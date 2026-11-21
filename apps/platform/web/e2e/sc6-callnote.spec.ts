@@ -78,6 +78,7 @@ test.describe("СЦ-6: записка о звонке", () => {
       const form = page.getByRole("form", { name: "Создать заявку" });
       await expect(form.getByText(/^Бобур Снабженцев/)).toBeVisible();
       await form.getByRole("button", { name: /^Запрос/ }).click();
+      await form.getByLabel("Суть запроса").fill("Повторный заказ накладок");
       await form.getByRole("button", { name: "Основание — звонок" }).click();
       await expect(
         form.getByText(

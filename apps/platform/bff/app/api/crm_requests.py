@@ -20,7 +20,7 @@ import re
 from datetime import UTC, datetime
 from typing import Annotated
 from urllib.parse import unquote
-from uuid import UUID
+from uuid import NAMESPACE_URL, UUID, uuid5
 
 import httpx
 from fastapi import APIRouter, Depends, Path, Request, Response, status
@@ -195,7 +195,12 @@ def _conflict(reason: str, message: str) -> PlatformError:
 
 
 async def _lead_call_note(authed: Authed, body: RequestCallNoteIn, lead: str) -> dict[str, object]:
-    """Тело EDS по лиду со звонка: телефонный лид и согласие (в CRM или отмеченное в форме)."""
+    """Тело EDS по лиду со звонка: телефонный лид и согласие (в CRM или отмеченное в форме).
+
+    Ключ записки выводится из лида и языка, а не берётся из формы: форма при каждом открытии
+    получает новый ключ, а EDS по (ключ, сотрудник) возвращает уже готовый файл — повторное
+    открытие не плодит PDF-сирот.
+    """
     detail = await CrmProxy(authed.call).get_model(
         crm.LeadDetail, "GET", f"{API}/leads/{_lead_id(lead)}"
     )
@@ -204,7 +209,7 @@ async def _lead_call_note(authed: Authed, body: RequestCallNoteIn, lead: str) ->
     if detail.consent_given_at is None and not body.consent:
         raise _conflict("call_note_no_consent", _NO_CONSENT)
     return {
-        "request_key": body.request_key,
+        "request_key": str(uuid5(NAMESPACE_URL, f"rt-call-note:{detail.id}:{body.lang}")),
         "lang": body.lang,
         "lead": lead_number(detail.id),
         "caller_name": detail.display_name,

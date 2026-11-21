@@ -91,9 +91,13 @@ describe("форма «Создать заявку»: правила до отп
       contact: "contact",
       channel: "channel",
       summary: "summary",
-      letter: "letter_required",
+      letter: "letter_call_consent",
       consent: "consent",
     });
+    // Телефонный лид с согласием: основание — записка или файл, текст обычный.
+    expect(validateRequest({ ...emptyRequestForm(), consentMarked: true }, lead).letter).toBe(
+      "letter_required",
+    );
   });
 
   it("лид из Telegram без согласия — согласие только в боте; неверный ИНН — словами", () => {
@@ -565,12 +569,23 @@ describe("записка о звонке как основание заявки 
     server.events.removeAllListeners();
   });
 
-  it("без согласия записка не собирается — данные клиента не уходят в EDS раньше согласия", async () => {
+  it("без согласия записка не собирается: кнопка недоступна, причина видна, «Осталось» ведёт к согласию", async () => {
     const notes = recordNotes();
     const panel = await openForm(PHONE);
     open(panel, "Запрос");
     expect(within(panel).queryByText("Записка о звонке приложена")).toBeNull();
-    expect(within(panel).queryByRole("button", { name: "Основание — звонок" })).toBeNull();
+    expect(within(panel).getByRole("button", { name: "Основание — звонок" })).toBeDisabled();
+    expect(
+      within(panel).getByText(
+        "Записка о звонке соберётся, когда на шаге «Контакт» отмечено согласие",
+      ),
+    ).toBeVisible();
+    open(panel, "Проверка и отправка");
+    expect(
+      within(panel).getAllByText(
+        "Отметьте согласие на шаге «Контакт» — записка о звонке соберётся сама, или приложите файл",
+      ).length,
+    ).toBeGreaterThan(0);
     await new Promise((resolve) => setTimeout(resolve, 50));
     expect(notes.bodies).toHaveLength(0);
     server.events.removeAllListeners();
@@ -708,6 +723,63 @@ describe("записка о звонке как основание заявки 
     expect(within(again).getByText("Записка о звонке приложена")).toBeVisible();
     await new Promise((resolve) => setTimeout(resolve, 50));
     expect(notes.bodies).toHaveLength(1);
+    server.events.removeAllListeners();
+  });
+
+  it("файл, выбранный во время сборки записки, готовая записка не затирает", async () => {
+    const id = "50000000-0000-4000-8000-000000000001";
+    server.use(
+      http.post(NOTE_URL, () =>
+        HttpResponse.json({ id, status: "pending", error: null, file: null }, { status: 202 }),
+      ),
+      http.get(`${NOTE_URL}/${id}`, () =>
+        HttpResponse.json({
+          id,
+          status: "ready",
+          error: null,
+          file: {
+            id: "60000000-0000-4000-8000-000000000001",
+            name: "Записка.pdf",
+            content_type: "application/pdf",
+            size: 10,
+          },
+        }),
+      ),
+    );
+    const panel = await openForm(PHONE);
+    markConsent(panel);
+    open(panel, "Запрос");
+    expect(await within(panel).findByText("Собираем записку о звонке…")).toBeVisible();
+    await attach(panel, "pismo.pdf");
+    await new Promise((resolve) => setTimeout(resolve, 1600));
+    expect(within(panel).getByText("Загружено: pismo.pdf")).toBeVisible();
+    expect(within(panel).queryByText("Записка о звонке приложена")).toBeNull();
+  });
+
+  it("без лида: пока не заполнена суть, записку не собрать; правка после сборки — новая записка с новым ключом", async () => {
+    server.events.removeAllListeners();
+    const notes = recordNotes();
+    const panel = await openForm("/crm/clients?client=3&create=1&panel=open&tab=card");
+    await waitFor(() => {
+      expect(within(panel).getByText(/^Бобур Снабженцев.* — Telegram/)).toBeVisible();
+    });
+    open(panel, "Запрос");
+    const button = within(panel).getByRole("button", { name: "Основание — звонок" });
+    expect(button).toBeDisabled();
+    expect(within(panel).getByText("Сначала заполните «Суть запроса»")).toBeVisible();
+
+    const need = within(panel).getByLabelText("Суть запроса");
+    fireEvent.change(need, { target: { value: "Накладки" } });
+    fireEvent.click(within(panel).getByRole("button", { name: "Основание — звонок" }));
+    expect(await within(panel).findByText("Записка о звонке приложена")).toBeVisible();
+    fireEvent.click(within(panel).getByRole("button", { name: "Убрать файл" }));
+    fireEvent.change(need, { target: { value: "Накладки и болты" } });
+    fireEvent.click(await within(panel).findByRole("button", { name: "Основание — звонок" }));
+    await waitFor(() => {
+      expect(notes.bodies).toHaveLength(2);
+    });
+    expect(notes.bodies[1]).toMatchObject({ need: "Накладки и болты" });
+    expect(notes.bodies[1]?.["request_key"]).not.toBe(notes.bodies[0]?.["request_key"]);
     server.events.removeAllListeners();
   });
 

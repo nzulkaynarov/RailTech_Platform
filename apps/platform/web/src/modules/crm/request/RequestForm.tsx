@@ -271,12 +271,21 @@ export function RequestForm({
   // (дано в CRM или отмечено на «Контакте»); без лида (повторный звонок клиента) — по кнопке «Основание — звонок».
   const consentPresent = lead === null || lead.consent.given_at !== null || state.consentMarked;
   const phoneLead = lead !== null && lead.channel === "phone";
-  const callBasis = (lead === null || (phoneLead && consentPresent)) && !incomingLetter;
+  const callBasis = (lead === null || phoneLead) && !incomingLetter;
   const caller = contacts.find((c) => c.id === form.contactId);
   const callerName = caller ? caller.name : state.fullName.trim();
+  // Результат сборки применяется, только пока записка ещё «в работе»: файл, который сотрудник выбрал сам, или
+  // продолженный черновик во время сборки готовая записка (или ошибка) не затирает.
   const callNote = useCallNote((letter) => {
-    setState((prev) => ({ ...prev, letter }));
+    setState((prev) =>
+      letter.status === "uploading" ||
+      (prev.letter?.kind === "call_note" && prev.letter.status === "uploading")
+        ? { ...prev, letter }
+        : prev,
+    );
   });
+  // Без лида записка фиксирует поля формы: ключ меняется вместе с содержимым, иначе EDS вернёт прежний файл.
+  const noteKey = useRef<{ sig: string; key: string } | null>(null);
   const startCallNote = () => {
     const lang = noteLanguage(i18n.language);
     if (lead) {
@@ -288,9 +297,7 @@ export function RequestForm({
       });
       return;
     }
-    void callNote.start({
-      request_key: requestKey,
-      lang,
+    const content = {
       caller: {
         name: callerName,
         company:
@@ -301,11 +308,29 @@ export function RequestForm({
         email: (caller ? caller.email : state.email.trim()) || null,
       },
       need: state.summary.trim() || null,
-    });
+    };
+    const sig = JSON.stringify([lang, content]);
+    if (noteKey.current?.sig !== sig) noteKey.current = { sig, key: newKey() };
+    void callNote.start({ request_key: noteKey.current.key, lang, ...content });
   };
+  const noteBlockedReason = lead
+    ? consentPresent
+      ? null
+      : t("request:letter.noteNeedsConsent")
+    : !callerName
+      ? t("request:letter.noteNeedsCaller")
+      : !state.summary.trim()
+        ? t("request:letter.noteNeedsSummary")
+        : null;
   const autoNote = useRef(false);
   const wantsAutoNote =
-    phoneLead && callBasis && !offer && active === "request" && state.letter === null && !done;
+    phoneLead &&
+    consentPresent &&
+    callBasis &&
+    !offer &&
+    active === "request" &&
+    state.letter === null &&
+    !done;
   useEffect(() => {
     if (!wantsAutoNote || autoNote.current) return;
     autoNote.current = true;
@@ -754,8 +779,7 @@ export function RequestForm({
                       callBasis
                         ? {
                             onStart: startCallNote,
-                            blockedReason:
-                              callerName || lead ? null : t("request:letter.noteNeedsCaller"),
+                            blockedReason: noteBlockedReason,
                           }
                         : undefined
                     }

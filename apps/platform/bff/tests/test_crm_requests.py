@@ -346,8 +346,8 @@ async def test_note_of_a_phone_lead_goes_to_eds_with_the_lead_fields(
     assert response.status_code == 202
     assert response.json() == PENDING
     sent = eds.body("POST", "call-notes")
+    note_key = sent.pop("request_key")
     assert sent == {
-        "request_key": REQUEST_KEY,
         "lang": "ru",
         "lead": "L-2041",
         "caller_name": "Азиз Звонкий",
@@ -358,6 +358,10 @@ async def test_note_of_a_phone_lead_goes_to_eds_with_the_lead_fields(
         "taken_by": "Дилшод Менеджеров",
         "need": "Рельсы Р65, 40 т",
     }
+    # Ключ записки выводится из лида: повторное открытие формы (другой ключ) — та же записка.
+    again = note_form(request_key="60000000-0000-4000-8000-000000000009")
+    assert (await web.send("POST", NOTE, json=again)).status_code == 202
+    assert eds.body("POST", "call-notes")["request_key"] == note_key
     assert eds.last("POST", "call-notes").headers["authorization"].startswith(f"Bearer {TOKEN}")
 
 
@@ -461,28 +465,28 @@ async def test_note_state_is_read_from_eds_and_foreign_note_is_404(
     await web.login(["MANAGER"])
     eds.answer("GET", f"call-notes/{NOTE_ID}", 200, READY)
     response = check(
-        await web.send("GET", f"{NOTE}/{NOTE_ID}"), "/crm/request-files/call-note/{note}", "get"
+        await web.client.get(f"{NOTE}/{NOTE_ID}"), "/crm/request-files/call-note/{note}", "get"
     )
     assert response.status_code == 200
     assert response.json()["file"]["id"] == FILE_ID
 
     other = "50000000-0000-4000-8000-000000000002"
     eds.error("GET", f"call-notes/{other}", 404, "NOT_FOUND")
-    assert (await web.send("GET", f"{NOTE}/{other}")).status_code == 404
-    assert (await web.send("GET", f"{NOTE}/not-a-uuid")).status_code == 422
+    assert (await web.client.get(f"{NOTE}/{other}")).status_code == 404
+    assert (await web.client.get(f"{NOTE}/not-a-uuid")).status_code == 422
 
 
 async def test_note_needs_full_clients_section(web: Web, crm: CrmLeadsFake, eds: EdsFake) -> None:
     await web.login(["SUPPLY"])
     assert (await web.send("POST", NOTE, json=note_form())).status_code == 403
-    assert (await web.send("GET", f"{NOTE}/{NOTE_ID}")).status_code == 403
+    assert (await web.client.get(f"{NOTE}/{NOTE_ID}")).status_code == 403
     assert crm.calls == []
     assert eds.calls == []
 
 
 async def test_request_file_is_opened_from_eds_as_an_attachment(web: Web, eds: EdsFake) -> None:
     await web.login(["MANAGER"])
-    response = await web.send("GET", f"{FILES}/{FILE_ID}")
+    response = await web.client.get(f"{FILES}/{FILE_ID}")
     assert response.status_code == 200
     assert response.content == b"%PDF-1.4 demo"
     assert response.headers["content-disposition"].startswith("attachment")
@@ -492,10 +496,10 @@ async def test_request_file_is_opened_from_eds_as_an_attachment(web: Web, eds: E
     )
 
     eds.error("GET", f"files/{FILE_ID}", 404, "NOT_FOUND")
-    assert (await web.send("GET", f"{FILES}/{FILE_ID}")).status_code == 404
+    assert (await web.client.get(f"{FILES}/{FILE_ID}")).status_code == 404
 
 
 async def test_request_file_needs_full_clients_section(web: Web, eds: EdsFake) -> None:
     await web.login(["SUPPLY"])
-    assert (await web.send("GET", f"{FILES}/{FILE_ID}")).status_code == 403
+    assert (await web.client.get(f"{FILES}/{FILE_ID}")).status_code == 403
     assert eds.calls == []
