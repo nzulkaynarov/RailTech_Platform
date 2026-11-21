@@ -6,7 +6,8 @@
 * `email` — у КП есть получатель письма (`resolve_quote_recipient`: представитель клиента или контакт сделки с e-mail);
 * `telegram` — контакт сделки (или основной контакт компании) с Telegram и клиент, переданный из CRM (бот CRM пишет по
   событию `quote.sent`; ERP в Telegram не пишет);
-* `cabinet` — у компании есть контакт, приглашённый в кабинет или уже входивший (не в архиве).
+* `cabinet` — у компании есть контакт (не в архиве), уже входивший в кабинет или с доставленным письмом-приглашением
+  (последний `portal_invitation` на его адрес — `SENT`; постановка в очередь, `invited_at`, доставкой не считается).
 
 Недоступный канал не роняет одобрение: он попадает в итог (`Quote.send_report.skipped` с причиной) и в журнал КП.
 Нет ни одного доступного канала или отправку остановил гейт (`QUOTE_BELOW_COST`, `FX_RATE_MISSING`…) — КП остаётся
@@ -38,7 +39,7 @@ REASON_TEXT = {
     "CONTACT_EMAIL_REQUIRED": "у контакта клиента нет e-mail",
     "CONTACT_TELEGRAM_REQUIRED": "контакт клиента не подключён к Telegram-боту",
     "CLIENT_NOT_IN_CRM": "клиент не передан в CRM, бот его не знает",
-    "CABINET_NOT_INVITED": "клиент не приглашён в кабинет",
+    "CABINET_NOT_INVITED": "клиент не входил в кабинет и приглашение ему не доставлено",
     "EMAIL_DELIVERY_FAILED": "письмо не ушло",
     "smtp_not_configured": "почта не настроена (Настройки · Подключения · Почта)",
     "QUOTE_BELOW_COST": "цена ниже себестоимости",
@@ -74,8 +75,29 @@ def _telegram_reason(quote) -> Optional[str]:
     return None
 
 
+def _invitation_delivered(contact) -> bool:
+    """Последнее письмо-приглашение на адрес контакта действительно отправлено почтой (`EmailLog.SENT`).
+
+    `Contact.invited_at` ставится, когда письмо поставлено в очередь, — доставкой оно не является."""
+    from core.models import EmailLog
+
+    email = (contact.email or "").strip().lower()
+    if not email:
+        return False
+    latest = (
+        EmailLog.objects.filter(template="portal_invitation", to_emails__contains=[email])
+        .order_by("-created_at", "-pk")
+        .values_list("status", flat=True)
+        .first()
+    )
+    return latest == EmailLog.STATUS_SENT
+
+
 def _cabinet_reason(quote) -> Optional[str]:
-    if any(c.invited_at or c.last_login_at for c in _company_contacts(quote)):
+    """Кабинет доступен по факту: контакт компании входил (`last_login_at`) или приглашение ему доставлено
+    (решение владельца 2026-11-22). Иначе — `CABINET_NOT_INVITED`: КП остаётся «Готово к отправке»."""
+    contacts = _company_contacts(quote)
+    if any(c.last_login_at or _invitation_delivered(c) for c in contacts):
         return None
     return "CABINET_NOT_INVITED"
 
