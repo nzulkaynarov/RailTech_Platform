@@ -3084,7 +3084,25 @@ export interface components {
       /** Format: date-time */
       requested_at: string;
     };
+    /**
+     * @description Переданный черновик ИСХ — задача вычисленному подписанту «Подписать» (СЦ-9). Подписант — первый по реестру
+     *     полномочий, кто не автор (иначе первый); при замещении строка у заместителя, `acting_for` — за кого.
+     */
+    SignatureTask: {
+      document_id: components["schemas"]["Uuid"];
+      subject: string;
+      in_reply_to: components["schemas"]["ReplyToLetter"] | null;
+      requested_by: components["schemas"]["PersonRef"];
+      /** Format: date-time */
+      requested_at: string;
+      acting_for: components["schemas"]["PersonRef"] | null;
+    };
     LetterTasks: {
+      /**
+       * @description Только вычисленному подписанту (СЦ-9): переданные черновики ИСХ, ждущие подписи. `registrations` по-прежнему
+       *     заполняется как раньше (потребитель переходит на `signatures` позже). Поля может не быть у старого ответа.
+       */
+      signatures?: components["schemas"]["SignatureTask"][];
       /**
        * @description Только держателю `letters.register` (EDS-REPLY-1): черновики ИСХ, переданные на регистрацию и ещё не
        *     зарегистрированные, раньше — давнее. Строка уходит сама при регистрации. Поля может не быть у старого ответа.
@@ -3531,6 +3549,22 @@ export interface components {
       verification_url?: string | null;
       /** @description Способ отправки документа адресату */
       dispatch_method?: components["schemas"]["DispatchMethod"] | null;
+      /**
+       * @description Только у открытого черновика исходящего письма и только в ответах, где известен спросивший (СЦ-9):
+       *     может ли он подписать сейчас (та же проверка, что у `POST /documents/{id}/sign`).
+       */
+      signing?: components["schemas"]["DocumentSigning"] | null;
+    };
+    DocumentSigning: {
+      can_sign: boolean;
+      /**
+       * @description Код отказа, как `details.reason` у `sign`: `no_permission`, `invalid_state`, `no_authority`,
+       *     `author_cannot_sign`, `authority_mismatch`, `revoked`, `not_started`, `expired`, `limit_exceeded`,
+       *     `currency_mismatch`, `holder_inactive`, `absent`, `deputy_without_authority`, `deputy_loop`.
+       */
+      reason: string | null;
+      /** @description Кто подпишет по реестру полномочий (первый, кто не автор); `null` — подписать некому */
+      signer: components["schemas"]["PersonRef"] | null;
     };
     /** @enum {string} */
     ApprovalTemplate: "memo" | "application" | "report" | "quote" | "signing";

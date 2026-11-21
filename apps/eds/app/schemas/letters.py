@@ -508,11 +508,23 @@ class RegistrationTask(BaseModel):
     requested_at: dt.datetime
 
 
+class SignatureTask(BaseModel):
+    """Переданный черновик ИСХ: задача подписанту «Подписать» (СЦ-9); `acting_for` — за кого, если по замещению."""
+
+    document_id: uuid.UUID
+    subject: str
+    in_reply_to: ReplyToLetter | None
+    requested_by: PersonRef
+    requested_at: dt.datetime
+    acting_for: PersonRef | None
+
+
 class LetterTasks(BaseModel):
     instructions: list[InstructionTask]
     extensions: list[ExtensionTask]
     acquaintances: list[AcquaintanceTask]
     registrations: list[RegistrationTask] = Field(default_factory=list)
+    signatures: list[SignatureTask] = Field(default_factory=list)
 
 
 class EmployeeChoice(BaseModel):
