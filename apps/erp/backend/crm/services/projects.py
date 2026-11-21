@@ -346,20 +346,47 @@ def _journal(deal, limit: int = 60) -> list:
     query = Q()
     for prefix in JOURNAL_PREFIXES:
         query |= Q(event_code__startswith=prefix)
-    logs = ActivityLog.objects.filter(query, deal=deal).select_related("user").order_by("-timestamp", "-id")[:limit]
-    return [_journal_row(log) for log in logs]
+    logs = (
+        ActivityLog.objects.filter(query, deal=deal)
+        .select_related("user", "contact")
+        .order_by("-timestamp", "-id")[:limit]
+    )
+    logs = list(logs)
+    # Строки клиента, записанные до правки, несут только `contact_id` в параметрах: имена — одним запросом.
+    from parties.models import Contact
+
+    legacy_ids = {
+        p["contact_id"]
+        for log in logs
+        if not log.user_id and not log.contact_id and isinstance(p := log.event_params, dict) and p.get("contact_id")
+    }
+    legacy_names = dict(Contact.objects.filter(pk__in=legacy_ids).values_list("pk", "name")) if legacy_ids else {}
+    return [_journal_row(log, legacy_names) for log in logs]
 
 
 _DOC_BY_PREFIX = {"contract": "contract", "act": "act", "invoice": "invoice", "quote": "quote", "project": "project"}
 
 
-def _journal_row(log) -> dict:
+def _actor_name(log, params: dict, legacy_names: Optional[dict] = None) -> Optional[str]:
+    """Кто сделал: сотрудник; иначе контакт клиента из портала (`contact`, а у старых строк — `contact_name` в параметрах);
+    пусто — только когда лица нет (системное действие)."""
+    if log.user_id:
+        return log.user.get_full_name() or log.user.email
+    if log.contact_id:
+        return (log.contact.name or "").strip() or None
+    named = (params.get("contact_name") or "").strip()
+    if not named and legacy_names:
+        named = (legacy_names.get(params.get("contact_id")) or "").strip()
+    return named or None
+
+
+def _journal_row(log, legacy_names: Optional[dict] = None) -> dict:
     params = log.event_params if isinstance(log.event_params, dict) else {}
     return {
         "at": log.timestamp,
         "code": log.event_code,
         "text": log.action,
-        "actor_name": (log.user.get_full_name() or log.user.email) if log.user_id else None,
+        "actor_name": _actor_name(log, params, legacy_names),
         "document": _DOC_BY_PREFIX.get(log.event_code.split(".")[0]),
         "number": params.get("number"),
         "reason": log.reason or params.get("reason") or params.get("note") or "",
