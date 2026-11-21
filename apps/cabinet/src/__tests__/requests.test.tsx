@@ -201,7 +201,8 @@ describe('Заявки', () => {
     await router.navigate('/requests/new');
     expect(await screen.findByText('Создавать заявки может контакт с правом подтверждать')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Отправить заявку' })).not.toBeInTheDocument();
-  });
+    // Two screens in one test: ~12 s alone, over 30 s under the full parallel run (as journey-j6).
+  }, 60_000);
 
   it('пустой список — пустое состояние', async () => {
     signedIn('actor', 'empty');
@@ -217,5 +218,6 @@ describe('Заявки', () => {
     await router.navigate('/requests/new');
     await heading('Новая заявка');
     await expectNoAxeViolations();
-  });
+    // Two axe passes: ~11 s alone, over 30 s under the full parallel run (as journey-j6).
+  }, 60_000);
 });
