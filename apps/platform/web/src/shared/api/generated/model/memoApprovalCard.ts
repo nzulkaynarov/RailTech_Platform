@@ -45,6 +45,8 @@ export interface MemoApprovalCard {
   accountant_step: boolean;
   decisions: EdsDecision[];
   can_decide: boolean;
+  /** СЦ-9: шаг замещаемого решает действующий заместитель — «Согласовать за {имя}»; `null` или нет поля — свой шаг (из маршрута EDS; подпись и оплата не переходят) */
+  acting_for?: EdsPerson | null;
   allowed_decisions: ApprovalDecision[];
   created_at: string;
   updated_at: string;

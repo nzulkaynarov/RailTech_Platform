@@ -1479,3 +1479,26 @@ async def test_memo_card_keeps_the_stored_deal_number_when_erp_is_down(
     card = (await web.client.get(MEMO)).json()
 
     assert card["deal"] == {"erp_deal_id": 5, "number": "ЗВ-2026-104"}
+
+
+async def test_cards_carry_the_replaced_person_when_the_deputy_decides(
+    web: Web, eds: ApprovalsFake, check: ContractChecker
+) -> None:
+    """СЦ-9: EDS отдал заместителю шаг замещаемого (`acting_for`) — карточки КП и служебки несут его
+    имя («Согласовать за {имя}»); свой шаг — `null`."""
+    madina = {"crm_user_id": 12, "full_name": "Мадина Р."}
+    eds.routes[MEMO_ROUTE] = memo_route(acting_for=madina)
+    eds.routes[QUOTE_ROUTE] = quote_route(acting_for=madina)
+    await _director(web)
+
+    memo = await web.client.get(MEMO)
+    quote = await web.client.get(QUOTE)
+
+    check(memo, "/eds/memo-approvals/{ref}", "get")
+    check(quote, "/eds/quotes/{ref}", "get")
+    assert memo.json()["acting_for"] == madina
+    assert quote.json()["acting_for"] == madina
+
+    eds.routes[MEMO_ROUTE] = memo_route()
+    own = await web.client.get(MEMO)
+    assert own.json()["acting_for"] is None

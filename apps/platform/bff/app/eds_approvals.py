@@ -724,6 +724,7 @@ async def quote_card(authed: Authed, proxy: EdsProxy, body: Any) -> QuoteApprova
         status=raw.status,
         stage=_stage(deal),
         can_decide=raw.can_decide,
+        acting_for=person(raw.acting_for) if raw.acting_for else None,
         allowed_decisions=raw.allowed_decisions,
         approved_late=raw.approved_late,
         outgoing_number=raw.outgoing_number,
@@ -901,6 +902,7 @@ async def memo_card(
             for d in doc.decisions
         ],
         can_decide=approval.can_decide,
+        acting_for=person(approval.acting_for) if approval.acting_for else None,
         allowed_decisions=approval.allowed_decisions,
         created_at=doc.created_at,
         updated_at=doc.updated_at,

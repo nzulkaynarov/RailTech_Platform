@@ -1,6 +1,6 @@
 import { App, Button, Card, Input } from "antd";
 import { Dialog } from "../../../shared/ui/Dialog";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { SigningApprovalRow } from "../../../shared/api/generated/model";
@@ -13,7 +13,7 @@ import { useConfirmAction } from "../../../shared/ui/useConfirmAction";
 import { reasonText } from "../documents/errors";
 
 /** Документы ERP, ждущие подписи текущего сотрудника (SIGN-4): «Подписать» или «Отказать» с причиной. */
-export function SigningList() {
+export function SigningList({ focusId = null }: { focusId?: string | null }) {
   const { t } = useTranslation("approvals");
   const { money } = useFormat();
   const confirmAction = useConfirmAction();
@@ -35,13 +35,26 @@ export function SigningList() {
     },
   });
   const items = list.data?.items ?? [];
+  const focused = useRef<HTMLLIElement | null>(null);
+  const hasFocus = focusId !== null && items.some((row) => row.id === focusId);
+  // Строка «Подписать …» очереди ведёт сюда: нужный шаг выделен и показан (СЦ-9)
+  useEffect(() => {
+    // в jsdom `scrollIntoView` нет
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+    if (hasFocus) focused.current?.scrollIntoView?.({ block: "center" });
+  }, [hasFocus]);
   if (items.length === 0) return null;
 
   return (
     <Card title={t("signing.title")} className="pf-signing-list">
       <ul className="pf-dec-cards" aria-label={t("signing.title")}>
         {items.map((row) => (
-          <li key={row.id}>
+          <li
+            key={row.id}
+            ref={row.id === focusId ? focused : undefined}
+            data-selected={row.id === focusId ? "true" : undefined}
+            aria-current={row.id === focusId ? "true" : undefined}
+          >
             <div className="pf-dec-card-head">
               <strong>{row.title}</strong>
               <span className="pf-hint">

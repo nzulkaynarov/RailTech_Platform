@@ -137,6 +137,34 @@ describe("Клиенты · Ждут ответа: менеджер", () => {
     expect(screen.queryByText("Уйдёт клиенту в Telegram")).toBeNull();
   });
 
+  it("СЦ-9: ответ заместителя подписан «<заместитель> за <владелец лида>», свой ответ — без «за»", async () => {
+    const state = readMessages();
+    const row = state.leads.find((l) => l.item.lead === "L-2041");
+    if (!row) throw new Error("нет лида в моках");
+    const base = {
+      author: "manager" as const,
+      author_name: "Демо Менеджеров",
+      created_at: new Date().toISOString(),
+      attachments: [],
+      delivery: null,
+      channel: "telegram" as const,
+      context: null,
+    };
+    row.messages.push(
+      { ...base, id: 2041901, text: "Отвечу по ценам после обеда", on_behalf_of_name: "Мадина Р." },
+      { ...base, id: 2041902, text: "Цену подтверждаю", on_behalf_of_name: null },
+    );
+    writeMessages(state);
+    await open("manager@demo.example", "?lead=L-2041");
+
+    const bubble = await screen.findByText("Отвечу по ценам после обеда", {
+      selector: ".pf-msg-bubble",
+    });
+    const own = await screen.findByText("Цену подтверждаю", { selector: ".pf-msg-bubble" });
+    expect(bubble.closest("li")).toHaveTextContent("Демо Менеджеров за Мадина Р.");
+    expect(own.closest("li")).not.toHaveTextContent(" за ");
+  });
+
   it("CHAT-1: причина передачи «Написал в кабинете» и подписи канала словами", () => {
     const t = i18n.getFixedT("ru");
     expect(reasonLabels(t, ["cabinet_message"])).toEqual(["Написал в кабинете"]);

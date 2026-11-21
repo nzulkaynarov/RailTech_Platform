@@ -16,6 +16,7 @@ D17G-1); одобрение КП — маршруты EDS на моём шаге
 
 from dataclasses import dataclass
 from datetime import datetime
+from decimal import Decimal
 from typing import Any
 
 from app.feeds.erp_work import calc_rows, invoice_rows, project_rows
@@ -23,6 +24,7 @@ from app.feeds.feed import Feed
 from app.feeds.models import (
     DueLabel,
     MenuCounter,
+    ObjectKind,
     ObjectRef,
     QueueCard,
     QueueItem,
@@ -53,12 +55,12 @@ from app.feeds.snapshot import (
     wants_calc_tasks,
     wants_inbox,
     wants_invoices,
-    wants_letter_tasks,
     wants_letters,
     wants_mail,
     wants_mail_mine,
     wants_memos,
     wants_projects,
+    wants_signing,
     wants_supplier_overdue,
     wants_supply_tasks,
     wants_tickets,
@@ -105,6 +107,37 @@ def _sort_key(row: Row) -> tuple[int, float, float]:
 def _role_id(view: View, kind: QueueItemKind) -> str:
     role = view.role_for(kind)
     return str(role) if role is not None else ""
+
+
+def _acting(entry: dict[str, Any]) -> QueueOwner | None:
+    """Чью работу решает заместитель (`acting_for` из EDS, СЦ-9): «за {имя}»; свой шаг — `None`."""
+    person = entry.get("acting_for")
+    if not isinstance(person, dict):
+        return None
+    user_id, name = person.get("crm_user_id"), person.get("full_name")
+    if isinstance(user_id, int) and isinstance(name, str) and name:
+        return QueueOwner(id=str(user_id), name=name)
+    return None
+
+
+def _mine_or_acting(view: View, kind: QueueItemKind, owner: QueueOwner | None) -> bool:
+    """Свой вид работы — по роли; строка замещаемого приходит от EDS, и роль заместителя её не
+    фильтрует (решает EDS по токену: право или замещение)."""
+    return owner is not None or view.wants(kind)
+
+
+def _role_id_for(view: View, kind: QueueItemKind, owner: QueueOwner | None) -> str:
+    role = _role_id(view, kind)
+    if role or owner is None or not view.roles:
+        return role
+    return str(view.roles[0].id)
+
+
+def _acting_item(item: QueueItem, owner: QueueOwner | None) -> QueueItem:
+    """Строка замещаемого: id с суффиксом (чужая и своя строки не сливаются), «за»."""
+    if owner is None:
+        return item
+    return item.model_copy(update={"id": f"{item.id}:for:{owner.id}", "on_behalf_of": owner})
 
 
 def _lead_row(
@@ -266,15 +299,20 @@ def quote_rows(snap: Snapshot, now: datetime, view: View) -> list[Row]:
     строки — как экран «КП на одобрение · На моём шаге». Клиент, сумма и срок действия — снимок КП
     из карточки маршрута; нет снимка — клиент по сделке ERP, без суммы."""
     deals = snap.deal_index
-    role_id = _role_id(view, "approve_quote")
     out: list[Row] = []
     seen: set[str] = set()
     for route in snap.quotes or []:
         route_id = route.get("id")
         obj = _dict(route.get("object"))
-        if not isinstance(route_id, str) or route_id in seen:
+        owner = _acting(route)
+        if (
+            not isinstance(route_id, str)
+            or route_id in seen
+            or not _mine_or_acting(view, "approve_quote", owner)
+        ):
             continue
         seen.add(route_id)
+        role_id = _role_id_for(view, "approve_quote", owner)
         snapshot = snap.quote_snapshots.get(route_id, {})
         deal_id = obj.get("erp_deal_id")
         deal = deals.get(deal_id) if isinstance(deal_id, int) else None
@@ -300,7 +338,7 @@ def quote_rows(snap: Snapshot, now: datetime, view: View) -> list[Row]:
             due_at=valid_until,
             object=quote_ref(quote, title=client, drafting=True),
         )
-        out.append(Row(item, created))
+        out.append(Row(_acting_item(item, owner), created))
     return out
 
 
@@ -380,66 +418,64 @@ def letter_task_rows(snap: Snapshot, now: datetime, view: View) -> list[Row]:
             seen.add(row.item.id)
             out.append(row)
 
-    if view.wants("instruction"):
-        role_id = _role_id(view, "instruction")
-        for entry in tasks.get("instructions", []):
-            letter = _task_letter(entry)
-            if letter is None or not isinstance(entry.get("id"), str):
-                continue
-            letter_id, number, sender, subject = letter
-            due_at = parse_deadline(entry.get("due"))
-            action = (
-                "Подготовить ответ на письмо"
-                if entry.get("kind") == "reply"
-                else "Исполнить поручение по письму"
-            )
-            label = "overdue" if entry.get("overdue") is True else due_label(due_at, now)
-            add(
-                Row(
-                    QueueItem(
-                        id=f"instruction:{entry['id']}",
-                        role_id=role_id,
-                        kind="instruction",
-                        title=f"{action} {number}",
-                        subtitle=join(
-                            sender,
-                            subject,
-                            "запрошен перенос" if entry.get("extension_pending") is True else None,
-                        ),
-                        due_label=label,
-                        due_at=due_at,
-                        object=letter_task_ref(letter_id, number, subject or None),
-                    ),
-                    parse_dt(entry.get("created_at")),
-                )
-            )
-    if view.wants("instruction_extension"):
-        role_id = _role_id(view, "instruction_extension")
-        for entry in tasks.get("extensions", []):
-            letter = _task_letter(entry)
-            if letter is None or not isinstance(entry.get("id"), str):
-                continue
-            letter_id, number, _sender, subject = letter
-            executor = _dict(entry.get("executor"))
-            new_due = _ddmm(entry.get("new_due"))
-            add(
-                Row(
-                    QueueItem(
-                        id=f"instruction_extension:{entry['id']}",
-                        role_id=role_id,
-                        kind="instruction_extension",
-                        title=f"Решить перенос срока по {number}",
-                        subtitle=join(
-                            _text(executor.get("full_name")),
-                            f"новый срок {new_due}" if new_due else None,
-                            short(entry.get("reason"), 80),
-                        ),
-                        due_label="today",
-                        object=letter_task_ref(letter_id, number, subject or None),
-                    ),
-                    parse_dt(entry.get("requested_at")),
-                )
-            )
+    for entry in tasks.get("instructions", []):
+        owner = _acting(entry)
+        letter = _task_letter(entry)
+        if (
+            not _mine_or_acting(view, "instruction", owner)
+            or letter is None
+            or not isinstance(entry.get("id"), str)
+        ):
+            continue
+        letter_id, number, sender, subject = letter
+        due_at = parse_deadline(entry.get("due"))
+        action = (
+            "Подготовить ответ на письмо"
+            if entry.get("kind") == "reply"
+            else "Исполнить поручение по письму"
+        )
+        label = "overdue" if entry.get("overdue") is True else due_label(due_at, now)
+        item = QueueItem(
+            id=f"instruction:{entry['id']}",
+            role_id=_role_id_for(view, "instruction", owner),
+            kind="instruction",
+            title=f"{action} {number}",
+            subtitle=join(
+                sender,
+                subject,
+                "запрошен перенос" if entry.get("extension_pending") is True else None,
+            ),
+            due_label=label,
+            due_at=due_at,
+            object=letter_task_ref(letter_id, number, subject or None),
+        )
+        add(Row(_acting_item(item, owner), parse_dt(entry.get("created_at"))))
+    for entry in tasks.get("extensions", []):
+        owner = _acting(entry)
+        letter = _task_letter(entry)
+        if (
+            not _mine_or_acting(view, "instruction_extension", owner)
+            or letter is None
+            or not isinstance(entry.get("id"), str)
+        ):
+            continue
+        letter_id, number, _sender, subject = letter
+        executor = _dict(entry.get("executor"))
+        new_due = _ddmm(entry.get("new_due"))
+        item = QueueItem(
+            id=f"instruction_extension:{entry['id']}",
+            role_id=_role_id_for(view, "instruction_extension", owner),
+            kind="instruction_extension",
+            title=f"Решить перенос срока по {number}",
+            subtitle=join(
+                _text(executor.get("full_name")),
+                f"новый срок {new_due}" if new_due else None,
+                short(entry.get("reason"), 80),
+            ),
+            due_label="today",
+            object=letter_task_ref(letter_id, number, subject or None),
+        )
+        add(Row(_acting_item(item, owner), parse_dt(entry.get("requested_at"))))
     if view.wants("acquaint"):
         role_id = _role_id(view, "acquaint")
         for entry in tasks.get("acquaintances", []):
@@ -461,44 +497,106 @@ def letter_task_rows(snap: Snapshot, now: datetime, view: View) -> list[Row]:
                     parse_dt(entry.get("created_at")),
                 )
             )
-    if view.wants("register_reply"):
-        role_id = _role_id(view, "register_reply")
-        for entry in tasks.get("registrations", []):
-            row = _registration_row(entry, role_id)
+    if view.wants("sign_document"):
+        for entry in tasks.get("signatures", []):
+            row = _signature_row(entry, view)
             if row is not None:
                 add(row)
     return out
 
 
-def _registration_row(entry: dict[str, Any], role_id: str) -> Row | None:
-    """«Зарегистрировать исходящее» (EDS-REPLY-1): исполнитель передал черновик ответа на
-    регистрацию; строка уходит сама, когда исходящее зарегистрировано. Ведёт в черновик."""
+def _signature_row(entry: dict[str, Any], view: View) -> Row | None:
+    """«Подписать исходящее» (СЦ-9): автор передал письмо на подпись, подписант вычислен в EDS
+    (реестр полномочий; при замещении строка у заместителя, «за {имя}»). Исходящее не
+    регистрируется без подписи — номер выдаёт подпись. Ведёт в карточку письма, где «Подписать»."""
     document_id = entry.get("document_id")
     if not isinstance(document_id, str) or not document_id:
         return None
+    owner = _acting(entry)
     reply_to = _dict(entry.get("in_reply_to"))
     letter_number = _text(reply_to.get("number"))
     subject = short(entry.get("subject"), 80)
     by = _text(_dict(entry.get("requested_by")).get("full_name"))
-    return Row(
-        QueueItem(
-            id=f"register_reply:{document_id}",
-            role_id=role_id,
-            kind="register_reply",
-            title=f"Зарегистрировать исходящее: ответ на {letter_number}"
-            if letter_number
-            else "Зарегистрировать исходящее",
-            subtitle=join(subject, by),
+    item = QueueItem(
+        id=f"sign_document:{document_id}",
+        role_id=_role_id_for(view, "sign_document", owner),
+        kind="sign_document",
+        title=f"Подписать исходящее: ответ на {letter_number}"
+        if letter_number
+        else f"Подписать исходящее: {subject}"
+        if subject
+        else "Подписать исходящее",
+        subtitle=join(None if letter_number is None else subject, by),
+        due_label="today",
+        object=ObjectRef(
+            kind="memo",
+            number=letter_number or subject or "Исходящее",
+            title=subject or None,
+            path=outgoing_document_path(document_id),
+        ),
+    )
+    return Row(_acting_item(item, owner), parse_dt(entry.get("requested_at")))
+
+
+# Права EDS шагов визы маршрута подписи (ADR-0025, как в `eds_approvals`): не подпись.
+VISA_PERMISSIONS = frozenset({"approvals.visa_finance", "approvals.visa_legal"})
+_SIGNING_NOUN = {"quote": "КП", "contract": "договор", "invoice": "счёт", "act": "акт"}
+_SIGNING_OBJECT: dict[str, ObjectKind] = {
+    "quote": "quote",
+    "contract": "contract",
+    "invoice": "invoice",
+    "act": "act",
+}
+
+
+def signing_rows(snap: Snapshot, now: datetime, view: View) -> list[Row]:
+    """«Подписать договор CT-…», счёт, акт, КП (СЦ-9): открытые шаги подписи на мне — тот же список,
+    что блок «Подписи» под очередью (`GET /approvals?mine&template=signing`). Виза бухгалтера или
+    юриста — не подпись: строки нет. Кому подписывать, решает EDS (реестр полномочий)."""
+    if not wants_signing(view):
+        return []
+    out: list[Row] = []
+    seen: set[str] = set()
+    for route in snap.signing or []:
+        route_id = route.get("id")
+        obj = _dict(route.get("object"))
+        number = _text(obj.get("signing_number"))
+        kind = _text(obj.get("signing_kind"))
+        step = _dict(route.get("current_step"))
+        permission = _text(_dict(step.get("assignee")).get("permission"))
+        if (
+            not isinstance(route_id, str)
+            or route_id in seen
+            or not number
+            or kind not in _SIGNING_NOUN
+            or permission in VISA_PERMISSIONS
+        ):
+            continue
+        seen.add(route_id)
+        owner = _acting(route)
+        created = parse_dt(route.get("created_at"))
+        tiyins = obj.get("signing_amount_tiyins")
+        amount = (
+            money(f"{Decimal(tiyins) / 100:.2f}", obj.get("signing_currency"))
+            if isinstance(tiyins, int)
+            else None
+        )
+        item = QueueItem(
+            id=f"sign_document:{route_id}",
+            role_id=_role_id_for(view, "sign_document", owner),
+            kind="sign_document",
+            title=f"Подписать {_SIGNING_NOUN[kind]} {number}",
+            subtitle=join(short(route.get("title"), 80), amount, ago(created, now)),
             due_label="today",
             object=ObjectRef(
-                kind="memo",
-                number=letter_number or subject or "Исходящее",
-                title=subject or None,
-                path=outgoing_document_path(document_id),
+                kind=_SIGNING_OBJECT[kind],
+                number=number,
+                title=short(route.get("title"), 80) or None,
+                path=f"/dashboard/queue?signing={route_id}",
             ),
-        ),
-        parse_dt(entry.get("requested_at")),
-    )
+        )
+        out.append(Row(_acting_item(item, owner), created))
+    return out
 
 
 _MEMO_TITLES = {"approve_memo": "Согласовать", "pay_memo": "Принять к оплате"}
@@ -511,12 +609,15 @@ _MEMO_KIND_BY_PERMISSION: dict[str, QueueItemKind] = {
 }
 
 
-def _memo_kind(step: dict[str, Any], view: View) -> QueueItemKind:
+def _memo_kind(step: dict[str, Any], view: View, *, acting: bool = False) -> QueueItemKind:
     """Вид строки — по праву, которое держит текущий шаг маршрута (EDS): директор, у которого есть и
     право бухгалтера, на шаге бухгалтера видит «Принять к оплате», а не «Согласовать». Шаг
     конкретного сотрудника (права нет) или вид, не положенный роли, — тот, что даёт раздел роли."""
     permission = _text(_dict(step.get("assignee")).get("permission"))
     preferred = _MEMO_KIND_BY_PERMISSION.get(permission or "")
+    if acting:
+        # шаг замещаемого: вид — по праву шага, а не по ролям заместителя
+        return preferred or "approve_memo"
     for kind in (preferred, "approve_memo", "pay_memo"):
         if kind is not None and view.wants(kind):
             return kind
@@ -533,10 +634,13 @@ def memo_rows(snap: Snapshot, now: datetime, view: View) -> list[Row]:
         route_id = route.get("id")
         if not isinstance(number, str) or not number or not isinstance(route_id, str):
             continue
+        owner = _acting(route)
         created = parse_dt(route.get("created_at"))
         step = _dict(route.get("current_step"))
-        kind = _memo_kind(step, view)
-        role_id = _role_id(view, kind)
+        kind = _memo_kind(step, view, acting=owner is not None)
+        if not _mine_or_acting(view, kind, owner):
+            continue
+        role_id = _role_id_for(view, kind, owner)
         subject = short(route.get("title"), 90)
         item = QueueItem(
             id=f"memo:{route_id}",
@@ -550,7 +654,7 @@ def memo_rows(snap: Snapshot, now: datetime, view: View) -> list[Row]:
             due_label="memo",
             object=memo_ref(number, subject or None),
         )
-        out.append(Row(item, created))
+        out.append(Row(_acting_item(item, owner), created))
     return out
 
 
@@ -760,15 +864,13 @@ def build_queue(feed: Feed, view: View, snap: Snapshot) -> list[QueueItem]:
         taken = {int(r.item.id.split(":")[1]) for r in own if r.item.id.startswith("lead:")}
         for covered in snap.covered:
             rows_ += covered_rows(covered, now, view, taken)
-    if wants_approvals(view):
-        rows_ += quote_rows(snap, now, view)
+    rows_ += quote_rows(snap, now, view)
     rows_ += rework_rows(snap, now, view)
     if wants_letters(view):
         rows_ += letter_rows(snap, now, view)
-    if wants_letter_tasks(view):
-        rows_ += letter_task_rows(snap, now, view)
-    if wants_memos(view):
-        rows_ += memo_rows(snap, now, view)
+    rows_ += letter_task_rows(snap, now, view)
+    rows_ += signing_rows(snap, now, view)
+    rows_ += memo_rows(snap, now, view)
     if wants_tickets(view):
         rows_ += ticket_rows(snap, now, view)
     if wants_mail(view) or wants_mail_mine(view):
@@ -790,6 +892,11 @@ def build_queue(feed: Feed, view: View, snap: Snapshot) -> list[QueueItem]:
         rows_.append(Row(item, since))
     rows_.sort(key=_sort_key)
     return [row.item for row in rows_]
+
+
+def _own_count(routes: list[dict[str, Any]]) -> int:
+    """Счётчики — только своя работа (W15-H6): шаги замещаемого (`acting_for`) в число не входят."""
+    return sum(1 for route in routes if _acting(route) is None)
 
 
 def projects_in_work(snap: Snapshot) -> int:
@@ -856,7 +963,7 @@ def build_cards(view: View, snap: Snapshot, queue: list[QueueItem]) -> list[Queu
         cards["quotes_to_approve"] = QueueCard(
             key="quotes_to_approve",
             label="КП на одобрение",
-            count=sum(1 for i in queue if i.kind == "approve_quote"),
+            count=sum(1 for i in queue if i.kind == "approve_quote" and i.on_behalf_of is None),
             hint="Документы · Исходящие" + (" · не меньше" if snap.quotes_more else ""),
             path="/eds/drafts",
         )
@@ -864,7 +971,7 @@ def build_cards(view: View, snap: Snapshot, queue: list[QueueItem]) -> list[Queu
         cards["memos_to_approve"] = QueueCard(
             key="memos_to_approve",
             label="Служебные записки",
-            count=len(snap.memos),
+            count=_own_count(snap.memos),
             hint="Документы · Внутренние" + (" · не меньше" if snap.memos_more else ""),
             path="/eds/approvals",
         )
@@ -915,10 +1022,10 @@ def build_counters(view: View, snap: Snapshot, queue: list[QueueItem]) -> list[M
         total = len(snap.letters)
         items.append(MenuCounter(module="eds", section="inbox", count=total, attention=total > 0))
     if wants_approvals(view) and snap.quotes is not None:
-        total = sum(1 for i in queue if i.kind == "approve_quote")
+        total = sum(1 for i in queue if i.kind == "approve_quote" and i.on_behalf_of is None)
         items.append(MenuCounter(module="eds", section="drafts", count=total, attention=total > 0))
     if wants_memos(view) and snap.memos is not None:
-        total = len(snap.memos)
+        total = _own_count(snap.memos)
         items.append(
             MenuCounter(module="eds", section="approvals", count=total, attention=total > 0)
         )

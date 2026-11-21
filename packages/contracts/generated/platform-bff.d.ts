@@ -937,6 +937,15 @@ export interface paths {
      *     `order_shortage` — «Заказать недостающее по ПР-…» (по проекту не заказано всё нужное), строка открывает новый заказ
      *     `/erp/stock/new?mode=shortage&request=ПР`; `ship_project` — «Отгрузить товар по ПР-…» (товар в резерве проекта),
      *     строка открывает отгрузки `/erp/stock?view=shipments&request=ПР`. Системному директору эти виды не приходят.
+     *
+     *     Подпись (СЦ-9): `sign_document` — «Подписать исходящее: ответ на ВХ-…» / «Подписать исходящее: тема» (EDS
+     *     `GET /letter-tasks`, `signatures`; строка открывает карточку письма `/eds/documents?scope=all&doc=…&panel=open`) и
+     *     «Подписать договор CT-…», счёт, акт, КП (EDS `GET /approvals?mine&template=signing&status=open`, только шаг подписи,
+     *     виза — нет; строка ведёт к блоку «Подписи» под очередью). Кому подписывать, решает EDS; роль строку не режет.
+     *
+     *     Замещение (СЦ-9): шаги замещаемого, которые EDS отдал заместителю (`acting_for`: согласование служебки и КП, поручение,
+     *     перенос срока, подпись по полномочию), и лиды замещаемого приходят с `on_behalf_of`; решает и действует EDS (право
+     *     шага замещаемого, подпись и оплата не переходят). В карточках и бейджах меню такие строки не считаются.
      */
     get: operations["getQueue"];
     put?: never;
@@ -10061,7 +10070,8 @@ export interface components {
       | "acquaint"
       | "inbound_mail"
       | "inbound_mail_mine"
-      | "register_reply";
+      | "register_reply"
+      | "sign_document";
     /**
      * @description Бейдж срока — red «просрочено», red «срок сегодня», gold «завтра», default — дата, purple «служебка»
      * @enum {string}
@@ -10159,7 +10169,7 @@ export interface components {
       /** Format: date */
       date_to: string;
     };
-    /** @description Чья это очередь, если строку видит заместитель */
+    /** @description Чья это работа, если строку видит заместитель («за {имя}») */
     QueueOwner: {
       id: string;
       name: string;
@@ -11233,6 +11243,8 @@ export interface components {
       status: components["schemas"]["ApprovalRouteStatus"];
       stage: components["schemas"]["StepCode"];
       can_decide: boolean;
+      /** @description СЦ-9: шаг замещаемого решает действующий заместитель — «Согласовать за {имя}»; `null` или нет поля — свой шаг (из маршрута EDS; подпись и оплата не переходят) */
+      acting_for?: components["schemas"]["EdsPerson"] | null;
       /** @description Что можно сейчас; `approve` нет, пока красна блокирующая строка чек-листа (решает EDS) */
       allowed_decisions: components["schemas"]["ApprovalDecision"][];
       /** @description КП одобрено с опозданием (C1-G-1) */
@@ -11702,6 +11714,8 @@ export interface components {
       accountant_step: boolean;
       decisions: components["schemas"]["EdsDecision"][];
       can_decide: boolean;
+      /** @description СЦ-9: шаг замещаемого решает действующий заместитель — «Согласовать за {имя}»; `null` или нет поля — свой шаг (из маршрута EDS; подпись и оплата не переходят) */
+      acting_for?: components["schemas"]["EdsPerson"] | null;
       allowed_decisions: components["schemas"]["ApprovalDecision"][];
       /** Format: date-time */
       created_at: string;
@@ -14541,6 +14555,8 @@ export interface components {
       author: "lead" | "bot" | "manager" | "system";
       /** @description Имя сотрудника у ответа менеджера; у сообщения из кабинета — имя контакта клиента */
       author_name: string | null;
+      /** @description СЦ-9: ответ дал заместитель — имя владельца лида, за которого он ответил («<author_name> за <имя>»); `null` — ответил сам менеджер или имя неизвестно */
+      on_behalf_of_name?: string | null;
       text: string;
       /** @description Канал сообщения — `telegram` или `cabinet` (CHAT-1) */
       channel: components["schemas"]["MessageChannel"];

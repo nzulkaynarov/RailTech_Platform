@@ -46,6 +46,7 @@ const CATEGORY: Record<QueueItemKind, Category> = {
   attach_scan: "documents",
   issue_act: "documents",
   register_reply: "documents",
+  sign_document: "documents",
   confirm_payment: "invoices",
   issue_invoice: "invoices",
   pay_memo: "invoices",

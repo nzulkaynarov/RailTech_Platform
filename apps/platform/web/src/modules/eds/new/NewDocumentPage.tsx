@@ -140,8 +140,8 @@ type Action = "draft" | "submit" | "handover";
 /**
  * Форма документа (SPEC-v3 §3.2, §7.3): тип, тема, кому, текст, сумма и «нужно до», вложения, связь с проектом. Главная
  * кнопка отправляет на согласование, вторичная сохраняет черновик. Письмо (P4) — на бланке компании: тело блоками, «кому»,
- * почта адресата, подписант и настоящий PDF рядом; держатель «регистрировать входящие» регистрирует ИСХ и отправляет
- * адресату, остальные передают черновик на регистрацию делопроизводителю (B-P8B-4). Ошибка сервера — «Не отправлено:
+ * почта адресата, подписант и настоящий PDF рядом; последний шаг у всех — «Передать на подпись» (СЦ-9: номер письмо
+ * получает только при подписании). Ошибка сервера — «Не отправлено:
  * причина», введённое остаётся; если документ уже создан, а отправка отклонена, следующая попытка идёт по тому же черновику.
  */
 function DocumentForm({
@@ -164,9 +164,6 @@ function DocumentForm({
   const { mobile } = useViewport();
   const refresh = useRefreshDocuments();
   const refreshLetters = useRefreshLetters();
-  // P8: исходящее письмо регистрирует тот, кто регистрирует входящие (`eds.inbox.register`); черновик письма (P4) готовит
-  // любой и передаёт делопроизводителю.
-  const canRegister = canEdit(me, "eds.inbox.register");
   const canLink = canSee(me, { anyOf: ["crm.clients", "eds.projects"] });
   const canCompany = canEdit(me, "company.settings");
   const [values, setValues] = useState<FormValues>(initial);
@@ -200,11 +197,11 @@ function DocumentForm({
   // Редактор неуправляемый: вставка помощника меняет revision — редактор берёт тело целиком
   const [bodyRevision, setBodyRevision] = useState(0);
   const lang = letterLang ?? bodyLang(i18n.language);
-  const handover = letter && !canRegister;
-  // Условие до действия (`ui-standard.md` §14 п. 2): почта не подключена — форма говорит это сразу, а кнопка не обещает
-  // отправку, которой не будет.
+  // СЦ-9: письмо на бланке не регистрируется без подписи — последний шаг формы «Передать на подпись»; номер, подпись и
+  // отправка адресату — в карточке письма. Автор, который сам подписывает (`Document.can_sign`), подписывает там же.
+  const handover = letter;
+  // Условие до действия (`ui-standard.md` §14 п. 2): почта не подключена — форма говорит это сразу.
   const mailConnected = letterhead.data?.mail_connected !== false;
-  const sendToRecipient = letter && values.recipientEmail.trim() !== "" && mailConnected;
 
   // Один валидатор на всё: галочка шага, «Осталось» и отправка. Ошибка у поля видна, когда шаг уже покидали.
   const allErrors = validate(values, today);
@@ -303,10 +300,10 @@ function DocumentForm({
     if (!check(action === "draft")) return;
     const submit = action !== "draft";
     try {
-      let doc = await persist(
-        action === "submit" ? { submit: true, send: sendToRecipient } : { submit: false },
-      );
-      if (action === "handover") {
+      let doc = await persist(action === "submit" ? { submit: true } : { submit: false });
+      // Письмо, которое автор подписывает сам, не передаётся себе: черновик сохранён, «Подписать» — в карточке
+      const signHere = action === "handover" && doc.can_sign;
+      if (action === "handover" && !signHere) {
         setHandingOver(true);
         try {
           doc = await requestEdsDocumentRegistration(doc.id);
@@ -336,17 +333,8 @@ function DocumentForm({
         : action === "draft"
           ? t("documents:form.toast.draft")
           : action === "handover"
-            ? t("documents:form.toast.handover")
-            : !letter
-              ? t("documents:form.toast.sent", { number: doc.number ?? "" })
-              : t(
-                  sendToRecipient
-                    ? "documents:form.toast.registeredSent"
-                    : "documents:form.toast.registered",
-                  {
-                    number: doc.number ?? "",
-                  },
-                );
+            ? t(signHere ? "documents:form.toast.signReady" : "documents:form.toast.handover")
+            : t("documents:form.toast.sent", { number: doc.number ?? "" });
       void message.success(toast);
       void navigate({
         pathname: "/eds/documents",
@@ -403,13 +391,7 @@ function DocumentForm({
     ? t(returned ? "documents:form.subtitleReturned" : "documents:form.subtitleContinue", {
         number: draft.number ?? "",
       })
-    : t(
-        letter
-          ? handover
-            ? "documents:form.subtitleLetterHandover"
-            : "documents:form.subtitleLetter"
-          : "documents:form.subtitle",
-      );
+    : t(letter ? "documents:form.subtitleLetterHandover" : "documents:form.subtitle");
   const title = t(letter ? "documents:form.title.letter" : "documents:form.title.internal");
   useDocumentTitle(title);
   const head = letterhead.data;
@@ -422,9 +404,7 @@ function DocumentForm({
       : t("documents:form.signatory.hintNone");
   const primaryLabel = !letter
     ? t("documents:form.submit.approval")
-    : handover
-      ? t("documents:form.submit.handover")
-      : t(sendToRecipient ? "documents:form.submit.letterSend" : "documents:form.submit.letter");
+    : t(draft?.can_sign ? "documents:form.submit.sign" : "documents:form.submit.handover");
 
   const textField = letter ? (
     <Field
@@ -547,7 +527,7 @@ function DocumentForm({
       footer: draftButton,
       content: (
         <div className="pf-fp-form">
-          {letter && handover ? (
+          {letter ? (
             <p className="pf-hint" style={{ margin: 0 }}>
               {t("documents:form.type.letterHandover")}
             </p>

@@ -1,9 +1,15 @@
-import { Button, Card, Skeleton } from "antd";
+import { Alert, Button, Card, Segmented, Skeleton } from "antd";
+import { useState } from "react";
+import { useSearchParams } from "react-router";
 import { useTranslation } from "react-i18next";
 
 import { canSee } from "../../app/access";
 import { useAuth } from "../../app/auth/useAuth";
-import { useGetQueue, useGetQueueCards } from "../../shared/api/generated/platform-bff";
+import {
+  useGetProfile,
+  useGetQueue,
+  useGetQueueCards,
+} from "../../shared/api/generated/platform-bff";
 import type { Sources } from "../../shared/api/generated/model";
 import { usePollQuery } from "../../shared/api/polling";
 import { todayLabel } from "../../shared/lib/format";
@@ -60,6 +66,12 @@ export function QueuePage() {
   const cards = useGetQueueCards(params, { query: poll });
   // Сколько счётчиков было в прошлый раз: до ответа — столько же карточек-скелетонов той же высоты (UX-1c, S10).
   const cardsCount = useCardsCount(me.id, cards.data?.cards.length);
+  // Замещение (СЦ-9): «Вы замещаете {имя} до {дата}» и фильтр «За {имя}»; профиль не открылся — без плашки, очередь та же
+  const profile = useGetProfile({ query: { staleTime: 60_000 } });
+  const covering = profile.data?.covering ?? [];
+  const [forId, setForId] = useState("all");
+  const [search] = useSearchParams();
+  const focusSigning = search.get("signing");
   const title = t("modules:dashboard.sections.queue");
   useDocumentTitle(title);
 
@@ -73,7 +85,17 @@ export function QueuePage() {
     .filter(Boolean)
     .join(" · ");
 
-  const rows: RowItem[] = (queue.data?.items ?? []).map((item) => {
+  const allItems = queue.data?.items ?? [];
+  const behalf = [
+    ...new Map(
+      allItems.flatMap((item) =>
+        item.on_behalf_of ? [[item.on_behalf_of.id, item.on_behalf_of]] : [],
+      ),
+    ).values(),
+  ];
+  const shown =
+    forId === "all" ? allItems : allItems.filter((item) => item.on_behalf_of?.id === forId);
+  const rows: RowItem[] = shown.map((item) => {
     // Письмо, КП, служебка и диалог клиента открываются в своём экране на нужной вкладке (D1-6), без «моста» в старую систему.
     const to = objectLink(item.object);
     return {
@@ -175,6 +197,17 @@ export function QueuePage() {
     <div className="pf-queue-page">
       <PageHeader title={title} subtitle={subtitle} />
       <SourceBanner sources={sources} onRetry={retry} messages={partialMessages} />
+      {covering.map((person) => (
+        <Alert
+          key={person.user_id}
+          type="info"
+          showIcon
+          message={t("modules:dashboard.queue.covering.banner", {
+            name: person.name,
+            date: format.date(person.date_to, "short"),
+          })}
+        />
+      ))}
       {cards.isPending && cardsCount > 0 ? (
         <CounterGridSkeleton count={cardsCount} />
       ) : cards.data && cards.data.cards.length > 0 ? (
@@ -192,10 +225,26 @@ export function QueuePage() {
           </CounterGrid>
         </section>
       ) : null}
+      {behalf.length > 0 ? (
+        <Segmented
+          aria-label={t("modules:dashboard.queue.covering.filterLabel")}
+          value={behalf.some((person) => person.id === forId) ? forId : "all"}
+          options={[
+            { value: "all", label: t("modules:dashboard.queue.covering.filterAll") },
+            ...behalf.map((person) => ({
+              value: person.id,
+              label: t("modules:dashboard.queue.covering.filterFor", { name: person.name }),
+            })),
+          ]}
+          onChange={(value) => {
+            setForId(value);
+          }}
+        />
+      ) : null}
       {list}
       {/* Подписи ERP ждут того, кто согласует служебки (SIGN-4); под списком и после него — их загрузка ничего не сдвигает */}
       {!queue.isPending && canSee(me, { anyOf: ["eds.memo.approve", "eds.memo.create"] }) ? (
-        <SigningList />
+        <SigningList focusId={focusSigning} />
       ) : null}
     </div>
   );

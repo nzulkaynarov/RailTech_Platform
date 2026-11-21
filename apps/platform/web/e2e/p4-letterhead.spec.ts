@@ -13,9 +13,9 @@ import {
 
 // P4 «Письмо на бланке» на MSW (SPEC-v3 §3.2a п. 3; план 2026-11-01 §6 п. 6): требование ГНК → поручение «Подготовить ответ»
 // исполнителю без права регистрировать → письмо на бланке блоками (абзац, список, таблица) → настоящий PDF (демо — рендер
-// `rt-docs`) → «Передать на регистрацию» → уполномоченный «Подписать» → номер ИСХ, журнал отправки,
-// поручение закрыто, письмо ВХ «Исполнено». Отдельно — директор с правом регистрировать: «Зарегистрировать и отправить» прямо
-// из формы и отказ почты с причиной словами. Снимки 1440 и 390 с axe — E2E_SCREENSHOT_DIR (docs/screens/p4).
+// `rt-docs`) → «Передать на подпись» → уполномоченный «Подписать» → номер ИСХ, журнал отправки,
+// поручение закрыто, письмо ВХ «Исполнено». Регистрации без подписи нет (СЦ-9): у любого автора, в том числе директора,
+// последний шаг формы — «Передать на подпись». Отдельно — отказ почты при подписании с причиной словами. Снимки 1440 и 390 с axe — E2E_SCREENSHOT_DIR (docs/screens/p4).
 const WIDE = 1440;
 const NARROW = 390;
 
@@ -187,7 +187,7 @@ test.describe("P4: письмо на бланке", () => {
     await page.getByRole("button", { name: "Утвердить проект" }).click();
     await expect(page.getByText("Резолюция наложена: поручение ушло исполнителям")).toBeVisible();
 
-    // 3. Исполнитель без права регистрировать: «Подготовить ответ» → письмо на бланке → PDF → «Передать на регистрацию».
+    // 3. Исполнитель без права регистрировать: «Подготовить ответ» → письмо на бланке → PDF → «Передать на подпись».
     await switchTo(page, "universal@demo.example");
     await queueRow(page, "Подготовить ответ на письмо IN-109/26")
       .getByRole("link", { name: /^Открыть:/ })
@@ -217,18 +217,18 @@ test.describe("P4: письмо на бланке", () => {
     await both(page, "pdf-preview", pdfReady);
 
     await openStep(page, "Проверка и отправка");
-    await page.getByRole("button", { name: "Передать на регистрацию" }).click();
-    await expect(page.getByText("Передано на регистрацию делопроизводителю.")).toBeVisible();
-    await expect(side(page).getByText(/Передано на регистрацию: Демо Широков/)).toBeVisible();
+    await page.getByRole("button", { name: "Передать на подпись" }).click();
+    await expect(page.getByText("Передано на подпись.")).toBeVisible();
+    await expect(side(page).getByText(/Передано на подпись: Демо Широков/)).toBeVisible();
 
-    // 4. Делопроизводитель: черновик в «Все документы» → «Зарегистрировать и отправить».
-    await switchTo(page, "registrar@demo.example");
+    // 4. Подписант (по реестру — директор): черновик в «Все документы» → «Подписать».
+    await switchTo(page, "director@demo.example");
     await spaGoto(page, "/eds/documents?scope=all");
     await page
       .getByRole("link", { name: "Открыть документ: Пояснения по требованию № 14-02/3381" })
       .click();
     const card = side(page);
-    await expect(card.getByText(/Передано на регистрацию: Демо Широков/)).toBeVisible();
+    await expect(card.getByText(/Передано на подпись: Демо Широков/)).toBeVisible();
     await both(page, "handed-over");
     // Карточка письма: тело — теми же блоками, что в редакторе (таблица таблицей), без неприменимой «Суммы».
     await expectLetterBody(card);
@@ -261,11 +261,12 @@ test.describe("P4: письмо на бланке", () => {
     ).toBeVisible();
   });
 
-  test("директор регистрирует и отправляет из формы; почта не настроена — причина словами в журнале отправки", async ({
+  test("автор любой роли передаёт письмо на подпись: «Зарегистрировать» нет; почта не настроена — причина словами в журнале отправки", async ({
     page,
   }) => {
+    test.setTimeout(240_000);
     await at(page, WIDE);
-    await loginAndWait(page, "director@demo.example");
+    await loginAndWait(page, "registrar@demo.example");
     await spaGoto(page, "/eds/new?type=letter");
     await (await reveal(page.getByLabel("Тема", { exact: true }))).fill("О сроках поставки");
     await reveal(page.getByLabel("Адресат (организация)"));
@@ -276,17 +277,22 @@ test.describe("P4: письмо на бланке", () => {
       await reveal(page.getByLabel("Текст", { exact: true }))
     ).fill("Сообщаем о переносе отгрузки на неделю.");
     await openStep(page, "Проверка и отправка");
-    await page.getByRole("button", { name: "Зарегистрировать и отправить" }).click();
-    await expect(
-      page.getByText(/Письмо зарегистрировано: OUT-\d{3}\/26\. Отправляем адресату\./),
-    ).toBeVisible();
+    // и у делопроизводителя: регистрации без подписи нет
+    await expect(page.getByRole("button", { name: /Зарегистрировать/ })).toHaveCount(0);
+    await page.getByRole("button", { name: "Передать на подпись" }).click();
+    await expect(page.getByText("Передано на подпись.")).toBeVisible();
 
+    await switchTo(page, "director@demo.example");
+    await queueRow(page, "Подписать исходящее: О сроках поставки")
+      .getByRole("link", { name: /^Открыть:/ })
+      .click();
+    const card = side(page);
+    await card.getByRole("button", { name: "Подписать", exact: true }).click();
+    await page.getByRole("button", { name: "Подписать письмо" }).click();
     await expect(
-      side(page).getByText("Не отправлено: Почта не настроена — Настройки · Подключения · Почта"),
+      card.getByText("Не отправлено: Почта не настроена — Настройки · Подключения · Почта"),
     ).toBeVisible({ timeout: 30_000 });
-    await expect(
-      side(page).getByRole("button", { name: "Отправить адресату ещё раз" }),
-    ).toBeVisible();
+    await expect(card.getByRole("button", { name: "Отправить адресату ещё раз" })).toBeVisible();
     await both(page, "mail-failed");
   });
 });

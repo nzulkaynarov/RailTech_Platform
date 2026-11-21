@@ -336,7 +336,7 @@ describe("Рабочий экран поручения (P8b, SPEC-v3 §3.2a п. 
       expect(findLetter("ВХ-108/26")?.instructions?.[0]?.status).toBe("in_work");
     });
 
-    it("«Задачи» делопроизводителя: «Зарегистрировать исходящее» — пока ответ передан и не зарегистрирован", () => {
+    it("«Задачи» подписанта: «Подписать исходящее» — пока ответ передан и не подписан; регистрации без подписи нет", () => {
       inExecution({ instructions: [replyInstruction()] });
       seedReply({
         letter: {
@@ -357,15 +357,19 @@ describe("Рабочий экран поручения (P8b, SPEC-v3 §3.2a п. 
         const roles = session ? sessionRoles(session) : undefined;
         return letterTaskQueueItems(roles?.view ?? []);
       };
-      const [row] = rows("registrar@demo.example").filter((r) => r.kind === "register_reply");
-      expect(row?.title).toBe("Зарегистрировать исходящее: ответ на ВХ-108/26");
+      const signs = (email: string) => rows(email).filter((r) => r.kind === "sign_document");
+      const [row] = signs("director@demo.example");
+      expect(row?.title).toBe("Подписать исходящее: ответ на ВХ-108/26");
       expect(row?.object.path).toBe(`/eds/documents?scope=all&doc=${documentId(950)}&panel=open`);
-      expect(rows("universal@demo.example").filter((r) => r.kind === "register_reply")).toEqual([]);
+      // автор подписанту не поручается сам себе, делопроизводитель — не подписант; «Зарегистрировать» не бывает
+      expect(signs("universal@demo.example")).toEqual([]);
+      expect(signs("registrar@demo.example")).toEqual([]);
+      expect(rows("director@demo.example").filter((r) => r.kind === "register_reply")).toEqual([]);
       const state = readEds();
       const doc = state.documents.find((d) => d.id === documentId(950));
       if (doc) doc.status = "sent";
       writeEds(state);
-      expect(rows("registrar@demo.example").filter((r) => r.kind === "register_reply")).toEqual([]);
+      expect(signs("director@demo.example")).toEqual([]);
     });
   });
 });
