@@ -70,7 +70,7 @@ test.describe("Мелкие дефекты гейта волны 15", () => {
 
     await login(page, "admin@demo.example");
     await expect(page).toHaveURL(/\/dashboard\/queue$/);
-    await page.goto("/admin/tickets/ОБР-0001?panel=open&tab=card");
+    await page.goto("/admin/tickets/TK-0001?panel=open&tab=card");
     await page.getByRole("textbox", { name: "Ваш ответ" }).fill("Доступ выдан");
     await page.getByRole("button", { name: "Отправить ответ" }).click();
     await expect(page.getByText("Ответ отправлен")).toBeVisible();

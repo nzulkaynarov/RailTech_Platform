@@ -79,9 +79,10 @@ export function resetTicketsMock(): void {
   }
 }
 
-export const numberOf = (seq: number) => `ОБР-${String(seq).padStart(4, "0")}`;
+export const numberOf = (seq: number) => `TK-${String(seq).padStart(4, "0")}`;
+// Как CRM: смысл имеет только id после «-», обозначение (и прежнее «ОБР») не читается.
 export const seqOf = (number: string) => {
-  const hit = /^ОБР-(\d{1,9})$/.exec(number);
+  const hit = /^[^\s-]{1,16}-(\d{1,9})$/.exec(number);
   return hit ? Number(hit[1]) : undefined;
 };
 

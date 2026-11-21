@@ -144,7 +144,7 @@ describe("Под статьёй: «Помогла?» и «Здесь устар�
     });
     fireEvent.click(within(dialog).getByRole("button", { name: "Отправить" }));
 
-    expect(await screen.findByText(/Обращение ОБР-\d+ отправлено/)).toBeInTheDocument();
+    expect(await screen.findByText(/Обращение TK-\d+ отправлено/)).toBeInTheDocument();
     const created = readTickets().tickets.at(-1);
     expect(created?.subject).toBe("other");
     expect(created?.body).toContain("/help/articles/queue");

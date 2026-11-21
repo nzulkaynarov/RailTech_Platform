@@ -172,7 +172,10 @@ RESOURCE_BACKENDS: Final[dict[str, tuple[str, ...]]] = {
         "crm",
         "erp",
     ),
-    "company.settings": ("erp",),
+    "company.settings": (
+        "crm",
+        "erp",
+    ),
 }
 
 # Меню: модуль -> пункт -> разделы; пункт виден, если виден любой из них.

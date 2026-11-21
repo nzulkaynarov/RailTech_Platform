@@ -15,7 +15,7 @@ import respx
 
 from tests.backends import Backends
 from tests.conftest import ContractChecker, Web
-from tests.consts import EDS_URL, ERP_URL
+from tests.consts import CRM_URL, EDS_URL, ERP_URL
 from tests.roles import custom
 
 API = f"{ERP_URL}/api/v1"
@@ -68,6 +68,17 @@ def eds(be: Backends) -> respx.Route:
     )
     return be.router.get(EDS_LABELS_URL).mock(
         return_value=httpx.Response(200, json=eds_labels_json())
+    )
+
+
+CRM_LABEL_URL = f"{CRM_URL}/api/v1/staff-tickets/label"
+
+
+@pytest.fixture(autouse=True)
+def crm_label(be: Backends) -> respx.Route:
+    """CRM отвечает обозначением номера обращений (СЦ-5)."""
+    return be.router.get(CRM_LABEL_URL).mock(
+        return_value=httpx.Response(200, json={"label": "TK", "example": "TK-0001"})
     )
 
 
@@ -749,6 +760,128 @@ async def test_numbering_get_maps_document_kinds(
         "memo": "MEMO",
         "application": "APP",
         "report": "REP",
+        # обращения — из CRM (СЦ-5)
+        "ticket": "TK",
+    }
+
+
+async def test_numbering_get_works_without_the_ticket_label(
+    web: Web, erp: respx.MockRouter, crm_label: respx.Route
+) -> None:
+    """Нет права CRM на обращения или CRM недоступна — остальной редактор открывается."""
+    await web.login(["DIRECTOR"])
+    erp.get(f"{API}/crm/numbering-scheme/").mock(
+        return_value=httpx.Response(200, json=scheme_json())
+    )
+    crm_label.mock(return_value=httpx.Response(403, json={"code": "forbidden", "message": "no"}))
+
+    response = await web.client.get("/api/v1/admin/company/numbering")
+
+    assert response.status_code == 200
+    assert "ticket" not in response.json()["type_labels"]
+    assert response.json()["type_labels"]["quote"] == "КП"
+
+
+async def test_numbering_patch_sends_the_ticket_label_to_crm_not_erp(
+    web: Web, erp: respx.MockRouter, be: Backends, check: ContractChecker
+) -> None:
+    await web.login(["DIRECTOR"])
+    put = be.router.put(CRM_LABEL_URL).mock(
+        return_value=httpx.Response(200, json={"label": "SR", "example": "SR-0001"})
+    )
+    scheme_patch = erp.patch(f"{API}/crm/numbering-scheme/").mock(return_value=httpx.Response(200))
+    erp.get(f"{API}/crm/numbering-scheme/").mock(
+        return_value=httpx.Response(200, json=scheme_json())
+    )
+
+    response = await web.send(
+        "PATCH", "/api/v1/admin/company/numbering", json={"type_labels": {"ticket": "sr"}}
+    )
+
+    assert response.status_code == 200, response.text
+    check(response, "/admin/company/numbering", "patch")
+    assert sent(put) == {"label": "sr"}
+    assert scheme_patch.call_count == 0
+    assert response.json()["type_labels"]["ticket"] == "SR"
+
+
+async def test_numbering_patch_saves_erp_labels_when_the_director_may_not_write_tickets(
+    web: Web, erp: respx.MockRouter, be: Backends
+) -> None:
+    """Директор без права CRM на запись обозначения: `ticket` неизменный, ERP сохраняется."""
+    await web.login(["DIRECTOR"])
+    put = be.router.put(CRM_LABEL_URL).mock(
+        return_value=httpx.Response(403, json={"code": "forbidden", "message": "no"})
+    )
+    scheme_patch = erp.patch(f"{API}/crm/numbering-scheme/").mock(
+        return_value=httpx.Response(200, json=scheme_json())
+    )
+    erp.get(f"{API}/crm/numbering-scheme/").mock(
+        return_value=httpx.Response(200, json=scheme_json())
+    )
+
+    response = await web.send(
+        "PATCH",
+        "/api/v1/admin/company/numbering",
+        json={"type_labels": {"quote": "KP", "ticket": "TK"}},
+    )
+
+    assert response.status_code == 200, response.text
+    assert put.call_count == 0
+    assert scheme_patch.call_count == 1
+
+
+@pytest.mark.parametrize("ticket", ["", "  "])
+async def test_numbering_patch_skips_an_empty_ticket_label(
+    web: Web, erp: respx.MockRouter, be: Backends, ticket: str
+) -> None:
+    """Чтение обозначения не удалось — форма шлёт пустое; CRM не вызывается, ERP сохраняется."""
+    await web.login(["DIRECTOR"])
+    put = be.router.put(CRM_LABEL_URL).mock(
+        return_value=httpx.Response(422, json={"code": "validation_failed", "message": "x"})
+    )
+    scheme_patch = erp.patch(f"{API}/crm/numbering-scheme/").mock(
+        return_value=httpx.Response(200, json=scheme_json())
+    )
+    erp.get(f"{API}/crm/numbering-scheme/").mock(
+        return_value=httpx.Response(200, json=scheme_json())
+    )
+
+    response = await web.send(
+        "PATCH",
+        "/api/v1/admin/company/numbering",
+        json={"type_labels": {"quote": "KP", "ticket": ticket}},
+    )
+
+    assert response.status_code == 200, response.text
+    assert put.call_count == 0
+    assert scheme_patch.call_count == 1
+
+
+async def test_numbering_patch_rejects_a_non_latin_ticket_label(
+    web: Web, erp: respx.MockRouter, be: Backends, check: ContractChecker
+) -> None:
+    await web.login(["DIRECTOR"])
+    be.router.put(CRM_LABEL_URL).mock(
+        return_value=httpx.Response(
+            422,
+            json={
+                "code": "validation_failed",
+                "message": "label: ticket_label_invalid",
+                "details": {"reason": "ticket_label_invalid", "field": "label"},
+            },
+        )
+    )
+
+    response = await web.send(
+        "PATCH", "/api/v1/admin/company/numbering", json={"type_labels": {"ticket": "ОБР"}}
+    )
+
+    assert response.status_code == 422
+    check(response, "/admin/company/numbering", "patch")
+    assert response.json()["details"] == {
+        "fields": ["type_labels"],
+        "reason": "ticket_label_invalid",
     }
 
 
@@ -870,6 +1003,30 @@ async def test_numbering_preview_maps_kinds_both_ways(
         {"kind": "contract", "label": "ДОГ", "number": "DEMO-ДОГ-2026-00001"},
     ]
     assert sent(route)["type_labels"] == {"CT": "ДОГ"}
+    assert response.json()["items"][-1] == {"kind": "ticket", "label": "TK", "number": "TK-0001"}
+
+
+async def test_numbering_preview_shows_the_draft_ticket_label(
+    web: Web, erp: respx.MockRouter
+) -> None:
+    await web.login(["DIRECTOR"])
+    erp.post(f"{API}/crm/numbering-scheme/preview/").mock(
+        return_value=httpx.Response(200, json={"results": []})
+    )
+
+    response = await web.send(
+        "POST",
+        "/api/v1/admin/company/numbering/preview",
+        json={
+            "pattern": "{type}-{seq}",
+            "padding": 4,
+            "reset_period": "never",
+            "start_value": 0,
+            "type_labels": {"ticket": "sr"},
+        },
+    )
+
+    assert response.json()["items"][-1] == {"kind": "ticket", "label": "SR", "number": "SR-0001"}
 
 
 # --- условия КП: маржа — группа cost_margin ----------------------------------------------------

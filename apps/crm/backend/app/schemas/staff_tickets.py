@@ -89,3 +89,16 @@ class StaffNotificationOut(BaseModel):
 class StaffNotificationsOut(BaseModel):
     items: list[StaffNotificationOut]
     unread_count: int
+
+
+class TicketLabelIn(BaseModel):
+    """Обозначение обращения в номере; латиницу и длину проверяет домен (`ticket_label_invalid`)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    label: str = Field(max_length=64)
+
+
+class TicketLabelOut(BaseModel):
+    label: str
+    example: str

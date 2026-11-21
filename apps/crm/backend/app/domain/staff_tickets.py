@@ -23,9 +23,13 @@ ROLE_MAX_LEN: Final = 120
 # Не больше пяти обращений в час от одного сотрудника: защита администратора от потока.
 MAX_PER_HOUR: Final = 5
 WINDOW: Final = timedelta(hours=1)
-NUMBER_PREFIX: Final = "ОБР"
-
-_NUMBER: Final = re.compile(rf"^{NUMBER_PREFIX}-(\d{{1,9}})$")
+# Обозначение обращения в номере по умолчанию; своё задаёт администратор в «Нумерации» (строка
+# `settings.ticket_label`). Только латиница и цифры: номер одинаков на всех языках (СЦ-5).
+DEFAULT_LABEL: Final = "TK"
+LABEL_RE: Final = re.compile(r"^[A-Z0-9]{1,16}$")
+# Номер обращения = обозначение + `-` + id по построению: из строки берётся только id после
+# последнего дефиса, а обозначение (текущее, прежнее или ОБР из старых ссылок) не читается.
+_NUMBER: Final = re.compile(r"^[^\s-]{1,16}-(\d{1,9})$")
 # Переходы статуса: «Решено» можно вернуть «В работу» (проблема вернулась).
 _MOVES: Final[dict[str, frozenset[str]]] = {
     "new": frozenset({"in_progress", "resolved"}),
@@ -110,12 +114,21 @@ def window_start(now: datetime) -> datetime:
     return now - WINDOW
 
 
-def number_of(ticket_id: int) -> str:
-    """`ОБР-0012`: номер обращения для людей; в адресах и API — числовой id."""
-    return f"{NUMBER_PREFIX}-{ticket_id:04d}"
+def checked_label(value: str) -> str:
+    """Обозначение обращения: латиница и цифры, до 16 знаков; регистр приводится к верхнему."""
+    label = value.strip().upper()
+    if not LABEL_RE.match(label):
+        raise TicketValueError("ticket_label_invalid", "label")
+    return label
+
+
+def number_of(ticket_id: int, label: str = DEFAULT_LABEL) -> str:
+    """`TK-0012`: номер обращения для людей; в адресах и API — числовой id."""
+    return f"{label}-{ticket_id:04d}"
 
 
 def id_of(number: str) -> int | None:
+    """Id обращения из номера с любым обозначением (`TK-0012`, прежнее `ОБР-0012`)."""
     match = _NUMBER.match(number.strip())
     return int(match.group(1)) if match else None
 

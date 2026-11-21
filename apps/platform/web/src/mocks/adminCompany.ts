@@ -200,6 +200,8 @@ const KIND_CODE: Record<NumberingKind, string> = {
   memo: "MEMO",
   application: "APP",
   report: "REP",
+  // обращения сотрудников (CRM, СЦ-5): `{обозначение}-NNNN`
+  ticket: "TK",
 };
 // Номера EDS: входящее и исходящее — `{обозначение}-NNN/ГГ`, прочие — `{обозначение}-ГГГГ/NNN`.
 const EDS_YEAR_SUFFIX: ReadonlySet<NumberingKind> = new Set<NumberingKind>([
@@ -457,13 +459,16 @@ export const adminCompanyHandlers = [
         return {
           kind,
           label,
-          number: EDS_YEAR_SUFFIX.has(kind)
-            ? `${label}-001/${year.slice(2)}`
-            : EDS_KINDS.has(kind)
-              ? `${label}-${year}/001`
-              : width
-                ? `${label}-${year}-${"1".padStart(width, "0")}`
-                : renderNumber(body, label),
+          number:
+            kind === "ticket"
+              ? `${label}-0001`
+              : EDS_YEAR_SUFFIX.has(kind)
+                ? `${label}-001/${year.slice(2)}`
+                : EDS_KINDS.has(kind)
+                  ? `${label}-${year}/001`
+                  : width
+                    ? `${label}-${year}-${"1".padStart(width, "0")}`
+                    : renderNumber(body, label),
         };
       }),
     });

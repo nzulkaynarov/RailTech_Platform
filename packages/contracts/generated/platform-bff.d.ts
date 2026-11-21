@@ -9629,7 +9629,7 @@ export interface components {
       name: string;
     };
     TicketRow: {
-      /** @example ОБР-0012 */
+      /** @example TK-0012 */
       number: string;
       subject: components["schemas"]["TicketSubject"];
       status: components["schemas"]["TicketStatus"];
@@ -9655,7 +9655,7 @@ export interface components {
       created_at: string;
     };
     Ticket: {
-      /** @example ОБР-0012 */
+      /** @example TK-0012 */
       number: string;
       subject: components["schemas"]["TicketSubject"];
       status: components["schemas"]["TicketStatus"];
@@ -11828,7 +11828,7 @@ export interface components {
      */
     DocumentKind: "quote" | "contract" | "invoice" | "act" | "letter";
     /**
-     * @description Вид номера в «Настройки · Нумерация» (задача «Н»): заявка, проект, КП, договор, счёт, акт, квитанция, накладная, заказ поставщику, отгрузка, договор партнёра, документ по шаблону (ERP `REQ`, `PRJ`, `KP`, `CT`, `INV`, `ACT`, `RCP`, `DN`, `PO`, `SHP`, `PART`, `DOC`); документооборота (задача «Н2», EDS): входящее, исходящее, служебная записка, заявление, отчёт
+     * @description Вид номера в «Настройки · Нумерация» (задача «Н»): заявка, проект, КП, договор, счёт, акт, квитанция, накладная, заказ поставщику, отгрузка, договор партнёра, документ по шаблону (ERP `REQ`, `PRJ`, `KP`, `CT`, `INV`, `ACT`, `RCP`, `DN`, `PO`, `SHP`, `PART`, `DOC`); документооборота (задача «Н2», EDS): входящее, исходящее, служебная записка, заявление, отчёт; обращение сотрудника (СЦ-5, CRM `/api/v1/staff-tickets/label`)
      * @enum {string}
      */
     NumberingKind:
@@ -11848,7 +11848,8 @@ export interface components {
       | "outgoing"
       | "memo"
       | "application"
-      | "report";
+      | "report"
+      | "ticket";
     BrandPreviewIn: {
       kind: components["schemas"]["DocumentKind"];
       /** @description Несохранённые правки бланка — предпросмотр накладывает их в памяти, ничего не сохраняя */
@@ -17419,7 +17420,7 @@ export interface components {
     InboundMailId: number;
     /** @description Идентификатор статьи компании */
     CompanyArticleIdPath: number;
-    /** @description Номер обращения `ОБР-0012` (в адресе — закодированный) */
+    /** @description Номер обращения `TK-0012` или прежний `ОБР-0012` (в адресе — закодированный) */
     TicketNumberPath: string;
     /** @description Клиент CRM (id) */
     ClientIdPath: number;
@@ -18389,7 +18390,7 @@ export interface operations {
       query?: never;
       header?: never;
       path: {
-        /** @description Номер обращения `ОБР-0012` (в адресе — закодированный) */
+        /** @description Номер обращения `TK-0012` или прежний `ОБР-0012` (в адресе — закодированный) */
         number: components["parameters"]["TicketNumberPath"];
       };
       cookie?: never;
@@ -18444,7 +18445,7 @@ export interface operations {
       query?: never;
       header?: never;
       path: {
-        /** @description Номер обращения `ОБР-0012` (в адресе — закодированный) */
+        /** @description Номер обращения `TK-0012` или прежний `ОБР-0012` (в адресе — закодированный) */
         number: components["parameters"]["TicketNumberPath"];
       };
       cookie?: never;
@@ -18474,7 +18475,7 @@ export interface operations {
         "X-CSRF-Token": components["parameters"]["CsrfToken"];
       };
       path: {
-        /** @description Номер обращения `ОБР-0012` (в адресе — закодированный) */
+        /** @description Номер обращения `TK-0012` или прежний `ОБР-0012` (в адресе — закодированный) */
         number: components["parameters"]["TicketNumberPath"];
       };
       cookie?: never;
@@ -18518,7 +18519,7 @@ export interface operations {
         "X-CSRF-Token": components["parameters"]["CsrfToken"];
       };
       path: {
-        /** @description Номер обращения `ОБР-0012` (в адресе — закодированный) */
+        /** @description Номер обращения `TK-0012` или прежний `ОБР-0012` (в адресе — закодированный) */
         number: components["parameters"]["TicketNumberPath"];
       };
       cookie?: never;

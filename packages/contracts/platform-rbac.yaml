@@ -408,6 +408,8 @@ resources:
     module: admin
     label: { ru: "Настройки · Компания и Документы · Шаблоны", uz: "Sozlamalar · Kompaniya va hujjatlar · shablonlar", en: "Settings · Company and documents · templates" }
     backend:
+      # СЦ-5: обозначение номера обращений (CRM) правится в том же редакторе «Нумерация», что и остальные обозначения.
+      crm: { full: [ticket_label:read, ticket_label:write] }
       erp: { full: [settings.edit, settings.charge_templates] }
 
 # Пункты меню модулей (SPEC-v3 §6.2) → разделы. Пункт виден, если у сотрудника есть хотя бы один из разделов `any_of`

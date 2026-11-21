@@ -1,6 +1,6 @@
 """Обращения сотрудников к администратору (W15-H7, контракт 0.24.0) и колокольчик CRM.
 
-CRM на respx: решения (темы, лимит, права, статусы) за CRM, здесь — перевод номеров `ОБР-0012`, роль
+CRM на respx: решения (темы, лимит, права, статусы) за CRM, здесь — перевод номеров `TK-0012`, роль
 автора из сессии, права раздела `admin`, ошибки значений и лента CRM в колокольчике.
 """
 
@@ -23,7 +23,7 @@ NOW = datetime(2026, 10, 28, 9, 0, tzinfo=UTC).isoformat().replace("+00:00", "Z"
 def crm_row(ticket_id: int = 12, **over: Any) -> dict[str, Any]:
     return {
         "id": ticket_id,
-        "number": f"ОБР-{ticket_id:04d}",
+        "number": f"TK-{ticket_id:04d}",
         "subject": "access",
         "status": "new",
         "author_id": 7,
@@ -134,7 +134,7 @@ async def test_create_sends_the_role_from_the_session_and_hides_internal_ids(
     assert response.status_code == 201, response.text
     check(response, "/tickets", "post")
     body = response.json()
-    assert body["number"] == "ОБР-0012"
+    assert body["number"] == "TK-0012"
     assert "id" not in body
     assert body["author"] == {"id": "7", "name": "Иван Тестов"}
     _, sent = crm.last("create")
@@ -220,12 +220,25 @@ async def test_my_tickets_list_and_card_by_number(
     await web.login(["MANAGER"])
 
     mine = await web.client.get("/api/v1/tickets")
-    one = await web.client.get("/api/v1/tickets/ОБР-0012")
+    one = await web.client.get("/api/v1/tickets/TK-0012")
 
     check(mine, "/tickets", "get")
     check(one, "/tickets/{number}", "get")
-    assert [t["number"] for t in mine.json()["items"]] == ["ОБР-0012"]
+    assert [t["number"] for t in mine.json()["items"]] == ["TK-0012"]
     assert one.json()["messages"] == []
+    assert crm.last("mine_one")[0].endswith("/me/tickets/12")
+
+
+@pytest.mark.parametrize("number", ["ОБР-0012", "TK-0012", "REQ-0012"])
+async def test_card_is_found_by_any_label_only_the_id_matters(
+    web: Web, crm: CrmTickets, number: str
+) -> None:
+    """Прежнее «ОБР» из старых ссылок и колокольчика и любое новое обозначение — тот же id."""
+    await web.login(["MANAGER"])
+
+    response = await web.client.get(f"/api/v1/tickets/{number}")
+
+    assert response.status_code == 200, response.text
     assert crm.last("mine_one")[0].endswith("/me/tickets/12")
 
 
@@ -274,17 +287,17 @@ async def test_only_admin_full_replies_and_changes_status(
     web: Web, crm: CrmTickets, check: ContractChecker
 ) -> None:
     await web.login(["DIRECTOR"])
-    denied = await web.send("POST", "/api/v1/admin/tickets/ОБР-0012/reply", json={"body": "ок"})
+    denied = await web.send("POST", "/api/v1/admin/tickets/TK-0012/reply", json={"body": "ок"})
     assert denied.status_code == 403
     denied_status = await web.send(
-        "POST", "/api/v1/admin/tickets/ОБР-0012/status", json={"status": "resolved"}
+        "POST", "/api/v1/admin/tickets/TK-0012/status", json={"status": "resolved"}
     )
     assert denied_status.status_code == 403
     assert crm.calls == []
 
     await web.login(["ADMIN"])
     reply = await web.send(
-        "POST", "/api/v1/admin/tickets/ОБР-0012/reply", json={"body": "ок", "status": "resolved"}
+        "POST", "/api/v1/admin/tickets/TK-0012/reply", json={"body": "ок", "status": "resolved"}
     )
     assert reply.status_code == 200, reply.text
     check(reply, "/admin/tickets/{number}/reply", "post")
@@ -292,11 +305,11 @@ async def test_only_admin_full_replies_and_changes_status(
     assert crm.last("reply")[1] == {"body": "ок", "status": "resolved"}
 
     status = await web.send(
-        "POST", "/api/v1/admin/tickets/ОБР-0012/status", json={"status": "resolved"}
+        "POST", "/api/v1/admin/tickets/TK-0012/status", json={"status": "resolved"}
     )
     check(status, "/admin/tickets/{number}/status", "post")
     assert status.json()["status"] == "resolved"
-    card = await web.client.get("/api/v1/admin/tickets/ОБР-0012")
+    card = await web.client.get("/api/v1/admin/tickets/TK-0012")
     check(card, "/admin/tickets/{number}", "get")
 
 
@@ -307,7 +320,7 @@ async def test_status_transition_conflict_is_a_409_with_reason(
     crm.reply = error(409, "conflict", "ticket_status_transition")
 
     response = await web.send(
-        "POST", "/api/v1/admin/tickets/ОБР-0012/reply", json={"body": "ок", "status": "new"}
+        "POST", "/api/v1/admin/tickets/TK-0012/reply", json={"body": "ок", "status": "new"}
     )
 
     assert response.status_code == 409

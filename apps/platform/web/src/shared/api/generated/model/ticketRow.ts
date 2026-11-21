@@ -7,7 +7,7 @@ import type { TicketStatus } from "./ticketStatus";
 import type { TicketSubject } from "./ticketSubject";
 
 export interface TicketRow {
-  /** @pattern ^ОБР-[0-9]{1,9}$ */
+  /** @pattern ^[A-Z0-9А-Я]{1,16}-[0-9]{1,9}$ */
   number: string;
   subject: TicketSubject;
   status: TicketStatus;

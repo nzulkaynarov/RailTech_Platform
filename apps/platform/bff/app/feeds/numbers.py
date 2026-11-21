@@ -169,7 +169,7 @@ def quote_ref(quote: dict[str, Any], *, title: str | None, drafting: bool) -> Ob
 
 
 def ticket_ref(number: str) -> ObjectRef:
-    """Обращение сотрудника (`ОБР-0012`): карточка в «Обращениях сотрудников» (W15-H7)."""
+    """Обращение сотрудника (`TK-0012`): карточка в «Обращениях сотрудников» (W15-H7)."""
     return ObjectRef(
         kind="ticket", number=number, path=f"/admin/tickets/{segment(number)}?panel=open&tab=card"
     )

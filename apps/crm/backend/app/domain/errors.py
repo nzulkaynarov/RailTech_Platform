@@ -173,6 +173,7 @@ class Reason(StrEnum):
     TICKET_REPLY_EMPTY = "ticket_reply_empty"
     TICKET_REPLY_TOO_LONG = "ticket_reply_too_long"
     TICKET_RATE_LIMITED = "ticket_rate_limited"
+    TICKET_LABEL_INVALID = "ticket_label_invalid"
     # Статьи компании (W18A-P5, B-079)
     ARTICLE_TITLE_EMPTY = "article_title_empty"
     ARTICLE_TITLE_TOO_LONG = "article_title_too_long"

@@ -64,6 +64,15 @@ export function errorFields(error: unknown): string[] {
   return Array.isArray(fields) ? fields.filter((f): f is string => typeof f === "string") : [];
 }
 
+/** Ключ текста для поля нумерации, названного в 422: маска, обозначение обращения или занятый префикс. */
+export function numberingErrorKey(field: string, error: unknown): string {
+  if (field === "pattern") return "numbering.maskInvalid";
+  if (error instanceof ApiError && error.details["reason"] === "ticket_label_invalid") {
+    return "numbering.ticketLabelInvalid";
+  }
+  return "numbering.prefixTaken";
+}
+
 /** Причины по полям из 422 ERP (`details.field_reasons`, ADR-0029): `{поле: код}`. */
 export function fieldReasons(error: unknown): Record<string, string> {
   if (!(error instanceof ApiError)) return {};

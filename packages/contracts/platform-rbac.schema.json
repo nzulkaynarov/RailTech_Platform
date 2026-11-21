@@ -115,6 +115,8 @@
         "external_services:write",
         "tickets:read",
         "tickets:write",
+        "ticket_label:read",
+        "ticket_label:write",
         "chats:read",
         "chats:reply",
         "chats:note",

@@ -24,11 +24,11 @@ def crm_note(
         "id": note_id,
         "kind": kind,
         "tab": "system",
-        "title": "Ответ на обращение ОБР-0012",
+        "title": "Ответ на обращение TK-0012",
         "subtitle": "Доступ выдан",
         "object_kind": "ticket",
         "object_id": "12",
-        "object_number": "ОБР-0012",
+        "object_number": "TK-0012",
         "created_at": created,
         "read": read,
         **over,
@@ -50,9 +50,9 @@ async def test_crm_ticket_notifications_are_merged_with_erp_by_time(
                 7,
                 "ticket_new",
                 m.ago(hours=1),
-                title="Новое обращение ОБР-0013",
+                title="Новое обращение TK-0013",
                 object_id="13",
-                object_number="ОБР-0013",
+                object_number="TK-0013",
             ),
             crm_note(
                 6,
@@ -80,13 +80,11 @@ async def test_crm_ticket_notifications_are_merged_with_erp_by_time(
     by_id = {n["id"]: n for n in page["items"]}
     assert by_id["crm:8"]["object"] == {
         "kind": "ticket",
-        "number": "ОБР-0012",
-        "path": "/help/requests/%D0%9E%D0%91%D0%A0-0012",
+        "number": "TK-0012",
+        "path": "/help/requests/TK-0012",
     }
     # Админу о новом обращении — в «Настройки · Обращения сотрудников», с карточкой в боковом окне.
-    assert by_id["crm:7"]["object"]["path"] == (
-        "/admin/tickets/%D0%9E%D0%91%D0%A0-0013?panel=open&tab=card"
-    )
+    assert by_id["crm:7"]["object"]["path"] == ("/admin/tickets/TK-0013?panel=open&tab=card")
     assert "object" not in by_id["crm:6"]
     assert by_id["crm:6"]["read"] is True
 
@@ -213,7 +211,7 @@ async def test_admin_queue_and_menu_counter_show_new_staff_tickets(
         "items": [
             {
                 "id": 12,
-                "number": "ОБР-0012",
+                "number": "TK-0012",
                 "subject": "access",
                 "status": "new",
                 "author_id": 7,
@@ -234,12 +232,12 @@ async def test_admin_queue_and_menu_counter_show_new_staff_tickets(
     check(queue, "/queue", "get")
     check(counters, "/menu-counters", "get")
     [item] = [i for i in queue.json()["items"] if i["kind"] == "ticket"]
-    assert item["title"] == "Ответить на обращение ОБР-0012"
+    assert item["title"] == "Ответить на обращение TK-0012"
     assert item["subtitle"].startswith("Дильшод Т. · доступ · Нужен доступ")
     assert item["object"] == {
         "kind": "ticket",
-        "number": "ОБР-0012",
-        "path": "/admin/tickets/%D0%9E%D0%91%D0%A0-0012?panel=open&tab=card",
+        "number": "TK-0012",
+        "path": "/admin/tickets/TK-0012?panel=open&tab=card",
     }
     assert {
         "module": "admin",
@@ -250,7 +248,7 @@ async def test_admin_queue_and_menu_counter_show_new_staff_tickets(
 
 
 async def test_manager_does_not_see_staff_tickets_in_the_queue(web: Web, fb: FeedBackends) -> None:
-    fb.state["crm_tickets"] = {"items": [{"number": "ОБР-0001"}], "total": 1, "counts": {}}
+    fb.state["crm_tickets"] = {"items": [{"number": "TK-0001"}], "total": 1, "counts": {}}
     await web.login(["MANAGER"])
 
     queue = await web.client.get("/api/v1/queue")

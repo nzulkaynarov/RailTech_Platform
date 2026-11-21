@@ -24,6 +24,7 @@ from app.domain.errors import (
     ValidationFailedError,
 )
 from app.models.auth import Role, User, UserRole
+from app.models.leads import Setting
 from app.models.platform_roles import PlatformRole, UserPlatformRole
 from app.models.staff_tickets import StaffTicket, StaffTicketMessage
 from app.security import audit
@@ -88,6 +89,16 @@ def _utcnow() -> datetime:
 def invalid(exc: rules.TicketValueError) -> ValidationFailedError:
     """Ошибка значения -> 422 с `details.field` и `details.reason`."""
     return ValidationFailedError(str(exc), reason=Reason(exc.reason), field=exc.field)
+
+
+LABEL_KEY = "ticket_label"
+
+
+async def label_in(session: AsyncSession) -> str:
+    """Текущее обозначение обращения (`settings.ticket_label`), по умолчанию `TK`."""
+    row = await session.get(Setting, LABEL_KEY)
+    value = row.value.get("label") if row is not None else None
+    return value if isinstance(value, str) and value else rules.DEFAULT_LABEL
 
 
 async def admin_user_ids(session: AsyncSession) -> list[int]:
@@ -167,7 +178,7 @@ class StaffTicketService:
             )
             session.add(ticket)
             await session.flush()
-            number = rules.number_of(ticket.id)
+            number = rules.number_of(ticket.id, await label_in(session))
             await audit.record(
                 session, actor, "staff_ticket.create", "staff_ticket", ticket.id,
                 after={"subject": subject_ok, "page": page_ok},
@@ -194,7 +205,8 @@ class StaffTicketService:
             result = await session.execute(
                 stmt.order_by(StaffTicket.created_at.desc(), StaffTicket.id.desc())
             )
-            return [_row(*r) for r in result.all()]
+            label = await label_in(session)
+            return [_row(*r, label=label) for r in result.all()]
 
     async def get_own(self, user_id: int, ticket_id: int) -> TicketDetail:
         detail = await self.get(ticket_id)
@@ -233,7 +245,8 @@ class StaffTicketService:
         )
         async with self._sessions() as session:
             result = await session.execute(stmt.order_by(*order).limit(limit).offset(offset))
-            items = [_row(*r) for r in result.all()]
+            label = await label_in(session)
+            items = [_row(*r, label=label) for r in result.all()]
             total = int(
                 await session.scalar(select(func.count()).select_from(StaffTicket).where(*filters))
                 or 0
@@ -263,7 +276,7 @@ class StaffTicketService:
             found = result.first()
             if found is None:
                 raise NotFoundError("ticket not found")
-            row = _row(*found)
+            row = _row(*found, label=await label_in(session))
             ticket = await session.get(StaffTicket, ticket_id)
             assert ticket is not None  # noqa: S101 — только что прочитан
             messages = (
@@ -314,7 +327,7 @@ class StaffTicketService:
                 session, actor, "staff_ticket.reply", "staff_ticket", ticket_id,
                 before={"status": before}, after={"status": after},
             )  # fmt: skip
-            number = rules.number_of(ticket_id)
+            number = rules.number_of(ticket_id, await label_in(session))
             author = await session.get(User, ticket.author_id)
             language = author.language if author else None
             note = rules.reply_note(language, number, text)
@@ -353,7 +366,7 @@ class StaffTicketService:
                 session, actor, "staff_ticket.status", "staff_ticket", ticket_id,
                 before={"status": before}, after={"status": target},
             )  # fmt: skip
-            number = rules.number_of(ticket_id)
+            number = rules.number_of(ticket_id, await label_in(session))
             author = await session.get(User, ticket.author_id)
             language = author.language if author else None
             if target == "resolved":
@@ -370,6 +383,35 @@ class StaffTicketService:
                     object_number=number,
                 )
         return await self.get(ticket_id)
+
+    # --- обозначение в номере ------------------------------------------------------------------
+
+    async def get_label(self) -> str:
+        async with self._sessions() as session:
+            return await label_in(session)
+
+    async def set_label(self, actor: Actor, value: str) -> str:
+        """Обозначение для новых и показанных номеров; id обращений не меняется, старые ссылки
+        с любым обозначением открываются (`rules.id_of`)."""
+        try:
+            label = rules.checked_label(value)
+        except rules.TicketValueError as exc:
+            raise invalid(exc) from exc
+        async with self._sessions() as session, session.begin():
+            row = await session.get(Setting, LABEL_KEY, with_for_update=True)
+            before = row.value.get("label") if row is not None else None
+            if row is None:
+                session.add(
+                    Setting(key=LABEL_KEY, value={"label": label}, updated_by=actor.user_id)
+                )
+            else:
+                row.value = {"label": label}
+                row.updated_by = actor.user_id
+            await audit.record(
+                session, actor, "staff_ticket.label", "staff_ticket", None,
+                before={"label": before}, after={"label": label},
+            )  # fmt: skip
+        return label
 
     # --- внутреннее -----------------------------------------------------------------------------
 
@@ -448,10 +490,12 @@ def _row(
     replies: int,
     created_at: datetime,
     updated_at: datetime,
+    *,
+    label: str,
 ) -> TicketRow:
     return TicketRow(
         id=ticket_id,
-        number=rules.number_of(ticket_id),
+        number=rules.number_of(ticket_id, label),
         subject=subject,
         status=status,
         author_id=author_id,
