@@ -4038,6 +4038,11 @@ components:
             - $ref: '#/components/schemas/PersonRef'
             - type: 'null'
           description: '`null` — система'
+        on_behalf_of:
+          oneOf:
+            - $ref: '#/components/schemas/PersonRef'
+            - type: 'null'
+          description: 'СЦ-9: «за <имя>» — действие заместителя за замещаемого (`by` — заместитель); `null` — за себя'
         comment:
           type: [string, 'null']
         file_id:
@@ -5600,6 +5605,11 @@ components:
           type: boolean
         extension_pending:
           type: boolean
+        acting_for:
+          oneOf:
+            - $ref: '#/components/schemas/PersonRef'
+            - type: 'null'
+          description: 'СЦ-9: пометка «за <имя>» — шаг решает действующий заместитель за замещаемого (подпись и оплата не переходят); `null` — свой шаг'
         created_at:
           type: string
           format: date-time
@@ -5624,6 +5634,11 @@ components:
           format: date
         reason:
           type: string
+        acting_for:
+          oneOf:
+            - $ref: '#/components/schemas/PersonRef'
+            - type: 'null'
+          description: 'СЦ-9: пометка «за <имя>» — шаг решает действующий заместитель за замещаемого (подпись и оплата не переходят); `null` — свой шаг'
         requested_at:
           type: string
           format: date-time
@@ -6793,6 +6808,11 @@ components:
             - $ref: '#/components/schemas/ApprovalStep'
             - type: 'null'
           description: '`null` — маршрут закрыт'
+        acting_for:
+          oneOf:
+            - $ref: '#/components/schemas/PersonRef'
+            - type: 'null'
+          description: 'СЦ-9: пометка «за <имя>» — шаг решает действующий заместитель за замещаемого (подпись и оплата не переходят); `null` — свой шаг'
         created_at:
           type: string
           format: date-time
@@ -6857,6 +6877,11 @@ components:
         can_decide:
           type: boolean
           description: Текущий шаг ждёт этого сотрудника
+        acting_for:
+          oneOf:
+            - $ref: '#/components/schemas/PersonRef'
+            - type: 'null'
+          description: 'СЦ-9: пометка «за <имя>» — шаг решает действующий заместитель за замещаемого (подпись и оплата не переходят); `null` — свой шаг'
         allowed_decisions:
           type: array
           uniqueItems: true

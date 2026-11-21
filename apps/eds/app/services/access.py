@@ -5,23 +5,138 @@
 """
 
 import uuid
+from dataclasses import dataclass
+from datetime import date
 
 from sqlalchemy import ColumnElement, and_, any_, exists, literal, not_, or_, select, true
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import aliased
 
+from app import clock
 from app.models import ApprovalRoute, ApprovalStep, Document, Employee
 from app.security.permissions import EdsPermission, known_permissions
+
+# --- замещение (СЦ-9 P11, решение владельца 2026-11-21 (2)) -----------------------------------------------------------
+# Заместитель на период решает шаги замещаемого: служебки, заявления, отчёты, КП, поручения и переносы срока. Подпись
+# (решение 2026-11-05, ADR-0024 п. 2) и подтверждение оплаты не переходят: у них своё полномочие и свой экран.
+DEPUTY_TEMPLATE_BLOCKED = "signing"
+DEPUTY_PERMISSION_BLOCKED = EdsPermission.PAYMENTS_CONFIRM.value
+DEPUTY_PERMISSIONS = (EdsPermission.MEMOS_APPROVE.value, EdsPermission.APPROVALS_DECIDE.value)
+INSTRUCTION = "instruction"  # вид шага «поручение или перенос срока» для `acting_on_behalf`
+
+
+def deputy_today() -> date:
+    return clock.company_date(clock.now())
+
+
+@dataclass(frozen=True)
+class Acting:
+    """Ответ «от чьего имени сотрудник вправе действовать на шаге»: `allowed` и, если не за себя, замещаемый."""
+
+    allowed: bool
+    on_behalf_of: Employee | None = None
+
+
+REFUSED = Acting(False)
+SELF = Acting(True)
+
+
+def _kind_transferable(template: str | None, permission: str | None) -> bool:
+    return template != DEPUTY_TEMPLATE_BLOCKED and permission != DEPUTY_PERMISSION_BLOCKED
+
+
+async def covered_employees(session: AsyncSession, employee: Employee, today: date | None = None) -> list[Employee]:
+    """Активные сотрудники, которых `employee` сегодня замещает (период включительно, дата компании)."""
+    day = today or deputy_today()
+    rows = await session.execute(
+        select(Employee)
+        .where(
+            Employee.deputy_crm_user_id == employee.crm_user_id,
+            Employee.is_active.is_(True),
+            Employee.deputy_from <= day,
+            Employee.deputy_to >= day,
+        )
+        .order_by(Employee.crm_user_id)
+    )
+    return list(rows.scalars().all())
+
+
+async def acting_on_behalf(
+    session: AsyncSession,
+    employee: Employee,
+    *,
+    owner: int | None = None,
+    permission: str | None = None,
+    template: str | None = None,
+    today: date | None = None,
+    covered: list[Employee] | None = None,
+) -> Acting:
+    """Единая точка: от чьего имени `employee` вправе решить шаг сегодня.
+
+    Шаг задан исполнителем (`owner`, crm_user_id) или правом (`permission`); `template` — вид маршрута (`signing`) или
+    `INSTRUCTION`. Себя — если шаг его; иначе замещаемый, чей шаг это и чей вид шага переходит. Подпись и оплата —
+    отказ всегда. `covered` — заранее загруженный список замещаемых (для списков, без запроса на строку).
+    """
+    if owner == employee.crm_user_id or (
+        permission is not None and permission in known_permissions(employee.permissions_eds)
+    ):
+        return SELF
+    if not _kind_transferable(template, permission):
+        return REFUSED
+    for replaced in covered if covered is not None else await covered_employees(session, employee, today):
+        if owner is not None and owner == replaced.crm_user_id:
+            return Acting(True, replaced)
+        if (
+            permission is not None
+            and permission in DEPUTY_PERMISSIONS
+            and permission in known_permissions(replaced.permissions_eds)
+        ):
+            return Acting(True, replaced)
+    return REFUSED
 
 
 def has(employee: Employee, permission: EdsPermission) -> bool:
     return permission.value in known_permissions(employee.permissions_eds)
 
 
+def _deputy_step(employee: Employee) -> ColumnElement[bool]:
+    """Шаг замещаемого, который решает заместитель (зеркало `acting_on_behalf`): не подпись и не оплата."""
+    replaced = aliased(Employee)
+    today = deputy_today()
+    route, document = aliased(ApprovalRoute), aliased(Document)
+    foreign_own = (
+        select(1)
+        .where(document.id == route.document_id, document.author_crm_user_id == replaced.crm_user_id)
+        .correlate(route, replaced)
+    )
+    # документ замещаемого решает он сам или никто: заместитель не решает «свою» служебку за него
+    transferable_route = (
+        select(route.id).where(route.template != DEPUTY_TEMPLATE_BLOCKED, ~exists(foreign_own)).correlate(replaced)
+    )
+    return exists(
+        select(1).where(
+            replaced.deputy_crm_user_id == employee.crm_user_id,
+            replaced.is_active.is_(True),
+            replaced.deputy_from <= today,
+            replaced.deputy_to >= today,
+            ApprovalStep.approval_id.in_(transferable_route),
+            or_(
+                ApprovalStep.assignee_crm_user_id == replaced.crm_user_id,
+                and_(
+                    ApprovalStep.assignee_permission.in_(DEPUTY_PERMISSIONS),
+                    ApprovalStep.assignee_permission == any_(replaced.permissions_eds),
+                ),
+            ),
+        )
+    )
+
+
 def step_is_mine(employee: Employee) -> ColumnElement[bool]:
-    """Шаг ждёт этого сотрудника: назначен ему или он держит право шага."""
+    """Шаг ждёт этого сотрудника: назначен ему, он держит право шага или он замещает того, кому шаг назначен."""
     return or_(
         ApprovalStep.assignee_crm_user_id == employee.crm_user_id,
         ApprovalStep.assignee_permission.in_(known_permissions(employee.permissions_eds)),
+        _deputy_step(employee),
     )
 
 
@@ -118,10 +233,16 @@ def can_read_project_documents(employee: Employee) -> bool:
 
 
 __all__ = [
+    "INSTRUCTION",
+    "REFUSED",
+    "SELF",
+    "Acting",
+    "acting_on_behalf",
     "can_read_letters",
     "can_read_project_documents",
     "can_view_document",
     "can_view_route",
+    "covered_employees",
     "document_visible",
     "has",
     "participates_in",

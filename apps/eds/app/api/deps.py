@@ -20,6 +20,7 @@ from app.errors import EdsError, forbidden, unauthorized
 from app.models import Employee
 from app.security.access_token import AccessTokenError, verify_access_token
 from app.security.permissions import EdsPermission
+from app.services import access
 from app.services.employees import get_employee
 from app.services.storage import ObjectStorage
 
@@ -69,11 +70,18 @@ async def current_employee(
 
 def require_permission(
     *codes: EdsPermission,
-) -> Callable[[Employee], Coroutine[Any, Any, Employee]]:
+    deputy: bool = False,
+) -> Callable[..., Coroutine[Any, Any, Employee]]:
+    """`deputy=True` (СЦ-9 P11): действующий заместитель проходит и без права — какие шаги ему доступны, решает сервис
+    (`access.acting_on_behalf`), здесь только «замещает ли кого-то сегодня»."""
     wanted = tuple(c.value for c in codes)
 
-    async def dependency(employee: Annotated[Employee, Depends(current_employee)]) -> Employee:
+    async def dependency(request: Request, employee: Annotated[Employee, Depends(current_employee)]) -> Employee:
         if wanted and not set(wanted) & set(employee.permissions_eds):
+            if deputy:
+                async with get_container(request).session_factory() as session:
+                    if await access.covered_employees(session, employee):
+                        return employee
             raise forbidden(wanted)
         return employee
 
