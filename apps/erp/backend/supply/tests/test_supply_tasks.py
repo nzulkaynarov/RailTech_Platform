@@ -1,7 +1,8 @@
 """Plan 0.7 (FR-6): the supply officer's to-do list `GET /api/v1/stock/tasks/`.
 
 A draft order, a partner's date change, a shipment not received and a partnership application each give a row; a sent
-order, a received shipment and a decided application do not. Only a holder of `supply.manage` sees the list.
+order, a received shipment and a decided application do not. A holder of `supply.manage` sees these rows; a holder of
+`fulfillment.manage` alone gets only the shipment rows (СЦ-9, `test_supply_shortage_tasks.py`).
 """
 
 from __future__ import annotations
@@ -79,6 +80,11 @@ def test_partner_date_change_and_shipment_wait_for_the_officer(world):
     assert "partner_date_change" not in dict(_kinds(world))
 
 
-def test_only_supply_sees_the_list(world):
-    for who in ("reader", "shipper", "outsider"):
+def test_only_supply_or_shipping_sees_the_list(world):
+    for who in ("reader", "outsider"):
         assert api(world[who]).get(TASKS).status_code == 403, who
+    # СЦ-9: the shipper gets the shipment rows only — never the supply officer's orders and applications
+    _create(world)
+    _application()
+    response = api(world["shipper"]).get(TASKS)
+    assert response.status_code == 200 and response.json() == {"results": []}

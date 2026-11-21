@@ -60,6 +60,21 @@ exceptions:
     text: "candidate_agreed"
     reason: "PART-PIPELINE-1: добавлен статус candidate_agreed в PartnerApplication; потребители — BFF Платформы и Cabinet"
     until: 2026-12-31
+  # СЦ-9: строки «Мои задачи» снабжения `order_shortage` (непокрытый товар проекта) и `ship_project` (резерв ждёт
+  # отгрузки). Потребитель — BFF Платформы: неизвестные виды строк он пропускает (feeds/queue.py), строки Платформы —
+  # отдельным PR; Cabinet этот путь не читает. Удалить после слияния (проверка напечатает предупреждение).
+  - file: erp-internal.yaml
+    id: response-property-enum-value-added
+    path: /api/v1/stock/tasks/
+    text: "`order_shortage`"
+    reason: "СЦ-9: вид строки order_shortage; BFF Платформы пропускает неизвестные виды, строка в Платформе — следующий PR"
+    until: 2026-12-31
+  - file: erp-internal.yaml
+    id: response-property-enum-value-added
+    path: /api/v1/stock/tasks/
+    text: "`ship_project`"
+    reason: "СЦ-9: вид строки ship_project; BFF Платформы пропускает неизвестные виды, строка в Платформе — следующий PR"
+    until: 2026-12-31
   # План 1.9 «Передать в работу»: источник заявки кандидата `letter` (заявку завёл сотрудник по входящему письму).
   # Потребитель — BFF Платформы: неизвестный источник он принимает (`to_partner_application`), новый — в том же PR.
   - file: erp-internal.yaml
