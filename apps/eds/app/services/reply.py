@@ -12,8 +12,10 @@
 уведомлений не порождает — `letter` в событии обязателен (docs/QUESTIONS.md, Q-EDS-REPLY-1).
 """
 
+import datetime as dt
 import uuid
 from collections.abc import Iterable
+from decimal import Decimal
 
 from rt_bus.sqlalchemy import AsyncBus
 from sqlalchemy import any_, literal, select
@@ -27,9 +29,11 @@ from app.schemas.letters import (
     LetterReplyState,
     RegistrationTask,
     ReplyToLetter,
+    SignatureTask,
 )
+from app.schemas.signing import SignerCandidate, SigningResolution
 from app.security.permissions import EdsPermission as P
-from app.services import access, instructions
+from app.services import access, instructions, signing_resolve
 from app.services.people import load_directory
 
 REPLIES_LIMIT = 10
@@ -147,6 +151,74 @@ async def registration_tasks(session: AsyncSession, employee: Employee) -> list[
                 in_reply_to=await reply_to_ref(session, document.in_reply_to),
                 requested_by=directory.person(document.registration_requested_by),
                 requested_at=document.registration_requested_at,
+            )
+        )
+    return tasks
+
+
+async def signing_tasks(session: AsyncSession, employee: Employee, today: dt.date) -> list[SignatureTask]:
+    """«Подписать ИСХ»: переданные черновики, подписант которых по реестру — этот сотрудник (или он по замещению)."""
+    # Переданные неподписанные черновики — набор маленький, без LIMIT: обрезаем после фильтра «подписант — я».
+    documents = list(
+        (
+            await session.execute(
+                select(Document)
+                .where(
+                    Document.kind == DocumentKind.LETTER_OUT.value,
+                    Document.status == DocumentStatus.DRAFT.value,
+                    Document.registration_requested_at.is_not(None),
+                    Document.registration_requested_by.is_not(None),
+                )
+                .order_by(Document.registration_requested_at, Document.id)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    if not documents:
+        return []
+    grants, people = await signing_resolve.load_registry(session, DocumentKind.LETTER_OUT.value)
+    openers = await signing_resolve.draft_openers(session, set(people))
+    resolutions: dict[tuple[str, Decimal | None, str | None], SigningResolution] = {}
+    mine: list[tuple[Document, SignerCandidate]] = []
+    for document in documents:
+        key = (document.kind, document.amount, document.currency)
+        if key not in resolutions:
+            resolutions[key] = signing_resolve.evaluate(
+                kind=document.kind,
+                amount=document.amount,
+                currency=document.currency,
+                on_date=today,
+                grants=grants,
+                people=people,
+            )
+        signer = signing_resolve.pick_letter_signer(resolutions[key], document.author_crm_user_id, openers)
+        if signer is not None and signer.signer.crm_user_id == employee.crm_user_id:
+            mine.append((document, signer))
+    mine = mine[:TASKS_LIMIT]
+    directory = await load_directory(session, (d.registration_requested_by for d, _ in mine))
+    reply_ids = {d.in_reply_to for d, _ in mine if d.in_reply_to is not None}
+    replies = {
+        row.id: row
+        for row in (
+            await session.execute(select(Letter.id, Letter.number, Letter.subject).where(Letter.id.in_(reply_ids)))
+        ).all()
+    }
+    tasks: list[SignatureTask] = []
+    for document, signer in mine:
+        if document.registration_requested_by is None or document.registration_requested_at is None:
+            continue
+        reply = replies.get(document.in_reply_to) if document.in_reply_to is not None else None
+        tasks.append(
+            SignatureTask(
+                document_id=document.id,
+                subject=document.subject,
+                in_reply_to=None
+                if reply is None
+                else ReplyToLetter(id=reply.id, number=reply.number, subject=reply.subject),
+                requested_by=directory.person(document.registration_requested_by),
+                requested_at=document.registration_requested_at,
+                acting_for=signer.acting_for[0] if signer.acting_for else None,
             )
         )
     return tasks

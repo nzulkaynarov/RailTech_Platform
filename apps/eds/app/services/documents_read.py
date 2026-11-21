@@ -5,6 +5,7 @@ import uuid
 from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app import clock
 from app.config import get_settings
 from app.errors import not_found
 from app.models import ApprovalRoute, ApprovalStep, Document, DocumentPayment, DocumentRender, Employee, StoredFile
@@ -17,6 +18,7 @@ from app.schemas.documents import (
     DocumentListItem,
     DocumentMailing,
     DocumentPage,
+    DocumentSigning,
     DocumentStatus,
     OutgoingLetter,
     RegistrationRequest,
@@ -24,7 +26,7 @@ from app.schemas.documents import (
 from app.schemas.documents import DocumentPayment as PaymentOut
 from app.schemas.pagination import decode_cursor
 from app.schemas.registry import RegistryStage
-from app.services import access, delivery, files, journal, letter_mail, paging, registry, renders, reply
+from app.services import access, delivery, documents, files, journal, letter_mail, paging, registry, renders, reply
 from app.services.people import Directory, load_directory
 
 _DECISION = {"approved": Decision.APPROVE, "returned": Decision.RETURN, "rejected": Decision.REJECT}
@@ -120,7 +122,20 @@ async def letter_of(session: AsyncSession, document: Document) -> OutgoingLetter
     )
 
 
-async def present(session: AsyncSession, document: Document) -> DocumentOut:
+async def _signing(session: AsyncSession, document: Document, viewer: Employee | None) -> DocumentSigning | None:
+    """«Подписать можно?» для открытого черновика письма — тем же `documents.sign_check`, что и само подписание."""
+    editable = (DocumentStatus.DRAFT.value, DocumentStatus.RETURNED.value)
+    if viewer is None or document.kind != DocumentKind.LETTER_OUT.value or document.status not in editable:
+        return None
+    check = await documents.sign_check(session, viewer, document, clock.company_date(clock.now()))
+    return DocumentSigning(
+        can_sign=check.allowed,
+        reason=check.reason,
+        signer=None if check.signer is None else check.signer.signer,
+    )
+
+
+async def present(session: AsyncSession, document: Document, viewer: Employee | None = None) -> DocumentOut:
     route_id = (
         await session.execute(
             select(ApprovalRoute.id)
@@ -202,6 +217,7 @@ async def present(session: AsyncSession, document: Document) -> DocumentOut:
         verification_code=document.verification_code,
         verification_url=verification_url,
         dispatch_method=document.dispatch_method,
+        signing=await _signing(session, document, viewer),
     )
 
 

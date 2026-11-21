@@ -12,7 +12,8 @@
 
 import secrets
 import uuid
-from datetime import datetime
+from dataclasses import dataclass
+from datetime import date, datetime
 from decimal import Decimal
 from typing import Any
 
@@ -22,7 +23,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import clock
 from app.config import get_settings
-from app.errors import conflict, forbidden, forbidden_reason, invalid_fields, not_found
+from app.errors import EdsError, conflict, forbidden, forbidden_reason, invalid_fields, not_found
 from app.models import ApprovalRoute, Document, DocumentVersion, Employee, Letter
 from app.schemas.approvals import ApprovalTemplate
 from app.schemas.common import Money
@@ -34,6 +35,7 @@ from app.schemas.documents import (
     DocumentUpdate,
     OutgoingLetterIn,
 )
+from app.schemas.signing import SignerCandidate
 from app.security.permissions import EdsPermission as P
 from app.services import (
     access,
@@ -421,6 +423,52 @@ async def submit(
     return document
 
 
+@dataclass(frozen=True, slots=True)
+class SignCheck:
+    """Итог «может ли этот сотрудник подписать это письмо сейчас»: одна проверка для кнопки и для самого действия."""
+
+    allowed: bool
+    reason: str | None
+    message: str
+    signer: SignerCandidate | None  # кому подпись достаётся по реестру (не обязательно спросившему)
+    candidate: SignerCandidate | None  # полномочие самого спросившего, если он вправе
+    state_conflict: bool = False  # отказ из-за состояния документа или правила «автор ≠ подписант» (409), иначе 403
+    status: str | None = None  # статус документа при отказе по состоянию (уходит в details.status)
+
+    def error(self) -> EdsError:
+        reason = self.reason or "no_authority"
+        if self.state_conflict:
+            return conflict(reason, self.message, **({} if self.status is None else {"status": self.status}))
+        return forbidden_reason(reason, self.message)
+
+
+async def sign_check(session: AsyncSession, employee: Employee, document: Document, today: date) -> SignCheck:
+    """Может ли `employee` подписать `document` на дату `today`: право Signer, вид, статус, реестр полномочий, правило
+    «автор ≠ подписант» (ADR-0024 п. 3). Её вызывают `sign()` и карточка документа (`Document.signing`)."""
+    if document.kind != DocumentKind.LETTER_OUT.value:
+        return SignCheck(False, "invalid_state", "Подписывается только исходящее письмо.", None, None, True)
+    if document.status not in (DocumentStatus.DRAFT.value, DocumentStatus.RETURNED.value):
+        return SignCheck(
+            False, "invalid_state", "Документ нельзя подписать в текущем статусе.", None, None, True, document.status
+        )
+    result = await signing_resolve.resolve(
+        session, kind=document.kind, amount=document.amount, currency=document.currency, on_date=today
+    )
+    openers = await signing_resolve.draft_openers(session, {c.signer.crm_user_id for c in result.candidates})
+    signer = signing_resolve.pick_letter_signer(result, document.author_crm_user_id, openers)
+    if not (access.has(employee, P.LETTERS_REGISTER) or access.has(employee, P.MEMOS_APPROVE)):
+        return SignCheck(False, "no_permission", "Подписывать письма может сотрудник с правом подписи.", signer, None)
+    own = signing_resolve.signer_check(result, employee.crm_user_id)
+    if not own.allowed or own.candidate is None:
+        return SignCheck(False, own.reason or "no_authority", own.message, signer, None)
+    if document.author_crm_user_id == employee.crm_user_id and any(
+        c.signer.crm_user_id != employee.crm_user_id for c in result.candidates
+    ):
+        message = "Автор проекта письма не вправе подписывать документ при наличии других лиц с правом подписи."
+        return SignCheck(False, "author_cannot_sign", message, signer, own.candidate, True)
+    return SignCheck(True, None, own.message, signer, own.candidate)
+
+
 async def sign(
     session: AsyncSession,
     bus: AsyncBus,
@@ -436,24 +484,15 @@ async def sign(
     document = await get_for_update(session, document_id)
     if not await access.can_view_document(session, employee, document.id):
         raise not_found("Документ не найден.")
-    if document.status not in (DocumentStatus.DRAFT.value, DocumentStatus.RETURNED.value):
-        raise conflict("invalid_state", "Документ нельзя подписать в текущем статусе.", status=document.status)
 
     now = clock.now()
     today = clock.company_date(now)
 
-    check_result = await signing_resolve.check_signer(
-        session,
-        employee.crm_user_id,
-        kind=document.kind,
-        amount=document.amount,
-        currency=document.currency,
-        on_date=today,
-    )
-    if not check_result.allowed or check_result.candidate is None:
-        raise forbidden_reason(check_result.reason or "no_authority", check_result.message)
+    check = await sign_check(session, employee, document, today)
+    if not check.allowed or check.candidate is None:
+        raise check.error()
 
-    candidate = check_result.candidate
+    candidate = check.candidate
     if authority_id is not None and candidate.authority.id != authority_id:
         res = await signing_resolve.resolve(
             session,
@@ -470,22 +509,6 @@ async def sign(
                 "authority_mismatch", "Выбранное полномочие не действительно или не соответствует документу."
             )
         candidate = matched[0]
-
-    # Правило «автор ≠ подписант» (ADR-0024 п. 3):
-    if document.author_crm_user_id == employee.crm_user_id:
-        res = await signing_resolve.resolve(
-            session,
-            kind=document.kind,
-            amount=document.amount,
-            currency=document.currency,
-            on_date=today,
-        )
-        other_candidates = [c for c in res.candidates if c.signer.crm_user_id != employee.crm_user_id]
-        if other_candidates:
-            raise conflict(
-                "author_cannot_sign",
-                "Автор проекта письма не вправе подписывать документ при наличии других лиц с правом подписи.",
-            )
 
     method = dispatch_method if dispatch_method in ("email", "paper", "courier", "edo", "other") else "email"
     if method == "email" and send and not (document.recipient_email and document.body is not None):

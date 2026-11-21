@@ -352,6 +352,17 @@ def to_grant(row: SigningAuthority) -> Grant:
     )
 
 
+async def load_registry(session: AsyncSession, kind: str) -> tuple[list[Grant], dict[int, Holder]]:
+    """Строки реестра на вид `kind` и их держатели из проекции (один раз — дальше `evaluate` без базы)."""
+    rows = (
+        (await session.execute(select(SigningAuthority).where(literal(kind) == any_(SigningAuthority.kinds))))
+        .scalars()
+        .all()
+    )
+    grants = [to_grant(r) for r in rows]
+    return grants, await load_holders(session, {g.crm_user_id for g in grants})
+
+
 async def resolve(
     session: AsyncSession,
     *,
@@ -362,13 +373,7 @@ async def resolve(
     kind_label: str | None = None,
 ) -> SigningResolution:
     """Кто вправе подписать `kind` на `amount` `currency` на дату `on_date` (с учётом замещения), по базе."""
-    rows = (
-        (await session.execute(select(SigningAuthority).where(literal(kind) == any_(SigningAuthority.kinds))))
-        .scalars()
-        .all()
-    )
-    grants = [to_grant(r) for r in rows]
-    people = await load_holders(session, {g.crm_user_id for g in grants})
+    grants, people = await load_registry(session, kind)
     return evaluate(
         kind=kind,
         amount=amount,

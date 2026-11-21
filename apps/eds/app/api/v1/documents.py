@@ -74,7 +74,7 @@ async def create_document(
 
         async def create() -> Document:
             document = await documents.create(session, bus, employee=employee, data=body)
-            return await documents_read.present(session, document)
+            return await documents_read.present(session, document, employee)
 
         return await idempotency.run(
             session,
@@ -89,14 +89,16 @@ async def create_document(
 
 @router.get("/documents/{document_id}", response_model=Document, operation_id="getDocument")
 async def get_document(document_id: uuid.UUID, employee: Reader, session: Session) -> Document:
-    return await documents_read.present(session, await documents_read.get_visible(session, employee, document_id))
+    return await documents_read.present(
+        session, await documents_read.get_visible(session, employee, document_id), employee
+    )
 
 
 @router.patch("/documents/{document_id}", response_model=Document, operation_id="updateDocument")
 async def update_document(document_id: uuid.UUID, body: DocumentUpdate, employee: Author, session: Session) -> Document:
     async with session.begin():
         document = await documents.update(session, employee=employee, document_id=document_id, edits=body)
-        return await documents_read.present(session, document)
+        return await documents_read.present(session, document, employee)
 
 
 @router.post("/documents/{document_id}/submit", response_model=Document, operation_id="submitDocument")
@@ -113,7 +115,7 @@ async def submit_document(
         document = await documents.submit(
             session, bus, employee=employee, document_id=document_id, edits=body, storage=storage
         )
-        result = await documents_read.present(session, document)
+        result = await documents_read.present(session, document, employee)
     await box.defer_render(renders.take_pending(session))
     return result
 
@@ -140,7 +142,7 @@ async def sign_document(
             send=params.send,
             storage=storage,
         )
-        result = await documents_read.present(session, document)
+        result = await documents_read.present(session, document, employee)
     await box.defer_render(renders.take_pending(session))
     return result
 
@@ -211,7 +213,7 @@ async def request_document_registration(
 ) -> Document:
     async with session.begin():
         document = await documents.request_registration(session, bus, employee=employee, document_id=document_id)
-        return await documents_read.present(session, document)
+        return await documents_read.present(session, document, employee)
 
 
 @router.post("/documents/{document_id}/send", response_model=Document, operation_id="sendDocument")
@@ -220,7 +222,7 @@ async def send_document(
 ) -> Document:
     async with session.begin():
         document = await documents.send_again(session, bus, storage, employee=employee, document_id=document_id)
-        result = await documents_read.present(session, document)
+        result = await documents_read.present(session, document, employee)
     await box.defer_render(renders.take_pending(session))
     return result
 
@@ -230,7 +232,7 @@ async def waive_document_mail(document_id: uuid.UUID, employee: Registrar, sessi
     """«Вручено иначе»: письмо передано адресату не почтой — недоставленным оно больше не считается (СЦ-1)."""
     async with session.begin():
         document = await documents.waive_mail(session, employee=employee, document_id=document_id)
-        return await documents_read.present(session, document)
+        return await documents_read.present(session, document, employee)
 
 
 @router.get("/letterhead", response_model=LetterheadOut, operation_id="getLetterhead")
@@ -267,4 +269,4 @@ async def pay_document(
 ) -> Document:
     async with session.begin():
         document = await payments.pay(session, bus, employee=employee, document_id=document_id, body=body)
-        return await documents_read.present(session, document)
+        return await documents_read.present(session, document, employee)
