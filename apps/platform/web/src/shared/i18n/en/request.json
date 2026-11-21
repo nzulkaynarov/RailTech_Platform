@@ -35,7 +35,23 @@
     "remove": "Remove the file",
     "tooLarge": "The file is larger than 25 MB",
     "unsupported": "PDF, image or Office document only",
-    "failed": "Could not upload the file: {{reason}}"
+    "failed": "Could not upload the file: {{reason}}",
+    "callBasis": "Basis — phone call",
+    "noteBuilding": "Building the call note…",
+    "noteAttached": "Call note attached",
+    "replaceNote": "Replace with a file",
+    "open": "Open",
+    "openNote": "Open: {{name}}",
+    "openFailed": "Could not open the file",
+    "noteRetry": "Retry",
+    "noteFailed": "Could not build the call note: {{reason}}. Attach a file.",
+    "noteNeedsCaller": "First enter who called on the Contact step",
+    "noteReasons": {
+      "generic": "the document could not be built",
+      "call_note_not_phone": "this is not a phone lead",
+      "call_note_no_consent": "no client consent",
+      "letterhead_missing": "no company letterhead is set up"
+    }
   },
   "urgency": {
     "legend": "Urgency",

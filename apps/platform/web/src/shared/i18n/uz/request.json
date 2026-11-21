@@ -35,7 +35,23 @@
     "remove": "Faylni olib tashlash",
     "tooLarge": "Fayl 25 MB dan katta",
     "unsupported": "PDF, rasm yoki Office hujjati mos keladi",
-    "failed": "Faylni yuklab bo‘lmadi: {{reason}}"
+    "failed": "Faylni yuklab bo‘lmadi: {{reason}}",
+    "callBasis": "Asos — qönğiroq",
+    "noteBuilding": "Qönğiroq haqida yozuv tuzilmoqda…",
+    "noteAttached": "Qönğiroq haqida yozuv biriktirildi",
+    "replaceNote": "Fayl bilan almaştiriş",
+    "open": "Oçiş",
+    "openNote": "Oçiş: {{name}}",
+    "openFailed": "Faylni oçib bölmadi",
+    "noteRetry": "Qaytadan",
+    "noteFailed": "Qönğiroq haqida yozuvni tuzib bölmadi: {{reason}}. Fayl biriktiring.",
+    "noteNeedsCaller": "Avval «Kontakt» qadamida kim qönğiroq qilganini kiriting",
+    "noteReasons": {
+      "generic": "hujjatni tuzib bölmadi",
+      "call_note_not_phone": "bu qönğiroq böyiça lid emas",
+      "call_note_no_consent": "mijozning roziligi yöq",
+      "letterhead_missing": "kompaniyada blank sozlanmagan"
+    }
   },
   "urgency": {
     "legend": "Shoshilinchlik",

@@ -35,7 +35,23 @@
     "remove": "Убрать файл",
     "tooLarge": "Файл больше 25 МБ",
     "unsupported": "Подходит PDF, изображение или документ Office",
-    "failed": "Не удалось загрузить файл: {{reason}}"
+    "failed": "Не удалось загрузить файл: {{reason}}",
+    "callBasis": "Основание — звонок",
+    "noteBuilding": "Собираем записку о звонке…",
+    "noteAttached": "Записка о звонке приложена",
+    "replaceNote": "Заменить файлом",
+    "open": "Открыть",
+    "openNote": "Открыть: {{name}}",
+    "openFailed": "Не удалось открыть файл",
+    "noteRetry": "Повторить",
+    "noteFailed": "Записку о звонке не собрать: {{reason}}. Приложите файл.",
+    "noteNeedsCaller": "Сначала укажите, кто звонил, на шаге «Контакт»",
+    "noteReasons": {
+      "generic": "не получилось собрать документ",
+      "call_note_not_phone": "это не лид со звонка",
+      "call_note_no_consent": "нет согласия клиента",
+      "letterhead_missing": "в компании не настроен бланк"
+    }
   },
   "urgency": {
     "legend": "Срочность",
