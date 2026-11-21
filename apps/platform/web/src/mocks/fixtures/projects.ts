@@ -76,7 +76,12 @@ export interface ProjectState {
 }
 
 /** Исполнение в памяти мока: отметки и ссылку на файл считает `toCard` (как ERP и BFF). */
-export type MockFulfillment = Omit<ProjectFulfillment, "actions" | "proof_url">;
+export type MockFulfillment = Omit<
+  ProjectFulfillment,
+  "actions" | "proof_url" | "goods_not_shipped"
+> & {
+  goods_not_shipped?: boolean;
+};
 
 /** Отметки доставки (L0-1): как `sales/services/delivery_progress.TRANSITIONS` ERP. */
 export const DELIVERY_FROM: Record<ProjectDeliveryAction, readonly string[]> = {
@@ -88,10 +93,11 @@ function fulfillmentOf(p: ProjectState, marker: boolean): ProjectFulfillment | n
   const f = p.fulfillment;
   if (!f) return null;
   const actions = (Object.keys(DELIVERY_FROM) as ProjectDeliveryAction[]).filter(
-    (action) => marker && DELIVERY_FROM[action].includes(f.status ?? ""),
+    (action) => marker && !f.goods_not_shipped && DELIVERY_FROM[action].includes(f.status ?? ""),
   );
   return {
     ...f,
+    goods_not_shipped: f.goods_not_shipped ?? false,
     actions,
     proof_url: f.proof_name ? `/api/v1/eds/projects/${numberOf(p)}/delivery/proof` : null,
   };
@@ -336,6 +342,49 @@ function seed(): ProjectState[] {
       ],
     },
     {
+      // Счёт оплачен, товар отгружен, но не доставлен: акт — после доставки (СЦ-9).
+      id: 98,
+      year: 2026,
+      title: "Светофоры, этап 2",
+      client: "ООО «Демо-Сигнал»",
+      created_at: "2026-10-13T11:00:00+05:00",
+      manager: MANAGER,
+      total: money("12800000.00"),
+      quote: {
+        id: 1195,
+        number: "КП-2026/111",
+        version: 1,
+        outgoing: "ИСХ-071/26",
+        valid_until: "2026-11-10",
+      },
+      contract: {
+        id: 302,
+        number: "ДОГ-2026/098",
+        status: "signed",
+        sent_to_client: true,
+        total: money("12800000.00"),
+        created_at: "2026-10-14T10:00:00+05:00",
+        client_agreed_at: "2026-10-15T10:00:00+05:00",
+        signed_at: "2026-10-18T12:00:00+05:00",
+        has_scan: true,
+      },
+      invoices: [invoice(4402, "СЧ-2026/132", "paid", "12800000.00")],
+      act: null,
+      journal: [],
+      fulfillment: {
+        status: "IN_TRANSIT",
+        status_name: "В пути",
+        expected_delivery_date: "2026-11-30",
+        shipped_at: "2026-11-20T10:00:00+05:00",
+        delivered_at: null,
+        accepted_at: null,
+        tracking_number: "TRK-5120",
+        carrier: "Демо-Логистика",
+        proof_name: null,
+      },
+      lines: [],
+    },
+    {
       id: 81,
       year: 2026,
       title: "Кабель СБ",
@@ -567,6 +616,11 @@ export function toRow(p: ProjectState): ProjectRow {
   };
 }
 
+/** Акт — после доставки (СЦ-9): исполнение «Доставлено» или «Принято» — как `billing.act_not_delivered` ERP. */
+export function actDelivered(p: ProjectState): boolean {
+  return ["DELIVERED", "ACCEPTED"].includes(p.fulfillment?.status ?? "");
+}
+
 export function toCard(p: ProjectState, writer: boolean, marker = false): ProjectCard {
   const c = p.contract;
   const a = p.act;
@@ -616,7 +670,15 @@ export function toCard(p: ProjectState, writer: boolean, marker = false): Projec
           history: historyOf(p, "act"),
         }
       : null,
-    act_blocker: !writer ? "forbidden" : a ? "act_exists" : issuable ? null : "no_invoice",
+    act_blocker: !writer
+      ? "forbidden"
+      : a
+        ? "act_exists"
+        : !issuable
+          ? "no_invoice"
+          : actDelivered(p)
+            ? null
+            : "not_delivered",
     fulfillment: fulfillmentOf(p, marker),
     delivery_lines: p.lines ?? [],
     journal: p.journal,

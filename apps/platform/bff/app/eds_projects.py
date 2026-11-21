@@ -54,6 +54,8 @@ _ERP_REASONS: dict[str, str] = {
     "CHANNEL_INVALID": "Выберите канал.",
     # L0-1: отметки доставки клиенту по проекту.
     "DELIVERY_TRANSITION_NOT_ALLOWED": "Доставка сейчас в другом статусе. Обновите страницу.",
+    "GOODS_NOT_SHIPPED": "Товар ещё не отгружен со склада: отметки доставки — после отгрузки.",
+    "ACT_NOT_DELIVERED": "Акт выпускается после доставки: товар ещё не доставлен.",
     "FULFILLMENT_NOT_READY": "Исполнения по проекту ещё нет: оно появляется после договора.",
     "DELIVERY_ACTION_INVALID": "Выберите отметку: в пути или доставлено.",
     "DELIVERY_DATE_INVALID": "Укажите дату.",
@@ -310,6 +312,14 @@ class ErpProjects:
                 status_code=409,
                 source="erp",
                 details={"reason": "act_already_exists"},
+            )
+        if card.act_blocker == "not_delivered":
+            raise PlatformError(
+                "CONFLICT",
+                "Акт выпускается после доставки: товар ещё не доставлен.",
+                status_code=409,
+                source="erp",
+                details={"reason": "not_delivered"},
             )
         issuable = [
             i for i in card.invoices if i.status in ("issued", "partial", "paid", "overdue")

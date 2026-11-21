@@ -503,6 +503,17 @@ def _act_wordings(seller_company) -> dict:
     return {"act_closing_text": resolve_wording(profile, "act_closing_text")}
 
 
+def act_not_delivered(deal) -> bool:
+    """СЦ-9 (решение владельца 2026-11-21): акт выпускается после доставки — когда исполнение сделки «Доставлено» или
+    «Принято клиентом» (то же правило G1, что `deal_documents` и `tasks`: акт — по факту поставки). Единственное место
+    правила: карточка проекта (`act_blocker`), очередь Платформы и выпуск `generate_act` спрашивают только его."""
+    from ..constants import FulfillmentStatusCode
+
+    fulfillment = getattr(deal, "fulfillment", None)
+    code = fulfillment.status.code if fulfillment is not None and fulfillment.status_id else None
+    return code not in (FulfillmentStatusCode.DELIVERED, FulfillmentStatusCode.ACCEPTED)
+
+
 # Нумератор держит блокировку счётчика ДО КОММИТА вызывающего (контракт
 # `next_document_number`), поэтому выпуск акта обязан быть атомарным. Без декоратора продавец
 # получал 500 на кнопку «Сформировать акт» — найдено проходом глазами 03-08.
@@ -541,6 +552,9 @@ def generate_act(
         if live_act.status_code == ActStatusCode.DRAFT:
             return None, f"ACT_AWAITING_REISSUE:{live_act.id}"
         return None, f"ACT_ALREADY_EXISTS:{live_act.id}"
+
+    if act_not_delivered(invoice.deal):
+        return None, "ACT_NOT_DELIVERED"
 
     # Seller company = the КП author's owning company → its prefix + per-company counter.
     from .document_blocks import frozen_body_for

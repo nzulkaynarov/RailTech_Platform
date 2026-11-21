@@ -241,7 +241,13 @@ function Documents({ card, objectId }: { card: ProjectCard; objectId: string }) 
         <DocRow
           number="—"
           type={t("card.documents.act")}
-          status={<span className="pf-hint">{t("card.documents.actMissing")}</span>}
+          status={
+            <span className="pf-hint">
+              {card.act_blocker === "not_delivered"
+                ? t("card.documents.actAfterDelivery")
+                : t("card.documents.actMissing")}
+            </span>
+          }
           action={
             canIssueAct ? (
               <Button
@@ -309,6 +315,9 @@ function Execution({ card, objectId }: { card: ProjectCard; objectId: string }) 
           ) : (
             <p className="pf-hint">{t("card.execution.none")}</p>
           )}
+          {f?.goods_not_shipped ? (
+            <p className="pf-hint">{t("card.execution.awaitingShipment")}</p>
+          ) : null}
           {f ? <DeliveryActions objectId={objectId} fulfillment={f} /> : null}
         </section>
         <section aria-label={t("card.execution.lines")}>

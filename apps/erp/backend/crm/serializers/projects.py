@@ -25,7 +25,7 @@ CLIENT_STATUSES = [
 PROBLEMS = ["no_contract", "contract_rejected", "act_returned", "invoice_overdue"]
 CONTRACT_ACTIONS = ["send_to_client", "client_agreed", "reject", "revise", "mark_issued", "attach_scan"]
 ACT_ACTIONS = ["attach_scan", "return", "reissue"]
-ACT_BLOCKERS = ["no_invoice", "act_exists", "forbidden"]
+ACT_BLOCKERS = ["no_invoice", "act_exists", "forbidden", "not_delivered"]
 JOURNAL_DOCUMENTS = ["contract", "act", "invoice", "quote", "project"]
 
 
@@ -90,6 +90,11 @@ class ProjectRowSerializer(serializers.Serializer):
     due_date = serializers.DateField(allow_null=True)
     documents = ProjectDocumentsSerializer()
     problems = serializers.ListField(child=serializers.ChoiceField(choices=PROBLEMS))
+    act_blocker = serializers.ChoiceField(
+        choices=[c for c in ACT_BLOCKERS if c != "forbidden"],
+        allow_null=True,
+        help_text="Почему акт выпустить нельзя, без учёта прав: нет счёта, акт уже есть, товар не доставлен",
+    )
 
 
 class ProjectPageSerializer(serializers.Serializer):
@@ -172,6 +177,9 @@ class FulfillmentCardSerializer(serializers.Serializer):
         child=serializers.ChoiceField(choices=["in_transit", "delivered"]),
         help_text="Отметки доставки, доступные этому сотруднику сейчас (статус исполнения и право `fulfillment.manage`)",
     )
+    goods_not_shipped = serializers.BooleanField(
+        help_text="Товар с карточкой каталога ещё не отгружен со склада: отметки доставки не предлагаются (`actions` пуст)"
+    )
     proof_attachment_id = serializers.IntegerField(
         allow_null=True, help_text="Вложение подтверждения доставки (`/sourcing/attachments/{id}/download/`)"
     )
@@ -211,7 +219,10 @@ class ProjectCardSerializer(ProjectRowSerializer):
     act_blocker = serializers.ChoiceField(
         choices=ACT_BLOCKERS,
         allow_null=True,
-        help_text="Почему акт сейчас выпустить нельзя: нет счёта, акт уже есть, нет права `fulfillment.act`",
+        help_text=(
+            "Почему акт сейчас выпустить нельзя: нет права `fulfillment.act`, акт уже есть, нет счёта, "
+            "товар не доставлен (`not_delivered`: акт — после доставки или приёмки клиентом)"
+        ),
     )
     fulfillment = FulfillmentCardSerializer(allow_null=True)
     delivery_lines = DeliveryLineCardSerializer(many=True)

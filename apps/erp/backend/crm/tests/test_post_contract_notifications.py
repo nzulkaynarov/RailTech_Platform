@@ -30,6 +30,7 @@ from crm.models import (
     Quote,
     QuoteStatus,
 )
+from crm.tests.delivery_support import mark_delivered
 from notifications.models import Notification
 
 
@@ -153,6 +154,7 @@ def test_buyer_is_notified_when_an_act_is_issued(chain, django_capture_on_commit
     chain["invoice"].save(update_fields=["status", "amount_paid"])
 
     with django_capture_on_commit_callbacks(execute=True):
+        mark_delivered(chain["invoice"].deal)
         act, error = generate_act(chain["invoice"].id, actor=chain["seller_user"])
     assert error is None, error
 

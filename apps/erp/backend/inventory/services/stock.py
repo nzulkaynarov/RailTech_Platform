@@ -606,9 +606,8 @@ def ship(
     return shipment
 
 
-def goods_fully_shipped(deal) -> bool:
-    """Весь товар последнего одобренного КП отгружен со склада: каждой строке-товару хватает отгруженного количества.
-    Строка товара без карточки каталога (на склад не заводится) отгрузку «полной» не делает."""
+def _approved_goods(deal) -> tuple[list, dict]:
+    """Товарные строки последнего одобренного КП и отгруженное по ним количество (`{quote_item_id: сумма}`)."""
     from sales.models import Quote
 
     from crm.constants import QuoteStatusCode
@@ -616,18 +615,32 @@ def goods_fully_shipped(deal) -> bool:
 
     quote = Quote.objects.filter(deal=deal, status__code=QuoteStatusCode.APPROVED).order_by("-version").first()
     if quote is None:
-        return False
+        return [], {}
     items = list(quote.items.billable().select_related("product__domain_type", "calc"))
     goods = [item for item in items if zone_of(item) == "goods"]
     if not goods:
-        return False
+        return [], {}
     shipped = {
         row["quote_item_id"]: row["total"]
         for row in ShipmentLine.objects.filter(quote_item__in=goods)
         .values("quote_item_id")
         .annotate(total=Sum("quantity"))
     }
-    return all(item.product_id and shipped.get(item.pk, 0) >= item.quantity for item in goods)
+    return goods, shipped
+
+
+def goods_fully_shipped(deal) -> bool:
+    """Весь товар последнего одобренного КП отгружен со склада: каждой строке-товару хватает отгруженного количества.
+    Строка товара без карточки каталога (на склад не заводится) отгрузку «полной» не делает."""
+    goods, shipped = _approved_goods(deal)
+    return bool(goods) and all(item.product_id and shipped.get(item.pk, 0) >= item.quantity for item in goods)
+
+
+def catalog_goods_awaiting_shipment(deal) -> bool:
+    """Есть товар с карточкой каталога, который ещё не ушёл со склада. Такой товар отмечается отгруженным только
+    отгрузкой со склада; строки без карточки (на склад не заводятся) ручную отметку доставки не закрывают."""
+    goods, shipped = _approved_goods(deal)
+    return any(item.product_id and shipped.get(item.pk, 0) < item.quantity for item in goods)
 
 
 def _complete_fulfillment_if_shipped(deal, shipment: Shipment, user) -> None:

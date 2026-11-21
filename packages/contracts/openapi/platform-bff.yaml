@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — BFF API (Платформа → CRM и ERP)
-  version: 0.119.0
+  version: 0.120.0
   summary: Пространство `/api/v1/` BFF Платформы — вызывает SPA `apps/platform/web` от имени сотрудника.
   description: |
     Контракт по ADR-0011 и `docs/architecture/platform-bff.md`. Версия 0.1.0 (INF-P0-1) покрывает фазу P1:
@@ -19091,14 +19091,18 @@ components:
           items: {$ref: '#/components/schemas/ProjectDeliveryAction'}
           description: >-
             Отметки доставки, доступные этому сотруднику сейчас (считает ERP по статусу исполнения и праву `fulfillment.manage`):
-            `in_transit` — из «Ожидает отгрузки» и «Отгружено», `delivered` — из них же и из «В пути»
+            `in_transit` — из «Ожидает отгрузки» и «Отгружено», `delivered` — из них же и из «В пути»; пусто, пока товар
+            с карточкой каталога не отгружен со склада (`goods_not_shipped`)
+        goods_not_shipped:
+          type: boolean
+          description: Товар с карточкой каталога ещё не отгружен со склада — отметки доставки не предлагаются; ручной путь остаётся у товара без карточки
         proof_name:
           type: [string, 'null']
           description: Имя файла подтверждения доставки; `null` — файла нет
         proof_url:
           type: [string, 'null']
           description: Ссылка BFF на файл подтверждения доставки (`/api/v1/eds/projects/{ref}/delivery/proof`); `null` — файла нет
-      required: [status, status_name, expected_delivery_date, shipped_at, delivered_at, accepted_at, tracking_number, carrier, actions, proof_name, proof_url]
+      required: [status, status_name, expected_delivery_date, shipped_at, delivered_at, accepted_at, tracking_number, carrier, actions, goods_not_shipped, proof_name, proof_url]
       additionalProperties: false
     ProjectDeliveryAction:
       type: string
@@ -19207,8 +19211,8 @@ components:
             - $ref: '#/components/schemas/ProjectAct'
             - type: 'null'
         act_blocker:
-          description: 'Почему акт сейчас выпустить нельзя: no_invoice — нет выставленного счёта, act_exists — акт уже есть, forbidden — нет права; null — можно'
-          enum: [no_invoice, act_exists, forbidden, null]
+          description: 'Почему акт сейчас выпустить нельзя: no_invoice — нет выставленного счёта, act_exists — акт уже есть, forbidden — нет права, not_delivered — товар ещё не доставлен (акт — после доставки или приёмки клиентом); null — можно'
+          enum: [no_invoice, act_exists, forbidden, not_delivered, null]
           type: [string, 'null']
         fulfillment:
           description: 'Исполнение из ERP — только чтение'

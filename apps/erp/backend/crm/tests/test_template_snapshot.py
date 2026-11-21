@@ -30,6 +30,7 @@ from crm.models import (
 from crm.services.billing import generate_act, generate_invoice_from_contract
 from crm.services.document_blocks import frozen_body_for, render_invoice_body
 from crm.services.invoice_lifecycle import issue_invoice
+from crm.tests.delivery_support import mark_delivered
 from notifications.models import NotificationType
 
 
@@ -156,6 +157,7 @@ def test_act_is_born_with_a_frozen_template(world):
     invoice, _ = generate_invoice_from_contract(world["contract"].id, actor=None)
     invoice, _ = issue_invoice(invoice, world["seller_user"])
 
+    mark_delivered(invoice.deal)
     act, err = generate_act(invoice.id, world["seller_user"])
 
     assert err is None

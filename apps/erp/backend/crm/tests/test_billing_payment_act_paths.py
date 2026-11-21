@@ -28,6 +28,7 @@ from crm.models import (
 )
 from crm.services._params import PaymentData
 from crm.services.billing import generate_act, generate_invoice_from_contract, record_payment
+from crm.tests.delivery_support import mark_delivered
 
 
 @pytest.fixture
@@ -292,6 +293,7 @@ class TestGenerateAct:
         invoice, error = generate_invoice_from_contract(world["contract"].id, actor=None)
         assert error is None
         assert invoice.status_code == "DRAFT"
+        mark_delivered(invoice.deal)
         result, error = generate_act(invoice.id, actor=world["seller_user"])
         assert result is None
         assert error == "ACT_INVALID_INVOICE_STATUS"
@@ -304,6 +306,7 @@ class TestGenerateAct:
     def test_staff_issues_an_act_mirroring_the_invoice(self, world):
         """Акт зеркалит счёт: та же сумма, статус «выпущен», связи проставлены."""
         invoice = _issued_invoice(world)
+        mark_delivered(invoice.deal)
         act, error = generate_act(invoice.id, actor=world["seller_user"])
         assert error is None
         assert act.status_code == "ISSUED"
@@ -316,5 +319,6 @@ class TestGenerateAct:
 def test_act_model_is_reachable_from_invoice(world):
     """Связка счёт → акт: реестр актов строится по ней."""
     invoice = _issued_invoice(world)
+    mark_delivered(invoice.deal)
     generate_act(invoice.id, actor=world["seller_user"])
     assert Act.objects.filter(invoice=invoice).count() == 1

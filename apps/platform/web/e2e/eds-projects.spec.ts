@@ -128,6 +128,20 @@ test.describe("Проекты: бухгалтер", () => {
     await expectNoInvoiceWord(page);
   });
 
+  test("счёт оплачен, товар не доставлен: «Акт — после доставки», кнопки нет (СЦ-9)", async ({
+    page,
+  }) => {
+    await loginAndWait(page, "accountant@demo.example");
+    await openProject(page, 98, "act");
+    const act = page.locator(PANEL);
+    await expect(act.getByText("Акта ещё нет")).toBeVisible();
+    await expect(act.getByText(/Акт — после доставки/)).toBeVisible();
+    await expect(act.getByRole("button", { name: "Выпустить акт" })).toHaveCount(0);
+    await expect(page.getByText("Акт — после доставки").first()).toBeVisible();
+    await settledScreenshot(page, "act-after-delivery");
+    await expectNoViolations(page, "акт — после доставки");
+  });
+
   test("реестр «Все документы»: договор и акт проекта — вкладки и ссылка «В проекте»", async ({
     page,
   }) => {
@@ -192,6 +206,13 @@ test.describe("Проекты: телефон", () => {
       await settledScreenshot(page, "mobile-contract-sheet");
       await expectNoViolations(page, "мобильный лист договора");
       await expectNoInvoiceWord(page);
+
+      await spaGoto(page, `${PR(98)}?sheet=act`);
+      const actSheet = page.getByRole("dialog");
+      await expect(actSheet.getByText(/Акт — после доставки/)).toBeVisible();
+      await expect(actSheet.getByRole("button", { name: "Выпустить акт" })).toHaveCount(0);
+      await settledScreenshot(page, "act-after-delivery");
+      await expectNoViolations(page, "мобильный лист акта: после доставки");
     },
   );
 });

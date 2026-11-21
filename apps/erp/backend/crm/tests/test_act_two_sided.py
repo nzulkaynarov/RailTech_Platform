@@ -32,6 +32,7 @@ from crm.models import (
     Quote,
     QuoteStatus,
 )
+from crm.tests.delivery_support import mark_delivered
 
 
 @pytest.fixture
@@ -194,6 +195,7 @@ def test_generated_act_records_its_issuer(act_world):
     act_world["act"].status = ActStatus.objects.get(code="CANCELLED")
     act_world["act"].save(update_fields=["status"])
 
+    mark_delivered(act_world["invoice"].deal)
     fresh, error = generate_act(act_world["invoice"].id, actor=act_world["seller_user"])
 
     assert error is None, error

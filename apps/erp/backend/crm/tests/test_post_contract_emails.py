@@ -34,6 +34,7 @@ from crm.models import (
     QuoteItem,
     QuoteStatus,
 )
+from crm.tests.delivery_support import mark_delivered
 
 
 @pytest.fixture
@@ -208,6 +209,7 @@ def test_issuing_an_act_emails_the_buyer(world, django_capture_on_commit_callbac
     invoice = _invoice(world, "PAID", paid=Decimal("112"))
     with patch("notifications.tasks.send_transactional_email") as mail:
         with django_capture_on_commit_callbacks(execute=True):
+            mark_delivered(invoice.deal)
             act, error = generate_act(invoice.id, actor=world["seller_user"])
 
     assert error is None, error
@@ -392,6 +394,7 @@ def test_issuing_an_act_emails_contacts_without_telegram(world, contacts, django
     invoice = _invoice(world, "PAID", paid=Decimal("112"))
     with patch("notifications.tasks.send_transactional_email"), patch("portal.tasks.send_notice_email") as contact_mail:
         with django_capture_on_commit_callbacks(execute=True):
+            mark_delivered(invoice.deal)
             act, error = generate_act(invoice.id, actor=world["seller_user"])
 
     assert error is None, error

@@ -20813,16 +20813,6 @@ components:
       - viewer_can_reject
       - viewer_can_remind
       - viewer_can_sign
-    ActBlockerEnum:
-      enum:
-      - no_invoice
-      - act_exists
-      - forbidden
-      type: string
-      description: |-
-        * `no_invoice` - no_invoice
-        * `act_exists` - act_exists
-        * `forbidden` - forbidden
     ActCard:
       type: object
       properties:
@@ -28887,6 +28877,10 @@ components:
           items:
             $ref: '#/components/schemas/DeliveryMarkActionEnum'
           description: Отметки доставки, доступные этому сотруднику сейчас (статус исполнения и право `fulfillment.manage`)
+        goods_not_shipped:
+          type: boolean
+          description: 'Товар с карточкой каталога ещё не отгружен со склада: отметки доставки не предлагаются (`actions`
+            пуст)'
         proof_attachment_id:
           type: integer
           nullable: true
@@ -28901,6 +28895,7 @@ components:
       - carrier
       - delivered_at
       - expected_delivery_date
+      - goods_not_shipped
       - proof_attachment_id
       - proof_name
       - shipped_at
@@ -34787,6 +34782,18 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ProblemsEnum'
+        act_blocker:
+          nullable: true
+          description: |-
+            Почему акт сейчас выпустить нельзя: нет права `fulfillment.act`, акт уже есть, нет счёта, товар не доставлен (`not_delivered`: акт — после доставки или приёмки клиентом)
+
+            * `no_invoice` - no_invoice
+            * `act_exists` - act_exists
+            * `forbidden` - forbidden
+            * `not_delivered` - not_delivered
+          oneOf:
+          - $ref: '#/components/schemas/ProjectCardActBlockerEnum'
+          - $ref: '#/components/schemas/NullEnum'
         quote:
           allOf:
           - $ref: '#/components/schemas/QuoteCard'
@@ -34806,17 +34813,6 @@ components:
           allOf:
           - $ref: '#/components/schemas/ActCard'
           nullable: true
-        act_blocker:
-          nullable: true
-          description: |-
-            Почему акт сейчас выпустить нельзя: нет счёта, акт уже есть, нет права `fulfillment.act`
-
-            * `no_invoice` - no_invoice
-            * `act_exists` - act_exists
-            * `forbidden` - forbidden
-          oneOf:
-          - $ref: '#/components/schemas/ActBlockerEnum'
-          - $ref: '#/components/schemas/NullEnum'
         fulfillment:
           allOf:
           - $ref: '#/components/schemas/FulfillmentCard'
@@ -34853,6 +34849,18 @@ components:
       - step
       - title
       - total
+    ProjectCardActBlockerEnum:
+      enum:
+      - no_invoice
+      - act_exists
+      - forbidden
+      - not_delivered
+      type: string
+      description: |-
+        * `no_invoice` - no_invoice
+        * `act_exists` - act_exists
+        * `forbidden` - forbidden
+        * `not_delivered` - not_delivered
     ProjectContractStatusEnum:
       enum:
       - project
@@ -35030,7 +35038,19 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ProblemsEnum'
+        act_blocker:
+          nullable: true
+          description: |-
+            Почему акт выпустить нельзя, без учёта прав: нет счёта, акт уже есть, товар не доставлен
+
+            * `no_invoice` - no_invoice
+            * `act_exists` - act_exists
+            * `not_delivered` - not_delivered
+          oneOf:
+          - $ref: '#/components/schemas/ProjectRowActBlockerEnum'
+          - $ref: '#/components/schemas/NullEnum'
       required:
+      - act_blocker
       - client_status
       - company_id
       - company_name
@@ -35045,6 +35065,16 @@ components:
       - step
       - title
       - total
+    ProjectRowActBlockerEnum:
+      enum:
+      - no_invoice
+      - act_exists
+      - not_delivered
+      type: string
+      description: |-
+        * `no_invoice` - no_invoice
+        * `act_exists` - act_exists
+        * `not_delivered` - not_delivered
     PublicCodeSent:
       type: object
       properties:

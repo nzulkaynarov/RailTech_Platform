@@ -3444,6 +3444,7 @@ export const getGetEdsProjectResponseProjectFulfillmentMock = (
       null,
     ]),
     actions: faker.helpers.arrayElements(Object.values(ProjectDeliveryAction)),
+    goods_not_shipped: faker.datatype.boolean(),
     proof_name: faker.helpers.arrayElement([
       faker.string.alpha({ length: { min: 10, max: 20 } }),
       null,
@@ -3529,7 +3530,7 @@ export const getGetEdsProjectResponseMock = (
   ),
   act: faker.helpers.arrayElement([{ ...getGetEdsProjectResponseProjectActMock() }, null]),
   act_blocker: faker.helpers.arrayElement([
-    faker.helpers.arrayElement(["no_invoice", "act_exists", "forbidden"] as const),
+    faker.helpers.arrayElement(["no_invoice", "act_exists", "forbidden", "not_delivered"] as const),
     null,
   ]),
   fulfillment: faker.helpers.arrayElement([
@@ -3850,6 +3851,7 @@ export const getCreateEdsProjectContractResponseProjectFulfillmentMock = (
       null,
     ]),
     actions: faker.helpers.arrayElements(Object.values(ProjectDeliveryAction)),
+    goods_not_shipped: faker.datatype.boolean(),
     proof_name: faker.helpers.arrayElement([
       faker.string.alpha({ length: { min: 10, max: 20 } }),
       null,
@@ -3959,7 +3961,7 @@ export const getCreateEdsProjectContractResponseMock = (
     null,
   ]),
   act_blocker: faker.helpers.arrayElement([
-    faker.helpers.arrayElement(["no_invoice", "act_exists", "forbidden"] as const),
+    faker.helpers.arrayElement(["no_invoice", "act_exists", "forbidden", "not_delivered"] as const),
     null,
   ]),
   fulfillment: faker.helpers.arrayElement([
@@ -4280,6 +4282,7 @@ export const getActEdsProjectContractResponseProjectFulfillmentMock = (
       null,
     ]),
     actions: faker.helpers.arrayElements(Object.values(ProjectDeliveryAction)),
+    goods_not_shipped: faker.datatype.boolean(),
     proof_name: faker.helpers.arrayElement([
       faker.string.alpha({ length: { min: 10, max: 20 } }),
       null,
@@ -4386,7 +4389,7 @@ export const getActEdsProjectContractResponseMock = (
   ),
   act: faker.helpers.arrayElement([{ ...getActEdsProjectContractResponseProjectActMock() }, null]),
   act_blocker: faker.helpers.arrayElement([
-    faker.helpers.arrayElement(["no_invoice", "act_exists", "forbidden"] as const),
+    faker.helpers.arrayElement(["no_invoice", "act_exists", "forbidden", "not_delivered"] as const),
     null,
   ]),
   fulfillment: faker.helpers.arrayElement([
@@ -4707,6 +4710,7 @@ export const getScanEdsProjectContractResponseProjectFulfillmentMock = (
       null,
     ]),
     actions: faker.helpers.arrayElements(Object.values(ProjectDeliveryAction)),
+    goods_not_shipped: faker.datatype.boolean(),
     proof_name: faker.helpers.arrayElement([
       faker.string.alpha({ length: { min: 10, max: 20 } }),
       null,
@@ -4813,7 +4817,7 @@ export const getScanEdsProjectContractResponseMock = (
   ),
   act: faker.helpers.arrayElement([{ ...getScanEdsProjectContractResponseProjectActMock() }, null]),
   act_blocker: faker.helpers.arrayElement([
-    faker.helpers.arrayElement(["no_invoice", "act_exists", "forbidden"] as const),
+    faker.helpers.arrayElement(["no_invoice", "act_exists", "forbidden", "not_delivered"] as const),
     null,
   ]),
   fulfillment: faker.helpers.arrayElement([
@@ -5134,6 +5138,7 @@ export const getRequestEdsProjectSigningResponseProjectFulfillmentMock = (
       null,
     ]),
     actions: faker.helpers.arrayElements(Object.values(ProjectDeliveryAction)),
+    goods_not_shipped: faker.datatype.boolean(),
     proof_name: faker.helpers.arrayElement([
       faker.string.alpha({ length: { min: 10, max: 20 } }),
       null,
@@ -5243,7 +5248,7 @@ export const getRequestEdsProjectSigningResponseMock = (
     null,
   ]),
   act_blocker: faker.helpers.arrayElement([
-    faker.helpers.arrayElement(["no_invoice", "act_exists", "forbidden"] as const),
+    faker.helpers.arrayElement(["no_invoice", "act_exists", "forbidden", "not_delivered"] as const),
     null,
   ]),
   fulfillment: faker.helpers.arrayElement([
@@ -5581,6 +5586,7 @@ export const getActEdsProjectActResponseProjectFulfillmentMock = (
       null,
     ]),
     actions: faker.helpers.arrayElements(Object.values(ProjectDeliveryAction)),
+    goods_not_shipped: faker.datatype.boolean(),
     proof_name: faker.helpers.arrayElement([
       faker.string.alpha({ length: { min: 10, max: 20 } }),
       null,
@@ -5678,7 +5684,7 @@ export const getActEdsProjectActResponseMock = (
   ),
   act: faker.helpers.arrayElement([{ ...getActEdsProjectActResponseProjectActMock() }, null]),
   act_blocker: faker.helpers.arrayElement([
-    faker.helpers.arrayElement(["no_invoice", "act_exists", "forbidden"] as const),
+    faker.helpers.arrayElement(["no_invoice", "act_exists", "forbidden", "not_delivered"] as const),
     null,
   ]),
   fulfillment: faker.helpers.arrayElement([
@@ -5999,6 +6005,7 @@ export const getScanEdsProjectActResponseProjectFulfillmentMock = (
       null,
     ]),
     actions: faker.helpers.arrayElements(Object.values(ProjectDeliveryAction)),
+    goods_not_shipped: faker.datatype.boolean(),
     proof_name: faker.helpers.arrayElement([
       faker.string.alpha({ length: { min: 10, max: 20 } }),
       null,
@@ -6096,7 +6103,7 @@ export const getScanEdsProjectActResponseMock = (
   ),
   act: faker.helpers.arrayElement([{ ...getScanEdsProjectActResponseProjectActMock() }, null]),
   act_blocker: faker.helpers.arrayElement([
-    faker.helpers.arrayElement(["no_invoice", "act_exists", "forbidden"] as const),
+    faker.helpers.arrayElement(["no_invoice", "act_exists", "forbidden", "not_delivered"] as const),
     null,
   ]),
   fulfillment: faker.helpers.arrayElement([
@@ -6417,6 +6424,7 @@ export const getMarkEdsProjectDeliveryResponseProjectFulfillmentMock = (
       null,
     ]),
     actions: faker.helpers.arrayElements(Object.values(ProjectDeliveryAction)),
+    goods_not_shipped: faker.datatype.boolean(),
     proof_name: faker.helpers.arrayElement([
       faker.string.alpha({ length: { min: 10, max: 20 } }),
       null,
@@ -6523,7 +6531,7 @@ export const getMarkEdsProjectDeliveryResponseMock = (
   ),
   act: faker.helpers.arrayElement([{ ...getMarkEdsProjectDeliveryResponseProjectActMock() }, null]),
   act_blocker: faker.helpers.arrayElement([
-    faker.helpers.arrayElement(["no_invoice", "act_exists", "forbidden"] as const),
+    faker.helpers.arrayElement(["no_invoice", "act_exists", "forbidden", "not_delivered"] as const),
     null,
   ]),
   fulfillment: faker.helpers.arrayElement([

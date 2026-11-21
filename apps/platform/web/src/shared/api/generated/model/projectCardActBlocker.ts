@@ -4,7 +4,7 @@
  */
 
 /**
- * Почему акт сейчас выпустить нельзя: no_invoice — нет выставленного счёта, act_exists — акт уже есть, forbidden — нет права; null — можно
+ * Почему акт сейчас выпустить нельзя: no_invoice — нет выставленного счёта, act_exists — акт уже есть, forbidden — нет права, not_delivered — товар ещё не доставлен (акт — после доставки или приёмки клиентом); null — можно
  * @nullable
  */
 export type ProjectCardActBlocker =
@@ -14,4 +14,5 @@ export const ProjectCardActBlocker = {
   no_invoice: "no_invoice",
   act_exists: "act_exists",
   forbidden: "forbidden",
+  not_delivered: "not_delivered",
 } as const;

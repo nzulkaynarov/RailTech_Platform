@@ -622,7 +622,9 @@ class InvoiceViewSet(
     def generate_act(self, request, pk=None):
         act, err = crm_services.generate_act(int(pk), actor=request.user)
         if err:
-            return Response({"detail": err}, status=(404 if err == "NOT_FOUND" else 400))
+            return Response(
+                {"detail": err}, status=(404 if err == "NOT_FOUND" else 409 if err == "ACT_NOT_DELIVERED" else 400)
+            )
         return Response(ActSerializer(act).data, status=201)
 
 

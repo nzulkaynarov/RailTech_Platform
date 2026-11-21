@@ -3,6 +3,7 @@ import { HttpResponse, http } from "msw";
 import { describe, expect, it } from "vitest";
 
 import { chooseOption } from "../../../test/fields";
+import { readProjects, writeProject } from "../../../mocks/fixtures/projects";
 import { server } from "../../../test/server";
 
 import { panelEl, renderAt, setupProjectTests, signIn } from "../../../test/projectsKit";
@@ -300,5 +301,26 @@ describe("Проект: акт (вкладка в боковом окне)", () 
     expect(await within(panel).findByText("Акта ещё нет")).toBeVisible();
     expect(within(panel).getByText(/Акт выпускается по выставленному счёту/)).toBeVisible();
     expect(within(panel).queryByRole("button", { name: "Выпустить акт" })).toBeNull();
+  });
+
+  it("счёт есть, товар не доставлен: вместо кнопки — «после доставки»; доставлен — кнопка есть (СЦ-9)", async () => {
+    const project = readProjects().find((p) => p.id === 97);
+    if (!project) throw new Error("нет проекта 97");
+    writeProject({ ...project, act: null });
+    const { panel } = await openTab("accountant@demo.example", 97, "act");
+    expect(await within(panel).findByText(/Акт — после доставки/)).toBeVisible();
+    expect(within(panel).queryByRole("button", { name: "Выпустить акт" })).toBeNull();
+  });
+
+  it("доставлено: акт можно выпустить", async () => {
+    const project = readProjects().find((p) => p.id === 97);
+    if (!project?.fulfillment) throw new Error("нет исполнения проекта 97");
+    writeProject({
+      ...project,
+      act: null,
+      fulfillment: { ...project.fulfillment, status: "DELIVERED", status_name: "Доставлено" },
+    });
+    const { panel } = await openTab("accountant@demo.example", 97, "act");
+    expect(await within(panel).findByRole("button", { name: "Выпустить акт" })).toBeVisible();
   });
 });

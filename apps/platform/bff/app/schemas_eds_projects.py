@@ -34,7 +34,7 @@ ContractActionCode = Literal[
 ]
 ActAction = Literal["issue", "return", "reissue"]
 ActActionCode = Literal["attach_scan", "return", "reissue"]
-ActBlocker = Literal["no_invoice", "act_exists", "forbidden"]
+ActBlocker = Literal["no_invoice", "act_exists", "forbidden", "not_delivered"]
 DeliveryAction = Literal["in_transit", "delivered"]
 JournalDocument = Literal["contract", "act", "invoice", "quote", "project"]
 FileKind = Literal["contract", "invoice", "act"]
@@ -185,6 +185,7 @@ class ProjectFulfillment(BaseModel):
     tracking_number: str | None
     carrier: str | None
     actions: list[DeliveryAction]
+    goods_not_shipped: bool = False
     proof_name: str | None
     proof_url: str | None
 
@@ -203,6 +204,7 @@ class RawFulfillment(BaseModel):
     tracking_number: str | None
     carrier: str | None
     actions: list[DeliveryAction] = Field(default_factory=list)
+    goods_not_shipped: bool = False
     proof_attachment_id: int | None = None
     proof_name: str | None = None
 
@@ -298,6 +300,7 @@ class RawRow(_Raw):
     due_date: dt.date | None = None
     documents: ProjectDocuments
     problems: list[ProjectProblem] = Field(default_factory=list)
+    act_blocker: ActBlocker | None = None  # без учёта прав; очередь идёт за ним, без своего правила
 
 
 class RawPage(_Raw):
@@ -311,7 +314,6 @@ class RawCard(RawRow):
     can_create_contract: bool = False
     invoices: list[ProjectInvoice] = Field(default_factory=list)
     act: ProjectAct | None = None
-    act_blocker: ActBlocker | None = None
     fulfillment: RawFulfillment | None = None
     delivery_lines: list[ProjectDeliveryLine] = Field(default_factory=list)
     journal: list[ProjectJournalEntry] = Field(default_factory=list)

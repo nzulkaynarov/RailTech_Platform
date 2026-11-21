@@ -564,6 +564,7 @@ async def test_issue_act_uses_the_freshest_issued_invoice(
         ("act_exists", [invoice_card()], 409, "act_already_exists"),
         ("no_invoice", [invoice_card(status="to_issue")], 409, "no_invoice"),
         (None, [], 409, "no_invoice"),
+        ("not_delivered", [invoice_card()], 409, "not_delivered"),
     ],
 )
 async def test_issue_act_refusals_come_before_the_erp_call(

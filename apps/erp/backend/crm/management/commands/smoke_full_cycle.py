@@ -24,8 +24,9 @@ What it does:
     5. Move Deal DRAFT → SOURCING → CALCULATING via the FSM.
     6. Create Quote + QuoteItem, send to client, accept as the client's contact.
     7. Generate Contract → sign client → sign manager (SIGNED).
-    8. Generate Invoice → record Payment (PAID) → generate Act (приёмка акта — шаг клиента в портале).
-    9. Fulfillment SHIPPED → DELIVERED; the client contact accepts the delivery lines (portal step);
+    8. Generate Invoice → record Payment (PAID) → Fulfillment SHIPPED → DELIVERED → generate Act
+       (акт — после доставки; приёмка акта — шаг клиента в портале).
+    9. The client contact accepts the delivery lines (portal step);
        the manager moves the Deal to CLOSED_WON.
     10. Print step-by-step report.
 
@@ -316,7 +317,7 @@ class Command(BaseCommand):
                 raise Exception(f"{action} failed: {err}")
         info(f"contract status={contract.status_code} (expected SIGNED)")
 
-        step(8, "Generate invoice, record payment, generate act")
+        step(8, "Generate invoice, record payment, deliver the goods, generate act")
         invoice, err = crm_services.generate_invoice_from_contract(contract.id, actor=manager)
         if err:
             raise Exception(f"generate_invoice_from_contract failed: {err}")
@@ -339,12 +340,7 @@ class Command(BaseCommand):
             raise Exception(f"record_payment failed: {err}")
         invoice.refresh_from_db()
         info(f"invoice status={invoice.status_code} amount_paid={invoice.amount_paid}")
-        act, err = crm_services.generate_act(invoice.id, actor=manager)
-        if err:
-            raise Exception(f"generate_act failed: {err}")
-        info(f"act={act.number} status={act.status_code} (приёмка акта клиентом — в портале)")
-
-        step(9, "Fulfillment DELIVERED → client accepts the delivery lines (portal step) → deal CLOSED_WON")
+        # Акт — после доставки (СЦ-9): сначала исполнение SHIPPED → DELIVERED.
         crm_services.ensure_fulfillment(deal)
         ff, err = crm_services.update_fulfillment_status(
             deal.id, manager, "SHIPPED", tracking_number="TRK-SMK-001", carrier="Smoke Logistics"
@@ -354,6 +350,12 @@ class Command(BaseCommand):
         ff, err = crm_services.update_fulfillment_status(deal.id, manager, "DELIVERED")
         if err:
             raise Exception(f"update_fulfillment_status DELIVERED failed: {err}")
+        act, err = crm_services.generate_act(invoice.id, actor=manager)
+        if err:
+            raise Exception(f"generate_act failed: {err}")
+        info(f"act={act.number} status={act.status_code} (приёмка акта клиентом — в портале)")
+
+        step(9, "Client accepts the delivery lines (portal step) → deal CLOSED_WON")
         # Приёмка — решение клиента: статус исполнения «принято» менеджеру недоступен (FIX-13/FIX-24). Строки
         # поставки принимает контакт клиента, как в портале; сделку закрывает менеджер по обычному переходу.
         from sales.models import DeliveryLine

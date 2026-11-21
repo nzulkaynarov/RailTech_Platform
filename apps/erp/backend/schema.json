@@ -36019,15 +36019,6 @@
                     "viewer_can_sign"
                 ]
             },
-            "ActBlockerEnum": {
-                "enum": [
-                    "no_invoice",
-                    "act_exists",
-                    "forbidden"
-                ],
-                "type": "string",
-                "description": "* `no_invoice` - no_invoice\n* `act_exists` - act_exists\n* `forbidden` - forbidden"
-            },
             "ActCard": {
                 "type": "object",
                 "properties": {
@@ -46461,6 +46452,10 @@
                         },
                         "description": "Отметки доставки, доступные этому сотруднику сейчас (статус исполнения и право `fulfillment.manage`)"
                     },
+                    "goods_not_shipped": {
+                        "type": "boolean",
+                        "description": "Товар с карточкой каталога ещё не отгружен со склада: отметки доставки не предлагаются (`actions` пуст)"
+                    },
                     "proof_attachment_id": {
                         "type": "integer",
                         "nullable": true,
@@ -46478,6 +46473,7 @@
                     "carrier",
                     "delivered_at",
                     "expected_delivery_date",
+                    "goods_not_shipped",
                     "proof_attachment_id",
                     "proof_name",
                     "shipped_at",
@@ -54134,6 +54130,18 @@
                             "$ref": "#/components/schemas/ProblemsEnum"
                         }
                     },
+                    "act_blocker": {
+                        "nullable": true,
+                        "description": "Почему акт сейчас выпустить нельзя: нет права `fulfillment.act`, акт уже есть, нет счёта, товар не доставлен (`not_delivered`: акт — после доставки или приёмки клиентом)\n\n* `no_invoice` - no_invoice\n* `act_exists` - act_exists\n* `forbidden` - forbidden\n* `not_delivered` - not_delivered",
+                        "oneOf": [
+                            {
+                                "$ref": "#/components/schemas/ProjectCardActBlockerEnum"
+                            },
+                            {
+                                "$ref": "#/components/schemas/NullEnum"
+                            }
+                        ]
+                    },
                     "quote": {
                         "allOf": [
                             {
@@ -54167,18 +54175,6 @@
                             }
                         ],
                         "nullable": true
-                    },
-                    "act_blocker": {
-                        "nullable": true,
-                        "description": "Почему акт сейчас выпустить нельзя: нет счёта, акт уже есть, нет права `fulfillment.act`\n\n* `no_invoice` - no_invoice\n* `act_exists` - act_exists\n* `forbidden` - forbidden",
-                        "oneOf": [
-                            {
-                                "$ref": "#/components/schemas/ActBlockerEnum"
-                            },
-                            {
-                                "$ref": "#/components/schemas/NullEnum"
-                            }
-                        ]
                     },
                     "fulfillment": {
                         "allOf": [
@@ -54226,6 +54222,16 @@
                     "title",
                     "total"
                 ]
+            },
+            "ProjectCardActBlockerEnum": {
+                "enum": [
+                    "no_invoice",
+                    "act_exists",
+                    "forbidden",
+                    "not_delivered"
+                ],
+                "type": "string",
+                "description": "* `no_invoice` - no_invoice\n* `act_exists` - act_exists\n* `forbidden` - forbidden\n* `not_delivered` - not_delivered"
             },
             "ProjectContractStatusEnum": {
                 "enum": [
@@ -54463,9 +54469,22 @@
                         "items": {
                             "$ref": "#/components/schemas/ProblemsEnum"
                         }
+                    },
+                    "act_blocker": {
+                        "nullable": true,
+                        "description": "Почему акт выпустить нельзя, без учёта прав: нет счёта, акт уже есть, товар не доставлен\n\n* `no_invoice` - no_invoice\n* `act_exists` - act_exists\n* `not_delivered` - not_delivered",
+                        "oneOf": [
+                            {
+                                "$ref": "#/components/schemas/ProjectRowActBlockerEnum"
+                            },
+                            {
+                                "$ref": "#/components/schemas/NullEnum"
+                            }
+                        ]
                     }
                 },
                 "required": [
+                    "act_blocker",
                     "client_status",
                     "company_id",
                     "company_name",
@@ -54481,6 +54500,15 @@
                     "title",
                     "total"
                 ]
+            },
+            "ProjectRowActBlockerEnum": {
+                "enum": [
+                    "no_invoice",
+                    "act_exists",
+                    "not_delivered"
+                ],
+                "type": "string",
+                "description": "* `no_invoice` - no_invoice\n* `act_exists` - act_exists\n* `not_delivered` - not_delivered"
             },
             "PublicCodeSent": {
                 "type": "object",

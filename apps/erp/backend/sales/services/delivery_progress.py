@@ -9,8 +9,8 @@
 Эталоны: Odoo «Validate» доставки и Proof of Delivery (подпись/вложение), Business Central «Posted Sales Shipment» с
 номером отправления перевозчика (Package Tracking No.), SAP S/4HANA «Proof of Delivery» — дата и подтверждение получателя.
 
-Коды ошибок (`{"detail": CODE}`): `ROLE_NOT_PERMITTED` (403), `NOT_FOUND` (404), `FULFILLMENT_NOT_READY` и
-`DELIVERY_TRANSITION_NOT_ALLOWED` (409), 400: `DELIVERY_ACTION_INVALID`, `DELIVERY_DATE_INVALID`,
+Коды ошибок (`{"detail": CODE}`): `ROLE_NOT_PERMITTED` (403), `NOT_FOUND` (404), `FULFILLMENT_NOT_READY`,
+`DELIVERY_TRANSITION_NOT_ALLOWED` и `GOODS_NOT_SHIPPED` (409), 400: `DELIVERY_ACTION_INVALID`, `DELIVERY_DATE_INVALID`,
 `DELIVERY_DATE_IN_FUTURE`, `DELIVERY_DATE_BEFORE_SHIPPED`, `WAYBILL_TOO_LONG`, `PROOF_INVALID`.
 """
 
@@ -43,6 +43,7 @@ HTTP_STATUS = {
     "NOT_FOUND": 404,
     "FULFILLMENT_NOT_READY": 409,
     "DELIVERY_TRANSITION_NOT_ALLOWED": 409,
+    "GOODS_NOT_SHIPPED": 409,
 }
 
 
@@ -77,9 +78,18 @@ def _status_code(fulfillment) -> Optional[str]:
     return fulfillment.status.code if fulfillment.status_id else None
 
 
+def goods_not_shipped(fulfillment) -> bool:
+    """СЦ-9: товар с карточкой каталога ещё на складе — ручные отметки «В пути» и «Доставлено» не предлагаются и не
+    принимаются (иначе акт выпускается по поставке, которой не было). Товар без карточки каталога ручной путь сохраняет.
+    """
+    from inventory.services.stock import catalog_goods_awaiting_shipment
+
+    return catalog_goods_awaiting_shipment(fulfillment.deal)
+
+
 def available_actions(fulfillment, user) -> list[str]:
     """Отметки, доступные сотруднику сейчас: по статусу исполнения и праву (страница не угадывает)."""
-    if fulfillment is None or not may_mark(user):
+    if fulfillment is None or not may_mark(user) or goods_not_shipped(fulfillment):
         return []
     code = _status_code(fulfillment)
     return [action for action in ACTIONS if code in TRANSITIONS[action][1]]
@@ -187,6 +197,8 @@ def _mark(deal_id: int, actor, mark: DeliveryMark):
     target, allowed_from = TRANSITIONS[mark.action]
     if _status_code(fulfillment) not in allowed_from:
         raise _Refused("DELIVERY_TRANSITION_NOT_ALLOWED")
+    if goods_not_shipped(fulfillment):
+        raise _Refused("GOODS_NOT_SHIPPED")
     shipped = fulfillment.shipped_at
     if mark.action == DELIVERED and shipped and day < timezone.localtime(shipped).date():
         raise _Refused("DELIVERY_DATE_BEFORE_SHIPPED")
