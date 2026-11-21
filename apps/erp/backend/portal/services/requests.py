@@ -16,7 +16,9 @@ import uuid
 
 from django.core.files import File
 from django.db import transaction
+from integration.models import CrmClientMapping
 from integration.services import events, partner_client
+from integration.services.client_requests import manager_for
 from portal.exceptions import PortalValidationError
 from portal.models import PortalRequestLine, PortalRequestSummary, PortalUpload
 
@@ -63,6 +65,12 @@ def _attach(deal: Deal, upload: PortalUpload) -> None:
         )
 
 
+def _client_manager(company):
+    """Сотрудник ERP — ответственный за клиента в CRM по сопоставлению провижининга; нет — `None`."""
+    owner_id = CrmClientMapping.objects.filter(company=company).values_list("owner_crm_user_id", flat=True).first()
+    return manager_for(owner_id)
+
+
 def create_client_request(company, contact, *, summary: str, lines: list[dict], attachments: list[dict]) -> Deal:
     """Создаёт запрос клиента; вернуть сделку. Данные уже прошли `ClientRequestCreateSerializer`."""
     draft_stage = DealStage.objects.filter(code=DealStageCode.DRAFT).first()
@@ -74,6 +82,8 @@ def create_client_request(company, contact, *, summary: str, lines: list[dict], 
         deal = Deal(
             company=company,
             contact=contact,
+            # «Его менеджер» — ответственный за клиента в CRM (решение владельца 2026-11-21 (4)); нет сопоставления — пусто.
+            manager=_client_manager(company),
             title=short_title(summary),
             stage=draft_stage,
             notes="Запрос создан клиентом из Cabinet",
