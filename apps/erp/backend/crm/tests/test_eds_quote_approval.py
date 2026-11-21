@@ -561,21 +561,41 @@ def test_buyer_sees_the_outgoing_number_but_not_the_directors_decision(world):
 # ── ERP-11 (решение архитектора 2026-10-28, W16-D1-2): автоотправка по каналам директора ─────────────────────────────
 
 
-def _contact(world, *, telegram=None, email="", invited=False):
-    """Контакт сделки клиента (офлайн, без входа в ERP): Telegram, e-mail и приглашение в кабинет — по аргументам."""
+def _invite_mail(email, status):
+    from core.models import EmailLog
+
+    return EmailLog.objects.create(
+        template="portal_invitation",
+        subject="Приглашение",
+        from_email="noreply@example.test",
+        to_emails=[email],
+        status=status,
+    )
+
+
+def _contact(world, *, telegram=None, email="", invited=False, invite_mail=None, logged_in=False, company=None):
+    """Контакт сделки клиента (офлайн, без входа в ERP): Telegram, e-mail и кабинет — по аргументам.
+
+    Кабинет доступен по факту: `logged_in` (был вход) или `invite_mail="SENT"` (письмо-приглашение доставлено).
+    `invite_mail` — письмо-приглашение этому контакту: ставит и `invited_at` (письмо создаётся до отметки).
+    `invited` без письма — только `invited_at`, приглашение в очереди, доставкой не считается."""
     from django.utils import timezone
     from parties.models import Contact
 
+    if invite_mail:
+        _invite_mail(email, invite_mail)
     contact = Contact.objects.create(
-        company=world["client"],
+        company=company or world["client"],
         name="Бахтиёр Каримов",
         email=email,
         telegram_user_id=telegram,
         is_primary=True,
-        invited_at=timezone.now() if invited else None,
+        invited_at=timezone.now() if (invited or invite_mail) else None,
+        last_login_at=timezone.now() if logged_in else None,
     )
-    world["deal"].contact, world["deal"].client = contact, None
-    world["deal"].save(update_fields=["contact", "client"])
+    if company is None:
+        world["deal"].contact, world["deal"].client = contact, None
+        world["deal"].save(update_fields=["contact", "client"])
     return contact
 
 
@@ -590,7 +610,7 @@ def _approve_with(world, channels):
 
 def test_approval_with_available_channels_sends_the_quote_to_the_client(world):
     """Директор выбрал Telegram, кабинет и почту — все доступны: КП «Отправлено», `quote.sent` несёт каналы."""
-    _contact(world, telegram=700100, email="client@example.test", invited=True)
+    _contact(world, telegram=700100, email="client@example.test", invite_mail="SENT")
 
     quote, _ = _approve_with(world, ["telegram", "cabinet", "email"])
 
@@ -630,6 +650,78 @@ def test_no_available_channel_leaves_the_quote_ready_for_the_manager(world):
     assert ActivityLog.objects.filter(entity_id=quote.pk, event_code="quote.auto_send_skipped").exists()
 
 
+def test_cabinet_is_not_a_channel_when_the_invitation_mail_failed(world):
+    """Приглашение поставлено в очередь (`invited_at`), но письмо не ушло (FAILED): кабинет недоступен — КП «Готово к
+    отправке», `quote.sent` нет, менеджеру — уведомление с причиной."""
+    from notifications.models import Notification
+
+    _contact(world, telegram=None, email="client@example.test", invited=True, invite_mail="FAILED")
+
+    quote, _ = _approve_with(world, ["cabinet"])
+
+    assert quote.status.code == "READY_TO_SEND"
+    assert quote.send_report["skipped"] == [{"channel": "cabinet", "reason": "CABINET_NOT_INVITED"}]
+    assert bus_support.published("quote.sent") == []
+    note = Notification.objects.get(user=world["calc"], event_code="quote.auto_send_failed")
+    assert note.event_params["channels"] == "cabinet"
+
+
+def test_cabinet_is_not_a_channel_while_the_invitation_is_only_queued(world):
+    _contact(world, email="client@example.test", invited=True, invite_mail="QUEUED")
+
+    quote, _ = _approve_with(world, ["cabinet"])
+
+    assert quote.status.code == "READY_TO_SEND" and bus_support.published("quote.sent") == []
+
+
+def test_cabinet_is_a_channel_when_the_invitation_mail_was_sent(world):
+    _contact(world, email="client@example.test", invite_mail="SENT")
+
+    quote, _ = _approve_with(world, ["cabinet"])
+
+    assert quote.status.code == "SENT" and quote.send_report["sent_via"] == ["cabinet"]
+    assert bus_support.only("quote.sent")["data"]["payload"]["channels"] == ["cabinet"]
+
+
+def test_another_contacts_invitation_to_the_same_address_does_not_open_the_cabinet(world):
+    """Тот же адрес у контакта другой компании: приглашён тот, а не контакт нашего клиента — канал закрыт, `quote.sent`
+    нет (ссылка приглашения выпущена тому контакту, войти по ней в кабинет этого клиента нельзя)."""
+    from parties.models import Company
+
+    other = Company.objects.create(name="Другая компания")
+    _contact(world, email="shared@example.test", invite_mail="SENT", company=other)
+    _contact(world, email="shared@example.test")
+
+    quote, _ = _approve_with(world, ["cabinet"])
+
+    assert quote.status.code == "READY_TO_SEND"
+    assert quote.send_report["skipped"] == [{"channel": "cabinet", "reason": "CABINET_NOT_INVITED"}]
+    assert bus_support.published("quote.sent") == []
+
+
+def test_cabinet_is_a_channel_when_the_client_has_logged_in(world):
+    """Вход в кабинет — факт сам по себе, письмо не нужно (даже если последнее приглашение не ушло)."""
+    _contact(world, email="client@example.test", invite_mail="FAILED", logged_in=True)
+
+    quote, _ = _approve_with(world, ["cabinet"])
+
+    assert quote.status.code == "SENT" and quote.send_report["sent_via"] == ["cabinet"]
+
+
+def test_the_latest_invitation_mail_decides(world):
+    """Раньше письмо ушло, но повторное приглашение не доставлено — по последнему канал недоступен."""
+    from django.utils import timezone
+
+    contact = _contact(world, email="client@example.test", invite_mail="SENT")
+    _invite_mail("client@example.test", "FAILED")
+    contact.invited_at = timezone.now()  # повторное приглашение: письмо создано до отметки, но не доставлено
+    contact.save(update_fields=["invited_at"])
+
+    quote, _ = _approve_with(world, ["cabinet"])
+
+    assert quote.status.code == "READY_TO_SEND"
+
+
 def test_telegram_needs_a_client_known_to_crm(world):
     """Telegram доставляет бот CRM: клиент без сопоставления с CRM — канал недоступен."""
     _contact(world, telegram=700102, email="")
@@ -642,7 +734,7 @@ def test_telegram_needs_a_client_known_to_crm(world):
 
 
 def test_repeated_delivery_of_the_decision_does_not_send_twice(world):
-    _contact(world, telegram=700103, email="", invited=True)
+    _contact(world, telegram=700103, email="", logged_in=True)
     quote, data = _approve_with(world, ["telegram", "cabinet"])
     assert quote.status.code == "SENT"
 
@@ -657,7 +749,7 @@ def test_a_send_gate_stops_the_auto_send_without_undoing_the_approval(world, mon
     """Гейт отправки (здесь — убыточное КП) останавливает автоотправку: одобрение в силе, код — в итоге."""
     from crm.services.quotes import lifecycle
 
-    _contact(world, telegram=700104, email="", invited=True)
+    _contact(world, telegram=700104, email="", logged_in=True)
     quote = _submitted(world)
     monkeypatch.setattr(
         lifecycle,
@@ -675,7 +767,7 @@ def test_a_send_gate_stops_the_auto_send_without_undoing_the_approval(world, mon
 
 
 def test_approval_without_channels_does_not_auto_send(world):
-    _contact(world, telegram=700105, email="client2@example.test", invited=True)
+    _contact(world, telegram=700105, email="client2@example.test")
 
     quote, _ = _approve_with(world, [])
 
@@ -688,7 +780,7 @@ def test_any_send_failure_keeps_the_approval_and_tells_the_request_manager(world
     from crm.services.quotes import QuoteLifecycleService
     from notifications.models import Notification
 
-    _contact(world, telegram=700106, email="", invited=True)
+    _contact(world, telegram=700106, email="", logged_in=True)
     quote = _submitted(world)
 
     def broken(*args, **kwargs):
