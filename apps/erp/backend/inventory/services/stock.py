@@ -603,6 +603,10 @@ def ship(
         {"number": number},
     )
     _complete_fulfillment_if_shipped(deal, shipment, user)
+    # Частичная отгрузка статус исполнения не меняет, но отгруженные целиком строки поставки уже «Отгружено».
+    from sales.services.delivery_lines import sync_delivery_lines
+
+    sync_delivery_lines(Fulfillment.objects.filter(deal=deal).select_related("status"))
     return shipment
 
 
