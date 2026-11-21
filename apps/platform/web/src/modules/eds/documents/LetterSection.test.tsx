@@ -192,4 +192,32 @@ describe("EDS · карточка письма на бланке (P4)", () => {
     expect(saved?.signed_at).not.toBeNull();
     expect(saved?.verification_code).toMatch(/^RT-26-/);
   });
+
+  it("подписать некому: вместо «Подписать» — подсказка, ссылка на права подписи только у администратора", async () => {
+    seed({ signing: { can_sign: false, reason: "no_authority", signer_id: null } });
+    const director = await openCard("director@demo.example");
+    expect(director.queryByRole("button", { name: "Подписать" })).toBeNull();
+    expect(director.getByText(/Подписать некому — полномочие выдаёт администратор/)).toBeVisible();
+    expect(director.queryByRole("link", { name: "Настройки · Права подписи" })).toBeNull();
+  });
+
+  it("подписать некому у администратора: есть ссылка «Настройки · Права подписи»", async () => {
+    seed({
+      ownerId: "u-demo-admin",
+      signing: { can_sign: false, reason: "no_authority", signer_id: null },
+    });
+    const admin = await openCard("admin@demo.example");
+    const link = admin.getByRole("link", { name: "Настройки · Права подписи" });
+    expect(link).toHaveAttribute("href", "/admin/signing");
+  });
+
+  it("подписант по реестру известен: «Подпишет: имя», кнопки «Подписать» нет", async () => {
+    seed({
+      signing: { can_sign: false, reason: "author_cannot_sign", signer_id: "u-demo-director" },
+    });
+    const card = await openCard("universal@demo.example");
+    expect(card.queryByRole("button", { name: "Подписать" })).toBeNull();
+    expect(card.getByText(/Подпишет: /)).toBeVisible();
+    expect(card.queryByText(/Подписать некому/)).toBeNull();
+  });
 });
