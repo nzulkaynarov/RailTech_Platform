@@ -1,5 +1,7 @@
 """Тесты BFF для шага подписи исходящего документа (SIGN-3, ADR-0024)."""
 
+from typing import Any
+
 import pytest
 
 from app.cookies import CSRF_HEADER
@@ -78,13 +80,13 @@ async def test_letter_sign_offer_follows_eds_signing_check(
     web: Web,
     eds: EdsFake,
     check: ContractChecker,
-    signing: dict | None,
+    signing: dict[str, Any] | None,
     can_sign: bool,
-    hint: dict | None,
+    hint: dict[str, Any] | None,
 ) -> None:
     """СЦ-9: «Подписать» — только если EDS разрешает; причину и подписанта даёт подсказка."""
     await web.login(["DIRECTOR"])
-    over = {} if signing is None else {"signing": signing}
+    over: dict[str, Any] = {} if signing is None else {"signing": signing}
     eds.answer("GET", f"documents/{DOC_ID}", body=document(kind="letter_out", **over))
 
     response = await web.client.get(f"{BASE}/documents/{DOC_ID}")
