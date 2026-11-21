@@ -492,6 +492,10 @@ export const QUEUE = {
     resource: "eds.inbox.register",
     level: "full",
   },
+  sign_document: {
+    resource: "dashboard.queue",
+    level: "full",
+  },
 } as const satisfies Record<string, { resource: ResourceKey; level: AccessLevel }>;
 
 /** Роль каталога: название, матрица и поля с ограничением. */

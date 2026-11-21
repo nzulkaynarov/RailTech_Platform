@@ -119,6 +119,8 @@ class ThreadMessage(BaseModel):
     id: int
     author: Author
     author_name: str | None
+    # Ответил заместитель — владелец лида, за которого он ответил (CRM `meta.on_behalf_of_user_id`)
+    on_behalf_of_name: str | None = None
     text: str
     created_at: datetime
     attachments: list[ThreadAttachment]

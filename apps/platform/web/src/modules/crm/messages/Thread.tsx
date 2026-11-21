@@ -72,7 +72,11 @@ function Bubble({ entry, lead, canCreate }: { entry: Entry; lead: string; canCre
     );
   }
   const { message } = entry;
-  const author = message.author_name ?? t(`thread.authors.${message.author}`);
+  const sender = message.author_name ?? t(`thread.authors.${message.author}`);
+  // Ответил заместитель: «<заместитель> за <владелец лида>» (СЦ-9)
+  const author = message.on_behalf_of_name
+    ? t("thread.authorFor", { name: sender, owner: message.on_behalf_of_name })
+    : sender;
   const context = message.context ? contextLabel(t, message.context) : null;
   return (
     <li className={`pf-msg-item pf-msg-item--${message.author}`}>

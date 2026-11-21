@@ -10,6 +10,7 @@ import pytest
 from app.container import Container
 from tests.conftest import ACCESS_SECRET, ERP_SERVICE_TOKEN, ERP_SERVICE_TOKEN_PREVIOUS
 from tests.domain import Person
+from tests.signing import sign_out
 from tests.test_api_auth import assert_error
 from tests.test_letterhead_letters import PDF, StubRenderer, deliver_letterhead, letter_json, run
 
@@ -33,7 +34,7 @@ async def test_erp_reads_only_the_final_pdf_of_a_sent_letter(
     assert await run(container, StubRenderer(), deferred[-1]) == "ready"
     assert_error(await client.get(path, headers=bearer(ERP_SERVICE_TOKEN)), 404, "NOT_FOUND")
 
-    sent = await client.post(f"/api/v1/documents/{doc['id']}/submit", headers=registrar.headers)
+    sent = await sign_out(client, staff, doc["id"])
     assert sent.status_code == 200 and sent.json()["status"] == "sent", sent.text
     # Номер выдан, итоговый PDF ещё готовится — 404.
     assert_error(await client.get(path, headers=bearer(ERP_SERVICE_TOKEN)), 404, "NOT_FOUND")

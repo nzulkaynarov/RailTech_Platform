@@ -180,6 +180,51 @@ describe("Рабочий экран поручения (P8b, SPEC-v3 §3.2a п. 
     });
   });
 
+  describe("СЦ-9: заместитель открывает шаг замещаемого (?for=)", () => {
+    const pending = {
+      id: "e-1",
+      old_due: "2030-01-10",
+      new_due: "2030-01-17",
+      reason: "Ждём выписку",
+      status: "pending" as const,
+      requested_by: executor,
+      requested_at: "2026-11-02T05:00:00Z",
+      decided_by: null,
+      decided_at: null,
+      comment: null,
+    };
+    const forQuery = (person: { id: string; name: string }) =>
+      `?for=${person.id}&forName=${encodeURIComponent(person.name)}`;
+
+    it("поручение за исполнителя: форма исполнения и подпись «Вы замещаете …»", async () => {
+      inExecution();
+      signIn("manager@demo.example");
+      renderAt(`${PATH}${forQuery(executor)}`);
+
+      expect(await screen.findByRole("form", { name: "Отметить исполнение" })).toBeVisible();
+      expect(screen.getByText("Вы замещаете Демо Широков")).toBeVisible();
+    });
+
+    it("перенос срока за директора: «Одобрить перенос» у заместителя", async () => {
+      inExecution({ urgent: false, instructions: [instruction({ extensions: [pending] })] });
+      signIn("manager@demo.example");
+      renderAt(`${PATH}${forQuery(director)}`);
+
+      expect(await screen.findByRole("button", { name: "Одобрить перенос" })).toBeVisible();
+      expect(screen.getByText("Вы замещаете Демо Директоров")).toBeVisible();
+    });
+
+    it("без ?for= тот же человек видит «Действий от вас не ждут» и ни одной формы", async () => {
+      inExecution({ urgent: false, instructions: [instruction({ extensions: [pending] })] });
+      signIn("manager@demo.example");
+      renderAt(PATH);
+
+      expect(await screen.findByText("Действий от вас по этому письму не ждут")).toBeVisible();
+      expect(screen.queryByRole("button", { name: "Одобрить перенос" })).toBeNull();
+      expect(screen.queryByRole("form", { name: "Отметить исполнение" })).toBeNull();
+    });
+  });
+
   it("«Задачи»: строки поручения, ознакомления и переноса — без дублей, ведут на рабочий экран", () => {
     inExecution({
       urgent: false,
@@ -336,7 +381,7 @@ describe("Рабочий экран поручения (P8b, SPEC-v3 §3.2a п. 
       expect(findLetter("ВХ-108/26")?.instructions?.[0]?.status).toBe("in_work");
     });
 
-    it("«Задачи» делопроизводителя: «Зарегистрировать исходящее» — пока ответ передан и не зарегистрирован", () => {
+    it("«Задачи» подписанта: «Подписать исходящее» — пока ответ передан и не подписан; регистрации без подписи нет", () => {
       inExecution({ instructions: [replyInstruction()] });
       seedReply({
         letter: {
@@ -357,15 +402,19 @@ describe("Рабочий экран поручения (P8b, SPEC-v3 §3.2a п. 
         const roles = session ? sessionRoles(session) : undefined;
         return letterTaskQueueItems(roles?.view ?? []);
       };
-      const [row] = rows("registrar@demo.example").filter((r) => r.kind === "register_reply");
-      expect(row?.title).toBe("Зарегистрировать исходящее: ответ на ВХ-108/26");
+      const signs = (email: string) => rows(email).filter((r) => r.kind === "sign_document");
+      const [row] = signs("director@demo.example");
+      expect(row?.title).toBe("Подписать исходящее: ответ на ВХ-108/26");
       expect(row?.object.path).toBe(`/eds/documents?scope=all&doc=${documentId(950)}&panel=open`);
-      expect(rows("universal@demo.example").filter((r) => r.kind === "register_reply")).toEqual([]);
+      // автор подписанту не поручается сам себе, делопроизводитель — не подписант; «Зарегистрировать» не бывает
+      expect(signs("universal@demo.example")).toEqual([]);
+      expect(signs("registrar@demo.example")).toEqual([]);
+      expect(rows("director@demo.example").filter((r) => r.kind === "register_reply")).toEqual([]);
       const state = readEds();
       const doc = state.documents.find((d) => d.id === documentId(950));
       if (doc) doc.status = "sent";
       writeEds(state);
-      expect(rows("registrar@demo.example").filter((r) => r.kind === "register_reply")).toEqual([]);
+      expect(signs("director@demo.example")).toEqual([]);
     });
   });
 });

@@ -321,6 +321,7 @@
       "unknown": "nimadir xato ketdi, kiritilgan matn shaklda qoldi"
     },
     "submitNoChannels": "TTni tasdiqlash",
+    "submitFor": "{{name}} uçun TTni tasdiqlaş",
     "confirmVerb": "Tasdiqlash"
   },
   "superseded": "{{version}}-versiya bilan almashtirildi"

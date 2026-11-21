@@ -70,6 +70,7 @@
       "action": "Amal"
     },
     "noNumber": "raqam ro‘yxatga olishda beriladi",
+    "noNumberSigning": "raqam imzolaşda beriladi",
     "open": "Hujjatni ochish: {{subject}}",
     "continue": "Davom ettirish",
     "continueLabel": "Hujjatni davom ettirish: {{subject}}",
@@ -188,12 +189,12 @@
       "mailingMeta": "{{to}} · {{date}}",
       "sendAgain": "Manzilga yana yuborish",
       "sendRequested": "Yuborish so‘raldi",
-      "handedOver": "Ro‘yxatga olishga topshirildi: {{name}}, {{date}}",
+      "handedOver": "Imzoga topşirildi: {{name}}, {{date}}",
       "register": "Ro‘yxatga olish va yuborish",
       "registerOnly": "Ro‘yxatga olish",
       "registered": "Xat ro‘yxatga olindi: {{number}}",
-      "handover": "Ro‘yxatga olishga topshirish",
-      "handoverDone": "Ro‘yxatga olish uchun ish yurituvchiga topshirildi.",
+      "handover": "Imzoga topşiriş",
+      "handoverDone": "Imzoga topşirildi.",
       "sign": "Imzolash",
       "signer": "Imzolaydi: {{name}}",
       "noSigner": "Imzolovçi yöq — vakolatni administrator beradi",
@@ -221,13 +222,13 @@
       "verificationCode": "Tekshirish kodi",
       "verificationUrl": "Haqiqiyligini tekshirish",
       "actionFailed": "Bajarilmadi: {{reason}}",
-      "unmatched": "Manzil matn bilan yozilgan. «Davom ettirish»ni bosing va tashkilotni kontragentlardan tanlang — ungaça xat röyxatdan ötkazilmaydi."
+      "unmatched": "Manzil matn bilan yozilgan. «Davom ettiriş»ni bosing va taşkilotni kontragentlardan tanlang — ungaça xatni imzolab bölmaydi."
     },
     "replyTo": "Javob:",
     "mailFailed": "Yuborilmadi",
     "undelivered": {
       "title": "Xat adresatga yetib bormadi",
-      "notTried": "Xat röyxatga olingan, lekin adresatga hali yuborilmagan.",
+      "notTried": "Xat imzolangan, lekin adresatga hali yuborilmagan.",
       "inProgress": "Xat adresatga yuborilmoqda — natija şu yerda körinadi.",
       "waive": "Boşqa yöl bilan topşirildi",
       "waived": "Belgilandi: xat boşqa yöl bilan topşirildi",
@@ -236,16 +237,13 @@
   },
   "form": {
     "subtitle": "Hujjat direktorga kelishish uchun yuboriladi. Qoralamani saqlab, keyinroq «Hujjatlar»da davom ettirish mumkin.",
-    "subtitleLetter": "Kompaniya blankidagi xat: haqiqiy PDF ni köring, çiquvçi xatni röyxatdan ötkazing va manzilga yuboring.",
     "subtitleContinue": "{{number}} qoralamasi: o‘zgarishlar saqlanadi, istalgan payt yuborish mumkin.",
     "subtitleReturned": "{{number}} qayta ishlashga qaytarilgan: tuzatib, qayta yuboring.",
     "formLabel": "Yangi hujjat",
     "type": {
       "label": "Hujjat turi",
-      "letterLocked": "Xatlarni kiruvchi xatlarga kirish huquqi bor rol ro‘yxatdan o‘tkazadi.",
-      "letterOption": "Xat — kiruvchi xatlarga kirish kerak",
       "locked": "Yaratilgandan keyin turini o‘zgartirib bo‘lmaydi.",
-      "letterHandover": "Xatni siz tayyorlaysiz, ish yurituvchi ro‘yxatga oladi va yuboradi."
+      "letterHandover": "Xatni siz tayyorlaysiz, vakolatli şaxs imzolaydi: raqam va yuboriş — imzodan keyin."
     },
     "subject": {
       "label": "Mavzu",
@@ -309,8 +307,7 @@
       "label": "Kelishish yo‘nalishi",
       "plain": "Siz → Direktor",
       "withAmount": "Siz → Direktor → Buxgalter (summa bor)",
-      "letter": "Kelishuvsiz: xat darhol ro‘yxatdan o‘tadi",
-      "letterHandover": "Siz → iş yurituvçi: u çiquvçi xatni röyxatga oladi va manzilga yuboradi",
+      "letterHandover": "Siz → imzolovçi: imzolaydi, xat raqam oladi va adresatga ketadi",
       "approvers": "Kelishuvchilar",
       "approversHint": "Marshrut bosqichlaridan oldin, tanlangan tartibda kelishadi.",
       "watchers": "Nusxa oluvchilar",
@@ -338,25 +335,14 @@
         "Direktor kelishadi, qayta ishlashga qaytaradi yoki rad etadi — sizga xabar keladi.",
         "Qaror va sana «Hujjatlar»da qoladi."
       ],
-      "letter": [
-        "Xatga çiquvçi raqam (masalan, OUT-014/26) va röyxatga oliş sanasi beriladi.",
-        "Raqamli blank PDF i e-pochta ko‘rsatilgan bo‘lsa, manzilga yuboriladi.",
-        "Kiruvçi xatga javob «Javob tayyorlaş» topşiriğini yopadi; yuboriş jurnali — xat kartoçkasida."
-      ],
-      "draft": "«Qoralamani saqlash» hech narsa yubormaydi: hujjat «Hujjatlar»da «Davom ettirish» tugmasi bilan qoladi.",
-      "letterHandover": [
-        "Xat qoralamasi ro‘yxatga olish uchun ish yurituvchiga o‘tadi.",
-        "U PDF ni tekşiradi, çiquvçi xatni röyxatga oladi va manzilga yuboradi.",
-        "Çiquvçi raqam va yuboriş jurnali xat kartoçkasida paydo böladi."
-      ]
+      "draft": "«Qoralamani saqlaş» heç narsa yubormaydi: hujjat «Hujjatlar»da «Davom ettiriş» tugmasi bilan qoladi."
     },
     "submit": {
       "approval": "Kelishishga yuborish",
-      "letter": "Xatni ro‘yxatdan o‘tkazish",
       "draft": "Qoralamani saqlash",
       "uploadWait": "Fayllar yuklanishini kuting",
-      "letterSend": "Ro‘yxatga olish va yuborish",
-      "handover": "Ro‘yxatga olishga topshirish"
+      "handover": "Imzoga topşiriş",
+      "sign": "Imzolaş"
     },
     "validation": {
       "summary": "Belgilangan maydonlarni tuzating.",
@@ -373,9 +359,8 @@
     "toast": {
       "draft": "Qoralama saqlandi",
       "sent": "Kelishishga yuborildi: {{number}}",
-      "registered": "Xat ro‘yxatdan o‘tkazildi: {{number}}",
-      "registeredSent": "Xat ro‘yxatga olindi: {{number}}. Manzilga yuborilmoqda.",
-      "handover": "Ro‘yxatga olish uchun ish yurituvchiga topshirildi."
+      "handover": "Imzoga topşirildi.",
+      "signReady": "Qoralama saqlandi — xatni kartoçkada imzolang."
     },
     "error": {
       "send": "Yuborilmadi: {{reason}}",
@@ -399,6 +384,7 @@
         "pdf_not_ready": "PDF hali tayyorlanmoqda",
         "mail_in_progress": "yuborish davom etmoqda, natijani kuting",
         "no_authority": "imzo vakolati hech kimga berilmagan",
+        "signature_required": "xat raqamni faqat imzolanganda oladi — uni imzoga topşiring",
         "no_signing_authority": "imzolovçida amaldagi imzo vakolati yöq",
         "author_cannot_sign": "muallif öz xatini imzolamaydi",
         "authority_mismatch": "vakolat bu hujjatga taalluqli emas",
@@ -427,17 +413,17 @@
     "forbiddenTitle": "Hujjat yaratib bo‘lmaydi",
     "replyTo": {
       "label": "Kiruvchi xatga javoban",
-      "hint": "Kiruvçi xat raqami, masalan IN-112/26: xat röyxatga olinsa, «Javob tayyorlaş» topşiriği yopiladi."
+      "hint": "Kiruvçi xat raqami, masalan IN-112/26: xat imzolansa, «Javob tayyorlaş» topşiriği yopiladi."
     },
-    "subtitleLetterHandover": "",
+    "subtitleLetterHandover": "Kompaniya blankidagi xat: haqiqiy PDF ni köring va imzoga topşiring — raqamni xat imzolanganda oladi.",
     "attention": {
       "label": "Kimga (lavozimi va F.I.Sh.)",
       "hint": "Ixtiyoriy. Masalan: Mirobod tumani DSI boshlig‘i A. A. Karimovga."
     },
     "email": {
       "label": "Manzil e-pochtasi",
-      "hint": "Ixtiyoriy. E-pochta bo‘lsa, xat ro‘yxatga olingach blankdagi PDF bilan darhol yuboriladi.",
-      "notConnected": "Hujjat aylanişi poçtasi ulanmagan: xat röyxatga olinadi, lekin adresatga yuborilmaydi. Administratorga xabar bering."
+      "hint": "Ixtiyoriy. E-poçta bölsa, xat imzolangaç blankdagi PDF bilan darhol yuboriladi.",
+      "notConnected": "Hujjat aylanişi poçtasi ulanmagan: xat imzolanadi, lekin adresatga yuborilmaydi. Administratorga xabar bering."
     },
     "body": {
       "label": "Matn",

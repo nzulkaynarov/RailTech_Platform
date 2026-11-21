@@ -13,6 +13,7 @@ from app.services import instructions
 from tests.conftest import FakeClock
 from tests.domain import Person, outbox, validate
 from tests.helpers import seed_employee
+from tests.signing import sign_out
 from tests.test_api_auth import assert_error
 from tests.test_files import upload
 from tests.test_letter_registration import TAX_NOTICE
@@ -306,7 +307,7 @@ async def test_outgoing_in_reply_closes_reply_instructions(
         headers=registrar.headers,
     )
     assert draft.status_code == 201, draft.text
-    sent = await client.post(f"/api/v1/documents/{draft.json()['id']}/submit", headers=registrar.headers)
+    sent = await sign_out(client, staff, draft.json()["id"])
     assert sent.status_code == 200, sent.text
     card = (await get(client, director, letter["id"])).json()
     assert card["status"] == "executed"
@@ -339,9 +340,7 @@ async def test_complete_with_outgoing_number_and_report_files(
         json={"kind": "letter_out", "subject": "Ответ", "text": "Текст", "recipient": {"name": "Банк"}},
         headers=registrar.headers,
     )
-    number = (await client.post(f"/api/v1/documents/{outgoing.json()['id']}/submit", headers=registrar.headers)).json()[
-        "number"
-    ]
+    number = (await sign_out(client, staff, outgoing.json()["id"])).json()["number"]
     first = await act(client, executor, responsible["id"], "complete", {"outgoing_number": number})
     assert first.status_code == 200, first.text
     assert first.json()["status"] == "in_execution"  # соисполнитель ещё работает

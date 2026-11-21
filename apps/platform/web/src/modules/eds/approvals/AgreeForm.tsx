@@ -79,6 +79,10 @@ export function AgreeForm({ memo, variant = "panel", onDone }: AgreeFormProps) {
   const payPath = `/eds/payments?show=memos&memo=${encodeURIComponent(memo.id)}&panel=open&tab=payment`;
   const may = (d: Action) => memo.allowed_decisions.includes(d);
   const busy = decide.isPending;
+  // Шаг замещаемого (СЦ-9): кнопка называет, за кого решает заместитель
+  const approveLabel = memo.acting_for
+    ? t("form.submitFor", { name: memo.acting_for.full_name })
+    : t("form.submit");
 
   const decideNow = (decision: Action) => {
     setFailure(null);
@@ -99,7 +103,7 @@ export function AgreeForm({ memo, variant = "panel", onDone }: AgreeFormProps) {
         event.preventDefault();
         if (!accountant && may("approve") && !busy) {
           confirmAction({
-            action: t("form.submit"),
+            action: approveLabel,
             object: memo.number ?? "",
             onConfirm: () => {
               decideNow("approve");
@@ -142,7 +146,7 @@ export function AgreeForm({ memo, variant = "panel", onDone }: AgreeFormProps) {
             loading={busy && pendingAction === "approve"}
             disabled={!may("approve") || busy}
           >
-            {t("form.submit")}
+            {approveLabel}
           </Button>
         )}
         <div className="pf-dec-secondary">

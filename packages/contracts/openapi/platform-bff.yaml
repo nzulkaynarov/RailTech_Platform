@@ -1,12 +1,18 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — BFF API (Платформа → CRM и ERP)
-  version: 0.121.0
+  version: 0.122.0
   summary: Пространство `/api/v1/` BFF Платформы — вызывает SPA `apps/platform/web` от имени сотрудника.
   description: |
     Контракт по ADR-0011 и `docs/architecture/platform-bff.md`. Версия 0.1.0 (INF-P0-1) покрывает фазу P1:
     сессия, профиль, счётчики меню, «Моя очередь», лента «Сегодня», уведомления, поиск. Экраны фаз P2–P4 добавляются
     в этот файл до кода (`docs/architecture/integration-map.md` §1).
+
+    **0.122.0 (СЦ-9, подпись — задача подписанта; замещение) — ломающее по oasdiff (до 1.0 допустимо): новое значение
+    `QueueItemKind.sign_document`.** Строка «Подписать» в «Моих задачах»: исходящее письмо, переданное на подпись (подписанта
+    вычисляет EDS по реестру полномочий), и договор, счёт, акт, КП на моём шаге подписи. Строка `register_reply` больше не
+    приходит (значение оставлено для старых клиентов). Строки замещаемого из EDS (`acting_for`: согласование, поручение,
+    перенос срока, подпись) приходят с `on_behalf_of`; в счётчиках меню и карточках — только своя работа.
 
     **0.59.0 (реестр «Исходящие», план 2026-11-12 п. 0.9, находка FR-5).** `GET /eds/documents` принимает `stage`:
     `open` — ждёт чьего-то действия («Исходящие», «Внутренние»), `done` — путь завершён («Архив»); конечные статусы по виду
@@ -1992,6 +1998,15 @@ paths:
         `order_shortage` — «Заказать недостающее по ПР-…» (по проекту не заказано всё нужное), строка открывает новый заказ
         `/erp/stock/new?mode=shortage&request=ПР`; `ship_project` — «Отгрузить товар по ПР-…» (товар в резерве проекта),
         строка открывает отгрузки `/erp/stock?view=shipments&request=ПР`. Системному директору эти виды не приходят.
+
+        Подпись (СЦ-9): `sign_document` — «Подписать исходящее: ответ на ВХ-…» / «Подписать исходящее: тема» (EDS
+        `GET /letter-tasks`, `signatures`; строка открывает карточку письма `/eds/documents?scope=all&doc=…&panel=open`) и
+        «Подписать договор CT-…», счёт, акт, КП (EDS `GET /approvals?mine&template=signing&status=open`, только шаг подписи,
+        виза — нет; строка ведёт к блоку «Подписи» под очередью). Кому подписывать, решает EDS; роль строку не режет.
+
+        Замещение (СЦ-9): шаги замещаемого, которые EDS отдал заместителю (`acting_for`: согласование служебки и КП, поручение,
+        перенос срока, подпись по полномочию), и лиды замещаемого приходят с `on_behalf_of`; решает и действует EDS (право
+        шага замещаемого, подпись и оплата не переходят). В карточках и бейджах меню такие строки не считаются.
       parameters:
         - $ref: '#/components/parameters/RoleQuery'
       responses:
@@ -18322,6 +18337,7 @@ components:
         - inbound_mail
         - inbound_mail_mine
         - register_reply
+        - sign_document
 
     DueLabel:
       type: string
@@ -18528,7 +18544,7 @@ components:
       type: object
       additionalProperties: false
       required: [id, name]
-      description: Чья это очередь, если строку видит заместитель
+      description: Чья это работа, если строку видит заместитель («за {имя}»)
       properties:
         id:
           type: string
@@ -19988,6 +20004,13 @@ components:
         status: {$ref: '#/components/schemas/ApprovalRouteStatus'}
         stage: {$ref: '#/components/schemas/StepCode'}
         can_decide: {type: boolean}
+        acting_for:
+          oneOf:
+            - $ref: '#/components/schemas/EdsPerson'
+            - type: 'null'
+          description: >-
+            СЦ-9: шаг замещаемого решает действующий заместитель — «Согласовать за {имя}»; `null` или нет поля — свой шаг (из
+            маршрута EDS; подпись и оплата не переходят)
         allowed_decisions:
           type: array
           uniqueItems: true
@@ -20460,6 +20483,13 @@ components:
           type: array
           items: {$ref: '#/components/schemas/EdsDecision'}
         can_decide: {type: boolean}
+        acting_for:
+          oneOf:
+            - $ref: '#/components/schemas/EdsPerson'
+            - type: 'null'
+          description: >-
+            СЦ-9: шаг замещаемого решает действующий заместитель — «Согласовать за {имя}»; `null` или нет поля — свой шаг (из
+            маршрута EDS; подпись и оплата не переходят)
         allowed_decisions:
           type: array
           uniqueItems: true
@@ -24954,6 +24984,11 @@ components:
         author_name:
           type: [string, 'null']
           description: Имя сотрудника у ответа менеджера; у сообщения из кабинета — имя контакта клиента
+        on_behalf_of_name:
+          type: [string, 'null']
+          description: >-
+            СЦ-9: ответ дал заместитель — имя владельца лида, за которого он ответил («<author_name> за <имя>»); `null` — ответил
+            сам менеджер или имя неизвестно
         text: {type: string}
         channel:
           $ref: '#/components/schemas/MessageChannel'

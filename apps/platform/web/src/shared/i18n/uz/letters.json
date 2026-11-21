@@ -469,7 +469,7 @@
     },
     "kindHint": {
       "execute": "Ijrochi bajaradi va «Vazifalar»da hisobot beradi.",
-      "reply": "Ijrochi javob tayyorlaydi: «javoban» chiquvchi xat ro‘yxatga olinsa, topshiriq yopiladi.",
+      "reply": "Ijroçi javob tayyorlaydi: «javoban» çiquvçi xat imzolansa, topşiriq yopiladi.",
       "info": "Topshiriqsiz: xat «Ma’lumot uchun qabul qilindi» holatini oladi."
     },
     "template": {
@@ -624,6 +624,7 @@
     }
   },
   "tasks": {
+    "onBehalf": "Siz {{name}}ni almaştirasiz",
     "title": "{{number}} xati bo‘yicha topshiriq",
     "subtitle": "Xat, sizning topshirig‘ingiz va u bo‘yicha amallar",
     "letter": "Xat",
@@ -1273,11 +1274,11 @@
   },
   "reply": {
     "title": "Xatga javob",
-    "draft": "Javob qoralamasi — hali ro‘yxatdan o‘tkazishga topshirilmagan.",
-    "handed": "Qoralama ish yurituvchiga ro‘yxatdan o‘tkazish uchun topshirildi.",
-    "registered": "{{number}} ro‘yxatdan o‘tkazildi.",
+    "draft": "Javob qoralamasi — hali imzoga topşirilmagan.",
+    "handed": "Qoralama imzoga topşirildi.",
+    "registered": "{{number}} imzolandi.",
     "noMail": "Tizimdan tashqarida yuborilgan yoki pochta orqali yuborilmagan.",
-    "sending": "{{number}} ro‘yxatdan o‘tkazildi, xat manzilga yuborilmoqda.",
+    "sending": "{{number}} imzolandi, xat manzilga yuborilmoqda.",
     "sent": "{{number}} manzilga yuborildi.",
     "failedTag": "Yuborilmadi",
     "failed": "{{number}} manzilga yetib bormadi: {{reason}}.",

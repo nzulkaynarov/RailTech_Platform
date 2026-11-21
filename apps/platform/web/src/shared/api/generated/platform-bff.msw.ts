@@ -8164,6 +8164,16 @@ export const getListQuoteApprovalsResponseMock = (
   ...overrideResponse,
 });
 
+export const getGetQuoteApprovalResponseEdsPersonMock = (
+  overrideResponse: Partial<EdsPerson> = {},
+): EdsPerson => ({
+  ...{
+    crm_user_id: faker.number.int(),
+    full_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
 export const getGetQuoteApprovalResponseLetterRequestMock = (
   overrideResponse: Partial<LetterRequest> = {},
 ): LetterRequest => ({
@@ -8231,16 +8241,6 @@ export const getGetQuoteApprovalResponseQuoteTotalsMock = (
     ]),
     vat_amount: faker.helpers.arrayElement([faker.helpers.fromRegExp("^-?\\d+(\\.\\d+)?$"), null]),
     total: faker.helpers.fromRegExp("^-?\\d+(\\.\\d+)?$"),
-  },
-  ...overrideResponse,
-});
-
-export const getGetQuoteApprovalResponseEdsPersonMock = (
-  overrideResponse: Partial<EdsPerson> = {},
-): EdsPerson => ({
-  ...{
-    crm_user_id: faker.number.int(),
-    full_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
   },
   ...overrideResponse,
 });
@@ -8358,6 +8358,7 @@ export const getGetQuoteApprovalResponseMock = (
   status: faker.helpers.arrayElement(Object.values(ApprovalRouteStatus)),
   stage: faker.helpers.arrayElement(Object.values(StepCode)),
   can_decide: faker.datatype.boolean(),
+  acting_for: faker.helpers.arrayElement([{ ...getGetQuoteApprovalResponseEdsPersonMock() }, null]),
   allowed_decisions: faker.helpers.arrayElements(Object.values(ApprovalDecision)),
   approved_late: faker.datatype.boolean(),
   outgoing_number: faker.helpers.arrayElement([
@@ -8506,6 +8507,16 @@ export const getGetQuoteApprovalResponseMock = (
   ...overrideResponse,
 });
 
+export const getDecideQuoteApprovalResponseEdsPersonMock = (
+  overrideResponse: Partial<EdsPerson> = {},
+): EdsPerson => ({
+  ...{
+    crm_user_id: faker.number.int(),
+    full_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
 export const getDecideQuoteApprovalResponseLetterRequestMock = (
   overrideResponse: Partial<LetterRequest> = {},
 ): LetterRequest => ({
@@ -8573,16 +8584,6 @@ export const getDecideQuoteApprovalResponseQuoteTotalsMock = (
     ]),
     vat_amount: faker.helpers.arrayElement([faker.helpers.fromRegExp("^-?\\d+(\\.\\d+)?$"), null]),
     total: faker.helpers.fromRegExp("^-?\\d+(\\.\\d+)?$"),
-  },
-  ...overrideResponse,
-});
-
-export const getDecideQuoteApprovalResponseEdsPersonMock = (
-  overrideResponse: Partial<EdsPerson> = {},
-): EdsPerson => ({
-  ...{
-    crm_user_id: faker.number.int(),
-    full_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
   },
   ...overrideResponse,
 });
@@ -8700,6 +8701,10 @@ export const getDecideQuoteApprovalResponseMock = (
   status: faker.helpers.arrayElement(Object.values(ApprovalRouteStatus)),
   stage: faker.helpers.arrayElement(Object.values(StepCode)),
   can_decide: faker.datatype.boolean(),
+  acting_for: faker.helpers.arrayElement([
+    { ...getDecideQuoteApprovalResponseEdsPersonMock() },
+    null,
+  ]),
   allowed_decisions: faker.helpers.arrayElements(Object.values(ApprovalDecision)),
   approved_late: faker.datatype.boolean(),
   outgoing_number: faker.helpers.arrayElement([
@@ -8851,6 +8856,16 @@ export const getDecideQuoteApprovalResponseMock = (
   ...overrideResponse,
 });
 
+export const getSendQuoteByChannelResponseEdsPersonMock = (
+  overrideResponse: Partial<EdsPerson> = {},
+): EdsPerson => ({
+  ...{
+    crm_user_id: faker.number.int(),
+    full_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
 export const getSendQuoteByChannelResponseLetterRequestMock = (
   overrideResponse: Partial<LetterRequest> = {},
 ): LetterRequest => ({
@@ -8918,16 +8933,6 @@ export const getSendQuoteByChannelResponseQuoteTotalsMock = (
     ]),
     vat_amount: faker.helpers.arrayElement([faker.helpers.fromRegExp("^-?\\d+(\\.\\d+)?$"), null]),
     total: faker.helpers.fromRegExp("^-?\\d+(\\.\\d+)?$"),
-  },
-  ...overrideResponse,
-});
-
-export const getSendQuoteByChannelResponseEdsPersonMock = (
-  overrideResponse: Partial<EdsPerson> = {},
-): EdsPerson => ({
-  ...{
-    crm_user_id: faker.number.int(),
-    full_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
   },
   ...overrideResponse,
 });
@@ -9045,6 +9050,10 @@ export const getSendQuoteByChannelResponseMock = (
   status: faker.helpers.arrayElement(Object.values(ApprovalRouteStatus)),
   stage: faker.helpers.arrayElement(Object.values(StepCode)),
   can_decide: faker.datatype.boolean(),
+  acting_for: faker.helpers.arrayElement([
+    { ...getSendQuoteByChannelResponseEdsPersonMock() },
+    null,
+  ]),
   allowed_decisions: faker.helpers.arrayElements(Object.values(ApprovalDecision)),
   approved_late: faker.datatype.boolean(),
   outgoing_number: faker.helpers.arrayElement([
@@ -9193,6 +9202,16 @@ export const getSendQuoteByChannelResponseMock = (
   ...overrideResponse,
 });
 
+export const getRecordQuoteClientDecisionResponseEdsPersonMock = (
+  overrideResponse: Partial<EdsPerson> = {},
+): EdsPerson => ({
+  ...{
+    crm_user_id: faker.number.int(),
+    full_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
 export const getRecordQuoteClientDecisionResponseLetterRequestMock = (
   overrideResponse: Partial<LetterRequest> = {},
 ): LetterRequest => ({
@@ -9260,16 +9279,6 @@ export const getRecordQuoteClientDecisionResponseQuoteTotalsMock = (
     ]),
     vat_amount: faker.helpers.arrayElement([faker.helpers.fromRegExp("^-?\\d+(\\.\\d+)?$"), null]),
     total: faker.helpers.fromRegExp("^-?\\d+(\\.\\d+)?$"),
-  },
-  ...overrideResponse,
-});
-
-export const getRecordQuoteClientDecisionResponseEdsPersonMock = (
-  overrideResponse: Partial<EdsPerson> = {},
-): EdsPerson => ({
-  ...{
-    crm_user_id: faker.number.int(),
-    full_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
   },
   ...overrideResponse,
 });
@@ -9387,6 +9396,10 @@ export const getRecordQuoteClientDecisionResponseMock = (
   status: faker.helpers.arrayElement(Object.values(ApprovalRouteStatus)),
   stage: faker.helpers.arrayElement(Object.values(StepCode)),
   can_decide: faker.datatype.boolean(),
+  acting_for: faker.helpers.arrayElement([
+    { ...getRecordQuoteClientDecisionResponseEdsPersonMock() },
+    null,
+  ]),
   allowed_decisions: faker.helpers.arrayElements(Object.values(ApprovalDecision)),
   approved_late: faker.datatype.boolean(),
   outgoing_number: faker.helpers.arrayElement([
@@ -9703,6 +9716,7 @@ export const getGetMemoApprovalResponseMock = (
     }),
   ),
   can_decide: faker.datatype.boolean(),
+  acting_for: faker.helpers.arrayElement([{ ...getGetMemoApprovalResponseEdsPersonMock() }, null]),
   allowed_decisions: faker.helpers.arrayElements(Object.values(ApprovalDecision)),
   created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
   updated_at: faker.date.past().toISOString().slice(0, 19) + "Z",
@@ -9821,6 +9835,10 @@ export const getDecideMemoApprovalResponseMock = (
     }),
   ),
   can_decide: faker.datatype.boolean(),
+  acting_for: faker.helpers.arrayElement([
+    { ...getDecideMemoApprovalResponseEdsPersonMock() },
+    null,
+  ]),
   allowed_decisions: faker.helpers.arrayElements(Object.values(ApprovalDecision)),
   created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
   updated_at: faker.date.past().toISOString().slice(0, 19) + "Z",
@@ -23801,6 +23819,10 @@ export const getGetCrmThreadResponseMock = (
     id: faker.number.int(),
     author: faker.helpers.arrayElement(["lead", "bot", "manager", "system"] as const),
     author_name: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    on_behalf_of_name: faker.helpers.arrayElement([
       faker.string.alpha({ length: { min: 10, max: 20 } }),
       null,
     ]),

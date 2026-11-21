@@ -415,6 +415,10 @@ QUEUE: Final[dict[str, tuple[str, Level]]] = {
         "eds.inbox.register",
         "full",
     ),
+    "sign_document": (
+        "dashboard.queue",
+        "full",
+    ),
 }
 
 # Системные роли (неизменны): название, матрица, поля с ограничением.

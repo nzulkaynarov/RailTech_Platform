@@ -134,11 +134,10 @@ async def letter_handed_over(
     document: Document,
     *,
     today: date,
-    already_told: Iterable[int],
     actor_id: int,
 ) -> None:
     """Проект письма передан: подписанту (по замещению — с пометкой «за …»); подписать некому — держателям
-    `signing.manage`. `already_told` — кому о передаче уже сообщило уведомление по ответу на входящее."""
+    `signing.manage`."""
     signer = await signing_resolve.letter_signer(session, document, today)
     directory = await load_directory(session, [document.author_crm_user_id])
     if signer is None:
@@ -155,7 +154,7 @@ async def letter_handed_over(
         )
         return
     who = signer.signer.crm_user_id
-    if who == actor_id or who in set(already_told):
+    if who == actor_id:
         return
     behalf = "" if not signer.acting_for else " · за " + ", ".join(p.full_name for p in signer.acting_for)
     await _publish(

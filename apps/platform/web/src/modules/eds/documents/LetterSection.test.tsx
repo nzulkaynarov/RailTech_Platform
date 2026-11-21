@@ -79,7 +79,7 @@ describe("EDS · карточка письма на бланке (P4)", () => {
     seed({ can_sign: false });
     const card = await openCard("registrar@demo.example");
 
-    expect(card.getByText(/Передано на регистрацию: Демо Широков/)).toBeVisible();
+    expect(card.getByText(/Передано на подпись: Демо Широков/)).toBeVisible();
     expect(card.getByText("Начальнику ГНИ")).toBeVisible();
     expect(card.getByText("по бланку (директор)")).toBeVisible();
     expect(card.getByText("Адресату ещё не отправляли.")).toBeVisible();
@@ -142,7 +142,7 @@ describe("EDS · карточка письма на бланке (P4)", () => {
     });
   });
 
-  it("автор без права регистрировать: «Передать на регистрацию», кнопки регистрации нет", async () => {
+  it("автор без права регистрировать: «Передать на подпись», кнопки регистрации нет", async () => {
     seed({});
     const state = readEds();
     const doc = state.documents.find((d) => d.id === ID);
@@ -151,8 +151,8 @@ describe("EDS · карточка письма на бланке (P4)", () => {
     const card = await openCard("universal@demo.example");
 
     expect(card.queryByRole("button", { name: "Зарегистрировать и отправить" })).toBeNull();
-    fireEvent.click(card.getByRole("button", { name: "Передать на регистрацию" }));
-    expect(await screen.findByText("Передано на регистрацию делопроизводителю.")).toBeVisible();
+    fireEvent.click(card.getByRole("button", { name: "Передать на подпись" }));
+    expect(await screen.findByText("Передано на подпись.")).toBeVisible();
     expect(
       readEds().documents.find((d) => d.id === ID)?.letter?.registration_requested,
     ).not.toBeNull();

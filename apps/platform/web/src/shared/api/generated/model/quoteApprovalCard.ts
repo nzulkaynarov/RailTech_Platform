@@ -5,6 +5,7 @@
 import type { ApprovalDecision } from "./approvalDecision";
 import type { ApprovalRouteStatus } from "./approvalRouteStatus";
 import type { EdsMoney } from "./edsMoney";
+import type { EdsPerson } from "./edsPerson";
 import type { EdsRouteStep } from "./edsRouteStep";
 import type { LetterRequest } from "./letterRequest";
 import type { QuoteCalculator } from "./quoteCalculator";
@@ -40,6 +41,8 @@ export interface QuoteApprovalCard {
   status: ApprovalRouteStatus;
   stage: StepCode;
   can_decide: boolean;
+  /** СЦ-9: шаг замещаемого решает действующий заместитель — «Согласовать за {имя}»; `null` или нет поля — свой шаг (из маршрута EDS; подпись и оплата не переходят) */
+  acting_for?: EdsPerson | null;
   /** Что можно сейчас; `approve` нет, пока красна блокирующая строка чек-листа (решает EDS) */
   allowed_decisions: ApprovalDecision[];
   /** КП одобрено с опозданием (C1-G-1) */

@@ -63,7 +63,8 @@ function PanelBody({
 }) {
   const { t } = useTranslation("approvals");
   const { me } = useAuth();
-  const mayDecide = mayDecideMemos(me);
+  // Заместитель решает шаг замещаемого и без раздела согласования (СЦ-9): право и замещение проверяет EDS
+  const mayDecide = mayDecideMemos(me) || Boolean(memo.acting_for);
   // Документ уже решён (в том числе другим): черновик комментария ему не нужен.
   useEffect(() => {
     if (memo.status !== "open") clearComment(me.id, memo.approval_id);

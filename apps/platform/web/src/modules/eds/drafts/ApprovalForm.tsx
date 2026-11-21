@@ -216,7 +216,11 @@ export function ApprovalForm({ quote, variant = "panel", onDone }: ApprovalFormP
           disabled={!canApprove || decide.isPending}
           aria-describedby={blockedText ? id("blocked") : undefined}
         >
-          {chosen.length > 0 ? t("form.submit") : t("form.submitNoChannels")}
+          {quote.acting_for
+            ? t("form.submitFor", { name: quote.acting_for.full_name })
+            : chosen.length > 0
+              ? t("form.submit")
+              : t("form.submitNoChannels")}
         </Button>
         {blockedText ? (
           <p className="pf-hint" id={id("blocked")}>

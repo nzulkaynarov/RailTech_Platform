@@ -536,3 +536,14 @@ def test_handoff_remembers_the_crm_owner_of_the_client_for_cabinet_requests(api)
     response = handoff(api, payload(crm_client_id=2002))
     assert response.status_code == 201
     assert CrmClientMapping.objects.get(crm_client_id=2002).owner_crm_user_id == 101
+
+
+@pytest.mark.django_db
+def test_handoff_sets_the_client_role_explicitly_and_it_is_not_restored_after_removal(api):
+    """СЦ-8: the role comes from the handoff itself (not from a signal); remove it and it stays removed."""
+    company = Company.objects.get(pk=handoff(api, payload()).json()["erp_company_id"])
+    assert set(company.types.values_list("code", flat=True)) == {"CLIENT"}
+
+    company.types.clear()
+
+    assert not company.types.exists()
