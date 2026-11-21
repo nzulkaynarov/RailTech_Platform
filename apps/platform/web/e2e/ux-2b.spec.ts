@@ -132,6 +132,45 @@ test.describe("UX-2b: суммы, статусы, телефон", () => {
     expect(wide).toEqual([]);
   });
 
+  test("Визы и подписи на 390: длинные слова без пробелов переносятся, а не раздвигают область (Х-19)", async ({
+    page,
+  }) => {
+    // без заглушки ответ «Визы и подписи» — случайные строки из схемы: слово без пробелов в этапе или сумме давало +3…+50 px
+    const word = "ДлинноеСловоБезПробеловИзДоменаДлинноеСловоБезПробелов";
+    // MSW живёт в service worker — `page.route` его ответы не видит, поэтому подменяем fetch страницы
+    const body = {
+      items: [
+        {
+          id: "00000000-0000-4000-8000-000000000001",
+          kind: "contract",
+          action: "visa",
+          step: word,
+          number: word,
+          title: word,
+          amount: word,
+          currency: null,
+          created_at: "2026-11-01T10:00:00Z",
+        },
+      ],
+    };
+    await page.addInitScript(`(() => {
+      const original = window.fetch.bind(window);
+      const payload = ${JSON.stringify(JSON.stringify(body))};
+      window.fetch = (input, init) => {
+        const url = input instanceof Request ? input.url : String(input);
+        return url.includes("/eds/signing-approvals")
+          ? Promise.resolve(
+              new Response(payload, { status: 200, headers: { "content-type": "application/json" } }),
+            )
+          : original(input, init);
+      };
+    })()`);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await loginAndWait(page, "all@demo.example");
+    await expect(page.getByRole("list", { name: "Визы и подписи" })).toBeVisible();
+    expect(await settledOverflow(page)).toEqual({ page: 0, main: 0 });
+  });
+
   for (const width of [1440, 390] as const) {
     test(`Счета и оплаты: суммы в сумах, без «UZS», числа вправо — ${String(width)}`, async ({
       page,
