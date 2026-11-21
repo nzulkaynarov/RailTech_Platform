@@ -60,6 +60,8 @@ export interface MockDocument {
   approvers?: string[];
   watchers?: string[];
   can_sign?: boolean;
+  /** Ответ EDS `Document.signing`; нет поля — выводится из `can_sign` и полномочия */
+  signing?: { can_sign: boolean; reason: string | null; signer_id: string | null };
 }
 
 export interface MockLetter {

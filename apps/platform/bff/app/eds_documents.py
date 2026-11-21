@@ -31,6 +31,7 @@ from app.schemas_eds_documents import (
     EdsRecipient,
     EdsReplyTo,
     EdsRouteStep,
+    EdsSigningHint,
 )
 from app.schemas_eds_letters import letter_path
 
@@ -222,6 +223,14 @@ class _RawReplyTo(BaseModel):
     subject: str
 
 
+class _RawSigning(BaseModel):
+    """`Document.signing` EDS (СЦ-9): та же проверка, что у `POST /documents/{id}/sign`."""
+
+    can_sign: bool = False
+    reason: str | None = None
+    signer: EdsPerson | None = None
+
+
 class _RawDocument(BaseModel):
     id: str
     kind: str
@@ -255,6 +264,7 @@ class _RawDocument(BaseModel):
     verification_code: str | None = None
     verification_url: str | None = None
     dispatch_method: str | None = None
+    signing: _RawSigning | None = None
 
 
 class _RawStep(BaseModel):
@@ -398,17 +408,24 @@ def _letter_flags(raw: "_RawDocument", *, me: int, registrar: bool) -> dict[str,
             "can_register": False,
             "can_request_registration": False,
             "can_sign": False,
+            "signing_hint": None,
         }
     letter = raw.letter
     draft = raw.status == "draft"
     mine = raw.author.crm_user_id == me
     handed = letter is not None and letter.registration_requested is not None
     has_body = letter is not None and letter.body is not None
+    signing = raw.signing
     return {
         "letter": letter,
-        "can_register": draft and registrar and (mine or handed),
+        # Решение владельца 2026-11-21 (3): исходящее письмо выходит только через «Подписать»
+        "can_register": False,
         "can_request_registration": draft and mine and not registrar and has_body and not handed,
-        "can_sign": draft and (registrar or handed or not mine),
+        # Подпись предлагается, только если EDS её разрешает (СЦ-9); поля нет — не предлагается
+        "can_sign": draft and signing is not None and signing.can_sign,
+        "signing_hint": EdsSigningHint(reason=signing.reason, signer=signing.signer)
+        if draft and signing is not None
+        else None,
     }
 
 

@@ -10761,8 +10761,24 @@ export interface components {
       verification_url?: string | null;
       /** @enum {string|null} */
       dispatch_method?: "email" | "paper" | "courier" | "edo" | "other" | null;
-      /** @description Пользователь может подписать документ (черновик, уполномоченное лицо) */
+      /**
+       * @description Подпись предлагается, только если сервис документов её разрешает (СЦ-9: та же проверка, что у `sign`);
+       *     поле сервиса не пришло — `false`.
+       */
       can_sign?: boolean;
+      /** @description Только у черновика исходящего письма — почему подписать нельзя и кто подпишет по реестру полномочий */
+      signing_hint?: components["schemas"]["EdsSigningHint"] | null;
+    };
+    /** @description Подсказка о подписи письма (СЦ-9) */
+    EdsSigningHint: {
+      /**
+       * @description Код отказа, как `details.reason` у `sign`: `no_permission`, `invalid_state`, `no_authority`,
+       *     `author_cannot_sign`, `authority_mismatch`, `revoked`, `not_started`, `expired`, `limit_exceeded`,
+       *     `currency_mismatch`, `holder_inactive`, `absent`, `deputy_without_authority`, `deputy_loop`
+       */
+      reason?: string | null;
+      /** @description Кто подпишет по реестру; `null` — подписать некому */
+      signer?: components["schemas"]["EdsPerson"] | null;
     };
     /** @description Параметры подписания документа уполномоченным лицом (SIGN-3, ADR-0024) */
     EdsDocumentSignIn: {

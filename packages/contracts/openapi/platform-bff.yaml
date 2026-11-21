@@ -19493,7 +19493,26 @@ components:
           enum: [email, paper, courier, edo, other, null]
         can_sign:
           type: boolean
-          description: Пользователь может подписать документ (черновик, уполномоченное лицо)
+          description: |
+            Подпись предлагается, только если сервис документов её разрешает (СЦ-9: та же проверка, что у `sign`);
+            поле сервиса не пришло — `false`.
+        signing_hint:
+          oneOf: [{$ref: '#/components/schemas/EdsSigningHint'}, {type: 'null'}]
+          description: 'Только у черновика исходящего письма — почему подписать нельзя и кто подпишет по реестру полномочий'
+    EdsSigningHint:
+      type: object
+      additionalProperties: false
+      description: Подсказка о подписи письма (СЦ-9)
+      properties:
+        reason:
+          type: [string, 'null']
+          description: |
+            Код отказа, как `details.reason` у `sign`: `no_permission`, `invalid_state`, `no_authority`,
+            `author_cannot_sign`, `authority_mismatch`, `revoked`, `not_started`, `expired`, `limit_exceeded`,
+            `currency_mismatch`, `holder_inactive`, `absent`, `deputy_without_authority`, `deputy_loop`
+        signer:
+          oneOf: [{$ref: '#/components/schemas/EdsPerson'}, {type: 'null'}]
+          description: Кто подпишет по реестру; `null` — подписать некому
     EdsDocumentSignIn:
       type: object
       additionalProperties: false

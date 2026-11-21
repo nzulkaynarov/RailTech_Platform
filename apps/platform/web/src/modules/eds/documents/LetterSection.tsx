@@ -2,6 +2,7 @@ import { Alert, App, Button, Checkbox, Radio, Space } from "antd";
 import { Dialog } from "../../../shared/ui/Dialog";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Link } from "react-router";
 
 import { canEdit } from "../../../app/access";
 import { useAuth } from "../../../app/auth/useAuth";
@@ -10,6 +11,7 @@ import type {
   EdsDocumentMailing,
   EdsDocumentSignInDispatchMethod,
   EdsLetter,
+  EdsSigningHint,
 } from "../../../shared/api/generated/model";
 import {
   requestEdsDocumentRegistration,
@@ -83,6 +85,30 @@ function registerBody(doc: EdsDocument, letter: EdsLetter, send: boolean) {
     submit: true,
     ...(send ? { send: true } : {}),
   };
+}
+
+/** Вместо «Подписать», когда EDS не разрешает: кто подпишет, либо «подписать некому» и куда идти за полномочием (СЦ-9). */
+function SignerHint({ hint }: { hint: EdsSigningHint }) {
+  const { t } = useTranslation("documents");
+  const { me } = useAuth();
+  if (hint.signer) {
+    return (
+      <span className="pf-fp-sub">{t("panel.letter.signer", { name: hint.signer.full_name })}</span>
+    );
+  }
+  return (
+    <span className="pf-fp-sub">
+      {t("panel.letter.noSigner")}
+      {canEdit(me, "eds.signing.manage") ? (
+        <>
+          {": "}
+          <Link to="/admin/signing" style={{ textDecoration: "underline" }}>
+            {t("panel.letter.noSignerLink")}
+          </Link>
+        </>
+      ) : null}
+    </span>
+  );
 }
 
 /**
@@ -257,6 +283,7 @@ export function LetterSection({ doc }: { doc: EdsDocument }) {
             {t("panel.letter.sign")}
           </Button>
         ) : null}
+        {!doc.can_sign && doc.signing_hint ? <SignerHint hint={doc.signing_hint} /> : null}
         {doc.can_register && !doc.can_sign ? (
           <Button
             type="primary"
