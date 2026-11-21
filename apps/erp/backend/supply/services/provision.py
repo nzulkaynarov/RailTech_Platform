@@ -9,7 +9,7 @@
    (`crm.services.calculation.line_supplier_offer`). Цена строки — цена этого предложения, если у всех строк заказа одна
    валюта;
 3. строки дефицита без предложения поставщика заказом не становятся (у ЗП поставщик обязателен): запись в журнале
-   проекта «Дефицит без поставщика» и колокольчик снабженцу задания — он выбирает поставщика в «Склад · Создать заказ ·
+   проекта «Дефицит без поставщика» и колокольчик снабженцу задания — он выбирает поставщика в «Закупки · Новый заказ ·
    На дефицит заявки» (`orders.create_from_deal` считает тот же дефицит).
 
 Идемпотентно: повторный вызов (повтор события, ручной перезапуск) не создаёт дублей — резерв строки один и не больше её
@@ -25,31 +25,16 @@ import logging
 from typing import Any, Optional
 
 from django.db import transaction
-from django.db.models import Sum
 from django.utils import timezone
 from inventory.access import StockError
 from inventory.services import stock
-from supply.models import OrderLogKind, OrderStatus, SupplierOrder, SupplierOrderLine
+from supply.models import OrderLogKind, OrderStatus, SupplierOrder
 from supply.services import orders
+from supply.services.shortage import ordered_by_item
 
 from core.quantity import jsonable
 
 logger = logging.getLogger(__name__)
-
-LIVE_STATUSES = (OrderStatus.DRAFT, OrderStatus.SENT, OrderStatus.CONFIRMED)
-
-
-def ordered_by_item(item_ids) -> dict[int, int]:
-    """Сколько по строкам КП уже заказано и ещё не принято в живых заказах (черновик, отправлен, подтверждён)."""
-    ids = [i for i in set(item_ids) if i]
-    if not ids:
-        return {}
-    rows = (
-        SupplierOrderLine.objects.filter(quote_item_id__in=ids, order__status__in=LIVE_STATUSES)
-        .values("quote_item_id")
-        .annotate(total=Sum("quantity") - Sum("received_quantity"))
-    )
-    return {row["quote_item_id"]: max(row["total"] or 0, 0) for row in rows}
 
 
 def _supplier_or_none(offer) -> Optional[Any]:
@@ -119,6 +104,7 @@ def _notify_supply(deal, title: str, message: str, event_code: str, params: dict
             type=ntype,
             title=title,
             message=message,
+            deal=deal,
             link=f"#deal/{deal.pk}",
             event_code=event_code,
             event_params=jsonable(params),
@@ -193,7 +179,7 @@ def provision_accepted_quote(quote) -> dict:
             deal,
             "Дефицит без поставщика",
             f"Проект {deal.number}: КП принято, у позиций нет предложения поставщика ({names}). Выберите поставщика: "
-            "Склад · Создать заказ · На дефицит заявки.",
+            "Закупки · Новый заказ · На дефицит заявки.",
             "supply.shortage_without_supplier",
             {"deal_id": deal.pk, "lines": len(without)},
         )

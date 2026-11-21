@@ -24,7 +24,7 @@ from decimal import ROUND_HALF_UP, Decimal
 from typing import Any, Optional
 
 from django.db import transaction
-from django.db.models import F, Q, Sum
+from django.db.models import F, Q
 from django.utils import timezone
 from inventory.access import (
     StockError,
@@ -48,6 +48,7 @@ from supply.models import (
     SupplierOrderLine,
     SupplierOrderLog,
 )
+from supply.services import shortage
 
 from catalog.item_ref import item_ref, main_photos
 from catalog.models import Product
@@ -363,7 +364,8 @@ def _expect_by_lead_time(order: SupplierOrder) -> None:
 @transaction.atomic
 def create_from_deal(user, deal_id: int, supplier_id: int) -> SupplierOrder:
     """Черновик ЗП на дефицит проекта: по каждой строке-товару последнего КП заявки — недостающее количество (количество
-    строки − удерживаемое резервом − уже заказанное в живых ЗП). Нечего заказывать — 409 `NO_SHORTAGE`."""
+    строки − отгруженное − удерживаемое резервом − уже заказанное в живых ЗП, формула `supply.services.shortage`). Нечего заказывать — 409 `NO_SHORTAGE`.
+    """
     from sales.models import Deal
 
     from crm.services.calculation import calc_quote, zone_of
@@ -381,22 +383,12 @@ def create_from_deal(user, deal_id: int, supplier_id: int) -> SupplierOrder:
         for item in quote.items.billable().select_related("product__domain_type", "product__uom", "calc")
         if item.product_id and zone_of(item) == "goods"
     ]
-    reserved = stock.reserved_by_item(i.pk for i in items)
-    ordered = {
-        row["quote_item_id"]: row["total"] or 0
-        for row in SupplierOrderLine.objects.filter(
-            quote_item__in=items, order__status__in=(OrderStatus.DRAFT, *OVERDUE_STATUSES)
-        )
-        .values("quote_item_id")
-        .annotate(total=Sum("quantity") - Sum("received_quantity"))
-    }
-    lines = []
-    for item in items:
-        shortage = item.quantity - reserved.get(item.pk, 0) - ordered.get(item.pk, 0)
-        if shortage > 0:
-            lines.append(
-                LineInput(quantity=shortage, product_id=item.product_id, deal_id=deal.pk, quote_item_id=item.pk)
-            )
+    missing = shortage.shortage_by_item(items)
+    lines = [
+        LineInput(quantity=missing[item.pk], product_id=item.product_id, deal_id=deal.pk, quote_item_id=item.pk)
+        for item in items
+        if item.pk in missing
+    ]
     if not lines:
         raise StockError("NO_SHORTAGE", 409)
     order = create_order(
