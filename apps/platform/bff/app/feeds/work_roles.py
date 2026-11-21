@@ -15,7 +15,16 @@ from app.rbac_generated import QUEUE
 
 # Виды исполнения ERP, которых нет в очереди системного директора.
 EXECUTION_KINDS: frozenset[str] = frozenset(
-    {"calc_task", "confirm_payment", "issue_invoice", "issue_contract", "attach_scan", "issue_act"}
+    {
+        "calc_task",
+        "confirm_payment",
+        "issue_invoice",
+        "issue_contract",
+        "attach_scan",
+        "issue_act",
+        "order_shortage",
+        "ship_project",
+    }
 )
 _DECIDER_ONLY = "DIRECTOR"
 

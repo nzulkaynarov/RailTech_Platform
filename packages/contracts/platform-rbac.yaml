@@ -516,6 +516,8 @@ queue:
   partner_date_change: { resource: erp.stock, level: full }
   receive_goods: { resource: erp.stock, level: full }
   partner_application: { resource: erp.stock, level: full }
+  order_shortage: { resource: erp.stock, level: full }
+  ship_project: { resource: erp.stock, level: full }
   confirm_payment: { resource: eds.payments, level: full }
   issue_invoice: { resource: eds.payments, level: full }
   issue_contract: { resource: eds.projects, level: full }
