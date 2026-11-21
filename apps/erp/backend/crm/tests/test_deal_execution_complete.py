@@ -19,7 +19,7 @@ def test_won_deal_with_unpaid_invoice_is_not_complete(act_world):  # noqa: F811
 
 
 @pytest.mark.django_db
-def test_complete_only_when_paid_delivered_and_act_signed(act_world):  # noqa: F811
+def test_complete_only_when_paid_and_act_signed(act_world):  # noqa: F811
     from django.utils import timezone
 
     from crm.constants import ActStatusCode, FulfillmentStatusCode, InvoiceStatusCode
@@ -39,12 +39,12 @@ def test_complete_only_when_paid_delivered_and_act_signed(act_world):  # noqa: F
     act.issuer_signed_at = timezone.now()
     act.acceptor_signed_at = timezone.now()
     act.save(update_fields=["status", "issuer_signed_at", "acceptor_signed_at"])
-    assert deal_execution_is_complete(deal) is False, "поставка ещё не принята"
+    deal.refresh_from_db()
+    assert deal_execution_is_complete(deal) is True, "приёмка строк поставки не требуется (решение 2026-11-22)"
 
     Fulfillment.objects.create(
         deal=deal,
-        status=FulfillmentStatus.objects.get(code=FulfillmentStatusCode.ACCEPTED),
-        accepted_at=timezone.now(),
+        status=FulfillmentStatus.objects.get(code=FulfillmentStatusCode.DELIVERED),
     )
     deal.refresh_from_db()
     assert deal_execution_is_complete(deal) is True

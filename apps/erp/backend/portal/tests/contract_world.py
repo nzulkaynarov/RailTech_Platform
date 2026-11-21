@@ -191,7 +191,7 @@ def contract_world(db, client_company, other_company, client_contact, other_cont
         deal=in_progress, action="Сделка создана", event_code="deal.created", event_params={"actor_email": "s@e.uz"}
     )
     closed = Deal.objects.create(
-        company=client_company, contact=client_contact, title="Закрытая", stage=_stage(DealStageCode.CLOSED_WON)
+        company=client_company, contact=client_contact, title="Закрытая", stage=_stage(DealStageCode.CLOSED_LOST)
     )
     main = Deal.objects.create(
         company=client_company, contact=client_contact, title="Поставка труб", stage=_stage(DealStageCode.QUOTE_SENT)

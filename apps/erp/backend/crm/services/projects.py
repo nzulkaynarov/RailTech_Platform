@@ -6,8 +6,11 @@
 документам ведут свои сервисы (`contract_flow`, `act_flow`, `billing`); здесь — чтение и перечень доступных действий,
 которые считает СЕРВЕР по статусу и правам зрителя (страница не угадывает).
 
-«Выполнено» (`project_is_done`): акт подписан (скан), все не отменённые и не черновые счета оплачены, счёт есть. В отличие от
-`deal_execution_is_complete` (старый флаг сделки) приёмка поставки клиентом не требуется: в процессе v3 её заменяет акт.
+«Выполнено» (`project_is_done`) — ЕДИНСТВЕННОЕ определение для ERP, склада, CRM, Платформы и Кабинета (решение владельца
+2026-11-22): каждый живой акт принят клиентом в Кабинете или подписан сканом, все не отменённые и не черновые счета оплачены,
+счёт есть. Приёмка строк поставки клиентом условием не является. Читают его: `deal_execution_is_complete` (флаг сделки),
+стадия `won` контракта, `deal_closed_for_stock`, исход и статус запроса в портале; событие `deal.won` уходит в момент, когда
+проект стал выполненным (`log_project_done_once`), а не при подписании договора.
 """
 
 import datetime
@@ -107,7 +110,11 @@ def act_word(act) -> str:
 
 
 def project_is_done(deal) -> bool:
-    """Акт подписан и все счета оплачены (SPEC-v3 §2.3 шаг 7); без акта или без счёта проект не выполнен."""
+    """Единое «проект выполнен»: акт принят клиентом в Кабинете или подписан сканом и все счета оплачены (SPEC-v3 §2.3 шаг 7).
+
+    Без акта или без счёта проект не выполнен; аннулированные и черновые документы не в счёт. Работает на prefetch
+    `acts__status` и `invoices__status`.
+    """
     invoices = _billable_invoices(deal)
     if not invoices or any(i.status_code != InvoiceStatusCode.PAID for i in invoices):
         return False
@@ -145,6 +152,11 @@ def log_project_done_once(deal, actor=None) -> bool:
         deal=locked,
         company_id=locked.company_id,
     )
+    # `deal.won` — один раз, когда проект стал выполненным (раньше уходил при подписании договора, до счёта и оплаты).
+    if locked.stage_id and locked.stage.code == DealStageCode.CLOSED_WON:
+        from integration.services import events
+
+        events.publish_deal_outcome(locked, won=True)
     return True
 
 

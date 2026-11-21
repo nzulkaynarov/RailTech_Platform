@@ -108,7 +108,11 @@ def test_new_request_has_no_deal_yet_and_carries_lines_and_attachments(contract_
 
 @pytest.mark.parametrize(
     ("key", "status", "source"),
-    [("in_progress", "in_progress", "erp"), ("closed", "closed", "crm"), ("main", "quoted", "crm")],
+    [
+        ("in_progress", "in_progress", "erp"),
+        ("closed", "closed", "crm"),  # акт принят и счёт оплачен — проект выполнен, запрос закрыт (СЦ-8)
+        ("main", "quoted", "crm"),
+    ],
 )
 def test_request_after_work_started_refers_to_its_deal(contract_world, key, status, source):
     deal = fresh_deal(contract_world[key].pk)
@@ -148,7 +152,7 @@ def test_request_list_does_not_query_per_deal(contract_world, django_assert_max_
     deals = list(
         Deal.objects.filter(company=contract_world["company"])
         .select_related("stage", "portal_summary")
-        .prefetch_related("quotes__status", "portal_lines", "portal_uploads")
+        .prefetch_related("quotes__status", "invoices__status", "acts__status", "portal_lines", "portal_uploads")
     )
     with django_assert_max_num_queries(1):  # только журнал источника; остальное — из prefetch
         annotate_request_sources(deals)

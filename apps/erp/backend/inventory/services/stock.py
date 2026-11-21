@@ -98,15 +98,15 @@ def lock_products(product_ids: Iterable[int]) -> None:
 
 def deal_closed_for_stock(deal) -> bool:
     """Заявка закрыта для резерва и приёмки под проект: проиграна (`CLOSED_LOST`) или выполнена — `CLOSED_WON` и
-    исполнение закрыто целиком (`deal_execution_is_complete`: счета оплачены, акты подписаны, поставка принята).
+    проект выполнен (`project_is_done`: акты приняты в Кабинете или скан, счета оплачены; приёмка строк поставки не нужна).
     `CLOSED_WON` сам по себе — договор подписан, исполнение только начинается (SPEC-v3 §2.3)."""
     stage = deal.stage.code if deal.stage_id else ""
     if stage == LOST_STAGE:
         return True
     if stage == WON_STAGE:
-        from crm.services.deal_documents import deal_execution_is_complete
+        from crm.services.projects import project_is_done
 
-        return deal_execution_is_complete(deal)
+        return project_is_done(deal)
     return False
 
 

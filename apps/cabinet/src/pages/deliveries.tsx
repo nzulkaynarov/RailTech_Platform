@@ -6,7 +6,7 @@ import { toast } from '@/lib/toast';
 
 import { apiErrorKey } from '@/api/errors';
 import { itemThumbnailUrl, type DeliveryLine, type DocumentKind, type PortalDocument } from '@/api/portal';
-import { useAcceptDelivery, useDeliveries, useDisputeDelivery, useDocuments } from '@/api/queries';
+import { useAcceptDelivery, useDeliveries, useDisputeDelivery, useDocuments, useRequests } from '@/api/queries';
 import { DateField } from '@/components/DateField';
 import { DealLink } from '@/components/Details';
 import { DocumentButton } from '@/components/DocumentButton';
@@ -35,13 +35,18 @@ import { dealContext } from '@/lib/messages';
  * документы компании (B2B `CompanyFilesPage`). Поставки сгруппированы по сделке: клиент думает
  * «мой заказ», а не «строка 2». Поставщиков, цен и складов здесь нет — их нет и в контракте.
  * Приёмка по строкам настоящая: «Принять» → `POST /deliveries/{id}/accept`, «Замечание» →
- * `/dispute {reason}`; кнопки есть только у строки в статусе `delivered`.
+ * `/dispute {reason}`; кнопки есть только у строки в статусе `delivered` и только пока проект не выполнен: у выполненного
+ * проекта (запрос `closed` с исходом `won` — акт принят или скан, счета оплачены) отдельная приёмка строк не нужна.
  */
 export function DeliveriesPage() {
   const { t } = useTranslation();
   const deliveries = useDeliveries();
   const accept = useAcceptDelivery();
   const dispute = useDisputeDelivery();
+  const requests = useRequests();
+  const doneDealIds = new Set(
+    (requests.data ?? []).filter((request) => request.status === 'closed' && request.outcome === 'won' && request.deal).map((request) => request.deal!.id),
+  );
   const [disputeTarget, setDisputeTarget] = useState<DeliveryLine | null>(null);
   const [acceptingId, setAcceptingId] = useState<number | null>(null);
 
@@ -136,7 +141,7 @@ export function DeliveriesPage() {
                             {line.remark ? <span className="wrap-break-word">{t('pages.deliveries.remark', { remark: line.remark })}</span> : null}
                           </span>
                         ) : null}
-                        {line.status === 'delivered' ? (
+                        {line.status === 'delivered' && !doneDealIds.has(group.deal.id) ? (
                           <CanAct>
                             <div className="mt-1 flex flex-wrap items-center gap-1 sm:justify-end">
                               <Button
