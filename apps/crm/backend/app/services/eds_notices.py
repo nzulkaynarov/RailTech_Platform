@@ -33,6 +33,10 @@ NOTICE_TYPE_V2: Final = "uz.railtech.eds.notice.requested.v2"
 # SIGN-2 (ADR-0024 п. 1): полномочие подписи скоро истекает — тот же путь доставки, своя схема.
 SIGNING_EXPIRING_TYPE: Final = "uz.railtech.eds.signing_authority.expiring.v1"
 SIGNING_EXPIRING_KIND: Final = "signing_authority_expiring"
+# СЦ-9: уведомления по документам без входящего письма (служебка, подпись письма) — тот же путь.
+DOCUMENT_NOTICE_TYPE: Final = "uz.railtech.eds.document.notice_requested.v1"
+# «Подписать некому» ведёт держателя права в Настройки, а не к документу, которого он не видит.
+_SETTINGS_KIND: Final = "letter_signer_missing"
 # Вкладка колокольчика: от сотрудника ждут действия — «Решения»; остальное — «Система».
 _DECISIONS: Final = frozenset(
     {
@@ -41,6 +45,8 @@ _DECISIONS: Final = frozenset(
         "instruction_overdue",
         "extension_requested",
         "acquaint_requested",
+        "letter_sign_requested",
+        "letter_signer_missing",
     }
 )
 
@@ -162,6 +168,50 @@ class EdsNoticeService:
         )
         logger.info(
             "eds_signing_notice_accepted",
+            notice_key=data.get("notice_key"),
+            recipients=len(recipients),
+        )
+        return len(recipients)
+
+    async def accept_document(self, session: AsyncSession, event: Event) -> int:
+        """Уведомление по документу EDS (СЦ-9): колокольчик с карточкой и Telegram со ссылкой."""
+        data: dict[str, Any] = dict(event.data)
+        kind = str(data["kind"])
+        title = str(data["title"])
+        subtitle = data.get("subtitle")
+        subtitle = str(subtitle) if subtitle else None
+        recipients = await self._active(session, data.get("recipients") or [])
+        if not recipients:
+            logger.info(
+                "eds_document_notice_no_recipients", kind=kind, notice_key=data.get("notice_key")
+            )
+            return 0
+        document: dict[str, Any] = dict(data["document"])
+        document_id = str(document["eds_document_id"])
+        to_settings = kind == _SETTINGS_KIND
+        # Черновик письма без номера: подписью в колокольчике служит тема (поле 40 знаков).
+        label = str(document.get("number") or document.get("subject") or "")[:40] or None
+        staff_notifications.add_in(
+            session,
+            recipients,
+            kind=f"eds.{kind}"[:40],
+            tab=tab_of(kind),
+            title=title,
+            subtitle=subtitle,
+            object_kind=None if to_settings else "document",
+            object_id=None if to_settings else document_id,
+            object_number=None if to_settings else label,
+        )
+        link = self._signing_link() if to_settings else self._link("", document_id)
+        text = telegram_text(title, subtitle, link)
+        self._notices.add(
+            session,
+            str(event.id),
+            [{"kind": "staff", "user_id": uid, "text": text} for uid in recipients],
+        )
+        logger.info(
+            "eds_document_notice_accepted",
+            kind=kind,
             notice_key=data.get("notice_key"),
             recipients=len(recipients),
         )

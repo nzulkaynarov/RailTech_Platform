@@ -212,6 +212,8 @@ EDS_EVENTS = {
     "notice.requested",
     # SIGN-2: напоминание об окончании полномочия подписи доставляет CRM тем же путём.
     "signing_authority.expiring",
+    # СЦ-9: уведомления по документам без входящего письма (служебка, подпись письма) доставляет CRM.
+    "document.notice_requested",
     # SIGN-3: подписание официального документа уполномоченным лицом.
     "document.signed",
     # SIGN-4: решение уполномоченного лица по коммерческому документу ERP (подписан/отклонён).
@@ -473,6 +475,7 @@ def test_crm_gets_every_erp_event_except_those_for_eds() -> None:
         "uz.railtech.eds.notice.requested.v1",
         "uz.railtech.eds.notice.requested.v2",
         "uz.railtech.eds.signing_authority.expiring.v1",  # SIGN-2: полномочие подписи скоро истекает
+        "uz.railtech.eds.document.notice_requested.v1",  # СЦ-9: уведомления по документам
         "uz.railtech.eds.letter.registered.v1",
         "uz.railtech.eds.letter.registered.v2",  # задача «Н»: номер с обозначением из настроек
     }

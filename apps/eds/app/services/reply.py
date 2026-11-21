@@ -274,19 +274,22 @@ async def _letter_number(session: AsyncSession, document: Document) -> str:
 
 async def notify_registration_requested(
     session: AsyncSession, bus: AsyncBus, document: Document, *, actor_id: int
-) -> None:
-    """«Передать на регистрацию»: делопроизводители узнают сразу, а не из журнала."""
+) -> list[int]:
+    """«Передать на регистрацию»: делопроизводители узнают сразу, а не из журнала. Возвращает, кому уже сообщили
+    (ответ на входящее; письмо без входящего уведомлений по поручениям не порождает — пусто)."""
     directory = await load_directory(session, [actor_id])
+    recipients = [uid for uid in await registrar_ids(session) if uid != actor_id]
     await _notice(
         session,
         bus,
         document,
         key=f"document:{document.id}:registration",
-        recipients=[uid for uid in await registrar_ids(session) if uid != actor_id],
+        recipients=recipients,
         title=f"Зарегистрируйте ответ на {await _letter_number(session, document)}",
         subtitle=f"{document.subject} · {directory.name(actor_id)}"[:200],
         actor_id=actor_id,
     )
+    return recipients if document.in_reply_to is not None else []
 
 
 async def notify_registered(

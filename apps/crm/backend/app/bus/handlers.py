@@ -43,7 +43,12 @@ from app.services import company_projection
 from app.services.cabinet_chat import POSTED_TYPE
 from app.services.company_projection import COMPANY_UPDATED
 from app.services.contact_telegram import UNLINK_REQUESTED
-from app.services.eds_notices import NOTICE_TYPE, NOTICE_TYPE_V2, SIGNING_EXPIRING_TYPE
+from app.services.eds_notices import (
+    DOCUMENT_NOTICE_TYPE,
+    NOTICE_TYPE,
+    NOTICE_TYPE_V2,
+    SIGNING_EXPIRING_TYPE,
+)
 from app.services.inbound_mail import LETTER_REGISTERED, LETTER_REGISTERED_V2
 from app.services.mail_requests import MAIL_REQUEST_TYPES
 from app.services.partner_clients import REJECTED_TYPE as PARTNER_CLIENT_REJECTED
@@ -110,6 +115,11 @@ async def on_eds_notice(event: Event, session: AsyncSession) -> None:
 @subscribe(SIGNING_EXPIRING_TYPE)
 async def on_signing_authority_expiring(event: Event, session: AsyncSession) -> None:
     await current_container().eds_notices.accept_signing_expiring(session, event)
+
+
+@subscribe(DOCUMENT_NOTICE_TYPE)
+async def on_eds_document_notice(event: Event, session: AsyncSession) -> None:
+    await current_container().eds_notices.accept_document(session, event)
 
 
 @subscribe(LETTER_REGISTERED)

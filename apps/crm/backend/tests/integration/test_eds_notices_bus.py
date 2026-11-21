@@ -18,6 +18,7 @@ from app.bus import runtime
 from app.models.auth import User
 from app.models.staff_tickets import StaffNotification
 from app.services.eds_notices import (
+    DOCUMENT_NOTICE_TYPE,
     NOTICE_TYPE,
     SIGNING_EXPIRING_TYPE,
     EdsNoticeService,
@@ -251,3 +252,113 @@ async def test_signing_authority_reminder_repeated_delivery_gives_one_notificati
     assert await stand.h.process(event_id) == "processed"
     await stand.h.process(event_id)
     assert len(await stand.bell()) == 1
+
+
+DOC_ID = "2f6b1c0e-8a3d-4e57-9c14-b0d7a5e3f812"
+
+
+def document_notice(recipients: list[int], **over: Any) -> dict[str, Any]:
+    """Тело `document.notice_requested` (СЦ-9): как пример контракта, получатели — свои."""
+    return {
+        "notice_key": f"document:{DOC_ID}:r1:memo_decided:approved",
+        "kind": "memo_decided",
+        "recipients": recipients,
+        "title": "Служебка MEMO-2026/014 согласована",
+        "subtitle": "Передана на оплату",
+        "document": {
+            "eds_document_id": DOC_ID,
+            "number": "MEMO-2026/014",
+            "subject": "Закупка расходных материалов",
+        },
+        "actor": {"type": "staff", "crm_user_id": 3},
+        **over,
+    }
+
+
+async def test_document_notice_reaches_the_author_with_a_link_to_the_document(stand: Stand) -> None:
+    author, _ = await make_user(stand.h.sessions, "author@x.uz", ["manager"])
+    other, _ = await make_user(stand.h.sessions, "author2@x.uz", ["manager"])
+    await _link(stand.h.sessions, author.id, 8301)
+
+    event_id = await stand.receive(
+        document_notice([author.id, other.id, 999_999], future_field=1),
+        event_type=DOCUMENT_NOTICE_TYPE,
+    )
+    assert await stand.h.process(event_id) == "processed"
+
+    rows = await stand.bell()
+    assert [(r.user_id, r.kind, r.tab) for r in rows] == [
+        (author.id, "eds.memo_decided", "system"),
+        (other.id, "eds.memo_decided", "system"),
+    ]
+    assert (rows[0].object_kind, rows[0].object_id, rows[0].object_number) == (
+        "document",
+        DOC_ID,
+        "MEMO-2026/014",
+    )
+    [(chat, text)] = stand.h.bot.sent
+    assert chat == 8301
+    assert text.endswith(f"https://platform.example.com/eds/documents?doc={DOC_ID}&panel=open")
+
+
+async def test_document_notice_for_a_draft_letter_uses_the_subject_as_label(stand: Stand) -> None:
+    signer, _ = await make_user(stand.h.sessions, "signer@x.uz", ["admin"])
+    data = document_notice(
+        [signer.id],
+        kind="letter_sign_requested",
+        document={
+            "eds_document_id": DOC_ID,
+            "number": None,
+            "subject": "Ответ на требование о пояснениях",
+        },
+    )
+    assert (
+        await stand.h.process(await stand.receive(data, event_type=DOCUMENT_NOTICE_TYPE))
+        == "processed"
+    )
+    [row] = await stand.bell()
+    assert (row.kind, row.tab, row.object_kind, row.object_number) == (
+        "eds.letter_sign_requested",
+        "decisions",
+        "document",
+        "Ответ на требование о пояснениях",
+    )
+
+
+async def test_missing_signer_notice_points_to_the_signing_settings(stand: Stand) -> None:
+    keeper, _ = await make_user(stand.h.sessions, "keeper3@x.uz", ["admin"])
+    await _link(stand.h.sessions, keeper.id, 8302)
+    data = document_notice([keeper.id], kind="letter_signer_missing", title="Подписать некому")
+    assert (
+        await stand.h.process(await stand.receive(data, event_type=DOCUMENT_NOTICE_TYPE))
+        == "processed"
+    )
+    [row] = await stand.bell()
+    assert (row.tab, row.object_kind, row.object_id) == ("decisions", None, None)
+    assert stand.h.bot.sent[-1][1].endswith("https://platform.example.com/admin/signing")
+
+
+async def test_document_notice_repeated_delivery_gives_one_notification(stand: Stand) -> None:
+    author, _ = await make_user(stand.h.sessions, "author3@x.uz", ["manager"])
+    event_id = str(uuid.uuid4())
+    data = document_notice([author.id])
+    await stand.receive(data, event_id=event_id, event_type=DOCUMENT_NOTICE_TYPE)
+    await stand.receive(data, event_id=event_id, event_type=DOCUMENT_NOTICE_TYPE)
+    assert await stand.h.process(event_id) == "processed"
+    await stand.h.process(event_id)
+    assert len(await stand.bell()) == 1
+
+
+async def test_document_notice_failed_processing_leaves_nothing(
+    stand: Stand, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    author, _ = await make_user(stand.h.sessions, "author4@x.uz", ["manager"])
+
+    def broken(*_args: Any, **_kwargs: Any) -> None:
+        raise RuntimeError("сбой после строки колокольчика")
+
+    monkeypatch.setattr(stand.h.notices, "add", broken)
+    event_id = await stand.receive(document_notice([author.id]), event_type=DOCUMENT_NOTICE_TYPE)
+    assert await stand.h.process(event_id) != "processed"
+    assert await stand.bell() == []
+    assert stand.h.bot.sent == []
