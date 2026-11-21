@@ -45,7 +45,12 @@ from django.utils import timezone
 SMOKE_RATE_SOURCE = "SMOKE"
 SMOKE_BUYER = {"inn": "999000001", "name": "Smoke Buyer LLC"}
 SMOKE_SELLER = {"inn": "999000002", "name": "Smoke Supplier LLC"}
-SMOKE_SELLER_BANK = {"account": "20208000000000000001", "mfo": "00440"}
+SMOKE_SELLER_BANK = {
+    "account": "20208000000000000001",
+    "mfo": "00440",
+    "inn": "999999991",
+    "address": "Smoke: тестовый адрес продавца",
+}
 SMOKE_CLIENT_EMAIL = "smoke.client@example.test"
 SMOKE_SUPPLIER_EMAIL = "smoke.supplier@example.test"
 SMOKE_MANAGER_EMAIL = "smoke.manager@example.test"
@@ -181,6 +186,16 @@ class Command(BaseCommand):
 
         if not supplier_co.bank_accounts.exists():
             set_uzs_account(supplier_co, SMOKE_SELLER_BANK["account"], SMOKE_SELLER_BANK["mfo"])
+        # Счёт выставляется только с ИНН и юридическим адресом продавца (СЦ-3) — у smoke-продавца свои.
+        filled = []
+        if not (supplier_co.inn or "").strip():
+            supplier_co.inn = SMOKE_SELLER_BANK["inn"]
+            filled.append("inn")
+        if not (supplier_co.legal_address or "").strip():
+            supplier_co.legal_address = SMOKE_SELLER_BANK["address"]
+            filled.append("legal_address")
+        if filled:
+            supplier_co.save(update_fields=filled)
         supplier_co.types.add(supplier_type)
         # На время прогона «своя компания» ERP — smoke-продавец (возвращается в handle()).
         settings.OWN_COMPANY_ID = supplier_co.pk

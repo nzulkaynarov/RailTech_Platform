@@ -36516,8 +36516,8 @@ components:
             $ref: '#/components/schemas/ReceivableRow'
         seller_bank_details_ready:
           type: boolean
-          description: 'У своей компании есть реквизиты для счетов (р/с или МФО): без них «Выставить счёт» откажет `SELLER_BANK_DETAILS_REQUIRED`
-            (D26G-6, подсказка до клика).'
+          description: 'У своей компании есть реквизиты для счетов — ИНН, юридический адрес и расчётный счёт: без них «Выставить
+            счёт» откажет `SELLER_BANK_DETAILS_REQUIRED` (D26G-6, СЦ-3; подсказка до клика).'
       required:
       - count
       - counts
@@ -36630,7 +36630,8 @@ components:
           description: 'Повтор подтверждения: платёж уже был записан, ничего не добавлено.'
         seller_bank_details_ready:
           type: boolean
-          description: 'Гейт выпуска пропустит этот счёт: реквизиты продавца есть (у выставленного счёта — всегда `true`).'
+          description: 'Гейт выпуска пропустит этот счёт: ИНН, юридический адрес и расчётный счёт продавца есть (у выставленного
+            счёта — всегда `true`).'
       required:
       - amount_paid
       - balance_due
@@ -37221,8 +37222,8 @@ components:
           description: Id своей компании (core.tenant, с учётом OWN_COMPANY_ID); null — её нет.
         bank_details_ready:
           type: boolean
-          description: У своей компании есть реквизиты для счетов (р/с или МФО — как требует гейт «Выставить счёт»); своей
-            компании нет — true (D26G-6).
+          description: У своей компании есть реквизиты для счетов — ИНН, юридический адрес и расчётный счёт, как требует гейт
+            «Выставить счёт»; своей компании нет — true (D26G-6, СЦ-3).
       required:
       - bank_details_ready
       - can_setup

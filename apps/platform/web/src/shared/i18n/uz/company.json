@@ -125,7 +125,7 @@
     "iso": "ISO 9001 sifat sertifikati bor",
     "save": "Rekvizitlarni saqlash",
     "invalidField": "Qiymatni tekshiring",
-    "bankReady": "Hisoblar uchun rekvizitlar kiritilgan: «Hisob chiqarish» ishlaydi.",
+    "bankReady": "Sömdagi asosiy hisob raqam kiritilgan.",
     "bankMissing": "So‘mdagi asosiy hisob yo‘q: mijozga hisob-faktura chiqarib bo‘lmaydi. Quyida hisob qo‘shing.",
     "sections": {
       "company": "Kompaniya",
