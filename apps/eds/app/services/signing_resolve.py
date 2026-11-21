@@ -385,21 +385,6 @@ async def resolve(
     )
 
 
-async def check_signer(
-    session: AsyncSession,
-    crm_user_id: int,
-    *,
-    kind: str,
-    amount: Decimal | None,
-    currency: str | None,
-    on_date: date,
-    kind_label: str | None = None,
-) -> SignerCheck:
-    """Вправе ли именно этот сотрудник подписать: он среди кандидатов `resolve` (иначе — причина отказа)."""
-    result = await resolve(session, kind=kind, amount=amount, currency=currency, on_date=on_date, kind_label=kind_label)
-    return signer_check(result, crm_user_id)
-
-
 async def draft_openers(session: AsyncSession, ids: Collection[int]) -> set[int]:
     """Кто из `ids` видит и вправе подписать переданный черновик ИСХ: активный держатель `letters.register`
     (без него черновик недоступен — `access.document_visible`)."""
@@ -434,6 +419,21 @@ async def letter_signer(session: AsyncSession, document: Document, today: date) 
     )
     openers = await draft_openers(session, {c.signer.crm_user_id for c in result.candidates})
     return pick_letter_signer(result, document.author_crm_user_id, openers)
+
+
+async def check_signer(
+    session: AsyncSession,
+    crm_user_id: int,
+    *,
+    kind: str,
+    amount: Decimal | None,
+    currency: str | None,
+    on_date: date,
+    kind_label: str | None = None,
+) -> SignerCheck:
+    """Вправе ли именно этот сотрудник подписать: он среди кандидатов `resolve` (иначе — причина отказа)."""
+    result = await resolve(session, kind=kind, amount=amount, currency=currency, on_date=on_date, kind_label=kind_label)
+    return signer_check(result, crm_user_id)
 
 
 def signer_check(result: SigningResolution, crm_user_id: int) -> SignerCheck:

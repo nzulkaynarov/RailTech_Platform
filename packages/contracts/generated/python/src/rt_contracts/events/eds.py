@@ -512,6 +512,38 @@ class DocumentKindV2(StrEnum):
     report = "report"
 
 
+class DocumentNoticeRequestedV1(BaseModel):
+    """
+    Тип uz.railtech.eds.document.notice_requested.v1, источник rt://eds. Поле data конверта (envelope.v1.json). Уведомление сотрудникам по документу EDS, у которого нет входящего письма (СЦ-9): автору служебной записки (заявления, отчёта) — решение директора (`memo_decided`) и оплата (`memo_paid`); подписанту — передан проект исходящего письма (`letter_sign_requested`); держателям права `signing.manage` — подписать некому (`letter_signer_missing`, ссылка на Настройки → Права подписи); автору — письмо подписал другой сотрудник (`letter_signed`, только письма не в ответ на входящее: для ответов есть `notice.requested`). Текст (RU) готовит EDS, доставляет CRM тем же путём, что `notice.requested`: строка колокольчика (`staff_notifications`, объект — документ, `kind = eds.<kind>`) и сообщение в Telegram, где он привязан. Один эффект на повтор доставки (inbox CRM). Ссылки на `_defs.v2.json`: номер документа — с обозначением из настроек нумерации. Подписчики v1: crm (доставка).
+    """
+
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    notice_key: Annotated[str, Field(pattern="^[A-Za-z0-9._:/-]{1,128}$")]
+    """
+    Ключ отправителя: EDS публикует уведомление с этим ключом один раз на причину (документ, вид, круг согласования или оплата)
+    """
+    kind: Kind
+    """
+    memo_decided — директор согласовал или отклонил (автору); memo_paid — бухгалтер отметил оплату (автору); letter_sign_requested — проект письма ждёт подписи (подписанту); letter_signer_missing — подписать некому (держателям `signing.manage`); letter_signed — письмо подписал другой сотрудник (автору)
+    """
+    recipients: Annotated[list[int], Field(max_length=50, min_length=1)]
+    """
+    crm_user_id получателей
+    """
+    title: Annotated[str, Field(max_length=200, min_length=1)]
+    """
+    Заголовок уведомления (RU)
+    """
+    subtitle: Annotated[str | None, Field(max_length=200)] = None
+    """
+    Вторая строка: комментарий решения, сумма и дата оплаты, тема и автор письма
+    """
+    document: NoticeDocumentRefV2
+    actor: Actor
+
+
 class DocumentRef(BaseModel):
     model_config = ConfigDict(
         extra="ignore",
@@ -662,6 +694,18 @@ class InReplyTo(BaseModel):
 
 class Kind(StrEnum):
     """
+    memo_decided — директор согласовал или отклонил (автору); memo_paid — бухгалтер отметил оплату (автору); letter_sign_requested — проект письма ждёт подписи (подписанту); letter_signer_missing — подписать некому (держателям `signing.manage`); letter_signed — письмо подписал другой сотрудник (автору)
+    """
+
+    memo_decided = "memo_decided"
+    memo_paid = "memo_paid"
+    letter_sign_requested = "letter_sign_requested"
+    letter_signer_missing = "letter_signer_missing"
+    letter_signed = "letter_signed"
+
+
+class Kind1(StrEnum):
+    """
     Что случилось: выдано поручение; напоминание о сроке; срок прошёл; исполнитель просит перенос; автор решил перенос; надо ознакомиться; все поручения письма исполнены
     """
 
@@ -674,7 +718,7 @@ class Kind(StrEnum):
     letter_executed = "letter_executed"
 
 
-class Kind2(StrEnum):
+class Kind3(StrEnum):
     quote = "quote"
     contract = "contract"
     invoice = "invoice"
@@ -1016,7 +1060,7 @@ class NoticeRequestedV1(BaseModel):
     """
     Ключ отправителя: EDS публикует уведомление с этим ключом один раз; для журнала и разбора
     """
-    kind: Kind
+    kind: Kind1
     """
     Что случилось: выдано поручение; напоминание о сроке; срок прошёл; исполнитель просит перенос; автор решил перенос; надо ознакомиться; все поручения письма исполнены
     """
@@ -1056,7 +1100,7 @@ class NoticeRequestedV2(BaseModel):
     """
     Ключ отправителя: EDS публикует уведомление с этим ключом один раз; для журнала и разбора
     """
-    kind: Kind
+    kind: Kind1
     """
     Что случилось: выдано поручение; напоминание о сроке; срок прошёл; исполнитель просит перенос; автор решил перенос; надо ознакомиться; все поручения письма исполнены
     """
@@ -1088,7 +1132,7 @@ class Object(BaseModel):
     model_config = ConfigDict(
         extra="ignore",
     )
-    kind: Kind2
+    kind: Kind3
     object_id: int
     """
     Идентификатор сущности в ERP
