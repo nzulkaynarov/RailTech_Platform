@@ -564,7 +564,6 @@ async def test_issue_act_uses_the_freshest_issued_invoice(
         ("act_exists", [invoice_card()], 409, "act_already_exists"),
         ("no_invoice", [invoice_card(status="to_issue")], 409, "no_invoice"),
         (None, [], 409, "no_invoice"),
-        ("not_delivered", [invoice_card()], 409, "not_delivered"),
     ],
 )
 async def test_issue_act_refusals_come_before_the_erp_call(
@@ -580,6 +579,20 @@ async def test_issue_act_refusals_come_before_the_erp_call(
     response = await web.send("POST", f"{BASE}/{NUMBER}/act", json={"action": "issue"})
     assert response.status_code == status
     assert response.json()["details"]["reason"] == reason
+    assert erp.posts() == []
+
+
+async def test_issue_act_before_delivery_is_refused_from_the_erp_flag(
+    web: Web, erp: ProjectsFake
+) -> None:
+    """СЦ-9: ERP отдаёт `act_needs_delivery`, BFF выводит блокер `not_delivered` и не зовёт ERP."""
+    await _as(web, "ACCOUNTANT")
+    erp.cards[DEAL] = card(invoices=[invoice_card()], act_blocker=None, act_needs_delivery=True)
+    shown = await web.send("GET", f"{BASE}/{NUMBER}")
+    assert shown.json()["act_blocker"] == "not_delivered"
+    response = await web.send("POST", f"{BASE}/{NUMBER}/act", json={"action": "issue"})
+    assert response.status_code == 409
+    assert response.json()["details"]["reason"] == "not_delivered"
     assert erp.posts() == []
 
 

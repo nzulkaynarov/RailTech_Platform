@@ -334,6 +334,7 @@ def project_row(deal) -> dict:
         },
         "problems": project_problems(deal),
         "act_blocker": act_blocker_for(deal, acts),
+        "act_needs_delivery": act_blocker_for(deal, acts) is None and billing.act_not_delivered(deal),
     }
 
 
@@ -466,19 +467,18 @@ def _delivery_lines(deal) -> list:
 
 
 def act_blocker_for(deal, acts: list) -> Optional[str]:
-    """Часть блокера акта без пользователя (строка списка и очередь): `act_exists`, `no_invoice`, `not_delivered`."""
+    """Часть блокера акта без пользователя (строка списка и очередь): `act_exists`, `no_invoice`. Доставку блокером не
+    называем (значение enum осталось прежним): её отдаёт `act_needs_delivery`."""
     if acts:
         return "act_exists"
     issuable = (InvoiceStatusCode.ISSUED, InvoiceStatusCode.PARTIAL, InvoiceStatusCode.PAID)
     if not any(i.status_code in issuable for i in deal.invoices.all()):
         return "no_invoice"
-    if billing.act_not_delivered(deal):
-        return "not_delivered"
     return None
 
 
 def _act_blocker(deal, user, acts: list) -> Optional[str]:
-    """Почему нельзя выпустить акт сейчас: `forbidden`, `act_exists`, `no_invoice`, `not_delivered`; `None` — можно."""
+    """Почему нельзя выпустить акт сейчас: `forbidden`, `act_exists`, `no_invoice`; `None` — можно (доставку смотрит `act_needs_delivery`)."""
     if not act_flow.may_issue_acts(user):
         return "forbidden"
     return act_blocker_for(deal, acts)

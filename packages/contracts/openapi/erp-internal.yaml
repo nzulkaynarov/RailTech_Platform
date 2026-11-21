@@ -20813,6 +20813,16 @@ components:
       - viewer_can_reject
       - viewer_can_remind
       - viewer_can_sign
+    ActBlockerEnum:
+      enum:
+      - no_invoice
+      - act_exists
+      - forbidden
+      type: string
+      description: |-
+        * `no_invoice` - no_invoice
+        * `act_exists` - act_exists
+        * `forbidden` - forbidden
     ActCard:
       type: object
       properties:
@@ -34785,15 +34795,18 @@ components:
         act_blocker:
           nullable: true
           description: |-
-            Почему акт сейчас выпустить нельзя: нет права `fulfillment.act`, акт уже есть, нет счёта, товар не доставлен (`not_delivered`: акт — после доставки или приёмки клиентом)
+            Почему акт выпустить нельзя: нет счёта, акт уже есть, нет права `fulfillment.act`; `null` — можно
 
             * `no_invoice` - no_invoice
             * `act_exists` - act_exists
             * `forbidden` - forbidden
-            * `not_delivered` - not_delivered
           oneOf:
-          - $ref: '#/components/schemas/ProjectCardActBlockerEnum'
+          - $ref: '#/components/schemas/ActBlockerEnum'
           - $ref: '#/components/schemas/NullEnum'
+        act_needs_delivery:
+          type: boolean
+          description: 'Акт иначе можно выпустить, но товар ещё не доставлен: акт — после доставки или приёмки клиентом (СЦ-9).
+            Выпуск раньше — 409 `ACT_NOT_DELIVERED`'
         quote:
           allOf:
           - $ref: '#/components/schemas/QuoteCard'
@@ -34849,18 +34862,6 @@ components:
       - step
       - title
       - total
-    ProjectCardActBlockerEnum:
-      enum:
-      - no_invoice
-      - act_exists
-      - forbidden
-      - not_delivered
-      type: string
-      description: |-
-        * `no_invoice` - no_invoice
-        * `act_exists` - act_exists
-        * `forbidden` - forbidden
-        * `not_delivered` - not_delivered
     ProjectContractStatusEnum:
       enum:
       - project
@@ -35041,14 +35042,18 @@ components:
         act_blocker:
           nullable: true
           description: |-
-            Почему акт выпустить нельзя, без учёта прав: нет счёта, акт уже есть, товар не доставлен
+            Почему акт выпустить нельзя: нет счёта, акт уже есть, нет права `fulfillment.act`; `null` — можно
 
             * `no_invoice` - no_invoice
             * `act_exists` - act_exists
-            * `not_delivered` - not_delivered
+            * `forbidden` - forbidden
           oneOf:
-          - $ref: '#/components/schemas/ProjectRowActBlockerEnum'
+          - $ref: '#/components/schemas/ActBlockerEnum'
           - $ref: '#/components/schemas/NullEnum'
+        act_needs_delivery:
+          type: boolean
+          description: 'Акт иначе можно выпустить, но товар ещё не доставлен: акт — после доставки или приёмки клиентом (СЦ-9).
+            Выпуск раньше — 409 `ACT_NOT_DELIVERED`'
       required:
       - act_blocker
       - client_status
@@ -35065,16 +35070,6 @@ components:
       - step
       - title
       - total
-    ProjectRowActBlockerEnum:
-      enum:
-      - no_invoice
-      - act_exists
-      - not_delivered
-      type: string
-      description: |-
-        * `no_invoice` - no_invoice
-        * `act_exists` - act_exists
-        * `not_delivered` - not_delivered
     PublicCodeSent:
       type: object
       properties:

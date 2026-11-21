@@ -36019,6 +36019,15 @@
                     "viewer_can_sign"
                 ]
             },
+            "ActBlockerEnum": {
+                "enum": [
+                    "no_invoice",
+                    "act_exists",
+                    "forbidden"
+                ],
+                "type": "string",
+                "description": "* `no_invoice` - no_invoice\n* `act_exists` - act_exists\n* `forbidden` - forbidden"
+            },
             "ActCard": {
                 "type": "object",
                 "properties": {
@@ -54132,15 +54141,19 @@
                     },
                     "act_blocker": {
                         "nullable": true,
-                        "description": "Почему акт сейчас выпустить нельзя: нет права `fulfillment.act`, акт уже есть, нет счёта, товар не доставлен (`not_delivered`: акт — после доставки или приёмки клиентом)\n\n* `no_invoice` - no_invoice\n* `act_exists` - act_exists\n* `forbidden` - forbidden\n* `not_delivered` - not_delivered",
+                        "description": "Почему акт выпустить нельзя: нет счёта, акт уже есть, нет права `fulfillment.act`; `null` — можно\n\n* `no_invoice` - no_invoice\n* `act_exists` - act_exists\n* `forbidden` - forbidden",
                         "oneOf": [
                             {
-                                "$ref": "#/components/schemas/ProjectCardActBlockerEnum"
+                                "$ref": "#/components/schemas/ActBlockerEnum"
                             },
                             {
                                 "$ref": "#/components/schemas/NullEnum"
                             }
                         ]
+                    },
+                    "act_needs_delivery": {
+                        "type": "boolean",
+                        "description": "Акт иначе можно выпустить, но товар ещё не доставлен: акт — после доставки или приёмки клиентом (СЦ-9). Выпуск раньше — 409 `ACT_NOT_DELIVERED`"
                     },
                     "quote": {
                         "allOf": [
@@ -54222,16 +54235,6 @@
                     "title",
                     "total"
                 ]
-            },
-            "ProjectCardActBlockerEnum": {
-                "enum": [
-                    "no_invoice",
-                    "act_exists",
-                    "forbidden",
-                    "not_delivered"
-                ],
-                "type": "string",
-                "description": "* `no_invoice` - no_invoice\n* `act_exists` - act_exists\n* `forbidden` - forbidden\n* `not_delivered` - not_delivered"
             },
             "ProjectContractStatusEnum": {
                 "enum": [
@@ -54472,15 +54475,19 @@
                     },
                     "act_blocker": {
                         "nullable": true,
-                        "description": "Почему акт выпустить нельзя, без учёта прав: нет счёта, акт уже есть, товар не доставлен\n\n* `no_invoice` - no_invoice\n* `act_exists` - act_exists\n* `not_delivered` - not_delivered",
+                        "description": "Почему акт выпустить нельзя: нет счёта, акт уже есть, нет права `fulfillment.act`; `null` — можно\n\n* `no_invoice` - no_invoice\n* `act_exists` - act_exists\n* `forbidden` - forbidden",
                         "oneOf": [
                             {
-                                "$ref": "#/components/schemas/ProjectRowActBlockerEnum"
+                                "$ref": "#/components/schemas/ActBlockerEnum"
                             },
                             {
                                 "$ref": "#/components/schemas/NullEnum"
                             }
                         ]
+                    },
+                    "act_needs_delivery": {
+                        "type": "boolean",
+                        "description": "Акт иначе можно выпустить, но товар ещё не доставлен: акт — после доставки или приёмки клиентом (СЦ-9). Выпуск раньше — 409 `ACT_NOT_DELIVERED`"
                     }
                 },
                 "required": [
@@ -54500,15 +54507,6 @@
                     "title",
                     "total"
                 ]
-            },
-            "ProjectRowActBlockerEnum": {
-                "enum": [
-                    "no_invoice",
-                    "act_exists",
-                    "not_delivered"
-                ],
-                "type": "string",
-                "description": "* `no_invoice` - no_invoice\n* `act_exists` - act_exists\n* `not_delivered` - not_delivered"
             },
             "PublicCodeSent": {
                 "type": "object",

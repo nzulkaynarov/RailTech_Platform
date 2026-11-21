@@ -7,7 +7,7 @@ BFF не решает: шаг пути, статус для клиента, «п
 """
 
 import datetime as dt
-from typing import Any, Literal
+from typing import Any, Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
@@ -300,7 +300,15 @@ class RawRow(_Raw):
     due_date: dt.date | None = None
     documents: ProjectDocuments
     problems: list[ProjectProblem] = Field(default_factory=list)
-    act_blocker: ActBlocker | None = None  # без учёта прав; очередь идёт за ним, без своего правила
+    act_blocker: ActBlocker | None = None  # без учёта прав (ERP: no_invoice, act_exists, forbidden)
+    act_needs_delivery: bool = False  # ERP: акт иначе можно, но товар не доставлен (СЦ-9)
+
+    @model_validator(mode="after")
+    def _derive_not_delivered(self) -> Self:
+        """BFF-блокер `not_delivered` выводится из флага ERP: счёт есть, акта нет, доставки нет."""
+        if self.act_blocker is None and self.act_needs_delivery:
+            self.act_blocker = "not_delivered"
+        return self
 
 
 class RawPage(_Raw):

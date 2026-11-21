@@ -153,12 +153,14 @@ def test_card_act_blocker_and_act_actions(pw):  # noqa: F811
     contract = contract_in(pw, S.SIGNED)
     assert _card(pw.accountant, pw.deal.id).json()["act_blocker"] == "no_invoice"
     invoice = w.add_invoice(pw.deal, InvoiceStatusCode.ISSUED, total="5", contract=contract)
-    # СЦ-9: счёт есть, а товар не доставлен — акт пока нельзя; строка списка говорит то же без права.
-    assert _card(pw.accountant, pw.deal.id).json()["act_blocker"] == "not_delivered"
-    assert api(pw.manager).get(LIST).json()["results"][0]["act_blocker"] == "not_delivered"
+    # СЦ-9: счёт есть, а товар не доставлен — блокер прежний (нет), но акт ждёт доставки; строка списка говорит то же.
+    first = _card(pw.accountant, pw.deal.id).json()
+    assert first["act_blocker"] is None and first["act_needs_delivery"] is True
+    assert api(pw.manager).get(LIST).json()["results"][0]["act_needs_delivery"] is True
     mark_delivered(pw.deal)
-    assert _card(pw.accountant, pw.deal.id).json()["act_blocker"] is None
-    assert api(pw.manager).get(LIST).json()["results"][0]["act_blocker"] is None
+    delivered = _card(pw.accountant, pw.deal.id).json()
+    assert delivered["act_blocker"] is None and delivered["act_needs_delivery"] is False
+    assert api(pw.manager).get(LIST).json()["results"][0]["act_needs_delivery"] is False
     act = w.add_act(pw.deal, A.ISSUED, contract=contract, invoice=invoice)
     card = _card(pw.accountant, pw.deal.id).json()
     assert card["act_blocker"] == "act_exists" and card["act"]["actions"] == ["attach_scan", "return"]
