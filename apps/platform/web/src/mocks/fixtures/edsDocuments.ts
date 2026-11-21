@@ -109,19 +109,19 @@ export interface EdsMock {
 export const MOCK_DEALS: readonly MockDeal[] = [
   {
     erp_deal_id: 904,
-    number: "ЗВ-2026-104",
+    number: "PRJ-2026-104",
     title: "Поставка рельсов Р65",
     company: "ООО «Демо-Путь»",
   },
   {
     erp_deal_id: 905,
-    number: "ЗВ-2026-105",
+    number: "PRJ-2026-105",
     title: "Монтаж стрелочных переводов",
     company: "АО «Пример-Рельс»",
   },
   {
     erp_deal_id: 898,
-    number: "ПР-2026-098",
+    number: "PRJ-2026-098",
     title: "Ремонт путей станции Север",
     company: "ООО «Условная станция»",
   },
