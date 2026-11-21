@@ -193,7 +193,7 @@
       "register": "Ro‘yxatga olish va yuborish",
       "registerOnly": "Ro‘yxatga olish",
       "registered": "Xat ro‘yxatga olindi: {{number}}",
-      "handover": "Imzoga topşirish",
+      "handover": "Imzoga topşiriş",
       "handoverDone": "Imzoga topşirildi.",
       "sign": "Imzolash",
       "signer": "Imzolaydi: {{name}}",
@@ -222,7 +222,7 @@
       "verificationCode": "Tekshirish kodi",
       "verificationUrl": "Haqiqiyligini tekshirish",
       "actionFailed": "Bajarilmadi: {{reason}}",
-      "unmatched": "Manzil matn bilan yozilgan. «Davom ettirish»ni bosing va tashkilotni kontragentlardan tanlang — ungaça xatni imzolab bölmaydi."
+      "unmatched": "Manzil matn bilan yozilgan. «Davom ettiriş»ni bosing va taşkilotni kontragentlardan tanlang — ungaça xatni imzolab bölmaydi."
     },
     "replyTo": "Javob:",
     "mailFailed": "Yuborilmadi",
@@ -335,14 +335,14 @@
         "Direktor kelishadi, qayta ishlashga qaytaradi yoki rad etadi — sizga xabar keladi.",
         "Qaror va sana «Hujjatlar»da qoladi."
       ],
-      "draft": "«Qoralamani saqlash» hech narsa yubormaydi: hujjat «Hujjatlar»da «Davom ettirish» tugmasi bilan qoladi."
+      "draft": "«Qoralamani saqlaş» heç narsa yubormaydi: hujjat «Hujjatlar»da «Davom ettiriş» tugmasi bilan qoladi."
     },
     "submit": {
       "approval": "Kelishishga yuborish",
       "draft": "Qoralamani saqlash",
       "uploadWait": "Fayllar yuklanishini kuting",
-      "handover": "Imzoga topşirish",
-      "sign": "Imzolash"
+      "handover": "Imzoga topşiriş",
+      "sign": "Imzolaş"
     },
     "validation": {
       "summary": "Belgilangan maydonlarni tuzating.",
