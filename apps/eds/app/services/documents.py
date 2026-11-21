@@ -432,27 +432,31 @@ class SignCheck:
     signer: SignerCandidate | None  # кому подпись достаётся по реестру (не обязательно спросившему)
     candidate: SignerCandidate | None  # полномочие самого спросившего, если он вправе
     state_conflict: bool = False  # отказ из-за состояния документа или правила «автор ≠ подписант» (409), иначе 403
+    status: str | None = None  # статус документа при отказе по состоянию (уходит в details.status)
 
     def error(self) -> EdsError:
         reason = self.reason or "no_authority"
         if self.state_conflict:
-            return conflict(reason, self.message)
+            return conflict(reason, self.message, **({} if self.status is None else {"status": self.status}))
         return forbidden_reason(reason, self.message)
 
 
 async def sign_check(session: AsyncSession, employee: Employee, document: Document, today: date) -> SignCheck:
     """Может ли `employee` подписать `document` на дату `today`: право Signer, вид, статус, реестр полномочий, правило
     «автор ≠ подписант» (ADR-0024 п. 3). Её вызывают `sign()` и карточка документа (`Document.signing`)."""
-    if not (access.has(employee, P.LETTERS_REGISTER) or access.has(employee, P.MEMOS_APPROVE)):
-        return SignCheck(False, "no_permission", "Подписывать письма может сотрудник с правом подписи.", None, None)
     if document.kind != DocumentKind.LETTER_OUT.value:
         return SignCheck(False, "invalid_state", "Подписывается только исходящее письмо.", None, None, True)
     if document.status not in (DocumentStatus.DRAFT.value, DocumentStatus.RETURNED.value):
-        return SignCheck(False, "invalid_state", "Документ нельзя подписать в текущем статусе.", None, None, True)
+        return SignCheck(
+            False, "invalid_state", "Документ нельзя подписать в текущем статусе.", None, None, True, document.status
+        )
     result = await signing_resolve.resolve(
         session, kind=document.kind, amount=document.amount, currency=document.currency, on_date=today
     )
-    signer = signing_resolve.pick_letter_signer(result, document.author_crm_user_id)
+    openers = await signing_resolve.draft_openers(session, {c.signer.crm_user_id for c in result.candidates})
+    signer = signing_resolve.pick_letter_signer(result, document.author_crm_user_id, openers)
+    if not (access.has(employee, P.LETTERS_REGISTER) or access.has(employee, P.MEMOS_APPROVE)):
+        return SignCheck(False, "no_permission", "Подписывать письма может сотрудник с правом подписи.", signer, None)
     own = signing_resolve.signer_check(result, employee.crm_user_id)
     if not own.allowed or own.candidate is None:
         return SignCheck(False, own.reason or "no_authority", own.message, signer, None)

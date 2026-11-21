@@ -174,3 +174,34 @@ async def test_letter_signer_skips_the_author_but_falls_back_to_the_only_candida
         assert row is not None
         other = await signing_resolve.letter_signer(session, row, today)
         assert other is not None and other.signer.crm_user_id == 3
+
+
+async def test_card_of_an_author_without_signing_right_still_names_the_signer(
+    client: httpx.AsyncClient, staff: dict[str, Person]
+) -> None:
+    await grant(client, staff, "director")
+    doc = await draft_of(client, staff["manager"])
+    expected = {
+        "can_sign": False,
+        "reason": "no_permission",
+        "signer": {"crm_user_id": 3, "full_name": "Рустам Директоров"},
+    }
+    assert (await card(client, staff["manager"], doc["id"]))["signing"] == expected
+    await hand_over(client, staff["manager"], doc["id"])
+    assert (await card(client, staff["manager"], doc["id"]))["signing"] == expected
+
+
+async def test_authority_holder_who_cannot_open_the_draft_is_never_the_signer(
+    client: httpx.AsyncClient, staff: dict[str, Person]
+) -> None:
+    # Бухгалтер без letters.register: черновик ему недоступен, поэтому подписантом он не становится.
+    await grant(client, staff, "accountant")
+    doc = await draft_of(client, staff["manager"])
+    await hand_over(client, staff["manager"], doc["id"])
+    for name in staff:
+        assert (await tasks_of(client, staff[name]))["signatures"] == [], name
+    assert (await card(client, staff["director"], doc["id"]))["signing"]["signer"] is None
+    # Директор с полномочием забирает задачу, хотя бухгалтер стоит в реестре раньше по имени/основанию.
+    await grant(client, staff, "director", basis="order", basis_number="1", basis_date="2026-01-02")
+    assert len((await tasks_of(client, staff["director"]))["signatures"]) == 1
+    assert (await tasks_of(client, staff["accountant"]))["signatures"] == []
