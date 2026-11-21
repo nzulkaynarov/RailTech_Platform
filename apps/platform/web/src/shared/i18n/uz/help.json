@@ -58,7 +58,7 @@
         "title": "Menejer",
         "steps": [
           "«Javob kutmoqda»: botdan o‘tkazmalar va mijoz xabarlari — javob bering yoki ishga oling.",
-          "Lidan ariza yarating: mijoz va ariza raqami (masalan, RQ-2026-104) paydo bo‘ladi.",
+          "Lidan ariza yarating: mijoz va ariza raqami (masalan, RQ-2026-104) paydo böladi.",
           "Ariza bosqichini uning kartochkasida kuzating: rezolyutsiya, hisob-kitob, TT.",
           "Ish uchun biror narsa sotib olish kerak bo‘lsa — xizmat yozuvini rasmiylashtiring."
         ]
@@ -114,7 +114,7 @@
       {
         "title": "Ariza",
         "who": "menejer",
-        "text": "Menejer lidan ariza yaratadi: matn, qatorlar, mijoz xati. Xat kiruvchi sifatida raqam bilan ro‘yxatga olinadi."
+        "text": "Menejer lidan ariza yaratadi: matn, qatorlar, mijoz xati. Xat kiruvçi sifatida raqam bilan röyxatga olinadi."
       },
       {
         "title": "Rezolyutsiya",
@@ -169,7 +169,7 @@
         "text": "Mijoz TTni qabul qilgandan keyingi o‘sha ariza; raqami ariza raqamidan olinadi."
       },
       {
-        "term": "Kiruvchi xat (IN-104/26)",
+        "term": "Kiruvçi xat (IN-104/26)",
         "text": "Mijozning direktor nomiga rasmiy hujjati; rezolyutsiyani kutadi."
       },
       {
@@ -185,11 +185,11 @@
         "text": "Versiyali tijorat taklifi. Mijozga faqat direktor tasdiqlagandan keyin ketadi."
       },
       {
-        "term": "Chiquvchi (OUT-082/26)",
+        "term": "Çiquvçi (OUT-082/26)",
         "text": "TT tasdiqlanganda oladigan chiquvchi raqam."
       },
       {
-        "term": "Shartnoma (CT-2026/104)",
+        "term": "Şartnoma (CT-2026/104)",
         "text": "Qabul qilingan TTdan shartnoma loyihasi; operatorda imzolanadi, skaner biriktiriladi."
       },
       {

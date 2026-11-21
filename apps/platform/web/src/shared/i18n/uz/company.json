@@ -232,7 +232,7 @@
     "start": "Boshlang'ich qiymat",
     "startHint": "Birinchi raqam = qiymat + 1",
     "labelsTitle": "Raqam turlarining belgilari",
-    "labelsHint": "Raqam barcha tillarda bir xil: faqat lotin harflari A-Z va raqamlar.",
+    "labelsHint": "Raqam barça tillarda bir xil: faqat lotin harflari A-Z va raqamlar.",
     "labelInvalid": "Faqat lotin harflari A-Z va raqamlar",
     "save": "Raqamlashni saqlash",
     "saved": "Raqamlash saqlandi",
