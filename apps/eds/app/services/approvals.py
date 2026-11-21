@@ -22,7 +22,7 @@ from app.errors import conflict, forbidden_reason, not_found
 from app.models import ApprovalRoute, ApprovalStep, Document, Employee
 from app.schemas.approvals import ApprovalTemplate, Decision, DecisionIn, RouteStatus
 from app.security.permissions import EdsPermission as P
-from app.services import access, checklist, document_state, events, journal, numbering
+from app.services import access, checklist, document_notices, document_state, events, journal, numbering
 from app.services.people import load_directory
 
 DIRECTOR = "Директор"
@@ -303,6 +303,9 @@ async def _apply(
             last_step=following is None,
             with_accountant=len(steps) > 1,
             actor_id=employee.crm_user_id,
+        )
+        await document_notices.memo_decided(
+            session, bus, document, round_=route.round, comment=body.comment, actor_id=employee.crm_user_id
         )
     return route
 

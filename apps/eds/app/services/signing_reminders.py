@@ -42,7 +42,8 @@ def _title(basis: str, holder: str, valid_to: date) -> str:
     return f"{_BASIS_NAME.get(basis, 'Полномочие')} {holder} заканчивается {valid_to:%d.%m.%Y}"[:200]
 
 
-async def _recipients(session: AsyncSession) -> list[int]:
+async def manage_holder_ids(session: AsyncSession) -> list[int]:
+    """Активные держатели права `signing.manage` — кому уходят напоминания и «подписать некому»."""
     found = await session.execute(
         select(Employee.crm_user_id)
         .where(Employee.is_active.is_(True), literal(P.SIGNING_MANAGE.value) == any_(Employee.permissions_eds))
@@ -77,7 +78,7 @@ async def send_expiry_reminders(session: AsyncSession, bus: AsyncBus, *, now: da
             )
         ).all()
     )
-    recipients = await _recipients(session) if rows else []
+    recipients = await manage_holder_ids(session) if rows else []
     if not recipients:
         return 0
     for authority, holder in rows:

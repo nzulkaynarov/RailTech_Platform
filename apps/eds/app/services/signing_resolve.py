@@ -26,7 +26,7 @@ from decimal import Decimal
 from sqlalchemy import any_, literal, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import Employee, SigningAuthority
+from app.models import Document, Employee, SigningAuthority
 from app.models.signing import BASIS_CHARTER, BASIS_ORDER, BASIS_POWER_OF_ATTORNEY
 from app.schemas.common import PersonRef
 from app.schemas.signing import (
@@ -377,6 +377,18 @@ async def resolve(
         people=people,
         kind_label=kind_label,
     )
+
+
+async def letter_signer(session: AsyncSession, document: Document, today: date) -> SignerCandidate | None:
+    """Кому уходит проект исходящего письма на подпись: первый кандидат реестра, не автор (автор ≠ подписант,
+    ADR-0024 п. 3), иначе единственный возможный; подписать некому — `None`."""
+    result = await resolve(
+        session, kind=document.kind, amount=document.amount, currency=document.currency, on_date=today
+    )
+    for item in result.candidates:
+        if item.signer.crm_user_id != document.author_crm_user_id:
+            return item
+    return result.candidates[0] if result.candidates else None
 
 
 async def check_signer(

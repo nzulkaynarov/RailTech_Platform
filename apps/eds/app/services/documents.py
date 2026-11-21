@@ -38,6 +38,7 @@ from app.security.permissions import EdsPermission as P
 from app.services import (
     access,
     approvals,
+    document_notices,
     document_state,
     events,
     files,
@@ -537,6 +538,9 @@ async def sign(
 
     closed = await instructions.close_by_outgoing(session, bus, document=document, actor_id=employee.crm_user_id)
     await reply.notify_registered(session, bus, document, closed_executors=closed, actor_id=employee.crm_user_id)
+    await document_notices.letter_signed(
+        session, bus, document, signer_id=employee.crm_user_id, signer_name=candidate.signer.full_name
+    )
 
     if method == "email" and send and render is not None:
         await letter_mail.start(
@@ -600,7 +604,15 @@ async def request_registration(
         await journal.record(
             session, "document.registration_requested", by=employee.crm_user_id, document_id=document.id
         )
-        await reply.notify_registration_requested(session, bus, document, actor_id=employee.crm_user_id)
+        told = await reply.notify_registration_requested(session, bus, document, actor_id=employee.crm_user_id)
+        await document_notices.letter_handed_over(
+            session,
+            bus,
+            document,
+            today=clock.company_date(now),
+            already_told=told,
+            actor_id=employee.crm_user_id,
+        )
     return document
 
 

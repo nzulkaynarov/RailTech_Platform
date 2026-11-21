@@ -20,7 +20,7 @@ from app.models import ApprovalRoute, ApprovalStep, Document, DocumentPayment, E
 from app.schemas.approvals import Decision, DecisionIn, RouteStatus
 from app.schemas.documents import DocumentKind, DocumentPaymentIn, DocumentStatus
 from app.security.permissions import EdsPermission as P
-from app.services import access, approvals, files, journal
+from app.services import access, approvals, document_notices, files, journal
 
 
 def is_accountant_step(step: ApprovalStep) -> bool:
@@ -121,6 +121,15 @@ async def pay(
     )
     decision = DecisionIn(decision=Decision.APPROVE, comment=(body.note or "").strip() or None)
     await approvals.complete_step(session, bus, employee, route, steps, current, decision)
+    await document_notices.memo_paid(
+        session,
+        bus,
+        document,
+        paid_on=body.paid_on,
+        amount=amount,
+        currency=body.amount.currency,
+        actor_id=employee.crm_user_id,
+    )
     return document
 
 
