@@ -227,6 +227,7 @@ class LetterPage(BaseModel):
 class Letter(BaseModel):
     id: uuid.UUID
     number: str
+    previous_number: str | None
     status: LetterStatus
     subject: str
     summary: str

@@ -256,6 +256,36 @@ async def test_card_by_any_numbering_label(web: Web, eds: EdsFake, number: str) 
     assert lookup.url.params["number"] == number
 
 
+async def test_card_by_previous_number_and_previous_number_on_the_card(
+    web: Web, eds: EdsFake, check: ContractChecker
+) -> None:
+    """СЦ-5: старая ссылка `/eds/inbox/ВХ-104/26` открывает письмо с номером `IN-104/26`; прежний
+    номер доходит до карточки; без него поля нет или оно `null`."""
+    eds.registry = [
+        {"kind": "letter_in", "id": LETTER_ID, "number": "IN-104/26", "previous_number": NUMBER}
+    ]
+    eds.answer(
+        "GET",
+        f"letters/{LETTER_ID}",
+        httpx.Response(200, json=letter(number="IN-104/26", previous_number=NUMBER)),
+    )
+    await _director(web)
+
+    response = await web.client.get(f"{BASE}/letters/{quote(NUMBER, safe='')}")
+
+    check(response, "/eds/letters/{ref}", "get")
+    assert response.status_code == 200
+    assert response.json()["number"] == "IN-104/26"
+    assert response.json()["previous_number"] == NUMBER
+    [lookup] = eds.made("GET", "registry")
+    assert lookup.url.params["number"] == NUMBER
+
+
+async def test_card_without_a_previous_number_has_none(web: Web, eds: EdsFake) -> None:
+    await _director(web)
+    assert (await web.client.get(CARD)).json().get("previous_number") is None
+
+
 @pytest.mark.parametrize("ref", ["ВХ-999/26", "ЗВ-2026-104", "abc", "ВХ-104/2026", "ВХ-104/26/1"])
 async def test_unknown_or_foreign_refs_are_404(web: Web, eds: EdsFake, ref: str) -> None:
     await _director(web)

@@ -3,6 +3,7 @@ import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { HttpResponse, http } from "msw";
 import { describe, expect, it } from "vitest";
 
+import { readLetters, writeLetters } from "../../../mocks/fixtures/letters";
 import { server } from "../../../test/server";
 import { panelEl, renderAt, setupLetterTests, signIn } from "../../../test/lettersKit";
 
@@ -241,6 +242,28 @@ describe("EDS · Входящие письма: карточка", () => {
       "/crm/clients/42",
     );
     expect(screen.getByText("Ждёт резолюции")).toBeVisible();
+  });
+
+  it("прежний номер — одной строкой в реквизитах, только если он есть (СЦ-5)", async () => {
+    writeLetters(
+      readLetters().map((l) =>
+        l.number === "ВХ-104/26" ? { ...l, previous_number: "ВХ-004/26" } : l,
+      ),
+    );
+    await openInbox("director@demo.example", "/eds/inbox/%D0%92%D0%A5-104%2F26");
+    expect(
+      await screen.findByRole("heading", { level: 1, name: "Письмо ВХ-104/26" }),
+    ).toBeVisible();
+    expect(screen.getByText("Прежний номер", { selector: "dt" })).toBeVisible();
+    expect(screen.getByText("ВХ-004/26", { selector: "dd" })).toBeVisible();
+  });
+
+  it("письмо без прежнего номера — строки «Прежний номер» нет", async () => {
+    await openInbox("director@demo.example", "/eds/inbox/%D0%92%D0%A5-104%2F26");
+    expect(
+      await screen.findByRole("heading", { level: 1, name: "Письмо ВХ-104/26" }),
+    ).toBeVisible();
+    expect(screen.queryByText("Прежний номер")).toBeNull();
   });
 
   it("номер со «/» без кодирования (`/eds/inbox/ВХ-104/26`) тоже открывает письмо", async () => {

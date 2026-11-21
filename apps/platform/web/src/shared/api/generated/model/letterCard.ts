@@ -26,6 +26,11 @@ import type { StepCode } from "./stepCode";
 export interface LetterCard {
   id: string;
   number: string;
+  /**
+   * Номер до перенумерации на латиницу; `null` или нет поля, если номер не менялся
+   * @nullable
+   */
+  previous_number?: string | null;
   status: LetterStatus;
   subject: string;
   /** Суть документа */

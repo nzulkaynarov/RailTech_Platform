@@ -113,6 +113,7 @@
   "panel": {
     "label": "Hujjat",
     "fields": {
+      "previousNumber": "Avvalgi raqam",
       "kind": "Turi",
       "author": "Kimdan",
       "addressee": "Kimga",

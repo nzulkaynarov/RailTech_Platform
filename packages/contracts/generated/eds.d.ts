@@ -1570,15 +1570,15 @@ export interface paths {
      * Обозначения номеров документооборота (задача «Н»)
      * @description Обозначения видов номера EDS — входящее, исходящее, служебная записка, заявление, отчёт — и образец первого
      *     номера года. Задаёт владелец в «Настройки · Нумерация»; по умолчанию латиницей (`IN-001/26`, `OUT-001/26`,
-     *     `MEMO-2026/001`, `APP-2026/001`, `REP-2026/001`). Выданные номера (`ВХ-104/26`, `СЗ-2026/031`) не меняются.
+     *     `MEMO-2026/001`, `APP-2026/001`, `REP-2026/001`). Номер меняет только разовая перенумерация (`renumber-latin`); прежний номер — в `previous_number`.
      */
     get: operations["getNumberLabels"];
     /**
      * Задать обозначения номеров документооборота
-     * @description Только переданные виды. Обозначение — до 16 знаков без пробелов, «/» и «-» (иначе 422, поле `labels.<вид>` с
-     *     `invalid_label`); неизвестный вид — 422 `unknown_kind`; совпадает с обозначением другого вида — нынешним или
-     *     прежним (`ВХ`, `ИСХ`, `СЗ`, `ЗЯ`, `ОТ`), которым уже выданы номера, — 422 `label_taken`. Новые номера идут с
-     *     новым обозначением, счётчик года продолжается.
+     * @description Только переданные виды. Обозначение — от 1 до 16 знаков, только латинские заглавные буквы и цифры
+     *     (`^[A-Z0-9]{1,16}$`; иначе 422, поле `labels.<вид>` с `invalid_label`); неизвестный вид — 422 `unknown_kind`;
+     *     совпадает с обозначением другого вида — 422 `label_taken`. Новые номера идут с новым обозначением, счётчик года
+     *     продолжается.
      */
     put: operations["setNumberLabels"];
     post?: never;
@@ -2414,6 +2414,8 @@ export interface components {
     };
     Letter: {
       id: components["schemas"]["Uuid"];
+      /** @description Номер до перенумерации (кириллическое обозначение → латиница, СЦ-5); `null`, если номер не менялся. Находится поиском и поиском по номеру наравне с `number` */
+      previous_number: string | null;
       number: components["schemas"]["LetterNumber"];
       status: components["schemas"]["LetterStatus"];
       subject: string;
@@ -3389,6 +3391,8 @@ export interface components {
     Document: {
       id: components["schemas"]["Uuid"];
       kind: components["schemas"]["DocumentKind"];
+      /** @description Номер до перенумерации (кириллическое обозначение → латиница, СЦ-5); `null`, если номер не менялся. Находится поиском и поиском по номеру наравне с `number` */
+      previous_number: string | null;
       number: components["schemas"]["DocumentNumber"] | null;
       status: components["schemas"]["DocumentStatus"];
       version: number;
@@ -3642,6 +3646,8 @@ export interface components {
       id: components["schemas"]["Uuid"];
       /** @description Номер реестра EDS или номер КП, договора, счёта, акта ERP; `null` — исходящее до отправки */
       number: string | null;
+      /** @description Номер до перенумерации (СЦ-5); `number` в фильтре и поиске совпадает и с ним */
+      previous_number?: string | null;
       title: string;
       /** @description Значение `LetterStatus`, `DocumentStatus` или `RouteStatus` по типу; у `contract`, `invoice`, `act` — слово SPEC-v3 §2.4 (см. 0.5.0) */
       status: string;

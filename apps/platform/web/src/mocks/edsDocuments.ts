@@ -234,6 +234,7 @@ function detail(doc: MockDocument, state: EdsMock, me: string): EdsDocument {
     id: doc.id,
     kind: doc.kind,
     number: doc.number,
+    ...(doc.previous_number ? { previous_number: doc.previous_number } : {}),
     status: doc.status,
     version: doc.version,
     subject: doc.subject,
