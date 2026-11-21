@@ -10,24 +10,34 @@
 Файл письма идёт в EDS от имени сотрудника (обмен токена `aud=eds`) так же, как в «Создать
 документ»: тело до 25 МБ передаётся как есть. Вложение переписки BFF читает из CRM потоком с тем же
 пределом и отправляет EDS формой multipart с именем и типом файла из ответа CRM.
+
+«Записка о звонке» (СЦ-6) — основание заявки по звонку: PDF строит EDS в воркере
+(`POST /call-notes`, 202 и опрос), BFF проверяет лид в CRM (канал «телефон», согласие) и отдаёт EDS
+поля лида; сам документ BFF не строит и не хранит.
 """
 
 import re
+from datetime import UTC, datetime
 from typing import Annotated
 from urllib.parse import unquote
+from uuid import UUID
 
 import httpx
 from fastapi import APIRouter, Depends, Path, Request, Response, status
+from fastapi.responses import StreamingResponse
 
 from app.api.crm_messages import _lead_id
-from app.api.eds_documents import MAX_UPLOAD_BYTES, _read_limited, _too_large
+from app.api.eds_documents import MAX_UPLOAD_BYTES, FileStream, _read_limited, _too_large
+from app.clients import crm_models as crm
 from app.clients.crm_proxy import CrmProxy, crm_error
 from app.crm_clients_view import CrmRequestCreated, CrmRequestRetried
 from app.deps import Authed, require, require_all
-from app.eds_documents import EdsProxy
+from app.eds_documents import EdsProxy, eds_error
 from app.errors import PlatformError, backend_unavailable
 from app.feeds.numbers import lead_number
 from app.schemas_crm_leads import (
+    CallNoteView,
+    RequestCallNoteIn,
     RequestCreatedView,
     RequestFileFromMessageIn,
     RequestFormIn,
@@ -172,3 +182,109 @@ async def copy_message_attachment(body: RequestFileFromMessageIn, authed: Copier
         content=content,
         content_type=form.headers["content-type"],
     )
+
+
+_NOT_PHONE = "Записка о звонке составляется только по лиду со звонка."
+_NO_CONSENT = "Нет согласия клиента на обработку данных — записку о звонке не составить."
+
+
+def _conflict(reason: str, message: str) -> PlatformError:
+    return PlatformError(
+        "CONFLICT", message, status_code=409, details={"reason": reason, "backend_status": 409}
+    )
+
+
+async def _lead_call_note(authed: Authed, body: RequestCallNoteIn, lead: str) -> dict[str, object]:
+    """Тело EDS по лиду со звонка: телефонный лид и согласие (в CRM или отмеченное в форме)."""
+    detail = await CrmProxy(authed.call).get_model(
+        crm.LeadDetail, "GET", f"{API}/leads/{_lead_id(lead)}"
+    )
+    if detail.source != "phone":
+        raise _conflict("call_note_not_phone", _NOT_PHONE)
+    if detail.consent_given_at is None and not body.consent:
+        raise _conflict("call_note_no_consent", _NO_CONSENT)
+    return {
+        "request_key": body.request_key,
+        "lang": body.lang,
+        "lead": lead_number(detail.id),
+        "caller_name": detail.display_name,
+        "company": detail.company_name,
+        "phone": detail.phone_e164 or detail.client_phone_e164,
+        "email": detail.email,
+        "called_at": detail.created_at.isoformat(),
+        "taken_by": detail.assigned_user_name,
+        "need": detail.need_summary,
+    }
+
+
+def _form_call_note(body: RequestCallNoteIn) -> dict[str, object]:
+    """Тело EDS без лида (повторный звонок): поля формы; «Когда» — сейчас, «Принял» — сотрудник."""
+    caller = body.caller
+    if caller is None:
+        raise PlatformError(
+            "VALIDATION_FAILED",
+            "Укажите, кто звонил.",
+            status_code=422,
+            details={"fields": ["caller"]},
+        )
+    return {
+        "request_key": body.request_key,
+        "lang": body.lang,
+        "lead": None,
+        "caller_name": caller.name,
+        "company": caller.company,
+        "phone": caller.phone,
+        "email": caller.email,
+        "called_at": datetime.now(UTC).isoformat(),
+        "taken_by": None,
+        "need": body.need,
+    }
+
+
+@router.post(
+    "/crm/request-files/call-note",
+    response_model=CallNoteView,
+    status_code=status.HTTP_202_ACCEPTED,
+    operation_id="createCrmRequestCallNote",
+)
+async def create_call_note(body: RequestCallNoteIn, authed: Writer) -> CallNoteView:
+    payload = (
+        await _lead_call_note(authed, body, body.lead)
+        if body.lead is not None
+        else _form_call_note(body)
+    )
+    return await EdsProxy(authed.call).model(
+        CallNoteView, "POST", f"{API}/call-notes", expected=202, json=payload
+    )
+
+
+@router.get(
+    "/crm/request-files/call-note/{note}",
+    response_model=CallNoteView,
+    operation_id="getCrmRequestCallNote",
+)
+async def get_call_note(note: UUID, authed: Writer) -> CallNoteView:
+    return await EdsProxy(authed.call).model(CallNoteView, "GET", f"{API}/call-notes/{note}")
+
+
+@router.get(
+    "/crm/request-files/{file_id}",
+    response_class=StreamingResponse,
+    responses={200: {"content": {"application/octet-stream": {}}}},
+    operation_id="downloadCrmRequestFile",
+)
+async def download_request_file(file_id: UUID, authed: Writer) -> Response:
+    """«Открыть» файл основания: свой файл сотрудника в EDS, потоком и всегда вложением."""
+    upstream = await EdsProxy(authed.call).raw("GET", f"{API}/files/{file_id}", stream=True)
+    if upstream.status_code != 200:
+        try:
+            await upstream.aread()
+            raise eds_error(upstream)
+        finally:
+            await upstream.aclose()
+    headers = {
+        "Content-Disposition": upstream.headers.get("content-disposition") or "attachment",
+        "X-Content-Type-Options": "nosniff",
+        "Cache-Control": "private, no-store",
+    }
+    return FileStream(upstream, headers, "application/octet-stream")
