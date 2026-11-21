@@ -63,7 +63,7 @@ def _outcome_event(event_type: str, quote, portal_contact, on_behalf: Optional[O
 
 def _provision_accepted_quote(quote) -> None:
     """SPEC-v3 §3.1 ш. 6 (D26G-1): резерв склада и черновик заказа поставщику на дефицит. Своя точка сохранения: сбой
-    обеспечения не отменяет акцепт клиента — снабженец доберёт резерв и заказ вручную («Склад · Создать заказ»)."""
+    обеспечения не отменяет акцепт клиента — снабженец доберёт резерв и заказ вручную («Закупки · Новый заказ»)."""
     from supply.services.provision import provision_accepted_quote
 
     try:

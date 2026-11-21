@@ -3,7 +3,7 @@
 openapi: 3.0.3
 info:
   title: RailTech Platform ERP — Internal API (ERP SPA)
-  version: 1.20.0
+  version: 1.21.0
   description: 'Внутренний API ERP для ERP SPA (бэк-офис), пространство `/api/v1/` (CONTRACTS §1). Файл генерируется из схемы
     бэкенда — это не отдельное описание, а её срез; расхождение с кодом невозможно: CI перегенерирует схему и падает при diff.'
   contact:
@@ -38310,22 +38310,27 @@ components:
           allOf:
           - $ref: '#/components/schemas/SupplyTaskKindEnum'
           description: |-
-            send_order — черновик не отправлен; partner_date_change — партнёр просит перенести дату; receive_goods — партнёр отгрузил, товар не принят; partner_application — заявка на партнёрство ждёт решения
+            send_order — черновик не отправлен; partner_date_change — партнёр просит перенести дату; receive_goods — партнёр отгрузил, товар не принят; partner_application — заявка на партнёрство ждёт решения; order_shortage — по проекту есть непокрытый товар, нужно заказать недостающее; ship_project — товар в резерве проекта ждёт отгрузки
 
             * `send_order` - send_order
             * `partner_date_change` - partner_date_change
             * `receive_goods` - receive_goods
             * `partner_application` - partner_application
+            * `order_shortage` - order_shortage
+            * `ship_project` - ship_project
         id:
           type: integer
-          description: Заказ партнёру или заявка на партнёрство
+          description: Заказ партнёру, заявка на партнёрство или проект (order_shortage, ship_project)
         number:
           type: string
           nullable: true
-          description: Номер заказа; у заявки на партнёрство — null
+          description: Номер заказа или проекта; у заявки на партнёрство — null
         supplier_name:
           type: string
-          description: Партнёр или компания-заявитель
+          description: Партнёр или компания-заявитель; у строк проекта — пусто
+        client_name:
+          type: string
+          description: 'order_shortage, ship_project: клиент проекта'
         since:
           type: string
           format: date-time
@@ -38354,12 +38359,16 @@ components:
       - partner_date_change
       - receive_goods
       - partner_application
+      - order_shortage
+      - ship_project
       type: string
       description: |-
         * `send_order` - send_order
         * `partner_date_change` - partner_date_change
         * `receive_goods` - receive_goods
         * `partner_application` - partner_application
+        * `order_shortage` - order_shortage
+        * `ship_project` - ship_project
     SupplyTaskList:
       type: object
       properties:

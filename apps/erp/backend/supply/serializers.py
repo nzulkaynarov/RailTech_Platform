@@ -263,13 +263,31 @@ class SupplyTaskSerializer(serializers.Serializer):
     """Строка списка дел снабженца (план 0.7, FR-6): заказ партнёру или заявка на партнёрство."""
 
     kind = serializers.ChoiceField(
-        choices=["send_order", "partner_date_change", "receive_goods", "partner_application"],
+        choices=[
+            "send_order",
+            "partner_date_change",
+            "receive_goods",
+            "partner_application",
+            "order_shortage",
+            "ship_project",
+        ],
         help_text="send_order — черновик не отправлен; partner_date_change — партнёр просит перенести дату; "
-        "receive_goods — партнёр отгрузил, товар не принят; partner_application — заявка на партнёрство ждёт решения",
+        "receive_goods — партнёр отгрузил, товар не принят; partner_application — заявка на партнёрство ждёт решения; "
+        "order_shortage — по проекту есть непокрытый товар, нужно заказать недостающее; "
+        "ship_project — товар в резерве проекта ждёт отгрузки",
     )
-    id = serializers.IntegerField(help_text="Заказ партнёру или заявка на партнёрство")
-    number = serializers.CharField(allow_null=True, help_text="Номер заказа; у заявки на партнёрство — null")
-    supplier_name = serializers.CharField(help_text="Партнёр или компания-заявитель")
+    id = serializers.IntegerField(
+        help_text="Заказ партнёру, заявка на партнёрство или проект (order_shortage, ship_project)"
+    )
+    number = serializers.CharField(
+        allow_null=True, help_text="Номер заказа или проекта; у заявки на партнёрство — null"
+    )
+    supplier_name = serializers.CharField(
+        allow_blank=True, help_text="Партнёр или компания-заявитель; у строк проекта — пусто"
+    )
+    client_name = serializers.CharField(
+        required=False, allow_blank=True, help_text="order_shortage, ship_project: клиент проекта"
+    )
     since = serializers.DateTimeField(allow_null=True, help_text="С какого момента дело ждёт снабженца")
     date = serializers.DateField(required=False, help_text="partner_date_change: на какую дату просит партнёр")
     note = serializers.CharField(required=False, allow_null=True, help_text="Причина переноса или накладная отгрузки")

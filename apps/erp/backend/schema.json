@@ -2,7 +2,7 @@
     "openapi": "3.0.3",
     "info": {
         "title": "ERP API",
-        "version": "1.20.0",
+        "version": "1.21.0",
         "description": "ERP Platform API. Supports deal lifecycle management, quoting, product catalog (PIM), Excel imports, and real-time notifications via WebSocket.",
         "contact": {
             "name": "ERP API Support",
@@ -58675,20 +58675,24 @@
                                 "$ref": "#/components/schemas/SupplyTaskKindEnum"
                             }
                         ],
-                        "description": "send_order — черновик не отправлен; partner_date_change — партнёр просит перенести дату; receive_goods — партнёр отгрузил, товар не принят; partner_application — заявка на партнёрство ждёт решения\n\n* `send_order` - send_order\n* `partner_date_change` - partner_date_change\n* `receive_goods` - receive_goods\n* `partner_application` - partner_application"
+                        "description": "send_order — черновик не отправлен; partner_date_change — партнёр просит перенести дату; receive_goods — партнёр отгрузил, товар не принят; partner_application — заявка на партнёрство ждёт решения; order_shortage — по проекту есть непокрытый товар, нужно заказать недостающее; ship_project — товар в резерве проекта ждёт отгрузки\n\n* `send_order` - send_order\n* `partner_date_change` - partner_date_change\n* `receive_goods` - receive_goods\n* `partner_application` - partner_application\n* `order_shortage` - order_shortage\n* `ship_project` - ship_project"
                     },
                     "id": {
                         "type": "integer",
-                        "description": "Заказ партнёру или заявка на партнёрство"
+                        "description": "Заказ партнёру, заявка на партнёрство или проект (order_shortage, ship_project)"
                     },
                     "number": {
                         "type": "string",
                         "nullable": true,
-                        "description": "Номер заказа; у заявки на партнёрство — null"
+                        "description": "Номер заказа или проекта; у заявки на партнёрство — null"
                     },
                     "supplier_name": {
                         "type": "string",
-                        "description": "Партнёр или компания-заявитель"
+                        "description": "Партнёр или компания-заявитель; у строк проекта — пусто"
+                    },
+                    "client_name": {
+                        "type": "string",
+                        "description": "order_shortage, ship_project: клиент проекта"
                     },
                     "since": {
                         "type": "string",
@@ -58724,10 +58728,12 @@
                     "send_order",
                     "partner_date_change",
                     "receive_goods",
-                    "partner_application"
+                    "partner_application",
+                    "order_shortage",
+                    "ship_project"
                 ],
                 "type": "string",
-                "description": "* `send_order` - send_order\n* `partner_date_change` - partner_date_change\n* `receive_goods` - receive_goods\n* `partner_application` - partner_application"
+                "description": "* `send_order` - send_order\n* `partner_date_change` - partner_date_change\n* `receive_goods` - receive_goods\n* `partner_application` - partner_application\n* `order_shortage` - order_shortage\n* `ship_project` - ship_project"
             },
             "SupplyTaskList": {
                 "type": "object",
