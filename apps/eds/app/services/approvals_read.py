@@ -20,6 +20,7 @@ from app.schemas.approvals import (
     StepAssignee,
 )
 from app.schemas.approvals import ApprovalStep as StepOut
+from app.schemas.common import PersonRef
 from app.schemas.pagination import decode_cursor
 from app.security.permissions import EdsPermission as P
 from app.services import access, approvals, checklist, paging
@@ -123,6 +124,28 @@ def _hide_margin(items: list[ChecklistItem]) -> list[ChecklistItem]:
     return [item.model_copy(update={"value": None}) if item.code == "margin" else item for item in items]
 
 
+async def _acting_for(
+    session: AsyncSession,
+    employee: Employee,
+    route: ApprovalRoute,
+    step: ApprovalStep,
+    directory: Directory,
+    covered: list[Employee] | None = None,
+) -> PersonRef | None:
+    """«За <имя>»: шаг решается за замещаемого, а не по своему праву (`access.acting_on_behalf`)."""
+    acting = await access.acting_on_behalf(
+        session,
+        employee,
+        owner=step.assignee_crm_user_id,
+        permission=step.assignee_permission,
+        template=route.template,
+        covered=covered,
+    )
+    if acting.on_behalf_of is None:
+        return None
+    return PersonRef(crm_user_id=acting.on_behalf_of.crm_user_id, full_name=acting.on_behalf_of.full_name)
+
+
 async def present(session: AsyncSession, employee: Employee, route: ApprovalRoute) -> Approval:
     steps = await approvals.load_steps(session, route.id)
     directory = await load_directory(session, (s.decided_by for s in steps))
@@ -138,6 +161,9 @@ async def present(session: AsyncSession, employee: Employee, route: ApprovalRout
         and current is not None
         and await approvals.may_decide(session, employee, route.id, current.index)
     )
+    acting_for: PersonRef | None = None
+    if can_decide and current is not None:
+        acting_for = await _acting_for(session, employee, route, current, directory)
     allowed: list[Decision] = []
     if can_decide:
         allowed = [Decision.RETURN, Decision.REJECT]
@@ -157,6 +183,7 @@ async def present(session: AsyncSession, employee: Employee, route: ApprovalRout
         if is_quote and decider and route.quote_snapshot
         else None,
         can_decide=can_decide,
+        acting_for=acting_for,
         allowed_decisions=allowed,
         outgoing_number=route.outgoing_number,
         approved_late=route.approved_late,
@@ -213,6 +240,7 @@ async def list_page(
         ).scalars()
     }
     directory = Directory()
+    covered = await access.covered_employees(session, employee) if mine else []
     newer = await newer_versions(session, page)
     items = [
         ApprovalListItem(
@@ -224,6 +252,11 @@ async def list_page(
             round=r.round,
             current_step=step_of(current_steps[(r.id, r.current_step)], directory)
             if r.current_step is not None and (r.id, r.current_step) in current_steps
+            else None,
+            acting_for=await _acting_for(
+                session, employee, r, current_steps[(r.id, r.current_step)], directory, covered
+            )
+            if mine and r.current_step is not None and (r.id, r.current_step) in current_steps
             else None,
             created_at=r.created_at,
         )

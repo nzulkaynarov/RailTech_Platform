@@ -53,7 +53,13 @@ Reader = Annotated[
     # дают 404 (`can_view_file`).
     Depends(
         require_permission(
-            P.LETTERS_READ, P.MEMOS_CREATE, P.MEMOS_APPROVE, P.APPROVALS_DECIDE, P.REGISTRY_READ, P.FILES_UPLOAD
+            P.LETTERS_READ,
+            P.MEMOS_CREATE,
+            P.MEMOS_APPROVE,
+            P.APPROVALS_DECIDE,
+            P.REGISTRY_READ,
+            P.FILES_UPLOAD,
+            deputy=True,
         )
     ),
 ]
