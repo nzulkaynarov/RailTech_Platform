@@ -141,9 +141,9 @@ def _get_or_create_company(data: Dict[str, Any], crm_client_id: int) -> Tuple[Co
         language=language,
         is_registered=True,
     )
-    client_type = CompanyType.objects.filter(code="CLIENT").first()
-    if client_type:
-        company.types.add(client_type)
+    # Handoff creates the company AS a client: the role is set explicitly, nothing adds it behind the scenes (СЦ-8).
+    client_type, _ = CompanyType.objects.get_or_create(code="CLIENT", defaults={"name": "Клиент"})
+    company.types.add(client_type)
     return company, False
 
 
