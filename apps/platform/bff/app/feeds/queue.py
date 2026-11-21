@@ -18,6 +18,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
 from typing import Any
+from urllib.parse import quote
 
 from app.feeds.erp_work import calc_rows, invoice_rows, project_rows
 from app.feeds.feed import Feed
@@ -133,11 +134,20 @@ def _role_id_for(view: View, kind: QueueItemKind, owner: QueueOwner | None) -> s
     return str(view.roles[0].id)
 
 
+_TASK_SCREEN_KINDS = frozenset({"instruction", "instruction_extension"})
+
+
 def _acting_item(item: QueueItem, owner: QueueOwner | None) -> QueueItem:
     """Строка замещаемого: id с суффиксом (чужая и своя строки не сливаются), «за»."""
     if owner is None:
         return item
-    return item.model_copy(update={"id": f"{item.id}:for:{owner.id}", "on_behalf_of": owner})
+    update: dict[str, Any] = {"id": f"{item.id}:for:{owner.id}", "on_behalf_of": owner}
+    if item.kind in _TASK_SCREEN_KINDS:
+        # Рабочий экран поручения не знает замещения (в карточке письма его признака нет): за кого
+        # открыт шаг, он берёт из адреса; право действовать проверяет EDS
+        path = f"{item.object.path}?for={quote(owner.id)}&forName={quote(owner.name)}"
+        update["object"] = item.object.model_copy(update={"path": path})
+    return item.model_copy(update=update)
 
 
 def _lead_row(
@@ -1006,6 +1016,8 @@ def build_cards(view: View, snap: Snapshot, queue: list[QueueItem]) -> list[Queu
 def build_counters(view: View, snap: Snapshot, queue: list[QueueItem]) -> list[MenuCounter]:
     """Бейджи подменю: красный — требует действия, серый — счётчик. Пункты вне ролей «вида» не
     перечисляются."""
+    # Бейдж «Задачи» равен числу строк списка, включая «за {имя}» (замещение); остальные бейджи и
+    # карточки считают только свои дела
     items = [
         MenuCounter(module="dashboard", section="queue", count=len(queue), attention=bool(queue))
     ]

@@ -138,7 +138,7 @@ function Content({
   const { me } = useAuth();
   const { wide, mobile } = useViewport();
   const [, setParams] = useSearchParams();
-  const mayDecide = canEdit(me, "eds.drafts");
+  const mayDecide = canEdit(me, "eds.drafts") || Boolean(quote.acting_for);
   const waiting = quote.status === "open" && quote.can_decide && mayDecide;
 
   const openApproval = () => {

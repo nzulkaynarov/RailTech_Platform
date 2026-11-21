@@ -70,6 +70,7 @@
       "action": "Amal"
     },
     "noNumber": "raqam ro‘yxatga olishda beriladi",
+    "noNumberSigning": "raqam imzolaşda beriladi",
     "open": "Hujjatni ochish: {{subject}}",
     "continue": "Davom ettirish",
     "continueLabel": "Hujjatni davom ettirish: {{subject}}",
@@ -421,7 +422,7 @@
     },
     "email": {
       "label": "Manzil e-pochtasi",
-      "hint": "Ixtiyoriy. E-pochta bölsa, xat imzolangaç blankdagi PDF bilan darhol yuboriladi.",
+      "hint": "Ixtiyoriy. E-poçta bölsa, xat imzolangaç blankdagi PDF bilan darhol yuboriladi.",
       "notConnected": "Hujjat aylanişi poçtasi ulanmagan: xat imzolanadi, lekin adresatga yuborilmaydi. Administratorga xabar bering."
     },
     "body": {

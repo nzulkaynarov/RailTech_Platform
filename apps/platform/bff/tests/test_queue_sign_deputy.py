@@ -202,6 +202,9 @@ async def test_deputy_sees_replaced_steps_marked_even_without_the_role_for_them(
     assert memo["on_behalf_of"] == {"id": "12", "name": "Мадина Р."}
     assert memo["role_id"] == rid("MANAGER")
     assert items["sign_document"]["id"] == f"sign_document:{DOC}:for:12"
+    # рабочий экран поручения и переноса узнаёт, за кого он открыт, из адреса
+    path = items["instruction_extension"]["object"]["path"]
+    assert path.endswith("?for=12&forName=%D0%9C%D0%B0%D0%B4%D0%B8%D0%BD%D0%B0%20%D0%A0.")
 
 
 async def test_without_covering_the_replaced_steps_are_not_read(web: Web, fb: FeedBackends) -> None:
@@ -236,3 +239,8 @@ async def test_counters_and_cards_count_only_own_steps(web: Web, fb: FeedBackend
     assert {c["key"]: c["count"] for c in cards}["memos_to_approve"] == 1
     badge = next(c for c in counters if c["module"] == "eds" and c["section"] == "approvals")
     assert badge["count"] == 1
+    tasks_badge = next(
+        c for c in counters if c["module"] == "dashboard" and c["section"] == "queue"
+    )
+    # бейдж «Задачи» — число строк списка, в том числе «за …»; бейдж «Согласования» — только свои
+    assert tasks_badge["count"] == 2

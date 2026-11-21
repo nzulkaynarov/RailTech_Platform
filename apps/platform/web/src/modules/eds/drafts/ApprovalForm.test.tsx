@@ -54,6 +54,27 @@ describe("Одобрение КП: форма", () => {
     expect(within(form).queryByRole("button", { name: APPROVE })).toBeNull();
   });
 
+  it("СЦ-9: заместитель-менеджер (раздел КП только на чтение) получает форму «за {имя}»; без замещения — только чтение", async () => {
+    const quotes = readQuotes();
+    writeQuotes(
+      quotes.map((q) =>
+        q.number === "КП-2026/115"
+          ? { ...q, acting_for: { crm_user_id: 12, full_name: "Мадина Р." } }
+          : q,
+      ),
+    );
+    const { form } = await openForm(115, "manager@demo.example");
+    expect(within(form).getByRole("button", { name: "Одобрить КП за Мадина Р." })).toBeEnabled();
+    cleanup();
+
+    writeQuotes(quotes);
+    signIn("manager@demo.example");
+    renderAt(QUOTE(115));
+    const panel = await panelEl();
+    await within(panel).findByText("КП ждёт решения директора");
+    expect(within(panel).queryByRole("form", { name: "Одобрение КП" })).toBeNull();
+  });
+
   it("красные блокирующие строки: кнопка неактивна, подпись называет каждый не зелёный пункт", async () => {
     const { form } = await openForm(116);
     const approve = within(form).getByRole("button", { name: APPROVE });

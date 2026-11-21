@@ -469,7 +469,7 @@
     },
     "kindHint": {
       "execute": "Ijrochi bajaradi va «Vazifalar»da hisobot beradi.",
-      "reply": "Ijrochi javob tayyorlaydi: «javoban» chiquvchi xat imzolansa, topşiriq yopiladi.",
+      "reply": "Ijroçi javob tayyorlaydi: «javoban» çiquvçi xat imzolansa, topşiriq yopiladi.",
       "info": "Topshiriqsiz: xat «Ma’lumot uchun qabul qilindi» holatini oladi."
     },
     "template": {
@@ -624,6 +624,7 @@
     }
   },
   "tasks": {
+    "onBehalf": "Siz {{name}}ni almaştirasiz",
     "title": "{{number}} xati bo‘yicha topshiriq",
     "subtitle": "Xat, sizning topshirig‘ingiz va u bo‘yicha amallar",
     "letter": "Xat",

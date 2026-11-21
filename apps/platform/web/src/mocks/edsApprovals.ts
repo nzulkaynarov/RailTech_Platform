@@ -31,6 +31,7 @@ import {
 } from "./fixtures/approvals";
 import { recordReturn } from "./fixtures/edsDocuments";
 import { buildMe, readSession } from "./mockSession";
+import { coveringFor } from "./profileStore";
 
 /**
  * Моки EDS · КП на одобрение и документы на согласовании (D1-4, BFF 0.24.0). Права — как в BFF: КП — `eds.drafts` (чтение —
@@ -84,8 +85,22 @@ function guard(resources: readonly string[], need: Level) {
 
 const QUOTES = ["eds.drafts"] as const;
 const MEMO_READ = ["eds.memo.approve", "eds.memo.create"] as const;
-// Решает директор (`eds.memo.approve`) или бухгалтер на своём шаге (`eds.payments` — полный).
-const MEMO_DECIDE = ["eds.memo.approve", "eds.payments"] as const;
+
+/**
+ * Служебка, чей шаг заместитель решает за замещаемого: та же, что строка «за {имя}» в очереди (`coveredQueueItems`).
+ * Как у EDS, карточка и решение получают `acting_for`.
+ */
+function asDeputy(card: MemoApprovalCard): MemoApprovalCard {
+  const session = readSession();
+  const first = readMemos().find((m) => m.status === "open" && m.number !== null);
+  if (!session || card.acting_for || first?.id !== card.id) return card;
+  const covered = coveringFor(session.userId)[0];
+  if (!covered) return card;
+  return {
+    ...card,
+    acting_for: { crm_user_id: MOCK_USER_CRM_ID[covered.user_id] ?? 0, full_name: covered.name },
+  };
+}
 
 function mayDecideAny(levels: Held): boolean {
   return levels["eds.memo.approve"] === "full" || levels["eds.payments"] === "full";
@@ -95,6 +110,8 @@ function mayDecideAny(levels: Held): boolean {
 function canDecideMemo(card: MemoApprovalCard, levels: Held): boolean {
   const current = card.steps.find((s) => s.status === "current");
   if (card.status !== "open" || !current) return false;
+  // Заместитель решает шаг замещаемого без раздела согласования (СЦ-9): замещение проверяет EDS
+  if (card.acting_for) return true;
   const resource = current.label === "Бухгалтер" ? "eds.payments" : "eds.memo.approve";
   return levels[resource] === "full";
 }
@@ -263,12 +280,14 @@ export const edsApprovalsHandlers = [
     if (ok.error) return ok.error;
     const url = new URL(request.url);
     const mine = (url.searchParams.get("scope") ?? "mine") === "mine";
-    const mayDecide = ok.who.levels["eds.drafts"] === "full";
+    const director = ok.who.levels["eds.drafts"] === "full";
     const statuses = wantedStatuses(url);
     const found = readQuotes()
-      .filter((q) => (mine ? q.status === "open" && q.can_decide && mayDecide : true))
+      .filter((q) =>
+        mine ? q.status === "open" && q.can_decide && (director || q.acting_for) : true,
+      )
       .filter((q) => statuses.length === 0 || statuses.includes(q.status))
-      .map((q) => quoteRow(q, mayDecide));
+      .map((q) => quoteRow(q, director || Boolean(q.acting_for)));
     const page: QuoteApprovalPage = paged(url, found);
     return HttpResponse.json(page);
   }),
@@ -298,7 +317,7 @@ export const edsApprovalsHandlers = [
       presentQuote(
         card,
         ok.who.margin,
-        ok.who.levels["eds.drafts"] === "full",
+        ok.who.levels["eds.drafts"] === "full" || Boolean(card.acting_for),
         ok.who.levels["crm.clients"] === "full",
       ),
     );
@@ -396,10 +415,17 @@ export const edsApprovalsHandlers = [
   }),
 
   http.post("*/eds/quotes/:id/decision", async ({ request, params }) => {
-    const ok = guard(QUOTES, "full");
+    // BFF пускает любую роль с разделом КП; решает EDS: директор или заместитель на шаге замещаемого (СЦ-9)
+    const ok = guard(QUOTES, "read");
     if (ok.error) return ok.error;
     const card = findQuote(String(params["id"]));
     if (!card) return failure(404, "NOT_FOUND", "КП не найдено.", "eds");
+    if (ok.who.levels["eds.drafts"] !== "full" && !card.acting_for) {
+      return failure(403, "FORBIDDEN", "Сейчас не ваш шаг.", "eds", {
+        backend_status: 403,
+        reason: "not_your_step",
+      });
+    }
     const body = (await request.json()) as QuoteDecisionIn;
     if ((body.decision === "return" || body.decision === "reject") && !body.comment?.trim()) {
       return failure(422, "VALIDATION_FAILED", "Комментарий обязателен.", "bff", {
@@ -478,9 +504,10 @@ export const edsApprovalsHandlers = [
   http.get("*/eds/memo-approvals/*", ({ request }) => {
     const ok = guard(MEMO_READ, "read");
     if (ok.error) return ok.error;
-    const card = findMemo(refOf(request, "/eds/memo-approvals/"));
-    if (!card)
+    const found = findMemo(refOf(request, "/eds/memo-approvals/"));
+    if (!found)
       return failure(404, "NOT_FOUND", "Документ не найден.", "eds", { backend_status: 404 });
+    const card = asDeputy(found);
     const can = canDecideMemo(card, ok.who.levels);
     const view: MemoApprovalCard = {
       ...card,
@@ -496,10 +523,12 @@ export const edsApprovalsHandlers = [
   }),
 
   http.post("*/eds/memo-approvals/:id/decision", async ({ request, params }) => {
-    const ok = guard(MEMO_DECIDE, "full");
+    // BFF пускает любую роль с разделом служебок; чей шаг и есть ли замещение, решает EDS (СЦ-9)
+    const ok = guard(MEMO_READ, "read");
     if (ok.error) return ok.error;
-    const card = readMemos().find((m) => m.approval_id === String(params["id"]));
-    if (!card) return failure(404, "NOT_FOUND", "Документ не найден.", "eds");
+    const stored = readMemos().find((m) => m.approval_id === String(params["id"]));
+    if (!stored) return failure(404, "NOT_FOUND", "Документ не найден.", "eds");
+    const card = asDeputy(stored);
     const body = (await request.json()) as MemoDecisionIn;
     if ((body.decision === "return" || body.decision === "reject") && !body.comment?.trim()) {
       return failure(422, "VALIDATION_FAILED", "Комментарий обязателен.", "bff", {

@@ -76,12 +76,45 @@ test.describe("СЦ-9: подпись и замещение в «Задачах�
       const main = page.getByRole("main");
       await expect(main.getByText(/Вы замещаете Демо Директоров до/)).toBeVisible();
       await expect(main.getByText(/^за Демо Директоров · /).first()).toBeVisible();
+      if (width === 1440) {
+        // Бейдж «Задачи» в меню равен числу строк списка, «за …» тоже (BFF считает так же)
+        const decisions = (
+          await main
+            .getByText(/\d+ (решени|решений)/)
+            .first()
+            .innerText()
+        ).match(/(\d+) решени/)?.[1];
+        await expect(page.getByRole("link", { name: /^Задачи\s*\d+/ })).toContainText(
+          String(decisions),
+        );
+      }
       await main.locator(".ant-segmented-item", { hasText: "За Демо Директоров" }).click();
       await expect(main.getByText("Ответить лиду L-2050")).toHaveCount(0);
       await expect(main.getByText(/^Согласовать /)).toBeVisible();
       await settledScreenshot(page, "deputy-tasks");
       await expectNoViolations(page, `deputy-tasks-${String(width)}`);
       await noHorizontalScroll(page);
+
+      // Строка ведёт до конца: у заместителя-менеджера (раздела согласования нет) открывается форма «за …»
+      await main
+        .getByText(/^Согласовать /)
+        .locator("xpath=ancestor::li[1]")
+        .getByRole("link", { name: /Открыть/ })
+        .click();
+      const agree = page.getByRole("form", { name: "Согласование документа" });
+      const button = agree.getByRole("button", { name: "Согласовать за Демо Директоров" });
+      await expect(button).toBeVisible();
+      await expect(agree.getByRole("button", { name: "Согласовать", exact: true })).toHaveCount(0);
+      await expect(page.getByText(/Вы видите документ в режиме чтения/)).toHaveCount(0);
+      await settledScreenshot(page, "deputy-agree");
+      await expectNoViolations(page, `deputy-agree-${String(width)}`);
+      await noHorizontalScroll(page);
+      await button.click();
+      await page
+        .getByRole("dialog", { name: /^Согласовать за Демо Директоров/ })
+        .getByRole("button", { name: "Согласовать за Демо Директоров" })
+        .click();
+      await expect(page.getByText("Документ согласован").first()).toBeVisible();
     });
   }
 });

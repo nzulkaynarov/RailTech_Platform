@@ -234,7 +234,9 @@ function Body({ doc, sheet, onClose }: { doc: EdsDocument; sheet: boolean; onClo
           {doc.number ? (
             <DocNumber number={doc.number} />
           ) : (
-            <span className="pf-hint">{t("list.noNumber")}</span>
+            <span className="pf-hint">
+              {t(doc.kind === "letter_out" ? "list.noNumberSigning" : "list.noNumber")}
+            </span>
           )}
           <DocumentStatusTag kind={doc.kind} status={doc.status} />
           {mailFailed ? <StatusTag tone="red">{t("panel.mailFailed")}</StatusTag> : null}

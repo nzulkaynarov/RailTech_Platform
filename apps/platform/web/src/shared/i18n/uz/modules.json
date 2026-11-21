@@ -74,7 +74,7 @@
         "title": "Navbat to‘liq yuklanmadi",
         "text": "Manba javob bermagani uchun vazifalarning bir qismi ko‘rinmayapti. Birozdan keyin qayta urinib ko‘ring."
       },
-      "onBehalf": "{{name}} uchun",
+      "onBehalf": "{{name}} uçun",
       "covering": {
         "banner": "Siz {{name}}ni {{date}} gaça almaştirasiz",
         "filterAll": "Hammasi",

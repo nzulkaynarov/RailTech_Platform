@@ -93,8 +93,10 @@ export function QueuePage() {
       ),
     ).values(),
   ];
+  // Выбранного человека в очереди уже нет (шаг решили, замещение кончилось) — фильтр сам возвращается к «Все»
+  const activeFor = behalf.some((person) => person.id === forId) ? forId : "all";
   const shown =
-    forId === "all" ? allItems : allItems.filter((item) => item.on_behalf_of?.id === forId);
+    activeFor === "all" ? allItems : allItems.filter((item) => item.on_behalf_of?.id === activeFor);
   const rows: RowItem[] = shown.map((item) => {
     // Письмо, КП, служебка и диалог клиента открываются в своём экране на нужной вкладке (D1-6), без «моста» в старую систему.
     const to = objectLink(item.object);
@@ -228,7 +230,7 @@ export function QueuePage() {
       {behalf.length > 0 ? (
         <Segmented
           aria-label={t("modules:dashboard.queue.covering.filterLabel")}
-          value={behalf.some((person) => person.id === forId) ? forId : "all"}
+          value={activeFor}
           options={[
             { value: "all", label: t("modules:dashboard.queue.covering.filterAll") },
             ...behalf.map((person) => ({

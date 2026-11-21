@@ -293,6 +293,62 @@ describe("Dashboard · Моя очередь", () => {
     expect(within(page).getByText("Согласовать СЗ-2026/031")).toBeVisible();
   });
 
+  it("СЦ-9: фильтр «За …» сбрасывается, когда строк замещаемого в очереди больше нет", async () => {
+    let deputyRows = true;
+    const row = (id: string, number: string, over: object = {}) => ({
+      id,
+      role_id: ROLE_ID.MANAGER,
+      kind: "approve_memo",
+      title: `Согласовать ${number}`,
+      subtitle: "Директор",
+      due_label: "memo",
+      object: { kind: "memo", number, path: `/eds/approvals/${encodeURIComponent(number)}` },
+      ...over,
+    });
+    server.use(
+      http.get("*/me/profile", () =>
+        HttpResponse.json({
+          name: "Демо Менеджер",
+          email: "manager@demo.example",
+          language: "ru",
+          timezone: "Asia/Tashkent",
+          telegram: { linked: false, username: null, pending: false },
+          covering: [
+            { user_id: "12", name: "Мадина Р.", date_from: "2026-11-20", date_to: "2026-12-03" },
+          ],
+        }),
+      ),
+      http.get("*/queue", () =>
+        HttpResponse.json({
+          items: [
+            row("memo:own", "СЗ-2026/031"),
+            ...(deputyRows
+              ? [
+                  row("memo:o:for:12", "СЗ-2026/041", {
+                    on_behalf_of: { id: "12", name: "Мадина Р." },
+                  }),
+                ]
+              : []),
+          ],
+          sources: { crm: "ok", erp: "ok" },
+        }),
+      ),
+    );
+    signInAs("manager@demo.example");
+    const { queryClient } = renderApp("/dashboard/queue");
+    const page = await main();
+    fireEvent.click(await within(page).findByText("За Мадина Р."));
+    expect(within(page).queryByText("Согласовать СЗ-2026/031")).toBeNull();
+
+    deputyRows = false;
+    await act(async () => {
+      await queryClient.invalidateQueries();
+    });
+
+    expect(await within(page).findByText("Согласовать СЗ-2026/031")).toBeVisible();
+    expect(within(page).queryByText("За Мадина Р.")).toBeNull();
+  });
+
   it("менеджер (склад — только чтение) строки о просроченных заказах не получает", async () => {
     signInAs("manager@demo.example");
     renderApp("/dashboard/queue");

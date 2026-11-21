@@ -269,7 +269,9 @@ function DocumentsTable({
           {row.number ? (
             <DocNumber number={row.number} />
           ) : (
-            <span className="pf-hint">{t("list.noNumber")}</span>
+            <span className="pf-hint">
+              {t(row.kind === "letter_out" ? "list.noNumberSigning" : "list.noNumber")}
+            </span>
           )}
           <div className="pf-hint pf-ell" title={t(`kinds.${row.kind}`)}>
             <span className="pf-sr-only">{t("list.columns.kind")}: </span>

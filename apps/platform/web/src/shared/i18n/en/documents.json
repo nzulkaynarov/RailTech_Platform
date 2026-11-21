@@ -70,6 +70,7 @@
       "action": "Action"
     },
     "noNumber": "number is assigned on registration",
+    "noNumberSigning": "number is assigned on signing",
     "open": "Open document: {{subject}}",
     "continue": "Continue",
     "continueLabel": "Continue document: {{subject}}",

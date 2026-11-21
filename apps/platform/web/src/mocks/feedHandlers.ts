@@ -224,13 +224,19 @@ export const feedHandlers = [
     if (!roles) return expired();
     const denied = noQueue(roles);
     if (denied) return denied;
+    // Бейдж «Задачи» равен числу строк списка, включая «за {имя}» (замещение), как у BFF
+    const userId = sessionUserId();
+    const answerRole = ownQueue(roles.view).find((i) => i.kind === "answer_lead")?.role_id;
+    const coveredCount = userId && answerRole ? coveredQueueItems(userId, answerRole).length : 0;
     const tickets = ticketQueueItems(roles.view).length;
     const stockOverdue = stockQueueItems(roles.view).length;
     return HttpResponse.json({
       // ERP не отвечает: бейджи разделов ERP (EDS, ERP, «Все проекты») не показываются, остаются очередь и CRM
       items: [
         ...menuCountersFor(
-          ownQueue(roles.view).length + (edsDown() ? 0 : reworkQueueItems(roles.view).length),
+          ownQueue(roles.view).length +
+            (edsDown() ? 0 : reworkQueueItems(roles.view).length) +
+            coveredCount,
         )
           .filter((c) => !erpDown() || c.module === "crm" || c.section === "queue")
           .filter(

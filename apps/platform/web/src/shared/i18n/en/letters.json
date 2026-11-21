@@ -624,6 +624,7 @@
     }
   },
   "tasks": {
+    "onBehalf": "You are covering {{name}}",
     "title": "Instruction on letter {{number}}",
     "subtitle": "The letter, your instruction and actions on it",
     "letter": "Letter",

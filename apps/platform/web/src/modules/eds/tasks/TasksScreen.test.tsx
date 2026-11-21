@@ -180,6 +180,51 @@ describe("Рабочий экран поручения (P8b, SPEC-v3 §3.2a п. 
     });
   });
 
+  describe("СЦ-9: заместитель открывает шаг замещаемого (?for=)", () => {
+    const pending = {
+      id: "e-1",
+      old_due: "2030-01-10",
+      new_due: "2030-01-17",
+      reason: "Ждём выписку",
+      status: "pending" as const,
+      requested_by: executor,
+      requested_at: "2026-11-02T05:00:00Z",
+      decided_by: null,
+      decided_at: null,
+      comment: null,
+    };
+    const forQuery = (person: { id: string; name: string }) =>
+      `?for=${person.id}&forName=${encodeURIComponent(person.name)}`;
+
+    it("поручение за исполнителя: форма исполнения и подпись «Вы замещаете …»", async () => {
+      inExecution();
+      signIn("manager@demo.example");
+      renderAt(`${PATH}${forQuery(executor)}`);
+
+      expect(await screen.findByRole("form", { name: "Отметить исполнение" })).toBeVisible();
+      expect(screen.getByText("Вы замещаете Демо Широков")).toBeVisible();
+    });
+
+    it("перенос срока за директора: «Одобрить перенос» у заместителя", async () => {
+      inExecution({ urgent: false, instructions: [instruction({ extensions: [pending] })] });
+      signIn("manager@demo.example");
+      renderAt(`${PATH}${forQuery(director)}`);
+
+      expect(await screen.findByRole("button", { name: "Одобрить перенос" })).toBeVisible();
+      expect(screen.getByText("Вы замещаете Демо Директоров")).toBeVisible();
+    });
+
+    it("без ?for= тот же человек видит «Действий от вас не ждут» и ни одной формы", async () => {
+      inExecution({ urgent: false, instructions: [instruction({ extensions: [pending] })] });
+      signIn("manager@demo.example");
+      renderAt(PATH);
+
+      expect(await screen.findByText("Действий от вас по этому письму не ждут")).toBeVisible();
+      expect(screen.queryByRole("button", { name: "Одобрить перенос" })).toBeNull();
+      expect(screen.queryByRole("form", { name: "Отметить исполнение" })).toBeNull();
+    });
+  });
+
   it("«Задачи»: строки поручения, ознакомления и переноса — без дублей, ведут на рабочий экран", () => {
     inExecution({
       urgent: false,
