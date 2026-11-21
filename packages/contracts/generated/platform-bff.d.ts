@@ -10630,6 +10630,8 @@ export interface components {
       id: string;
       kind: components["schemas"]["EdsDocumentKind"];
       number: string | null;
+      /** @description Номер до перенумерации на латиницу; `null` или нет поля, если номер не менялся */
+      previous_number?: string | null;
       /** @enum {string} */
       status:
         | "draft"
@@ -12820,6 +12822,8 @@ export interface components {
       id: string;
       /** @example ВХ-104/26 */
       number: string;
+      /** @description Номер до перенумерации на латиницу; `null` или нет поля, если номер не менялся */
+      previous_number?: string | null;
       status: components["schemas"]["LetterStatus"];
       subject: string;
       /** @description Суть документа */

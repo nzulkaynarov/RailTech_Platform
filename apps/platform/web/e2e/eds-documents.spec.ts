@@ -212,22 +212,21 @@ test.describe("Создать документ: сотрудник", () => {
     await loginAndWait(page, "manager@demo.example");
     await spaGoto(page, "/eds/new");
 
-    await send(page, "Отправить на согласование");
-    // ошибка открывает первый шаг с ошибкой; у шага с текстом — отметка «Нужно исправить»
-    await expect(page.getByText("Укажите тему.")).toBeVisible();
-    await expect(page.getByLabel("Тема")).toBeFocused();
-    await expect(page.locator("button[aria-expanded]", { hasText: BODY })).toContainText(
-      "Нужно исправить",
-    );
-    await openStep(page, BODY);
-    await expect(page.getByText("Напишите текст документа.")).toBeVisible();
+    // пока не заполнено, главная кнопка недоступна, а на «Проверке» — что осталось; на пройденный шаг форма не возвращает
+    await openStep(page, CHECK);
+    await expect(page.getByRole("button", { name: "Отправить на согласование" })).toBeDisabled();
+    const rest = page.locator("#doc-remaining");
+    await expect(rest).toContainText("Укажите тему.");
+    await expect(rest).toContainText("Напишите текст документа.");
+    await rest.getByRole("button", { name: ABOUT }).first().click();
+    await expect(page.getByLabel("Тема")).toHaveAttribute("aria-invalid", "true");
 
     await fillMemo(page, "Тема", "Текст");
     await openStep(page, ABOUT);
     await page.getByLabel("Сумма, сум").fill("0");
     await page.getByRole("button", { name: "Сохранить черновик" }).click();
     await expect(
-      page.getByText("Сумма должна быть больше нуля, например 1 500 000."),
+      page.getByText("Сумма должна быть больше нуля, например 1 500 000.").first(),
     ).toBeVisible();
     await settledScreenshot(page, "validation");
 
@@ -352,7 +351,7 @@ test.describe("Создать документ: axe и снимки", () => {
       await page.getByLabel("Сумма, сум").fill("0");
       await page.getByRole("button", { name: "Сохранить черновик" }).click();
       await expect(
-        page.getByText("Сумма должна быть больше нуля, например 1 500 000."),
+        page.getByText("Сумма должна быть больше нуля, например 1 500 000.").first(),
       ).toBeVisible();
       await expectNoViolations(page, `форма с ошибкой ${String(width)}`);
 

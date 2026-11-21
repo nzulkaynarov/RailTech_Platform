@@ -2327,6 +2327,10 @@ export const getCreateEdsDocumentResponseMock = (
   id: faker.string.uuid(),
   kind: faker.helpers.arrayElement(Object.values(EdsDocumentKind)),
   number: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  previous_number: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
   status: faker.helpers.arrayElement([
     "draft",
     "on_approval",
@@ -2617,6 +2621,10 @@ export const getGetEdsDocumentResponseMock = (
   id: faker.string.uuid(),
   kind: faker.helpers.arrayElement(Object.values(EdsDocumentKind)),
   number: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  previous_number: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
   status: faker.helpers.arrayElement([
     "draft",
     "on_approval",
@@ -2901,6 +2909,10 @@ export const getUpdateEdsDocumentResponseMock = (
   id: faker.string.uuid(),
   kind: faker.helpers.arrayElement(Object.values(EdsDocumentKind)),
   number: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  previous_number: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
   status: faker.helpers.arrayElement([
     "draft",
     "on_approval",
@@ -6895,6 +6907,10 @@ export const getRequestEdsDocumentRegistrationResponseMock = (
   id: faker.string.uuid(),
   kind: faker.helpers.arrayElement(Object.values(EdsDocumentKind)),
   number: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  previous_number: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
   status: faker.helpers.arrayElement([
     "draft",
     "on_approval",
@@ -7206,6 +7222,10 @@ export const getWaiveEdsDocumentMailResponseMock = (
   id: faker.string.uuid(),
   kind: faker.helpers.arrayElement(Object.values(EdsDocumentKind)),
   number: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  previous_number: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
   status: faker.helpers.arrayElement([
     "draft",
     "on_approval",
@@ -7505,6 +7525,10 @@ export const getSendEdsDocumentResponseMock = (
   id: faker.string.uuid(),
   kind: faker.helpers.arrayElement(Object.values(EdsDocumentKind)),
   number: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  previous_number: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
   status: faker.helpers.arrayElement([
     "draft",
     "on_approval",
@@ -7795,6 +7819,10 @@ export const getSignEdsDocumentResponseMock = (
   id: faker.string.uuid(),
   kind: faker.helpers.arrayElement(Object.values(EdsDocumentKind)),
   number: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  previous_number: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
   status: faker.helpers.arrayElement([
     "draft",
     "on_approval",
@@ -15184,6 +15212,10 @@ export const getRegisterLetterResponseMock = (
 ): LetterCard => ({
   id: faker.string.uuid(),
   number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  previous_number: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
   status: faker.helpers.arrayElement(Object.values(LetterStatus)),
   subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
   summary: faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -15986,6 +16018,10 @@ export const getGetLetterResponseMock = (
 ): LetterCard => ({
   id: faker.string.uuid(),
   number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  previous_number: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
   status: faker.helpers.arrayElement(Object.values(LetterStatus)),
   subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
   summary: faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -16391,6 +16427,10 @@ export const getResolveLetterResponseMock = (
 ): LetterCard => ({
   id: faker.string.uuid(),
   number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  previous_number: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
   status: faker.helpers.arrayElement(Object.values(LetterStatus)),
   subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
   summary: faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -16802,6 +16842,10 @@ export const getReturnLetterResponseMock = (
 ): LetterCard => ({
   id: faker.string.uuid(),
   number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  previous_number: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
   status: faker.helpers.arrayElement(Object.values(LetterStatus)),
   subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
   summary: faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -17213,6 +17257,10 @@ export const getRejectLetterResponseMock = (
 ): LetterCard => ({
   id: faker.string.uuid(),
   number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  previous_number: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
   status: faker.helpers.arrayElement(Object.values(LetterStatus)),
   subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
   summary: faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -17657,6 +17705,10 @@ export const getMarkLetterDuplicateResponseMock = (
 ): LetterCard => ({
   id: faker.string.uuid(),
   number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  previous_number: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
   status: faker.helpers.arrayElement(Object.values(LetterStatus)),
   subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
   summary: faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -18086,6 +18138,10 @@ export const getSaveResolutionDraftResponseMock = (
 ): LetterCard => ({
   id: faker.string.uuid(),
   number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  previous_number: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
   status: faker.helpers.arrayElement(Object.values(LetterStatus)),
   subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
   summary: faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -18515,6 +18571,10 @@ export const getResolveOfficeLetterResponseMock = (
 ): LetterCard => ({
   id: faker.string.uuid(),
   number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  previous_number: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
   status: faker.helpers.arrayElement(Object.values(LetterStatus)),
   subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
   summary: faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -18944,6 +19004,10 @@ export const getAcknowledgeLetterResponseMock = (
 ): LetterCard => ({
   id: faker.string.uuid(),
   number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  previous_number: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
   status: faker.helpers.arrayElement(Object.values(LetterStatus)),
   subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
   summary: faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -19364,6 +19428,10 @@ export const getAddCoExecutorResponseMock = (
 ): LetterCard => ({
   id: faker.string.uuid(),
   number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  previous_number: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
   status: faker.helpers.arrayElement(Object.values(LetterStatus)),
   subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
   summary: faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -19781,6 +19849,10 @@ export const getCloseLetterWithoutReplyResponseMock = (
 ): LetterCard => ({
   id: faker.string.uuid(),
   number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  previous_number: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
   status: faker.helpers.arrayElement(Object.values(LetterStatus)),
   subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
   summary: faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -20210,6 +20282,10 @@ export const getReopenLetterResponseMock = (
 ): LetterCard => ({
   id: faker.string.uuid(),
   number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  previous_number: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
   status: faker.helpers.arrayElement(Object.values(LetterStatus)),
   subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
   summary: faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -20627,6 +20703,10 @@ export const getReturnInstructionToAuthorResponseMock = (
 ): LetterCard => ({
   id: faker.string.uuid(),
   number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  previous_number: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
   status: faker.helpers.arrayElement(Object.values(LetterStatus)),
   subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
   summary: faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -21062,6 +21142,10 @@ export const getCompleteInstructionResponseMock = (
 ): LetterCard => ({
   id: faker.string.uuid(),
   number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  previous_number: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
   status: faker.helpers.arrayElement(Object.values(LetterStatus)),
   subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
   summary: faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -21491,6 +21575,10 @@ export const getRequestInstructionExtensionResponseMock = (
 ): LetterCard => ({
   id: faker.string.uuid(),
   number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  previous_number: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
   status: faker.helpers.arrayElement(Object.values(LetterStatus)),
   subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
   summary: faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -21926,6 +22014,10 @@ export const getDecideInstructionExtensionResponseMock = (
 ): LetterCard => ({
   id: faker.string.uuid(),
   number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  previous_number: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
   status: faker.helpers.arrayElement(Object.values(LetterStatus)),
   subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
   summary: faker.string.alpha({ length: { min: 10, max: 20 } }),

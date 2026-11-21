@@ -242,6 +242,7 @@ BODY_TEXT_MAX = 100_000
 class LetterCard(BaseModel):
     id: str
     number: str
+    previous_number: str | None = None
     status: LetterStatus
     subject: str
     summary: str
@@ -894,6 +895,7 @@ class EdsLetter(BaseModel):
 
     id: str
     number: str
+    previous_number: str | None = None
     status: LetterStatus
     subject: str
     summary: str
@@ -1230,6 +1232,7 @@ def to_card(
     return LetterCard(
         id=letter.id,
         number=letter.number,
+        previous_number=letter.previous_number,
         status=letter.status,
         subject=letter.subject,
         summary=letter.summary,

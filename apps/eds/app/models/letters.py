@@ -82,6 +82,8 @@ class Letter(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     number: Mapped[str] = mapped_column(String(32), unique=True)
+    # СЦ-5: номер до перенумерации (кириллическое обозначение → латиница); ищется наравне с `number`
+    previous_number: Mapped[str | None] = mapped_column(String(32), index=True)
     status: Mapped[str] = mapped_column(String(24))
     subject: Mapped[str] = mapped_column(String(300))
     summary: Mapped[str] = mapped_column(Text)

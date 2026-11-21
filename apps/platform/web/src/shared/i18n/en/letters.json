@@ -83,6 +83,7 @@
       "addressee": "Addressed to",
       "contact": "Contact person",
       "received": "Received",
+      "previousNumber": "Previous number",
       "urgency": "Urgency",
       "kind": "Document type",
       "receiptMethod": "Received via",

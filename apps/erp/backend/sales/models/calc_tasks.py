@@ -38,7 +38,9 @@ class CalcTask(models.Model):
         verbose_name=_("Письмо EDS"),
         help_text=_("Входящее письмо EDS, на которое наложена резолюция (одно задание на письмо)"),
     )
-    letter_number = models.CharField(max_length=32, verbose_name=_("Номер письма"), help_text=_("ВХ-NNN/ГГ"))
+    letter_number = models.CharField(
+        max_length=32, verbose_name=_("Номер письма"), help_text=_("Номер входящего письма в EDS (IN-001/26)")
+    )
     letter_subject = models.CharField(max_length=300, blank=True, default="", verbose_name=_("Тема письма"))
     resolution_text = models.TextField(verbose_name=_("Текст резолюции"))
     due = models.DateField(verbose_name=_("Срок расчёта"))

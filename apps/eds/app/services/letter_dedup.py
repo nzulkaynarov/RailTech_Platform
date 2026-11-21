@@ -92,9 +92,9 @@ def ref_key(ref: str | None) -> str:
 
 
 def letter_number(value: str) -> str:
-    """Номер ВХ, набранный как попало: регистр, пробелы, латинские «BX» вместо «ВХ»."""
-    number = re.sub(r"\s", "", value).upper()
-    return re.sub(r"^[BВ][XХ]", "ВХ", number)
+    """Номер входящего, набранный как попало: без пробелов, регистр не важен. Обозначение не разбирается и не
+    подменяется — номер непрозрачен (СЦ-5); прежний номер находится по `previous_number`."""
+    return re.sub(r"\s", "", value).upper()
 
 
 def subject_key(subject: str | None) -> str:
@@ -280,7 +280,9 @@ async def check(session: AsyncSession, probe: Probe, *, actor_id: int) -> Letter
 
 async def _lock_pair(session: AsyncSession, letter_id: uuid.UUID, number: str) -> tuple[Letter, Letter | None]:
     """Письмо и оригинал под блокировкой в порядке id (две встречные пометки не дают взаимной блокировки)."""
-    stmt = select(Letter.id).where(Letter.number == letter_number(number))
+    wanted = letter_number(number)
+    stmt = select(Letter.id).where(or_(Letter.number == wanted, Letter.previous_number == wanted))
+    stmt = stmt.order_by((Letter.number == wanted).desc()).limit(1)
     original_id = (await session.execute(stmt)).scalar_one_or_none()
     ids = [letter_id] if original_id is None else [letter_id, original_id]
     rows = {

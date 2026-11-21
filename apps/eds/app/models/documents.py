@@ -50,6 +50,8 @@ class Document(Base):
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     kind: Mapped[str] = mapped_column(String(16))
     number: Mapped[str | None] = mapped_column(String(32), unique=True)
+    # СЦ-5: номер до перенумерации (кириллическое обозначение → латиница); ищется наравне с `number`
+    previous_number: Mapped[str | None] = mapped_column(String(32), index=True)
     status: Mapped[str] = mapped_column(String(16))
     version: Mapped[int] = mapped_column(Integer, default=1, server_default="1")
     subject: Mapped[str] = mapped_column(String(300))

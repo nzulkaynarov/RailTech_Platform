@@ -309,7 +309,11 @@ async def registry_ids(proxy: EdsProxy, number: str, kind: str | None) -> list[d
         params["kind"] = kind
     body = await proxy.request("GET", f"{API}/registry", params=params)
     items = body.get("items") if isinstance(body, dict) else None
-    return [i for i in items or [] if isinstance(i, dict) and i.get("number") == number]
+    return [
+        i
+        for i in items or []
+        if isinstance(i, dict) and number in (i.get("number"), i.get("previous_number"))
+    ]
 
 
 async def quote_route_id(proxy: EdsProxy, ref: str) -> str:

@@ -224,6 +224,7 @@ class EdsDocument(BaseModel):
     id: str
     kind: DocumentKind
     number: str | None
+    previous_number: str | None = None
     status: DocumentStatus
     version: int
     subject: str

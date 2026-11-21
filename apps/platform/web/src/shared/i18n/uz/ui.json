@@ -140,7 +140,9 @@
   "formSteps": {
     "next": "Keyingi: {{title}}",
     "edit": "O‘zgartirish",
-    "invalid": "Tuzatish kerak"
+    "invalid": "Tuzatish kerak",
+    "needed": "Bu qadam tayyor bölişi uçun:",
+    "remaining": "Qoldi:"
   },
   "rowActions": {
     "label": "Amallar: {{name}}"

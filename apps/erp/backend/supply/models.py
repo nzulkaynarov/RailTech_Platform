@@ -31,7 +31,7 @@ TRANSITIONS = {
 
 
 class SupplierOrder(models.Model):
-    number = models.CharField(max_length=32, unique=True, verbose_name=_("Номер ЗП"))
+    number = models.CharField(max_length=32, unique=True, verbose_name=_("Номер заказа поставщику"))
     number_year = models.PositiveIntegerField(editable=False)
     number_seq = models.PositiveIntegerField(editable=False)
     supplier = models.ForeignKey(

@@ -113,6 +113,7 @@
   "panel": {
     "label": "Hujjat",
     "fields": {
+      "previousNumber": "Avvalgi raqam",
       "kind": "Turi",
       "author": "Kimdan",
       "addressee": "Kimga",
@@ -363,7 +364,8 @@
       "recipient": "Tashkilotni röyxatdan tanlang yoki yangisini qöşing.",
       "deal": "Loyiha topilmadi — boshqasini tanlang yoki bog‘lashni olib tashlang.",
       "replyTo": "Bunday raqamli kiruvçi xat yöq. Kiruvçi xat raqamini tekşiring.",
-      "recipientEmail": "Manzil e-pochtasini tekshiring, masalan office@example.uz."
+      "recipientEmail": "Manzil e-pochtasini tekshiring, masalan office@example.uz.",
+      "uploading": "Fayllar yuklanişini kuting."
     },
     "toast": {
       "draft": "Qoralama saqlandi",
@@ -483,7 +485,8 @@
       "hint": "Majburiy emas. Tanlov «Kimga»ni töldiradi.",
       "placeholder": "Tashkilot kartoçkasidagi şaxs",
       "empty": "Tashkilot kartoçkasida şaxslar yöq"
-    }
+    },
+    "draftHint": "Qoralama mavzu va matn bölganda saqlanadi."
   },
   "preview": {
     "title": "Blankdagi PDF",

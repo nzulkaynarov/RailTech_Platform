@@ -226,7 +226,7 @@ class ProductViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
     #: игнорирует (порядок остаётся прежним) — сортировка по произвольному столбцу была бы
     #: дырой: `?ordering=offers__base_price` раскрыл бы закрытую костгейтом цену перестановкой.
     ordering_fields = ["name", "sku", "demand_count", "last_requested_at", "created_at", "updated_at"]
-    search_fields = ["name", "gost_drawing", "sku"]
+    search_fields = ["name", "gost_drawing", "sku", "previous_sku"]
 
     def get_permissions(self):
         # Любое чтение каталога бэк-офиса (список, карточка, выгрузка, покрытие, ТН ВЭД) — только

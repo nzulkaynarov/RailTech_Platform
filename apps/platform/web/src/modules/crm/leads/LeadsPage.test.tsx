@@ -122,6 +122,15 @@ describe("Клиенты · Лиды (D1-2b)", () => {
     );
   });
 
+  it("карточка лида: «Что известно от бота» только у лида из бота, у звонка — нейтрально; согласие по каналу (СЦ-6)", async () => {
+    await open("manager@demo.example", "/crm/leads?lead=L-2077&panel=open&tab=card");
+    const panel = await panelEl();
+    expect(await within(panel).findByRole("heading", { name: "Звонок Демо" })).toBeVisible();
+    expect(within(panel).getByRole("heading", { name: "Что известно" })).toBeVisible();
+    expect(within(panel).queryByRole("heading", { name: "Что известно от бота" })).toBeNull();
+    expect(within(panel).getByText("нет — отметьте при создании заявки")).toBeVisible();
+  });
+
   it("директор (лиды — чтение): ни «Забрать», ни «Ответить»", async () => {
     await open("director@demo.example");
     await screen.findByRole("table", { name: "Лиды" });

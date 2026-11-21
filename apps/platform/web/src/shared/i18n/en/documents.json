@@ -113,6 +113,7 @@
   "panel": {
     "label": "Document",
     "fields": {
+      "previousNumber": "Previous number",
       "kind": "Type",
       "author": "From",
       "addressee": "To",
@@ -363,7 +364,8 @@
       "recipient": "Pick the organization from the list or add a new one.",
       "deal": "Project not found — pick another or remove the link.",
       "replyTo": "No incoming letter with this number. Check the number.",
-      "recipientEmail": "Check the addressee email, for example office@example.uz."
+      "recipientEmail": "Check the addressee email, for example office@example.uz.",
+      "uploading": "Wait for the files to upload."
     },
     "toast": {
       "draft": "Draft saved",
@@ -483,7 +485,8 @@
       "hint": "Optional. Picking fills in “To”.",
       "placeholder": "Person from the organization card",
       "empty": "No people in the organization card"
-    }
+    },
+    "draftHint": "A draft can be saved once there is a subject and text."
   },
   "preview": {
     "title": "Letterhead PDF",

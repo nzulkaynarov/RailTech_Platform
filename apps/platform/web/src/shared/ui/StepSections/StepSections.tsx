@@ -14,6 +14,16 @@ export interface StepSection {
   complete?: boolean;
   /** В секции ошибка — отметка «нужно исправить» */
   invalid?: boolean;
+  /**
+   * Невыполненные требования шага человеческим текстом — из того же валидатора, что проверяет отправку. Пока список не пуст,
+   * галочки нет. «Далее» и переход по заголовку не блокируются (§4.1a): секции не блокируют друг друга.
+   */
+  requirements?: readonly string[];
+  /**
+   * Показывать требования на самом шаге (и отметку «нужно исправить» у свёрнутого): форма включает это, когда человек шаг
+   * уже покидал, — на первом открытии пустая форма не пестрит требованиями. По умолчанию — да.
+   */
+  showRequirements?: boolean;
   content: ReactNode;
   /** Кнопки внизу секции рядом с «Далее» (например, «Сохранить черновик») */
   footer?: ReactNode;
@@ -47,6 +57,10 @@ export function StepSections({
     <ol className="pf-fsteps">
       {sections.map((section, index) => {
         const open = section.key === active;
+        const needs = section.showRequirements === false ? [] : (section.requirements ?? []);
+        const invalid = section.invalid || (needs.length > 0 && !open);
+        const ticked =
+          section.complete && !open && !(section.requirements && section.requirements.length > 0);
         const next = sections[index + 1];
         const headId = `${base}-${section.key}-head`;
         const bodyId = `${base}-${section.key}-body`;
@@ -55,7 +69,7 @@ export function StepSections({
             key={section.key}
             className="pf-fstep"
             data-open={open || undefined}
-            data-invalid={section.invalid || undefined}
+            data-invalid={invalid || undefined}
           >
             <Heading className="pf-fstep-heading">
               <button
@@ -69,20 +83,14 @@ export function StepSections({
                 }}
               >
                 <span className="pf-fstep-badge" aria-hidden="true">
-                  {section.invalid ? (
-                    <AlertIcon />
-                  ) : section.complete && !open ? (
-                    <CheckMarkIcon />
-                  ) : (
-                    index + 1
-                  )}
+                  {invalid ? <AlertIcon /> : ticked ? <CheckMarkIcon /> : index + 1}
                 </span>
                 <span className="pf-fstep-text">
                   <span className="pf-fstep-title">{section.title}</span>
                   {!open && section.summary ? (
                     <span className="pf-fstep-summary">{section.summary}</span>
                   ) : null}
-                  {section.invalid ? (
+                  {invalid ? (
                     <span className="pf-fstep-error">{t("formSteps.invalid")}</span>
                   ) : null}
                 </span>
@@ -96,6 +104,16 @@ export function StepSections({
               className="pf-fstep-body"
               hidden={!open}
             >
+              {needs.length > 0 ? (
+                <div className="pf-fstep-needs" role="status">
+                  <p className="pf-fstep-needs-title">{t("formSteps.needed")}</p>
+                  <ul>
+                    {needs.map((text) => (
+                      <li key={text}>{text}</li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
               {section.content}
               {next || section.footer ? (
                 <div className="pf-fstep-footer">
@@ -117,5 +135,53 @@ export function StepSections({
         );
       })}
     </ol>
+  );
+}
+
+export interface RemainingItem {
+  /** Ключ шага, к которому ведёт пункт */
+  step: string;
+  /** Название шага */
+  title: string;
+  /** Что осталось сделать */
+  text: string;
+}
+
+/**
+ * «Осталось» на шаге проверки: что мешает отправить и где это исправить. Список — причина, по которой главная кнопка
+ * недоступна (`aria-describedby` кнопки ведёт на `id`).
+ */
+export function StepRemaining({
+  id,
+  items,
+  onGo,
+}: {
+  id: string;
+  items: readonly RemainingItem[];
+  onGo: (step: string) => void;
+}) {
+  const { t } = useTranslation("ui");
+  if (items.length === 0) return null;
+  return (
+    <div id={id} className="pf-fstep-remaining" role="status">
+      <p className="pf-fstep-needs-title">{t("formSteps.remaining")}</p>
+      <ul>
+        {items.map((item) => (
+          <li key={`${item.step}-${item.text}`}>
+            <Button
+              type="link"
+              size="small"
+              className="pf-fstep-remaining-link"
+              onClick={() => {
+                onGo(item.step);
+              }}
+            >
+              {item.title}
+            </Button>
+            {`: ${item.text}`}
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }

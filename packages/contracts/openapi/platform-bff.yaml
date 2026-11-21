@@ -19299,6 +19299,7 @@ components:
         id: {type: string, format: uuid}
         kind: {$ref: '#/components/schemas/EdsDocumentKind'}
         number: {type: [string, 'null']}
+        previous_number: {type: [string, 'null'], description: 'Номер до перенумерации на латиницу; `null` или нет поля, если номер не менялся'}
         status: {type: string, enum: [draft, on_approval, returned, rejected, approved, to_accountant, paid, sent]}
         version: {type: integer, minimum: 1}
         subject: {type: string}
@@ -22602,6 +22603,7 @@ components:
       properties:
         id: {type: string, format: uuid}
         number: {type: string, examples: [ВХ-104/26]}
+        previous_number: {type: [string, 'null'], description: 'Номер до перенумерации на латиницу; `null` или нет поля, если номер не менялся'}
         status: {$ref: '#/components/schemas/LetterStatus'}
         subject: {type: string}
         summary: {type: string, description: Суть документа}

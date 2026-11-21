@@ -136,6 +136,8 @@ function Details({ doc }: { doc: EdsDocument }) {
   const isLetter = doc.kind === "letter_out";
   const hidden = NOT_APPLICABLE[doc.kind] ?? [];
   const optional: { key: string; label: string; value: ReactNode }[] = [
+    // СЦ-5: номер до перенумерации на латиницу; пустое поле скрывается общим правилом ниже
+    { key: "previousNumber", label: t("panel.fields.previousNumber"), value: doc.previous_number },
     isLetter
       ? {
           key: "recipient",

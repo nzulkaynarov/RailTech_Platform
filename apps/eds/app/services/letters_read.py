@@ -208,6 +208,7 @@ async def present(session: AsyncSession, letter: Letter, viewer: Employee | None
     return LetterOut(
         id=letter.id,
         number=letter.number,
+        previous_number=letter.previous_number,
         status=LetterStatus(letter.status),
         subject=letter.subject,
         summary=letter.summary,
@@ -321,6 +322,7 @@ async def list_page(
         stmt = stmt.where(
             or_(
                 Letter.number.ilike(like, escape="\\"),
+                Letter.previous_number.ilike(like, escape="\\"),
                 Letter.subject.ilike(like, escape="\\"),
                 Letter.sender_name.ilike(like, escape="\\"),
                 Letter.deal_number.ilike(like, escape="\\"),

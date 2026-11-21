@@ -1570,15 +1570,15 @@ export interface paths {
      * Обозначения номеров документооборота (задача «Н»)
      * @description Обозначения видов номера EDS — входящее, исходящее, служебная записка, заявление, отчёт — и образец первого
      *     номера года. Задаёт владелец в «Настройки · Нумерация»; по умолчанию латиницей (`IN-001/26`, `OUT-001/26`,
-     *     `MEMO-2026/001`, `APP-2026/001`, `REP-2026/001`). Выданные номера (`ВХ-104/26`, `СЗ-2026/031`) не меняются.
+     *     `MEMO-2026/001`, `APP-2026/001`, `REP-2026/001`). Номер меняет только разовая перенумерация (`renumber-latin`); прежний номер — в `previous_number`.
      */
     get: operations["getNumberLabels"];
     /**
      * Задать обозначения номеров документооборота
-     * @description Только переданные виды. Обозначение — до 16 знаков без пробелов, «/» и «-» (иначе 422, поле `labels.<вид>` с
-     *     `invalid_label`); неизвестный вид — 422 `unknown_kind`; совпадает с обозначением другого вида — нынешним или
-     *     прежним (`ВХ`, `ИСХ`, `СЗ`, `ЗЯ`, `ОТ`), которым уже выданы номера, — 422 `label_taken`. Новые номера идут с
-     *     новым обозначением, счётчик года продолжается.
+     * @description Только переданные виды. Обозначение — от 1 до 16 знаков, только латинские заглавные буквы и цифры
+     *     (`^[A-Z0-9]{1,16}$`; иначе 422, поле `labels.<вид>` с `invalid_label`); неизвестный вид — 422 `unknown_kind`;
+     *     совпадает с обозначением другого вида — 422 `label_taken`. Новые номера идут с новым обозначением, счётчик года
+     *     продолжается.
      */
     put: operations["setNumberLabels"];
     post?: never;
@@ -1653,6 +1653,52 @@ export interface paths {
      *     полем `file_ids` при создании или отправке; непривязанный видит только загрузивший.
      */
     post: operations["uploadFile"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/call-notes": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Записка о звонке (основание заявки по звонку)
+     * @description Одностраничный PDF «Кто звонил / Что просил» на бланке компании (макет `internal`, итоговый, без «ПРОЕКТ»): рендер идёт в
+     *     воркере (очередь `renders`), поэтому ответ 202; готовый PDF становится файлом вызывающего сотрудника — тем, что он
+     *     прикрепляет к письму по заявке (`letter_file_id`). Идемпотентно по `(request_key, сотрудник)`: повтор с тем же ключом
+     *     отдаёт тот же файл (первое содержимое остаётся), новый ключ — новая записка. Лид — готовая строка вида `L-0001`,
+     *     без лида записка «составлена по звонку». Язык записки — `lang`. Нет бланка — 409 `letterhead_missing` (форма просит
+     *     приложить файл). Прогресс — `getCallNote`; неудавшийся рендер повторяется тем же запросом.
+     */
+    post: operations["createCallNote"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/call-notes/{note_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Состояние записки о звонке
+     * @description Готова (`ready`) — `file` — `FileRef` непривязанного файла автора; строится (`pending`) или не удалась (`failed`, текст
+     *     в `error`). Чужая и неизвестная записка — 404.
+     */
+    get: operations["getCallNote"];
+    put?: never;
+    post?: never;
     delete?: never;
     options?: never;
     head?: never;
@@ -2414,6 +2460,8 @@ export interface components {
     };
     Letter: {
       id: components["schemas"]["Uuid"];
+      /** @description Номер до перенумерации (кириллическое обозначение → латиница, СЦ-5); `null`, если номер не менялся. Находится поиском и поиском по номеру наравне с `number` */
+      previous_number: string | null;
       number: components["schemas"]["LetterNumber"];
       status: components["schemas"]["LetterStatus"];
       subject: string;
@@ -3124,6 +3172,31 @@ export interface components {
     TemplatePreviewIn: {
       body: components["schemas"]["DocumentBody"];
     };
+    CallNoteIn: {
+      /** @description Ключ формы заявки; с сотрудником даёт идентификатор файла записки */
+      request_key: string;
+      /** @description Номер лида как есть (например `L-0001`); нет — записка составлена по звонку без лида */
+      lead?: string | null;
+      caller_name: string;
+      company?: string | null;
+      phone?: string | null;
+      email?: string | null;
+      /** Format: date-time */
+      called_at: string;
+      /** @description Кто принял звонок; пусто — вызывающий сотрудник */
+      taken_by?: string | null;
+      /** @description Что просил клиент */
+      need?: string | null;
+      /** @enum {string} */
+      lang: "ru" | "uz" | "en";
+    };
+    CallNote: {
+      id: components["schemas"]["Uuid"];
+      /** @enum {string} */
+      status: "pending" | "ready" | "failed";
+      error: string | null;
+      file: components["schemas"]["FileRef"] | null;
+    };
     TemplatePreview: {
       hash: string;
       /** @enum {string} */
@@ -3389,6 +3462,8 @@ export interface components {
     Document: {
       id: components["schemas"]["Uuid"];
       kind: components["schemas"]["DocumentKind"];
+      /** @description Номер до перенумерации (кириллическое обозначение → латиница, СЦ-5); `null`, если номер не менялся. Находится поиском и поиском по номеру наравне с `number` */
+      previous_number: string | null;
       number: components["schemas"]["DocumentNumber"] | null;
       status: components["schemas"]["DocumentStatus"];
       version: number;
@@ -3642,6 +3717,8 @@ export interface components {
       id: components["schemas"]["Uuid"];
       /** @description Номер реестра EDS или номер КП, договора, счёта, акта ERP; `null` — исходящее до отправки */
       number: string | null;
+      /** @description Номер до перенумерации (СЦ-5); `number` в фильтре и поиске совпадает и с ним */
+      previous_number?: string | null;
       title: string;
       /** @description Значение `LetterStatus`, `DocumentStatus` или `RouteStatus` по типу; у `contract`, `invoice`, `act` — слово SPEC-v3 §2.4 (см. 0.5.0) */
       status: string;
@@ -6152,6 +6229,59 @@ export interface operations {
         };
       };
       422: components["responses"]["ValidationFailed"];
+    };
+  };
+  createCallNote: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CallNoteIn"];
+      };
+    };
+    responses: {
+      /** @description Записка строится или уже готова (`status`, `file`) */
+      202: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CallNote"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      409: components["responses"]["Conflict"];
+      422: components["responses"]["ValidationFailed"];
+    };
+  };
+  getCallNote: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        note_id: components["schemas"]["Uuid"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Состояние */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CallNote"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
     };
   };
   downloadFile: {

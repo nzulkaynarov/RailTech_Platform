@@ -167,6 +167,7 @@ async def present(session: AsyncSession, document: Document) -> DocumentOut:
         id=document.id,
         kind=DocumentKind(document.kind),
         number=document.number,
+        previous_number=document.previous_number,
         status=DocumentStatus(document.status),
         version=document.version,
         subject=document.subject,

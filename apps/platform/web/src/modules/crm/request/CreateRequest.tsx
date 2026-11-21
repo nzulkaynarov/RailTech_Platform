@@ -49,6 +49,12 @@ export function CreateRequest({
       />
     );
   }
+  // Лид из Telegram без согласия: отметить его здесь нельзя (согласие даётся в боте) — причина вместо формы, до заполнения.
+  if (card.data.channel === "telegram" && card.data.consent.given_at === null) {
+    return (
+      <EmptyState level={3} compact title={t("request:title")} text={t("request:consent.viaBot")} />
+    );
+  }
   return (
     <RequestForm lead={card.data} clientId={clientId} letterFrom={letterFrom} onCancel={onCancel} />
   );

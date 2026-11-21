@@ -106,6 +106,7 @@ export function validateRequest(state: RequestFormState, ctx: RequestContext): R
   if (!state.summary.trim()) errors.summary = "summary";
   // Основание обязательно (план 0.4, FR-9): без письма или файла запроса заявка не создаётся.
   if (state.letter?.status === "error") errors.letter = "letter_failed";
+  else if (state.letter?.status === "uploading") errors.letter = "letter_uploading";
   else if (!state.letter) errors.letter = "letter_required";
   if (consentNeeded(ctx)) {
     if (ctx.leadChannel === "telegram") errors.consent = "consent_via_bot";

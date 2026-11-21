@@ -5,8 +5,9 @@
 обратно не возвращается: отменённый документ остаётся в реестре. Год — по `Asia/Tashkent`.
 
 Обозначения видов (задача «Н», решение владельца 2026-11-13) задаёт владелец в «Настройки · Нумерация»
-(`number_labels`); по умолчанию — латиницей, номер одинаков на всех языках. Выданные номера (`ВХ-104/26`,
-`СЗ-2026/031`) не меняются.
+(`number_labels`); только латиница и цифры, номер одинаков на всех языках. Номер выдан раз и остаётся прежним, пока
+его не перенумеровали разово (`python -m app renumber-latin`, СЦ-5: ВХ-104/26 → IN-104/26); прежний номер хранится в
+`previous_number` и находится поиском. Код не разбирает номер по обозначению — номер непрозрачен.
 """
 
 import re
@@ -37,16 +38,9 @@ DEFAULT_LABELS: dict[NumberKind, str] = {
     NumberKind.APPLICATION: "APP",
     NumberKind.REPORT: "REP",
 }
-# Обозначения до 2026-11-13: ими выданы номера, поэтому другому виду их не отдать — номера совпали бы.
-LEGACY_LABELS: dict[NumberKind, str] = {
-    NumberKind.LETTER_IN: "ВХ",
-    NumberKind.OUTGOING: "ИСХ",
-    NumberKind.MEMO: "СЗ",
-    NumberKind.APPLICATION: "ЗЯ",
-    NumberKind.REPORT: "ОТ",
-}
 _YEAR_SUFFIX = {NumberKind.LETTER_IN, NumberKind.OUTGOING}  # IN-104/26, OUT-082/26; прочие — MEMO-2026/031
-_LABEL = re.compile(r"^[^\s/\-]{1,16}$")
+# Обозначение — только латиница и цифры (СЦ-5): один алфавит на всех языках, номер читается и ищется одинаково
+_LABEL = re.compile(r"^[A-Z0-9]{1,16}$")
 
 
 def format_number(kind: NumberKind, year: int, value: int, label: str | None = None) -> str:
@@ -64,8 +58,8 @@ async def labels(session: AsyncSession) -> dict[NumberKind, str]:
 
 
 async def set_labels(session: AsyncSession, values: dict[str, str]) -> dict[NumberKind, str]:
-    """Сохранить обозначения. Неизвестный вид, пустое, с пробелом, «/» или «-» — 422; обозначение не может совпасть с
-    обозначением другого вида — нынешним или прежним, которым уже выданы номера."""
+    """Сохранить обозначения. Неизвестный вид, пустое или не из латиницы и цифр (до 16 знаков) — 422; обозначение не
+    может совпасть с обозначением другого вида."""
     current = await labels(session)
     wanted = dict(current)
     for key, raw in values.items():
@@ -76,13 +70,11 @@ async def set_labels(session: AsyncSession, values: dict[str, str]) -> dict[Numb
         label = raw.strip()
         if not _LABEL.fullmatch(label):
             raise invalid_fields(
-                "Обозначение: до 16 знаков, без пробелов, «/» и «-».", **{f"labels.{key}": "invalid_label"}
+                "Обозначение: до 16 знаков, только латинские буквы и цифры.", **{f"labels.{key}": "invalid_label"}
             )
         wanted[kind] = label
     for kind, label in wanted.items():
-        taken = {v.casefold() for k, v in wanted.items() if k != kind} | {
-            v.casefold() for k, v in LEGACY_LABELS.items() if k != kind
-        }
+        taken = {v.casefold() for k, v in wanted.items() if k != kind}
         if label.casefold() in taken:
             raise invalid_fields(
                 "Такое обозначение уже у другого вида номера.", **{f"labels.{kind.value}": "label_taken"}

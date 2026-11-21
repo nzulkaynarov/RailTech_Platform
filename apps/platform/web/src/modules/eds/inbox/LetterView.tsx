@@ -270,6 +270,10 @@ function Content({
           <Card size="small" title={<h2 className="pf-letters-title">{t("card.details")}</h2>}>
             <DefinitionList
               items={[
+                // СЦ-5: номер до перенумерации на латиницу — одна строка, только если он был
+                ...(letter.previous_number
+                  ? [{ label: t("card.fields.previousNumber"), value: letter.previous_number }]
+                  : []),
                 ...registry,
                 // Делопроизводство (ГОСТ Р 7.0.97, SPEC-v3 §3.2a) — «корреспондент», заявка клиента — «клиент».
                 {

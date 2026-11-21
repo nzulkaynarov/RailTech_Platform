@@ -124,7 +124,10 @@ async def test_labels_are_latin_by_default_and_editable_by_the_admin(
         ({"memo": ""}, "invalid_label"),
         ({"nonsense": "X"}, "unknown_kind"),
         ({"memo": "IN"}, "label_taken"),  # нынешнее обозначение входящих
-        ({"memo": "ВХ"}, "label_taken"),  # прежнее обозначение входящих: номера ВХ уже выданы
+        ({"memo": "ВХ"}, "invalid_label"),  # кириллица (СЦ-5): обозначение только латиницей
+        ({"memo": "СZ"}, "invalid_label"),  # латинская Z, кириллическая С — смешение алфавитов
+        ({"memo": "sz"}, "invalid_label"),
+        ({"memo": "A" * 17}, "invalid_label"),
     ],
 )
 async def test_bad_or_taken_label_is_refused(

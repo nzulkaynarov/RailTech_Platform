@@ -3,6 +3,7 @@
 - `api` — FastAPI (REST, приёмник шины) под uvicorn;
 - `worker` — воркер Procrastinate (шина: ретранслятор и обработка inbox; уборка `jti`);
 - `bus status|dead|failed|retry|retry-dead|retry-inbox` — ручное управление шиной (docs/architecture/rt-bus.md §8);
+- `renumber-latin` — разовая перенумерация номеров на латиницу (СЦ-5), сухой прогон по умолчанию, `--apply` записывает;
 - `ai-key-sync` — виртуальный ключ EDS в LiteLLM с дневным бюджетом (EDS-REG, сервис compose `eds-ai-gateway`).
 """
 
@@ -61,6 +62,10 @@ def _parser() -> argparse.ArgumentParser:
     from app.cli import bus_cli
 
     bus_cli.add_arguments(bus)
+    renumber = commands.add_parser("renumber-latin", help="номера с кириллическим обозначением → латиница (СЦ-5)")
+    from app.cli import renumber_cli
+
+    renumber_cli.add_arguments(renumber)
     commands.add_parser("ai-key-sync", help="виртуальный ключ EDS в LiteLLM (бюджет на день)")
     return parser
 
@@ -76,6 +81,10 @@ def main() -> None:
         _run_api(args)
     elif args.command == "worker":
         asyncio.run(_run_worker())
+    elif args.command == "renumber-latin":
+        from app.cli import renumber_cli
+
+        sys.exit(asyncio.run(renumber_cli.run(args)))
     else:
         from app.cli import bus_cli
 
