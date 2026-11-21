@@ -126,7 +126,7 @@
     "iso": "Has ISO 9001 quality certificate",
     "save": "Save details",
     "invalidField": "Check the value",
-    "bankReady": "Bank details for invoices are set: “Issue invoice” will work.",
+    "bankReady": "The main UZS account is set.",
     "bankMissing": "No default account in sums: an invoice cannot be issued. Add an account below.",
     "sections": {
       "company": "Company",

@@ -16,8 +16,8 @@ from decimal import Decimal
 import pytest
 
 from accounts.models import Company, CompanyMember, CompanyType, CustomUser, WorkspaceRole
-from accounts.services.bank_accounts import set_uzs_account
 from accounts.testing import make_cashier
+from accounts.tests.requisites import ready_for_invoices
 from crm.models import Deal, DealStage, Invoice, InvoiceStatus, Quote, QuoteItem, QuoteStatus
 from crm.services import create_manual_invoice
 from crm.services.billing import record_payment
@@ -41,7 +41,7 @@ def scenario(db):
     def _seller(name, inn):
         # O3: продавец с платёжными реквизитами — иначе `issue_invoice` не выпустит счёт (он неоплатен).
         co = Company.objects.create(name=name, inn=inn)
-        set_uzs_account(co, "20208000900001234567", "00443")
+        ready_for_invoices(co)
         co.types.add(CompanyType.objects.get(code="SUPPLIER"))
         user = CustomUser.objects.create_user(email=f"{inn}@s.test", username=f"{inn}@s.test", password="pw")
         CompanyMember.objects.create(
@@ -60,7 +60,7 @@ def scenario(db):
 
     # O3: продавец с платёжными реквизитами — иначе `issue_invoice` не выпустит счёт (он неоплатен).
     buyer = Company.objects.create(name="Buyer LLC", inn="6600000001")
-    set_uzs_account(buyer, "20208000900001234567", "00443")
+    ready_for_invoices(buyer)
     buyer.types.add(CompanyType.objects.get(code="CLIENT"))
     buyer_user = CustomUser.objects.create_user(email="buyer@b.test", username="buyer@b.test", password="pw")
     CompanyMember.objects.create(

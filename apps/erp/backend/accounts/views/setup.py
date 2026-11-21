@@ -26,8 +26,8 @@ from core.permissions import ADMIN_ONLY, IsPlatformAdmin, RoleGatedViewMixin
                     help_text="Id своей компании (core.tenant, с учётом OWN_COMPANY_ID); null — её нет.",
                 ),
                 "bank_details_ready": serializers.BooleanField(
-                    help_text="У своей компании есть реквизиты для счетов (р/с или МФО — как требует гейт «Выставить "
-                    "счёт»); своей компании нет — true (D26G-6)."
+                    help_text="У своей компании есть реквизиты для счетов — ИНН, юридический адрес и расчётный счёт, "
+                    "как требует гейт «Выставить счёт»; своей компании нет — true (D26G-6, СЦ-3)."
                 ),
             },
         )

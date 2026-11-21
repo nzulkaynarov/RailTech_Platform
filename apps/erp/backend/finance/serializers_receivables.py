@@ -56,8 +56,8 @@ class ReceivableBoardSerializer(serializers.Serializer):
     counts = ReceivableCountsSerializer(help_text="Счета на каждой вкладке (вкладки не пересекаются).")
     results = ReceivableRowSerializer(many=True)
     seller_bank_details_ready = serializers.BooleanField(
-        help_text="У своей компании есть реквизиты для счетов (р/с или МФО): без них «Выставить счёт» откажет "
-        "`SELLER_BANK_DETAILS_REQUIRED` (D26G-6, подсказка до клика)."
+        help_text="У своей компании есть реквизиты для счетов — ИНН, юридический адрес и расчётный счёт: без них "
+        "«Выставить счёт» откажет `SELLER_BANK_DETAILS_REQUIRED` (D26G-6, СЦ-3; подсказка до клика)."
     )
 
 
@@ -118,7 +118,8 @@ class ReceivableCardSerializer(ReceivableRowSerializer):
     can_request_proof = serializers.BooleanField()
     replayed = serializers.BooleanField(help_text="Повтор подтверждения: платёж уже был записан, ничего не добавлено.")
     seller_bank_details_ready = serializers.BooleanField(
-        help_text="Гейт выпуска пропустит этот счёт: реквизиты продавца есть (у выставленного счёта — всегда `true`)."
+        help_text="Гейт выпуска пропустит этот счёт: ИНН, юридический адрес и расчётный счёт продавца есть "
+        "(у выставленного счёта — всегда `true`)."
     )
 
 

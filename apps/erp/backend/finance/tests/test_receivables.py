@@ -17,7 +17,7 @@ from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from accounts.models import Company, CompanyMember, CompanyRole, CustomUser, WorkspaceRole
-from accounts.services.bank_accounts import set_uzs_account
+from accounts.tests.requisites import ready_for_invoices
 from core.tests.openapi_fixtures import conforms
 from crm.models import ActivityLog, Invoice, InvoiceStatus, Payment
 from crm.tests.test_record_payment_back_office import world as base_world  # noqa: F401
@@ -440,6 +440,6 @@ def test_missing_bank_details_are_visible_before_the_issue_click(world):
     assert card.json()["seller_bank_details_ready"] is False
     assert _get(world["viewer"], f"{BASE}{world['invoice'].pk}/").json()["seller_bank_details_ready"] is True
 
-    set_uzs_account(own, "20208000900001234567", "00443")
+    ready_for_invoices(own)
     assert _get(world["viewer"], BASE, tab="to_issue").json()["seller_bank_details_ready"] is True
     assert _get(world["viewer"], f"{BASE}{draft.pk}/").json()["seller_bank_details_ready"] is True

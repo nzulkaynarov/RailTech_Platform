@@ -21,7 +21,7 @@ export interface PaymentBoard {
    * @nullable
    */
   memos_to_pay: number | null;
-  /** У своей компании есть реквизиты для счетов (р/с или МФО; ERP `seller_bank_details_ready`, D26G-6). `false` — «Выставить счёт» откажет `bank_details_required`: экран предупреждает до клика, заполняет администратор в «Настройки · Компания и бланки» */
+  /** У своей компании есть реквизиты для счетов — ИНН, юридический адрес и расчётный счёт (ERP `seller_bank_details_ready`, D26G-6, СЦ-3). `false` — «Выставить счёт» откажет `bank_details_required`: экран предупреждает до клика, заполняет администратор в «Настройки · Реквизиты и бланк» */
   bank_details_ready: boolean;
   items: PaymentRow[];
   sources: PaymentSources;

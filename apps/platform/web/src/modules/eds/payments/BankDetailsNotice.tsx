@@ -22,7 +22,7 @@ export function BankDetailsNotice() {
       showIcon
       role="status"
       message={t("bankDetails.title")}
-      description={t("bankDetails.text")}
+      description={canFix ? undefined : t("bankDetails.text")}
       action={
         canFix ? (
           <LinkButton size="small" to={BANK_DETAILS_PATH}>

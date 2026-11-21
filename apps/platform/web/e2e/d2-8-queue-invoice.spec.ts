@@ -195,7 +195,9 @@ test.describe("D26G-6, D26G-9: реквизиты для счёта и служ�
       await spaGoto(page, "/eds/payments?show=to_issue");
       const main = page.getByRole("main");
       await expect(
-        main.getByText("Нет банковских реквизитов компании — счёт не выставить."),
+        main.getByText(
+          "Нет реквизитов компании (ИНН, юридический адрес или расчётный счёт) — счёт не выставить.",
+        ),
       ).toBeVisible();
       await expect(page.getByRole("link", { name: "Открыть «Реквизиты и бланк»" })).toHaveCount(0);
       await shot(page, "payments-to-issue-no-bank");
@@ -204,7 +206,9 @@ test.describe("D26G-6, D26G-9: реквизиты для счёта и служ�
       await spaGoto(page, "/eds/payments/143?panel=open&tab=payment");
       const form = page.getByRole("form", { name: "Выставить счёт" }).first();
       await expect(
-        form.getByText("Нет банковских реквизитов компании — счёт не выставить."),
+        form.getByText(
+          "Нет реквизитов компании (ИНН, юридический адрес или расчётный счёт) — счёт не выставить.",
+        ),
       ).toBeVisible();
       await expect(form.getByRole("button", { name: "Выставить счёт" })).toBeDisabled();
       await shot(page, "invoice-issue-no-bank");

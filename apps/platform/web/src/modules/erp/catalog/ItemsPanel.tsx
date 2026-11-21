@@ -60,7 +60,8 @@ import {
   ReturnButton,
   ReviewBlock,
 } from "./ReviewQueue";
-import { DuplicateHint, useRequestsColumns } from "./RequestsQueue";
+import { DuplicateHint } from "./RequestsQueue";
+import { useRequestsColumns } from "./useRequestsQueue";
 import { ItemCell } from "../../../shared/ui/EntityCell";
 import { FilterBar, FilterField } from "../../../shared/ui/FilterBar";
 import { UnitLabel } from "../../../shared/ui/UnitLabel";
