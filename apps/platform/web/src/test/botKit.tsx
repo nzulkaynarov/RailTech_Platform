@@ -45,6 +45,7 @@ const missing: string[] = [];
 export function setupBotTests(width = 1440): void {
   beforeEach(() => {
     window.localStorage.clear();
+    window.sessionStorage.clear();
     resetKb();
     usePanelsStore.setState({ entries: {} });
     setViewportWidth(width);

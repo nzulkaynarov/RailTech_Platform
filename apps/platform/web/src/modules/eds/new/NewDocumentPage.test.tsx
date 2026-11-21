@@ -110,6 +110,11 @@ describe("EDS · Создать документ: форма", () => {
     expect(screen.getByLabelText("Нужно до")).toBeVisible();
     // менеджеру открыты заявки: поле «Связь с проектом» есть
     expect(screen.getByLabelText("Связь с проектом")).toBeInTheDocument();
+    // черновик сохраняется, когда есть тема и текст: пока их нет — подсказка вместо кнопки
+    expect(screen.queryByRole("button", { name: "Сохранить черновик" })).toBeNull();
+    // подсказка — в подвале каждого шага; открыт первый
+    expect(screen.getAllByText("Черновик сохраняется, когда есть тема и текст.")[0]).toBeVisible();
+    fillMemo();
     expect(screen.getByRole("button", { name: "Сохранить черновик" })).toBeVisible();
     // шаг 2 «Текст и вложения»
     step(/Текст и вложения/);
@@ -396,21 +401,83 @@ describe("EDS · Создать документ: форма", () => {
     });
   });
 
-  it("обязательные поля: пустая отправка подсвечивает тему и текст, ничего не уходит на сервер", async () => {
+  it("обязательные поля: недостающее названо на шаге и в «Осталось», кнопка недоступна, пройденный шаг не открывается заново", async () => {
     await openForm("manager@demo.example");
 
-    await press("Отправить на согласование");
-
-    // ошибка открывает свою секцию: тема — шаг 1; у шага 2 отметка «Нужно исправить»
-    expect(await screen.findByText("Укажите тему.")).toBeVisible();
-    expect(screen.getByRole("button", { name: /Текст и вложения.*Нужно исправить/ })).toBeVisible();
-    step(/Текст и вложения/);
-    expect(screen.getByText("Напишите текст документа.")).toBeVisible();
+    step(/Проверка и отправка/);
+    const main = screen.getByRole("button", { name: "Отправить на согласование" });
+    expect(main).toBeDisabled();
+    const list = document.getElementById("doc-remaining") as HTMLElement;
+    expect(within(list).getByText(/Укажите тему\./)).toBeVisible();
+    expect(within(list).getByText(/Напишите текст документа\./)).toBeVisible();
+    expect(main).toHaveAttribute("aria-describedby", "doc-remaining");
+    // «Осталось» ведёт на шаг; поле помечено, потому что шаг уже покидали
+    fireEvent.click(within(list).getByRole("button", { name: /^О чём/ }));
     expect(screen.getByLabelText("Тема")).toHaveAttribute("aria-invalid", "true");
-    await waitFor(() => {
-      expect(screen.getByLabelText("Тема")).toHaveFocus();
-    });
     expect(screen.queryByText(/Отправлено на согласование/)).toBeNull();
+
+    // исправили — «Осталось» пусто, кнопка доступна
+    fillMemo();
+    step(/Проверка и отправка/);
+    expect(document.getElementById("doc-remaining")).toBeNull();
+    expect(screen.getByRole("button", { name: "Отправить на согласование" })).toBeEnabled();
+  });
+
+  it("галочки шагов — по validate: сумма «0» снимает галочку «О чём»; «Согласование» без галочки, пока не пройден", async () => {
+    await openForm("manager@demo.example");
+    fillMemo();
+    type("Сумма, сум", "0");
+    step(/Текст и вложения/);
+    const about = screen.getByRole("button", { name: /^О чём/ });
+    expect(about).toHaveTextContent("Нужно исправить");
+    expect(about.querySelector(".lucide-check")).toBeNull();
+    // «Согласование» ещё не открывали — галочки нет (раньше стояла всегда)
+    const route = screen.getByRole("button", { name: /^Согласование/ });
+    expect(route.querySelector(".lucide-check")).toBeNull();
+    step(/Согласование/);
+    step(/Текст и вложения/);
+    expect(
+      screen.getByRole("button", { name: /^Согласование/ }).querySelector(".lucide-check"),
+    ).not.toBeNull();
+  });
+
+  it("боковое окно: скрыть панель не стирает введённое; повторный переход из «Создать» открывает пустую форму", async () => {
+    const { router } = await openForm("manager@demo.example");
+    type("Тема", "Закупка");
+    fireEvent.click(await screen.findByRole("button", { name: /Скрыть панель|Показать панель/ }));
+    await waitFor(() => {
+      expect(router.state.location.search).toContain("panel=");
+    });
+    expect(screen.getByLabelText("Тема")).toHaveValue("Закупка");
+    // намеренный переход с меткой «Создать» — форма новая
+    await router.navigate("/eds/new?type=memo", { state: { fresh: 1 } });
+    await waitFor(() => {
+      expect(screen.getByLabelText("Тема")).toHaveValue("");
+    });
+  });
+
+  it("отказ сервера по полю «О чём»: у шага нет галочки и есть «Нужно исправить», пока поле не поправят", async () => {
+    server.use(
+      http.post("*/eds/documents", () =>
+        HttpResponse.json(
+          {
+            code: "VALIDATION_ERROR",
+            message: "x",
+            source: "eds",
+            details: { fields: ["erp_deal_id"] },
+          },
+          { status: 422 },
+        ),
+      ),
+    );
+    await openForm("manager@demo.example");
+    fillMemo();
+    await press("Отправить на согласование");
+    await screen.findByRole("alert");
+    step(/Проверка и отправка/);
+    const about = screen.getByRole("button", { name: /^О чём/ });
+    expect(about).toHaveTextContent("Нужно исправить");
+    expect(about.querySelector(".lucide-check")).toBeNull();
   });
 
   it("сумма больше нуля и «нужно до» не в прошлом", async () => {
@@ -434,10 +501,11 @@ describe("EDS · Создать документ: форма", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Сохранить черновик" }));
 
+    // текст — и у поля, и в требованиях шага: шаг открыт заново нажатием
     expect(
-      await screen.findByText("Сумма должна быть больше нуля, например 1 500 000."),
+      (await screen.findAllByText("Сумма должна быть больше нуля, например 1 500 000."))[0],
     ).toBeVisible();
-    expect(screen.getByText("Срок «нужно до» не может быть в прошлом.")).toBeVisible();
+    expect(screen.getAllByText("Срок «нужно до» не может быть в прошлом.")[0]).toBeVisible();
     expect(due).toHaveValue("01.01.2020");
   });
 

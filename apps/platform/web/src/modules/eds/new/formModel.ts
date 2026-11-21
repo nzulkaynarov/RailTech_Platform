@@ -193,6 +193,19 @@ export function validate(values: FormValues, today: string = todayInCompanyZone(
   return errors;
 }
 
+/**
+ * Что нужно для «Сохранить черновик»: тема и текст (так требует контракт) и верные форматы суммы, срока и почты; адресат
+ * не нужен — письмо без него сохраняется (`recipient` в запрос тогда не идёт).
+ */
+export function validateDraft(
+  values: FormValues,
+  today: string = todayInCompanyZone(),
+): FormErrors {
+  const errors = validate(values, today);
+  delete errors.recipient;
+  return errors;
+}
+
 /** Порядок полей на экране: первая ошибка получает фокус. */
 export const FIELD_ORDER: readonly FieldKey[] = [
   "subject",

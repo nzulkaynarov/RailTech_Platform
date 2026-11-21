@@ -140,7 +140,9 @@
   "formSteps": {
     "next": "Далее: {{title}}",
     "edit": "Изменить",
-    "invalid": "Нужно исправить"
+    "invalid": "Нужно исправить",
+    "needed": "Чтобы шаг был готов:",
+    "remaining": "Осталось:"
   },
   "rowActions": {
     "label": "Действия: {{name}}"

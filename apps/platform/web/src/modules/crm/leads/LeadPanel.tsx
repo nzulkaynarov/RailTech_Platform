@@ -45,7 +45,11 @@ function noticeText(t: TFunction, fmt: Format, notice: LeadNotice | ClientInvita
 
 function consentText(t: TFunction, fmt: Format, card: LeadCard): string {
   const { given_at: at, method } = card.consent;
-  if (!at) return t("leads:card.consentMissing");
+  if (!at) {
+    return t(
+      card.channel === "telegram" ? "leads:card.consentMissingBot" : "leads:card.consentMissing",
+    );
+  }
   if (method === null) return t("leads:card.consentBot", { date: fmt.date(at) });
   return t("leads:card.consentStaff", {
     date: fmt.date(at),
@@ -146,7 +150,7 @@ function Body({ card, sheet, onClose }: { card: LeadCard; sheet: boolean; onClos
       </div>
 
       <div className="pf-fp-block">
-        <h4>{t("leads:card.facts")}</h4>
+        <h4>{t(card.channel === "telegram" ? "leads:card.facts" : "leads:card.factsOther")}</h4>
         {card.need ? (
           <DefinitionList items={[{ label: t("leads:card.need"), value: card.need }]} />
         ) : null}
