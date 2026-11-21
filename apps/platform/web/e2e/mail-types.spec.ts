@@ -210,7 +210,10 @@ for (const width of WIDTHS) {
     await expect(
       page.getByText("Письмо передано на загрузку прайса: Демо Снабженцев"),
     ).toBeVisible();
+    // После передачи приложение само возвращает к списку: без ожидания этот переход перебивает следующий (Х-19).
+    await expect(page).toHaveURL(/\/eds\/mail$/);
     await spaGoto(page, "/eds/mail/18");
+    await expect(page).toHaveURL(/\/eds\/mail\/18$/);
     await chooseOption(page.getByRole("combobox", { name: "Сменить тип" }), "Счёт партнёра");
     await page.getByRole("button", { name: "Передать бухгалтеру" }).first().click();
     await page.getByRole("button", { name: "Передать", exact: true }).click();
