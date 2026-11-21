@@ -499,7 +499,7 @@ class AcquaintanceTask(BaseModel):
 
 
 class RegistrationTask(BaseModel):
-    """Черновик ИСХ, переданный на регистрацию: задача делопроизводителю (EDS-REPLY-1)."""
+    """Устарело: список `registrations` всегда пуст — ИСХ без подписи не регистрируется (2026-11-21 (3))."""
 
     document_id: uuid.UUID
     subject: str

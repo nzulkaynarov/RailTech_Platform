@@ -1135,8 +1135,8 @@ export interface paths {
      * Мои поручения, переносы на решение и ознакомления (P8b)
      * @description Строки «Моих задач» сотрудника по входящим (SPEC-v3 §3.2a п. 3–5): поручения в работе, где он исполнитель (со
      *     сроком и признаком просрочки); запросы переноса без решения, где он автор резолюции; ознакомления без отметки.
-     *     Не больше 100 строк каждого вида, раньше — ближайший срок. Держателю `letters.register` — ещё `registrations`:
-     *     черновики ИСХ, переданные на регистрацию (EDS-REPLY-1).
+     *     Не больше 100 строк каждого вида, раньше — ближайший срок. Вычисленному подписанту — ещё `signatures`: переданные
+     *     черновики ИСХ. `registrations` с 2026-11-21 всегда пуст (письмо без подписи не регистрируется).
      */
     get: operations["listMyLetterTasks"];
     put?: never;
@@ -1244,11 +1244,10 @@ export interface paths {
      *     после возврата `version` растёт на 1; открывается маршрут (новый круг) — статус `on_approval`, `approval.requested`.
      *     Шаблоны (runbook §2.5): `memo` — директор (любой с `memos.approve`), затем, если указана сумма, бухгалтер (любой с
      *     `payments.confirm` — решение архитектора); `application`, `report` — директор. Статусы по решениям — `DocumentStatus`.
-     *     `letter_out` из `draft` (регистрация ИСХ, право `letters.register`): автор или — для черновика, переданного на
-     *     регистрацию (`registration-request`), — любой держатель `letters.register`; присваивается `ИСХ-NNN/ГГ`, статус `sent`,
-     *     `document.registered`, затем `document.archived`; ИСХ «в ответ на ВХ» закрывает поручения «Подготовить ответ». Письмо с
-     *     телом (P4): ставится рендер итогового PDF (номер и дата), а при `send = true` — отправка адресату, как только PDF готов
-     *     (`letter.mailings`). Без `letters.register` — 403 (`details.permission`). Другой статус — 409 `CONFLICT`
+     *     `letter_out` (решение владельца 2026-11-21 (3)): исходящее письмо не регистрируется и не отправляется этим вызовом —
+     *     номер, статус `sent`, `document.registered` и отправка адресату выдаются только при подписи (`POST …/sign`), бумажное
+     *     письмо тоже. Для `letter_out` в статусе `draft` ответ всегда 409 `CONFLICT` (`details.reason = signature_required`,
+     *     `details.status = draft`); без права `letters.register` — 403 (`details.permission`). Другой статус — 409 `CONFLICT`
      *     (`details.reason = invalid_state`).
      */
     post: operations["submitDocument"];
@@ -1405,7 +1404,8 @@ export interface paths {
      *     (`POST …/submit`). Автор может продолжать править черновик. Повтор — без изменений. Не черновик — 409 (`invalid_state`),
      *     не автор — 403 (`not_author`), у письма нет тела — 409 (`no_body`). Делопроизводитель узнаёт сразу (EDS-REPLY-1):
      *     `notice.requested` держателям `letters.register` (если письмо «в ответ на ВХ») и задача в `GET /letter-tasks`
-     *     (`registrations`); задача уходит при регистрации.
+     *     (`signatures`, вычисленному подписанту); задача уходит при подписи. Регистрации без подписи нет (`submit` — 409
+     *     `signature_required`).
      */
     post: operations["requestDocumentRegistration"];
     delete?: never;
@@ -3099,13 +3099,13 @@ export interface components {
     };
     LetterTasks: {
       /**
-       * @description Только вычисленному подписанту (СЦ-9): переданные черновики ИСХ, ждущие подписи. `registrations` по-прежнему
-       *     заполняется как раньше (потребитель переходит на `signatures` позже). Поля может не быть у старого ответа.
+       * @description Только вычисленному подписанту (СЦ-9): переданные черновики ИСХ, ждущие подписи. Единственный список задач по
+       *     письму на бланке: `registrations` с 2026-11-21 пуст. Поля может не быть у старого ответа.
        */
       signatures?: components["schemas"]["SignatureTask"][];
       /**
-       * @description Только держателю `letters.register` (EDS-REPLY-1): черновики ИСХ, переданные на регистрацию и ещё не
-       *     зарегистрированные, раньше — давнее. Строка уходит сама при регистрации. Поля может не быть у старого ответа.
+       * @description Устарело: с 2026-11-21 всегда пуст — исходящее письмо не регистрируется без подписи, задача «Подписать» —
+       *     в `signatures`. Поле оставлено для совместимости. Поля может не быть у старого ответа.
        */
       registrations?: components["schemas"]["RegistrationTask"][];
       instructions: components["schemas"]["InstructionTask"][];
@@ -3797,7 +3797,7 @@ export interface components {
         "application/json": components["schemas"]["Error"];
       };
     };
-    /** @description `CONFLICT` — `details.reason`: `invalid_state`, `route_closed`, `checklist_not_green`, `idempotency_key_reused`, `duplicate_letter`, `resolution_exists`, `calc_in_progress` */
+    /** @description `CONFLICT` — `details.reason`: `invalid_state`, `signature_required`, `route_closed`, `checklist_not_green`, `idempotency_key_reused`, `duplicate_letter`, `resolution_exists`, `calc_in_progress` */
     Conflict: {
       headers: {
         [name: string]: unknown;

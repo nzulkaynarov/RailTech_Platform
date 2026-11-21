@@ -19,6 +19,7 @@ from app.schemas.documents import DocumentCreate, DocumentSubmitIn
 from app.schemas.letters import LetterCreate, ResolutionIn
 from app.services import approvals, documents, letters, quotes
 from tests.domain import Person, erp_event, outbox
+from tests.signing import ensure_signer
 from tests.test_documents import WITH_AMOUNT, create, submit
 from tests.test_letters import NEW_LETTER, RESOLUTION, register
 
@@ -134,10 +135,11 @@ async def test_document_creation_and_submission_rolled_back(
         await documents.submit(session, bus, employee=who, document_id=uuid.UUID(draft["id"]), edits=DocumentSubmitIn())
 
     async def send_letter(session: AsyncSession, bus: AsyncBus, who: Employee) -> None:
-        await documents.submit(session, bus, employee=who, document_id=uuid.UUID(letter_out["id"]), edits=None)
+        await documents.sign(session, bus, employee=who, document_id=uuid.UUID(letter_out["id"]), send=False)
 
+    await ensure_signer(client, staff)
     await rolled_back(container, 5, send_for_approval)
-    await rolled_back(container, 4, send_letter)
+    await rolled_back(container, staff["registrar"].id, send_letter)
     assert len(await outbox(container)) == before
 
 

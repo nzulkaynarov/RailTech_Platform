@@ -19,6 +19,7 @@ from app.models import Document, DocumentRender, Employee
 from app.services import letter_mail, renders
 from app.services.documents import may_open_pdf
 from tests.domain import Person
+from tests.signing import sign_out
 from tests.test_api_auth import assert_error
 from tests.test_letterhead_letters import (
     StubRenderer,
@@ -75,7 +76,7 @@ async def test_draft_render_is_marked_and_final_is_not(
     assert (
         await client.post(f"/api/v1/documents/{doc}/registration-request", headers=staff["manager"].headers)
     ).status_code == 200
-    registered = await client.post(f"/api/v1/documents/{doc}/submit", headers=staff["registrar"].headers)
+    registered = await sign_out(client, staff, doc)
     assert registered.status_code == 200, registered.text
     final_hash = deferred[-1]
     stub = StubRenderer()

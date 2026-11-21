@@ -2,8 +2,8 @@
 
 Исполнитель поручения «Подготовить ответ» создаёт письмо `letter_out` с `in_reply_to` (ВХ); дальше путь не обрывается:
 
-* «Передать на регистрацию» — уведомление держателям `letters.register` и строка в `GET /letter-tasks`
-  (`registrations`);
+* «Передать на регистрацию» — уведомление держателям `letters.register` и строка подписанту в `GET /letter-tasks`
+  (`signatures`; `registrations` пуст с 2026-11-21: письмо без подписи не регистрируется);
 * регистрация ИСХ закрывает поручение (`instructions.close_by_outgoing`) и сообщает исполнителю и автору ответа;
 * письмо не ушло адресату (`crm.mail.failed`, «почта не настроена») — уведомление автору и делопроизводителям;
 * карточка ВХ показывает ответы (`replies`: черновик → передан → ИСХ → итог отправки), карточка ИСХ — «в ответ на ВХ-…».
@@ -27,7 +27,6 @@ from app.schemas.letters import (
     LetterReply,
     LetterReplyMail,
     LetterReplyState,
-    RegistrationTask,
     ReplyToLetter,
     SignatureTask,
 )
@@ -117,43 +116,6 @@ async def replies_for(session: AsyncSession, employee: Employee | None, letter: 
             )
         )
     return out
-
-
-async def registration_tasks(session: AsyncSession, employee: Employee) -> list[RegistrationTask]:
-    """«Зарегистрировать ИСХ»: черновики, переданные на регистрацию; только держателю `letters.register`."""
-    if not access.has(employee, P.LETTERS_REGISTER):
-        return []
-    documents = list(
-        (
-            await session.execute(
-                select(Document)
-                .where(
-                    Document.kind == DocumentKind.LETTER_OUT.value,
-                    Document.status == DocumentStatus.DRAFT.value,
-                    Document.registration_requested_at.is_not(None),
-                )
-                .order_by(Document.registration_requested_at, Document.id)
-                .limit(TASKS_LIMIT)
-            )
-        )
-        .scalars()
-        .all()
-    )
-    directory = await load_directory(session, (d.registration_requested_by for d in documents))
-    tasks: list[RegistrationTask] = []
-    for document in documents:
-        if document.registration_requested_by is None or document.registration_requested_at is None:
-            continue
-        tasks.append(
-            RegistrationTask(
-                document_id=document.id,
-                subject=document.subject,
-                in_reply_to=await reply_to_ref(session, document.in_reply_to),
-                requested_by=directory.person(document.registration_requested_by),
-                requested_at=document.registration_requested_at,
-            )
-        )
-    return tasks
 
 
 async def signing_tasks(session: AsyncSession, employee: Employee, today: dt.date) -> list[SignatureTask]:
