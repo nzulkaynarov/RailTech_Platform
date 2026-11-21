@@ -7,6 +7,7 @@ import pytest
 
 from app.container import Container
 from tests.domain import Person, outbox, validate
+from tests.signing import sign_out
 from tests.test_api_auth import assert_error
 
 pytestmark = pytest.mark.pg
@@ -337,7 +338,7 @@ async def test_outgoing_letter_is_numbered_on_send_and_archived(
     )
     assert await outbox(container, "document.registered") == []  # номера ещё нет
 
-    sent = await submit(client, staff["registrar"], draft["id"])
+    sent = await sign_out(client, staff, draft["id"])
     assert sent.status_code == 200, sent.text
     body = sent.json()
     validate("Document", body)
@@ -357,8 +358,9 @@ async def test_outgoing_letter_is_numbered_on_send_and_archived(
     assert archived["data"]["reason"] == "sent"
     assert await outbox(container, "approval.requested") == []
     assert_error(await submit(client, staff["registrar"], draft["id"]), 409, "CONFLICT", reason="invalid_state")
+    assert_error(await sign_out(client, staff, draft["id"]), 409, "CONFLICT", reason="invalid_state")
     second = await create(client, staff["registrar"], kind="letter_out", recipient={"name": "Другой"})
-    assert (await submit(client, staff["registrar"], second["id"])).json()["number"] == "OUT-002/26"
+    assert (await sign_out(client, staff, second["id"])).json()["number"] == "OUT-002/26"
     second_registered = (await outbox(container, "document.registered"))[-1]["data"]["document"]
     assert second_registered["letter"] == {
         "recipient": {"name": "Другой", "inn": None, "email": None},
@@ -511,7 +513,7 @@ async def test_update_is_allowed_for_draft_and_returned_only(
     # отправленное исходящее письмо править нельзя
     letter = await create(client, staff["registrar"], kind="letter_out", recipient={"name": "ООО «Пример»"})
     assert (await patch(client, staff["registrar"], letter["id"], {"subject": "Тема"})).status_code == 200
-    assert (await submit(client, staff["registrar"], letter["id"])).status_code == 200
+    assert (await sign_out(client, staff, letter["id"])).status_code == 200
     assert_error(
         await patch(client, staff["registrar"], letter["id"], {"subject": "Поздно"}),
         409,

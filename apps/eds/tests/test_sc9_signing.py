@@ -107,7 +107,7 @@ async def test_signing_gives_number_and_sent_status_and_the_card_stops_offering_
     assert (await tasks_of(client, staff["director"]))["signatures"] == []
 
 
-async def test_signature_task_goes_only_to_the_computed_signer_and_registrations_stay(
+async def test_signature_task_goes_only_to_the_computed_signer_and_registrations_are_gone(
     client: httpx.AsyncClient, staff: dict[str, Person]
 ) -> None:
     await grant(client, staff, "director")
@@ -119,9 +119,9 @@ async def test_signature_task_goes_only_to_the_computed_signer_and_registrations
     assert (task["document_id"], task["requested_by"]["crm_user_id"], task["acting_for"]) == (doc["id"], 5, None)
     for other in ("registrar", "manager", "accountant"):
         assert (await tasks_of(client, staff[other]))["signatures"] == [], other
-    # Старая строка не пропала: делопроизводитель и директор получают её, как до СЦ-9.
-    assert len((await tasks_of(client, staff["registrar"]))["registrations"]) == 1
-    assert len((await tasks_of(client, staff["director"]))["registrations"]) == 1
+    # Строки «Зарегистрировать» больше нет ни у кого: письмо без подписи не регистрируется.
+    for name in ("registrar", "director", "manager"):
+        assert (await tasks_of(client, staff[name]))["registrations"] == [], name
 
 
 async def test_no_signer_means_no_signature_task_for_anyone(
