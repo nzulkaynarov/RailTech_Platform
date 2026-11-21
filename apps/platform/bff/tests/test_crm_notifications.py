@@ -294,6 +294,40 @@ async def test_letter_notice_opens_the_work_screen_of_the_letter(
     }
 
 
+async def test_cabinet_request_notice_opens_the_client_card(
+    web: Web, fb: FeedBackends, check: ContractChecker
+) -> None:
+    """СЦ-9: заявка клиента из кабинета — уведомление менеджеру ведёт в карточку клиента."""
+    fb.state["crm_notifications"] = {
+        "items": [
+            crm_note(
+                11,
+                "erp.cabinet_request",
+                fb.m.ago(minutes=1),
+                tab="clients",
+                title="Заявка клиента ООО Ромашка из кабинета · ждёт резолюции директора",
+                subtitle="RQ-2026-002",
+                object_kind="client",
+                object_id="42",
+                object_number="RQ-2026-002",
+            )
+        ],
+        "unread_count": 1,
+    }
+    await web.login(["MANAGER_ALL"])
+
+    response = await web.client.get("/api/v1/notifications")
+
+    check(response, "/notifications", "get")
+    [note] = response.json()["items"]
+    assert note["tab"] == "clients"
+    assert note["object"] == {
+        "kind": "client",
+        "number": "RQ-2026-002",
+        "path": "/crm/clients/42?panel=open&tab=card",
+    }
+
+
 async def test_reply_notice_opens_the_outgoing_document(
     web: Web, fb: FeedBackends, check: ContractChecker
 ) -> None:

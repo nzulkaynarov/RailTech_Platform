@@ -28,6 +28,8 @@ from tests.integration.test_erp_seam_events import COMPANY, notes, receive, seed
 
 pytestmark = pytest.mark.integration
 
+NUMBER = example_data("uz.railtech.erp.quote.accepted.v1")["deal"]["number"]
+
 CODE = "739104"  # уникальная строка: ищем её везде, где её быть не должно
 TG_PRIMARY = 777
 TG_CONTACT = 4242
@@ -371,7 +373,8 @@ async def test_the_feed_names_the_contact_who_accepted_the_quote(harness: Harnes
     (note,) = await notes(harness, lead_id)
     assert "Иван Петров" in note
     assert "акцептовал" in note
-    assert f"#{envelope['data']['payload']['erp_quote_id']}" in note
+    assert f"по {envelope['data']['deal']['number']}, версия" in note
+    assert "#" not in note
 
 
 async def test_the_feed_names_the_contact_who_rejected_the_quote_with_the_reason(
@@ -391,8 +394,8 @@ async def test_the_feed_names_the_contact_who_rejected_the_quote_with_the_reason
 @pytest.mark.parametrize(
     ("event_type", "expected"),
     [
-        ("uz.railtech.erp.quote.accepted.v1", "Клиент акцептовал КП #1203 v2."),
-        ("uz.railtech.erp.quote.rejected.v1", "КП #1203 v2 отклонено клиентом."),
+        ("uz.railtech.erp.quote.accepted.v1", f"Клиент акцептовал КП по {NUMBER}, версия 2."),
+        ("uz.railtech.erp.quote.rejected.v1", f"КП по {NUMBER}, версия 2 отклонено клиентом."),
     ],
 )
 async def test_without_a_crm_contact_the_feed_stays_neutral(
@@ -414,13 +417,13 @@ async def test_without_a_crm_contact_the_feed_stays_neutral(
     [
         (
             "uz.railtech.erp.quote.accepted.v1",
-            "Клиент акцептовал КП #1203 v2. Отмечено сотрудником Менеджер Демо по подтверждению"
-            " клиента: Каримов А., снабженец (почта).",
+            f"Клиент акцептовал КП по {NUMBER}, версия 2. Отмечено сотрудником Менеджер Демо"
+            " по подтверждению клиента: Каримов А., снабженец (почта).",
         ),
         (
             "uz.railtech.erp.quote.rejected.v1",
-            "КП #1203 v2 отклонено клиентом. Причина: Дорого. Отмечено сотрудником Менеджер Демо"
-            " по подтверждению клиента: Каримов А., снабженец (почта).",
+            f"КП по {NUMBER}, версия 2 отклонено клиентом. Причина: Дорого. Отмечено сотрудником"
+            " Менеджер Демо по подтверждению клиента: Каримов А., снабженец (почта).",
         ),
     ],
 )

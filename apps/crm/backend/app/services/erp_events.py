@@ -33,6 +33,7 @@ from app.models.leads import Lead, LeadNote
 from app.repositories import events
 from app.security.audit import Actor
 from app.services import deals as deals_service
+from app.services import staff_notifications
 from app.services.erp_acceptance_code import AcceptanceCodeDelivery
 from app.services.erp_bot_messages import (
     client_message,
@@ -43,6 +44,7 @@ from app.services.erp_bot_messages import (
 from app.services.erp_event_handlers import aware, dispatch
 from app.services.erp_invite_delivery import InviteDelivery
 from app.services.settings import SettingsService
+from app.services.staff_tickets import active_user_ids, client_holder_user_ids
 
 logger = structlog.get_logger(__name__)
 
@@ -78,6 +80,19 @@ def _staff_target(deal: Deal | None, client: Client, lead: Lead | None) -> int |
         lead.assigned_user_id if lead else None,
     )
     return next((int(user_id) for user_id in candidates if user_id), None)
+
+
+async def _cabinet_request_recipients(
+    session: AsyncSession, client: Client, manager_crm_user_id: int | None
+) -> list[int]:
+    """Кому сообщить о заявке из кабинета: названный в событии менеджер, иначе владелец клиента,
+    иначе держатели `crm.clients: full` (администратор карточку клиента открыть не может)."""
+    for candidate in (manager_crm_user_id, client.owner_user_id):
+        if candidate:
+            active = await active_user_ids(session, [int(candidate)])
+            if active:
+                return active
+    return await client_holder_user_ids(session)
 
 
 class ErpEventsService:
@@ -235,6 +250,24 @@ class ErpEventsService:
                 item["track"] = "request_accepted"
                 item["email"] = {"subject": mail.subject, "body": mail.body, "lang": language}
             notices.append(item)
+        if env.event == "request.created" and plain(env.payload.source) == "cabinet":
+            recipients = await _cabinet_request_recipients(
+                session, client, env.payload.manager_crm_user_id
+            )
+            text = f"Заявка клиента {client.name} из кабинета · ждёт резолюции директора"
+            number = env_deal.number if env_deal else None
+            staff_notifications.add_in(
+                session,
+                recipients,
+                kind="erp.cabinet_request",
+                tab="clients",
+                title=text,
+                subtitle=" · ".join(p for p in (number, env.payload.summary) if p) or None,
+                object_kind="client",
+                object_id=str(client.id),
+                object_number=number,
+            )
+            notices.extend({"kind": "staff", "user_id": uid, "text": text} for uid in recipients)
         if staff_alert_text:
             target_user_id = _staff_target(deal, client, lead)
             if target_user_id:
