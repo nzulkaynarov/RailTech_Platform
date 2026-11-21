@@ -437,9 +437,19 @@ class ClientRequestSerializer(serializers.Serializer):
     created_at = serializers.DateTimeField(read_only=True)
     lines = RequestLineSerializer(source="portal_lines", many=True, read_only=True)
     attachments = serializers.SerializerMethodField()
+    manager_name = serializers.SerializerMethodField()
 
     def get_number(self, deal) -> str:
         return projections.request_number(deal)
+
+    def get_manager_name(self, deal) -> Optional[str]:
+        """Кто ведёт заявку: ответственный по сделке, иначе менеджер; `None` — ещё не назначен."""
+        for user in (deal.assigned_to, deal.manager):
+            if user is not None and user.is_active:
+                name = (user.get_full_name() or user.email or "").strip()
+                if name:
+                    return name
+        return None
 
     def get_status(self, deal) -> str:
         return projections.request_status(deal)

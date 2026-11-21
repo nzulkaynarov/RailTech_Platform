@@ -933,6 +933,10 @@ export interface paths {
      *     подписанного договора, `issue_act` — выпустить акт (счета оплачены, акта нет) или выпустить заново (заказчик вернул)
      *     (ERP `GET /crm/projects/?step=CONTRACT|PAYMENT`); строка открывает проект `/eds/projects/{ПР}` на вкладке «Договор» или
      *     «Акт». Один объект — одна строка: у роли, совмещающей несколько видов, дублей нет.
+     *     Дела снабжения (СЦ-9; ERP `GET /stock/tasks/`, строки вычисляются в ERP и уже отфильтрованы по человеку):
+     *     `order_shortage` — «Заказать недостающее по ПР-…» (по проекту не заказано всё нужное), строка открывает новый заказ
+     *     `/erp/stock/new?mode=shortage&request=ПР`; `ship_project` — «Отгрузить товар по ПР-…» (товар в резерве проекта),
+     *     строка открывает отгрузки `/erp/stock?view=shipments&request=ПР`. Системному директору эти виды не приходят.
      */
     get: operations["getQueue"];
     put?: never;
@@ -10041,6 +10045,8 @@ export interface components {
       | "partner_date_change"
       | "receive_goods"
       | "partner_application"
+      | "order_shortage"
+      | "ship_project"
       | "confirm_payment"
       | "issue_invoice"
       | "issue_contract"
@@ -10755,8 +10761,24 @@ export interface components {
       verification_url?: string | null;
       /** @enum {string|null} */
       dispatch_method?: "email" | "paper" | "courier" | "edo" | "other" | null;
-      /** @description Пользователь может подписать документ (черновик, уполномоченное лицо) */
+      /**
+       * @description Подпись предлагается, только если сервис документов её разрешает (СЦ-9: та же проверка, что у `sign`);
+       *     поле сервиса не пришло — `false`.
+       */
       can_sign?: boolean;
+      /** @description Только у черновика исходящего письма — почему подписать нельзя и кто подпишет по реестру полномочий */
+      signing_hint?: components["schemas"]["EdsSigningHint"] | null;
+    };
+    /** @description Подсказка о подписи письма (СЦ-9) */
+    EdsSigningHint: {
+      /**
+       * @description Код отказа, как `details.reason` у `sign`: `no_permission`, `invalid_state`, `no_authority`,
+       *     `author_cannot_sign`, `authority_mismatch`, `revoked`, `not_started`, `expired`, `limit_exceeded`,
+       *     `currency_mismatch`, `holder_inactive`, `absent`, `deputy_without_authority`, `deputy_loop`
+       */
+      reason?: string | null;
+      /** @description Кто подпишет по реестру; `null` — подписать некому */
+      signer?: components["schemas"]["EdsPerson"] | null;
     };
     /** @description Параметры подписания документа уполномоченным лицом (SIGN-3, ADR-0024) */
     EdsDocumentSignIn: {

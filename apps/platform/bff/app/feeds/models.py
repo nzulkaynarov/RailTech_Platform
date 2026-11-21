@@ -52,6 +52,8 @@ QueueItemKind = Literal[
     "partner_date_change",
     "receive_goods",
     "partner_application",
+    "order_shortage",
+    "ship_project",
     "confirm_payment",
     "issue_invoice",
     "issue_contract",

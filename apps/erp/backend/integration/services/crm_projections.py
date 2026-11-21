@@ -104,13 +104,27 @@ def apply_client_snapshot(data: Mapping[str, Any]) -> Outcome:
         return _log(Outcome(SKIPPED_UNKNOWN_CLIENT, "клиент ещё не передан в ERP"), "client.updated", crm_client_id)
 
     state = _state(CrmProjectionKind.CLIENT, crm_client_id)
-    if state is not None and state.applied_at >= updated_at:
-        status = SKIPPED_NO_CHANGE if state.applied_at == updated_at else SKIPPED_STALE
+    if state is not None and state.applied_at > updated_at:
         return _log(
-            Outcome(status, f"применён снимок от {state.applied_at.isoformat()}"), "client.updated", crm_client_id
+            Outcome(SKIPPED_STALE, f"применён снимок от {state.applied_at.isoformat()}"),
+            "client.updated",
+            crm_client_id,
         )
 
+    # Снимок того же момента (переотправка CRM, `republish-clients`) не старее применённого: ответственного,
+    # который ERP раньше не хранила (СЦ-9), он дописывает; остальное у снимка то же.
     company: Company = mapping.company
+    owner_id = (snapshot.get("owner") or {}).get("crm_user_id")
+    owner_changed = mapping.owner_crm_user_id != owner_id
+    if owner_changed:
+        mapping.owner_crm_user_id = owner_id
+        mapping.save(update_fields=["owner_crm_user_id", "updated_at"])
+    if state is not None and state.applied_at == updated_at and not owner_changed:
+        return _log(
+            Outcome(SKIPPED_NO_CHANGE, f"применён снимок от {state.applied_at.isoformat()}"),
+            "client.updated",
+            crm_client_id,
+        )
     _remember(CrmProjectionKind.CLIENT, crm_client_id, updated_at)
     return _log(Outcome(APPLIED, f"компания #{company.pk}"), "client.updated", crm_client_id)
 

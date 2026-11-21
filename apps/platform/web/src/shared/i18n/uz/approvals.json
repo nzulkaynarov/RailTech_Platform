@@ -199,6 +199,7 @@
     "returnTitle": "Izoh",
     "reason": "Sabab, muallif ko'radi",
     "done": "Qaror saqlandi",
-    "failed": "Qarorni saqlab bo'lmadi"
+    "failed": "Qarorni saqlab bo'lmadi",
+    "failedReason": "Saqlanmadi: {{reason}}"
   }
 }

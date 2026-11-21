@@ -10,6 +10,7 @@ import {
 } from "../../../shared/api/generated/platform-bff";
 import { useFormat } from "../../../shared/lib/useFormat";
 import { useConfirmAction } from "../../../shared/ui/useConfirmAction";
+import { reasonText } from "../documents/errors";
 
 /** Документы ERP, ждущие подписи текущего сотрудника (SIGN-4): «Подписать» или «Отказать» с причиной. */
 export function SigningList() {
@@ -28,8 +29,8 @@ export function SigningList() {
         void list.refetch();
         void message.success(t("signing.done"));
       },
-      onError: () => {
-        void message.error(t("signing.failed"));
+      onError: (failure) => {
+        void message.error(t("signing.failedReason", { reason: reasonText(t, failure) }));
       },
     },
   });

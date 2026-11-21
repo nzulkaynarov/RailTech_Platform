@@ -489,6 +489,7 @@
       "created": "Created",
       "source": "Source",
       "deal": "Project",
+      "manager": "Handled by",
       "quotes": "Quotes for this request",
       "linesTitle": "Requested items",
       "attachmentsTitle": "Attachments",

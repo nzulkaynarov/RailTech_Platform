@@ -2578,6 +2578,8 @@ export interface components {
             source?: "crm" | "cabinet" | "erp";
             /** @description Сделка, в которую вырос запрос (Q-16); `null`, пока запрос не стал сделкой */
             deal?: components["schemas"]["DealRef"] | null;
+            /** @description Кто ведёт заявку: ответственный за клиента в CRM, которого ERP ставит заявке при создании (иначе ответственный по сделке); null — ещё не назначен (СЦ-9, аддитивно) */
+            manager_name?: string | null;
             /** Format: date-time */
             created_at: string;
             lines?: components["schemas"]["RequestLineIn"][];

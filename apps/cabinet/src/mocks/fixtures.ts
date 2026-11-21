@@ -235,6 +235,7 @@ export const requests: Schemas["ClientRequest"][] = [
     status: "quoted",
     summary: "Подшипники 6205-2RS — 200 шт., ремни приводные SPZ 1250 — 40 шт.",
     source: "crm",
+    manager_name: "Дилноза Каримова",
     ...dealOf(42),
     created_at: "2026-09-28T10:15:00+05:00",
   },

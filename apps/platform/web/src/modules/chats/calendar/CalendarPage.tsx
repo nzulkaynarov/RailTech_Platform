@@ -55,6 +55,8 @@ const CATEGORY: Record<QueueItemKind, Category> = {
   partner_date_change: "deliveries",
   receive_goods: "deliveries",
   partner_application: "tasks",
+  order_shortage: "deliveries",
+  ship_project: "deliveries",
 };
 
 function toEvent(item: QueueItem): EventInput[] {

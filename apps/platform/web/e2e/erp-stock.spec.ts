@@ -211,6 +211,41 @@ test.describe("Склад и закупки: снабженец", () => {
     await expectNoViolations(page, "карточка просроченного заказа");
   });
 
+  test("СЦ-9: строки снабжения по проекту в «Моих задачах» открывают экраны с предзаполнением", async ({
+    page,
+  }) => {
+    const project = "ПР-2026-099";
+    const dir = process.env["E2E_SCREENSHOT_DIR"];
+    await loginAndWait(page, "supply@demo.example");
+    for (const width of [1440, 390]) {
+      await page.setViewportSize({ width, height: 900 });
+      await expect(
+        page.getByRole("link", { name: new RegExp(`Заказать недостающее по ${project}`) }),
+      ).toBeVisible();
+      await expect(
+        page.getByRole("link", { name: new RegExp(`Отгрузить товар по ${project}`) }),
+      ).toBeVisible();
+      if (dir) await page.screenshot({ path: `${dir}/queue-${String(width)}.png`, fullPage: true });
+      await expectNoViolations(page, `Задачи снабженца, ${String(width)} px`);
+    }
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page
+      .getByRole("link", { name: new RegExp(`Заказать недостающее по ${project}`) })
+      .click();
+    await expect(page).toHaveURL(/\/erp\/stock\/new\?mode=shortage&request=/);
+    await expect(page.getByRole("radio", { name: "На дефицит заявки" })).toBeChecked();
+    await expect(page.getByRole("textbox", { name: "Номер заявки или проекта" })).toHaveValue(
+      project,
+    );
+    await spaGoto(page, "/dashboard/queue");
+    await page.getByRole("link", { name: new RegExp(`Отгрузить товар по ${project}`) }).click();
+    await expect(page).toHaveURL(/view=shipments&request=/);
+    await expect(page.getByRole("searchbox", { name: "Номер проекта" })).toHaveValue(project);
+    await expect(
+      page.getByRole("spinbutton", { name: /Отгрузить, «Скрепление рельсовое КБ-65»/ }),
+    ).toBeVisible();
+  });
+
   test("роли: менеджер читает склад без действий; администратору раздел «Склад» не положен", async ({
     page,
   }) => {

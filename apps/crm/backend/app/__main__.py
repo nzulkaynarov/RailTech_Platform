@@ -12,6 +12,7 @@
 - `sample-dialogs` — выгрузка диалогов для еженедельной разметки (YAML в stdout);
 - `create-admin --email ...` — первый администратор CRM;
 - `republish-identity [--user-id N] [--dry-run]` — снимки сотрудников на шину для новых подписчиков;
+- `republish-clients [--client-id N] [--dry-run]` — снимки клиентов (`client.updated`) на шину;
 - `republish-ai-policy` — политика защиты данных для ИИ на шину заново (воркер делает сам);
 - `renumber-latin MAPPING [--apply]` — копии номеров CRM в латиницу по маппингу (СЦ-5);
 - `reprovision-erp` — права ERP заново всем с доступом к ERP (запасной путь к отпечатку каталога);
@@ -150,6 +151,15 @@ def _parser() -> argparse.ArgumentParser:
     republish.add_argument(
         "--dry-run", action="store_true", help="только посчитать, не публиковать"
     )
+    republish_clients = commands.add_parser(
+        "republish-clients", help="переопубликовать снимки клиентов (client.updated) на шину"
+    )
+    republish_clients.add_argument(
+        "--client-id", type=int, help="только этот клиент (по умолчанию — все)"
+    )
+    republish_clients.add_argument(
+        "--dry-run", action="store_true", help="только посчитать, не публиковать"
+    )
     commands.add_parser(
         "republish-ai-policy", help="переопубликовать политику защиты данных для ИИ на шину"
     )
@@ -215,6 +225,10 @@ async def _run_cli(args: argparse.Namespace) -> int:
         from app.cli import republish_identity
 
         return await republish_identity.run(args)
+    if args.command == "republish-clients":
+        from app.cli import republish_clients
+
+        return await republish_clients.run(args)
     if args.command == "republish-ai-policy":
         from app.cli import republish_ai_policy
 

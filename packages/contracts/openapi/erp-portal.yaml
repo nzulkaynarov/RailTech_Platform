@@ -5351,6 +5351,11 @@ components:
           oneOf:
             - $ref: '#/components/schemas/DealRef'
             - type: 'null'
+        manager_name:
+          type: [string, 'null']
+          description: >-
+            Кто ведёт заявку: ответственный за клиента в CRM, которого ERP ставит заявке при создании (иначе ответственный по
+            сделке); null — ещё не назначен (СЦ-9, аддитивно)
         created_at:
           type: string
           format: date-time

@@ -389,3 +389,47 @@ def test_unknown_fields_do_not_reach_the_deal(portal_client):
     assert response.status_code == 201
     deal = Deal.objects.get()
     assert deal.stage.code == "DRAFT" and deal.company_id != 999
+
+
+# ── Кто ведёт заявку (СЦ-9, решение владельца 2026-11-21 (4)): ответственный за клиента в CRM ───────────
+
+
+@pytest.fixture
+def crm_owner(db):
+    from django.contrib.auth import get_user_model
+    from integration.models import CrmUserMapping
+
+    user = get_user_model().objects.create_user(
+        username="owner@erp.uz", email="owner@erp.uz", password="x", first_name="Дилноза", last_name="Каримова"
+    )
+    CrmUserMapping.objects.create(crm_user_id=77, user=user)
+    return user
+
+
+def test_request_is_led_by_the_crm_owner_of_the_client(portal_client, mapped, crm_owner):
+    mapped.owner_crm_user_id = 77
+    mapped.save()
+    created = post(portal_client).json()
+
+    assert Deal.objects.get(pk=created["id"]).manager_id == crm_owner.pk
+    assert created["manager_name"] == "Дилноза Каримова"
+    assert portal_client.get(f"{URL}/{created['id']}").json()["manager_name"] == "Дилноза Каримова"
+    assert [r["manager_name"] for r in portal_client.get(URL).json()] == ["Дилноза Каримова"]
+    # уведомление CRM уходит тому же человеку: менеджер события — он
+    assert bus_support.only("request.created")["data"]["payload"]["manager_crm_user_id"] == 77
+
+
+def test_request_without_a_known_owner_has_no_manager_name(portal_client, mapped):
+    created = post(portal_client).json()
+    assert created["manager_name"] is None
+    assert Deal.objects.get(pk=created["id"]).manager_id is None
+    assert not check_response(created, component("ClientRequest"))
+
+
+def test_inactive_manager_is_not_named_to_the_client(portal_client, mapped, crm_owner):
+    mapped.owner_crm_user_id = 77
+    mapped.save()
+    created = post(portal_client).json()
+    crm_owner.is_active = False
+    crm_owner.save()
+    assert portal_client.get(f"{URL}/{created['id']}").json()["manager_name"] is None

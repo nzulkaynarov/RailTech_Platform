@@ -185,8 +185,11 @@ test.describe("EDS-REPLY-1: ответ на входящее", () => {
     await expect(card.getByText("В ответ на", { exact: true })).toBeVisible();
     await expect(card.getByRole("link", { name: new RegExp(NUMBER) })).toBeVisible();
     await both(page, "outgoing-draft-reply-to");
-    await card.getByRole("button", { name: "Зарегистрировать и отправить" }).click();
-    await expect(page.getByText(/Письмо зарегистрировано: OUT-\d{3}\/26/)).toBeVisible();
+    // Регистрации без подписи нет (решение 2026-11-21 (3)): номер — при подписании.
+    await expect(card.getByRole("button", { name: /Зарегистрировать/ })).toHaveCount(0);
+    await card.getByRole("button", { name: "Подписать", exact: true }).click();
+    await page.getByRole("button", { name: "Подписать письмо" }).click();
+    await expect(page.getByText(/Письмо подписано: OUT-\d{3}\/26/)).toBeVisible();
     const log = card.getByRole("list", { name: "Журнал отправки" });
     await expect(log.getByRole("listitem").filter({ hasText: "Отправлено" })).toBeVisible({
       timeout: 30_000,
@@ -229,7 +232,8 @@ test.describe("EDS-REPLY-1: ответ на входящее", () => {
       .getByRole("link", { name: /^Открыть:/ })
       .click();
     const card = side(page);
-    await card.getByRole("button", { name: "Зарегистрировать и отправить" }).click();
+    await card.getByRole("button", { name: "Подписать", exact: true }).click();
+    await page.getByRole("button", { name: "Подписать письмо" }).click();
     await expect(
       card.getByText("Не отправлено: Почта не настроена — Настройки · Подключения · Почта"),
     ).toBeVisible({ timeout: 30_000 });
