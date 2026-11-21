@@ -119,6 +119,33 @@ async def admin_user_ids(session: AsyncSession) -> list[int]:
     return list((await session.scalars(stmt)).all())
 
 
+async def client_holder_user_ids(session: AsyncSession) -> list[int]:
+    """Активные сотрудники с полным доступом к `crm.clients` (администраторы не в счёт)."""
+    stmt = (
+        select(User.id)
+        .join(UserPlatformRole, UserPlatformRole.user_id == User.id)
+        .join(PlatformRole, PlatformRole.id == UserPlatformRole.role_id)
+        .where(User.is_active.is_(True), PlatformRole.access["crm.clients"].astext == "full")
+        .distinct()
+        .order_by(User.id)
+    )
+    return list((await session.scalars(stmt)).all())
+
+
+async def active_user_ids(session: AsyncSession, user_ids: list[int]) -> list[int]:
+    """Из `user_ids` — только активные пользователи, в исходном порядке."""
+    if not user_ids:
+        return []
+    active = set(
+        (
+            await session.scalars(
+                select(User.id).where(User.id.in_(user_ids), User.is_active.is_(True))
+            )
+        ).all()
+    )
+    return [uid for uid in user_ids if uid in active]
+
+
 class StaffTicketService:
     def __init__(
         self,
@@ -514,5 +541,7 @@ __all__: Sequence[str] = (
     "TicketDetail",
     "TicketPage",
     "TicketRow",
+    "active_user_ids",
     "admin_user_ids",
+    "client_holder_user_ids",
 )
