@@ -182,6 +182,9 @@ def test_clients_full_brings_only_the_own_file_upload() -> None:
         ("/api/v1/files", "post"),
         ("/api/v1/files/{file_id}", "get"),
         ("/api/v1/files/{file_id}/versions", "get"),
+        # СЦ-6: записка о звонке — основание заявки, тот же собственный файл сотрудника
+        ("/api/v1/call-notes", "post"),
+        ("/api/v1/call-notes/{note_id}", "get"),
     }
     for r in CATALOG["resources"]:
         if r["key"] != "crm.clients":

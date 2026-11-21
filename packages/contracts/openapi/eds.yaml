@@ -2923,6 +2923,63 @@ paths:
         '422':
           $ref: '#/components/responses/ValidationFailed'
 
+  /api/v1/call-notes:
+    post:
+      tags: [files]
+      operationId: createCallNote
+      summary: Записка о звонке (основание заявки по звонку)
+      description: |
+        Одностраничный PDF «Кто звонил / Что просил» на бланке компании (макет `internal`, итоговый, без «ПРОЕКТ»): рендер идёт в
+        воркере (очередь `renders`), поэтому ответ 202; готовый PDF становится файлом вызывающего сотрудника — тем, что он
+        прикрепляет к письму по заявке (`letter_file_id`). Идемпотентно по `(request_key, сотрудник)`: повтор с тем же ключом
+        отдаёт тот же файл (первое содержимое остаётся), новый ключ — новая записка. Лид — готовая строка вида `L-0001`,
+        без лида записка «составлена по звонку». Язык записки — `lang`. Нет бланка — 409 `letterhead_missing` (форма просит
+        приложить файл). Прогресс — `getCallNote`; неудавшийся рендер повторяется тем же запросом.
+      x-rt-permissions: [letters.register, letters.resolve, memos.create, memos.approve, approvals.decide, files.upload]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/CallNoteIn'}
+      responses:
+        '202':
+          description: Записка строится или уже готова (`status`, `file`)
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/CallNote'}
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+
+  /api/v1/call-notes/{note_id}:
+    get:
+      tags: [files]
+      operationId: getCallNote
+      summary: Состояние записки о звонке
+      description: |
+        Готова (`ready`) — `file` — `FileRef` непривязанного файла автора; строится (`pending`) или не удалась (`failed`, текст
+        в `error`). Чужая и неизвестная записка — 404.
+      x-rt-permissions: [letters.register, letters.resolve, memos.create, memos.approve, approvals.decide, files.upload]
+      parameters:
+        - {name: note_id, in: path, required: true, schema: {$ref: '#/components/schemas/Uuid'}}
+      responses:
+        '200':
+          description: Состояние
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/CallNote'}
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /api/v1/files/{file_id}:
     get:
       tags: [files]
@@ -5719,6 +5776,43 @@ components:
       required: [body]
       properties:
         body: {$ref: '#/components/schemas/DocumentBody'}
+    CallNoteIn:
+      type: object
+      additionalProperties: false
+      required: [request_key, caller_name, called_at, lang]
+      properties:
+        request_key:
+          type: string
+          minLength: 8
+          maxLength: 128
+          description: Ключ формы заявки; с сотрудником даёт идентификатор файла записки
+        lead:
+          type: [string, 'null']
+          maxLength: 32
+          description: Номер лида как есть (например `L-0001`); нет — записка составлена по звонку без лида
+        caller_name: {type: string, minLength: 1, maxLength: 200}
+        company: {type: [string, 'null'], maxLength: 200}
+        phone: {type: [string, 'null'], maxLength: 64}
+        email: {type: [string, 'null'], maxLength: 200}
+        called_at: {type: string, format: date-time}
+        taken_by:
+          type: [string, 'null']
+          maxLength: 200
+          description: Кто принял звонок; пусто — вызывающий сотрудник
+        need: {type: [string, 'null'], maxLength: 4000, description: Что просил клиент}
+        lang: {type: string, enum: [ru, uz, en]}
+    CallNote:
+      type: object
+      additionalProperties: false
+      required: [id, status, error, file]
+      properties:
+        id: {$ref: '#/components/schemas/Uuid'}
+        status: {type: string, enum: [pending, ready, failed]}
+        error: {type: [string, 'null']}
+        file:
+          oneOf:
+            - {$ref: '#/components/schemas/FileRef'}
+            - {type: 'null'}
     TemplatePreview:
       type: object
       additionalProperties: false
