@@ -209,6 +209,14 @@ class DocumentPage(BaseModel):
     next_cursor: str | None
 
 
+class DocumentSigning(BaseModel):
+    """Подпись черновика письма глазами спросившего: может ли он подписать, почему нет и кто подпишет (СЦ-9)."""
+
+    can_sign: bool
+    reason: str | None
+    signer: PersonRef | None
+
+
 class Document(BaseModel):
     id: uuid.UUID
     kind: DocumentKind
@@ -248,3 +256,4 @@ class Document(BaseModel):
     verification_code: str | None = None
     verification_url: str | None = None
     dispatch_method: Literal["email", "paper", "courier", "edo", "other"] | None = None
+    signing: DocumentSigning | None = None

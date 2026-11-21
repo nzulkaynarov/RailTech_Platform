@@ -26,7 +26,7 @@ from decimal import Decimal
 from sqlalchemy import any_, literal, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import Employee, SigningAuthority
+from app.models import Document, Employee, SigningAuthority
 from app.models.signing import BASIS_CHARTER, BASIS_ORDER, BASIS_POWER_OF_ATTORNEY
 from app.schemas.common import PersonRef
 from app.schemas.signing import (
@@ -392,6 +392,22 @@ async def check_signer(
     """Вправе ли именно этот сотрудник подписать: он среди кандидатов `resolve` (иначе — причина отказа)."""
     result = await resolve(session, kind=kind, amount=amount, currency=currency, on_date=on_date, kind_label=kind_label)
     return signer_check(result, crm_user_id)
+
+
+def pick_letter_signer(result: SigningResolution, author_crm_user_id: int | None) -> SignerCandidate | None:
+    """Кому достаётся подпись письма: первый кандидат, кто не автор (ADR-0024 п. 3), иначе первый, иначе никто."""
+    for item in result.candidates:
+        if item.signer.crm_user_id != author_crm_user_id:
+            return item
+    return result.candidates[0] if result.candidates else None
+
+
+async def letter_signer(session: AsyncSession, document: Document, today: date) -> SignerCandidate | None:
+    """Вычисленный подписант документа `document` на дату `today` (без миграции: по реестру полномочий на лету)."""
+    result = await resolve(
+        session, kind=document.kind, amount=document.amount, currency=document.currency, on_date=today
+    )
+    return pick_letter_signer(result, document.author_crm_user_id)
 
 
 def signer_check(result: SigningResolution, crm_user_id: int) -> SignerCheck:

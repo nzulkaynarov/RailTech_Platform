@@ -7,6 +7,7 @@ from fastapi import APIRouter, Body, Depends, Header, Query, Response
 from rt_bus.sqlalchemy import AsyncBus
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app import clock
 from app.api.deps import get_bus, get_session, require_permission
 from app.models import Employee
 from app.schemas.letters import (
@@ -332,6 +333,7 @@ async def decide_instruction_extension(
 async def list_my_letter_tasks(employee: Anyone, session: Session) -> LetterTasks:
     tasks = await instructions.my_tasks(session, crm_user_id=employee.crm_user_id)
     tasks.registrations = await reply.registration_tasks(session, employee)  # EDS-REPLY-1: «Зарегистрировать ИСХ»
+    tasks.signatures = await reply.signing_tasks(session, employee, clock.company_date(clock.now()))  # СЦ-9
     return tasks
 
 

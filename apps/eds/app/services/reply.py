@@ -12,8 +12,10 @@
 уведомлений не порождает — `letter` в событии обязателен (docs/QUESTIONS.md, Q-EDS-REPLY-1).
 """
 
+import datetime as dt
 import uuid
 from collections.abc import Iterable
+from decimal import Decimal
 
 from rt_bus.sqlalchemy import AsyncBus
 from sqlalchemy import any_, literal, select
@@ -27,9 +29,11 @@ from app.schemas.letters import (
     LetterReplyState,
     RegistrationTask,
     ReplyToLetter,
+    SignatureTask,
 )
+from app.schemas.signing import SignerCandidate, SigningResolution
 from app.security.permissions import EdsPermission as P
-from app.services import access, instructions
+from app.services import access, instructions, signing_resolve
 from app.services.people import load_directory
 
 REPLIES_LIMIT = 10
@@ -147,6 +151,53 @@ async def registration_tasks(session: AsyncSession, employee: Employee) -> list[
                 in_reply_to=await reply_to_ref(session, document.in_reply_to),
                 requested_by=directory.person(document.registration_requested_by),
                 requested_at=document.registration_requested_at,
+            )
+        )
+    return tasks
+
+
+async def signing_tasks(session: AsyncSession, employee: Employee, today: dt.date) -> list[SignatureTask]:
+    """«Подписать ИСХ»: переданные черновики, подписант которых по реестру — этот сотрудник (или он по замещению)."""
+    documents = list(
+        (
+            await session.execute(
+                select(Document)
+                .where(
+                    Document.kind == DocumentKind.LETTER_OUT.value,
+                    Document.status == DocumentStatus.DRAFT.value,
+                    Document.registration_requested_at.is_not(None),
+                )
+                .order_by(Document.registration_requested_at, Document.id)
+                .limit(TASKS_LIMIT)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    resolutions: dict[tuple[str, Decimal | None, str | None], SigningResolution] = {}
+    mine: list[tuple[Document, SignerCandidate]] = []
+    for document in documents:
+        key = (document.kind, document.amount, document.currency)
+        if key not in resolutions:
+            resolutions[key] = await signing_resolve.resolve(
+                session, kind=document.kind, amount=document.amount, currency=document.currency, on_date=today
+            )
+        signer = signing_resolve.pick_letter_signer(resolutions[key], document.author_crm_user_id)
+        if signer is not None and signer.signer.crm_user_id == employee.crm_user_id:
+            mine.append((document, signer))
+    directory = await load_directory(session, (d.registration_requested_by for d, _ in mine))
+    tasks: list[SignatureTask] = []
+    for document, signer in mine:
+        if document.registration_requested_by is None or document.registration_requested_at is None:
+            continue
+        tasks.append(
+            SignatureTask(
+                document_id=document.id,
+                subject=document.subject,
+                in_reply_to=await reply_to_ref(session, document.in_reply_to),
+                requested_by=directory.person(document.registration_requested_by),
+                requested_at=document.registration_requested_at,
+                acting_for=signer.acting_for[0] if signer.acting_for else None,
             )
         )
     return tasks

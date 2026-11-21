@@ -5656,11 +5656,43 @@ components:
         requested_at:
           type: string
           format: date-time
+    SignatureTask:
+      type: object
+      additionalProperties: false
+      required: [document_id, subject, in_reply_to, requested_by, requested_at, acting_for]
+      description: |
+        Переданный черновик ИСХ — задача вычисленному подписанту «Подписать» (СЦ-9). Подписант — первый по реестру
+        полномочий, кто не автор (иначе первый); при замещении строка у заместителя, `acting_for` — за кого.
+      properties:
+        document_id:
+          $ref: '#/components/schemas/Uuid'
+        subject:
+          type: string
+        in_reply_to:
+          oneOf:
+            - $ref: '#/components/schemas/ReplyToLetter'
+            - type: 'null'
+        requested_by:
+          $ref: '#/components/schemas/PersonRef'
+        requested_at:
+          type: string
+          format: date-time
+        acting_for:
+          oneOf:
+            - $ref: '#/components/schemas/PersonRef'
+            - type: 'null'
     LetterTasks:
       type: object
       additionalProperties: false
       required: [instructions, extensions, acquaintances]
       properties:
+        signatures:
+          type: array
+          items:
+            $ref: '#/components/schemas/SignatureTask'
+          description: |
+            Только вычисленному подписанту (СЦ-9): переданные черновики ИСХ, ждущие подписи. `registrations` по-прежнему
+            заполняется как раньше (потребитель переходит на `signatures` позже). Поля может не быть у старого ответа.
         registrations:
           type: array
           items:
@@ -6467,6 +6499,32 @@ components:
             - $ref: '#/components/schemas/DispatchMethod'
             - type: 'null'
           description: Способ отправки документа адресату
+        signing:
+          oneOf:
+            - $ref: '#/components/schemas/DocumentSigning'
+            - type: 'null'
+          description: |
+            Только у открытого черновика исходящего письма и только в ответах, где известен спросивший (СЦ-9):
+            может ли он подписать сейчас (та же проверка, что у `POST /documents/{id}/sign`).
+
+    DocumentSigning:
+      type: object
+      additionalProperties: false
+      required: [can_sign, reason, signer]
+      properties:
+        can_sign:
+          type: boolean
+        reason:
+          type: [string, 'null']
+          description: |
+            Код отказа, как `details.reason` у `sign`: `no_permission`, `invalid_state`, `no_authority`,
+            `author_cannot_sign`, `authority_mismatch`, `revoked`, `not_started`, `expired`, `limit_exceeded`,
+            `currency_mismatch`, `holder_inactive`, `absent`, `deputy_without_authority`, `deputy_loop`.
+        signer:
+          oneOf:
+            - $ref: '#/components/schemas/PersonRef'
+            - type: 'null'
+          description: Кто подпишет по реестру полномочий (первый, кто не автор); `null` — подписать некому
 
     ApprovalTemplate:
       type: string
