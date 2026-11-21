@@ -154,6 +154,7 @@
       "step3": "The document stays in the registry with your visa, date and comment."
     },
     "submit": "Approve",
+    "submitFor": "Approve for {{name}}",
     "return": "Return for rework",
     "reject": "Reject",
     "disabled": "You can return or reject only with a comment: the buttons are inactive while it is empty.",

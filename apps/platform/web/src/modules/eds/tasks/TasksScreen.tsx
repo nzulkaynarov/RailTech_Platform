@@ -1,4 +1,4 @@
-import { Button, Card, Skeleton } from "antd";
+import { Alert, Button, Card, Skeleton } from "antd";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -22,6 +22,7 @@ import { Attachments } from "../inbox/Parts";
 import { previewText } from "../mail/frameDoc";
 import { ClosedBanner } from "./LetterOutcomes";
 import { ReplyCard } from "./ReplyBlock";
+import { useActor } from "./actor";
 import { AcquaintAction, MyInstruction } from "./TaskActions";
 
 import "../inbox/inbox.css";
@@ -73,14 +74,16 @@ function LetterBody({ letter }: { letter: LetterCard }) {
 function Content({ letter }: { letter: LetterCard }) {
   const { t } = useTranslation("letters");
   const { me } = useAuth();
+  const actor = useActor();
   const { date } = useFormat();
   const mine = (letter.instructions ?? []).find(
-    (i) => i.person.id === me.id && i.status === "in_work",
+    (i) => i.person.id === actor.id && i.status === "in_work",
   );
+  // «Ознакомиться» — только за себя: замещение на ознакомление не распространяется
   const acquaint = (letter.acquaintances ?? []).find(
     (a) => a.person.id === me.id && !a.acknowledged_at,
   );
-  const author = letter.office_resolution?.decided_by.id === me.id;
+  const author = letter.office_resolution?.decided_by.id === actor.id;
   const waitsAuthor =
     author &&
     (letter.instructions ?? []).some((i) => i.extensions.some((e) => e.status === "pending"));
@@ -100,6 +103,9 @@ function Content({ letter }: { letter: LetterCard }) {
       />
       <div className="pf-letters-grid">
         <div className="pf-letters-main">
+          {actor.forName ? (
+            <Alert type="info" showIcon message={t("tasks.onBehalf", { name: actor.forName })} />
+          ) : null}
           <ClosedBanner letter={letter} />
           <LetterBody letter={letter} />
           {mine ? <MyInstruction letter={letter} instruction={mine} /> : null}

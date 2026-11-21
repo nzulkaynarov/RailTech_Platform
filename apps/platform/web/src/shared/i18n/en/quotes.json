@@ -321,6 +321,7 @@
       "unknown": "something went wrong, what you typed stays in the form"
     },
     "submitNoChannels": "Approve quote",
+    "submitFor": "Approve quote for {{name}}",
     "confirmVerb": "Approve"
   },
   "superseded": "Superseded by version {{version}}"

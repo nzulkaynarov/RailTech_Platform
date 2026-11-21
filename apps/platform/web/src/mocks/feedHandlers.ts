@@ -10,6 +10,7 @@ import {
   searchIndex,
 } from "./fixtures/feeds";
 import { reworkQueueItems } from "./edsRework";
+import { signingQueueItems } from "./edsSigning";
 import { registeredQueueItems } from "./edsLetters";
 import { letterNotificationsOf, letterTaskQueueItems, markLetterNoteRead } from "./edsInstructions";
 import { computeAccess, type MockRole } from "./fixtures/roles";
@@ -69,6 +70,7 @@ const EDS_KINDS: readonly QueueItem["kind"][] = [
   "instruction_extension",
   "acquaint",
   "register_reply",
+  "sign_document",
 ];
 
 const sources = (): Sources => ({
@@ -145,6 +147,7 @@ function ownQueue(view: readonly MockRole[]): QueueItem[] {
     ...supplyTaskQueueItems(view), // план 0.7: черновики заказов партнёрам (ERP `/stock/tasks/`)
     ...registeredQueueItems(view), // P8: входящие, зарегистрированные делопроизводителем
     ...letterTaskQueueItems(view), // P8b: поручения, переносы, ознакомления
+    ...signingQueueItems(view), // СЦ-9: подпись договора, счёта, акта на мне
     ...erpWorkQueueItems(view), // D2-8: расчёт, счета и платёжки, договор и акт (ERP)
     ...edsDecisionQueueItems(view), // D26G-4, D26G-9: КП на моём шаге и служебка к оплате (EDS)
     ...handOver, // D17G-1: разобрать лида, переданный лид
@@ -221,13 +224,19 @@ export const feedHandlers = [
     if (!roles) return expired();
     const denied = noQueue(roles);
     if (denied) return denied;
+    // Бейдж «Задачи» равен числу строк списка, включая «за {имя}» (замещение), как у BFF
+    const userId = sessionUserId();
+    const answerRole = ownQueue(roles.view).find((i) => i.kind === "answer_lead")?.role_id;
+    const coveredCount = userId && answerRole ? coveredQueueItems(userId, answerRole).length : 0;
     const tickets = ticketQueueItems(roles.view).length;
     const stockOverdue = stockQueueItems(roles.view).length;
     return HttpResponse.json({
       // ERP не отвечает: бейджи разделов ERP (EDS, ERP, «Все проекты») не показываются, остаются очередь и CRM
       items: [
         ...menuCountersFor(
-          ownQueue(roles.view).length + (edsDown() ? 0 : reworkQueueItems(roles.view).length),
+          ownQueue(roles.view).length +
+            (edsDown() ? 0 : reworkQueueItems(roles.view).length) +
+            coveredCount,
         )
           .filter((c) => !erpDown() || c.module === "crm" || c.section === "queue")
           .filter(

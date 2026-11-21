@@ -3,7 +3,7 @@ import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
-import { useAuth } from "../../../app/auth/useAuth";
+import { useActor } from "../tasks/actor";
 import type {
   LetterCard,
   LetterInstruction,
@@ -281,11 +281,11 @@ function InstructionItem({
 export function InstructionsCard({ letter }: { letter: LetterCard }) {
   const { t } = useTranslation("letters");
   const { date } = useFormat();
-  const { me } = useAuth();
+  const actor = useActor();
   const instructions = letter.instructions ?? [];
   const acquaintances = letter.acquaintances ?? [];
   if (instructions.length === 0 && acquaintances.length === 0) return null;
-  const author = letter.office_resolution?.decided_by.id === me.id;
+  const author = letter.office_resolution?.decided_by.id === actor.id;
   return (
     <Card
       size="small"

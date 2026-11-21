@@ -179,9 +179,11 @@ describe("EDS · Создать документ: форма", () => {
       await screen.findByText("Пусто — подписант бланка: Каримов А. А., Директор."),
     ).toBeVisible();
     step(/Проверка и отправка/);
-    expect(screen.getByRole("button", { name: "Зарегистрировать письмо" })).toBeVisible();
+    // СЦ-9: письмо на бланке не регистрируется без подписи — последний шаг «Передать на подпись» и у директора
+    expect(screen.getByRole("button", { name: "Передать на подпись" })).toBeVisible();
     type("Почта адресата", "gni@example.uz");
-    expect(screen.getByRole("button", { name: "Зарегистрировать и отправить" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Передать на подпись" })).toBeVisible();
+    expect(screen.queryByRole("button", { name: /Зарегистрировать/ })).toBeNull();
     expect(screen.queryByRole("button", { name: "Отправить на согласование" })).toBeNull();
     expect(screen.getByRole("region", { name: "PDF на бланке" })).toBeVisible();
   });
@@ -204,12 +206,12 @@ describe("EDS · Создать документ: форма", () => {
     await openForm("director@demo.example", "?type=letter");
 
     expect(
-      await screen.findByText(/Почта документооборота не подключена: письмо зарегистрируется/),
+      await screen.findByText(/Почта документооборота не подключена: письмо подпишется/),
     ).toBeVisible();
     type("Почта адресата", "gni@example.uz");
     step(/Проверка и отправка/);
-    expect(screen.getByRole("button", { name: "Зарегистрировать письмо" })).toBeVisible();
-    expect(screen.queryByRole("button", { name: "Зарегистрировать и отправить" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Передать на подпись" })).toBeVisible();
+    expect(screen.queryByRole("button", { name: /Зарегистрировать/ })).toBeNull();
   });
 
   it("помощник письма (план 1.4): «Подготовить текст» вставляет черновик, «Перевести на английский» — с обратным переводом", async () => {
@@ -243,25 +245,50 @@ describe("EDS · Создать документ: форма", () => {
     expect(screen.queryByRole("button", { name: "Перевести на английский" })).toBeNull();
   });
 
-  it("у роли без права регистрировать письмо готовит черновик и передаёт его на регистрацию (B-P8B-4)", async () => {
+  it("автор готовит черновик и передаёт его на подпись; письмо номера не получает (СЦ-9)", async () => {
     const { router } = await openForm("manager@demo.example", "?type=letter&reply_to=ВХ-112/26");
 
     expect(
-      screen.getByText("Письмо подготовите вы, зарегистрирует и отправит делопроизводитель."),
+      screen.getByText(
+        "Письмо подготовите вы, подпишет уполномоченный: номер и отправка — после подписи.",
+      ),
     ).toBeVisible();
     expect(screen.getByLabelText("В ответ на входящее")).toHaveValue("ВХ-112/26");
     type("Тема", "Ответ на требование");
     await pickAddressee();
     type("Текст", "Направляем пояснения.");
-    await press("Передать на регистрацию");
+    await press("Передать на подпись");
 
     await waitFor(() => {
       expect(router.state.location.pathname).toBe("/eds/documents");
     });
     const saved = readEds().documents.find((d) => d.subject === "Ответ на требование");
     expect(saved?.status).toBe("draft");
+    expect(saved?.number).toBeNull();
     expect(saved?.letter?.registration_requested).not.toBeNull();
     expect(saved?.replyTo).toBe("ВХ-112/26");
+  });
+
+  it("делопроизводитель и директор тоже передают письмо на подпись: «Зарегистрировать» у письма нет (СЦ-9)", async () => {
+    const { router } = await openForm("registrar@demo.example", "?type=letter");
+
+    expect(
+      screen.getByText(
+        "Письмо подготовите вы, подпишет уполномоченный: номер и отправка — после подписи.",
+      ),
+    ).toBeVisible();
+    type("Тема", "Запрос в банк");
+    await pickAddressee();
+    type("Текст", "Просим выслать выписку.");
+    await press("Передать на подпись");
+
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/eds/documents");
+    });
+    const saved = readEds().documents.find((d) => d.subject === "Запрос в банк");
+    expect(saved?.status).toBe("draft");
+    expect(saved?.number).toBeNull();
+    expect(saved?.letter?.registration_requested).not.toBeNull();
   });
 
   it("«Подготовить ответ»: форма заполнена из входящего — корреспондент, ИНН, почта, тема; можно поправить (EDS-REPLY-1)", async () => {
@@ -309,7 +336,7 @@ describe("EDS · Создать документ: форма", () => {
     fireEvent.change(within(sheet).getByLabelText("ИНН"), { target: { value: "300111222" } });
     fireEvent.click(within(sheet).getByRole("button", { name: "Завести" }));
     expect(await screen.findByText("ИНН 300111222")).toBeVisible();
-    await press("Передать на регистрацию");
+    await press("Передать на подпись");
     await waitFor(() => {
       expect(router.state.location.pathname).toBe("/eds/documents");
     });

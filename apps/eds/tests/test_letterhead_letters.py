@@ -18,6 +18,7 @@ from app.services.storage import TEST_STORAGE
 from tests.conftest import BUS_SECRET_CRM_EDS
 from tests.domain import Person, deliver_erp, outbox, validate
 from tests.helpers import example, signed
+from tests.signing import sign_out
 from tests.test_api_auth import assert_error
 from tests.test_letter_instructions import BANK, register, resolve
 
@@ -303,16 +304,23 @@ async def test_executor_hands_over_registrar_registers_closes_instruction_and_ma
     assert handed.status_code == 200, handed.text
     validate("Document", handed.json())
     assert handed.json()["letter"]["registration_requested"]["by"]["crm_user_id"] == 5
+    # С 2026-11-21 письмо не регистрируется без подписи ни автором, ни делопроизводителем.
     assert_error(
         await client.post(f"/api/v1/documents/{doc_id}/submit", headers=manager.headers),
         403,
         "FORBIDDEN",
         permission="letters.register",
     )
+    assert_error(
+        await client.post(f"/api/v1/documents/{doc_id}/submit", headers=registrar.headers),
+        409,
+        "CONFLICT",
+        reason="signature_required",
+    )
 
     seen = await client.get(f"/api/v1/documents/{doc_id}", headers=registrar.headers)
     assert seen.status_code == 200
-    registered = await client.post(f"/api/v1/documents/{doc_id}/submit", json={"send": True}, headers=registrar.headers)
+    registered = await sign_out(client, staff, doc_id, send=True)
     assert registered.status_code == 200, registered.text
     card = registered.json()
     validate("Document", card)
@@ -376,9 +384,9 @@ async def test_send_requires_email_and_registrar(
     letter = letter_json()
     letter["letter"]["recipient_email"] = None
     doc = (await client.post("/api/v1/documents", json=letter, headers=registrar.headers)).json()
-    no_mail = await client.post(f"/api/v1/documents/{doc['id']}/submit", json={"send": True}, headers=registrar.headers)
+    no_mail = await sign_out(client, staff, doc["id"], send=True)
     assert_error(no_mail, 422, "VALIDATION_FAILED")
-    plain = await client.post(f"/api/v1/documents/{doc['id']}/submit", headers=registrar.headers)
+    plain = await sign_out(client, staff, doc["id"])
     assert plain.status_code == 200 and plain.json()["letter"]["mailings"] == []
     assert_error(
         await client.post(f"/api/v1/documents/{doc['id']}/send", headers=staff["manager"].headers),
@@ -460,7 +468,7 @@ async def test_letter_without_pair_stays_in_outgoing_until_waived(
     created = await client.post("/api/v1/documents", json=letter_json(), headers=registrar.headers)
     assert created.status_code == 201, created.text
     doc_id = created.json()["id"]
-    sent = await client.post(f"/api/v1/documents/{doc_id}/submit", json={"send": True}, headers=registrar.headers)
+    sent = await sign_out(client, staff, doc_id, send=True)
     assert sent.status_code == 200, sent.text
     assert await run(container, StubRenderer(), deferred[-1]) == "ready"
 

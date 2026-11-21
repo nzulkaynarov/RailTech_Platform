@@ -1,13 +1,13 @@
 """Документы EDS: служебная записка, заявление, отчёт, исходящее письмо (SPEC-v3 §3.2; eds.yaml, тег `documents`).
 
 `memo`/`application`/`report`: номер (`СЗ|ЗЯ|ОТ-ГГГГ/NNN`) — при создании, `document.registered`; отправка открывает
-круг маршрута (`approval.requested`), после возврата версия растёт. `letter_out`: номер `ИСХ-NNN/ГГ` — при регистрации,
-затем архив.
+круг маршрута (`approval.requested`), после возврата версия растёт. `letter_out`: номер `ИСХ-NNN/ГГ` выдаёт только
+подписание (`sign`, в том числе бумажное: `dispatch_method=paper`), затем архив;
+`submit` без подписи — 409 `signature_required`.
 
 Письмо на бланке (P4): тело блоками (`letter`), PDF — фоновый рендер (`services/renders.py`), «Отправить адресату» —
 `services/letter_mail.py`. Черновик письма создаёт любой с `memos.create` (исполнитель «Подготовить ответ», B-P8B-4) и
-передаёт делопроизводителю (`request_registration`); регистрирует только `letters.register` — автор или, если черновик
-передан, любой держатель права.
+передаёт на подпись (`request_registration`); подписывает вычисленный подписант (`services/signing`).
 """
 
 import secrets
@@ -74,7 +74,7 @@ APPROVER = "Согласующий"
 
 
 def required_permission(kind: DocumentKind) -> P:
-    """Отправка: `letter_out` регистрирует регистратор писем, остальное отправляет любой с `memos.create`."""
+    """Отправка: `letter_out` — держатель `letters.register` (номер даёт `sign`), прочее — любой с `memos.create`."""
     return P.LETTERS_REGISTER if kind is DocumentKind.LETTER_OUT else P.MEMOS_CREATE
 
 
@@ -252,7 +252,7 @@ async def _publish_signed(
 
 
 async def create(session: AsyncSession, bus: AsyncBus, *, employee: Employee, data: DocumentCreate) -> Document:
-    """Черновик документа. `memo`/`application`/`report` получают номер сразу, `letter_out` — при отправке."""
+    """Черновик документа. `memo`/`application`/`report` получают номер сразу, `letter_out` — в `sign`."""
     require_draft_permission(employee, data.kind)
     is_letter = data.kind is DocumentKind.LETTER_OUT
     if not is_letter and (data.recipient is not None or data.in_reply_to is not None or data.letter is not None):
@@ -371,15 +371,6 @@ async def update(
     return document
 
 
-def _may_register(employee: Employee, document: Document) -> bool:
-    """Чужое письмо регистрирует держатель `letters.register`, если автор передал черновик на регистрацию (B-P8B-4)."""
-    return (
-        document.kind == DocumentKind.LETTER_OUT.value
-        and document.registration_requested_at is not None
-        and access.has(employee, P.LETTERS_REGISTER)
-    )
-
-
 async def submit(
     session: AsyncSession,
     bus: AsyncBus,
@@ -389,37 +380,32 @@ async def submit(
     edits: DocumentSubmitIn | None,
     storage: ObjectStorage | None = None,
 ) -> Document:
-    """Отправить на согласование (или зарегистрировать исходящее письмо). Автор (письмо — ещё делопроизводитель, если
-    черновик передан на регистрацию); другой статус — 409 `invalid_state`."""
+    """Отправить на согласование служебный документ (автор). Исходящее письмо так не регистрируется и не уходит: номер
+    и отправка — только в `sign()` (решение владельца 2026-11-21 (3)), иначе 409 `signature_required`; другой статус —
+    409 `invalid_state`."""
     document = await get_for_update(session, document_id)
     if not await access.can_view_document(session, employee, document.id):
         raise not_found("Документ не найден.")
     kind = DocumentKind(document.kind)
     require_kind_permission(employee, kind)
-    if document.author_crm_user_id != employee.crm_user_id and not _may_register(employee, document):
-        raise forbidden_reason("not_author", "Отправить документ может только его автор.")
     allowed = {DocumentStatus.DRAFT.value} if kind is DocumentKind.LETTER_OUT else {"draft", "returned"}
     if document.status not in allowed:
         raise conflict("invalid_state", "Документ нельзя отправить в текущем статусе.", status=document.status)
+    if kind is DocumentKind.LETTER_OUT:
+        raise conflict(
+            "signature_required",
+            "Исходящее письмо регистрируется и отправляется только после подписи: нажмите «Подписать».",
+            status=document.status,
+        )
+    if document.author_crm_user_id != employee.crm_user_id:
+        raise forbidden_reason("not_author", "Отправить документ может только его автор.")
     changes = edits or DocumentSubmitIn()
     _check_amount(changes.amount)
     _apply_edits(document, changes)
-    if kind is not DocumentKind.LETTER_OUT:
-        await _apply_route_people(session, document, changes)
+    await _apply_route_people(session, document, changes)
     if changes.file_ids:
         await files.attach(session, changes.file_ids, actor_id=employee.crm_user_id, document_id=document.id)
-    if kind is DocumentKind.LETTER_OUT:
-        if changes.send and not (document.recipient_email and document.body is not None):
-            raise invalid_fields("Укажите почту адресата и текст письма на бланке.", recipient_email="required")
-        await _send_letter(session, bus, document, employee)
-        if document.body is not None:
-            render = await renders.request(session, document)
-            if changes.send:
-                await letter_mail.start(
-                    session, bus, _storage(storage), document=document, render=render, actor_id=employee.crm_user_id
-                )
-    else:
-        await _open_approval(session, bus, document, employee, kind)
+    await _open_approval(session, bus, document, employee, kind)
     return document
 
 
@@ -627,13 +613,11 @@ async def request_registration(
         await journal.record(
             session, "document.registration_requested", by=employee.crm_user_id, document_id=document.id
         )
-        told = await reply.notify_registration_requested(session, bus, document, actor_id=employee.crm_user_id)
         await document_notices.letter_handed_over(
             session,
             bus,
             document,
             today=clock.company_date(now),
-            already_told=told,
             actor_id=employee.crm_user_id,
         )
     return document
@@ -666,18 +650,6 @@ async def waive_mail(session: AsyncSession, *, employee: Employee, document_id: 
         document.mail_waived_at, document.mail_waived_by = clock.now(), employee.crm_user_id
         await journal.record(session, "document.mail_waived", by=employee.crm_user_id, document_id=document.id)
     return document
-
-
-async def _send_letter(session: AsyncSession, bus: AsyncBus, document: Document, employee: Employee) -> None:
-    now = clock.now()
-    document.number = await numbering.allocate(session, numbering.NumberKind.OUTGOING, now)
-    document.status, document.updated_at, document.registered_at = DocumentStatus.SENT.value, now, now
-    await journal.record(session, "document.sent", by=employee.crm_user_id, document_id=document.id)
-    await _publish_registered(session, bus, document, registered_at=now, actor_id=employee.crm_user_id)
-    await document_state.archive(session, bus, document, actor_id=employee.crm_user_id, reason=document.status)
-    # P8b: ИСХ «в ответ на ВХ» закрывает поручения «Подготовить ответ» этого письма (тот же хук — письмо на бланке P4).
-    closed = await instructions.close_by_outgoing(session, bus, document=document, actor_id=employee.crm_user_id)
-    await reply.notify_registered(session, bus, document, closed_executors=closed, actor_id=employee.crm_user_id)
 
 
 async def _apply_route_people(session: AsyncSession, document: Document, changes: DocumentSubmitIn) -> None:

@@ -29,7 +29,7 @@ test.describe("Задачи", () => {
     page,
   }) => {
     await loginAndWait(page, "director@demo.example");
-    await expect(page.getByRole("main").getByText(/^[^·]+ · 8 решений$/)).toBeVisible();
+    await expect(page.getByRole("main").getByText(/^[^·]+ · 10 решений$/)).toBeVisible();
     // Поток подключается вместе с каркасом: ждём, пока MSW примет соединение.
     await expect
       .poll(() => page.evaluate("window.__rtMockStreamCount?.() ?? 0"), { timeout: 5_000 })
@@ -57,7 +57,7 @@ test.describe("Задачи", () => {
     const main = page.getByRole("main");
 
     // D26G-4: «Одобрить КП» — все четыре КП на шаге директора в «КП на одобрение» (EDS)
-    await expect(main.getByText(/^[^·]+ · 8 решений$/)).toBeVisible();
+    await expect(main.getByText(/^[^·]+ · 10 решений$/)).toBeVisible();
     const cards = main.getByRole("region", { name: "Счётчики очереди" }).getByRole("link");
     await expect(cards).toHaveCount(4);
     await expect(cards.nth(0)).toContainText("Входящие без резолюции");
@@ -66,7 +66,7 @@ test.describe("Задачи", () => {
     const queue = main.getByRole("region", { name: "Что сделать сейчас" });
     const rows = queue.getByRole("listitem");
     // D2-8: в очереди директора только решения — строк исполнения ERP нет
-    await expect(rows).toHaveCount(8);
+    await expect(rows).toHaveCount(10);
     // D2-2: просроченный заказ партнёру (erp.stock: полный) — первым
     await expect(rows.nth(0)).toContainText("Просрочен заказ");
     await expect(rows.nth(1)).toContainText("срок сегодня");
@@ -74,7 +74,9 @@ test.describe("Задачи", () => {
     // P8: требование ГНК, зарегистрированное делопроизводителем
     await expect(rows.nth(2)).toContainText("Наложить резолюцию на письмо ВХ-108/26");
     await expect(rows.nth(3)).toContainText("служебка");
-    await expect(rows.nth(4)).toContainText("Одобрить КП-2026/115");
+    await expect(rows.filter({ hasText: "Одобрить КП-2026/115" })).toHaveCount(1);
+    // СЦ-9: подпись договора и счёта на мне — строки «Подписать …»
+    await expect(rows.filter({ hasText: /^.*Подписать (договор|счёт) / })).toHaveCount(2);
     await expect(cards.nth(1)).toContainText("КП на одобрение");
     await expect(cards.nth(1)).toContainText("4");
 

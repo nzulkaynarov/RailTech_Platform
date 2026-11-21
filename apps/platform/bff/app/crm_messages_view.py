@@ -220,10 +220,12 @@ def thread_message(
     delivery = state if state in ("sending", "unconfirmed") else None
     if author == "lead":
         name = message.author_name  # контакт клиента, написавший в кабинете (CHAT-1)
+    behalf = message.meta.get("on_behalf_of_user_id") if author == "manager" else None
     return ThreadMessage(
         id=message.id,
         author=author,
         author_name=name if author in ("manager", "lead") else None,
+        on_behalf_of_name=names.get(behalf) if isinstance(behalf, int) else None,
         text=message.text,
         created_at=message.created_at,
         attachments=attachments(number, message.id, list(message.attachments)),

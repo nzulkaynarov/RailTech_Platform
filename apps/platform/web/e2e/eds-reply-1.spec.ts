@@ -5,8 +5,8 @@ import { loginAndWait, openAvatarMenu, reveal, spaGoto, waitForMotionEnd } from 
 import { addAddressee, chooseOption, fillDate, openStep, pickFiles } from "./support/fields";
 
 // EDS-REPLY-1 «Ответ на входящее» на MSW: требование ГНК → поручение «Подготовить ответ» исполнителю без права регистрировать →
-// «Подготовить ответ» (форма заполнена из входящего) → «Передать на регистрацию» → у делопроизводителя задача «Зарегистрировать
-// ИСХ» и уведомление → «Зарегистрировать и отправить» → поручение исполнено, ВХ «Исполнено», исполнителю уведомление, связь
+// «Подготовить ответ» (форма заполнена из входящего) → «Передать на подпись» → у подписанта (директор) задача «Подписать
+// исходящее» и уведомление → «Подписать» (номер — при подписании) → поручение исполнено, ВХ «Исполнено», исполнителю уведомление, связь
 // видна с обеих сторон. Второй сценарий: письмо не ушло — метка «Не отправлено», уведомления, «Отправить ещё раз».
 // Снимки 1440 и 390 с axe — E2E_SCREENSHOT_DIR (docs/screens/EDS-REPLY-1).
 const WIDE = 1440;
@@ -115,7 +115,7 @@ async function incomingWithReplyInstruction(page: Page): Promise<void> {
   await expect(page.getByText("Резолюция наложена: поручение ушло исполнителям")).toBeVisible();
 }
 
-/** Исполнитель: «Подготовить ответ» → форма заполнена из входящего → текст → «Передать на регистрацию». */
+/** Исполнитель: «Подготовить ответ» → форма заполнена из входящего → текст → «Передать на подпись». */
 async function executorHandsOver(page: Page, email: string, screens: boolean): Promise<void> {
   await switchTo(page, "universal@demo.example");
   await queueRow(page, `Подготовить ответ на письмо ${NUMBER}`)
@@ -146,14 +146,14 @@ async function executorHandsOver(page: Page, email: string, screens: boolean): P
     "На требование № 14-02/3381 сообщаем: расхождения вызваны поступлением счетов-фактур после отчётной даты.",
   );
   await openStep(page, "Проверка и отправка");
-  await page.getByRole("button", { name: "Передать на регистрацию" }).click();
-  await expect(page.getByText("Передано на регистрацию делопроизводителю.")).toBeVisible();
+  await page.getByRole("button", { name: "Передать на подпись" }).click();
+  await expect(page.getByText("Передано на подпись.")).toBeVisible();
 
   // На рабочем экране поручения: ответ передан, второго «Ответить» нет.
   await spaGoto(page, `/eds/tasks/${encodeURIComponent(NUMBER)}`);
   const block = page.getByRole("heading", { level: 2, name: "Ответ на письмо" });
   await expect(block).toBeVisible();
-  await expect(page.getByText("Черновик передан на регистрацию делопроизводителю.")).toBeVisible();
+  await expect(page.getByText("Черновик передан на подпись.")).toBeVisible();
   await expect(page.getByRole("link", { name: "Ответить" })).toHaveCount(0);
   if (screens) await both(page, "task-reply-handed");
 }
@@ -161,26 +161,27 @@ async function executorHandsOver(page: Page, email: string, screens: boolean): P
 test.describe("EDS-REPLY-1: ответ на входящее", () => {
   test.skip(({ isMobile }) => isMobile, "ширины задаёт сам сценарий");
 
-  test("поручение → «Подготовить ответ» → «Передать на регистрацию» → задача делопроизводителю → ИСХ → поручение исполнено", async ({
+  test("поручение → «Подготовить ответ» → «Передать на подпись» → задача подписанту → ИСХ → поручение исполнено", async ({
     page,
   }) => {
     test.setTimeout(240_000);
     await incomingWithReplyInstruction(page);
     await executorHandsOver(page, "gni-mirabad@example.uz", true);
 
-    // Делопроизводитель: уведомление и строка «Зарегистрировать исходящее» в «Моих задачах».
-    await switchTo(page, "registrar@demo.example");
-    const row = queueRow(page, `Зарегистрировать исходящее: ответ на ${NUMBER}`);
+    // Подписант (по реестру — директор): уведомление и строка «Подписать исходящее» в «Моих задачах»; «Зарегистрировать» нет.
+    await switchTo(page, "director@demo.example");
+    const row = queueRow(page, `Подписать исходящее: ответ на ${NUMBER}`);
     await expect(row).toBeVisible();
-    await both(page, "queue-register-reply");
+    await expect(queueRow(page, "Зарегистрировать исходящее")).toHaveCount(0);
+    await both(page, "queue-sign-reply");
     await spaGoto(page, "/dashboard/queue?panel=open&tab=notifications");
-    await expect(page.getByText(`Зарегистрируйте ответ на ${NUMBER}`).first()).toBeVisible();
+    await expect(page.getByText(`Подпишите ответ на ${NUMBER}`).first()).toBeVisible();
     await spaGoto(page, "/dashboard/queue");
-    await queueRow(page, "Зарегистрировать исходящее")
+    await queueRow(page, "Подписать исходящее")
       .getByRole("link", { name: /^Открыть:/ })
       .click();
     const card = side(page);
-    await expect(card.getByText(/Передано на регистрацию: Демо Широков/)).toBeVisible();
+    await expect(card.getByText(/Передано на подпись: Демо Широков/)).toBeVisible();
     // Связь видна из ИСХ: «В ответ на IN-109/26» со ссылкой.
     await expect(card.getByText("В ответ на", { exact: true })).toBeVisible();
     await expect(card.getByRole("link", { name: new RegExp(NUMBER) })).toBeVisible();
@@ -196,13 +197,13 @@ test.describe("EDS-REPLY-1: ответ на входящее", () => {
     });
     // Задача ушла сама.
     await spaGoto(page, "/dashboard/queue");
-    await expect(queueRow(page, "Зарегистрировать исходящее")).toHaveCount(0);
+    await expect(queueRow(page, "Подписать исходящее")).toHaveCount(0);
 
     // Исполнитель: уведомление о регистрации, поручение исполнено, ответ виден в блоке «Ответ на письмо».
     await switchTo(page, "universal@demo.example");
     await expect(queueRow(page, `Подготовить ответ на письмо ${NUMBER}`)).toHaveCount(0);
     await spaGoto(page, "/dashboard/queue?panel=open&tab=notifications");
-    await expect(page.getByText(/Ответ зарегистрирован: OUT-\d{3}\/26/).first()).toBeVisible();
+    await expect(page.getByText(/Ответ подписан: OUT-\d{3}\/26/).first()).toBeVisible();
     await spaGoto(page, `/eds/tasks/${encodeURIComponent(NUMBER)}`);
     await expect(page.getByText(/OUT-\d{3}\/26 отправлен адресату\./)).toBeVisible();
     await expect(page.getByRole("form", { name: "Отметить исполнение" })).toHaveCount(0);
@@ -227,8 +228,8 @@ test.describe("EDS-REPLY-1: ответ на входящее", () => {
     await incomingWithReplyInstruction(page);
     await executorHandsOver(page, "office@nosmtp.example", false);
 
-    await switchTo(page, "registrar@demo.example");
-    await queueRow(page, "Зарегистрировать исходящее")
+    await switchTo(page, "director@demo.example");
+    await queueRow(page, "Подписать исходящее")
       .getByRole("link", { name: /^Открыть:/ })
       .click();
     const card = side(page);

@@ -281,7 +281,7 @@ test.describe("Создать документ: директор и реестр
     await expect(page.getByText("Заказ спецодежды для бригады")).toHaveCount(0);
   });
 
-  test("письмо: у директора есть адресат вместо «Кому», регистрация даёт статус «Зарегистрировано»", async ({
+  test("письмо: у директора есть адресат вместо «Кому», последний шаг — «Передать на подпись», номера до подписи нет", async ({
     page,
   }) => {
     await loginAndWait(page, "director@demo.example");
@@ -290,33 +290,34 @@ test.describe("Создать документ: директор и реестр
     await expect(page.getByLabel("Адресат (организация)")).toBeVisible();
     await expect(page.getByLabel("Сумма, сум")).toHaveCount(0);
     await pickAddressee(page, "Демо-Путь", "АО «Демо-Путь»");
-    // выбор подставил общую почту организации — здесь письмо только регистрируется
+    // выбор подставил общую почту организации — здесь письмо только готовится к подписи
     await page.getByLabel("Почта адресата").fill("");
     await fillMemo(page, "Ответ на запрос цен", "Направляем коммерческие условия.");
     await openStep(page, CHECK);
     await settledScreenshot(page, "letter-form");
-    await send(page, "Зарегистрировать письмо");
+    await expect(page.getByRole("button", { name: /Зарегистрировать/ })).toHaveCount(0);
+    await send(page, "Передать на подпись");
 
     const panel = side(page);
     await expect(
       panel.getByRole("heading", { level: 3, name: "Ответ на запрос цен" }),
     ).toBeVisible();
-    await expect(panel.getByText("Зарегистрировано")).toBeVisible();
-    await expect(panel.getByText(/OUT-082\/26/)).toBeVisible();
+    await expect(panel.getByText(/Передано на подпись/)).toBeVisible();
+    await expect(panel.getByText(/OUT-\d{3}\/26/)).toHaveCount(0);
     await expect(panel.getByText("АО «Демо-Путь»")).toBeVisible();
   });
 
-  test("менеджер без права регистрировать готовит письмо и передаёт на регистрацию (P4, B-P8B-4)", async ({
-    page,
-  }) => {
+  test("менеджер готовит письмо и передаёт на подпись (P4, СЦ-9)", async ({ page }) => {
     await loginAndWait(page, "manager@demo.example");
     await spaGoto(page, "/eds/new?type=letter");
 
     await expect(
-      page.getByText("Письмо подготовите вы, зарегистрирует и отправит делопроизводитель."),
+      page.getByText(
+        "Письмо подготовите вы, подпишет уполномоченный: номер и отправка — после подписи.",
+      ),
     ).toBeVisible();
     await openStep(page, CHECK);
-    await expect(page.getByRole("button", { name: "Передать на регистрацию" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Передать на подпись" })).toBeVisible();
   });
 
   test("администратор: без доступа к реестру — только «Мои», пусто словами и с действием", async ({

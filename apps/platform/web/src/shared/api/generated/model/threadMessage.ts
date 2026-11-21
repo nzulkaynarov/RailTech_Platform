@@ -16,6 +16,11 @@ export interface ThreadMessage {
    * @nullable
    */
   author_name: string | null;
+  /**
+   * СЦ-9: ответ дал заместитель — имя владельца лида, за которого он ответил («<author_name> за <имя>»); `null` — ответил сам менеджер или имя неизвестно
+   * @nullable
+   */
+  on_behalf_of_name?: string | null;
   text: string;
   /** Канал сообщения — `telegram` или `cabinet` (CHAT-1) */
   channel: MessageChannel;

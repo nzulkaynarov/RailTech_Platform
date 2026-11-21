@@ -418,3 +418,32 @@ async def test_a_fresh_reply_is_shown_as_sending(web: Web, crm: CrmMessagesFake)
     await web.login(["MANAGER"])
     items = (await web.client.get(f"{BASE}/L-2041/thread")).json()["items"]
     assert [m["delivery"] for m in items] == ["sending", "unconfirmed", None]
+
+
+async def test_a_deputy_reply_carries_the_owner_name(
+    web: Web, crm: CrmMessagesFake, check: ContractChecker
+) -> None:
+    """СЦ-9: ответ заместителя (CRM `meta.on_behalf_of_user_id`) — «<заместитель> за <владелец>»;
+    свой ответ и чужое поле у клиента или бота — без владельца."""
+    crm.answer(
+        "GET",
+        "leads/2041/messages",
+        body=[
+            message(95, "manager", meta={"on_behalf_of_user_id": 7}),
+            message(96, "manager"),
+            message(97, "lead", meta={"on_behalf_of_user_id": 7}),
+            message(98, "manager", meta={"on_behalf_of_user_id": 999}),  # не из команды — без имени
+        ],
+    )
+    await web.login(["MANAGER"])
+
+    response = check(
+        await web.client.get(f"{BASE}/L-2041/thread"), "/crm/messages/{lead}/thread", "get"
+    )
+
+    assert [m["on_behalf_of_name"] for m in response.json()["items"]] == [
+        "Дилшод Менеджеров",
+        None,
+        None,
+        None,
+    ]

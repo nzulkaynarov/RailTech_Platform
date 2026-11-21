@@ -70,6 +70,7 @@
       "action": "Action"
     },
     "noNumber": "number is assigned on registration",
+    "noNumberSigning": "number is assigned on signing",
     "open": "Open document: {{subject}}",
     "continue": "Continue",
     "continueLabel": "Continue document: {{subject}}",
@@ -188,12 +189,12 @@
       "mailingMeta": "{{to}} · {{date}}",
       "sendAgain": "Send to the addressee again",
       "sendRequested": "Sending requested",
-      "handedOver": "Handed over for registration: {{name}}, {{date}}",
+      "handedOver": "Handed over for signing: {{name}}, {{date}}",
       "register": "Register and send",
       "registerOnly": "Register",
       "registered": "Letter registered: {{number}}",
-      "handover": "Hand over for registration",
-      "handoverDone": "Handed over to the records clerk for registration.",
+      "handover": "Hand over for signing",
+      "handoverDone": "Handed over for signing.",
       "sign": "Sign",
       "signer": "Will be signed by: {{name}}",
       "noSigner": "Nobody can sign — an administrator grants the authority",
@@ -221,13 +222,13 @@
       "verificationCode": "Verification code",
       "verificationUrl": "Verify authenticity",
       "actionFailed": "Not done: {{reason}}",
-      "unmatched": "The addressee is typed as text. Click “Continue” and pick the organization from counterparties — until then the letter can’t be registered."
+      "unmatched": "The addressee is typed as text. Click “Continue” and pick the organization from counterparties — until then the letter can’t be signed."
     },
     "replyTo": "In reply to",
     "mailFailed": "Not sent",
     "undelivered": {
       "title": "The letter did not reach the addressee",
-      "notTried": "The letter is registered but has not been sent to the addressee yet.",
+      "notTried": "The letter is signed but has not been sent to the addressee yet.",
       "inProgress": "The letter is being sent — the result will appear here.",
       "waive": "Delivered another way",
       "waived": "Marked: delivered another way",
@@ -236,16 +237,13 @@
   },
   "form": {
     "subtitle": "The document goes to the director for approval. You can save a draft and continue later in “Documents”.",
-    "subtitleLetter": "A letter on the company letterhead: see the real PDF, register the outgoing number and send it to the addressee.",
     "subtitleContinue": "Draft {{number}}: changes are saved, you can send it at any time.",
     "subtitleReturned": "{{number}} was returned for rework: fix it and send again.",
     "formLabel": "New document",
     "type": {
       "label": "Document type",
-      "letterLocked": "Letters are registered by a role with access to incoming letters.",
-      "letterOption": "Letter — needs access to incoming letters",
       "locked": "The type cannot be changed after creation.",
-      "letterHandover": "You prepare the letter; the records clerk registers and sends it."
+      "letterHandover": "You prepare the letter; an authorised signer signs it. The number and sending come after signing."
     },
     "subject": {
       "label": "Subject",
@@ -309,8 +307,7 @@
       "label": "Approval route",
       "plain": "You → Director",
       "withAmount": "You → Director → Accountant (amount given)",
-      "letter": "No approval: the letter is registered at once",
-      "letterHandover": "You → records clerk: they register the outgoing number and send it",
+      "letterHandover": "You → signer: they sign, the letter gets its number and goes to the addressee",
       "approvers": "Approvers",
       "approversHint": "Approve before the route steps, in the order chosen.",
       "watchers": "Copy to",
@@ -338,25 +335,14 @@
         "The director approves, returns it for rework or rejects it — you get a notification.",
         "The decision and its date stay in “Documents”."
       ],
-      "letter": [
-        "The letter gets an outgoing number, e.g. OUT-014/26, and the registration date.",
-        "The numbered letterhead PDF goes to the addressee by email, if given.",
-        "A reply to an incoming letter closes the “Prepare a reply” instruction; the sending log is on the letter card."
-      ],
-      "draft": "“Save draft” sends nothing: the document stays in “Documents” with a “Continue” button.",
-      "letterHandover": [
-        "The letter draft goes to the records clerk for registration.",
-        "They check the PDF, register the outgoing number and send it to the addressee.",
-        "The outgoing number and the sending log appear on the letter card."
-      ]
+      "draft": "“Save draft” sends nothing: the document stays in “Documents” with a “Continue” button."
     },
     "submit": {
       "approval": "Send for approval",
-      "letter": "Register the letter",
       "draft": "Save draft",
       "uploadWait": "Wait for the files to upload",
-      "letterSend": "Register and send",
-      "handover": "Hand over for registration"
+      "handover": "Hand over for signing",
+      "sign": "Sign"
     },
     "validation": {
       "summary": "Fix the marked fields.",
@@ -373,9 +359,8 @@
     "toast": {
       "draft": "Draft saved",
       "sent": "Sent for approval: {{number}}",
-      "registered": "Letter registered: {{number}}",
-      "registeredSent": "Letter registered: {{number}}. Sending to the addressee.",
-      "handover": "Handed over to the records clerk for registration."
+      "handover": "Handed over for signing.",
+      "signReady": "Draft saved — sign the letter on its card."
     },
     "error": {
       "send": "Not sent: {{reason}}",
@@ -399,6 +384,7 @@
         "pdf_not_ready": "the PDF is still being prepared",
         "mail_in_progress": "sending is in progress, wait for the result",
         "no_authority": "nobody has been given signing authority",
+        "signature_required": "a letter gets its number only when signed — hand it over for signing",
         "no_signing_authority": "the signer has no valid signing authority",
         "author_cannot_sign": "the author does not sign their own letter",
         "authority_mismatch": "the authority does not cover this document",
@@ -427,17 +413,17 @@
     "forbiddenTitle": "You cannot create documents",
     "replyTo": {
       "label": "In reply to incoming",
-      "hint": "Incoming number, e.g. IN-112/26: registering the letter closes the \"Prepare a reply\" instruction."
+      "hint": "Incoming number, e.g. IN-112/26: signing the letter closes the \"Prepare a reply\" instruction."
     },
-    "subtitleLetterHandover": "",
+    "subtitleLetterHandover": "A letter on the company letterhead: see the real PDF and hand it over for signing — the letter gets its number when signed.",
     "attention": {
       "label": "To (position and name)",
       "hint": "Optional. For example: To the Head of the Mirabad District Tax Inspectorate, A. A. Karimov."
     },
     "email": {
       "label": "Addressee email",
-      "hint": "Optional. With an email, the letter goes to the addressee with the letterhead PDF right after registration.",
-      "notConnected": "Document mail is not connected: the letter will be registered but will not reach the addressee. Tell the administrator."
+      "hint": "Optional. With an email, the letter goes to the addressee with the letterhead PDF right after signing.",
+      "notConnected": "Document mail is not connected: the letter will be signed but will not reach the addressee. Tell the administrator."
     },
     "body": {
       "label": "Text",

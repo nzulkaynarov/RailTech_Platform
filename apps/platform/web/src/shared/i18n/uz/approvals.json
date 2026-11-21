@@ -154,6 +154,7 @@
       "step3": "Hujjat reyestrda vizangiz, sanangiz va izohingiz bilan qoladi."
     },
     "submit": "Kelishish",
+    "submitFor": "{{name}} uçun kelişiş",
     "return": "Qayta ishlashga qaytarish",
     "reject": "Rad etish",
     "disabled": "Qaytarish va rad etish faqat izoh bilan mumkin: izoh bo'sh bo'lsa tugmalar faol emas.",

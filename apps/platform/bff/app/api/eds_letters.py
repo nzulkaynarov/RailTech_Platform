@@ -564,7 +564,7 @@ async def request_instruction_extension(
     operation_id="decideInstructionExtension",
 )
 async def decide_instruction_extension(
-    id: InstructionId, body: InstructionExtensionDecisionIn, authed: Resolver
+    id: InstructionId, body: InstructionExtensionDecisionIn, authed: Participant
 ) -> LetterCard:
     raw = await _letters(authed).decide_extension(str(id), body.for_eds())
     return await _card(authed, raw)
