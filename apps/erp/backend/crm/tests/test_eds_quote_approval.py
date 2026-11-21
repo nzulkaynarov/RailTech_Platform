@@ -573,27 +573,29 @@ def _invite_mail(email, status):
     )
 
 
-def _contact(world, *, telegram=None, email="", invited=False, invite_mail=None, logged_in=False):
+def _contact(world, *, telegram=None, email="", invited=False, invite_mail=None, logged_in=False, company=None):
     """Контакт сделки клиента (офлайн, без входа в ERP): Telegram, e-mail и кабинет — по аргументам.
 
     Кабинет доступен по факту: `logged_in` (был вход) или `invite_mail="SENT"` (письмо-приглашение доставлено).
-    `invited` ставит только `invited_at` — приглашение в очереди, доставкой не считается."""
+    `invite_mail` — письмо-приглашение этому контакту: ставит и `invited_at` (письмо создаётся до отметки).
+    `invited` без письма — только `invited_at`, приглашение в очереди, доставкой не считается."""
     from django.utils import timezone
     from parties.models import Contact
 
+    if invite_mail:
+        _invite_mail(email, invite_mail)
     contact = Contact.objects.create(
-        company=world["client"],
+        company=company or world["client"],
         name="Бахтиёр Каримов",
         email=email,
         telegram_user_id=telegram,
         is_primary=True,
-        invited_at=timezone.now() if invited else None,
+        invited_at=timezone.now() if (invited or invite_mail) else None,
         last_login_at=timezone.now() if logged_in else None,
     )
-    if invite_mail:
-        _invite_mail(email, invite_mail)
-    world["deal"].contact, world["deal"].client = contact, None
-    world["deal"].save(update_fields=["contact", "client"])
+    if company is None:
+        world["deal"].contact, world["deal"].client = contact, None
+        world["deal"].save(update_fields=["contact", "client"])
     return contact
 
 
@@ -681,6 +683,22 @@ def test_cabinet_is_a_channel_when_the_invitation_mail_was_sent(world):
     assert bus_support.only("quote.sent")["data"]["payload"]["channels"] == ["cabinet"]
 
 
+def test_another_contacts_invitation_to_the_same_address_does_not_open_the_cabinet(world):
+    """Тот же адрес у контакта другой компании: приглашён тот, а не контакт нашего клиента — канал закрыт, `quote.sent`
+    нет (ссылка приглашения выпущена тому контакту, войти по ней в кабинет этого клиента нельзя)."""
+    from parties.models import Company
+
+    other = Company.objects.create(name="Другая компания")
+    _contact(world, email="shared@example.test", invite_mail="SENT", company=other)
+    _contact(world, email="shared@example.test")
+
+    quote, _ = _approve_with(world, ["cabinet"])
+
+    assert quote.status.code == "READY_TO_SEND"
+    assert quote.send_report["skipped"] == [{"channel": "cabinet", "reason": "CABINET_NOT_INVITED"}]
+    assert bus_support.published("quote.sent") == []
+
+
 def test_cabinet_is_a_channel_when_the_client_has_logged_in(world):
     """Вход в кабинет — факт сам по себе, письмо не нужно (даже если последнее приглашение не ушло)."""
     _contact(world, email="client@example.test", invite_mail="FAILED", logged_in=True)
@@ -692,8 +710,12 @@ def test_cabinet_is_a_channel_when_the_client_has_logged_in(world):
 
 def test_the_latest_invitation_mail_decides(world):
     """Раньше письмо ушло, но повторное приглашение не доставлено — по последнему канал недоступен."""
-    _contact(world, email="client@example.test", invite_mail="SENT")
+    from django.utils import timezone
+
+    contact = _contact(world, email="client@example.test", invite_mail="SENT")
     _invite_mail("client@example.test", "FAILED")
+    contact.invited_at = timezone.now()  # повторное приглашение: письмо создано до отметки, но не доставлено
+    contact.save(update_fields=["invited_at"])
 
     quote, _ = _approve_with(world, ["cabinet"])
 

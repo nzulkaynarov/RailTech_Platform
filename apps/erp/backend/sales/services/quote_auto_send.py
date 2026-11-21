@@ -7,7 +7,8 @@
 * `telegram` — контакт сделки (или основной контакт компании) с Telegram и клиент, переданный из CRM (бот CRM пишет по
   событию `quote.sent`; ERP в Telegram не пишет);
 * `cabinet` — у компании есть контакт (не в архиве), уже входивший в кабинет или с доставленным письмом-приглашением
-  (последний `portal_invitation` на его адрес — `SENT`; постановка в очередь, `invited_at`, доставкой не считается).
+  (он приглашён, `invited_at`; последний `portal_invitation` на его адрес — `SENT` и создан не позже `invited_at`;
+  постановка в очередь доставкой не считается, письмо контакту другой компании с тем же адресом — тоже).
 
 Недоступный канал не роняет одобрение: он попадает в итог (`Quote.send_report.skipped` с причиной) и в журнал КП.
 Нет ни одного доступного канала или отправку остановил гейт (`QUOTE_BELOW_COST`, `FX_RATE_MISSING`…) — КП остаётся
@@ -75,29 +76,49 @@ def _telegram_reason(quote) -> Optional[str]:
     return None
 
 
-def _invitation_delivered(contact) -> bool:
-    """Последнее письмо-приглашение на адрес контакта действительно отправлено почтой (`EmailLog.SENT`).
+def _latest_invitation_mails(contacts) -> dict[str, tuple[str, Any]]:
+    """Последнее письмо-приглашение по адресам контактов — `{адрес: (статус, создано)}` одним запросом."""
+    from django.db.models import Q
 
-    `Contact.invited_at` ставится, когда письмо поставлено в очередь, — доставкой оно не является."""
     from core.models import EmailLog
 
-    email = (contact.email or "").strip().lower()
-    if not email:
+    emails = {(c.email or "").strip().lower() for c in contacts if c.invited_at} - {""}
+    if not emails:
+        return {}
+    wanted = Q()
+    for email in emails:
+        wanted |= Q(to_emails__contains=[email])
+    latest: dict[str, tuple[str, Any]] = {}
+    logs = EmailLog.objects.filter(wanted, template="portal_invitation").order_by("created_at", "pk")
+    for to_emails, status, created_at in logs.values_list("to_emails", "status", "created_at"):
+        for email in to_emails:
+            if email.lower() in emails:
+                latest[email.lower()] = (status, created_at)
+    return latest
+
+
+def _invitation_delivered(contact, latest: dict[str, tuple[str, Any]]) -> bool:
+    """Приглашение именно этому контакту доставлено: он приглашён (`invited_at`), а последнее письмо-приглашение на его
+    адрес отправлено почтой (`EmailLog.SENT`) и создано не позже `invited_at` (письмо приглашения создаётся до отметки).
+
+    `invited_at` ставится, когда письмо поставлено в очередь, — доставкой оно не является; письмо контакту другой
+    компании с тем же адресом (создано позже) приглашением этого контакта не считается."""
+    from core.models import EmailLog
+
+    if not contact.invited_at:
         return False
-    latest = (
-        EmailLog.objects.filter(template="portal_invitation", to_emails__contains=[email])
-        .order_by("-created_at", "-pk")
-        .values_list("status", flat=True)
-        .first()
-    )
-    return latest == EmailLog.STATUS_SENT
+    mail = latest.get((contact.email or "").strip().lower())
+    return mail is not None and mail[0] == EmailLog.STATUS_SENT and mail[1] <= contact.invited_at
 
 
 def _cabinet_reason(quote) -> Optional[str]:
     """Кабинет доступен по факту: контакт компании входил (`last_login_at`) или приглашение ему доставлено
     (решение владельца 2026-11-22). Иначе — `CABINET_NOT_INVITED`: КП остаётся «Готово к отправке»."""
     contacts = _company_contacts(quote)
-    if any(c.last_login_at or _invitation_delivered(c) for c in contacts):
+    if any(c.last_login_at for c in contacts):
+        return None
+    latest = _latest_invitation_mails(contacts)
+    if any(_invitation_delivered(c, latest) for c in contacts):
         return None
     return "CABINET_NOT_INVITED"
 
