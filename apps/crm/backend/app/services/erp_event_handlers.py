@@ -77,10 +77,23 @@ def _set_stage(deal: Deal | None, stage: str) -> None:
 
 def _request_created(env: ErpEvent) -> str:
     payload = env.payload
+    number = _deal_number(env)
     return (
-        f"В бэк-офисе создана заявка #{payload.erp_request_id or '—'} "
+        f"В бэк-офисе создана заявка{f' {number}' if number else ''} "
         f"(источник: {plain(payload.source)})."
     )
+
+
+def _deal_number(env: ErpEvent) -> str:
+    """Номер сделки из события — тот, что видит сотрудник; внутренний id в тексты не попадает."""
+    return env.deal.number if env.deal is not None and env.deal.number else ""
+
+
+def _quote_label(env: ErpEvent) -> str:
+    """«по ЗВ-2026-002, версия 2»: события КП несут номер сделки, но не номер самого КП."""
+    number = _deal_number(env)
+    version = f"версия {env.payload.version}"
+    return f"по {number}, {version}" if number else version
 
 
 def _stage_changed(env: ErpEvent, deal: Deal | None) -> str:
@@ -115,7 +128,7 @@ def _outcome(env: ErpEvent, deal: Deal | None, deal_title: str) -> str:
 def _quote_sent(env: ErpEvent, deal: Deal | None) -> str:
     payload = env.payload
     _set_stage(deal, "quote_sent")
-    parts = [f"Клиенту отправлено КП #{payload.erp_quote_id} v{payload.version}"]
+    parts = [f"Клиенту отправлено КП {_quote_label(env)}"]
     total, currency = plain(payload.total), plain(payload.currency)
     if total and currency:
         parts.append(f"на сумму {total} {currency}")
@@ -149,7 +162,7 @@ def _quote_outcome(env: ErpEvent, deal: Deal | None, contact_name: str | None) -
     """Запись ленты по КП; у принятия и отказа — кто из контактов клиента это сделал (шов 0.3.0)
     и кто из сотрудников записал решение по подтверждению клиента (A1)."""
     payload = env.payload
-    label = f"#{payload.erp_quote_id} v{payload.version}"
+    label = _quote_label(env)
     who = f" ({contact_name})" if contact_name else ""
     if env.event == "quote.viewed":
         return f"Клиент открыл КП {label}."

@@ -151,6 +151,16 @@ def _crm_object(row: dict[str, Any]) -> ObjectRef | None:
     письмо по поручению (P8b, событие EDS `notice.requested`) — рабочий экран письма; лид,
     переданный первой линией (D17G-1), — диалог в «Ждут ответа»."""
     number = row.get("object_number")
+    if row.get("object_kind") == "client":
+        # Заявка клиента из кабинета: уведомление открывает карточку клиента (как в поиске).
+        client_id = row.get("object_id")
+        if not isinstance(client_id, str) or not client_id:
+            return None
+        return ObjectRef(
+            kind="client",
+            number=number if isinstance(number, str) and number else client_id,
+            path=f"/crm/clients/{quote(client_id, safe='')}?panel=open&tab=card",
+        )
     if not isinstance(number, str) or not number:
         return None
     if row.get("object_kind") == "lead":
