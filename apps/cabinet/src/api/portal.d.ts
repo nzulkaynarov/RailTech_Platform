@@ -595,7 +595,7 @@ export interface paths {
         put?: never;
         /**
          * Подписать договор со стороны клиента
-         * @description Простая подпись подтверждением (E-IMZO отложен до пилота, DECISIONS 2026-10-13).
+         * @description Согласие клиента с редакцией договора (E-IMZO отложен до пилота, DECISIONS 2026-10-13). Это не подпись: в журнале договора запись «согласовано клиентом» (`contract.client_agreed`) с именем контакта, статус становится «Согласован клиентом», шина получает `contract.status_changed`, а `contract.signed` (by=client) не публикуется (DECISIONS 2026-11-22). «Подписан» ставит скан подписанного договора. Имена полей `signed_by_client*` сохранены ради совместимости.
          */
         post: operations["signContract"];
         delete?: never;
@@ -2666,7 +2666,10 @@ export interface components {
             /** Format: date-time */
             created_at: string;
         };
-        /** @enum {string} */
+        /**
+         * @description `signed_by_client` — клиент согласовал редакцию в кабинете («Согласован клиентом»), это не подпись; `signed` — договор подписан (скан). Значения не переименованы ради совместимости.
+         * @enum {string}
+         */
         ContractStatus: "sent" | "signed_by_client" | "signed_by_company" | "signed" | "cancelled";
         Contract: {
             /** Format: int64 */
@@ -4438,7 +4441,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Подписано клиентом */
+            /** @description Согласовано клиентом */
             200: {
                 headers: {
                     [name: string]: unknown;
