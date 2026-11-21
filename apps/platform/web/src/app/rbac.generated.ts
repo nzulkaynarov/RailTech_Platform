@@ -254,7 +254,7 @@ export const RESOURCES = {
   "company.settings": {
     module: "admin",
     levels: ["read", "full"],
-    backends: ["erp"],
+    backends: ["crm", "erp"],
     label: {
       ru: "Настройки · Компания и Документы · Шаблоны",
       uz: "Sozlamalar · Kompaniya va hujjatlar · shablonlar",

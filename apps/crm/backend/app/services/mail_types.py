@@ -54,7 +54,7 @@ _ATTRS: Final[tuple[tuple[str, tuple[str, str, str], tuple[str, ...]], ...]] = (
 )
 _ACTION_NAMES: Final[dict[str, tuple[str, str, str]]] = {
     "register_incoming": (
-        "Зарегистрировать как входящее (ВХ) → директору",
+        "Зарегистрировать как входящее → директору",
         "Kiruvchi sifatida ro'yxatdan o'tkazish → direktorga",
         "Register as incoming → director",
     ),

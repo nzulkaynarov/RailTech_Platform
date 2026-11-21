@@ -17,7 +17,7 @@ import {
 } from "../../../../shared/api/generated/platform-bff";
 import { QueryGate, SaveBlock, TabHeader, ReadOnlyFence } from "../common";
 import { changedFields, isEmptyObject } from "../diff";
-import { errorFields } from "../errors";
+import { errorFields, numberingErrorKey } from "../errors";
 
 // Все виды номеров ERP (задача «Н»): обозначения — здесь, в коде их нет.
 const KINDS: NumberingKind[] = [
@@ -39,6 +39,8 @@ const KINDS: NumberingKind[] = [
   "memo",
   "application",
   "report",
+  // обращения сотрудников (CRM, СЦ-5)
+  "ticket",
 ];
 const RESET: NumberingResetPeriod[] = ["never", "yearly", "monthly"];
 // «Стандартный» — умолчание SPEC-v3 §2.2 (`КП-2026/042`); «Через дефис» — прежнее умолчание, его маски у компаний остаются.
@@ -145,7 +147,7 @@ function NumberingForm({ scheme }: { scheme: NumberingScheme }) {
               .filter((name) => name in initial)
               .map((name) => ({
                 name: name as keyof Values,
-                errors: [t(name === "pattern" ? "numbering.maskInvalid" : "numbering.prefixTaken")],
+                errors: [t(numberingErrorKey(name, error))],
               })),
           );
         },

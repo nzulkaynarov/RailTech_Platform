@@ -70,7 +70,7 @@ describe("Обращения к администратору", () => {
       target: { value: "Нужен доступ" },
     });
     fireEvent.click(within(dialog).getByRole("button", { name: "Отправить" }));
-    await screen.findByText("Обращение ОБР-0001 отправлено");
+    await screen.findByText("Обращение TK-0001 отправлено");
     expect(readTickets().tickets[0]?.page).toBe("/admin/org");
   });
 
@@ -89,24 +89,24 @@ describe("Обращения к администратору", () => {
       "Нужен доступ к разделу «Оргструктура», чтобы приглашать",
     );
     fireEvent.click(within(dialog).getByRole("button", { name: "Отправить" }));
-    expect(await screen.findByText("Обращение ОБР-0001 отправлено")).toBeInTheDocument();
+    expect(await screen.findByText("Обращение TK-0001 отправлено")).toBeInTheDocument();
     cleanup();
     endSession();
 
     // 2. Администратор видит обращение в «Моих задачах» (SET-IA: списка в Настройках нет) и открывает его карточку.
     signInAs("admin@demo.example");
     renderApp("/dashboard/queue");
-    expect(await screen.findByText("Ответить на обращение ОБР-0001")).toBeInTheDocument();
+    expect(await screen.findByText("Ответить на обращение TK-0001")).toBeInTheDocument();
     cleanup();
-    renderApp("/admin/tickets/ОБР-0001?panel=open&tab=card");
+    renderApp("/admin/tickets/TK-0001?panel=open&tab=card");
     expect(
       await screen.findByRole("heading", { level: 1, name: "Обращения сотрудников" }),
     ).toBeInTheDocument();
-    const row = await screen.findByRole("link", { name: "Открыть обращение ОБР-0001" });
+    const row = await screen.findByRole("link", { name: "Открыть обращение TK-0001" });
     expect(row.closest("tr")).toHaveTextContent("Демо Менеджеров");
     expect(row.closest("tr")).toHaveTextContent("Новое");
 
-    const panel = await screen.findByRole("heading", { level: 3, name: /ОБР-0001/ });
+    const panel = await screen.findByRole("heading", { level: 3, name: /TK-0001/ });
     const card = panel.parentElement as HTMLElement;
     expect(within(card).getByText(/Оргструктура/)).toBeInTheDocument();
     expect(within(card).getByText("/admin/org")).toBeInTheDocument();
@@ -126,23 +126,23 @@ describe("Обращения к администратору", () => {
 
     // 4. Автор видит ответ в «Мои обращения» и в колокольчике; чужие обращения ему не видны.
     signInAs("manager@demo.example");
-    renderApp("/help/requests/ОБР-0001");
+    renderApp("/help/requests/TK-0001");
     expect(await screen.findByText("Доступ выдан, зайдите заново")).toBeInTheDocument();
     fireEvent.click(await screen.findByRole("button", { name: /^Центр уведомлений/ }));
     const center = await screen.findByRole("dialog", { name: "Центр уведомлений" });
-    expect(await within(center).findByText(/Ответ на обращение ОБР-0001/)).toBeInTheDocument();
+    expect(await within(center).findByText(/Ответ на обращение TK-0001/)).toBeInTheDocument();
   });
 
   it("статус меняется кнопкой: «Взять в работу» и «Отметить решённым»", async () => {
     const dialog = await writeFromForbidden("Не приходит уведомление о КП");
     fireEvent.click(within(dialog).getByRole("button", { name: "Отправить" }));
-    await screen.findByText("Обращение ОБР-0001 отправлено");
+    await screen.findByText("Обращение TK-0001 отправлено");
     cleanup();
     endSession();
 
     signInAs("admin@demo.example");
-    renderApp("/admin/tickets/ОБР-0001?panel=open&tab=card");
-    const heading = await screen.findByRole("heading", { level: 3, name: /ОБР-0001/ });
+    renderApp("/admin/tickets/TK-0001?panel=open&tab=card");
+    const heading = await screen.findByRole("heading", { level: 3, name: /TK-0001/ });
     const card = heading.parentElement as HTMLElement;
     fireEvent.click(within(card).getByRole("button", { name: "Взять в работу" }));
     expect(await within(card).findByText("Статус изменён")).toBeInTheDocument();
@@ -155,13 +155,13 @@ describe("Обращения к администратору", () => {
   it("новое обращение — строка в «Моих задачах» администратора и счётчик в меню; директору строки нет", async () => {
     const dialog = await writeFromForbidden("Нужен шаблон договора поставки");
     fireEvent.click(within(dialog).getByRole("button", { name: "Отправить" }));
-    await screen.findByText("Обращение ОБР-0001 отправлено");
+    await screen.findByText("Обращение TK-0001 отправлено");
     cleanup();
     endSession();
 
     signInAs("admin@demo.example");
     renderApp("/dashboard/queue");
-    const row = await screen.findByText("Ответить на обращение ОБР-0001");
+    const row = await screen.findByText("Ответить на обращение TK-0001");
     expect(row.closest("li")).toHaveTextContent("Демо Менеджеров");
     cleanup();
     endSession();
@@ -169,7 +169,7 @@ describe("Обращения к администратору", () => {
     signInAs("director@demo.example");
     renderApp("/dashboard/queue");
     await screen.findByRole("heading", { level: 1, name: "Задачи" });
-    expect(screen.queryByText("Ответить на обращение ОБР-0001")).toBeNull();
+    expect(screen.queryByText("Ответить на обращение TK-0001")).toBeNull();
   });
 
   it("старый адрес списка обращений ведёт в «Задачи» (SET-IA); на индексе Настроек — счётчик со ссылкой", async () => {
@@ -191,13 +191,13 @@ describe("Обращения к администратору", () => {
   it("директор читает обращения, но отвечать не может", async () => {
     const dialog = await writeFromForbidden("Ошибка при открытии письма");
     fireEvent.click(within(dialog).getByRole("button", { name: "Отправить" }));
-    await screen.findByText("Обращение ОБР-0001 отправлено");
+    await screen.findByText("Обращение TK-0001 отправлено");
     cleanup();
     endSession();
 
     signInAs("director@demo.example");
-    renderApp("/admin/tickets/ОБР-0001?panel=open&tab=card");
-    const heading = await screen.findByRole("heading", { level: 3, name: /ОБР-0001/ });
+    renderApp("/admin/tickets/TK-0001?panel=open&tab=card");
+    const heading = await screen.findByRole("heading", { level: 3, name: /TK-0001/ });
     const card = heading.parentElement as HTMLElement;
     expect(within(card).queryByRole("textbox", { name: "Ваш ответ" })).toBeNull();
     expect(within(card).getByText(/Директор читает обращения/)).toBeInTheDocument();
@@ -205,7 +205,7 @@ describe("Обращения к администратору", () => {
 
   it("сотрудник без доступа к Admin не открывает чужие обращения", async () => {
     signInAs("manager@demo.example");
-    renderApp("/admin/tickets/ОБР-0001");
+    renderApp("/admin/tickets/TK-0001");
     expect(
       await screen.findByRole("heading", { level: 1, name: "Нет доступа" }),
     ).toBeInTheDocument();

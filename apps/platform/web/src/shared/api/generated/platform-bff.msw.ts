@@ -959,7 +959,7 @@ export const getListMyTicketsResponseMock = (
   overrideResponse: Partial<Extract<TicketList, object>> = {},
 ): TicketList => ({
   items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
-    number: faker.helpers.fromRegExp("^ОБР-[0-9]{1,9}$"),
+    number: faker.helpers.fromRegExp("^[A-Z0-9А-Я]{1,16}-[0-9]{1,9}$"),
     subject: faker.helpers.arrayElement(Object.values(TicketSubject)),
     status: faker.helpers.arrayElement(Object.values(TicketStatus)),
     author: {
@@ -985,7 +985,7 @@ export const getListMyTicketsResponseMock = (
 export const getCreateTicketResponseMock = (
   overrideResponse: Partial<Extract<Ticket, object>> = {},
 ): Ticket => ({
-  number: faker.helpers.fromRegExp("^ОБР-[0-9]{1,9}$"),
+  number: faker.helpers.fromRegExp("^[A-Z0-9А-Я]{1,16}-[0-9]{1,9}$"),
   subject: faker.helpers.arrayElement(Object.values(TicketSubject)),
   status: faker.helpers.arrayElement(Object.values(TicketStatus)),
   author: {
@@ -1025,7 +1025,7 @@ export const getCreateTicketResponseMock = (
 export const getGetMyTicketResponseMock = (
   overrideResponse: Partial<Extract<Ticket, object>> = {},
 ): Ticket => ({
-  number: faker.helpers.fromRegExp("^ОБР-[0-9]{1,9}$"),
+  number: faker.helpers.fromRegExp("^[A-Z0-9А-Я]{1,16}-[0-9]{1,9}$"),
   subject: faker.helpers.arrayElement(Object.values(TicketSubject)),
   status: faker.helpers.arrayElement(Object.values(TicketStatus)),
   author: {
@@ -1066,7 +1066,7 @@ export const getListTicketsResponseMock = (
   overrideResponse: Partial<Extract<TicketPage, object>> = {},
 ): TicketPage => ({
   items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
-    number: faker.helpers.fromRegExp("^ОБР-[0-9]{1,9}$"),
+    number: faker.helpers.fromRegExp("^[A-Z0-9А-Я]{1,16}-[0-9]{1,9}$"),
     subject: faker.helpers.arrayElement(Object.values(TicketSubject)),
     status: faker.helpers.arrayElement(Object.values(TicketStatus)),
     author: {
@@ -1098,7 +1098,7 @@ export const getListTicketsResponseMock = (
 export const getGetTicketResponseMock = (
   overrideResponse: Partial<Extract<Ticket, object>> = {},
 ): Ticket => ({
-  number: faker.helpers.fromRegExp("^ОБР-[0-9]{1,9}$"),
+  number: faker.helpers.fromRegExp("^[A-Z0-9А-Я]{1,16}-[0-9]{1,9}$"),
   subject: faker.helpers.arrayElement(Object.values(TicketSubject)),
   status: faker.helpers.arrayElement(Object.values(TicketStatus)),
   author: {
@@ -1138,7 +1138,7 @@ export const getGetTicketResponseMock = (
 export const getReplyTicketResponseMock = (
   overrideResponse: Partial<Extract<Ticket, object>> = {},
 ): Ticket => ({
-  number: faker.helpers.fromRegExp("^ОБР-[0-9]{1,9}$"),
+  number: faker.helpers.fromRegExp("^[A-Z0-9А-Я]{1,16}-[0-9]{1,9}$"),
   subject: faker.helpers.arrayElement(Object.values(TicketSubject)),
   status: faker.helpers.arrayElement(Object.values(TicketStatus)),
   author: {
@@ -1178,7 +1178,7 @@ export const getReplyTicketResponseMock = (
 export const getSetTicketStatusResponseMock = (
   overrideResponse: Partial<Extract<Ticket, object>> = {},
 ): Ticket => ({
-  number: faker.helpers.fromRegExp("^ОБР-[0-9]{1,9}$"),
+  number: faker.helpers.fromRegExp("^[A-Z0-9А-Я]{1,16}-[0-9]{1,9}$"),
   subject: faker.helpers.arrayElement(Object.values(TicketSubject)),
   status: faker.helpers.arrayElement(Object.values(TicketStatus)),
   author: {

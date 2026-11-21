@@ -257,7 +257,12 @@ CRM_BACKEND: Final[dict[str, dict[str, tuple[str, ...]]]] = {
             "company_articles:write",
         ),
     },
-    "company.settings": {},
+    "company.settings": {
+        "full": (
+            "ticket_label:read",
+            "ticket_label:write",
+        ),
+    },
 }
 
 # Раздел -> уровень -> права ERP (`Permission`; уровень full включает read).
