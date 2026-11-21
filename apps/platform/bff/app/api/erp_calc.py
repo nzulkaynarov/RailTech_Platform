@@ -18,7 +18,7 @@ from app.clients.erp_company import ErpCompany, erp_error
 from app.deps import Authed, require, require_any
 from app.erp_request_files import stream_request_file
 from app.errors import PlatformError
-from app.feeds.numbers import deal_number, number_query
+from app.feeds.numbers import deal_number
 from app.schemas_erp_calc import (
     CalcCatalogItem,
     CalcCatalogPage,
@@ -99,27 +99,20 @@ _MESSAGES = {
 }
 
 
-def _other_prefix(number: str) -> tuple[str, ...]:
-    """`ЗВ-2026-104` ↔ `ПР-2026-104`: заявка и проект с одним NNN (SPEC-v3 §2.2)."""
-    for one, other in (("ЗВ-", "ПР-"), ("ПР-", "ЗВ-")):
-        if number.startswith(one):
-            return (other + number[len(one) :],)
-    return ()
-
-
 class ErpCalc(ErpCompany):
     """Вызовы `/api/v1/calc/*` от имени сотрудника и поиск заявки по номеру ЗВ."""
 
     async def deal_id(self, number: str) -> int:
-        """Заявка по номеру ЗВ/ПР: лёгкий справочник ERP `GET /calc/deals/?number=` (id, номер,
-        создана, стадия — без строк и виз). Номер выдаёт ERP (`Deal.number`, ERP-09); `id` из
-        номера не разбирается. После принятия КП заявка — проект с тем же NNN: `ЗВ-…` находит и
-        `ПР-…`."""
-        canonical = number_query(number) or number
-        wanted = {number, canonical, *_other_prefix(canonical)}
-        data = await self.data("GET", "calc/deals/", params={"number": canonical})
+        """Заявка по номеру: лёгкий справочник ERP `GET /calc/deals/?number=` (id, номер, создана,
+        стадия — без строк и виз). Номер уходит как набран, ERP сам находит сделку (год и порядковый
+        номер, обозначение не важно): после принятия КП заявка — проект, и старая ссылка на номер
+        заявки, и новая на номер проекта открывают одну сделку. BFF обозначение не разбирает."""
+        wanted = number.strip()
+        data = (
+            await self.data("GET", "calc/deals/", params={"number": wanted}) if wanted else None
+        )  # an empty filter would list every deal: never ask ERP with it
         for deal in data.get("results", []) if isinstance(data, dict) else []:
-            if isinstance(deal, dict) and deal_number(deal) in wanted:
+            if isinstance(deal, dict) and deal.get("id") is not None:
                 return int(deal["id"])
         raise PlatformError(
             "NOT_FOUND",

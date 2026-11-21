@@ -91,7 +91,7 @@ describe("Рабочий экран поручения (P8b, SPEC-v3 §3.2a п. 
 
     fireEvent.click(within(mine).getByRole("button", { name: "Исполнено" }));
     expect(
-      await within(mine).findByText("Напишите отчёт, приложите файл или укажите номер ИСХ."),
+      await within(mine).findByText("Напишите отчёт, приложите файл или укажите исходящий номер."),
     ).toBeVisible();
 
     fireEvent.change(within(mine).getByLabelText("Отчёт"), {
@@ -328,7 +328,7 @@ describe("Рабочий экран поручения (P8b, SPEC-v3 §3.2a п. 
       signIn("universal@demo.example");
       renderAt(PATH);
       const form = await screen.findByRole("form", { name: "Отметить исполнение" });
-      fireEvent.change(within(form).getByLabelText(/Ответ — номер нашего ИСХ/), {
+      fireEvent.change(within(form).getByLabelText(/Ответ — номер нашего исходящего/), {
         target: { value: "ИСХ-014/26" },
       });
       fireEvent.click(within(form).getByRole("button", { name: "Исполнено" }));
@@ -336,7 +336,7 @@ describe("Рабочий экран поручения (P8b, SPEC-v3 §3.2a п. 
       expect(findLetter("ВХ-108/26")?.instructions?.[0]?.status).toBe("in_work");
     });
 
-    it("«Задачи» делопроизводителя: «Зарегистрировать ИСХ» — пока ответ передан и не зарегистрирован", () => {
+    it("«Задачи» делопроизводителя: «Зарегистрировать исходящее» — пока ответ передан и не зарегистрирован", () => {
       inExecution({ instructions: [replyInstruction()] });
       seedReply({
         letter: {
@@ -358,7 +358,7 @@ describe("Рабочий экран поручения (P8b, SPEC-v3 §3.2a п. 
         return letterTaskQueueItems(roles?.view ?? []);
       };
       const [row] = rows("registrar@demo.example").filter((r) => r.kind === "register_reply");
-      expect(row?.title).toBe("Зарегистрировать ИСХ: ответ на ВХ-108/26");
+      expect(row?.title).toBe("Зарегистрировать исходящее: ответ на ВХ-108/26");
       expect(row?.object.path).toBe(`/eds/documents?scope=all&doc=${documentId(950)}&panel=open`);
       expect(rows("universal@demo.example").filter((r) => r.kind === "register_reply")).toEqual([]);
       const state = readEds();

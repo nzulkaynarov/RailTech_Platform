@@ -236,7 +236,9 @@ async def list_memos(
 async def get_memo(ref: str, authed: MemoReader) -> MemoApprovalCard:
     proxy = _proxy(authed)
     document_id = await memo_document_id(proxy, ref)
-    return await memo_card(proxy, await proxy.request("GET", f"{API}/documents/{document_id}"))
+    return await memo_card(
+        proxy, await proxy.request("GET", f"{API}/documents/{document_id}"), authed=authed
+    )
 
 
 @router.post(
@@ -255,5 +257,8 @@ async def decide_memo(
     if not isinstance(document_id, str):
         raise not_found("Документ не найден.")
     return await memo_card(
-        proxy, await proxy.request("GET", f"{API}/documents/{document_id}"), approval
+        proxy,
+        await proxy.request("GET", f"{API}/documents/{document_id}"),
+        approval,
+        authed=authed,
     )

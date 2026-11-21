@@ -335,9 +335,13 @@ async def test_eds_down_is_503_with_source(web: Web, eds: EdsFake) -> None:
 
 
 async def test_card_assembles_route_decisions_and_edit_flag(
-    web: Web, eds: EdsFake, check: ContractChecker
+    web: Web, be: Backends, eds: EdsFake, check: ContractChecker
 ) -> None:
     await web.login(["MANAGER"])
+    # СЦ-5: номер сделки — текущий из ERP (заявка стала проектом), а не копия, сохранённая в EDS
+    be.router.get(f"{ERP_URL}/api/v1/crm/deals/905/").mock(
+        return_value=httpx.Response(200, json={"id": 905, "number": "PRJ-2026-104"})
+    )
     eds.answer(
         "GET",
         f"documents/{DOC_ID}",
@@ -373,7 +377,7 @@ async def test_card_assembles_route_decisions_and_edit_flag(
     ]
     assert body["decisions"][0]["comment"] == "Добавьте смету"
     assert body["decisions"][0]["by"]["full_name"] == "Рустам Директоров"
-    assert body["deal"] == {"erp_deal_id": 905, "number": "ЗВ-2026-104"}
+    assert body["deal"] == {"erp_deal_id": 905, "number": "PRJ-2026-104"}
     assert body["files"] == [
         {"id": FILE_ID, "name": "schet.pdf", "content_type": "application/pdf", "size": 2048}
     ]
@@ -933,6 +937,22 @@ def _deals(be: Backends) -> list[httpx.Request]:
 
     be.router.get(f"{ERP_URL}/api/v1/crm/deals/").mock(side_effect=answer)
     return seen
+
+
+async def test_card_keeps_the_stored_deal_number_when_erp_is_down(
+    web: Web, be: Backends, eds: EdsFake
+) -> None:
+    """Живой номер — удобство: ERP не ответил, карточка открывается с копией из EDS."""
+    await web.login(["MANAGER"])
+    be.router.get(f"{ERP_URL}/api/v1/crm/deals/905/").mock(return_value=httpx.Response(503))
+    eds.answer(
+        "GET", f"documents/{DOC_ID}", 200, document(erp_deal_id=905, deal_number="ЗВ-2026-104")
+    )
+
+    response = await web.client.get(f"{BASE}/documents/{DOC_ID}")
+
+    assert response.status_code == 200, response.text
+    assert response.json()["deal"] == {"erp_deal_id": 905, "number": "ЗВ-2026-104"}
 
 
 async def test_deal_options_find_requests_by_number_title_or_company(

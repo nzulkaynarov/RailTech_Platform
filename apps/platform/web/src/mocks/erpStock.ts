@@ -197,7 +197,7 @@ function refOf(number: string): StockRequestRef {
   return {
     number,
     client: known?.client ?? null,
-    path: number.startsWith("ПР") ? `/eds/projects/${seg(number)}` : `/erp/calc/${seg(number)}`,
+    path: known?.project ? `/eds/projects/${seg(number)}` : `/erp/calc/${seg(number)}`,
   };
 }
 
@@ -1396,7 +1396,7 @@ export const erpStockHandlers = [
     if ("error" in held) return held.error;
     const body = (await request.json()) as StockShipIn;
     const state = read();
-    if (!body.request.startsWith("ПР")) {
+    if (!REQUESTS.find((r) => r.number === body.request)?.project) {
       return conflict(
         "fulfillment_not_ready",
         "Проект ещё не подписан: отгрузка возможна после подписания договора.",

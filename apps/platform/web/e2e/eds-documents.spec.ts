@@ -104,7 +104,7 @@ test.describe("Создать документ: сотрудник", () => {
     await openStep(page, ABOUT);
     await page.getByLabel("Связь с проектом").click();
     await page.getByLabel("Связь с проектом").fill("рельс");
-    await page.getByTitle(/ЗВ-2026-104 · Поставка рельсов Р65/).click();
+    await page.getByTitle(/PRJ-2026-104 · Поставка рельсов Р65/).click();
     await openStep(page, ROUTE);
     await expect(
       page
@@ -125,7 +125,7 @@ test.describe("Создать документ: сотрудник", () => {
     await expect(panel.getByText("Директор — ждёт решения")).toBeVisible();
     await expect(panel.getByText("Бухгалтер — дальше по маршруту")).toBeVisible();
     await expect(panel.getByRole("button", { name: "Скачать: schet-mebel.pdf" })).toBeVisible();
-    await expect(panel.getByText("ЗВ-2026-104")).toBeVisible();
+    await expect(panel.getByText("PRJ-2026-104")).toBeVisible();
     await settledScreenshot(page, "document-panel");
 
     const row = page
@@ -302,7 +302,7 @@ test.describe("Создать документ: директор и реестр
       panel.getByRole("heading", { level: 3, name: "Ответ на запрос цен" }),
     ).toBeVisible();
     await expect(panel.getByText("Зарегистрировано")).toBeVisible();
-    await expect(panel.getByText(/ИСХ-082\/26/)).toBeVisible();
+    await expect(panel.getByText(/OUT-082\/26/)).toBeVisible();
     await expect(panel.getByText("АО «Демо-Путь»")).toBeVisible();
   });
 

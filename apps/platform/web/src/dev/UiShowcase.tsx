@@ -3,7 +3,6 @@ import { type ReactNode, useState } from "react";
 
 import { companyToday } from "../shared/lib/dates";
 import { MEANING_TONE, STATUS_KINDS, STATUS_TONE, STATUS_TONES } from "../shared/lib/statuses";
-import { formatDocNumber } from "../shared/lib/docNumber";
 import { useFormat } from "../shared/lib/useFormat";
 import { Checklist } from "../shared/ui/Checklist";
 import { ContextPanel } from "../shared/ui/ContextPanel";
@@ -83,11 +82,11 @@ function Steps() {
   return (
     <Section id="steps" title="RequestSteps: путь заявки в 7 шагов">
       <div className="pf-card dev-card dev-stack">
-        <RequestSteps stage="REQUEST" number="ЗВ-2026-104" />
-        <RequestSteps stage="QUOTE" number="ЗВ-2026-104" />
-        <RequestSteps stage="PAYMENT" number="ПР-2026-104" />
-        <RequestSteps stage="DONE" number="ПР-2026-099" />
-        <RequestSteps stage="LOST" step={4} number="ЗВ-2026-097" />
+        <RequestSteps stage="REQUEST" number="RQ-2026-104" />
+        <RequestSteps stage="QUOTE" number="RQ-2026-104" />
+        <RequestSteps stage="PAYMENT" number="PRJ-2026-104" />
+        <RequestSteps stage="DONE" number="PRJ-2026-099" />
+        <RequestSteps stage="LOST" step={4} number="RQ-2026-097" />
       </div>
     </Section>
   );
@@ -219,14 +218,14 @@ function Lists() {
             {
               id: "1",
               badge: { tone: "red", label: "срок сегодня" },
-              title: "Наложить резолюцию на письмо ВХ-104/26",
-              caption: "АО «Демо-Транс» · заявка ЗВ-2026-104 · от менеджера · вчера 09:24",
+              title: "Наложить резолюцию на письмо IN-104/26",
+              caption: "АО «Демо-Транс» · заявка RQ-2026-104 · от менеджера · вчера 09:24",
               to: "/dev/ui",
             },
             {
               id: "2",
               badge: { tone: "gold", label: "завтра" },
-              title: "Одобрить КП-2026/118 (черновик)",
+              title: "Одобрить QT-2026/118 (черновик)",
               caption: "Депо «Демо» · расчёт готов, визы собраны · маржа 23,4 %",
               to: "/dev/ui",
             },
@@ -245,7 +244,7 @@ function Lists() {
           extra={<Button size="small">+ Добавить документ</Button>}
         >
           <DocRow
-            number="КП-2026/115"
+            number="QT-2026/115"
             type="Исходящие · v2"
             status={<StatusTag kind="quote" status="accepted" />}
             note="24.10 · Рустамов А.К. в кабинете"
@@ -296,11 +295,9 @@ function Formats() {
               label: "Номера",
               value: (
                 <span className="dev-numbers">
-                  <DocNumber number="ЗВ-2026-104" base="/eds/projects" />
-                  <DocNumber
-                    number={formatDocNumber({ kind: "quote", year: 2026, seq: 115, version: 2 })}
-                  />
-                  <DocNumber number={formatDocNumber({ kind: "incoming", year: 2026, seq: 104 })} />
+                  <DocNumber number="RQ-2026-104" base="/eds/projects" />
+                  <DocNumber number="QT-2026/115 v2" />
+                  <DocNumber number="IN-104/26" />
                 </span>
               ),
             },
@@ -328,7 +325,7 @@ function States() {
         <SourceBanner sources={{ crm: "unavailable", erp: "unavailable" }} />
         <div className="pf-card dev-card">
           <PageHeader
-            title="ПР-2026-104 · Датчики ADZ, блоки БКЗ-24В"
+            title="PRJ-2026-104 · Датчики ADZ, блоки БКЗ-24В"
             subtitle="АО «Демо-Транс» · 134,4 млн сум с НДС"
             extra={<SoonButton>Написать клиенту</SoonButton>}
           />

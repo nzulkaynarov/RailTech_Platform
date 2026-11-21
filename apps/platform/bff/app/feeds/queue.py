@@ -470,8 +470,8 @@ def letter_task_rows(snap: Snapshot, now: datetime, view: View) -> list[Row]:
 
 
 def _registration_row(entry: dict[str, Any], role_id: str) -> Row | None:
-    """«Зарегистрировать ИСХ» (EDS-REPLY-1): исполнитель передал черновик ответа на регистрацию;
-    строка уходит сама, когда ИСХ зарегистрирован. Ведёт в карточку черновика."""
+    """«Зарегистрировать исходящее» (EDS-REPLY-1): исполнитель передал черновик ответа на
+    регистрацию; строка уходит сама, когда исходящее зарегистрировано. Ведёт в черновик."""
     document_id = entry.get("document_id")
     if not isinstance(document_id, str) or not document_id:
         return None
@@ -484,14 +484,14 @@ def _registration_row(entry: dict[str, Any], role_id: str) -> Row | None:
             id=f"register_reply:{document_id}",
             role_id=role_id,
             kind="register_reply",
-            title=f"Зарегистрировать ИСХ: ответ на {letter_number}"
+            title=f"Зарегистрировать исходящее: ответ на {letter_number}"
             if letter_number
-            else "Зарегистрировать ИСХ",
+            else "Зарегистрировать исходящее",
             subtitle=join(subject, by),
             due_label="today",
             object=ObjectRef(
                 kind="memo",
-                number=letter_number or subject or "ИСХ",
+                number=letter_number or subject or "Исходящее",
                 title=subject or None,
                 path=outgoing_document_path(document_id),
             ),

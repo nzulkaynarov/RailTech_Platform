@@ -1,9 +1,9 @@
 """Бизнес-номера и пути объектов SPA (SPEC-v3 §2.2, docs/architecture/platform-frontend.md §6).
 
-Номер заявки или проекта (ЗВ-/ПР-) выдаёт ERP (`Deal.number`, ERP-09): BFF его не составляет и из
-номера `id` не разбирает (кроме `L-NNNN` лида CRM). Если ERP номера не отдал (старая запись),
-показывается нейтральное `D-<id>`. Поиск сделок по номеру, названию и компании — на стороне ERP
-(`?search=`, латиница ZV/PR и пробелы допустимы).
+Номер заявки или проекта выдаёт ERP (`Deal.number`, ERP-09) по схеме нумерации: BFF его не
+составляет, не переписывает и из номера ни `id`, ни вид не разбирает (кроме `L-NNNN` лида CRM).
+Если ERP номера не отдал (старая запись), показывается нейтральное `D-<id>`. Поиск сделок по
+номеру, названию и компании — на стороне ERP (`?search=`); запрос уходит как набран.
 """
 
 import re
@@ -50,42 +50,6 @@ def lead_id_of(text: str) -> int | None:
     """`L-2041`, `l2041`, `2041` с префиксом L — идентификатор лида CRM."""
     match = re.fullmatch(r"[Ll]-?(\d{1,9})", text.strip())
     return int(match.group(1)) if match else None
-
-
-# Латинская запись префикса бизнес-номера (раскладка клавиатуры «ZV»), O-4 отчёта гейта P1.
-_LATIN_PREFIXES = {"zv": "ЗВ", "pr": "ПР", "kp": "КП"}
-_LATIN_PREFIX = re.compile(r"(?i:(zv|pr|kp))(?![^\W\d_])")
-
-_DEAL_NUMBER_QUERY = re.compile(
-    r"(?P<prefix>[^\W\d_]{2})[\s\-–—/]*(?P<year>\d{4})[\s\-–—/]*(?P<seq>\d{1,6})"
-)
-
-
-def cyrillic_prefix(text: str) -> str:
-    """Запрос как набран, но латинский префикс номера заменён кириллическим: `kp-2026-0` ->
-    `КП-2026-0`, `zv 2026` -> `ЗВ 2026`. Остальное не перестраивается: номера документов ERP
-    (`КП-2026-00001`, схема и ширина настраиваются) ищутся по подстроке как есть."""
-    stripped = text.strip()
-    match = _LATIN_PREFIX.match(stripped)
-    if match is None:
-        return stripped
-    return _LATIN_PREFIXES[match[1].casefold()] + stripped[match.end() :]
-
-
-def number_query(text: str) -> str | None:
-    """Запрос, похожий на номер заявки или проекта, в каноническом виде: `zv-2026-1` ->
-    `ЗВ-2026-001` (ERP выдаёт номер с тремя знаками). Не номер ЗВ/ПР — None. Это нормализация
-    набранной строки для точного вызова ERP (`GET /calc/deals/?number=`), не разбор идентификатора:
-    `id` сделки из номера не извлекается. Поиск по частичному номеру — `?search=` ERP.
-    """
-    match = _DEAL_NUMBER_QUERY.fullmatch(text.strip())
-    if match is None:
-        return None
-    prefix = match["prefix"].casefold()
-    prefix = _LATIN_PREFIXES.get(prefix, prefix.upper())
-    if prefix not in ("ЗВ", "ПР"):
-        return None
-    return f"{prefix}-{match['year']}-{match['seq'].zfill(3)}"
 
 
 def deal_step(deal: dict[str, Any]) -> DealStep:
@@ -191,7 +155,7 @@ def quote_number(quote: dict[str, Any]) -> str:
     number = quote.get("number")
     if isinstance(number, str) and number:
         return number
-    return f"КП v{quote.get('version') or 1}"
+    return f"Коммерческое предложение, версия {quote.get('version') or 1}"
 
 
 def quote_ref(quote: dict[str, Any], *, title: str | None, drafting: bool) -> ObjectRef:

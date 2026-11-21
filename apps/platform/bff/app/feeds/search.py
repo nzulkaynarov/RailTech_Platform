@@ -14,7 +14,6 @@ from app.feeds.feed import SNAPSHOT_TTL_SECONDS, Feed, rows
 from app.feeds.models import ObjectRef, SearchGroup, SearchHit, SearchResult
 from app.feeds.numbers import (
     STEP_TITLES,
-    cyrillic_prefix,
     deal_number,
     deal_ref,
     deal_step,
@@ -168,10 +167,9 @@ def _registry_hit(item: dict[str, Any]) -> SearchHit | None:
 
 
 async def search(feed: Feed, access: Access, query: str) -> SearchResult:
-    # Сделки ERP получают запрос как набран (`ZV 2026 104`, `зв-2026-10`): номер, название и
-    # компанию разбирает ERP. Латинский префикс номера документа (`kp-…`) -> кириллический; номера
-    # документов строит схема нумерации ERP, BFF её не перестраивает.
-    typed = cyrillic_prefix(query)
+    # Запрос уходит в ERP и EDS как набран: номер, название и компанию разбирают они (в том числе
+    # прежние номера). Номера строит схема нумерации, BFF префикс не переписывает.
+    typed = query.strip()
     docs_query = typed
     can_leads = allows(access, "crm.leads", "read")
     can_clients = allows(access, "crm.clients", "read")

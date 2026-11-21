@@ -12,7 +12,7 @@ import { addAddressee, chooseOption, fillDate, openStep, pickFiles } from "./sup
 const WIDE = 1440;
 const NARROW = 390;
 
-const ID = encodeURIComponent("ВХ-109/26");
+const ID = encodeURIComponent("IN-109/26");
 
 function companyDay(offset: number): string {
   return new Intl.DateTimeFormat("en-CA", {
@@ -128,11 +128,11 @@ test.describe("P8b: поручения по входящим", () => {
     await both(page, "register-draft");
     await openStep(page, "Проверка и регистрация");
     await page.getByRole("button", { name: "Зарегистрировать", exact: true }).click();
-    await expect(page.getByText(/Зарегистрировано: ВХ-109\/26/)).toBeVisible();
+    await expect(page.getByText(/Зарегистрировано: IN-109\/26/)).toBeVisible();
 
     // 2. Директор: строка «Наложить резолюцию», проект — «Утвердить проект» одним нажатием.
     await switchTo(page, "director@demo.example");
-    await expect(queueRow(page, "Наложить резолюцию на письмо ВХ-109/26")).toBeVisible();
+    await expect(queueRow(page, "Наложить резолюцию на письмо IN-109/26")).toBeVisible();
     await spaGoto(page, `/eds/inbox/${ID}?panel=open&tab=resolution`);
     await expect(page.getByText(/Проект подготовил\(а\) Демо Канцелярова/)).toBeVisible();
     await both(page, "resolution-draft", {
@@ -145,7 +145,7 @@ test.describe("P8b: поручения по входящим", () => {
     // Журнал: «На контроле» — исполнитель и срок.
     await spaGoto(page, "/eds/inbox?status=on_control");
     const journalRow = page.getByRole("row").filter({
-      has: page.getByRole("link", { name: "Показать письмо ВХ-109/26 в боковом окне" }),
+      has: page.getByRole("link", { name: "Показать письмо IN-109/26 в боковом окне" }),
     });
     await expect(journalRow).toContainText("Демо Широков");
     await expect(journalRow).toContainText(ru(due));
@@ -153,12 +153,12 @@ test.describe("P8b: поручения по входящим", () => {
 
     // 3. Исполнитель: поручение в «Моих задачах» со сроком → рабочий экран → «Запросить перенос».
     await switchTo(page, "universal@demo.example");
-    const task = queueRow(page, "Исполнить поручение по письму ВХ-109/26");
+    const task = queueRow(page, "Исполнить поручение по письму IN-109/26");
     await expect(task).toBeVisible();
     await expect(task).toContainText(ru(due).slice(0, 5));
     await task.getByRole("link", { name: /^Открыть:/ }).click();
     await expect(
-      page.getByRole("heading", { level: 1, name: "Поручение по письму ВХ-109/26" }),
+      page.getByRole("heading", { level: 1, name: "Поручение по письму IN-109/26" }),
     ).toBeVisible();
     await both(page, "executor-task");
     // письмо срочное: запросить перенос можно, директор может только отклонить (Росархив 5.14)
@@ -179,7 +179,7 @@ test.describe("P8b: поручения по входящим", () => {
 
     // 4. Директор: строка «Перенос срока» → «Отклонить перенос».
     await switchTo(page, "director@demo.example");
-    const extRow = queueRow(page, "Решить перенос срока по письму ВХ-109/26");
+    const extRow = queueRow(page, "Решить перенос срока по письму IN-109/26");
     await expect(extRow).toBeVisible();
     await extRow.getByRole("link", { name: /^Открыть:/ }).click();
     const decide = page.getByRole("region", { name: "Перенос срока: нужно ваше решение" });
@@ -191,7 +191,7 @@ test.describe("P8b: поручения по входящим", () => {
 
     // 5. Исполнитель: «Исполнено» с отчётом.
     await switchTo(page, "universal@demo.example");
-    await queueRow(page, "Исполнить поручение по письму ВХ-109/26")
+    await queueRow(page, "Исполнить поручение по письму IN-109/26")
       .getByRole("link", { name: /^Открыть:/ })
       .click();
     await expect(page.getByText(/отклонено/).first()).toBeVisible();
@@ -201,17 +201,17 @@ test.describe("P8b: поручения по входящим", () => {
     ).fill("Документы по контрагенту переданы инспектору, акт приёма в файле.");
     await done.getByRole("button", { name: "Исполнено" }).click();
     await expect(page.getByText("Поручение исполнено", { exact: true })).toBeVisible();
-    await expect(queueRow(page, "ВХ-109/26")).toHaveCount(0);
+    await expect(queueRow(page, "IN-109/26")).toHaveCount(0);
 
     // 6. Директор: письмо «Исполнено», контроль снят, уведомление в колокольчике.
     await switchTo(page, "director@demo.example");
     await spaGoto(page, "/eds/inbox?status=executed");
     const executed = page.getByRole("row").filter({
-      has: page.getByRole("link", { name: "Показать письмо ВХ-109/26 в боковом окне" }),
+      has: page.getByRole("link", { name: "Показать письмо IN-109/26 в боковом окне" }),
     });
     await expect(executed).toContainText("Исполнено");
     await spaGoto(page, "/dashboard/queue?panel=open&tab=notifications");
-    await expect(page.getByText("Письмо ВХ-109/26 исполнено").first()).toBeVisible();
+    await expect(page.getByText("Письмо IN-109/26 исполнено").first()).toBeVisible();
   });
 
   test("срочное письмо: исполнитель запрашивает перенос, директор не может одобрить (только отклонить)", async ({

@@ -312,13 +312,19 @@ def _reply_to(raw: _RawReplyTo | None, *, inbox: bool) -> EdsReplyTo | None:
 
 
 async def present(
-    proxy: EdsProxy, body: Any, *, me: int, registrar: bool = False, inbox: bool = False
+    proxy: EdsProxy,
+    body: Any,
+    *,
+    me: int,
+    registrar: bool = False,
+    inbox: bool = False,
+    deal_number: str | None = None,
 ) -> EdsDocument:
     """Карточка документа: ответ EDS и шаги маршрута текущего круга (если документ отправлялся).
 
     Маршрут недоступен (нет права читать маршрут, не найден) — карточка без шагов, решения остаются.
     `registrar` — у сотрудника раздел `eds.inbox.register` (полный): регистрирует исходящие
-    (P4, B-P8B-4).
+    (P4, B-P8B-4). `deal_number` — текущий номер сделки из ERP; нет — копия, сохранённая в EDS.
     """
     raw = _parse(_RawDocument, body, f"{API}/documents")
     steps: list[EdsRouteStep] = []
@@ -331,7 +337,7 @@ async def present(
         else:
             steps = [EdsRouteStep.model_validate(s.model_dump()) for s in approval.steps]
     deal = (
-        EdsDealRef(erp_deal_id=raw.erp_deal_id, number=raw.deal_number)
+        EdsDealRef(erp_deal_id=raw.erp_deal_id, number=deal_number or raw.deal_number)
         if raw.erp_deal_id is not None
         else None
     )

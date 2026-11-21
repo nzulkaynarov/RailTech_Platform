@@ -207,7 +207,7 @@ describe("Входящая почта: «Подозрительные» и «и�
       await screen.findByText("Подозрительное", { selector: ".ant-tag *, .ant-tag" }),
     ).toBeVisible();
     expect(screen.getByText(/отметьте его в почте «Не спам»/)).toBeVisible();
-    expect(screen.queryByRole("link", { name: "Зарегистрировать как ВХ" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Зарегистрировать как входящее" })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Не спам" }));
     expect(await screen.findByText("Письмо в «Новых»")).toBeVisible();
     expect(await screen.findByText("Подозрительных писем нет")).toBeVisible();

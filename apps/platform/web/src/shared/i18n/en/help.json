@@ -58,7 +58,7 @@
         "title": "Manager",
         "steps": [
           "“Awaiting reply”: bot handovers and client messages — answer or take into work.",
-          "Create a request from a lead: the client and the number ЗВ-YYYY-NNN appear.",
+          "Create a request from a lead: the client and the request number, e.g. RQ-2026-104, appear.",
           "Follow the request step on its card: resolution, costing, quote.",
           "Need to buy something for work — file a memo."
         ]
@@ -114,7 +114,7 @@
       {
         "title": "Request",
         "who": "manager",
-        "text": "The manager creates a request from a lead: text, lines, the client's letter. The letter is registered with an ВХ number."
+        "text": "The manager creates a request from a lead: text, lines, the client's letter. The letter is registered as incoming, with a number."
       },
       {
         "title": "Resolution",
@@ -161,15 +161,15 @@
         "text": "A company with contacts. Appears when the manager creates a request from a lead."
       },
       {
-        "term": "Request (ЗВ-2026-104)",
+        "term": "Request (RQ-2026-104)",
         "text": "A client's need: text, lines, attachments, a letter. Goes through seven steps."
       },
       {
-        "term": "Project (ПР-2026-104)",
+        "term": "Project (PRJ-2026-104)",
         "text": "The same request after the client accepted the quote; inherits the request number."
       },
       {
-        "term": "Incoming letter (ВХ-104/26)",
+        "term": "Incoming letter (IN-104/26)",
         "text": "An official client document addressed to the director; waits for a resolution."
       },
       {
@@ -181,19 +181,19 @@
         "text": "Request lines with stock and partner data and specialists' sign-offs."
       },
       {
-        "term": "Quote (КП-2026/118)",
+        "term": "Quote (QT-2026/118)",
         "text": "A commercial offer with versions. Goes to the client only after the director approves."
       },
       {
-        "term": "ИСХ (ИСХ-082/26)",
+        "term": "Outgoing (OUT-082/26)",
         "text": "The outgoing number a quote gets on approval."
       },
       {
-        "term": "Contract (ДОГ-2026/104)",
+        "term": "Contract (CT-2026/104)",
         "text": "A draft contract from the accepted quote; signed with the operator, the scan is attached."
       },
       {
-        "term": "Invoice (СЧ-2026/142)",
+        "term": "Invoice (INV-2026/142)",
         "text": "An invoice for payment: prepayment, balance or stage."
       },
       {
@@ -201,11 +201,11 @@
         "text": "The client's payment order (a file) that the accountant confirms."
       },
       {
-        "term": "Act (АКТ-2026/058)",
+        "term": "Act (ACT-2026/058)",
         "text": "An act of completed work or delivery; the signed scan is attached."
       },
       {
-        "term": "Memo (СЗ-2026/031)",
+        "term": "Memo (MEMO-2026/031)",
         "text": "An internal employee document addressed to the director: subject, text, amount or deadline."
       },
       {

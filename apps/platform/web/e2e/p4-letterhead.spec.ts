@@ -179,22 +179,22 @@ test.describe("P4: письмо на бланке", () => {
     await fillDate(page.getByLabel("Срок исполнения"), companyDay(3));
     await openStep(page, "Проверка и регистрация");
     await page.getByRole("button", { name: "Зарегистрировать", exact: true }).click();
-    await expect(page.getByText(/Зарегистрировано: ВХ-109\/26/)).toBeVisible();
+    await expect(page.getByText(/Зарегистрировано: IN-109\/26/)).toBeVisible();
 
     // 2. Директор утверждает проект резолюции.
     await switchTo(page, "director@demo.example");
-    await spaGoto(page, `/eds/inbox/${encodeURIComponent("ВХ-109/26")}?panel=open&tab=resolution`);
+    await spaGoto(page, `/eds/inbox/${encodeURIComponent("IN-109/26")}?panel=open&tab=resolution`);
     await page.getByRole("button", { name: "Утвердить проект" }).click();
     await expect(page.getByText("Резолюция наложена: поручение ушло исполнителям")).toBeVisible();
 
     // 3. Исполнитель без права регистрировать: «Подготовить ответ» → письмо на бланке → PDF → «Передать на регистрацию».
     await switchTo(page, "universal@demo.example");
-    await queueRow(page, "Подготовить ответ на письмо ВХ-109/26")
+    await queueRow(page, "Подготовить ответ на письмо IN-109/26")
       .getByRole("link", { name: /^Открыть:/ })
       .click();
     await page.getByRole("link", { name: "Ответить" }).click();
     await expect(page).toHaveURL(/\/eds\/new\?type=letter&reply_to=/);
-    await expect(page.getByLabel("В ответ на входящее")).toHaveValue("ВХ-109/26");
+    await expect(page.getByLabel("В ответ на входящее")).toHaveValue("IN-109/26");
     await (
       await reveal(page.getByLabel("Тема", { exact: true }))
     ).fill("Пояснения по требованию № 14-02/3381");
@@ -239,7 +239,7 @@ test.describe("P4: письмо на бланке", () => {
       await table.scrollIntoViewIfNeeded();
     });
     await card.getByRole("button", { name: "Зарегистрировать и отправить" }).click();
-    await expect(page.getByText(/Письмо зарегистрировано: ИСХ-\d{3}\/26/)).toBeVisible();
+    await expect(page.getByText(/Письмо зарегистрировано: OUT-\d{3}\/26/)).toBeVisible();
     await expect(card.getByText("Зарегистрировано")).toBeVisible();
     await expectLetterBody(card); // зарегистрированное письмо — тот же вид текста
 
@@ -251,11 +251,11 @@ test.describe("P4: письмо на бланке", () => {
     await expect(log.getByText(/gni-mirabad@example\.uz/)).toBeVisible();
     await both(page, "sent", logInView);
 
-    // 5. Ответ закрыл поручение: письмо ВХ-109/26 «Исполнено».
+    // 5. Ответ закрыл поручение: письмо IN-109/26 «Исполнено».
     await switchTo(page, "director@demo.example");
     await spaGoto(page, "/eds/inbox?status=executed");
     await expect(
-      page.getByRole("link", { name: "Показать письмо ВХ-109/26 в боковом окне" }),
+      page.getByRole("link", { name: "Показать письмо IN-109/26 в боковом окне" }),
     ).toBeVisible();
   });
 
@@ -276,7 +276,7 @@ test.describe("P4: письмо на бланке", () => {
     await openStep(page, "Проверка и отправка");
     await page.getByRole("button", { name: "Зарегистрировать и отправить" }).click();
     await expect(
-      page.getByText(/Письмо зарегистрировано: ИСХ-\d{3}\/26\. Отправляем адресату\./),
+      page.getByText(/Письмо зарегистрировано: OUT-\d{3}\/26\. Отправляем адресату\./),
     ).toBeVisible();
 
     await expect(

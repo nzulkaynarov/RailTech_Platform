@@ -1192,15 +1192,18 @@ def to_card(
         else None
     )
     request_files = parse_request_files(deal.get("request_files")) if deal else None
+    # Номер — текущий из ERP (заявка стала проектом); ERP не ответил — копия EDS.
+    live = deal.get("number") if deal else None
+    request_number = live if isinstance(live, str) and live else links.deal_number
     request = (
         LetterRequest(
-            number=links.deal_number,
+            number=request_number,
             title=_deal_title(deal),
-            path=_request_path(links.deal_number, deal),
+            path=_request_path(request_number or "", deal),
             # Файлы клиента к заявке (СЦ-10): ERP ответил — список, нет — поля нет.
             **({"files": request_files} if request_files is not None else {}),
         )
-        if links.deal_number
+        if request_number
         else None
     )
     stage, lost_at = letter_stage(letter.status, deal)

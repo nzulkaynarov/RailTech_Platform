@@ -45,7 +45,7 @@
     },
     "search": {
       "label": "Search by invoice number or customer",
-      "placeholder": "СЧ-2026/142 or customer"
+      "placeholder": "INV-2026/142 or customer"
     },
     "caption": "Invoices",
     "scroll": "Invoices table",

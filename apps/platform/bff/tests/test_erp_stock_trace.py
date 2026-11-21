@@ -68,7 +68,7 @@ def traced_unit(**extra: Any) -> dict[str, Any]:
                 "shipment_number": "ОТГ-2026-014",
                 "shipped_at": "2026-10-28T09:00:00+00:00",
                 "quantity": 1,
-                "deal": ref(number="ПР-2026-104"),
+                "deal": ref(number="PRJ-2026-104", stage_code="CONTRACT_SIGNED"),
             }
         ],
         **extra,
@@ -93,7 +93,7 @@ async def test_search_shows_origin_and_destinations(
     assert unit["origin"]["order_path"] == f"/erp/stock/{ORDER_ENCODED}"
     assert unit["origin"]["supplier"] == "ООО Вымышленный Поставщик"
     assert unit["origin"]["request"]["number"] == NUMBER
-    assert unit["destinations"][0]["request"]["path"] == "/eds/projects/%D0%9F%D0%A0-2026-104"
+    assert unit["destinations"][0]["request"]["path"] == "/eds/projects/PRJ-2026-104"
     assert "receipt_id" not in unit["origin"]
     assert "order_id" not in unit["origin"]
 
@@ -194,7 +194,7 @@ async def test_reservations_carry_free_units_and_ship_sends_the_picks(
     shipment = {
         "id": 12,
         "number": "ОТГ-2026-014",
-        "deal": ref(number="ПР-2026-104"),
+        "deal": ref(number="PRJ-2026-104", stage_code="CONTRACT_SIGNED"),
         "tracking": None,
         "carrier": None,
         "note": None,

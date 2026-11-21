@@ -17,6 +17,7 @@ from typing import Annotated, Any, Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.feeds.models import PersonRef
+from app.feeds.numbers import deal_kind, deal_step
 from app.feeds.text import segment
 from app.schemas_erp_calc import zones_of
 from app.schemas_item_ref import ItemRef, item_ref
@@ -588,15 +589,14 @@ def stock_path(number: str) -> str:
 
 
 def request_ref(raw: Mapping[str, Any] | None) -> StockRequestRef | None:
-    """Заявка или проект: ЗВ — расчёт (рабочее место снабжения), ПР — проект в EDS."""
+    """Заявка — расчёт (рабочее место снабжения), проект — карточка проекта в EDS.
+    Вид — по стадии сделки ERP (`stage_code`), не по обозначению номера."""
     if not isinstance(raw, Mapping) or not raw.get("number"):
         return None
     number = str(raw["number"])
-    path = (
-        f"/eds/projects/{segment(number)}"
-        if number.startswith("ПР")
-        else f"/erp/calc/{segment(number)}"
-    )
+    stage = raw.get("stage_code")
+    is_project = isinstance(stage, str) and deal_kind(deal_step({"stage_code": stage})) == "project"
+    path = f"/eds/projects/{segment(number)}" if is_project else f"/erp/calc/{segment(number)}"
     return StockRequestRef(number=number, client=raw.get("client_name"), path=path)
 
 

@@ -20,6 +20,7 @@ from urllib.parse import quote
 
 from pydantic import ValidationError
 
+from app.deal_number_live import live_deal_number, number_of
 from app.deps import Authed
 from app.doc_numbers import DOC_NUMBER_RE
 from app.eds_documents import API, EdsProxy, eds_error
@@ -669,13 +670,15 @@ async def quote_card(authed: Authed, proxy: EdsProxy, body: Any) -> QuoteApprova
     snap = raw.quote
     number = raw.object.quote_number or raw.title
     title = _text(deal.get("title")) if deal else None
+    # Номер заявки — текущий из ERP: после принятия КП это номер проекта, а не копия из EDS.
+    request_number = number_of(deal, raw.object.deal_number)
     request = (
         QuoteRequestRef(
-            number=raw.object.deal_number,
+            number=request_number,
             title=title,
-            path=_request_path(raw.object.deal_number),
+            path=_request_path(request_number),
         )
-        if raw.object.deal_number
+        if request_number
         else None
     )
     checklist = [
@@ -844,7 +847,7 @@ def _mail_ready(body: Any) -> bool | None:
 
 
 async def memo_card(
-    proxy: EdsProxy, doc_body: Any, approval_body: Any | None = None
+    proxy: EdsProxy, doc_body: Any, approval_body: Any | None = None, *, authed: Authed
 ) -> MemoApprovalCard:
     doc = parse(RawDocument, doc_body, "document")
     if doc.kind not in MEMO_KINDS:
@@ -873,7 +876,10 @@ async def memo_card(
             EdsFile(id=f.id, name=f.name, content_type=f.content_type, size=f.size)
             for f in doc.files
         ],
-        deal=EdsDealRef(erp_deal_id=doc.erp_deal_id, number=doc.deal_number)
+        deal=EdsDealRef(
+            erp_deal_id=doc.erp_deal_id,
+            number=await live_deal_number(authed, doc.erp_deal_id, doc.deal_number),
+        )
         if doc.erp_deal_id is not None
         else None,
         steps=[route_step(s) for s in approval.steps],

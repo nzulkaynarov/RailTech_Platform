@@ -334,21 +334,23 @@ async def test_number_is_found_in_the_light_reference_of_erp(
 async def test_request_number_finds_the_project_with_the_same_nnn(
     web: Web, be: Backends, check: ContractChecker
 ) -> None:
-    """Номер выдаёт ERP (`Deal.number`); после принятия КП заявка — проект `ПР-…` с тем же NNN,
-    латиница и ширина номера в адресе нормализуются, `id` из номера не разбирается."""
+    """СЦ-5: номер уходит в ERP как набран (BFF не переписывает и не разбирает обозначение), ERP
+    находит сделку по году и порядковому номеру: старая ссылка `RQ-…` открывает проект `PRJ-…`,
+    выданный раньше `ЗВ-…` — тоже."""
     await web.login(["SUPPLY"])
-    project = deal(id=7, number="ПР-2026-104", stage_code="CONTRACT_SIGNED")
+    project = deal(id=7, number="PRJ-2026-104", stage_code="CONTRACT_SIGNED")
     route = be.router.get(f"{CALC}/deals/").mock(
         return_value=httpx.Response(200, json=refs(project))
     )
     be.router.get(f"{CALC}/7/").mock(return_value=httpx.Response(200, json=sheet(deal=project)))
 
-    response = await web.client.get("/api/v1/erp/calc/zv-2026-104")
+    for typed in ("RQ-2026-104", "ЗВ-2026-104", "zv 2026 104"):
+        response = await web.client.get(f"/api/v1/erp/calc/{typed}")
 
-    assert response.status_code == 200
-    check(response, "/erp/calc/{number}", "get")
-    assert response.json()["number"] == "ПР-2026-104"
-    assert route.calls.last.request.url.params["number"] == NUMBER
+        assert response.status_code == 200
+        check(response, "/erp/calc/{number}", "get")
+        assert response.json()["number"] == "PRJ-2026-104"
+        assert route.calls.last.request.url.params["number"] == typed
 
 
 async def test_unknown_number_is_404(web: Web, be: Backends, check: ContractChecker) -> None:
@@ -360,6 +362,28 @@ async def test_unknown_number_is_404(web: Web, be: Backends, check: ContractChec
     assert response.status_code == 404
     check(response, "/erp/calc/{number}", "get")
     assert response.json()["details"]["reason"] == "calc_task_not_found"
+
+
+@pytest.mark.parametrize("blank", ["%20", "%20%20"])
+async def test_a_blank_number_is_404_and_erp_is_not_asked(
+    web: Web, be: Backends, blank: str
+) -> None:
+    """ERP treats an empty `number` filter as no filter and would return the latest deal."""
+    await web.login(["SUPPLY"])
+    route = be.router.get(f"{CALC}/deals/").mock(
+        return_value=httpx.Response(200, json=refs(deal(id=7)))
+    )
+
+    for method, suffix in (("GET", ""), ("POST", "/start")):
+        response = await web.client.request(
+            method,
+            f"/api/v1/erp/calc/{blank}{suffix}",
+            headers={"x-csrf-token": web.csrf} if method == "POST" else None,
+        )
+
+        assert response.status_code == 404, (method, suffix)
+        assert response.json()["details"]["reason"] == "calc_task_not_found"
+    assert not route.called
 
 
 # --- строки, визы, «Расчёт готов» ---------------------------------------------------------------

@@ -370,7 +370,7 @@
     },
     "related": {
       "label": "Related document",
-      "hint": "Optional: number of a previous incoming (ВХ) or our outgoing (ИСХ)"
+      "hint": "Optional: number of a previous incoming or our outgoing"
     },
     "duplicate": {
       "exactTitle": "This letter seems to be registered already",
@@ -403,7 +403,7 @@
       "received_at": "Enter the date received — not later than today.",
       "subject": "Enter the subject.",
       "file_ids": "Attach the letter file and wait for the upload.",
-      "related_number": "No document with this number. Check the ВХ or ИСХ number.",
+      "related_number": "No document with this number. Check the incoming or outgoing number.",
       "forbidden": "registering incoming letters is not part of your role",
       "server": "the server did not accept the data, try again in a minute"
     },
@@ -639,7 +639,7 @@
       "reportHint": "What was done. A report, a file or an outgoing number is required.",
       "files": "Report files",
       "outgoing": "Reply — our outgoing number",
-      "outgoingHint": "If you replied with a letter: its number from \"Documents\", e.g. ИСХ-014/26.",
+      "outgoingHint": "If you replied with a letter: its number from \"Documents\", e.g. OUT-014/26.",
       "submit": "Executed",
       "done": "Instruction executed",
       "error": "Write a report, attach a file or enter the outgoing number."

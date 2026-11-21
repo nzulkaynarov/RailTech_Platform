@@ -72,7 +72,7 @@ function rejected(status: 409 | 422, reason: string, message: string, fields?: s
 }
 
 function nextNumber(state: LeadsMock): string {
-  const number = `ЗВ-2026-${String(state.nextNumber).padStart(3, "0")}`;
+  const number = `RQ-2026-${String(state.nextNumber).padStart(3, "0")}`;
   state.nextNumber += 1;
   return number;
 }

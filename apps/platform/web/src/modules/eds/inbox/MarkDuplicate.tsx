@@ -115,7 +115,7 @@ export function MarkDuplicateAction({ letter }: { letter: LetterCard }) {
             id="dup-original"
             value={number}
             maxLength={32}
-            placeholder="ВХ-101/26"
+            placeholder="IN-101/26"
             autoComplete="off"
             onChange={(event) => {
               setNumber(event.target.value);

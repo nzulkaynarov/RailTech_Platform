@@ -127,7 +127,7 @@ test.describe("P8: роли пилота и регистрация входящ�
       const started = Date.now();
       await openStep(page, "Проверка и регистрация");
       await page.getByRole("button", { name: "Зарегистрировать", exact: true }).click();
-      await expect(page.getByText(/Зарегистрировано: ВХ-109\/26/)).toBeVisible();
+      await expect(page.getByText(/Зарегистрировано: IN-109\/26/)).toBeVisible();
       expect(Date.now() - started).toBeLessThan(60_000);
       await expect(page.getByRole("heading", { level: 1, name: "Входящие" })).toBeVisible();
       // письмо в боковом окне (на телефоне — лист): у делопроизводителя кнопки решения нет — только проект резолюции (P8b)
