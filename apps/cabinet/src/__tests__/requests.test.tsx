@@ -29,9 +29,18 @@ describe('Заявки', () => {
     await heading('Заявка ЗВ-2026-042');
     expect(screen.getByText('КП готово — откройте его ниже.')).toBeInTheDocument();
     expect(screen.getByText('Через менеджера')).toBeInTheDocument();
+    expect(screen.getByText('Ведёт')).toBeInTheDocument();
+    expect(screen.getByText('Дилноза Каримова')).toBeInTheDocument();
     const quotes = await screen.findByRole('link', { name: /KP-2026-0042 · версия 2/ });
     expect(quotes).toHaveAttribute('href', '/quotes/301');
     await expectNoAxeViolations();
+  });
+
+  it('карточка: без назначенного менеджера строки «Ведёт» нет', async () => {
+    signedIn();
+    renderApp('/requests/503');
+    await heading('Заявка ЗВ-2026-061');
+    expect(screen.queryByText('Ведёт')).not.toBeInTheDocument();
   });
 
   it('чужой или несуществующий запрос — «не найдено»', async () => {

@@ -571,7 +571,7 @@ def _requests_queryset(company):
     """Запросы компании (сделки) с тем, что нужно сериализатору, без N+1."""
     return (
         Deal.objects.filter(company=company)
-        .select_related("stage", "portal_summary")
+        .select_related("stage", "portal_summary", "manager", "assigned_to")
         .prefetch_related("quotes__status", "portal_lines", "portal_uploads")
     )
 

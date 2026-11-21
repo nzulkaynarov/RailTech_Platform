@@ -377,3 +377,18 @@ def test_snapshots_are_not_mutated(company):
     before = copy.deepcopy(data)
     projections.apply_client_snapshot(data)
     assert data == before
+
+
+def test_client_snapshot_keeps_the_crm_owner_for_the_requests_of_the_client(company):
+    from integration.models import CrmClientMapping
+
+    data = client_data()
+    data["client"]["owner"] = {"crm_user_id": 77, "full_name": "Дилноза Каримова"}
+    projections.apply_client_snapshot(data)
+    assert CrmClientMapping.objects.get(crm_client_id=42).owner_crm_user_id == 77
+
+    # передача дел: ответственного сняли — заявки больше его не называют
+    data = client_data(at=T0 + timedelta(minutes=1))
+    data["client"]["owner"] = None
+    projections.apply_client_snapshot(data)
+    assert CrmClientMapping.objects.get(crm_client_id=42).owner_crm_user_id is None

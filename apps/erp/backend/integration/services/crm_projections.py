@@ -111,6 +111,10 @@ def apply_client_snapshot(data: Mapping[str, Any]) -> Outcome:
         )
 
     company: Company = mapping.company
+    owner_id = (snapshot.get("owner") or {}).get("crm_user_id")
+    if mapping.owner_crm_user_id != owner_id:
+        mapping.owner_crm_user_id = owner_id
+        mapping.save(update_fields=["owner_crm_user_id", "updated_at"])
     _remember(CrmProjectionKind.CLIENT, crm_client_id, updated_at)
     return _log(Outcome(APPLIED, f"компания #{company.pk}"), "client.updated", crm_client_id)
 
