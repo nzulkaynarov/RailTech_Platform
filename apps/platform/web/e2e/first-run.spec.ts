@@ -383,13 +383,13 @@ test.describe("Первый запуск: axe и скриншоты", () => {
   });
 });
 
-// D26G-6: «Выставить счёт» без р/с и МФО откажет — мастер показывает шаг «Банковские реквизиты для счетов» со статусом и
+// D26G-6: «Выставить счёт» без р/с и МФО откажет — мастер показывает шаг «Реквизиты для счетов» (СЦ-3: ИНН, адрес и счёт) со статусом и
 // ведёт в «Реквизиты и бланк», где над полями видно, что реквизитов нет. Снимки — docs/screens/d26g-4.
 test.describe("Первый запуск: банковские реквизиты для счетов (D26G-6)", () => {
   test.skip(({ isMobile }) => isMobile, "ширины задаёт сам сценарий");
 
   for (const width of WIDTHS) {
-    test(`шаг «Банковские реквизиты для счетов» → «Реквизиты и бланк» → «Готово», ${String(width)}`, async ({
+    test(`шаг «Реквизиты для счетов» → «Реквизиты и бланк» → «Готово», ${String(width)}`, async ({
       page,
     }) => {
       await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
@@ -401,10 +401,10 @@ test.describe("Первый запуск: банковские реквизит�
       await page.evaluate(`window.localStorage.setItem("rt-pf-mock-no-bank", "1")`);
 
       await spaGoto(page, "/admin/setup");
-      const card = stepCard(page, "Банковские реквизиты для счетов");
+      const card = stepCard(page, "Реквизиты для счетов");
       await expect(card.getByText("Не сделано")).toBeVisible();
       await expect(
-        card.getByText(/Без расчётного счёта и МФО счёт клиенту не выставить/),
+        card.getByText(/Без ИНН, юридического адреса и расчётного счёта счёт клиенту не выставить/),
       ).toBeVisible();
       await card
         .getByRole("link", { name: "Открыть «Реквизиты и бланк»" })
@@ -426,14 +426,10 @@ test.describe("Первый запуск: банковские реквизит�
       await expect(dialog.getByLabel("Банк", { exact: true })).toHaveValue("АКБ «Демо Банк»");
       await screenShot(page, "company-bank-add");
       await dialog.getByRole("button", { name: "Сохранить" }).click();
-      await expect(
-        page.getByText("Реквизиты для счетов заданы: «Выставить счёт» сработает."),
-      ).toBeVisible();
+      await expect(page.getByText("Основной счёт в сумах задан.")).toBeVisible();
 
       await spaGoto(page, "/admin/setup");
-      await expect(
-        stepCard(page, "Банковские реквизиты для счетов").getByText("Готово"),
-      ).toBeVisible();
+      await expect(stepCard(page, "Реквизиты для счетов").getByText("Готово")).toBeVisible();
     });
   }
 });

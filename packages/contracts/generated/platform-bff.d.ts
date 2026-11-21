@@ -9818,7 +9818,7 @@ export interface components {
       required: boolean;
       /** @description Текущий сотрудник может её создать (суперпользователь ERP) */
       can_setup: boolean;
-      /** @description Шаг «Банковские реквизиты для счетов» (D26G-6): у своей компании есть р/с или МФО — без них ERP не выставит счёт (ERP `setup/status` `bank_details_ready`; компании нет — `true`) */
+      /** @description Шаг «Реквизиты для счетов» (D26G-6, СЦ-3): у своей компании есть ИНН, юридический адрес и расчётный счёт — без них ERP не выставит счёт (ERP `setup/status` `bank_details_ready`; компании нет — `true`) */
       bank_details_ready: boolean;
     };
     SetupChecklist: {
@@ -11331,7 +11331,7 @@ export interface components {
       counts: components["schemas"]["PaymentCounts"];
       /** @description Служебок ждёт оплаты (до 100); `null` — EDS не ответил */
       memos_to_pay: number | null;
-      /** @description У своей компании есть реквизиты для счетов (р/с или МФО; ERP `seller_bank_details_ready`, D26G-6). `false` — «Выставить счёт» откажет `bank_details_required`: экран предупреждает до клика, заполняет администратор в «Настройки · Компания и бланки» */
+      /** @description У своей компании есть реквизиты для счетов — ИНН, юридический адрес и расчётный счёт (ERP `seller_bank_details_ready`, D26G-6, СЦ-3). `false` — «Выставить счёт» откажет `bank_details_required`: экран предупреждает до клика, заполняет администратор в «Настройки · Реквизиты и бланк» */
       bank_details_ready: boolean;
       items: components["schemas"]["PaymentRow"][];
       sources: components["schemas"]["PaymentSources"];

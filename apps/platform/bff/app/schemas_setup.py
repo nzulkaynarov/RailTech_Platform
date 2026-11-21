@@ -50,7 +50,7 @@ class SetupStep(BaseModel):
 class SetupCompanyStatus(BaseModel):
     required: bool
     can_setup: bool
-    # D26G-6: шаг «Банковские реквизиты для счетов» — у своей компании есть р/с или МФО (ERP)
+    # D26G-6, СЦ-3: шаг «Реквизиты для счетов» — у своей компании есть ИНН, юр. адрес и р/с (ERP)
     bank_details_ready: bool
 
 
