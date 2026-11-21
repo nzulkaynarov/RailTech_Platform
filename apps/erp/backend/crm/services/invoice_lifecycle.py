@@ -90,6 +90,17 @@ def _bank_details_line(company, currency_code=None) -> str:
     return bank_details_text(company, currency_code)
 
 
+def seller_identity_ready(company) -> bool:
+    """ИНН и юридический адрес продавца есть — то, что печатает счёт (`rt_documents._parties`: профиль бланка или
+    карточка компании). Без них счёт выходит без реквизитов продавца (СЦ-3)."""
+    from accounts.models import CompanyDocumentProfile
+
+    row = CompanyDocumentProfile.objects.filter(company=company).only("inn", "legal_address").first()
+    inn = (getattr(company, "inn", "") or (row.inn if row else "") or "").strip()
+    address = (getattr(company, "legal_address", "") or (row.legal_address if row else "") or "").strip()
+    return bool(inn and address)
+
+
 def invoice_bank_details_ready(invoice) -> bool:
     """Гейт выпуска (`SELLER_BANK_DETAILS_REQUIRED`) этот счёт пропустит: реквизиты продавца есть.
 
@@ -99,7 +110,7 @@ def invoice_bank_details_ready(invoice) -> bool:
     if invoice.frozen_bank_details or invoice.status_code != InvoiceStatusCode.DRAFT:
         return True
     seller, details = _seller_and_bank_details(invoice)
-    return bool(details) or seller is None
+    return seller is None or (bool(details) and seller_identity_ready(seller))
 
 
 def own_company_bank_details_ready() -> bool:
@@ -114,7 +125,7 @@ def own_company_bank_details_ready() -> bool:
 
     company_id = own_company_id_or_none()
     company = Company.objects.filter(pk=company_id).first() if company_id else None
-    return company is None or bool(_bank_details_line(company))
+    return company is None or (bool(_bank_details_line(company)) and seller_identity_ready(company))
 
 
 @transaction.atomic
@@ -137,7 +148,8 @@ def issue_invoice(invoice, user) -> Tuple[Optional[object], Optional[str]]:
     # ссылкой в настройки. Гейт стоит ИМЕННО на выпуске счёта (как переход draft → open у
     # HubSpot: «all of the details needed to be sent to the buyer»), КП и договор он не трогает.
     seller, bank_details = _seller_and_bank_details(invoice)
-    if seller is not None and not bank_details:
+    # СЦ-3: и ИНН с юридическим адресом — без них счёт печатается без реквизитов продавца.
+    if seller is not None and not (bank_details and seller_identity_ready(seller)):
         # Гейт бьёт ТОЛЬКО когда продавец известен, а реквизиты у него пусты — тогда их и
         # правда некому заполнить, кроме него. Счёт, у которого продавец вообще не выводится
         # (старые/ручные данные), этот гейт не трогает: там другая проблема, документ и так

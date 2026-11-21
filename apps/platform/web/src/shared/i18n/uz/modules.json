@@ -428,7 +428,7 @@
         "hide": "Ertagacha yashirish",
         "hideLabel": "Ertagacha yashirish: sozlash banneri",
         "hidden": "Banner ertagacha yashirildi. Uni «Birinchi ishga tushirish» ustozida qaytarish mumkin.",
-        "bank": "Hisoblar uchun bank rekvizitlari yo‘q."
+        "bank": "Hisob uçun rekvizitlar yöq: STIR, yuridik manzil yoki hisob raqam."
       },
       "erpTitle": "ERP ulanishi",
       "erpLead": "Kompaniya ERP'da yaratiladi, shuning uchun ERP birinchi ulanadi: «ERP ni ulash» tugmasi yetarli.",
@@ -447,9 +447,9 @@
       "bannerHidden": "Sozlash banneri ertagacha yashirilgan.",
       "bannerReturn": "Bannerni qaytarish",
       "cabinetTitle": "Mijoz kabineti manzili",
-      "bankTitle": "Hisoblar uchun bank rekvizitlari",
-      "bankDone": "Hisob raqami va MFO kiritilgan: mijozga hisob chiqariladi.",
-      "bankTodo": "Hisob raqami va MFOsiz mijozga hisob chiqarib bo‘lmaydi. Ularni «Sozlamalar · Rekvizitlar va blanka»da kiriting.",
+      "bankTitle": "Hisob uçun rekvizitlar",
+      "bankDone": "STIR, yuridik manzil va hisob raqam kiritilgan: mijozga hisob chiqariladi.",
+      "bankTodo": "STIR, yuridik manzil va hisob raqamsiz mijozga hisob chiqarib bölmaydi. Ularni «Sozlamalar · Rekvizitlar va blank»da kiriting.",
       "bankWaitCompany": "Avval kompaniyangizni yarating: rekvizitlar uning kartasida kiritiladi.",
       "bankUnknown": "Hali ma’lumot yo‘q — rekvizitlar holati server javob bergach ko‘rinadi.",
       "bankOpen": "«Rekvizitlar va blanka»ni ochish",

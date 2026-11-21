@@ -444,8 +444,8 @@
     }
   },
   "bankDetails": {
-    "title": "Kompaniyaning bank rekvizitlari yo‘q — hisob chiqarib bo‘lmaydi.",
-    "text": "",
+    "title": "Kompaniya rekvizitlari yöq (STIR, yuridik manzil yoki hisob raqam) — hisob chiqarib bölmaydi.",
+    "text": "Ularni administrator «Sozlamalar · Rekvizitlar va blank»da töldiradi.",
     "open": "«Rekvizitlar va blanka»ni ochish"
   },
   "bankChanges": {

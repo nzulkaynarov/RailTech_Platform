@@ -444,8 +444,8 @@
     }
   },
   "bankDetails": {
-    "title": "The company has no bank details — the invoice cannot be issued.",
-    "text": "",
+    "title": "Company details are missing (tax ID, legal address or bank account) — the invoice cannot be issued.",
+    "text": "An administrator fills them in “Settings · Details and letterhead”.",
     "open": "Open “Details & letterhead”"
   },
   "bankChanges": {
