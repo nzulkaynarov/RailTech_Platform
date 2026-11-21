@@ -368,6 +368,27 @@ describe("Склад · приёмка и отгрузки", () => {
     expect(await screen.findByText("в резерве 12 из 20")).toBeVisible();
   });
 
+  it("СЦ-9: отгрузка открыта из «Моих задач» с ?request= — проект уже найден, резервы показаны", async () => {
+    signIn("supply@demo.example");
+    renderAt("/erp/stock?view=shipments&request=ПР-2026-099");
+    expect(await screen.findByRole("searchbox", { name: "Номер проекта" })).toHaveValue(
+      "ПР-2026-099",
+    );
+    expect(
+      await screen.findByRole("spinbutton", { name: "Отгрузить, «Скрепление рельсовое КБ-65»" }),
+    ).toHaveValue("20");
+  });
+
+  it("СЦ-9: новый заказ открыт с ?mode=shortage&request= — режим и номер проекта подставлены", async () => {
+    signIn("supply@demo.example");
+    renderAt("/erp/stock/new?mode=shortage&request=ПР-2026-099");
+    await screen.findByRole("heading", { level: 1, name: "Новый заказ партнёру" });
+    expect(await screen.findByRole("radio", { name: "На дефицит заявки" })).toBeChecked();
+    expect(screen.getByRole("textbox", { name: /Номер заявки|Заявка|Проект/ })).toHaveValue(
+      "ПР-2026-099",
+    );
+  });
+
   it("непроект (заявка ЗВ) не отгружается: понятный отказ", async () => {
     await openStock("supply@demo.example", "shipments");
     fireEvent.change(screen.getByRole("searchbox", { name: "Номер проекта" }), {

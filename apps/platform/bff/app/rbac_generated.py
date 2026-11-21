@@ -347,6 +347,14 @@ QUEUE: Final[dict[str, tuple[str, Level]]] = {
         "erp.stock",
         "full",
     ),
+    "order_shortage": (
+        "erp.stock",
+        "full",
+    ),
+    "ship_project": (
+        "erp.stock",
+        "full",
+    ),
     "confirm_payment": (
         "eds.payments",
         "full",

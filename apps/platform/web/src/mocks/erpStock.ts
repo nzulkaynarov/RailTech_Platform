@@ -710,25 +710,68 @@ export function supplyTaskQueueItems(
 ): QueueItem[] {
   const full = view.find((r) => r.access["erp.stock"] === "full");
   if (!full) return [];
-  return read()
-    .orders.filter((o) => o.status === "draft")
-    .map((o): QueueItem => {
-      const supplier = SUPPLIERS.find((s) => s.id === o.supplierId)?.name ?? null;
-      return {
-        id: `send_supplier_order:${String(o.id)}`,
-        role_id: full.id,
-        kind: "send_supplier_order",
-        title: `Отправить заказ ${o.number} партнёру`,
-        subtitle: supplier ?? "",
-        due_label: "later",
-        object: {
-          kind: "supplier_order",
-          number: o.number,
-          ...(supplier ? { title: supplier } : {}),
-          path: `/erp/stock/${seg(o.number)}`,
-        },
-      };
-    });
+  // СЦ-9: строки по проекту — «Заказать недостающее» и «Отгрузить товар» (ERP считает их сам); системному директору не приходят.
+  const project = REQUESTS.find((r) => r.project);
+  const executor = view.find(
+    (r) =>
+      r.access["erp.stock"] === "full" &&
+      !("system" in r && r.system && "code" in r && r.code === "DIRECTOR"),
+  );
+  const projectItems: QueueItem[] =
+    project && executor
+      ? [
+          {
+            id: "order_shortage:900",
+            role_id: executor.id,
+            kind: "order_shortage",
+            title: `Заказать недостающее по ${project.number}`,
+            subtitle: `${project.client} · Болт М22: 5 шт.`,
+            due_label: "today",
+            object: {
+              kind: "project",
+              number: project.number,
+              title: project.client,
+              path: `/erp/stock/new?mode=shortage&request=${seg(project.number)}`,
+            },
+          },
+          {
+            id: "ship_project:900",
+            role_id: executor.id,
+            kind: "ship_project",
+            title: `Отгрузить товар по ${project.number}`,
+            subtitle: `${project.client} · в резерве 40 т`,
+            due_label: "later",
+            object: {
+              kind: "project",
+              number: project.number,
+              title: project.client,
+              path: `/erp/stock?view=shipments&request=${seg(project.number)}`,
+            },
+          },
+        ]
+      : [];
+  return [
+    ...projectItems,
+    ...read()
+      .orders.filter((o) => o.status === "draft")
+      .map((o): QueueItem => {
+        const supplier = SUPPLIERS.find((s) => s.id === o.supplierId)?.name ?? null;
+        return {
+          id: `send_supplier_order:${String(o.id)}`,
+          role_id: full.id,
+          kind: "send_supplier_order",
+          title: `Отправить заказ ${o.number} партнёру`,
+          subtitle: supplier ?? "",
+          due_label: "later",
+          object: {
+            kind: "supplier_order",
+            number: o.number,
+            ...(supplier ? { title: supplier } : {}),
+            path: `/erp/stock/${seg(o.number)}`,
+          },
+        };
+      }),
+  ];
 }
 
 /** Тестам (план 0.7): черновик заказа партнёру в демо-данных — как от «Заказать по дефициту». */

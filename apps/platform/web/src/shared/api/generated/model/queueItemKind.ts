@@ -25,6 +25,8 @@ export const QueueItemKind = {
   partner_date_change: "partner_date_change",
   receive_goods: "receive_goods",
   partner_application: "partner_application",
+  order_shortage: "order_shortage",
+  ship_project: "ship_project",
   confirm_payment: "confirm_payment",
   issue_invoice: "issue_invoice",
   issue_contract: "issue_contract",

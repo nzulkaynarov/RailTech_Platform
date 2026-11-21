@@ -1276,6 +1276,60 @@ async def test_supply_tasks_are_queue_rows(
     }
 
 
+def shortage_and_ship_rows() -> list[dict[str, Any]]:
+    base = {"number": "ПР-2026-007", "client_name": "ООО Вымышленный Заказчик"}
+    return [
+        {
+            "kind": "order_shortage",
+            "id": 70,
+            "since": "2027-01-09T10:00:00+05:00",
+            "note": "Болт М22: 5 шт.",
+            **base,
+        },
+        {
+            "kind": "ship_project",
+            "id": 71,
+            "since": "2027-01-09T11:00:00+05:00",
+            "note": "в резерве 40 т",
+            **base,
+        },
+    ]
+
+
+async def test_shortage_and_ship_rows_name_the_project_and_open_prefilled_screens(
+    web: Web, fb: FeedBackends, check: ContractChecker
+) -> None:
+    """СЦ-9: строки снабжения по проекту — заголовок с номером ПР, ссылка с предзаполнением."""
+    fb.state["supply_tasks"] = {"results": shortage_and_ship_rows()}
+    await web.login(["SUPPLY"])
+
+    response = await web.client.get("/api/v1/queue")
+
+    assert response.status_code == 200, response.json()
+    check(response, "/queue", "get")
+    rows = {i["kind"]: i for i in response.json()["items"]}
+    short, ship = rows["order_shortage"], rows["ship_project"]
+    number = quote("ПР-2026-007", safe="")
+    assert short["title"] == "Заказать недостающее по ПР-2026-007"
+    assert short["subtitle"] == "ООО Вымышленный Заказчик · Болт М22: 5 шт."
+    assert short["due_label"] == "today"
+    assert short["object"]["path"] == f"/erp/stock/new?mode=shortage&request={number}"
+    assert ship["title"] == "Отгрузить товар по ПР-2026-007"
+    assert ship["subtitle"] == "ООО Вымышленный Заказчик · в резерве 40 т"
+    assert ship["object"]["path"] == f"/erp/stock?view=shipments&request={number}"
+
+
+async def test_shortage_and_ship_rows_do_not_reach_the_system_director(
+    web: Web, fb: FeedBackends
+) -> None:
+    """Исполнение (заказать, отгрузить) — не решения: у системного директора этих строк нет."""
+    fb.state["supply_tasks"] = {"results": supply_task_rows() + shortage_and_ship_rows()}
+    await web.login(["DIRECTOR"])
+    kinds = {i["kind"] for i in (await web.client.get("/api/v1/queue")).json()["items"]}
+    assert not {"order_shortage", "ship_project"} & kinds
+    assert {"send_supplier_order", "receive_goods"} <= kinds
+
+
 @pytest.mark.parametrize("role", ["MANAGER", "ACCOUNTANT"])
 async def test_supply_tasks_are_not_asked_for_roles_without_the_stock_section(
     web: Web, fb: FeedBackends, role: str
