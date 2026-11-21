@@ -112,7 +112,7 @@ async def test_memo_with_amount_goes_to_the_accountant_then_payment_is_announced
 ) -> None:
     doc_id, _ = await to_accountant(client, staff, **WITH_AMOUNT)
     [decided] = await notices(container, "memo_decided")
-    assert decided["recipients"] == [5] and "Передана бухгалтеру на оплату" in decided["subtitle"]
+    assert decided["recipients"] == [5] and "Передана на оплату" in decided["subtitle"]
 
     paid = await pay(client, staff["accountant"], doc_id)
     assert paid.status_code == 200, paid.text
@@ -151,12 +151,22 @@ async def test_nobody_can_sign_tells_the_holders_of_signing_manage(
     assert "Права подписи" in notice["subtitle"]
 
 
-async def test_the_only_signer_being_the_author_is_not_notified(
+async def test_the_only_signer_being_the_author_who_cannot_open_the_draft_is_missing(
     client: httpx.AsyncClient, container: Container, staff: dict[str, Person]
 ) -> None:
-    await authorise(client, staff, crm_user_id=5)
+    await authorise(client, staff, crm_user_id=5)  # автор без letters.register: подписать не может
     await hand_over(client, staff["manager"])
-    assert await notices(container) == []
+    [notice] = await notices(container)
+    assert notice["kind"] == "letter_signer_missing" and 9 in notice["recipients"]
+
+
+async def test_holder_without_letters_register_is_not_asked_to_sign(
+    client: httpx.AsyncClient, container: Container, staff: dict[str, Person]
+) -> None:
+    await authorise(client, staff, crm_user_id=6)  # бухгалтер: полномочие есть, доступа к черновику нет
+    await hand_over(client, staff["manager"])
+    [notice] = await notices(container)
+    assert notice["kind"] == "letter_signer_missing" and 6 not in notice["recipients"]
 
 
 async def test_reply_letter_does_not_double_the_registration_notice(

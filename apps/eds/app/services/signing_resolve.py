@@ -18,7 +18,7 @@
 """
 
 import uuid
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Collection, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
@@ -38,6 +38,7 @@ from app.schemas.signing import (
     SignerCheck,
     SigningResolution,
 )
+from app.security.permissions import EdsPermission as P
 
 MAX_DEPUTY_CHAIN = 5
 _RANK = {BASIS_CHARTER: 0, BASIS_ORDER: 1, BASIS_POWER_OF_ATTORNEY: 2}
@@ -379,16 +380,40 @@ async def resolve(
     )
 
 
+async def draft_openers(session: AsyncSession, ids: Collection[int]) -> set[int]:
+    """Кто из `ids` видит и вправе подписать переданный черновик ИСХ: активный держатель `letters.register`
+    (без него черновик недоступен — `access.document_visible`)."""
+    if not ids:
+        return set()
+    rows = await session.execute(
+        select(Employee.crm_user_id).where(
+            Employee.crm_user_id.in_(ids),
+            Employee.is_active.is_(True),
+            literal(P.LETTERS_REGISTER.value) == any_(Employee.permissions_eds),
+        )
+    )
+    return {int(uid) for uid in rows.scalars()}
+
+
+def pick_letter_signer(
+    result: SigningResolution, author_crm_user_id: int | None, openers: Collection[int] | None = None
+) -> SignerCandidate | None:
+    """Кому достаётся подпись письма: первый кандидат, кто не автор (ADR-0024 п. 3), иначе первый, иначе никто.
+    Если задан `openers`, кандидаты вне него пропускаются: кому черновик недоступен, тому его и не поручают."""
+    pool = [c for c in result.candidates if openers is None or c.signer.crm_user_id in openers]
+    for item in pool:
+        if item.signer.crm_user_id != author_crm_user_id:
+            return item
+    return pool[0] if pool else None
+
+
 async def letter_signer(session: AsyncSession, document: Document, today: date) -> SignerCandidate | None:
-    """Кому уходит проект исходящего письма на подпись: первый кандидат реестра, не автор (автор ≠ подписант,
-    ADR-0024 п. 3), иначе единственный возможный; подписать некому — `None`."""
+    """Вычисленный подписант документа `document` на дату `today` (без миграции: по реестру полномочий на лету)."""
     result = await resolve(
         session, kind=document.kind, amount=document.amount, currency=document.currency, on_date=today
     )
-    for item in result.candidates:
-        if item.signer.crm_user_id != document.author_crm_user_id:
-            return item
-    return result.candidates[0] if result.candidates else None
+    openers = await draft_openers(session, {c.signer.crm_user_id for c in result.candidates})
+    return pick_letter_signer(result, document.author_crm_user_id, openers)
 
 
 async def check_signer(

@@ -86,7 +86,7 @@ async def memo_decided(
     if status == DocumentStatus.REJECTED.value:
         title, subtitle = f"{_name(document)} {rejected_word}", comment or document.subject
     elif status == DocumentStatus.TO_ACCOUNTANT.value:
-        title, subtitle = f"{_name(document)} {approved_word}", f"Передана бухгалтеру на оплату · {document.subject}"
+        title, subtitle = f"{_name(document)} {approved_word}", f"Передана на оплату · {document.subject}"
     elif status == DocumentStatus.APPROVED.value:
         title, subtitle = f"{_name(document)} {approved_word}", document.subject
     else:
@@ -150,7 +150,7 @@ async def letter_handed_over(
             key=f"document:{document.id}:letter_signer_missing",
             recipients=await signing_reminders.manage_holder_ids(session),
             title="Подписать некому",
-            subtitle=f"{document.subject} · Настройки → Права подписи: выдайте полномочие"[:200],
+            subtitle=f"Настройки → Права подписи · {document.subject}"[:200],
             actor_id=actor_id,
         )
         return

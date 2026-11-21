@@ -264,7 +264,7 @@ def document_notice(recipients: list[int], **over: Any) -> dict[str, Any]:
         "kind": "memo_decided",
         "recipients": recipients,
         "title": "Служебка MEMO-2026/014 согласована",
-        "subtitle": "Передана бухгалтеру на оплату",
+        "subtitle": "Передана на оплату",
         "document": {
             "eds_document_id": DOC_ID,
             "number": "MEMO-2026/014",
