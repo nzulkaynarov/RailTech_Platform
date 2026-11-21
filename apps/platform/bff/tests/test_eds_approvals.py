@@ -1435,3 +1435,47 @@ async def test_quote_card_by_the_erp_number(web: Web, eds: ApprovalsFake) -> Non
 
     assert response.status_code == 200
     assert response.json()["id"] == QUOTE_ROUTE
+
+
+async def test_quote_card_shows_the_live_deal_number_from_erp(web: Web, eds: ApprovalsFake) -> None:
+    """EDS keeps `ЗВ-2026-104`; after the quote is accepted ERP calls the deal `PRJ-2026-104`."""
+    eds.deal = {**eds.deal, "number": "PRJ-2026-104"}  # type: ignore[dict-item]
+    await _director(web)
+
+    card = (await web.client.get(QUOTE)).json()
+
+    assert card["request"]["number"] == "PRJ-2026-104"
+    assert "PRJ-2026-104" in card["request"]["path"]
+
+
+async def test_quote_card_keeps_the_stored_deal_number_when_erp_is_down(
+    web: Web, eds: ApprovalsFake
+) -> None:
+    eds.deal = 503
+    await _director(web)
+
+    card = (await web.client.get(QUOTE)).json()
+
+    assert card["request"]["number"] == "ЗВ-2026-104"
+
+
+async def test_memo_card_shows_the_live_deal_number_from_erp(web: Web, eds: ApprovalsFake) -> None:
+    eds.documents[MEMO_DOC] = memo_doc(erp_deal_id=5, deal_number="ЗВ-2026-104")
+    eds.deal = {**eds.deal, "number": "PRJ-2026-104"}  # type: ignore[dict-item]
+    await _director(web)
+
+    card = (await web.client.get(MEMO)).json()
+
+    assert card["deal"] == {"erp_deal_id": 5, "number": "PRJ-2026-104"}
+
+
+async def test_memo_card_keeps_the_stored_deal_number_when_erp_is_down(
+    web: Web, eds: ApprovalsFake
+) -> None:
+    eds.documents[MEMO_DOC] = memo_doc(erp_deal_id=5, deal_number="ЗВ-2026-104")
+    eds.deal = 503
+    await _director(web)
+
+    card = (await web.client.get(MEMO)).json()
+
+    assert card["deal"] == {"erp_deal_id": 5, "number": "ЗВ-2026-104"}

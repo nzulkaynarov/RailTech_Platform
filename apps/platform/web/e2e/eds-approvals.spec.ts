@@ -71,9 +71,9 @@ test.describe("КП на одобрение: директор", () => {
     await settledScreenshot(page, "confirm-dialog");
     await confirmDialog(page);
 
-    await expect(page.getByText(/КП КП-2026\/115 одобрено: ИСХ-/)).toBeVisible();
+    await expect(page.getByText(/КП КП-2026\/115 одобрено: OUT-/)).toBeVisible();
     await expect(page.locator(PANEL).getByRole("heading", { name: "КП одобрено" })).toBeVisible();
-    await expect(page.getByText("ИСХ-042/26").first()).toBeVisible();
+    await expect(page.getByText("OUT-042/26").first()).toBeVisible();
     // D17G-2: отчёт по каналам в карточке — Telegram и кабинет ушли, почту не выбирали (можно отправить)
     const report = page.getByRole("list", { name: "Каналы отправки" });
     await expect(report.getByText("Telegram-бот — отправлено")).toBeVisible();

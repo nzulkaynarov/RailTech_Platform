@@ -18,6 +18,7 @@ import {
 import { QueryGate, SaveBlock, TabHeader, ReadOnlyFence } from "../common";
 import { changedFields, isEmptyObject } from "../diff";
 import { errorFields, numberingErrorKey } from "../errors";
+import { LABEL_PATTERN } from "./numberingRules";
 
 // Все виды номеров ERP (задача «Н»): обозначения — здесь, в коде их нет.
 const KINDS: NumberingKind[] = [
@@ -43,7 +44,7 @@ const KINDS: NumberingKind[] = [
   "ticket",
 ];
 const RESET: NumberingResetPeriod[] = ["never", "yearly", "monthly"];
-// «Стандартный» — умолчание SPEC-v3 §2.2 (`КП-2026/042`); «Через дефис» — прежнее умолчание, его маски у компаний остаются.
+// «Стандартный» — умолчание SPEC-v3 §2.2 (`QT-2026/042`); «Через дефис» — прежнее умолчание, его маски у компаний остаются.
 const PRESETS = [
   { id: "standard", pattern: "{prefix}{type}-{YYYY}/{seq}" },
   { id: "brand", pattern: "{prefix}{type}-{YYYY}-{seq}" },
@@ -225,6 +226,7 @@ function NumberingForm({ scheme }: { scheme: NumberingScheme }) {
                 name={["type_labels", kind]}
                 label={t(`kinds.${kind}`)}
                 style={{ marginBottom: 12 }}
+                rules={[{ pattern: LABEL_PATTERN, message: t("numbering.labelInvalid") }]}
               >
                 <Input maxLength={16} autoComplete="off" />
               </Form.Item>

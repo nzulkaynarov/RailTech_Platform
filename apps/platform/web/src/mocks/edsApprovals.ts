@@ -424,7 +424,7 @@ export const edsApprovalsHandlers = [
       allowed_decisions: [],
       approved_late: late,
       outgoing_number:
-        body.decision === "approve" ? `ИСХ-0${String(40 + current.version)}/26` : null,
+        body.decision === "approve" ? `OUT-0${String(40 + current.version)}/26` : null,
       // ERP-11: одобрение с каналами сразу отправляет КП по доступным из них (отчёт — D17G-2)
       delivery:
         body.decision === "approve"

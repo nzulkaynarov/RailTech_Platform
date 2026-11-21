@@ -208,7 +208,7 @@ describe("Типы входящих писем: тег, фильтр, основ
     await heading("Требование о предоставлении документов");
     fireEvent.mouseDown(screen.getByRole("combobox", { name: "Сменить тип" }));
     fireEvent.click(await screen.findByTitle("Официальное письмо (госорган, банк, налоговая)"));
-    const register = await screen.findByRole("link", { name: "Зарегистрировать как ВХ" });
+    const register = await screen.findByRole("link", { name: "Зарегистрировать как входящее" });
     fireEvent.click(register);
     expect(
       await screen.findByText(/Из письма: «Требование о предоставлении документов»/),

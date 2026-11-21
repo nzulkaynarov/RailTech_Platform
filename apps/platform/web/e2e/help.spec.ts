@@ -130,8 +130,8 @@ test.describe("Помощь", () => {
       .getByRole("navigation", { name: "Разделы помощи" })
       .getByRole("link", { name: "Словарь" })
       .click();
-    await expect(page.getByText("Входящее письмо (ВХ-104/26)")).toBeVisible();
-    await expect(page.getByText("Служебная записка (СЗ-2026/031)")).toBeVisible();
+    await expect(page.getByText("Входящее письмо (IN-104/26)")).toBeVisible();
+    await expect(page.getByText("Служебная записка (MEMO-2026/031)")).toBeVisible();
     await expectNoViolations(page, "словарь");
 
     await page

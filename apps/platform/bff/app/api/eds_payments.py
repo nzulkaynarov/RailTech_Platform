@@ -18,6 +18,7 @@ from fastapi import APIRouter, Depends, Header, Path, Query, Request, Response, 
 from fastapi.responses import StreamingResponse
 
 from app.api.eds_documents import FileStream, _read_limited
+from app.deal_number_live import with_live_deal_number
 from app.deps import Authed, require
 from app.eds_documents import API, EdsProxy
 from app.eds_payments import (
@@ -93,7 +94,7 @@ async def list_memos(
 
 @router.get("/payment-memos/{id}", response_model=PaymentMemoCard, operation_id="getPaymentMemo")
 async def get_memo(id: MemoId, authed: Reader) -> PaymentMemoCard:
-    return await load_memo(_proxy(authed), str(id))
+    return await load_memo(_proxy(authed), str(id), authed)
 
 
 @router.post(
@@ -108,7 +109,7 @@ async def pay_memo(id: MemoId, body: PaymentMemoPayIn, authed: Writer) -> Paymen
         "note": body.note,
     }
     paid = await proxy.request("POST", f"{API}/documents/{id}/payment", json=payload)
-    return memo_card(paid, None)
+    return memo_card(await with_live_deal_number(authed, paid), None)
 
 
 @router.post(

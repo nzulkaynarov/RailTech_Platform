@@ -102,8 +102,8 @@ describe("Раздел /help", () => {
     expect(screen.getByText("Выполнено")).toBeInTheDocument();
     cleanup();
     renderApp("/help/glossary");
-    expect(await screen.findByText("Входящее письмо (ВХ-104/26)")).toBeInTheDocument();
-    expect(screen.getByText("Служебная записка (СЗ-2026/031)")).toBeInTheDocument();
+    expect(await screen.findByText("Входящее письмо (IN-104/26)")).toBeInTheDocument();
+    expect(screen.getByText("Служебная записка (MEMO-2026/031)")).toBeInTheDocument();
     cleanup();
     renderApp("/help/keys");
     expect(await screen.findByText("Ctrl K или ⌘ K")).toBeInTheDocument();

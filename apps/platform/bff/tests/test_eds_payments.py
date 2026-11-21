@@ -546,6 +546,36 @@ async def test_memo_list_and_card(web: Web, fake: PaymentsFake, check: ContractC
     assert body["files"][0]["name"] == "счёт-аренда.pdf"
 
 
+async def test_memo_card_shows_the_live_deal_number_from_erp(web: Web, fake: PaymentsFake) -> None:
+    await web.login(["ACCOUNTANT"])
+    fake.documents[PAY_DOC] = {
+        **fake.documents[PAY_DOC],
+        "erp_deal_id": 5,
+        "deal_number": "ЗВ-2026-104",
+    }
+    fake.deal = {**fake.deal, "number": "PRJ-2026-104"}  # type: ignore[dict-item]
+
+    body = (await web.client.get(f"{BASE}/payment-memos/{PAY_DOC}")).json()
+
+    assert body["deal"] == {"erp_deal_id": 5, "number": "PRJ-2026-104"}
+
+
+async def test_memo_card_keeps_the_stored_deal_number_when_erp_is_down(
+    web: Web, fake: PaymentsFake
+) -> None:
+    await web.login(["ACCOUNTANT"])
+    fake.documents[PAY_DOC] = {
+        **fake.documents[PAY_DOC],
+        "erp_deal_id": 5,
+        "deal_number": "ЗВ-2026-104",
+    }
+    fake.deal = 503
+
+    body = (await web.client.get(f"{BASE}/payment-memos/{PAY_DOC}")).json()
+
+    assert body["deal"] == {"erp_deal_id": 5, "number": "ЗВ-2026-104"}
+
+
 async def test_memo_card_hides_the_actions_from_someone_whose_step_it_is_not(
     web: Web, fake: PaymentsFake
 ) -> None:

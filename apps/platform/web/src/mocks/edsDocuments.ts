@@ -481,13 +481,13 @@ function numberFor(state: EdsMock, kind: MockDocument["kind"]): string {
   const pad = (n: number, width: number) => String(n).padStart(width, "0");
   switch (kind) {
     case "memo":
-      return `СЗ-${year}/${pad(state.next.memo++, 3)}`;
+      return `MEMO-${year}/${pad(state.next.memo++, 3)}`;
     case "application":
-      return `ЗЯ-${year}/${pad(state.next.application++, 3)}`;
+      return `APP-${year}/${pad(state.next.application++, 3)}`;
     case "report":
-      return `ОТ-${year}/${pad(state.next.report++, 3)}`;
+      return `REP-${year}/${pad(state.next.report++, 3)}`;
     case "letter_out":
-      return `ИСХ-${pad(state.next.outgoing++, 3)}/26`;
+      return `OUT-${pad(state.next.outgoing++, 3)}/26`;
   }
 }
 

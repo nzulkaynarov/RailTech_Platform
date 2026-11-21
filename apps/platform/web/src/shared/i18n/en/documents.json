@@ -316,29 +316,29 @@
     },
     "consequence": {
       "memo": [
-        "The document gets a number like СЗ-2026/031 and goes to the director for approval.",
+        "The document gets a memo number and goes to the director for approval.",
         "The director approves, returns it for rework or rejects it — you get a notification.",
         "An approved document stays in “Documents” with the visa and date."
       ],
       "memoAmount": [
-        "The document gets a number like СЗ-2026/031 and goes to the director for approval.",
+        "The document gets a memo number and goes to the director for approval.",
         "After the director approves, the document is passed to the accountant for payment.",
         "The accountant confirms payment: the status becomes “Paid”."
       ],
       "application": [
-        "The application gets a number like ЗЯ-2026/012 and goes to the director for approval.",
+        "The application gets a number and goes to the director for approval.",
         "The director approves, returns it for rework or rejects it — you get a notification.",
         "The decision and its date stay in “Documents”."
       ],
       "report": [
-        "The report gets a number like ОТ-2026/007 and goes to the director for approval.",
+        "The report gets a number and goes to the director for approval.",
         "The director approves, returns it for rework or rejects it — you get a notification.",
         "The decision and its date stay in “Documents”."
       ],
       "letter": [
-        "The letter gets the outgoing number ИСХ-NNN/YY and the registration date.",
+        "The letter gets an outgoing number, e.g. OUT-014/26, and the registration date.",
         "The numbered letterhead PDF goes to the addressee by email, if given.",
-        "A reply “to ВХ” closes the “Prepare a reply” instruction; the sending log is on the letter card."
+        "A reply to an incoming letter closes the “Prepare a reply” instruction; the sending log is on the letter card."
       ],
       "draft": "“Save draft” sends nothing: the document stays in “Documents” with a “Continue” button.",
       "letterHandover": [
@@ -410,7 +410,7 @@
     "forbiddenTitle": "You cannot create documents",
     "replyTo": {
       "label": "In reply to incoming",
-      "hint": "Incoming number, e.g. ВХ-112/26: registering the letter closes the \"Prepare a reply\" instruction."
+      "hint": "Incoming number, e.g. IN-112/26: registering the letter closes the \"Prepare a reply\" instruction."
     },
     "subtitleLetterHandover": "",
     "attention": {

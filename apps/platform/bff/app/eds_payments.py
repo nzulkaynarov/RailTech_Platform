@@ -18,6 +18,7 @@ import httpx
 from pydantic import BaseModel, ValidationError
 
 from app.clients.erp_company import erp_error
+from app.deal_number_live import with_live_deal_number
 from app.deps import Authed
 from app.eds_documents import API as EDS_API
 from app.eds_documents import EdsProxy
@@ -554,9 +555,11 @@ def _accountant_step(approval: Any) -> bool:
     )
 
 
-async def load_memo(proxy: EdsProxy, document_id: str) -> PaymentMemoCard:
-    """Служебка и её маршрут (шаг, право решить) -> карточка «к оплате»."""
-    doc = await proxy.request("GET", f"{EDS_API}/documents/{document_id}")
+async def load_memo(proxy: EdsProxy, document_id: str, authed: Authed) -> PaymentMemoCard:
+    """Служебка и её маршрут (шаг, право решить) -> карточка «к оплате»; номер сделки — из ERP."""
+    doc = await with_live_deal_number(
+        authed, await proxy.request("GET", f"{EDS_API}/documents/{document_id}")
+    )
     approval = None
     approval_id = doc.get("approval_id") if isinstance(doc, dict) else None
     if isinstance(approval_id, str):

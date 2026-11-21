@@ -886,7 +886,7 @@ export function RegisterLetterPage() {
                           value={values.relatedNumber}
                           maxLength={32}
                           autoComplete="off"
-                          placeholder="ВХ-101/26"
+                          placeholder="IN-101/26"
                           status={errors.related_number ? "error" : undefined}
                           aria-invalid={errors.related_number || undefined}
                           aria-describedby={describedBy(

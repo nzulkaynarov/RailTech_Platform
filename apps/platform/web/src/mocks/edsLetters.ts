@@ -141,9 +141,9 @@ const squash = (value: string | null | undefined) =>
 function nextNumber(): string {
   const max = Math.max(
     0,
-    ...readLetters().map((l) => Number(/^ВХ-(\d+)\//.exec(l.number)?.[1] ?? 0)),
+    ...readLetters().map((l) => Number(/(\d+)\/\d{2}$/.exec(l.number)?.[1] ?? 0)),
   );
-  return `ВХ-${String(max + 1).padStart(3, "0")}/26`;
+  return `IN-${String(max + 1).padStart(3, "0")}/26`;
 }
 
 /**

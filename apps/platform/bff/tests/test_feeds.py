@@ -143,7 +143,10 @@ async def test_director_queue_comes_from_eds_quote_routes(
 
     check(response, "/queue", "get")
     items = response.json()["items"]
-    assert [i["title"] for i in items] == ["Одобрить КП-2026/118", "Одобрить КП v3"]
+    assert [i["title"] for i in items] == [
+        "Одобрить КП-2026/118",
+        "Одобрить Коммерческое предложение, версия 3",
+    ]
     first = items[0]
     assert first["role_id"] == rid("DIRECTOR")
     assert first["kind"] == "approve_quote"
@@ -316,7 +319,11 @@ async def test_erp_down_keeps_crm_part_and_marks_source(
     body = response.json()
     assert body["sources"] == {"crm": "ok", "erp": "unavailable", "eds": "ok"}
     # D26G-4: КП на одобрении — маршруты EDS: без ERP строки остаются (клиент и сумма — снимок EDS)
-    assert [i["object"]["number"] for i in body["items"]] == ["L-2060", "КП-2026/118", "КП v3"]
+    assert [i["object"]["number"] for i in body["items"]] == [
+        "L-2060",
+        "КП-2026/118",
+        "Коммерческое предложение, версия 3",
+    ]
 
 
 async def test_crm_down_keeps_erp_part_and_marks_source(
@@ -1059,8 +1066,8 @@ async def test_role_without_deal_sections_does_not_search_deals(web: Web, fb: Fe
     [
         ("КП-2026-00001", "КП-2026-00001"),  # реальный формат ERP: {type}-{YYYY}-{seq}, ширина 5
         ("кп-2026-0", "кп-2026-0"),  # набор по мере ввода не перестраивается
-        ("kp-2026-00001", "КП-2026-00001"),  # меняется только латинский префикс
-        ("KP-2026-0", "КП-2026-0"),
+        ("kp-2026-00001", "kp-2026-00001"),  # префикс не переписывается (СЦ-5)
+        ("KP-2026-0", "KP-2026-0"),
         ("СЧ-2026/142", "СЧ-2026/142"),
         ("price list", "price list"),  # «pr…» без разделителя — не префикс номера
     ],

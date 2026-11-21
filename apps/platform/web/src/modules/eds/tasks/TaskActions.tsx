@@ -129,7 +129,7 @@ function CompleteForm({ instruction }: { instruction: LetterInstruction }) {
           value={outgoing}
           maxLength={32}
           autoComplete="off"
-          placeholder="ИСХ-014/26"
+          placeholder="OUT-014/26"
           status={outgoingError ? "error" : undefined}
           aria-invalid={outgoingError || undefined}
           aria-describedby={described(`${ids}-outgoing`, true, outgoingError)}

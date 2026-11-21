@@ -109,10 +109,9 @@ export function validateRegister(values: RegisterValues, today: string): Registe
   return errors;
 }
 
-/** Номер заявки из подписи выбора «ЗВ-2026-104 · Название · Компания». */
+/** Номер заявки — поле выбора, а не кусок подписи: подпись только для показа. */
 function dealNumber(choice: DealChoice): string | null {
-  const head = choice.label.split(" · ")[0]?.trim();
-  return head || null;
+  return choice.number?.trim() || null;
 }
 
 function text(value: string): string | null {

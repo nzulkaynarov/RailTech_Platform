@@ -75,7 +75,7 @@ async function openCard(email: string) {
 }
 
 describe("EDS · карточка письма на бланке (P4)", () => {
-  it("делопроизводитель видит переданный черновик, регистрирует и отправляет: номер ИСХ и журнал отправки", async () => {
+  it("делопроизводитель видит переданный черновик, регистрирует и отправляет: исходящий номер и журнал отправки", async () => {
     seed({});
     const card = await openCard("registrar@demo.example");
 
@@ -85,7 +85,7 @@ describe("EDS · карточка письма на бланке (P4)", () => {
     expect(card.getByText("Адресату ещё не отправляли.")).toBeVisible();
     fireEvent.click(card.getByRole("button", { name: "Зарегистрировать и отправить" }));
 
-    expect(await screen.findByText(/Письмо зарегистрировано: ИСХ-\d{3}\/26/)).toBeVisible();
+    expect(await screen.findByText(/Письмо зарегистрировано: OUT-\d{3}\/26/)).toBeVisible();
     const saved = readEds().documents.find((d) => d.id === ID);
     expect(saved?.status).toBe("sent");
     expect(saved?.letter?.pdf?.final).toBe(true);
@@ -142,7 +142,7 @@ describe("EDS · карточка письма на бланке (P4)", () => {
     expect(
       card.getByText("Не отправлено: Почта не настроена — Настройки · Подключения · Почта"),
     ).toBeVisible();
-    expect(card.getByText("PDF с номером ИСХ готов · 1 стр.")).toBeVisible();
+    expect(card.getByText("PDF с исходящим номером готов · 1 стр.")).toBeVisible();
     fireEvent.click(card.getByRole("button", { name: "Отправить адресату ещё раз" }));
     expect(await screen.findByText("Отправка запрошена")).toBeVisible();
     await waitFor(() => {
@@ -186,7 +186,7 @@ describe("EDS · карточка письма на бланке (P4)", () => {
     const confirmBtn = within(modal).getByRole("button", { name: "Подписать письмо" });
     fireEvent.click(confirmBtn);
 
-    expect(await screen.findByText(/Письмо подписано: ИСХ-\d{3}\/26/)).toBeVisible();
+    expect(await screen.findByText(/Письмо подписано: OUT-\d{3}\/26/)).toBeVisible();
     const saved = readEds().documents.find((d) => d.id === ID);
     expect(saved?.status).toBe("sent");
     expect(saved?.signed_at).not.toBeNull();
