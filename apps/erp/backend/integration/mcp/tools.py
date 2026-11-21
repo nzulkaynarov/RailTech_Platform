@@ -242,7 +242,7 @@ def create_request_tool(context: AgentContext, arguments: Dict[str, Any]) -> Dic
     )
     return {
         "erp_request_id": deal.id,
-        "number": deal.number or f"D-{deal.id}",  # ЗВ-ГГГГ-NNN (ERP-09)
+        "number": deal.number or f"D-{deal.id}",  # deal number (ERP-09)
         "status": deal_stage(deal),
     }
 

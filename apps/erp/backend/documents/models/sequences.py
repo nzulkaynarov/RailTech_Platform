@@ -1,3 +1,5 @@
+import re
+
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models
@@ -6,11 +8,9 @@ from django.utils.translation import gettext_lazy as _
 # Все виды номеров ERP в одной схеме (задача «Н», решение владельца 2026-11-13): заявка и проект, КП, договор, счёт, акт,
 # квитанция, накладная, заказ поставщику, отгрузка, договор партнёра, документ по шаблону.
 NUMBERING_TYPE_CODES = ("REQ", "PRJ", "KP", "CT", "INV", "ACT", "RCP", "DN", "PO", "SHP", "PART", "DOC")
-# Умолчания SPEC-v3 §2.2 (W-6, B-WDOCS2-1): КП-2026/115, ДОГ-2026/104, СЧ-2026/142, АКТ-2026/058; для документа по
-# шаблону SPEC молчит — тот же стиль, «ДОК». До 2026-11 умолчания были `КП-2026-00042`, `CT-…`, `INV-…`, `ACT-…`, `DOC-…`
-# (LEGACY_* ниже — их знает миграция documents/0004 и поиск по номеру).
-# Умолчания — латиницей (владелец 2026-11-13): номер читают и набирают иностранные партнёры; переводятся только подписи
-# вокруг номера. Выданные номера (`КП-2026/042`, `ЗВ-2026-001`, …) не меняются, поиск находит оба вида.
+# Умолчания — латиницей (владелец 2026-11-13, СЦ-5 2026-11-19): номер читают и набирают иностранные партнёры; переводятся
+# только подписи вокруг номера. Ранее выданные кириллические номера перенумерованы командой `renumber_latin`
+# (сделки — поиск по году и NNN, артикулы — `previous_sku`). LEGACY_* ниже — их знает миграция documents/0004.
 DEFAULT_TYPE_LABELS = {
     "REQ": "RQ",
     "PRJ": "PRJ",
@@ -25,11 +25,13 @@ DEFAULT_TYPE_LABELS = {
     "PART": "PA",
     "DOC": "DOC",
 }
-# Кириллические умолчания SPEC-v3 §2.2 до 2026-11-13 — их знают поиск по номеру и тесты истории.
-CYRILLIC_TYPE_LABELS = {"KP": "КП", "CT": "ДОГ", "INV": "СЧ", "ACT": "АКТ", "DOC": "ДОК", "RCP": "КВ", "DN": "НАК"}
-LEGACY_DEFAULT_TYPE_LABELS = {"KP": "КП", "CT": "CT", "INV": "INV", "ACT": "ACT", "DOC": "DOC"}
 LEGACY_DEFAULT_PATTERN = "{prefix}{type}-{YYYY}-{seq}"
 LEGACY_DEFAULT_PADDING = 5
+
+
+# A number label is Latin letters and digits only (СЦ-5, owner 2026-11-19): numbers are read and typed by foreign
+# partners, and nothing may derive meaning from a label.
+TYPE_LABEL_RE = re.compile(r"[A-Z0-9]{1,16}")
 
 
 def default_type_labels():
@@ -92,7 +94,7 @@ class DocumentNumberingScheme(models.Model):
 
     A token mask so a selling company can shape its own numbers (separator, padding, date tokens,
     reset period, start value). The shipped default is SPEC-v3 §2.2: `{prefix}{type}-{YYYY}/{seq}`
-    with three digits — `КП-2026/042`, `ACME-ДОГ-2026/104`.
+    with three digits — `QT-2026/042`, `ACME-CT-2026/104`.
     """
 
     RESET_NEVER = "never"
@@ -172,6 +174,8 @@ class DocumentNumberingScheme(models.Model):
                 continue
             if not isinstance(value, str) or not value.strip():
                 raise ValidationError({"type_labels": _("Метка типа не может быть пустой")})
+            if not TYPE_LABEL_RE.fullmatch(value):
+                raise ValidationError({"type_labels": _("Метка типа — латинские буквы и цифры, до 16 знаков")})
 
     def __str__(self):
         scope = self.company_id or "platform"

@@ -6038,7 +6038,7 @@ paths:
     post:
       operationId: catalog_partner_applications_create
       description: 'План 1.9, «Передать в работу»: сотрудник снабжения заводит заявку кандидата по входящему письму (`source
-        = letter`, `source_ref` — номер ВХ). Согласия кандидата нет — дальше договорный шлюз.'
+        = letter`, `source_ref` — номер входящего письма). Согласия кандидата нет — дальше договорный шлюз.'
       summary: Create a partner application from an incoming letter
       tags:
       - Catalog
@@ -10438,8 +10438,8 @@ paths:
     get:
       operationId: crm_deals_list
       description: Returns deals accessible to the current user. Admins/managers see all; clients see only their company's
-        deals. `search` finds deals by number (ЗВ-ГГГГ-NNN / ПР-ГГГГ-NNN — the same NNN under either prefix, latin ZV/PR and
-        spaces accepted), title or client company name (ERP-09).
+        deals. `search` finds deals by number (RQ-2026-001 / PRJ-2026-001 — the same NNN under either prefix, latin ZV/PR
+        and spaces accepted), title or client company name (ERP-09).
       summary: List deals
       parameters:
       - name: page
@@ -12622,8 +12622,8 @@ paths:
     patch:
       operationId: crm_numbering_scheme_partial_update
       description: 'Upsert the seller company''s numbering scheme. An invalid mask (missing {seq}, empty) → 400 {"detail":
-        "INVALID_NUMBERING_PATTERN"}. Applies to FUTURE numbers only; already-issued numbers are snapshots and never change.
-        settings.edit + seller.'
+        "INVALID_NUMBERING_PATTERN"}; a label outside Latin A-Z 0-9 (1-16) → 400 {"detail": "INVALID_NUMBERING_LABEL", "type_labels":
+        [...]}. Applies to FUTURE numbers only; already-issued numbers are snapshots and never change. settings.edit + seller.'
       summary: Update numbering scheme
       tags:
       - CRM
@@ -12648,7 +12648,7 @@ paths:
                 $ref: '#/components/schemas/NumberingScheme'
           description: ''
         '400':
-          description: INVALID_NUMBERING_PATTERN
+          description: 'INVALID_NUMBERING_PATTERN or INVALID_NUMBERING_LABEL (type_labels: Latin A-Z 0-9, up to 16)'
           content:
             application/json:
               schema:
@@ -12691,7 +12691,7 @@ paths:
                 $ref: '#/components/schemas/NumberingPreviewResponse'
           description: ''
         '400':
-          description: INVALID_NUMBERING_PATTERN
+          description: 'INVALID_NUMBERING_PATTERN or INVALID_NUMBERING_LABEL (type_labels: Latin A-Z 0-9, up to 16)'
           content:
             application/json:
               schema:
@@ -19489,7 +19489,7 @@ paths:
         name: number
         schema:
           type: string
-        description: Точный номер ЗП-ГГГГ-NNN
+        description: Точный номер заказа поставщику (PO-2026-001)
       - in: query
         name: overdue
         schema:
@@ -20414,7 +20414,7 @@ paths:
     post:
       operationId: stock_ship
       description: GET/POST /api/v1/stock/shipments/ — отгрузки по проектам; POST — отгрузить со склада по резервам заявки.
-      summary: Отгрузить со склада по резервам заявки (накладная ОТГ)
+      summary: Отгрузить со склада по резервам заявки (внутренняя накладная)
       tags:
       - Stock
       requestBody:
@@ -21886,7 +21886,7 @@ components:
         number:
           type: string
           nullable: true
-          description: Номер ЗВ-ГГГГ-NNN или ПР-ГГГГ-NNN (`Deal.number`, ERP-09)
+          description: Номер заявки или проекта (`Deal.number`, ERP-09)
         title:
           type: string
         created_at:
@@ -21916,7 +21916,7 @@ components:
         number:
           type: string
           nullable: true
-          description: Номер ЗВ-ГГГГ-NNN или ПР-ГГГГ-NNN (`Deal.number`, ERP-09)
+          description: Номер заявки или проекта (`Deal.number`, ERP-09)
         created_at:
           type: string
           format: date-time
@@ -25053,7 +25053,8 @@ components:
           type: string
           readOnly: true
           title: Номер заявки
-          description: ЗВ-ГГГГ-NNN; после принятия КП клиентом — ПР-ГГГГ-NNN (тот же NNN)
+          description: Номер заявки по схеме нумерации (RQ-2026-001); после принятия КП клиентом — номер проекта (PRJ-2026-001,
+            тот же счёт)
         process:
           allOf:
           - $ref: '#/components/schemas/ProcessEnum'
@@ -25237,7 +25238,8 @@ components:
           type: string
           readOnly: true
           title: Номер заявки
-          description: ЗВ-ГГГГ-NNN; после принятия КП клиентом — ПР-ГГГГ-NNN (тот же NNN)
+          description: Номер заявки по схеме нумерации (RQ-2026-001); после принятия КП клиентом — номер проекта (PRJ-2026-001,
+            тот же счёт)
         process:
           allOf:
           - $ref: '#/components/schemas/ProcessEnum'
@@ -26842,7 +26844,7 @@ components:
         source_ref:
           type: string
           minLength: 1
-          description: Номер входящего письма (ВХ)
+          description: Номер входящего письма
           maxLength: 32
       required:
       - categories_description
@@ -30229,7 +30231,7 @@ components:
           type: integer
         number:
           type: string
-          description: ЗП-ГГГГ-NNN
+          description: Номер заказа поставщику (PO-2026-001)
         status:
           $ref: '#/components/schemas/SupplierOrderStatusEnum'
         supplier:
@@ -30694,7 +30696,7 @@ components:
           type: integer
         number:
           type: string
-          description: ЗП-ГГГГ-NNN
+          description: Номер заказа поставщику (PO-2026-001)
         status:
           $ref: '#/components/schemas/SupplierOrderStatusEnum'
         supplier:
@@ -34063,7 +34065,7 @@ components:
           type: string
           readOnly: true
           title: Артикул (SKU)
-          description: Внутренний артикул (генерируется автоматически)
+          description: 'Внутренний артикул (генерируется автоматически: GD-00001)'
         name:
           type: string
           title: Наименование
@@ -34423,7 +34425,7 @@ components:
         sku:
           type: string
           title: Артикул (SKU)
-          description: Внутренний артикул (генерируется автоматически)
+          description: 'Внутренний артикул (генерируется автоматически: GD-00001)'
           maxLength: 50
         name:
           type: string
@@ -35195,8 +35197,8 @@ components:
           readOnly: true
           nullable: true
           title: Номер КП
-          description: 'Человекочитаемый сквозной номер КП (напр. КП-2026/00001), выдаётся при передаче директору. Версии
-            одного КП несут один номер (SPEC-v3 §2.1–2.2): уникальна пара номер + версия.'
+          description: 'Человекочитаемый сквозной номер КП (напр. QT-2026/001), выдаётся при передаче директору. Версии одного
+            КП несут один номер (SPEC-v3 §2.1–2.2): уникальна пара номер + версия.'
         status:
           type: integer
           readOnly: true
@@ -35395,7 +35397,7 @@ components:
           type: string
           readOnly: true
           title: Исходящий номер (EDS)
-          description: ИСХ-NNN/ГГ, присвоенный EDS при одобрении КП директором; пусто — КП не одобрено
+          description: Исходящий номер, присвоенный EDS при одобрении КП директором (OUT-001/26); пусто — КП не одобрено
         director_decision:
           type: string
           readOnly: true
@@ -37368,14 +37370,19 @@ components:
         number:
           type: string
           nullable: true
-          description: Номер ЗВ/ПР (`Deal.number`)
+          description: Номер заявки или проекта (`Deal.number`)
         client_name:
           type: string
           nullable: true
+        stage_code:
+          type: string
+          nullable: true
+          description: 'Стадия сделки (`DealStage.code`): вид — заявка или проект — по ней, не по номеру'
       required:
       - client_name
       - id
       - number
+      - stage_code
     StockError:
       type: object
       properties:
@@ -37779,7 +37786,7 @@ components:
           type: integer
         number:
           type: string
-          description: Внутренняя накладная ОТГ-ГГГГ-NNN
+          description: Номер внутренней накладной (SHP-2026-001)
         deal:
           $ref: '#/components/schemas/StockDealRef'
         tracking:

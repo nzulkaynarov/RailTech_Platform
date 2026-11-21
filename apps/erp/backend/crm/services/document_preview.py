@@ -82,11 +82,14 @@ def _frame(kind_code: str, company, brand: dict, now: datetime.datetime) -> tupl
     )
     seller = brand.get("seller")
     profile = brand.get("seller_profile")
+    from .numbering import sample_numbers
+
+    numbers = sample_numbers(seller)
     items = _demo_items()
     totals = _demo_totals(items)
     deal = SimpleNamespace(company=buyer, contact=None)
     contract = SimpleNamespace(
-        number="ДОГ-2026/007",
+        number=numbers.get("CT", ""),
         created_at=now,
         valid_from=None,
         valid_until=None,
@@ -119,7 +122,7 @@ def _frame(kind_code: str, company, brand: dict, now: datetime.datetime) -> tupl
         context = {"contract": contract, "company": buyer}
     elif kind_code == "INVOICE":
         invoice = SimpleNamespace(
-            number="СЧ-2026-00012",
+            number=numbers.get("INV", ""),
             issued_at=now,
             created_at=now,
             due_date=(now + datetime.timedelta(days=10)).date(),
@@ -138,9 +141,9 @@ def _frame(kind_code: str, company, brand: dict, now: datetime.datetime) -> tupl
         }
         context = {"invoice": invoice, "company": buyer, "contact": None}
     else:  # ACT
-        invoice = SimpleNamespace(number="СЧ-2026-00012", issued_at=now, created_at=now, items=_Items(items))
+        invoice = SimpleNamespace(number=numbers.get("INV", ""), issued_at=now, created_at=now, items=_Items(items))
         act = SimpleNamespace(
-            number="АКТ-2026/005",
+            number=numbers.get("ACT", ""),
             issued_at=now,
             created_at=now,
             deal_id=1024,

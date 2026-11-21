@@ -159,7 +159,7 @@ class Reservation(models.Model):
 
 
 class DocumentCounter(models.Model):
-    """Счётчик NNN номеров складских документов по виду и году (ЗП-ГГГГ-NNN, ОТГ-ГГГГ-NNN): строка берётся под
+    """Счётчик NNN номеров складских документов по виду и году (PO-2026-001, SHP-2026-001): строка берётся под
     блокировкой, номер выдаётся без пропусков (как `sales.DealNumberCounter`)."""
 
     kind = models.CharField(max_length=8)
@@ -176,7 +176,7 @@ class DocumentCounter(models.Model):
 
 
 class Shipment(models.Model):
-    """Отгрузка по проекту со склада: строки, внутренняя накладная (номер ОТГ-ГГГГ-NNN), трек."""
+    """Отгрузка по проекту со склада: строки, внутренняя накладная (номер SHP-2026-001), трек."""
 
     number = models.CharField(max_length=32, unique=True, verbose_name=_("Номер накладной"))
     number_year = models.PositiveIntegerField(editable=False)

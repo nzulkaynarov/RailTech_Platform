@@ -107,7 +107,10 @@ def test_line_with_project_link_must_belong_to_the_deal(world):
     assert mismatch.status_code == 400 and mismatch.json()["detail"] == "LINE_NOT_IN_DEAL"
     ok = _create(world, [_line(world["rail"], 5, deal_id=deal.pk, quote_item_id=item.pk)])
     assert ok.status_code == 201
-    assert ok.json()["projects"] == [{"id": deal.pk, "number": deal.number, "client_name": "ООО Пример Логистик"}]
+    deal.refresh_from_db()
+    assert ok.json()["projects"] == [
+        {"id": deal.pk, "number": deal.number, "client_name": "ООО Пример Логистик", "stage_code": deal.stage.code}
+    ]
 
 
 def test_line_for_another_product_than_the_calc_line_is_refused(world):

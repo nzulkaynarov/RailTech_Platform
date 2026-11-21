@@ -12,16 +12,14 @@ mask. A company without its own scheme falls back to the platform default scheme
 (company=NULL, if such a row exists) and finally to the code-level DEFAULT_SCHEME below —
 so numbering works with NO scheme row at all (hot path never writes a scheme on read; Rule 1).
 
-The shipped default is SPEC-v3 §2.2 (W-6, B-WDOCS2-1): `КП-2026/042`, `ДОГ-2026/104`, `СЧ-2026/142`,
-`АКТ-2026/058`, квитанция `КВ-…`, накладная `НАК-…`, документ по шаблону `ДОК-…`. Until 2026-11 it was
-`КП-2026-00042` / `CT-…` / `INV-…` / `ACT-…`: numbers already issued keep that form (a document is
-never renumbered), counters continue — the new form differs by the «/» separator and the labels, so
-a new number can never repeat an old one. Search finds both forms (`number_search_q`).
+The shipped default is Latin (SPEC-v3 §2.2 with Latin labels, СЦ-5): `QT-2026/042`, `CT-2026/104`, `INV-2026/142`,
+`ACT-2026/058`, receipt `RCP-…`, delivery note `DN-…`, template document `DOC-…`. Numbers issued earlier in Cyrillic
+were renumbered once by `renumber_latin`; search still finds the old synonyms (`number_search_q`).
 
 Per-company branding: a selling company that sets a `doc_number_prefix` mints under
-its OWN scoped counter and prefix — `ACME-ДОГ-2026/001`. A company WITHOUT a prefix
+its OWN scoped counter and prefix — `ACME-CT-2026/001`. A company WITHOUT a prefix
 (and the actor=None automation path) uses the SHARED platform counter (company=NULL)
-and the platform scheme `ДОГ-2026/001`.
+and the platform scheme `CT-2026/001`.
 
 GLOBAL-UNIQUE SAFETY (unchanged): Contract/Invoice/Act.number is globally `unique=True`.
 A per-company counter is used ONLY when the company carries a (non-empty) prefix — the
@@ -43,7 +41,7 @@ RESET_YEARLY = "yearly"
 RESET_MONTHLY = "monthly"
 
 # Code-level default scheme = SPEC-v3 §2.2, so a company with NO scheme row (and no platform
-# row) mints `{prefix}-{label}-{year}/{NNN}` — `КП-2026/042`, `ACME-ДОГ-2026/104`.
+# row) mints `{prefix}-{label}-{year}/{NNN}` — `QT-2026/042`, `ACME-CT-2026/104`.
 DEFAULT_PATTERN = "{prefix}{type}-{YYYY}/{seq}"
 DEFAULT_PADDING = 3
 DEFAULT_RESET_PERIOD = RESET_YEARLY
@@ -313,6 +311,33 @@ def preview_scheme_numbers(
             number = _render_number(spec, prefix=effective_prefix, label=label, now=now, displayed=displayed)
         rows.append({"type_code": type_code, "label": label, "number": number})
     return rows
+
+
+def sample_numbers(company=None) -> dict:
+    """Example number per kind (`{"KP": "QT-2026/001", ...}`) in the scheme that mints for `company`.
+
+    Used by document previews and editor demo contexts so a sample never shows a hardcoded label: it is
+    rendered from the same scheme, prefix and labels as a real number. Read-only (no counter is touched);
+    a broken stored mask falls back to the code-level default scheme, never to a literal.
+    """
+    prefix = _company_prefix(company)
+    now = timezone.now()
+    candidates = [(_resolve_scheme(_scheme_company_id(company, prefix)), prefix), (DEFAULT_SCHEME, "")]
+    for spec, render_prefix in candidates:
+        try:
+            result = {}
+            for code in PREVIEW_TYPE_CODES:
+                label = spec.label_for(code)
+                if code in OWN_FORMAT_WIDTH:
+                    result[code] = own_format_number(label, now.year, 1, OWN_FORMAT_WIDTH[code])
+                else:
+                    result[code] = _render_number(
+                        spec, prefix=render_prefix, label=label, now=now, displayed=spec.start_value + 1
+                    )
+            return result
+        except (KeyError, ValueError, IndexError):
+            continue
+    return {}
 
 
 def get_company_scheme(company) -> SchemeSpec:

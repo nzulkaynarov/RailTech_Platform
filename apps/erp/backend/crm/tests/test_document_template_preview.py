@@ -12,6 +12,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from accounts.models import Company, CompanyMember, CompanyType, CustomUser, SystemRole, WorkspaceRole
 from crm.services.generated_documents import MAX_TEMPLATE_BODY_CHARS
+from crm.services.numbering import sample_numbers
 
 
 @pytest.fixture
@@ -85,8 +86,10 @@ def test_preview_resolves_known_placeholders_on_demo_data(lookups):
     body = resp.json()
     assert resp.status_code == 200, resp.content
     assert "Демо-сделка" in body["rendered_html"]
-    assert "КП-2026/042" in body["rendered_html"]
-    assert "ДОГ-2026/007" in body["rendered_html"]
+    samples = sample_numbers(None)
+    assert samples["KP"] in body["rendered_html"] and samples["CT"] in body["rendered_html"]
+    assert samples["KP"].startswith("QT-") and samples["CT"].startswith("CT-")  # Latin from the scheme, not a literal
+    assert "КП-2026" not in body["rendered_html"] and "ДОГ-2026" not in body["rendered_html"]
     assert set(body["placeholders_used"]) == {"deal.title", "quote.number", "contract.number"}
     assert body["warnings"] == []
 
@@ -247,7 +250,7 @@ def test_contract_preview_uses_the_contract_frame_and_sample_blocks(lookups):
 
     page = result["document_html"]
     assert "Договор поставки" in page  # каркас договора, а не «Образец документа»
-    assert "Договор № ДОГ-2026/007" in page
+    assert f"Договор № {sample_numbers(None)['CT']}" in page
     assert "Образец документа" not in page
     assert "Приложение № 1. Спецификация" in page and "Стрелочный привод СП-6" in page
     assert "Итого к оплате" in page and "Реквизиты и подписи Сторон" in page

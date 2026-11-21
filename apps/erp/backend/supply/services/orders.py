@@ -726,7 +726,12 @@ def _receipt_state(order: SupplierOrder, lines) -> str:
 def _deal_ref(deal) -> Optional[dict]:
     if deal is None:
         return None
-    return {"id": deal.pk, "number": deal.number or None, "client_name": deal.company.name if deal.company_id else None}
+    return {
+        "id": deal.pk,
+        "number": deal.number or None,
+        "client_name": deal.company.name if deal.company_id else None,
+        "stage_code": deal.stage.code if deal.stage_id else None,
+    }
 
 
 def _price_request_state(order: SupplierOrder) -> Optional[dict]:
@@ -867,6 +872,7 @@ def _list_queryset():
         "supplier", "currency", "created_by__crm_user_mapping"
     ).prefetch_related(
         "lines__deal__company",
+        "lines__deal__stage",
         "lines__product__category",
         "lines__product__domain_type",
         "lines__supplier_offer__delivery_basis",

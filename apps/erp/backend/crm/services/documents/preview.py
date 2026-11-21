@@ -113,27 +113,14 @@ def _sample_invoice_lines():
 
 def _sample_quote_number(seller) -> str:
     """Владелец 27-07: «нумерация документа разрознена с настройками компании» — номер образца
-    рендерится ПО СХЕМЕ НУМЕРАЦИИ продавца (dry-run, счётчик не трогается), а не хардкодом.
-    A broken draft scheme must never kill the preview — it falls back to the stock sample."""
-    fallback = "КП-2026/123"
-    if seller is None:
-        return fallback
-    from django.core.exceptions import ValidationError as DjangoValidationError
+    рендерится ПО СХЕМЕ НУМЕРАЦИИ продавца (dry-run, счётчик не трогается), а не хардкодом."""
+    return _sample_number(seller, "KP")
 
-    from ..numbering import get_company_scheme_view, preview_scheme_numbers
 
-    try:
-        scheme_view = get_company_scheme_view(seller)
-        rendered = preview_scheme_numbers(
-            seller,
-            pattern=scheme_view.scheme.pattern,
-            padding=scheme_view.scheme.padding,
-            reset_period=scheme_view.scheme.reset_period,
-            start_value=scheme_view.scheme.start_value,
-        )
-        return next((row["number"] for row in rendered if row["type_code"] == "KP"), fallback)
-    except (DjangoValidationError, ValueError):
-        return fallback
+def _sample_number(seller, type_code: str) -> str:
+    from ..numbering import sample_numbers
+
+    return sample_numbers(seller).get(type_code, "")
 
 
 def _sample_quote(brand: dict) -> dict:
@@ -280,7 +267,7 @@ def _render_sample_contract_html(brand: dict) -> str:
         },
     ]
     sample_contract = {
-        "number": "ДОГ-2026/042 (образец)",
+        "number": f"{_sample_number(brand.get('seller'), 'CT')} (образец)",
         "created_at": date(2026, 7, 8),
         "valid_from": date(2026, 7, 8),
         "valid_until": date(2026, 12, 31),
@@ -310,11 +297,11 @@ def _render_sample_invoice_html(brand: dict) -> str:
     from django.template.loader import render_to_string
 
     sample_invoice = {
-        "number": "СЧ-2026/042 (образец)",
+        "number": f"{_sample_number(brand.get('seller'), 'INV')} (образец)",
         "issued_at": date(2026, 7, 8),
         "due_date": date(2026, 8, 8),
         "notes": "",
-        "contract": {"number": "ДОГ-2026/042"},
+        "contract": {"number": _sample_number(brand.get("seller"), "CT")},
         "subtotal_excl_vat": Decimal("18400000.00"),
         "vat_amount": Decimal("2208000.00"),
         "total_incl_vat": Decimal("20608000.00"),
@@ -345,16 +332,16 @@ def _render_sample_act_html(brand: dict) -> str:
     from django.template.loader import render_to_string
 
     sample_invoice = {
-        "number": "СЧ-2026/042",
+        "number": _sample_number(brand.get("seller"), "INV"),
         "issued_at": date(2026, 7, 8),
         "items": {"all": _sample_invoice_lines()},
     }
     sample_act = {
-        "number": "АКТ-2026/042 (образец)",
+        "number": f"{_sample_number(brand.get('seller'), 'ACT')} (образец)",
         "issued_at": date(2026, 7, 15),
         "deal_id": 0,
         "total_amount": Decimal("20608000.00"),
-        "contract": {"number": "ДОГ-2026/042", "created_at": date(2026, 7, 8)},
+        "contract": {"number": _sample_number(brand.get("seller"), "CT"), "created_at": date(2026, 7, 8)},
         "invoice": sample_invoice,
     }
     context = {
@@ -381,11 +368,11 @@ def _render_sample_letter_html(brand: dict) -> str:
 
     sample_letter = {
         "title": "Гарантийное письмо (образец)",
-        "number": "ДОК-2026/042",
+        "number": _sample_number(brand.get("seller"), "DOC"),
         "created_at": date(2026, 7, 8),
         "rendered_html": (
             "<p>Настоящим гарантируем оплату по сделке #1024 в полном объёме в согласованные сроки.</p>"
-            "<p>Сумма обязательств соответствует коммерческому предложению КП-2026/042 "
+            f"<p>Сумма обязательств соответствует коммерческому предложению {_sample_number(brand.get('seller'), 'KP')} "
             "на сумму 20 608 000 UZS.</p>"
         ),
     }

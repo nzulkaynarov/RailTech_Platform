@@ -24,15 +24,15 @@ def test_numbering_scheme_round_trip(admin, company):
     template = f"{API}crm/numbering-scheme/"
     conforms(admin.get(template.replace(API, API)), template, "get", status=200)
     body = {"pattern": "{prefix}-{type}-{year}-{seq}", "padding": 5, "reset_period": "yearly", "start_value": 0}
-    sends(template, "patch", {**body, "type_labels": {"KP": "КП"}})
-    response = admin.patch(template, {**body, "type_labels": {"KP": "КП"}}, format="json")
+    sends(template, "patch", {**body, "type_labels": {"KP": "QT"}})
+    response = admin.patch(template, {**body, "type_labels": {"KP": "QT"}}, format="json")
     conforms(response, template, "patch", status=200)
     refused = admin.patch(template, {"pattern": "no-seq-token"}, format="json")
     assert refused.json() == {"detail": "INVALID_NUMBERING_PATTERN"}
     conforms(refused, template, "patch", status=400)
 
     preview = f"{API}crm/numbering-scheme/preview/"
-    draft = {**body, "type_labels": {"KP": "КП"}, "prefix": "D20"}
+    draft = {**body, "type_labels": {"KP": "QT"}, "prefix": "D20"}
     sends(preview, "post", draft)
     conforms(admin.post(preview, draft, format="json"), preview, "post", status=200)
 

@@ -402,7 +402,7 @@ class PortalDocumentVerification(models.Model):
     number = models.CharField(
         max_length=128,
         verbose_name=_("Номер документа"),
-        help_text=_("Регистрационный номер, например ИСХ-042/26"),
+        help_text=_("Регистрационный номер, например OUT-042/26"),
     )
     date = models.DateField(
         verbose_name=_("Дата документа"),

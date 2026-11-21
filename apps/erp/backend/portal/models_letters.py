@@ -42,7 +42,9 @@ class PortalLetter(models.Model):
     state = models.CharField(max_length=16, choices=LetterState.choices, verbose_name=_("Состояние"))
     #: id письма (`in`) или документа (`out`) в EDS: ключ идемпотентности проекции.
     eds_id = models.UUIDField(unique=True, verbose_name=_("ID в EDS"))
-    number = models.CharField(max_length=32, verbose_name=_("Номер"), help_text=_("ВХ или ИСХ по нумерации EDS"))
+    number = models.CharField(
+        max_length=32, verbose_name=_("Номер"), help_text=_("Входящий или исходящий номер по нумерации EDS")
+    )
     subject = models.CharField(max_length=300, verbose_name=_("Тема"))
     #: Дата письма: получения (`in`) или регистрации при отправке (`out`).
     date = models.DateField(verbose_name=_("Дата"))

@@ -60,7 +60,7 @@ class PartnerApplicationDeskViewSet(DeskViewSet):
         summary="Create a partner application from an incoming letter",
         description=(
             "План 1.9, «Передать в работу»: сотрудник снабжения заводит заявку кандидата по входящему письму "
-            "(`source = letter`, `source_ref` — номер ВХ). Согласия кандидата нет — дальше договорный шлюз."
+            "(`source = letter`, `source_ref` — номер входящего письма). Согласия кандидата нет — дальше договорный шлюз."
         ),
         request=DeskPartnerApplicationCreateIn,
         responses={201: DeskPartnerApplicationDetail, 400: REFUSED, 403: FORBIDDEN},

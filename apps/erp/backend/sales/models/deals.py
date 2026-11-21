@@ -95,7 +95,7 @@ class Deal(models.Model):
         help_text=_("Внутренние заметки, видны только сотрудникам"),
     )
 
-    # Номер заявки ЗВ-ГГГГ-NNN, после принятия КП — ПР-ГГГГ-NNN с тем же NNN (SPEC-v3 §2.2, ERP-09). Выдаётся при
+    # Номер заявки RQ-ГГГГ-NNN, после принятия КП — PRJ-ГГГГ-NNN с тем же NNN (SPEC-v3 §2.2, ERP-09). Выдаётся при
     # создании сделки из счётчика года под блокировкой (`sales/services/deal_numbers.py`), без пропусков.
     number = models.CharField(
         max_length=32,
@@ -103,7 +103,9 @@ class Deal(models.Model):
         default="",
         db_index=True,
         verbose_name=_("Номер заявки"),
-        help_text=_("ЗВ-ГГГГ-NNN; после принятия КП клиентом — ПР-ГГГГ-NNN (тот же NNN)"),
+        help_text=_(
+            "Номер заявки по схеме нумерации (RQ-2026-001); после принятия КП клиентом — номер проекта (PRJ-2026-001, тот же счёт)"
+        ),
     )
     number_year = models.PositiveIntegerField(null=True, blank=True, editable=False, verbose_name=_("Год номера"))
     number_seq = models.PositiveIntegerField(null=True, blank=True, editable=False, verbose_name=_("NNN номера"))
@@ -191,7 +193,7 @@ class DealNumberCounter(models.Model):
         verbose_name_plural = _("Счётчики номеров заявок")
 
     def __str__(self):
-        return f"ЗВ {self.year}: {self.last_value}"
+        return f"deals {self.year}: {self.last_value}"
 
 
 class ActivityLog(models.Model):

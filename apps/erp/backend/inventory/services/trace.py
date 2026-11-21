@@ -207,7 +207,12 @@ def present_unit_short(unit: TraceUnit) -> dict:
 def _deal_ref(deal) -> Optional[dict]:
     if deal is None:
         return None
-    return {"id": deal.pk, "number": deal.number or None, "client_name": deal.company.name if deal.company_id else None}
+    return {
+        "id": deal.pk,
+        "number": deal.number or None,
+        "client_name": deal.company.name if deal.company_id else None,
+        "stage_code": deal.stage.code if deal.stage_id else None,
+    }
 
 
 def _origin(unit: TraceUnit) -> dict:
@@ -248,13 +253,16 @@ def search(user, query: str) -> list[dict]:
     text = _clean(query)
     if len(text) < SEARCH_MIN:
         return []
-    allocations = TraceAllocation.objects.select_related("shipment_line__shipment__deal__company")
+    allocations = TraceAllocation.objects.select_related(
+        "shipment_line__shipment__deal__company", "shipment_line__shipment__deal__stage"
+    )
     units = (
         TraceUnit.objects.filter(Q(number__iexact=text) | Q(number__icontains=text))
         .select_related(
             "product__brand",
             "receipt_line__receipt__order__supplier",
             "receipt_line__order_line__deal__company",
+            "receipt_line__order_line__deal__stage",
         )
         .prefetch_related(Prefetch("allocations", queryset=allocations))
         .order_by("number", "id")[:SEARCH_LIMIT]

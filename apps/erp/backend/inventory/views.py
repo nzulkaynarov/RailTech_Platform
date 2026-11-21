@@ -224,7 +224,7 @@ class StockShipmentListView(RoleGatedViewMixin, APIView):
 
     @extend_schema(
         operation_id="stock_ship",
-        summary="Отгрузить со склада по резервам заявки (накладная ОТГ)",
+        summary="Отгрузить со склада по резервам заявки (внутренняя накладная)",
         tags=TAGS,
         request=StockShipInSerializer,
         responses={201: StockShipmentSerializer, **ERRORS},

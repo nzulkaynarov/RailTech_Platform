@@ -30,7 +30,7 @@ from .workflow import DealWorkflowActionsMixin
         description=(
             "Returns deals accessible to the current user. "
             "Admins/managers see all; clients see only their company's deals. "
-            "`search` finds deals by number (ЗВ-ГГГГ-NNN / ПР-ГГГГ-NNN — the same NNN under either prefix, "
+            "`search` finds deals by number (RQ-2026-001 / PRJ-2026-001 — the same NNN under either prefix, "
             "latin ZV/PR and spaces accepted), title or client company name (ERP-09)."
         ),
         tags=["CRM"],

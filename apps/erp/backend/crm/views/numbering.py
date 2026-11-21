@@ -54,6 +54,17 @@ def _authorized_company_or_403(request):
     return company, None
 
 
+def _invalid_scheme_response(error) -> Response:
+    """400 for a rejected draft/scheme: a bad label names its field (`type_labels`), anything else is the mask."""
+    fields = getattr(error, "message_dict", {})
+    if "type_labels" in fields:
+        return Response(
+            {"detail": "INVALID_NUMBERING_LABEL", "type_labels": fields["type_labels"]},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    return Response({"detail": "INVALID_NUMBERING_PATTERN"}, status=status.HTTP_400_BAD_REQUEST)
+
+
 def _scheme_view_payload(company) -> dict:
     """Flatten the SchemeView dataclass into the serializer's field shape."""
     view = get_company_scheme_view(company)
@@ -99,13 +110,16 @@ class NumberingSchemeView(RoleGatedViewMixin, APIView):
         summary="Update numbering scheme",
         description=(
             "Upsert the seller company's numbering scheme. An invalid mask (missing {seq}, "
-            'empty) → 400 {"detail": "INVALID_NUMBERING_PATTERN"}. Applies to FUTURE numbers '
+            'empty) → 400 {"detail": "INVALID_NUMBERING_PATTERN"}; a label outside Latin A-Z 0-9 (1-16) → '
+            '400 {"detail": "INVALID_NUMBERING_LABEL", "type_labels": [...]}. Applies to FUTURE numbers '
             "only; already-issued numbers are snapshots and never change. settings.edit + seller."
         ),
         request=NumberingSchemeWriteSerializer,
         responses={
             200: NumberingSchemeSerializer,
-            400: OpenApiResponse(description="INVALID_NUMBERING_PATTERN"),
+            400: OpenApiResponse(
+                description="INVALID_NUMBERING_PATTERN or INVALID_NUMBERING_LABEL (type_labels: Latin A-Z 0-9, up to 16)"
+            ),
             403: OpenApiResponse(description="Not a seller / no settings.edit"),
         },
         tags=["CRM"],
@@ -118,8 +132,8 @@ class NumberingSchemeView(RoleGatedViewMixin, APIView):
         write.is_valid(raise_exception=True)
         try:
             set_company_scheme(company, **write.validated_data)
-        except DjangoValidationError:
-            return Response({"detail": "INVALID_NUMBERING_PATTERN"}, status=status.HTTP_400_BAD_REQUEST)
+        except DjangoValidationError as error:
+            return _invalid_scheme_response(error)
         return Response(NumberingSchemeSerializer(_scheme_view_payload(company)).data)
 
 
@@ -143,7 +157,9 @@ class NumberingSchemePreviewView(RoleGatedViewMixin, APIView):
         request=NumberingPreviewRequestSerializer,
         responses={
             200: NumberingPreviewResponseSerializer,
-            400: OpenApiResponse(description="INVALID_NUMBERING_PATTERN"),
+            400: OpenApiResponse(
+                description="INVALID_NUMBERING_PATTERN or INVALID_NUMBERING_LABEL (type_labels: Latin A-Z 0-9, up to 16)"
+            ),
             403: OpenApiResponse(description="Not a seller / no settings.edit"),
         },
         tags=["CRM"],
@@ -156,6 +172,6 @@ class NumberingSchemePreviewView(RoleGatedViewMixin, APIView):
         draft.is_valid(raise_exception=True)
         try:
             results = preview_scheme_numbers(company, **draft.validated_data)
-        except DjangoValidationError:
-            return Response({"detail": "INVALID_NUMBERING_PATTERN"}, status=status.HTTP_400_BAD_REQUEST)
+        except DjangoValidationError as error:
+            return _invalid_scheme_response(error)
         return Response({"results": results})
