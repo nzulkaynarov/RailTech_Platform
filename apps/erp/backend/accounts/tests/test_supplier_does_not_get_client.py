@@ -1,4 +1,4 @@
-"""K0: поставщик не получает CLIENT даром (сигнал «продавец тоже покупает» удалён); компания без типов — по-прежнему клиент."""
+"""K0: поставщик не получает CLIENT даром (сигнал «продавец тоже покупает» удалён); СЦ-8: компания, у которой сняли последнюю роль, остаётся без ролей."""
 
 import pytest
 from django.contrib import admin as django_admin
@@ -59,14 +59,26 @@ def test_seller_created_in_admin_form_does_not_get_client():
     assert _codes(company) == {"SUPPLIER"}
 
 
-def test_removing_the_last_type_still_restores_client_default():
-    client = _type("CLIENT")
+def test_removing_the_last_type_leaves_the_company_without_roles():
+    """Fact: a role is an explicit mark; nothing re-adds CLIENT when the last one is removed (СЦ-8)."""
+    _type("CLIENT")
     company = Company.objects.create(name="Untyped", inn="8400001")
     company.types.add(_type("SUPPLIER"))
 
     company.types.clear()
 
-    assert _codes(company) == {client.code}
+    assert _codes(company) == set()
+    assert not Company.objects.filter(types__code="CLIENT", pk=company.pk).exists()
+
+
+def test_removing_one_of_two_types_keeps_the_other_and_adds_nothing():
+    company = Company.objects.create(name="Two", inn="8400002")
+    _type("CLIENT")
+    company.types.add(_type("SUPPLIER"), _type("MANUFACTURER"))
+
+    company.types.remove(_type("MANUFACTURER"))
+
+    assert _codes(company) == {"SUPPLIER"}
 
 
 def test_client_added_explicitly_stays_next_to_supplier():
@@ -75,3 +87,32 @@ def test_client_added_explicitly_stays_next_to_supplier():
     company.types.add(_type("SUPPLIER"), _type("CLIENT"))
 
     assert _codes(company) == {"SUPPLIER", "CLIENT"}
+
+
+def test_company_whose_last_role_was_removed_is_not_in_the_client_book():
+    """СЦ-8: no role, no deals, no CRM mapping — the company is out of the client book (its role does not reappear)."""
+    from accounts.services.clients import client_book_q
+
+    _type("CLIENT")
+    company = Company.objects.create(name="Ex Supplier", inn="8600001")
+    company.types.add(_type("SUPPLIER"))
+    assert not Company.objects.filter(client_book_q(), pk=company.pk).exists()
+
+    company.types.remove(_type("SUPPLIER"))
+
+    assert _codes(company) == set()
+    assert not Company.objects.filter(client_book_q(), pk=company.pk).exists()
+
+
+def test_desk_role_switch_off_leaves_the_company_without_roles():
+    """The desk path (`service_counterparty.set_role`) — the one that used to trigger the CLIENT auto-restore."""
+    from portal.desk.service_counterparty import set_role
+
+    _type("CLIENT")
+    company = Company.objects.create(name="Desk Supplier", inn="8700001")
+    company.types.add(_type("SUPPLIER"))
+    actor = CustomUser.objects.create_superuser(username="r@example.com", email="r@example.com", password="x")
+
+    set_role(company, "supplier", False, actor=actor)
+
+    assert _codes(company) == set()

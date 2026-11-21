@@ -1,27 +1,20 @@
 """
-Invariant: every Company must have at least one CompanyType.
-Otherwise the frontend cannot derive a status context (BUYER/SELLER/MANUFACTURER)
-and Admin-role users get bounced to ProfileCompletionForm when they open the app.
+Signals of the accounts app.
 
-Default restoration: CLIENT for companies left WITHOUT any type. Super-rights belong
-exclusively to the superuser account (is_superuser + SystemRole.ADMIN).
-If a company needs to act as a seller, a human must add SUPPLIER to its types
-through normal Admin UI — no magic bypass. SUPPLIER does NOT imply CLIENT (K0, 2026-11-01):
-the marketplace rule "a seller may also buy" is gone, and CLIENT is what opens the
-client cabinet (`portal/services/access.py`), so a supplier must not get it for free.
-
-Mirrors the backfill in core/migrations/0002_seed_enterprise_lookups.py, but
-applied on every M2M-edit, not once per migrate.
+A company's role (CompanyType) is an explicit mark or follows from data (offers, brands, deals) — it never appears
+by itself (СЦ-8). A company whose last role was removed stays without roles and is not in the client book; the old
+"restore CLIENT when the last type is removed" signal is gone. A flow that creates a company AS a client sets CLIENT
+explicitly (`integration/services/handoff.py`, `accounts/services/clients.py`, `integration/services/partner_client.py`).
 """
 
 import logging
 
 from django.contrib.auth.signals import user_login_failed
-from django.db.models.signals import m2m_changed, post_delete, post_save
+from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 from rest_framework.throttling import BaseThrottle
 
-from .models import Company, CompanyType
+from .models import Company
 from .services import login_guard
 
 logger = logging.getLogger(__name__)
@@ -41,29 +34,6 @@ def log_django_auth_login_failure(sender, credentials=None, request=None, **kwar
     ip = BaseThrottle().get_ident(request) if request is not None else ""
     path = getattr(request, "path", "") if request is not None else ""
     login_guard.note_django_auth_failure(username, ip, path)
-
-
-@receiver(m2m_changed, sender=Company.types.through)
-def ensure_company_has_at_least_one_type(sender, instance: Company, action: str, **kwargs):
-    """Guard Company.types M2M. Re-adds CLIENT if the last type was removed."""
-    if action not in {"post_remove", "post_clear"}:
-        return
-    if instance.types.exists():
-        return
-    ct = CompanyType.objects.filter(code="CLIENT").first()
-    if ct is None:
-        logger.warning(
-            "Company %s has no types and CompanyType(CLIENT) is not seeded — "
-            "run `python manage.py migrate` to apply core.0002_seed_enterprise_lookups",
-            instance.pk,
-        )
-        return
-    instance.types.add(ct)
-    logger.info(
-        "Company %s had no types left after %s — auto-restored CLIENT default",
-        instance.pk,
-        action,
-    )
 
 
 # Поля карточки компании, которые печатаются в бланке EDS (решение владельца 2026-11-11: одни реквизиты).
