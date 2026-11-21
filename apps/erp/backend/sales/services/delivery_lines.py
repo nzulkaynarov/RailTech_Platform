@@ -103,11 +103,13 @@ def sync_delivery_lines(fulfillments: Iterable[Fulfillment]) -> int:
         return 0
     deal_ids = [f.deal_id for f in fulfillments]
     quotes = _approved_quotes_by_deal(deal_ids)
-    shipped_from_stock = _shipped_from_stock(deal_ids)
+    # Строки читаются ДО факта склада: параллельная отгрузка между двумя чтениями может дать лишь «ещё не отгружено»
+    # по устаревшему снимку строк, но не откатит строку назад (факт склада читается позже и не старее строк).
     existing: dict[int, DeliveryLine] = {
         line.quote_item_id: line
         for line in DeliveryLine.objects.filter(deal_id__in=deal_ids).select_related("quote_item")
     }
+    shipped_from_stock = _shipped_from_stock(deal_ids)
 
     to_create: list[DeliveryLine] = []
     to_update: list[tuple[list[int], dict]] = []  # (id строк, новые значения) — по сделке
@@ -136,14 +138,13 @@ def sync_delivery_lines(fulfillments: Iterable[Fulfillment]) -> int:
             line = existing.get(item.pk)
             line_wanted = wanted
             shipped_qty, shipped_last = shipped_from_stock.get(item.pk, (0, None))
-            if (
-                wanted["status"] == DeliveryLineStatus.ASSEMBLING
-                and item.quantity is not None
-                and shipped_qty
-                and shipped_qty >= item.quantity
-            ):
-                # Исполнение ещё «Собирается» (ушла часть заказа), а эта строка со склада отгружена целиком.
-                line_wanted = {**wanted, "status": DeliveryLineStatus.SHIPPED, "shipped_at": shipped_last}
+            if item.quantity is not None and shipped_qty and shipped_qty >= item.quantity:
+                # Склад отдал строку целиком: дата отгрузки — факт склада, а не момент, когда ушло всё исполнение
+                # (при отгрузке в разные дни дата ушедшей раньше строки не должна сдвигаться).
+                line_wanted = {**wanted, "shipped_at": shipped_last}
+                if wanted["status"] == DeliveryLineStatus.ASSEMBLING:
+                    # Исполнение ещё «Собирается» (ушла часть заказа), а эта строка отгружена целиком.
+                    line_wanted["status"] = DeliveryLineStatus.SHIPPED
             if line is None:
                 to_create.append(
                     DeliveryLine(
