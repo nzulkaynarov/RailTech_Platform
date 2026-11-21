@@ -111,21 +111,35 @@ async def test_client_id_limits_and_unknown_id_publishes_nothing(
     assert (missing.clients, missing.published) == (0, 0)
 
 
-async def test_repeat_keeps_rows_and_snapshot(
+async def test_republished_snapshot_is_strictly_newer_for_untouched_clients(
     sessions: async_sessionmaker[AsyncSession], bus: Any
 ) -> None:
-    await _clients(sessions)
-    await republish_clients(sessions)
-    first = await _outbox(sessions)
-    await republish_clients(sessions)
-    both = await _outbox(sessions)
+    """ERP skips a snapshot whose `updated_at` is not newer than the applied one."""
+    ids = await _clients(sessions)
+    async with sessions() as session, session.begin():  # the normal path: last published state
+        for cid in ids:
+            client = await session.get(Client, cid)
+            assert client is not None
+            await bus_events.client_updated(session, client, Actor.system())
+    last = {
+        row["subject"]: row["envelope"]["data"]["client"]["updated_at"]
+        for row in await _outbox(sessions)
+    }
+    await _clear_outbox(sessions)
 
-    assert (len(first), len(both)) == (3, 6)
-    stamps: dict[int, set[str]] = {}
-    for row in both:
-        snap = row["envelope"]["data"]["client"]
-        stamps.setdefault(snap["crm_client_id"], set()).add(snap["updated_at"])
-    assert all(len(s) == 1 for s in stamps.values())  # same updated_at: "not older" applies
+    await republish_clients(sessions)
+    first = {
+        row["subject"]: row["envelope"]["data"]["client"]["updated_at"]
+        for row in await _outbox(sessions)
+    }
+    await republish_clients(sessions)  # a repeat moves forward again, content unchanged
+    rows = await _outbox(sessions)
+
+    assert set(first) == set(last)
+    assert len(rows) == 6
+    assert all(first[s] > last[s] for s in last)
+    latest = {r["subject"]: r["envelope"]["data"]["client"]["updated_at"] for r in rows}
+    assert all(latest[s] >= first[s] for s in first)
 
 
 def test_cli_arguments() -> None:
