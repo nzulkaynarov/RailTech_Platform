@@ -15,6 +15,7 @@ import type { EdsPerson } from "./edsPerson";
 import type { EdsRecipient } from "./edsRecipient";
 import type { EdsReplyTo } from "./edsReplyTo";
 import type { EdsRouteStep } from "./edsRouteStep";
+import type { EdsSigningHint } from "./edsSigningHint";
 
 export interface EdsDocument {
   id: string;
@@ -80,6 +81,11 @@ export interface EdsDocument {
   verification_url?: string | null;
   /** @nullable */
   dispatch_method?: EdsDocumentDispatchMethod;
-  /** Пользователь может подписать документ (черновик, уполномоченное лицо) */
+  /**
+   * Подпись предлагается, только если сервис документов её разрешает (СЦ-9: та же проверка, что у `sign`);
+   * поле сервиса не пришло — `false`.
+   */
   can_sign?: boolean;
+  /** Только у черновика исходящего письма — почему подписать нельзя и кто подпишет по реестру полномочий */
+  signing_hint?: EdsSigningHint | null;
 }

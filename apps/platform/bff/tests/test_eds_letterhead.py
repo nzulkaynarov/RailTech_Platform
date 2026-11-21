@@ -136,8 +136,8 @@ async def test_create_letter_sends_body_and_registers_with_send(
 async def test_card_flags_for_executor_and_registrar(
     web: Web, eds: EdsFake, check: ContractChecker
 ) -> None:
-    """Автор без права регистрации — «Передать на регистрацию»; делопроизводитель видит
-    переданный черновик «зарегистрировать»."""
+    """Автор без права регистрации — «Передать на регистрацию»; регистрации без подписи нет
+    (решение владельца 2026-11-21 (3)): переданный черновик тоже без «зарегистрировать»."""
     eds.answer("GET", f"documents/{DOC_ID}", 200, letter_doc())
     await web.login(["MANAGER"])
     mine = await web.client.get(f"{BASE}/documents/{DOC_ID}")
@@ -158,7 +158,7 @@ async def test_card_flags_for_executor_and_registrar(
     await web.login(["REGISTRAR"])
     seen = await web.client.get(f"{BASE}/documents/{DOC_ID}")
     check(seen, "/eds/documents/{id}", "get")
-    assert (seen.json()["can_register"], seen.json()["can_request_registration"]) == (True, False)
+    assert (seen.json()["can_register"], seen.json()["can_request_registration"]) == (False, False)
 
 
 async def test_pdf_request_status_and_stream(
