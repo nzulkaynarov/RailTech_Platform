@@ -91,9 +91,13 @@ describe("форма «Создать заявку»: правила до отп
       contact: "contact",
       channel: "channel",
       summary: "summary",
-      letter: "letter_required",
+      letter: "letter_call_consent",
       consent: "consent",
     });
+    // Телефонный лид с согласием: основание — записка или файл, текст обычный.
+    expect(validateRequest({ ...emptyRequestForm(), consentMarked: true }, lead).letter).toBe(
+      "letter_required",
+    );
   });
 
   it("лид из Telegram без согласия — согласие только в боте; неверный ИНН — словами", () => {
@@ -517,5 +521,279 @@ describe("ключ черновика заявки по месту открыт�
     expect(requestDraftScope(null, null, "doc-7")).not.toBe(requestDraftScope(null, null));
     expect(requestDraftScope("L-2044", null)).toBe("L-2044");
     expect(requestDraftScope(null, 5)).toBe("client:5");
+  });
+});
+
+describe("записка о звонке как основание заявки (СЦ-6)", () => {
+  const PHONE = "/crm/leads?lead=L-2077&create=1&panel=open&tab=card";
+  const NOTE_URL = "*/api/v1/crm/request-files/call-note";
+
+  /** Тела заказов записки: сколько раз форма заказывала её и с чем. */
+  function recordNotes(): { bodies: Record<string, unknown>[] } {
+    const seen: { bodies: Record<string, unknown>[] } = { bodies: [] };
+    server.events.on("request:start", ({ request }) => {
+      if (request.method === "POST" && request.url.endsWith("/crm/request-files/call-note")) {
+        void request
+          .clone()
+          .json()
+          .then((body: Record<string, unknown>) => seen.bodies.push(body));
+      }
+    });
+    return seen;
+  }
+
+  function markConsent(panel: HTMLElement): void {
+    open(panel, "Контакт");
+    fireEvent.click(within(panel).getByRole("checkbox", { name: "Согласие получено" }));
+  }
+
+  it("лид со звонка и согласием: записка собирается сама на шаге «Запрос», файл не нужен, заявка уходит с её id", async () => {
+    const notes = recordNotes();
+    const panel = await openForm(PHONE);
+    markConsent(panel);
+    open(panel, "Запрос");
+    expect(await within(panel).findByText("Записка о звонке приложена")).toBeVisible();
+    expect(within(panel).getByRole("button", { name: /^Открыть/ })).toBeVisible();
+    expect(within(panel).getByText("Заменить файлом")).toBeVisible();
+    await waitFor(() => {
+      expect(notes.bodies).toHaveLength(1);
+    });
+    expect(notes.bodies[0]).toMatchObject({ lead: "L-2077", consent: true, lang: "ru" });
+
+    const submit = submitButton(panel);
+    expect(submit).toBeEnabled();
+    fireEvent.click(submit);
+    expect(await within(panel).findByText("Заявка создана")).toBeVisible();
+    const created = readLeads().clients.find((c) => c.name === "ООО Демо-Депо");
+    expect(created?.requests[0]?.letter_file_id).toBeTruthy();
+    server.events.removeAllListeners();
+  });
+
+  it("без согласия записка не собирается: кнопка недоступна, причина видна, «Осталось» ведёт к согласию", async () => {
+    const notes = recordNotes();
+    const panel = await openForm(PHONE);
+    open(panel, "Запрос");
+    expect(within(panel).queryByText("Записка о звонке приложена")).toBeNull();
+    expect(within(panel).getByRole("button", { name: "Основание — звонок" })).toBeDisabled();
+    expect(
+      within(panel).getByText(
+        "Записка о звонке соберётся, когда на шаге «Контакт» отмечено согласие",
+      ),
+    ).toBeVisible();
+    open(panel, "Проверка и отправка");
+    expect(
+      within(panel).getAllByText(
+        "Отметьте согласие на шаге «Контакт» — записка о звонке соберётся сама, или приложите файл",
+      ).length,
+    ).toBeGreaterThan(0);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(notes.bodies).toHaveLength(0);
+    server.events.removeAllListeners();
+  });
+
+  it("лид не со звонка: записки и кнопки «Основание — звонок» нет, основание — файл", async () => {
+    const notes = recordNotes();
+    const panel = await openForm("/crm/leads?lead=L-2044&create=1&panel=open&tab=card");
+    open(panel, "Запрос");
+    expect(within(panel).queryByRole("button", { name: "Основание — звонок" })).toBeNull();
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(notes.bodies).toHaveLength(0);
+    server.events.removeAllListeners();
+  });
+
+  it("без лида (повторный звонок клиента): записка — по кнопке «Основание — звонок» из полей формы", async () => {
+    server.events.removeAllListeners();
+    const notes = recordNotes();
+    const panel = await openForm("/crm/clients?client=3&create=1&panel=open&tab=card");
+    await waitFor(() => {
+      expect(within(panel).getByText(/^Бобур Снабженцев.* — Telegram/)).toBeVisible();
+    });
+    open(panel, "Запрос");
+    fireEvent.change(within(panel).getByLabelText("Суть запроса"), {
+      target: { value: "Повторный заказ накладок" },
+    });
+    // сама записка без лида не собирается
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(notes.bodies).toHaveLength(0);
+
+    fireEvent.click(within(panel).getByRole("button", { name: "Основание — звонок" }));
+    expect(await within(panel).findByText("Записка о звонке приложена")).toBeVisible();
+    expect(notes.bodies).toHaveLength(1);
+    expect(notes.bodies[0]).toMatchObject({
+      caller: { name: "Бобур Снабженцев", company: "ООО Рельс-Сервис Демо" },
+      need: "Повторный заказ накладок",
+    });
+    expect(notes.bodies[0]).not.toHaveProperty("lead");
+    fireEvent.click(submitButton(panel));
+    expect(await within(panel).findByText("Заявка создана")).toBeVisible();
+    server.events.removeAllListeners();
+  });
+
+  it("нет бланка у компании: причина и «приложите файл»; загруженный файл заменяет записку, заявка уходит", async () => {
+    server.use(
+      http.post(NOTE_URL, () =>
+        HttpResponse.json(
+          {
+            code: "CONFLICT",
+            message: "Бланк",
+            source: "eds",
+            details: { reason: "letterhead_missing" },
+          },
+          { status: 409 },
+        ),
+      ),
+    );
+    const panel = await openForm(PHONE);
+    markConsent(panel);
+    open(panel, "Запрос");
+    expect(
+      await within(panel).findByText(
+        "Записку о звонке не собрать: в компании не настроен бланк. Приложите файл.",
+      ),
+    ).toBeVisible();
+    expect(submitButton(panel)).toBeDisabled();
+    await attach(panel, "zapros.pdf");
+    expect(within(panel).queryByText("Записка о звонке приложена")).toBeNull();
+    fireEvent.click(submitButton(panel));
+    expect(await within(panel).findByText("Заявка создана")).toBeVisible();
+  });
+
+  it("записка строится в воркере: «Собираем…», затем опрос до готовности", async () => {
+    const id = "50000000-0000-4000-8000-000000000001";
+    const file = {
+      id: "60000000-0000-4000-8000-000000000001",
+      name: "Записка.pdf",
+      content_type: "application/pdf",
+      size: 10,
+    };
+    let polls = 0;
+    server.use(
+      http.post(NOTE_URL, () =>
+        HttpResponse.json({ id, status: "pending", error: null, file: null }, { status: 202 }),
+      ),
+      http.get(`${NOTE_URL}/${id}`, () => {
+        polls += 1;
+        return HttpResponse.json({ id, status: "ready", error: null, file });
+      }),
+    );
+    const panel = await openForm(PHONE);
+    markConsent(panel);
+    open(panel, "Запрос");
+    expect(await within(panel).findByText("Собираем записку о звонке…")).toBeVisible();
+    expect(submitButton(panel)).toBeDisabled();
+    open(panel, "Запрос");
+    expect(
+      await within(panel).findByText("Записка о звонке приложена", undefined, { timeout: 4000 }),
+    ).toBeVisible();
+    expect(polls).toBe(1);
+    open(panel, "Проверка и отправка");
+    expect(submitButton(panel)).toBeEnabled();
+  });
+
+  it("«Убрать файл» не пускает автосборку второй раз: записку можно вернуть кнопкой", async () => {
+    const notes = recordNotes();
+    const panel = await openForm(PHONE);
+    markConsent(panel);
+    open(panel, "Запрос");
+    expect(await within(panel).findByText("Записка о звонке приложена")).toBeVisible();
+    fireEvent.click(within(panel).getByRole("button", { name: "Убрать файл" }));
+    const again = await within(panel).findByRole("button", { name: "Основание — звонок" });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(notes.bodies).toHaveLength(1);
+    fireEvent.click(again);
+    expect(await within(panel).findByText("Записка о звонке приложена")).toBeVisible();
+    expect(notes.bodies).toHaveLength(2);
+    server.events.removeAllListeners();
+  });
+
+  it("черновик хранит записку: после «Продолжить» она приложена и заново не заказывается", async () => {
+    const notes = recordNotes();
+    const panel = await openForm(PHONE);
+    markConsent(panel);
+    open(panel, "Запрос");
+    expect(await within(panel).findByText("Записка о звонке приложена")).toBeVisible();
+    fireEvent.change(within(panel).getByLabelText("Суть запроса"), {
+      target: { value: "Колодки" },
+    });
+    cleanup();
+
+    const again = await openForm(PHONE);
+    fireEvent.click(within(again).getByRole("button", { name: "Продолжить" }));
+    open(again, "Запрос");
+    expect(within(again).getByText("Записка о звонке приложена")).toBeVisible();
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(notes.bodies).toHaveLength(1);
+    server.events.removeAllListeners();
+  });
+
+  it("файл, выбранный во время сборки записки, готовая записка не затирает", async () => {
+    const id = "50000000-0000-4000-8000-000000000001";
+    server.use(
+      http.post(NOTE_URL, () =>
+        HttpResponse.json({ id, status: "pending", error: null, file: null }, { status: 202 }),
+      ),
+      http.get(`${NOTE_URL}/${id}`, () =>
+        HttpResponse.json({
+          id,
+          status: "ready",
+          error: null,
+          file: {
+            id: "60000000-0000-4000-8000-000000000001",
+            name: "Записка.pdf",
+            content_type: "application/pdf",
+            size: 10,
+          },
+        }),
+      ),
+    );
+    const panel = await openForm(PHONE);
+    markConsent(panel);
+    open(panel, "Запрос");
+    expect(await within(panel).findByText("Собираем записку о звонке…")).toBeVisible();
+    await attach(panel, "pismo.pdf");
+    await new Promise((resolve) => setTimeout(resolve, 1600));
+    expect(within(panel).getByText("Загружено: pismo.pdf")).toBeVisible();
+    expect(within(panel).queryByText("Записка о звонке приложена")).toBeNull();
+  });
+
+  it("без лида: пока не заполнена суть, записку не собрать; правка после сборки — новая записка с новым ключом", async () => {
+    server.events.removeAllListeners();
+    const notes = recordNotes();
+    const panel = await openForm("/crm/clients?client=3&create=1&panel=open&tab=card");
+    await waitFor(() => {
+      expect(within(panel).getByText(/^Бобур Снабженцев.* — Telegram/)).toBeVisible();
+    });
+    open(panel, "Запрос");
+    const button = within(panel).getByRole("button", { name: "Основание — звонок" });
+    expect(button).toBeDisabled();
+    expect(within(panel).getByText("Сначала заполните «Суть запроса»")).toBeVisible();
+
+    const need = within(panel).getByLabelText("Суть запроса");
+    fireEvent.change(need, { target: { value: "Накладки" } });
+    fireEvent.click(within(panel).getByRole("button", { name: "Основание — звонок" }));
+    expect(await within(panel).findByText("Записка о звонке приложена")).toBeVisible();
+    fireEvent.click(within(panel).getByRole("button", { name: "Убрать файл" }));
+    fireEvent.change(need, { target: { value: "Накладки и болты" } });
+    fireEvent.click(await within(panel).findByRole("button", { name: "Основание — звонок" }));
+    await waitFor(() => {
+      expect(notes.bodies).toHaveLength(2);
+    });
+    expect(notes.bodies[1]).toMatchObject({ need: "Накладки и болты" });
+    expect(notes.bodies[1]?.["request_key"]).not.toBe(notes.bodies[0]?.["request_key"]);
+    server.events.removeAllListeners();
+  });
+
+  it("форма без правки черновиком не становится: записка, собранная системой, «Продолжить» не вызывает", async () => {
+    const state = readLeads();
+    const lead = state.leads.find((l) => l.row.lead === "L-2077");
+    if (!lead) throw new Error("нет L-2077");
+    lead.card.consent = { given_at: "2026-10-27T08:00:00Z", method: "phone" };
+    writeLeads(state);
+    const panel = await openForm(PHONE);
+    open(panel, "Запрос");
+    expect(await within(panel).findByText("Записка о звонке приложена")).toBeVisible();
+    cleanup();
+    const again = await openForm(PHONE);
+    expect(within(again).queryByText(/Есть черновик заявки от/)).toBeNull();
   });
 });

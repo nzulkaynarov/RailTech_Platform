@@ -35,7 +35,25 @@
     "remove": "Remove the file",
     "tooLarge": "The file is larger than 25 MB",
     "unsupported": "PDF, image or Office document only",
-    "failed": "Could not upload the file: {{reason}}"
+    "failed": "Could not upload the file: {{reason}}",
+    "callBasis": "Basis — phone call",
+    "noteBuilding": "Building the call note…",
+    "noteAttached": "Call note attached",
+    "replaceNote": "Replace with a file",
+    "open": "Open",
+    "openNote": "Open: {{name}}",
+    "openFailed": "Could not open the file",
+    "noteRetry": "Retry",
+    "noteFailed": "Could not build the call note: {{reason}}. Attach a file.",
+    "noteNeedsCaller": "First enter who called on the Contact step",
+    "noteNeedsConsent": "The call note is built once consent is marked on the Contact step",
+    "noteNeedsSummary": "First fill in the request summary",
+    "noteReasons": {
+      "generic": "the document could not be built",
+      "call_note_not_phone": "this is not a phone lead",
+      "call_note_no_consent": "no client consent",
+      "letterhead_missing": "no company letterhead is set up"
+    }
   },
   "urgency": {
     "legend": "Urgency",
@@ -90,6 +108,7 @@
     "not_lead_owner": "Another employee handles this lead",
     "telegram_linked_elsewhere": "The lead's Telegram is already linked to another client",
     "letter_required": "Attach the client's letter or request file",
+    "letter_call_consent": "Mark consent on the Contact step to get the call note, or attach a file",
     "letter_failed": "The file did not upload — pick it again or another one",
     "request_not_failed": "The request is already being sent or was sent to the back office — refresh the card",
     "request_not_retryable": "Retrying will not help: the request data changed after sending — create the request again",

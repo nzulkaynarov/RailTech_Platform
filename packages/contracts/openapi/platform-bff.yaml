@@ -12921,6 +12921,114 @@ paths:
           $ref: '#/components/responses/EdsUnsupportedMedia'
         '503':
           $ref: '#/components/responses/BackendUnavailable'
+  /crm/request-files/call-note:
+    post:
+      tags: [requests]
+      operationId: createCrmRequestCallNote
+      summary: 'Записка о звонке — основание заявки по звонку (PDF в EDS)'
+      description: >-
+        EDS `POST /call-notes` от имени сотрудника (СЦ-6): одностраничный PDF «Кто звонил / Что просил» на бланке компании,
+        который становится его файлом — тем, что форма отдаёт как `letter_file_id`. Рендер идёт в воркере EDS, поэтому ответ
+        202 `CallNoteView`: `status = pending` — опрашивать `GET /crm/request-files/call-note/{id}`; повтор с тем же
+        `request_key` отдаёт ту же записку. С `lead` BFF читает лид в CRM: нужен канал `phone` (иначе 409 `call_note_not_phone`)
+        и согласие на данные — данное в CRM или отмеченное в форме (`consent = true`; иначе 409 `call_note_no_consent`);
+        «Кто звонил», «Компания», «Телефон», «Почта», «Когда» (создание лида), «Принял» (ответственный за лид) и «Что просил»
+        — из лида, `caller` и `need` игнорируются. Без `lead` (повторный звонок клиента) записка составляется по `caller` и
+        `need` формы, «Когда» — сейчас, «Принял» — сам сотрудник; `caller` обязателен (422). Нет бланка компании — 409
+        `details.reason = letterhead_missing` (форма просит приложить файл). Раздел `crm.clients` полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RequestCallNoteIn'
+      responses:
+        '202':
+          description: Записка строится или уже готова
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CallNoteView'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/RequestConflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /crm/request-files/call-note/{note}:
+    get:
+      tags: [requests]
+      operationId: getCrmRequestCallNote
+      summary: 'Состояние записки о звонке'
+      description: >-
+        EDS `GET /call-notes/{id}`: `pending` — строится, `ready` — `file` готов (id идёт в `RequestFormIn.letter_file_id`),
+        `failed` — не удалась (`error`; повтор `POST` с тем же ключом запускает рендер заново). Чужая и неизвестная записка —
+        404. Раздел `crm.clients` полный.
+      parameters:
+        - name: note
+          in: path
+          required: true
+          schema: {type: string, format: uuid}
+      responses:
+        '200':
+          description: Состояние
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CallNoteView'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /crm/request-files/{file_id}:
+    get:
+      tags: [requests]
+      operationId: downloadCrmRequestFile
+      summary: 'Открыть файл основания заявки (записку о звонке или загруженное письмо)'
+      description: >-
+        EDS `GET /files/{id}` потоком, последняя версия: «Открыть» в форме заявки. Видит загрузивший сотрудник (файл ещё ни к чему
+        не привязан). Файл отдаётся вложением (`Content-Disposition: attachment`), тип содержимого браузер не исполняет. Раздел
+        `crm.clients` полный.
+      parameters:
+        - name: file_id
+          in: path
+          required: true
+          schema: {type: string, format: uuid}
+      responses:
+        '200':
+          description: Содержимое файла
+          headers:
+            Content-Disposition:
+              description: "`attachment; filename*=UTF-8''…`"
+              schema: {type: string}
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
   /erp/catalog/lookups:
     get:
       tags: [erp-catalog]
@@ -15534,7 +15642,7 @@ components:
     RequestConflict:
       description: >-
         409 `CONFLICT` — CRM отказала по состоянию; код — в `details.reason` (`request_not_allowed`, `request_key_reused`,
-        `consent_via_bot`, `erp_not_configured`, `telegram_linked_elsewhere`, `request_not_failed`, `request_not_retryable`)
+        `consent_via_bot`, `erp_not_configured`, `telegram_linked_elsewhere`, `request_not_failed`, `request_not_retryable`; записка о звонке — `call_note_not_phone`, `call_note_no_consent`, `letterhead_missing`)
       content:
         application/json:
           schema:
@@ -26723,6 +26831,42 @@ components:
         lead: {type: string, pattern: '^[Ll]-?\d{1,9}$'}
         message: {type: integer, minimum: 1}
         index: {type: integer, minimum: 0}
+    RequestCallNoteIn:
+      type: object
+      additionalProperties: false
+      required: [request_key, lang]
+      properties:
+        request_key: {type: string, format: uuid, description: 'Ключ формы заявки — с сотрудником даёт один и тот же файл записки при повторе'}
+        lang: {type: string, enum: [ru, uz, en]}
+        lead: {type: [string, 'null'], pattern: '^[Ll]-?\d{1,9}$', description: 'Лид по звонку; данные записки — из него'}
+        consent: {type: boolean, description: 'Согласие отмечено в форме (в CRM ещё не записано); для лида без согласия'}
+        caller:
+          oneOf:
+            - $ref: '#/components/schemas/RequestCallNoteCaller'
+            - type: 'null'
+          description: 'Без `lead` — кто звонил, из формы'
+        need: {type: [string, 'null'], maxLength: 4000, description: 'Без `lead` — что просил клиент'}
+    RequestCallNoteCaller:
+      type: object
+      additionalProperties: false
+      required: [name]
+      properties:
+        name: {type: string, minLength: 1, maxLength: 200}
+        company: {type: [string, 'null'], maxLength: 200}
+        phone: {type: [string, 'null'], maxLength: 64}
+        email: {type: [string, 'null'], maxLength: 200}
+    CallNoteView:
+      type: object
+      additionalProperties: false
+      required: [id, status, error, file]
+      properties:
+        id: {type: string, format: uuid}
+        status: {type: string, enum: [pending, ready, failed]}
+        error: {type: [string, 'null']}
+        file:
+          oneOf:
+            - $ref: '#/components/schemas/EdsFile'
+            - type: 'null'
     # --- D2-3: Расчёт · Номенклатура и поставщики, Техдокументация (0.25.0, tag `erp-catalog`) ---
     CatalogItemKind:
       type: string

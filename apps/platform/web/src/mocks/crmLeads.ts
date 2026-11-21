@@ -1,6 +1,7 @@
 import { HttpResponse, http } from "msw";
 
 import type {
+  CallNoteView,
   ClientCard,
   ClientInvitation,
   ClientRequestRow,
@@ -9,6 +10,7 @@ import type {
   LeadCreated,
   LeadIn,
   LeadPage,
+  RequestCallNoteIn,
   RequestCreatedView,
   RequestFileFromMessageIn,
   RequestFormIn,
@@ -477,5 +479,72 @@ export const crmLeadsHandlers = [
       size: 184_320,
     };
     return HttpResponse.json(stored, { status: 201 });
+  }),
+];
+
+/**
+ * Записка о звонке (СЦ-6): как BFF — лид только со звонка и только при согласии (в CRM или отмеченном в форме), без лида —
+ * по полям формы. Мок отдаёт готовую записку сразу (в EDS она строится секунды); флаг `rt-pf-mock-no-letterhead` —
+ * отвечает 409 `letterhead_missing`.
+ */
+export const MOCK_NOTE_NO_LETTERHEAD_KEY = "rt-pf-mock-no-letterhead";
+const NOTE_FILE = (name: string): EdsFile => ({
+  id: crypto.randomUUID(),
+  name,
+  content_type: "application/pdf",
+  size: 41_200,
+});
+const notes = new Map<string, CallNoteView>();
+
+export const callNoteHandlers = [
+  http.post("*/api/v1/crm/request-files/call-note", async ({ request }) => {
+    const denied = guard("crm.clients", "full");
+    if (denied) return denied;
+    const body = (await request.json()) as RequestCallNoteIn;
+    let name = `Записка о звонке ${new Date().toISOString().slice(0, 10)}.pdf`;
+    if (body.lead) {
+      const lead = findLead(readLeads(), body.lead);
+      if (!lead) return failure(404, "NOT_FOUND", "Лид не найден.", "crm");
+      if (lead.card.channel !== "phone") {
+        return rejected(
+          409,
+          "call_note_not_phone",
+          "Записка составляется только по лиду со звонка.",
+        );
+      }
+      if (lead.card.consent.given_at === null && !body.consent) {
+        return rejected(409, "call_note_no_consent", "Нет согласия клиента.");
+      }
+      name = `Записка о звонке ${lead.row.lead}.pdf`;
+    } else if (!body.caller) {
+      return rejected(422, "caller_required", "Укажите, кто звонил.", ["caller"]);
+    }
+    if (mockFlag(MOCK_NOTE_NO_LETTERHEAD_KEY)) {
+      return rejected(409, "letterhead_missing", "Бланк компании не настроен.");
+    }
+    const id = crypto.randomUUID();
+    const ready: CallNoteView = { id, status: "ready", error: null, file: NOTE_FILE(name) };
+    notes.set(id, ready);
+    return HttpResponse.json(ready, { status: 202 });
+  }),
+
+  http.get("*/api/v1/crm/request-files/call-note/:note", ({ params }) => {
+    const denied = guard("crm.clients", "full");
+    if (denied) return denied;
+    const note = notes.get(String(params["note"]));
+    if (!note) return failure(404, "NOT_FOUND", "Записка не найдена.", "eds");
+    return HttpResponse.json(note);
+  }),
+
+  http.get("*/api/v1/crm/request-files/:file", () => {
+    const denied = guard("crm.clients", "full");
+    if (denied) return denied;
+    return new HttpResponse("%PDF-1.4 demo", {
+      headers: {
+        "content-type": "application/octet-stream",
+        "content-disposition":
+          "attachment; filename*=UTF-8''%D0%97%D0%B0%D0%BF%D0%B8%D1%81%D0%BA%D0%B0.pdf",
+      },
+    });
   }),
 ];

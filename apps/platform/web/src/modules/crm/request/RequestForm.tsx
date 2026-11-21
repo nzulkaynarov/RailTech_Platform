@@ -26,6 +26,7 @@ import {
 import { useLeftSteps } from "../../../shared/ui/StepSections/useLeftSteps";
 import { reasonError } from "../common/errors";
 import { clientPath, useRefreshCrm } from "../common/params";
+import { noteLanguage, useCallNote } from "./callNote";
 import {
   clearRequestDraft,
   REQUEST_SECTIONS,
@@ -170,7 +171,7 @@ export function RequestForm({
   onCreated,
   onCancel,
 }: RequestFormProps) {
-  const { t } = useTranslation(["request", "clients"]);
+  const { t, i18n } = useTranslation(["request", "clients"]);
   const { me } = useAuth();
   const { mobile } = useViewport();
   const fmt = useFormat();
@@ -266,6 +267,78 @@ export function RequestForm({
     consentGiven: lead === null || lead.consent.given_at !== null,
     contacts,
   };
+  // Основание по звонку (СЦ-6): лид со звонка — записка собирается сама при входе на шаг «Запрос», когда согласие уже есть
+  // (дано в CRM или отмечено на «Контакте»); без лида (повторный звонок клиента) — по кнопке «Основание — звонок».
+  const consentPresent = lead === null || lead.consent.given_at !== null || state.consentMarked;
+  const phoneLead = lead !== null && lead.channel === "phone";
+  const callBasis = (lead === null || phoneLead) && !incomingLetter;
+  const caller = contacts.find((c) => c.id === form.contactId);
+  const callerName = caller ? caller.name : state.fullName.trim();
+  // Результат сборки применяется, только пока записка ещё «в работе»: файл, который сотрудник выбрал сам, или
+  // продолженный черновик во время сборки готовая записка (или ошибка) не затирает.
+  const callNote = useCallNote((letter) => {
+    setState((prev) =>
+      letter.status === "uploading" ||
+      (prev.letter?.kind === "call_note" && prev.letter.status === "uploading")
+        ? { ...prev, letter }
+        : prev,
+    );
+  });
+  // Без лида записка фиксирует поля формы: ключ меняется вместе с содержимым, иначе EDS вернёт прежний файл.
+  const noteKey = useRef<{ sig: string; key: string } | null>(null);
+  const startCallNote = () => {
+    const lang = noteLanguage(i18n.language);
+    if (lead) {
+      void callNote.start({
+        request_key: requestKey,
+        lang,
+        lead: lead.lead,
+        consent: state.consentMarked,
+      });
+      return;
+    }
+    const content = {
+      caller: {
+        name: callerName,
+        company:
+          (state.clientId !== null
+            ? (state.clientName ?? client.data?.name)
+            : state.companyName.trim()) || null,
+        phone: (caller ? caller.phone : state.phone.trim()) || null,
+        email: (caller ? caller.email : state.email.trim()) || null,
+      },
+      need: state.summary.trim() || null,
+    };
+    const sig = JSON.stringify([lang, content]);
+    if (noteKey.current?.sig !== sig) noteKey.current = { sig, key: newKey() };
+    void callNote.start({ request_key: noteKey.current.key, lang, ...content });
+  };
+  const noteBlockedReason = lead
+    ? consentPresent
+      ? null
+      : t("request:letter.noteNeedsConsent")
+    : !callerName
+      ? t("request:letter.noteNeedsCaller")
+      : !state.summary.trim()
+        ? t("request:letter.noteNeedsSummary")
+        : null;
+  const autoNote = useRef(false);
+  const wantsAutoNote =
+    phoneLead &&
+    consentPresent &&
+    callBasis &&
+    !offer &&
+    active === "request" &&
+    state.letter === null &&
+    !done;
+  useEffect(() => {
+    if (!wantsAutoNote || autoNote.current) return;
+    autoNote.current = true;
+    startCallNote();
+    // Один раз на открытие формы: после «Убрать файл» записка заново сама не собирается (есть кнопка).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wantsAutoNote]);
+
   // Один валидатор на всё: галочка шага, список «Осталось» и отправка. Ошибка у поля видна, когда шаг уже покидали.
   const all = validateRequest(form, ctx);
   const errors: RequestErrors = Object.fromEntries(
@@ -702,6 +775,14 @@ export function RequestForm({
                     onChange={(letter) => {
                       set({ letter });
                     }}
+                    callNote={
+                      callBasis
+                        ? {
+                            onStart: startCallNote,
+                            blockedReason: noteBlockedReason,
+                          }
+                        : undefined
+                    }
                   />
                   <FieldError id={`${id("letter")}-error`} text={err("letter")} />
                 </FormField>

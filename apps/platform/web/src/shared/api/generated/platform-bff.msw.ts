@@ -129,6 +129,7 @@ import type {
   CalcRequestList,
   CalcSheet,
   CalcSupplier,
+  CallNoteView,
   CatalogCategory,
   CatalogCategoryList,
   CatalogDuplicateRef,
@@ -31115,6 +31116,53 @@ export const getCopyCrmMessageAttachmentToRequestResponseMock = (
   ...overrideResponse,
 });
 
+export const getCreateCrmRequestCallNoteResponseEdsFileMock = (
+  overrideResponse: Partial<EdsFile> = {},
+): EdsFile => ({
+  ...{
+    id: faker.string.uuid(),
+    name: faker.string.alpha({ length: { min: 10, max: 255 } }),
+    content_type: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    size: faker.number.int({ min: 0 }),
+  },
+  ...overrideResponse,
+});
+
+export const getCreateCrmRequestCallNoteResponseMock = (
+  overrideResponse: Partial<Extract<CallNoteView, object>> = {},
+): CallNoteView => ({
+  id: faker.string.uuid(),
+  status: faker.helpers.arrayElement(["pending", "ready", "failed"] as const),
+  error: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  file: faker.helpers.arrayElement([{ ...getCreateCrmRequestCallNoteResponseEdsFileMock() }, null]),
+  ...overrideResponse,
+});
+
+export const getGetCrmRequestCallNoteResponseEdsFileMock = (
+  overrideResponse: Partial<EdsFile> = {},
+): EdsFile => ({
+  ...{
+    id: faker.string.uuid(),
+    name: faker.string.alpha({ length: { min: 10, max: 255 } }),
+    content_type: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    size: faker.number.int({ min: 0 }),
+  },
+  ...overrideResponse,
+});
+
+export const getGetCrmRequestCallNoteResponseMock = (
+  overrideResponse: Partial<Extract<CallNoteView, object>> = {},
+): CallNoteView => ({
+  id: faker.string.uuid(),
+  status: faker.helpers.arrayElement(["pending", "ready", "failed"] as const),
+  error: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  file: faker.helpers.arrayElement([{ ...getGetCrmRequestCallNoteResponseEdsFileMock() }, null]),
+  ...overrideResponse,
+});
+
+export const getDownloadCrmRequestFileResponseMock = (): Blob =>
+  new Blob([new Uint8Array(faker.number.int({ min: 1, max: 64 }))]);
+
 export const getGetCatalogLookupsResponseMock = (
   overrideResponse: Partial<Extract<CatalogLookups, object>> = {},
 ): CatalogLookups => ({
@@ -45085,6 +45133,77 @@ export const getCopyCrmMessageAttachmentToRequestMockHandler = (
   );
 };
 
+export const getCreateCrmRequestCallNoteMockHandler = (
+  overrideResponse?:
+    | CallNoteView
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<CallNoteView> | CallNoteView),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/crm/request-files/call-note",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getCreateCrmRequestCallNoteResponseMock(),
+        { status: 202 },
+      );
+    },
+    options,
+  );
+};
+
+export const getGetCrmRequestCallNoteMockHandler = (
+  overrideResponse?:
+    | CallNoteView
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<CallNoteView> | CallNoteView),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/crm/request-files/call-note/:note",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetCrmRequestCallNoteResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getDownloadCrmRequestFileMockHandler = (
+  overrideResponse?:
+    Blob | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<Blob> | Blob),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/crm/request-files/:fileId",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      const binaryBody =
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getDownloadCrmRequestFileResponseMock();
+      return new HttpResponse(binaryBody, {
+        status: 200,
+        headers: { "Content-Type": "application/octet-stream" },
+      });
+    },
+    options,
+  );
+};
+
 export const getGetCatalogLookupsMockHandler = (
   overrideResponse?:
     | CatalogLookups
@@ -47109,6 +47228,9 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getRetryCrmRequestMockHandler(),
   getUploadCrmRequestFileMockHandler(),
   getCopyCrmMessageAttachmentToRequestMockHandler(),
+  getCreateCrmRequestCallNoteMockHandler(),
+  getGetCrmRequestCallNoteMockHandler(),
+  getDownloadCrmRequestFileMockHandler(),
   getGetCatalogLookupsMockHandler(),
   getListCatalogItemsMockHandler(),
   getCreateCatalogItemMockHandler(),

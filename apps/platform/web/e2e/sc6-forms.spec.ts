@@ -36,7 +36,7 @@ test.describe("СЦ-6: заявка по звонку", () => {
       await form.getByRole("button", { name: /^Проверка и отправка/ }).click();
       const rest = form.locator(".pf-fstep-remaining");
       await expect(rest).toContainText("Без согласия клиента заявку не создать");
-      await expect(rest).toContainText("Приложите письмо клиента или файл запроса");
+      await expect(rest).toContainText("записка о звонке соберётся сама, или приложите файл");
       await expect(form.getByRole("button", { name: "Создать заявку" })).toBeDisabled();
       await shot(page, "request-review", width);
       await expectNoViolations(page, `проверка ${String(width)}`);

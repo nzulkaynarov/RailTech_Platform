@@ -7089,6 +7089,66 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/crm/request-files/call-note": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Записка о звонке — основание заявки по звонку (PDF в EDS)
+     * @description EDS `POST /call-notes` от имени сотрудника (СЦ-6): одностраничный PDF «Кто звонил / Что просил» на бланке компании, который становится его файлом — тем, что форма отдаёт как `letter_file_id`. Рендер идёт в воркере EDS, поэтому ответ 202 `CallNoteView`: `status = pending` — опрашивать `GET /crm/request-files/call-note/{id}`; повтор с тем же `request_key` отдаёт ту же записку. С `lead` BFF читает лид в CRM: нужен канал `phone` (иначе 409 `call_note_not_phone`) и согласие на данные — данное в CRM или отмеченное в форме (`consent = true`; иначе 409 `call_note_no_consent`); «Кто звонил», «Компания», «Телефон», «Почта», «Когда» (создание лида), «Принял» (ответственный за лид) и «Что просил» — из лида, `caller` и `need` игнорируются. Без `lead` (повторный звонок клиента) записка составляется по `caller` и `need` формы, «Когда» — сейчас, «Принял» — сам сотрудник; `caller` обязателен (422). Нет бланка компании — 409 `details.reason = letterhead_missing` (форма просит приложить файл). Раздел `crm.clients` полный.
+     */
+    post: operations["createCrmRequestCallNote"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/crm/request-files/call-note/{note}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Состояние записки о звонке
+     * @description EDS `GET /call-notes/{id}`: `pending` — строится, `ready` — `file` готов (id идёт в `RequestFormIn.letter_file_id`), `failed` — не удалась (`error`; повтор `POST` с тем же ключом запускает рендер заново). Чужая и неизвестная записка — 404. Раздел `crm.clients` полный.
+     */
+    get: operations["getCrmRequestCallNote"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/crm/request-files/{file_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Открыть файл основания заявки (записку о звонке или загруженное письмо)
+     * @description EDS `GET /files/{id}` потоком, последняя версия: «Открыть» в форме заявки. Видит загрузивший сотрудник (файл ещё ни к чему не привязан). Файл отдаётся вложением (`Content-Disposition: attachment`), тип содержимого браузер не исполняет. Раздел `crm.clients` полный.
+     */
+    get: operations["downloadCrmRequestFile"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/erp/catalog/lookups": {
     parameters: {
       query?: never;
@@ -15877,6 +15937,37 @@ export interface components {
       message: number;
       index: number;
     };
+    RequestCallNoteIn: {
+      /**
+       * Format: uuid
+       * @description Ключ формы заявки — с сотрудником даёт один и тот же файл записки при повторе
+       */
+      request_key: string;
+      /** @enum {string} */
+      lang: "ru" | "uz" | "en";
+      /** @description Лид по звонку; данные записки — из него */
+      lead?: string | null;
+      /** @description Согласие отмечено в форме (в CRM ещё не записано); для лида без согласия */
+      consent?: boolean;
+      /** @description Без `lead` — кто звонил, из формы */
+      caller?: components["schemas"]["RequestCallNoteCaller"] | null;
+      /** @description Без `lead` — что просил клиент */
+      need?: string | null;
+    };
+    RequestCallNoteCaller: {
+      name: string;
+      company?: string | null;
+      phone?: string | null;
+      email?: string | null;
+    };
+    CallNoteView: {
+      /** Format: uuid */
+      id: string;
+      /** @enum {string} */
+      status: "pending" | "ready" | "failed";
+      error: string | null;
+      file: components["schemas"]["EdsFile"] | null;
+    };
     /**
      * @description Товар со склада, товар под заказ, услуга: фикс / по этапам / по времени (ERP вычисляет)
      * @enum {string}
@@ -17301,7 +17392,7 @@ export interface components {
         "application/json": components["schemas"]["Error"];
       };
     };
-    /** @description 409 `CONFLICT` — CRM отказала по состоянию; код — в `details.reason` (`request_not_allowed`, `request_key_reused`, `consent_via_bot`, `erp_not_configured`, `telegram_linked_elsewhere`, `request_not_failed`, `request_not_retryable`) */
+    /** @description 409 `CONFLICT` — CRM отказала по состоянию; код — в `details.reason` (`request_not_allowed`, `request_key_reused`, `consent_via_bot`, `erp_not_configured`, `telegram_linked_elsewhere`, `request_not_failed`, `request_not_retryable`; записка о звонке — `call_note_not_phone`, `call_note_no_consent`, `letterhead_missing`) */
     RequestConflict: {
       headers: {
         [name: string]: unknown;
@@ -30155,6 +30246,93 @@ export interface operations {
       404: components["responses"]["NotFound"];
       413: components["responses"]["EdsPayloadTooLarge"];
       415: components["responses"]["EdsUnsupportedMedia"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  createCrmRequestCallNote: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["RequestCallNoteIn"];
+      };
+    };
+    responses: {
+      /** @description Записка строится или уже готова */
+      202: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CallNoteView"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["RequestConflict"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  getCrmRequestCallNote: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        note: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Состояние */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CallNoteView"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  downloadCrmRequestFile: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        file_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Содержимое файла */
+      200: {
+        headers: {
+          /** @description `attachment; filename*=UTF-8''…` */
+          "Content-Disposition"?: string;
+          [name: string]: unknown;
+        };
+        content: {
+          "application/octet-stream": string;
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
       503: components["responses"]["BackendUnavailable"];
     };
   };

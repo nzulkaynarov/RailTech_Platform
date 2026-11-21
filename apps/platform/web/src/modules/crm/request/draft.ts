@@ -55,7 +55,12 @@ function isState(value: unknown): value is RequestFormState {
 function persistedLetter(state: RequestFormState): RequestFormState["letter"] {
   const letter = state.letter;
   return letter?.status === "done" && letter.id
-    ? { name: letter.name, status: "done", id: letter.id }
+    ? {
+        name: letter.name,
+        status: "done",
+        id: letter.id,
+        ...(letter.kind ? { kind: letter.kind } : {}),
+      }
     : null;
 }
 
@@ -96,8 +101,11 @@ export function isBlankRequest(
   ignoreLetter: boolean,
 ): boolean {
   const comparable = (v: RequestFormState) => JSON.stringify({ ...v, letter: null });
+  // Записка о звонке система собирает сама при открытии формы: сама по себе черновиком она не считается.
+  const systemLetter = state.letter?.kind === "call_note";
   return (
-    comparable(state) === comparable(initial) && (ignoreLetter || persistedLetter(state) === null)
+    comparable(state) === comparable(initial) &&
+    (ignoreLetter || systemLetter || persistedLetter(state) === null)
   );
 }
 

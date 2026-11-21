@@ -309,6 +309,43 @@ class RequestFileFromMessageIn(BaseModel):
     index: int = Field(ge=0)
 
 
+class RequestCallNoteCaller(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    name: str = Field(min_length=1, max_length=200)
+    company: str | None = Field(default=None, max_length=200)
+    phone: str | None = Field(default=None, max_length=64)
+    email: str | None = Field(default=None, max_length=200)
+
+
+class RequestCallNoteIn(BaseModel):
+    """Call note as a request basis: from the phone lead, or from the form fields without a lead."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    request_key: str = Field(pattern=UUID_PATTERN)
+    lang: Literal["ru", "uz", "en"]
+    lead: str | None = Field(default=None, pattern=LEAD_PATTERN)
+    #: Consent marked in the form but not yet recorded in CRM (a lead without consent)
+    consent: bool = False
+    caller: RequestCallNoteCaller | None = None
+    need: str | None = Field(default=None, max_length=4000)
+
+
+class CallNoteFile(BaseModel):
+    id: str
+    name: str
+    content_type: str
+    size: int
+
+
+class CallNoteView(BaseModel):
+    id: str
+    status: Literal["pending", "ready", "failed"]
+    error: str | None
+    file: CallNoteFile | None
+
+
 class LeadIn(BaseModel):
     """«Создать · Лид»: звонок, письмо, рекомендация; нужен телефон или почта — решает CRM."""
 

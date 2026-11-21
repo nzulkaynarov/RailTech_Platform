@@ -20,7 +20,7 @@ export function failure(
   status: number,
   code: string,
   message: string,
-  source: "bff" | "crm" | "erp" = "bff",
+  source: "bff" | "crm" | "erp" | "eds" = "bff",
   details?: Record<string, unknown>,
 ) {
   return HttpResponse.json({ code, message, source, ...(details ? { details } : {}) }, { status });

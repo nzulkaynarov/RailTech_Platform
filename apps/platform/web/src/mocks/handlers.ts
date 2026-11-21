@@ -24,7 +24,7 @@ import { adminCompanyHandlers } from "./adminCompany";
 import { adminRolesHandlers } from "./adminRoles";
 import { botKbHandlers } from "./botKb";
 import { companyArticlesHandlers } from "./companyArticlesHandlers";
-import { crmLeadsHandlers } from "./crmLeads";
+import { callNoteHandlers, crmLeadsHandlers } from "./crmLeads";
 import { crmMessagesHandlers } from "./crmMessages";
 import { edsApprovalsHandlers } from "./edsApprovals";
 import { edsProjectsHandlers } from "./edsProjects";
@@ -217,6 +217,7 @@ export const handlers = [
   ...botKbHandlers,
   ...crmMessagesHandlers,
   ...crmLeadsHandlers,
+  ...callNoteHandlers,
   ...ticketsHandlers,
   ...mailTypesHandlers, // MAIL-TYPES: правила отправителя
   ...inboundMailHandlers, // W18A-P2: входящая почта общего ящика и приём в «Подключениях»

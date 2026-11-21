@@ -5,7 +5,7 @@ platform-bff.yaml. Проверяется то, что делает BFF: раз�
 вложения переписки; 403 — до CRM и EDS), выбор вызова CRM (лид или клиент), тело CRM без номера
 лида, статус CRM (201 — новая, 200 — повтор формы), отказы CRM с кодом в `details.reason`,
 «Повторить отправку в ERP», файл письма в EDS как есть и вложение переписки — формой multipart с
-именем из CRM.
+именем из CRM; записка о звонке (СЦ-6) — лид из CRM (канал, согласие), поля в EDS и ответ EDS.
 """
 
 import httpx
@@ -16,7 +16,8 @@ from app.cookies import CSRF_HEADER
 from tests.backends import Backends
 from tests.conftest import ContractChecker, Web
 from tests.crm_leads_support import LETTER_ID, REQUEST_KEY, CrmLeadsFake, created, request_form
-from tests.eds_documents_support import FILE_ID, TOKEN, EdsFake
+from tests.eds_documents_support import FILE_ID, TOKEN, EdsFake, file_ref
+from tests.messages_support import EARLIER, lead_detail
 from tests.roles import custom
 from tests.test_eds_documents import multipart
 
@@ -296,3 +297,209 @@ def test_filename_prefers_utf8_and_falls_back_to_ascii() -> None:
     ) == ("З.pdf")
     assert crm_requests.filename_of('attachment; filename="scan.png"') == "scan.png"
     assert crm_requests.filename_of("attachment") == "file"
+
+
+# --- записка о звонке (СЦ-6) ---------------------------------------------------------------------
+
+NOTE = f"{FILES}/call-note"
+NOTE_ID = "50000000-0000-4000-8000-000000000001"
+PENDING = {"id": NOTE_ID, "status": "pending", "error": None, "file": None}
+READY = {"id": NOTE_ID, "status": "ready", "error": None, "file": file_ref()}
+
+
+def note_form(**over: object) -> dict[str, object]:
+    return {"request_key": REQUEST_KEY, "lang": "ru", "lead": "L-2041", **over}
+
+
+def phone_lead(crm: CrmLeadsFake, **over: object) -> None:
+    crm.answer(
+        "GET",
+        "leads/2041",
+        200,
+        lead_detail(
+            2041,
+            source="phone",
+            assigned_user_id=7,
+            assigned_user_name="Дилшод Менеджеров",
+            display_name="Азиз Звонкий",
+            company_name="ООО Звонок",
+            phone_e164="+998901112233",
+            email="aziz@example.org",
+            need_summary="Рельсы Р65, 40 т",
+            **over,
+        ),
+    )
+
+
+async def test_note_of_a_phone_lead_goes_to_eds_with_the_lead_fields(
+    web: Web, crm: CrmLeadsFake, eds: EdsFake, check: ContractChecker
+) -> None:
+    await web.login(["MANAGER"])
+    phone_lead(crm)
+    eds.answer("POST", "call-notes", 202, PENDING)
+    # Данные записки берутся из лида: подмена «кто звонил» в теле не доходит до EDS.
+    body = note_form(caller={"name": "Чужое имя"}, need="чужое")
+    response = check(
+        await web.send("POST", NOTE, json=body), "/crm/request-files/call-note", "post"
+    )
+
+    assert response.status_code == 202
+    assert response.json() == PENDING
+    sent = eds.body("POST", "call-notes")
+    note_key = sent.pop("request_key")
+    assert sent == {
+        "lang": "ru",
+        "lead": "L-2041",
+        "caller_name": "Азиз Звонкий",
+        "company": "ООО Звонок",
+        "phone": "+998901112233",
+        "email": "aziz@example.org",
+        "called_at": EARLIER.replace("Z", "+00:00"),
+        "taken_by": "Дилшод Менеджеров",
+        "need": "Рельсы Р65, 40 т",
+    }
+    # Ключ записки выводится из лида: повторное открытие формы (другой ключ) — та же записка.
+    again = note_form(request_key="60000000-0000-4000-8000-000000000009")
+    assert (await web.send("POST", NOTE, json=again)).status_code == 202
+    assert eds.body("POST", "call-notes")["request_key"] == note_key
+    assert eds.last("POST", "call-notes").headers["authorization"].startswith(f"Bearer {TOKEN}")
+
+
+async def test_note_for_a_lead_of_another_channel_is_a_conflict_without_eds(
+    web: Web, crm: CrmLeadsFake, eds: EdsFake, check: ContractChecker
+) -> None:
+    await web.login(["MANAGER"])
+    crm.answer("GET", "leads/2041", 200, lead_detail(2041, source="web"))
+    response = check(
+        await web.send("POST", NOTE, json=note_form()), "/crm/request-files/call-note", "post"
+    )
+    assert response.status_code == 409
+    assert response.json()["details"]["reason"] == "call_note_not_phone"
+    assert eds.requests("POST", "call-notes") == []
+
+
+async def test_note_without_consent_waits_for_the_mark_in_the_form(
+    web: Web, crm: CrmLeadsFake, eds: EdsFake, check: ContractChecker
+) -> None:
+    await web.login(["MANAGER"])
+    phone_lead(crm, consent_given_at=None)
+    eds.answer("POST", "call-notes", 202, PENDING)
+    refused = check(
+        await web.send("POST", NOTE, json=note_form()), "/crm/request-files/call-note", "post"
+    )
+    assert refused.status_code == 409
+    assert refused.json()["details"]["reason"] == "call_note_no_consent"
+    assert eds.requests("POST", "call-notes") == []
+
+    marked = await web.send("POST", NOTE, json=note_form(consent=True))
+    assert marked.status_code == 202
+    assert len(eds.requests("POST", "call-notes")) == 1
+
+
+async def test_note_without_a_lead_is_made_from_the_form_fields(
+    web: Web, crm: CrmLeadsFake, eds: EdsFake, check: ContractChecker
+) -> None:
+    await web.login(["MANAGER"])
+    eds.answer("POST", "call-notes", 202, PENDING)
+    body = {
+        "request_key": REQUEST_KEY,
+        "lang": "uz",
+        "caller": {
+            "name": "Ольга Почтова",
+            "company": "ООО Дальний",
+            "phone": None,
+            "email": "o@x.org",
+        },
+        "need": "Повторный заказ",
+    }
+    response = check(
+        await web.send("POST", NOTE, json=body), "/crm/request-files/call-note", "post"
+    )
+
+    assert response.status_code == 202
+    sent = eds.body("POST", "call-notes")
+    assert sent["lead"] is None
+    assert sent["taken_by"] is None
+    assert (sent["caller_name"], sent["company"], sent["email"], sent["need"]) == (
+        "Ольга Почтова",
+        "ООО Дальний",
+        "o@x.org",
+        "Повторный заказ",
+    )
+    assert sent["lang"] == "uz"
+    assert sent["called_at"]
+    assert crm.calls == []
+
+
+async def test_note_without_a_lead_needs_the_caller(
+    web: Web, crm: CrmLeadsFake, eds: EdsFake, check: ContractChecker
+) -> None:
+    await web.login(["MANAGER"])
+    body = {"request_key": REQUEST_KEY, "lang": "ru"}
+    response = check(
+        await web.send("POST", NOTE, json=body), "/crm/request-files/call-note", "post"
+    )
+    assert response.status_code == 422
+    assert response.json()["details"]["fields"] == ["caller"]
+    assert eds.requests("POST", "call-notes") == []
+
+
+async def test_note_without_a_letterhead_keeps_the_reason_of_eds(
+    web: Web, crm: CrmLeadsFake, eds: EdsFake, check: ContractChecker
+) -> None:
+    await web.login(["MANAGER"])
+    phone_lead(crm)
+    eds.error(
+        "POST", "call-notes", 409, "CONFLICT", "Нет бланка.", {"reason": "letterhead_missing"}
+    )
+    response = check(
+        await web.send("POST", NOTE, json=note_form()), "/crm/request-files/call-note", "post"
+    )
+    assert response.status_code == 409
+    assert response.json()["details"]["reason"] == "letterhead_missing"
+
+
+async def test_note_state_is_read_from_eds_and_foreign_note_is_404(
+    web: Web, crm: CrmLeadsFake, eds: EdsFake, check: ContractChecker
+) -> None:
+    await web.login(["MANAGER"])
+    eds.answer("GET", f"call-notes/{NOTE_ID}", 200, READY)
+    response = check(
+        await web.client.get(f"{NOTE}/{NOTE_ID}"), "/crm/request-files/call-note/{note}", "get"
+    )
+    assert response.status_code == 200
+    assert response.json()["file"]["id"] == FILE_ID
+
+    other = "50000000-0000-4000-8000-000000000002"
+    eds.error("GET", f"call-notes/{other}", 404, "NOT_FOUND")
+    assert (await web.client.get(f"{NOTE}/{other}")).status_code == 404
+    assert (await web.client.get(f"{NOTE}/not-a-uuid")).status_code == 422
+
+
+async def test_note_needs_full_clients_section(web: Web, crm: CrmLeadsFake, eds: EdsFake) -> None:
+    await web.login(["SUPPLY"])
+    assert (await web.send("POST", NOTE, json=note_form())).status_code == 403
+    assert (await web.client.get(f"{NOTE}/{NOTE_ID}")).status_code == 403
+    assert crm.calls == []
+    assert eds.calls == []
+
+
+async def test_request_file_is_opened_from_eds_as_an_attachment(web: Web, eds: EdsFake) -> None:
+    await web.login(["MANAGER"])
+    response = await web.client.get(f"{FILES}/{FILE_ID}")
+    assert response.status_code == 200
+    assert response.content == b"%PDF-1.4 demo"
+    assert response.headers["content-disposition"].startswith("attachment")
+    assert response.headers["x-content-type-options"] == "nosniff"
+    assert (
+        eds.last("GET", f"files/{FILE_ID}").headers["authorization"].startswith(f"Bearer {TOKEN}")
+    )
+
+    eds.error("GET", f"files/{FILE_ID}", 404, "NOT_FOUND")
+    assert (await web.client.get(f"{FILES}/{FILE_ID}")).status_code == 404
+
+
+async def test_request_file_needs_full_clients_section(web: Web, eds: EdsFake) -> None:
+    await web.login(["SUPPLY"])
+    assert (await web.client.get(f"{FILES}/{FILE_ID}")).status_code == 403
+    assert eds.calls == []

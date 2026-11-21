@@ -11,6 +11,8 @@ export interface LetterFile {
   status: "uploading" | "done" | "error";
   id?: string;
   error?: string;
+  /** Файл — записка о звонке, собранная системой (СЦ-6): «Открыть» и «Заменить файлом» вместо загрузки */
+  kind?: "call_note";
 }
 
 /** Поля формы «Создать заявку» (SPEC-v3 §3.1 шаг 2). Пустая строка — поле не заполнено. */
@@ -107,7 +109,11 @@ export function validateRequest(state: RequestFormState, ctx: RequestContext): R
   // Основание обязательно (план 0.4, FR-9): без письма или файла запроса заявка не создаётся.
   if (state.letter?.status === "error") errors.letter = "letter_failed";
   else if (state.letter?.status === "uploading") errors.letter = "letter_uploading";
-  else if (!state.letter) errors.letter = "letter_required";
+  else if (!state.letter) {
+    // Телефонный лид без согласия: записка о звонке соберётся после согласия — «Осталось» ведёт к нему, а не к поиску файла.
+    const phoneNoConsent = ctx.leadChannel === "phone" && !ctx.consentGiven && !state.consentMarked;
+    errors.letter = phoneNoConsent ? "letter_call_consent" : "letter_required";
+  }
   if (consentNeeded(ctx)) {
     if (ctx.leadChannel === "telegram") errors.consent = "consent_via_bot";
     else if (!state.consentMarked) errors.consent = "consent";

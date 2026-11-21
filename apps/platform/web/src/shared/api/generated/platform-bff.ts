@@ -70,6 +70,7 @@ import type {
   CalcRequestList,
   CalcSheet,
   CalcTermsPatch,
+  CallNoteView,
   CatalogCategory,
   CatalogCategoryIn,
   CatalogCategoryList,
@@ -406,6 +407,7 @@ import type {
   ReplyIn,
   ReplyTemplateIn,
   ReplyTemplateList,
+  RequestCallNoteIn,
   RequestConflictResponse,
   RequestCreatedView,
   RequestFileFromMessageIn,
@@ -50949,6 +50951,435 @@ export const useCopyCrmMessageAttachmentToRequest = <
 > => {
   return useMutation(getCopyCrmMessageAttachmentToRequestMutationOptions(options), queryClient);
 };
+
+export const getCreateCrmRequestCallNoteUrl = () => {
+  return `/api/v1/crm/request-files/call-note`;
+};
+
+/**
+ * EDS `POST /call-notes` от имени сотрудника (СЦ-6): одностраничный PDF «Кто звонил / Что просил» на бланке компании, который становится его файлом — тем, что форма отдаёт как `letter_file_id`. Рендер идёт в воркере EDS, поэтому ответ 202 `CallNoteView`: `status = pending` — опрашивать `GET /crm/request-files/call-note/{id}`; повтор с тем же `request_key` отдаёт ту же записку. С `lead` BFF читает лид в CRM: нужен канал `phone` (иначе 409 `call_note_not_phone`) и согласие на данные — данное в CRM или отмеченное в форме (`consent = true`; иначе 409 `call_note_no_consent`); «Кто звонил», «Компания», «Телефон», «Почта», «Когда» (создание лида), «Принял» (ответственный за лид) и «Что просил» — из лида, `caller` и `need` игнорируются. Без `lead` (повторный звонок клиента) записка составляется по `caller` и `need` формы, «Когда» — сейчас, «Принял» — сам сотрудник; `caller` обязателен (422). Нет бланка компании — 409 `details.reason = letterhead_missing` (форма просит приложить файл). Раздел `crm.clients` полный.
+ * @summary Записка о звонке — основание заявки по звонку (PDF в EDS)
+ */
+export const createCrmRequestCallNote = async (
+  requestCallNoteIn: RequestCallNoteIn,
+  options?: Parameters<typeof http>[1],
+): Promise<CallNoteView> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<CallNoteView>(getCreateCrmRequestCallNoteUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(requestCallNoteIn),
+  });
+};
+
+export const getCreateCrmRequestCallNoteMutationKey = () => ["createCrmRequestCallNote"] as const;
+
+export const getCreateCrmRequestCallNoteMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | RequestConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createCrmRequestCallNote>>,
+    TError,
+    CreateCrmRequestCallNoteMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createCrmRequestCallNote>>,
+  TError,
+  CreateCrmRequestCallNoteMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCreateCrmRequestCallNoteMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createCrmRequestCallNote>>,
+    CreateCrmRequestCallNoteMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createCrmRequestCallNote(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateCrmRequestCallNoteMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createCrmRequestCallNote>>
+>;
+export type CreateCrmRequestCallNoteMutationBody = RequestCallNoteIn;
+export type CreateCrmRequestCallNoteMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | RequestConflictResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type CreateCrmRequestCallNoteMutationVariables = { data: RequestCallNoteIn };
+
+/**
+ * @summary Записка о звонке — основание заявки по звонку (PDF в EDS)
+ */
+export const useCreateCrmRequestCallNote = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | RequestConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createCrmRequestCallNote>>,
+      TError,
+      CreateCrmRequestCallNoteMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof createCrmRequestCallNote>>,
+  TError,
+  CreateCrmRequestCallNoteMutationVariables,
+  TContext
+> => {
+  return useMutation(getCreateCrmRequestCallNoteMutationOptions(options), queryClient);
+};
+
+export const getGetCrmRequestCallNoteUrl = (note: string) => {
+  return `/api/v1/crm/request-files/call-note/${note}`;
+};
+
+/**
+ * EDS `GET /call-notes/{id}`: `pending` — строится, `ready` — `file` готов (id идёт в `RequestFormIn.letter_file_id`), `failed` — не удалась (`error`; повтор `POST` с тем же ключом запускает рендер заново). Чужая и неизвестная записка — 404. Раздел `crm.clients` полный.
+ * @summary Состояние записки о звонке
+ */
+export const getCrmRequestCallNote = async (
+  note: string,
+  options?: Parameters<typeof http>[1],
+): Promise<CallNoteView> => {
+  return http<CallNoteView>(getGetCrmRequestCallNoteUrl(note), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetCrmRequestCallNoteQueryKey = (note: string) => {
+  return [`/api/v1/crm/request-files/call-note/${note}`] as const;
+};
+
+export const getGetCrmRequestCallNoteQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCrmRequestCallNote>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  note: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getCrmRequestCallNote>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetCrmRequestCallNoteQueryKey(note);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getCrmRequestCallNote>>> = ({ signal }) =>
+    getCrmRequestCallNote(note, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: note !== null && note !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof getCrmRequestCallNote>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type GetCrmRequestCallNoteQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getCrmRequestCallNote>>
+>;
+export type GetCrmRequestCallNoteQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+
+export function useGetCrmRequestCallNote<
+  TData = Awaited<ReturnType<typeof getCrmRequestCallNote>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  note: string,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getCrmRequestCallNote>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getCrmRequestCallNote>>,
+          TError,
+          Awaited<ReturnType<typeof getCrmRequestCallNote>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetCrmRequestCallNote<
+  TData = Awaited<ReturnType<typeof getCrmRequestCallNote>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  note: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getCrmRequestCallNote>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getCrmRequestCallNote>>,
+          TError,
+          Awaited<ReturnType<typeof getCrmRequestCallNote>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetCrmRequestCallNote<
+  TData = Awaited<ReturnType<typeof getCrmRequestCallNote>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  note: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getCrmRequestCallNote>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Состояние записки о звонке
+ */
+
+export function useGetCrmRequestCallNote<
+  TData = Awaited<ReturnType<typeof getCrmRequestCallNote>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  note: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getCrmRequestCallNote>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetCrmRequestCallNoteQueryOptions(note, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getDownloadCrmRequestFileUrl = (fileId: string) => {
+  return `/api/v1/crm/request-files/${fileId}`;
+};
+
+/**
+ * EDS `GET /files/{id}` потоком, последняя версия: «Открыть» в форме заявки. Видит загрузивший сотрудник (файл ещё ни к чему не привязан). Файл отдаётся вложением (`Content-Disposition: attachment`), тип содержимого браузер не исполняет. Раздел `crm.clients` полный.
+ * @summary Открыть файл основания заявки (записку о звонке или загруженное письмо)
+ */
+export const downloadCrmRequestFile = async (
+  fileId: string,
+  options?: Parameters<typeof http>[1],
+): Promise<Blob> => {
+  return http<Blob>(getDownloadCrmRequestFileUrl(fileId), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getDownloadCrmRequestFileQueryKey = (fileId: string) => {
+  return [`/api/v1/crm/request-files/${fileId}`] as const;
+};
+
+export const getDownloadCrmRequestFileQueryOptions = <
+  TData = Awaited<ReturnType<typeof downloadCrmRequestFile>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  fileId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof downloadCrmRequestFile>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getDownloadCrmRequestFileQueryKey(fileId);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof downloadCrmRequestFile>>> = ({ signal }) =>
+    downloadCrmRequestFile(fileId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: fileId !== null && fileId !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof downloadCrmRequestFile>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type DownloadCrmRequestFileQueryResult = NonNullable<
+  Awaited<ReturnType<typeof downloadCrmRequestFile>>
+>;
+export type DownloadCrmRequestFileQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+
+export function useDownloadCrmRequestFile<
+  TData = Awaited<ReturnType<typeof downloadCrmRequestFile>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  fileId: string,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof downloadCrmRequestFile>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof downloadCrmRequestFile>>,
+          TError,
+          Awaited<ReturnType<typeof downloadCrmRequestFile>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useDownloadCrmRequestFile<
+  TData = Awaited<ReturnType<typeof downloadCrmRequestFile>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  fileId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof downloadCrmRequestFile>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof downloadCrmRequestFile>>,
+          TError,
+          Awaited<ReturnType<typeof downloadCrmRequestFile>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useDownloadCrmRequestFile<
+  TData = Awaited<ReturnType<typeof downloadCrmRequestFile>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  fileId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof downloadCrmRequestFile>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Открыть файл основания заявки (записку о звонке или загруженное письмо)
+ */
+
+export function useDownloadCrmRequestFile<
+  TData = Awaited<ReturnType<typeof downloadCrmRequestFile>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  fileId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof downloadCrmRequestFile>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getDownloadCrmRequestFileQueryOptions(fileId, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
 
 export const getGetCatalogLookupsUrl = () => {
   return `/api/v1/erp/catalog/lookups`;

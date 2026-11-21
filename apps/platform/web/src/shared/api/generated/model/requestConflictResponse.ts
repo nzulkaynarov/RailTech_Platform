@@ -5,6 +5,6 @@
 import type { Error } from "./error";
 
 /**
- * 409 `CONFLICT` — CRM отказала по состоянию; код — в `details.reason` (`request_not_allowed`, `request_key_reused`, `consent_via_bot`, `erp_not_configured`, `telegram_linked_elsewhere`, `request_not_failed`, `request_not_retryable`)
+ * 409 `CONFLICT` — CRM отказала по состоянию; код — в `details.reason` (`request_not_allowed`, `request_key_reused`, `consent_via_bot`, `erp_not_configured`, `telegram_linked_elsewhere`, `request_not_failed`, `request_not_retryable`; записка о звонке — `call_note_not_phone`, `call_note_no_consent`, `letterhead_missing`)
  */
 export type RequestConflictResponse = Error;

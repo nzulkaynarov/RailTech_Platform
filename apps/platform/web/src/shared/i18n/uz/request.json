@@ -35,7 +35,25 @@
     "remove": "Faylni olib tashlash",
     "tooLarge": "Fayl 25 MB dan katta",
     "unsupported": "PDF, rasm yoki Office hujjati mos keladi",
-    "failed": "Faylni yuklab bo‘lmadi: {{reason}}"
+    "failed": "Faylni yuklab bo‘lmadi: {{reason}}",
+    "callBasis": "Asos — qönğiroq",
+    "noteBuilding": "Qönğiroq haqida yozuv tuzilmoqda…",
+    "noteAttached": "Qönğiroq haqida yozuv biriktirildi",
+    "replaceNote": "Fayl bilan almaştiriş",
+    "open": "Oçiş",
+    "openNote": "Oçiş: {{name}}",
+    "openFailed": "Faylni oçib bölmadi",
+    "noteRetry": "Qaytadan",
+    "noteFailed": "Qönğiroq haqida yozuvni tuzib bölmadi: {{reason}}. Fayl biriktiring.",
+    "noteNeedsCaller": "Avval «Kontakt» qadamida kim qönğiroq qilganini kiriting",
+    "noteNeedsConsent": "Qönğiroq haqida yozuv «Kontakt» qadamida rozilik belgilangandan keyin tuziladi",
+    "noteNeedsSummary": "Avval «So‘rov mazmuni»ni yozing",
+    "noteReasons": {
+      "generic": "hujjatni tuzib bölmadi",
+      "call_note_not_phone": "bu qönğiroq böyiça lid emas",
+      "call_note_no_consent": "mijozning roziligi yöq",
+      "letterhead_missing": "kompaniyada blank sozlanmagan"
+    }
   },
   "urgency": {
     "legend": "Shoshilinchlik",
@@ -90,6 +108,7 @@
     "not_lead_owner": "Lidni boshqa xodim olib boryapti",
     "telegram_linked_elsewhere": "Lid Telegrami boshqa mijozga bog‘langan",
     "letter_required": "Mijoz xatini yoki so‘rov faylini biriktiring",
+    "letter_call_consent": "«Kontakt» qadamida rozilikni belgilang — qönğiroq haqida yozuv özi tuziladi, yoki fayl biriktiring",
     "letter_failed": "Fayl yuklanmadi — uni qayta yoki boshqasini tanlang",
     "request_not_failed": "Ariza bek-ofisga uzatilmoqda yoki uzatilgan — kartani yangilang",
     "request_not_retryable": "Qayta yuborish yordam bermaydi: yuborilgandan keyin ariza ma’lumotlari o‘zgardi — arizani qayta yarating",
