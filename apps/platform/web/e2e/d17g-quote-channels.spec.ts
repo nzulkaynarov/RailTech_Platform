@@ -106,6 +106,43 @@ test.describe("D17G: каналы отправки КП и адрес кабин
       await shot(page, "d17g-manager-resent");
     });
 
+    test(`СЦ-8: КП выпущено, но ни один канал не донёс — заголовок и причины, ${String(width)} px`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
+      await loginAndWait(page, "manager@demo.example");
+      await page.evaluate(() => {
+        (
+          window as unknown as {
+            __rtMockSetQuoteDelivery: (number: string, delivery: unknown) => void;
+          }
+        ).__rtMockSetQuoteDelivery("КП-2026/113", {
+          state: "sent",
+          error: null,
+          lines: [
+            { channel: "telegram", status: "skipped", reason: "no_telegram", can_send: false },
+            { channel: "cabinet", status: "skipped", reason: "no_cabinet", can_send: false },
+            { channel: "email", status: "failed", reason: "mail_failed", can_send: true },
+          ],
+        });
+      });
+      await spaGoto(page, quotePath("КП-2026/113", "?panel=closed"));
+
+      const report = page.getByRole("list", { name: "Каналы отправки" });
+      await expect(
+        page.getByText("КП выпущено, но клиенту не дошло ни по одному каналу."),
+      ).toBeVisible();
+      await expect(page.getByText("КП отправлено клиенту.")).toHaveCount(0);
+      await expect(
+        report.getByText(
+          "Кабинет — не отправлено: клиент ещё не в кабинете — пригласите из карточки клиента",
+        ),
+      ).toBeVisible();
+      await scrollTo(report);
+      await expectNoViolations(page, `КП не дошло ${String(width)}`);
+      await shot(page, "sc8-quote-not-reached");
+    });
+
     test(`администратор: адрес кабинета в мастере и «Подключениях», ${String(width)} px`, async ({
       page,
     }) => {

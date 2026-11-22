@@ -269,6 +269,8 @@ test.describe("На согласовании: служебные записки"
     await confirmDialog(page);
     await expect(page.getByText("Документ согласован", { exact: true }).first()).toBeVisible();
     await expect(page.getByText("Передана бухгалтеру").first()).toBeVisible();
+    // SC-8: the card names the agreed step by fact, not «you will be able to decide»
+    await expect(page.getByText(/Вы согласовали .*Сейчас шаг: Бухгалтер\./).first()).toBeVisible();
     await settledScreenshot(page, "memo-agreed");
   });
 
@@ -396,5 +398,7 @@ test.describe("Одобрение и согласование на телефо�
     await confirmDialog(page);
     await expect(page.getByText("Документ согласован", { exact: true }).first()).toBeVisible();
     await expect(page.getByRole("dialog", { name: /^Согласование/ })).toHaveCount(0);
+    await expect(page.getByText(/Вы согласовали .*Сейчас шаг: Бухгалтер\./).first()).toBeVisible();
+    await settledScreenshot(page, "memo-agreed");
   });
 });

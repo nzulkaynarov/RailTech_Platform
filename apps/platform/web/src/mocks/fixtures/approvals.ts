@@ -192,7 +192,11 @@ export function deliveryAfterApproval(
       return { channel, status, reason: null, can_send: false };
     }
     if (channel === "cabinet") {
-      if (!sent) return { channel, status: "not_selected", reason: null, can_send: false };
+      if (!sent) {
+        return ok(channel)
+          ? { channel, status: "not_selected", reason: null, can_send: false }
+          : { channel, status: "skipped", reason, can_send: false };
+      }
       return ok(channel)
         ? { channel, status: "published", reason: null, can_send: false }
         : { channel, status: "skipped", reason, can_send: false };

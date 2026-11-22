@@ -5,8 +5,7 @@ import { describe, expect, it } from "vitest";
 import type { MemoApprovalCard } from "../../../shared/api/generated/model";
 import { server } from "../../../test/server";
 import { panelEl, renderAt, setupApprovalTests, signIn } from "../../../test/approvalsKit";
-import { MOCK_USER_CRM_ID, readMemos, writeMemos } from "../../../mocks/fixtures/approvals";
-import { buildMe, readSession } from "../../../mocks/mockSession";
+import { readMemos, writeMemos } from "../../../mocks/fixtures/approvals";
 import { nextStepLabel } from "./model";
 import { confirmDialog } from "../../../test/confirmDialog";
 
@@ -191,15 +190,6 @@ describe("Согласование: шаг бухгалтера", () => {
 
   it("СЦ-8: директор согласовал служебку с суммой — «Вы согласовали <дата>. Сейчас шаг: Бухгалтер.» вместо «вы сможете решить»", async () => {
     signIn("director@demo.example");
-    // Real `Me.id` is the `crm_user_id` string (the mock session keeps its own ids)
-    server.use(
-      http.get("*/me", () => {
-        const session = readSession();
-        const me = session ? buildMe(session) : undefined;
-        if (!me || !session) return new HttpResponse(null, { status: 401 });
-        return HttpResponse.json({ ...me, id: String(MOCK_USER_CRM_ID[session.userId]) });
-      }),
-    );
     renderAt(MEMO("СЗ-2026/015"));
     const panel = await panelEl();
 

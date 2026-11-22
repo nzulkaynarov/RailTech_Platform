@@ -74,6 +74,32 @@ describe("Отправка клиенту: отчёт по каналам", () =
     ).toBeVisible();
   });
 
+  it("СЦ-8: нет данных об отправке (unknown) — заголовок не утверждает «не дошло»", async () => {
+    writeQuotes(
+      readQuotes().map((q) =>
+        q.number === "КП-2026/113" && q.delivery
+          ? {
+              ...q,
+              delivery: {
+                ...q.delivery,
+                lines: [
+                  { channel: "telegram", status: "unknown", reason: null, can_send: false },
+                  { channel: "cabinet", status: "skipped", reason: "no_cabinet", can_send: false },
+                  { channel: "email", status: "unknown", reason: null, can_send: false },
+                ],
+              },
+            }
+          : q,
+      ),
+    );
+    signIn("manager@demo.example");
+    renderAt(APPROVED);
+
+    await screen.findByRole("list", { name: "Каналы отправки" });
+    expect(screen.getByText("КП отправлено клиенту.")).toBeVisible();
+    expect(screen.queryByText(/не дошло ни по одному каналу/)).toBeNull();
+  });
+
   it("одобрение без почты у клиента: почта выключена с причиной, после одобрения — «не отправлено» с причиной и без кнопки", async () => {
     signIn("director@demo.example");
     renderAt(`/eds/drafts/${encodeURIComponent("КП-2026/117")}?panel=open&tab=approve`);
