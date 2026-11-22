@@ -178,7 +178,15 @@ function DocumentForm({
   // ЕД-6: подписант письма — из держателей права подписи (без автора, если есть другие), не вписывается текстом.
   const signersQuery = useListEdsSigners({ query: { staleTime: 60_000 } });
   const allSigners = signersQuery.data?.items ?? [];
-  const signers = allSigners.length > 1 ? allSigners.filter((p) => p.id !== me.id) : allSigners;
+  const listed = allSigners.length > 1 ? allSigners.filter((p) => p.id !== me.id) : allSigners;
+  // The saved choice may have lost the signing right and left the list: keep showing the name, never the raw id.
+  const signers =
+    values.signerId && !listed.some((p) => p.id === values.signerId)
+      ? [
+          ...listed,
+          { id: values.signerId, name: values.signatoryName || values.signerId, position: null },
+        ]
+      : listed;
   // Отказ сервера по полям: проверить заранее нельзя; снимается правкой формы. Клиентские ошибки — живые, ниже.
   const [serverErrors, setServerErrors] = useState<FormErrors>({});
   // Секции по шагам (platform-frontend.md §4.1a): новый документ — с первой, черновик — с проверки.
@@ -895,6 +903,7 @@ function DocumentForm({
                 id="doc-signatory-name"
                 label={t("documents:form.signatory.name")}
                 hint={values.signerId ? undefined : signatoryHint}
+                error={errors.signer_crm_user_id ? fieldText(t, "signer_crm_user_id") : undefined}
               >
                 <EmployeePicker
                   id="doc-signatory-name"
@@ -905,6 +914,7 @@ function DocumentForm({
                   emptyText={t("documents:form.signatory.none")}
                   aria-describedby="doc-signatory-name-hint"
                   onChange={(id, option) => {
+                    setServerErrors({});
                     setValues((v) => ({
                       ...v,
                       signerId: id ?? "",

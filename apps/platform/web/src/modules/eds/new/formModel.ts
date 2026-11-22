@@ -237,6 +237,8 @@ export const FIELD_ORDER: readonly FieldKey[] = [
 ];
 
 export function fieldElementId(field: FieldKey): string {
+  // ЕД-6: поле подписанта на экране — «Подписант» (`doc-signatory-name`)
+  if (field === "signer_crm_user_id") return "doc-signatory-name";
   return `doc-${field.replaceAll("_", "-")}`;
 }
 

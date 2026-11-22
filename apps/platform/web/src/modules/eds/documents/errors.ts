@@ -14,6 +14,7 @@ export const FIELD_KEYS = [
   "recipient_email",
   "erp_deal_id",
   "in_reply_to_number",
+  "signer_crm_user_id",
 ] as const;
 export type FieldKey = (typeof FIELD_KEYS)[number];
 
@@ -26,6 +27,7 @@ const FIELD_TEXT: Record<FieldKey, string> = {
   recipient_email: "documents:form.validation.recipientEmail",
   erp_deal_id: "documents:form.validation.deal",
   in_reply_to_number: "documents:form.validation.replyTo",
+  signer_crm_user_id: "documents:form.validation.signer",
 };
 
 function stringDetail(error: ApiError, key: string): string | undefined {

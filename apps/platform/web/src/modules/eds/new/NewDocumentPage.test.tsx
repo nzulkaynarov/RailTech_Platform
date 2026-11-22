@@ -6,7 +6,7 @@ import { HttpResponse, http } from "msw";
 import { companyToday } from "../../../shared/lib/dates";
 import { fillDate } from "../../../test/fields";
 import { server } from "../../../test/server";
-import { readEds } from "../../../mocks/fixtures/edsDocuments";
+import { readEds, writeEds } from "../../../mocks/fixtures/edsDocuments";
 import { readLetters, writeLetters } from "../../../mocks/fixtures/letters";
 import { renderAt, setupEdsTests, signIn } from "../../../test/edsKit";
 
@@ -203,6 +203,32 @@ describe("EDS · Создать документ: форма", () => {
     expect(position).toHaveValue("");
     fireEvent.change(position, { target: { value: "И. о. директора" } });
     expect(position).toHaveValue("И. о. директора");
+  });
+
+  it("ЕД-6: у сохранённого подписанта пропало право — в поле имя, а не id", async () => {
+    const state = readEds();
+    const draft = state.documents.find((d) => d.id === "00000000-0000-4000-8000-000000000004");
+    if (!draft) throw new Error("fixture draft is missing");
+    draft.kind = "letter_out";
+    draft.letter = {
+      body: null,
+      recipient_attention: null,
+      recipient_email: null,
+      signatory_name: "Бывший Подписантов",
+      signatory_position: null,
+      signer_crm_user_id: 999,
+      pdf: null,
+      pdfPolls: 0,
+      mailings: [],
+      registration_requested: null,
+    };
+    writeEds(state);
+    await openForm("manager@demo.example", "?draft=00000000-0000-4000-8000-000000000004");
+    await screen.findByDisplayValue("Ремонт кондиционера в переговорной");
+    step(/Согласование и подпись/);
+
+    expect(await screen.findByText("Бывший Подписантов")).toBeVisible();
+    expect(screen.queryByText("999")).toBeNull();
   });
 
   it("СЦ-1: почта документооборота не подключена — форма говорит это до отправки, кнопка не обещает отправку", async () => {
