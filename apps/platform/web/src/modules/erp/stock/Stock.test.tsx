@@ -1,8 +1,10 @@
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { HttpResponse, http } from "msw";
 import { describe, expect, it } from "vitest";
 
 import { renderAt, setupCalcTests, signIn } from "../../../test/calcKit";
 import { fillDate } from "../../../test/fields";
+import { server } from "../../../test/server";
 import { listSettled } from "../../../test/settled";
 
 setupCalcTests();
@@ -524,5 +526,76 @@ describe("Склад · заказ без цены и даты не уходит
 
     expect(await screen.findByText(/Запрос цены отправлен .* — ждём ответа\./)).toBeVisible();
     expect(screen.getByText("Без цены: 1 строка · Нет ожидаемой даты")).toBeVisible();
+  });
+});
+
+/** СЦ-7 (F): количества от тысячи и дробные идут через общий формат — с разрядами и запятой. */
+describe("Склад · количества с разрядами (СЦ-7)", () => {
+  it("отгрузка: «в резерве 1 200 из 2 500» — с разрядами", async () => {
+    server.use(
+      http.get("*/api/v1/erp/stock/reservations", () =>
+        HttpResponse.json({
+          items: [
+            {
+              id: "9001",
+              product_id: "1",
+              product_name: "Рельс Р65",
+              request: { number: "ПР-2026-099", client: null, path: "/eds/projects/x" },
+              line_id: null,
+              quantity: 2500,
+              shipped_quantity: 1300,
+              remaining: 1200,
+              status: "active",
+              created_at: "2026-11-01T10:00:00+05:00",
+              created_by: null,
+              tracking: "none",
+              units: [],
+            },
+          ],
+        }),
+      ),
+    );
+    await openStock("supply@demo.example", "shipments");
+    fireEvent.change(screen.getByRole("searchbox", { name: "Номер проекта" }), {
+      target: { value: "ПР-2026-099" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Найти резервы" }));
+    expect(await screen.findByText(/^в резерве 1\s200 из 2\s500$/)).toBeVisible();
+  });
+
+  it("прослеживаемость: «отгружено 0,5 из 1 500» — с разрядами и запятой", async () => {
+    server.use(
+      http.get("*/api/v1/erp/stock/trace", () =>
+        HttpResponse.json({
+          items: [
+            {
+              id: "7001",
+              kind: "lot",
+              number: "LOT-BIG",
+              expiry_date: null,
+              quantity: 1500,
+              shipped_quantity: 0.5,
+              status: "in_stock",
+              product: { id: "1", name: "Смазка", article: "СМ-1" },
+              origin: {
+                received_at: "2026-11-01T10:00:00+05:00",
+                supplier_doc: null,
+                order_number: ORDER,
+                order_path: ORDER_PATH,
+                supplier: "Партнёр",
+                manufacturer: null,
+                doc_number: null,
+                doc_valid_until: null,
+                request: null,
+              },
+              destinations: [],
+            },
+          ],
+        }),
+      ),
+    );
+    signIn("supply@demo.example");
+    renderAt("/erp/stock?view=trace&q=LOT-BIG");
+    expect(await screen.findByText(/отгружено 0,5 из 1\s500/)).toBeVisible();
   });
 });

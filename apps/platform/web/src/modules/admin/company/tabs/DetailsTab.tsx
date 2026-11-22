@@ -20,7 +20,7 @@ import { localName } from "../../../eds/dictionaries";
 import { changedFields, isEmptyObject } from "../diff";
 import { errorFields } from "../errors";
 import { BankAccounts } from "./BankAccounts";
-import { isEmailLike } from "../../../../shared/lib/email";
+import { EMAIL, isEmailLike } from "../../../../shared/lib/email";
 
 interface Values {
   name: string;
@@ -290,7 +290,7 @@ function DetailsForm({
                   <Form.Item
                     name="email"
                     label={t("details.email")}
-                    rules={[{ type: "email", message: t("details.emailInvalid") }]}
+                    rules={[{ pattern: EMAIL, message: t("details.emailInvalid") }]}
                   >
                     <Input maxLength={254} type="email" autoComplete="email" inputMode="email" />
                   </Form.Item>

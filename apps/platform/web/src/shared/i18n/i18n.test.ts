@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { ObjectKind } from "../api/generated/model/objectKind";
 import i18n, { resources } from "./index";
 
 function keys(obj: object, prefix = ""): string[] {
@@ -47,6 +48,16 @@ describe("i18n", () => {
   ] as const)("пространство %s: uz и en — те же ключи, что ru", (ns) => {
     for (const lng of ["uz", "en"] as const) {
       expect(keys(resources[lng][ns]).sort()).toEqual(keys(resources.ru[ns]).sort());
+    }
+  });
+
+  it("СЦ-7: у каждого вида объекта есть kindChip в ru, en и uz", () => {
+    for (const lng of ["ru", "en", "uz"] as const) {
+      for (const kind of Object.values(ObjectKind)) {
+        const v = valueAt(resources[lng].shell, `notifications.kindChip.${kind}`);
+        expect(v, `${lng}:${kind}`).toEqual(expect.any(String));
+        expect(v, `${lng}:${kind}`).not.toBe("");
+      }
     }
   });
 

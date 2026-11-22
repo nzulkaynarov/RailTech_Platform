@@ -384,9 +384,15 @@ describe("Реквизиты и логотип", () => {
     fireEvent.click(head(/^Контакты/));
     expect(ticked(head(/^Компания/))).toBe(true);
 
-    type("Почта компании", "not-an-email");
+    for (const bad of ["not-an-email", "info@railtech.u", "a..b@x.uz", "a@x_y.uz"]) {
+      type("Почта компании", bad);
+      fireEvent.click(head(/^Компания/));
+      expect(ticked(head(/^Контакты/)), bad).toBe(false);
+      fireEvent.click(head(/^Контакты/));
+    }
+    type("Почта компании", "info@railtech.uz");
     fireEvent.click(head(/^Компания/));
-    expect(ticked(head(/^Контакты/))).toBe(false);
+    expect(ticked(head(/^Контакты/))).toBe(true);
   });
 
   it("логотип: загрузка файла и удаление", async () => {
