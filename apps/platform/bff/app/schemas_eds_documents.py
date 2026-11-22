@@ -168,6 +168,8 @@ class EdsLetterIn(BaseModel):
     recipient_email: str | None = Field(default=None, max_length=254, pattern=EMAIL_PATTERN)
     signatory_name: str | None = Field(default=None, max_length=255)
     signatory_position: str | None = Field(default=None, max_length=255)
+    # ЕД-6: выбранный подписант (`GET /eds/signers`); имя берёт EDS из справочника
+    signer_crm_user_id: int | None = None
 
 
 class EdsDocumentPdf(BaseModel):
@@ -200,6 +202,7 @@ class EdsLetter(BaseModel):
     recipient_email: str | None
     signatory_name: str | None
     signatory_position: str | None
+    signer_crm_user_id: int | None = None
     pdf: EdsDocumentPdf | None
     mailings: list[EdsDocumentMailing]
     registration_requested: EdsRegistrationRequest | None

@@ -32,9 +32,6 @@ _PREVIEW_TEXT_OVERRIDES = (
     "signatory_position",
     "footer_text",
     "accent_color",
-    "secondary_color",
-    "layout_preset",
-    "font_family",
     "cover_letter_text",
 )
 _PREVIEW_BOOL_OVERRIDES = (

@@ -337,6 +337,7 @@
       "company": "Rekvizitlar va blanka",
       "numbering": "Raqamlash",
       "taxes": "Soliqlar va valyutalar",
+      "sales": "Sotuvlar",
       "articles": "Kompaniya maqolalari",
       "telegram": "Telegram",
       "mail": "Pochta",
@@ -584,7 +585,12 @@
         "telegram": "Bildirishnomalar uchun Telegram",
         "status": "Holat",
         "erpPending": "ERP ga kirish hali berilmoqda.",
-        "erpError": "ERP ga kirishni berib bo'lmadi: {{error}}",
+        "erpReason": {
+          "not_connected": "ERP ga kiriş berilmadi: ERP ga ulanib bölmadi. Administrator manzil va tokenni «Ulanishlar» bölimida tekşiradi; berish özi qayta uriniladi.",
+          "unavailable": "ERP ga kiriş berilmadi: ERP javob bermadi. Berish özi qayta uriniladi.",
+          "queue": "ERP ga kiriş berilmadi: berish vazifasi navbatga qöyilmadi. «Qayta uriniş» tugmasini bosing.",
+          "rejected": "ERP ga kiriş berilmadi: ERP hisobni qabul qilmadi. Xodimning poçtasi va rollarini tekşiring va «Qayta uriniş» tugmasini bosing."
+        },
         "erpNotGranted": "ERP ga kiriş berilmagan.",
         "erpRetry": "Qayta uriniş",
         "disabledNote": "Xodim o'chirilgan va kira olmaydi. Rollar va lavozim saqlangan."

@@ -2170,6 +2170,27 @@ paths:
         '403':
           $ref: '#/components/responses/Forbidden'
 
+  /api/v1/employees/signers:
+    get:
+      tags: [letters]
+      operationId: listLetterSigners
+      summary: Кого выбрать подписантом исходящего письма (ЕД-6)
+      description: |
+        Активные держатели действующего полномочия на исходящие письма (реестр «Права подписи»; отсутствующие — тоже, задача
+        перейдёт заместителю), кому доступен переданный черновик, по имени. Должность — из справочника сотрудников.
+      x-rt-permissions: [letters.register, letters.resolve, bus.manage, signing.manage, memos.create]
+      responses:
+        '200':
+          description: Подписанты
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmployeeList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
   /api/v1/documents:
     get:
       tags: [documents]
@@ -6048,6 +6069,13 @@ components:
         signatory_position:
           type: [string, 'null']
           maxLength: 255
+          description: Должность в письме; без неё — из справочника сотрудников (правится для «и. о.», справочник не меняется)
+        signer_crm_user_id:
+          type: [integer, 'null']
+          description: >-
+            ЕД-6: выбранный подписант — держатель действующего полномочия на письма (`GET /employees/signers`).
+            Имя и должность по умолчанию берутся из справочника; задача «Подписать» уходит ему (при отсутствии — заместителю).
+            422 `signer_crm_user_id`: `no_signing_right`, `author_cannot_sign`
     OutgoingLetter:
       type: object
       additionalProperties: false
@@ -6068,6 +6096,9 @@ components:
           type: [string, 'null']
         signatory_position:
           type: [string, 'null']
+        signer_crm_user_id:
+          type: [integer, 'null']
+          description: ЕД-6 — выбранный подписант; `null` у писем, созданных без выбора (подписанта подбирает реестр полномочий)
         pdf:
           oneOf:
             - $ref: '#/components/schemas/DocumentPdf'

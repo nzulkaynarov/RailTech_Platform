@@ -134,7 +134,7 @@ test.describe("P8b: поручения по входящим", () => {
     await switchTo(page, "director@demo.example");
     await expect(queueRow(page, "Наложить резолюцию на письмо IN-109/26")).toBeVisible();
     await spaGoto(page, `/eds/inbox/${ID}?panel=open&tab=resolution`);
-    await expect(page.getByText(/Проект подготовил\(а\) Демо Канцелярова/)).toBeVisible();
+    await expect(page.getByText(/Проект подготовлен: Демо Канцелярова/)).toBeVisible();
     await both(page, "resolution-draft", {
       wide: `/eds/inbox/${ID}?panel=open&tab=resolution`,
       narrow: `/eds/inbox/${ID}?sheet=resolution&tab=resolution`,

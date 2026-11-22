@@ -21188,7 +21188,7 @@
                                 }
                             }
                         },
-                        "description": "TEMPLATE_NAME_REQUIRED / TEMPLATE_NAME_TOO_LONG / TEMPLATE_BODY_TOO_LARGE / TEMPLATE_MISSING_REQUIRED_BLOCKS (with `missing_blocks`) / TEMPLATE_IN_USE (delete)"
+                        "description": "TEMPLATE_NAME_REQUIRED / TEMPLATE_NAME_TOO_LONG / TEMPLATE_BODY_TOO_LARGE / TEMPLATE_KIND_INVALID / TEMPLATE_MISSING_REQUIRED_BLOCKS (with `missing_blocks`) / TEMPLATE_IN_USE (delete)"
                     },
                     "403": {
                         "description": "ROLE_NOT_PERMITTED / NO_COMPANY / SETTINGS_EDIT_REQUIRED / TEMPLATE_NOT_EDITABLE",
@@ -21312,7 +21312,7 @@
                                 }
                             }
                         },
-                        "description": "TEMPLATE_NAME_REQUIRED / TEMPLATE_NAME_TOO_LONG / TEMPLATE_BODY_TOO_LARGE / TEMPLATE_MISSING_REQUIRED_BLOCKS (with `missing_blocks`) / TEMPLATE_IN_USE (delete)"
+                        "description": "TEMPLATE_NAME_REQUIRED / TEMPLATE_NAME_TOO_LONG / TEMPLATE_BODY_TOO_LARGE / TEMPLATE_KIND_INVALID / TEMPLATE_MISSING_REQUIRED_BLOCKS (with `missing_blocks`) / TEMPLATE_IN_USE (delete)"
                     },
                     "403": {
                         "description": "ROLE_NOT_PERMITTED / NO_COMPANY / SETTINGS_EDIT_REQUIRED / TEMPLATE_NOT_EDITABLE",
@@ -21393,7 +21393,7 @@
                                 }
                             }
                         },
-                        "description": "TEMPLATE_NAME_REQUIRED / TEMPLATE_NAME_TOO_LONG / TEMPLATE_BODY_TOO_LARGE / TEMPLATE_MISSING_REQUIRED_BLOCKS (with `missing_blocks`) / TEMPLATE_IN_USE (delete)"
+                        "description": "TEMPLATE_NAME_REQUIRED / TEMPLATE_NAME_TOO_LONG / TEMPLATE_BODY_TOO_LARGE / TEMPLATE_KIND_INVALID / TEMPLATE_MISSING_REQUIRED_BLOCKS (with `missing_blocks`) / TEMPLATE_IN_USE (delete)"
                     },
                     "403": {
                         "description": "ROLE_NOT_PERMITTED / NO_COMPANY / SETTINGS_EDIT_REQUIRED / TEMPLATE_NOT_EDITABLE",
@@ -21448,7 +21448,7 @@
                                 }
                             }
                         },
-                        "description": "TEMPLATE_NAME_REQUIRED / TEMPLATE_NAME_TOO_LONG / TEMPLATE_BODY_TOO_LARGE / TEMPLATE_MISSING_REQUIRED_BLOCKS (with `missing_blocks`) / TEMPLATE_IN_USE (delete)"
+                        "description": "TEMPLATE_NAME_REQUIRED / TEMPLATE_NAME_TOO_LONG / TEMPLATE_BODY_TOO_LARGE / TEMPLATE_KIND_INVALID / TEMPLATE_MISSING_REQUIRED_BLOCKS (with `missing_blocks`) / TEMPLATE_IN_USE (delete)"
                     },
                     "403": {
                         "description": "ROLE_NOT_PERMITTED / NO_COMPANY / SETTINGS_EDIT_REQUIRED / TEMPLATE_NOT_EDITABLE",
@@ -21531,7 +21531,7 @@
                                 }
                             }
                         },
-                        "description": "TEMPLATE_NAME_REQUIRED / TEMPLATE_NAME_TOO_LONG / TEMPLATE_BODY_TOO_LARGE / TEMPLATE_MISSING_REQUIRED_BLOCKS (with `missing_blocks`) / TEMPLATE_IN_USE (delete)"
+                        "description": "TEMPLATE_NAME_REQUIRED / TEMPLATE_NAME_TOO_LONG / TEMPLATE_BODY_TOO_LARGE / TEMPLATE_KIND_INVALID / TEMPLATE_MISSING_REQUIRED_BLOCKS (with `missing_blocks`) / TEMPLATE_IN_USE (delete)"
                     },
                     "403": {
                         "description": "ROLE_NOT_PERMITTED / NO_COMPANY / SETTINGS_EDIT_REQUIRED / TEMPLATE_NOT_EDITABLE",
@@ -31243,6 +31243,14 @@
                 "parameters": [
                     {
                         "in": "query",
+                        "name": "limit",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "Поле выбора: первые N строк (до 20) одним списком, без страниц"
+                    },
+                    {
+                        "in": "query",
                         "name": "page",
                         "schema": {
                             "type": "integer"
@@ -31261,7 +31269,22 @@
                         "schema": {
                             "type": "string"
                         },
-                        "description": "Поиск по названию и ИНН"
+                        "description": "Поиск по названию и ИНН; точный ИНН — первым"
+                    },
+                    {
+                        "in": "query",
+                        "name": "role",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "client",
+                                "manufacturer",
+                                "organization",
+                                "partner",
+                                "supplier"
+                            ]
+                        },
+                        "description": "Роль-подсказка: компании с ней идут выше, остальные не скрываются"
                     }
                 ],
                 "tags": [
@@ -31293,7 +31316,7 @@
             },
             "post": {
                 "operationId": "parties_organizations_create",
-                "description": "Организация-адресат из письма (ADR-0028 п. 5, СУЩ-2.6): название, ИНН или рег. номер, страна, адрес; роль «Организация», без сделок. Такая компания уже есть (ИНН, пара «страна — рег. номер», без ИНН — название) — 409 `COMPANY_EXISTS`, её выбирают из списка. Ответ — карточка контрагента.",
+                "description": "Организация-адресат из письма (ADR-0028 п. 5, СУЩ-2.6): название, ИНН или рег. номер, страна, адрес; роль «Организация», без сделок. Такая компания уже есть (ИНН, пара «страна — рег. номер», без ИНН — название) — 409 `COMPANY_EXISTS` с `existing_id` (поиск среди всех компаний), её выбирают из списка. Роль — «организация» по умолчанию; «поставщик» и «изготовитель» — право `supply.manage`, иначе 403 `ROLE_PERMISSION_REQUIRED`. Ответ — карточка контрагента.",
                 "summary": "Create an addressee organization",
                 "tags": [
                     "Parties"
@@ -31511,6 +31534,60 @@
                     },
                     "401": {
                         "$ref": "#/components/responses/UnauthorizedResponse"
+                    }
+                }
+            }
+        },
+        "/api/v1/parties/organizations/{id}/people/": {
+            "get": {
+                "operationId": "parties_organizations_people",
+                "description": "Люди компании для поля выбора человека: имя, должность и почта (телефон — только по одному через `parties/people`). Те же границы, что у списка; главный контакт первым.",
+                "summary": "People of a counterparty for a picker",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "pattern": "^\\d+$"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Parties"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DeskOrganizationPeople"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "404": {
+                        "description": "Объекта нет.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/ForbiddenResponse"
                     }
                 }
             }
@@ -43647,15 +43724,36 @@
                     },
                     "kind": {
                         "$ref": "#/components/schemas/DeskPersonKindEnum"
+                    },
+                    "roles": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/DeskCounterpartyRoles"
+                            }
+                        ],
+                        "description": "Роли компании — отметки, как в карточке контрагента"
+                    },
+                    "country": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "Название страны компании"
+                    },
+                    "crm_client_id": {
+                        "type": "integer",
+                        "nullable": true,
+                        "description": "Клиент CRM, с которым связана компания"
                     }
                 },
                 "required": [
                     "contact_person",
+                    "country",
+                    "crm_client_id",
                     "email",
                     "id",
                     "inn",
                     "kind",
-                    "name"
+                    "name",
+                    "roles"
                 ]
             },
             "DeskOrganizationInRequest": {
@@ -43683,6 +43781,12 @@
                     "legal_address": {
                         "type": "string",
                         "maxLength": 500
+                    },
+                    "role": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Роль новой компании: `organization` (по умолчанию), `supplier` или `manufacturer` — последние два требуют права `supply.manage`",
+                        "maxLength": 20
                     }
                 },
                 "required": [
@@ -43715,6 +43819,50 @@
                     "next",
                     "previous",
                     "results"
+                ]
+            },
+            "DeskOrganizationPeople": {
+                "type": "object",
+                "properties": {
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/DeskOrganizationPerson"
+                        }
+                    }
+                },
+                "required": [
+                    "results"
+                ]
+            },
+            "DeskOrganizationPerson": {
+                "type": "object",
+                "description": "Человек организации для поля выбора: должность и почта (телефон — только через `parties/people`).",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "position": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "email": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "is_primary": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "email",
+                    "id",
+                    "is_primary",
+                    "name",
+                    "position"
                 ]
             },
             "DeskOrigin": {
@@ -45797,8 +45945,7 @@
                     "kind": {
                         "type": "string",
                         "minLength": 1,
-                        "default": "CUSTOM",
-                        "description": "Код вида шаблона; по умолчанию CUSTOM"
+                        "description": "Код вида шаблона: CONTRACT, INVOICE, ACT, RECEIPT, DELIVERY_NOTE; без вида — 400 TEMPLATE_KIND_INVALID"
                     },
                     "body_html": {
                         "type": "string",

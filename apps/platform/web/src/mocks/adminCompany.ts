@@ -231,16 +231,15 @@ function esc(value: string): string {
 }
 
 function sampleHtml(kind: DocumentKind, brand: CompanyMock["brand"]): string {
-  const font = brand.font_family === "serif" ? "Georgia, serif" : "Arial, sans-serif";
   return `<!doctype html><html lang="ru"><head><meta charset="utf-8"><title>${esc(KIND_WORD[kind])}</title></head>
-<body style="font-family:${font};margin:0;padding:24px;color:#1f1f1f">
+<body style="font-family:Arial, sans-serif;margin:0;padding:24px;color:#1f1f1f">
 <div style="border-bottom:3px solid ${esc(brand.accent_color)};padding-bottom:8px;margin-bottom:16px">
 <strong style="color:${esc(brand.accent_color)}">${esc(brand.legal_name)}</strong>
-<div style="color:${esc(brand.secondary_color)};font-size:12px">ИНН ${esc(brand.inn)}</div></div>
+<div style="color:#595959;font-size:12px">ИНН ${esc(brand.inn)}</div></div>
 <h2 style="margin:0 0 8px">${esc(KIND_WORD[kind])} № ${esc(KIND_CODE[kind])}-2026/001</h2>
 <p>Образец документа на бланке компании. Позиции, суммы и сроки подставляются при оформлении.</p>
 <p style="margin-top:32px">${esc(brand.signatory_position)} ______ ${esc(brand.signatory_name)}</p>
-<p style="color:${esc(brand.secondary_color)};font-size:12px">${esc(brand.footer_text)}</p></body></html>`;
+<p style="color:#595959;font-size:12px">${esc(brand.footer_text)}</p></body></html>`;
 }
 
 function renderNumber(
@@ -388,7 +387,7 @@ export const adminCompanyHandlers = [
   http.get("*/admin/company/brand", () => read("read", (_c, s) => s.brand)),
   http.patch("*/admin/company/brand", ({ request }) =>
     write<BrandProfileUpdate>(request, (body, s) => {
-      for (const key of ["accent_color", "secondary_color"] as const) {
+      for (const key of ["accent_color"] as const) {
         const value = body[key];
         if (value && !/^#[0-9a-fA-F]{6}$/.test(value)) {
           return validation([key], `invalid_${key}`);

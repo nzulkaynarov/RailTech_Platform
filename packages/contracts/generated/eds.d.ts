@@ -1215,6 +1215,27 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/employees/signers": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Кого выбрать подписантом исходящего письма (ЕД-6)
+     * @description Активные держатели действующего полномочия на исходящие письма (реестр «Права подписи»; отсутствующие — тоже, задача
+     *     перейдёт заместителю), кому доступен переданный черновик, по имени. Должность — из справочника сотрудников.
+     */
+    get: operations["listLetterSigners"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/documents": {
     parameters: {
       query?: never;
@@ -3339,7 +3360,10 @@ export interface components {
       recipient_email?: string | null;
       /** @description Подписант; `null` — подписант бланка (директор) */
       signatory_name?: string | null;
+      /** @description Должность в письме; без неё — из справочника сотрудников (правится для «и. о.», справочник не меняется) */
       signatory_position?: string | null;
+      /** @description ЕД-6: выбранный подписант — держатель действующего полномочия на письма (`GET /employees/signers`). Имя и должность по умолчанию берутся из справочника; задача «Подписать» уходит ему (при отсутствии — заместителю). 422 `signer_crm_user_id`: `no_signing_right`, `author_cannot_sign` */
+      signer_crm_user_id?: number | null;
     };
     /** @description Письмо на бланке (P4) — тело и реквизиты, последний PDF, журнал отправки, передача на регистрацию */
     OutgoingLetter: {
@@ -3349,6 +3373,8 @@ export interface components {
       recipient_email: string | null;
       signatory_name: string | null;
       signatory_position: string | null;
+      /** @description ЕД-6 — выбранный подписант; `null` у писем, созданных без выбора (подписанта подбирает реестр полномочий) */
+      signer_crm_user_id?: number | null;
       /** @description Последний запрошенный PDF; `null` — не запрашивался */
       pdf: components["schemas"]["DocumentPdf"] | null;
       /** @description Журнал отправки адресату, новые ниже */
@@ -5722,6 +5748,28 @@ export interface operations {
     requestBody?: never;
     responses: {
       /** @description Сотрудники */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["EmployeeList"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+    };
+  };
+  listLetterSigners: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Подписанты */
       200: {
         headers: {
           [name: string]: unknown;

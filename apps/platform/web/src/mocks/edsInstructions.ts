@@ -600,6 +600,20 @@ export const edsInstructionsHandlers = [
     return HttpResponse.json(list);
   }),
 
+  // ЕД-6: держатели права подписи на письма — в демо директор и администратор; числовые id, как у `crm_user_id`
+  http.get("*/eds/signers", () => {
+    const held = access();
+    if (!me()) return expired();
+    if (!held.resolve && !held.register && !held.admin && !held.author)
+      return forbiddenBff("eds.inbox");
+    const list: EdsStaffList = {
+      items: STAFF.filter((u) => u.roles.some((r) => r === "DIRECTOR" || r === "ADMIN")).map(
+        (u) => ({ id: String(100 + STAFF.indexOf(u)), name: u.name, position: u.position }),
+      ),
+    };
+    return HttpResponse.json(list);
+  }),
+
   http.put("*/eds/letters/:id/resolution-draft", async ({ request, params }) => {
     const user = me();
     if (!user) return expired();

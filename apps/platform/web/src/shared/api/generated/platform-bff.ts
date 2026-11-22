@@ -122,6 +122,10 @@ import type {
   CounterpartyCard,
   CounterpartyContacts,
   CounterpartyPersonPage,
+  CounterpartyPersonPickList,
+  CounterpartyPick,
+  CounterpartyPickIn,
+  CounterpartyPickList,
   CounterpartyRequisitesIn,
   CounterpartyRoleIn,
   CreatedId,
@@ -436,6 +440,7 @@ import type {
   SandboxTurn,
   SaveBotSettingBody,
   SearchCalcCatalogParams,
+  SearchCounterpartiesParams,
   SearchEdsAddresseesParams,
   SearchMxikParams,
   SearchParams,
@@ -6201,7 +6206,7 @@ export const getListDeputyCandidatesUrl = () => {
 };
 
 /**
- * Активные коллеги с рабочей ролью CRM (менеджер или администратор), кроме самого сотрудника.
+ * Все активные сотрудники, кроме самого (ЕД-6 — не только менеджеры CRM), по имени; поиск — на экране.
  * @summary Кого можно назначить заместителем
  */
 export const listDeputyCandidates = async (
@@ -41254,6 +41259,122 @@ export function useListEdsStaff<
   return withQueryKey(query, queryOptions.queryKey);
 }
 
+export const getListEdsSignersUrl = () => {
+  return `/api/v1/eds/signers`;
+};
+
+/**
+ * EDS `GET /employees/signers`: активные держатели действующего полномочия на исходящие письма (реестр «Права подписи»; отсутствующие — тоже, задача перейдёт заместителю), по имени; должность — из справочника сотрудников. Права те же, что у `GET /eds/staff`.
+ * @summary EDS · Кого выбрать подписантом исходящего письма (ЕД-6)
+ */
+export const listEdsSigners = async (
+  options?: Parameters<typeof http>[1],
+): Promise<EdsStaffList> => {
+  return http<EdsStaffList>(getListEdsSignersUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListEdsSignersQueryKey = () => {
+  return [`/api/v1/eds/signers`] as const;
+};
+
+export const getListEdsSignersQueryOptions = <
+  TData = Awaited<ReturnType<typeof listEdsSigners>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listEdsSigners>>, TError, TData>>;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListEdsSignersQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listEdsSigners>>> = ({ signal }) =>
+    listEdsSigners({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listEdsSigners>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListEdsSignersQueryResult = NonNullable<Awaited<ReturnType<typeof listEdsSigners>>>;
+export type ListEdsSignersQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse
+>;
+
+export function useListEdsSigners<
+  TData = Awaited<ReturnType<typeof listEdsSigners>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listEdsSigners>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listEdsSigners>>,
+          TError,
+          Awaited<ReturnType<typeof listEdsSigners>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListEdsSigners<
+  TData = Awaited<ReturnType<typeof listEdsSigners>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listEdsSigners>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listEdsSigners>>,
+          TError,
+          Awaited<ReturnType<typeof listEdsSigners>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListEdsSigners<
+  TData = Awaited<ReturnType<typeof listEdsSigners>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listEdsSigners>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary EDS · Кого выбрать подписантом исходящего письма (ЕД-6)
+ */
+
+export function useListEdsSigners<
+  TData = Awaited<ReturnType<typeof listEdsSigners>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listEdsSigners>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListEdsSignersQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
 export const getListSigningAuthoritiesUrl = (params?: ListSigningAuthoritiesParams) => {
   const normalizedParams = new URLSearchParams();
 
@@ -54787,6 +54908,457 @@ export const useRevealCounterpartyContacts = <
 > => {
   return useMutation(getRevealCounterpartyContactsMutationOptions(options), queryClient);
 };
+
+export const getSearchCounterpartiesUrl = (params?: SearchCounterpartiesParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/people/counterparties?${stringifiedParams}`
+    : `/api/v1/people/counterparties`;
+};
+
+/**
+ * ЕД-6 «Запись выбирают, а не вписывают»: одно поле выбора компании для форм — заявка, письмо, входящее, бренд, импорт прайса, заказ поставщику, запрос цены. ERP `parties/organizations/`: клиенты своей компании, поставщики, изготовители, партнёры и организации-адресаты. `q` — часть названия или ИНН, точный ИНН идёт первым; `role` поднимает компании с этой ролью выше, остальных не скрывает; `limit` — до 20 строк (по умолчанию 10). В строке — роли для подсказки, страна и клиент CRM. Раздел `crm.clients`, `erp.stock`, `erp.calc` или `eds.memo.create` — чтение.
+ * @summary Поле выбора: контрагенты
+ */
+export const searchCounterparties = async (
+  params?: SearchCounterpartiesParams,
+  options?: Parameters<typeof http>[1],
+): Promise<CounterpartyPickList> => {
+  return http<CounterpartyPickList>(getSearchCounterpartiesUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getSearchCounterpartiesQueryKey = (params?: SearchCounterpartiesParams) => {
+  return [`/api/v1/people/counterparties`, ...(params ? [params] : [])] as const;
+};
+
+export const getSearchCounterpartiesQueryOptions = <
+  TData = Awaited<ReturnType<typeof searchCounterparties>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params?: SearchCounterpartiesParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof searchCounterparties>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getSearchCounterpartiesQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof searchCounterparties>>> = ({ signal }) =>
+    searchCounterparties(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof searchCounterparties>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type SearchCounterpartiesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof searchCounterparties>>
+>;
+export type SearchCounterpartiesQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse | BackendUnavailableResponse
+>;
+
+export function useSearchCounterparties<
+  TData = Awaited<ReturnType<typeof searchCounterparties>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params: undefined | SearchCounterpartiesParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof searchCounterparties>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof searchCounterparties>>,
+          TError,
+          Awaited<ReturnType<typeof searchCounterparties>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useSearchCounterparties<
+  TData = Awaited<ReturnType<typeof searchCounterparties>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params?: SearchCounterpartiesParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof searchCounterparties>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof searchCounterparties>>,
+          TError,
+          Awaited<ReturnType<typeof searchCounterparties>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useSearchCounterparties<
+  TData = Awaited<ReturnType<typeof searchCounterparties>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params?: SearchCounterpartiesParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof searchCounterparties>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Поле выбора: контрагенты
+ */
+
+export function useSearchCounterparties<
+  TData = Awaited<ReturnType<typeof searchCounterparties>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params?: SearchCounterpartiesParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof searchCounterparties>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getSearchCounterpartiesQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getCreateCounterpartyUrl = () => {
+  return `/api/v1/people/counterparties`;
+};
+
+/**
+ * Последняя строка поля выбора «завести»: название, ИНН (9 цифр), страна, адрес и роль (`organization` по умолчанию, `supplier` или `manufacturer`). ERP `POST parties/organizations/`. Такой ИНН уже есть у ЛЮБОЙ компании, а не только из видимых в списке — 409 `CONFLICT` (`details.reason = company_exists`, `details.existing_id` — id найденной компании): её выбирают, а не заводят. Роль «поставщик» и «изготовитель» — право ERP `supply.manage`, иначе 403. Раздел `crm.clients`, `erp.stock`, `erp.calc` или `eds.memo.create` — полный.
+ * @summary Поле выбора: завести контрагента
+ */
+export const createCounterparty = async (
+  counterpartyPickIn: CounterpartyPickIn,
+  options?: Parameters<typeof http>[1],
+): Promise<CounterpartyPick> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<CounterpartyPick>(getCreateCounterpartyUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(counterpartyPickIn),
+  });
+};
+
+export const getCreateCounterpartyMutationKey = () => ["createCounterparty"] as const;
+
+export const getCreateCounterpartyMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | Error
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createCounterparty>>,
+    TError,
+    CreateCounterpartyMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createCounterparty>>,
+  TError,
+  CreateCounterpartyMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCreateCounterpartyMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createCounterparty>>,
+    CreateCounterpartyMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createCounterparty(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateCounterpartyMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createCounterparty>>
+>;
+export type CreateCounterpartyMutationBody = CounterpartyPickIn;
+export type CreateCounterpartyMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | Error
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type CreateCounterpartyMutationVariables = { data: CounterpartyPickIn };
+
+/**
+ * @summary Поле выбора: завести контрагента
+ */
+export const useCreateCounterparty = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | Error
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createCounterparty>>,
+      TError,
+      CreateCounterpartyMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof createCounterparty>>,
+  TError,
+  CreateCounterpartyMutationVariables,
+  TContext
+> => {
+  return useMutation(getCreateCounterpartyMutationOptions(options), queryClient);
+};
+
+export const getListCounterpartyPickerPeopleUrl = (id: CompanyItemRef) => {
+  return `/api/v1/people/counterparties/${id}/people`;
+};
+
+/**
+ * ЕД-6: люди компании для поля выбора человека — имя, должность, почта (для строки «Кому» письма); телефон не отдаётся, его открывает `revealCounterpartyContacts` с записью в журнал. ERP `parties/organizations/{id}/people/`; чужая компания — 404. Раздел `crm.clients`, `erp.stock`, `erp.calc` или `eds.memo.create` — чтение.
+ * @summary Поле выбора: люди контрагента
+ */
+export const listCounterpartyPickerPeople = async (
+  id: CompanyItemRef,
+  options?: Parameters<typeof http>[1],
+): Promise<CounterpartyPersonPickList> => {
+  return http<CounterpartyPersonPickList>(getListCounterpartyPickerPeopleUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListCounterpartyPickerPeopleQueryKey = (id: CompanyItemRef) => {
+  return [`/api/v1/people/counterparties/${id}/people`] as const;
+};
+
+export const getListCounterpartyPickerPeopleQueryOptions = <
+  TData = Awaited<ReturnType<typeof listCounterpartyPickerPeople>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: CompanyItemRef,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listCounterpartyPickerPeople>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListCounterpartyPickerPeopleQueryKey(id);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listCounterpartyPickerPeople>>> = ({
+    signal,
+  }) => listCounterpartyPickerPeople(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: id !== null && id !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof listCounterpartyPickerPeople>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type ListCounterpartyPickerPeopleQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listCounterpartyPickerPeople>>
+>;
+export type ListCounterpartyPickerPeopleQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+
+export function useListCounterpartyPickerPeople<
+  TData = Awaited<ReturnType<typeof listCounterpartyPickerPeople>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: CompanyItemRef,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listCounterpartyPickerPeople>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listCounterpartyPickerPeople>>,
+          TError,
+          Awaited<ReturnType<typeof listCounterpartyPickerPeople>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListCounterpartyPickerPeople<
+  TData = Awaited<ReturnType<typeof listCounterpartyPickerPeople>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: CompanyItemRef,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listCounterpartyPickerPeople>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listCounterpartyPickerPeople>>,
+          TError,
+          Awaited<ReturnType<typeof listCounterpartyPickerPeople>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListCounterpartyPickerPeople<
+  TData = Awaited<ReturnType<typeof listCounterpartyPickerPeople>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: CompanyItemRef,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listCounterpartyPickerPeople>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Поле выбора: люди контрагента
+ */
+
+export function useListCounterpartyPickerPeople<
+  TData = Awaited<ReturnType<typeof listCounterpartyPickerPeople>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: CompanyItemRef,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listCounterpartyPickerPeople>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListCounterpartyPickerPeopleQueryOptions(id, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
 
 export const getGetCounterpartyUrl = (id: CompanyItemRef) => {
   return `/api/v1/people/counterparties/${id}`;

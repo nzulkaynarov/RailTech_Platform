@@ -5,18 +5,17 @@ import { SectionTabs } from "../company/SectionTabs";
 import { DocumentTemplates } from "../company/tabs/DocumentTemplates";
 import { EmailTemplates } from "../company/tabs/EmailTemplates";
 import { LetterTemplates } from "../company/tabs/LetterTemplates";
-import { QuoteTab } from "../company/tabs/QuoteTab";
 import { SettingsPage } from "./SettingsPage";
 import { TemplateCatalog } from "./TemplateCatalog";
 import { useTabParam } from "./useTabParam";
 
 import "../company/company.css";
 
-const TABS = ["all", "documents", "letters", "emails", "quote"] as const;
+const TABS = ["all", "documents", "letters", "emails"] as const;
 
 /**
- * Процессы · Шаблоны документов (SET-IA): шаблоны КП, договоров, счетов и актов, шаблоны писем клиентам и условия КП по
- * умолчанию — бывшие вкладки «Шаблоны» и «Условия КП» «Компании и бланков». Один уровень вкладок, `?tab=`.
+ * Процессы · Шаблоны документов (SET-IA): шаблоны КП, договоров, счетов и актов, шаблоны писем клиентам. «Условия КП» — не шаблон,
+ * они на страницах «Продажи», «Налоги и валюты» и «Уведомления» (ДОК-13). Один уровень вкладок, `?tab=`.
  */
 export function TemplatesPage() {
   const { t } = useTranslation("company");
@@ -31,13 +30,11 @@ export function TemplatesPage() {
           tabs={TABS.map((key) => ({
             key,
             label:
-              key === "quote"
-                ? t("tabs.quote")
-                : key === "all"
-                  ? t("catalog.tab")
-                  : key === "letters"
-                    ? t("letterTemplates.tab")
-                    : t(`templates.parts.${key}`),
+              key === "all"
+                ? t("catalog.tab")
+                : key === "letters"
+                  ? t("letterTemplates.tab")
+                  : t(`templates.parts.${key}`),
           }))}
         >
           {active === "all" ? (
@@ -52,12 +49,10 @@ export function TemplatesPage() {
             <div className="pf-co-body">
               <LetterTemplates />
             </div>
-          ) : active === "emails" ? (
+          ) : (
             <div className="pf-co-body">
               <EmailTemplates />
             </div>
-          ) : (
-            <QuoteTab />
           )}
         </SectionTabs>
       </Card>

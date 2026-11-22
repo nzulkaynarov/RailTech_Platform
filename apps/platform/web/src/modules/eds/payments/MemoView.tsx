@@ -23,7 +23,7 @@ function Journal({ memo }: { memo: PaymentMemoCard }) {
   const items: HistoryItem[] = memo.journal.map((entry) => ({
     state: "done",
     title: t(`memo.journalAction.${entry.action.replace(".", "_")}`, {
-      defaultValue: entry.action,
+      defaultValue: t("memo.journalActionUnknown"),
     }),
     meta: (
       <>

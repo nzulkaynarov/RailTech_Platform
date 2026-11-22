@@ -294,12 +294,7 @@ export const profileHandlers = [
     if (!userId) return expired();
     const items: Colleague[] = readEmployees()
       .filter((e) => e.id !== userId && e.status !== "disabled" && e.status !== "invited")
-      .flatMap((e) => {
-        const user = findUserById(e.id);
-        return user && user.roles.some((r) => r === "MANAGER" || r === "DIRECTOR" || r === "ADMIN")
-          ? [{ id: e.id, name: nameOf(e.id), position: user.position }]
-          : [];
-      });
+      .map((e) => ({ id: e.id, name: nameOf(e.id), position: findUserById(e.id)?.position }));
     return HttpResponse.json(items);
   }),
 

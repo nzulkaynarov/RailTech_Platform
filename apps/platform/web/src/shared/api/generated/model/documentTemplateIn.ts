@@ -10,6 +10,7 @@ export interface DocumentTemplateIn {
    * @maxLength 255
    */
   name: string;
+  /** Вид обязателен для нового шаблона: без него (или с устаревшим видом) ERP отвечает 400 `TEMPLATE_KIND_INVALID`. */
   kind?: DocumentTemplateKind;
   body_html?: string;
   is_active?: boolean;

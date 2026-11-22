@@ -165,6 +165,7 @@ class CompanyDocumentProfileSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         ]
+        # ДОК-13: secondary_color, layout_preset, font_family устарели: в ответе остаются (контракт), сервис их не принимает
         read_only_fields = ["id", "company", "logo", "created_at", "updated_at", "inherited_preview"]
 
     def get_logo_url(self, obj) -> str | None:

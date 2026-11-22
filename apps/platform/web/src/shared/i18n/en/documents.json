@@ -355,6 +355,7 @@
       "deal": "Project not found — pick another or remove the link.",
       "replyTo": "No incoming letter with this number. Check the number.",
       "recipientEmail": "Check the addressee email, for example office@example.uz.",
+      "signer": "Choose a signer from the list: the selected one has no signing right.",
       "uploading": "Wait for the files to upload."
     },
     "toast": {
@@ -369,6 +370,7 @@
       "savedNote": "The draft is saved and what you typed is kept. Fix it and send again.",
       "reasons": {
         "FORBIDDEN": "this action is not granted to your role",
+        "FORBIDDEN_SECTION": "no access to the section «{{section}}»",
         "eds_not_granted": "you have no rights in the documents service",
         "not_author": "only the author can edit the document",
         "NOT_FOUND": "the document was not found",
@@ -433,6 +435,8 @@
     "signatory": {
       "name": "Signatory",
       "position": "Signatory position",
+      "positionHint": "From the directory; type your own for acting roles",
+      "none": "No employees with signing right",
       "hint": "Empty — the letterhead signatory: {{name}}, {{position}}.",
       "hintNone": ""
     },

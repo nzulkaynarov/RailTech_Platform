@@ -28,8 +28,14 @@ export interface EdsLetterIn {
    */
   signatory_name?: string | null;
   /**
+   * Должность в письме; без неё — из справочника сотрудников (правится для «и. о.», справочник не меняется)
    * @maxLength 255
    * @nullable
    */
   signatory_position?: string | null;
+  /**
+   * ЕД-6: выбранный подписант (`GET /eds/signers`); имя берёт EDS из справочника, задача «Подписать» уходит ему
+   * @nullable
+   */
+  signer_crm_user_id?: number | null;
 }

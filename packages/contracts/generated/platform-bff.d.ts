@@ -861,7 +861,7 @@ export interface paths {
     };
     /**
      * Кого можно назначить заместителем
-     * @description Активные коллеги с рабочей ролью CRM (менеджер или администратор), кроме самого сотрудника.
+     * @description Все активные сотрудники, кроме самого (ЕД-6 — не только менеджеры CRM), по имени; поиск — на экране.
      */
     get: operations["listDeputyCandidates"];
     put?: never;
@@ -5815,6 +5815,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/eds/signers": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * EDS · Кого выбрать подписантом исходящего письма (ЕД-6)
+     * @description EDS `GET /employees/signers`: активные держатели действующего полномочия на исходящие письма (реестр «Права подписи»; отсутствующие — тоже, задача перейдёт заместителю), по имени; должность — из справочника сотрудников. Права те же, что у `GET /eds/staff`.
+     */
+    get: operations["listEdsSigners"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/eds/signing/authorities": {
     parameters: {
       query?: never;
@@ -7622,6 +7642,50 @@ export interface paths {
      * @description FR-11, NAVIGATION «Люди»: телефон и почта открываются по нажатию, показ пишется в журнал CRM (`contact.reveal` — кто, когда, чьи). Сначала запись в журнал: не записалась — контакты не отдаются (503). ERP `parties/people/{id}/` — в тех же границах, что список. Раздел `chats.internal` — чтение.
      */
     post: operations["revealCounterpartyContacts"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/people/counterparties": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Поле выбора: контрагенты
+     * @description ЕД-6 «Запись выбирают, а не вписывают»: одно поле выбора компании для форм — заявка, письмо, входящее, бренд, импорт прайса, заказ поставщику, запрос цены. ERP `parties/organizations/`: клиенты своей компании, поставщики, изготовители, партнёры и организации-адресаты. `q` — часть названия или ИНН, точный ИНН идёт первым; `role` поднимает компании с этой ролью выше, остальных не скрывает; `limit` — до 20 строк (по умолчанию 10). В строке — роли для подсказки, страна и клиент CRM. Раздел `crm.clients`, `erp.stock`, `erp.calc` или `eds.memo.create` — чтение.
+     */
+    get: operations["searchCounterparties"];
+    put?: never;
+    /**
+     * Поле выбора: завести контрагента
+     * @description Последняя строка поля выбора «завести»: название, ИНН (9 цифр), страна, адрес и роль (`organization` по умолчанию, `supplier` или `manufacturer`). ERP `POST parties/organizations/`. Такой ИНН уже есть у ЛЮБОЙ компании, а не только из видимых в списке — 409 `CONFLICT` (`details.reason = company_exists`, `details.existing_id` — id найденной компании): её выбирают, а не заводят. Роль «поставщик» и «изготовитель» — право ERP `supply.manage`, иначе 403. Раздел `crm.clients`, `erp.stock`, `erp.calc` или `eds.memo.create` — полный.
+     */
+    post: operations["createCounterparty"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/people/counterparties/{id}/people": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Поле выбора: люди контрагента
+     * @description ЕД-6: люди компании для поля выбора человека — имя, должность, почта (для строки «Кому» письма); телефон не отдаётся, его открывает `revealCounterpartyContacts` с записью в журнал. ERP `parties/organizations/{id}/people/`; чужая компания — 404. Раздел `crm.clients`, `erp.stock`, `erp.calc` или `eds.memo.create` — чтение.
+     */
+    get: operations["listCounterpartyPickerPeople"];
+    put?: never;
+    post?: never;
     delete?: never;
     options?: never;
     head?: never;
@@ -11089,7 +11153,10 @@ export interface components {
       recipient_email?: string | null;
       /** @description `null` — подписант бланка (директор) */
       signatory_name?: string | null;
+      /** @description Должность в письме; без неё — из справочника сотрудников (правится для «и. о.», справочник не меняется) */
       signatory_position?: string | null;
+      /** @description ЕД-6: выбранный подписант (`GET /eds/signers`); имя берёт EDS из справочника, задача «Подписать» уходит ему */
+      signer_crm_user_id?: number | null;
     };
     EdsDocumentPdf: {
       /**
@@ -11140,6 +11207,8 @@ export interface components {
       recipient_email: string | null;
       signatory_name: string | null;
       signatory_position: string | null;
+      /** @description ЕД-6: выбранный подписант; `null` — подписанта подбирает реестр полномочий */
+      signer_crm_user_id?: number | null;
       /** @description Последний PDF; `null` — не строился */
       pdf: components["schemas"]["EdsDocumentPdf"] | null;
       /** @description Журнал отправки адресату */
@@ -12011,7 +12080,7 @@ export interface components {
       footer_text: string;
       /** @description Основной цвет бренда, `#RRGGBB` */
       accent_color: string;
-      /** @description Второй цвет бренда, `#RRGGBB` */
+      /** @description Устарело (ДОК-13): ничего не меняет и не показывается, значение не принимается и не читается */
       secondary_color: string;
       cover_letter_text: string;
       contract_acceptance_text: string;
@@ -12019,12 +12088,12 @@ export interface components {
       contract_extra_terms_text: string;
       act_closing_text: string;
       /**
-       * @description Оформление: светлое, в рамках, контрастное, полосатое
+       * @description Устарело (ДОК-13): ничего не меняет и не показывается, значение не принимается и не читается
        * @enum {string}
        */
       layout_preset: "light" | "boxed" | "bold" | "striped";
       /**
-       * @description Шрифт: без засечек или с засечками
+       * @description Устарело (ДОК-13): ничего не меняет и не показывается, значение не принимается и не читается
        * @enum {string}
        */
       font_family: "sans" | "serif";
@@ -12053,7 +12122,7 @@ export interface components {
       footer_text?: string;
       /** @description Основной цвет бренда, `#RRGGBB` */
       accent_color?: string;
-      /** @description Второй цвет бренда, `#RRGGBB` */
+      /** @description Устарело (ДОК-13): ничего не меняет и не показывается, значение не принимается и не читается */
       secondary_color?: string;
       cover_letter_text?: string;
       contract_acceptance_text?: string;
@@ -12061,12 +12130,12 @@ export interface components {
       contract_extra_terms_text?: string;
       act_closing_text?: string;
       /**
-       * @description Оформление: светлое, в рамках, контрастное, полосатое
+       * @description Устарело (ДОК-13): ничего не меняет и не показывается, значение не принимается и не читается
        * @enum {string}
        */
       layout_preset?: "light" | "boxed" | "bold" | "striped";
       /**
-       * @description Шрифт: без засечек или с засечками
+       * @description Устарело (ДОК-13): ничего не меняет и не показывается, значение не принимается и не читается
        * @enum {string}
        */
       font_family?: "sans" | "serif";
@@ -12422,7 +12491,7 @@ export interface components {
       is_active?: boolean;
     };
     /**
-     * @description Вид шаблона документа
+     * @description Вид шаблона документа. `letter`, `report` и `custom` устарели (ДОК-13): новые шаблоны таких видов не создаются (ответ 400 `TEMPLATE_KIND_INVALID`), значения остаются только у ранее созданных шаблонов компании.
      * @enum {string}
      */
     DocumentTemplateKind:
@@ -12455,6 +12524,7 @@ export interface components {
     };
     DocumentTemplateIn: {
       name: string;
+      /** @description Вид обязателен для нового шаблона: без него (или с устаревшим видом) ERP отвечает 400 `TEMPLATE_KIND_INVALID`. */
       kind?: components["schemas"]["DocumentTemplateKind"];
       body_html?: string;
       is_active?: boolean;
@@ -16739,6 +16809,46 @@ export interface components {
       partner: boolean;
       /** @description Организация — адресат писем без сделок (госорган, банк), заведена из письма */
       organization: boolean;
+    };
+    /** @enum {string} */
+    CounterpartyPickRole: "client" | "supplier" | "manufacturer" | "partner" | "organization";
+    /** @description Строка поля выбора контрагента (ЕД-6) */
+    CounterpartyPick: {
+      id: components["schemas"]["CompanyItemRef"];
+      name: string;
+      inn: string | null;
+      /** @description Название страны */
+      country: string | null;
+      roles: components["schemas"]["CounterpartyRoles"];
+      /** @description Клиент CRM, с которым связана компания */
+      crm_client_id: number | null;
+      /** @description Общая почта компании */
+      email: string | null;
+    };
+    CounterpartyPickList: {
+      items: components["schemas"]["CounterpartyPick"][];
+    };
+    CounterpartyPickIn: {
+      name: string;
+      inn?: string | null;
+      /** @description Страна из справочника `CatalogLookups.countries` */
+      country_id?: number | null;
+      address?: string | null;
+      /**
+       * @default organization
+       * @enum {string}
+       */
+      role: "organization" | "supplier" | "manufacturer";
+    };
+    CounterpartyPersonPick: {
+      id: string;
+      name: string;
+      position: string | null;
+      email: string | null;
+      is_primary: boolean;
+    };
+    CounterpartyPersonPickList: {
+      items: components["schemas"]["CounterpartyPersonPick"][];
     };
     CounterpartyCardPerson: {
       id: components["schemas"]["CompanyItemRef"];
@@ -28223,6 +28333,29 @@ export interface operations {
       503: components["responses"]["BackendUnavailable"];
     };
   };
+  listEdsSigners: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Подписанты */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["EdsStaffList"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
   listSigningAuthorities: {
     parameters: {
       query?: {
@@ -31410,6 +31543,102 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["CounterpartyContacts"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  searchCounterparties: {
+    parameters: {
+      query?: {
+        /** @description Часть названия или ИНН */
+        q?: string;
+        /** @description Роль-подсказка: компании с ней идут выше */
+        role?: components["schemas"]["CounterpartyPickRole"];
+        limit?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Строки выбора */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CounterpartyPickList"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  createCounterparty: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CounterpartyPickIn"];
+      };
+    };
+    responses: {
+      /** @description Контрагент заведён */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CounterpartyPick"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      /** @description `CONFLICT` (`details.reason = company_exists`, `details.existing_id`) — такая компания уже есть */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  listCounterpartyPickerPeople: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: components["schemas"]["CompanyItemRef"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Люди компании, главный контакт первым */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CounterpartyPersonPickList"];
         };
       };
       401: components["responses"]["SessionExpired"];

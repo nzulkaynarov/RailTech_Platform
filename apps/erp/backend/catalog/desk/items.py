@@ -427,10 +427,12 @@ def catalog_price(product) -> dict:
 class ItemError(Exception):
     """Отказ проверки: `code` — машинный код ответа `{"detail": КОД}`."""
 
-    def __init__(self, code: str, field: str | None = None):
+    def __init__(self, code: str, field: str | None = None, extra: dict | None = None):
         super().__init__(code)
         self.code = code
         self.field = field
+        #: Дополнительные ключи ответа рядом с `detail` (например, `existing_id` у `COMPANY_EXISTS`)
+        self.extra = extra or {}
 
 
 def parse_vat(value):
