@@ -845,6 +845,8 @@ export const getGetNotificationSettingsResponseMock = (
   telegram_linked: faker.datatype.boolean(),
   notify_leads: faker.datatype.boolean(),
   notify_system: faker.datatype.boolean(),
+  notify_decisions: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
+  notify_tasks: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
   delivery_failed_at: faker.helpers.arrayElement([
     faker.date.past().toISOString().slice(0, 19) + "Z",
     undefined,
@@ -858,6 +860,8 @@ export const getUpdateNotificationSettingsResponseMock = (
   telegram_linked: faker.datatype.boolean(),
   notify_leads: faker.datatype.boolean(),
   notify_system: faker.datatype.boolean(),
+  notify_decisions: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
+  notify_tasks: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
   delivery_failed_at: faker.helpers.arrayElement([
     faker.date.past().toISOString().slice(0, 19) + "Z",
     undefined,

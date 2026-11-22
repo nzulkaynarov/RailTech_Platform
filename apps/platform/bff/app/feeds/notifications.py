@@ -177,6 +177,22 @@ def _crm_object(row: dict[str, Any]) -> ObjectRef | None:
         if not isinstance(document_id, str) or not document_id:
             return None
         return ObjectRef(kind="memo", number=number, path=outgoing_document_path(document_id))
+    if row.get("object_kind") == "approval":
+        # ГЛ-2: КП на одобрение или шаг подписи коммерческого документа — маршрут без документа EDS
+        route_id = row.get("object_id")
+        if not isinstance(route_id, str) or not route_id:
+            return None
+        if row.get("kind") == "eds.approve_quote":
+            return ObjectRef(
+                kind="quote",
+                number=number,
+                path=f"/eds/drafts/{quote(number, safe='')}?panel=open&tab=approve",
+            )
+        return ObjectRef(
+            kind="contract",
+            number=number,
+            path=f"/dashboard/queue?signing={quote(route_id, safe='')}",
+        )
     if row.get("object_kind") != "ticket":
         return None
     segment = quote(number, safe="")
