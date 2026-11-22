@@ -12332,6 +12332,7 @@ export interface components {
     };
     DocumentTemplateIn: {
       name: string;
+      /** @description Вид обязателен для нового шаблона: без него (или с устаревшим видом) ERP отвечает 400 `TEMPLATE_KIND_INVALID`. */
       kind?: components["schemas"]["DocumentTemplateKind"];
       body_html?: string;
       is_active?: boolean;

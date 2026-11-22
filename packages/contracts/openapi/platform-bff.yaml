@@ -21682,7 +21682,10 @@ components:
           minLength: 1
           maxLength: 255
         kind:
-          $ref: '#/components/schemas/DocumentTemplateKind'
+          allOf:
+            - $ref: '#/components/schemas/DocumentTemplateKind'
+          description: >-
+            Вид обязателен для нового шаблона: без него (или с устаревшим видом) ERP отвечает 400 `TEMPLATE_KIND_INVALID`.
         body_html:
           type: string
         is_active:

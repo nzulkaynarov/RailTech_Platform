@@ -28352,8 +28352,7 @@ components:
         kind:
           type: string
           minLength: 1
-          default: CUSTOM
-          description: Код вида шаблона; по умолчанию CUSTOM
+          description: 'Код вида шаблона: CONTRACT, INVOICE, ACT, RECEIPT, DELIVERY_NOTE; без вида — 400 TEMPLATE_KIND_INVALID'
         body_html:
           type: string
           maxLength: 100000

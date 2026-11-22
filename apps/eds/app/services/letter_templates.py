@@ -154,7 +154,7 @@ BUILTINS: Final[dict[str, dict[str, Any]]] = {
                     "",
                     "Şartnoma doirasidagi bitimda majburiyatlar bajarilmagani aniqlandi.",
                     "",
-                    "Buzilişlarni maqul muddatda bartaraf etişingizni talab qilamiz.",
+                    "Buzilişlarni maʼqul muddatda bartaraf etişingizni talab qilamiz.",
                     "",
                     "Hurmat bilan,",
                 ],
