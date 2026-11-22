@@ -11,6 +11,14 @@ const FUTURE = `${String(new Date().getFullYear() + 1)}-01-15`;
 const ORDER = `ЗП-${String(new Date().getFullYear())}-029`;
 const ORDER_PATH = `/erp/stock/${encodeURIComponent(ORDER)}`;
 
+/** Галочка (`StepSections`): в кружке svg, и шаг не помечен «нужно исправить» (там тоже svg). */
+function tickOf(head: HTMLElement): boolean {
+  return (
+    head.querySelector(".pf-fstep-badge svg") !== null &&
+    head.closest("li")?.getAttribute("data-invalid") === null
+  );
+}
+
 async function openStock(email: string, view = "") {
   signIn(email);
   renderAt(`/erp/stock${view ? `?view=${view}` : ""}`);
@@ -387,6 +395,32 @@ describe("Склад · приёмка и отгрузки", () => {
     expect(screen.getByRole("textbox", { name: /Номер заявки|Заявка|Проект/ })).toHaveValue(
       "ПР-2026-099",
     );
+  });
+
+  it("Х-18: шаг «Строки» без количества не получает галочку; с количеством — получает", async () => {
+    signIn("supply@demo.example");
+    renderAt("/erp/stock/new");
+    await screen.findByRole("heading", { level: 1, name: "Новый заказ партнёру" });
+    const page = document.body;
+    fireEvent.click(screen.getByRole("button", { name: /^Строки/, expanded: false }));
+    fireEvent.mouseDown(within(page).getByRole("combobox", { name: "Товар, строка 1" }));
+    fireEvent.change(within(page).getByRole("combobox", { name: "Товар, строка 1" }), {
+      target: { value: "перевод" },
+    });
+    fireEvent.click(
+      await screen.findByText(/Перевод стрелочный Р65 марки 1\/11/, {
+        selector: ".ant-select-item-option-content",
+      }),
+    );
+    const lines = () => screen.getByRole("button", { name: /^Строки/ });
+    fireEvent.click(screen.getByRole("button", { name: /^Партнёр и способ/, expanded: false }));
+    expect(tickOf(lines())).toBe(false); // позиция выбрана, количества нет — форма это не пропустит
+    fireEvent.click(lines());
+    fireEvent.change(within(page).getByRole("spinbutton", { name: "Количество, строка 1" }), {
+      target: { value: "3" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /^Партнёр и способ/, expanded: false }));
+    expect(tickOf(lines())).toBe(true);
   });
 
   it("непроект (заявка ЗВ) не отгружается: понятный отказ", async () => {

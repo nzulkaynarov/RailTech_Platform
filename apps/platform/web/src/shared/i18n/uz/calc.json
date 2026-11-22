@@ -68,7 +68,10 @@
     "readOnly": "Faqat ko‘rish.",
     "notStarted": {
       "title": "Hisob-kitob hali boshlanmagan",
-      "textLines": "Arizada {{count}} ta qator bor. Ularni hisob-kitobga o‘tkazing, keyin qatorlarni qo‘shing va katalog bilan solishtiring.",
+      "textLines_one": "Arizada {{count}} ta qator bor. Ularni hisob-kitobga o‘tkazing, keyin qatorlarni qo‘shing va katalog bilan solishtiring.",
+      "textLines_few": "Arizada {{count}} ta qator bor. Ularni hisob-kitobga o‘tkazing, keyin qatorlarni qo‘shing va katalog bilan solishtiring.",
+      "textLines_many": "Arizada {{count}} ta qator bor. Ularni hisob-kitobga o‘tkazing, keyin qatorlarni qo‘shing va katalog bilan solishtiring.",
+      "textLines_other": "Arizada {{count}} ta qator bor. Ularni hisob-kitobga o‘tkazing, keyin qatorlarni qo‘shing va katalog bilan solishtiring.",
       "textEmpty": "Arizada qatorlar yo‘q, faqat matn. Hisob-kitobni boshlang va ariza matnini qatorlarga ajrating yoki ularni qo‘lda qo‘shing.",
       "action": "Hisob-kitobni boshlash",
       "noRights": "Hisob-kitobni «Hisob-kitob» bo‘limiga to‘liq ruxsati bor xodim boshlaydi."

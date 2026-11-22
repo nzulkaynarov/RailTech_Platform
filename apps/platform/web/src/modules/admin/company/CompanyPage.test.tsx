@@ -367,6 +367,28 @@ describe("Реквизиты и логотип", () => {
     expect(readCompanyMock().company.inn).toBe("123456789");
   });
 
+  it("Х-18: галочка шага «Компания» — только при ИНН из 9 цифр; «Контакты» — только при верной почте", async () => {
+    await openTab("details");
+    await screen.findByLabelText(/^ИНН/);
+    const head = (name: RegExp) => screen.getByRole("button", { name });
+    const ticked = (el: HTMLElement) =>
+      el.querySelector(".pf-fstep-badge svg") !== null &&
+      el.closest("li")?.getAttribute("data-invalid") === null;
+
+    type(/^ИНН/, "12");
+    fireEvent.click(head(/^Контакты/));
+    expect(ticked(head(/^Компания/))).toBe(false);
+
+    fireEvent.click(head(/^Компания/));
+    type(/^ИНН/, "123456789");
+    fireEvent.click(head(/^Контакты/));
+    expect(ticked(head(/^Компания/))).toBe(true);
+
+    type("Почта компании", "not-an-email");
+    fireEvent.click(head(/^Компания/));
+    expect(ticked(head(/^Контакты/))).toBe(false);
+  });
+
   it("логотип: загрузка файла и удаление", async () => {
     await openTab("details");
     const input = await screen.findByLabelText("Выбрать файл: Логотип компании");
