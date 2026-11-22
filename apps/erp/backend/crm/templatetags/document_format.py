@@ -70,15 +70,18 @@ def money_words(value, currency_code=BASE_CURRENCY):
 @register.filter
 def qty(value, unit=None):
     """`{{ item.quantity|qty:item.unit }}` → `«10 шт.»` with a non-breaking space; bare number if
-    no unit. Integers print without a trailing «.0»; fractional quantities keep their decimals."""
+    no unit. Integers print without a trailing «.0»; fractional quantities keep their decimals;
+    thousands are grouped with a non-breaking space like `money` («20 000 шт.»)."""
     amount = _to_decimal(value)
     if amount is None:
         number = _DASH
     elif amount == amount.to_integral_value():
-        number = f"{int(amount)}"
+        number = f"{int(amount):,}".replace(",", NBSP)
     else:
-        # Дробное количество (ADR-0027 п. 9) — с запятой, как в документах на русском: «12,5 т».
-        number = format(amount.normalize(), "f").replace(".", ",")
+        # Дробное количество (ADR-0027 п. 9) — с запятой, как в документах на русском: «12,5 т»; тысячи — как в money.
+        whole, _, frac = format(amount.normalize(), "f").partition(".")
+        sign = "-" if whole.startswith("-") else ""
+        number = f"{sign}{int(whole.lstrip('-')):,}".replace(",", NBSP) + f",{frac}"
     if unit:
         return f"{number}{NBSP}{unit}"
     return number

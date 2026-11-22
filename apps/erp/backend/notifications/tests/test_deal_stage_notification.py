@@ -29,6 +29,11 @@ def test_deal_stage_change_notifies_the_client_once(deal, django_user_model):
     deal.stage = DealStage.objects.get_or_create(code=DealStageCode.CALCULATING, defaults={"name": "Расчёт"})[0]
     deal.save()
     assert Notification.objects.filter(user=client, event_code="deal.stage_changed").count() == 1
+    from notifications.tests.human_text import assert_human_text
+
+    message = Notification.objects.get(user=client, event_code="deal.stage_changed").message
+    assert_human_text(message)  # СЦ-7: номер сделки, не #id
+    assert deal.number and deal.number in message
     deal.save()  # стадия не менялась — второго уведомления нет
     assert Notification.objects.filter(user=client, event_code="deal.stage_changed").count() == 1
 

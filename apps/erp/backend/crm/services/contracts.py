@@ -6,6 +6,7 @@ from accounts.models import CustomUser
 from core.audit import log_admin_action
 from core.currency import BASE_CURRENCY
 from crm.services.pdf_storage import save_rendered_pdf
+from notifications.text_format import deal_ref
 
 from ..constants import ContractStatusCode, QuoteStatusCode
 from ..models import ActivityLog, Quote
@@ -167,7 +168,7 @@ def _notify_contract_pending(contract) -> None:
     # N2: the contract needs BOTH signatures (client + seller), so at PENDING_CLIENT each party's
     # OWN signature is what's outstanding — say «требуется ВАША подпись» per recipient instead of
     # the ambiguous «требуется подпись сторон» (which left neither side knowing who has to act).
-    deal_ref = contract.deal.title or f"#{contract.deal_id}"
+    deal_name = contract.deal.title or deal_ref(contract.deal)
     for recipient in {contract.deal.client, _contract_seller_recipient(contract)}:
         if recipient is None:
             continue
@@ -175,11 +176,11 @@ def _notify_contract_pending(contract) -> None:
             user=recipient,
             type=info,
             title="Требуется ваша подпись",
-            message=f"Договор {contract.number} по сделке «{deal_ref}» готов — требуется ваша подпись.",
+            message=f"Договор {contract.number} по сделке «{deal_name}» готов — требуется ваша подпись.",
             link="/crm/deals",
             deal=contract.deal,
             event_code="contract.signature_required",
-            event_params={"number": contract.number, "deal_ref": deal_ref},
+            event_params={"number": contract.number, "deal_ref": deal_name},
         )
         push_notification_ws(notif)
 
@@ -508,7 +509,7 @@ def _notify_contract_signed(contract) -> None:
             user=recipient,
             type=info,
             title="Договор подписан",
-            message=f"Договор {contract.number} по сделке #{contract.deal_id} подписан обеими сторонами",
+            message=f"Договор {contract.number} по сделке {deal_ref(contract.deal)} подписан обеими сторонами",
             link="/crm/deals",
             deal=contract.deal,
             event_code="contract.signed",
