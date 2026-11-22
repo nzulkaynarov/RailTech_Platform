@@ -30,7 +30,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
       en: 'How to accept or reject a commercial quote?',
     },
     summary: {
-      ru: 'Порядок подтверждения КП одноразовым кодом из SMS/Telegram/E-mail.',
+      ru: 'Порядок подтверждения КП одноразовым кодом из письма (или из Telegram, если он подключён).',
       uz: 'Bir martalik kod orqali tijorat taklifini tasdiqlash tartibi.',
       en: 'Procedure for confirming a quote via one-time code.',
     },

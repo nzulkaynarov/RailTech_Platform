@@ -471,7 +471,6 @@
       "quantityInvalid": "Quantity must be a positive number, e.g. 12 or 2.5.",
       "addLine": "Add line",
       "removeLine": "Remove line {{n}}",
-      "attachmentsLater": "For now send specifications and drawings to your manager — file upload to the cabinet is coming later.",
       "attachmentsTitle": "Attach files (specification, drawings, inquiry sheets)",
       "attachmentsHint": "PDF, DOCX, XLSX or images up to 10 MB",
       "uploadButton": "Upload file",
@@ -923,6 +922,7 @@
         "alreadyPartnerDesc": "Your company is an authorized partner. You have access to “My Products” to manage your catalog.",
         "toMyProducts": "Go to “My Products”",
         "applicationPendingDesc": "The application for partner status has been submitted and is under review by {{operator}}.",
+        "contractValue": "No. {{number}} dated {{date}}",
         "contractSentDesc": "The partner agreement has been prepared and sent to your company for review and signing.",
         "contractAgreedDesc": "The draft contract has been agreed by you and is awaiting digital signature by {{operator}} management.",
         "status": {
@@ -1177,7 +1177,7 @@
     },
     "partnerOrders": {
       "title": "Purchase orders",
-      "description": "Confirm purchase orders, submit advance shipping notices (ASN), and respond to price requests",
+      "description": "Confirm purchase orders, submit shipping notices, and respond to price requests",
       "posShort": "items",
       "tabsLabel": "Order and RFQ statuses",
       "ordersListLabel": "Purchase orders list",
@@ -1199,10 +1199,10 @@
       "historyTitle": "Activity log",
       "responseSent": "Your response was sent",
       "confirmSuccess": "Purchase order confirmed",
-      "shipSuccess": "Advance shipping notice (ASN) submitted",
+      "shipSuccess": "Shipping notice submitted",
       "respondSuccess": "Price request response submitted",
       "views": {
-        "orders": "Purchase Orders (PO)",
+        "orders": "Orders",
         "rfq": "Price Requests",
         "finance": "Turnover & Scorecard"
       },
@@ -1276,7 +1276,7 @@
       },
       "actions": {
         "confirm": "Confirm",
-        "ship": "Ship (ASN)",
+        "ship": "Ship",
         "view": "Open",
         "respond": "Respond",
         "sendResponse": "Send response",
@@ -1287,7 +1287,7 @@
         "confirmTitle": "Confirm purchase order",
         "confirmDescription": "Confirm that you can ship the listed items at the listed prices and enter the delivery date. If it differs from the order date, the order date stays: procurement receives a change request.",
         "expectedDateLabel": "Expected delivery date",
-        "shipTitle": "Advance shipping notice (ASN)",
+        "shipTitle": "Shipping notice",
         "shipDescription": "Provide shipping document details and carrier information so our warehouse can prepare for receiving.",
         "supplierDocLabel": "Supplier waybill / invoice number",
         "supplierDocPlaceholder": "e.g. WB-402 dated 08.11.2026",
