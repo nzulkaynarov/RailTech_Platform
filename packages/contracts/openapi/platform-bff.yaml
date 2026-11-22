@@ -19349,8 +19349,9 @@ components:
     EdsDocumentRow:
       type: object
       additionalProperties: false
-      required: [kind, id, number, subject, status, author, amount, due_date, created_at, openable, undelivered]
+      required: [kind, id, number, subject, status, author, amount, due_date, created_at, openable, undelivered, awaiting_signature]
       properties:
+        awaiting_signature: {type: boolean, description: 'Исходящее письмо передано на подпись и не подписано (СЦ-8): слово «На подписи» при `status = draft`; без передачи — «Черновик»; у остальных видов — `false`. Признак отдаёт EDS'}
         undelivered: {type: boolean, description: 'Исходящее письмо не ушло адресату (СЦ-1): строка остаётся в «Исходящих» с меткой «Не отправлено»'}
         kind: {$ref: '#/components/schemas/EdsRegistryKind'}
         id: {type: string, format: uuid}
@@ -19479,7 +19480,12 @@ components:
             черновик передан ему на регистрацию (P4, B-P8B-4)
         can_request_registration:
           type: boolean
-          description: Автор черновика письма без права регистрировать — может «Передать на регистрацию» делопроизводителю
+          description: Автор черновика письма с текстом, который сам подписать не может и ещё не передал, — может «Передать на подпись»
+        awaiting_signature:
+          type: boolean
+          description: |
+            Исходящее письмо передано на подпись и не подписано (СЦ-8): `status = draft` с отметкой передачи. Слово «На подписи»;
+            без передачи — «Черновик»; после подписи — `sent`. Признак отдаёт EDS, BFF его не вычисляет.
         signed_at:
           type: [string, 'null']
           format: date-time
@@ -22890,7 +22896,7 @@ components:
         state:
           type: string
           enum: [draft, registration_requested, registered]
-          description: '`draft` — черновик автора; `registration_requested` — передан делопроизводителю; `registered` — ИСХ зарегистрирован'
+          description: '`draft` — черновик автора; `registration_requested` — передан на подпись (признак `awaiting_signature` карточки); `registered` — ИСХ зарегистрирован'
         author: {$ref: '#/components/schemas/PersonRef'}
         mail:
           type: string

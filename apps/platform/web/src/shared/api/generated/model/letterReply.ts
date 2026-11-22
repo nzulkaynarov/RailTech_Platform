@@ -17,7 +17,7 @@ export interface LetterReply {
    */
   number: string | null;
   subject: string;
-  /** `draft` — черновик автора; `registration_requested` — передан делопроизводителю; `registered` — ИСХ зарегистрирован */
+  /** `draft` — черновик автора; `registration_requested` — передан на подпись (признак `awaiting_signature` карточки); `registered` — ИСХ зарегистрирован */
   state: LetterReplyState;
   author: PersonRef;
   /** Отправка адресату почтой по последней попытке: `none` — не отправлялось (черновик или ответ ушёл вне системы), `sending` — идёт, `sent` — отправлено, `failed` — не ушло (повтор — «Отправить адресату ещё раз», `POST /eds/documents/{id}/send`) */

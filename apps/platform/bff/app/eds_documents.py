@@ -265,6 +265,7 @@ class _RawDocument(BaseModel):
     verification_url: str | None = None
     dispatch_method: str | None = None
     signing: _RawSigning | None = None
+    awaiting_signature: bool = False
 
 
 class _RawStep(BaseModel):
@@ -290,6 +291,7 @@ class _RawListItem(BaseModel):
     due_date: str | None
     created_at: Any
     undelivered: bool = False
+    awaiting_signature: bool = False
 
 
 class _RawRegistryItem(BaseModel):
@@ -303,6 +305,7 @@ class _RawRegistryItem(BaseModel):
     links: dict[str, Any] | None = None
     amount: dict[str, Any] | None = None
     undelivered: bool = False
+    awaiting_signature: bool = False
 
 
 def _parse[T: BaseModel](model: type[T], body: Any, path: str) -> T:
@@ -392,6 +395,7 @@ async def present(
             "verification_code": raw.verification_code,
             "verification_url": raw.verification_url,
             "dispatch_method": raw.dispatch_method,
+            "awaiting_signature": raw.awaiting_signature,
             **_letter_flags(raw, me=me),
         }
     )
@@ -451,6 +455,7 @@ def documents_page(body: Any) -> EdsDocumentPage:
                     "created_at": item.created_at,
                     "openable": item.kind in DOCUMENT_KINDS,
                     "undelivered": item.undelivered,
+                    "awaiting_signature": item.awaiting_signature,
                 }
             )
         )
@@ -492,6 +497,7 @@ def registry_page(body: Any) -> EdsDocumentPage:
                     "openable": item.kind in DOCUMENT_KINDS,
                     "project_ref": _project_ref(item),
                     "undelivered": item.undelivered,
+                    "awaiting_signature": item.awaiting_signature,
                 }
             )
         )

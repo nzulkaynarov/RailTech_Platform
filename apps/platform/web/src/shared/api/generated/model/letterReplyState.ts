@@ -4,7 +4,7 @@
  */
 
 /**
- * `draft` — черновик автора; `registration_requested` — передан делопроизводителю; `registered` — ИСХ зарегистрирован
+ * `draft` — черновик автора; `registration_requested` — передан на подпись (признак `awaiting_signature` карточки); `registered` — ИСХ зарегистрирован
  */
 export type LetterReplyState = (typeof LetterReplyState)[keyof typeof LetterReplyState];
 

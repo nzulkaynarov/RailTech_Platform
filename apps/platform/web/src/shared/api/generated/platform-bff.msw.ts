@@ -2132,6 +2132,7 @@ export const getListEdsDocumentsResponseMock = (
   overrideResponse: Partial<Extract<EdsDocumentPage, object>> = {},
 ): EdsDocumentPage => ({
   items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    awaiting_signature: faker.datatype.boolean(),
     undelivered: faker.datatype.boolean(),
     kind: faker.helpers.arrayElement(Object.values(EdsRegistryKind)),
     id: faker.string.uuid(),
@@ -2440,6 +2441,7 @@ export const getCreateEdsDocumentResponseMock = (
   letter: faker.helpers.arrayElement([{ ...getCreateEdsDocumentResponseEdsLetterMock() }, null]),
   can_register: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
   can_request_registration: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
+  awaiting_signature: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
   signed_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
   signed_by: faker.helpers.arrayElement([{ ...getCreateEdsDocumentResponseEdsPersonMock() }, null]),
   signing_authority_id: faker.helpers.arrayElement([faker.string.uuid(), null]),
@@ -2742,6 +2744,7 @@ export const getGetEdsDocumentResponseMock = (
   letter: faker.helpers.arrayElement([{ ...getGetEdsDocumentResponseEdsLetterMock() }, null]),
   can_register: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
   can_request_registration: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
+  awaiting_signature: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
   signed_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
   signed_by: faker.helpers.arrayElement([{ ...getGetEdsDocumentResponseEdsPersonMock() }, null]),
   signing_authority_id: faker.helpers.arrayElement([faker.string.uuid(), null]),
@@ -3056,6 +3059,7 @@ export const getUpdateEdsDocumentResponseMock = (
   letter: faker.helpers.arrayElement([{ ...getUpdateEdsDocumentResponseEdsLetterMock() }, null]),
   can_register: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
   can_request_registration: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
+  awaiting_signature: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
   signed_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
   signed_by: faker.helpers.arrayElement([{ ...getUpdateEdsDocumentResponseEdsPersonMock() }, null]),
   signing_authority_id: faker.helpers.arrayElement([faker.string.uuid(), null]),
@@ -7094,6 +7098,7 @@ export const getRequestEdsDocumentRegistrationResponseMock = (
   ]),
   can_register: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
   can_request_registration: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
+  awaiting_signature: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
   signed_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
   signed_by: faker.helpers.arrayElement([
     { ...getRequestEdsDocumentRegistrationResponseEdsPersonMock() },
@@ -7420,6 +7425,7 @@ export const getWaiveEdsDocumentMailResponseMock = (
   letter: faker.helpers.arrayElement([{ ...getWaiveEdsDocumentMailResponseEdsLetterMock() }, null]),
   can_register: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
   can_request_registration: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
+  awaiting_signature: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
   signed_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
   signed_by: faker.helpers.arrayElement([
     { ...getWaiveEdsDocumentMailResponseEdsPersonMock() },
@@ -7737,6 +7743,7 @@ export const getSendEdsDocumentResponseMock = (
   letter: faker.helpers.arrayElement([{ ...getSendEdsDocumentResponseEdsLetterMock() }, null]),
   can_register: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
   can_request_registration: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
+  awaiting_signature: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
   signed_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
   signed_by: faker.helpers.arrayElement([{ ...getSendEdsDocumentResponseEdsPersonMock() }, null]),
   signing_authority_id: faker.helpers.arrayElement([faker.string.uuid(), null]),
@@ -8048,6 +8055,7 @@ export const getSignEdsDocumentResponseMock = (
   letter: faker.helpers.arrayElement([{ ...getSignEdsDocumentResponseEdsLetterMock() }, null]),
   can_register: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
   can_request_registration: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
+  awaiting_signature: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
   signed_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
   signed_by: faker.helpers.arrayElement([{ ...getSignEdsDocumentResponseEdsPersonMock() }, null]),
   signing_authority_id: faker.helpers.arrayElement([faker.string.uuid(), null]),
