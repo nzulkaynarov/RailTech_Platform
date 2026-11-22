@@ -817,3 +817,39 @@ tr > td.pf-col-num {
   color: var(--rt-color-primary-text);
   overflow-wrap: anywhere;
 }
+
+/* ЕД-7: «История» объекта с чипами-фильтрами по подчинённым документам */
+.pf-record-history-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.pf-record-history-chip {
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--rt-color-surface-border);
+  border-radius: 16px;
+  background: var(--rt-color-surface-background);
+  color: var(--rt-color-text-default);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.pf-record-history-chip[aria-pressed="true"] {
+  border-color: var(--rt-color-primary-default);
+  background: var(--rt-color-primary-bg);
+  color: var(--rt-color-primary-text);
+  font-weight: 500;
+}
+.pf-record-history-note {
+  display: block;
+  margin-top: 2px;
+  color: var(--rt-color-text-secondary);
+  font-size: 13px;
+}
+
+/* Карточка с боковым окном поверх (ЕД-7): окно не закрывает правый край центра — кнопки действий остаются доступны */
+.pf-overlay-aware {
+  padding-inline-end: max(0px, calc(var(--pf-overlay-inset, 0px) - 24px + 16px));
+}

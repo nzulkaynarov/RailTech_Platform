@@ -1,7 +1,9 @@
 import type { TFunction } from "i18next";
 
+import type { RecordHistoryEntry } from "../../../shared/ui/RecordHistory";
 import type {
   ProjectAct,
+  ProjectCard,
   ProjectContract,
   ProjectJournalEntry,
 } from "../../../shared/api/generated/model";
@@ -49,4 +51,22 @@ export function scanProblem(file: Pick<File, "name" | "size" | "type">): ScanPro
   const okName = SCAN_EXTENSIONS.some((ext) => name.endsWith(ext));
   const okType = file.type === "" || SCAN_TYPES.has(file.type);
   return okName && okType ? null : "wrongType";
+}
+
+/** Запись журнала проекта в общем виде «Истории» (`RecordHistory`); документ записи — ключ чипа-фильтра. */
+export function projectHistoryEntries(
+  t: TFunction<"projects">,
+  card: ProjectCard,
+): RecordHistoryEntry[] {
+  return card.journal.map((entry) => ({
+    at: entry.at,
+    by: entry.actor_name,
+    action: journalText(t, entry),
+    comment: entry.reason ? t("journal.reason", { reason: entry.reason }) : null,
+    onBehalf: entry.on_behalf
+      ? { channel: entry.on_behalf.channel, person: entry.on_behalf.counterparty_person }
+      : null,
+    filter: entry.document && entry.document !== "project" ? entry.document : null,
+    number: entry.number,
+  }));
 }

@@ -101,9 +101,7 @@
       "manager": "Manager",
       "responsible": "Owner",
       "opened": "Opened",
-      "quote": "From quote",
-      "due": "Due",
-      "clientStatus": "Client sees"
+      "due": "Due"
     },
     "readOnly": "Read only",
     "readOnlyHint": "View only.",
@@ -177,8 +175,7 @@
       "proofFile": "File"
     },
     "journal": {
-      "title": "Document log",
-      "empty": "No entries yet. Here you will see who did what with the contract, invoice and act, and when."
+      "title": "Project history"
     },
     "delivery": {
       "in_transit": "Sent, in transit",

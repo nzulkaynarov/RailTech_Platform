@@ -40,7 +40,14 @@ import { useAuth } from "../auth/useAuth";
 import { AvatarMenu } from "./AvatarMenu";
 import { CreateMenu } from "./CreateMenu";
 import { PanelContent } from "./PanelContent";
-import { usePanelForced, usePanelSlotHost } from "./panelSlotContext";
+import {
+  effectivePanelTab,
+  hasBuiltInTab,
+  usePanelClaims,
+  usePanelForced,
+  usePanelSlotHost,
+  visiblePanelTabs,
+} from "./panelSlotContext";
 import { usePanels } from "./usePanels";
 import { useDockFits, useViewport } from "./useViewport";
 import { useOperatorLogo, useProductName } from "../../shared/lib/useProductName";
@@ -78,7 +85,17 @@ export function AppShell() {
   const ownPanels = usePanels(me.id, match?.section, Boolean(match?.objectId));
   // Форма в окне (`FormSheet`) открывает его сама и на «Карточке», не меняя адрес и выбор пользователя.
   const panelForced = usePanelForced();
-  const panels = panelForced ? { ...ownPanels, panelOpen: true, tab: "card" } : ownPanels;
+  const forcedPanels = panelForced ? { ...ownPanels, panelOpen: true, tab: "card" } : ownPanels;
+  // ЕД-7: вкладки, которые никто не наполняет, не показываются; пропавшая вкладка уступает место первой видимой.
+  const claimedTabs = usePanelClaims();
+  const visibleTabs = visiblePanelTabs(forcedPanels.tabs, claimedTabs, (tab) =>
+    hasBuiltInTab(match?.module.code, match?.section.key, tab),
+  );
+  const panels = {
+    ...forcedPanels,
+    tabs: visibleTabs,
+    tab: effectivePanelTab(forcedPanels.tab, visibleTabs),
+  };
   const setupKnown = useSetupKnown();
   const setupBannerLate = useLateSetupBanner(setupKnown);
   const { attach: attachPanelSlot, claimed: panelClaimed } = usePanelSlotHost(panels.tab);

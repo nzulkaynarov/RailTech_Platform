@@ -101,9 +101,7 @@
       "manager": "Menejer",
       "responsible": "Yuritadi",
       "opened": "Ochilgan",
-      "quote": "TT dan",
-      "due": "Muddat",
-      "clientStatus": "Mijozga ko‘rinadi"
+      "due": "Muddat"
     },
     "readOnly": "Faqat o‘qish",
     "readOnlyHint": "Faqat ko‘rish.",
@@ -177,8 +175,7 @@
       "proofFile": "Fayl"
     },
     "journal": {
-      "title": "Hujjatlar jurnali",
-      "empty": "Yozuvlar hali yo‘q. Bu yerda shartnoma, hisob va dalolatnoma bilan kim, qachon nima qilgani ko‘rinadi."
+      "title": "Loyiha tarixi"
     },
     "delivery": {
       "in_transit": "Jo‘natildi, yo‘lda",
