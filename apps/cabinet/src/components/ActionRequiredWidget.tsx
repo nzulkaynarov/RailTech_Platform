@@ -19,7 +19,7 @@ import { ToneBadge } from '@/components/StatusBadge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useActionRequired } from '@/hooks/useActionRequired';
-import { formatMoney, formatQuantity } from '@/lib/format';
+import { formatDecimal, formatMoney, formatQuantity } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { useCanAct, useHasModule } from '@/session/useMe';
 
@@ -120,7 +120,7 @@ export function ActionRequiredWidget({
                 icon={Truck}
                 tone="warning"
                 badge={t('widgets.actionRequired.partnerOrderBadge')}
-                aside={<Amount>{order.currency ? formatMoney({ amount: order.total_amount, currency: order.currency }) : order.total_amount}</Amount>}
+                aside={<Amount>{order.currency ? formatMoney({ amount: order.total_amount, currency: order.currency }) : formatDecimal(order.total_amount)}</Amount>}
                 to={`/partner/orders?orderId=${order.id}`}
                 label={order.number}
               >
