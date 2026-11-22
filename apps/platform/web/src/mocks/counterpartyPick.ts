@@ -4,7 +4,9 @@ import type {
   CounterpartyPersonPick,
   CounterpartyPick,
   CounterpartyPickIn,
+  CounterpartyRoleIn,
 } from "../shared/api/generated/model";
+import { SUPPLIERS } from "./fixtures/stock";
 
 /**
  * Поле выбора компании и человека (ЕД-6) на моках: ERP `parties/organizations/` и `parties/people/`. Поиск по названию
@@ -58,6 +60,32 @@ const COMPANIES: CounterpartyPick[] = [
   },
 ];
 
+/** Компания без роли: поиск её не показывает, а ИНН у неё занят — «Завести» по этому ИНН отдаёт её в 409 */
+const HIDDEN: CounterpartyPick[] = [
+  {
+    id: "14",
+    name: "ООО «Скрытая Компания»",
+    inn: "300000999",
+    country: "Узбекистан",
+    roles: roles({}),
+    crm_client_id: null,
+    email: null,
+  },
+];
+
+// поставщики склада (id совпадают с заказами и запросами цены на моках)
+COMPANIES.push(
+  ...SUPPLIERS.map((s): CounterpartyPick => ({
+    id: String(s.id),
+    name: s.name,
+    inn: s.inn,
+    country: "Узбекистан",
+    roles: roles({ supplier: true }),
+    crm_client_id: null,
+    email: s.email,
+  })),
+);
+
 const PEOPLE: Record<string, CounterpartyPersonPick[]> = {
   "7": [
     {
@@ -104,16 +132,17 @@ export const counterpartyPickHandlers = [
     const body = (await request.json()) as CounterpartyPickIn;
     // как в ERP: дубль по ИНН, а без ИНН — по названию без учёта регистра
     const name = body.name.trim().toLocaleLowerCase("ru");
+    const all = [...COMPANIES, ...HIDDEN];
     const twin = body.inn
-      ? COMPANIES.find((row) => row.inn === body.inn)
-      : COMPANIES.find((row) => row.name.toLocaleLowerCase("ru") === name);
+      ? all.find((row) => row.inn === body.inn)
+      : all.find((row) => row.name.toLocaleLowerCase("ru") === name);
     if (twin) {
       return HttpResponse.json(
         {
           code: "CONFLICT",
           message: "Такая компания уже есть.",
           source: "erp",
-          details: { reason: "company_exists", existing_id: twin.id },
+          details: { reason: "company_exists", existing_id: twin.id, existing: twin },
         },
         { status: 409 },
       );
@@ -130,6 +159,19 @@ export const counterpartyPickHandlers = [
     COMPANIES.push(created);
     return HttpResponse.json(created, { status: 201 });
   }),
+  http.post("*/people/counterparties/:id/roles", async ({ params, request }) => {
+    // как в ERP: компания без роли вне границ контрагентов — для `roles` такой карточки нет
+    const row = COMPANIES.find((company) => company.id === String(params["id"]));
+    if (!row) {
+      return HttpResponse.json(
+        { code: "NOT_FOUND", message: "Не найдено.", source: "erp" },
+        { status: 404 },
+      );
+    }
+    const body = (await request.json()) as CounterpartyRoleIn;
+    row.roles = { ...row.roles, [body.role]: body.on };
+    return HttpResponse.json(row);
+  }),
   http.get("*/people/counterparties/:id/people", ({ params }) => {
     const id = String(params["id"]);
     if (!COMPANIES.some((row) => row.id === id)) {
@@ -144,7 +186,7 @@ export const counterpartyPickHandlers = [
 
 /** Компания поля выбора по id — документы и письма на моках берут из неё название и ИНН */
 export function pickedCompanyById(id: string): CounterpartyPick | undefined {
-  return COMPANIES.find((row) => row.id === id);
+  return [...COMPANIES, ...HIDDEN].find((row) => row.id === id);
 }
 
 /** Люди компании поля выбора */

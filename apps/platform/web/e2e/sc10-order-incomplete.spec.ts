@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 
+import { chooseOrAddAddressee } from "./support/fields";
 import { loginAndWait, settledScreenshot, spaGoto } from "./support/app";
 import { expectNoViolations } from "./support/axe";
 
@@ -18,8 +19,7 @@ for (const width of WIDTHS) {
       page.getByRole("heading", { level: 1, name: "Новый заказ партнёру" }),
     ).toBeVisible();
     const create = page.getByRole("main");
-    await create.getByRole("combobox", { name: "Партнёр" }).click();
-    await page.locator(".ant-select-dropdown").getByTitle("ООО «Вымышленная Сталь»").click();
+    await chooseOrAddAddressee(page, "ООО «Вымышленная Сталь»", "Партнёр");
     await create.getByRole("button", { name: /^Строки/, expanded: false }).click();
     const product = create.getByRole("combobox", { name: "Товар, строка 1" });
     await product.click();

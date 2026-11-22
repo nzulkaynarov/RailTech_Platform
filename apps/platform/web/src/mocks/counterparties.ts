@@ -171,7 +171,8 @@ export const counterpartyHandlers = [
     if (denied) return denied;
     const id = String(params["id"]);
     const before = cardOf(id);
-    if (!before) return notFound();
+    // не карточка каталога — компания поля выбора (`counterpartyPick.ts`), её роль ставит следующий обработчик
+    if (!before) return;
     const body = (await request.json()) as CounterpartyRoleIn;
     const state = readErpCatalog();
     const inUse =

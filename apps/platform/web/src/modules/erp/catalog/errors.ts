@@ -96,6 +96,8 @@ const REASONS = new Set([
  */
 export function catalogErrorText(t: TFunction, error: unknown): string {
   const base = "catalog:errors.";
+  // уже готовый текст отказа (роль компании при сохранении формы)
+  if (typeof error === "string") return error;
   if (!(error instanceof ApiError)) return t(`${base}DEFAULT`);
   const reason = error.details["reason"];
   if (typeof reason === "string" && REASONS.has(reason)) return t(`${base}reason.${reason}`);

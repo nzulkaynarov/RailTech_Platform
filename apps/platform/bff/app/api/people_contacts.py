@@ -555,8 +555,28 @@ async def create_counterparty(authed: PickerWriter, body: CounterpartyPickIn) ->
         sent["country_id"] = body.country_id
     if body.address:
         sent["legal_address"] = body.address
-    card = await ErpCompany(authed.call).data("POST", "parties/organizations/", json=sent)
+    try:
+        card = await ErpCompany(authed.call).data("POST", "parties/organizations/", json=sent)
+    except PlatformError as exc:
+        _normalise_existing(exc)
+        raise
     return to_pick(card)
+
+
+def _normalise_existing(exc: PlatformError) -> None:
+    """Дубль по ИНН: строка выбора уже существующей компании — в `details.existing`.
+
+    Компания без роли поиску и карточке ERP не видна, поэтому строку кладёт сама ERP в тело отказа;
+    здесь она приводится к виду строки выбора. Строки нет — остаётся только `existing_id`.
+    """
+    details = exc.body.details or {}
+    row = details.get("existing")
+    if exc.status_code != 409 or details.get("reason") != "company_exists" or row is None:
+        return
+    if isinstance(row, dict) and row.get("name"):
+        details["existing"] = to_pick(row).model_dump()
+    else:
+        details.pop("existing")
 
 
 @router.get(
