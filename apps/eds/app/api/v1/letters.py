@@ -12,6 +12,7 @@ from app.api.deps import get_bus, get_session, require_permission
 from app.models import Employee
 from app.schemas.letters import (
     CoExecutorIn,
+    EmployeeChoice,
     EmployeeList,
     ExtensionDecisionIn,
     ExtensionRequestIn,
@@ -38,7 +39,16 @@ from app.schemas.letters import (
 )
 from app.schemas.pagination import Cursor, Limit
 from app.security.permissions import EdsPermission as P
-from app.services import dictionaries, idempotency, instructions, letter_dedup, letters, letters_read, reply
+from app.services import (
+    dictionaries,
+    idempotency,
+    instructions,
+    letter_dedup,
+    letters,
+    letters_read,
+    reply,
+    signing_resolve,
+)
 
 router = APIRouter(prefix="/api/v1", tags=["letters"])
 
@@ -348,3 +358,12 @@ StaffReader = Annotated[
 @router.get("/employees", response_model=EmployeeList, operation_id="listActiveEmployees")
 async def list_active_employees(_: StaffReader, session: Session) -> EmployeeList:
     return await instructions.active_employees(session)
+
+
+@router.get("/employees/signers", response_model=EmployeeList, operation_id="listLetterSigners")
+async def list_letter_signers(_: StaffReader, session: Session) -> EmployeeList:
+    """Кого выбрать подписантом исходящего письма (ЕД-6): держатели действующего полномочия на письма."""
+    options = await signing_resolve.letter_signer_options(session, clock.company_date(clock.now()))
+    return EmployeeList(
+        items=[EmployeeChoice(crm_user_id=o.crm_user_id, full_name=o.full_name, position=o.position) for o in options]
+    )

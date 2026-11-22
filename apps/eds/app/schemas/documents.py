@@ -54,6 +54,8 @@ class OutgoingLetterIn(Strict):
     recipient_email: Annotated[str | None, Field(max_length=254, pattern=EMAIL_PATTERN)] = None
     signatory_name: Annotated[str | None, Field(max_length=255)] = None
     signatory_position: Annotated[str | None, Field(max_length=255)] = None
+    #: ЕД-6: выбранный подписант (сотрудник с правом подписи); имя и должность по умолчанию — из справочника
+    signer_crm_user_id: int | None = None
 
 
 class DocumentPdf(BaseModel):
@@ -86,6 +88,7 @@ class OutgoingLetter(BaseModel):
     recipient_email: str | None
     signatory_name: str | None
     signatory_position: str | None
+    signer_crm_user_id: int | None = None
     pdf: DocumentPdf | None
     mailings: list[DocumentMailing]
     registration_requested: RegistrationRequest | None

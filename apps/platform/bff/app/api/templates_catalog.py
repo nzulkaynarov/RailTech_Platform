@@ -1,8 +1,10 @@
 """Каталог шаблонов всех доменов (план 2026-11-12 п. 2.7; исследование 2026-11-11
 «Документы и шаблоны» §3, TPL-1).
 
-Одна таблица «Настройки · Шаблоны»: шаблоны документов и писем ERP, резолюций EDS, быстрые
-ответы бота CRM и встроенный шаблон КП. BFF собирает список из API доменов от имени сотрудника,
+Одна таблица «Настройки · Шаблоны»: шаблоны документов и писем ERP, резолюций EDS и быстрые
+ответы бота CRM. Строки «КП» нет: у КП нет шаблона, а «Условия КП» — настройки (ДОК-13);
+строка вернётся с ДОК-16.
+BFF собирает список из API доменов от имени сотрудника,
 как ленты: источник без раздела у ролей не опрашивается, упавший — помечен в `sources`.
 Строка ведёт в нынешний редактор. Шаблоны хранит домен-владелец; общий ресурс `/templates` у
 доменов появится вместе с вариантами по языкам (TPL-2, TPL-4).
@@ -180,19 +182,6 @@ def _replies(payload: Any) -> list[TemplateRow]:
     return out
 
 
-#: КП пока собирает код ERP (условия — вкладка «Условия КП»): строка ведёт туда
-QUOTE = TemplateRow(
-    id="erp.quote:builtin",
-    kind="quote",
-    name="Коммерческое предложение",
-    domain="erp",
-    languages=["ru"],
-    origin="builtin",
-    active=True,
-    path="/admin/templates?tab=quote",
-)
-
-
 async def _none() -> list[TemplateRow]:
     return []
 
@@ -231,7 +220,7 @@ async def catalog(feed: Feed, access: Access) -> TemplateCatalog:
         source(resolutions, "eds", "/api/v1/resolution-templates", _resolutions),
         source(replies, "crm", "/api/v1/reply-templates", _replies),
     )
-    items = ([QUOTE] if company else []) + [row for part in parts for row in part]
+    items = [row for part in parts for row in part]
     return TemplateCatalog(items=items, sources=feed.sources)
 
 

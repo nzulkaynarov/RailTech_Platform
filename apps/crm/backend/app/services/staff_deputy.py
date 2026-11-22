@@ -16,8 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.bus import events as bus_events
 from app.domain import staff_profile as rules
 from app.domain.errors import ForbiddenError, NotFoundError, Reason, ValidationFailedError
-from app.domain.lead_access import WORK_ROLES
-from app.models.auth import Role, User, UserRole
+from app.models.auth import User
 from app.repositories import users as repo
 from app.security import audit
 from app.security.audit import Actor
@@ -53,13 +52,13 @@ class StaffDeputyService:
         self._clock = clock
 
     async def candidates(self, user_id: int) -> list[Candidate]:
-        """Коллеги, которые могут вести очередь: активные, с рабочей ролью CRM, не сам сотрудник."""
+        """Кого можно назначить: все активные сотрудники, кроме самого (ЕД-6).
+
+        Роль CRM не фильтр: задачи подписи и согласования уходят не только менеджерам;
+        объекты заместитель открывает по своим правам."""
         stmt = (
             select(User.id, User.full_name, User.position)
-            .join(UserRole, UserRole.user_id == User.id)
-            .join(Role, Role.id == UserRole.role_id)
-            .where(User.is_active.is_(True), User.id != user_id, Role.name.in_(WORK_ROLES))
-            .distinct()
+            .where(User.is_active.is_(True), User.id != user_id)
             .order_by(User.full_name, User.id)
         )
         async with self._sessions() as session:
@@ -78,10 +77,9 @@ class StaffDeputyService:
             except rules.ProfileValueError as exc:
                 raise invalid(exc) from exc
             deputy = await repo.get(session, deputy_user_id)
-            roles = set(await repo.roles_of(session, deputy_user_id)) if deputy else set()
-            if deputy is None or not deputy.is_active or not roles & WORK_ROLES:
+            if deputy is None or not deputy.is_active:
                 raise ValidationFailedError(
-                    "the deputy cannot work the queue",
+                    "the deputy is not an active employee",
                     reason=Reason.DEPUTY_NOT_COLLEAGUE,
                     field="deputy_user_id",
                 )

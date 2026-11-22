@@ -99,7 +99,7 @@ def letterhead_data(company, profile, user=None) -> Dict[str, Any]:
         "signatory_position": _text(profile.signatory_position, 255),
         "footer_text": _text(profile.footer_text, 2000),
         "accent_color": accent if len(accent) == 7 else "",
-        "font_family": profile.font_family if profile.font_family in ("sans", "serif") else "sans",
+        "font_family": "sans",  # ДОК-13: выбор шрифта удалён, поле события осталось для совместимости
         "logo": logo,
     }
     if omitted:

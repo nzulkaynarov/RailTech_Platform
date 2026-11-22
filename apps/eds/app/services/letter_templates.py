@@ -52,6 +52,130 @@ BUILTINS: Final[dict[str, dict[str, Any]]] = {
             ),
         },
     },
+    # ДОК-13: бывшие образцы ERP «Гарантийное письмо», «Сопроводительное письмо» и «Претензия» —
+    # теперь шаблоны писем на бланке
+    "guarantee_letter": {
+        "kind": "letter",
+        "name": "Гарантийное письмо",
+        "variants": {
+            "ru": _paragraphs(
+                "ru",
+                [
+                    "Гарантийное письмо",
+                    "",
+                    "Настоящим гарантируем оплату по сделке в полном объёме и в согласованные сроки.",
+                    "",
+                    "Обязательства соответствуют коммерческому предложению.",
+                    "",
+                    "С уважением,",
+                ],
+            ),
+            "uz": _paragraphs(
+                "uz",
+                [
+                    "Kafolat xati",
+                    "",
+                    "Uşbu xat bilan bitim böyiça tölovni töliq hajmda "
+                    "va kelişilgan muddatlarda amalga oşirişimizni kafolatlaymiz.",
+                    "",
+                    "Majburiyatlar tijorat taklifiga muvofiq keladi.",
+                    "",
+                    "Hurmat bilan,",
+                ],
+            ),
+            "en": _paragraphs(
+                "en",
+                [
+                    "Letter of guarantee",
+                    "",
+                    "We hereby guarantee payment under the deal in full and within the agreed terms.",
+                    "",
+                    "The obligations correspond to the commercial offer.",
+                    "",
+                    "Best regards,",
+                ],
+            ),
+        },
+    },
+    "cover_letter": {
+        "kind": "letter",
+        "name": "Сопроводительное письмо",
+        "variants": {
+            "ru": _paragraphs(
+                "ru",
+                [
+                    "Уважаемые коллеги!",
+                    "",
+                    "Направляем Вам комплект документов по сделке. Просим рассмотреть и подтвердить получение.",
+                    "",
+                    "С уважением,",
+                ],
+            ),
+            "uz": _paragraphs(
+                "uz",
+                [
+                    "Hurmatli hamkasblar!",
+                    "",
+                    "Bitim böyiça hujjatlar töplamini yuboramiz. "
+                    "Körib çiqişingizni va olinganini tasdiqlaşingizni söraymiz.",
+                    "",
+                    "Hurmat bilan,",
+                ],
+            ),
+            "en": _paragraphs(
+                "en",
+                [
+                    "Dear colleagues,",
+                    "",
+                    "We are sending you the set of documents for the deal. Please review them and confirm receipt.",
+                    "",
+                    "Best regards,",
+                ],
+            ),
+        },
+    },
+    "claim": {
+        "kind": "letter",
+        "name": "Претензия",
+        "variants": {
+            "ru": _paragraphs(
+                "ru",
+                [
+                    "Претензия",
+                    "",
+                    "В рамках сделки по договору нами выявлено неисполнение обязательств.",
+                    "",
+                    "Требуем устранить нарушения в разумный срок.",
+                    "",
+                    "С уважением,",
+                ],
+            ),
+            "uz": _paragraphs(
+                "uz",
+                [
+                    "Da’vo",
+                    "",
+                    "Şartnoma doirasidagi bitimda majburiyatlar bajarilmagani aniqlandi.",
+                    "",
+                    "Buzilişlarni maʼqul muddatda bartaraf etişingizni talab qilamiz.",
+                    "",
+                    "Hurmat bilan,",
+                ],
+            ),
+            "en": _paragraphs(
+                "en",
+                [
+                    "Claim",
+                    "",
+                    "Under the deal and the contract we have found a failure to perform obligations.",
+                    "",
+                    "We demand that the violations be remedied within a reasonable time.",
+                    "",
+                    "Best regards,",
+                ],
+            ),
+        },
+    },
     "memo": {
         "kind": "memo",
         "name": "Служебная записка",

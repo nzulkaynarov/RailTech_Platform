@@ -15,6 +15,7 @@ import {
   useGetEdsDocument,
   useGetEdsLetterhead,
   useGetLetter,
+  useListEdsSigners,
   useListEdsStaff,
   useUpdateEdsDocument,
 } from "../../../shared/api/generated/platform-bff";
@@ -24,6 +25,7 @@ import { BodyEditor } from "../../../shared/ui/BodyEditor/BodyEditor";
 import { LetterAssist } from "./LetterAssist";
 import { type BodyLang, bodyLang, isBlank } from "../../../shared/ui/BodyEditor/bodyModel";
 import { DateField } from "../../../shared/ui/DateField";
+import { EmployeePicker } from "../../../shared/ui/EmployeePicker";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { ErrorNote } from "../../../shared/ui/FormParts";
 import { LinkButton } from "../../../shared/ui/LinkButton";
@@ -174,6 +176,18 @@ function DocumentForm({
   const people = (staff.data?.items ?? [])
     .filter((p) => p.id !== me.id)
     .map((p) => ({ value: p.id, label: p.position ? `${p.name} · ${p.position}` : p.name }));
+  // ЕД-6: подписант письма — из держателей права подписи (без автора, если есть другие), не вписывается текстом.
+  const signersQuery = useListEdsSigners({ query: { staleTime: 60_000 } });
+  const allSigners = signersQuery.data?.items ?? [];
+  const listed = allSigners.length > 1 ? allSigners.filter((p) => p.id !== me.id) : allSigners;
+  // The saved choice may have lost the signing right and left the list: keep showing the name, never the raw id.
+  const signers =
+    values.signerId && !listed.some((p) => p.id === values.signerId)
+      ? [
+          ...listed,
+          { id: values.signerId, name: values.signatoryName || values.signerId, position: null },
+        ]
+      : listed;
   // Отказ сервера по полям: проверить заранее нельзя; снимается правкой формы. Клиентские ошибки — живые, ниже.
   const [serverErrors, setServerErrors] = useState<FormErrors>({});
   // Секции по шагам (platform-frontend.md §4.1a): новый документ — с первой, черновик — с проверки.
@@ -882,27 +896,44 @@ function DocumentForm({
               <Field
                 id="doc-signatory-name"
                 label={t("documents:form.signatory.name")}
-                hint={signatoryHint}
+                hint={values.signerId ? undefined : signatoryHint}
+                error={errors.signer_crm_user_id ? fieldText(t, "signer_crm_user_id") : undefined}
               >
-                <Input
+                <EmployeePicker
                   id="doc-signatory-name"
-                  value={values.signatoryName}
-                  maxLength={255}
-                  autoComplete="off"
-                  placeholder={head?.signatory_name ?? undefined}
+                  value={values.signerId}
+                  options={signers}
+                  loading={signersQuery.isPending}
+                  placeholder={values.signatoryName || head?.signatory_name || undefined}
+                  emptyText={t("documents:form.signatory.none")}
                   aria-describedby="doc-signatory-name-hint"
-                  onChange={(event) => {
-                    set("signatoryName", event.target.value);
+                  onChange={(id, option) => {
+                    setServerErrors({});
+                    setValues((v) => ({
+                      ...v,
+                      signerId: id ?? "",
+                      signatoryName: option?.name ?? "",
+                      signatoryPosition: "",
+                    }));
                   }}
                 />
               </Field>
-              <Field id="doc-signatory-position" label={t("documents:form.signatory.position")}>
+              <Field
+                id="doc-signatory-position"
+                label={t("documents:form.signatory.position")}
+                hint={t("documents:form.signatory.positionHint")}
+              >
                 <Input
                   id="doc-signatory-position"
                   value={values.signatoryPosition}
                   maxLength={255}
                   autoComplete="off"
-                  placeholder={head?.signatory_position ?? undefined}
+                  aria-describedby="doc-signatory-position-hint"
+                  placeholder={
+                    signers.find((p) => p.id === values.signerId)?.position ??
+                    head?.signatory_position ??
+                    undefined
+                  }
                   onChange={(event) => {
                     set("signatoryPosition", event.target.value);
                   }}

@@ -30,7 +30,6 @@ _EDITABLE_FIELDS = (
     "signatory_position",
     "footer_text",
     "accent_color",
-    "secondary_color",
     "cover_letter_text",
     # Формулировки договора и акта (D1). Поля появились миграцией accounts/0043 и объявлены в
     # сериализаторе, но в этот список не попали — и сервис молча их выбрасывал: интерфейс
@@ -43,12 +42,7 @@ _EDITABLE_FIELDS = (
     "act_closing_text",
 )
 
-# Theme choice fields (D2, Odoo Document Layout model) — validated against the model's
-# choice sets, never written raw (a bad value would land in a PDF <style>/class attr).
-_EDITABLE_CHOICE_FIELDS = {
-    "layout_preset": {code for code, _label in CompanyDocumentProfile.LAYOUT_CHOICES},
-    "font_family": {code for code, _label in CompanyDocumentProfile.FONT_CHOICES},
-}
+# ДОК-13: «Макет», «Шрифт» и «Второй цвет» удалены — значения не принимаются и нигде не читаются (колонки остались).
 
 # Layout toggles (P3) — coerced to bool, so a False value isn't turned into "" like the text fields.
 _EDITABLE_BOOL_FIELDS = (
@@ -119,18 +113,12 @@ def update_document_profile(
     """
     if not is_company_owner(user, company):
         return None, "NOT_COMPANY_OWNER"
-    # SEC (audit #9): accent/secondary colours are interpolated raw into a <style> block in
+    # SEC (audit #9): accent colour is interpolated raw into a <style> block in
     # the PDF templates, so an unvalidated value ("red;background:url(http://10.0.0.2)") is
     # CSS injection → WeasyPrint SSRF/LFI on render. Reject anything but a #hex colour.
     accent = data.get("accent_color")
     if accent not in (None, "") and not is_hex_color(accent):
         return None, "INVALID_ACCENT_COLOR"
-    secondary = data.get("secondary_color")
-    if secondary not in (None, "") and not is_hex_color(secondary):
-        return None, "INVALID_SECONDARY_COLOR"
-    for field, allowed in _EDITABLE_CHOICE_FIELDS.items():
-        if field in data and data[field] not in allowed:
-            return None, f"INVALID_{field.upper()}"
     translations = None
     if "translations" in data:
         translations = clean_translations(data["translations"])
@@ -144,10 +132,6 @@ def update_document_profile(
     for field in _EDITABLE_FIELDS:
         if field in data:
             setattr(profile, field, data[field] or "")
-            changed.append(field)
-    for field in _EDITABLE_CHOICE_FIELDS:
-        if field in data:
-            setattr(profile, field, data[field])
             changed.append(field)
     for field in _EDITABLE_BOOL_FIELDS:
         if field in data:

@@ -4,7 +4,7 @@
  */
 
 /**
- * Вид шаблона документа
+ * Вид шаблона документа. `letter`, `report` и `custom` устарели (ДОК-13): новые шаблоны таких видов не создаются (ответ 400 `TEMPLATE_KIND_INVALID`), значения остаются только у ранее созданных шаблонов компании.
  */
 export type DocumentTemplateKind = (typeof DocumentTemplateKind)[keyof typeof DocumentTemplateKind];
 

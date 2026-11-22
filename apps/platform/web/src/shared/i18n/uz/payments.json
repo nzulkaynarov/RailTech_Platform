@@ -419,6 +419,7 @@
         "unknown": "nimadir noto‘g‘ri ketdi, kiritilgan ma’lumot shaklda qoldi"
       }
     },
+    "journalActionUnknown": "Hujjatdagi amal",
     "journalAction": {
       "document_created": "Yaratilgan",
       "document_submitted": "Kelishuvga yuborilgan",

@@ -144,7 +144,9 @@ export function Journal({ mail }: { mail: InboundMail }) {
         {mail.journal.map((event, index) => (
           <li key={`${event.at}-${String(index)}`} className="pf-hint">
             {date(event.at, "datetime")} · {event.actor?.name ?? t("mail.journal.system")} ·{" "}
-            {t(`mail.journal.action.${event.action}`, { defaultValue: event.action })}
+            {t(`mail.journal.action.${event.action}`, {
+              defaultValue: t("mail.journal.actionUnknown"),
+            })}
             {event.detail ? ` — ${event.detail}` : ""}
           </li>
         ))}

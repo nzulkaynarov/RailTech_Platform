@@ -64,12 +64,6 @@ _BRAND_SCALAR_FIELDS = (
     "show_fx_note",
     "accent",
     "accent_contrast",
-    # D2 document theme: _document_base.html reads these (body layout class + :root font/tint vars).
-    # Without them a frozen snapshot rebuilds to the DEFAULT theme, so an ISSUED document's PDF loses
-    # the seller's layout preset / font / secondary tint that its DRAFT preview showed (fidelity gap).
-    "layout_preset",
-    "font_stack",
-    "secondary",
 )
 
 
@@ -229,6 +223,16 @@ def _kind(code: str):
     return DocumentTemplateKind.objects.get(code=code)
 
 
+def _template_kind(code: str):
+    """Вид для шаблона: только действующий. Виды «Письмо», «Рапорт», «Произвольный» выведены из обращения (ДОК-13)."""
+    from ..models import DocumentTemplateKind
+
+    kind = DocumentTemplateKind.objects.filter(code=code, is_active=True).first()
+    if kind is None:
+        raise ValidationError("TEMPLATE_KIND_INVALID")
+    return kind
+
+
 def _assert_legal_template_integrity(kind_code: str, body_html: str, is_active: bool) -> None:
     """E2 (spec-editable-outgoing-documents): АКТИВНЫЙ шаблон юридического вида обязан
     содержать структурные блоки — без таблицы позиций, итогов и подписей/реквизитов документ
@@ -269,7 +273,7 @@ def create_template(company, user: CustomUser, *, name: str, kind_code: str, bod
     return DocumentTemplate.objects.create(
         company=company,
         name=name.strip(),
-        kind=_kind(kind_code),
+        kind=_template_kind(kind_code),
         body_html=clean_html,
         placeholders_used=extract_placeholders(clean_html),
         is_active=is_active,
@@ -289,7 +293,7 @@ def update_template(template, *, name=None, kind_code=None, body_html=None, is_a
         template.name = name.strip()
         fields.append("name")
     if kind_code is not None:
-        template.kind = _kind(kind_code)
+        template.kind = _template_kind(kind_code)
         fields.append("kind")
     if body_html is not None:
         if len(body_html) > MAX_TEMPLATE_BODY_CHARS:

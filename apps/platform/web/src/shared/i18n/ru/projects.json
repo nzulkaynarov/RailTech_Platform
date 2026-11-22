@@ -238,7 +238,7 @@
     },
     "by": "{{date}} · {{name}}",
     "bySystem": "{{date}} · система",
-    "reason": "Причина: {{reason}}"
+    "reason": "Комментарий: {{reason}}"
   },
   "panel": {
     "contractLabel": "Договор проекта",

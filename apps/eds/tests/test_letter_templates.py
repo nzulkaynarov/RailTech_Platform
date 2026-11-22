@@ -109,3 +109,19 @@ async def test_preview_needs_the_letterhead_and_is_served_only_as_a_preview(
     state = await client.get(f"{PREVIEW}/{first.json()['hash']}", headers=manager.headers)
     assert state.status_code == 200 and state.json()["status"] in ("pending", "ready")
     assert (await client.get(f"{PREVIEW}/{'0' * 64}", headers=manager.headers)).status_code == 404
+
+
+async def test_former_erp_samples_are_letter_templates_in_three_languages(
+    client: httpx.AsyncClient, staff: dict[str, Person]
+) -> None:
+    """ДОК-13: «Гарантийное письмо», «Сопроводительное письмо» и «Претензия» — встроенные шаблоны писем на бланке."""
+    letters = {t["name"]: t for t in await listed(client, staff["manager"], "letter")}
+    for name in ("Гарантийное письмо", "Сопроводительное письмо", "Претензия"):
+        row = letters[name]
+        assert (row["origin"], row["changed"], row["is_default"]) == ("builtin", False, False)
+        assert row["languages"] == ["ru", "uz", "en"]
+    assert letters["Деловое письмо"]["is_default"] is True  # new built-ins never take the default away
+    # Uzbek is in the new Latin alphabet: none of the old o‘ / g‘ / sh / ch digraph spellings
+    for name in ("Гарантийное письмо", "Сопроводительное письмо", "Претензия"):
+        text = str(letters[name]["variants"]["uz"])
+        assert "o‘" not in text and "O‘" not in text and "g‘" not in text

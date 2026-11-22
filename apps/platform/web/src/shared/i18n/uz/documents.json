@@ -343,6 +343,7 @@
       "deal": "Loyiha topilmadi — boshqasini tanlang yoki bog‘lashni olib tashlang.",
       "replyTo": "Bunday raqamli kiruvçi xat yöq. Kiruvçi xat raqamini tekşiring.",
       "recipientEmail": "Manzil e-pochtasini tekshiring, masalan office@example.uz.",
+      "signer": "Imzolovçini röyxatdan tanlang: tanlanganda imzo huquqi yöq.",
       "uploading": "Fayllar yuklanişini kuting."
     },
     "toast": {
@@ -357,6 +358,7 @@
       "savedNote": "Qoralama saqlandi, kiritilganlar yo‘qolmadi. Tuzatib, qayta yuboring.",
       "reasons": {
         "FORBIDDEN": "bu amal rolingizga berilmagan",
+        "FORBIDDEN_SECTION": "«{{section}}» bölimiga kiriş yöq",
         "eds_not_granted": "hujjatlar xizmatida huquqingiz yo‘q",
         "not_author": "hujjatni faqat muallifi tahrirlay oladi",
         "NOT_FOUND": "hujjat topilmadi",
@@ -421,6 +423,8 @@
     "signatory": {
       "name": "Imzolovchi",
       "position": "Imzolovchining lavozimi",
+      "positionHint": "Maʼlumotnomadan; v. b. uchun özingiznikini yozing",
+      "none": "Imzo huquqi bor xodim yöq",
       "hint": "Bo‘sh — blankdagi imzolovchi: {{name}}, {{position}}.",
       "hintNone": ""
     },
