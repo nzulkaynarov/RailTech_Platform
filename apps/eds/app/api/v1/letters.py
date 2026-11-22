@@ -198,10 +198,11 @@ async def resubmit_letter(
     letter_id: uuid.UUID,
     employee: Registrar,
     session: Session,
+    bus: Bus,
     body: Annotated[LetterSubmitIn | None, Body()] = None,
 ) -> Letter:
     async with session.begin():
-        letter = await letters.resubmit(session, actor_id=employee.crm_user_id, letter_id=letter_id, data=body)
+        letter = await letters.resubmit(session, bus, actor_id=employee.crm_user_id, letter_id=letter_id, data=body)
         return await letters_read.present(session, letter, employee)
 
 

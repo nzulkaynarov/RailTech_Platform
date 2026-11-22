@@ -11,10 +11,10 @@ from referencing import Registry, Resource
 
 from app.container import Container
 from tests.domain import Person, deliver_erp, outbox
-from tests.helpers import EVENTS
+from tests.helpers import EVENTS, seed_employee
 from tests.test_commercial_signing import _grant_director, _open_ids, _pass_visas, _request
 from tests.test_documents import WITH_AMOUNT, create, decide, submit
-from tests.test_letters import register
+from tests.test_letters import act, register
 from tests.test_payments import to_accountant
 from tests.test_quotes import ready
 
@@ -125,3 +125,47 @@ async def test_inbound_letter_awaiting_resolution_signals_the_addressee(
     assert notice["recipients"] == [3]  # адресат по умолчанию — директор; делопроизводитель, регистрировавший, — нет
     assert notice["letter"]["eds_letter_id"] == letter["id"]
     assert notice["notice_key"] == f"letter:{letter['id']}:resolve_letter"
+
+
+async def _accountants_memo_at_payment_step(client: httpx.AsyncClient, staff: dict[str, Person]) -> None:
+    """Служебка с суммой от бухгалтера: директор согласовал, шаг оплаты (`payments.confirm`) стал текущим."""
+    doc = await create(client, staff["accountant"], **WITH_AMOUNT)
+    approval_id = (await submit(client, staff["accountant"], doc["id"])).json()["approval_id"]
+    assert (await decide(client, staff["director"], approval_id, "approve")).status_code == 200
+
+
+async def test_author_is_skipped_on_his_own_step_when_another_holder_exists(
+    client: httpx.AsyncClient, container: Container, staff: dict[str, Person]
+) -> None:
+    await seed_employee(container, 21, email="pay2@example.com", permissions={"eds": ["payments.confirm"]})
+    await _accountants_memo_at_payment_step(client, staff)
+
+    [notice] = await tasks(container, "pay_memo")
+    assert notice["recipients"] == [21]  # автор (6) держит право, но шаг не его: как access.step_open_to
+
+
+async def test_author_gets_his_own_step_when_he_is_the_only_holder(
+    client: httpx.AsyncClient, container: Container, staff: dict[str, Person]
+) -> None:
+    director = staff["director"]  # право оплаты есть у директора из ростера — убираем, чтобы держатель был один
+    rights = [p for p in director.permissions if p != "payments.confirm"]
+    await seed_employee(
+        container, director.id, email="user3@example.com", permissions={"eds": rights, "sections": director.sections}
+    )
+    await _accountants_memo_at_payment_step(client, staff)
+
+    [notice] = await tasks(container, "pay_memo")
+    assert notice["recipients"] == [6]  # другого держателя нет — шаг не повисает без сигнала
+
+
+async def test_resubmitted_returned_letter_signals_the_addressee_again(
+    client: httpx.AsyncClient, container: Container, staff: dict[str, Person]
+) -> None:
+    letter = await register(client, staff["registrar"])
+    for comment in ("Уточните количество", "Ещё раз уточните"):
+        assert (await act(client, staff["director"], letter["id"], "return", {"comment": comment})).status_code == 200
+        assert (await act(client, staff["registrar"], letter["id"], "submit", {"comment": "ok"})).status_code == 200
+
+    notices = await tasks(container, "resolve_letter")  # регистрация + две подачи: у директора три прихода строки
+    assert [n["recipients"] for n in notices] == [[3], [3], [3]]
+    assert len({n["notice_key"] for n in notices}) == 3  # ключ меняется с подачей, иначе CRM отбросит повтор

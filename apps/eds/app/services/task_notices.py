@@ -8,7 +8,8 @@
 * КП (`approve_quote`) — держателям права решения; служебка, заявление, отчёт — шаг «Директор» (`approve_memo`) или
   «Бухгалтер» (`pay_memo`); коммерческий документ — виза (`visa_commercial`) и «Подписать» (`sign_commercial`);
 * автору возвращённый документ — `rework_document` (только колокольчик, решение за автором);
-* входящее письмо без резолюции — адресату (`resolve_letter`).
+* входящее письмо без резолюции — адресату (`resolve_letter`), при регистрации и при каждой повторной подаче
+  возвращённого письма (ключ с номером подачи).
 Тот, кто сам запустил шаг, о нём не уведомляется; автор не получает шаг по своему документу, если есть другой
 держатель права (как `access.step_open_to`).
 """
@@ -136,15 +137,22 @@ async def returned_to_author(
 
 
 async def letter_awaits_resolution(
-    session: AsyncSession, bus: AsyncBus, letter: Letter, *, addressee: int | None, actor_id: int | None
+    session: AsyncSession,
+    bus: AsyncBus,
+    letter: Letter,
+    *,
+    addressee: int | None,
+    actor_id: int | None,
+    round_no: int = 0,
 ) -> None:
-    """Входящее письмо зарегистрировано и ждёт резолюции: адресату (директору), если он не сам регистрирует."""
+    """Входящее письмо ждёт резолюции: адресату (директору), если он не сам подаёт. Подача возвращённого письма —
+    новый приход строки в очередь, поэтому ключ несёт номер подачи (`round_no`; 0 — регистрация)."""
     sender = letter.sender_name or "отправитель не указан"
     await document_notices.publish_notice(
         session,
         bus,
         kind="resolve_letter",
-        key=f"letter:{letter.id}:resolve_letter",
+        key=f"letter:{letter.id}:resolve_letter" + (f":r{round_no}" if round_no else ""),
         recipients=[addressee] if addressee != actor_id else [],
         title=f"Наложите резолюцию: {letter.number}",
         subtitle=f"{sender} · {letter.subject}",

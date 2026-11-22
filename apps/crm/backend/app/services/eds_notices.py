@@ -65,6 +65,7 @@ _TELEGRAM_DECISIONS: Final = frozenset(
     {
         "letter_sign_requested",
         "letter_signer_missing",
+        "extension_requested",
         "approve_quote",
         "resolve_letter",
         "approve_memo",
