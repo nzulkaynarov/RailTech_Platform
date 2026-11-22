@@ -6,7 +6,7 @@ import { DisableEmployee } from "../../../features/assign-role/DisableEmployee";
 import { RetryErpSync } from "../../../features/assign-role/RetryErpSync";
 import { ResetPassword } from "../../../features/reset-password/ResetPassword";
 import { ResendInvite } from "../../../features/invite-employee/ResendInvite";
-import { erpAttention } from "../../../entities/employee/status";
+import { erpAttention, erpSyncReason } from "../../../entities/employee/status";
 import type { Employee } from "../../../shared/api/generated/model";
 import { DefinitionList } from "../../../shared/ui/DefinitionList";
 import { CrmTag, EmployeeStatusTag, ErpTag, RoleTags, TelegramText } from "./EmployeeCells";
@@ -26,6 +26,7 @@ export interface EmployeeCardProps {
 export function EmployeeCard({ employee, selfId, canEdit, otherActiveAdmins }: EmployeeCardProps) {
   const { t } = useTranslation("modules");
   const attention = erpAttention(employee);
+  const erpReason = erpSyncReason(employee.erp_sync_error);
   const disabled = employee.status === "disabled";
   return (
     <div className="pf-panel-stack">
@@ -61,8 +62,8 @@ export function EmployeeCard({ employee, selfId, canEdit, otherActiveAdmins }: E
           type="error"
           showIcon
           message={
-            employee.erp_sync_error
-              ? t("admin.org.card.erpError", { error: employee.erp_sync_error })
+            erpReason
+              ? t(`admin.org.card.erpReason.${erpReason}`)
               : t("admin.org.card.erpNotGranted")
           }
           action={canEdit ? <RetryErpSync employee={employee} /> : undefined}

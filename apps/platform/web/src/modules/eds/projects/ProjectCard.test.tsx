@@ -134,7 +134,8 @@ describe("Проект: договор (вкладка в боковом окн�
       await within(panel).findByText(/Договор выставлен у оператора\. Когда обе стороны/),
     ).toBeVisible();
     expect(within(panel).getAllByText("Выставлен у оператора").length).toBeGreaterThan(0);
-    expect(within(panel).getByText(/Didox, № 77/)).toBeVisible();
+    expect(within(panel).getByText("Комментарий: Didox, № 77")).toBeVisible();
+    expect(within(panel).queryByText(/Причина: Didox/)).toBeNull();
 
     // скан: пока файла нет — кнопка неактивна, подпись говорит почему
     const submit = within(panel).getByRole("button", { name: "Прикрепить скан" });

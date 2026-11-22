@@ -4,7 +4,7 @@
  */
 
 /**
- * Шрифт: без засечек или с засечками
+ * Устарело (ДОК-13): ничего не меняет и не показывается, значение не принимается и не читается
  */
 export type BrandProfileUpdateFontFamily =
   (typeof BrandProfileUpdateFontFamily)[keyof typeof BrandProfileUpdateFontFamily];

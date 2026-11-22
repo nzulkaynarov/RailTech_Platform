@@ -8,6 +8,7 @@ import { ExportsView } from "../bot/ExportsView";
 import { SoloSection } from "../company/solo";
 import { NumberingTab } from "../company/tabs/NumberingTab";
 import { PlatformTab } from "../company/tabs/PlatformTab";
+import { QuoteSettings } from "../company/tabs/QuoteTab";
 import { AiTab } from "../docflow/AiTab";
 import { PiiPolicyCard } from "../docflow/PiiPolicyCard";
 import { TemplatesTab as ResolutionTemplates } from "../docflow/TemplatesTab";
@@ -49,11 +50,28 @@ export function TaxesPage() {
       <Solo>
         <PlatformTab />
       </Solo>
+      <Card styles={{ body: { padding: 0 } }}>
+        <QuoteSettings group="taxes" />
+      </Card>
       {canSee(me, { resource: "erp.stock" }) ? (
         <Card>
           <RatesView />
         </Card>
       ) : null}
+    </SettingsPage>
+  );
+}
+
+/** Компания · Продажи: условия нового КП (срок, оплата, гарантия, маржа, базис) и политика каталога — бывшие «Условия КП». */
+export function SalesPage() {
+  return (
+    <SettingsPage sectionKey="sales">
+      <Card styles={{ body: { padding: 0 } }}>
+        <QuoteSettings group="sales" />
+      </Card>
+      <Card styles={{ body: { padding: 0 } }}>
+        <QuoteSettings group="catalog" />
+      </Card>
     </SettingsPage>
   );
 }
@@ -103,6 +121,7 @@ export function TimingPage() {
 /** Процессы · Уведомления: канал команды и оповещения о сбоях; личные уведомления — в Профиле. */
 export function NotificationsPage() {
   const { t } = useTranslation("modules");
+  const { me } = useAuth();
   return (
     <SettingsPage
       sectionKey="notifications"
@@ -116,6 +135,11 @@ export function NotificationsPage() {
       }
     >
       <BotSettingsSections page="notifications" />
+      {canSee(me, { resource: "company.settings" }) ? (
+        <Card styles={{ body: { padding: 0 } }}>
+          <QuoteSettings group="reminders" />
+        </Card>
+      ) : null}
     </SettingsPage>
   );
 }

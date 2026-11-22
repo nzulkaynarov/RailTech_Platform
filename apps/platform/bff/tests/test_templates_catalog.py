@@ -109,7 +109,8 @@ async def test_director_sees_all_domains_in_one_list(
     response = await web.client.get("/api/v1/templates")
     check(response, "/templates", "get")
     items = {row["id"]: row for row in response.json()["items"]}
-    assert next(iter(items)) == "erp.quote:builtin"
+    # ДОК-13: «Условия КП» — настройки, а не шаблон: строки «КП» в списке нет
+    assert not any(row["kind"] == "quote" for row in items.values())
     assert {k: v for k, v in items["erp.document:5"].items() if k != "updated_at"} == {
         "id": "erp.document:5",
         "kind": "contract",

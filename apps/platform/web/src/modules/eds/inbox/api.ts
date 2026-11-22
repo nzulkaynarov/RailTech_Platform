@@ -1,5 +1,6 @@
 import { ApiError } from "../../../shared/api/errors";
 import type { LetterStatus } from "../../../shared/api/generated/model";
+import { missingSectionName } from "../../../shared/lib/permissionSection";
 import { COMPANY_TIME_ZONE } from "../../../shared/lib/format";
 import { LETTER_KEYS, useInvalidatePrefixes } from "../refreshKeys";
 
@@ -88,6 +89,19 @@ export function reasonOf(error: unknown): Reason {
   }
   // Сеть оборвалась до ответа (`fetch` бросает TypeError).
   return error instanceof TypeError ? "unavailable" : "unknown";
+}
+
+/**
+ * Причина отказа текстом для `…: {{reason}}`: у 403 с правом — «нет доступа к разделу «…»» (раздел из каталога
+ * `platform-rbac.yaml`), иначе слово из словаря `form.reasons`.
+ */
+export function reasonText(
+  t: (key: string, options?: Record<string, unknown>) => string,
+  error: unknown,
+): string {
+  const reason = reasonOf(error);
+  const section = reason === "forbidden" ? missingSectionName(error) : null;
+  return section ? t("form.reasons.forbiddenSection", { section }) : t(`form.reasons.${reason}`);
 }
 
 /** Поля формы, которые EDS назвал в `details.fields` (`due`, `assignees`, …). */

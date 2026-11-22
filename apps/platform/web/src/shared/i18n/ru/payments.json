@@ -419,6 +419,7 @@
         "unknown": "что-то пошло не так, введённое осталось в форме"
       }
     },
+    "journalActionUnknown": "Действие по документу",
     "journalAction": {
       "document_created": "Создана",
       "document_submitted": "Отправлена на согласование",

@@ -21,16 +21,16 @@ export interface BrandProfile {
   footer_text: string;
   /** Основной цвет бренда, `#RRGGBB` */
   accent_color: string;
-  /** Второй цвет бренда, `#RRGGBB` */
+  /** Устарело (ДОК-13): ничего не меняет и не показывается, значение не принимается и не читается */
   secondary_color: string;
   cover_letter_text: string;
   contract_acceptance_text: string;
   contract_liability_text: string;
   contract_extra_terms_text: string;
   act_closing_text: string;
-  /** Оформление: светлое, в рамках, контрастное, полосатое */
+  /** Устарело (ДОК-13): ничего не меняет и не показывается, значение не принимается и не читается */
   layout_preset: BrandProfileLayoutPreset;
-  /** Шрифт: без засечек или с засечками */
+  /** Устарело (ДОК-13): ничего не меняет и не показывается, значение не принимается и не читается */
   font_family: BrandProfileFontFamily;
   show_cover_letter: boolean;
   show_bank_in_header: boolean;
