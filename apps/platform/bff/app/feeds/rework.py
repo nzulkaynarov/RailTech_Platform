@@ -132,7 +132,7 @@ def rework_item(
         reason=remark if who else "вам вернули документ на доработку",
         title=f"Доработать: {number}" + (f" · {subject}" if subject and subject != number else ""),
         subtitle=join(remark, ago(returned_at, now)),
-        due_label=due_label(due_at, now, default="today"),
+        due_label=due_label(due_at, now),
         due_at=due_at,
         object=ObjectRef(
             kind="memo",

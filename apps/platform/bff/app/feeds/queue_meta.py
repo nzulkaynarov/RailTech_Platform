@@ -2,9 +2,10 @@
 глагол кнопки и «почему это у вас».
 
 Группа выводится только из срока строки (`due_label`, который считается от реального срока
-источника): просрочено, сегодня, «позже» (остальное, и строки без срока). Вид работы и глагол —
-таблицы ниже; «почему у вас» строит сам источник из своего факта (подписант по реестру, резолюция от
-даты, «за {имя}», мой клиент, шаг маршрута), а если факта нет — здесь нейтральная фраза по виду."""
+источника): просрочено, сегодня, «позже» (остальное; строка без срока — тоже «позже»). Вид работы
+и глагол — таблицы ниже; «почему у вас» строит сам источник из своего факта (подписант по реестру,
+резолюция от даты, «за {имя}», мой клиент, шаг маршрута), а если факта нет — здесь нейтральная
+фраза по виду."""
 
 from app.feeds.models import DueLabel, QueueCategory, QueueGroup, QueueItem, QueueItemKind
 
@@ -126,7 +127,12 @@ def finish(item: QueueItem) -> QueueItem:
     """Дописать строке группу, вид работы, глагол и «почему у вас», если источник не задал свои."""
     update: dict[str, object] = {}
     if item.group is None:
-        update["group"] = group_of(item.due_label)
+        # No fake "today": a row without a real due date is "later" (overdue is the source fact).
+        update["group"] = (
+            "later"
+            if item.due_at is None and item.due_label != "overdue"
+            else group_of(item.due_label)
+        )
     if item.category is None:
         update["category"] = CATEGORY.get(item.kind, "other")
     if item.action_label is None:

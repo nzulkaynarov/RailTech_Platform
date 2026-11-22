@@ -99,7 +99,10 @@ async def test_director_queue_gets_letters_and_memos_from_eds(
     urgent = by_number["ВХ-104/26"]
     assert urgent["kind"] == "resolve_letter"
     assert urgent["title"] == "Наложить резолюцию на письмо ВХ-104/26"
-    assert urgent["due_label"] == "today"  # срочное письмо без срока — сегодня
+    assert (urgent["due_label"], urgent["group"]) == (
+        "later",
+        "later",
+    )  # срока нет — «сегодня» не выдумывается
     assert urgent["role_id"] == rid("DIRECTOR")
     assert "ООО «Демо-Рейл»" in urgent["subtitle"]
     assert urgent["object"]["path"] == "/eds/inbox/%D0%92%D0%A5-104%2F26?panel=open&tab=resolution"
@@ -111,8 +114,8 @@ async def test_director_queue_gets_letters_and_memos_from_eds(
     assert memo["object"]["path"] == "/eds/approvals/%D0%A1%D0%97-2026%2F031?panel=open&tab=agree"
     assert by_number["ЗЯ-2026/003"]["kind"] == "approve_memo"
     assert by_number["КП-2026/118"]["kind"] == "approve_quote"  # D26G-4: КП — маршрут EDS
-    # срочное письмо — выше служебок и КП на завтра
-    assert body["items"][0]["object"]["number"] == "ВХ-104/26"
+    # КП со сроком на завтра выше срочного письма без срока (оно «позже», «сегодня» не выдумывается)
+    assert body["items"][0]["object"]["number"] == "КП-2026/118"
     # EDS читают под токеном сотрудника (aud=eds), запросы — по виду работы
     letters = fb.eds["letters"].calls.last.request
     assert letters.headers["authorization"] == "Bearer eds-access-1"

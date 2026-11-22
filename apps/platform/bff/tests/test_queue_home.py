@@ -148,8 +148,8 @@ async def test_every_row_says_why_it_is_yours_from_its_own_fact(web: Web, fb: Fe
     second = items["instruction:a0000000-0000-4000-8000-000000000002"]
     assert second["reason"] == "резолюция от 11.01 · вы соисполнитель"
     assert (second["action_label"], second["category"]) == ("Подготовить ответ", "instruction")
-    assert items["acquaint:" + LETTER["id"]]["reason"].startswith("вас просят ознакомиться")
-    assert items["acquaint:" + LETTER["id"]]["action_label"] == "Ознакомлен"
+    assert items["acquaint:" + str(LETTER["id"])]["reason"].startswith("вас просят ознакомиться")
+    assert items["acquaint:" + str(LETTER["id"])]["action_label"] == "Ознакомлен"
     letter_sign = items[f"sign_document:{DOC}"]
     assert letter_sign["reason"] == (
         "вы подписант по реестру полномочий · передал(а) Иван Исполнитель · ждёт 2 ч"
@@ -343,3 +343,45 @@ async def test_remind_goes_to_eds_and_the_rate_limit_is_explained(
     assert again.json()["code"] == "TOO_MANY_REQUESTS"
     assert again.json()["details"]["reason"] == "remind_rate_limited"
     assert again.headers["retry-after"] == "1800"
+
+
+async def test_rows_without_a_due_date_are_later_not_today(web: Web, fb: FeedBackends) -> None:
+    """Свободный лид и непрочитанный «мой» без SLA, заказ и приёмка без срока: группа «позже»."""
+    fb.state["inbox"] = {
+        "escalations": [lead(2099, "Без SLA", escalation=escalation())],
+        "mine": [lead(2098, "Мой", unread=True, last_msg=fb.m.ago(minutes=5))],
+        "unassigned": [],
+    }
+    await web.login(["MANAGER"])
+
+    items = await rows(web)
+
+    for key in ("lead:2099:take_lead", "lead:2098:answer_lead"):
+        assert (items[key]["group"], items[key]["due_label"]) == ("later", "later"), key
+
+
+async def test_deputy_lead_row_names_the_colleague_not_your_client(
+    web: Web, fb: FeedBackends
+) -> None:
+    fb.state["covering"] = [
+        {
+            "user_id": 12,
+            "full_name": "Мадина Р.",
+            "date_from": "2026-10-20",
+            "date_to": "2027-02-02",
+        }
+    ]
+    fb.state["covered_inbox"] = {
+        12: {
+            "escalations": [],
+            "mine": [lead(2060, "Ждёт Мадину", unread=True, last_msg=fb.m.ago(hours=3))],
+            "unassigned": [],
+        }
+    }
+    await web.login(["MANAGER"])
+
+    items = await rows(web)
+
+    (row,) = [i for i in items.values() if "on_behalf_of" in i]
+    assert row["reason"].startswith("вы замещаете Мадина Р.")
+    assert "ваш клиент" not in row["reason"]

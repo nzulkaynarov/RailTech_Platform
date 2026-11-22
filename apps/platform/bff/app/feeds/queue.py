@@ -195,7 +195,7 @@ def _lead_row(
         reason=reason,
         title=title,
         subtitle=join(name, short(why or lead.get("need_summary")), handed_by, ago(waiting, now)),
-        due_label=due_label(due_at, now, default="today"),
+        due_label=due_label(due_at, now),
         due_at=due_at,
         object=lead_ref(lead_id, name, conversation=True),
     )
@@ -294,7 +294,12 @@ def covered_rows(covered: Covered, now: datetime, view: View, skip: set[int]) ->
             return
         seen.add(lead_id)
         row.item = row.item.model_copy(
-            update={"id": f"{row.item.id}:for:{covered.user_id}", "on_behalf_of": owner}
+            update={
+                "id": f"{row.item.id}:for:{covered.user_id}",
+                "on_behalf_of": owner,
+                # The lead is the colleague's, not the reader's: never "ваш клиент"
+                "reason": f"вы замещаете {covered.name} · клиент ждёт ответа",
+            }
         )
         out.append(row)
 
@@ -419,7 +424,7 @@ def letter_rows(snap: Snapshot, now: datetime, view: View) -> list[Row]:
                 _text(links.get("deal_number")),
                 ago_value(letter.get("received_at"), now),
             ),
-            due_label=due_label(due_at, now, default="today" if letter.get("urgent") else "later"),
+            due_label=due_label(due_at, now),
             due_at=due_at,
             object=letter_ref(number, subject or None),
         )
@@ -628,9 +633,10 @@ _VISA_REASON = {
 
 
 def signing_rows(snap: Snapshot, now: datetime, view: View) -> list[Row]:
-    """«Подписать договор CT-…», счёт, акт, КП (СЦ-9): открытые шаги подписи на мне — тот же список,
-    что блок «Подписи» под очередью (`GET /approvals?mine&template=signing`). Виза бухгалтера или
-    юриста — не подпись: строки нет. Кому подписывать, решает EDS (реестр полномочий)."""
+    """«Подписать договор CT-…», счёт, акт, КП (СЦ-9): открытые шаги подписи на мне, из списка
+    (`GET /approvals?mine&template=signing`), что раньше был отдельным блоком. Виза бухгалтера или
+    юриста — тоже строка (категория «согласовать», своя причина). Кому подписывать, решает EDS
+    (реестр полномочий)."""
     if not wants_signing(view):
         return []
     out: list[Row] = []
@@ -891,7 +897,7 @@ def _supply_task_item(task: dict[str, Any], kind: QueueItemKind, role_id: str) -
         if kind == "order_shortage":
             title, due, path = (
                 f"Заказать недостающее по {number}",
-                "today",
+                "later",
                 f"/erp/stock/new?mode=shortage&request={segment(number)}",
             )
         else:
@@ -930,7 +936,7 @@ def _supply_task_item(task: dict[str, Any], kind: QueueItemKind, role_id: str) -
         kind=kind,
         title=title,
         subtitle=subtitle,
-        due_label="today" if kind == "receive_goods" else "later",
+        due_label="later",
         object=supplier_order_ref(number, supplier),
     )
 
