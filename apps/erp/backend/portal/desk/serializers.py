@@ -306,6 +306,14 @@ class DeskPeoplePage(serializers.Serializer):
     results = DeskPerson(many=True)
 
 
+class DeskCounterpartyRoles(serializers.Serializer):
+    client = serializers.BooleanField(help_text="Клиент — книга продавца (заводит CRM)")
+    supplier = serializers.BooleanField(help_text="Поставщик — отметка или действующие предложения")
+    manufacturer = serializers.BooleanField(help_text="Изготовитель — отметка; у брендов ссылка на компанию")
+    partner = serializers.BooleanField(help_text="Партнёр с кабинетом — отношение `partner` приглашено или активно")
+    organization = serializers.BooleanField(help_text="Организация — адресат писем без сделок (тип `ORGANIZATION`)")
+
+
 class DeskOrganization(serializers.Serializer):
     """Организация-контрагент для поля «Организация» письма (пункт «Ш»)."""
 
@@ -315,6 +323,9 @@ class DeskOrganization(serializers.Serializer):
     email = serializers.CharField(allow_null=True, help_text="Общая почта организации (`Company.email`)")
     contact_person = serializers.CharField(allow_null=True, help_text="Контактное лицо — для строки «Кому»")
     kind = serializers.ChoiceField(choices=["client", "partner"])
+    roles = DeskCounterpartyRoles(help_text="Роли компании — отметки, как в карточке контрагента")
+    country = serializers.CharField(allow_null=True, help_text="Название страны компании")
+    crm_client_id = serializers.IntegerField(allow_null=True, help_text="Клиент CRM, с которым связана компания")
 
 
 class DeskOrganizationPage(serializers.Serializer):
@@ -322,14 +333,6 @@ class DeskOrganizationPage(serializers.Serializer):
     next = serializers.CharField(allow_null=True)
     previous = serializers.CharField(allow_null=True)
     results = DeskOrganization(many=True)
-
-
-class DeskCounterpartyRoles(serializers.Serializer):
-    client = serializers.BooleanField(help_text="Клиент — книга продавца (заводит CRM)")
-    supplier = serializers.BooleanField(help_text="Поставщик — отметка или действующие предложения")
-    manufacturer = serializers.BooleanField(help_text="Изготовитель — отметка; у брендов ссылка на компанию")
-    partner = serializers.BooleanField(help_text="Партнёр с кабинетом — отношение `partner` приглашено или активно")
-    organization = serializers.BooleanField(help_text="Организация — адресат писем без сделок (тип `ORGANIZATION`)")
 
 
 class DeskCounterpartyPerson(serializers.Serializer):
@@ -378,6 +381,14 @@ class DeskOrganizationIn(serializers.Serializer):
     registration_number = serializers.CharField(max_length=64, required=False, allow_blank=True)
     country_id = serializers.IntegerField(required=False, allow_null=True)
     legal_address = serializers.CharField(max_length=500, required=False, allow_blank=True)
+    role = serializers.CharField(
+        max_length=20,
+        required=False,
+        help_text=(
+            "Роль новой компании: `organization` (по умолчанию), `supplier` или `manufacturer` — последние два "
+            "требуют права `supply.manage`"
+        ),
+    )
 
 
 class DeskCounterpartyRequisitesIn(serializers.Serializer):
@@ -393,6 +404,20 @@ class DeskCounterpartyRequisitesIn(serializers.Serializer):
 class DeskCounterpartyRoleIn(serializers.Serializer):
     role = serializers.ChoiceField(choices=["supplier", "manufacturer"])
     on = serializers.BooleanField()
+
+
+class DeskOrganizationPerson(serializers.Serializer):
+    """Человек организации для поля выбора: должность и почта (телефон — только через `parties/people`)."""
+
+    id = serializers.IntegerField()
+    name = serializers.CharField()
+    position = serializers.CharField(allow_null=True)
+    email = serializers.CharField(allow_null=True)
+    is_primary = serializers.BooleanField()
+
+
+class DeskOrganizationPeople(serializers.Serializer):
+    results = DeskOrganizationPerson(many=True)
 
 
 class DeskPersonContacts(serializers.Serializer):

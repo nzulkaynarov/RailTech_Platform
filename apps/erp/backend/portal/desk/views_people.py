@@ -4,13 +4,16 @@
 клиентом CRM или сделка) и партнёров (поставщики и изготовители из списка поставщиков, компании с отношением «партнёр»).
 Только чтение, любой сотрудник бэк-офиса; своя компания не входит. Компания и клиент, и поставщик — вид `client`.
 Список — имя, компания, должность (их видят все, NAVIGATION «Люди»); телефон и почта — по одному человеку
-(`retrieve`): Платформа открывает их по нажатию и пишет показ в журнал. Массовой выгрузки контактов нет.
+(`retrieve`): Платформа открывает их по нажатию и пишет показ в журнал. Единственное исключение — почта людей одной
+компании для поля выбора (`organizations/{id}/people/`, Q-ED6-1): она отдаётся списком, телефона в нём нет.
 """
 
-from django.db.models import Q
+from django.db.models import Case, IntegerField, Q, When
 from drf_spectacular.utils import OpenApiParameter, extend_schema
+from integration.models import CrmClientMapping
 from parties.models import Company, Contact
-from parties.models.relationships import RelationshipRole
+from parties.models.contacts import active_contact_q
+from parties.models.relationships import RelationshipRole, RelationshipStatus
 from parties.people import contact_names
 from portal.desk import service_counterparty as counterparty
 from portal.desk.serializers import (
@@ -19,6 +22,7 @@ from portal.desk.serializers import (
     DeskCounterpartyRoleIn,
     DeskOrganizationIn,
     DeskOrganizationPage,
+    DeskOrganizationPeople,
     DeskPeoplePage,
     DeskPersonContacts,
 )
@@ -115,7 +119,7 @@ class PeopleDeskViewSet(DeskViewSet):
         )
 
 
-def organization_row(company: Company, client_ids: set, names: dict) -> dict:
+def organization_row(company: Company, client_ids: set, names: dict, roles: dict, crm_ids: dict) -> dict:
     return {
         "id": company.pk,
         "name": company.name,
@@ -123,12 +127,57 @@ def organization_row(company: Company, client_ids: set, names: dict) -> dict:
         "email": company.email or None,
         "contact_person": names.get(company.pk) or None,
         "kind": "client" if company.pk in client_ids else "partner",
+        "roles": roles[company.pk],
+        "country": company.country.name if company.country_id else None,
+        "crm_client_id": crm_ids.get(company.pk),
     }
 
 
 def _organization_rows(rows, client_ids: set) -> list:
+    rows = list(rows)
     names = contact_names(rows)
-    return [organization_row(r, client_ids, names) for r in rows]
+    roles = counterparty.roles_for(rows, client_ids)
+    crm_ids = dict(
+        CrmClientMapping.objects.filter(company__in=rows).order_by("-pk").values_list("company_id", "crm_client_id")
+    )
+    return [organization_row(r, client_ids, names, roles, crm_ids) for r in rows]
+
+
+#: Роль-подсказка поля выбора: строки с этой ролью идут выше, остальные не скрываются
+ROLE_FILTERS = ("client", "supplier", "manufacturer", "partner", "organization")
+PICKER_LIMIT = 20
+
+
+def _role_match(role: str, client_ids: set):
+    """Условие «у компании есть роль» — те же отметки, что `service_counterparty.roles_of`."""
+    if role == "client":
+        return Q(pk__in=client_ids)
+    if role == "supplier":
+        return Q(types__code="SUPPLIER") | Q(supplier_offers__isnull=False)
+    if role == "manufacturer":
+        return Q(types__code="MANUFACTURER")
+    if role == "partner":
+        return Q(
+            relationships__role=RelationshipRole.PARTNER,
+            relationships__status__in=(RelationshipStatus.INVITED, RelationshipStatus.ACTIVE),
+        )
+    return Q(types__code="ORGANIZATION")
+
+
+def _picker_order(queryset, q: str, role: str | None, client_ids: set):
+    """Порядок поля выбора: точный ИНН, затем компании с нужной ролью, затем название."""
+    keys = []
+    if q:
+        exact = Q(inn=q) | Q(stated_inn=q)
+        queryset = queryset.annotate(inn_exact=Case(When(exact, then=0), default=1, output_field=IntegerField()))
+        keys.append("inn_exact")
+    if role:
+        wanted = Company.objects.filter(_role_match(role, client_ids)).values("pk")
+        queryset = queryset.annotate(
+            role_rank=Case(When(pk__in=wanted, then=0), default=1, output_field=IntegerField())
+        )
+        keys.append("role_rank")
+    return queryset.order_by(*keys, "name", "pk")
 
 
 class OrganizationsDeskViewSet(DeskViewSet):
@@ -136,7 +185,8 @@ class OrganizationsDeskViewSet(DeskViewSet):
 
     Организации в тех же границах, что и «Люди»: клиенты своей компании и партнёры, своя компания не входит. Название,
     ИНН, общая почта и контактное лицо организации — реквизиты для письма, не личные контакты человека, поэтому
-    отдаются списком (почта и телефон людей — по-прежнему по одному, с записью в журнал).
+    отдаются списком; почта людей одной компании — тоже списком, для поля выбора (Q-ED6-1), телефон людей — только
+    по одному, с записью в журнал.
     """
 
     queryset = Company.objects.none()
@@ -150,7 +200,20 @@ class OrganizationsDeskViewSet(DeskViewSet):
             "в ответе ИНН, общая почта и контактное лицо."
         ),
         parameters=[
-            OpenApiParameter("q", str, required=False, description="Поиск по названию и ИНН"),
+            OpenApiParameter("q", str, required=False, description="Поиск по названию и ИНН; точный ИНН — первым"),
+            OpenApiParameter(
+                "role",
+                str,
+                required=False,
+                enum=list(ROLE_FILTERS),
+                description="Роль-подсказка: компании с ней идут выше, остальные не скрываются",
+            ),
+            OpenApiParameter(
+                "limit",
+                int,
+                required=False,
+                description="Поле выбора: первые N строк (до 20) одним списком, без страниц",
+            ),
             OpenApiParameter("page", int, required=False),
             OpenApiParameter("page_size", int, required=False),
         ],
@@ -163,7 +226,14 @@ class OrganizationsDeskViewSet(DeskViewSet):
         q = (request.query_params.get("q") or "").strip()[:100]
         if q:
             queryset = queryset.filter(Q(name__icontains=q) | Q(inn__icontains=q) | Q(stated_inn__icontains=q))
-        return self.page_of(queryset.order_by("name", "pk"), lambda rows: _organization_rows(rows, client_ids))
+        role = request.query_params.get("role")
+        role = role if role in ROLE_FILTERS else None
+        queryset = _picker_order(queryset.select_related("country"), q, role, client_ids)
+        limit = request.query_params.get("limit")
+        if limit and limit.isdigit() and int(limit) > 0:
+            rows = _organization_rows(queryset[: min(int(limit), PICKER_LIMIT)], client_ids)
+            return Response({"count": len(rows), "next": None, "previous": None, "results": rows})
+        return self.page_of(queryset, lambda rows: _organization_rows(rows, client_ids))
 
     # --- карточка контрагента: одна компания во всех ролях (ADR-0028, СУЩ-2.5) ---------------------
 
@@ -189,7 +259,9 @@ class OrganizationsDeskViewSet(DeskViewSet):
         description=(
             "Организация-адресат из письма (ADR-0028 п. 5, СУЩ-2.6): название, ИНН или рег. номер, страна, адрес; роль "
             "«Организация», без сделок. Такая компания уже есть (ИНН, пара «страна — рег. номер», без ИНН — название) — "
-            "409 `COMPANY_EXISTS`, её выбирают из списка. Ответ — карточка контрагента."
+            "409 `COMPANY_EXISTS` с `existing_id` (поиск среди всех компаний), её выбирают из списка. Роль — "
+            "«организация» по умолчанию; «поставщик» и «изготовитель» — право `supply.manage`, иначе 403 "
+            "`ROLE_PERMISSION_REQUIRED`. Ответ — карточка контрагента."
         ),
         request=DeskOrganizationIn,
         responses={201: DeskCounterparty, 400: REFUSED, 409: REFUSED},
@@ -241,6 +313,35 @@ class OrganizationsDeskViewSet(DeskViewSet):
         except ItemError as error:
             return refuse(error)
         return Response(counterparty.card(company, client_ids, request.user))
+
+    @extend_schema(
+        operation_id="parties_organizations_people",
+        summary="People of a counterparty for a picker",
+        description=(
+            "Люди компании для поля выбора человека: имя, должность и почта (телефон — только по одному через "
+            "`parties/people`). Те же границы, что у списка; главный контакт первым."
+        ),
+        responses={200: DeskOrganizationPeople, 404: NOT_FOUND},
+        tags=["Parties"],
+    )
+    @action(detail=True, methods=["get"], url_path="people")
+    def people(self, request, pk=None):
+        company, _ = self._company(request, pk)
+        contacts = company.contacts.filter(active_contact_q()).order_by("-is_primary", "name", "pk")
+        return Response(
+            {
+                "results": [
+                    {
+                        "id": c.pk,
+                        "name": c.name,
+                        "position": c.position or None,
+                        "email": c.email or None,
+                        "is_primary": c.is_primary,
+                    }
+                    for c in contacts
+                ]
+            }
+        )
 
     @extend_schema(
         operation_id="parties_organizations_by_crm_client",

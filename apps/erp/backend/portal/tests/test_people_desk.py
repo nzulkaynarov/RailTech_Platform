@@ -116,6 +116,9 @@ def test_organizations_in_the_same_bounds_with_letter_details(world):
         "email": "office@yug.example.uz",
         "contact_person": "Анвар Клиентов",
         "kind": "client",
+        "roles": {"client": True, "supplier": False, "manufacturer": False, "partner": False, "organization": False},
+        "country": None,
+        "crm_client_id": None,
     }
     assert rows["ООО Изготовитель"]["kind"] == "partner"
     assert rows["ООО Изготовитель"]["email"] is None

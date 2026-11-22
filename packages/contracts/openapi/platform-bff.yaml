@@ -13905,6 +13905,101 @@ paths:
           $ref: '#/components/responses/NotFound'
         '503':
           $ref: '#/components/responses/BackendUnavailable'
+  /people/counterparties:
+    get:
+      tags: [chats]
+      operationId: searchCounterparties
+      summary: 'Поле выбора: контрагенты'
+      description: >-
+        ЕД-6 «Запись выбирают, а не вписывают»: одно поле выбора компании для форм — заявка, письмо, входящее, бренд, импорт
+        прайса, заказ поставщику, запрос цены. ERP `parties/organizations/`: клиенты своей компании, поставщики, изготовители,
+        партнёры и организации-адресаты. `q` — часть названия или ИНН, точный ИНН идёт первым; `role` поднимает компании с
+        этой ролью выше, остальных не скрывает; `limit` — до 20 строк (по умолчанию 10). В строке — роли для подсказки,
+        страна и клиент CRM. Раздел `crm.clients`, `erp.stock`, `erp.calc` или `eds.memo.create` — чтение.
+      parameters:
+        - {name: q, in: query, required: false, description: 'Часть названия или ИНН', schema: {type: string, maxLength: 100}}
+        - {name: role, in: query, required: false, description: 'Роль-подсказка: компании с ней идут выше', schema: {$ref: '#/components/schemas/CounterpartyPickRole'}}
+        - {name: limit, in: query, required: false, schema: {type: integer, minimum: 1, maximum: 20, default: 10}}
+      responses:
+        '200':
+          description: Строки выбора
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CounterpartyPickList'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+    post:
+      tags: [chats]
+      operationId: createCounterparty
+      summary: 'Поле выбора: завести контрагента'
+      description: >-
+        Последняя строка поля выбора «завести»: название, ИНН (9 цифр), страна, адрес и роль (`organization` по умолчанию,
+        `supplier` или `manufacturer`). ERP `POST parties/organizations/`. Такой ИНН уже есть у ЛЮБОЙ компании, а не только
+        из видимых в списке — 409 `CONFLICT` (`details.reason = company_exists`, `details.existing_id` — id найденной
+        компании): её выбирают, а не заводят. Роль «поставщик» и «изготовитель» — право ERP `supply.manage`, иначе 403.
+        Раздел `crm.clients`, `erp.stock`, `erp.calc` или `eds.memo.create` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CounterpartyPickIn'
+      responses:
+        '201':
+          description: Контрагент заведён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CounterpartyPick'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: '`CONFLICT` (`details.reason = company_exists`, `details.existing_id`) — такая компания уже есть'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+  /people/counterparties/{id}/people:
+    get:
+      tags: [chats]
+      operationId: listCounterpartyPickerPeople
+      summary: 'Поле выбора: люди контрагента'
+      description: >-
+        ЕД-6: люди компании для поля выбора человека — имя, должность, почта (для строки «Кому» письма); телефон не
+        отдаётся, его открывает `revealCounterpartyContacts` с записью в журнал. ERP `parties/organizations/{id}/people/`;
+        чужая компания — 404. Раздел `crm.clients`, `erp.stock`, `erp.calc` или `eds.memo.create` — чтение.
+      parameters:
+        - {name: id, in: path, required: true, schema: {$ref: '#/components/schemas/CompanyItemRef'}}
+      responses:
+        '200':
+          description: Люди компании, главный контакт первым
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CounterpartyPersonPickList'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
   /people/counterparties/{id}:
     get:
       tags: [chats]
@@ -27748,6 +27843,54 @@ components:
         manufacturer: {type: boolean, description: 'Изготовитель — отметка; у брендов ссылка на компанию'}
         partner: {type: boolean, description: 'Партнёр с кабинетом — приглашён или активен'}
         organization: {type: boolean, description: 'Организация — адресат писем без сделок (госорган, банк), заведена из письма'}
+    CounterpartyPickRole:
+      type: string
+      enum: [client, supplier, manufacturer, partner, organization]
+    CounterpartyPick:
+      type: object
+      additionalProperties: false
+      description: Строка поля выбора контрагента (ЕД-6)
+      required: [id, name, inn, country, roles, crm_client_id, email]
+      properties:
+        id: {$ref: '#/components/schemas/CompanyItemRef'}
+        name: {type: string}
+        inn: {type: [string, 'null']}
+        country: {type: [string, 'null'], description: Название страны}
+        roles: {$ref: '#/components/schemas/CounterpartyRoles'}
+        crm_client_id: {type: [integer, 'null'], description: 'Клиент CRM, с которым связана компания'}
+        email: {type: [string, 'null'], description: Общая почта компании}
+    CounterpartyPickList:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items: {type: array, items: {$ref: '#/components/schemas/CounterpartyPick'}}
+    CounterpartyPickIn:
+      type: object
+      additionalProperties: false
+      required: [name]
+      properties:
+        name: {type: string, minLength: 1, maxLength: 255}
+        inn: {type: [string, 'null'], pattern: '^\d{9}$'}
+        country_id: {type: [integer, 'null'], minimum: 1, description: 'Страна из справочника `CatalogLookups.countries`'}
+        address: {type: [string, 'null'], maxLength: 500}
+        role: {type: string, enum: [organization, supplier, manufacturer], default: organization}
+    CounterpartyPersonPick:
+      type: object
+      additionalProperties: false
+      required: [id, name, position, email, is_primary]
+      properties:
+        id: {type: string, pattern: '^[0-9]+$'}
+        name: {type: string}
+        position: {type: [string, 'null']}
+        email: {type: [string, 'null']}
+        is_primary: {type: boolean}
+    CounterpartyPersonPickList:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items: {type: array, items: {$ref: '#/components/schemas/CounterpartyPersonPick'}}
     CounterpartyCardPerson:
       type: object
       additionalProperties: false
