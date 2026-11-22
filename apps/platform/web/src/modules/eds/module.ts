@@ -1,4 +1,4 @@
-import type { ModuleConfig } from "../types";
+import { RECORD_TAB_SET, type ModuleConfig } from "../types";
 
 const EDS_ANY = [
   "eds.inbox",
@@ -59,8 +59,8 @@ export const eds: ModuleConfig = {
       path: "/eds/projects",
       detail: "/eds/projects/:id",
       access: { resource: "eds.projects" },
-      // D2-5: договор и акт — вкладки бокового окна карточки проекта (SPEC-v3 §7.3); «Оплата» подключит D2-4.
-      tabs: [{ key: "contract" }, { key: "act" }, { key: "journal" }, { key: "chat" }],
+      // ЕД-7: «Сведения» и «История» бокового окна; договор и акт — действия в строках документов в центре.
+      tabs: RECORD_TAB_SET,
       actionTo: "/eds/documents",
     },
     {

@@ -12,6 +12,11 @@
   "consequence": {
     "title": "What will happen"
   },
+  "recordHistory": {
+    "system": "System",
+    "filter": "Show entries",
+    "all": "All"
+  },
   "history": {
     "done": "Done",
     "failed": "Failed",

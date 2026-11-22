@@ -175,7 +175,7 @@ async def test_manager_all_morning_has_costing_payment_invoice_and_contract_rows
     scan = by_kind["attach_scan"]
     assert scan["title"] == "Прикрепить скан подписанного договора ДОГ-2027/106 по ПР-2027-106"
     assert scan["object"]["kind"] == "contract"
-    assert scan["object"]["path"] == ("/eds/projects/%D0%9F%D0%A0-2027-106?panel=open&tab=contract")
+    assert scan["object"]["path"] == ("/eds/projects/%D0%9F%D0%A0-2027-106")
     # одна строка — одно действие: у роли, совмещающей пять ролей SPEC, дублей нет
     ids = [i["id"] for i in items]
     assert len(ids) == len(set(ids))
@@ -371,7 +371,8 @@ async def test_contract_step_waiting_for_the_company_is_a_row(
     items = [i for i in await queue_of(web) if i["kind"] == kind]
 
     assert [i["title"] for i in items] == [title]
-    assert items[0]["object"]["path"].endswith("?panel=open&tab=contract")
+    assert "panel=open" not in items[0]["object"]["path"]
+    assert items[0]["object"]["path"].startswith("/eds/projects/")
 
 
 async def test_contract_at_the_client_or_signed_is_not_a_row(web: Web, fb: FeedBackends) -> None:
@@ -443,7 +444,10 @@ async def test_act_is_issued_after_payment_and_reissued_after_a_return(
         "Выпустить акт по ПР-2027-097",
         "Выпустить заново акт АКТ-2027/003 по ПР-2027-099",
     ]
-    assert all(i["object"]["path"].endswith("?panel=open&tab=act") for i in acts)
+    assert all(
+        i["object"]["path"].startswith("/eds/projects/") and "panel=open" not in i["object"]["path"]
+        for i in acts
+    )
 
 
 async def test_erp_down_leaves_the_rest_and_hides_erp_badges(web: Web, fb: FeedBackends) -> None:

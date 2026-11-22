@@ -15,17 +15,14 @@ import {
 } from "../../../shared/api/generated/platform-bff";
 import { useFormat } from "../../../shared/lib/useFormat";
 import { DefinitionList } from "../../../shared/ui/DefinitionList";
-import { EmptyState } from "../../../shared/ui/EmptyState";
 import { ActionToggle } from "../../../shared/ui/FormParts";
-import { History, type HistoryItem } from "../../../shared/ui/History";
 import { MoneyText } from "../../../shared/ui/MoneyText";
-import { OnBehalfFields, OnBehalfNote } from "../../../shared/ui/OnBehalf";
+import { OnBehalfFields } from "../../../shared/ui/OnBehalf";
 import { fileUrl, projectRef } from "./api";
 import { reasonText } from "./errors";
 import { FileLinks } from "./FileLinks";
 import { NoteField, ReasonForm, ScanForm } from "./forms";
-import { contractStateKey, journalText } from "./model";
-import { ProjectStatusTag } from "./status";
+import { contractStateKey } from "./model";
 import { SigningButton } from "./SigningButton";
 import { useApplyCard } from "./useProjectMutations";
 
@@ -103,49 +100,8 @@ function ContractBody({
   const create = useCreateEdsProjectContract({ mutation: { onError: fail } });
   const busy = act.isPending || scan.isPending || create.isPending;
 
-  if (!contract) {
-    return (
-      <div className="pf-dec-panel">
-        <EmptyState
-          level={3}
-          compact
-          title={t("contract.none.title")}
-          text={t("contract.none.text")}
-        />
-        {card.can_create_contract ? (
-          <div className="pf-fp-form">
-            {error ? (
-              <p className="pf-field-error" role="alert">
-                {error}
-              </p>
-            ) : null}
-            <Button
-              type="primary"
-              block
-              loading={pending === "create"}
-              disabled={busy}
-              onClick={() => {
-                setError(null);
-                setPending("create");
-                create.mutate(
-                  { ref },
-                  {
-                    onSuccess: (next) => {
-                      done(next, "create");
-                    },
-                  },
-                );
-              }}
-            >
-              {t("contract.none.create")}
-            </Button>
-          </div>
-        ) : (
-          <p className="pf-hint">{t("contract.readOnly")}</p>
-        )}
-      </div>
-    );
-  }
+  // Договора ещё нет: кнопка «Сформировать проект» живёт в строке документа (`ContractCreateButton`).
+  if (!contract) return null;
 
   const allowed = contract.actions;
   const primary = primaryOf(card, allowed);
@@ -170,27 +126,6 @@ function ContractBody({
       },
     );
   };
-  const items: HistoryItem[] = contract.history.map((entry) => ({
-    state: "done",
-    title: journalText(t, entry),
-    meta: (
-      <>
-        {entry.actor_name
-          ? t("journal.by", { date: date(entry.at, "datetime"), name: entry.actor_name })
-          : t("journal.bySystem", { date: date(entry.at, "datetime") })}
-        {entry.reason ? (
-          <span className="pf-dec-note">{t("journal.reason", { reason: entry.reason })}</span>
-        ) : null}
-        {entry.on_behalf ? (
-          <OnBehalfNote
-            channel={entry.on_behalf.channel}
-            person={entry.on_behalf.counterparty_person}
-          />
-        ) : null}
-      </>
-    ),
-  }));
-
   let primaryBlock: ReactNode = null;
   if (primary === "attach_scan") {
     primaryBlock = (
@@ -282,10 +217,6 @@ function ContractBody({
         className="pf-dec-brief"
         aria-label={t("contract.number", { number: contract.number })}
       >
-        <div className="pf-dec-brief-head">
-          <h3 className="pf-fp-title">{t("contract.number", { number: contract.number })}</h3>
-          <ProjectStatusTag kind="contract" status={contract.status} />
-        </div>
         <p className="pf-dec-note" style={{ margin: 0 }}>
           {t(`contract.state.${stateKey}`)}
         </p>
@@ -298,15 +229,6 @@ function ContractBody({
               ) : null,
             },
             { label: t("contract.fields.created"), value: date(contract.created_at) },
-            {
-              label: t("contract.fields.toClient"),
-              value:
-                contract.status === "project"
-                  ? contract.sent_to_client
-                    ? t("contract.toClientYes")
-                    : t("contract.toClientNo")
-                  : null,
-            },
             {
               label: t("contract.fields.agreed"),
               value: contract.client_agreed_at ? date(contract.client_agreed_at, "datetime") : null,
@@ -378,31 +300,56 @@ function ContractBody({
       contract.status !== "cancelled" ? (
         <SigningButton objectId={objectId} kind="contract" documentId={contract.id} />
       ) : null}
-
-      <section aria-label={t("contract.history")}>
-        <h3 className="pf-dec-subhead">{t("contract.history")}</h3>
-        {items.length > 0 ? (
-          <History items={items} label={t("contract.history")} />
-        ) : (
-          <p className="pf-hint">{t("contract.historyEmpty")}</p>
-        )}
-      </section>
     </div>
   );
 }
 
-/** Содержимое вкладки «Договор» бокового окна карточки проекта. */
-export function ContractPanel({
-  card,
-  objectId,
-  variant = "panel",
-  onDone,
-}: {
-  card: ProjectCard;
-  objectId: string;
-  variant?: "panel" | "sheet";
-  onDone?: (() => void) | undefined;
-}) {
-  // Что можно сделать, решает ERP по статусу и правам роли (`contract.actions`), экран только показывает.
-  return <ContractBody card={card} objectId={objectId} variant={variant} onDone={onDone} />;
+/** Кнопка строки «Договор»: сформировать проект, пока договора нет (тот же вызов, что был во вкладке окна). */
+export function ContractCreateButton({ objectId }: { objectId: string }) {
+  const { t } = useTranslation("projects");
+  const { message } = App.useApp();
+  const apply = useApplyCard(objectId);
+  const [error, setError] = useState<string | null>(null);
+  const create = useCreateEdsProjectContract({
+    mutation: {
+      onError: (e) => {
+        setError(t("errors.failed", { reason: reasonText(t, e) }));
+      },
+    },
+  });
+  return (
+    <>
+      <Button
+        size="small"
+        type="primary"
+        aria-label={t("card.documents.createContractLabel")}
+        loading={create.isPending}
+        disabled={create.isPending}
+        onClick={() => {
+          setError(null);
+          create.mutate(
+            { ref: projectRef(objectId) },
+            {
+              onSuccess: (next) => {
+                apply(next);
+                void message.success(t("contract.done.create"));
+              },
+            },
+          );
+        }}
+      >
+        {t("card.documents.createContract")}
+      </Button>
+      {error ? (
+        <p className="pf-field-error" role="alert">
+          {error}
+        </p>
+      ) : null}
+    </>
+  );
+}
+
+/** Действия по договору в строке документа: следующий шаг, скан, отклонение, отправка на подпись. Что можно — решает ERP. */
+export function ContractPanel({ card, objectId }: { card: ProjectCard; objectId: string }) {
+  return <ContractBody card={card} objectId={objectId} variant="panel" />;
 }

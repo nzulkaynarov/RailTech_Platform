@@ -3,7 +3,8 @@ import { HttpResponse, http } from "msw";
 import { describe, expect, it } from "vitest";
 
 import { chooseOption } from "../../../test/fields";
-import { readProjects, writeProject } from "../../../mocks/fixtures/projects";
+import { clientStatusOf, readProjects, writeProject } from "../../../mocks/fixtures/projects";
+import ruProjects from "../../../shared/i18n/ru/projects.json";
 import { server } from "../../../test/server";
 
 import { panelEl, renderAt, setupProjectTests, signIn } from "../../../test/projectsKit";
@@ -19,7 +20,13 @@ const PDF = () => new File(["%PDF-1.4 demo scan"], "scan.pdf", { type: "applicat
  * ожидания считает доступность каждого узла антовской разметки и занимает поток, пока React не успевает отрисовать ответ.
  */
 async function click(panel: HTMLElement, name: string) {
-  await within(panel).findAllByText(name);
+  await waitFor(() => {
+    if (
+      within(panel).queryAllByText(name).length === 0 &&
+      within(panel).queryAllByLabelText(name).length === 0
+    )
+      throw new Error(`нет кнопки «${name}»`);
+  });
   fireEvent.click(within(panel).getByRole("button", { name }));
 }
 
@@ -37,11 +44,20 @@ function pick(input: HTMLElement, file: File) {
   fireEvent.change(input, { target: { files: [file] } });
 }
 
-async function openTab(user: string, n: number, tab: "contract" | "act") {
+/** Карточка проекта: действия по договору и акту — в строках документов в центре (ЕД-7), «panel» — область документов. */
+async function openCard(user: string, n: number) {
   signIn(user);
-  const view = renderAt(`${PR(n)}?panel=open&tab=${tab}`);
-  const panel = await panelEl();
+  const view = renderAt(PR(n));
+  const panel = await screen.findByRole("region", { name: "Документы проекта" });
   return { ...view, panel };
+}
+
+/** Вкладка бокового окна по имени: «Сведения», «История». */
+async function sideTab(name: string): Promise<HTMLElement> {
+  const side = await panelEl();
+  const tab = await within(side).findByRole("tab", { name });
+  fireEvent.click(tab);
+  return side;
 }
 
 describe("Проект: карточка", () => {
@@ -62,7 +78,8 @@ describe("Проект: карточка", () => {
     expect(rows[0]).toHaveTextContent("Принято клиентом");
     expect(rows[1]).toHaveTextContent("ДОГ-2026/097");
     expect(rows[1]).toHaveTextContent("Подписан (скан)");
-    expect(rows[1]).toHaveTextContent("Демо Бухгалтеров"); // история: кто и когда
+    // события документов — только во вкладке «История», в строке их пересказа нет
+    expect(rows[1]).not.toHaveTextContent("Демо Бухгалтеров");
     expect(docs).toHaveTextContent("СЧ-2026/131");
     expect(docs).toHaveTextContent("Оплачен");
     expect(docs).toHaveTextContent("АКТ-2026/051");
@@ -76,15 +93,63 @@ describe("Проект: карточка", () => {
     expect(
       within(execution as HTMLElement).queryByRole("button", { name: "Доставлено" }),
     ).toBeNull();
-    expect(screen.getByRole("heading", { name: "Журнал документов" })).toBeVisible();
+    expect(screen.queryByRole("heading", { name: "Журнал документов" })).toBeNull();
+  });
+
+  it("каждое сведение — один раз: клиент и сумма только в «Сведениях», статус клиента — в шапке, № КП — в строке", async () => {
+    signIn("accountant@demo.example");
+    renderAt(PR(97));
+    const docs = await screen.findByRole("region", { name: "Документы проекта" });
+    const side = await sideTab("Сведения");
+    const project = readProjects().find((p) => p.id === 97);
+    if (!project) throw new Error("нет проекта 97");
+
+    // клиент и менеджер — в «Сведениях» один раз и больше нигде на странице
+    expect(within(side).getAllByText(project.client)).toHaveLength(1);
+    expect(within(document.body).getAllByText(project.client)).toHaveLength(1);
+    // статус для клиента — только тег шапки; в «Сведениях» его нет
+    expect(within(side).queryByText("Клиент видит")).toBeNull();
+    expect(screen.getAllByText(ruProjects.clientStatus[clientStatusOf(project)])).toHaveLength(1);
+    // номер КП — только в строке документа
+    expect(within(docs).getAllByText("КП-2026/110")).toHaveLength(1);
+    expect(screen.getAllByText("КП-2026/110")).toHaveLength(1); // и нигде больше на странице
+    expect(within(side).queryByText("Из КП")).toBeNull();
+    // у договора и акта нет своей копии истории и шапки со статусом
+    expect(screen.queryByRole("list", { name: "История договора" })).toBeNull();
+    expect(screen.queryByRole("list", { name: "История акта" })).toBeNull();
+    // колонки справа внутри страницы больше нет
+    expect(document.querySelector(".pf-dec-side")).toBeNull();
+  });
+
+  it("«История»: журнал проекта один, договор/акт — фильтры; пустые вкладки не показываются", async () => {
+    signIn("accountant@demo.example");
+    renderAt(PR(97));
+    await screen.findByRole("region", { name: "Документы проекта" });
+    const side = await panelEl();
+    // «Маршрут», «Обсуждение», «Документы» никто не наполняет — вкладок нет
+    const names = (await within(side).findAllByRole("tab")).map((tab) => tab.textContent);
+    expect(names).toEqual(["Сведения", "История"]);
+
+    await sideTab("История");
+    const list = within(side).getByRole("list", { name: "История проекта" });
+    const all = within(list).getAllByRole("listitem");
+    expect(all.length).toBeGreaterThan(1);
+    fireEvent.click(within(side).getByRole("button", { name: "Акт" }));
+    const onlyAct = within(
+      within(side).getByRole("list", { name: "История проекта" }),
+    ).getAllByRole("listitem");
+    expect(onlyAct.length).toBeLessThan(all.length);
+    onlyAct.forEach((li) => {
+      expect(li).toHaveTextContent(/акт/i);
+    });
   });
 
   it("менеджер читает карточку, но действий нет: пометка «Только чтение», в окне договора — пояснение", async () => {
     signIn("manager@demo.example");
-    renderAt(`${PR(105)}?panel=open&tab=contract`);
+    renderAt(PR(105));
 
     expect(await screen.findByText("Только чтение")).toBeVisible();
-    const panel = await panelEl();
+    const panel = await screen.findByRole("region", { name: "Документы проекта" });
     expect(await within(panel).findByText("ДОГ-2026/105", { exact: false })).toBeVisible();
     expect(
       within(panel).queryByRole("button", { name: /Отметить: согласован клиентом/ }),
@@ -106,17 +171,18 @@ describe("Проект: карточка", () => {
   });
 });
 
-describe("Проект: договор (вкладка в боковом окне)", () => {
+describe("Проект: договор (строка документа)", () => {
   it("весь путь: формирование проекта → на согласование клиенту → согласован → выставлен у оператора → скан → Подписан", async () => {
-    const { panel } = await openTab("accountant@demo.example", 104, "contract");
+    const { panel } = await openCard("accountant@demo.example", 104);
 
     // договора нет: бухгалтер формирует проект
-    expect(await within(panel).findByText("Договора ещё нет")).toBeVisible();
-    fireEvent.click(within(panel).getByRole("button", { name: "Сформировать проект договора" }));
+    expect(await within(panel).findByText(/Проекта договора ещё нет/)).toBeVisible();
+    fireEvent.click(
+      within(panel).getByRole("button", { name: "Сформировать проект договора по КП" }),
+    );
 
     // проект не отправлен клиенту
     expect(await within(panel).findByText("Проект ещё не отправлен клиенту.")).toBeVisible();
-    expect(within(panel).getByText("не отправлен")).toBeVisible();
     fireEvent.click(within(panel).getByRole("button", { name: "На согласование клиенту" }));
 
     expect(
@@ -134,8 +200,6 @@ describe("Проект: договор (вкладка в боковом окн�
       await within(panel).findByText(/Договор выставлен у оператора\. Когда обе стороны/),
     ).toBeVisible();
     expect(within(panel).getAllByText("Выставлен у оператора").length).toBeGreaterThan(0);
-    expect(within(panel).getByText("Комментарий: Didox, № 77")).toBeVisible();
-    expect(within(panel).queryByText(/Причина: Didox/)).toBeNull();
 
     // скан: пока файла нет — кнопка неактивна, подпись говорит почему
     const submit = within(panel).getByRole("button", { name: "Прикрепить скан" });
@@ -152,17 +216,21 @@ describe("Проект: договор (вкладка в боковом окн�
     ).toBeVisible();
     expect(within(panel).getByText("Подписан (скан)")).toBeVisible();
     expect(within(panel).getByRole("button", { name: "Скан подписанного" })).toBeVisible();
-    // история договора: кто и когда, записи по порядку (новые первыми)
-    const history = within(panel).getByRole("list", { name: "История договора" });
+    // история — одна, во вкладке «История»: кто и когда, записи по порядку (новые первыми)
+    const side = await sideTab("История");
+    const history = await within(side).findByRole("list", { name: "История проекта" });
     expect(within(history).getAllByRole("listitem")[0]).toHaveTextContent(
       "Прикреплён скан подписанного договора",
     );
     expect(within(history).getAllByRole("listitem")[0]).toHaveTextContent("Демо Бухгалтеров");
+    // СЦ-7: подпись записи — «Комментарий», а не «Причина»; после ЕД-7 запись живёт только в «Истории»
+    expect(within(history).getByText("Комментарий: Didox, № 77")).toBeVisible();
+    expect(within(history).queryByText(/Причина: Didox/)).toBeNull();
   });
 
   it("A2: «Согласован клиентом» — без канала и лица не отмечается; в истории — «Отмечено сотрудником»", async () => {
-    const { panel } = await openTab("accountant@demo.example", 104, "contract");
-    await click(panel, "Сформировать проект договора");
+    const { panel } = await openCard("accountant@demo.example", 104);
+    await click(panel, "Сформировать проект договора по КП");
     await click(panel, "На согласование клиенту");
     await click(panel, "Отметить: согласован клиентом");
 
@@ -172,7 +240,8 @@ describe("Проект: договор (вкладка в боковом окн�
 
     await agree(panel, "Юсупова Н., юрист");
     expect(await within(panel).findByText(/Клиент согласовал редакцию/)).toBeVisible();
-    const history = within(panel).getByRole("list", { name: "История договора" });
+    const side = await sideTab("История");
+    const history = await within(side).findByRole("list", { name: "История проекта" });
     const last = within(history).getAllByRole("listitem")[0];
     expect(last).toHaveTextContent("Редакция договора согласована клиентом");
     expect(last).toHaveTextContent("Отмечено сотрудником");
@@ -180,8 +249,8 @@ describe("Проект: договор (вкладка в боковом окн�
   });
 
   it("скан не того типа: кнопка остаётся неактивной, слово о типе; ошибка ERP показывается словами", async () => {
-    const { panel } = await openTab("accountant@demo.example", 104, "contract");
-    await click(panel, "Сформировать проект договора");
+    const { panel } = await openCard("accountant@demo.example", 104);
+    await click(panel, "Сформировать проект договора по КП");
     await click(panel, "На согласование клиенту");
     await agree(panel);
     await click(panel, "Отметить: выставлен у оператора");
@@ -207,7 +276,7 @@ describe("Проект: договор (вкладка в боковом окн�
   });
 
   it("отклонение клиентом: причина обязательна, потом «Вернуть в проект»", async () => {
-    const { panel } = await openTab("accountant@demo.example", 105, "contract");
+    const { panel } = await openCard("accountant@demo.example", 105);
     await click(panel, "Клиент отклонил договор…");
 
     const form = within(panel).getByRole("form", { name: "Клиент отклонил договор" });
@@ -228,7 +297,9 @@ describe("Проект: договор (вкладка в боковом окн�
     expect(
       await within(panel).findByText(/Клиент отклонил договор\. Исправьте проект/),
     ).toBeVisible();
-    expect(within(panel).getByText(/Срок оплаты 5 дней/)).toBeVisible();
+    // причина отказа — в «Истории», у договора её копии нет
+    const side = await sideTab("История");
+    expect(await within(side).findByText(/Срок оплаты 5 дней/)).toBeVisible();
     fireEvent.click(within(panel).getByRole("button", { name: "Вернуть в проект" }));
     expect(await within(panel).findByText("Проект ещё не отправлен клиенту.")).toBeVisible();
   });
@@ -247,7 +318,7 @@ describe("Проект: договор (вкладка в боковом окн�
         ),
       ),
     );
-    const { panel } = await openTab("accountant@demo.example", 105, "contract");
+    const { panel } = await openCard("accountant@demo.example", 105);
     await agree(panel);
 
     expect(
@@ -259,9 +330,9 @@ describe("Проект: договор (вкладка в боковом окн�
   });
 });
 
-describe("Проект: акт (вкладка в боковом окне)", () => {
+describe("Проект: акт (строка документа)", () => {
   it("скан подписанного акта → «Подписан (скан)», проект «Выполнено»", async () => {
-    const { panel } = await openTab("accountant@demo.example", 97, "act");
+    const { panel } = await openCard("accountant@demo.example", 97);
 
     expect(await within(panel).findByText(/Акт у клиента на приёмке/)).toBeVisible();
     const submit = within(panel).getByRole("button", { name: "Прикрепить скан" });
@@ -277,19 +348,22 @@ describe("Проект: акт (вкладка в боковом окне)", () 
     expect(
       await screen.findByText("Проект выполнен: акт принят, все счета оплачены."),
     ).toBeVisible();
-    expect(screen.getAllByText("Проект выполнен").length).toBeGreaterThan(0);
+    const side = await sideTab("История");
+    expect(await within(side).findByText("Проект выполнен")).toBeVisible();
   });
 
   it("принят клиентом в кабинете, файла нет → «Принят клиентом», слова «скан» нет (СЦ-8)", async () => {
-    const { panel } = await openTab("accountant@demo.example", 72, "act");
+    const { panel } = await openCard("accountant@demo.example", 72);
 
     expect(
       await within(panel).findByText("Клиент принял акт в кабинете. Скана нет."),
     ).toBeVisible();
-    expect(within(panel).getByText("Принят клиентом")).toBeVisible();
-    expect(within(panel).getByText("Принят")).toBeVisible(); // поле даты
-    expect(panel).not.toHaveTextContent("Подписан (скан)");
-    expect(panel).not.toHaveTextContent("скан сохранён");
+    const detail = within(panel)
+      .getByText("Клиент принял акт в кабинете. Скана нет.")
+      .closest("li") as HTMLElement;
+    expect(within(detail).getByText("Принят")).toBeVisible(); // поле даты
+    expect(detail).not.toHaveTextContent("Подписан (скан)");
+    expect(detail).not.toHaveTextContent("скан сохранён");
     const docs = screen.getByRole("region", { name: "Документы проекта" });
     expect(docs).toHaveTextContent("АКТ-2026/044");
     const actRow = within(docs).getByText("АКТ-2026/044").closest("li") as HTMLElement;
@@ -298,7 +372,7 @@ describe("Проект: акт (вкладка в боковом окне)", () 
   });
 
   it("возврат заказчиком с причиной → «Возвращён с причиной» → выпустить заново", async () => {
-    const { panel } = await openTab("accountant@demo.example", 97, "act");
+    const { panel } = await openCard("accountant@demo.example", 97);
     await click(panel, "Заказчик вернул акт…");
     const form = within(panel).getByRole("form", { name: "Заказчик вернул акт" });
     const submit = within(form).getByRole("button", { name: "Записать возврат" });
@@ -315,19 +389,19 @@ describe("Проект: акт (вкладка в боковом окне)", () 
   });
 
   it("акта нет и счёта нет: подпись объясняет, когда его можно выпустить", async () => {
-    const { panel } = await openTab("accountant@demo.example", 105, "act");
-    expect(await within(panel).findByText("Акта ещё нет")).toBeVisible();
-    expect(within(panel).getByText(/Акт выпускается по выставленному счёту/)).toBeVisible();
-    expect(within(panel).queryByRole("button", { name: "Выпустить акт" })).toBeNull();
+    const { panel } = await openCard("accountant@demo.example", 105);
+    // факт — `act_blocker = no_invoice`: подпись называет причину и следующий шаг, а не общую фразу
+    expect(await within(panel).findByText(/Счёт пока не выставлен — выставьте его/)).toBeVisible();
+    expect(within(panel).queryByRole("button", { name: "Выпустить акт по проекту" })).toBeNull();
   });
 
   it("счёт есть, товар не доставлен: вместо кнопки — «после доставки»; доставлен — кнопка есть (СЦ-9)", async () => {
     const project = readProjects().find((p) => p.id === 97);
     if (!project) throw new Error("нет проекта 97");
     writeProject({ ...project, act: null });
-    const { panel } = await openTab("accountant@demo.example", 97, "act");
+    const { panel } = await openCard("accountant@demo.example", 97);
     expect(await within(panel).findByText(/Акт — после доставки/)).toBeVisible();
-    expect(within(panel).queryByRole("button", { name: "Выпустить акт" })).toBeNull();
+    expect(within(panel).queryByRole("button", { name: "Выпустить акт по проекту" })).toBeNull();
   });
 
   it("доставлено: акт можно выпустить", async () => {
@@ -338,7 +412,9 @@ describe("Проект: акт (вкладка в боковом окне)", () 
       act: null,
       fulfillment: { ...project.fulfillment, status: "DELIVERED", status_name: "Доставлено" },
     });
-    const { panel } = await openTab("accountant@demo.example", 97, "act");
-    expect(await within(panel).findByRole("button", { name: "Выпустить акт" })).toBeVisible();
+    const { panel } = await openCard("accountant@demo.example", 97);
+    expect(
+      await within(panel).findByRole("button", { name: "Выпустить акт по проекту" }),
+    ).toBeVisible();
   });
 });
