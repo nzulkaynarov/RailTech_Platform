@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { Alert, App, Button, DatePicker, Select } from "antd";
+import { Alert, App, Button, DatePicker } from "antd";
 import dayjs, { type Dayjs } from "dayjs";
 import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -13,6 +13,7 @@ import {
 } from "../../shared/api/generated/platform-bff";
 import { useFormat } from "../../shared/lib/useFormat";
 import { ContextualSaveBar } from "../../shared/ui/ContextualSaveBar";
+import { EmployeePicker } from "../../shared/ui/EmployeePicker";
 import { profileErrorText } from "./errors";
 import { Section } from "./Section";
 
@@ -98,18 +99,15 @@ export function DeputySection({ profile }: { profile: Profile }) {
       <div className="pf-profile-deputy-row">
         <div>
           <label htmlFor={`${base}-who`}>{t("deputy.who")}</label>
-          <Select
+          <EmployeePicker
             id={`${base}-who`}
-            style={{ width: "100%" }}
-            placeholder={t("deputy.whoPlaceholder")}
             value={who}
+            options={candidates.data ?? []}
             onChange={setWho}
             loading={candidates.isPending}
-            notFoundContent={candidates.isSuccess ? t("deputy.noCandidates") : undefined}
-            options={(candidates.data ?? []).map((c) => ({
-              value: c.id,
-              label: c.position ? `${c.name} · ${c.position}` : c.name,
-            }))}
+            placeholder={t("deputy.whoPlaceholder")}
+            emptyText={t("deputy.noCandidates")}
+            allowClear={false}
           />
         </div>
         <div>

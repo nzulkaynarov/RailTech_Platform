@@ -12,7 +12,7 @@ import {
   selectedLabel,
 } from "../../../test/fields";
 import { server } from "../../../test/server";
-import { readEds } from "../../../mocks/fixtures/edsDocuments";
+import { readEds, writeEds } from "../../../mocks/fixtures/edsDocuments";
 import { readLetters, writeLetters } from "../../../mocks/fixtures/letters";
 import { renderAt, setupEdsTests, signIn } from "../../../test/edsKit";
 
@@ -215,6 +215,49 @@ describe("EDS · Создать документ: форма", () => {
     expect(screen.queryByRole("button", { name: /Зарегистрировать/ })).toBeNull();
     expect(screen.queryByRole("button", { name: "Отправить на согласование" })).toBeNull();
     expect(screen.getByRole("region", { name: "PDF на бланке" })).toBeVisible();
+  });
+
+  it("ЕД-6: подписант письма — выбор из держателей права подписи, должность из справочника правится для «и. о.»", async () => {
+    await openForm("manager@demo.example", "?type=letter");
+    step(/Согласование и подпись/);
+
+    // текстом имя подписанта не вписывается: поле — выбор
+    const signer = await screen.findByRole("combobox", { name: "Подписант" });
+    expect(screen.queryByRole("textbox", { name: "Подписант" })).toBeNull();
+    fireEvent.mouseDown(signer);
+    fireEvent.click(await screen.findByTitle("Демо Директоров"));
+
+    const position = screen.getByLabelText("Должность подписанта");
+    expect(position).toHaveAttribute("placeholder", "Директор");
+    expect(position).toHaveValue("");
+    fireEvent.change(position, { target: { value: "И. о. директора" } });
+    expect(position).toHaveValue("И. о. директора");
+  });
+
+  it("ЕД-6: у сохранённого подписанта пропало право — в поле имя, а не id", async () => {
+    const state = readEds();
+    const draft = state.documents.find((d) => d.id === "00000000-0000-4000-8000-000000000004");
+    if (!draft) throw new Error("fixture draft is missing");
+    draft.kind = "letter_out";
+    draft.letter = {
+      body: null,
+      recipient_attention: null,
+      recipient_email: null,
+      signatory_name: "Бывший Подписантов",
+      signatory_position: null,
+      signer_crm_user_id: 999,
+      pdf: null,
+      pdfPolls: 0,
+      mailings: [],
+      registration_requested: null,
+    };
+    writeEds(state);
+    await openForm("manager@demo.example", "?draft=00000000-0000-4000-8000-000000000004");
+    await screen.findByDisplayValue("Ремонт кондиционера в переговорной");
+    step(/Согласование и подпись/);
+
+    expect(await screen.findByText("Бывший Подписантов")).toBeVisible();
+    expect(screen.queryByText("999")).toBeNull();
   });
 
   it("СЦ-1: почта документооборота не подключена — форма говорит это до отправки, кнопка не обещает отправку", async () => {

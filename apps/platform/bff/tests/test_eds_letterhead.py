@@ -332,3 +332,38 @@ async def test_letterhead_and_body_validation(
     for form in (bad_email, bad_body):
         assert (await web.send("POST", f"{BASE}/documents", json=form)).status_code == 422
     assert eds.requests("POST", "documents") == []
+
+
+async def test_chosen_signer_goes_to_eds_and_comes_back_on_the_card(
+    web: Web, eds: EdsFake, check: ContractChecker
+) -> None:
+    """ЕД-6: выбранный подписант и «и. о.» уходят в EDS как есть; имя из справочника берёт EDS."""
+    await web.login(["REGISTRAR"])
+    eds.answer(
+        "POST",
+        "documents",
+        201,
+        letter_doc(
+            letter=letter(
+                signatory_name="Рустам Директоров",
+                signatory_position="И. о. директора",
+                signer_crm_user_id=3,
+            )
+        ),
+    )
+    form = {
+        **LETTER_FORM,
+        "letter": {
+            **LETTER_FORM["letter"],
+            "signer_crm_user_id": 3,
+            "signatory_position": "И. о. директора",
+        },
+    }
+
+    response = await web.send("POST", f"{BASE}/documents", json=form)
+
+    assert response.status_code == 201, response.text
+    check(response, "/eds/documents", "post")
+    sent = eds.body("POST", "documents")["letter"]
+    assert (sent["signer_crm_user_id"], sent["signatory_position"]) == (3, "И. о. директора")
+    assert response.json()["letter"]["signer_crm_user_id"] == 3

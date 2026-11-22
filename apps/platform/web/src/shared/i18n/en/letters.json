@@ -123,6 +123,7 @@
     "returned": "The letter was returned to the manager",
     "rejected": "The letter was rejected",
     "journal": "History",
+    "actionUnknown": "Action on the letter",
     "journalSystem": "System",
     "actions": {
       "letter_registered": "Letter registered",
@@ -289,6 +290,7 @@
       "invalid_state": "the letter is no longer awaiting resolution, refresh the card",
       "eds_not_granted": "you have no access to document flow",
       "forbidden": "this action is not allowed for your role",
+      "forbiddenSection": "no access to the section «{{section}}»",
       "unavailable": "document flow is not responding",
       "validation": "check the fields",
       "unknown": "unexpected error",
@@ -976,6 +978,7 @@
     "journal": {
       "title": "Journal",
       "system": "System",
+      "actionUnknown": "Action on the message",
       "action": {
         "take": "took it",
         "takeover": "took it over",

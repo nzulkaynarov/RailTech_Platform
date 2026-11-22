@@ -82,6 +82,8 @@ class Document(Base):
     recipient_email: Mapped[str | None] = mapped_column(String(254))
     signatory_name: Mapped[str | None] = mapped_column(String(255))
     signatory_position: Mapped[str | None] = mapped_column(String(255))
+    # ЕД-6: подписант, выбранный автором (сотрудник с правом подписи); `NULL` — подбирает реестр полномочий.
+    chosen_signer_crm_user_id: Mapped[int | None] = mapped_column(BigInteger)
     registered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     pdf_hash: Mapped[str | None] = mapped_column(String(64), ForeignKey("document_renders.hash", use_alter=True))
     registration_requested_by: Mapped[int | None] = mapped_column(BigInteger)

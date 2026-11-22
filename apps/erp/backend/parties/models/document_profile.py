@@ -87,6 +87,7 @@ class CompanyDocumentProfile(models.Model):
         verbose_name=_("Акцентный цвет"),
         help_text=_("HEX-цвет фирменного стиля для шапки документа (напр. #15294d)"),
     )
+    # ДОК-13: макет, шрифт и второй цвет устарели — удалены из интерфейса и не читаются; колонки остались до уборки схемы.
     LAYOUT_LIGHT = "light"
     LAYOUT_BOXED = "boxed"
     LAYOUT_BOLD = "bold"

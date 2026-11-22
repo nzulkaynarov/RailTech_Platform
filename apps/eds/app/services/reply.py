@@ -153,7 +153,9 @@ async def signing_tasks(session: AsyncSession, employee: Employee, today: dt.dat
                 grants=grants,
                 people=people,
             )
-        signer = signing_resolve.pick_letter_signer(resolutions[key], document.author_crm_user_id, openers)
+        signer = signing_resolve.pick_letter_signer(
+            resolutions[key], document.author_crm_user_id, openers, document.chosen_signer_crm_user_id
+        )
         if signer is not None and signer.signer.crm_user_id == employee.crm_user_id:
             mine.append((document, signer))
     mine = mine[:TASKS_LIMIT]

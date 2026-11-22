@@ -127,7 +127,7 @@ describe("Резолюция делопроизводства (P8b, SPEC-v3 §3.
     cleanup();
 
     const form = await directorForm();
-    expect(within(form).getByText(/Проект подготовил\(а\) Демо Канцелярова/)).toBeVisible();
+    expect(within(form).getByText(/Проект подготовлен: Демо Канцелярова/)).toBeVisible();
     expect(within(form).getByRole("radio", { name: /Подготовить ответ/ })).toBeChecked();
     fireEvent.click(within(form).getByRole("button", { name: "Утвердить проект" }));
     await waitFor(() => {

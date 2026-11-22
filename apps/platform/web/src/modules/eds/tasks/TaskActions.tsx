@@ -14,7 +14,7 @@ import { DateField } from "../../../shared/ui/DateField";
 import { ErrorNote } from "../../../shared/ui/FormParts";
 import { LinkButton } from "../../../shared/ui/LinkButton";
 import { useResolutionKindName } from "../dictionaries";
-import { fieldsOf, reasonOf, useRefreshLetters } from "../inbox/api";
+import { fieldsOf, reasonText, useRefreshLetters } from "../inbox/api";
 import { AttachmentsField } from "../new/AttachmentsField";
 import type { Attachment } from "../new/formModel";
 import { OutcomeMenu } from "./LetterOutcomes";
@@ -139,11 +139,7 @@ function CompleteForm({ instruction }: { instruction: LetterInstruction }) {
           }}
         />
       </Field>
-      <ErrorNote
-        message={
-          failure ? t("tasks.failed", { reason: t(`form.reasons.${reasonOf(failure)}`) }) : null
-        }
-      />
+      <ErrorNote message={failure ? t("tasks.failed", { reason: reasonText(t, failure) }) : null} />
       <div className="pf-fp-row">
         <Button type="primary" htmlType="submit" loading={complete.isPending} disabled={uploading}>
           {t("tasks.complete.submit")}
@@ -252,11 +248,7 @@ function ExtensionForm({
           }}
         />
       </Field>
-      <ErrorNote
-        message={
-          failure ? t("tasks.failed", { reason: t(`form.reasons.${reasonOf(failure)}`) }) : null
-        }
-      />
+      <ErrorNote message={failure ? t("tasks.failed", { reason: reasonText(t, failure) }) : null} />
       <div className="pf-fp-row">
         <Button htmlType="submit" loading={request.isPending}>
           {t("tasks.ext.submit")}
@@ -332,11 +324,7 @@ export function AcquaintAction({ letter }: { letter: LetterCard }) {
   return (
     <Card size="small" title={<h2 className="pf-letters-title">{t("tasks.acq.title")}</h2>}>
       <p>{t("tasks.acq.text")}</p>
-      <ErrorNote
-        message={
-          failure ? t("tasks.failed", { reason: t(`form.reasons.${reasonOf(failure)}`) }) : null
-        }
-      />
+      <ErrorNote message={failure ? t("tasks.failed", { reason: reasonText(t, failure) }) : null} />
       <Button
         type="primary"
         loading={acknowledge.isPending}

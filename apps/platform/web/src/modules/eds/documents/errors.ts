@@ -1,6 +1,7 @@
 import type { TFunction } from "i18next";
 
 import { ApiError } from "../../../shared/api/errors";
+import { missingSectionName } from "../../../shared/lib/permissionSection";
 
 const NS = "documents:form.error.reasons.";
 
@@ -14,6 +15,7 @@ export const FIELD_KEYS = [
   "recipient_email",
   "erp_deal_id",
   "in_reply_to_number",
+  "signer_crm_user_id",
 ] as const;
 export type FieldKey = (typeof FIELD_KEYS)[number];
 
@@ -26,6 +28,7 @@ const FIELD_TEXT: Record<FieldKey, string> = {
   recipient_email: "documents:form.validation.recipientEmail",
   erp_deal_id: "documents:form.validation.deal",
   in_reply_to_number: "documents:form.validation.replyTo",
+  signer_crm_user_id: "documents:form.validation.signer",
 };
 
 function stringDetail(error: ApiError, key: string): string | undefined {
@@ -70,6 +73,8 @@ export function reasonText(t: TFunction, error: unknown): string {
     const text = t(`${NS}${reason}`, { defaultValue: "" });
     if (text) return text;
   }
+  const section = error.code === "FORBIDDEN" ? missingSectionName(error) : null;
+  if (section) return t(`${NS}FORBIDDEN_SECTION`, { section });
   const fields = serverFields(error);
   const first = fields[0];
   if (first && error.code === "VALIDATION_FAILED") return fieldText(t, first).replace(/\.$/, "");

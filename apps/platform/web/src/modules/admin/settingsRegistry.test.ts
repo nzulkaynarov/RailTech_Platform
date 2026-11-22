@@ -72,6 +72,14 @@ describe("поиск по настройкам", () => {
   const keys = (query: string, allowed?: (e: SettingEntry) => boolean) =>
     searchSettings(query, "ru", allowed).map((hit) => hit.entry.key);
 
+  it("условия КП и напоминания о счёте находят свои страницы, а не «Шаблоны документов»", () => {
+    expect(keys("условия кп")[0]).toBe("sales");
+    expect(keys("условия кп")).not.toContain("templates");
+    expect(keys("просрочка")).toContain("notifications");
+    expect(keys("просрочка")).not.toContain("templates");
+    expect(keys("напоминание")).not.toContain("templates");
+  });
+
   it("по названию — первым: «почта» → «Почта»; «справоч» → «Справочники»", () => {
     expect(keys("почта")[0]).toBe("mail");
     expect(keys("справоч")[0]).toBe("dictionaries");

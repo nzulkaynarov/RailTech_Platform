@@ -13,7 +13,7 @@ import {
 } from "../../../shared/api/generated/platform-bff";
 import { DateField } from "../../../shared/ui/DateField";
 import { ErrorNote, FormField } from "../../../shared/ui/FormParts";
-import { companyDate, fieldsOf, reasonOf, useRefreshLetters } from "./api";
+import { companyDate, fieldsOf, reasonOf, reasonText, useRefreshLetters } from "./api";
 import { type ResolutionDraft, type ZonePick, clearDraft, readDraft, writeDraft } from "./draft";
 import { shortAction, useConfirmAction } from "../../../shared/ui/useConfirmAction";
 import { UnitLabel } from "../../../shared/ui/UnitLabel";
@@ -207,7 +207,7 @@ export function ResolutionForm({ letter, variant = "panel", onDone }: Resolution
   const failureText = failure
     ? t(
         `form.${reasonOf(failure.error) === "invalid_state" ? "failedGone" : "failed"}.${failure.action}`,
-        { reason: t(`form.reasons.${reasonOf(failure.error)}`) },
+        { reason: reasonText(t, failure.error) },
       )
     : null;
 

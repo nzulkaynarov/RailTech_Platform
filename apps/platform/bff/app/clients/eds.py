@@ -276,6 +276,11 @@ class EdsLetters:
         found: dict[str, Any] = await self._json("GET", "/api/v1/employees")
         return found
 
+    async def signers(self) -> dict[str, Any]:
+        """Кого выбрать подписантом письма (`GET /employees/signers`, ЕД-6)."""
+        found: dict[str, Any] = await self._json("GET", "/api/v1/employees/signers")
+        return found
+
     async def file(self, file_id: str) -> httpx.Response:
         """Файл потоком (`stream`): ответ открыт, закрывает вызывающий."""
         return await self._call("eds", "GET", f"/api/v1/files/{file_id}", stream=True)

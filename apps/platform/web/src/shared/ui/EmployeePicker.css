@@ -1,0 +1,10 @@
+/* ЕД-6: строка выбора сотрудника — имя и должность второй строкой */
+.pf-emp-option {
+  display: flex;
+  flex-direction: column;
+  line-height: 20px;
+}
+.pf-emp-position {
+  font-size: 12px;
+  color: var(--rt-color-text-secondary);
+}
