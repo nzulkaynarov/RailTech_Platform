@@ -755,7 +755,7 @@
   "tabs": {
     "today": "Bugun",
     "notifications": "Bildirishnomalar",
-    "facts": "Ma’lumotlar",
+    "facts": "Maʼlumotlar",
     "route": "Marshrut",
     "history": "Tarix",
     "card": "Kartochka",
@@ -785,16 +785,16 @@
       "text": "Qarorlar, mijoz xabarlari va tizim hodisalari shu yerda ko‘rinadi."
     },
     "facts": {
-      "title": "Ma’lumot yo‘q",
-      "text": "Tanlangan obyekt ma’lumotlari shu yerda paydo bo‘ladi."
+      "title": "Maʼlumot yöq",
+      "text": "Tanlangan obyekt maʼlumotlari shu yerda paydo böladi."
     },
     "route": {
-      "title": "Marshrut yo‘q",
-      "text": "Obyekt bo‘yicha qadamlar va qarorlar shu yerda paydo bo‘ladi."
+      "title": "Marshrut yöq",
+      "text": "Obyekt böyicha qadamlar va qarorlar shu yerda paydo böladi."
     },
     "history": {
-      "title": "Tarix yo‘q",
-      "text": "Obyekt hodisalari shu yerda paydo bo‘ladi."
+      "title": "Tarix yöq",
+      "text": "Obyekt hodisalari shu yerda paydo böladi."
     },
     "card": {
       "title": "Obyekt tanlanmagan",

@@ -59,6 +59,8 @@ describe("Склад · карточка заказа партнёру (ЕД-7)"
     fireEvent.click(within(side).getByRole("tab", { name: "История" }));
     expect(await within(side).findByRole("list", { name: "Журнал заказа" })).toBeVisible();
     expect(screen.getAllByRole("list", { name: "Журнал заказа" })).toHaveLength(1);
+    // и при открытой «Истории» поставщик по-прежнему назван один раз: запись «Заказ создан» его не повторяет
+    expect(screen.getAllByText(/Вымышленная Сталь/)).toHaveLength(1);
   });
 });
 

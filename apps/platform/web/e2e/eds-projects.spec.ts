@@ -239,6 +239,14 @@ test.describe("Проекты: телефон", () => {
       await expectNoViolations(page, "мобильная карточка: договор в строке");
       await expectNoInvoiceWord(page);
 
+      // Ссылка из очереди/колокольчика ведёт на проект без `?panel=open&tab=…`: окно закрыто, кнопка шага доступна.
+      await openProject(page, 104);
+      await expect(page.locator(PANEL)).toBeHidden();
+      await page
+        .getByRole(DOCS.role, { name: DOCS.name })
+        .getByRole("button", { name: "Сформировать проект договора по КП" })
+        .click({ trial: true });
+
       await openProject(page, 97);
       await page.getByTestId("panel-toggle").click();
       await expect(page.getByRole("tab", { name: "История" })).toBeVisible();

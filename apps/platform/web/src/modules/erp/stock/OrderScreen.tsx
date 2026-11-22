@@ -42,7 +42,8 @@ function OrderLog({ order }: { order: SupplierOrderDetail }) {
     at: entry.at,
     by: entry.by?.name ?? null,
     action: t(`order.log.${entry.kind}`),
-    comment: entry.detail,
+    // «Заказ создан» несёт название поставщика, которое уже стоит в шапке: повтор не выводим.
+    comment: entry.kind === "created" && entry.detail === order.supplier.name ? null : entry.detail,
   }));
   return <RecordHistory entries={entries} label={t("order.log.label")} timeStyle="activity" />;
 }

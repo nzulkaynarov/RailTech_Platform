@@ -120,7 +120,7 @@ def _doc_hit(doc: dict[str, Any], deals: dict[int, dict[str, Any]]) -> SearchHit
             subtitle=context,
         )
     if deal is not None:
-        project = deal_ref(deal, tab="documents")
+        project = deal_ref(deal)
         path = project.path
     else:
         path = f"/eds/documents?type={kind}&q={segment(label)}"

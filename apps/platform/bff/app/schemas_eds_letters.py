@@ -1070,7 +1070,7 @@ def _request_path(number: str, deal: dict[str, Any] | None) -> str:
     if deal is not None and deal_kind(deal_step(deal)) == "project":
         own = deal.get("number")
         project = own if isinstance(own, str) and own else number
-        return f"/eds/projects/{quote(project, safe='')}?panel=open&tab=card"
+        return f"/eds/projects/{quote(project, safe='')}"
     return request_path(number)
 
 

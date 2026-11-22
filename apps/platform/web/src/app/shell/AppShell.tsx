@@ -41,7 +41,9 @@ import { AvatarMenu } from "./AvatarMenu";
 import { CreateMenu } from "./CreateMenu";
 import { PanelContent } from "./PanelContent";
 import {
+  FORM_TAB,
   effectivePanelTab,
+  panelHasContent,
   hasBuiltInTab,
   usePanelClaims,
   usePanelForced,
@@ -85,14 +87,26 @@ export function AppShell() {
   const ownPanels = usePanels(me.id, match?.section, Boolean(match?.objectId));
   // Форма в окне (`FormSheet`) открывает его сама и на «Карточке», не меняя адрес и выбор пользователя.
   const panelForced = usePanelForced();
-  const forcedPanels = panelForced ? { ...ownPanels, panelOpen: true, tab: "card" } : ownPanels;
+  const forcedPanels = panelForced ? { ...ownPanels, panelOpen: true, tab: FORM_TAB } : ownPanels;
   // ЕД-7: вкладки, которые никто не наполняет, не показываются; пропавшая вкладка уступает место первой видимой.
   const claimedTabs = usePanelClaims();
-  const visibleTabs = visiblePanelTabs(forcedPanels.tabs, claimedTabs, (tab) =>
-    hasBuiltInTab(match?.module.code, match?.section.key, tab),
-  );
+  const builtIn = (tab: string) => hasBuiltInTab(match?.module.code, match?.section.key, tab);
+  const visibleTabs = visiblePanelTabs(forcedPanels.tabs, claimedTabs, builtIn, panelForced);
+  // Окно само (по умолчанию на карточке) не открывается, пока экран ничего в него не положил (форма создания, загрузка, ошибка):
+  // пустое окно с заглушкой нарушило бы ЕД-7. Явное открытие (`?panel=open`, кнопка) остаётся за пользователем.
+  const explicitOpen = new URLSearchParams(location.search).get("panel") === "open";
+  const autoOpenBlocked =
+    !panelForced &&
+    !explicitOpen &&
+    forcedPanels.panelOpen &&
+    !panelHasContent(forcedPanels.tabs, claimedTabs, builtIn);
+  const panelOpen = forcedPanels.panelOpen && !autoOpenBlocked;
   const panels = {
     ...forcedPanels,
+    panelOpen,
+    togglePanel: () => {
+      forcedPanels.setPanelOpen(!panelOpen);
+    },
     tabs: visibleTabs,
     tab: effectivePanelTab(forcedPanels.tab, visibleTabs),
   };

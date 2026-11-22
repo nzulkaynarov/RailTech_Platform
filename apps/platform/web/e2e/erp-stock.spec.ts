@@ -199,6 +199,18 @@ test.describe("Склад и закупки: снабженец", () => {
     await expectNoViolations(page, "отгрузки");
   });
 
+  test("ЕД-7: форма нового заказа — окно само не открывается, заглушки «Сведений нет» нет", async ({
+    page,
+  }) => {
+    await loginAndWait(page, "supply@demo.example");
+    await spaGoto(page, "/erp/stock/new");
+    await expect(
+      page.getByRole("heading", { level: 1, name: "Новый заказ партнёру" }),
+    ).toBeVisible();
+    await expect(page.locator("#pf-context-panel")).toBeHidden();
+    await expect(page.getByText("Сведений нет")).toHaveCount(0);
+  });
+
   test("просроченный заказ — в «Моих задачах» и ведёт на карточку заказа", async ({ page }) => {
     await loginAndWait(page, "supply@demo.example");
     const row = page.getByRole("link", { name: new RegExp(`Просрочен заказ ${OVERDUE}`) });

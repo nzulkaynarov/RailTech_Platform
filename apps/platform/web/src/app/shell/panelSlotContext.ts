@@ -51,11 +51,28 @@ export function visiblePanelTabs(
   tabs: readonly string[],
   claimed: readonly string[],
   builtIn: (tab: string) => boolean,
+  forced = false,
 ): readonly string[] {
-  const shown = tabs.filter((tab) => claimed.includes(tab) || builtIn(tab));
+  // Форма поверх (`FormSheet layer="panel"`) живёт на «Карточке»: набор раздела её может не иметь — вкладка остаётся видимой.
+  const withForm = forced && !tabs.includes(FORM_TAB) ? [FORM_TAB, ...tabs] : tabs;
+  const shown = withForm.filter(
+    (tab) => claimed.includes(tab) || builtIn(tab) || (forced && tab === FORM_TAB),
+  );
   if (shown.length > 0) return shown;
   return tabs.slice(0, 1);
 }
+
+/** Экран ничего не положил в окно: ни занятых вкладок, ни тех, что наполняет каркас. */
+export function panelHasContent(
+  tabs: readonly string[],
+  claimed: readonly string[],
+  builtIn: (tab: string) => boolean,
+): boolean {
+  return tabs.some((tab) => claimed.includes(tab) || builtIn(tab));
+}
+
+/** Вкладка формы поверх: `panelForced` переводит каркас на неё. */
+export const FORM_TAB = "card";
 
 /** Активная вкладка среди видимых: выбранная пользователем, а если она исчезла (данные ушли) — первая видимая. */
 export function effectivePanelTab(active: string, visible: readonly string[]): string {

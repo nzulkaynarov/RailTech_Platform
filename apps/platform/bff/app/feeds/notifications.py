@@ -67,17 +67,6 @@ _CLIENTS = (
     "deal.",
     "company.",
 )
-# События по документам открывают проект на вкладке «Документы», по сделке — на «Карточке».
-_DOCUMENT_EVENTS = (
-    "quote.",
-    "document.",
-    "invoice.",
-    "payment.",
-    "act.",
-    "contract.",
-    "delivery.",
-    "fulfillment.",
-)
 
 
 def tab_of(event_code: str) -> NotificationTab:
@@ -113,8 +102,7 @@ def _object(row: dict[str, Any], deals: dict[int, dict[str, Any]]) -> ObjectRef 
     deal = deals.get(row["deal"]) if isinstance(row.get("deal"), int) else None
     if deal is None:
         return None
-    code = str(row.get("event_code") or "")
-    return deal_ref(deal, tab="documents" if code.startswith(_DOCUMENT_EVENTS) else "card")
+    return deal_ref(deal)
 
 
 def _subtitle(row: dict[str, Any], deals: dict[int, dict[str, Any]]) -> str | None:

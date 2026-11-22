@@ -388,7 +388,8 @@ describe("Проект: акт (строка документа)", () => {
 
   it("акта нет и счёта нет: подпись объясняет, когда его можно выпустить", async () => {
     const { panel } = await openCard("accountant@demo.example", 105);
-    expect(await within(panel).findByText(/Акт выпускается по выставленному счёту/)).toBeVisible();
+    // факт — `act_blocker = no_invoice`: подпись называет причину и следующий шаг, а не общую фразу
+    expect(await within(panel).findByText(/Счёт пока не выставлен — выставьте его/)).toBeVisible();
     expect(within(panel).queryByRole("button", { name: "Выпустить акт по проекту" })).toBeNull();
   });
 

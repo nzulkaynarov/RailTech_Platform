@@ -82,13 +82,13 @@ def request_path(number: str) -> str:
     return f"/erp/requests?request={segment(number)}&panel=open&tab=task"
 
 
-def deal_ref(deal: dict[str, Any], *, tab: str = "card") -> ObjectRef:
+def deal_ref(deal: dict[str, Any]) -> ObjectRef:
     """Заявка (ЗВ) открывается в «Заявках в расчёте» (окно «Задание», `request_path`), проект (ПР)
-    — в EDS; боковое окно проекта — на вкладке `tab`."""
+    — в EDS: карточка проекта без вкладок «Договор» и «Акт» (ЕД-7), шаги — строки в центре."""
     step = deal_step(deal)
     number = deal_number(deal)
     if deal_kind(step) == "project":
-        path = f"/eds/projects/{segment(number)}?panel=open&tab={tab}"
+        path = f"/eds/projects/{segment(number)}"
     else:
         path = request_path(number)
     return ObjectRef(
@@ -231,14 +231,12 @@ def project_doc_ref(
     number: str,
     project: str,
     title: str | None,
-    *,
-    tab: Literal["contract", "act"],
 ) -> ObjectRef:
-    """Договор или акт проекта (D2-8): карточка проекта `/eds/projects/ПР-…` на вкладке
-    «Договор» или «Акт», где кнопки шага (сформировать, отправить, скан, выпустить)."""
+    """Договор или акт проекта (D2-8): карточка проекта `/eds/projects/ПР-…`, где в центре строки
+    «Договор» и «Акт» с кнопками шага (сформировать, отправить, скан, выпустить)."""
     return ObjectRef(
         kind=kind,
         number=number,
         title=title,
-        path=f"/eds/projects/{segment(project)}?panel=open&tab={tab}",
+        path=f"/eds/projects/{segment(project)}",
     )

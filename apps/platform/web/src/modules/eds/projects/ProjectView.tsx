@@ -1,6 +1,7 @@
 import { Card, Skeleton } from "antd";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
 
 import { canEdit, canSee } from "../../../app/access";
 import { useAuth } from "../../../app/auth/useAuth";
@@ -178,18 +179,28 @@ function Documents({ card, objectId }: { card: ProjectCard; objectId: string }) 
         <DocRow
           number="—"
           type={t("card.documents.act")}
-          status={
-            <span className="pf-hint">
-              {card.act_blocker === "not_delivered"
-                ? t("card.documents.actAfterDelivery")
-                : t("card.documents.actMissing")}
-            </span>
-          }
+          status={<span className="pf-hint">{actHint(card.act_blocker, t)}</span>}
           action={canIssueAct ? <ActIssueButton objectId={objectId} /> : null}
         />
       )}
     </DocList>
   );
+}
+
+/** Статус строки «Акт» из факта `act_blocker` (почему акт нельзя выпустить), а не общая фраза. */
+function actHint(blocker: ProjectCard["act_blocker"], t: TFunction<"projects">): string {
+  switch (blocker) {
+    case "no_invoice":
+      return t("act.none.noInvoice");
+    case "forbidden":
+      return t("act.none.forbidden");
+    case "not_delivered":
+      return t("card.documents.actAfterDelivery");
+    case null:
+      return t("act.none.ready");
+    default:
+      return t("card.documents.actMissing");
+  }
 }
 
 function Execution({ card, objectId }: { card: ProjectCard; objectId: string }) {
