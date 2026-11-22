@@ -7,9 +7,11 @@
   max-width: 760px;
   min-width: 0;
 }
+/* Две колонки — только когда они помещаются: ширину считаем от самой строки, а не от окна браузера, потому что
+   закреплённое боковое окно сужает рабочую область (иначе «Почта адресата» сжималась до одного слова в строке). */
 .pf-newdoc-row {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
   gap: 16px;
 }
 /* Тип зафиксирован («Продолжить» черновик или возвращённый документ, D1-6b): значение закрытого селекта читается — antd рисует его
@@ -58,6 +60,7 @@
 /* Письмо на бланке (P4): форма слева, PDF справа; на телефоне и узком экране — PDF под формой */
 .pf-newdoc--letter {
   max-width: 1440px;
+  container-type: inline-size;
 }
 .pf-newdoc-letter {
   display: grid;
@@ -71,6 +74,15 @@
   min-width: 0;
 }
 @media (max-width: 1199px) {
+  .pf-newdoc-letter {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .pf-newdoc-letter-pdf {
+    position: static;
+  }
+}
+/* То же при узкой рабочей области (боковое окно закреплено рядом): PDF уходит под форму, форма не сжимается */
+@container (max-width: 1039px) {
   .pf-newdoc-letter {
     grid-template-columns: minmax(0, 1fr);
   }
