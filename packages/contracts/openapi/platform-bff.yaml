@@ -19898,7 +19898,7 @@ components:
       properties:
         contact_name: {type: [string, 'null'], description: Кому уйдёт КП — контакт заявки или основной контакт клиента}
         telegram: {type: boolean, description: Контакт подключён к боту и клиент известен CRM}
-        cabinet: {type: boolean, description: Клиент уже входил в кабинет или ему доставлено приглашение (письмо ушло, а не только поставлено в очередь)}
+        cabinet: {type: boolean, description: Клиент уже входил в кабинет или ему доставлено приглашение — письмо ушло и не стоит в очереди}
         email: {type: boolean, description: У контакта есть e-mail и почта настроена}
         reasons:
           $ref: '#/components/schemas/QuoteChannelReasons'
