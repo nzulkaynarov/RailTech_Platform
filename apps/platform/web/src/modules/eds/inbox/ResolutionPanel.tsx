@@ -39,7 +39,9 @@ function Brief({ letter }: { letter: LetterCard }) {
             ),
             value: letter.sender.name,
           },
-          { label: t("panel.brief.request"), value: letter.request?.number },
+          ...(letter.request
+            ? [{ label: t("panel.brief.request"), value: letter.request.number }]
+            : []),
           { label: t("panel.brief.received"), value: date(letter.received_at) },
         ]}
       />

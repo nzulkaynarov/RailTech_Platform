@@ -135,11 +135,13 @@ def _text(value: Any, masked: Masked | None, limit: int) -> str | None:
     return cleaned[:limit] or None
 
 
-def due_from_text(raw: str, received: date) -> date | None:
-    """Срок «в течение N (рабочих|календарных) дней» из текста письма: код считает от даты `received`, а не модель.
+def due_from_text(raw: str, today: date) -> date | None:
+    """Срок «в течение N (рабочих|календарных) дней» из текста письма: код считает
+    от даты `today` (дня регистрации), а не модель.
 
     Рабочие дни — пн–пт (как в подсказке срока резолюции); без слова «рабочих» — календарные. Нет оборота или N вне
-    разумного — `None`. Это подсказка: срок человек подтверждает в карточке."""
+    разумного — `None`. Это подсказка: срок человек подтверждает в карточке (в письме отсчёт
+    может идти от даты поступления)."""
     if not raw:
         return None
     found = _DUE_RU.search(raw)
@@ -155,8 +157,8 @@ def due_from_text(raw: str, received: date) -> date | None:
     if not 1 <= days <= _MAX_DUE_DAYS:
         return None
     if not working:
-        return received + timedelta(days=days)
-    day = received
+        return today + timedelta(days=days)
+    day = today
     while days:
         day += timedelta(days=1)
         if day.weekday() < 5:

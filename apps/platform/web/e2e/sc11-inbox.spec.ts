@@ -120,6 +120,14 @@ test.describe("СЦ-11 · Входящее: регистрация и ответ
       await shot(page, "letter-card-no-deal");
       await expectNoViolations(page, `карточка ${String(width)}`);
 
+      await spaGoto(page, "/eds/inbox");
+      await page.getByRole("link", { name: "Показать письмо ВХ-108/26 в боковом окне" }).click();
+      const brief = page.getByRole("region", { name: "ВХ-108/26" });
+      await expect(brief).toBeVisible();
+      await expect(brief.locator("dt", { hasText: /^Заявка$/ })).toHaveCount(0);
+      await shot(page, "panel-brief-no-deal");
+      await expectNoViolations(page, `боковое окно ${String(width)}`);
+
       await spaGoto(
         page,
         `/eds/new?type=letter&reply_to=${encodeURIComponent("ВХ-108/26")}&reply_id=20000000-0000-4000-8000-000000000108`,

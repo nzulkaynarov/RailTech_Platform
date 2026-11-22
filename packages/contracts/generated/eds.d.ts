@@ -271,7 +271,7 @@ export interface paths {
      *     422, в `details.fields` — поле `kind` с `unknown_kind`), `receipt_method` — действующий код `receipt-methods`
      *     (иначе `receipt_method` с `unknown_method`); вид с `urgent` ставит `urgent = true` сам; `related_number` —
      *     номер предыдущего ВХ или нашего ИСХ (нет такого — 422, поле `related_number` с `not_found`); `summary` не задано —
-     *     берётся тема.
+     *     берётся тема. Вид с `due_required` без срока из документа (`document_due`) — 422, поле `document_due` с `required`.
      *
      *     Письмо общего ящика CRM (`source.crm_inbound_mail_id`, W18A-P2-3): одно письмо — один ВХ. Повторная регистрация
      *     того же письма (другой `Idempotency-Key`, повтор после обрыва, двойное нажатие) возвращает уже созданный ВХ —

@@ -191,6 +191,21 @@ describe("EDS · Входящие письма: боковое окно из с�
     expect(screen.getByText("Заявка", { selector: "dt" })).toBeVisible();
   });
 
+  it("СЦ-11: в кратком блоке бокового окна строка «Заявка» только у письма по заявке", async () => {
+    await openInbox("director@demo.example");
+    await screen.findByRole("table");
+
+    fireEvent.click(within(row("ВХ-104/26")).getByText("ООО «Демо-Рейл»"));
+    const withRequest = await panelEl();
+    await within(withRequest).findByRole("heading", { level: 3, name: "ВХ-104/26" });
+    expect(within(withRequest).getByText("Заявка", { selector: "dt" })).toBeVisible();
+
+    fireEvent.click(screen.getByRole("link", { name: "Показать письмо ВХ-108/26 в боковом окне" }));
+    const noRequest = await panelEl();
+    await within(noRequest).findByRole("heading", { level: 3, name: "ВХ-108/26" });
+    expect(within(noRequest).queryByText("Заявка", { selector: "dt" })).toBeNull();
+  });
+
   it("клик по строке открывает письмо и форму «Резолюция» в боковом окне без перехода", async () => {
     const { router } = await openInbox("director@demo.example");
     await screen.findByRole("table");
