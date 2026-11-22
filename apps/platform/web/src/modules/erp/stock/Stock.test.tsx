@@ -428,6 +428,41 @@ describe("Склад · приёмка и отгрузки", () => {
     });
   });
 
+  it("ЕД-6: роль поставщика ставится при «Создать черновик», а не при выборе; отказ — без заказа", async () => {
+    signIn("supply@demo.example");
+    renderAt("/erp/stock/new?mode=shortage&request=ПР-2026-099");
+    await screen.findByRole("heading", { level: 1, name: "Новый заказ партнёру" });
+    const marked: unknown[] = [];
+    const sent: unknown[] = [];
+    let status = 403;
+    server.use(
+      http.post("*/people/counterparties/:id/roles", async ({ request }) => {
+        marked.push(await request.clone().json());
+        return status === 0
+          ? undefined
+          : HttpResponse.json({ code: "FORBIDDEN", message: "Нет.", source: "erp" }, { status });
+      }),
+      http.post("*/erp/stock/orders/from-request", async ({ request }) => {
+        sent.push(await request.clone().json());
+        return undefined;
+      }),
+    );
+    const partner = await screen.findByRole("combobox", { name: "Партнёр" });
+    await pickCompany(partner, "Демо-Путь", "АО «Демо-Путь»");
+    expect(marked).toEqual([]);
+    fireEvent.click(screen.getByRole("button", { name: "Создать черновик" }));
+    expect(
+      await screen.findByText(/Не удалось отметить компанию поставщиком: нет права/),
+    ).toBeVisible();
+    expect(sent).toEqual([]);
+    status = 0;
+    fireEvent.click(screen.getByRole("button", { name: "Создать черновик" }));
+    await waitFor(() => {
+      expect(sent).toEqual([{ request: "ПР-2026-099", supplier_id: "7" }]);
+    });
+    expect(marked).toHaveLength(2);
+  });
+
   it("Х-18: шаг «Строки» без количества не получает галочку; с количеством — получает", async () => {
     signIn("supply@demo.example");
     renderAt("/erp/stock/new");

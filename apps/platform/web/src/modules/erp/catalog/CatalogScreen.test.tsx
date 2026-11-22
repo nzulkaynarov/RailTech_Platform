@@ -333,6 +333,48 @@ describe("Бренд: изготовитель выбирается (ЕД-6)", (
   });
 });
 
+describe("Бренд: роль изготовителя ставится при сохранении (ЕД-6)", () => {
+  it("закрытая форма роли не оставляет; «Добавить» — ставит, затем создаёт бренд", async () => {
+    const marked: unknown[] = [];
+    const sent: unknown[] = [];
+    server.use(
+      http.post("*/people/counterparties/:id/roles", async ({ request }) => {
+        marked.push(await request.clone().json());
+        return undefined;
+      }),
+      http.post("*/erp/catalog/manufacturers", async ({ request }) => {
+        sent.push(await request.clone().json());
+        return undefined;
+      }),
+    );
+    await open("supply@demo.example", "?part=refs");
+    fireEvent.click(await screen.findByRole("radio", { name: "Бренды" }));
+    const openForm = async () => {
+      fireEvent.click(await screen.findByRole("button", { name: "Добавить бренд" }));
+      const form = await findModal("Добавить бренд");
+      fireEvent.change(await within(form).findByLabelText("Название"), {
+        target: { value: "Демо-бренд" },
+      });
+      await pickCompany(
+        within(form).getByLabelText("Изготовитель — компания"),
+        "Демо-Путь",
+        "АО «Демо-Путь»",
+      );
+      return form;
+    };
+    const first = await openForm();
+    fireEvent.click(within(first).getByRole("button", { name: "Отмена" }));
+    await modalClosed("Добавить бренд");
+    expect(marked).toEqual([]);
+    const second = await openForm();
+    fireEvent.click(await within(second).findByRole("button", { name: "Добавить" }));
+    await waitFor(() => {
+      expect(sent).toMatchObject([{ name: "Демо-бренд", company_id: "7" }]);
+    });
+    expect(marked).toEqual([{ role: "manufacturer", on: true }]);
+  });
+});
+
 describe("Номенклатура: запросы на категории", () => {
   it("снабженец подаёт запрос; директор одобряет, выбрав заведённую категорию", async () => {
     const supply = await open("supply@demo.example", "?part=requests");

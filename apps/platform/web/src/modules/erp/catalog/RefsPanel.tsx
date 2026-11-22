@@ -29,7 +29,7 @@ import { useFormat } from "../../../shared/lib/useFormat";
 import { DateField } from "../../../shared/ui/DateField";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { FormField, QueryState } from "../../../shared/ui/FormParts";
-import { CompanyPicker, type PickedCompany } from "../../../shared/ui/pickers";
+import { CompanyPicker, useApplyCompanyRole, type PickedCompany } from "../../../shared/ui/pickers";
 import { StatusTag } from "../../../shared/ui/StatusTag";
 import { type Column, DataList, FormModal, FormPanel, PAGE_SIZE, Pager } from "./common";
 import { useDebounced } from "./useDebounced";
@@ -665,6 +665,8 @@ function BrandForm({ brand, onClose }: { brand?: Manufacturer | undefined; onClo
     void queryClient.invalidateQueries({ queryKey: getListManufacturersQueryKey() });
     onClose();
   };
+  const applyRole = useApplyCompanyRole();
+  const [roleRefused, setRoleRefused] = useState<string | null>(null);
   const create = useCreateManufacturer({ mutation: { onSuccess: done } });
   const update = useUpdateManufacturer({ mutation: { onSuccess: done } });
   const mutation = brand ? update : create;
@@ -673,7 +675,7 @@ function BrandForm({ brand, onClose }: { brand?: Manufacturer | undefined; onClo
       title={brand ? t("refs.brands.form.editTitle") : t("refs.brands.form.addTitle")}
       okLabel={brand ? t("save") : t("refs.brands.form.add")}
       loading={mutation.isPending}
-      error={mutation.error}
+      error={roleRefused ?? mutation.error}
       disabled={name.trim() === ""}
       onOk={() => {
         const data = {
@@ -683,8 +685,16 @@ function BrandForm({ brand, onClose }: { brand?: Manufacturer | undefined; onClo
           is_active: active,
           company_id: company?.id ?? null,
         };
-        if (brand) update.mutate({ id: brand.id, data });
-        else create.mutate({ data });
+        setRoleRefused(null);
+        // роль изготовителя — в момент сохранения: закрытая форма не оставляет роль без бренда
+        void applyRole(company).then((refused) => {
+          if (refused) {
+            setRoleRefused(refused);
+            return;
+          }
+          if (brand) update.mutate({ id: brand.id, data });
+          else create.mutate({ data });
+        });
       }}
       onCancel={onClose}
     >
@@ -710,6 +720,7 @@ function BrandForm({ brand, onClose }: { brand?: Manufacturer | undefined; onClo
           value={company}
           onChange={(picked) => {
             setCompany(picked);
+            setRoleRefused(null);
             // страна — из карточки компании сразу; в справочнике нет такого названия — остаётся прежняя
             const own = (lookups.data?.countries ?? []).find((c) => c.name === picked?.country);
             if (own) setCountry(own.id);

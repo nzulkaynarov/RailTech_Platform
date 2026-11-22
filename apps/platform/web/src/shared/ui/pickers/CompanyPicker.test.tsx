@@ -7,7 +7,7 @@ import { addCompany, pickCompany, searchCompany, selectedLabel } from "../../../
 import { renderUi } from "../../../test/renderUi";
 import { server } from "../../../test/server";
 
-import { CompanyPicker, type PickedCompany } from "./CompanyPicker";
+import { CompanyPicker, type PickedCompany, useApplyCompanyRole } from "./CompanyPicker";
 import { PersonPicker } from "./PersonPicker";
 
 function Harness({
@@ -20,6 +20,9 @@ function Harness({
   assignRole?: boolean;
 }) {
   const [value, setValue] = useState<PickedCompany | null>(null);
+  const [saved, setSaved] = useState(false);
+  const [refused, setRefused] = useState<string | null>(null);
+  const applyRole = useApplyCompanyRole();
   return (
     <>
       <label htmlFor="co">Организация</label>
@@ -33,6 +36,21 @@ function Harness({
           onChange(company);
         }}
       />
+      {/* «Сохранить» формы: роль ставится здесь, а не при выборе */}
+      <button
+        type="button"
+        onClick={() => {
+          setSaved(false);
+          void applyRole(value).then((text) => {
+            setRefused(text);
+            setSaved(text === null);
+          });
+        }}
+      >
+        Сохранить
+      </button>
+      {refused ? <p role="alert">{refused}</p> : null}
+      {saved ? <p>Сохранено</p> : null}
       <label htmlFor="pe">Человек</label>
       <PersonPicker id="pe" companyId={value?.id ?? ""} value="" onChange={() => undefined} />
     </>
@@ -162,7 +180,7 @@ describe("CompanyPicker (ЕД-6)", () => {
     expect(picked).toEqual([]);
   });
 
-  it("форме нужна роль поставщика: выбранная компания без неё получает её, с ней — ничего не меняется", async () => {
+  it("форме нужна роль поставщика: выбор ничего не пишет, роль ставится при сохранении и только компании без неё", async () => {
     const marked: { id: string; body: unknown }[] = [];
     server.use(
       http.post("*/people/counterparties/:id/roles", async ({ params, request }) => {
@@ -174,34 +192,42 @@ describe("CompanyPicker (ЕД-6)", () => {
     renderUi(<Harness onChange={(c) => picked.push(c)} role="supplier" assignRole />);
     const field = screen.getByLabelText("Организация");
     await pickCompany(field, "Путь", "АО «Демо-Путь»");
+    expect(picked[0]).toMatchObject({ id: "7", pendingRole: "supplier" });
+    // форму не сохранили — роли нет (факт «заказ создан» ещё не случился)
+    expect(marked).toEqual([]);
+    fireEvent.click(screen.getByRole("button", { name: "Сохранить" }));
     await waitFor(() => {
-      expect(picked).toHaveLength(1);
+      expect(marked).toEqual([{ id: "7", body: { role: "supplier", on: true } }]);
     });
-    expect(marked).toEqual([{ id: "7", body: { role: "supplier", on: true } }]);
-    // у «Поставщик Север» роль уже есть — запроса нет
+    // у «Поставщик Север» роль уже есть — отметки нет ни при выборе, ни при сохранении
     await pickCompany(field, "Север", "ООО «Поставщик Север»");
-    await waitFor(() => {
-      expect(picked).toHaveLength(2);
-    });
+    expect(picked[1]?.pendingRole).toBeUndefined();
+    fireEvent.click(screen.getByRole("button", { name: "Сохранить" }));
+    await screen.findByText("Сохранено");
     expect(marked).toHaveLength(1);
   });
 
-  it("роль поставить не вышло: компания не выбирается, под полем сказано почему", async () => {
-    server.use(
-      http.post("*/people/counterparties/:id/roles", () =>
-        HttpResponse.json(
-          { code: "FORBIDDEN", message: "Нет права.", source: "erp" },
-          { status: 403 },
+  it.each([
+    [403, /Не удалось отметить компанию поставщиком: нет права/],
+    [404, /Компании нет в списке контрагентов/],
+    [503, /Не удалось отметить роль компании\. Повторите/],
+  ])(
+    "роль не поставилась (HTTP %i): причина берётся из факта, «нет права» — только при 403",
+    async (status, text) => {
+      server.use(
+        http.post("*/people/counterparties/:id/roles", () =>
+          HttpResponse.json({ code: "X", message: "Сбой.", source: "erp" }, { status }),
         ),
-      ),
-    );
-    const picked: (PickedCompany | null)[] = [];
-    renderUi(<Harness onChange={(c) => picked.push(c)} role="supplier" assignRole />);
-    const field = screen.getByLabelText("Организация");
-    await pickCompany(field, "Путь", "АО «Демо-Путь»");
-    expect(await screen.findByText(/Не удалось отметить компанию поставщиком/)).toBeVisible();
-    expect(picked).toEqual([]);
-  });
+      );
+      renderUi(<Harness onChange={() => undefined} role="supplier" assignRole />);
+      const field = screen.getByLabelText("Организация");
+      await pickCompany(field, "Путь", "АО «Демо-Путь»");
+      fireEvent.click(screen.getByRole("button", { name: "Сохранить" }));
+      expect(await screen.findByRole("alert")).toHaveTextContent(text);
+      if (status !== 403) expect(screen.queryByText(/нет права/)).toBeNull();
+      expect(screen.queryByText("Сохранено")).toBeNull();
+    },
+  );
 
   it("короткий ИНН не отправляется: «Завести» недоступна", async () => {
     renderUi(<Harness onChange={() => undefined} />);

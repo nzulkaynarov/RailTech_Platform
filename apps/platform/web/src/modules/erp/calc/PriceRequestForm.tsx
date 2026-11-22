@@ -8,7 +8,7 @@ import {
   useListCounterpartyPickerPeople,
 } from "../../../shared/api/generated/platform-bff";
 import { ErrorNote, FormField } from "../../../shared/ui/FormParts";
-import { CompanyPicker, type PickedCompany } from "../../../shared/ui/pickers";
+import { CompanyPicker, useApplyCompanyRole, type PickedCompany } from "../../../shared/ui/pickers";
 import { clean, useErrorText, useRefreshStock } from "../stock/api";
 import { calcRef } from "./api";
 import { useFormat } from "../../../shared/lib/useFormat";
@@ -25,6 +25,7 @@ export function PriceRequestForm({ sheet, onClose }: { sheet: CalcSheet; onClose
   const { message } = App.useApp();
   const refresh = useRefreshStock();
   const errorText = useErrorText();
+  const applyRole = useApplyCompanyRole();
   const noteId = useId();
   const emailId = useId();
   const goods = sheet.lines.filter((line) => line.zone === "goods");
@@ -138,14 +139,21 @@ export function PriceRequestForm({ sheet, onClose }: { sheet: CalcSheet; onClose
               const to = clean(email);
               const text = clean(note);
               setError(null);
-              create.mutate({
-                number: calcRef(sheet.number),
-                data: {
-                  supplier_id: supplier.id,
-                  line_ids: lines,
-                  ...(text ? { note: text } : {}),
-                  ...(needsEmail && to ? { to_email: to } : {}),
-                },
+              // роль поставщика — в момент отправки: закрытая форма не оставляет роль без запроса
+              void applyRole(supplier).then((refused) => {
+                if (refused) {
+                  setError(refused);
+                  return;
+                }
+                create.mutate({
+                  number: calcRef(sheet.number),
+                  data: {
+                    supplier_id: supplier.id,
+                    line_ids: lines,
+                    ...(text ? { note: text } : {}),
+                    ...(needsEmail && to ? { to_email: to } : {}),
+                  },
+                });
               });
             }}
           >

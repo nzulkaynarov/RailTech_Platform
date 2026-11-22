@@ -26,7 +26,7 @@ import { DateField } from "../../../shared/ui/DateField";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { FileField } from "../../../shared/ui/FileField";
 import { FormField } from "../../../shared/ui/FormParts";
-import { CompanyPicker, type PickedCompany } from "../../../shared/ui/pickers";
+import { CompanyPicker, useApplyCompanyRole, type PickedCompany } from "../../../shared/ui/pickers";
 import { catalogErrorText } from "./errors";
 import { PanelTable } from "./common";
 
@@ -69,6 +69,8 @@ export function PriceImportPanel() {
     const given = (location.state as { supplier?: { id: string; name: string } } | null)?.supplier;
     return given ? { id: given.id, name: given.name, inn: null } : null;
   });
+  const applyRole = useApplyCompanyRole();
+  const [roleRefused, setRoleRefused] = useState<string | null>(null);
   const [mode, setMode] = useState<PriceImportMode>("xlsx");
   const [files, setFiles] = useState<File[]>([]);
   const [from, setFrom] = useState("");
@@ -112,7 +114,8 @@ export function PriceImportPanel() {
     applyChecked.isPending ||
     running(checkJob, checkStatus.data) ||
     running(applyJob, applyStatus.data);
-  const error = start.error ?? applyChecked.error ?? checkStatus.error ?? applyStatus.error;
+  const error =
+    roleRefused ?? start.error ?? applyChecked.error ?? checkStatus.error ?? applyStatus.error;
 
   const isApplied = applied !== null;
   useEffect(() => {
@@ -129,15 +132,23 @@ export function PriceImportPanel() {
   };
   const run = (check: boolean) => {
     if (!supplier || !file) return;
-    if (!check && mode === "ai" && checked?.rows_token) {
-      applyChecked.mutate({
-        data: { supplier_id: supplier.id, rows_token: checked.rows_token, ...validity },
+    setRoleRefused(null);
+    // ERP принимает файл (и проверку тоже) только от компании с ролью «поставщик»: роль ставится на первом шаге
+    void applyRole(supplier).then((refused) => {
+      if (refused) {
+        setRoleRefused(refused);
+        return;
+      }
+      if (!check && mode === "ai" && checked?.rows_token) {
+        applyChecked.mutate({
+          data: { supplier_id: supplier.id, rows_token: checked.rows_token, ...validity },
+        });
+        return;
+      }
+      start.mutate({
+        data: { file },
+        params: { supplier_id: supplier.id, mode, check, ...validity },
       });
-      return;
-    }
-    start.mutate({
-      data: { file },
-      params: { supplier_id: supplier.id, mode, check, ...validity },
     });
   };
 
@@ -157,6 +168,7 @@ export function PriceImportPanel() {
               value={supplier}
               onChange={(company) => {
                 setSupplier(company);
+                setRoleRefused(null);
                 reset();
               }}
             />

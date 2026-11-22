@@ -5,7 +5,8 @@
   "client": {
     "legend": "Mijoz",
     "picked": "Mijoz: {{name}}",
-    "name": "Kompaniya nomi"
+    "name": "Kompaniya nomi",
+    "noInnNote": "Kompaniyada STIR yöq: ariza şu nom bilan mijoz ochadi."
   },
   "contact": {
     "legend": "Kontakt",

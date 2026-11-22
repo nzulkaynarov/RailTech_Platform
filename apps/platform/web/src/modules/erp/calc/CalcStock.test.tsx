@@ -173,6 +173,63 @@ describe("Расчёт · «Запросить цену» · партнёр вы
   });
 });
 
+describe("Расчёт · «Запросить цену» · роль поставщика ставится при отправке (ЕД-6)", () => {
+  it("выбор клиента ролей не пишет; отправка — пишет; отказ — понятная причина и письма нет", async () => {
+    const marked: unknown[] = [];
+    const sent: unknown[] = [];
+    let refuse = 404;
+    server.use(
+      http.post("*/people/counterparties/:id/roles", async ({ request }) => {
+        marked.push(await request.clone().json());
+        return refuse === 0
+          ? undefined
+          : HttpResponse.json(
+              { code: "NOT_FOUND", message: "Нет.", source: "erp" },
+              { status: refuse },
+            );
+      }),
+      http.post("*/erp/calc/*/price-requests", async ({ request }) => {
+        sent.push(await request.clone().json());
+        return undefined;
+      }),
+      http.get("*/people/counterparties/7/people", () =>
+        HttpResponse.json({
+          items: [
+            { id: "41", name: "Демо", position: null, email: "d@x.example", is_primary: true },
+          ],
+        }),
+      ),
+    );
+    await openCalc("supply@demo.example");
+    fireEvent.click(screen.getByRole("button", { name: "Запросить цену у партнёра" }));
+    const modal = await screen.findByRole("region", { name: /^Запросить цену у партнёра/ });
+    await pickCompany(
+      within(modal).getByRole("combobox", { name: "Партнёр" }),
+      "Демо-Путь",
+      "АО «Демо-Путь»",
+    );
+    const submit = within(modal).getByRole("button", { name: "Отправить запрос" });
+    await waitFor(() => {
+      expect(submit).toBeEnabled();
+    });
+    expect(marked).toEqual([]);
+    // компании нет в списке контрагентов: причина — не «нет права», запрос цены не уходит
+    fireEvent.click(submit);
+    expect(await within(modal).findByText(/Компании нет в списке контрагентов/)).toBeVisible();
+    expect(within(modal).queryByText(/нет права/)).toBeNull();
+    expect(sent).toEqual([]);
+    refuse = 0;
+    fireEvent.click(submit);
+    await waitFor(() => {
+      expect(sent).toHaveLength(1);
+    });
+    expect(marked).toEqual([
+      { role: "supplier", on: true },
+      { role: "supplier", on: true },
+    ]);
+  });
+});
+
 describe("Расчёт · «Добавить строку» в боковом окне (§4.1a)", () => {
   it("форма в окне задачи вместо задачи; добавленная строка — в таблице, окно снова показывает задачу", async () => {
     await openCalc("supply@demo.example");

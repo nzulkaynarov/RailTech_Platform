@@ -481,7 +481,16 @@ export function RequestForm({
                     </span>
                   </div>
                 ) : (
-                  <FormField id={id("company")} label={t("request:client.name")}>
+                  <FormField
+                    id={id("company")}
+                    label={t("request:client.name")}
+                    hint={
+                      // без ИНН и без клиента CRM заявка не может назвать карточку ERP: клиент заведётся по названию
+                      state.company && !state.company.inn && state.company.crmClientId == null
+                        ? t("request:client.noInnNote")
+                        : undefined
+                    }
+                  >
                     {/* ЕД-6: компания — любой контрагент; заявка делает её клиентом, если он ещё не клиент */}
                     <CompanyPicker
                       id={id("company")}

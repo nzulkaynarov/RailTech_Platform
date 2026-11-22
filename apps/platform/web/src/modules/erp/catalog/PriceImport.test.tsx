@@ -102,12 +102,16 @@ describe("Загрузка прайса партнёра", () => {
     await waitFor(() => {
       expect(asked?.get("role")).toBe("supplier");
     });
-    // клиент без роли поставщика: выбор ставит роль и открывает проверку
+    // клиент без роли поставщика: выбор открывает проверку, но роль не пишет — роль ставится, когда проверка стартует
     await pickCompany(supplier, "Демо-Путь", "АО «Демо-Путь»");
     await waitFor(() => {
       expect(screen.getByRole("button", { name: "Проверить" })).toBeEnabled();
     });
-    expect(marked).toEqual([{ role: "supplier", on: true }]);
+    expect(marked).toEqual([]);
+    fireEvent.click(screen.getByRole("button", { name: "Проверить" }));
+    await waitFor(() => {
+      expect(marked).toEqual([{ role: "supplier", on: true }]);
+    });
   });
 
   it("без права на цены партнёров загрузки нет", async () => {

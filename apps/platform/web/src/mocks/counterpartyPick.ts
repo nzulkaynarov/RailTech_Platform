@@ -160,8 +160,14 @@ export const counterpartyPickHandlers = [
     return HttpResponse.json(created, { status: 201 });
   }),
   http.post("*/people/counterparties/:id/roles", async ({ params, request }) => {
-    const row = pickedCompanyById(String(params["id"]));
-    if (!row) return;
+    // как в ERP: компания без роли вне границ контрагентов — для `roles` такой карточки нет
+    const row = COMPANIES.find((company) => company.id === String(params["id"]));
+    if (!row) {
+      return HttpResponse.json(
+        { code: "NOT_FOUND", message: "Не найдено.", source: "erp" },
+        { status: 404 },
+      );
+    }
     const body = (await request.json()) as CounterpartyRoleIn;
     row.roles = { ...row.roles, [body.role]: body.on };
     return HttpResponse.json(row);

@@ -189,8 +189,12 @@
         "failed": "Kompaniyani qöşib bölmadi. Qayta uriniş."
       },
       "roleFailed": {
-        "supplier": "Kompaniyani yetkazib beruvchi deb belgilab bölmadi: ruxsat yöq. Boşqasini tanlang yoki administratorga murojaat qiling.",
-        "manufacturer": "Kompaniyani işlab çiqaruvçi deb belgilab bölmadi: ruxsat yöq. Boşqasini tanlang yoki administratorga murojaat qiling."
+        "denied": {
+          "supplier": "Kompaniyani yetkazib beruvchi deb belgilab bölmadi: ruxsat yöq. Boşqasini tanlang yoki administratorga murojaat qiling.",
+          "manufacturer": "Kompaniyani işlab çiqaruvçi deb belgilab bölmadi: ruxsat yöq. Boşqasini tanlang yoki administratorga murojaat qiling."
+        },
+        "notListed": "Kompaniya kontragentlar röyxatida yöq, unga rol berib bölmaydi. Boşqasini tanlang.",
+        "other": "Kompaniya rolini belgilab bölmadi. Qayta uriniş."
       }
     },
     "person": {

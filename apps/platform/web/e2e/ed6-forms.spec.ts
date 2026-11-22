@@ -57,7 +57,7 @@ for (const width of [1440, 390] as const) {
   );
 
   test(
-    `заказ партнёру: партнёр выбирается, компании без роли поставщика роль ставится, ${String(width)}`,
+    `заказ партнёру: партнёр выбирается, роль поставщика ставится при сохранении, ${String(width)}`,
     { tag: "@mobile" },
     async ({ page }) => {
       test.skip(test.info().project.name !== "chromium", "ширины задаёт сам сценарий");
@@ -79,4 +79,55 @@ for (const width of [1440, 390] as const) {
       await expectNoViolations(page, "заказ партнёру: партнёр выбран");
     },
   );
+
+  test(
+    `запрос цены: партнёр выбирается, почта берётся из карточки, ${String(width)}`,
+    { tag: "@mobile" },
+    async ({ page }) => {
+      test.skip(test.info().project.name !== "chromium", "ширины задаёт сам сценарий");
+      await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
+      await loginAndWait(page, "supply@demo.example");
+      await spaGoto(page, `/erp/calc/${encodeURIComponent("ЗВ-2026-097")}`);
+      await page.getByRole("button", { name: "Запросить цену у партнёра" }).click();
+      const request = page.getByRole("region", { name: /^Запросить цену у партнёра/ });
+      await expect(request).toBeVisible();
+      // у компании есть своя почта: поля «Адрес для письма» нет
+      await pickAddressee(page, "Сталь", "ООО «Вымышленная Сталь»", "Партнёр");
+      await expect(request.getByLabel("Адрес для письма")).toBeHidden();
+      await shot(page, "price-request-email-from-card", width);
+      await expectNoViolations(page, "запрос цены: партнёр выбран");
+    },
+  );
+
+  test(`бренд: изготовитель выбирается, страна подставляется, ${String(width)}`, async ({
+    page,
+  }) => {
+    test.skip(test.info().project.name !== "chromium", "ширины задаёт сам сценарий");
+    await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
+    await loginAndWait(page, "supply@demo.example");
+    await spaGoto(page, "/erp/catalog?part=refs");
+    await page.locator("label.ant-segmented-item").filter({ hasText: "Бренды" }).click();
+    await page.getByRole("button", { name: "Добавить бренд" }).click();
+    await expect(page.getByLabel("Изготовитель — компания")).toBeVisible();
+    await pickAddressee(page, "Локо", "Lokotrans GmbH", "Изготовитель — компания");
+    await expect(
+      page.getByLabel("Страна").locator("xpath=ancestor::div[contains(@class,'ant-select')][1]"),
+    ).toContainText("Германия");
+    await shot(page, "brand-country-from-company", width);
+    await expectNoViolations(page, "бренд: изготовитель выбран");
+  });
+
+  test(`загрузка прайса: партнёр из общего поля, кнопки «Новый партнёр» нет, ${String(width)}`, async ({
+    page,
+  }) => {
+    test.skip(test.info().project.name !== "chromium", "ширины задаёт сам сценарий");
+    await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
+    await loginAndWait(page, "supply@demo.example");
+    await spaGoto(page, "/erp/catalog?part=import");
+    await expect(page.getByRole("heading", { level: 1, name: "Загрузка прайса" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Новый партнёр" })).toHaveCount(0);
+    await pickAddressee(page, "Север", "ООО «Поставщик Север»", "Партнёр");
+    await shot(page, "price-import-partner", width);
+    await expectNoViolations(page, "загрузка прайса: партнёр выбран");
+  });
 }

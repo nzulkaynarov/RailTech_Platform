@@ -189,8 +189,12 @@
         "failed": "Could not add the company. Try again."
       },
       "roleFailed": {
-        "supplier": "Could not mark the company as a supplier: no permission. Pick another or ask an administrator.",
-        "manufacturer": "Could not mark the company as a manufacturer: no permission. Pick another or ask an administrator."
+        "denied": {
+          "supplier": "Could not mark the company as a supplier: no permission. Pick another or ask an administrator.",
+          "manufacturer": "Could not mark the company as a manufacturer: no permission. Pick another or ask an administrator."
+        },
+        "notListed": "The company is not in the counterparty list, so it cannot get a role. Pick another.",
+        "other": "Could not set the company role. Try again."
       }
     },
     "person": {

@@ -13,7 +13,7 @@ import { useDocumentTitle } from "../../../shared/lib/useDocumentTitle";
 import { DateField } from "../../../shared/ui/DateField";
 import { LinkButton } from "../../../shared/ui/LinkButton";
 import { PageHeader } from "../../../shared/ui/PageHeader";
-import { CompanyPicker, type PickedCompany } from "../../../shared/ui/pickers";
+import { CompanyPicker, useApplyCompanyRole, type PickedCompany } from "../../../shared/ui/pickers";
 import { StepSections } from "../../../shared/ui/StepSections/StepSections";
 import { clean, orderPath, useErrorText, useRefreshStock } from "./api";
 
@@ -96,6 +96,7 @@ export function OrderCreatePage() {
   const navigate = useNavigate();
   const refresh = useRefreshStock();
   const errorText = useErrorText();
+  const applyRole = useApplyCompanyRole();
   const [form] = Form.useForm<Values>();
   // Строка «Мои задачи» «Заказать недостающее» открывает страницу с `?mode=shortage&request=ПР-…` (СЦ-9).
   const [params] = useSearchParams();
@@ -155,7 +156,14 @@ export function OrderCreatePage() {
             // Ошибка открывает свою секцию (§4.1a): строки — во второй
             setActive(errorFields.some((f) => f.name[0] === "lines") ? "lines" : "supplier");
           }}
-          onFinish={(values) => {
+          onFinish={async (values) => {
+            // роль поставщика — в момент сохранения: закрытая форма не оставляет роль без заказа
+            const refused = await applyRole(values.supplier);
+            if (refused) {
+              void message.error(refused);
+              setActive("supplier");
+              return;
+            }
             if (values.mode === "shortage") {
               fromRequest.mutate({
                 data: {
