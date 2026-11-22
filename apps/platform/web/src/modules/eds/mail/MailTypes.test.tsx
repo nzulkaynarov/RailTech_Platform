@@ -214,7 +214,11 @@ describe("Типы входящих писем: тег, фильтр, основ
       await screen.findByText(/Из письма: «Требование о предоставлении документов»/),
     ).toBeVisible();
     // у «Официального письма» вид документа — «Письмо госоргана» (код government)
-    expect(reveal(await screen.findByText("Письмо госоргана"))).toBeVisible();
+    expect(
+      reveal(
+        await screen.findByText("Письмо госоргана", { selector: ".ant-select-selection-item" }),
+      ),
+    ).toBeVisible();
   });
 
   it("рассылка из меню действий: «В Подозрительные» уносит письмо во вкладку «Подозрительные»", async () => {

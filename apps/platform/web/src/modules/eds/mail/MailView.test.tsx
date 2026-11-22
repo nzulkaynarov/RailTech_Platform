@@ -67,9 +67,15 @@ describe("Карточка письма: подсказка и действия 
     ).toBeVisible();
     // регистрация — секциями (§4.1a): тема и вид документа — в свёрнутых секциях, файл — в открытой первой
     expect(screen.getByLabelText("Тема", { exact: true })).toHaveValue("Акт сверки за октябрь");
-    expect(await screen.findByText("акт-сверки-октябрь.pdf")).toBeVisible();
+    expect(
+      await screen.findByText("акт-сверки-октябрь.pdf", { selector: ".pf-doc-file-name" }),
+    ).toBeVisible();
     // вид документа предзаполнен по типу письма («Документ партнёра» → «Письмо партнёра»)
-    expect(reveal(await screen.findByText("Письмо партнёра"))).toBeVisible();
+    expect(
+      reveal(
+        await screen.findByText("Письмо партнёра", { selector: ".ant-select-selection-item" }),
+      ),
+    ).toBeVisible();
   });
 });
 
