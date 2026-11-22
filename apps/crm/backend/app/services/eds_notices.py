@@ -35,6 +35,8 @@ SIGNING_EXPIRING_TYPE: Final = "uz.railtech.eds.signing_authority.expiring.v1"
 SIGNING_EXPIRING_KIND: Final = "signing_authority_expiring"
 # СЦ-9: уведомления по документам без входящего письма (служебка, подпись письма) — тот же путь.
 DOCUMENT_NOTICE_TYPE: Final = "uz.railtech.eds.document.notice_requested.v1"
+# ГЛ-2: новые виды (задачи «Главной», КП, резолюция, шаги маршрута, подпись, виза, доработка) — v2.
+DOCUMENT_NOTICE_TYPE_V2: Final = "uz.railtech.eds.document.notice_requested.v2"
 # «Подписать некому» ведёт держателя права в Настройки, а не к документу, которого он не видит.
 _SETTINGS_KIND: Final = "letter_signer_missing"
 # Вкладка колокольчика: от сотрудника ждут действия — «Решения»; остальное — «Система».
@@ -47,12 +49,43 @@ _DECISIONS: Final = frozenset(
         "acquaint_requested",
         "letter_sign_requested",
         "letter_signer_missing",
+        "approve_quote",
+        "resolve_letter",
+        "approve_memo",
+        "pay_memo",
+        "sign_commercial",
+        "visa_commercial",
+        "rework_document",
     }
 )
+# ГЛ-2: Telegram — только решения (подписать, согласовать, резолюция, оплата, виза):
+# их переключатель `notify_decisions`. Прочие задачи и итоги — `notify_tasks` (по умолчанию
+# выключено); «Доработать» — только колокольчик.
+_TELEGRAM_DECISIONS: Final = frozenset(
+    {
+        "letter_sign_requested",
+        "letter_signer_missing",
+        "approve_quote",
+        "resolve_letter",
+        "approve_memo",
+        "pay_memo",
+        "sign_commercial",
+        "visa_commercial",
+        SIGNING_EXPIRING_KIND,
+    }
+)
+_BELL_ONLY: Final = frozenset({"rework_document"})
 
 
 def tab_of(kind: str) -> str:
     return "decisions" if kind in _DECISIONS else "system"
+
+
+def telegram_class(kind: str) -> str | None:
+    """Чей переключатель ведает Telegram: `decisions`, `tasks` или `None` (только колокольчик)."""
+    if kind in _BELL_ONLY:
+        return None
+    return "decisions" if kind in _TELEGRAM_DECISIONS else "tasks"
 
 
 def telegram_text(title: str, subtitle: str | None, link: str | None) -> str:
@@ -73,6 +106,16 @@ class EdsNoticeService:
     def _signing_link(self) -> str | None:
         """Страница Настроек «Права подписи»."""
         return None if self._platform_url is None else f"{self._platform_url}/admin/signing"
+
+    def _approval_link(self, approval: dict[str, Any]) -> str | None:
+        """КП — вкладка «Одобрение» черновика; подпись документа — блок «Подписи» в «Задачах»."""
+        if self._platform_url is None:
+            return None
+        if approval.get("template") == "quote":
+            number = quote(str(approval["number"]), safe="")
+            return f"{self._platform_url}/eds/drafts/{number}?panel=open&tab=approve"
+        route = quote(str(approval["eds_approval_id"]), safe="")
+        return f"{self._platform_url}/dashboard/queue?signing={route}"
 
     def _link(self, letter_id: str, document_id: str | None = None) -> str | None:
         """Рабочий экран письма по UUID: реестра (поиск по номеру) у исполнителя может не быть.
@@ -95,6 +138,37 @@ class EdsNoticeService:
         )
         found = set(rows.all())
         return [uid for uid in wanted if uid in found]
+
+    @staticmethod
+    async def _telegram_recipients(
+        session: AsyncSession, recipients: Sequence[int], kind: str
+    ) -> list[int]:
+        """Кому из получателей колокольчика писать в Telegram: по переключателю в профиле."""
+        which = telegram_class(kind)
+        if which is None or not recipients:
+            return []
+        flag = User.notify_decisions if which == "decisions" else User.notify_tasks
+        rows = await session.scalars(
+            select(User.id).where(User.id.in_(list(recipients)), flag.is_(True))
+        )
+        wanted = set(rows.all())
+        return [uid for uid in recipients if uid in wanted]
+
+    async def _telegram(
+        self,
+        session: AsyncSession,
+        event: Event,
+        recipients: Sequence[int],
+        kind: str,
+        text: str,
+    ) -> None:
+        people = await self._telegram_recipients(session, recipients, kind)
+        if people:
+            self._notices.add(
+                session,
+                str(event.id),
+                [{"kind": "staff", "user_id": uid, "text": text} for uid in people],
+            )
 
     async def accept(self, session: AsyncSession, event: Event) -> int:
         """Колокольчик и Telegram получателям (в транзакции inbox). Возвращает число получателей."""
@@ -127,11 +201,7 @@ class EdsNoticeService:
             object_number=object_number,
         )
         text = telegram_text(title, subtitle, self._link(str(letter["eds_letter_id"]), document_id))
-        self._notices.add(
-            session,
-            str(event.id),
-            [{"kind": "staff", "user_id": uid, "text": text} for uid in recipients],
-        )
+        await self._telegram(session, event, recipients, kind, text)
         logger.info(
             "eds_notice_accepted",
             kind=kind,
@@ -161,11 +231,7 @@ class EdsNoticeService:
             subtitle=subtitle,
         )
         text = telegram_text(title, subtitle, self._signing_link())
-        self._notices.add(
-            session,
-            str(event.id),
-            [{"kind": "staff", "user_id": uid, "text": text} for uid in recipients],
-        )
+        await self._telegram(session, event, recipients, SIGNING_EXPIRING_KIND, text)
         logger.info(
             "eds_signing_notice_accepted",
             notice_key=data.get("notice_key"),
@@ -186,11 +252,27 @@ class EdsNoticeService:
                 "eds_document_notice_no_recipients", kind=kind, notice_key=data.get("notice_key")
             )
             return 0
-        document: dict[str, Any] = dict(data["document"])
-        document_id = str(document["eds_document_id"])
         to_settings = kind == _SETTINGS_KIND
-        # Черновик письма без номера: подписью в колокольчике служит тема (поле 40 знаков).
-        label = str(document.get("number") or document.get("subject") or "")[:40] or None
+        obj_kind: str | None
+        obj_id: str | None
+        label: str | None
+        if isinstance(data.get("document"), dict):
+            document: dict[str, Any] = dict(data["document"])
+            obj_kind, obj_id = "document", str(document["eds_document_id"])
+            # Черновик письма без номера: подписью в колокольчике служит тема (поле 40 знаков).
+            label = str(document.get("number") or document.get("subject") or "")[:40] or None
+            link = self._link("", obj_id)
+        elif isinstance(data.get("letter"), dict):  # ГЛ-2: входящее письмо ждёт резолюции
+            letter: dict[str, Any] = dict(data["letter"])
+            obj_kind, obj_id, label = "letter", str(letter["eds_letter_id"]), str(letter["number"])
+            link = self._link(obj_id)
+        else:  # ГЛ-2: КП или коммерческий документ — маршрут без документа EDS
+            approval: dict[str, Any] = dict(data["approval"])
+            obj_kind, obj_id = "approval", str(approval["eds_approval_id"])
+            label = str(approval["number"])[:40]
+            link = self._approval_link(approval)
+        if to_settings:
+            obj_kind, obj_id, label, link = None, None, None, self._signing_link()
         staff_notifications.add_in(
             session,
             recipients,
@@ -198,17 +280,12 @@ class EdsNoticeService:
             tab=tab_of(kind),
             title=title,
             subtitle=subtitle,
-            object_kind=None if to_settings else "document",
-            object_id=None if to_settings else document_id,
-            object_number=None if to_settings else label,
+            object_kind=obj_kind,
+            object_id=obj_id,
+            object_number=label,
         )
-        link = self._signing_link() if to_settings else self._link("", document_id)
         text = telegram_text(title, subtitle, link)
-        self._notices.add(
-            session,
-            str(event.id),
-            [{"kind": "staff", "user_id": uid, "text": text} for uid in recipients],
-        )
+        await self._telegram(session, event, recipients, kind, text)
         logger.info(
             "eds_document_notice_accepted",
             kind=kind,

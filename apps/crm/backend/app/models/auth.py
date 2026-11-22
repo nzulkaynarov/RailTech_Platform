@@ -75,6 +75,9 @@ class User(TimestampMixin, Base):
     # Личные уведомления от бота (Q-010): системные алерты (админы) и сообщения своих лидов.
     notify_system: Mapped[bool] = mapped_column(Boolean, server_default=sql("true"))
     notify_leads: Mapped[bool] = mapped_column(Boolean, server_default=sql("true"))
+    # GL-2: Telegram по задачам EDS — решения (по умолчанию да) и прочие задачи (по умолчанию нет).
+    notify_decisions: Mapped[bool] = mapped_column(Boolean, server_default=sql("true"))
+    notify_tasks: Mapped[bool] = mapped_column(Boolean, server_default=sql("false"))
     # Telegram отказал в личном сообщении (не нажат «Старт»/бот заблокирован); снимается успехом.
     tg_dm_failed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     # Куда пользователю можно (FIX-11, ADR-0003): `["crm"]` по умолчанию, `["crm", "erp"]` — доступ
