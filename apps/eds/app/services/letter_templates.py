@@ -52,7 +52,8 @@ BUILTINS: Final[dict[str, dict[str, Any]]] = {
             ),
         },
     },
-    # ДОК-13: бывшие образцы ERP «Гарантийное письмо», «Сопроводительное письмо» и «Претензия» — теперь шаблоны писем на бланке
+    # ДОК-13: бывшие образцы ERP «Гарантийное письмо», «Сопроводительное письмо» и «Претензия» —
+    # теперь шаблоны писем на бланке
     "guarantee_letter": {
         "kind": "letter",
         "name": "Гарантийное письмо",
@@ -74,7 +75,8 @@ BUILTINS: Final[dict[str, dict[str, Any]]] = {
                 [
                     "Kafolat xati",
                     "",
-                    "Uşbu xat bilan bitim böyiça tölovni töliq hajmda va kelişilgan muddatlarda amalga oşirişimizni kafolatlaymiz.",
+                    "Uşbu xat bilan bitim böyiça tölovni töliq hajmda "
+                    "va kelişilgan muddatlarda amalga oşirişimizni kafolatlaymiz.",
                     "",
                     "Majburiyatlar tijorat taklifiga muvofiq keladi.",
                     "",
@@ -114,7 +116,8 @@ BUILTINS: Final[dict[str, dict[str, Any]]] = {
                 [
                     "Hurmatli hamkasblar!",
                     "",
-                    "Bitim böyiça hujjatlar töplamini yuboramiz. Körib çiqişingizni va olinganini tasdiqlaşingizni söraymiz.",
+                    "Bitim böyiça hujjatlar töplamini yuboramiz. "
+                    "Körib çiqişingizni va olinganini tasdiqlaşingizni söraymiz.",
                     "",
                     "Hurmat bilan,",
                 ],
