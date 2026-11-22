@@ -120,7 +120,7 @@ test.describe("КП на одобрение: директор", () => {
     await expect(approve).toHaveAccessibleDescription(/нет визы гл\. инженера/);
     // канал «Кабинет» недоступен у этой компании
     await expect(form.getByRole("checkbox", { name: "Кабинет" })).toBeDisabled();
-    await expect(form.getByText("Недоступен: клиент не приглашён в кабинет.")).toBeVisible();
+    await expect(form.getByText("Недоступен: клиент ещё не в кабинете.")).toBeVisible();
     await settledScreenshot(page, "blocked");
     await expectNoViolations(page, "неактивная кнопка с подписью");
 

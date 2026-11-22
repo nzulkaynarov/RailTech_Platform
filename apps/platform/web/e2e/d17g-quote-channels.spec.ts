@@ -69,7 +69,11 @@ test.describe("D17G: каналы отправки КП и адрес кабин
       const report = page.getByRole("list", { name: "Каналы отправки" });
       await expect(report.getByText("Telegram-бот — отправлено")).toBeVisible();
       await expect(report.getByText("Кабинет — опубликовано")).toBeVisible();
-      await expect(report.getByText("Почта — не выбрано при одобрении")).toBeVisible();
+      await expect(
+        report.getByText(
+          "Почта — не отправлено: нет e-mail у контакта — добавьте его в карточке клиента",
+        ),
+      ).toBeVisible();
       if (width === 390) {
         const close = page.getByRole("button", { name: "Закрыть" });
         if (await close.isVisible()) await close.click();

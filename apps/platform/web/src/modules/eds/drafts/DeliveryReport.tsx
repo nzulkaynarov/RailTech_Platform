@@ -75,6 +75,12 @@ export function DeliveryReport({ quote }: { quote: QuoteApprovalCard }) {
   const delivery = quote.delivery;
   if (!delivery) return null;
 
+  // «Sent to the client» is true only if some channel really carried the quote.
+  const reached = delivery.lines.some(
+    (line) => line.status === "sent" || line.status === "published" || line.status === "pending",
+  );
+  const stateKey = delivery.state === "sent" && !reached ? "sentNowhere" : delivery.state;
+
   const items: ChecklistItem[] = delivery.lines.map((line) => {
     const channel = t(`form.channels.${line.channel}.name`);
     const status = t(`card.delivery.status.${line.status}`);
@@ -118,7 +124,7 @@ export function DeliveryReport({ quote }: { quote: QuoteApprovalCard }) {
 
   return (
     <Card size="small" title={<h2 className="pf-dec-title">{t("card.delivery.title")}</h2>}>
-      <p className="pf-hint">{t(`card.delivery.state.${delivery.state}`)}</p>
+      <p className="pf-hint">{t(`card.delivery.state.${stateKey}`)}</p>
       {delivery.error ? (
         <p className="pf-dec-warn" role="note">
           {t("card.delivery.error", { reason: t(`card.delivery.reason.${delivery.error}`) })}

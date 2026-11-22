@@ -19898,7 +19898,7 @@ components:
       properties:
         contact_name: {type: [string, 'null'], description: Кому уйдёт КП — контакт заявки или основной контакт клиента}
         telegram: {type: boolean, description: Контакт подключён к боту и клиент известен CRM}
-        cabinet: {type: boolean, description: Клиент приглашён в кабинет или уже входил}
+        cabinet: {type: boolean, description: Клиент уже входил в кабинет или ему доставлено приглашение (письмо ушло, а не только поставлено в очередь)}
         email: {type: boolean, description: У контакта есть e-mail и почта настроена}
         reasons:
           $ref: '#/components/schemas/QuoteChannelReasons'
@@ -19918,7 +19918,8 @@ components:
          unpriced_lines, below_floor, not_claimed, no_recipient, send_failed]
       description: >-
         Почему КП не ушло по каналу (коды ERP `send_report` и проверок каналов, D17G-2): `no_telegram` — контакт не подключён к
-        боту; `client_not_in_crm` — клиент не передан в CRM; `no_cabinet` — клиент не приглашён в кабинет; `no_email` — у
+        боту; `client_not_in_crm` — клиент не передан в CRM; `no_cabinet` — клиент не в кабинете: не входил и приглашение не
+        доставлено; `no_email` — у
         контакта нет e-mail; `mail_not_configured` — почта не настроена (Настройки · Подключения · Почта); `mail_failed` — письмо
         не ушло; остальное — гейт отправки ERP (цена ниже себестоимости, нет курса, позиции без цены, маржа ниже минимальной без
         обоснования, нет компании-продавца, некому отправить) или сбой отправки
@@ -19927,8 +19928,9 @@ components:
       enum: [sent, pending, failed, skipped, not_selected, published, unknown]
       description: >-
         `sent` — отправлено (Telegram — передано боту CRM; почта — письмо ушло); `pending` — письмо у почтового сервиса, итога ещё
-        нет; `failed` — не отправлено (причина в `reason`); `skipped` — канал выбран, но недоступен; `not_selected` — канал не
-        выбран; `published` — КП видно клиенту в кабинете; `unknown` — КП отправлено без отчёта по каналам
+        нет; `failed` — не отправлено (причина в `reason`); `skipped` — канал недоступен (причина в `reason`; у кабинета и у невыбранного канала — по живой доступности, а не по отчёту
+        ERP); `not_selected` — канал доступен, но не выбран; `published` — КП видно клиенту в кабинете (клиент может войти); `unknown` —
+        КП отправлено без отчёта по каналам или доступность кабинета не узнали
     QuoteDeliveryLine:
       type: object
       additionalProperties: false

@@ -15,7 +15,7 @@ export interface QuoteChannels {
   contact_name: string | null;
   /** Контакт подключён к боту и клиент известен CRM */
   telegram: boolean;
-  /** Клиент приглашён в кабинет или уже входил */
+  /** Клиент уже входил в кабинет или ему доставлено приглашение (письмо ушло */
   cabinet: boolean;
   /** У контакта есть e-mail и почта настроена */
   email: boolean;
