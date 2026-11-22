@@ -18,17 +18,8 @@
   padding: 16px 24px;
   overflow-x: auto;
 }
-.pf-dec-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 320px;
-  gap: 16px;
-  align-items: start;
-}
-.pf-dec-main,
-.pf-dec-side {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
+/* ЕД-7: блоки карточки в одну колонку сжимаются по ширине страницы (таблица прокручивается сама), а не растягивают её */
+.pf-dec-page > * {
   min-width: 0;
 }
 .pf-dec-text,
@@ -267,22 +258,16 @@
   border-top: 1px solid var(--rt-color-surface-split);
 }
 
-@container (max-width: 879px) {
-  .pf-dec-grid {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
-/* Карточка КП: основной колонке нужно ≥ 620 px под таблицу из шести столбцов — уже реквизиты уходят над ней */
-@container (max-width: 959px) {
-  .pf-dec-grid--quote {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .pf-dec-grid--quote .pf-dec-side {
-    order: -1;
-  }
-}
 @media (max-width: 767px) {
   .pf-dec-steps {
     padding: 12px 16px;
   }
+}
+
+/* ЕД-7: форма решения — блок в центре карточки, а не вкладка окна; при переходе по ссылке не прячется под шапкой */
+.pf-dec-center {
+  scroll-margin-top: 16px;
+}
+.pf-dec-center:empty {
+  display: none;
 }

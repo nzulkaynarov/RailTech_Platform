@@ -24,7 +24,8 @@ export const eds: ModuleConfig = {
       path: "/eds/inbox",
       detail: "/eds/inbox/:id",
       access: { anyOf: ["eds.inbox", "eds.inbox.register"] },
-      tabs: [{ key: "resolution" }, { key: "chat" }, { key: "documents" }],
+      // ЕД-7: «Резолюция» — вкладка окна списка; на карточке форма в центре, а окно — «Сведения», «Маршрут», «История»
+      tabs: [{ key: "resolution" }, ...RECORD_TAB_SET],
       actionTo: "/eds/documents",
     },
     {
@@ -68,7 +69,7 @@ export const eds: ModuleConfig = {
       path: "/eds/drafts",
       detail: "/eds/drafts/:id",
       access: { resource: "eds.drafts" },
-      tabs: [{ key: "approve" }, { key: "chat" }, { key: "documents" }],
+      tabs: RECORD_TAB_SET,
       actionTo: "/eds/documents",
     },
     {
@@ -76,14 +77,15 @@ export const eds: ModuleConfig = {
       path: "/eds/approvals",
       detail: "/eds/approvals/:id",
       access: { anyOf: ["eds.memo.approve", "eds.memo.create"] },
-      tabs: [{ key: "agree" }, { key: "chat" }, { key: "documents" }],
+      tabs: RECORD_TAB_SET,
     },
     {
       key: "payments",
       path: "/eds/payments",
       detail: "/eds/payments/:id",
       access: { resource: "eds.payments" },
-      tabs: [{ key: "payment" }, { key: "chat" }, { key: "documents" }],
+      // «Оплата» — вкладка окна списка (счёт и служебка к оплате); на карточке форма в центре (ЕД-7)
+      tabs: [{ key: "payment" }, ...RECORD_TAB_SET],
       actionTo: "/eds/projects",
     },
     {

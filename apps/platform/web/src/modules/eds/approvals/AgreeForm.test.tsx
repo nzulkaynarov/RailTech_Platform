@@ -1,10 +1,11 @@
-import { cleanup, fireEvent, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { HttpResponse, http } from "msw";
 import { describe, expect, it } from "vitest";
 
 import type { MemoApprovalCard } from "../../../shared/api/generated/model";
 import { server } from "../../../test/server";
-import { panelEl, renderAt, setupApprovalTests, signIn } from "../../../test/approvalsKit";
+import { renderAt, setupApprovalTests, signIn } from "../../../test/approvalsKit";
+import { decisionEl } from "../../../test/panel";
 import { readMemos, writeMemos } from "../../../mocks/fixtures/approvals";
 import { nextStepLabel } from "./model";
 import { confirmDialog } from "../../../test/confirmDialog";
@@ -16,7 +17,7 @@ const MEMO = (number: string) => `/eds/approvals/${encodeURIComponent(number)}`;
 async function openForm(number = "СЗ-2026/014", user = "director@demo.example") {
   signIn(user);
   const view = renderAt(MEMO(number));
-  const panel = await panelEl();
+  const panel = await decisionEl();
   const form = await within(panel).findByRole("form", { name: "Согласование документа" });
   return { ...view, panel, form };
 }
@@ -58,7 +59,7 @@ describe("Согласование: форма", () => {
     writeMemos(memos);
     signIn("manager@demo.example");
     renderAt(MEMO("СЗ-2026/014"));
-    const panel = await panelEl();
+    const panel = await decisionEl();
     await within(panel).findByText(/Решение принимает согласующий/);
     expect(within(panel).queryByRole("form", { name: "Согласование документа" })).toBeNull();
   });
@@ -136,13 +137,16 @@ describe("Согласование: форма", () => {
         )
       ).length,
     ).toBeGreaterThan(0);
-    expect(await within(panel).findByRole("heading", { name: "Документ отклонён" })).toBeVisible();
+    // Решённый документ говорит о себе статусом и лентой «Маршрут», а не вторым блоком в центре (ЕД-7)
+    await waitFor(() => {
+      expect(within(panel).queryByRole("form", { name: "Согласование документа" })).toBeNull();
+    });
   });
 
   it("автор без права решения: карточка в режиме чтения, формы нет", async () => {
     signIn("manager@demo.example");
     renderAt(MEMO("СЗ-2026/014"));
-    const panel = await panelEl();
+    const panel = await decisionEl();
 
     expect(
       await within(panel).findByRole("heading", { name: "Документ на согласовании" }),
@@ -177,7 +181,7 @@ describe("Согласование: шаг бухгалтера", () => {
   it("бухгалтер до своей очереди: формы нет, шаг у директора", async () => {
     signIn("accountant@demo.example");
     renderAt(MEMO("СЗ-2026/014"));
-    const panel = await panelEl();
+    const panel = await decisionEl();
 
     expect(
       await within(panel).findByRole("heading", { name: "Документ на согласовании" }),
@@ -191,13 +195,13 @@ describe("Согласование: шаг бухгалтера", () => {
   it("СЦ-8: директор согласовал служебку с суммой — «Вы согласовали <дата>. Сейчас шаг: Бухгалтер.» вместо «вы сможете решить»", async () => {
     signIn("director@demo.example");
     renderAt(MEMO("СЗ-2026/015"));
-    const panel = await panelEl();
+    const panel = await decisionEl();
 
     expect(
       await within(panel).findByText(/^Вы согласовали .*2026.*\. Сейчас шаг: Бухгалтер\.$/),
     ).toBeVisible();
     expect(within(panel).queryByText(/Вы сможете решить/)).toBeNull();
-    expect(screen.getAllByText(/^Вы согласовали /).length).toBeGreaterThan(1); // карточка + панель
+    expect(screen.getAllByText(/^Вы согласовали /)).toHaveLength(1); // одно место: блок решения
   });
 
   it("шаг бухгалтера решает держатель `eds.payments` full: у бухгалтера переход к оплате, у директора (только чтение счетов, D2-4) формы нет", async () => {
@@ -207,7 +211,7 @@ describe("Согласование: шаг бухгалтера", () => {
 
     signIn("director@demo.example");
     renderAt(MEMO("СЗ-2026/015"));
-    const panel = await panelEl();
+    const panel = await decisionEl();
     expect((await screen.findAllByText(/СЗ-2026\/015/)).length).toBeGreaterThan(0);
     expect(within(panel).queryByRole("form", { name: "Согласование документа" })).toBeNull();
   });

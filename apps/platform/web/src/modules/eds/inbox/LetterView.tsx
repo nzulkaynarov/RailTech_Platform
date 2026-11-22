@@ -1,10 +1,9 @@
-import { Button, Card, Skeleton } from "antd";
+import { Card, Skeleton } from "antd";
 import { useTranslation } from "react-i18next";
-import { Link, useSearchParams } from "react-router";
+import { Link } from "react-router";
 
 import { canEdit } from "../../../app/access";
 import { useAuth } from "../../../app/auth/useAuth";
-import { useViewport } from "../../../app/shell/useViewport";
 import { ApiError } from "../../../shared/api/errors";
 import type { DictionaryItem, LetterCard } from "../../../shared/api/generated/model";
 import { useGetLetter } from "../../../shared/api/generated/platform-bff";
@@ -19,7 +18,10 @@ import { LockIcon } from "../../../shared/ui/icons";
 import { PageHeader } from "../../../shared/ui/PageHeader";
 import { RequestSteps } from "../../../shared/ui/RequestSteps";
 import { SourceBanner } from "../../../shared/ui/SourceBanner";
+import { RecordHistory, type RecordHistoryEntry } from "../../../shared/ui/RecordHistory";
 import { StatusTag } from "../../../shared/ui/StatusTag";
+import { DecisionCenter } from "../decision/DecisionCenter";
+import { RecordTab } from "../decision/RecordTab";
 import { letterRef } from "./api";
 import { useStateLabels } from "./labels";
 import { ReplyCard } from "../tasks/ReplyBlock";
@@ -27,7 +29,7 @@ import { InstructionsCard, OfficeDecision } from "./Instructions";
 import { ClosedBanner } from "../tasks/LetterOutcomes";
 import { DuplicateBanner, MarkDuplicateAction } from "./MarkDuplicate";
 import { Attachments, RequestAttachments } from "./Parts";
-import { ResolutionSlot } from "./ResolutionPanel";
+import { ResolutionPanel } from "./ResolutionPanel";
 
 function Decision({ letter }: { letter: LetterCard }) {
   const { t } = useTranslation("letters");
@@ -72,87 +74,17 @@ function Decision({ letter }: { letter: LetterCard }) {
   );
 }
 
-function Journal({ letter }: { letter: LetterCard }) {
+/** «История» письма: журнал один — его печатает общая лента `RecordHistory`. */
+function useJournalEntries(letter: LetterCard): RecordHistoryEntry[] {
   const { t } = useTranslation("letters");
-  const { date } = useFormat();
-  if (letter.journal.length === 0) return null;
-  return (
-    <Card size="small" title={<h2 className="pf-letters-title">{t("card.journal")}</h2>}>
-      <ol className="pf-letters-journal">
-        {letter.journal.map((entry, index) => (
-          <li key={`${entry.at}-${String(index)}`}>
-            <strong>
-              {t(`card.actions.${entry.action.replace(".", "_")}`, {
-                defaultValue: t("card.actionUnknown"),
-              })}
-            </strong>
-            <span className="pf-hint">
-              {" "}
-              · {entry.by ? entry.by.name : t("card.journalSystem")} · {date(entry.at, "datetime")}
-            </span>
-            {entry.comment ? <p className="pf-letters-note">{entry.comment}</p> : null}
-          </li>
-        ))}
-      </ol>
-    </Card>
-  );
-}
-
-function Links({ letter }: { letter: LetterCard }) {
-  const { t } = useTranslation("letters");
-  const { date } = useFormat();
-  return (
-    <Card size="small" title={<h2 className="pf-letters-title">{t("card.links")}</h2>}>
-      <DefinitionList
-        items={[
-          // СЦ-11: письмо не по сделке — без строк заявки и клиента (там нечего показывать, кроме «—» и «не определён»)
-          ...(letter.request || letter.client
-            ? [
-                {
-                  label: t("card.linkFields.request"),
-                  value: letter.request ? (
-                    <>
-                      <Link className="pf-focusable" to={letter.request.path}>
-                        {letter.request.number}
-                      </Link>
-                      {letter.request.title ? (
-                        <div className="pf-hint">{letter.request.title}</div>
-                      ) : null}
-                    </>
-                  ) : (
-                    <span className="pf-hint">{t("card.noRequest")}</span>
-                  ),
-                },
-                {
-                  label: t("card.linkFields.client"),
-                  value: letter.client ? (
-                    <>
-                      <Link className="pf-focusable" to={letter.client.path}>
-                        {letter.client.name ?? letter.client.id}
-                      </Link>
-                      {letter.client.inn ? (
-                        <div className="pf-hint">
-                          {t("card.byClient", { inn: letter.client.inn })}
-                        </div>
-                      ) : null}
-                    </>
-                  ) : (
-                    <span className="pf-hint">{t("card.noClient")}</span>
-                  ),
-                },
-              ]
-            : []),
-          { label: t("card.linkFields.manager"), value: letter.manager?.name },
-          {
-            label: t("card.linkFields.registered"),
-            value: `${date(letter.registered_at, "datetime")} · ${
-              letter.registered_by ? letter.registered_by.name : t("card.bySystem")
-            }`,
-          },
-        ]}
-      />
-    </Card>
-  );
+  return letter.journal.map((entry) => ({
+    at: entry.at,
+    by: entry.by ? entry.by.name : null,
+    action: t(`card.actions.${entry.action.replace(".", "_")}`, {
+      defaultValue: t("card.actionUnknown"),
+    }),
+    comment: entry.comment ?? null,
+  }));
 }
 
 /** Реквизиты делопроизводства (P8, SPEC-v3 §3.2a п. 1): вид, способ получения, подписал, срок по документу, связь. */
@@ -202,32 +134,17 @@ function Content({
   const { t } = useTranslation("letters");
   const { me } = useAuth();
   const { date } = useFormat();
-  const { wide, mobile } = useViewport();
-  const [, setParams] = useSearchParams();
   const canResolve = canEdit(me, "eds.inbox");
-  // Делопроизводитель готовит проект резолюции письма делопроизводства (P8b) в том же боковом окне.
+  // Делопроизводитель готовит проект резолюции письма делопроизводства (P8b) в том же блоке решения.
   const office = letter.track === "office";
   const canRegister = canEdit(me, "eds.inbox.register");
-  const canDraft = canRegister && office;
-  const awaiting = letter.status === "awaiting_resolution";
   const registry = useRegistryItems(letter);
-
-  const openResolution = () => {
-    setParams(
-      (prev) => {
-        const next = new URLSearchParams(prev);
-        // Телефон — лист на весь экран, планшет — окно справа (Drawer каркаса).
-        if (mobile) next.set("sheet", "resolution");
-        else next.set("panel", "open");
-        next.set("tab", "resolution");
-        return next;
-      },
-      { replace: true },
-    );
-  };
+  const history = useJournalEntries(letter);
+  // СЦ-11: письмо не по сделке — без строк заявки и клиента (там нечего показывать, кроме «—» и «не определён»)
+  const withDeal = Boolean(letter.request || letter.client);
 
   return (
-    <div className="pf-letters">
+    <div className="pf-letters pf-overlay-aware">
       <PageHeader
         title={t("card.title", { number: letter.number })}
         subtitle={letter.subject}
@@ -260,85 +177,119 @@ function Content({
           />
         </section>
       )}
-      {awaiting && (canResolve || canDraft) && !wide ? (
-        <div>
-          <Button type="primary" onClick={openResolution}>
-            {canResolve ? t("card.resolve") : t("office.draftName")}
-          </Button>
-        </div>
-      ) : null}
-      {awaiting && !canResolve ? <p className="pf-hint">{t("card.readOnlyHint")}</p> : null}
-      {/* EDS-DUP: «Это дубль ВХ-…» — у делопроизводителя; слева, чтобы боковое окно не закрывало кнопку */}
+      {/* EDS-DUP: «Это дубль ВХ-…» — у делопроизводителя */}
       {canRegister && letter.status !== "duplicate" ? (
         <div>
           <MarkDuplicateAction letter={letter} />
         </div>
       ) : null}
-      <div className="pf-letters-grid">
-        <div className="pf-letters-main">
-          <Card size="small" title={<h2 className="pf-letters-title">{t("card.details")}</h2>}>
-            <DefinitionList
-              items={[
-                // СЦ-5: номер до перенумерации на латиницу — одна строка, только если он был
-                ...(letter.previous_number
-                  ? [{ label: t("card.fields.previousNumber"), value: letter.previous_number }]
-                  : []),
-                ...registry,
-                // Делопроизводство (ГОСТ Р 7.0.97, SPEC-v3 §3.2a) — «корреспондент», заявка клиента — «клиент».
-                {
-                  label: t(office ? "card.fields.correspondent" : "card.fields.client"),
-                  value: letter.sender.name,
-                },
-                {
-                  label: t(office ? "card.fields.correspondentInn" : "card.fields.inn"),
-                  value: letter.sender.inn,
-                },
-                { label: t("card.fields.contact"), value: letter.sender.contact },
-                {
-                  label: t("card.fields.senderRef"),
-                  value: [
-                    letter.sender_ref.number,
-                    letter.sender_ref.date ? date(letter.sender_ref.date) : null,
-                  ]
-                    .filter(Boolean)
-                    .join(" · "),
-                },
-                { label: t("card.fields.addressee"), value: letter.addressee.name },
-                { label: t("card.fields.received"), value: date(letter.received_at) },
-                {
-                  label: t("card.fields.urgency"),
-                  value: letter.urgent ? t("card.urgent") : t("card.regular"),
-                },
-              ]}
-            />
-          </Card>
-          <Card size="small" title={<h2 className="pf-letters-title">{t("card.summary")}</h2>}>
-            <p className="pf-letters-summary">{letter.summary}</p>
-          </Card>
-          <Card size="small" title={<h2 className="pf-letters-title">{t("card.files")}</h2>}>
-            {letter.files.length > 0 ? <Attachments files={letter.files} /> : null}
-            {letter.request?.files?.length ? (
-              <RequestAttachments
-                letterId={letter.id}
-                number={letter.request.number}
-                files={letter.request.files}
-              />
-            ) : null}
-            {letter.files.length === 0 && !letter.request?.files?.length ? (
-              <p className="pf-hint">{t("card.noFiles")}</p>
-            ) : null}
-          </Card>
-          <Decision letter={letter} />
-          <OfficeDecision letter={letter} />
-          <InstructionsCard letter={letter} />
-          <ReplyCard letter={letter} />
-          <Journal letter={letter} />
-        </div>
-        <aside className="pf-letters-side" aria-label={t("card.links")}>
-          <Links letter={letter} />
-        </aside>
-      </div>
-      <ResolutionSlot letterRef={refKey} />
+      <Card size="small" title={<h2 className="pf-letters-title">{t("card.summary")}</h2>}>
+        <p className="pf-letters-summary">{letter.summary}</p>
+      </Card>
+      <Card size="small" title={<h2 className="pf-letters-title">{t("card.files")}</h2>}>
+        {letter.files.length > 0 ? <Attachments files={letter.files} /> : null}
+        {letter.request?.files?.length ? (
+          <RequestAttachments
+            letterId={letter.id}
+            number={letter.request.number}
+            files={letter.request.files}
+          />
+        ) : null}
+        {letter.files.length === 0 && !letter.request?.files?.length ? (
+          <p className="pf-hint">{t("card.noFiles")}</p>
+        ) : null}
+      </Card>
+      <DecisionCenter legacyTab="resolution" legacySheet="resolution" label={t("panel.sheetLabel")}>
+        <ResolutionPanel letterRef={refKey} />
+      </DecisionCenter>
+      <Decision letter={letter} />
+      <OfficeDecision letter={letter} />
+      <InstructionsCard letter={letter} />
+      <ReplyCard letter={letter} />
+      <RecordTab tab="facts">
+        <DefinitionList
+          items={[
+            // СЦ-5: номер до перенумерации на латиницу — одна строка, только если он был
+            ...(letter.previous_number
+              ? [{ label: t("card.fields.previousNumber"), value: letter.previous_number }]
+              : []),
+            ...registry,
+            // Делопроизводство (ГОСТ Р 7.0.97, SPEC-v3 §3.2a) — «корреспондент», заявка клиента — «клиент». Клиент CRM,
+            // найденный по письму, — та же строка со ссылкой на карточку, а не вторая «Клиент».
+            ...(letter.client
+              ? [
+                  {
+                    label: t("card.linkFields.client"),
+                    value: (
+                      <>
+                        <Link className="pf-focusable" to={letter.client.path}>
+                          {letter.client.name ?? letter.client.id}
+                        </Link>
+                        {letter.client.inn ? (
+                          <div className="pf-hint">
+                            {t("card.byClient", { inn: letter.client.inn })}
+                          </div>
+                        ) : null}
+                      </>
+                    ),
+                  },
+                ]
+              : [
+                  {
+                    label: t(office ? "card.fields.correspondent" : "card.fields.client"),
+                    value: letter.sender.name,
+                  },
+                  {
+                    label: t(office ? "card.fields.correspondentInn" : "card.fields.inn"),
+                    value: letter.sender.inn,
+                  },
+                ]),
+            ...(withDeal
+              ? [
+                  {
+                    label: t("card.linkFields.request"),
+                    value: letter.request ? (
+                      <>
+                        <Link className="pf-focusable" to={letter.request.path}>
+                          {letter.request.number}
+                        </Link>
+                        {letter.request.title ? (
+                          <div className="pf-hint">{letter.request.title}</div>
+                        ) : null}
+                      </>
+                    ) : (
+                      <span className="pf-hint">{t("card.noRequest")}</span>
+                    ),
+                  },
+                ]
+              : []),
+            { label: t("card.fields.contact"), value: letter.sender.contact },
+            {
+              label: t("card.fields.senderRef"),
+              value: [
+                letter.sender_ref.number,
+                letter.sender_ref.date ? date(letter.sender_ref.date) : null,
+              ]
+                .filter(Boolean)
+                .join(" · "),
+            },
+            { label: t("card.fields.addressee"), value: letter.addressee.name },
+            { label: t("card.fields.received"), value: date(letter.received_at) },
+            { label: t("card.linkFields.manager"), value: letter.manager?.name },
+            {
+              label: t("card.linkFields.registered"),
+              value: `${date(letter.registered_at, "datetime")} · ${
+                letter.registered_by ? letter.registered_by.name : t("card.bySystem")
+              }`,
+            },
+          ]}
+        />
+      </RecordTab>
+      {history.length > 0 ? (
+        <RecordTab tab="history">
+          <RecordHistory label={t("card.journal")} entries={history} />
+        </RecordTab>
+      ) : null}
     </div>
   );
 }

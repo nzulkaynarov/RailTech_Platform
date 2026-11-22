@@ -14,7 +14,8 @@ for (const width of WIDTHS) {
     });
 
     test("карточка письма", async ({ page }) => {
-      await spaGoto(page, `/eds/inbox/${encodeURIComponent("ВХ-100/26")}`);
+      // «Прежний номер» — строка «Сведений» бокового окна (на телефоне его открывает ссылка)
+      await spaGoto(page, `/eds/inbox/${encodeURIComponent("ВХ-100/26")}?panel=open&tab=facts`);
       await expect(page.getByRole("heading", { level: 1, name: "Письмо ВХ-100/26" })).toBeVisible();
       await expect(page.getByText("Прежний номер")).toBeVisible();
       await expect(page.getByText("ВХ-100", { exact: true })).toBeVisible();

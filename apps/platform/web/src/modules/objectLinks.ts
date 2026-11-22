@@ -11,11 +11,14 @@ import { matchSection } from "./registry";
 interface Native {
   /** Какой объект открывает раздел: по нему из номера строится путь карточки */
   kind: ObjectKind;
-  /** Вкладка бокового окна, на которой ждёт решение: «Резолюция», «Одобрение», «Согласование» */
+  /**
+   * Метка блока решения: «Резолюция», «Одобрение», «Согласование». С ЕД-7 форма решения лежит в центре карточки, а не
+   * вкладкой окна; `DecisionCenter` узнаёт эту метку (`?panel=open&tab=…`), прокручивает к форме и снимает параметры окна.
+   */
   tab: string;
 }
 
-/** Ключ — `<модуль>.<раздел>`; вкладки — из `tabs` в `module.ts` модуля. */
+/** Ключ — `<модуль>.<раздел>`; метки — те же `legacyTab` у `DecisionCenter` карточки раздела. */
 export const DECISION_TABS: Readonly<Record<string, Native>> = {
   "eds.inbox": { kind: "letter", tab: "resolution" },
   "eds.drafts": { kind: "quote", tab: "approve" },

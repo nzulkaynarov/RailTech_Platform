@@ -4,7 +4,8 @@ import { describe, expect, it } from "vitest";
 
 import { findQuote, readQuotes, writeQuotes } from "../../../mocks/fixtures/approvals";
 import { server } from "../../../test/server";
-import { panelEl, renderAt, setupApprovalTests, signIn } from "../../../test/approvalsKit";
+import { renderAt, setupApprovalTests, signIn } from "../../../test/approvalsKit";
+import { decisionEl } from "../../../test/panel";
 import { confirmDialog } from "../../../test/confirmDialog";
 
 setupApprovalTests();
@@ -15,7 +16,7 @@ const APPROVE = "Одобрить КП";
 async function openForm(n = 115, user = "director@demo.example") {
   signIn(user);
   const view = renderAt(QUOTE(n));
-  const panel = await panelEl();
+  const panel = await decisionEl();
   const form = await within(panel).findByRole("form", { name: "Одобрение КП" });
   return { ...view, panel, form };
 }
@@ -70,7 +71,7 @@ describe("Одобрение КП: форма", () => {
     writeQuotes(quotes);
     signIn("manager@demo.example");
     renderAt(QUOTE(115));
-    const panel = await panelEl();
+    const panel = await decisionEl();
     await within(panel).findByText("КП ждёт решения директора");
     expect(within(panel).queryByRole("form", { name: "Одобрение КП" })).toBeNull();
   });
@@ -218,17 +219,16 @@ describe("Одобрение КП: форма", () => {
         "Не сохранено: КП уже решено другим директором или заменено новой версией, карточка обновлена",
       ),
     ).not.toHaveLength(0);
-    expect(
-      await within(panel).findByRole("heading", { name: "КП возвращено на доработку" }),
-    ).toBeVisible();
-    expect(within(panel).queryByRole("form", { name: "Одобрение КП" })).toBeNull();
+    await waitFor(() => {
+      expect(within(panel).queryByRole("form", { name: "Одобрение КП" })).toBeNull();
+    });
     expect(draftKeys()).toHaveLength(0);
   });
 
   it("менеджер: формы решения нет, внутренних полей нет", async () => {
     signIn("manager@demo.example");
     renderAt(QUOTE(115));
-    const panel = await panelEl();
+    const panel = await decisionEl();
 
     expect(
       await within(panel).findByRole("heading", { name: "КП ждёт решения директора" }),
@@ -314,7 +314,7 @@ describe("Одобрение КП: форма", () => {
     renderAt(`/eds/drafts/${encodeURIComponent("КП-2026/118")}?panel=open&tab=approve`);
 
     expect(await screen.findByRole("heading", { level: 1, name: "КП-2026/118" })).toBeVisible();
-    const panel = await panelEl();
+    const panel = await decisionEl();
     expect(await within(panel).findByRole("form", { name: "Одобрение КП" })).toBeVisible();
   });
 });
