@@ -1069,7 +1069,12 @@ async def test_awaiting_signature_passes_through_list_registry_and_card(
 ) -> None:
     """СЦ-8: «На подписи» — признак EDS; BFF отдаёт его как есть, статус остаётся `draft`."""
     await web.login(["MANAGER"])
-    letter = {"kind": "letter_out", "number": None, "status": "draft", "awaiting_signature": True}
+    letter: dict[str, Any] = {
+        "kind": "letter_out",
+        "number": None,
+        "status": "draft",
+        "awaiting_signature": True,
+    }
     eds.answer(
         "GET",
         "documents",
