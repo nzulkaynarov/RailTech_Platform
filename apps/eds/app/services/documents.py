@@ -91,12 +91,13 @@ def require_draft_permission(employee: Employee, kind: DocumentKind) -> None:
         raise forbidden(tuple(permission.value for permission in allowed))
 
 
-def _apply_letter(document: Document, letter: OutgoingLetterIn | None) -> None:
+async def _apply_letter(session: AsyncSession, document: Document, letter: OutgoingLetterIn | None) -> None:
     """Письмо на бланке: тело (проверено `rt_docs`), «кому», почта, подписант; `text` — производный от тела."""
     if letter is None:
         document.body = None
         document.recipient_attention = document.recipient_email = None
         document.signatory_name = document.signatory_position = None
+        document.chosen_signer_crm_user_id = None
         return
     document.body = letter_body.clean(letter.body)
     document.text = letter_body.plain_text(document.body)
@@ -104,6 +105,25 @@ def _apply_letter(document: Document, letter: OutgoingLetterIn | None) -> None:
     document.recipient_email = (letter.recipient_email or "").strip() or None
     document.signatory_name = (letter.signatory_name or "").strip() or None
     document.signatory_position = (letter.signatory_position or "").strip() or None
+    await _apply_chosen_signer(session, document, letter.signer_crm_user_id)
+
+
+async def _apply_chosen_signer(session: AsyncSession, document: Document, signer_id: int | None) -> None:
+    """ЕД-6: подписант выбран — имя берётся из справочника сотрудников, должность — оттуда же, если автор не вписал свою
+    (для «и. о.»; справочник не меняется). Выбрать можно только держателя действующего полномочия на письма."""
+    document.chosen_signer_crm_user_id = signer_id
+    if signer_id is None:
+        return
+    today = clock.company_date(clock.now())
+    options = {o.crm_user_id: o for o in await signing_resolve.letter_signer_options(session, today)}
+    option = options.get(signer_id)
+    if option is None:
+        raise invalid_fields("Выберите подписанта с правом подписи.", signer_crm_user_id="no_signing_right")
+    others = [uid for uid in options if uid != document.author_crm_user_id]
+    if signer_id == document.author_crm_user_id and others:
+        raise invalid_fields("Автор письма не подписывает его сам.", signer_crm_user_id="author_cannot_sign")
+    document.signatory_name = option.full_name
+    document.signatory_position = document.signatory_position or option.position
 
 
 def _check_amount(amount: Money | None) -> None:
@@ -285,7 +305,7 @@ async def create(session: AsyncSession, bus: AsyncBus, *, employee: Employee, da
         updated_at=now,
     )
     if is_letter and data.letter is not None:
-        _apply_letter(document, data.letter)
+        await _apply_letter(session, document, data.letter)
     if not is_letter:
         document.number = await numbering.allocate(session, _NUMBER_KIND[data.kind], now)
     session.add(document)
@@ -363,7 +383,7 @@ async def update(
             if edits.letter is not None:
                 raise invalid_fields("Письмо на бланке — только у исходящего письма.", letter="letter_out_only")
         else:
-            _apply_letter(document, edits.letter)
+            await _apply_letter(session, document, edits.letter)
     document.updated_at = clock.now()
     if edits.file_ids:
         await files.attach(session, edits.file_ids, actor_id=employee.crm_user_id, document_id=document.id)
@@ -441,7 +461,9 @@ async def sign_check(session: AsyncSession, employee: Employee, document: Docume
         session, kind=document.kind, amount=document.amount, currency=document.currency, on_date=today
     )
     openers = await signing_resolve.draft_openers(session, {c.signer.crm_user_id for c in result.candidates})
-    signer = signing_resolve.pick_letter_signer(result, document.author_crm_user_id, openers)
+    signer = signing_resolve.pick_letter_signer(
+        result, document.author_crm_user_id, openers, document.chosen_signer_crm_user_id
+    )
     if not (access.has(employee, P.LETTERS_REGISTER) or access.has(employee, P.MEMOS_APPROVE)):
         return SignCheck(False, "no_permission", "Подписывать письма может сотрудник с правом подписи.", signer, None)
     own = signing_resolve.signer_check(result, employee.crm_user_id)
@@ -518,7 +540,8 @@ async def sign(
     document.verification_code = verification_code
     document.dispatch_method = method
     document.signatory_name = candidate.signer.full_name
-    document.signatory_position = candidate.position
+    if document.chosen_signer_crm_user_id != employee.crm_user_id or not document.signatory_position:
+        document.signatory_position = candidate.position  # «и. о.», вписанное автором, остаётся
 
     await journal.record(
         session,
