@@ -23,6 +23,7 @@ import { edsDecisionQueueItems, quoteCounter, quotesToApprove } from "./edsQueue
 import { coveredQueueItems } from "./profileStore";
 import { handOverNotificationsOf, handOverQueueItems } from "./crmMessages";
 import { readErpCatalog } from "./fixtures/erpCatalog";
+import { markReminded, remindedAt, waitingForView, withQueueMeta } from "./queueMeta";
 
 /**
  * Имитация сбоя ERP для скриншотов и e2e: `localStorage["rt-pf-mock-erp-down"] = "1"` (страница с MSW читает его при
@@ -216,7 +217,40 @@ export const feedHandlers = [
     const items = [...own, ...(edsDown() ? [] : reworkQueueItems(roles.view))].sort(
       (a, b) => DUE_RANK[a.due_label] - DUE_RANK[b.due_label],
     );
-    return HttpResponse.json({ items: [...items, ...covered], sources: sources() });
+    return HttpResponse.json({
+      items: [...items, ...covered].map(withQueueMeta),
+      sources: sources(),
+    });
+  }),
+
+  // ГЛ-1: «Вы ждёте других» и «Напомнить» (не чаще раза в час на объект)
+  http.get("*/queue/waiting", () => {
+    const roles = viewRoles(null);
+    if (!roles) return expired();
+    const denied = noQueue(roles);
+    if (denied) return denied;
+    return HttpResponse.json({
+      items: edsDown() ? [] : waitingForView(roles.view),
+      sources: sources(),
+    });
+  }),
+
+  http.post("*/queue/waiting/:kind/:id/remind", ({ params }) => {
+    const id = String(params.id);
+    const last = remindedAt(id);
+    if (last !== undefined && Date.now() - last < 3_600_000) {
+      return HttpResponse.json(
+        {
+          code: "TOO_MANY_REQUESTS",
+          message: "Уже напоминали.",
+          source: "eds",
+          details: { reason: "remind_rate_limited" },
+        },
+        { status: 429 },
+      );
+    }
+    markReminded(id);
+    return HttpResponse.json({ reminded_at: new Date().toISOString() });
   }),
 
   http.get("*/menu-counters", () => {

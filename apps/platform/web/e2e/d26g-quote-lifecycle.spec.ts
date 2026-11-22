@@ -48,7 +48,7 @@ test.describe("D26G: жизненный цикл КП — доработка, о
     }) => {
       await signInAt(page, UNIVERSAL, width);
       const row = page
-        .getByRole("region", { name: "Что сделать сейчас" })
+        .getByRole("region", { name: "Что ждёт вас" })
         .getByRole("listitem")
         .filter({ hasText: `Клиент отклонил КП по заявке ${REJECTED}` });
       await expect(row).toHaveCount(1);
@@ -56,7 +56,7 @@ test.describe("D26G: жизненный цикл КП — доработка, о
       await shot(page, "queue-client-rejected");
       await expectNoViolations(page, `очередь ${String(width)}`);
 
-      await row.getByRole("link", { name: /Открыть/ }).click();
+      await row.getByRole("link").click();
       await expect(
         page.getByRole("heading", { level: 1, name: `Расчёт по заявке ${REJECTED}` }),
       ).toBeVisible();

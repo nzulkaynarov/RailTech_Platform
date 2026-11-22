@@ -8,7 +8,7 @@
       "summary": "Сводка"
     },
     "queue": {
-      "title": "Что сделать сейчас",
+      "title": "Что ждёт вас",
       "cardsLabel": "Счётчики очереди",
       "decisions": {
         "one": "{{count}} решение",
@@ -80,6 +80,53 @@
         "filterAll": "Все",
         "filterFor": "За {{name}}",
         "filterLabel": "Чьи задачи"
+      },
+      "overdueCount": "просрочено: {{count}}",
+      "filterLabel": "Вид работы",
+      "filterAll": "Всё",
+      "groups": {
+        "overdue": "Просрочено",
+        "today": "Сегодня",
+        "later": "Позже"
+      },
+      "categories": {
+        "sign": "Подписать",
+        "approve": "Согласовать",
+        "resolution": "Резолюция",
+        "instruction": "Поручения",
+        "payment": "Оплата",
+        "lead": "Лиды",
+        "mail": "Почта",
+        "supply": "Снабжение",
+        "project": "Проекты",
+        "other": "Другое"
+      },
+      "why": "Почему у вас:",
+      "openLabel": "{{action}}: {{title}}",
+      "truncated": "Показаны не все задачи: источник отдал только часть. Остальное — в разделах.",
+      "quick": {
+        "acknowledged": "Отмечено",
+        "taken": "Лид ваш",
+        "failed": "Не удалось"
+      },
+      "waiting": {
+        "title": "Вы ждёте других",
+        "loadError": "Не удалось загрузить, что вы ждёте от других",
+        "onSignature": "на подписи у {{name}}",
+        "noSigner": "подписанта нет",
+        "onApproval": "на согласовании: {{name}}",
+        "onInstruction": "поручение: {{name}}",
+        "until": "срок {{date}}",
+        "age": {
+          "minutes": "{{count}} мин",
+          "hours": "{{count}} ч",
+          "days": "{{count}} д"
+        },
+        "remind": "Напомнить",
+        "remindLabel": "Напомнить: {{title}}",
+        "reminded": "Напоминание отправлено",
+        "again": "Уже напоминали, повторить можно позже",
+        "failed": "Напоминание не отправлено"
       }
     },
     "activity": {

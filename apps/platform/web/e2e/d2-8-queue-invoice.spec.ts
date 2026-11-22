@@ -39,7 +39,7 @@ async function signInAt(page: Page, email: string, width: number): Promise<void>
 
 function queueRow(page: Page, title: string | RegExp) {
   return page
-    .getByRole("region", { name: "Что сделать сейчас" })
+    .getByRole("region", { name: "Что ждёт вас" })
     .getByRole("listitem")
     .filter({ hasText: title });
 }
@@ -62,17 +62,17 @@ test.describe("D2-8: «Задачи» менеджера-универсала и
       await shot(page, "queue-manager-all");
       await expectNoViolations(page, `очередь ${String(width)}`);
 
-      await rows.calc.getByRole("link", { name: /Открыть/ }).click();
+      await rows.calc.getByRole("link").click();
       await expect(page).toHaveURL(/\/erp\/calc\/%D0%97%D0%92-2026-103$/);
       await expect(page.getByRole("heading", { level: 1, name: /ЗВ-2026-103/ })).toBeVisible();
 
       await spaGoto(page, "/dashboard/queue");
-      await rows.pay.getByRole("link", { name: /Открыть/ }).click();
+      await rows.pay.getByRole("link").click();
       await expect(page).toHaveURL(/\/eds\/payments\/145\?/);
       await expect(page.getByRole("heading", { level: 1, name: "СЧ-2026/145" })).toBeVisible();
 
       await spaGoto(page, "/dashboard/queue");
-      await rows.scan.getByRole("link", { name: /Открыть/ }).click();
+      await rows.scan.getByRole("link").click();
       await expect(page).toHaveURL(/\/eds\/projects\/%D0%9F%D0%A0-2026-106/);
       await expect(
         page.getByRole("heading", { level: 1, name: "Проект ПР-2026-106" }),
@@ -107,9 +107,7 @@ test.describe("D2-8: «Задачи» менеджера-универсала и
       page,
     }) => {
       await signInAt(page, UNIVERSAL, width);
-      await queueRow(page, "Выставить счёт СЧ-2026/143")
-        .getByRole("link", { name: /Открыть/ })
-        .click();
+      await queueRow(page, "Выставить счёт СЧ-2026/143").getByRole("link").click();
       await expect(page).toHaveURL(/\/eds\/payments\/143/);
       // на телефоне окно «Оплата» — лист на весь экран (ссылка очереди открывает его сразу)
       const form = page.getByRole("form", { name: "Выставить счёт" });

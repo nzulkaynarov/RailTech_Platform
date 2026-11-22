@@ -68,7 +68,7 @@ async function switchTo(page: Page, email: string): Promise<void> {
 
 function queueRow(page: Page, text: string): Locator {
   return page
-    .getByRole("region", { name: "Что сделать сейчас" })
+    .getByRole("region", { name: "Что ждёт вас" })
     .getByRole("listitem")
     .filter({ hasText: text });
 }
@@ -119,7 +119,7 @@ async function incomingWithReplyInstruction(page: Page): Promise<void> {
 async function executorHandsOver(page: Page, email: string, screens: boolean): Promise<void> {
   await switchTo(page, "universal@demo.example");
   await queueRow(page, `Подготовить ответ на письмо ${NUMBER}`)
-    .getByRole("link", { name: /^Открыть:/ })
+    .getByRole("link", { name: /^(?!Открыть документ)[А-ЯЁ][а-яё ]+: / })
     .click();
   await page.getByRole("link", { name: "Ответить" }).click();
   await expect(page).toHaveURL(/\/eds\/new\?type=letter&reply_to=.*&reply_id=[0-9a-f-]{36}/);
@@ -178,7 +178,7 @@ test.describe("EDS-REPLY-1: ответ на входящее", () => {
     await expect(page.getByText(`Подпишите ответ на ${NUMBER}`).first()).toBeVisible();
     await spaGoto(page, "/dashboard/queue");
     await queueRow(page, "Подписать исходящее")
-      .getByRole("link", { name: /^Открыть:/ })
+      .getByRole("link", { name: /^(?!Открыть документ)[А-ЯЁ][а-яё ]+: / })
       .click();
     const card = side(page);
     await expect(card.getByText(/Передано на подпись: Демо Широков/)).toBeVisible();
@@ -230,7 +230,7 @@ test.describe("EDS-REPLY-1: ответ на входящее", () => {
 
     await switchTo(page, "director@demo.example");
     await queueRow(page, "Подписать исходящее")
-      .getByRole("link", { name: /^Открыть:/ })
+      .getByRole("link", { name: /^(?!Открыть документ)[А-ЯЁ][а-яё ]+: / })
       .click();
     const card = side(page);
     await card.getByRole("button", { name: "Подписать", exact: true }).click();

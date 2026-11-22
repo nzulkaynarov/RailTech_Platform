@@ -8,7 +8,7 @@
       "summary": "Summary"
     },
     "queue": {
-      "title": "What to do now",
+      "title": "Waiting for you",
       "cardsLabel": "Queue counters",
       "decisions": {
         "one": "{{count}} decision",
@@ -80,6 +80,53 @@
         "filterAll": "All",
         "filterFor": "For {{name}}",
         "filterLabel": "Whose tasks"
+      },
+      "overdueCount": "overdue: {{count}}",
+      "filterLabel": "Kind of work",
+      "filterAll": "All",
+      "groups": {
+        "overdue": "Overdue",
+        "today": "Today",
+        "later": "Later"
+      },
+      "categories": {
+        "sign": "Sign",
+        "approve": "Approve",
+        "resolution": "Resolution",
+        "instruction": "Instructions",
+        "payment": "Payment",
+        "lead": "Leads",
+        "mail": "Mail",
+        "supply": "Supply",
+        "project": "Projects",
+        "other": "Other"
+      },
+      "why": "Why it is yours:",
+      "openLabel": "{{action}}: {{title}}",
+      "truncated": "Not every task is shown: a source returned only part. The rest is in the sections.",
+      "quick": {
+        "acknowledged": "Noted",
+        "taken": "The lead is yours",
+        "failed": "Failed"
+      },
+      "waiting": {
+        "title": "You are waiting for others",
+        "loadError": "Could not load what you are waiting for",
+        "onSignature": "with {{name}} for signature",
+        "noSigner": "no signer",
+        "onApproval": "on approval: {{name}}",
+        "onInstruction": "instruction: {{name}}",
+        "until": "due {{date}}",
+        "age": {
+          "minutes": "{{count}} min",
+          "hours": "{{count}} h",
+          "days": "{{count}} d"
+        },
+        "remind": "Remind",
+        "remindLabel": "Remind: {{title}}",
+        "reminded": "Reminder sent",
+        "again": "Already reminded, try again later",
+        "failed": "Reminder not sent"
       }
     },
     "activity": {

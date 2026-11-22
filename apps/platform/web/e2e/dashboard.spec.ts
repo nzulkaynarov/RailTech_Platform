@@ -29,7 +29,9 @@ test.describe("Задачи", () => {
     page,
   }) => {
     await loginAndWait(page, "director@demo.example");
-    await expect(page.getByRole("main").getByText(/^[^·]+ · 10 решений$/)).toBeVisible();
+    await expect(
+      page.getByRole("main").getByText(/^[^·]+ · 10 решений · просрочено: 1$/),
+    ).toBeVisible();
     // Поток подключается вместе с каркасом: ждём, пока MSW примет соединение.
     await expect
       .poll(() => page.evaluate("window.__rtMockStreamCount?.() ?? 0"), { timeout: 5_000 })
@@ -52,18 +54,18 @@ test.describe("Задачи", () => {
     await expect.poll(() => wanted.every((path) => seen.has(path)), { timeout: 2_000 }).toBe(true);
   });
 
-  test("директор: счётчики, «Что сделать сейчас», лента «Сегодня»", async ({ page }) => {
+  test("директор: счётчики, «Что ждёт вас», лента «Сегодня»", async ({ page }) => {
     await loginAndWait(page, "director@demo.example");
     const main = page.getByRole("main");
 
     // D26G-4: «Одобрить КП» — все четыре КП на шаге директора в «КП на одобрение» (EDS)
-    await expect(main.getByText(/^[^·]+ · 10 решений$/)).toBeVisible();
+    await expect(main.getByText(/^[^·]+ · 10 решений · просрочено: 1$/)).toBeVisible();
     const cards = main.getByRole("region", { name: "Счётчики очереди" }).getByRole("link");
     await expect(cards).toHaveCount(4);
     await expect(cards.nth(0)).toContainText("Входящие без резолюции");
     await expect(cards.nth(3)).toContainText("1 ждёт оплаты · 1 в отгрузке");
 
-    const queue = main.getByRole("region", { name: "Что сделать сейчас" });
+    const queue = main.getByRole("region", { name: "Что ждёт вас" });
     const rows = queue.getByRole("listitem");
     // D2-8: в очереди директора только решения — строк исполнения ERP нет
     await expect(rows).toHaveCount(10);
@@ -105,7 +107,7 @@ test.describe("Задачи", () => {
     await loginAndWait(page, "director@demo.example");
 
     await page
-      .getByRole("link", { name: /Открыть: Наложить резолюцию на письмо ВХ-104\/26/ })
+      .getByRole("link", { name: /Наложить резолюцию: Наложить резолюцию на письмо ВХ-104\/26/ })
       .click();
 
     await expect(page).toHaveURL(/\/eds\/inbox\/%D0%92%D0%A5-104%2F26\?panel=open&tab=resolution$/);
@@ -352,7 +354,7 @@ test.describe("Задачи директора: «Одобрить КП» из E
       await loginAndWait(page, "director@demo.example");
       const main = page.getByRole("main");
       const rows = main
-        .getByRole("region", { name: "Что сделать сейчас" })
+        .getByRole("region", { name: "Что ждёт вас" })
         .getByRole("listitem")
         .filter({ hasText: /Одобрить КП-2026\// });
       await expect(rows).toHaveCount(4);
@@ -372,10 +374,7 @@ test.describe("Задачи директора: «Одобрить КП» из E
       }
       await expectNoViolations(page, `очередь директора ${String(width)}`);
 
-      await rows
-        .filter({ hasText: "Одобрить КП-2026/115" })
-        .getByRole("link", { name: /Открыть/ })
-        .click();
+      await rows.filter({ hasText: "Одобрить КП-2026/115" }).getByRole("link").click();
       await expect(page).toHaveURL(/\/eds\/drafts\/%D0%9A%D0%9F-2026%2F115\?.*tab=approve/);
       await spaGoto(page, "/eds/drafts");
       await expect(page).toHaveURL(/\/eds\/documents\?box=outgoing&kind=quote$/);
