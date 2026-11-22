@@ -29,11 +29,12 @@ import { DefinitionList, type DefinitionItem } from "../../../shared/ui/Definiti
 import { ErrorNote } from "../../../shared/ui/FormParts";
 import { PageHeader } from "../../../shared/ui/PageHeader";
 import { useRefreshLetters } from "../inbox/api";
+import { signedByAfter } from "./signedBy";
 import { useRefreshMail } from "../mail/mailModel";
 import { RESOLUTION_KINDS } from "../inbox/officeModel";
 import { AttachmentsField } from "../new/AttachmentsField";
 import { DealField } from "../new/DealField";
-import { AddresseePerson, RecipientField } from "../new/RecipientField";
+import { CompanyPicker, PersonPicker } from "../../../shared/ui/pickers";
 import type { Attachment } from "../new/formModel";
 import { todayInCompanyZone } from "../new/formModel";
 import { localName, useLetterDictionary, useResolutionKindName } from "../dictionaries";
@@ -179,6 +180,8 @@ export function RegisterLetterPage() {
   const [note, setNote] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const idempotency = useRef<{ body: string; key: string } | null>(null);
+  // the «Подписал» text a chosen person put in on their own: only such text may be replaced or cleared
+  const autoSigned = useRef("");
   // EDS-DUP: фоновая проверка дублей, найденный при отправке ВХ (409) и «Это другое письмо» с причиной.
   const checked = useDuplicateCheck(values);
   // Найденный по 409 ВХ — пока не правили ключевые поля (корреспондент, ИНН, номер, дата): правка — проверка заново.
@@ -703,32 +706,35 @@ export function RegisterLetterPage() {
                           }
                           error={fieldError("sender_name")}
                         >
-                          {/* СУЩ-2.6: корреспондент — только из контрагентов; правка текста снимает выбор */}
-                          <RecipientField
+                          {/* ЕД-6: корреспондент — только выбором из контрагентов */}
+                          <CompanyPicker
                             id={id("sender_name")}
-                            value={values.senderName}
+                            value={
+                              values.senderCompanyId
+                                ? {
+                                    id: values.senderCompanyId,
+                                    name: values.senderName,
+                                    inn: values.senderInn || null,
+                                  }
+                                : null
+                            }
+                            suggest={values.senderCompanyId ? undefined : values.senderName}
                             invalid={Boolean(errors.sender_name)}
                             describedBy={describedBy(
                               id("sender_name"),
                               true,
                               Boolean(errors.sender_name),
                             )}
-                            onChange={(name) => {
+                            onChange={(company) => {
+                              const auto = autoSigned.current;
+                              autoSigned.current = "";
                               setValues((prev) => ({
                                 ...prev,
-                                senderName: name,
-                                senderInn: "",
-                                senderCompanyId: "",
+                                senderName: company?.name ?? "",
+                                senderInn: company?.inn ?? "",
+                                senderCompanyId: company?.id ?? "",
                                 senderContactId: "",
-                              }));
-                            }}
-                            onPick={(company) => {
-                              setValues((prev) => ({
-                                ...prev,
-                                senderName: company.name,
-                                senderInn: company.inn ?? "",
-                                senderCompanyId: company.id,
-                                senderContactId: "",
+                                signedBy: signedByAfter(prev.signedBy, auto, null),
                               }));
                             }}
                           />
@@ -738,12 +744,23 @@ export function RegisterLetterPage() {
                           label={t("letters:register.person.label")}
                           hint={t("letters:register.person.hint")}
                         >
-                          <AddresseePerson
+                          <PersonPicker
                             id="reg-sender-person"
                             companyId={values.senderCompanyId}
                             value={values.senderContactId}
-                            onPick={(person) => {
-                              set("senderContactId", person?.id ?? "");
+                            describedBy="reg-sender-person-hint"
+                            onChange={(person) => {
+                              const auto = autoSigned.current;
+                              const name = person?.name ?? null;
+                              autoSigned.current =
+                                name !== null && signedByAfter(values.signedBy, auto, name) === name
+                                  ? name
+                                  : "";
+                              setValues((prev) => ({
+                                ...prev,
+                                senderContactId: person?.id ?? "",
+                                signedBy: signedByAfter(prev.signedBy, auto, person?.name ?? null),
+                              }));
                             }}
                           />
                         </Field>

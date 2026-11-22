@@ -45,10 +45,13 @@ class DocflowSettings(BaseModel):
     # Политика защиты данных для ИИ — проекция настройки CRM (`ai.pii_policy`), только чтение
     pii_policy: Literal["business", "strict"]
     ai_available: bool
+    #: ГЛ-0: автор письма с правом подписи подписывает его сам (по умолчанию да)
+    author_may_sign_own_letter: bool = True
 
 
 class DocflowSettingsPatch(_In):
-    recognize_scans: bool
+    recognize_scans: bool | None = None
+    author_may_sign_own_letter: bool | None = None
 
 
 class LetterAssistIn(BaseModel):

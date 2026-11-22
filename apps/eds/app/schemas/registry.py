@@ -45,6 +45,8 @@ class RegistryItem(BaseModel):
     undelivered: bool = False
     #: Исходящее письмо передано на подпись и не подписано (СЦ-8); у остальных видов — false
     awaiting_signature: bool = False
+    #: ГЛ-0: у кого письмо на подписи (вычисленный или выбранный подписант); у остальных — `null`
+    signer: PersonRef | None = None
 
 
 class RegistryPage(BaseModel):

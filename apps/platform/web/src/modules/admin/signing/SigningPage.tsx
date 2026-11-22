@@ -18,6 +18,7 @@ import { SettingsPage } from "../settings/SettingsPage";
 import { ListTable } from "../company/common";
 import { AuthorityDrawer, type DrawerTarget } from "./AuthorityDrawer";
 import { AuthorityStatus } from "./AuthorityStatus";
+import { AuthorRule } from "./AuthorRule";
 import { ResolveCheck } from "./ResolveCheck";
 import type { FormValues } from "./model";
 import { useBasisText } from "./useBasisText";
@@ -231,6 +232,7 @@ export function SigningPage() {
             action: list.isPending ? undefined : addButton,
           }}
         />
+        <AuthorRule />
         <ResolveCheck />
       </div>
       {target ? (

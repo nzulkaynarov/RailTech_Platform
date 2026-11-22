@@ -2,10 +2,10 @@ import { expect, test } from "@playwright/test";
 
 import { loginAndWait, reveal, spaGoto, waitForMotionEnd } from "./support/app";
 import { expectNoViolations } from "./support/axe";
-import { pickAddressee } from "./support/fields";
+import { clearCompany, expectCompany, pickAddressee, openCompany } from "./support/fields";
 
-// СУЩ-2.6, часть 3 на MSW (ADR-0028 п. 5): корреспондент входящего — организация из контрагентов и человек из её
-// карточки; текст без выбора корреспондентом не становится. Снимки 1440 и 390 с axe.
+// ЕД-6 на MSW: корреспондент входящего — компания из контрагентов и человек из её карточки; свободного текста нет;
+// выбранный человек подставляет «Подписал». Снимки 1440 и 390 с axe.
 const dir = process.env["E2E_SCREENSHOT_DIR"];
 const SENDER = "Корреспондент (организация)";
 
@@ -32,11 +32,15 @@ for (const width of [1440, 390] as const) {
       if (dir) await page.screenshot({ path: `${dir}/sender-person-${String(width)}.png` });
       await expectNoViolations(page, "корреспондент и человек");
 
-      // правка названия снимает выбор: корреспондент — только из списка
-      await page.getByLabel(SENDER, { exact: true }).fill("ГНИ Мирабадского района");
-      await expect(
-        page.getByText(/Выберите из контрагентов или заведите организацию/),
-      ).toBeVisible();
+      await expect(page.getByLabel("Подписал")).toHaveValue("Демо Клиентов");
+
+      // текст в поле — только запрос: без выбора корреспондент не меняется; очистка выключает «человека»
+      const field = page.getByLabel(SENDER, { exact: true });
+      await openCompany(field);
+      await field.fill("ГНИ Мирабадского района");
+      await page.keyboard.press("Escape");
+      await expectCompany(page, "АО «Демо-Путь»", SENDER);
+      await clearCompany(field);
       await expect(page.getByLabel("Человек корреспондента")).toBeDisabled();
     },
   );

@@ -110,7 +110,8 @@
     "inProject": "Loyihada",
     "inProjectLabel": "Loyihada ochish: {{subject}}",
     "openQuote": "Taklifni ochish",
-    "openQuoteLabel": "Taklifni ochish: {{subject}}"
+    "openQuoteLabel": "Taklifni ochish: {{subject}}",
+    "onSigningAt": "{{name}} da"
   },
   "panel": {
     "label": "Hujjat",
@@ -223,7 +224,22 @@
       "verificationCode": "Tekshirish kodi",
       "verificationUrl": "Haqiqiyligini tekshirish",
       "actionFailed": "Bajarilmadi: {{reason}}",
-      "unmatched": "Manzil matn bilan yozilgan. «Davom ettiriş»ni bosing va taşkilotni kontragentlardan tanlang — ungaça xatni imzolab bölmaydi."
+      "unmatched": "Manzil matn bilan yozilgan. «Davom ettiriş»ni bosing va taşkilotni kontragentlardan tanlang — ungaça xatni imzolab bölmaydi.",
+      "onSigning": "Imzoda: {{who}}, {{date}} dan beri",
+      "youSign": "Siz imzolaysiz. {{date}} dan beri imzoda",
+      "signSelf": "Özim imzolayman",
+      "refusal": {
+        "author_cannot_sign": "Siz xat muallifisiz. Kompaniyada qoida yoqilgan: muallif öz xatini imzolamaydi. Imzolaşi mümkin: {{name}}."
+      },
+      "remind": "Eslatiş",
+      "reminded": "Eslatma yuborildi: {{name}}",
+      "withdraw": "Qaytarib oliş",
+      "withdrawn": "Xat imzodan qaytarib olindi",
+      "changeSigner": "Imzolovçini almaştiriş",
+      "changeSignerTitle": "Xatni kim imzolaydi",
+      "changeSignerSave": "Almaştiriş",
+      "changeSignerPlaceholder": "Imzolovçini tanlang",
+      "signerChanged": "Imzolovçi almaştirildi"
     },
     "replyTo": "Javob:",
     "mailFailed": "Yuborilmadi",
@@ -257,19 +273,7 @@
     },
     "recipient": {
       "label": "Manzil (tashkilot)",
-      "placeholder": "Nomi yoki STIR",
       "innShort": "STIR {{inn}}",
-      "create": {
-        "option": "+ «{{name}}» tashkilotini qöşiş",
-        "title": "Yangi tashkilot",
-        "name": "Nomi",
-        "inn": "STIR",
-        "innHint": "9 raqam. Xorijiy tashkilotda — böş.",
-        "address": "Manzil",
-        "submit": "Qöşiş",
-        "exists": "Bunday kompaniya allaqaçon bor — uni röyxatdan toping.",
-        "failed": "Tashkilotni qöşib bölmadi. Qayta urinib köring."
-      },
       "pickHint": "Kontragentlardan tanlang yoki taklifning oxirgi qatoridan tashkilot qöşing."
     },
     "text": {
@@ -400,7 +404,9 @@
         "absent": "imzolovçi yöq",
         "deputy_without_authority": "örinbosarda imzo vakolati yöq",
         "deputy_loop": "almaştiriş öz-özidan aylanib qolgan",
-        "no_permission": "imzolaş huquqingiz yöq"
+        "no_permission": "imzolaş huquqingiz yöq",
+        "remind_too_soon": "eslatma yuborilgan, bir soatdan keyin takrorlaş mümkin",
+        "not_handed_over": "xat imzoga topşirilmagan"
       }
     },
     "loadDraft": "Qoralama yuklanmoqda…",
@@ -492,9 +498,7 @@
     },
     "person": {
       "label": "Kimga — şaxs",
-      "hint": "Majburiy emas. Tanlov «Kimga»ni töldiradi.",
-      "placeholder": "Tashkilot kartoçkasidagi şaxs",
-      "empty": "Tashkilot kartoçkasida şaxslar yöq"
+      "hint": "Majburiy emas. Tanlov pöçta va «Kimga»ni töldiradi."
     },
     "draftHint": "Qoralama mavzu va matn bölganda saqlanadi."
   },

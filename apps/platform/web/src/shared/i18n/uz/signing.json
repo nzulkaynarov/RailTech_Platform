@@ -172,5 +172,12 @@
     "actingFor": "o‘rniga: {{names}}",
     "why": "Nega shunday",
     "rejected": "Huquqi yo‘q"
+  },
+  "authorRule": {
+    "label": "Muallif öz xatini imzolaşi mümkin",
+    "on": "Imzo huquqi bor muallif öz xatini özi imzolaydi. Navbatda imzolovçi — muallif tanlagan yoki reestr tanlagan kişi.",
+    "off": "Boşqa kişi imzolay olsa, muallif öz xatini imzolamaydi. Imzo huquqi faqat muallifda bölsa, özi imzolaydi.",
+    "saved": "Qoida saqlandi",
+    "error": "Qoidani saqlab bölmadi"
   }
 }

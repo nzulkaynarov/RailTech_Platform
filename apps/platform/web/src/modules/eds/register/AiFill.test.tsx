@@ -10,7 +10,7 @@ import {
   writeDocflowSettings,
 } from "../../../mocks/letterIntake";
 import type { LetterRegisterIn } from "../../../shared/api/generated/model";
-import { selectedLabel } from "../../../test/fields";
+import { addCompany, selectedLabel } from "../../../test/fields";
 import { renderAt, signIn } from "../../../test/edsKit";
 import { setupLetterTests } from "../../../test/lettersKit";
 import { server } from "../../../test/server";
@@ -105,7 +105,13 @@ describe("«Заполнить из файла» (EDS-REG)", () => {
     await attach();
 
     expect(await screen.findByText(/Заполнено из файла: 8 полей/)).toBeVisible();
-    expect(screen.getByLabelText("Корреспондент (организация)")).toHaveValue("ГНИ Демо-района");
+    // название из файла — подсказка в поле: выбор делает человек
+    expect(
+      screen
+        .getByLabelText("Корреспондент (организация)")
+        .closest(".ant-select")
+        ?.querySelector(".ant-select-selection-placeholder"),
+    ).toHaveTextContent("ГНИ Демо-района");
     expect(screen.getByLabelText("Тема")).toHaveValue(
       "Требование о пояснениях по НДС за III квартал",
     );
@@ -123,16 +129,11 @@ describe("«Заполнить из файла» (EDS-REG)", () => {
     expect(searched).toContain("301234567");
     expect(searched).toContain("ГНИ Демо-района");
 
-    // СУЩ-2.6: корреспондент из файла — текст поиска; его заводят организацией или выбирают из списка
-    const sender = reveal(screen.getByLabelText("Корреспондент (организация)"));
-    fireEvent.change(sender, { target: { value: "ГНИ Демо-район" } });
-    fireEvent.change(sender, { target: { value: "ГНИ Демо-района" } });
-    fireEvent.click(await screen.findByText("+ Завести организацию «ГНИ Демо-района»"));
-    const sheet = await screen.findByRole("dialog", { name: "Новая организация" });
-    fireEvent.click(within(sheet).getByRole("button", { name: "Завести" }));
-    await waitFor(() => {
-      expect(screen.queryByRole("dialog", { name: "Новая организация" })).toBeNull();
-    });
+    // ЕД-6: корреспондент из файла — поисковая подсказка; его выбирают из списка или заводят последней строкой
+    await addCompany(
+      reveal(screen.getByLabelText("Корреспондент (организация)")),
+      "ГНИ Демо-района",
+    );
 
     // способ получения помощник не предлагает — его выбирает человек
     fireEvent.mouseDown(screen.getByLabelText("Способ получения"));
@@ -150,11 +151,16 @@ describe("«Заполнить из файла» (EDS-REG)", () => {
   });
 
   it("скан при выключенном распознавании — понятный отказ, форма остаётся ручной", async () => {
-    writeDocflowSettings({ recognize_scans: false, pii_policy: "business", ai_available: true });
+    writeDocflowSettings({
+      recognize_scans: false,
+      pii_policy: "business",
+      ai_available: true,
+      author_may_sign_own_letter: true,
+    });
     await openForm();
     await attach("скан.png", "image/png");
     expect(await screen.findByText(/помощник их сейчас не читает/)).toBeVisible();
-    expect(screen.getByLabelText("Корреспондент (организация)")).toHaveValue("");
+    expect(selectedLabel(screen.getByLabelText("Корреспондент (организация)"))).toBe("");
   });
 
   it("PD-BIZ: скан при «Деловой» политике читается сразу, при «Строгой» — отказ; подпись у загрузки", async () => {
@@ -177,14 +183,19 @@ describe("«Заполнить из файла» (EDS-REG)", () => {
   });
 
   it("«Убрать предложенное» очищает непоправленные поля и пишет «вручную»", async () => {
-    writeDocflowSettings({ recognize_scans: true, pii_policy: "business", ai_available: true });
+    writeDocflowSettings({
+      recognize_scans: true,
+      pii_policy: "business",
+      ai_available: true,
+      author_may_sign_own_letter: true,
+    });
     await openForm();
     fireEvent.change(screen.getByLabelText("Тема"), { target: { value: "Своя тема" } });
     await attach();
     expect(await screen.findByText(/Заполнено из файла: 7 полей/)).toBeVisible();
     expect(screen.getByLabelText("Тема")).toHaveValue("Своя тема"); // набранное человеком не перетирается
     fireEvent.click(screen.getByRole("button", { name: "Убрать предложенное" }));
-    expect(screen.getByLabelText("Корреспондент (организация)")).toHaveValue("");
+    expect(selectedLabel(screen.getByLabelText("Корреспондент (организация)"))).toBe("");
     expect(screen.getByLabelText("Тема")).toHaveValue("Своя тема");
     await waitFor(() => {
       expect(intakeDecisions).toEqual(["manual"]);
@@ -192,7 +203,12 @@ describe("«Заполнить из файла» (EDS-REG)", () => {
   });
 
   it("помощник не настроен — кнопки нет", async () => {
-    writeDocflowSettings({ recognize_scans: false, pii_policy: "business", ai_available: false });
+    writeDocflowSettings({
+      recognize_scans: false,
+      pii_policy: "business",
+      ai_available: false,
+      author_may_sign_own_letter: true,
+    });
     await openForm();
     await attach();
     expect(screen.queryByRole("button", { name: "Заполнить из файла" })).toBeNull();

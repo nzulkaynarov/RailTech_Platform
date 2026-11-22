@@ -1,0 +1,30 @@
+{
+  "specversion": "1.0",
+  "id": "5d2e8a47-1c3b-5f69-9a0d-7b4c6e8f1a23",
+  "source": "rt://eds",
+  "type": "uz.railtech.eds.document.notice_requested.v2",
+  "time": "2026-11-21T07:15:00Z",
+  "subject": "document/2f6b1c0e-8a3d-4e57-9c14-b0d7a5e3f812",
+  "datacontenttype": "application/json",
+  "dataschema": "rt://contracts/events/eds/document.notice_requested/v2",
+  "tenant": "railtech",
+  "correlationid": "8e1f3a5c-7b9d-5e2f-a4c6-0d8b2f4a6e13",
+  "data": {
+    "notice_key": "document:2f6b1c0e-8a3d-4e57-9c14-b0d7a5e3f812:r1:memo_decided:approved",
+    "kind": "memo_decided",
+    "recipients": [
+      7
+    ],
+    "title": "Служебка MEMO-2026/014 согласована",
+    "subtitle": "Передана на оплату",
+    "document": {
+      "eds_document_id": "2f6b1c0e-8a3d-4e57-9c14-b0d7a5e3f812",
+      "number": "MEMO-2026/014",
+      "subject": "Закупка расходных материалов"
+    },
+    "actor": {
+      "type": "staff",
+      "crm_user_id": 3
+    }
+  }
+}

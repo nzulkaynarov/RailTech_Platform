@@ -6,6 +6,7 @@ import type {
   EdsAddressee,
   EdsAddresseeIn,
 } from "../shared/api/generated/model";
+import { pickedCompanyById, pickedPeople } from "./counterpartyPick";
 
 /** Люди клиентов и партнёров (FR-11): контакты контрагентов демо-мира, как их отдаёт ERP `parties/people/`. */
 const PEOPLE: CounterpartyPerson[] = [
@@ -59,12 +60,28 @@ const ADDRESSEES: EdsAddressee[] = [
 
 /** Адресат письма по id (СУЩ-2.6): BFF берёт название и ИНН из карточки компании ERP. */
 export function addresseeById(id: string): EdsAddressee | undefined {
-  return ADDRESSEES.find((item) => item.id === id);
+  const own = ADDRESSEES.find((item) => item.id === id);
+  if (own) return own;
+  // компании поля выбора (ЕД-6), в том числе заведённые из формы
+  const picked = pickedCompanyById(id);
+  return picked
+    ? {
+        id: picked.id,
+        name: picked.name,
+        inn: picked.inn,
+        email: picked.email,
+        attention: null,
+        kind: "partner",
+      }
+    : undefined;
 }
 
 /** Люди компании-адресата — «Кому — человек». */
-export function addresseePeople(id: string): CounterpartyPerson[] {
-  return PEOPLE.filter((person) => person.company.id === id);
+export function addresseePeople(
+  id: string,
+): { id: string; name: string; position: string | null }[] {
+  const own = PEOPLE.filter((person) => person.company.id === id);
+  return [...own, ...pickedPeople(id).filter((p) => !own.some((o) => o.id === p.id))];
 }
 
 export const peopleContactsHandlers = [

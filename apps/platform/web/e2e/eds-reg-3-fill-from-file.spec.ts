@@ -71,9 +71,15 @@ test.describe("EDS-REG · «Заполнить из файла»", () => {
       // 1. PDF с текстом: поля предложены и помечены.
       await fillFromFile(page, "trebovanie-gni.pdf", "application/pdf");
       await expect(page.getByText(/Заполнено из файла: 8 полей/)).toBeVisible();
-      await expect(page.getByLabel("Корреспондент (организация)", { exact: true })).toHaveValue(
-        "ГНИ Демо-района",
-      );
+      // название из файла — подсказка в поле: компанию выбирает человек
+      await expect(
+        page
+          .getByLabel("Корреспондент (организация)", { exact: true })
+          .locator(
+            "xpath=ancestor::div[contains(concat(' ', normalize-space(@class), ' '), ' ant-select ')][1]",
+          )
+          .locator(".ant-select-selection-placeholder"),
+      ).toHaveText("ГНИ Демо-района");
       // ИНН из файла под отметкой не показывается: у корреспондента ИНН — из карточки (СУЩ-2.6)
       await expect(page.getByText("Предложено ИИ", { exact: true })).toHaveCount(7);
       await (

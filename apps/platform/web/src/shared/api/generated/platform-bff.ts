@@ -167,6 +167,7 @@ import type {
   EdsFileUpload,
   EdsLetterhead,
   EdsPayloadTooLargeResponse,
+  EdsSignerChangeIn,
   EdsStaffList,
   EdsTemplate,
   EdsTemplateIn,
@@ -12390,6 +12391,353 @@ export const useRequestEdsDocumentRegistration = <
   TContext
 > => {
   return useMutation(getRequestEdsDocumentRegistrationMutationOptions(options), queryClient);
+};
+
+export const getRemindEdsDocumentSignerUrl = (id: string) => {
+  return `/api/v1/eds/documents/${id}/remind`;
+};
+
+/**
+ * EDS `POST /documents/{id}/remind`. Автор повторно отправляет текущему подписанту «Подпишите исходящее»; не чаще раза в час (409, `details.reason = remind_too_soon`, `details.retry_at`). Не автор — 403, письмо не на подписи — 409.
+ * @summary EDS · Письмо на подписи: напомнить подписанту (ГЛ-0)
+ */
+export const remindEdsDocumentSigner = async (
+  id: string,
+  options?: Parameters<typeof http>[1],
+): Promise<EdsDocument> => {
+  return http<EdsDocument>(getRemindEdsDocumentSignerUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getRemindEdsDocumentSignerMutationKey = () => ["remindEdsDocumentSigner"] as const;
+
+export const getRemindEdsDocumentSignerMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | EdsConflictResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof remindEdsDocumentSigner>>,
+    TError,
+    RemindEdsDocumentSignerMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof remindEdsDocumentSigner>>,
+  TError,
+  RemindEdsDocumentSignerMutationVariables,
+  TContext
+> => {
+  const mutationKey = getRemindEdsDocumentSignerMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof remindEdsDocumentSigner>>,
+    RemindEdsDocumentSignerMutationVariables
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return remindEdsDocumentSigner(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RemindEdsDocumentSignerMutationResult = NonNullable<
+  Awaited<ReturnType<typeof remindEdsDocumentSigner>>
+>;
+
+export type RemindEdsDocumentSignerMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | EdsConflictResponse
+  | BackendUnavailableResponse
+>;
+export type RemindEdsDocumentSignerMutationVariables = { id: string };
+
+/**
+ * @summary EDS · Письмо на подписи: напомнить подписанту (ГЛ-0)
+ */
+export const useRemindEdsDocumentSigner = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | EdsConflictResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof remindEdsDocumentSigner>>,
+      TError,
+      RemindEdsDocumentSignerMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof remindEdsDocumentSigner>>,
+  TError,
+  RemindEdsDocumentSignerMutationVariables,
+  TContext
+> => {
+  return useMutation(getRemindEdsDocumentSignerMutationOptions(options), queryClient);
+};
+
+export const getWithdrawEdsDocumentFromSigningUrl = (id: string) => {
+  return `/api/v1/eds/documents/${id}/withdraw`;
+};
+
+/**
+ * EDS `POST /documents/{id}/withdraw`. Автор снимает передачу на подпись: письмо снова черновик, задача у подписанта пропадает. Не автор — 403, письмо не на подписи — 409.
+ * @summary EDS · Письмо на подписи: отозвать (ГЛ-0)
+ */
+export const withdrawEdsDocumentFromSigning = async (
+  id: string,
+  options?: Parameters<typeof http>[1],
+): Promise<EdsDocument> => {
+  return http<EdsDocument>(getWithdrawEdsDocumentFromSigningUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getWithdrawEdsDocumentFromSigningMutationKey = () =>
+  ["withdrawEdsDocumentFromSigning"] as const;
+
+export const getWithdrawEdsDocumentFromSigningMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | EdsConflictResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof withdrawEdsDocumentFromSigning>>,
+    TError,
+    WithdrawEdsDocumentFromSigningMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof withdrawEdsDocumentFromSigning>>,
+  TError,
+  WithdrawEdsDocumentFromSigningMutationVariables,
+  TContext
+> => {
+  const mutationKey = getWithdrawEdsDocumentFromSigningMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof withdrawEdsDocumentFromSigning>>,
+    WithdrawEdsDocumentFromSigningMutationVariables
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return withdrawEdsDocumentFromSigning(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type WithdrawEdsDocumentFromSigningMutationResult = NonNullable<
+  Awaited<ReturnType<typeof withdrawEdsDocumentFromSigning>>
+>;
+
+export type WithdrawEdsDocumentFromSigningMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | EdsConflictResponse
+  | BackendUnavailableResponse
+>;
+export type WithdrawEdsDocumentFromSigningMutationVariables = { id: string };
+
+/**
+ * @summary EDS · Письмо на подписи: отозвать (ГЛ-0)
+ */
+export const useWithdrawEdsDocumentFromSigning = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | EdsConflictResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof withdrawEdsDocumentFromSigning>>,
+      TError,
+      WithdrawEdsDocumentFromSigningMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof withdrawEdsDocumentFromSigning>>,
+  TError,
+  WithdrawEdsDocumentFromSigningMutationVariables,
+  TContext
+> => {
+  return useMutation(getWithdrawEdsDocumentFromSigningMutationOptions(options), queryClient);
+};
+
+export const getChangeEdsDocumentSignerUrl = (id: string) => {
+  return `/api/v1/eds/documents/${id}/signer`;
+};
+
+/**
+ * EDS `POST /documents/{id}/signer`. Автор выбирает другого подписанта из `GET /eds/signers`; новому уходит «Подпишите исходящее». Нет права подписи — 422 (`signer_crm_user_id`), не автор — 403, письмо не на подписи — 409.
+ * @summary EDS · Письмо на подписи: сменить подписанта (ГЛ-0)
+ */
+export const changeEdsDocumentSigner = async (
+  id: string,
+  edsSignerChangeIn: EdsSignerChangeIn,
+  options?: Parameters<typeof http>[1],
+): Promise<EdsDocument> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<EdsDocument>(getChangeEdsDocumentSignerUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(edsSignerChangeIn),
+  });
+};
+
+export const getChangeEdsDocumentSignerMutationKey = () => ["changeEdsDocumentSigner"] as const;
+
+export const getChangeEdsDocumentSignerMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | EdsConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof changeEdsDocumentSigner>>,
+    TError,
+    ChangeEdsDocumentSignerMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof changeEdsDocumentSigner>>,
+  TError,
+  ChangeEdsDocumentSignerMutationVariables,
+  TContext
+> => {
+  const mutationKey = getChangeEdsDocumentSignerMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof changeEdsDocumentSigner>>,
+    ChangeEdsDocumentSignerMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return changeEdsDocumentSigner(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ChangeEdsDocumentSignerMutationResult = NonNullable<
+  Awaited<ReturnType<typeof changeEdsDocumentSigner>>
+>;
+export type ChangeEdsDocumentSignerMutationBody = EdsSignerChangeIn;
+export type ChangeEdsDocumentSignerMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | EdsConflictResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type ChangeEdsDocumentSignerMutationVariables = { id: string; data: EdsSignerChangeIn };
+
+/**
+ * @summary EDS · Письмо на подписи: сменить подписанта (ГЛ-0)
+ */
+export const useChangeEdsDocumentSigner = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | EdsConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof changeEdsDocumentSigner>>,
+      TError,
+      ChangeEdsDocumentSignerMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof changeEdsDocumentSigner>>,
+  TError,
+  ChangeEdsDocumentSignerMutationVariables,
+  TContext
+> => {
+  return useMutation(getChangeEdsDocumentSignerMutationOptions(options), queryClient);
 };
 
 export const getWaiveEdsDocumentMailUrl = (id: string) => {

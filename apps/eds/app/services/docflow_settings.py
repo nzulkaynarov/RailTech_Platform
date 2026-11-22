@@ -6,6 +6,9 @@
   здесь она не правится (ORCHESTRATOR §3 п. 16). Пока событие ни разу не приходило (`pii_policy_at` пуст), EDS ведёт
   себя как «Строгая»: расхождение с CRM не может открыть больше данных, чем выбрал администратор. CRM повторно
   публикует текущую политику при каждом старте воркера, поэтому после выкладки событие приходит само.
+* `author_may_sign_own_letter` — правило «автор ≠ подписант» (ADR-0024 п. 3) как настройка компании (ГЛ-0, решение
+  владельца 2026-11-22): по умолчанию включено — автор с правом подписи подписывает своё письмо сам; выключено —
+  строгое правило над тем же кругом кандидатов (`signing_resolve.author_blocked`).
 """
 
 from datetime import datetime
@@ -31,6 +34,12 @@ async def recognize_scans(session: AsyncSession) -> bool:
     return True if row is None else bool(row.recognize_scans)
 
 
+async def author_may_sign_own_letter(session: AsyncSession) -> bool:
+    """Выбор администратора (нет строки — можно)."""
+    row = await session.get(DocflowSettings, ROW_ID)
+    return True if row is None else bool(row.author_may_sign_own_letter)
+
+
 def _policy(row: DocflowSettings | None) -> PiiPolicy:
     """Событие CRM ещё не приходило (нет строки или `pii_policy_at` пуст) — «Строгая»; иначе значение проекции."""
     if row is None or row.pii_policy_at is None:
@@ -52,25 +61,41 @@ async def read(session: AsyncSession, settings: Settings) -> SettingsOut:
         recognize_scans=await recognize_scans(session),
         pii_policy=await pii_policy(session),
         ai_available=gateway.available(settings),
+        author_may_sign_own_letter=await author_may_sign_own_letter(session),
     )
 
 
-async def update(session: AsyncSession, settings: Settings, *, actor_id: int, recognize: bool) -> SettingsOut:
+async def update(
+    session: AsyncSession,
+    settings: Settings,
+    *,
+    actor_id: int,
+    recognize: bool | None = None,
+    author_may_sign: bool | None = None,
+) -> SettingsOut:
+    """Записать переданные настройки (не переданная остаётся прежней); каждая смена — строка журнала."""
     row = await session.get(DocflowSettings, ROW_ID, with_for_update=True)
     if row is None:
-        row = DocflowSettings(id=ROW_ID, pii_policy=DEFAULT_POLICY)
+        row = DocflowSettings(
+            id=ROW_ID, pii_policy=DEFAULT_POLICY, recognize_scans=True, author_may_sign_own_letter=True
+        )
         session.add(row)
-    row.recognize_scans = recognize
+    changes: list[str] = []
+    if recognize is not None:
+        row.recognize_scans = recognize
+        changes.append(f"recognize_scans={str(recognize).lower()}")
+    if author_may_sign is not None:
+        row.author_may_sign_own_letter = author_may_sign
+        changes.append(f"author_may_sign_own_letter={str(author_may_sign).lower()}")
     row.updated_by = actor_id
     row.updated_at = clock.now()
     await session.flush()
-    await journal.record(
-        session, "docflow_settings.updated", by=actor_id, comment=f"recognize_scans={str(recognize).lower()}"
-    )
+    await journal.record(session, "docflow_settings.updated", by=actor_id, comment=", ".join(changes) or None)
     return SettingsOut(
-        recognize_scans=recognize,
+        recognize_scans=bool(row.recognize_scans),
         pii_policy=_policy(row),
         ai_available=gateway.available(settings),
+        author_may_sign_own_letter=bool(row.author_may_sign_own_letter),
     )
 
 

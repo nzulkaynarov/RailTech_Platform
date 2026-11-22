@@ -35,8 +35,12 @@ SIGNING_EXPIRING_TYPE: Final = "uz.railtech.eds.signing_authority.expiring.v1"
 SIGNING_EXPIRING_KIND: Final = "signing_authority_expiring"
 # СЦ-9: уведомления по документам без входящего письма (служебка, подпись письма) — тот же путь.
 DOCUMENT_NOTICE_TYPE: Final = "uz.railtech.eds.document.notice_requested.v1"
+# v2 (ГЛ-0): добавлен вид `letter_sign_withdrawn`; данные те же.
+DOCUMENT_NOTICE_TYPE_V2: Final = "uz.railtech.eds.document.notice_requested.v2"
 # «Подписать некому» ведёт держателя права в Настройки, а не к документу, которого он не видит.
 _SETTINGS_KIND: Final = "letter_signer_missing"
+# «Письмо отозвано с подписи»: подписант документ уже не видит — строка без ссылки на него.
+_WITHDRAWN_KIND: Final = "letter_sign_withdrawn"
 # Вкладка колокольчика: от сотрудника ждут действия — «Решения»; остальное — «Система».
 _DECISIONS: Final = frozenset(
     {
@@ -189,6 +193,7 @@ class EdsNoticeService:
         document: dict[str, Any] = dict(data["document"])
         document_id = str(document["eds_document_id"])
         to_settings = kind == _SETTINGS_KIND
+        no_object = to_settings or kind == _WITHDRAWN_KIND
         # Черновик письма без номера: подписью в колокольчике служит тема (поле 40 знаков).
         label = str(document.get("number") or document.get("subject") or "")[:40] or None
         staff_notifications.add_in(
@@ -198,11 +203,16 @@ class EdsNoticeService:
             tab=tab_of(kind),
             title=title,
             subtitle=subtitle,
-            object_kind=None if to_settings else "document",
-            object_id=None if to_settings else document_id,
-            object_number=None if to_settings else label,
+            object_kind=None if no_object else "document",
+            object_id=None if no_object else document_id,
+            object_number=None if no_object else label,
         )
-        link = self._signing_link() if to_settings else self._link("", document_id)
+        if to_settings:
+            link = self._signing_link()
+        elif kind == _WITHDRAWN_KIND:
+            link = None
+        else:
+            link = self._link("", document_id)
         text = telegram_text(title, subtitle, link)
         self._notices.add(
             session,

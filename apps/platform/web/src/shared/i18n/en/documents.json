@@ -110,7 +110,8 @@
     "inProject": "In project",
     "inProjectLabel": "Open in project: {{subject}}",
     "openQuote": "Open quote",
-    "openQuoteLabel": "Open quote: {{subject}}"
+    "openQuoteLabel": "Open quote: {{subject}}",
+    "onSigningAt": "with {{name}}"
   },
   "panel": {
     "label": "Document",
@@ -223,7 +224,22 @@
       "verificationCode": "Verification code",
       "verificationUrl": "Verify authenticity",
       "actionFailed": "Not done: {{reason}}",
-      "unmatched": "The addressee is typed as text. Click “Continue” and pick the organization from counterparties — until then the letter can’t be signed."
+      "unmatched": "The addressee is typed as text. Click “Continue” and pick the organization from counterparties — until then the letter can’t be signed.",
+      "onSigning": "Awaiting signature from {{who}} since {{date}}",
+      "youSign": "You are signing. Awaiting signature since {{date}}",
+      "signSelf": "Sign it myself",
+      "refusal": {
+        "author_cannot_sign": "You are the author of this letter. The company rule is on: the author does not sign their own letter. {{name}} can sign it."
+      },
+      "remind": "Remind",
+      "reminded": "Reminder sent: {{name}}",
+      "withdraw": "Withdraw",
+      "withdrawn": "The letter is withdrawn from signing",
+      "changeSigner": "Change signer",
+      "changeSignerTitle": "Who signs the letter",
+      "changeSignerSave": "Change",
+      "changeSignerPlaceholder": "Choose a signer",
+      "signerChanged": "Signer changed"
     },
     "replyTo": "In reply to",
     "mailFailed": "Not sent",
@@ -257,19 +273,7 @@
     },
     "recipient": {
       "label": "Addressee (organization)",
-      "placeholder": "Name or tax ID",
       "innShort": "Tax ID {{inn}}",
-      "create": {
-        "option": "+ Add organization “{{name}}”",
-        "title": "New organization",
-        "name": "Name",
-        "inn": "Tax ID",
-        "innHint": "9 digits. Leave empty for a foreign organization.",
-        "address": "Address",
-        "submit": "Add",
-        "exists": "This company already exists — find it in the list.",
-        "failed": "Could not add the organization. Try again."
-      },
       "pickHint": "Pick a counterparty or add an organization from the last suggestion."
     },
     "text": {
@@ -400,7 +404,9 @@
         "absent": "the signer is absent",
         "deputy_without_authority": "the deputy has no signing authority",
         "deputy_loop": "the substitution loops back to itself",
-        "no_permission": "you have no right to sign"
+        "no_permission": "you have no right to sign",
+        "remind_too_soon": "a reminder was already sent, you can repeat it in an hour",
+        "not_handed_over": "the letter is not handed over for signing"
       }
     },
     "loadDraft": "Loading the draft…",
@@ -492,9 +498,7 @@
     },
     "person": {
       "label": "To — person",
-      "hint": "Optional. Picking fills in “To”.",
-      "placeholder": "Person from the organization card",
-      "empty": "No people in the organization card"
+      "hint": "Optional. Picking fills in the email and “To”."
     },
     "draftHint": "A draft can be saved once there is a subject and text."
   },
