@@ -16,7 +16,7 @@ describe('Wave J6 & B-CABFIX-2: Поиск, фильтры, повтор зап�
       await heading('Заявки');
 
       const list = await screen.findByRole('list', { name: 'Заявки' });
-      expect(within(list).getAllByRole('listitem')).toHaveLength(5);
+      expect(within(list).getAllByRole('listitem')).toHaveLength(6);
 
       // Кликаем по фильтру «Закрыт»
       const closedFilter = screen.getByRole('button', { name: 'Закрыта' });
@@ -26,7 +26,7 @@ describe('Wave J6 & B-CABFIX-2: Поиск, фильтры, повтор зап�
       await waitFor(() => {
         const items = within(list).getAllByRole('listitem');
         expect(items).toHaveLength(1);
-        expect(items[0]).toHaveTextContent('ПР-2026-035');
+        expect(items[0]).toHaveTextContent('ПР-2026-036');
       });
 
       // Сбрасываем фильтр кнопкой «Все»
@@ -34,7 +34,7 @@ describe('Wave J6 & B-CABFIX-2: Поиск, фильтры, повтор зап�
       await user.click(allFilter);
       expect(router.state.location.search).toBe('');
       await waitFor(() => {
-        expect(within(list).getAllByRole('listitem')).toHaveLength(5);
+        expect(within(list).getAllByRole('listitem')).toHaveLength(6);
       });
     });
 
@@ -73,7 +73,7 @@ describe('Wave J6 & B-CABFIX-2: Поиск, фильтры, повтор зап�
 
       const list = await screen.findByRole('list', { name: 'Заявки' });
       await waitFor(() => {
-        expect(within(list).getAllByRole('listitem')).toHaveLength(5);
+        expect(within(list).getAllByRole('listitem')).toHaveLength(6);
       });
     });
   });
@@ -134,13 +134,15 @@ describe('Wave J6 & B-CABFIX-2: Поиск, фильтры, повтор зап�
       await heading('Заявки');
 
       const list = await screen.findByRole('list', { name: 'Заявки' });
-      // Запрос 504 закрыт с outcome: 'won'
+      // Запрос 506 закрыт с outcome: 'won' (акт принят, счёт оплачен); 504 в исполнении — «Исполнена» не показывает
+      const item506 = within(list).getByText('ПР-2026-036').closest('li')!;
+      expect(within(item506).getByText('Исполнена')).toBeInTheDocument();
       const item504 = within(list).getByText('ПР-2026-035').closest('li')!;
-      expect(within(item504).getByText('Исполнена')).toBeInTheDocument();
+      expect(within(item504).queryByText('Исполнена')).not.toBeInTheDocument();
 
       // Открываем детальную страницу
-      await router.navigate('/requests/504');
-      await heading('Заявка ПР-2026-035');
+      await router.navigate('/requests/506');
+      await heading('Заявка ПР-2026-036');
       expect(screen.getByText('Исполнена')).toBeInTheDocument();
     });
 

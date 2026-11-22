@@ -580,7 +580,7 @@ class DealStageChangedV1(BaseModel):
 
 class DealWonV1(BaseModel):
     """
-    Тип uz.railtech.erp.deal.won.v1, источник rt://erp. Поле data конверта (envelope.v1.json); прежнее тело события deal.won из events.schema.json без version, event, occurred_at. Что делает CRM: зеркало сделки CRM → won; стадия лида не меняется (CRM ADR-0022).
+    Тип uz.railtech.erp.deal.won.v1, источник rt://erp. Публикуется один раз, когда проект выполнен: каждый живой акт принят клиентом в Кабинете или подписан сканом и все выставленные счета оплачены (решение владельца 2026-11-22); прежде уходило при подписании договора. Поле data конверта (envelope.v1.json); прежнее тело события deal.won из events.schema.json без version, event, occurred_at. Что делает CRM: зеркало сделки CRM → won; стадия лида не меняется (CRM ADR-0022).
     """
 
     model_config = ConfigDict(

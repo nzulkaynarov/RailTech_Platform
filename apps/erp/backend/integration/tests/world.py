@@ -249,7 +249,7 @@ def build_closing(company):
 def build_won(company):
     deal, contract = build_signed_contract_deal(company)
     invoice = add_invoice(deal, InvoiceStatusCode.PAID, total="5000000", paid="5000000", contract=contract)
-    add_fulfillment(deal, FulfillmentStatusCode.ACCEPTED)
+    add_fulfillment(deal, FulfillmentStatusCode.DELIVERED)  # приёмка строк не нужна: выполнен по акту и оплате
     add_act(deal, ActStatusCode.SIGNED, contract=contract, invoice=invoice)
     return deal
 
