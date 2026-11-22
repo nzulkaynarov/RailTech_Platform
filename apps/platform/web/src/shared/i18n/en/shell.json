@@ -1,7 +1,5 @@
 {
   "docTitle": "{{page}} — {{name}}",
-  "soon": "Coming in the next update",
-  "soonPilot": "Coming by the pilot",
   "skip": "Skip to content",
   "loading": "Loading…",
   "rail": {
@@ -256,7 +254,7 @@
     "sectionTag": "Section",
     "keywords": {
       "erp": {
-        "calc": "calculator, cost",
+        "requests": "calculator, cost",
         "catalog": "reference, items"
       }
     },
@@ -268,13 +266,10 @@
     "title": "Create",
     "search": "Find: letter, lead, application…",
     "frequent": "You often create",
-    "soon": "soon",
-    "withChats": "with chats",
     "empty": "Nothing found",
     "groups": {
       "sales": "Sales",
-      "documents": "Documents",
-      "talk": "Messages"
+      "documents": "Documents"
     },
     "kinds": {
       "lead": "Lead",
@@ -282,9 +277,7 @@
       "calc": "Costing",
       "incoming": "Incoming document",
       "letter": "Outgoing letter",
-      "internal": "Internal document",
-      "message": "Message",
-      "assignment": "Assignment"
+      "internal": "Internal document"
     },
     "hints": {
       "lead": "New enquiry: call, email, referral",
@@ -292,9 +285,7 @@
       "calc": "From a request, a file or the last similar one",
       "incoming": "Register a letter received by the company",
       "letter": "On the company letterhead, with a number and signature",
-      "internal": "Memo, application, report",
-      "message": "Write to a colleague",
-      "assignment": "A task with a deadline and an assignee"
+      "internal": "Memo, application, report"
     }
   }
 }

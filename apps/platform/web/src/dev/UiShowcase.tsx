@@ -20,7 +20,6 @@ import { MoneyText } from "../shared/ui/MoneyText";
 import { PageHeader } from "../shared/ui/PageHeader";
 import { QueueList } from "../shared/ui/QueueList";
 import { RequestSteps } from "../shared/ui/RequestSteps";
-import { SoonButton } from "../shared/ui/SoonButton";
 import { SourceBanner } from "../shared/ui/SourceBanner";
 import { StatusTag } from "../shared/ui/StatusTag";
 import "./showcase.css";
@@ -327,7 +326,6 @@ function States() {
           <PageHeader
             title="PRJ-2026-104 · Датчики ADZ, блоки БКЗ-24В"
             subtitle="АО «Демо-Транс» · 134,4 млн сум с НДС"
-            extra={<SoonButton>Написать клиенту</SoonButton>}
           />
         </div>
       </div>

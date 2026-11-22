@@ -416,7 +416,6 @@
       "hint": "So'mga kurslar: Markaziy bankdan avtomatik yoki sanaga qo'lda. TT uchun kompaniya sozlamalarida belgilangan muddatdan eski bo'lmagan oxirgi kurs olinadi.",
       "filter": "Valyuta",
       "any": "Barcha valyutalar",
-      "enter": "USD kursini kiritish",
       "table": "So'mga valyuta kurslari",
       "columns": {
         "currency": "Valyuta",
@@ -431,18 +430,6 @@
       "empty": {
         "title": "Kurslar yo'q",
         "text": "Hozircha bo‘sh."
-      },
-      "form": {
-        "title": "Sanaga USD kursini kiritish",
-        "ok": "Kursni saqlash",
-        "date": "Kurs sanasi",
-        "rate": "Kurs, 1 USD uchun so'm",
-        "rateHint": "0 dan katta, verguldan keyin oltitagacha belgi.",
-        "steps": [
-          "Sanadagi kurs Markaziy bank yoki avvalgi qo'lda kiritilgan kursni almashtiradi.",
-          "Avvalgi qiymat jurnalda qoladi.",
-          "Markaziy bank avtoyuklashi qo'lda kiritilgan kursni bosmaydi."
-        ]
       }
     },
     "hs": {
@@ -973,7 +960,10 @@
       "U pozitsiya kartasida va «Texnik hujjatlar» bo‘limida paydo bo‘ladi.",
       "«Mijozga ko‘rinadi» belgisi saqlanadi; mijoz kabinetida keyinroq ko‘rinadi."
     ],
-    "editSteps": ["O‘zgarishlar hujjatda saqlanadi.", "Faylning o‘zi o‘zgarmaydi."],
+    "editSteps": [
+      "O‘zgarishlar hujjatda saqlanadi.",
+      "Faylning o‘zi o‘zgarmaydi."
+    ],
     "saved": "Hujjat saqlandi."
   },
   "queue": {

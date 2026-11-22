@@ -18,17 +18,29 @@
   text-decoration: underline;
 }
 
-.pf-people-card,
-.pf-people-actions {
+.pf-people-card {
   display: flex;
+  flex-direction: column;
   gap: 16px;
 }
 
-.pf-people-card {
-  flex-direction: column;
+/* Рамка списка как у «Главная · Проекты»: заголовки слева, строки с линией, шапка на подложке */
+.pf-people-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
 }
 
-.pf-people-actions {
-  flex-wrap: wrap;
-  gap: 8px;
+.pf-people-table th,
+.pf-people-table td {
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--rt-color-surface-split);
+  text-align: left;
+  vertical-align: top;
+}
+
+.pf-people-table th {
+  background: var(--rt-color-surface-subtle);
+  font-weight: 600;
+  white-space: nowrap;
 }

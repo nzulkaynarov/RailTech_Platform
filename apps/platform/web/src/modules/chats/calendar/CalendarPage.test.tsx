@@ -56,4 +56,28 @@ describe("Органайзер · Календарь", () => {
     });
     expect(screen.getByText("Выставить счёт")).toBeVisible();
   });
+
+  it("фильтр «Прочие задачи» говорит, что в нём: лиды, заявки, письма — не только поручения (ЕВ-0)", async () => {
+    const now = new Date().toISOString();
+    server.use(
+      http.get("*/queue", () =>
+        HttpResponse.json({
+          items: [
+            queueWith("answer_lead", "Ответить лиду", now),
+            queueWith("resolve_letter", "Резолюция на письмо", now),
+          ],
+        }),
+      ),
+    );
+    signInAs("director@demo.example");
+    renderApp("/chats/calendar");
+
+    expect(await screen.findByText("Ответить лиду")).toBeVisible();
+    expect(screen.queryByRole("checkbox", { name: "Поручения" })).toBeNull();
+    fireEvent.click(screen.getByRole("checkbox", { name: "Прочие задачи" }));
+    await waitFor(() => {
+      expect(screen.queryByText("Ответить лиду")).toBeNull();
+    });
+    expect(screen.getByText("Резолюция на письмо")).toBeVisible();
+  });
 });

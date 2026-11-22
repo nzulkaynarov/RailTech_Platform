@@ -14,6 +14,7 @@ import { useNavigate } from "react-router";
 
 import { canSee } from "../../app/access";
 import { useAuth } from "../../app/auth/useAuth";
+import { visibleItems } from "../../modules/navigation";
 import { objectLink } from "../../modules/objectLinks";
 import { MODULES, moduleName } from "../../modules/registry";
 import { GROUP_NAMES, langOf, searchSettings } from "../../modules/admin/settingsRegistry";
@@ -23,6 +24,15 @@ import { MODULE_ICONS } from "../../shared/ui/moduleIcons";
 import { SourceBanner } from "../../shared/ui/SourceBanner";
 import { matchActions } from "./actions";
 import "./global-search.css";
+
+/** Пункт или вкладка подменю, которые находит поиск разделов. */
+interface SearchEntry {
+  key: string;
+  /** Ключ слов-синонимов `shell:search.keywords.<модуль>.<ключ>` */
+  keywordKey: string;
+  label: string;
+  to: string;
+}
 
 const MIN_LENGTH = 2;
 const DEBOUNCE_MS = 250;
@@ -128,19 +138,32 @@ export function GlobalSearch({ inputRef, shortcut, mobile }: GlobalSearchProps) 
       // Настройки ищутся по своему реестру — отдельной группой «Настройки» ниже (SET-IA).
       if (!me.modules.includes(mod.code) || mod.code === "admin") continue;
       const modTitle = moduleName(t, mod.code);
-      const accessibleSections = mod.sections.filter(
-        (sec) => !sec.hidden && canSee(me, sec.access),
+      // Ищем по нынешнему меню (пункты и вкладки подменю), а не по списку разделов кода: разделы-перенаправления
+      // («Каналы связи», «КП на одобрение», «Мои расчёты») находились под старыми именами и вели в другое место.
+      const entries = visibleItems(mod.code, (sec) => canSee(me, sec.access)).flatMap(
+        ({ item, to, tabs }): SearchEntry[] => [
+          {
+            key: item.key,
+            keywordKey: item.key,
+            label: t(`modules:${mod.code}.nav.${item.key}`),
+            to,
+          },
+          ...tabs.map((tab) => ({
+            key: `${item.key}-${tab.key}`,
+            keywordKey: tab.key,
+            label: t(tab.label ?? `modules:${mod.code}.nav.${tab.key}`),
+            to: tab.to,
+          })),
+        ],
       );
-
-      for (const sec of accessibleSections) {
-        const secTitle = t(`modules:${mod.code}.sections.${sec.key}`);
-        const extra = keywords[mod.code]?.[sec.key] ?? "";
-        if (startsWord(secTitle, q) || startsWord(modTitle, q) || startsWord(extra, q)) {
+      for (const entry of entries) {
+        const extra = keywords[mod.code]?.[entry.keywordKey] ?? "";
+        if (startsWord(entry.label, q) || startsWord(modTitle, q) || startsWord(extra, q)) {
           results.push({
-            key: `${mod.code}-${sec.key}`,
-            title: secTitle,
+            key: `${mod.code}-${entry.key}`,
+            title: entry.label,
             moduleTitle: modTitle,
-            path: sec.path,
+            path: entry.to,
             moduleCode: mod.code,
           });
         }

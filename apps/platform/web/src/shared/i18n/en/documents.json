@@ -426,8 +426,8 @@
     },
     "subtitleLetterHandover": "A letter on the company letterhead: see the real PDF and hand it over for signing — the letter gets its number when signed.",
     "attention": {
-      "label": "To (position and name)",
-      "hint": "Optional. For example: To the Head of the Mirabad District Tax Inspectorate, A. A. Karimov."
+      "label": "Addressee line",
+      "hint": "Filled in by picking a person; you can edit it"
     },
     "email": {
       "label": "Addressee email",
@@ -498,7 +498,7 @@
     },
     "person": {
       "label": "To — person",
-      "hint": "Optional. Picking fills in the email and “To”."
+      "hint": "Optional. Picking fills in the email and the addressee line."
     },
     "draftHint": "A draft can be saved once there is a subject and text."
   },

@@ -484,10 +484,7 @@
   },
   "platform": {
     "title": "Platforma sozlamalari",
-    "hint": "Butun platforma uçun QQS stavkasi, yordam manzili va valyutalarning sömga kursi.",
-    "vat": "QQS stavkasi, %",
-    "vatHint": "0 dan 100 gacha.",
-    "invalidVat": "Stavka — 0 dan 100 gacha son",
+    "hint": "Butun platforma uçun yordam manzili va valyutalarning sömga kursi.",
     "currencyUzs": "so'm",
     "updated": "Sozlamalar yangilangan",
     "save": "Sozlamalarni saqlaş",
@@ -526,7 +523,6 @@
       },
       "currency": "Valyuta"
     },
-    "note": "Yangi hisob-kitob va hujjatlar shu stavka bilan boradi.",
     "support": "Yordam manzili",
     "supportHint": "Mijozlar uni xatlarda köradi. Böş bölsa, xatlarda «Savollar bormi?» qatori yöq.",
     "invalidSupport": "Pochta manzilini kiriting"

@@ -33,9 +33,7 @@ for (const width of [1440, 390] as const) {
       await expect(page.getByLabel("Почта адресата")).toHaveValue("office@demo-put.example");
       await page.getByLabel("Кому — человек").click();
       await page.locator(".ant-select-item-option").filter({ hasText: "Демо Клиентов" }).click();
-      await expect(page.getByLabel("Кому (должность и ФИО)")).toHaveValue(
-        "Главный инженер Демо Клиентов",
-      );
+      await expect(page.getByLabel("Строка адресата")).toHaveValue("Главный инженер Демо Клиентов");
       // почта человека заполняет «Почту адресата»
       await expect(page.getByLabel("Почта адресата")).toHaveValue("d.klientov@demo-put.example");
       await waitForMotionEnd(page);

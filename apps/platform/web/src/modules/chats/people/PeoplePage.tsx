@@ -1,4 +1,4 @@
-import { Alert, Button, Descriptions, Drawer, Input, Segmented, Skeleton } from "antd";
+import { Alert, Button, Card, Descriptions, Drawer, Input, Segmented } from "antd";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -12,11 +12,15 @@ import {
   useListEdsStaff,
 } from "../../../shared/api/generated/platform-bff";
 import { useDocumentTitle } from "../../../shared/lib/useDocumentTitle";
+import { DataBlock, ListSkeleton } from "../../../shared/ui/DataBlock";
 import { type DataColumn, DataTable } from "../../../shared/ui/DataTable/DataTable";
+import { EmptyState } from "../../../shared/ui/EmptyState";
 import { PageHeader } from "../../../shared/ui/PageHeader";
-import { SoonButton } from "../../../shared/ui/SoonButton";
 import "./people.css";
 import { FilterBar, FilterField } from "../../../shared/ui/FilterBar";
+
+/** Ширины по типу столбца (platform-frontend.md §4.2): имя и компания делят остаток, короткие значения — фиксированные. */
+const COLS = { position: 180, kind: 150, owner: 170, contacts: 170 };
 
 const KINDS = ["all", "employees", "clients", "partners", "leads"] as const;
 type Kind = (typeof KINDS)[number];
@@ -164,7 +168,7 @@ export function PeoplePage() {
     {
       id: "position",
       header: t("modules:chats.people.columns.position"),
-      width: null,
+      width: COLS.position,
       cell: (row) => row.position ?? "—",
     },
     {
@@ -176,19 +180,19 @@ export function PeoplePage() {
     {
       id: "kind",
       header: t("modules:chats.people.columns.kind"),
-      width: null,
+      width: COLS.kind,
       cell: (row) => kindLabel(row.kind),
     },
     {
       id: "owner",
       header: t("modules:chats.people.columns.owner"),
-      width: null,
+      width: COLS.owner,
       cell: (row) => row.owner ?? "—",
     },
     {
       id: "contacts",
       header: t("modules:chats.people.columns.contacts"),
-      width: null,
+      width: COLS.contacts,
       cell: (person) => contactsOf(person, "any"),
     },
   ];
@@ -215,21 +219,29 @@ export function PeoplePage() {
           />
         </FilterField>
       </FilterBar>
-      {loading ? (
-        <Skeleton active paragraph={{ rows: 4 }} />
-      ) : rows.length === 0 ? (
-        <p className="pf-hint">{t("modules:chats.people.noData")}</p>
-      ) : (
-        <DataTable<Person>
-          tableId="chats.people"
-          caption={title}
-          scrollLabel={title}
-          columns={columns}
-          rows={rows}
-          rowKey={(row) => row.key}
-          pageSize={20}
-        />
-      )}
+      <Card styles={{ body: { padding: 0 } }}>
+        <DataBlock>
+          {loading ? (
+            <ListSkeleton rows={8} />
+          ) : rows.length === 0 ? (
+            <EmptyState
+              title={t("modules:chats.people.empty.title")}
+              text={t("modules:chats.people.empty.text")}
+            />
+          ) : (
+            <DataTable<Person>
+              tableId="chats.people"
+              caption={title}
+              scrollLabel={title}
+              className="pf-people-table"
+              columns={columns}
+              rows={rows}
+              rowKey={(row) => row.key}
+              pageSize={20}
+            />
+          )}
+        </DataBlock>
+      </Card>
       <Drawer
         open={selected !== null}
         title={selected?.name}
@@ -273,10 +285,6 @@ export function PeoplePage() {
                 },
               ]}
             />
-            <div className="pf-people-actions">
-              <SoonButton>{t("modules:chats.people.write")}</SoonButton>
-              <SoonButton>{t("modules:chats.people.call")}</SoonButton>
-            </div>
           </div>
         ) : null}
       </Drawer>

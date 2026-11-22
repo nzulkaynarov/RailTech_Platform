@@ -295,6 +295,29 @@ describe("Глобальный поиск", () => {
     });
   });
 
+  it("поиск читает нынешнее меню: разделы-перенаправления («Мои расчёты», «КП на одобрение», «Каналы связи») не находятся (ЕВ-0)", async () => {
+    signInAs("universal@demo.example");
+    renderApp("/dashboard/queue");
+    const box = await searchBox();
+
+    // слова старых имён разделов: «Мои расчёты», «КП на одобрение», «Каналы связи», «Ждут ответа»
+    for (const old of ["расчёты", "одобрение", "каналы", "ждут"]) {
+      type(box, old);
+      await waitFor(() => {
+        expect(box).toHaveValue(old);
+      });
+      expect(screen.queryByRole("group", { name: "Разделы" })).toBeNull();
+    }
+
+    // а пункты нынешнего меню находятся и ведут туда, куда ведёт меню
+    type(box, "склад");
+    const nav = await screen.findByRole("group", { name: "Разделы" });
+    expect(within(nav).getByRole("option", { name: /Склад/ })).toHaveTextContent("Раздел");
+    type(box, "почта");
+    const mail = await screen.findByRole("group", { name: "Разделы" });
+    expect(within(mail).getByRole("option", { name: /Почта/ })).toBeVisible();
+  });
+
   it("настройки — своей группой «Настройки» из реестра (SET-IA): «лог» находит «Журнал», а не «каталог»", async () => {
     signInAs("admin@demo.example");
     renderApp("/dashboard/queue");

@@ -416,7 +416,6 @@
       "hint": "Rates to UZS: automatically from the central bank, or entered by hand for a date. Quotes use the latest rate not older than the limit set in company settings.",
       "filter": "Currency",
       "any": "All currencies",
-      "enter": "Enter USD rate",
       "table": "Exchange rates to UZS",
       "columns": {
         "currency": "Currency",
@@ -431,18 +430,6 @@
       "empty": {
         "title": "No rates",
         "text": "Nothing here yet."
-      },
-      "form": {
-        "title": "Enter the USD rate for a date",
-        "ok": "Save rate",
-        "date": "Rate date",
-        "rate": "Rate, UZS per 1 USD",
-        "rateHint": "Above 0, at most six decimals.",
-        "steps": [
-          "The rate for the date replaces the central bank or a previous manual one.",
-          "The previous value stays in the log.",
-          "The central bank auto-load will not overwrite a manual rate."
-        ]
       }
     },
     "hs": {
@@ -973,7 +960,10 @@
       "It appears on the item card and in “Technical documents”.",
       "The “Visible to client” mark is saved; the client portal will show it later."
     ],
-    "editSteps": ["The changes are saved in the document.", "The file itself does not change."],
+    "editSteps": [
+      "The changes are saved in the document.",
+      "The file itself does not change."
+    ],
     "saved": "Document saved."
   },
   "queue": {

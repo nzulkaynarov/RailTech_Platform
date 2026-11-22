@@ -484,10 +484,7 @@
   },
   "platform": {
     "title": "Platform settings",
-    "hint": "The VAT rate, support address and exchange rates to UZS for the whole platform.",
-    "vat": "VAT rate, %",
-    "vatHint": "From 0 to 100.",
-    "invalidVat": "The rate is a number from 0 to 100",
+    "hint": "The support address and exchange rates to UZS for the whole platform.",
     "currencyUzs": "UZS",
     "updated": "Settings updated",
     "save": "Save settings",
@@ -526,7 +523,6 @@
       },
       "currency": "Currency"
     },
-    "note": "New calculations and documents use this rate.",
     "support": "Support address",
     "supportHint": "Clients see it in letters. Empty — letters have no “Questions?” line.",
     "invalidSupport": "Enter an email address"

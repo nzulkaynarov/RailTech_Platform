@@ -36,19 +36,13 @@ const INVITE: SearchAction = {
 };
 
 export const SEARCH_ACTIONS: readonly SearchAction[] = [
-  ...CREATE_KINDS.flatMap((kind) =>
-    kind.to === undefined
-      ? []
-      : [
-          {
-            key: kind.key,
-            create: true,
-            keywords: kind.keywords,
-            to: kind.to,
-            resources: kind.resources,
-          },
-        ],
-  ),
+  ...CREATE_KINDS.map((kind) => ({
+    key: kind.key,
+    create: true,
+    keywords: kind.keywords,
+    to: kind.to,
+    resources: kind.resources,
+  })),
   INVITE,
 ];
 

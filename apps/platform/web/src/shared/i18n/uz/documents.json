@@ -426,8 +426,8 @@
     },
     "subtitleLetterHandover": "Kompaniya blankidagi xat: haqiqiy PDF ni köring va imzoga topşiring — raqamni xat imzolanganda oladi.",
     "attention": {
-      "label": "Kimga (lavozimi va F.I.Sh.)",
-      "hint": "Ixtiyoriy. Masalan: Mirobod tumani DSI boshlig‘i A. A. Karimovga."
+      "label": "Adresat qatori",
+      "hint": "Şaxs tanlanganda töldiriladi; töğrilash mümkin"
     },
     "email": {
       "label": "Manzil e-pochtasi",
@@ -498,7 +498,7 @@
     },
     "person": {
       "label": "Kimga — şaxs",
-      "hint": "Majburiy emas. Tanlov pöçta va «Kimga»ni töldiradi."
+      "hint": "Majburiy emas. Tanlov pöçta va adresat qatorini töldiradi."
     },
     "draftHint": "Qoralama mavzu va matn bölganda saqlanadi."
   },
