@@ -70,5 +70,24 @@ export function RouteTimeline({
       ),
     });
   });
+  // Decisions of earlier rounds whose step no longer exists (a shorter route on resubmission) stay in the history.
+  const orphans = decisions
+    .filter((d) => d.step < 1 || d.step > steps.length)
+    .sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
+  const authorItems = author ? 1 : 0;
+  items.splice(
+    authorItems,
+    0,
+    ...orphans.map((d): HistoryItem => ({
+      state: "done",
+      title: decisionTitle(d),
+      meta: (
+        <>
+          {`${date(d.at, "datetime")} · ${d.by.full_name}`}
+          {d.comment ? <p className="pf-dec-note">{d.comment}</p> : null}
+        </>
+      ),
+    })),
+  );
   return <History items={items} label={label} />;
 }

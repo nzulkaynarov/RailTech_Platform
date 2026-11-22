@@ -8,7 +8,7 @@ import { decisionEl, openSideTab, panelEl } from "../../../test/panel";
 setupApprovalTests();
 
 const MEMO = (ref: string) => `/eds/approvals/${encodeURIComponent(ref)}`;
-const person = (id: number, name: string) => ({ id, full_name: name });
+const person = (id: number, name: string) => ({ id, crm_user_id: id, full_name: name });
 
 /** СЗ-2026/015: директор сначала вернул, потом согласовал; бухгалтер ждёт — решение одно на шаге, возврат — перед ним. */
 function withDecisions() {

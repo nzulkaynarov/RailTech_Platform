@@ -5,7 +5,7 @@ import type { EdsDecision, EdsRouteStep } from "../api/generated/model";
 import { renderUi } from "../../test/renderUi";
 import { RouteTimeline } from "./RouteTimeline";
 
-const person = (name: string) => ({ id: name, full_name: name });
+const person = (name: string) => ({ id: name, crm_user_id: 1, full_name: name });
 const steps: EdsRouteStep[] = [
   {
     label: "Бухгалтер",
@@ -70,5 +70,21 @@ describe("RouteTimeline", () => {
     expect(rows[1]).toHaveTextContent("нет счёта");
     expect(rows[2]).toHaveTextContent("Бухгалтер: approved");
     expect(screen.getAllByText(/Каримова Н\./)).toHaveLength(2);
+  });
+
+  it("решение, не подошедшее ни к одному шагу (шагов стало меньше), не теряется", () => {
+    const rows = renderRoute([
+      decision({}),
+      decision({
+        round: 1,
+        step: 3,
+        decision: "return",
+        comment: "прошлый круг, шаг 3",
+        at: "2026-11-19T12:00:00Z",
+      }),
+    ]);
+    expect(rows).toHaveLength(4);
+    const orphan = rows.find((r) => r.textContent?.includes("прошлый круг, шаг 3"));
+    expect(orphan).toHaveTextContent("решение return круг 1");
   });
 });
