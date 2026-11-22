@@ -39,11 +39,25 @@ def settings() -> Settings:
     )
 
 
+def release_app(application: FastAPI) -> None:
+    """Drop the heavy parts of a finished test app.
+
+    Something outside the tests keeps every created app reachable (about 9 MB each), so a full run
+    grows to 7–9 GB; emptying routes and state keeps the leftover object small.
+    """
+    application.router.routes.clear()
+    application.user_middleware.clear()
+    application.middleware_stack = None
+    application.openapi_schema = None
+    application.state._state.clear()
+
+
 @pytest.fixture
 async def app(settings: Settings) -> AsyncIterator[FastAPI]:
     application = create_app(settings)
     async with application.router.lifespan_context(application):
         yield application
+    release_app(application)
 
 
 @pytest.fixture
