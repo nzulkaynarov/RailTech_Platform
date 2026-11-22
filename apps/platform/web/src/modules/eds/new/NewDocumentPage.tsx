@@ -47,9 +47,10 @@ import {
 import { LetterPdfPanel } from "../documents/LetterPdfPanel";
 import { parseDocumentId, useRefreshDocuments } from "../documents/params";
 import { useRefreshLetters } from "../inbox/api";
+import { type AutoFilled, NO_AUTO, applyCompany, applyPerson } from "./recipientPick";
 import { AttachmentsField } from "./AttachmentsField";
 import { DealField } from "./DealField";
-import { AddresseePerson, RecipientField } from "./RecipientField";
+import { CompanyPicker, PersonPicker } from "../../../shared/ui/pickers";
 import {
   type Attachment,
   EMPTY_FORM,
@@ -197,6 +198,8 @@ function DocumentForm({
   const [savedId, setSavedId] = useState<string | null>(draft?.id ?? null);
   // Id сохранённого черновика без ожидания перерисовки: «Показать PDF» сразу после создания идёт по тому же документу.
   const savedRef = useRef<string | null>(draft?.id ?? null);
+  // what the company and person pickers filled themselves: only that may be replaced when the choice changes
+  const autoRef = useRef<AutoFilled>(NO_AUTO);
   const [creating, setCreating] = useState(false);
   const [handingOver, setHandingOver] = useState(false);
   // Ключ повтора создания: на экземпляр формы и тело запроса — потерянный ответ не заведёт второй документ.
@@ -614,31 +617,25 @@ function DocumentForm({
                 }
                 error={errors.recipient ? fieldText(t, "recipient") : undefined}
               >
-                <RecipientField
+                <CompanyPicker
                   id={ids.recipient}
-                  value={values.recipientName}
+                  value={
+                    values.recipientCompanyId
+                      ? {
+                          id: values.recipientCompanyId,
+                          name: values.recipientName,
+                          inn: values.recipientInn || null,
+                        }
+                      : null
+                  }
+                  suggest={values.recipientCompanyId ? undefined : values.recipientName}
                   invalid={Boolean(errors.recipient)}
                   describedBy={describedBy(ids.recipient, true, Boolean(errors.recipient))}
-                  onChange={(name) => {
-                    // адресат — только из контрагентов (СУЩ-2.6): правка текста снимает выбор
-                    setValues((prev) => ({
-                      ...prev,
-                      recipientName: name,
-                      recipientInn: "",
-                      recipientCompanyId: "",
-                      recipientContactId: "",
-                    }));
-                  }}
-                  onPick={(addressee) => {
-                    setValues((prev) => ({
-                      ...prev,
-                      recipientName: addressee.name,
-                      recipientInn: addressee.inn ?? "",
-                      recipientCompanyId: addressee.id,
-                      recipientContactId: "",
-                      recipientEmail: addressee.email ?? prev.recipientEmail,
-                      recipientAttention: addressee.attention ?? prev.recipientAttention,
-                    }));
+                  onChange={(company) => {
+                    // адресат — только выбором из контрагентов (ЕД-6): смена компании снимает человека и его почту
+                    const auto = autoRef.current;
+                    autoRef.current = { person: null, companyEmail: company?.email ?? "" };
+                    setValues((prev) => ({ ...prev, ...applyCompany(prev, company, auto) }));
                   }}
                 />
               </Field>
@@ -648,18 +645,15 @@ function DocumentForm({
                   label={t("documents:form.person.label")}
                   hint={t("documents:form.person.hint")}
                 >
-                  <AddresseePerson
+                  <PersonPicker
                     id="doc-recipient-person"
                     companyId={values.recipientCompanyId}
                     value={values.recipientContactId}
-                    onPick={(person) => {
-                      setValues((prev) => ({
-                        ...prev,
-                        recipientContactId: person?.id ?? "",
-                        recipientAttention: person
-                          ? [person.position, person.name].filter(Boolean).join(" ")
-                          : prev.recipientAttention,
-                      }));
+                    describedBy="doc-recipient-person-hint"
+                    onChange={(person) => {
+                      const auto = autoRef.current;
+                      autoRef.current = { ...auto, person };
+                      setValues((prev) => ({ ...prev, ...applyPerson(prev, person, auto) }));
                     }}
                   />
                 </Field>

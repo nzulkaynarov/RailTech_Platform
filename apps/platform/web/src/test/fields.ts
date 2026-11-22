@@ -1,4 +1,4 @@
-import { fireEvent, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { expect } from "vitest";
 
 /**
@@ -51,4 +51,50 @@ export function selectedLabel(combobox: HTMLElement): string {
       ?.querySelector(".ant-select-selection-item")
       ?.getAttribute("title") ?? ""
   );
+}
+
+/** Ввести поисковую строку в поле выбора компании (ЕД-6): поиск идёт с задержкой, подсказки приходят позже. */
+export function searchCompany(combobox: HTMLElement, query: string): void {
+  fireEvent.mouseDown(combobox);
+  fireEvent.change(combobox, { target: { value: query } });
+}
+
+/** Выбрать компанию в `CompanyPicker`: найти по запросу и нажать строку с названием. */
+export async function pickCompany(
+  combobox: HTMLElement,
+  query: string,
+  name: string,
+): Promise<void> {
+  searchCompany(combobox, query);
+  const option = await waitFor(() => {
+    const found = Array.from(
+      document.querySelectorAll<HTMLElement>(
+        ".ant-select-dropdown:not(.ant-select-dropdown-hidden) .ant-select-item-option",
+      ),
+    ).find((item) => item.getAttribute("title") === name);
+    expect(found, `компания «${name}»`).toBeDefined();
+    return found as HTMLElement;
+  });
+  fireEvent.click(option);
+}
+
+/** Компании нет среди контрагентов: «Завести» последней строкой, короткая форма, «Завести» — и она выбрана. */
+export async function addCompany(combobox: HTMLElement, name: string, inn = ""): Promise<void> {
+  searchCompany(combobox, name);
+  const row = await waitFor(() => {
+    const found = Array.from(
+      document.querySelectorAll<HTMLElement>(
+        ".ant-select-dropdown:not(.ant-select-dropdown-hidden) .ant-select-item-option",
+      ),
+    ).find((item) => item.textContent === `Завести «${name.trim()}»`);
+    expect(found, "строка «Завести»").toBeDefined();
+    return found as HTMLElement;
+  });
+  fireEvent.click(row);
+  const sheet = await screen.findByRole("dialog", { name: "Новая компания" });
+  if (inn) fireEvent.change(within(sheet).getByLabelText("ИНН"), { target: { value: inn } });
+  fireEvent.click(within(sheet).getByRole("button", { name: "Завести" }));
+  await waitFor(() => {
+    expect(screen.queryByRole("dialog", { name: "Новая компания" })).toBeNull();
+  });
 }

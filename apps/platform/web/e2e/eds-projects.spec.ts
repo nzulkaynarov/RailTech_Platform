@@ -7,6 +7,8 @@ import { chooseOption, pickFiles } from "./support/fields";
 // EDS · «Проекты: договор, акт, сканы» на MSW (D2-5): бухгалтер ведёт проект ПР-2026-104 от «Сформировать проект договора» до
 // «Подписан (скан)», акт проекта ПР-2026-097 — до «Выполнено»; менеджер читает без кнопок; администратор не видит раздел;
 // в интерфейсе нет слова «счёт-фактура»; axe (WCAG 2.1 AA); на 390 px договор и акт — листы на весь экран (@mobile).
+// ЕД-7: действия по договору и акту — в строках «Документов проекта» в центре, а не во вкладках бокового окна.
+const DOCS = { role: "region", name: "Документы проекта" } as const;
 const PANEL = "#pf-context-panel";
 const PR = (n: number) =>
   `/eds/projects/${encodeURIComponent(`ПР-2026-${String(n).padStart(3, "0")}`)}`;
@@ -40,8 +42,8 @@ async function expectNoInvoiceWord(page: Page): Promise<void> {
   expect(text).not.toMatch(/фактур/i);
 }
 
-async function openProject(page: Page, n: number, tab?: "contract" | "act"): Promise<void> {
-  await spaGoto(page, `${PR(n)}${tab ? `?panel=open&tab=${tab}` : ""}`);
+async function openProject(page: Page, n: number): Promise<void> {
+  await spaGoto(page, PR(n));
   await expect(
     page.getByRole("heading", { level: 1, name: `Проект ПР-2026-${String(n).padStart(3, "0")}` }),
   ).toBeVisible();
@@ -69,11 +71,11 @@ test.describe("Проекты: бухгалтер", () => {
     await expect(table.getByText("ПР-2026-097")).toBeVisible();
 
     // карточка проекта без договора: «Сформировать проект договора» из принятого КП
-    await openProject(page, 104, "contract");
-    const panel = page.locator(PANEL);
+    await openProject(page, 104);
+    const panel = page.getByRole(DOCS.role, { name: DOCS.name });
     await settledScreenshot(page, "contract-none");
     await expectNoViolations(page, "договор: нет проекта");
-    await panel.getByRole("button", { name: "Сформировать проект договора" }).click();
+    await panel.getByRole("button", { name: "Сформировать проект договора по КП" }).click();
 
     await expect(panel.getByText("Проект ещё не отправлен клиенту.")).toBeVisible();
     await panel.getByRole("button", { name: "На согласование клиенту" }).click();
@@ -82,7 +84,7 @@ test.describe("Проекты: бухгалтер", () => {
     await chooseOption(panel.getByLabel("Как клиент сообщил"), "почта");
     await panel.getByLabel("Кто со стороны клиента").fill("Каримов А., снабженец");
     await panel.getByRole("button", { name: "Отметить: согласован клиентом" }).click();
-    await expect(panel.getByText("Отмечено сотрудником").first()).toBeVisible();
+    await expect(panel.getByText(/Клиент согласовал редакцию/)).toBeVisible(); // «Отмечено сотрудником» — в «Истории»
     await panel.getByRole("button", { name: "Отметить: выставлен у оператора" }).click();
     await expect(
       panel.getByText(/Договор выставлен у оператора\. Когда обе стороны/),
@@ -113,8 +115,8 @@ test.describe("Проекты: бухгалтер", () => {
     await expectNoInvoiceWord(page);
 
     // акт: проект 097, скан подписанного акта → проект «Выполнено»
-    await openProject(page, 97, "act");
-    const act = page.locator(PANEL);
+    await openProject(page, 97);
+    const act = page.getByRole(DOCS.role, { name: DOCS.name });
     await expect(act.getByText(/Акт у клиента на приёмке/)).toBeVisible();
     await settledScreenshot(page, "act-issued");
     await pickFiles(act.getByLabel("Скан подписанного акта"), SCAN("akt-demo.pdf"));
@@ -126,16 +128,29 @@ test.describe("Проекты: бухгалтер", () => {
     await expectNoInvoiceWord(page);
   });
 
+  test("ЕД-7: «Сведения» и «История» в окне, документы и действия — в центре", async ({ page }) => {
+    await loginAndWait(page, "accountant@demo.example");
+    await openProject(page, 97);
+    const side = page.locator(PANEL);
+    await expect(side.getByRole("tab")).toHaveText(["Сведения", "История"]);
+    await expect(side.getByText("Клиент", { exact: true })).toBeVisible();
+    await settledScreenshot(page, "project-card-facts");
+    await expectNoViolations(page, "карточка проекта: сведения");
+    await side.getByRole("tab", { name: "История" }).click();
+    await side.getByRole("button", { name: "Акт" }).click();
+    await expect(side.getByRole("button", { name: "Акт" })).toHaveAttribute("aria-pressed", "true");
+    await settledScreenshot(page, "project-card-history");
+    await expectNoViolations(page, "карточка проекта: история");
+  });
+
   test("счёт оплачен, товар не доставлен: «Акт — после доставки», кнопки нет (СЦ-9)", async ({
     page,
   }) => {
     await loginAndWait(page, "accountant@demo.example");
-    await openProject(page, 98, "act");
-    const act = page.locator(PANEL);
-    await expect(act.getByText("Акта ещё нет")).toBeVisible();
+    await openProject(page, 98);
+    const act = page.getByRole(DOCS.role, { name: DOCS.name });
     await expect(act.getByText(/Акт — после доставки/)).toBeVisible();
-    await expect(act.getByRole("button", { name: "Выпустить акт" })).toHaveCount(0);
-    await expect(page.getByText("Акт — после доставки").first()).toBeVisible();
+    await expect(act.getByRole("button", { name: "Выпустить акт по проекту" })).toHaveCount(0);
     await settledScreenshot(page, "act-after-delivery");
     await expectNoViolations(page, "акт — после доставки");
   });
@@ -144,11 +159,15 @@ test.describe("Проекты: бухгалтер", () => {
     page,
   }) => {
     await loginAndWait(page, "accountant@demo.example");
-    await openProject(page, 72, "act");
-    const act = page.locator(PANEL);
+    await openProject(page, 72);
+    const act = page.getByRole(DOCS.role, { name: DOCS.name });
     await expect(act.getByText("Клиент принял акт в кабинете. Скана нет.")).toBeVisible();
-    await expect(act.getByText("Принят клиентом")).toBeVisible();
-    await expect(act.getByText(/скан сохранён/)).toHaveCount(0);
+    await expect(act.getByText("Принят клиентом").first()).toBeVisible();
+    // строка акта и его действия — без слова «скан» (у подписанного договора рядом оно есть)
+    const actDetail = act
+      .getByText("Клиент принял акт в кабинете. Скана нет.")
+      .locator("xpath=ancestor::li[1]");
+    await expect(actDetail.getByText(/скан сохранён/)).toHaveCount(0);
     await settledScreenshot(page, "act-accepted-no-scan");
     await expectNoViolations(page, "акт принят клиентом");
   });
@@ -176,10 +195,12 @@ test.describe("Проекты: чтение и доступ", () => {
 
   test("менеджер читает карточку, действий нет", async ({ page }) => {
     await loginAndWait(page, "manager@demo.example");
-    await openProject(page, 105, "contract");
+    await openProject(page, 105);
     await expect(page.getByText("Только чтение", { exact: true })).toBeVisible();
     await expect(
-      page.locator(PANEL).getByRole("button", { name: /Отметить: согласован клиентом/ }),
+      page
+        .getByRole(DOCS.role, { name: DOCS.name })
+        .getByRole("button", { name: /Отметить: согласован клиентом/ }),
     ).toHaveCount(0);
     await expectNoViolations(page, "менеджер: чтение");
   });
@@ -198,7 +219,7 @@ test.describe("Проекты: чтение и доступ", () => {
 // @mobile: проект mobile (Pixel 7, 390) гоняет только сценарии с этим тегом.
 test.describe("Проекты: телефон", () => {
   test(
-    "список — карточки; договор и акт — листы на весь экран",
+    "список — карточки; договор и акт — действия в строках документов, «Сведения» и «История» — в окне",
     { tag: "@mobile" },
     async ({ page, isMobile }) => {
       test.skip(!isMobile, "узкий экран — проект mobile");
@@ -208,28 +229,48 @@ test.describe("Проекты: телефон", () => {
       await settledScreenshot(page, "mobile-projects-list");
       await expectNoViolations(page, "мобильный список проектов");
 
-      await spaGoto(page, `${PR(105)}?sheet=contract`);
-      const sheet = page.getByRole("dialog");
-      await expect(sheet.getByRole("heading", { name: "Договор ДОГ-2026/105" })).toBeVisible();
-      const box = await sheet.boundingBox();
-      const viewport = page.viewportSize();
-      expect(box?.width).toBe(viewport?.width);
-      await settledScreenshot(page, "mobile-contract-sheet");
-      await expectNoViolations(page, "мобильный лист договора");
+      await openProject(page, 105);
+      const docs = page.getByRole(DOCS.role, { name: DOCS.name });
+      await expect(docs.getByText("ДОГ-2026/105").first()).toBeVisible();
+      await expect(
+        docs.getByRole("button", { name: /Отметить: согласован клиентом/ }),
+      ).toBeVisible();
+      await settledScreenshot(page, "mobile-contract-inline");
+      await expectNoViolations(page, "мобильная карточка: договор в строке");
       await expectNoInvoiceWord(page);
 
-      await spaGoto(page, `${PR(98)}?sheet=act`);
-      const actSheet = page.getByRole("dialog");
-      await expect(actSheet.getByText(/Акт — после доставки/)).toBeVisible();
-      await expect(actSheet.getByRole("button", { name: "Выпустить акт" })).toHaveCount(0);
-      await settledScreenshot(page, "act-after-delivery");
-      await expectNoViolations(page, "мобильный лист акта: после доставки");
+      // Ссылка из очереди/колокольчика ведёт на проект без `?panel=open&tab=…`: окно закрыто, кнопка шага доступна.
+      await openProject(page, 104);
+      await expect(page.locator(PANEL)).toBeHidden();
+      await page
+        .getByRole(DOCS.role, { name: DOCS.name })
+        .getByRole("button", { name: "Сформировать проект договора по КП" })
+        .click({ trial: true });
 
-      await spaGoto(page, `${PR(72)}?sheet=act`);
-      const accepted = page.getByRole("dialog");
-      await expect(accepted.getByText("Принят клиентом")).toBeVisible();
+      await openProject(page, 97);
+      await page.getByTestId("panel-toggle").click();
+      await expect(page.getByRole("tab", { name: "История" })).toBeVisible();
+      await settledScreenshot(page, "mobile-project-panel");
+      await expectNoViolations(page, "мобильная карточка: боковое окно");
+
+      await openProject(page, 98);
+      await expect(
+        page.getByRole(DOCS.role, { name: DOCS.name }).getByText(/Акт — после доставки/),
+      ).toBeVisible();
+      await expect(
+        page
+          .getByRole(DOCS.role, { name: DOCS.name })
+          .getByRole("button", { name: "Выпустить акт по проекту" }),
+      ).toHaveCount(0);
+      await settledScreenshot(page, "act-after-delivery");
+      await expectNoViolations(page, "мобильная карточка: акт после доставки");
+
+      await openProject(page, 72);
+      await expect(
+        page.getByRole(DOCS.role, { name: DOCS.name }).getByText("Принят клиентом").first(),
+      ).toBeVisible();
       await settledScreenshot(page, "act-accepted-no-scan");
-      await expectNoViolations(page, "мобильный лист акта: принят клиентом");
+      await expectNoViolations(page, "мобильная карточка: акт принят клиентом");
     },
   );
 });

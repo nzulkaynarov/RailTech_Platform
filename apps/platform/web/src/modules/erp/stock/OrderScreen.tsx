@@ -4,7 +4,6 @@ import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
 import { PanelPortal } from "../../../app/shell/PanelSlot";
-import { useViewport } from "../../../app/shell/useViewport";
 import { ApiError } from "../../../shared/api/errors";
 import type { SupplierOrderDetail, SupplierOrderMail } from "../../../shared/api/generated/model";
 import { useGetSupplierOrder } from "../../../shared/api/generated/platform-bff";
@@ -14,7 +13,7 @@ import { DefinitionList } from "../../../shared/ui/DefinitionList";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { QueryState } from "../../../shared/ui/FormParts";
 import { DataTable, type DataColumn } from "../../../shared/ui/DataTable/DataTable";
-import { History, type HistoryItem } from "../../../shared/ui/History";
+import { RecordHistory, type RecordHistoryEntry } from "../../../shared/ui/RecordHistory";
 import { LinkButton } from "../../../shared/ui/LinkButton";
 import { PageHeader } from "../../../shared/ui/PageHeader";
 import { useStateLabels, withUnit } from "./api";
@@ -36,15 +35,17 @@ import { PersonRefCell } from "../../PersonRefCell";
 
 type Dialog = "send" | "price" | "confirm" | "receive" | "cancel" | "edit" | null;
 
+/** Журнал заказа в общем виде «Истории» (ЕД-7): одно место, где перечислены события заказа. */
 function OrderLog({ order }: { order: SupplierOrderDetail }) {
   const { t } = useTranslation("stock");
-  const { activity } = useFormat();
-  const items: HistoryItem[] = order.log.map((entry) => ({
-    state: "done",
-    title: t(`order.log.${entry.kind}`),
-    meta: [activity(entry.at), entry.by?.name, entry.detail].filter(Boolean).join(" · "),
+  const entries: RecordHistoryEntry[] = order.log.map((entry) => ({
+    at: entry.at,
+    by: entry.by?.name ?? null,
+    action: t(`order.log.${entry.kind}`),
+    // «Заказ создан» несёт название поставщика, которое уже стоит в шапке: повтор не выводим.
+    comment: entry.kind === "created" && entry.detail === order.supplier.name ? null : entry.detail,
   }));
-  return <History items={items} label={t("order.log.label")} />;
+  return <RecordHistory entries={entries} label={t("order.log.label")} timeStyle="activity" />;
 }
 
 /** Цена поставщика, из которой создана строка (ADR-0021 п. 6): базис поставки и срок цены. */
@@ -205,7 +206,6 @@ function Content({ order }: { order: SupplierOrderDetail }) {
   const { t } = useTranslation("stock");
   const mailText = useMailText();
   const { date, activity } = useFormat();
-  const { mobile } = useViewport();
   const [dialog, setDialog] = useState<Dialog>(null);
   const close = () => {
     setDialog(null);
@@ -221,7 +221,7 @@ function Content({ order }: { order: SupplierOrderDetail }) {
           ? ("receive" as const)
           : null;
   return (
-    <div className="pf-calc pf-stock">
+    <div className="pf-calc pf-stock pf-overlay-aware">
       <PageHeader
         title={t("order.title", { number: order.number })}
         subtitle={[order.supplier.name, order.requests.map((r) => r.number).join(", ")]
@@ -311,45 +311,6 @@ function Content({ order }: { order: SupplierOrderDetail }) {
           message={t("order.cancelledBanner", { reason: order.cancel_reason ?? "—" })}
         />
       ) : null}
-      <Card size="small" title={<h2 className="pf-calc-title">{t("order.details")}</h2>}>
-        <DefinitionList
-          items={[
-            { label: t("order.supplier"), value: order.supplier.name },
-            { label: t("order.email"), value: order.supplier.email },
-            {
-              label: t("order.expected"),
-              value: order.expected_date ? date(order.expected_date) : null,
-            },
-            {
-              label: t("order.sent"),
-              value: order.sent_at
-                ? `${activity(order.sent_at)}${order.sent_to ? ` · ${order.sent_to}` : ""}`
-                : null,
-            },
-            // 0.10 (FR-12): итог письма приходит от почтового сервиса — «отправлено» только после него.
-            { label: t("order.mail.label"), value: order.mail ? mailText(order.mail) : null },
-            {
-              label: t("order.confirmed"),
-              value: order.confirmed_at ? activity(order.confirmed_at) : null,
-            },
-            {
-              label: t("order.receivedAt"),
-              value: order.received_at ? activity(order.received_at) : null,
-            },
-            {
-              label: t("order.createdBy"),
-              value: order.created_by ? <PersonRefCell person={order.created_by} /> : null,
-            },
-            {
-              label: t("order.partnerNote"),
-              value: order.partner_note ? (
-                <span className="pf-stock-multiline">{order.partner_note}</span>
-              ) : null,
-            },
-            { label: t("order.note"), value: order.note },
-          ]}
-        />
-      </Card>
       <Card
         size="small"
         title={<h2 className="pf-calc-title">{t("order.linesTitle")}</h2>}
@@ -364,17 +325,53 @@ function Content({ order }: { order: SupplierOrderDetail }) {
       >
         <Receipts order={order} />
       </Card>
-      <Card size="small" title={<h2 className="pf-calc-title">{t("order.logTitle")}</h2>}>
-        <OrderLog order={order} />
-      </Card>
-      {mobile ? null : (
-        <PanelPortal tab="journal">
+      <PanelPortal tab="facts">
+        <div className="pf-calc-task">
+          <DefinitionList
+            items={[
+              { label: t("order.email"), value: order.supplier.email },
+              {
+                label: t("order.expected"),
+                value: order.expected_date ? date(order.expected_date) : null,
+              },
+              {
+                label: t("order.sent"),
+                value: order.sent_at
+                  ? `${activity(order.sent_at)}${order.sent_to ? ` · ${order.sent_to}` : ""}`
+                  : null,
+              },
+              // 0.10 (FR-12): итог письма приходит от почтового сервиса — «отправлено» только после него.
+              { label: t("order.mail.label"), value: order.mail ? mailText(order.mail) : null },
+              {
+                label: t("order.confirmed"),
+                value: order.confirmed_at ? activity(order.confirmed_at) : null,
+              },
+              {
+                label: t("order.receivedAt"),
+                value: order.received_at ? activity(order.received_at) : null,
+              },
+              {
+                label: t("order.createdBy"),
+                value: order.created_by ? <PersonRefCell person={order.created_by} /> : null,
+              },
+              {
+                label: t("order.partnerNote"),
+                value: order.partner_note ? (
+                  <span className="pf-stock-multiline">{order.partner_note}</span>
+                ) : null,
+              },
+              { label: t("order.note"), value: order.note },
+            ]}
+          />
+        </div>
+      </PanelPortal>
+      {order.log.length > 0 ? (
+        <PanelPortal tab="history">
           <div className="pf-calc-task">
-            <h3 className="pf-calc-task-title">{t("order.logTitle")}</h3>
             <OrderLog order={order} />
           </div>
         </PanelPortal>
-      )}
+      ) : null}
       {dialog === "send" ? <SendModal order={order} onClose={close} /> : null}
       {dialog === "price" ? <PriceRequestModal order={order} onClose={close} /> : null}
       {dialog === "confirm" ? <ConfirmModal order={order} onClose={close} /> : null}

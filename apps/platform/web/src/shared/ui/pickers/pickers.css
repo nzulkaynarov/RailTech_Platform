@@ -1,0 +1,20 @@
+/* Строка поля выбора компании и человека (ЕД-6): имя, под ним роль, ИНН, страна или должность и почта */
+.pf-pick-row {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 2px 0;
+}
+.pf-pick-row__name {
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+.pf-pick-row__sub {
+  font-size: 12px;
+  color: var(--rt-color-text-secondary);
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+.pf-pick-create {
+  font-weight: 500;
+}

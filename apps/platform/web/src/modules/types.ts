@@ -59,6 +59,27 @@ export interface ModuleConfig {
   sections: readonly SectionConfig[];
 }
 
+/**
+ * Стандартный набор вкладок карточки записи (ЕД-7, `docs/DECISIONS.md` 2026-11-22): «Сведения» · «Маршрут» · «Обсуждение» ·
+ * «История» (+ «Документы» там, где у записи есть своя цепочка). Вкладку, которую экран не наполнил, каркас не показывает,
+ * поэтому раздел перечисляет весь набор, а экран занимает только то, что у него есть (`PanelPortal tab=…`).
+ */
+export const RECORD_TABS = {
+  facts: { key: "facts" },
+  route: { key: "route" },
+  chat: { key: "chat" },
+  history: { key: "history" },
+  documents: { key: "documents" },
+} as const satisfies Record<string, PanelTab>;
+
+export const RECORD_TAB_SET: readonly PanelTab[] = [
+  RECORD_TABS.facts,
+  RECORD_TABS.route,
+  RECORD_TABS.chat,
+  RECORD_TABS.history,
+  RECORD_TABS.documents,
+];
+
 export const DEFAULT_TABS: readonly PanelTab[] = [
   { key: "card" },
   { key: "chat" },

@@ -761,6 +761,9 @@
   "tabs": {
     "today": "Today",
     "notifications": "Notifications",
+    "facts": "Details",
+    "route": "Route",
+    "history": "History",
     "card": "Card",
     "chat": "Discussion",
     "documents": "Documents",
@@ -786,6 +789,18 @@
     "notifications": {
       "title": "No new notifications",
       "text": "Decisions, client messages and system events will appear here."
+    },
+    "facts": {
+      "title": "No details",
+      "text": "Details of the selected object will appear here."
+    },
+    "route": {
+      "title": "No route",
+      "text": "Route steps and decisions will appear here."
+    },
+    "history": {
+      "title": "No history",
+      "text": "Events of the object will appear here."
     },
     "card": {
       "title": "No object selected",
