@@ -3343,6 +3343,98 @@ paths:
         '503':
           $ref: '#/components/responses/BackendUnavailable'
 
+  /eds/documents/{id}/remind:
+    post:
+      tags: [eds-documents]
+      operationId: remindEdsDocumentSigner
+      summary: 'EDS · Письмо на подписи: напомнить подписанту (ГЛ-0)'
+      description: >-
+        EDS `POST /documents/{id}/remind`. Автор повторно отправляет текущему подписанту «Подпишите исходящее»; не чаще раза в час (409, `details.reason = remind_too_soon`, `details.retry_at`). Не автор — 403, письмо не на подписи — 409.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/EdsDocumentId'
+      responses:
+        '200':
+          description: Готово
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EdsDocument'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/EdsConflict'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /eds/documents/{id}/withdraw:
+    post:
+      tags: [eds-documents]
+      operationId: withdrawEdsDocumentFromSigning
+      summary: 'EDS · Письмо на подписи: отозвать (ГЛ-0)'
+      description: >-
+        EDS `POST /documents/{id}/withdraw`. Автор снимает передачу на подпись: письмо снова черновик, задача у подписанта пропадает. Не автор — 403, письмо не на подписи — 409.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/EdsDocumentId'
+      responses:
+        '200':
+          description: Готово
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EdsDocument'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/EdsConflict'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /eds/documents/{id}/signer:
+    post:
+      tags: [eds-documents]
+      operationId: changeEdsDocumentSigner
+      summary: 'EDS · Письмо на подписи: сменить подписанта (ГЛ-0)'
+      description: >-
+        EDS `POST /documents/{id}/signer`. Автор выбирает другого подписанта из `GET /eds/signers`; новому уходит «Подпишите исходящее». Нет права подписи — 422 (`signer_crm_user_id`), не автор — 403, письмо не на подписи — 409.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/EdsDocumentId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EdsSignerChangeIn'
+      responses:
+        '200':
+          description: Готово
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EdsDocument'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/EdsConflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
   /eds/documents/{id}/mail-waive:
     post:
       tags: [eds-documents]
@@ -19497,6 +19589,9 @@ components:
       required: [kind, id, number, subject, status, author, amount, due_date, created_at, openable, undelivered, awaiting_signature]
       properties:
         awaiting_signature: {type: boolean, description: 'Исходящее письмо передано на подпись и не подписано (СЦ-8): слово «На подписи» при `status = draft`; без передачи — «Черновик»; у остальных видов — `false`. Признак отдаёт EDS'}
+        signer:
+          oneOf: [{$ref: '#/components/schemas/EdsPerson'}, {type: 'null'}]
+          description: 'ГЛ-0. У кого письмо на подписи (вычисленный или выбранный подписант); у остальных строк — `null`. Отдаёт реестр «Все документы»'
         undelivered: {type: boolean, description: 'Исходящее письмо не ушло адресату (СЦ-1): строка остаётся в «Исходящих» с меткой «Не отправлено»'}
         kind: {$ref: '#/components/schemas/EdsRegistryKind'}
         id: {type: string, format: uuid}
@@ -19631,6 +19726,11 @@ components:
           description: |
             Исходящее письмо передано на подпись и не подписано (СЦ-8): `status = draft` с отметкой передачи. Слово «На подписи»;
             без передачи — «Черновик»; после подписи — `sent`. Признак отдаёт EDS, BFF его не вычисляет.
+        can_manage_handover:
+          type: boolean
+          description: |
+            ГЛ-0. Автор письма на подписи — ему доступны «Напомнить» (`POST /eds/documents/{id}/remind`), «Отозвать»
+            (`…/withdraw`) и «Сменить подписанта» (`…/signer`); у остальных — `false`
         signed_at:
           type: [string, 'null']
           format: date-time
@@ -19679,7 +19779,18 @@ components:
             `currency_mismatch`, `holder_inactive`, `absent`, `deputy_without_authority`, `deputy_loop`
         signer:
           oneOf: [{$ref: '#/components/schemas/EdsPerson'}, {type: 'null'}]
-          description: Кто подпишет по реестру; `null` — подписать некому
+          description: Кто подпишет по реестру (выбранный автором или первый, кто не автор); `null` — подписать некому
+        signer_position:
+          type: [string, 'null']
+          description: ГЛ-0. Должность подписанта по реестру полномочий («На подписи у …, должность»)
+        signer_is_you:
+          type: boolean
+          description: 'ГЛ-0. Подписант — сам спросивший (автор подписывает своё письмо): уведомления ему нет, карточка говорит «Подписываете вы»'
+    EdsSignerChangeIn:
+      type: object
+      additionalProperties: false
+      properties:
+        signer_crm_user_id: {type: [integer, 'null'], description: 'Сотрудник из `GET /eds/signers`; `null` — подписанта снова подбирает реестр полномочий'}
     EdsDocumentSignIn:
       type: object
       additionalProperties: false
@@ -23149,18 +23260,19 @@ components:
     DocflowSettings:
       type: object
       additionalProperties: false
-      required: [recognize_scans, pii_policy, ai_available]
+      required: [recognize_scans, pii_policy, ai_available, author_may_sign_own_letter]
       properties:
         recognize_scans: {type: boolean}
         pii_policy: {type: string, enum: [business, strict]}
         ai_available: {type: boolean}
+        author_may_sign_own_letter: {type: boolean, description: 'ГЛ-0, ADR-0024 п. 3: автор письма с правом подписи подписывает его сам (по умолчанию да); нет — «автор ≠ подписант»'}
 
     DocflowSettingsPatch:
       type: object
       additionalProperties: false
-      required: [recognize_scans]
       properties:
         recognize_scans: {type: boolean}
+        author_may_sign_own_letter: {type: boolean, description: "Переданное поле меняется; остальные остаются прежними"}
 
     ResolutionTemplateScope:
       type: string
