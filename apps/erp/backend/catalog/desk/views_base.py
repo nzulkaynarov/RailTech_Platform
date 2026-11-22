@@ -9,7 +9,9 @@ from core.pagination import DefaultPageNumberPagination
 from core.permissions import IsBackOfficeStaff, RoleGatedViewMixin
 
 #: Отказы по праву на закрытое поле: 403, а не ошибка проверки.
-FORBIDDEN_CODES = frozenset({"SUPPLIER_PRICES_REQUIRED", "CREW_RATES_REQUIRED", "PRODUCT_NOT_YOURS"})
+FORBIDDEN_CODES = frozenset(
+    {"SUPPLIER_PRICES_REQUIRED", "CREW_RATES_REQUIRED", "PRODUCT_NOT_YOURS", "ROLE_PERMISSION_REQUIRED"}
+)
 CONFLICT_CODES = frozenset(
     {
         "HS_CODE_EXISTS",
@@ -43,7 +45,7 @@ def refuse(error: ItemError) -> Response:
         code = status.HTTP_409_CONFLICT
     else:
         code = status.HTTP_400_BAD_REQUEST
-    return Response({"detail": error.code}, status=code)
+    return Response({**error.extra, "detail": error.code}, status=code)
 
 
 class DeskViewSet(RoleGatedViewMixin, viewsets.GenericViewSet):
