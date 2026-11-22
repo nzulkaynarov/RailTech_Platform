@@ -1,6 +1,6 @@
 # AREA A: why the windows look like a zoo, and how components drift from the identity rules
 
-Source: read-only checkout `/home/umarbek/projects/RailTech_Platform/.claude/worktrees/research-main` (HEAD 2ecd40446, after ЕД-6 and ЕД-7 PR-1). All paths below are relative to `apps/platform/web/src/` unless they start with `docs/` or `packages/`. Nothing was built or run. Counts come from grep over 385 non-test `.tsx` files. Points marked **(inference)** are my reasoning, not something the code states directly.
+Source: read-only checkout `` (HEAD 2ecd40446, after ЕД-6 and ЕД-7 PR-1). All paths below are relative to `apps/platform/web/src/` unless they start with `docs/` or `packages/`. Nothing was built or run. Counts come from grep over 385 non-test `.tsx` files. Points marked **(inference)** are my reasoning, not something the code states directly.
 
 ## 0. Short answer
 - The identity standard is real and mostly enforced for **centre dialogs, status tags, icons and colours in CSS**.
