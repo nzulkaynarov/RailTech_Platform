@@ -192,3 +192,40 @@ async def test_queue_without_a_link_writes_nothing_and_a_partial_queue_keeps_the
     await queue_of(web)  # ERP не ответил: срок не должен пропасть из календаря
 
     assert len(events(await feed(web, issued["path"]))) == before
+
+
+class BytesRedis:
+    """Как настоящий Redis без `decode_responses`: `get` отдаёт bytes."""
+
+    def __init__(self, inner: Any) -> None:
+        self.inner = inner
+
+    async def get(self, key: str) -> bytes | None:
+        value = await self.inner.get(key)
+        return None if value is None else str(value).encode()
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self.inner, name)
+
+
+async def test_feed_works_on_a_redis_that_returns_bytes(web: Web) -> None:
+    from app import calendar_link
+
+    redis = BytesRedis(web.redis)
+    token = "t" * 43
+    await calendar_link.activate(redis, 7, token, "2026-11-22T00:00:00Z", ORIGIN)  # type: ignore[arg-type]
+    assert (await calendar_link.state(redis, 7)).active  # type: ignore[arg-type]
+    body = await calendar_link.render(redis, token)  # type: ignore[arg-type]
+    assert body is not None
+    assert b"RailTech" in body
+    assert await calendar_link.render(redis, "x" * 43) is None  # type: ignore[arg-type]
+
+
+async def test_link_outlives_the_snapshot(web: Web) -> None:
+    from app import calendar_link
+
+    token = "u" * 43
+    await calendar_link.activate(web.redis, 8, token, "2026-11-22T00:00:00Z", ORIGIN)  # type: ignore[arg-type]
+    web.clock.advance(calendar_link.TTL_SECONDS + 10)
+    assert (await calendar_link.state(web.redis, 8)).active  # type: ignore[arg-type]
+    assert await calendar_link.render(web.redis, token) is not None  # type: ignore[arg-type]

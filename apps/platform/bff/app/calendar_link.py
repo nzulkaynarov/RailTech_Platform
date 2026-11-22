@@ -4,7 +4,8 @@
 Календарный клиент приходит без сессии, поэтому ничего «вживую» из CRM, ERP и EDS BFF собрать не
 может: их токены лежат только в сессии сотрудника. Лента — проекция его «Моей очереди»: пока он
 работает в Платформе, каждый разбор очереди обновляет в Redis снимок (название, срок, адрес
-объекта; без сумм, цен и условий сделок). Что хранится, `TTL` 30 дней от последнего обновления:
+объекта; без сумм, цен и условий сделок). Что хранится: ссылка (`cal:tok`, `cal:user`) — без срока,
+до замены или отключения сотрудника; снимок — `TTL` 30 дней от последнего обновления:
 
 - `cal:tok:<sha256 токена>` -> id сотрудника: по ней публичный маршрут находит владельца;
 - `cal:user:<id>` -> {hash, issued_at, origin}: действующая ссылка сотрудника (одна);
@@ -61,9 +62,9 @@ async def activate(redis: Redis, user_id: int, token: str, issued_at: str, origi
     """Новая ссылка вместо прежней: старый токен перестаёт находиться."""
     await _drop_tokens(redis, user_id)
     digest = hash_token(token)
-    await redis.set(_tok(digest), str(user_id), ex=TTL_SECONDS)
+    await redis.set(_tok(digest), str(user_id))
     record = {"hash": digest, "issued_at": issued_at, "origin": origin}
-    await redis.set(_user(user_id), json.dumps(record), ex=TTL_SECONDS)
+    await redis.set(_user(user_id), json.dumps(record))
 
 
 async def _record(redis: Redis, user_id: int) -> dict[str, Any] | None:
@@ -118,15 +119,12 @@ def _projection(items: list[QueueItem]) -> list[dict[str, str]]:
 
 
 async def store_snapshot(redis: Redis, user_id: int, items: list[QueueItem], now: float) -> None:
-    """Обновить снимок, если у сотрудника есть ссылка; срок ссылки продлевается вместе с ним."""
+    """Обновить снимок, если у сотрудника есть ссылка (сама ссылка срока не имеет)."""
     record = await _record(redis, user_id)
     if record is None:
         return
     body = {"at": now, "events": _projection(items)}
     await redis.set(_snap(user_id), json.dumps(body, ensure_ascii=False), ex=TTL_SECONDS)
-    await redis.expire(_user(user_id), TTL_SECONDS)
-    if isinstance(record.get("hash"), str):
-        await redis.expire(_tok(record["hash"]), TTL_SECONDS)
 
 
 async def render(redis: Redis, token: str) -> bytes | None:
@@ -134,7 +132,7 @@ async def render(redis: Redis, token: str) -> bytes | None:
     raw_owner = await redis.get(_tok(hash_token(token)))
     if raw_owner is None:
         return None
-    owner = str(raw_owner)
+    owner = raw_owner.decode() if isinstance(raw_owner, bytes) else str(raw_owner)
     record = await _record(redis, int(owner)) if owner.isdigit() else None
     if record is None or record.get("hash") != hash_token(token):
         return None
