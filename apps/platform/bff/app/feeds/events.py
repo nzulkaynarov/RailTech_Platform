@@ -77,7 +77,7 @@ EVENT_TEXTS: dict[str, str] = {
     "invoice.cancelled": "Счёт отменён",
     "payment.recorded": "Оплата зафиксирована",
     "act.issued": "Акт выставлен",
-    "act.signed": "Акт подписан",
+    "act.signed": "Акт принят заказчиком",
     "act.rejected": "Акт отклонён клиентом",
     "act.reissued": "Акт выставлен заново",
     "act.reminded": "Напоминание по акту",

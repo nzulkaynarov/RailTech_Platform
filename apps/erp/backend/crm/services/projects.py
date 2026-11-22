@@ -295,7 +295,8 @@ def _invoices_ref(deal) -> Optional[dict]:
 def _act_ref(act) -> Optional[dict]:
     if act is None:
         return None
-    return {"id": act.id, "number": act.number, "status": act_word(act)}
+    # `has_scan` is the fact behind the word «signed»: a client acceptance in the cabinet may carry no file.
+    return {"id": act.id, "number": act.number, "status": act_word(act), "has_scan": bool(act.signed_file)}
 
 
 def _person(user) -> Optional[dict]:
@@ -446,7 +447,6 @@ def _act_card(act, user, journal: list, deal_currency: str) -> Optional[dict]:
         "signed_at": act.signed_at,
         "rejection_reason": act.rejection_reason or "",
         "has_pdf": bool(act.pdf_file),
-        "has_scan": bool(act.signed_file),
         "actions": act_flow.allowed_actions(act, user),
         "history": _history_for(journal, "act", act.number),
     }

@@ -69,6 +69,9 @@ describe("Проекты: список", () => {
       expect(within(screen.getByRole("table")).getAllByRole("row")).toHaveLength(2);
     });
     expect(screen.getByRole("table")).toHaveTextContent("ПР-2026-072");
+    // акт принят клиентом в кабинете без файла: слово «скан» только при файле (СЦ-8)
+    expect(screen.getByRole("table")).toHaveTextContent(/АктПринят клиентом/);
+    expect(screen.getByRole("table")).not.toHaveTextContent(/АктПодписан \(скан\)/);
 
     renderAt("/eds/projects?q=ПР-2026-097");
     await waitFor(() => {

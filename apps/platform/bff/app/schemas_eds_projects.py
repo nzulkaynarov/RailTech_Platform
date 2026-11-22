@@ -83,6 +83,7 @@ class ProjectActRef(BaseModel):
     id: int
     number: str
     status: ActWord
+    has_scan: bool
 
 
 class ProjectDocuments(BaseModel):
@@ -170,7 +171,6 @@ class ProjectAct(ProjectActRef):
     signed_at: dt.datetime | None
     rejection_reason: str | None
     has_pdf: bool
-    has_scan: bool
     actions: list[ActActionCode]
     history: list[ProjectJournalEntry]
 

@@ -144,7 +144,7 @@
       {
         "title": "Completed",
         "who": "system",
-        "text": "The act is signed, all invoices are paid — the request is closed."
+        "text": "The act is accepted by the client, all invoices are paid — the request is closed."
       }
     ],
     "lost": "On steps 2–5 a request can be closed with a reason — “Lost”; it can be restored at the “Costing” step."
