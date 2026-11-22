@@ -124,5 +124,7 @@ async def get_docflow_settings(authed: SettingsReader) -> DocflowSettings:
     "/docflow-settings", response_model=DocflowSettings, operation_id="updateDocflowSettings"
 )
 async def update_docflow_settings(authed: Admin, body: DocflowSettingsPatch) -> DocflowSettings:
-    raw = await _call(authed, "PATCH", "/docflow-settings", 200, json=body.model_dump())
+    raw = await _call(
+        authed, "PATCH", "/docflow-settings", 200, json=body.model_dump(exclude_none=True)
+    )
     return _parse(DocflowSettings, raw)
