@@ -382,6 +382,8 @@ tags:
   - name: setup
     description: Первый запуск — администратор (без сессии), чек-лист из пяти шагов и своя компания (раздел `admin`)
   - name: me
+  - name: calendar
+    description: Личный календарь сроков по секретной ссылке (подписка в Яндекс Календаре и др.)
   - name: system
   - name: dashboard
   - name: notifications
@@ -1843,6 +1845,73 @@ paths:
           $ref: '#/components/responses/CsrfFailed'
         '503':
           $ref: '#/components/responses/BackendUnavailable'
+
+  /me/calendar-link:
+    get:
+      tags: [calendar]
+      operationId: getCalendarLink
+      summary: Ссылка на личный календарь — действует ли
+      description: >-
+        Календарь сроков: ссылка-подписка для Яндекс Календаря, Google или Outlook. Здесь только состояние; сам секрет
+        виден один раз при выдаче. Ссылка действует, пока сотрудник работает в Платформе (снимок сроков живёт 30 дней
+        от последнего входа); отключённый сотрудник теряет ссылку.
+      responses:
+        '200':
+          description: Состояние
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalendarLink'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+    post:
+      tags: [calendar]
+      operationId: issueCalendarLink
+      summary: Выдать ссылку на календарь (или сменить прежнюю)
+      description: >-
+        Новая секретная ссылка (токен — 32 случайных байта; CRM хранит только хеш). Прежняя ссылка перестаёт действовать.
+        Путь с токеном виден один раз.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      responses:
+        '200':
+          description: Новая ссылка
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalendarLinkIssued'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/CsrfFailed'
+
+  /calendar/{name}:
+    get:
+      tags: [calendar]
+      operationId: getCalendarFeed
+      summary: Лента сроков сотрудника (iCal) по секретной ссылке
+      description: >-
+        Без сессии: доступ по токену из `name` (`<токен>.ics`). Состав — те же строки с датой, что «Календарь» Платформы
+        (`GET /queue`): название, срок и адрес объекта; сумм, цен и условий сделок нет. Лента — снимок, который BFF
+        обновляет, пока сотрудник работает в Платформе. Неизвестный, заменённый или просроченный токен — 404 (причина не
+        различается); частые промахи с одного адреса — 429.
+      security: []
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema: {type: string}
+          description: '`<токен>.ics`'
+      responses:
+        '200':
+          description: 'iCalendar; Cache-Control private, max-age=300'
+          content:
+            text/calendar:
+              schema: {type: string}
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
 
   /me/deputy-candidates:
     get:
@@ -17400,6 +17469,21 @@ components:
         challenge: {type: string, minLength: 1, maxLength: 2048}
         code: {type: string, minLength: 6, maxLength: 16, description: '6 цифр из приложения или резервный код `XXXX-XXXX`'}
         remember_device: {type: boolean, default: false, description: 'Не спрашивать код на этом устройстве 30 дней'}
+    CalendarLink:
+      type: object
+      additionalProperties: false
+      required: [active]
+      properties:
+        active: {type: boolean, description: 'Ссылка выдана и действует'}
+        issued_at: {type: [string, 'null'], format: date-time}
+    CalendarLinkIssued:
+      type: object
+      additionalProperties: false
+      required: [path, url, issued_at]
+      properties:
+        path: {type: string, description: 'Путь с секретным токеном; виден один раз'}
+        url: {type: string, description: 'Полный адрес для подписки в календаре'}
+        issued_at: {type: string, format: date-time}
     SecondFactorStatus:
       type: object
       additionalProperties: false
