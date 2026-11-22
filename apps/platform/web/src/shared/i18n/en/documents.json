@@ -355,6 +355,7 @@
       "deal": "Project not found — pick another or remove the link.",
       "replyTo": "No incoming letter with this number. Check the number.",
       "recipientEmail": "Check the addressee email, for example office@example.uz.",
+      "signer": "Choose a signer from the list: the selected one has no signing right.",
       "uploading": "Wait for the files to upload."
     },
     "toast": {
@@ -433,6 +434,8 @@
     "signatory": {
       "name": "Signatory",
       "position": "Signatory position",
+      "positionHint": "From the directory; type your own for acting roles",
+      "none": "No employees with signing right",
       "hint": "Empty — the letterhead signatory: {{name}}, {{position}}.",
       "hintNone": ""
     },

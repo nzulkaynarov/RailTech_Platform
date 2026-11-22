@@ -20,6 +20,9 @@ describe("ошибки документов", () => {
     expect(serverFields(error(422, "VALIDATION_FAILED", { fields: ["amount.amount"] }))).toEqual([
       "amount",
     ]);
+    expect(
+      serverFields(error(422, "VALIDATION_FAILED", { fields: ["body.letter.signer_crm_user_id"] })),
+    ).toEqual(["signer_crm_user_id"]);
     expect(serverFields(new Error("x"))).toEqual([]);
     expect(serverFields(error(500, "X"))).toEqual([]);
   });

@@ -28,6 +28,11 @@ export interface EdsLetter {
   signatory_name: string | null;
   /** @nullable */
   signatory_position: string | null;
+  /**
+   * ЕД-6: выбранный подписант; `null` — подписанта подбирает реестр полномочий
+   * @nullable
+   */
+  signer_crm_user_id?: number | null;
   /** Последний PDF; `null` — не строился */
   pdf: EdsDocumentPdf | null;
   /** Журнал отправки адресату */

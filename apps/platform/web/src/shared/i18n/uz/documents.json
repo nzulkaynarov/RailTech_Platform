@@ -355,6 +355,7 @@
       "deal": "Loyiha topilmadi — boshqasini tanlang yoki bog‘lashni olib tashlang.",
       "replyTo": "Bunday raqamli kiruvçi xat yöq. Kiruvçi xat raqamini tekşiring.",
       "recipientEmail": "Manzil e-pochtasini tekshiring, masalan office@example.uz.",
+      "signer": "Imzolovçini röyxatdan tanlang: tanlanganda imzo huquqi yöq.",
       "uploading": "Fayllar yuklanişini kuting."
     },
     "toast": {
@@ -433,6 +434,8 @@
     "signatory": {
       "name": "Imzolovchi",
       "position": "Imzolovchining lavozimi",
+      "positionHint": "Maʼlumotnomadan; v. b. uchun özingiznikini yozing",
+      "none": "Imzo huquqi bor xodim yöq",
       "hint": "Bo‘sh — blankdagi imzolovchi: {{name}}, {{position}}.",
       "hintNone": ""
     },

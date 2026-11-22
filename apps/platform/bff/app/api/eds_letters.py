@@ -590,7 +590,10 @@ StaffReader = Annotated[
 @router.get("/staff", response_model=EdsStaffList, operation_id="listEdsStaff")
 async def list_eds_staff(authed: StaffReader) -> EdsStaffList:
     """Активные сотрудники EDS: адресат, исполнитель, «ознакомить» (P8b)."""
-    raw = await _letters(authed).employees()
+    return _staff_list(await _letters(authed).employees())
+
+
+def _staff_list(raw: Any) -> EdsStaffList:
     items = raw.get("items") if isinstance(raw, dict) else None
     if not isinstance(items, list):
         raise backend_unavailable("eds", "bad_employees")
@@ -609,6 +612,13 @@ async def list_eds_staff(authed: StaffReader) -> EdsStaffList:
         )
     found.sort(key=lambda m: (m.name.casefold(), m.id))
     return EdsStaffList(items=found)
+
+
+@router.get("/signers", response_model=EdsStaffList, operation_id="listEdsSigners")
+async def list_eds_signers(authed: StaffReader) -> EdsStaffList:
+    """Кого выбрать подписантом письма (ЕД-6): держатели действующего полномочия на письма."""
+    raw = await _letters(authed).signers()
+    return _staff_list(raw)
 
 
 # --- кандидаты в исполнители ---------------------------------------------------------------------

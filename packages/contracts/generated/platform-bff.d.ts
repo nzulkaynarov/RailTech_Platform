@@ -861,7 +861,7 @@ export interface paths {
     };
     /**
      * Кого можно назначить заместителем
-     * @description Активные коллеги с рабочей ролью CRM (менеджер или администратор), кроме самого сотрудника.
+     * @description Все активные сотрудники, кроме самого (ЕД-6 — не только менеджеры CRM), по имени; поиск — на экране.
      */
     get: operations["listDeputyCandidates"];
     put?: never;
@@ -5761,6 +5761,26 @@ export interface paths {
      * @description EDS `GET /employees` (права `letters.register` или `letters.resolve`): активные сотрудники по имени. Раздел `eds.inbox.register` или `eds.inbox` — полный, или `admin` — полный (общие шаблоны резолюций, EDS-REG), или `eds.signing.manage` — полный (выбрать сотрудника для полномочия подписи, SIGN-2), или `eds.memo.create` — полный (согласующие и получатели копии документа, пункт 1.6). Исполнитель резолюции делопроизводства — любой активный сотрудник, без проверки зоны (SPEC-v3 §3.2a п. 2).
      */
     get: operations["listEdsStaff"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/eds/signers": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * EDS · Кого выбрать подписантом исходящего письма (ЕД-6)
+     * @description EDS `GET /employees/signers`: активные держатели действующего полномочия на исходящие письма (реестр «Права подписи»; отсутствующие — тоже, задача перейдёт заместителю), по имени; должность — из справочника сотрудников. Права те же, что у `GET /eds/staff`.
+     */
+    get: operations["listEdsSigners"];
     put?: never;
     post?: never;
     delete?: never;
@@ -11017,7 +11037,10 @@ export interface components {
       recipient_email?: string | null;
       /** @description `null` — подписант бланка (директор) */
       signatory_name?: string | null;
+      /** @description Должность в письме; без неё — из справочника сотрудников (правится для «и. о.», справочник не меняется) */
       signatory_position?: string | null;
+      /** @description ЕД-6: выбранный подписант (`GET /eds/signers`); имя берёт EDS из справочника, задача «Подписать» уходит ему */
+      signer_crm_user_id?: number | null;
     };
     EdsDocumentPdf: {
       /**
@@ -11068,6 +11091,8 @@ export interface components {
       recipient_email: string | null;
       signatory_name: string | null;
       signatory_position: string | null;
+      /** @description ЕД-6: выбранный подписант; `null` — подписанта подбирает реестр полномочий */
+      signer_crm_user_id?: number | null;
       /** @description Последний PDF; `null` — не строился */
       pdf: components["schemas"]["EdsDocumentPdf"] | null;
       /** @description Журнал отправки адресату */
@@ -28125,6 +28150,29 @@ export interface operations {
     requestBody?: never;
     responses: {
       /** @description Сотрудники */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["EdsStaffList"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  listEdsSigners: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Подписанты */
       200: {
         headers: {
           [name: string]: unknown;

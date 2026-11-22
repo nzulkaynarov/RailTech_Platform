@@ -75,6 +75,8 @@ export interface FormValues {
   recipientEmail: string;
   signatoryName: string;
   signatoryPosition: string;
+  /** ЕД-6: выбранный подписант (`crm_user_id`) — держатель права подписи; пусто — подписанта подбирает реестр */
+  signerId: string;
   /** Пункт 1.6 плана: согласующие перед шагами шаблона (по порядку) и получатели копии — `crm_user_id` */
   approvers: string[];
   watchers: string[];
@@ -98,6 +100,7 @@ export const EMPTY_FORM: FormValues = {
   recipientEmail: "",
   signatoryName: "",
   signatoryPosition: "",
+  signerId: "",
   approvers: [],
   watchers: [],
 };
@@ -234,6 +237,8 @@ export const FIELD_ORDER: readonly FieldKey[] = [
 ];
 
 export function fieldElementId(field: FieldKey): string {
+  // ЕД-6: поле подписанта на экране — «Подписант» (`doc-signatory-name`)
+  if (field === "signer_crm_user_id") return "doc-signatory-name";
   return `doc-${field.replaceAll("_", "-")}`;
 }
 
@@ -251,6 +256,7 @@ interface Payload {
     recipient_email: string | null;
     signatory_name: string | null;
     signatory_position: string | null;
+    signer_crm_user_id: number | null;
   };
   submit: boolean;
   send?: boolean;
@@ -303,6 +309,7 @@ export function toPayload(
             recipient_email: orNull(values.recipientEmail),
             signatory_name: orNull(values.signatoryName),
             signatory_position: orNull(values.signatoryPosition),
+            signer_crm_user_id: values.signerId ? Number(values.signerId) : null,
           },
           ...(submit && send ? { send: true } : {}),
         }
@@ -377,6 +384,7 @@ export function fromDocument(doc: EdsDocument): FormValues {
     recipientEmail: doc.letter?.recipient_email ?? "",
     signatoryName: doc.letter?.signatory_name ?? "",
     signatoryPosition: doc.letter?.signatory_position ?? "",
+    signerId: doc.letter?.signer_crm_user_id ? String(doc.letter.signer_crm_user_id) : "",
   };
 }
 
