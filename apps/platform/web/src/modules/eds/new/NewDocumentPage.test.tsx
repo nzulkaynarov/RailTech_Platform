@@ -188,6 +188,23 @@ describe("EDS · Создать документ: форма", () => {
     expect(screen.getByRole("region", { name: "PDF на бланке" })).toBeVisible();
   });
 
+  it("ЕД-6: подписант письма — выбор из держателей права подписи, должность из справочника правится для «и. о.»", async () => {
+    await openForm("manager@demo.example", "?type=letter");
+    step(/Согласование и подпись/);
+
+    // текстом имя подписанта не вписывается: поле — выбор
+    const signer = await screen.findByRole("combobox", { name: "Подписант" });
+    expect(screen.queryByRole("textbox", { name: "Подписант" })).toBeNull();
+    fireEvent.mouseDown(signer);
+    fireEvent.click(await screen.findByTitle("Демо Директоров"));
+
+    const position = screen.getByLabelText("Должность подписанта");
+    expect(position).toHaveAttribute("placeholder", "Директор");
+    expect(position).toHaveValue("");
+    fireEvent.change(position, { target: { value: "И. о. директора" } });
+    expect(position).toHaveValue("И. о. директора");
+  });
+
   it("СЦ-1: почта документооборота не подключена — форма говорит это до отправки, кнопка не обещает отправку", async () => {
     server.use(
       http.get("*/eds/letterhead", () =>

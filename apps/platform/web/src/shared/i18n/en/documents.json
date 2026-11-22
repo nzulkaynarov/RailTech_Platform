@@ -433,6 +433,8 @@
     "signatory": {
       "name": "Signatory",
       "position": "Signatory position",
+      "positionHint": "From the directory; type your own for acting roles",
+      "none": "No employees with signing right",
       "hint": "Empty — the letterhead signatory: {{name}}, {{position}}.",
       "hintNone": ""
     },

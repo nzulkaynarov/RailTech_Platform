@@ -433,6 +433,8 @@
     "signatory": {
       "name": "Imzolovchi",
       "position": "Imzolovchining lavozimi",
+      "positionHint": "Ma’lumotnomadan; v. b. uchun o‘zingiznikini yozing",
+      "none": "Imzo huquqi bor xodim yo‘q",
       "hint": "Bo‘sh — blankdagi imzolovchi: {{name}}, {{position}}.",
       "hintNone": ""
     },

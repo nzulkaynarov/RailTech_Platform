@@ -70,6 +70,8 @@ export interface MockLetter {
   recipient_email: string | null;
   signatory_name: string | null;
   signatory_position: string | null;
+  /** ЕД-6: выбранный подписант */
+  signer_crm_user_id?: number | null;
   pdf: EdsDocumentPdf | null;
   /** Сколько раз спросили состояние PDF: «готов» — со второго опроса (рендер в фоне) */
   pdfPolls: number;

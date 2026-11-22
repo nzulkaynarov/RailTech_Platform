@@ -1918,7 +1918,7 @@ paths:
       tags: [me]
       operationId: listDeputyCandidates
       summary: Кого можно назначить заместителем
-      description: Активные коллеги с рабочей ролью CRM (менеджер или администратор), кроме самого сотрудника.
+      description: "Все активные сотрудники, кроме самого (ЕД-6 — не только менеджеры CRM), по имени; поиск — на экране."
       responses:
         '200':
           description: Коллеги
@@ -10768,6 +10768,29 @@ paths:
       responses:
         '200':
           description: Сотрудники
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EdsStaffList'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /eds/signers:
+    get:
+      tags: [letters]
+      operationId: listEdsSigners
+      summary: 'EDS · Кого выбрать подписантом исходящего письма (ЕД-6)'
+      description: >-
+        EDS `GET /employees/signers`: активные держатели действующего полномочия на исходящие письма (реестр «Права подписи»;
+        отсутствующие — тоже, задача перейдёт заместителю), по имени; должность — из справочника сотрудников. Права те же,
+        что у `GET /eds/staff`.
+      responses:
+        '200':
+          description: Подписанты
           content:
             application/json:
               schema:
@@ -19767,7 +19790,8 @@ components:
         recipient_attention: {type: [string, 'null'], maxLength: 300, description: '«Кому» — должность и ФИО получателя'}
         recipient_email: {type: [string, 'null'], format: email, maxLength: 254, description: 'Почта адресата — «Отправить адресату»'}
         signatory_name: {type: [string, 'null'], maxLength: 255, description: '`null` — подписант бланка (директор)'}
-        signatory_position: {type: [string, 'null'], maxLength: 255}
+        signatory_position: {type: [string, 'null'], maxLength: 255, description: 'Должность в письме; без неё — из справочника сотрудников (правится для «и. о.», справочник не меняется)'}
+        signer_crm_user_id: {type: [integer, 'null'], description: 'ЕД-6: выбранный подписант (`GET /eds/signers`); имя берёт EDS из справочника, задача «Подписать» уходит ему'}
     EdsDocumentPdf:
       type: object
       additionalProperties: false
@@ -19808,6 +19832,7 @@ components:
         recipient_email: {type: [string, 'null']}
         signatory_name: {type: [string, 'null']}
         signatory_position: {type: [string, 'null']}
+        signer_crm_user_id: {type: [integer, 'null'], description: 'ЕД-6: выбранный подписант; `null` — подписанта подбирает реестр полномочий'}
         pdf: {oneOf: [{$ref: '#/components/schemas/EdsDocumentPdf'}, {type: 'null'}], description: 'Последний PDF; `null` — не строился'}
         mailings:
           type: array

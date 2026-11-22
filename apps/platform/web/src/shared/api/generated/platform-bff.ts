@@ -6198,7 +6198,7 @@ export const getListDeputyCandidatesUrl = () => {
 };
 
 /**
- * Активные коллеги с рабочей ролью CRM (менеджер или администратор), кроме самого сотрудника.
+ * Все активные сотрудники, кроме самого (ЕД-6 — не только менеджеры CRM), по имени; поиск — на экране.
  * @summary Кого можно назначить заместителем
  */
 export const listDeputyCandidates = async (
@@ -41014,6 +41014,122 @@ export function useListEdsStaff<
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
   const queryOptions = getListEdsStaffQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getListEdsSignersUrl = () => {
+  return `/api/v1/eds/signers`;
+};
+
+/**
+ * EDS `GET /employees/signers`: активные держатели действующего полномочия на исходящие письма (реестр «Права подписи»; отсутствующие — тоже, задача перейдёт заместителю), по имени; должность — из справочника сотрудников. Права те же, что у `GET /eds/staff`.
+ * @summary EDS · Кого выбрать подписантом исходящего письма (ЕД-6)
+ */
+export const listEdsSigners = async (
+  options?: Parameters<typeof http>[1],
+): Promise<EdsStaffList> => {
+  return http<EdsStaffList>(getListEdsSignersUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListEdsSignersQueryKey = () => {
+  return [`/api/v1/eds/signers`] as const;
+};
+
+export const getListEdsSignersQueryOptions = <
+  TData = Awaited<ReturnType<typeof listEdsSigners>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listEdsSigners>>, TError, TData>>;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListEdsSignersQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listEdsSigners>>> = ({ signal }) =>
+    listEdsSigners({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listEdsSigners>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListEdsSignersQueryResult = NonNullable<Awaited<ReturnType<typeof listEdsSigners>>>;
+export type ListEdsSignersQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse
+>;
+
+export function useListEdsSigners<
+  TData = Awaited<ReturnType<typeof listEdsSigners>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listEdsSigners>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listEdsSigners>>,
+          TError,
+          Awaited<ReturnType<typeof listEdsSigners>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListEdsSigners<
+  TData = Awaited<ReturnType<typeof listEdsSigners>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listEdsSigners>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listEdsSigners>>,
+          TError,
+          Awaited<ReturnType<typeof listEdsSigners>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListEdsSigners<
+  TData = Awaited<ReturnType<typeof listEdsSigners>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listEdsSigners>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary EDS · Кого выбрать подписантом исходящего письма (ЕД-6)
+ */
+
+export function useListEdsSigners<
+  TData = Awaited<ReturnType<typeof listEdsSigners>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listEdsSigners>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListEdsSignersQueryOptions(options);
 
   const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>;

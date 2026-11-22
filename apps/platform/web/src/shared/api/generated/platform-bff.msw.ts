@@ -2300,6 +2300,7 @@ export const getCreateEdsDocumentResponseEdsLetterMock = (
       faker.string.alpha({ length: { min: 10, max: 20 } }),
       null,
     ]),
+    signer_crm_user_id: faker.helpers.arrayElement([faker.number.int(), null]),
     pdf: faker.helpers.arrayElement([
       { ...getCreateEdsDocumentResponseEdsDocumentPdfMock() },
       null,
@@ -2615,6 +2616,7 @@ export const getGetEdsDocumentResponseEdsLetterMock = (
       faker.string.alpha({ length: { min: 10, max: 20 } }),
       null,
     ]),
+    signer_crm_user_id: faker.helpers.arrayElement([faker.number.int(), null]),
     pdf: faker.helpers.arrayElement([{ ...getGetEdsDocumentResponseEdsDocumentPdfMock() }, null]),
     mailings: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
       () => ({
@@ -2918,6 +2920,7 @@ export const getUpdateEdsDocumentResponseEdsLetterMock = (
       faker.string.alpha({ length: { min: 10, max: 20 } }),
       null,
     ]),
+    signer_crm_user_id: faker.helpers.arrayElement([faker.number.int(), null]),
     pdf: faker.helpers.arrayElement([
       { ...getUpdateEdsDocumentResponseEdsDocumentPdfMock() },
       null,
@@ -6951,6 +6954,7 @@ export const getRequestEdsDocumentRegistrationResponseEdsLetterMock = (
       faker.string.alpha({ length: { min: 10, max: 20 } }),
       null,
     ]),
+    signer_crm_user_id: faker.helpers.arrayElement([faker.number.int(), null]),
     pdf: faker.helpers.arrayElement([
       { ...getRequestEdsDocumentRegistrationResponseEdsDocumentPdfMock() },
       null,
@@ -7287,6 +7291,7 @@ export const getWaiveEdsDocumentMailResponseEdsLetterMock = (
       faker.string.alpha({ length: { min: 10, max: 20 } }),
       null,
     ]),
+    signer_crm_user_id: faker.helpers.arrayElement([faker.number.int(), null]),
     pdf: faker.helpers.arrayElement([
       { ...getWaiveEdsDocumentMailResponseEdsDocumentPdfMock() },
       null,
@@ -7614,6 +7619,7 @@ export const getSendEdsDocumentResponseEdsLetterMock = (
       faker.string.alpha({ length: { min: 10, max: 20 } }),
       null,
     ]),
+    signer_crm_user_id: faker.helpers.arrayElement([faker.number.int(), null]),
     pdf: faker.helpers.arrayElement([{ ...getSendEdsDocumentResponseEdsDocumentPdfMock() }, null]),
     mailings: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
       () => ({
@@ -7926,6 +7932,7 @@ export const getSignEdsDocumentResponseEdsLetterMock = (
       faker.string.alpha({ length: { min: 10, max: 20 } }),
       null,
     ]),
+    signer_crm_user_id: faker.helpers.arrayElement([faker.number.int(), null]),
     pdf: faker.helpers.arrayElement([{ ...getSignEdsDocumentResponseEdsDocumentPdfMock() }, null]),
     mailings: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
       () => ({
@@ -22718,6 +22725,20 @@ export const getUpdateDocflowSettingsResponseMock = (
 });
 
 export const getListEdsStaffResponseMock = (
+  overrideResponse: Partial<Extract<EdsStaffList, object>> = {},
+): EdsStaffList => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    position: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  })),
+  ...overrideResponse,
+});
+
+export const getListEdsSignersResponseMock = (
   overrideResponse: Partial<Extract<EdsStaffList, object>> = {},
 ): EdsStaffList => ({
   items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
@@ -43629,6 +43650,30 @@ export const getListEdsStaffMockHandler = (
   );
 };
 
+export const getListEdsSignersMockHandler = (
+  overrideResponse?:
+    | EdsStaffList
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<EdsStaffList> | EdsStaffList),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/eds/signers",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListEdsSignersResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
 export const getListSigningAuthoritiesMockHandler = (
   overrideResponse?:
     | SigningAuthorityList
@@ -47475,6 +47520,7 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getGetDocflowSettingsMockHandler(),
   getUpdateDocflowSettingsMockHandler(),
   getListEdsStaffMockHandler(),
+  getListEdsSignersMockHandler(),
   getListSigningAuthoritiesMockHandler(),
   getCreateSigningAuthorityMockHandler(),
   getGetSigningAuthorityMockHandler(),
