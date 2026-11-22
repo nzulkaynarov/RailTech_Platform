@@ -13,11 +13,11 @@ import {
   useCopyCrmMessageAttachmentToRequest,
   useCreateCrmRequest,
   useGetCrmClient,
-  useListCrmClients,
 } from "../../../shared/api/generated/platform-bff";
 import { useFormat } from "../../../shared/lib/useFormat";
 import { ErrorNote, FormField } from "../../../shared/ui/FormParts";
 import { LinkButton } from "../../../shared/ui/LinkButton";
+import { CompanyPicker, PersonPicker } from "../../../shared/ui/pickers";
 import {
   type RemainingItem,
   StepRemaining,
@@ -60,7 +60,6 @@ function initialState(lead: LeadCard | null, clientId: number | null): RequestFo
     state.clientName = lead?.client?.name ?? null;
   }
   if (!lead) return state;
-  state.companyName = lead.facts.company ?? lead.contacts.company ?? "";
   state.fullName = lead.name;
   state.phone = lead.contacts.phone ?? "";
   state.email = lead.contacts.email ?? "";
@@ -83,42 +82,11 @@ function contactLabel(contact: ClientContactView, t: (key: string) => string): s
   return `${contact.name}${contact.position ? `, ${contact.position}` : ""} — ${channels || t("clients:card.noChannels")}`;
 }
 
-/** Поиск клиента по названию компании: подсказка «Выбрать: …», чтобы лид не завёл дубль компании. */
-function ClientMatches({
-  name,
-  onPick,
-}: {
-  name: string;
-  onPick: (id: number, name: string) => void;
-}) {
-  const { t } = useTranslation("request");
-  const q = name.trim();
-  const list = useListCrmClients({ q }, { query: { enabled: q.length >= 3 } });
-  const items = q.length >= 3 ? (list.data?.items ?? []).slice(0, 3) : [];
-  if (items.length === 0) return null;
-  return (
-    <div className="pf-fp-row" role="group" aria-label={t("client.searchHint")}>
-      {items.map((client) => (
-        <Button
-          key={client.id}
-          size="small"
-          onClick={() => {
-            onPick(client.id, client.name);
-          }}
-        >
-          {t("client.pick", { name: client.inn ? `${client.name} (${client.inn})` : client.name })}
-        </Button>
-      ))}
-    </div>
-  );
-}
-
 type SectionKey = "client" | "contact" | "request" | "review";
 
 /** Поле с ошибкой → его секция (форма секциями, platform-frontend.md §4.1a) */
 const SECTION_OF: Record<keyof RequestErrors, SectionKey> = {
   company: "client",
-  inn: "client",
   contact: "contact",
   channel: "contact",
   summary: "request",
@@ -129,7 +97,6 @@ const SECTION_OF: Record<keyof RequestErrors, SectionKey> = {
 
 const FIELD_ORDER: readonly (keyof RequestErrors)[] = [
   "company",
-  "inn",
   "contact",
   "channel",
   "consent",
@@ -219,6 +186,10 @@ export function RequestForm({
   const create = useCreateCrmRequest();
   const refresh = useRefreshCrm();
   const fixedClient = clientId !== null || lead?.client != null;
+  // Название из переписки лида: стоит в поле выбора серым и открывает поиск по нему
+  const suggestedCompany = lead?.facts.company ?? lead?.contacts.company ?? "";
+  // Человек из карточки компании, выбранный для нового контакта клиента
+  const [personId, setPersonId] = useState("");
 
   const client = useGetCrmClient(state.clientId ?? 0, {
     query: { enabled: state.clientId !== null },
@@ -303,7 +274,7 @@ export function RequestForm({
         company:
           (state.clientId !== null
             ? (state.clientName ?? client.data?.name)
-            : state.companyName.trim()) || null,
+            : state.company?.name) || null,
         phone: (caller ? caller.phone : state.phone.trim()) || null,
         email: (caller ? caller.email : state.email.trim()) || null,
       },
@@ -369,7 +340,7 @@ export function RequestForm({
   const clientSummary =
     state.clientId !== null
       ? (state.clientName ?? client.data?.name ?? "")
-      : [state.companyName.trim(), state.inn.trim()].filter(Boolean).join(" · ");
+      : [state.company?.name, state.company?.inn].filter(Boolean).join(" · ");
   const picked = contacts.find((c) => c.id === form.contactId);
   const contactSummary = picked
     ? contactLabel(picked, t)
@@ -501,68 +472,37 @@ export function RequestForm({
             showRequirements: left.has("client"),
             content: (
               <div className="pf-fp-stack">
-                {state.clientId !== null ? (
+                {fixedClient ? (
                   <div className="pf-fp-row" style={{ alignItems: "center" }}>
                     <span>
                       {t("request:client.picked", {
                         name: state.clientName ?? client.data?.name ?? `#${String(state.clientId)}`,
                       })}
                     </span>
-                    {fixedClient ? null : (
-                      <Button
-                        type="link"
-                        size="small"
-                        style={{ padding: 0 }}
-                        onClick={() => {
-                          setContactTouched(false);
-                          set({ clientId: null, clientName: null, contactId: null });
-                        }}
-                      >
-                        {t("request:client.change")}
-                      </Button>
-                    )}
                   </div>
                 ) : (
-                  <>
-                    <FormField id={id("company")} label={t("request:client.name")}>
-                      <Input
-                        id={id("company")}
-                        value={state.companyName}
-                        maxLength={255}
-                        aria-invalid={errors.company ? true : undefined}
-                        aria-describedby={describedBy("company")}
-                        onChange={(event) => {
-                          set({ companyName: event.target.value });
-                        }}
-                      />
-                      <FieldError id={`${id("company")}-error`} text={err("company")} />
-                    </FormField>
-                    <ClientMatches
-                      name={state.companyName}
-                      onPick={(picked, name) => {
+                  <FormField id={id("company")} label={t("request:client.name")}>
+                    {/* ЕД-6: компания — любой контрагент; заявка делает её клиентом, если он ещё не клиент */}
+                    <CompanyPicker
+                      id={id("company")}
+                      role="client"
+                      value={state.company}
+                      invalid={Boolean(errors.company)}
+                      describedBy={describedBy("company")}
+                      suggest={suggestedCompany}
+                      onChange={(company) => {
                         setContactTouched(false);
-                        set({ clientId: picked, clientName: name, contactId: null });
+                        setPersonId("");
+                        set({
+                          company,
+                          clientId: company?.crmClientId ?? null,
+                          clientName: company?.crmClientId != null ? company.name : null,
+                          contactId: null,
+                        });
                       }}
                     />
-                    <FormField
-                      id={id("inn")}
-                      label={t("request:client.inn")}
-                      hint={t("request:client.innHint")}
-                    >
-                      <Input
-                        id={id("inn")}
-                        value={state.inn}
-                        inputMode="numeric"
-                        maxLength={14}
-                        aria-invalid={errors.inn ? true : undefined}
-                        aria-describedby={describedBy("inn", true)}
-                        onChange={(event) => {
-                          set({ inn: event.target.value });
-                        }}
-                      />
-                      <FieldError id={`${id("inn")}-error`} text={err("inn")} />
-                    </FormField>
-                  </>
+                    <FieldError id={`${id("company")}-error`} text={err("company")} />
+                  </FormField>
                 )}
               </div>
             ),
@@ -597,6 +537,26 @@ export function RequestForm({
                 ) : null}
                 {form.contactId === null ? (
                   <>
+                    {state.company && state.clientId === null ? (
+                      <FormField id={id("person")} label={t("request:contact.person")}>
+                        <PersonPicker
+                          id={id("person")}
+                          companyId={state.company.id}
+                          value={personId}
+                          onChange={(person) => {
+                            setPersonId(person?.id ?? "");
+                            // выбор заполняет зависимое: имя, должность и почту — их можно поправить ниже
+                            if (person) {
+                              set({
+                                fullName: person.name,
+                                position: person.position ?? "",
+                                email: person.email ?? state.email,
+                              });
+                            }
+                          }}
+                        />
+                      </FormField>
+                    ) : null}
                     <FormField id={id("contact")} label={t("request:contact.name")}>
                       <Input
                         id={id("contact")}

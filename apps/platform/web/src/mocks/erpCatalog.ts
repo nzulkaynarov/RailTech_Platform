@@ -57,6 +57,7 @@ import {
   readErpCatalog,
   validityOf,
 } from "./fixtures/erpCatalog";
+import { pickedCompanyById } from "./counterpartyPick";
 import { readCompanyMock, updateCompanyMock } from "./fixtures/company";
 import { partnerPriceVisibility } from "./erpSupplierAccess";
 import { buildMe, readSession } from "./mockSession";
@@ -529,6 +530,35 @@ const IMPORT_ROWS = [
   },
 ] as const;
 
+/**
+ * Партнёр загрузки прайса: из справочника или компания поля выбора (ЕД-6), которой форма поставила роль «поставщик» —
+ * тогда она входит в справочник партнёров сразу, как в ERP.
+ */
+function supplierOf(id: string | null | undefined): MockSupplier | undefined {
+  const state = readErpCatalog();
+  const known = state.suppliers.find((s) => s.id === id);
+  if (known || !id) return known;
+  const company = pickedCompanyById(id);
+  if (!company?.roles.supplier) return undefined;
+  const created: MockSupplier = {
+    id,
+    name: company.name,
+    tin: company.inn ?? "",
+    registration_number: "",
+    country: company.country ?? "",
+    country_id: null,
+    currency: null,
+    is_manufacturer: false,
+    contact_person: "",
+    phone: "",
+    email: company.email ?? "",
+    website: "",
+    legal_address: "",
+  };
+  state.suppliers.push(created);
+  return created;
+}
+
 function runImport(
   supplier: MockSupplier,
   write: boolean,
@@ -666,7 +696,7 @@ export const erpCatalogHandlers = [
     if (isResponse(who)) return who;
     if (!who.prices) return erpForbidden("SUPPLIER_PRICES_REQUIRED");
     const data = await body<Partial<PriceImportApplyIn>>(request);
-    const supplier = readErpCatalog().suppliers.find((s) => s.id === data.supplier_id);
+    const supplier = supplierOf(data.supplier_id);
     if (!supplier || !data.rows_token) return invalid("rows_token", "rows_token_invalid");
     const id = `job-${nextId()}`;
     jobs.set(id, {
@@ -682,7 +712,7 @@ export const erpCatalogHandlers = [
         restricted: "supplier_prices",
       });
     const params = new URL(request.url).searchParams;
-    const supplier = readErpCatalog().suppliers.find((s) => s.id === params.get("supplier_id"));
+    const supplier = supplierOf(params.get("supplier_id"));
     if (!supplier) return invalid("supplier_id", "supplier_not_found");
     const upload = await parseUpload(request);
     if (!upload?.file) return invalid("file", "no_file_provided");

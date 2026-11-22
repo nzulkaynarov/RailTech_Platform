@@ -4,13 +4,8 @@
   "from": "From lead {{lead}}",
   "client": {
     "legend": "Client",
-    "searchHint": "Similar clients — pick one to avoid a duplicate company",
-    "pick": "Pick: {{name}}",
     "picked": "Client: {{name}}",
-    "change": "Another client",
-    "name": "Company name",
-    "inn": "TIN",
-    "innHint": "9–14 digits; can be added later"
+    "name": "Company name"
   },
   "contact": {
     "legend": "Contact",
@@ -21,7 +16,8 @@
     "phone": "Phone",
     "email": "Email",
     "telegram": "Lead's Telegram ({{username}})",
-    "channelsHint": "At least one channel is required: Telegram, phone or email"
+    "channelsHint": "At least one channel is required: Telegram, phone or email",
+    "person": "Person from the company card"
   },
   "summary": {
     "label": "Request summary",
@@ -93,12 +89,11 @@
     "openClient": "Open client card"
   },
   "errors": {
-    "company": "Pick a client or enter the company name",
+    "company": "Pick the company",
     "contact": "Pick a contact or enter a name",
     "channel": "At least one channel is required: Telegram, phone or email",
     "summary": "Describe the request",
     "consent": "A request cannot be created without the client's consent",
-    "inn": "TIN is 9 to 14 digits",
     "handoff_no_consent": "The client has not given data consent — record how it was received",
     "consent_via_bot": "A Telegram lead gives consent in the bot — ask them to agree",
     "contact_channel_required": "The contact has no Telegram, phone or email",

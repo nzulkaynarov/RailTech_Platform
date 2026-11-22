@@ -73,7 +73,7 @@ const ROLE_KEYS = ["client", "supplier", "manufacturer", "partner", "organizatio
  */
 export function CompanyPicker({
   id,
-  value,
+  value = null,
   onChange,
   role,
   allowCreate = true,
@@ -83,9 +83,10 @@ export function CompanyPicker({
   describedBy,
   suggest,
 }: {
-  id: string;
-  value: PickedCompany | null;
-  onChange: (company: PickedCompany | null) => void;
+  /** Поле формы antd (`Form.Item`) подставляет `id`, `value` и `onChange` само */
+  id?: string;
+  value?: PickedCompany | null;
+  onChange?: (company: PickedCompany | null) => void;
   /** Роль, которая нужна форме: компании с ней идут выше; для «Завести» — роль новой компании */
   role?: CounterpartyPickRole;
   allowCreate?: boolean;
@@ -120,7 +121,7 @@ export function CompanyPicker({
         return false;
       }
     }
-    onChange(toPicked(row));
+    onChange?.(toPicked(row));
     return true;
   };
 
@@ -177,7 +178,7 @@ export function CompanyPicker({
         }}
         onSearch={setSearch}
         onClear={() => {
-          onChange(null);
+          onChange?.(null);
         }}
         onSelect={(picked) => {
           if (picked === CREATE) {
@@ -225,7 +226,7 @@ export function CompanyPicker({
           onDone={(company) => {
             setCreating(null);
             setSearch("");
-            onChange(company);
+            onChange?.(company);
           }}
           onCancel={() => {
             setCreating(null);

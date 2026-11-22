@@ -1,11 +1,10 @@
-import { Alert, App, Button, Segmented, Select } from "antd";
+import { Alert, App, Button, Segmented } from "antd";
 import { useEffect, useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useSearchParams } from "react-router";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { useAuth } from "../../../app/auth/useAuth";
-import { useViewport } from "../../../app/shell/useViewport";
 import { canEdit } from "../../../app/access";
 import { downloadFile } from "../../../shared/api/download";
 import type {
@@ -21,18 +20,15 @@ import {
   getListCatalogSuppliersQueryKey,
   useApplyCheckedPriceImport,
   useGetPriceImport,
-  useListCatalogSuppliers,
   useStartPriceImport,
 } from "../../../shared/api/generated/platform-bff";
 import { DateField } from "../../../shared/ui/DateField";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { FileField } from "../../../shared/ui/FileField";
 import { FormField } from "../../../shared/ui/FormParts";
-import { Sheet } from "../../../shared/ui/Sheet";
+import { CompanyPicker, type PickedCompany } from "../../../shared/ui/pickers";
 import { catalogErrorText } from "./errors";
 import { PanelTable } from "./common";
-import { SupplierForm } from "./supplierForms";
-import { useDebounced } from "./useDebounced";
 
 const POLL_MS = 1500;
 const MAX_BYTES = 20 * 1024 * 1024;
@@ -67,35 +63,12 @@ export function PriceImportPanel() {
   const { message } = App.useApp();
   const queryClient = useQueryClient();
   const [, setParams] = useSearchParams();
-  const [search, setSearch] = useState("");
-  const q = useDebounced(search.trim());
-  const suppliers = useListCatalogSuppliers({ ...(q ? { q } : {}), page: 1, page_size: 50 });
   const location = useLocation();
-  const [supplier, setSupplier] = useState<{ id: string; name: string } | null>(
-    (location.state as { supplier?: { id: string; name: string } } | null)?.supplier ?? null,
-  );
-  const { mobile } = useViewport();
-  const [creating, setCreating] = useState(false);
-  // Новый поставщик — формой секциями в боковом окне (§4.1a): окно открывается и закрывается вместе с формой.
-  const openCreate = (open: boolean) => {
-    setCreating(open);
-    // на телефоне форма — лист на весь экран (`Sheet`), боковое окно каркаса не открываем
-    if (mobile) return;
-    setParams(
-      (prev) => {
-        const next = new URLSearchParams(prev);
-        if (open) {
-          next.set("panel", "open");
-          next.set("tab", "card");
-        } else {
-          next.delete("panel");
-          next.delete("tab");
-        }
-        return next;
-      },
-      { replace: true },
-    );
-  };
+  // Поставщик — компания из общего поля выбора (ЕД-6); из карточки партнёра («Загрузить прайс») приходит готовым
+  const [supplier, setSupplier] = useState<PickedCompany | null>(() => {
+    const given = (location.state as { supplier?: { id: string; name: string } } | null)?.supplier;
+    return given ? { id: given.id, name: given.name, inn: null } : null;
+  });
   const [mode, setMode] = useState<PriceImportMode>("xlsx");
   const [files, setFiles] = useState<File[]>([]);
   const [from, setFrom] = useState("");
@@ -177,35 +150,17 @@ export function PriceImportPanel() {
       <div className="pf-cat-form">
         <div className="pf-cat-form-row">
           <FormField id={ids.supplier} label={t("import.supplier")}>
-            <Select
+            <CompanyPicker
               id={ids.supplier}
-              showSearch
-              filterOption={false}
-              placeholder={t("import.supplierPlaceholder")}
-              value={supplier?.id}
-              onSearch={setSearch}
-              onChange={(value: string, option) => {
-                const label = Array.isArray(option) ? "" : (option?.label ?? "");
-                setSupplier({ id: value, name: label });
+              role="supplier"
+              assignRole
+              value={supplier}
+              onChange={(company) => {
+                setSupplier(company);
                 reset();
               }}
-              options={[
-                ...(supplier && !suppliers.data?.items.some((s) => s.id === supplier.id)
-                  ? [{ value: supplier.id, label: supplier.name }]
-                  : []),
-                ...(suppliers.data?.items ?? []).map((s) => ({ value: s.id, label: s.name })),
-              ]}
             />
           </FormField>
-          <div className="pf-cat-import-new">
-            <Button
-              onClick={() => {
-                openCreate(true);
-              }}
-            >
-              {t("import.newSupplier")}
-            </Button>
-          </div>
         </div>
         <FormField id={ids.mode} label={t("import.mode")} hint={t(`import.modeHint.${mode}`)}>
           <Segmented
@@ -323,25 +278,6 @@ export function PriceImportPanel() {
           </h2>
         )}
       </section>
-      {creating ? (
-        <Sheet
-          label={t("supplierForm.addTitle")}
-          onClose={() => {
-            openCreate(false);
-          }}
-        >
-          <SupplierForm
-            onClose={() => {
-              openCreate(false);
-            }}
-            onSaved={(saved) => {
-              openCreate(false);
-              setSupplier({ id: saved.id, name: saved.name });
-              reset();
-            }}
-          />
-        </Sheet>
-      ) : null}
     </div>
   );
 }

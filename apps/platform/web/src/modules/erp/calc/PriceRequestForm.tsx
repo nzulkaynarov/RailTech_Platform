@@ -1,13 +1,14 @@
-import { App, Button, Checkbox, Input, Select } from "antd";
+import { App, Button, Checkbox, Input } from "antd";
 import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { CalcSheet } from "../../../shared/api/generated/model";
 import {
   useCreateCalcPriceRequest,
-  useListStockSuppliers,
+  useListCounterpartyPickerPeople,
 } from "../../../shared/api/generated/platform-bff";
 import { ErrorNote, FormField } from "../../../shared/ui/FormParts";
+import { CompanyPicker, type PickedCompany } from "../../../shared/ui/pickers";
 import { clean, useErrorText, useRefreshStock } from "../stock/api";
 import { calcRef } from "./api";
 import { useFormat } from "../../../shared/lib/useFormat";
@@ -29,13 +30,17 @@ export function PriceRequestForm({ sheet, onClose }: { sheet: CalcSheet; onClose
   const goods = sheet.lines.filter((line) => line.zone === "goods");
   const needy = goods.filter((line) => line.kind === "goods_to_order");
   const [lines, setLines] = useState<string[]>((needy.length ? needy : goods).map((l) => l.id));
-  const [supplier, setSupplier] = useState<string | undefined>();
+  const [supplier, setSupplier] = useState<PickedCompany | null>(null);
   const [note, setNote] = useState("");
   const [email, setEmail] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const suppliers = useListStockSuppliers();
-  const chosen = (suppliers.data?.items ?? []).find((s) => s.id === supplier);
-  const needsEmail = chosen !== undefined && !chosen.email;
+  // Адрес: почта компании, иначе почта человека из её карточки (как отправляет ERP); нет ни той, ни другой — вводят
+  const people = useListCounterpartyPickerPeople(supplier?.id ?? "", {
+    query: { enabled: supplier !== null && !supplier.email, staleTime: 30_000, retry: false },
+  });
+  const contactEmail = (people.data?.items ?? []).find((person) => person.email)?.email ?? null;
+  const needsEmail =
+    supplier !== null && !supplier.email && !people.isFetching && contactEmail === null;
   const create = useCreateCalcPriceRequest({
     mutation: {
       onSuccess: (request) => {
@@ -59,18 +64,15 @@ export function PriceRequestForm({ sheet, onClose }: { sheet: CalcSheet; onClose
       </h3>
       <div className="pf-calc-stack">
         <FormField id="pf-pr-supplier" label={t("priceRequest.supplier")}>
-          <Select<string>
+          <CompanyPicker
             id="pf-pr-supplier"
-            showSearch
-            optionFilterProp="label"
-            loading={suppliers.isPending}
+            role="supplier"
+            assignRole
             value={supplier}
-            placeholder={t("priceRequest.supplierPlaceholder")}
-            onChange={setSupplier}
-            options={(suppliers.data?.items ?? []).map((s) => ({
-              value: s.id,
-              label: s.email ? `${s.name} · ${s.email}` : `${s.name} · ${t("create.noEmail")}`,
-            }))}
+            onChange={(company) => {
+              setSupplier(company);
+              setEmail("");
+            }}
           />
         </FormField>
         {needsEmail ? (
@@ -125,7 +127,12 @@ export function PriceRequestForm({ sheet, onClose }: { sheet: CalcSheet; onClose
           <Button
             type="primary"
             loading={create.isPending}
-            disabled={!supplier || lines.length === 0 || (needsEmail && clean(email) === undefined)}
+            disabled={
+              !supplier ||
+              lines.length === 0 ||
+              people.isFetching ||
+              (needsEmail && clean(email) === undefined)
+            }
             onClick={() => {
               if (!supplier) return;
               const to = clean(email);
@@ -134,7 +141,7 @@ export function PriceRequestForm({ sheet, onClose }: { sheet: CalcSheet; onClose
               create.mutate({
                 number: calcRef(sheet.number),
                 data: {
-                  supplier_id: supplier,
+                  supplier_id: supplier.id,
                   line_ids: lines,
                   ...(text ? { note: text } : {}),
                   ...(needsEmail && to ? { to_email: to } : {}),

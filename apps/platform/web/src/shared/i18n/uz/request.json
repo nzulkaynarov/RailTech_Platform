@@ -4,13 +4,8 @@
   "from": "{{lead}} lididan",
   "client": {
     "legend": "Mijoz",
-    "searchHint": "O‘xshash mijozlar — kompaniya takrorlanmasligi uchun tanlang",
-    "pick": "Tanlash: {{name}}",
     "picked": "Mijoz: {{name}}",
-    "change": "Boshqa mijoz",
-    "name": "Kompaniya nomi",
-    "inn": "STIR",
-    "innHint": "9–14 raqam; keyinroq ham mumkin"
+    "name": "Kompaniya nomi"
   },
   "contact": {
     "legend": "Kontakt",
@@ -21,7 +16,8 @@
     "phone": "Telefon",
     "email": "Pochta",
     "telegram": "Lid Telegrami ({{username}})",
-    "channelsHint": "Kamida bitta kanal kerak: Telegram, telefon yoki pochta"
+    "channelsHint": "Kamida bitta kanal kerak: Telegram, telefon yoki pochta",
+    "person": "Kompaniya kartasidagi odam"
   },
   "summary": {
     "label": "So‘rov mazmuni",
@@ -93,12 +89,11 @@
     "openClient": "Mijoz kartasini ochish"
   },
   "errors": {
-    "company": "Mijozni tanlang yoki kompaniya nomini kiriting",
+    "company": "Kompaniyani tanlang",
     "contact": "Kontaktni tanlang yoki ismni kiriting",
     "channel": "Kamida bitta kanal kerak: Telegram, telefon yoki pochta",
     "summary": "So‘rov mazmunini yozing",
     "consent": "Mijoz roziligisiz ariza yaratib bo‘lmaydi",
-    "inn": "STIR — 9 dan 14 gacha raqam",
     "handoff_no_consent": "Mijoz ma’lumotlarga rozilik bermagan — qanday olinganini belgilang",
     "consent_via_bot": "Telegramdagi lid rozilikni botda beradi — undan rozi bo‘lishini so‘rang",
     "contact_channel_required": "Kontaktda Telegram, telefon yoki pochta yo‘q",

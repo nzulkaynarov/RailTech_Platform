@@ -167,7 +167,6 @@
     "title": "New partner order",
     "supplier": "Partner",
     "supplierRequired": "Choose a partner",
-    "noEmail": "no email",
     "mode": "Contents",
     "modeManual": "By hand",
     "modeShortage": "For a request shortage",
@@ -401,7 +400,6 @@
   "priceRequest": {
     "title": "Request a partner price · {{number}}",
     "supplier": "Partner",
-    "supplierPlaceholder": "Choose a partner",
     "email": "Email address",
     "emailHint": "The partner has no email: enter an address to send the letter to.",
     "lines": "Request lines",

@@ -1,7 +1,16 @@
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import { chooseOption } from "../../../test/fields";
+import { HttpResponse, http } from "msw";
+
+import {
+  addCompany,
+  chooseOption,
+  pickCompany,
+  searchCompany,
+  selectedLabel,
+} from "../../../test/fields";
+import { server } from "../../../test/server";
 import {
   findModal,
   modalClosed,
@@ -34,20 +43,10 @@ describe("Загрузка прайса партнёра", () => {
   it("новый иностранный партнёр без ИНН, проверка ничего не пишет, «Применить» загружает", async () => {
     await open("supply@demo.example", "?part=import");
 
-    fireEvent.click(await screen.findByRole("button", { name: "Новый партнёр" }));
-    // форма секциями в боковом окне (§4.1a)
-    const form = await screen.findByRole("region", { name: "Новый партнёр" });
-    fireEvent.change(within(form).getByLabelText("Название"), {
-      target: { value: "Werk Nordlicht GmbH" },
-    });
-    await chooseOption(within(form).getByLabelText("Страна"), "Германия");
-    fireEvent.change(within(form).getByLabelText("Рег. номер"), {
-      target: { value: "HRB 000001" },
-    });
-    fireEvent.click(within(form).getByRole("button", { name: "Добавить" }));
-    await waitFor(() => {
-      expect(screen.queryByRole("region", { name: "Новый партнёр" })).toBeNull();
-    });
+    // ЕД-6: партнёр — не вписывается, а выбирается; нет в базе — «Завести» последней строкой
+    const supplier = screen.getByRole("combobox", { name: "Партнёр" });
+    await addCompany(supplier, "Werk Nordlicht GmbH");
+    expect(selectedLabel(supplier)).toBe("Werk Nordlicht GmbH");
 
     fireEvent.change(screen.getByLabelText("Файл прайса"), { target: { files: [xlsx()] } });
     const check = screen.getByRole("button", { name: "Проверить" });
@@ -79,6 +78,36 @@ describe("Загрузка прайса партнёра", () => {
       expect(within(drawer).queryByText("Изменения от партнёров")).toBeNull();
     });
     expect(screen.getByRole("dialog", { name: "Кабель силовой ВВГнг 3×2,5" })).toBeVisible();
+  });
+
+  it("партнёр выбирается, а не вписывается: текст партнёром не становится, роль формы — «поставщик», чужой компании роль ставится", async () => {
+    await open("supply@demo.example", "?part=import");
+    let asked: URLSearchParams | undefined;
+    const marked: unknown[] = [];
+    server.use(
+      http.get("*/people/counterparties", ({ request }) => {
+        asked = new URL(request.url).searchParams;
+        return undefined;
+      }),
+      http.post("*/people/counterparties/:id/roles", async ({ request }) => {
+        marked.push(await request.clone().json());
+        return undefined;
+      }),
+    );
+    const supplier = screen.getByRole("combobox", { name: "Партнёр" });
+    searchCompany(supplier, "Демо-Путь");
+    // без выбора строки партнёра нет: проверить нечего
+    fireEvent.change(screen.getByLabelText("Файл прайса"), { target: { files: [xlsx()] } });
+    expect(screen.getByRole("button", { name: "Проверить" })).toBeDisabled();
+    await waitFor(() => {
+      expect(asked?.get("role")).toBe("supplier");
+    });
+    // клиент без роли поставщика: выбор ставит роль и открывает проверку
+    await pickCompany(supplier, "Демо-Путь", "АО «Демо-Путь»");
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Проверить" })).toBeEnabled();
+    });
+    expect(marked).toEqual([{ role: "supplier", on: true }]);
   });
 
   it("без права на цены партнёров загрузки нет", async () => {

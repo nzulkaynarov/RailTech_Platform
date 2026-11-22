@@ -3,7 +3,7 @@ import { HttpResponse, http } from "msw";
 import { describe, expect, it } from "vitest";
 
 import { renderAt, setupCalcTests, signIn } from "../../../test/calcKit";
-import { fillDate } from "../../../test/fields";
+import { fillDate, pickCompany, searchCompany } from "../../../test/fields";
 import { server } from "../../../test/server";
 import { listSettled } from "../../../test/settled";
 
@@ -180,11 +180,10 @@ describe("Склад · заказы партнёрам", () => {
     fireEvent.click(await screen.findByRole("link", { name: "Создать заказ" }));
     await screen.findByRole("heading", { level: 1, name: "Новый заказ партнёру" });
     const modal = document.body;
-    fireEvent.mouseDown(within(modal).getByRole("combobox", { name: "Партнёр" }));
-    fireEvent.click(
-      await screen.findByText("ООО «Вымышленная Сталь»", {
-        selector: ".ant-select-item-option-content",
-      }),
+    await pickCompany(
+      within(modal).getByRole("combobox", { name: "Партнёр" }),
+      "Сталь",
+      "ООО «Вымышленная Сталь»",
     );
     fireEvent.click(screen.getByRole("button", { name: /^Строки/, expanded: false }));
     fireEvent.mouseDown(within(modal).getByRole("combobox", { name: "Товар, строка 1" }));
@@ -245,11 +244,10 @@ describe("Склад · заказы партнёрам", () => {
     fireEvent.click(await screen.findByRole("link", { name: "Создать заказ" }));
     await screen.findByRole("heading", { level: 1, name: "Новый заказ партнёру" });
     const page = document.body;
-    fireEvent.mouseDown(within(page).getByRole("combobox", { name: "Партнёр" }));
-    fireEvent.click(
-      await screen.findByText("ООО «Вымышленная Сталь»", {
-        selector: ".ant-select-item-option-content",
-      }),
+    await pickCompany(
+      within(page).getByRole("combobox", { name: "Партнёр" }),
+      "Сталь",
+      "ООО «Вымышленная Сталь»",
     );
     fireEvent.click(screen.getByRole("button", { name: /^Строки/, expanded: false }));
     expect(screen.getByText("Партнёр его не увидит.")).toBeVisible();
@@ -307,11 +305,10 @@ describe("Склад · заказы партнёрам", () => {
     fireEvent.click(await screen.findByRole("link", { name: "Создать заказ" }));
     await screen.findByRole("heading", { level: 1, name: "Новый заказ партнёру" });
     const modal = document.body;
-    fireEvent.mouseDown(within(modal).getByRole("combobox", { name: "Партнёр" }));
-    fireEvent.click(
-      await screen.findByText(/ООО «Пример Лес» · нет почты/, {
-        selector: ".ant-select-item-option-content",
-      }),
+    await pickCompany(
+      within(modal).getByRole("combobox", { name: "Партнёр" }),
+      "Лес",
+      "ООО «Пример Лес»",
     );
     fireEvent.click(screen.getByRole("button", { name: /^Строки/, expanded: false }));
     fireEvent.mouseDown(within(modal).getByRole("combobox", { name: "Товар, строка 1" }));
@@ -399,6 +396,38 @@ describe("Склад · приёмка и отгрузки", () => {
     );
   });
 
+  it("ЕД-6: партнёр заказа выбирается из контрагентов, а не вписывается; роль формы — «поставщик»; в ERP уходит id выбранной компании", async () => {
+    signIn("supply@demo.example");
+    renderAt("/erp/stock/new?mode=shortage&request=ПР-2026-099");
+    await screen.findByRole("heading", { level: 1, name: "Новый заказ партнёру" });
+    let asked: URLSearchParams | undefined;
+    const sent: unknown[] = [];
+    server.use(
+      http.get("*/people/counterparties", ({ request }) => {
+        asked = new URL(request.url).searchParams;
+        return undefined;
+      }),
+      http.post("*/erp/stock/orders/from-request", async ({ request }) => {
+        sent.push(await request.clone().json());
+        return undefined;
+      }),
+    );
+    const partner = await screen.findByRole("combobox", { name: "Партнёр" });
+    // вписанный текст партнёром не становится: создать нельзя, поле просит выбор
+    searchCompany(partner, "Левый ООО");
+    fireEvent.click(screen.getByRole("button", { name: "Создать черновик" }));
+    expect(await screen.findByText("Выберите партнёра")).toBeInTheDocument();
+    expect(sent).toEqual([]);
+    await waitFor(() => {
+      expect(asked?.get("role")).toBe("supplier");
+    });
+    await pickCompany(partner, "Сталь", "ООО «Вымышленная Сталь»");
+    fireEvent.click(screen.getByRole("button", { name: "Создать черновик" }));
+    await waitFor(() => {
+      expect(sent).toEqual([{ request: "ПР-2026-099", supplier_id: "5" }]);
+    });
+  });
+
   it("Х-18: шаг «Строки» без количества не получает галочку; с количеством — получает", async () => {
     signIn("supply@demo.example");
     renderAt("/erp/stock/new");
@@ -440,11 +469,10 @@ async function createUnpricedDraft() {
   fireEvent.click(await screen.findByRole("link", { name: "Создать заказ" }));
   await screen.findByRole("heading", { level: 1, name: "Новый заказ партнёру" });
   const page = document.body;
-  fireEvent.mouseDown(within(page).getByRole("combobox", { name: "Партнёр" }));
-  fireEvent.click(
-    await screen.findByText("ООО «Вымышленная Сталь»", {
-      selector: ".ant-select-item-option-content",
-    }),
+  await pickCompany(
+    within(page).getByRole("combobox", { name: "Партнёр" }),
+    "Сталь",
+    "ООО «Вымышленная Сталь»",
   );
   fireEvent.click(screen.getByRole("button", { name: /^Строки/, expanded: false }));
   fireEvent.mouseDown(within(page).getByRole("combobox", { name: "Товар, строка 1" }));
@@ -468,11 +496,10 @@ describe("Склад · заказ без цены и даты не уходит
     fireEvent.click(await screen.findByRole("link", { name: "Создать заказ" }));
     await screen.findByRole("heading", { level: 1, name: "Новый заказ партнёру" });
     const page = document.body;
-    fireEvent.mouseDown(within(page).getByRole("combobox", { name: "Партнёр" }));
-    fireEvent.click(
-      await screen.findByText("ООО «Вымышленная Сталь»", {
-        selector: ".ant-select-item-option-content",
-      }),
+    await pickCompany(
+      within(page).getByRole("combobox", { name: "Партнёр" }),
+      "Сталь",
+      "ООО «Вымышленная Сталь»",
     );
     fireEvent.click(screen.getByRole("button", { name: /^Строки/, expanded: false }));
     fireEvent.mouseDown(within(page).getByRole("combobox", { name: "Товар, строка 1" }));
