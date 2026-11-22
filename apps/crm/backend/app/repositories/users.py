@@ -1,6 +1,7 @@
 """Доступ к пользователям и ролям."""
 
 from collections.abc import Sequence
+from datetime import datetime
 
 from sqlalchemy import delete, func, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -79,6 +80,12 @@ async def lock_admin_set(session: AsyncSession) -> None:
 async def set_erp_sync_error(session: AsyncSession, user_id: int, message: str | None) -> None:
     """Итог синхронизации с ERP: ошибка (для ленты внешних сервисов) или `None` — всё в порядке."""
     await session.execute(update(User).where(User.id == user_id).values(erp_sync_error=message))
+
+
+async def set_erp_provisioned(session: AsyncSession, user_id: int, at: datetime | None) -> None:
+    """Факт выдачи доступа в ERP: `at` — ERP ответила успехом на провижининг; `None` — доступ
+    отозван (успешный отзыв сессий)."""
+    await session.execute(update(User).where(User.id == user_id).values(erp_provisioned_at=at))
 
 
 # Задачи синхронизации с ERP в очереди или в работе: блокировка `erp_user:<id>`

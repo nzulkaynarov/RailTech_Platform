@@ -183,6 +183,20 @@ test.describe("Входящие письма: директор", () => {
     await expect(page.getByText("Отказ").first()).toBeVisible();
   });
 
+  test("СЦ-8: панель решённого письма называет статус по факту (Принято к сведению), 1440", async ({
+    page,
+  }) => {
+    await loginAndWait(page, "director@demo.example");
+    await openInbox(page, "?status=noted");
+    await row(page, "ВХ-100/26").getByText("Изменение тарифов").click();
+    const panel = page.locator(PANEL);
+    await expect(
+      panel.getByRole("heading", { level: 3, name: "Принято к сведению" }),
+    ).toBeVisible();
+    await settledScreenshot(page, "sc8-letter-panel-status");
+    await expectNoViolations(page, "панель решённого письма");
+  });
+
   test("ERP не ответил — карточка частичная, с плашкой; номер ВХ-104/26 без кодирования открывает письмо", async ({
     page,
   }) => {
@@ -231,6 +245,17 @@ test.describe("Входящие письма: роли только для чт�
 });
 
 test.describe("Входящие письма на телефоне @mobile", () => {
+  test("@mobile СЦ-8: лист решённого письма называет статус по факту, 390", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await loginAndWait(page, "director@demo.example");
+    await spaGoto(page, "/eds/inbox?status=noted");
+    await page.getByRole("link", { name: "Показать письмо ВХ-100/26 в боковом окне" }).click();
+    const sheet = page.getByRole("dialog");
+    await expect(sheet.getByRole("heading", { name: "Принято к сведению" })).toBeVisible();
+    await settledScreenshot(page, "sc8-letter-panel-status");
+    await expectNoViolations(page, "телефон: лист решённого письма");
+  });
+
   test("@mobile список карточками; «Резолюция» — лист на весь экран с кнопками внизу", async ({
     page,
   }) => {

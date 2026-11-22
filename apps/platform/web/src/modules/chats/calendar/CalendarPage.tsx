@@ -16,7 +16,6 @@ import { usePollQuery } from "../../../shared/api/polling";
 import type { QueueItem, QueueItemKind } from "../../../shared/api/generated/model";
 import { useDocumentTitle } from "../../../shared/lib/useDocumentTitle";
 import { PageHeader } from "../../../shared/ui/PageHeader";
-import { SoonButton } from "../../../shared/ui/SoonButton";
 import { objectLink } from "../../objectLinks";
 import "./calendar.css";
 
@@ -114,7 +113,15 @@ export function CalendarPage() {
     <div className="pf-calendar">
       <PageHeader
         title={title}
-        extra={<SoonButton>{t("modules:chats.calendar.link")}</SoonButton>}
+        extra={
+          <Button
+            onClick={() => {
+              void navigate("/me?part=notifications");
+            }}
+          >
+            {t("modules:chats.calendar.link")}
+          </Button>
+        }
       />
       <Checkbox.Group
         className="pf-cal-filters"

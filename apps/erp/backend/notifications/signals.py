@@ -10,6 +10,7 @@ from crm.models import Deal
 
 from .models import Notification, NotificationType
 from .services import push_notification_ws
+from .text_format import deal_ref
 
 logger = logging.getLogger(__name__)
 
@@ -89,7 +90,7 @@ def _notify_seller_team(deal, info_type):
             user_id=uid,
             type=info_type,
             title="Новая заявка",
-            message=f"Заявка #{deal.pk} от «{company_name}» ожидает КП",
+            message=f"Заявка {deal_ref(deal)} от «{company_name}» ожидает КП",
             link=f"/crm/deals/{deal.pk}",
             deal=deal,
             event_code="rfq.new",
@@ -118,7 +119,7 @@ def notify_deal_created(sender, instance, created, **kwargs):
             user=instance.manager,
             type=info_type,
             title="Новая сделка",
-            message=f"Создана сделка #{instance.pk} от {company_name}",
+            message=f"Создана сделка {deal_ref(instance)} от {company_name}",
             link="/crm/deals",
             deal=instance,
             event_code="deal.created",
@@ -167,7 +168,7 @@ def notify_deal_stage_change(sender, instance, created, **kwargs):
             user=instance.client,
             type=info_type,
             title="Статус сделки изменён",
-            message=f"Сделка #{instance.pk} перешла в стадию: {new_stage_name}",
+            message=f"Сделка {deal_ref(instance)} перешла в стадию: {new_stage_name}",
             link="/cabinet/deals",
             deal=instance,
             event_code="deal.stage_changed",

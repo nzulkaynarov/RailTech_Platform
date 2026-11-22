@@ -183,6 +183,21 @@ describe("Согласование: шаг бухгалтера", () => {
       await within(panel).findByRole("heading", { name: "Документ на согласовании" }),
     ).toBeVisible();
     expect(within(panel).queryByRole("form")).toBeNull();
+    // СЦ-8: не решал и очередь не его — только факт «сейчас шаг», без обещания «вы сможете решить»
+    expect(within(panel).getByText("Сейчас шаг: Директор.")).toBeVisible();
+    expect(within(panel).queryByText(/Вы сможете решить/)).toBeNull();
+  });
+
+  it("СЦ-8: директор согласовал служебку с суммой — «Вы согласовали <дата>. Сейчас шаг: Бухгалтер.» вместо «вы сможете решить»", async () => {
+    signIn("director@demo.example");
+    renderAt(MEMO("СЗ-2026/015"));
+    const panel = await panelEl();
+
+    expect(
+      await within(panel).findByText(/^Вы согласовали .*2026.*\. Сейчас шаг: Бухгалтер\.$/),
+    ).toBeVisible();
+    expect(within(panel).queryByText(/Вы сможете решить/)).toBeNull();
+    expect(screen.getAllByText(/^Вы согласовали /).length).toBeGreaterThan(1); // карточка + панель
   });
 
   it("шаг бухгалтера решает держатель `eds.payments` full: у бухгалтера переход к оплате, у директора (только чтение счетов, D2-4) формы нет", async () => {

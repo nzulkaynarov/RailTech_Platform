@@ -122,7 +122,8 @@
     "readOnly": {
       "title": "Document awaits approval",
       "text": "The approver makes the decision. You see the document read-only.",
-      "notYourStep": "It is another approver's step now. You can decide when it is your turn."
+      "notYourStep": "Current step: {{label}}.",
+      "decidedStep": "You approved on {{date}}. Current step: {{label}}."
     },
     "decided": {
       "approved": {

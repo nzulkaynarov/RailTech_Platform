@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { AppProviders } from "../../../app/providers";
 import { routes } from "../../../app/router";
 import { usePanelsStore } from "../../../app/shell/panelsStore";
-import { readEmployees } from "../../../mocks/fixtures/employees";
+import { readEmployees, writeEmployees } from "../../../mocks/fixtures/employees";
 import { findUser } from "../../../mocks/fixtures/users";
 import { buildMe, endSession, readSession, startSession } from "../../../mocks/mockSession";
 import i18n from "../../../shared/i18n";
@@ -67,6 +67,55 @@ describe("Admin · Оргструктура (экран целиком на MSW)
       within(screen.getByRole("row", { name: /Демо Отключённый/ })).getByText("Отключён"),
     ).toBeVisible();
     expect(await within(await panelEl()).findByText("Объект не выбран")).toBeVisible();
+  });
+
+  it("«выдаётся» сменяется на «ок» без перезагрузки: список перечитывается, пока ERP не ответила (СЦ-8)", async () => {
+    signIn("admin@demo.example");
+    renderAt("/admin/org");
+
+    const row = await screen.findByRole("row", { name: /Демо Приглашённая/ });
+    expect(within(row).getByText("ERP: выдаётся")).toBeVisible();
+
+    await waitFor(
+      () => {
+        const next = screen.getByRole("row", { name: /Демо Приглашённая/ });
+        expect(within(next).queryByText("ERP: выдаётся")).toBeNull();
+        expect(within(next).getByText("ERP")).toBeVisible();
+      },
+      { timeout: 7000 },
+    );
+  }, 12000);
+
+  it("сбой без текста: «Доступ в ERP не выдан.» и «Повторить», который вызывает маршрут", async () => {
+    signIn("admin@demo.example");
+    writeEmployees(
+      readEmployees().map((e) =>
+        e.id === "u-demo-manager" ? { ...e, erp_sync: "error" as const } : e,
+      ),
+    );
+    renderAt("/admin/org?employee=u-demo-manager&panel=open");
+
+    const panel = await panelEl();
+    expect(await within(panel).findByText("Доступ в ERP не выдан.")).toBeVisible();
+    fireEvent.click(within(panel).getByRole("button", { name: "Повторить" }));
+
+    await waitFor(() => {
+      expect(readEmployees().find((e) => e.id === "u-demo-manager")?.erp_sync).not.toBe("error");
+    });
+  });
+
+  it("у отключённого нет метки «выдаётся» и «ERP», хотя роль с доступом сохранилась", async () => {
+    signIn("admin@demo.example");
+    writeEmployees(
+      readEmployees().map((e) =>
+        e.name === "Демо Отключённый" ? { ...e, erp_sync: "pending" as const } : e,
+      ),
+    );
+    renderAt("/admin/org");
+
+    const row = await screen.findByRole("row", { name: /Демо Отключённый/ });
+    expect(within(row).queryByText("ERP: выдаётся")).toBeNull();
+    expect(within(row).queryByText("ERP")).toBeNull();
   });
 
   it("карточка открывается из адреса и по клику на имя", async () => {

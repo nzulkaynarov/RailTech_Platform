@@ -23,6 +23,7 @@ import { adminIntegrationsHandlers } from "./adminIntegrations";
 import { adminCompanyHandlers } from "./adminCompany";
 import { adminRolesHandlers } from "./adminRoles";
 import { botKbHandlers } from "./botKb";
+import { calendarLinkHandlers } from "./calendarLink";
 import { companyArticlesHandlers } from "./companyArticlesHandlers";
 import { callNoteHandlers, crmLeadsHandlers } from "./crmLeads";
 import { crmMessagesHandlers } from "./crmMessages";
@@ -154,6 +155,7 @@ export const handlers = [
     return session ? HttpResponse.json(session) : failure(500, "INTERNAL_ERROR", "Нет сессии");
   }),
   ...secondFactorHandlers,
+  ...calendarLinkHandlers,
 
   http.post("*/auth/logout", () => {
     endSession();

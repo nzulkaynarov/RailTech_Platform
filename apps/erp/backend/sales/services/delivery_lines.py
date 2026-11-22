@@ -22,6 +22,7 @@ from django.utils import timezone
 from sales.models import ActivityLog, DeliveryLine, DeliveryLineStatus, Fulfillment, Quote, QuoteItem
 
 from crm.constants import FulfillmentStatusCode, QuoteStatusCode
+from notifications.text_format import deal_ref
 
 logger = logging.getLogger(__name__)
 
@@ -334,7 +335,7 @@ def _notify_dispute(line: DeliveryLine, reason: str) -> None:
         _manager_recipient_ids(line.deal),
         deal=line.deal,
         title="Клиент оспорил поставку",
-        message=f"Сделка #{line.deal_id}, строка {line.line_no} «{line.title}»: {reason}",
+        message=f"Сделка {deal_ref(line.deal)}, строка {line.line_no} «{line.title}»: {reason}",
         link=spa_link("fulfillments"),
         type_code="WARNING",
         event_code="delivery.line_disputed",

@@ -13,6 +13,7 @@ ERP позже) фиксируются и пробрасываются — Procr
 """
 
 from collections.abc import Awaitable, Callable
+from datetime import UTC, datetime
 from typing import Literal
 
 import structlog
@@ -43,11 +44,29 @@ class ErpAccessService:
         self._client = client
 
     async def provision(self, user_id: int) -> Outcome:
-        """Создать или обновить сотрудника в ERP по его ролям CRM."""
+        """Создать или обновить сотрудника в ERP по его ролям CRM. Успех ERP — факт выдачи
+        (`users.erp_provisioned_at`)."""
+        try:
+            payload = await self._payload(user_id)
+        except Exception as exc:
+            # Сбой до обращения к ERP не должен оставить «не выдан» без причины (СЦ-8).
+            await self._set_error(user_id, _describe("erp_provision_user", exc))
+            raise
+        if payload is None:
+            return "skipped"  # доступ уже снят или пользователя нет — задача устарела
+        await self._call(
+            "erp_provision_user",
+            user_id,
+            lambda: self._client.provision_user(payload),
+            provisioned_at=datetime.now(UTC),
+        )
+        return "done"
+
+    async def _payload(self, user_id: int) -> ProvisionPayload | None:
         async with self._sessions() as session:
             user = await repo.get(session, user_id)
             if user is None or not user.is_active or ERP not in user.platform_access:
-                return "skipped"  # доступ уже снят или пользователя нет — задача устарела
+                return None
             held = await platform_repo.roles_of_user(session, user_id)
             if held:
                 # Роли Платформы (R-1): права ERP — объединение матриц ролей по каталогу,
@@ -57,7 +76,7 @@ class ErpAccessService:
             else:
                 access = erp_access(await repo.roles_of(session, user_id))
                 role_codes = tuple(normalize_erp_roles(user.erp_role_codes or []))
-            payload = ProvisionPayload(
+            return ProvisionPayload(
                 crm_user_id=user.id,
                 email=user.email,
                 name=user.full_name,
@@ -65,10 +84,6 @@ class ErpAccessService:
                 permissions=access.permissions,
                 role_codes=role_codes,
             )
-        await self._call(
-            "erp_provision_user", user_id, lambda: self._client.provision_user(payload)
-        )
-        return "done"
 
     async def revoke(self, user_id: int) -> Outcome:
         """Отозвать все сессии сотрудника в ERP (доступ снят или пользователь деактивирован)."""
@@ -79,7 +94,10 @@ class ErpAccessService:
             if user.is_active and ERP in user.platform_access:
                 return "skipped"  # доступ выдали заново — отзывать нельзя
         await self._call(
-            "erp_revoke_sessions", user_id, lambda: self._client.revoke_sessions(user_id)
+            "erp_revoke_sessions",
+            user_id,
+            lambda: self._client.revoke_sessions(user_id),
+            provisioned_at=None,  # успешный отзыв снимает факт выдачи
         )
         return "done"
 
@@ -87,7 +105,14 @@ class ErpAccessService:
         """Ошибка постановки задачи в очередь: запись в ленту внешних сервисов."""
         await self._set_error(user_id, message)
 
-    async def _call(self, task: str, user_id: int, call: Callable[[], Awaitable[object]]) -> None:
+    async def _call(
+        self,
+        task: str,
+        user_id: int,
+        call: Callable[[], Awaitable[object]],
+        *,
+        provisioned_at: datetime | None,
+    ) -> None:
         try:
             await call()
         except ConflictError as exc:
@@ -106,7 +131,10 @@ class ErpAccessService:
             logger.warning("erp_sync_failed", task=task, user_id=user_id, error=str(exc))
             raise
         else:
-            await self._set_error(user_id, None)
+            # Только здесь, после ответа ERP: отказ (`_rejected`) и сбои факта не пишут.
+            async with self._sessions() as session, session.begin():
+                await repo.set_erp_sync_error(session, user_id, None)
+                await repo.set_erp_provisioned(session, user_id, provisioned_at)
 
     async def _rejected(self, task: str, user_id: int, exc: DomainError) -> None:
         # Постоянная ошибка: повтор ничего не изменит — запись в ленту, задача завершена.

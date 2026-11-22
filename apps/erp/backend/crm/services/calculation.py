@@ -42,6 +42,7 @@ from accounts.services.permissions import is_seller, member_has_permission
 from catalog.item_ref import item_ref, main_photos
 from core.currency import BASE_CURRENCY
 from core.quantity import as_qty, to_qty
+from crm.services._plural import pluralize_ru
 
 from ..constants import DealStageCode, QuoteStatusCode
 from ..models import ActivityLog, CalcLine, CalcLineKind, CalcPriceBasis, CalcTask
@@ -1025,7 +1026,7 @@ def add_lines(deal_id: int, user, rows: list[LineInput]) -> dict:
         deal,
         user,
         "Строки добавлены в расчёт",
-        f"{len(created)} строк(и) в расчёт по {task.letter_number}",
+        f"{len(created)} {pluralize_ru(len(created), 'строка', 'строки', 'строк')} в расчёт по {task.letter_number}",
         "calc.lines_added",
         {"count": len(created), "letter_number": task.letter_number},
     )
@@ -1118,7 +1119,7 @@ def copy_lines(deal_id: int, user, from_deal_id: int) -> dict:
         deal,
         user,
         "Состав скопирован из прошлой заявки",
-        f"{len(rows)} строк(и) из {source_deal.number}",
+        f"{len(rows)} {pluralize_ru(len(rows), 'строка', 'строки', 'строк')} из {source_deal.number}",
         "calc.lines_copied",
         {"count": len(rows), "from": source_deal.number},
     )

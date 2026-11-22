@@ -808,6 +808,50 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/me/calendar-link": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Ссылка на личный календарь — действует ли
+     * @description Календарь сроков: ссылка-подписка для Яндекс Календаря, Google или Outlook. Здесь только состояние; сам секрет виден один раз при выдаче. Ссылка действует до замены или отключения сотрудника; снимок сроков живёт 30 дней от последнего входа (без входа лента пустая); отключённый сотрудник теряет ссылку.
+     */
+    get: operations["getCalendarLink"];
+    put?: never;
+    /**
+     * Выдать ссылку на календарь (или сменить прежнюю)
+     * @description Новая секретная ссылка (токен — 32 случайных байта; CRM хранит только хеш). Прежняя ссылка перестаёт действовать. Путь с токеном виден один раз.
+     */
+    post: operations["issueCalendarLink"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/calendar/{name}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Лента сроков сотрудника (iCal) по секретной ссылке
+     * @description Без сессии: доступ по токену из `name` (`<токен>.ics`). Состав — те же строки с датой, что «Календарь» Платформы (`GET /queue`): название, срок и адрес объекта; сумм, цен и условий сделок нет. Лента — снимок, который BFF обновляет, пока сотрудник работает в Платформе. Неизвестный, заменённый или просроченный токен — 404 (причина не различается); частые промахи с одного адреса — 429.
+     */
+    get: operations["getCalendarFeed"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/me/deputy-candidates": {
     parameters: {
       query?: never;
@@ -3639,6 +3683,26 @@ export interface paths {
      * @description Повтор письма-приглашения сотруднику со статусом «Приглашён» (CRM `/users/{id}/invite`). CRM выдаёт новый временный пароль только при отправке письма: без подключённой почты пароль не меняется и ответ — 409 `CONFLICT` с `details.invite = not_sent`. Раздел `admin` — полный.
      */
     post: operations["resendInvite"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/users/{id}/erp-sync": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Повторить синхронизацию доступа с ERP
+     * @description Повтор выдачи доступа в ERP (активному сотруднику с доступом) или отзыва сессий (CRM `/users/{id}/erp-sync`). Прежняя ошибка снимается, задача встаёт в очередь: в ответе `erp_sync = pending`, итог — `ok` или `error` при следующем чтении. Раздел `admin` — полный.
+     */
+    post: operations["retryEmployeeErpSync"];
     delete?: never;
     options?: never;
     head?: never;
@@ -9601,6 +9665,20 @@ export interface components {
        */
       remember_device: boolean;
     };
+    CalendarLink: {
+      /** @description Ссылка выдана и действует */
+      active: boolean;
+      /** Format: date-time */
+      issued_at?: string | null;
+    };
+    CalendarLinkIssued: {
+      /** @description Путь с секретным токеном; виден один раз */
+      path: string;
+      /** @description Полный адрес для подписки в календаре */
+      url: string;
+      /** Format: date-time */
+      issued_at: string;
+    };
     SecondFactorStatus: {
       enabled: boolean;
       /** Format: date-time */
@@ -9817,7 +9895,7 @@ export interface components {
     /** @enum {string} */
     EmployeeStatus: "active" | "invited" | "disabled";
     /**
-     * @description Итог провижининга в ERP
+     * @description Итог выдачи доступа в ERP по факту (ответ ERP на выдачу сохранён в CRM): `ok` — ERP подтвердила выдачу; `pending` — подтверждения ещё нет, задача в очереди; `error` — последняя задача упала (есть текст) или подтверждения нет и задачи нет («не выдан», текста нет: админ может повторить); `not_applicable` — у сотрудника нет доступа к ERP или он отключён.
      * @enum {string}
      */
     ErpSyncState: "ok" | "pending" | "error" | "not_applicable";
@@ -10312,6 +10390,8 @@ export interface components {
       number: string;
       /** @enum {string} */
       status: "project" | "returned" | "issued" | "signed" | "cancelled";
+      /** @description Файл подписанного акта приложен; при `signed` без файла акт принят клиентом в кабинете */
+      has_scan: boolean;
     };
     ProjectDocuments: {
       quote: components["schemas"]["ProjectQuoteRef"] | null;
@@ -11151,7 +11231,7 @@ export interface components {
       contact_name: string | null;
       /** @description Контакт подключён к боту и клиент известен CRM */
       telegram: boolean;
-      /** @description Клиент приглашён в кабинет или уже входил */
+      /** @description Клиент уже входил в кабинет или ему доставлено приглашение — письмо ушло и не стоит в очереди */
       cabinet: boolean;
       /** @description У контакта есть e-mail и почта настроена */
       email: boolean;
@@ -11164,7 +11244,7 @@ export interface components {
       email: components["schemas"]["QuoteDeliveryReason"] | null;
     };
     /**
-     * @description Почему КП не ушло по каналу (коды ERP `send_report` и проверок каналов, D17G-2): `no_telegram` — контакт не подключён к боту; `client_not_in_crm` — клиент не передан в CRM; `no_cabinet` — клиент не приглашён в кабинет; `no_email` — у контакта нет e-mail; `mail_not_configured` — почта не настроена (Настройки · Подключения · Почта); `mail_failed` — письмо не ушло; остальное — гейт отправки ERP (цена ниже себестоимости, нет курса, позиции без цены, маржа ниже минимальной без обоснования, нет компании-продавца, некому отправить) или сбой отправки
+     * @description Почему КП не ушло по каналу (коды ERP `send_report` и проверок каналов, D17G-2): `no_telegram` — контакт не подключён к боту; `client_not_in_crm` — клиент не передан в CRM; `no_cabinet` — клиент не в кабинете: не входил и приглашение не доставлено; `no_email` — у контакта нет e-mail; `mail_not_configured` — почта не настроена (Настройки · Подключения · Почта); `mail_failed` — письмо не ушло; остальное — гейт отправки ERP (цена ниже себестоимости, нет курса, позиции без цены, маржа ниже минимальной без обоснования, нет компании-продавца, некому отправить) или сбой отправки
      * @enum {string}
      */
     QuoteDeliveryReason:
@@ -11182,7 +11262,7 @@ export interface components {
       | "no_recipient"
       | "send_failed";
     /**
-     * @description `sent` — отправлено (Telegram — передано боту CRM; почта — письмо ушло); `pending` — письмо у почтового сервиса, итога ещё нет; `failed` — не отправлено (причина в `reason`); `skipped` — канал выбран, но недоступен; `not_selected` — канал не выбран; `published` — КП видно клиенту в кабинете; `unknown` — КП отправлено без отчёта по каналам
+     * @description `sent` — отправлено (Telegram — передано боту CRM; почта — письмо ушло); `pending` — письмо у почтового сервиса, итога ещё нет; `failed` — не отправлено (причина в `reason`); `skipped` — канал недоступен (причина в `reason`; у кабинета и у невыбранного канала — по живой доступности, а не по отчёту ERP); `not_selected` — канал доступен, но не выбран; `published` — КП видно клиенту в кабинете (клиент может войти); `unknown` — КП отправлено без отчёта по каналам или доступность кабинета не узнали
      * @enum {string}
      */
     QuoteDeliveryStatus:
@@ -19122,6 +19202,77 @@ export interface operations {
       503: components["responses"]["BackendUnavailable"];
     };
   };
+  getCalendarLink: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Состояние */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CalendarLink"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+    };
+  };
+  issueCalendarLink: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Новая ссылка */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CalendarLinkIssued"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["CsrfFailed"];
+    };
+  };
+  getCalendarFeed: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description `<токен>.ics` */
+        name: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description iCalendar; Cache-Control private, max-age=300 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "text/calendar": string;
+        };
+      };
+      404: components["responses"]["NotFound"];
+      429: components["responses"]["TooManyRequests"];
+    };
+  };
   listDeputyCandidates: {
     parameters: {
       query?: never;
@@ -23686,6 +23837,44 @@ export interface operations {
           "application/json": components["schemas"]["Error"];
         };
       };
+      /** @description `BACKEND_UNAVAILABLE` */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+    };
+  };
+  retryEmployeeErpSync: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description `crm_user_id` — число без ведущих нулей (`07` и `007` — не адрес сотрудника) */
+        id: components["parameters"]["EmployeeId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Задача поставлена в очередь */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Employee"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
       /** @description `BACKEND_UNAVAILABLE` */
       503: {
         headers: {

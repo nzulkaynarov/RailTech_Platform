@@ -221,10 +221,37 @@ def test_send_mails_the_supplier_and_writes_the_journal(world):
     (message,) = mail.outbox
     assert message.to == ["sales@vendor.example"] and order["number"] in message.subject
     assert message.reply_to == ["supply@demo.test"], "ответ поставщика придёт снабженцу"
-    assert "Перевод стрелочный Р65 1/11" in message.body and "90000.00" in message.body
+    assert "Перевод стрелочный Р65 1/11" in message.body and "90\u00a0000,00" in message.body
     log = EmailLog.objects.get(template="supplier_order")
     # W18A-P1: письмо передано почтовому сервису CRM — «В очереди» до итога доставки
     assert log.status == "QUEUED" and log.to_emails == ["sales@vendor.example"]
+
+
+def test_supplier_mail_shows_quantity_and_money_like_screens(world):
+    """СЦ-7: «20,000» и «9500000.00» в письме поставщику — теперь «20 000» и «9 500 000,00 UZS», дата — ДД.ММ.ГГГГ."""
+    from notifications.tests.human_text import assert_human_text
+
+    order = _create(
+        world, [_line(world["rail"], 20000, unit_price="9500000.00")], expected_date=_tomorrow(), currency="UZS"
+    ).json()
+    assert _act(world, order["id"], "send").status_code == 200
+    (message,) = mail.outbox
+    html = message.alternatives[0][0]
+    for part in (message.body, html):
+        assert_human_text(part)
+        assert "20\u00a0000" in part and "9\u00a0500\u00a0000,00" in part
+        assert "UZS" in part
+    expected = (timezone.localdate() + timedelta(days=1)).strftime("%d.%m.%Y")
+    assert expected in message.body
+
+
+def test_confirm_journal_shows_the_date_not_iso(world):
+    from notifications.tests.human_text import assert_human_text
+
+    order_id = _confirmed(world)
+    entry = SupplierOrder.objects.get(pk=order_id).log.filter(kind="confirmed").get()
+    assert_human_text(entry.detail)
+    assert entry.detail == (timezone.localdate() + timedelta(days=1)).strftime("%d.%m.%Y")
 
 
 def test_internal_note_stays_out_of_the_supplier_mail(world):
@@ -668,4 +695,4 @@ def test_order_mail_carries_the_currency(world):
 
     assert _act(world, order["id"], "send").status_code == 200
 
-    assert "100.00 UZS" in mail.outbox[0].body
+    assert "100,00 UZS" in mail.outbox[0].body

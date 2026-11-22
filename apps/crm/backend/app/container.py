@@ -40,6 +40,7 @@ if TYPE_CHECKING:
     from app.services.budget import BudgetGuard
     from app.services.cabinet_chat import CabinetChatService
     from app.services.cabinet_url import CabinetUrlService
+    from app.services.calendar_link import CalendarLinkService
     from app.services.client_contacts import ClientContactService
     from app.services.client_notices import ClientNoticeService
     from app.services.client_requests import ClientRequestService
@@ -250,6 +251,12 @@ class Container:
         from app.services.auth import AuthService
 
         return AuthService(self.session_factory, self.settings)
+
+    @cached_property
+    def calendar_link_service(self) -> "CalendarLinkService":
+        from app.services.calendar_link import CalendarLinkService
+
+        return CalendarLinkService(self.session_factory)
 
     @cached_property
     def second_factor_service(self) -> "SecondFactorService":

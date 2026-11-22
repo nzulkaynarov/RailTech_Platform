@@ -61,8 +61,8 @@ describe("Клиенты · Клиенты (D1-2b)", () => {
     const requests = within(panel).getByRole("region", { name: "Заявки и проекты" });
     expect(within(requests).getByText("ЗВ-2026-031")).toBeVisible();
     expect(within(requests).getByRole("list", { name: "Путь заявки ЗВ-2026-031" })).toBeVisible();
-    expect(within(requests).getByText(/Клиент видит: «Ждёт вашего решения»/)).toBeVisible();
-    expect(within(requests).getByText(/Клиент видит: «Ожидает оплаты»/)).toBeVisible();
+    expect(within(requests).getByText(/В кабинете клиента: «Ждёт вашего решения»/)).toBeVisible();
+    expect(within(requests).getByText(/В кабинете клиента: «Ожидает оплаты»/)).toBeVisible();
 
     const docs = within(panel).getByRole("region", { name: "Документы" });
     expect(within(docs).getByText(/Договор поставки/)).toBeVisible();

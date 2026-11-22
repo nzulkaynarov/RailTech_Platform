@@ -21,6 +21,8 @@ import secrets
 from django.db import transaction
 from django.utils import timezone
 
+from notifications.text_format import deal_ref
+
 logger = logging.getLogger(__name__)
 
 # One-time acceptance code parameters. Brute force over the 10^6 space is bounded by the attempt
@@ -152,7 +154,7 @@ def _send_code_email(quote, email: str, code: str, language=None):
     from notifications.emails import email_brand, send_templated_email
 
     seller_name = getattr(quote.seller_company, "name", None) or "Поставщик"
-    deal_ref = quote.deal.title or f"#{quote.deal_id}"
+    deal_name = quote.deal.title or deal_ref(quote.deal)
     try:
         return send_templated_email(
             "quote_acceptance_code",
@@ -160,7 +162,7 @@ def _send_code_email(quote, email: str, code: str, language=None):
                 "code": code,
                 "quote_number": quote.number or f"{quote.deal_id}-{quote.version}",
                 "seller_name": seller_name,
-                "deal_ref": deal_ref,
+                "deal_ref": deal_name,
                 "expires_minutes": CODE_TTL_MINUTES,
                 # D1e white-label: the seller's brand opens the email.
                 **email_brand(quote.seller_company),

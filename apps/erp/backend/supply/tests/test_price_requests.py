@@ -67,6 +67,18 @@ def test_request_goes_to_the_supplier_and_is_journaled(world):
     assert [row["id"] for row in listing] == [body["id"]], "журнал читает любой сотрудник"
 
 
+def test_request_mail_shows_quantity_with_separators(world):
+    """СЦ-7: количество в письме поставщику — «20 000», не «20000.000»."""
+    from notifications.tests.human_text import assert_human_text
+
+    deal, _q, items = make_deal(world, [(world["rail"], 20000)])
+    assert _ask(world, deal, items).status_code == 201
+    (message,) = mail.outbox
+    for part in (message.body, message.alternatives[0][0]):
+        assert_human_text(part)
+        assert "20\u00a0000" in part
+
+
 def test_a_failed_mail_stays_in_the_journal(world, monkeypatch):
     deal, _q, items = make_deal(world, [(world["rail"], 2)])
     from notifications.models import EmailLog as Log

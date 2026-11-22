@@ -204,6 +204,33 @@ describe("Резолюция делопроизводства (P8b, SPEC-v3 §3.
   });
 });
 
+describe("СЦ-8: правая панель письма с резолюцией называет статус письма", () => {
+  it.each([
+    ["in_execution", "На исполнении"],
+    ["executed", "Исполнено"],
+  ] as const)("письмо %s: заголовок «%s», а не «Резолюция наложена»", async (status, title) => {
+    const director = person("u-demo-director", "Демо Директоров");
+    patchLetter("ВХ-108/26", {
+      status,
+      office_resolution: {
+        kind: "execute",
+        text: "Ответить",
+        due: "2030-01-10",
+        responsible: person("u-demo-universal", "Демо Широков"),
+        co_executors: [],
+        acquaint: [],
+        decided_by: director,
+        decided_at: "2026-11-01T05:00:00Z",
+      },
+    });
+    signIn("director@demo.example");
+    renderAt(TAX);
+
+    expect(await screen.findByRole("heading", { name: title }, { timeout: 3000 })).toBeVisible();
+    expect(screen.queryByRole("heading", { name: "Резолюция наложена" })).toBeNull();
+  });
+});
+
 describe("Срочное письмо: перенос можно запросить, одобрить нельзя (Росархив 5.14)", () => {
   it("автор резолюции видит «Одобрить перенос» недоступной с пояснением; «Отклонить» — доступна", async () => {
     const director = person("u-demo-director", "Демо Директоров");

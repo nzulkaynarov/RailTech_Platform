@@ -8,4 +8,6 @@ export interface ProjectActRef {
   id: number;
   number: string;
   status: ProjectActRefStatus;
+  /** Файл подписанного акта приложен; при `signed` без файла акт принят клиентом в кабинете */
+  has_scan: boolean;
 }

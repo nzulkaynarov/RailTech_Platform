@@ -1,8 +1,10 @@
 """Синхронизация сотрудников с ERP (FIX-11): провижининг и отзыв читают текущее состояние,
 ошибки оседают в `erp_sync_error` (лента внешних сервисов), а не в ответе пользователю."""
 
+import contextlib
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from datetime import UTC, datetime
 from typing import Any
 
 import pytest
@@ -48,6 +50,7 @@ def _user(
     access: list[str] | None = None,
     error: str | None = None,
     erp_roles: list[str] | None = None,
+    provisioned: bool = False,
 ) -> User:
     return User(
         id=5,
@@ -56,6 +59,7 @@ def _user(
         is_active=active,
         platform_access=access if access is not None else ["crm", "erp"],
         erp_sync_error=error,
+        erp_provisioned_at=datetime(2026, 11, 1, tzinfo=UTC) if provisioned else None,
         erp_role_codes=erp_roles if erp_roles is not None else [],
         must_change_password=False,
     )
@@ -82,6 +86,12 @@ def wired(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
         if user is not None:
             user.erp_sync_error = message
 
+    async def set_provisioned(session: Any, user_id: int, at: datetime | None) -> None:
+        user: User | None = state["user"]
+        if user is not None:
+            user.erp_provisioned_at = at
+
+    monkeypatch.setattr("app.services.erp_access.repo.set_erp_provisioned", set_provisioned)
     monkeypatch.setattr("app.services.erp_access.repo.get", get)
     monkeypatch.setattr("app.services.erp_access.repo.roles_of", roles_of)
     monkeypatch.setattr("app.services.erp_access.platform_repo.roles_of_user", platform_roles_of)
@@ -346,3 +356,76 @@ async def test_success_clears_previous_error(wired: dict[str, Any]) -> None:
     wired["user"] = _user(error="erp_provision_user: erp_unavailable: timeout")
     await _service(FakeClient()).provision(5)
     assert wired["user"].erp_sync_error is None
+
+
+# --- СЦ-8: статус «ок» выводится из факта, который пишет этот сервис ---
+
+
+@pytest.mark.asyncio
+async def test_provision_success_records_the_fact(wired: dict[str, Any]) -> None:
+    before = datetime.now(UTC)
+    await _service(FakeClient()).provision(5)
+    assert wired["user"].erp_provisioned_at is not None
+    assert wired["user"].erp_provisioned_at >= before
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "error",
+    [
+        pytest.param(ConflictError("busy", reason=Reason.ERP_EMAIL_CONFLICT), id="refused-409"),
+        pytest.param(
+            UpstreamUnavailableError("timeout", reason=Reason.ERP_UNAVAILABLE), id="unavailable"
+        ),
+        pytest.param(RuntimeError("boom"), id="crash"),
+    ],
+)
+async def test_failed_provision_does_not_record_the_fact(
+    wired: dict[str, Any], error: Exception
+) -> None:
+    with contextlib.suppress(Exception):  # временные ошибки пробрасываются для повтора
+        await _service(FakeClient(error=error)).provision(5)
+    assert wired["user"].erp_provisioned_at is None
+    assert wired["user"].erp_sync_error
+
+
+@pytest.mark.asyncio
+async def test_stale_provision_does_not_record_the_fact(wired: dict[str, Any]) -> None:
+    wired["user"] = _user(access=["crm"])
+    await _service(FakeClient()).provision(5)
+    assert wired["user"].erp_provisioned_at is None
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("known", [True, False])
+async def test_revoke_success_clears_the_fact(wired: dict[str, Any], known: bool) -> None:
+    """Отзыв сессий (и 404 «такого в ERP нет») снимает факт выдачи."""
+    wired["user"] = _user(access=["crm"], provisioned=True)
+    await _service(FakeClient(known=known)).revoke(5)
+    assert wired["user"].erp_provisioned_at is None
+
+
+@pytest.mark.asyncio
+async def test_failed_revoke_keeps_the_fact(wired: dict[str, Any]) -> None:
+    wired["user"] = _user(access=["crm"], provisioned=True)
+    with pytest.raises(RuntimeError):
+        await _service(FakeClient(error=RuntimeError("boom"))).revoke(5)
+    assert wired["user"].erp_provisioned_at is not None
+
+
+@pytest.mark.asyncio
+async def test_crash_before_the_erp_call_writes_an_error(
+    wired: dict[str, Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Сбой при сборе данных до обращения к ERP: не «тихий» провал — ошибка в карточке."""
+
+    async def broken(session: Any, user_id: int) -> list[str]:
+        raise RuntimeError("db is gone")
+
+    monkeypatch.setattr("app.services.erp_access.repo.roles_of", broken)
+    client = FakeClient()
+    with pytest.raises(RuntimeError):
+        await _service(client).provision(5)
+    assert client.provisioned == []
+    assert wired["user"].erp_sync_error == "erp_provision_user: RuntimeError: db is gone"
+    assert wired["user"].erp_provisioned_at is None

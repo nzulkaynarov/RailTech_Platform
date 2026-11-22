@@ -69,7 +69,7 @@
     "noRequests": "No requests yet",
     "noNumber": "no number yet",
     "urgent": "Urgent",
-    "clientSees": "Client sees: “{{text}}”",
+    "clientSees": "In the client cabinet: “{{text}}”",
     "transfer": {
       "pending": "Being transferred to the back office",
       "failed": "Not transferred to the back office: {{reason}}"
