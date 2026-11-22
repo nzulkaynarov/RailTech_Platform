@@ -1,12 +1,7 @@
-import { useQueryClient } from "@tanstack/react-query";
-import { useCallback } from "react";
-
 import { ApiError } from "../../../shared/api/errors";
 import type { LetterStatus } from "../../../shared/api/generated/model";
 import { COMPANY_TIME_ZONE } from "../../../shared/lib/format";
-
-/** Все запросы писем начинаются с этого префикса ключа (orval): по нему сбрасывается кэш после решения. */
-export const LETTERS_KEY = "/api/v1/eds/letters";
+import { LETTER_KEYS, useInvalidatePrefixes } from "../refreshKeys";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -35,19 +30,9 @@ export const STATUS_FILTERS: readonly LetterStatus[] = [
   "rejected",
 ];
 
-/** После решения сбрасываются список и все карточки: статус письма и счётчики меняются везде. */
+/** После действия сбрасываются письма, документы (ответ-ИСХ), очередь и счётчики (`LETTER_KEYS`). */
 export function useRefreshLetters(): () => Promise<void> {
-  const client = useQueryClient();
-  return useCallback(
-    () =>
-      client.invalidateQueries({
-        predicate: (query) => {
-          const head = query.queryKey[0];
-          return typeof head === "string" && head.startsWith(LETTERS_KEY);
-        },
-      }),
-    [client],
-  );
+  return useInvalidatePrefixes(LETTER_KEYS);
 }
 
 export type Reason =

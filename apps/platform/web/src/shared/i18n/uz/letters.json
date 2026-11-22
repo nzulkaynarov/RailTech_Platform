@@ -140,7 +140,13 @@
       "letter_duplicate_forced": "Boshqa kiruvchi xatga mos boʻlsa ham roʻyxatga olindi",
       "letter_marked_duplicate": "Takror deb belgilandi",
       "letter_work_cancelled": "Topshiriqlar va tanishishlar bekor qilindi",
-      "letter_duplicate_linked": "Xatning takrori topildi"
+      "letter_duplicate_linked": "Xatning takrori topildi",
+      "file_attached": "Fayl biriktirildi",
+      "file_version_added": "Faylning yangi versiyasi yuklandi",
+      "instruction_co_executor_added": "Hamijrochi qoşildi",
+      "letter_closed": "Javobsiz yopildi",
+      "letter_reopened": "Işga qaytarildi",
+      "letter_returned_to_author": "Rezolyusiya muallifiga qaytarildi"
     },
     "readOnly": "Faqat ko'rish",
     "readOnlyHint": "Faqat ko‘rish.",

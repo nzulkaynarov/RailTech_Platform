@@ -69,7 +69,7 @@
     "noRequests": "Hozircha arizalar yo‘q",
     "noNumber": "raqam hali berilmagan",
     "urgent": "Shoshilinch",
-    "clientSees": "Mijoz ko‘radi: «{{text}}»",
+    "clientSees": "Mijoz kabinetida: «{{text}}»",
     "transfer": {
       "pending": "Bek-ofisga uzatilmoqda",
       "failed": "Bek-ofisga uzatilmadi: {{reason}}"

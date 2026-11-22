@@ -5,7 +5,8 @@ import { describe, expect, it } from "vitest";
 import type { MemoApprovalCard } from "../../../shared/api/generated/model";
 import { server } from "../../../test/server";
 import { panelEl, renderAt, setupApprovalTests, signIn } from "../../../test/approvalsKit";
-import { readMemos, writeMemos } from "../../../mocks/fixtures/approvals";
+import { MOCK_USER_CRM_ID, readMemos, writeMemos } from "../../../mocks/fixtures/approvals";
+import { buildMe, readSession } from "../../../mocks/mockSession";
 import { nextStepLabel } from "./model";
 import { confirmDialog } from "../../../test/confirmDialog";
 
@@ -183,6 +184,30 @@ describe("Согласование: шаг бухгалтера", () => {
       await within(panel).findByRole("heading", { name: "Документ на согласовании" }),
     ).toBeVisible();
     expect(within(panel).queryByRole("form")).toBeNull();
+    // СЦ-8: не решал и очередь не его — только факт «сейчас шаг», без обещания «вы сможете решить»
+    expect(within(panel).getByText("Сейчас шаг: Директор.")).toBeVisible();
+    expect(within(panel).queryByText(/Вы сможете решить/)).toBeNull();
+  });
+
+  it("СЦ-8: директор согласовал служебку с суммой — «Вы согласовали <дата>. Сейчас шаг: Бухгалтер.» вместо «вы сможете решить»", async () => {
+    signIn("director@demo.example");
+    // Real `Me.id` is the `crm_user_id` string (the mock session keeps its own ids)
+    server.use(
+      http.get("*/me", () => {
+        const session = readSession();
+        const me = session ? buildMe(session) : undefined;
+        if (!me || !session) return new HttpResponse(null, { status: 401 });
+        return HttpResponse.json({ ...me, id: String(MOCK_USER_CRM_ID[session.userId]) });
+      }),
+    );
+    renderAt(MEMO("СЗ-2026/015"));
+    const panel = await panelEl();
+
+    expect(
+      await within(panel).findByText(/^Вы согласовали .*2026.*\. Сейчас шаг: Бухгалтер\.$/),
+    ).toBeVisible();
+    expect(within(panel).queryByText(/Вы сможете решить/)).toBeNull();
+    expect(screen.getAllByText(/^Вы согласовали /).length).toBeGreaterThan(1); // карточка + панель
   });
 
   it("шаг бухгалтера решает держатель `eds.payments` full: у бухгалтера переход к оплате, у директора (только чтение счетов, D2-4) формы нет", async () => {

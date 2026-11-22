@@ -426,7 +426,9 @@
       "approval_decided": "Decision made",
       "document_paid": "Paid",
       "document_archived": "Moved to archive",
-      "file_attached": "File attached"
+      "file_attached": "File attached",
+      "document_updated": "Updated",
+      "file_version_added": "New file version uploaded"
     }
   },
   "issue": {

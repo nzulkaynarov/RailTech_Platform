@@ -140,7 +140,13 @@
       "letter_duplicate_forced": "Registered despite matching another letter",
       "letter_marked_duplicate": "Marked as duplicate",
       "letter_work_cancelled": "Instructions and acknowledgements cancelled",
-      "letter_duplicate_linked": "Duplicate of this letter found"
+      "letter_duplicate_linked": "Duplicate of this letter found",
+      "file_attached": "File attached",
+      "file_version_added": "New file version uploaded",
+      "instruction_co_executor_added": "Co-executor added",
+      "letter_closed": "Closed without a reply",
+      "letter_reopened": "Returned to work",
+      "letter_returned_to_author": "Returned to the resolution author"
     },
     "readOnly": "View only",
     "readOnlyHint": "View only.",
