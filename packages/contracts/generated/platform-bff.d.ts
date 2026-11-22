@@ -3645,6 +3645,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/admin/users/{id}/erp-sync": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Повторить синхронизацию доступа с ERP
+     * @description Повтор выдачи доступа в ERP (активному сотруднику с доступом) или отзыва сессий (CRM `/users/{id}/erp-sync`). Прежняя ошибка снимается, задача встаёт в очередь: в ответе `erp_sync = pending`, итог — `ok` или `error` при следующем чтении. Раздел `admin` — полный.
+     */
+    post: operations["retryEmployeeErpSync"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/admin/users/{id}/temporary-password": {
     parameters: {
       query?: never;
@@ -9817,7 +9837,7 @@ export interface components {
     /** @enum {string} */
     EmployeeStatus: "active" | "invited" | "disabled";
     /**
-     * @description Итог провижининга в ERP
+     * @description Итог выдачи доступа в ERP по факту (ответ ERP на выдачу сохранён в CRM): `ok` — ERP подтвердила выдачу; `pending` — подтверждения ещё нет, задача в очереди; `error` — последняя задача упала (есть текст) или подтверждения нет и задачи нет («не выдан», текста нет: админ может повторить); `not_applicable` — у сотрудника нет доступа к ERP или он отключён.
      * @enum {string}
      */
     ErpSyncState: "ok" | "pending" | "error" | "not_applicable";
@@ -23681,6 +23701,44 @@ export interface operations {
           "application/json": components["schemas"]["Error"];
         };
       };
+      /** @description `BACKEND_UNAVAILABLE` */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+    };
+  };
+  retryEmployeeErpSync: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description `crm_user_id` — число без ведущих нулей (`07` и `007` — не адрес сотрудника) */
+        id: components["parameters"]["EmployeeId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Задача поставлена в очередь */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Employee"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
       /** @description `BACKEND_UNAVAILABLE` */
       503: {
         headers: {

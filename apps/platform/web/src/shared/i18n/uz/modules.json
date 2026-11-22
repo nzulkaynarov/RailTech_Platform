@@ -538,6 +538,8 @@
         "status": "Holat",
         "erpPending": "ERP ga kirish hali berilmoqda.",
         "erpError": "ERP ga kirishni berib bo'lmadi: {{error}}",
+        "erpNotGranted": "ERP ga kiriş berilmagan.",
+        "erpRetry": "Qayta uriniş",
         "disabledNote": "Xodim o'chirilgan va kira olmaydi. Rollar va lavozim saqlangan."
       },
       "form": {

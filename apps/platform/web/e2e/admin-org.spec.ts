@@ -185,6 +185,10 @@ test.describe("Оргструктура: приглашение", () => {
     await expect(row).toContainText("Приглашён");
     await expect(row).toContainText("Бухгалтер-кассир");
     await expect(row).toContainText("Бухгалтер");
+    // Статус «ERP» — из ответа ERP, а не из «очередь пуста»: «выдаётся» само сменяется на «ок», без перезагрузки
+    await expect(row).toContainText("ERP: выдаётся");
+    await expect(row).not.toContainText("ERP: выдаётся", { timeout: 10_000 });
+    await expect(row).toContainText("ERP");
   });
 
   test("почта уже есть — ошибка у поля; почта не подключена — сотрудник создан, письмо не ушло", async ({
@@ -252,6 +256,42 @@ test.describe("Оргструктура: axe и скриншоты", () => {
       ).toBeVisible();
       await expectNoViolations(page, `invite ${String(width)}`);
       await settledScreenshot(page, "org-invite-form");
+    });
+  }
+
+  for (const width of WIDTHS) {
+    test(`сбой выдачи доступа в ERP на ${String(width)}: «Доступ в ERP не выдан.» и «Повторить», axe без нарушений`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
+      await loginAndWait(page, "admin@demo.example");
+      await openOrg(page);
+      await page.evaluate(() => {
+        const key = "rt-pf-mock-employees";
+        const items = JSON.parse(window.localStorage.getItem(key) ?? "[]") as {
+          id: string;
+          erp_sync: string;
+        }[];
+        window.localStorage.setItem(
+          key,
+          JSON.stringify(
+            items.map((e) => (e.id === "u-demo-manager" ? { ...e, erp_sync: "error" } : e)),
+          ),
+        );
+      });
+      await page.reload();
+      await openCard(page, "Демо Менеджеров");
+      const panel = page.locator(PANEL);
+      await expect(panel.getByText("Доступ в ERP не выдан.")).toBeVisible();
+      await expectNoViolations(page, `erp error ${String(width)}`);
+      await settledScreenshot(page, "org-card-erp-error");
+
+      await panel.getByRole("button", { name: "Повторить" }).click();
+      await expect(panel.getByText("Доступ в ERP ещё выдаётся.")).toBeVisible();
+      await expect(panel.getByText("Доступ в ERP ещё выдаётся.")).toHaveCount(0, {
+        timeout: 10_000,
+      });
+      await settledScreenshot(page, "org-card-erp-granted");
     });
   }
 
