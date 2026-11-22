@@ -7,8 +7,10 @@
 
 «Напомнить» шлёт уведомление текущему адресату (`letter_sign_requested`, `approval_reminder` — назначенному
 согласующему или, на шаге «любой с правом», держателям права; `instruction_reminder`) и никогда не повторяет
-`approval.requested` («круг открыт» — один раз). Пишет в журнал объекта `waiting.reminded`; повтор по тому же
-объекту — не чаще раза в час (429 `RATE_LIMITED`): время прошлого напоминания берётся из журнала, отдельной таблицы нет.
+`approval.requested` («круг открыт» — один раз). Пишет в журнал объекта `waiting.reminded`
+(письмо — `document.sign_reminded`, общий с «Напомнить» на карточке письма ГЛ-0: напоминание любым
+путём закрывает оба на час); повтор по тому же объекту — не чаще раза в час (429 `RATE_LIMITED`):
+время прошлого напоминания берётся из журнала, отдельной таблицы нет.
 """
 
 import datetime as dt
@@ -25,6 +27,7 @@ from app.models import ApprovalRoute, ApprovalStep, Document, Employee, Instruct
 from app.schemas.approvals import ApprovalTemplate, RouteStatus
 from app.schemas.waiting import REMIND_INTERVAL, RemindOut, WaitingItem, WaitingKind, WaitingList
 from app.services import document_notices, instructions, journal, signing_resolve, signing_state
+from app.services.documents import SIGN_REMINDED  # one letter-reminder fact for both paths (GL-0 card, GL-1 list)
 from app.services.people import load_directory
 
 LIMIT = 50
@@ -33,13 +36,13 @@ _DOCUMENT_TEMPLATES = (ApprovalTemplate.MEMO.value, ApprovalTemplate.APPLICATION
 
 
 async def _last_reminders(
-    session: AsyncSession, column: Any, ids: list[uuid.UUID], *, comment: bool = False
+    session: AsyncSession, column: Any, ids: list[uuid.UUID], *, comment: bool = False, action: str = REMINDED
 ) -> dict[str, dt.datetime]:
     """Момент последнего напоминания по объектам (ключ — id объекта или id поручения из комментария)."""
     if not ids:
         return {}
     wanted = {str(i) for i in ids}
-    stmt = select(JournalEntry).where(JournalEntry.action == REMINDED)
+    stmt = select(JournalEntry).where(JournalEntry.action == action)
     stmt = stmt.where(JournalEntry.letter_id.in_(ids)) if comment else stmt.where(column.in_(ids))
     out: dict[str, dt.datetime] = {}
     for row in (await session.execute(stmt.order_by(JournalEntry.id))).scalars():
@@ -85,7 +88,7 @@ async def _signatures(session: AsyncSession, employee: Employee, today: dt.date)
     )
     more = len(documents) > LIMIT
     documents = documents[:LIMIT]
-    last = await _last_reminders(session, JournalEntry.document_id, [d.id for d in documents])
+    last = await _last_reminders(session, JournalEntry.document_id, [d.id for d in documents], action=SIGN_REMINDED)
     out: list[WaitingItem] = []
     for document in documents:
         if document.registration_requested_at is None:
@@ -231,7 +234,9 @@ async def remind(
             or not signing_state.is_awaiting_signature(document)
         ):
             raise not_found()
-        last = (await _last_reminders(session, JournalEntry.document_id, [document.id])).get(str(document.id))
+        last = (await _last_reminders(session, JournalEntry.document_id, [document.id], action=SIGN_REMINDED)).get(
+            str(document.id)
+        )
         await _check_gate(last)
         signer = await signing_resolve.letter_signer(session, document, clock.company_date(now))
         if signer is None or signer.signer.crm_user_id == actor:
@@ -240,7 +245,7 @@ async def remind(
         await document_notices.publish_notice(
             session,
             bus,
-            document,
+            document=document,
             kind="letter_sign_requested",
             key=f"document:{document.id}:letter_sign_reminded:{int(now.timestamp())}",
             recipients=[signer.signer.crm_user_id],
@@ -248,7 +253,7 @@ async def remind(
             subtitle=f"{document.subject}{behalf}",
             actor_id=actor,
         )
-        await journal.record(session, REMINDED, by=actor, document_id=document.id)
+        await journal.record(session, SIGN_REMINDED, by=actor, document_id=document.id)
     elif kind == "approval":
         found = (
             await session.execute(
@@ -278,7 +283,7 @@ async def remind(
         await document_notices.publish_notice(
             session,
             bus,
-            document,
+            document=document,
             kind="approval_reminder",
             key=f"approval:{route.id}:reminded:{int(now.timestamp())}",
             recipients=recipients,

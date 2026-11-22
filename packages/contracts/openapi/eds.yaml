@@ -2624,6 +2624,103 @@ paths:
         '409':
           $ref: '#/components/responses/Conflict'
 
+  /api/v1/documents/{document_id}/remind:
+    post:
+      tags: [documents]
+      operationId: remindDocumentSigner
+      summary: Напомнить подписанту о письме на подписи (ГЛ-0)
+      description: |
+        Автор письма на подписи (`awaiting_signature = true`) повторно отправляет текущему подписанту уведомление
+        «Подпишите исходящее» (`document.notice_requested`, `kind = letter_sign_requested`; подписант — вычисленный или выбранный
+        автором, `DocumentSigning.signer`). Не чаще раза в час: факт — строка журнала `document.sign_reminded`; раньше — 409
+        (`details.reason = remind_too_soon`, `details.retry_at`). Подписывает сам автор (подписант — он) — уведомления нет, карточка
+        говорит «Подписываете вы». Не автор — 403 (`not_author`), письмо не на подписи — 409 (`not_handed_over`).
+      x-rt-permissions: [memos.create, letters.register]
+      parameters:
+        - $ref: '#/components/parameters/DocumentId'
+      responses:
+        '200':
+          description: Напоминание отправлено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Document'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /api/v1/documents/{document_id}/withdraw:
+    post:
+      tags: [documents]
+      operationId: withdrawDocumentFromSigning
+      summary: Отозвать письмо с подписи (ГЛ-0)
+      description: |
+        Автор снимает передачу на подпись: `letter.registration_requested` и `awaiting_signature` сбрасываются, письмо снова
+        обычный черновик автора, строка журнала `document.registration_withdrawn`. Задача «Подписать» у подписанта пропадает сама
+        (`GET /letter-tasks` выводит её из факта передачи). Не автор — 403 (`not_author`), письмо не на подписи — 409
+        (`not_handed_over`).
+      x-rt-permissions: [memos.create, letters.register]
+      parameters:
+        - $ref: '#/components/parameters/DocumentId'
+      responses:
+        '200':
+          description: Письмо отозвано
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Document'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /api/v1/documents/{document_id}/signer:
+    post:
+      tags: [documents]
+      operationId: changeDocumentSigner
+      summary: Сменить подписанта письма на подписи (ГЛ-0)
+      description: |
+        Автор письма на подписи выбирает другого подписанта (`signer_crm_user_id`; `null` — снова подбирает реестр полномочий).
+        Выбор проверяется как при правке черновика: у выбранного должно быть действующее полномочие и доступ к черновику
+        (422 `no_signing_right`); автор выбирает себя, если компания это разрешает (`DocflowSettings.author_may_sign_own_letter`),
+        иначе 422 `author_cannot_sign`. Вычисленный подписант изменился — новому уходит «Подпишите исходящее», строка журнала
+        `document.signer_changed`. Не автор — 403 (`not_author`), письмо не на подписи — 409 (`not_handed_over`).
+      x-rt-permissions: [memos.create, letters.register]
+      parameters:
+        - $ref: '#/components/parameters/DocumentId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignerChangeIn'
+      responses:
+        '200':
+          description: Подписант сменён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Document'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+
   /api/v1/documents/{document_id}/mail-waive:
     post:
       tags: [documents]
@@ -4919,7 +5016,7 @@ components:
     DocflowSettings:
       type: object
       additionalProperties: false
-      required: [recognize_scans, pii_policy, ai_available]
+      required: [recognize_scans, pii_policy, ai_available, author_may_sign_own_letter]
       properties:
         recognize_scans: { type: boolean }
         pii_policy:
@@ -4927,12 +5024,25 @@ components:
           enum: [business, strict]
           description: 'Политика защиты данных для ИИ: `business` — «Деловая», `strict` — «Строгая»; задаёт CRM'
         ai_available: { type: boolean, description: Ключ шлюза моделей задан (помощник может работать) }
+        author_may_sign_own_letter:
+          type: boolean
+          description: |
+            ГЛ-0, ADR-0024 п. 3: автор письма с правом подписи может подписать его сам (по умолчанию `true`). `false` —
+            строгое правило «автор ≠ подписант» над тем же кругом кандидатов, что выбирает подписанта; если автор в круге
+            единственный, подписывает он.
     DocflowSettingsPatch:
       type: object
       additionalProperties: false
-      required: [recognize_scans]
       properties:
         recognize_scans: { type: boolean }
+        author_may_sign_own_letter: { type: boolean, description: "Переданное поле меняется; остальные остаются прежними" }
+    SignerChangeIn:
+      type: object
+      additionalProperties: false
+      properties:
+        signer_crm_user_id:
+          type: [integer, 'null']
+          description: Сотрудник с правом подписи; `null` или поле не передано — подписанта снова подбирает реестр полномочий
     ResolutionTemplateScope:
       type: string
       enum: [personal, company]
@@ -6715,7 +6825,10 @@ components:
           oneOf:
             - $ref: '#/components/schemas/PersonRef'
             - type: 'null'
-          description: Кто подпишет по реестру полномочий (первый, кто не автор); `null` — подписать некому
+          description: Кто подпишет по реестру полномочий (выбранный автором или первый, кто не автор); `null` — подписать некому
+        signer_position:
+          type: [string, 'null']
+          description: Должность подписанта по реестру полномочий (ГЛ-0); `null` — не задана или подписанта нет
 
     ApprovalTemplate:
       type: string
@@ -7123,6 +7236,11 @@ components:
         awaiting_signature:
           type: boolean
           description: 'Исходящее письмо передано на подпись и не подписано (СЦ-8): `status = draft` с отметкой передачи; у остальных видов — `false`'
+        signer:
+          oneOf:
+            - $ref: '#/components/schemas/PersonRef'
+            - type: 'null'
+          description: 'ГЛ-0: у кого письмо на подписи (вычисленный или выбранный подписант, как `DocumentSigning.signer`); у остальных строк — `null`'
         kind:
           $ref: '#/components/schemas/RegistryKind'
         id:

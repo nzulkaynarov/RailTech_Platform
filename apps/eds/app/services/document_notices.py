@@ -7,7 +7,8 @@ EDS сама сотрудникам не пишет: текст (RU) готов�
 * служебка, заявление, отчёт: решение директора (`memo_decided`) и оплата (`memo_paid`) — автору;
   возврат на доработку не дублируем: он остаётся строкой «Доработать» в «Моих задачах»;
 * исходящее письмо: передан проект — подписанту (`letter_sign_requested`) или, если подписать некому, держателям
-  `signing.manage` (`letter_signer_missing`); подписал другой сотрудник — автору (`letter_signed`).
+  `signing.manage` (`letter_signer_missing`); подписал другой сотрудник — автору (`letter_signed`);
+  автор отозвал с подписи — прежнему подписанту (`letter_sign_withdrawn`).
 """
 
 from collections.abc import Iterable
@@ -18,7 +19,8 @@ from typing import Any
 from rt_bus.sqlalchemy import AsyncBus
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import Document
+from app import clock
+from app.models import Document, Letter
 from app.schemas.documents import DocumentKind, DocumentStatus
 from app.services import events, signing_reminders, signing_resolve
 from app.services.people import load_directory
@@ -37,10 +39,53 @@ _DECIDED = {
 }
 
 
-def _name(document: Document) -> str:
+def name_of(document: Document) -> str:
     """«Служебка MEMO-2026/014»; у документа без номера — одно слово."""
     word = _KIND_WORD.get(document.kind, "Документ")
     return f"{word} {document.number}" if document.number else word
+
+
+async def publish_notice(
+    session: AsyncSession,
+    bus: AsyncBus,
+    *,
+    kind: str,
+    key: str,
+    recipients: Iterable[int | None],
+    title: str,
+    subtitle: str | None,
+    actor_id: int | None,
+    document: Document | None = None,
+    letter: Letter | None = None,
+    approval: dict[str, Any] | None = None,
+) -> None:
+    """`document.notice_requested`: нет получателей — нет события. Объект: документ, письмо или маршрут."""
+    people = list(dict.fromkeys(uid for uid in recipients if uid is not None))
+    if not people:
+        return
+    data: dict[str, Any] = {
+        "notice_key": key,
+        "kind": kind,
+        "recipients": people,
+        "title": title[:200],
+        "subtitle": subtitle[:200] if subtitle else None,
+        "actor": events.actor(actor_id),
+    }
+    subject = "notice"
+    if document is not None:
+        data["document"] = {
+            "eds_document_id": str(document.id),
+            "number": document.number,
+            "subject": document.subject[:300],
+        }
+        subject = f"document/{document.id}"
+    if letter is not None:
+        data["letter"] = {"eds_letter_id": str(letter.id), "number": letter.number, "subject": letter.subject[:300]}
+        subject = f"letter/{letter.id}"
+    if approval is not None:
+        data["approval"] = approval
+        subject = f"approval/{approval['eds_approval_id']}"
+    await events.publish(bus, session, "document.notice_requested", data, subject=subject)
 
 
 async def _publish(
@@ -55,23 +100,17 @@ async def _publish(
     subtitle: str | None,
     actor_id: int,
 ) -> None:
-    people = list(dict.fromkeys(uid for uid in recipients if uid is not None))
-    if not people:
-        return
-    data: dict[str, Any] = {
-        "notice_key": key,
-        "kind": kind,
-        "recipients": people,
-        "title": title[:200],
-        "subtitle": subtitle[:200] if subtitle else None,
-        "document": {
-            "eds_document_id": str(document.id),
-            "number": document.number,
-            "subject": document.subject[:300],
-        },
-        "actor": events.actor(actor_id),
-    }
-    await events.publish(bus, session, "document.notice_requested", data, subject=f"document/{document.id}")
+    await publish_notice(
+        session,
+        bus,
+        kind=kind,
+        key=key,
+        recipients=recipients,
+        title=title,
+        subtitle=subtitle,
+        actor_id=actor_id,
+        document=document,
+    )
 
 
 async def memo_decided(
@@ -84,11 +123,11 @@ async def memo_decided(
     approved_word, rejected_word = words
     status = document.status
     if status == DocumentStatus.REJECTED.value:
-        title, subtitle = f"{_name(document)} {rejected_word}", comment or document.subject
+        title, subtitle = f"{name_of(document)} {rejected_word}", comment or document.subject
     elif status == DocumentStatus.TO_ACCOUNTANT.value:
-        title, subtitle = f"{_name(document)} {approved_word}", f"Передана на оплату · {document.subject}"
+        title, subtitle = f"{name_of(document)} {approved_word}", f"Передана на оплату · {document.subject}"
     elif status == DocumentStatus.APPROVED.value:
-        title, subtitle = f"{_name(document)} {approved_word}", document.subject
+        title, subtitle = f"{name_of(document)} {approved_word}", document.subject
     else:
         return
     await _publish(
@@ -122,10 +161,14 @@ async def memo_paid(
         kind="memo_paid",
         key=f"document:{document.id}:memo_paid",
         recipients=[document.author_crm_user_id] if document.author_crm_user_id != actor_id else [],
-        title=f"{_name(document)} оплачена",
+        title=f"{name_of(document)} оплачена",
         subtitle=f"{paid_on:%d.%m.%Y} · {amount:.2f} {currency}",
         actor_id=actor_id,
     )
+
+
+def _again(again: bool) -> str:
+    return f":{int(clock.now().timestamp())}" if again else ""
 
 
 async def letter_handed_over(
@@ -135,9 +178,12 @@ async def letter_handed_over(
     *,
     today: date,
     actor_id: int,
+    again: bool = False,
 ) -> None:
     """Проект письма передан: подписанту (по замещению — с пометкой «за …»); подписать некому — держателям
-    `signing.manage`."""
+    `signing.manage`. `again` (ГЛ-0): напоминание или смена подписанта на подписи — уведомление уходит заново, ключ
+    с моментом отправки (иначе CRM погасит повтор). Подписант — сам действующий: уведомления нет, карточка письма
+    говорит «Подписываете вы»."""
     signer = await signing_resolve.letter_signer(session, document, today)
     directory = await load_directory(session, [document.author_crm_user_id])
     if signer is None:
@@ -146,7 +192,7 @@ async def letter_handed_over(
             bus,
             document,
             kind="letter_signer_missing",
-            key=f"document:{document.id}:letter_signer_missing",
+            key=f"document:{document.id}:letter_signer_missing{_again(again)}",
             recipients=await signing_reminders.manage_holder_ids(session),
             title="Подписать некому",
             subtitle=f"Настройки → Права подписи · {document.subject}"[:200],
@@ -162,10 +208,31 @@ async def letter_handed_over(
         bus,
         document,
         kind="letter_sign_requested",
-        key=f"document:{document.id}:letter_sign_requested:{who}",
+        key=f"document:{document.id}:letter_sign_requested:{who}{_again(again)}",
         recipients=[who],
         title="Подпишите исходящее",
         subtitle=f"{document.subject} · {directory.name(document.author_crm_user_id)}{behalf}",
+        actor_id=actor_id,
+    )
+
+
+async def letter_withdrawn(
+    session: AsyncSession, bus: AsyncBus, document: Document, *, signer_id: int | None, actor_id: int
+) -> None:
+    """Автор отозвал письмо с подписи (ГЛ-0): прежнему подписанту — «Письмо отозвано с подписи», иначе его
+    «Подпишите исходящее» остаётся без пояснения. Подписант — сам автор: уведомления нет."""
+    if signer_id is None or signer_id == document.author_crm_user_id:
+        return
+    directory = await load_directory(session, [document.author_crm_user_id])
+    await _publish(
+        session,
+        bus,
+        document,
+        kind="letter_sign_withdrawn",
+        key=f"document:{document.id}:letter_sign_withdrawn:{signer_id}:{int(clock.now().timestamp())}",
+        recipients=[signer_id],
+        title="Письмо отозвано с подписи",
+        subtitle=f"{document.subject} · {directory.name(document.author_crm_user_id)}",
         actor_id=actor_id,
     )
 
@@ -183,12 +250,10 @@ async def letter_signed(
         kind="letter_signed",
         key=f"document:{document.id}:letter_signed",
         recipients=[document.author_crm_user_id],
-        title=f"{_name(document)} подписано",
+        title=f"{name_of(document)} подписано",
         subtitle=f"{document.subject} · {signer_name}",
         actor_id=signer_id,
     )
 
 
-publish_notice = _publish  # public name for the waiting reminders (ГЛ-1)
-
-__all__ = ["letter_handed_over", "letter_signed", "memo_decided", "memo_paid"]
+__all__ = ["letter_handed_over", "letter_signed", "letter_withdrawn", "memo_decided", "memo_paid"]

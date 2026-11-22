@@ -36,6 +36,8 @@ def to_out(view: UserView) -> UserOut:
         ui_mode=view.ui_mode,
         notify_system=view.notify_system,
         notify_leads=view.notify_leads,
+        notify_decisions=view.notify_decisions,
+        notify_tasks=view.notify_tasks,
         tg_dm_failed_at=view.tg_dm_failed_at,
         platform_access=view.platform_access,
         erp_role_codes=view.erp_role_codes,

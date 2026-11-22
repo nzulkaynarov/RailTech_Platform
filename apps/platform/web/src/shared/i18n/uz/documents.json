@@ -110,7 +110,8 @@
     "inProject": "Loyihada",
     "inProjectLabel": "Loyihada ochish: {{subject}}",
     "openQuote": "Taklifni ochish",
-    "openQuoteLabel": "Taklifni ochish: {{subject}}"
+    "openQuoteLabel": "Taklifni ochish: {{subject}}",
+    "onSigningAt": "{{name}} da"
   },
   "panel": {
     "label": "Hujjat",
@@ -223,7 +224,22 @@
       "verificationCode": "Tekshirish kodi",
       "verificationUrl": "Haqiqiyligini tekshirish",
       "actionFailed": "Bajarilmadi: {{reason}}",
-      "unmatched": "Manzil matn bilan yozilgan. «Davom ettiriş»ni bosing va taşkilotni kontragentlardan tanlang — ungaça xatni imzolab bölmaydi."
+      "unmatched": "Manzil matn bilan yozilgan. «Davom ettiriş»ni bosing va taşkilotni kontragentlardan tanlang — ungaça xatni imzolab bölmaydi.",
+      "onSigning": "Imzoda: {{who}}, {{date}} dan beri",
+      "youSign": "Siz imzolaysiz. {{date}} dan beri imzoda",
+      "signSelf": "Özim imzolayman",
+      "refusal": {
+        "author_cannot_sign": "Siz xat muallifisiz. Kompaniyada qoida yoqilgan: muallif öz xatini imzolamaydi. Imzolaşi mümkin: {{name}}."
+      },
+      "remind": "Eslatiş",
+      "reminded": "Eslatma yuborildi: {{name}}",
+      "withdraw": "Qaytarib oliş",
+      "withdrawn": "Xat imzodan qaytarib olindi",
+      "changeSigner": "Imzolovçini almaştiriş",
+      "changeSignerTitle": "Xatni kim imzolaydi",
+      "changeSignerSave": "Almaştiriş",
+      "changeSignerPlaceholder": "Imzolovçini tanlang",
+      "signerChanged": "Imzolovçi almaştirildi"
     },
     "replyTo": "Javob:",
     "mailFailed": "Yuborilmadi",
@@ -400,7 +416,9 @@
         "absent": "imzolovçi yöq",
         "deputy_without_authority": "örinbosarda imzo vakolati yöq",
         "deputy_loop": "almaştiriş öz-özidan aylanib qolgan",
-        "no_permission": "imzolaş huquqingiz yöq"
+        "no_permission": "imzolaş huquqingiz yöq",
+        "remind_too_soon": "eslatma yuborilgan, bir soatdan keyin takrorlaş mümkin",
+        "not_handed_over": "xat imzoga topşirilmagan"
       }
     },
     "loadDraft": "Qoralama yuklanmoqda…",

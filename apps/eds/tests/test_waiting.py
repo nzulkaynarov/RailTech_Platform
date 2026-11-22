@@ -79,6 +79,30 @@ async def test_remind_resends_the_signing_notice_once_an_hour(
     assert len(await notices(container, "letter_sign_requested")) == before + 2
 
 
+async def test_letter_reminder_is_one_fact_for_the_card_and_the_waiting_list(
+    client: httpx.AsyncClient, staff: dict[str, Person], container: Container, clock: FakeClock
+) -> None:
+    """ГЛ-0 «Напомнить» на карточке и ГЛ-1 «Напомнить» в «Вы ждёте других» делят один час: напоминание любым путём
+    закрывает оба, и строка очереди сама показывает, что напоминать пока нельзя."""
+    await deliver_letterhead(client, container)
+    await authorise(client, staff)
+    manager = staff["manager"]
+    card_url = "/api/v1/documents/{}/remind"
+
+    first = await hand_over(client, manager)
+    assert (await client.post(card_url.format(first["id"]), headers=manager.headers)).status_code == 200
+    assert_error(await remind(client, manager, "letter_signature", first["id"]), 429, "RATE_LIMITED")
+    [row] = (await waiting(client, manager))["items"]
+    assert (row["remindable"], row["remind_available_at"] is not None) == (False, True)
+
+    clock.advance(hours=1, minutes=1)
+    second = await hand_over(client, manager)
+    assert (await remind(client, manager, "letter_signature", second["id"])).status_code == 200
+    blocked = await client.post(card_url.format(second["id"]), headers=manager.headers)
+    assert_error(blocked, 409, "CONFLICT")
+    assert blocked.json()["details"]["reason"] == "remind_too_soon"
+
+
 async def test_remind_is_only_for_the_author_and_not_when_signer_is_the_author(
     client: httpx.AsyncClient, staff: dict[str, Person], container: Container
 ) -> None:

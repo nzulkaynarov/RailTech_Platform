@@ -9,6 +9,8 @@ import type { EdsRegistryKind } from "./edsRegistryKind";
 export interface EdsDocumentRow {
   /** Исходящее письмо передано на подпись и не подписано (СЦ-8): слово «На подписи» при `status = draft`; без передачи — «Черновик»; у остальных видов — `false`. Признак отдаёт EDS */
   awaiting_signature: boolean;
+  /** ГЛ-0. У кого письмо на подписи (вычисленный или выбранный подписант); у остальных строк — `null`. Отдаёт реестр «Все документы» */
+  signer?: EdsPerson | null;
   /** Исходящее письмо не ушло адресату (СЦ-1): строка остаётся в «Исходящих» с меткой «Не отправлено» */
   undelivered: boolean;
   kind: EdsRegistryKind;

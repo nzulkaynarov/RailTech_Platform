@@ -337,19 +337,39 @@ class UserService:
             return await _loaded_view(session, user)
 
     async def set_notify(
-        self, actor: Actor, user_id: int, *, system: bool | None, leads: bool | None
+        self,
+        actor: Actor,
+        user_id: int,
+        *,
+        system: bool | None,
+        leads: bool | None,
+        decisions: bool | None = None,
+        tasks: bool | None = None,
     ) -> UserView:
         """Подписки на личные уведомления от бота (Q-010) — меняет только сам пользователь."""
         async with self._sessions() as session, session.begin():
             user = await repo.get(session, user_id, for_update=True)
             if user is None:
                 raise NotFoundError("user not found")
-            before = {"notify_system": user.notify_system, "notify_leads": user.notify_leads}
+
+            def flags() -> dict[str, bool]:
+                return {
+                    "notify_system": user.notify_system,
+                    "notify_leads": user.notify_leads,
+                    "notify_decisions": user.notify_decisions,
+                    "notify_tasks": user.notify_tasks,
+                }
+
+            before = flags()
             if system is not None:
                 user.notify_system = system
             if leads is not None:
                 user.notify_leads = leads
-            after = {"notify_system": user.notify_system, "notify_leads": user.notify_leads}
+            if decisions is not None:
+                user.notify_decisions = decisions
+            if tasks is not None:
+                user.notify_tasks = tasks
+            after = flags()
             if after != before:
                 await audit.record(
                     session, actor, "user.notify", "user", user_id, before=before, after=after

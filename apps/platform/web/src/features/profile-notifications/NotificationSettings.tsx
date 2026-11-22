@@ -126,6 +126,28 @@ export function NotificationSettings({ me }: { me: Me }) {
             update.mutate({ data: { notify_leads: value } });
           }}
         />
+        <Row
+          id={`${base}-decisions`}
+          label={t("profile.decisions")}
+          hint={t("profile.decisionsHint")}
+          checked={data.notify_decisions ?? true}
+          disabled={!linked}
+          loading={update.isPending}
+          onChange={(value) => {
+            update.mutate({ data: { notify_decisions: value } });
+          }}
+        />
+        <Row
+          id={`${base}-tasks`}
+          label={t("profile.tasks")}
+          hint={t("profile.tasksHint")}
+          checked={data.notify_tasks ?? false}
+          disabled={!linked}
+          loading={update.isPending}
+          onChange={(value) => {
+            update.mutate({ data: { notify_tasks: value } });
+          }}
+        />
         {canSee(me, { resource: "admin" }) ? (
           <Row
             id={`${base}-system`}

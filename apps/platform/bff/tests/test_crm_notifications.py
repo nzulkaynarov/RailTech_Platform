@@ -362,6 +362,49 @@ async def test_reply_notice_opens_the_outgoing_document(
     }
 
 
+async def test_task_signals_open_the_quote_and_the_signing_route(
+    web: Web, fb: FeedBackends, check: ContractChecker
+) -> None:
+    """ГЛ-2: сигналы «КП на одобрение» и «Подпишите» ведут к своему маршруту, не к документу."""
+    route = "80000000-0000-4000-8000-000000000081"
+    fb.state["crm_notifications"] = {
+        "items": [
+            crm_note(
+                11,
+                "eds.approve_quote",
+                fb.m.ago(minutes=2),
+                tab="decisions",
+                title="КП на одобрение: КП-0042 v2",
+                object_kind="approval",
+                object_id=route,
+                object_number="КП-0042",
+            ),
+            crm_note(
+                12,
+                "eds.sign_commercial",
+                fb.m.ago(minutes=1),
+                tab="decisions",
+                title="Подпишите: Договор Д-500",
+                object_kind="approval",
+                object_id=route,
+                object_number="Д-500",
+            ),
+        ],
+        "unread_count": 2,
+    }
+    await web.login(["DIRECTOR"])
+
+    response = await web.client.get("/api/v1/notifications")
+
+    check(response, "/notifications", "get")
+    paths = {n["title"]: n["object"]["path"] for n in response.json()["items"]}
+    assert (
+        paths["КП на одобрение: КП-0042 v2"]
+        == "/eds/drafts/%D0%9A%D0%9F-0042?panel=open&tab=approve"
+    )
+    assert paths["Подпишите: Договор Д-500"] == f"/dashboard/queue?signing={route}"
+
+
 async def test_quote_not_sent_notification_opens_the_quote_card(
     web: Web, fb: FeedBackends, check: ContractChecker
 ) -> None:

@@ -50,7 +50,7 @@ VERSION = dict.fromkeys(
         "approval.requested",
         "approval.decided",
         "notice.requested",
-        "document.notice_requested",  # ГЛ-1: v2 добавляет вид approval_reminder
+        "document.notice_requested",  # ГЛ-0, ГЛ-1, ГЛ-2: v2 — все виды уведомлений о документе
     ),
     2,
 )

@@ -57,6 +57,7 @@ from app.schemas_eds_documents import (
     EdsFile,
     EdsLetterhead,
     EdsRecipientIn,
+    EdsSignerChangeIn,
     RegistryKind,
     StatusFilter,
 )
@@ -378,6 +379,46 @@ async def request_registration(id: DocumentId, authed: Writer) -> EdsDocument:
     proxy = _proxy(authed)
     body = await proxy.request("POST", f"{API}/documents/{id}/registration-request")
     return await _present(proxy, body, authed)
+
+
+@router.post(
+    "/eds/documents/{id}/remind",
+    response_model=EdsDocument,
+    operation_id="remindEdsDocumentSigner",
+)
+async def remind_document_signer(id: DocumentId, authed: Writer) -> EdsDocument:
+    """«Напомнить» (ГЛ-0): подписанту письма на подписи; не чаще раза в час — решает EDS."""
+    proxy = _proxy(authed)
+    body = await proxy.request("POST", f"{API}/documents/{id}/remind")
+    return await _present(proxy, body, authed)
+
+
+@router.post(
+    "/eds/documents/{id}/withdraw",
+    response_model=EdsDocument,
+    operation_id="withdrawEdsDocumentFromSigning",
+)
+async def withdraw_document_from_signing(id: DocumentId, authed: Writer) -> EdsDocument:
+    """«Отозвать» (ГЛ-0): автор снимает передачу на подпись."""
+    proxy = _proxy(authed)
+    body = await proxy.request("POST", f"{API}/documents/{id}/withdraw")
+    return await _present(proxy, body, authed)
+
+
+@router.post(
+    "/eds/documents/{id}/signer",
+    response_model=EdsDocument,
+    operation_id="changeEdsDocumentSigner",
+)
+async def change_document_signer(
+    id: DocumentId, body: EdsSignerChangeIn, authed: Writer
+) -> EdsDocument:
+    """«Сменить подписанта» (ГЛ-0): новому подписанту уходит «Подпишите исходящее» — решает EDS."""
+    proxy = _proxy(authed)
+    data = await proxy.request(
+        "POST", f"{API}/documents/{id}/signer", json=body.model_dump(), expected=200
+    )
+    return await _present(proxy, data, authed)
 
 
 @router.post("/eds/documents/{id}/send", response_model=EdsDocument, operation_id="sendEdsDocument")

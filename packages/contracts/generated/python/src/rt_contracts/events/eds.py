@@ -108,6 +108,45 @@ class Approval3(BaseModel):
     """
 
 
+class Approval4(BaseModel):
+    """
+    Маршрут согласования или подписи, у которого нет документа EDS (КП, коммерческий документ ERP): ведёт к строке «Задачи»
+    """
+
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    eds_approval_id: UuidV2
+    template: Template
+    number: Annotated[str, Field(max_length=64, min_length=1)]
+
+
+class Approval5(BaseModel):
+    """
+    Маршрут согласования или подписи, у которого нет документа EDS (КП, коммерческий документ ERP): ведёт к строке «Задачи»
+    """
+
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    eds_approval_id: UuidV2
+    template: Template
+    number: Annotated[str, Field(max_length=64, min_length=1)]
+
+
+class Approval6(BaseModel):
+    """
+    Маршрут согласования или подписи, у которого нет документа EDS (КП, коммерческий документ ERP): ведёт к строке «Задачи»
+    """
+
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    eds_approval_id: UuidV2
+    template: Template
+    number: Annotated[str, Field(max_length=64, min_length=1)]
+
+
 class ApprovalDecidedV1(BaseModel):
     """
     Тип uz.railtech.eds.approval.decided.v1, источник rt://eds. Поле data конверта (envelope.v1.json). Решение на шаге маршрута: approve, return (на доработку), reject; comment обязателен для return и reject. route_status — состояние маршрута после решения (open — есть следующий шаг). Что делает ERP (EDS-03) для approval.object.kind = quote и закрытого маршрута: approved — ИСХ-номер outgoing_number на КП, отправка по channels разблокирована; returned — КП «На доработке» с комментарием; rejected — КП отклонено директором. Одобрение КП, готового позже срока резолюции, допустимо (строка «срок» чек-листа — предупреждение) и помечается approved_late = true.
@@ -544,9 +583,9 @@ class DocumentNoticeRequestedV1(BaseModel):
     actor: Actor
 
 
-class DocumentNoticeRequestedV2(BaseModel):
+class DocumentNoticeRequestedV21(BaseModel):
     """
-    Тип uz.railtech.eds.document.notice_requested.v2, источник rt://eds. Поле data конверта (envelope.v1.json). v2 (ГЛ-1): добавлен вид `approval_reminder`, иначе как v1. Уведомление сотрудникам по документу EDS, у которого нет входящего письма (СЦ-9): автору служебной записки (заявления, отчёта) — решение директора (`memo_decided`) и оплата (`memo_paid`); подписанту — передан проект исходящего письма (`letter_sign_requested`); держателям права `signing.manage` — подписать некому (`letter_signer_missing`, ссылка на Настройки → Права подписи); автору — письмо подписал другой сотрудник (`letter_signed`, только письма не в ответ на входящее: для ответов есть `notice.requested`); текущему согласующему (на шаге «любой с правом» — держателям права) — автор напомнил о шаге маршрута (`approval_reminder`, «Напомнить» в «Вы ждёте других»). Текст (RU) готовит EDS, доставляет CRM тем же путём, что `notice.requested`: строка колокольчика (`staff_notifications`, объект — документ, `kind = eds.<kind>`) и сообщение в Telegram, где он привязан. Один эффект на повтор доставки (inbox CRM). Ссылки на `_defs.v2.json`: номер документа — с обозначением из настроек нумерации. Подписчики v1: crm (доставка).
+    Тип uz.railtech.eds.document.notice_requested.v2, источник rt://eds. v2 (ГЛ-0, ГЛ-1, ГЛ-2, 2026-11-22): `letter_sign_withdrawn` (автор отозвал письмо с подписи), `approval_reminder` (напоминание о шаге согласования) и новые виды уведомлений о задачах «Главной» — `approve_quote` (КП ждёт решения директора), `resolve_letter` (входящее письмо ждёт резолюции), `approve_memo` и `pay_memo` (шаг маршрута служебки пришёл к сотруднику), `sign_commercial` и `visa_commercial` (подпись и виза коммерческого документа), `rework_document` (документ вернули автору); объект — `document`, `letter` или `approval` (КП и подпись коммерческого документа не имеют документа EDS); остальное — как v1. Поле data конверта (envelope.v1.json). Уведомление сотрудникам по документу EDS, у которого нет входящего письма (СЦ-9): автору служебной записки (заявления, отчёта) — решение директора (`memo_decided`) и оплата (`memo_paid`); подписанту — передан проект исходящего письма (`letter_sign_requested`); держателям права `signing.manage` — подписать некому (`letter_signer_missing`, ссылка на Настройки → Права подписи); автору — письмо подписал другой сотрудник (`letter_signed`, только письма не в ответ на входящее: для ответов есть `notice.requested`). Текст (RU) готовит EDS, доставляет CRM тем же путём, что `notice.requested`: строка колокольчика (`staff_notifications`, объект — документ, `kind = eds.<kind>`) и сообщение в Telegram, где он привязан. Один эффект на повтор доставки (inbox CRM). Ссылки на `_defs.v2.json`: номер документа — с обозначением из настроек нумерации. Подписчики v2: crm (доставка). Одно уведомление на приход задачи к сотруднику (ключ — шаг маршрута или письмо); Telegram — только для решений (подписать, согласовать, резолюция, оплата, виза), `rework_document` — только колокольчик.
     """
 
     model_config = ConfigDict(
@@ -558,7 +597,7 @@ class DocumentNoticeRequestedV2(BaseModel):
     """
     kind: Kind1
     """
-    memo_decided — директор согласовал или отклонил (автору); memo_paid — бухгалтер отметил оплату (автору); letter_sign_requested — проект письма ждёт подписи (подписанту); letter_signer_missing — подписать некому (держателям `signing.manage`); letter_signed — письмо подписал другой сотрудник (автору); approval_reminder — автор напомнил о шаге маршрута (текущему согласующему или держателям права шага)
+    memo_decided — директор согласовал или отклонил (автору); memo_paid — бухгалтер отметил оплату (автору); letter_sign_requested — проект письма ждёт подписи (подписанту); letter_signer_missing — подписать некому (держателям `signing.manage`); letter_signed — письмо подписал другой сотрудник (автору); approve_quote — КП ждёт решения (держателям права решения); resolve_letter — входящее письмо ждёт резолюции (адресату); approve_memo — шаг «Директор» служебки, заявления или отчёта пришёл к сотруднику; pay_memo — шаг «Бухгалтер» (оплата); sign_commercial — шаг «Подписать» коммерческого документа (подписанту); visa_commercial — шаг визы финансиста или юриста; rework_document — документ вернули на доработку (автору, только колокольчик); letter_sign_withdrawn — автор отозвал письмо с подписи (бывшему подписанту); approval_reminder — автор напомнил о шаге согласования (текущему согласующему)
     """
     recipients: Annotated[list[int], Field(max_length=50, min_length=1)]
     """
@@ -572,8 +611,105 @@ class DocumentNoticeRequestedV2(BaseModel):
     """
     Вторая строка: комментарий решения, сумма и дата оплаты, тема и автор письма
     """
-    document: NoticeDocumentRefV2
     actor: Actor
+    document: NoticeDocumentRefV2
+    letter: LetterRefV2 | None = None
+    approval: Approval4 | None = None
+    """
+    Маршрут согласования или подписи, у которого нет документа EDS (КП, коммерческий документ ERP): ведёт к строке «Задачи»
+    """
+
+
+class DocumentNoticeRequestedV22(BaseModel):
+    """
+    Тип uz.railtech.eds.document.notice_requested.v2, источник rt://eds. v2 (ГЛ-0, ГЛ-1, ГЛ-2, 2026-11-22): `letter_sign_withdrawn` (автор отозвал письмо с подписи), `approval_reminder` (напоминание о шаге согласования) и новые виды уведомлений о задачах «Главной» — `approve_quote` (КП ждёт решения директора), `resolve_letter` (входящее письмо ждёт резолюции), `approve_memo` и `pay_memo` (шаг маршрута служебки пришёл к сотруднику), `sign_commercial` и `visa_commercial` (подпись и виза коммерческого документа), `rework_document` (документ вернули автору); объект — `document`, `letter` или `approval` (КП и подпись коммерческого документа не имеют документа EDS); остальное — как v1. Поле data конверта (envelope.v1.json). Уведомление сотрудникам по документу EDS, у которого нет входящего письма (СЦ-9): автору служебной записки (заявления, отчёта) — решение директора (`memo_decided`) и оплата (`memo_paid`); подписанту — передан проект исходящего письма (`letter_sign_requested`); держателям права `signing.manage` — подписать некому (`letter_signer_missing`, ссылка на Настройки → Права подписи); автору — письмо подписал другой сотрудник (`letter_signed`, только письма не в ответ на входящее: для ответов есть `notice.requested`). Текст (RU) готовит EDS, доставляет CRM тем же путём, что `notice.requested`: строка колокольчика (`staff_notifications`, объект — документ, `kind = eds.<kind>`) и сообщение в Telegram, где он привязан. Один эффект на повтор доставки (inbox CRM). Ссылки на `_defs.v2.json`: номер документа — с обозначением из настроек нумерации. Подписчики v2: crm (доставка). Одно уведомление на приход задачи к сотруднику (ключ — шаг маршрута или письмо); Telegram — только для решений (подписать, согласовать, резолюция, оплата, виза), `rework_document` — только колокольчик.
+    """
+
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    notice_key: Annotated[str, Field(pattern="^[A-Za-z0-9._:/-]{1,128}$")]
+    """
+    Ключ отправителя: EDS публикует уведомление с этим ключом один раз на причину (документ, вид, круг согласования или оплата)
+    """
+    kind: Kind1
+    """
+    memo_decided — директор согласовал или отклонил (автору); memo_paid — бухгалтер отметил оплату (автору); letter_sign_requested — проект письма ждёт подписи (подписанту); letter_signer_missing — подписать некому (держателям `signing.manage`); letter_signed — письмо подписал другой сотрудник (автору); approve_quote — КП ждёт решения (держателям права решения); resolve_letter — входящее письмо ждёт резолюции (адресату); approve_memo — шаг «Директор» служебки, заявления или отчёта пришёл к сотруднику; pay_memo — шаг «Бухгалтер» (оплата); sign_commercial — шаг «Подписать» коммерческого документа (подписанту); visa_commercial — шаг визы финансиста или юриста; rework_document — документ вернули на доработку (автору, только колокольчик); letter_sign_withdrawn — автор отозвал письмо с подписи (бывшему подписанту); approval_reminder — автор напомнил о шаге согласования (текущему согласующему)
+    """
+    recipients: Annotated[list[int], Field(max_length=50, min_length=1)]
+    """
+    crm_user_id получателей
+    """
+    title: Annotated[str, Field(max_length=200, min_length=1)]
+    """
+    Заголовок уведомления (RU)
+    """
+    subtitle: Annotated[str | None, Field(max_length=200)] = None
+    """
+    Вторая строка: комментарий решения, сумма и дата оплаты, тема и автор письма
+    """
+    actor: Actor
+    document: NoticeDocumentRefV2 | None = None
+    letter: LetterRefV2
+    approval: Approval5 | None = None
+    """
+    Маршрут согласования или подписи, у которого нет документа EDS (КП, коммерческий документ ERP): ведёт к строке «Задачи»
+    """
+
+
+class DocumentNoticeRequestedV23(BaseModel):
+    """
+    Тип uz.railtech.eds.document.notice_requested.v2, источник rt://eds. v2 (ГЛ-0, ГЛ-1, ГЛ-2, 2026-11-22): `letter_sign_withdrawn` (автор отозвал письмо с подписи), `approval_reminder` (напоминание о шаге согласования) и новые виды уведомлений о задачах «Главной» — `approve_quote` (КП ждёт решения директора), `resolve_letter` (входящее письмо ждёт резолюции), `approve_memo` и `pay_memo` (шаг маршрута служебки пришёл к сотруднику), `sign_commercial` и `visa_commercial` (подпись и виза коммерческого документа), `rework_document` (документ вернули автору); объект — `document`, `letter` или `approval` (КП и подпись коммерческого документа не имеют документа EDS); остальное — как v1. Поле data конверта (envelope.v1.json). Уведомление сотрудникам по документу EDS, у которого нет входящего письма (СЦ-9): автору служебной записки (заявления, отчёта) — решение директора (`memo_decided`) и оплата (`memo_paid`); подписанту — передан проект исходящего письма (`letter_sign_requested`); держателям права `signing.manage` — подписать некому (`letter_signer_missing`, ссылка на Настройки → Права подписи); автору — письмо подписал другой сотрудник (`letter_signed`, только письма не в ответ на входящее: для ответов есть `notice.requested`). Текст (RU) готовит EDS, доставляет CRM тем же путём, что `notice.requested`: строка колокольчика (`staff_notifications`, объект — документ, `kind = eds.<kind>`) и сообщение в Telegram, где он привязан. Один эффект на повтор доставки (inbox CRM). Ссылки на `_defs.v2.json`: номер документа — с обозначением из настроек нумерации. Подписчики v2: crm (доставка). Одно уведомление на приход задачи к сотруднику (ключ — шаг маршрута или письмо); Telegram — только для решений (подписать, согласовать, резолюция, оплата, виза), `rework_document` — только колокольчик.
+    """
+
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    notice_key: Annotated[str, Field(pattern="^[A-Za-z0-9._:/-]{1,128}$")]
+    """
+    Ключ отправителя: EDS публикует уведомление с этим ключом один раз на причину (документ, вид, круг согласования или оплата)
+    """
+    kind: Kind1
+    """
+    memo_decided — директор согласовал или отклонил (автору); memo_paid — бухгалтер отметил оплату (автору); letter_sign_requested — проект письма ждёт подписи (подписанту); letter_signer_missing — подписать некому (держателям `signing.manage`); letter_signed — письмо подписал другой сотрудник (автору); approve_quote — КП ждёт решения (держателям права решения); resolve_letter — входящее письмо ждёт резолюции (адресату); approve_memo — шаг «Директор» служебки, заявления или отчёта пришёл к сотруднику; pay_memo — шаг «Бухгалтер» (оплата); sign_commercial — шаг «Подписать» коммерческого документа (подписанту); visa_commercial — шаг визы финансиста или юриста; rework_document — документ вернули на доработку (автору, только колокольчик); letter_sign_withdrawn — автор отозвал письмо с подписи (бывшему подписанту); approval_reminder — автор напомнил о шаге согласования (текущему согласующему)
+    """
+    recipients: Annotated[list[int], Field(max_length=50, min_length=1)]
+    """
+    crm_user_id получателей
+    """
+    title: Annotated[str, Field(max_length=200, min_length=1)]
+    """
+    Заголовок уведомления (RU)
+    """
+    subtitle: Annotated[str | None, Field(max_length=200)] = None
+    """
+    Вторая строка: комментарий решения, сумма и дата оплаты, тема и автор письма
+    """
+    actor: Actor
+    document: NoticeDocumentRefV2 | None = None
+    letter: LetterRefV2 | None = None
+    approval: Approval6
+    """
+    Маршрут согласования или подписи, у которого нет документа EDS (КП, коммерческий документ ERP): ведёт к строке «Задачи»
+    """
+
+
+class DocumentNoticeRequestedV2(
+    RootModel[
+        DocumentNoticeRequestedV21
+        | DocumentNoticeRequestedV22
+        | DocumentNoticeRequestedV23
+    ]
+):
+    root: Annotated[
+        DocumentNoticeRequestedV21
+        | DocumentNoticeRequestedV22
+        | DocumentNoticeRequestedV23,
+        Field(title="Запрошено уведомление по документу (EDS)"),
+    ]
+    """
+    Тип uz.railtech.eds.document.notice_requested.v2, источник rt://eds. v2 (ГЛ-0, ГЛ-1, ГЛ-2, 2026-11-22): `letter_sign_withdrawn` (автор отозвал письмо с подписи), `approval_reminder` (напоминание о шаге согласования) и новые виды уведомлений о задачах «Главной» — `approve_quote` (КП ждёт решения директора), `resolve_letter` (входящее письмо ждёт резолюции), `approve_memo` и `pay_memo` (шаг маршрута служебки пришёл к сотруднику), `sign_commercial` и `visa_commercial` (подпись и виза коммерческого документа), `rework_document` (документ вернули автору); объект — `document`, `letter` или `approval` (КП и подпись коммерческого документа не имеют документа EDS); остальное — как v1. Поле data конверта (envelope.v1.json). Уведомление сотрудникам по документу EDS, у которого нет входящего письма (СЦ-9): автору служебной записки (заявления, отчёта) — решение директора (`memo_decided`) и оплата (`memo_paid`); подписанту — передан проект исходящего письма (`letter_sign_requested`); держателям права `signing.manage` — подписать некому (`letter_signer_missing`, ссылка на Настройки → Права подписи); автору — письмо подписал другой сотрудник (`letter_signed`, только письма не в ответ на входящее: для ответов есть `notice.requested`). Текст (RU) готовит EDS, доставляет CRM тем же путём, что `notice.requested`: строка колокольчика (`staff_notifications`, объект — документ, `kind = eds.<kind>`) и сообщение в Telegram, где он привязан. Один эффект на повтор доставки (inbox CRM). Ссылки на `_defs.v2.json`: номер документа — с обозначением из настроек нумерации. Подписчики v2: crm (доставка). Одно уведомление на приход задачи к сотруднику (ключ — шаг маршрута или письмо); Telegram — только для решений (подписать, согласовать, резолюция, оплата, виза), `rework_document` — только колокольчик.
+    """
 
 
 class DocumentRef(BaseModel):
@@ -738,7 +874,7 @@ class Kind(StrEnum):
 
 class Kind1(StrEnum):
     """
-    memo_decided — директор согласовал или отклонил (автору); memo_paid — бухгалтер отметил оплату (автору); letter_sign_requested — проект письма ждёт подписи (подписанту); letter_signer_missing — подписать некому (держателям `signing.manage`); letter_signed — письмо подписал другой сотрудник (автору); approval_reminder — автор напомнил о шаге маршрута (текущему согласующему или держателям права шага)
+    memo_decided — директор согласовал или отклонил (автору); memo_paid — бухгалтер отметил оплату (автору); letter_sign_requested — проект письма ждёт подписи (подписанту); letter_signer_missing — подписать некому (держателям `signing.manage`); letter_signed — письмо подписал другой сотрудник (автору); approve_quote — КП ждёт решения (держателям права решения); resolve_letter — входящее письмо ждёт резолюции (адресату); approve_memo — шаг «Директор» служебки, заявления или отчёта пришёл к сотруднику; pay_memo — шаг «Бухгалтер» (оплата); sign_commercial — шаг «Подписать» коммерческого документа (подписанту); visa_commercial — шаг визы финансиста или юриста; rework_document — документ вернули на доработку (автору, только колокольчик); letter_sign_withdrawn — автор отозвал письмо с подписи (бывшему подписанту); approval_reminder — автор напомнил о шаге согласования (текущему согласующему)
     """
 
     memo_decided = "memo_decided"
@@ -746,10 +882,18 @@ class Kind1(StrEnum):
     letter_sign_requested = "letter_sign_requested"
     letter_signer_missing = "letter_signer_missing"
     letter_signed = "letter_signed"
+    approve_quote = "approve_quote"
+    resolve_letter = "resolve_letter"
+    approve_memo = "approve_memo"
+    pay_memo = "pay_memo"
+    sign_commercial = "sign_commercial"
+    visa_commercial = "visa_commercial"
+    rework_document = "rework_document"
+    letter_sign_withdrawn = "letter_sign_withdrawn"
     approval_reminder = "approval_reminder"
 
 
-class Kind2(StrEnum):
+class Kind4(StrEnum):
     """
     Что случилось: выдано поручение; напоминание о сроке; срок прошёл; исполнитель просит перенос; автор решил перенос; надо ознакомиться; все поручения письма исполнены
     """
@@ -763,7 +907,7 @@ class Kind2(StrEnum):
     letter_executed = "letter_executed"
 
 
-class Kind4(StrEnum):
+class Kind6(StrEnum):
     quote = "quote"
     contract = "contract"
     invoice = "invoice"
@@ -1105,7 +1249,7 @@ class NoticeRequestedV1(BaseModel):
     """
     Ключ отправителя: EDS публикует уведомление с этим ключом один раз; для журнала и разбора
     """
-    kind: Kind2
+    kind: Kind4
     """
     Что случилось: выдано поручение; напоминание о сроке; срок прошёл; исполнитель просит перенос; автор решил перенос; надо ознакомиться; все поручения письма исполнены
     """
@@ -1145,7 +1289,7 @@ class NoticeRequestedV2(BaseModel):
     """
     Ключ отправителя: EDS публикует уведомление с этим ключом один раз; для журнала и разбора
     """
-    kind: Kind2
+    kind: Kind4
     """
     Что случилось: выдано поручение; напоминание о сроке; срок прошёл; исполнитель просит перенос; автор решил перенос; надо ознакомиться; все поручения письма исполнены
     """
@@ -1177,7 +1321,7 @@ class Object(BaseModel):
     model_config = ConfigDict(
         extra="ignore",
     )
-    kind: Kind4
+    kind: Kind6
     object_id: int
     """
     Идентификатор сущности в ERP
@@ -1494,6 +1638,11 @@ class StepV2(BaseModel):
     Номер шага маршрута с 1
     """
     assignee: StepAssigneeV2
+
+
+class Template(StrEnum):
+    quote = "quote"
+    signing = "signing"
 
 
 class ToItem(RootModel[EmailStr]):

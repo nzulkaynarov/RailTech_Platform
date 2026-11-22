@@ -266,6 +266,25 @@ async def test_avatar_without_the_field_or_not_multipart_is_422(
     assert plain.json()["details"]["reason"] == "avatar_unsupported_type"
 
 
+async def test_patch_me_saves_the_telegram_switches_for_decisions_and_tasks(
+    client: TestClient, sessions: async_sessionmaker[AsyncSession]
+) -> None:
+    """ГЛ-2: Telegram по решениям включён по умолчанию, по прочим задачам выключен."""
+    manager, password = await make_user(sessions, "switch@railtech.uz", ["manager"])
+    headers = login(client, manager.email, password)
+    me = client.get("/api/v1/me", headers=headers).json()
+    assert (me["notify_decisions"], me["notify_tasks"]) == (True, False)
+
+    patched = client.patch(
+        "/api/v1/me", headers=headers, json={"notify_decisions": False, "notify_tasks": True}
+    )
+    assert patched.status_code == 200, patched.text
+    assert (patched.json()["notify_decisions"], patched.json()["notify_tasks"]) == (False, True)
+    again = client.get("/api/v1/me", headers=headers).json()
+    assert (again["notify_decisions"], again["notify_tasks"]) == (False, True)
+    assert again["notify_leads"] is True  # соседние переключатели не задеты
+
+
 async def test_patch_me_is_atomic_and_rejects_a_blank_name(
     client: TestClient, sessions: async_sessionmaker[AsyncSession]
 ) -> None:
