@@ -187,6 +187,10 @@
         "address": "Manzil",
         "existsHidden": "Bunday kompaniya bor, lekin tanlov röyxatida yöq. Administratorga murojaat qiling.",
         "failed": "Kompaniyani qöşib bölmadi. Qayta uriniş."
+      },
+      "roleFailed": {
+        "supplier": "Kompaniyani yetkazib beruvchi deb belgilab bölmadi: ruxsat yöq. Boşqasini tanlang yoki administratorga murojaat qiling.",
+        "manufacturer": "Kompaniyani işlab çiqaruvçi deb belgilab bölmadi: ruxsat yöq. Boşqasini tanlang yoki administratorga murojaat qiling."
       }
     },
     "person": {

@@ -8,6 +8,7 @@ import {
   searchCounterparties,
   useCreateCounterparty,
   useGetCatalogLookups,
+  useSetCounterpartyRole,
 } from "../../api/generated/platform-bff";
 import { ErrorNote, FormField } from "../FormParts";
 import { FormSheet } from "../FormSheet";
@@ -27,6 +28,10 @@ export interface PickedCompany {
   inn: string | null;
   /** Общая почта компании — форма может подставить её, если у человека своей нет */
   email?: string | null;
+  /** Клиент CRM, с которым связана компания: заявка уходит с его id, без него — с названием и ИНН */
+  crmClientId?: number | null;
+  /** Название страны из карточки: форма, где страна — справочник, подставляет её сразу */
+  country?: string | null;
 }
 
 export type { CounterpartyPickRole };
@@ -36,7 +41,27 @@ const toPicked = (row: CounterpartyPick): PickedCompany => ({
   name: row.name,
   inn: row.inn,
   email: row.email,
+  crmClientId: row.crm_client_id,
+  country: row.country,
 });
+
+/** Строка выбора из `details.existing` ответа 409: проверяем форму, чужому телу не верим */
+function existingRow(details: Record<string, unknown>): CounterpartyPick | null {
+  const row = details["existing"];
+  if (!row || typeof row !== "object") return null;
+  const found = row as Partial<CounterpartyPick>;
+  if (typeof found.id !== "string" || typeof found.name !== "string") return null;
+  if (!found.roles || typeof found.roles !== "object") return null;
+  return {
+    id: found.id,
+    name: found.name,
+    inn: found.inn ?? null,
+    country: found.country ?? null,
+    roles: found.roles,
+    crm_client_id: found.crm_client_id ?? null,
+    email: found.email ?? null,
+  };
+}
 
 const ROLE_KEYS = ["client", "supplier", "manufacturer", "partner", "organization"] as const;
 
@@ -52,6 +77,7 @@ export function CompanyPicker({
   onChange,
   role,
   allowCreate = true,
+  assignRole = false,
   invalid = false,
   disabled = false,
   describedBy,
@@ -63,6 +89,11 @@ export function CompanyPicker({
   /** Роль, которая нужна форме: компании с ней идут выше; для «Завести» — роль новой компании */
   role?: CounterpartyPickRole;
   allowCreate?: boolean;
+  /**
+   * Форма просит у компании роль «поставщик» или «изготовитель» (`role`): выбранной компании без этой роли форма
+   * ставит её сама (ERP, право `supply.manage`); не вышло — компания не выбирается, а под полем сказано почему.
+   */
+  assignRole?: boolean;
   invalid?: boolean;
   disabled?: boolean;
   describedBy?: string;
@@ -73,7 +104,25 @@ export function CompanyPicker({
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
   const [creating, setCreating] = useState<string | null>(null);
+  const [roleFailed, setRoleFailed] = useState(false);
+  const setRole = useSetCounterpartyRole();
   const { items, query, loading, settled } = useCompanySearch(search, role, open);
+
+  // Выбор строки: роль формы — до того, как компания попадёт в поле
+  const choose = async (row: CounterpartyPick): Promise<boolean> => {
+    setRoleFailed(false);
+    const wanted = assignRole && (role === "supplier" || role === "manufacturer") ? role : null;
+    if (wanted && !row.roles[wanted]) {
+      try {
+        await setRole.mutateAsync({ id: row.id, data: { role: wanted, on: true } });
+      } catch {
+        setRoleFailed(true);
+        return false;
+      }
+    }
+    onChange(toPicked(row));
+    return true;
+  };
 
   const typed = query.length >= MIN_CREATE;
   const offerCreate = allowCreate && typed && settled;
@@ -137,7 +186,7 @@ export function CompanyPicker({
             return;
           }
           const row = items.find((item) => item.id === picked);
-          if (row) onChange(toPicked(row));
+          if (row) void choose(row);
         }}
         options={[
           // выбранная компания остаётся в списке, пока поиск её не показал, — иначе поле теряет название
@@ -160,10 +209,19 @@ export function CompanyPicker({
             : []),
         ]}
       />
+      <ErrorNote message={roleFailed ? t(`picker.company.roleFailed.${String(role)}`) : null} />
       {creating !== null ? (
         <NewCompany
           name={creating}
           role={role}
+          onExisting={async (row) => {
+            const ok = await choose(row);
+            if (ok) {
+              setCreating(null);
+              setSearch("");
+            }
+            return ok;
+          }}
           onDone={(company) => {
             setCreating(null);
             setSearch("");
@@ -186,11 +244,14 @@ const createRole = (role: CounterpartyPickRole | undefined) =>
 function NewCompany({
   name: initial,
   role,
+  onExisting,
   onDone,
   onCancel,
 }: {
   name: string;
   role: CounterpartyPickRole | undefined;
+  /** Такой ИНН уже есть: компания выбирается (форма при необходимости ставит ей свою роль) */
+  onExisting: (row: CounterpartyPick) => Promise<boolean>;
   onDone: (company: PickedCompany) => void;
   onCancel: () => void;
 }) {
@@ -200,6 +261,7 @@ function NewCompany({
   const [countryId, setCountryId] = useState<number | null>(null);
   const [address, setAddress] = useState("");
   const [taken, setTaken] = useState(false);
+  const [denied, setDenied] = useState(false);
   const lookups = useGetCatalogLookups({ query: { staleTime: 300_000, retry: false } });
   const create = useCreateCounterparty({
     mutation: {
@@ -211,7 +273,12 @@ function NewCompany({
   const innValid = inn.trim() === "" || /^\d{9}$/.test(inn.trim());
 
   // такой ИНН уже есть у компании — берём её, а не заводим вторую
-  const pickExisting = async (existingId: string | undefined) => {
+  const pickExisting = async (existingId: string | undefined, known: CounterpartyPick | null) => {
+    // BFF прикладывает строку компании сразу: она может быть без роли и в поиске её нет
+    if (known) {
+      setDenied(!(await onExisting(known)));
+      return;
+    }
     const innText = inn.trim();
     const list = await searchCounterparties({ q: innText || name.trim(), limit: 20 }).catch(
       () => null,
@@ -219,7 +286,7 @@ function NewCompany({
     const found =
       list?.items.find((row) => row.id === existingId) ??
       (innText ? list?.items.find((row) => row.inn === innText) : undefined);
-    if (found) onDone(toPicked(found));
+    if (found) setDenied(!(await onExisting(found)));
     else setTaken(true);
   };
 
@@ -235,16 +302,19 @@ function NewCompany({
       error={
         <ErrorNote
           message={
-            taken
-              ? t("picker.company.create.existsHidden")
-              : failed
-                ? t("picker.company.create.failed")
-                : null
+            denied
+              ? t(`picker.company.roleFailed.${String(role)}`)
+              : taken
+                ? t("picker.company.create.existsHidden")
+                : failed
+                  ? t("picker.company.create.failed")
+                  : null
           }
         />
       }
       onSubmit={() => {
         setTaken(false);
+        setDenied(false);
         create.mutate(
           {
             data: {
@@ -259,7 +329,10 @@ function NewCompany({
             onError: (error) => {
               if (error instanceof ApiError && error.status === 409) {
                 const existing = error.details["existing_id"];
-                void pickExisting(typeof existing === "string" ? existing : undefined);
+                void pickExisting(
+                  typeof existing === "string" ? existing : undefined,
+                  existingRow(error.details),
+                );
               }
             },
           },

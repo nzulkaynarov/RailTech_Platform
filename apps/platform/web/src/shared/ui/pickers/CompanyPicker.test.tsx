@@ -13,9 +13,11 @@ import { PersonPicker } from "./PersonPicker";
 function Harness({
   onChange,
   role,
+  assignRole,
 }: {
   onChange: (company: PickedCompany | null) => void;
   role?: "supplier";
+  assignRole?: boolean;
 }) {
   const [value, setValue] = useState<PickedCompany | null>(null);
   return (
@@ -25,6 +27,7 @@ function Harness({
         id="co"
         value={value}
         role={role}
+        assignRole={assignRole}
         onChange={(company) => {
           setValue(company);
           onChange(company);
@@ -116,7 +119,25 @@ describe("CompanyPicker (ЕД-6)", () => {
     expect(found.items).toHaveLength(1);
   });
 
-  it("дубль указывает на компанию, которой нет в выдаче поиска: понятный отказ вместо отсылки в пустой список", async () => {
+  it("ИНН у компании без роли, которой нет в поиске: берётся компания из ответа 409, тупика нет", async () => {
+    const picked: (PickedCompany | null)[] = [];
+    renderUi(<Harness onChange={(c) => picked.push(c)} />);
+    const field = screen.getByLabelText("Организация");
+    // в поиске её нет
+    searchCompany(field, "Скрытая");
+    expect(await screen.findByText("Завести «Скрытая»")).toBeInTheDocument();
+    expect(screen.queryByText(/ИНН 300000999/)).toBeNull();
+    await addCompany(field, "Скрытая копия", "300000999");
+    await waitFor(() => {
+      expect(selectedLabel(field)).toBe("ООО «Скрытая Компания»");
+    });
+    expect(picked).toHaveLength(1);
+    expect(picked[0]).toMatchObject({ id: "14", inn: "300000999", country: "Узбекистан" });
+    expect(screen.queryByRole("dialog", { name: "Новая компания" })).toBeNull();
+    expect(screen.queryByText(/в списке выбора её нет/)).toBeNull();
+  });
+
+  it("ответ 409 без строки компании и без неё в поиске: понятный отказ, поле остаётся пустым", async () => {
     server.use(
       http.post("*/people/counterparties", () =>
         HttpResponse.json(
@@ -138,7 +159,47 @@ describe("CompanyPicker (ЕД-6)", () => {
     const sheet = await screen.findByRole("dialog", { name: "Новая компания" });
     fireEvent.click(within(sheet).getByRole("button", { name: "Завести" }));
     expect(await within(sheet).findByText(/в списке выбора её нет/)).toBeVisible();
-    expect(within(sheet).queryByText(/найдите её в списке/)).toBeNull();
+    expect(picked).toEqual([]);
+  });
+
+  it("форме нужна роль поставщика: выбранная компания без неё получает её, с ней — ничего не меняется", async () => {
+    const marked: { id: string; body: unknown }[] = [];
+    server.use(
+      http.post("*/people/counterparties/:id/roles", async ({ params, request }) => {
+        marked.push({ id: String(params["id"]), body: await request.json() });
+        return HttpResponse.json({});
+      }),
+    );
+    const picked: (PickedCompany | null)[] = [];
+    renderUi(<Harness onChange={(c) => picked.push(c)} role="supplier" assignRole />);
+    const field = screen.getByLabelText("Организация");
+    await pickCompany(field, "Путь", "АО «Демо-Путь»");
+    await waitFor(() => {
+      expect(picked).toHaveLength(1);
+    });
+    expect(marked).toEqual([{ id: "7", body: { role: "supplier", on: true } }]);
+    // у «Поставщик Север» роль уже есть — запроса нет
+    await pickCompany(field, "Север", "ООО «Поставщик Север»");
+    await waitFor(() => {
+      expect(picked).toHaveLength(2);
+    });
+    expect(marked).toHaveLength(1);
+  });
+
+  it("роль поставить не вышло: компания не выбирается, под полем сказано почему", async () => {
+    server.use(
+      http.post("*/people/counterparties/:id/roles", () =>
+        HttpResponse.json(
+          { code: "FORBIDDEN", message: "Нет права.", source: "erp" },
+          { status: 403 },
+        ),
+      ),
+    );
+    const picked: (PickedCompany | null)[] = [];
+    renderUi(<Harness onChange={(c) => picked.push(c)} role="supplier" assignRole />);
+    const field = screen.getByLabelText("Организация");
+    await pickCompany(field, "Путь", "АО «Демо-Путь»");
+    expect(await screen.findByText(/Не удалось отметить компанию поставщиком/)).toBeVisible();
     expect(picked).toEqual([]);
   });
 

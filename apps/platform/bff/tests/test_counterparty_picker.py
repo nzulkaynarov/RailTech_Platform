@@ -158,6 +158,7 @@ async def test_duplicate_inn_names_the_existing_company(
     router.post(f"{API}/parties/organizations/").mock(
         return_value=httpx.Response(409, json={"detail": "COMPANY_EXISTS", "existing_id": 55})
     )
+    router.get(f"{API}/parties/organizations/55/").mock(return_value=httpx.Response(200, json=ROW))
     response = await web.client.post(
         "/api/v1/people/counterparties",
         json={"name": "Копия", "inn": "300000777"},
@@ -168,6 +169,57 @@ async def test_duplicate_inn_names_the_existing_company(
     body = response.json()
     assert body["code"] == "CONFLICT"
     assert (body["details"]["reason"], body["details"]["existing_id"]) == ("company_exists", "55")
+
+
+async def test_duplicate_inn_carries_the_existing_company_as_a_picker_row(
+    web: Web, be: Any, check: ContractChecker
+) -> None:
+    """Компания без роли не видна в поиске: 409 несёт её строку выбора (ЕД-6, PR-3)."""
+    await web.login(["MANAGER"])
+    router: respx.MockRouter = be.router
+    router.post(f"{API}/parties/organizations/").mock(
+        return_value=httpx.Response(409, json={"detail": "COMPANY_EXISTS", "existing_id": 9})
+    )
+    card = router.get(f"{API}/parties/organizations/9/").mock(
+        return_value=httpx.Response(200, json=OTHER)
+    )
+    response = await web.client.post(
+        "/api/v1/people/counterparties",
+        json={"name": "Копия", "inn": "300000777"},
+        headers={"X-CSRF-Token": web.csrf},
+    )
+    assert response.status_code == 409
+    check(response, "/people/counterparties", "post")
+    details = response.json()["details"]
+    assert details["existing_id"] == "9"
+    assert details["existing"] == {
+        "id": "9",
+        "name": "ООО Север",
+        "inn": None,
+        "country": None,
+        "roles": OTHER["roles"],
+        "crm_client_id": None,
+        "email": None,
+    }
+    assert card.called
+
+
+async def test_duplicate_without_readable_card_still_names_the_id(web: Web, be: Any) -> None:
+    """Карточка не прочиталась — 409 прежний: только `existing_id`, форма ищет по ИНН."""
+    await web.login(["MANAGER"])
+    router: respx.MockRouter = be.router
+    router.post(f"{API}/parties/organizations/").mock(
+        return_value=httpx.Response(409, json={"detail": "COMPANY_EXISTS", "existing_id": 9})
+    )
+    router.get(f"{API}/parties/organizations/9/").mock(return_value=httpx.Response(404, json={}))
+    response = await web.client.post(
+        "/api/v1/people/counterparties",
+        json={"name": "Копия", "inn": "300000777"},
+        headers={"X-CSRF-Token": web.csrf},
+    )
+    assert response.status_code == 409
+    assert response.json()["details"]["existing_id"] == "9"
+    assert "existing" not in response.json()["details"]
 
 
 async def test_create_validates_input_before_erp(web: Web, be: Any) -> None:

@@ -555,8 +555,31 @@ async def create_counterparty(authed: PickerWriter, body: CounterpartyPickIn) ->
         sent["country_id"] = body.country_id
     if body.address:
         sent["legal_address"] = body.address
-    card = await ErpCompany(authed.call).data("POST", "parties/organizations/", json=sent)
+    erp = ErpCompany(authed.call)
+    try:
+        card = await erp.data("POST", "parties/organizations/", json=sent)
+    except PlatformError as exc:
+        await _attach_existing(erp, exc)
+        raise
     return to_pick(card)
+
+
+async def _attach_existing(erp: ErpCompany, exc: PlatformError) -> None:
+    """Дубль по ИНН: строка выбора уже существующей компании — в `details.existing`.
+
+    Компания без роли поиск не показывает, поэтому форма берёт её из этого ответа. Карточка не
+    прочиталась — остаётся только `existing_id`, как раньше.
+    """
+    details = exc.body.details or {}
+    existing = details.get("existing_id")
+    if exc.status_code != 409 or details.get("reason") != "company_exists" or not existing:
+        return
+    try:
+        card = await erp.data("GET", f"parties/organizations/{existing}/")
+    except PlatformError:
+        return
+    if isinstance(card, dict) and card.get("name"):
+        details["existing"] = to_pick({**card, "id": existing}).model_dump()
 
 
 @router.get(
