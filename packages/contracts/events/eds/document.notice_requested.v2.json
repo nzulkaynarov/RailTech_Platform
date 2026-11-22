@@ -1,0 +1,117 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://railtech.uz/contracts/events/eds/document.notice_requested.v2.json",
+  "title": "Запрошено уведомление по документу (EDS)",
+  "description": "Тип uz.railtech.eds.document.notice_requested.v2, источник rt://eds. v2 (ГЛ-2, 2026-11-22): новые виды уведомлений о задачах «Главной» — `approve_quote` (КП ждёт решения директора), `resolve_letter` (входящее письмо ждёт резолюции), `approve_memo` и `pay_memo` (шаг маршрута служебки пришёл к сотруднику), `sign_commercial` и `visa_commercial` (подпись и виза коммерческого документа), `rework_document` (документ вернули автору); объект — `document`, `letter` или `approval` (КП и подпись коммерческого документа не имеют документа EDS); остальное — как v1. Поле data конверта (envelope.v1.json). Уведомление сотрудникам по документу EDS, у которого нет входящего письма (СЦ-9): автору служебной записки (заявления, отчёта) — решение директора (`memo_decided`) и оплата (`memo_paid`); подписанту — передан проект исходящего письма (`letter_sign_requested`); держателям права `signing.manage` — подписать некому (`letter_signer_missing`, ссылка на Настройки → Права подписи); автору — письмо подписал другой сотрудник (`letter_signed`, только письма не в ответ на входящее: для ответов есть `notice.requested`). Текст (RU) готовит EDS, доставляет CRM тем же путём, что `notice.requested`: строка колокольчика (`staff_notifications`, объект — документ, `kind = eds.<kind>`) и сообщение в Telegram, где он привязан. Один эффект на повтор доставки (inbox CRM). Ссылки на `_defs.v2.json`: номер документа — с обозначением из настроек нумерации. Подписчики v2: crm (доставка). Одно уведомление на приход задачи к сотруднику (ключ — шаг маршрута или письмо); Telegram — только для решений (подписать, согласовать, резолюция, оплата, виза), `rework_document` — только колокольчик.",
+  "type": "object",
+  "required": [
+    "notice_key",
+    "kind",
+    "recipients",
+    "title",
+    "actor"
+  ],
+  "properties": {
+    "notice_key": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9._:/-]{1,128}$",
+      "description": "Ключ отправителя: EDS публикует уведомление с этим ключом один раз на причину (документ, вид, круг согласования или оплата)"
+    },
+    "kind": {
+      "type": "string",
+      "enum": [
+        "memo_decided",
+        "memo_paid",
+        "letter_sign_requested",
+        "letter_signer_missing",
+        "letter_signed",
+        "approve_quote",
+        "resolve_letter",
+        "approve_memo",
+        "pay_memo",
+        "sign_commercial",
+        "visa_commercial",
+        "rework_document"
+      ],
+      "description": "memo_decided — директор согласовал или отклонил (автору); memo_paid — бухгалтер отметил оплату (автору); letter_sign_requested — проект письма ждёт подписи (подписанту); letter_signer_missing — подписать некому (держателям `signing.manage`); letter_signed — письмо подписал другой сотрудник (автору); approve_quote — КП ждёт решения (держателям права решения); resolve_letter — входящее письмо ждёт резолюции (адресату); approve_memo — шаг «Директор» служебки, заявления или отчёта пришёл к сотруднику; pay_memo — шаг «Бухгалтер» (оплата); sign_commercial — шаг «Подписать» коммерческого документа (подписанту); visa_commercial — шаг визы финансиста или юриста; rework_document — документ вернули на доработку (автору, только колокольчик)"
+    },
+    "recipients": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 50,
+      "uniqueItems": true,
+      "items": {
+        "type": "integer"
+      },
+      "description": "crm_user_id получателей"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "description": "Заголовок уведомления (RU)"
+    },
+    "subtitle": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 200,
+      "description": "Вторая строка: комментарий решения, сумма и дата оплаты, тема и автор письма"
+    },
+    "actor": {
+      "$ref": "_defs.v1.json#/$defs/Actor"
+    },
+    "document": {
+      "$ref": "_defs.v2.json#/$defs/NoticeDocumentRef"
+    },
+    "letter": {
+      "$ref": "_defs.v2.json#/$defs/LetterRef"
+    },
+    "approval": {
+      "type": "object",
+      "description": "Маршрут согласования или подписи, у которого нет документа EDS (КП, коммерческий документ ERP): ведёт к строке «Задачи»",
+      "required": [
+        "eds_approval_id",
+        "template",
+        "number"
+      ],
+      "properties": {
+        "eds_approval_id": {
+          "$ref": "_defs.v2.json#/$defs/Uuid"
+        },
+        "template": {
+          "type": "string",
+          "enum": [
+            "quote",
+            "signing"
+          ]
+        },
+        "number": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false,
+  "anyOf": [
+    {
+      "required": [
+        "document"
+      ]
+    },
+    {
+      "required": [
+        "letter"
+      ]
+    },
+    {
+      "required": [
+        "approval"
+      ]
+    }
+  ]
+}

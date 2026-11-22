@@ -50,6 +50,7 @@ VERSION = dict.fromkeys(
         "approval.requested",
         "approval.decided",
         "notice.requested",
+        "document.notice_requested",  # ГЛ-2: новые виды уведомлений о задачах
     ),
     2,
 )

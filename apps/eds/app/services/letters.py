@@ -31,7 +31,7 @@ from app.schemas.letters import (
     LetterTrack,
     ResolutionIn,
 )
-from app.services import dictionaries, events, files, instructions, journal, letter_dedup, numbering
+from app.services import dictionaries, events, files, instructions, journal, letter_dedup, numbering, task_notices
 from app.services.people import active_ids, default_director, load_directory, zone_mismatches
 
 log = structlog.get_logger(__name__)
@@ -134,6 +134,7 @@ async def _publish_registered(
     if source is not None:  # W18A-P2: письмо общего ящика CRM — CRM снимает его с очереди
         data["source"] = source
     await events.publish(bus, session, "letter.registered", data, subject=letter.number)
+    await task_notices.letter_awaits_resolution(session, bus, letter, addressee=director, actor_id=actor_id)  # ГЛ-2
 
 
 async def _insert(

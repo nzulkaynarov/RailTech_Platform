@@ -37,14 +37,19 @@ def _registry() -> Any:
     return registry
 
 
+LEGACY_KINDS = {"memo_decided", "memo_paid", "letter_sign_requested", "letter_signer_missing", "letter_signed"}
+
+
 async def notices(container: Container, kind: str | None = None) -> list[dict[str, Any]]:
     found = [e["data"] for e in await outbox(container, "document.notice_requested")]
     for data in found:  # каждое событие соответствует схеме каталога
-        schema = json.loads((EVENTS / "eds" / "document.notice_requested.v1.json").read_text(encoding="utf-8"))
+        schema = json.loads((EVENTS / "eds" / "document.notice_requested.v2.json").read_text(encoding="utf-8"))
         jsonschema.Draft202012Validator(
             schema, registry=_registry(), format_checker=jsonschema.FormatChecker()
         ).validate(data)
-    return [d for d in found if kind is None or d["kind"] == kind]
+    if kind is None:  # СЦ-9: без вида — только прежние виды; сигналы о задачах (ГЛ-2) — в test_task_notices.py
+        return [d for d in found if d["kind"] in LEGACY_KINDS]
+    return [d for d in found if d["kind"] == kind]
 
 
 async def authorise(client: httpx.AsyncClient, staff: dict[str, Person], **body: Any) -> None:

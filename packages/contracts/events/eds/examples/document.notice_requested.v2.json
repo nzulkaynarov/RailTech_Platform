@@ -1,0 +1,29 @@
+{
+  "specversion": "1.0",
+  "id": "5d2e8a47-1c3b-5f69-9a0d-7b4c6e8f1a23",
+  "source": "rt://eds",
+  "type": "uz.railtech.eds.document.notice_requested.v2",
+  "time": "2026-11-21T07:15:00Z",
+  "subject": "approval/6b1d0e2a-4c7f-4a39-8f15-3e9a7c2d5b40",
+  "datacontenttype": "application/json",
+  "dataschema": "rt://contracts/events/eds/document.notice_requested/v2",
+  "tenant": "railtech",
+  "correlationid": "8e1f3a5c-7b9d-5e2f-a4c6-0d8b2f4a6e13",
+  "data": {
+    "notice_key": "approval:6b1d0e2a-4c7f-4a39-8f15-3e9a7c2d5b40:s1:approve_quote",
+    "kind": "approve_quote",
+    "recipients": [
+      3
+    ],
+    "title": "КП на одобрение: КП-0042 v2",
+    "subtitle": "Сделка DL-0017",
+    "actor": {
+      "type": "system"
+    },
+    "approval": {
+      "eds_approval_id": "6b1d0e2a-4c7f-4a39-8f15-3e9a7c2d5b40",
+      "template": "quote",
+      "number": "КП-0042"
+    }
+  }
+}
