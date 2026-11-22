@@ -1,7 +1,7 @@
 import { renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { countLabel, stripCount, useTaskCountTitle } from "./useTaskCountTitle";
+import { countLabel, stripCount, titleWithCount, useTaskCountTitle } from "./useTaskCountTitle";
 
 const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
 
@@ -31,6 +31,42 @@ describe("useTaskCountTitle", () => {
     expect(document.title).toBe("(7) Задачи — RailTech");
     rerender({ count: 0 });
     expect(document.title).toBe("Задачи — RailTech");
+  });
+
+  it("пустой заголовок: число без хвостового пробела и без накопления (иначе наблюдатель дописывает префикс бесконечно)", async () => {
+    document.head.innerHTML = "<title></title>";
+    renderHook(() => {
+      useTaskCountTitle(5);
+    });
+    await settle();
+    await settle();
+    expect(document.title).toBe("(5)");
+    // страница позже задала заголовок — число встаёт перед ним один раз
+    document.title = "Telegram — RailTech";
+    await settle();
+    expect(document.title).toBe("(5) Telegram — RailTech");
+    expect(titleWithCount("(5)", 7)).toBe("(7)");
+    expect(titleWithCount("  ", 0)).toBe("");
+  });
+
+  it("два вызова с разными числами не переписывают заголовок друг за другом: действует последнее число", async () => {
+    const first = renderHook(() => {
+      useTaskCountTitle(0);
+    });
+    renderHook(() => {
+      useTaskCountTitle(10);
+    });
+    await settle();
+    await settle();
+    expect(document.title).toBe("(10) Задачи — RailTech");
+    document.title = "Telegram — RailTech";
+    await settle();
+    await settle();
+    expect(document.title).toBe("(10) Telegram — RailTech");
+    // один из двух ушёл — число остаётся, пока жив второй
+    first.unmount();
+    await settle();
+    expect(document.title).toBe("(10) Telegram — RailTech");
   });
 
   it("страница сменила заголовок — число остаётся", async () => {
