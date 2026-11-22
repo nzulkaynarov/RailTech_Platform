@@ -97,6 +97,14 @@ async def test_settings_read_by_registrar_and_admin_changed_by_admin(
     changed = await web.send("PATCH", f"{BASE}/docflow-settings", json={"recognize_scans": True})
     check(changed, "/eds/docflow-settings", "patch")
     assert changed.json()["recognize_scans"] is True
+    assert (
+        changed.json()["author_may_sign_own_letter"] is True
+    )  # ГЛ-0: настройка приходит с ответом
+    # ГЛ-0: в EDS уходит только переданное поле — второй переключатель не затирается
+    await web.send("PATCH", f"{BASE}/docflow-settings", json={"author_may_sign_own_letter": False})
+    assert (
+        eds.made("PATCH", "docflow-settings")[-1].read() == b'{"author_may_sign_own_letter":false}'
+    )
 
 
 async def test_others_cannot_call_the_helper(web: Web, eds: EdsFake) -> None:

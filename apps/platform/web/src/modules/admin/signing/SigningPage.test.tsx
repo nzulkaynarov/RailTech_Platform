@@ -188,4 +188,25 @@ describe("Настройки · Права подписи (SIGN-2, ADR-0024)", (
       expect(screen.queryByText("Пока никто не вправе подписывать документы")).toBeNull();
     });
   });
+
+  it("ГЛ-0: правило «автор может подписать своё письмо» — включено по умолчанию, администратор выключает его", async () => {
+    signInAs("admin@demo.example");
+    renderApp("/admin/signing");
+    await heading();
+    const rule = await screen.findByRole("switch", { name: "Автор может подписать своё письмо" });
+    expect(rule).toBeChecked();
+    expect(
+      screen.getByText(/Автор письма, у которого есть право подписи, подписывает его сам/),
+    ).toBeVisible();
+    fireEvent.click(rule);
+    expect(await screen.findByText("Правило сохранено")).toBeVisible();
+    await waitFor(() => {
+      expect(
+        screen.getByRole("switch", { name: "Автор может подписать своё письмо" }),
+      ).not.toBeChecked();
+    });
+    expect(
+      screen.getByText(/Автор не подписывает своё письмо, пока подписать может кто-то ещё/),
+    ).toBeVisible();
+  });
 });

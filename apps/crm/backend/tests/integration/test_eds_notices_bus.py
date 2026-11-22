@@ -345,6 +345,26 @@ async def test_missing_signer_notice_points_to_the_signing_settings(stand: Stand
     assert stand.h.bot.sent[-1][1].endswith("https://platform.example.com/admin/signing")
 
 
+async def test_withdrawn_notice_v2_has_no_link_to_the_hidden_document(stand: Stand) -> None:
+    signer, _ = await make_user(stand.h.sessions, "signer2@x.uz", ["admin"])
+    await _link(stand.h.sessions, signer.id, 8303, notify_tasks=True)  # итог — класс «задачи»
+    data = document_notice(
+        [signer.id], kind="letter_sign_withdrawn", title="Письмо отозвано с подписи"
+    )
+    assert (
+        await stand.h.process(await stand.receive(data, event_type=DOCUMENT_NOTICE_TYPE_V2))
+        == "processed"
+    )
+    [row] = await stand.bell()
+    assert (row.kind, row.tab, row.object_kind, row.object_id) == (
+        "eds.letter_sign_withdrawn",
+        "system",
+        None,
+        None,
+    )
+    assert "http" not in stand.h.bot.sent[-1][1]
+
+
 async def test_document_notice_repeated_delivery_gives_one_notification(stand: Stand) -> None:
     author, _ = await make_user(stand.h.sessions, "author3@x.uz", ["manager"])
     event_id = str(uuid.uuid4())

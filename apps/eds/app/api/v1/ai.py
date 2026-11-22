@@ -75,5 +75,9 @@ async def update_docflow_settings(
 ) -> DocflowSettings:
     async with session.begin():
         return await docflow_settings.update(
-            session, box.settings, actor_id=admin.crm_user_id, recognize=body.recognize_scans
+            session,
+            box.settings,
+            actor_id=admin.crm_user_id,
+            recognize=body.recognize_scans,
+            author_may_sign=body.author_may_sign_own_letter,
         )

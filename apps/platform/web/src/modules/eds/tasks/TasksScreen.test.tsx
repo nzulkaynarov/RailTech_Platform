@@ -171,10 +171,10 @@ describe("Рабочий экран поручения (P8b, SPEC-v3 §3.2a п. 
     inExecution();
     signIn("accountant@demo.example");
     renderAt(PATH);
-    const button = await screen.findByRole("button", { name: "Ознакомлен(а)" });
+    const button = await screen.findByRole("button", { name: "Ознакомиться" });
     expect(screen.queryByRole("form", { name: "Отметить исполнение" })).toBeNull();
     fireEvent.click(button);
-    expect(await screen.findByText("Отмечено: ознакомлен(а)")).toBeVisible();
+    expect(await screen.findByText("Ознакомление отмечено")).toBeVisible();
     await waitFor(() => {
       expect(findLetter("ВХ-108/26")?.acquaintances?.[0]?.acknowledged_at).not.toBeNull();
     });

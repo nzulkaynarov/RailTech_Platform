@@ -25,9 +25,8 @@ describe("«Все шаблоны» (план 2.7)", () => {
     signInAs("director@demo.example");
     const { router } = renderApp("/admin/templates");
     const table = await screen.findByRole("table", { name: "Шаблоны всех разделов" });
-    expect(
-      within(table).getByRole("link", { name: "Коммерческое предложение" }),
-    ).toBeInTheDocument();
+    // ДОК-13: «Условия КП» — настройки, а не шаблон; строки «КП» в таблице нет
+    expect(within(table).queryByRole("link", { name: "Коммерческое предложение" })).toBeNull();
     const kinds = within(table)
       .getAllByRole("row")
       .slice(1)

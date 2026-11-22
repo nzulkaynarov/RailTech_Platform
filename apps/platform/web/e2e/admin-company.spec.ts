@@ -28,7 +28,7 @@ const TABS = [
   ["details", "Реквизиты и бланк", "Реквизиты компании"],
   ["brand", "Реквизиты и бланк", "Бланк и бренд документов"],
   ["numbering", "Нумерация", "Нумерация документов"],
-  ["quote", "Шаблоны документов", "Условия КП по умолчанию"],
+  ["quote", "Продажи", "Условия нового КП"],
   ["charges", "Справочники", "Статьи расхода КП"],
   ["templates", "Шаблоны документов", "Шаблоны документов"],
   ["reference", "Справочники", "Страны"],
@@ -578,7 +578,10 @@ test.describe("Компания: axe и снимки", () => {
     }) => {
       await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
       await loginAndWait(page, "director@demo.example");
-      await openCompany(page, "quote");
+      await spaGoto(page, "/admin/notifications");
+      await expect(
+        page.getByRole("heading", { level: 1, name: "Уведомления", exact: true }),
+      ).toBeVisible();
       const toggle = page.getByRole("switch", {
         name: "Напоминать клиентам о просроченных счетах",
       });

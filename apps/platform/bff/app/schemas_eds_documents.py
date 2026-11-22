@@ -55,6 +55,10 @@ class EdsSigningHint(BaseModel):
 
     reason: str | None = None
     signer: EdsPerson | None = None
+    #: ГЛ-0: должность подписанта по реестру полномочий
+    signer_position: str | None = None
+    #: ГЛ-0: подписант — сам спросивший (автор подписывает своё письмо): уведомления ему нет
+    signer_is_you: bool = False
 
 
 class EdsMoney(BaseModel):
@@ -114,6 +118,8 @@ class EdsDocumentRow(BaseModel):
     undelivered: bool = False
     #: Письмо передано на подпись и не подписано (СЦ-8): слово «На подписи» при `status = draft`
     awaiting_signature: bool = False
+    #: ГЛ-0: у кого письмо на подписи (реестр «Все документы»)
+    signer: EdsPerson | None = None
 
 
 class EdsDocumentPage(BaseModel):
@@ -168,6 +174,8 @@ class EdsLetterIn(BaseModel):
     recipient_email: str | None = Field(default=None, max_length=254, pattern=EMAIL_PATTERN)
     signatory_name: str | None = Field(default=None, max_length=255)
     signatory_position: str | None = Field(default=None, max_length=255)
+    # ЕД-6: выбранный подписант (`GET /eds/signers`); имя берёт EDS из справочника
+    signer_crm_user_id: int | None = None
 
 
 class EdsDocumentPdf(BaseModel):
@@ -200,6 +208,7 @@ class EdsLetter(BaseModel):
     recipient_email: str | None
     signatory_name: str | None
     signatory_position: str | None
+    signer_crm_user_id: int | None = None
     pdf: EdsDocumentPdf | None
     mailings: list[EdsDocumentMailing]
     registration_requested: EdsRegistrationRequest | None
@@ -270,6 +279,8 @@ class EdsDocument(BaseModel):
     dispatch_method: str | None = None
     can_sign: bool = False
     signing_hint: EdsSigningHint | None = None
+    #: ГЛ-0: автор письма на подписи — «Напомнить», «Отозвать», «Сменить подписанта»
+    can_manage_handover: bool = False
 
 
 class EdsDocumentSignIn(BaseModel):
@@ -357,3 +368,9 @@ class EdsDealOption(BaseModel):
 class EdsDealOptions(BaseModel):
     items: list[EdsDealOption]
     sources: Sources
+
+
+class EdsSignerChangeIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    signer_crm_user_id: int | None = None

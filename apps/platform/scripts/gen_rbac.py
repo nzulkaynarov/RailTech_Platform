@@ -91,6 +91,17 @@ def _backends(resource: dict[str, Any]) -> list[str]:
     return [name for name in ("crm", "erp") if any((backend.get(name) or {}).values())]
 
 
+def _permission_sections(spec: dict[str, Any]) -> dict[str, str]:
+    """Право EDS -> первый раздел каталога (порядок контракта), в `backend.eds` которого оно есть."""
+    found: dict[str, str] = {}
+    for resource in spec["resources"]:
+        eds = (resource.get("backend") or {}).get("eds") or {}
+        for level in ("read", "full"):
+            for permission in eds.get(level) or []:
+                found.setdefault(permission, resource["key"])
+    return dict(sorted(found.items()))
+
+
 # --- Python ---------------------------------------------------------------------------------------
 
 
@@ -322,6 +333,7 @@ def render_ts(spec: dict[str, Any]) -> str:
         for name, f in spec["restricted_fields"].items()
     }
     queue = {kind: dict(need) for kind, need in spec["queue"].items()}
+    sections = _permission_sections(spec)
     out: list[str] = [
         "// ГЕНЕРИРУЕТСЯ — не править руками (ADR-0012).",
         f"// Источник: packages/contracts/platform-rbac.yaml (version {spec['version']}).",
@@ -373,6 +385,13 @@ def render_ts(spec: dict[str, Any]) -> str:
         queue,
         " as const satisfies Record<string, { resource: ResourceKey; level: AccessLevel }>",
         "Вид работы «Моей очереди» -> раздел и уровень не ниже.",
+    )
+    out += _ts_const(
+        "PERMISSION_SECTIONS",
+        sections,
+        " as const satisfies Record<string, ResourceKey>",
+        "Право EDS (`details.permission` отказа 403) -> первый раздел каталога, который его даёт: "
+        "отказ называет раздел словами, а не кодом права.",
     )
     out += [
         "/** Роль каталога: название, матрица и поля с ограничением. */",

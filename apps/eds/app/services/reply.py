@@ -16,7 +16,6 @@
 import datetime as dt
 import uuid
 from collections.abc import Iterable
-from decimal import Decimal
 
 from rt_bus.sqlalchemy import AsyncBus
 from sqlalchemy import any_, literal, select
@@ -31,7 +30,6 @@ from app.schemas.letters import (
     ReplyToLetter,
     SignatureTask,
 )
-from app.schemas.signing import SignerCandidate, SigningResolution
 from app.security.permissions import EdsPermission as P
 from app.services import access, instructions, signing_resolve, signing_state
 from app.services.people import load_directory
@@ -138,24 +136,12 @@ async def signing_tasks(session: AsyncSession, employee: Employee, today: dt.dat
     )
     if not documents:
         return []
-    grants, people = await signing_resolve.load_registry(session, DocumentKind.LETTER_OUT.value)
-    openers = await signing_resolve.draft_openers(session, set(people))
-    resolutions: dict[tuple[str, Decimal | None, str | None], SigningResolution] = {}
-    mine: list[tuple[Document, SignerCandidate]] = []
-    for document in documents:
-        key = (document.kind, document.amount, document.currency)
-        if key not in resolutions:
-            resolutions[key] = signing_resolve.evaluate(
-                kind=document.kind,
-                amount=document.amount,
-                currency=document.currency,
-                on_date=today,
-                grants=grants,
-                people=people,
-            )
-        signer = signing_resolve.pick_letter_signer(resolutions[key], document.author_crm_user_id, openers)
-        if signer is not None and signer.signer.crm_user_id == employee.crm_user_id:
-            mine.append((document, signer))
+    signers = await signing_resolve.letter_signers(session, documents, today)
+    mine = [
+        (document, signer)
+        for document in documents
+        if (signer := signers.get(document.id)) is not None and signer.signer.crm_user_id == employee.crm_user_id
+    ]
     mine = mine[:TASKS_LIMIT]
     directory = await load_directory(session, (d.registration_requested_by for d, _ in mine))
     reply_ids = {d.in_reply_to for d, _ in mine if d.in_reply_to is not None}

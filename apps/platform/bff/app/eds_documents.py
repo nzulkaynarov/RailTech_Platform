@@ -229,6 +229,7 @@ class _RawSigning(BaseModel):
     can_sign: bool = False
     reason: str | None = None
     signer: EdsPerson | None = None
+    signer_position: str | None = None
 
 
 class _RawDocument(BaseModel):
@@ -306,6 +307,7 @@ class _RawRegistryItem(BaseModel):
     amount: dict[str, Any] | None = None
     undelivered: bool = False
     awaiting_signature: bool = False
+    signer: EdsPerson | None = None
 
 
 def _parse[T: BaseModel](model: type[T], body: Any, path: str) -> T:
@@ -412,6 +414,7 @@ def _letter_flags(raw: "_RawDocument", *, me: int) -> dict[str, Any]:
             "can_request_registration": False,
             "can_sign": False,
             "signing_hint": None,
+            "can_manage_handover": False,
         }
     letter = raw.letter
     draft = raw.status == "draft"
@@ -427,9 +430,15 @@ def _letter_flags(raw: "_RawDocument", *, me: int) -> dict[str, Any]:
         "can_request_registration": draft and mine and has_body and not handed and not can_sign,
         # Подпись предлагается, только если EDS её разрешает (СЦ-9); поля нет — не предлагается
         "can_sign": can_sign,
-        "signing_hint": EdsSigningHint(reason=signing.reason, signer=signing.signer)
+        "signing_hint": EdsSigningHint(
+            reason=signing.reason,
+            signer=signing.signer,
+            signer_position=signing.signer_position,
+            signer_is_you=signing.signer is not None and signing.signer.crm_user_id == me,
+        )
         if draft and signing is not None
         else None,
+        "can_manage_handover": draft and mine and handed and raw.awaiting_signature,
     }
 
 
@@ -498,6 +507,7 @@ def registry_page(body: Any) -> EdsDocumentPage:
                     "project_ref": _project_ref(item),
                     "undelivered": item.undelivered,
                     "awaiting_signature": item.awaiting_signature,
+                    "signer": item.signer,
                 }
             )
         )

@@ -51,7 +51,7 @@ subscribers:
       # СЦ-9: уведомления по документам без входящего письма (решение и оплата служебной записки, подпись письма) —
       # тот же путь доставки: колокольчик и Telegram, объект — документ.
       - uz.railtech.eds.document.notice_requested.v1
-      - uz.railtech.eds.document.notice_requested.v2  # ГЛ-2: уведомления о задачах «Главной» (КП, резолюция, шаги маршрута, подпись, виза, доработка)
+      - uz.railtech.eds.document.notice_requested.v2  # ГЛ-0, ГЛ-2: уведомления о задачах «Главной», вид letter_sign_withdrawn
       # W18A-P2 (B-INB-5): ВХ, зарегистрированный из очереди «Входящая почта» (`source.crm_inbound_mail_id`), —
       # CRM снимает письмо с очереди и показывает номер ВХ. Прочие регистрации CRM пропускает.
       - uz.railtech.eds.letter.registered.v1

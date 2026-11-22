@@ -29,6 +29,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models import Document, Employee, SigningAuthority
 from app.models.signing import BASIS_CHARTER, BASIS_ORDER, BASIS_POWER_OF_ATTORNEY
 from app.schemas.common import PersonRef
+from app.schemas.documents import DocumentKind
 from app.schemas.signing import (
     RejectedSigner,
     RejectReason,
@@ -39,6 +40,7 @@ from app.schemas.signing import (
     SigningResolution,
 )
 from app.security.permissions import EdsPermission as P
+from app.services import docflow_settings
 
 MAX_DEPUTY_CHAIN = 5
 _RANK = {BASIS_CHARTER: 0, BASIS_ORDER: 1, BASIS_POWER_OF_ATTORNEY: 2}
@@ -400,12 +402,45 @@ async def draft_openers(session: AsyncSession, ids: Collection[int]) -> set[int]
     return {int(uid) for uid in rows.scalars()}
 
 
+def letter_pool(result: SigningResolution, openers: Collection[int] | None) -> list[SignerCandidate]:
+    """Круг, из которого берётся подписант письма и по которому проверяется «автор ≠ подписант»: кандидаты реестра,
+    кому переданный черновик доступен (`draft_openers`). Один круг на выбор подписанта и на проверку подписи (ГЛ-0)."""
+    return [c for c in result.candidates if openers is None or c.signer.crm_user_id in openers]
+
+
+def author_blocked(
+    pool: Collection[SignerCandidate], author_crm_user_id: int | None, who: int, *, author_may_sign: bool
+) -> bool:
+    """Правило «автор ≠ подписант» (ADR-0024 п. 3) — настройка компании `author_may_sign_own_letter`: включено — автор
+    подписывает сам; выключено — автору отказ, пока в круге есть кто-то ещё; он единственный — подписывает он."""
+    if author_may_sign or author_crm_user_id is None or who != author_crm_user_id:
+        return False
+    return any(c.signer.crm_user_id != who for c in pool)
+
+
 def pick_letter_signer(
-    result: SigningResolution, author_crm_user_id: int | None, openers: Collection[int] | None = None
+    result: SigningResolution,
+    author_crm_user_id: int | None,
+    openers: Collection[int] | None = None,
+    chosen: int | None = None,
+    *,
+    author_may_sign: bool = True,
 ) -> SignerCandidate | None:
-    """Кому достаётся подпись письма: первый кандидат, кто не автор (ADR-0024 п. 3), иначе первый, иначе никто.
-    Если задан `openers`, кандидаты вне него пропускаются: кому черновик недоступен, тому его и не поручают."""
-    pool = [c for c in result.candidates if openers is None or c.signer.crm_user_id in openers]
+    """Кому достаётся подпись письма: выбранный автором (ЕД-6) — он сам или, если он отсутствует, его заместитель;
+    иначе первый кандидат, кто не автор (ADR-0024 п. 3), иначе первый, иначе никто. Выбранный, у кого права уже нет
+    (отозвано, истекло), пропускается: письмо не повисает без подписанта. Кандидаты вне `openers` пропускаются: кому
+    черновик недоступен, тому его и не поручают. При выключенной настройке автор не выбирается подписантом себе, пока в
+    круге есть кто-то ещё (`author_blocked`): вычисленный подписант — всегда тот, кому проверка подписи не откажет."""
+    pool = letter_pool(result, openers)
+    if chosen is not None:
+        for item in pool:
+            if item.signer.crm_user_id == chosen and not author_blocked(
+                pool, author_crm_user_id, chosen, author_may_sign=author_may_sign
+            ):
+                return item
+        for item in pool:
+            if any(p.crm_user_id == chosen for p in item.acting_for):
+                return item
     for item in pool:
         if item.signer.crm_user_id != author_crm_user_id:
             return item
@@ -418,7 +453,66 @@ async def letter_signer(session: AsyncSession, document: Document, today: date) 
         session, kind=document.kind, amount=document.amount, currency=document.currency, on_date=today
     )
     openers = await draft_openers(session, {c.signer.crm_user_id for c in result.candidates})
-    return pick_letter_signer(result, document.author_crm_user_id, openers)
+    return pick_letter_signer(
+        result,
+        document.author_crm_user_id,
+        openers,
+        document.chosen_signer_crm_user_id,
+        author_may_sign=await docflow_settings.author_may_sign_own_letter(session),
+    )
+
+
+async def letter_signers(
+    session: AsyncSession, documents: Sequence[Document], today: date
+) -> dict[uuid.UUID, SignerCandidate | None]:
+    """Вычисленный подписант каждого письма из `documents` одним чтением реестра: для очереди «Подписать ИСХ» и
+    колонки «На подписи у …» в реестре (то же правило, что `letter_signer`)."""
+    if not documents:
+        return {}
+    grants, people = await load_registry(session, DocumentKind.LETTER_OUT.value)
+    openers = await draft_openers(session, set(people))
+    may_sign_own = await docflow_settings.author_may_sign_own_letter(session)
+    resolutions: dict[tuple[str, Decimal | None, str | None], SigningResolution] = {}
+    picked: dict[uuid.UUID, SignerCandidate | None] = {}
+    for document in documents:
+        key = (document.kind, document.amount, document.currency)
+        if key not in resolutions:
+            resolutions[key] = evaluate(
+                kind=document.kind,
+                amount=document.amount,
+                currency=document.currency,
+                on_date=today,
+                grants=grants,
+                people=people,
+            )
+        picked[document.id] = pick_letter_signer(
+            resolutions[key],
+            document.author_crm_user_id,
+            openers,
+            document.chosen_signer_crm_user_id,
+            author_may_sign=may_sign_own,
+        )
+    return picked
+
+
+@dataclass(frozen=True, slots=True)
+class SignerOption:
+    crm_user_id: int
+    full_name: str
+    position: str | None
+
+
+async def letter_signer_options(session: AsyncSession, today: date) -> list[SignerOption]:
+    """Кого можно выбрать подписантом письма (ЕД-6): активные держатели действующего полномочия на «исходящее письмо»
+    (в том числе отсутствующие — задача перейдёт заместителю), кому доступен переданный черновик. Факт — реестр
+    полномочий, а не роль."""
+    result = await resolve(session, kind=DocumentKind.LETTER_OUT.value, amount=None, currency=None, on_date=today)
+    holders = {c.signer.crm_user_id for c in result.candidates}  # полномочие у каждого своё
+    holders |= {r.signer.crm_user_id for r in result.rejected if r.reason == "absent"}
+    holders &= await draft_openers(session, holders)
+    people = await load_holders(session, holders)
+    options = [SignerOption(uid, people[uid].full_name, people[uid].position) for uid in holders if uid in people]
+    return sorted(options, key=lambda o: (o.full_name.casefold(), o.crm_user_id))
 
 
 async def check_signer(

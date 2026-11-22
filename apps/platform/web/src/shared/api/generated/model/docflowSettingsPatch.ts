@@ -4,5 +4,7 @@
  */
 
 export interface DocflowSettingsPatch {
-  recognize_scans: boolean;
+  recognize_scans?: boolean;
+  /** Переданное поле меняется; остальные остаются прежними */
+  author_may_sign_own_letter?: boolean;
 }

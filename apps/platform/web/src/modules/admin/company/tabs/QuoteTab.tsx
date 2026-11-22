@@ -16,20 +16,54 @@ import { errorFields } from "../errors";
 import { UnitLabel } from "../../../../shared/ui/UnitLabel";
 import { unitOf } from "../../../../shared/lib/unit";
 
-type Values = Omit<QuoteDefaults, never>;
+type Values = Partial<QuoteDefaults>;
 
 const MARGINS = ["default_margin_percent", "min_margin_percent", "target_margin_percent"] as const;
 
-/** Условия КП по умолчанию (ERP `companies/{id}/settings`): валюта, базис, НДС, маржа, сроки, политика каталога. */
-export function QuoteTab() {
+/**
+ * Условия нового КП разнесены по страницам своих дел (ДОК-13, решение владельца 2026-11-20): «Продажи» — срок, оплата,
+ * гарантия, маржа, базис; «Каталог» — цена и порог карточки; «Налоги и валюты» — валюта, НДС и возраст курса;
+ * «Уведомления» — напоминания о счетах и актах. Одна и та же запись настроек компании ERP, у каждой страницы свои поля.
+ */
+export type QuoteGroup = "sales" | "catalog" | "taxes" | "reminders";
+
+const GROUPS: Record<QuoteGroup, readonly (keyof QuoteDefaults)[]> = {
+  sales: [
+    "default_delivery_basis",
+    ...MARGINS,
+    "default_offer_validity_days",
+    "payment_terms_days",
+    "default_warranty_months",
+    "default_payment_terms",
+    "offer_confirm_days",
+    "offer_expiring_days",
+  ],
+  catalog: ["catalog_price_visibility", "catalog_publish_threshold"],
+  taxes: ["default_cost_currency", "default_vat_rate", "fx_rate_max_age_days"],
+  reminders: ["remind_overdue_invoices", "act_reminder_hours"],
+};
+
+const pick = (defaults: QuoteDefaults, group: QuoteGroup): Values =>
+  Object.fromEntries(
+    GROUPS[group].filter((key) => key in defaults).map((key) => [key, defaults[key]]),
+  );
+
+/** Часть условий КП (ERP `companies/{id}/settings`) на своей странице Настроек. */
+export function QuoteSettings({ group }: { group: QuoteGroup }) {
   const { t } = useTranslation("company");
   const query = useGetQuoteDefaults();
   return (
     <div className="pf-co-body">
-      <TabHeader title={t("quote.title")} hint={t("quote.hint")} />
+      <TabHeader title={t(`quote.groups.${group}.title`)} hint={t(`quote.groups.${group}.hint`)} />
       <ReadOnlyFence>
         <QueryGate query={query}>
-          {(defaults) => <QuoteForm key={JSON.stringify(defaults)} defaults={defaults} />}
+          {(defaults) => (
+            <QuoteForm
+              key={JSON.stringify(pick(defaults, group))}
+              defaults={defaults}
+              group={group}
+            />
+          )}
         </QueryGate>
       </ReadOnlyFence>
     </div>
@@ -38,12 +72,13 @@ export function QuoteTab() {
 
 const NUMBER = { style: { width: "100%" } } as const;
 
-function QuoteForm({ defaults }: { defaults: QuoteDefaults }) {
+function QuoteForm({ defaults, group }: { defaults: QuoteDefaults; group: QuoteGroup }) {
   const { t } = useTranslation("company");
   const { message } = App.useApp();
   const queryClient = useQueryClient();
   const [form] = Form.useForm<Values>();
-  const initial = useMemo<Values>(() => ({ ...defaults }), [defaults]);
+  const initial = useMemo<Values>(() => pick(defaults, group), [defaults, group]);
+  const shows = (name: keyof QuoteDefaults) => GROUPS[group].includes(name);
   const watched = Form.useWatch([], form);
   const changed = changedFields(initial, watched);
   const currencies = useListReferenceItems("currencies");
@@ -81,7 +116,7 @@ function QuoteForm({ defaults }: { defaults: QuoteDefaults }) {
 
   return (
     <Form<Values> form={form} layout="vertical" initialValues={initial} onFinish={submit}>
-      {!marginsVisible ? (
+      {group === "sales" && !marginsVisible ? (
         <Alert
           type="info"
           showIcon
@@ -90,35 +125,41 @@ function QuoteForm({ defaults }: { defaults: QuoteDefaults }) {
         />
       ) : null}
       <div className="pf-co-grid">
-        <Form.Item
-          name="default_cost_currency"
-          label={t("quote.currency")}
-          extra={t("quote.currencyHint")}
-        >
-          <Select
-            allowClear
-            loading={currencies.isPending}
-            options={active(currencies.data?.items)}
-          />
-        </Form.Item>
-        <Form.Item
-          name="default_delivery_basis"
-          label={t("quote.basis")}
-          extra={t("quote.basisHint")}
-        >
-          <Select allowClear loading={bases.isPending} options={active(bases.data?.items)} />
-        </Form.Item>
-        <Form.Item name="default_vat_rate" label={<UnitLabel label={t("quote.vat")} />}>
-          <InputNumber
-            suffix={unitOf(t("quote.vat"))}
-            stringMode
-            min="0"
-            max="100"
-            step="0.5"
-            {...NUMBER}
-          />
-        </Form.Item>
-        {marginsVisible
+        {shows("default_cost_currency") ? (
+          <Form.Item
+            name="default_cost_currency"
+            label={t("quote.currency")}
+            extra={t("quote.currencyHint")}
+          >
+            <Select
+              allowClear
+              loading={currencies.isPending}
+              options={active(currencies.data?.items)}
+            />
+          </Form.Item>
+        ) : null}
+        {shows("default_delivery_basis") ? (
+          <Form.Item
+            name="default_delivery_basis"
+            label={t("quote.basis")}
+            extra={t("quote.basisHint")}
+          >
+            <Select allowClear loading={bases.isPending} options={active(bases.data?.items)} />
+          </Form.Item>
+        ) : null}
+        {shows("default_vat_rate") ? (
+          <Form.Item name="default_vat_rate" label={<UnitLabel label={t("quote.vat")} />}>
+            <InputNumber
+              suffix={unitOf(t("quote.vat"))}
+              stringMode
+              min="0"
+              max="100"
+              step="0.5"
+              {...NUMBER}
+            />
+          </Form.Item>
+        ) : null}
+        {group === "sales" && marginsVisible
           ? MARGINS.map((name) => (
               <Form.Item key={name} name={name} label={<UnitLabel label={t(`quote.${name}`)} />}>
                 <InputNumber
@@ -132,100 +173,130 @@ function QuoteForm({ defaults }: { defaults: QuoteDefaults }) {
               </Form.Item>
             ))
           : null}
-        <Form.Item
-          name="default_offer_validity_days"
-          label={<UnitLabel label={t("quote.validity")} />}
-        >
-          <InputNumber suffix={unitOf(t("quote.validity"))} min={0} precision={0} {...NUMBER} />
-        </Form.Item>
-        <Form.Item name="payment_terms_days" label={<UnitLabel label={t("quote.paymentDays")} />}>
-          <InputNumber suffix={unitOf(t("quote.paymentDays"))} min={0} precision={0} {...NUMBER} />
-        </Form.Item>
-        <Form.Item
-          name="remind_overdue_invoices"
-          label={t("quote.remindOverdue")}
-          extra={t("quote.remindOverdueHint")}
-          valuePropName="checked"
-          className="pf-co-wide"
-        >
-          <Switch />
-        </Form.Item>
-        <Form.Item name="default_warranty_months" label={<UnitLabel label={t("quote.warranty")} />}>
-          <InputNumber suffix={unitOf(t("quote.warranty"))} min={0} precision={0} {...NUMBER} />
-        </Form.Item>
-        <Form.Item
-          name="default_payment_terms"
-          label={t("quote.paymentTerms")}
-          className="pf-co-wide"
-        >
-          <Input maxLength={255} />
-        </Form.Item>
-        <Form.Item name="catalog_price_visibility" label={t("quote.priceVisibility")}>
-          <Select
-            options={(["cabinet", "on_request"] as const).map((value) => ({
-              value,
-              label: t(`quote.visibility.${value}`),
-            }))}
-          />
-        </Form.Item>
-        <Form.Item
-          name="catalog_publish_threshold"
-          label={<UnitLabel label={t("quote.threshold")} />}
-          extra={t("quote.thresholdHint")}
-        >
-          <InputNumber
-            suffix={unitOf(t("quote.threshold"))}
-            min={1}
-            max={100}
-            precision={0}
-            {...NUMBER}
-          />
-        </Form.Item>
-        <Form.Item
-          name="fx_rate_max_age_days"
-          label={<UnitLabel label={t("quote.fxAge")} />}
-          extra={t("quote.fxAgeHint")}
-        >
-          <InputNumber
-            suffix={unitOf(t("quote.fxAge"))}
-            min={1}
-            max={90}
-            precision={0}
-            {...NUMBER}
-          />
-        </Form.Item>
+        {shows("default_offer_validity_days") ? (
+          <Form.Item
+            name="default_offer_validity_days"
+            label={<UnitLabel label={t("quote.validity")} />}
+          >
+            <InputNumber suffix={unitOf(t("quote.validity"))} min={0} precision={0} {...NUMBER} />
+          </Form.Item>
+        ) : null}
+        {shows("payment_terms_days") ? (
+          <Form.Item name="payment_terms_days" label={<UnitLabel label={t("quote.paymentDays")} />}>
+            <InputNumber
+              suffix={unitOf(t("quote.paymentDays"))}
+              min={0}
+              precision={0}
+              {...NUMBER}
+            />
+          </Form.Item>
+        ) : null}
+        {shows("remind_overdue_invoices") ? (
+          <Form.Item
+            name="remind_overdue_invoices"
+            label={t("quote.remindOverdue")}
+            extra={t("quote.remindOverdueHint")}
+            valuePropName="checked"
+            className="pf-co-wide"
+          >
+            <Switch />
+          </Form.Item>
+        ) : null}
+        {shows("default_warranty_months") ? (
+          <Form.Item
+            name="default_warranty_months"
+            label={<UnitLabel label={t("quote.warranty")} />}
+          >
+            <InputNumber suffix={unitOf(t("quote.warranty"))} min={0} precision={0} {...NUMBER} />
+          </Form.Item>
+        ) : null}
+        {shows("default_payment_terms") ? (
+          <Form.Item
+            name="default_payment_terms"
+            label={t("quote.paymentTerms")}
+            className="pf-co-wide"
+          >
+            <Input maxLength={255} />
+          </Form.Item>
+        ) : null}
+        {shows("catalog_price_visibility") ? (
+          <Form.Item name="catalog_price_visibility" label={t("quote.priceVisibility")}>
+            <Select
+              options={(["cabinet", "on_request"] as const).map((value) => ({
+                value,
+                label: t(`quote.visibility.${value}`),
+              }))}
+            />
+          </Form.Item>
+        ) : null}
+        {shows("catalog_publish_threshold") ? (
+          <Form.Item
+            name="catalog_publish_threshold"
+            label={<UnitLabel label={t("quote.threshold")} />}
+            extra={t("quote.thresholdHint")}
+          >
+            <InputNumber
+              suffix={unitOf(t("quote.threshold"))}
+              min={1}
+              max={100}
+              precision={0}
+              {...NUMBER}
+            />
+          </Form.Item>
+        ) : null}
+        {shows("fx_rate_max_age_days") ? (
+          <Form.Item
+            name="fx_rate_max_age_days"
+            label={<UnitLabel label={t("quote.fxAge")} />}
+            extra={t("quote.fxAgeHint")}
+          >
+            <InputNumber
+              suffix={unitOf(t("quote.fxAge"))}
+              min={1}
+              max={90}
+              precision={0}
+              {...NUMBER}
+            />
+          </Form.Item>
+        ) : null}
         {/* Сроки (задача «Н3c»): раньше были константами в коде */}
-        <Form.Item name="offer_confirm_days" label={<UnitLabel label={t("quote.confirmDays")} />}>
-          <InputNumber
-            suffix={unitOf(t("quote.confirmDays"))}
-            min={1}
-            max={365}
-            precision={0}
-            {...NUMBER}
-          />
-        </Form.Item>
-        <Form.Item name="offer_expiring_days" label={t("quote.expiringDays")}>
-          <InputNumber min={1} max={90} precision={0} {...NUMBER} />
-        </Form.Item>
-        <Form.Item
-          name="act_reminder_hours"
-          label={<UnitLabel label={t("quote.actReminderHours")} />}
-        >
-          <InputNumber
-            suffix={unitOf(t("quote.actReminderHours"))}
-            min={1}
-            max={720}
-            precision={0}
-            {...NUMBER}
-          />
-        </Form.Item>
+        {shows("offer_confirm_days") ? (
+          <Form.Item name="offer_confirm_days" label={<UnitLabel label={t("quote.confirmDays")} />}>
+            <InputNumber
+              suffix={unitOf(t("quote.confirmDays"))}
+              min={1}
+              max={365}
+              precision={0}
+              {...NUMBER}
+            />
+          </Form.Item>
+        ) : null}
+        {shows("offer_expiring_days") ? (
+          <Form.Item name="offer_expiring_days" label={t("quote.expiringDays")}>
+            <InputNumber min={1} max={90} precision={0} {...NUMBER} />
+          </Form.Item>
+        ) : null}
+        {shows("act_reminder_hours") ? (
+          <Form.Item
+            name="act_reminder_hours"
+            label={<UnitLabel label={t("quote.actReminderHours")} />}
+          >
+            <InputNumber
+              suffix={unitOf(t("quote.actReminderHours"))}
+              min={1}
+              max={720}
+              precision={0}
+              {...NUMBER}
+            />
+          </Form.Item>
+        ) : null}
       </div>
       <SaveBlock
-        label={t("quote.save")}
+        label={t(`quote.groups.${group}.save`)}
         loading={update.isPending}
         disabled={isEmptyObject(changed)}
         error={update.error}
-        note={t("quote.note")}
+        note={t(`quote.groups.${group}.note`)}
         onDiscard={() => {
           form.resetFields();
           update.reset();

@@ -66,7 +66,10 @@ class DocumentTemplateCreateSerializer(serializers.Serializer):
     """Тело `POST crm/document-templates/`; без `is_active` шаблон активен, `false` — черновик (блоки не проверяются)."""
 
     name = serializers.CharField(max_length=255)
-    kind = serializers.CharField(required=False, default="CUSTOM", help_text="Код вида шаблона; по умолчанию CUSTOM")
+    kind = serializers.CharField(
+        required=False,
+        help_text="Код вида шаблона: CONTRACT, INVOICE, ACT, RECEIPT, DELIVERY_NOTE; без вида — 400 TEMPLATE_KIND_INVALID",
+    )
     body_html = serializers.CharField(required=False, allow_blank=True, max_length=100_000)
     is_active = serializers.BooleanField(required=False, default=True)
 

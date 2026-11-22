@@ -4,7 +4,7 @@
  */
 
 /**
- * Оформление: светлое, в рамках, контрастное, полосатое
+ * Устарело (ДОК-13): ничего не меняет и не показывается, значение не принимается и не читается
  */
 export type BrandProfileUpdateLayoutPreset =
   (typeof BrandProfileUpdateLayoutPreset)[keyof typeof BrandProfileUpdateLayoutPreset];

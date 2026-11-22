@@ -73,3 +73,15 @@
   margin: 0 0 12px;
   padding-left: 20px;
 }
+.pf-sign-rule {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+.pf-sign-rule > .ant-switch {
+  flex: none;
+  margin-top: 2px;
+}
+.pf-sign-rule-name {
+  font-weight: 600;
+}

@@ -61,7 +61,12 @@ export interface MockDocument {
   watchers?: string[];
   can_sign?: boolean;
   /** Ответ EDS `Document.signing`; нет поля — выводится из `can_sign` и полномочия */
-  signing?: { can_sign: boolean; reason: string | null; signer_id: string | null };
+  signing?: {
+    can_sign: boolean;
+    reason: string | null;
+    signer_id: string | null;
+    signer_position?: string | null;
+  };
 }
 
 export interface MockLetter {
@@ -70,11 +75,15 @@ export interface MockLetter {
   recipient_email: string | null;
   signatory_name: string | null;
   signatory_position: string | null;
+  /** ЕД-6: выбранный подписант */
+  signer_crm_user_id?: number | null;
   pdf: EdsDocumentPdf | null;
   /** Сколько раз спросили состояние PDF: «готов» — со второго опроса (рендер в фоне) */
   pdfPolls: number;
   mailings: EdsDocumentMailing[];
   registration_requested: { ownerId: string; at: string } | null;
+  /** ГЛ-0: когда напомнили подписанту (не чаще раза в час) */
+  remindedAt?: string | null;
   /** «Вручено иначе» (СЦ-1): сотрудник снял отправку почтой */
   mailWaivedAt?: string | null;
 }

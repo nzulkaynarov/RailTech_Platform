@@ -35,10 +35,13 @@ SIGNING_EXPIRING_TYPE: Final = "uz.railtech.eds.signing_authority.expiring.v1"
 SIGNING_EXPIRING_KIND: Final = "signing_authority_expiring"
 # СЦ-9: уведомления по документам без входящего письма (служебка, подпись письма) — тот же путь.
 DOCUMENT_NOTICE_TYPE: Final = "uz.railtech.eds.document.notice_requested.v1"
-# ГЛ-2: новые виды (задачи «Главной», КП, резолюция, шаги маршрута, подпись, виза, доработка) — v2.
+# v2 (ГЛ-0, ГЛ-2): вид `letter_sign_withdrawn` и новые виды задач «Главной» (КП, резолюция,
+# шаги маршрута, подпись, виза, доработка); объект — документ, письмо или маршрут.
 DOCUMENT_NOTICE_TYPE_V2: Final = "uz.railtech.eds.document.notice_requested.v2"
 # «Подписать некому» ведёт держателя права в Настройки, а не к документу, которого он не видит.
 _SETTINGS_KIND: Final = "letter_signer_missing"
+# «Письмо отозвано с подписи»: подписант документ уже не видит — строка без ссылки на него.
+_WITHDRAWN_KIND: Final = "letter_sign_withdrawn"
 # Вкладка колокольчика: от сотрудника ждут действия — «Решения»; остальное — «Система».
 _DECISIONS: Final = frozenset(
     {
@@ -274,6 +277,8 @@ class EdsNoticeService:
             link = self._approval_link(approval)
         if to_settings:
             obj_kind, obj_id, label, link = None, None, None, self._signing_link()
+        elif kind == _WITHDRAWN_KIND:  # подписант документ не видит: без объекта и ссылки
+            obj_kind, obj_id, label, link = None, None, None, None
         staff_notifications.add_in(
             session,
             recipients,

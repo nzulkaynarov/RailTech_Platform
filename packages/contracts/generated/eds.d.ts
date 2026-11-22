@@ -1170,6 +1170,27 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/employees/signers": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Кого выбрать подписантом исходящего письма (ЕД-6)
+     * @description Активные держатели действующего полномочия на исходящие письма (реестр «Права подписи»; отсутствующие — тоже, задача
+     *     перейдёт заместителю), кому доступен переданный черновик, по имени. Должность — из справочника сотрудников.
+     */
+    get: operations["listLetterSigners"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/documents": {
     parameters: {
       query?: never;
@@ -1409,6 +1430,77 @@ export interface paths {
      *     `signature_required`).
      */
     post: operations["requestDocumentRegistration"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/documents/{document_id}/remind": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Напомнить подписанту о письме на подписи (ГЛ-0)
+     * @description Автор письма на подписи (`awaiting_signature = true`) повторно отправляет текущему подписанту уведомление
+     *     «Подпишите исходящее» (`document.notice_requested`, `kind = letter_sign_requested`; подписант — вычисленный или выбранный
+     *     автором, `DocumentSigning.signer`). Не чаще раза в час: факт — строка журнала `document.sign_reminded`; раньше — 409
+     *     (`details.reason = remind_too_soon`, `details.retry_at`). Подписывает сам автор (подписант — он) — уведомления нет, карточка
+     *     говорит «Подписываете вы». Не автор — 403 (`not_author`), письмо не на подписи — 409 (`not_handed_over`).
+     */
+    post: operations["remindDocumentSigner"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/documents/{document_id}/withdraw": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Отозвать письмо с подписи (ГЛ-0)
+     * @description Автор снимает передачу на подпись: `letter.registration_requested` и `awaiting_signature` сбрасываются, письмо снова
+     *     обычный черновик автора, строка журнала `document.registration_withdrawn`. Задача «Подписать» у подписанта пропадает сама
+     *     (`GET /letter-tasks` выводит её из факта передачи). Не автор — 403 (`not_author`), письмо не на подписи — 409
+     *     (`not_handed_over`).
+     */
+    post: operations["withdrawDocumentFromSigning"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/documents/{document_id}/signer": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Сменить подписанта письма на подписи (ГЛ-0)
+     * @description Автор письма на подписи выбирает другого подписанта (`signer_crm_user_id`; `null` — снова подбирает реестр полномочий).
+     *     Выбор проверяется как при правке черновика: у выбранного должно быть действующее полномочие и доступ к черновику
+     *     (422 `no_signing_right`); автор выбирает себя, если компания это разрешает (`DocflowSettings.author_may_sign_own_letter`),
+     *     иначе 422 `author_cannot_sign`. Вычисленный подписант изменился — новому уходит «Подпишите исходящее», строка журнала
+     *     `document.signer_changed`. Не автор — 403 (`not_author`), письмо не на подписи — 409 (`not_handed_over`).
+     */
+    post: operations["changeDocumentSigner"];
     delete?: never;
     options?: never;
     head?: never;
@@ -2613,9 +2705,21 @@ export interface components {
       pii_policy: "business" | "strict";
       /** @description Ключ шлюза моделей задан (помощник может работать) */
       ai_available: boolean;
+      /**
+       * @description ГЛ-0, ADR-0024 п. 3: автор письма с правом подписи может подписать его сам (по умолчанию `true`). `false` —
+       *     строгое правило «автор ≠ подписант» над тем же кругом кандидатов, что выбирает подписанта; если автор в круге
+       *     единственный, подписывает он.
+       */
+      author_may_sign_own_letter: boolean;
     };
     DocflowSettingsPatch: {
-      recognize_scans: boolean;
+      recognize_scans?: boolean;
+      /** @description Переданное поле меняется; остальные остаются прежними */
+      author_may_sign_own_letter?: boolean;
+    };
+    SignerChangeIn: {
+      /** @description Сотрудник с правом подписи; `null` или поле не передано — подписанта снова подбирает реестр полномочий */
+      signer_crm_user_id?: number | null;
     };
     /**
      * @description `personal` — свой шаблон сотрудника, `company` — общий, ведёт администратор
@@ -3264,7 +3368,10 @@ export interface components {
       recipient_email?: string | null;
       /** @description Подписант; `null` — подписант бланка (директор) */
       signatory_name?: string | null;
+      /** @description Должность в письме; без неё — из справочника сотрудников (правится для «и. о.», справочник не меняется) */
       signatory_position?: string | null;
+      /** @description ЕД-6: выбранный подписант — держатель действующего полномочия на письма (`GET /employees/signers`). Имя и должность по умолчанию берутся из справочника; задача «Подписать» уходит ему (при отсутствии — заместителю). 422 `signer_crm_user_id`: `no_signing_right`, `author_cannot_sign` */
+      signer_crm_user_id?: number | null;
     };
     /** @description Письмо на бланке (P4) — тело и реквизиты, последний PDF, журнал отправки, передача на регистрацию */
     OutgoingLetter: {
@@ -3274,6 +3381,8 @@ export interface components {
       recipient_email: string | null;
       signatory_name: string | null;
       signatory_position: string | null;
+      /** @description ЕД-6 — выбранный подписант; `null` у писем, созданных без выбора (подписанта подбирает реестр полномочий) */
+      signer_crm_user_id?: number | null;
       /** @description Последний запрошенный PDF; `null` — не запрашивался */
       pdf: components["schemas"]["DocumentPdf"] | null;
       /** @description Журнал отправки адресату, новые ниже */
@@ -3589,8 +3698,10 @@ export interface components {
        *     `currency_mismatch`, `holder_inactive`, `absent`, `deputy_without_authority`, `deputy_loop`.
        */
       reason: string | null;
-      /** @description Кто подпишет по реестру полномочий (первый, кто не автор); `null` — подписать некому */
+      /** @description Кто подпишет по реестру полномочий (выбранный автором или первый, кто не автор); `null` — подписать некому */
       signer: components["schemas"]["PersonRef"] | null;
+      /** @description Должность подписанта по реестру полномочий (ГЛ-0); `null` — не задана или подписанта нет */
+      signer_position?: string | null;
     };
     /** @enum {string} */
     ApprovalTemplate: "memo" | "application" | "report" | "quote" | "signing";
@@ -3778,6 +3889,8 @@ export interface components {
       undelivered: boolean;
       /** @description Исходящее письмо передано на подпись и не подписано (СЦ-8): `status = draft` с отметкой передачи; у остальных видов — `false` */
       awaiting_signature: boolean;
+      /** @description ГЛ-0: у кого письмо на подписи (вычисленный или выбранный подписант, как `DocumentSigning.signer`); у остальных строк — `null` */
+      signer?: components["schemas"]["PersonRef"] | null;
       kind: components["schemas"]["RegistryKind"];
       /** @description Письмо (`letter_in`), документ (`letter_out`, `memo`, `application`, `report`), маршрут (`quote`) или проекция документа проекта (`contract`, `invoice`, `act`) */
       id: components["schemas"]["Uuid"];
@@ -5601,6 +5714,28 @@ export interface operations {
       403: components["responses"]["Forbidden"];
     };
   };
+  listLetterSigners: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Подписанты */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["EmployeeList"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+    };
+  };
   listDocuments: {
     parameters: {
       query?: {
@@ -5946,6 +6081,89 @@ export interface operations {
       403: components["responses"]["Forbidden"];
       404: components["responses"]["NotFound"];
       409: components["responses"]["Conflict"];
+    };
+  };
+  remindDocumentSigner: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        document_id: components["parameters"]["DocumentId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Напоминание отправлено */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Document"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+    };
+  };
+  withdrawDocumentFromSigning: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        document_id: components["parameters"]["DocumentId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Письмо отозвано */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Document"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+    };
+  };
+  changeDocumentSigner: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        document_id: components["parameters"]["DocumentId"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SignerChangeIn"];
+      };
+    };
+    responses: {
+      /** @description Подписант сменён */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Document"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      422: components["responses"]["ValidationFailed"];
     };
   };
   waiveDocumentMail: {

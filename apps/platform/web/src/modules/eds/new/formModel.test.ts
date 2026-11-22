@@ -78,6 +78,20 @@ describe("formModel", () => {
     expect(validate({ ...filled, recipientEmail: "office@example.uz" }, "2026-10-27")).toEqual({});
   });
 
+  it("ЕД-6: выбранный подписант уходит id, а вписанная должность — «и. о.»; без выбора — null", () => {
+    const base: FormValues = { ...FILLED, kind: "letter_out", recipientName: "ГНИ" };
+    const chosen = toCreateBody(
+      { ...base, signerId: "3", signatoryName: "Рустам", signatoryPosition: "И. о. директора" },
+      false,
+    );
+    expect(chosen.letter).toMatchObject({
+      signer_crm_user_id: 3,
+      signatory_name: "Рустам",
+      signatory_position: "И. о. директора",
+    });
+    expect(toCreateBody(base, false).letter).toMatchObject({ signer_crm_user_id: null });
+  });
+
   it("письмо на бланке: тело контракта, производный текст, «кому», почта, подписант; отправка адресату только с регистрацией", () => {
     const form: FormValues = {
       ...FILLED,

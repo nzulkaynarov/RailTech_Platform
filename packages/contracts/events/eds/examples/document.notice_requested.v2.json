@@ -4,26 +4,27 @@
   "source": "rt://eds",
   "type": "uz.railtech.eds.document.notice_requested.v2",
   "time": "2026-11-21T07:15:00Z",
-  "subject": "approval/6b1d0e2a-4c7f-4a39-8f15-3e9a7c2d5b40",
+  "subject": "document/2f6b1c0e-8a3d-4e57-9c14-b0d7a5e3f812",
   "datacontenttype": "application/json",
   "dataschema": "rt://contracts/events/eds/document.notice_requested/v2",
   "tenant": "railtech",
   "correlationid": "8e1f3a5c-7b9d-5e2f-a4c6-0d8b2f4a6e13",
   "data": {
-    "notice_key": "approval:6b1d0e2a-4c7f-4a39-8f15-3e9a7c2d5b40:s1:approve_quote",
-    "kind": "approve_quote",
+    "notice_key": "document:2f6b1c0e-8a3d-4e57-9c14-b0d7a5e3f812:r1:memo_decided:approved",
+    "kind": "memo_decided",
     "recipients": [
-      3
+      7
     ],
-    "title": "КП на одобрение: КП-0042 v2",
-    "subtitle": "Сделка DL-0017",
-    "actor": {
-      "type": "system"
+    "title": "Служебка MEMO-2026/014 согласована",
+    "subtitle": "Передана на оплату",
+    "document": {
+      "eds_document_id": "2f6b1c0e-8a3d-4e57-9c14-b0d7a5e3f812",
+      "number": "MEMO-2026/014",
+      "subject": "Закупка расходных материалов"
     },
-    "approval": {
-      "eds_approval_id": "6b1d0e2a-4c7f-4a39-8f15-3e9a7c2d5b40",
-      "template": "quote",
-      "number": "КП-0042"
+    "actor": {
+      "type": "staff",
+      "crm_user_id": 3
     }
   }
 }

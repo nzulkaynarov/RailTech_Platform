@@ -145,21 +145,8 @@
     "signatoryPosition": "Signatory position",
     "footer": "Footer",
     "accent": "Primary colour",
-    "secondary": "Secondary colour",
     "pickColor": "Pick colour: {{label}}",
     "colorInvalid": "Colour as #RRGGBB",
-    "layout": "Layout",
-    "layouts": {
-      "light": "Light",
-      "boxed": "Boxed",
-      "bold": "Bold",
-      "striped": "Striped"
-    },
-    "font": "Font",
-    "fonts": {
-      "sans": "Sans-serif",
-      "serif": "Serif"
-    },
     "printLegend": "What to print",
     "flags": {
       "use_company_defaults": "Take details from the company card",
@@ -244,14 +231,12 @@
     "note": "New numbers follow this scheme; issued ones do not change."
   },
   "quote": {
-    "title": "Default quote terms",
-    "hint": "What a new quote gets by default: currency, basis, VAT, term, warranty.",
     "marginHidden": "Margin fields are hidden: roles with cost and margin rights see them.",
     "currency": "Cost currency",
     "currencyHint": "From the Currencies list",
     "basis": "Delivery basis",
     "basisHint": "From the Delivery bases list",
-    "vat": "VAT rate, %",
+    "vat": "VAT rate in new quotes, %",
     "default_margin_percent": "Default margin, %",
     "min_margin_percent": "Minimum margin, %",
     "target_margin_percent": "Target margin, %",
@@ -268,14 +253,39 @@
     "thresholdHint": "Completeness from which a card may be published (1–100).",
     "fxAge": "Maximum rate age, days",
     "fxAgeHint": "From 1 to 90 days.",
-    "save": "Save terms",
     "invalidField": "Check the value",
     "note": "New quotes take these values; issued quotes do not change.",
     "remindOverdue": "Remind customers about overdue invoices",
     "remindOverdueHint": "Once a day at 10:00 Tashkent time — one reminder per invoice more than three days past due: in the customer portal bell and by email to the project contact and to contacts invited to the portal. Off by default.",
     "confirmDays": "Partner price confirmation, days",
     "expiringDays": "Warn before a partner price expires, days",
-    "actReminderHours": "Pause between act reminders, hours"
+    "actReminderHours": "Pause between act reminders, hours",
+    "groups": {
+      "sales": {
+        "title": "New quote terms",
+        "hint": "What a new quote gets: validity, payment, warranty, margin, delivery basis.",
+        "note": "New quotes take these values; issued quotes do not change.",
+        "save": "Save terms"
+      },
+      "catalog": {
+        "title": "Catalog",
+        "hint": "Catalog price display and the card publishing threshold.",
+        "note": "Applies to the catalog right away.",
+        "save": "Save catalog"
+      },
+      "taxes": {
+        "title": "Quote currency and VAT",
+        "hint": "What a new quote gets and how many days an exchange rate counts as fresh.",
+        "note": "New quotes take these values; issued quotes do not change.",
+        "save": "Save terms"
+      },
+      "reminders": {
+        "title": "Invoice and act reminders",
+        "hint": "Overdue invoices and acts: when and how often to remind.",
+        "note": "Takes effect from the next reminder.",
+        "save": "Save reminders"
+      }
+    }
   },
   "charges": {
     "title": "Quote charge items",

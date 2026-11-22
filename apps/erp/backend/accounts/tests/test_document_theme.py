@@ -1,6 +1,6 @@
-"""D1–D2 document theme: brand edits invalidate mutable cached PDFs; the theme fields
-(layout preset / font / secondary tint) validate + persist; the multi-type Document-Layout
-preview renders every kind with draft (unsaved) overrides — Odoo wizard model.
+"""D1–D2 document theme: brand edits invalidate mutable cached PDFs; the multi-type Document-Layout preview renders
+every kind with draft (unsaved) overrides. ДОК-13: the layout / font / second colour settings are gone — the service
+neither stores nor validates them, and no template reads them.
 """
 
 import pytest
@@ -34,38 +34,29 @@ def seller(db):
     return company, owner
 
 
-# ── Theme fields: validation + persistence ────────────────────────────────────────
+# ── ДОК-13: «Макет», «Шрифт», «Второй цвет» удалены ──────────────────────────────────
 
 
 @pytest.mark.django_db
-def test_theme_fields_persist(seller):
+def test_removed_theme_fields_are_not_stored(seller):
     company, owner = seller
     profile, error = update_document_profile(
         owner,
         company,
-        {"layout_preset": "striped", "font_family": "serif", "secondary_color": "#eef2f7"},
+        {"layout_preset": "striped", "font_family": "serif", "secondary_color": "#eef2f7", "accent_color": "#8b0000"},
     )
     assert error is None
     profile.refresh_from_db()
-    assert profile.layout_preset == "striped"
-    assert profile.font_family == "serif"
-    assert profile.secondary_color == "#eef2f7"
+    assert profile.accent_color == "#8b0000"  # the colour that stays is saved
+    assert (profile.layout_preset, profile.font_family, profile.secondary_color) == ("light", "sans", "")
 
 
 @pytest.mark.django_db
-@pytest.mark.parametrize(
-    "payload,code",
-    [
-        ({"layout_preset": "neon"}, "INVALID_LAYOUT_PRESET"),
-        ({"font_family": "comic-sans"}, "INVALID_FONT_FAMILY"),
-        ({"secondary_color": "red;background:url(http://10.0.0.2)"}, "INVALID_SECONDARY_COLOR"),
-    ],
-)
-def test_theme_fields_validated(seller, payload, code):
+def test_removed_theme_fields_are_not_validated(seller):
+    """A value that used to be refused is now simply ignored — nothing reads it, nothing lands in a PDF."""
     company, owner = seller
-    profile, error = update_document_profile(owner, company, payload)
-    assert profile is None
-    assert error == code
+    profile, error = update_document_profile(owner, company, {"secondary_color": "red;background:url(http://10.0.0.2)"})
+    assert error is None
 
 
 # ── D1a: brand edits invalidate still-mutable cached PDFs ─────────────────────────
@@ -112,7 +103,7 @@ def test_noop_update_does_not_invalidate(quotes_with_pdfs):
 
 
 @pytest.mark.django_db
-def test_preview_renders_every_type_with_draft_theme(seller):
+def test_preview_renders_every_type_with_draft_accent_and_ignores_removed_theme(seller):
     company, _owner_user = seller
     for doc_type in PREVIEW_DOC_TYPES:
         html = render_document_profile_preview_html(
@@ -125,32 +116,18 @@ def test_preview_renders_every_type_with_draft_theme(seller):
                 "secondary_color": "#fdf0f0",
             },
         )
-        assert "layout-boxed" in html, doc_type
         assert "#8b0000" in html, doc_type
-        assert "DejaVu Serif" in html, doc_type
-        assert "#fdf0f0" in html, doc_type
+        assert "layout-" not in html, doc_type
+        assert "DejaVu Serif" not in html, doc_type
+        assert "#fdf0f0" not in html, doc_type
 
 
 @pytest.mark.django_db
-def test_preview_defaults_reproduce_light_layout(seller):
+def test_preview_defaults_use_one_look(seller):
     company, _owner_user = seller
     html = render_document_profile_preview_html(company)
-    assert "layout-light" in html
+    assert "layout-" not in html
     assert "DejaVu Sans" in html
-
-
-@pytest.mark.django_db
-def test_serif_font_family_is_not_html_escaped(seller):
-    """The font stack carries apostrophes ('DejaVu Serif'); without |safe Django escapes them to
-    &#x27; and the whole font-family is dropped by the CSS parser (serif silently ignored)."""
-    import re
-
-    company, _owner_user = seller
-    html = render_document_profile_preview_html(company, doc_type="KP", overrides={"font_family": "serif"})
-    line = re.search(r"--font-main:[^;]+;", html)
-    assert line is not None
-    assert "'DejaVu Serif'" in line.group(0)
-    assert "&#x27;" not in line.group(0)
 
 
 @pytest.mark.django_db
@@ -158,12 +135,11 @@ def test_preview_endpoint_post_draft(seller):
     company, owner = seller
     resp = _client(owner).post(
         f"/api/v1/accounts/companies/{company.id}/document-profile/preview/",
-        {"doc_type": "CT", "draft": {"layout_preset": "bold", "accent_color": "#005500"}},
+        {"doc_type": "CT", "draft": {"accent_color": "#005500"}},
         format="json",
     )
     assert resp.status_code == 200
     body = resp.content.decode()
-    assert "layout-bold" in body
     assert "#005500" in body
 
 
@@ -184,7 +160,7 @@ def test_preview_draft_never_persists(seller):
     from accounts.models import CompanyDocumentProfile
 
     company, _owner_user = seller
-    render_document_profile_preview_html(company, doc_type="KP", overrides={"layout_preset": "striped"})
+    render_document_profile_preview_html(company, doc_type="KP", overrides={"accent_color": "#123456"})
     row = CompanyDocumentProfile.objects.filter(company=company).first()
     # The preview never creates/saves a profile row — overrides are in-memory only.
-    assert row is None or row.layout_preset == "light"
+    assert row is None or row.accent_color == ""

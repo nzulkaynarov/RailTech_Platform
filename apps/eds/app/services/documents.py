@@ -13,7 +13,7 @@
 import secrets
 import uuid
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 from typing import Any
 
@@ -24,7 +24,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app import clock
 from app.config import get_settings
 from app.errors import EdsError, conflict, forbidden, forbidden_reason, invalid_fields, not_found
-from app.models import ApprovalRoute, Document, DocumentVersion, Employee, Letter
+from app.models import ApprovalRoute, Document, DocumentVersion, Employee, JournalEntry, Letter
 from app.schemas.approvals import ApprovalTemplate
 from app.schemas.common import Money
 from app.schemas.documents import (
@@ -40,6 +40,7 @@ from app.security.permissions import EdsPermission as P
 from app.services import (
     access,
     approvals,
+    docflow_settings,
     document_notices,
     document_state,
     events,
@@ -52,6 +53,7 @@ from app.services import (
     renders,
     reply,
     signing_resolve,
+    signing_state,
 )
 from app.services.employees import get_employee
 from app.services.people import holds_permission, load_directory
@@ -71,6 +73,8 @@ _TEMPLATE = {
 
 # Пункт 1.6 плана: подпись шага согласующего, которого добавил автор (шаблонные — «Директор», «Бухгалтер»).
 APPROVER = "Согласующий"
+#: «Напомнить» подписанту — не чаще раза в этот срок (ГЛ-0)
+REMIND_INTERVAL = timedelta(hours=1)
 
 
 def required_permission(kind: DocumentKind) -> P:
@@ -91,12 +95,13 @@ def require_draft_permission(employee: Employee, kind: DocumentKind) -> None:
         raise forbidden(tuple(permission.value for permission in allowed))
 
 
-def _apply_letter(document: Document, letter: OutgoingLetterIn | None) -> None:
+async def _apply_letter(session: AsyncSession, document: Document, letter: OutgoingLetterIn | None) -> None:
     """Письмо на бланке: тело (проверено `rt_docs`), «кому», почта, подписант; `text` — производный от тела."""
     if letter is None:
         document.body = None
         document.recipient_attention = document.recipient_email = None
         document.signatory_name = document.signatory_position = None
+        document.chosen_signer_crm_user_id = None
         return
     document.body = letter_body.clean(letter.body)
     document.text = letter_body.plain_text(document.body)
@@ -104,6 +109,31 @@ def _apply_letter(document: Document, letter: OutgoingLetterIn | None) -> None:
     document.recipient_email = (letter.recipient_email or "").strip() or None
     document.signatory_name = (letter.signatory_name or "").strip() or None
     document.signatory_position = (letter.signatory_position or "").strip() or None
+    await _apply_chosen_signer(session, document, letter.signer_crm_user_id)
+
+
+async def _apply_chosen_signer(session: AsyncSession, document: Document, signer_id: int | None) -> None:
+    """ЕД-6: подписант выбран — имя берётся из справочника сотрудников, должность — оттуда же, если автор не вписал свою
+    (для «и. о.»; справочник не меняется). Выбрать можно только держателя действующего полномочия на письма."""
+    previous = document.chosen_signer_crm_user_id
+    document.chosen_signer_crm_user_id = signer_id
+    if signer_id is None:
+        return
+    if signer_id == previous:
+        # An unchanged saved choice is accepted even if the right was revoked since: routing re-checks at send time
+        # (pick_letter_signer), and the draft must stay editable.
+        return
+    today = clock.company_date(clock.now())
+    options = {o.crm_user_id: o for o in await signing_resolve.letter_signer_options(session, today)}
+    option = options.get(signer_id)
+    if option is None:
+        raise invalid_fields("Выберите подписанта с правом подписи.", signer_crm_user_id="no_signing_right")
+    others = [uid for uid in options if uid != document.author_crm_user_id]
+    may_sign_own = await docflow_settings.author_may_sign_own_letter(session)
+    if signer_id == document.author_crm_user_id and others and not may_sign_own:
+        raise invalid_fields("Автор письма не подписывает его сам.", signer_crm_user_id="author_cannot_sign")
+    document.signatory_name = option.full_name
+    document.signatory_position = document.signatory_position or option.position
 
 
 def _check_amount(amount: Money | None) -> None:
@@ -285,7 +315,7 @@ async def create(session: AsyncSession, bus: AsyncBus, *, employee: Employee, da
         updated_at=now,
     )
     if is_letter and data.letter is not None:
-        _apply_letter(document, data.letter)
+        await _apply_letter(session, document, data.letter)
     if not is_letter:
         document.number = await numbering.allocate(session, _NUMBER_KIND[data.kind], now)
     session.add(document)
@@ -330,8 +360,18 @@ async def _snapshot(session: AsyncSession, document: Document, employee: Employe
     await session.flush()
 
 
+async def _signer_id(session: AsyncSession, document: Document) -> int | None:
+    signer = await signing_resolve.letter_signer(session, document, clock.company_date(clock.now()))
+    return None if signer is None else signer.signer.crm_user_id
+
+
 async def update(
-    session: AsyncSession, *, employee: Employee, document_id: uuid.UUID, edits: DocumentUpdate
+    session: AsyncSession,
+    bus: AsyncBus,
+    *,
+    employee: Employee,
+    document_id: uuid.UUID,
+    edits: DocumentUpdate,
 ) -> Document:
     """Править черновик (или возвращённый документ) без отправки. Только автор; другой статус — 409 `invalid_state`."""
     document = await get_for_update(session, document_id)
@@ -345,6 +385,8 @@ async def update(
     if document.status not in allowed:
         raise conflict("invalid_state", "Документ нельзя править в текущем статусе.", status=document.status)
     _check_amount(edits.amount)
+    handed = signing_state.is_awaiting_signature(document)
+    signer_before = await _signer_id(session, document) if handed else None
     _apply_edits(document, edits)
     if "erp_deal_id" in edits.model_fields_set:
         document.erp_deal_id = edits.erp_deal_id
@@ -363,11 +405,16 @@ async def update(
             if edits.letter is not None:
                 raise invalid_fields("Письмо на бланке — только у исходящего письма.", letter="letter_out_only")
         else:
-            _apply_letter(document, edits.letter)
+            await _apply_letter(session, document, edits.letter)
     document.updated_at = clock.now()
     if edits.file_ids:
         await files.attach(session, edits.file_ids, actor_id=employee.crm_user_id, document_id=document.id)
     await journal.record(session, "document.updated", by=employee.crm_user_id, document_id=document.id)
+    if handed and await _signer_id(session, document) != signer_before:
+        # ГЛ-0: на подписи сменился вычисленный подписант — новому уходит «Подпишите исходящее»
+        await document_notices.letter_handed_over(
+            session, bus, document, today=clock.company_date(clock.now()), actor_id=employee.crm_user_id, again=True
+        )
     return document
 
 
@@ -441,14 +488,19 @@ async def sign_check(session: AsyncSession, employee: Employee, document: Docume
         session, kind=document.kind, amount=document.amount, currency=document.currency, on_date=today
     )
     openers = await signing_resolve.draft_openers(session, {c.signer.crm_user_id for c in result.candidates})
-    signer = signing_resolve.pick_letter_signer(result, document.author_crm_user_id, openers)
+    may_sign_own = await docflow_settings.author_may_sign_own_letter(session)
+    signer = signing_resolve.pick_letter_signer(
+        result, document.author_crm_user_id, openers, document.chosen_signer_crm_user_id, author_may_sign=may_sign_own
+    )
     if not (access.has(employee, P.LETTERS_REGISTER) or access.has(employee, P.MEMOS_APPROVE)):
         return SignCheck(False, "no_permission", "Подписывать письма может сотрудник с правом подписи.", signer, None)
     own = signing_resolve.signer_check(result, employee.crm_user_id)
     if not own.allowed or own.candidate is None:
         return SignCheck(False, own.reason or "no_authority", own.message, signer, None)
-    if document.author_crm_user_id == employee.crm_user_id and any(
-        c.signer.crm_user_id != employee.crm_user_id for c in result.candidates
+    # Тот же круг, что и у вычисленного подписанта (ГЛ-0): иначе автор становится подписантом и получает отказ
+    pool = signing_resolve.letter_pool(result, openers)
+    if signing_resolve.author_blocked(
+        pool, document.author_crm_user_id, employee.crm_user_id, author_may_sign=may_sign_own
     ):
         message = "Автор проекта письма не вправе подписывать документ при наличии других лиц с правом подписи."
         return SignCheck(False, "author_cannot_sign", message, signer, own.candidate, True)
@@ -518,7 +570,8 @@ async def sign(
     document.verification_code = verification_code
     document.dispatch_method = method
     document.signatory_name = candidate.signer.full_name
-    document.signatory_position = candidate.position
+    if document.chosen_signer_crm_user_id != employee.crm_user_id or not document.signatory_position:
+        document.signatory_position = candidate.position  # «и. о.», вписанное автором, остаётся
 
     await journal.record(
         session,
@@ -619,6 +672,102 @@ async def request_registration(
             document,
             today=clock.company_date(now),
             actor_id=employee.crm_user_id,
+        )
+    return document
+
+
+def _own_awaiting_letter(employee: Employee, document: Document) -> None:
+    """Письмо на подписи и действие автора над ним: другой вид, статус или не автор — отказ."""
+    if document.kind != DocumentKind.LETTER_OUT.value:
+        raise conflict("invalid_state", "Действие доступно только для исходящего письма.", status=document.status)
+    if document.author_crm_user_id != employee.crm_user_id:
+        raise forbidden_reason("not_author", "Это может сделать только автор письма.")
+    if not signing_state.is_awaiting_signature(document):
+        raise conflict("not_handed_over", "Письмо не передано на подпись.", status=document.status)
+
+
+async def remind_signer(
+    session: AsyncSession, bus: AsyncBus, *, employee: Employee, document_id: uuid.UUID
+) -> Document:
+    """«Напомнить» (ГЛ-0): подписанту письма на подписи повторно уходит «Подпишите исходящее»; не чаще раза в час —
+    факт берётся из журнала (`document.sign_reminded`), отдельного поля нет."""
+    document = await get_for_update(session, document_id)
+    if not await access.can_view_document(session, employee, document.id):
+        raise not_found("Документ не найден.")
+    _own_awaiting_letter(employee, document)
+    now = clock.now()
+    last = (
+        await session.execute(
+            select(func.max(JournalEntry.at)).where(
+                JournalEntry.document_id == document.id, JournalEntry.action == "document.sign_reminded"
+            )
+        )
+    ).scalar_one()
+    if last is not None and now - last < REMIND_INTERVAL:
+        raise conflict(
+            "remind_too_soon",
+            "Напоминание уже отправлено. Повторить можно через час.",
+            retry_at=(last + REMIND_INTERVAL).isoformat(),
+        )
+    await journal.record(session, "document.sign_reminded", by=employee.crm_user_id, document_id=document.id)
+    await document_notices.letter_handed_over(
+        session, bus, document, today=clock.company_date(now), actor_id=employee.crm_user_id, again=True
+    )
+    return document
+
+
+async def withdraw_from_signing(
+    session: AsyncSession, bus: AsyncBus, *, employee: Employee, document_id: uuid.UUID
+) -> Document:
+    """«Отозвать» (ГЛ-0): передача снята — письмо снова черновик автора. Очередь подписанта выводится из факта передачи,
+    поэтому задача у него пропадает сама."""
+    document = await get_for_update(session, document_id)
+    if not await access.can_view_document(session, employee, document.id):
+        raise not_found("Документ не найден.")
+    _own_awaiting_letter(employee, document)
+    signer_id = await _signer_id(session, document)  # before the handover is cleared
+    document.registration_requested_at = document.registration_requested_by = None
+    document.updated_at = clock.now()
+    await journal.record(
+        session,
+        "document.registration_withdrawn",
+        by=employee.crm_user_id,
+        document_id=document.id,
+        comment="Отозвано с подписи",
+    )
+    await document_notices.letter_withdrawn(session, bus, document, signer_id=signer_id, actor_id=employee.crm_user_id)
+    return document
+
+
+async def change_signer(
+    session: AsyncSession,
+    bus: AsyncBus,
+    *,
+    employee: Employee,
+    document_id: uuid.UUID,
+    signer_id: int | None,
+) -> Document:
+    """«Сменить подписанта» (ГЛ-0): автор выбирает другого подписанта письма на подписи; новому уходит «Подпишите
+    исходящее». Выбор проверяет та же `_apply_chosen_signer`, что при правке черновика (право, правило автора)."""
+    document = await get_for_update(session, document_id)
+    if not await access.can_view_document(session, employee, document.id):
+        raise not_found("Документ не найден.")
+    _own_awaiting_letter(employee, document)
+    before = await _signer_id(session, document)
+    await _apply_chosen_signer(session, document, signer_id)
+    document.updated_at = clock.now()
+    after = await _signer_id(session, document)
+    if after != before:
+        who = None if after is None else (await get_employee(session, after))
+        await journal.record(
+            session,
+            "document.signer_changed",
+            by=employee.crm_user_id,
+            document_id=document.id,
+            comment=None if who is None else f"Подписант: {who.full_name}",
+        )
+        await document_notices.letter_handed_over(
+            session, bus, document, today=clock.company_date(clock.now()), actor_id=employee.crm_user_id, again=True
         )
     return document
 

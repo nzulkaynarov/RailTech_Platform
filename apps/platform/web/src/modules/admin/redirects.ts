@@ -39,7 +39,7 @@ const COMPANY_TAB: Record<string, string> = {
   details: "/admin/company",
   brand: "/admin/company?part=brand",
   numbering: "/admin/numbering",
-  quote: "/admin/templates?tab=quote",
+  quote: "/admin/sales", // «Условия КП» разошлись по страницам (ДОК-13): «Продажи», «Налоги и валюты», «Уведомления»
   charges: "/admin/dictionaries?list=charges",
   templates: "/admin/templates?tab=documents", // бывшая вкладка — шаблоны документов, не «Все шаблоны»
   reference: "/admin/dictionaries?list=countries",
@@ -100,6 +100,7 @@ export function legacySettingsPath(pathname: string, search = ""): string | null
     if (tab === null || tab === "card") return null;
     return COMPANY_TAB[tab] ?? "/admin/company";
   }
+  if (path === "/admin/templates" && params.get("tab") === "quote") return "/admin/sales";
   if (path === "/admin/tickets") return TICKETS_HOME;
   if (path === "/admin/integrations") {
     const card = params.get("card");

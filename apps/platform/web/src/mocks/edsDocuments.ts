@@ -149,6 +149,8 @@ function rowOf(doc: MockDocument): EdsDocumentRow {
   return {
     undelivered: undeliveredOf(doc),
     awaiting_signature: awaitingSignatureOf(doc),
+    signer:
+      awaitingSignatureOf(doc) && doc.signing?.signer_id ? personOf(doc.signing.signer_id) : null,
     kind: doc.kind,
     id: doc.id,
     number: doc.number,
@@ -324,6 +326,7 @@ function letterFields(doc: MockDocument, me: string): Partial<EdsDocument> {
           recipient_email: letter.recipient_email,
           signatory_name: letter.signatory_name,
           signatory_position: letter.signatory_position,
+          signer_crm_user_id: letter.signer_crm_user_id ?? null,
           pdf: letter.pdf,
           mailings: letter.mailings,
           undelivered: undeliveredOf(doc),
@@ -343,8 +346,14 @@ function letterFields(doc: MockDocument, me: string): Partial<EdsDocument> {
       draft && doc.ownerId === me && !signing.can_sign && !letter?.registration_requested,
     can_sign: draft && signing.can_sign,
     signing_hint: draft
-      ? { reason: signing.reason, signer: signing.signer_id ? personOf(signing.signer_id) : null }
+      ? {
+          reason: signing.reason,
+          signer: signing.signer_id ? personOf(signing.signer_id) : null,
+          signer_position: signing.signer_position ?? null,
+          signer_is_you: signing.signer_id === me,
+        }
       : null,
+    can_manage_handover: draft && doc.ownerId === me && Boolean(letter?.registration_requested),
   };
 }
 
@@ -490,6 +499,7 @@ function applyForm(doc: MockDocument, body: FormBody): void {
       recipient_email: body.letter.recipient_email ?? null,
       signatory_name: body.letter.signatory_name ?? null,
       signatory_position: body.letter.signatory_position ?? null,
+      signer_crm_user_id: body.letter.signer_crm_user_id ?? null,
       pdf: prev?.pdf ?? null,
       pdfPolls: prev?.pdfPolls ?? 0,
       mailings: prev?.mailings ?? [],
@@ -856,6 +866,64 @@ export const edsDocumentsHandlers = [
       doc.letter.registration_requested = { ownerId: ownerId(), at: new Date().toISOString() };
       noticeRegistrationRequested(doc);
     }
+    writeEds(state);
+    return HttpResponse.json(detail(doc, state, ownerId()));
+  }),
+
+  http.post("*/eds/documents/:id/remind", ({ params }) => {
+    const held = resources();
+    if (!held) return sessionExpired();
+    const state = readEds();
+    const doc = state.documents.find((candidate) => candidate.id === params["id"]);
+    if (!doc || doc.ownerId !== ownerId()) return fail(404, "NOT_FOUND", "Документ не найден.");
+    if (!awaitingSignatureOf(doc) || !doc.letter) {
+      return fail(409, "CONFLICT", "Письмо не передано на подпись.", { reason: "not_handed_over" });
+    }
+    const last = doc.letter.remindedAt ? Date.parse(doc.letter.remindedAt) : 0;
+    if (Date.now() - last < 3_600_000) {
+      return fail(409, "CONFLICT", "Напоминание уже отправлено.", {
+        reason: "remind_too_soon",
+        retry_at: new Date(last + 3_600_000).toISOString(),
+      });
+    }
+    doc.letter.remindedAt = new Date().toISOString();
+    writeEds(state);
+    return HttpResponse.json(detail(doc, state, ownerId()));
+  }),
+
+  http.post("*/eds/documents/:id/withdraw", ({ params }) => {
+    const held = resources();
+    if (!held) return sessionExpired();
+    const state = readEds();
+    const doc = state.documents.find((candidate) => candidate.id === params["id"]);
+    if (!doc || doc.ownerId !== ownerId()) return fail(404, "NOT_FOUND", "Документ не найден.");
+    if (!awaitingSignatureOf(doc) || !doc.letter) {
+      return fail(409, "CONFLICT", "Письмо не передано на подпись.", { reason: "not_handed_over" });
+    }
+    doc.letter.registration_requested = null;
+    writeEds(state);
+    return HttpResponse.json(detail(doc, state, ownerId()));
+  }),
+
+  http.post("*/eds/documents/:id/signer", async ({ params, request }) => {
+    const held = resources();
+    if (!held) return sessionExpired();
+    const state = readEds();
+    const doc = state.documents.find((candidate) => candidate.id === params["id"]);
+    if (!doc || doc.ownerId !== ownerId()) return fail(404, "NOT_FOUND", "Документ не найден.");
+    if (!awaitingSignatureOf(doc) || !doc.letter) {
+      return fail(409, "CONFLICT", "Письмо не передано на подпись.", { reason: "not_handed_over" });
+    }
+    const body = (await request.json()) as { signer_crm_user_id?: number | null };
+    doc.letter.signer_crm_user_id = body.signer_crm_user_id ?? null;
+    // как у `/eds/signers`: id подписанта = 100 + номер в списке сотрудников демо
+    const picked = DEMO_USERS.filter((u) => !u.loginError)[(body.signer_crm_user_id ?? 0) - 100];
+    doc.signing = {
+      can_sign: false,
+      reason: null,
+      signer_id: picked?.id ?? doc.signing?.signer_id ?? null,
+      signer_position: picked?.position ?? null,
+    };
     writeEds(state);
     return HttpResponse.json(detail(doc, state, ownerId()));
   }),

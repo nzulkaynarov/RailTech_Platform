@@ -115,6 +115,7 @@ async def letter_of(session: AsyncSession, document: Document) -> OutgoingLetter
         recipient_email=document.recipient_email,
         signatory_name=document.signatory_name,
         signatory_position=document.signatory_position,
+        signer_crm_user_id=document.chosen_signer_crm_user_id,
         pdf=renders.present(render) if render and not renders.is_unmarked_draft(render) else None,
         mailings=[
             DocumentMailing(
@@ -144,6 +145,7 @@ async def _signing(session: AsyncSession, document: Document, viewer: Employee |
         can_sign=check.allowed,
         reason=check.reason,
         signer=None if check.signer is None else check.signer.signer,
+        signer_position=None if check.signer is None else check.signer.position,
     )
 
 

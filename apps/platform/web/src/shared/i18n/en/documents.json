@@ -110,7 +110,8 @@
     "inProject": "In project",
     "inProjectLabel": "Open in project: {{subject}}",
     "openQuote": "Open quote",
-    "openQuoteLabel": "Open quote: {{subject}}"
+    "openQuoteLabel": "Open quote: {{subject}}",
+    "onSigningAt": "with {{name}}"
   },
   "panel": {
     "label": "Document",
@@ -223,7 +224,22 @@
       "verificationCode": "Verification code",
       "verificationUrl": "Verify authenticity",
       "actionFailed": "Not done: {{reason}}",
-      "unmatched": "The addressee is typed as text. Click “Continue” and pick the organization from counterparties — until then the letter can’t be signed."
+      "unmatched": "The addressee is typed as text. Click “Continue” and pick the organization from counterparties — until then the letter can’t be signed.",
+      "onSigning": "Awaiting signature from {{who}} since {{date}}",
+      "youSign": "You are signing. Awaiting signature since {{date}}",
+      "signSelf": "Sign it myself",
+      "refusal": {
+        "author_cannot_sign": "You are the author of this letter. The company rule is on: the author does not sign their own letter. {{name}} can sign it."
+      },
+      "remind": "Remind",
+      "reminded": "Reminder sent: {{name}}",
+      "withdraw": "Withdraw",
+      "withdrawn": "The letter is withdrawn from signing",
+      "changeSigner": "Change signer",
+      "changeSignerTitle": "Who signs the letter",
+      "changeSignerSave": "Change",
+      "changeSignerPlaceholder": "Choose a signer",
+      "signerChanged": "Signer changed"
     },
     "replyTo": "In reply to",
     "mailFailed": "Not sent",
@@ -355,6 +371,7 @@
       "deal": "Project not found — pick another or remove the link.",
       "replyTo": "No incoming letter with this number. Check the number.",
       "recipientEmail": "Check the addressee email, for example office@example.uz.",
+      "signer": "Choose a signer from the list: the selected one has no signing right.",
       "uploading": "Wait for the files to upload."
     },
     "toast": {
@@ -369,6 +386,7 @@
       "savedNote": "The draft is saved and what you typed is kept. Fix it and send again.",
       "reasons": {
         "FORBIDDEN": "this action is not granted to your role",
+        "FORBIDDEN_SECTION": "no access to the section «{{section}}»",
         "eds_not_granted": "you have no rights in the documents service",
         "not_author": "only the author can edit the document",
         "NOT_FOUND": "the document was not found",
@@ -398,7 +416,9 @@
         "absent": "the signer is absent",
         "deputy_without_authority": "the deputy has no signing authority",
         "deputy_loop": "the substitution loops back to itself",
-        "no_permission": "you have no right to sign"
+        "no_permission": "you have no right to sign",
+        "remind_too_soon": "a reminder was already sent, you can repeat it in an hour",
+        "not_handed_over": "the letter is not handed over for signing"
       }
     },
     "loadDraft": "Loading the draft…",
@@ -433,6 +453,8 @@
     "signatory": {
       "name": "Signatory",
       "position": "Signatory position",
+      "positionHint": "From the directory; type your own for acting roles",
+      "none": "No employees with signing right",
       "hint": "Empty — the letterhead signatory: {{name}}, {{position}}.",
       "hintNone": ""
     },

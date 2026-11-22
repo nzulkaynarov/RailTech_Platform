@@ -58,5 +58,7 @@ class DocflowSettings(Base):
     recognize_scans: Mapped[bool] = mapped_column(Boolean, server_default=sql("true"))
     pii_policy: Mapped[str] = mapped_column(String(16), server_default="business")
     pii_policy_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # ГЛ-0 (ADR-0024 п. 3): автор письма с правом подписи может подписать его сам; выключено — «автор ≠ подписант»
+    author_may_sign_own_letter: Mapped[bool] = mapped_column(Boolean, server_default=sql("true"))
     updated_by: Mapped[int | None] = mapped_column(BigInteger)
     updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

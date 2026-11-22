@@ -476,7 +476,7 @@ def test_crm_gets_every_erp_event_except_those_for_eds() -> None:
         "uz.railtech.eds.notice.requested.v2",
         "uz.railtech.eds.signing_authority.expiring.v1",  # SIGN-2: полномочие подписи скоро истекает
         "uz.railtech.eds.document.notice_requested.v1",  # СЦ-9: уведомления по документам
-        "uz.railtech.eds.document.notice_requested.v2",  # ГЛ-2: уведомления о задачах «Главной»
+        "uz.railtech.eds.document.notice_requested.v2",  # ГЛ-0, ГЛ-2: уведомления о задачах и подписи
         "uz.railtech.eds.letter.registered.v1",
         "uz.railtech.eds.letter.registered.v2",  # задача «Н»: номер с обозначением из настроек
     }

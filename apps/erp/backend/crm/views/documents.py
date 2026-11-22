@@ -79,6 +79,10 @@ def _as_flag(value, *, default: bool | None) -> bool | None:
     return bool(value)
 
 
+# ДОК-13: образец, снятый с показа миграцией (на него ссылается выпущенный документ), в библиотеке не виден
+_ACTIVE_SAMPLE_Q = Q(company__isnull=True, is_sample=True, is_active=True)
+
+
 def _template_error(exc):
     """400 `{"detail": CODE}`; у `TEMPLATE_MISSING_REQUIRED_BLOCKS` — ещё `missing_blocks`
     (`[{code, label}]`): редактор называет недостающие блоки по именам (C2A-G-5)."""
@@ -94,7 +98,7 @@ def _template_error(exc):
 
 _TEMPLATE_REFUSAL = OpenApiResponse(
     response=DocumentTemplateErrorSerializer,
-    description="TEMPLATE_NAME_REQUIRED / TEMPLATE_NAME_TOO_LONG / TEMPLATE_BODY_TOO_LARGE / "
+    description="TEMPLATE_NAME_REQUIRED / TEMPLATE_NAME_TOO_LONG / TEMPLATE_BODY_TOO_LARGE / TEMPLATE_KIND_INVALID / "
     "TEMPLATE_MISSING_REQUIRED_BLOCKS (with `missing_blocks`) / TEMPLATE_IN_USE (delete)",
 )
 _TEMPLATE_FORBIDDEN = OpenApiResponse(
@@ -159,7 +163,7 @@ class DocumentTemplateViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
         owner_company_id = crm_services.resolve_owner_company_id(self.request.user)
         # Own templates + global samples (readable by all, copy-source only).
         return (
-            DocumentTemplate.objects.filter(Q(company_id=owner_company_id) | Q(company__isnull=True, is_sample=True))
+            DocumentTemplate.objects.filter(Q(company_id=owner_company_id) | _ACTIVE_SAMPLE_Q)
             .select_related("kind", "company")
             .order_by("-is_sample", "name")
         )
@@ -190,7 +194,7 @@ class DocumentTemplateViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
                 company,
                 request.user,
                 name=request.data.get("name", ""),
-                kind_code=request.data.get("kind", "CUSTOM"),
+                kind_code=request.data.get("kind") or "",  # ДОК-13: «Произвольный» выведен — вид обязателен
                 body_html=request.data.get("body_html", ""),
                 is_active=_as_flag(request.data.get("is_active"), default=True),
             )
@@ -438,7 +442,7 @@ class GeneratedDocumentViewSet(
     def _readable_template(self, template_id):
         owner_company_id = crm_services.resolve_owner_company_id(self.request.user)
         return (
-            DocumentTemplate.objects.filter(Q(company_id=owner_company_id) | Q(company__isnull=True, is_sample=True))
+            DocumentTemplate.objects.filter(Q(company_id=owner_company_id) | _ACTIVE_SAMPLE_Q)
             .filter(pk=template_id)
             .first()
         )

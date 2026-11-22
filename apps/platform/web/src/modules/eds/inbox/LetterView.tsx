@@ -82,7 +82,9 @@ function Journal({ letter }: { letter: LetterCard }) {
         {letter.journal.map((entry, index) => (
           <li key={`${entry.at}-${String(index)}`}>
             <strong>
-              {t(`card.actions.${entry.action.replace(".", "_")}`, { defaultValue: entry.action })}
+              {t(`card.actions.${entry.action.replace(".", "_")}`, {
+                defaultValue: t("card.actionUnknown"),
+              })}
             </strong>
             <span className="pf-hint">
               {" "}
