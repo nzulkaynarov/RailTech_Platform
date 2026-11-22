@@ -175,3 +175,16 @@ describe("тексты Настроек коротко и без жаргона 
     },
   );
 });
+
+describe("склонения без скобок (СЦ-7)", () => {
+  it.each([
+    [1, "В заявке 1 строка."],
+    [2, "В заявке 2 строки."],
+    [5, "В заявке 5 строк."],
+    [21, "В заявке 21 строка."],
+  ])("заявка из %i строк: слово согласовано с числом", (count, start) => {
+    const text = i18n.t("sheet.notStarted.textLines", { ns: "calc", count, lng: "ru" });
+    expect(text.startsWith(start)).toBe(true);
+    expect(text).not.toMatch(/\(и\)/);
+  });
+});

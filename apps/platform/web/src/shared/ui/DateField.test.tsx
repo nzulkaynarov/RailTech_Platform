@@ -40,7 +40,7 @@ function Controlled(props: {
         }}
       />
       <span id="due-hint">Подсказка</span>
-      <output data-testid="value">{value}</output>
+      <output hidden data-testid="value">{value}</output>
     </>
   );
 }
