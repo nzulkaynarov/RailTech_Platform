@@ -93,6 +93,10 @@ class EventHub:
         self._task: asyncio.Task[None] | None = None
 
     @property
+    def redis(self) -> Redis:
+        return self._get_redis()
+
+    @property
     def streams(self) -> int:
         return len(self._streams)
 

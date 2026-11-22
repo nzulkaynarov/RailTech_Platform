@@ -69,7 +69,7 @@
     "noRequests": "Заявок пока нет",
     "noNumber": "номер ещё не присвоен",
     "urgent": "Срочная",
-    "clientSees": "Клиент видит: «{{text}}»",
+    "clientSees": "В кабинете клиента: «{{text}}»",
     "transfer": {
       "pending": "Передаётся в бэк-офис",
       "failed": "Не передана в бэк-офис: {{reason}}"

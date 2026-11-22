@@ -167,7 +167,7 @@ const ORDER: readonly QuoteSendChannel[] = ["telegram", "cabinet", "email"];
 
 /**
  * Отчёт об отправке после одобрения (как ERP-11 + BFF): выбранные доступные каналы уходят (почта — «передано почтовому
- * сервису»), кабинет у отправленного КП — «опубликовано», невыбранные — «не выбрано» с «Отправить», если канал доступен.
+ * сервису»), кабинет у отправленного КП — «опубликовано», невыбранные — «не выбрано» с «Отправить», если канал доступен, иначе «не отправлено» с причиной.
  */
 /** Решение клиента по отправленному КП, пока клиент не ответил (A1 волны 18a). */
 export const AWAITING_CLIENT = {
@@ -192,12 +192,18 @@ export function deliveryAfterApproval(
       return { channel, status, reason: null, can_send: false };
     }
     if (channel === "cabinet") {
-      if (!sent) return { channel, status: "not_selected", reason: null, can_send: false };
+      if (!sent) {
+        return ok(channel)
+          ? { channel, status: "not_selected", reason: null, can_send: false }
+          : { channel, status: "skipped", reason, can_send: false };
+      }
       return ok(channel)
         ? { channel, status: "published", reason: null, can_send: false }
         : { channel, status: "skipped", reason, can_send: false };
     }
-    return { channel, status: "not_selected", reason: null, can_send: ok(channel) };
+    // Not chosen and unavailable: the real reason, not «not chosen» (BFF `_line_status`).
+    if (!ok(channel)) return { channel, status: "skipped", reason, can_send: false };
+    return { channel, status: "not_selected", reason: null, can_send: true };
   });
   return { state: sent ? "sent" : "ready", lines, error: null };
 }

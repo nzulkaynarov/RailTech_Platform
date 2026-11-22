@@ -77,7 +77,7 @@ test.describe("Лиды → «Создать заявку» → карточка
     const requests = panel.getByRole("region", { name: "Заявки и проекты" });
     await expect(requests.getByText("RQ-2026-040")).toBeVisible();
     await expect(requests.getByRole("listitem").filter({ hasText: "RQ-" })).toHaveCount(1);
-    await expect(requests).toContainText("Клиент видит: «Принято в работу, считаем»");
+    await expect(requests).toContainText("В кабинете клиента: «Принято в работу, считаем»");
     await expect(requests.getByText("Срочная")).toBeVisible();
     await settledScreenshot(page, "client-card-new-request");
     await expectNoViolations(page, "карточка клиента с новой заявкой");

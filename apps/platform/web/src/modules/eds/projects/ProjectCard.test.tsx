@@ -274,9 +274,26 @@ describe("Проект: акт (вкладка в боковом окне)", () 
     expect(await within(panel).findByText("Акт подписан, скан сохранён.")).toBeVisible();
     // проект закрыт: шаг «Выполнено», статус для клиента «Выполнено», запись в журнале
     expect(
-      await screen.findByText("Проект выполнен: акт подписан, все счета оплачены."),
+      await screen.findByText("Проект выполнен: акт принят, все счета оплачены."),
     ).toBeVisible();
     expect(screen.getAllByText("Проект выполнен").length).toBeGreaterThan(0);
+  });
+
+  it("принят клиентом в кабинете, файла нет → «Принят клиентом», слова «скан» нет (СЦ-8)", async () => {
+    const { panel } = await openTab("accountant@demo.example", 72, "act");
+
+    expect(
+      await within(panel).findByText("Клиент принял акт в кабинете. Скана нет."),
+    ).toBeVisible();
+    expect(within(panel).getByText("Принят клиентом")).toBeVisible();
+    expect(within(panel).getByText("Принят")).toBeVisible(); // поле даты
+    expect(panel).not.toHaveTextContent("Подписан (скан)");
+    expect(panel).not.toHaveTextContent("скан сохранён");
+    const docs = screen.getByRole("region", { name: "Документы проекта" });
+    expect(docs).toHaveTextContent("АКТ-2026/044");
+    const actRow = within(docs).getByText("АКТ-2026/044").closest("li") as HTMLElement;
+    expect(actRow).toHaveTextContent("Принят клиентом");
+    expect(actRow).not.toHaveTextContent("скан");
   });
 
   it("возврат заказчиком с причиной → «Возвращён с причиной» → выпустить заново", async () => {

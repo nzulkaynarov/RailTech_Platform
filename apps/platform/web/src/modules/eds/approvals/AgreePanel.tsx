@@ -16,6 +16,7 @@ import { AgreeForm } from "./AgreeForm";
 import { memoPath, memoRef } from "./api";
 import { clearComment } from "./draft";
 import { mayDecideMemos } from "./model";
+import { useStepNote } from "./stepNote";
 import { useStateLabels } from "./labels";
 
 function Brief({ memo }: { memo: MemoApprovalCard }) {
@@ -65,6 +66,7 @@ function PanelBody({
   const { me } = useAuth();
   // Заместитель решает шаг замещаемого и без раздела согласования (СЦ-9): право и замещение проверяет EDS
   const mayDecide = mayDecideMemos(me) || Boolean(memo.acting_for);
+  const stepNote = useStepNote(memo);
   // Документ уже решён (в том числе другим): черновик комментария ему не нужен.
   useEffect(() => {
     if (memo.status !== "open") clearComment(me.id, memo.approval_id);
@@ -78,7 +80,7 @@ function PanelBody({
         level={3}
         compact
         title={t("panel.readOnly.title")}
-        text={t(mayDecide ? "panel.readOnly.notYourStep" : "panel.readOnly.text")}
+        text={mayDecide && stepNote ? stepNote : t("panel.readOnly.text")}
       />
     );
   } else {

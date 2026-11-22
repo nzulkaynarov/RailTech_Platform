@@ -19,6 +19,7 @@ from app.api import (
     admin_roles,
     admin_users,
     auth,
+    calendar,
     chats,
     company_articles,
     consoles,
@@ -167,6 +168,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(eds_payments.router, prefix=API_PREFIX)
     app.include_router(erp_calc.router, prefix=API_PREFIX)
     app.include_router(erp_stock.router, prefix=API_PREFIX)
+    app.include_router(calendar.router, prefix=API_PREFIX)
     app.include_router(dashboard.router, prefix=API_PREFIX)
     app.include_router(notifications.router, prefix=API_PREFIX)
     app.include_router(search.router, prefix=API_PREFIX)
