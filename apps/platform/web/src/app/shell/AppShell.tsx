@@ -48,7 +48,6 @@ import {
   hasBuiltInTab,
   usePanelClaims,
   usePanelForced,
-  usePanelHasTable,
   usePanelSlotHost,
   visiblePanelTabs,
 } from "./panelSlotContext";
@@ -98,7 +97,6 @@ export function AppShell() {
   // пустое окно с заглушкой нарушило бы ЕД-7. Явное открытие (`?panel=open`, кнопка) остаётся за пользователем.
   const explicitOpen = new URLSearchParams(location.search).get("panel") === "open";
   const hasContent = panelHasContent(forcedPanels.tabs, claimedTabs, builtIn);
-  const hasTable = usePanelHasTable();
   const autoOpenBlocked = !panelForced && !explicitOpen && forcedPanels.panelOpen && !hasContent;
   const panelOpen = forcedPanels.panelOpen && !autoOpenBlocked;
   const panels = {
@@ -362,12 +360,12 @@ export function AppShell() {
     ),
   };
 
-  // Кнопки и окна нет там, где экран ничего в окно не кладёт, таблицы на нём нет и у раздела нет карточек объектов
-  // (форма «Новое письмо»); на телефоне список — карточки, а не таблица, поэтому смотрим и на `detail` раздела.
+  // Кнопки и окна нет там, где экран ничего в окно не кладёт и у раздела нет карточек объектов (форма «Новое письмо»,
+  // «Люди», списки настроек): строка таблицы окно не наполняет, пока экран сам не занял вкладку (`PanelPortal`).
   const hasPanel =
     match !== undefined &&
     sectionAllowed(match.section) &&
-    panelAvailable(panelForced, hasContent, hasTable || match.section.detail !== undefined);
+    panelAvailable(panelForced, hasContent, match.section.detail !== undefined);
   const menuHidden = viewport.mobile ? true : !panels.menuOpen;
   // Рядом — только булавкой и если помещается (≥ 1280 px и рабочей области ≥ 736 px); иначе поверх, выбор помнится.
   const panelDocked = panels.panelMode === "docked" && viewport.canDock && dockFits;

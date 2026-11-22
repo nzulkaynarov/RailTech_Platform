@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { createQueryClient } from "./queryClient";
 import { HttpResponse, http } from "msw";
 import { RouterProvider, createMemoryRouter } from "react-router";
@@ -205,6 +205,19 @@ describe("каркас на 1440", () => {
     expect(screen.queryByRole("button", { name: "Показать панель" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Скрыть панель" })).toBeNull();
     expect(screen.queryByRole("complementary", { name: "Боковое окно" })).toBeNull();
+    expect(screen.queryByText("Объект не выбран")).toBeNull();
+  });
+
+  it("«Люди» и список настроек: строка окно не наполняет — кнопки и окна нет даже по ?panel=open (ЕВ-0)", async () => {
+    signIn("director@demo.example");
+    renderAt("/chats/contacts?panel=open");
+    await screen.findByRole("heading", { level: 1, name: "Люди" });
+    expect(screen.queryByRole("button", { name: /Показать панель|Скрыть панель/ })).toBeNull();
+    expect(screen.queryByText("Объект не выбран")).toBeNull();
+    cleanup();
+    renderAt("/admin/taxes?panel=open");
+    await screen.findByRole("heading", { level: 1, name: "Налоги и валюты" });
+    expect(screen.queryByRole("button", { name: /Показать панель|Скрыть панель/ })).toBeNull();
     expect(screen.queryByText("Объект не выбран")).toBeNull();
   });
 

@@ -17,10 +17,12 @@ test.describe("ЕВ-0: быстрые правки", () => {
     }) => {
       await page.setViewportSize(size(width));
       await loginAndWait(page, "director@demo.example");
-      await spaGoto(page, "/chats/contacts");
+      await spaGoto(page, "/chats/contacts?panel=open");
       await expect(page.getByRole("heading", { level: 1, name: "Люди" })).toBeVisible();
       const row = page.locator(".ant-card .pf-people-table tbody tr").first();
       await expect(row).toBeVisible();
+      await expect(page.getByTestId("panel-toggle")).toBeHidden();
+      await expect(page.getByText("Объект не выбран")).toHaveCount(0);
       await expect(page.getByRole("columnheader").first()).toHaveCSS("text-align", "left");
       await expectNoViolations(page, `people ${String(width)}`);
       await settledScreenshot(page, `people-${String(width)}`);
@@ -53,8 +55,10 @@ test.describe("ЕВ-0: быстрые правки", () => {
     }) => {
       await page.setViewportSize(size(width));
       await loginAndWait(page, "director@demo.example");
-      await spaGoto(page, "/admin/taxes");
+      await spaGoto(page, "/admin/taxes?panel=open");
       await expect(page.getByRole("heading", { level: 1, name: "Налоги и валюты" })).toBeVisible();
+      await expect(page.getByTestId("panel-toggle")).toBeHidden();
+      await expect(page.getByText("Объект не выбран")).toHaveCount(0);
       await expect(page.getByLabel(/Ставка НДС/)).toHaveCount(1);
       await expect(page.getByLabel("Ставка НДС в новом КП, %")).toBeVisible();
       await expect(page.getByRole("form", { name: "Ручной ввод курса" })).toHaveCount(1);

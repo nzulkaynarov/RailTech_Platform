@@ -14,9 +14,6 @@ export interface PanelSlotValue {
   /** Сколько форм сейчас открыто поверх карточки (`PanelPortal over`): пока есть хоть одна, окно открыто на «Карточке» */
   overs: number;
   claimOver: () => () => void;
-  /** Сколько таблиц сейчас на экране (`DataTable`): в таблице выбирают строку, и карточка открывается в окне */
-  tables: number;
-  claimTable: () => () => void;
 }
 
 export const PanelSlotContext = createContext<PanelSlotValue | null>(null);
@@ -40,23 +37,13 @@ export function usePanelForced(): boolean {
   return (useContext(PanelSlotContext)?.overs ?? 0) > 0;
 }
 
-/** Для таблицы: экран с таблицей может открыть окно — выбранная строка наполнит его (`DataTable`). */
-export function useClaimPanelTable(): void {
-  const claimTable = useContext(PanelSlotContext)?.claimTable;
-  useLayoutEffect(() => claimTable?.(), [claimTable]);
-}
-
-/** Для каркаса: на экране есть таблица. */
-export function usePanelHasTable(): boolean {
-  return (useContext(PanelSlotContext)?.tables ?? 0) > 0;
-}
-
 /**
- * Нужна ли экрану кнопка окна: окно открывает форма поверх, его наполнил экран (занятая или встроенная вкладка) или на
- * экране таблица, где строку можно выбрать. Форма без таблицы окна не имеет — пустое окно с «Объект не выбран» не открывается.
+ * Нужна ли экрану кнопка окна: окно открывает форма поверх, его наполнил экран (занятая или встроенная вкладка) или у
+ * раздела есть карточка объекта (`detail`). Форма без карточки и список без карточки в окне (справочники, «Люди»)
+ * окна не имеют: пустое окно с «Объект не выбран» не открывается.
  */
-export function panelAvailable(forced: boolean, hasContent: boolean, hasTable: boolean): boolean {
-  return forced || hasContent || hasTable;
+export function panelAvailable(forced: boolean, hasContent: boolean, hasDetail: boolean): boolean {
+  return forced || hasContent || hasDetail;
 }
 
 /** Для каркаса: какие вкладки сейчас заняты страницами (`PanelPortal`). */

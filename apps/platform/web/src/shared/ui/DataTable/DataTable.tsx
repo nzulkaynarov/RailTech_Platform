@@ -25,7 +25,6 @@ import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 
 import { AuthContext } from "../../../app/auth/useAuth";
-import { useClaimPanelTable } from "../../../app/shell/panelSlotContext";
 import { TableCols } from "../DataBlock";
 import { ScrollRegion } from "../FormParts";
 import { tableMinWidth } from "../tableWidth";
@@ -122,7 +121,6 @@ export function DataTable<Row extends RowData>({
   const slotTarget = useToolsTarget();
   const toolsTarget = ownTarget !== undefined ? ownTarget : slotTarget;
   const { t } = useTranslation("ui");
-  useClaimPanelTable();
   const userId = useContext(AuthContext)?.me.id ?? "-";
   const key = tableKey(userId, tableId);
   const saved = useTablesStore((state) => state.entries[key]) ?? EMPTY;

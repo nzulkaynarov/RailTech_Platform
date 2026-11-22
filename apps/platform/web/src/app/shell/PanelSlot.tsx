@@ -20,13 +20,6 @@ export function PanelSlotProvider({ children }: { children: ReactNode }) {
       setOvers((count) => count - 1);
     };
   }, []);
-  const [tables, setTables] = useState(0);
-  const claimTable = useCallback(() => {
-    setTables((count) => count + 1);
-    return () => {
-      setTables((count) => count - 1);
-    };
-  }, []);
   const claim = useCallback((name: string) => {
     setClaimed((prev) => [...prev, name]);
     return () => {
@@ -46,10 +39,8 @@ export function PanelSlotProvider({ children }: { children: ReactNode }) {
       setTab,
       overs,
       claimOver,
-      tables,
-      claimTable,
     }),
-    [element, claimed, claim, tab, overs, claimOver, tables, claimTable],
+    [element, claimed, claim, tab, overs, claimOver],
   );
   return <PanelSlotContext.Provider value={value}>{children}</PanelSlotContext.Provider>;
 }
