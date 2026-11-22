@@ -361,6 +361,13 @@ export const edsLettersHandlers = [
     }
     const kind = activeLetterKinds().items.find((k) => k.code === body.kind);
     if (!kind) return invalid("kind", "unknown_kind", "Такого вида документа нет в справочнике.");
+    if (kind.due_required && !body.document_due) {
+      return invalid(
+        "document_due",
+        "required",
+        "Для этого вида документа нужен срок по документу.",
+      );
+    }
     if (!isActiveValue("receipt-methods", body.receipt_method)) {
       return invalid(
         "receipt_method",

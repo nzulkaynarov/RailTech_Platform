@@ -271,7 +271,7 @@ export interface paths {
      *     422, в `details.fields` — поле `kind` с `unknown_kind`), `receipt_method` — действующий код `receipt-methods`
      *     (иначе `receipt_method` с `unknown_method`); вид с `urgent` ставит `urgent = true` сам; `related_number` —
      *     номер предыдущего ВХ или нашего ИСХ (нет такого — 422, поле `related_number` с `not_found`); `summary` не задано —
-     *     берётся тема.
+     *     берётся тема. Вид с `due_required` без срока из документа (`document_due`) — 422, поле `document_due` с `required`.
      *
      *     Письмо общего ящика CRM (`source.crm_inbound_mail_id`, W18A-P2-3): одно письмо — один ВХ. Повторная регистрация
      *     того же письма (другой `Idempotency-Key`, повтор после обрыва, двойное нажатие) возвращает уже созданный ВХ —
@@ -1397,11 +1397,12 @@ export interface paths {
     get?: never;
     put?: never;
     /**
-     * Передать письмо на регистрацию делопроизводителю (B-P8B-4)
+     * Передать письмо на подпись (B-P8B-4)
      * @description Автор черновика `letter_out` без права `letters.register` (исполнитель поручения «Подготовить ответ») передаёт письмо
-     *     делопроизводителю: `letter.registration_requested` = кто и когда, журнал `document.registration_requested`. Черновик
-     *     становится виден держателям `letters.register` (реестр «Все документы», карточка), они строят PDF и регистрируют его
-     *     (`POST …/submit`). Автор может продолжать править черновик. Повтор — без изменений. Не черновик — 409 (`invalid_state`),
+     *     на подпись: `letter.registration_requested` = кто и когда, журнал `document.registration_requested`; статус остаётся
+     *     `draft`, а `awaiting_signature = true` (слово «На подписи», СЦ-8). Черновик
+     *     становится виден держателям `letters.register` (реестр «Все документы», карточка), подписант подписывает его через
+     *     `POST …/sign`. Автор может продолжать править черновик. Повтор — без изменений. Не черновик — 409 (`invalid_state`),
      *     не автор — 403 (`not_author`), у письма нет тела — 409 (`no_body`). Делопроизводитель узнаёт сразу (EDS-REPLY-1):
      *     `notice.requested` держателям `letters.register` (если письмо «в ответ на ВХ») и задача в `GET /letter-tasks`
      *     (`signatures`, вычисленному подписанту); задача уходит при подписи. Регистрации без подписи нет (`submit` — 409
@@ -1916,7 +1917,7 @@ export interface components {
     DictionaryList: {
       items: components["schemas"]["Dictionary"][];
     };
-    /** @description Значения полей `attrs` вида (`urgent`, `due_days` у видов документа); `null` — не задано */
+    /** @description Значения полей `attrs` вида (`urgent`, `due_days`, `due_required` у видов документа); `null` — не задано */
     DictionaryAttrValues: {
       [key: string]: boolean | number | null;
     };
@@ -2325,6 +2326,11 @@ export interface components {
       urgent: boolean;
       /** @description Срок исполнения по умолчанию, дней (EDS-REG); `null` — общее правило (срочно 3, обычный 10) */
       due_days?: number | null;
+      /**
+       * @description Письмо этого вида не регистрируется без срока по документу (`document_due`) — 422 `VALIDATION_FAILED`, `details.fields = [document_due]` (СЦ-11); флаг ведёт администратор в справочнике
+       * @default false
+       */
+      due_required: boolean;
     };
     LetterKindList: {
       items: components["schemas"]["LetterKindItem"][];
@@ -2522,7 +2528,7 @@ export interface components {
       /** @description Оригинал, если письмо закрыто как дубль (`status = duplicate`, EDS-DUP) */
       duplicate_of?: components["schemas"]["LetterDuplicateRef"] | null;
       /**
-       * @description Ответы на это входящее (EDS-REPLY-1), новейший первым: черновик, «передан на регистрацию», ИСХ и итог его отправки.
+       * @description Ответы на это входящее (EDS-REPLY-1), новейший первым: черновик, «на подписи», ИСХ и итог его отправки.
        *     Поля может не быть у старого ответа — это «ответов нет».
        */
       replies?: components["schemas"]["LetterReply"][];
@@ -2909,7 +2915,7 @@ export interface components {
       subject: string;
     };
     /**
-     * @description Где ответ на входящее: `draft` — черновик автора, `registration_requested` — передан делопроизводителю на регистрацию,
+     * @description Где ответ на входящее: `draft` — черновик автора, `registration_requested` — передан на подпись (`Document.awaiting_signature`),
      *     `registered` — ИСХ зарегистрирован (`Document.status = sent`)
      * @enum {string}
      */
@@ -3144,7 +3150,10 @@ export interface components {
      *     | `to_accountant` | бухгалтер `approve` (оплачено) | `paid` | закрыт: `approved` | `document.archived` |
      *     | `on_approval`, `to_accountant` | `return` (комментарий обязателен) | `returned` (автор правит) | закрыт: `returned` | — |
      *     | `on_approval`, `to_accountant` | `reject` (комментарий обязателен) | `rejected` | закрыт: `rejected` | `document.archived` |
-     *     | `draft` (`letter_out`) | `POST …/submit` — отправка, `ИСХ-NNN/ГГ` | `sent` | — | `document.archived` |
+     *     | `draft` (`letter_out`) | `POST …/sign` — подпись, `ИСХ-NNN/ГГ` (`POST …/submit` без подписи — 409 `signature_required`) | `sent` | — | `document.archived` |
+     *
+     *     Статус письма после `POST …/registration-request` остаётся `draft`: «На подписи» — признак `awaiting_signature`
+     *     (передано на подпись и не подписано), а не значение перечисления.
      *
      *     Архив — признак `archived_at`, итоговый статус сохраняется.
      * @enum {string}
@@ -3459,6 +3468,12 @@ export interface components {
     DocumentListItem: {
       /** @description Исходящее письмо с почтой адресата не ушло и отправку не сняли (СЦ-1); в списке — `stage=open` */
       undelivered: boolean;
+      /**
+       * @description Исходящее письмо передано на подпись и не подписано (СЦ-8): `status = draft` и есть отметка передачи
+       *     (`letter.registration_requested`). Слово «На подписи»; без передачи — «Черновик»; после подписи — `sent`.
+       *     У остальных видов — `false`.
+       */
+      awaiting_signature: boolean;
       id: components["schemas"]["Uuid"];
       kind: components["schemas"]["DocumentKind"];
       /** @description `null` — исходящее письмо до отправки */
@@ -3560,6 +3575,11 @@ export interface components {
        *     может ли он подписать сейчас (та же проверка, что у `POST /documents/{id}/sign`).
        */
       signing?: components["schemas"]["DocumentSigning"] | null;
+      /**
+       * @description Исходящее письмо передано на подпись и не подписано (СЦ-8): `status = draft` и есть `letter.registration_requested`.
+       *     Слово «На подписи»; без передачи — «Черновик»; после `POST …/sign` — `sent`. У остальных видов — `false`.
+       */
+      awaiting_signature?: boolean;
     };
     DocumentSigning: {
       can_sign: boolean;
@@ -3756,6 +3776,8 @@ export interface components {
     RegistryItem: {
       /** @description Исходящее письмо с почтой адресата не ушло и отправку не сняли (СЦ-1); такая строка — `stage=open` */
       undelivered: boolean;
+      /** @description Исходящее письмо передано на подпись и не подписано (СЦ-8): `status = draft` с отметкой передачи; у остальных видов — `false` */
+      awaiting_signature: boolean;
       kind: components["schemas"]["RegistryKind"];
       /** @description Письмо (`letter_in`), документ (`letter_out`, `memo`, `application`, `report`), маршрут (`quote`) или проекция документа проекта (`contract`, `invoice`, `act`) */
       id: components["schemas"]["Uuid"];
@@ -5911,7 +5933,7 @@ export interface operations {
     };
     requestBody?: never;
     responses: {
-      /** @description Передано на регистрацию */
+      /** @description Передано на подпись */
       200: {
         headers: {
           [name: string]: unknown;

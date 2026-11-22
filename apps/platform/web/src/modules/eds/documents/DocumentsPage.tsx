@@ -231,7 +231,11 @@ function RowStatus({ row }: { row: EdsDocumentRow }) {
   const { t } = useTranslation("documents");
   return (
     <>
-      <DocumentStatusTag kind={row.kind} status={row.status} />
+      <DocumentStatusTag
+        kind={row.kind}
+        status={row.status}
+        awaitingSignature={row.awaiting_signature}
+      />
       {row.undelivered ? <StatusTag tone="red">{t("panel.mailFailed")}</StatusTag> : null}
     </>
   );

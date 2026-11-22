@@ -67,6 +67,7 @@ async def list_letter_kinds(_: Clerk, session: Session) -> LetterKindList:
                 name=item.name.model_dump(),
                 urgent=bool(item.attrs.get("urgent")),
                 due_days=item.attrs.get("due_days") if isinstance(item.attrs.get("due_days"), int) else None,
+                due_required=item.attrs.get("due_required") is True,
             )
             for item in found.items
         ]

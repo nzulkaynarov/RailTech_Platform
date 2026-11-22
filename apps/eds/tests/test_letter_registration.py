@@ -39,6 +39,8 @@ async def test_letter_kinds_are_the_starter_dictionary(client: httpx.AsyncClient
     urgent = {item["code"] for item in body["items"] if item["urgent"]}
     assert urgent == {"tax_notice"}
     assert body["items"][0]["name"]["ru"] == "Требование или уведомление ГНК"
+    # СЦ-11: срок обязателен только у требования ГНК; остальные виды — по настройке администратора
+    assert {item["code"] for item in body["items"] if item["due_required"]} == {"tax_notice"}
 
 
 async def test_registrar_registers_a_tax_notice_urgent_without_summary(
@@ -67,6 +69,31 @@ async def test_registrar_registers_a_tax_notice_urgent_without_summary(
         headers=staff["registrar"].headers,
     )
     assert_error(denied, 403, "FORBIDDEN", permission="letters.resolve")
+
+
+async def test_requirement_of_a_state_body_is_not_registered_without_a_due_date(
+    client: httpx.AsyncClient, staff: dict[str, Person]
+) -> None:
+    """СЦ-11: срок обязателен у вида с флагом `due_required` (данные справочника); у остальных видов — нет."""
+    missing = await register(client, staff["registrar"], document_due=None)
+    assert_error(missing, 422, "VALIDATION_FAILED")
+    assert {"field": "document_due", "message": "required", "type": "value_error"} in missing.json()["details"][
+        "fields"
+    ]
+    assert (await client.get("/api/v1/letters", headers=staff["registrar"].headers)).json()["items"] == []
+    assert (await register(client, staff["registrar"])).status_code == 201
+    # вид без флага регистрируется и без срока
+    bank = await register(client, staff["registrar"], kind="bank", document_due=None, sender_ref={"number": "B-1"})
+    assert bank.status_code == 201, bank.text
+    # администратор снял флаг — требование без срока снова регистрируется: правило — данные, а не код
+    flag = await client.patch(
+        "/api/v1/dictionaries/letter-kinds/tax_notice",
+        json={"attrs": {"due_required": False}},
+        headers=staff["admin"].headers,
+    )
+    assert flag.status_code == 200, flag.text
+    free = await register(client, staff["registrar"], document_due=None, sender_ref={"number": "04-12/9"})
+    assert free.status_code == 201, free.text
 
 
 async def test_unknown_kind_and_receipt_method_are_rejected(

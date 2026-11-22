@@ -246,6 +246,8 @@ async def register(session: AsyncSession, bus: AsyncBus, *, actor_id: int, data:
     kind = await dictionaries.find(session, dictionaries.LETTER_KINDS, data.kind) if data.kind is not None else None
     if data.kind is not None and kind is None:
         raise invalid_fields("Такого вида документа нет в справочнике.", kind="unknown_kind")
+    if kind is not None and kind.attrs.get("due_required") is True and data.document_due is None:
+        raise invalid_fields("Для этого вида документа нужен срок по документу.", document_due="required")
     if data.receipt_method is not None and (
         await dictionaries.find(session, dictionaries.RECEIPT_METHODS, data.receipt_method) is None
     ):

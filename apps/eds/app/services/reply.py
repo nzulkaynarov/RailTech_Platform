@@ -33,7 +33,7 @@ from app.schemas.letters import (
 )
 from app.schemas.signing import SignerCandidate, SigningResolution
 from app.security.permissions import EdsPermission as P
-from app.services import access, instructions, signing_resolve
+from app.services import access, instructions, signing_resolve, signing_state
 from app.services.people import load_directory
 
 REPLIES_LIMIT = 10
@@ -52,7 +52,7 @@ async def reply_to_ref(session: AsyncSession, letter_id: uuid.UUID | None) -> Re
 def _state(document: Document) -> LetterReplyState:
     if document.status == DocumentStatus.SENT.value:
         return LetterReplyState.REGISTERED
-    if document.registration_requested_at is not None:
+    if signing_state.is_awaiting_signature(document):
         return LetterReplyState.REGISTRATION_REQUESTED
     return LetterReplyState.DRAFT
 
@@ -127,9 +127,7 @@ async def signing_tasks(session: AsyncSession, employee: Employee, today: dt.dat
             await session.execute(
                 select(Document)
                 .where(
-                    Document.kind == DocumentKind.LETTER_OUT.value,
-                    Document.status == DocumentStatus.DRAFT.value,
-                    Document.registration_requested_at.is_not(None),
+                    signing_state.awaiting_signature(),
                     Document.registration_requested_by.is_not(None),
                 )
                 .order_by(Document.registration_requested_at, Document.id)

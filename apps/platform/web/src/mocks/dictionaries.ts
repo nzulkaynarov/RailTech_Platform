@@ -100,10 +100,11 @@ const kindItem = (
   position: number,
   urgent = false,
   dueDays: number | null = null,
+  dueRequired = false,
 ): DictionaryItem => ({
   code,
   name,
-  attrs: { urgent, due_days: dueDays },
+  attrs: { urgent, due_days: dueDays, due_required: dueRequired },
   active: true,
   position,
 });
@@ -132,6 +133,7 @@ function seed(): State {
         10,
         true,
         3,
+        true,
       ),
       kindItem("bank", names("Письмо банка", "Bank xati", "Bank letter"), 20),
       kindItem(
@@ -349,6 +351,11 @@ const CATALOG: Dictionary[] = [
         minimum: 1,
         maximum: 365,
       },
+      {
+        key: "due_required",
+        type: "boolean",
+        name: names("Срок обязателен", "Muddat majburiy", "Due date required"),
+      },
     ],
   },
   {
@@ -455,6 +462,7 @@ export function activeLetterKinds(): LetterKindList {
         name: item.name,
         urgent: item.attrs["urgent"] === true,
         due_days: typeof item.attrs["due_days"] === "number" ? item.attrs["due_days"] : null,
+        due_required: item.attrs["due_required"] === true,
       })),
   };
 }
@@ -752,7 +760,7 @@ export const dictionariesHandlers = [
     }
     const defaults: DictionaryItem["attrs"] =
       kind === "letter-kinds"
-        ? { urgent: false, due_days: null }
+        ? { urgent: false, due_days: null, due_required: false }
         : kind === "mail-types"
           ? { color: "default", icon: "mail", letter_kind: null }
           : {};

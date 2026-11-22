@@ -204,7 +204,7 @@
       "add": "Add",
       "name": "Name",
       "kind": "Item type",
-      "kindHint": "“From stock” or “to order” is decided by ERP from partner offers.",
+      "kindHint": "“From stock” or “to order” is decided from partner offers.",
       "unit": "Unit of measure",
       "vat": "VAT, %",
       "vatHint": "Empty — the company default.",

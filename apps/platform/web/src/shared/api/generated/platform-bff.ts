@@ -12289,8 +12289,8 @@ export const getRequestEdsDocumentRegistrationUrl = (id: string) => {
 };
 
 /**
- * EDS `POST /documents/{id}/registration-request` (B-P8B-4). Исполнитель без права регистрировать исходящие (`eds.inbox.register`) готовит письмо-ответ и передаёт черновик делопроизводителю: тот видит его в «Все документы», смотрит PDF и регистрирует ИСХ (`PUT /eds/documents/{id}` с `submit = true`). Не черновик — 409, не автор — 403.
- * @summary EDS · Письмо: передать на регистрацию делопроизводителю
+ * EDS `POST /documents/{id}/registration-request` (B-P8B-4). Исполнитель без права регистрировать исходящие (`eds.inbox.register`) готовит письмо-ответ и передаёт черновик на подпись: подписант подписывает его через «Подписать». Не черновик — 409, не автор — 403.
+ * @summary EDS · Письмо: передать на подпись
  */
 export const requestEdsDocumentRegistration = async (
   id: string,
@@ -12361,7 +12361,7 @@ export type RequestEdsDocumentRegistrationMutationError = ErrorType<
 export type RequestEdsDocumentRegistrationMutationVariables = { id: string };
 
 /**
- * @summary EDS · Письмо: передать на регистрацию делопроизводителю
+ * @summary EDS · Письмо: передать на подпись
  */
 export const useRequestEdsDocumentRegistration = <
   TError = ErrorType<
@@ -35401,7 +35401,7 @@ export const getRegisterLetterUrl = () => {
 };
 
 /**
- * Форма «Зарегистрировать входящее» (SPEC-v3 §3.2a п. 1): EDS `POST /letters` (право `letters.register`). Раздел `eds.inbox.register` — полный: регистрация отдельно от резолюции (`eds.inbox: full`), делопроизводитель резолюцию не накладывает. Обязательны вид документа (код из `GET /eds/letter-kinds`), способ получения, корреспондент, дата поступления, тема и хотя бы один файл (загрузка — `POST /eds/document-files`). Вид со «срочно» (требование ГНК) ставит «срочно» сам. Адресат — директор по умолчанию (держатель резолюции); письмо сразу «Ждёт резолюции» и попадает директору в «Мои задачи» (`resolve_letter`). Дубли (EDS-DUP): экран проверяет в фоне (`POST /eds/letters/duplicates-check`); то же письмо уже зарегистрировано (корреспондент, исх. № и дата исх.) — 409 `CONFLICT`, `details.reason = duplicate_letter`, `details.duplicate` — найденный ВХ (`LetterDuplicate`); зарегистрировать всё равно — `force = true` с причиной `force_reason` (в журнал ВХ). Номер связанного ВХ или ИСХ не найден — 422 `VALIDATION_FAILED`, `details.fields = [related_number]`; неизвестный вид — `details.fields = [kind]`. `Idempotency-Key` уходит в EDS как есть. Из письма общего ящика (`source_mail_id`, W18A-P2-3): до EDS CRM помечает письмо «Регистрируется» и берёт его для сотрудника; ведёт другой или уже разобрано — 409 `CONFLICT` (`details.reason = mail_in_work_by_other` | `mail_handled`), ВХ не создаётся; отказ EDS возвращает письмо «в работе». Письмо ящика, у которого ВХ уже есть (повтор, двойное нажатие, регистрация зависла), получает тот же ВХ, а не второй: EDS отвечает 200, BFF — этой же карточкой.
+ * Форма «Зарегистрировать входящее» (SPEC-v3 §3.2a п. 1): EDS `POST /letters` (право `letters.register`). Раздел `eds.inbox.register` — полный: регистрация отдельно от резолюции (`eds.inbox: full`), делопроизводитель резолюцию не накладывает. Обязательны вид документа (код из `GET /eds/letter-kinds`), способ получения, корреспондент, дата поступления, тема и хотя бы один файл (загрузка — `POST /eds/document-files`). Вид со «срочно» (требование ГНК) ставит «срочно» сам. Адресат — директор по умолчанию (держатель резолюции); письмо сразу «Ждёт резолюции» и попадает директору в «Мои задачи» (`resolve_letter`). Дубли (EDS-DUP): экран проверяет в фоне (`POST /eds/letters/duplicates-check`); то же письмо уже зарегистрировано (корреспондент, исх. № и дата исх.) — 409 `CONFLICT`, `details.reason = duplicate_letter`, `details.duplicate` — найденный ВХ (`LetterDuplicate`); зарегистрировать всё равно — `force = true` с причиной `force_reason` (в журнал ВХ). Номер связанного ВХ или ИСХ не найден — 422 `VALIDATION_FAILED`, `details.fields = [related_number]`; неизвестный вид — `details.fields = [kind]`. Вид с `due_required` без срока из документа (`document_due`) — 422 `VALIDATION_FAILED`, `details.fields = [document_due]` (`required`). `Idempotency-Key` уходит в EDS как есть. Из письма общего ящика (`source_mail_id`, W18A-P2-3): до EDS CRM помечает письмо «Регистрируется» и берёт его для сотрудника; ведёт другой или уже разобрано — 409 `CONFLICT` (`details.reason = mail_in_work_by_other` | `mail_handled`), ВХ не создаётся; отказ EDS возвращает письмо «в работе». Письмо ящика, у которого ВХ уже есть (повтор, двойное нажатие, регистрация зависла), получает тот же ВХ, а не второй: EDS отвечает 200, BFF — этой же карточкой.
  * @summary EDS · Зарегистрировать входящее (делопроизводитель, P8)
  */
 export const registerLetter = async (

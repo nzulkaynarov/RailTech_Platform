@@ -6,7 +6,7 @@
 Downgrade удаляет колонки (выданные ссылки перестают действовать).
 
 Revision ID: c41a7e5d9b20
-Revises: 9b1daa0b361e
+Revises: 061f7a08104a
 Create Date: 2026-11-22 10:00:00+00:00
 """
 
@@ -16,7 +16,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision: str = "c41a7e5d9b20"
-down_revision: str | Sequence[str] | None = "9b1daa0b361e"
+down_revision: str | Sequence[str] | None = "061f7a08104a"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

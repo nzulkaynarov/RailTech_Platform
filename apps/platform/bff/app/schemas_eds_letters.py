@@ -320,6 +320,7 @@ class LetterKind(BaseModel):
     name: LetterKindName
     urgent: bool
     due_days: int | None = None
+    due_required: bool = False
 
 
 class LetterKindList(BaseModel):

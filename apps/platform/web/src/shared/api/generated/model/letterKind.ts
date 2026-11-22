@@ -17,4 +17,6 @@ export interface LetterKind {
    * @nullable
    */
   due_days?: number | null;
+  /** Письмо этого вида не регистрируется без срока по документу (СЦ-11); флаг ведёт администратор */
+  due_required?: boolean;
 }

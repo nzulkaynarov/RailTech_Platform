@@ -165,7 +165,7 @@ describe("Номенклатура: партнёры", () => {
     const drawer = await findPartnerCard("ООО «Поставщик Север»");
     expect(await within(drawer).findByText("Кабель силовой ВВГнг 3×2,5")).toBeVisible();
     expect(within(drawer).getByText(/310\s*USD/)).toBeVisible();
-    expect(within(drawer).getByText("УНП")).toBeVisible();
+    expect(within(drawer).getByText("ИНН")).toBeVisible();
   });
 
   it("гл. инженер видит сроки и квоты, но не цены; правка условий без цены", async () => {

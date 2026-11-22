@@ -4,6 +4,7 @@ import type {
   PaymentMoney,
   PaymentRow,
 } from "../../../shared/api/generated/model";
+import { formatNumber } from "../../../shared/lib/money";
 
 /** «Финансы»: статусы счёта и заявки на оплату (SPEC-v3 §7.3), параметр адреса `?show=`. */
 export const TABS = ["to_issue", "awaiting", "proofs", "overdue", "memos", "all"] as const;
@@ -44,6 +45,14 @@ export function rowAction(row: PaymentRow): "confirm" | "review" | "open" {
   if (row.status === "proof_received") return "review";
   if (isOpen(row.status)) return "confirm";
   return "open";
+}
+
+/**
+ * Сумма контракта (`1500000.00`) для поля ввода: с разрядами, как на экране (`1 500 000`), запятая — десятичная.
+ * Язык интерфейса не берётся: `normalizeAmount` читает запятую как дробную часть, а «1,500,000» (en) сломало бы разбор.
+ */
+export function amountForField(amount: string): string {
+  return formatNumber(amount, { language: "ru" });
 }
 
 /**

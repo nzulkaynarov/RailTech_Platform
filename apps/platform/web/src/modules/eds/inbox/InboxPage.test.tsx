@@ -178,6 +178,34 @@ describe("EDS · Входящие письма: список", () => {
 });
 
 describe("EDS · Входящие письма: боковое окно из списка", () => {
+  it("СЦ-11: письмо не по сделке — в карточке нет строк заявки и клиента; у письма по заявке они есть", async () => {
+    await openInbox("registrar@demo.example", "/eds/inbox/%D0%92%D0%A5-108%2F26");
+    expect(await screen.findByText("Связи")).toBeVisible();
+    expect(screen.queryByText("Клиент не определён")).toBeNull();
+    expect(screen.queryByText("Заявка", { selector: "dt" })).toBeNull();
+  });
+
+  it("СЦ-11: у письма по заявке в карточке есть строка заявки", async () => {
+    await openInbox("director@demo.example", "/eds/inbox/%D0%92%D0%A5-104%2F26");
+    expect(await screen.findByText("Связи")).toBeVisible();
+    expect(screen.getByText("Заявка", { selector: "dt" })).toBeVisible();
+  });
+
+  it("СЦ-11: в кратком блоке бокового окна строка «Заявка» только у письма по заявке", async () => {
+    await openInbox("director@demo.example");
+    await screen.findByRole("table");
+
+    fireEvent.click(within(row("ВХ-104/26")).getByText("ООО «Демо-Рейл»"));
+    const withRequest = await panelEl();
+    await within(withRequest).findByRole("heading", { level: 3, name: "ВХ-104/26" });
+    expect(within(withRequest).getByText("Заявка", { selector: "dt" })).toBeVisible();
+
+    fireEvent.click(screen.getByRole("link", { name: "Показать письмо ВХ-108/26 в боковом окне" }));
+    const noRequest = await panelEl();
+    await within(noRequest).findByRole("heading", { level: 3, name: "ВХ-108/26" });
+    expect(within(noRequest).queryByText("Заявка", { selector: "dt" })).toBeNull();
+  });
+
   it("клик по строке открывает письмо и форму «Резолюция» в боковом окне без перехода", async () => {
     const { router } = await openInbox("director@demo.example");
     await screen.findByRole("table");

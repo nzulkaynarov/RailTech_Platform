@@ -103,36 +103,43 @@ function Links({ letter }: { letter: LetterCard }) {
     <Card size="small" title={<h2 className="pf-letters-title">{t("card.links")}</h2>}>
       <DefinitionList
         items={[
-          {
-            label: t("card.linkFields.request"),
-            value: letter.request ? (
-              <>
-                <Link className="pf-focusable" to={letter.request.path}>
-                  {letter.request.number}
-                </Link>
-                {letter.request.title ? (
-                  <div className="pf-hint">{letter.request.title}</div>
-                ) : null}
-              </>
-            ) : (
-              <span className="pf-hint">{t("card.noRequest")}</span>
-            ),
-          },
-          {
-            label: t("card.linkFields.client"),
-            value: letter.client ? (
-              <>
-                <Link className="pf-focusable" to={letter.client.path}>
-                  {letter.client.name ?? letter.client.id}
-                </Link>
-                {letter.client.inn ? (
-                  <div className="pf-hint">{t("card.byClient", { inn: letter.client.inn })}</div>
-                ) : null}
-              </>
-            ) : (
-              <span className="pf-hint">{t("card.noClient")}</span>
-            ),
-          },
+          // СЦ-11: письмо не по сделке — без строк заявки и клиента (там нечего показывать, кроме «—» и «не определён»)
+          ...(letter.request || letter.client
+            ? [
+                {
+                  label: t("card.linkFields.request"),
+                  value: letter.request ? (
+                    <>
+                      <Link className="pf-focusable" to={letter.request.path}>
+                        {letter.request.number}
+                      </Link>
+                      {letter.request.title ? (
+                        <div className="pf-hint">{letter.request.title}</div>
+                      ) : null}
+                    </>
+                  ) : (
+                    <span className="pf-hint">{t("card.noRequest")}</span>
+                  ),
+                },
+                {
+                  label: t("card.linkFields.client"),
+                  value: letter.client ? (
+                    <>
+                      <Link className="pf-focusable" to={letter.client.path}>
+                        {letter.client.name ?? letter.client.id}
+                      </Link>
+                      {letter.client.inn ? (
+                        <div className="pf-hint">
+                          {t("card.byClient", { inn: letter.client.inn })}
+                        </div>
+                      ) : null}
+                    </>
+                  ) : (
+                    <span className="pf-hint">{t("card.noClient")}</span>
+                  ),
+                },
+              ]
+            : []),
           { label: t("card.linkFields.manager"), value: letter.manager?.name },
           {
             label: t("card.linkFields.registered"),

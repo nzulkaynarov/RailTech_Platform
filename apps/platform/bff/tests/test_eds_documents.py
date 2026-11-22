@@ -30,6 +30,7 @@ from tests.eds_documents_support import (
     EdsFake,
     document,
     file_ref,
+    list_item,
     registry_item,
 )
 from tests.feeds_support import deal_matches
@@ -1061,3 +1062,54 @@ async def test_stage_goes_to_eds_and_registry_rows_carry_amounts(
     await web.client.get(f"{BASE}/documents?stage=done")
     assert eds.last("GET", "documents").url.params["stage"] == "done"
     assert (await web.client.get(f"{BASE}/documents?stage=later")).status_code == 422
+
+
+async def test_awaiting_signature_passes_through_list_registry_and_card(
+    web: Web, eds: EdsFake, check: ContractChecker
+) -> None:
+    """СЦ-8: «На подписи» — признак EDS; BFF отдаёт его как есть, статус остаётся `draft`."""
+    await web.login(["MANAGER"])
+    letter: dict[str, Any] = {
+        "kind": "letter_out",
+        "number": None,
+        "status": "draft",
+        "awaiting_signature": True,
+    }
+    eds.answer(
+        "GET",
+        "documents",
+        200,
+        {"items": [list_item(**letter), list_item(DOC_ID, status="draft")], "next_cursor": None},
+    )
+    mine = await web.client.get(f"{BASE}/documents?kind=letter_out&status=draft")
+    check(mine, "/eds/documents", "get")
+    handed, plain = mine.json()["items"]
+    assert (handed["status"], handed["awaiting_signature"]) == ("draft", True)
+    assert plain["awaiting_signature"] is False
+
+    eds.answer(
+        "GET",
+        "registry",
+        200,
+        {
+            "items": [
+                registry_item(
+                    kind="letter_out", number=None, status="draft", awaiting_signature=True
+                )
+            ],
+            "next_cursor": None,
+        },
+    )
+    registry = await web.client.get(f"{BASE}/documents?scope=all&kind=letter_out")
+    check(registry, "/eds/documents", "get")
+    assert registry.json()["items"][0]["awaiting_signature"] is True
+
+    eds.answer(
+        "GET",
+        f"documents/{DOC_ID}",
+        200,
+        document(kind="letter_out", status="draft", awaiting_signature=True),
+    )
+    card = await web.client.get(f"{BASE}/documents/{DOC_ID}")
+    check(card, "/eds/documents/{id}", "get")
+    assert (card.json()["status"], card.json()["awaiting_signature"]) == ("draft", True)
