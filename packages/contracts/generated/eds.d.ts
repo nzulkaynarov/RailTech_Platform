@@ -1147,6 +1147,51 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/waiting": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * «Вы ждёте других» — что я передал и жду от другого (ГЛ-1)
+     * @description Строки выводятся из фактов, статуса нет: мои исходящие письма на подписи (`awaiting_signature`, подписант — по реестру
+     *     полномочий), мои служебки, заявления и отчёты на открытом маршруте (ждёт текущий шаг), выданные мной поручения в работе.
+     *     Не больше 50 строк каждого вида; `more` — один из списков обрезан. Старше — выше.
+     */
+    get: operations["listWaitingOnOthers"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/waiting/{kind}/{object_id}/remind": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Напомнить адресату (ГЛ-1)
+     * @description Повторяет существующее уведомление текущему адресату: подписанту — `letter_sign_requested`, шагу маршрута —
+     *     `approval.requested`, исполнителю — `instruction_reminder`. Объект должен быть «моим» (автор документа или резолюции)
+     *     и ещё ждать, иначе 404. Не чаще раза в час по объекту: иначе 429 `RATE_LIMITED` (`details.retry_after_seconds`).
+     *     Некому напоминать (подписанта нет или это сам автор) — 409 `no_one_to_remind`.
+     */
+    post: operations["remindWaitingOnOthers"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/employees": {
     parameters: {
       query?: never;
@@ -1871,7 +1916,7 @@ export interface components {
     };
     Error: {
       /**
-       * @description Стабильный код (`UNAUTHORIZED`, `INVALID_SSO_TOKEN`, `USER_NOT_PROVISIONED`, `USER_INACTIVE`, `FORBIDDEN`, `NOT_FOUND`, `VALIDATION_FAILED`, `CONFLICT`, `PAYLOAD_TOO_LARGE`, `UNSUPPORTED_MEDIA_TYPE`, `BAD_REQUEST`, `INTERNAL_ERROR`)
+       * @description Стабильный код (`UNAUTHORIZED`, `INVALID_SSO_TOKEN`, `USER_NOT_PROVISIONED`, `USER_INACTIVE`, `FORBIDDEN`, `NOT_FOUND`, `VALIDATION_FAILED`, `CONFLICT`, `RATE_LIMITED`, `PAYLOAD_TOO_LARGE`, `UNSUPPORTED_MEDIA_TYPE`, `BAD_REQUEST`, `INTERNAL_ERROR`)
        * @example FORBIDDEN
        */
       code: string;
@@ -2908,6 +2953,36 @@ export interface components {
     InstructionStatus: "in_work" | "executed" | "cancelled";
     /** @enum {string} */
     InstructionRole: "responsible" | "co_executor";
+    /** @enum {string} */
+    WaitingKind: "letter_signature" | "approval" | "instruction";
+    WaitingItem: {
+      kind: components["schemas"]["WaitingKind"];
+      object_id: components["schemas"]["Uuid"];
+      number: string | null;
+      title: string;
+      /** @description Кто должен ответить; `null` — шаг «любой с правом» или подписанта нет (тогда `waiting_label`) */
+      waiting_on: components["schemas"]["PersonRef"] | null;
+      waiting_label: string | null;
+      /** Format: date-time */
+      since: string;
+      /** Format: date */
+      due: string | null;
+      /**
+       * Format: date-time
+       * @description `null` — напомнить можно сейчас; иначе момент, с которого можно (после прошлого напоминания)
+       */
+      remind_available_at: string | null;
+      remindable: boolean;
+    };
+    WaitingList: {
+      items: components["schemas"]["WaitingItem"][];
+      /** @description Один из списков обрезан по пределу */
+      more: boolean;
+    };
+    RemindOut: {
+      /** Format: date-time */
+      reminded_at: string;
+    };
     /** @description Входящее письмо, на которое отвечает ИСХ (EDS-REPLY-1) */
     ReplyToLetter: {
       id: components["schemas"]["Uuid"];
@@ -5577,6 +5652,64 @@ export interface operations {
         };
       };
       401: components["responses"]["Unauthorized"];
+    };
+  };
+  listWaitingOnOthers: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Ждём от других */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["WaitingList"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+    };
+  };
+  remindWaitingOnOthers: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        kind: components["schemas"]["WaitingKind"];
+        /** @description Документ (`letter_signature`), маршрут (`approval`) или поручение (`instruction`) */
+        object_id: components["schemas"]["Uuid"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Напоминание отправлено */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["RemindOut"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      /** @description `RATE_LIMITED` — напоминание по этому объекту уже было меньше часа назад */
+      429: {
+        headers: {
+          "Retry-After"?: number;
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
     };
   };
   listActiveEmployees: {

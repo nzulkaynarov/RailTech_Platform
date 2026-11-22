@@ -155,6 +155,8 @@ tags:
     description: Обмен токена сотрудника CRM на токен доступа EDS
   - name: letters
     description: Входящие письма и резолюции (EDS-01)
+  - name: waiting
+    description: «Вы ждёте других» и напоминание (ГЛ-1)
   - name: documents
     description: Служебные записки, заявления, отчёты, исходящие письма (EDS-02)
   - name: approvals
@@ -2078,6 +2080,73 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
+  /api/v1/waiting:
+    get:
+      tags: [waiting]
+      operationId: listWaitingOnOthers
+      summary: «Вы ждёте других» — что я передал и жду от другого (ГЛ-1)
+      description: |
+        Строки выводятся из фактов, статуса нет: мои исходящие письма на подписи (`awaiting_signature`, подписант — по реестру
+        полномочий), мои служебки, заявления и отчёты на открытом маршруте (ждёт текущий шаг), выданные мной поручения в работе.
+        Не больше 50 строк каждого вида; `more` — один из списков обрезан. Старше — выше.
+      x-rt-permissions: []
+      responses:
+        '200':
+          description: Ждём от других
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WaitingList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/waiting/{kind}/{object_id}/remind:
+    post:
+      tags: [waiting]
+      operationId: remindWaitingOnOthers
+      summary: Напомнить адресату (ГЛ-1)
+      description: |
+        Повторяет существующее уведомление текущему адресату: подписанту — `letter_sign_requested`, шагу маршрута —
+        `approval.requested`, исполнителю — `instruction_reminder`. Объект должен быть «моим» (автор документа или резолюции)
+        и ещё ждать, иначе 404. Не чаще раза в час по объекту: иначе 429 `RATE_LIMITED` (`details.retry_after_seconds`).
+        Некому напоминать (подписанта нет или это сам автор) — 409 `no_one_to_remind`.
+      x-rt-permissions: []
+      parameters:
+        - name: kind
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/WaitingKind'
+        - name: object_id
+          in: path
+          required: true
+          description: Документ (`letter_signature`), маршрут (`approval`) или поручение (`instruction`)
+          schema:
+            $ref: '#/components/schemas/Uuid'
+      responses:
+        '200':
+          description: Напоминание отправлено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RemindOut'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          description: '`RATE_LIMITED` — напоминание по этому объекту уже было меньше часа назад'
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
   /api/v1/employees:
     get:
       tags: [letters]
@@ -3505,7 +3574,7 @@ components:
       properties:
         code:
           type: string
-          description: Стабильный код (`UNAUTHORIZED`, `INVALID_SSO_TOKEN`, `USER_NOT_PROVISIONED`, `USER_INACTIVE`, `FORBIDDEN`, `NOT_FOUND`, `VALIDATION_FAILED`, `CONFLICT`, `PAYLOAD_TOO_LARGE`, `UNSUPPORTED_MEDIA_TYPE`, `BAD_REQUEST`, `INTERNAL_ERROR`)
+          description: Стабильный код (`UNAUTHORIZED`, `INVALID_SSO_TOKEN`, `USER_NOT_PROVISIONED`, `USER_INACTIVE`, `FORBIDDEN`, `NOT_FOUND`, `VALIDATION_FAILED`, `CONFLICT`, `RATE_LIMITED`, `PAYLOAD_TOO_LARGE`, `UNSUPPORTED_MEDIA_TYPE`, `BAD_REQUEST`, `INTERNAL_ERROR`)
           examples: [FORBIDDEN]
         message:
           type: string
@@ -5307,6 +5376,61 @@ components:
     InstructionRole:
       type: string
       enum: [responsible, co_executor]
+    WaitingKind:
+      type: string
+      enum: [letter_signature, approval, instruction]
+    WaitingItem:
+      type: object
+      additionalProperties: false
+      required: [kind, object_id, number, title, waiting_on, waiting_label, since, due, remind_available_at, remindable]
+      properties:
+        kind:
+          $ref: '#/components/schemas/WaitingKind'
+        object_id:
+          $ref: '#/components/schemas/Uuid'
+        number:
+          type: [string, 'null']
+        title:
+          type: string
+        waiting_on:
+          oneOf:
+            - $ref: '#/components/schemas/PersonRef'
+            - type: 'null'
+          description: Кто должен ответить; `null` — шаг «любой с правом» или подписанта нет (тогда `waiting_label`)
+        waiting_label:
+          type: [string, 'null']
+        since:
+          type: string
+          format: date-time
+        due:
+          type: [string, 'null']
+          format: date
+        remind_available_at:
+          type: [string, 'null']
+          format: date-time
+          description: '`null` — напомнить можно сейчас; иначе момент, с которого можно (после прошлого напоминания)'
+        remindable:
+          type: boolean
+    WaitingList:
+      type: object
+      additionalProperties: false
+      required: [items, more]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/WaitingItem'
+        more:
+          type: boolean
+          description: Один из списков обрезан по пределу
+    RemindOut:
+      type: object
+      additionalProperties: false
+      required: [reminded_at]
+      properties:
+        reminded_at:
+          type: string
+          format: date-time
     ReplyToLetter:
       type: object
       additionalProperties: false

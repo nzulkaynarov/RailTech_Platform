@@ -189,4 +189,6 @@ async def letter_signed(
     )
 
 
+publish_notice = _publish  # public name for the waiting reminders (ГЛ-1)
+
 __all__ = ["letter_handed_over", "letter_signed", "memo_decided", "memo_paid"]
