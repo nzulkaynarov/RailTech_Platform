@@ -422,3 +422,163 @@ async def addressee_people(id: CompanyId, authed: Writer) -> EdsAddresseePeople:
             if "id" in person
         ]
     )
+
+
+# --- Контрагенты для выбора: одно поле компании и человека во всех формах (ЕД-6) ------------------
+
+# Поле выбора стоит в формах разных разделов: заявка (`erp.calc`), заказ поставщику и бренд
+# (`erp.stock`),
+# клиенты (`crm.clients`), письмо (`eds.memo.create`). Достаточно любого; решающее слово за ERP.
+PickerReader = Annotated[
+    Authed,
+    Depends(
+        require_any(
+            ("crm.clients", "read"),
+            ("erp.stock", "read"),
+            ("erp.calc", "read"),
+            ("eds.memo.create", "read"),
+        )
+    ),
+]
+PickerWriter = Annotated[
+    Authed,
+    Depends(
+        require_any(
+            ("crm.clients", "full"),
+            ("erp.stock", "full"),
+            ("erp.calc", "full"),
+            ("eds.memo.create", "full"),
+        )
+    ),
+]
+PickerRole = Literal["client", "supplier", "manufacturer", "partner", "organization"]
+NewRole = Literal["organization", "supplier", "manufacturer"]
+
+
+class CounterpartyPick(BaseModel):
+    """Строка поля выбора контрагента: название, ИНН, страна и роли для подсказки."""
+
+    model_config = ConfigDict(extra="forbid")
+    id: str
+    name: str
+    inn: str | None
+    country: str | None
+    roles: CounterpartyRoles
+    crm_client_id: int | None
+    email: str | None
+
+
+class CounterpartyPickList(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    items: list[CounterpartyPick]
+
+
+class CounterpartyPickIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    name: str = Field(min_length=1, max_length=255)
+    inn: str | None = Field(default=None, pattern=r"^\d{9}$")
+    country_id: int | None = Field(default=None, ge=1)
+    address: str | None = Field(default=None, max_length=500)
+    role: NewRole = "organization"
+
+
+class CounterpartyPersonPick(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    id: str
+    name: str
+    position: str | None
+    email: str | None
+    is_primary: bool
+
+
+class CounterpartyPersonPickList(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    items: list[CounterpartyPersonPick]
+
+
+def _roles(raw: Any) -> CounterpartyRoles:
+    roles: dict[str, Any] = raw if isinstance(raw, dict) else {}
+    return CounterpartyRoles(
+        client=bool(roles.get("client")),
+        supplier=bool(roles.get("supplier")),
+        manufacturer=bool(roles.get("manufacturer")),
+        partner=bool(roles.get("partner")),
+        organization=bool(roles.get("organization")),
+    )
+
+
+def to_pick(row: dict[str, Any]) -> CounterpartyPick:
+    client = row.get("crm_client_id")
+    return CounterpartyPick(
+        id=str(row["id"]),
+        name=str(row.get("name") or ""),
+        inn=_text(row.get("inn")),
+        country=_text(row.get("country")),
+        roles=_roles(row.get("roles")),
+        crm_client_id=client if isinstance(client, int) else None,
+        email=_text(row.get("email")),
+    )
+
+
+@router.get(
+    "/people/counterparties",
+    response_model=CounterpartyPickList,
+    operation_id="searchCounterparties",
+)
+async def search_counterparties(
+    authed: PickerReader,
+    q: Annotated[str | None, Query(max_length=100)] = None,
+    role: PickerRole | None = None,
+    limit: Annotated[int, Query(ge=1, le=20)] = 10,
+) -> CounterpartyPickList:
+    """Название или точный ИНН; `role` поднимает компании с ролью, остальных не скрывает."""
+    wanted = {"q": (q or "").strip(), "role": role, "limit": limit}
+    params = {k: v for k, v in wanted.items() if v not in (None, "")}
+    data = await ErpCompany(authed.call).data("GET", "parties/organizations/", params=params)
+    return CounterpartyPickList(
+        items=[to_pick(row) for row in rows_of(data) if "id" in row and row.get("name")]
+    )
+
+
+@router.post(
+    "/people/counterparties",
+    response_model=CounterpartyPick,
+    status_code=status.HTTP_201_CREATED,
+    operation_id="createCounterparty",
+)
+async def create_counterparty(authed: PickerWriter, body: CounterpartyPickIn) -> CounterpartyPick:
+    """Строка «завести» поля выбора. Дубль по ИНН — 409 с `details.existing_id`."""
+    sent: dict[str, Any] = {"name": body.name, "role": body.role}
+    if body.inn:
+        sent["tin"] = body.inn
+    if body.country_id is not None:
+        sent["country_id"] = body.country_id
+    if body.address:
+        sent["legal_address"] = body.address
+    card = await ErpCompany(authed.call).data("POST", "parties/organizations/", json=sent)
+    return to_pick(card)
+
+
+@router.get(
+    "/people/counterparties/{id}/people",
+    response_model=CounterpartyPersonPickList,
+    operation_id="listCounterpartyPickerPeople",
+)
+async def counterparty_picker_people(
+    id: CompanyId, authed: PickerReader
+) -> CounterpartyPersonPickList:
+    """Поле выбора человека компании: имя, должность и почта; телефон — только через «Люди»."""
+    data = await ErpCompany(authed.call).data("GET", f"parties/organizations/{id}/people/")
+    return CounterpartyPersonPickList(
+        items=[
+            CounterpartyPersonPick(
+                id=str(row["id"]),
+                name=str(row.get("name") or ""),
+                position=_text(row.get("position")),
+                email=_text(row.get("email")),
+                is_primary=bool(row.get("is_primary")),
+            )
+            for row in rows_of(data)
+            if "id" in row
+        ]
+    )

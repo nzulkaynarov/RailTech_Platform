@@ -271,6 +271,10 @@ def erp_error(response: httpx.Response) -> PlatformError:
         details["reason"] = reason
         if erp_code in _FIELD_OF:
             details["fields"] = [_FIELD_OF[erp_code]]
+        # дубль называет уже существующую запись: её выбирают, а не заводят заново
+        existing = body.get("existing_id") if isinstance(body, dict) else None
+        if isinstance(existing, int) and not isinstance(existing, bool):
+            details["existing_id"] = str(existing)
         return PlatformError("CONFLICT", message, status_code=409, source="erp", details=details)
     fields = _validation_fields(body)
     if erp_code is not None:

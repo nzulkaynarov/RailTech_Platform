@@ -167,6 +167,9 @@ import type {
   CounterpartyCard,
   CounterpartyContacts,
   CounterpartyPersonPage,
+  CounterpartyPersonPickList,
+  CounterpartyPick,
+  CounterpartyPickList,
   CreatedId,
   CrewRate,
   DictionaryImportResult,
@@ -33743,6 +33746,65 @@ export const getRevealCounterpartyContactsResponseMock = (
   ...overrideResponse,
 });
 
+export const getSearchCounterpartiesResponseMock = (
+  overrideResponse: Partial<Extract<CounterpartyPickList, object>> = {},
+): CounterpartyPickList => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    inn: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    country: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    roles: {
+      client: faker.datatype.boolean(),
+      supplier: faker.datatype.boolean(),
+      manufacturer: faker.datatype.boolean(),
+      partner: faker.datatype.boolean(),
+      organization: faker.datatype.boolean(),
+    },
+    crm_client_id: faker.helpers.arrayElement([faker.number.int(), null]),
+    email: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  })),
+  ...overrideResponse,
+});
+
+export const getCreateCounterpartyResponseMock = (
+  overrideResponse: Partial<Extract<CounterpartyPick, object>> = {},
+): CounterpartyPick => ({
+  id: faker.helpers.fromRegExp("^[0-9]+$"),
+  name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  inn: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  country: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  roles: {
+    client: faker.datatype.boolean(),
+    supplier: faker.datatype.boolean(),
+    manufacturer: faker.datatype.boolean(),
+    partner: faker.datatype.boolean(),
+    organization: faker.datatype.boolean(),
+  },
+  crm_client_id: faker.helpers.arrayElement([faker.number.int(), null]),
+  email: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  ...overrideResponse,
+});
+
+export const getListCounterpartyPickerPeopleResponseMock = (
+  overrideResponse: Partial<Extract<CounterpartyPersonPickList, object>> = {},
+): CounterpartyPersonPickList => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    position: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    email: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    is_primary: faker.datatype.boolean(),
+  })),
+  ...overrideResponse,
+});
+
 export const getGetCounterpartyResponseMock = (
   overrideResponse: Partial<Extract<CounterpartyCard, object>> = {},
 ): CounterpartyCard => ({
@@ -46018,6 +46080,78 @@ export const getRevealCounterpartyContactsMockHandler = (
   );
 };
 
+export const getSearchCounterpartiesMockHandler = (
+  overrideResponse?:
+    | CounterpartyPickList
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<CounterpartyPickList> | CounterpartyPickList),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/people/counterparties",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getSearchCounterpartiesResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getCreateCounterpartyMockHandler = (
+  overrideResponse?:
+    | CounterpartyPick
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<CounterpartyPick> | CounterpartyPick),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/people/counterparties",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getCreateCounterpartyResponseMock(),
+        { status: 201 },
+      );
+    },
+    options,
+  );
+};
+
+export const getListCounterpartyPickerPeopleMockHandler = (
+  overrideResponse?:
+    | CounterpartyPersonPickList
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<CounterpartyPersonPickList> | CounterpartyPersonPickList),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/people/counterparties/:id/people",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListCounterpartyPickerPeopleResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
 export const getGetCounterpartyMockHandler = (
   overrideResponse?:
     | CounterpartyCard
@@ -47577,6 +47711,9 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getListEdsAddresseePeopleMockHandler(),
   getListCounterpartyPeopleMockHandler(),
   getRevealCounterpartyContactsMockHandler(),
+  getSearchCounterpartiesMockHandler(),
+  getCreateCounterpartyMockHandler(),
+  getListCounterpartyPickerPeopleMockHandler(),
   getGetCounterpartyMockHandler(),
   getUpdateCounterpartyRequisitesMockHandler(),
   getGetCounterpartyByClientMockHandler(),
