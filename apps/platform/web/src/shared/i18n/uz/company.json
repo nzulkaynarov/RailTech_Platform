@@ -629,8 +629,8 @@
     "partial": "Ba’zi bo‘limlar javob bermadi — hamma shablonlar ko‘rsatilmagan.",
     "error": "Shablonlar yuklanmadi",
     "errorText": "Sahifani yangilang.",
-    "empty": "Şablonlar yoq",
-    "emptyText": "Başqa turni tanlang.",
+    "empty": "Hozircha şablonlar yöq",
+    "emptyText": "Hujjat va xat bölimlarida yaratilgach, ular şu yerda paydo böladi.",
     "columns": {
       "name": "Nomi",
       "kind": "Turi",

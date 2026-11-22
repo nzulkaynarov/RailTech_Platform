@@ -89,13 +89,48 @@ test.describe("Общая рамка списка", () => {
     await settledScreenshot(page, "org-selected");
   });
 
-  test("Обращения: пустое состояние внутри рамки, без пустой таблицы", async ({ page }) => {
+  test("Обращения: рамка со строками и выбранная строка; пустой список — состояние внутри рамки", async ({
+    page,
+  }) => {
     await loginAndWait(page, "admin@demo.example");
+    // пусто: состояние внутри рамки, пустой таблицы нет (карточка открыта сбоку — на экране 1440 видно обе)
     await page.goto("/admin/tickets/TK-0001?panel=open&tab=card");
-    const frame = page.locator(".pf-reg");
-    await expect(frame.getByRole("heading", { level: 2 })).toBeVisible();
-    await expect(frame.getByRole("table")).toHaveCount(0);
-    await evidence(page, "tickets-empty");
+    const emptyFrame = page.locator(".pf-reg");
+    await expect(emptyFrame.getByRole("heading", { level: 2 })).toBeVisible();
+    await expect(emptyFrame.getByRole("table")).toHaveCount(0);
+    // три обращения в хранилище моков — список без открытой карточки
+    const at = "2026-11-20T09:00:00Z";
+    const ticket = (seq: number, subject: string, status: string, body: string) => ({
+      seq,
+      subject,
+      status,
+      authorId: "u-demo",
+      authorName: "Демо Менеджеров",
+      body,
+      messages: [],
+      createdAt: at,
+      updatedAt: at,
+    });
+    const stored = {
+      tickets: [
+        ticket(1, "access", "new", "Нужен доступ к документам"),
+        ticket(2, "error", "in_progress", "Не открывается шаблон"),
+        ticket(3, "other", "resolved", "Вопрос по уведомлениям"),
+      ],
+      notes: [],
+      nextTicket: 4,
+      nextNote: 1,
+    };
+    await page.evaluate(
+      `window.localStorage.setItem("rt-pf-mock-tickets", ${JSON.stringify(JSON.stringify(stored))})`,
+    );
+    await page.goto("/admin/tickets/TK-0002");
+    const table = page.locator("table.pf-dt-table");
+    await expect(table.getByRole("row")).toHaveCount(4);
+    expect(await look(page)).toMatchObject({ headAlign: "left", rowLine: "1px" });
+    await expect(page.locator("tr[data-selected='true']")).toHaveCount(1);
+    expect(await selectedBackground(page)).toBe("rgb(239, 246, 255)");
+    await evidence(page, "tickets");
   });
 
   test("Все шаблоны: рамка вместо голой таблицы", async ({ page }) => {

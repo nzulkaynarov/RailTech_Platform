@@ -33,11 +33,34 @@ const IMPORT_KIND = {
   Spin: "spin",
   Modal: "modal",
 };
+/** Deep imports: `antd/es/drawer`, `antd/lib/table/Table`, `antd/drawer` — the folder names the component. */
+const FOLDER_KIND = Object.fromEntries(
+  Object.entries(IMPORT_KIND).map(([name, kind]) => [name.toLowerCase(), kind]),
+);
+
+/** Kind of an `antd` module specifier that is a deep import of a guarded component, else undefined. */
+function deepImportKind(specifier) {
+  const match = /^antd\/(?:es\/|lib\/)?([a-z-]+)(?:\/|$)/.exec(specifier);
+  return match === null ? undefined : FOLDER_KIND[match[1]];
+}
+
+const isUseApp = (node) =>
+  ts.isCallExpression(node) &&
+  ts.isIdentifier(node.expression.name ?? node.expression) &&
+  (ts.isPropertyAccessExpression(node.expression)
+    ? node.expression.name.text === "useApp"
+    : node.expression.text === "useApp");
+const isUseModal = (node) =>
+  ts.isCallExpression(node) &&
+  ts.isPropertyAccessExpression(node.expression) &&
+  node.expression.name.text === "useModal";
 
 /**
  * Violations in one TS/TSX source: `{ kind, line, column }` (1-based line, 0-based column, like ESLint).
- * Imports of Drawer / Popconfirm / Table / Spin / Modal from "antd", `<table>` elements, and `modal.confirm(…)` /
- * `Modal.confirm(…)` calls.
+ * Caught: Drawer / Popconfirm / Table / Spin / Modal imported from "antd" (named) or from `antd/es|lib/<x>`; the same
+ * components reached through a namespace or default import (`import * as antd`, `<antd.Table/>`, `const { Drawer } = antd`);
+ * `<table>`; `modal.confirm()` / `Modal.confirm()` and confirm on any alias of the `modal` that `App.useApp()` or
+ * `Modal.useModal()` hands out (`const { modal: dialogs } = App.useApp()`, `app.modal.confirm()`).
  */
 export function detectTs(source, fileName = "file.tsx") {
   const file = ts.createSourceFile(
@@ -52,17 +75,96 @@ export function detectTs(source, fileName = "file.tsx") {
     const { line, character } = file.getLineAndCharacterOfPosition(node.getStart(file));
     found.push({ kind, line: line + 1, column: character });
   };
-  const visit = (node) => {
+  const namespaces = new Set(); // identifiers bound to the whole "antd" module
+  const modalAliases = new Set(["modal", "Modal"]);
+  const appAliases = new Set(); // `const app = App.useApp()`
+  // pass 1: aliases
+  const collect = (node) => {
     if (
       ts.isImportDeclaration(node) &&
       ts.isStringLiteral(node.moduleSpecifier) &&
       node.moduleSpecifier.text === "antd" &&
-      node.importClause?.namedBindings !== undefined &&
-      ts.isNamedImports(node.importClause.namedBindings)
+      node.importClause !== undefined
     ) {
-      for (const element of node.importClause.namedBindings.elements) {
-        const name = (element.propertyName ?? element.name).text;
-        const kind = IMPORT_KIND[name];
+      const { name, namedBindings } = node.importClause;
+      if (name !== undefined) namespaces.add(name.text);
+      if (namedBindings !== undefined && ts.isNamespaceImport(namedBindings)) {
+        namespaces.add(namedBindings.name.text);
+      }
+    }
+    if (ts.isVariableDeclaration(node) && node.initializer !== undefined) {
+      const init = node.initializer;
+      if (ts.isObjectBindingPattern(node.name) && isUseApp(init)) {
+        for (const el of node.name.elements) {
+          const source = (el.propertyName ?? el.name).text;
+          if (source === "modal" && ts.isIdentifier(el.name)) modalAliases.add(el.name.text);
+        }
+      } else if (ts.isArrayBindingPattern(node.name) && isUseModal(init)) {
+        const first = node.name.elements[0];
+        if (first !== undefined && ts.isBindingElement(first) && ts.isIdentifier(first.name)) {
+          modalAliases.add(first.name.text);
+        }
+      } else if (ts.isIdentifier(node.name)) {
+        if (isUseApp(init)) appAliases.add(node.name.text);
+        else if (
+          ts.isPropertyAccessExpression(init) &&
+          init.name.text === "modal" &&
+          (isUseApp(init.expression) ||
+            (ts.isIdentifier(init.expression) && appAliases.has(init.expression.text)))
+        ) {
+          modalAliases.add(node.name.text);
+        }
+      }
+    }
+    ts.forEachChild(node, collect);
+  };
+  collect(file);
+  const isModalRef = (expr) =>
+    (ts.isIdentifier(expr) && modalAliases.has(expr.text)) ||
+    (ts.isPropertyAccessExpression(expr) &&
+      expr.name.text === "modal" &&
+      (isUseApp(expr.expression) ||
+        (ts.isIdentifier(expr.expression) && appAliases.has(expr.expression.text)))) ||
+    (ts.isPropertyAccessExpression(expr) &&
+      ts.isIdentifier(expr.expression) &&
+      namespaces.has(expr.expression.text) &&
+      expr.name.text === "Modal");
+  // pass 2: violations
+  const visit = (node) => {
+    if (ts.isImportDeclaration(node) && ts.isStringLiteral(node.moduleSpecifier)) {
+      const specifier = node.moduleSpecifier.text;
+      if (specifier === "antd") {
+        const bindings = node.importClause?.namedBindings;
+        if (bindings !== undefined && ts.isNamedImports(bindings)) {
+          for (const element of bindings.elements) {
+            const kind = IMPORT_KIND[(element.propertyName ?? element.name).text];
+            if (kind !== undefined) at(element, kind);
+          }
+        }
+      } else {
+        const kind = deepImportKind(specifier);
+        if (kind !== undefined) at(node, kind);
+      }
+    }
+    // `<antd.Table/>`, `antd.Drawer`, `antd.Modal.confirm()`
+    if (
+      ts.isPropertyAccessExpression(node) &&
+      ts.isIdentifier(node.expression) &&
+      namespaces.has(node.expression.text)
+    ) {
+      const kind = IMPORT_KIND[node.name.text];
+      if (kind !== undefined) at(node, kind);
+    }
+    // `const { Drawer } = antd`
+    if (
+      ts.isVariableDeclaration(node) &&
+      ts.isObjectBindingPattern(node.name) &&
+      node.initializer !== undefined &&
+      ts.isIdentifier(node.initializer) &&
+      namespaces.has(node.initializer.text)
+    ) {
+      for (const element of node.name.elements) {
+        const kind = IMPORT_KIND[(element.propertyName ?? element.name).text];
         if (kind !== undefined) at(element, kind);
       }
     }
@@ -77,8 +179,7 @@ export function detectTs(source, fileName = "file.tsx") {
       ts.isCallExpression(node) &&
       ts.isPropertyAccessExpression(node.expression) &&
       node.expression.name.text === "confirm" &&
-      ts.isIdentifier(node.expression.expression) &&
-      /^(modal|Modal)$/.test(node.expression.expression.text)
+      isModalRef(node.expression.expression)
     ) {
       at(node, "confirm");
     }
@@ -90,6 +191,8 @@ export function detectTs(source, fileName = "file.tsx") {
 
 const TABLE_SELECTOR =
   /(^|[\s>+~(])(table|thead|tbody|tfoot|tr|th|td|caption)(?![\w-])|\.ant-table/;
+/** Classes and state of the shared frame: a module must not restyle them (`.pf-x .pf-dt-table [data-selected]`). */
+const FRAME_SELECTOR = /\.pf-(dt|fixed)-table(?![\w-])|\[data-selected\b/;
 
 /** Table styling in one stylesheet: `{ kind: "css-table", line, column, selector }` per offending selector. */
 export function detectCss(source) {
@@ -104,7 +207,10 @@ export function detectCss(source) {
     if (text.startsWith("@")) continue;
     // attribute values and strings are not selectors of table elements
     const clean = text.replace(/\[[^\]]*\]/g, "[]").replace(/(["']).*?\1/g, "");
-    if (clean.split(",").some((part) => TABLE_SELECTOR.test(part.trim()))) {
+    if (
+      clean.split(",").some((part) => TABLE_SELECTOR.test(part.trim())) ||
+      FRAME_SELECTOR.test(text)
+    ) {
       const line = blank.slice(0, start).split("\n").length;
       found.push({ kind: CSS_KIND, line, column: 0, selector: text.replace(/\s+/g, " ") });
     }

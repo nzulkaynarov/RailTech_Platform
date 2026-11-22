@@ -163,7 +163,7 @@ export default tseslint.config(
   },
   {
     // Стандарт интерфейса §6: окно по центру в модулях — только общий `Dialog` (448, подтверждение и 1–3 поля), форма
-    // длиннее — `FormSheet`; `modal.confirm` из `App.useApp()` — для вопросов подтверждения.
+    // длиннее — `FormSheet`; вопрос подтверждения — `useConfirmAction` (shared/ui), не `modal.confirm`.
     files: ["src/modules/**/*.{ts,tsx}"],
     rules: {
       "no-restricted-imports": [

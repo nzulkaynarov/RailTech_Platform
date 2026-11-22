@@ -2,184 +2,227 @@
   "drawer": [
     {
       "path": "src/modules/admin/signing/AuthorityDrawer.tsx",
+      "count": 1,
       "reason": "Drawer 520 with its own header and footer; moves to the shared panel (ЕВ-1б)"
     },
     {
       "path": "src/modules/chats/people/PeoplePage.tsx",
+      "count": 1,
       "reason": "Drawer 400 for the person card; the People executor replaces it (ЕВ-1б)"
     },
     {
       "path": "src/modules/crm/messages/Dialog.tsx",
+      "count": 1,
       "reason": "phone bottom sheet copied per module; use shared Sheet (ЕВ-1б)"
     },
     {
       "path": "src/modules/eds/decision/DecisionSlot.tsx",
+      "count": 1,
       "reason": "phone bottom sheet copied per module; use shared Sheet (ЕВ-1б)"
     },
     {
       "path": "src/modules/eds/documents/DocumentSheet.tsx",
+      "count": 1,
       "reason": "phone bottom sheet copied per module; use shared Sheet (ЕВ-1б)"
     },
     {
       "path": "src/modules/eds/inbox/ResolutionPanel.tsx",
+      "count": 1,
       "reason": "phone bottom sheet copied per module; use shared Sheet (ЕВ-1б)"
     },
     {
       "path": "src/modules/eds/mail/MailBody.tsx",
+      "count": 1,
       "reason": "Drawer min(100vw, 960) for a letter preview; moves to the shared panel at 640 (ЕВ-1б)"
     },
     {
       "path": "src/modules/eds/mail/SentMail.tsx",
+      "count": 1,
       "reason": "Drawer 560 with the primary button in the header; moves to the shared panel (ЕВ-1б)"
     },
     {
       "path": "src/modules/erp/catalog/ItemsPanel.tsx",
+      "count": 1,
       "reason": "Drawer 640 (width allowed) without the shared header and footer; moves to the shared panel (ЕВ-1б)"
     },
     {
       "path": "src/modules/erp/docs/DocsScreen.tsx",
+      "count": 1,
       "reason": "Drawer 760; moves to the shared panel at 640 (ЕВ-1б)"
     },
     {
       "path": "src/modules/erp/stock/ProductDrawer.tsx",
+      "count": 1,
       "reason": "Drawer 560; moves to the shared panel (ЕВ-1б)"
     },
     {
       "path": "src/features/help/HelpDrawer.tsx",
+      "count": 1,
       "reason": "shell drawer 480 (Help): allowed by platform-frontend §4.1a; stays until the shell panel owns it"
     }
   ],
   "confirm": [
     {
       "path": "src/modules/admin/articles/ArticleEditor.tsx",
+      "count": 1,
       "reason": "direct modal.confirm with the default icon; becomes useConfirmAction (ЕВ-1б)"
     },
     {
       "path": "src/modules/admin/articles/ArticlesPage.tsx",
+      "count": 2,
       "reason": "two direct modal.confirm calls; become useConfirmAction (ЕВ-1б)"
     },
     {
       "path": "src/modules/erp/calc/LinesTable.tsx",
+      "count": 1,
       "reason": "Popconfirm in a line row; becomes useConfirmAction (ЕВ-1б)"
     },
     {
       "path": "src/modules/erp/stock/ProductDrawer.tsx",
+      "count": 1,
       "reason": "Popconfirm; becomes useConfirmAction (ЕВ-1б)"
     },
     {
       "path": "src/features/profile/CalendarLinkSection.tsx",
+      "count": 1,
       "reason": "Popconfirm; becomes useConfirmAction (ЕВ-1б)"
     },
     {
       "path": "src/features/profile/TelegramSection.tsx",
+      "count": 1,
       "reason": "direct modal.confirm; becomes useConfirmAction (ЕВ-1б)"
     }
   ],
   "table": [
     {
       "path": "src/modules/admin/roles/RoleMatrix.tsx",
+      "count": 1,
       "reason": "documented exception (archive UI-6): role matrix is a grid, not a list"
     },
     {
       "path": "src/modules/erp/calc/LinesTable.tsx",
+      "count": 1,
       "reason": "documented exception (archive UI-6): editable lines grid with inputs in cells"
     }
   ],
   "spin": [
     {
       "path": "src/modules/admin/company/tabs/LetterTemplates.tsx",
+      "count": 1,
       "reason": "Spin on the template preview; becomes a skeleton (ЕВ-1б)"
     },
     {
       "path": "src/modules/crm/messages/Dialog.tsx",
+      "count": 1,
       "reason": "Spin on the dialog; becomes a skeleton (ЕВ-1б)"
     },
     {
       "path": "src/modules/crm/messages/MessagesPage.tsx",
+      "count": 1,
       "reason": "Spin on the list; becomes a skeleton (ЕВ-1б)"
     },
     {
       "path": "src/modules/crm/messages/Thread.tsx",
+      "count": 1,
       "reason": "Spin on the thread; becomes a skeleton (ЕВ-1б)"
     },
     {
       "path": "src/modules/eds/new/LetterAssist.tsx",
+      "count": 1,
       "reason": "Spin while the assistant answers; becomes a skeleton (ЕВ-1б)"
     },
     {
       "path": "src/modules/erp/calc/ParseModal.tsx",
+      "count": 1,
       "reason": "Spin while parsing; becomes a skeleton or progress (ЕВ-1б)"
     },
     {
       "path": "src/modules/erp/calc/PreviousModal.tsx",
+      "count": 1,
       "reason": "Spin on the list; becomes a skeleton (ЕВ-1б)"
     }
   ],
   "modal": [
     {
       "path": "src/features/onboarding/Onboarding.tsx",
+      "count": 1,
       "reason": "first-login tour in a raw Modal; moves to Dialog (ЕВ-1б)"
     },
     {
       "path": "src/features/profile/AvatarCropper.tsx",
+      "count": 1,
       "reason": "raw Modal 340; moves to Dialog (ЕВ-1б)"
     },
     {
       "path": "src/features/profile/TelegramSection.tsx",
+      "count": 1,
       "reason": "raw Modal 360; moves to Dialog (ЕВ-1б)"
     },
     {
       "path": "src/features/tickets/WriteToAdminModal.tsx",
+      "count": 1,
       "reason": "raw Modal with its own buttons; moves to Dialog (ЕВ-1б)"
     }
   ],
   "css-table": [
     {
       "path": "src/modules/admin/bot/bot.css",
+      "count": 3,
       "reason": "pf-bot-table: own header band and selection (duplicate of the shared look); remove when the bot tables move to RegistryTable"
     },
     {
       "path": "src/modules/admin/bus/bus.css",
+      "count": 3,
       "reason": "pf-bus-row-selected and dead .ant-table rule; remove when the bus views move to RegistryTable"
     },
     {
       "path": "src/modules/admin/integrations/integrations.css",
+      "count": 3,
       "reason": "pf-int-table: own header band with padding 6/8; remove with ReportTable"
     },
     {
       "path": "src/modules/admin/roles/roles.css",
+      "count": 7,
       "reason": "role matrix grid (raw <table>, documented exception)"
     },
     {
       "path": "src/modules/crm/crm.css",
+      "count": 4,
       "reason": "pf-crm-table: no band, middle alignment; remove when Clients and Leads move to RegistryTable"
     },
     {
       "path": "src/modules/crm/kb/kb.css",
+      "count": 4,
       "reason": "pf-kb-table: own header band; remove when the knowledge-base lists move to RegistryTable"
     },
     {
       "path": "src/modules/eds/decision/decision.css",
+      "count": 6,
       "reason": "pf-dec-table: band, row lines and selection (the origin of the shared look); remove when the decision lists move to RegistryTable"
     },
     {
       "path": "src/modules/eds/documents/documents.css",
+      "count": 4,
       "reason": "pf-docs-table: no band, middle alignment; remove when Documents moves to RegistryTable"
     },
     {
       "path": "src/modules/eds/inbox/inbox.css",
+      "count": 5,
       "reason": "pf-letters-table: own header band; remove when Inbox moves to RegistryTable"
     },
     {
       "path": "src/modules/eds/payments/payments.css",
+      "count": 3,
       "reason": "table rules of the payment lists; remove when they move to RegistryTable"
     },
     {
       "path": "src/modules/erp/calc/calc.css",
+      "count": 7,
       "reason": "pf-calc-table and the lines grid; the list part goes to RegistryTable, the lines grid stays (documented exception)"
     },
     {
       "path": "src/modules/erp/catalog/catalog.css",
+      "count": 5,
       "reason": "pf-cat-table / pf-cat-offers: no band; remove when the catalog lists move to RegistryTable"
     }
   ]

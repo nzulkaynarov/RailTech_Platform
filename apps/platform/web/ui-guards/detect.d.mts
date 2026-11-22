@@ -6,6 +6,7 @@ export interface Hit {
 }
 export interface AllowEntry {
   path: string;
+  count: number;
   reason: string;
 }
 export const WEB_ROOT: string;
