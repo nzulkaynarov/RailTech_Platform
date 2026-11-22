@@ -134,6 +134,7 @@
       "state": {
         "ready": "The quote is approved and not yet sent to the client.",
         "sent": "The quote is sent to the client.",
+        "sentNowhere": "The quote is issued but has not reached the client by any channel.",
         "closed": "The client answered the quote, there is nothing more to send."
       },
       "status": {
@@ -148,7 +149,7 @@
       "reason": {
         "no_telegram": "the contact is not connected to the Telegram bot",
         "client_not_in_crm": "the client was not passed to CRM, the bot does not know them",
-        "no_cabinet": "the client is not invited to the cabinet — invite them from the client card",
+        "no_cabinet": "the client is not in the cabinet yet — invite them from the client card",
         "no_email": "the contact has no e-mail — add it on the client card",
         "mail_not_configured": "email is not set up — Settings · Connections · Email",
         "mail_failed": "the email did not go out",
@@ -281,7 +282,7 @@
       "reason": {
         "no_telegram": "Unavailable: the contact is not connected to the Telegram bot.",
         "client_not_in_crm": "Unavailable: the client was not passed to CRM, the bot does not know them.",
-        "no_cabinet": "Unavailable: the client is not invited to the cabinet.",
+        "no_cabinet": "Unavailable: the client is not in the cabinet yet.",
         "no_email": "Unavailable: the contact has no e-mail.",
         "mail_not_configured": "Unavailable: email is not set up — Settings · Connections · Email."
       }

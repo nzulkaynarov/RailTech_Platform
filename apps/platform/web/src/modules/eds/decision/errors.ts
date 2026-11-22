@@ -1,7 +1,5 @@
-import { useQueryClient } from "@tanstack/react-query";
-import { useCallback } from "react";
-
 import { ApiError } from "../../../shared/api/errors";
+import { APPROVAL_KEYS, useInvalidatePrefixes } from "../refreshKeys";
 
 /** Причина отказа решения словарным ключом (`<ns>:form.reasons.<ключ>`). */
 export type DecisionReason =
@@ -48,19 +46,7 @@ export function isTerminal(error: unknown): boolean {
   return reason === "route_closed" || reason === "not_your_step";
 }
 
-/** После решения сбрасываются списки и карточки КП и документов: статус и очереди меняются везде. */
-const KEYS = ["/api/v1/eds/quotes", "/api/v1/eds/memo-approvals"] as const;
-
+/** После решения сбрасываются списки и карточки КП и служебок, реестр документов, очередь и счётчики (`APPROVAL_KEYS`). */
 export function useRefreshApprovals(): () => Promise<void> {
-  const client = useQueryClient();
-  return useCallback(
-    () =>
-      client.invalidateQueries({
-        predicate: (query) => {
-          const head = query.queryKey[0];
-          return typeof head === "string" && KEYS.some((key) => head.startsWith(key));
-        },
-      }),
-    [client],
-  );
+  return useInvalidatePrefixes(APPROVAL_KEYS);
 }

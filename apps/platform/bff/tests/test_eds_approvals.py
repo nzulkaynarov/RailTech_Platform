@@ -504,12 +504,66 @@ async def test_ready_quote_without_channels_can_be_sent_by_the_manager_only(
     assert [(ln["status"], ln["can_send"]) for ln in lines] == [
         ("not_selected", True),
         ("not_selected", False),
-        ("not_selected", False),  # нет e-mail — отправить нельзя
+        ("skipped", False),  # нет e-mail: причина настоящая, а не «не выбрано»
     ]
+    assert lines[2]["reason"] == "no_email"
     eds.erp_quote = {**eds.erp_quote, "can_send": False}  # type: ignore[dict-item]
     assert not any(
         ln["can_send"] for ln in (await web.client.get(QUOTE)).json()["delivery"]["lines"]
     )
+
+
+_SENT_ONLY_CABINET = {
+    "requested": ["telegram", "cabinet"],
+    "sent_via": ["telegram", "cabinet"],
+    "skipped": [],
+    "error": None,
+}
+
+
+async def test_cabinet_line_follows_live_availability_not_sent_via(
+    web: Web, eds: ApprovalsFake
+) -> None:
+    """ERP listed the cabinet in `sent_via`, but the client cannot sign in (no invitation
+    delivered): the line is «skipped» with the reason, not «published»."""
+    _approved(
+        eds,
+        "SENT",
+        _SENT_ONLY_CABINET,
+        channel_availability=availability(cabinet="CABINET_NOT_INVITED"),
+    )
+    await _director(web)
+
+    cabinet = (await web.client.get(QUOTE)).json()["delivery"]["lines"][1]
+
+    assert (cabinet["status"], cabinet["reason"]) == ("skipped", "no_cabinet")
+
+
+async def test_cabinet_line_is_unknown_when_availability_is_unknown(
+    web: Web, eds: ApprovalsFake
+) -> None:
+    _approved(eds, "SENT", _SENT_ONLY_CABINET, channel_availability=None)
+    await _director(web)
+
+    cabinet = (await web.client.get(QUOTE)).json()["delivery"]["lines"][1]
+
+    assert (cabinet["status"], cabinet["reason"]) == ("unknown", None)
+
+
+async def test_unrequested_unavailable_channel_is_skipped_with_its_reason(
+    web: Web, eds: ApprovalsFake
+) -> None:
+    _approved(
+        eds,
+        "SENT",
+        {"requested": ["telegram"], "sent_via": ["telegram"], "skipped": [], "error": None},
+        channel_availability=availability(email="CONTACT_EMAIL_REQUIRED"),
+    )
+    await _director(web)
+
+    email = (await web.client.get(QUOTE)).json()["delivery"]["lines"][2]
+
+    assert (email["status"], email["reason"]) == ("skipped", "no_email")
 
 
 async def test_gate_error_marks_the_requested_channels_failed(web: Web, eds: ApprovalsFake) -> None:

@@ -27,6 +27,7 @@ import { AgreeSlot } from "./AgreePanel";
 import { memoRef } from "./api";
 import { useStateLabels } from "./labels";
 import { mayDecideMemos } from "./model";
+import { useStepNote } from "./stepNote";
 
 function stepState(status: EdsRouteStep["status"]): HistoryItem["state"] {
   if (status === "current") return "waiting";
@@ -110,6 +111,7 @@ function Content({ memo, refKey }: { memo: MemoApprovalCard; refKey: string }) {
   const { wide, mobile } = useViewport();
   const [, setParams] = useSearchParams();
   const mayDecide = mayDecideMemos(me) || Boolean(memo.acting_for);
+  const stepNote = useStepNote(memo);
   const waiting = memo.status === "open" && memo.can_decide && mayDecide;
   const number = memo.number ?? t(`kinds.${memo.kind}`);
 
@@ -153,7 +155,7 @@ function Content({ memo, refKey }: { memo: MemoApprovalCard; refKey: string }) {
         </div>
       ) : null}
       {memo.status === "open" && !waiting ? (
-        <p className="pf-hint">{t("card.readOnlyHint")}</p>
+        <p className="pf-hint">{mayDecide && stepNote ? stepNote : t("card.readOnlyHint")}</p>
       ) : null}
       <div className="pf-dec-grid">
         <div className="pf-dec-main">
