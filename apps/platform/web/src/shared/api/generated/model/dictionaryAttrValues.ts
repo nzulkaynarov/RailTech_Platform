@@ -4,7 +4,7 @@
  */
 
 /**
- * Значения полей `attrs` (`urgent`, `due_days` у видов документа; `default_action`, `color`, `icon` у типов писем — строки из `options`); `null` — не задано
+ * Значения полей `attrs` (`urgent`, `due_days`, `due_required` у видов документа; `default_action`, `color`, `icon` у типов писем — строки из `options`); `null` — не задано
  */
 export interface DictionaryAttrValues {
   [key: string]: boolean | number | string | null;

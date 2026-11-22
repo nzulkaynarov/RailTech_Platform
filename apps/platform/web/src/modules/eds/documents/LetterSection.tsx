@@ -242,7 +242,7 @@ export function LetterSection({ doc }: { doc: EdsDocument }) {
         <h4>{t("panel.letter.title")}</h4>
         <DefinitionList items={definitionItems} />
         {unmatched ? <Alert type="warning" showIcon message={t("panel.letter.unmatched")} /> : null}
-        {letter.registration_requested && doc.status === "draft" ? (
+        {letter.registration_requested && doc.awaiting_signature ? (
           <Alert
             type="info"
             showIcon

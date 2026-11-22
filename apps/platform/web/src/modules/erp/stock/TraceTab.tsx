@@ -101,7 +101,11 @@ function UnitCard({ unit }: { unit: StockTraceUnit }) {
         {unit.kind === "lot" ? (
           <span className="pf-hint">
             {" "}
-            · {t("trace.lotShipped", { shipped: unit.shipped_quantity, total: unit.quantity })}
+            ·{" "}
+            {t("trace.lotShipped", {
+              shipped: qty(unit.shipped_quantity),
+              total: qty(unit.quantity),
+            })}
           </span>
         ) : null}
       </p>

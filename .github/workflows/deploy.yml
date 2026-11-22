@@ -363,11 +363,9 @@ jobs:
         run: ssh app "docker logout ghcr.io" || true
 
   # «Что нового» (W-REL): после успешной выкладки — черновик записи docs/kb/help/changelog/<дата>.md из строк «Для пользователей»
-  # PR, влитых с прошлого тега (scripts/release_notes.py). Бот в main не пишет: запись уходит черновым PR в ветке
-  # release-notes/<дата>-<sha>; архитектор правит формулировки и переводит PR в «Ready for review» — CI запускается от
-  # человека (события GITHUB_TOKEN workflows не запускают), а дальше обычные правила main. Нет строк — PR нет. Сбой этой job
-  # выкладку не отменяет (continue-on-error): запись всегда можно собрать вручную тем же скриптом. Если в репозитории не
-  # разрешено «Allow GitHub Actions to create … pull requests», черновик остаётся артефактом прогона и в сводке job.
+  # PR, влитых с прошлого тега (scripts/release_notes.py). Бот в main не пишет и PR не открывает (DECISIONS 2026-11-22:
+  # «Что нового» — раз в неделю): черновик остаётся в сводке job и артефакте прогона, недельную запись лид собирает
+  # одним PR. Сбой этой job выкладку не отменяет (continue-on-error).
   release-notes:
     name: «Что нового» — черновик записи
     needs: [prepare, deploy]
@@ -408,24 +406,6 @@ jobs:
         with:
           name: release-notes-${{ steps.notes.outputs.day }}
           path: ${{ steps.notes.outputs.file }}
-
-      - name: Черновой PR с записью
-        if: steps.notes.outputs.file != ''
-        env:
-          GH_TOKEN: ${{ github.token }}
-          DAY: ${{ steps.notes.outputs.day }}
-          SHA: ${{ needs.prepare.outputs.sha }}
-        run: |
-          branch="release-notes/$DAY-${SHA:0:7}"
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git switch -c "$branch"
-          git add docs/kb/help/changelog apps/platform/web/src/generated/help-articles
-          git commit -m "docs: «Что нового» $DAY — черновик из строк «Для пользователей» (W-REL)"
-          git push origin "$branch"
-          body="Черновик записи «Что нового» после выкладки ${SHA:0:7} (deploy.yml, job release-notes). Поправьте заголовок и формулировки (человеческим языком, для кого), затем «Ready for review» — CI запустится. Пустое или лишнее — закройте PR."
-          gh pr create --draft --base main --head "$branch" --title "docs: «Что нового» $DAY" --body "$body" \
-            || echo "::warning::PR не создан (нет права Actions создавать PR?) — ветка $branch запушена, черновик — в артефакте прогона"
 
   rollback:
     if: github.event_name == 'workflow_dispatch' && inputs.action == 'rollback'

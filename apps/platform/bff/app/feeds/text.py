@@ -78,6 +78,25 @@ def ago(then: datetime | None, now: datetime) -> str:
     return f"{days} дн. назад"
 
 
+def ago_value(raw: Any, now: datetime) -> str:
+    """`ago` для сырого значения бэкенда.
+
+    Дата без времени (`2026-11-22`, EDS `received_at`) не знает часа: вместо «N ч назад» —
+    «сегодня», «вчера» или `ДД.ММ.ГГГГ`."""
+    if isinstance(raw, str) and len(raw) == 10:
+        try:
+            day = datetime.fromisoformat(raw).date()
+        except ValueError:
+            return ""
+        days = company_day(now) - day.toordinal()
+        if days <= 0:
+            return "сегодня"
+        if days == 1:
+            return "вчера"
+        return day.strftime("%d.%m.%Y")
+    return ago(parse_dt(raw), now)
+
+
 def money(amount: Any, currency: str | None) -> str | None:
     """`1 234 567 сум`; другая валюта — её код. Нечисло — None."""
     try:

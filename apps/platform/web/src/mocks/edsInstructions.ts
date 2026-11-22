@@ -491,10 +491,16 @@ const forbiddenBff = (resource: string) =>
  * Хук регистрации ИСХ «в ответ на ВХ» (как `close_by_outgoing` EDS, P8b/P4): поручения «Подготовить ответ» письма в работе
  * → «Исполнено» со ссылкой на ИСХ; все исполнены — письмо «Исполнено», уведомление автору резолюции и делопроизводителю.
  */
-export function closeReplyInstructions(letterNumber: string, outgoingNumber: string): string[] {
+export function closeReplyInstructions(
+  letterNumber: string,
+  outgoingNumber: string,
+  authorId: string,
+): string[] {
   const letter = readLetters().find((l) => l.number === letterNumber);
   const user = me();
   if (!letter || !user) return [];
+  // СЦ-8: в истории назван автор ответа, а не подписавший (подпись — отдельная запись `document.signed`)
+  const author = personOf(authorId) ?? user;
   const now = new Date().toISOString();
   let next = letter;
   const closed: string[] = [];
@@ -512,7 +518,7 @@ export function closeReplyInstructions(letterNumber: string, outgoingNumber: str
     });
     next = {
       ...next,
-      journal: [...next.journal, entry("instruction.executed", user, `Ответ ${outgoingNumber}`)],
+      journal: [...next.journal, entry("instruction.executed", author, `Ответ ${outgoingNumber}`)],
     };
   }
   if (closed.length === 0) return [];

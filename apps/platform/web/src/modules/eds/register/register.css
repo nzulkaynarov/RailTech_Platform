@@ -40,3 +40,8 @@
   color: var(--rt-color-primary-text);
   background: var(--rt-color-primary-bg);
 }
+
+/* СЦ-11: сводка на шаге «Проверка» отделена от «Осталось» и кнопок */
+.pf-reg-summary {
+  margin-bottom: var(--pf-space-4, 16px);
+}

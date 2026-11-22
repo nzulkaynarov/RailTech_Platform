@@ -136,9 +136,19 @@ function undeliveredOf(doc: MockDocument): boolean {
   );
 }
 
+/** Как в EDS (СЦ-8): письмо передано на подпись и не подписано — статус `draft`, слово «На подписи». */
+function awaitingSignatureOf(doc: MockDocument): boolean {
+  return (
+    doc.kind === "letter_out" &&
+    doc.status === "draft" &&
+    Boolean(doc.letter?.registration_requested)
+  );
+}
+
 function rowOf(doc: MockDocument): EdsDocumentRow {
   return {
     undelivered: undeliveredOf(doc),
+    awaiting_signature: awaitingSignatureOf(doc),
     kind: doc.kind,
     id: doc.id,
     number: doc.number,
@@ -327,6 +337,7 @@ function letterFields(doc: MockDocument, me: string): Partial<EdsDocument> {
         }
       : null,
     // Как BFF: исходящее письмо выходит только через «Подписать» (решение владельца 2026-11-21 (3))
+    awaiting_signature: awaitingSignatureOf(doc),
     can_register: false,
     can_request_registration:
       draft && doc.ownerId === me && !signing.can_sign && !letter?.registration_requested,
@@ -516,7 +527,7 @@ function submitDocument(doc: MockDocument, state: EdsMock, send = false): void {
       if (send) queueMailing(doc.letter);
     }
     if (doc.replyTo) {
-      const closed = closeReplyInstructions(doc.replyTo, doc.number);
+      const closed = closeReplyInstructions(doc.replyTo, doc.number, doc.ownerId);
       noticeReplyRegistered(doc, closed);
     }
   } else {
@@ -603,6 +614,7 @@ export const edsDocumentsHandlers = [
         ...state.documents.map((doc) => ({ ...rowOf(doc), due_date: null })),
         ...state.registry.map((entry): EdsDocumentRow => ({
           undelivered: false,
+          awaiting_signature: false,
           kind: entry.kind,
           id: entry.id,
           number: entry.number,
@@ -919,7 +931,7 @@ export const edsDocumentsHandlers = [
       }
     }
     if (doc.replyTo) {
-      const closed = closeReplyInstructions(doc.replyTo, doc.number);
+      const closed = closeReplyInstructions(doc.replyTo, doc.number, doc.ownerId);
       noticeReplyRegistered(doc, closed);
     }
     writeEds(state);

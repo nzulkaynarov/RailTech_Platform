@@ -11,6 +11,7 @@ import { QueryState } from "../../../shared/ui/FormParts";
 import { StatusTag } from "../../../shared/ui/StatusTag";
 import { useErrorText, useRefreshStock, useStateLabels } from "../stock/api";
 import { calcRef } from "./api";
+import { priceRequestLinesText } from "./priceRequestText";
 
 function Entry({ item, canAnswer }: { item: PriceRequest; canAnswer: boolean }) {
   const { t } = useTranslation("stock");
@@ -53,7 +54,7 @@ function Entry({ item, canAnswer }: { item: PriceRequest; canAnswer: boolean }) 
           email: item.to_email,
         })}
       </p>
-      <p>{item.lines.map((l) => `${l.name} · ${qty(l.quantity)}`).join("; ")}</p>
+      <p>{priceRequestLinesText(item.lines, qty)}</p>
       {item.error ? <p className="pf-hint">{item.error}</p> : null}
       {item.answer_note ? (
         <p className="pf-hint">{t("priceRequest.answerNote", { note: item.answer_note })}</p>

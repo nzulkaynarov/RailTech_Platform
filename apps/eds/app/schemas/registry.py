@@ -43,6 +43,8 @@ class RegistryItem(BaseModel):
     amount: Money | None
     #: Исходящее письмо с почтой адресата не ушло и отправку не сняли (СЦ-1): строка остаётся в «Исходящих»
     undelivered: bool = False
+    #: Исходящее письмо передано на подпись и не подписано (СЦ-8); у остальных видов — false
+    awaiting_signature: bool = False
 
 
 class RegistryPage(BaseModel):

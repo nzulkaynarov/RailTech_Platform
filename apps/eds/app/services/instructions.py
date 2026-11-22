@@ -437,8 +437,13 @@ async def resolve_office(
 # --- исполнение ---------------------------------------------------------------------------------------------------
 
 
-async def _finish_if_done(session: AsyncSession, bus: AsyncBus, letter: Letter, actor_id: int | None) -> None:
-    """Все поручения письма исполнены — письмо «Исполнено», контроль снят, уведомление автору и регистратору."""
+async def _finish_if_done(
+    session: AsyncSession, bus: AsyncBus, letter: Letter, actor_id: int | None, *, journal_by_actor: bool = True
+) -> None:
+    """Все поручения письма исполнены — письмо «Исполнено», контроль снят, уведомление автору и регистратору.
+
+    `journal_by_actor=False` — письмо закрыто подписью чужого ответа (СЦ-8): в журнале «Система», а не подписавший;
+    `actor_id` остаётся только для уведомления (подписавшему о его же подписи не пишем)."""
     if letter.status != LetterStatus.IN_EXECUTION.value:
         return
     open_left = await session.execute(
@@ -453,7 +458,7 @@ async def _finish_if_done(session: AsyncSession, bus: AsyncBus, letter: Letter, 
         now,
         now,
     )
-    await journal.record(session, "letter.executed", by=actor_id, letter_id=letter.id)
+    await journal.record(session, "letter.executed", by=actor_id if journal_by_actor else None, letter_id=letter.id)
     await notify(
         session,
         bus,
@@ -828,13 +833,13 @@ async def close_by_outgoing(session: AsyncSession, bus: AsyncBus, *, document: D
         await journal.record(
             session,
             "instruction.executed",
-            by=actor_id,
+            by=document.author_crm_user_id,  # СЦ-8: ответ написал автор; подписавший назван в `document.signed`
             letter_id=letter.id,
             comment=f"Ответ {document.number}",
         )
     executors = [r.crm_user_id for r in rows]
     if rows:
-        await _finish_if_done(session, bus, letter, actor_id)
+        await _finish_if_done(session, bus, letter, actor_id, journal_by_actor=False)
     return executors
 
 

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { ObjectKind } from "../api/generated/model/objectKind";
 import i18n, { resources } from "./index";
 
 function keys(obj: object, prefix = ""): string[] {
@@ -43,9 +44,20 @@ describe("i18n", () => {
     "help",
     "articles",
     "signing",
+    "stock",
   ] as const)("пространство %s: uz и en — те же ключи, что ru", (ns) => {
     for (const lng of ["uz", "en"] as const) {
       expect(keys(resources[lng][ns]).sort()).toEqual(keys(resources.ru[ns]).sort());
+    }
+  });
+
+  it("СЦ-7: у каждого вида объекта есть kindChip в ru, en и uz", () => {
+    for (const lng of ["ru", "en", "uz"] as const) {
+      for (const kind of Object.values(ObjectKind)) {
+        const v = valueAt(resources[lng].shell, `notifications.kindChip.${kind}`);
+        expect(v, `${lng}:${kind}`).toEqual(expect.any(String));
+        expect(v, `${lng}:${kind}`).not.toBe("");
+      }
     }
   });
 
@@ -173,4 +185,17 @@ describe("тексты Настроек коротко и без жаргона 
       }
     },
   );
+});
+
+describe("склонения без скобок (СЦ-7)", () => {
+  it.each([
+    [1, "В заявке 1 строка."],
+    [2, "В заявке 2 строки."],
+    [5, "В заявке 5 строк."],
+    [21, "В заявке 21 строка."],
+  ])("заявка из %i строк: слово согласовано с числом", (count, start) => {
+    const text = i18n.t("sheet.notStarted.textLines", { ns: "calc", count, lng: "ru" });
+    expect(text.startsWith(start)).toBe(true);
+    expect(text).not.toMatch(/\(и\)/);
+  });
 });

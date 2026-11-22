@@ -318,7 +318,7 @@ describe("EDS · Создать документ: форма", () => {
     expect(await screen.findByLabelText("Адресат (организация)")).toHaveValue("ГНИ Демо-района");
     expect(screen.getByLabelText("Почта адресата")).toHaveValue("gni@demo-inspection.example");
     expect(screen.getByLabelText("Тема")).toHaveValue(
-      `На ВХ-108/26 от 29.10.2026: ${letter.subject}`,
+      `На № 04-12/3456 от 28.10.2026: ${letter.subject}`,
     );
     expect(screen.getByLabelText("В ответ на входящее")).toHaveValue("ВХ-108/26");
     expect(

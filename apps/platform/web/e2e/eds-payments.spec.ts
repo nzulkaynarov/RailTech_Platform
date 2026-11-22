@@ -117,7 +117,7 @@ test.describe("Счета и оплаты: бухгалтер", () => {
       panel.getByRole("link", { name: "Скачать платёжку платёжка-0127.pdf" }),
     ).toBeVisible();
     await expect(form.getByRole("radio", { name: "платёжка-0127.pdf" })).toBeChecked();
-    await expect(form.getByLabel(/Сумма по выписке/)).toHaveValue("28000000.00");
+    await expect(form.getByLabel(/Сумма по выписке/)).toHaveValue(/^28\s000\s000$/);
     await expect(form.getByRole("button", { name: "Подтвердить оплату" })).toBeEnabled();
     await settledScreenshot(page, "card-proof");
     await expectNoViolations(page, "карточка счёта с платёжкой");
@@ -155,7 +155,7 @@ test.describe("Счета и оплаты: бухгалтер", () => {
     await row(page, "СЧ-2026/142").getByText("ООО «Демо-Рейл»").click();
     const form = confirmForm(page);
     const amount = form.getByLabel(/Сумма по выписке/);
-    await expect(amount).toHaveValue("112000000.00");
+    await expect(amount).toHaveValue(/^112\s000\s000$/);
 
     // больше остатка: ответ словами, введённое остаётся
     await amount.fill("112000001.00");
@@ -179,7 +179,7 @@ test.describe("Счета и оплаты: бухгалтер", () => {
     // остаток закрывает счёт
     await row(page, "СЧ-2026/142").getByText("ООО «Демо-Рейл»").click();
     const next = confirmForm(page);
-    await expect(next.getByLabel(/Сумма по выписке/)).toHaveValue("72000000.00");
+    await expect(next.getByLabel(/Сумма по выписке/)).toHaveValue(/^72\s000\s000$/);
     await next.getByRole("button", { name: "Подтвердить оплату" }).click();
     await confirmDialog(page);
     await expect(page.getByText(/Оплата подтверждена: 72\s000\s000/)).toBeVisible();
@@ -235,7 +235,7 @@ test.describe("Счета и оплаты: бухгалтер", () => {
     await expect(panel.getByRole("heading", { level: 3, name: "СЗ-2026/015" })).toBeVisible();
     await expect(panel.getByRole("link", { name: "Скачать счёт-аренда.pdf" })).toBeVisible();
     const form = memoForm(page);
-    await expect(form.getByLabel(/Сумма оплаты/)).toHaveValue("4200000.00");
+    await expect(form.getByLabel(/Сумма оплаты/)).toHaveValue(/^4\s200\s000$/);
     await pickFiles(form.getByLabel(/Платёжка/), {
       name: "pp-015.pdf",
       mimeType: "application/pdf",

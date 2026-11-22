@@ -261,7 +261,7 @@ describe('Онбординг партнёров (PART-ONBOARD-1)', () => {
 
       expect(await screen.findByText('Договор отправлен')).toBeInTheDocument();
       expect(screen.getByText('Партнёрский договор подготовлен и направлен на согласование вашей компании.')).toBeInTheDocument();
-      expect(screen.getByText('PRT-2026-088 от 2026-11-05')).toBeInTheDocument();
+      expect(screen.getByText('№ PRT-2026-088 от 5 нояб. 2026 г.')).toBeInTheDocument();
       expect(screen.getByRole('link', { name: /Скачать проект договора/ })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /Согласовать проект договора/ })).toBeInTheDocument();
     });

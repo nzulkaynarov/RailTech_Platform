@@ -39,12 +39,14 @@ KINDS = {
             "name": {"ru": "Требование или уведомление ГНК", "uz": "Talabnoma", "en": "Tax notice"},
             "urgent": True,
             "due_days": 3,
+            "due_required": True,
         },
         {
             "code": "other",
             "name": {"ru": "Прочее", "uz": "Boshqa", "en": "Other"},
             "urgent": False,
             "due_days": None,
+            "due_required": False,
         },
     ]
 }

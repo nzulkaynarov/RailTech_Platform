@@ -116,6 +116,12 @@ async def test_reply_path_registration_task_notices_links_and_mail_failure(
     assert registered.status_code == 200, registered.text
     number = registered.json()["number"]
     assert (await tasks_of(client, director))["signatures"] == []
+    # СЦ-8: поручение закрыл ответ — в истории назван автор ответа (5), а не подписавший; письмо исполнено «Системой»
+    journal = (await get(client, director, incoming["id"])).json()["journal"]
+    [executed] = [e for e in journal if e["action"] == "instruction.executed"]
+    assert executed["by"]["crm_user_id"] == 5 and executed["by"]["crm_user_id"] != registrar.id
+    [finished] = [e for e in journal if e["action"] == "letter.executed"]
+    assert finished["by"] is None
     done = notice_by_key(await notices(container), ":registered")
     assert (done["kind"], done["recipients"]) == ("letter_executed", [5])
     assert done["title"] == f"Ответ зарегистрирован: {number}" and "поручение исполнено" in done["subtitle"]

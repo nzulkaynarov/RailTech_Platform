@@ -2,11 +2,13 @@
 служебки на моём шаге маршрута — строки по секции `queue` каталога, поиск по реестру EDS,
 частичный ответ `sources.eds`, права — по токену `aud=eds` и разделам каталога."""
 
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import httpx
 import pytest
 
+from app.feeds.text import COMPANY_TZ, ago_value
 from tests.conftest import ContractChecker, Web
 from tests.feeds_support import FeedBackends, Moments, deal, quote
 from tests.roles import custom, rid
@@ -126,6 +128,40 @@ async def test_director_queue_gets_letters_and_memos_from_eds(
         ["quote"],
     )
     assert fb.calls(fb.erp["approvals"]) == 0  # ERP `my-approval-queue` больше не источник
+
+
+async def test_letter_received_date_has_no_hours(web: Web, fb: FeedBackends) -> None:
+    """EDS отдаёт `received_at` датой без времени: «N ч назад» выдумывало бы час (СЦ-7)."""
+    today = fb.m.now.astimezone(COMPANY_TZ).date()
+    fb.state["letters"] = page(
+        {**letter_row(), "received_at": today.isoformat()},
+        {
+            **letter_row("ВХ-105/26", urgent=False),
+            "received_at": (today - timedelta(days=1)).isoformat(),
+        },
+        {
+            **letter_row("ВХ-106/26", urgent=False),
+            "received_at": (today - timedelta(days=5)).isoformat(),
+        },
+    )
+    await web.login(["DIRECTOR"])
+
+    items = (await web.client.get("/api/v1/queue")).json()["items"]
+
+    sub = {i["object"]["number"]: i["subtitle"] for i in items if i["kind"] == "resolve_letter"}
+    assert sub["ВХ-104/26"].endswith("· сегодня")
+    assert sub["ВХ-105/26"].endswith("· вчера")
+    assert sub["ВХ-106/26"].endswith((today - timedelta(days=5)).strftime("· %d.%m.%Y"))
+    assert not any("назад" in v for v in sub.values())
+
+
+def test_ago_value_date_only_and_timestamp() -> None:
+    now = datetime(2026, 11, 22, 5, 0, tzinfo=UTC)  # 10:00 в поясе компании
+    assert ago_value("2026-11-22", now) == "сегодня"
+    assert ago_value("2026-11-21", now) == "вчера"
+    assert ago_value("2026-11-10", now) == "10.11.2026"
+    assert ago_value("2026-11-22T03:00:00Z", now) == "2 ч назад"  # со временем — как раньше
+    assert ago_value(None, now) == ""
 
 
 async def test_letter_due_date_gives_the_badge(web: Web, fb: FeedBackends) -> None:

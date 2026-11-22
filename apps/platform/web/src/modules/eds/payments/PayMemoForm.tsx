@@ -17,7 +17,7 @@ import { ActionToggle, ErrorNote, FormField } from "../../../shared/ui/FormParts
 import { companyDate } from "../inbox/api";
 import { MAX_FILE_BYTES } from "../documents/fileSize";
 import { type MemoReason, isMemoStale, memoReason, useRefreshPayments } from "./api";
-import { normalizeAmount, toCents } from "./model";
+import { amountForField, normalizeAmount, toCents } from "./model";
 import { HOME_CURRENCY } from "../../../shared/lib/money";
 import { useConfirmAction } from "../../../shared/ui/useConfirmAction";
 import { UnitLabel } from "../../../shared/ui/UnitLabel";
@@ -50,7 +50,7 @@ export function PayMemoForm({ memo, variant = "panel", onDone }: PayMemoFormProp
   const uploaded = useRef<{ key: string; id: string } | null>(null);
 
   const [date, setDate] = useState(today);
-  const [amount, setAmount] = useState(approved);
+  const [amount, setAmount] = useState(amountForField(approved));
   const [note, setNote] = useState("");
   const [failure, setFailure] = useState<{ reason: MemoReason } | null>(null);
   const [returning, setReturning] = useState(false);

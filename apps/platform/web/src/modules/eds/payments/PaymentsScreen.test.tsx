@@ -162,7 +162,7 @@ describe("Подтвердить оплату", () => {
     const { form, panel } = await openInvoice("СЧ-2026/142");
 
     const amount = within(form).getByLabelText(/Сумма по выписке/);
-    expect(amount).toHaveValue("112000000.00");
+    expect(amount).toHaveValue("112\u00a0000\u00a0000");
     fireEvent.click(within(form).getByRole("button", { name: "Подтвердить оплату" }));
     await confirmDialog();
 
@@ -310,7 +310,7 @@ describe("Служебки к оплате", () => {
     );
     const panel = await panelEl();
     const form = await within(panel).findByRole("form", { name: "Оплата служебной записки" });
-    expect(within(form).getByLabelText(/Сумма оплаты/)).toHaveValue("4200000.00");
+    expect(within(form).getByLabelText(/Сумма оплаты/)).toHaveValue("4\u00a0200\u00a0000");
     expect(within(panel).getByRole("link", { name: "Скачать счёт-аренда.pdf" })).toBeVisible();
 
     const file = new File(["%PDF-1.4"], "pp-015.pdf", { type: "application/pdf" });

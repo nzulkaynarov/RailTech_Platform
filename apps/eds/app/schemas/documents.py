@@ -202,6 +202,8 @@ class DocumentListItem(BaseModel):
     created_at: dt.datetime
     #: Исходящее письмо с почтой адресата не ушло и отправку не сняли (СЦ-1)
     undelivered: bool = False
+    #: Письмо передано на подпись и не подписано (СЦ-8): статус остаётся `draft`, слово — «На подписи»
+    awaiting_signature: bool = False
 
 
 class DocumentPage(BaseModel):
@@ -257,3 +259,5 @@ class Document(BaseModel):
     verification_url: str | None = None
     dispatch_method: Literal["email", "paper", "courier", "edo", "other"] | None = None
     signing: DocumentSigning | None = None
+    #: Письмо передано на подпись и не подписано (СЦ-8)
+    awaiting_signature: bool = False

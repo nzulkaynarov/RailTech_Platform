@@ -321,6 +321,8 @@
     },
     "missing": {
       "prices_one": "No price: {{count}} line",
+      "prices_few": "No price: {{count}} lines",
+      "prices_many": "No price: {{count}} lines",
       "prices_other": "No price: {{count}} lines",
       "date": "No expected date",
       "hint": "Add them in “Edit” — the order is not sent to the partner without prices and a date."
@@ -330,6 +332,8 @@
       "submit": "Send request",
       "note": "Comment to the partner",
       "lines_one": "The partner gets a request for {{count}} line without a price.",
+      "lines_few": "The partner gets a request for {{count}} lines without a price.",
+      "lines_many": "The partner gets a request for {{count}} lines without a price.",
       "lines_other": "The partner gets a request for {{count}} lines without a price.",
       "state": {
         "sent": "Price request sent {{date}} — awaiting the answer.",

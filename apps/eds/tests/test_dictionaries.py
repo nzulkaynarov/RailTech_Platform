@@ -34,13 +34,13 @@ async def test_catalog_and_starter_values_repeat_the_former_code(
     validate("DictionaryList", catalog.json())
     kinds = {d["kind"]: d for d in catalog.json()["items"]}
     assert set(kinds) == {"letter-kinds", "receipt-methods", "resolution-kinds", "signing-kinds", "close-reasons"}
-    assert [a["key"] for a in kinds["letter-kinds"]["attrs"]] == ["urgent", "due_days"]
+    assert [a["key"] for a in kinds["letter-kinds"]["attrs"]] == ["urgent", "due_days", "due_required"]
     assert kinds["receipt-methods"]["attrs"] == []
 
     kinds_list = await items(client, staff["registrar"], "letter-kinds")
     assert [i["code"] for i in kinds_list] == ["tax_notice", "bank", "supplier", "government", "counterparty", "other"]
-    assert kinds_list[0]["attrs"] == {"urgent": True, "due_days": 3}
-    assert kinds_list[1]["attrs"] == {"urgent": False, "due_days": None}
+    assert kinds_list[0]["attrs"] == {"urgent": True, "due_days": 3, "due_required": True}
+    assert kinds_list[1]["attrs"] == {"urgent": False, "due_days": None, "due_required": False}
     assert all(i["used"] is None for i in kinds_list)  # без include_hidden не считается
     methods = await items(client, staff["registrar"], "receipt-methods")
     assert [i["code"] for i in methods] == ["paper", "post", "taxpayer_cabinet", "courier", "email"]
@@ -54,6 +54,7 @@ async def test_catalog_and_starter_values_repeat_the_former_code(
         "name": kinds_list[0]["name"],
         "urgent": True,
         "due_days": 3,
+        "due_required": True,
     }
 
 
@@ -122,7 +123,7 @@ async def test_attrs_are_checked_by_the_dictionary_kind(client: httpx.AsyncClien
         headers=headers,
     )
     assert rename.status_code == 200, rename.text
-    assert rename.json()["attrs"] == {"urgent": False, "due_days": 5}
+    assert rename.json()["attrs"] == {"urgent": False, "due_days": 5, "due_required": False}
     assert rename.json()["code"] == "bank"
 
 

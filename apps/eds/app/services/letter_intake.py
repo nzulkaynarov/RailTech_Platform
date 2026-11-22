@@ -59,6 +59,11 @@ MAX_TOKENS = 1200
 # ИНН организации РУз — 9 цифр рядом со словом ИНН/STIR/INN/TIN; 14 цифр (ПИНФЛ) — личные данные, их не берём.
 _INN: Final = re.compile(r"(?i)(?:\bИНН|\bSTIR|\bINN|\bTIN)\b\D{0,12}?(\d{9})(?!\d)")
 
+# «в течение 5 рабочих дней», «в течение десяти календарных дней», «5 kun ichida», «5 ish kuni ichida».
+_DUE_RU: Final = re.compile(r"(?i)в\s+течение\s+(\d{1,3})\s*(?:\([^)]{1,30}\)\s*)?(рабоч\w*|календарн\w*)?\s*дн")
+_DUE_UZ: Final = re.compile(r"(?i)\b(\d{1,3})\s*(ish\s+)?kun(?:i)?\s+ichida")
+_MAX_DUE_DAYS = 90
+
 SCHEMA: Final[dict[str, Any]] = {
     "type": "object",
     "additionalProperties": False,
@@ -130,13 +135,44 @@ def _text(value: Any, masked: Masked | None, limit: int) -> str | None:
     return cleaned[:limit] or None
 
 
+def due_from_text(raw: str, today: date) -> date | None:
+    """Срок «в течение N (рабочих|календарных) дней» из текста письма: код считает
+    от даты `today` (дня регистрации), а не модель.
+
+    Рабочие дни — пн–пт (как в подсказке срока резолюции); без слова «рабочих» — календарные. Нет оборота или N вне
+    разумного — `None`. Это подсказка: срок человек подтверждает в карточке (в письме отсчёт
+    может идти от даты поступления)."""
+    if not raw:
+        return None
+    found = _DUE_RU.search(raw)
+    working = False
+    if found:
+        days = int(found.group(1))
+        working = (found.group(2) or "").lower().startswith("рабоч")
+    elif (found := _DUE_UZ.search(raw)) is not None:
+        days = int(found.group(1))
+        working = bool(found.group(2))
+    else:
+        return None
+    if not 1 <= days <= _MAX_DUE_DAYS:
+        return None
+    if not working:
+        return today + timedelta(days=days)
+    day = today
+    while days:
+        day += timedelta(days=1)
+        if day.weekday() < 5:
+            days -= 1
+    return day
+
+
 def clean(
     data: dict[str, Any], *, masked: Masked | None, kinds: set[str], raw: str, today: date, own_inn: str | None = None
 ) -> LetterIntakeFields:
     """Ответ модели → поля карточки: код решает, что принять (вид — из справочника, даты — разобранные и в разумных
     пределах, ИНН — найденный кодом, не свой)."""
     ref_date = _date(data.get("sender_ref_date"))
-    due = _date(data.get("document_due"))
+    due = _date(data.get("document_due")) or due_from_text(raw, today)
     kind = data.get("kind")
     return LetterIntakeFields(
         sender_name=_text(data.get("sender_name"), masked, LIMITS["sender_name"]),

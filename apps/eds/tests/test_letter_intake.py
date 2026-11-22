@@ -444,3 +444,31 @@ async def test_key_sync_cli_survives_an_unreachable_gateway(monkeypatch: pytest.
     monkeypatch.setenv("EDS_LITELLM_API_KEY", "sk-eds")
     monkeypatch.setenv("LITELLM_MASTER_KEY", "sk-master")
     assert await ai_cli.run() == 0  # стенд поднимается, помощник выключен
+
+
+def test_relative_due_in_the_letter_text_is_suggested_by_code() -> None:
+    """СЦ-11: «в течение 5 рабочих дней» без даты — срок считает код (пн–пт), модель его не называет."""
+    from datetime import date
+
+    from app.services.letter_intake import due_from_text
+
+    friday = date(2026, 11, 20)
+    assert due_from_text("Просим представить пояснения в течение 5 рабочих дней с даты получения.", friday) == date(
+        2026, 11, 27
+    )
+    assert due_from_text("в течение 5 (пяти) рабочих дней", friday) == date(2026, 11, 27)
+    assert due_from_text("в течение 10 календарных дней", friday) == date(2026, 11, 30)
+    assert due_from_text("в течение 3 дней", friday) == date(2026, 11, 23)
+    assert due_from_text("5 ish kuni ichida", friday) == date(2026, 11, 27)
+    assert due_from_text("Срок не указан", friday) is None
+    assert due_from_text("в течение 500 дней", friday) is None
+    # срок из текста подставляется в предложение; названный моделью датой — главнее
+    today = date(2026, 11, 20)
+    guessed = letter_intake.clean(
+        {**ANSWER, "document_due": None}, masked=None, kinds=set(), raw="в течение 5 рабочих дней", today=today
+    )
+    assert guessed.document_due == date(2026, 11, 27)
+    explicit = letter_intake.clean(
+        {**ANSWER, "document_due": "2026-11-25"}, masked=None, kinds=set(), raw="в течение 5 рабочих дней", today=today
+    )
+    assert explicit.document_due == date(2026, 11, 25)

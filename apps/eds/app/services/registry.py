@@ -40,7 +40,7 @@ from app.models import ApprovalRoute, ApprovalStep, Document, Employee, Letter, 
 from app.schemas.common import ErpLinks, LetterSender, Money
 from app.schemas.pagination import decode_cursor
 from app.schemas.registry import RegistryItem, RegistryKind, RegistryPage, RegistryStage
-from app.services import access, delivery, paging
+from app.services import access, delivery, paging, signing_state
 from app.services.letters_read import escape_like
 from app.services.people import Directory, load_directory
 
@@ -114,6 +114,7 @@ def _union(employee: Employee) -> CompoundSelect[Any]:
         cast(null(), Numeric).label("amount"),
         cast(null(), String).label("currency"),
         false().label("undelivered"),
+        false().label("awaiting_signature"),
     )
     documents = select(
         cast(literal_column("documents.kind"), String).label("kind"),
@@ -135,6 +136,7 @@ def _union(employee: Employee) -> CompoundSelect[Any]:
         Document.currency.label("currency"),
         # СЦ-1: письмо с почтой адресата, которое не ушло, — не «Архив», а «Исходящие»
         delivery.undelivered().label("undelivered"),
+        signing_state.awaiting_signature().label("awaiting_signature"),
     ).where(access.document_visible(employee))  # письма и чужие черновики отсекает сам предикат видимости
     quotes = select(
         cast(literal_column("'quote'"), String).label("kind"),
@@ -154,6 +156,7 @@ def _union(employee: Employee) -> CompoundSelect[Any]:
         ApprovalRoute.erp_company_id,
         cast(ApprovalRoute.quote_snapshot["total"].astext, Numeric),
         ApprovalRoute.quote_snapshot["currency"].astext,
+        false(),
         false(),
     ).where(ApprovalRoute.template == "quote", access.route_visible(employee))
     parts = [documents, quotes]
@@ -185,6 +188,7 @@ def _project_documents() -> Select[Any]:
         ProjectDocument.erp_company_id,
         cast(ProjectDocument.amount, Numeric),
         ProjectDocument.currency,
+        false(),
         false(),
     )
 
@@ -251,6 +255,7 @@ def _item(row: Any, directory: Directory) -> RegistryItem:
             else None
         ),
         undelivered=bool(row.undelivered),
+        awaiting_signature=bool(row.awaiting_signature),
     )
 
 

@@ -61,7 +61,10 @@
       "memo": "Mem",
       "chat": "Ch",
       "ticket": "T",
-      "integration": "!"
+      "integration": "!",
+      "supplier_order": "Ord",
+      "partner_application": "Ptn",
+      "product": "Itm"
     },
     "tabChip": {
       "all": "•",

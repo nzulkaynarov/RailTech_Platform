@@ -25,6 +25,7 @@ import {
 import { useDocumentTitle } from "../../../shared/lib/useDocumentTitle";
 import { useFormat } from "../../../shared/lib/useFormat";
 import { DateField } from "../../../shared/ui/DateField";
+import { DefinitionList, type DefinitionItem } from "../../../shared/ui/DefinitionList";
 import { ErrorNote } from "../../../shared/ui/FormParts";
 import { PageHeader } from "../../../shared/ui/PageHeader";
 import { useRefreshLetters } from "../inbox/api";
@@ -137,6 +138,7 @@ const SECTION_OF: Record<RegisterField, SectionKey> = {
   sender_inn: "sender",
   received_at: "sender",
   subject: "content",
+  document_due: "route",
   related_number: "route",
 };
 
@@ -262,7 +264,9 @@ export function RegisterLetterPage() {
     setValues((prev) => ({ ...prev, attachments: updater(prev.attachments) }));
   };
   // Один валидатор на всё: галочка шага, «Осталось» и отправка. Ошибка у поля видна, когда шаг уже покидали.
-  const all = validateRegister(values, today);
+  const chosenKind = kinds.data?.items.find((item) => item.code === values.kind);
+  const dueRequired = chosenKind?.due_required === true;
+  const all = validateRegister(values, today, dueRequired);
   const errors: RegisterErrors = {
     ...Object.fromEntries(
       REGISTER_ORDER.filter((field) => all[field] && left.has(SECTION_OF[field])).map((field) => [
@@ -292,6 +296,54 @@ export function RegisterLetterPage() {
     (key) => needs(key).map((text) => ({ step: key, title: stepTitles[key], text })),
   );
   const doneFiles = values.attachments.filter((a) => a.status === "done");
+  // Сводка «Проверки» (СЦ-11): что будет записано в реестр. Пустое необязательное не показываем; поля сделки и клиента — только
+  // когда письмо связано со сделкой.
+  const methodName = methods.data?.items.find((item) => item.code === values.receiptMethod);
+  const addresseeName = people.find((person) => person.value === values.addresseeId)?.label;
+  const summaryItems: DefinitionItem[] = [
+    {
+      label: t("letters:register.kind.label"),
+      value: chosenKind ? localName(chosenKind.name, i18n.language) : null,
+    },
+    {
+      label: t("letters:register.method.label"),
+      value: methodName ? localName(methodName.name, i18n.language) : null,
+    },
+    {
+      label: t("letters:register.sender.label"),
+      value: [values.senderName.trim(), values.senderInn.trim()].filter(Boolean).join(" · "),
+    },
+    {
+      label: t("letters:register.review.ref"),
+      value: [values.refNumber.trim(), values.refDate ? date(values.refDate) : ""]
+        .filter(Boolean)
+        .join(" · "),
+    },
+    {
+      label: t("letters:register.receivedAt.label"),
+      value: values.receivedAt ? date(values.receivedAt) : null,
+    },
+    { label: t("letters:register.subject.label"), value: values.subject.trim() },
+    {
+      label: t("letters:register.documentDue.label"),
+      value: values.documentDue ? date(values.documentDue) : null,
+    },
+    {
+      label: t("letters:register.addressee.label"),
+      value: addresseeName ?? t("letters:register.addressee.default"),
+    },
+    ...(values.urgent
+      ? [{ label: t("letters:register.urgent"), value: t("letters:register.review.yes") }]
+      : []),
+    ...(values.deal ? [{ label: t("letters:register.deal.label"), value: values.deal.label }] : []),
+    ...(values.relatedNumber.trim()
+      ? [{ label: t("letters:register.related.label"), value: values.relatedNumber.trim() }]
+      : []),
+    ...(values.draftKind
+      ? [{ label: t("letters:register.review.draft"), value: resolutionKindName(values.draftKind) }]
+      : []),
+    { label: t("letters:register.review.files"), value: doneFiles.map((a) => a.name).join(", ") },
+  ].filter((item) => item.value !== null && item.value !== "");
   const fileSummary = [
     doneFiles.map((a) => a.name).join(", "),
     ai ? t("letters:register.ai.applied", { count: ai.left.size }) : "",
@@ -810,6 +862,8 @@ export function RegisterLetterPage() {
                   title: t("letters:register.sections.route"),
                   // Обязательных полей нет: галочка — когда шаг пройден, а не раньше человека
                   complete: left.has("route"),
+                  requirements: needs("route"),
+                  showRequirements: left.has("route"),
                   invalid: serverInvalid("route"),
                   content: (
                     <div className="pf-fp-form">
@@ -817,12 +871,24 @@ export function RegisterLetterPage() {
                         <Field
                           id="reg-document-due"
                           label={t("letters:register.documentDue.label")}
-                          hint={t("letters:register.documentDue.hint")}
+                          hint={
+                            dueRequired
+                              ? `${t("letters:register.documentDue.required")}. ${t("letters:register.documentDue.hint")}`
+                              : t("letters:register.documentDue.hint")
+                          }
+                          error={fieldError("document_due")}
                         >
                           <DateField
                             id="reg-document-due"
                             value={values.documentDue}
-                            aria-describedby="reg-document-due-hint"
+                            status={errors.document_due ? "error" : undefined}
+                            aria-required={dueRequired || undefined}
+                            aria-invalid={errors.document_due || undefined}
+                            aria-describedby={describedBy(
+                              "reg-document-due",
+                              true,
+                              Boolean(errors.document_due),
+                            )}
                             onChange={(next) => {
                               set("documentDue", next);
                             }}
@@ -1009,6 +1075,11 @@ export function RegisterLetterPage() {
                   title: t("letters:register.sections.review"),
                   content: (
                     <div className="pf-newdoc-actions">
+                      <DefinitionList
+                        className="pf-reg-summary"
+                        columns="auto"
+                        items={summaryItems}
+                      />
                       <StepRemaining
                         id="reg-remaining"
                         items={remaining}
