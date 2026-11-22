@@ -178,6 +178,19 @@ describe("EDS · Входящие письма: список", () => {
 });
 
 describe("EDS · Входящие письма: боковое окно из списка", () => {
+  it("СЦ-11: письмо не по сделке — в карточке нет строк заявки и клиента; у письма по заявке они есть", async () => {
+    await openInbox("registrar@demo.example", "/eds/inbox/%D0%92%D0%A5-108%2F26");
+    expect(await screen.findByText("Связи")).toBeVisible();
+    expect(screen.queryByText("Клиент не определён")).toBeNull();
+    expect(screen.queryByText("Заявка", { selector: "dt" })).toBeNull();
+  });
+
+  it("СЦ-11: у письма по заявке в карточке есть строка заявки", async () => {
+    await openInbox("director@demo.example", "/eds/inbox/%D0%92%D0%A5-104%2F26");
+    expect(await screen.findByText("Связи")).toBeVisible();
+    expect(screen.getByText("Заявка", { selector: "dt" })).toBeVisible();
+  });
+
   it("клик по строке открывает письмо и форму «Резолюция» в боковом окне без перехода", async () => {
     const { router } = await openInbox("director@demo.example");
     await screen.findByRole("table");

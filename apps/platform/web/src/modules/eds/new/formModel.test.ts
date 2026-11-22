@@ -9,6 +9,7 @@ import {
   kindFromParam,
   parseAmount,
   replyPrefill,
+  replyRef,
   routeKind,
   todayInCompanyZone,
   toCreateBody,
@@ -295,5 +296,22 @@ describe("ответ на входящее: заготовка формы (EDS-R
     expect(
       replyPrefill({ subject: "я".repeat(400), sender: bare as never }, "На ВХ").subject,
     ).toHaveLength(300);
+  });
+
+  it("СЦ-11: ответ ссылается на номер и дату отправителя, а наш ВХ — только если своего номера у него нет", () => {
+    const texts = {
+      theirs: (number: string, date: string | null) =>
+        date ? `На № ${number} от ${date}` : `На № ${number}`,
+      ours: "На IN-002/26 от 19.11.2026",
+    };
+    expect(replyRef({ sender_ref: { number: "01-12/345", date: "2026-11-10" } }, texts)).toBe(
+      "На № 01-12/345 от 2026-11-10",
+    );
+    expect(replyRef({ sender_ref: { number: " 01-12/345 ", date: null } }, texts)).toBe(
+      "На № 01-12/345",
+    );
+    expect(replyRef({ sender_ref: { number: null, date: "2026-11-10" } }, texts)).toBe(
+      "На IN-002/26 от 19.11.2026",
+    );
   });
 });

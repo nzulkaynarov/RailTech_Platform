@@ -352,7 +352,8 @@
     },
     "documentDue": {
       "label": "Hujjat bo‘yicha muddat",
-      "hint": "Jo‘natuvchi ko‘rsatgan javob yoki ijro muddati"
+      "hint": "Jo‘natuvchi ko‘rsatgan javob yoki ijro muddati",
+      "required": "Bu hujjat turi uchun majburiy"
     },
     "addressee": {
       "label": "Adresat",
@@ -403,6 +404,7 @@
       "received_at": "Kelib tushgan sanani kiriting — bugundan kech emas.",
       "subject": "Mavzuni kiriting.",
       "file_ids": "Xat faylini biriktiring va yuklanishini kuting.",
+      "document_due": "Bu hujjat turi uchun hujjatdagi muddat kerak — uni xatdan oling.",
       "related_number": "Bunday raqamli hujjat yöq. Kiruvçi yoki çiquvçi raqamni tekşiring.",
       "forbidden": "kiruvchi hujjatlarni ro‘yxatga olish rolingizga berilmagan",
       "server": "server ma’lumotni qabul qilmadi, bir daqiqadan so‘ng qayta urining"
@@ -439,6 +441,13 @@
         "DEFAULT": "Fayldan to‘ldirib bo‘lmadi. Qo‘lda to‘ldiring."
       },
       "reading": "Fayl o‘qilmoqda va maydonlar to‘ldirilmoqda — yozishda davom etishingiz mumkin."
+    },
+    "review": {
+      "yes": "Ha",
+      "title": "Ro‘yxatga olinadi",
+      "ref": "Yuboruvchining raqami va sanasi",
+      "draft": "Rezolyutsiya loyihasi",
+      "files": "Fayllar"
     },
     "sections": {
       "file": "Xat fayli",
