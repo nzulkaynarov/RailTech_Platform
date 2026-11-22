@@ -235,6 +235,7 @@ SETTINGS_MENU = [
     "company",
     "numbering",
     "taxes",
+    "sales",
     "articles",
     "telegram",
     "mail",

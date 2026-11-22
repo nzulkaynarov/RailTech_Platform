@@ -20833,7 +20833,7 @@ components:
           description: Основной цвет бренда, `#RRGGBB`
         secondary_color:
           type: string
-          description: Второй цвет бренда, `#RRGGBB`
+          description: 'Устарело (ДОК-13): ничего не меняет и не показывается, значение не принимается и не читается'
         cover_letter_text:
           type: string
         contract_acceptance_text:
@@ -20851,13 +20851,13 @@ components:
             - boxed
             - bold
             - striped
-          description: 'Оформление: светлое, в рамках, контрастное, полосатое'
+          description: 'Устарело (ДОК-13): ничего не меняет и не показывается, значение не принимается и не читается'
         font_family:
           type: string
           enum:
             - sans
             - serif
-          description: 'Шрифт: без засечек или с засечками'
+          description: 'Устарело (ДОК-13): ничего не меняет и не показывается, значение не принимается и не читается'
         show_cover_letter:
           type: boolean
         show_bank_in_header:
@@ -20909,7 +20909,7 @@ components:
           description: Основной цвет бренда, `#RRGGBB`
         secondary_color:
           type: string
-          description: Второй цвет бренда, `#RRGGBB`
+          description: 'Устарело (ДОК-13): ничего не меняет и не показывается, значение не принимается и не читается'
         cover_letter_text:
           type: string
         contract_acceptance_text:
@@ -20927,13 +20927,13 @@ components:
             - boxed
             - bold
             - striped
-          description: 'Оформление: светлое, в рамках, контрастное, полосатое'
+          description: 'Устарело (ДОК-13): ничего не меняет и не показывается, значение не принимается и не читается'
         font_family:
           type: string
           enum:
             - sans
             - serif
-          description: 'Шрифт: без засечек или с засечками'
+          description: 'Устарело (ДОК-13): ничего не меняет и не показывается, значение не принимается и не читается'
         show_cover_letter:
           type: boolean
         show_bank_in_header:
@@ -21617,7 +21617,9 @@ components:
     DocumentTemplateKind:
       type: string
       enum: [letter, report, custom, contract, invoice, act, receipt, delivery_note]
-      description: Вид шаблона документа
+      description: >-
+        Вид шаблона документа. `letter`, `report` и `custom` устарели (ДОК-13): новые шаблоны таких видов не создаются
+        (ответ 400 `TEMPLATE_KIND_INVALID`), значения остаются только у ранее созданных шаблонов компании.
     DocumentTemplate:
       type: object
       additionalProperties: false
