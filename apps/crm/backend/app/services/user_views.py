@@ -31,6 +31,8 @@ class UserView:
     language: str = "ru"
     erp_sync: str = "not_applicable"
     erp_sync_error: str | None = None
+    # Факт выдачи доступа в ERP (`users.erp_provisioned_at` не пуст) — основание статуса «ок».
+    erp_provisioned: bool = False
     # Профиль, который правит сам сотрудник (W15-H6).
     phone: str | None = None
     timezone: str = "Asia/Tashkent"
@@ -95,8 +97,10 @@ def view_of(
             is_active=user.is_active,
             error=user.erp_sync_error,
             pending=erp_pending,
+            provisioned=user.erp_provisioned_at is not None,
         ),
         erp_sync_error=user.erp_sync_error,
+        erp_provisioned=user.erp_provisioned_at is not None,
         phone=user.phone,
         timezone=user.timezone,
         email_signature=user.email_signature,

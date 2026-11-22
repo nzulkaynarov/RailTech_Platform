@@ -6650,6 +6650,38 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /admin/users/{id}/erp-sync:
+    post:
+      tags: [admin]
+      operationId: retryEmployeeErpSync
+      summary: Повторить синхронизацию доступа с ERP
+      description: >-
+        Повтор выдачи доступа в ERP (активному сотруднику с доступом) или отзыва сессий (CRM `/users/{id}/erp-sync`).
+        Прежняя ошибка снимается, задача встаёт в очередь: в ответе `erp_sync = pending`, итог — `ok` или `error` при
+        следующем чтении. Раздел `admin` — полный.
+      parameters:
+        - $ref: '#/components/parameters/EmployeeId'
+        - $ref: '#/components/parameters/CsrfToken'
+      responses:
+        '200':
+          description: Задача поставлена в очередь
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Employee'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          description: '`BACKEND_UNAVAILABLE`'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
   /admin/users/{id}/temporary-password:
     post:
       tags: [admin]
@@ -17861,7 +17893,11 @@ components:
     ErpSyncState:
       type: string
       enum: [ok, pending, error, not_applicable]
-      description: Итог провижининга в ERP
+      description: >-
+        Итог выдачи доступа в ERP по факту (ответ ERP на выдачу сохранён в CRM): `ok` — ERP подтвердила выдачу;
+        `pending` — подтверждения ещё нет, задача в очереди; `error` — последняя задача упала (есть текст) или
+        подтверждения нет и задачи нет («не выдан», текста нет: админ может повторить); `not_applicable` — у сотрудника
+        нет доступа к ERP или он отключён.
 
     Employee:
       type: object

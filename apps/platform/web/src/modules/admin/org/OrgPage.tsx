@@ -6,7 +6,7 @@ import { useLocation, useNavigate, useSearchParams } from "react-router";
 import { canEdit } from "../../../app/access";
 import { useAuth } from "../../../app/auth/useAuth";
 import { PanelPortal } from "../../../app/shell/PanelSlot";
-import { EMPLOYEE_STATUSES } from "../../../entities/employee/status";
+import { anyErpPending, EMPLOYEE_STATUSES } from "../../../entities/employee/status";
 import { isSystemAdmin } from "../../../entities/role/roles";
 import { InviteEmployeeForm } from "../../../features/invite-employee/InviteEmployeeForm";
 import type { EmployeeStatus } from "../../../shared/api/generated/model";
@@ -46,7 +46,12 @@ export function OrgPage({ objectId }: { objectId?: string }) {
 
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<EmployeeStatus | "all">("all");
-  const list = useListEmployees();
+  const list = useListEmployees(undefined, {
+    query: {
+      // Доступ в ERP выдаёт очередь: пока кто-то «выдаётся», перечитываем, итог приходит без перезагрузки.
+      refetchInterval: (query) => (anyErpPending(query.state.data?.items) ? 3000 : false),
+    },
+  });
   const items = useMemo(() => list.data?.items ?? [], [list.data]);
 
   const selectedId = objectId ?? params.get("employee");

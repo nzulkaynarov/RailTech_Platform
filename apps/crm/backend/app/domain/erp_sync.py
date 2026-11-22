@@ -58,16 +58,20 @@ ErpSyncStatus = Literal["ok", "pending", "error", "not_applicable"]
 
 
 def erp_sync_status(
-    *, has_erp: bool, is_active: bool, error: str | None, pending: bool
+    *, has_erp: bool, is_active: bool, error: str | None, pending: bool, provisioned: bool
 ) -> ErpSyncStatus:
-    """Итог синхронизации с ERP для карточки сотрудника: ошибка последней задачи — `error`; задача
-    в очереди или выполняется — `pending`; доступ к ERP выдан и активен — `ok`; иначе
-    `not_applicable`."""
+    """Итог синхронизации с ERP для карточки сотрудника — из факта, а не из «очередь пуста»
+    (СЦ-8). Порядок: ошибка последней задачи — `error`; доступа нет или сотрудник не активен —
+    `not_applicable` (отзыв в очереди — не «выдаётся»); ERP подтвердила выдачу
+    (`users.erp_provisioned_at`) — `ok`; факта нет, задача в очереди или выполняется — `pending`;
+    факта нет и задачи нет — `error` без текста («не выдан»: повторить может админ)."""
     if error:
         return "error"
-    if pending:
-        return "pending"
-    return "ok" if has_erp and is_active else "not_applicable"
+    if not (has_erp and is_active):
+        return "not_applicable"
+    if provisioned:
+        return "ok"
+    return "pending" if pending else "error"
 
 
 def access_audit_action(before: AccessState, after: AccessState) -> str | None:

@@ -85,12 +85,19 @@ export const adminUsersHandlers = [
     const url = new URL(request.url);
     const q = (url.searchParams.get("q") ?? "").trim().toLocaleLowerCase();
     const status = url.searchParams.get("status");
-    const items = sorted(readEmployees())
+    const stored = readEmployees();
+    const items = sorted(stored)
       .filter((e) => !status || e.status === status)
       .filter(
         (e) => !q || `${e.name} ${e.email} ${e.position ?? ""}`.toLocaleLowerCase().includes(q),
       )
       .map(toEmployee);
+    // ERP отвечает между чтениями: «выдаётся» в этом ответе — «ок» в следующем (как очередь CRM).
+    if (stored.some((e) => e.erp_sync === "pending")) {
+      writeEmployees(
+        stored.map((e) => (e.erp_sync === "pending" ? { ...e, erp_sync: "ok" as const } : e)),
+      );
+    }
     return HttpResponse.json({ items });
   }),
 
@@ -237,6 +244,19 @@ export const adminUsersHandlers = [
       });
     }
     return HttpResponse.json(toEmployee(employee));
+  }),
+
+  http.post("*/admin/users/:id/erp-sync", ({ params }) => {
+    const denied = guard("full");
+    if (denied) return denied;
+    const items = readEmployees();
+    const current = items.find((e) => e.id === params["id"]);
+    if (!current) return failure(404, "NOT_FOUND", "Не найдено.", "crm");
+    // Ошибка снята, задача в очереди: «выдаётся», следующее чтение списка — «ок».
+    const next: MockEmployee = { ...current, erp_sync: "pending" };
+    delete next.erp_sync_error;
+    writeEmployees(items.map((e) => (e.id === next.id ? next : e)));
+    return HttpResponse.json(toEmployee(next));
   }),
 
   http.get("*/admin/users/:id", ({ params }) => {

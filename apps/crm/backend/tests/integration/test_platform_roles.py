@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.config import Settings
 from app.main import create_app
+from app.services.erp_access import ErpAccessService
 from app.services.users import UserService
 from tests.integration.crm_helpers import PASSWORD, login, make_user
 from tests.integration.roles_helpers import (
@@ -95,7 +96,8 @@ async def test_every_catalog_role_by_id_computes_crm_role_access_and_queues_prov
     assert body["roles"] == [BASE_ROLE[code]]
     assert body["platform_access"] == ["crm", "erp"]
     assert body["erp_role_codes"] == []  # права ERP — вычисленный набор, не системные роли
-    assert body["erp_sync"] == "pending"
+    # Фиктивная очередь не пишет задачу в procrastinate, факта нет — «не выдан» (queue.jobs ниже).
+    assert body["erp_sync"] == "error"
     assert await crm_roles(sessions, employee) == [BASE_ROLE[code]]
     assert (await user_row(sessions, employee)).ui_mode == "manager"
     assert queue.jobs == [("provision", employee)]  # доступ выдан ролью -> провижининг
@@ -595,9 +597,31 @@ async def test_first_admin_from_setup_gets_the_admin_platform_role(
     assert queue.jobs == [("provision", me["id"])]
 
 
-async def test_erp_sync_reports_pending_error_ok_and_not_applicable(
+class _FakeErp:
+    """Подставной клиент ERP: ответ — `erp_user_id`, как у настоящей ERP."""
+
+    async def provision_user(self, payload: object) -> int:
+        return 900
+
+    async def revoke_sessions(self, crm_user_id: int) -> bool:
+        return True
+
+
+async def _defer_revoke_job(sessions: async_sessionmaker[AsyncSession], user_id: int) -> None:
+    async with sessions() as session, session.begin():
+        await session.execute(
+            text(
+                "SELECT procrastinate_defer_jobs_v1(ARRAY[ROW('notify', 'erp_revoke_sessions', "
+                "0, :lock, NULL, CAST(:args AS jsonb), NULL)::procrastinate_job_to_defer_v1])"
+            ),
+            {"lock": f"erp_user:{user_id}", "args": f'{{"user_id": {user_id}}}'},
+        )
+
+
+async def test_erp_sync_status_follows_the_fact_of_erp_answer(
     client: TestClient, sessions: async_sessionmaker[AsyncSession]
 ) -> None:
+    """СЦ-8: «ок» — только после ответа ERP (`erp_provisioned_at`), а не «очередь пуста»."""
     employee, boss = await setup_staff(client, sessions)
 
     def status() -> tuple[str, str | None]:
@@ -605,22 +629,96 @@ async def test_erp_sync_reports_pending_error_ok_and_not_applicable(
         return card["erp_sync"], card["erp_sync_error"]
 
     assert status() == ("not_applicable", None)
+    granted = client.patch(
+        f"/api/v1/users/{employee}",
+        json={"platform_role_ids": legacy_ids(client, boss, ["MANAGER"])},
+        headers=boss,
+    )
+    # Ответ на действие — тот же итог, что и в карточке: в фиктивной очереди задачи нет.
+    assert granted.json()["erp_sync"] == "error"
+    # Выдача поставлена только в фиктивную очередь: ERP ничего не ответила — это не «ок»
+    # (раньше здесь было ("ok", None) — «ок» без единого обращения к ERP).
+    async with sessions() as session:
+        assert (
+            await session.scalar(
+                text("SELECT erp_provisioned_at FROM users WHERE id = :id"), {"id": employee}
+            )
+            is None
+        )
+    listed = {u["id"]: u for u in client.get("/api/v1/users", headers=boss).json()}
+    assert status()[0] == "error"  # факта нет и задачи нет — «не выдан»
+    assert listed[employee]["erp_sync"] == "error"
+    assert listed[employee]["erp_sync_error"] is None
+
+    await defer_erp_job(sessions, employee)
+    assert status() == ("pending", None)  # задача стоит в настоящей очереди
+    # PATCH поля без синхронизации не должен выдавать ложный «error»: очередь берётся из факта.
+    edited = client.patch(f"/api/v1/users/{employee}", json={"position": "Менеджер"}, headers=boss)
+    assert edited.json()["erp_sync"] == "pending"
+    listed = {u["id"]: u for u in client.get("/api/v1/users", headers=boss).json()}
+    assert listed[employee]["erp_sync"] == "pending"
+
+    # Задача отработала: ERP ответила (подставной клиент) — факт записан, статус «ок».
+    async with sessions() as session, session.begin():
+        await session.execute(text("UPDATE procrastinate_jobs SET status = 'succeeded'"))
+    assert await ErpAccessService(sessions, _FakeErp()).provision(employee) == "done"
+    assert status() == ("ok", None)
+    listed = {u["id"]: u for u in client.get("/api/v1/users", headers=boss).json()}
+    assert listed[employee]["erp_sync"] == "ok"
+
+    # Отключили: отзыв в очереди — про выдачу ни слова.
+    client.patch(f"/api/v1/users/{employee}", json={"is_active": False}, headers=boss)
+    await _defer_revoke_job(sessions, employee)
+    assert status() == ("not_applicable", None)
+
+    # Сбой последней задачи — ошибка с текстом.
+    async with sessions() as session, session.begin():
+        await session.execute(text("UPDATE procrastinate_jobs SET status = 'succeeded'"))
+        await session.execute(
+            text("UPDATE users SET is_active = true, erp_sync_error = :e WHERE id = :id"),
+            {"e": "erp_provision_user: erp_unavailable: ERP недоступна", "id": employee},
+        )
+    assert status() == ("error", "erp_provision_user: erp_unavailable: ERP недоступна")
+
+
+async def test_erp_resync_route_queues_provision_or_revoke_and_audits(
+    client: TestClient, sessions: async_sessionmaker[AsyncSession], queue: Queue
+) -> None:
+    employee, boss = await setup_staff(client, sessions)
     client.patch(
         f"/api/v1/users/{employee}",
         json={"platform_role_ids": legacy_ids(client, boss, ["MANAGER"])},
         headers=boss,
     )
-    assert status() == ("ok", None)  # фиктивная очередь ничего не оставила в настоящей
-
-    await defer_erp_job(sessions, employee)
-    assert status() == ("pending", None)  # задача стоит в настоящей очереди
-    listed = {u["id"]: u for u in client.get("/api/v1/users", headers=boss).json()}
-    assert listed[employee]["erp_sync"] == "pending"
-
+    queue.jobs.clear()
     async with sessions() as session, session.begin():
-        await session.execute(text("UPDATE procrastinate_jobs SET status = 'succeeded'"))
         await session.execute(
-            text("UPDATE users SET erp_sync_error = :e WHERE id = :id"),
-            {"e": "erp_provision_user: erp_unavailable: ERP недоступна", "id": employee},
+            text("UPDATE users SET erp_sync_error = 'erp_provision_user: x' WHERE id = :id"),
+            {"id": employee},
         )
-    assert status() == ("error", "erp_provision_user: erp_unavailable: ERP недоступна")
+
+    response = client.post(f"/api/v1/users/{employee}/erp-sync", headers=boss)
+    assert response.status_code == 200, response.text
+    assert queue.jobs == [("provision", employee)]
+    assert response.json()["erp_sync_error"] is None  # прежняя ошибка снята, итог перепишет задача
+
+    client.patch(f"/api/v1/users/{employee}", json={"is_active": False}, headers=boss)
+    queue.jobs.clear()
+    assert client.post(f"/api/v1/users/{employee}/erp-sync", headers=boss).status_code == 200
+    assert queue.jobs == [("revoke", employee)]
+
+    async with sessions() as session:
+        actions = (await session.execute(text("SELECT action FROM audit_log"))).scalars().all()
+    assert actions.count("user.erp_resync") == 2
+
+    assert client.post("/api/v1/users/999999/erp-sync", headers=boss).status_code == 404
+
+
+async def test_erp_resync_route_needs_users_write(
+    client: TestClient, sessions: async_sessionmaker[AsyncSession]
+) -> None:
+    employee, _ = await setup_staff(client, sessions)
+    assert client.post(f"/api/v1/users/{employee}/erp-sync").status_code == 401
+    viewer, password = await make_user(sessions, "viewer@railtech.uz", ["viewer"])
+    headers = login(client, viewer.email, password)
+    assert client.post(f"/api/v1/users/{employee}/erp-sync", headers=headers).status_code == 403

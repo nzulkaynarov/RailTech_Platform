@@ -18430,6 +18430,37 @@ paths:
       summary: Update User
       tags:
       - users
+  /api/v1/users/{user_id}/erp-sync:
+    post:
+      description: 'Повторить синхронизацию доступа с ERP (СЦ-8): активному с доступом — выдача, иначе отзыв
+
+        сессий. Задача идёт в очередь; итог — в `erp_sync` (`pending` → `ok` | `error`).'
+      operationId: erp_sync
+      parameters:
+      - in: path
+        name: user_id
+        required: true
+        schema:
+          title: User Id
+          type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserOut'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: Erp Sync
+      tags:
+      - users
   /api/v1/users/{user_id}/invite:
     post:
       description: 'Пригласить по почте (M3-CRM-08): новый временный пароль и письмо через коннектор «Почта».

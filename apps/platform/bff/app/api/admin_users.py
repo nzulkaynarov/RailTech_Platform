@@ -148,6 +148,18 @@ async def resend_invite(id: EmployeeId, authed: Writer) -> Employee:
     return to_employee(await users.get(id))
 
 
+@router.post(
+    "/admin/users/{id}/erp-sync",
+    response_model=Employee,
+    response_model_exclude_none=True,
+    operation_id="retryEmployeeErpSync",
+)
+async def retry_employee_erp_sync(id: EmployeeId, authed: Writer) -> Employee:
+    """Повторить выдачу доступа в ERP: CRM снимает прежнюю ошибку и ставит задачу; в ответе —
+    карточка со статусом `pending`, итог придёт при следующем чтении."""
+    return to_employee(await _users(authed).erp_sync(id))
+
+
 SELF_RESET_MESSAGE = "Свой пароль здесь не сбросить: выберите «Сменить пароль» в меню аватара."
 
 

@@ -24908,6 +24908,97 @@ export const useResendInvite = <
   return useMutation(getResendInviteMutationOptions(options), queryClient);
 };
 
+export const getRetryEmployeeErpSyncUrl = (id: string) => {
+  return `/api/v1/admin/users/${id}/erp-sync`;
+};
+
+/**
+ * Повтор выдачи доступа в ERP (активному сотруднику с доступом) или отзыва сессий (CRM `/users/{id}/erp-sync`). Прежняя ошибка снимается, задача встаёт в очередь: в ответе `erp_sync = pending`, итог — `ok` или `error` при следующем чтении. Раздел `admin` — полный.
+ * @summary Повторить синхронизацию доступа с ERP
+ */
+export const retryEmployeeErpSync = async (
+  id: string,
+  options?: Parameters<typeof http>[1],
+): Promise<Employee> => {
+  return http<Employee>(getRetryEmployeeErpSyncUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getRetryEmployeeErpSyncMutationKey = () => ["retryEmployeeErpSync"] as const;
+
+export const getRetryEmployeeErpSyncMutationOptions = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | Error>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof retryEmployeeErpSync>>,
+    TError,
+    RetryEmployeeErpSyncMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof retryEmployeeErpSync>>,
+  TError,
+  RetryEmployeeErpSyncMutationVariables,
+  TContext
+> => {
+  const mutationKey = getRetryEmployeeErpSyncMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof retryEmployeeErpSync>>,
+    RetryEmployeeErpSyncMutationVariables
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return retryEmployeeErpSync(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RetryEmployeeErpSyncMutationResult = NonNullable<
+  Awaited<ReturnType<typeof retryEmployeeErpSync>>
+>;
+
+export type RetryEmployeeErpSyncMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | Error
+>;
+export type RetryEmployeeErpSyncMutationVariables = { id: string };
+
+/**
+ * @summary Повторить синхронизацию доступа с ERP
+ */
+export const useRetryEmployeeErpSync = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | Error>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof retryEmployeeErpSync>>,
+      TError,
+      RetryEmployeeErpSyncMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof retryEmployeeErpSync>>,
+  TError,
+  RetryEmployeeErpSyncMutationVariables,
+  TContext
+> => {
+  return useMutation(getRetryEmployeeErpSyncMutationOptions(options), queryClient);
+};
+
 export const getIssueTemporaryPasswordUrl = (id: string) => {
   return `/api/v1/admin/users/${id}/temporary-password`;
 };
