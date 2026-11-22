@@ -2,6 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 
+import { partnerOrders } from '@/mocks/partnerMock';
 import { portalServer } from '@/mocks/server';
 import { renderApp, signedIn } from '@/test/render';
 
@@ -45,11 +46,11 @@ describe('Заказы на поставку (PO, ASN) и запросы цен 
 
     await screen.findByText('PO-2026-0042');
 
-    const shipButtons = screen.getAllByRole('button', { name: 'Отгрузить (ASN)' });
+    const shipButtons = screen.getAllByRole('button', { name: 'Отгрузить' });
     await user.click(shipButtons[0]!);
 
     const dialog = await screen.findByRole('dialog');
-    expect(within(dialog).getByText('Уведомление об отгрузке (ASN)')).toBeInTheDocument();
+    expect(within(dialog).getByText('Уведомление об отгрузке')).toBeInTheDocument();
 
     const docInput = within(dialog).getByLabelText(/Номер накладной/);
     await user.type(docInput, 'УПД-550 от 08.11.2026');
@@ -60,7 +61,7 @@ describe('Заказы на поставку (PO, ASN) и запросы цен 
     const trackingInput = within(dialog).getByLabelText(/Трек-номер/);
     await user.type(trackingInput, '01 A 777 AA');
 
-    await user.click(within(dialog).getByRole('button', { name: 'Отгрузить (ASN)' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Отгрузить' }));
 
     await waitFor(() => {
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
@@ -138,7 +139,7 @@ describe('Заказы на поставку (PO, ASN) и запросы цен 
     renderApp('/partner/orders');
 
     await screen.findByText('PO-2026-0041');
-    expect(screen.getAllByRole('button', { name: 'Отгрузить (ASN)' })).toHaveLength(1);
+    expect(screen.getAllByRole('button', { name: 'Отгрузить' })).toHaveLength(1);
   });
 
   it('FX-7: запрос на перенос у подтверждённого заказа', async () => {
@@ -199,6 +200,30 @@ describe('Заказы на поставку (PO, ASN) и запросы цен 
     const card = await screen.findByRole('dialog');
     expect(await within(card).findByText(/1\s250,50/)).toBeInTheDocument();
     expect(within(card).queryByRole('button', { name: 'Ответить' })).not.toBeInTheDocument();
+  });
+
+  it('СЦ-7: цены и количества позиций — как на экранах: разряды, валюта, единица', async () => {
+    signedIn('actor', 'demo', PARTNER_ACCESS);
+    const user = userEvent.setup();
+    portalServer.use(
+      http.get('*/api/portal/v1/partner/orders/:id', ({ params }) => {
+        const order = partnerOrders().find((o) => String(o.id) === params.id)!;
+        const [line] = order.lines;
+        return HttpResponse.json({
+          ...order,
+          total_amount: '190000000.00',
+          lines: [{ ...line!, quantity: 1200, unit: 'шт', unit_price: '190000000.00', total_price: '190000000.00' }],
+        });
+      }),
+    );
+    renderApp('/partner/orders?orderId=8002');
+
+    const card = await screen.findByRole('dialog');
+    await within(card).findByText('Заказ PO-2026-0042');
+    expect((await within(card).findAllByText('190 000 000 сум')).length).toBeGreaterThan(0);
+    expect(within(card).getByText(/^1\D200 шт$/)).toBeInTheDocument();
+    expect(card.textContent).not.toMatch(/\d{5,}\.\d{2}/);
+    void user;
   });
 
   it('отображает складские приёмки и расхождения в карточке заказа (K3-supply-docs)', async () => {

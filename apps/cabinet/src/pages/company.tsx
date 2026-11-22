@@ -48,7 +48,7 @@ import {
 } from '@/lib/bankAccount';
 import { BankAccountFields } from '@/components/BankAccountFields';
 import { isPortalApiError } from '@/api/portal';
-import { formatDateTime } from '@/lib/format';
+import { formatDate, formatDateTime } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { CanAct } from '@/session/CanAct';
 import { useMe } from '@/session/useMe';
@@ -1105,7 +1105,9 @@ export function PartnerApplicationCard() {
                   ? [
                       {
                         label: t('pages.company.partner.contractNumber'),
-                        value: `${app.contract_number}${app.contract_date ? ` от ${app.contract_date}` : ''}`,
+                        value: app.contract_date
+                          ? t('pages.company.partner.contractValue', { number: app.contract_number, date: formatDate(app.contract_date) })
+                          : app.contract_number,
                       },
                     ]
                   : []),
