@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { fromCents, normalizeAmount, remainderAfter, showTab, toCents } from "./model";
+import {
+  amountForField,
+  fromCents,
+  normalizeAmount,
+  remainderAfter,
+  showTab,
+  toCents,
+} from "./model";
 
 describe("сумма из поля ввода", () => {
   it.each([
@@ -36,5 +43,15 @@ describe("вкладка из адреса", () => {
     expect(showTab("memos")).toBe("memos");
     expect(showTab("paid")).toBe("awaiting");
     expect(showTab(null)).toBe("awaiting");
+  });
+});
+
+describe("сумма в поле ввода", () => {
+  it.each([
+    ["1500000.00", "1\u00a0500\u00a0000"],
+    ["4200000.50", "4\u00a0200\u00a0000,50"],
+  ])("%s показывается с разрядами и читается обратно", (amount, shown) => {
+    expect(amountForField(amount)).toBe(shown);
+    expect(normalizeAmount(amountForField(amount))).toBe(amount.includes(".50") ? amount : amount);
   });
 });

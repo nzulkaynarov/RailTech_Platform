@@ -34,6 +34,7 @@ const COLS = {
 
 function NewShipment({ manage }: { manage: boolean }) {
   const { t } = useTranslation("stock");
+  const { qty } = useFormat();
   const { message } = App.useApp();
   const refresh = useRefreshStock();
   const errorText = useErrorText();
@@ -111,7 +112,10 @@ function NewShipment({ manage }: { manage: boolean }) {
                         <div>
                           <strong>{r.product_name}</strong>
                           <div className="pf-hint">
-                            {t("shipments.reserved", { remaining: r.remaining, total: r.quantity })}
+                            {t("shipments.reserved", {
+                              remaining: qty(r.remaining),
+                              total: qty(r.quantity),
+                            })}
                           </div>
                         </div>
                         <InputNumber
