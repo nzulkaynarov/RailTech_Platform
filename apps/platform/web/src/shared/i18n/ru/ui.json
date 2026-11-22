@@ -12,6 +12,11 @@
   "consequence": {
     "title": "Что произойдёт"
   },
+  "recordHistory": {
+    "system": "Система",
+    "filter": "Показать записи",
+    "all": "Все"
+  },
   "history": {
     "done": "Сделано",
     "failed": "Не удалось",

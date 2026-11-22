@@ -32,6 +32,13 @@ async function expectNoViolations(page: Page, context: string): Promise<void> {
   ).toEqual([]);
 }
 
+/** «История» заказа — вкладка бокового окна карточки (ЕД-7): открываем её и отдаём журнал. */
+async function orderHistory(page: Page) {
+  const side = page.locator("#pf-context-panel");
+  await side.getByRole("tab", { name: "История" }).click();
+  return side.getByRole("list", { name: "Журнал заказа" });
+}
+
 async function signOut(page: Page): Promise<void> {
   await openAvatarMenu(page);
   await page.getByRole("menuitem", { name: "Выйти" }).click();
@@ -138,15 +145,15 @@ test.describe("Склад и закупки: снабженец", () => {
     await expect(
       page.getByText(/^Заказ оформлен\. Письмо партнёру — в очереди почты/),
     ).toBeVisible();
-    await expect(
-      page.getByRole("list", { name: "Журнал заказа" }).getByText("Отправлен партнёру"),
-    ).toBeVisible();
+    await expect((await orderHistory(page)).getByText("Отправлен партнёру")).toBeVisible();
     await page.getByRole("button", { name: "Партнёр подтвердил" }).click();
     const confirm = page.getByRole("dialog", { name: `Партнёр подтвердил заказ ${NEW_ORDER}` });
     await fillDate(confirm.getByLabel("Подтверждённая дата поставки"), "2099-01-15");
     await confirm.getByRole("button", { name: "Подтвердить" }).click();
     await expect(page.getByRole("button", { name: "Принять товар" })).toBeVisible();
     await settledScreenshot(page, "order-confirmed");
+    await (await orderHistory(page)).waitFor();
+    await settledScreenshot(page, "order-history");
     await expectNoViolations(page, "карточка заказа");
 
     // Приёмка частичная, затем полная: остаток склада растёт.
@@ -156,16 +163,12 @@ test.describe("Склад и закупки: снабженец", () => {
     await receive.getByRole("textbox", { name: /Ячейка для/ }).fill("A-03-2");
     await receive.getByRole("button", { name: "Принять" }).click();
     await expect(page.getByText("Товар принят")).toBeVisible();
-    await expect(
-      page.getByRole("list", { name: "Журнал заказа" }).getByText("Принят товар"),
-    ).toBeVisible();
+    await expect((await orderHistory(page)).getByText("Принят товар")).toBeVisible();
     await page.getByRole("button", { name: "Принять товар" }).click();
     await receive.getByRole("textbox", { name: /Ячейка для/ }).fill("A-03-2");
     await receive.getByRole("button", { name: "Принять" }).click();
     await expect(page.getByRole("button", { name: "Принять товар" })).toHaveCount(0);
-    await expect(
-      page.getByRole("list", { name: "Журнал заказа" }).getByText("Заказ получен целиком"),
-    ).toBeVisible();
+    await expect((await orderHistory(page)).getByText("Заказ получен целиком")).toBeVisible();
     await spaGoto(page, "/erp/stock");
     await expect(stockRow(page, RAIL).getByText("A-03-2: 5")).toBeVisible();
     await expect(stockRow(page, RAIL).getByText("Свободно · 4")).toBeVisible();
@@ -193,6 +196,18 @@ test.describe("Склад и закупки: снабженец", () => {
     await expectNoViolations(page, "отгрузки");
   });
 
+  test("ЕД-7: форма нового заказа — окно само не открывается, заглушки «Сведений нет» нет", async ({
+    page,
+  }) => {
+    await loginAndWait(page, "supply@demo.example");
+    await spaGoto(page, "/erp/stock/new");
+    await expect(
+      page.getByRole("heading", { level: 1, name: "Новый заказ партнёру" }),
+    ).toBeVisible();
+    await expect(page.locator("#pf-context-panel")).toBeHidden();
+    await expect(page.getByText("Сведений нет")).toHaveCount(0);
+  });
+
   test("просроченный заказ — в «Моих задачах» и ведёт на карточку заказа", async ({ page }) => {
     await loginAndWait(page, "supply@demo.example");
     const row = page.getByRole("link", { name: new RegExp(`Просрочен заказ ${OVERDUE}`) });
@@ -204,6 +219,7 @@ test.describe("Склад и закупки: снабженец", () => {
       page.getByRole("heading", { level: 1, name: `Заказ партнёру ${OVERDUE}` }),
     ).toBeVisible();
     await expect(page.getByText(/просрочка 3 дн\./)).toBeVisible();
+    await expect(page.getByRole("tab", { name: "Сведения" })).toBeVisible();
     await settledScreenshot(page, "order-overdue");
     await expectNoViolations(page, "карточка просроченного заказа");
   });
@@ -285,7 +301,10 @@ test.describe("Склад на телефоне @mobile", () => {
     await expect(
       page.getByRole("heading", { level: 1, name: `Заказ партнёру ${OVERDUE}` }),
     ).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Журнал заказа" })).toBeVisible();
+    // на телефоне «Сведения» и «История» — в боковом окне: открывается кнопкой в шапке
+    await page.getByTestId("panel-toggle").click();
+    await expect(page.getByRole("tab", { name: "История" })).toBeVisible();
+    await expect(page.getByRole("tab", { name: "Сведения" })).toBeVisible();
     await settledScreenshot(page, "order-overdue");
     await expectNoViolations(page, "карточка заказа на телефоне");
 

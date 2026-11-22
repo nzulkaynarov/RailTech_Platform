@@ -40,7 +40,7 @@ def _registry() -> Any:
 async def notices(container: Container, kind: str | None = None) -> list[dict[str, Any]]:
     found = [e["data"] for e in await outbox(container, "document.notice_requested")]
     for data in found:  # каждое событие соответствует схеме каталога
-        schema = json.loads((EVENTS / "eds" / "document.notice_requested.v1.json").read_text(encoding="utf-8"))
+        schema = json.loads((EVENTS / "eds" / "document.notice_requested.v2.json").read_text(encoding="utf-8"))
         jsonschema.Draft202012Validator(
             schema, registry=_registry(), format_checker=jsonschema.FormatChecker()
         ).validate(data)

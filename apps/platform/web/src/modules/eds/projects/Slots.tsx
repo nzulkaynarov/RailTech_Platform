@@ -3,93 +3,58 @@ import { useTranslation } from "react-i18next";
 import { PanelPortal } from "../../../app/shell/PanelSlot";
 import type { ProjectCard } from "../../../shared/api/generated/model";
 import { useFormat } from "../../../shared/lib/useFormat";
-import { EmptyState } from "../../../shared/ui/EmptyState";
-import { History, type HistoryItem } from "../../../shared/ui/History";
-import { OnBehalfNote } from "../../../shared/ui/OnBehalf";
-import { DecisionSlot } from "../decision/DecisionSlot";
-import { ActPanel } from "./ActPanel";
-import { ContractPanel } from "./ContractPanel";
-import { journalText } from "./model";
+import { DefinitionList } from "../../../shared/ui/DefinitionList";
+import { MoneyText } from "../../../shared/ui/MoneyText";
+import { RecordHistory } from "../../../shared/ui/RecordHistory";
+import { projectHistoryEntries } from "./model";
 
-/** Где живёт «Договор» проекта: вкладка бокового окна каркаса, на телефоне — лист на весь экран (`?sheet=contract`). */
-export function ContractSlot({ card, objectId }: { card: ProjectCard; objectId: string }) {
+const HISTORY_FILTERS = ["quote", "contract", "invoice", "act"] as const;
+
+/**
+ * Вкладка «История» бокового окна: журнал проекта один — договор, счета, акт и КП в нём чипами-фильтрами, а не копиями
+ * (ЕД-7). Записей нет — вкладки нет.
+ */
+export function ProjectHistoryTab({ card }: { card: ProjectCard }) {
   const { t } = useTranslation("projects");
+  if (card.journal.length === 0) return null;
   return (
-    <DecisionSlot
-      tab="contract"
-      sheet="contract"
-      title={
-        card.contract
-          ? t("panel.sheetContract", { number: card.contract.number })
-          : t("panel.sheetContractNone")
-      }
-      label={t("panel.contractLabel")}
-      closeLabel={t("panel.sheetClose")}
-    >
-      {(variant, onDone) => (
-        <ContractPanel card={card} objectId={objectId} variant={variant} onDone={onDone} />
-      )}
-    </DecisionSlot>
+    <PanelPortal tab="history">
+      <div className="pf-dec-panel">
+        <RecordHistory
+          label={t("card.journal.title")}
+          entries={projectHistoryEntries(t, card)}
+          filters={HISTORY_FILTERS.map((key) => ({
+            key,
+            label: t(`card.documents.${key}`),
+          }))}
+        />
+      </div>
+    </PanelPortal>
   );
 }
 
-/** Где живёт «Акт» проекта: вкладка бокового окна, на телефоне — лист (`?sheet=act`). */
-export function ActSlot({ card, objectId }: { card: ProjectCard; objectId: string }) {
-  const { t } = useTranslation("projects");
-  return (
-    <DecisionSlot
-      tab="act"
-      sheet="act"
-      title={card.act ? t("panel.sheetAct", { number: card.act.number }) : t("panel.sheetActNone")}
-      label={t("panel.actLabel")}
-      closeLabel={t("panel.sheetClose")}
-    >
-      {(variant, onDone) => (
-        <ActPanel card={card} objectId={objectId} variant={variant} onDone={onDone} />
-      )}
-    </DecisionSlot>
-  );
-}
-
-/** Журнал документов проекта: история договора, счетов и акта (новые первыми). */
-export function JournalList({ card }: { card: ProjectCard }) {
+/** Вкладка «Сведения»: реквизиты клиента и проекта — единственное место, где они перечислены (ЕД-7). */
+export function ProjectFactsTab({ card }: { card: ProjectCard }) {
   const { t } = useTranslation("projects");
   const { date } = useFormat();
-  if (card.journal.length === 0) {
-    return (
-      <EmptyState level={3} compact title={t("panel.journalEmpty")} text={t("panel.journalHint")} />
-    );
-  }
-  const items: HistoryItem[] = card.journal.map((entry) => ({
-    state: "done",
-    title: journalText(t, entry),
-    meta: (
-      <>
-        {entry.actor_name
-          ? t("journal.by", { date: date(entry.at, "datetime"), name: entry.actor_name })
-          : t("journal.bySystem", { date: date(entry.at, "datetime") })}
-        {entry.number ? <span> · {entry.number}</span> : null}
-        {entry.reason ? (
-          <span className="pf-dec-note">{t("journal.reason", { reason: entry.reason })}</span>
-        ) : null}
-        {entry.on_behalf ? (
-          <OnBehalfNote
-            channel={entry.on_behalf.channel}
-            person={entry.on_behalf.counterparty_person}
-          />
-        ) : null}
-      </>
-    ),
-  }));
-  return <History items={items} label={t("card.journal.title")} />;
-}
-
-/** Вкладка «Журнал» бокового окна. */
-export function JournalTab({ card }: { card: ProjectCard }) {
   return (
-    <PanelPortal tab="journal">
+    <PanelPortal tab="facts">
       <div className="pf-dec-panel">
-        <JournalList card={card} />
+        <DefinitionList
+          items={[
+            { label: t("card.fields.client"), value: card.client_name },
+            {
+              label: t("card.fields.total"),
+              value: card.total ? (
+                <MoneyText value={card.total.amount} currency={card.total.currency} />
+              ) : null,
+            },
+            { label: t("card.fields.manager"), value: card.manager?.name },
+            { label: t("card.fields.responsible"), value: card.responsible?.name },
+            { label: t("card.fields.opened"), value: date(card.created_at) },
+            { label: t("card.fields.due"), value: card.due_date ? date(card.due_date) : null },
+          ]}
+        />
       </div>
     </PanelPortal>
   );

@@ -31,7 +31,14 @@ function stored(): DocflowSettings {
   } catch {
     // Хранилище недоступно — состояние в памяти.
   }
-  return memory ?? { recognize_scans: true, pii_policy: "business", ai_available: true };
+  return (
+    memory ?? {
+      recognize_scans: true,
+      pii_policy: "business",
+      ai_available: true,
+      author_may_sign_own_letter: true,
+    }
+  );
 }
 
 export function readDocflowSettings(): DocflowSettings {
@@ -180,7 +187,13 @@ export const letterIntakeHandlers = [
       return fail(403, "FORBIDDEN", "Раздел или действие не положены вашей роли.");
     }
     const body = (await request.json()) as DocflowSettingsPatch;
-    const next = { ...readDocflowSettings(), recognize_scans: body.recognize_scans };
+    const current = readDocflowSettings();
+    const next = {
+      ...current,
+      recognize_scans: body.recognize_scans ?? current.recognize_scans,
+      author_may_sign_own_letter:
+        body.author_may_sign_own_letter ?? current.author_may_sign_own_letter,
+    };
     writeDocflowSettings(next);
     return HttpResponse.json(next);
   }),

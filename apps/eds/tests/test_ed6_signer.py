@@ -58,10 +58,15 @@ async def test_signers_list_is_closed_without_staff_reader_rights(
     assert denied.status_code == 403, denied.text
 
 
-async def test_the_author_cannot_choose_themselves_when_others_can_sign(
+async def test_the_author_cannot_choose_themselves_when_others_can_sign_under_the_strict_rule(
     client: httpx.AsyncClient, staff: dict[str, Person]
 ) -> None:
     from tests.test_letterhead_letters import letter_json
+
+    saved = await client.patch(
+        "/api/v1/docflow-settings", json={"author_may_sign_own_letter": False}, headers=staff["admin"].headers
+    )
+    assert saved.status_code == 200, saved.text
 
     await grant(client, staff, "director")
     await grant(client, staff, "registrar")

@@ -9,63 +9,15 @@ import {
 } from "../../../shared/api/generated/platform-bff";
 import { useFormat } from "../../../shared/lib/useFormat";
 import { DefinitionList } from "../../../shared/ui/DefinitionList";
-import { EmptyState } from "../../../shared/ui/EmptyState";
 import { ActionToggle } from "../../../shared/ui/FormParts";
-import { History, type HistoryItem } from "../../../shared/ui/History";
 import { MoneyText } from "../../../shared/ui/MoneyText";
 import { fileUrl, projectRef } from "./api";
 import { reasonText } from "./errors";
 import { FileLinks } from "./FileLinks";
 import { ReasonForm, ScanForm } from "./forms";
-import { actStateKey, journalText } from "./model";
-import { ActStatusTag } from "./status";
+import { actStateKey } from "./model";
 import { SigningButton } from "./SigningButton";
 import { useApplyCard } from "./useProjectMutations";
-
-function NoAct({
-  card,
-  busy,
-  error,
-  onIssue,
-}: {
-  card: ProjectCard;
-  busy: boolean;
-  error: string | null;
-  onIssue: () => void;
-}) {
-  const { t } = useTranslation("projects");
-  const blocker = card.act_blocker;
-  if (blocker === "forbidden") {
-    return (
-      <EmptyState level={3} compact title={t("act.none.title")} text={t("act.none.forbidden")} />
-    );
-  }
-  if (blocker === "no_invoice") {
-    return (
-      <EmptyState level={3} compact title={t("act.none.title")} text={t("act.none.noInvoice")} />
-    );
-  }
-  if (blocker === "not_delivered") {
-    return (
-      <EmptyState level={3} compact title={t("act.none.title")} text={t("act.none.notDelivered")} />
-    );
-  }
-  return (
-    <div className="pf-dec-panel">
-      <EmptyState level={3} compact title={t("act.none.title")} text={t("act.none.ready")} />
-      <div className="pf-fp-form">
-        {error ? (
-          <p className="pf-field-error" role="alert">
-            {error}
-          </p>
-        ) : null}
-        <Button type="primary" block loading={busy} disabled={busy} onClick={onIssue}>
-          {t("act.none.issue")}
-        </Button>
-      </div>
-    </div>
-  );
-}
 
 function ActBody({
   card,
@@ -105,51 +57,13 @@ function ActBody({
   const scan = useScanEdsProjectAct({ mutation: { onError: fail } });
   const busy = run.isPending || scan.isPending;
 
-  if (!act) {
-    return (
-      <NoAct
-        card={card}
-        busy={pending === "issue"}
-        error={error}
-        onIssue={() => {
-          setError(null);
-          setPending("issue");
-          run.mutate(
-            { ref, data: { action: "issue" } },
-            {
-              onSuccess: (next) => {
-                done(next, "issue");
-              },
-            },
-          );
-        }}
-      />
-    );
-  }
+  // Акта ещё нет: «Выпустить акт» живёт в строке документа (`ActIssueButton`).
+  if (!act) return null;
 
   const may = (action: ProjectActActionsItem) => act.actions.includes(action);
-  const items: HistoryItem[] = act.history.map((entry) => ({
-    state: "done",
-    title: journalText(t, entry),
-    meta: (
-      <>
-        {entry.actor_name
-          ? t("journal.by", { date: date(entry.at, "datetime"), name: entry.actor_name })
-          : t("journal.bySystem", { date: date(entry.at, "datetime") })}
-        {entry.reason ? (
-          <span className="pf-dec-note">{t("journal.reason", { reason: entry.reason })}</span>
-        ) : null}
-      </>
-    ),
-  }));
-
   return (
     <div className={`pf-dec-panel pf-dec--${variant}`}>
       <section className="pf-dec-brief" aria-label={t("act.number", { number: act.number })}>
-        <div className="pf-dec-brief-head">
-          <h3 className="pf-fp-title">{t("act.number", { number: act.number })}</h3>
-          <ActStatusTag act={act} />
-        </div>
         <p className="pf-dec-note" style={{ margin: 0 }}>
           {t(`act.state.${actStateKey(act)}`)}
         </p>
@@ -299,30 +213,56 @@ function ActBody({
       {act.status !== "signed" && act.status !== "cancelled" ? (
         <SigningButton objectId={objectId} kind="act" documentId={act.id} />
       ) : null}
-
-      <section aria-label={t("act.history")}>
-        <h3 className="pf-dec-subhead">{t("act.history")}</h3>
-        {items.length > 0 ? (
-          <History items={items} label={t("act.history")} />
-        ) : (
-          <p className="pf-hint">{t("act.historyEmpty")}</p>
-        )}
-      </section>
     </div>
   );
 }
 
-/** Содержимое вкладки «Акт» бокового окна карточки проекта. */
-export function ActPanel({
-  card,
-  objectId,
-  variant = "panel",
-  onDone,
-}: {
-  card: ProjectCard;
-  objectId: string;
-  variant?: "panel" | "sheet";
-  onDone?: (() => void) | undefined;
-}) {
-  return <ActBody card={card} objectId={objectId} variant={variant} onDone={onDone} />;
+/** Кнопка строки «Акт»: выпустить акт, когда договор и поставка это позволяют (тот же вызов, что был во вкладке окна). */
+export function ActIssueButton({ objectId }: { objectId: string }) {
+  const { t } = useTranslation("projects");
+  const { message } = App.useApp();
+  const apply = useApplyCard(objectId);
+  const [error, setError] = useState<string | null>(null);
+  const run = useActEdsProjectAct({
+    mutation: {
+      onError: (e) => {
+        setError(t("errors.failed", { reason: reasonText(t, e) }));
+      },
+    },
+  });
+  return (
+    <>
+      <Button
+        size="small"
+        type="primary"
+        aria-label={t("card.documents.issueActLabel")}
+        loading={run.isPending}
+        disabled={run.isPending}
+        onClick={() => {
+          setError(null);
+          run.mutate(
+            { ref: projectRef(objectId), data: { action: "issue" } },
+            {
+              onSuccess: (next) => {
+                apply(next);
+                void message.success(t("act.done.issue"));
+              },
+            },
+          );
+        }}
+      >
+        {t("card.documents.issueAct")}
+      </Button>
+      {error ? (
+        <p className="pf-field-error" role="alert">
+          {error}
+        </p>
+      ) : null}
+    </>
+  );
+}
+
+/** Действия по акту в строке документа: скан, перевыпуск, возврат, отправка на подпись. Что можно — решает ERP. */
+export function ActPanel({ card, objectId }: { card: ProjectCard; objectId: string }) {
+  return <ActBody card={card} objectId={objectId} variant="panel" />;
 }

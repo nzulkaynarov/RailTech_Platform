@@ -8,4 +8,6 @@ export interface DocflowSettings {
   recognize_scans: boolean;
   pii_policy: DocflowSettingsPiiPolicy;
   ai_available: boolean;
+  /** ГЛ-0, ADR-0024 п. 3: автор письма с правом подписи подписывает его сам (по умолчанию да); нет — «автор ≠ подписант» */
+  author_may_sign_own_letter: boolean;
 }

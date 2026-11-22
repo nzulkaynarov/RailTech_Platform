@@ -1,7 +1,7 @@
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import { renderAt, setupProjectTests, signIn } from "../../../test/projectsKit";
+import { panelEl, renderAt, setupProjectTests, signIn } from "../../../test/projectsKit";
 
 setupProjectTests();
 
@@ -52,9 +52,12 @@ describe("Проект: отметки доставки", () => {
     expect(within(card).queryByRole("button", { name: "Доставлено" })).toBeNull();
     const lines = within(card).getByRole("region", { name: "Строки поставки" });
     expect(lines).toHaveTextContent("Доставлено");
-    expect(
-      screen.getByRole("heading", { name: "Журнал документов" }).closest(".ant-card"),
-    ).toHaveTextContent("Доставлено клиенту");
+    // событие — одно, во вкладке «История» бокового окна
+    const side = await panelEl();
+    fireEvent.click(await within(side).findByRole("tab", { name: "История" }));
+    expect(await within(side).findByRole("list", { name: "История проекта" })).toHaveTextContent(
+      "Доставлено клиенту",
+    );
   });
 
   it("менеджер видит исполнение без отметок", async () => {

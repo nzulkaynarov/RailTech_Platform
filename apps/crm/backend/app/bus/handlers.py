@@ -45,6 +45,7 @@ from app.services.company_projection import COMPANY_UPDATED
 from app.services.contact_telegram import UNLINK_REQUESTED
 from app.services.eds_notices import (
     DOCUMENT_NOTICE_TYPE,
+    DOCUMENT_NOTICE_TYPE_V2,
     NOTICE_TYPE,
     NOTICE_TYPE_V2,
     SIGNING_EXPIRING_TYPE,
@@ -118,6 +119,7 @@ async def on_signing_authority_expiring(event: Event, session: AsyncSession) -> 
 
 
 @subscribe(DOCUMENT_NOTICE_TYPE)
+@subscribe(DOCUMENT_NOTICE_TYPE_V2)
 async def on_eds_document_notice(event: Event, session: AsyncSession) -> None:
     await current_container().eds_notices.accept_document(session, event)
 

@@ -12,6 +12,11 @@
   "consequence": {
     "title": "Nima bo‘ladi"
   },
+  "recordHistory": {
+    "system": "Tizim",
+    "filter": "Yozuvlarni körsatish",
+    "all": "Hammasi"
+  },
   "history": {
     "done": "Bajarilgan",
     "failed": "Bajarilmadi",

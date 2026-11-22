@@ -172,5 +172,12 @@
     "actingFor": "acting for: {{names}}",
     "why": "Why",
     "rejected": "May not sign"
+  },
+  "authorRule": {
+    "label": "The author may sign their own letter",
+    "on": "An author who holds the signing right signs their own letter. The signer in the queue is still the one the author chose or the register picked.",
+    "off": "The author does not sign their own letter while someone else can. If only the author holds the signing right, the author signs.",
+    "saved": "Rule saved",
+    "error": "Could not save the rule"
   }
 }
