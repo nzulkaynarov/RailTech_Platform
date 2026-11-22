@@ -21188,7 +21188,7 @@
                                 }
                             }
                         },
-                        "description": "TEMPLATE_NAME_REQUIRED / TEMPLATE_NAME_TOO_LONG / TEMPLATE_BODY_TOO_LARGE / TEMPLATE_MISSING_REQUIRED_BLOCKS (with `missing_blocks`) / TEMPLATE_IN_USE (delete)"
+                        "description": "TEMPLATE_NAME_REQUIRED / TEMPLATE_NAME_TOO_LONG / TEMPLATE_BODY_TOO_LARGE / TEMPLATE_KIND_INVALID / TEMPLATE_MISSING_REQUIRED_BLOCKS (with `missing_blocks`) / TEMPLATE_IN_USE (delete)"
                     },
                     "403": {
                         "description": "ROLE_NOT_PERMITTED / NO_COMPANY / SETTINGS_EDIT_REQUIRED / TEMPLATE_NOT_EDITABLE",
@@ -21312,7 +21312,7 @@
                                 }
                             }
                         },
-                        "description": "TEMPLATE_NAME_REQUIRED / TEMPLATE_NAME_TOO_LONG / TEMPLATE_BODY_TOO_LARGE / TEMPLATE_MISSING_REQUIRED_BLOCKS (with `missing_blocks`) / TEMPLATE_IN_USE (delete)"
+                        "description": "TEMPLATE_NAME_REQUIRED / TEMPLATE_NAME_TOO_LONG / TEMPLATE_BODY_TOO_LARGE / TEMPLATE_KIND_INVALID / TEMPLATE_MISSING_REQUIRED_BLOCKS (with `missing_blocks`) / TEMPLATE_IN_USE (delete)"
                     },
                     "403": {
                         "description": "ROLE_NOT_PERMITTED / NO_COMPANY / SETTINGS_EDIT_REQUIRED / TEMPLATE_NOT_EDITABLE",
@@ -21393,7 +21393,7 @@
                                 }
                             }
                         },
-                        "description": "TEMPLATE_NAME_REQUIRED / TEMPLATE_NAME_TOO_LONG / TEMPLATE_BODY_TOO_LARGE / TEMPLATE_MISSING_REQUIRED_BLOCKS (with `missing_blocks`) / TEMPLATE_IN_USE (delete)"
+                        "description": "TEMPLATE_NAME_REQUIRED / TEMPLATE_NAME_TOO_LONG / TEMPLATE_BODY_TOO_LARGE / TEMPLATE_KIND_INVALID / TEMPLATE_MISSING_REQUIRED_BLOCKS (with `missing_blocks`) / TEMPLATE_IN_USE (delete)"
                     },
                     "403": {
                         "description": "ROLE_NOT_PERMITTED / NO_COMPANY / SETTINGS_EDIT_REQUIRED / TEMPLATE_NOT_EDITABLE",
@@ -21448,7 +21448,7 @@
                                 }
                             }
                         },
-                        "description": "TEMPLATE_NAME_REQUIRED / TEMPLATE_NAME_TOO_LONG / TEMPLATE_BODY_TOO_LARGE / TEMPLATE_MISSING_REQUIRED_BLOCKS (with `missing_blocks`) / TEMPLATE_IN_USE (delete)"
+                        "description": "TEMPLATE_NAME_REQUIRED / TEMPLATE_NAME_TOO_LONG / TEMPLATE_BODY_TOO_LARGE / TEMPLATE_KIND_INVALID / TEMPLATE_MISSING_REQUIRED_BLOCKS (with `missing_blocks`) / TEMPLATE_IN_USE (delete)"
                     },
                     "403": {
                         "description": "ROLE_NOT_PERMITTED / NO_COMPANY / SETTINGS_EDIT_REQUIRED / TEMPLATE_NOT_EDITABLE",
@@ -21531,7 +21531,7 @@
                                 }
                             }
                         },
-                        "description": "TEMPLATE_NAME_REQUIRED / TEMPLATE_NAME_TOO_LONG / TEMPLATE_BODY_TOO_LARGE / TEMPLATE_MISSING_REQUIRED_BLOCKS (with `missing_blocks`) / TEMPLATE_IN_USE (delete)"
+                        "description": "TEMPLATE_NAME_REQUIRED / TEMPLATE_NAME_TOO_LONG / TEMPLATE_BODY_TOO_LARGE / TEMPLATE_KIND_INVALID / TEMPLATE_MISSING_REQUIRED_BLOCKS (with `missing_blocks`) / TEMPLATE_IN_USE (delete)"
                     },
                     "403": {
                         "description": "ROLE_NOT_PERMITTED / NO_COMPANY / SETTINGS_EDIT_REQUIRED / TEMPLATE_NOT_EDITABLE",

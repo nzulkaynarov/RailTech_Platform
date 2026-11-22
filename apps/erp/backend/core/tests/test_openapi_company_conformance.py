@@ -122,14 +122,11 @@ def test_document_profile_round_trip_and_preview(admin, company):
         "signatory_position": "Директор",
         "footer_text": "Подвал",
         "accent_color": "#112233",
-        "secondary_color": "#445566",
         "cover_letter_text": "Письмо",
         "contract_acceptance_text": "a",
         "contract_liability_text": "b",
         "contract_extra_terms_text": "c",
         "act_closing_text": "d",
-        "layout_preset": "boxed",
-        "font_family": "serif",
         "show_cover_letter": True,
         "show_bank_in_header": False,
         "use_company_defaults": False,
@@ -156,9 +153,7 @@ def test_document_profile_service_whitelist_is_in_request_schema():
     described = request_fields_missing(
         f"{API}accounts/companies/{{id}}/document-profile/",
         "patch",
-        dict.fromkeys(
-            [*service._EDITABLE_FIELDS, *service._EDITABLE_CHOICE_FIELDS, *service._EDITABLE_BOOL_FIELDS], None
-        ),
+        dict.fromkeys([*service._EDITABLE_FIELDS, *service._EDITABLE_BOOL_FIELDS], None),
     )
     assert not described, described
 

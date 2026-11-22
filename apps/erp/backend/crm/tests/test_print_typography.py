@@ -11,19 +11,15 @@ import re
 from pathlib import Path
 from types import SimpleNamespace
 
-import pytest
 import tinycss2
 from django.template.loader import render_to_string
-
-from crm.services.documents.brand import _FONT_STACKS
 
 _BACKEND_ROOT = Path(__file__).resolve().parents[2]
 _TEMPLATE_ROOTS = [_BACKEND_ROOT / "crm" / "templates", _BACKEND_ROOT / "templates"]
 
 
-def _base_ctx(font_key: str) -> dict:
+def _base_ctx() -> dict:
     return {
-        "font_stack": _FONT_STACKS[font_key],
         "seller": SimpleNamespace(
             name="ООО «Продавец»", inn="123456789", legal_address="г. Ташкент", phone="", email="s@x.uz"
         ),
@@ -46,12 +42,11 @@ def _root_declarations(html: str) -> dict:
     return {}
 
 
-@pytest.mark.parametrize("font_key,expected_family", [("sans", "Inter"), ("serif", "PT Serif")])
-def test_font_main_survives_css_parsing(font_key, expected_family):
-    html = render_to_string("crm/_document_base.html", _base_ctx(font_key))
+def test_font_main_survives_css_parsing():
+    html = render_to_string("crm/_document_base.html", _base_ctx())
     decls = _root_declarations(html)
     assert "--font-main" in decls, "the --font-main declaration was eaten by a CSS parse error"
-    assert expected_family in decls["--font-main"]
+    assert "Inter" in decls["--font-main"]
     assert "--accent" in decls  # the rest of the token block survived too
 
 
@@ -71,7 +66,7 @@ def test_no_nested_css_comments_in_any_template():
 def test_registration_footer_prints_seller_requisites():
     """The ADZ-class multi-column footer prints the seller's registration line on every page;
     a custom footer_text keeps overriding it entirely (pre-wave behavior)."""
-    ctx = _base_ctx("sans")
+    ctx = _base_ctx()
     footer_markup = render_to_string("crm/_document_base.html", ctx).split('class="footer"')[1]
     assert '<table class="footer-grid"' in footer_markup
     assert "ООО «Продавец»" in footer_markup
