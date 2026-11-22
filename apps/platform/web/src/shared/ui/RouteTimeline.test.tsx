@@ -84,7 +84,7 @@ describe("RouteTimeline", () => {
       }),
     ]);
     expect(rows).toHaveLength(4);
-    const orphan = rows.find((r) => r.textContent?.includes("прошлый круг, шаг 3"));
+    const orphan = rows.find((r) => r.textContent.includes("прошлый круг, шаг 3"));
     expect(orphan).toHaveTextContent("решение return круг 1");
   });
 });
