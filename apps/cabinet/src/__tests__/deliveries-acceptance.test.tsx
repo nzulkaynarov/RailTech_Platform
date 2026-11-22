@@ -1,6 +1,5 @@
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-
 import { renderApp, signedIn } from '@/test/render';
 import { captureBody, expectNoAxeViolations, failWith, heading, requestLog } from '@/test/screens';
 
@@ -107,6 +106,17 @@ describe('Приёмка поставки по строкам', () => {
     expect(screen.queryByText('Замечание передано менеджеру')).not.toBeInTheDocument();
   });
 
+  it('выполненный проект (ПР-2026-036: запрос закрыт с исходом won, акт принят, счёт оплачен): «Принять» и «Есть замечания» у его строк скрыты, статус виден', async () => {
+    signedIn();
+    await openDeliveries();
+
+    expect(screen.queryByRole('button', { name: 'Принять позицию Фильтр гидравлический HF-40' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Есть замечания по позиции Фильтр гидравлический HF-40' })).not.toBeInTheDocument();
+    expect(screen.getAllByText('Доставлено').length).toBeGreaterThan(1);
+    // проект в исполнении (ПР-2026-035) кнопки сохраняет
+    expect(screen.getByRole('button', { name: `Принять позицию ${LINE}` })).toBeInTheDocument();
+  });
+
   it('can_act=false: кнопок приёмки нет, статусы видны', async () => {
     signedIn('viewer');
     window.localStorage.setItem('cabinet.language', 'ru');
@@ -114,7 +124,7 @@ describe('Приёмка поставки по строкам', () => {
     await openDeliveries();
     expect(screen.queryByRole('button', { name: /^Принять позицию / })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /^Есть замечания по позиции/ })).not.toBeInTheDocument();
-    expect(screen.getByText('Доставлено')).toBeInTheDocument();
+    expect(screen.getAllByText('Доставлено').length).toBeGreaterThan(0);
     expect(log.filter((entry) => entry.startsWith('POST'))).toEqual([]);
   });
 });

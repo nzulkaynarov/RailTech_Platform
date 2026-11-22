@@ -55,6 +55,11 @@ def test_requests_filter_by_status_and_search(j6_setup):
     stage_won, _ = DealStage.objects.get_or_create(code=DealStageCode.CLOSED_WON, defaults={"name": "Выиграна"})
     deal2.stage = stage_won
     deal2.save()
+    # проект выполнен: акт принят и счёт оплачен — только тогда запрос «закрыт» с исходом won (СЦ-8)
+    from integration.tests.world import add_act, add_invoice
+
+    invoice = add_invoice(deal2, "PAID", total="1000", paid="1000")
+    add_act(deal2, "SIGNED", invoice=invoice)
 
     # 3. Создаем третий запрос (будет закрыт lost)
     deal3 = create_client_request(
@@ -68,11 +73,22 @@ def test_requests_filter_by_status_and_search(j6_setup):
     deal3.stage = stage_lost
     deal3.save()
 
+    # Подписанный договор без акта и оплаты — проект в работе, а не закрытый запрос
+    deal4 = create_client_request(
+        company,
+        contact,
+        summary="Крепёж путевой",
+        lines=[{"text": "Болт путевой", "quantity": "10", "unit": "шт"}],
+        attachments=[],
+    )
+    deal4.stage = stage_won
+    deal4.save()
+
     # Проверка получения всех запросов
     res = client.get(f"{PREFIX}/requests")
     assert res.status_code == 200
     data = res.json()
-    assert len(data) == 3
+    assert len(data) == 4
 
     # Проверка исходов (B-CABFIX-2)
     items_by_id = {item["id"]: item for item in data}
@@ -82,6 +98,8 @@ def test_requests_filter_by_status_and_search(j6_setup):
     assert items_by_id[deal2.pk]["outcome"] == "won"
     assert items_by_id[deal3.pk]["status"] == "closed"
     assert items_by_id[deal3.pk]["outcome"] == "cancelled"
+    assert items_by_id[deal4.pk]["status"] == "in_progress"
+    assert items_by_id[deal4.pk]["outcome"] is None
 
     # Фильтрация по статусу status=closed
     res_closed = client.get(f"{PREFIX}/requests?status=closed")

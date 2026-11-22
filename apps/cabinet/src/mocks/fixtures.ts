@@ -43,6 +43,12 @@ export const deals: Record<number, Schemas["DealRef"]> = {
     stage: "project",
     title: "Редукторы и муфты",
   },
+  36: {
+    id: 36,
+    number: "ПР-2026-036",
+    stage: "project",
+    title: "Фильтры гидравлические",
+  },
   42: {
     id: 42,
     number: "ЗВ-2026-042",
@@ -252,12 +258,23 @@ export const requests: Schemas["ClientRequest"][] = [
   {
     id: 504,
     number: "ПР-2026-035",
-    status: "closed",
-    outcome: "won",
+    status: "in_progress",
+    outcome: null,
     summary: "Редукторы червячные NMRV 063 — 6 шт., муфты упругие — 12 шт.",
     source: "crm",
     ...dealOf(35),
     created_at: "2026-08-05T14:00:00+05:00",
+  },
+  // Выполненный проект (СЦ-8): акт принят, все счета оплачены — ERP отдаёт closed/won только по этому факту.
+  {
+    id: 506,
+    number: "ПР-2026-036",
+    status: "closed",
+    outcome: "won",
+    summary: "Фильтры гидравлические HF-40 — 8 шт.",
+    source: "crm",
+    ...dealOf(36),
+    created_at: "2026-07-20T10:00:00+05:00",
   },
 ];
 
@@ -582,6 +599,17 @@ export const invoices: Schemas["Invoice"][] = [
     document_id: null,
     proofs: [],
   },
+  {
+    id: 605,
+    ...dealOf(36),
+    number: "S-2026-0094",
+    status: "paid",
+    total: { amount: "9600000.00", currency: "UZS" },
+    paid: { amount: "9600000.00", currency: "UZS" },
+    due_date: "2026-08-25",
+    document_id: null,
+    proofs: [],
+  },
 ];
 
 export const acts: Schemas["Act"][] = [
@@ -609,6 +637,15 @@ export const acts: Schemas["Act"][] = [
     number: "A-2026-0071",
     status: "accepted",
     issued_at: "2026-09-18T12:00:00+05:00",
+    returned_reason: null,
+    document_id: null,
+  },
+  {
+    id: 704,
+    ...dealOf(36),
+    number: "A-2026-0066",
+    status: "accepted",
+    issued_at: "2026-09-02T12:00:00+05:00",
     returned_reason: null,
     document_id: null,
   },
@@ -715,6 +752,18 @@ export const deliveries: Schemas["DeliveryLine"][] = [
     shipped_at: "2026-09-21T08:00:00+05:00",
     accepted_at: "2026-09-27T10:20:00+05:00",
     remark: "У двух канистр нарушена пломба",
+  },
+  {
+    id: 109,
+    ...dealOf(36),
+    line_no: 1,
+    title: "Фильтр гидравлический HF-40",
+    quantity: "8",
+    unit: "шт",
+    status: "delivered",
+    eta: "2026-08-30",
+    tracking: "UZP-66120931",
+    shipped_at: "2026-08-27T08:00:00+05:00",
   },
 ];
 

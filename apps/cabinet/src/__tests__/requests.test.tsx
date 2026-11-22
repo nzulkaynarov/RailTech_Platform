@@ -11,7 +11,7 @@ describe('Заявки', () => {
     const { router } = renderApp('/requests');
     await heading('Заявки');
     const list = await screen.findByRole('list', { name: 'Заявки' });
-    expect(within(list).getAllByRole('listitem')).toHaveLength(5);
+    expect(within(list).getAllByRole('listitem')).toHaveLength(6);
     expect(within(list).getByText('Новая')).toBeInTheDocument();
     expect(within(list).getAllByText('Есть КП')).toHaveLength(2);
     expect(within(list).getByText('Ещё без проекта')).toBeInTheDocument();
@@ -77,8 +77,8 @@ describe('Заявки', () => {
     await user.click(screen.getByRole('button', { name: 'Удалить строку 3' }));
     await user.click(screen.getByRole('button', { name: 'Отправить заявку' }));
 
-    expect(await heading('Заявка ЗВ-2026-106')).toBeInTheDocument();
-    expect(router.state.location.pathname).toBe('/requests/506');
+    expect(await heading('Заявка ЗВ-2026-107')).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/requests/507');
     expect(body.current).toEqual({
       summary: 'Кабель для цеха',
       lines: [
@@ -86,7 +86,7 @@ describe('Заявки', () => {
         { text: 'Монтаж', quantity: null, unit: null },
       ],
     });
-    expect(await screen.findByText('Заявка ЗВ-2026-106 отправлена')).toBeInTheDocument();
+    expect(await screen.findByText('Заявка ЗВ-2026-107 отправлена')).toBeInTheDocument();
   });
 
   it('Ctrl+S / ⌘S не отправляет запрос и не перехватывается: отправка — только кнопкой рядом с «Что произойдёт»', async () => {
@@ -201,7 +201,8 @@ describe('Заявки', () => {
     await router.navigate('/requests/new');
     expect(await screen.findByText('Создавать заявки может контакт с правом подтверждать')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Отправить заявку' })).not.toBeInTheDocument();
-  });
+    // Two screens in one test: ~12 s alone, over 30 s under the full parallel run (as journey-j6).
+  }, 60_000);
 
   it('пустой список — пустое состояние', async () => {
     signedIn('actor', 'empty');
@@ -217,5 +218,6 @@ describe('Заявки', () => {
     await router.navigate('/requests/new');
     await heading('Новая заявка');
     await expectNoAxeViolations();
-  });
+    // Two axe passes: ~11 s alone, over 30 s under the full parallel run (as journey-j6).
+  }, 60_000);
 });

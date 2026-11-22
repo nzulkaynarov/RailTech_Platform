@@ -17,15 +17,15 @@
 не совпадают по смыслу: `CONTRACT_SIGNED` ставится при акцепте КП (договор ещё не подписан), а `CLOSED_WON` — при
 подписании договора обеими сторонами, ДО счёта, оплаты и поставки (`crm/services/contracts.py`,
 `deal_execution_is_complete`: «выиграна» и «исполнена» — разные шкалы). Поэтому до акцепта стадию даёт FSM, после
-акцепта — документы сделки (то, что клиент видит в Cabinet), а `won` наступает, когда исполнение закрыто целиком.
+акцепта — документы сделки (то, что клиент видит в Cabinet), а `won` наступает, когда проект выполнен (`project_is_done`, решение владельца 2026-11-22).
 
 Правила (сверху вниз, срабатывает первое):
 
 | Условие                                                                             | Стадия контракта |
 |-------------------------------------------------------------------------------------|------------------|
 | FSM `CLOSED_LOST`                                                                   | `lost`           |
-| FSM `CLOSED_WON` и исполнение закрыто целиком (счета оплачены, акты подписаны,      | `won`            |
-| поставка принята — `deal_execution_is_complete`)                                    |                  |
+| FSM `CLOSED_WON` и проект выполнен (акт принят в Кабинете или скан, счета оплачены; | `won`            |
+| приёмка строк поставки не нужна — `projects.project_is_done`, одно определение)     |                  |
 | FSM `CONTRACT_SIGNED` / `CLOSED_WON` (КП акцептовано) и есть видимый клиенту акт    | `closing`        |
 | (выставлен, подписан или возвращён)                                                 |                  |
 | …и поставка пошла: исполнение сделки не `PENDING` либо строка поставки не           | `fulfilment`     |
@@ -165,9 +165,9 @@ def _fulfilment_started(deal) -> bool:
 
 def _stage_after_acceptance(deal, code: str) -> str:
     """Стадия сделки, КП которой принято: по документам (см. таблицу в docstring модуля)."""
-    from crm.services.deal_documents import deal_execution_is_complete
+    from crm.services.projects import project_is_done
 
-    if code == DealStageCode.CLOSED_WON and deal_execution_is_complete(deal):
+    if code == DealStageCode.CLOSED_WON and project_is_done(deal):
         return "won"
     if any(projections.client_acts_visible(act) for act in deal.acts.all()):
         return "closing"
