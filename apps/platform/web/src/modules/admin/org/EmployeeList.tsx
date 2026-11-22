@@ -1,10 +1,11 @@
+import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
 import type { Employee } from "../../../shared/api/generated/model";
 import { PersonAvatar, PersonCell } from "../../../shared/ui/EntityCell";
 import { AccessTags, EmployeeStatusTag, RoleTags } from "./EmployeeCells";
-import { DataTable } from "../../../shared/ui/DataTable/DataTable";
+import { RegistryTable } from "../../../shared/ui/RegistryTable";
 
 export interface EmployeeListProps {
   items: readonly Employee[];
@@ -13,6 +14,11 @@ export interface EmployeeListProps {
   hrefOf: (id: string) => string;
   /** Блок уже таблицы: строки списком, без колонок */
   compact: boolean;
+  /** Рамка списка (RegistryTable): состояния и строка фильтров */
+  loading: boolean;
+  error: ReactNode;
+  empty: ReactNode;
+  toolbar: ReactNode;
 }
 
 function NameLink({
@@ -38,48 +44,60 @@ function NameLink({
 }
 
 /** Сотрудники: таблица на широком экране, список строк на узком. Имя — ссылка, открывает карточку в боковом окне. */
-export function EmployeeList({ items, selectedId, hrefOf, compact }: EmployeeListProps) {
+export function EmployeeList({
+  items,
+  selectedId,
+  hrefOf,
+  compact,
+  loading,
+  error,
+  empty,
+  toolbar,
+}: EmployeeListProps) {
   const { t } = useTranslation("modules");
   const label = t("admin.org.listLabel");
 
-  if (compact) {
-    return (
-      <ul className="pf-list" aria-label={label}>
-        {items.map((employee) => (
-          <li
-            key={employee.id}
-            className={`pf-org-row${employee.id === selectedId ? " pf-org-row-selected" : ""}`}
-          >
-            <PersonAvatar name={employee.name} size={32} />
-            <div className="pf-org-row-body">
-              <div className="pf-org-row-head">
-                <NameLink
-                  employee={employee}
-                  selected={employee.id === selectedId}
-                  href={hrefOf(employee.id)}
-                />
-                <EmployeeStatusTag status={employee.status} />
-              </div>
-              <div className="pf-hint">
-                {employee.position ?? t("admin.org.noPosition")} · {employee.email}
-              </div>
-              <RoleTags roles={employee.roles} />
-              <AccessTags employee={employee} />
+  const list = compact ? (
+    <ul className="pf-list" aria-label={label}>
+      {items.map((employee) => (
+        <li
+          key={employee.id}
+          className={`pf-org-row${employee.id === selectedId ? " pf-org-row-selected" : ""}`}
+        >
+          <PersonAvatar name={employee.name} size={32} />
+          <div className="pf-org-row-body">
+            <div className="pf-org-row-head">
+              <NameLink
+                employee={employee}
+                selected={employee.id === selectedId}
+                href={hrefOf(employee.id)}
+              />
+              <EmployeeStatusTag status={employee.status} />
             </div>
-          </li>
-        ))}
-      </ul>
-    );
-  }
+            <div className="pf-hint">
+              {employee.position ?? t("admin.org.noPosition")} · {employee.email}
+            </div>
+            <RoleTags roles={employee.roles} />
+            <AccessTags employee={employee} />
+          </div>
+        </li>
+      ))}
+    </ul>
+  ) : undefined;
 
   return (
-    <DataTable<Employee>
+    <RegistryTable<Employee>
       tableId="admin.org.employees"
       caption={label}
       scrollLabel={label}
       rows={items}
       rowKey={(row) => row.id}
-      rowAttrs={(row) => ({ className: row.id === selectedId ? "pf-org-table-row-selected" : "" })}
+      selectedKey={selectedId}
+      loading={loading}
+      error={error}
+      empty={empty}
+      toolbar={toolbar}
+      list={list}
       columns={[
         {
           id: "employee",

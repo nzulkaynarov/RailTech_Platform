@@ -1,5 +1,5 @@
 import { keepPreviousData } from "@tanstack/react-query";
-import { Button, Card, Pagination } from "antd";
+import { Button } from "antd";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router";
@@ -11,7 +11,6 @@ import { useListAudit, useListEmployees } from "../../../shared/api/generated/pl
 import { useCompactBlock } from "../../../shared/lib/useCompactBlock";
 import { useDocumentTitle } from "../../../shared/lib/useDocumentTitle";
 import { useShownKey } from "../../../shared/lib/useShownKey";
-import { DataBlock, ListSkeleton } from "../../../shared/ui/DataBlock";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { PageHeader } from "../../../shared/ui/PageHeader";
 import { AuditEntryCard } from "./AuditEntryCard";
@@ -100,46 +99,30 @@ export function AuditPage() {
   };
 
   const shownKey = useShownKey(list.queryKey, list.isPlaceholderData);
-  let body;
-  if (list.isPending) {
-    body = <ListSkeleton rows={PAGE} />;
-  } else if (list.isError) {
-    body = (
-      <EmptyState
-        title={t("audit:loadError.title")}
-        text={t("audit:loadError.text")}
-        action={
-          <Button
-            onClick={() => {
-              void list.refetch();
-            }}
-          >
-            {t("audit:loadError.retry")}
-          </Button>
-        }
-      />
-    );
-  } else if (items.length === 0 && hasFilters(filters, entityId)) {
-    body = (
-      <EmptyState
-        title={t("audit:noMatch.title")}
-        text={t("audit:noMatch.text")}
-        action={<Button onClick={reset}>{t("audit:noMatch.action")}</Button>}
-      />
-    );
-  } else if (items.length === 0) {
-    body = <EmptyState title={t("audit:empty.title")} text={t("audit:empty.text")} />;
-  } else {
-    body = (
-      <AuditList
-        items={items}
-        selectedId={selected ? selected.id : null}
-        hrefOf={entryHref}
-        names={names}
-        compact={compact}
-      />
-    );
-  }
+  const error = list.isError ? (
+    <EmptyState
+      title={t("audit:loadError.title")}
+      text={t("audit:loadError.text")}
+      action={
+        <Button
+          onClick={() => {
+            void list.refetch();
+          }}
+        >
+          {t("audit:loadError.retry")}
+        </Button>
+      }
+    />
+  ) : undefined;
+  const empty = hasFilters(filters, entityId) ? (
+    <EmptyState
+      title={t("audit:noMatch.title")}
+      text={t("audit:noMatch.text")}
+      action={<Button onClick={reset}>{t("audit:noMatch.action")}</Button>}
+    />
+  ) : (
+    <EmptyState title={t("audit:empty.title")} text={t("audit:empty.text")} />
+  );
 
   const total = list.data?.total ?? 0;
   const closeHref = () => {
@@ -154,36 +137,35 @@ export function AuditPage() {
       <PageHeader title={title} subtitle={t("audit:page.subtitle")} />
       <JournalFilter current="people" />
       <div ref={blockRef}>
-        <Card styles={{ body: { padding: 0 } }}>
-          <AuditFilters
-            value={filters}
-            onChange={update}
-            actors={actors}
-            entityId={entityId}
-            onReset={reset}
-          />
-          <DataBlock busy={list.isPlaceholderData} resetKey={shownKey}>
-            {body}
-          </DataBlock>
-          {list.data && total > 0 ? (
-            <div className="pf-audit-footer">
-              <span className="pf-hint" aria-live="polite">
-                {t("audit:count", { count: total })}
-              </span>
-              {total > PAGE ? (
-                <Pagination
-                  current={page}
-                  pageSize={PAGE}
-                  total={total}
-                  showSizeChanger={false}
-                  size="small"
-                  aria-label={t("audit:pager")}
-                  onChange={setPage}
-                />
-              ) : null}
-            </div>
-          ) : null}
-        </Card>
+        <AuditList
+          items={items}
+          selectedId={selected ? selected.id : null}
+          hrefOf={entryHref}
+          names={names}
+          compact={compact}
+          loading={list.isPending}
+          error={error}
+          empty={empty}
+          busy={list.isPlaceholderData}
+          resetKey={shownKey}
+          toolbar={
+            <AuditFilters
+              value={filters}
+              onChange={update}
+              actors={actors}
+              entityId={entityId}
+              onReset={reset}
+            />
+          }
+          pagination={{
+            current: page,
+            pageSize: PAGE,
+            total,
+            onChange: setPage,
+            label: t("audit:pager"),
+            summary: list.data && total > 0 ? t("audit:count", { count: total }) : null,
+          }}
+        />
       </div>
       <PanelPortal tab="card">
         {selected ? (

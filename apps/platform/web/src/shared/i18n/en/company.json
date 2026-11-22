@@ -629,6 +629,8 @@
     "partial": "Some sections did not answer — not all templates are shown.",
     "error": "Templates did not load",
     "errorText": "Refresh the page.",
+    "empty": "No templates",
+    "emptyText": "Pick another kind.",
     "columns": {
       "name": "Name",
       "kind": "Kind",
