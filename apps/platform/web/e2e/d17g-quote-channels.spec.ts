@@ -113,7 +113,7 @@ test.describe("D17G: каналы отправки КП и адрес кабин
       await loginAndWait(page, "manager@demo.example");
       await page.evaluate(() => {
         (
-          window as unknown as {
+          globalThis as unknown as {
             __rtMockSetQuoteDelivery: (number: string, delivery: unknown) => void;
           }
         ).__rtMockSetQuoteDelivery("КП-2026/113", {
