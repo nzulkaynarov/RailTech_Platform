@@ -555,31 +555,28 @@ async def create_counterparty(authed: PickerWriter, body: CounterpartyPickIn) ->
         sent["country_id"] = body.country_id
     if body.address:
         sent["legal_address"] = body.address
-    erp = ErpCompany(authed.call)
     try:
-        card = await erp.data("POST", "parties/organizations/", json=sent)
+        card = await ErpCompany(authed.call).data("POST", "parties/organizations/", json=sent)
     except PlatformError as exc:
-        await _attach_existing(erp, exc)
+        _normalise_existing(exc)
         raise
     return to_pick(card)
 
 
-async def _attach_existing(erp: ErpCompany, exc: PlatformError) -> None:
+def _normalise_existing(exc: PlatformError) -> None:
     """Дубль по ИНН: строка выбора уже существующей компании — в `details.existing`.
 
-    Компания без роли поиск не показывает, поэтому форма берёт её из этого ответа. Карточка не
-    прочиталась — остаётся только `existing_id`, как раньше.
+    Компания без роли поиску и карточке ERP не видна, поэтому строку кладёт сама ERP в тело отказа;
+    здесь она приводится к виду строки выбора. Строки нет — остаётся только `existing_id`.
     """
     details = exc.body.details or {}
-    existing = details.get("existing_id")
-    if exc.status_code != 409 or details.get("reason") != "company_exists" or not existing:
+    row = details.get("existing")
+    if exc.status_code != 409 or details.get("reason") != "company_exists" or row is None:
         return
-    try:
-        card = await erp.data("GET", f"parties/organizations/{existing}/")
-    except PlatformError:
-        return
-    if isinstance(card, dict) and card.get("name"):
-        details["existing"] = to_pick({**card, "id": existing}).model_dump()
+    if isinstance(row, dict) and row.get("name"):
+        details["existing"] = to_pick(row).model_dump()
+    else:
+        details.pop("existing")
 
 
 @router.get(

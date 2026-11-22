@@ -174,14 +174,17 @@ async def test_duplicate_inn_names_the_existing_company(
 async def test_duplicate_inn_carries_the_existing_company_as_a_picker_row(
     web: Web, be: Any, check: ContractChecker
 ) -> None:
-    """Компания без роли не видна в поиске: 409 несёт её строку выбора (ЕД-6, PR-3)."""
+    """Компания без роли не видна ни в поиске, ни в карточке ERP: строку несёт сам отказ (ЕД-6)."""
     await web.login(["MANAGER"])
     router: respx.MockRouter = be.router
     router.post(f"{API}/parties/organizations/").mock(
-        return_value=httpx.Response(409, json={"detail": "COMPANY_EXISTS", "existing_id": 9})
+        return_value=httpx.Response(
+            409, json={"detail": "COMPANY_EXISTS", "existing_id": 9, "existing": OTHER}
+        )
     )
+    # как в настоящей ERP: карточка компании вне границ контрагентов читается как 404
     card = router.get(f"{API}/parties/organizations/9/").mock(
-        return_value=httpx.Response(200, json=OTHER)
+        return_value=httpx.Response(404, json={"detail": "Not found."})
     )
     response = await web.client.post(
         "/api/v1/people/counterparties",
@@ -201,17 +204,16 @@ async def test_duplicate_inn_carries_the_existing_company_as_a_picker_row(
         "crm_client_id": None,
         "email": None,
     }
-    assert card.called
+    assert not card.called
 
 
-async def test_duplicate_without_readable_card_still_names_the_id(web: Web, be: Any) -> None:
-    """Карточка не прочиталась — 409 прежний: только `existing_id`, форма ищет по ИНН."""
+async def test_duplicate_without_a_row_still_names_the_id(web: Web, be: Any) -> None:
+    """ERP строку не приложила — 409 прежний: только `existing_id`, форма ищет по ИНН."""
     await web.login(["MANAGER"])
     router: respx.MockRouter = be.router
     router.post(f"{API}/parties/organizations/").mock(
         return_value=httpx.Response(409, json={"detail": "COMPANY_EXISTS", "existing_id": 9})
     )
-    router.get(f"{API}/parties/organizations/9/").mock(return_value=httpx.Response(404, json={}))
     response = await web.client.post(
         "/api/v1/people/counterparties",
         json={"name": "Копия", "inn": "300000777"},
