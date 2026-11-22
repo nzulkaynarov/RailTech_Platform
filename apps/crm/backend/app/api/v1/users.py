@@ -111,6 +111,13 @@ async def update_user(
     return to_out(await container.user_service.update(who.actor, user_id, patch))
 
 
+@router.post("/{user_id}/erp-sync", response_model=UserOut)
+async def erp_sync(user_id: int, who: Writer, container: ContainerDep) -> UserOut:
+    """Повторить синхронизацию доступа с ERP (СЦ-8): активному с доступом — выдача, иначе отзыв
+    сессий. Задача идёт в очередь; итог — в `erp_sync` (`pending` → `ok` | `error`)."""
+    return to_out(await container.user_service.erp_resync(who.actor, user_id))
+
+
 @router.post("/{user_id}/reset-password", response_model=PasswordReset)
 async def reset_password(user_id: int, who: Writer, container: ContainerDep) -> PasswordReset:
     password = await container.user_service.reset_password(who.actor, user_id)

@@ -95,6 +95,9 @@ class User(TimestampMixin, Base):
     # Последняя ошибка синхронизации с ERP (провижининг или отзыв); NULL — ERP в курсе. Читает
     # проверка «Синхронизация с ERP» центра внешних сервисов (ADR-0024); пользователю не видна.
     erp_sync_error: Mapped[str | None] = mapped_column(Text)
+    # Факт «доступ в ERP выдан» (СЦ-8): момент успешного ответа ERP на провижининг (получен
+    # `erp_user_id`); успешный отзыв сессий сбрасывает в NULL. Статус «ок» выводится отсюда.
+    erp_provisioned_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     # Профиль, который правит сам сотрудник (W15-H6, ADR-0015: владелец полей — CRM).
     phone: Mapped[str | None] = mapped_column(String(32))
     timezone: Mapped[str] = mapped_column(String(64), server_default=sql("'Asia/Tashkent'"))
