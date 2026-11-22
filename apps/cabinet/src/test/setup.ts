@@ -107,16 +107,19 @@ const RAW_PATTERNS: Array<{ name: string; re: RegExp }> = [
  * Новое сюда не добавлять: исправить экран.
  */
 const HUMAN_TEXT_ALLOW: Array<{ name: string; text: RegExp; why: string }> = [
-  { name: 'record number "#123"', text: /#\d+/, why: 'номера записей «Приёмка #8301» и др. — отдельная находка, не СЦ-7' },
+  // Контекст обязателен: любой другой «#N» на экране по-прежнему роняет тест. Слово — pages.partnerOrders.receiptPrefix (ru/en/uz).
+  { name: 'record number "#123"', text: /(?:Приёмка|Receipt|Qabul) #\d+$/, why: '«Приёмка #8301» (partnerOrders, карточка заказа) — отдельная находка, не СЦ-7, в «Хвосты»' },
   { name: 'raw decimal amount', text: /^1500000\.50$/, why: 'подсказка формата ввода суммы в «Я оплатил» (pages.invoices.proofDialog.amountHint) — пример того, что набрать; не СЦ-7' },
 ];
 
 function humanTextProblems(text: string): string[] {
   const problems: string[] = [];
   for (const { name, re } of RAW_PATTERNS) {
-    const found = text.match(new RegExp(re.source, 'g')) ?? [];
-    for (const hit of found) {
-      if (HUMAN_TEXT_ALLOW.some((rule) => rule.name === name && rule.text.test(hit))) continue;
+    for (const match of text.matchAll(new RegExp(re.source, 'g'))) {
+      const hit = match[0];
+      // Allow-list смотрит на хит вместе с 12 символами слева — так исключение привязано к контексту, а не к шаблону.
+      const withContext = text.slice(Math.max(0, (match.index ?? 0) - 12), (match.index ?? 0) + hit.length);
+      if (HUMAN_TEXT_ALLOW.some((rule) => rule.name === name && (rule.text.test(hit) || rule.text.test(withContext)))) continue;
       problems.push(`${name}: ${hit}`);
     }
   }
@@ -128,13 +131,14 @@ afterEach(() => {
   const missing = Array.from(missingKeys);
   missingKeys.clear();
   if (missing.length > 0) problems.push(...missing.map((key) => `missing i18n key: ${key}`));
+  // Вся уборка — до ошибки охраны, иначе переопределения мока утекают в соседние тесты.
   cleanup();
-  if (problems.length > 0) throw new Error(`Human text guard: ${[...new Set(problems)].join('; ')}`);
   // Очередь тостов sonner — состояние модуля: без сброса тост прошлого теста всплывает в следующем.
   toast.dismiss();
   portalServer.resetHandlers();
   portalServer.events.removeAllListeners();
   vi.useRealTimers();
+  if (problems.length > 0) throw new Error(`Human text guard: ${[...new Set(problems)].join('; ')}`);
 });
 
 // Radix Checkbox меряет себя через ResizeObserver, которого в jsdom нет.

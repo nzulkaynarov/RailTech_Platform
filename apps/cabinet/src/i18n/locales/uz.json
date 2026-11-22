@@ -1177,7 +1177,7 @@
     },
     "partnerOrders": {
       "title": "Yetkazib berish buyurtmalari",
-      "description": "Buyurtmalarni tasdiqlash, joʻnatish xabarnomalari va narx soʻrovlariga javoblar",
+      "description": "Buyurtmalarni tasdiqlash, jönatiş xabarnomalari va narx sörovlariga javoblar",
       "posShort": "poz.",
       "tabsLabel": "Buyurtmalar va narx soʻrovlari holati",
       "ordersListLabel": "Yetkazib berish buyurtmalari roʻyxati",
@@ -1199,7 +1199,7 @@
       "historyTitle": "Amallar tarixi",
       "responseSent": "Javobingiz yuborilgan",
       "confirmSuccess": "Yetkazib berish buyurtmasi tasdiqlandi",
-      "shipSuccess": "Joʻnatish xabarnomasi yuborildi",
+      "shipSuccess": "Jönatiş xabarnomasi yuborildi",
       "respondSuccess": "Narx soʻroviga javob yuborildi",
       "views": {
         "orders": "Buyurtmalar",
@@ -1276,7 +1276,7 @@
       },
       "actions": {
         "confirm": "Tasdiqlash",
-        "ship": "Joʻnatish",
+        "ship": "Jönatiş",
         "view": "Ochish",
         "respond": "Javob berish",
         "sendResponse": "Javobni yuborish",
@@ -1287,7 +1287,7 @@
         "confirmTitle": "Yetkazib berish buyurtmasini tasdiqlash",
         "confirmDescription": "Ko‘rsatilgan pozitsiyalar va narxlar bo‘yicha jo‘natishga tayyorligingizni tasdiqlang va yetkazib berish sanasini kiriting. Sana buyurtma muddatidan farq qilsa, muddat o‘zgarmaydi: ta’minot ko‘chirish so‘rovini oladi.",
         "expectedDateLabel": "Rejalashtirilgan yetkazib berish sanasi",
-        "shipTitle": "Joʻnatish xabarnomasi",
+        "shipTitle": "Jönatiş xabarnomasi",
         "shipDescription": "Omborni qabul qilishga tayyorlash uchun yuk hujjati rekvizitlari va tashuvchi maʼlumotlarini koʻrsating.",
         "supplierDocLabel": "Yetkazib beruvchi yuk xati / hisob-faktura raqami",
         "supplierDocPlaceholder": "Masalan: YX-402, 08.11.2026",
