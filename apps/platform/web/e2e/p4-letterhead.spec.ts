@@ -224,11 +224,18 @@ test.describe("P4: письмо на бланке", () => {
     // 4. Подписант (по реестру — директор): черновик в «Все документы» → «Подписать».
     await switchTo(page, "director@demo.example");
     await spaGoto(page, "/eds/documents?scope=all");
+    // СЦ-8: переданное письмо в списке — «На подписи», а не «Черновик»
+    const handedRow = page
+      .getByRole("link", { name: "Открыть документ: Пояснения по требованию № 14-02/3381" })
+      .locator("xpath=ancestor::tr[1]");
+    await expect(handedRow.getByText("На подписи")).toBeVisible();
+    await both(page, "handed-over-list");
     await page
       .getByRole("link", { name: "Открыть документ: Пояснения по требованию № 14-02/3381" })
       .click();
     const card = side(page);
     await expect(card.getByText(/Передано на подпись: Демо Широков/)).toBeVisible();
+    await expect(card.getByText("На подписи", { exact: true })).toBeVisible();
     await both(page, "handed-over");
     // Карточка письма: тело — теми же блоками, что в редакторе (таблица таблицей), без неприменимой «Суммы».
     await expectLetterBody(card);

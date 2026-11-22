@@ -12,6 +12,7 @@
   },
   "status": {
     "draft": "Draft",
+    "signing": "Awaiting signature",
     "sent": "Registered",
     "quote": {
       "open": "Awaiting approval",

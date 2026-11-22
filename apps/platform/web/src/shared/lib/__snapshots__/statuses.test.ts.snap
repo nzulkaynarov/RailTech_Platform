@@ -191,6 +191,7 @@ exports[`карты статусов > снимок карты: изменени
     "rejected": "red",
     "returned": "gold",
     "sent": "blue",
+    "signing": "gold",
     "to_accountant": "blue",
     "to_pay": "blue",
   },

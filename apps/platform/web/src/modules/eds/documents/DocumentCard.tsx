@@ -238,7 +238,11 @@ function Body({ doc, sheet, onClose }: { doc: EdsDocument; sheet: boolean; onClo
               {t(doc.kind === "letter_out" ? "list.noNumberSigning" : "list.noNumber")}
             </span>
           )}
-          <DocumentStatusTag kind={doc.kind} status={doc.status} />
+          <DocumentStatusTag
+            kind={doc.kind}
+            status={doc.status}
+            awaitingSignature={doc.awaiting_signature}
+          />
           {mailFailed ? <StatusTag tone="red">{t("panel.mailFailed")}</StatusTag> : null}
         </div>
       </div>

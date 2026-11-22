@@ -35,11 +35,19 @@ const QUOTE: Record<string, string> = {
   rejected: "documents:status.quote.rejected",
 };
 
+/**
+ * `awaitingSignature` (СЦ-8) — факт EDS: письмо передано на подпись и не подписано. Статус при этом `draft`, а слово
+ * «На подписи»; `code` — код цвета в общей карте (как у служебки «ждёт действия»), по умолчанию — сам статус.
+ */
 export function statusEntry(
   kind: EdsRegistryKind,
   status: string,
-): { kind: StatusKind; key: string | undefined } {
-  if (kind === "letter_in") return { kind: "incoming", key: LETTER_IN[status] };
-  if (kind === "quote") return { kind: "quote", key: QUOTE[status] };
-  return { kind: "memo", key: DOCUMENT[status] };
+  awaitingSignature = false,
+): { kind: StatusKind; key: string | undefined; code: string } {
+  if (kind === "letter_out" && status === "draft" && awaitingSignature) {
+    return { kind: "memo", key: "documents:status.signing", code: "signing" };
+  }
+  if (kind === "letter_in") return { kind: "incoming", key: LETTER_IN[status], code: status };
+  if (kind === "quote") return { kind: "quote", key: QUOTE[status], code: status };
+  return { kind: "memo", key: DOCUMENT[status], code: status };
 }

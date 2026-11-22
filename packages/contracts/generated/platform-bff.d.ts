@@ -10633,6 +10633,8 @@ export interface components {
       contact_id?: string | null;
     };
     EdsDocumentRow: {
+      /** @description Исходящее письмо передано на подпись и не подписано (СЦ-8): слово «На подписи» при `status = draft`; без передачи — «Черновик»; у остальных видов — `false`. Признак отдаёт EDS */
+      awaiting_signature: boolean;
       /** @description Исходящее письмо не ушло адресату (СЦ-1): строка остаётся в «Исходящих» с меткой «Не отправлено» */
       undelivered: boolean;
       kind: components["schemas"]["EdsRegistryKind"];
@@ -10753,8 +10755,13 @@ export interface components {
       letter?: components["schemas"]["EdsLetter"] | null;
       /** @description Письмо-черновик можно зарегистрировать как ИСХ: у сотрудника раздел `eds.inbox.register` (полный), и он автор или черновик передан ему на регистрацию (P4, B-P8B-4) */
       can_register?: boolean;
-      /** @description Автор черновика письма без права регистрировать — может «Передать на регистрацию» делопроизводителю */
+      /** @description Автор черновика письма с текстом, который сам подписать не может и ещё не передал, — может «Передать на подпись» */
       can_request_registration?: boolean;
+      /**
+       * @description Исходящее письмо передано на подпись и не подписано (СЦ-8): `status = draft` с отметкой передачи. Слово «На подписи»;
+       *     без передачи — «Черновик»; после подписи — `sent`. Признак отдаёт EDS, BFF его не вычисляет.
+       */
+      awaiting_signature?: boolean;
       /**
        * Format: date-time
        * @description Дата и время подписания документа
@@ -12999,7 +13006,7 @@ export interface components {
       number: string | null;
       subject: string;
       /**
-       * @description `draft` — черновик автора; `registration_requested` — передан делопроизводителю; `registered` — ИСХ зарегистрирован
+       * @description `draft` — черновик автора; `registration_requested` — передан на подпись (признак `awaiting_signature` карточки); `registered` — ИСХ зарегистрирован
        * @enum {string}
        */
       state: "draft" | "registration_requested" | "registered";
