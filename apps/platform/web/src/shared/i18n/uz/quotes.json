@@ -134,6 +134,7 @@
       "state": {
         "ready": "TT tasdiqlandi, mijozga hali yuborilmagan.",
         "sent": "TT mijozga yuborildi.",
+        "sentNowhere": "TT çiqarildi, lekin mijozga heç bir kanal orqali yetib bormadi.",
         "closed": "Mijoz TTga javob berdi, boshqa yuboriladigan narsa yo'q."
       },
       "status": {
@@ -148,7 +149,7 @@
       "reason": {
         "no_telegram": "kontakt Telegram-botga ulanmagan",
         "client_not_in_crm": "mijoz CRMga uzatilmagan, bot uni bilmaydi",
-        "no_cabinet": "mijoz kabinetga taklif qilinmagan — mijoz kartasidan taklif qiling",
+        "no_cabinet": "mijoz hali kabinetda emas — mijoz kartasidan taklif qiling",
         "no_email": "kontaktda e-mail yo'q — uni mijoz kartasida qo'shing",
         "mail_not_configured": "pochta sozlanmagan — Sozlamalar · Ulanishlar · Pochta",
         "mail_failed": "xat ketmadi",
@@ -281,7 +282,7 @@
       "reason": {
         "no_telegram": "Mavjud emas: kontakt Telegram-botga ulanmagan.",
         "client_not_in_crm": "Mavjud emas: mijoz CRMga uzatilmagan, bot uni bilmaydi.",
-        "no_cabinet": "Mavjud emas: mijoz kabinetga taklif qilinmagan.",
+        "no_cabinet": "Mavjud emas: mijoz hali kabinetda emas.",
         "no_email": "Mavjud emas: kontaktda e-mail yo'q.",
         "mail_not_configured": "Mavjud emas: pochta sozlanmagan — Sozlamalar · Ulanishlar · Pochta."
       }

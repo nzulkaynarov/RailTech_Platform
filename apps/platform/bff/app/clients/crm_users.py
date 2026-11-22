@@ -161,6 +161,11 @@ class CrmUsers:
         """Письмо-приглашение с новым временным паролем (коннектор «Почта» CRM)."""
         await self._json("POST", f"/api/v1/users/{user_id}/invite", 200)
 
+    async def erp_sync(self, user_id: str) -> dict[str, Any]:
+        """Повторить выдачу доступа в ERP (или отзыв): CRM ставит задачу, ответ — карточка."""
+        user: dict[str, Any] = await self._json("POST", f"/api/v1/users/{user_id}/erp-sync", 200)
+        return user
+
     async def reset_password_email(self, user_id: str) -> dict[str, Any]:
         """Новый временный пароль и письмо о нём (коннектор «Почта» CRM); сессии сотрудника гаснут.
 

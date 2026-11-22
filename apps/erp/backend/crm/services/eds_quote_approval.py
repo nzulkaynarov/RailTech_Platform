@@ -24,6 +24,8 @@ from django.db import transaction
 from django.db.models import Max
 from django.utils import timezone
 
+from notifications.text_format import channel_words
+
 from ..constants import QuoteStatusCode
 from ..models import Quote
 from ..models.approvals import StepParticipation, StepStatus
@@ -315,7 +317,7 @@ def apply_director_decision(
                 "sent_via"
             ]
         message = (
-            f"КП #{number} одобрено ({quote.outgoing_number or '—'}) и отправлено клиенту: {', '.join(sent_via)}."
+            f"КП #{number} одобрено ({quote.outgoing_number or '—'}) и отправлено клиенту: {channel_words(sent_via)}."
             if sent_via
             else f"КП #{number} одобрено ({quote.outgoing_number or '—'}) — можно отправлять клиенту."
         )

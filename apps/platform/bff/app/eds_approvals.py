@@ -490,23 +490,27 @@ def _line_status(
         item = skipped[channel]
         reason = erp_reason(item.get("reason"), item.get("detail"))
         return ("failed" if item.get("reason") == "EMAIL_DELIVERY_FAILED" else "skipped"), reason
-    if channel in sent_via:
-        if channel == "cabinet":
-            return "published", None
+    if channel in sent_via and channel != "cabinet":
         if channel == "email" and not report.get("email_sent_at"):
             return "pending", None
         return "sent", None
     error = report.get("error")
-    if error and channel in (report.get("requested") or []):
+    if error and channel in (report.get("requested") or []) and channel not in sent_via:
         return "failed", erp_reason(error)
     if channel == "cabinet" and state != "ready":
-        # Отправленное КП клиент видит в кабинете всегда (DECISIONS 2026-10-28 «ERP-11»), если он
-        # туда приглашён.
-        if channels is not None and not channels.cabinet:
+        # The cabinet shows an issued quote to the client only if the client can sign in (ERP
+        # `channel_availability`: logged in or invitation delivered), so the line follows the live
+        # availability, not the fact that ERP listed the channel in `sent_via`.
+        if channels is None:
+            return "unknown", None
+        if not channels.cabinet:
             return "skipped", channels.reasons.cabinet
         return "published", None
     if not report and state != "ready":
         return "unknown", None
+    if channels is not None and not getattr(channels, channel):
+        # Not requested and unavailable: the reason is the real one, not «not chosen».
+        return "skipped", getattr(channels.reasons, channel)
     return "not_selected", None
 
 

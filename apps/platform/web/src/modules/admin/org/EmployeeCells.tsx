@@ -37,7 +37,7 @@ export function ErpTag({ employee }: { employee: Employee }) {
       ? (["error", "erpError"] as const)
       : attention === "pending"
         ? (["pending", "erpPending"] as const)
-        : employee.access.erp
+        : employee.access.erp && employee.status !== "disabled"
           ? (["yes", "erp"] as const)
           : (["no", "erpNo"] as const);
   return (

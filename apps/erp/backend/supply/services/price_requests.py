@@ -103,6 +103,7 @@ def create(
 def _dispatch(user, request: PriceRequest, supplier, recipient: str, reference: str) -> bool:
     """Письмо партнёру и колокольчик его кабинета; вернуть True, если письмо не ушло (статус FAILED записан)."""
     from notifications.emails import send_templated_email
+    from notifications.text_format import text_qty
 
     context = {
         "supplier_name": supplier.name,
@@ -111,7 +112,7 @@ def _dispatch(user, request: PriceRequest, supplier, recipient: str, reference: 
         "sender_email": getattr(user, "email", "") or "",
         "note": request.note,
         "lines": [
-            {"name": line.name, "article": line.article, "quantity": line.quantity, "unit": line.unit}
+            {"name": line.name, "article": line.article, "quantity": text_qty(line.quantity), "unit": line.unit}
             for line in request.lines.all()
         ],
     }

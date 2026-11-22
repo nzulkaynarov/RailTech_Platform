@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 
 import { AssignRoleForm } from "../../../features/assign-role/AssignRoleForm";
 import { DisableEmployee } from "../../../features/assign-role/DisableEmployee";
+import { RetryErpSync } from "../../../features/assign-role/RetryErpSync";
 import { ResetPassword } from "../../../features/reset-password/ResetPassword";
 import { ResendInvite } from "../../../features/invite-employee/ResendInvite";
 import { erpAttention } from "../../../entities/employee/status";
@@ -59,7 +60,12 @@ export function EmployeeCard({ employee, selfId, canEdit, otherActiveAdmins }: E
         <Alert
           type="error"
           showIcon
-          message={t("admin.org.card.erpError", { error: employee.erp_sync_error ?? "—" })}
+          message={
+            employee.erp_sync_error
+              ? t("admin.org.card.erpError", { error: employee.erp_sync_error })
+              : t("admin.org.card.erpNotGranted")
+          }
+          action={canEdit ? <RetryErpSync employee={employee} /> : undefined}
         />
       ) : null}
       {!canEdit ? (

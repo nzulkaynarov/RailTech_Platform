@@ -36040,6 +36040,10 @@
                     "status": {
                         "$ref": "#/components/schemas/ProjectActStatusEnum"
                     },
+                    "has_scan": {
+                        "type": "boolean",
+                        "description": "Файл подписанного акта приложен; при `signed` без файла акт принят клиентом в кабинете"
+                    },
                     "total": {
                         "allOf": [
                             {
@@ -36062,9 +36066,6 @@
                         "type": "string"
                     },
                     "has_pdf": {
-                        "type": "boolean"
-                    },
-                    "has_scan": {
                         "type": "boolean"
                     },
                     "actions": {
@@ -36302,9 +36303,14 @@
                     },
                     "status": {
                         "$ref": "#/components/schemas/ProjectActStatusEnum"
+                    },
+                    "has_scan": {
+                        "type": "boolean",
+                        "description": "Файл подписанного акта приложен; при `signed` без файла акт принят клиентом в кабинете"
                     }
                 },
                 "required": [
+                    "has_scan",
                     "id",
                     "number",
                     "status"

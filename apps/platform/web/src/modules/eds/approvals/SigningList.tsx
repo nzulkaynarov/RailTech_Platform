@@ -11,6 +11,7 @@ import {
 import { useFormat } from "../../../shared/lib/useFormat";
 import { useConfirmAction } from "../../../shared/ui/useConfirmAction";
 import { reasonText } from "../documents/errors";
+import { useRefreshSigning } from "../refreshKeys";
 
 /** Документы ERP, ждущие подписи текущего сотрудника (SIGN-4): «Подписать» или «Отказать» с причиной. */
 export function SigningList({ focusId = null }: { focusId?: string | null }) {
@@ -19,6 +20,7 @@ export function SigningList({ focusId = null }: { focusId?: string | null }) {
   const confirmAction = useConfirmAction();
   const { message } = App.useApp();
   const list = useListSigningApprovals();
+  const refresh = useRefreshSigning();
   const [rejecting, setRejecting] = useState<SigningApprovalRow | null>(null);
   const [reason, setReason] = useState("");
   const decide = useDecideSigningApproval({
@@ -26,7 +28,7 @@ export function SigningList({ focusId = null }: { focusId?: string | null }) {
       onSuccess: () => {
         setRejecting(null);
         setReason("");
-        void list.refetch();
+        void refresh();
         void message.success(t("signing.done"));
       },
       onError: (failure) => {

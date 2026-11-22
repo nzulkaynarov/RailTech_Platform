@@ -102,7 +102,7 @@ function PanelBody({
       <EmptyState
         level={3}
         compact
-        title={t("panel.decidedOffice.title")}
+        title={t(`dictionary:status.incoming.${letter.status}`)}
         text={t("panel.decidedOffice.text")}
         action={
           <Link className="pf-focusable" to={tasksPath(letter.id)}>

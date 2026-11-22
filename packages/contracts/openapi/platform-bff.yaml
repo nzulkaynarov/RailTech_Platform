@@ -382,6 +382,8 @@ tags:
   - name: setup
     description: Первый запуск — администратор (без сессии), чек-лист из пяти шагов и своя компания (раздел `admin`)
   - name: me
+  - name: calendar
+    description: Личный календарь сроков по секретной ссылке (подписка в Яндекс Календаре и др.)
   - name: system
   - name: dashboard
   - name: notifications
@@ -1843,6 +1845,73 @@ paths:
           $ref: '#/components/responses/CsrfFailed'
         '503':
           $ref: '#/components/responses/BackendUnavailable'
+
+  /me/calendar-link:
+    get:
+      tags: [calendar]
+      operationId: getCalendarLink
+      summary: Ссылка на личный календарь — действует ли
+      description: >-
+        Календарь сроков: ссылка-подписка для Яндекс Календаря, Google или Outlook. Здесь только состояние; сам секрет
+        виден один раз при выдаче. Ссылка действует до замены или отключения сотрудника; снимок сроков живёт 30 дней
+        от последнего входа (без входа лента пустая); отключённый сотрудник теряет ссылку.
+      responses:
+        '200':
+          description: Состояние
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalendarLink'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+    post:
+      tags: [calendar]
+      operationId: issueCalendarLink
+      summary: Выдать ссылку на календарь (или сменить прежнюю)
+      description: >-
+        Новая секретная ссылка (токен — 32 случайных байта; CRM хранит только хеш). Прежняя ссылка перестаёт действовать.
+        Путь с токеном виден один раз.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      responses:
+        '200':
+          description: Новая ссылка
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalendarLinkIssued'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/CsrfFailed'
+
+  /calendar/{name}:
+    get:
+      tags: [calendar]
+      operationId: getCalendarFeed
+      summary: Лента сроков сотрудника (iCal) по секретной ссылке
+      description: >-
+        Без сессии: доступ по токену из `name` (`<токен>.ics`). Состав — те же строки с датой, что «Календарь» Платформы
+        (`GET /queue`): название, срок и адрес объекта; сумм, цен и условий сделок нет. Лента — снимок, который BFF
+        обновляет, пока сотрудник работает в Платформе. Неизвестный, заменённый или просроченный токен — 404 (причина не
+        различается); частые промахи с одного адреса — 429.
+      security: []
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema: {type: string}
+          description: '`<токен>.ics`'
+      responses:
+        '200':
+          description: 'iCalendar; Cache-Control private, max-age=300'
+          content:
+            text/calendar:
+              schema: {type: string}
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
 
   /me/deputy-candidates:
     get:
@@ -6643,6 +6712,38 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '503':
+          description: '`BACKEND_UNAVAILABLE`'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /admin/users/{id}/erp-sync:
+    post:
+      tags: [admin]
+      operationId: retryEmployeeErpSync
+      summary: Повторить синхронизацию доступа с ERP
+      description: >-
+        Повтор выдачи доступа в ERP (активному сотруднику с доступом) или отзыва сессий (CRM `/users/{id}/erp-sync`).
+        Прежняя ошибка снимается, задача встаёт в очередь: в ответе `erp_sync = pending`, итог — `ok` или `error` при
+        следующем чтении. Раздел `admin` — полный.
+      parameters:
+        - $ref: '#/components/parameters/EmployeeId'
+        - $ref: '#/components/parameters/CsrfToken'
+      responses:
+        '200':
+          description: Задача поставлена в очередь
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Employee'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
         '503':
           description: '`BACKEND_UNAVAILABLE`'
           content:
@@ -17400,6 +17501,21 @@ components:
         challenge: {type: string, minLength: 1, maxLength: 2048}
         code: {type: string, minLength: 6, maxLength: 16, description: '6 цифр из приложения или резервный код `XXXX-XXXX`'}
         remember_device: {type: boolean, default: false, description: 'Не спрашивать код на этом устройстве 30 дней'}
+    CalendarLink:
+      type: object
+      additionalProperties: false
+      required: [active]
+      properties:
+        active: {type: boolean, description: 'Ссылка выдана и действует'}
+        issued_at: {type: [string, 'null'], format: date-time}
+    CalendarLinkIssued:
+      type: object
+      additionalProperties: false
+      required: [path, url, issued_at]
+      properties:
+        path: {type: string, description: 'Путь с секретным токеном; виден один раз'}
+        url: {type: string, description: 'Полный адрес для подписки в календаре'}
+        issued_at: {type: string, format: date-time}
     SecondFactorStatus:
       type: object
       additionalProperties: false
@@ -17861,7 +17977,11 @@ components:
     ErpSyncState:
       type: string
       enum: [ok, pending, error, not_applicable]
-      description: Итог провижининга в ERP
+      description: >-
+        Итог выдачи доступа в ERP по факту (ответ ERP на выдачу сохранён в CRM): `ok` — ERP подтвердила выдачу;
+        `pending` — подтверждения ещё нет, задача в очереди; `error` — последняя задача упала (есть текст) или
+        подтверждения нет и задачи нет («не выдан», текста нет: админ может повторить); `not_applicable` — у сотрудника
+        нет доступа к ERP или он отключён.
 
     Employee:
       type: object
@@ -18831,7 +18951,10 @@ components:
         status:
           enum: [project, returned, issued, signed, cancelled]
           type: string
-      required: [id, number, status]
+        has_scan:
+          type: boolean
+          description: Файл подписанного акта приложен; при `signed` без файла акт принят клиентом в кабинете
+      required: [id, number, status, has_scan]
       additionalProperties: false
     ProjectDocuments:
       type: object
@@ -19898,7 +20021,7 @@ components:
       properties:
         contact_name: {type: [string, 'null'], description: Кому уйдёт КП — контакт заявки или основной контакт клиента}
         telegram: {type: boolean, description: Контакт подключён к боту и клиент известен CRM}
-        cabinet: {type: boolean, description: Клиент приглашён в кабинет или уже входил}
+        cabinet: {type: boolean, description: Клиент уже входил в кабинет или ему доставлено приглашение — письмо ушло и не стоит в очереди}
         email: {type: boolean, description: У контакта есть e-mail и почта настроена}
         reasons:
           $ref: '#/components/schemas/QuoteChannelReasons'
@@ -19918,7 +20041,8 @@ components:
          unpriced_lines, below_floor, not_claimed, no_recipient, send_failed]
       description: >-
         Почему КП не ушло по каналу (коды ERP `send_report` и проверок каналов, D17G-2): `no_telegram` — контакт не подключён к
-        боту; `client_not_in_crm` — клиент не передан в CRM; `no_cabinet` — клиент не приглашён в кабинет; `no_email` — у
+        боту; `client_not_in_crm` — клиент не передан в CRM; `no_cabinet` — клиент не в кабинете: не входил и приглашение не
+        доставлено; `no_email` — у
         контакта нет e-mail; `mail_not_configured` — почта не настроена (Настройки · Подключения · Почта); `mail_failed` — письмо
         не ушло; остальное — гейт отправки ERP (цена ниже себестоимости, нет курса, позиции без цены, маржа ниже минимальной без
         обоснования, нет компании-продавца, некому отправить) или сбой отправки
@@ -19927,8 +20051,9 @@ components:
       enum: [sent, pending, failed, skipped, not_selected, published, unknown]
       description: >-
         `sent` — отправлено (Telegram — передано боту CRM; почта — письмо ушло); `pending` — письмо у почтового сервиса, итога ещё
-        нет; `failed` — не отправлено (причина в `reason`); `skipped` — канал выбран, но недоступен; `not_selected` — канал не
-        выбран; `published` — КП видно клиенту в кабинете; `unknown` — КП отправлено без отчёта по каналам
+        нет; `failed` — не отправлено (причина в `reason`); `skipped` — канал недоступен (причина в `reason`; у кабинета и у невыбранного канала — по живой доступности, а не по отчёту
+        ERP); `not_selected` — канал доступен, но не выбран; `published` — КП видно клиенту в кабинете (клиент может войти); `unknown` —
+        КП отправлено без отчёта по каналам или доступность кабинета не узнали
     QuoteDeliveryLine:
       type: object
       additionalProperties: false

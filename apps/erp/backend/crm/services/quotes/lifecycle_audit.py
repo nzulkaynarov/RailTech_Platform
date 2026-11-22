@@ -8,6 +8,8 @@ the side effects and the state change commit atomically together (Rule 8 — bus
 stays in services).
 """
 
+from notifications.text_format import deal_ref
+
 from ._shared import _log_quote
 
 
@@ -55,15 +57,15 @@ def notify_client_new_quote(quote) -> None:
         return
     info_type = NotificationType.objects.filter(code="INFO").first()
     seller_name = getattr(quote.seller_company, "name", None) or "Поставщик"
-    deal_ref = quote.deal.title or f"#{quote.deal_id}"
+    deal_name = quote.deal.title or deal_ref(quote.deal)
     Notification.objects.create(
         user=quote.deal.client,
         type=info_type,
         title="Новое КП от поставщика",
-        message=f"«{seller_name}» отправил вам КП v{quote.version} по сделке «{deal_ref}» — "
+        message=f"«{seller_name}» отправил вам КП v{quote.version} по сделке «{deal_name}» — "
         f"откройте, чтобы принять или отклонить.",
         link="/cabinet/deals",
         deal=quote.deal,
         event_code="quote.received",
-        event_params={"seller": seller_name, "version": quote.version, "deal_ref": deal_ref},
+        event_params={"seller": seller_name, "version": quote.version, "deal_ref": deal_name},
     )

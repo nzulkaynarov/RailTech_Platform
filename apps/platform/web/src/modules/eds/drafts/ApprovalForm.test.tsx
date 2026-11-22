@@ -84,7 +84,7 @@ describe("Одобрение КП: форма", () => {
       "Одобрить нельзя: нет визы гл. инженера, маржа ниже порога резолюции.",
     );
     expect(within(form).getByRole("checkbox", { name: "Кабинет" })).toBeDisabled();
-    expect(within(form).getByText("Недоступен: клиент не приглашён в кабинет.")).toBeVisible();
+    expect(within(form).getByText("Недоступен: клиент ещё не в кабинете.")).toBeVisible();
   });
 
   it("срок клиента просрочен — предупреждение, не блок; почта недоступна с подписью", async () => {

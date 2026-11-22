@@ -140,7 +140,13 @@
       "letter_duplicate_forced": "Зарегистрировано, хотя совпадает с другим входящим",
       "letter_marked_duplicate": "Отмечено как дубль",
       "letter_work_cancelled": "Поручения и ознакомления отменены",
-      "letter_duplicate_linked": "Найден дубль письма"
+      "letter_duplicate_linked": "Найден дубль письма",
+      "file_attached": "Приложен файл",
+      "file_version_added": "Загружена новая версия файла",
+      "instruction_co_executor_added": "Добавлен соисполнитель",
+      "letter_closed": "Закрыто без ответа",
+      "letter_reopened": "Возвращено в работу",
+      "letter_returned_to_author": "Возвращено автору резолюции"
     },
     "readOnly": "Только просмотр",
     "readOnlyHint": "Только просмотр.",

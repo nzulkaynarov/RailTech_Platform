@@ -9,6 +9,7 @@ import type { Profile } from "../../shared/api/generated/model";
 import { useDocumentTitle } from "../../shared/lib/useDocumentTitle";
 import { PageHeader } from "../../shared/ui/PageHeader";
 import { NotificationSettings } from "../profile-notifications/NotificationSettings";
+import { CalendarLinkSection } from "./CalendarLinkSection";
 import { DeputySection } from "./DeputySection";
 import { IdentitySection } from "./IdentitySection";
 import { SecondFactorSection } from "./SecondFactorSection";
@@ -71,6 +72,7 @@ export function ProfilePage() {
           <NotificationSettings me={me} />
         </Section>
       ) : null}
+      {key === "all" || key === "notifications" ? <CalendarLinkSection /> : null}
       {key === "all" || key === "deputy" ? <DeputySection profile={data} /> : null}
       {key === "all" || key === "security" ? <SecondFactorSection /> : null}
     </div>

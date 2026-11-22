@@ -129,6 +129,8 @@ import type {
   CalcRequestList,
   CalcSheet,
   CalcSupplier,
+  CalendarLink,
+  CalendarLinkIssued,
   CallNoteView,
   CatalogCategory,
   CatalogCategoryList,
@@ -1644,6 +1646,25 @@ export const getDeleteTelegramLinkResponseMock = (
   ),
   ...overrideResponse,
 });
+
+export const getGetCalendarLinkResponseMock = (
+  overrideResponse: Partial<Extract<CalendarLink, object>> = {},
+): CalendarLink => ({
+  active: faker.datatype.boolean(),
+  issued_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
+  ...overrideResponse,
+});
+
+export const getIssueCalendarLinkResponseMock = (
+  overrideResponse: Partial<Extract<CalendarLinkIssued, object>> = {},
+): CalendarLinkIssued => ({
+  path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  url: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  issued_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  ...overrideResponse,
+});
+
+export const getGetCalendarFeedResponseMock = (): string => faker.word.sample();
 
 export const getListDeputyCandidatesResponseMock = (): Colleague[] =>
   Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
@@ -3171,6 +3192,7 @@ export const getListEdsProjectsResponseProjectActRefMock = (
       "signed",
       "cancelled",
     ] as const),
+    has_scan: faker.datatype.boolean(),
   },
   ...overrideResponse,
 });
@@ -3311,6 +3333,7 @@ export const getGetEdsProjectResponseProjectActRefMock = (
       "signed",
       "cancelled",
     ] as const),
+    has_scan: faker.datatype.boolean(),
   },
   ...overrideResponse,
 });
@@ -3712,6 +3735,7 @@ export const getCreateEdsProjectContractResponseProjectActRefMock = (
       "signed",
       "cancelled",
     ] as const),
+    has_scan: faker.datatype.boolean(),
   },
   ...overrideResponse,
 });
@@ -4143,6 +4167,7 @@ export const getActEdsProjectContractResponseProjectActRefMock = (
       "signed",
       "cancelled",
     ] as const),
+    has_scan: faker.datatype.boolean(),
   },
   ...overrideResponse,
 });
@@ -4571,6 +4596,7 @@ export const getScanEdsProjectContractResponseProjectActRefMock = (
       "signed",
       "cancelled",
     ] as const),
+    has_scan: faker.datatype.boolean(),
   },
   ...overrideResponse,
 });
@@ -4999,6 +5025,7 @@ export const getRequestEdsProjectSigningResponseProjectActRefMock = (
       "signed",
       "cancelled",
     ] as const),
+    has_scan: faker.datatype.boolean(),
   },
   ...overrideResponse,
 });
@@ -5453,6 +5480,7 @@ export const getActEdsProjectActResponseProjectActRefMock = (
       "signed",
       "cancelled",
     ] as const),
+    has_scan: faker.datatype.boolean(),
   },
   ...overrideResponse,
 });
@@ -5866,6 +5894,7 @@ export const getScanEdsProjectActResponseProjectActRefMock = (
       "signed",
       "cancelled",
     ] as const),
+    has_scan: faker.datatype.boolean(),
   },
   ...overrideResponse,
 });
@@ -6285,6 +6314,7 @@ export const getMarkEdsProjectDeliveryResponseProjectActRefMock = (
       "signed",
       "cancelled",
     ] as const),
+    has_scan: faker.datatype.boolean(),
   },
   ...overrideResponse,
 });
@@ -13345,6 +13375,37 @@ export const getInviteEmployeeResponseMock = (
 });
 
 export const getResendInviteResponseMock = (
+  overrideResponse: Partial<Extract<Employee, object>> = {},
+): Employee => ({
+  id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+  email: faker.internet.email(),
+  position: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 120 } }),
+    undefined,
+  ]),
+  roles: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.helpers.fromRegExp("^[1-9][0-9]*$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    system: faker.datatype.boolean(),
+    code: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      undefined,
+    ]),
+  })),
+  access: { crm: faker.datatype.boolean(), erp: faker.datatype.boolean() },
+  status: faker.helpers.arrayElement(Object.values(EmployeeStatus)),
+  telegram_linked: faker.datatype.boolean(),
+  erp_sync: faker.helpers.arrayElement(Object.values(ErpSyncState)),
+  erp_sync_error: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
+  ...overrideResponse,
+});
+
+export const getRetryEmployeeErpSyncResponseMock = (
   overrideResponse: Partial<Extract<Employee, object>> = {},
 ): Employee => ({
   id: faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -37017,6 +37078,79 @@ export const getDeleteTelegramLinkMockHandler = (
   );
 };
 
+export const getGetCalendarLinkMockHandler = (
+  overrideResponse?:
+    | CalendarLink
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<CalendarLink> | CalendarLink),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/me/calendar-link",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetCalendarLinkResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getIssueCalendarLinkMockHandler = (
+  overrideResponse?:
+    | CalendarLinkIssued
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<CalendarLinkIssued> | CalendarLinkIssued),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/me/calendar-link",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getIssueCalendarLinkResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getGetCalendarFeedMockHandler = (
+  overrideResponse?:
+    string | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<string> | string),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/calendar/:name",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      const resolvedBody =
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetCalendarFeedResponseMock();
+      const textBody =
+        typeof resolvedBody === "string" ? resolvedBody : JSON.stringify(resolvedBody ?? null);
+      return HttpResponse.text(textBody, {
+        status: 200,
+        headers: { "Content-Type": "text/calendar" },
+      });
+    },
+    options,
+  );
+};
+
 export const getListDeputyCandidatesMockHandler = (
   overrideResponse?:
     | Colleague[]
@@ -40488,6 +40622,28 @@ export const getResendInviteMockHandler = (
             ? await overrideResponse(info)
             : overrideResponse
           : getResendInviteResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getRetryEmployeeErpSyncMockHandler = (
+  overrideResponse?:
+    | Employee
+    | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<Employee> | Employee),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/admin/users/:id/erp-sync",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getRetryEmployeeErpSyncResponseMock(),
         { status: 200 },
       );
     },
@@ -47023,6 +47179,9 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getGetStaffAvatarMockHandler(),
   getCreateTelegramLinkMockHandler(),
   getDeleteTelegramLinkMockHandler(),
+  getGetCalendarLinkMockHandler(),
+  getIssueCalendarLinkMockHandler(),
+  getGetCalendarFeedMockHandler(),
   getListDeputyCandidatesMockHandler(),
   getSetDeputyMockHandler(),
   getClearDeputyMockHandler(),
@@ -47175,6 +47334,7 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getCreateEmployeeMockHandler(),
   getInviteEmployeeMockHandler(),
   getResendInviteMockHandler(),
+  getRetryEmployeeErpSyncMockHandler(),
   getIssueTemporaryPasswordMockHandler(),
   getGetEmployeeMockHandler(),
   getUpdateEmployeeMockHandler(),

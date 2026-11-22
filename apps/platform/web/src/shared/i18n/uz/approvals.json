@@ -122,7 +122,8 @@
     "readOnly": {
       "title": "Hujjat kelishuvda",
       "text": "Qarorni kelishuvchi qabul qiladi. Siz hujjatni faqat o'qish rejimida ko'rasiz.",
-      "notYourStep": "Hozir boshqa kelishuvchining bosqichi. Navbat kelganda qaror qila olasiz."
+      "notYourStep": "Hozirgi bosqich: {{label}}.",
+      "decidedStep": "Siz {{date}} kelişdingiz. Hozirgi bosqich: {{label}}."
     },
     "decided": {
       "approved": {

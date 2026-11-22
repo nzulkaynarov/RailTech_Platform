@@ -53,6 +53,8 @@ from supply.services import shortage
 from catalog.item_ref import item_ref, main_photos
 from catalog.models import Product
 from core.person_ref import person_ref
+from crm.templatetags.document_format import money
+from notifications.text_format import text_date, text_qty
 
 logger = logging.getLogger(__name__)
 
@@ -491,7 +493,7 @@ def send_order(user, order_id: int, *, to_email: str = "") -> SupplierOrder:
     context = {
         "supplier_name": order.supplier.name,
         "number": order.number,
-        "expected_date": order.expected_date.strftime("%d.%m.%Y") if order.expected_date else "",
+        "expected_date": text_date(order.expected_date),
         # The order note is internal (СЦ-10): the supplier gets only the partner comment.
         "note": order.partner_note,
         "sender_name": person_name(user),
@@ -499,9 +501,10 @@ def send_order(user, order_id: int, *, to_email: str = "") -> SupplierOrder:
             {
                 "name": line.name,
                 "article": line.article,
-                "quantity": line.quantity,
+                "quantity": text_qty(line.quantity),
                 "unit": line.unit,
-                "unit_price": _money(line.unit_price) if line.unit_price is not None else "",
+                # Same money format as screens; the currency code is added by the template next to the price.
+                "unit_price": money(line.unit_price) if line.unit_price is not None else "",
             }
             for line in lines
         ],
@@ -553,7 +556,7 @@ def confirm_order(user, order_id: int, *, expected_date: Optional[date] = None) 
     order.save(
         update_fields=["status", "confirmed_at", "confirmed_by", "expected_date", "overdue_notified_at", "updated_at"]
     )
-    _log(order, OrderLogKind.CONFIRMED, user, order.expected_date.isoformat())
+    _log(order, OrderLogKind.CONFIRMED, user, text_date(order.expected_date))
     return order
 
 

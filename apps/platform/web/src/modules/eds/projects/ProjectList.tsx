@@ -20,7 +20,7 @@ import { PageHeader } from "../../../shared/ui/PageHeader";
 import { StatusTag } from "../../../shared/ui/StatusTag";
 import { PAGE_SIZE, type Scope, projectPath, scopeOf } from "./api";
 import { useStateLabels } from "./labels";
-import { ProjectStatusTag } from "./status";
+import { ActStatusTag, ProjectStatusTag } from "./status";
 
 import "../decision/decision.css";
 import "./projects.css";
@@ -77,7 +77,7 @@ function Documents({ row }: { row: ProjectRow }) {
         {act ? (
           <li>
             <span className="pf-hint">{t("card.documents.act")}</span>
-            <ProjectStatusTag kind="act" status={act.status} />
+            <ActStatusTag act={act} />
           </li>
         ) : null}
       </ul>

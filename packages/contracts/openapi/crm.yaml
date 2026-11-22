@@ -1144,6 +1144,20 @@ components:
       - env_url
       title: CabinetUrlOut
       type: object
+    CalendarLinkOut:
+      properties:
+        issued_at:
+          format: date-time
+          title: Issued At
+          type: string
+        token:
+          title: Token
+          type: string
+      required:
+      - token
+      - issued_at
+      title: CalendarLinkOut
+      type: object
     ChangePasswordRequest:
       properties:
         current_password:
@@ -16603,6 +16617,30 @@ paths:
       summary: Put Avatar
       tags:
       - me
+  /api/v1/me/calendar-link:
+    post:
+      description: 'Выдать (или заменить) секретный токен личного календаря: виден один раз, прежний
+
+        перестаёт действовать. Ссылку из токена собирает Платформа.'
+      operationId: calendar_link_issue
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalendarLinkOut'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: Calendar Link Issue
+      tags:
+      - me
   /api/v1/me/company-articles:
     get:
       description: Опубликованные статьи компании для «Помощи»; черновиков здесь нет ни у кого.
@@ -18428,6 +18466,37 @@ paths:
       security:
       - HTTPBearer: []
       summary: Update User
+      tags:
+      - users
+  /api/v1/users/{user_id}/erp-sync:
+    post:
+      description: 'Повторить синхронизацию доступа с ERP (СЦ-8): активному с доступом — выдача, иначе отзыв
+
+        сессий. Задача идёт в очередь; итог — в `erp_sync` (`pending` → `ok` | `error`).'
+      operationId: erp_sync
+      parameters:
+      - in: path
+        name: user_id
+        required: true
+        schema:
+          title: User Id
+          type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserOut'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: Erp Sync
       tags:
       - users
   /api/v1/users/{user_id}/invite:

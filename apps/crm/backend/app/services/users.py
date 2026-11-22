@@ -143,7 +143,12 @@ class UserService:
                 await prepo.set_user_roles(
                     session, user.id, [r.id for r in platform], actor.user_id
                 )
-            view = view_of(user, sorted(roles), platform or [], erp_pending=bool(derived))
+            view = view_of(
+                user,
+                sorted(roles),
+                platform or [],
+                erp_pending=bool(derived and "erp" in derived.platform_access),
+            )
             await audit.record(session, actor, "user.create", "user", user.id, after=audit_of(view))
             await bus_events.user_created(session, user, actor)
             if derived:
@@ -202,6 +207,10 @@ class UserService:
                 await hand_over_work(session, actor, user_id, patch.transfer_to_user_id)
             if patch.is_active is False:
                 await revoke_tokens(session, user_id)
+                # Секретная ссылка календаря отзывается вместе с входом (BFF удаляет свою копию по
+                # событию `identity.user.deactivated`).
+                user.calendar_token_hash = None
+                user.calendar_token_at = None
             try:
                 await session.flush()
             except IntegrityError as exc:
@@ -227,12 +236,30 @@ class UserService:
             await _publish_change(session, actor, user, before, after, changed)
             action = sync_action(erp_before, erp_after)
         await self._sync_erp(action, user_id)
-        if action == "provision":
-            after = replace(after, erp_sync="error" if after.erp_sync_error else "pending")
-        return after
+        # Status comes from the fact and the real queue, not from the pre-commit snapshot.
+        return await self.get(user_id)
 
     async def _sync_erp(self, action: SyncAction | None, user_id: int) -> None:
         await enqueue_sync(self._sessions, self._erp_sync, action, user_id)
+
+    async def erp_resync(self, actor: Actor, user_id: int) -> UserView:
+        """Повторить синхронизацию с ERP (СЦ-8): выдача активному с доступом, иначе отзыв сессий.
+        Прежняя ошибка снимается — итог перепишет задача (или постановка в очередь, если упадёт)."""
+        async with self._sessions() as session, session.begin():
+            user = await repo.get(session, user_id, for_update=True)
+            if user is None:
+                raise NotFoundError("user not found")
+            action: SyncAction = (
+                "provision"
+                if user.is_active and "erp" in (user.platform_access or [])
+                else "revoke"
+            )
+            await repo.set_erp_sync_error(session, user_id, None)
+            await audit.record(
+                session, actor, "user.erp_resync", "user", user_id, after={"action": action}
+            )
+        await self._sync_erp(action, user_id)
+        return await self.get(user_id)
 
     async def reset_password(self, actor: Actor, user_id: int) -> str:
         password = temporary_password()

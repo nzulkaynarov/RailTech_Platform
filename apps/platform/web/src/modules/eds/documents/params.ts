@@ -1,4 +1,4 @@
-import { useQueryClient } from "@tanstack/react-query";
+import { DOCUMENT_KEYS, useInvalidatePrefixes } from "../refreshKeys";
 
 /**
  * Сброс кэша всех запросов документов EDS после действия: списки и открытая карточка перечитываются. Вместе с ними — «Моя очередь»
@@ -6,18 +6,9 @@ import { useQueryClient } from "@tanstack/react-query";
  * потока или опроса.
  */
 export function useRefreshDocuments(): () => void {
-  const queryClient = useQueryClient();
+  const invalidate = useInvalidatePrefixes(DOCUMENT_KEYS);
   return () => {
-    void queryClient.invalidateQueries({
-      predicate: (query) => {
-        const key = String(query.queryKey[0]);
-        return (
-          key.startsWith("/api/v1/eds/documents") ||
-          key === "/api/v1/menu-counters" ||
-          key.startsWith("/api/v1/queue")
-        );
-      },
-    });
+    void invalidate();
   };
 }
 
