@@ -236,9 +236,11 @@ async def remind_document_signer(document_id: uuid.UUID, employee: Author, sessi
     response_model=Document,
     operation_id="withdrawDocumentFromSigning",
 )
-async def withdraw_document_from_signing(document_id: uuid.UUID, employee: Author, session: Session) -> Document:
+async def withdraw_document_from_signing(
+    document_id: uuid.UUID, employee: Author, session: Session, bus: Bus
+) -> Document:
     async with session.begin():
-        document = await documents.withdraw_from_signing(session, employee=employee, document_id=document_id)
+        document = await documents.withdraw_from_signing(session, bus, employee=employee, document_id=document_id)
         return await documents_read.present(session, document, employee)
 
 

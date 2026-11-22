@@ -716,13 +716,16 @@ async def remind_signer(
     return document
 
 
-async def withdraw_from_signing(session: AsyncSession, *, employee: Employee, document_id: uuid.UUID) -> Document:
+async def withdraw_from_signing(
+    session: AsyncSession, bus: AsyncBus, *, employee: Employee, document_id: uuid.UUID
+) -> Document:
     """«Отозвать» (ГЛ-0): передача снята — письмо снова черновик автора. Очередь подписанта выводится из факта передачи,
     поэтому задача у него пропадает сама."""
     document = await get_for_update(session, document_id)
     if not await access.can_view_document(session, employee, document.id):
         raise not_found("Документ не найден.")
     _own_awaiting_letter(employee, document)
+    signer_id = await _signer_id(session, document)  # before the handover is cleared
     document.registration_requested_at = document.registration_requested_by = None
     document.updated_at = clock.now()
     await journal.record(
@@ -732,6 +735,7 @@ async def withdraw_from_signing(session: AsyncSession, *, employee: Employee, do
         document_id=document.id,
         comment="Отозвано с подписи",
     )
+    await document_notices.letter_withdrawn(session, bus, document, signer_id=signer_id, actor_id=employee.crm_user_id)
     return document
 
 

@@ -7,7 +7,8 @@ EDS сама сотрудникам не пишет: текст (RU) готов�
 * служебка, заявление, отчёт: решение директора (`memo_decided`) и оплата (`memo_paid`) — автору;
   возврат на доработку не дублируем: он остаётся строкой «Доработать» в «Моих задачах»;
 * исходящее письмо: передан проект — подписанту (`letter_sign_requested`) или, если подписать некому, держателям
-  `signing.manage` (`letter_signer_missing`); подписал другой сотрудник — автору (`letter_signed`).
+  `signing.manage` (`letter_signer_missing`); подписал другой сотрудник — автору (`letter_signed`);
+  автор отозвал с подписи — прежнему подписанту (`letter_sign_withdrawn`).
 """
 
 from collections.abc import Iterable
@@ -178,6 +179,27 @@ async def letter_handed_over(
     )
 
 
+async def letter_withdrawn(
+    session: AsyncSession, bus: AsyncBus, document: Document, *, signer_id: int | None, actor_id: int
+) -> None:
+    """Автор отозвал письмо с подписи (ГЛ-0): прежнему подписанту — «Письмо отозвано с подписи», иначе его
+    «Подпишите исходящее» остаётся без пояснения. Подписант — сам автор: уведомления нет."""
+    if signer_id is None or signer_id == document.author_crm_user_id:
+        return
+    directory = await load_directory(session, [document.author_crm_user_id])
+    await _publish(
+        session,
+        bus,
+        document,
+        kind="letter_sign_withdrawn",
+        key=f"document:{document.id}:letter_sign_withdrawn:{signer_id}:{int(clock.now().timestamp())}",
+        recipients=[signer_id],
+        title="Письмо отозвано с подписи",
+        subtitle=f"{document.subject} · {directory.name(document.author_crm_user_id)}",
+        actor_id=actor_id,
+    )
+
+
 async def letter_signed(
     session: AsyncSession, bus: AsyncBus, document: Document, *, signer_id: int, signer_name: str
 ) -> None:
@@ -197,4 +219,4 @@ async def letter_signed(
     )
 
 
-__all__ = ["letter_handed_over", "letter_signed", "memo_decided", "memo_paid"]
+__all__ = ["letter_handed_over", "letter_signed", "letter_withdrawn", "memo_decided", "memo_paid"]

@@ -516,6 +516,12 @@ channels:
     messages:
       uz.railtech.eds.document.notice_requested.v1:
         $ref: '#/components/messages/uz.railtech.eds.document.notice_requested.v1'
+  uz.railtech.eds.document.notice_requested.v2:
+    address: uz.railtech.eds.document.notice_requested.v2
+    title: Запрошено уведомление по документу (EDS)
+    messages:
+      uz.railtech.eds.document.notice_requested.v2:
+        $ref: '#/components/messages/uz.railtech.eds.document.notice_requested.v2'
   uz.railtech.eds.signing.decided.v1:
     address: uz.railtech.eds.signing.decided.v1
     title: Решение по подписи коммерческого документа
@@ -1229,6 +1235,15 @@ operations:
       $ref: '#/channels/uz.railtech.eds.document.notice_requested.v1'
     messages:
       - $ref: '#/channels/uz.railtech.eds.document.notice_requested.v1/messages/uz.railtech.eds.document.notice_requested.v1'
+    bindings:
+      $ref: '#/components/operationBindings/delivery'
+  publish.uz.railtech.eds.document.notice_requested.v2:
+    action: send
+    summary: rt://eds публикует uz.railtech.eds.document.notice_requested.v2
+    channel:
+      $ref: '#/channels/uz.railtech.eds.document.notice_requested.v2'
+    messages:
+      - $ref: '#/channels/uz.railtech.eds.document.notice_requested.v2/messages/uz.railtech.eds.document.notice_requested.v2'
     bindings:
       $ref: '#/components/operationBindings/delivery'
   publish.uz.railtech.eds.signing.decided.v1:
@@ -3246,6 +3261,31 @@ components:
                   const: rt://contracts/events/eds/document.notice_requested/v1
                 data:
                   $ref: './eds/document.notice_requested.v1.json'
+    uz.railtech.eds.document.notice_requested.v2:
+      name: uz.railtech.eds.document.notice_requested.v2
+      title: Запрошено уведомление по документу (EDS)
+      contentType: application/cloudevents+json
+      correlationId:
+        location: '$message.payload#/correlationid'
+      headers:
+        $ref: '#/components/schemas/DeliveryHeaders'
+      bindings:
+        $ref: '#/components/messageBindings/delivery'
+      payload:
+        schemaFormat: application/schema+json;version=draft-07
+        schema:
+          allOf:
+            - $ref: './envelope.v1.json'
+            - type: object
+              properties:
+                source:
+                  const: rt://eds
+                type:
+                  const: uz.railtech.eds.document.notice_requested.v2
+                dataschema:
+                  const: rt://contracts/events/eds/document.notice_requested/v2
+                data:
+                  $ref: './eds/document.notice_requested.v2.json'
     uz.railtech.eds.signing.decided.v1:
       name: uz.railtech.eds.signing.decided.v1
       title: Решение по подписи коммерческого документа

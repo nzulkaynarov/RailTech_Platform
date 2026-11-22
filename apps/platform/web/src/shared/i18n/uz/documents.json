@@ -229,15 +229,15 @@
       "youSign": "Siz imzolaysiz. {{date}} dan beri imzoda",
       "signSelf": "Özim imzolayman",
       "refusal": {
-        "author_cannot_sign": "Siz xat muallifisiz. Kompaniyada qoida yoqilgan: muallif öz xatini imzolamaydi. Imzolashi mümkin: {{name}}."
+        "author_cannot_sign": "Siz xat muallifisiz. Kompaniyada qoida yoqilgan: muallif öz xatini imzolamaydi. Imzolaşi mümkin: {{name}}."
       },
-      "remind": "Eslatish",
+      "remind": "Eslatiş",
       "reminded": "Eslatma yuborildi: {{name}}",
-      "withdraw": "Qaytarib olish",
+      "withdraw": "Qaytarib oliş",
       "withdrawn": "Xat imzodan qaytarib olindi",
-      "changeSigner": "Imzolovçini almaştirish",
+      "changeSigner": "Imzolovçini almaştiriş",
       "changeSignerTitle": "Xatni kim imzolaydi",
-      "changeSignerSave": "Almaştirish",
+      "changeSignerSave": "Almaştiriş",
       "changeSignerPlaceholder": "Imzolovçini tanlang",
       "signerChanged": "Imzolovçi almaştirildi"
     },
@@ -416,7 +416,7 @@
         "deputy_without_authority": "örinbosarda imzo vakolati yöq",
         "deputy_loop": "almaştiriş öz-özidan aylanib qolgan",
         "no_permission": "imzolaş huquqingiz yöq",
-        "remind_too_soon": "eslatma yuborilgan, bir soatdan keyin takrorlash mümkin",
+        "remind_too_soon": "eslatma yuborilgan, bir soatdan keyin takrorlaş mümkin",
         "not_handed_over": "xat imzoga topşirilmagan"
       }
     },

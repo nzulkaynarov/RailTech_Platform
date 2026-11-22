@@ -258,6 +258,29 @@ async def test_withdraw_clears_the_handover_and_the_task_of_the_signer(
     assert len((await tasks_of(client, staff["registrar"]))["signatures"]) == 1
 
 
+async def test_withdraw_tells_the_former_signer(
+    client: httpx.AsyncClient, staff: dict[str, Person], container: Container
+) -> None:
+    doc = await handed_by_manager(client, staff)
+    assert await notices(container, "letter_sign_withdrawn") == []
+    done = await client.post(f"/api/v1/documents/{doc['id']}/withdraw", headers=staff["manager"].headers)
+    assert done.status_code == 200, done.text
+    sent = await notices(container, "letter_sign_withdrawn")
+    assert len(sent) == 1 and sent[0]["recipients"] == [REGISTRAR]
+    assert sent[0]["title"] == "Письмо отозвано с подписи"
+
+
+async def test_withdraw_is_silent_when_the_author_is_the_signer(
+    client: httpx.AsyncClient, staff: dict[str, Person], container: Container
+) -> None:
+    await grant(client, staff, "registrar")
+    doc = await draft_of(client, staff["registrar"])
+    await hand_over(client, staff["registrar"], doc["id"])
+    done = await client.post(f"/api/v1/documents/{doc['id']}/withdraw", headers=staff["registrar"].headers)
+    assert done.status_code == 200, done.text
+    assert await notices(container, "letter_sign_withdrawn") == []
+
+
 # --- change signer ---------------------------------------------------------------------------------------------
 
 
