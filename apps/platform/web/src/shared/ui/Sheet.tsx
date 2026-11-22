@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 
 import { PanelPortal } from "../../app/shell/PanelSlot";
 import { useViewport } from "../../app/shell/useViewport";
+import { useKeyboardInset } from "./useKeyboardInset";
 
 /**
  * Карточка лида, клиента и форма «Создать заявку» — в боковом окне каркаса (SPEC-v3 §7.2); на телефоне (< 768) —
@@ -24,12 +25,13 @@ export function Sheet({
   tab?: string;
 }) {
   const { mobile } = useViewport();
+  useKeyboardInset();
   if (mobile) {
     return (
       <Drawer
         open
         placement="bottom"
-        height="100dvh"
+        height="100dvh" /* shrinks above the keyboard: styles/touch.css */
         closable={false}
         keyboard
         onClose={onClose}

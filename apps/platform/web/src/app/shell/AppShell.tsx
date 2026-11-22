@@ -34,6 +34,7 @@ import {
 import { ModuleMenu, ModuleMenuContent, type MenuItem } from "../../shared/ui/ModuleMenu";
 import { ModuleRail, type RailModule } from "../../shared/ui/ModuleRail";
 import { TopBar, type Crumb } from "../../shared/ui/TopBar";
+import { useKeyboardInset } from "../../shared/ui/useKeyboardInset";
 import "../../shared/ui/shell.css";
 import { canSee } from "../access";
 import { useAuth } from "../auth/useAuth";
@@ -55,8 +56,13 @@ import { useDockFits, useViewport } from "./useViewport";
 import { useOperatorLogo, useProductName } from "../../shared/lib/useProductName";
 
 const PANEL_ID = "pf-context-panel";
+/** Module code of Настройки: not in the phone bottom bar */
+const SETTINGS_MODULE = "admin";
 const MOBILE_BAR_HEIGHT = 60;
 const HEADER_HEIGHT = 56;
+// Insets of a notched phone (viewport-fit=cover): the top bar and the bottom bar grow by them, the content keeps clear.
+const SAFE_TOP = "env(safe-area-inset-top, 0px)";
+const SAFE_BOTTOM = "env(safe-area-inset-bottom, 0px)";
 
 function isMac(): boolean {
   return typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent);
@@ -75,6 +81,7 @@ export function AppShell() {
   const operatorLogo = useOperatorLogo();
   const location = useLocation();
   const viewport = useViewport();
+  useKeyboardInset();
   const [menuDrawer, setMenuDrawer] = useState(false);
   const [bellOpen, setBellOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
@@ -319,8 +326,18 @@ export function AppShell() {
   const openHelp = () => {
     setHelpOpen(true);
   };
+  // On a phone Настройки leave the bottom bar (5 modules at most) and live in the profile menu (NAVIGATION.md, map of 2026-11-10).
   const profile = (
-    <AvatarMenu me={me} placement={viewport.mobile ? "topRight" : "topLeft"} onHelp={openHelp} />
+    <AvatarMenu
+      me={me}
+      placement={viewport.mobile ? "topRight" : "topLeft"}
+      onHelp={openHelp}
+      settings={
+        viewport.mobile && canSee(me, { resource: "admin" })
+          ? { to: SETTINGS_HOME, label: t("modules:admin.name") }
+          : undefined
+      }
+    />
   );
   // Ключ раздела для статьи «К этому разделу»: `crm.leads`; профиль — `me`; сам раздел помощи — `help`.
   const helpSection = match
@@ -474,11 +491,15 @@ export function AppShell() {
               flexDirection: "column",
               gap: 16,
               padding: viewport.mobile ? 16 : 24,
-              paddingBottom: viewport.mobile ? MOBILE_BAR_HEIGHT + 16 : 24,
+              paddingBottom: viewport.mobile
+                ? `calc(${String(MOBILE_BAR_HEIGHT + 16)}px + ${SAFE_BOTTOM})`
+                : 24,
               outline: "none",
               ["--pf-overlay-inset" as string]: `${String(overlayInset)}px`,
               // Бар несохранённого прилипает выше нижней панели модулей (< 768) или с отступом 16 px (UX-1b, S6)
-              ["--pf-save-bar-offset" as string]: `${String(viewport.mobile ? MOBILE_BAR_HEIGHT + 8 : 16)}px`,
+              ["--pf-save-bar-offset" as string]: viewport.mobile
+                ? `calc(${String(MOBILE_BAR_HEIGHT + 8)}px + ${SAFE_BOTTOM})`
+                : "16px",
             }}
           >
             {setupBannerLate ? null : <SetupBanner />}
@@ -521,8 +542,8 @@ export function AppShell() {
           onClose={() => {
             panels.setPanelOpen(false);
           }}
-          offsetTop={HEADER_HEIGHT}
-          offsetBottom={MOBILE_BAR_HEIGHT}
+          offsetTop={`calc(${String(HEADER_HEIGHT)}px + ${SAFE_TOP})`}
+          offsetBottom={`calc(${String(MOBILE_BAR_HEIGHT)}px + ${SAFE_BOTTOM})`}
           {...panelProps}
         />
       ) : null}
@@ -530,7 +551,7 @@ export function AppShell() {
         <>
           <ModuleRail
             variant="bottom"
-            modules={railItems}
+            modules={railItems.filter((m) => m.code !== SETTINGS_MODULE)}
             label={t("rail.label")}
             logoLabel={t("rail.logo", { name: product.name, initials: product.initials })}
             logoText={product.initials}

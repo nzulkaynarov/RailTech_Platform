@@ -1,0 +1,114 @@
+/*
+ * Phone and touch hygiene, one block for the whole app (ЕВ-0, report §7 rules 26-31).
+ * 1. Scroll root does not bounce or chain: the page itself never scrolls (the shell is 100dvh), `#main-content` does.
+ * 2. Controls: no 300 ms / double-tap zoom, no grey tap flash, no long-press callout and no accidental text selection.
+ *    Numbers, article codes, document numbers and contacts stay selectable (copying them is a real task).
+ * 3. Inputs are 16 px on a phone: below that iOS Safari zooms the page on focus.
+ * 4. Under a coarse pointer primary actions, row actions and the bottom bar are at least 44 px.
+ * 5. The on-screen keyboard offset `--pf-kb-inset` comes from `shared/ui/useKeyboardInset.ts`.
+ */
+html,
+body {
+  overscroll-behavior: none;
+}
+#main-content,
+.ant-drawer-body,
+.ant-modal-wrap {
+  overscroll-behavior: contain;
+}
+
+:where(
+  button,
+  [role="button"],
+  [role="tab"],
+  [role="menuitem"],
+  [role="switch"],
+  summary,
+  select,
+  .ant-btn,
+  .ant-segmented-item,
+  .ant-tabs-tab,
+  .pf-rail-btn
+) {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+:where(
+  button,
+  [role="button"],
+  [role="tab"],
+  [role="menuitem"],
+  [role="switch"],
+  .ant-btn,
+  .ant-segmented-item,
+  .ant-tabs-tab,
+  .pf-rail-btn
+) {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+:where(a, input, textarea, [contenteditable="true"]) {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+/* Numbers, codes and contacts inside a control stay selectable */
+:where(
+  .pf-docnum,
+  .pf-code,
+  .pf-num,
+  .pf-selectable,
+  [translate="no"],
+  a[href^="tel:"],
+  a[href^="mailto:"]
+) {
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
+}
+
+@media (max-width: 767px) {
+  :root input:not([type="checkbox"], [type="radio"], [type="range"]),
+  :root textarea,
+  :root select,
+  :root .ant-input,
+  :root .ant-input-number-input,
+  :root .ant-select-selection-search-input,
+  :root .ant-picker-input > input {
+    font-size: 16px;
+  }
+}
+
+@media (pointer: coarse) {
+  :root .ant-btn:not(.ant-btn-link) {
+    min-height: 44px;
+  }
+  :root .ant-btn.ant-btn-icon-only {
+    min-width: 44px;
+  }
+  :root .pf-icon-btn {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  :root .pf-bottom-bar .pf-rail-btn,
+  :root .pf-bottom-bar button {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* Bottom sheets and bars stay above the on-screen keyboard; the module bar yields its place to it */
+:root[data-kb="open"] .pf-bottom-bar {
+  display: none;
+}
+:root .ant-drawer-bottom > .ant-drawer-content-wrapper {
+  bottom: var(--pf-kb-inset, 0px) !important;
+  max-height: calc(100dvh - var(--pf-kb-inset, 0px));
+}
+:root[data-kb="open"] .pf-save-dock {
+  bottom: calc(var(--pf-kb-inset, 0px) + 8px);
+}
+/* Drawer footers clear the home indicator */
+:root .ant-drawer .ant-drawer-footer {
+  padding-bottom: max(8px, env(safe-area-inset-bottom, 0px));
+}
