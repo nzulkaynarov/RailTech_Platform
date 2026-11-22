@@ -84,7 +84,11 @@ export function withQueueMeta(item: QueueItem): QueueItem {
         : reason,
     group:
       item.group ??
-      (item.due_label === "overdue" ? "overdue" : item.due_label === "today" ? "today" : "later"),
+      (item.due_label === "overdue"
+        ? "overdue"
+        : item.due_label === "today" && item.due_at
+          ? "today"
+          : "later"),
     category: item.category ?? CATEGORY[item.kind] ?? "other",
     action_label: item.action_label ?? ACTION[item.kind],
   };

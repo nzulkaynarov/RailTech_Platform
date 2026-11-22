@@ -393,7 +393,7 @@ export function letterTaskQueueItems(view: readonly MockRole[]): QueueItem[] {
         subtitle: [to ? doc.subject : null, personOf(doc.ownerId)?.name]
           .filter(Boolean)
           .join(" · "),
-        due_label: "today",
+        due_label: "later",
         object: {
           kind: "memo",
           number: to ?? doc.subject,

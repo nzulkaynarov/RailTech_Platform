@@ -76,6 +76,51 @@ export function quickActionOf(
   return null;
 }
 
+/**
+ * Ключ подписи кнопки в i18n (`dashboard.queue.actions.<ключ>`): вид строки; визу отличает категория
+ * «согласовать» у `sign_document`, ответ по поручению — глагол BFF у `instruction`. Нет ключа — глагол BFF.
+ */
+export function actionKeyOf(
+  item: Pick<QueueItem, "kind" | "category" | "action_label">,
+): string | null {
+  if (item.kind === "sign_document" && item.category === "approve") return "visa";
+  if (item.kind === "instruction" && item.action_label === "Подготовить ответ") {
+    return "instruction_reply";
+  }
+  return ACTION_KINDS.has(item.kind) ? item.kind : null;
+}
+
+const ACTION_KINDS: ReadonlySet<string> = new Set([
+  "sign_document",
+  "approve_quote",
+  "approve_memo",
+  "pay_memo",
+  "resolve_letter",
+  "instruction",
+  "instruction_extension",
+  "acquaint",
+  "rework_document",
+  "answer_lead",
+  "take_lead",
+  "triage_lead",
+  "inbound_mail",
+  "inbound_mail_mine",
+  "ticket",
+  "calc_task",
+  "confirm_payment",
+  "issue_invoice",
+  "issue_contract",
+  "attach_scan",
+  "issue_act",
+  "supplier_overdue",
+  "send_supplier_order",
+  "partner_date_change",
+  "receive_goods",
+  "partner_application",
+  "order_shortage",
+  "ship_project",
+]);
+
 /** Идентификатор письма в строке «Ознакомиться»: `acquaint:<id письма>`. */
 export function acquaintLetterId(id: string): string {
   return id.startsWith("acquaint:") ? id.slice("acquaint:".length) : id;

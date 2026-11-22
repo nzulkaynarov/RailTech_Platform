@@ -97,16 +97,29 @@ describe("Dashboard · Моя очередь", () => {
     expect(rows).toHaveLength(10);
     // D2-2: просроченный заказ партнёру (erp.stock: полный) — первым, он уже просрочен.
     expect(within(rows[0] as HTMLElement).getByText(/Просрочен заказ ЗП-\d{4}-029/)).toBeVisible();
-    expect(within(rows[1] as HTMLElement).getByText("срок сегодня")).toBeVisible();
-    // P8: требование ГНК, зарегистрированное делопроизводителем, — «срочно», тоже сегодня
-    expect(within(rows[2] as HTMLElement).getByText(/ВХ-108\/26/)).toBeVisible();
-    expect(within(rows[3] as HTMLElement).getByText("служебка")).toBeVisible();
+    // ВХ-104 — со сроком сегодня; у ВХ-108 срока нет: «сегодня» не выдумывается (ГЛ-1)
+    const rowOf = (title: string) => rows.find((r) => within(r).queryByText(title)) as HTMLElement;
+    expect(
+      within(rowOf("Наложить резолюцию на письмо ВХ-104/26")).getByText("срок сегодня"),
+    ).toBeVisible();
+    expect(
+      within(rowOf("Наложить резолюцию на письмо ВХ-108/26")).queryByText("срок сегодня"),
+    ).toBeNull();
+    expect(
+      within(rows.find((r) => within(r).queryByText("служебка")) as HTMLElement).getByText(
+        "служебка",
+      ),
+    ).toBeVisible();
     expect(within(queue).getByText("Одобрить КП-2026/115")).toBeVisible();
     // СЦ-9: подпись договора и счёта на мне — строки «Подписать …»
     expect(within(queue).getByText("Подписать договор CT-2026-014")).toBeVisible();
     expect(within(queue).getByText("Подписать счёт INV-2026-031")).toBeVisible();
     expect(within(cards).getByRole("link", { name: /КП на одобрение/ })).toHaveTextContent("4");
-    const open = within(rows[1] as HTMLElement).getByRole("link");
+    const open = within(
+      rows.find((r) =>
+        within(r).queryByText("Наложить резолюцию на письмо ВХ-104/26"),
+      ) as HTMLElement,
+    ).getByRole("link");
     expect(open).toHaveAttribute(
       "href",
       "/eds/inbox/%D0%92%D0%A5-104%2F26?panel=open&tab=resolution",
@@ -472,10 +485,12 @@ describe("Dashboard · Моя очередь", () => {
     const page = await main();
 
     expect(
-      await within(page).findByRole("link", { name: /Открыть: Наложить резолюцию на письмо/ }),
+      await within(page).findByRole("link", {
+        name: /Наложить резолюцию: Наложить резолюцию на письмо/,
+      }),
     ).toHaveAttribute("href", "/eds/inbox/%D0%92%D0%A5-104%2F26?panel=open&tab=resolution");
     expect(
-      within(page).getByRole("link", { name: "Открыть: Согласовать СЗ-2026/031" }),
+      within(page).getByRole("link", { name: "Согласовать: Согласовать СЗ-2026/031" }),
     ).toHaveAttribute("href", "/eds/approvals/%D0%A1%D0%97-2026%2F031?panel=open&tab=agree");
   });
 
@@ -533,15 +548,15 @@ describe("Dashboard · Моя очередь", () => {
     const page = await main();
 
     const first = await within(page).findByRole("link", {
-      name: "Открыть: Наложить резолюцию на письмо ВХ-104/26",
+      name: "Наложить резолюцию: Наложить резолюцию на письмо ВХ-104/26",
     });
     const second = within(page).getByRole("link", {
-      name: "Открыть: Наложить резолюцию на письмо ВХ-105/26",
+      name: "Наложить резолюцию: Наложить резолюцию на письмо ВХ-105/26",
     });
     expect(first).toHaveClass("ant-btn-primary");
     expect(second).toHaveClass("ant-btn-primary");
     expect(
-      within(page).getByRole("link", { name: "Открыть: Одобрить КП-2026/118 (черновик)" }),
+      within(page).getByRole("link", { name: "Одобрить: Одобрить КП-2026/118 (черновик)" }),
     ).not.toHaveClass("ant-btn-primary");
   });
 

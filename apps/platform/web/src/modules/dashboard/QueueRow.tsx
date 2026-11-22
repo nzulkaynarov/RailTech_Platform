@@ -10,7 +10,7 @@ import { LinkButton } from "../../shared/ui/LinkButton";
 import { StatusTag } from "../../shared/ui/StatusTag";
 import { objectLink } from "../objectLinks";
 import { dueBadge, isUrgent } from "./queue";
-import { acquaintLetterId, quickActionOf } from "./queueModel";
+import { actionKeyOf, acquaintLetterId, quickActionOf } from "./queueModel";
 
 /** Строки очереди и меню после быстрого действия перечитываются; источник строки сам погасит её. */
 function useRefreshQueue(): () => void {
@@ -43,7 +43,11 @@ export function QueueRow({ item }: { item: QueueItem }) {
   const acknowledge = useAcknowledgeLetter();
   const take = useTakeCrmLead();
   const quick = quickActionOf(item);
-  const action = item.action_label ?? t("ui:open");
+  const actionKey = actionKeyOf(item);
+  // Подпись кнопки — из i18n по виду строки; глагол BFF — запасной вариант для вида без ключа
+  const action = actionKey
+    ? t(`modules:dashboard.queue.actions.${actionKey}`)
+    : (item.action_label ?? t("ui:open"));
   const badge = dueBadge(
     item,
     (key, options) => t(key, options),

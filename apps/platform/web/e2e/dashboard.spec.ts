@@ -71,11 +71,13 @@ test.describe("Задачи", () => {
     await expect(rows).toHaveCount(10);
     // D2-2: просроченный заказ партнёру (erp.stock: полный) — первым
     await expect(rows.nth(0)).toContainText("Просрочен заказ");
-    await expect(rows.nth(1)).toContainText("срок сегодня");
-    await expect(rows.nth(1)).toContainText("Наложить резолюцию на письмо ВХ-104/26");
-    // P8: требование ГНК, зарегистрированное делопроизводителем
-    await expect(rows.nth(2)).toContainText("Наложить резолюцию на письмо ВХ-108/26");
-    await expect(rows.nth(3)).toContainText("служебка");
+    // ВХ-104 — со сроком сегодня; у ВХ-108 срока нет: «сегодня» не выдумывается (ГЛ-1)
+    const dated = rows.filter({ hasText: "Наложить резолюцию на письмо ВХ-104/26" });
+    await expect(dated).toContainText("срок сегодня");
+    const undated = rows.filter({ hasText: "Наложить резолюцию на письмо ВХ-108/26" });
+    await expect(undated).toHaveCount(1);
+    await expect(undated).not.toContainText("срок сегодня");
+    await expect(rows.filter({ hasText: "служебка" })).toHaveCount(1);
     await expect(rows.filter({ hasText: "Одобрить КП-2026/115" })).toHaveCount(1);
     // СЦ-9: подпись договора и счёта на мне — строки «Подписать …»
     await expect(rows.filter({ hasText: /^.*Подписать (договор|счёт) / })).toHaveCount(2);

@@ -409,7 +409,7 @@ export function handOverQueueItems(
         kind: "triage_lead",
         title: `Разобрать лида ${item.lead}`,
         subtitle: [item.name, item.note.request].filter(Boolean).join(" · "),
-        due_label: "today",
+        due_label: "later",
         object,
       });
     }

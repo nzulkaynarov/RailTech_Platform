@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 
+import i18n from "../../shared/i18n";
 import type { Me, QueueItem } from "../../shared/api/generated/model";
 import { isUrgent, queueEmptyKind } from "./queue";
 import {
   acquaintLetterId,
+  actionKeyOf,
   ageOf,
   canRemind,
   chipsOf,
@@ -119,5 +121,43 @@ describe("«Что ждёт вас»: группы, чипы, быстрые д�
     expect(canRemind({ remindable: true, remind_available_at: "2027-01-15T07:00:00Z" }, now)).toBe(
       true,
     );
+  });
+});
+
+describe("actionKeyOf: подпись кнопки строки — из i18n по виду, не из русского глагола BFF", () => {
+  it("виза отличается от подписи категорией, ответ по поручению — глаголом", () => {
+    expect(
+      actionKeyOf({ kind: "sign_document", category: "sign", action_label: "Подписать" }),
+    ).toBe("sign_document");
+    expect(actionKeyOf({ kind: "sign_document", category: "approve", action_label: "x" })).toBe(
+      "visa",
+    );
+    expect(
+      actionKeyOf({
+        kind: "instruction",
+        category: "instruction",
+        action_label: "Подготовить ответ",
+      }),
+    ).toBe("instruction_reply");
+  });
+
+  it.each(["ru", "en", "uz"])("у каждого ключа есть текст на языке %s", async (lang) => {
+    await i18n.changeLanguage(lang);
+    const keys = [
+      "sign_document",
+      "visa",
+      "acquaint",
+      "take_lead",
+      "instruction_reply",
+      "ship_project",
+    ];
+    for (const key of keys) {
+      expect(i18n.exists(`modules:dashboard.queue.actions.${key}`)).toBe(true);
+    }
+    const t = i18n.getFixedT(lang);
+    expect(t("modules:dashboard.queue.actions.sign_document")).toBe(
+      { ru: "Подписать", en: "Sign", uz: "Imzolaş" }[lang],
+    );
+    await i18n.changeLanguage("ru");
   });
 });

@@ -27,7 +27,7 @@ function ago(then: number, now: number): string {
 }
 
 function dueOf(dueDate: string | null, now: number): Pick<QueueItem, "due_label" | "due_at"> {
-  if (!dueDate) return { due_label: "today" };
+  if (!dueDate) return { due_label: "later" };
   const end = Date.parse(`${dueDate}T23:59:59+05:00`);
   const days = companyDay(end) - companyDay(now);
   const label = end < now ? "overdue" : days <= 0 ? "today" : days === 1 ? "tomorrow" : "later";
