@@ -60,11 +60,11 @@ test.describe("Стабильная оболочка", () => {
       await expect(panel).toHaveClass(/pf-panel-docked/);
       const docked = await mainWidth(page);
       expect(docked).toBeGreaterThanOrEqual(736);
-      // реквизиты не сжимаются до букв: сетка карточки считается от её ширины — либо одна колонка, либо основной ≥ 540 px
-      const columns = await page.evaluate<string>(
-        `getComputedStyle(document.querySelector(".pf-letters-grid")).gridTemplateColumns`,
+      // содержание карточки (суть, вложения, форма решения) не сжимается до букв: колонка ≥ 540 px
+      const content = await page.evaluate<number>(
+        `document.querySelector(".pf-letters").getBoundingClientRect().width`,
       );
-      expect(Number.parseFloat(columns.split(" ")[0] ?? "0")).toBeGreaterThanOrEqual(540);
+      expect(content).toBeGreaterThanOrEqual(540);
       await settledScreenshot(page, "letter-docked");
       await expectNoViolations(page, "карточка, окно рядом");
     });

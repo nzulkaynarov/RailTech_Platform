@@ -14,6 +14,8 @@ import { chooseOption, fillDate } from "./support/fields";
 // «Утвердить»; отдельно «Вернуть менеджеру» и «Отклонить»; ошибка резолюции со словами и сохранённым текстом; роли только для
 // чтения не видят кнопок решения; axe (WCAG 2.1 AA); на 390 px «Резолюция» — лист на весь экран с кнопками внизу (@mobile).
 const PANEL = "#pf-context-panel";
+// ЕД-7: форма резолюции на карточке — блок в центре; в списке по-прежнему вкладка окна
+const CENTER = ".pf-dec-center";
 const SUBMIT = "Утвердить резолюцию";
 
 async function expectNoViolations(page: Page, context: string): Promise<void> {
@@ -81,7 +83,7 @@ test.describe("Входящие письма: директор", () => {
     await expect(page.getByRole("link", { name: "Скачать файл запрос-на-кп.pdf" })).toBeVisible();
     await expect(page.getByRole("link", { name: "ЗВ-2026-104" })).toBeVisible();
 
-    const form = panel.getByRole("form", { name: "Резолюция директора" });
+    const form = page.locator(CENTER).getByRole("form", { name: "Резолюция директора" });
     await expect(form.getByRole("checkbox", { name: /Бухгалтер/ })).not.toBeChecked();
     await expect(form.getByRole("button", { name: "Вернуть менеджеру" })).toBeDisabled();
     await expect(form.getByText(/Кнопки неактивны, пока нет комментария/)).toBeVisible();
@@ -113,7 +115,7 @@ test.describe("Входящие письма: директор", () => {
     await expect(page.getByText("Резолюция наложена: задание ушло исполнителям")).toBeVisible();
     await expect(page.getByRole("heading", { name: "Решение директора" })).toBeVisible();
     await expect(page.getByText("15 %")).toBeVisible();
-    await expect(panel.getByRole("heading", { name: "Решение по письму принято" })).toBeVisible();
+    await expect(form).toHaveCount(0);
     await expect(steps.locator('[aria-current="step"]')).toContainText("Расчёт");
     await settledScreenshot(page, "resolved");
 
@@ -127,7 +129,7 @@ test.describe("Входящие письма: директор", () => {
   test("ошибка резолюции словами; введённое в форме не теряется", async ({ page }) => {
     await loginAndWait(page, "director@demo.example");
     await spaGoto(page, "/eds/inbox/%D0%92%D0%A5-105%2F26");
-    const form = page.locator(PANEL).getByRole("form", { name: "Резолюция директора" });
+    const form = page.locator(CENTER).getByRole("form", { name: "Резолюция директора" });
 
     await form.getByLabel("Текст резолюции").fill("Расчёт нужен срочно.");
     await chooseOption(
@@ -154,7 +156,7 @@ test.describe("Входящие письма: директор", () => {
   }) => {
     await loginAndWait(page, "director@demo.example");
     await spaGoto(page, "/eds/inbox/%D0%92%D0%A5-106%2F26");
-    const form = page.locator(PANEL).getByRole("form", { name: "Резолюция директора" });
+    const form = page.locator(CENTER).getByRole("form", { name: "Резолюция директора" });
     const back = form.getByRole("button", { name: "Вернуть менеджеру" });
 
     await expect(back).toBeDisabled();
@@ -170,7 +172,7 @@ test.describe("Входящие письма: директор", () => {
   test("«Отклонить»: причина обязательна, на шкале — «Отказ»", async ({ page }) => {
     await loginAndWait(page, "director@demo.example");
     await spaGoto(page, "/eds/inbox/%D0%92%D0%A5-105%2F26");
-    const form = page.locator(PANEL).getByRole("form", { name: "Резолюция директора" });
+    const form = page.locator(CENTER).getByRole("form", { name: "Резолюция директора" });
     const reject = form.getByRole("button", { name: "Отклонить" });
 
     await expect(reject).toBeDisabled();
@@ -223,9 +225,8 @@ test.describe("Входящие письма: роли только для чт�
 
       await expect(page.getByRole("heading", { level: 1, name: "Письмо ВХ-104/26" })).toBeVisible();
       await expect(page.getByText(/^Только просмотр/).first()).toBeVisible();
-      const panel = page.locator(PANEL);
       await expect(
-        panel.getByRole("heading", { name: "Письмо ждёт резолюции директора" }),
+        page.locator(CENTER).getByRole("heading", { name: "Письмо ждёт резолюции директора" }),
       ).toBeVisible();
       await expect(page.getByRole("button", { name: SUBMIT })).toHaveCount(0);
       await expect(page.getByRole("button", { name: "Отклонить" })).toHaveCount(0);
@@ -296,7 +297,7 @@ test.describe("Входящие письма на телефоне @mobile", () 
     await expect(page.getByRole("dialog", { name: /^Резолюция/ })).toHaveCount(0);
   });
 
-  test("@mobile карточка письма: «Наложить резолюцию» открывает лист; ошибка со словами", async ({
+  test("@mobile карточка письма: форма резолюции — в самой карточке, окно открывать не нужно; ошибка со словами", async ({
     page,
   }) => {
     await page.setViewportSize({ width: 390, height: 844 });
@@ -306,8 +307,9 @@ test.describe("Входящие письма на телефоне @mobile", () 
     await settledScreenshot(page, "mobile-card");
     await expectNoViolations(page, "телефон: карточка");
 
-    await page.getByRole("button", { name: "Наложить резолюцию" }).click();
-    const sheet = page.getByRole("dialog", { name: /^Резолюция/ });
+    const sheet = page.locator(CENTER).getByRole("form", { name: "Резолюция директора" });
+    await sheet.scrollIntoViewIfNeeded();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
     await sheet.getByLabel("Текст резолюции").fill("Нужен расчёт.");
     await chooseOption(
       sheet.getByLabel("Сотрудник: Снабженец"),

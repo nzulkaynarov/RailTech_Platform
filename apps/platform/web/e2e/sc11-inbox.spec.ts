@@ -113,8 +113,9 @@ test.describe("СЦ-11 · Входящее: регистрация и ответ
     test.setTimeout(120_000);
     for (const width of WIDTHS) {
       await signInAt(page, "director@demo.example", width);
-      await spaGoto(page, `/eds/inbox/${encodeURIComponent("ВХ-108/26")}`);
-      await expect(page.getByText("Связи", { exact: true })).toBeVisible();
+      await spaGoto(page, `/eds/inbox/${encodeURIComponent("ВХ-108/26")}?panel=open&tab=facts`);
+      // ЕД-7: связи — строки «Сведений» бокового окна
+      await expect(page.locator("dt", { hasText: /^Зарегистрировано$/ })).toBeVisible();
       await expect(page.getByText("Клиент не определён")).toHaveCount(0);
       await expect(page.locator("dt", { hasText: /^Заявка$/ })).toHaveCount(0);
       await shot(page, "letter-card-no-deal");

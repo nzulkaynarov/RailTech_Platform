@@ -18,43 +18,53 @@ import { ProofsBlock } from "./ProofsBlock";
 import { useStateLabels } from "./labels";
 import { invoicePath, isOpen, moneyProps } from "./model";
 
-/** Реквизиты счёта для панели и страницы: клиент, проект, суммы, остаток, срок (просрочка — словом, не только цветом). */
-export function InvoiceBrief({ card, link = false }: { card: PaymentCard; link?: boolean }) {
+/** Сведения о счёте без номера и статуса (они в шапке): клиент, проект, оплачено, остаток, даты; `amount` — для списка. */
+export function InvoiceFacts({ card, amount = false }: { card: PaymentCard; amount?: boolean }) {
   const { t } = useTranslation("payments");
   const { date } = useFormat();
+  return (
+    <DefinitionList
+      items={[
+        { label: t("brief.client"), value: card.client_name },
+        { label: t("brief.project"), value: card.project_number },
+        ...(amount
+          ? [{ label: t("brief.amount"), value: <MoneyText {...moneyProps(card.amount)} /> }]
+          : []),
+        { label: t("brief.paid"), value: <MoneyText {...moneyProps(card.paid)} /> },
+        {
+          label: t("brief.balance"),
+          value: <MoneyText strong {...moneyProps(card.balance)} />,
+        },
+        { label: t("brief.issued"), value: card.issued_at ? date(card.issued_at) : null },
+        {
+          label: t("brief.due"),
+          value: card.due_date ? (
+            <>
+              {date(card.due_date)}
+              {card.days_overdue ? (
+                <span className="pf-pay-overdue">
+                  {" · "}
+                  {t("list.overdueDays", { count: card.days_overdue })}
+                </span>
+              ) : null}
+            </>
+          ) : null,
+        },
+      ]}
+    />
+  );
+}
+
+/** Счёт в боковом окне списка: номер, статус и сведения; на карточке счёта сведения — во вкладке «Сведения». */
+export function InvoiceBrief({ card, link = false }: { card: PaymentCard; link?: boolean }) {
+  const { t } = useTranslation("payments");
   return (
     <section className="pf-dec-brief" aria-label={card.number}>
       <div className="pf-dec-brief-head">
         <h3 className="pf-fp-title">{card.number}</h3>
         <InvoiceStatus status={card.status} />
       </div>
-      <DefinitionList
-        items={[
-          { label: t("brief.client"), value: card.client_name },
-          { label: t("brief.project"), value: card.project_number },
-          { label: t("brief.amount"), value: <MoneyText {...moneyProps(card.amount)} /> },
-          { label: t("brief.paid"), value: <MoneyText {...moneyProps(card.paid)} /> },
-          {
-            label: t("brief.balance"),
-            value: <MoneyText strong {...moneyProps(card.balance)} />,
-          },
-          { label: t("brief.issued"), value: card.issued_at ? date(card.issued_at) : null },
-          {
-            label: t("brief.due"),
-            value: card.due_date ? (
-              <>
-                {date(card.due_date)}
-                {card.days_overdue ? (
-                  <span className="pf-pay-overdue">
-                    {" · "}
-                    {t("list.overdueDays", { count: card.days_overdue })}
-                  </span>
-                ) : null}
-              </>
-            ) : null,
-          },
-        ]}
-      />
+      <InvoiceFacts card={card} amount />
       {link ? (
         <Link className="pf-focusable pf-dec-open" to={invoicePath(card.id)}>
           {t("panel.open")}
@@ -82,6 +92,9 @@ function Body({
   if (card.status === "draft" && mayAct) {
     // Черновик к выставлению (B-D24-4): выставляет держатель раздела «Счета и оплаты», право решает ERP
     action = <IssueForm card={card} variant={variant} {...(onDone ? { onDone } : {})} />;
+  } else if (!isOpen(card.status) && !brief) {
+    // На карточке закрытый счёт говорит о себе статусом в шапке (ЕД-7)
+    action = null;
   } else if (!isOpen(card.status)) {
     const closed =
       card.status === "paid" ? "paid" : card.status === "draft" ? "draft" : "cancelled";
@@ -113,7 +126,8 @@ function Body({
     <div className="pf-dec-panel pf-dec-page">
       {brief ? <InvoiceBrief card={card} link /> : null}
       {action}
-      <ProofsBlock card={card} />
+      {/* На карточке счёта платёжки — блок в центре (один список); окно списка своего центра не имеет */}
+      {brief ? <ProofsBlock card={card} /> : null}
     </div>
   );
 }

@@ -173,6 +173,7 @@
       "invalid": "TTni endi yuborib bo'lmaydi — karta yangilandi."
     },
     "superseded": "Bu {{version}}-versiya, uni {{next}}-versiya almashtirdi. Qaror «Tasdiqlash uchun TT» ro‘yxatidagi amaldagi versiya bo‘yicha qabul qilinadi; bu — tarix.",
+    "supersededOpen": "{{next}}-versiyani ochish",
     "clientDecision": {
       "title": "Mijoz qarori",
       "state": {
