@@ -538,7 +538,12 @@
         "telegram": "Telegram for notifications",
         "status": "Status",
         "erpPending": "ERP access is still being granted.",
-        "erpError": "ERP access could not be granted: {{error}}",
+        "erpReason": {
+          "not_connected": "ERP access not granted: ERP cannot be reached with the saved connection. An administrator checks the address and token in Connections; granting will retry on its own.",
+          "unavailable": "ERP access not granted: ERP did not respond. Granting will retry on its own.",
+          "queue": "ERP access not granted: the granting task was not queued. Press Retry.",
+          "rejected": "ERP access not granted: ERP did not accept the account. Check the employee's email and roles, then press Retry."
+        },
         "erpNotGranted": "ERP access is not granted.",
         "erpRetry": "Retry",
         "disabledNote": "The employee is disabled and cannot sign in. Roles and position are kept."

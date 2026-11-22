@@ -370,6 +370,7 @@
       "savedNote": "Qoralama saqlandi, kiritilganlar yo‘qolmadi. Tuzatib, qayta yuboring.",
       "reasons": {
         "FORBIDDEN": "bu amal rolingizga berilmagan",
+        "FORBIDDEN_SECTION": "«{{section}}» bölimiga kiriş yöq",
         "eds_not_granted": "hujjatlar xizmatida huquqingiz yo‘q",
         "not_author": "hujjatni faqat muallifi tahrirlay oladi",
         "NOT_FOUND": "hujjat topilmadi",

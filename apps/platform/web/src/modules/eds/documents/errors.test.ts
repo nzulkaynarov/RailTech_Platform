@@ -27,6 +27,17 @@ describe("ошибки документов", () => {
     expect(serverFields(error(500, "X"))).toEqual([]);
   });
 
+  it("СЦ-7: отказ 403 с правом называет раздел словами, а не «не положено вашей роли» и не кодом права", () => {
+    const text = reasonText(t, error(403, "FORBIDDEN", { permission: "letters.register" }));
+    expect(text).toBe("нет доступа к разделу «Документы · Входящие · регистрация»");
+    expect(text).not.toContain("letters.register");
+    // без права или с неизвестным — общая фраза, без кода
+    expect(reasonText(t, error(403, "FORBIDDEN"))).toBe("действие не положено вашей роли");
+    expect(reasonText(t, error(403, "FORBIDDEN", { permission: "x.y" }))).toBe(
+      "действие не положено вашей роли",
+    );
+  });
+
   it("отказ подписи: настоящая причина EDS, а не «не положено вашей роли»", () => {
     for (const reason of [
       "no_authority",
