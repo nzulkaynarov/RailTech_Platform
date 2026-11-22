@@ -86,10 +86,23 @@ def blank_to_none(value):
 # ── Запросы клиента ───────────────────────────────────────────────────────────────────────────────
 
 
+def _project_done(deal) -> bool:
+    """Единое «проект выполнен» (`crm.services.projects.project_is_done`); импорт внутри — модуль портала грузится раньше."""
+    from crm.services.projects import project_is_done
+
+    return project_is_done(deal)
+
+
 def request_status(deal) -> str:
-    """Статус запроса по стадии сделки и её КП (`RequestStatus`). Работает на prefetch `quotes__status`."""
+    """Статус запроса по стадии сделки, её КП и документам (`RequestStatus`).
+
+    Работает на prefetch `quotes__status`, `invoices__status`, `acts__status`. Подписанный договор (`CLOSED_WON`) — это
+    проект в работе (`in_progress`); `closed` он становится только когда проект выполнен (`project_is_done`).
+    """
     code = deal.stage.code if deal.stage else DealStageCode.DRAFT
-    if code in (DealStageCode.CLOSED_WON, DealStageCode.CLOSED_LOST):
+    if code == DealStageCode.CLOSED_WON:
+        return "closed" if _project_done(deal) else "in_progress"
+    if code == DealStageCode.CLOSED_LOST:
         return "closed"
     quotes = list(deal.quotes.all())
     if code in (DealStageCode.QUOTE_SENT, DealStageCode.CONTRACT_SIGNED):
@@ -105,7 +118,7 @@ def request_outcome(deal) -> Optional[str]:
     """Исход закрытого запроса (`won` / `cancelled` / `None`, B-CABFIX-2)."""
     code = deal.stage.code if deal.stage else DealStageCode.DRAFT
     if code == DealStageCode.CLOSED_WON:
-        return "won"
+        return "won" if _project_done(deal) else None
     if code == DealStageCode.CLOSED_LOST:
         return "cancelled"
     return None

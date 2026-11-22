@@ -6,8 +6,11 @@
 документам ведут свои сервисы (`contract_flow`, `act_flow`, `billing`); здесь — чтение и перечень доступных действий,
 которые считает СЕРВЕР по статусу и правам зрителя (страница не угадывает).
 
-«Выполнено» (`project_is_done`): акт подписан (скан), все не отменённые и не черновые счета оплачены, счёт есть. В отличие от
-`deal_execution_is_complete` (старый флаг сделки) приёмка поставки клиентом не требуется: в процессе v3 её заменяет акт.
+«Выполнено» (`project_is_done`) — ЕДИНСТВЕННОЕ определение для ERP, склада, CRM, Платформы и Кабинета (решение владельца
+2026-11-22): каждый живой акт принят клиентом в Кабинете или подписан сканом, все не отменённые и не черновые счета оплачены,
+счёт есть. Приёмка строк поставки клиентом условием не является. Читают его: `deal_execution_is_complete` (флаг сделки),
+стадия `won` контракта, `deal_closed_for_stock`, исход и статус запроса в портале; событие `deal.won` уходит в момент, когда
+проект стал выполненным (`log_project_done_once`), а не при подписании договора.
 """
 
 import datetime
@@ -107,7 +110,11 @@ def act_word(act) -> str:
 
 
 def project_is_done(deal) -> bool:
-    """Акт подписан и все счета оплачены (SPEC-v3 §2.3 шаг 7); без акта или без счёта проект не выполнен."""
+    """Единое «проект выполнен»: акт принят клиентом в Кабинете или подписан сканом и все счета оплачены (SPEC-v3 §2.3 шаг 7).
+
+    Без акта или без счёта проект не выполнен; аннулированные и черновые документы не в счёт. Работает на prefetch
+    `acts__status` и `invoices__status`.
+    """
     invoices = _billable_invoices(deal)
     if not invoices or any(i.status_code != InvoiceStatusCode.PAID for i in invoices):
         return False
@@ -122,24 +129,56 @@ PROJECT_DONE = "project.done"
 def log_project_done_once(deal, actor=None) -> bool:
     """Проект стал «Выполнено» (акт подписан и счета оплачены): ровно одна запись `project.done` в журнале сделки.
 
-    Зовётся из каждого места, где последним может оказаться недостающее условие: скан подписанного акта
-    (`act_flow.attach_act_scan`), приёмка акта заказчиком в портале (`billing.sign_act`) и оплата счёта
-    (`billing.record_payment`) — порядок «акт, потом оплата» и «оплата, потом акт» даёт один результат. Строка сделки
+    Зовётся из каждого места, где проект может стать выполненным: скан подписанного акта
+    (`act_flow.attach_act_scan`), приёмка акта заказчиком в портале (`billing.sign_act`), оплата счёта
+    (`billing.record_payment`), отмена неоплаченного счёта и аннулирование открытого акта (остальное уже закрыто), переход
+    сделки в `CLOSED_WON` (проект выполнен раньше договора) — порядок «акт, потом оплата» и «оплата, потом акт» даёт один результат. Строка сделки
     берётся под `select_for_update`: две транзакции, каждая из которых записала своё условие, проверяют итог по очереди,
     и вторая видит запись первой; повтор не пишет второй раз. `True` — запись создана сейчас.
     """
     locked = Deal.objects.select_for_update(of=("self",)).get(pk=deal.pk)
     if not project_is_done(locked):
         return False
-    if ActivityLog.objects.filter(deal=locked, event_code=PROJECT_DONE).exists():
+    created = False
+    if not ActivityLog.objects.filter(deal=locked, event_code=PROJECT_DONE).exists():
+        ActivityLog.objects.create(
+            action="Проект выполнен",
+            detail=f"Сделка #{locked.id}: акт подписан, счета оплачены",
+            event_code=PROJECT_DONE,
+            event_params={"deal_id": locked.id},
+            user=actor,
+            level="SUCCESS",
+            entity_type="deal",
+            entity_id=locked.id,
+            deal=locked,
+            company_id=locked.company_id,
+        )
+        created = True
+    _publish_deal_won_once(locked)
+    return created
+
+
+#: Маркер журнала «`deal.won` уже опубликовано»: отдельный от `project.done`, потому что проект может стать выполненным
+#: раньше, чем договор перейдёт в `CLOSED_WON` (событие тогда уходит при переходе), и наоборот.
+DEAL_WON_PUBLISHED = "deal.won_published"
+
+
+@transaction.atomic
+def _publish_deal_won_once(locked) -> bool:
+    """`deal.won` — один раз, когда выполнены оба условия: проект выполнен И стадия `CLOSED_WON` (под блокировкой строки)."""
+    if not (locked.stage_id and locked.stage.code == DealStageCode.CLOSED_WON) or not project_is_done(locked):
         return False
+    if ActivityLog.objects.filter(deal=locked, event_code=DEAL_WON_PUBLISHED).exists():
+        return False
+    from integration.services import events
+
+    events.publish_deal_outcome(locked, won=True)
     ActivityLog.objects.create(
-        action="Проект выполнен",
-        detail=f"Сделка #{locked.id}: акт подписан, счета оплачены",
-        event_code="project.done",
+        action="Итог сделки передан в CRM",
+        detail=f"Сделка #{locked.id}: событие deal.won опубликовано",
+        event_code=DEAL_WON_PUBLISHED,
         event_params={"deal_id": locked.id},
-        user=actor,
-        level="SUCCESS",
+        level="INFO",
         entity_type="deal",
         entity_id=locked.id,
         deal=locked,

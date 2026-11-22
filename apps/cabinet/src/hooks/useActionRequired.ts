@@ -8,9 +8,11 @@ import {
   usePartnerPriceRequests,
   usePartnerProducts,
   useQuotes,
+  useRequests,
 } from '@/api/queries';
 import { useNow } from '@/hooks/useNow';
 import { useUnread } from '@/hooks/useUnread';
+import { doneDealIdsOf } from '@/lib/deliveries';
 import { invoiceViews } from '@/lib/invoice';
 import { quoteAwaitsDecision } from '@/lib/quotes';
 import { contractAwaitsClient } from '@/lib/status';
@@ -22,7 +24,7 @@ import { useHasModule } from '@/session/useMe';
  * - Договоры на согласовании клиента;
  * - Просроченные счета к оплате;
  * - Выпущенные акты к приёмке;
- * - Поставки `delivered`, ожидающие приёмки;
+ * - Поставки `delivered`, ожидающие приёмки (кроме выполненных проектов);
  * - Проект партнёрского договора к согласованию (`contract_sent`);
  * - Карточки товаров партнёра с замечаниями снабжения (`rejected`);
  * - Непрочитанные ответы менеджера в чате.
@@ -46,6 +48,7 @@ export function useActionRequired() {
     useDeliveries({ enabled: modules.deliveries }),
   ] as const;
   const [quotes, contracts, invoices, acts, deliveries] = queries;
+  const requests = useRequests({ enabled: modules.deliveries });
   const partnerProductsQuery = usePartnerProducts(
     { status: 'returned', page_size: 20 },
     { enabled: modules.myProducts },
@@ -82,7 +85,10 @@ export function useActionRequired() {
   );
   const overdueInvoices = (invoices.data ?? []).filter((invoice) => Boolean(views.get(invoice.id)?.overdueDays));
   const awaitingActs = (acts.data ?? []).filter((act) => act.status === 'issued');
-  const awaitingDeliveries = (deliveries.data ?? []).filter((delivery) => delivery.status === 'delivered');
+  const doneDealIds = doneDealIdsOf(requests.data);
+  const awaitingDeliveries = (deliveries.data ?? []).filter(
+    (delivery) => delivery.status === 'delivered' && !doneDealIds.has(delivery.deal.id),
+  );
   const partnerApplicationAwaiting = Boolean(
     partnerAppQuery.data?.has_application && partnerAppQuery.data.application?.status === 'contract_sent',
   );

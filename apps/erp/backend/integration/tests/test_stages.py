@@ -189,14 +189,23 @@ def test_returned_act_is_still_closing():
     assert stage_of(deal) == "closing"
 
 
-def test_closed_won_is_not_won_until_execution_is_complete():
-    """FSM `CLOSED_WON` наступает при подписании договора; для CRM сделка закрыта, когда оплата, акт и приёмка готовы."""
+def test_closed_won_is_not_won_until_the_project_is_done():
+    """FSM `CLOSED_WON` наступает при подписании договора; для CRM сделка закрыта, когда акт принят/скан и счета оплачены."""
+    deal, contract = build_signed_contract_deal(make_company())
+    invoice = add_invoice(deal, InvoiceStatusCode.PAID, total="5000000", paid="5000000", contract=contract)
+    add_act(deal, ActStatusCode.ISSUED, contract=contract, invoice=invoice)  # акт не принят
+    add_fulfillment(deal, FulfillmentStatusCode.DELIVERED)
+    assert stage_of(deal) == "closing"
+    assert stages.is_open_stage(stage_of(deal))
+
+
+def test_won_does_not_need_the_delivery_to_be_accepted():
+    """Приёмка строк поставки клиентом условием не является (решение владельца 2026-11-22)."""
     deal, contract = build_signed_contract_deal(make_company())
     invoice = add_invoice(deal, InvoiceStatusCode.PAID, total="5000000", paid="5000000", contract=contract)
     add_act(deal, ActStatusCode.SIGNED, contract=contract, invoice=invoice)
-    add_fulfillment(deal, FulfillmentStatusCode.DELIVERED)  # не принята клиентом
-    assert stage_of(deal) == "closing"
-    assert stages.is_open_stage(stage_of(deal))
+    add_fulfillment(deal, FulfillmentStatusCode.DELIVERED)
+    assert stage_of(deal) == "won"
 
 
 def test_closed_lost_wins_over_documents():

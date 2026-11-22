@@ -373,38 +373,15 @@ def _next_step(*, contract_data, invoices, acts, fulfillment_data, sides) -> Opt
 
 
 def deal_execution_is_complete(deal) -> bool:
-    """Исполнение сделки закрыто целиком: акт подписан, счёт оплачен, поставка принята.
+    """Исполнение сделки закрыто целиком — ровно «проект выполнен» (`crm.services.projects.project_is_done`).
 
-    O4 (18-08): «выиграна» и «исполнена» — РАЗНЫЕ шкалы. У Odoo продажная шкала кончается
-    нейтральным «Sales Order», а рядом живут `invoice_status` и `delivery_status`; Salesforce
-    и HubSpot добиваются того же переносом исполнения на другой объект. У нас `CLOSED_WON`
-    ставится при подписании договора — до оплаты и поставки, поэтому слово «Завершено»
-    отдаётся ТОЛЬКО этому предикату (аналог ручного Lock у Odoo — терминальное состояние).
-
-    Считается по фактам, без нового поля: одна функция для списка сделок и для витрин.
+    O4 (18-08): «выиграна» и «исполнена» — РАЗНЫЕ шкалы: `CLOSED_WON` ставится при подписании договора, до оплаты и
+    поставки, поэтому слово «Завершено» отдаётся ТОЛЬКО этому предикату. Решение владельца 2026-11-22: одно определение
+    для всех читателей — акт принят в Кабинете или скан, счета оплачены; приёмка строк поставки не требуется.
     """
-    from crm.constants import ActStatusCode, FulfillmentStatusCode, InvoiceStatusCode
+    from crm.services.projects import project_is_done
 
-    # Аннулированный и черновой счёт — не неоплаченный долг: как и аннулированный акт ниже, он не держит сделку «не завершённой»
-    # (то же правило у стадии `paid` в integration/services/stages.py). Но хотя бы один оплаченный счёт обязан быть.
-    invoices = [
-        inv
-        for inv in deal.invoices.all()
-        if inv.status_code not in (InvoiceStatusCode.CANCELLED, InvoiceStatusCode.DRAFT)
-    ]
-    if not invoices or any(inv.status_code != InvoiceStatusCode.PAID for inv in invoices):
-        return False
-    # Аннулированный акт — не незакрытый документ, а отменённый: он не должен вечно держать
-    # сделку в «не завершено». Считаем только живые, но хотя бы один подписанный обязан быть.
-    acts = [act for act in deal.acts.all() if act.status_code != ActStatusCode.CANCELLED]
-    if not acts or any(act.status_code != ActStatusCode.SIGNED for act in acts):
-        return False
-    fulfillment = getattr(deal, "fulfillment", None)
-    # У Fulfillment статус — FK-справочник без свойства `status_code` (в отличие от счёта и акта).
-    fulfillment_code = getattr(getattr(fulfillment, "status", None), "code", None)
-    if fulfillment_code != FulfillmentStatusCode.ACCEPTED:
-        return False
-    return True
+    return project_is_done(deal)
 
 
 def deal_document_hub(deal, user, request) -> dict:
