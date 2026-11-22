@@ -206,7 +206,8 @@ def create_organization(data: dict, *, actor) -> Company:
         entity="company",
         instance=company,
         event="created",
-        action="Организация заведена из письма" if role == "organization" else "Контрагент заведён из поля выбора",
+        # the source (letter, request form, brand) is not known here, so the entry names only the fact
+        action="Организация заведена" if role == "organization" else "Контрагент заведён",
         before=None,
         after={"name": name, "inn": inn, "registration_number": registration_number or None, "role": role},
         detail=name,

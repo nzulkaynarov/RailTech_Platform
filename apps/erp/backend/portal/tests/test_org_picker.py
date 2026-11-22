@@ -134,3 +134,17 @@ def test_supplier_role_needs_supply_permission(world):
     assert (denied.status_code, denied.json()["detail"]) == (403, "ROLE_PERMISSION_REQUIRED")
     assert not Company.objects.filter(inn="301000333").exists()
     assert manager.post(ORGS, {"name": "ООО Адресат", "tin": "301000444"}, format="json").status_code == 201
+
+
+def test_journal_entry_names_only_the_fact_not_an_unknown_source(world):
+    from crm.models import ActivityLog
+
+    supply = world["clients"]["supply"]
+    for tin, role in (("301000555", None), ("301000556", "supplier")):
+        body = {"name": f"ООО Журнал {tin}", "tin": tin, **({"role": role} if role else {})}
+        made = supply.post(ORGS, body, format="json")
+        assert made.status_code == 201, made.content
+        entry = ActivityLog.objects.filter(entity_type="company", entity_id=made.json()["id"]).get()
+        # the server cannot know the caller (letter, request form, brand): no source in the text
+        assert "из письма" not in entry.action and "из поля" not in entry.action
+        assert entry.action == ("Организация заведена" if role is None else "Контрагент заведён")
