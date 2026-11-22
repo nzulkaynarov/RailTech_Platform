@@ -1916,7 +1916,7 @@ export interface components {
     DictionaryList: {
       items: components["schemas"]["Dictionary"][];
     };
-    /** @description Значения полей `attrs` вида (`urgent`, `due_days` у видов документа); `null` — не задано */
+    /** @description Значения полей `attrs` вида (`urgent`, `due_days`, `due_required` у видов документа); `null` — не задано */
     DictionaryAttrValues: {
       [key: string]: boolean | number | null;
     };
@@ -2325,6 +2325,11 @@ export interface components {
       urgent: boolean;
       /** @description Срок исполнения по умолчанию, дней (EDS-REG); `null` — общее правило (срочно 3, обычный 10) */
       due_days?: number | null;
+      /**
+       * @description Письмо этого вида не регистрируется без срока по документу (`document_due`) — 422 `VALIDATION_FAILED`, `details.fields = [document_due]` (СЦ-11); флаг ведёт администратор в справочнике
+       * @default false
+       */
+      due_required: boolean;
     };
     LetterKindList: {
       items: components["schemas"]["LetterKindItem"][];

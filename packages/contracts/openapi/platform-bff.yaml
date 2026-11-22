@@ -23696,7 +23696,7 @@ components:
     DictionaryAttrValues:
       type: object
       description: >-
-        Значения полей `attrs` (`urgent`, `due_days` у видов документа; `default_action`, `color`, `icon` у типов писем —
+        Значения полей `attrs` (`urgent`, `due_days`, `due_required` у видов документа; `default_action`, `color`, `icon` у типов писем —
         строки из `options`); `null` — не задано
       additionalProperties:
         type: [boolean, integer, string, 'null']
@@ -23820,6 +23820,10 @@ components:
           minimum: 1
           maximum: 365
           description: Срок исполнения по умолчанию, дней (EDS-REG); `null` — общее правило (срочно 3, обычный 10)
+        due_required:
+          type: boolean
+          default: false
+          description: Письмо этого вида не регистрируется без срока по документу (СЦ-11); флаг ведёт администратор
 
     LetterKindList:
       type: object

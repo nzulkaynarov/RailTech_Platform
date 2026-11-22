@@ -3571,7 +3571,7 @@ components:
           items: { $ref: '#/components/schemas/Dictionary' }
     DictionaryAttrValues:
       type: object
-      description: Значения полей `attrs` вида (`urgent`, `due_days` у видов документа); `null` — не задано
+      description: Значения полей `attrs` вида (`urgent`, `due_days`, `due_required` у видов документа); `null` — не задано
       additionalProperties:
         type: [boolean, integer, 'null']
     DictionaryItem:
@@ -4319,6 +4319,12 @@ components:
           minimum: 1
           maximum: 365
           description: Срок исполнения по умолчанию, дней (EDS-REG); `null` — общее правило (срочно 3, обычный 10)
+        due_required:
+          type: boolean
+          default: false
+          description: >-
+            Письмо этого вида не регистрируется без срока по документу (`document_due`) — 422 `VALIDATION_FAILED`,
+            `details.fields = [document_due]` (СЦ-11); флаг ведёт администратор в справочнике
     LetterKindList:
       type: object
       additionalProperties: false

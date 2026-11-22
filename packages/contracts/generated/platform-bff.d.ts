@@ -13611,7 +13611,7 @@ export interface components {
       /** @description Домены, чьи справочники не ответили — список частичный (экран говорит об этом) */
       unavailable: ("eds" | "crm" | "erp")[];
     };
-    /** @description Значения полей `attrs` (`urgent`, `due_days` у видов документа; `default_action`, `color`, `icon` у типов писем — строки из `options`); `null` — не задано */
+    /** @description Значения полей `attrs` (`urgent`, `due_days`, `due_required` у видов документа; `default_action`, `color`, `icon` у типов писем — строки из `options`); `null` — не задано */
     DictionaryAttrValues: {
       [key: string]: boolean | number | string | null;
     };
@@ -13682,6 +13682,11 @@ export interface components {
       urgent: boolean;
       /** @description Срок исполнения по умолчанию, дней (EDS-REG); `null` — общее правило (срочно 3, обычный 10) */
       due_days?: number | null;
+      /**
+       * @description Письмо этого вида не регистрируется без срока по документу (СЦ-11); флаг ведёт администратор
+       * @default false
+       */
+      due_required: boolean;
     };
     LetterKindList: {
       items: components["schemas"]["LetterKind"][];
