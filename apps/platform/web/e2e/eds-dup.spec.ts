@@ -109,6 +109,8 @@ test.describe("EDS-DUP: одно письмо — один входящий но
       await expect(dialog).toHaveCount(0);
       const banner = page.getByRole("status").filter({ hasText: "Дубль письма" });
       await expect(banner.getByRole("link", { name: "ВХ-100/26" })).toBeVisible();
+      // запись об отметке — в «Истории» бокового окна (ЕД-7)
+      await spaGoto(page, `/eds/inbox/${encodeURIComponent("ВХ-108/26")}?panel=open&tab=history`);
       await expect(
         page.getByText("Дубль ВХ-100/26: Пришло дважды: почтой и курьером"),
       ).toBeVisible();

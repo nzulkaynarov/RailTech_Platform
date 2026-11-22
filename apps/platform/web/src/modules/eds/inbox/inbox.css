@@ -8,6 +8,9 @@
      колонка реквизитов уходит вниз, а не сжимается до букв. */
   container-type: inline-size;
 }
+.pf-letters > * {
+  min-width: 0;
+}
 .pf-letters-title {
   margin: 0;
   font-size: 14px;

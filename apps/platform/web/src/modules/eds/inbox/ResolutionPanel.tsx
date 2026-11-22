@@ -1,12 +1,9 @@
-import { Drawer } from "antd";
 import { type ReactNode, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { Link, useSearchParams } from "react-router";
+import { Link } from "react-router";
 
 import { canEdit } from "../../../app/access";
 import { useAuth } from "../../../app/auth/useAuth";
-import { PanelPortal } from "../../../app/shell/PanelSlot";
-import { useViewport } from "../../../app/shell/useViewport";
 import type { LetterCard } from "../../../shared/api/generated/model";
 import { useGetLetter } from "../../../shared/api/generated/platform-bff";
 import { useFormat } from "../../../shared/lib/useFormat";
@@ -14,6 +11,7 @@ import { DefinitionList } from "../../../shared/ui/DefinitionList";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { QueryState } from "../../../shared/ui/FormParts";
 import { StatusTag } from "../../../shared/ui/StatusTag";
+import { DecisionSlot } from "../decision/DecisionSlot";
 import { Attachments } from "./Parts";
 import { letterPath, letterRef, tasksPath } from "./api";
 import { clearDraft } from "./draft";
@@ -113,7 +111,7 @@ function PanelBody({
         }
       />
     );
-  } else {
+  } else if (brief) {
     body = (
       <EmptyState
         level={3}
@@ -122,6 +120,9 @@ function PanelBody({
         text={t("panel.decided.text")}
       />
     );
+  } else {
+    // На карточке итог резолюции — блок «Решение» и статус в шапке (ЕД-7)
+    body = null;
   }
   return (
     <div className="pf-res-panel pf-letters">
@@ -167,11 +168,7 @@ function SheetTitle({ letterRef: ref }: { letterRef: string }) {
   );
 }
 
-/**
- * Где живёт «Резолюция» письма. Широкий и средний экран — вкладка бокового окна каркаса. Телефон (< 768 px) — полноэкранный
- * лист с кнопками внизу (директор согласует с телефона, UX P0-4): открывается параметром `?sheet=resolution`; ссылки из
- * очереди и колокольчика с `panel=open` на телефоне переводятся в лист, чтобы рядом не открывалось окно каркаса.
- */
+/** Где живёт «Резолюция» в списке: вкладка окна, на телефоне — лист (общий `DecisionSlot`); на карточке — центр (ЕД-7). */
 export function ResolutionSlot({
   letterRef: ref,
   brief = false,
@@ -180,60 +177,22 @@ export function ResolutionSlot({
   brief?: boolean;
 }) {
   const { t } = useTranslation("letters");
-  const { mobile } = useViewport();
-  const [params, setParams] = useSearchParams();
-  const sheetOpen = params.get("sheet") === "resolution";
-  const wantsPanel = params.get("panel") === "open";
-
-  useEffect(() => {
-    if (!mobile || !wantsPanel) return;
-    setParams(
-      (prev) => {
-        const next = new URLSearchParams(prev);
-        next.delete("panel");
-        next.set("sheet", "resolution");
-        return next;
-      },
-      { replace: true },
-    );
-  }, [mobile, wantsPanel, setParams]);
-
-  if (!mobile) {
-    return (
-      <PanelPortal tab="resolution">
-        <ResolutionPanel letterRef={ref} brief={brief} />
-      </PanelPortal>
-    );
-  }
-  const close = () => {
-    setParams(
-      (prev) => {
-        const next = new URLSearchParams(prev);
-        next.delete("sheet");
-        return next;
-      },
-      { replace: true },
-    );
-  };
   return (
-    <Drawer
-      open={sheetOpen}
-      onClose={close}
-      placement="bottom"
-      height="100%"
-      destroyOnHidden
+    <DecisionSlot
+      tab="resolution"
+      sheet="resolution"
       title={<SheetTitle letterRef={ref} />}
-      closeIcon={null}
-      extra={
-        <button type="button" className="pf-res-close pf-focusable" onClick={close}>
-          {t("panel.sheetClose")}
-        </button>
-      }
-      styles={{ body: { padding: 16 }, header: { padding: "12px 16px" } }}
-      aria-label={t("panel.sheetLabel")}
-      className="pf-res-sheet"
+      label={t("panel.sheetLabel")}
+      closeLabel={t("panel.sheetClose")}
     >
-      <ResolutionPanel letterRef={ref} brief={brief} variant="sheet" onDone={close} />
-    </Drawer>
+      {(variant, onDone) => (
+        <ResolutionPanel
+          letterRef={ref}
+          brief={brief}
+          variant={variant}
+          {...(onDone ? { onDone } : {})}
+        />
+      )}
+    </DecisionSlot>
   );
 }

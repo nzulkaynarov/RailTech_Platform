@@ -17,6 +17,7 @@ import { BodyView } from "../../../shared/ui/BodyEditor/BodyView";
 import { DocNumber } from "../../../shared/ui/DocNumber";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { History, type HistoryItem } from "../../../shared/ui/History";
+import { routeStepState } from "../../../shared/ui/routeStepState";
 import { LinkButton } from "../../../shared/ui/LinkButton";
 import { MoneyText } from "../../../shared/ui/MoneyText";
 import { StatusTag } from "../../../shared/ui/StatusTag";
@@ -26,14 +27,6 @@ import { DocumentStatusTag } from "./status";
 import { UndeliveredBanner } from "./UndeliveredBanner";
 
 import "./documents.css";
-
-type Step = EdsDocument["route"][number];
-
-function stepState(status: Step["status"]): HistoryItem["state"] {
-  if (status === "current") return "waiting";
-  if (status === "pending") return "todo";
-  return "done";
-}
 
 function Files({ doc }: { doc: EdsDocument }) {
   const { t, i18n } = useTranslation("documents");
@@ -85,7 +78,7 @@ function Route({ doc }: { doc: EdsDocument }) {
       meta: t("panel.routeAuthorMeta", { date: date(doc.created_at, "datetime") }),
     },
     ...doc.route.map((step) => ({
-      state: stepState(step.status),
+      state: routeStepState(step.status),
       title: t(`panel.routeStep.${step.status}`, { label: step.label }),
       meta:
         step.decided_at && step.decided_by

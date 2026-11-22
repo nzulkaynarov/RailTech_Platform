@@ -14,6 +14,8 @@ import {
 // «Вернуть на доработку»; служебка → «Согласовать», «Отклонить» с комментарием; менеджер видит КП без маржи и без кнопок решения;
 // axe (WCAG 2.1 AA); на 390 px «Одобрение» и «Согласование» — лист на весь экран с кнопками внизу (@mobile).
 const PANEL = "#pf-context-panel";
+// ЕД-7: форма решения — блок в центре карточки
+const CENTER = ".pf-dec-center";
 const APPROVE = "Одобрить КП";
 
 async function expectNoViolations(page: Page, context: string): Promise<void> {
@@ -27,9 +29,9 @@ async function expectNoViolations(page: Page, context: string): Promise<void> {
   ).toEqual([]);
 }
 
-const quoteForm = (page: Page) => page.locator(PANEL).getByRole("form", { name: "Одобрение КП" });
+const quoteForm = (page: Page) => page.locator(CENTER).getByRole("form", { name: "Одобрение КП" });
 const memoForm = (page: Page) =>
-  page.locator(PANEL).getByRole("form", { name: "Согласование документа" });
+  page.locator(CENTER).getByRole("form", { name: "Согласование документа" });
 
 test.describe("КП на одобрение: директор", () => {
   test.skip(({ isMobile }) => isMobile, "сценарии на десктопе; телефон — блок @mobile");
@@ -72,7 +74,8 @@ test.describe("КП на одобрение: директор", () => {
     await confirmDialog(page);
 
     await expect(page.getByText(/КП КП-2026\/115 одобрено: OUT-/)).toBeVisible();
-    await expect(page.locator(PANEL).getByRole("heading", { name: "КП одобрено" })).toBeVisible();
+    // решённое КП говорит о себе статусом в шапке: формы в центре больше нет
+    await expect(quoteForm(page)).toHaveCount(0);
     await expect(page.getByText("OUT-042/26").first()).toBeVisible();
     // D17G-2: отчёт по каналам в карточке — Telegram и кабинет ушли, почту не выбирали (можно отправить)
     const report = page.getByRole("list", { name: "Каналы отправки" });
@@ -88,16 +91,18 @@ test.describe("КП на одобрение: директор", () => {
     await loginAndWait(page, "director@demo.example");
     await spaGoto(page, `/eds/drafts/${encodeURIComponent("КП-2026/113")}`);
     await expect(page.getByRole("heading", { level: 1, name: "КП-2026/113" })).toBeVisible();
+    // ЕД-7: комментарии клиента — вкладка «Обсуждение» бокового окна
+    await page.locator(PANEL).getByRole("tab", { name: "Обсуждение" }).click();
     const comments = page.getByRole("list", { name: "Комментарии клиента к КП" });
     await expect(comments).toContainText("Можно разбить поставку щебня на две партии по 1000 т?");
     await expect(comments).toContainText("Алия Демо");
-    // боковое окно «Одобрение» закрывает правую колонку карточки — скрываем его, чтобы блок был в кадре
-    await page.getByRole("button", { name: "Скрыть боковое окно" }).click();
     await comments.scrollIntoViewIfNeeded();
     await expect(comments).toBeInViewport();
     await settledScreenshot(page, "quote-client-comments");
     await expectNoViolations(page, "карточка КП с комментарием клиента");
     await page.setViewportSize({ width: 390, height: 844 });
+    // телефон: окно открывается кнопкой или ссылкой — «Обсуждение» в нём
+    await spaGoto(page, `/eds/drafts/${encodeURIComponent("КП-2026/113")}?panel=open&tab=chat`);
     await comments.scrollIntoViewIfNeeded();
     await expect(comments).toBeInViewport();
     await settledScreenshot(page, "quote-client-comments");
@@ -133,9 +138,11 @@ test.describe("КП на одобрение: директор", () => {
     await back.click();
 
     await expect(page.getByText("КП КП-2026/116 возвращено на доработку")).toBeVisible();
-    await expect(page.getByText("Нужна виза гл. инженера и пересчёт маржи.").first()).toBeVisible();
+    await expect(quoteForm(page)).toHaveCount(0);
+    // решение с комментарием — в ленте «Маршрут»
+    await page.locator(PANEL).getByRole("tab", { name: "Маршрут" }).click();
     await expect(
-      page.locator(PANEL).getByRole("heading", { name: "КП возвращено на доработку" }),
+      page.locator(PANEL).getByText("Нужна виза гл. инженера и пересчёт маржи."),
     ).toBeVisible();
   });
 
@@ -179,9 +186,7 @@ test.describe("КП на одобрение: директор", () => {
         .getByText(/Не сохранено: КП уже решено другим директором или заменено новой версией/)
         .first(),
     ).toBeVisible();
-    await expect(
-      page.locator(PANEL).getByRole("heading", { name: "КП возвращено на доработку" }),
-    ).toBeVisible();
+    await expect(quoteForm(page)).toHaveCount(0);
   });
 });
 
@@ -224,7 +229,7 @@ test.describe("КП на одобрение: менеджер", () => {
     await expect(page.getByRole("button", { name: "Вернуть на доработку" })).toHaveCount(0);
     await expect(page.getByRole("form", { name: "Одобрение КП" })).toHaveCount(0);
     await expect(
-      page.locator(PANEL).getByRole("heading", { name: "КП ждёт решения директора" }),
+      page.locator(CENTER).getByRole("heading", { name: "КП ждёт решения директора" }),
     ).toBeVisible();
     await settledScreenshot(page, "manager-card");
     await expectNoViolations(page, "менеджер: карточка КП");
@@ -250,6 +255,7 @@ test.describe("На согласовании: служебные записки"
     await expect(page.getByRole("heading", { level: 1, name: "СЗ-2026/014" })).toBeVisible();
     await expect(page.getByText("Прошу согласовать оплату аренды склада")).toBeVisible();
     await expect(page.getByRole("link", { name: "Скачать файл счёт-аренда.pdf" })).toBeVisible();
+    await page.locator(PANEL).getByRole("tab", { name: "Маршрут" }).click();
     const route = page.getByRole("list", { name: "Маршрут согласования" });
     await expect(route.getByRole("listitem")).toHaveCount(3);
     await expect(route).toContainText("Автор: Демо Менеджеров");
@@ -286,7 +292,8 @@ test.describe("На согласовании: служебные записки"
     await reject.click();
     await confirmDialog(page);
     await expect(page.getByText("Документ отклонён", { exact: true }).first()).toBeVisible();
-    await expect(page.getByText("Нужны данные по неликвиду.").first()).toBeVisible();
+    await page.locator(PANEL).getByRole("tab", { name: "Маршрут" }).click();
+    await expect(page.locator(PANEL).getByText("Нужны данные по неликвиду.")).toBeVisible();
 
     await spaGoto(page, `/eds/approvals/${encodeURIComponent("ЗЯ-2026/003")}`);
     const form2 = memoForm(page);
@@ -306,7 +313,7 @@ test.describe("На согласовании: служебные записки"
     await expect(page.getByRole("button", { name: "Согласовать" })).toHaveCount(0);
     await expect(page.getByRole("form", { name: "Согласование документа" })).toHaveCount(0);
     await expect(
-      page.locator(PANEL).getByRole("heading", { name: "Документ на согласовании" }),
+      page.locator(CENTER).getByRole("heading", { name: "Документ на согласовании" }),
     ).toBeVisible();
     await expectNoViolations(page, "автор: карточка документа");
   });
@@ -339,33 +346,31 @@ test.describe("На согласовании: бухгалтер", () => {
 });
 
 test.describe("Одобрение и согласование на телефоне @mobile", () => {
-  test("@mobile КП: «Одобрение» — лист на весь экран с кнопками внизу", async ({ page }) => {
+  test("@mobile КП: форма «Одобрение» — в центре карточки, окно открывать не нужно; старая ссылка ведёт к ней", async ({
+    page,
+  }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await loginAndWait(page, "director@demo.example");
     await spaGoto(page, `/eds/drafts/${encodeURIComponent("КП-2026/115")}?panel=open&tab=approve`);
-    const sheet = page.getByRole("dialog", { name: /^Одобрение/ });
-    await expect(sheet.getByRole("form", { name: "Одобрение КП" })).toBeVisible();
-
-    const viewport = page.viewportSize();
-    const box = await sheet.boundingBox();
-    expect(box?.width).toBeGreaterThanOrEqual((viewport?.width ?? 0) - 1);
-    expect(box?.height).toBeGreaterThanOrEqual((viewport?.height ?? 0) - 1);
+    const form = quoteForm(page);
+    await expect(form).toBeVisible();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await expect(page).not.toHaveURL(/panel=open|tab=approve/);
     for (const name of [APPROVE, "Вернуть на доработку"]) {
-      await expect(sheet.getByRole("button", { name })).toBeInViewport();
+      await form.getByRole("button", { name }).scrollIntoViewIfNeeded();
+      await expect(form.getByRole("button", { name })).toBeInViewport();
     }
-    const submit = await sheet.getByRole("button", { name: APPROVE }).boundingBox();
-    expect(submit?.y ?? 0).toBeGreaterThan((viewport?.height ?? 0) / 2);
     await settledScreenshot(page, "mobile-sheet");
-    await expectNoViolations(page, "телефон: лист «Одобрение»");
+    await expectNoViolations(page, "телефон: форма «Одобрение» в центре");
 
-    await sheet.getByRole("button", { name: APPROVE }).click();
+    await form.getByRole("button", { name: APPROVE }).click();
 
     await confirmDialog(page);
     await expect(page.getByText(/КП КП-2026\/115 одобрено/)).toBeVisible();
-    await expect(page.getByRole("dialog", { name: /^Одобрение/ })).toHaveCount(0);
+    await expect(quoteForm(page)).toHaveCount(0);
   });
 
-  test("@mobile КП: карточка, неактивная кнопка на листе с подписью", async ({ page }) => {
+  test("@mobile КП: карточка, неактивная кнопка в форме с подписью", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await loginAndWait(page, "director@demo.example");
     await spaGoto(page, `/eds/drafts/${encodeURIComponent("КП-2026/116")}`);
@@ -373,32 +378,32 @@ test.describe("Одобрение и согласование на телефо�
     await settledScreenshot(page, "mobile-card");
     await expectNoViolations(page, "телефон: карточка КП");
 
-    await page.getByRole("button", { name: "Одобрить КП", exact: true }).click();
-
-    const sheet = page.getByRole("dialog", { name: /^Одобрение/ });
-    await expect(sheet.getByRole("button", { name: APPROVE })).toBeDisabled();
-    await expect(sheet.getByText(/Одобрить нельзя: нет визы гл\. инженера/)).toBeVisible();
+    const form = quoteForm(page);
+    await form.scrollIntoViewIfNeeded();
+    await expect(form.getByRole("button", { name: APPROVE })).toBeDisabled();
+    await expect(form.getByText(/Одобрить нельзя: нет визы гл\. инженера/)).toBeVisible();
     await settledScreenshot(page, "mobile-blocked");
   });
 
-  test("@mobile служебка: «Согласование» — лист с кнопками внизу", async ({ page }) => {
+  test("@mobile служебка: форма «Согласование» — в центре карточки", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await loginAndWait(page, "director@demo.example");
     await spaGoto(page, `/eds/approvals/${encodeURIComponent("СЗ-2026/014")}?panel=open&tab=agree`);
-    const sheet = page.getByRole("dialog", { name: /^Согласование/ });
-    await expect(sheet.getByRole("form", { name: "Согласование документа" })).toBeVisible();
+    const form = memoForm(page);
+    await expect(form).toBeVisible();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
     for (const name of ["Согласовать", "Вернуть на доработку", "Отклонить"]) {
-      await expect(sheet.getByRole("button", { name })).toBeInViewport();
+      await form.getByRole("button", { name }).scrollIntoViewIfNeeded();
+      await expect(form.getByRole("button", { name })).toBeInViewport();
     }
     await settledScreenshot(page, "mobile-agree");
-    await expectNoViolations(page, "телефон: лист «Согласование»");
+    await expectNoViolations(page, "телефон: форма «Согласование» в центре");
 
-    await sheet.getByRole("button", { name: "Согласовать" }).click();
+    await form.getByRole("button", { name: "Согласовать" }).click();
 
     await confirmDialog(page);
     await expect(page.getByText("Документ согласован", { exact: true }).first()).toBeVisible();
-    await expect(page.getByRole("dialog", { name: /^Согласование/ })).toHaveCount(0);
-    await expect(page.getByText(/Вы согласовали .*Сейчас шаг: Бухгалтер\./).first()).toBeVisible();
+    await expect(memoForm(page)).toHaveCount(0);
     await settledScreenshot(page, "memo-agreed");
   });
 });

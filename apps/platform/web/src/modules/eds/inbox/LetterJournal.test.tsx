@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { readLetters, resetLetters, writeLetters } from "../../../mocks/fixtures/letters";
 import i18n from "../../../shared/i18n";
 import { renderAt, signIn } from "../../../test/lettersKit";
+import { openSideTab } from "../../../test/panel";
 import { setViewportWidth } from "../../../test/viewport";
 import { usePanelsStore } from "../../../app/shell/panelsStore";
 import { endSession } from "../../../mocks/mockSession";
@@ -45,8 +46,8 @@ describe("СЦ-7: история письма", () => {
     signIn("director@demo.example");
     renderAt("/eds/inbox/%D0%92%D0%A5-104%2F26");
 
-    const heading = await screen.findByRole("heading", { name: "История" });
-    const journal = heading.closest(".ant-card") as HTMLElement;
+    await screen.findByRole("heading", { level: 1, name: "Письмо ВХ-104/26" });
+    const journal = await openSideTab("История");
     expect(within(journal).getByText("Приложен файл")).toBeVisible();
     expect(within(journal).getByText("Действие в письме")).toBeVisible();
     expect(journal.textContent).not.toContain("letter.future_step");

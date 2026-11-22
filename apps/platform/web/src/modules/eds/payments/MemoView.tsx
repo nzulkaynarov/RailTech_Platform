@@ -9,41 +9,32 @@ import { useFormat } from "../../../shared/lib/useFormat";
 import { DefinitionList } from "../../../shared/ui/DefinitionList";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { QueryState } from "../../../shared/ui/FormParts";
-import { History, type HistoryItem } from "../../../shared/ui/History";
 import { LinkButton } from "../../../shared/ui/LinkButton";
 import { MoneyText } from "../../../shared/ui/MoneyText";
 import { PageHeader } from "../../../shared/ui/PageHeader";
-import { MemoFiles, MemoSlot, MemoStatus } from "./MemoPanel";
+import { RecordHistory, type RecordHistoryEntry } from "../../../shared/ui/RecordHistory";
+import { DecisionCenter } from "../decision/DecisionCenter";
+import { RecordTab } from "../decision/RecordTab";
+import { MemoFiles, MemoPanel, MemoStatus } from "./MemoPanel";
 import { useStateLabels } from "./labels";
 import { moneyProps } from "./model";
-
-function Journal({ memo }: { memo: PaymentMemoCard }) {
-  const { t } = useTranslation("payments");
-  const { date } = useFormat();
-  const items: HistoryItem[] = memo.journal.map((entry) => ({
-    state: "done",
-    title: t(`memo.journalAction.${entry.action.replace(".", "_")}`, {
-      defaultValue: t("memo.journalActionUnknown"),
-    }),
-    meta: (
-      <>
-        {date(entry.at, "datetime")}
-        {entry.by ? ` · ${entry.by.full_name}` : ""}
-        {entry.comment ? <p className="pf-dec-note">{entry.comment}</p> : null}
-      </>
-    ),
-  }));
-  return <History items={items} label={t("memo.panel.journal")} />;
-}
 
 function Content({ memo }: { memo: PaymentMemoCard }) {
   const { t } = useTranslation("payments");
   const { date } = useFormat();
+  const history: RecordHistoryEntry[] = memo.journal.map((entry) => ({
+    at: entry.at,
+    by: entry.by ? entry.by.full_name : null,
+    action: t(`memo.journalAction.${entry.action.replace(".", "_")}`, {
+      defaultValue: t("memo.journalActionUnknown"),
+    }),
+    comment: entry.comment ?? null,
+  }));
   return (
-    <div className="pf-dec-page">
+    <div className="pf-dec-page pf-overlay-aware">
       <PageHeader
         title={memo.number ?? memo.subject}
-        subtitle={memo.subject}
+        {...(memo.number ? { subtitle: memo.subject } : {})}
         extra={
           <div className="pf-dec-row">
             <MemoStatus status={memo.status} />
@@ -51,41 +42,36 @@ function Content({ memo }: { memo: PaymentMemoCard }) {
           </div>
         }
       />
-      <div className="pf-dec-grid">
-        <div className="pf-dec-main">
-          <Card size="small" title={<h2 className="pf-dec-title">{t("memo.panel.text")}</h2>}>
-            <p className="pf-dec-text">{memo.text}</p>
-          </Card>
-          <Card size="small" title={<h2 className="pf-dec-title">{t("memo.panel.files")}</h2>}>
-            <MemoFiles memo={memo} />
-          </Card>
-          <Card size="small" title={<h2 className="pf-dec-title">{t("memo.panel.journal")}</h2>}>
-            <Journal memo={memo} />
-          </Card>
-        </div>
-        <aside className="pf-dec-side" aria-label={t("memo.panel.amount")}>
-          <Card
-            size="small"
-            title={<h2 className="pf-dec-title">{memo.number ?? memo.subject}</h2>}
-          >
-            <DefinitionList
-              items={[
-                { label: t("memo.panel.from"), value: memo.author.full_name },
-                {
-                  label: t("memo.panel.amount"),
-                  value: memo.amount ? <MoneyText {...moneyProps(memo.amount)} /> : null,
-                },
-                { label: t("memo.panel.due"), value: memo.due_date ? date(memo.due_date) : null },
-                {
-                  label: t("brief.project"),
-                  value: memo.deal ? (memo.deal.number ?? String(memo.deal.erp_deal_id)) : null,
-                },
-              ]}
-            />
-          </Card>
-        </aside>
-      </div>
-      <MemoSlot memoId={memo.id} />
+      <Card size="small" title={<h2 className="pf-dec-title">{t("memo.panel.text")}</h2>}>
+        <p className="pf-dec-text">{memo.text}</p>
+      </Card>
+      <Card size="small" title={<h2 className="pf-dec-title">{t("memo.panel.files")}</h2>}>
+        <MemoFiles memo={memo} />
+      </Card>
+      <DecisionCenter legacyTab="payment" legacySheet="payment" label={t("memo.panel.sheetLabel")}>
+        <MemoPanel memoId={memo.id} />
+      </DecisionCenter>
+      <RecordTab tab="facts">
+        <DefinitionList
+          items={[
+            { label: t("memo.panel.from"), value: memo.author.full_name },
+            {
+              label: t("memo.panel.amount"),
+              value: memo.amount ? <MoneyText {...moneyProps(memo.amount)} /> : null,
+            },
+            { label: t("memo.panel.due"), value: memo.due_date ? date(memo.due_date) : null },
+            {
+              label: t("brief.project"),
+              value: memo.deal ? (memo.deal.number ?? String(memo.deal.erp_deal_id)) : null,
+            },
+          ]}
+        />
+      </RecordTab>
+      {history.length > 0 ? (
+        <RecordTab tab="history">
+          <RecordHistory label={t("memo.panel.journal")} entries={history} />
+        </RecordTab>
+      ) : null}
     </div>
   );
 }
