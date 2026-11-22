@@ -4,6 +4,7 @@ import type {
   RequestFormInConsentMethod,
   RequestFormInUrgency,
 } from "../../../shared/api/generated/model";
+import type { PickedCompany } from "../../../shared/ui/pickers";
 
 /** Письмо на имя директора: файл уходит в EDS сразу после выбора, в заявку — только id готового файла. */
 export interface LetterFile {
@@ -17,11 +18,11 @@ export interface LetterFile {
 
 /** Поля формы «Создать заявку» (SPEC-v3 §3.1 шаг 2). Пустая строка — поле не заполнено. */
 export interface RequestFormState {
-  /** Выбранный клиент; `null` — новая компания из `companyName` и `inn` */
+  /** Клиент CRM: заданный формой (лид, карточка клиента) или клиент выбранной компании; `null` — клиента ещё нет */
   clientId: number | null;
   clientName: string | null;
-  companyName: string;
-  inn: string;
+  /** Компания из поля выбора (ЕД-6): любой контрагент; без клиента CRM заявка делает её клиентом по названию и ИНН */
+  company: PickedCompany | null;
   /** Контакт клиента; `null` — новый контакт из полей ниже */
   contactId: number | null;
   fullName: string;
@@ -52,20 +53,16 @@ export interface RequestContext {
   contacts: readonly ClientContactView[];
 }
 
-export type RequestField =
-  "company" | "inn" | "contact" | "channel" | "summary" | "letter" | "consent";
+export type RequestField = "company" | "contact" | "channel" | "summary" | "letter" | "consent";
 
 /** Ключ текста ошибки `request:errors.*` по полю. */
 export type RequestErrors = Partial<Record<RequestField, string>>;
-
-const INN = /^\d{9,14}$/;
 
 export function emptyRequestForm(): RequestFormState {
   return {
     clientId: null,
     clientName: null,
-    companyName: "",
-    inn: "",
+    company: null,
     contactId: null,
     fullName: "",
     position: "",
@@ -92,9 +89,7 @@ function consentNeeded(ctx: RequestContext): boolean {
 export function validateRequest(state: RequestFormState, ctx: RequestContext): RequestErrors {
   const errors: RequestErrors = {};
   if (state.clientId === null) {
-    if (!state.companyName.trim()) errors.company = "company";
-    const inn = state.inn.trim();
-    if (inn && !INN.test(inn)) errors.inn = "inn";
+    if (!state.company) errors.company = "company";
   }
   if (state.contactId === null) {
     if (!state.fullName.trim()) errors.contact = "contact";
@@ -150,7 +145,7 @@ export function toRequestPayload(
   };
   if (ctx.lead) payload.lead = ctx.lead;
   if (state.clientId !== null) payload.client_id = state.clientId;
-  else payload.company = { name: state.companyName.trim(), inn: text(state.inn) };
+  else if (state.company) payload.company = { name: state.company.name, inn: state.company.inn };
   if (consentNeeded(ctx) && state.consentMarked) {
     payload.consent = { method: state.consentMethod, comment: text(state.consentComment) };
   }

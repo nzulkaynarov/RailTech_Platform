@@ -2,7 +2,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { type Page, expect, test } from "@playwright/test";
 
 import { loginAndWait, settledScreenshot, spaGoto, waitForMotionEnd } from "./support/app";
-import { pickFiles } from "./support/fields";
+import { chooseOrAddAddressee, pickFiles } from "./support/fields";
 
 // Клиенты · Лиды, Клиенты и «Создать заявку» (D1-2b) на MSW: менеджер — лид «Просит КП» → «Создать заявку» с письмом на
 // имя директора → заявка ЗВ видна в карточке клиента; двойная отправка — одна заявка; карточка клиента 360° и «Повторить
@@ -56,7 +56,9 @@ test.describe("Лиды → «Создать заявку» → карточка
     await page.getByRole("button", { name: "Скрыть боковое окно" }).click();
     await page.getByRole("link", { name: "Создать заявку для Азиз Демо" }).click();
     const form = panel.getByRole("form", { name: "Создать заявку" });
-    await expect(form.getByLabel("Название компании")).toHaveValue("ООО Демо-Логистик");
+    // ЕД-6: компания выбирается; название из переписки стоит в поле серым, «Завести» или существующая
+    await expect(form.locator(".ant-select-selection-placeholder")).toHaveText("ООО Демо-Логистик");
+    await chooseOrAddAddressee(page, "ООО Демо-Логистик", "Название компании");
     // форма секциями (§4.1a): письмо и срочность — в «Запросе», кнопка — в «Проверке и отправке»
     await form.getByRole("button", { name: /^Запрос/, expanded: false }).click();
     await pickFiles(form.getByLabel("Письмо или файл запроса"), LETTER);
@@ -137,7 +139,10 @@ test(
 
     await list.getByRole("link", { name: "Создать заявку для Азиз Демо" }).click();
     const sheet = page.getByRole("dialog", { name: "Создать заявку" });
-    await expect(sheet.getByLabel("Название компании")).toHaveValue("ООО Демо-Логистик");
+    await expect(sheet.locator(".ant-select-selection-placeholder")).toHaveText(
+      "ООО Демо-Логистик",
+    );
+    await chooseOrAddAddressee(page, "ООО Демо-Логистик", "Название компании");
     // Основание заявки обязательно (план 0.4, FR-9)
     const request = sheet.getByRole("button", { name: /^Запрос/, expanded: false });
     if (await request.isVisible()) await request.click();

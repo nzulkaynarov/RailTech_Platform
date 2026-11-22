@@ -275,6 +275,10 @@ def erp_error(response: httpx.Response) -> PlatformError:
         existing = body.get("existing_id") if isinstance(body, dict) else None
         if isinstance(existing, int) and not isinstance(existing, bool):
             details["existing_id"] = str(existing)
+            # ERP puts the twin's picker row in the refusal: the twin's own card may be unreadable
+            row = body.get("existing") if isinstance(body, dict) else None
+            if isinstance(row, dict) and row.get("id") == existing and row.get("name"):
+                details["existing"] = row
         return PlatformError("CONFLICT", message, status_code=409, source="erp", details=details)
     fields = _validation_fields(body)
     if erp_code is not None:

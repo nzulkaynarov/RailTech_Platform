@@ -259,7 +259,8 @@ class OrganizationsDeskViewSet(DeskViewSet):
         description=(
             "Организация-адресат из письма (ADR-0028 п. 5, СУЩ-2.6): название, ИНН или рег. номер, страна, адрес; роль "
             "«Организация», без сделок. Такая компания уже есть (ИНН, пара «страна — рег. номер», без ИНН — название) — "
-            "409 `COMPANY_EXISTS` с `existing_id` (поиск среди всех компаний), её выбирают из списка. Роль — "
+            "409 `COMPANY_EXISTS` с `existing_id` (поиск среди всех компаний) и `existing` — строкой выбора этой компании, "
+            "даже если она без роли и в списке её нет. Роль — "
             "«организация» по умолчанию; «поставщик» и «изготовитель» — право `supply.manage`, иначе 403 "
             "`ROLE_PERMISSION_REQUIRED`. Ответ — карточка контрагента."
         ),
@@ -273,7 +274,16 @@ class OrganizationsDeskViewSet(DeskViewSet):
         try:
             company = counterparty.create_organization(body.validated_data, actor=request.user)
         except ItemError as error:
-            return refuse(error)
+            response = refuse(error)
+            twin_id = error.extra.get("existing_id")
+            if error.code == "COMPANY_EXISTS" and twin_id:
+                # the twin may sit outside the picker boundary (no role): its card is unreadable for the caller,
+                # so the picker row travels in the refusal itself
+                client_ids, _ = counterparty_ids(request.user)
+                twin = Company.objects.select_related("country").filter(pk=twin_id).first()
+                if twin is not None:
+                    response.data["existing"] = _organization_rows([twin], client_ids)[0]
+            return response
         client_ids, _ = counterparty_ids(request.user)
         return Response(counterparty.card(company, client_ids, request.user), status=status.HTTP_201_CREATED)
 

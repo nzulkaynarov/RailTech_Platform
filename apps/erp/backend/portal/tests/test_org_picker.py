@@ -106,15 +106,21 @@ def test_people_of_an_organization_with_email_and_position(world):
     assert client.get(f"{ORGS}{world['stranger'].pk}/people/").status_code == 404
 
 
-def test_create_conflict_names_the_existing_company_even_if_hidden(world):
+def test_create_conflict_carries_the_hidden_company_as_a_picker_row(world):
+    """The twin has no role, so card, people and roles answer 404 — the refusal itself must carry its row."""
     manager = world["clients"]["manager"]
-    taken = manager.post(ORGS, {"name": "Другое имя", "tin": world["stranger"].inn}, format="json")
-    assert (taken.status_code, taken.json()) == (
-        409,
-        {"detail": "COMPANY_EXISTS", "existing_id": world["stranger"].pk},
-    )
+    stranger = world["stranger"]
+    assert manager.get(f"{ORGS}{stranger.pk}/").status_code == 404
+    taken = manager.post(ORGS, {"name": "Другое имя", "tin": stranger.inn}, format="json")
+    assert taken.status_code == 409
+    body = taken.json()
+    assert (body["detail"], body["existing_id"]) == ("COMPANY_EXISTS", stranger.pk)
+    assert body["existing"]["id"] == stranger.pk
+    assert (body["existing"]["name"], body["existing"]["inn"]) == ("ООО Чужой", stranger.inn)
+    assert not any(body["existing"]["roles"].values())
     same_name = manager.post(ORGS, {"name": "банк образец"}, format="json")
     assert (same_name.status_code, same_name.json()["existing_id"]) == (409, world["bank"].pk)
+    assert same_name.json()["existing"]["roles"]["organization"] is True
 
 
 def test_create_with_role(world):

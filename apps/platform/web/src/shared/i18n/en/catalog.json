@@ -860,8 +860,6 @@
       "text": "Insufficient permissions."
     },
     "supplier": "Partner",
-    "supplierPlaceholder": "Find by name or number",
-    "newSupplier": "New partner",
     "mode": "File type",
     "modes": {
       "xlsx": "Template (xlsx)",

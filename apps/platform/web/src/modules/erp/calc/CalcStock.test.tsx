@@ -1,6 +1,9 @@
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { HttpResponse, http } from "msw";
 import { describe, expect, it } from "vitest";
 
+import { pickCompany, searchCompany } from "../../../test/fields";
+import { server } from "../../../test/server";
 import { renderAt, setupCalcTests, signIn } from "../../../test/calcKit";
 
 setupCalcTests();
@@ -88,11 +91,10 @@ describe("Расчёт · «Запросить цену у партнёра»", 
     const modal = await screen.findByRole("region", { name: /^Запросить цену у партнёра/ });
     const submit = within(modal).getByRole("button", { name: "Отправить запрос" });
     expect(submit).toBeDisabled();
-    fireEvent.mouseDown(within(modal).getByRole("combobox", { name: "Партнёр" }));
-    fireEvent.click(
-      await screen.findByText(/ООО «Вымышленная Сталь» · sales@steel\.example/, {
-        selector: ".ant-select-item-option-content",
-      }),
+    await pickCompany(
+      within(modal).getByRole("combobox", { name: "Партнёр" }),
+      "Сталь",
+      "ООО «Вымышленная Сталь»",
     );
     expect(submit).toBeEnabled();
     fireEvent.click(submit);
@@ -122,20 +124,109 @@ describe("Расчёт · «Запросить цену у партнёра»", 
     fireEvent.click(screen.getByRole("button", { name: "Запросить цену у партнёра" }));
     // форма — в боковом окне (§4.1a)
     const modal = await screen.findByRole("region", { name: /^Запросить цену у партнёра/ });
-    fireEvent.mouseDown(within(modal).getByRole("combobox", { name: "Партнёр" }));
-    fireEvent.click(
-      await screen.findByText(/ООО «Пример Лес» · нет почты/, {
-        selector: ".ant-select-item-option-content",
-      }),
+    await pickCompany(
+      within(modal).getByRole("combobox", { name: "Партнёр" }),
+      "Лес",
+      "ООО «Пример Лес»",
     );
     const submit = within(modal).getByRole("button", { name: "Отправить запрос" });
     expect(submit).toBeDisabled();
-    fireEvent.change(within(modal).getByLabelText("Адрес для письма"), {
+    fireEvent.change(await within(modal).findByLabelText("Адрес для письма"), {
       target: { value: "orders@lumber.example" },
     });
     expect(submit).toBeEnabled();
     fireEvent.click(submit);
     expect(await screen.findByText("Запрос ушёл на orders@lumber.example")).toBeVisible();
+  });
+});
+
+describe("Расчёт · «Запросить цену» · партнёр выбирается (ЕД-6)", () => {
+  it("у компании нет почты, но есть человек с почтой: адрес берётся из его карточки, вводить не нужно", async () => {
+    server.use(
+      http.get("*/people/counterparties/6/people", () =>
+        HttpResponse.json({
+          items: [
+            {
+              id: "61",
+              name: "Лесов Л. Л.",
+              position: "Менеджер",
+              email: "orders@lumber.example",
+              is_primary: true,
+            },
+          ],
+        }),
+      ),
+    );
+    await openCalc("supply@demo.example");
+    fireEvent.click(screen.getByRole("button", { name: "Запросить цену у партнёра" }));
+    const modal = await screen.findByRole("region", { name: /^Запросить цену у партнёра/ });
+    // вписанное название партнёром не становится: без выбора отправить нельзя
+    const partner = within(modal).getByRole("combobox", { name: "Партнёр" });
+    searchCompany(partner, "Пример");
+    expect(within(modal).getByRole("button", { name: "Отправить запрос" })).toBeDisabled();
+    await pickCompany(partner, "Лес", "ООО «Пример Лес»");
+    const submit = within(modal).getByRole("button", { name: "Отправить запрос" });
+    await waitFor(() => {
+      expect(submit).toBeEnabled();
+    });
+    expect(within(modal).queryByLabelText("Адрес для письма")).toBeNull();
+  });
+});
+
+describe("Расчёт · «Запросить цену» · роль поставщика ставится при отправке (ЕД-6)", () => {
+  it("выбор клиента ролей не пишет; отправка — пишет; отказ — понятная причина и письма нет", async () => {
+    const marked: unknown[] = [];
+    const sent: unknown[] = [];
+    let refuse = 404;
+    server.use(
+      http.post("*/people/counterparties/:id/roles", async ({ request }) => {
+        marked.push(await request.clone().json());
+        return refuse === 0
+          ? undefined
+          : HttpResponse.json(
+              { code: "NOT_FOUND", message: "Нет.", source: "erp" },
+              { status: refuse },
+            );
+      }),
+      http.post("*/erp/calc/*/price-requests", async ({ request }) => {
+        sent.push(await request.clone().json());
+        return undefined;
+      }),
+      http.get("*/people/counterparties/7/people", () =>
+        HttpResponse.json({
+          items: [
+            { id: "41", name: "Демо", position: null, email: "d@x.example", is_primary: true },
+          ],
+        }),
+      ),
+    );
+    await openCalc("supply@demo.example");
+    fireEvent.click(screen.getByRole("button", { name: "Запросить цену у партнёра" }));
+    const modal = await screen.findByRole("region", { name: /^Запросить цену у партнёра/ });
+    await pickCompany(
+      within(modal).getByRole("combobox", { name: "Партнёр" }),
+      "Демо-Путь",
+      "АО «Демо-Путь»",
+    );
+    const submit = within(modal).getByRole("button", { name: "Отправить запрос" });
+    await waitFor(() => {
+      expect(submit).toBeEnabled();
+    });
+    expect(marked).toEqual([]);
+    // компании нет в списке контрагентов: причина — не «нет права», запрос цены не уходит
+    fireEvent.click(submit);
+    expect(await within(modal).findByText(/Компании нет в списке контрагентов/)).toBeVisible();
+    expect(within(modal).queryByText(/нет права/)).toBeNull();
+    expect(sent).toEqual([]);
+    refuse = 0;
+    fireEvent.click(submit);
+    await waitFor(() => {
+      expect(sent).toHaveLength(1);
+    });
+    expect(marked).toEqual([
+      { role: "supplier", on: true },
+      { role: "supplier", on: true },
+    ]);
   });
 });
 

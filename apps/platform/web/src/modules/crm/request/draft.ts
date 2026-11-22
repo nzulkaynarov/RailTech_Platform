@@ -46,7 +46,7 @@ function key(userId: string, scope: string): string {
 function isState(value: unknown): value is RequestFormState {
   if (typeof value !== "object" || value === null) return false;
   const v = value as Record<string, unknown>;
-  return ["companyName", "inn", "fullName", "phone", "email", "summary", "urgency"].every(
+  return ["fullName", "phone", "email", "summary", "urgency"].every(
     (field) => typeof v[field] === "string",
   );
 }

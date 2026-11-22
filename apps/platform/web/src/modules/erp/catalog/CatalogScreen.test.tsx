@@ -2,7 +2,7 @@ import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { http } from "msw";
 import { describe, expect, it } from "vitest";
 
-import { fillDate } from "../../../test/fields";
+import { fillDate, pickCompany, searchCompany, selectedLabel } from "../../../test/fields";
 import { server } from "../../../test/server";
 import { setViewportWidth } from "../../../test/viewport";
 import {
@@ -295,6 +295,83 @@ describe("Номенклатура: справочники", () => {
     });
     fireEvent.click(await within(form).findByRole("button", { name: "Добавить" }));
     expect(await screen.findByText("Новый Бренд")).toBeVisible();
+  });
+});
+
+describe("Бренд: изготовитель выбирается (ЕД-6)", () => {
+  it("компания — любой контрагент с ролью «изготовитель» вверху списка; страна подставляется из её карточки; в ERP уходит id компании", async () => {
+    let asked: URLSearchParams | undefined;
+    const sent: unknown[] = [];
+    server.use(
+      http.get("*/people/counterparties", ({ request }) => {
+        asked = new URL(request.url).searchParams;
+        return undefined;
+      }),
+      http.post("*/erp/catalog/manufacturers", async ({ request }) => {
+        sent.push(await request.clone().json());
+        return undefined;
+      }),
+    );
+    await open("supply@demo.example", "?part=refs");
+    fireEvent.click(await screen.findByRole("radio", { name: "Бренды" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Добавить бренд" }));
+    const form = await findModal("Добавить бренд");
+    fireEvent.change(await within(form).findByLabelText("Название"), {
+      target: { value: "Локотранс" },
+    });
+    const company = within(form).getByLabelText("Изготовитель — компания");
+    // страна пуста, пока компания не выбрана; вписанный текст компанией не становится
+    searchCompany(company, "Локо");
+    expect(selectedLabel(within(form).getByLabelText("Страна"))).toBe("");
+    await pickCompany(company, "Локо", "Lokotrans GmbH");
+    expect(asked?.get("role")).toBe("manufacturer");
+    expect(selectedLabel(within(form).getByLabelText("Страна"))).toBe("Германия");
+    fireEvent.click(await within(form).findByRole("button", { name: "Добавить" }));
+    await waitFor(() => {
+      expect(sent).toMatchObject([{ name: "Локотранс", company_id: "13", country_id: "3" }]);
+    });
+  });
+});
+
+describe("Бренд: роль изготовителя ставится при сохранении (ЕД-6)", () => {
+  it("закрытая форма роли не оставляет; «Добавить» — ставит, затем создаёт бренд", async () => {
+    const marked: unknown[] = [];
+    const sent: unknown[] = [];
+    server.use(
+      http.post("*/people/counterparties/:id/roles", async ({ request }) => {
+        marked.push(await request.clone().json());
+        return undefined;
+      }),
+      http.post("*/erp/catalog/manufacturers", async ({ request }) => {
+        sent.push(await request.clone().json());
+        return undefined;
+      }),
+    );
+    await open("supply@demo.example", "?part=refs");
+    fireEvent.click(await screen.findByRole("radio", { name: "Бренды" }));
+    const openForm = async () => {
+      fireEvent.click(await screen.findByRole("button", { name: "Добавить бренд" }));
+      const form = await findModal("Добавить бренд");
+      fireEvent.change(await within(form).findByLabelText("Название"), {
+        target: { value: "Демо-бренд" },
+      });
+      await pickCompany(
+        within(form).getByLabelText("Изготовитель — компания"),
+        "Демо-Путь",
+        "АО «Демо-Путь»",
+      );
+      return form;
+    };
+    const first = await openForm();
+    fireEvent.click(within(first).getByRole("button", { name: "Отмена" }));
+    await modalClosed("Добавить бренд");
+    expect(marked).toEqual([]);
+    const second = await openForm();
+    fireEvent.click(await within(second).findByRole("button", { name: "Добавить" }));
+    await waitFor(() => {
+      expect(sent).toMatchObject([{ name: "Демо-бренд", company_id: "7" }]);
+    });
+    expect(marked).toEqual([{ role: "manufacturer", on: true }]);
   });
 });
 

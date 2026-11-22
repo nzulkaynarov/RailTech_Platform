@@ -860,8 +860,6 @@
       "text": "Ruxsat yetarli emas."
     },
     "supplier": "Hamkor",
-    "supplierPlaceholder": "Nomi yoki raqami bo‘yicha toping",
-    "newSupplier": "Yangi hamkor",
     "mode": "Fayl turi",
     "modes": {
       "xlsx": "Shablon (xlsx)",

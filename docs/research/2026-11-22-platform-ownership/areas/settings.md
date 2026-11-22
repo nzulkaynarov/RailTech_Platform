@@ -2,7 +2,7 @@
 # AREA B: Settings. Inventory, duplicates, dead settings and health signals
 
 **Path abbreviations** (all absolute):
-- R = `/home/umarbek/projects/RailTech_Platform/.claude/worktrees/research-main`
+- R = ``
 - W = `R/apps/platform/web/src`
 - A = `W/modules/admin`
 - B = `R/apps/platform/bff/app`

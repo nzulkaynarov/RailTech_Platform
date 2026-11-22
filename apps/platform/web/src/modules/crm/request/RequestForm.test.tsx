@@ -5,6 +5,13 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { readLeads, resetLeads, writeLeads } from "../../../mocks/fixtures/leads";
 import { resetMessages } from "../../../mocks/fixtures/messages";
 import { panelEl, renderAt, setupBotTests, signIn } from "../../../test/botKit";
+import {
+  addCompany,
+  chooseOption,
+  pickCompany,
+  searchCompany,
+  selectedLabel,
+} from "../../../test/fields";
 import { server } from "../../../test/server";
 import { setViewportWidth } from "../../../test/viewport";
 import type { Me, RequestFormIn } from "../../../shared/api/generated/model";
@@ -24,11 +31,20 @@ beforeEach(() => {
   resetMessages();
 });
 
-async function openForm(path: string): Promise<HTMLElement> {
+/**
+ * Открыть форму. Компания в ней выбирается (ЕД-6): название из переписки лида стоит в поле серым, и по умолчанию тест
+ * выбирает именно его — «Завести» по подсказке или существующую; `pick: false` оставляет поле пустым.
+ */
+async function openForm(path: string, pick = true): Promise<HTMLElement> {
   signIn("manager@demo.example");
   renderAt(path);
   const panel = await panelEl();
   await within(panel).findByRole("form", { name: "Создать заявку" });
+  const field = within(panel).queryByLabelText("Название компании");
+  const suggested = panel.querySelector(".ant-select-selection-placeholder")?.textContent.trim();
+  if (pick && field && suggested && suggested !== "Название или ИНН") {
+    await addCompany(field, suggested);
+  }
   return panel;
 }
 
@@ -100,11 +116,10 @@ describe("форма «Создать заявку»: правила до отп
     );
   });
 
-  it("лид из Telegram без согласия — согласие только в боте; неверный ИНН — словами", () => {
+  it("лид из Telegram без согласия — согласие только в боте", () => {
     const state = {
       ...emptyRequestForm(),
-      companyName: "ООО Демо",
-      inn: "12ab",
+      company: { id: "7", name: "ООО Демо", inn: null },
       fullName: "Демо",
       letter: { name: "pismo.pdf", status: "done" as const, id: "f-1" },
     };
@@ -112,7 +127,7 @@ describe("форма «Создать заявку»: правила до отп
       { ...state, useLeadTelegram: true, summary: "Шпалы" },
       { ...lead, leadChannel: "telegram", leadTelegram: "demo" },
     );
-    expect(errors).toEqual({ inn: "inn", consent: "consent_via_bot" });
+    expect(errors).toEqual({ consent: "consent_via_bot" });
   });
 
   it("контакт клиента без каналов не подходит", () => {
@@ -149,8 +164,7 @@ describe("форма «Создать заявку»: правила до отп
     const payload = toRequestPayload(
       {
         ...emptyRequestForm(),
-        companyName: " ООО Демо ",
-        inn: "",
+        company: { id: "9001", name: "ООО Демо", inn: null, crmClientId: null },
         fullName: "Демо",
         phone: "+998900000077",
         summary: "Колодки",
@@ -184,7 +198,9 @@ describe("форма «Создать заявку»: правила до отп
 describe("«Создать заявку» из лида и из клиента (D1-2b)", () => {
   it("лид «Просит КП»: поля из переписки, письмо директору, «Что произойдёт»; заявка — в карточке клиента", async () => {
     const panel = await openForm("/crm/leads?lead=L-2041&create=1&panel=open&tab=card");
-    expect(within(panel).getByLabelText("Название компании")).toHaveValue("ООО Демо-Логистик");
+    expect(selectedLabel(within(panel).getByLabelText("Название компании"))).toBe(
+      "ООО Демо-Логистик",
+    );
     open(panel, "Контакт");
     expect(within(panel).getByLabelText("Имя")).toHaveValue("Азиз Демо");
     expect(
@@ -260,8 +276,9 @@ describe("«Создать заявку» из лида и из клиента (
   });
 
   it("шаг готов по тому же валидатору: требования видны на шаге после ухода с него, «Осталось» — на проверке, кнопка недоступна", async () => {
-    const panel = await openForm("/crm/leads?lead=L-2044&create=1&panel=open&tab=card");
-    fireEvent.change(within(panel).getByLabelText("Название компании"), { target: { value: "" } });
+    // компания не выбрана: подсказка из переписки в поле только серым
+    const panel = await openForm("/crm/leads?lead=L-2044&create=1&panel=open&tab=card", false);
+    expect(within(panel).getByText("ООО Демо-Строй")).toBeVisible();
     fireEvent.change(within(panel).getByLabelText("Суть запроса"), { target: { value: " " } });
     // пока с шага не уходили, он не пестрит требованиями
     expect(within(panel).queryByText("Чтобы шаг был готов:")).toBeNull();
@@ -278,7 +295,7 @@ describe("«Создать заявку» из лида и из клиента (
     const submit = submitButton(panel);
     expect(submit).toBeDisabled();
     const list = remainingList(panel);
-    expect(within(list).getByText(/Выберите клиента или впишите название компании/)).toBeVisible();
+    expect(within(list).getByText(/Выберите компанию/)).toBeVisible();
     expect(within(list).getByText(/Опишите суть запроса/)).toBeVisible();
     expect(within(list).getByText(/Приложите письмо клиента или файл запроса/)).toBeVisible();
     expect(submit).toHaveAttribute("aria-describedby", list.id);
@@ -346,6 +363,72 @@ describe("«Создать заявку» из лида и из клиента (
   });
 });
 
+describe("компания и человек выбираются, а не вписываются (ЕД-6)", () => {
+  it("компания — любой контрагент без клиента CRM: заявка уходит с названием и ИНН, человек из карточки заполняет контакт", async () => {
+    let asked: URLSearchParams | undefined;
+    const sent: RequestFormIn[] = [];
+    server.use(
+      http.get("*/people/counterparties", ({ request }) => {
+        asked = new URL(request.url).searchParams;
+        return undefined;
+      }),
+      http.post("*/api/v1/crm/requests", async ({ request }) => {
+        sent.push((await request.clone().json()) as RequestFormIn);
+        return undefined;
+      }),
+    );
+    const panel = await openForm("/crm/leads?lead=L-2044&create=1&panel=open&tab=card", false);
+    const company = within(panel).getByLabelText("Название компании");
+    // вписанный текст компанией не становится: «Осталось» всё ещё просит выбор
+    searchCompany(company, "ГНИ");
+    await waitFor(() => {
+      expect(asked?.get("role")).toBe("client");
+    });
+    expect(within(remainingList(panel)).getByText(/Выберите компанию/)).toBeInTheDocument();
+    // компания есть среди контрагентов, но не клиент CRM — её выбирают, заявка сделает её клиентом
+    await pickCompany(company, "ГНИ", "ГНИ Мирабадского района");
+
+    open(panel, "Контакт");
+    const person = within(panel).getByLabelText("Человек из карточки компании");
+    await chooseOption(person, "Абдуллаев Б. Т.");
+    expect(within(panel).getByLabelText("Имя")).toHaveValue("Абдуллаев Б. Т.");
+    expect(within(panel).getByLabelText("Должность")).toHaveValue("Начальник отдела");
+    expect(within(panel).getByLabelText("Почта")).toHaveValue("abdullaev@gni.example");
+
+    open(panel, "Запрос");
+    fireEvent.change(within(panel).getByLabelText("Суть запроса"), { target: { value: "Шпалы" } });
+    await attach(panel);
+    fireEvent.click(submitButton(panel));
+    expect(await within(panel).findByText("Заявка создана")).toBeVisible();
+    expect(sent).toHaveLength(1);
+    expect(sent[0]?.client_id).toBeUndefined();
+    expect(sent[0]?.company).toEqual({ name: "ГНИ Мирабадского района", inn: "200145778" });
+    expect(sent[0]?.contact).toMatchObject({
+      full_name: "Абдуллаев Б. Т.",
+      position: "Начальник отдела",
+      email: "abdullaev@gni.example",
+    });
+  });
+
+  it("компания уже клиент CRM: в заявку уходит id клиента, названия и ИНН в теле нет", () => {
+    const payload = toRequestPayload(
+      {
+        ...emptyRequestForm(),
+        company: { id: "7", name: "АО «Демо-Путь»", inn: "300000777", crmClientId: 41 },
+        clientId: 41,
+        clientName: "АО «Демо-Путь»",
+        contactId: 5,
+        summary: "Колодки",
+        letter: { name: "pismo.pdf", status: "done", id: "f-1" },
+      },
+      { lead: null, leadChannel: null, leadTelegram: null, consentGiven: true, contacts: [] },
+      "11111111-1111-4111-8111-111111111111",
+    );
+    expect(payload.client_id).toBe(41);
+    expect(payload.company).toBeUndefined();
+  });
+});
+
 describe("письмо директору: из переписки и при сбое загрузки", () => {
   it("«В заявку» у файла клиента в «Ждут ответа» — форма с этим файлом как письмом директору", async () => {
     signIn("manager@demo.example");
@@ -361,6 +444,7 @@ describe("письмо директору: из переписки и при с�
     });
     const panel = await panelEl();
     await within(panel).findByRole("form", { name: "Создать заявку" });
+    await addCompany(within(panel).getByLabelText("Название компании"), "ООО Демо-Логистик");
     open(panel, "Запрос");
     expect(await within(panel).findByText("Загружено: письмо-директору.pdf")).toBeVisible();
     fireEvent.click(submitButton(panel));
@@ -455,17 +539,17 @@ describe("черновик заявки и лид из Telegram без согл�
   });
 
   it("«Начать заново» стирает черновик, форма — с данными лида", async () => {
-    const panel = await openForm(PATH);
+    const panel = await openForm(PATH, false);
     open(panel, "Запрос");
     fireEvent.change(within(panel).getByLabelText("Суть запроса"), { target: { value: "Другое" } });
     cleanup();
-    const again = await openForm(PATH);
+    const again = await openForm(PATH, false);
     fireEvent.click(within(again).getByRole("button", { name: "Начать заново" }));
     expect(within(again).queryByText(/Есть черновик заявки от/)).toBeNull();
     open(again, "Запрос");
     expect(within(again).getByLabelText("Суть запроса")).not.toHaveValue("Другое");
     cleanup();
-    const third = await openForm(PATH);
+    const third = await openForm(PATH, false);
     // форму не меняли — черновика нет
     expect(within(third).queryByText(/Есть черновик заявки от/)).toBeNull();
   });
@@ -789,11 +873,11 @@ describe("записка о звонке как основание заявки 
     if (!lead) throw new Error("нет L-2077");
     lead.card.consent = { given_at: "2026-10-27T08:00:00Z", method: "phone" };
     writeLeads(state);
-    const panel = await openForm(PHONE);
+    const panel = await openForm(PHONE, false);
     open(panel, "Запрос");
     expect(await within(panel).findByText("Записка о звонке приложена")).toBeVisible();
     cleanup();
-    const again = await openForm(PHONE);
+    const again = await openForm(PHONE, false);
     expect(within(again).queryByText(/Есть черновик заявки от/)).toBeNull();
   });
 });

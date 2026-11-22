@@ -6,7 +6,6 @@ import { useNavigate, useSearchParams } from "react-router";
 import {
   useCreateSupplierOrder,
   useCreateSupplierOrderFromRequest,
-  useListStockSuppliers,
   useListSupplierOrders,
   useSearchCalcCatalog,
 } from "../../../shared/api/generated/platform-bff";
@@ -14,6 +13,7 @@ import { useDocumentTitle } from "../../../shared/lib/useDocumentTitle";
 import { DateField } from "../../../shared/ui/DateField";
 import { LinkButton } from "../../../shared/ui/LinkButton";
 import { PageHeader } from "../../../shared/ui/PageHeader";
+import { CompanyPicker, useApplyCompanyRole, type PickedCompany } from "../../../shared/ui/pickers";
 import { StepSections } from "../../../shared/ui/StepSections/StepSections";
 import { clean, orderPath, useErrorText, useRefreshStock } from "./api";
 
@@ -24,7 +24,8 @@ interface LineValues {
 }
 
 interface Values {
-  supplier_id: string;
+  /** Партнёр заказа — компания из поля выбора; в ERP уходит её id */
+  supplier: PickedCompany | null;
   mode: "manual" | "shortage";
   request?: string;
   expected_date?: string;
@@ -95,6 +96,7 @@ export function OrderCreatePage() {
   const navigate = useNavigate();
   const refresh = useRefreshStock();
   const errorText = useErrorText();
+  const applyRole = useApplyCompanyRole();
   const [form] = Form.useForm<Values>();
   // Строка «Мои задачи» «Заказать недостающее» открывает страницу с `?mode=shortage&request=ПР-…` (СЦ-9).
   const [params] = useSearchParams();
@@ -104,7 +106,6 @@ export function OrderCreatePage() {
       ? { mode: "shortage", lines: [{}], ...(requestFromUrl ? { request: requestFromUrl } : {}) }
       : { mode: "manual", lines: [{}] };
   const mode = Form.useWatch("mode", form);
-  const suppliers = useListStockSuppliers();
   const done = (number: string) => {
     refresh();
     void message.success(t("create.done", { number }));
@@ -129,8 +130,9 @@ export function OrderCreatePage() {
       onError,
     },
   });
-  const supplierId = Form.useWatch("supplier_id", form);
-  const supplierName = suppliers.data?.items.find((s) => s.id === supplierId)?.name;
+  const watchedSupplier: PickedCompany | null | undefined = Form.useWatch("supplier", form);
+  const supplierId = watchedSupplier?.id;
+  const supplierName = watchedSupplier?.name;
   // до первой отрисовки строк useWatch отдаёт undefined
   const watchedLines: LineValues[] | undefined = Form.useWatch("lines", form);
   const lines = (watchedLines ?? []).filter((l) => l.product_id);
@@ -155,29 +157,41 @@ export function OrderCreatePage() {
             setActive(errorFields.some((f) => f.name[0] === "lines") ? "lines" : "supplier");
           }}
           onFinish={(values) => {
-            if (values.mode === "shortage") {
-              fromRequest.mutate({
-                data: { request: (values.request ?? "").trim(), supplier_id: values.supplier_id },
+            void (async () => {
+              // роль поставщика — в момент сохранения: закрытая форма не оставляет роль без заказа
+              const refused = await applyRole(values.supplier);
+              if (refused) {
+                void message.error(refused);
+                setActive("supplier");
+                return;
+              }
+              if (values.mode === "shortage") {
+                fromRequest.mutate({
+                  data: {
+                    request: (values.request ?? "").trim(),
+                    supplier_id: values.supplier?.id ?? "",
+                  },
+                });
+                return;
+              }
+              const note = clean(values.note);
+              const partnerNote = clean(values.partner_note);
+              create.mutate({
+                data: {
+                  supplier_id: values.supplier?.id ?? "",
+                  ...(values.expected_date ? { expected_date: values.expected_date } : {}),
+                  ...(note ? { note } : {}),
+                  ...(partnerNote ? { partner_note: partnerNote } : {}),
+                  lines: (values.lines ?? [])
+                    .filter((l) => l.product_id && l.quantity)
+                    .map((l) => ({
+                      product_id: l.product_id ?? "",
+                      quantity: l.quantity ?? 1,
+                      ...(clean(l.unit_price) ? { unit_price: clean(l.unit_price) } : {}),
+                    })),
+                },
               });
-              return;
-            }
-            const note = clean(values.note);
-            const partnerNote = clean(values.partner_note);
-            create.mutate({
-              data: {
-                supplier_id: values.supplier_id,
-                ...(values.expected_date ? { expected_date: values.expected_date } : {}),
-                ...(note ? { note } : {}),
-                ...(partnerNote ? { partner_note: partnerNote } : {}),
-                lines: (values.lines ?? [])
-                  .filter((l) => l.product_id && l.quantity)
-                  .map((l) => ({
-                    product_id: l.product_id ?? "",
-                    quantity: l.quantity ?? 1,
-                    ...(clean(l.unit_price) ? { unit_price: clean(l.unit_price) } : {}),
-                  })),
-              },
-            });
+            })();
           }}
         >
           <StepSections
@@ -196,20 +210,12 @@ export function OrderCreatePage() {
                 content: (
                   <>
                     <Form.Item
-                      name="supplier_id"
+                      name="supplier"
                       label={t("create.supplier")}
                       rules={[{ required: true, message: t("create.supplierRequired") }]}
                     >
-                      <Select
-                        showSearch
-                        optionFilterProp="label"
-                        loading={suppliers.isPending}
-                        placeholder={t("create.supplier")}
-                        options={(suppliers.data?.items ?? []).map((s) => ({
-                          value: s.id,
-                          label: s.email ? s.name : `${s.name} · ${t("create.noEmail")}`,
-                        }))}
-                      />
+                      {/* ЕД-6: партнёр — компания из общего поля; без роли поставщика форма ставит её сама */}
+                      <CompanyPicker id="supplier" role="supplier" assignRole />
                     </Form.Item>
                     <Form.Item name="mode" label={t("create.mode")}>
                       <Radio.Group>
