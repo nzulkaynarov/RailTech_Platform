@@ -538,8 +538,9 @@
         "status": "Status",
         "erpPending": "ERP access is still being granted.",
         "erpReason": {
-          "not_configured": "ERP access not granted: ERP is not connected. An administrator sets the address and token in Connections; granting will retry on its own.",
+          "not_connected": "ERP access not granted: ERP cannot be reached with the saved connection. An administrator checks the address and token in Connections; granting will retry on its own.",
           "unavailable": "ERP access not granted: ERP did not respond. Granting will retry on its own.",
+          "queue": "ERP access not granted: the granting task was not queued. Press Retry.",
           "rejected": "ERP access not granted: ERP did not accept the account. Check the employee's email and roles, then press Retry."
         },
         "erpNotGranted": "ERP access is not granted.",

@@ -538,9 +538,10 @@
         "status": "Holat",
         "erpPending": "ERP ga kirish hali berilmoqda.",
         "erpReason": {
-          "not_configured": "ERP ga kiriş berilmadi: ERP ulanmagan. Administrator manzil va tokenni «Ulanishlar» bölimida kiritadi; berish özi qayta uriniladi.",
+          "not_connected": "ERP ga kiriş berilmadi: ERP ga ulanib bölmadi. Administrator manzil va tokenni «Ulanishlar» bölimida tekşiradi; berish özi qayta uriniladi.",
           "unavailable": "ERP ga kiriş berilmadi: ERP javob bermadi. Berish özi qayta uriniladi.",
-          "rejected": "ERP ga kiriş berilmadi: ERP hisobni qabul qilmadi. Xodimning pochtasi va rollarini tekshiring va «Qayta urinish» tugmasini bosing."
+          "queue": "ERP ga kiriş berilmadi: berish vazifasi navbatga qöyilmadi. «Qayta uriniş» tugmasini bosing.",
+          "rejected": "ERP ga kiriş berilmadi: ERP hisobni qabul qilmadi. Xodimning poçtasi va rollarini tekşiring va «Qayta uriniş» tugmasini bosing."
         },
         "erpNotGranted": "ERP ga kiriş berilmagan.",
         "erpRetry": "Qayta uriniş",

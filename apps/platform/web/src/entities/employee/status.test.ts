@@ -40,15 +40,19 @@ describe("anyErpPending", () => {
 });
 
 describe("erpSyncReason", () => {
-  it("код причины CRM решает фразу, сам текст ошибки не показывается", () => {
-    expect(erpSyncReason("erp_provision_user: erp_not_configured: ERP не подключена")).toBe(
-      "not_configured",
-    );
-    expect(erpSyncReason("erp_provision_user: ConnectError: All connection attempts failed")).toBe(
-      "unavailable",
-    );
-    expect(erpSyncReason("erp_provision_user: ReadTimeout: ")).toBe("unavailable");
-    expect(erpSyncReason("erp_provision_user: erp_rejected: email занят")).toBe("rejected");
+  it.each([
+    ["erp_provision_user: erp_not_configured: ERP не подключена", "not_connected"],
+    ["erp_provision_user: erp_unauthorized: HTTP 401", "not_connected"],
+    ["erp_provision_user: erp_invalid_url: bad url", "not_connected"],
+    ["erp_provision_user: erp_unavailable: timeout", "unavailable"],
+    ["erp_provision_user: erp_rate_limited: slow down", "unavailable"],
+    ["erp_provision_user: erp_bad_response: erp bad response: HTTP 503", "unavailable"],
+    ["erp_provision_user: erp_bad_response: erp validation error: {}", "rejected"],
+    ["erp_provision_user: ConnectError: All connection attempts failed", "unavailable"],
+    ["erp_provision_user: erp_email_conflict: busy", "rejected"],
+    ["provision: задача не поставлена в очередь", "queue"],
+  ])("код причины CRM решает фразу: %s -> %s", (error, reason) => {
+    expect(erpSyncReason(error)).toBe(reason);
   });
 
   it("без текста ошибки причины нет", () => {

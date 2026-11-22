@@ -290,7 +290,7 @@
       "invalid_state": "xat endi rezolyutsiya kutmayapti, kartochkani yangilang",
       "eds_not_granted": "hujjat aylanishiga ruxsatingiz yo'q",
       "forbidden": "bu amal rolingizga ruxsat etilmagan",
-      "forbiddenSection": "«{{section}}» bo‘limiga kirish yo‘q",
+      "forbiddenSection": "«{{section}}» bölimiga kiriş yöq",
       "unavailable": "hujjat aylanishi javob bermayapti",
       "validation": "maydonlarni tekshiring",
       "unknown": "kutilmagan xato",

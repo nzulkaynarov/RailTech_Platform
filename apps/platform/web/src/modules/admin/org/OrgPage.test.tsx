@@ -107,10 +107,12 @@ describe("Admin · Оргструктура (экран целиком на MSW)
   it.each([
     [
       "erp_provision_user: erp_not_configured: ERP не подключена — укажите адрес",
-      "ERP не подключена",
+      "нет связи с ERP",
     ],
-    ["erp_provision_user: ConnectError: All connection attempts failed", "ERP не ответила"],
-    ["erp_provision_user: email_taken: duplicate key value", "ERP не приняла учётную запись"],
+    ["erp_provision_user: erp_unauthorized: HTTP 401", "нет связи с ERP"],
+    ["erp_provision_user: erp_unavailable: timeout", "ERP не ответила"],
+    ["erp_provision_user: erp_email_conflict: busy", "ERP не приняла учётную запись"],
+    ["provision: задача не поставлена в очередь", "не поставилась в очередь"],
   ])(
     "сбой с текстом CRM «%s»: причина словами, кода и текста сервера на экране нет",
     async (error, phrase) => {
@@ -127,8 +129,8 @@ describe("Admin · Оргструктура (экран целиком на MSW)
       const panel = await panelEl();
       expect(await within(panel).findByText(new RegExp(phrase))).toBeVisible();
       expect(panel.textContent).not.toContain("erp_provision_user");
-      expect(panel.textContent).not.toContain("ConnectError");
-      expect(panel.textContent).not.toContain("duplicate key");
+      expect(panel.textContent).not.toContain("erp_unavailable");
+      expect(panel.textContent).not.toContain("busy");
     },
   );
 
