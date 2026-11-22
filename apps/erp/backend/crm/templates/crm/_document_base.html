@@ -34,14 +34,8 @@
   :root {
     --accent: {{ accent }};
     --accent-contrast: {{ accent_contrast }};
-    /* D2 document theme: the font pair + secondary tint come validated from
-       document_brand_context (allowlist stack / #hex only — never raw user CSS).
-       |safe: font_stack is a fixed allowlist value (_FONT_STACKS), never user input — without it
-       Django escapes the apostrophes and the font-family is dropped. Two comment traps here:
-       multi-line Django hash-comments leak verbatim, and CSS comments DO NOT NEST — a stray
-       comment-closer inside this block once killed the font-main declaration in every PDF. */
-    --font-main: {{ font_stack|default:"'Inter', 'PT Sans', 'DejaVu Sans', 'Helvetica', 'Arial', sans-serif"|safe }};
-    --secondary: {{ secondary|default:"#f6f8fb" }};
+    --font-main: 'Inter', 'PT Sans', 'DejaVu Sans', 'Helvetica', 'Arial', sans-serif;
+    --secondary: #f6f8fb;
     --ink: #20242b;
     --ink-soft: #3c424c;
     --muted: #7a828f;
@@ -235,35 +229,10 @@
   }
   .draft-watermark .draft-note { display: block; font-size: 22pt; letter-spacing: 1pt; margin-top: 6pt; }
   .doc-id .doc-no-draft { font-size: var(--fs-lg); font-weight: 700; color: #b42318; letter-spacing: 0.2pt; string-set: doc-ref content(); }
-  /* ── D2 layout presets (Odoo Document Layout: Light / Boxed / Bold / Striped) ──────
-     `light` is the historical default — zero extra rules. Each preset restyles ONLY the
-     shared primitives (brandbar / rule / lines / totals), so every document type inherits
-     the theme identically. WeasyPrint-safe: plain selectors, no flex/grid. */
-  /* boxed — everything framed, no fills */
-  .layout-boxed .rule { display: none; }
-  .layout-boxed .brandbar { border: 1pt solid var(--accent); margin-bottom: 16pt; }
-  .layout-boxed .brandbar td { padding: 8pt; }
-  .layout-boxed .party { border: 0.75pt solid #dfe3ea; padding: 9pt 11pt; border-top: 0.75pt solid #dfe3ea; }
-  .layout-boxed table.lines thead th { background: transparent; color: var(--accent); border: 0.5pt solid var(--line); border-bottom: 1.5pt solid var(--accent); }
-  .layout-boxed table.lines tbody td { border: 0.5pt solid var(--line); }
-  .layout-boxed table.totals tr.grand td { background: transparent; color: var(--accent); border: 1pt solid var(--accent); }
-  /* bold — heavy accent presence: the ONE preset that keeps the filled-bar look */
-  .layout-bold .rule { height: 6pt; }
-  .layout-bold .brand-name { font-size: 19pt; }
-  .layout-bold h1.doc-title { font-size: 16pt; text-transform: uppercase; letter-spacing: 0.5pt; }
-  .layout-bold .party { background: var(--panel); border: 0.75pt solid #dfe3ea; border-radius: 4pt; padding: 9pt 11pt; }
-  .layout-bold table.lines thead th { background: var(--accent); color: var(--accent-contrast); border-top: none; border-bottom: none; padding: 8pt 7pt; font-size: 8.5pt; font-weight: 600; }
-  .layout-bold table.lines tbody tr:nth-child(even) { background: var(--secondary); }
-  .layout-bold table.totals tr.grand td { background: var(--accent); color: var(--accent-contrast); border-top: none; border-bottom: none; font-size: 12pt; }
-  /* striped — airy, zebra-led, minimal fills */
-  .layout-striped .rule { height: 1pt; }
-  .layout-striped table.lines thead th { border-top: none; border-bottom: 2pt solid var(--accent); }
-  .layout-striped table.lines tbody tr:nth-child(odd) { background: var(--secondary); }
-  .layout-striped table.totals tr.grand td { border-bottom: none; border-top: 2pt solid var(--accent); }
   {% block extra_head %}{% endblock %}
 </style>
 </head>
-<body class="layout-{{ layout_preset|default:'light' }}">
+<body>
   {% block watermark %}{% if document_draft %}<div class="draft-watermark">{% translate "ПРОЕКТ" %}{% if document_draft_offer %}<span class="draft-note">{% translate "не является офертой" %}</span>{% endif %}</div>{% endif %}{% endblock %}
 
   <!-- ── Brand header ── -->

@@ -81,7 +81,7 @@ def test_document_templates_crud_and_refusals(admin, company):
     item = f"{API}crm/document-templates/{{id}}/"
     conforms(admin.get(listing), listing, "get", status=200)
     conforms(admin.get(f"{listing}placeholders/"), f"{listing}placeholders/", "get", status=200)
-    body = {"name": "Мой шаблон", "body_html": DOCUMENT_BODY}
+    body = {"name": "Мой шаблон", "kind": "RECEIPT", "body_html": DOCUMENT_BODY}  # ДОК-13: вид обязателен
     sends(listing, "post", {**body, "is_active": False})  # Q-D20-1.2: create принимает is_active
     created = admin.post(listing, body, format="json")
     conforms(created, listing, "post", status=201)
@@ -102,7 +102,7 @@ def test_document_templates_crud_and_refusals(admin, company):
 def test_template_update_reads_is_active_the_same_way_as_create(admin, company):
     """Ревью #282: `"false"` строкой (форма) на правке — выключить, а не включить (`bool("false")` был бы истиной)."""
     listing = f"{API}crm/document-templates/"
-    created = admin.post(listing, {"name": "Флаг", "body_html": DOCUMENT_BODY}, format="json")
+    created = admin.post(listing, {"name": "Флаг", "kind": "RECEIPT", "body_html": DOCUMENT_BODY}, format="json")
     one = f"{listing}{created.json()['id']}/"
     off = admin.patch(one, {"is_active": "false"}, format="json")
     conforms(off, f"{API}crm/document-templates/{{id}}/", "patch", status=200)

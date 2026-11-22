@@ -15,19 +15,6 @@ _DEFAULT_ACCENT = "#15294d"
 _DARK_INK = "#1b1f27"
 _LIGHT_INK = "#ffffff"
 
-# Document theme (D2, Odoo Document Layout model). Font stacks are limited to families the
-# backend container actually ships (Rule 1 — offering a font WeasyPrint would silently
-# substitute would be a fake choice). Print typography wave (2026-07-27, owner: «кривые
-# шрифты»): the container now ships Inter (fonts-inter) and PT Sans/PT Serif
-# (fonts-paratype — ParaType, designed for Russian document typography); DejaVu is demoted
-# to fallback only. Web surfaces fall through to Helvetica/Georgia when Inter/PT are absent.
-_LAYOUT_PRESETS = {"light", "boxed", "bold", "striped"}
-_FONT_STACKS = {
-    "sans": "'Inter', 'PT Sans', 'DejaVu Sans', 'Helvetica', 'Arial', sans-serif",
-    "serif": "'PT Serif', 'DejaVu Serif', 'Georgia', 'Times New Roman', serif",
-}
-_DEFAULT_SECONDARY = "#f6f8fb"  # the historical panel/zebra tint — zero-diff default
-
 # Logos above this size are dropped from the PDF render rather than inlined (a data: URI of a
 # multi-MB upload would bloat every render); the letterhead then falls back to the text name.
 _LOGO_EMBED_MAX_BYTES = 1_000_000
@@ -179,8 +166,7 @@ def _brand_context_from_row(seller_company, row) -> dict:
 
     Branding (legal name / logo / requisites) only renders when actually filled
     (_profile_has_branding) → the template falls back to the Company otherwise. The layout
-    TOGGLES and the document THEME (layout preset / font / secondary tint) read from the raw
-    row regardless, so a seller can restyle documents without also filling their legal name.
+    TOGGLES read from the raw row regardless, so a seller can switch them without also filling their legal name.
     """
     from ..quotes import _profile_has_branding
 
@@ -196,14 +182,6 @@ def _brand_context_from_row(seller_company, row) -> dict:
     # injection → WeasyPrint SSRF).
     raw_accent = getattr(branded, "accent_color", None) if branded else None
     accent = raw_accent if is_hex_color(raw_accent) else _DEFAULT_ACCENT
-    # Theme reads from the RAW row (like the toggles) and is allowlist-validated at render
-    # time too — defence-in-depth: layout lands in a class attr, secondary in a <style> block.
-    raw_layout = getattr(row, "layout_preset", None) if row else None
-    layout_preset = raw_layout if raw_layout in _LAYOUT_PRESETS else "light"
-    raw_font = getattr(row, "font_family", None) if row else None
-    font_stack = _FONT_STACKS.get(raw_font, _FONT_STACKS["sans"])
-    raw_secondary = getattr(row, "secondary_color", None) if row else None
-    secondary = raw_secondary if is_hex_color(raw_secondary) else _DEFAULT_SECONDARY
     return {
         "seller": seller_company,
         "seller_profile": branded,
@@ -215,8 +193,5 @@ def _brand_context_from_row(seller_company, row) -> dict:
         # and text on the accent fill reads --accent-contrast so a light brand accent stays legible.
         "accent": accent,
         "accent_contrast": accent_contrast(accent),
-        # D2 document theme — one theme drives all the company's PDFs.
-        "layout_preset": layout_preset,
-        "font_stack": font_stack,
-        "secondary": secondary,
+        # ДОК-13: тема (макет, шрифт, второй цвет) удалена — шаблоны берут свои умолчания.
     }

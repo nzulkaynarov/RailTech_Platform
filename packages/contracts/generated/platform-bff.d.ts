@@ -11939,7 +11939,7 @@ export interface components {
       footer_text: string;
       /** @description Основной цвет бренда, `#RRGGBB` */
       accent_color: string;
-      /** @description Второй цвет бренда, `#RRGGBB` */
+      /** @description Устарело (ДОК-13): ничего не меняет и не показывается, значение не принимается и не читается */
       secondary_color: string;
       cover_letter_text: string;
       contract_acceptance_text: string;
@@ -11947,12 +11947,12 @@ export interface components {
       contract_extra_terms_text: string;
       act_closing_text: string;
       /**
-       * @description Оформление: светлое, в рамках, контрастное, полосатое
+       * @description Устарело (ДОК-13): ничего не меняет и не показывается, значение не принимается и не читается
        * @enum {string}
        */
       layout_preset: "light" | "boxed" | "bold" | "striped";
       /**
-       * @description Шрифт: без засечек или с засечками
+       * @description Устарело (ДОК-13): ничего не меняет и не показывается, значение не принимается и не читается
        * @enum {string}
        */
       font_family: "sans" | "serif";
@@ -11981,7 +11981,7 @@ export interface components {
       footer_text?: string;
       /** @description Основной цвет бренда, `#RRGGBB` */
       accent_color?: string;
-      /** @description Второй цвет бренда, `#RRGGBB` */
+      /** @description Устарело (ДОК-13): ничего не меняет и не показывается, значение не принимается и не читается */
       secondary_color?: string;
       cover_letter_text?: string;
       contract_acceptance_text?: string;
@@ -11989,12 +11989,12 @@ export interface components {
       contract_extra_terms_text?: string;
       act_closing_text?: string;
       /**
-       * @description Оформление: светлое, в рамках, контрастное, полосатое
+       * @description Устарело (ДОК-13): ничего не меняет и не показывается, значение не принимается и не читается
        * @enum {string}
        */
       layout_preset?: "light" | "boxed" | "bold" | "striped";
       /**
-       * @description Шрифт: без засечек или с засечками
+       * @description Устарело (ДОК-13): ничего не меняет и не показывается, значение не принимается и не читается
        * @enum {string}
        */
       font_family?: "sans" | "serif";
@@ -12350,7 +12350,7 @@ export interface components {
       is_active?: boolean;
     };
     /**
-     * @description Вид шаблона документа
+     * @description Вид шаблона документа. `letter`, `report` и `custom` устарели (ДОК-13): новые шаблоны таких видов не создаются (ответ 400 `TEMPLATE_KIND_INVALID`), значения остаются только у ранее созданных шаблонов компании.
      * @enum {string}
      */
     DocumentTemplateKind:
@@ -12383,6 +12383,7 @@ export interface components {
     };
     DocumentTemplateIn: {
       name: string;
+      /** @description Вид обязателен для нового шаблона: без него (или с устаревшим видом) ERP отвечает 400 `TEMPLATE_KIND_INVALID`. */
       kind?: components["schemas"]["DocumentTemplateKind"];
       body_html?: string;
       is_active?: boolean;

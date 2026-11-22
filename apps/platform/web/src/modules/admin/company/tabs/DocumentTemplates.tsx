@@ -32,16 +32,8 @@ interface Values {
   is_active: boolean;
 }
 
-const KINDS: DocumentTemplateKind[] = [
-  "letter",
-  "report",
-  "custom",
-  "contract",
-  "invoice",
-  "act",
-  "receipt",
-  "delivery_note",
-];
+/** ДОК-13: «Письмо», «Рапорт» и «Произвольный» не предлагаются — письма пишутся на бланке в документообороте. */
+const KINDS: DocumentTemplateKind[] = ["contract", "invoice", "act", "receipt", "delivery_note"];
 
 /** Шаблоны документов компании: свои и образцы платформы («скопировать к себе»), редактор с подстановками и образцом. */
 export function DocumentTemplates() {
@@ -255,10 +247,12 @@ function DocumentEditor({
   const [form] = Form.useForm<Values>();
   // Образец платформы открывается только на просмотр (правит копия), как и всё — без права «полный» на раздел.
   const readOnly = noRight || (row?.is_sample ?? false);
-  const [prefilled, setPrefilled] = useState<string | null>(null);
+  // Новый шаблон не пустой: сразу текст образца платформы вида «Договор» (у юридических видов есть обязательные блоки).
+  const starter = samples.find((item) => item.kind === "contract")?.body_html ?? "";
+  const [prefilled, setPrefilled] = useState<string | null>(row || !starter ? null : starter);
   const initial: Values = row
     ? { name: row.name, kind: row.kind, body_html: row.body_html, is_active: row.is_active }
-    : { name: "", kind: "custom", body_html: "", is_active: true };
+    : { name: "", kind: "contract", body_html: starter, is_active: true };
   const create = useCreateDocumentTemplate({ mutation: { onSuccess: onSaved } });
   const update = useUpdateDocumentTemplate({ mutation: { onSuccess: onSaved } });
   const mutation = row ? update : create;
