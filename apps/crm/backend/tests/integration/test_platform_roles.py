@@ -96,7 +96,8 @@ async def test_every_catalog_role_by_id_computes_crm_role_access_and_queues_prov
     assert body["roles"] == [BASE_ROLE[code]]
     assert body["platform_access"] == ["crm", "erp"]
     assert body["erp_role_codes"] == []  # права ERP — вычисленный набор, не системные роли
-    assert body["erp_sync"] == "pending"
+    # Фиктивная очередь не пишет задачу в procrastinate, факта нет — «не выдан» (queue.jobs ниже).
+    assert body["erp_sync"] == "error"
     assert await crm_roles(sessions, employee) == [BASE_ROLE[code]]
     assert (await user_row(sessions, employee)).ui_mode == "manager"
     assert queue.jobs == [("provision", employee)]  # доступ выдан ролью -> провижининг
@@ -633,7 +634,8 @@ async def test_erp_sync_status_follows_the_fact_of_erp_answer(
         json={"platform_role_ids": legacy_ids(client, boss, ["MANAGER"])},
         headers=boss,
     )
-    assert granted.json()["erp_sync"] == "pending"  # ответ на действие — «поставлено»
+    # Ответ на действие — тот же итог, что и в карточке: в фиктивной очереди задачи нет.
+    assert granted.json()["erp_sync"] == "error"
     # Выдача поставлена только в фиктивную очередь: ERP ничего не ответила — это не «ок»
     # (раньше здесь было ("ok", None) — «ок» без единого обращения к ERP).
     async with sessions() as session:
@@ -650,6 +652,9 @@ async def test_erp_sync_status_follows_the_fact_of_erp_answer(
 
     await defer_erp_job(sessions, employee)
     assert status() == ("pending", None)  # задача стоит в настоящей очереди
+    # PATCH поля без синхронизации не должен выдавать ложный «error»: очередь берётся из факта.
+    edited = client.patch(f"/api/v1/users/{employee}", json={"position": "Менеджер"}, headers=boss)
+    assert edited.json()["erp_sync"] == "pending"
     listed = {u["id"]: u for u in client.get("/api/v1/users", headers=boss).json()}
     assert listed[employee]["erp_sync"] == "pending"
 

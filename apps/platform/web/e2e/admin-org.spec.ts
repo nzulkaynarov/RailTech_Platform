@@ -266,19 +266,16 @@ test.describe("Оргструктура: axe и скриншоты", () => {
       await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
       await loginAndWait(page, "admin@demo.example");
       await openOrg(page);
-      await page.evaluate(() => {
+      await page.evaluate(`(() => {
         const key = "rt-pf-mock-employees";
-        const items = JSON.parse(window.localStorage.getItem(key) ?? "[]") as {
-          id: string;
-          erp_sync: string;
-        }[];
+        const items = JSON.parse(window.localStorage.getItem(key) || "[]");
         window.localStorage.setItem(
           key,
           JSON.stringify(
             items.map((e) => (e.id === "u-demo-manager" ? { ...e, erp_sync: "error" } : e)),
           ),
         );
-      });
+      })()`);
       await page.reload();
       await openCard(page, "Демо Менеджеров");
       const panel = page.locator(PANEL);

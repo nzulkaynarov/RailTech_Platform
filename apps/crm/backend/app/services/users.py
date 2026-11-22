@@ -232,10 +232,8 @@ class UserService:
             await _publish_change(session, actor, user, before, after, changed)
             action = sync_action(erp_before, erp_after)
         await self._sync_erp(action, user_id)
-        if action == "provision" and not after.erp_provisioned:
-            # Факта ещё нет: задача только поставлена (или не встала в очередь — тогда ошибка).
-            after = replace(after, erp_sync="error" if after.erp_sync_error else "pending")
-        return after
+        # Status comes from the fact and the real queue, not from the pre-commit snapshot.
+        return await self.get(user_id)
 
     async def _sync_erp(self, action: SyncAction | None, user_id: int) -> None:
         await enqueue_sync(self._sessions, self._erp_sync, action, user_id)
