@@ -49,6 +49,12 @@ class SecondFactorLoginRequest(BaseModel):
     remember_device: bool = False
 
 
+class CalendarLinkOut(BaseModel):
+    # Секрет виден один раз: в CRM остаётся только sha256
+    token: str
+    issued_at: datetime
+
+
 class SecondFactorStatusResponse(BaseModel):
     enabled: bool
     enabled_at: datetime | None

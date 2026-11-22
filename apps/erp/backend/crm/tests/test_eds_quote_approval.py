@@ -620,6 +620,13 @@ def test_approval_with_available_channels_sends_the_quote_to_the_client(world):
     bus_support.assert_matches_contract(sent)
     assert sent["data"]["payload"]["channels"] == ["telegram", "cabinet", "email"]
     assert ActivityLog.objects.filter(entity_id=quote.pk, event_code="quote.auto_sent").exists()
+    # СЦ-7: the bell names channels in words, not codes
+    from core.models import Notification
+    from notifications.tests.human_text import assert_human_text
+
+    message = Notification.objects.get(event_code="quote.director_approved", user_id=quote.prepared_by_id).message
+    assert_human_text(message)
+    assert "в Telegram, в Кабинет, на почту" in message
 
 
 def test_unavailable_channel_is_skipped_with_a_reason_and_the_approval_stands(world):

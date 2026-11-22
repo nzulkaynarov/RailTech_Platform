@@ -84,6 +84,9 @@ class CrmUsers:
         self.patch_route = router.patch(url__regex=rf"{CRM_URL}/api/v1/users/\d+$").mock(
             side_effect=self._patch
         )
+        self.erp_sync_route = router.post(url__regex=rf"{CRM_URL}/api/v1/users/\d+/erp-sync$").mock(
+            side_effect=self._erp_sync
+        )
         self.invite_route = router.post(url__regex=rf"{CRM_URL}/api/v1/users/\d+/invite$").mock(
             side_effect=lambda request: self.invite_response
         )
@@ -113,6 +116,16 @@ class CrmUsers:
             return early
         user = self.users.get(self._id(request))
         return httpx.Response(200, json=with_refs(user)) if user else self._error(404, "not_found")
+
+    def _erp_sync(self, request: httpx.Request) -> httpx.Response:
+        """CRM: ошибка снята, задача в очереди — карточка со статусом `pending`."""
+        if (early := self._common()) is not None:
+            return early
+        user = self.users.get(self._id(request))
+        if user is None:
+            return self._error(404, "not_found")
+        user.update(erp_sync="pending", erp_sync_error=None)
+        return httpx.Response(200, json=with_refs(user))
 
     def _create(self, request: httpx.Request) -> httpx.Response:
         if (early := self._common()) is not None:
@@ -284,6 +297,43 @@ async def test_erp_sync_comes_from_crm(web: Web, crm: CrmUsers, check: ContractC
     check(response, "/admin/users/{id}", "get")
     assert response.json()["erp_sync"] == "error"
     assert response.json()["erp_sync_error"] == "ERP: нет связи"
+
+
+async def test_erp_sync_missing_from_crm_is_not_invented_as_ok(web: Web, crm: CrmUsers) -> None:
+    """Без поля `erp_sync` от CRM BFF не подставляет «ок» (СЦ-8): статус — только из факта CRM."""
+    await login_as(web, "ADMIN")
+    crm.users[11].pop("erp_sync")
+    crm.users[11]["platform_access"] = ["crm", "erp"]
+
+    response = await web.client.get("/api/v1/admin/users/11")
+
+    assert response.json()["access"]["erp"] is True
+    assert response.json()["erp_sync"] == "not_applicable"
+
+
+async def test_retry_erp_sync_calls_crm_and_returns_the_card(
+    web: Web, crm: CrmUsers, check: ContractChecker
+) -> None:
+    await login_as(web, "ADMIN")
+    crm.users[11].update(erp_sync="error", erp_sync_error="ERP: нет связи")
+
+    response = await web.send("POST", "/api/v1/admin/users/11/erp-sync")
+
+    assert response.status_code == 200, response.text
+    check(response, "/admin/users/{id}/erp-sync", "post")
+    assert response.json()["erp_sync"] == "pending"
+    assert "erp_sync_error" not in response.json()
+    assert crm.erp_sync_route.calls.last.request.url.path == "/api/v1/users/11/erp-sync"
+
+
+async def test_retry_erp_sync_unknown_employee_is_404_and_needs_csrf(
+    web: Web, crm: CrmUsers
+) -> None:
+    await login_as(web, "ADMIN")
+    assert (await web.send("POST", "/api/v1/admin/users/999/erp-sync")).status_code == 404
+    denied = await web.send("POST", "/api/v1/admin/users/11/erp-sync", csrf="wrong")
+    assert denied.status_code == 403
+    assert denied.json()["code"] == "CSRF_FAILED"
 
 
 async def test_get_unknown_employee_is_404(web: Web, crm: CrmUsers, check: ContractChecker) -> None:

@@ -467,7 +467,7 @@ function seed(): ProjectState[] {
         issued_at: "2026-10-05",
         signed_at: "2026-10-07T12:00:00+05:00",
         rejection_reason: "",
-        has_scan: true,
+        has_scan: false,
       },
       journal: [
         entry(
@@ -479,12 +479,12 @@ function seed(): ProjectState[] {
           "Демо Бухгалтеров",
         ),
         entry(
-          "act.scan_attached",
+          "act.signed",
           "act",
           "АКТ-2026/044",
-          "Прикреплён скан подписанного акта",
+          "Акт принят заказчиком",
           "2026-10-07T12:00:00+05:00",
-          "Демо Бухгалтеров",
+          "",
         ),
       ],
     },
@@ -609,7 +609,9 @@ export function toRow(p: ProjectState): ProjectRow {
       invoice: last
         ? { id: last.id, number: last.number, status: last.status, count: live.length }
         : null,
-      act: p.act ? { id: p.act.id, number: p.act.number, status: p.act.status } : null,
+      act: p.act
+        ? { id: p.act.id, number: p.act.number, status: p.act.status, has_scan: p.act.has_scan }
+        : null,
     },
     problems: problemsOf(p),
     created_at: p.created_at,

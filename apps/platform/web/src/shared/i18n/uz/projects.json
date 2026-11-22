@@ -79,6 +79,7 @@
       "returned": "Sabab bilan qaytarilgan",
       "issued": "Chiqarilgan",
       "signed": "Imzolangan (skan)",
+      "accepted": "Mijoz qabul qilgan",
       "cancelled": "Bekor qilingan"
     }
   },
@@ -92,8 +93,8 @@
     "title": "{{number}} loyihasi",
     "back": "Barcha loyihalar",
     "steps": "Ariza yo‘li",
-    "doneNote": "Loyiha bajarildi: dalolatnoma imzolangan, barcha hisoblar to‘langan.",
-    "doneRule": "Dalolatnoma imzolanib, barcha hisoblar to‘langanda loyiha «Bajarildi» bo‘ladi.",
+    "doneNote": "Loyiha bajarildi: dalolatnoma qabul qilingan, barcha hisoblar tölangan.",
+    "doneRule": "Dalolatnoma qabul qilinib, barcha hisoblar tölanganda loyiha «Bajarildi» böladi.",
     "fields": {
       "client": "Mijoz",
       "total": "QQS bilan summa",
@@ -118,7 +119,8 @@
       "actType": "Bajarilgan ish yoki yetkazib berish dalolatnomasi",
       "none": "—",
       "contractMissing": "Shartnoma loyihasi hali yo‘q: uni buxgalter qabul qilingan TT dan shakllantiradi.",
-      "invoiceMissing": "Hisob shartnoma imzolangandan keyin paydo bo‘ladi: ERP oldindan to‘lov hisobining qoralamasini yaratadi.",
+      "invoiceMissing": "Hisob shartnoma imzolangandan keyin paydo böladi: qoralama avtomatik yaratiladi.",
+      "invoiceMissingSigned": "Shartnoma imzolangan, hisob hali yöq: uni «Moliya» bölimida chiqaring.",
       "actMissing": "Dalolatnoma rasmiylashtirilgan hisob bo‘yicha chiqariladi.",
       "actAfterDelivery": "Dalolatnoma — yetkazilgandan keyin",
       "invoiceDue": "muddat {{date}}",
@@ -217,7 +219,7 @@
       "issued_external": "Shartnoma operatorda rasmiylashtirildi",
       "scan_attached": "Imzolangan shartnoma skani biriktirildi",
       "signed": "Shartnoma imzolandi",
-      "signed_client": "Shartnomani mijoz imzoladi",
+      "signed_client": "Mijoz shartnomani kelişdi",
       "signed_manager": "Shartnomani kompaniya imzoladi",
       "cancelled": "Shartnoma bekor qilindi"
     },
@@ -334,12 +336,14 @@
     "fields": {
       "total": "Summa",
       "issued": "Chiqarilgan",
-      "signed": "Imzolangan"
+      "signed": "Imzolangan",
+      "accepted": "Qabul qilingan"
     },
     "state": {
       "project": "Dalolatnoma loyiha holatida.",
       "issued": "Dalolatnoma mijozda qabul qilinmoqda. U imzolagach, skanni biriktiring.",
       "signed": "Dalolatnoma imzolangan, skan saqlangan.",
+      "accepted": "Mijoz dalolatnomani kabinetda qabul qildi. Skan yöq.",
       "returned": "Mijoz dalolatnomani sabab bilan qaytardi. To‘g‘rilab, qaytadan chiqaring.",
       "cancelled": "Dalolatnoma bekor qilingan."
     },

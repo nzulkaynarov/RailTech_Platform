@@ -3,21 +3,37 @@
 
 from typing import Annotated
 
+import structlog
 from fastapi import APIRouter, Depends, Query
+from redis.exceptions import RedisError
 
+from app import calendar_link, session
 from app.deps import Authed, require
 from app.feeds import activity, queue
 from app.feeds.feed import Feed
-from app.feeds.models import ActivityFeed, MenuCounters, Queue, QueueCards
+from app.feeds.models import ActivityFeed, MenuCounters, Queue, QueueCards, QueueItem, Sources
 from app.feeds.snapshot import load_snapshot, wants_approvals, wants_projects
 from app.feeds.view import roles_of_view
 
 router = APIRouter(tags=["dashboard"])
+log = structlog.get_logger()
 
 QueueAuthed = Annotated[Authed, Depends(require("dashboard.queue", "read"))]
 RoleParam = Annotated[
     str | None, Query(pattern=r"^[1-9][0-9]*$", description="Только очередь этой роли (id)")
 ]
+
+
+async def publish_calendar(authed: Authed, items: list[QueueItem], sources: Sources) -> None:
+    """Снимок сроков для личного календаря сотрудника (`app/calendar_link.py`). Неполная очередь
+    (источник не ответил) снимок не заменяет: срок не пропадает из календаря из-за сбоя."""
+    if "unavailable" in sources.model_dump().values():
+        return
+    try:
+        redis = authed.service.store.redis
+        await calendar_link.store_snapshot(redis, authed.data.user_id, items, session.now())
+    except RedisError:  # календарь — добавка к очереди, а не её условие
+        log.warning("calendar_snapshot_failed")
 
 
 @router.get("/menu-counters", response_model=MenuCounters, operation_id="getMenuCounters")
@@ -56,7 +72,9 @@ async def get_queue(authed: QueueAuthed, role: RoleParam = None) -> Queue:
         stock=True,
         work=True,
     )
-    return Queue(items=queue.build_queue(feed, view, snap), sources=feed.sources)
+    items = queue.build_queue(feed, view, snap)
+    await publish_calendar(authed, items, feed.sources)
+    return Queue(items=items, sources=feed.sources)
 
 
 @router.get(

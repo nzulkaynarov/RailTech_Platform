@@ -79,6 +79,7 @@
       "returned": "Returned with a reason",
       "issued": "Issued",
       "signed": "Signed (scan)",
+      "accepted": "Accepted by client",
       "cancelled": "Voided"
     }
   },
@@ -92,8 +93,8 @@
     "title": "Project {{number}}",
     "back": "All projects",
     "steps": "Request path",
-    "doneNote": "The project is completed: the act is signed and all invoices are paid.",
-    "doneRule": "The project becomes “Completed” when the act is signed and all invoices are paid.",
+    "doneNote": "The project is completed: the act is accepted and all invoices are paid.",
+    "doneRule": "The project becomes “Completed” when the act is accepted and all invoices are paid.",
     "fields": {
       "client": "Client",
       "total": "Total incl. VAT",
@@ -118,7 +119,8 @@
       "actType": "Act of work or delivery",
       "none": "—",
       "contractMissing": "No contract draft yet: the accountant creates it from the accepted quote.",
-      "invoiceMissing": "The invoice appears after the contract is signed: ERP creates a draft prepayment invoice.",
+      "invoiceMissing": "The invoice appears after the contract is signed: the draft is created automatically.",
+      "invoiceMissingSigned": "The contract is signed, no invoice yet: issue it in “Finance”.",
       "actMissing": "The act is issued against an issued invoice.",
       "actAfterDelivery": "Act — after delivery",
       "invoiceDue": "due {{date}}",
@@ -217,7 +219,7 @@
       "issued_external": "Contract issued at the operator",
       "scan_attached": "Scan of the signed contract attached",
       "signed": "Contract signed",
-      "signed_client": "Contract signed by the client",
+      "signed_client": "Client agreed to the contract",
       "signed_manager": "Contract signed by the company",
       "cancelled": "Contract cancelled"
     },
@@ -334,12 +336,14 @@
     "fields": {
       "total": "Amount",
       "issued": "Issued",
-      "signed": "Signed"
+      "signed": "Signed",
+      "accepted": "Accepted"
     },
     "state": {
       "project": "The act is a draft.",
       "issued": "The act is with the client for acceptance. When they sign, attach the scan.",
       "signed": "The act is signed, the scan is stored.",
+      "accepted": "The client accepted the act in the cabinet. No scan.",
       "returned": "The client returned the act with a reason. Fix it and issue it again.",
       "cancelled": "The act is voided."
     },

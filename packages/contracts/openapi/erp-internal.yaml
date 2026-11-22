@@ -20832,6 +20832,9 @@ components:
           type: string
         status:
           $ref: '#/components/schemas/ProjectActStatusEnum'
+        has_scan:
+          type: boolean
+          description: Файл подписанного акта приложен; при `signed` без файла акт принят клиентом в кабинете
         total:
           allOf:
           - $ref: '#/components/schemas/ProjectMoney'
@@ -20847,8 +20850,6 @@ components:
         rejection_reason:
           type: string
         has_pdf:
-          type: boolean
-        has_scan:
           type: boolean
         actions:
           type: array
@@ -21056,7 +21057,11 @@ components:
           type: string
         status:
           $ref: '#/components/schemas/ProjectActStatusEnum'
+        has_scan:
+          type: boolean
+          description: Файл подписанного акта приложен; при `signed` без файла акт принят клиентом в кабинете
       required:
+      - has_scan
       - id
       - number
       - status

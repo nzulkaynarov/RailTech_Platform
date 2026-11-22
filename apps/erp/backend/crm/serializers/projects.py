@@ -64,6 +64,9 @@ class ActRefSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     number = serializers.CharField()
     status = serializers.ChoiceField(choices=ACT_WORDS)
+    has_scan = serializers.BooleanField(
+        help_text="Файл подписанного акта приложен; при `signed` без файла акт принят клиентом в кабинете"
+    )
 
 
 class ProjectDocumentsSerializer(serializers.Serializer):
@@ -166,7 +169,6 @@ class ActCardSerializer(ActRefSerializer):
     signed_at = serializers.DateTimeField(allow_null=True)
     rejection_reason = serializers.CharField(allow_blank=True)
     has_pdf = serializers.BooleanField()
-    has_scan = serializers.BooleanField()
     actions = serializers.ListField(child=serializers.ChoiceField(choices=ACT_ACTIONS))
     history = ProjectJournalEntrySerializer(many=True)
 

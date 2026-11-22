@@ -4,7 +4,7 @@ from dataclasses import replace
 
 import pytest
 
-from app.domain.erp_sync import AccessState, access_audit_action, sync_action
+from app.domain.erp_sync import AccessState, access_audit_action, erp_sync_status, sync_action
 
 CRM_ONLY = AccessState(("crm",), True, ("manager",), "Иван")
 WITH_ERP = replace(CRM_ONLY, platform_access=("crm", "erp"))
@@ -119,3 +119,41 @@ def test_sync_decision(
 ) -> None:
     assert sync_action(before, after) == action
     assert access_audit_action(before, after) == audit
+
+
+@pytest.mark.parametrize(
+    ("has_erp", "is_active", "error", "pending", "provisioned", "status"),
+    [
+        # 1. ошибка важнее всего
+        pytest.param(True, True, "boom", True, True, "error", id="error-first"),
+        pytest.param(False, False, "boom", False, False, "error", id="error-even-inapplicable"),
+        # 2. нет доступа или не активен — выдача не в счёт, отзыв в очереди не «выдаётся»
+        pytest.param(False, True, None, True, True, "not_applicable", id="no-access"),
+        pytest.param(True, False, None, True, True, "not_applicable", id="disabled-revoke-queued"),
+        # 3. факт есть — ок, даже если задача (повторный провижининг) в очереди
+        pytest.param(True, True, None, False, True, "ok", id="fact"),
+        pytest.param(True, True, None, True, True, "ok", id="fact-and-queued"),
+        # 4. факта нет, задача в очереди — pending
+        pytest.param(True, True, None, True, False, "pending", id="no-fact-queued"),
+        # 5. факта нет и задачи нет — «не выдан»
+        pytest.param(True, True, None, False, False, "error", id="no-fact-no-job"),
+    ],
+)
+def test_erp_sync_status_derives_from_the_fact(
+    has_erp: bool,
+    is_active: bool,
+    error: str | None,
+    pending: bool,
+    provisioned: bool,
+    status: str,
+) -> None:
+    assert (
+        erp_sync_status(
+            has_erp=has_erp,
+            is_active=is_active,
+            error=error,
+            pending=pending,
+            provisioned=provisioned,
+        )
+        == status
+    )

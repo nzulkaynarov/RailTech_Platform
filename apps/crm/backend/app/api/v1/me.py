@@ -10,6 +10,7 @@ from app.api.v1.users import to_out
 from app.container import Container
 from app.domain.errors import PasswordChangeRequiredError, ValidationFailedError
 from app.schemas.auth import (
+    CalendarLinkOut,
     CoveredOut,
     DeputyCandidate,
     DeputyIn,
@@ -249,3 +250,11 @@ async def second_factor_disable(
 ) -> None:
     """Выключить — кодом из приложения или резервным."""
     await container.second_factor_service.disable(principal.actor, principal.user_id, body.code)
+
+
+@router.post("/calendar-link", response_model=CalendarLinkOut)
+async def calendar_link_issue(principal: Settled, container: ContainerDep) -> CalendarLinkOut:
+    """Выдать (или заменить) секретный токен личного календаря: виден один раз, прежний
+    перестаёт действовать. Ссылку из токена собирает Платформа."""
+    issued = await container.calendar_link_service.issue(principal.actor, principal.user_id)
+    return CalendarLinkOut(token=issued.token, issued_at=issued.issued_at)

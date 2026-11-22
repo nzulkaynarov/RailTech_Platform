@@ -120,9 +120,7 @@ test.describe("Проекты: бухгалтер", () => {
     await pickFiles(act.getByLabel("Скан подписанного акта"), SCAN("akt-demo.pdf"));
     await act.getByRole("button", { name: "Прикрепить скан" }).click();
     await expect(act.getByText("Акт подписан, скан сохранён.")).toBeVisible();
-    await expect(
-      page.getByText("Проект выполнен: акт подписан, все счета оплачены."),
-    ).toBeVisible();
+    await expect(page.getByText("Проект выполнен: акт принят, все счета оплачены.")).toBeVisible();
     await settledScreenshot(page, "project-done");
     await expectNoViolations(page, "проект выполнен");
     await expectNoInvoiceWord(page);
@@ -140,6 +138,19 @@ test.describe("Проекты: бухгалтер", () => {
     await expect(page.getByText("Акт — после доставки").first()).toBeVisible();
     await settledScreenshot(page, "act-after-delivery");
     await expectNoViolations(page, "акт — после доставки");
+  });
+
+  test("акт принят клиентом в кабинете, файла нет: «Принят клиентом», без «скан» (СЦ-8)", async ({
+    page,
+  }) => {
+    await loginAndWait(page, "accountant@demo.example");
+    await openProject(page, 72, "act");
+    const act = page.locator(PANEL);
+    await expect(act.getByText("Клиент принял акт в кабинете. Скана нет.")).toBeVisible();
+    await expect(act.getByText("Принят клиентом")).toBeVisible();
+    await expect(act.getByText(/скан сохранён/)).toHaveCount(0);
+    await settledScreenshot(page, "act-accepted-no-scan");
+    await expectNoViolations(page, "акт принят клиентом");
   });
 
   test("реестр «Все документы»: договор и акт проекта — вкладки и ссылка «В проекте»", async ({
@@ -213,6 +224,12 @@ test.describe("Проекты: телефон", () => {
       await expect(actSheet.getByRole("button", { name: "Выпустить акт" })).toHaveCount(0);
       await settledScreenshot(page, "act-after-delivery");
       await expectNoViolations(page, "мобильный лист акта: после доставки");
+
+      await spaGoto(page, `${PR(72)}?sheet=act`);
+      const accepted = page.getByRole("dialog");
+      await expect(accepted.getByText("Принят клиентом")).toBeVisible();
+      await settledScreenshot(page, "act-accepted-no-scan");
+      await expectNoViolations(page, "мобильный лист акта: принят клиентом");
     },
   );
 });

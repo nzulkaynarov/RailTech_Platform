@@ -75,6 +75,13 @@ export function DeliveryReport({ quote }: { quote: QuoteApprovalCard }) {
   const delivery = quote.delivery;
   if (!delivery) return null;
 
+  // «Not reached» only when every line is a definite negative outcome; `unknown` is absence of data, not a fact.
+  const sentNowhere = delivery.lines.every(
+    (line) =>
+      line.status === "failed" || line.status === "skipped" || line.status === "not_selected",
+  );
+  const stateKey = delivery.state === "sent" && sentNowhere ? "sentNowhere" : delivery.state;
+
   const items: ChecklistItem[] = delivery.lines.map((line) => {
     const channel = t(`form.channels.${line.channel}.name`);
     const status = t(`card.delivery.status.${line.status}`);
@@ -118,7 +125,7 @@ export function DeliveryReport({ quote }: { quote: QuoteApprovalCard }) {
 
   return (
     <Card size="small" title={<h2 className="pf-dec-title">{t("card.delivery.title")}</h2>}>
-      <p className="pf-hint">{t(`card.delivery.state.${delivery.state}`)}</p>
+      <p className="pf-hint">{t(`card.delivery.state.${stateKey}`)}</p>
       {delivery.error ? (
         <p className="pf-dec-warn" role="note">
           {t("card.delivery.error", { reason: t(`card.delivery.reason.${delivery.error}`) })}

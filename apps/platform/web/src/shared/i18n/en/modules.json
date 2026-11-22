@@ -538,6 +538,8 @@
         "status": "Status",
         "erpPending": "ERP access is still being granted.",
         "erpError": "ERP access could not be granted: {{error}}",
+        "erpNotGranted": "ERP access is not granted.",
+        "erpRetry": "Retry",
         "disabledNote": "The employee is disabled and cannot sign in. Roles and position are kept."
       },
       "form": {

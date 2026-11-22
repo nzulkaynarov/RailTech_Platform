@@ -426,7 +426,9 @@
       "approval_decided": "Принято решение",
       "document_paid": "Оплачена",
       "document_archived": "Перенесена в архив",
-      "file_attached": "Приложен файл"
+      "file_attached": "Приложен файл",
+      "document_updated": "Изменена",
+      "file_version_added": "Загружена новая версия файла"
     }
   },
   "issue": {

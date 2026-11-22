@@ -23,6 +23,8 @@ from uuid import UUID
 
 from django.db import transaction
 
+from notifications.text_format import deal_ref, text_date
+
 from ..constants import DealStageCode
 from ..models import ActivityLog, CalcTask, CalcTaskAssignee
 from ..models import CalcZone as Zone
@@ -141,7 +143,7 @@ def _notify_assignee(user_id: int, deal: Deal, task: CalcTask) -> None:
         user_id=user_id,
         type=NotificationType.objects.filter(code="INFO").first(),
         title="Задание на расчёт",
-        message=f"Резолюция по {task.letter_number}: расчёт по заявке #{deal.id} до {task.due.isoformat()}.",
+        message=f"Резолюция по {task.letter_number}: расчёт по заявке {deal_ref(deal)} до {text_date(task.due)}.",
         link=f"#deal/{deal.id}",
         event_code="deal.calc_assigned",
         event_params={"deal_id": deal.id, "letter_number": task.letter_number, "due": task.due.isoformat()},

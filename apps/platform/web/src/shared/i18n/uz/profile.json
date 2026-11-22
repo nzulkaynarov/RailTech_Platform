@@ -17,7 +17,7 @@
     "cropArea": "Rasm maydoni: klaviatura o‘qlari bilan suring",
     "zoom": "Masshtab",
     "apply": "Rasmni saqlash",
-    "cancel": "Bekor qilish",
+    "cancel": "Bekor qiliş",
     "readError": "Faylni ochib bo‘lmadi. PNG, JPEG yoki WebP rasm tanlang.",
     "errors": {
       "avatar_unsupported_type": "PNG, JPEG yoki WebP rasm kerak.",
@@ -49,7 +49,7 @@
     "signatureHint": "Siz yuboradigan xatlarga qo‘shiladi. 1000 belgigacha.",
     "signatureTooLong": "Imzo 1000 belgidan oshmasligi kerak",
     "save": "Saqlash",
-    "cancel": "Bekor qilish",
+    "cancel": "Bekor qiliş",
     "saved": "Profil saqlandi",
     "errors": {
       "phone_invalid": "Raqamni tekshiring: 7 dan 15 gacha raqam, «+» bilan boshlanishi mumkin.",
@@ -173,11 +173,11 @@
     "manual": "Skanerlanmasa — kalitni qölda kiriting:",
     "code": "Ilovadagi kod",
     "confirm": "Tasdiqlash",
-    "cancel": "Bekor qilish",
+    "cancel": "Bekor qiliş",
     "backupTitle": "Kod bilan kirish yoqildi. Zaxira kodlarni saqlang",
     "backupHint": "Har bir kod telefonsiz bir marta kirish uçun. Ularni boşqa körsatmaymiz.",
     "download": "Yuklab olish",
-    "copy": "Nusxalash",
+    "copy": "Nusxalaş",
     "copied": "Kodlar nusxalandi",
     "saved": "Kodlarni saqladim",
     "disabled": "Kod bilan kirish öçirildi",
@@ -188,5 +188,21 @@
       "default": "Bölmadi. Qayta urinib köring."
     },
     "qrLabel": "Autentifikator ilovasi uçun QR-kod"
+  },
+  "calendarLink": {
+    "title": "Taqvim havolasi",
+    "lead": "“Mening vazifalarim”dagi muddatlar taqvimingizda: nomlar va sanalar, summalarsiz. Havola orqali telefon yoki kompyuterdagi taqvimga obuna böling.",
+    "none": "Havola hali yöq.",
+    "active": "Havola {{date}} sanasida berilgan.",
+    "get": "Havolani oliş",
+    "rotate": "Havolani almaştiriş",
+    "rotateTitle": "Eski havola işlamay qoladi. Almaştiramizmi?",
+    "cancel": "Bekor qiliş",
+    "field": "Taqvim havolasi",
+    "copy": "Nusxalaş",
+    "copied": "Havola nusxalandi",
+    "once": "Havolani hozir nusxalang: keyin uni körsatmaymiz. Yöqotdingizmi — havolani almaştiring.",
+    "refreshHint": "Muddatlar Platformaga kirganingizda yangilanadi.",
+    "error": "Havolani olib bölmadi. Qayta urinib köring."
   }
 }

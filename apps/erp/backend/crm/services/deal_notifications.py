@@ -15,6 +15,7 @@
 from typing import Iterable, List
 
 from notifications.services import notify_user, spa_link
+from notifications.text_format import deal_ref, text_date, text_money
 
 
 def buyer_team_user_ids(deal) -> List[int]:
@@ -87,7 +88,7 @@ def notify_payment_recorded(payment) -> int:
         seller_team_user_ids(deal),
         deal=deal,
         title="Оплата получена",
-        message=f"По счёту {invoice.number} записана оплата на сумму {payment.amount}",
+        message=f"По счёту {invoice.number} записана оплата на сумму {text_money(payment.amount, invoice.currency.code if invoice.currency_id else '')}",
         link=spa_link("invoices", invoice.id),
         type_code="SUCCESS",
         event_code="payment.recorded",
@@ -103,7 +104,7 @@ def notify_act_issued(act) -> int:
         buyer_team_user_ids(deal),
         deal=deal,
         title="Акт выставлен",
-        message=f"По сделке #{deal.pk} выставлен акт {act.number} — требуется подпись",
+        message=f"По сделке {deal_ref(deal)} выставлен акт {act.number} — требуется подпись",
         link="",
         type_code="INFO",
         event_code="act.issued",
@@ -117,9 +118,9 @@ def notify_act_signed(act, signer, *, accepted_by_client: bool = False) -> int:
     Приёмка клиентом в кабинете — не подпись: в тексте «принят клиентом» (решение владельца 2026-11-22); скан,
     прикреплённый сотрудником, остаётся «подписан»."""
     title, message = (
-        ("Акт принят клиентом", f"Акт {act.number} по сделке #{act.deal_id} принят клиентом")
+        ("Акт принят клиентом", f"Акт {act.number} по сделке {deal_ref(act.deal)} принят клиентом")
         if accepted_by_client
-        else ("Акт подписан", f"Акт {act.number} по сделке #{act.deal_id} подписан")
+        else ("Акт подписан", f"Акт {act.number} по сделке {deal_ref(act.deal)} подписан")
     )
     deal = act.deal
     recipients = set(buyer_team_user_ids(deal)) | set(seller_team_user_ids(deal))
@@ -149,7 +150,7 @@ def notify_act_rejected(act, actor, reason: str) -> int:
         recipients,
         deal=deal,
         title="Акт отклонён заказчиком",
-        message=f"Акт {act.number} по сделке #{deal.pk} возвращён на доработку: {reason}",
+        message=f"Акт {act.number} по сделке {deal_ref(deal)} возвращён на доработку: {reason}",
         link=spa_link("acts", act.id),
         type_code="WARNING",
         event_code="act.rejected",
@@ -171,7 +172,7 @@ def notify_act_cancelled(act, actor, reason: str) -> int:
         recipients,
         deal=deal,
         title="Акт аннулирован исполнителем",
-        message=f"Акт {act.number} по сделке #{deal.pk} отозван: {reason}",
+        message=f"Акт {act.number} по сделке {deal_ref(deal)} отозван: {reason}",
         link="",
         type_code="WARNING",
         event_code="act.cancelled",
@@ -205,7 +206,7 @@ def notify_fulfillment_status(fulfillment, status_code: str, actor) -> int:
         recipients,
         deal=deal,
         title=title,
-        message=f"Сделка #{deal.pk}: статус поставки — {title.lower()}",
+        message=f"Сделка {deal_ref(deal)}: статус поставки — {title.lower()}",
         link=spa_link("fulfillments"),
         type_code="WARNING" if status_code == FulfillmentStatusCode.DISPUTED else "INFO",
         # Один код на все статусы: сам статус — параметр, клиент печатает его из своего же
@@ -229,7 +230,7 @@ def notify_delivery_overdue(fulfillment) -> int:
         deal=deal,
         title="Просрочка по доставке",
         message=(
-            f"Сделка #{deal.pk}: ожидали {fulfillment.expected_delivery_date}, "
+            f"Сделка {deal_ref(deal)}: ожидали {text_date(fulfillment.expected_delivery_date)}, "
             f"статус — {fulfillment.status.name if fulfillment.status else '—'}"
         ),
         link=spa_link("fulfillments"),

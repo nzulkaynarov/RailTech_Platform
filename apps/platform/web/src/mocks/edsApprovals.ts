@@ -87,6 +87,25 @@ const QUOTES = ["eds.drafts"] as const;
 const MEMO_READ = ["eds.memo.approve", "eds.memo.create"] as const;
 
 /**
+ * Prod `Me.id` is the CRM user id, but a mock session user has a string id («u-demo-director»). For the signed-in user the
+ * card names them by that id (cast: the mock lies about the integer type), so «Вы согласовали …» works on the mock stand.
+ */
+function asViewer(card: MemoApprovalCard): MemoApprovalCard {
+  const session = readSession();
+  const crmId = session ? MOCK_USER_CRM_ID[session.userId] : undefined;
+  if (!session || crmId === undefined) return card;
+  const mine = <P extends { crm_user_id: number }>(person: P): P =>
+    person.crm_user_id === crmId ? { ...person, crm_user_id: session.userId as never } : person;
+  return {
+    ...card,
+    steps: card.steps.map((st) =>
+      st.decided_by ? { ...st, decided_by: mine(st.decided_by) } : st,
+    ),
+    decisions: card.decisions.map((d) => ({ ...d, by: mine(d.by) })),
+  };
+}
+
+/**
  * Служебка, чей шаг заместитель решает за замещаемого: та же, что строка «за {имя}» в очереди (`coveredQueueItems`).
  * Как у EDS, карточка и решение получают `acting_for`.
  */
@@ -272,6 +291,17 @@ function decideSteps(
     const handedOver = steps[index - 1]?.status === "current" && decision === "approve";
     return { ...s, status: handedOver ? "current" : "skipped" };
   });
+}
+
+/** For e2e: replace the delivery report of a seeded quote (`window.__rtMockSetQuoteDelivery`), e.g. «ERP says sent, nothing reached». */
+if (typeof window !== "undefined") {
+  (
+    window as unknown as {
+      __rtMockSetQuoteDelivery?: (number: string, delivery: QuoteApprovalCard["delivery"]) => void;
+    }
+  ).__rtMockSetQuoteDelivery = (number, delivery) => {
+    writeQuotes(readQuotes().map((q) => (q.number === number ? { ...q, delivery } : q)));
+  };
 }
 
 export const edsApprovalsHandlers = [
@@ -519,7 +549,7 @@ export const edsApprovalsHandlers = [
           : ["approve", "return", "reject"]
         : [],
     };
-    return HttpResponse.json(view);
+    return HttpResponse.json(asViewer(view));
   }),
 
   http.post("*/eds/memo-approvals/:id/decision", async ({ request, params }) => {
@@ -587,6 +617,6 @@ export const edsApprovalsHandlers = [
     // Возврат — работа автора: документ становится «Возвращён на доработку» в его документах (строка «Доработать» в очереди).
     const last = next.decisions[next.decisions.length - 1];
     if (body.decision === "return" && last) recordReturn(next, last);
-    return HttpResponse.json(next);
+    return HttpResponse.json(asViewer(next));
   }),
 ];

@@ -26,7 +26,7 @@ import { FileLinks } from "./FileLinks";
 import { DeliveryActions } from "./DeliveryMarks";
 import { useStateLabels } from "./labels";
 import { journalText } from "./model";
-import { ProjectStatusTag, QuoteAcceptedTag } from "./status";
+import { ActStatusTag, ProjectStatusTag, QuoteAcceptedTag } from "./status";
 import { ActSlot, ContractSlot, JournalList, JournalTab } from "./Slots";
 
 import "../decision/decision.css";
@@ -102,7 +102,15 @@ function InvoiceRows({ card, objectId }: { card: ProjectCard; objectId: string }
       <DocRow
         number="—"
         type={t("card.documents.invoice")}
-        status={<span className="pf-hint">{t("card.documents.invoiceMissing")}</span>}
+        status={
+          <span className="pf-hint">
+            {t(
+              card.contract?.status === "signed"
+                ? "card.documents.invoiceMissingSigned"
+                : "card.documents.invoiceMissing",
+            )}
+          </span>
+        }
       />
     );
   }
@@ -222,7 +230,7 @@ function Documents({ card, objectId }: { card: ProjectCard; objectId: string }) 
         <DocRow
           number={act.number}
           type={t("card.documents.actType")}
-          status={<ProjectStatusTag kind="act" status={act.status} />}
+          status={<ActStatusTag act={act} />}
           note={historyNote(t, date, act.history[0])}
           action={
             <Button

@@ -95,6 +95,9 @@ class User(TimestampMixin, Base):
     # Последняя ошибка синхронизации с ERP (провижининг или отзыв); NULL — ERP в курсе. Читает
     # проверка «Синхронизация с ERP» центра внешних сервисов (ADR-0024); пользователю не видна.
     erp_sync_error: Mapped[str | None] = mapped_column(Text)
+    # Факт «доступ в ERP выдан» (СЦ-8): момент успешного ответа ERP на провижининг (получен
+    # `erp_user_id`); успешный отзыв сессий сбрасывает в NULL. Статус «ок» выводится отсюда.
+    erp_provisioned_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     # Профиль, который правит сам сотрудник (W15-H6, ADR-0015: владелец полей — CRM).
     phone: Mapped[str | None] = mapped_column(String(32))
     timezone: Mapped[str] = mapped_column(String(64), server_default=sql("'Asia/Tashkent'"))
@@ -117,6 +120,10 @@ class User(TimestampMixin, Base):
     totp_enabled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     totp_last_step: Mapped[int | None] = mapped_column(BigInteger)
     totp_backup_codes: Mapped[list[str]] = mapped_column(JSONB, server_default=sql("'[]'::jsonb"))
+    # Секретная ссылка на личный календарь: хранится только sha256 токена (сам токен виден один раз
+    # при выдаче); NULL — ссылки нет. Отключение сотрудника обнуляет (`services/users.py`).
+    calendar_token_hash: Mapped[str | None] = mapped_column(String(64), unique=True)
+    calendar_token_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     # Замещение: на период включительно очередь сотрудника видит заместитель.
     deputy_user_id: Mapped[int | None] = mapped_column(
         BigInteger, ForeignKey("users.id", ondelete="SET NULL")

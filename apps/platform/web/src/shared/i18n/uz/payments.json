@@ -426,7 +426,9 @@
       "approval_decided": "Qaror qabul qilingan",
       "document_paid": "To‘langan",
       "document_archived": "Arxivga o‘tkazilgan",
-      "file_attached": "Fayl biriktirilgan"
+      "file_attached": "Fayl biriktirilgan",
+      "document_updated": "Yangilandi",
+      "file_version_added": "Faylning yangi versiyasi yuklandi"
     }
   },
   "issue": {

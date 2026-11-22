@@ -8,6 +8,7 @@ from django.db import transaction
 from django.utils import timezone, translation
 
 from core.currency import BASE_CURRENCY
+from notifications.text_format import deal_ref
 
 from .constants import ActStatusCode, ContractStatusCode, FulfillmentStatusCode, InvoiceStatusCode
 
@@ -196,7 +197,7 @@ def expire_stale_quotes(self) -> dict:
                 user=q.prepared_by,
                 type=warn_type,
                 title="КП просрочено",
-                message=f"Срок действия КП v{q.version} по сделке #{q.deal_id} истёк",
+                message=f"Срок действия КП v{q.version} по сделке {deal_ref(q.deal)} истёк",
                 link="/crm/quotes",
                 deal=q.deal,
                 event_code="quote.expired",

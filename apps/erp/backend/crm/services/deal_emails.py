@@ -22,6 +22,8 @@ import logging
 from django.conf import settings
 from django.db import transaction
 
+from notifications.text_format import text_date, text_money
+
 logger = logging.getLogger(__name__)
 
 
@@ -31,6 +33,11 @@ def _deal_url(deal) -> str:
 
 def _invoice_url(invoice) -> str:
     return f"{settings.FRONTEND_URL}/#invoices?open={invoice.pk}"
+
+
+def _currency_code(invoice) -> str:
+    """Код валюты счёта; у счёта без валюты — базовая (`text_money` подставит её сам)."""
+    return invoice.currency.code if invoice.currency_id else ""
 
 
 def _emails_for(user_ids) -> list:
@@ -72,8 +79,8 @@ def email_invoice_issued(invoice) -> int:
         "invoice_number": invoice.number,
         "deal_title": deal.title or "",
         "seller_name": _seller_name(invoice),
-        "total": str(invoice.total_incl_vat),
-        "due_date": invoice.due_date.isoformat() if invoice.due_date else "",
+        "total": text_money(invoice.total_incl_vat, _currency_code(invoice)),
+        "due_date": text_date(invoice.due_date),
         "invoice_url": _invoice_url(invoice),
     }
     return send_deal_email("invoice_issued", context, buyer_team_user_ids(deal))
@@ -90,9 +97,9 @@ def email_payment_received(payment) -> int:
         "invoice_number": invoice.number,
         "deal_title": deal.title or "",
         "buyer_name": deal.company.name if deal.company_id else "",
-        "amount": str(payment.amount),
-        "paid_total": str(invoice.amount_paid),
-        "total": str(invoice.total_incl_vat),
+        "amount": text_money(payment.amount, _currency_code(invoice)),
+        "paid_total": text_money(invoice.amount_paid, _currency_code(invoice)),
+        "total": text_money(invoice.total_incl_vat, _currency_code(invoice)),
         "is_fully_paid": invoice.amount_paid >= invoice.total_incl_vat,
         "invoice_url": _invoice_url(invoice),
     }
@@ -113,9 +120,9 @@ def email_payment_reminder(invoice) -> int:
         "invoice_number": invoice.number,
         "deal_title": deal.title or "",
         "seller_name": _seller_name(invoice),
-        "total": str(invoice.total_incl_vat),
-        "balance_due": str(invoice.balance_due),
-        "due_date": invoice.due_date.isoformat() if invoice.due_date else "",
+        "total": text_money(invoice.total_incl_vat, _currency_code(invoice)),
+        "balance_due": text_money(invoice.balance_due, _currency_code(invoice)),
+        "due_date": text_date(invoice.due_date),
         "invoice_url": _invoice_url(invoice),
     }
     return send_deal_email("payment_reminder", context, buyer_team_user_ids(deal))
@@ -133,7 +140,7 @@ def email_act_awaiting_acceptance(act) -> int:
     context = {
         "act_number": act.number,
         "deal_title": deal.title or "",
-        "total": str(act.total_amount),
+        "total": text_money(act.total_amount, _act_currency(act)),
         "deal_url": _deal_url(deal),
     }
     return send_deal_email("act_awaiting_acceptance", context, buyer_team_user_ids(deal))
@@ -146,3 +153,9 @@ def _seller_name(invoice) -> str:
 
     supplier = _invoice_seller_company(invoice)
     return supplier.name if supplier else ""
+
+
+def _act_currency(act) -> str:
+    """Валюта акта — валюта его счёта (у акта своей валюты нет)."""
+    invoice = getattr(act, "invoice", None)
+    return _currency_code(invoice) if invoice is not None else ""

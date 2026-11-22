@@ -120,7 +120,6 @@ def to_employee(user: dict[str, Any]) -> Employee:
     name = str(user.get("full_name") or "")
     email = str(user["email"])
     access = {str(a) for a in user.get("platform_access") or ["crm"]}
-    erp = "erp" in access
     position = str(user.get("position") or "").strip() or None
     sync = str(user.get("erp_sync") or "")
     error = user.get("erp_sync_error")
@@ -131,12 +130,11 @@ def to_employee(user: dict[str, Any]) -> Employee:
         email=email,
         position=position,
         roles=role_refs(user),
-        access=AccessFlags(crm="crm" in access, erp=erp),
+        access=AccessFlags(crm="crm" in access, erp="erp" in access),
         status=status_of(user),
         telegram_linked=user.get("tg_user_id") is not None,
-        erp_sync=cast(
-            ErpSyncState, sync if sync in _ERP_SYNC else ("ok" if erp else "not_applicable")
-        ),
+        # Статус считает CRM по факту; без поля — «не применимо», а не выдуманное «ок» (СЦ-8).
+        erp_sync=cast(ErpSyncState, sync if sync in _ERP_SYNC else "not_applicable"),
         erp_sync_error=str(error) if isinstance(error, str) and error else None,
     )
 
