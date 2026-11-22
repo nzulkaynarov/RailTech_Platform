@@ -35,6 +35,7 @@ import { OFFER_SOURCES } from "./kinds";
 import { useDebounced } from "./useDebounced";
 import { UnitLabel } from "../../../shared/ui/UnitLabel";
 import { unitOf } from "../../../shared/lib/unit";
+import { isEmailLike } from "../../../shared/lib/email";
 
 /** Поля секции «Компания»: ошибка сервера в них отмечает секцию */
 const COMPANY_FIELDS: ReadonlySet<string> = new Set([
@@ -97,7 +98,9 @@ export function SupplierForm({
   const fields = errorFields(mutation.error);
   const error = mutation.error ? catalogErrorText(t, mutation.error) : null;
   const tinValid = tin.trim() === "" || /^\d{9}$/.test(tin.trim());
-  const valid = name.trim() !== "" && (tin.trim() !== "" || reg.trim() !== "") && tinValid;
+  const emailValid = email.trim() === "" || isEmailLike(email);
+  const valid =
+    name.trim() !== "" && (tin.trim() !== "" || reg.trim() !== "") && tinValid && emailValid;
   const submit = () => {
     const data: SupplierCreate = {
       name: name.trim(),
@@ -232,7 +235,10 @@ export function SupplierForm({
               key: "contact",
               title: t("supplierForm.sections.contact"),
               summary: [contact.trim(), email.trim() || phone.trim()].filter(Boolean).join(" · "),
-              complete: contact.trim() !== "" || email.trim() !== "" || phone.trim() !== "",
+              // галочка — только если заполнено и проходит ту же проверку, что и отправка формы
+              complete:
+                (contact.trim() !== "" || email.trim() !== "" || phone.trim() !== "") && emailValid,
+              invalid: !emailValid,
               content: (
                 <>
                   <FormField id={ids.contact} label={t("supplierForm.contact")}>
@@ -250,6 +256,7 @@ export function SupplierForm({
                       <Input
                         id={ids.email}
                         type="email"
+                        status={!emailValid ? "error" : undefined}
                         value={email}
                         onChange={(e) => {
                           setEmail(e.target.value);

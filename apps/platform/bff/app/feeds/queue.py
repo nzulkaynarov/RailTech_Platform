@@ -69,6 +69,7 @@ from app.feeds.snapshot import (
 from app.feeds.text import (
     COMPANY_TZ,
     ago,
+    ago_value,
     due_label,
     join,
     money,
@@ -389,7 +390,7 @@ def letter_rows(snap: Snapshot, now: datetime, view: View) -> list[Row]:
                 _text(sender.get("name")),
                 subject,
                 _text(links.get("deal_number")),
-                ago(received, now),
+                ago_value(letter.get("received_at"), now),
             ),
             due_label=due_label(due_at, now, default="today" if letter.get("urgent") else "later"),
             due_at=due_at,

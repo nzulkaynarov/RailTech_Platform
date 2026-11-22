@@ -1,7 +1,10 @@
 import "@testing-library/jest-dom/vitest";
 import { configure } from "@testing-library/react";
-import { afterAll, afterEach, beforeAll } from "vitest";
+import { afterAll, afterEach, beforeAll, expect } from "vitest";
 
+import i18n from "../shared/i18n";
+import { humanTextProblems, missingKeys, recordMissingKey, visibleText } from "./humanText";
+import { ALLOWED_HUMAN_TEXT, ALLOWED_MISSING_KEYS } from "./humanTextAllowList";
 import { server } from "./server";
 
 configure({ asyncUtilTimeout: 5_000 });
@@ -100,3 +103,28 @@ afterAll(() => {
 if (typeof Element.prototype.scrollIntoView !== "function") {
   Element.prototype.scrollIntoView = () => undefined;
 }
+
+// Охранник «человеческого текста» (СЦ-7, `humanText.ts`): ключ без перевода и без `defaultValue` попадает в `missingKeys`,
+// а после теста текст экрана сканируется на сырые ключи и коды событий, даты ISO, суммы без разрядов, «(и)»/«(а)» и «#2».
+// Выключить на один тест нельзя; известные чужие нарушения — в `humanTextAllowList.ts`.
+i18n.options.saveMissing = true;
+i18n.options.missingKeyHandler = (_languages, namespace, key, _fallback, _update, options) => {
+  recordMissingKey(namespace, key, options as { defaultValue?: unknown } | undefined);
+};
+
+// Хук объявлен после импорта RTL: он выполняется раньше его очистки (хуки afterEach идут в обратном порядке),
+// поэтому `document.body` ещё содержит экран теста.
+afterEach(() => {
+  const file = expect.getState().testPath ?? "";
+  const problems = humanTextProblems(
+    file,
+    visibleText(document.body),
+    missingKeys,
+    ALLOWED_HUMAN_TEXT,
+    ALLOWED_MISSING_KEYS,
+  );
+  missingKeys.clear();
+  if (problems.length > 0) {
+    throw new Error(`Человек такое не читает (СЦ-7):\n${problems.map((p) => `  ${p}`).join("\n")}`);
+  }
+});

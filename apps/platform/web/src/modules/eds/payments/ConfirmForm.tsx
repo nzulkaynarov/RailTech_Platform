@@ -10,7 +10,7 @@ import { DateField } from "../../../shared/ui/DateField";
 import { ErrorNote, FormField } from "../../../shared/ui/FormParts";
 import { companyDate } from "../inbox/api";
 import { type InvoiceReason, invoiceReason, isStale, useRefreshPayments } from "./api";
-import { newKey, normalizeAmount, toCents } from "./model";
+import { amountForField, newKey, normalizeAmount, toCents } from "./model";
 import { useConfirmAction } from "../../../shared/ui/useConfirmAction";
 
 export interface ConfirmFormProps {
@@ -39,7 +39,7 @@ export function ConfirmForm({ card, variant = "panel", onDone }: ConfirmFormProp
 
   const pending = card.proofs.filter((p) => p.status === "PENDING");
   const today = companyDate();
-  const [amount, setAmount] = useState(card.balance.amount);
+  const [amount, setAmount] = useState(amountForField(card.balance.amount));
   const [date, setDate] = useState(today);
   const [reference, setReference] = useState("");
   const [proofId, setProofId] = useState<number | null>(pending[0]?.id ?? null);

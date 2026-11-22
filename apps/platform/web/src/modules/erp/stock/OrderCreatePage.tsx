@@ -135,6 +135,10 @@ export function OrderCreatePage() {
   const watchedLines: LineValues[] | undefined = Form.useWatch("lines", form);
   const lines = (watchedLines ?? []).filter((l) => l.product_id);
   const manual = mode !== "shortage";
+  // Галочка шага «Строки» — когда у каждой строки есть позиция и количество больше нуля (как требует форма).
+  const linesDone =
+    (watchedLines ?? []).length > 0 &&
+    (watchedLines ?? []).every((l) => Boolean(l.product_id) && Number(l.quantity) >= 0.001);
   return (
     <div className="pf-stock-new">
       <PageHeader
@@ -251,7 +255,7 @@ export function OrderCreatePage() {
                       key: "lines",
                       title: t("create.sections.lines"),
                       summary: t("create.linesSummary", { count: lines.length }),
-                      complete: lines.length > 0,
+                      complete: linesDone,
                       content: (
                         <>
                           <div className="pf-calc-add-row">

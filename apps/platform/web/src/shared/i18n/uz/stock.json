@@ -321,6 +321,8 @@
     },
     "missing": {
       "prices_one": "Narxsiz: {{count}} qator",
+      "prices_few": "Narxsiz: {{count}} qator",
+      "prices_many": "Narxsiz: {{count}} qator",
       "prices_other": "Narxsiz: {{count}} qator",
       "date": "Kutilgan sana yöq",
       "hint": "«Özgartiriş»da kiriting — narx va sanasiz buyurtma hamkorga yuborilmaydi."
@@ -330,6 +332,8 @@
       "submit": "Sörovni yuboriş",
       "note": "Hamkorga izoh",
       "lines_one": "Hamkor narxsiz {{count}} qator böyiça sörov oladi.",
+      "lines_few": "Hamkor narxsiz {{count}} qator böyiça sörov oladi.",
+      "lines_many": "Hamkor narxsiz {{count}} qator böyiça sörov oladi.",
       "lines_other": "Hamkor narxsiz {{count}} qator böyiça sörov oladi.",
       "state": {
         "sent": "Narx sörovi {{date}} yuborildi — javob kutilmoqda.",

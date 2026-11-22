@@ -20,6 +20,7 @@ import { localName } from "../../../eds/dictionaries";
 import { changedFields, isEmptyObject } from "../diff";
 import { errorFields } from "../errors";
 import { BankAccounts } from "./BankAccounts";
+import { EMAIL, isEmailLike } from "../../../../shared/lib/email";
 
 interface Values {
   name: string;
@@ -193,7 +194,8 @@ function DetailsForm({
               key: "company",
               title: t("details.sections.company"),
               summary: [values.name, values.inn].filter(Boolean).join(" · "),
-              complete: Boolean(values.name?.trim() && values.inn?.trim()),
+              // галочка — только если поля проходят правила формы: название задано, ИНН — ровно 9 цифр
+              complete: Boolean(values.name?.trim() && /^\d{9}$/.test(values.inn?.trim() ?? "")),
               invalid: invalid("company"),
               content: (
                 <>
@@ -268,7 +270,9 @@ function DetailsForm({
               title: t("details.sections.contacts"),
               summary: [values.phone, values.email].filter(Boolean).join(" · "),
               complete: Boolean(
-                (values.phone?.trim() || values.email?.trim()) && values.legal_address?.trim(),
+                (values.phone?.trim() || values.email?.trim()) &&
+                values.legal_address?.trim() &&
+                (!values.email?.trim() || isEmailLike(values.email)),
               ),
               invalid: invalid("contacts"),
               content: (
@@ -286,7 +290,7 @@ function DetailsForm({
                   <Form.Item
                     name="email"
                     label={t("details.email")}
-                    rules={[{ type: "email", message: t("details.emailInvalid") }]}
+                    rules={[{ pattern: EMAIL, message: t("details.emailInvalid") }]}
                   >
                     <Input maxLength={254} type="email" autoComplete="email" inputMode="email" />
                   </Form.Item>
