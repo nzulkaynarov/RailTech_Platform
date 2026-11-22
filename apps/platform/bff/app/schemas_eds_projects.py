@@ -83,7 +83,8 @@ class ProjectActRef(BaseModel):
     id: int
     number: str
     status: ActWord
-    has_scan: bool
+    # ERP before СЦ-8 P6 does not send it in list rows; no scan is the safe reading.
+    has_scan: bool = False
 
 
 class ProjectDocuments(BaseModel):
