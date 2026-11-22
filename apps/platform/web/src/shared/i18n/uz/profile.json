@@ -188,5 +188,21 @@
       "default": "Bölmadi. Qayta urinib köring."
     },
     "qrLabel": "Autentifikator ilovasi uçun QR-kod"
+  },
+  "calendarLink": {
+    "title": "Taqvim havolasi",
+    "lead": "“Mening vazifalarim”dagi muddatlar taqvimingizda: nomlar va sanalar, summalarsiz. Havola orqali telefon yoki kompyuterdagi taqvimga obuna böling.",
+    "none": "Havola hali yöq.",
+    "active": "Havola {{date}} sanasida berilgan.",
+    "get": "Havolani olish",
+    "rotate": "Havolani almashtirish",
+    "rotateTitle": "Eski havola ishlamay qoladi. Almashtiramizmi?",
+    "cancel": "Bekor qilish",
+    "field": "Taqvim havolasi",
+    "copy": "Nusxalash",
+    "copied": "Havola nusxalandi",
+    "once": "Havolani hozir nusxalang: keyin uni körsatmaymiz. Yöqotdingizmi — havolani almashtiring.",
+    "refreshHint": "Muddatlar Platformaga kirganingizda yangilanadi.",
+    "error": "Havolani olib bölmadi. Qayta urinib köring."
   }
 }
