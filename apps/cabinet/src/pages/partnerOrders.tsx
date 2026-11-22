@@ -59,7 +59,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useUrlParams } from '@/hooks/useUrlParams';
 import { pageCount, parsePage } from '@/lib/catalog';
-import { formatDate, formatDateTime, formatMoney } from '@/lib/format';
+import { formatDate, formatDateTime, formatDecimal, formatMoney, formatQuantity } from '@/lib/format';
 import { toast } from '@/lib/toast';
 import { CanAct } from '@/session/CanAct';
 
@@ -80,7 +80,7 @@ const CURRENCY_RE = /^[A-Z]{3}$/;
 
 /** Сумма заказа: валюта в заказе может быть не указана — тогда только число, без чужой валюты. */
 function orderAmount(amount: string, currency: string | null | undefined) {
-  return currency ? formatMoney({ amount, currency }) : amount;
+  return currency ? formatMoney({ amount, currency }) : formatDecimal(amount);
 }
 
 export function PartnerOrdersPage() {
@@ -1289,7 +1289,7 @@ function OrderDetailDialog({
                         <td className="p-2.5 font-medium">{l.name}</td>
                         <td className="p-2.5 text-muted-foreground">{l.article || '—'}</td>
                         <td className="p-2.5 text-right">
-                          {l.quantity} {l.unit}
+                          {formatQuantity(String(l.quantity), l.unit)}
                         </td>
                         <td className="p-2.5 text-right">
                           <span
@@ -1299,11 +1299,11 @@ function OrderDetailDialog({
                                 : ''
                             }
                           >
-                            {l.received_quantity} {l.unit}
+                            {formatQuantity(String(l.received_quantity ?? 0), l.unit)}
                           </span>
                         </td>
-                        <td className="p-2.5 text-right">{l.unit_price}</td>
-                        <td className="p-2.5 text-right font-medium">{l.total_price}</td>
+                        <td className="p-2.5 text-right">{orderAmount(l.unit_price, order.currency)}</td>
+                        <td className="p-2.5 text-right font-medium">{orderAmount(l.total_price, order.currency)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -1354,7 +1354,7 @@ function OrderDetailDialog({
                               <tr key={rline.id}>
                                 <td className="p-1.5 font-medium">{rline.name}</td>
                                 <td className="p-1.5 text-right font-semibold">
-                                  {rline.quantity} {rline.unit}
+                                  {formatQuantity(String(rline.quantity), rline.unit)}
                                 </td>
                                 <td className="p-1.5 text-muted-foreground">{rline.warehouse_name || '—'}</td>
                                 <td className="p-1.5 text-muted-foreground">
@@ -1555,7 +1555,7 @@ function RfqDetailDialog({
                         <td className="p-2.5 font-medium">{l.name}</td>
                         <td className="p-2.5 text-muted-foreground">{l.article || '—'}</td>
                         <td className="p-2.5 text-right">
-                          {l.quantity} {l.unit}
+                          {formatQuantity(String(l.quantity), l.unit)}
                         </td>
                         <td className="p-2.5 text-right tabular-nums">
                           {l.answer_price ? orderAmount(l.answer_price, rfq.answer_currency) : '—'}

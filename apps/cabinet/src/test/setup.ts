@@ -84,8 +84,52 @@ beforeEach(async () => {
   await i18n.changeLanguage('ru');
 });
 
+/**
+ * Охрана «человеческого текста» (СЦ-7): тест падает, если на экране остался сырой ключ i18n или код, число или дата в
+ * машинном виде. Те же правила — в Платформе (`apps/platform/web/src/test/setup.ts`).
+ * Сканируется текст страницы до `cleanup()`; допустимое — только в явном списке ниже, с причиной.
+ */
+const missingKeys = new Set<string>();
+i18n.options.saveMissing = true;
+i18n.options.missingKeyHandler = (_languages, namespace, key) => {
+  missingKeys.add(`${namespace}:${key}`);
+};
+
+const RAW_PATTERNS: Array<{ name: string; re: RegExp }> = [
+  { name: 'raw i18n key', re: /\b(?:pages|widgets|common|errors|roles|status|nav)\.[A-Za-z]+(?:\.[A-Za-z0-9_]+)+/ },
+  { name: 'ISO date', re: /\b\d{4}-\d{2}-\d{2}(?:T|\b)/ },
+  { name: 'raw decimal amount', re: /\b\d{5,}\.\d{2}\b/ },
+  { name: 'record number "#123"', re: /#\d+/ },
+];
+
+/**
+ * Допустимые попадания — не СЦ-7, вынесены в «Хвосты» PR (лид переносит в inbox плана). Подстрока текста страницы → причина.
+ * Новое сюда не добавлять: исправить экран.
+ */
+const HUMAN_TEXT_ALLOW: Array<{ name: string; text: RegExp; why: string }> = [
+  { name: 'record number "#123"', text: /#\d+/, why: 'номера записей «Приёмка #8301» и др. — отдельная находка, не СЦ-7' },
+  { name: 'raw decimal amount', text: /^1500000\.50$/, why: 'подсказка формата ввода суммы в «Я оплатил» (pages.invoices.proofDialog.amountHint) — пример того, что набрать; не СЦ-7' },
+];
+
+function humanTextProblems(text: string): string[] {
+  const problems: string[] = [];
+  for (const { name, re } of RAW_PATTERNS) {
+    const found = text.match(new RegExp(re.source, 'g')) ?? [];
+    for (const hit of found) {
+      if (HUMAN_TEXT_ALLOW.some((rule) => rule.name === name && rule.text.test(hit))) continue;
+      problems.push(`${name}: ${hit}`);
+    }
+  }
+  return problems;
+}
+
 afterEach(() => {
+  const problems = humanTextProblems(document.body.textContent ?? '');
+  const missing = Array.from(missingKeys);
+  missingKeys.clear();
+  if (missing.length > 0) problems.push(...missing.map((key) => `missing i18n key: ${key}`));
   cleanup();
+  if (problems.length > 0) throw new Error(`Human text guard: ${[...new Set(problems)].join('; ')}`);
   // Очередь тостов sonner — состояние модуля: без сброса тост прошлого теста всплывает в следующем.
   toast.dismiss();
   portalServer.resetHandlers();
