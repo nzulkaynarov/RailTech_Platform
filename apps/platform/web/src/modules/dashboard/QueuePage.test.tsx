@@ -144,7 +144,7 @@ describe("Dashboard · Моя очередь", () => {
     await expectRow(/Выставить счёт СЧ-2026\/143/, "/eds/payments/143?panel=open&tab=payment");
     await expectRow(
       /Прикрепить скан подписанного договора ДОГ-2026\/106/,
-      "/eds/projects/%D0%9F%D0%A0-2026-106?panel=open&tab=contract",
+      "/eds/projects/%D0%9F%D0%A0-2026-106",
     );
     // D26G-9: служебка на шаге «Бухгалтер» — держателю права оплаты, на пилоте это менеджер-универсал
     await expectRow(

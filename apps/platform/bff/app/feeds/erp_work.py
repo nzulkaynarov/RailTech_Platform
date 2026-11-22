@@ -258,9 +258,9 @@ def project_rows(snap: Snapshot, now: datetime, view: View, role_of: RoleOf) -> 
         contract = row.documents.contract
         client = row.company_name or None
         ref = (
-            project_doc_ref("contract", contract.number, project, client, tab="contract")
+            project_doc_ref("contract", contract.number, project, client)
             if contract is not None
-            else project_doc_ref("project", project, project, client, tab="contract")
+            else project_doc_ref("project", project, project, client)
         )
         item = QueueItem(
             id=f"project:{row.deal_id}:contract",
@@ -285,9 +285,9 @@ def project_rows(snap: Snapshot, now: datetime, view: View, role_of: RoleOf) -> 
             client = row.company_name or None
             act = row.documents.act
             ref = (
-                project_doc_ref("act", act.number, project, client, tab="act")
+                project_doc_ref("act", act.number, project, client)
                 if act is not None
-                else project_doc_ref("project", project, project, client, tab="act")
+                else project_doc_ref("project", project, project, client)
             )
             item = QueueItem(
                 id=f"project:{row.deal_id}:act",

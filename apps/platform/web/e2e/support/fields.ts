@@ -86,7 +86,43 @@ export async function openStep(page: Page, title: string | RegExp): Promise<void
   await expect(head).toHaveAttribute("aria-expanded", "true");
 }
 
-/** Адресат письма — только из контрагентов (СУЩ-2.6): поиск по названию и выбор подсказки `name`. */
+/** Поле выбора компании (ЕД-6) целиком: antd `Select`, в котором стоит `label for`-поле поиска. */
+function companyBox(field: Locator): Locator {
+  return field.locator(
+    "xpath=ancestor::div[contains(concat(' ', normalize-space(@class), ' '), ' ant-select ')][1]",
+  );
+}
+
+/** Выбранная компания в поле выбора — название в `.ant-select-selection-item`, подсказка из письма — в placeholder. */
+export async function expectCompany(
+  page: Page,
+  name: string,
+  label = "Адресат (организация)",
+): Promise<void> {
+  const box = companyBox(page.getByLabel(label, { exact: true }));
+  await expect(box.locator(".ant-select-selection-item")).toHaveText(name);
+}
+
+/** Снять выбор крестиком поля (появляется при наведении). */
+export async function clearCompany(field: Locator): Promise<void> {
+  const box = companyBox(field);
+  await box.hover();
+  await box.locator(".ant-select-clear").click();
+}
+
+/** Введённый в поиск запрос: поле выбора открывается и ищет по названию и ИНН. */
+/** Открыть поле выбора компании щелчком по его рамке: выбранное название лежит поверх поля поиска. */
+export async function openCompany(field: Locator): Promise<void> {
+  await field.scrollIntoViewIfNeeded();
+  await companyBox(field).click();
+}
+
+async function searchCompany(field: Locator, query: string): Promise<void> {
+  await openCompany(field);
+  await field.fill(query);
+}
+
+/** Компания выбирается из контрагентов (ЕД-6): поиск по названию или ИНН и выбор строки `name`. */
 export async function pickAddressee(
   page: Page,
   query: string,
@@ -94,13 +130,12 @@ export async function pickAddressee(
   label = "Адресат (организация)",
 ): Promise<void> {
   const field = page.getByLabel(label, { exact: true });
-  await field.scrollIntoViewIfNeeded();
-  await field.fill(query);
+  await searchCompany(field, query);
   await page.locator(".ant-select-item-option").filter({ hasText: name }).first().click();
-  await expect(field).toHaveValue(name);
+  await expectCompany(page, name, label);
 }
 
-/** Адресата нет в контрагентах — «Завести организацию» из подсказок (название, ИНН) и выбрать её. */
+/** Компании нет в контрагентах — «Завести» последней строкой (название, ИНН) и выбрать её. */
 export async function addAddressee(
   page: Page,
   name: string,
@@ -108,21 +143,18 @@ export async function addAddressee(
   label = "Адресат (организация)",
 ): Promise<void> {
   const field = page.getByLabel(label, { exact: true });
-  await field.scrollIntoViewIfNeeded();
-  // правка открывает подсказки, даже если поле уже заполнено (ответ на входящее)
-  await field.fill(name.slice(0, -1));
-  await field.fill(name);
-  await page.getByText(`+ Завести организацию «${name}»`).click();
-  const sheet = page.getByRole("dialog", { name: "Новая организация" });
+  await searchCompany(field, name);
+  await page.locator(".ant-select-item-option").getByText(`Завести «${name}»`).click();
+  const sheet = page.getByRole("dialog", { name: "Новая компания" });
   if (inn) await sheet.getByLabel("ИНН").fill(inn);
   await sheet.getByRole("button", { name: "Завести" }).click();
   await expect(sheet).toBeHidden();
-  await expect(field).toHaveValue(name);
+  await expectCompany(page, name, label);
 }
 
 /**
- * Корреспондент или адресат из контрагентов (СУЩ-2.6): есть в подсказках — выбрать, нет — завести организацией. Для
- * сценариев, которые проходят одну форму несколько раз подряд (обе ширины): во второй раз организация уже заведена.
+ * Корреспондент или адресат из контрагентов: есть в подсказках — выбрать, нет — завести. Для сценариев, которые
+ * проходят одну форму несколько раз подряд (обе ширины): во второй раз компания уже заведена.
  */
 export async function chooseOrAddAddressee(
   page: Page,
@@ -130,24 +162,21 @@ export async function chooseOrAddAddressee(
   label = "Адресат (организация)",
 ): Promise<void> {
   const field = page.getByLabel(label, { exact: true });
-  await field.scrollIntoViewIfNeeded();
-  await field.fill(name.slice(0, -1));
-  await field.fill(name);
+  await searchCompany(field, name);
   const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  // строка «+ Завести организацию …» — тоже подсказка; своя организация начинается с названия
   const existing = page
     .locator(".ant-select-item-option")
-    .filter({ hasText: new RegExp(`^${escaped}`) })
+    .filter({ has: page.locator(".pf-pick-row__name", { hasText: new RegExp(`^${escaped}$`) }) })
     .first();
-  const create = page.getByText(`+ Завести организацию «${name}»`);
+  const create = page.locator(".ant-select-item-option").getByText(`Завести «${name}»`);
   await expect(existing.or(create).first()).toBeVisible();
   if (await create.isVisible()) {
     await create.click();
-    const sheet = page.getByRole("dialog", { name: "Новая организация" });
+    const sheet = page.getByRole("dialog", { name: "Новая компания" });
     await sheet.getByRole("button", { name: "Завести" }).click();
     await expect(sheet).toBeHidden();
   } else {
     await existing.click();
   }
-  await expect(field).toHaveValue(name);
+  await expectCompany(page, name, label);
 }

@@ -82,7 +82,11 @@ test.describe("L0-1: отметки доставки клиенту в карт�
       await expect(card.getByRole("button", { name: "Доставлено" })).toHaveCount(0);
       const lines = card.getByRole("region", { name: "Строки поставки" });
       await expect(lines.getByText("Доставлено").first()).toBeVisible();
-      await expect(page.getByText("Доставлено клиенту").first()).toBeVisible();
+      // событие — в «Истории» бокового окна (на телефоне окно открывается кнопкой в шапке)
+      if (width === 390) await page.getByTestId("panel-toggle").click();
+      const side = page.locator("#pf-context-panel");
+      await side.getByRole("tab", { name: "История" }).click();
+      await expect(side.getByText("Доставлено клиенту").first()).toBeVisible();
       await scrollTo(card);
       await expectNoViolations(page, `исполнение: доставлено ${String(width)}`);
       await shot(page, "l0-1-delivered");

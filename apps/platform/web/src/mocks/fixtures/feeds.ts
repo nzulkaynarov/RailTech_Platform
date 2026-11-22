@@ -57,7 +57,7 @@ const project99: ObjectRef = {
   kind: "project",
   number: "ПР-2026-097",
   title: "Рельсовые скрепления",
-  path: `/eds/projects/${seg("ПР-2026-097")}?panel=open&tab=contract`,
+  path: `/eds/projects/${seg("ПР-2026-097")}`,
   step: "PAYMENT",
 };
 const invoice142: ObjectRef = {
@@ -70,7 +70,7 @@ const contract91: ObjectRef = {
   kind: "contract",
   number: "ДОГ-2026/091",
   title: "ДОГ-2026/091",
-  path: `/eds/projects/${seg("ПР-2026-097")}?panel=open&tab=contract`,
+  path: `/eds/projects/${seg("ПР-2026-097")}`,
 };
 const lead = (id: number, title: string): ObjectRef => ({
   kind: "lead",

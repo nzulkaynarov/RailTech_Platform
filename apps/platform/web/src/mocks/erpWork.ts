@@ -227,8 +227,7 @@ function projectItems(view: readonly MockRole[]): QueueItem[] {
   const items: QueueItem[] = [];
   for (const project of readProjects()) {
     const row = toRow(project);
-    const path = (tab: "contract" | "act") =>
-      `/eds/projects/${seg(row.number)}?panel=open&tab=${tab}`;
+    const path = () => `/eds/projects/${seg(row.number)}`;
     if (row.step === "CONTRACT") {
       const step = contractStep(row);
       const role = step ? roleFor(view, step[0]) : undefined;
@@ -245,7 +244,7 @@ function projectItems(view: readonly MockRole[]): QueueItem[] {
             kind: c ? "contract" : "project",
             number: c ? c.number : row.number,
             title: row.client_name,
-            path: path("contract"),
+            path: path(),
           },
         });
       }
@@ -265,7 +264,7 @@ function projectItems(view: readonly MockRole[]): QueueItem[] {
           kind: a ? "act" : "project",
           number: a ? a.number : row.number,
           title: row.client_name,
-          path: path("act"),
+          path: path(),
         },
       });
     }

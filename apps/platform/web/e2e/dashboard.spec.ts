@@ -199,7 +199,7 @@ test.describe("Центр уведомлений", () => {
 
     // Договор: у раздела «Проекты» есть экран (D2-5) — уведомление ведёт в карточку проекта на вкладку договора, счётчик уменьшается
     await center.getByRole("link", { name: /ДОГ-2026\/091/ }).click();
-    await expect(page).toHaveURL(/\/eds\/projects\/.*tab=contract/);
+    await expect(page).toHaveURL(/\/eds\/projects\/[^?]+$/);
     await expect(page.getByRole("button", { name: "Центр уведомлений, 2 новых" })).toBeVisible();
     await expectNoViolations(page, "notification opens the project");
   });
@@ -294,7 +294,7 @@ test(
     await expectNoViolations(page, "notifications popover 390");
 
     await center.getByRole("link", { name: /ДОГ-2026\/091/ }).click();
-    await expect(page).toHaveURL(/\/eds\/projects\/.*(sheet|tab)=contract/);
+    await expect(page).toHaveURL(/\/eds\/projects\/[^?]+$/);
   },
 );
 

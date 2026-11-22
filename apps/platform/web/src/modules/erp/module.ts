@@ -1,4 +1,4 @@
-import type { ModuleConfig } from "../types";
+import { RECORD_TAB_SET, type ModuleConfig } from "../types";
 
 /** Вкладки бокового окна расчёта: «Задание» (резолюция, визы, чат проекта), чат и документы (SPEC-v3 §7.4). */
 const CALC_TABS = [{ key: "task" }, { key: "chat" }, { key: "documents" }] as const;
@@ -30,11 +30,10 @@ export const erp: ModuleConfig = {
     {
       key: "stock",
       path: "/erp/stock",
-      // Карточка заказа поставщику `/erp/stock/ЗП-…`; «Журнал» заказа — боковое окно (D2-2, SPEC-v3 §7.4).
+      // Карточка заказа поставщику `/erp/stock/ЗП-…`; «Сведения» и «История» заказа — боковое окно (ЕД-7, SPEC-v3 §7.4).
       detail: "/erp/stock/:id",
       access: { resource: "erp.stock" },
-      tabs: [{ key: "journal" }],
-      defaults: { panelOpen: false },
+      tabs: RECORD_TAB_SET,
       actionTo: "/erp/catalog",
     },
     {

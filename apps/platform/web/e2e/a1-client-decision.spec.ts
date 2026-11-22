@@ -99,25 +99,15 @@ test.describe("A2: «Согласован клиентом» с каналом �
 
   for (const width of WIDTHS) {
     test(`бухгалтер: согласие клиента с договором, ${String(width)} px`, async ({ page }) => {
-      // Проект договора — сформирован и отправлен клиенту в боковом окне (на телефоне лист закрывается после действия).
-      await page.setViewportSize({ width: 1440, height: 900 });
+      // ЕД-7: действия по договору — в строке документа в центре, окна и листа для них больше нет.
+      await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
       await loginAndWait(page, "accountant@demo.example");
       const project = `/eds/projects/${encodeURIComponent("ПР-2026-104")}`;
-      await spaGoto(page, `${project}?panel=open&tab=contract`);
-      const side = page.locator("#pf-context-panel");
-      await side.getByRole("button", { name: "Сформировать проект договора" }).click();
-      await side.getByRole("button", { name: "На согласование клиенту" }).click();
-      await expect(side.getByLabel("Как клиент сообщил")).toBeVisible();
-
-      await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
-      const panel = width === 390 ? page.getByRole("dialog") : side;
-      if (width === 390) {
-        // Смена ширины перестраивает экран: переход к листу, сделанный в этот момент, теряется — открываем до появления (Х-19).
-        await expect(async () => {
-          await spaGoto(page, `${project}?sheet=contract`);
-          await expect(panel.getByLabel("Как клиент сообщил")).toBeVisible({ timeout: 3_000 });
-        }).toPass({ timeout: 30_000 });
-      }
+      await spaGoto(page, project);
+      const panel = page.getByRole("region", { name: "Документы проекта" });
+      await panel.getByRole("button", { name: "Сформировать проект договора по КП" }).click();
+      await panel.getByRole("button", { name: "На согласование клиенту" }).click();
+      await expect(panel.getByLabel("Как клиент сообщил")).toBeVisible();
 
       await chooseOption(panel.getByLabel("Как клиент сообщил"), "бумага");
       await panel.getByLabel("Кто со стороны клиента").fill("Юсупова Н., юрист");
@@ -125,11 +115,11 @@ test.describe("A2: «Согласован клиентом» с каналом �
       await shot(page, "a2-contract-agree");
 
       await panel.getByRole("button", { name: "Отметить: согласован клиентом" }).click();
-      // На телефоне лист закрывается после действия: запись видна в журнале документов карточки.
-      const history =
-        width === 390
-          ? page.getByRole("list", { name: "Журнал документов" })
-          : side.getByRole("list", { name: "История договора" });
+      // Запись — в «Истории» бокового окна (на телефоне окно открывается кнопкой в шапке).
+      if (width === 390) await page.getByTestId("panel-toggle").click();
+      const side = page.locator("#pf-context-panel");
+      await side.getByRole("tab", { name: "История" }).click();
+      const history = side.getByRole("list", { name: "История проекта" });
       await expect(history.getByText("Отмечено сотрудником")).toBeVisible();
       await expect(history.getByText(/бумага · подтвердил: Юсупова Н., юрист/)).toBeVisible();
       await scrollTo(history);

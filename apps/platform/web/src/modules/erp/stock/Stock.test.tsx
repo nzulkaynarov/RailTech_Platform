@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 
 import { renderAt, setupCalcTests, signIn } from "../../../test/calcKit";
 import { fillDate } from "../../../test/fields";
+import { panelEl } from "../../../test/panel";
 import { server } from "../../../test/server";
 import { listSettled } from "../../../test/settled";
 
@@ -34,6 +35,34 @@ async function rowOf(text: string): Promise<HTMLElement> {
   if (!tr) throw new Error(`нет строки ${text}`);
   return tr;
 }
+
+describe("Склад · карточка заказа партнёру (ЕД-7)", () => {
+  it("каждое сведение — один раз: поставщик в шапке, реквизиты в «Сведениях», журнал только в «Истории»", async () => {
+    signIn("supply@demo.example");
+    renderAt(ORDER_PATH);
+    expect(
+      await screen.findByRole("heading", { level: 1, name: `Заказ партнёру ${ORDER}` }),
+    ).toBeVisible();
+    const side = await panelEl();
+    // у карточки нет «Обсуждения», «Маршрута» и «Документов» — вкладок нет
+    expect((await within(side).findAllByRole("tab")).map((tab) => tab.textContent)).toEqual([
+      "Сведения",
+      "История",
+    ]);
+    // поставщик назван один раз (шапка), почта — только в «Сведениях»
+    expect(screen.getAllByText(/Вымышленная Сталь/)).toHaveLength(1);
+    expect(within(side).getAllByText(/sales@steel\.example/).length).toBeGreaterThan(0);
+    expect(screen.queryByRole("heading", { name: "Журнал заказа" })).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Реквизиты заказа" })).toBeNull();
+    // журнал — в «Истории», в центре его копии нет
+    expect(screen.queryByRole("list", { name: "Журнал заказа" })).toBeNull();
+    fireEvent.click(within(side).getByRole("tab", { name: "История" }));
+    expect(await within(side).findByRole("list", { name: "Журнал заказа" })).toBeVisible();
+    expect(screen.getAllByRole("list", { name: "Журнал заказа" })).toHaveLength(1);
+    // и при открытой «Истории» поставщик по-прежнему назван один раз: запись «Заказ создан» его не повторяет
+    expect(screen.getAllByText(/Вымышленная Сталь/)).toHaveLength(1);
+  });
+});
 
 describe("Склад · остатки и резервы", () => {
   it("снабженец видит остаток, резерв, свободное, ожидаемый приход и ячейки", async () => {
@@ -158,7 +187,10 @@ describe("Склад · заказы партнёрам", () => {
     });
     fireEvent.click(within(modal).getByRole("button", { name: "Принять" }));
     expect(await screen.findByText("Товар принят")).toBeVisible();
-    expect((await screen.findAllByText(/накладная НП-77/)).length).toBeGreaterThan(0);
+    // события заказа — одно место, вкладка «История» бокового окна (ЕД-7)
+    const side = await panelEl();
+    fireEvent.click(await within(side).findByRole("tab", { name: "История" }));
+    expect((await within(side).findAllByText(/накладная НП-77/)).length).toBeGreaterThan(0);
     // СЦ-10: количество — в единице строки заказа, в журнале и в списке приёмок.
     expect((await screen.findAllByText(/10\sкомпл\. · накладная НП-77/)).length).toBeGreaterThan(0);
     expect(screen.getByText(/· 10 компл\. \(C-02-1\)/)).toBeVisible();

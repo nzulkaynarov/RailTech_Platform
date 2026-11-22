@@ -233,7 +233,7 @@ test.describe("Колокольчик: объект без экрана", () => 
     const center = page.getByRole("dialog", { name: "Центр уведомлений" });
     await expect(center.getByRole("button", { name: /Где посмотреть/ })).toHaveCount(0);
     await center.getByRole("link", { name: /ДОГ-2026\/091/ }).click();
-    await expect(page).toHaveURL(/\/eds\/projects\/.*tab=contract/);
+    await expect(page).toHaveURL(/\/eds\/projects\/[^?]+$/);
     await expect(page.getByRole("heading", { level: 1, name: "Проект ПР-2026-097" })).toBeVisible();
   });
 });

@@ -390,7 +390,7 @@ async def test_request_becomes_a_project_link_after_the_contract_step(
 
     assert card["stage"] == "CONTRACT"
     # номер проекта — от ERP как есть; BFF префиксы не переписывает (задача «Н»)
-    assert card["request"]["path"] == "/eds/projects/PRJ-2026-104?panel=open&tab=card"
+    assert card["request"]["path"] == "/eds/projects/PRJ-2026-104"
 
 
 async def test_letter_without_links_has_no_erp_call_and_no_blocks(web: Web, eds: EdsFake) -> None:
