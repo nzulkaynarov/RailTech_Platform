@@ -3171,6 +3171,7 @@ export const getListEdsProjectsResponseProjectActRefMock = (
       "signed",
       "cancelled",
     ] as const),
+    has_scan: faker.datatype.boolean(),
   },
   ...overrideResponse,
 });
@@ -3311,6 +3312,7 @@ export const getGetEdsProjectResponseProjectActRefMock = (
       "signed",
       "cancelled",
     ] as const),
+    has_scan: faker.datatype.boolean(),
   },
   ...overrideResponse,
 });
@@ -3712,6 +3714,7 @@ export const getCreateEdsProjectContractResponseProjectActRefMock = (
       "signed",
       "cancelled",
     ] as const),
+    has_scan: faker.datatype.boolean(),
   },
   ...overrideResponse,
 });
@@ -4143,6 +4146,7 @@ export const getActEdsProjectContractResponseProjectActRefMock = (
       "signed",
       "cancelled",
     ] as const),
+    has_scan: faker.datatype.boolean(),
   },
   ...overrideResponse,
 });
@@ -4571,6 +4575,7 @@ export const getScanEdsProjectContractResponseProjectActRefMock = (
       "signed",
       "cancelled",
     ] as const),
+    has_scan: faker.datatype.boolean(),
   },
   ...overrideResponse,
 });
@@ -4999,6 +5004,7 @@ export const getRequestEdsProjectSigningResponseProjectActRefMock = (
       "signed",
       "cancelled",
     ] as const),
+    has_scan: faker.datatype.boolean(),
   },
   ...overrideResponse,
 });
@@ -5453,6 +5459,7 @@ export const getActEdsProjectActResponseProjectActRefMock = (
       "signed",
       "cancelled",
     ] as const),
+    has_scan: faker.datatype.boolean(),
   },
   ...overrideResponse,
 });
@@ -5866,6 +5873,7 @@ export const getScanEdsProjectActResponseProjectActRefMock = (
       "signed",
       "cancelled",
     ] as const),
+    has_scan: faker.datatype.boolean(),
   },
   ...overrideResponse,
 });
@@ -6285,6 +6293,7 @@ export const getMarkEdsProjectDeliveryResponseProjectActRefMock = (
       "signed",
       "cancelled",
     ] as const),
+    has_scan: faker.datatype.boolean(),
   },
   ...overrideResponse,
 });

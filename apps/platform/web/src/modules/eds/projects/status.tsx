@@ -1,7 +1,9 @@
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
+import type { ProjectActRef } from "../../../shared/api/generated/model";
 import { StatusTag } from "../../../shared/ui/StatusTag";
+import { actStateKey } from "./model";
 
 /**
  * Статусы документов проекта словами SPEC-v3 §2.4 (слова — `projects:status.*`), цвет — общая карта `STATUS_TONE`
@@ -25,6 +27,17 @@ export function ProjectStatusTag({
     <StatusTag kind={kind} status={status}>
       {children ?? t(`status.${kind}.${status}`, { defaultValue: status })}
     </StatusTag>
+  );
+}
+
+/** Тег акта: цвет — по статусу ERP, слово — по факту скана (`actStateKey`). */
+export function ActStatusTag({ act }: { act: Pick<ProjectActRef, "status" | "has_scan"> }) {
+  const { t } = useTranslation("projects");
+  const key = actStateKey(act);
+  return (
+    <ProjectStatusTag kind="act" status={act.status}>
+      {t(`status.act.${key}`, { defaultValue: act.status })}
+    </ProjectStatusTag>
   );
 }
 

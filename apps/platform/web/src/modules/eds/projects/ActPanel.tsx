@@ -17,8 +17,8 @@ import { fileUrl, projectRef } from "./api";
 import { reasonText } from "./errors";
 import { FileLinks } from "./FileLinks";
 import { ReasonForm, ScanForm } from "./forms";
-import { journalText } from "./model";
-import { ProjectStatusTag } from "./status";
+import { actStateKey, journalText } from "./model";
+import { ActStatusTag } from "./status";
 import { SigningButton } from "./SigningButton";
 import { useApplyCard } from "./useProjectMutations";
 
@@ -148,10 +148,10 @@ function ActBody({
       <section className="pf-dec-brief" aria-label={t("act.number", { number: act.number })}>
         <div className="pf-dec-brief-head">
           <h3 className="pf-fp-title">{t("act.number", { number: act.number })}</h3>
-          <ProjectStatusTag kind="act" status={act.status} />
+          <ActStatusTag act={act} />
         </div>
         <p className="pf-dec-note" style={{ margin: 0 }}>
-          {t(`act.state.${act.status}`)}
+          {t(`act.state.${actStateKey(act)}`)}
         </p>
         {act.rejection_reason && act.status === "returned" ? (
           <p className="pf-dec-note" style={{ margin: 0 }}>
@@ -168,7 +168,11 @@ function ActBody({
             },
             { label: t("act.fields.issued"), value: act.issued_at ? date(act.issued_at) : null },
             {
-              label: t("act.fields.signed"),
+              label: t(
+                act.has_scan || act.status !== "signed"
+                  ? "act.fields.signed"
+                  : "act.fields.accepted",
+              ),
               value: act.signed_at ? date(act.signed_at, "datetime") : null,
             },
           ]}

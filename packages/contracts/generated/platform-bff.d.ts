@@ -10312,6 +10312,8 @@ export interface components {
       number: string;
       /** @enum {string} */
       status: "project" | "returned" | "issued" | "signed" | "cancelled";
+      /** @description Файл подписанного акта приложен; при `signed` без файла акт принят клиентом в кабинете */
+      has_scan: boolean;
     };
     ProjectDocuments: {
       quote: components["schemas"]["ProjectQuoteRef"] | null;

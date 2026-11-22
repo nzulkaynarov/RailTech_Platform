@@ -83,6 +83,8 @@ class ProjectActRef(BaseModel):
     id: int
     number: str
     status: ActWord
+    # ERP before СЦ-8 P6 does not send it in list rows; no scan is the safe reading.
+    has_scan: bool = False
 
 
 class ProjectDocuments(BaseModel):
@@ -170,7 +172,6 @@ class ProjectAct(ProjectActRef):
     signed_at: dt.datetime | None
     rejection_reason: str | None
     has_pdf: bool
-    has_scan: bool
     actions: list[ActActionCode]
     history: list[ProjectJournalEntry]
 

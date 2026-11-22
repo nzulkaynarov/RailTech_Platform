@@ -224,3 +224,32 @@ def test_reissue_after_return_keeps_the_same_document(pw):  # noqa: F811
     assert response.status_code == 200, response.content
     act.refresh_from_db()
     assert act.status.code == A.ISSUED
+
+
+def _row_and_card_act(pw, act):  # noqa: F811
+    row = api(pw.director).get("/api/v1/crm/projects/").json()["results"][0]["documents"]["act"]
+    card = api(pw.director).get(f"/api/v1/crm/projects/{pw.deal.id}/").json()["act"]
+    assert row["id"] == card["id"] == act.id
+    return row, card
+
+
+def test_list_row_has_scan_only_when_the_signed_file_exists(pw):  # noqa: F811
+    """The word «scan» is a fact: the list row and the card tell a staff scan from a client acceptance without a file."""
+    from parties.models import Contact
+
+    from crm.services.billing import sign_act
+
+    act = _act(pw)
+    contact = Contact.objects.create(company=pw.client, name="Контакт клиента", can_act=True, language="ru")
+    signed, error = sign_act(act.id, portal_contact=contact)  # accepted in the cabinet, no upload
+    assert error is None and signed.status.code == A.SIGNED and not signed.signed_file
+    row, card = _row_and_card_act(pw, act)
+    assert row["status"] == card["status"] == "signed"
+    assert row["has_scan"] is False and card["has_scan"] is False
+
+
+def test_list_row_has_scan_after_the_staff_scan(pw):  # noqa: F811
+    act = _act(pw)
+    assert _post(pw.accountant, act, "attach-scan", {"file": scan()}, "multipart").status_code == 200
+    row, card = _row_and_card_act(pw, act)
+    assert row["status"] == "signed" and row["has_scan"] is True and card["has_scan"] is True

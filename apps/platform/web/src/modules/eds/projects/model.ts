@@ -20,8 +20,12 @@ export function contractStateKey(
   return contract.status;
 }
 
-export function actStateKey(act: Pick<ProjectAct, "status">): string {
-  return act.status;
+/**
+ * Слово акта. «Подписан (скан)» — только при файле скана (факт `has_scan`); `signed` без файла — клиент принял акт
+ * в кабинете, это «Принят клиентом».
+ */
+export function actStateKey(act: Pick<ProjectAct, "status" | "has_scan">): string {
+  return act.status === "signed" && !act.has_scan ? "accepted" : act.status;
 }
 
 /** Последняя запись истории документа (в ответе новые первыми). */

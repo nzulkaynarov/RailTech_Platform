@@ -48,7 +48,7 @@
     "act": {
       "draft": "Draft",
       "issued": "Issued",
-      "signed": "Signed",
+      "signed": "Accepted",
       "returned": "Returned"
     },
     "memo": {

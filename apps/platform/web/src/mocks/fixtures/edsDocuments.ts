@@ -319,6 +319,17 @@ function initial(): EdsMock {
         responsible: { crm_user_id: 1, full_name: "Демо Менеджеров" },
         project_ref: "97",
       },
+      {
+        // Принят клиентом в Кабинете: EDS ставит `signed`, файла-скана может не быть.
+        kind: "act",
+        id: documentId(813),
+        number: "АКТ-2026/052",
+        title: "Поставка крепежа, объект «Юг»",
+        status: "signed",
+        registered_at: "2026-10-22T09:00:00Z",
+        responsible: { crm_user_id: 1, full_name: "Демо Менеджеров" },
+        project_ref: "98",
+      },
     ],
     files: {
       [documentId(901)]: {

@@ -18831,7 +18831,10 @@ components:
         status:
           enum: [project, returned, issued, signed, cancelled]
           type: string
-      required: [id, number, status]
+        has_scan:
+          type: boolean
+          description: Файл подписанного акта приложен; при `signed` без файла акт принят клиентом в кабинете
+      required: [id, number, status, has_scan]
       additionalProperties: false
     ProjectDocuments:
       type: object
