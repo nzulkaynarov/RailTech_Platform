@@ -76,7 +76,8 @@ describe("Ролевая матрица · вкладка «Журнал»", () 
     signInAs("admin@demo.example");
     renderApp("/admin/roles?panel=open&tab=journal");
 
-    expect(await within(await panelEl()).findByText("Запись не выбрана")).toBeVisible();
+    // ЕД-7: пустые вкладки скрыты — пока роль не выбрана, окно показывает одну первую вкладку с её пояснением.
+    expect(await within(await panelEl()).findByText("Роль не выбрана")).toBeVisible();
   });
 
   it("ошибка CRM — слова и «Повторить»", async () => {
