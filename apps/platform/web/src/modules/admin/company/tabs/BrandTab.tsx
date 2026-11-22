@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { App, Checkbox, Collapse, Form, Input, Segmented, Select } from "antd";
+import { App, Checkbox, Collapse, Form, Input, Segmented } from "antd";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
@@ -21,7 +21,10 @@ import { LogoField, PreviewFrame, QueryGate, ReadOnlyFence, SaveBlock, TabHeader
 import { changedFields, isEmptyObject, omit } from "../diff";
 import { errorFields } from "../errors";
 
-type Values = Omit<BrandProfile, "logo_url" | "inherited">;
+/** ДОК-13: «Оформление», «Шрифт» и «Второй цвет» не показываются и не уходят — в договоре они устарели. */
+const DEPRECATED = ["secondary_color", "layout_preset", "font_family"] as const;
+
+type Values = Omit<BrandProfile, "logo_url" | "inherited" | (typeof DEPRECATED)[number]>;
 
 const KINDS: DocumentKind[] = ["quote", "contract", "invoice", "act", "letter"];
 const FLAGS = [
@@ -48,7 +51,8 @@ const VARIANT_FIELDS = [
   ["footer_text", 2000],
 ] as const;
 
-const toValues = (brand: BrandProfile): Values => omit(brand, ["logo_url", "inherited"]);
+const toValues = (brand: BrandProfile): Values =>
+  omit(brand, ["logo_url", "inherited", ...DEPRECATED]);
 
 /** Цвет бренда: выбор цвета и запись `#RRGGBB` рядом; `id` от `Form.Item` получает текстовое поле (связь с подписью). */
 function ColorField({
@@ -155,11 +159,6 @@ function BrandForm({ brand }: { brand: BrandProfile }) {
     );
   };
 
-  const colors = [
-    ["accent_color", t("brand.accent")],
-    ["secondary_color", t("brand.secondary")],
-  ] as const;
-
   return (
     <div className="pf-co-split">
       <ReadOnlyFence block>
@@ -195,31 +194,12 @@ function BrandForm({ brand }: { brand: BrandProfile }) {
             <Form.Item name="footer_text" label={t("brand.footer")} className="pf-co-wide">
               <Input.TextArea rows={2} />
             </Form.Item>
-            {colors.map(([name, label]) => (
-              <Form.Item
-                key={name}
-                name={name}
-                label={label}
-                rules={[{ pattern: HEX, message: t("brand.colorInvalid") }]}
-              >
-                <ColorField label={label} />
-              </Form.Item>
-            ))}
-            <Form.Item name="layout_preset" label={t("brand.layout")}>
-              <Select
-                options={(["light", "boxed", "bold", "striped"] as const).map((value) => ({
-                  value,
-                  label: t(`brand.layouts.${value}`),
-                }))}
-              />
-            </Form.Item>
-            <Form.Item name="font_family" label={t("brand.font")}>
-              <Select
-                options={(["sans", "serif"] as const).map((value) => ({
-                  value,
-                  label: t(`brand.fonts.${value}`),
-                }))}
-              />
+            <Form.Item
+              name="accent_color"
+              label={t("brand.accent")}
+              rules={[{ pattern: HEX, message: t("brand.colorInvalid") }]}
+            >
+              <ColorField label={t("brand.accent")} />
             </Form.Item>
           </div>
           <fieldset className="pf-co-fieldset">

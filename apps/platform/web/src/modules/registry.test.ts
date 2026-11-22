@@ -164,6 +164,7 @@ describe("карта маршрутов SPEC-v3 §6.3", () => {
     "/admin/company",
     "/admin/numbering",
     "/admin/taxes",
+    "/admin/sales",
     "/admin/telegram",
     "/admin/mail",
     "/admin/web-forms",

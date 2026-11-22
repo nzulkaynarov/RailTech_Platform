@@ -45,16 +45,6 @@ export const templateCatalogHandlers = [
     ]);
     const rows: TemplateRow[] = [];
     if (docs) {
-      rows.push({
-        id: "erp.quote:builtin",
-        kind: "quote",
-        name: "Коммерческое предложение",
-        domain: "erp",
-        languages: ["ru"],
-        origin: "builtin",
-        active: true,
-        path: "/admin/templates?tab=quote",
-      });
       for (const doc of docs) {
         rows.push({
           id: `erp.document:${doc.id}`,

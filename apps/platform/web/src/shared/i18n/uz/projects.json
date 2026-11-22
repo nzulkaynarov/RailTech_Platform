@@ -235,7 +235,7 @@
     },
     "by": "{{date}} · {{name}}",
     "bySystem": "{{date}} · tizim",
-    "reason": "Sabab: {{reason}}"
+    "reason": "Izoh: {{reason}}"
   },
   "panel": {
     "contractLabel": "Loyiha shartnomasi",

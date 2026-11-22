@@ -108,7 +108,7 @@ def return_address(seller, profile) -> str:
 
 
 def letterhead_of(seller, profile):
-    """Бланк продавца для rt_docs: название, адрес, ИНН и банк строками, подвал, логотип, цвет и шрифт профиля."""
+    """Бланк продавца для rt_docs: название, адрес, ИНН и банк строками, подвал, логотип и цвет профиля."""
     from rt_docs import Letterhead, Logo
 
     from accounts.services.letterhead_event import _logo
@@ -125,14 +125,12 @@ def letterhead_of(seller, profile):
         if payload:
             logo = Logo(base64.b64decode(payload["data_base64"]), payload["content_type"])
     accent = (getattr(profile, "accent_color", "") or "").strip()
-    font = getattr(profile, "font_family", "") if getattr(profile, "font_family", "") in ("sans", "serif") else "sans"
     return Letterhead(
         company_name=name or "—",
         requisites=tuple(requisites),
         footer=tuple(_lines(getattr(profile, "footer_text", ""))),
         logo=logo,
         **({"accent": accent} if len(accent) == 7 and accent.startswith("#") else {}),
-        font=font,
         footer_columns=footer_columns(seller, profile) if grid_enabled() and seller is not None else (),
         return_address=return_address(seller, profile) if grid_enabled() and seller is not None else None,
     )

@@ -143,7 +143,7 @@ def test_preview_returns_full_document_html_from_real_template(lookups):
     # Structural markers only the real base template emits (not the old React re-implementation):
     assert 'class="brandbar"' in document_html  # letterhead шапка table
     assert "--accent:" in document_html  # :root theme tokens
-    assert "layout-" in document_html  # body layout-preset class
+    assert "layout-" not in document_html  # ДОК-13: макеты удалены
     assert 'class="doc-body"' in document_html  # generated_document_pdf.html body wrapper
     # …carrying the seller's own letterhead + the rendered body.
     assert "ООО Полный-Документ" in document_html

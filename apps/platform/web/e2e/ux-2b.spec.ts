@@ -88,6 +88,7 @@ const ROUTES = [
   "/admin/company",
   "/admin/numbering",
   "/admin/taxes",
+  "/admin/sales",
   "/admin/articles",
   "/admin/telegram",
   "/admin/telegram?tab=texts",

@@ -37,7 +37,7 @@ def svc(sessions: async_sessionmaker[AsyncSession], now: datetime = NOON) -> Sta
     return StaffDeputyService(sessions, lambda: now)
 
 
-async def test_candidates_are_active_working_colleagues(
+async def test_candidates_are_all_active_colleagues(
     sessions: async_sessionmaker[AsyncSession],
 ) -> None:
     me, _ = await make_user(sessions, "me@railtech.uz", ["manager"])
@@ -49,9 +49,16 @@ async def test_candidates_are_active_working_colleagues(
         await session.execute(update(User).where(User.id == gone.id).values(is_active=False))
 
     found = {c.id for c in await svc(sessions).candidates(me.id)}
-    assert found == {colleague.id, boss.id}
-    assert viewer.id not in found
+    assert found == {colleague.id, boss.id, viewer.id}  # ЕД-6: не только менеджеры CRM
+    assert gone.id not in found
     assert me.id not in found
+
+
+async def test_viewer_can_be_a_deputy(sessions: async_sessionmaker[AsyncSession]) -> None:
+    me, _ = await make_user(sessions, "me@railtech.uz", ["manager"])
+    viewer, _ = await make_user(sessions, "viewer@railtech.uz", ["viewer"])
+    await svc(sessions).set(Actor(me.id), me.id, viewer.id, TODAY, TODAY + timedelta(days=2))
+    assert await svc(sessions).deputy_name(viewer.id) == "viewer"
 
 
 async def test_set_and_clear_deputy(sessions: async_sessionmaker[AsyncSession]) -> None:
@@ -73,7 +80,6 @@ async def test_set_and_clear_deputy(sessions: async_sessionmaker[AsyncSession]) 
         ("self", "deputy_is_self"),
         ("reversed", "deputy_period_reversed"),
         ("past", "deputy_period_past"),
-        ("viewer", "deputy_not_colleague"),
         ("inactive", "deputy_not_colleague"),
         ("missing", "deputy_not_colleague"),
     ],
@@ -82,13 +88,12 @@ async def test_invalid_assignments(
     sessions: async_sessionmaker[AsyncSession], kind: str, reason: str
 ) -> None:
     me, _ = await make_user(sessions, "me@railtech.uz", ["manager"])
-    viewer, _ = await make_user(sessions, "viewer@railtech.uz", ["viewer"])
     gone, _ = await make_user(sessions, "gone@railtech.uz", ["manager"])
     async with sessions() as session, session.begin():
         await session.execute(update(User).where(User.id == gone.id).values(is_active=False))
     target = {
         "self": me.id, "reversed": gone.id, "past": gone.id,
-        "viewer": viewer.id, "inactive": gone.id, "missing": 99999,
+        "inactive": gone.id, "missing": 99999,
     }[kind]  # fmt: skip
     start, end = {
         "reversed": (TODAY + timedelta(days=5), TODAY),

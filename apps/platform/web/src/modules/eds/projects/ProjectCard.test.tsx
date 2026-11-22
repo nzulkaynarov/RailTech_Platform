@@ -223,7 +223,9 @@ describe("Проект: договор (строка документа)", () =>
       "Прикреплён скан подписанного договора",
     );
     expect(within(history).getAllByRole("listitem")[0]).toHaveTextContent("Демо Бухгалтеров");
-    expect(within(history).getByText(/Didox, № 77/)).toBeVisible();
+    // СЦ-7: подпись записи — «Комментарий», а не «Причина»; после ЕД-7 запись живёт только в «Истории»
+    expect(within(history).getByText("Комментарий: Didox, № 77")).toBeVisible();
+    expect(within(history).queryByText(/Причина: Didox/)).toBeNull();
   });
 
   it("A2: «Согласован клиентом» — без канала и лица не отмечается; в истории — «Отмечено сотрудником»", async () => {

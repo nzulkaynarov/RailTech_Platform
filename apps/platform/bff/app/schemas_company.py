@@ -744,7 +744,9 @@ class DocumentTemplateIn(Body):
         if data.get("kind") is not None:
             data["kind"] = TEMPLATE_KIND_TO_ERP[data["kind"]]
         else:
-            data.pop("kind", None)  # без вида ERP ставит CUSTOM
+            data.pop(
+                "kind", None
+            )  # без вида ERP отвечает 400 TEMPLATE_KIND_INVALID (ДОК-13: вида «Произвольный» нет)
         return data
 
 
