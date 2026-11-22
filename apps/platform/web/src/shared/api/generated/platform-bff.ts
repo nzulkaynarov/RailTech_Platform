@@ -11971,8 +11971,8 @@ export const getRequestEdsDocumentRegistrationUrl = (id: string) => {
 };
 
 /**
- * EDS `POST /documents/{id}/registration-request` (B-P8B-4). Исполнитель без права регистрировать исходящие (`eds.inbox.register`) готовит письмо-ответ и передаёт черновик делопроизводителю: тот видит его в «Все документы», смотрит PDF и регистрирует ИСХ (`PUT /eds/documents/{id}` с `submit = true`). Не черновик — 409, не автор — 403.
- * @summary EDS · Письмо: передать на регистрацию делопроизводителю
+ * EDS `POST /documents/{id}/registration-request` (B-P8B-4). Исполнитель без права регистрировать исходящие (`eds.inbox.register`) готовит письмо-ответ и передаёт черновик на подпись: подписант подписывает его через «Подписать». Не черновик — 409, не автор — 403.
+ * @summary EDS · Письмо: передать на подпись
  */
 export const requestEdsDocumentRegistration = async (
   id: string,
@@ -12043,7 +12043,7 @@ export type RequestEdsDocumentRegistrationMutationError = ErrorType<
 export type RequestEdsDocumentRegistrationMutationVariables = { id: string };
 
 /**
- * @summary EDS · Письмо: передать на регистрацию делопроизводителю
+ * @summary EDS · Письмо: передать на подпись
  */
 export const useRequestEdsDocumentRegistration = <
   TError = ErrorType<

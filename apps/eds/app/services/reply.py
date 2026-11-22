@@ -127,9 +127,7 @@ async def signing_tasks(session: AsyncSession, employee: Employee, today: dt.dat
             await session.execute(
                 select(Document)
                 .where(
-                    Document.kind == DocumentKind.LETTER_OUT.value,
-                    Document.status == DocumentStatus.DRAFT.value,
-                    Document.registration_requested_at.is_not(None),
+                    signing_state.awaiting_signature(),
                     Document.registration_requested_by.is_not(None),
                 )
                 .order_by(Document.registration_requested_at, Document.id)

@@ -1401,8 +1401,8 @@ export interface paths {
      * @description Автор черновика `letter_out` без права `letters.register` (исполнитель поручения «Подготовить ответ») передаёт письмо
      *     на подпись: `letter.registration_requested` = кто и когда, журнал `document.registration_requested`; статус остаётся
      *     `draft`, а `awaiting_signature = true` (слово «На подписи», СЦ-8). Черновик
-     *     становится виден держателям `letters.register` (реестр «Все документы», карточка), они строят PDF и регистрируют его
-     *     (`POST …/submit`). Автор может продолжать править черновик. Повтор — без изменений. Не черновик — 409 (`invalid_state`),
+     *     становится виден держателям `letters.register` (реестр «Все документы», карточка), подписант подписывает его через
+     *     `POST …/sign`. Автор может продолжать править черновик. Повтор — без изменений. Не черновик — 409 (`invalid_state`),
      *     не автор — 403 (`not_author`), у письма нет тела — 409 (`no_body`). Делопроизводитель узнаёт сразу (EDS-REPLY-1):
      *     `notice.requested` держателям `letters.register` (если письмо «в ответ на ВХ») и задача в `GET /letter-tasks`
      *     (`signatures`, вычисленному подписанту); задача уходит при подписи. Регистрации без подписи нет (`submit` — 409
@@ -2523,7 +2523,7 @@ export interface components {
       /** @description Оригинал, если письмо закрыто как дубль (`status = duplicate`, EDS-DUP) */
       duplicate_of?: components["schemas"]["LetterDuplicateRef"] | null;
       /**
-       * @description Ответы на это входящее (EDS-REPLY-1), новейший первым: черновик, «передан на регистрацию», ИСХ и итог его отправки.
+       * @description Ответы на это входящее (EDS-REPLY-1), новейший первым: черновик, «на подписи», ИСХ и итог его отправки.
        *     Поля может не быть у старого ответа — это «ответов нет».
        */
       replies?: components["schemas"]["LetterReply"][];
@@ -5928,7 +5928,7 @@ export interface operations {
     };
     requestBody?: never;
     responses: {
-      /** @description Передано на регистрацию */
+      /** @description Передано на подпись */
       200: {
         headers: {
           [name: string]: unknown;
