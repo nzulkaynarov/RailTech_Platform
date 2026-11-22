@@ -54739,7 +54739,7 @@ export const getCreateCounterpartyUrl = () => {
 };
 
 /**
- * Последняя строка поля выбора «завести»: название, ИНН (9 цифр), страна, адрес и роль (`organization` по умолчанию, `supplier` или `manufacturer`). ERP `POST parties/organizations/`. Такой ИНН уже есть у ЛЮБОЙ компании, а не только из видимых в списке — 409 `CONFLICT` (`details.reason = company_exists`, `details.existing_id` — id найденной компании): её выбирают, а не заводят. Роль «поставщик» и «изготовитель» — право ERP `supply.manage`, иначе 403. Раздел `crm.clients`, `erp.stock`, `erp.calc` или `eds.memo.create` — полный.
+ * Последняя строка поля выбора «завести»: название, ИНН (9 цифр), страна, адрес и роль (`organization` по умолчанию, `supplier` или `manufacturer`). ERP `POST parties/organizations/`. Такой ИНН уже есть у ЛЮБОЙ компании, а не только из видимых в списке — 409 `CONFLICT` (`details.reason = company_exists`, `details.existing_id` — id найденной компании, `details.existing` — её строка выбора): её выбирают, а не заводят. Роль «поставщик» и «изготовитель» — право ERP `supply.manage`, иначе 403. Раздел `crm.clients`, `erp.stock`, `erp.calc` или `eds.memo.create` — полный.
  * @summary Поле выбора: завести контрагента
  */
 export const createCounterparty = async (

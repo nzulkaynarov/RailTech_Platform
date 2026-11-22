@@ -1,7 +1,7 @@
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import { HttpResponse, http } from "msw";
+import { http } from "msw";
 
 import {
   addCompany,

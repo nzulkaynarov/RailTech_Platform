@@ -8,7 +8,7 @@ import {
   spaGoto,
   waitForMotionEnd,
 } from "./support/app";
-import { fillDate } from "./support/fields";
+import { fillDate, chooseOrAddAddressee } from "./support/fields";
 
 // Склад и закупки на MSW (D2-2, SPEC-v3 §7.4): сценарий снабженца целиком — резерв строки из расчёта и «Запросить цену у
 // партнёра» (письмо в журнале) → заказ партнёру ЗП: черновик → отправлен (письмо) → подтверждён → приёмка частичная и
@@ -77,8 +77,7 @@ test.describe("Склад и закупки: снабженец", () => {
     await page.getByRole("button", { name: "Запросить цену у партнёра" }).click();
     // форма в боковом окне (§4.1a)
     const request = page.getByRole("region", { name: `Запросить цену у партнёра · ${NUMBER}` });
-    await request.getByRole("combobox", { name: "Партнёр" }).click();
-    await page.getByTitle(/ООО «Вымышленная Сталь» · sales@steel\.example/).click();
+    await chooseOrAddAddressee(page, "ООО «Вымышленная Сталь»", "Партнёр");
     await settledScreenshot(page, "calc-price-request");
     await request.getByRole("button", { name: "Отправить запрос" }).click();
     await expect(page.getByText("Запрос ушёл на sales@steel.example")).toBeVisible();
@@ -111,9 +110,7 @@ test.describe("Склад и закупки: снабженец", () => {
       page.getByRole("heading", { level: 1, name: "Новый заказ партнёру" }),
     ).toBeVisible();
     const create = page.getByRole("main");
-    await create.getByRole("combobox", { name: "Партнёр" }).click();
-    // Вариант списка партнёров (у ячейки таблицы тоже есть `title` с полным именем — UX-1c)
-    await page.locator(".ant-select-dropdown").getByTitle("ООО «Вымышленная Сталь»").click();
+    await chooseOrAddAddressee(page, "ООО «Вымышленная Сталь»", "Партнёр");
     await create.getByRole("button", { name: /^Строки/, expanded: false }).click();
     const product = create.getByRole("combobox", { name: "Товар, строка 1" });
     await product.click();

@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { pickAddressee } from "./support/fields";
 
 import { loginAndWait, spaGoto, waitForMotionEnd } from "./support/app";
 import { expectNoViolations } from "./support/axe";
@@ -21,6 +22,11 @@ for (const width of [1440, 390] as const) {
 
     await page.getByRole("button", { name: "Изменить: Рельс-Сталь" }).click();
     await expect(page.getByLabel("Изготовитель — компания")).toBeVisible();
+    // ЕД-6: изготовитель — любая компания базы; страна подставляется из её карточки
+    await pickAddressee(page, "Локо", "Lokotrans GmbH", "Изготовитель — компания");
+    await expect(
+      page.getByLabel("Страна").locator("xpath=ancestor::div[contains(@class,'ant-select')][1]"),
+    ).toContainText("Германия");
     await waitForMotionEnd(page);
     if (dir)
       await page.screenshot({ path: `${dir}/brand-form-${String(width)}.png`, fullPage: true });

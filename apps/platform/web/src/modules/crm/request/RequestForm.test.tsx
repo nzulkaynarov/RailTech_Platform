@@ -41,7 +41,7 @@ async function openForm(path: string, pick = true): Promise<HTMLElement> {
   const panel = await panelEl();
   await within(panel).findByRole("form", { name: "Создать заявку" });
   const field = within(panel).queryByLabelText("Название компании");
-  const suggested = panel.querySelector(".ant-select-selection-placeholder")?.textContent?.trim();
+  const suggested = panel.querySelector(".ant-select-selection-placeholder")?.textContent.trim();
   if (pick && field && suggested && suggested !== "Название или ИНН") {
     await addCompany(field, suggested);
   }

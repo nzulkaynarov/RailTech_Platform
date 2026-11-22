@@ -10,7 +10,7 @@ import {
   waitForMotionEnd,
   partnerCard,
 } from "./support/app";
-import { chooseOption, pickFiles } from "./support/fields";
+import { chooseOption, chooseOrAddAddressee, pickFiles } from "./support/fields";
 import { pickRowAction } from "./support/rowActions";
 
 // CAT-1 (L0-2) на MSW: снабженец заводит иностранный завод без ИНН, загружает его прайс по шаблону (проверка ничего не
@@ -53,19 +53,9 @@ async function uploadScenario(page: Page, width: number): Promise<void> {
   await expectNoViolations(page, "загрузка прайса");
   await settledScreenshot(page, "cat1-import-empty");
 
-  // новый иностранный завод без ИНН
-  await page.getByRole("button", { name: "Новый партнёр" }).click();
-  // форма секциями в боковом окне (§4.1a)
-  const form = page.getByRole("region", { name: "Новый партнёр" });
-  await form.getByLabel("Название").fill("Werk Nordlicht GmbH");
-  await chooseOption(form.getByLabel("Страна"), "Германия");
-  await chooseOption(form.getByLabel("Валюта цен"), "EUR");
-  await form.getByLabel("Рег. номер").fill("HRB 000001");
-  await form.getByLabel("Сам выпускает товар (изготовитель)").check();
-  await expectNoViolations(page, "новый партнёр");
+  // ЕД-6: партнёр выбирается; новый иностранный завод без ИНН — «Завести» последней строкой поля
+  await chooseOrAddAddressee(page, "Werk Nordlicht GmbH", "Партнёр");
   await settledScreenshot(page, "cat1-new-supplier");
-  await form.getByRole("button", { name: "Добавить" }).click();
-  await expect(form).toBeHidden();
 
   // файл, срок цен, проверка
   await pickFiles(page.getByLabel("Файл прайса"), PRICE_FILE);
