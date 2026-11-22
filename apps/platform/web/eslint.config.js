@@ -4,6 +4,8 @@ import reactRefresh from "eslint-plugin-react-refresh";
 import globals from "globals";
 import tseslint from "typescript-eslint";
 
+import rtUi from "./ui-guards/eslint-plugin.mjs";
+
 // Ключи кэша — только сгенерированные orval (`get…QueryKey`), как в CRM (ADR-0021): ручной массив
 // молча не совпадёт с ключом хука.
 const QUERY_KEY_METHODS = [
@@ -186,6 +188,18 @@ export default tseslint.config(
         },
       ],
     },
+  },
+  {
+    // ЕВ-1а: сырые Drawer / Modal / Popconfirm / Table / Spin, `<table>` и `modal.confirm()` в коде модулей — только из
+    // списка `ui-guards/allowlist.json` (путь и причина); список только уменьшается (src/test/uiGuards.test.ts).
+    files: [
+      "src/modules/**/*.{ts,tsx}",
+      "src/features/**/*.{ts,tsx}",
+      "src/entities/**/*.{ts,tsx}",
+    ],
+    ignores: ["**/*.test.{ts,tsx}"],
+    plugins: { "rt-ui": rtUi },
+    rules: { "rt-ui/no-raw-ui": "error" },
   },
   {
     files: ["src/shared/ui/lucide.tsx"],
