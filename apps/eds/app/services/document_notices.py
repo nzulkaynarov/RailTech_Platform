@@ -18,6 +18,7 @@ from typing import Any
 from rt_bus.sqlalchemy import AsyncBus
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app import clock
 from app.models import Document
 from app.schemas.documents import DocumentKind, DocumentStatus
 from app.services import events, signing_reminders, signing_resolve
@@ -128,6 +129,10 @@ async def memo_paid(
     )
 
 
+def _again(again: bool) -> str:
+    return f":{int(clock.now().timestamp())}" if again else ""
+
+
 async def letter_handed_over(
     session: AsyncSession,
     bus: AsyncBus,
@@ -135,9 +140,12 @@ async def letter_handed_over(
     *,
     today: date,
     actor_id: int,
+    again: bool = False,
 ) -> None:
     """Проект письма передан: подписанту (по замещению — с пометкой «за …»); подписать некому — держателям
-    `signing.manage`."""
+    `signing.manage`. `again` (ГЛ-0): напоминание или смена подписанта на подписи — уведомление уходит заново, ключ
+    с моментом отправки (иначе CRM погасит повтор). Подписант — сам действующий: уведомления нет, карточка письма
+    говорит «Подписываете вы»."""
     signer = await signing_resolve.letter_signer(session, document, today)
     directory = await load_directory(session, [document.author_crm_user_id])
     if signer is None:
@@ -146,7 +154,7 @@ async def letter_handed_over(
             bus,
             document,
             kind="letter_signer_missing",
-            key=f"document:{document.id}:letter_signer_missing",
+            key=f"document:{document.id}:letter_signer_missing{_again(again)}",
             recipients=await signing_reminders.manage_holder_ids(session),
             title="Подписать некому",
             subtitle=f"Настройки → Права подписи · {document.subject}"[:200],
@@ -162,7 +170,7 @@ async def letter_handed_over(
         bus,
         document,
         kind="letter_sign_requested",
-        key=f"document:{document.id}:letter_sign_requested:{who}",
+        key=f"document:{document.id}:letter_sign_requested:{who}{_again(again)}",
         recipients=[who],
         title="Подпишите исходящее",
         subtitle=f"{document.subject} · {directory.name(document.author_crm_user_id)}{behalf}",

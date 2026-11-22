@@ -79,7 +79,10 @@ class DocflowSettings(BaseModel):
     # Политика защиты данных для ИИ — проекция настройки CRM (владелец поля — CRM), здесь только для чтения.
     pii_policy: PiiPolicy
     ai_available: bool
+    #: ГЛ-0: автор письма с правом подписи подписывает его сам (по умолчанию да); нет — «автор ≠ подписант»
+    author_may_sign_own_letter: bool = True
 
 
 class DocflowSettingsPatch(Strict):
-    recognize_scans: bool
+    recognize_scans: bool | None = None
+    author_may_sign_own_letter: bool | None = None

@@ -274,7 +274,12 @@ async def test_scans_follow_the_policy_and_the_admin_switch(
     assert await deliver_policy(client, container, "business", at="2026-11-03T08:00:00Z") == "processed"
     settings = await client.get("/api/v1/docflow-settings", headers=staff["registrar"].headers)
     validate("DocflowSettings", settings.json())
-    assert settings.json() == {"recognize_scans": True, "pii_policy": "business", "ai_available": True}
+    assert settings.json() == {
+        "recognize_scans": True,
+        "pii_policy": "business",
+        "ai_available": True,
+        "author_may_sign_own_letter": True,
+    }
 
     on = await intake(client, staff["registrar"], PNG, name="scan.png", content_type="image/png")
     assert on.status_code == 200, on.text
@@ -290,7 +295,12 @@ async def test_scans_follow_the_policy_and_the_admin_switch(
     assert "строгой политике" in body["message"]
     assert len(model.bodies) == 1  # при «Строгой» в модель ничего не ушло
     shown = await client.get("/api/v1/docflow-settings", headers=staff["registrar"].headers)
-    assert shown.json() == {"recognize_scans": True, "pii_policy": "strict", "ai_available": True}
+    assert shown.json() == {
+        "recognize_scans": True,
+        "pii_policy": "strict",
+        "ai_available": True,
+        "author_may_sign_own_letter": True,
+    }
 
     assert await deliver_policy(client, container, "business", at="2026-11-03T12:00:00Z") == "processed"
     denied = await client.patch(
@@ -300,7 +310,12 @@ async def test_scans_follow_the_policy_and_the_admin_switch(
     turned = await client.patch(
         "/api/v1/docflow-settings", json={"recognize_scans": False}, headers=staff["admin"].headers
     )
-    assert turned.json() == {"recognize_scans": False, "pii_policy": "business", "ai_available": True}
+    assert turned.json() == {
+        "recognize_scans": False,
+        "pii_policy": "business",
+        "ai_available": True,
+        "author_may_sign_own_letter": True,
+    }
     off = await intake(client, staff["registrar"], PNG, name="scan.png", content_type="image/png")
     assert_error(off, 409, "CONFLICT", reason="scan_recognition_disabled")
     assert len(model.bodies) == 1

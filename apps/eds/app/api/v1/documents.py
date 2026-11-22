@@ -25,6 +25,7 @@ from app.schemas.documents import (
     DocumentSubmitIn,
     DocumentUpdate,
     LetterheadOut,
+    SignerChangeIn,
 )
 from app.schemas.pagination import Cursor, Limit
 from app.schemas.registry import RegistryStage
@@ -96,9 +97,11 @@ async def get_document(document_id: uuid.UUID, employee: Reader, session: Sessio
 
 
 @router.patch("/documents/{document_id}", response_model=Document, operation_id="updateDocument")
-async def update_document(document_id: uuid.UUID, body: DocumentUpdate, employee: Author, session: Session) -> Document:
+async def update_document(
+    document_id: uuid.UUID, body: DocumentUpdate, employee: Author, session: Session, bus: Bus
+) -> Document:
     async with session.begin():
-        document = await documents.update(session, employee=employee, document_id=document_id, edits=body)
+        document = await documents.update(session, bus, employee=employee, document_id=document_id, edits=body)
         return await documents_read.present(session, document, employee)
 
 
@@ -214,6 +217,43 @@ async def request_document_registration(
 ) -> Document:
     async with session.begin():
         document = await documents.request_registration(session, bus, employee=employee, document_id=document_id)
+        return await documents_read.present(session, document, employee)
+
+
+@router.post(
+    "/documents/{document_id}/remind",
+    response_model=Document,
+    operation_id="remindDocumentSigner",
+)
+async def remind_document_signer(document_id: uuid.UUID, employee: Author, session: Session, bus: Bus) -> Document:
+    async with session.begin():
+        document = await documents.remind_signer(session, bus, employee=employee, document_id=document_id)
+        return await documents_read.present(session, document, employee)
+
+
+@router.post(
+    "/documents/{document_id}/withdraw",
+    response_model=Document,
+    operation_id="withdrawDocumentFromSigning",
+)
+async def withdraw_document_from_signing(document_id: uuid.UUID, employee: Author, session: Session) -> Document:
+    async with session.begin():
+        document = await documents.withdraw_from_signing(session, employee=employee, document_id=document_id)
+        return await documents_read.present(session, document, employee)
+
+
+@router.post(
+    "/documents/{document_id}/signer",
+    response_model=Document,
+    operation_id="changeDocumentSigner",
+)
+async def change_document_signer(
+    document_id: uuid.UUID, body: SignerChangeIn, employee: Author, session: Session, bus: Bus
+) -> Document:
+    async with session.begin():
+        document = await documents.change_signer(
+            session, bus, employee=employee, document_id=document_id, signer_id=body.signer_crm_user_id
+        )
         return await documents_read.present(session, document, employee)
 
 
