@@ -102,7 +102,11 @@ export const counterpartyPickHandlers = [
   }),
   http.post("*/people/counterparties", async ({ request }) => {
     const body = (await request.json()) as CounterpartyPickIn;
-    const twin = body.inn ? COMPANIES.find((row) => row.inn === body.inn) : undefined;
+    // как в ERP: дубль по ИНН, а без ИНН — по названию без учёта регистра
+    const name = body.name.trim().toLocaleLowerCase("ru");
+    const twin = body.inn
+      ? COMPANIES.find((row) => row.inn === body.inn)
+      : COMPANIES.find((row) => row.name.toLocaleLowerCase("ru") === name);
     if (twin) {
       return HttpResponse.json(
         {

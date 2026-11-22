@@ -236,7 +236,7 @@ function NewCompany({
         <ErrorNote
           message={
             taken
-              ? t("picker.company.create.exists")
+              ? t("picker.company.create.existsHidden")
               : failed
                 ? t("picker.company.create.failed")
                 : null

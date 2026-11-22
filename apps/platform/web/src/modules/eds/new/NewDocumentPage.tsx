@@ -45,6 +45,7 @@ import {
 import { LetterPdfPanel } from "../documents/LetterPdfPanel";
 import { parseDocumentId, useRefreshDocuments } from "../documents/params";
 import { useRefreshLetters } from "../inbox/api";
+import { type AutoFilled, NO_AUTO, applyCompany, applyPerson } from "./recipientPick";
 import { AttachmentsField } from "./AttachmentsField";
 import { DealField } from "./DealField";
 import { CompanyPicker, PersonPicker } from "../../../shared/ui/pickers";
@@ -183,6 +184,8 @@ function DocumentForm({
   const [savedId, setSavedId] = useState<string | null>(draft?.id ?? null);
   // Id сохранённого черновика без ожидания перерисовки: «Показать PDF» сразу после создания идёт по тому же документу.
   const savedRef = useRef<string | null>(draft?.id ?? null);
+  // what the company and person pickers filled themselves: only that may be replaced when the choice changes
+  const autoRef = useRef<AutoFilled>(NO_AUTO);
   const [creating, setCreating] = useState(false);
   const [handingOver, setHandingOver] = useState(false);
   // Ключ повтора создания: на экземпляр формы и тело запроса — потерянный ответ не заведёт второй документ.
@@ -615,15 +618,10 @@ function DocumentForm({
                   invalid={Boolean(errors.recipient)}
                   describedBy={describedBy(ids.recipient, true, Boolean(errors.recipient))}
                   onChange={(company) => {
-                    // адресат — только выбором из контрагентов (ЕД-6): очистка снимает выбор вместе с человеком
-                    setValues((prev) => ({
-                      ...prev,
-                      recipientName: company?.name ?? "",
-                      recipientInn: company?.inn ?? "",
-                      recipientCompanyId: company?.id ?? "",
-                      recipientContactId: "",
-                      recipientEmail: company?.email ?? prev.recipientEmail,
-                    }));
+                    // адресат — только выбором из контрагентов (ЕД-6): смена компании снимает человека и его почту
+                    const auto = autoRef.current;
+                    autoRef.current = { person: null, companyEmail: company?.email ?? "" };
+                    setValues((prev) => ({ ...prev, ...applyCompany(prev, company, auto) }));
                   }}
                 />
               </Field>
@@ -637,16 +635,11 @@ function DocumentForm({
                     id="doc-recipient-person"
                     companyId={values.recipientCompanyId}
                     value={values.recipientContactId}
+                    describedBy="doc-recipient-person-hint"
                     onChange={(person) => {
-                      setValues((prev) => ({
-                        ...prev,
-                        recipientContactId: person?.id ?? "",
-                        recipientAttention: person
-                          ? [person.position, person.name].filter(Boolean).join(" ")
-                          : prev.recipientAttention,
-                        // почта человека заполняет «Почту адресата»; у человека её нет — остаётся прежняя
-                        recipientEmail: person?.email ?? prev.recipientEmail,
-                      }));
+                      const auto = autoRef.current;
+                      autoRef.current = { ...auto, person };
+                      setValues((prev) => ({ ...prev, ...applyPerson(prev, person, auto) }));
                     }}
                   />
                 </Field>

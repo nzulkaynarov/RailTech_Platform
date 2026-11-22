@@ -185,7 +185,7 @@
         "innHint": "9 digits; empty for a foreign company",
         "country": "Country",
         "address": "Address",
-        "exists": "This company already exists — find it in the list.",
+        "existsHidden": "This company already exists but is not in the picker. Ask an administrator.",
         "failed": "Could not add the company. Try again."
       }
     },

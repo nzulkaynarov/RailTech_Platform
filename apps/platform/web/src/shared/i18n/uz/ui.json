@@ -185,7 +185,7 @@
         "innHint": "9 raqam; xorijiy kompaniyada böş",
         "country": "Mamlakat",
         "address": "Manzil",
-        "exists": "Bunday kompaniya bor — röyxatdan toping.",
+        "existsHidden": "Bunday kompaniya bor, lekin tanlov röyxatida yöq. Administratorga murojaat qiling.",
         "failed": "Kompaniyani qöşib bölmadi. Qayta uriniş."
       }
     },

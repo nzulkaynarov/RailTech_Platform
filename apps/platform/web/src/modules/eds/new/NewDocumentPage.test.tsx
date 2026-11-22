@@ -155,6 +155,31 @@ describe("EDS · Создать документ: форма", () => {
     expect(screen.getByLabelText("Кому — человек")).toBeDisabled();
   });
 
+  it("смена компании и снятие человека не оставляют в письме почту и «Кому» прежнего человека", async () => {
+    await openForm("director@demo.example", "?type=letter");
+    await pickAddressee();
+    const person = screen.getByLabelText("Кому — человек");
+    await chooseOption(person, "Демо Клиентов");
+    expect(screen.getByLabelText("Почта адресата")).toHaveValue("d.klientov@demo-put.example");
+    // человека сняли: возвращается общая почта компании, «Кому» от человека уходит
+    const clearPerson = person.closest(".ant-select")?.querySelector(".ant-select-clear");
+    fireEvent.mouseDown(clearPerson as Element);
+    fireEvent.click(clearPerson as Element);
+    expect(screen.getByLabelText("Почта адресата")).toHaveValue("office@demo-put.example");
+    expect(screen.getByLabelText("Кому (должность и ФИО)")).toHaveValue("");
+    // компания A -> человек -> компания B без почты: ничего от A
+    await chooseOption(screen.getByLabelText("Кому — человек"), "Демо Клиентов");
+    await pickAddressee("гни", "ГНИ Мирабадского района");
+    expect(screen.getByLabelText("Почта адресата")).toHaveValue("");
+    expect(screen.getByLabelText("Кому (должность и ФИО)")).toHaveValue("");
+    // «Кому», которое вписал сам сотрудник, смена компании не трогает
+    fireEvent.change(screen.getByLabelText("Кому (должность и ФИО)"), {
+      target: { value: "Начальнику отдела" },
+    });
+    await pickAddressee("демо", "АО «Демо-Путь»");
+    expect(screen.getByLabelText("Кому (должность и ФИО)")).toHaveValue("Начальнику отдела");
+  });
+
   it("адресата нет среди контрагентов: «Завести» последней строкой — и она становится адресатом; тот же ИНН — предлагается существующая (ЕД-6)", async () => {
     await openForm("director@demo.example", "?type=letter");
     const field = screen.getByLabelText("Адресат (организация)");

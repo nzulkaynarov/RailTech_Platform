@@ -29,6 +29,7 @@ import { DefinitionList, type DefinitionItem } from "../../../shared/ui/Definiti
 import { ErrorNote } from "../../../shared/ui/FormParts";
 import { PageHeader } from "../../../shared/ui/PageHeader";
 import { useRefreshLetters } from "../inbox/api";
+import { signedByAfter } from "./signedBy";
 import { useRefreshMail } from "../mail/mailModel";
 import { RESOLUTION_KINDS } from "../inbox/officeModel";
 import { AttachmentsField } from "../new/AttachmentsField";
@@ -179,6 +180,8 @@ export function RegisterLetterPage() {
   const [note, setNote] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const idempotency = useRef<{ body: string; key: string } | null>(null);
+  // the «Подписал» text a chosen person put in on their own: only such text may be replaced or cleared
+  const autoSigned = useRef("");
   // EDS-DUP: фоновая проверка дублей, найденный при отправке ВХ (409) и «Это другое письмо» с причиной.
   const checked = useDuplicateCheck(values);
   // Найденный по 409 ВХ — пока не правили ключевые поля (корреспондент, ИНН, номер, дата): правка — проверка заново.
@@ -723,12 +726,15 @@ export function RegisterLetterPage() {
                               Boolean(errors.sender_name),
                             )}
                             onChange={(company) => {
+                              const auto = autoSigned.current;
+                              autoSigned.current = "";
                               setValues((prev) => ({
                                 ...prev,
                                 senderName: company?.name ?? "",
                                 senderInn: company?.inn ?? "",
                                 senderCompanyId: company?.id ?? "",
                                 senderContactId: "",
+                                signedBy: signedByAfter(prev.signedBy, auto, null),
                               }));
                             }}
                           />
@@ -742,13 +748,18 @@ export function RegisterLetterPage() {
                             id="reg-sender-person"
                             companyId={values.senderCompanyId}
                             value={values.senderContactId}
+                            describedBy="reg-sender-person-hint"
                             onChange={(person) => {
+                              const auto = autoSigned.current;
+                              const name = person?.name ?? null;
+                              autoSigned.current =
+                                name !== null && signedByAfter(values.signedBy, auto, name) === name
+                                  ? name
+                                  : "";
                               setValues((prev) => ({
                                 ...prev,
                                 senderContactId: person?.id ?? "",
-                                // «Подписал» подставляется выбором человека, пока его не вписали
-                                signedBy:
-                                  person && !prev.signedBy.trim() ? person.name : prev.signedBy,
+                                signedBy: signedByAfter(prev.signedBy, auto, person?.name ?? null),
                               }));
                             }}
                           />

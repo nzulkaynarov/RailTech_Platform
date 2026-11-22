@@ -3,7 +3,13 @@ import { HttpResponse, http } from "msw";
 import { describe, expect, it } from "vitest";
 
 import type { LetterRegisterIn } from "../../../shared/api/generated/model";
-import { addCompany, chooseOption, fillDate, selectedLabel } from "../../../test/fields";
+import {
+  addCompany,
+  chooseOption,
+  fillDate,
+  pickCompany,
+  selectedLabel,
+} from "../../../test/fields";
 import { setupLetterTests } from "../../../test/lettersKit";
 import { renderAt, signIn } from "../../../test/edsKit";
 import { server } from "../../../test/server";
@@ -441,5 +447,22 @@ describe("registerModel", () => {
       deal_number: "RQ-2026-104",
       file_ids: ["f1"],
     });
+  });
+
+  it("«Подписал» следует за выбором человека, а смена компании его очищает; вписанное вручную не трогается", async () => {
+    await openForm();
+    const sender = reveal(screen.getByLabelText(SENDER));
+    await pickCompany(sender, "демо", "АО «Демо-Путь»");
+    const signed = () => reveal(screen.getByLabelText("Подписал"));
+    await chooseOption(reveal(screen.getByLabelText("Человек корреспондента")), "Демо Клиентов");
+    expect(signed()).toHaveValue("Демо Клиентов");
+    await chooseOption(reveal(screen.getByLabelText("Человек корреспондента")), "Каримова Дилноза");
+    expect(signed()).toHaveValue("Каримова Дилноза");
+    await pickCompany(sender, "гни", "ГНИ Мирабадского района");
+    expect(signed()).toHaveValue("");
+    await chooseOption(reveal(screen.getByLabelText("Человек корреспондента")), "Абдуллаев Б. Т.");
+    fireEvent.change(signed(), { target: { value: "Иванов И. И." } });
+    await pickCompany(sender, "демо", "АО «Демо-Путь»");
+    expect(signed()).toHaveValue("Иванов И. И.");
   });
 });

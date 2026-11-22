@@ -103,6 +103,45 @@ describe("CompanyPicker (ЕД-6)", () => {
     expect(screen.queryByRole("dialog", { name: "Новая компания" })).toBeNull();
   });
 
+  it("без ИНН дубль по названию: берётся существующая компания, вторая не заводится", async () => {
+    renderUi(<Harness onChange={() => undefined} />);
+    const field = screen.getByLabelText("Организация");
+    await addCompany(field, "гни мирабадского района");
+    await waitFor(() => {
+      expect(selectedLabel(field)).toBe("ГНИ Мирабадского района");
+    });
+    const found = (await (await fetch("/api/v1/people/counterparties?q=мирабадского")).json()) as {
+      items: unknown[];
+    };
+    expect(found.items).toHaveLength(1);
+  });
+
+  it("дубль указывает на компанию, которой нет в выдаче поиска: понятный отказ вместо отсылки в пустой список", async () => {
+    server.use(
+      http.post("*/people/counterparties", () =>
+        HttpResponse.json(
+          {
+            code: "CONFLICT",
+            message: "Такая компания уже есть.",
+            source: "erp",
+            details: { reason: "company_exists", existing_id: "999" },
+          },
+          { status: 409 },
+        ),
+      ),
+    );
+    const picked: (PickedCompany | null)[] = [];
+    renderUi(<Harness onChange={(c) => picked.push(c)} />);
+    const field = screen.getByLabelText("Организация");
+    searchCompany(field, "Скрытая");
+    fireEvent.click(await screen.findByText("Завести «Скрытая»"));
+    const sheet = await screen.findByRole("dialog", { name: "Новая компания" });
+    fireEvent.click(within(sheet).getByRole("button", { name: "Завести" }));
+    expect(await within(sheet).findByText(/в списке выбора её нет/)).toBeVisible();
+    expect(within(sheet).queryByText(/найдите её в списке/)).toBeNull();
+    expect(picked).toEqual([]);
+  });
+
   it("короткий ИНН не отправляется: «Завести» недоступна", async () => {
     renderUi(<Harness onChange={() => undefined} />);
     searchCompany(screen.getByLabelText("Организация"), "Новая");
