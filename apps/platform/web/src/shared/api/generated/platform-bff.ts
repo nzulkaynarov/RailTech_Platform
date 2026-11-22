@@ -70,6 +70,8 @@ import type {
   CalcRequestList,
   CalcSheet,
   CalcTermsPatch,
+  CalendarLink,
+  CalendarLinkIssued,
   CallNoteView,
   CatalogCategory,
   CatalogCategoryIn,
@@ -5879,6 +5881,317 @@ export const useDeleteTelegramLink = <
 ): UseMutationResult<Awaited<ReturnType<typeof deleteTelegramLink>>, TError, void, TContext> => {
   return useMutation(getDeleteTelegramLinkMutationOptions(options), queryClient);
 };
+
+export const getGetCalendarLinkUrl = () => {
+  return `/api/v1/me/calendar-link`;
+};
+
+/**
+ * Календарь сроков: ссылка-подписка для Яндекс Календаря, Google или Outlook. Здесь только состояние; сам секрет виден один раз при выдаче. Ссылка действует до замены или отключения сотрудника; снимок сроков живёт 30 дней от последнего входа (без входа лента пустая); отключённый сотрудник теряет ссылку.
+ * @summary Ссылка на личный календарь — действует ли
+ */
+export const getCalendarLink = async (
+  options?: Parameters<typeof http>[1],
+): Promise<CalendarLink> => {
+  return http<CalendarLink>(getGetCalendarLinkUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetCalendarLinkQueryKey = () => {
+  return [`/api/v1/me/calendar-link`] as const;
+};
+
+export const getGetCalendarLinkQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCalendarLink>>,
+  TError = ErrorType<SessionExpiredResponse>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getCalendarLink>>, TError, TData>>;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetCalendarLinkQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getCalendarLink>>> = ({ signal }) =>
+    getCalendarLink({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getCalendarLink>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetCalendarLinkQueryResult = NonNullable<Awaited<ReturnType<typeof getCalendarLink>>>;
+export type GetCalendarLinkQueryError = ErrorType<SessionExpiredResponse>;
+
+export function useGetCalendarLink<
+  TData = Awaited<ReturnType<typeof getCalendarLink>>,
+  TError = ErrorType<SessionExpiredResponse>,
+>(
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getCalendarLink>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getCalendarLink>>,
+          TError,
+          Awaited<ReturnType<typeof getCalendarLink>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetCalendarLink<
+  TData = Awaited<ReturnType<typeof getCalendarLink>>,
+  TError = ErrorType<SessionExpiredResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getCalendarLink>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getCalendarLink>>,
+          TError,
+          Awaited<ReturnType<typeof getCalendarLink>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetCalendarLink<
+  TData = Awaited<ReturnType<typeof getCalendarLink>>,
+  TError = ErrorType<SessionExpiredResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getCalendarLink>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Ссылка на личный календарь — действует ли
+ */
+
+export function useGetCalendarLink<
+  TData = Awaited<ReturnType<typeof getCalendarLink>>,
+  TError = ErrorType<SessionExpiredResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getCalendarLink>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetCalendarLinkQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getIssueCalendarLinkUrl = () => {
+  return `/api/v1/me/calendar-link`;
+};
+
+/**
+ * Новая секретная ссылка (токен — 32 случайных байта; CRM хранит только хеш). Прежняя ссылка перестаёт действовать. Путь с токеном виден один раз.
+ * @summary Выдать ссылку на календарь (или сменить прежнюю)
+ */
+export const issueCalendarLink = async (
+  options?: Parameters<typeof http>[1],
+): Promise<CalendarLinkIssued> => {
+  return http<CalendarLinkIssued>(getIssueCalendarLinkUrl(), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getIssueCalendarLinkMutationKey = () => ["issueCalendarLink"] as const;
+
+export const getIssueCalendarLinkMutationOptions = <
+  TError = ErrorType<SessionExpiredResponse | CsrfFailedResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof issueCalendarLink>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<Awaited<ReturnType<typeof issueCalendarLink>>, TError, void, TContext> => {
+  const mutationKey = getIssueCalendarLinkMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof issueCalendarLink>>, void> = () => {
+    return issueCalendarLink(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type IssueCalendarLinkMutationResult = NonNullable<
+  Awaited<ReturnType<typeof issueCalendarLink>>
+>;
+
+export type IssueCalendarLinkMutationError = ErrorType<SessionExpiredResponse | CsrfFailedResponse>;
+
+/**
+ * @summary Выдать ссылку на календарь (или сменить прежнюю)
+ */
+export const useIssueCalendarLink = <
+  TError = ErrorType<SessionExpiredResponse | CsrfFailedResponse>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof issueCalendarLink>>,
+      TError,
+      void,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<Awaited<ReturnType<typeof issueCalendarLink>>, TError, void, TContext> => {
+  return useMutation(getIssueCalendarLinkMutationOptions(options), queryClient);
+};
+
+export const getGetCalendarFeedUrl = (name: string) => {
+  return `/api/v1/calendar/${name}`;
+};
+
+/**
+ * Без сессии: доступ по токену из `name` (`<токен>.ics`). Состав — те же строки с датой, что «Календарь» Платформы (`GET /queue`): название, срок и адрес объекта; сумм, цен и условий сделок нет. Лента — снимок, который BFF обновляет, пока сотрудник работает в Платформе. Неизвестный, заменённый или просроченный токен — 404 (причина не различается); частые промахи с одного адреса — 429.
+ * @summary Лента сроков сотрудника (iCal) по секретной ссылке
+ */
+export const getCalendarFeed = async (
+  name: string,
+  options?: Parameters<typeof http>[1],
+): Promise<string> => {
+  return http<string>(getGetCalendarFeedUrl(name), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetCalendarFeedQueryKey = (name: string) => {
+  return [`/api/v1/calendar/${name}`] as const;
+};
+
+export const getGetCalendarFeedQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCalendarFeed>>,
+  TError = ErrorType<NotFoundResponse | TooManyRequestsResponse>,
+>(
+  name: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getCalendarFeed>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetCalendarFeedQueryKey(name);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getCalendarFeed>>> = ({ signal }) =>
+    getCalendarFeed(name, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: name !== null && name !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof getCalendarFeed>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type GetCalendarFeedQueryResult = NonNullable<Awaited<ReturnType<typeof getCalendarFeed>>>;
+export type GetCalendarFeedQueryError = ErrorType<NotFoundResponse | TooManyRequestsResponse>;
+
+export function useGetCalendarFeed<
+  TData = Awaited<ReturnType<typeof getCalendarFeed>>,
+  TError = ErrorType<NotFoundResponse | TooManyRequestsResponse>,
+>(
+  name: string,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getCalendarFeed>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getCalendarFeed>>,
+          TError,
+          Awaited<ReturnType<typeof getCalendarFeed>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetCalendarFeed<
+  TData = Awaited<ReturnType<typeof getCalendarFeed>>,
+  TError = ErrorType<NotFoundResponse | TooManyRequestsResponse>,
+>(
+  name: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getCalendarFeed>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getCalendarFeed>>,
+          TError,
+          Awaited<ReturnType<typeof getCalendarFeed>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetCalendarFeed<
+  TData = Awaited<ReturnType<typeof getCalendarFeed>>,
+  TError = ErrorType<NotFoundResponse | TooManyRequestsResponse>,
+>(
+  name: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getCalendarFeed>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Лента сроков сотрудника (iCal) по секретной ссылке
+ */
+
+export function useGetCalendarFeed<
+  TData = Awaited<ReturnType<typeof getCalendarFeed>>,
+  TError = ErrorType<NotFoundResponse | TooManyRequestsResponse>,
+>(
+  name: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getCalendarFeed>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetCalendarFeedQueryOptions(name, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
 
 export const getListDeputyCandidatesUrl = () => {
   return `/api/v1/me/deputy-candidates`;

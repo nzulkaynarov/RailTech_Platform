@@ -188,5 +188,21 @@
       "default": "Something went wrong. Try again."
     },
     "qrLabel": "QR code for the authenticator app"
+  },
+  "calendarLink": {
+    "title": "Calendar link",
+    "lead": "Your deadlines from My tasks in your calendar: titles and dates, no amounts. Subscribe by link in the calendar on your phone or computer.",
+    "none": "No link yet.",
+    "active": "Link issued {{date}}.",
+    "get": "Get link",
+    "rotate": "Change link",
+    "rotateTitle": "The old link will stop working. Change it?",
+    "cancel": "Cancel",
+    "field": "Calendar link",
+    "copy": "Copy",
+    "copied": "Link copied",
+    "once": "Copy the link now: we will not show it again. Lost it? Change the link.",
+    "refreshHint": "Deadlines refresh when you sign in to the Platform.",
+    "error": "Could not get the link. Try again."
   }
 }

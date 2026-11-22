@@ -17,6 +17,7 @@ from typing import Any
 from rt_bus import BusConfig, Event, HandlerRegistry
 from rt_bus.memory import MemoryReceiver
 
+from app import calendar_link
 from app.hub import TOPICS, EventHub, Hint
 
 SERVICE = "platform-bff"
@@ -25,6 +26,7 @@ SERVICE = "platform-bff"
 ERP_EVENTS = "uz.railtech.erp.*.v1"
 LEAD_EVENTS = "uz.railtech.crm.lead.*.v1"
 USER_EVENTS = "uz.railtech.identity.user.*.v1"
+USER_DEACTIVATED = "uz.railtech.identity.user.deactivated.v1"
 # События EDS (`letter.registered|resolved|returned|rejected`, `approval.requested|decided`,
 # `document.registered|archived`): письмо ждёт резолюции, служебка или КП пришли на шаг, решение
 # снимает строку с очереди.
@@ -85,6 +87,13 @@ def create_receiver(hub: EventHub) -> MemoryReceiver:
         if topics:
             await hub.publish(Hint(topics, event.type))
 
+    async def on_user_deactivated(event: Event) -> None:
+        # Секретная ссылка календаря отключённого сотрудника перестаёт действовать сразу
+        user_id = (event.data or {}).get("crm_user_id")
+        if isinstance(user_id, int):
+            await calendar_link.revoke_user(hub.redis, user_id)
+
     for mask in HANDLED:
         registry.add(mask, on_event)
+    registry.add(USER_DEACTIVATED, on_user_deactivated)
     return MemoryReceiver(BusConfig(service=SERVICE), registry=registry)

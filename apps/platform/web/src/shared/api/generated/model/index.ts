@@ -147,6 +147,8 @@ export * from "./calcVisaGroups";
 export * from "./calcVisaIndicators";
 export * from "./calcVisaState";
 export * from "./calcZone";
+export * from "./calendarLink";
+export * from "./calendarLinkIssued";
 export * from "./callNoteView";
 export * from "./callNoteViewStatus";
 export * from "./catalogCategory";

@@ -1144,6 +1144,20 @@ components:
       - env_url
       title: CabinetUrlOut
       type: object
+    CalendarLinkOut:
+      properties:
+        issued_at:
+          format: date-time
+          title: Issued At
+          type: string
+        token:
+          title: Token
+          type: string
+      required:
+      - token
+      - issued_at
+      title: CalendarLinkOut
+      type: object
     ChangePasswordRequest:
       properties:
         current_password:
@@ -16601,6 +16615,30 @@ paths:
       security:
       - HTTPBearer: []
       summary: Put Avatar
+      tags:
+      - me
+  /api/v1/me/calendar-link:
+    post:
+      description: 'Выдать (или заменить) секретный токен личного календаря: виден один раз, прежний
+
+        перестаёт действовать. Ссылку из токена собирает Платформа.'
+      operationId: calendar_link_issue
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalendarLinkOut'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: Calendar Link Issue
       tags:
       - me
   /api/v1/me/company-articles:

@@ -808,6 +808,50 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/me/calendar-link": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Ссылка на личный календарь — действует ли
+     * @description Календарь сроков: ссылка-подписка для Яндекс Календаря, Google или Outlook. Здесь только состояние; сам секрет виден один раз при выдаче. Ссылка действует до замены или отключения сотрудника; снимок сроков живёт 30 дней от последнего входа (без входа лента пустая); отключённый сотрудник теряет ссылку.
+     */
+    get: operations["getCalendarLink"];
+    put?: never;
+    /**
+     * Выдать ссылку на календарь (или сменить прежнюю)
+     * @description Новая секретная ссылка (токен — 32 случайных байта; CRM хранит только хеш). Прежняя ссылка перестаёт действовать. Путь с токеном виден один раз.
+     */
+    post: operations["issueCalendarLink"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/calendar/{name}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Лента сроков сотрудника (iCal) по секретной ссылке
+     * @description Без сессии: доступ по токену из `name` (`<токен>.ics`). Состав — те же строки с датой, что «Календарь» Платформы (`GET /queue`): название, срок и адрес объекта; сумм, цен и условий сделок нет. Лента — снимок, который BFF обновляет, пока сотрудник работает в Платформе. Неизвестный, заменённый или просроченный токен — 404 (причина не различается); частые промахи с одного адреса — 429.
+     */
+    get: operations["getCalendarFeed"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/me/deputy-candidates": {
     parameters: {
       query?: never;
@@ -9620,6 +9664,20 @@ export interface components {
        * @default false
        */
       remember_device: boolean;
+    };
+    CalendarLink: {
+      /** @description Ссылка выдана и действует */
+      active: boolean;
+      /** Format: date-time */
+      issued_at?: string | null;
+    };
+    CalendarLinkIssued: {
+      /** @description Путь с секретным токеном; виден один раз */
+      path: string;
+      /** @description Полный адрес для подписки в календаре */
+      url: string;
+      /** Format: date-time */
+      issued_at: string;
     };
     SecondFactorStatus: {
       enabled: boolean;
@@ -19137,6 +19195,77 @@ export interface operations {
       401: components["responses"]["SessionExpired"];
       403: components["responses"]["CsrfFailed"];
       503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  getCalendarLink: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Состояние */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CalendarLink"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+    };
+  };
+  issueCalendarLink: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Новая ссылка */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CalendarLinkIssued"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["CsrfFailed"];
+    };
+  };
+  getCalendarFeed: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description `<токен>.ics` */
+        name: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description iCalendar; Cache-Control private, max-age=300 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "text/calendar": string;
+        };
+      };
+      404: components["responses"]["NotFound"];
+      429: components["responses"]["TooManyRequests"];
     };
   };
   listDeputyCandidates: {
