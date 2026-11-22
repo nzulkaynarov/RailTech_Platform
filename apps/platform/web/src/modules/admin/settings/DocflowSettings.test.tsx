@@ -79,7 +79,7 @@ describe("Настройки · Процессы · Справочники пи�
     expect(row).toHaveTextContent("7");
     const stored = readDictionaries()["letter-kinds"].at(-1);
     expect(stored?.code).toBe("pretenziya_pokupatelya");
-    expect(stored?.attrs).toEqual({ urgent: true, due_days: 7 });
+    expect(stored?.attrs).toEqual({ urgent: true, due_days: 7, due_required: false });
   });
 
   it("скрывает использованный способ получения и возвращает; порядок — стрелками", async () => {

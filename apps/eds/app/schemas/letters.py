@@ -149,6 +149,7 @@ class LetterKindItem(BaseModel):
     name: dict[str, str]
     urgent: bool
     due_days: int | None = None
+    due_required: bool = False
 
 
 class LetterKindList(BaseModel):

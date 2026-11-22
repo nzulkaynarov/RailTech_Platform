@@ -358,7 +358,8 @@
     },
     "documentDue": {
       "label": "Deadline in the document",
-      "hint": "Reply or action deadline set by the sender"
+      "hint": "Reply or action deadline set by the sender",
+      "required": "Required for this document type"
     },
     "addressee": {
       "label": "Addressee",
@@ -409,6 +410,7 @@
       "received_at": "Enter the date received — not later than today.",
       "subject": "Enter the subject.",
       "file_ids": "Attach the letter file and wait for the upload.",
+      "document_due": "This document type needs a due date — take it from the letter.",
       "related_number": "No document with this number. Check the incoming or outgoing number.",
       "forbidden": "registering incoming letters is not part of your role",
       "server": "the server did not accept the data, try again in a minute"
@@ -445,6 +447,12 @@
         "DEFAULT": "Could not fill from the file. Fill in manually."
       },
       "reading": "Reading the file and filling the fields — you can keep typing."
+    },
+    "review": {
+      "yes": "Yes",
+      "ref": "Sender's number and date",
+      "draft": "Resolution draft",
+      "files": "Files"
     },
     "sections": {
       "file": "Letter file",

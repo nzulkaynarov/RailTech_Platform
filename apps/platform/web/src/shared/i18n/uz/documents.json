@@ -440,7 +440,9 @@
       "missing": "Kompaniya blanki berilmagan — xat PDF ini qurib bo‘lmaydi. Administrator «Sozlamalar · Rekvizitlar va blanka»ni saqlaydi.",
       "open": "«Rekvizitlar va blanka»ni ochish"
     },
-    "replySubject": "{{number}} ({{date}}) ga javob",
+    "replySubject": "№ {{number}} ({{date}}) ga javob",
+    "replySubjectNoDate": "№ {{number}} ga javob",
+    "replySubjectOurs": "{{number}} ({{date}}) ga javob",
     "replyPrefilled": "{{number}} dan to‘ldirildi: muxbir, pochta va mavzuni tekshiring.",
     "title": {
       "letter": "Chiquvchi xat",

@@ -127,7 +127,7 @@ async function executorHandsOver(page: Page, email: string, screens: boolean): P
   // Поля заполнены из входящего (корреспондент, ИНН, тема); почты в письме нет — пусто, вводит исполнитель.
   await expect(page.getByLabel("Адресат (организация)")).toHaveValue("ГНИ Мирабадского района");
   await expect(page.getByLabel("Тема", { exact: true })).toHaveValue(
-    /^На IN-109\/26 от \d{2}\.\d{2}\.\d{4}: Требование о представлении пояснений по НДС$/,
+    /^На № 14-02\/3381 от \d{2}\.\d{2}\.\d{4}: Требование о представлении пояснений по НДС$/,
   );
   await expect(page.getByLabel("В ответ на входящее")).toHaveValue(NUMBER);
   await expect(page.getByLabel("Почта адресата")).toHaveValue("");

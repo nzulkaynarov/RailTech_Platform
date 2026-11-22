@@ -134,6 +134,19 @@ export function emailIn(text: string | null | undefined): string {
 }
 
 /**
+ * Как ответ ссылается на входящее (СЦ-11): адресат знает своё письмо под СВОИМ номером и датой — «На № <номер отправителя>
+ * от <дата отправителя>»; наш ВХ остаётся в реестре и в поле «В ответ на». Отправитель номера не указал (бумага без
+ * исходящего) — ссылка на нашу регистрацию.
+ */
+export function replyRef(
+  letter: Pick<LetterCard, "sender_ref">,
+  texts: { theirs: (number: string, date: string | null) => string; ours: string },
+): string {
+  const number = letter.sender_ref.number?.trim();
+  return number ? texts.theirs(number, letter.sender_ref.date ?? null) : texts.ours;
+}
+
+/**
  * Заготовка ответа на входящее (EDS-REPLY-1): корреспондент, ИНН, почта адресата — только то, что уже есть в письме, и тема
  * «На ВХ-… от …: тема письма» (не длиннее 300 знаков). Остальное — пусто.
  */

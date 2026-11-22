@@ -3,7 +3,7 @@ import { HttpResponse, http } from "msw";
 import { describe, expect, it } from "vitest";
 
 import type { LetterRegisterIn } from "../../../shared/api/generated/model";
-import { chooseOption, selectedLabel } from "../../../test/fields";
+import { chooseOption, fillDate, selectedLabel } from "../../../test/fields";
 import { setupLetterTests } from "../../../test/lettersKit";
 import { renderAt, signIn } from "../../../test/edsKit";
 import { server } from "../../../test/server";
@@ -135,7 +135,7 @@ describe("EDS · Зарегистрировать входящее (P8)", () => 
     type("Исходящий номер отправителя", "04-12/9999");
     type("Тема", "Требование о пояснениях");
     // P8b: адресат — выбор сотрудника; пусто — директор по умолчанию (назначает EDS)
-    expect(reveal(screen.getByText("Директор (по умолчанию)"))).toBeVisible();
+    expect(reveal(screen.getAllByText("Директор (по умолчанию)")[0] as HTMLElement)).toBeVisible();
     await attach();
     expect(await screen.findByText(/Заполнено из файла:/)).toBeVisible();
 
@@ -158,7 +158,65 @@ describe("EDS · Зарегистрировать входящее (P8)", () => 
       summary: expect.stringContaining("Просят пояснить расхождение") as unknown,
     });
     expect(body?.file_ids).toHaveLength(1);
+    // СЦ-11: срок по документу подставлен из файла и ушёл в запрос — у требования ГНК он обязателен
+    expect(body?.document_due).toBe("2026-11-12");
     expect(await screen.findByRole("heading", { level: 1, name: "Входящие" })).toBeVisible();
+  });
+
+  it("СЦ-11: требование госоргана без срока не регистрируется; срок обязателен только у вида с флагом", async () => {
+    await openForm();
+    await chooseOption(
+      reveal(screen.getByLabelText("Вид документа")),
+      "Требование или уведомление ГНК",
+    );
+    registerButton("Зарегистрировать");
+    const due = /Для этого вида документа нужен срок по документу/;
+    expect(
+      within(document.getElementById("reg-remaining") as HTMLElement).getByText(due),
+    ).toBeVisible();
+    // пункт ведёт на шаг со сроком; на самом шаге поле помечено обязательным
+    openStep("Срок, адресат и резолюция");
+    expect(reveal(screen.getByLabelText("Срок по документу"))).toHaveAttribute(
+      "aria-required",
+      "true",
+    );
+    fillDate(reveal(screen.getByLabelText("Срок по документу")), "2026-11-30");
+    registerButton("Зарегистрировать");
+    expect(
+      within(document.getElementById("reg-remaining") as HTMLElement).queryByText(due),
+    ).toBeNull();
+
+    // вид без флага срок не требует
+    await chooseOption(reveal(screen.getByLabelText("Вид документа")), "Письмо банка");
+    fillDate(reveal(screen.getByLabelText("Срок по документу")), "");
+    registerButton("Зарегистрировать");
+    expect(
+      within(document.getElementById("reg-remaining") as HTMLElement).queryByText(due),
+    ).toBeNull();
+  });
+
+  it("СЦ-11: шаг «Проверка» показывает сводку того, что будет зарегистрировано; полей сделки без сделки нет", async () => {
+    await openForm();
+    await chooseOption(reveal(screen.getByLabelText("Вид документа")), "Письмо банка");
+    await chooseOption(reveal(screen.getByLabelText("Способ получения")), "Почта");
+    await addSender("ГНИ Сводного района");
+    type("Исходящий номер отправителя", "01-12/345");
+    type("Тема", "Запрос выписки");
+    openStep("Срок, адресат и резолюция");
+    fillDate(reveal(screen.getByLabelText("Срок по документу")), "2026-11-30");
+    openStep("Проверка и регистрация");
+    const summary = document.querySelector(".pf-reg-summary") as HTMLElement;
+    for (const text of [
+      "Письмо банка",
+      "ГНИ Сводного района",
+      "01-12/345",
+      "Запрос выписки",
+      "30.11.2026",
+    ]) {
+      expect(within(summary).getByText(new RegExp(text.replace(/[./]/g, "\\$&")))).toBeVisible();
+    }
+    // письмо не по сделке: строк заявки в сводке нет
+    expect(within(summary).queryByText("Связь с заявкой или проектом")).toBeNull();
   });
 
   it("похожее (тот же корреспондент и исх. № без даты): ссылка на ВХ, регистрация не запрещена", async () => {

@@ -4996,7 +4996,7 @@ export interface paths {
     put?: never;
     /**
      * EDS · Зарегистрировать входящее (делопроизводитель, P8)
-     * @description Форма «Зарегистрировать входящее» (SPEC-v3 §3.2a п. 1): EDS `POST /letters` (право `letters.register`). Раздел `eds.inbox.register` — полный: регистрация отдельно от резолюции (`eds.inbox: full`), делопроизводитель резолюцию не накладывает. Обязательны вид документа (код из `GET /eds/letter-kinds`), способ получения, корреспондент, дата поступления, тема и хотя бы один файл (загрузка — `POST /eds/document-files`). Вид со «срочно» (требование ГНК) ставит «срочно» сам. Адресат — директор по умолчанию (держатель резолюции); письмо сразу «Ждёт резолюции» и попадает директору в «Мои задачи» (`resolve_letter`). Дубли (EDS-DUP): экран проверяет в фоне (`POST /eds/letters/duplicates-check`); то же письмо уже зарегистрировано (корреспондент, исх. № и дата исх.) — 409 `CONFLICT`, `details.reason = duplicate_letter`, `details.duplicate` — найденный ВХ (`LetterDuplicate`); зарегистрировать всё равно — `force = true` с причиной `force_reason` (в журнал ВХ). Номер связанного ВХ или ИСХ не найден — 422 `VALIDATION_FAILED`, `details.fields = [related_number]`; неизвестный вид — `details.fields = [kind]`. `Idempotency-Key` уходит в EDS как есть. Из письма общего ящика (`source_mail_id`, W18A-P2-3): до EDS CRM помечает письмо «Регистрируется» и берёт его для сотрудника; ведёт другой или уже разобрано — 409 `CONFLICT` (`details.reason = mail_in_work_by_other` | `mail_handled`), ВХ не создаётся; отказ EDS возвращает письмо «в работе». Письмо ящика, у которого ВХ уже есть (повтор, двойное нажатие, регистрация зависла), получает тот же ВХ, а не второй: EDS отвечает 200, BFF — этой же карточкой.
+     * @description Форма «Зарегистрировать входящее» (SPEC-v3 §3.2a п. 1): EDS `POST /letters` (право `letters.register`). Раздел `eds.inbox.register` — полный: регистрация отдельно от резолюции (`eds.inbox: full`), делопроизводитель резолюцию не накладывает. Обязательны вид документа (код из `GET /eds/letter-kinds`), способ получения, корреспондент, дата поступления, тема и хотя бы один файл (загрузка — `POST /eds/document-files`). Вид со «срочно» (требование ГНК) ставит «срочно» сам. Адресат — директор по умолчанию (держатель резолюции); письмо сразу «Ждёт резолюции» и попадает директору в «Мои задачи» (`resolve_letter`). Дубли (EDS-DUP): экран проверяет в фоне (`POST /eds/letters/duplicates-check`); то же письмо уже зарегистрировано (корреспондент, исх. № и дата исх.) — 409 `CONFLICT`, `details.reason = duplicate_letter`, `details.duplicate` — найденный ВХ (`LetterDuplicate`); зарегистрировать всё равно — `force = true` с причиной `force_reason` (в журнал ВХ). Номер связанного ВХ или ИСХ не найден — 422 `VALIDATION_FAILED`, `details.fields = [related_number]`; неизвестный вид — `details.fields = [kind]`. Вид с `due_required` без срока из документа (`document_due`) — 422 `VALIDATION_FAILED`, `details.fields = [document_due]` (`required`). `Idempotency-Key` уходит в EDS как есть. Из письма общего ящика (`source_mail_id`, W18A-P2-3): до EDS CRM помечает письмо «Регистрируется» и берёт его для сотрудника; ведёт другой или уже разобрано — 409 `CONFLICT` (`details.reason = mail_in_work_by_other` | `mail_handled`), ВХ не создаётся; отказ EDS возвращает письмо «в работе». Письмо ящика, у которого ВХ уже есть (повтор, двойное нажатие, регистрация зависла), получает тот же ВХ, а не второй: EDS отвечает 200, BFF — этой же карточкой.
      */
     post: operations["registerLetter"];
     delete?: never;
@@ -13698,7 +13698,7 @@ export interface components {
       /** @description Домены, чьи справочники не ответили — список частичный (экран говорит об этом) */
       unavailable: ("eds" | "crm" | "erp")[];
     };
-    /** @description Значения полей `attrs` (`urgent`, `due_days` у видов документа; `default_action`, `color`, `icon` у типов писем — строки из `options`); `null` — не задано */
+    /** @description Значения полей `attrs` (`urgent`, `due_days`, `due_required` у видов документа; `default_action`, `color`, `icon` у типов писем — строки из `options`); `null` — не задано */
     DictionaryAttrValues: {
       [key: string]: boolean | number | string | null;
     };
@@ -13769,6 +13769,11 @@ export interface components {
       urgent: boolean;
       /** @description Срок исполнения по умолчанию, дней (EDS-REG); `null` — общее правило (срочно 3, обычный 10) */
       due_days?: number | null;
+      /**
+       * @description Письмо этого вида не регистрируется без срока по документу (СЦ-11); флаг ведёт администратор
+       * @default false
+       */
+      due_required: boolean;
     };
     LetterKindList: {
       items: components["schemas"]["LetterKind"][];

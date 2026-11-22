@@ -440,7 +440,9 @@
       "missing": "The company letterhead is not set — the letter PDF cannot be built. An administrator saves “Settings · Details & letterhead”.",
       "open": "Open “Details & letterhead”"
     },
-    "replySubject": "Re {{number}} dated {{date}}",
+    "replySubject": "Re No. {{number}} dated {{date}}",
+    "replySubjectNoDate": "Re No. {{number}}",
+    "replySubjectOurs": "Re {{number}} dated {{date}}",
     "replyPrefilled": "Filled in from {{number}}: check the correspondent, email and subject.",
     "title": {
       "letter": "Outgoing letter",

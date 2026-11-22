@@ -16025,6 +16025,7 @@ export const getListLetterKindsResponseMock = (
     },
     urgent: faker.datatype.boolean(),
     due_days: faker.helpers.arrayElement([faker.number.int({ min: 1, max: 365 }), null]),
+    due_required: faker.datatype.boolean(),
   })),
   ...overrideResponse,
 });

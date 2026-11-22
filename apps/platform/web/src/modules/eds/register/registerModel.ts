@@ -46,6 +46,7 @@ export type RegisterField =
   | "received_at"
   | "subject"
   | "file_ids"
+  | "document_due"
   | "related_number";
 
 /** Порядок полей формы: фокус уходит на первое с ошибкой. */
@@ -57,6 +58,7 @@ export const REGISTER_ORDER: readonly RegisterField[] = [
   "received_at",
   "subject",
   "file_ids",
+  "document_due",
   "related_number",
 ];
 
@@ -96,7 +98,12 @@ export function registerFieldId(field: RegisterField): string {
 }
 
 /** Обязательные поля SPEC-v3 §3.2a п. 1: вид, способ, корреспондент, дата поступления (не позже сегодня), тема, файл. */
-export function validateRegister(values: RegisterValues, today: string): RegisterErrors {
+export function validateRegister(
+  values: RegisterValues,
+  today: string,
+  /** Вид документа требует срок по документу (`LetterKind.due_required`, СЦ-11): флаг ведёт администратор */
+  dueRequired = false,
+): RegisterErrors {
   const errors: RegisterErrors = {};
   if (!values.kind) errors.kind = true;
   if (!values.receiptMethod) errors.receipt_method = true;
@@ -106,6 +113,7 @@ export function validateRegister(values: RegisterValues, today: string): Registe
   if (!values.subject.trim()) errors.subject = true;
   const hasFile = values.attachments.some((a) => a.status === "done" && a.id);
   if (!hasFile && values.sourceMailId === null) errors.file_ids = true;
+  if (dueRequired && !values.documentDue) errors.document_due = true;
   return errors;
 }
 

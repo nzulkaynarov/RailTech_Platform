@@ -59,6 +59,7 @@ import {
   isLetter,
   kindFromParam,
   replyPrefill,
+  replyRef,
   routeKind,
   type SubmitMode,
   todayInCompanyZone,
@@ -1055,9 +1056,15 @@ function ReplyDraft({ id, number }: { id: string; number: string }) {
     ...(letter
       ? replyPrefill(
           letter,
-          t("documents:form.replySubject", {
-            number: letter.number,
-            date: date(letter.received_at),
+          replyRef(letter, {
+            theirs: (number, theirDate) =>
+              theirDate
+                ? t("documents:form.replySubject", { number, date: date(theirDate) })
+                : t("documents:form.replySubjectNoDate", { number }),
+            ours: t("documents:form.replySubjectOurs", {
+              number: letter.number,
+              date: date(letter.received_at),
+            }),
           }),
         )
       : {}),

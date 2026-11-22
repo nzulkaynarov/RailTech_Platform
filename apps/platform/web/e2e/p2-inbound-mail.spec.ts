@@ -94,7 +94,9 @@ test.describe("P2: входящая почта общего ящика", () => {
       await expect(
         page.getByText("Из письма: «Акт сверки за октябрь» от ООО «Демо-Поставка»"),
       ).toBeVisible();
-      await expect(page.getByText("акт-сверки-октябрь.pdf")).toBeVisible();
+      await expect(
+        page.locator(".pf-doc-file-name", { hasText: "акт-сверки-октябрь.pdf" }),
+      ).toBeVisible();
       await shot(page, "register-from-mail");
       await expectNoViolations(page, `форма ${String(width)}`);
       // корреспондент из письма — текст; его выбирают из контрагентов или заводят (СУЩ-2.6)
