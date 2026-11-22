@@ -202,6 +202,10 @@ class UserService:
                 await hand_over_work(session, actor, user_id, patch.transfer_to_user_id)
             if patch.is_active is False:
                 await revoke_tokens(session, user_id)
+                # Секретная ссылка календаря отзывается вместе с входом (BFF удаляет свою копию по
+                # событию `identity.user.deactivated`).
+                user.calendar_token_hash = None
+                user.calendar_token_at = None
             try:
                 await session.flush()
             except IntegrityError as exc:
