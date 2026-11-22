@@ -3,7 +3,7 @@ import { HttpResponse, http } from "msw";
 import { describe, expect, it } from "vitest";
 
 import type { LetterRegisterIn } from "../../../shared/api/generated/model";
-import { chooseOption, selectedLabel } from "../../../test/fields";
+import { addCompany, chooseOption, selectedLabel } from "../../../test/fields";
 import { setupLetterTests } from "../../../test/lettersKit";
 import { renderAt, signIn } from "../../../test/edsKit";
 import { server } from "../../../test/server";
@@ -44,15 +44,7 @@ function intakeCalls(): { count: number } {
 }
 
 async function addSender(name: string) {
-  fireEvent.change(reveal(screen.getByLabelText("Корреспондент (организация)")), {
-    target: { value: name },
-  });
-  fireEvent.click(await screen.findByText(`+ Завести организацию «${name}»`));
-  const sheet = await screen.findByRole("dialog", { name: "Новая организация" });
-  fireEvent.click(within(sheet).getByRole("button", { name: "Завести" }));
-  await waitFor(() => {
-    expect(screen.queryByRole("dialog", { name: "Новая организация" })).toBeNull();
-  });
+  await addCompany(reveal(screen.getByLabelText("Корреспондент (организация)")), name);
 }
 
 let senders = 0;

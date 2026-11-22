@@ -161,5 +161,37 @@
   },
   "entity": {
     "sku": "Article"
+  },
+  "picker": {
+    "searching": "Searching…",
+    "company": {
+      "placeholder": "Name or tax ID",
+      "empty": "Nothing found",
+      "inn": "Tax ID {{inn}}",
+      "noInn": "No tax ID",
+      "roles": {
+        "client": "client",
+        "supplier": "supplier",
+        "manufacturer": "manufacturer",
+        "partner": "partner",
+        "organization": "organization"
+      },
+      "create": {
+        "option": "Add “{{name}}”",
+        "title": "New company",
+        "submit": "Add",
+        "name": "Name",
+        "inn": "Tax ID",
+        "innHint": "9 digits; empty for a foreign company",
+        "country": "Country",
+        "address": "Address",
+        "existsHidden": "This company already exists but is not in the picker. Ask an administrator.",
+        "failed": "Could not add the company. Try again."
+      }
+    },
+    "person": {
+      "placeholder": "Person from the company card",
+      "empty": "The company card has no people"
+    }
   }
 }

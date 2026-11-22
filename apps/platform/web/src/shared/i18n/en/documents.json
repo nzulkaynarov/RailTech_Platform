@@ -257,19 +257,7 @@
     },
     "recipient": {
       "label": "Addressee (organization)",
-      "placeholder": "Name or tax ID",
       "innShort": "Tax ID {{inn}}",
-      "create": {
-        "option": "+ Add organization “{{name}}”",
-        "title": "New organization",
-        "name": "Name",
-        "inn": "Tax ID",
-        "innHint": "9 digits. Leave empty for a foreign organization.",
-        "address": "Address",
-        "submit": "Add",
-        "exists": "This company already exists — find it in the list.",
-        "failed": "Could not add the organization. Try again."
-      },
       "pickHint": "Pick a counterparty or add an organization from the last suggestion."
     },
     "text": {
@@ -492,9 +480,7 @@
     },
     "person": {
       "label": "To — person",
-      "hint": "Optional. Picking fills in “To”.",
-      "placeholder": "Person from the organization card",
-      "empty": "No people in the organization card"
+      "hint": "Optional. Picking fills in the email and “To”."
     },
     "draftHint": "A draft can be saved once there is a subject and text."
   },

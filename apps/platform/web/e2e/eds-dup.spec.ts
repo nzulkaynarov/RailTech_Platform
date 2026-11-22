@@ -1,7 +1,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import { type Page, expect, test } from "@playwright/test";
 
-import { fillDate } from "./support/fields";
+import { chooseOrAddAddressee, fillDate } from "./support/fields";
 import { loginAndWait, reveal, spaGoto, waitForMotionEnd } from "./support/app";
 
 // EDS-DUP «Одно письмо — один входящий номер» на MSW: форма «Зарегистрировать входящее» в фоне находит то же письмо
@@ -56,9 +56,8 @@ test.describe("EDS-DUP: одно письмо — один входящий но
       await expect(
         page.getByRole("heading", { level: 1, name: "Регистрация входящего документа" }),
       ).toBeVisible();
-      await (
-        await reveal(page.getByLabel("Корреспондент (организация)", { exact: true }))
-      ).fill('акб "Демо-Банк"');
+      await reveal(page.getByLabel("Корреспондент (организация)", { exact: true }));
+      await chooseOrAddAddressee(page, 'акб "Демо-Банк"', "Корреспондент (организация)");
       await (await reveal(page.getByLabel("Исходящий номер отправителя"))).fill("№ 12-07/881");
       await fillDate(page.getByLabel("Дата у отправителя"), "2026-10-18");
 

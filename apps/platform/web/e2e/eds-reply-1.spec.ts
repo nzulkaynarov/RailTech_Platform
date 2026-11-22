@@ -2,7 +2,14 @@ import AxeBuilder from "@axe-core/playwright";
 import { type Locator, type Page, expect, test } from "@playwright/test";
 
 import { loginAndWait, openAvatarMenu, reveal, spaGoto, waitForMotionEnd } from "./support/app";
-import { addAddressee, chooseOption, fillDate, openStep, pickFiles } from "./support/fields";
+import {
+  addAddressee,
+  chooseOption,
+  expectCompany,
+  fillDate,
+  openStep,
+  pickFiles,
+} from "./support/fields";
 
 // EDS-REPLY-1 «Ответ на входящее» на MSW: требование ГНК → поручение «Подготовить ответ» исполнителю без права регистрировать →
 // «Подготовить ответ» (форма заполнена из входящего) → «Передать на подпись» → у подписанта (директор) задача «Подписать
@@ -125,7 +132,7 @@ async function executorHandsOver(page: Page, email: string, screens: boolean): P
   await expect(page).toHaveURL(/\/eds\/new\?type=letter&reply_to=.*&reply_id=[0-9a-f-]{36}/);
 
   // Поля заполнены из входящего (корреспондент, ИНН, тема); почты в письме нет — пусто, вводит исполнитель.
-  await expect(page.getByLabel("Адресат (организация)")).toHaveValue("ГНИ Мирабадского района");
+  await expectCompany(page, "ГНИ Мирабадского района");
   await expect(page.getByLabel("Тема", { exact: true })).toHaveValue(
     /^На № 14-02\/3381 от \d{2}\.\d{2}\.\d{4}: Требование о представлении пояснений по НДС$/,
   );
