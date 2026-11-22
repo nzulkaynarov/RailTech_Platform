@@ -1,6 +1,6 @@
 # Area F: old and new piled together (read-only, main @ 2ecd40446)
 
-Paths are relative to `/home/umarbek/projects/RailTech_Platform/.claude/worktrees/research-main/`. `web/` = `apps/platform/web/src/`, `bff/` = `apps/platform/bff/app/`, `plan` = `docs/runbooks/plan-2026-11-12.md`.
+Paths are relative to ``. `web/` = `apps/platform/web/src/`, `bff/` = `apps/platform/bff/app/`, `plan` = `docs/runbooks/plan-2026-11-12.md`.
 
 ## 1. Duplicate cards and views of one object
 

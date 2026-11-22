@@ -1,6 +1,6 @@
 # AREA E: roles, module owners and the «situation centre»
 
-All paths are relative to `/home/umarbek/projects/RailTech_Platform/.claude/worktrees/research-main` (main at 2ecd40446). Anything marked (inference) is my reading, not something the code or docs state.
+All paths are relative to `` (main at 2ecd40446). Anything marked (inference) is my reading, not something the code or docs state.
 
 **The short version:**
 - The owner's six-owner model doesn't match the role catalog:
