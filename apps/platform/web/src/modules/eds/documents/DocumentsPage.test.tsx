@@ -156,6 +156,12 @@ describe("EDS · Документы: список", () => {
       "href",
       "/eds/projects/97",
     );
+    // Акт, принятый клиентом в Кабинете (EDS: `signed`), — без «скан»: реестр не знает о файле.
+    const accepted = (await screen.findByText("Поставка крепежа, объект «Юг»")).closest(
+      "tr",
+    ) as HTMLElement;
+    expect(within(accepted).getByText("Принят клиентом")).toBeVisible();
+    expect(within(accepted).queryByText(/скан/)).toBeNull();
   });
 
   it("«Мои документы»: вкладок договоров, счетов и актов нет — они в реестре компании", async () => {
