@@ -101,9 +101,14 @@ async def test_memo_on_approval_waits_on_the_current_step_and_clears_after_decis
     assert row["object_id"] == approval_id and row["title"] == doc["subject"]
     assert row["waiting_on"] is not None or row["waiting_label"]
 
-    events_before = len(await outbox(container, "approval.requested"))
+    opened = len(await outbox(container, "approval.requested"))
+    before = len(await notices(container, "approval_reminder"))
     assert (await remind(client, manager, "approval", approval_id)).status_code == 200
-    assert len(await outbox(container, "approval.requested")) == events_before + 1
+    sent = (await notices(container, "approval_reminder"))[before:]
+    # a person gets it: the holders of the step's right, never the author; the circle is not "opened" again
+    assert len(sent) == 1 and sent[0]["recipients"] and manager.id not in sent[0]["recipients"]
+    assert staff["director"].id in sent[0]["recipients"]
+    assert len(await outbox(container, "approval.requested")) == opened
     assert_error(await remind(client, manager, "approval", approval_id), 429, "RATE_LIMITED")
 
     assert (await decide(client, staff["director"], approval_id, "reject", comment="Нет бюджета")).status_code == 200
@@ -133,3 +138,17 @@ async def test_issued_instruction_waits_on_the_executor_until_executed(
     )
     assert done.status_code == 200, done.text
     assert (await waiting(client, director))["items"] == []
+
+
+async def test_remind_has_no_one_to_remind_when_the_author_is_the_only_approver(
+    client: httpx.AsyncClient, staff: dict[str, Person], container: Container
+) -> None:
+    director = staff["director"]
+    doc = await create(client, director, **WITH_AMOUNT)
+    approval_id = (await submit(client, director, doc["id"])).json()["approval_id"]
+    [row] = [i for i in (await waiting(client, director))["items"] if i["kind"] == "approval"]
+    assert row["remindable"] is False  # the only holder of the step's right is the author
+
+    before = len(await notices(container, "approval_reminder"))
+    assert_error(await remind(client, director, "approval", approval_id), 409, "CONFLICT")
+    assert len(await notices(container, "approval_reminder")) == before

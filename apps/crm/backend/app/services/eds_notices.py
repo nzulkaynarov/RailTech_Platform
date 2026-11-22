@@ -35,6 +35,8 @@ SIGNING_EXPIRING_TYPE: Final = "uz.railtech.eds.signing_authority.expiring.v1"
 SIGNING_EXPIRING_KIND: Final = "signing_authority_expiring"
 # СЦ-9: уведомления по документам без входящего письма (служебка, подпись письма) — тот же путь.
 DOCUMENT_NOTICE_TYPE: Final = "uz.railtech.eds.document.notice_requested.v1"
+# v2 (ГЛ-1): добавлен вид `approval_reminder` (автор напомнил о шаге маршрута); данные те же.
+DOCUMENT_NOTICE_TYPE_V2: Final = "uz.railtech.eds.document.notice_requested.v2"
 # «Подписать некому» ведёт держателя права в Настройки, а не к документу, которого он не видит.
 _SETTINGS_KIND: Final = "letter_signer_missing"
 # Вкладка колокольчика: от сотрудника ждут действия — «Решения»; остальное — «Система».
@@ -47,6 +49,7 @@ _DECISIONS: Final = frozenset(
         "acquaint_requested",
         "letter_sign_requested",
         "letter_signer_missing",
+        "approval_reminder",
     }
 )
 

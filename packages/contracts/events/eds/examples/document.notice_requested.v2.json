@@ -1,0 +1,30 @@
+{
+  "specversion": "1.0",
+  "id": "6e3f9b58-2d4c-5a7a-8b1e-8c5d7f9a2b34",
+  "source": "rt://eds",
+  "type": "uz.railtech.eds.document.notice_requested.v2",
+  "time": "2026-11-21T07:15:00Z",
+  "subject": "document/2f6b1c0e-8a3d-4e57-9c14-b0d7a5e3f812",
+  "datacontenttype": "application/json",
+  "dataschema": "rt://contracts/events/eds/document.notice_requested/v2",
+  "tenant": "railtech",
+  "correlationid": "8e1f3a5c-7b9d-5e2f-a4c6-0d8b2f4a6e13",
+  "data": {
+    "notice_key": "approval:7c1d2e3f-4a5b-4c6d-8e7f-9a0b1c2d3e4f:reminded:1795245300",
+    "kind": "approval_reminder",
+    "recipients": [
+      3
+    ],
+    "title": "Напоминание: нужно ваше решение",
+    "subtitle": "MEMO-2026/014 · Директор",
+    "document": {
+      "eds_document_id": "2f6b1c0e-8a3d-4e57-9c14-b0d7a5e3f812",
+      "number": "MEMO-2026/014",
+      "subject": "Закупка расходных материалов"
+    },
+    "actor": {
+      "type": "staff",
+      "crm_user_id": 7
+    }
+  }
+}

@@ -19,6 +19,7 @@ from app.models.auth import User
 from app.models.staff_tickets import StaffNotification
 from app.services.eds_notices import (
     DOCUMENT_NOTICE_TYPE,
+    DOCUMENT_NOTICE_TYPE_V2,
     NOTICE_TYPE,
     SIGNING_EXPIRING_TYPE,
     EdsNoticeService,
@@ -362,3 +363,18 @@ async def test_document_notice_failed_processing_leaves_nothing(
     assert await stand.h.process(event_id) != "processed"
     assert await stand.bell() == []
     assert stand.h.bot.sent == []
+
+
+async def test_approval_reminder_v2_is_a_decision_for_the_approver(stand: Stand) -> None:
+    """ГЛ-1: «Напомнить» по маршруту — уведомление в «Решения» тому, кто согласует (v2 события)."""
+    approver, _ = await make_user(stand.h.sessions, "approver@x.uz", ["admin"])
+    data = document_notice(
+        [approver.id],
+        notice_key=f"approval:{DOC_ID}:reminded:1",
+        kind="approval_reminder",
+        title="Напоминание: нужно ваше решение",
+    )
+    event_id = await stand.receive(data, event_type=DOCUMENT_NOTICE_TYPE_V2)
+    assert await stand.h.process(event_id) == "processed"
+    [row] = await stand.bell()
+    assert (row.user_id, row.kind, row.tab) == (approver.id, "eds.approval_reminder", "decisions")

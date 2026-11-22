@@ -5,9 +5,10 @@
 * служебка, заявление, отчёт на согласовании — открытый маршрут моего документа, ждёт текущий шаг;
 * поручение, которое я выдал резолюцией, — `instructions.created_by`, статус «в работе».
 
-«Напомнить» повторяет существующее уведомление текущему адресату (`letter_sign_requested`, `approval.requested`,
-`instruction_reminder`) и пишет в журнал объекта `waiting.reminded`; повтор по тому же объекту — не чаще раза в час
-(429 `RATE_LIMITED`): время прошлого напоминания берётся из журнала, отдельной таблицы нет.
+«Напомнить» шлёт уведомление текущему адресату (`letter_sign_requested`, `approval_reminder` — назначенному
+согласующему или, на шаге «любой с правом», держателям права; `instruction_reminder`) и никогда не повторяет
+`approval.requested` («круг открыт» — один раз). Пишет в журнал объекта `waiting.reminded`; повтор по тому же
+объекту — не чаще раза в час (429 `RATE_LIMITED`): время прошлого напоминания берётся из журнала, отдельной таблицы нет.
 """
 
 import datetime as dt
@@ -15,7 +16,7 @@ import uuid
 from typing import Any
 
 from rt_bus.sqlalchemy import AsyncBus
-from sqlalchemy import and_, select
+from sqlalchemy import and_, any_, literal, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import clock
@@ -23,7 +24,7 @@ from app.errors import EdsError, conflict, not_found
 from app.models import ApprovalRoute, ApprovalStep, Document, Employee, Instruction, JournalEntry, Letter
 from app.schemas.approvals import ApprovalTemplate, RouteStatus
 from app.schemas.waiting import REMIND_INTERVAL, RemindOut, WaitingItem, WaitingKind, WaitingList
-from app.services import approvals, document_notices, events, instructions, journal, signing_resolve, signing_state
+from app.services import document_notices, instructions, journal, signing_resolve, signing_state
 from app.services.people import load_directory
 
 LIMIT = 50
@@ -54,6 +55,19 @@ def _gate(last: dt.datetime | None) -> tuple[bool, dt.datetime | None]:
         return True, None
     until = last + REMIND_INTERVAL
     return (clock.now() >= until), until
+
+
+async def step_recipients(session: AsyncSession, step: ApprovalStep, *, exclude: int) -> list[int]:
+    """Кому уходит напоминание по текущему шагу: назначенный сотрудник, а у шага «любой с правом» — активные
+    держатели права. Сам автор не получатель: напоминать себе незачем."""
+    if step.assignee_crm_user_id is not None:
+        return [] if step.assignee_crm_user_id == exclude else [step.assignee_crm_user_id]
+    found = await session.execute(
+        select(Employee.crm_user_id)
+        .where(Employee.is_active.is_(True), literal(step.assignee_permission) == any_(Employee.permissions_eds))
+        .order_by(Employee.crm_user_id)
+    )
+    return [int(i) for i in found.scalars() if int(i) != exclude]
 
 
 async def _signatures(session: AsyncSession, employee: Employee, today: dt.date) -> tuple[list[WaitingItem], bool]:
@@ -121,6 +135,7 @@ async def _approvals(session: AsyncSession, employee: Employee) -> tuple[list[Wa
     out: list[WaitingItem] = []
     for route, document, step in rows:
         ok, until = _gate(last.get(str(route.id)))
+        recipients = await step_recipients(session, step, exclude=employee.crm_user_id)
         out.append(
             WaitingItem(
                 kind="approval",
@@ -132,7 +147,7 @@ async def _approvals(session: AsyncSession, employee: Employee) -> tuple[list[Wa
                 since=route.created_at,
                 due=None,
                 remind_available_at=until,
-                remindable=ok,
+                remindable=ok and bool(recipients),
             )
         )
     return out, more
@@ -257,12 +272,20 @@ async def remind(
         route, document, step = found
         last = (await _last_reminders(session, JournalEntry.approval_id, [route.id])).get(str(route.id))
         await _check_gate(last)
-        data = {
-            "approval": approvals.approval_ref(route, document),
-            "step": {"index": step.index, "assignee": approvals.assignee_dict(step)},
-            "actor": events.actor(actor),
-        }
-        await events.publish(bus, session, "approval.requested", data, subject=document.number or str(route.id))
+        recipients = await step_recipients(session, step, exclude=actor)
+        if not recipients:
+            raise conflict("no_one_to_remind", "Напоминать некому: на шаге нет согласующего, кроме вас.")
+        await document_notices.publish_notice(
+            session,
+            bus,
+            document,
+            kind="approval_reminder",
+            key=f"approval:{route.id}:reminded:{int(now.timestamp())}",
+            recipients=recipients,
+            title="Напоминание: нужно ваше решение",
+            subtitle=f"{document.number or document.subject} · {step.label}"[:200],
+            actor_id=actor,
+        )
         await journal.record(session, REMINDED, by=actor, approval_id=route.id, document_id=document.id)
     else:
         found_i = (
