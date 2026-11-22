@@ -19,7 +19,7 @@ vi.mock("../../../shared/ui/PdfViewer", () => ({
 const ID = documentId(900);
 const AT = "2026-11-01T09:00:00Z";
 
-function seed(overrides: Partial<MockDocument>): void {
+function seed(overrides: Partial<MockDocument>, handedOver = true): void {
   const state = readEds();
   state.documents.push({
     id: ID,
@@ -57,7 +57,7 @@ function seed(overrides: Partial<MockDocument>): void {
       pdf: null,
       pdfPolls: 0,
       mailings: [],
-      registration_requested: { ownerId: "u-demo-universal", at: AT },
+      registration_requested: handedOver ? { ownerId: "u-demo-universal", at: AT } : null,
     },
     ...overrides,
   });
@@ -80,12 +80,23 @@ describe("EDS · карточка письма на бланке (P4)", () => {
     const card = await openCard("registrar@demo.example");
 
     expect(card.getByText(/Передано на подпись: Демо Широков/)).toBeVisible();
+    // СЦ-8: слово статуса — по факту передачи; статус документа остаётся `draft`
+    expect(card.getByText("На подписи")).toBeVisible();
     expect(card.getByText("Начальнику ГНИ")).toBeVisible();
     expect(card.getByText("по бланку (директор)")).toBeVisible();
     expect(card.getByText("Адресату ещё не отправляли.")).toBeVisible();
     expect(card.queryByRole("button", { name: /Зарегистрировать/ })).toBeNull();
     expect(card.queryByRole("button", { name: "Подписать" })).toBeNull();
     expect(readEds().documents.find((d) => d.id === ID)?.status).toBe("draft");
+  });
+
+  it("до передачи на подпись письмо — «Черновик», плашки передачи нет (СЦ-8)", async () => {
+    seed({}, false);
+    const card = await openCard("registrar@demo.example");
+
+    expect(card.getByText("Черновик")).toBeVisible();
+    expect(card.queryByText("На подписи")).toBeNull();
+    expect(card.queryByText(/Передано на подпись:/)).toBeNull();
   });
 
   it("адресат текстом из писем до СУЩ-2.6: просьба сопоставить, регистрация закрыта", async () => {

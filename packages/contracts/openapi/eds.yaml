@@ -2504,12 +2504,13 @@ paths:
     post:
       tags: [documents]
       operationId: requestDocumentRegistration
-      summary: Передать письмо на регистрацию делопроизводителю (B-P8B-4)
+      summary: Передать письмо на подпись (B-P8B-4)
       description: |
         Автор черновика `letter_out` без права `letters.register` (исполнитель поручения «Подготовить ответ») передаёт письмо
-        делопроизводителю: `letter.registration_requested` = кто и когда, журнал `document.registration_requested`. Черновик
-        становится виден держателям `letters.register` (реестр «Все документы», карточка), они строят PDF и регистрируют его
-        (`POST …/submit`). Автор может продолжать править черновик. Повтор — без изменений. Не черновик — 409 (`invalid_state`),
+        на подпись: `letter.registration_requested` = кто и когда, журнал `document.registration_requested`; статус остаётся
+        `draft`, а `awaiting_signature = true` (слово «На подписи», СЦ-8). Черновик
+        становится виден держателям `letters.register` (реестр «Все документы», карточка), подписант подписывает его через
+        `POST …/sign`. Автор может продолжать править черновик. Повтор — без изменений. Не черновик — 409 (`invalid_state`),
         не автор — 403 (`not_author`), у письма нет тела — 409 (`no_body`). Делопроизводитель узнаёт сразу (EDS-REPLY-1):
         `notice.requested` держателям `letters.register` (если письмо «в ответ на ВХ») и задача в `GET /letter-tasks`
         (`signatures`, вычисленному подписанту); задача уходит при подписи. Регистрации без подписи нет (`submit` — 409
@@ -2519,7 +2520,7 @@ paths:
         - $ref: '#/components/parameters/DocumentId'
       responses:
         '200':
-          description: Передано на регистрацию
+          description: Передано на подпись
           content:
             application/json:
               schema:
@@ -4731,7 +4732,7 @@ components:
           items:
             $ref: '#/components/schemas/LetterReply'
           description: |
-            Ответы на это входящее (EDS-REPLY-1), новейший первым: черновик, «передан на регистрацию», ИСХ и итог его отправки.
+            Ответы на это входящее (EDS-REPLY-1), новейший первым: черновик, «на подписи», ИСХ и итог его отправки.
             Поля может не быть у старого ответа — это «ответов нет».
 
     LetterTrack:
@@ -5316,7 +5317,7 @@ components:
       type: string
       enum: [draft, registration_requested, registered]
       description: |
-        Где ответ на входящее: `draft` — черновик автора, `registration_requested` — передан делопроизводителю на регистрацию,
+        Где ответ на входящее: `draft` — черновик автора, `registration_requested` — передан на подпись (`Document.awaiting_signature`),
         `registered` — ИСХ зарегистрирован (`Document.status = sent`)
     LetterReplyMail:
       type: string
@@ -5768,7 +5769,10 @@ components:
         | `to_accountant` | бухгалтер `approve` (оплачено) | `paid` | закрыт: `approved` | `document.archived` |
         | `on_approval`, `to_accountant` | `return` (комментарий обязателен) | `returned` (автор правит) | закрыт: `returned` | — |
         | `on_approval`, `to_accountant` | `reject` (комментарий обязателен) | `rejected` | закрыт: `rejected` | `document.archived` |
-        | `draft` (`letter_out`) | `POST …/submit` — отправка, `ИСХ-NNN/ГГ` | `sent` | — | `document.archived` |
+        | `draft` (`letter_out`) | `POST …/sign` — подпись, `ИСХ-NNN/ГГ` (`POST …/submit` без подписи — 409 `signature_required`) | `sent` | — | `document.archived` |
+
+        Статус письма после `POST …/registration-request` остаётся `draft`: «На подписи» — признак `awaiting_signature`
+        (передано на подпись и не подписано), а не значение перечисления.
 
         Архив — признак `archived_at`, итоговый статус сохраняется.
     LetterTemplateKind:
@@ -6296,11 +6300,17 @@ components:
     DocumentListItem:
       type: object
       additionalProperties: false
-      required: [id, kind, number, status, subject, author, files_count, paid_on, created_at, undelivered]
+      required: [id, kind, number, status, subject, author, files_count, paid_on, created_at, undelivered, awaiting_signature]
       properties:
         undelivered:
           type: boolean
           description: Исходящее письмо с почтой адресата не ушло и отправку не сняли (СЦ-1); в списке — `stage=open`
+        awaiting_signature:
+          type: boolean
+          description: |
+            Исходящее письмо передано на подпись и не подписано (СЦ-8): `status = draft` и есть отметка передачи
+            (`letter.registration_requested`). Слово «На подписи»; без передачи — «Черновик»; после подписи — `sent`.
+            У остальных видов — `false`.
         id:
           $ref: '#/components/schemas/Uuid'
         kind:
@@ -6521,6 +6531,11 @@ components:
           description: |
             Только у открытого черновика исходящего письма и только в ответах, где известен спросивший (СЦ-9):
             может ли он подписать сейчас (та же проверка, что у `POST /documents/{id}/sign`).
+        awaiting_signature:
+          type: boolean
+          description: |
+            Исходящее письмо передано на подпись и не подписано (СЦ-8): `status = draft` и есть `letter.registration_requested`.
+            Слово «На подписи»; без передачи — «Черновик»; после `POST …/sign` — `sent`. У остальных видов — `false`.
 
     DocumentSigning:
       type: object
@@ -6939,11 +6954,14 @@ components:
     RegistryItem:
       type: object
       additionalProperties: false
-      required: [kind, id, number, title, status, registered_at, responsible, client, links, amount, undelivered]
+      required: [kind, id, number, title, status, registered_at, responsible, client, links, amount, undelivered, awaiting_signature]
       properties:
         undelivered:
           type: boolean
           description: Исходящее письмо с почтой адресата не ушло и отправку не сняли (СЦ-1); такая строка — `stage=open`
+        awaiting_signature:
+          type: boolean
+          description: 'Исходящее письмо передано на подпись и не подписано (СЦ-8): `status = draft` с отметкой передачи; у остальных видов — `false`'
         kind:
           $ref: '#/components/schemas/RegistryKind'
         id:

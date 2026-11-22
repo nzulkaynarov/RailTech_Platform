@@ -112,6 +112,8 @@ class EdsDocumentRow(BaseModel):
     project_ref: str | None = None
     #: Исходящее письмо не ушло адресату и отправку не сняли (СЦ-1): остаётся в «Исходящих»
     undelivered: bool = False
+    #: Письмо передано на подпись и не подписано (СЦ-8): слово «На подписи» при `status = draft`
+    awaiting_signature: bool = False
 
 
 class EdsDocumentPage(BaseModel):
@@ -255,6 +257,8 @@ class EdsDocument(BaseModel):
     letter: EdsLetter | None = None
     can_register: bool = False
     can_request_registration: bool = False
+    #: Передано на подпись и не подписано (СЦ-8): EDS отдаёт признак, BFF не пересчитывает
+    awaiting_signature: bool = False
     signed_at: datetime | None = None
     signed_by: EdsPerson | None = None
     signing_authority_id: str | None = None

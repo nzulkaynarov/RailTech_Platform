@@ -6,6 +6,7 @@ import { server } from "../../../test/server";
 import { setViewportWidth } from "../../../test/viewport";
 import { panelEl, renderAt, setupEdsTests, signIn } from "../../../test/edsKit";
 import { listSettled } from "../../../test/settled";
+import { readEds, writeEds } from "../../../mocks/fixtures/edsDocuments";
 import { companyDayIn } from "../../../mocks/fixtures/dates";
 import { formatDate } from "../../../shared/lib/dates";
 
@@ -265,6 +266,46 @@ describe("EDS · Документы: список", () => {
 
     expect(await screen.findByText("Документы недоступны")).toBeVisible();
     expect(screen.getByRole("button", { name: "Повторить" })).toBeVisible();
+  });
+});
+
+describe("EDS · Документы: письмо на подписи (СЦ-8)", () => {
+  it("переданное письмо в списке — «На подписи», не переданное — «Черновик»", async () => {
+    const state = readEds();
+    const template = state.documents.find(
+      (d) => d.ownerId === "u-demo-manager" && d.status === "draft",
+    );
+    if (!template) throw new Error("нет шаблона черновика");
+    const letter = (n: number, subject: string, handed: boolean) => ({
+      ...template,
+      id: `00000000-0000-4000-8000-0000000009${String(n)}0`,
+      kind: "letter_out" as const,
+      subject,
+      replyTo: null,
+      letter: {
+        body: null,
+        recipient_attention: null,
+        recipient_email: null,
+        signatory_name: null,
+        signatory_position: null,
+        pdf: null,
+        pdfPolls: 0,
+        mailings: [],
+        registration_requested: handed
+          ? { ownerId: "u-demo-manager", at: "2026-11-01T09:00:00Z" }
+          : null,
+      },
+    });
+    state.documents.push(letter(1, "Письмо переданное", true), letter(2, "Письмо свежее", false));
+    writeEds(state);
+
+    await openDocuments("manager@demo.example", "?scope=mine");
+
+    expect(
+      await screen.findByRole("link", { name: "Открыть документ: Письмо переданное" }),
+    ).toBeVisible();
+    expect(within(row("Письмо переданное")).getByText("На подписи")).toBeVisible();
+    expect(within(row("Письмо свежее")).getByText("Черновик")).toBeVisible();
   });
 });
 

@@ -1695,8 +1695,8 @@ export interface paths {
     get?: never;
     put?: never;
     /**
-     * EDS · Письмо: передать на регистрацию делопроизводителю
-     * @description EDS `POST /documents/{id}/registration-request` (B-P8B-4). Исполнитель без права регистрировать исходящие (`eds.inbox.register`) готовит письмо-ответ и передаёт черновик делопроизводителю: тот видит его в «Все документы», смотрит PDF и регистрирует ИСХ (`PUT /eds/documents/{id}` с `submit = true`). Не черновик — 409, не автор — 403.
+     * EDS · Письмо: передать на подпись
+     * @description EDS `POST /documents/{id}/registration-request` (B-P8B-4). Исполнитель без права регистрировать исходящие (`eds.inbox.register`) готовит письмо-ответ и передаёт черновик на подпись: подписант подписывает его через «Подписать». Не черновик — 409, не автор — 403.
      */
     post: operations["requestEdsDocumentRegistration"];
     delete?: never;
@@ -10713,6 +10713,8 @@ export interface components {
       contact_id?: string | null;
     };
     EdsDocumentRow: {
+      /** @description Исходящее письмо передано на подпись и не подписано (СЦ-8): слово «На подписи» при `status = draft`; без передачи — «Черновик»; у остальных видов — `false`. Признак отдаёт EDS */
+      awaiting_signature: boolean;
       /** @description Исходящее письмо не ушло адресату (СЦ-1): строка остаётся в «Исходящих» с меткой «Не отправлено» */
       undelivered: boolean;
       kind: components["schemas"]["EdsRegistryKind"];
@@ -10831,10 +10833,15 @@ export interface components {
       in_reply_to?: components["schemas"]["EdsReplyTo"] | null;
       /** @description Только `letter_out` — письмо на бланке (P4) */
       letter?: components["schemas"]["EdsLetter"] | null;
-      /** @description Письмо-черновик можно зарегистрировать как ИСХ: у сотрудника раздел `eds.inbox.register` (полный), и он автор или черновик передан ему на регистрацию (P4, B-P8B-4) */
+      /** @description Письмо-черновик можно зарегистрировать как ИСХ: у сотрудника раздел `eds.inbox.register` (полный), и он автор или черновик передан ему на подпись (P4, B-P8B-4); у исходящего письма всегда false, подписание — «Подписать» */
       can_register?: boolean;
-      /** @description Автор черновика письма без права регистрировать — может «Передать на регистрацию» делопроизводителю */
+      /** @description Автор черновика письма с текстом, который сам подписать не может и ещё не передал, — может «Передать на подпись» */
       can_request_registration?: boolean;
+      /**
+       * @description Исходящее письмо передано на подпись и не подписано (СЦ-8): `status = draft` с отметкой передачи. Слово «На подписи»;
+       *     без передачи — «Черновик»; после подписи — `sent`. Признак отдаёт EDS, BFF его не вычисляет.
+       */
+      awaiting_signature?: boolean;
       /**
        * Format: date-time
        * @description Дата и время подписания документа
@@ -13065,7 +13072,7 @@ export interface components {
       executed_at?: string | null;
       /** @description Оригинал, если письмо закрыто как дубль (EDS-DUP) */
       duplicate_of?: components["schemas"]["LetterDuplicateOf"] | null;
-      /** @description Ответы на это входящее (EDS-REPLY-1), новейший первым: черновик, «передан на регистрацию», ИСХ и итог его отправки. Чужой черновик не виден (правило видимости документов EDS). */
+      /** @description Ответы на это входящее (EDS-REPLY-1), новейший первым: черновик, «на подписи», ИСХ и итог его отправки. Чужой черновик не виден (правило видимости документов EDS). */
       replies?: components["schemas"]["LetterReply"][];
     };
     /** @description Ответ на входящее письмо — исходящее письмо «в ответ на» это ВХ (EDS-REPLY-1) */
@@ -13079,7 +13086,7 @@ export interface components {
       number: string | null;
       subject: string;
       /**
-       * @description `draft` — черновик автора; `registration_requested` — передан делопроизводителю; `registered` — ИСХ зарегистрирован
+       * @description `draft` — черновик автора; `registration_requested` — передан на подпись (признак `awaiting_signature` карточки); `registered` — ИСХ зарегистрирован
        * @enum {string}
        */
       state: "draft" | "registration_requested" | "registered";
@@ -20636,7 +20643,7 @@ export interface operations {
     };
     requestBody?: never;
     responses: {
-      /** @description Передано на регистрацию */
+      /** @description Передано на подпись */
       200: {
         headers: {
           [name: string]: unknown;
