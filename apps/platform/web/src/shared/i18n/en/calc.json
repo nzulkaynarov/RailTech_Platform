@@ -68,7 +68,8 @@
     "readOnly": "View only.",
     "notStarted": {
       "title": "Costing has not started",
-      "textLines": "The request has {{count}} line(s). Move them into costing, then add lines and match them with the catalogue.",
+      "textLines_one": "The request has {{count}} line. Move it into costing, then add lines and match them with the catalogue.",
+      "textLines_other": "The request has {{count}} lines. Move them into costing, then add lines and match them with the catalogue.",
       "textEmpty": "The request has no lines, only text. Start costing and parse the request text into lines or add them manually.",
       "action": "Start costing",
       "noRights": "Costing can be started by an employee with full access to “Costing”."

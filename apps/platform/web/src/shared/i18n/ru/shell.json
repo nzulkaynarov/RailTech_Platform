@@ -61,7 +61,10 @@
       "memo": "Зап",
       "chat": "Ч",
       "ticket": "Т",
-      "integration": "!"
+      "integration": "!",
+      "supplier_order": "Зак",
+      "partner_application": "Парт",
+      "product": "Тов"
     },
     "tabChip": {
       "all": "•",

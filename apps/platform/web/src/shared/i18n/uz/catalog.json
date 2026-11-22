@@ -204,7 +204,7 @@
       "add": "Qo'shish",
       "name": "Nomi",
       "kind": "Pozitsiya turi",
-      "kindHint": "«Ombordan» yoki «buyurtma bo'yicha»ni ERP hamkorlar takliflaridan aniqlaydi.",
+      "kindHint": "«Ombordan» yoki «buyurtma bo'yicha» hamkorlar takliflaridan aniqlanadi.",
       "unit": "O'lchov birligi",
       "vat": "QQS, %",
       "vatHint": "Bo'sh — kompaniyaning odatdagi stavkasi.",
