@@ -34,6 +34,7 @@ import { edsBankChangesHandlers } from "./edsBankChanges";
 import { erpPartnerApplicationsHandlers } from "./erpPartnerApplications";
 import { erpSupplierAccessHandlers } from "./erpSupplierAccess";
 import { counterpartyHandlers } from "./counterparties";
+import { counterpartyPickHandlers } from "./counterpartyPick";
 import { peopleContactsHandlers } from "./peopleContacts";
 import { edsPaymentsHandlers } from "./edsPayments";
 import { edsInstructionsHandlers } from "./edsInstructions";
@@ -207,6 +208,7 @@ export const handlers = [
   }),
 
   ...counterpartyHandlers,
+  ...counterpartyPickHandlers,
   ...peopleContactsHandlers,
   ...profileHandlers,
   ...aboutHandlers,

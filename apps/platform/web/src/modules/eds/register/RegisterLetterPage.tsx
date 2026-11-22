@@ -33,7 +33,7 @@ import { useRefreshMail } from "../mail/mailModel";
 import { RESOLUTION_KINDS } from "../inbox/officeModel";
 import { AttachmentsField } from "../new/AttachmentsField";
 import { DealField } from "../new/DealField";
-import { AddresseePerson, RecipientField } from "../new/RecipientField";
+import { CompanyPicker, PersonPicker } from "../../../shared/ui/pickers";
 import type { Attachment } from "../new/formModel";
 import { todayInCompanyZone } from "../new/formModel";
 import { localName, useLetterDictionary, useResolutionKindName } from "../dictionaries";
@@ -703,31 +703,31 @@ export function RegisterLetterPage() {
                           }
                           error={fieldError("sender_name")}
                         >
-                          {/* СУЩ-2.6: корреспондент — только из контрагентов; правка текста снимает выбор */}
-                          <RecipientField
+                          {/* ЕД-6: корреспондент — только выбором из контрагентов */}
+                          <CompanyPicker
                             id={id("sender_name")}
-                            value={values.senderName}
+                            value={
+                              values.senderCompanyId
+                                ? {
+                                    id: values.senderCompanyId,
+                                    name: values.senderName,
+                                    inn: values.senderInn || null,
+                                  }
+                                : null
+                            }
+                            suggest={values.senderCompanyId ? undefined : values.senderName}
                             invalid={Boolean(errors.sender_name)}
                             describedBy={describedBy(
                               id("sender_name"),
                               true,
                               Boolean(errors.sender_name),
                             )}
-                            onChange={(name) => {
+                            onChange={(company) => {
                               setValues((prev) => ({
                                 ...prev,
-                                senderName: name,
-                                senderInn: "",
-                                senderCompanyId: "",
-                                senderContactId: "",
-                              }));
-                            }}
-                            onPick={(company) => {
-                              setValues((prev) => ({
-                                ...prev,
-                                senderName: company.name,
-                                senderInn: company.inn ?? "",
-                                senderCompanyId: company.id,
+                                senderName: company?.name ?? "",
+                                senderInn: company?.inn ?? "",
+                                senderCompanyId: company?.id ?? "",
                                 senderContactId: "",
                               }));
                             }}
@@ -738,12 +738,18 @@ export function RegisterLetterPage() {
                           label={t("letters:register.person.label")}
                           hint={t("letters:register.person.hint")}
                         >
-                          <AddresseePerson
+                          <PersonPicker
                             id="reg-sender-person"
                             companyId={values.senderCompanyId}
                             value={values.senderContactId}
-                            onPick={(person) => {
-                              set("senderContactId", person?.id ?? "");
+                            onChange={(person) => {
+                              setValues((prev) => ({
+                                ...prev,
+                                senderContactId: person?.id ?? "",
+                                // «Подписал» подставляется выбором человека, пока его не вписали
+                                signedBy:
+                                  person && !prev.signedBy.trim() ? person.name : prev.signedBy,
+                              }));
                             }}
                           />
                         </Field>

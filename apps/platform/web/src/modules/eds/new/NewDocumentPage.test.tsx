@@ -4,7 +4,13 @@ import { describe, expect, it, vi } from "vitest";
 import { HttpResponse, http } from "msw";
 
 import { companyToday } from "../../../shared/lib/dates";
-import { fillDate } from "../../../test/fields";
+import {
+  addCompany,
+  chooseOption,
+  fillDate,
+  pickCompany,
+  selectedLabel,
+} from "../../../test/fields";
 import { server } from "../../../test/server";
 import { readEds } from "../../../mocks/fixtures/edsDocuments";
 import { readLetters, writeLetters } from "../../../mocks/fixtures/letters";
@@ -75,8 +81,7 @@ function type(label: string | RegExp, value: string) {
 
 /** Адресат письма — только из контрагентов (СУЩ-2.6): поиск и выбор подсказки. */
 async function pickAddressee(query = "демо", name = "АО «Демо-Путь»") {
-  type("Адресат (организация)", query);
-  fireEvent.click(await screen.findByText(name));
+  await pickCompany(screen.getByLabelText("Адресат (организация)"), query, name);
 }
 
 /** Открыть секцию формы (секции по шагам, platform-frontend.md §4.1a) щелчком по её заголовку. */
@@ -126,40 +131,39 @@ describe("EDS · Создать документ: форма", () => {
     expect(screen.getByRole("button", { name: "Отправить на согласование" })).toBeVisible();
   });
 
-  it("адресат письма из контрагентов: подсказка подставляет ИНН, почту и «Кому»; человек — из карточки; текст без выбора — не адресат", async () => {
+  it("адресат письма — выбор из контрагентов: компания даёт ИНН и почту, человек из её карточки — «Кому» и свою почту; сбросить — снять", async () => {
     await openForm("director@demo.example", "?type=letter");
+    expect(screen.getByLabelText("Кому — человек")).toBeDisabled();
     await pickAddressee();
-    expect(screen.getByLabelText("Адресат (организация)")).toHaveValue("АО «Демо-Путь»");
+    expect(selectedLabel(screen.getByLabelText("Адресат (организация)"))).toBe("АО «Демо-Путь»");
     expect(screen.getByText("ИНН 300000777")).toBeVisible();
     expect(screen.getByLabelText("Почта адресата")).toHaveValue("office@demo-put.example");
-    expect(screen.getByLabelText("Кому (должность и ФИО)")).toHaveValue("Демо Клиентов");
-    // «Кому — человек»: люди организации из её карточки; выбор подставляет должность и имя
-    fireEvent.mouseDown(screen.getByLabelText("Кому — человек"));
-    fireEvent.click(await screen.findByText("Демо Клиентов · Главный инженер"));
+    // человек: люди компании из её карточки; выбор подставляет должность, имя и его почту
+    await chooseOption(screen.getByLabelText("Кому — человек"), "Демо Клиентов");
     expect(screen.getByLabelText("Кому (должность и ФИО)")).toHaveValue(
       "Главный инженер Демо Клиентов",
     );
-    // правка текста снимает выбор: адресат — только компания из списка
-    type("Адресат (организация)", "ГНИ Мирабадского района");
-    expect(screen.getByLabelText("Адресат (организация)")).toHaveValue("ГНИ Мирабадского района");
-    expect(screen.getByText(/Выберите из контрагентов или заведите организацию/)).toBeVisible();
+    expect(screen.getByLabelText("Почта адресата")).toHaveValue("d.klientov@demo-put.example");
+    // свободного текста нет: поле даёт только выбор, очистка снимает компанию и выключает «человека»
+    const clear = screen
+      .getByLabelText("Адресат (организация)")
+      .closest(".ant-select")
+      ?.querySelector(".ant-select-clear");
+    fireEvent.mouseDown(clear as Element);
+    fireEvent.click(clear as Element);
+    expect(selectedLabel(screen.getByLabelText("Адресат (организация)"))).toBe("");
+    expect(screen.getByLabelText("Кому — человек")).toBeDisabled();
   });
 
-  it("адресата нет среди контрагентов: «Завести организацию» из подсказок — и она становится адресатом (СУЩ-2.6)", async () => {
+  it("адресата нет среди контрагентов: «Завести» последней строкой — и она становится адресатом; тот же ИНН — предлагается существующая (ЕД-6)", async () => {
     await openForm("director@demo.example", "?type=letter");
-    type("Адресат (организация)", "Таможенный комитет");
-    fireEvent.click(await screen.findByText("+ Завести организацию «Таможенный комитет»"));
-    const sheet = await screen.findByRole("dialog", { name: "Новая организация" });
-    expect(within(sheet).getByLabelText("Название")).toHaveValue("Таможенный комитет");
-    fireEvent.change(within(sheet).getByLabelText("ИНН"), { target: { value: "12" } });
-    expect(within(sheet).getByRole("button", { name: "Завести" })).toBeDisabled();
-    fireEvent.change(within(sheet).getByLabelText("ИНН"), { target: { value: "200000123" } });
-    fireEvent.click(within(sheet).getByRole("button", { name: "Завести" }));
-    await waitFor(() => {
-      expect(screen.queryByRole("dialog", { name: "Новая организация" })).toBeNull();
-    });
-    expect(screen.getByLabelText("Адресат (организация)")).toHaveValue("Таможенный комитет");
+    const field = screen.getByLabelText("Адресат (организация)");
+    await addCompany(field, "Таможенный комитет", "200000123");
+    expect(selectedLabel(field)).toBe("Таможенный комитет");
     expect(screen.getByText("ИНН 200000123")).toBeVisible();
+    // дубль по ИНН: вторая компания не заводится, выбирается найденная
+    await addCompany(field, "Таможня-2", "300000777");
+    expect(selectedLabel(field)).toBe("АО «Демо-Путь»");
   });
 
   it("?type=letter у роли с доступом к входящим: письмо на бланке — адресат, почта, «кому», блоки, подписант; без суммы и срока", async () => {
@@ -315,7 +319,11 @@ describe("EDS · Создать документ: форма", () => {
       `?type=letter&reply_to=${encodeURIComponent("ВХ-108/26")}&reply_id=${letter.id}`,
     );
 
-    expect(await screen.findByLabelText("Адресат (организация)")).toHaveValue("ГНИ Демо-района");
+    // имя из письма стоит в поле подсказкой: компания ещё не выбрана
+    const field = await screen.findByLabelText("Адресат (организация)");
+    expect(
+      field.closest(".ant-select")?.querySelector(".ant-select-selection-placeholder"),
+    ).toHaveTextContent("ГНИ Демо-района");
     expect(screen.getByLabelText("Почта адресата")).toHaveValue("gni@demo-inspection.example");
     expect(screen.getByLabelText("Тема")).toHaveValue(
       `На № 04-12/3456 от 28.10.2026: ${letter.subject}`,
@@ -327,14 +335,8 @@ describe("EDS · Создать документ: форма", () => {
 
     type("Тема", "Пояснения по требованию");
     type("Текст", "Направляем пояснения.");
-    // корреспондента ещё нет в контрагентах — заводится организацией из письма (СУЩ-2.6)
-    // поле уже заполнено из письма: правка открывает подсказки
-    type("Адресат (организация)", "ГНИ Демо-район");
-    type("Адресат (организация)", "ГНИ Демо-района");
-    fireEvent.click(await screen.findByText("+ Завести организацию «ГНИ Демо-района»"));
-    const sheet = await screen.findByRole("dialog", { name: "Новая организация" });
-    fireEvent.change(within(sheet).getByLabelText("ИНН"), { target: { value: "300111222" } });
-    fireEvent.click(within(sheet).getByRole("button", { name: "Завести" }));
+    // корреспондента ещё нет в контрагентах — «Завести» последней строкой, название берётся из письма
+    await addCompany(field, "ГНИ Демо-района", "300111222");
     expect(await screen.findByText("ИНН 300111222")).toBeVisible();
     await press("Передать на подпись");
     await waitFor(() => {
@@ -362,7 +364,7 @@ describe("EDS · Создать документ: форма", () => {
       `?type=letter&reply_to=${encodeURIComponent("ВХ-108/26")}&reply_id=20000000-0000-4000-8000-000000000108`,
     );
     expect(await screen.findByLabelText("В ответ на входящее")).toHaveValue("ВХ-108/26");
-    expect(screen.getByLabelText("Адресат (организация)")).toHaveValue("");
+    expect(selectedLabel(screen.getByLabelText("Адресат (организация)"))).toBe("");
   });
 
   it("страницы строятся сами после паузы: черновик сохраняется один раз, PDF готовится в фоне и показывается", async () => {

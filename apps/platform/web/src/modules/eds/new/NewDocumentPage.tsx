@@ -47,7 +47,7 @@ import { parseDocumentId, useRefreshDocuments } from "../documents/params";
 import { useRefreshLetters } from "../inbox/api";
 import { AttachmentsField } from "./AttachmentsField";
 import { DealField } from "./DealField";
-import { AddresseePerson, RecipientField } from "./RecipientField";
+import { CompanyPicker, PersonPicker } from "../../../shared/ui/pickers";
 import {
   type Attachment,
   EMPTY_FORM,
@@ -600,30 +600,29 @@ function DocumentForm({
                 }
                 error={errors.recipient ? fieldText(t, "recipient") : undefined}
               >
-                <RecipientField
+                <CompanyPicker
                   id={ids.recipient}
-                  value={values.recipientName}
+                  value={
+                    values.recipientCompanyId
+                      ? {
+                          id: values.recipientCompanyId,
+                          name: values.recipientName,
+                          inn: values.recipientInn || null,
+                        }
+                      : null
+                  }
+                  suggest={values.recipientCompanyId ? undefined : values.recipientName}
                   invalid={Boolean(errors.recipient)}
                   describedBy={describedBy(ids.recipient, true, Boolean(errors.recipient))}
-                  onChange={(name) => {
-                    // адресат — только из контрагентов (СУЩ-2.6): правка текста снимает выбор
+                  onChange={(company) => {
+                    // адресат — только выбором из контрагентов (ЕД-6): очистка снимает выбор вместе с человеком
                     setValues((prev) => ({
                       ...prev,
-                      recipientName: name,
-                      recipientInn: "",
-                      recipientCompanyId: "",
+                      recipientName: company?.name ?? "",
+                      recipientInn: company?.inn ?? "",
+                      recipientCompanyId: company?.id ?? "",
                       recipientContactId: "",
-                    }));
-                  }}
-                  onPick={(addressee) => {
-                    setValues((prev) => ({
-                      ...prev,
-                      recipientName: addressee.name,
-                      recipientInn: addressee.inn ?? "",
-                      recipientCompanyId: addressee.id,
-                      recipientContactId: "",
-                      recipientEmail: addressee.email ?? prev.recipientEmail,
-                      recipientAttention: addressee.attention ?? prev.recipientAttention,
+                      recipientEmail: company?.email ?? prev.recipientEmail,
                     }));
                   }}
                 />
@@ -634,17 +633,19 @@ function DocumentForm({
                   label={t("documents:form.person.label")}
                   hint={t("documents:form.person.hint")}
                 >
-                  <AddresseePerson
+                  <PersonPicker
                     id="doc-recipient-person"
                     companyId={values.recipientCompanyId}
                     value={values.recipientContactId}
-                    onPick={(person) => {
+                    onChange={(person) => {
                       setValues((prev) => ({
                         ...prev,
                         recipientContactId: person?.id ?? "",
                         recipientAttention: person
                           ? [person.position, person.name].filter(Boolean).join(" ")
                           : prev.recipientAttention,
+                        // почта человека заполняет «Почту адресата»; у человека её нет — остаётся прежняя
+                        recipientEmail: person?.email ?? prev.recipientEmail,
                       }));
                     }}
                   />

@@ -161,5 +161,37 @@
   },
   "entity": {
     "sku": "Artikul"
+  },
+  "picker": {
+    "searching": "Qidirilmoqda…",
+    "company": {
+      "placeholder": "Nomi yoki STIR",
+      "empty": "Heç narsa topilmadi",
+      "inn": "STIR {{inn}}",
+      "noInn": "STIR körsatilmagan",
+      "roles": {
+        "client": "mijoz",
+        "supplier": "yetkazib beruvchi",
+        "manufacturer": "işlab çiqaruvçi",
+        "partner": "hamkor",
+        "organization": "taşkilot"
+      },
+      "create": {
+        "option": "“{{name}}” qöşiş",
+        "title": "Yangi kompaniya",
+        "submit": "Qöşiş",
+        "name": "Nomi",
+        "inn": "STIR",
+        "innHint": "9 raqam; xorijiy kompaniyada böş",
+        "country": "Mamlakat",
+        "address": "Manzil",
+        "exists": "Bunday kompaniya bor — röyxatdan toping.",
+        "failed": "Kompaniyani qöşib bölmadi. Qayta uriniş."
+      }
+    },
+    "person": {
+      "placeholder": "Kompaniya kartasidagi odam",
+      "empty": "Kompaniya kartasida odamlar yöq"
+    }
   }
 }

@@ -3,7 +3,7 @@ import { HttpResponse, http } from "msw";
 import { describe, expect, it } from "vitest";
 
 import type { LetterRegisterIn } from "../../../shared/api/generated/model";
-import { chooseOption, fillDate, selectedLabel } from "../../../test/fields";
+import { addCompany, chooseOption, fillDate, selectedLabel } from "../../../test/fields";
 import { setupLetterTests } from "../../../test/lettersKit";
 import { renderAt, signIn } from "../../../test/edsKit";
 import { server } from "../../../test/server";
@@ -29,15 +29,9 @@ function type(label: string | RegExp, value: string) {
 
 const SENDER = "Корреспондент (организация)";
 
-/** Корреспондента нет в контрагентах — заводится организацией из подсказок (СУЩ-2.6). */
+/** Корреспондента нет в контрагентах — «Завести» последней строкой поля выбора (ЕД-6). */
 async function addSender(name: string) {
-  type(SENDER, name);
-  fireEvent.click(await screen.findByText(`+ Завести организацию «${name.trim()}»`));
-  const sheet = await screen.findByRole("dialog", { name: "Новая организация" });
-  fireEvent.click(within(sheet).getByRole("button", { name: "Завести" }));
-  await waitFor(() => {
-    expect(screen.queryByRole("dialog", { name: "Новая организация" })).toBeNull();
-  });
+  await addCompany(reveal(screen.getByLabelText(SENDER)), name.trim());
 }
 
 /** «Зарегистрировать» — в последней секции «Проверка и регистрация». */
@@ -222,7 +216,7 @@ describe("EDS · Зарегистрировать входящее (P8)", () => 
   it("похожее (тот же корреспондент и исх. № без даты): ссылка на ВХ, регистрация не запрещена", async () => {
     await openForm();
 
-    type(SENDER, "гни  демо-района");
+    await addSender("гни  демо-района");
     type("Исходящий номер отправителя", "№ 04-12/3456");
 
     expect(await screen.findByText("Похожие письма", {}, { timeout: 3000 })).toBeVisible();
