@@ -11,6 +11,7 @@ from typing import Optional, Tuple
 from django.db import transaction
 
 from notifications.services import spa_link
+from notifications.text_format import deal_ref
 
 from ..constants import InvoiceStatusCode
 from ..models import ActivityLog
@@ -27,7 +28,7 @@ def _notify_invoice_issued_to_buyer(invoice) -> None:
         buyer_team_user_ids(deal),
         deal=deal,
         title="Счёт выставлен",
-        message=f"По сделке #{deal.pk} выставлен счёт {invoice.number} к оплате",
+        message=f"По сделке {deal_ref(deal)} выставлен счёт {invoice.number} к оплате",
         event_code="invoice.issued",
         event_params={"deal_id": deal.pk, "number": invoice.number},
         # Точная ссылка вместо реестра: раньше человек попадал в общий список счетов и искал
@@ -47,7 +48,7 @@ def notify_seller_invoice_draft(invoice) -> None:
         seller_team_user_ids(deal),
         deal=deal,
         title="Счёт создан черновиком",
-        message=f"По сделке #{deal.pk} создан счёт {invoice.number} — проверьте и выставьте",
+        message=f"По сделке {deal_ref(deal)} создан счёт {invoice.number} — проверьте и выставьте",
         event_code="invoice.draft_created",
         event_params={"deal_id": deal.pk, "number": invoice.number},
         link=spa_link("invoices", invoice.id),

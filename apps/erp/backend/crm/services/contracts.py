@@ -6,6 +6,7 @@ from accounts.models import CustomUser
 from core.audit import log_admin_action
 from core.currency import BASE_CURRENCY
 from crm.services.pdf_storage import save_rendered_pdf
+from notifications.text_format import deal_ref
 
 from ..constants import ContractStatusCode, QuoteStatusCode
 from ..models import ActivityLog, Quote
@@ -508,7 +509,7 @@ def _notify_contract_signed(contract) -> None:
             user=recipient,
             type=info,
             title="Договор подписан",
-            message=f"Договор {contract.number} по сделке #{contract.deal_id} подписан обеими сторонами",
+            message=f"Договор {contract.number} по сделке {deal_ref(contract.deal)} подписан обеими сторонами",
             link="/crm/deals",
             deal=contract.deal,
             event_code="contract.signed",

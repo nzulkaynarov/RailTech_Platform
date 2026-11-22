@@ -15,6 +15,7 @@ from django.utils import timezone
 
 from accounts.models import CustomUser
 from crm.services.pdf_storage import save_rendered_pdf
+from notifications.text_format import deal_ref
 
 from ..constants import GeneratedDocumentStatusCode
 from .document_placeholders import (
@@ -537,7 +538,7 @@ def _notify_document_issued_to_counterparty(document) -> None:
             user_id=uid,
             type=info_type,
             title="Получен документ",
-            message=f"По сделке #{deal.pk} вам направлен документ {document.number}",
+            message=f"По сделке {deal_ref(deal)} вам направлен документ {document.number}",
             link="/crm/documents",
             deal=deal,
             event_code="document.received",

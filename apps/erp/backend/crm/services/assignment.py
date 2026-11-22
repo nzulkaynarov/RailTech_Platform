@@ -15,6 +15,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from accounts.models import CustomUser
+from notifications.text_format import deal_ref
 
 from ..models import Deal
 
@@ -149,7 +150,7 @@ def _notify_assignee(deal: Deal, assignee: CustomUser) -> None:
         user=assignee,
         type=info,
         title="Вам назначена заявка",
-        message=f"Заявка #{deal.pk} назначена вам — нужен КП",
+        message=f"Заявка {deal_ref(deal)} назначена вам — нужен КП",
         link=f"/crm/deals/{deal.pk}",
         deal=deal,
         event_code="deal.assigned",
