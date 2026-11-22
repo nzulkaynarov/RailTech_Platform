@@ -1397,9 +1397,10 @@ export interface paths {
     get?: never;
     put?: never;
     /**
-     * Передать письмо на регистрацию делопроизводителю (B-P8B-4)
+     * Передать письмо на подпись (B-P8B-4)
      * @description Автор черновика `letter_out` без права `letters.register` (исполнитель поручения «Подготовить ответ») передаёт письмо
-     *     делопроизводителю: `letter.registration_requested` = кто и когда, журнал `document.registration_requested`. Черновик
+     *     на подпись: `letter.registration_requested` = кто и когда, журнал `document.registration_requested`; статус остаётся
+     *     `draft`, а `awaiting_signature = true` (слово «На подписи», СЦ-8). Черновик
      *     становится виден держателям `letters.register` (реестр «Все документы», карточка), они строят PDF и регистрируют его
      *     (`POST …/submit`). Автор может продолжать править черновик. Повтор — без изменений. Не черновик — 409 (`invalid_state`),
      *     не автор — 403 (`not_author`), у письма нет тела — 409 (`no_body`). Делопроизводитель узнаёт сразу (EDS-REPLY-1):
@@ -2909,7 +2910,7 @@ export interface components {
       subject: string;
     };
     /**
-     * @description Где ответ на входящее: `draft` — черновик автора, `registration_requested` — передан делопроизводителю на регистрацию,
+     * @description Где ответ на входящее: `draft` — черновик автора, `registration_requested` — передан на подпись (`Document.awaiting_signature`),
      *     `registered` — ИСХ зарегистрирован (`Document.status = sent`)
      * @enum {string}
      */
@@ -3144,7 +3145,10 @@ export interface components {
      *     | `to_accountant` | бухгалтер `approve` (оплачено) | `paid` | закрыт: `approved` | `document.archived` |
      *     | `on_approval`, `to_accountant` | `return` (комментарий обязателен) | `returned` (автор правит) | закрыт: `returned` | — |
      *     | `on_approval`, `to_accountant` | `reject` (комментарий обязателен) | `rejected` | закрыт: `rejected` | `document.archived` |
-     *     | `draft` (`letter_out`) | `POST …/submit` — отправка, `ИСХ-NNN/ГГ` | `sent` | — | `document.archived` |
+     *     | `draft` (`letter_out`) | `POST …/sign` — подпись, `ИСХ-NNN/ГГ` (`POST …/submit` без подписи — 409 `signature_required`) | `sent` | — | `document.archived` |
+     *
+     *     Статус письма после `POST …/registration-request` остаётся `draft`: «На подписи» — признак `awaiting_signature`
+     *     (передано на подпись и не подписано), а не значение перечисления.
      *
      *     Архив — признак `archived_at`, итоговый статус сохраняется.
      * @enum {string}
@@ -3459,6 +3463,12 @@ export interface components {
     DocumentListItem: {
       /** @description Исходящее письмо с почтой адресата не ушло и отправку не сняли (СЦ-1); в списке — `stage=open` */
       undelivered: boolean;
+      /**
+       * @description Исходящее письмо передано на подпись и не подписано (СЦ-8): `status = draft` и есть отметка передачи
+       *     (`letter.registration_requested`). Слово «На подписи»; без передачи — «Черновик»; после подписи — `sent`.
+       *     У остальных видов — `false`.
+       */
+      awaiting_signature: boolean;
       id: components["schemas"]["Uuid"];
       kind: components["schemas"]["DocumentKind"];
       /** @description `null` — исходящее письмо до отправки */
@@ -3560,6 +3570,11 @@ export interface components {
        *     может ли он подписать сейчас (та же проверка, что у `POST /documents/{id}/sign`).
        */
       signing?: components["schemas"]["DocumentSigning"] | null;
+      /**
+       * @description Исходящее письмо передано на подпись и не подписано (СЦ-8): `status = draft` и есть `letter.registration_requested`.
+       *     Слово «На подписи»; без передачи — «Черновик»; после `POST …/sign` — `sent`. У остальных видов — `false`.
+       */
+      awaiting_signature?: boolean;
     };
     DocumentSigning: {
       can_sign: boolean;
@@ -3756,6 +3771,8 @@ export interface components {
     RegistryItem: {
       /** @description Исходящее письмо с почтой адресата не ушло и отправку не сняли (СЦ-1); такая строка — `stage=open` */
       undelivered: boolean;
+      /** @description Исходящее письмо передано на подпись и не подписано (СЦ-8): `status = draft` с отметкой передачи; у остальных видов — `false` */
+      awaiting_signature: boolean;
       kind: components["schemas"]["RegistryKind"];
       /** @description Письмо (`letter_in`), документ (`letter_out`, `memo`, `application`, `report`), маршрут (`quote`) или проекция документа проекта (`contract`, `invoice`, `act`) */
       id: components["schemas"]["Uuid"];

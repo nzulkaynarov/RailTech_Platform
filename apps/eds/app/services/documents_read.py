@@ -26,7 +26,19 @@ from app.schemas.documents import (
 from app.schemas.documents import DocumentPayment as PaymentOut
 from app.schemas.pagination import decode_cursor
 from app.schemas.registry import RegistryStage
-from app.services import access, delivery, documents, files, journal, letter_mail, paging, registry, renders, reply
+from app.services import (
+    access,
+    delivery,
+    documents,
+    files,
+    journal,
+    letter_mail,
+    paging,
+    registry,
+    renders,
+    reply,
+    signing_state,
+)
 from app.services.people import Directory, load_directory
 
 _DECISION = {"approved": Decision.APPROVE, "returned": Decision.RETURN, "rejected": Decision.REJECT}
@@ -218,6 +230,7 @@ async def present(session: AsyncSession, document: Document, viewer: Employee | 
         verification_url=verification_url,
         dispatch_method=document.dispatch_method,
         signing=await _signing(session, document, viewer),
+        awaiting_signature=signing_state.is_awaiting_signature(document),
     )
 
 
@@ -276,6 +289,7 @@ async def list_page(
             paid_on=paid_on.get(r.id),
             created_at=r.created_at,
             undelivered=r.id in stuck,
+            awaiting_signature=signing_state.is_awaiting_signature(r),
         )
         for r in page
     ]
