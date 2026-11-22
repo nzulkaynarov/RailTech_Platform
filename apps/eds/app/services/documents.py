@@ -111,8 +111,13 @@ async def _apply_letter(session: AsyncSession, document: Document, letter: Outgo
 async def _apply_chosen_signer(session: AsyncSession, document: Document, signer_id: int | None) -> None:
     """ЕД-6: подписант выбран — имя берётся из справочника сотрудников, должность — оттуда же, если автор не вписал свою
     (для «и. о.»; справочник не меняется). Выбрать можно только держателя действующего полномочия на письма."""
+    previous = document.chosen_signer_crm_user_id
     document.chosen_signer_crm_user_id = signer_id
     if signer_id is None:
+        return
+    if signer_id == previous:
+        # An unchanged saved choice is accepted even if the right was revoked since: routing re-checks at send time
+        # (pick_letter_signer), and the draft must stay editable.
         return
     today = clock.company_date(clock.now())
     options = {o.crm_user_id: o for o in await signing_resolve.letter_signer_options(session, today)}

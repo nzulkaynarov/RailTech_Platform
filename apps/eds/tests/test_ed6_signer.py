@@ -51,6 +51,56 @@ async def test_signers_list_is_the_holders_of_a_letter_authority(
     assert sorted(await signer_ids(client, staff["manager"])) == [DIRECTOR, REGISTRAR]
 
 
+async def test_signers_list_is_closed_without_staff_reader_rights(
+    client: httpx.AsyncClient, staff: dict[str, Person]
+) -> None:
+    denied = await client.get("/api/v1/employees/signers", headers=staff["nobody"].headers)
+    assert denied.status_code == 403, denied.text
+
+
+async def test_the_author_cannot_choose_themselves_when_others_can_sign(
+    client: httpx.AsyncClient, staff: dict[str, Person]
+) -> None:
+    from tests.test_letterhead_letters import letter_json
+
+    await grant(client, staff, "director")
+    await grant(client, staff, "registrar")
+    body = letter_json()
+    body["letter"]["signer_crm_user_id"] = REGISTRAR
+    refused = await client.post("/api/v1/documents", json=body, headers=staff["registrar"].headers)
+    assert refused.status_code == 422, refused.text
+    assert "author_cannot_sign" in refused.text
+
+
+async def test_a_draft_whose_signer_lost_the_right_stays_editable(
+    client: httpx.AsyncClient, staff: dict[str, Person]
+) -> None:
+    await grant(client, staff, "director")
+    await grant(client, staff, "registrar")
+    doc = await draft_with(client, staff["manager"], REGISTRAR)
+    authorities = (await client.get("/api/v1/signing/authorities", headers=staff["admin"].headers)).json()["items"]
+    [mine] = [a for a in authorities if a["holder"]["crm_user_id"] == REGISTRAR]
+    revoked = await client.post(
+        f"/api/v1/signing/authorities/{mine['id']}/revoke", json={"reason": "уволен"}, headers=staff["admin"].headers
+    )
+    assert revoked.status_code == 200, revoked.text
+    from tests.test_letterhead_letters import letter_json
+
+    letter = {**letter_json()["letter"], "signer_crm_user_id": REGISTRAR}
+    saved = await client.patch(
+        f"/api/v1/documents/{doc['id']}",
+        json={"subject": "Новая тема", "letter": letter},
+        headers=staff["manager"].headers,
+    )
+    assert saved.status_code == 200, saved.text
+    # A new choice is still checked.
+    letter["signer_crm_user_id"] = staff["accountant"].id
+    refused = await client.patch(
+        f"/api/v1/documents/{doc['id']}", json={"letter": letter}, headers=staff["manager"].headers
+    )
+    assert refused.status_code == 422, refused.text
+
+
 async def test_a_signer_without_the_right_is_refused(client: httpx.AsyncClient, staff: dict[str, Person]) -> None:
     from tests.test_letterhead_letters import letter_json
 
@@ -90,15 +140,30 @@ async def test_chosen_signer_absent_task_goes_to_the_deputy(
 ) -> None:
     await grant(client, staff, "director")
     await grant(client, staff, "registrar")
+    await grant(client, staff, "accountant")
+    await grant(client, staff, "lawyer")
     today = clock.company_date(clock.now())
     async with container.session_factory() as session, session.begin():
-        await session.execute(
-            text("UPDATE employees SET deputy_crm_user_id = 3, deputy_from = :a, deputy_to = :b WHERE crm_user_id = 4"),
-            {"a": today - timedelta(days=1), "b": today + timedelta(days=3)},
+        await session.execute(  # they may open drafts, so the registry can pick them
+            text(
+                "UPDATE employees SET permissions_eds = permissions_eds || '{letters.register}' "
+                "WHERE crm_user_id IN (6, 13)"
+            )
         )
+        # Two absentees: the accountant (lawyer's deputy) sorts before the director (registrar's deputy), so without
+        # the choice the registry picks the accountant; only the acting_for branch gives the task to the director.
+        for absent, deputy in ((4, 3), (13, 6)):
+            await session.execute(
+                text(
+                    "UPDATE employees SET deputy_crm_user_id = :d, deputy_from = :a, deputy_to = :b "
+                    "WHERE crm_user_id = :u"
+                ),
+                {"u": absent, "d": deputy, "a": today - timedelta(days=1), "b": today + timedelta(days=3)},
+            )
     doc = await draft_with(client, staff["manager"], REGISTRAR)
     await hand_over(client, staff["manager"], doc["id"])
     assert (await tasks_of(client, staff["registrar"]))["signatures"] == []
+    assert (await tasks_of(client, staff["accountant"]))["signatures"] == []  # the default pick, not the deputy
     [task] = (await tasks_of(client, staff["director"]))["signatures"]
     assert task["acting_for"]["crm_user_id"] == REGISTRAR
 

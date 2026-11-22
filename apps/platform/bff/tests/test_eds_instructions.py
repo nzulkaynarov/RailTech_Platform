@@ -802,3 +802,10 @@ async def test_signers_list_comes_from_the_signing_registry_and_letter_keeps_the
         "items": [{"id": "3", "name": "Рустам Директоров", "position": "Директор"}]
     }
     assert len(eds.made("GET", "employees/signers")) == 1
+
+
+async def test_signers_list_requires_a_session(web: Web, eds: EdsFake) -> None:
+    # Every staff role holds `eds.memo.create`; the guard turns away only callers without a session.
+    response = await web.client.get(f"{BASE}/signers")
+    assert response.status_code == 401, response.text
+    assert eds.made("GET", "employees/signers") == []
