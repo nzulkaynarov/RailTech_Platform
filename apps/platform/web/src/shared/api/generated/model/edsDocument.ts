@@ -68,6 +68,11 @@ export interface EdsDocument {
    */
   awaiting_signature?: boolean;
   /**
+   * ГЛ-0. Автор письма на подписи — ему доступны «Напомнить» (`POST /eds/documents/{id}/remind`), «Отозвать»
+   * (`…/withdraw`) и «Сменить подписанта» (`…/signer`); у остальных — `false`
+   */
+  can_manage_handover?: boolean;
+  /**
    * Дата и время подписания документа
    * @nullable
    */

@@ -367,6 +367,7 @@ export * from "./edsRegistryKind";
 export * from "./edsReplyTo";
 export * from "./edsRouteStep";
 export * from "./edsRouteStepStatus";
+export * from "./edsSignerChangeIn";
 export * from "./edsSigningHint";
 export * from "./edsStaffList";
 export * from "./edsStaffMember";

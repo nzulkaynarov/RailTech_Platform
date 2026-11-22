@@ -295,6 +295,7 @@ describe("EDS · Документы: письмо на подписи (СЦ-8)",
           ? { ownerId: "u-demo-manager", at: "2026-11-01T09:00:00Z" }
           : null,
       },
+      signing: { can_sign: false, reason: null, signer_id: "u-demo-director" },
     });
     state.documents.push(letter(1, "Письмо переданное", true), letter(2, "Письмо свежее", false));
     writeEds(state);
@@ -306,6 +307,9 @@ describe("EDS · Документы: письмо на подписи (СЦ-8)",
     ).toBeVisible();
     expect(within(row("Письмо переданное")).getByText("На подписи")).toBeVisible();
     expect(within(row("Письмо свежее")).getByText("Черновик")).toBeVisible();
+    // ГЛ-0: у переданного письма в строке — у кого оно на подписи; у свежего подписанта нет
+    expect(within(row("Письмо переданное")).getByText("у Демо Директоров")).toBeVisible();
+    expect(within(row("Письмо свежее")).queryByText(/^у /)).toBeNull();
   });
 });
 

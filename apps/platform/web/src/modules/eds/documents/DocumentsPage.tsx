@@ -237,6 +237,9 @@ function RowStatus({ row }: { row: EdsDocumentRow }) {
         awaitingSignature={row.awaiting_signature}
       />
       {row.undelivered ? <StatusTag tone="red">{t("panel.mailFailed")}</StatusTag> : null}
+      {row.awaiting_signature && row.signer ? (
+        <div className="pf-hint">{t("list.onSigningAt", { name: row.signer.full_name })}</div>
+      ) : null}
     </>
   );
 }
