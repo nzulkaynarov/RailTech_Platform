@@ -57,12 +57,17 @@ async def test_sign_without_any_authority_is_refused_on_a_fresh_install(
         "can_sign": False,
         "reason": "no_authority",
         "signer": None,
+        "signer_position": None,
     }
 
 
-async def test_author_with_authority_cannot_sign_while_another_signer_exists(
+async def test_author_with_authority_cannot_sign_while_another_signer_exists_under_the_strict_rule(
     client: httpx.AsyncClient, staff: dict[str, Person]
 ) -> None:
+    saved = await client.patch(
+        "/api/v1/docflow-settings", json={"author_may_sign_own_letter": False}, headers=staff["admin"].headers
+    )
+    assert saved.status_code == 200, saved.text
     await grant(client, staff, "registrar")
     await grant(client, staff, "director")
     doc = await draft_of(client, staff["registrar"])
@@ -185,6 +190,7 @@ async def test_card_of_an_author_without_signing_right_still_names_the_signer(
         "can_sign": False,
         "reason": "no_permission",
         "signer": {"crm_user_id": 3, "full_name": "Рустам Директоров"},
+        "signer_position": "Менеджер по продажам",
     }
     assert (await card(client, staff["manager"], doc["id"]))["signing"] == expected
     await hand_over(client, staff["manager"], doc["id"])

@@ -7,7 +7,8 @@ EDS сама сотрудникам не пишет: текст (RU) готов�
 * служебка, заявление, отчёт: решение директора (`memo_decided`) и оплата (`memo_paid`) — автору;
   возврат на доработку не дублируем: он остаётся строкой «Доработать» в «Моих задачах»;
 * исходящее письмо: передан проект — подписанту (`letter_sign_requested`) или, если подписать некому, держателям
-  `signing.manage` (`letter_signer_missing`); подписал другой сотрудник — автору (`letter_signed`).
+  `signing.manage` (`letter_signer_missing`); подписал другой сотрудник — автору (`letter_signed`);
+  автор отозвал с подписи — прежнему подписанту (`letter_sign_withdrawn`).
 """
 
 from collections.abc import Iterable
@@ -18,6 +19,7 @@ from typing import Any
 from rt_bus.sqlalchemy import AsyncBus
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app import clock
 from app.models import Document
 from app.schemas.documents import DocumentKind, DocumentStatus
 from app.services import events, signing_reminders, signing_resolve
@@ -128,6 +130,10 @@ async def memo_paid(
     )
 
 
+def _again(again: bool) -> str:
+    return f":{int(clock.now().timestamp())}" if again else ""
+
+
 async def letter_handed_over(
     session: AsyncSession,
     bus: AsyncBus,
@@ -135,9 +141,12 @@ async def letter_handed_over(
     *,
     today: date,
     actor_id: int,
+    again: bool = False,
 ) -> None:
     """Проект письма передан: подписанту (по замещению — с пометкой «за …»); подписать некому — держателям
-    `signing.manage`."""
+    `signing.manage`. `again` (ГЛ-0): напоминание или смена подписанта на подписи — уведомление уходит заново, ключ
+    с моментом отправки (иначе CRM погасит повтор). Подписант — сам действующий: уведомления нет, карточка письма
+    говорит «Подписываете вы»."""
     signer = await signing_resolve.letter_signer(session, document, today)
     directory = await load_directory(session, [document.author_crm_user_id])
     if signer is None:
@@ -146,7 +155,7 @@ async def letter_handed_over(
             bus,
             document,
             kind="letter_signer_missing",
-            key=f"document:{document.id}:letter_signer_missing",
+            key=f"document:{document.id}:letter_signer_missing{_again(again)}",
             recipients=await signing_reminders.manage_holder_ids(session),
             title="Подписать некому",
             subtitle=f"Настройки → Права подписи · {document.subject}"[:200],
@@ -162,10 +171,31 @@ async def letter_handed_over(
         bus,
         document,
         kind="letter_sign_requested",
-        key=f"document:{document.id}:letter_sign_requested:{who}",
+        key=f"document:{document.id}:letter_sign_requested:{who}{_again(again)}",
         recipients=[who],
         title="Подпишите исходящее",
         subtitle=f"{document.subject} · {directory.name(document.author_crm_user_id)}{behalf}",
+        actor_id=actor_id,
+    )
+
+
+async def letter_withdrawn(
+    session: AsyncSession, bus: AsyncBus, document: Document, *, signer_id: int | None, actor_id: int
+) -> None:
+    """Автор отозвал письмо с подписи (ГЛ-0): прежнему подписанту — «Письмо отозвано с подписи», иначе его
+    «Подпишите исходящее» остаётся без пояснения. Подписант — сам автор: уведомления нет."""
+    if signer_id is None or signer_id == document.author_crm_user_id:
+        return
+    directory = await load_directory(session, [document.author_crm_user_id])
+    await _publish(
+        session,
+        bus,
+        document,
+        kind="letter_sign_withdrawn",
+        key=f"document:{document.id}:letter_sign_withdrawn:{signer_id}:{int(clock.now().timestamp())}",
+        recipients=[signer_id],
+        title="Письмо отозвано с подписи",
+        subtitle=f"{document.subject} · {directory.name(document.author_crm_user_id)}",
         actor_id=actor_id,
     )
 
@@ -189,4 +219,4 @@ async def letter_signed(
     )
 
 
-__all__ = ["letter_handed_over", "letter_signed", "memo_decided", "memo_paid"]
+__all__ = ["letter_handed_over", "letter_signed", "letter_withdrawn", "memo_decided", "memo_paid"]

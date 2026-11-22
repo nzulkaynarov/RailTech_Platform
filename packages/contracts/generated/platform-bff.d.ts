@@ -1705,6 +1705,66 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/eds/documents/{id}/remind": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * EDS · Письмо на подписи: напомнить подписанту (ГЛ-0)
+     * @description EDS `POST /documents/{id}/remind`. Автор повторно отправляет текущему подписанту «Подпишите исходящее»; не чаще раза в час (409, `details.reason = remind_too_soon`, `details.retry_at`). Не автор — 403, письмо не на подписи — 409.
+     */
+    post: operations["remindEdsDocumentSigner"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/eds/documents/{id}/withdraw": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * EDS · Письмо на подписи: отозвать (ГЛ-0)
+     * @description EDS `POST /documents/{id}/withdraw`. Автор снимает передачу на подпись: письмо снова черновик, задача у подписанта пропадает. Не автор — 403, письмо не на подписи — 409.
+     */
+    post: operations["withdrawEdsDocumentFromSigning"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/eds/documents/{id}/signer": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * EDS · Письмо на подписи: сменить подписанта (ГЛ-0)
+     * @description EDS `POST /documents/{id}/signer`. Автор выбирает другого подписанта из `GET /eds/signers`; новому уходит «Подпишите исходящее». Нет права подписи — 422 (`signer_crm_user_id`), не автор — 403, письмо не на подписи — 409.
+     */
+    post: operations["changeEdsDocumentSigner"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/eds/documents/{id}/mail-waive": {
     parameters: {
       query?: never;
@@ -10779,6 +10839,8 @@ export interface components {
     EdsDocumentRow: {
       /** @description Исходящее письмо передано на подпись и не подписано (СЦ-8): слово «На подписи» при `status = draft`; без передачи — «Черновик»; у остальных видов — `false`. Признак отдаёт EDS */
       awaiting_signature: boolean;
+      /** @description ГЛ-0. У кого письмо на подписи (вычисленный или выбранный подписант); у остальных строк — `null`. Отдаёт реестр «Все документы» */
+      signer?: components["schemas"]["EdsPerson"] | null;
       /** @description Исходящее письмо не ушло адресату (СЦ-1): строка остаётся в «Исходящих» с меткой «Не отправлено» */
       undelivered: boolean;
       kind: components["schemas"]["EdsRegistryKind"];
@@ -10907,6 +10969,11 @@ export interface components {
        */
       awaiting_signature?: boolean;
       /**
+       * @description ГЛ-0. Автор письма на подписи — ему доступны «Напомнить» (`POST /eds/documents/{id}/remind`), «Отозвать»
+       *     (`…/withdraw`) и «Сменить подписанта» (`…/signer`); у остальных — `false`
+       */
+      can_manage_handover?: boolean;
+      /**
        * Format: date-time
        * @description Дата и время подписания документа
        */
@@ -10938,8 +11005,16 @@ export interface components {
        *     `currency_mismatch`, `holder_inactive`, `absent`, `deputy_without_authority`, `deputy_loop`
        */
       reason?: string | null;
-      /** @description Кто подпишет по реестру; `null` — подписать некому */
+      /** @description Кто подпишет по реестру (выбранный автором или первый, кто не автор); `null` — подписать некому */
       signer?: components["schemas"]["EdsPerson"] | null;
+      /** @description ГЛ-0. Должность подписанта по реестру полномочий («На подписи у …, должность») */
+      signer_position?: string | null;
+      /** @description ГЛ-0. Подписант — сам спросивший (автор подписывает своё письмо): уведомления ему нет, карточка говорит «Подписываете вы» */
+      signer_is_you?: boolean;
+    };
+    EdsSignerChangeIn: {
+      /** @description Сотрудник из `GET /eds/signers`; `null` — подписанта снова подбирает реестр полномочий */
+      signer_crm_user_id?: number | null;
     };
     /** @description Параметры подписания документа уполномоченным лицом (SIGN-3, ADR-0024) */
     EdsDocumentSignIn: {
@@ -13247,9 +13322,13 @@ export interface components {
       /** @enum {string} */
       pii_policy: "business" | "strict";
       ai_available: boolean;
+      /** @description ГЛ-0, ADR-0024 п. 3: автор письма с правом подписи подписывает его сам (по умолчанию да); нет — «автор ≠ подписант» */
+      author_may_sign_own_letter: boolean;
     };
     DocflowSettingsPatch: {
-      recognize_scans: boolean;
+      recognize_scans?: boolean;
+      /** @description Переданное поле меняется; остальные остаются прежними */
+      author_may_sign_own_letter?: boolean;
     };
     /**
      * @description `personal` — свой шаблон, `company` — общий, ведёт администратор
@@ -20771,6 +20850,104 @@ export interface operations {
       403: components["responses"]["Forbidden"];
       404: components["responses"]["NotFound"];
       409: components["responses"]["EdsConflict"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  remindEdsDocumentSigner: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Id документа EDS (UUID); номер `СЗ-2026/031` содержит «/» и в адресе не используется */
+        id: components["parameters"]["EdsDocumentId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Готово */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["EdsDocument"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["EdsConflict"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  withdrawEdsDocumentFromSigning: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Id документа EDS (UUID); номер `СЗ-2026/031` содержит «/» и в адресе не используется */
+        id: components["parameters"]["EdsDocumentId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Готово */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["EdsDocument"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["EdsConflict"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  changeEdsDocumentSigner: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Id документа EDS (UUID); номер `СЗ-2026/031` содержит «/» и в адресе не используется */
+        id: components["parameters"]["EdsDocumentId"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["EdsSignerChangeIn"];
+      };
+    };
+    responses: {
+      /** @description Готово */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["EdsDocument"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["EdsConflict"];
+      422: components["responses"]["ValidationFailed"];
       503: components["responses"]["BackendUnavailable"];
     };
   };

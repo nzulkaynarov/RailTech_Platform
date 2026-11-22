@@ -145,6 +145,7 @@ async def _signing(session: AsyncSession, document: Document, viewer: Employee |
         can_sign=check.allowed,
         reason=check.reason,
         signer=None if check.signer is None else check.signer.signer,
+        signer_position=None if check.signer is None else check.signer.position,
     )
 
 

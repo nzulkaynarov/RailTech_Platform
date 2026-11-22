@@ -214,13 +214,123 @@ describe("EDS · карточка письма на бланке (P4)", () => {
     expect(link).toHaveAttribute("href", "/admin/signing");
   });
 
-  it("подписант по реестру известен: «Подпишет: имя», кнопки «Подписать» нет", async () => {
-    seed({
-      signing: { can_sign: false, reason: "author_cannot_sign", signer_id: "u-demo-director" },
-    });
+  it("подписант известен, причина без особой фразы: «Подпишет: имя», кнопки «Подписать» нет", async () => {
+    seed(
+      { signing: { can_sign: false, reason: "no_permission", signer_id: "u-demo-director" } },
+      false,
+    );
     const card = await openCard("universal@demo.example");
     expect(card.queryByRole("button", { name: "Подписать" })).toBeNull();
     expect(card.getByText(/Подпишет: /)).toBeVisible();
     expect(card.queryByText(/Подписать некому/)).toBeNull();
+  });
+
+  describe("ГЛ-0: письмо на подписи без тупика", () => {
+    const director = {
+      can_sign: false,
+      reason: "author_cannot_sign",
+      signer_id: "u-demo-director",
+      signer_position: "Директор",
+    };
+
+    it("автор видит, у кого письмо и с какого дня; строгий режим объясняет отказ целым предложением", async () => {
+      seed({ signing: director });
+      const card = await openCard("universal@demo.example");
+
+      expect(card.getByText(/На подписи у Демо Директоров, Директор с /)).toBeVisible();
+      expect(
+        card.getByText(
+          "Вы автор письма. В компании включено правило: автор не подписывает своё письмо. Подписать может Демо Директоров.",
+        ),
+      ).toBeVisible();
+      expect(card.queryByRole("button", { name: /Подписать/ })).toBeNull();
+      expect(card.getByRole("button", { name: "Напомнить" })).toBeEnabled();
+      expect(card.getByRole("button", { name: "Отозвать" })).toBeEnabled();
+      expect(card.getByRole("button", { name: "Сменить подписанта" })).toBeEnabled();
+    });
+
+    it("автор вправе подписать сам: «Подписать самому» рядом с действиями над передачей", async () => {
+      seed({ signing: { ...director, can_sign: true, reason: null } });
+      const card = await openCard("universal@demo.example");
+
+      expect(card.getByRole("button", { name: "Подписать самому" })).toBeVisible();
+      expect(card.queryByText(/Вы автор письма/)).toBeNull();
+      expect(card.getByText(/На подписи у Демо Директоров/)).toBeVisible();
+    });
+
+    it("подписывает сам автор: «Подписываете вы», напоминать некому", async () => {
+      seed({
+        signing: { can_sign: true, reason: null, signer_id: "u-demo-universal" },
+      });
+      const card = await openCard("universal@demo.example");
+
+      expect(card.getByText(/Подписываете вы/)).toBeVisible();
+      expect(card.getByRole("button", { name: "Подписать" })).toBeVisible();
+      expect(card.getByRole("button", { name: "Напомнить" })).toBeDisabled();
+    });
+
+    it("«Напомнить» — раз в час: второй раз сервер отказывает, причина словами", async () => {
+      seed({ signing: director });
+      const card = await openCard("universal@demo.example");
+
+      fireEvent.click(card.getByRole("button", { name: "Напомнить" }));
+      expect(await screen.findByText("Напоминание отправлено: Демо Директоров")).toBeVisible();
+      expect(readEds().documents.find((d) => d.id === ID)?.letter?.remindedAt).toBeTruthy();
+      const again = within(await panelEl());
+      // кнопка ещё уходит из состояния «загрузка»: имя с иконкой, поэтому по части имени
+      fireEvent.click(await again.findByRole("button", { name: /Напомнить/ }));
+      expect(
+        await again.findByText(/напоминание уже отправлено, повторить можно через час/),
+      ).toBeVisible();
+    });
+
+    it("«Отозвать» снимает передачу: «На подписи» гаснет, возвращается «Передать на подпись»", async () => {
+      seed({ signing: director });
+      const card = await openCard("universal@demo.example");
+
+      fireEvent.click(card.getByRole("button", { name: "Отозвать" }));
+      expect(await screen.findByText("Письмо отозвано с подписи")).toBeVisible();
+      await waitFor(() => {
+        expect(
+          readEds().documents.find((d) => d.id === ID)?.letter?.registration_requested,
+        ).toBeNull();
+      });
+      expect(await card.findByRole("button", { name: "Передать на подпись" })).toBeVisible();
+      expect(card.queryByRole("button", { name: "Отозвать" })).toBeNull();
+      expect(card.queryByText(/На подписи у /)).toBeNull();
+    });
+
+    it("«Сменить подписанта»: список подписантов, новый подписант на карточке", async () => {
+      seed({ signing: director });
+      const card = await openCard("universal@demo.example");
+
+      fireEvent.click(card.getByRole("button", { name: "Сменить подписанта" }));
+      const dialog = await findModal("Кто подпишет письмо");
+      const box = within(dialog).getByRole("combobox");
+      fireEvent.mouseDown(box);
+      // список подписантов приходит с сервера: выбираем, пока строка не станет выбранной
+      await waitFor(() => {
+        const pick = screen.getByTitle("Демо Админов");
+        fireEvent.click(pick.closest(".ant-select-item-option") ?? pick);
+        expect(within(dialog).getByRole("button", { name: "Сменить" })).toBeEnabled();
+      });
+      fireEvent.click(within(dialog).getByRole("button", { name: "Сменить" }));
+      expect(await screen.findByText("Подписант сменён")).toBeVisible();
+      await waitFor(() => {
+        expect(
+          readEds().documents.find((d) => d.id === ID)?.letter?.signer_crm_user_id,
+        ).toBeGreaterThanOrEqual(100);
+      });
+    });
+
+    it("подписанту (не автору) действий над передачей не показываются", async () => {
+      seed({ signing: { ...director, can_sign: true, reason: null } });
+      const card = await openCard("director@demo.example");
+
+      expect(card.getByRole("button", { name: "Подписать" })).toBeVisible();
+      expect(card.queryByRole("button", { name: "Напомнить" })).toBeNull();
+      expect(card.queryByRole("button", { name: "Отозвать" })).toBeNull();
+      expect(card.queryByRole("button", { name: "Сменить подписанта" })).toBeNull();
+    });
   });
 });

@@ -151,7 +151,12 @@ describe("«Заполнить из файла» (EDS-REG)", () => {
   });
 
   it("скан при выключенном распознавании — понятный отказ, форма остаётся ручной", async () => {
-    writeDocflowSettings({ recognize_scans: false, pii_policy: "business", ai_available: true });
+    writeDocflowSettings({
+      recognize_scans: false,
+      pii_policy: "business",
+      ai_available: true,
+      author_may_sign_own_letter: true,
+    });
     await openForm();
     await attach("скан.png", "image/png");
     expect(await screen.findByText(/помощник их сейчас не читает/)).toBeVisible();
@@ -178,7 +183,12 @@ describe("«Заполнить из файла» (EDS-REG)", () => {
   });
 
   it("«Убрать предложенное» очищает непоправленные поля и пишет «вручную»", async () => {
-    writeDocflowSettings({ recognize_scans: true, pii_policy: "business", ai_available: true });
+    writeDocflowSettings({
+      recognize_scans: true,
+      pii_policy: "business",
+      ai_available: true,
+      author_may_sign_own_letter: true,
+    });
     await openForm();
     fireEvent.change(screen.getByLabelText("Тема"), { target: { value: "Своя тема" } });
     await attach();
@@ -193,7 +203,12 @@ describe("«Заполнить из файла» (EDS-REG)", () => {
   });
 
   it("помощник не настроен — кнопки нет", async () => {
-    writeDocflowSettings({ recognize_scans: false, pii_policy: "business", ai_available: false });
+    writeDocflowSettings({
+      recognize_scans: false,
+      pii_policy: "business",
+      ai_available: false,
+      author_may_sign_own_letter: true,
+    });
     await openForm();
     await attach();
     expect(screen.queryByRole("button", { name: "Заполнить из файла" })).toBeNull();

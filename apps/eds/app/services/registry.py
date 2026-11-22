@@ -11,6 +11,7 @@
 """
 
 import datetime as dt
+import uuid
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -35,12 +36,13 @@ from sqlalchemy import (
 )
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app import clock
 from app.clock import COMPANY_TZ
 from app.models import ApprovalRoute, ApprovalStep, Document, Employee, Letter, ProjectDocument
-from app.schemas.common import ErpLinks, LetterSender, Money
+from app.schemas.common import ErpLinks, LetterSender, Money, PersonRef
 from app.schemas.pagination import decode_cursor
 from app.schemas.registry import RegistryItem, RegistryKind, RegistryPage, RegistryStage
-from app.services import access, delivery, paging, signing_state
+from app.services import access, delivery, paging, signing_resolve, signing_state
 from app.services.letters_read import escape_like
 from app.services.people import Directory, load_directory
 
@@ -230,7 +232,7 @@ def _filtered(employee: Employee, filters: Filters) -> Select[Any]:
     return stmt
 
 
-def _item(row: Any, directory: Directory) -> RegistryItem:
+def _item(row: Any, directory: Directory, signers: dict[uuid.UUID, PersonRef] | None = None) -> RegistryItem:
     named = row.client_name is not None or row.client_inn is not None
     return RegistryItem(
         kind=RegistryKind(row.kind),
@@ -256,7 +258,17 @@ def _item(row: Any, directory: Directory) -> RegistryItem:
         ),
         undelivered=bool(row.undelivered),
         awaiting_signature=bool(row.awaiting_signature),
+        signer=(signers or {}).get(row.id),
     )
+
+
+async def _signers(session: AsyncSession, ids: list[uuid.UUID]) -> dict[uuid.UUID, PersonRef]:
+    """«На подписи у …» (ГЛ-0): подписант писем страницы — то же правило, что у очереди."""
+    if not ids:
+        return {}
+    documents = list((await session.execute(select(Document).where(Document.id.in_(ids)))).scalars())
+    picked = await signing_resolve.letter_signers(session, documents, clock.company_date(clock.now()))
+    return {doc_id: c.signer for doc_id, c in picked.items() if c is not None}
 
 
 async def list_page(
@@ -267,7 +279,8 @@ async def list_page(
     rows = list((await session.execute(stmt)).all())
     page, next_cursor = paging.cut(rows, limit, lambda r: r.registered_at, lambda r: r.id)
     directory = await load_directory(session, (r.responsible for r in page))
-    return RegistryPage(items=[_item(r, directory) for r in page], next_cursor=next_cursor)
+    signers = await _signers(session, [r.id for r in page if r.awaiting_signature])
+    return RegistryPage(items=[_item(r, directory, signers) for r in page], next_cursor=next_cursor)
 
 
 async def export_rows(session: AsyncSession, employee: Employee, filters: Filters) -> list[RegistryItem] | None:

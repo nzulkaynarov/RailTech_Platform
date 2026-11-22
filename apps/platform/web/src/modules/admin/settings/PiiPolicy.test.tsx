@@ -103,7 +103,12 @@ describe("Настройки · Расходы на ИИ · Защита дан�
     // CRM — «Деловая», а проекция в EDS ещё «Строгая» (событие не дошло): переключатель показывает EDS, не CRM.
     server.use(
       http.get("*/eds/docflow-settings", () =>
-        HttpResponse.json({ recognize_scans: true, pii_policy: "strict", ai_available: true }),
+        HttpResponse.json({
+          recognize_scans: true,
+          pii_policy: "strict",
+          ai_available: true,
+          author_may_sign_own_letter: true,
+        }),
       ),
     );
     signInAs("admin@demo.example");

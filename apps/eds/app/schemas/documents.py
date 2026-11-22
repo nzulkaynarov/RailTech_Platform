@@ -154,6 +154,12 @@ class DocumentSignIn(Strict):
     send: bool = True
 
 
+class SignerChangeIn(Strict):
+    """«Сменить подписанта» письма на подписи (ГЛ-0): `null` — подписанта снова подбирает реестр полномочий."""
+
+    signer_crm_user_id: int | None = None
+
+
 class DocumentUpdate(DocumentSubmitIn):
     """Правка черновика (или возвращённого документа) без отправки: те же поля, что у `submit`, и связь с проектом."""
 
@@ -220,6 +226,8 @@ class DocumentSigning(BaseModel):
     can_sign: bool
     reason: str | None
     signer: PersonRef | None
+    #: ГЛ-0: должность подписанта по реестру полномочий («На подписи у …, должность»)
+    signer_position: str | None = None
 
 
 class Document(BaseModel):
