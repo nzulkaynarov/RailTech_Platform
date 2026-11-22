@@ -76,6 +76,20 @@ QueueItemKind = Literal[
     "sign_document",
 ]
 DueLabel = Literal["overdue", "today", "tomorrow", "later", "memo"]
+# ГЛ-1: группа списка «Что ждёт вас» и вид работы для фильтра со счётчиком
+QueueGroup = Literal["overdue", "today", "later"]
+QueueCategory = Literal[
+    "sign",
+    "approve",
+    "resolution",
+    "instruction",
+    "payment",
+    "lead",
+    "mail",
+    "supply",
+    "project",
+    "other",
+]
 NotificationTab = Literal["all", "decisions", "clients", "system"]
 
 
@@ -139,11 +153,47 @@ class QueueItem(BaseModel):
     due_at: datetime | None = None
     object: ObjectRef
     on_behalf_of: QueueOwner | None = None
+    # ГЛ-1: «почему это у вас» (из факта источника), группа срока, вид работы фильтра, глагол кнопки
+    reason: str | None = None
+    group: QueueGroup | None = None
+    category: QueueCategory | None = None
+    action_label: str | None = None
 
 
 class Queue(BaseModel):
     items: list[QueueItem]
     sources: Sources
+    # ГЛ-1: один из источников отдал не всё (предел страницы) — «показаны не все»
+    truncated: bool | None = None
+
+
+WaitingKind = Literal["letter_signature", "approval", "instruction"]
+
+
+class WaitingRow(BaseModel):
+    """«Вы ждёте других»: что передано и ждёт ответа не от меня (ГЛ-1)."""
+
+    id: str
+    kind: WaitingKind
+    object_id: str
+    title: str
+    waiting_on: QueueOwner | None = None
+    waiting_label: str | None = None
+    since: datetime
+    due_at: datetime | None = None
+    remindable: bool
+    remind_available_at: datetime | None = None
+    object: ObjectRef
+
+
+class Waiting(BaseModel):
+    items: list[WaitingRow]
+    truncated: bool | None = None
+    sources: Sources
+
+
+class Reminded(BaseModel):
+    reminded_at: datetime
 
 
 class QueueCard(BaseModel):

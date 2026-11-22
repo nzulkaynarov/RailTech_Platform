@@ -8,4 +8,6 @@ import type { Sources } from "./sources";
 export interface Queue {
   items: QueueItem[];
   sources: Sources;
+  /** ГЛ-1: `true` — один из источников отдал не всё (предел страницы EDS, задач, возвратов, обращений): «показаны не все». Нет поля — очередь полная. */
+  truncated?: boolean;
 }

@@ -4,6 +4,8 @@
  */
 import type { DueLabel } from "./dueLabel";
 import type { ObjectRef } from "./objectRef";
+import type { QueueCategory } from "./queueCategory";
+import type { QueueGroup } from "./queueGroup";
 import type { QueueItemKind } from "./queueItemKind";
 import type { QueueOwner } from "./queueOwner";
 import type { RoleId } from "./roleId";
@@ -20,4 +22,10 @@ export interface QueueItem {
   due_at?: string;
   object: ObjectRef;
   on_behalf_of?: QueueOwner;
+  /** ГЛ-1: «почему это у вас» одной строкой, из факта источника — «вы подписант по реестру полномочий · передал Дилшод Р.», «резолюция от 18.11 · вы ответственный», «вы замещаете Нодиру Алиеву», «ваш клиент». Есть у каждой строки текущего BFF; у старого ответа поля может не быть. */
+  reason?: string;
+  group?: QueueGroup;
+  category?: QueueCategory;
+  /** ГЛ-1, глагол кнопки строки — «Подписать», «Согласовать», «Ознакомлен», «Взять»; нет — «Открыть» */
+  action_label?: string;
 }

@@ -129,6 +129,7 @@ def rework_item(
         id=f"rework:{document['id']}",
         role_id=role_id,
         kind="rework_document",
+        reason=remark if who else "вам вернули документ на доработку",
         title=f"Доработать: {number}" + (f" · {subject}" if subject and subject != number else ""),
         subtitle=join(remark, ago(returned_at, now)),
         due_label=due_label(due_at, now, default="today"),

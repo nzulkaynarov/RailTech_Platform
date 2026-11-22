@@ -70,6 +70,8 @@ import {
   PaymentTab,
   PriceImportMode,
   ProjectDeliveryAction,
+  QueueCategory,
+  QueueGroup,
   QueueItemKind,
   QuoteDeliveryReason,
   QuoteDeliveryStatus,
@@ -95,6 +97,7 @@ import {
   TicketStatus,
   TicketSubject,
   TrackingClass,
+  WaitingKind,
 } from "./model";
 import type {
   About,
@@ -330,6 +333,7 @@ import type {
   QuoteTotals,
   ReferenceItem,
   ReferenceItemList,
+  Reminded,
   ReplyTemplateList,
   RequestCreatedView,
   RequestRetriedView,
@@ -403,6 +407,7 @@ import type {
   Ticket,
   TicketList,
   TicketPage,
+  Waiting,
 } from "./model";
 
 export const getLoginResponseMock = (
@@ -1875,6 +1880,22 @@ export const getGetQueueResponseMock = (
       },
       undefined,
     ]),
+    reason: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      undefined,
+    ]),
+    group: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(QueueGroup)),
+      undefined,
+    ]),
+    category: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(QueueCategory)),
+      undefined,
+    ]),
+    action_label: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      undefined,
+    ]),
   })),
   sources: {
     crm: faker.helpers.arrayElement(Object.values(SourceState)),
@@ -1884,6 +1905,7 @@ export const getGetQueueResponseMock = (
       undefined,
     ]),
   },
+  truncated: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
   ...overrideResponse,
 });
 
@@ -1908,6 +1930,68 @@ export const getGetQueueCardsResponseMock = (
       undefined,
     ]),
   },
+  ...overrideResponse,
+});
+
+export const getGetQueueWaitingResponseMock = (
+  overrideResponse: Partial<Extract<Waiting, object>> = {},
+): Waiting => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    kind: faker.helpers.arrayElement(Object.values(WaitingKind)),
+    object_id: faker.string.uuid(),
+    title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    waiting_on: faker.helpers.arrayElement([
+      {
+        id: faker.helpers.fromRegExp("^[1-9][0-9]*$"),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      },
+      undefined,
+    ]),
+    waiting_label: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      undefined,
+    ]),
+    since: faker.date.past().toISOString().slice(0, 19) + "Z",
+    due_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      undefined,
+    ]),
+    remindable: faker.datatype.boolean(),
+    remind_available_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      undefined,
+    ]),
+    object: {
+      kind: faker.helpers.arrayElement(Object.values(ObjectKind)),
+      number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      title: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        undefined,
+      ]),
+      path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      step: faker.helpers.arrayElement([
+        faker.helpers.arrayElement(Object.values(StepCode)),
+        undefined,
+      ]),
+    },
+  })),
+  truncated: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
+  sources: {
+    crm: faker.helpers.arrayElement(Object.values(SourceState)),
+    erp: faker.helpers.arrayElement(Object.values(SourceState)),
+    eds: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(SourceState)),
+      undefined,
+    ]),
+  },
+  ...overrideResponse,
+});
+
+export const getRemindQueueWaitingResponseMock = (
+  overrideResponse: Partial<Extract<Reminded, object>> = {},
+): Reminded => ({
+  reminded_at: faker.date.past().toISOString().slice(0, 19) + "Z",
   ...overrideResponse,
 });
 
@@ -37334,6 +37418,49 @@ export const getGetQueueCardsMockHandler = (
   );
 };
 
+export const getGetQueueWaitingMockHandler = (
+  overrideResponse?:
+    Waiting | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<Waiting> | Waiting),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/queue/waiting",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetQueueWaitingResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getRemindQueueWaitingMockHandler = (
+  overrideResponse?:
+    | Reminded
+    | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<Reminded> | Reminded),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/queue/waiting/:kind/:id/remind",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getRemindQueueWaitingResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
 export const getGetActivityTodayMockHandler = (
   overrideResponse?:
     | ActivityFeed
@@ -47199,6 +47326,8 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getGetMenuCountersMockHandler(),
   getGetQueueMockHandler(),
   getGetQueueCardsMockHandler(),
+  getGetQueueWaitingMockHandler(),
+  getRemindQueueWaitingMockHandler(),
   getGetActivityTodayMockHandler(),
   getListNotificationsMockHandler(),
   getMarkNotificationReadMockHandler(),

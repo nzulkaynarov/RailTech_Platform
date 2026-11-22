@@ -985,7 +985,13 @@ export interface paths {
      *     Подпись (СЦ-9): `sign_document` — «Подписать исходящее: ответ на ВХ-…» / «Подписать исходящее: тема» (EDS
      *     `GET /letter-tasks`, `signatures`; строка открывает карточку письма `/eds/documents?scope=all&doc=…&panel=open`) и
      *     «Подписать договор CT-…», счёт, акт, КП (EDS `GET /approvals?mine&template=signing&status=open`, только шаг подписи,
-     *     виза — нет; строка ведёт к блоку «Подписи» под очередью). Кому подписывать, решает EDS; роль строку не режет.
+     *     виза — тот же вид `sign_document` с `category = approve` и `action_label = «Завизировать»` (ГЛ-1: новое значение вида ломало бы клиентов); строка открывает окно решения «Подписать»/«Отказать» или «Завизировать»/«Вернуть»
+     *     на `/dashboard/queue?signing=<маршрут>`). Кому подписывать, решает EDS; роль строку не режет.
+     *
+     *     ГЛ-1 «Что ждёт вас»: у строки есть `reason` («почему это у вас», из факта источника), `group` (просрочено, сегодня,
+     *     позже — только из срока; у подписи письма, подписи и визы коммерческого документа срока нет — «позже»; у переноса
+     *     срока — действующий срок поручения), `category` (вид работы для фильтра) и `action_label` (глагол кнопки).
+     *     `truncated` — «показаны не все».
      *
      *     Замещение (СЦ-9): шаги замещаемого, которые EDS отдал заместителю (`acting_for`: согласование служебки и КП, поручение,
      *     перенос срока, подпись по полномочию), и лиды замещаемого приходят с `on_behalf_of`; решает и действует EDS (право
@@ -1011,6 +1017,46 @@ export interface paths {
     get: operations["getQueueCards"];
     put?: never;
     post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/queue/waiting": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * «Вы ждёте других» — что я передал и жду от другого (ГЛ-1)
+     * @description EDS `GET /waiting`: мои исходящие письма на подписи (кто подписант по реестру полномочий), мои служебки и заявления на согласовании (чей шаг), выданные мной поручения в работе. Строки выводятся из фактов, своего статуса нет; погасают сами (подписано, решено, исполнено). `truncated` — один из списков обрезан. Адрес строки — объект, который передан.
+     */
+    get: operations["getQueueWaiting"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/queue/waiting/{kind}/{id}/remind": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * «Напомнить» тому, кого ждёте (ГЛ-1)
+     * @description EDS `POST /waiting/{kind}/{id}/remind`: повторяет существующее уведомление текущему адресату (подписанту, шагу маршрута, исполнителю). Не чаще раза в час на объект: иначе 429 `TOO_MANY_REQUESTS` с `details.reason = remind_rate_limited` и `Retry-After`. Объект не мой или уже не ждёт — 404; напоминать некому — 409.
+     */
+    post: operations["remindQueueWaiting"];
     delete?: never;
     options?: never;
     head?: never;
@@ -10265,10 +10311,80 @@ export interface components {
       due_at?: string;
       object: components["schemas"]["ObjectRef"];
       on_behalf_of?: components["schemas"]["QueueOwner"];
+      /** @description ГЛ-1: «почему это у вас» одной строкой, из факта источника — «вы подписант по реестру полномочий · передал Дилшод Р.», «резолюция от 18.11 · вы ответственный», «вы замещаете Нодиру Алиеву», «ваш клиент». Есть у каждой строки текущего BFF; у старого ответа поля может не быть. */
+      reason?: string;
+      group?: components["schemas"]["QueueGroup"];
+      category?: components["schemas"]["QueueCategory"];
+      /** @description ГЛ-1, глагол кнопки строки — «Подписать», «Согласовать», «Ознакомлен», «Взять»; нет — «Открыть» */
+      action_label?: string;
     };
+    /**
+     * @description ГЛ-1: группа списка «Что ждёт вас» — только из срока строки: просрочено, сегодня, «позже» (всё остальное, в том числе строки без срока: «сегодня» без срока не выдумывается)
+     * @enum {string}
+     */
+    QueueGroup: "overdue" | "today" | "later";
+    /**
+     * @description ГЛ-1, вид работы для фильтра со счётчиком (подписи, согласования и визы, резолюции, поручения, оплата, лиды, почта, снабжение, проекты)
+     * @enum {string}
+     */
+    QueueCategory:
+      | "sign"
+      | "approve"
+      | "resolution"
+      | "instruction"
+      | "payment"
+      | "lead"
+      | "mail"
+      | "supply"
+      | "project"
+      | "other";
     Queue: {
       items: components["schemas"]["QueueItem"][];
       sources: components["schemas"]["Sources"];
+      /** @description ГЛ-1: `true` — один из источников отдал не всё (предел страницы EDS, задач, возвратов, обращений): «показаны не все». Нет поля — очередь полная. */
+      truncated?: boolean;
+    };
+    /** @enum {string} */
+    WaitingKind: "letter_signature" | "approval" | "instruction";
+    WaitingRow: {
+      id: string;
+      kind: components["schemas"]["WaitingKind"];
+      /**
+       * Format: uuid
+       * @description Документ (`letter_signature`), маршрут (`approval`) или поручение (`instruction`) — идентификатор для «Напомнить»
+       */
+      object_id: string;
+      title: string;
+      waiting_on?: components["schemas"]["QueueOwner"];
+      /** @description Кого ждём, когда нет конкретного человека — шаг «любой с правом» («Бухгалтер») или «Подписанта нет» */
+      waiting_label?: string;
+      /**
+       * Format: date-time
+       * @description С какого момента ждём (передача на подпись, начало круга согласования, выдача поручения)
+       */
+      since: string;
+      /**
+       * Format: date-time
+       * @description Срок поручения; у подписи и согласования срока нет
+       */
+      due_at?: string;
+      /** @description Напомнить можно сейчас (с прошлого напоминания прошёл час, есть кому напоминать) */
+      remindable: boolean;
+      /**
+       * Format: date-time
+       * @description С какого момента можно напомнить снова
+       */
+      remind_available_at?: string;
+      object: components["schemas"]["ObjectRef"];
+    };
+    Waiting: {
+      items: components["schemas"]["WaitingRow"][];
+      truncated?: boolean;
+      sources: components["schemas"]["Sources"];
+    };
+    Reminded: {
+      /** Format: date-time */
+      reminded_at: string;
     };
     QueueCard: {
       /** @description `letters_without_resolution`, `quotes_to_approve`, `memos_to_approve`, `projects_in_work`, `leads_without_answer`… */
@@ -19469,6 +19585,60 @@ export interface operations {
       };
       401: components["responses"]["SessionExpired"];
       403: components["responses"]["Forbidden"];
+    };
+  };
+  getQueueWaiting: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Ждём от других */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Waiting"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+    };
+  };
+  remindQueueWaiting: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        kind: components["schemas"]["WaitingKind"];
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Напоминание отправлено */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Reminded"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["EdsConflict"];
+      429: components["responses"]["TooManyRequests"];
+      503: components["responses"]["BackendUnavailable"];
     };
   };
   getActivityToday: {

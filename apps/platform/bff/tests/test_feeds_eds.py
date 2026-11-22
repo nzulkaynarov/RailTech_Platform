@@ -659,7 +659,8 @@ async def test_director_sees_the_extension_request_and_others_do_not(
     ]
     assert row["title"] == "Решить перенос срока по ВХ-112/26"
     assert row["subtitle"].startswith("Иван Исполнитель · новый срок 22.01")
-    assert row["due_label"] == "today"
+    # срок — действующий срок поручения (old_due), а не выдуманное «сегодня»
+    assert row["due_label"] == "tomorrow"
     assert row["role_id"] == rid("DIRECTOR")
 
     # строку переноса видит только держатель резолюции (`eds.inbox: full`)
