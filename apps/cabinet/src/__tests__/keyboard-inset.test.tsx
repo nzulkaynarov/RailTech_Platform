@@ -22,6 +22,10 @@ describe('keyboardInsetOf', () => {
     expect(keyboardInsetOf(844, { height: 520, offsetTop: 0 })).toBe(324);
     expect(keyboardInsetOf(844, { height: 520, offsetTop: 100 })).toBe(224);
   });
+  it('is 0 while pinch-zoomed: a smaller visual viewport is not the keyboard', () => {
+    expect(keyboardInsetOf(844, { height: 422, offsetTop: 0, scale: 2 })).toBe(0);
+    expect(keyboardInsetOf(844, { height: 520, offsetTop: 0, scale: 1 })).toBe(324);
+  });
 });
 
 describe('useKeyboardInset', () => {

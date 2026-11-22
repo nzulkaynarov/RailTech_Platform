@@ -327,14 +327,16 @@ export function AppShell() {
     setHelpOpen(true);
   };
   // On a phone Настройки leave the bottom bar (5 modules at most) and live in the profile menu (NAVIGATION.md, map of 2026-11-10).
+  // Same condition as the module in the rail: any visible Настройки section (not only `admin`) keeps the entry
+  const settingsRail = railItems.find((m) => m.code === SETTINGS_MODULE);
   const profile = (
     <AvatarMenu
       me={me}
       placement={viewport.mobile ? "topRight" : "topLeft"}
       onHelp={openHelp}
       settings={
-        viewport.mobile && canSee(me, { resource: "admin" })
-          ? { to: SETTINGS_HOME, label: t("modules:admin.name") }
+        settingsRail && viewport.mobile
+          ? { to: settingsRail.to, label: settingsRail.name }
           : undefined
       }
     />

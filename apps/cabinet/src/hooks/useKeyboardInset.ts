@@ -6,11 +6,15 @@ export const KEYBOARD_MIN_INSET = 120;
 interface ViewportLike {
   height: number;
   offsetTop: number;
+  /** Pinch zoom factor; 1 when not zoomed. */
+  scale?: number;
 }
 
 /** Height the on-screen keyboard covers: layout viewport minus the visual one; 0 while it is closed. */
 export function keyboardInsetOf(innerHeight: number, viewport: ViewportLike | null): number {
   if (!viewport) return 0;
+  // A pinch zoom shrinks the visual viewport too, but it is not the keyboard
+  if ((viewport.scale ?? 1) > 1.01) return 0;
   const inset = Math.round(innerHeight - viewport.height - viewport.offsetTop);
   return inset >= KEYBOARD_MIN_INSET ? inset : 0;
 }

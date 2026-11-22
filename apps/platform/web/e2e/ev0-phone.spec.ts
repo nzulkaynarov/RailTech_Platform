@@ -1,3 +1,6 @@
+import { appendFileSync } from "node:fs";
+
+import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 
 import {
@@ -8,6 +11,22 @@ import {
   spaGoto,
 } from "./support/app";
 import { expectNoViolations } from "./support/axe";
+
+// Снимок и axe одного экрана для docs/screens/ev0-phone (только при E2E_SCREENSHOT_DIR): одна строка JSON на экран.
+async function recordAxe(page: Page, screen: string): Promise<void> {
+  const dir = process.env["E2E_SCREENSHOT_DIR"];
+  if (!dir) return;
+  const result = await new AxeBuilder({ page })
+    .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
+    .analyze();
+  const line = {
+    screen,
+    width: page.viewportSize()?.width ?? 0,
+    rulesPassed: result.passes.length,
+    violations: result.violations.map((v) => v.id),
+  };
+  appendFileSync(`${dir}/axe-platform.jsonl`, `${JSON.stringify(line)}\n`);
+}
 
 // ЕВ-0 «Гигиена телефона»: нижняя панель без «Настроек», touch-цели 44 px, клавиатура, согласование директора с телефона,
 // ширины 390 / 768 / 1024 без горизонтальной прокрутки. Проект mobile (Pixel 7) — указатель coarse, как на телефоне.
@@ -34,7 +53,7 @@ test.describe("Гигиена телефона @mobile", () => {
         );
         expect(overflow, `${route} @${String(size.width)}`).toBeLessThanOrEqual(0);
       }
-      await settledScreenshot(page, `queue-${String(size.width)}`);
+      await settledScreenshot(page, "queue");
     });
   }
 
@@ -88,11 +107,19 @@ test.describe("Гигиена телефона @mobile", () => {
     }
     // решение не перекрыто нижней панелью или чем-то ещё: пробный клик доходит до самой кнопки
     await approve.click({ trial: true });
-    await settledScreenshot(page, "approval-390");
+    await settledScreenshot(page, "approval");
 
     // экранная клавиатура 320 px: лист поднят над ней, кнопки на виду, панель модулей скрыта
+    // поле «Комментарий» в фокусе — путь «ввести комментарий → вернуть на доработку» при открытой клавиатуре
+    const comment = sheet.getByRole("textbox", { name: "Комментарий" });
+    await comment.focus();
     await page.evaluate("window.__kb(320)");
     await expect(page.locator("html")).toHaveAttribute("data-kb", "open");
+    // браузер сам прокручивает сфокусированное поле в видимую часть листа; Playwright этого при fill не делает
+    await comment.scrollIntoViewIfNeeded();
+    await comment.fill("Нужна скидка по второму пункту");
+    await expect(comment).toBeInViewport({ ratio: 1 });
+    await expect(back).toBeInViewport({ ratio: 1 });
     await expect(page.getByRole("navigation", { name: "Модули" })).toBeHidden();
     const sheetBox = await sheet.boundingBox();
     expect((sheetBox?.y ?? 0) + (sheetBox?.height ?? 0)).toBeLessThanOrEqual(844 - 320 + 1);
@@ -101,6 +128,7 @@ test.describe("Гигиена телефона @mobile", () => {
     await page.evaluate("window.__kb(0)");
     await expect(page.locator("html")).not.toHaveAttribute("data-kb", "open");
     await expectNoViolations(page, "телефон: одобрение КП");
+    await recordAxe(page, "approval-quote");
   });
 
   test("@mobile 390: служебка — читать и согласовать без горизонтальной прокрутки", async ({
@@ -115,7 +143,7 @@ test.describe("Гигиена телефона @mobile", () => {
         "document.documentElement.scrollWidth - document.documentElement.clientWidth",
       ),
     ).toBeLessThanOrEqual(0);
-    await settledScreenshot(page, "memo-390");
+    await settledScreenshot(page, "memo");
     await spaGoto(page, `/eds/approvals/${encodeURIComponent("СЗ-2026/014")}?panel=open&tab=agree`);
     const sheet = page.getByRole("dialog", { name: /^Согласование/ });
     const agree = sheet.getByRole("button", { name: "Согласовать" });
@@ -131,6 +159,15 @@ test.describe("Гигиена телефона @mobile", () => {
     await loginAndWait(page, "director@demo.example");
     await spaGoto(page, `/eds/drafts/${encodeURIComponent("КП-2026/115")}`);
     await expect(page.getByRole("heading", { level: 1, name: "КП-2026/115" })).toBeVisible();
-    await settledScreenshot(page, "quote-768");
+    await settledScreenshot(page, "quote");
+    await spaGoto(page, `/eds/drafts/${encodeURIComponent("КП-2026/115")}?panel=open&tab=approve`);
+    // на 768 панель — лист или боковое окно: форма одобрения одна, решение на виду без горизонтальной прокрутки
+    const form = page.getByRole("form", { name: "Одобрение КП" });
+    await expect(form).toBeVisible();
+    await expect(form.getByRole("button", { name: "Одобрить КП" })).toBeInViewport();
+    expect(await page.evaluate("document.documentElement.scrollWidth")).toBeLessThanOrEqual(768);
+    await settledScreenshot(page, "approval");
+    await expectNoViolations(page, "планшет: одобрение КП");
+    await recordAxe(page, "approval-quote");
   });
 });

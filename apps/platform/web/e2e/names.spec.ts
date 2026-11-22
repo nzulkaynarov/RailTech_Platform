@@ -131,7 +131,10 @@ test.describe("названия модулей: 390 @mobile", () => {
     await page.setViewportSize({ width: 390, height: 844 });
     await loginAndWait(page, "director@demo.example");
     const bar = page.getByRole("navigation", { name: "Модули" });
-    await expect(bar.getByRole("link")).toHaveText(RU.map((m) => m.name));
+    // «Настройки» на телефоне — в меню профиля, не в нижней панели (ЕВ-0)
+    await expect(bar.getByRole("link")).toHaveText(
+      RU.map((m) => m.name).filter((name) => name !== "Настройки"),
+    );
     await bar.getByRole("link", { name: "Контакты" }).click();
     await page.getByRole("button", { name: "Меню" }).click();
     const drawerMenu = page.getByRole("navigation", { name: "Разделы модуля" });
@@ -150,7 +153,6 @@ test.describe("названия модулей: 390 @mobile", () => {
       "Hujjatlar",
       "Amallar",
       "Organayzer",
-      "Sozlamalar",
     ]);
     await page.getByRole("button", { name: "Menyu" }).click();
     await expect(page.getByRole("navigation", { name: "Modul bo‘limlari" })).toContainText(

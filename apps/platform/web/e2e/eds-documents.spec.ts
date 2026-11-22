@@ -424,10 +424,11 @@ test.describe("Создать документ: телефон", () => {
       await openStep(page, CHECK);
       const submit = page.getByRole("button", { name: "Отправить на согласование" });
       await expect(submit).toBeVisible();
-      // кнопки прижаты к низу экрана (над нижней панелью модулей)
+      // кнопки прижаты к низу экрана (над нижней панелью модулей); под грубым указателем кнопки 44 px (ЕВ-0),
+      // колонка подвала стала выше на ~12 px на кнопку, поэтому допуск 160, а не 140
       const submitBox = await submit.boundingBox();
       expect((submitBox?.y ?? 0) + (submitBox?.height ?? 0)).toBeGreaterThan(
-        (viewport?.height ?? 0) - 140,
+        (viewport?.height ?? 0) - 160,
       );
       await settledScreenshot(page, "mobile-form");
       await expectNoViolations(page, "мобильная форма");
