@@ -156,40 +156,42 @@ export function OrderCreatePage() {
             // Ошибка открывает свою секцию (§4.1a): строки — во второй
             setActive(errorFields.some((f) => f.name[0] === "lines") ? "lines" : "supplier");
           }}
-          onFinish={async (values) => {
-            // роль поставщика — в момент сохранения: закрытая форма не оставляет роль без заказа
-            const refused = await applyRole(values.supplier);
-            if (refused) {
-              void message.error(refused);
-              setActive("supplier");
-              return;
-            }
-            if (values.mode === "shortage") {
-              fromRequest.mutate({
+          onFinish={(values) => {
+            void (async () => {
+              // роль поставщика — в момент сохранения: закрытая форма не оставляет роль без заказа
+              const refused = await applyRole(values.supplier);
+              if (refused) {
+                void message.error(refused);
+                setActive("supplier");
+                return;
+              }
+              if (values.mode === "shortage") {
+                fromRequest.mutate({
+                  data: {
+                    request: (values.request ?? "").trim(),
+                    supplier_id: values.supplier?.id ?? "",
+                  },
+                });
+                return;
+              }
+              const note = clean(values.note);
+              const partnerNote = clean(values.partner_note);
+              create.mutate({
                 data: {
-                  request: (values.request ?? "").trim(),
                   supplier_id: values.supplier?.id ?? "",
+                  ...(values.expected_date ? { expected_date: values.expected_date } : {}),
+                  ...(note ? { note } : {}),
+                  ...(partnerNote ? { partner_note: partnerNote } : {}),
+                  lines: (values.lines ?? [])
+                    .filter((l) => l.product_id && l.quantity)
+                    .map((l) => ({
+                      product_id: l.product_id ?? "",
+                      quantity: l.quantity ?? 1,
+                      ...(clean(l.unit_price) ? { unit_price: clean(l.unit_price) } : {}),
+                    })),
                 },
               });
-              return;
-            }
-            const note = clean(values.note);
-            const partnerNote = clean(values.partner_note);
-            create.mutate({
-              data: {
-                supplier_id: values.supplier?.id ?? "",
-                ...(values.expected_date ? { expected_date: values.expected_date } : {}),
-                ...(note ? { note } : {}),
-                ...(partnerNote ? { partner_note: partnerNote } : {}),
-                lines: (values.lines ?? [])
-                  .filter((l) => l.product_id && l.quantity)
-                  .map((l) => ({
-                    product_id: l.product_id ?? "",
-                    quantity: l.quantity ?? 1,
-                    ...(clean(l.unit_price) ? { unit_price: clean(l.unit_price) } : {}),
-                  })),
-              },
-            });
+            })();
           }}
         >
           <StepSections
