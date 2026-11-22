@@ -13375,6 +13375,37 @@ export const getResendInviteResponseMock = (
   ...overrideResponse,
 });
 
+export const getRetryEmployeeErpSyncResponseMock = (
+  overrideResponse: Partial<Extract<Employee, object>> = {},
+): Employee => ({
+  id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+  email: faker.internet.email(),
+  position: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 120 } }),
+    undefined,
+  ]),
+  roles: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.helpers.fromRegExp("^[1-9][0-9]*$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    system: faker.datatype.boolean(),
+    code: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      undefined,
+    ]),
+  })),
+  access: { crm: faker.datatype.boolean(), erp: faker.datatype.boolean() },
+  status: faker.helpers.arrayElement(Object.values(EmployeeStatus)),
+  telegram_linked: faker.datatype.boolean(),
+  erp_sync: faker.helpers.arrayElement(Object.values(ErpSyncState)),
+  erp_sync_error: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
+  ...overrideResponse,
+});
+
 export const getIssueTemporaryPasswordResponseMock = (
   overrideResponse: Partial<Extract<EmployeeCredentials, object>> = {},
 ): EmployeeCredentials => ({
@@ -40495,6 +40526,28 @@ export const getResendInviteMockHandler = (
   );
 };
 
+export const getRetryEmployeeErpSyncMockHandler = (
+  overrideResponse?:
+    | Employee
+    | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<Employee> | Employee),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/admin/users/:id/erp-sync",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getRetryEmployeeErpSyncResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
 export const getIssueTemporaryPasswordMockHandler = (
   overrideResponse?:
     | EmployeeCredentials
@@ -47175,6 +47228,7 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getCreateEmployeeMockHandler(),
   getInviteEmployeeMockHandler(),
   getResendInviteMockHandler(),
+  getRetryEmployeeErpSyncMockHandler(),
   getIssueTemporaryPasswordMockHandler(),
   getGetEmployeeMockHandler(),
   getUpdateEmployeeMockHandler(),
