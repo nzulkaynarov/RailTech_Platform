@@ -68,7 +68,7 @@ const PAGE_OF: Record<string, string> = {
   details: "Реквизиты и бланк",
   brand: "Реквизиты и бланк",
   numbering: "Нумерация",
-  quote: "Шаблоны документов",
+  quote: "Продажи",
   templates: "Шаблоны документов",
   charges: "Справочники",
   reference: "Справочники",
@@ -398,6 +398,25 @@ describe("Реквизиты и логотип", () => {
 });
 
 describe("Бланк и бренд", () => {
+  it("«Оформление», «Шрифт» и «Второй цвет» не показаны и при сохранении не уходят (ДОК-13)", async () => {
+    await openTab("brand");
+    await screen.findByLabelText("Основной цвет");
+    for (const label of ["Оформление", "Шрифт", "Второй цвет"]) {
+      expect(screen.queryByLabelText(label)).toBeNull();
+    }
+    type("Основной цвет", "#047857");
+    fireEvent.click(await button("Сохранить бланк"));
+    expect(await screen.findByText("Сохранено")).toBeInTheDocument();
+    const { brand } = readCompanyMock();
+    expect(brand.accent_color).toBe("#047857");
+    // в моке остались прежние значения: поля не отправлялись
+    expect([brand.layout_preset, brand.font_family, brand.secondary_color]).toEqual([
+      "boxed",
+      "sans",
+      "#595959",
+    ]);
+  });
+
   it("образец документа в изолированной рамке меняется вместе с несохранённой правкой цвета", async () => {
     await openTab("brand");
     const frame = await screen.findByTitle("Образец: КП");
@@ -596,15 +615,47 @@ describe("Условия КП: маржа — группа cost_margin", () => {
   });
 });
 
-describe("Условия КП: напоминания о просрочке (NOTIFY-2)", () => {
-  it("по умолчанию выключено; включение сохраняется", async () => {
+describe("Условия КП разошлись по страницам своих дел (ДОК-13)", () => {
+  it("в «Шаблонах документов» вкладки «Условия КП» нет; старый адрес ведёт в «Продажи»", async () => {
+    signInAs("director@demo.example");
+    renderApp("/admin/templates");
+    await screen.findByRole("heading", { level: 1, name: "Шаблоны документов" });
+    expect(screen.queryByRole("tab", { name: "Условия КП" })).toBeNull();
+  });
+
+  it("«Продажи»: срок и каталог — две части, валюты и напоминаний здесь нет", async () => {
     await openTab("quote");
+    expect(await screen.findByLabelText("Срок действия КП, дней")).toBeInTheDocument();
+    expect(screen.getByLabelText("Цена в каталоге")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Валюта себестоимости")).toBeNull();
+    expect(screen.queryByRole("switch")).toBeNull();
+  });
+
+  it("«Налоги и валюты»: валюта и возраст курса сохраняются, поля «Продаж» не уходят", async () => {
+    signInAs("director@demo.example");
+    renderApp("/admin/taxes");
+    await screen.findByRole("heading", { level: 1, name: "Налоги и валюты" });
+    fireEvent.change(await screen.findByLabelText("Предельный возраст курса, дней"), {
+      target: { value: "5" },
+    });
+    expect(screen.queryByLabelText("Срок действия КП, дней")).toBeNull();
+    fireEvent.click(await button("Сохранить условия"));
+    expect(await screen.findByText("Сохранено")).toBeInTheDocument();
+    expect(readCompanyMock().quote.fx_rate_max_age_days).toBe(5);
+  });
+});
+
+describe("Условия КП: напоминания о просрочке (NOTIFY-2)", () => {
+  it("по умолчанию выключено; включение сохраняется на странице «Уведомления»", async () => {
+    signInAs("director@demo.example");
+    renderApp("/admin/notifications");
+    await screen.findByRole("heading", { level: 1, name: "Уведомления" });
     const toggle = await screen.findByRole("switch", {
       name: "Напоминать клиентам о просроченных счетах",
     });
     expect(toggle).not.toBeChecked();
     fireEvent.click(toggle);
-    fireEvent.click(await button("Сохранить условия"));
+    fireEvent.click(await button("Сохранить напоминания"));
     expect(await screen.findByText("Сохранено")).toBeInTheDocument();
     expect(readCompanyMock().quote.remind_overdue_invoices).toBe(true);
   });
@@ -698,8 +749,9 @@ describe("Шаблоны документов и писем", () => {
     await openTab("templates");
     fireEvent.click(await screen.findByRole("button", { name: "Создать шаблон" }));
     const dialog = await screen.findByRole("region", { name: "Новый шаблон документа" });
-    expect(within(dialog).getByText(/\{\{counterparty\.name\}\}/)).toBeInTheDocument();
-    expect(within(dialog).queryByText(/buyer_name/)).not.toBeInTheDocument();
+    // ДОК-13: «Произвольного» вида нет — новый шаблон начинается с образца договора и не пуст
+    expect(within(dialog).getByLabelText(/^Текст шаблона/)).not.toHaveValue("");
+    expect(within(dialog).getByText(/Подставлен образец платформы/)).toBeInTheDocument();
 
     fireEvent.change(within(dialog).getByLabelText("Название"), { target: { value: "Мой акт" } });
     fireEvent.mouseDown(within(dialog).getByRole("combobox", { name: "Вид документа" }));

@@ -320,6 +320,7 @@ export const MENU = {
     company: ["company.settings"],
     numbering: ["company.settings"],
     taxes: ["company.settings"],
+    sales: ["company.settings"],
     articles: ["admin"],
     telegram: ["admin"],
     mail: ["admin"],

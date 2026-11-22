@@ -145,21 +145,8 @@
     "signatoryPosition": "Imzo egasi lavozimi",
     "footer": "Pastki kolontitul",
     "accent": "Asosiy rang",
-    "secondary": "Ikkinchi rang",
     "pickColor": "Rang tanlash: {{label}}",
     "colorInvalid": "Rang #RRGGBB ko'rinishida",
-    "layout": "Ko'rinish",
-    "layouts": {
-      "light": "Yorug'",
-      "boxed": "Ramkali",
-      "bold": "Kontrastli",
-      "striped": "Yo'l-yo'l"
-    },
-    "font": "Shrift",
-    "fonts": {
-      "sans": "Seriflarsiz",
-      "serif": "Serifli"
-    },
     "printLegend": "Nimalar chop etiladi",
     "flags": {
       "use_company_defaults": "Rekvizitlarni kompaniya kartasidan olish",
@@ -244,14 +231,12 @@
     "note": "Yangi raqamlar shu sxema bo‘yicha beriladi; berilganlari o‘zgarmaydi."
   },
   "quote": {
-    "title": "TT bo'yicha standart shartlar",
-    "hint": "Yangi TTga nima qo‘yiladi: valyuta, bazis, QQS, muddat, kafolat.",
     "marginHidden": "Marja maydonlari yashirilgan: ularni tannarx va marja huquqiga ega rollar ko'radi.",
     "currency": "Tannarx valyutasi",
     "currencyHint": "«Valyutalar» ma'lumotnomasidan",
     "basis": "Yetkazib berish bazisi",
     "basisHint": "«Yetkazib berish bazislari» ma'lumotnomasidan",
-    "vat": "QQS stavkasi, %",
+    "vat": "Yangi TTda QQS stavkasi, %",
     "default_margin_percent": "Standart marja, %",
     "min_margin_percent": "Minimal marja, %",
     "target_margin_percent": "Maqsadli marja, %",
@@ -268,14 +253,39 @@
     "thresholdHint": "Karta qancha to'liqlikdan e'lon qilinishi mumkin (1–100).",
     "fxAge": "Kurs eng ko'p yoshi, kun",
     "fxAgeHint": "1 dan 90 kungacha.",
-    "save": "Shartlarni saqlash",
     "invalidField": "Qiymatni tekshiring",
     "note": "Yangi TT shu qiymatlarni oladi; rasmiylashtirilgan TT o‘zgarmaydi.",
     "remindOverdue": "Mijozlarga muddati oʻtgan hisob-fakturalar haqida eslatish",
     "remindOverdueHint": "Kuniga bir marta, Toshkent vaqti bilan 10:00 da — toʻlov muddati uch kundan ortiq oʻtgan har bir hisob-faktura boʻyicha bitta eslatma: mijoz kabinetidagi qoʻngʻiroqchada va loyiha kontaktiga hamda kabinetga taklif qilinganlarga xat bilan. Sukut boʻyicha oʻchirilgan.",
     "confirmDays": "Hamkor narxini tasdiqlash, kun",
     "expiringDays": "Hamkor narxi tugashidan oldin ogohlantirish, kun",
-    "actReminderHours": "Dalolatnoma eslatmalari orasidagi tanaffus, soat"
+    "actReminderHours": "Dalolatnoma eslatmalari orasidagi tanaffus, soat",
+    "groups": {
+      "sales": {
+        "title": "Yangi TT şartları",
+        "hint": "Yangi TTga nima qöyiladi: muddat, tölov, kafolat, marja, bazis.",
+        "note": "Yangi TT şu qiymatlarni oladi; rasmiylaştirilgan TT özgarmaydi.",
+        "save": "Şartlarni saqlaş"
+      },
+      "catalog": {
+        "title": "Katalog",
+        "hint": "Katalogda narx körsatilişi va kartoçkani e’lon qiliş çegarasi.",
+        "note": "Katalogga darhol qöllanadi.",
+        "save": "Katalogni saqlaş"
+      },
+      "taxes": {
+        "title": "TTda valyuta va QQS",
+        "hint": "Yangi TTga nima qöyiladi va kurs necha kun yangi hisoblanadi.",
+        "note": "Yangi TT şu qiymatlarni oladi; rasmiylaştirilgan TT özgarmaydi.",
+        "save": "Şartlarni saqlaş"
+      },
+      "reminders": {
+        "title": "Hisob va dalolatnoma eslatmalari",
+        "hint": "Muddati ötgan hisoblar va dalolatnomalar: qaçon va qançalik tez eslatiş.",
+        "note": "Keyingi eslatmadan boşlab amal qiladi.",
+        "save": "Eslatmalarni saqlaş"
+      }
+    }
   },
   "charges": {
     "title": "TT xarajat moddalari",
