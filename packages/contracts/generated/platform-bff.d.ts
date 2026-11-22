@@ -7582,6 +7582,50 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/people/counterparties": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Поле выбора: контрагенты
+     * @description ЕД-6 «Запись выбирают, а не вписывают»: одно поле выбора компании для форм — заявка, письмо, входящее, бренд, импорт прайса, заказ поставщику, запрос цены. ERP `parties/organizations/`: клиенты своей компании, поставщики, изготовители, партнёры и организации-адресаты. `q` — часть названия или ИНН, точный ИНН идёт первым; `role` поднимает компании с этой ролью выше, остальных не скрывает; `limit` — до 20 строк (по умолчанию 10). В строке — роли для подсказки, страна и клиент CRM. Раздел `crm.clients`, `erp.stock`, `erp.calc` или `eds.memo.create` — чтение.
+     */
+    get: operations["searchCounterparties"];
+    put?: never;
+    /**
+     * Поле выбора: завести контрагента
+     * @description Последняя строка поля выбора «завести»: название, ИНН (9 цифр), страна, адрес и роль (`organization` по умолчанию, `supplier` или `manufacturer`). ERP `POST parties/organizations/`. Такой ИНН уже есть у ЛЮБОЙ компании, а не только из видимых в списке — 409 `CONFLICT` (`details.reason = company_exists`, `details.existing_id` — id найденной компании): её выбирают, а не заводят. Роль «поставщик» и «изготовитель» — право ERP `supply.manage`, иначе 403. Раздел `crm.clients`, `erp.stock`, `erp.calc` или `eds.memo.create` — полный.
+     */
+    post: operations["createCounterparty"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/people/counterparties/{id}/people": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Поле выбора: люди контрагента
+     * @description ЕД-6: люди компании для поля выбора человека — имя, должность, почта (для строки «Кому» письма); телефон не отдаётся, его открывает `revealCounterpartyContacts` с записью в журнал. ERP `parties/organizations/{id}/people/`; чужая компания — 404. Раздел `crm.clients`, `erp.stock`, `erp.calc` или `eds.memo.create` — чтение.
+     */
+    get: operations["listCounterpartyPickerPeople"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/people/counterparties/{id}": {
     parameters: {
       query?: never;
@@ -16611,6 +16655,46 @@ export interface components {
       partner: boolean;
       /** @description Организация — адресат писем без сделок (госорган, банк), заведена из письма */
       organization: boolean;
+    };
+    /** @enum {string} */
+    CounterpartyPickRole: "client" | "supplier" | "manufacturer" | "partner" | "organization";
+    /** @description Строка поля выбора контрагента (ЕД-6) */
+    CounterpartyPick: {
+      id: components["schemas"]["CompanyItemRef"];
+      name: string;
+      inn: string | null;
+      /** @description Название страны */
+      country: string | null;
+      roles: components["schemas"]["CounterpartyRoles"];
+      /** @description Клиент CRM, с которым связана компания */
+      crm_client_id: number | null;
+      /** @description Общая почта компании */
+      email: string | null;
+    };
+    CounterpartyPickList: {
+      items: components["schemas"]["CounterpartyPick"][];
+    };
+    CounterpartyPickIn: {
+      name: string;
+      inn?: string | null;
+      /** @description Страна из справочника `CatalogLookups.countries` */
+      country_id?: number | null;
+      address?: string | null;
+      /**
+       * @default organization
+       * @enum {string}
+       */
+      role: "organization" | "supplier" | "manufacturer";
+    };
+    CounterpartyPersonPick: {
+      id: string;
+      name: string;
+      position: string | null;
+      email: string | null;
+      is_primary: boolean;
+    };
+    CounterpartyPersonPickList: {
+      items: components["schemas"]["CounterpartyPersonPick"][];
     };
     CounterpartyCardPerson: {
       id: components["schemas"]["CompanyItemRef"];
@@ -31228,6 +31312,102 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["CounterpartyContacts"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  searchCounterparties: {
+    parameters: {
+      query?: {
+        /** @description Часть названия или ИНН */
+        q?: string;
+        /** @description Роль-подсказка: компании с ней идут выше */
+        role?: components["schemas"]["CounterpartyPickRole"];
+        limit?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Строки выбора */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CounterpartyPickList"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  createCounterparty: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CounterpartyPickIn"];
+      };
+    };
+    responses: {
+      /** @description Контрагент заведён */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CounterpartyPick"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      /** @description `CONFLICT` (`details.reason = company_exists`, `details.existing_id`) — такая компания уже есть */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  listCounterpartyPickerPeople: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: components["schemas"]["CompanyItemRef"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Люди компании, главный контакт первым */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CounterpartyPersonPickList"];
         };
       };
       401: components["responses"]["SessionExpired"];

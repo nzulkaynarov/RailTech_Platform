@@ -17,7 +17,7 @@ from django.db import transaction
 from integration.models import CrmClientMapping
 from parties.banking import grouped, masked
 from parties.models import Company, CompanyType
-from parties.models.relationships import RelationshipRole, RelationshipStatus
+from parties.models.relationships import CompanyRelationship, RelationshipRole, RelationshipStatus
 
 from accounts.services.permissions import staff_has_permission
 from catalog.desk.audit import record
@@ -42,6 +42,33 @@ def roles_of(company: Company, client_ids: set) -> dict:
             status__in=(RelationshipStatus.INVITED, RelationshipStatus.ACTIVE),
         ).exists(),
         "organization": "ORGANIZATION" in codes,
+    }
+
+
+def roles_for(companies, client_ids: set) -> dict[int, dict]:
+    """Роли пачки компаний (список выбора): те же отметки, что у `roles_of`, пятью запросами на страницу, а не на строку."""
+    ids = [c.pk for c in companies]
+    codes: dict[int, set] = {}
+    for company_id, code in Company.objects.filter(pk__in=ids).values_list("pk", "types__code"):
+        if code:
+            codes.setdefault(company_id, set()).add(code)
+    offered = set(SupplierOffer.objects.filter(supplier__in=ids).values_list("supplier", flat=True))
+    partners = set(
+        CompanyRelationship.objects.filter(
+            company__in=ids,
+            role=RelationshipRole.PARTNER,
+            status__in=(RelationshipStatus.INVITED, RelationshipStatus.ACTIVE),
+        ).values_list("company", flat=True)
+    )
+    return {
+        pk: {
+            "client": pk in client_ids,
+            "supplier": "SUPPLIER" in codes.get(pk, ()) or pk in offered,
+            "manufacturer": "MANUFACTURER" in codes.get(pk, ()),
+            "partner": pk in partners,
+            "organization": "ORGANIZATION" in codes.get(pk, ()),
+        }
+        for pk in ids
     }
 
 
@@ -145,15 +172,24 @@ def create_organization(data: dict, *, actor) -> Company:
     if inn and not re.match(settings.INN_VALIDATION_REGEX, inn):
         raise ItemError("TIN_INVALID", "tin")
     country = _country(data.get("country_id"))
-    if inn and Company.objects.filter(inn=inn).exists():
-        raise ItemError("COMPANY_EXISTS", "tin")
-    if (
-        registration_number
-        and Company.objects.filter(registration_number__iexact=registration_number, country=country).exists()
-    ):
-        raise ItemError("COMPANY_EXISTS", "registration_number")
-    if not inn and not registration_number and Company.objects.filter(name__iexact=name).exists():
-        raise ItemError("COMPANY_EXISTS", "name")
+    role = data.get("role") or "organization"
+    if role not in ("organization", *EDITABLE_ROLES):
+        raise ItemError("ROLE_NOT_EDITABLE", "role")
+    if role in EDITABLE_ROLES and not staff_has_permission(actor, "supply.manage"):
+        raise ItemError("ROLE_PERMISSION_REQUIRED", "role")
+    # дубль ищется среди ВСЕХ компаний, не только видимых в списке выбора; id найденной — в ответе (`existing_id`)
+    twin = None
+    if inn:
+        twin = Company.objects.filter(inn=inn).first()
+        taken_field = "tin"
+    if twin is None and registration_number:
+        twin = Company.objects.filter(registration_number__iexact=registration_number, country=country).first()
+        taken_field = "registration_number"
+    if twin is None and not inn and not registration_number:
+        twin = Company.objects.filter(name__iexact=name).first()
+        taken_field = "name"
+    if twin is not None:
+        raise ItemError("COMPANY_EXISTS", taken_field, {"existing_id": twin.pk})
     company = Company.objects.create(
         name=name,
         inn=inn,
@@ -162,16 +198,17 @@ def create_organization(data: dict, *, actor) -> Company:
         legal_address=(data.get("legal_address") or "").strip(),
         is_registered=False,  # заведена сотрудником, входа нет
     )
-    kind, _ = CompanyType.objects.get_or_create(code="ORGANIZATION", defaults={"name": _TYPE_NAMES["ORGANIZATION"]})
+    code = "ORGANIZATION" if role == "organization" else EDITABLE_ROLES[role]
+    kind, _ = CompanyType.objects.get_or_create(code=code, defaults={"name": _TYPE_NAMES[code]})
     company.types.add(kind)
     record(
         actor,
         entity="company",
         instance=company,
         event="created",
-        action="Организация заведена из письма",
+        action="Организация заведена из письма" if role == "organization" else "Контрагент заведён из поля выбора",
         before=None,
-        after={"name": name, "inn": inn, "registration_number": registration_number or None},
+        after={"name": name, "inn": inn, "registration_number": registration_number or None, "role": role},
         detail=name,
     )
     return company
