@@ -1,4 +1,11 @@
-import type { DealRef, DeliveryLine } from '@/api/portal';
+import type { ClientRequest, DealRef, DeliveryLine } from '@/api/portal';
+
+/** Сделки выполненных проектов (запрос `closed` с исходом `won`: акт принят или скан, счета оплачены; СЦ-8): приёмка строк им не нужна. */
+export function doneDealIdsOf(requests: ClientRequest[] | undefined): Set<number> {
+  return new Set(
+    (requests ?? []).filter((request) => request.status === 'closed' && request.outcome === 'won' && request.deal).map((request) => request.deal!.id),
+  );
+}
 
 /** Строки поставки по сделкам — в порядке первого появления сделки в ответе ERP, строки по `line_no`. */
 export interface DeliveryGroup {

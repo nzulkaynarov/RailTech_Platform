@@ -150,7 +150,7 @@ def assert_user_may_change_stage(deal: Deal, actor: Optional[CustomUser], target
 
 
 def _publish_stage_events(deal: Deal, prev_code: Optional[str], lost_reason: str = "") -> None:
-    """События шины о смене стадии: `deal.stage_changed` (стадия контракта изменилась) и итог — `deal.won` / `deal.lost`.
+    """События шины о смене стадии: `deal.stage_changed` (стадия контракта изменилась) и итог проигрыша — `deal.lost`.
 
     Публикуются в транзакции смены стадии (B3, rt_bus): сбой публикации откатывает переход. Сделка без компании клиента
     (черновик калькулятора) событий не даёт. `lost_reason` — причина проигрыша (например, отказ директора по письму EDS).
@@ -166,10 +166,13 @@ def _publish_stage_events(deal: Deal, prev_code: Optional[str], lost_reason: str
     curr_stage = stages.deal_stage(deal)
     if prev_stage != curr_stage:
         events.publish_deal_stage_changed(deal, from_stage=prev_stage, to_stage=curr_stage)
-    outcome = stages.fsm_outcome(curr_code)
-    if outcome == "won":
-        events.publish_deal_outcome(deal, won=True)
-    elif outcome == "lost":
+    # `deal.won` уходит один раз, когда проект выполнен И стадия `CLOSED_WON` (решение владельца 2026-11-22): здесь —
+    # если проект стал выполненным раньше договора, иначе из `projects.log_project_done_once`.
+    if curr_code == DealStageCode.CLOSED_WON:
+        from .projects import log_project_done_once
+
+        log_project_done_once(deal)
+    if stages.fsm_outcome(curr_code) == "lost":
         events.publish_deal_outcome(deal, won=False, lost_reason=lost_reason or "Сделка закрыта со статусом lost")
 
 

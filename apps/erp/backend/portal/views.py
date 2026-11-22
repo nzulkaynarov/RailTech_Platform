@@ -572,7 +572,7 @@ def _requests_queryset(company):
     return (
         Deal.objects.filter(company=company)
         .select_related("stage", "portal_summary", "manager", "assigned_to")
-        .prefetch_related("quotes__status", "portal_lines", "portal_uploads")
+        .prefetch_related("quotes__status", "invoices__status", "acts__status", "portal_lines", "portal_uploads")
     )
 
 
