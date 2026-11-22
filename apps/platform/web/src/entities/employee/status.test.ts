@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { Employee } from "../../shared/api/generated/model";
-import { anyErpPending, erpAttention } from "./status";
+import { anyErpPending, erpAttention, erpSyncReason } from "./status";
 
 const base = {
   access: { crm: true, erp: true },
@@ -36,5 +36,23 @@ describe("anyErpPending", () => {
     expect(anyErpPending([row("ok"), row("error")])).toBe(false);
     expect(anyErpPending([row("pending", "disabled")])).toBe(false);
     expect(anyErpPending(undefined)).toBe(false);
+  });
+});
+
+describe("erpSyncReason", () => {
+  it("код причины CRM решает фразу, сам текст ошибки не показывается", () => {
+    expect(erpSyncReason("erp_provision_user: erp_not_configured: ERP не подключена")).toBe(
+      "not_configured",
+    );
+    expect(erpSyncReason("erp_provision_user: ConnectError: All connection attempts failed")).toBe(
+      "unavailable",
+    );
+    expect(erpSyncReason("erp_provision_user: ReadTimeout: ")).toBe("unavailable");
+    expect(erpSyncReason("erp_provision_user: erp_rejected: email занят")).toBe("rejected");
+  });
+
+  it("без текста ошибки причины нет", () => {
+    expect(erpSyncReason(undefined)).toBeNull();
+    expect(erpSyncReason("")).toBeNull();
   });
 });

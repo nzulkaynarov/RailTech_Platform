@@ -14,7 +14,7 @@ import { useFormat } from "../../../shared/lib/useFormat";
 import { DateField } from "../../../shared/ui/DateField";
 import { ErrorNote, FormField } from "../../../shared/ui/FormParts";
 import { useResolutionKindName } from "../dictionaries";
-import { companyDate, fieldsOf, reasonOf, useRefreshLetters } from "./api";
+import { companyDate, fieldsOf, reasonText, useRefreshLetters } from "./api";
 import {
   type OfficeErrors,
   type OfficeField,
@@ -162,9 +162,7 @@ export function OfficeResolutionForm({
   const described = (field: OfficeField) =>
     errors[field] ? id(`${field}-error`) : id(`${field}-hint`);
 
-  const failureText = failure
-    ? t("office.failed", { reason: t(`form.reasons.${reasonOf(failure)}`) })
-    : null;
+  const failureText = failure ? t("office.failed", { reason: reasonText(t, failure) }) : null;
   const trimmed = comment.trim();
 
   return (

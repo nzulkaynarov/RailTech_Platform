@@ -498,6 +498,24 @@ export const QUEUE = {
   },
 } as const satisfies Record<string, { resource: ResourceKey; level: AccessLevel }>;
 
+/** Право EDS (`details.permission` отказа 403) -> первый раздел каталога, который его даёт: отказ называет раздел словами, а не кодом права. */
+export const PERMISSION_SECTIONS = {
+  "approvals.decide": "eds.drafts",
+  "approvals.visa_finance": "eds.visa.finance",
+  "approvals.visa_legal": "eds.visa.legal",
+  "bus.manage": "admin",
+  "files.upload": "crm.clients",
+  "letters.read": "eds.inbox",
+  "letters.register": "eds.inbox.register",
+  "letters.resolve": "eds.inbox",
+  "memos.approve": "eds.memo.approve",
+  "memos.create": "eds.memo.create",
+  "payments.confirm": "eds.payments",
+  "registry.export": "eds.projects",
+  "registry.read": "eds.inbox",
+  "signing.manage": "eds.signing.manage",
+} as const satisfies Record<string, ResourceKey>;
+
 /** Роль каталога: название, матрица и поля с ограничением. */
 export interface CatalogRole {
   name: I18n;

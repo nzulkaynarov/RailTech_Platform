@@ -123,6 +123,7 @@
     "returned": "Xat menejerga qaytarildi",
     "rejected": "Xat rad etildi",
     "journal": "Tarix",
+    "actionUnknown": "Xatdagi amal",
     "journalSystem": "Tizim",
     "actions": {
       "letter_registered": "Xat ro'yxatga olindi",
@@ -289,6 +290,7 @@
       "invalid_state": "xat endi rezolyutsiya kutmayapti, kartochkani yangilang",
       "eds_not_granted": "hujjat aylanishiga ruxsatingiz yo'q",
       "forbidden": "bu amal rolingizga ruxsat etilmagan",
+      "forbiddenSection": "«{{section}}» bo‘limiga kirish yo‘q",
       "unavailable": "hujjat aylanishi javob bermayapti",
       "validation": "maydonlarni tekshiring",
       "unknown": "kutilmagan xato",
@@ -976,6 +978,7 @@
     "journal": {
       "title": "Jurnal",
       "system": "Tizim",
+      "actionUnknown": "Xat bilan amal",
       "action": {
         "take": "ishga oldi",
         "takeover": "o‘ziga oldi",

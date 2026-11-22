@@ -17,3 +17,20 @@ export function erpAttention(
     ? employee.erp_sync
     : null;
 }
+
+export type ErpSyncReason = "not_configured" | "unavailable" | "rejected";
+
+/** Python/httpx exception names CRM writes as the "code" of a transient failure (`ConnectError`, `ReadTimeout`, …). */
+const TRANSIENT_CODE = /^[A-Z][A-Za-z]*(Error|Exception|Timeout)$/;
+
+/**
+ * Human reason of a failed ERP provisioning from `erp_sync_error` (CRM writes `task: code: detail`, 500 chars max).
+ * The text itself is never shown: the code decides the sentence. `null` — CRM has no error text ("не выдан", no job).
+ */
+export function erpSyncReason(error: string | undefined | null): ErpSyncReason | null {
+  if (!error) return null;
+  const code = error.split(": ")[1]?.trim() ?? "";
+  if (code === "erp_not_configured") return "not_configured";
+  if (TRANSIENT_CODE.test(code)) return "unavailable";
+  return "rejected";
+}

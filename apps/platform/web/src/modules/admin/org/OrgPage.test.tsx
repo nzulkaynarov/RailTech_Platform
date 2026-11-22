@@ -104,6 +104,34 @@ describe("Admin · Оргструктура (экран целиком на MSW)
     });
   });
 
+  it.each([
+    [
+      "erp_provision_user: erp_not_configured: ERP не подключена — укажите адрес",
+      "ERP не подключена",
+    ],
+    ["erp_provision_user: ConnectError: All connection attempts failed", "ERP не ответила"],
+    ["erp_provision_user: email_taken: duplicate key value", "ERP не приняла учётную запись"],
+  ])(
+    "сбой с текстом CRM «%s»: причина словами, кода и текста сервера на экране нет",
+    async (error, phrase) => {
+      signIn("admin@demo.example");
+      writeEmployees(
+        readEmployees().map((e) =>
+          e.id === "u-demo-manager"
+            ? { ...e, erp_sync: "error" as const, erp_sync_error: error }
+            : e,
+        ),
+      );
+      renderAt("/admin/org?employee=u-demo-manager&panel=open");
+
+      const panel = await panelEl();
+      expect(await within(panel).findByText(new RegExp(phrase))).toBeVisible();
+      expect(panel.textContent).not.toContain("erp_provision_user");
+      expect(panel.textContent).not.toContain("ConnectError");
+      expect(panel.textContent).not.toContain("duplicate key");
+    },
+  );
+
   it("у отключённого нет метки «выдаётся» и «ERP», хотя роль с доступом сохранилась", async () => {
     signIn("admin@demo.example");
     writeEmployees(

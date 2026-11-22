@@ -419,6 +419,7 @@
         "unknown": "something went wrong, your input stayed in the form"
       }
     },
+    "journalActionUnknown": "Action on the document",
     "journalAction": {
       "document_created": "Created",
       "document_submitted": "Sent for approval",

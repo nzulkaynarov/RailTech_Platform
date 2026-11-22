@@ -537,7 +537,11 @@
         "telegram": "Bildirishnomalar uchun Telegram",
         "status": "Holat",
         "erpPending": "ERP ga kirish hali berilmoqda.",
-        "erpError": "ERP ga kirishni berib bo'lmadi: {{error}}",
+        "erpReason": {
+          "not_configured": "ERP ga kiriş berilmadi: ERP ulanmagan. Administrator manzil va tokenni «Ulanishlar» bölimida kiritadi; berish özi qayta uriniladi.",
+          "unavailable": "ERP ga kiriş berilmadi: ERP javob bermadi. Berish özi qayta uriniladi.",
+          "rejected": "ERP ga kiriş berilmadi: ERP hisobni qabul qilmadi. Xodimning pochtasi va rollarini tekshiring va «Qayta urinish» tugmasini bosing."
+        },
         "erpNotGranted": "ERP ga kiriş berilmagan.",
         "erpRetry": "Qayta uriniş",
         "disabledNote": "Xodim o'chirilgan va kira olmaydi. Rollar va lavozim saqlangan."

@@ -15,7 +15,7 @@ import { DefinitionList } from "../../../shared/ui/DefinitionList";
 import { ErrorNote } from "../../../shared/ui/FormParts";
 import { StatusTag } from "../../../shared/ui/StatusTag";
 import { useResolutionKindName } from "../dictionaries";
-import { reasonOf, useRefreshLetters } from "./api";
+import { reasonText, useRefreshLetters } from "./api";
 import { Attachments } from "./Parts";
 import { TimeLeft } from "../../../shared/ui/TimeLeft";
 
@@ -155,11 +155,7 @@ export function ExtensionDecision({
           }}
         />
       </div>
-      <ErrorNote
-        message={
-          failure ? t("tasks.failed", { reason: t(`form.reasons.${reasonOf(failure)}`) }) : null
-        }
-      />
+      <ErrorNote message={failure ? t("tasks.failed", { reason: reasonText(t, failure) }) : null} />
       <div className="pf-fp-row">
         <Button
           type="primary"

@@ -134,7 +134,7 @@ test.describe("P8b: поручения по входящим", () => {
     await switchTo(page, "director@demo.example");
     await expect(queueRow(page, "Наложить резолюцию на письмо IN-109/26")).toBeVisible();
     await spaGoto(page, `/eds/inbox/${ID}?panel=open&tab=resolution`);
-    await expect(page.getByText(/Проект подготовил\(а\) Демо Канцелярова/)).toBeVisible();
+    await expect(page.getByText(/Проект подготовлен: Демо Канцелярова/)).toBeVisible();
     await both(page, "resolution-draft", {
       wide: `/eds/inbox/${ID}?panel=open&tab=resolution`,
       narrow: `/eds/inbox/${ID}?sheet=resolution&tab=resolution`,
@@ -271,8 +271,8 @@ test.describe("P8b: поручения по входящим", () => {
     const row = queueRow(page, "Ознакомиться с письмом ВХ-108/26");
     await expect(row).toBeVisible();
     await row.getByRole("link", { name: /^Открыть:/ }).click();
-    await page.getByRole("button", { name: "Ознакомлен(а)" }).click();
-    await expect(page.getByText("Отмечено: ознакомлен(а)")).toBeVisible();
-    await expect(page.getByText(/ознакомлен\(а\) \d{2}\.\d{2}\.\d{4}/)).toBeVisible();
+    await page.getByRole("button", { name: "Ознакомиться" }).click();
+    await expect(page.getByText("Ознакомление отмечено")).toBeVisible();
+    await expect(page.getByText(/ознакомление: \d{2}\.\d{2}\.\d{4}/)).toBeVisible();
   });
 });

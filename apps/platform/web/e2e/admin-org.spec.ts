@@ -292,6 +292,38 @@ test.describe("Оргструктура: axe и скриншоты", () => {
     });
   }
 
+  for (const width of WIDTHS) {
+    test(`сбой выдачи доступа в ERP с текстом CRM на ${String(width)}: причина словами, кода нет, axe без нарушений`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
+      await loginAndWait(page, "admin@demo.example");
+      await openOrg(page);
+      await page.evaluate(`(() => {
+        const key = "rt-pf-mock-employees";
+        const items = JSON.parse(window.localStorage.getItem(key) || "[]");
+        window.localStorage.setItem(
+          key,
+          JSON.stringify(
+            items.map((e) =>
+              e.id === "u-demo-manager"
+                ? { ...e, erp_sync: "error", erp_sync_error: "erp_provision_user: ConnectError: All connection attempts failed" }
+                : e,
+            ),
+          ),
+        );
+      })()`);
+      await page.reload();
+      await openCard(page, "Демо Менеджеров");
+      const panel = page.locator(PANEL);
+      await expect(panel.getByText(/ERP не ответила/)).toBeVisible();
+      await expect(panel).not.toContainText("ConnectError");
+      await expect(panel).not.toContainText("erp_provision_user");
+      await expectNoViolations(page, `erp error reason ${String(width)}`);
+      await settledScreenshot(page, "org-card-erp-reason");
+    });
+  }
+
   test("пустой поиск и нет сотрудника в адресе: тексты словами, axe без нарушений", async ({
     page,
   }) => {
