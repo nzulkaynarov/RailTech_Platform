@@ -53,6 +53,12 @@ class ContractRefSerializer(serializers.Serializer):
     number = serializers.CharField()
     status = serializers.ChoiceField(choices=CONTRACT_WORDS)
     sent_to_client = serializers.BooleanField(help_text="Проект ушёл клиенту на согласование и виден ему в портале")
+    send_blocker = serializers.CharField(
+        required=False,
+        allow_null=True,
+        help_text="Что мешает отправить договор по шаблону клиенту сейчас (`CONTRACT_NEEDS_OUR_SIGNATURE`, "
+        "`CONTRACT_DEVIATION_PENDING`); `null` — ничего. «Мои задачи» строят шаг договора по нему",
+    )
 
 
 class InvoiceRefSerializer(serializers.Serializer):

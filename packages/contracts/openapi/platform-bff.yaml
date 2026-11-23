@@ -19984,6 +19984,9 @@ components:
         sent_to_client:
           description: 'Проект ушёл клиенту на согласование редакции и виден ему в кабинете'
           type: boolean
+        send_blocker:
+          description: 'Что мешает отправить договор по шаблону клиенту сейчас: CONTRACT_NEEDS_OUR_SIGNATURE, CONTRACT_DEVIATION_PENDING; null — ничего'
+          type: [string, 'null']
       required: [id, number, status, sent_to_client]
       additionalProperties: false
     ProjectInvoiceRef:

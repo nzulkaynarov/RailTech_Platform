@@ -42002,6 +42002,11 @@
                         "type": "boolean",
                         "description": "Проект ушёл клиенту на согласование и виден ему в портале"
                     },
+                    "send_blocker": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "Что мешает отправить договор по шаблону клиенту сейчас (`CONTRACT_NEEDS_OUR_SIGNATURE`, `CONTRACT_DEVIATION_PENDING`); `null` — ничего. «Мои задачи» строят шаг договора по нему"
+                    },
                     "template": {
                         "allOf": [
                             {
@@ -42280,6 +42285,11 @@
                     "sent_to_client": {
                         "type": "boolean",
                         "description": "Проект ушёл клиенту на согласование и виден ему в портале"
+                    },
+                    "send_blocker": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "Что мешает отправить договор по шаблону клиенту сейчас (`CONTRACT_NEEDS_OUR_SIGNATURE`, `CONTRACT_DEVIATION_PENDING`); `null` — ничего. «Мои задачи» строят шаг договора по нему"
                     }
                 },
                 "required": [

@@ -33,6 +33,9 @@ CONTRACT_KIND = "CONTRACT"
 APPROVE_PERMISSION = "contract.approve_template"
 MAX_DEVIATION_CHARS = 4000
 
+# Запасной выбор без настройки: поставка раньше услуг (не по алфавиту кода)
+_SUBJECT_ORDER = {ContractSubject.SUPPLY: 0, ContractSubject.SERVICES: 1}
+
 _PARTNER_TYPES = {"SUPPLIER", "MANUFACTURER", "LOGISTICS_PROVIDER"}
 
 
@@ -226,8 +229,25 @@ def approve(template, user) -> Tuple[Optional[DocumentTemplate], Optional[str]]:
     template.approved_at = now
     template.is_active = True
     template.save(update_fields=["approval_status", "approved_by", "approved_at", "is_active", "updated_at"])
+    _carry_defaults_to_edition(template)
     _journal(template, user, "contract_template.approved", "Шаблон договора утверждён")
     return template, None
+
+
+def _carry_defaults_to_edition(template) -> None:
+    """Настройка хранит id редакции; новая утверждённая редакция наследует роль «по умолчанию» у прежних по цепочке."""
+    from parties.models.company_settings import CompanySettings
+
+    ancestors, node = [], template.previous_edition
+    while node is not None and node.pk not in ancestors:
+        ancestors.append(node.pk)
+        node = node.previous_edition
+    if not ancestors:
+        return
+    for field in ("default_client_contract_template", "default_partner_contract_template"):
+        CompanySettings.objects.filter(company=template.company, **{f"{field}_id__in": ancestors}).update(
+            **{f"{field}_id": template.pk}
+        )
 
 
 @transaction.atomic
@@ -255,9 +275,9 @@ def pick_template(seller_company, counterparty_company, template_id=None):
     режим, см. docstring модуля).
     """
     kind = counterparty_kind_of(counterparty_company)
-    offered = list(offered_templates(seller_company, kind).order_by("subject", "name"))
+    offered = sorted(offered_templates(seller_company, kind), key=lambda t: (_SUBJECT_ORDER.get(t.subject, 99), t.name))
     if template_id:
-        chosen = next((t for t in offered if t.id == int(template_id)), None)
+        chosen = next((t for t in offered if t.id == template_id), None)
         return (chosen, None) if chosen else (None, "CONTRACT_TEMPLATE_NOT_OFFERED")
     if not offered:
         return None, None
@@ -448,18 +468,22 @@ def request_deviation(contract_id: int, user: CustomUser, text: str):
 
 
 def _notify_holders(contract) -> None:
+    from urllib.parse import quote
+
     from core.tenant import own_company_id
     from notifications.models import Notification, NotificationType
     from notifications.services import push_notification_ws
 
     info = NotificationType.objects.filter(code="INFO").first()
+    # Карточка проекта (путь по бизнес-номеру сделки, как в Платформе), а не общий список
+    link = f"/eds/projects/{quote(contract.deal.number or f'D-{contract.deal_id}', safe='')}"
     for holder in _holders_to_notify(own_company_id()):
         notif = Notification.objects.create(
             user=holder,
             type=info,
             title="Запрос на отступление от шаблона договора",
             message=f"Договор {contract.number}: {contract.deviation_text[:200]}",
-            link="/eds/projects",
+            link=link,
             deal=contract.deal,
             event_code="contract.deviation_requested",
             event_params={"number": contract.number},

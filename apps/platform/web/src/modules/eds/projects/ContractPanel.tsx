@@ -41,8 +41,7 @@ function primaryOf(
   switch (contract.status) {
     case "project":
       if (contract.sent_to_client) return pick("client_agreed");
-      // ДОК-10: пока договору по шаблону что-то мешает (наша подпись, решение по отступлению), «На согласование» не предлагается
-      return contract.template?.send_blocker ? null : pick("send_to_client");
+      return pick("send_to_client"); // ДОК-10: ERP не отдаёт действие, пока договору по шаблону что-то мешает
     case "client_agreed":
       return pick("mark_issued");
     case "issued_at_operator":

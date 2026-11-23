@@ -10960,6 +10960,8 @@ export interface components {
         | "cancelled";
       /** @description Проект ушёл клиенту на согласование редакции и виден ему в кабинете */
       sent_to_client: boolean;
+      /** @description Что мешает отправить договор по шаблону клиенту сейчас: CONTRACT_NEEDS_OUR_SIGNATURE, CONTRACT_DEVIATION_PENDING; null — ничего */
+      send_blocker?: string | null;
     };
     ProjectInvoiceRef: {
       id: number;

@@ -260,12 +260,18 @@ class ContractViewSet(
         quote_id = request.data.get("quote_id")
         if not quote_id:
             return Response({"detail": "QUOTE_ID_REQUIRED"}, status=400)
+        try:
+            quote_id = int(quote_id)
+            raw_template = request.data.get("template_id") or None
+            template_id = int(raw_template) if raw_template is not None else None
+        except (TypeError, ValueError):
+            return Response({"detail": "BAD_ID"}, status=400)
         contract, err = crm_services.generate_contract_from_quote(
-            int(quote_id),
+            quote_id,
             actor=request.user,
             notes=request.data.get("notes", ""),
             send_to_client=str(request.data.get("send_to_client", "true")).lower() not in ("false", "0"),
-            template_id=request.data.get("template_id") or None,
+            template_id=template_id,
         )
         if err:
             return Response({"detail": err}, status=400)
@@ -288,7 +294,7 @@ class ContractViewSet(
     def sign_ours(self, request, pk=None):
         from crm.services import contract_templates
 
-        return self._template_flow(contract_templates.sign_by_company, int(pk), request.user)
+        return self._template_flow(contract_templates.sign_by_company, self.get_object().pk, request.user)
 
     @extend_schema(
         summary="Request a deviation from the approved template (ДОК-10)",
@@ -301,7 +307,7 @@ class ContractViewSet(
         from crm.services import contract_templates
 
         return self._template_flow(
-            contract_templates.request_deviation, int(pk), request.user, request.data.get("text", "")
+            contract_templates.request_deviation, self.get_object().pk, request.user, request.data.get("text", "")
         )
 
     @extend_schema(
@@ -317,7 +323,9 @@ class ContractViewSet(
         approve = request.data.get("approve")
         if not isinstance(approve, bool):
             return Response({"detail": "BAD_BOOLEAN"}, status=400)
-        return self._template_flow(contract_templates.decide_deviation, int(pk), request.user, approve_it=approve)
+        return self._template_flow(
+            contract_templates.decide_deviation, self.get_object().pk, request.user, approve_it=approve
+        )
 
     @extend_schema(
         summary="Select an approved wording variant for THIS contract (E4 playbook)",

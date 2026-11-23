@@ -29,7 +29,13 @@ def approver(pw, grant):  # noqa: F811
 
 
 def make_template(
-    pw, *, status=TemplateApproval.APPROVED, body=BODY, edition=1, name="Договор с клиентом · поставка"  # noqa: F811
+    pw,  # noqa: F811
+    *,
+    status=TemplateApproval.APPROVED,
+    body=BODY,
+    edition=1,
+    name="Договор с клиентом · поставка",
+    subject="supply",
 ):
     return DocumentTemplate.objects.create(
         company=pw.own,
@@ -39,7 +45,7 @@ def make_template(
         approval_status=status,
         edition=edition,
         counterparty_kind="client",
-        subject="supply",
+        subject=subject,
         is_active=status == TemplateApproval.APPROVED,
     )
 
@@ -297,3 +303,127 @@ def test_settings_accept_only_approved_templates_of_the_kind(pw):  # noqa: F811
         {"default_client_contract_template": approved.id, "contract_auto_send": False},
     )
     assert error is None and row.default_client_contract_template_id == approved.id and not row.contract_auto_send
+
+
+# ── ревью: настройка переживает новую редакцию, запасной порядок, замки, враждебные входы ─────────────────────────
+
+
+def test_default_template_survives_a_new_edition(pw, approver):  # noqa: F811
+    first = make_template(pw)
+    rules(pw, default_client_contract_template=first, contract_sign_before_send=False)
+    second, _ = svc.new_edition(first, pw.accountant)
+    svc.submit_for_approval(second, pw.accountant)
+    approved, error = svc.approve(second, approver)
+    assert error is None
+    assert CompanySettings.objects.get(company=pw.own).default_client_contract_template_id == approved.id
+    contract, _ = generate(pw)
+    assert contract.template_id == approved.id and contract.template_edition == 2
+
+
+def test_default_follows_the_whole_edition_chain(pw, approver):  # noqa: F811
+    first = make_template(pw)
+    rules(pw, default_client_contract_template=first)
+    current = first
+    for _ in range(2):
+        nxt, _ = svc.new_edition(current, pw.accountant)
+        svc.submit_for_approval(nxt, pw.accountant)
+        current, error = svc.approve(nxt, approver)
+        assert error is None
+    assert CompanySettings.objects.get(company=pw.own).default_client_contract_template_id == current.id
+
+
+def test_fallback_picks_supply_before_services(pw):  # noqa: F811
+    make_template(pw, name="Договор с клиентом · услуги", subject="services")
+    supply = make_template(pw, name="Договор с клиентом · поставка", subject="supply")
+    rules(pw, contract_sign_before_send=False)
+    contract, _ = generate(pw)  # настройки по умолчанию нет — запасной порядок явный, не по алфавиту кода
+    assert contract.template_id == supply.id
+
+
+def test_approved_template_cannot_be_deleted(pw, approver):  # noqa: F811
+    template = make_template(pw)
+    response = api(pw.director).delete(f"{TPL}{template.id}/")
+    assert response.status_code == 400 and response.json()["detail"] == "TEMPLATE_LOCKED"
+    assert DocumentTemplate.objects.filter(pk=template.pk).exists()
+
+
+def test_replaced_edition_cannot_be_switched_back_on(pw, approver):  # noqa: F811
+    first = make_template(pw)
+    second, _ = svc.new_edition(first, pw.accountant)
+    svc.submit_for_approval(second, pw.accountant)
+    svc.approve(second, approver)
+    response = api(pw.director).patch(f"{TPL}{first.id}/", {"is_active": True}, format="json")
+    assert response.status_code == 400 and response.json()["detail"] == "TEMPLATE_LOCKED"
+    assert [t.id for t in svc.offered_templates(pw.own, "client")] == [second.id]
+    # и действующую нельзя выключить в обход утверждения: договоры ушли бы в переходный режим без блокировок
+    off = api(pw.director).patch(f"{TPL}{second.id}/", {"is_active": False}, format="json")
+    assert off.status_code == 400 and off.json()["detail"] == "TEMPLATE_LOCKED"
+
+
+def test_draft_template_can_still_be_deleted(pw, approver):  # noqa: F811
+    draft = make_template(pw, status=TemplateApproval.DRAFT)
+    assert api(pw.director).delete(f"{TPL}{draft.id}/").status_code == 204
+
+
+def test_card_does_not_promise_send_without_our_signature(pw):  # noqa: F811
+    from crm.services import contract_flow
+
+    rules(pw, contract_auto_send=False, contract_sign_before_send=True)
+    make_template(pw)
+    contract, _ = generate(pw)
+    assert "send_to_client" not in contract_flow.allowed_actions(contract, pw.accountant)
+    post(pw.director, contract, "sign-ours")
+    contract.refresh_from_db()
+    assert "send_to_client" in contract_flow.allowed_actions(contract, pw.accountant)
+
+
+def test_card_hides_send_while_deviation_is_requested(pw, approver):  # noqa: F811
+    from crm.services import contract_flow
+
+    rules(pw, contract_auto_send=True, contract_sign_before_send=True)
+    make_template(pw)
+    contract, _ = generate(pw)
+    assert post(pw.accountant, contract, "request-deviation", {"text": "Оплата 30 дней"}).status_code == 200
+    post(pw.director, contract, "sign-ours")
+    contract.refresh_from_db()
+    assert svc.deviation_state(contract) == "requested"
+    assert "send_to_client" not in contract_flow.allowed_actions(contract, pw.accountant)
+    post(approver, contract, "decide-deviation", {"approve": True})
+    contract.refresh_from_db()
+    assert "send_to_client" in contract_flow.allowed_actions(contract, pw.accountant)
+
+
+def test_hostile_ids_give_400_or_404_not_500(pw, approver):  # noqa: F811
+    make_template(pw)
+    bad = api(pw.director).post(
+        "/api/v1/crm/contracts/generate-from-quote/", {"quote_id": pw.quote.id, "template_id": "abc"}, format="json"
+    )
+    assert bad.status_code == 400 and bad.json()["detail"] == "BAD_ID"
+    bad_quote = api(pw.director).post("/api/v1/crm/contracts/generate-from-quote/", {"quote_id": "x"}, format="json")
+    assert bad_quote.status_code == 400
+
+    missing = Contract(id=999999)
+    for action, body in (
+        ("sign-ours", {}),
+        ("request-deviation", {"text": "x"}),
+        ("decide-deviation", {"approve": True}),
+    ):
+        assert post(approver, missing, action, body).status_code == 404
+
+    assert api(approver).get(f"{TPL}offered/?deal_id=abc").status_code == 400
+    assert api(approver).get(f"{TPL}offered/?deal_id=999999").status_code == 404
+
+
+def test_template_actions_respect_the_contract_scope(pw):  # noqa: F811
+    rules(pw, contract_sign_before_send=True)
+    make_template(pw)
+    contract, _ = generate(pw)
+    for action, body in (
+        ("sign-ours", {}),
+        ("request-deviation", {"text": "x"}),
+        ("decide-deviation", {"approve": True}),
+    ):
+        assert post(pw.stranger, contract, action, body).status_code in (403, 404)
+    contract.refresh_from_db()
+    assert contract.manager_signed_at is None and svc.deviation_state(contract) == "none"
+    assert api(pw.stranger).get(f"{TPL}offered/?deal_id={pw.deal.id}").status_code in (403, 404)

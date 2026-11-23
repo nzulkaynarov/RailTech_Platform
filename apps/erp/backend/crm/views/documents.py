@@ -241,6 +241,10 @@ class DocumentTemplateViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
         instance = self.get_object()
         self._owner_company()
         self._assert_owned(instance)
+        from crm.services.contract_templates import is_locked
+
+        if is_locked(instance):  # утверждённый шаблон договора — след для договоров; не удаляется
+            return Response({"detail": "TEMPLATE_LOCKED"}, status=400)
         try:
             instance.delete()
         except ProtectedError:
@@ -280,10 +284,20 @@ class DocumentTemplateViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
     @action(detail=False, methods=["get"], url_path="offered")
     def offered(self, request):
         """Только утверждённые шаблоны вида контрагента сделки; `default` — шаблон по умолчанию из настроек."""
+        from accounts.services.permissions import is_seller, sees_all_deals
         from crm.models import Deal
         from crm.services import contract_templates as svc
 
-        deal = Deal.objects.select_related("company").filter(pk=request.query_params.get("deal_id") or 0).first()
+        try:
+            deal_id = int(request.query_params.get("deal_id") or 0)
+        except ValueError:
+            return Response({"detail": "BAD_ID"}, status=400)
+        deals = Deal.objects.select_related("company").filter(pk=deal_id)
+        if not (sees_all_deals(request.user) or is_seller(request.user)):
+            deals = deals.filter(
+                company_id__in=request.user.memberships.filter(is_active=True).values_list("company_id", flat=True)
+            )
+        deal = deals.first()
         if deal is None:
             return Response({"detail": "DEAL_NOT_FOUND"}, status=404)
         company_id = crm_services.resolve_owner_company_id(request.user)

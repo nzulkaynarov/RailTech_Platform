@@ -291,6 +291,9 @@ def update_template(template, *, name=None, kind_code=None, body_html=None, is_a
         (name is not None and name.strip() != template.name)
         or (kind_code is not None and kind_code != template.kind.code)
         or (body_html is not None and sanitize_template_html(body_html) != template.body_html)
+        # «Действует» ставит и снимает только утверждение (approve / новая редакция): иначе рядом две редакции
+        # или договоры теряют предложенные шаблоны и уходят в переходный режим без блокировок.
+        or (is_active is not None and bool(is_active) != template.is_active)
     ):
         raise ValidationError("TEMPLATE_LOCKED")
     fields = ["updated_at"]

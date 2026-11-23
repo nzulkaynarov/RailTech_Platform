@@ -581,6 +581,14 @@ export function contractActions(c: MutableContract, writer: boolean): ProjectCon
   }
 }
 
+/** Как `contract_flow.allowed_actions`: «На согласование» не обещается, пока договору по шаблону что-то мешает. */
+function withoutBlockedSend(
+  actions: ProjectContractActionsItem[],
+  template: ProjectContractTemplate | null,
+): ProjectContractActionsItem[] {
+  return template?.send_blocker ? actions.filter((a) => a !== "send_to_client") : actions;
+}
+
 /**
  * Блок «договор по шаблону» из фактов (как `crm/services/contract_templates.py`): путь — собран, наша подпись, в Кабинете,
  * подписан обеими; «что мешает» — нет нашей подписи или отступление ждёт решения; визы нужны только с отступлением.
@@ -721,7 +729,7 @@ export function toCard(
           signed_at: c.signed_at,
           has_pdf: true,
           has_scan: c.has_scan,
-          actions: contractActions(c, writer),
+          actions: withoutBlockedSend(contractActions(c, writer), templateOf(c, writer, approver)),
           template: templateOf(c, writer, approver),
           history: historyOf(p, "contract"),
         }

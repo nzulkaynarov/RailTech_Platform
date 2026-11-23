@@ -190,6 +190,15 @@ def _contract_step(row: RawRow) -> tuple[QueueItemKind, str, str] | None:
             return None
         return "issue_contract", "Сформировать проект договора по", "КП принято клиентом"
     if contract.status == "project" and not contract.sent_to_client:
+        # ДОК-10: шаг по фактам шаблона (ERP отдаёт `send_blocker`), а не по одному статусу
+        if contract.send_blocker == "CONTRACT_DEVIATION_PENDING":
+            return None  # ход за держателем «Право»: у отправителя строки нет
+        if contract.send_blocker == "CONTRACT_NEEDS_OUR_SIGNATURE":
+            return (
+                "issue_contract",
+                f"Подписать от компании договор {contract.number} по",
+                "до отправки клиенту нужна наша подпись",
+            )
         return (
             "issue_contract",
             f"Отправить клиенту проект договора {contract.number} по",

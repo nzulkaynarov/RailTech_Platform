@@ -86,6 +86,12 @@ class ProjectContractRef(BaseModel):
     sent_to_client: bool
 
 
+class ProjectListContractRef(ProjectContractRef):
+    """Договор в строке списка: что мешает отправить его по шаблону."""
+
+    send_blocker: str | None = None
+
+
 class ProjectInvoiceRef(BaseModel):
     id: int
     number: str
@@ -103,7 +109,7 @@ class ProjectActRef(BaseModel):
 
 class ProjectDocuments(BaseModel):
     quote: ProjectQuoteRef | None
-    contract: ProjectContractRef | None
+    contract: ProjectListContractRef | None
     invoice: ProjectInvoiceRef | None
     act: ProjectActRef | None
 

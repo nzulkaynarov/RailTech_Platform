@@ -286,20 +286,20 @@
         "save": "Eslatmalarni saqlaş"
       },
       "contracts": {
-        "title": "Shartnomalar",
-        "hint": "TT qabul qilingach shartnoma qanday yig‘iladi va ketadi.",
-        "note": "Qoidalar yangi shartnomalar uchun amal qiladi; yig‘ilganlar o‘zgarmaydi.",
-        "save": "Qoidalarni saqlash"
+        "title": "Şartnomalar",
+        "hint": "TT qabul qilingaç şartnoma qanday yiğiladi va ketadi.",
+        "note": "Qoidalar yangi şartnomalar uçun amal qiladi; yiğilganlar özgarmaydi.",
+        "save": "Qoidalarni saqlaş"
       }
     },
-    "contract_auto_send": "Tasdiqlangan shablon bo‘yicha shartnoma TT qabul qilingach o‘zi Kabinetga ketadi",
-    "contract_auto_sendHint": "Chetlanishsiz viza kerak emas. O‘chirilsa — shartnoma qo‘lda yuboriladi.",
-    "contract_sign_before_send": "Bizning imzo — mijozga yuborishdan oldin",
-    "contract_sign_before_sendHint": "O‘chirilsa — shartnoma tayyor bo‘lishi bilan ketadi.",
-    "contract_deviations_allowed": "Shablondan chetlanish — «Huquq» egasiga ariza bilan",
-    "contract_deviations_allowedHint": "Chetlanishli shartnoma viza yo‘nalishidan o‘tadi va vizalargacha mijozga ketmaydi.",
-    "defaultClientTemplate": "Standart shablon: mijoz",
-    "defaultPartnerTemplate": "Standart shablon: hamkor",
+    "contract_auto_send": "Tasdiqlangan şablon böyiça şartnoma TT qabul qilingaç özi Kabinetga ketadi",
+    "contract_auto_sendHint": "Çetlanişsiz viza kerak emas. Öçirilsa — şartnoma qölda yuboriladi.",
+    "contract_sign_before_send": "Bizning imzo — mijozga yuborişdan oldin",
+    "contract_sign_before_sendHint": "Öçirilsa — şartnoma tayyor bölişi bilan ketadi.",
+    "contract_deviations_allowed": "Şablondan çetlaniş — «Huquq» egasiga ariza bilan",
+    "contract_deviations_allowedHint": "Çetlanişli şartnoma viza yönalişidan ötadi va vizalargaça mijozga ketmaydi.",
+    "defaultClientTemplate": "Standart şablon: mijoz",
+    "defaultPartnerTemplate": "Standart şablon: hamkor",
     "edition": "{{n}}-tahrir"
   },
   "charges": {
@@ -332,7 +332,7 @@
     "parts": {
       "documents": "Hujjatlar",
       "emails": "Xatlar",
-      "contracts": "Shartnomalar"
+      "contracts": "Şartnomalar"
     },
     "documents": {
       "name": "Nomi",
@@ -670,18 +670,18 @@
     }
   },
   "contractTemplates": {
-    "title": "Shartnoma shablonlari",
+    "title": "Şartnoma şablonlari",
     "hint": "Yurist bir marta tasdiqlaydi — bitimda faqat tasdiqlanganlari tanlanadi.",
-    "add": "Yangi shablon",
-    "createTitle": "Yangi shartnoma shabloni",
-    "createSubmit": "Yaratish",
+    "add": "Yangi şablon",
+    "createTitle": "Yangi şartnoma şabloni",
+    "createSubmit": "Yaratiş",
     "empty": {
-      "title": "Shartnoma shablonlari hali yo‘q",
-      "text": "Standart matndan shablon yarating va tasdiqlashga yuboring: bitimda faqat tasdiqlanganlari taklif etiladi."
+      "title": "Şartnoma şablonlari hali yöq",
+      "text": "Standart matndan şablon yarating va tasdiqlaşga yuboring: bitimda faqat tasdiqlanganlari taklif etiladi."
     },
     "columns": {
-      "name": "Shablon",
-      "counterparty": "Kim uchun",
+      "name": "Şablon",
+      "counterparty": "Kim uçun",
       "subject": "Predmet",
       "edition": "Tahrir"
     },
@@ -690,40 +690,40 @@
       "partner": "Hamkor"
     },
     "subject": {
-      "supply": "Yetkazib berish",
+      "supply": "Yetkazib beriş",
       "services": "Xizmatlar"
     },
     "status": {
       "draft": "Qoralama",
-      "on_approval": "Tasdiqlashda",
+      "on_approval": "Tasdiqlaşda",
       "approved": "Tasdiqlangan"
     },
     "approvedLine": "{{edition}}-tahrir, {{date}} · tasdiqladi: {{who}}",
     "waitingLine": "{{edition}}-tahrir · «Huquq» kutmoqda, {{date}} dan",
     "draftLine": "{{edition}}-tahrir",
-    "replaced": "yangi tahrir bilan almashtirilgan",
+    "replaced": "yangi tahrir bilan almaştirilgan",
     "notOffered": "bitimda taklif etilmaydi",
     "fallback": "uz va en — rus matni",
     "actions": {
       "edition": "Yangi tahrir",
-      "submit": "Tasdiqlashga",
-      "approve": "Tasdiqlash",
-      "back": "Qoralamaga qaytarish"
+      "submit": "Tasdiqlaşga",
+      "approve": "Tasdiqlaş",
+      "back": "Qoralamaga qaytariş"
     },
     "done": {
       "edition": "Yangi tahrir yaratildi",
-      "submit": "Tasdiqlashga yuborildi",
-      "approve": "Shablon tasdiqlandi",
+      "submit": "Tasdiqlaşga yuborildi",
+      "approve": "Şablon tasdiqlandi",
       "back": "Qoralamaga qaytarildi",
-      "create": "Shablon yaratildi"
+      "create": "Şablon yaratildi"
     },
-    "note": "Yangi shablonni «Huquq» zonasi egasi tasdiqlaydi. Mustahkamlangan matn faqat yangi tahrir bilan o‘zgaradi; shartnomalar o‘z tahririda qoladi.",
+    "note": "Yangi şablonni «Huquq» zonasi egasi tasdiqlaydi. Mustahkamlangan matn faqat yangi tahrir bilan özgaradi; şartnomalar öz tahririda qoladi.",
     "errors": {
-      "generic": "Bajarilmadi. Sahifani yangilab, qayta urinib ko‘ring.",
-      "template_locked": "Tasdiqlangan matn o‘zgarmaydi. Yangi tahrir yarating.",
-      "template_transition_not_allowed": "Shablon boshqa holatda. Sahifani yangilang.",
-      "template_edition_in_progress": "Yangi tahrir allaqachon ishlanmoqda.",
-      "template_counterparty_required": "Shablon kim uchun ekanini belgilang.",
+      "generic": "Bajarilmadi. Sahifani yangilab, qayta urinib köring.",
+      "template_locked": "Tasdiqlangan matn özgarmaydi. Yangi tahrir yarating.",
+      "template_transition_not_allowed": "Şablon boşqa holatda. Sahifani yangilang.",
+      "template_edition_in_progress": "Yangi tahrir allaqaçon işlanmoqda.",
+      "template_counterparty_required": "Şablon kim uçun ekanini belgilang.",
       "template_approval_forbidden": "«Huquq» zonasi egasi tasdiqlaydi."
     }
   }

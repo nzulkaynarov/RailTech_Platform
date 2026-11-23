@@ -143,8 +143,16 @@ def allowed_actions(contract, user) -> list:
 
     Единый источник для карточки проекта: страница не вычисляет сама, что можно (CONVENTIONS Платформы, правило 2).
     """
+    from .contract_templates import send_blocker
+
     code = _status_code(contract)
-    return [t.action for t in TRANSITIONS.values() if code in t.sources and may(user, t.permission) and is_staff(user)]
+    actions = [
+        t.action for t in TRANSITIONS.values() if code in t.sources and may(user, t.permission) and is_staff(user)
+    ]
+    # ДОК-10: «На согласование» не обещаем, пока отправка ответит 409 (нет нашей подписи, отступление ждёт решения)
+    if "send_to_client" in actions and send_blocker(contract) is not None:
+        actions.remove("send_to_client")
+    return actions
 
 
 def is_staff(user) -> bool:
