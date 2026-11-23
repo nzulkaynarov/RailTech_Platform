@@ -357,9 +357,9 @@ class QuoteLifecycleService:
         (re-sending the same КП version keeps its citable number/link); a fresh link is minted by
         issuing a new version. Records a timeline event so the audit shows who pulled the link.
         """
-        from ._shared import _log_quote
-
         from portal.services.doc_links import revoke_quote_links
+
+        from ._shared import _log_quote
 
         quote = Quote.objects.select_related("deal", "status").get(pk=quote_id)
         # ДК-1: отзыв на документе гасит и ссылки получателей в Кабинет (`/d/<токен>`), и страницу ERP старой ссылки;

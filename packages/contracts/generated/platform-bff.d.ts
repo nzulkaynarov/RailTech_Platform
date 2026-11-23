@@ -11881,10 +11881,10 @@ export interface components {
     /** @description Ссылка клиента на КП в Кабинете (ДК-1): состояние, кому ушла (адрес замаскирован) и открывал ли */
     QuoteClientLink: {
       /**
-       * @description `active` — ссылка открывается; `revoked` — отозвана на документе; `expired` — срок вышел; `none` — ссылки нет
+       * @description `active` — ссылка открывается; `revoked` — отозвана на документе; `expired` — срок вышел; `superseded` — есть более новая отправленная версия КП; `none` — ссылки нет
        * @enum {string}
        */
-      state: "none" | "active" | "revoked" | "expired";
+      state: "none" | "active" | "revoked" | "expired" | "superseded";
       /** @description Адрес получателя, замаскированный (`a***@example.uz`) */
       recipient_hint: string | null;
       /**
