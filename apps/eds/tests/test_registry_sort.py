@@ -51,10 +51,12 @@ async def test_amount_order_walks_pages_with_empty_last(
 ) -> None:
     await seed(client, staff)
     who = staff["manager"]
-    kinds = {"kind": "memo"}
-    asc = await walk(client, who, url, "amount", **kinds)
-    desc = await walk(client, who, url, "-amount", **kinds)
-    value = lambda row: row["amount"]["amount"] if row["amount"] else None  # noqa: E731
+    asc = await walk(client, who, url, "amount", kind="memo")
+    desc = await walk(client, who, url, "-amount", kind="memo")
+
+    def value(row: dict[str, Any]) -> Any:
+        return row["amount"]["amount"] if row["amount"] else None
+
     assert [value(r) for r in asc] == ["20.00", "500.00", "1500.00", None]
     assert [value(r) for r in desc] == ["1500.00", "500.00", "20.00", None]  # пустое — в конце и при «вниз»
     assert len({r["id"] for r in asc}) == 4  # ни потерь, ни повторов на стыке страниц
