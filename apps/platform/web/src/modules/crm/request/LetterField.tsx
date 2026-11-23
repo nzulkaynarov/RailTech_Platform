@@ -11,6 +11,7 @@ import {
 import { FilePicker } from "../../../shared/ui/FileField";
 import { MAX_FILE_BYTES } from "../../eds/documents/fileSize";
 import { reasonError } from "../common/errors";
+import { noteContext, type NoteKind } from "./callNote";
 import type { LetterFile } from "./formModel";
 
 const ACCEPT = ".pdf,.png,.jpg,.jpeg,.gif,.webp,.tif,.tiff,.doc,.docx,.xls,.xlsx,.ppt,.pptx";
@@ -32,13 +33,14 @@ export function LetterField({
   value: LetterFile | null;
   onChange: (value: LetterFile | null) => void;
   /** Основание по звонку возможно: сборка записки и причина, по которой её пока нельзя заказать */
-  callNote?: { onStart: () => void; blockedReason?: string | null };
+  callNote?: { onStart: () => void; blockedReason?: string | null; kind?: NoteKind };
 }) {
   const { t } = useTranslation("request");
   const upload = useUploadCrmRequestFile();
   const [openError, setOpenError] = useState<string | null>(null);
   const note = value?.kind === "call_note";
   const noteDone = note && value.status === "done";
+  const context = noteContext(callNote?.kind ?? "call");
   const noteAction = callNote && (!value || (note && value.status === "error"));
 
   const pick = (file: File | undefined) => {
@@ -92,7 +94,7 @@ export function LetterField({
             aria-describedby={callNote.blockedReason ? `${id}-note-hint` : undefined}
             onClick={callNote.onStart}
           >
-            {note ? t("letter.noteRetry") : t("letter.callBasis")}
+            {note ? t("letter.noteRetry") : t("letter.callBasis", { context })}
           </Button>
           {callNote.blockedReason ? (
             <span className="pf-hint" id={`${id}-note-hint`}>
@@ -105,12 +107,14 @@ export function LetterField({
         <div className="pf-fp-row" style={{ alignItems: "center" }}>
           {value.status === "uploading" ? (
             <span className="pf-hint" role="status">
-              {note ? t("letter.noteBuilding") : t("letter.uploading")}
+              {note ? t("letter.noteBuilding", { context }) : t("letter.uploading")}
             </span>
           ) : null}
           {value.status === "done" ? (
             <span role="status">
-              {note ? t("letter.noteAttached") : t("letter.uploaded", { name: value.name })}
+              {note
+                ? t("letter.noteAttached", { context })
+                : t("letter.uploaded", { name: value.name })}
             </span>
           ) : null}
           {noteDone && value.id ? (

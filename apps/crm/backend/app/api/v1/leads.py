@@ -39,6 +39,7 @@ from app.schemas.leads import (
     HandOver,
     InboxResponse,
     LeadDetail,
+    LeadOriginOut,
     LeadOut,
     LeadPage,
     MessageContextOut,
@@ -101,6 +102,18 @@ def _handed_by(escalations: dict[int, Escalation]) -> list[int | None]:
 def _platform_status(lead: Lead, escalation: Escalation | None) -> str:
     asks_price, sla_overdue = lead_status.escalation_flags(escalation)
     return platform_status(lead.stage, asks_price=asks_price, sla_overdue=sla_overdue).value
+
+
+def _origin_out(lead: Lead) -> LeadOriginOut | None:
+    if not (lead.source_form or lead.source_page or lead.source_referrer or lead.source_utm):
+        return None
+    return LeadOriginOut(
+        form=lead.source_form,
+        page=lead.source_page,
+        referrer=lead.source_referrer,
+        utm=lead.source_utm,
+        landing_language=lead.source_lang,
+    )
 
 
 def lead_out(
@@ -194,6 +207,13 @@ async def list_leads(
     created_from: datetime | None = None,
     created_to: datetime | None = None,
     sort: str = Query(default="last_message", pattern="^(last_message|score|created)$"),
+    order: Annotated[
+        str,
+        Query(
+            pattern="^(asc|desc)$",
+            description="Направление `sort`: по умолчанию `desc` (новые и сильные сверху)",
+        ),
+    ] = "desc",
     limit: Annotated[int, Query(ge=1, le=200)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,
     platform_status: Annotated[
@@ -227,7 +247,9 @@ async def list_leads(
         source,
     )
     async with container.session_factory() as session:
-        rows, total = await crm.list_leads(session, flt, who.user_id, limit, offset, sort)
+        rows, total = await crm.list_leads(
+            session, flt, who.user_id, limit, offset, sort, order == "asc"
+        )
         escalations = await crm.active_escalations(session, [r.id for r in rows])
         names = await crm.user_names(session, rows, _handed_by(escalations))
     return LeadPage(items=[lead_out(r, escalations.get(r.id), names) for r in rows], total=total)
@@ -337,6 +359,7 @@ async def get_lead(lead_id: int, _: Reader, container: ContainerDep) -> LeadDeta
         first_response_overdue=web_lead_sla.overdue(
             lead.first_response_due_at, lead.assigned_user_id, now
         ),
+        origin=_origin_out(lead),
         confirmation=NoticeOut.model_validate(confirmation, from_attributes=True)
         if confirmation is not None
         else None,

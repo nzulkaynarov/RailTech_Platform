@@ -15,6 +15,10 @@ import type { LetterFile } from "./formModel";
 export const CALL_NOTE_POLL_MS = 1000;
 const CALL_NOTE_POLL_LIMIT = 60;
 
+/** «call» — «Записка о звонке», «request» — «Записка о запросе» (лид с сайта, из Кабинета, Telegram): тексты по контексту. */
+export type NoteKind = "call" | "request";
+export const noteContext = (kind: NoteKind) => (kind === "request" ? "request" : undefined);
+
 /** Язык записки — язык интерфейса сотрудника. */
 export function noteLanguage(language: string): Language {
   const base = language.slice(0, 2);
@@ -43,7 +47,7 @@ const sleep = (ms: number) =>
  * формы), опрашивает готовность и отдаёт форме `LetterFile` с `kind: "call_note"` — «собираем», «готово» или причину, по
  * которой записку не собрать (нет бланка, нет согласия, канал не «звонок»).
  */
-export function useCallNote(onChange: (letter: LetterFile) => void) {
+export function useCallNote(onChange: (letter: LetterFile) => void, kind: NoteKind = "call") {
   const { t } = useTranslation("request");
   const create = useCreateCrmRequestCallNote();
   const alive = useRef(true);
@@ -75,11 +79,20 @@ export function useCallNote(onChange: (letter: LetterFile) => void) {
       if (note.status === "ready" && note.file) {
         onChange({ name: note.file.name, status: "done", id: note.file.id, kind: "call_note" });
       } else {
-        onChange(failed(t("letter.noteFailed", { reason: t("letter.noteReasons.generic") })));
+        onChange(
+          failed(
+            t("letter.noteFailed", {
+              context: noteContext(kind),
+              reason: t("letter.noteReasons.generic"),
+            }),
+          ),
+        );
       }
     } catch (error: unknown) {
       if (!alive.current) return;
-      onChange(failed(t("letter.noteFailed", { reason: reasonOf(t, error) })));
+      onChange(
+        failed(t("letter.noteFailed", { context: noteContext(kind), reason: reasonOf(t, error) })),
+      );
     }
   };
 
