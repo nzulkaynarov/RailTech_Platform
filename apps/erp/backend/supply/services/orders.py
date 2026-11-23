@@ -38,6 +38,7 @@ from inventory.access import (
 from inventory.models import MovementKind, Reservation, ReservationStatus
 from inventory.services import stock, trace
 from inventory.services.overview import present_receipt_line
+from portal.models import NoticeChannel
 from supply.models import (
     TRANSITIONS,
     GoodsReceipt,
@@ -468,6 +469,34 @@ def _transition(order: SupplierOrder, target: str) -> None:
         raise StockError("TRANSITION_NOT_ALLOWED", 409, current=order.status, target=target)
 
 
+def partner_confirms_in_cabinet(company) -> bool:
+    """Партнёр сам подтверждает заказы в Кабинете (ДК-5): у компании открыт раздел заказов на поставку и есть приглашённый
+    действующий контакт с правом подтверждать. Тогда «подтверждён» — факт его действия, сотрудник за него не отвечает;
+    без Кабинета (подтвердил ответом на письмо) сотрудник записывает подтверждение сам."""
+    from parties.models import Contact, active_contact_q
+    from portal.services.access import company_access
+
+    _roles, modules = company_access(getattr(company, "pk", None))
+    if "my_products" not in modules:
+        return False
+    return (
+        Contact.objects.filter(active_contact_q(), company=company, can_act=True)
+        .filter(Q(invited_at__isnull=False) | Q(last_login_at__isnull=False))
+        .exists()
+    )
+
+
+def _notify_partner(order: SupplierOrder, *, already_emailed=()) -> list:
+    """Колокольчик и письмо со ссылкой контактам партнёра с Кабинетом; без Кабинета — пусто."""
+    try:
+        from portal.services import notice_sources
+
+        return notice_sources.partner_order_sent(order, already_emailed=already_emailed)
+    except Exception:
+        logger.exception("Не удалось отправить уведомление о заказе %s", order.pk)
+        return []
+
+
 def send_gaps(order: SupplierOrder, lines) -> tuple[int, bool]:
     """Чего заказу не хватает, чтобы уйти партнёру (СЦ-10): строк без цены и ожидаемой даты."""
     return sum(1 for line in lines if line.unit_price is None), order.expected_date is None
@@ -487,9 +516,17 @@ def send_order(user, order_id: int, *, to_email: str = "") -> SupplierOrder:
     missing_prices, missing_date = send_gaps(order, lines)
     if missing_prices or missing_date:
         raise StockError("ORDER_INCOMPLETE", 409, missing_prices=missing_prices, missing_date=missing_date)
-    recipient = (to_email or "").strip() or supplier_email(order.supplier)
-    if not recipient:
+    explicit = (to_email or "").strip()
+    recipient = explicit or supplier_email(order.supplier)
+    # ДК-5: контактам партнёра с Кабинетом заказ уходит одним письмом — уведомлением со ссылкой; письмо «подтвердите
+    # ответом» им не шлём. Адрес, который сотрудник вписал сам, получает письмо по старому пути.
+    notices = _notify_partner(order, already_emailed=[explicit] if explicit else [])
+    by_cabinet = [n for n in notices if n.channel == NoticeChannel.EMAIL]
+    send_legacy = bool(explicit) or not by_cabinet
+    if send_legacy and not recipient:
         raise StockError("SUPPLIER_EMAIL_REQUIRED", 409)
+    if not send_legacy:
+        recipient = by_cabinet[0].contact.email
     context = {
         "supplier_name": order.supplier.name,
         "number": order.number,
@@ -511,19 +548,21 @@ def send_order(user, order_id: int, *, to_email: str = "") -> SupplierOrder:
         "with_prices": any(line.unit_price is not None for line in lines),
         "currency": order.currency.code if order.currency_id else "",
     }
-    try:
-        mail = send_templated_email(
-            "supplier_order",
-            context,
-            to=[recipient],
-            channel="transactional",
-            user=None,
-            language=order.supplier.language or None,
-            reply_to=[user.email] if getattr(user, "email", "") else None,
-        )
-    except EmailDeliveryError as exc:
-        logger.warning("Заказ %s не отправлен: %s", order.number, exc)
-        raise StockError("EMAIL_FAILED", 409) from exc
+    mail = None
+    if send_legacy:
+        try:
+            mail = send_templated_email(
+                "supplier_order",
+                context,
+                to=[recipient],
+                channel="transactional",
+                user=None,
+                language=order.supplier.language or None,
+                reply_to=[user.email] if getattr(user, "email", "") else None,
+            )
+        except EmailDeliveryError as exc:
+            logger.warning("Заказ %s не отправлен: %s", order.number, exc)
+            raise StockError("EMAIL_FAILED", 409) from exc
     order.status = OrderStatus.SENT
     order.sent_at = timezone.now()
     order.sent_by = user if getattr(user, "pk", None) else None
@@ -531,12 +570,6 @@ def send_order(user, order_id: int, *, to_email: str = "") -> SupplierOrder:
     order.sent_mail = mail
     order.save(update_fields=["status", "sent_at", "sent_by", "sent_to", "sent_mail", "updated_at"])
     _log(order, OrderLogKind.SENT, user, recipient)
-    try:
-        from portal.services import notice_sources
-
-        notice_sources.partner_order_sent(order)
-    except Exception:
-        logger.exception("Не удалось отправить уведомление о заказе %s", order.pk)
     return order
 
 
@@ -545,6 +578,9 @@ def confirm_order(user, order_id: int, *, expected_date: Optional[date] = None) 
     require_supply(user)
     order = _order_or_404(order_id, lock=True)
     _transition(order, OrderStatus.CONFIRMED)
+    if partner_confirms_in_cabinet(order.supplier):
+        # ДК-5: партнёр с Кабинетом подтверждает сам — статус «подтверждён» не выставляется за него.
+        raise StockError("PARTNER_CONFIRMS_IN_CABINET", 409)
     if expected_date is not None:
         order.expected_date = expected_date
     if order.expected_date is None:
@@ -777,7 +813,7 @@ def present_order(order: SupplierOrder, user, *, detail: bool = False) -> dict:
             "edit": manage and status == OrderStatus.DRAFT,
             "send": manage and status == OrderStatus.DRAFT and complete,
             "request_price": manage and status == OrderStatus.DRAFT and missing_prices > 0,
-            "confirm": manage and status == OrderStatus.SENT,
+            "confirm": manage and status == OrderStatus.SENT and not partner_confirms_in_cabinet(order.supplier),
             "receive": manage and status == OrderStatus.CONFIRMED,
             "cancel": manage
             and status in (OrderStatus.DRAFT, OrderStatus.SENT, OrderStatus.CONFIRMED)

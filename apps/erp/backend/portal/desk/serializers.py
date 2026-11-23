@@ -127,6 +127,10 @@ class DeskSupplierAccessInviteIn(serializers.Serializer):
     kind = serializers.CharField(required=False, allow_blank=True, max_length=20)
     contract_number = serializers.CharField(required=False, allow_blank=True, max_length=64)
     contract_date = serializers.DateField(required=False, allow_null=True)
+    can_act = serializers.BooleanField(
+        required=False,
+        help_text="Право контакта подтверждать заказы поставщику (в Кабинете и в Платформе — «Может подтверждать»); не указано — не меняется.",
+    )
 
 
 class DeskSupplierAccessRelationshipPatch(serializers.Serializer):

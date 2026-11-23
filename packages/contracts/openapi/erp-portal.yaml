@@ -5020,7 +5020,7 @@ components:
         partner: [my_products, catalog_requests, letters, messages, profile]
       x-role-default-modules:
         client: [catalog_requests, quotes, documents, letters, contracts, invoices, acts, deliveries, messages, company, team, profile]
-        partner: [my_products, catalog_requests, letters, messages, profile]
+        partner: [my_products, letters, messages, profile]
 
     TelegramStatus:
       type: object

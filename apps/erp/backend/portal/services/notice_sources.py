@@ -245,16 +245,19 @@ def partner_card_decision(product, decision: str, *, reason: str = "", issues=()
     return len(rows)
 
 
-def partner_order_sent(order) -> int:
-    """Заказ поставщику отправлен — ждёт подтверждения (колокольчик и письмо контактам партнёра)."""
+def partner_order_sent(order, *, already_emailed=()) -> list:
+    """Заказ поставщику отправлен — ждёт подтверждения (колокольчик и письмо контактам партнёра).
+
+    Возвращает созданные уведомления: по каналу видно, кому ушло письмо со ссылкой (ДК-5 — оно единственное по заказу).
+    `already_emailed` — адреса, которым письмо по заказу уже ушло другим путём."""
     from .access import company_access
 
     company = getattr(order, "supplier", None)
     if company is None:
-        return 0
+        return []
     _roles, modules = company_access(company.pk)
     if "my_products" not in modules:
-        return 0
+        return []
     number = order.number or f"PO-{order.pk}"
     rows = notify(
         "partner_order_sent",
@@ -265,8 +268,9 @@ def partner_order_sent(order) -> int:
         link=f"/partner/orders?orderId={order.pk}",
         dedup=f"{order.pk}:sent",
         bot_reaches=False,
+        already_emailed=already_emailed,
     )
-    return len(rows)
+    return rows
 
 
 def partner_rfq_sent(price_request) -> int:

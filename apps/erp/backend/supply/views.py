@@ -297,6 +297,11 @@ class OrderConfirmView(RoleGatedViewMixin, APIView):
     @extend_schema(
         operation_id="stock_order_confirm",
         summary="Отметить подтверждение поставщика",
+        description=(
+            "Подтверждение со слов поставщика, который не работает в Кабинете. Если у партнёра есть приглашённый контакт с "
+            "правом подтверждать и открыт раздел заказов, подтверждает он сам, а здесь — 409 `PARTNER_CONFIRMS_IN_CABINET` "
+            "(`actions.confirm` = false)."
+        ),
         tags=TAGS,
         request=OrderConfirmInSerializer,
         responses={200: OrderDetailSerializer, **ERRORS},

@@ -34493,7 +34493,7 @@
         "/api/v1/stock/orders/{order_id}/confirm/": {
             "post": {
                 "operationId": "stock_order_confirm",
-                "description": "POST /api/v1/stock/orders/<id>/confirm/ — поставщик подтвердил (отправлен → подтверждён); нужна ожидаемая дата.",
+                "description": "Подтверждение со слов поставщика, который не работает в Кабинете. Если у партнёра есть приглашённый контакт с правом подтверждать и открыт раздел заказов, подтверждает он сам, а здесь — 409 `PARTNER_CONFIRMS_IN_CABINET` (`actions.confirm` = false).",
                 "summary": "Отметить подтверждение поставщика",
                 "parameters": [
                     {
@@ -44895,6 +44895,10 @@
                         "type": "string",
                         "format": "date",
                         "nullable": true
+                    },
+                    "can_act": {
+                        "type": "boolean",
+                        "description": "Право контакта подтверждать заказы поставщику (в Кабинете и в Платформе — «Может подтверждать»); не указано — не меняется."
                     }
                 },
                 "required": [

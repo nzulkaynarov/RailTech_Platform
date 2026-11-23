@@ -62,7 +62,8 @@ def supplier_contact(supplier_company):
 
 
 def relate(company, status_=RelationshipStatus.ACTIVE, **extra):
-    extra.setdefault("modules", list(ROLE_DEFAULT_MODULES["partner"]))
+    # партнёр с разделом покупателя: новому отношению его не дают (ДК-5), сотрудник включает сам
+    extra.setdefault("modules", ["my_products", "catalog_requests", "letters", "messages", "profile"])
     return CompanyRelationship.objects.create(company=company, role=RelationshipRole.PARTNER, status=status_, **extra)
 
 
