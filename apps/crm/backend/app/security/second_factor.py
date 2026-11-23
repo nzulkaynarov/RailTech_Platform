@@ -6,6 +6,9 @@
 
 Токены — JWT тем же ключом, что access, со своим `typ`:
 * `2fa_challenge` — 5 минут между паролем и кодом (`sub`, версия пароля);
+* `2fa_enroll` — 15 минут на настройку фактора сразу после пароля, когда он обязателен (ДВ-4б);
+* `step_up` — 5 минут «свежего кода» перед чувствительным действием (ДВ-4б), заголовок
+  `X-Step-Up-Token`; привязан к сотруднику, версии пароля и версии фактора;
 * `2fa_device` — «запомнить устройство» на 30 дней (`sub`, версия пароля и версия второго
   фактора — момент включения: после выключения и повторного включения прежние метки не действуют).
 """
@@ -24,6 +27,8 @@ from app.security.tokens import ALGORITHM, ISSUER, TokenError
 
 CHALLENGE_TTL: Final = timedelta(minutes=5)
 DEVICE_TTL: Final = timedelta(days=30)
+ENROLL_TTL: Final = timedelta(minutes=15)
+STEP_UP_TTL: Final = timedelta(minutes=5)
 BACKUP_CODES: Final = 8
 _BACKUP_ALPHABET: Final = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"  # без 0/O, 1/I
 _STEP_S: Final = 30
@@ -130,3 +135,19 @@ def issue_device(key: bytes, claims: FactorClaims, now: datetime | None = None) 
 
 def decode_device(key: bytes, token: str) -> FactorClaims:
     return _decode(key, "2fa_device", token)
+
+
+def issue_enroll(key: bytes, claims: FactorClaims, now: datetime | None = None) -> str:
+    return _issue(key, "2fa_enroll", claims, ENROLL_TTL, now or datetime.now(UTC))
+
+
+def decode_enroll(key: bytes, token: str) -> FactorClaims:
+    return _decode(key, "2fa_enroll", token)
+
+
+def issue_step_up(key: bytes, claims: FactorClaims, now: datetime | None = None) -> str:
+    return _issue(key, "step_up", claims, STEP_UP_TTL, now or datetime.now(UTC))
+
+
+def decode_step_up(key: bytes, token: str) -> FactorClaims:
+    return _decode(key, "step_up", token)

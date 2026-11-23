@@ -38,6 +38,22 @@ class SecondFactorChallengeOut(BaseModel):
 
     second_factor_required: Literal[True] = True
     challenge: str
+    # ДВ-4б: фактор обязателен по разделам доступа, но не настроен — `challenge` годится только
+    # для `/auth/login/enroll/*` (экран настройки сразу после пароля)
+    enrollment_required: bool = False
+
+
+class EnrollSetupIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    challenge: str = Field(min_length=1, max_length=2048)
+
+
+class EnrollIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    challenge: str = Field(min_length=1, max_length=2048)
+    code: str = Field(min_length=6, max_length=16)
 
 
 class ChangePasswordIn(BaseModel):
@@ -121,6 +137,12 @@ class SessionOut(BaseModel):
     me: Me
     must_change_password: bool
     expires_at: datetime
+
+
+class EnrolledSession(SessionOut):
+    """Сессия после настройки обязательного фактора при входе (ДВ-4б): резервные коды — один раз."""
+
+    backup_codes: list[str]
 
 
 def initials_of(name: str, email: str) -> str:

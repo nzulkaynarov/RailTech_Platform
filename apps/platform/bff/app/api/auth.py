@@ -9,6 +9,7 @@ from fastapi.responses import JSONResponse
 
 from app.auth import FAILED_LOGIN_CODES, SecondFactorChallenge
 from app.client_ip import UNKNOWN
+from app.clients import crm_setup
 from app.clients.base import BackendUnavailableError
 from app.cookies import SESSION_COOKIE, clear_session_cookies, set_session_cookies
 from app.deps import (
@@ -23,13 +24,21 @@ from app.deps import (
 from app.errors import PlatformError, backend_reason, backend_unavailable, from_backend
 from app.schemas import (
     ChangePasswordIn,
+    EnrolledSession,
+    EnrollIn,
+    EnrollSetupIn,
     LoginIn,
     SecondFactorChallengeOut,
     SecondFactorLoginIn,
     SessionOut,
     build_session,
 )
-from app.schemas_profile import ForgotPasswordAccepted, ForgotPasswordIn, ResetPasswordIn
+from app.schemas_profile import (
+    ForgotPasswordAccepted,
+    ForgotPasswordIn,
+    ResetPasswordIn,
+    SecondFactorSetup,
+)
 from app.session import SessionData
 
 router = APIRouter(tags=["auth"])
@@ -90,7 +99,9 @@ async def login(
     if isinstance(result, SecondFactorChallenge):
         log.info("login_second_factor_required", email_hash=attempt.email_digest[:12])
         return JSONResponse(
-            SecondFactorChallengeOut(challenge=result.challenge).model_dump(),
+            SecondFactorChallengeOut(
+                challenge=result.challenge, enrollment_required=result.enrollment
+            ).model_dump(),
             status_code=status.HTTP_202_ACCEPTED,
             headers={"Cache-Control": "no-store"},
         )
@@ -139,6 +150,66 @@ async def login_second_factor(
             samesite="strict",
         )
     return await _signed_in(request, response, service, settings, sid, data)
+
+
+@router.post(
+    "/auth/login/enroll/setup",
+    response_model=SecondFactorSetup,
+    operation_id="loginEnrollSetup",
+)
+async def login_enroll_setup(
+    body: EnrollSetupIn, request: Request, service: AuthServiceDep, limiter: LoginLimiterDep
+) -> SecondFactorSetup:
+    """Секрет и адрес QR при входе, когда фактор обязателен по разделам доступа, но не настроен
+    (ДВ-4б): `challenge` из 202 на `/auth/login` с `enrollment_required`."""
+    ip: str = request.state.client_ip
+    attempt = await limiter.check(ip, "second-factor")
+    try:
+        try:
+            issuer = (await crm_setup.fetch_state(request.app.state.crm)).company_name or ""
+        except (BackendUnavailableError, PlatformError):
+            issuer = ""
+        setup = await service.enroll_setup(
+            body.challenge, issuer[:60], None if ip == UNKNOWN else ip
+        )
+    except BaseException:
+        await limiter.refund(attempt)
+        raise
+    await limiter.succeeded(attempt)
+    return SecondFactorSetup.model_validate(setup)
+
+
+@router.post("/auth/login/enroll", response_model=EnrolledSession, operation_id="loginEnroll")
+async def login_enroll(
+    body: EnrollIn,
+    request: Request,
+    response: Response,
+    service: AuthServiceDep,
+    limiter: LoginLimiterDep,
+    settings: SettingsDep,
+) -> EnrolledSession:
+    """Код из приложения включает фактор и открывает сессию; резервные коды — в ответе, один раз
+    (ДВ-4б). Неверный код — 401 `SECOND_FACTOR_INVALID` (в счёт блокировки CRM), время вышло —
+    401 `SECOND_FACTOR_EXPIRED`."""
+    ip: str = request.state.client_ip
+    attempt = await limiter.check(ip, "second-factor")
+    try:
+        sid, data, codes = await service.enroll(
+            body.challenge, body.code, None if ip == UNKNOWN else ip
+        )
+    except PlatformError as exc:
+        log.warning("login_enroll_failed", code=exc.body.code, status=exc.status_code)
+        if exc.body.code not in FAILED_LOGIN_CODES:
+            await limiter.refund(attempt)
+        raise
+    except Exception:
+        await limiter.refund(attempt)
+        raise
+    await limiter.succeeded(attempt)
+    log.info("login_succeeded", user_id=data.user_id, second_factor="enrolled")
+    session = await _signed_in(request, response, service, settings, sid, data)
+    response.headers["Cache-Control"] = "no-store"
+    return EnrolledSession(**session.model_dump(), backup_codes=codes)
 
 
 async def _signed_in(

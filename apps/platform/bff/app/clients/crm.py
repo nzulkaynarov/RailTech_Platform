@@ -76,6 +76,28 @@ class CrmClient(BackendClient):
             headers={"X-Forwarded-For": client_ip} if client_ip else None,
         )
 
+    async def enroll_setup(
+        self, challenge: str, issuer: str, client_ip: str | None = None
+    ) -> httpx.Response:
+        """Секрет фактора при входе, когда он обязателен, но не настроен (ДВ-4б)."""
+        return await self.send(
+            "POST",
+            "/api/v1/auth/login/enroll/setup",
+            json={"challenge": challenge, "issuer": issuer},
+            headers={"X-Forwarded-For": client_ip} if client_ip else None,
+        )
+
+    async def enroll(
+        self, challenge: str, code: str, client_ip: str | None = None
+    ) -> httpx.Response:
+        """Код включает фактор и открывает сессию; резервные коды — в теле ответа (ДВ-4б)."""
+        return await self.send(
+            "POST",
+            "/api/v1/auth/login/enroll",
+            json={"challenge": challenge, "code": code},
+            headers={"X-Forwarded-For": client_ip} if client_ip else None,
+        )
+
     async def refresh(self, refresh_token: str) -> httpx.Response:
         return await self.send(
             "POST", "/api/v1/auth/refresh", cookies={REFRESH_COOKIE: refresh_token}

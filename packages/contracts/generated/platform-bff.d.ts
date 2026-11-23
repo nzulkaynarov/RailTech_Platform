@@ -22,8 +22,52 @@ export interface paths {
      *     `SecondFactorChallenge` без сессии; код — `POST /auth/login/second-factor`. С меткой `pf_device` (HttpOnly,
      *     путь `/api/v1/auth`, 30 дней — ставит второй шаг с `remember_device`) код не спрашивается, пока не сменились
      *     пароль и сам фактор.
+     *
+     *     Обязательный фактор (ДВ-4б): у держателя разделов с деньгами и доступом (полные `eds.payments`, `eds.memo.approve`,
+     *     `eds.drafts`, `admin` — по разделам, не по названию роли) без настроенного фактора ответ — тоже 202 с
+     *     `enrollment_required = true`: сессии нет, настройка — `POST /auth/login/enroll/setup` и `POST /auth/login/enroll`.
      */
     post: operations["login"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/auth/login/enroll/setup": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Настройка обязательного второго фактора при входе — секрет и адрес для QR (ДВ-4б)
+     * @description Без сессии: `challenge` из ответа 202 на `/auth/login` с `enrollment_required` (живёт 15 минут). Секрет для приложения-аутентификатора и адрес `otpauth://`; запись подписана названием компании. Время вышло — 401 `SECOND_FACTOR_EXPIRED`, войти заново. Тот же лимит попыток по IP, что у входа.
+     */
+    post: operations["loginEnrollSetup"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/auth/login/enroll": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Включить обязательный второй фактор кодом и войти (ДВ-4б)
+     * @description Без сессии: `challenge` и код из приложения. Код включает фактор и открывает сессию одной операцией; ответ — сессия и восемь резервных кодов, показываются один раз (`Cache-Control: no-store`). Неверный код — 401 `SECOND_FACTOR_INVALID` (неверные коды считает CRM: после десяти — 423 `ACCOUNT_LOCKED`); время вышло — 401 `SECOND_FACTOR_EXPIRED`.
+     */
+    post: operations["loginEnroll"];
     delete?: never;
     options?: never;
     head?: never;
@@ -315,7 +359,7 @@ export interface paths {
     };
     /**
      * Второй фактор входа — состояние (ДВ-4)
-     * @description Свой фактор; доступно каждому вошедшему сотруднику (CRM `/me/second-factor`).
+     * @description Свой фактор; доступно каждому вошедшему сотруднику (CRM `/me/second-factor`). `required` — фактор обязателен по разделам доступа сотрудника (ДВ-4б).
      */
     get: operations["getSecondFactor"];
     put?: never;
@@ -366,6 +410,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/me/second-factor/step-up": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Свежий код перед чувствительным действием (ДВ-4б)
+     * @description Верный код приложения или резервный даёт токен на 5 минут — его фронт шлёт заголовком `X-Step-Up-Token` при выдаче роли и подтверждении новых банковских реквизитов. Неверный код — 422 `VALIDATION_FAILED` (`second_factor_code_invalid`) и в счёт блокировки; фактор не включён — 403 `STEP_UP_REQUIRED` (`details.reason = second_factor_not_enrolled`).
+     */
+    post: operations["stepUpSecondFactor"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/me/second-factor/disable": {
     parameters: {
       query?: never;
@@ -377,7 +441,7 @@ export interface paths {
     put?: never;
     /**
      * Выключить второй фактор (ДВ-4)
-     * @description Кодом из приложения или резервным. Неверный — 422 `VALIDATION_FAILED` (`second_factor_code_invalid`).
+     * @description Кодом из приложения или резервным (он же «свежий код»). Неверный — 422 `VALIDATION_FAILED` (`second_factor_code_invalid`). Фактор обязателен по разделам доступа (`required` в состоянии) — 409 `CONFLICT` (`details.reason = second_factor_required`), отключить нельзя (ДВ-4б).
      */
     post: operations["disableSecondFactor"];
     delete?: never;
@@ -2242,7 +2306,7 @@ export interface paths {
     put?: never;
     /**
      * Счета и оплаты · Смена реквизитов: подтвердить
-     * @description ERP `POST finance/bank-changes/{id}/approve/` — право `finance.payment`. Применяет новые реквизиты компании и уведомляет её администраторов и основной контакт по всем каналам. Повтор на подтверждённом запросе — тот же ответ без второго эффекта. Отклонённый запрос — 409 `bank_change_not_pending`; компания в архиве — 409 `company_archived`; реквизиты изменились после подачи — 409 `bank_change_stale`.
+     * @description ERP `POST finance/bank-changes/{id}/approve/` — право `finance.payment`. Нужен свежий код второго фактора (заголовок `X-Step-Up-Token`, ДВ-4б) — без него 403 `STEP_UP_REQUIRED`, ERP не вызывается. Применяет новые реквизиты компании и уведомляет её администраторов и основной контакт по всем каналам. Повтор на подтверждённом запросе — тот же ответ без второго эффекта. Отклонённый запрос — 409 `bank_change_not_pending`; компания в архиве — 409 `company_archived`; реквизиты изменились после подачи — 409 `bank_change_stale`.
      */
     post: operations["approveBankChangeRequest"];
     delete?: never;
@@ -3746,9 +3810,29 @@ export interface paths {
     put?: never;
     /**
      * Добавить сотрудника без почты — временный пароль показывается один раз
-     * @description Раздел `admin` — полный. Для тех, кому письмо не придёт (почта ещё не подключена, у сотрудника нет почты на этом адресе). BFF создаёт пользователя в CRM с ролями Платформы (CRM `/users`) и отдаёт **временный пароль в этом ответе — единственный раз**: BFF не пишет его в журнал, не кэширует и не хранит; ответ — `Cache-Control: no-store`. Сотрудник при первом входе обязан сменить пароль. Потерянный пароль не восстановить — выдать новый: `POST /admin/users/{id}/temporary-password`.
+     * @description Раздел `admin` — полный. Для тех, кому письмо не придёт (почта ещё не подключена, у сотрудника нет почты на этом адресе). Роль при создании — выдача роли: нужен свежий код второго фактора (`X-Step-Up-Token`, ДВ-4б). BFF создаёт пользователя в CRM с ролями Платформы (CRM `/users`) и отдаёт **временный пароль в этом ответе — единственный раз**: BFF не пишет его в журнал, не кэширует и не хранит; ответ — `Cache-Control: no-store`. Сотрудник при первом входе обязан сменить пароль. Потерянный пароль не восстановить — выдать новый: `POST /admin/users/{id}/temporary-password`.
      */
     post: operations["createEmployee"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/users/{id}/second-factor/reset": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Сбросить сотруднику второй фактор (потерян телефон; ДВ-4б)
+     * @description Раздел `admin` — полный. Причина (от 3 знаков) пишется в журнал CRM, сессии сотрудника закрываются, при следующем входе он настраивает фактор заново (если он обязателен по его разделам) или входит по паролю. Себе — 409 `CONFLICT` (`details.reason = second_factor_self_reset`): свой фактор сбрасывает другой администратор. Фактор не включён — 422.
+     */
+    post: operations["resetEmployeeSecondFactor"];
     delete?: never;
     options?: never;
     head?: never;
@@ -3766,7 +3850,7 @@ export interface paths {
     put?: never;
     /**
      * Пригласить сотрудника по почте
-     * @description BFF создаёт пользователя в CRM с ролями Платформы (`role_ids`) и отправляет приглашение (CRM `/users`, `/users/{id}/invite`); провижининг в ERP делает CRM. Раздел `admin` — полный. Письмо не ушло — 409 `CONFLICT` с `details.invite = not_sent` и `details.employee_id` (сотрудник создан; повтор — `POST /admin/users/{id}/invite`).
+     * @description Роль при создании — выдача роли: нужен свежий код второго фактора (`X-Step-Up-Token`, ДВ-4б). BFF создаёт пользователя в CRM с ролями Платформы (`role_ids`) и отправляет приглашение (CRM `/users`, `/users/{id}/invite`); провижининг в ERP делает CRM. Раздел `admin` — полный. Письмо не ушло — 409 `CONFLICT` с `details.invite = not_sent` и `details.employee_id` (сотрудник создан; повтор — `POST /admin/users/{id}/invite`).
      */
     post: operations["inviteEmployee"];
     delete?: never;
@@ -3851,7 +3935,7 @@ export interface paths {
     head?: never;
     /**
      * Роли, должность, отключение — единое место выдачи ролей обеих систем
-     * @description Раздел `admin` — полный. Роли — полный новый набор `role_ids`; права в CRM и ERP вычисляет CRM. Снять последнего активного администратора или директора (роль или отключение) нельзя — 409 `LAST_ADMIN` / `LAST_DIRECTOR`. У сотрудника есть лиды в работе, а изменение отнимает у него работу с лидами, — 409 `CONFLICT` с `details.reason = user_has_active_leads`; повтор с `transfer_to_user_id` передаёт лиды коллеге. Пустой набор ролей — 422 `ROLES_REQUIRED` (0.6.0): у сотрудника хотя бы одна роль, закрыть доступ — `is_active = false`.
+     * @description Раздел `admin` — полный. Роли — полный новый набор `role_ids`; права в CRM и ERP вычисляет CRM. Выдача роли (появилась роль, которой не было) требует свежий код второго фактора (`X-Step-Up-Token`, ДВ-4б) — иначе 403 `STEP_UP_REQUIRED`; снятие роли и прочие правки кода не требуют. Снять последнего активного администратора или директора (роль или отключение) нельзя — 409 `LAST_ADMIN` / `LAST_DIRECTOR`. У сотрудника есть лиды в работе, а изменение отнимает у него работу с лидами, — 409 `CONFLICT` с `details.reason = user_has_active_leads`; повтор с `transfer_to_user_id` передаёт лиды коллеге. Пустой набор ролей — 422 `ROLES_REQUIRED` (0.6.0): у сотрудника хотя бы одна роль, закрыть доступ — `is_active = false`.
      */
     patch: operations["updateEmployee"];
     trace?: never;
@@ -8578,7 +8662,7 @@ export interface components {
   schemas: {
     Error: {
       /**
-       * @description Стабильный код (`INVALID_CREDENTIALS`, `SESSION_EXPIRED`, `CSRF_FAILED`, `FORBIDDEN`, `NOT_FOUND`, `VALIDATION_FAILED`, `TOO_MANY_REQUESTS`, `BACKEND_UNAVAILABLE`, `NO_PLATFORM_ROLE`, `USER_DISABLED`, `ACCOUNT_LOCKED`, `CONFLICT`, `WRONG_PASSWORD`, `EMAIL_EXISTS`, `LAST_ADMIN`, `LAST_DIRECTOR`, `ROLE_IN_USE`, `ROLE_SYSTEM`, `ROLES_REQUIRED`, `NOT_CONFIGURED`, `SECRETS_KEY_MISSING`, `SERVICE_NOT_SWITCHABLE`, `INTEGRATION_FAILED`, `PAYLOAD_TOO_LARGE`, `UNSUPPORTED_MEDIA_TYPE`, `COMPANY_NOT_SET`, `SETUP_DONE`, `SETUP_CODE_INVALID`, `SETUP_CODE_EXPIRED`, `SETUP_LOCKED`, `OWN_COMPANY_ALREADY_EXISTS`, `ERP_NOT_CONNECTED`, `INTERNAL_ERROR`, `BAD_REQUEST`, `METHOD_NOT_ALLOWED`, `HTTP_<статус>`)
+       * @description Стабильный код (`INVALID_CREDENTIALS`, `SESSION_EXPIRED`, `CSRF_FAILED`, `FORBIDDEN`, `NOT_FOUND`, `VALIDATION_FAILED`, `TOO_MANY_REQUESTS`, `BACKEND_UNAVAILABLE`, `NO_PLATFORM_ROLE`, `USER_DISABLED`, `ACCOUNT_LOCKED`, `CONFLICT`, `WRONG_PASSWORD`, `EMAIL_EXISTS`, `LAST_ADMIN`, `LAST_DIRECTOR`, `ROLE_IN_USE`, `ROLE_SYSTEM`, `ROLES_REQUIRED`, `STEP_UP_REQUIRED`, `NOT_CONFIGURED`, `SECRETS_KEY_MISSING`, `SERVICE_NOT_SWITCHABLE`, `INTEGRATION_FAILED`, `PAYLOAD_TOO_LARGE`, `UNSUPPORTED_MEDIA_TYPE`, `COMPANY_NOT_SET`, `SETUP_DONE`, `SETUP_CODE_INVALID`, `SETUP_CODE_EXPIRED`, `SETUP_LOCKED`, `OWN_COMPANY_ALREADY_EXISTS`, `ERP_NOT_CONNECTED`, `INTERNAL_ERROR`, `BAD_REQUEST`, `METHOD_NOT_ALLOWED`, `HTTP_<статус>`)
        * @example SESSION_EXPIRED
        */
       code: string;
@@ -9850,8 +9934,35 @@ export interface components {
     SecondFactorChallenge: {
       /** @enum {boolean} */
       second_factor_required: true;
-      /** @description Непрозрачная строка на 5 минут для `/auth/login/second-factor` */
+      /** @description Непрозрачная строка на 5 минут для `/auth/login/second-factor`; при `enrollment_required` — на 15 минут для `/auth/login/enroll/*` */
       challenge: string;
+      /**
+       * @description ДВ-4б: фактор обязателен по разделам доступа, но не настроен — экран настройки вместо ввода кода
+       * @default false
+       */
+      enrollment_required: boolean;
+    };
+    EnrollSetupIn: {
+      challenge: string;
+    };
+    EnrollIn: {
+      challenge: string;
+      /** @description 6 цифр из приложения */
+      code: string;
+    };
+    /** @description Сессия после настройки обязательного фактора при входе; резервные коды показываются один раз */
+    EnrolledSession: components["schemas"]["Session"] & {
+      backup_codes: string[];
+    };
+    StepUp: {
+      /** @description Для заголовка `X-Step-Up-Token` */
+      token: string;
+      /** @description Секунды (300) */
+      expires_in: number;
+    };
+    SecondFactorResetIn: {
+      /** @description Причина — в журнале */
+      reason: string;
     };
     SecondFactorLoginIn: {
       challenge: string;
@@ -9882,6 +9993,11 @@ export interface components {
       /** Format: date-time */
       enabled_at: string | null;
       backup_codes_left: number;
+      /**
+       * @description ДВ-4б: фактор обязателен по разделам доступа — отключить нельзя
+       * @default false
+       */
+      required: boolean;
     };
     SecondFactorSetup: {
       /** @description Ключ для ручного ввода в приложение (base32) */
@@ -18016,6 +18132,8 @@ export interface components {
     SigningAuthorityId: string;
     /** @description Значение cookie `rt_pf_csrf` */
     CsrfToken: string;
+    /** @description Свежий код второго фактора (ДВ-4б): токен из `POST /me/second-factor/step-up`, действует 5 минут. Нужен при выдаче роли и подтверждении новых банковских реквизитов; без него или с просроченным — 403 `STEP_UP_REQUIRED` (`details.reason = second_factor_not_enrolled` — фактор ещё не включён) */
+    StepUpToken: string;
     /** @description Id документа базы знаний (CRM) */
     KbDocumentId: number;
     /** @description Id пробела базы знаний (CRM) */
@@ -18131,6 +18249,86 @@ export interface operations {
           "application/json": components["schemas"]["Error"];
         };
       };
+    };
+  };
+  loginEnrollSetup: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["EnrollSetupIn"];
+      };
+    };
+    responses: {
+      /** @description Секрет */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SecondFactorSetup"];
+        };
+      };
+      /** @description `SECOND_FACTOR_EXPIRED` — время на настройку вышло */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      422: components["responses"]["ValidationFailed"];
+      429: components["responses"]["TooManyRequests"];
+    };
+  };
+  loginEnroll: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["EnrollIn"];
+      };
+    };
+    responses: {
+      /** @description Фактор включён, вошёл */
+      200: {
+        headers: {
+          /** @description `rt_pf_session` и `rt_pf_csrf` */
+          "Set-Cookie"?: string;
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["EnrolledSession"];
+        };
+      };
+      /** @description `SECOND_FACTOR_INVALID` — неверный код; `SECOND_FACTOR_EXPIRED` — время вышло */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      /** @description `ACCOUNT_LOCKED` */
+      423: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      429: components["responses"]["TooManyRequests"];
     };
   };
   loginSecondFactor: {
@@ -18702,6 +18900,45 @@ export interface operations {
       401: components["responses"]["SessionExpired"];
       403: components["responses"]["Forbidden"];
       422: components["responses"]["ValidationFailed"];
+    };
+  };
+  stepUpSecondFactor: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SecondFactorCodeIn"];
+      };
+    };
+    responses: {
+      /** @description Код принят */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["StepUp"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      422: components["responses"]["ValidationFailed"];
+      /** @description `ACCOUNT_LOCKED` */
+      423: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
     };
   };
   disableSecondFactor: {
@@ -21825,6 +22062,8 @@ export interface operations {
     parameters: {
       query?: never;
       header: {
+        /** @description Свежий код второго фактора (ДВ-4б): токен из `POST /me/second-factor/step-up`, действует 5 минут. Нужен при выдаче роли и подтверждении новых банковских реквизитов; без него или с просроченным — 403 `STEP_UP_REQUIRED` (`details.reason = second_factor_not_enrolled` — фактор ещё не включён) */
+        "X-Step-Up-Token"?: components["parameters"]["StepUpToken"];
         /** @description Значение cookie `rt_pf_csrf` */
         "X-CSRF-Token": components["parameters"]["CsrfToken"];
       };
@@ -24207,6 +24446,8 @@ export interface operations {
     parameters: {
       query?: never;
       header: {
+        /** @description Свежий код второго фактора (ДВ-4б): токен из `POST /me/second-factor/step-up`, действует 5 минут. Нужен при выдаче роли и подтверждении новых банковских реквизитов; без него или с просроченным — 403 `STEP_UP_REQUIRED` (`details.reason = second_factor_not_enrolled` — фактор ещё не включён) */
+        "X-Step-Up-Token"?: components["parameters"]["StepUpToken"];
         /** @description Значение cookie `rt_pf_csrf` */
         "X-CSRF-Token": components["parameters"]["CsrfToken"];
       };
@@ -24245,10 +24486,54 @@ export interface operations {
       503: components["responses"]["BackendUnavailable"];
     };
   };
+  resetEmployeeSecondFactor: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description `crm_user_id` — число без ведущих нулей (`07` и `007` — не адрес сотрудника) */
+        id: components["parameters"]["EmployeeId"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SecondFactorResetIn"];
+      };
+    };
+    responses: {
+      /** @description Сброшен */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      /** @description `CONFLICT` — себе сбросить нельзя */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
   inviteEmployee: {
     parameters: {
       query?: never;
       header: {
+        /** @description Свежий код второго фактора (ДВ-4б): токен из `POST /me/second-factor/step-up`, действует 5 минут. Нужен при выдаче роли и подтверждении новых банковских реквизитов; без него или с просроченным — 403 `STEP_UP_REQUIRED` (`details.reason = second_factor_not_enrolled` — фактор ещё не включён) */
+        "X-Step-Up-Token"?: components["parameters"]["StepUpToken"];
         /** @description Значение cookie `rt_pf_csrf` */
         "X-CSRF-Token": components["parameters"]["CsrfToken"];
       };
@@ -24449,6 +24734,8 @@ export interface operations {
     parameters: {
       query?: never;
       header: {
+        /** @description Свежий код второго фактора (ДВ-4б): токен из `POST /me/second-factor/step-up`, действует 5 минут. Нужен при выдаче роли и подтверждении новых банковских реквизитов; без него или с просроченным — 403 `STEP_UP_REQUIRED` (`details.reason = second_factor_not_enrolled` — фактор ещё не включён) */
+        "X-Step-Up-Token"?: components["parameters"]["StepUpToken"];
         /** @description Значение cookie `rt_pf_csrf` */
         "X-CSRF-Token": components["parameters"]["CsrfToken"];
       };

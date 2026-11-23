@@ -16,6 +16,7 @@ from app.clients.crm_integrations import integration_error
 from app.errors import PlatformError, backend_code, backend_reason, from_backend
 
 Call = Callable[..., Awaitable[httpx.Response]]
+STEP_UP_HEADER = "X-Step-Up-Token"
 
 LAST_ADMIN_MESSAGE = (
     "Нельзя снять роль администратора или отключить последнего администратора. "
@@ -130,9 +131,18 @@ class CrmUsers:
     def __init__(self, call: Call) -> None:
         self._call = call
 
-    async def _json(self, method: str, path: str, expected: int, *, json: Any = None) -> Any:
+    async def _json(
+        self,
+        method: str,
+        path: str,
+        expected: int,
+        *,
+        json: Any = None,
+        step_up: str | None = None,
+    ) -> Any:
         backend: Backend = "crm"
-        response = await self._call(backend, method, path, json=json)
+        headers = {STEP_UP_HEADER: step_up} if step_up else None
+        response = await self._call(backend, method, path, json=json, headers=headers)
         if response.status_code != expected:
             raise crm_error(response)
         return response.json() if response.content else None
@@ -145,17 +155,27 @@ class CrmUsers:
         user: dict[str, Any] = await self._json("GET", f"/api/v1/users/{user_id}", 200)
         return user
 
-    async def create(self, payload: dict[str, Any]) -> dict[str, Any]:
-        """Создать пользователя; `temporary_password` наружу не отдаётся и в журнал не пишется."""
-        created = await self._json("POST", "/api/v1/users", 201, json=payload)
+    async def create(self, payload: dict[str, Any], step_up: str | None = None) -> dict[str, Any]:
+        """Создать пользователя; `temporary_password` наружу не отдаётся и в журнал не пишется.
+        Роль при создании — выдача роли: `step_up` — свежий код второго фактора (ДВ-4б)."""
+        created = await self._json("POST", "/api/v1/users", 201, json=payload, step_up=step_up)
         user: dict[str, Any] = created["user"]
         return user
 
-    async def update(self, user_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+    async def update(
+        self, user_id: str, payload: dict[str, Any], step_up: str | None = None
+    ) -> dict[str, Any]:
         user: dict[str, Any] = await self._json(
-            "PATCH", f"/api/v1/users/{user_id}", 200, json=payload
+            "PATCH", f"/api/v1/users/{user_id}", 200, json=payload, step_up=step_up
         )
         return user
+
+    async def reset_second_factor(self, user_id: str, reason: str) -> None:
+        """Сбросить второй фактор сотрудника (ДВ-4б): причина — в журнале CRM, сессии сотрудника
+        закрываются, при следующем входе он настраивает фактор заново."""
+        await self._json(
+            "POST", f"/api/v1/users/{user_id}/second-factor/reset", 204, json={"reason": reason}
+        )
 
     async def invite(self, user_id: str) -> None:
         """Письмо-приглашение с новым временным паролем (коннектор «Почта» CRM)."""

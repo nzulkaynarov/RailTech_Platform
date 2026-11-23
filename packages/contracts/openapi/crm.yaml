@@ -3042,6 +3042,39 @@ components:
       - erp_lost
       title: EmployeeImpactOut
       type: object
+    EnrollRequest:
+      properties:
+        challenge:
+          maxLength: 2048
+          minLength: 1
+          title: Challenge
+          type: string
+        code:
+          maxLength: 16
+          minLength: 6
+          title: Code
+          type: string
+      required:
+      - challenge
+      - code
+      title: EnrollRequest
+      type: object
+    EnrollSetupRequest:
+      properties:
+        challenge:
+          maxLength: 2048
+          minLength: 1
+          title: Challenge
+          type: string
+        issuer:
+          default: ''
+          maxLength: 60
+          title: Issuer
+          type: string
+      required:
+      - challenge
+      title: EnrollSetupRequest
+      type: object
     ErpCheckOut:
       description: 'Итог «Проверить связь»: ответ ERP `GET /api/integration/v1/health` (схема `Health`) и время.
 
@@ -8580,11 +8613,19 @@ components:
       title: SearchResponse
       type: object
     SecondFactorChallengeResponse:
-      description: '202 на входе: пароль верен, нужен код второго фактора (ДВ-4); сессии ещё нет.'
+      description: '202 на входе: пароль верен, нужен код второго фактора (ДВ-4); сессии ещё нет.
+
+        `enrollment_required` — фактор обязателен по разделам доступа, но не настроен (ДВ-4б):
+
+        `challenge` годится только для `/auth/login/enroll/*`.'
       properties:
         challenge:
           title: Challenge
           type: string
+        enrollment_required:
+          default: false
+          title: Enrollment Required
+          type: boolean
         second_factor_required:
           const: true
           default: true
@@ -8637,6 +8678,18 @@ components:
       - code
       title: SecondFactorLoginRequest
       type: object
+    SecondFactorResetRequest:
+      description: 'Сброс фактора администратором: причина попадает в журнал.'
+      properties:
+        reason:
+          maxLength: 500
+          minLength: 3
+          title: Reason
+          type: string
+      required:
+      - reason
+      title: SecondFactorResetRequest
+      type: object
     SecondFactorSetupRequest:
       properties:
         issuer:
@@ -8673,6 +8726,10 @@ components:
             type: string
           - type: 'null'
           title: Enabled At
+        required:
+          default: false
+          title: Required
+          type: boolean
       required:
       - enabled
       - enabled_at
@@ -9750,6 +9807,20 @@ components:
       - unread_count
       title: StaffNotificationsOut
       type: object
+    StepUpResponse:
+      description: 'Свежий код принят (ДВ-4б): токен на 5 минут для заголовка `X-Step-Up-Token`.'
+      properties:
+        expires_in:
+          title: Expires In
+          type: integer
+        token:
+          title: Token
+          type: string
+      required:
+      - token
+      - expires_in
+      title: StepUpResponse
+      type: object
     SystemStatusOut:
       properties:
         checked_at:
@@ -10211,6 +10282,13 @@ components:
         access_token:
           title: Access Token
           type: string
+        backup_codes:
+          anyOf:
+          - items:
+              type: string
+            type: array
+          - type: 'null'
+          title: Backup Codes
         device_token:
           anyOf:
           - type: string
@@ -11161,7 +11239,9 @@ paths:
     post:
       description: 'Вход паролем. Со вторым фактором (ДВ-4) и без запомненного устройства — 202 с `challenge`:
 
-        сессии ещё нет, код — `POST /auth/login/second-factor`.'
+        сессии ещё нет, код — `POST /auth/login/second-factor`. Фактор обязателен по разделам доступа
+
+        (ДВ-4б), но не настроен — 202 с `enrollment_required`: настройка — `/auth/login/enroll/*`.'
       operationId: login
       requestBody:
         content:
@@ -11189,6 +11269,62 @@ paths:
                 $ref: '#/components/schemas/ErrorOut'
           description: Ошибка валидации
       summary: Login
+      tags:
+      - auth
+  /api/v1/auth/login/enroll:
+    post:
+      description: 'Код из приложения включает фактор и открывает сессию; резервные коды — в `backup_codes`,
+
+        один раз. Неверный код — 401 `second_factor_invalid` (в счёт блокировки).'
+      operationId: login_enroll
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EnrollRequest'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      summary: Login Enroll
+      tags:
+      - auth
+  /api/v1/auth/login/enroll/setup:
+    post:
+      description: 'Секрет и адрес для QR при входе, когда фактор обязателен, но не настроен (ДВ-4б).
+
+        `challenge` из 202 на `/auth/login` с `enrollment_required`; просрочен — 401 `auth_failed`.'
+      operationId: login_enroll_setup
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EnrollSetupRequest'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SecondFactorSetupResponse'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      summary: Login Enroll Setup
       tags:
       - auth
   /api/v1/auth/login/second-factor:
@@ -16924,7 +17060,9 @@ paths:
       - me
   /api/v1/me/second-factor/disable:
     post:
-      description: Выключить — кодом из приложения или резервным.
+      description: 'Выключить — кодом из приложения или резервным; код в теле и есть «свежий код» (ДВ-4б).
+
+        Держателю разделов с деньгами и доступом отключить нельзя: 409 `second_factor_required`.'
       operationId: second_factor_disable
       requestBody:
         content:
@@ -17002,6 +17140,69 @@ paths:
       security:
       - HTTPBearer: []
       summary: Second Factor Setup
+      tags:
+      - me
+  /api/v1/me/second-factor/step-up:
+    post:
+      description: '«Свежий код» (ДВ-4б): верный код приложения или резервный — токен на 5 минут. Его фронт
+
+        шлёт заголовком `X-Step-Up-Token` на чувствительных действиях (выдача роли, подтверждение
+
+        новых банковских реквизитов). Фактор не настроен — 403 `step_up_required`,
+
+        `reason = second_factor_not_enrolled`.'
+      operationId: second_factor_step_up
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SecondFactorCodeRequest'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StepUpResponse'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: Second Factor Step Up
+      tags:
+      - me
+  /api/v1/me/second-factor/step-up/check:
+    post:
+      description: 'Проверка токена «свежего кода» для BFF перед действием в другой системе (подтверждение
+
+        банковских реквизитов в ERP): 204 или 403 `step_up_required`.'
+      operationId: second_factor_step_up_check
+      parameters:
+      - in: header
+        name: x-step-up-token
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Step-Up-Token
+      responses:
+        '204':
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: Second Factor Step Up Check
       tags:
       - me
   /api/v1/me/telegram-link:
@@ -18465,7 +18666,17 @@ paths:
       tags:
       - users
     post:
+      description: 'Новый сотрудник. Роль при создании — выдача роли: нужен свежий код (`X-Step-Up-Token`).'
       operationId: create_user
+      parameters:
+      - in: header
+        name: x-step-up-token
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Step-Up-Token
       requestBody:
         content:
           application/json:
@@ -18523,7 +18734,11 @@ paths:
 
         422 `roles_required` (R3-D-1: закрыть доступ — `is_active = false`); снять последнего
 
-        администратора или директора — 409 `last_admin` / `last_director`.'
+        администратора или директора — 409 `last_admin` / `last_director`. Выдача роли (появилась роль,
+
+        которой не было) требует свежий код второго фактора в `X-Step-Up-Token` (ДВ-4б), иначе 403
+
+        `step_up_required`.'
       operationId: update_user
       parameters:
       - in: path
@@ -18532,6 +18747,14 @@ paths:
         schema:
           title: User Id
           type: integer
+      - in: header
+        name: x-step-up-token
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Step-Up-Token
       requestBody:
         content:
           application/json:
@@ -18679,6 +18902,41 @@ paths:
       security:
       - HTTPBearer: []
       summary: Reset Password By Email
+      tags:
+      - users
+  /api/v1/users/{user_id}/second-factor/reset:
+    post:
+      description: 'Сбросить второй фактор сотруднику (потерян телефон; ДВ-4б): причина — в журнал, его сессии
+
+        закрываются, при следующем входе он настраивает фактор заново. Себе — 409
+
+        `second_factor_self_reset`; фактор не включён — 422 `second_factor_not_enabled`.'
+      operationId: reset_second_factor
+      parameters:
+      - in: path
+        name: user_id
+        required: true
+        schema:
+          title: User Id
+          type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SecondFactorResetRequest'
+        required: true
+      responses:
+        '204':
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: Reset Second Factor
       tags:
       - users
   /health:

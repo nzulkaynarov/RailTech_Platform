@@ -157,6 +157,17 @@ class UserService:
             await self._sync_erp("provision", view.id)
         return view, password
 
+    async def adds_roles(self, user_id: int, patch: UserPatch) -> bool:
+        """Выдаёт ли правка роль, которой у сотрудника нет (платформенную или базовую CRM): выдача
+        требует свежий код второго фактора (ДВ-4б); снятие и прочие правки — нет."""
+        async with self._sessions() as session:
+            if patch.platform_role_ids is not None:
+                held_ids = set(await prepo.role_ids_of_user(session, user_id))
+                return bool(set(patch.platform_role_ids) - held_ids)
+            if patch.roles is not None:
+                return bool(set(patch.roles) - set(await repo.roles_of(session, user_id)))
+        return False
+
     async def update(self, actor: Actor, user_id: int, patch: UserPatch) -> UserView:
         if patch.roles is not None:
             check_roles(patch.roles)

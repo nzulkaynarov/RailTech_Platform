@@ -9,4 +9,6 @@ export interface SecondFactorStatus {
   enabled_at: string | null;
   /** @minimum 0 */
   backup_codes_left: number;
+  /** ДВ-4б: фактор обязателен по разделам доступа — отключить нельзя */
+  required?: boolean;
 }

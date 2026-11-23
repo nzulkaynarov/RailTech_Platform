@@ -10,16 +10,19 @@ from app.config import Settings
 from app.domain.errors import AuthError
 from app.schemas.auth import (
     ChangePasswordRequest,
+    EnrollRequest,
+    EnrollSetupRequest,
     ForgotPasswordRequest,
     LoginRequest,
     ResetPasswordRequest,
     SecondFactorChallengeResponse,
     SecondFactorLoginRequest,
+    SecondFactorSetupResponse,
     SsoTokenRequest,
     SsoTokenResponse,
     TokenResponse,
 )
-from app.services.auth import ClientInfo, SecondFactorRequired, Session
+from app.services.auth import ClientInfo, EnrollmentRequired, SecondFactorRequired, Session
 
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
 
@@ -57,13 +60,17 @@ async def login(
     body: LoginRequest, request: Request, response: Response, container: ContainerDep
 ) -> TokenResponse | JSONResponse:
     """Вход паролем. Со вторым фактором (ДВ-4) и без запомненного устройства — 202 с `challenge`:
-    сессии ещё нет, код — `POST /auth/login/second-factor`."""
+    сессии ещё нет, код — `POST /auth/login/second-factor`. Фактор обязателен по разделам доступа
+    (ДВ-4б), но не настроен — 202 с `enrollment_required`: настройка — `/auth/login/enroll/*`."""
     result = await container.auth_service.login(
         body.email, body.password, _client(request), body.device_token
     )
-    if isinstance(result, SecondFactorRequired):
+    if isinstance(result, SecondFactorRequired | EnrollmentRequired):
         return JSONResponse(
-            SecondFactorChallengeResponse(challenge=result.challenge).model_dump(),
+            SecondFactorChallengeResponse(
+                challenge=result.challenge,
+                enrollment_required=isinstance(result, EnrollmentRequired),
+            ).model_dump(),
             status_code=status.HTTP_202_ACCEPTED,
         )
     return respond_with_session(response, result, container.settings)
@@ -80,6 +87,30 @@ async def login_second_factor(
     )
     out = respond_with_session(response, session, container.settings)
     out.device_token = device
+    return out
+
+
+@router.post("/login/enroll/setup", response_model=SecondFactorSetupResponse)
+async def login_enroll_setup(
+    body: EnrollSetupRequest, request: Request, container: ContainerDep
+) -> SecondFactorSetupResponse:
+    """Секрет и адрес для QR при входе, когда фактор обязателен, но не настроен (ДВ-4б).
+    `challenge` из 202 на `/auth/login` с `enrollment_required`; просрочен — 401 `auth_failed`."""
+    setup = await container.auth_service.enroll_setup(body.challenge, body.issuer, _client(request))
+    return SecondFactorSetupResponse(secret=setup.secret, otpauth_uri=setup.otpauth_uri)
+
+
+@router.post("/login/enroll", response_model=TokenResponse)
+async def login_enroll(
+    body: EnrollRequest, request: Request, response: Response, container: ContainerDep
+) -> TokenResponse:
+    """Код из приложения включает фактор и открывает сессию; резервные коды — в `backup_codes`,
+    один раз. Неверный код — 401 `second_factor_invalid` (в счёт блокировки)."""
+    enrolled = await container.auth_service.enroll_complete(
+        body.challenge, body.code, _client(request)
+    )
+    out = respond_with_session(response, enrolled.session, container.settings)
+    out.backup_codes = enrolled.backup_codes
     return out
 
 

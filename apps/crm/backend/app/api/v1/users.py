@@ -2,13 +2,14 @@
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Header, Response, status
 
 from app.api.deps import ContainerDep, require
 from app.api.v1.integrations import queued_out
 from app.schemas.auth import (
     PasswordReset,
     PlatformRoleRef,
+    SecondFactorResetRequest,
     UserCreate,
     UserCreated,
     UserOut,
@@ -19,6 +20,10 @@ from app.security.principal import Principal
 from app.services.user_views import UserPatch, UserView
 
 router = APIRouter(prefix="/api/v1/users", tags=["users"])
+
+StepUpHeader = Annotated[
+    str | None, Header()
+]  # `X-Step-Up-Token`: свежий код второго фактора (ДВ-4б)
 
 Reader = Annotated[Principal, Depends(require("users", "read"))]
 Writer = Annotated[Principal, Depends(require("users", "write"))]
@@ -73,7 +78,15 @@ async def list_users(_: Reader, container: ContainerDep) -> list[UserOut]:
 
 
 @router.post("", response_model=UserCreated, status_code=status.HTTP_201_CREATED)
-async def create_user(body: UserCreate, who: Writer, container: ContainerDep) -> UserCreated:
+async def create_user(
+    body: UserCreate,
+    who: Writer,
+    container: ContainerDep,
+    x_step_up_token: StepUpHeader = None,
+) -> UserCreated:
+    """Новый сотрудник. Роль при создании — выдача роли: нужен свежий код (`X-Step-Up-Token`)."""
+    if body.platform_role_ids or body.roles:
+        await container.second_factor_service.require_step_up(who.user_id, x_step_up_token)
     view, password = await container.user_service.create(
         who.actor,
         body.email,
@@ -92,11 +105,17 @@ async def get_user(user_id: int, _: Reader, container: ContainerDep) -> UserOut:
 
 @router.patch("/{user_id}", response_model=UserOut)
 async def update_user(
-    user_id: int, body: UserUpdate, who: Writer, container: ContainerDep
+    user_id: int,
+    body: UserUpdate,
+    who: Writer,
+    container: ContainerDep,
+    x_step_up_token: StepUpHeader = None,
 ) -> UserOut:
     """Изменить пользователя. Роли Платформы — полный набор `platform_role_ids`; пустой набор —
     422 `roles_required` (R3-D-1: закрыть доступ — `is_active = false`); снять последнего
-    администратора или директора — 409 `last_admin` / `last_director`."""
+    администратора или директора — 409 `last_admin` / `last_director`. Выдача роли (появилась роль,
+    которой не было) требует свежий код второго фактора в `X-Step-Up-Token` (ДВ-4б), иначе 403
+    `step_up_required`."""
     patch = UserPatch(
         full_name=body.full_name,
         roles=list(body.roles) if body.roles is not None else None,
@@ -110,6 +129,8 @@ async def update_user(
         position=body.position,
         language=body.language,
     )
+    if await container.user_service.adds_roles(user_id, patch):
+        await container.second_factor_service.require_step_up(who.user_id, x_step_up_token)
     return to_out(await container.user_service.update(who.actor, user_id, patch))
 
 
@@ -145,3 +166,14 @@ async def reset_password_by_email(
     Без коннектора — 409 `smtp_not_configured`, пароль не меняется.
     """
     return queued_out(await container.user_invites.reset_password_email(who.actor, user_id))
+
+
+@router.post("/{user_id}/second-factor/reset", status_code=status.HTTP_204_NO_CONTENT)
+async def reset_second_factor(
+    user_id: int, body: SecondFactorResetRequest, who: Writer, container: ContainerDep
+) -> Response:
+    """Сбросить второй фактор сотруднику (потерян телефон; ДВ-4б): причина — в журнал, его сессии
+    закрываются, при следующем входе он настраивает фактор заново. Себе — 409
+    `second_factor_self_reset`; фактор не включён — 422 `second_factor_not_enabled`."""
+    await container.second_factor_service.reset(who.actor, user_id, body.reason)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
