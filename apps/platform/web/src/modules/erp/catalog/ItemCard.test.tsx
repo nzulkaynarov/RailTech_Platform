@@ -370,3 +370,41 @@ describe("МХИК в карточке товара (план 1.8)", () => {
     expect(within(form).getByRole("button", { name: "Сохранить" })).toBeEnabled();
   });
 });
+
+describe("МХИК: поиск по слову и обязательный код для публикации (X-16)", () => {
+  it("«накладка» даёт рельсовые и вагонные позиции, под каждой — путь по группам", async () => {
+    const drawer = await openCable("supply@demo.example");
+    fireEvent.click(await within(drawer).findByRole("button", { name: "Изменить позицию" }));
+    const form = await findModal("Изменить позицию");
+    fireEvent.change(within(form).getByLabelText("МХИК (ИКПУ)"), {
+      target: { value: "накладка" },
+    });
+    expect(await screen.findByText(/73021001001000001 · Накладка рельсовая/)).toBeInTheDocument();
+    expect(
+      screen.getByText("Изделия из чёрных металлов › Детали железнодорожного пути"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/86079001001000000 · Накладки тормозные для вагонов/),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/пассажиров|газоснабжение/i)).toBeNull();
+  });
+
+  it("нет МХИК — публикация закрыта словами, а «Указать МХИК» открывает форму на этом поле", async () => {
+    const draft = readErpCatalog().items.find((item) => item.id === "5");
+    if (!draft) throw new Error("fixture item 5");
+    Object.assign(draft, { categoryId: "1", hs_code: "7302100000", mxik: null });
+    signIn("supply@demo.example");
+    renderAt("/erp/catalog?item=5");
+    const drawer = await screen.findByRole("dialog", { name: "Пусконаладочные работы" });
+
+    expect(
+      await within(drawer).findByText(/Для публикации заполните: код МХИК \(ИКПУ\)\./),
+    ).toBeVisible();
+    expect(within(drawer).getByRole("button", { name: "Опубликовать" })).toBeDisabled();
+    fireEvent.click(within(drawer).getByRole("button", { name: "Указать МХИК" }));
+    const form = await findModal("Изменить позицию");
+    await waitFor(() => {
+      expect(within(form).getByLabelText("МХИК (ИКПУ)")).toHaveFocus();
+    });
+  });
+});

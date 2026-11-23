@@ -164,7 +164,7 @@ function reviewOf(item: MockItem): CatalogReviewInfo | null {
   };
 }
 
-const completenessOf = (item: MockItem) => 100 - missingOf(item).length * 25;
+const completenessOf = (item: MockItem) => 100 - missingOf(item).length * 20;
 
 function rowOf(item: MockItem): CatalogItem {
   const { offers } = readErpCatalog();
@@ -233,12 +233,13 @@ function offerOf(offer: MockOffer, prices: boolean): CatalogOffer {
   };
 }
 
-/** Порог публикации мока: название, категория, единица и код ТН ВЭД (как полнота ERP по умолчанию). */
+/** Порог публикации мока: категория, единица, код ТН ВЭД и МХИК (X-16: настройки компании по умолчанию). */
 function missingOf(item: MockItem): string[] {
   return [
     ...(item.categoryId ? [] : ["category"]),
     ...(item.unitId ? [] : ["uom"]),
     ...(item.hs_code ? [] : ["hs_code"]),
+    ...(item.mxik ? [] : ["mxik_code"]),
   ];
 }
 
@@ -1343,6 +1344,29 @@ export const erpCatalogHandlers = [
         },
         { status: 503 },
       );
+    }
+    if (q.startsWith("накладк")) {
+      // X-16: классификатор отвечает широко, ERP оставляет позиции, где слово — в названии, и показывает путь групп
+      return HttpResponse.json({
+        items: [
+          {
+            code: "73021001001000001",
+            name: "Накладка рельсовая двухголовая",
+            group: "Изделия из чёрных металлов",
+            path: "Изделия из чёрных металлов › Детали железнодорожного пути",
+            unit: "штука",
+            package: "",
+          },
+          {
+            code: "86079001001000000",
+            name: "Накладки тормозные для вагонов",
+            group: "Части железнодорожных локомотивов",
+            path: "Части железнодорожных локомотивов › Тормозное оборудование",
+            unit: "штука",
+            package: "",
+          },
+        ],
+      });
     }
     const items = q.startsWith("кабел")
       ? [

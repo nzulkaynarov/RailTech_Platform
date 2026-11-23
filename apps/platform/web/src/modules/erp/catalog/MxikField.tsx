@@ -41,6 +41,7 @@ export function MxikField({
   const down =
     search.error instanceof ApiError && search.error.details["reason"] === "mxik_unavailable";
   const items = search.data?.items ?? [];
+  const empty = search.isSuccess && items.length === 0 && q.length >= 2 && !/^\d{17}$/.test(q);
 
   return (
     <>
@@ -48,9 +49,15 @@ export function MxikField({
         id={id}
         value={text}
         status={invalid ? "error" : undefined}
+        classNames={{ popup: { root: "pf-mxik-popup" } }}
         options={items.map((item) => ({
           value: item.code,
-          label: `${item.code} · ${item.name}${item.unit ? ` · ${item.unit}` : ""}`,
+          label: (
+            <span className="pf-mxik-hit">
+              {`${item.code} · ${item.name}${item.unit ? ` · ${item.unit}` : ""}`}
+              {item.path ? <span className="pf-hint pf-mxik-path">{item.path}</span> : null}
+            </span>
+          ),
         }))}
         onSearch={setText}
         onChange={(next: string) => {
@@ -70,6 +77,7 @@ export function MxikField({
       />
       {value.name ? <span className="pf-hint">{value.name}</span> : null}
       {down ? <span className="pf-hint">{t("items.form.mxikDown")}</span> : null}
+      {empty ? <span className="pf-hint">{t("items.form.mxikNone")}</span> : null}
     </>
   );
 }

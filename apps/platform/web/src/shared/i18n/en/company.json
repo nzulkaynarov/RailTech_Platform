@@ -285,7 +285,11 @@
         "note": "Takes effect from the next reminder.",
         "save": "Save reminders"
       }
-    }
+    },
+    "requireMxik": "MXIK is required to publish",
+    "requireMxikHint": "A card without an MXIK (IKPU) code cannot be published. Published cards stay; the check applies on the next publish.",
+    "requireHs": "HS code is required for imported goods",
+    "requireHsHint": "Origin is not Uzbekistan or is not set — it cannot be published without an HS code."
   },
   "charges": {
     "title": "Quote charge items",
