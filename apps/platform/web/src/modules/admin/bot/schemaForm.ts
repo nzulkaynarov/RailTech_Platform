@@ -101,6 +101,15 @@ export function withoutFields(schema: JsonSchema, names: readonly string[]): Jso
   return { ...schema, properties };
 }
 
+/** Схема только с перечисленными полями (остальные правятся на другой странице; их значения остаются в теле PUT). */
+export function onlyFields(schema: JsonSchema, names: readonly string[]): JsonSchema {
+  if (!schema.properties) return schema;
+  const properties = Object.fromEntries(
+    Object.entries(schema.properties).filter(([key]) => names.includes(key)),
+  );
+  return { ...schema, properties };
+}
+
 export function bounds(schema: JsonSchema): { min?: number; max?: number } {
   const result: { min?: number; max?: number } = {};
   const min = schema.minimum ?? schema.exclusiveMinimum;

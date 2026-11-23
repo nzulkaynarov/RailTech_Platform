@@ -257,6 +257,12 @@
     "additionalProperties": false,
     "description": "Антиспам публичной формы «Запрос» с сайта (M3-CRM-05, `domain/web_form.py`).\n\nБез внешних сервисов: honeypot, подписанный токен формы (минимальное время заполнения и срок\nжизни) и окно запросов по IP.",
     "properties": {
+      "first_response_sla_minutes": {
+        "description": "За сколько рабочих минут человек должен ответить на запрос с сайта",
+        "maximum": 1440,
+        "minimum": 1,
+        "type": "integer"
+      },
       "min_fill_seconds": {
         "description": "Минимум секунд между выдачей формы и отправкой",
         "maximum": 300,

@@ -52,7 +52,7 @@ describe("Настройки · Процессы · Справочники пи�
     expect(tax).toHaveTextContent("Действует");
     expect(await rowOf("Письмо банка")).toHaveTextContent("по общему правилу");
     const menu = screen.getByRole("navigation", { name: "Разделы модуля" });
-    expect(within(menu).getByRole("link", { name: "Компания" })).toHaveAttribute(
+    expect(within(menu).getByRole("link", { name: "Правила работы" })).toHaveAttribute(
       "aria-current",
       "page",
     );
@@ -121,9 +121,12 @@ describe("Настройки · Процессы · Справочники пи�
   it("шаблоны резолюций: администратор видит общий и добавляет новый", async () => {
     signInAs("admin@demo.example");
     renderApp("/admin/docflow?tab=templates");
-    expect(
-      await screen.findByRole("heading", { level: 1, name: "Шаблоны резолюций" }),
-    ).toBeInTheDocument();
+    // ЕВ-2а: шаблоны резолюций — вкладка «Резолюции» страницы «Шаблоны»; старый адрес уводит на неё
+    expect(await screen.findByRole("heading", { level: 1, name: "Шаблоны" })).toBeInTheDocument();
+    expect(await screen.findByRole("tab", { name: "Резолюции" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
     expect(
       await screen.findByText("Банк — к сведению бухгалтерии", { selector: "b" }),
     ).toBeInTheDocument();
@@ -153,12 +156,10 @@ describe("Настройки · Процессы · Справочники пи�
     });
   });
 
-  it("ИИ-помощник: старый адрес вкладки ведёт на «Расходы на ИИ»; сканы по умолчанию читаются (PD-BIZ)", async () => {
+  it("ИИ-помощник: старый адрес вкладки ведёт на «ИИ»; сканы по умолчанию читаются (PD-BIZ)", async () => {
     signInAs("admin@demo.example");
     renderApp("/admin/docflow?tab=ai");
-    expect(
-      await screen.findByRole("heading", { level: 1, name: "Расходы на ИИ" }),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { level: 1, name: "ИИ" })).toBeInTheDocument();
     const scans = await screen.findByRole("switch", { name: "Читать сканы и фото писем" });
     expect(scans).toBeChecked();
     expect(readDocflowSettings().recognize_scans).toBe(true);

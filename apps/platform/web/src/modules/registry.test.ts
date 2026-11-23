@@ -21,8 +21,16 @@ describe("меню — docs/product/NAVIGATION.md", () => {
     expect(menuOf("erp")).toEqual(["Заявки", "Каталог", "Финансы"]);
     // ЕВ-3а (q.2): «Чаты» — макет без сообщений, в меню их нет
     expect(menuOf("chats")).toEqual(["Календарь", "Люди"]);
-    expect(menuOf("admin")).toEqual(["Сотрудники", "Компания", "Подключения", "Журнал"]);
-    expect(MODULES.flatMap((m) => menuOf(m.code))).toHaveLength(20);
+    // ЕВ-2а: «Состояние» первым, затем пять групп
+    expect(menuOf("admin")).toEqual([
+      "Состояние",
+      "Люди и доступ",
+      "Компания",
+      "Правила работы",
+      "Каналы и подключения",
+      "Журнал",
+    ]);
+    expect(MODULES.flatMap((m) => menuOf(m.code))).toHaveLength(22);
   });
 
   it("у каждого раздела из меню есть конфигурация", () => {
@@ -50,11 +58,13 @@ describe("меню — docs/product/NAVIGATION.md", () => {
     expect(at("/eds/payments")).toBe("erp.finance.invoices");
     expect(at("/eds/payments?show=memos")).toBe("erp.finance.memos");
     expect(at("/eds/projects")).toBe("dashboard.projects");
-    expect(at("/admin/org")).toBe("admin.people.org");
-    // индекс группы — страница «Все настройки», пункты меню ведут на сами страницы
-    expect(at("/admin?group=channels")).toBeUndefined();
-    expect(at("/admin/telegram")).toBe("admin.channels.telegram");
-    expect(at("/admin/templates")).toBe("admin.company.templates");
+    expect(at("/admin/org")).toBe("admin.people");
+    // «Состояние» — первый пункт; группа открывает свою первую страницу, остальные — меню слева рамки страницы
+    expect(at("/admin")).toBe("admin.state");
+    expect(at("/admin/telegram")).toBe("admin.channels");
+    // «Обмен между системами» — вид «Истории»: подсвечивает пункт «Журнал»
+    expect(at("/admin/bus")).toBe("admin.journal");
+    expect(at("/admin/templates")).toBe("admin.rules");
     expect(at("/eds/mail")).toBe("eds.mail");
     expect(at("/eds/mail/42")).toBe("eds.mail");
     expect(at("/erp/stock")).toBe("erp.catalog.stock");
@@ -169,7 +179,6 @@ describe("карта маршрутов SPEC-v3 §6.3", () => {
     "/admin/mail",
     "/admin/web-forms",
     "/admin/dictionaries",
-    "/admin/resolutions",
     "/admin/templates",
     "/admin/timing",
     "/admin/notifications",

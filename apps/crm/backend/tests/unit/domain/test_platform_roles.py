@@ -268,6 +268,8 @@ EXPECTED: dict[tuple[str, str], tuple[set[str], set[str]]] = {
         {"ticket_label:read", "ticket_label:write"},
         {"settings.edit", "settings.charge_templates"},
     ),
+    # ЕВ-2а: раздел открывает в меню страницы фундамента; прав бэкенда не даёт
+    ("admin.system", "full"): NOTHING,
     ("admin", "read"): (ADMIN_READ, set()),
     (
         "admin",
@@ -416,6 +418,7 @@ def test_the_two_system_roles_are_fixed_by_the_catalog() -> None:
     rows = {r["code"]: r for r in default_roles()}
     assert rows["ADMIN"]["access"] == {
         "admin": "full",
+        "admin.system": "full",  # ЕВ-2а: страницы фундамента Настроек — только администратор
         "company.settings": "full",
         "dashboard.queue": "full",
         "chats.internal": "full",
@@ -430,7 +433,14 @@ def test_the_two_system_roles_are_fixed_by_the_catalog() -> None:
     # D17G-1: разбор и передачу лидов (первая линия) директор не ведёт — раздела у него нет.
     # SIGN-2: реестр полномочий подписи ведёт администратор — у директора раздела нет.
     # ADR-0025: директор подписывает, визы бухгалтера и юриста у него нет.
-    hidden = {"crm.leads.triage", "eds.signing.manage", "eds.visa.finance", "eds.visa.legal"}
+    # ЕВ-2а: страницы фундамента Настроек (`admin.system`) директору не показываются.
+    hidden = {
+        "crm.leads.triage",
+        "eds.signing.manage",
+        "eds.visa.finance",
+        "eds.visa.legal",
+        "admin.system",
+    }
     assert {k for k, v in director.items() if v == "read"} == read_only
     assert {k: v for k, v in director.items() if k not in read_only} == {
         k: "full" for k in generated.RESOURCE_KEYS if k not in read_only | hidden

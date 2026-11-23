@@ -365,7 +365,7 @@
     "name": "Settings",
     "title": "Settings",
     "sections": {
-      "overview": "All settings",
+      "overview": "Status",
       "org": "Employees",
       "roles": "Roles & permissions",
       "zones": "Responsibility zones",
@@ -381,11 +381,11 @@
       "forms": "Website forms",
       "dictionaries": "Lists",
       "resolutions": "Resolution templates",
-      "templates": "Document templates",
+      "templates": "Templates",
       "timing": "Hours & deadlines",
       "notifications": "Notifications",
       "integrations": "Services",
-      "spend": "AI spend",
+      "spend": "AI",
       "audit": "History",
       "exports": "Exports",
       "bus": "System exchange",
@@ -393,10 +393,11 @@
       "tickets": "Staff requests"
     },
     "groups": {
-      "people": "Employees",
+      "people": "People & access",
       "company": "Company",
-      "channels": "Connections",
-      "system": "Log"
+      "channels": "Channels & connections",
+      "rules": "Work rules",
+      "journal": "Log"
     },
     "home": {
       "viewOnly": "View only",
@@ -851,11 +852,94 @@
       "systems": "System exchange"
     },
     "nav": {
-      "people": "Employees",
+      "people": "People & access",
       "company": "Company",
-      "channels": "Connections",
-      "system": "Log"
-    }
+      "channels": "Channels & connections",
+      "state": "Status",
+      "rules": "Work rules",
+      "journal": "Log"
+    },
+    "frame": {
+      "nav": "Pages of “{{group}}”"
+    },
+    "state": {
+      "subtitle": "What needs attention now, who fixes it and where to go",
+      "attention": "Needs attention · {{count}}",
+      "none": "Everything works: no failures or overdue settings.",
+      "fixer": "fixed by {{who}}",
+      "open": "Open “{{page}}”",
+      "openPlain": "Open",
+      "affected": "affected: {{list}}",
+      "erpDetail": "The link to quotes is not set up: requests will not go to a quote, quote documents and stock are unavailable.",
+      "owner": {
+        "admin": "the administrator",
+        "owner": "the company owner",
+        "hosting": "the hosting",
+        "provider": "the provider",
+        "director": "the director",
+        "accountant": "the accountant"
+      },
+      "row": {
+        "signing": {
+          "title": "Signing authority expires in {{days}} d.",
+          "what": "{{name}}, {{basis}} until {{until}}",
+          "ifNot": "after that nobody can sign documents"
+        },
+        "signingExpired": {
+          "title": "Signing authority expired on {{until}}",
+          "what": "{{name}}, {{basis}}",
+          "ifNot": "nobody can sign documents: no valid authority covers these kinds"
+        },
+        "fx": {
+          "title": "The {{currency}} rate has not been updated for {{days}} d.",
+          "ifNot": "quotes in dollars cannot use a fresh rate"
+        },
+        "blank": {
+          "title": "Company letterhead is not set",
+          "ifNot": "letters on the letterhead cannot be built or sent"
+        },
+        "tickets": {
+          "title": "Staff requests: {{count}}",
+          "ifNot": "staff are waiting for an answer"
+        },
+        "zones": {
+          "title": "Zones without a responsible person: {{count}}",
+          "ifNot": "nobody takes the requests and tasks of the zone"
+        }
+      },
+      "services": "Services",
+      "service": {
+        "mail": "Mail",
+        "bot": "Telegram",
+        "erp": "Requests and quotes",
+        "backups": "Backups",
+        "ai": "AI",
+        "bus": "System exchange"
+      },
+      "bus": {
+        "empty": "queue is empty",
+        "queued": "queued: {{count}}",
+        "dead": "not delivered: {{count}}"
+      },
+      "external": {
+        "title": "External availability check",
+        "off": "not connected",
+        "text": "the owner will not be told about an outage"
+      },
+      "readiness": "Readiness · {{done}} of {{total}}",
+      "ready": {
+        "works": "works",
+        "filled": "filled in",
+        "broken": "not working",
+        "todo": "not done",
+        "unknown": "no data"
+      },
+      "extra": {
+        "blank": "Company letterhead",
+        "support": "Support address"
+      }
+    },
+    "templatesLink": "Document templates"
   },
   "tabs": {
     "today": "Today",

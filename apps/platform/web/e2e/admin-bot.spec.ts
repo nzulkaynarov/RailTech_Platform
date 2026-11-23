@@ -31,7 +31,7 @@ const SECTIONS = [
 const PAGE_OF: Record<string, string> = {
   company: "Реквизиты и бланк",
   business_hours: "Время и сроки",
-  escalation: "Время и сроки",
+  escalation: "Telegram",
   texts: "Telegram",
   bot: "Telegram",
   kb: "Telegram",
@@ -43,7 +43,7 @@ const PAGE_OF: Record<string, string> = {
   notifications: "Уведомления",
   service_alerts: "Уведомления",
   deals: "Справочники",
-  budget: "Расходы на ИИ",
+  budget: "ИИ",
   exports: "Выгрузки",
 };
 
@@ -82,14 +82,14 @@ test.describe("Настройки бота: администратор", () => {
     await settledScreenshot(page, "company");
 
     await contacts.getByLabel("Название компании").fill("RailTech Групп (демо)");
-    await expect(contacts.getByText("Есть несохранённые изменения")).toBeVisible();
+    await expect(contacts.getByText("Есть несохранённые изменения").first()).toBeVisible();
     await contacts.getByRole("button", { name: "Отменить изменения" }).click();
     await expect(contacts.getByLabel("Название компании")).toHaveValue("RailTech (демо)");
 
     await contacts.getByLabel("Название компании").fill("RailTech Групп (демо)");
     await contacts.getByRole("button", { name: "Сохранить", exact: true }).click();
     await expect(page.getByText("Настройки «Контакты для клиентов» сохранены")).toBeVisible();
-    await expect(contacts.getByText("Изменений нет")).toBeVisible();
+    await expect(contacts.getByRole("button", { name: "Сохранить", exact: true })).toHaveCount(0);
     await settledScreenshot(page, "company-saved");
   });
 
@@ -210,7 +210,7 @@ test.describe("Настройки бота: администратор", () => {
     );
     await settledScreenshot(page, "escalation-dry-run");
     await expect(
-      form(page, "Правила передачи").getByText("Есть несохранённые изменения"),
+      form(page, "Правила передачи").getByText("Есть несохранённые изменения").first(),
     ).toBeVisible();
   });
 
@@ -342,7 +342,7 @@ test.describe("Telegram в одном месте (W15-H4, SET-IA)", () => {
 test.describe("Настройки бота: права", () => {
   test.skip(({ isMobile }) => isMobile, "сценарии на десктопе; ширины проверяет блок axe");
 
-  test("директор читает разделы, шаблоны и выгрузки без кнопок изменения", async ({ page }) => {
+  test("директор читает разделы без кнопок изменения", async ({ page }) => {
     await loginAndWait(page, "director@demo.example");
     await openBot(page, "business_hours");
 
@@ -352,17 +352,11 @@ test.describe("Настройки бота: права", () => {
     await expect(
       page.getByRole("button", { name: "Проверить на последних 50 диалогах" }),
     ).toHaveCount(0);
-    await openBot(page, "templates");
-    await expect(page.getByRole("link", { name: "Новый шаблон" })).toHaveCount(0);
-    await expect(
-      page.getByRole("link", { name: "Открыть шаблон: Пришлю КП сегодня" }),
-    ).toBeVisible();
-    await openBot(page, "exports");
-    await expect(page.getByRole("button", { name: "Скачать: Сделки" })).toBeDisabled();
+    // шаблоны ответов и выгрузки — страницы фундамента (ЕВ-2а): директору не показываются
     await settledScreenshot(page, "director-view");
   });
 
-  test("менеджер: пункта «Telegram» нет, прямой адрес — «Нет доступа»; в Настройках у директора пункт есть", async ({
+  test("менеджер: пункта «Telegram» нет, прямой адрес — «Нет доступа»; директору «Каналы и подключения» не показываются (ЕВ-2а)", async ({
     page,
   }) => {
     await loginAndWait(page, "manager@demo.example");
@@ -374,11 +368,12 @@ test.describe("Настройки бота: права", () => {
     await spaGoto(page, "/login");
     await loginAndWait(page, "director@demo.example");
     await spaGoto(page, "/admin/roles");
-    await expect(
-      page
-        .getByRole("navigation", { name: "Разделы модуля" })
-        .getByRole("link", { name: "Подключения", exact: true }),
-    ).toBeVisible();
+    // EV-2a: страницы фундамента (раздел `admin.system`) директору не показываются
+    const menu = page.getByRole("navigation", { name: "Разделы модуля" });
+    await expect(menu.getByRole("link", { name: "Правила работы", exact: true })).toBeVisible();
+    await expect(menu.getByRole("link", { name: "Каналы и подключения", exact: true })).toHaveCount(
+      0,
+    );
   });
 });
 
@@ -435,7 +430,7 @@ test.describe("Настройки бота: axe и снимки", () => {
     test(`директор на ${String(width)}: просмотр без нарушений axe`, async ({ page }) => {
       await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
       await loginAndWait(page, "director@demo.example");
-      for (const section of ["company", "texts", "templates", "exports"]) {
+      for (const section of ["company", "business_hours"]) {
         await openBot(page, section);
         await expectNoViolations(page, `director ${section} ${String(width)}`);
       }

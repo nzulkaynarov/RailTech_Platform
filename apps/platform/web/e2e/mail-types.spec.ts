@@ -277,8 +277,11 @@ for (const width of WIDTHS) {
     page,
   }) => {
     await signInAt(page, width, ADMIN);
+    // EV-2a: типы писем и правила отправителей — на странице «Почта»; старый адрес справочника ведёт туда же
     await spaGoto(page, "/admin/dictionaries?list=doc%3Amail-types");
-    await expect(page.getByRole("heading", { level: 1, name: "Справочники" })).toBeVisible();
+    await expect(page).toHaveURL(/\/admin\/mail/);
+    await expect(page.getByRole("heading", { level: 1, name: "Почта" })).toBeVisible();
+    await expect(page.locator("#pf-mail-kinds")).toBeVisible();
     await expect(page.getByText("Создать лид → менеджеру").first()).toBeVisible();
     // таблица не шире окна: названия и «Цвет» не обрезаются, горизонтальной прокрутки таблицы нет
     const clipped = await page.evaluate<number>(

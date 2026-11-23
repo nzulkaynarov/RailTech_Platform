@@ -595,7 +595,7 @@ export function DocumentsPage() {
         {...(canSee(me, { resource: "company.settings" })
           ? {
               // ЕВ-3а: «Шаблоны» ушли из меню «Документов» — вход отсюда и из «Настроек · Компания»
-              extra: <Link to="/admin/templates">{t("modules:admin.sections.templates")}</Link>,
+              extra: <Link to="/admin/templates">{t("modules:admin.templatesLink")}</Link>,
             }
           : {})}
       />

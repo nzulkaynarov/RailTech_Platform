@@ -110,7 +110,9 @@ describe("карточка «Почта» · приём (W18A-P2)", () => {
 
   it("«Загрузить письма за период»: ход и итог «загружено N»", async () => {
     const side = await mailPanel();
-    fireEvent.click(await within(side).findByRole("button", { name: "Загрузить" }));
+    // на странице «Почта» есть и другие кнопки «Загрузить» — берём ту, что в блоке «Загрузить письма за период»
+    const block = within(side).getByRole("region", { name: "Загрузить письма за период" });
+    fireEvent.click(await within(block).findByRole("button", { name: "Загрузить" }));
     expect(
       await within(side).findByText(/Загружено новых писем: 2 из 3/, {}, { timeout: 15000 }),
     ).toBeVisible();

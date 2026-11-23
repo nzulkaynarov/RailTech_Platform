@@ -12,8 +12,18 @@ import { useSettingsEditable } from "./useSettingsEditable";
 
 import "./settings.css";
 
+/** Страницы-формы: поля не шире 768 px (отчёт 2026-11-22 §7 п. 20); остальные — таблицы и журналы — на всю ширину рамки. */
+const FORM_PAGES: readonly string[] = [
+  "timing",
+  "forms",
+  "notifications",
+  "sales",
+  "taxes",
+  "numbering",
+];
+
 /**
- * Рамка страницы Настроек (SET-IA): заголовок — название из реестра (`modules:admin.sections.<key>`, то же, что в меню и в
+ * Страница Настроек внутри общей рамки (`SettingsFrame`, ЕВ-2а; SET-IA): заголовок — название из реестра (`modules:admin.sections.<key>`, то же, что в меню и в
  * поиске), подзаголовок — одна строка или его нет (CONVENTIONS §2 п. 17); директору — плашка «Только просмотр».
  */
 export function SettingsPage({
@@ -47,7 +57,7 @@ export function SettingsPage({
     </Link>
   ) : null;
   return (
-    <div className="pf-set-page">
+    <div className={`pf-set-page${FORM_PAGES.includes(sectionKey) ? " pf-set-narrow" : ""}`}>
       <PageHeader
         title={title}
         subtitle={subtitle}

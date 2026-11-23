@@ -29,19 +29,17 @@ import { LinkButton } from "../../../shared/ui/LinkButton";
 import { LockIcon } from "../../../shared/ui/icons";
 import { AttentionGroupRow } from "./AttentionGroup";
 import { mergeSameCause } from "./attention";
+import { attentionTexts } from "./attentionTexts";
 import { CabinetAddress } from "./CabinetAddress";
 import { integrationErrorText } from "./errors";
 import { TechnicalDetails } from "./HealthParts";
 import { ErpPanel } from "./ErpPanel";
-import { MailPanel } from "./MailPanel";
 import { ModelsPanel } from "./ModelsPanel";
 import { LevelTag } from "./parts";
 import { useRefreshIntegrations } from "./refresh";
 import { ServicesPanel } from "./ServicesPanel";
-import { SpendPanel } from "./SpendPanel";
 import { StoragePanel } from "./StoragePanel";
 import { SystemPanel } from "./SystemPanel";
-import { TelegramPanel } from "./TelegramPanel";
 
 import "./integrations.css";
 
@@ -241,46 +239,6 @@ function IntegrationTile({
   );
 }
 
-function attentionTexts(
-  t: ReturnType<typeof useTranslation>["t"],
-  item: AttentionItem,
-): { subject: string; detail: string | null } {
-  const card = t(`cards.${item.card}.title`);
-  switch (item.kind) {
-    case "not_configured":
-      return { subject: card, detail: t(`attention.notConfigured.${item.card}`) };
-    case "model_problem": {
-      const alias = t(`models.alias.${item.subject ?? ""}`, { defaultValue: item.subject ?? card });
-      return { subject: alias, detail: t("health.model.problem", { alias }) };
-    }
-    case "backup_stale":
-      return {
-        subject: card,
-        detail: [t("attention.backupStale"), item.detail].filter(Boolean).join(" "),
-      };
-    case "rotation_pending":
-      return { subject: card, detail: t("attention.rotationPending") };
-    case "bot_not_running":
-      return {
-        subject: card,
-        detail: [t("attention.botNotRunning"), item.detail].filter(Boolean).join(" "),
-      };
-    case "paused":
-      return {
-        subject: item.subject ?? card,
-        detail: [t("attention.paused"), item.detail].filter(Boolean).join(" "),
-      };
-    case "budget_over":
-    case "budget_near":
-      return {
-        subject: item.subject ?? card,
-        detail: `${t(`attention.${item.kind}`)} ${item.detail ?? ""}`.trim(),
-      };
-    default:
-      return { subject: item.subject ?? card, detail: item.detail };
-  }
-}
-
 function AttentionSection({
   items,
   editable,
@@ -355,17 +313,16 @@ function CardPanel({ card, editable }: { card: IntegrationCardKey; editable: boo
   switch (card) {
     case "erp":
       return <ErpPanel editable={editable} />;
+    // Telegram, Почта и расходы на ИИ настраиваются на своих страницах — по одному месту (ЕВ-2а, отчёт §8.2 п. 18); «Открыть»
+    // ведёт туда (`OWN_PAGE`), а старая ссылка `?card=` уходит по `redirects.ts`: боковых окон этих карточек больше нет.
     case "telegram":
-      // Бот настраивается в одном месте — Настройки · Telegram-бот (W15-H4); здесь — состояние и переход туда.
-      return <TelegramPanel editable={editable} summary />;
     case "mail":
-      return <MailPanel editable={editable} />;
+    case "spend":
+      return null;
     case "services":
       return <ServicesPanel editable={editable} />;
     case "models":
       return <ModelsPanel editable={editable} />;
-    case "spend":
-      return <SpendPanel />;
     case "storage":
       return <StoragePanel editable={editable} />;
     case "system":

@@ -12,6 +12,7 @@ import { BotSettingsSections } from "../settings/BotSettingsSections";
 import { SettingsPage } from "../settings/SettingsPage";
 import { BrandTab } from "./tabs/BrandTab";
 import { DetailsTab } from "./tabs/DetailsTab";
+import { SupportAddress } from "./tabs/PlatformTab";
 
 import "./company.css";
 
@@ -69,6 +70,9 @@ export function CompanyPage() {
       </Card>
       <Card id="pf-co-part-brand" styles={{ body: { padding: 0 } }}>
         <BrandTab />
+      </Card>
+      <Card id="pf-co-part-support" styles={{ body: { padding: 0 } }}>
+        <SupportAddress />
       </Card>
       {canSee(me, { resource: "admin" }) ? (
         <section id="pf-co-part-contacts" className="pf-panel-stack">

@@ -12,6 +12,8 @@ import {
   matchesText,
   pickerToTime,
   BOT_PLACEMENT,
+  FIELD_MOVES,
+  botPartsFor,
   botSectionsFor,
   textGroups,
   timeToPicker,
@@ -25,13 +27,46 @@ describe("разделы настроек", () => {
   it("пятнадцать разделов CRM раскладываются по страницам Настроек без потерь и повторов (SET-IA)", () => {
     expect(KEYS).toHaveLength(15);
     const pages = [...new Set(Object.values(BOT_PLACEMENT))];
-    const placed = pages.flatMap((page) => botSectionsFor(page, KEYS));
+    // Раздел может стоять на странице двумя частями (`FIELD_MOVES`): без потерь — каждое поле ровно на одной странице
+    const placed = [...new Set(pages.flatMap((page) => botSectionsFor(page, KEYS)))];
     expect([...placed].sort()).toEqual([...KEYS].sort());
-    expect(botSectionsFor("timing", KEYS)).toEqual(["business_hours", "escalation"]);
+    expect(botSectionsFor("timing", KEYS)).toEqual(["business_hours", "escalation", "web_form"]);
     expect(botSectionsFor("notifications", KEYS)).toEqual(["notifications", "service_alerts"]);
     expect(botSectionsFor("dictionaries", KEYS)).toEqual(["deals"]);
-    expect(botSectionsFor("spend", KEYS)).toEqual(["budget"]);
+    expect(botSectionsFor("spend", KEYS)).toEqual(["budget", "bot"]);
     expect(botSectionsFor("spend.policy", KEYS)).toEqual(["ai"]); // своя карточка, общая форма её не рисует
+  });
+
+  it("одна настройка — одно место: каждое поле раздела, часть которого переехала, показана ровно на одной странице (ЕВ-2а)", () => {
+    const pages = [
+      ...new Set(Object.values(BOT_PLACEMENT)),
+      ...Object.values(FIELD_MOVES).flatMap((m) => m.map((x) => x.page)),
+    ];
+    for (const section of Object.keys(FIELD_MOVES)) {
+      const fields = Object.keys(SCHEMAS[section]?.properties ?? {});
+      for (const field of fields) {
+        const shownOn = [...new Set(pages)].filter((page) =>
+          botPartsFor(page, KEYS).some(
+            (part) =>
+              part.section === section &&
+              (part.only ? part.only.includes(field) : !(part.hide ?? []).includes(field)),
+          ),
+        );
+        expect(shownOn, `${section}.${field}`).toHaveLength(1);
+      }
+    }
+    // срок первого ответа лиду — оба поля на «Времени и сроках»; пороги передачи — к поведению бота
+    const timing = botPartsFor("timing", KEYS);
+    expect(timing.find((p) => p.section === "escalation")?.only).toEqual([
+      "sla_minutes",
+      "reminder_minutes",
+    ]);
+    expect(timing.find((p) => p.section === "web_form")?.only).toEqual([
+      "first_response_sla_minutes",
+    ]);
+    expect(
+      botPartsFor("telegram.behavior", KEYS).find((p) => p.section === "escalation")?.hide,
+    ).toEqual(["sla_minutes", "reminder_minutes"]);
   });
 
   it("новый раздел CRM попадает в «Telegram · Поведение», отсутствующие не показываются", () => {

@@ -9,7 +9,6 @@ import { localName } from "../../eds/dictionaries";
 import { CategoriesTab } from "../company/tabs/CategoriesTab";
 import { ChargesTab } from "../company/tabs/ChargesTab";
 import { DictionariesTab } from "../docflow/DictionariesTab";
-import { MailRules } from "../docflow/MailRules";
 import { BotSettingsSections } from "./BotSettingsSections";
 import { type NavGroup, SettingsNav } from "./SettingsNav";
 import { SettingsPage } from "./SettingsPage";
@@ -24,7 +23,7 @@ const DOC_PREFIX = "doc:";
 /**
  * Процессы · Справочники (SET-IA; ресёрч «Настройки» §4.3): все списки компании на одном экране, слева — по разделам.
  * Продажи — причины отказа и валюта сделок (раздел `deals` настроек бота); Документы — справочники писем (каталог BFF);
- * Почта — «Типы входящих писем» и правила отправителей (MAIL-TYPES, данные CRM, тот же каталог BFF);
+ * «Типы входящих писем» и правила отправителей — настройки канала, они на странице «Почта» (ЕВ-2а);
  * Расчёт — страны, валюты, единицы, базисы поставки, категории каталога и статьи расхода (нужен `company.settings`).
  * Справочники всех доменов — общим ресурсом BFF `/dictionaries` (решение владельца 2026-11-11), в том числе «Расчёт» ERP.
  */
@@ -51,13 +50,6 @@ export function DictionariesPage() {
       label: t("modules:admin.dictionaries.documents"),
       items: (catalog.data?.items ?? [])
         .filter((d) => d.area === "documents")
-        .map((d) => ({ key: `${DOC_PREFIX}${d.kind}`, label: localName(d.name, i18n.language) })),
-    },
-    {
-      key: "mail",
-      label: t("modules:admin.dictionaries.mail"),
-      items: (catalog.data?.items ?? [])
-        .filter((d) => d.area === "mail")
         .map((d) => ({ key: `${DOC_PREFIX}${d.kind}`, label: localName(d.name, i18n.language) })),
     },
     ...(withCalc
@@ -111,11 +103,6 @@ export function DictionariesPage() {
         <Card styles={{ body: { padding: 0 } }}>
           <DictionariesTab readOnly={!editable} kind={kind} />
         </Card>
-        {kind === "mail-types" ? (
-          <Card styles={{ body: { padding: 0 } }}>
-            <MailRules readOnly={!canEdit(me, "admin")} />
-          </Card>
-        ) : null}
       </>
     );
   } else if (current === "categories") {

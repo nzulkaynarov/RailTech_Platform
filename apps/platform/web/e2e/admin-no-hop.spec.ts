@@ -101,11 +101,9 @@ test.describe("Настройки без переброса", () => {
         page.locator(PANEL).getByRole("heading", { level: 3, name: "Шаг 7 из 10: Почта" }),
       ).toBeFocused();
 
-      // Чек-лист «Первый запуск» на индексе Настроек, пока шаги не завершены (SET-IA)
+      // Готовность на «Состоянии» (первый экран Настроек, EV-2a): остаётся и после настройки
       await spaGoto(page, "/admin");
-      await expect(
-        page.getByRole("region", { name: /^Первый запуск: готово \d+ из \d+$/ }),
-      ).toBeVisible();
+      await expect(page.getByRole("region", { name: /^Готовность · \d+ из \d+$/ })).toBeVisible();
       await expect(page.getByRole("region", { name: "Настройка Платформы" })).toHaveCount(0);
 
       // Telegram в одном месте (старый адрес бота уводит на «Каналы связи · Telegram»)

@@ -44,7 +44,7 @@
     "competitors": "Competitors",
     "escalation": "Handoff rules",
     "qualification": "Qualification",
-    "notifications": "Team channel",
+    "notifications": "Team alerts",
     "budget": "Model budget",
     "deals": "Loss reasons",
     "web_form": "Website \"Request\" form",
@@ -58,7 +58,7 @@
     "stop_words": "A message with a stop word is handed to a manager at once. \"word*\" — any ending.",
     "competitors": "Mentioning a competitor is a reason to hand off to a manager.",
     "escalation": "When the bot hands the dialog to the team and how fast the team must reply.",
-    "notifications": "Where handoff cards go and whom to mention in reminders.",
+    "notifications": "Whom to mention in reminders and how often to write to the manager.",
     "budget": "The daily limit of AI model spend.",
     "service_alerts": "Whom to write to when an external service (Telegram, AI models, mail…) breaks and when it recovers. One message about the failure and one about the recovery.",
     "deals": "Rejection reasons for closing a deal and the currency of new deals."
@@ -637,7 +637,8 @@
     "email_admins": "Email to administrators",
     "extra_emails": "Additional email addresses",
     "repeat_minutes": "At most one service failure alert per",
-    "pii_policy": "Data protection policy"
+    "pii_policy": "Data protection policy",
+    "first_response_sla_minutes": "First reply time for website requests"
   },
   "hints": {
     "cabinet_url": "The \"Cabinet\" button under quote and invoice messages; empty — no button.",
@@ -666,7 +667,8 @@
     "telegram_channel": "\"If not delivered to anyone personally\" — the channel stays about leads, the team sees failures there only as a fallback.",
     "email_admins": "To active administrators with an email; the \"Mail\" connector must be connected.",
     "extra_emails": "For example, the engineer on duty; Enter — add.",
-    "repeat_minutes": "If a service \"flickers\", a new failure sooner than this is written to the incident log without a message."
+    "repeat_minutes": "If a service \"flickers\", a new failure sooner than this is written to the incident log without a message.",
+    "first_response_sla_minutes": "Working minutes within which a person must answer a website request."
   },
   "units": {
     "repeat_minutes": "min",
@@ -680,7 +682,8 @@
     "daily_usd": "$",
     "erp_daily_usd": "$",
     "anthropic": "$",
-    "gemini": "$"
+    "gemini": "$",
+    "first_response_sla_minutes": "min"
   },
   "options": {
     "need": "Need",
@@ -715,5 +718,10 @@
     "text": "The documents the bot answers from, the “What the bot finds” search, gaps and the sandbox are on the knowledge base screen. Below — how the bot uses the base.",
     "readOnlyText": "Documents, gaps and the “What the bot finds” search are on the knowledge base screen, read only.",
     "open": "Open the knowledge base"
+  },
+  "movedKeys": {
+    "escalation": "First reply time and reminder",
+    "web_form": "First reply time for website requests",
+    "bot": "AI help for managers"
   }
 }
