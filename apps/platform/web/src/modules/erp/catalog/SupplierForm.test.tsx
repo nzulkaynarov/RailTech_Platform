@@ -13,8 +13,8 @@ const ticked = (head: HTMLElement) =>
 describe("Новый партнёр · галочки шагов (Х-18)", () => {
   it("шаг «Контакт» с неверной почтой не получает галочку; с верной — получает", async () => {
     signIn("supply@demo.example");
-    renderAt("/erp/catalog?part=import");
-    fireEvent.click(await screen.findByRole("button", { name: "Новый партнёр" }));
+    // форма партнёра целиком (компания, контакт, кабинет) — в «Контрагентах»; в загрузке прайса партнёр выбирается
+    renderAt("/crm/clients?partner=new&panel=open&tab=card");
     const form = await screen.findByRole("region", { name: "Новый партнёр" });
     const head = (name: RegExp) => within(form).getByRole("button", { name });
 
@@ -33,8 +33,8 @@ describe("Новый партнёр · галочки шагов (Х-18)", () =>
 
   it("шаг «Компания» с ИНН не из 9 цифр не получает галочку", async () => {
     signIn("supply@demo.example");
-    renderAt("/erp/catalog?part=import");
-    fireEvent.click(await screen.findByRole("button", { name: "Новый партнёр" }));
+    // форма партнёра целиком (компания, контакт, кабинет) — в «Контрагентах»; в загрузке прайса партнёр выбирается
+    renderAt("/crm/clients?partner=new&panel=open&tab=card");
     const form = await screen.findByRole("region", { name: "Новый партнёр" });
     fireEvent.change(within(form).getByLabelText("Название"), { target: { value: "Демо Сталь" } });
     fireEvent.change(within(form).getByLabelText("ИНН"), { target: { value: "12345" } });

@@ -59,8 +59,9 @@ test.describe("Доработать возвращённый документ", 
     // директор: «Вернуть на доработку» с комментарием
     await loginAndWait(page, "director@demo.example");
     await spaGoto(page, `/eds/approvals/${encodeURIComponent("СЗ-2026/014")}`);
+    // ЕД-7: форма согласования — блок в центре карточки
     const form = page
-      .locator("#pf-context-panel")
+      .locator(".pf-dec-center")
       .getByRole("form", { name: "Согласование документа" });
     await expect(page.getByRole("heading", { level: 1, name: "СЗ-2026/014" })).toBeVisible();
     await form.getByLabel("Комментарий").fill(REMARK);

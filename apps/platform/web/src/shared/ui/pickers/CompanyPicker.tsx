@@ -8,6 +8,7 @@ import {
   searchCounterparties,
   useCreateCounterparty,
   useGetCatalogLookups,
+  useSetCounterpartyRole,
 } from "../../api/generated/platform-bff";
 import { ErrorNote, FormField } from "../FormParts";
 import { FormSheet } from "../FormSheet";
@@ -27,6 +28,12 @@ export interface PickedCompany {
   inn: string | null;
   /** Общая почта компании — форма может подставить её, если у человека своей нет */
   email?: string | null;
+  /** Клиент CRM, с которым связана компания: заявка уходит с его id, без него — с названием и ИНН */
+  crmClientId?: number | null;
+  /** Название страны из карточки: форма, где страна — справочник, подставляет её сразу */
+  country?: string | null;
+  /** Роль, которую форма поставит при сохранении (`useApplyCompanyRole`): у выбранной компании её ещё нет */
+  pendingRole?: "supplier" | "manufacturer";
 }
 
 export type { CounterpartyPickRole };
@@ -36,7 +43,54 @@ const toPicked = (row: CounterpartyPick): PickedCompany => ({
   name: row.name,
   inn: row.inn,
   email: row.email,
+  crmClientId: row.crm_client_id,
+  country: row.country,
 });
+
+/** Строка выбора из `details.existing` ответа 409: проверяем форму, чужому телу не верим */
+function existingRow(details: Record<string, unknown>): CounterpartyPick | null {
+  const row = details["existing"];
+  if (!row || typeof row !== "object") return null;
+  const found = row as Partial<CounterpartyPick>;
+  if (typeof found.id !== "string" || typeof found.name !== "string") return null;
+  if (!found.roles || typeof found.roles !== "object") return null;
+  return {
+    id: found.id,
+    name: found.name,
+    inn: found.inn ?? null,
+    country: found.country ?? null,
+    roles: found.roles,
+    crm_client_id: found.crm_client_id ?? null,
+    email: found.email ?? null,
+  };
+}
+
+/** Роли, которые форма может попросить у компании сама */
+const isAssignable = (
+  role: CounterpartyPickRole | undefined,
+): role is "supplier" | "manufacturer" => role === "supplier" || role === "manufacturer";
+
+/**
+ * Роль формы ставится при сохранении формы, а не при выборе: закрытая форма не должна оставлять роль без факта.
+ * Возвращает текст причины, если не вышло (нет права, компании нет в списке контрагентов, сбой), иначе `null`.
+ */
+export function useApplyCompanyRole(): (company: PickedCompany | null) => Promise<string | null> {
+  const { t } = useTranslation("ui");
+  const setRole = useSetCounterpartyRole();
+  return async (company) => {
+    const wanted = company?.pendingRole;
+    if (!company || !wanted) return null;
+    try {
+      await setRole.mutateAsync({ id: company.id, data: { role: wanted, on: true } });
+      return null;
+    } catch (error) {
+      const status = error instanceof ApiError ? error.status : 0;
+      if (status === 403) return t(`picker.company.roleFailed.denied.${wanted}`);
+      if (status === 404) return t("picker.company.roleFailed.notListed");
+      return t("picker.company.roleFailed.other");
+    }
+  };
+}
 
 const ROLE_KEYS = ["client", "supplier", "manufacturer", "partner", "organization"] as const;
 
@@ -48,21 +102,29 @@ const ROLE_KEYS = ["client", "supplier", "manufacturer", "partner", "organizatio
  */
 export function CompanyPicker({
   id,
-  value,
+  value = null,
   onChange,
   role,
   allowCreate = true,
+  assignRole = false,
   invalid = false,
   disabled = false,
   describedBy,
   suggest,
 }: {
-  id: string;
-  value: PickedCompany | null;
-  onChange: (company: PickedCompany | null) => void;
+  /** Поле формы antd (`Form.Item`) подставляет `id`, `value` и `onChange` само */
+  id?: string;
+  value?: PickedCompany | null;
+  onChange?: (company: PickedCompany | null) => void;
   /** Роль, которая нужна форме: компании с ней идут выше; для «Завести» — роль новой компании */
   role?: CounterpartyPickRole;
   allowCreate?: boolean;
+  /**
+   * Форма просит у компании роль «поставщик» или «изготовитель» (`role`): у выбранной компании без этой роли в
+   * значении стоит `pendingRole`, и форма ставит роль при сохранении через `useApplyCompanyRole` (ERP, право
+   * `supply.manage`) — выбор сам ничего не пишет.
+   */
+  assignRole?: boolean;
   invalid?: boolean;
   disabled?: boolean;
   describedBy?: string;
@@ -74,6 +136,12 @@ export function CompanyPicker({
   const [open, setOpen] = useState(false);
   const [creating, setCreating] = useState<string | null>(null);
   const { items, query, loading, settled } = useCompanySearch(search, role, open);
+
+  // Выбор строки: роль формы запоминается в значении и ставится при сохранении формы (`useApplyCompanyRole`)
+  const choose = (row: CounterpartyPick) => {
+    const wanted = assignRole && isAssignable(role) && !row.roles[role] ? role : undefined;
+    onChange?.({ ...toPicked(row), ...(wanted ? { pendingRole: wanted } : {}) });
+  };
 
   const typed = query.length >= MIN_CREATE;
   const offerCreate = allowCreate && typed && settled;
@@ -128,7 +196,7 @@ export function CompanyPicker({
         }}
         onSearch={setSearch}
         onClear={() => {
-          onChange(null);
+          onChange?.(null);
         }}
         onSelect={(picked) => {
           if (picked === CREATE) {
@@ -137,7 +205,7 @@ export function CompanyPicker({
             return;
           }
           const row = items.find((item) => item.id === picked);
-          if (row) onChange(toPicked(row));
+          if (row) choose(row);
         }}
         options={[
           // выбранная компания остаётся в списке, пока поиск её не показал, — иначе поле теряет название
@@ -164,10 +232,15 @@ export function CompanyPicker({
         <NewCompany
           name={creating}
           role={role}
+          onExisting={(row) => {
+            choose(row);
+            setCreating(null);
+            setSearch("");
+          }}
           onDone={(company) => {
             setCreating(null);
             setSearch("");
-            onChange(company);
+            onChange?.(company);
           }}
           onCancel={() => {
             setCreating(null);
@@ -186,11 +259,14 @@ const createRole = (role: CounterpartyPickRole | undefined) =>
 function NewCompany({
   name: initial,
   role,
+  onExisting,
   onDone,
   onCancel,
 }: {
   name: string;
   role: CounterpartyPickRole | undefined;
+  /** Такой ИНН уже есть: компания выбирается, а не заводится вторая */
+  onExisting: (row: CounterpartyPick) => void;
   onDone: (company: PickedCompany) => void;
   onCancel: () => void;
 }) {
@@ -211,7 +287,12 @@ function NewCompany({
   const innValid = inn.trim() === "" || /^\d{9}$/.test(inn.trim());
 
   // такой ИНН уже есть у компании — берём её, а не заводим вторую
-  const pickExisting = async (existingId: string | undefined) => {
+  const pickExisting = async (existingId: string | undefined, known: CounterpartyPick | null) => {
+    // ERP прикладывает строку компании к отказу: она может быть без роли, и в поиске её нет
+    if (known) {
+      onExisting(known);
+      return;
+    }
     const innText = inn.trim();
     const list = await searchCounterparties({ q: innText || name.trim(), limit: 20 }).catch(
       () => null,
@@ -219,7 +300,7 @@ function NewCompany({
     const found =
       list?.items.find((row) => row.id === existingId) ??
       (innText ? list?.items.find((row) => row.inn === innText) : undefined);
-    if (found) onDone(toPicked(found));
+    if (found) onExisting(found);
     else setTaken(true);
   };
 
@@ -259,7 +340,10 @@ function NewCompany({
             onError: (error) => {
               if (error instanceof ApiError && error.status === 409) {
                 const existing = error.details["existing_id"];
-                void pickExisting(typeof existing === "string" ? existing : undefined);
+                void pickExisting(
+                  typeof existing === "string" ? existing : undefined,
+                  existingRow(error.details),
+                );
               }
             },
           },

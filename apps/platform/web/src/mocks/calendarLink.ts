@@ -21,6 +21,9 @@ function write(userId: string, issuedAt: string): void {
   }
 }
 
+/** Номер выдачи: две ссылки, выданные в одну миллисекунду, всё равно разные (иначе «Сменить ссылку» на моках флейкует). */
+let issued = 0;
+
 export const calendarLinkHandlers = [
   http.get("*/me/calendar-link", () => {
     const session = readSession();
@@ -33,7 +36,8 @@ export const calendarLinkHandlers = [
     if (!session) return new HttpResponse(null, { status: 401 });
     const issuedAt = new Date().toISOString();
     write(session.userId, issuedAt);
-    const path = `/api/v1/calendar/demo-calendar-token-${String(Date.now())}-0123456789abcdef.ics`;
+    issued += 1;
+    const path = `/api/v1/calendar/demo-calendar-token-${String(Date.now())}-${String(issued)}-0123456789abcdef.ics`;
     return HttpResponse.json({
       path,
       url: `${window.location.origin}${path}`,

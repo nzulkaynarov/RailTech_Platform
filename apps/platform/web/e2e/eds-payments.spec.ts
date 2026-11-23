@@ -140,6 +140,8 @@ test.describe("Счета и оплаты: бухгалтер", () => {
     await expect(page.getByRole("heading", { level: 1, name: "СЧ-2026/145" })).toBeVisible();
     const payments = page.getByRole("table", { name: "Оплаты по счёту" });
     await expect(payments.getByText("BANK-8841")).toBeVisible();
+    // журнал — «История» бокового окна, не блок в центре (ЕД-7)
+    await page.locator(PANEL).getByRole("tab", { name: "История" }).click();
     await expect(page.getByRole("list", { name: "Журнал счёта" })).toContainText(
       "Оплата подтверждена",
     );
@@ -259,6 +261,7 @@ test.describe("Счета и оплаты: бухгалтер", () => {
       .getByRole("link", { name: "Открыть служебку СЗ-2026/015" })
       .click();
     await expect(page.getByRole("heading", { level: 1, name: "СЗ-2026/015" })).toBeVisible();
+    await page.locator(PANEL).getByRole("tab", { name: "История" }).click();
     await expect(page.getByRole("list", { name: "Журнал записки" })).toContainText("Оплачена");
   });
 });

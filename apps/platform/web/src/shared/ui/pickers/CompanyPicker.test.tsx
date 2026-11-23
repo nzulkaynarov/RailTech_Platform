@@ -7,17 +7,22 @@ import { addCompany, pickCompany, searchCompany, selectedLabel } from "../../../
 import { renderUi } from "../../../test/renderUi";
 import { server } from "../../../test/server";
 
-import { CompanyPicker, type PickedCompany } from "./CompanyPicker";
+import { CompanyPicker, type PickedCompany, useApplyCompanyRole } from "./CompanyPicker";
 import { PersonPicker } from "./PersonPicker";
 
 function Harness({
   onChange,
   role,
+  assignRole,
 }: {
   onChange: (company: PickedCompany | null) => void;
   role?: "supplier";
+  assignRole?: boolean;
 }) {
   const [value, setValue] = useState<PickedCompany | null>(null);
+  const [saved, setSaved] = useState(false);
+  const [refused, setRefused] = useState<string | null>(null);
+  const applyRole = useApplyCompanyRole();
   return (
     <>
       <label htmlFor="co">Организация</label>
@@ -25,11 +30,27 @@ function Harness({
         id="co"
         value={value}
         role={role}
+        assignRole={assignRole}
         onChange={(company) => {
           setValue(company);
           onChange(company);
         }}
       />
+      {/* «Сохранить» формы: роль ставится здесь, а не при выборе */}
+      <button
+        type="button"
+        onClick={() => {
+          setSaved(false);
+          void applyRole(value).then((text) => {
+            setRefused(text);
+            setSaved(text === null);
+          });
+        }}
+      >
+        Сохранить
+      </button>
+      {refused ? <p role="alert">{refused}</p> : null}
+      {saved ? <p>Сохранено</p> : null}
       <label htmlFor="pe">Человек</label>
       <PersonPicker id="pe" companyId={value?.id ?? ""} value="" onChange={() => undefined} />
     </>
@@ -116,7 +137,25 @@ describe("CompanyPicker (ЕД-6)", () => {
     expect(found.items).toHaveLength(1);
   });
 
-  it("дубль указывает на компанию, которой нет в выдаче поиска: понятный отказ вместо отсылки в пустой список", async () => {
+  it("ИНН у компании без роли, которой нет в поиске: берётся компания из ответа 409, тупика нет", async () => {
+    const picked: (PickedCompany | null)[] = [];
+    renderUi(<Harness onChange={(c) => picked.push(c)} />);
+    const field = screen.getByLabelText("Организация");
+    // в поиске её нет
+    searchCompany(field, "Скрытая");
+    expect(await screen.findByText("Завести «Скрытая»")).toBeInTheDocument();
+    expect(screen.queryByText(/ИНН 300000999/)).toBeNull();
+    await addCompany(field, "Скрытая копия", "300000999");
+    await waitFor(() => {
+      expect(selectedLabel(field)).toBe("ООО «Скрытая Компания»");
+    });
+    expect(picked).toHaveLength(1);
+    expect(picked[0]).toMatchObject({ id: "14", inn: "300000999", country: "Узбекистан" });
+    expect(screen.queryByRole("dialog", { name: "Новая компания" })).toBeNull();
+    expect(screen.queryByText(/в списке выбора её нет/)).toBeNull();
+  });
+
+  it("ответ 409 без строки компании и без неё в поиске: понятный отказ, поле остаётся пустым", async () => {
     server.use(
       http.post("*/people/counterparties", () =>
         HttpResponse.json(
@@ -138,9 +177,57 @@ describe("CompanyPicker (ЕД-6)", () => {
     const sheet = await screen.findByRole("dialog", { name: "Новая компания" });
     fireEvent.click(within(sheet).getByRole("button", { name: "Завести" }));
     expect(await within(sheet).findByText(/в списке выбора её нет/)).toBeVisible();
-    expect(within(sheet).queryByText(/найдите её в списке/)).toBeNull();
     expect(picked).toEqual([]);
   });
+
+  it("форме нужна роль поставщика: выбор ничего не пишет, роль ставится при сохранении и только компании без неё", async () => {
+    const marked: { id: string; body: unknown }[] = [];
+    server.use(
+      http.post("*/people/counterparties/:id/roles", async ({ params, request }) => {
+        marked.push({ id: String(params["id"]), body: await request.json() });
+        return HttpResponse.json({});
+      }),
+    );
+    const picked: (PickedCompany | null)[] = [];
+    renderUi(<Harness onChange={(c) => picked.push(c)} role="supplier" assignRole />);
+    const field = screen.getByLabelText("Организация");
+    await pickCompany(field, "Путь", "АО «Демо-Путь»");
+    expect(picked[0]).toMatchObject({ id: "7", pendingRole: "supplier" });
+    // форму не сохранили — роли нет (факт «заказ создан» ещё не случился)
+    expect(marked).toEqual([]);
+    fireEvent.click(screen.getByRole("button", { name: "Сохранить" }));
+    await waitFor(() => {
+      expect(marked).toEqual([{ id: "7", body: { role: "supplier", on: true } }]);
+    });
+    // у «Поставщик Север» роль уже есть — отметки нет ни при выборе, ни при сохранении
+    await pickCompany(field, "Север", "ООО «Поставщик Север»");
+    expect(picked[1]?.pendingRole).toBeUndefined();
+    fireEvent.click(screen.getByRole("button", { name: "Сохранить" }));
+    await screen.findByText("Сохранено");
+    expect(marked).toHaveLength(1);
+  });
+
+  it.each([
+    [403, /Не удалось отметить компанию поставщиком: нет права/],
+    [404, /Компании нет в списке контрагентов/],
+    [503, /Не удалось отметить роль компании\. Повторите/],
+  ])(
+    "роль не поставилась (HTTP %i): причина берётся из факта, «нет права» — только при 403",
+    async (status, text) => {
+      server.use(
+        http.post("*/people/counterparties/:id/roles", () =>
+          HttpResponse.json({ code: "X", message: "Сбой.", source: "erp" }, { status }),
+        ),
+      );
+      renderUi(<Harness onChange={() => undefined} role="supplier" assignRole />);
+      const field = screen.getByLabelText("Организация");
+      await pickCompany(field, "Путь", "АО «Демо-Путь»");
+      fireEvent.click(screen.getByRole("button", { name: "Сохранить" }));
+      expect(await screen.findByRole("alert")).toHaveTextContent(text);
+      if (status !== 403) expect(screen.queryByText(/нет права/)).toBeNull();
+      expect(screen.queryByText("Сохранено")).toBeNull();
+    },
+  );
 
   it("короткий ИНН не отправляется: «Завести» недоступна", async () => {
     renderUi(<Harness onChange={() => undefined} />);

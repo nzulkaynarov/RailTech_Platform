@@ -167,7 +167,6 @@
     "title": "Hamkorga yangi buyurtma",
     "supplier": "Hamkor",
     "supplierRequired": "Hamkorni tanlang",
-    "noEmail": "pochta yo‘q",
     "mode": "Tarkib",
     "modeManual": "Qo‘lda",
     "modeShortage": "Ariza taqchilligi uchun",
@@ -401,7 +400,6 @@
   "priceRequest": {
     "title": "Hamkordan narx so‘rash · {{number}}",
     "supplier": "Hamkor",
-    "supplierPlaceholder": "Hamkorni tanlang",
     "email": "Xat manzili",
     "emailHint": "Hamkorda pochta yo‘q: xat yuboriladigan manzilni kiriting.",
     "lines": "So‘rov qatorlari",

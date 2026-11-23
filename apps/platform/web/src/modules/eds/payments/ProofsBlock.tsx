@@ -255,14 +255,21 @@ function RequestForm({ card }: { card: PaymentCard }) {
 }
 
 /** Платёжки клиента со вторичными действиями: приложить файл и запросить платёжку у клиента. */
-export function ProofsBlock({ card }: { card: PaymentCard }) {
+export function ProofsBlock({
+  card,
+  heading = true,
+}: {
+  card: PaymentCard;
+  /** Заголовок блока; в карточке счёта его даёт рамка блока в центре */
+  heading?: boolean;
+}) {
   const { t } = useTranslation("payments");
   const { date } = useFormat();
   const [attach, setAttach] = useState(false);
   const [request, setRequest] = useState(false);
   return (
     <section className="pf-dec-page" aria-label={t("proofs.title")}>
-      <h4 className="pf-dec-subhead">{t("proofs.title")}</h4>
+      {heading ? <h4 className="pf-dec-subhead">{t("proofs.title")}</h4> : null}
       <ProofList card={card} />
       {card.payment_doc_requested_at ? (
         <p className="pf-hint">

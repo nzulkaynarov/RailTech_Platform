@@ -112,7 +112,7 @@ test.describe("Задачи", () => {
       .getByRole("link", { name: /Наложить резолюцию: Наложить резолюцию на письмо ВХ-104\/26/ })
       .click();
 
-    await expect(page).toHaveURL(/\/eds\/inbox\/%D0%92%D0%A5-104%2F26\?panel=open&tab=resolution$/);
+    await expect(page).toHaveURL(/\/eds\/inbox\/%D0%92%D0%A5-104%2F26$/);
     await expect(page.getByRole("heading", { level: 1, name: "Письмо ВХ-104/26" })).toBeVisible();
   });
 
@@ -377,7 +377,7 @@ test.describe("Задачи директора: «Одобрить КП» из E
       await expectNoViolations(page, `очередь директора ${String(width)}`);
 
       await rows.filter({ hasText: "Одобрить КП-2026/115" }).getByRole("link").click();
-      await expect(page).toHaveURL(/\/eds\/drafts\/%D0%9A%D0%9F-2026%2F115\?.*tab=approve/);
+      await expect(page).toHaveURL(/\/eds\/drafts\/%D0%9A%D0%9F-2026%2F115$/);
       await spaGoto(page, "/eds/drafts");
       await expect(page).toHaveURL(/\/eds\/documents\?box=outgoing&kind=quote$/);
     });

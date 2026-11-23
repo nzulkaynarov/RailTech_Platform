@@ -7723,7 +7723,7 @@ export interface paths {
     put?: never;
     /**
      * Поле выбора: завести контрагента
-     * @description Последняя строка поля выбора «завести»: название, ИНН (9 цифр), страна, адрес и роль (`organization` по умолчанию, `supplier` или `manufacturer`). ERP `POST parties/organizations/`. Такой ИНН уже есть у ЛЮБОЙ компании, а не только из видимых в списке — 409 `CONFLICT` (`details.reason = company_exists`, `details.existing_id` — id найденной компании): её выбирают, а не заводят. Роль «поставщик» и «изготовитель» — право ERP `supply.manage`, иначе 403. Раздел `crm.clients`, `erp.stock`, `erp.calc` или `eds.memo.create` — полный.
+     * @description Последняя строка поля выбора «завести»: название, ИНН (9 цифр), страна, адрес и роль (`organization` по умолчанию, `supplier` или `manufacturer`). ERP `POST parties/organizations/`. Такой ИНН уже есть у ЛЮБОЙ компании, а не только из видимых в списке — 409 `CONFLICT` (`details.reason = company_exists`, `details.existing_id` — id найденной компании, `details.existing` — её строка выбора): её выбирают, а не заводят. Роль «поставщик» и «изготовитель» — право ERP `supply.manage`, иначе 403. Раздел `crm.clients`, `erp.stock`, `erp.calc` или `eds.memo.create` — полный.
      */
     post: operations["createCounterparty"];
     delete?: never;
@@ -31791,7 +31791,7 @@ export interface operations {
       };
       401: components["responses"]["SessionExpired"];
       403: components["responses"]["Forbidden"];
-      /** @description `CONFLICT` (`details.reason = company_exists`, `details.existing_id`) — такая компания уже есть */
+      /** @description `CONFLICT` (`details.reason = company_exists`, `details.existing_id`) — такая компания уже есть. `details.existing` — её строка выбора (`CounterpartyPick`: id, название, ИНН, страна, роли), когда ERP её приложила: компания без роли не видна ни поиску, ни карточке, ни `roles` (404), поэтому поле выбирает её прямо из ответа, а роль формы такой компании поставить нельзя */
       409: {
         headers: {
           [name: string]: unknown;

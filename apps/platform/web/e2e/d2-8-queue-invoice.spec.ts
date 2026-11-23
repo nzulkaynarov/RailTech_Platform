@@ -131,18 +131,13 @@ test.describe("D2-8: «Задачи» менеджера-универсала и
       page,
     }) => {
       await signInAt(page, "director@demo.example", width);
-      // карточка письма без бокового окна: блок «Связи» с номером заявки
-      await spaGoto(page, "/eds/inbox/%D0%92%D0%A5-104%2F26");
+      // карточка письма: номер заявки — строка «Сведений» бокового окна
+      await spaGoto(page, "/eds/inbox/%D0%92%D0%A5-104%2F26?panel=open&tab=facts");
       const link = page.getByRole("link", { name: "ЗВ-2026-104" }).first();
       await expect(link).toHaveAttribute(
         "href",
         "/erp/requests?request=%D0%97%D0%92-2026-104&panel=open&tab=task",
       );
-      // окно «Резолюция» на широком экране лежит поверх карточки — закрываем, как сделал бы сотрудник
-      if (width >= 768) {
-        await page.getByRole("button", { name: "Скрыть панель", exact: true }).click();
-        await waitForMotionEnd(page);
-      }
       await link.click();
       await expect(page).toHaveURL(/\/erp\/requests\?request=/);
       await expect(page.getByRole("heading", { level: 1, name: "Заявки" })).toBeVisible();

@@ -173,6 +173,7 @@
       "invalid": "The quote can no longer be sent — the card is refreshed."
     },
     "superseded": "This is version {{version}}, superseded by version {{next}}. Decide on the current version in “Quotes for approval”; this is history.",
+    "supersededOpen": "Open version {{next}}",
     "clientDecision": {
       "title": "Client decision",
       "state": {

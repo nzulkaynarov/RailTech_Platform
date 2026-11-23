@@ -35,13 +35,27 @@ describe("Профиль · ссылка для календаря", () => {
       within(block).getByText("Сроки обновляются, когда вы заходите в Платформу."),
     ).toBeVisible();
 
-    fireEvent.click(within(block).getByRole("button", { name: /Сменить ссылку/ }));
-    const confirm = (await screen.findAllByRole("button", { name: /Сменить ссылку/ })).at(-1);
-    expect(confirm).toBeDefined();
-    fireEvent.click(confirm as HTMLElement);
+    // кнопка смены появляется вместе со ссылкой, пока выдача ещё завершается: нажатие на «занятую» кнопку не открывает вопрос
+    const rotate = within(block).getByRole("button", { name: /Сменить ссылку/ });
     await waitFor(() => {
-      const next = within(block).getByLabelText<HTMLInputElement>("Ссылка для календаря").value;
-      expect(next).not.toBe(first);
+      expect(rotate).not.toHaveClass("ant-btn-loading");
     });
+    fireEvent.click(rotate);
+    // подтверждение — вторая кнопка с тем же словом: ждём само окно вопроса, иначе нажмём ту же кнопку ещё раз
+    await screen.findByText("Прежняя ссылка перестанет работать. Сменить?");
+    const buttons = await waitFor(() => {
+      const found = screen.getAllByRole("button", { name: /Сменить ссылку/ });
+      expect(found.length).toBeGreaterThan(1);
+      return found;
+    });
+    fireEvent.click(buttons.at(-1) as HTMLElement);
+    // смена — запрос к серверу: под нагрузкой прогона секунды по умолчанию не хватает
+    await waitFor(
+      () => {
+        const next = within(block).getByLabelText<HTMLInputElement>("Ссылка для календаря").value;
+        expect(next).not.toBe(first);
+      },
+      { timeout: 10_000 },
+    );
   });
 });

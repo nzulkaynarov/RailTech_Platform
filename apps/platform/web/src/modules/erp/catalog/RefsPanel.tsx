@@ -20,7 +20,6 @@ import {
   useListCatalogExchangeRates,
   useListDictionaryItems,
   useListHsCodes,
-  useListCatalogSuppliers,
   useListManufacturers,
   useUpdateHsCode,
   useUpdateManufacturer,
@@ -30,6 +29,7 @@ import { useFormat } from "../../../shared/lib/useFormat";
 import { DateField } from "../../../shared/ui/DateField";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { FormField, QueryState } from "../../../shared/ui/FormParts";
+import { CompanyPicker, useApplyCompanyRole, type PickedCompany } from "../../../shared/ui/pickers";
 import { StatusTag } from "../../../shared/ui/StatusTag";
 import { type Column, DataList, FormModal, FormPanel, PAGE_SIZE, Pager } from "./common";
 import { useDebounced } from "./useDebounced";
@@ -648,23 +648,12 @@ function BrandForm({ brand, onClose }: { brand?: Manufacturer | undefined; onClo
   const [country, setCountry] = useState<string | null>(brand?.country_id ?? null);
   const [site, setSite] = useState(brand?.website ?? "");
   const [active, setActive] = useState(brand?.is_active ?? true);
-  const [company, setCompany] = useState<string | null>(brand?.company_id ?? null);
-  const [companyQuery, setCompanyQuery] = useState("");
-  const companyQ = useDebounced(companyQuery.trim());
-  // Изготовитель — компания из контрагентов-поставщиков и изготовителей (ADR-0028 п. 4)
-  const companies = useListCatalogSuppliers({
-    ...(companyQ ? { q: companyQ } : {}),
-    page: 1,
-    page_size: 50,
-  });
-  const companyOptions = [
-    ...(brand?.company_id && brand.company_name
-      ? [{ value: brand.company_id, label: brand.company_name }]
-      : []),
-    ...(companies.data?.items ?? [])
-      .filter((item) => item.id !== brand?.company_id)
-      .map((item) => ({ value: item.id, label: item.name })),
-  ];
+  // Изготовитель — любая компания из контрагентов (ЕД-6); без роли форма ставит ей «изготовитель» сама
+  const [company, setCompany] = useState<PickedCompany | null>(
+    brand?.company_id && brand.company_name
+      ? { id: brand.company_id, name: brand.company_name, inn: null }
+      : null,
+  );
   const ids = {
     name: useId(),
     country: useId(),
@@ -676,6 +665,8 @@ function BrandForm({ brand, onClose }: { brand?: Manufacturer | undefined; onClo
     void queryClient.invalidateQueries({ queryKey: getListManufacturersQueryKey() });
     onClose();
   };
+  const applyRole = useApplyCompanyRole();
+  const [roleRefused, setRoleRefused] = useState<string | null>(null);
   const create = useCreateManufacturer({ mutation: { onSuccess: done } });
   const update = useUpdateManufacturer({ mutation: { onSuccess: done } });
   const mutation = brand ? update : create;
@@ -684,7 +675,7 @@ function BrandForm({ brand, onClose }: { brand?: Manufacturer | undefined; onClo
       title={brand ? t("refs.brands.form.editTitle") : t("refs.brands.form.addTitle")}
       okLabel={brand ? t("save") : t("refs.brands.form.add")}
       loading={mutation.isPending}
-      error={mutation.error}
+      error={roleRefused ?? mutation.error}
       disabled={name.trim() === ""}
       onOk={() => {
         const data = {
@@ -692,10 +683,18 @@ function BrandForm({ brand, onClose }: { brand?: Manufacturer | undefined; onClo
           country_id: country,
           website: site.trim(),
           is_active: active,
-          company_id: company,
+          company_id: company?.id ?? null,
         };
-        if (brand) update.mutate({ id: brand.id, data });
-        else create.mutate({ data });
+        setRoleRefused(null);
+        // роль изготовителя — в момент сохранения: закрытая форма не оставляет роль без бренда
+        void applyRole(company).then((refused) => {
+          if (refused) {
+            setRoleRefused(refused);
+            return;
+          }
+          if (brand) update.mutate({ id: brand.id, data });
+          else create.mutate({ data });
+        });
       }}
       onCancel={onClose}
     >
@@ -714,18 +713,18 @@ function BrandForm({ brand, onClose }: { brand?: Manufacturer | undefined; onClo
         label={t("refs.brands.form.company")}
         hint={t("refs.brands.form.companyHint")}
       >
-        <Select
+        <CompanyPicker
           id={ids.company}
-          allowClear
-          showSearch
-          filterOption={false}
-          onSearch={setCompanyQuery}
-          loading={companies.isFetching}
+          role="manufacturer"
+          assignRole
           value={company}
-          onChange={(v: string | null | undefined) => {
-            setCompany(v ?? null);
+          onChange={(picked) => {
+            setCompany(picked);
+            setRoleRefused(null);
+            // страна — из карточки компании сразу; в справочнике нет такого названия — остаётся прежняя
+            const own = (lookups.data?.countries ?? []).find((c) => c.name === picked?.country);
+            if (own) setCountry(own.id);
           }}
-          options={companyOptions}
         />
       </FormField>
       <FormField id={ids.country} label={t("refs.brands.form.country")}>

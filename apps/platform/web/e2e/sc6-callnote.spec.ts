@@ -2,6 +2,7 @@ import { type Page, expect, test } from "@playwright/test";
 
 import { loginAndWait, spaGoto, waitForMotionEnd } from "./support/app";
 import { expectNoViolations } from "./support/axe";
+import { chooseOrAddAddressee } from "./support/fields";
 
 // СЦ-6: заявка по звонку без поиска файла — записка о звонке собирается сама для лида со звонком (когда согласие есть) и по
 // кнопке «Основание — звонок» без лида; нет бланка — причина и «приложите файл». Снимки 1440 и 390 и axe — в
@@ -33,6 +34,8 @@ test.describe("СЦ-6: записка о звонке", () => {
       await spaGoto(page, "/crm/leads?lead=L-2077&create=1&panel=open&tab=card");
       const form = page.getByRole("form", { name: "Создать заявку" });
       await expect(form).toBeVisible();
+      // ЕД-6: название из звонка стоит в поле серым — компанию выбирают из контрагентов или заводят последней строкой
+      await chooseOrAddAddressee(page, "ООО Демо-Депо", "Название компании");
 
       await form.getByRole("button", { name: /^Контакт/ }).click();
       await form.getByRole("checkbox", { name: "Согласие получено" }).check();

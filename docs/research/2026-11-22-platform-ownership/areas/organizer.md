@@ -1,6 +1,6 @@
 # AREA D: Органайзер, internal communication, tasks and connectors
 
-All paths are relative to `/home/umarbek/projects/RailTech_Platform/.claude/worktrees/research-main` (main @ 2ecd40446). Abbreviations: W = `apps/platform/web/src`, BFF = `apps/platform/bff/app`.
+All paths are relative to `` (main @ 2ecd40446). Abbreviations: W = `apps/platform/web/src`, BFF = `apps/platform/bff/app`.
 
 ## 1. Facts: what exists today
 

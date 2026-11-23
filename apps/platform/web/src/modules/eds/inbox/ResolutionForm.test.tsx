@@ -6,7 +6,8 @@ import { readLetters, writeLetters } from "../../../mocks/fixtures/letters";
 import { chooseOption, fillDate, selectedLabel } from "../../../test/fields";
 import { server } from "../../../test/server";
 import { companyDate } from "./api";
-import { panelEl, renderAt, setupLetterTests, signIn } from "../../../test/lettersKit";
+import { renderAt, setupLetterTests, signIn } from "../../../test/lettersKit";
+import { decisionEl } from "../../../test/panel";
 import { confirmDialog } from "../../../test/confirmDialog";
 
 setupLetterTests();
@@ -16,7 +17,7 @@ const LETTER = "/eds/inbox/%D0%92%D0%A5-104%2F26";
 async function openForm(path = LETTER, directoryReady = true) {
   signIn("director@demo.example");
   const view = renderAt(path);
-  const panel = await panelEl();
+  const panel = await decisionEl();
   const form = await within(panel).findByRole("form", { name: "Резолюция директора" });
   // справочник сотрудников загружен: зона «услуги» с одним кандидатом выбрана сама
   if (directoryReady) {
@@ -176,9 +177,9 @@ describe("Резолюция: форма", () => {
       due: companyDate(3),
       min_margin_pct: "15.5",
     });
-    expect(
-      await within(panel).findByRole("heading", { name: "Решение по письму принято" }),
-    ).toBeVisible();
+    await waitFor(() => {
+      expect(within(panel).queryByRole("form")).toBeNull();
+    });
     expect(await screen.findByRole("heading", { name: "Решение директора" })).toBeVisible();
     expect(screen.getByText("15.5 %")).toBeVisible();
     expect(draftKeys()).toHaveLength(0);
@@ -197,9 +198,9 @@ describe("Резолюция: форма", () => {
         selector: ".ant-message-notice-content *",
       }),
     ).toBeVisible();
-    expect(
-      await within(panel).findByRole("heading", { name: "Решение по письму принято" }),
-    ).toBeVisible();
+    await waitFor(() => {
+      expect(within(panel).queryByRole("form")).toBeNull();
+    });
     expect((await screen.findAllByText("Нужен объём")).length).toBeGreaterThan(0);
   });
 
@@ -337,11 +338,11 @@ describe("Резолюция: ошибки и черновик", () => {
       JSON.stringify({ text: "старый", picks: {}, due: "2026-11-01", margin: "", comment: "" }),
     );
     renderAt("/eds/inbox/%D0%92%D0%A5-101%2F26");
-    const panel = await panelEl();
+    const panel = await decisionEl();
 
-    expect(
-      await within(panel).findByRole("heading", { name: "Решение по письму принято" }),
-    ).toBeVisible();
+    await waitFor(() => {
+      expect(within(panel).queryByRole("form")).toBeNull();
+    });
     await waitFor(() => {
       expect(window.sessionStorage.getItem(key)).toBeNull();
     });

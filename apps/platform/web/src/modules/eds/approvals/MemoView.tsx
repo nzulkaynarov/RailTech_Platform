@@ -1,11 +1,9 @@
-import { Button, Card, Skeleton } from "antd";
+import { Card, Skeleton } from "antd";
 import { useTranslation } from "react-i18next";
-import { useSearchParams } from "react-router";
 
 import { useAuth } from "../../../app/auth/useAuth";
-import { useViewport } from "../../../app/shell/useViewport";
 import { ApiError } from "../../../shared/api/errors";
-import type { EdsRouteStep, MemoApprovalCard } from "../../../shared/api/generated/model";
+import type { MemoApprovalCard } from "../../../shared/api/generated/model";
 import {
   getDownloadEdsDocumentFileUrl,
   useGetMemoApproval,
@@ -16,49 +14,19 @@ import { useFormat } from "../../../shared/lib/useFormat";
 import { DefinitionList } from "../../../shared/ui/DefinitionList";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { QueryState } from "../../../shared/ui/FormParts";
-import { History, type HistoryItem } from "../../../shared/ui/History";
 import { LockIcon } from "../../../shared/ui/icons";
 import { LinkButton } from "../../../shared/ui/LinkButton";
 import { MoneyText } from "../../../shared/ui/MoneyText";
 import { PageHeader } from "../../../shared/ui/PageHeader";
+import { RouteTimeline } from "../../../shared/ui/RouteTimeline";
 import { StatusTag } from "../../../shared/ui/StatusTag";
+import { DecisionCenter } from "../decision/DecisionCenter";
+import { RecordTab } from "../decision/RecordTab";
 import { DocumentStatusTag } from "../documents/status";
-import { AgreeSlot } from "./AgreePanel";
+import { AgreePanel } from "./AgreePanel";
 import { memoRef } from "./api";
 import { useStateLabels } from "./labels";
 import { mayDecideMemos } from "./model";
-import { useStepNote } from "./stepNote";
-
-function stepState(status: EdsRouteStep["status"]): HistoryItem["state"] {
-  if (status === "current") return "waiting";
-  if (status === "pending") return "todo";
-  return "done";
-}
-
-function Route({ memo }: { memo: MemoApprovalCard }) {
-  const { t } = useTranslation("approvals");
-  const { date } = useFormat();
-  const items: HistoryItem[] = [
-    {
-      state: "done",
-      title: t("card.routeAuthor", { name: memo.author.full_name }),
-      meta: date(memo.created_at, "datetime"),
-    },
-    ...memo.steps.map((step) => ({
-      state: stepState(step.status),
-      title: t(`card.routeStep.${step.status}`, { label: step.label }),
-      meta: (
-        <>
-          {step.decided_at && step.decided_by
-            ? `${date(step.decided_at, "datetime")} · ${step.decided_by.full_name}`
-            : null}
-          {step.comment ? <p className="pf-dec-note">{step.comment}</p> : null}
-        </>
-      ),
-    })),
-  ];
-  return <History items={items} label={t("card.route")} />;
-}
 
 function Files({ memo }: { memo: MemoApprovalCard }) {
   const { t, i18n } = useTranslation("approvals");
@@ -82,54 +50,15 @@ function Files({ memo }: { memo: MemoApprovalCard }) {
   );
 }
 
-function Decisions({ memo }: { memo: MemoApprovalCard }) {
-  const { t } = useTranslation("approvals");
-  const { date } = useFormat();
-  if (memo.decisions.length === 0) return null;
-  return (
-    <Card size="small" title={<h2 className="pf-dec-title">{t("card.decisions")}</h2>}>
-      <ol className="pf-dec-list" aria-label={t("card.decisions")}>
-        {memo.decisions.map((d, index) => (
-          <li key={`${d.at}-${String(index)}`}>
-            <strong>{t(`card.decision.${d.decision}`)}</strong>
-            <span className="pf-hint">
-              {" "}
-              · {d.by.full_name} · {date(d.at, "datetime")}
-            </span>
-            {d.comment ? <p className="pf-dec-note">{d.comment}</p> : null}
-          </li>
-        ))}
-      </ol>
-    </Card>
-  );
-}
-
 function Content({ memo, refKey }: { memo: MemoApprovalCard; refKey: string }) {
   const { t } = useTranslation("approvals");
   const { me } = useAuth();
   const { date } = useFormat();
-  const { wide, mobile } = useViewport();
-  const [, setParams] = useSearchParams();
   const mayDecide = mayDecideMemos(me) || Boolean(memo.acting_for);
-  const stepNote = useStepNote(memo);
-  const waiting = memo.status === "open" && memo.can_decide && mayDecide;
   const number = memo.number ?? t(`kinds.${memo.kind}`);
 
-  const openAgree = () => {
-    setParams(
-      (prev) => {
-        const next = new URLSearchParams(prev);
-        if (mobile) next.set("sheet", "agree");
-        else next.set("panel", "open");
-        next.set("tab", "agree");
-        return next;
-      },
-      { replace: true },
-    );
-  };
-
   return (
-    <div className="pf-dec-page">
+    <div className="pf-dec-page pf-overlay-aware">
       <PageHeader
         title={t("card.title", { number })}
         subtitle={memo.subject}
@@ -147,57 +76,51 @@ function Content({ memo, refKey }: { memo: MemoApprovalCard; refKey: string }) {
           </div>
         }
       />
-      {waiting && !wide ? (
-        <div>
-          <Button type="primary" onClick={openAgree}>
-            {t("card.agree")}
-          </Button>
-        </div>
-      ) : null}
-      {memo.status === "open" && !waiting ? (
-        <p className="pf-hint">{mayDecide && stepNote ? stepNote : t("card.readOnlyHint")}</p>
-      ) : null}
-      <div className="pf-dec-grid">
-        <div className="pf-dec-main">
-          <Card size="small" title={<h2 className="pf-dec-title">{t("card.text")}</h2>}>
-            <p className="pf-dec-text">{memo.text}</p>
-          </Card>
-          <Card size="small" title={<h2 className="pf-dec-title">{t("card.files")}</h2>}>
-            <Files memo={memo} />
-          </Card>
-          <Card size="small" title={<h2 className="pf-dec-title">{t("card.route")}</h2>}>
-            <Route memo={memo} />
-          </Card>
-          <Decisions memo={memo} />
-        </div>
-        <aside className="pf-dec-side" aria-label={t("card.requisites")}>
-          <Card size="small" title={<h2 className="pf-dec-title">{t("card.requisites")}</h2>}>
-            <DefinitionList
-              items={[
-                { label: t("card.fields.kind"), value: t(`kinds.${memo.kind}`) },
-                { label: t("card.fields.from"), value: memo.author.full_name },
-                {
-                  label: t("card.fields.to"),
-                  value: memo.addressee ? memo.addressee.full_name : t("card.toDirector"),
-                },
-                { label: t("card.fields.date"), value: date(memo.created_at, "datetime") },
-                {
-                  label: t("card.fields.amount"),
-                  value: memo.amount ? (
-                    <MoneyText value={memo.amount.amount} currency={memo.amount.currency} />
-                  ) : null,
-                },
-                { label: t("card.fields.due"), value: memo.due_date ? date(memo.due_date) : null },
-                {
-                  label: t("card.fields.deal"),
-                  value: memo.deal ? (memo.deal.number ?? String(memo.deal.erp_deal_id)) : null,
-                },
-              ]}
-            />
-          </Card>
-        </aside>
-      </div>
-      <AgreeSlot memoRef={refKey} />
+      <Card size="small" title={<h2 className="pf-dec-title">{t("card.text")}</h2>}>
+        <p className="pf-dec-text">{memo.text}</p>
+      </Card>
+      <Card size="small" title={<h2 className="pf-dec-title">{t("card.files")}</h2>}>
+        <Files memo={memo} />
+      </Card>
+      <DecisionCenter legacyTab="agree" legacySheet="agree" label={t("panel.sheetLabel")}>
+        <AgreePanel memoRef={refKey} />
+      </DecisionCenter>
+      <RecordTab tab="facts">
+        <DefinitionList
+          items={[
+            { label: t("card.fields.kind"), value: t(`kinds.${memo.kind}`) },
+            {
+              label: t("card.fields.to"),
+              value: memo.addressee ? memo.addressee.full_name : t("card.toDirector"),
+            },
+            {
+              label: t("card.fields.amount"),
+              value: memo.amount ? (
+                <MoneyText value={memo.amount.amount} currency={memo.amount.currency} />
+              ) : null,
+            },
+            { label: t("card.fields.due"), value: memo.due_date ? date(memo.due_date) : null },
+            {
+              label: t("card.fields.deal"),
+              value: memo.deal ? (memo.deal.number ?? String(memo.deal.erp_deal_id)) : null,
+            },
+          ]}
+        />
+      </RecordTab>
+      <RecordTab tab="route">
+        <RouteTimeline
+          label={t("card.route")}
+          steps={memo.steps}
+          decisions={memo.decisions}
+          author={{
+            name: memo.author.full_name,
+            at: memo.created_at,
+            title: (name) => t("card.routeAuthor", { name }),
+          }}
+          stepTitle={(step) => t(`card.routeStep.${step.status}`, { label: step.label })}
+          decisionTitle={(d) => t(`card.decision.${d.decision}`)}
+        />
+      </RecordTab>
     </div>
   );
 }

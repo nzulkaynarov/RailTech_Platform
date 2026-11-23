@@ -1,6 +1,6 @@
 # AREA C: navigation and information architecture compared with the owner's module-ownership draft
 
-All paths below are under `/home/umarbek/projects/RailTech_Platform/.claude/worktrees/research-main/`. The checkout is main @ `2ecd40446`.
+All paths below are under ``. The checkout is main @ `2ecd40446`.
 Abbreviations: **nav** = `apps/platform/web/src/modules/navigation.ts`, **rbac** = `packages/contracts/platform-rbac.yaml`, **NAV doc** = `docs/product/NAVIGATION.md`, **DEC** = `docs/DECISIONS.md`.
 Everything is a fact with a source unless marked (inference).
 

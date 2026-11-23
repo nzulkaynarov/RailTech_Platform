@@ -2,6 +2,7 @@ import { fireEvent, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import { renderAt, setupLetterTests, signIn } from "../../../test/lettersKit";
+import { openSideTab } from "../../../test/panel";
 
 setupLetterTests();
 
@@ -37,7 +38,8 @@ describe("EDS · «Это дубль ВХ-…» (EDS-DUP)", () => {
     expect(await screen.findByText("Дубль письма")).toBeVisible();
     expect(screen.getByRole("link", { name: "ВХ-100/26" })).toBeVisible();
     expect(screen.getAllByText("Дубль").length).toBeGreaterThan(0);
-    expect(screen.getByText("Дубль ВХ-100/26: Пришло дважды")).toBeVisible();
+    const history = await openSideTab("История");
+    expect(within(history).getByText("Дубль ВХ-100/26: Пришло дважды")).toBeVisible();
     expect(screen.queryByRole("button", { name: "Это дубль" })).toBeNull();
   });
 
