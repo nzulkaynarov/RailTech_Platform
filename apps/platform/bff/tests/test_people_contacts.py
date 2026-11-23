@@ -8,6 +8,7 @@ import json
 from typing import Any
 
 import httpx
+import pytest
 import respx
 
 from tests.conftest import ContractChecker, Web
@@ -124,6 +125,71 @@ async def test_no_journal_no_contacts(web: Web, be: Any) -> None:
     )
     assert response.status_code == 503
     assert "+9989" not in response.text
+
+
+# --- Сотрудники: контакты по нажатию с записью в журнал (решение 10.11) --------------------------
+
+STAFF_CONTACTS = {"id": 7, "phone": "+998901112233", "email": "ivan@railtech.example"}
+ROLES = [
+    "ADMIN",
+    "DIRECTOR",
+    "MANAGER",
+    "SUPPLY",
+    "ENGINEER",
+    "ACCOUNTANT",
+    "REGISTRAR",
+    "MANAGER_ALL",
+    "LAWYER",
+]
+
+
+@pytest.mark.parametrize("role", ROLES)
+async def test_every_staff_role_reveals_colleague_contacts_via_the_crm_journal(
+    web: Web, be: Any, check: ContractChecker, role: str
+) -> None:
+    await web.login([role])
+    router: respx.MockRouter = be.router
+    route = router.post(f"{CRM_URL}/api/v1/staff/7/contacts").mock(
+        return_value=httpx.Response(200, json=STAFF_CONTACTS)
+    )
+    response = await web.client.post(
+        "/api/v1/people/staff/7/reveal", headers={"X-CSRF-Token": web.csrf}
+    )
+    assert response.status_code == 200, response.text
+    check(response, "/people/staff/{id}/reveal", "post")
+    assert response.json() == {
+        "id": "7",
+        "phone": "+998901112233",
+        "email": "ivan@railtech.example",
+    }
+    assert route.call_count == 1
+
+
+async def test_staff_contacts_are_not_given_when_crm_refuses(web: Web, be: Any) -> None:
+    """Журнал и ответ — одна транзакция CRM: отказ или недоступность — контактов нет."""
+    await web.login(["MANAGER"])
+    router: respx.MockRouter = be.router
+    router.post(f"{CRM_URL}/api/v1/staff/7/contacts").mock(return_value=httpx.Response(500))
+    response = await web.client.post(
+        "/api/v1/people/staff/7/reveal", headers={"X-CSRF-Token": web.csrf}
+    )
+    assert response.status_code >= 500
+    assert "998901112233" not in response.text
+    router.post(f"{CRM_URL}/api/v1/staff/8/contacts").mock(
+        return_value=httpx.Response(404, json={"detail": "user not found"})
+    )
+    gone = await web.client.post(
+        "/api/v1/people/staff/8/reveal", headers={"X-CSRF-Token": web.csrf}
+    )
+    assert gone.status_code == 404
+
+
+async def test_staff_reveal_needs_session_and_a_numeric_id(web: Web, be: Any) -> None:
+    anonymous = await web.client.post("/api/v1/people/staff/7/reveal")
+    assert anonymous.status_code in (401, 403)
+    await web.login(["MANAGER"])
+    bad = await web.client.post("/api/v1/people/staff/x/reveal", headers={"X-CSRF-Token": web.csrf})
+    assert bad.status_code == 422
 
 
 # --- «Ш»: адресат письма из контрагентов ---------------------------------------------------------

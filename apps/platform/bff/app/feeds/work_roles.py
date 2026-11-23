@@ -1,19 +1,24 @@
-"""Чья очередь у исполнения ERP (D2-8): роли «вида» без системной роли DIRECTOR.
+"""Чья очередь у исполнения ERP (D2-8): роли «вида» без роли «решающего».
 
 Решение архитектора 2026-11-02 (PR #357; SPEC-v3 §4.1, роли пилота DECISIONS 2026-10-29 и
 2026-11-01): в «Моих задачах» директора — только решения (резолюция, одобрение КП, служебки).
-Строки исполнения — задания на расчёт, платёжки, счета к выставлению, договор и акт — системной
-роли DIRECTOR не приходят, хотя её разделы `erp.calc` и `eds.projects` полные: директор
-контролирует исполнение через сами разделы. У роли из шаблона и у созданной администратором роли с
-теми же разделами строки есть — по каталогу; у сотрудника с директором и второй ролью (например,
-менеджер-универсал) — по второй роли. Код системной роли в коде допустим (CONVENTIONS.md §2 п. 6).
+Строки исполнения — задания на расчёт, платёжки, счета к выставлению, договор и акт — роли
+«решающего» не приходят, хотя её разделы `erp.calc` и `eds.projects` полные: решающий
+контролирует исполнение через сами разделы.
+
+ЕВ-5а (отчёт 2026-11-22, §4.3 строка 1): «решающий» — признак набора прав, а не названия роли.
+Роль решающая, когда держит оба раздела одобрения полным уровнем: одобрение КП (`eds.drafts`) и
+согласование служебок (`eds.memo.approve`). В каталоге это только системный DIRECTOR, но созданная
+администратором роль (заместитель по зоне) с теми же двумя разделами получает то же поведение.
+У сотрудника с такой ролью и второй ролью (например, менеджер-универсал) строки исполнения — по
+второй роли. Названия и код роли в этом файле не используются.
 """
 
 from app.feeds.models import QueueItemKind
 from app.rbac import Access, RoleMatrix, View, allows, clean_access, merge
 from app.rbac_generated import QUEUE
 
-# Виды исполнения ERP, которых нет в очереди системного директора.
+# Виды исполнения ERP, которых нет в очереди роли «решающего».
 EXECUTION_KINDS: frozenset[str] = frozenset(
     {
         "calc_task",
@@ -26,15 +31,17 @@ EXECUTION_KINDS: frozenset[str] = frozenset(
         "ship_project",
     }
 )
-_DECIDER_ONLY = "DIRECTOR"
+# Разделы одобрения: держатель обоих — «решающий», у него в очереди только решения.
+DECIDER_SECTIONS: tuple[str, ...] = ("eds.drafts", "eds.memo.approve")
 
 
-def _is_system_director(role: RoleMatrix) -> bool:
-    return bool(getattr(role, "system", False)) and getattr(role, "code", None) == _DECIDER_ONLY
+def is_decider_role(role: RoleMatrix) -> bool:
+    access = clean_access(role.access)
+    return all(allows(access, section, "full") for section in DECIDER_SECTIONS)
 
 
 def executor_roles(view: View) -> tuple[RoleMatrix, ...]:
-    return tuple(r for r in view.roles if not _is_system_director(r))
+    return tuple(r for r in view.roles if not is_decider_role(r))
 
 
 def executor_access(view: View) -> Access:
@@ -43,7 +50,7 @@ def executor_access(view: View) -> Access:
 
 
 def wants_work(view: View, kind: QueueItemKind) -> bool:
-    """Вид исполнения положен роли «вида», кроме системного директора; прочие — `view.wants`."""
+    """Вид исполнения положен роли «вида», кроме роли «решающего»; прочие — `view.wants`."""
     if kind not in EXECUTION_KINDS:
         return view.wants(kind)
     return any(_gives(role, kind) for role in executor_roles(view))

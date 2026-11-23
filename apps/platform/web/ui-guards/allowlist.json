@@ -6,11 +6,6 @@
       "reason": "Drawer 520 with its own header and footer; moves to the shared panel (ЕВ-1б)"
     },
     {
-      "path": "src/modules/chats/people/PeoplePage.tsx",
-      "count": 1,
-      "reason": "Drawer 400 for the person card; the People executor replaces it (ЕВ-1б)"
-    },
-    {
       "path": "src/modules/crm/messages/Dialog.tsx",
       "count": 1,
       "reason": "phone bottom sheet copied per module; use shared Sheet (ЕВ-1б)"

@@ -1991,7 +1991,7 @@ paths:
       summary: Справочник сотрудников
       description: >-
         CRM `GET /api/v1/staff` (СУЩ-3): все сотрудники — имя, должность, адрес фото с версией; отключённые — с `active: false`
-        и без фото, чтобы «кто сделал» в старом документе по-прежнему называл человека. Почты, телефона и ролей нет. Любой
+        и без фото, чтобы «кто сделал» в старом документе по-прежнему называл человека. Роли — названиями; почты и телефона нет, их открывает `POST /people/staff/{id}/reveal` с записью в журнал. Любой
         сотрудник; общий компонент человека находит здесь фото и должность по `id` ссылки.
       responses:
         '200':
@@ -14213,6 +14213,34 @@ paths:
           $ref: '#/components/responses/NotFound'
         '503':
           $ref: '#/components/responses/BackendUnavailable'
+  /people/staff/{id}/reveal:
+    post:
+      tags: [chats]
+      operationId: revealStaffContacts
+      summary: 'Органайзер · Люди: показать телефон и почту сотрудника'
+      description: >-
+        Решение 10.11: имя, должность и роли коллеги видят все (`GET /staff`), телефон и почта открываются по нажатию. Показ
+        пишется в журнал CRM (`contact.reveal`, объект `staff`) в той же транзакции, что и ответ: не записалось — контактов нет.
+        Контакты берутся из профиля сотрудника в CRM; отключённый сотрудник — 404. Выгрузки нет. Раздел `chats.internal` —
+        чтение.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - {name: id, in: path, required: true, schema: {type: string, pattern: '^[1-9][0-9]*$'}}
+      responses:
+        '200':
+          description: Телефон и почта
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CounterpartyContacts'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
   /people/counterparties:
     get:
       tags: [chats]
@@ -18003,6 +18031,10 @@ components:
         position: {type: [string, 'null']}
         avatar_url: {type: [string, 'null'], description: 'Фото с версией (`/api/v1/staff/{id}/avatar?v=`); `null` — инициалы'}
         active: {type: boolean, description: '`false` — сотрудник отключён'}
+        roles:
+          type: array
+          items: {type: string}
+          description: 'Роли Платформы названиями — для карточки сотрудника в «Людях»; без матрицы прав'
     StaffDirectory:
       type: object
       additionalProperties: false

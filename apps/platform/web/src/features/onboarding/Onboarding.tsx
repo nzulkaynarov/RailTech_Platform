@@ -6,7 +6,7 @@ import { useTranslation } from "react-i18next";
 import { canSee } from "../../app/access";
 import { useAuth } from "../../app/auth/useAuth";
 import { getGetMeQueryKey, useFinishOnboarding } from "../../shared/api/generated/platform-bff";
-import { rolesText, startKindsOf, useStartSteps } from "../help/startKinds";
+import { rolesText, startKindsOf, useWelcomeSteps } from "../help/startKinds";
 import { isNewer } from "../help/changelog";
 import { useWhatsNew } from "../help/whatsNew";
 
@@ -219,7 +219,7 @@ export function Onboarding() {
   const finish = useFinishOnboarding();
   const whatsNew = useWhatsNew();
   const kinds = startKindsOf(me);
-  const steps = useStartSteps(kinds[0] ?? "default");
+  const steps = useWelcomeSteps(kinds, 4);
   const tourSteps = useMemo(
     () => STEPS.filter((key) => key !== "menu" || canSee(me, { resource: "dashboard.queue" })),
     [me],
@@ -273,7 +273,7 @@ export function Onboarding() {
       <p style={{ margin: 0 }}>{t("welcome.role", { role: rolesText(me) })}</p>
       <p style={{ margin: "8px 0 0" }}>{t("welcome.lead")}</p>
       <ol className="pf-welcome-steps">
-        {steps.slice(0, 4).map((step) => (
+        {steps.map((step) => (
           <li key={step}>{step}</li>
         ))}
       </ol>

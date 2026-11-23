@@ -27,7 +27,11 @@ test.describe("ЕВ-0: быстрые правки", () => {
       await expectNoViolations(page, `people ${String(width)}`);
       await settledScreenshot(page, `people-${String(width)}`);
       await page.getByRole("button", { name: "Демо Клиентов" }).first().click();
-      const card = page.getByRole("dialog", { name: "Демо Клиентов" });
+      // Desktop: shared side panel (no dialog role); phone: Drawer dialog.
+      const card =
+        width >= 768
+          ? page.locator(".pf-people-card").filter({ hasText: "Демо Клиентов" })
+          : page.getByRole("dialog", { name: "Демо Клиентов" });
       await expect(card).toBeVisible();
       await expect(card.getByRole("button", { name: /Написать|Позвонить/ })).toHaveCount(0);
       await expectNoViolations(page, `people card ${String(width)}`);
