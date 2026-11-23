@@ -11,9 +11,7 @@ class DeskSupplierAccessContact(serializers.Serializer):
     email = serializers.CharField()
     phone = serializers.CharField()
     language = serializers.ChoiceField(choices=["ru", "uz", "en"])
-    can_act = serializers.BooleanField(
-        help_text="Может подтверждать (участник); иначе — просмотр."
-    )
+    can_act = serializers.BooleanField(help_text="Может подтверждать (участник); иначе — просмотр.")
     invited_at = serializers.DateTimeField(allow_null=True)
     last_login_at = serializers.DateTimeField(allow_null=True)
 
