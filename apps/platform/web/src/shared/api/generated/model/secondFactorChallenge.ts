@@ -5,6 +5,8 @@
 
 export interface SecondFactorChallenge {
   second_factor_required: true;
-  /** Непрозрачная строка на 5 минут для `/auth/login/second-factor` */
+  /** Непрозрачная строка на 5 минут для `/auth/login/second-factor`; при `enrollment_required` — на 15 минут для `/auth/login/enroll/*` */
   challenge: string;
+  /** ДВ-4б: фактор обязателен по разделам доступа, но не настроен — экран настройки вместо ввода кода */
+  enrollment_required?: boolean;
 }

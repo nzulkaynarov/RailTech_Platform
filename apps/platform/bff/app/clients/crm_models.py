@@ -2227,6 +2227,7 @@ class Tier(StrEnum):
 
 class TokenResponse(BaseModel):
     access_token: Annotated[str, Field(title="Access Token")]
+    backup_codes: Annotated[list[str] | None, Field(title="Backup Codes")] = None
     device_token: Annotated[str | None, Field(title="Device Token")] = None
     expires_in: Annotated[int, Field(title="Expires In")]
     must_change_password: Annotated[bool, Field(title="Must Change Password")]

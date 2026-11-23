@@ -727,6 +727,20 @@
         "label": "Ishdagi lidlarni kimga topshirish",
         "placeholder": "Hamkasbni tanlang",
         "save": "Lidlarni topshirib saqlash"
+      },
+      "resetFactor": {
+        "button": "Ikkinci omilni tiklaş",
+        "title": "Ikkinci omilni tiklaş",
+        "what": "Xodim tizimdan çiqadi, keyingi kirişda kodni qaytadan sozlaydi. Sabab jurnalga yoziladi.",
+        "reason": "Sabab",
+        "confirm": "Tiklaş",
+        "cancel": "Bekor qiliş",
+        "done": "Ikkinci omil tiklandi: {{name}}",
+        "self": "Öz omilingizni boşqa administrator tiklaydi.",
+        "errors": {
+          "notEnabled": "Xodimda kod bilan kiriş yoqilmagan.",
+          "default": "Bölmadi. Qayta urinib köring."
+        }
       }
     },
     "roles": {

@@ -216,6 +216,7 @@ import type {
   Employee,
   EmployeeCredentials,
   EmployeeList,
+  EnrolledSession,
   ErpCheck,
   ErpConnector,
   ErpPairing,
@@ -383,6 +384,7 @@ import type {
   SmtpConnector,
   SpendReport,
   StaffDirectory,
+  StepUp,
   StockBalanceList,
   StockProduct,
   StockReceipts,
@@ -477,9 +479,74 @@ export const getLoginResponseMock = (
     {
       second_factor_required: faker.helpers.arrayElement([true] as const),
       challenge: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      enrollment_required: faker.datatype.boolean(),
       ...overrideResponse,
     },
   ]);
+
+export const getLoginEnrollSetupResponseMock = (
+  overrideResponse: Partial<Extract<SecondFactorSetup, object>> = {},
+): SecondFactorSetup => ({
+  secret: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  otpauth_uri: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  ...overrideResponse,
+});
+
+export const getLoginEnrollResponseMock = (
+  overrideResponse: Partial<Extract<EnrolledSession, object>> = {},
+): EnrolledSession => ({
+  me: {
+    id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    email: faker.internet.email(),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+    position: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      undefined,
+    ]),
+    avatar_url: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      undefined,
+    ]),
+    language: faker.helpers.arrayElement(Object.values(Language)),
+    roles: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        id: faker.helpers.fromRegExp("^[1-9][0-9]*$"),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        system: faker.datatype.boolean(),
+        code: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          undefined,
+        ]),
+      }),
+    ),
+    active_role: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[1-9][0-9]*$"), null]),
+    modules: faker.helpers.arrayElements(Object.values(ModuleCode)),
+    resources: {
+      [faker.string.alphanumeric(5)]: faker.helpers.arrayElement(Object.values(AccessLevel)),
+    },
+    restricted_fields: faker.helpers.arrayElement([
+      faker.helpers.arrayElements(Object.values(RestrictedField)),
+      undefined,
+    ]),
+    access: { crm: faker.datatype.boolean(), erp: faker.datatype.boolean() },
+    onboarding_done: faker.datatype.boolean(),
+    whats_new_shown: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^\\d{4}-\\d{2}-\\d{2}$"),
+      null,
+    ]),
+    whats_new_read: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^\\d{4}-\\d{2}-\\d{2}$"),
+      null,
+    ]),
+  },
+  must_change_password: faker.datatype.boolean(),
+  expires_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  backup_codes: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => faker.string.alpha({ length: { min: 10, max: 20 } }),
+  ),
+  ...overrideResponse,
+});
 
 export const getLoginSecondFactorResponseMock = (
   overrideResponse: Partial<Extract<Session, object>> = {},
@@ -834,6 +901,7 @@ export const getGetSecondFactorResponseMock = (
     null,
   ]),
   backup_codes_left: faker.number.int({ min: 0 }),
+  required: faker.datatype.boolean(),
   ...overrideResponse,
 });
 
@@ -851,6 +919,14 @@ export const getEnableSecondFactorResponseMock = (
   backup_codes: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
     () => faker.string.alpha({ length: { min: 10, max: 20 } }),
   ),
+  ...overrideResponse,
+});
+
+export const getStepUpSecondFactorResponseMock = (
+  overrideResponse: Partial<Extract<StepUp, object>> = {},
+): StepUp => ({
+  token: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  expires_in: faker.number.int({ min: 1 }),
   ...overrideResponse,
 });
 
@@ -37982,6 +38058,54 @@ export const getLoginMockHandler = (
   );
 };
 
+export const getLoginEnrollSetupMockHandler = (
+  overrideResponse?:
+    | SecondFactorSetup
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<SecondFactorSetup> | SecondFactorSetup),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/auth/login/enroll/setup",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getLoginEnrollSetupResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getLoginEnrollMockHandler = (
+  overrideResponse?:
+    | EnrolledSession
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<EnrolledSession> | EnrolledSession),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/auth/login/enroll",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getLoginEnrollResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
 export const getLoginSecondFactorMockHandler = (
   overrideResponse?:
     | Session
@@ -38394,6 +38518,27 @@ export const getEnableSecondFactorMockHandler = (
             ? await overrideResponse(info)
             : overrideResponse
           : getEnableSecondFactorResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getStepUpSecondFactorMockHandler = (
+  overrideResponse?:
+    StepUp | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<StepUp> | StepUp),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/me/second-factor/step-up",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getStepUpSecondFactorResponseMock(),
         { status: 200 },
       );
     },
@@ -42792,6 +42937,24 @@ export const getCreateEmployeeMockHandler = (
           : getCreateEmployeeResponseMock(),
         { status: 201 },
       );
+    },
+    options,
+  );
+};
+
+export const getResetEmployeeSecondFactorMockHandler = (
+  overrideResponse?:
+    void | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<void> | void),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/admin/users/:id/second-factor/reset",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      if (typeof overrideResponse === "function") {
+        await overrideResponse(info);
+      }
+
+      return new HttpResponse(null, { status: 204 });
     },
     options,
   );
@@ -49464,6 +49627,8 @@ export const getListTechDocDealOptionsMockHandler = (
 };
 export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getLoginMockHandler(),
+  getLoginEnrollSetupMockHandler(),
+  getLoginEnrollMockHandler(),
   getLoginSecondFactorMockHandler(),
   getForgotPasswordMockHandler(),
   getResetPasswordMockHandler(),
@@ -49483,6 +49648,7 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getGetSecondFactorMockHandler(),
   getSetupSecondFactorMockHandler(),
   getEnableSecondFactorMockHandler(),
+  getStepUpSecondFactorMockHandler(),
   getDisableSecondFactorMockHandler(),
   getGetNotificationSettingsMockHandler(),
   getUpdateNotificationSettingsMockHandler(),
@@ -49676,6 +49842,7 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getRetryBusInboxMockHandler(),
   getListEmployeesMockHandler(),
   getCreateEmployeeMockHandler(),
+  getResetEmployeeSecondFactorMockHandler(),
   getInviteEmployeeMockHandler(),
   getResendInviteMockHandler(),
   getRetryEmployeeErpSyncMockHandler(),

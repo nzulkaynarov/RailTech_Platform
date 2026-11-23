@@ -113,6 +113,8 @@ class SecondFactorChallenge:
     """Пароль верен, нужен код второго фактора (ДВ-4): сессии ещё нет."""
 
     challenge: str
+    # ДВ-4б: фактор обязателен, но не настроен — по `challenge` его настраивают (`enroll_*`)
+    enrollment: bool = False
 
 
 @dataclass(frozen=True)
@@ -225,7 +227,10 @@ class AuthService:
                 details={"backend_code": backend_code(resp)} if backend_code(resp) else None,
             )
         if resp.status_code == 202:
-            return SecondFactorChallenge(str(resp.json()["challenge"]))
+            body = resp.json()
+            return SecondFactorChallenge(
+                str(body["challenge"]), bool(body.get("enrollment_required"))
+            )
         _expect(resp, "crm")
         return await self._session_from_crm(resp)
 
@@ -263,6 +268,55 @@ class AuthService:
         device = resp.json().get("device_token")
         sid, data = await self._session_from_crm(resp)
         return sid, data, device if isinstance(device, str) and device else None
+
+    async def enroll_setup(
+        self, challenge: str, issuer: str, client_ip: str | None = None
+    ) -> dict[str, Any]:
+        """Секрет и адрес для QR при входе (ДВ-4б): фактор обязателен, но не настроен."""
+        try:
+            resp = await self.crm.enroll_setup(challenge, issuer, client_ip)
+        except BackendUnavailableError as exc:
+            raise backend_unavailable("crm", exc.reason) from exc
+        self._enrollment_failed(resp)
+        _expect(resp, "crm")
+        body = resp.json()
+        return {"secret": str(body["secret"]), "otpauth_uri": str(body["otpauth_uri"])}
+
+    async def enroll(
+        self, challenge: str, code: str, client_ip: str | None = None
+    ) -> tuple[str, SessionData, list[str]]:
+        """Код из приложения включает фактор и открывает сессию (ДВ-4б)."""
+        try:
+            resp = await self.crm.enroll(challenge, code, client_ip)
+        except BackendUnavailableError as exc:
+            raise backend_unavailable("crm", exc.reason) from exc
+        self._enrollment_failed(resp)
+        _expect(resp, "crm")
+        codes = resp.json().get("backup_codes")
+        sid, data = await self._session_from_crm(resp)
+        return sid, data, [str(c) for c in codes] if isinstance(codes, list) else []
+
+    @staticmethod
+    def _enrollment_failed(resp: httpx.Response) -> None:
+        if resp.status_code == 401:
+            if backend_code(resp) == "second_factor_invalid":
+                raise PlatformError(
+                    "SECOND_FACTOR_INVALID", "Неверный код.", status_code=401, source="crm"
+                )
+            raise PlatformError(
+                "SECOND_FACTOR_EXPIRED",
+                "Время на настройку вышло. Войдите заново.",
+                status_code=401,
+                source="crm",
+            )
+        if resp.status_code == 422:
+            raise PlatformError(
+                "VALIDATION_FAILED",
+                "Действие недоступно.",
+                status_code=422,
+                source="crm",
+                details={"reason": backend_reason(resp) or "second_factor_setup_failed"},
+            )
 
     async def _session_from_crm(self, resp: httpx.Response) -> tuple[str, SessionData]:
         tokens = CrmClient.tokens(resp)
