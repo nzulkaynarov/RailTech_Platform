@@ -1815,5 +1815,14 @@
     "partnerContractDesc": "Review conditions and agree to terms",
     "inviteTeam": "Invite colleagues",
     "inviteTeamDesc": "Add team members for collaboration"
+  },
+  "maintenance": {
+    "soon": "Cabinet update at {{time}} — work will be interrupted for {{duration}}. Save your changes.",
+    "soonUrgent": "Urgent Cabinet fix at {{time}} — work will be interrupted for {{duration}}. Save your changes.",
+    "running": "Update in progress — the page will refresh by itself in a couple of minutes.",
+    "runningUrgent": "Urgent fix in progress — the page will refresh by itself in a couple of minutes.",
+    "minutes_one": "{{range}} minute",
+    "minutes_other": "{{range}} minutes",
+    "hide": "Hide"
   }
 }
