@@ -104,7 +104,7 @@ async def _preview_row(session: AsyncSession, render_hash: str) -> DocumentRende
 async def preview_template(body: TemplatePreviewIn, employee: Reader, session: Session, box: Box) -> TemplatePreview:
     """PDF варианта на бланке без сохранения: тот же рендер и кэш по хешу, что у писем; повтор — без новой работы."""
     async with session.begin():
-        row = await renders.request_preview(session, letter_body.clean(body.body))
+        row = await renders.request_preview(session, letter_body.clean(body.body), body.kind)
         result = _preview(row)
     await box.defer_render(renders.take_pending(session))
     return result

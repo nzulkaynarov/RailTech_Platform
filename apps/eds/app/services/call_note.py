@@ -138,23 +138,20 @@ def is_call(data: CallNoteIn) -> bool:
 
 
 def build_body(data: CallNoteIn, taken_by: str) -> dict[str, Any]:
-    """Тело записки: заголовок, реквизиты, «Что просил», исходное сообщение, вложения, примечание системы."""
+    """Тело записки: реквизиты, «Что просил», исходное сообщение, вложения, примечание системы.
+
+    Вид документа, когда, кто принял и лид — в инфоблоке листа (`info_rows`), заголовка в теле нет (ДОК-5)."""
     text = TEXT[data.lang]
     call = is_call(data)
-    when = data.called_at.astimezone(clock.COMPANY_TZ).strftime("%d.%m.%Y %H:%M")
     pairs = [
         (text["caller" if call else "client"], data.caller_name),
         (text["company"], data.company),
         (text["phone"], data.phone),
         (text["email"], data.email),
-        (text["when"], when),
-        (text["taken_by"], taken_by),
-        (text["lead"], data.lead),
         (text["channel"], None if call else text.get(f"channel_{data.channel}", data.channel)),
     ]
     rows = [_row(label, value.strip()) for label, value in pairs if value and value.strip()]
     content: list[dict[str, Any]] = [
-        {"type": "heading", "attrs": {"level": 1}, "content": [_text(text["title" if call else "request_title"])]},
         {"type": "table", "attrs": {"columnWidths": [30, 70], "variant": "plain"}, "content": rows},
     ]
     need = [line.strip() for line in (data.need or "").splitlines() if line.strip()]
@@ -177,6 +174,16 @@ def build_body(data: CallNoteIn, taken_by: str) -> dict[str, Any]:
     except BodyError as exc:
         raise invalid_fields("Записку о звонке не собрать из этих данных.", body=str(exc)[:300]) from None
     return normalized
+
+
+def info_rows(data: CallNoteIn, taken_by: str) -> list[dict[str, Any]]:
+    """Инфоблок служебной записки по сетке (стандарт §4): когда, кто принял, лид — подписи на языке записки."""
+    text = TEXT[data.lang]
+    when = data.called_at.astimezone(clock.COMPANY_TZ).strftime("%d.%m.%Y %H:%M")
+    rows = [renders.info_row(text["when"], when), renders.info_row(text["taken_by"], taken_by)]
+    if data.lead and data.lead.strip():
+        rows.append(renders.info_row(text["lead"], data.lead.strip(), code=True))
+    return rows
 
 
 def file_name(data: CallNoteIn) -> str:
@@ -208,14 +215,10 @@ async def _payload(
             "basis_text": None,
             "verification_code": None,
             "verification_url": None,
+            "kind_label": TEXT[data.lang]["title" if is_call(data) else "request_title"],
+            "info": info_rows(data, taken_by),
         },
-        "letterhead": {
-            "company_name": letterhead.text(head, "company_name", data.lang),
-            "requisites": letterhead.requisites(head, data.lang),
-            "footer": letterhead.footer(head, data.lang),
-            "accent": head.accent_color or renders.DEFAULT_ACCENT,
-            "font": head.font_family,
-        },
+        "letterhead": renders.grid_letterhead(head, data.lang),
         "logo_sha256": head.logo_sha256,
         "call_note": {"file_id": str(file_id), "owner": employee.crm_user_id, "name": file_name(data)},
     }

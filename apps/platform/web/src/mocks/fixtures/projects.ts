@@ -4,6 +4,7 @@ import type {
   ProjectCard,
   ProjectContract,
   ProjectContractActionsItem,
+  ProjectContractSendBlocker,
   ProjectDeliveryAction,
   ProjectFulfillment,
   ProjectInvoice,
@@ -45,6 +46,8 @@ interface MutableContract {
   client_agreed_at: string | null;
   signed_at: string | null;
   has_scan: boolean;
+  /** Х-1: визы маршрута подписи до отправки клиенту; нет поля — собраны (все прежние проекты уже у клиента). */
+  visas?: "none" | "pending" | "returned" | "no_holder" | "collected" | "collecting";
 }
 
 interface MutableAct {
@@ -152,6 +155,38 @@ function seed(): ProjectState[] {
       },
       // КП принято, проект договора ещё не сформирован: бухгалтер создаёт его кнопкой
       contract: null,
+      invoices: [],
+      act: null,
+      journal: [],
+    },
+    {
+      // Х-1: проект договора готов и визы собраны — его можно отправить клиенту
+      id: 111,
+      year: 2026,
+      title: "Стрелочные переводы",
+      client: "ООО «Демо-Рейл»",
+      created_at: "2026-10-23T09:00:00+05:00",
+      manager: MANAGER,
+      total: money("38000000.00"),
+      quote: {
+        id: 1220,
+        number: "КП-2026/121",
+        version: 1,
+        outgoing: "ИСХ-086/26",
+        valid_until: "2026-11-30",
+      },
+      contract: {
+        id: 321,
+        number: "ДОГ-2026/111",
+        status: "project",
+        sent_to_client: false,
+        total: money("38000000.00"),
+        created_at: "2026-11-20T10:00:00+05:00",
+        client_agreed_at: null,
+        signed_at: null,
+        has_scan: false,
+        visas: "collected",
+      },
       invoices: [],
       act: null,
       journal: [],
@@ -552,12 +587,61 @@ export function problemsOf(p: ProjectState): ProjectRow["problems"] {
   return problems;
 }
 
+/** Х-1: что мешает отправить проект клиенту (как `contract_visas.send_blocker` ERP); `null` — визы собраны. */
+export function sendBlockerOf(c: MutableContract): ProjectContractSendBlocker | null {
+  if (c.sent_to_client || c.status !== "project") return null;
+  const base = { remark: "", settings_link: false, missing_permissions: [] as string[] };
+  switch (c.visas ?? "collected") {
+    case "none":
+      return {
+        ...base,
+        code: "visas_not_requested",
+        message:
+          "Нужны визы: сначала отправьте договор «На подпись», после виз его можно отправить клиенту.",
+        missing: [],
+      };
+    case "pending":
+      return {
+        ...base,
+        code: "visas_pending",
+        message: "Нужны визы: бухгалтер, юрист",
+        missing: ["бухгалтер", "юрист"],
+        missing_permissions: ["approvals.visa_finance", "approvals.visa_legal"],
+      };
+    case "collecting":
+      // запрос открыт, проекция виз ещё не пришла (событие в пути): ролей в причине нет
+      return { ...base, code: "visas_pending", message: "Визы собираются.", missing: [] };
+    case "returned":
+      return {
+        ...base,
+        code: "visas_returned",
+        message: "Визы возвращены: бухгалтер. Нет графика платежей",
+        missing: ["бухгалтер"],
+        missing_permissions: ["approvals.visa_finance"],
+        remark: "Нет графика платежей",
+      };
+    case "no_holder":
+      return {
+        ...base,
+        code: "no_visa_holder",
+        message:
+          "Нет сотрудника для визы: юрист. Назначьте роль в настройках и отправьте договор «На подпись» снова.",
+        missing: ["юрист"],
+        missing_permissions: ["approvals.visa_legal"],
+        settings_link: true,
+      };
+    default:
+      return null;
+  }
+}
+
 /** Действия по договору, доступные сейчас: допустимо из статуса (таблица ERP) и разрешено правами (`full` — директор, бухгалтер). */
 export function contractActions(c: MutableContract, writer: boolean): ProjectContractActionsItem[] {
   if (!writer) return [];
   switch (c.status) {
     case "project":
-      return c.sent_to_client ? ["client_agreed", "reject"] : ["send_to_client"];
+      if (c.sent_to_client) return ["client_agreed", "reject"];
+      return sendBlockerOf(c) ? [] : ["send_to_client"];
     case "client_agreed":
       return ["mark_issued", "reject"];
     case "issued_at_operator":
@@ -604,7 +688,13 @@ export function toRow(p: ProjectState): ProjectRow {
         version: p.quote.version,
       },
       contract: c
-        ? { id: c.id, number: c.number, status: c.status, sent_to_client: c.sent_to_client }
+        ? {
+            id: c.id,
+            number: c.number,
+            status: c.status,
+            sent_to_client: c.sent_to_client,
+            send_blocker_code: sendBlockerOf(c)?.code ?? null,
+          }
         : null,
       invoice: last
         ? { id: last.id, number: last.number, status: last.status, count: live.length }
@@ -652,6 +742,7 @@ export function toCard(p: ProjectState, writer: boolean, marker = false): Projec
           has_pdf: true,
           has_scan: c.has_scan,
           actions: contractActions(c, writer),
+          send_blocker: sendBlockerOf(c),
           history: historyOf(p, "contract"),
         }
       : null,

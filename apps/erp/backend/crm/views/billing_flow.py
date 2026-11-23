@@ -15,17 +15,19 @@ from crm.serializers.projects import (
     ActFlowSerializer,
     ActReturnInSerializer,
     ActScanInSerializer,
+    ContractConflictSerializer,
     ContractFlowSerializer,
     ContractScanInSerializer,
     ContractTransitionInSerializer,
 )
-from crm.services import act_flow, contract_flow
+from crm.services import act_flow, contract_flow, contract_visas
 from crm.views.request_body import invalid_body_response, is_object_body
 
 _HTTP = {
     "CONTRACT_NOT_FOUND": 404,
     "MEMBER_REQUIRED_FOR_ACTION": 403,
     "CONTRACT_TRANSITION_NOT_ALLOWED": 409,
+    "CONTRACT_VISAS_REQUIRED": 409,
     "ACT_SIGN_NOT_ALLOWED": 409,
 }
 _ERRORS = {
@@ -37,7 +39,13 @@ _ERRORS = {
     ),
     403: OpenApiResponse(description="MEMBER_REQUIRED_FOR_ACTION / ROLE_NOT_PERMITTED"),
     404: OpenApiResponse(description="Не найдено"),
-    409: OpenApiResponse(description="CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот"),
+    409: OpenApiResponse(
+        ContractConflictSerializer,
+        description=(
+            "CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот; CONTRACT_VISAS_REQUIRED (Х-1): "
+            "отправка договора клиенту до сбора виз — в теле `reason` (причина словами) и `missing` (роли без визы)"
+        ),
+    ),
 }
 
 
@@ -70,6 +78,12 @@ class ContractFlowMixin:
             channel=data.get("channel", ""),
             counterparty_person=data.get("counterparty_person", ""),
         )
+        if error == contract_visas.VISAS_REQUIRED:
+            blocker = contract_flow.send_blocker(contract) or {}
+            return Response(
+                {"detail": error, "reason": blocker.get("message", ""), "missing": blocker.get("missing", [])},
+                status=409,
+            )
         if error:
             return _fail(error)
         return Response(ContractFlowSerializer(updated, context=self.get_serializer_context()).data)

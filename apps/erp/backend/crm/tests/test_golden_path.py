@@ -313,7 +313,7 @@ def test_contract_and_billing_events_are_structured(deal, buyer, manager):
     assert agreed.event_params == {
         "number": contract.number,
         "deal_id": deal.id,
-        "from": "PENDING_CLIENT",
+        "from": "DRAFT",  # Х-1: без виз договор остаётся проектом; клиентское согласие записывает сервис
         "to": "PENDING_MANAGER",
     }
 
