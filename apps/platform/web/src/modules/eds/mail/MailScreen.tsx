@@ -143,7 +143,7 @@ function MailList({ own }: { own: boolean }) {
         title={t("letters:mail.off.title")}
         text={t("letters:mail.off.text")}
         action={
-          canSee(me, { resource: "admin" }) ? (
+          canSee(me, { resource: "admin.system" }) ? (
             <LinkButton to={ADMIN_MAIL_PATH}>{t("letters:mail.off.action")}</LinkButton>
           ) : undefined
         }

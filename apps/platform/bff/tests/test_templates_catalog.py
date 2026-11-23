@@ -141,3 +141,15 @@ async def test_role_sees_only_its_sources(web: Web, eds: EdsFake, domains: None)
     assert response.status_code == 200
     kinds = {row["kind"] for row in response.json()["items"]}
     assert kinds == {"resolution", "letter"}
+
+
+async def test_director_gets_no_reply_rows_without_a_page_to_open_them(
+    web: Web, eds: EdsFake, domains: None
+) -> None:
+    # EV-2a: «Telegram» — страница раздела admin.system; директору строк с ссылкой на неё не отдаём
+    assert (await web.login(["DIRECTOR"])).status_code == 200
+    response = await web.client.get("/api/v1/templates")
+    assert response.status_code == 200
+    ids = {row["id"] for row in response.json()["items"]}
+    assert "crm.reply:3" not in ids
+    assert "erp.document:5" in ids

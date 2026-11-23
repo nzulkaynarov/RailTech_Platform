@@ -16,9 +16,9 @@ export type SettingsGroup = (typeof SETTINGS_GROUPS)[number];
 
 /** Названия групп; совпадают с `modules:admin.groups.<group>`. */
 export const GROUP_NAMES: Readonly<Record<SettingsGroup, Texts>> = {
-  people: { ru: "Люди и доступ", uz: "Odamlar va kirish", en: "People & access" },
+  people: { ru: "Люди и доступ", uz: "Odamlar va kiriş", en: "People & access" },
   company: { ru: "Компания", uz: "Kompaniya", en: "Company" },
-  rules: { ru: "Правила работы", uz: "Ish qoidalari", en: "Work rules" },
+  rules: { ru: "Правила работы", uz: "Iş qoidalari", en: "Work rules" },
   channels: {
     ru: "Каналы и подключения",
     uz: "Kanallar va ulanişlar",
@@ -287,7 +287,7 @@ export const SETTINGS: readonly SettingEntry[] = [
     name: { ru: "Время и сроки", uz: "Vaqt va muddatlar", en: "Hours & deadlines" },
     description: {
       ru: "Часы работы, праздники и срок первого ответа",
-      uz: "Ish vaqti, bayramlar va birinchi javob muddati",
+      uz: "Iş vaqti, bayramlar va birinçi javob muddati",
       en: "Working hours, holidays and first reply time",
     },
     keywords: {
@@ -300,7 +300,7 @@ export const SETTINGS: readonly SettingEntry[] = [
         "срок первого ответа",
         "напоминание менеджеру",
       ],
-      uz: ["sla", "ish soatlari", "bayramlar", "javob muddati", "birinchi javob"],
+      uz: ["sla", "ish soatlari", "bayramlar", "javob muddati", "birinçi javob"],
       en: ["sla", "working hours", "holidays", "reply time", "first reply", "manager reminder"],
     },
   },
@@ -353,10 +353,10 @@ export const SETTINGS: readonly SettingEntry[] = [
     group: "rules",
     path: "/admin/templates",
     access: COMPANY,
-    name: { ru: "Шаблоны", uz: "Shablonlar", en: "Templates" },
+    name: { ru: "Шаблоны", uz: "Şablonlar", en: "Templates" },
     description: {
       ru: "КП, договоры, счета, акты, письма и резолюции",
-      uz: "TT, shartnoma, hisob, dalolatnoma, xatlar va rezolyutsiyalar",
+      uz: "TT, şartnoma, hisob, dalolatnoma, xatlar va rezolyutsiyalar",
       en: "Quotes, contracts, invoices, acts, letters and resolutions",
     },
     keywords: {
@@ -415,7 +415,7 @@ export const SETTINGS: readonly SettingEntry[] = [
     name: { ru: "Telegram", uz: "Telegram", en: "Telegram" },
     description: {
       ru: "Бот: подключение, канал команды, тексты и передача",
-      uz: "Bot: ulanish, jamoa kanali, matnlar va topshirish",
+      uz: "Bot: ulaniş, jamoa kanali, matnlar va topşiriş",
       en: "Bot: connection, team channel, texts and handoff",
     },
     keywords: {
@@ -432,7 +432,7 @@ export const SETTINGS: readonly SettingEntry[] = [
         "передача менеджеру",
         "порог передачи",
       ],
-      uz: ["bot", "token", "javob shablonlari", "bilimlar bazasi", "jamoa kanali", "topshirish"],
+      uz: ["bot", "token", "javob shablonlari", "bilimlar bazasi", "jamoa kanali", "topşiriş"],
       en: [
         "bot",
         "token",
@@ -454,7 +454,7 @@ export const SETTINGS: readonly SettingEntry[] = [
     name: { ru: "Почта", uz: "Pochta", en: "Mail" },
     description: {
       ru: "Отправка, общий ящик, виды писем и отправители",
-      uz: "Yuborish, umumiy quti, xat turlari va jönatuvçilar",
+      uz: "Yuboriş, umumiy quti, xat turlari va jönatuvçilar",
       en: "Sending, shared inbox, letter kinds and senders",
     },
     keywords: {
@@ -564,12 +564,12 @@ export const SETTINGS: readonly SettingEntry[] = [
     name: { ru: "История", uz: "Tarix", en: "History" },
     description: {
       ru: "Действия людей и обмен между системами",
-      uz: "Odamlar harakatlari va tizimlararo almashinuv",
+      uz: "Odamlar harakatlari va tizimlararo almaşinuv",
       en: "People’s actions and exchange between systems",
     },
     keywords: {
       ru: ["аудит", "лог", "история", "изменения", "шина", "события", "доставка", "повторить"],
-      uz: ["audit", "tarix", "o‘zgarishlar", "hodisalar", "yetkazish"],
+      uz: ["audit", "tarix", "özgarişlar", "hodisalar", "yetkazish"],
       en: ["audit", "log", "history", "changes", "bus", "events", "delivery", "retry"],
     },
   },

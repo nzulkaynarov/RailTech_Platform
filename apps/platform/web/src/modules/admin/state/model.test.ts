@@ -25,6 +25,7 @@ const authority = (patch: Partial<SigningAuthority>): SigningAuthority =>
     holder: { id: "u1", name: "Рустам Каримов" },
     holder_active: true,
     status: "expiring",
+    kinds: ["contract"],
     expires_in_days: 9,
     valid_to: "2026-12-02",
     basis_number: "14",
@@ -50,6 +51,52 @@ describe("полномочие подписи", () => {
     // статус — тоже факт: не «истекающее» по версии сервера строки нет, сколько бы дней ни осталось
     expect(signingRows([authority({ status: "scheduled", expires_in_days: 5 })])).toEqual([]);
     expect(signingRows([authority({ expires_in_days: 15 })])).toEqual([]);
+  });
+});
+
+describe("истёкшее полномочие подписи", () => {
+  const expired = authority({
+    id: "old",
+    status: "expired",
+    expires_in_days: null,
+    valid_to: "2026-11-20",
+  });
+
+  it("срок вышел, преемника нет — строка не пропадает в день окончания срока, а краснеет", () => {
+    // переход expiring → expired: строка осталась, стала сбоем
+    expect(signingRows([authority({})])).toHaveLength(1);
+    const [row] = signingRows([expired]);
+    expect(row).toMatchObject({ kind: "signingExpired", severity: "fail", to: "/admin/signing" });
+  });
+
+  it("есть действующий преемник на те же виды подписи — строки нет; на другие виды — есть", () => {
+    const successor = authority({ id: "new", status: "active", expires_in_days: 300 });
+    expect(signingRows([expired, successor])).toEqual([]);
+    expect(
+      signingRows([expired, { ...successor, kinds: ["other"] }]),
+    ).toHaveLength(1);
+    // отключённый держатель преемником не считается
+    expect(signingRows([expired, { ...successor, holder_active: false }])).toHaveLength(1);
+  });
+
+  it("истёкшее у отключённого держателя — строки нет", () => {
+    expect(signingRows([{ ...expired, holder_active: false }])).toEqual([]);
+  });
+});
+
+describe("кнопка к закрытой странице", () => {
+  it("зрителю без права на страницу сервиса кнопки нет, строка остаётся", () => {
+    const item = {
+      id: "i1",
+      card: "telegram",
+      kind: "bot_not_running",
+      group: null,
+      severity: "fail",
+    } as AttentionItem;
+    const [closed] = serviceRows([item], () => false);
+    expect(closed?.to).toBeNull();
+    const [open] = serviceRows([item], () => true);
+    expect(open?.to).toBe("/admin/telegram");
   });
 });
 

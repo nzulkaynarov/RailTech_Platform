@@ -22,7 +22,7 @@ export const SIGNING_WARN_DAYS = 14;
 /** Кто исправляет: слова словаря `modules:admin.state.owner.*` */
 export type StateOwner = ServiceOwner | "director" | "accountant";
 
-export type AttentionKind = "service" | "signing" | "fx" | "blank" | "tickets";
+export type AttentionKind = "service" | "signing" | "signingExpired" | "fx" | "blank" | "tickets";
 
 export interface AttentionRow {
   id: string;
@@ -30,8 +30,8 @@ export interface AttentionRow {
   /** `fail` — сбой, красным и первым; `warn` — внимание */
   severity: "fail" | "warn";
   owner: StateOwner;
-  /** Страница, где это чинится */
-  to: string;
+  /** Страница, где это чинится; `null` — зрителю она закрыта, кнопки нет, остаётся «исправляет …» */
+  to: string | null;
   /** Раздел реестра Настроек (`modules:admin.sections.<key>`) или `null`, если страница вне Настроек */
   page: string | null;
   /** Параметры текста строки (имя держателя, дни, число) */
@@ -56,7 +56,10 @@ export function cardTarget(card: IntegrationCardKey): { to: string; page: string
 const OWNERS: readonly ServiceOwner[] = ["admin", "owner", "hosting", "provider"];
 
 /** Сбои и предупреждения сервисов из обзора «Сервисов»; «ещё не подключено» — не сбой, оно в готовности. */
-export function serviceRows(attention: readonly AttentionItem[]): AttentionRow[] {
+export function serviceRows(
+  attention: readonly AttentionItem[],
+  canOpen: (page: string) => boolean = () => true,
+): AttentionRow[] {
   return mergeSameCause(attention.filter((item) => item.severity !== "setup")).map((item) => {
     const target = cardTarget(item.card);
     const owner = item.group?.owner;
@@ -65,7 +68,7 @@ export function serviceRows(attention: readonly AttentionItem[]): AttentionRow[]
       kind: "service",
       severity: item.severity === "fail" ? "fail" : "warn",
       owner: owner && OWNERS.includes(owner) ? owner : "admin",
-      to: target.to,
+      to: canOpen(target.page) ? target.to : null,
       page: target.page,
       params: {},
       item,
@@ -73,30 +76,54 @@ export function serviceRows(attention: readonly AttentionItem[]): AttentionRow[]
   });
 }
 
-/** Полномочие подписи, срок которого кончается в ближайшие 14 дней: после срока документы некому подписать. */
+/** Полномочие подписи, которое действует: по нему подписывают сейчас. */
+const covers = (a: SigningAuthority) =>
+  a.holder_active && (a.status === "active" || a.status === "expiring");
+
+/**
+ * Полномочия подписи, из-за которых документы могут остаться без подписанта (факт — реестр полномочий):
+ * срок кончается в ближайшие 14 дней, либо срок уже вышел, а действующего преемника на те же виды подписи нет.
+ * Истёкшее без преемника не пропадает из списка в день окончания срока — проблема только наступила.
+ */
 export function signingRows(authorities: readonly SigningAuthority[]): AttentionRow[] {
-  return authorities
-    .filter(
-      (a) =>
-        a.status === "expiring" &&
-        a.holder_active &&
-        a.expires_in_days !== null &&
-        a.expires_in_days <= SIGNING_WARN_DAYS,
-    )
-    .map((a) => ({
-      id: `signing:${a.id}`,
-      kind: "signing" as const,
-      severity: "warn" as const,
-      owner: "admin" as const,
-      to: "/admin/signing",
-      page: "signing",
-      params: {
-        name: a.holder.name,
-        days: a.expires_in_days ?? 0,
-        basis: a.basis_number ?? "",
-        until: a.valid_to ?? "",
-      },
-    }));
+  const covered = new Set(authorities.filter(covers).flatMap((a) => a.kinds));
+  const rows: AttentionRow[] = [];
+  for (const a of authorities) {
+    const params = {
+      name: a.holder.name,
+      days: a.expires_in_days ?? 0,
+      basis: a.basis_number ?? "",
+      until: a.valid_to ?? "",
+    };
+    const common = { owner: "admin" as const, to: "/admin/signing", page: "signing" };
+    if (
+      a.status === "expiring" &&
+      a.holder_active &&
+      a.expires_in_days !== null &&
+      a.expires_in_days <= SIGNING_WARN_DAYS
+    ) {
+      rows.push({
+        id: `signing:${a.id}`,
+        kind: "signing",
+        severity: "warn",
+        ...common,
+        params,
+      });
+    } else if (
+      a.status === "expired" &&
+      a.holder_active &&
+      (a.kinds).some((kind) => !covered.has(kind))
+    ) {
+      rows.push({
+        id: `signing:${a.id}`,
+        kind: "signingExpired",
+        severity: "fail",
+        ...common,
+        params,
+      });
+    }
+  }
+  return rows;
 }
 
 /** Свежего курса нет: ERP не получила курс за допустимый срок, расчёты в долларах недоступны. */

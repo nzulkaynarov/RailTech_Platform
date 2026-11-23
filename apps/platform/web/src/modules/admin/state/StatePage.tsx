@@ -75,9 +75,20 @@ function AttentionLine({ row }: { row: AttentionRow }) {
   let consequence: string;
   let detail: string | null;
   if (row.kind === "service" && row.item) {
-    const texts = attentionTexts(tInt, row.item);
-    title = row.item.group?.headline ?? texts.subject;
-    detail = row.item.group?.detail ?? texts.detail;
+    // Тема строки — название карточки: заголовок группы («Ключ OpenAI отклонён») называет поставщика,
+    // а «Состояние» читает и директор. У строки-группы `subject` — этот заголовок, поэтому берём карточку.
+    const texts = attentionTexts(
+      tInt,
+      row.item.kind === "service" ? { ...row.item, subject: null } : row.item,
+    );
+    title =
+      row.item.card === "erp" && texts.subject === tInt("cards.erp.title")
+        ? t("modules:admin.state.service.erp")
+        : texts.subject;
+    detail =
+      row.item.card === "erp" && row.item.kind === "not_configured"
+        ? t("modules:admin.state.erpDetail")
+        : texts.detail;
     consequence =
       row.item.group && row.item.group.affected.length > 0
         ? t("modules:admin.state.affected", { list: row.item.group.affected.join(", ") })
@@ -103,9 +114,11 @@ function AttentionLine({ row }: { row: AttentionRow }) {
           {t("modules:admin.state.fixer", { who: t(`modules:admin.state.owner.${row.owner}`) })}
         </span>
       </div>
-      <LinkButton to={row.to}>
-        {page ? t("modules:admin.state.open", { page }) : t("modules:admin.state.openPlain")}
-      </LinkButton>
+      {row.to ? (
+        <LinkButton to={row.to}>
+          {page ? t("modules:admin.state.open", { page }) : t("modules:admin.state.openPlain")}
+        </LinkButton>
+      ) : null}
     </li>
   );
 }
@@ -171,7 +184,7 @@ function StateBody() {
   });
   const setup = useSetupProgress(admin);
   const signing = useListSigningAuthorities(
-    { status: "expiring" },
+    { status: "all" },
     { query: { enabled: withSigning, retry: false } },
   );
   const fx = useGetFxRate({ currency: "USD" }, { query: { enabled: withCompany, retry: false } });
@@ -181,8 +194,13 @@ function StateBody() {
 
   const tickets =
     counters.data?.items.find((c) => c.module === "admin" && c.section === "tickets")?.count ?? 0;
+  // Кнопку к странице, закрытой зрителю, не показываем: остаётся «исправляет администратор»
+  const canOpen = (page: string) => {
+    const entry = SETTINGS.find((e) => e.key === page);
+    return !entry || canSee(me, entry.access);
+  };
   const rows = ordered([
-    ...serviceRows(overview.data?.attention ?? []),
+    ...serviceRows(overview.data?.attention ?? [], canOpen),
     ...signingRows(signing.data?.items ?? []),
     ...fxRows(fx.data),
     ...blankRows(brand.data),

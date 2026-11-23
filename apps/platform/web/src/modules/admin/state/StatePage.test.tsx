@@ -140,6 +140,50 @@ describe("Настройки · «Состояние» (ЕВ-2а, доска 37)
     expect(within(menu).getByRole("link", { name: "Компания" })).toBeVisible();
   });
 
+  it("строка сбоя службы: у директора нет кнопки на закрытую страницу «Telegram», у администратора есть; заголовок без названия поставщика", async () => {
+    const broken = {
+      checked_at: "2026-11-23T10:00:00Z",
+      cards: [],
+      attention: [
+        {
+          id: "bot:down",
+          card: "telegram",
+          severity: "fail",
+          kind: "service",
+          subject: "Ключ OpenAI отклонён",
+          detail: null,
+          technical: null,
+          group: {
+            key: "openai",
+            headline: "Ключ OpenAI отклонён",
+            detail: "Ключ не принят",
+            owner: "admin",
+            affected: [],
+            count: 1,
+          },
+        },
+      ],
+    };
+    server.use(http.get("*/admin/integrations", () => HttpResponse.json(broken)));
+    await openState("director@demo.example");
+    const list = within(await attention());
+    const row = (await list.findByText("Telegram")).closest("li") as HTMLElement;
+    expect(row).toHaveTextContent("исправляет администратор");
+    expect(row).not.toHaveTextContent("OpenAI");
+    expect(within(row).queryByRole("link")).toBeNull();
+    cleanup();
+
+    server.use(http.get("*/admin/integrations", () => HttpResponse.json(broken)));
+    await openState("admin@demo.example");
+    const adminRow = (await within(await attention()).findByText("Telegram")).closest(
+      "li",
+    ) as HTMLElement;
+    expect(within(adminRow).getByRole("link", { name: "Открыть «Telegram»" })).toHaveAttribute(
+      "href",
+      "/admin/telegram",
+    );
+  });
+
   it("⚙ из других модулей (`?group=`) ведёт на первую страницу группы, а не на «Состояние»", async () => {
     signInAs("admin@demo.example");
     renderApp("/admin?group=channels");

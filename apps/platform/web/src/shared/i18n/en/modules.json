@@ -870,6 +870,7 @@
       "open": "Open “{{page}}”",
       "openPlain": "Open",
       "affected": "affected: {{list}}",
+      "erpDetail": "The link to quotes is not set up: requests will not go to a quote, quote documents and stock are unavailable.",
       "owner": {
         "admin": "the administrator",
         "owner": "the company owner",
@@ -883,6 +884,11 @@
           "title": "Signing authority expires in {{days}} d.",
           "what": "{{name}}, {{basis}} until {{until}}",
           "ifNot": "after that nobody can sign documents"
+        },
+        "signingExpired": {
+          "title": "Signing authority expired on {{until}}",
+          "what": "{{name}}, {{basis}}",
+          "ifNot": "nobody can sign documents: no valid authority covers these kinds"
         },
         "fx": {
           "title": "The {{currency}} rate has not been updated for {{days}} d.",
@@ -901,7 +907,7 @@
       "service": {
         "mail": "Mail",
         "bot": "Telegram",
-        "erp": "ERP",
+        "erp": "Requests and quotes",
         "backups": "Backups",
         "ai": "AI",
         "bus": "System exchange"

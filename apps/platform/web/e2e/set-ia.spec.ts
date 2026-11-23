@@ -235,6 +235,15 @@ test.describe("Настройки: порядок и навигация (SET-IA)
         await expect(menu.getByRole("link", { name: "Каналы и подключения" })).toHaveCount(0);
         await expect(menu.getByRole("link", { name: "Компания", exact: true })).toBeVisible();
       }
+      // страницы раздела admin.system директору закрыты: кнопок на них на «Состоянии» нет
+      for (const href of [
+        "/admin/telegram",
+        "/admin/mail",
+        "/admin/integrations",
+        "/admin/ai-spend",
+      ]) {
+        await expect(page.locator(`main a[href^="${href}"]`)).toHaveCount(0);
+      }
       await expectNoViolations(page, `director state ${String(width)}`);
       await shot(page, "director-state");
 
@@ -251,6 +260,10 @@ test.describe("Настройки: порядок и навигация (SET-IA)
       await expect(page.getByText(/^Только просмотр/)).toHaveCount(0);
       await spaGoto(page, "/admin/telegram");
       await h1(page, "Нет доступа");
+
+      // ⚙ «Клиентов» ведёт в «Каналы и подключения»: у директора там нет страниц, значка нет
+      await spaGoto(page, "/crm/leads");
+      await expect(page.getByRole("link", { name: /^Настройки: Каналы/ })).toHaveCount(0);
     });
   }
 });

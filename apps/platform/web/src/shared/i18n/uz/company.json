@@ -287,9 +287,9 @@
       },
       "supplier": {
         "title": "Yetkazib beruvçi narxlarining dolzarbligi",
-        "hint": "Hamkor narxi necha kun tasdiqlangan hisoblanadi va tugashidan necha kun oldin ogohlantirish.",
+        "hint": "Hamkor narxi neça kun tasdiqlangan hisoblanadi va tugaşidan neça kun oldin ogohlantiriş.",
         "note": "Xaridga darhol qöllanadi.",
-        "save": "Muddatlarni saqlash"
+        "save": "Muddatlarni saqlaş"
       }
     }
   },
@@ -532,7 +532,7 @@
     },
     "support": "Yordam manzili",
     "supportHint": "Mijozlar uni xatlarda köradi. Böş bölsa, xatlarda «Savollar bormi?» qatori yöq.",
-    "invalidSupport": "Pochta manzilini kiriting",
+    "invalidSupport": "Poçta manzilini kiriting",
     "supportTitle": "Yordam manzili"
   },
   "bank": {
