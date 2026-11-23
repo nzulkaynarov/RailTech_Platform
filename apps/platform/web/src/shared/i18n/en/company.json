@@ -27,8 +27,7 @@
     "charges": "Charge items",
     "templates": "Templates",
     "reference": "Reference lists",
-    "categories": "Categories",
-    "platform": "Platform"
+    "categories": "Categories"
   },
   "kinds": {
     "request": "Request",

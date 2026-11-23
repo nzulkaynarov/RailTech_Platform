@@ -234,19 +234,10 @@
       "delivery_delivered": "Delivered to the client"
     },
     "by": "{{date}} · {{name}}",
-    "bySystem": "{{date}} · system",
     "reason": "Comment: {{reason}}"
   },
   "panel": {
-    "contractLabel": "Project contract",
-    "actLabel": "Project act",
-    "sheetClose": "Close",
-    "sheetContract": "Contract {{number}}",
-    "sheetAct": "Act {{number}}",
-    "sheetContractNone": "Contract",
-    "sheetActNone": "Act",
-    "journalEmpty": "The log is empty",
-    "journalHint": "Entries appear after the first actions on the contract and act."
+    "sheetClose": "Close"
   },
   "contract": {
     "number": "Contract {{number}}",
@@ -303,8 +294,6 @@
       "submit": "Attach scan",
       "choose": "Choose a scan file — the button becomes available."
     },
-    "history": "Contract history",
-    "historyEmpty": "No actions on the contract yet.",
     "files": {
       "pdf": "Contract PDF",
       "scan": "Signed scan"
@@ -318,7 +307,22 @@
       "reject": "Rejection recorded.",
       "revise": "Draft returned to work."
     },
-    "readOnly": "View only."
+    "readOnly": "View only.",
+    "blocker": {
+      "visas_not_requested": "Visas are needed. Press “Send for signature”: once they are collected, the contract can go to the client.",
+      "visas_declined": "The contract was not accepted for visas. Send it for signature again.",
+      "visas_pending": "Visas needed: {{roles}}",
+      "visas_returned": "Visas returned: {{roles}}. Fix the contract and send it for signature again.",
+      "no_visa_holder": "Nobody can give the visa: {{roles}}. Assign the role to an employee.",
+      "remark": "Remark: {{text}}",
+      "settings": "Employees",
+      "collecting": "Visas are being collected.",
+      "askAdmin": "Ask an administrator to assign the role: {{roles}}.",
+      "role": {
+        "visa_finance": "accountant",
+        "visa_legal": "lawyer"
+      }
+    }
   },
   "act": {
     "number": "Act {{number}}",
@@ -366,7 +370,6 @@
       "choose": "Choose a scan file — the button becomes available."
     },
     "history": "Act history",
-    "historyEmpty": "No actions on the act yet.",
     "files": {
       "pdf": "Act PDF",
       "scan": "Signed scan"
@@ -406,7 +409,8 @@
     "unavailable": "ERP is not responding. Try again later.",
     "payload": "The file is larger than 20 MB.",
     "unknown": "It did not work. Try again.",
-    "failed": "It did not work: {{reason}}"
+    "failed": "It did not work: {{reason}}",
+    "contract_visas_required": "Visas are needed first. Refresh the page."
   },
   "state": {
     "retry": "Retry",

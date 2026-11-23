@@ -20,7 +20,7 @@ afterEach(() => {
 });
 
 describe("Главная · Сводка", () => {
-  it("сроки на графике, просроченное списком, блоки без данных подписаны", async () => {
+  it("сроки на графике, просроченное списком, блоков без данных нет", async () => {
     server.use(
       http.get("*/queue", () =>
         HttpResponse.json({
@@ -55,6 +55,8 @@ describe("Главная · Сводка", () => {
     expect(
       screen.getByRole("img", { name: "Просрочено: 1, Сегодня: 1, Завтра: 0, Позже: 0" }),
     ).toBeVisible();
-    expect(screen.getAllByText("Данные появятся здесь")).toHaveLength(3);
+    // ЕВ-3а: блоков без данных на «Сводке» нет
+    expect(screen.queryByText("Данные появятся здесь")).toBeNull();
+    expect(screen.queryByText("Прибыль по проектам")).toBeNull();
   });
 });

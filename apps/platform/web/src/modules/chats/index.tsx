@@ -1,4 +1,4 @@
-import { Navigate, useLocation } from "react-router";
+import { useLocation } from "react-router";
 
 import { RequireAccess } from "../../app/RequireAccess";
 import { ModuleRoutes } from "../ModuleRoutes";
@@ -11,13 +11,6 @@ import { PeoplePage } from "./people/PeoplePage";
 export function Component() {
   const location = useLocation();
   const match = matchSection(location.pathname, location.search);
-  // Старые фильтры чатов: внутренние — сам список, переписка с клиентами — «Лиды · Ждут ответа»
-  if (match?.module.code === "chats" && match.section.key === "internal") {
-    return <Navigate to="/chats" replace />;
-  }
-  if (match?.module.code === "chats" && match.section.key === "external") {
-    return <Navigate to="/crm/leads?scope=waiting" replace />;
-  }
   if (match?.module.code === "chats" && match.section.key === "calendar") {
     return (
       <RequireAccess rule={match.section.access}>

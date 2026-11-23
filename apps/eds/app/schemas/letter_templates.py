@@ -50,6 +50,7 @@ class TemplatePreviewIn(Strict):
     """Предпросмотр варианта на бланке: тело как в редакторе, не сохраняется."""
 
     body: DocumentBody
+    kind: TemplateKind = "letter"
 
 
 class TemplatePreview(BaseModel):

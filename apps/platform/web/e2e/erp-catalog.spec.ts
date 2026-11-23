@@ -260,9 +260,7 @@ test.describe("Документация", () => {
     await link.click();
     const drawer = page.getByRole("dialog", { name: "Схема подключения реле РЗ-1" });
     await expect(drawer.getByText("Реле защиты РЗ-1")).toBeVisible();
-    await expect(
-      drawer.getByText(/Отправить клиенту в чат: появится вместе с разделом «Чаты»/),
-    ).toBeVisible();
+    await expect(drawer.getByText(/появится вместе с разделом «Чаты»/)).toHaveCount(0);
     await expectPdfDrawn(page);
     await expectNoViolations(page, "просмотр PDF");
     await settledScreenshot(page, "docs-pdf-preview");

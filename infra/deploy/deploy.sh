@@ -31,6 +31,10 @@ export RT_RELEASE_DATE
 export RT_SECRETS_DIR
 install -d -m 700 "$RT_SECRETS_DIR" 2>/dev/null \
   || log "внимание: не удалось создать $RT_SECRETS_DIR (права на $RT_ROOT?): внешняя копия останется «не настроена», остальное не затронуто"
+# Каталог файла-предупреждения (maintenance.json): создаём от deploy, иначе Docker создал бы его от root и скрипт не смог бы писать.
+export RT_MAINTENANCE_DIR
+install -d -m 755 "$RT_MAINTENANCE_DIR" 2>/dev/null \
+  || log "внимание: не удалось создать $RT_MAINTENANCE_DIR (права на $RT_ROOT?): предупреждение о плановом обновлении не будет показано"
 prev="$(state_get current_tag)"
 
 log "тег $tag, релиз $rel, предыдущий: ${prev:-нет}"

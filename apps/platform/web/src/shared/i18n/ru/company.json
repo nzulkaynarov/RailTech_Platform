@@ -27,8 +27,7 @@
     "charges": "Статьи расхода",
     "templates": "Шаблоны",
     "reference": "Справочники",
-    "categories": "Категории",
-    "platform": "Платформа"
+    "categories": "Категории"
   },
   "kinds": {
     "request": "Заявка",

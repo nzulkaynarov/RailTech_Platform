@@ -140,6 +140,23 @@ describe("каркас на 1440", () => {
     expect(within(rail).getByRole("link", { name: "Контакты" }).querySelector("b")).toBeNull();
   });
 
+  it("ЕВ-3б: счётчик `crm.messages` BFF входит в бейдж «Лидов», хотя раздела «Ждут ответа» в коде нет", async () => {
+    server.use(
+      http.get("*/menu-counters", () =>
+        HttpResponse.json({
+          items: [{ module: "crm", section: "messages", count: 7, attention: true }],
+          sources: [],
+        }),
+      ),
+    );
+    signIn("manager@demo.example");
+    renderAt("/crm/leads");
+    const menu = await screen.findByRole("navigation", { name: "Разделы модуля" });
+    await waitFor(() => {
+      expect(within(menu).getByRole("link", { name: /^Лиды/ })).toHaveTextContent("7");
+    });
+  });
+
   it("403 при выбранной активной роли: нейтральный текст и подсказка про «Все роли»", async () => {
     signIn("all@demo.example", "ACCOUNTANT");
     renderAt("/admin/roles");
@@ -177,7 +194,7 @@ describe("каркас на 1440", () => {
       within(menu)
         .getAllByRole("link")
         .map((a) => a.textContent.replace(/\d+, требует действия|\d+$/, "")),
-    ).toEqual(["Лиды", "Контрагенты", "Почта", "База знаний"]); // 0.3 (FR-10): почта менеджера
+    ).toEqual(["Лиды", "Контрагенты", "База знаний"]); // ЕВ-3а: «Почта» — в «Документах»
     expect(within(rail).getByRole("button", { name: "Создать" })).toBeVisible();
   });
 

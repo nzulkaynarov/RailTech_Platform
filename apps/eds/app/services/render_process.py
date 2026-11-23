@@ -39,34 +39,60 @@ class RenderError(Exception):
         return (RenderError, (self.code, self.detail))
 
 
-def render_payload(payload: dict[str, Any], logo: bytes | None, logo_mime: str | None) -> dict[str, Any]:
-    """Функция процесса пула: ввод рендера → `{pdf, pages, last_page_fill, warnings}` или `RenderError`."""
-    from rt_docs import BodyError, DocumentMeta, Layout, Letterhead, LetterheadError, Logo, RenderTimeoutError
-    from rt_docs.pdf import render_pdf
+def render_inputs(payload: dict[str, Any], logo: bytes | None, logo_mime: str | None) -> tuple[Any, Any]:
+    """Бланк и реквизиты `rt_docs` из ввода рендера (без pango: годится и для HTML-проверки в тестах).
+
+    Сетка документа (ДОК-5) включается видом документа в `meta`: ввод без него (рендер до сетки) идёт прежней шапкой."""
+    from rt_docs import DocumentMeta, Letterhead, Logo
+    from rt_docs.model import FooterColumn, InfoRow
 
     head = payload["letterhead"]
     meta = payload["meta"]
+    letterhead = Letterhead(
+        company_name=head["company_name"],
+        requisites=tuple(head["requisites"]),
+        footer=tuple(head["footer"]),
+        logo=Logo(logo, logo_mime) if logo is not None and logo_mime else None,
+        accent=head["accent"],
+        font=head["font"],
+        footer_columns=tuple(
+            FooterColumn(lines=tuple(column["lines"]), title=column.get("title"))
+            for column in head.get("footer_columns", ())
+        ),
+        return_address=head.get("return_address"),
+    )
+    document = DocumentMeta(
+        title=None,
+        number=meta["number"],
+        date=date.fromisoformat(meta["date"]) if meta["date"] else None,
+        addressee=tuple(meta["addressee"]),
+        reply_to=meta["reply_to"],
+        executor=meta["executor"],
+        kind_label=meta.get("kind_label"),
+        info=tuple(
+            InfoRow(row["label"], row["value"], code=row["code"], role=row["role"]) for row in meta.get("info", ())
+        ),
+        addressee_strong=meta.get("addressee_strong"),
+        signed_text=meta.get("signed_text"),
+        basis_text=meta.get("basis_text"),
+        verification_code=meta.get("verification_code"),
+        verification_url=meta.get("verification_url"),
+    )
+    return letterhead, document
+
+
+def render_payload(payload: dict[str, Any], logo: bytes | None, logo_mime: str | None) -> dict[str, Any]:
+    """Функция процесса пула: ввод рендера → `{pdf, pages, last_page_fill, warnings}` или `RenderError`."""
+    from rt_docs import BodyError, Layout, LetterheadError, RenderTimeoutError
+    from rt_docs.pdf import render_pdf
+
     try:
-        letterhead = Letterhead(
-            company_name=head["company_name"],
-            requisites=tuple(head["requisites"]),
-            footer=tuple(head["footer"]),
-            logo=Logo(logo, logo_mime) if logo is not None and logo_mime else None,
-            accent=head["accent"],
-            font=head["font"],
-        )
+        letterhead, meta = render_inputs(payload, logo, logo_mime)
         result = render_pdf(
             payload["body"],
             letterhead=letterhead,
             layout=Layout(payload["layout"]),
-            meta=DocumentMeta(
-                title=None,
-                number=meta["number"],
-                date=date.fromisoformat(meta["date"]) if meta["date"] else None,
-                addressee=tuple(meta["addressee"]),
-                reply_to=meta["reply_to"],
-                executor=meta["executor"],
-            ),
+            meta=meta,
             highlight_missing=False,
             draft=bool(payload.get("draft")),  # проект: «ПРОЕКТ», без номера и даты (ADR-0024 п. 4)
             timeout_s=RENDER_TIMEOUT_S,
