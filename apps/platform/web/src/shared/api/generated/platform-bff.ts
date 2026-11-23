@@ -266,6 +266,11 @@ import type {
   LeadIn,
   LeadManagerList,
   LeadPage,
+  LegalAcceptancePage,
+  LegalEditionCreate,
+  LegalEditionDetail,
+  LegalEditionList,
+  LegalEditionUpdate,
   LetterAssistIn,
   LetterAssistSuggestion,
   LetterCard,
@@ -307,6 +312,7 @@ import type {
   ListInboundMailParams,
   ListKbDocumentsParams,
   ListKbGapsParams,
+  ListLegalAcceptancesParams,
   ListLettersParams,
   ListMailLogParams,
   ListManufacturersParams,
@@ -4416,6 +4422,907 @@ export function useListCompanyArticles<
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
   const queryOptions = getListCompanyArticlesQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getListLegalEditionsUrl = () => {
+  return `/api/v1/admin/legal-editions`;
+};
+
+/**
+ * Раздел `company.settings` от чтения. Редакции по видам (`privacy`, `terms`): статус (`draft`, `current`, `retired`), кто и когда опубликовал, число акцептов. Текст — отдельным запросом.
+ * @summary Редакции оферты и политики Кабинета (Настройки · Оферта и политика)
+ */
+export const listLegalEditions = async (
+  options?: Parameters<typeof http>[1],
+): Promise<LegalEditionList> => {
+  return http<LegalEditionList>(getListLegalEditionsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListLegalEditionsQueryKey = () => {
+  return [`/api/v1/admin/legal-editions`] as const;
+};
+
+export const getListLegalEditionsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listLegalEditions>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listLegalEditions>>, TError, TData>>;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListLegalEditionsQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listLegalEditions>>> = ({ signal }) =>
+    listLegalEditions({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listLegalEditions>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListLegalEditionsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listLegalEditions>>
+>;
+export type ListLegalEditionsQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse
+>;
+
+export function useListLegalEditions<
+  TData = Awaited<ReturnType<typeof listLegalEditions>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listLegalEditions>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listLegalEditions>>,
+          TError,
+          Awaited<ReturnType<typeof listLegalEditions>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListLegalEditions<
+  TData = Awaited<ReturnType<typeof listLegalEditions>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listLegalEditions>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listLegalEditions>>,
+          TError,
+          Awaited<ReturnType<typeof listLegalEditions>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListLegalEditions<
+  TData = Awaited<ReturnType<typeof listLegalEditions>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listLegalEditions>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Редакции оферты и политики Кабинета (Настройки · Оферта и политика)
+ */
+
+export function useListLegalEditions<
+  TData = Awaited<ReturnType<typeof listLegalEditions>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listLegalEditions>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListLegalEditionsQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getCreateLegalEditionUrl = () => {
+  return `/api/v1/admin/legal-editions`;
+};
+
+/**
+ * Раздел `company.settings` — полный. Черновик одного вида — один: второй — 409 `CONFLICT` (`details.reason` `legal_draft_exists`). Меняет кабинет только публикация.
+ * @summary Новая редакция — черновик, копия действующей
+ */
+export const createLegalEdition = async (
+  legalEditionCreate: LegalEditionCreate,
+  options?: Parameters<typeof http>[1],
+): Promise<LegalEditionDetail> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<LegalEditionDetail>(getCreateLegalEditionUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(legalEditionCreate),
+  });
+};
+
+export const getCreateLegalEditionMutationKey = () => ["createLegalEdition"] as const;
+
+export const getCreateLegalEditionMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | Error
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createLegalEdition>>,
+    TError,
+    CreateLegalEditionMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createLegalEdition>>,
+  TError,
+  CreateLegalEditionMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCreateLegalEditionMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createLegalEdition>>,
+    CreateLegalEditionMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createLegalEdition(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateLegalEditionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createLegalEdition>>
+>;
+export type CreateLegalEditionMutationBody = LegalEditionCreate;
+export type CreateLegalEditionMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | Error
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type CreateLegalEditionMutationVariables = { data: LegalEditionCreate };
+
+/**
+ * @summary Новая редакция — черновик, копия действующей
+ */
+export const useCreateLegalEdition = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | Error
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createLegalEdition>>,
+      TError,
+      CreateLegalEditionMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof createLegalEdition>>,
+  TError,
+  CreateLegalEditionMutationVariables,
+  TContext
+> => {
+  return useMutation(getCreateLegalEditionMutationOptions(options), queryClient);
+};
+
+export const getGetLegalEditionUrl = (id: string) => {
+  return `/api/v1/admin/legal-editions/${id}`;
+};
+
+/**
+ * Раздел `company.settings` от чтения. `content` — как написано, с подстановками `{{company.*}}`; `rendered` — с реквизитами компании, как увидит контакт.
+ * @summary Текст редакции на трёх языках
+ */
+export const getLegalEdition = async (
+  id: string,
+  options?: Parameters<typeof http>[1],
+): Promise<LegalEditionDetail> => {
+  return http<LegalEditionDetail>(getGetLegalEditionUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetLegalEditionQueryKey = (id: string) => {
+  return [`/api/v1/admin/legal-editions/${id}`] as const;
+};
+
+export const getGetLegalEditionQueryOptions = <
+  TData = Awaited<ReturnType<typeof getLegalEdition>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getLegalEdition>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetLegalEditionQueryKey(id);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getLegalEdition>>> = ({ signal }) =>
+    getLegalEdition(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: id !== null && id !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof getLegalEdition>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type GetLegalEditionQueryResult = NonNullable<Awaited<ReturnType<typeof getLegalEdition>>>;
+export type GetLegalEditionQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+
+export function useGetLegalEdition<
+  TData = Awaited<ReturnType<typeof getLegalEdition>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: string,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getLegalEdition>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getLegalEdition>>,
+          TError,
+          Awaited<ReturnType<typeof getLegalEdition>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetLegalEdition<
+  TData = Awaited<ReturnType<typeof getLegalEdition>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getLegalEdition>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getLegalEdition>>,
+          TError,
+          Awaited<ReturnType<typeof getLegalEdition>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetLegalEdition<
+  TData = Awaited<ReturnType<typeof getLegalEdition>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getLegalEdition>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Текст редакции на трёх языках
+ */
+
+export function useGetLegalEdition<
+  TData = Awaited<ReturnType<typeof getLegalEdition>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getLegalEdition>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetLegalEditionQueryOptions(id, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getUpdateLegalEditionUrl = (id: string) => {
+  return `/api/v1/admin/legal-editions/${id}`;
+};
+
+/**
+ * Раздел `company.settings` — полный. Опубликованную редакцию править нельзя — 409 `CONFLICT` (`legal_edition_published`); создайте новую. Пустое поле на каком-либо языке — 422 `VALIDATION_FAILED`.
+ * @summary Править черновик (метка и текст)
+ */
+export const updateLegalEdition = async (
+  id: string,
+  legalEditionUpdate: LegalEditionUpdate,
+  options?: Parameters<typeof http>[1],
+): Promise<LegalEditionDetail> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<LegalEditionDetail>(getUpdateLegalEditionUrl(id), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(legalEditionUpdate),
+  });
+};
+
+export const getUpdateLegalEditionMutationKey = () => ["updateLegalEdition"] as const;
+
+export const getUpdateLegalEditionMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | Error
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateLegalEdition>>,
+    TError,
+    UpdateLegalEditionMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateLegalEdition>>,
+  TError,
+  UpdateLegalEditionMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUpdateLegalEditionMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateLegalEdition>>,
+    UpdateLegalEditionMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return updateLegalEdition(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateLegalEditionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateLegalEdition>>
+>;
+export type UpdateLegalEditionMutationBody = LegalEditionUpdate;
+export type UpdateLegalEditionMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | Error
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type UpdateLegalEditionMutationVariables = { id: string; data: LegalEditionUpdate };
+
+/**
+ * @summary Править черновик (метка и текст)
+ */
+export const useUpdateLegalEdition = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | Error
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof updateLegalEdition>>,
+      TError,
+      UpdateLegalEditionMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof updateLegalEdition>>,
+  TError,
+  UpdateLegalEditionMutationVariables,
+  TContext
+> => {
+  return useMutation(getUpdateLegalEditionMutationOptions(options), queryClient);
+};
+
+export const getDeleteLegalEditionUrl = (id: string) => {
+  return `/api/v1/admin/legal-editions/${id}`;
+};
+
+/**
+ * Раздел `company.settings` — полный. Опубликованную редакцию удалить нельзя — 409 `CONFLICT`.
+ * @summary Удалить черновик
+ */
+export const deleteLegalEdition = async (
+  id: string,
+  options?: Parameters<typeof http>[1],
+): Promise<void> => {
+  return http<void>(getDeleteLegalEditionUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteLegalEditionMutationKey = () => ["deleteLegalEdition"] as const;
+
+export const getDeleteLegalEditionMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | Error
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteLegalEdition>>,
+    TError,
+    DeleteLegalEditionMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteLegalEdition>>,
+  TError,
+  DeleteLegalEditionMutationVariables,
+  TContext
+> => {
+  const mutationKey = getDeleteLegalEditionMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteLegalEdition>>,
+    DeleteLegalEditionMutationVariables
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return deleteLegalEdition(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteLegalEditionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteLegalEdition>>
+>;
+
+export type DeleteLegalEditionMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | Error | BackendUnavailableResponse
+>;
+export type DeleteLegalEditionMutationVariables = { id: string };
+
+/**
+ * @summary Удалить черновик
+ */
+export const useDeleteLegalEdition = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | Error
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof deleteLegalEdition>>,
+      TError,
+      DeleteLegalEditionMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof deleteLegalEdition>>,
+  TError,
+  DeleteLegalEditionMutationVariables,
+  TContext
+> => {
+  return useMutation(getDeleteLegalEditionMutationOptions(options), queryClient);
+};
+
+export const getPublishLegalEditionUrl = (id: string) => {
+  return `/api/v1/admin/legal-editions/${id}/publish`;
+};
+
+/**
+ * Раздел `company.settings` — полный. Черновик становится действующей редакцией, прежняя действующая этого вида снимается; все контакты Кабинета примут новую редакцию при следующем входе, а уже открытые сессии закроются экраном принятия. Публикация пишется в журнал действий.
+ * @summary Опубликовать черновик
+ */
+export const publishLegalEdition = async (
+  id: string,
+  options?: Parameters<typeof http>[1],
+): Promise<LegalEditionDetail> => {
+  return http<LegalEditionDetail>(getPublishLegalEditionUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getPublishLegalEditionMutationKey = () => ["publishLegalEdition"] as const;
+
+export const getPublishLegalEditionMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | Error
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof publishLegalEdition>>,
+    TError,
+    PublishLegalEditionMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof publishLegalEdition>>,
+  TError,
+  PublishLegalEditionMutationVariables,
+  TContext
+> => {
+  const mutationKey = getPublishLegalEditionMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof publishLegalEdition>>,
+    PublishLegalEditionMutationVariables
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return publishLegalEdition(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type PublishLegalEditionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof publishLegalEdition>>
+>;
+
+export type PublishLegalEditionMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | Error
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type PublishLegalEditionMutationVariables = { id: string };
+
+/**
+ * @summary Опубликовать черновик
+ */
+export const usePublishLegalEdition = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | Error
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof publishLegalEdition>>,
+      TError,
+      PublishLegalEditionMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof publishLegalEdition>>,
+  TError,
+  PublishLegalEditionMutationVariables,
+  TContext
+> => {
+  return useMutation(getPublishLegalEditionMutationOptions(options), queryClient);
+};
+
+export const getListLegalAcceptancesUrl = (params?: ListLegalAcceptancesParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/admin/legal-acceptances?${stringifiedParams}`
+    : `/api/v1/admin/legal-acceptances`;
+};
+
+/**
+ * Раздел `company.settings` от чтения. Кто из контактов, когда, какую редакцию и на каком языке принял. Новые — выше.
+ * @summary Журнал акцептов оферты и политики (только чтение)
+ */
+export const listLegalAcceptances = async (
+  params?: ListLegalAcceptancesParams,
+  options?: Parameters<typeof http>[1],
+): Promise<LegalAcceptancePage> => {
+  return http<LegalAcceptancePage>(getListLegalAcceptancesUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListLegalAcceptancesQueryKey = (params?: ListLegalAcceptancesParams) => {
+  return [`/api/v1/admin/legal-acceptances`, ...(params ? [params] : [])] as const;
+};
+
+export const getListLegalAcceptancesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listLegalAcceptances>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params?: ListLegalAcceptancesParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listLegalAcceptances>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListLegalAcceptancesQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listLegalAcceptances>>> = ({ signal }) =>
+    listLegalAcceptances(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listLegalAcceptances>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListLegalAcceptancesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listLegalAcceptances>>
+>;
+export type ListLegalAcceptancesQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse | BackendUnavailableResponse
+>;
+
+export function useListLegalAcceptances<
+  TData = Awaited<ReturnType<typeof listLegalAcceptances>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params: undefined | ListLegalAcceptancesParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listLegalAcceptances>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listLegalAcceptances>>,
+          TError,
+          Awaited<ReturnType<typeof listLegalAcceptances>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListLegalAcceptances<
+  TData = Awaited<ReturnType<typeof listLegalAcceptances>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params?: ListLegalAcceptancesParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listLegalAcceptances>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listLegalAcceptances>>,
+          TError,
+          Awaited<ReturnType<typeof listLegalAcceptances>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListLegalAcceptances<
+  TData = Awaited<ReturnType<typeof listLegalAcceptances>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params?: ListLegalAcceptancesParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listLegalAcceptances>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Журнал акцептов оферты и политики (только чтение)
+ */
+
+export function useListLegalAcceptances<
+  TData = Awaited<ReturnType<typeof listLegalAcceptances>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params?: ListLegalAcceptancesParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listLegalAcceptances>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListLegalAcceptancesQueryOptions(params, options);
 
   const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>;
