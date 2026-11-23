@@ -6118,6 +6118,19 @@ components:
           description: Кто принял звонок; пусто — вызывающий сотрудник
         need: {type: [string, 'null'], maxLength: 4000, description: Что просил клиент}
         lang: {type: string, enum: [ru, uz, en]}
+        channel:
+          type: [string, 'null']
+          maxLength: 32
+          description: Канал лида (`phone`, `web`, `cabinet`, `telegram`, …); пусто или `phone` — «Записка о звонке», иначе «Записка о запросе» с тем же телом
+        message:
+          type: [string, 'null']
+          maxLength: 4000
+          description: Исходное сообщение клиента (лид с сайта, из Кабинета, Telegram)
+        attachments:
+          type: array
+          maxItems: 20
+          items: {type: string, minLength: 1, maxLength: 200}
+          description: Имена вложений исходного сообщения; в записку попадают списком
     CallNote:
       type: object
       additionalProperties: false

@@ -195,17 +195,39 @@ function guard(kind: unknown, write: boolean): Response | ReferenceKind | undefi
   return kind;
 }
 
-/** Каталог ERP мока: у валют — источник с датой обновления. */
+/** Банки (Х-12): коды из файла ЦБ раз в месяц; строки — в `banks.ts`. */
+const BANKS_DICTIONARY: Dictionary = {
+  kind: "banks",
+  owner: "erp",
+  area: "calc",
+  codes: "given",
+  closed: false,
+  name: names("Банки", "Banklar", "Banks"),
+  attrs: [],
+  source: { name: CBU, synced_at: null },
+};
+const monthStart = () => {
+  const at = new Date();
+  at.setDate(1);
+  at.setHours(3, 30, 0, 0);
+  return at.toISOString();
+};
+
+/** Каталог ERP мока: у валют и банков — источник с датой обновления. */
 export function erpCatalog(): Dictionary[] {
   return [
     ...ERP_CATALOG.map((d) =>
       d.source ? { ...d, source: { ...d.source, synced_at: cbuSyncedAt() } } : d,
     ),
+    { ...BANKS_DICTIONARY, source: { name: CBU, synced_at: monthStart() } },
     ...CATALOG_FILE_DICTIONARIES,
   ];
 }
 
 export const erpDictionaryHandlers = [
+  http.post("*/dictionaries/banks/sync", () =>
+    HttpResponse.json({ queued: true }, { status: 202 }),
+  ),
   http.post("*/dictionaries/:kind/sync", ({ params }) => {
     const kind = guard(params["kind"], true);
     if (kind === undefined || kind instanceof Response) return kind;

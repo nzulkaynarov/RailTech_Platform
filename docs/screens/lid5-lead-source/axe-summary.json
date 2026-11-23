@@ -1,0 +1,50 @@
+[
+  {
+    "screen": "04-new-client-filled",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 39,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "04-new-client-filled",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 39,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "05-new-client-sent",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 34,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "05-new-client-sent",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 34,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "08-new-client-sent-uz",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 34,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "08-new-client-sent-uz",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 34,
+    "overflowPx": 0,
+    "violations": []
+  }
+]

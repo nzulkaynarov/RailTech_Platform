@@ -273,7 +273,7 @@ export function cardsForView(view: readonly MockRole[]): QueueCard[] {
 export function menuCountersFor(queueCount: number): MenuCounter[] {
   return [
     { module: "dashboard", section: "queue", count: queueCount, attention: queueCount > 0 },
-    { module: "dashboard", section: "projects", count: 4, attention: false },
+    { module: "eds", section: "projects", count: 4, attention: false },
     { module: "crm", section: "messages", count: 1, attention: true },
     { module: "crm", section: "leads", count: 2, attention: true },
     { module: "eds", section: "inbox", count: 1, attention: true },

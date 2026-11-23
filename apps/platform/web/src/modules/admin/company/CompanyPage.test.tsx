@@ -302,17 +302,8 @@ describe("Admin · Компания: доступ и каркас", () => {
       );
     });
 
-    // «Шаблоны документов» — пункт «Документов»
-    fireEvent.click(
-      within(screen.getByRole("navigation", { name: "Модули" })).getByRole("link", {
-        name: "Документы",
-      }),
-    );
-    fireEvent.click(
-      within(await screen.findByRole("navigation", { name: "Разделы модуля" })).getByRole("link", {
-        name: "Шаблоны",
-      }),
-    );
+    // ЕВ-3а: «Шаблоны документов» — страница группы «Компания» (вход и из «Документов»), в меню «Документов» их нет
+    fireEvent.click(await screen.findByRole("link", { name: "Шаблоны документов" }));
     // Раздел открывается на «Все шаблоны» (план 2.7): шаблоны документов — своя вкладка
     fireEvent.click(await screen.findByRole("tab", { name: "Документы" }));
     fireEvent.click(await screen.findByRole("button", { name: "Открыть: Договор поставки (наш)" }));
@@ -393,6 +384,19 @@ describe("Реквизиты и логотип", () => {
     type("Почта компании", "info@railtech.uz");
     fireEvent.click(head(/^Компания/));
     expect(ticked(head(/^Контакты/))).toBe(true);
+  });
+
+  it("Х-18: без ИНН шаг «Компания» без галочки, а на шаге после ухода названо, что нужно для счетов", async () => {
+    await openTab("details");
+    await screen.findByLabelText(/^ИНН/);
+    type(/^ИНН/, "");
+    const company = () => screen.getByRole("button", { name: /^Компания/ });
+    fireEvent.click(screen.getByRole("button", { name: /^Контакты/ }));
+    fireEvent.click(company());
+    const section = screen.getByRole("region", { name: /^Компания/ });
+    expect(within(section).getByText("Укажите ИНН — он нужен для счетов")).toBeVisible();
+    type(/^ИНН/, "123456789");
+    expect(within(section).queryByText("Укажите ИНН — он нужен для счетов")).toBeNull();
   });
 
   it("логотип: загрузка файла и удаление", async () => {

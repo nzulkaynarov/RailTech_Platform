@@ -327,6 +327,14 @@
       "network": "No connection to the server — check your internet and try again.",
       "unknown": "Could not send the request — try again later or message us in Telegram.",
       "tokenUnavailable": "The form is unavailable right now. Try again or message us in Telegram."
+    },
+    "next": {
+      "number": "Request number",
+      "withinMinutes_one": "{{count}} minute",
+      "withinMinutes_other": "{{count}} minutes",
+      "withinHours_one": "{{count}} hour",
+      "withinHours_other": "{{count}} hours",
+      "text": "A manager will reply by phone or e-mail within {{within}} during business hours. If you prefer chatting, message us in Telegram."
     }
   },
   "manager": {
@@ -461,6 +469,9 @@
       "summaryHint": "Describe the task in your own words: what, how much and by when. Up to 5000 characters.",
       "summaryRequired": "Describe what you need — at least one sentence.",
       "prefillSummary": "I need a catalog item: {{name}}",
+      "draftOffer": "You have a draft from {{date}}",
+      "draftResume": "Continue",
+      "draftRestart": "Start over",
       "lines": "Items or stages",
       "linesHint": "List items or work in free text — exact part numbers are not required. Empty lines are not sent.",
       "lineText": "Line {{n}}",
@@ -1817,6 +1828,15 @@
     "partnerContractDesc": "Review conditions and agree to terms",
     "inviteTeam": "Invite colleagues",
     "inviteTeamDesc": "Add team members for collaboration"
+  },
+  "maintenance": {
+    "soon": "Cabinet update at {{time}} — work will be interrupted for {{duration}}. Save your changes.",
+    "soonUrgent": "Urgent Cabinet fix at {{time}} — work will be interrupted for {{duration}}. Save your changes.",
+    "running": "Update in progress — the page will refresh by itself in a couple of minutes.",
+    "runningUrgent": "Urgent fix in progress — the page will refresh by itself in a couple of minutes.",
+    "minutes_one": "{{range}} minute",
+    "minutes_other": "{{range}} minutes",
+    "hide": "Hide"
   },
   "legal": {
     "title": "Terms for using the cabinet",

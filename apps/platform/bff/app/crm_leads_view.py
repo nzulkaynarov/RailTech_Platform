@@ -22,6 +22,7 @@ from app.schemas_crm_leads import (
     LeadFirstResponse,
     LeadMessagePreview,
     LeadNotice,
+    LeadOrigin,
     LeadPlatformStatus,
     LeadRow,
     LeadScope,
@@ -38,10 +39,16 @@ LAST_MESSAGES = 5
 
 
 def list_params(
-    tab: LeadTab, scope: LeadScope, q: str | None, source: str | None, offset: int, limit: int
+    tab: LeadTab,
+    scope: LeadScope,
+    q: str | None,
+    source: str | None,
+    offset: int,
+    limit: int,
+    sort: str | None = None,
 ) -> dict[str, Any]:
     """Параметры CRM `GET /leads`: вкладка — `platform_status`, «мои» — `owner=me`, «просроченные» —
-    `overdue=true`, канал — `source`."""
+    `overdue=true`, канал — `source`, порядок (`field` / `-field`) — `sort` и `order` CRM."""
     params: dict[str, Any] = {"offset": offset, "limit": limit}
     if tab != "all":
         params["platform_status"] = tab
@@ -53,6 +60,9 @@ def list_params(
         params["q"] = q.strip()
     if source:
         params["source"] = source
+    if sort:
+        params["sort"] = sort.removeprefix("-")
+        params["order"] = "desc" if sort.startswith("-") else "asc"
     return params
 
 
@@ -183,6 +193,23 @@ def lead_card(
             due_at=lead.first_response_due_at, overdue=bool(lead.first_response_overdue)
         ),
         invitation=invitation(lead.invitation),
+        origin=origin_of(lead.origin),
+    )
+
+
+def origin_of(raw: crm.LeadOriginOut | None) -> LeadOrigin | None:
+    if raw is None:
+        return None
+    utm = raw.utm or {}
+    lang = raw.landing_language
+    return LeadOrigin(
+        form=raw.form,
+        page=raw.page,
+        referrer=raw.referrer,
+        campaign=utm.get("utm_campaign"),
+        utm_source=utm.get("utm_source"),
+        utm_medium=utm.get("utm_medium"),
+        language=lang if lang in ("ru", "uz", "en") else None,
     )
 
 

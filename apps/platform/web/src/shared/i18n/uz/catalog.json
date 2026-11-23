@@ -279,25 +279,9 @@
     }
   },
   "suppliers": {
-    "search": "Nomi va STIR bo'yicha qidiruv",
-    "table": "Hamkorlar",
-    "open": "{{name}} hamkorsini ochish",
-    "card": "Hamkor",
-    "tin": "STIR {{tin}}",
-    "columns": {
-      "name": "Hamkor",
-      "offers": "Takliflar",
-      "terms": "Narx muddatlari"
-    },
     "expired": "Tugagan: {{count}}",
     "expiring": "Tez orada tugaydi: {{count}}",
     "allValid": "Barcha narxlar amalda",
-    "nearest": "eng yaqin muddat {{date}}",
-    "empty": {
-      "title": "Hamkorlar yo'q",
-      "text": "Hamkorni qo‘shing yoki praysini yuklang.",
-      "filtered": "Bu so'rov bo'yicha hamkorlar yo'q."
-    },
     "fields": {
       "tin": "STIR",
       "country": "Mamlakat",
@@ -315,8 +299,6 @@
     "offers": "Pozitsiyalar bo'yicha takliflar",
     "offersTable": "Hamkor takliflari",
     "noOffers": "Takliflar yo'q.",
-    "reg": "ro‘yxat № {{reg}}",
-    "add": "Hamkor qo‘shish",
     "edit": "O‘zgartirish",
     "maker": "Ishlab chiqaruvchi",
     "dealer": "Hamkor"
@@ -575,7 +557,6 @@
     "downloadError": "Faylni yuklab bo'lmadi.",
     "delete": "Faylni o'chirish",
     "deleted": "Fayl o'chirildi.",
-    "chatLater": "Mijozga chatda yuborish: «Chatlar» bo'limi bilan birga paydo bo'ladi. Hozircha faylni yuklab olib, qo'lda yuboring.",
     "preview": "Ko'rish",
     "noPreview": "Bu format ko'rish uchun ochilmaydi — faylni yuklab oling.",
     "gone": {
@@ -604,7 +585,7 @@
       "steps": [
         "Fayl himoyalangan omborda saqlanadi.",
         "U bog‘langan pozitsiya va arizada paydo bo‘ladi.",
-        "«Mijozga ko‘rinadi» belgisi saqlanadi; mijoz kabinetida keyinroq ko‘rinadi."
+        "«Mijozga körinadi» belgisi saqlanadi."
       ],
       "number": "Raqami",
       "issuedBy": "Kim bergan",
@@ -612,7 +593,7 @@
       "validUntil": "Amal qilish muddati",
       "validUntilHint": "Bo‘sh — muddatsiz",
       "clientVisible": "Mijozga ko‘rinadi",
-      "clientVisibleHint": "Mijoz kabineti uchun belgi; ko‘rsatish keyinroq yoqiladi."
+      "clientVisibleHint": "Mijoz kabineti uchun belgi."
     },
     "review": {
       "filter": "Tekshiruv",
@@ -654,6 +635,12 @@
     "sections": {
       "company": "Kompaniya",
       "contact": "Kontakt"
+    },
+    "needs": {
+      "name": "Nomini kiriting",
+      "tinOrReg": "STIR yoki röyxat raqamini kiriting",
+      "tinInvalid": "STIR — 9 ta raqam",
+      "emailInvalid": "Poçta name@company.uz körinişida"
     }
   },
   "cabinetAccess": {
@@ -958,7 +945,7 @@
     "addSteps": [
       "Fayl himoyalangan omborda saqlanadi.",
       "U pozitsiya kartasida va «Texnik hujjatlar» bo‘limida paydo bo‘ladi.",
-      "«Mijozga ko‘rinadi» belgisi saqlanadi; mijoz kabinetida keyinroq ko‘rinadi."
+      "«Mijozga körinadi» belgisi saqlanadi."
     ],
     "editSteps": ["O‘zgarishlar hujjatda saqlanadi.", "Faylning o‘zi o‘zgarmaydi."],
     "saved": "Hujjat saqlandi."

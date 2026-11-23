@@ -20,7 +20,9 @@ import { localName } from "../../../eds/dictionaries";
 import { changedFields, isEmptyObject } from "../diff";
 import { errorFields } from "../errors";
 import { BankAccounts } from "./BankAccounts";
-import { EMAIL, isEmailLike } from "../../../../shared/lib/email";
+import { EMAIL } from "../../../../shared/lib/email";
+import { useLeftSteps } from "../../../../shared/ui/StepSections/useLeftSteps";
+import { detailsRequirements } from "../detailsModel";
 
 interface Values {
   name: string;
@@ -117,6 +119,19 @@ function DetailsForm({
     CONTACT_FIELDS.has(field) ? "contacts" : "company";
   // до первой отрисовки полей useWatch отдаёт undefined — тогда итог секций из сохранённого
   const values: Partial<Values> = { ...initial, ...watched };
+  // Галочки шагов и их требования — из одной проверки (`detailsRequirements`), а не руками на каждом шаге.
+  const missing = detailsRequirements(values);
+  const { left } = useLeftSteps(active);
+  const needs = (key: "company" | "contacts") =>
+    missing[key].map((requirement) =>
+      t(
+        requirement === "nameRequired" ||
+          requirement === "innInvalid" ||
+          requirement === "emailInvalid"
+          ? `details.${requirement}`
+          : `details.needs.${requirement}`,
+      ),
+    );
   const invalid = (key: SectionKey) =>
     form
       .getFieldsError()
@@ -194,8 +209,9 @@ function DetailsForm({
               key: "company",
               title: t("details.sections.company"),
               summary: [values.name, values.inn].filter(Boolean).join(" · "),
-              // галочка — только если поля проходят правила формы: название задано, ИНН — ровно 9 цифр
-              complete: Boolean(values.name?.trim() && /^\d{9}$/.test(values.inn?.trim() ?? "")),
+              complete: true,
+              requirements: needs("company"),
+              showRequirements: left.has("company"),
               invalid: invalid("company"),
               content: (
                 <>
@@ -269,11 +285,9 @@ function DetailsForm({
               key: "contacts",
               title: t("details.sections.contacts"),
               summary: [values.phone, values.email].filter(Boolean).join(" · "),
-              complete: Boolean(
-                (values.phone?.trim() || values.email?.trim()) &&
-                values.legal_address?.trim() &&
-                (!values.email?.trim() || isEmailLike(values.email)),
-              ),
+              complete: true,
+              requirements: needs("contacts"),
+              showRequirements: left.has("contacts"),
               invalid: invalid("contacts"),
               content: (
                 <div className="pf-co-grid">

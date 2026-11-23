@@ -164,8 +164,7 @@ export function SettingsHome() {
   useDocumentTitle(title);
 
   const allowed = (entry: SettingEntry) => canSee(me, entry.access);
-  // «Шаблоны документов» — пункт «Документов», в настройках их нет (NAVIGATION.md)
-  const visible = SETTINGS.filter((entry) => entry.key !== "templates" && allowed(entry));
+  const visible = SETTINGS.filter(allowed);
   const admin = canEdit(me, "admin");
   const setup = useSetupProgress(admin);
   const checklist = setup.checklist;

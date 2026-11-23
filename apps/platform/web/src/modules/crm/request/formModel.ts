@@ -105,9 +105,14 @@ export function validateRequest(state: RequestFormState, ctx: RequestContext): R
   if (state.letter?.status === "error") errors.letter = "letter_failed";
   else if (state.letter?.status === "uploading") errors.letter = "letter_uploading";
   else if (!state.letter) {
-    // Телефонный лид без согласия: записка о звонке соберётся после согласия — «Осталось» ведёт к нему, а не к поиску файла.
-    const phoneNoConsent = ctx.leadChannel === "phone" && !ctx.consentGiven && !state.consentMarked;
-    errors.letter = phoneNoConsent ? "letter_call_consent" : "letter_required";
+    // Лид без согласия (кроме Telegram: там согласие даёт бот): записка соберётся после согласия — «Осталось» ведёт к нему,
+    // а не к поиску файла.
+    const noteWaitsConsent =
+      ctx.leadChannel !== null &&
+      ctx.leadChannel !== "telegram" &&
+      !ctx.consentGiven &&
+      !state.consentMarked;
+    errors.letter = noteWaitsConsent ? "letter_call_consent" : "letter_required";
   }
   if (consentNeeded(ctx)) {
     if (ctx.leadChannel === "telegram") errors.consent = "consent_via_bot";
@@ -150,4 +155,13 @@ export function toRequestPayload(
     payload.consent = { method: state.consentMethod, comment: text(state.consentComment) };
   }
   return payload;
+}
+
+/** Why the request note of a lead cannot be built yet: Telegram consent comes only from the bot, others - the Contact step. */
+export function noteConsentBlock(
+  leadChannel: string | null,
+  consentPresent: boolean,
+): "via_bot" | "mark" | null {
+  if (consentPresent) return null;
+  return leadChannel === "telegram" ? "via_bot" : "mark";
 }

@@ -1,8 +1,8 @@
 ---
 title: Каналы и база знаний бота
-sections: crm.channels, crm.kb
+sections: crm.kb
 order: 25
-screens: [/crm/channels, /crm/kb]
+screens: [/crm/kb]
 ---
 Клиенты пишут в Telegram-бота; бот отвечает сам, пока вопрос простой, и передаёт диалог менеджеру в «Ждут ответа», когда нужен человек.
 
