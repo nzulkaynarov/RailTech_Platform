@@ -57,7 +57,7 @@ export const RESOURCES = {
     backends: ["crm"],
     label: {
       ru: "Контакты · Лиды; Документы · Почта · разбор и передача менеджеру",
-      uz: "Kontaktlar · Lidlar; Hujjatlar · Pochta · saralash va menejerga topshirish",
+      uz: "Kontaktlar · Lidlar; Hujjatlar · Pochta · saralash va menejerga topşiriş",
       en: "Contacts · Leads; Documents · Mail · triage and hand over to a manager",
     },
   },
@@ -67,7 +67,7 @@ export const RESOURCES = {
     backends: ["crm"],
     label: {
       ru: "Документы · Почта · вся очередь, чтение",
-      uz: "Hujjatlar · Pochta · butun navbat, o‘qish",
+      uz: "Hujjatlar · Pochta · butun navbat, öqish",
       en: "Documents · Mail · whole queue, read",
     },
   },
@@ -256,9 +256,9 @@ export const RESOURCES = {
     levels: ["read", "full"],
     backends: ["crm", "erp"],
     label: {
-      ru: "Настройки · Компания и Документы · Шаблоны",
-      uz: "Sozlamalar · Kompaniya va hujjatlar · shablonlar",
-      en: "Settings · Company and documents · templates",
+      ru: "Настройки · Компания и шаблоны документов",
+      uz: "Sozlamalar · Kompaniya va hujjat şablonlari",
+      en: "Settings · Company and document templates",
     },
   },
 } as const satisfies Record<string, ResourceDef>;

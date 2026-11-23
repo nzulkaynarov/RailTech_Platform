@@ -97,11 +97,15 @@ test.describe("Ролевая матрица: роли — данные", () => 
     // Сотрудник входит: рейл и подменю — ровно разделы роли, Dashboard нет — первый раздел роли.
     await signOut(page);
     await login(page, "engineer@demo.example");
-    await expect(page).toHaveURL(/\/crm\/leads\?scope=waiting$/);
+    // Без «Моей очереди» вход — в первый раздел роли: после переноса почты это сам список лидов (ЕВ-3а), не «Ждут ответа»
+    await expect(page).toHaveURL(/\/crm\/leads$/);
     await expect(railLinks(page)).toHaveText(["Контакты", "Документы", "Операции"]);
     const submenu = page.getByRole("navigation", { name: "Разделы модуля" });
-    // «Почта» — свои письма: раздел открыт и по `crm.leads` (0.3 плана 2026-11-12, владелец 2026-11-13)
-    await expect(submenu.getByRole("link")).toHaveText([/Лиды/, /Почта/, /База знаний/]);
+    await expect(submenu.getByRole("link")).toHaveText([/Лиды/, /База знаний/]);
+    // «Почта» — свои письма: раздел открыт и по `crm.leads`, в меню он теперь в «Документы» (ЕВ-3а)
+    await railLinks(page).filter({ hasText: "Документы" }).click();
+    await expect(submenu.getByRole("link", { name: /Почта/ })).toBeVisible();
+    await railLinks(page).filter({ hasText: "Контакты" }).click();
     await settledScreenshot(page, "roles-employee-view");
     // Поиск в шапке работает и без «Моей очереди»: только по разделам роли (лиды — да, клиенты — нет).
     const search = page.getByRole("combobox", { name: "Глобальный поиск" });
@@ -111,7 +115,7 @@ test.describe("Ролевая матрица: роли — данные", () => 
     await expect(page.getByRole("option", { name: /ИНН 300000001/ })).toHaveCount(0);
     await search.press("Escape");
     await railLinks(page).filter({ hasText: "Документы" }).click();
-    await expect(submenu.getByRole("link")).toHaveText([/Исходящие/, /Внутренние/, /Архив/]);
+    await expect(submenu.getByRole("link")).toHaveText([/Почта/, /Исходящие/, /Внутренние/, /Архив/]);
     // Название роли под аватаром — из данных.
     await expect(
       page.getByRole("button", { name: new RegExp(`${MIXED}: профиль и настройки`) }),

@@ -124,6 +124,15 @@ function trimmed(pathname: string): string {
   return pathname.length > 1 ? pathname.replace(/\/+$/, "") : pathname;
 }
 
+/** Битая процентная кодировка не должна ронять оболочку: оставляем идентификатор как есть (как `decoded()` в registry). */
+function safeDecode(value: string): string {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+}
+
 export function legacyPath(pathname: string, search = ""): string | undefined {
   const path = trimmed(pathname);
   const query = new URLSearchParams(search);
@@ -131,7 +140,7 @@ export function legacyPath(pathname: string, search = ""): string | undefined {
     let id: string | undefined;
     if (path !== entry.path) {
       if (entry.listOnly || !entry.withId || !path.startsWith(`${entry.path}/`)) continue;
-      id = decodeURIComponent(path.slice(entry.path.length + 1));
+      id = safeDecode(path.slice(entry.path.length + 1));
     }
     const target = entry.to(query, id);
     // «/chats?scope=internal» → «/chats»: адрес без фильтра уже действующий, цикла быть не должно

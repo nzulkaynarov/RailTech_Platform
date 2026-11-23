@@ -585,7 +585,7 @@
       "steps": [
         "Fayl himoyalangan omborda saqlanadi.",
         "U bog‘langan pozitsiya va arizada paydo bo‘ladi.",
-        "«Mijozga ko‘rinadi» belgisi saqlanadi."
+        "«Mijozga körinadi» belgisi saqlanadi."
       ],
       "number": "Raqami",
       "issuedBy": "Kim bergan",
@@ -939,7 +939,7 @@
     "addSteps": [
       "Fayl himoyalangan omborda saqlanadi.",
       "U pozitsiya kartasida va «Texnik hujjatlar» bo‘limida paydo bo‘ladi.",
-      "«Mijozga ko‘rinadi» belgisi saqlanadi."
+      "«Mijozga körinadi» belgisi saqlanadi."
     ],
     "editSteps": ["O‘zgarishlar hujjatda saqlanadi.", "Faylning o‘zi o‘zgarmaydi."],
     "saved": "Hujjat saqlandi."

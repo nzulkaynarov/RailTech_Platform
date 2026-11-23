@@ -81,4 +81,10 @@ describe("старые адреса разделов — ЕВ-3б", () => {
       }
     }
   });
+
+  it("битая процентная кодировка не бросает, а даёт обычный ответ", () => {
+    expect(() => legacyPath("/eds/outbox/%E0%A4%A")).not.toThrow();
+    expect(() => legacyPath("/crm/messages/%E0%A4%A")).not.toThrow();
+    expect(() => matchSection("/eds/outbox/%E0%A4%A")).not.toThrow();
+  });
 });

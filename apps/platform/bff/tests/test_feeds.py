@@ -77,7 +77,7 @@ async def test_manager_queue_comes_from_crm_inbox(
     assert first["due_label"] == "today"
     assert "Демо Клиентов" in first["subtitle"]
     assert "Просит цену и договор" in first["subtitle"]
-    assert first["object"]["path"] == "/crm/messages?lead=L-2041"
+    assert first["object"]["path"] == "/crm/leads?scope=waiting&lead=L-2041"
     assert body["items"][1]["title"] == "Ответить лиду L-2050"
     assert "3 ч назад" in body["items"][1]["subtitle"]
     assert fb.calls(fb.erp["approvals"]) == 0  # у менеджера ERP-очереди нет
