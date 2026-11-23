@@ -266,6 +266,12 @@ def apply_transition(
     before = _status_code(contract) or ""
     if before not in transition.sources:
         return None, "CONTRACT_TRANSITION_NOT_ALLOWED"
+    if action == "send_to_client":
+        from .contract_templates import send_blocker
+
+        blocker = send_blocker(contract)  # ДОК-10: отступление без решения, нет нашей подписи; сюда же — визы Х-1
+        if blocker:
+            return None, blocker
     reason = (reason or "").strip()
     note = (note or "").strip()
     if transition.needs_reason and not reason:

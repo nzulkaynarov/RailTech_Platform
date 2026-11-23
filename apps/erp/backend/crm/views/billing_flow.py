@@ -27,6 +27,9 @@ _HTTP = {
     "MEMBER_REQUIRED_FOR_ACTION": 403,
     "CONTRACT_TRANSITION_NOT_ALLOWED": 409,
     "ACT_SIGN_NOT_ALLOWED": 409,
+    # ДОК-10: что мешает отправить договор по шаблону клиенту
+    "CONTRACT_DEVIATION_PENDING": 409,
+    "CONTRACT_NEEDS_OUR_SIGNATURE": 409,
 }
 _ERRORS = {
     400: OpenApiResponse(
@@ -37,7 +40,9 @@ _ERRORS = {
     ),
     403: OpenApiResponse(description="MEMBER_REQUIRED_FOR_ACTION / ROLE_NOT_PERMITTED"),
     404: OpenApiResponse(description="Не найдено"),
-    409: OpenApiResponse(description="CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот"),
+    409: OpenApiResponse(
+        description="CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот; CONTRACT_DEVIATION_PENDING / CONTRACT_NEEDS_OUR_SIGNATURE: договор по шаблону ещё нельзя отправить"
+    ),
 }
 
 

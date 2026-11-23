@@ -57,6 +57,11 @@ class CompanySettingsSerializer(serializers.ModelSerializer):
             "offer_confirm_days",
             "offer_expiring_days",
             "act_reminder_hours",
+            "contract_auto_send",
+            "contract_sign_before_send",
+            "contract_deviations_allowed",
+            "default_client_contract_template",
+            "default_partner_contract_template",
             "doc_number_prefix",
             "created_at",
             "updated_at",
@@ -102,6 +107,11 @@ class CompanySettingsUpdateSerializer(serializers.ModelSerializer):
             "offer_confirm_days",
             "offer_expiring_days",
             "act_reminder_hours",
+            "contract_auto_send",
+            "contract_sign_before_send",
+            "contract_deviations_allowed",
+            "default_client_contract_template",
+            "default_partner_contract_template",
             "doc_number_prefix",
         ]
         extra_kwargs = {"min_margin_percent": {"required": False}, "target_margin_percent": {"required": False}}

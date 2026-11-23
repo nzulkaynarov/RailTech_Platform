@@ -50,12 +50,49 @@ def _initial_contract_wordings(seller_company) -> dict:
 # Тот же контракт нумератора, что и у акта: блокировка счётчика живёт до коммита вызывающего.
 # Путь «клиент принял КП на публичной странице» работал только потому, что его вызывающий уже
 # был атомарным; прямое создание договора из КП падало бы 500.
-@transaction.atomic
+class _TemplateVariablesUnfilled(Exception):
+    """Внутренний сигнал: в договоре по шаблону остались незаполненные места — транзакция откатывается."""
+
+    def __init__(self, missing):
+        super().__init__(",".join(missing))
+        self.missing = missing
+
+
 def generate_contract_from_quote(
     quote_id: int,
     actor: Optional[CustomUser] = None,
     notes: str = "",
     send_to_client: bool = True,
+    template_id: Optional[int] = None,
+) -> Tuple[Optional["Contract"], Optional[str]]:  # noqa: F821
+    """Договор из принятого КП по утверждённому шаблону (ДОК-10), см. `_generate_contract_from_quote`.
+
+    Документ с незаполненным местом шаблона не регистрируется: номер не расходуется, договора нет, в журнале сделки —
+    запись с перечнем мест (`CONTRACT_TEMPLATE_UNFILLED`)."""
+    try:
+        return _generate_contract_from_quote(quote_id, actor, notes, send_to_client, template_id)
+    except _TemplateVariablesUnfilled as exc:
+        quote = Quote.objects.select_related("deal").get(pk=quote_id)
+        ActivityLog.objects.create(
+            action="Договор не собран: не заполнены места шаблона",
+            detail=", ".join(exc.missing),
+            event_code="contract.template_unfilled",
+            event_params={"deal_id": quote.deal_id, "missing": exc.missing},
+            user=actor,
+            level="WARNING",
+            deal=quote.deal,
+            company_id=quote.deal.company_id,
+        )
+        return None, "CONTRACT_TEMPLATE_UNFILLED"
+
+
+@transaction.atomic
+def _generate_contract_from_quote(
+    quote_id: int,
+    actor: Optional[CustomUser],
+    notes: str,
+    send_to_client: bool,
+    template_id: Optional[int],
 ) -> Tuple[Optional["Contract"], Optional[str]]:  # noqa: F821
     """Create a Contract tied to an approved Quote, render its PDF.
 
@@ -95,14 +132,21 @@ def generate_contract_from_quote(
     created = not contract
     if not contract:
         # Seller company = the КП author's owning company → its prefix + per-company counter.
+        from .contract_templates import pick_template, seller_of_quote
         from .document_blocks import frozen_body_for
         from .quotes import _quote_seller_company
 
         seller_company = _quote_seller_company(quote)
+        # ДОК-10: только утверждённые шаблоны вида контрагента; нет ни одного — прежний путь (переходный режим).
+        chosen, pick_error = pick_template(seller_of_quote(quote), quote.deal.company, template_id)
+        if pick_error:
+            return None, pick_error
         contract = Contract(
+            template=chosen,
+            template_edition=chosen.edition if chosen else None,
             # E3: договор сразу уходит клиенту на подпись — редакция шаблона замораживается
             # при создании; правка шаблона после не переписывает отправленный документ.
-            frozen_template_body=frozen_body_for(seller_company, "CONTRACT"),
+            frozen_template_body=chosen.body_html if chosen else frozen_body_for(seller_company, "CONTRACT"),
             # E4: формулировки фиксируются на договоре при создании (резолв D1: профиль ->
             # платформа). Дальше менеджер меняет их ВЫБОРОМ согласованного варианта, а
             # перерендер после подписи печатает зафиксированный текст, не живой профиль.
@@ -122,6 +166,12 @@ def generate_contract_from_quote(
             notes=notes,
         )
         contract.save()
+        if chosen is not None:
+            from .contract_templates import unfilled_variables
+
+            missing = unfilled_variables(contract, contract.frozen_template_body)
+            if missing:
+                raise _TemplateVariablesUnfilled(missing)
 
     # F5.4: status is a FK lookup now. F1.6: render the PDF AFTER commit, off the
     # request thread — rendering inside this atomic block wrote the file to storage
@@ -130,8 +180,12 @@ def generate_contract_from_quote(
     from integration.services import document_events
 
     was_draft = contract.status_code == ContractStatusCode.DRAFT
+    # ДОК-10: договор по шаблону уходит клиенту по правилам компании (авто-отправка, наша подпись, отступления), а не
+    # безусловно: здесь он остаётся проектом, а `try_auto_send` отправит его, когда помех нет.
+    from_template = contract.template_id is not None
+    send_now = send_to_client and not from_template
     with document_events.watch_document_issue("contract", contract):  # document.created на выпуске (шина rt_bus)
-        if was_draft and send_to_client:
+        if was_draft and send_now:
             contract.status = _cstatus(ContractStatusCode.PENDING_CLIENT)
         contract.save(update_fields=["status", "updated_at"])
 
@@ -150,12 +204,17 @@ def generate_contract_from_quote(
         deal=quote.deal,
         company_id=quote.deal.company_id,
     )
-    if created or (was_draft and send_to_client):
+    if created or (was_draft and send_now):
         publish_current_status(contract, actor)  # `contract.status_changed` — проекция реестра EDS (D2-5)
     # P1: a created contract must not be silent — tell BOTH parties it awaits signature
     # (previously generate set PENDING_CLIENT and nobody was notified → dead-end after accept).
-    if send_to_client:
+    if send_now:
         _notify_contract_pending(contract)
+    elif from_template and created and send_to_client:
+        from .contract_templates import try_auto_send
+
+        if try_auto_send(contract):
+            contract.refresh_from_db()
     return contract, None
 
 

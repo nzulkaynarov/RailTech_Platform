@@ -65,6 +65,43 @@ class Contract(models.Model):
         verbose_name=_("PDF контракта"),
     )
     frozen_template_body = models.TextField(blank=True, default="")
+    # ДОК-10: договор собран из утверждённого шаблона; редакция фиксируется и после выхода новой не меняется.
+    template = models.ForeignKey(
+        "documents.DocumentTemplate",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="contracts",
+        verbose_name=_("Шаблон"),
+    )
+    template_edition = models.PositiveSmallIntegerField(null=True, blank=True, verbose_name=_("Редакция шаблона"))
+    # Отступление от шаблона: заявка держателю «Право»; до решения договор клиенту не уходит.
+    deviation_text = models.TextField(blank=True, default="", verbose_name=_("Отступление от шаблона"))
+    deviation_requested_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+        verbose_name=_("Кто запросил отступление"),
+    )
+    deviation_requested_at = models.DateTimeField(null=True, blank=True)
+    deviation_decision = models.CharField(
+        max_length=16,
+        blank=True,
+        default="",
+        choices=[("approved", _("Одобрено")), ("rejected", _("Отклонено"))],
+        verbose_name=_("Решение по отступлению"),
+    )
+    deviation_decided_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+        verbose_name=_("Кто решил по отступлению"),
+    )
+    deviation_decided_at = models.DateTimeField(null=True, blank=True)
     wording_selections = models.JSONField(default=dict, blank=True, verbose_name=_("Формулировки договора"))
     signed_file = models.FileField(
         upload_to=contract_signed_path,

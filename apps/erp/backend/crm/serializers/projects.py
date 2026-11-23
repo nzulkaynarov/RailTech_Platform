@@ -24,6 +24,8 @@ CLIENT_STATUSES = [
 ]
 PROBLEMS = ["no_contract", "contract_rejected", "act_returned", "invoice_overdue"]
 CONTRACT_ACTIONS = ["send_to_client", "client_agreed", "reject", "revise", "mark_issued", "attach_scan"]
+#: ДОК-10: действия договора по шаблону, доступные сейчас (отдельный список — у прежних действий схема не меняется).
+CONTRACT_TEMPLATE_ACTIONS = ["sign_ours", "request_deviation", "decide_deviation"]
 ACT_ACTIONS = ["attach_scan", "return", "reissue"]
 ACT_BLOCKERS = ["no_invoice", "act_exists", "forbidden"]
 JOURNAL_DOCUMENTS = ["contract", "act", "invoice", "quote", "project"]
@@ -137,7 +139,29 @@ class QuoteCardSerializer(QuoteRefSerializer):
     valid_until = serializers.DateField(allow_null=True)
 
 
+class ContractTemplateCardSerializer(serializers.Serializer):
+    """Договор по шаблону (ДОК-10): имя и редакция, отступление, путь по фактам. Пусто у договоров прежним путём."""
+
+    id = serializers.IntegerField(allow_null=True)
+    name = serializers.CharField()
+    edition = serializers.IntegerField()
+    deviation = serializers.ChoiceField(
+        choices=["none", "requested", "approved", "rejected"], help_text="Отступление от шаблона: из фактов договора"
+    )
+    deviation_text = serializers.CharField(allow_blank=True)
+    visas_required = serializers.BooleanField(help_text="Договор идёт по маршруту виз (Х-1) — только с отступлением")
+    send_blocker = serializers.CharField(allow_null=True, help_text="Что мешает отправить клиенту: код или null")
+    steps = serializers.ListField(
+        child=serializers.DictField(), help_text="Путь: assembled, our_signature, in_cabinet, signed_both"
+    )
+    actions = serializers.ListField(
+        child=serializers.ChoiceField(choices=CONTRACT_TEMPLATE_ACTIONS),
+        help_text="Что можно сделать СЕЙЧАС этому сотруднику с договором по шаблону",
+    )
+
+
 class ContractCardSerializer(ContractRefSerializer):
+    template = ContractTemplateCardSerializer(allow_null=True)
     total = ProjectMoneySerializer(allow_null=True)
     created_at = serializers.DateTimeField()
     client_agreed_at = serializers.DateTimeField(allow_null=True)

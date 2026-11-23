@@ -243,7 +243,8 @@ EXPECTED: dict[tuple[str, str], tuple[set[str], set[str]]] = {
     ("eds.signing.manage", "full"): NOTHING,
     # ADR-0025: визы перед подписью — только права EDS
     ("eds.visa.finance", "full"): NOTHING,
-    ("eds.visa.legal", "full"): NOTHING,
+    # ДОК-10: зона «Право» утверждает шаблоны договоров
+    ("eds.visa.legal", "full"): (set(), {"contract.approve_template"}),
     ("erp.calc", "read"): NOTHING,
     ("erp.calc", "full"): (set(), {"deal.manage", "quote.build", "quote.edit_pricing"}),
     ("erp.calc.goods", "full"): (set(), {"quote.build", "quote.edit_pricing", "quote.visa_goods"}),
@@ -313,11 +314,13 @@ def test_every_restricted_field_gives_the_expected_erp_rights(name: str, erp: se
 # Права ERP целых ролей, выписанные вручную.
 # Команду ведёт только администратор; счета директор читает (`finance.view`), но не выставляет
 # и не фиксирует оплаты (D2-4).
+# Право утверждать шаблоны договоров (зона «Право», ДОК-10) директору выдаётся в «Ролях и правах».
 DIRECTOR_ERP = set(ERP_PERMISSIONS) - {
     "team.manage",
     "finance.invoice",
     "finance.payment",
     "finance.rates",
+    "contract.approve_template",
 }
 ROLE_ERP: dict[str, set[str]] = {
     # 0.3 (FR-7): менеджер ведёт расчёт и КП — `erp.calc: full` (без себестоимости и виз)

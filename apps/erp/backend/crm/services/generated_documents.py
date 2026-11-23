@@ -284,6 +284,15 @@ def create_template(company, user: CustomUser, *, name: str, kind_code: str, bod
 @transaction.atomic
 def update_template(template, *, name=None, kind_code=None, body_html=None, is_active=None):
     """Update a template. Re-sanitises + re-derives placeholders when the body changes."""
+    from .contract_templates import is_locked
+
+    # ДОК-10: утверждённый и ожидающий утверждения шаблон договора — закреплённый текст; правка только новой редакцией.
+    if is_locked(template) and (
+        (name is not None and name.strip() != template.name)
+        or (kind_code is not None and kind_code != template.kind.code)
+        or (body_html is not None and sanitize_template_html(body_html) != template.body_html)
+    ):
+        raise ValidationError("TEMPLATE_LOCKED")
     fields = ["updated_at"]
     if name is not None:
         if not name.strip():
