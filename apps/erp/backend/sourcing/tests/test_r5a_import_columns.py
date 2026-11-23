@@ -376,9 +376,10 @@ def test_report_counts_unpublishable_cards_and_names_what_is_missing(world, sell
     )
 
     assert result["created"] == 2
-    assert result["unpublishable"] == 1, "полностью заполненная карточка публикуема"
+    assert result["unpublishable"] == 2, "в таблице нет колонки МХИК: без него (X-16) не опубликуется и полная карточка"
     missing = {item["code"]: item for item in result["missing_breakdown"]}
-    assert set(missing) == {"uom", "category", "hs_code"}
+    assert set(missing) == {"uom", "category", "hs_code", "mxik_code"}
+    assert missing["hs_code"]["count"] == 1, "у полной карточки ТН ВЭД есть"
     assert missing["category"]["count"] == 1
     assert missing["category"]["label"] == "Категория", "подпись берётся из completeness.py, а не заводится заново"
 
@@ -399,7 +400,7 @@ def test_dry_run_reports_publishability_and_still_persists_nothing(world, seller
     assert result["dry_run"] is True
     assert result["created"] == 1
     assert result["unpublishable"] == 1
-    assert {item["code"] for item in result["missing_breakdown"]} == {"uom", "category", "hs_code"}
+    assert {item["code"] for item in result["missing_breakdown"]} == {"uom", "category", "hs_code", "mxik_code"}
     assert Product.objects.count() == 0, "откат предпросмотра не тронут"
 
 
@@ -599,7 +600,8 @@ def test_leading_zero_code_does_not_make_the_card_unpublishable(world, seller):
         supplier_company_id=seller.id,
     )
 
-    assert result["unpublishable"] == 0, "испорченный код делал карточку непубликуемой"
+    codes = {item["code"] for item in result["missing_breakdown"]}
+    assert "hs_code" not in codes, "испорченный код делал карточку непубликуемой"
 
 
 @pytest.mark.django_db

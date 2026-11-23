@@ -22194,6 +22194,12 @@ components:
           minimum: 1
           maximum: 100
           description: Порог полноты карточки для публикации, %
+        catalog_require_mxik:
+          type: boolean
+          description: МХИК (ИКПУ) обязателен для публикации карточки; по умолчанию включено
+        catalog_require_hs_imported:
+          type: boolean
+          description: ТН ВЭД обязателен для ввозимого товара (страна происхождения не Узбекистан или не указана); по умолчанию включено
         fx_rate_max_age_days:
           type: integer
           minimum: 1
@@ -22283,6 +22289,12 @@ components:
           minimum: 1
           maximum: 100
           description: Порог полноты карточки для публикации, %
+        catalog_require_mxik:
+          type: boolean
+          description: МХИК (ИКПУ) обязателен для публикации карточки; по умолчанию включено
+        catalog_require_hs_imported:
+          type: boolean
+          description: ТН ВЭД обязателен для ввозимого товара (страна происхождения не Узбекистан или не указана); по умолчанию включено
         fx_rate_max_age_days:
           type: integer
           minimum: 1
@@ -27981,6 +27993,7 @@ components:
         code: {type: string, pattern: '^[0-9]{17}$'}
         name: {type: string}
         group: {type: string, description: Группа или класс классификатора}
+        path: {type: string, description: 'Путь по классификатору «группа › класс › позиция» без самого названия; пусто, если его нет'}
         unit: {type: string}
         package: {type: string}
 

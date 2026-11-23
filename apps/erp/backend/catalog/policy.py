@@ -26,6 +26,10 @@ from .constants import (
 class CatalogPolicy:
     price_visibility: str = PriceVisibility.ON_REQUEST
     publish_threshold: int = DEFAULT_PUBLISH_THRESHOLD
+    #: X-16: МХИК обязателен для публикации карточки (позиция, которую продаём).
+    require_mxik: bool = True
+    #: X-16: ТН ВЭД обязателен для ввозимого товара (страна происхождения не Узбекистан или не указана).
+    require_hs_imported: bool = True
     #: PART-2: через сколько дней без подтверждения цена поставщика «устарела» (`catalog/offer_freshness.py`).
     offer_confirm_days: int = DEFAULT_OFFER_CONFIRM_DAYS
     #: Задача «Н3c»: за сколько дней до окончания цена партнёра «истекает».
@@ -48,6 +52,8 @@ def load_policies(company_ids) -> dict[int, CatalogPolicy]:
         "catalog_publish_threshold",
         "offer_confirm_days",
         "offer_expiring_days",
+        "catalog_require_mxik",
+        "catalog_require_hs_imported",
     )
     return {
         company_id: CatalogPolicy(
@@ -55,8 +61,10 @@ def load_policies(company_ids) -> dict[int, CatalogPolicy]:
             publish_threshold=threshold,
             offer_confirm_days=confirm_days,
             offer_expiring_days=expiring_days,
+            require_mxik=require_mxik,
+            require_hs_imported=require_hs,
         )
-        for company_id, visibility, threshold, confirm_days, expiring_days in rows
+        for company_id, visibility, threshold, confirm_days, expiring_days, require_mxik, require_hs in rows
     }
 
 
