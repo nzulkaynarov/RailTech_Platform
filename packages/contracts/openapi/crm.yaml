@@ -9626,7 +9626,9 @@ components:
       description: 'Сотрудник для ссылки «кто сделал» (СУЩ-3): то, что видит любой коллега.
 
 
-        Без почты, телефона и ролей.'
+        Без почты и телефона: их открывает `POST /staff/{id}/contacts` с записью в журнал. Роли — только
+
+        названиями (для карточки «Людей»), без матрицы прав.'
       properties:
         avatar_version:
           anyOf:
@@ -9647,6 +9649,12 @@ components:
           - type: string
           - type: 'null'
           title: Position
+        roles:
+          default: []
+          items:
+            type: string
+          title: Roles
+          type: array
       required:
       - id
       - full_name
@@ -9654,6 +9662,28 @@ components:
       - avatar_version
       - is_active
       title: StaffCard
+      type: object
+    StaffContacts:
+      description: 'Телефон и почта сотрудника: отдаются только вместе с записью журнала `contact.reveal`.'
+      properties:
+        email:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Email
+        id:
+          title: Id
+          type: integer
+        phone:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Phone
+      required:
+      - id
+      - phone
+      - email
+      title: StaffContacts
       type: object
     StaffNotificationOut:
       properties:
@@ -18230,6 +18260,38 @@ paths:
       security:
       - HTTPBearer: []
       summary: Get Avatar
+      tags:
+      - staff
+  /api/v1/staff/{user_id}/contacts:
+    post:
+      description: 'Показ телефона и почты коллеги (решение 10.11): запись «кто, когда, чьи» и ответ — в одной
+
+        транзакции, нет записи — нет и контактов. Отключённый сотрудник — 404. Выгрузки нет.'
+      operationId: reveal_staff_contacts
+      parameters:
+      - in: path
+        name: user_id
+        required: true
+        schema:
+          exclusiveMinimum: 0
+          title: User Id
+          type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StaffContacts'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: Reveal Staff Contacts
       tags:
       - staff
   /api/v1/stream:

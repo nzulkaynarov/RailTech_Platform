@@ -1594,6 +1594,12 @@ export const getListStaffDirectoryResponseMock = (
       null,
     ]),
     active: faker.datatype.boolean(),
+    roles: faker.helpers.arrayElement([
+      Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() =>
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+      ),
+      undefined,
+    ]),
   })),
   ...overrideResponse,
 });
@@ -34929,6 +34935,15 @@ export const getRevealCounterpartyContactsResponseMock = (
   ...overrideResponse,
 });
 
+export const getRevealStaffContactsResponseMock = (
+  overrideResponse: Partial<Extract<CounterpartyContacts, object>> = {},
+): CounterpartyContacts => ({
+  id: faker.helpers.fromRegExp("^[0-9]+$"),
+  phone: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  email: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  ...overrideResponse,
+});
+
 export const getSearchCounterpartiesResponseMock = (
   overrideResponse: Partial<Extract<CounterpartyPickList, object>> = {},
 ): CounterpartyPickList => ({
@@ -47402,6 +47417,30 @@ export const getRevealCounterpartyContactsMockHandler = (
   );
 };
 
+export const getRevealStaffContactsMockHandler = (
+  overrideResponse?:
+    | CounterpartyContacts
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<CounterpartyContacts> | CounterpartyContacts),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/people/staff/:id/reveal",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getRevealStaffContactsResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
 export const getSearchCounterpartiesMockHandler = (
   overrideResponse?:
     | CounterpartyPickList
@@ -49039,6 +49078,7 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getListEdsAddresseePeopleMockHandler(),
   getListCounterpartyPeopleMockHandler(),
   getRevealCounterpartyContactsMockHandler(),
+  getRevealStaffContactsMockHandler(),
   getSearchCounterpartiesMockHandler(),
   getCreateCounterpartyMockHandler(),
   getListCounterpartyPickerPeopleMockHandler(),

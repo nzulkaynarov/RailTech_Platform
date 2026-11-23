@@ -55257,6 +55257,101 @@ export const useRevealCounterpartyContacts = <
   return useMutation(getRevealCounterpartyContactsMutationOptions(options), queryClient);
 };
 
+export const getRevealStaffContactsUrl = (id: string) => {
+  return `/api/v1/people/staff/${id}/reveal`;
+};
+
+/**
+ * Решение 10.11: имя, должность и роли коллеги видят все (`GET /staff`), телефон и почта открываются по нажатию. Показ пишется в журнал CRM (`contact.reveal`, объект `staff`) в той же транзакции, что и ответ: не записалось — контактов нет. Контакты берутся из профиля сотрудника в CRM; отключённый сотрудник — 404. Выгрузки нет. Раздел `chats.internal` — чтение.
+ * @summary Органайзер · Люди: показать телефон и почту сотрудника
+ */
+export const revealStaffContacts = async (
+  id: string,
+  options?: Parameters<typeof http>[1],
+): Promise<CounterpartyContacts> => {
+  return http<CounterpartyContacts>(getRevealStaffContactsUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getRevealStaffContactsMutationKey = () => ["revealStaffContacts"] as const;
+
+export const getRevealStaffContactsMutationOptions = <
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof revealStaffContacts>>,
+    TError,
+    RevealStaffContactsMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof revealStaffContacts>>,
+  TError,
+  RevealStaffContactsMutationVariables,
+  TContext
+> => {
+  const mutationKey = getRevealStaffContactsMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof revealStaffContacts>>,
+    RevealStaffContactsMutationVariables
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return revealStaffContacts(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RevealStaffContactsMutationResult = NonNullable<
+  Awaited<ReturnType<typeof revealStaffContacts>>
+>;
+
+export type RevealStaffContactsMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+export type RevealStaffContactsMutationVariables = { id: string };
+
+/**
+ * @summary Органайзер · Люди: показать телефон и почту сотрудника
+ */
+export const useRevealStaffContacts = <
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof revealStaffContacts>>,
+      TError,
+      RevealStaffContactsMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof revealStaffContacts>>,
+  TError,
+  RevealStaffContactsMutationVariables,
+  TContext
+> => {
+  return useMutation(getRevealStaffContactsMutationOptions(options), queryClient);
+};
+
 export const getSearchCounterpartiesUrl = (params?: SearchCounterpartiesParams) => {
   const normalizedParams = new URLSearchParams();
 

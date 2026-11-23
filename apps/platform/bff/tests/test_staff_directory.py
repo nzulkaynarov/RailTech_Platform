@@ -17,6 +17,7 @@ STAFF = [
         "position": "Менеджер",
         "avatar_version": 1790000000,
         "is_active": True,
+        "roles": ["Менеджер", 5],
     },
     {
         "id": 8,
@@ -36,7 +37,20 @@ STAFF = [
 ]
 
 
-@pytest.mark.parametrize("role", ["MANAGER", "REGISTRAR", "ADMIN"])
+@pytest.mark.parametrize(
+    "role",
+    [
+        "ADMIN",
+        "DIRECTOR",
+        "MANAGER",
+        "SUPPLY",
+        "ENGINEER",
+        "ACCOUNTANT",
+        "REGISTRAR",
+        "MANAGER_ALL",
+        "LAWYER",
+    ],
+)
 async def test_any_employee_reads_the_directory(
     web: Web, be: Backends, check: ContractChecker, role: str
 ) -> None:
@@ -54,10 +68,28 @@ async def test_any_employee_reads_the_directory(
             "position": "Менеджер",
             "avatar_url": "/api/v1/staff/7/avatar?v=1790000000",
             "active": True,
+            "roles": ["Менеджер"],
         },
-        {"id": "8", "name": "Анна Без Фото", "position": None, "avatar_url": None, "active": True},
-        {"id": "9", "name": "Ушёл Давно", "position": None, "avatar_url": None, "active": False},
+        {
+            "id": "8",
+            "name": "Анна Без Фото",
+            "position": None,
+            "avatar_url": None,
+            "active": True,
+            "roles": [],
+        },
+        {
+            "id": "9",
+            "name": "Ушёл Давно",
+            "position": None,
+            "avatar_url": None,
+            "active": False,
+            "roles": [],
+        },
     ]
+    # Решение 10.11: имя, должность и роли — всем; почты и телефона в справочнике нет.
+    keys = {"id", "name", "position", "avatar_url", "active", "roles"}
+    assert all(set(item) == keys for item in response.json()["items"])
 
 
 async def test_crm_down_is_503(web: Web, be: Backends) -> None:

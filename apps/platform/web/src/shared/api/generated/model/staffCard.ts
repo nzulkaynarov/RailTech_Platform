@@ -19,4 +19,6 @@ export interface StaffCard {
   avatar_url: string | null;
   /** `false` — сотрудник отключён */
   active: boolean;
+  /** Роли Платформы названиями — для карточки сотрудника в «Людях»; без матрицы прав */
+  roles?: string[];
 }
