@@ -1394,7 +1394,9 @@
     "BANK_CODE_INVALID": "Invalid bank code (MFO).",
     "BANK_SWIFT_INVALID": "Invalid SWIFT/BIC or it belongs to another country.",
     "BANK_HOLDER_LATIN_INVALID": "The Latin holder name has characters SWIFT does not allow.",
-    "BANK_INTERMEDIARY_INVALID": "Invalid intermediary bank SWIFT."
+    "BANK_INTERMEDIARY_INVALID": "Invalid intermediary bank SWIFT.",
+    "LEGAL_ACCEPTANCE_REQUIRED": "Accept the terms of use and the policy first.",
+    "LEGAL_EDITION_CHANGED": "A new edition has been published — the text is updated. Read and accept it."
   },
   "widgets": {
     "actionRequired": {
@@ -1815,5 +1817,28 @@
     "partnerContractDesc": "Review conditions and agree to terms",
     "inviteTeam": "Invite colleagues",
     "inviteTeamDesc": "Add team members for collaboration"
+  },
+  "legal": {
+    "title": "Terms for using the cabinet",
+    "intro": "To continue, read and accept the personal data processing policy and the terms of use of the cabinet (the offer). You do this once — we ask again only when a new edition is published.",
+    "documents": "Documents",
+    "tabs": {
+      "terms": "Terms of use",
+      "privacy": "Personal data policy"
+    },
+    "edition": "Edition of {{date}}",
+    "consent": "By pressing “I accept” you confirm that you have read both documents, accept the terms of use and consent to the processing of personal data under the policy. We record the edition, date and time.",
+    "accept": "I accept",
+    "accepting": "Saving…",
+    "decline": "I do not accept",
+    "declined": {
+      "title": "The cabinet stays closed until you accept",
+      "text": "We cannot open the cabinet until the terms and the policy are accepted. When you are ready, sign in again and accept them; you can ask your manager any questions.",
+      "back": "Back to the text",
+      "loginNotice": "You did not accept the terms and the policy, so you have been signed out. To work in the cabinet, sign in again and accept them."
+    },
+    "policyLink": "Personal data processing policy",
+    "notPublished": "The policy has not been published yet.",
+    "backToLogin": "Back to sign in"
   }
 }

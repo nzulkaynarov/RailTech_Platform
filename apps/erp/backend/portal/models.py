@@ -10,6 +10,7 @@ from django.utils.translation import gettext_lazy as _
 from core.storage import get_private_storage
 
 from .models_bank_change import BankDetailsChangeRequest, BankDetailsChangeStatus  # noqa: F401
+from .models_legal import LegalAcceptance, LegalEdition, LegalKind  # noqa: F401 — оферта и политика Кабинета (ДВ-5)
 from .models_letters import LetterDirection, LetterState, PortalLetter  # noqa: F401 — письма компании (ЛИД-8, ADR-0026)
 from .models_notices import NoticeChannel, NoticeEmailState, PortalNotice  # noqa: F401 — лента колокольчика (NOTIFY-2)
 
