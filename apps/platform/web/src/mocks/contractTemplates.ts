@@ -112,6 +112,7 @@ function mayApprove(): boolean {
   const session = readSession();
   if (!session) return false;
   const me = buildMe(session);
+  if (!me) return false;
   return me.resources["eds.visa.legal"] === "full" || me.resources["admin"] === "full";
 }
 

@@ -302,17 +302,8 @@ describe("Admin · Компания: доступ и каркас", () => {
       );
     });
 
-    // «Шаблоны документов» — пункт «Документов»
-    fireEvent.click(
-      within(screen.getByRole("navigation", { name: "Модули" })).getByRole("link", {
-        name: "Документы",
-      }),
-    );
-    fireEvent.click(
-      within(await screen.findByRole("navigation", { name: "Разделы модуля" })).getByRole("link", {
-        name: "Шаблоны",
-      }),
-    );
+    // ЕВ-3а: «Шаблоны документов» — страница группы «Компания» (вход и из «Документов»), в меню «Документов» их нет
+    fireEvent.click(await screen.findByRole("link", { name: "Шаблоны документов" }));
     // Раздел открывается на «Все шаблоны» (план 2.7): шаблоны документов — своя вкладка
     fireEvent.click(await screen.findByRole("tab", { name: "Документы" }));
     fireEvent.click(await screen.findByRole("button", { name: "Открыть: Договор поставки (наш)" }));

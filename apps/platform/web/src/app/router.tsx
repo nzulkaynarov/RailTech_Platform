@@ -1,6 +1,7 @@
 import type { RouteObject } from "react-router";
 
 import { HomeRedirect } from "./HomeRedirect";
+import { LegacyGate } from "./LegacyGate";
 
 import { AuthGate } from "./auth/AuthGate";
 import { ChangePasswordPage } from "./auth/ChangePasswordPage";
@@ -41,18 +42,23 @@ export const routes: RouteObject[] = [
           </PanelSlotProvider>
         ),
         children: [
-          { index: true, element: <HomeRedirect /> },
-          // Профиль — страница, а не окно (W15-H6, UX-оценка P1-3); вход — пункт «Профиль» в меню аватара.
-          { path: "me", lazy: () => import("../features/profile/ProfilePage") },
-          // Помощь (W15-H7): «С чего начать», путь заявки, словарь, статьи, «Мои обращения»; вкладка — часть адреса.
-          { path: "help/*", lazy: () => import("../features/help/HelpPage") },
-          { path: "dashboard/*", lazy: () => import("../modules/dashboard") },
-          { path: "crm/*", lazy: () => import("../modules/crm") },
-          { path: "eds/*", lazy: () => import("../modules/eds") },
-          { path: "erp/*", lazy: () => import("../modules/erp") },
-          { path: "chats/*", lazy: () => import("../modules/chats") },
-          { path: "admin/*", lazy: () => import("../modules/admin") },
-          { path: "*", element: <NotFoundPage /> },
+          {
+            element: <LegacyGate />,
+            children: [
+              { index: true, element: <HomeRedirect /> },
+              // Профиль — страница, а не окно (W15-H6, UX-оценка P1-3); вход — пункт «Профиль» в меню аватара.
+              { path: "me", lazy: () => import("../features/profile/ProfilePage") },
+              // Помощь (W15-H7): «С чего начать», путь заявки, словарь, статьи, «Мои обращения»; вкладка — часть адреса.
+              { path: "help/*", lazy: () => import("../features/help/HelpPage") },
+              { path: "dashboard/*", lazy: () => import("../modules/dashboard") },
+              { path: "crm/*", lazy: () => import("../modules/crm") },
+              { path: "eds/*", lazy: () => import("../modules/eds") },
+              { path: "erp/*", lazy: () => import("../modules/erp") },
+              { path: "chats/*", lazy: () => import("../modules/chats") },
+              { path: "admin/*", lazy: () => import("../modules/admin") },
+              { path: "*", element: <NotFoundPage /> },
+            ],
+          },
         ],
       },
     ],

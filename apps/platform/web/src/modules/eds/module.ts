@@ -49,13 +49,6 @@ export const eds: ModuleConfig = {
       actionTo: "/dashboard/queue",
     },
     {
-      key: "outbox",
-      path: "/eds/outbox",
-      detail: "/eds/outbox/:id",
-      access: { resource: "eds.drafts" },
-      actionTo: "/eds/documents",
-    },
-    {
       key: "projects",
       path: "/eds/projects",
       detail: "/eds/projects/:id",

@@ -4,7 +4,6 @@
     "title": "Bosh sahifa",
     "sections": {
       "queue": "Vazifalar",
-      "projects": "Loyihalar",
       "summary": "Xulosa"
     },
     "queue": {
@@ -220,7 +219,6 @@
       "byDue": "Muddat bo‘yicha vazifalar",
       "stuck": "Muddati o‘tgan",
       "noStuck": "Muddati o‘tgan vazifalar yo‘q",
-      "noData": "Ma’lumotlar shu yerda paydo bo‘ladi",
       "loadError": "Xulosani yuklab bo‘lmadi",
       "retry": "Qayta urinish",
       "due": {
@@ -228,11 +226,6 @@
         "today": "Bugun",
         "tomorrow": "Ertaga",
         "later": "Keyinroq"
-      },
-      "blocks": {
-        "requests": "Bosqichlar bo‘yicha arizalar",
-        "profit": "Loyihalar foydasi",
-        "targets": "12 oylik maqsadlar"
       }
     }
   },
@@ -240,18 +233,14 @@
     "name": "Kontaktlar",
     "title": "Kontaktlar",
     "sections": {
-      "messages": "Javob kutmoqda",
       "leads": "Lidlar",
       "clients": "Kontragentlar",
-      "requests": "Arizalar",
-      "channels": "Aloqa kanallari",
       "kb": "Bilimlar bazasi"
     },
     "action": "Ariza yaratish",
     "nav": {
       "leads": "Lidlar",
       "clients": "Kontragentlar",
-      "mail": "Pochta",
       "kb": "Bilimlar bazasi"
     }
   },
@@ -261,7 +250,6 @@
     "sections": {
       "documents": "Barcha hujjatlar",
       "inbox": "Kiruvchi",
-      "outbox": "Chiquvchi",
       "projects": "Loyihalar",
       "drafts": "Tasdiqlash uchun TT",
       "approvals": "Kelishuvda",
@@ -276,10 +264,10 @@
     "action": "Hujjat yaratish",
     "nav": {
       "inbox": "Kiruvchi",
+      "mail": "Pochta",
       "outbox": "Chiquvchi",
       "internal": "Ichki",
-      "archive": "Arxiv",
-      "templates": "Shablonlar"
+      "archive": "Arxiv"
     }
   },
   "erp": {
@@ -311,15 +299,12 @@
     "title": "Organayzer",
     "sections": {
       "all": "Chatlar",
-      "internal": "Jamoa",
-      "external": "Mijozlar bilan",
       "contacts": "Odamlar",
       "calendar": "Taqvim"
     },
     "action": "Chat yaratish",
     "nav": {
       "calendar": "Taqvim",
-      "chats": "Chatlar",
       "people": "Odamlar"
     },
     "calendar": {

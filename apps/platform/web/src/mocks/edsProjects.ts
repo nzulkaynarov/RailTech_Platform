@@ -117,7 +117,10 @@ function logged(
 // --- договор ------------------------------------------------------------------------------------------------
 
 const TRANSITIONS: Record<
-  Exclude<ProjectContractActionIn["action"], never>,
+  Exclude<
+    ProjectContractActionIn["action"],
+    "sign_ours" | "request_deviation" | "decide_deviation"
+  >,
   { from: string[]; to: string; code: string; text: string }
 > = {
   send_to_client: {
@@ -448,7 +451,7 @@ export const edsProjectsHandlers = [
         return conflict(blocked.toLowerCase(), "Договор по шаблону пока нельзя отправить клиенту.");
       }
     }
-    const rule = TRANSITIONS[body.action as keyof typeof TRANSITIONS];
+    const rule = TRANSITIONS[body.action];
     if (!rule.from.includes(stateOf(p))) {
       return conflict("contract_transition_not_allowed", "Договор сейчас в другом статусе.");
     }

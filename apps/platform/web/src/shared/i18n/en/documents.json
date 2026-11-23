@@ -269,7 +269,7 @@
     "to": {
       "label": "To",
       "director": "Director",
-      "hint": "Any employee with approval rights receives the document. Choosing a specific addressee will come later."
+      "hint": "Any employee with approval rights receives the document."
     },
     "recipient": {
       "label": "Addressee (organization)",
