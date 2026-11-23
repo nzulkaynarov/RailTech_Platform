@@ -17,6 +17,7 @@ from app.schemas.responsibility_zones import (
     ResponsibilityZoneCreate,
     ResponsibilityZoneList,
     ResponsibilityZoneOut,
+    ResponsibilityZoneSummary,
     ResponsibilityZoneUpdate,
     ZonePerson,
     ZoneProblemOut,
@@ -29,6 +30,7 @@ router = APIRouter(prefix="/api/v1/responsibility-zones", tags=["responsibility-
 Reader = Annotated[Principal, Depends(require("users", "read"))]
 Admin = Annotated[Principal, Depends(require("users", "write"))]
 # Назначение людей: раздел `company.settings` (администратор и директор), в CRM — `ticket_label`.
+Signal = Annotated[Principal, Depends(require("ticket_label", "read"))]
 Assigner = Annotated[Principal, Depends(require("ticket_label", "write"))]
 
 _PATCH_FIELDS = (
@@ -73,6 +75,21 @@ def to_out(view: ZoneView) -> ResponsibilityZoneOut:
 async def list_zones(_: Reader, container: ContainerDep) -> ResponsibilityZoneList:
     zones = await container.responsibility_zone_service.list_zones()
     return ResponsibilityZoneList(items=[to_out(z) for z in zones])
+
+
+@router.get("/summary", response_model=ResponsibilityZoneSummary)
+async def zones_summary(_: Signal, container: ContainerDep) -> ResponsibilityZoneSummary:
+    """Числа для сигналов: доступны держателям `company.settings`, без списка людей."""
+    zones = [z for z in await container.responsibility_zone_service.list_zones() if z.is_active]
+    return ResponsibilityZoneSummary(
+        zones_total=len(zones),
+        without_responsible=sum(
+            1
+            for z in zones
+            if any(p.code in ("no_responsible", "responsible_inactive") for p in z.problems)
+        ),
+        with_problems=sum(1 for z in zones if z.problems),
+    )
 
 
 @router.post("", response_model=ResponsibilityZoneOut, status_code=status.HTTP_201_CREATED)

@@ -62,6 +62,14 @@ class ResponsibilityZoneList(BaseModel):
     items: list[ResponsibilityZoneOut]
 
 
+class ResponsibilityZoneSummary(BaseModel):
+    """Сигнал «зона без ответственного» для Настроек и Главной (без списка людей)."""
+
+    zones_total: int = Field(description="Действующих зон")
+    without_responsible: int = Field(description="Действующих зон без действующего ответственного")
+    with_problems: int = Field(description="Действующих зон хотя бы с одной проблемой")
+
+
 class ResponsibilityZoneCreate(BaseModel):
     code: str = Field(pattern=CODE_PATTERN)
     name: LocalizedInput

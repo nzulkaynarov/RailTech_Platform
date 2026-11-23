@@ -261,6 +261,33 @@ async def test_problems_follow_the_facts(
     assert _codes(expired) == ["term_expired"]
 
 
+async def test_summary_counts_active_zones_without_a_working_responsible(
+    client: TestClient, staff: dict[str, tuple[int, dict[str, str]]]
+) -> None:
+    admin = staff["admin"][1]
+    director_id, director = staff["director"]
+    assert client.get(f"{ZONES}/summary", headers=staff["manager"][1]).status_code == 403
+    assert client.get(f"{ZONES}/summary", headers=director).json() == {
+        "zones_total": 0,
+        "without_responsible": 0,
+        "with_problems": 0,
+    }
+    first = _create(client, admin)["id"]
+    second = _create(client, admin, code="second", sections=["crm.clients"])["id"]
+    off = _create(client, admin, code="third")["id"]
+    client.post(f"{ZONES}/{off}/deactivate", headers=admin)
+    assert client.get(f"{ZONES}/summary", headers=director).json() == {
+        "zones_total": 2,
+        "without_responsible": 2,
+        "with_problems": 2,
+    }
+    client.patch(f"{ZONES}/{second}", json={"responsible_user_id": director_id}, headers=director)
+    # Директор держит «Клиентов» — у второй зоны проблем нет; первая по-прежнему без людей.
+    summary = client.get(f"{ZONES}/summary", headers=director).json()
+    assert summary == {"zones_total": 2, "without_responsible": 1, "with_problems": 1}
+    assert first != second
+
+
 async def test_deactivated_zone_keeps_its_data_and_reports_nothing(
     client: TestClient, staff: dict[str, tuple[int, dict[str, str]]]
 ) -> None:

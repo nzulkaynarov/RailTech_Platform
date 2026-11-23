@@ -8547,6 +8547,27 @@ components:
       - updated_at
       title: ResponsibilityZoneOut
       type: object
+    ResponsibilityZoneSummary:
+      description: Сигнал «зона без ответственного» для Настроек и Главной (без списка людей).
+      properties:
+        with_problems:
+          description: Действующих зон хотя бы с одной проблемой
+          title: With Problems
+          type: integer
+        without_responsible:
+          description: Действующих зон без действующего ответственного
+          title: Without Responsible
+          type: integer
+        zones_total:
+          description: Действующих зон
+          title: Zones Total
+          type: integer
+      required:
+      - zones_total
+      - without_responsible
+      - with_problems
+      title: ResponsibilityZoneSummary
+      type: object
     ResponsibilityZoneUpdate:
       description: 'Люди, основание и срок: `null` снимает значение, не присланное поле не меняется.'
       properties:
@@ -17885,6 +17906,28 @@ paths:
       security:
       - HTTPBearer: []
       summary: Create Zone
+      tags:
+      - responsibility-zones
+  /api/v1/responsibility-zones/summary:
+    get:
+      description: 'Числа для сигналов: доступны держателям `company.settings`, без списка людей.'
+      operationId: zones_summary
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponsibilityZoneSummary'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: Zones Summary
       tags:
       - responsibility-zones
   /api/v1/responsibility-zones/{zone_id}:

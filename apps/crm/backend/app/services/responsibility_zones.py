@@ -172,15 +172,6 @@ class ResponsibilityZoneService:
             zone = await _required(session, zone_id)
             return _view(zone, await _people(session), today())
 
-    async def count_without_responsible(self) -> int:
-        """Действующие зоны, у которых нет действующего ответственного (сигнал на «Состоянии»)."""
-        zones = await self.list_zones()
-        return sum(
-            1
-            for z in zones
-            if any(p.code in ("no_responsible", "responsible_inactive") for p in z.problems)
-        )
-
     async def create(
         self,
         actor: Actor,
