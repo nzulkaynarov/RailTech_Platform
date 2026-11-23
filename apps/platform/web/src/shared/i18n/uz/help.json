@@ -123,11 +123,10 @@
         ]
       },
       "signer": {
-        "title": "Imzolovçi",
+        "title": "Imzo huquqlari",
         "steps": [
-          "«Vazifalar»: «Imzolaş» qatorlari — imzolaşga haqqingiz bölgan xatlar, TTlar, şartnomalar va dalolatnomalar.",
-          "Hujjatni oçing, matn va summani tekşiring: imzo kompaniya qarorini mustahkamlaydi.",
-          "«Sozlamalar · Imzo huquqlari»: kim, nimani va qança summagaça imzolaşi mumkin; vakolatni uzaytiring yoki bekor qiling.",
+          "«Sozlamalar · Imzo huquqlari»: vakolatlar reyestri — kim, nimani va qança summagaça imzolaşi mumkin.",
+          "Vakolatni muddati tugaguncha uzaytiring yoki odam endi imzolay olmasa, bekor qiling.",
           "Vakolat tugaşiga 14 kun qolganda eslatma keladi."
         ]
       }

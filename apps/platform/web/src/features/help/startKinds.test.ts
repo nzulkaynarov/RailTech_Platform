@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { Me } from "../../shared/api/generated/model";
+import { seedRoles } from "../../mocks/fixtures/roles";
 import { resources } from "../../shared/i18n";
 import { START_KINDS, mergeSteps, startKindsOf } from "./startKinds";
 
@@ -71,6 +72,19 @@ describe("startKindsOf: делопроизводитель, юрист и под
     ).toEqual(["director"]);
   });
 
+  it("каталожный директор (crm.leads на чтение, crm.clients полный): вида «менеджер» нет", () => {
+    expect(
+      startKindsOf(
+        me({
+          "eds.inbox": "full",
+          "eds.memo.approve": "full",
+          "crm.leads": "read",
+          "crm.clients": "full",
+        }),
+      ),
+    ).toEqual(["director"]);
+  });
+
   it("у администратора права подписи покрыты его текстом", () => {
     expect(startKindsOf(me({ admin: "full", "eds.signing.manage": "full" }))).toEqual(["admin"]);
   });
@@ -99,5 +113,41 @@ describe("mergeSteps: приветствие первого входа", () => {
   it("несколько видов — по несколько шагов от каждого", () => {
     expect(mergeSteps([a, b], 4)).toEqual(["a1", "a2", "b1", "b2"]);
     expect(mergeSteps([a, b, ["c1"]], 4)).toEqual(["a1", "b1", "c1"]);
+  });
+  it("не больше limit при любом числе видов", () => {
+    const many = ["a", "b", "c", "d", "e", "f", "g", "h", "i"].map((k) => [`${k}1`, `${k}2`]);
+    expect(mergeSteps(many.slice(0, 5), 4)).toEqual(["a1", "b1", "c1", "d1"]);
+    expect(mergeSteps(many, 4)).toHaveLength(4);
+  });
+});
+
+describe("каталожные роли (seedRoles): виды по их реальным разделам", () => {
+  const byCode = (code: string, ...more: string[]) => {
+    const merged: Record<string, "read" | "full"> = {};
+    for (const role of seedRoles().filter((r) =>
+      [code, ...more].some((c) => r.code === c || r.code === `tpl:${c}`),
+    )) {
+      for (const [key, level] of Object.entries(role.access)) {
+        if (level && (merged[key] !== "full" || level === "full")) merged[key] = level;
+      }
+    }
+    return me(merged);
+  };
+
+  it("директор: приветствие — только шаги директора (первые 4), без менеджерских", () => {
+    expect(startKindsOf(byCode("DIRECTOR"))).toEqual(["director"]);
+  });
+  it("делопроизводитель, юрист — свои виды", () => {
+    expect(startKindsOf(byCode("REGISTRAR"))).toContain("registrar");
+    expect(startKindsOf(byCode("LAWYER"))).toContain("lawyer");
+  });
+  it("приветствие не длиннее 4 шагов у администратора с менеджером-универсалом", () => {
+    const kinds = startKindsOf(byCode("ADMIN", "MANAGER_ALL"));
+    expect(
+      mergeSteps(
+        kinds.map((k) => ["x1", "x2", k]),
+        4,
+      ).length,
+    ).toBeLessThanOrEqual(4);
   });
 });

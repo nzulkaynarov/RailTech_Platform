@@ -68,17 +68,32 @@ function primaryEmptyKind(me: Me): QueueEmptyKind {
   return "default";
 }
 
+/** Виды рабочих разделов, добавляемые к основному (порядок — как в `START_KINDS`); у каждого свой текст пустой «Главной». */
+const ADDITIVE_KINDS = ["admin", "manager", "supply", "engineer", "accountant"] as const;
+
+/** Что уже перечисляет текст основного вида — его не повторяем (совмещённая роль перечисляет сразу лиды, расчёт и оплаты). */
+const COVERED_BY_PRIMARY: Partial<Record<QueueEmptyKind, readonly QueueEmptyKind[]>> = {
+  universal: ["accountant", "manager", "supply", "engineer"],
+};
+
 /**
  * Виды пустого состояния «Моих задач» по разделам каталога, которые дают роли «вида» (`Me.resources`), а не по кодам ролей
  * (CONVENTIONS §2 п. 6): решения директора (письма, КП, служебки), платёжки бухгалтера, визы расчёта (товары — снабженец,
  * услуги — гл. инженер), лиды менеджера, настройки администратора. Основной вид — по порядку от решений к исполнению; к нему
- * добавляются виды делопроизводителя, юриста и подписанта (`KIND_SECTIONS`) — у человека с несколькими ролями тексты по
- * каждому его разделу. Ничего не подошло — один нейтральный `default`.
+ * добавляются остальные виды по разделам, которые он не покрывает (`COVERED_BY_PRIMARY`, `unless` в `KIND_SECTIONS`), и виды
+ * делопроизводителя, юриста и подписанта — у человека с несколькими ролями тексты по каждому его разделу. Ничего не
+ * подошло — один нейтральный `default`.
  */
 export function queueEmptyKinds(me: Me): QueueEmptyKind[] {
   const primary = primaryEmptyKind(me);
-  const extra = SECTION_ONLY_KINDS.filter((kind) => hasKind(me, kind));
-  const kinds: QueueEmptyKind[] = primary === "default" ? [...extra] : [primary, ...extra];
+  const covered = COVERED_BY_PRIMARY[primary] ?? [];
+  const more: QueueEmptyKind[] = [
+    ...ADDITIVE_KINDS.filter(
+      (kind) => kind !== primary && !covered.includes(kind) && hasKind(me, kind),
+    ),
+    ...SECTION_ONLY_KINDS.filter((kind) => hasKind(me, kind)),
+  ];
+  const kinds: QueueEmptyKind[] = primary === "default" ? more : [primary, ...more];
   return kinds.length > 0 ? kinds : ["default"];
 }
 

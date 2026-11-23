@@ -20,7 +20,11 @@ const me = (resources: Record<string, "read" | "full">): Me =>
 describe("queueEmptyKinds: пустое состояние — по разделам каталога, не по кодам ролей", () => {
   it.each([
     ["письма и резолюции", { "eds.inbox": "full" }, ["director"]],
-    ["одобрение КП", { "eds.drafts": "full", "eds.payments": "full" }, ["director"]],
+    [
+      "одобрение КП и платёжки",
+      { "eds.drafts": "full", "eds.payments": "full" },
+      ["director", "accountant"],
+    ],
     ["согласование служебок", { "eds.memo.approve": "full" }, ["director"]],
     [
       "продажи, расчёт, счета и оплаты (менеджер-универсал)",
@@ -73,6 +77,35 @@ describe("queueEmptyKinds: пустое состояние — по раздел
       "erp.calc.goods": "full",
     } as const;
     expect(queueEmptyKinds(me({ ...director }))).toEqual(["director"]);
+  });
+
+  it("сочетания каталожных ролей: основной вид плюс виды разделов, которые он не покрывает", () => {
+    const managerAll = { "crm.leads": "full", "erp.calc": "full", "eds.payments": "full" } as const;
+    expect(queueEmptyKinds(me({ ...managerAll, admin: "full" }))).toEqual(["universal", "admin"]);
+    expect(
+      queueEmptyKinds(me({ "eds.inbox": "full", "eds.memo.approve": "full", admin: "full" })),
+    ).toEqual(["director", "admin"]);
+    expect(queueEmptyKinds(me({ "eds.payments": "full", "erp.calc.goods": "full" }))).toEqual([
+      "accountant",
+      "supply",
+    ]);
+    expect(queueEmptyKinds(me({ "erp.calc.goods": "full", "erp.calc.services": "full" }))).toEqual([
+      "supply",
+      "engineer",
+    ]);
+  });
+
+  it("директор с лидами на чтение и клиентами: вида «менеджер» нет", () => {
+    expect(
+      queueEmptyKinds(
+        me({
+          "eds.inbox": "full",
+          "eds.memo.approve": "full",
+          "crm.leads": "read",
+          "crm.clients": "full",
+        }),
+      ),
+    ).toEqual(["director"]);
   });
 
   it("администратор: права подписи покрыты его текстом, отдельного «подписанта» нет", () => {

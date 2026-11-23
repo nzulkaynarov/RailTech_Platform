@@ -31,7 +31,8 @@ interface KindSections {
 export const KIND_SECTIONS: Readonly<Record<StartKindName, KindSections>> = {
   admin: { any: ["admin"] },
   director: { any: ["eds.inbox", "eds.memo.approve"] },
-  manager: { any: ["crm.leads", "crm.clients"] },
+  // Решающему директору лиды — на чтение, взять в работу он не вправе: его ведёт текст директора.
+  manager: { any: ["crm.leads", "crm.clients"], unless: ["eds.inbox"] },
   supply: { any: ["erp.calc.goods"], unless: ["eds.inbox"] },
   engineer: { any: ["erp.calc.services"], unless: ["eds.inbox"] },
   accountant: { any: ["eds.payments"] },
@@ -39,7 +40,8 @@ export const KIND_SECTIONS: Readonly<Record<StartKindName, KindSections>> = {
   registrar: { any: ["eds.inbox.register", "crm.leads.triage"], unless: ["eds.inbox"] },
   // Юрист: виза на договор.
   lawyer: { any: ["eds.visa.legal"] },
-  // Подписант: раздел «Права подписи»; у администратора тот же раздел покрыт его текстом.
+  // Права подписи: ведение реестра полномочий (продление, отзыв); «держит полномочие» в профиле пока нет (Q-EV5A-1).
+  // У администратора тот же раздел покрыт его текстом.
   signer: { any: ["eds.signing.manage"], unless: ["admin"] },
 };
 
@@ -80,7 +82,7 @@ export function useStartSteps(kind: StartKind): string[] {
 export function mergeSteps(lists: readonly (readonly string[])[], limit: number): string[] {
   if (lists.length === 0) return [];
   const each = Math.max(1, Math.floor(limit / lists.length));
-  return lists.flatMap((steps) => steps.slice(0, each));
+  return lists.flatMap((steps) => steps.slice(0, each)).slice(0, limit);
 }
 
 export function useWelcomeSteps(kinds: readonly StartKind[], limit: number): string[] {

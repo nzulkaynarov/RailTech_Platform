@@ -123,11 +123,10 @@
         ]
       },
       "signer": {
-        "title": "Signatory",
+        "title": "Signing authority",
         "steps": [
-          "“Tasks”: “Sign” rows — letters, quotes, contracts and acts you are entitled to sign.",
-          "Open the document, check the text and the amount: your signature records the company’s decision.",
-          "“Settings · Signing authority”: who may sign what, up to which amount; extend or revoke an authority.",
+          "“Settings · Signing authority”: the register — who may sign what, up to which amount.",
+          "Extend an authority before it expires, or revoke it when the person may no longer sign.",
           "A reminder arrives 14 days before an authority expires."
         ]
       }
