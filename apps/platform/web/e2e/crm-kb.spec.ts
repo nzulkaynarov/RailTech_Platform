@@ -187,6 +187,8 @@ test.describe("База знаний: администратор", () => {
     await expect(
       page.getByRole("link", { name: "Открыть пробел: Есть ли гарантия на крепёж?" }),
     ).toHaveCount(0);
+    // список перерисовывается после закрытия пробела: ждём, пока в нём останутся ровно открытые, и только потом берём ссылку заново
+    await expect(page.getByRole("link", { name: /^Открыть пробел: / })).toHaveCount(3);
 
     await page.getByRole("link", { name: "Открыть пробел: Можно ли оплатить частями?" }).click();
     await panel.getByRole("button", { name: "Привязать к документу" }).click();
@@ -196,6 +198,7 @@ test.describe("База знаний: администратор", () => {
     await link.getByRole("button", { name: "Привязать и закрыть пробел" }).click();
     // exact: иначе совпадает ещё и тост «Документ добавлен, пробел закрыт — …» предыдущего шага, пока он не исчез (strict mode).
     await expect(page.getByText("Пробел закрыт", { exact: true })).toBeVisible();
+    await expect(page.getByRole("link", { name: /^Открыть пробел: / })).toHaveCount(2);
 
     await page.getByRole("link", { name: "Открыть пробел: Do you deliver to Samarkand?" }).click();
     await panel.getByRole("button", { name: "Игнорировать" }).click();
