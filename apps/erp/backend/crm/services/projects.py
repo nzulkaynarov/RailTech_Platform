@@ -289,7 +289,9 @@ def _apply_sql_filters(qs: QuerySet, filters: Filters, user) -> QuerySet:
 #: Белый список порядка (Х-15): ключ параметра `ordering` → значение для сравнения. Поле вне списка не сортирует: порядок
 #: по произвольному имени из адреса недопустим.
 ORDERING = {
-    "number": lambda row: row["number"] or "",
+    # Numeric key (deal id grows with the sequence), not the displayed string: "…-1000" must follow "…-999" and a
+    # configurable prefix must not reorder rows.
+    "number": lambda row: row["deal_id"],
     "client": lambda row: (row["company_name"] or "").casefold(),
     "step": lambda row: STEPS.index(row["step"]) if row["step"] in STEPS else len(STEPS),
     "due_date": lambda row: row["due_date"],

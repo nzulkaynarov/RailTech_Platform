@@ -122,6 +122,9 @@
   background: transparent;
   color: inherit;
   font: inherit;
+  text-transform: inherit;
+  letter-spacing: inherit;
+  line-height: inherit;
   text-align: inherit;
   cursor: pointer;
 }

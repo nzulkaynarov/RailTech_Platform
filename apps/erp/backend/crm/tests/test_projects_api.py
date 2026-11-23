@@ -138,6 +138,8 @@ def test_ordering_uses_a_white_list_and_keeps_empty_values_last(pw):  # noqa: F8
     rows = [{"number": "ПР-2", "due_date": None}, {"number": "ПР-1", "due_date": datetime.date(2026, 1, 1)}]
     assert [r["number"] for r in projects.sort_rows(rows, "due_date")] == ["ПР-1", "ПР-2"]
     assert [r["number"] for r in projects.sort_rows(rows, "-due_date")] == ["ПР-1", "ПР-2"]
+    numbered = [{"number": "ПР-2026-1000", "deal_id": 1000}, {"number": "ПР-2026-999", "deal_id": 999}]
+    assert [r["number"] for r in projects.sort_rows(numbered, "number")] == ["ПР-2026-999", "ПР-2026-1000"]
     assert projects.parse_ordering("-number") == ("number", True)
     assert projects.parse_ordering("deal_id") == ("", False)
 

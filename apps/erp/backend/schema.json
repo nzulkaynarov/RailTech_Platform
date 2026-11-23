@@ -11637,6 +11637,14 @@
                     },
                     {
                         "in": "query",
+                        "name": "ordering",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "Порядок общего списка (без `review`): `name`, `sku`, `created_at`, `updated_at`; `-` в начале — по убыванию. Другое поле игнорируется (порядок по названию)."
+                    },
+                    {
+                        "in": "query",
                         "name": "page",
                         "schema": {
                             "type": "integer"

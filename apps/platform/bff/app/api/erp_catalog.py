@@ -188,7 +188,7 @@ async def get_lookups(authed: Reader) -> Lookups:
 
 
 # Порядок (Х-15): `field` по возрастанию, `-field` по убыванию; поле только из белого списка ERP
-# (`ordering_fields` позиций): цену и другие закрытые поля сортировкой не раскрыть.
+# (`ordering_terms` общего списка позиций): цену и другие закрытые поля сортировкой не раскрыть.
 ITEM_SORT = r"^-?(name|sku|created_at|updated_at)$"
 
 
