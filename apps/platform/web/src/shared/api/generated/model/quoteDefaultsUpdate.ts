@@ -57,6 +57,10 @@ export interface QuoteDefaultsUpdate {
    * @maximum 100
    */
   catalog_publish_threshold?: number;
+  /** МХИК (ИКПУ) обязателен для публикации карточки; по умолчанию включено */
+  catalog_require_mxik?: boolean;
+  /** ТН ВЭД обязателен для ввозимого товара (страна происхождения не Узбекистан или не указана); по умолчанию включено */
+  catalog_require_hs_imported?: boolean;
   /**
    * Предельный возраст курса, дней
    * @minimum 1

@@ -11,8 +11,10 @@ from fastapi import Query
 
 from app.errors import invalid_fields
 
-Cursor = Annotated[str | None, Query(max_length=500)]
+Cursor = Annotated[str | None, Query(max_length=1200)]
 Limit = Annotated[int, Query(ge=1, le=100)]
+#: Порядок списка (Х-15б): `field` по возрастанию, `-field` по убыванию; поля — `number|subject|status|amount|created`.
+Sort = Annotated[str | None, Query(pattern=r"^-?(number|subject|status|amount|created)$")]
 
 
 def encode_cursor(moment: dt.datetime, key: uuid.UUID) -> str:
@@ -30,5 +32,27 @@ def decode_cursor(value: str | None) -> tuple[dt.datetime, uuid.UUID] | None:
         if moment.tzinfo is None:
             raise ValueError("naive")
         return moment, uuid.UUID(raw["k"])
+    except (binascii.Error, ValueError, KeyError, TypeError) as exc:
+        raise invalid_fields("Неверный курсор.", cursor="malformed") from exc
+
+
+def encode_sort_cursor(sort: str, key: uuid.UUID) -> str:
+    """Курсор списка с порядком по полю: порядок (`sort`) и id последней строки; значение поля берёт сервер по id.
+
+    Значение в курсор не кладётся: тема внешнего письма может быть любой длины и любых символов, а курсор — в URL.
+    """
+    raw = json.dumps({"s": sort, "k": str(key)}).encode()
+    return base64.urlsafe_b64encode(raw).decode().rstrip("=")
+
+
+def decode_sort_cursor(value: str | None, sort: str) -> uuid.UUID | None:
+    """Разобрать курсор порядка `sort`; курсор другого порядка или повреждённый — 422 `VALIDATION_FAILED` (`cursor`)."""
+    if value is None:
+        return None
+    try:
+        raw = json.loads(base64.urlsafe_b64decode(value + "=" * (-len(value) % 4)))
+        if raw["s"] != sort:
+            raise ValueError("other order")
+        return uuid.UUID(raw["k"])
     except (binascii.Error, ValueError, KeyError, TypeError) as exc:
         raise invalid_fields("Неверный курсор.", cursor="malformed") from exc

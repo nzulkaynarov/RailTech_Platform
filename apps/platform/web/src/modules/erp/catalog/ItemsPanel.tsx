@@ -1,5 +1,5 @@
 import { App, Button, Checkbox, Drawer, Input, Select } from "antd";
-import { useId, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useSearchParams } from "react-router";
 import { useQueryClient } from "@tanstack/react-query";
@@ -444,6 +444,7 @@ function ItemDrawer({ id, onClose }: { id: string; onClose: () => void }) {
   const { mobile } = useViewport();
   const query = useGetCatalogItem(id);
   const [editing, setEditing] = useState(false);
+  const [focusField, setFocusField] = useState<"mxik" | "hs" | null>(null);
   const navigate = useNavigate();
   const item = query.data;
   const openSupplier = (supplierId: string) => {
@@ -522,6 +523,7 @@ function ItemDrawer({ id, onClose }: { id: string; onClose: () => void }) {
               <div className="pf-cat-actions">
                 <Button
                   onClick={() => {
+                    setFocusField(null);
                     setEditing(true);
                   }}
                 >
@@ -538,6 +540,29 @@ function ItemDrawer({ id, onClose }: { id: string; onClose: () => void }) {
                     .map((code) => t(`publish.fields.${code}`, { defaultValue: code }))
                     .join(", "),
                 })}
+                {canEdit(me, "erp.stock") ? (
+                  <>
+                    {" "}
+                    {[
+                      card.publish.missing.includes("mxik_code") ? ("mxik" as const) : null,
+                      card.publish.missing.includes("hs_code") ? ("hs" as const) : null,
+                    ]
+                      .filter((field) => field !== null)
+                      .map((field) => (
+                        <Button
+                          key={field}
+                          size="small"
+                          type="link"
+                          onClick={() => {
+                            setFocusField(field);
+                            setEditing(true);
+                          }}
+                        >
+                          {t(`publish.fill.${field}`)}
+                        </Button>
+                      ))}
+                  </>
+                ) : null}
               </p>
             ) : null}
             <ItemPhotos card={card} editable={canEdit(me, "erp.stock")} />
@@ -555,6 +580,7 @@ function ItemDrawer({ id, onClose }: { id: string; onClose: () => void }) {
             {editing ? (
               <ItemForm
                 item={card}
+                focus={focusField}
                 onClose={() => {
                   setEditing(false);
                 }}
@@ -758,10 +784,13 @@ function OffersTable({
 /** Добавление и правка позиции. Правка отправляет только изменённые поля; НДС пусто — по умолчанию компании. */
 function ItemForm({
   item,
+  focus = null,
   onClose,
   onSaved,
 }: {
   item?: CatalogItemDetail;
+  /** Поле, к которому подвести (из подсказки «для публикации заполните»). */
+  focus?: "mxik" | "hs" | null;
   onClose: () => void;
   onSaved: (item: CatalogItemDetail) => void;
 }) {
@@ -801,6 +830,18 @@ function ItemForm({
     wm: useId(),
     wt: useId(),
   };
+  useEffect(() => {
+    if (focus === null) return;
+    const timer = window.setTimeout(() => {
+      const target = document.getElementById(ids[focus]);
+      target?.scrollIntoView({ block: "center" });
+      target?.focus();
+    }, 150);
+    return () => {
+      window.clearTimeout(timer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once, when the form opens
+  }, []);
   const monthsValid = /^\d{0,3}$/.test(warrantyMonths.trim()) && Number(warrantyMonths || 0) <= 600;
   const hsValid = /^(\d{2}|\d{4}|\d{6}|\d{8}|\d{10})?$/.test(hs.trim());
   const mxikValid = MXIK_CODE.test(mxik.code);

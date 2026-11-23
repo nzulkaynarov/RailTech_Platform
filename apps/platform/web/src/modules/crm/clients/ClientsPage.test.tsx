@@ -2,6 +2,7 @@ import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { HttpResponse, http } from "msw";
 import { beforeEach, describe, expect, it } from "vitest";
 
+import { resetMarks, setMark } from "../../../mocks/doNotWorkMarks";
 import { resetLeads } from "../../../mocks/fixtures/leads";
 import { panelEl, renderAt, setupBotTests, signIn } from "../../../test/botKit";
 import { server } from "../../../test/server";
@@ -10,6 +11,7 @@ setupBotTests();
 
 beforeEach(() => {
   resetLeads();
+  resetMarks();
 });
 
 async function open(email: string, path = "/crm/clients") {
@@ -231,5 +233,32 @@ describe("Контрагенты: тип отношения", () => {
       expect(screen.queryByRole("link", { name: /Клиент Один/ })).toBeNull();
     });
     expect(screen.getByRole("link", { name: /Партнёр Семь/ })).toBeInTheDocument();
+  });
+
+  it("Х-8: компания с отметкой «Не работать» помечена в списке, фильтр «Не работаем» оставляет только такие", async () => {
+    // клиент 3 в ERP — компания 1003 (моки: 1000 + id клиента)
+    setMark("1003", "ООО Рельс-Сервис Демо", {
+      reason: "Спор по оплате",
+      set_by: "Менеджер Демо",
+      set_at: "2026-11-23T09:30:00Z",
+      until: null,
+    });
+    await open("manager@demo.example");
+    const table = await screen.findByRole("table", { name: "Клиенты" });
+    const marked = within(table)
+      .getByRole("link", { name: "Открыть карточку ООО Рельс-Сервис Демо" })
+      .closest("tr");
+    expect(marked).not.toBeNull();
+    expect(within(marked as HTMLElement).getByText("Не работаем")).toBeVisible();
+
+    fireEvent.click(screen.getByText("Не работаем", { selector: ".ant-segmented-item-label" }));
+    await waitFor(() => {
+      expect(
+        within(screen.getByRole("table", { name: "Клиенты" })).getAllByRole("row"),
+      ).toHaveLength(2);
+    });
+    expect(
+      screen.getByRole("link", { name: "Открыть карточку ООО Рельс-Сервис Демо" }),
+    ).toBeVisible();
   });
 });

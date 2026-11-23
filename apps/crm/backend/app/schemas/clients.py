@@ -11,6 +11,15 @@ from app.schemas.notices import InvitationOut
 DocType = Literal["contract", "proposal", "letter", "invoice", "act", "other"]
 
 
+class DoNotWorkOut(BaseModel):
+    """Отметка «Не работать» (Х-8): проекция компании ERP, факты как есть."""
+
+    reason: str
+    set_by: str | None
+    set_at: datetime
+    until: date | None
+
+
 class ClientOut(BaseModel):
     id: int
     name: str
@@ -24,6 +33,8 @@ class ClientOut(BaseModel):
     # Передача в бэк-офис идёт задачей после коммита (FIX-31): состояние и код причины ошибки.
     erp_handoff_status: Literal["pending", "done", "failed"] | None = None
     erp_handoff_error: str | None = None
+    # Х-8: у компании в ERP стоит «Не работать» — действующая отметка; `None` — работаем
+    do_not_work: DoNotWorkOut | None = None
 
 
 class ClientListItem(ClientOut):

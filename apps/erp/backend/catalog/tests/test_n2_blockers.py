@@ -58,7 +58,9 @@ def test_publish_action_still_flips_the_status(seller):
     from master_data.models import UnitOfMeasure
 
     uom, _ = UnitOfMeasure.objects.get_or_create(code="PCS", defaults={"name": "шт", "sort_order": 10})
-    services_domain_card = Product.objects.create(name="Услуга доставки", owner_company=seller["company"], uom=uom)
+    services_domain_card = Product.objects.create(
+        name="Услуга доставки", owner_company=seller["company"], uom=uom, mxik_code="49100001001000000"
+    )
     # Домен SERVICES: требования — имя, ед.изм., категория.
     from catalog.models import Category, DomainType
 

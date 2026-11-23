@@ -2855,11 +2855,20 @@ paths:
         - name: cursor
           in: query
           required: false
+          description: Курсор из `next_cursor`; привязан к порядку `sort`, при смене порядка начинают с первой страницы
           schema: {type: string, maxLength: 2000}
         - name: limit
           in: query
           required: false
           schema: {type: integer, minimum: 1, maximum: 100, default: 50}
+        - name: sort
+          in: query
+          required: false
+          description: >-
+            Порядок щелчком по шапке (Х-15б): `number`, `subject`, `status`, `amount`, `created`; `-` в начале — по убыванию.
+            Пустые значения (нет номера, нет суммы) — в конце, равные — по id. `number` и `subject` — строковый порядок: номер
+            непрозрачен, число в нём не разбирается. Другое поле — 422. Не задан — от новых.
+          schema: {type: string, pattern: '^-?(number|subject|status|amount|created)$'}
       responses:
         '200':
           description: Страница документов
@@ -4474,6 +4483,15 @@ paths:
           in: query
           required: false
           schema: {type: integer, minimum: 0, maximum: 100000, default: 0}
+        - name: sort
+          in: query
+          required: false
+          description: >-
+            Порядок щелчком по шапке (Х-15б): `number`, `client`, `amount`, `issued`, `due`, `status` (слово статуса строки);
+            `-` в начале — по убыванию. Пустые значения (нет срока, нет даты выставления) — в конце, равные — по id. `number` —
+            строковый порядок: у счёта нет сохранённого порядкового номера, префикс настраивается и не разбирается. Другое
+            поле — 422. Не задан — порядок вкладки.
+          schema: {type: string, pattern: '^-?(number|client|amount|issued|due|status)$'}
       responses:
         '200':
           description: Счета вкладки и счётчики
@@ -7683,6 +7701,187 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+
+  /admin/responsibility-zones:
+    get:
+      tags: [admin]
+      operationId: listResponsibilityZones
+      summary: Зоны ответственности (Настройки · Люди и доступ) — с людьми и проблемами по фактам
+      description: >-
+        Реестр «зона → ответственный → замещающий → куратор» (ЕВ-З): каждая зона — запись с основанием, сроком и журналом
+        изменений в CRM. `problems` считается при каждом чтении: нет ответственного, у ответственного нет разделов зоны
+        (`severity = warning`, не запрет), ответственный или замещающий не действует, срок вышел. Раздел `admin` — от
+        чтения (администратор и директор). Зоны не маршрутизируют уведомления и согласования.
+      responses:
+        '200':
+          description: Зоны в порядке заведения
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ZoneList'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags: [admin]
+      operationId: createResponsibilityZone
+      summary: Завести зону из существующих разделов прав
+      description: >-
+        Только `admin: full`. Разделы — из каталога прав, неизвестный — 422; повтор `code` — 409 `CONFLICT`.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ZoneCreate'
+      responses:
+        '201':
+          description: Создана, людей в ней нет
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Zone'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: '`CONFLICT` — зона с таким `code` уже есть'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+
+  /admin/responsibility-zones/summary:
+    get:
+      tags: [admin]
+      operationId: getResponsibilityZonesSummary
+      summary: Сколько действующих зон без ответственного — для сигналов Настроек и Главной
+      description: >-
+        Раздел `company.settings: full` (администратор и директор); без списка людей.
+      responses:
+        '200':
+          description: Числа по действующим зонам
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ZoneSummary'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /admin/responsibility-zones/{id}:
+    get:
+      tags: [admin]
+      operationId: getResponsibilityZone
+      summary: Зона ответственности
+      parameters:
+        - $ref: '#/components/parameters/ZoneIdPath'
+      responses:
+        '200':
+          description: Зона
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Zone'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags: [admin]
+      operationId: updateResponsibilityZone
+      summary: Назначить ответственного, замещающего и куратора, указать основание и срок
+      description: >-
+        Раздел `company.settings: full` (администратор и директор). Не присланное поле не меняется, `null` снимает значение.
+        Сотрудник должен действовать, замещающий — другой человек, чем ответственный (422); у выключенной зоны людей не
+        меняют — 409 `CONFLICT`. Каждое изменение пишется в журнал CRM с «до» и «после».
+      parameters:
+        - $ref: '#/components/parameters/ZoneIdPath'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ZoneUpdate'
+      responses:
+        '200':
+          description: Зона после изменения
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Zone'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: '`CONFLICT` — зона выключена'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+
+  /admin/responsibility-zones/{id}/deactivate:
+    post:
+      tags: [admin]
+      operationId: deactivateResponsibilityZone
+      summary: Выключить зону — не удаляется, назначения и журнал остаются
+      description: >-
+        Только `admin: full`. У выключенной зоны проблем нет, в сигналах она не считается.
+      parameters:
+        - $ref: '#/components/parameters/ZoneIdPath'
+        - $ref: '#/components/parameters/CsrfToken'
+      responses:
+        '200':
+          description: Зона выключена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Zone'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /admin/responsibility-zones/{id}/activate:
+    post:
+      tags: [admin]
+      operationId: activateResponsibilityZone
+      summary: Включить выключенную зону
+      description: >-
+        Только `admin: full`.
+      parameters:
+        - $ref: '#/components/parameters/ZoneIdPath'
+        - $ref: '#/components/parameters/CsrfToken'
+      responses:
+        '200':
+          description: Зона включена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Zone'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
   /admin/roles/{id}/journal:
     get:
@@ -14659,6 +14858,68 @@ paths:
           $ref: '#/components/responses/NotFound'
         '503':
           $ref: '#/components/responses/BackendUnavailable'
+  /people/counterparties/{id}/do-not-work:
+    post:
+      tags: [chats]
+      operationId: setCounterpartyDoNotWork
+      summary: 'Карточка контрагента: «Не работать»'
+      description: >-
+        ERP `POST parties/organizations/{id}/do-not-work/` (Х-8). Причина обязательна, дата окончания по желанию; повторная
+        отметка заменяет прежнюю. Новые КП, договор, заказ поставщику и заявка у такой компании ERP отказывает 409 `CONFLICT`
+        (`details.reason = company_do_not_work`, `details.do_not_work` — причина и кто отметил); приглашения её контактов в
+        кабинет не уходят; документы в работе не отменяются. Отметка попадает в журнал и в CRM снимком компании. Раздел
+        `crm.clients` или `erp.stock` — полный; в ERP — право `deal.manage` или `supply.manage`, иначе 403.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - {name: id, in: path, required: true, schema: {$ref: '#/components/schemas/CompanyItemRef'}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DoNotWorkIn'
+      responses:
+        '200':
+          description: Карточка с отметкой
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CounterpartyCard'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+    delete:
+      tags: [chats]
+      operationId: clearCounterpartyDoNotWork
+      summary: 'Карточка контрагента: «Снова работать»'
+      description: >-
+        ERP `DELETE parties/organizations/{id}/do-not-work/` (Х-8): снять отметку; повтор безопасен. Тот же доступ, что у
+        «Не работать». Запись в журнале и снимок в CRM — как при установке.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - {name: id, in: path, required: true, schema: {$ref: '#/components/schemas/CompanyItemRef'}}
+      responses:
+        '200':
+          description: Карточка без отметки
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CounterpartyCard'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
   /people/counterparties/{id}/roles:
     post:
       tags: [chats]
@@ -16199,6 +16460,14 @@ components:
       description: Id роли Платформы (CRM)
       schema:
         $ref: '#/components/schemas/RoleId'
+    ZoneIdPath:
+      name: id
+      in: path
+      required: true
+      description: Id зоны ответственности (CRM)
+      schema:
+        type: string
+        pattern: '^[1-9][0-9]*$'
     RoleQuery:
       name: role
       in: query
@@ -17007,6 +17276,148 @@ components:
         updated_at:
           type: string
           format: date-time
+
+    ZoneText:
+      type: object
+      additionalProperties: false
+      required: [ru, uz, en]
+      properties:
+        ru: {type: string}
+        uz: {type: string, description: 'Латиница нового алфавита (Ö Ğ Ş Ç, ʼ)'}
+        en: {type: string}
+
+    ZonePerson:
+      type: object
+      additionalProperties: false
+      required: [id, name, active]
+      properties:
+        id:
+          type: string
+          description: '`crm_user_id` сотрудника'
+        name: {type: string}
+        position: {type: string}
+        active:
+          type: boolean
+          description: Сотрудник действует (не отключён)
+
+    ZoneProblem:
+      type: object
+      additionalProperties: false
+      required: [code, severity]
+      properties:
+        code:
+          type: string
+          enum: [no_responsible, responsible_lacks_permissions, responsible_inactive, deputy_inactive, term_expired]
+        severity:
+          type: string
+          enum: [problem, warning]
+          description: '`warning` — только «у ответственного нет разделов зоны»: не запрет, а подсказка'
+        sections:
+          type: array
+          items: {type: string}
+          description: Ключи разделов каталога, которых не хватает ответственному (только `responsible_lacks_permissions`)
+
+    Zone:
+      type: object
+      additionalProperties: false
+      required: [id, code, name, description, sections, basis, active, problems, updated_at]
+      properties:
+        id: {type: string, pattern: '^[1-9][0-9]*$'}
+        code:
+          type: string
+          description: Стабильный слаг зоны (не меняется)
+        name:
+          $ref: '#/components/schemas/ZoneText'
+        description:
+          $ref: '#/components/schemas/ZoneText'
+        sections:
+          type: array
+          items: {type: string}
+          description: Ключи разделов каталога прав, к которым относится зона
+        responsible:
+          $ref: '#/components/schemas/ZonePerson'
+        deputy:
+          $ref: '#/components/schemas/ZonePerson'
+        curator:
+          $ref: '#/components/schemas/ZonePerson'
+        basis:
+          type: string
+          description: Основание назначения — номер и дата приказа
+        valid_from: {type: string, format: date}
+        valid_to: {type: string, format: date}
+        active: {type: boolean}
+        problems:
+          type: array
+          items:
+            $ref: '#/components/schemas/ZoneProblem'
+        updated_at: {type: string, format: date-time}
+
+    ZoneList:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Zone'
+
+    ZoneSummary:
+      type: object
+      additionalProperties: false
+      required: [zones_total, without_responsible, with_problems]
+      properties:
+        zones_total: {type: integer, minimum: 0}
+        without_responsible:
+          type: integer
+          minimum: 0
+          description: Действующих зон без действующего ответственного
+        with_problems: {type: integer, minimum: 0}
+
+    ZoneCreate:
+      type: object
+      additionalProperties: false
+      required: [code, name, sections]
+      properties:
+        code:
+          type: string
+          pattern: '^[a-z][a-z0-9_]{1,39}$'
+        name:
+          $ref: '#/components/schemas/ZoneText'
+        description:
+          type: object
+          additionalProperties: false
+          properties:
+            ru: {type: string, maxLength: 1000}
+            uz: {type: string, maxLength: 1000}
+            en: {type: string, maxLength: 1000}
+        sections:
+          type: array
+          minItems: 1
+          maxItems: 24
+          uniqueItems: true
+          items: {type: string}
+          description: Ключи разделов каталога прав
+
+    ZoneUpdate:
+      type: object
+      additionalProperties: false
+      description: Не присланное поле не меняется, `null` снимает значение
+      properties:
+        responsible_id:
+          type: [string, 'null']
+          pattern: '^[1-9][0-9]*$'
+        deputy_id:
+          type: [string, 'null']
+          pattern: '^[1-9][0-9]*$'
+        curator_id:
+          type: [string, 'null']
+          pattern: '^[1-9][0-9]*$'
+        basis:
+          type: [string, 'null']
+          maxLength: 500
+        valid_from: {type: [string, 'null'], format: date}
+        valid_to: {type: [string, 'null'], format: date}
 
     RoleList:
       type: object
@@ -19851,7 +20262,7 @@ components:
       properties:
         key:
           type: string
-          description: '`letters_without_resolution`, `quotes_to_approve`, `memos_to_approve`, `projects_in_work`, `leads_without_answer`…'
+          description: '`letters_without_resolution`, `quotes_to_approve`, `memos_to_approve`, `projects_in_work`, `leads_without_answer`, `zones_without_responsible` (держателям `company.settings`, пока есть зона без ответственного)…'
         label:
           type: string
         count:
@@ -20553,6 +20964,11 @@ components:
           items:
             $ref: '#/components/schemas/ProjectJournalEntry'
           type: array
+        do_not_work:
+          description: 'Х-8: у компании проекта отметка «Не работать» (причина, кто, когда) — полоса «С компанией не работаем» в карточке; документы в работе не отменяются. null — работаем'
+          oneOf:
+            - $ref: '#/components/schemas/DoNotWork'
+            - type: 'null'
       required: [number, request_number, title, client_name, step, client_status, total, due_date, manager, responsible, documents, problems, created_at, quote, contract, can_create_contract, invoices, act, act_blocker, fulfillment, delivery_lines, journal]
       additionalProperties: false
     ProjectContractActionIn:
@@ -22531,6 +22947,12 @@ components:
           minimum: 1
           maximum: 100
           description: Порог полноты карточки для публикации, %
+        catalog_require_mxik:
+          type: boolean
+          description: МХИК (ИКПУ) обязателен для публикации карточки; по умолчанию включено
+        catalog_require_hs_imported:
+          type: boolean
+          description: ТН ВЭД обязателен для ввозимого товара (страна происхождения не Узбекистан или не указана); по умолчанию включено
         fx_rate_max_age_days:
           type: integer
           minimum: 1
@@ -22620,6 +23042,12 @@ components:
           minimum: 1
           maximum: 100
           description: Порог полноты карточки для публикации, %
+        catalog_require_mxik:
+          type: boolean
+          description: МХИК (ИКПУ) обязателен для публикации карточки; по умолчанию включено
+        catalog_require_hs_imported:
+          type: boolean
+          description: ТН ВЭД обязателен для ввозимого товара (страна происхождения не Узбекистан или не указана); по умолчанию включено
         fx_rate_max_age_days:
           type: integer
           minimum: 1
@@ -28039,6 +28467,11 @@ components:
         id: {type: integer}
         name: {type: string}
         inn: {type: [string, 'null']}
+        do_not_work:
+          oneOf:
+            - $ref: '#/components/schemas/DoNotWork'
+            - type: 'null'
+          description: 'Х-8: отметка «Не работать» клиента лида — полоса в карточке лида'
 
     ClientRow:
       type: object
@@ -28052,6 +28485,7 @@ components:
         open_requests: {type: integer, minimum: 0}
         last_activity_at: {type: [string, 'null'], format: date-time}
         handoff_status: {type: [string, 'null'], enum: [pending, done, failed, null]}
+        do_not_work: {type: boolean, description: 'Х-8: у компании действует отметка «Не работать» (фильтр «Не работаем»)'}
 
     ClientList:
       type: object
@@ -28172,6 +28606,11 @@ components:
             contacts: {$ref: '#/components/schemas/SourceState'}
             requests: {$ref: '#/components/schemas/SourceState'}
             documents: {$ref: '#/components/schemas/SourceState'}
+        do_not_work:
+          oneOf:
+            - $ref: '#/components/schemas/DoNotWork'
+            - type: 'null'
+          description: 'Х-8: отметка «Не работать» компании (из ERP снимком `company.updated`) — полоса «С компанией не работаем»; нет — работаем'
 
     ClientPartnerRequest:
       type: object
@@ -28339,6 +28778,7 @@ components:
         code: {type: string, pattern: '^[0-9]{17}$'}
         name: {type: string}
         group: {type: string, description: Группа или класс классификатора}
+        path: {type: string, description: 'Путь по классификатору «группа › класс › позиция» без самого названия; пусто, если его нет'}
         unit: {type: string}
         package: {type: string}
 
@@ -28777,6 +29217,7 @@ components:
         expired_count: {type: integer, minimum: 0, description: Действующих предложений с истёкшим сроком цены}
         expiring_count: {type: integer, minimum: 0, description: Срок цены истекает в ближайшие 14 дней}
         nearest_valid_until: {type: [string, 'null'], format: date}
+        do_not_work: {type: boolean, description: 'Х-8: с поставщиком не работаем — действует отметка «Не работать»'}
     EdsAddressee:
       type: object
       additionalProperties: false
@@ -28956,6 +29397,28 @@ components:
           type: array
           items: {$ref: '#/components/schemas/CounterpartyRef'}
           description: 'Бренды, которые выпускает компания'
+        do_not_work:
+          oneOf:
+            - $ref: '#/components/schemas/DoNotWork'
+            - type: 'null'
+          description: 'Х-8: отметка «Не работать» — причина, кто и когда поставил, срок; нет — работаем'
+    DoNotWork:
+      type: object
+      additionalProperties: false
+      description: Отметка «Не работать» у контрагента (Х-8) — факты, а не флаг
+      required: [reason, set_by, set_at, until]
+      properties:
+        reason: {type: string, description: Причина — текст для коллег}
+        set_by: {type: [string, 'null'], description: 'Кто поставил отметку (имя сотрудника)'}
+        set_at: {type: string, format: date-time}
+        until: {type: [string, 'null'], format: date, description: 'До какого дня действует; null — без срока'}
+    DoNotWorkIn:
+      type: object
+      additionalProperties: false
+      required: [reason]
+      properties:
+        reason: {type: string, minLength: 1, maxLength: 1000, description: Причина — обязательный текст}
+        until: {type: [string, 'null'], format: date, description: 'Необязательная дата окончания; не раньше сегодняшнего дня'}
     CounterpartyRequisitesIn:
       type: object
       additionalProperties: false
@@ -29007,6 +29470,7 @@ components:
         expired_count: {type: integer, minimum: 0, description: Действующих предложений с истёкшим сроком цены}
         expiring_count: {type: integer, minimum: 0, description: Срок цены истекает в ближайшие 14 дней}
         nearest_valid_until: {type: [string, 'null'], format: date}
+        do_not_work: {type: boolean, description: 'Х-8: с поставщиком не работаем — действует отметка «Не работать»'}
         contact_person: {type: string}
         phone: {type: string}
         email: {type: string}

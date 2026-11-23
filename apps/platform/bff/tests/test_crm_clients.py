@@ -11,7 +11,14 @@ import pytest
 
 from tests.backends import Backends
 from tests.conftest import ContractChecker, Web
-from tests.crm_leads_support import LETTER_ID, CrmLeadsFake, client_detail, deal, invitation_out
+from tests.crm_leads_support import (
+    LETTER_ID,
+    CrmLeadsFake,
+    client_detail,
+    client_item,
+    deal,
+    invitation_out,
+)
 
 BASE = "/api/v1/crm/clients"
 
@@ -53,6 +60,7 @@ async def test_list_puts_recently_active_first(
         "open_requests": 2,
         "last_activity_at": "2026-10-27T08:48:00Z",
         "handoff_status": "done",
+        "do_not_work": False,
     }
     assert items[2]["in_erp"] is False
     assert crm.params("GET", "clients") == {"q": "Демо"}
@@ -342,3 +350,34 @@ async def test_card_shows_mail_not_configured_in_words(
     invitation = response.json()["invitation"]
     assert (invitation["status"], invitation["error_text"]) == ("failed", reason)
     assert invitation["can_resend"] is True
+
+
+# --- Х-8: «Не работать» из ERP в карточке и списке клиента ---------------------------------------
+
+MARK = {
+    "reason": "Спор по оплате",
+    "set_by": "Менеджер Демо",
+    "set_at": "2026-11-23T09:30:00Z",
+    "until": "2026-12-31",
+}
+
+
+async def test_card_and_list_show_the_do_not_work_mark_from_erp(
+    web: Web, crm: CrmLeadsFake, check: ContractChecker
+) -> None:
+    crm.answer("GET", "clients/12", body=client_detail(12, do_not_work=MARK))
+    crm.answer("GET", "clients", body=[client_item(12, do_not_work=MARK), client_item(13)])
+    await web.login(["DIRECTOR"])
+
+    card = check(await web.client.get(f"{BASE}/12"), "/crm/clients/{id}", "get").json()
+    assert card["do_not_work"] == MARK
+    items = check(await web.client.get(BASE), "/crm/clients", "get").json()["items"]
+    assert {row["id"]: row["do_not_work"] for row in items} == {12: True, 13: False}
+
+
+async def test_card_without_the_mark_has_none(
+    web: Web, crm: CrmLeadsFake, check: ContractChecker
+) -> None:
+    await web.login(["DIRECTOR"])
+    card = check(await web.client.get(f"{BASE}/12"), "/crm/clients/{id}", "get").json()
+    assert card["do_not_work"] is None

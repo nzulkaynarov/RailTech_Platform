@@ -18,6 +18,8 @@ from master_data.models import UnitOfMeasure
 
 pytestmark = pytest.mark.django_db
 
+MXIK = "73020010001000001"
+
 
 @pytest.fixture
 def seller_world(db):
@@ -74,6 +76,7 @@ def test_owner_publishes_once_the_card_is_complete(seller_world):
         uom=seller_world["uom"],
         category=seller_world["category"],
         hs_code="7302300000",
+        mxik_code=MXIK,
     )
     assert completeness(card)["is_publishable"] is True
 
@@ -90,6 +93,7 @@ def test_a_stranger_cannot_publish_someone_elses_card(seller_world):
         uom=seller_world["uom"],
         category=seller_world["category"],
         hs_code="7302300000",
+        mxik_code=MXIK,
     )
     stranger = CustomUser.objects.create_user(email="x@pub.test", username="x@pub.test", password="pw")
 
@@ -106,6 +110,7 @@ def test_bulk_publish_reports_line_by_line(seller_world):
         uom=seller_world["uom"],
         category=seller_world["category"],
         hs_code="7302300000",
+        mxik_code=MXIK,
     )
     incomplete = _card(seller_world, name="Полуфабрикат")
 
@@ -128,6 +133,7 @@ def test_requirements_depend_on_the_domain(seller_world):
         domain_type=services,
         uom=seller_world["uom"],
         category=service_category,
+        mxik_code=MXIK,
     )
 
     assert completeness(card)["is_publishable"] is True, "услуге хватает имени, единицы и категории"

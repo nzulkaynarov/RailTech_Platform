@@ -173,6 +173,7 @@ class TestReviewDoesNotHang:
         from master_data.models import UnitOfMeasure
 
         card.hs_code = "8708301009"
+        card.mxik_code = "87083010001000000"
         card.uom = UnitOfMeasure.objects.get_or_create(code="796", defaults={"name": "шт"})[0]
         card.save()
 

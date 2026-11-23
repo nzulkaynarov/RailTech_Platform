@@ -7,6 +7,7 @@ import type { CounterpartyAccount } from "./counterpartyAccount";
 import type { CounterpartyCardPerson } from "./counterpartyCardPerson";
 import type { CounterpartyRef } from "./counterpartyRef";
 import type { CounterpartyRoles } from "./counterpartyRoles";
+import type { DoNotWork } from "./doNotWork";
 
 /**
  * Карточка контрагента — одна компания во всех ролях (ADR-0028)
@@ -34,4 +35,6 @@ export interface CounterpartyCard {
   accounts_masked: boolean;
   /** Бренды, которые выпускает компания */
   brands: CounterpartyRef[];
+  /** Х-8: отметка «Не работать» — причина, кто и когда поставил, срок; нет — работаем */
+  do_not_work?: DoNotWork | null;
 }

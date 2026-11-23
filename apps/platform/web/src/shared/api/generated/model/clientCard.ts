@@ -10,6 +10,7 @@ import type { ClientInvitation } from "./clientInvitation";
 import type { ClientLeadLink } from "./clientLeadLink";
 import type { ClientPartnerRequest } from "./clientPartnerRequest";
 import type { ClientRequestRow } from "./clientRequestRow";
+import type { DoNotWork } from "./doNotWork";
 
 export interface ClientCard {
   id: number;
@@ -30,4 +31,6 @@ export interface ClientCard {
   partner_requests: ClientPartnerRequest[];
   /** Части карточки, которые CRM не отдала (`unavailable`) — экран показывает плашку в разделе */
   sources: ClientCardSources;
+  /** Х-8: отметка «Не работать» компании (из ERP снимком `company.updated`) — полоса «С компанией не работаем»; нет — работаем */
+  do_not_work?: DoNotWork | null;
 }

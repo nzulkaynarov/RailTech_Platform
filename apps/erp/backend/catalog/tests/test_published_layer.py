@@ -98,6 +98,7 @@ def world(db, grant):
 
 def make_card(world, *, name="Подшипник 6205", published=True, service=False, offer=True, **fields):
     fields.setdefault("hs_code", "8482100000")
+    fields.setdefault("mxik_code", "84821000001000000")
     product = Product.objects.create(
         name=name,
         description="Шариковый радиальный",
@@ -304,12 +305,14 @@ def test_cabinet_visibility_requires_list_price(world):
 
 
 def test_threshold_policy_allows_publishing_below_full_completeness(world):
-    product = make_card(world, published=False, hs_code="")
+    product = make_card(world, published=False)
+    Product.objects.filter(pk=product.pk).update(category=None)
+    product = Product.objects.get(pk=product.pk)
     assert completeness(product)["is_publishable"] is False, "по умолчанию нужно всё обязательное"
 
-    set_company_policy(world, catalog_publish_threshold=75)
+    set_company_policy(world, catalog_publish_threshold=80)
     report = completeness(product)
-    assert report["percent"] == 75 and report["threshold"] == 75
+    assert report["percent"] == 80 and report["threshold"] == 80
     assert report["is_publishable"] is True
 
 
@@ -321,10 +324,11 @@ def test_name_is_required_whatever_the_threshold(world):
 
 
 def test_publish_endpoint_honours_threshold(world):
-    product = make_card(world, published=False, hs_code="")
+    product = make_card(world, published=False)
+    Product.objects.filter(pk=product.pk).update(category=None)
     url = f"/api/v1/catalog/products/{product.pk}/publish/"
     assert world["staff_client"].post(url).status_code == 400
-    set_company_policy(world, catalog_publish_threshold=75)
+    set_company_policy(world, catalog_publish_threshold=80)
     assert world["staff_client"].post(url).status_code == 200
 
 

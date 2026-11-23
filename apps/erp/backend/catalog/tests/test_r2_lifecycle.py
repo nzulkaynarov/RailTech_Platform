@@ -90,6 +90,7 @@ def _complete_kwargs(world):
         "uom": world["uom"],
         "category": world["category"],
         "hs_code": "7318159000",
+        "mxik_code": "73181590001000000",
     }
 
 

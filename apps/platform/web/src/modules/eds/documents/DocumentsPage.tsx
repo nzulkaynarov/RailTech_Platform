@@ -20,6 +20,7 @@ import { useFormat } from "../../../shared/lib/useFormat";
 import { DocNumber } from "../../../shared/ui/DocNumber";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { DataTable, type DataColumn } from "../../../shared/ui/DataTable/DataTable";
+import { useSortParam } from "../../../shared/ui/DataTable/sort";
 import { QueryState } from "../../../shared/ui/FormParts";
 import { LinkButton } from "../../../shared/ui/LinkButton";
 import { MoneyText } from "../../../shared/ui/MoneyText";
@@ -34,6 +35,9 @@ import "./documents.css";
 import { FilterBar, FilterField } from "../../../shared/ui/FilterBar";
 
 const PAGE_SIZE = 25;
+
+/** Порядок щелчком по шапке (Х-15б): ключи те же, что принимает BFF `sort` (белый список там и в EDS) */
+const DOCUMENT_SORT_KEYS = ["number", "subject", "status", "amount", "created"] as const;
 /**
  * Ширины колонок по типу (platform-frontend.md §4.2): номер (тип документа — второй строкой, как в «На согласовании»),
  * тема (гибкая), статус, сумма, срок, [ответственный — в реестре «Все»], создан, действие. На 1440 с открытым подменю —
@@ -270,6 +274,7 @@ function DocumentsTable({
     {
       id: "number",
       header: t("list.columns.number"),
+      sortKey: "number",
       width: widths.number,
       cell: (row) => (
         <>
@@ -290,6 +295,7 @@ function DocumentsTable({
     {
       id: "subject",
       header: t("list.columns.subject"),
+      sortKey: "subject",
       width: null,
       cellClassName: "pf-docs-subject",
       cell: (row) => <SubjectCell row={row} params={params} selected={selected === row.id} />,
@@ -297,12 +303,14 @@ function DocumentsTable({
     {
       id: "status",
       header: t("list.columns.status"),
+      sortKey: "status",
       width: widths.status,
       cell: (row) => <RowStatus row={row} />,
     },
     {
       id: "amount",
       header: t("list.columns.amount"),
+      sortKey: "amount",
       width: widths.amount,
       numeric: true,
       cell: (row) => <Amount row={row} />,
@@ -329,6 +337,7 @@ function DocumentsTable({
     {
       id: "created",
       header: t("list.columns.created"),
+      sortKey: "created",
       width: widths.created,
       cellClassName: "pf-num",
       cell: (row) => date(row.created_at),
@@ -347,6 +356,7 @@ function DocumentsTable({
       scrollLabel={t("list.tableScroll")}
       className="pf-docs-table"
       columns={columns}
+      sortMode="server"
       rows={items}
       rowKey={(row) => `${row.kind}-${row.id}`}
       rowAttrs={(row) => ({ "data-selected": selected === row.id })}
@@ -428,7 +438,9 @@ export function DocumentsPage() {
   const docId = parseDocumentId(params.get("doc"));
 
   // Страницы списка идут курсором: стек пройденных курсоров; смена условий возвращает на первую страницу.
-  const filterKey = `${box ?? ""}|${scope}|${tab}|${status}`;
+  // Порядок щелчком по шапке (Х-15б) — часть условий: курсор привязан к порядку, смена порядка начинает с первой страницы.
+  const sort = useSortParam(DOCUMENT_SORT_KEYS);
+  const filterKey = `${box ?? ""}|${scope}|${tab}|${status}|${sort ?? ""}`;
   const [paging, setPaging] = useState<{ key: string; stack: string[] }>({ key: "", stack: [] });
   const cursors = paging.key === filterKey ? paging.stack : [];
   const setCursors = (change: (stack: string[]) => string[]) => {
@@ -448,10 +460,11 @@ export function DocumentsPage() {
       ...(kinds ? { kind: kinds } : {}),
       ...(statusFilter ? { status: statusFilter } : {}),
       ...(stage ? { stage } : {}),
+      ...(sort ? { sort } : {}),
       limit: PAGE_SIZE,
       ...(cursor ? { cursor } : {}),
     }),
-    [scope, kinds, statusFilter, stage, cursor],
+    [scope, kinds, statusFilter, stage, sort, cursor],
   );
   const list = useListEdsDocuments(query);
   // Колонки, подписи и подзаголовок — по реестру, к которому относятся строки на экране (UX-1c, S8)

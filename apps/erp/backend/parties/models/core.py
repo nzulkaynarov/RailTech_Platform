@@ -255,6 +255,21 @@ class Company(models.Model):
     )
     archived_reason = models.TextField(blank=True, default="", verbose_name=_("Причина архивации"))
 
+    # ── Не работать (план Х-8) ──────────────────────────────────────────────────────────────────
+    # Отметка — факты: когда, кем и почему поставлена. Действует, пока не снята и не вышла `do_not_work_until`;
+    # «действует ли» считает `parties.do_not_work.is_marked`, отдельного флага нет (статус из фактов).
+    do_not_work_at = models.DateTimeField(null=True, blank=True, verbose_name=_("Не работать с"))
+    do_not_work_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+        verbose_name=_("Кто отметил «Не работать»"),
+    )
+    do_not_work_reason = models.TextField(blank=True, default="", verbose_name=_("Причина «Не работать»"))
+    do_not_work_until = models.DateField(null=True, blank=True, verbose_name=_("«Не работать» до"))
+
     objects = models.Manager.from_queryset(CompanyQuerySet)()
 
     class Meta:

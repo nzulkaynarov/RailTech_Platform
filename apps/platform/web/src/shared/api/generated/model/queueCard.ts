@@ -4,7 +4,7 @@
  */
 
 export interface QueueCard {
-  /** `letters_without_resolution`, `quotes_to_approve`, `memos_to_approve`, `projects_in_work`, `leads_without_answer`… */
+  /** `letters_without_resolution`, `quotes_to_approve`, `memos_to_approve`, `projects_in_work`, `leads_without_answer`, `zones_without_responsible` (держателям `company.settings`, пока есть зона без ответственного)… */
   key: string;
   label: string;
   /** @minimum 0 */

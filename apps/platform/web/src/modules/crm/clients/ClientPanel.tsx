@@ -26,6 +26,7 @@ import {
 import type { StageOrLost } from "../../../shared/lib/statuses";
 import { useFormat } from "../../../shared/lib/useFormat";
 import { DefinitionList } from "../../../shared/ui/DefinitionList";
+import { DoNotWorkStrip } from "../../../shared/ui/DoNotWorkStrip";
 import { DocNumber } from "../../../shared/ui/DocNumber";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { ErrorNote } from "../../../shared/ui/FormParts";
@@ -385,6 +386,8 @@ function Body({
           </span>
         </div>
       )}
+      {/* внутри карточки контрагента полоса уже над вкладками — её дают данные ERP */}
+      {embedded ? null : <DoNotWorkStrip mark={card.do_not_work} />}
       <Partial card={card} />
       <PartnerRequests card={card} canWrite={canWrite} />
       <DefinitionList
@@ -407,7 +410,7 @@ function Body({
           },
         ]}
       />
-      {canWrite ? (
+      {canWrite && !card.do_not_work ? (
         <div>
           <LinkButton
             type="primary"
@@ -416,6 +419,8 @@ function Body({
             {t("clients:card.newRequest")}
           </LinkButton>
         </div>
+      ) : canWrite ? (
+        <p className="pf-hint">{t("clients:counterparty.doNotWork.newRequestClosed")}</p>
       ) : null}
 
       <section className="pf-fp-block" aria-labelledby={`pf-client-${String(card.id)}-contacts`}>

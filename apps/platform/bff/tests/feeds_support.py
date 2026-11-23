@@ -75,6 +75,8 @@ class FeedBackends:
                     "last_error_kind": None,
                 },
             },
+            # ЕВ-З: сводка зон для карточки на Главной — ноль, пока тест не поставит число
+            "crm_zones": {"zones_total": 0, "without_responsible": 0, "with_problems": 0},
             # Просроченные заказы поставщикам (ERP `stock/overdue`, D2-2): пусто, пока нет строк
             "overdue": {"results": []},
             # Дела снабженца (ERP `stock/tasks`, план 0.7): пусто, пока нет строк
@@ -119,6 +121,9 @@ class FeedBackends:
             ),
             "tickets": self._crm("crm_tickets", router.get(f"{CRM_URL}/api/v1/staff-tickets")),
             "mail": self._crm("crm_mail", router.get(f"{CRM_URL}/api/v1/inbound-mail")),
+            "zones": self._crm(
+                "crm_zones", router.get(f"{CRM_URL}/api/v1/responsibility-zones/summary")
+            ),
         }
         self.crm_read_status = 204
         self.crm_read = router.post(

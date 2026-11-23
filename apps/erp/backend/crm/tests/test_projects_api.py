@@ -265,3 +265,17 @@ def test_done_project_reports_the_done_step(pw):  # noqa: F811
     assert row["step"] == "DONE" and row["client_status"] == "done"
     deal = projects.project_queryset().get(pk=pw.deal.pk)
     assert projects.project_is_done(deal)
+
+
+def test_card_carries_the_do_not_work_mark_and_keeps_documents_in_work(pw):  # noqa: F811
+    """Х-8: отметка компании — полоса в карточке; договор и КП в работе не отменяются."""
+    from portal.desk.service_counterparty import clear_do_not_work, set_do_not_work
+
+    contract_in(pw, S.PENDING_CLIENT)
+    assert _card(pw.director, pw.deal.id).json()["do_not_work"] is None
+    set_do_not_work(pw.deal.company, {"reason": "Спор по оплате"}, actor=pw.director)
+    body = _card(pw.director, pw.deal.id).json()
+    assert body["do_not_work"]["reason"] == "Спор по оплате" and body["do_not_work"]["set_by"]
+    assert body["contract"]["status"] == "project" and body["quote"] is not None
+    clear_do_not_work(pw.deal.company, actor=pw.director)
+    assert _card(pw.director, pw.deal.id).json()["do_not_work"] is None
