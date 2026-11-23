@@ -33,7 +33,10 @@ describe('«Новый запрос»: черновик переживает у�
     await heading('Заявки');
     await router.navigate('/requests/new');
     await heading('Новая заявка');
-
+    // Х-18: черновик предлагается, а не подставляется молча
+    expect(screen.getByLabelText('Что нужно')).toHaveValue('');
+    expect(screen.getByText(/^У вас есть черновик от /)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Продолжить' }));
     expect(screen.getByLabelText('Что нужно')).toHaveValue('Кабель для цеха');
     expect(screen.getByLabelText('Строка 1')).toHaveValue('Кабель ВВГнг 3×2,5');
     expect(screen.getByLabelText('Количество')).toHaveValue('2,5');
@@ -77,6 +80,43 @@ describe('«Новый запрос»: черновик переживает у�
     await user.click(screen.getByRole('button', { name: 'Запросить' }));
     await heading('Новая заявка');
     expect(screen.getByLabelText('Что нужно')).toHaveValue('Нужна позиция из каталога: Подшипник 6205-2RS');
+  });
+
+  it('Х-18: сохранённый черновик не подставляется молча — предложение с датой, до выбора он цел', async () => {
+    window.sessionStorage.setItem(KEY, JSON.stringify({ summary: 'Кабель', lines: [], attachments: [], savedAt: Date.now() }));
+    signedIn();
+    const user = userEvent.setup();
+    renderApp('/requests/new');
+    await heading('Новая заявка');
+    expect(screen.getByText(/^У вас есть черновик от /)).toBeInTheDocument();
+    expect(screen.getByLabelText('Что нужно')).toHaveValue('');
+    // форма может быть дополнена, но пока выбор не сделан, черновик в хранилище не затирается
+    await user.type(screen.getByLabelText('Что нужно'), 'Другое');
+    expect(loadRequestDraft(KEY)?.summary).toBe('Кабель');
+  });
+
+  it('Х-18: «Начать заново» стирает черновик и убирает предложение', async () => {
+    window.sessionStorage.setItem(KEY, JSON.stringify({ summary: 'Кабель', lines: [], attachments: [], savedAt: Date.now() }));
+    signedIn();
+    const user = userEvent.setup();
+    renderApp('/requests/new');
+    await heading('Новая заявка');
+    await user.click(screen.getByRole('button', { name: 'Начать заново' }));
+    expect(screen.queryByText(/^У вас есть черновик от /)).toBeNull();
+    expect(window.sessionStorage.getItem(KEY)).toBeNull();
+    expect(screen.getByLabelText('Что нужно')).toHaveValue('');
+  });
+
+  it('Х-18: «Продолжить» поднимает черновик, предложение исчезает, правки снова сохраняются', async () => {
+    window.sessionStorage.setItem(KEY, JSON.stringify({ summary: 'Кабель', lines: [], attachments: [], savedAt: Date.now() }));
+    signedIn();
+    const user = userEvent.setup();
+    renderApp('/requests/new');
+    await heading('Новая заявка');
+    await user.click(screen.getByRole('button', { name: 'Продолжить' }));
+    expect(screen.queryByText(/^У вас есть черновик от /)).toBeNull();
+    await user.type(screen.getByLabelText('Что нужно'), ' 5 км');
+    expect(loadRequestDraft(KEY)?.summary).toBe('Кабель 5 км');
   });
 
   it('битый черновик в хранилище игнорируется', async () => {
@@ -124,7 +164,8 @@ describe('«Новый запрос»: черновик переживает у�
     await heading('Заявки');
     await router.navigate('/requests/new');
     await heading('Новая заявка');
-
+    expect(screen.queryByText('spec.pdf')).toBeNull();
+    await user.click(screen.getByRole('button', { name: 'Продолжить' }));
     expect(screen.getByText('spec.pdf')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Отправить заявку' }));
     await heading(/^Заявка ЗВ-/);
@@ -156,8 +197,10 @@ describe('«Новый запрос»: черновик переживает у�
   it('прежний формат без файлов и времени читается', async () => {
     window.sessionStorage.setItem(KEY, JSON.stringify({ summary: 'Кабель', lines: [{ text: 'Болт', quantity: '', unit: '' }] }));
     signedIn();
+    const user = userEvent.setup();
     renderApp('/requests/new');
     await heading('Новая заявка');
+    await user.click(screen.getByRole('button', { name: 'Продолжить' }));
     expect(screen.getByLabelText('Что нужно')).toHaveValue('Кабель');
   });
 
@@ -170,6 +213,7 @@ describe('«Новый запрос»: черновик переживает у�
     const user = userEvent.setup();
     renderApp('/requests/new');
     await heading('Новая заявка');
+    await user.click(screen.getByRole('button', { name: 'Продолжить' }));
     expect(screen.getByText('old.pdf')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Отправить заявку' }));
     expect(await screen.findByText('Загруженный файл не найден — загрузите его ещё раз.')).toBeInTheDocument();
