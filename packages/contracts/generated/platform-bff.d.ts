@@ -3878,7 +3878,7 @@ export interface paths {
     put?: never;
     /**
      * Отправить приглашение снова
-     * @description Повтор письма-приглашения сотруднику со статусом «Приглашён» (CRM `/users/{id}/invite`). CRM выдаёт новый временный пароль только при отправке письма: без подключённой почты пароль не меняется и ответ — 409 `CONFLICT` с `details.invite = not_sent`. Раздел `admin` — полный.
+     * @description Повтор письма-приглашения сотруднику со статусом «Приглашён» (CRM `/users/{id}/invite`). В письме одноразовая ссылка «Задайте пароль» на 72 часа, пароля в нём нет; новая ссылка гасит прежние, прежний пароль закрывается. Без подключённой почты ничего не меняется и ответ — 409 `CONFLICT` с `details.invite = not_sent`; больше трёх ссылок в час на сотрудника — 429 `TOO_MANY_REQUESTS`. Раздел `admin` — полный.
      */
     post: operations["resendInvite"];
     delete?: never;
@@ -3958,8 +3958,8 @@ export interface paths {
     get?: never;
     put?: never;
     /**
-     * Сбросить пароль сотрудника и отправить временный по почте
-     * @description CRM `/users/{id}/reset-password/email`: новый временный пароль, письмо через коннектор «Почта», сессии сотрудника завершаются, при входе он обязан сменить пароль (статус «Приглашён»). Пароль в ответе не возвращается. Раздел `admin` — полный. Себе сбросить нельзя — 409 `CONFLICT` с `details.reason = self_reset` (в CRM запрос не уходит; свой пароль — «Сменить пароль» в меню аватара). Почта не подключена — 409 `NOT_CONFIGURED`, пароль не меняется; нет ключа шифрования секретов — 409 `SECRETS_KEY_MISSING`.
+     * Сбросить пароль сотрудника и отправить ссылку по почте
+     * @description CRM `/users/{id}/reset-password/email`: письмо через коннектор «Почта» с одноразовой ссылкой «Задайте пароль» на час (пароля в письме нет), прежний пароль закрывается, сессии сотрудника завершаются (статус «Приглашён», пока он не задаст новый). Пароль в ответе не возвращается. Больше трёх ссылок в час на сотрудника — 429 `TOO_MANY_REQUESTS`. Раздел `admin` — полный. Себе сбросить нельзя — 409 `CONFLICT` с `details.reason = self_reset` (в CRM запрос не уходит; свой пароль — «Сменить пароль» в меню аватара). Почта не подключена — 409 `NOT_CONFIGURED`, пароль не меняется; нет ключа шифрования секретов — 409 `SECRETS_KEY_MISSING`.
      */
     post: operations["resetEmployeePasswordByEmail"];
     delete?: never;
@@ -24765,6 +24765,7 @@ export interface operations {
           "application/json": components["schemas"]["Error"];
         };
       };
+      429: components["responses"]["TooManyRequests"];
       /** @description `BACKEND_UNAVAILABLE` */
       503: {
         headers: {
@@ -24968,6 +24969,7 @@ export interface operations {
           "application/json": components["schemas"]["Error"];
         };
       };
+      429: components["responses"]["TooManyRequests"];
       /** @description `BACKEND_UNAVAILABLE` */
       503: {
         headers: {

@@ -12,6 +12,9 @@ from datetime import datetime, timedelta
 from typing import Final, Literal
 
 TOKEN_TTL: Final = timedelta(minutes=60)
+# Ссылка «Задайте пароль» из приглашения (ДВ-7) живёт дольше сброса: почту могут открыть через
+# пару дней. Один срок на всех сотрудников, не по ролям.
+INVITE_TTL: Final = timedelta(hours=72)
 # Не больше трёх ссылок в час на одну учётную запись: защита от заспамленной почты сотрудника.
 MAX_REQUESTS_PER_HOUR: Final = 3
 WINDOW: Final = timedelta(hours=1)
