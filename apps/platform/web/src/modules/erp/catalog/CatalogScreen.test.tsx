@@ -239,17 +239,12 @@ describe("Номенклатура: бригады", () => {
 });
 
 describe("Номенклатура: справочники", () => {
-  it("директор видит курсы в налогах и валютах и вводит курс USD вручную", async () => {
+  it("директор видит курсы в налогах и валютах; кнопки второго ввода курса у списка нет (ввод — в форме страницы)", async () => {
     signIn("director@demo.example");
     renderAt("/admin/taxes");
     expect((await screen.findAllByText("Вручную")).length).toBeGreaterThan(0);
-    fireEvent.click(await screen.findByRole("button", { name: "Ввести курс USD" }));
-    const form = await findModal("Ввести курс USD на дату");
-    fireEvent.change(await within(form).findByLabelText("Курс, сум за 1 USD"), {
-      target: { value: "12700" },
-    });
-    fireEvent.click(await within(form).findByRole("button", { name: "Сохранить курс" }));
-    await modalClosed("Ввести курс USD на дату");
+    expect(screen.queryByRole("button", { name: "Ввести курс USD" })).toBeNull();
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 
   it("коды ТН ВЭД: поиск, добавление и повтор кода — конфликт словами", async () => {

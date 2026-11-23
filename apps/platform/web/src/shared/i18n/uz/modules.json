@@ -310,7 +310,7 @@
       "link": "Taqvim havolasi",
       "filter": "Nimani ko‘rsatish",
       "kinds": {
-        "tasks": "Topshiriqlar",
+        "tasks": "Boşqa topşiriqlar",
         "documents": "Hujjatlar",
         "invoices": "Hisoblar",
         "deliveries": "Yetkazmalar"
@@ -321,7 +321,6 @@
       "next": "Oldinga"
     },
     "inbox": {
-      "call": "Qo‘ng‘iroq",
       "search": "Muhokamani topish",
       "message": "Xabar yozish",
       "noData": "Ma’lumotlar shu yerda paydo bo‘ladi",
@@ -334,11 +333,8 @@
       "filter": "Kimni ko‘rsatish",
       "search": "Odamni topish",
       "show": "Ko‘rsatish",
-      "write": "Yozish",
-      "call": "Qo‘ng‘iroq",
       "phone": "Telefon",
       "email": "Pochta",
-      "noData": "Ma’lumotlar shu yerda paydo bo‘ladi",
       "kinds": {
         "all": "Hammasi",
         "employees": "Xodimlar",
@@ -355,7 +351,11 @@
         "company": "Kompaniya"
       },
       "showFor": "Telefon va pochtani ko‘rsatish: {{name}}",
-      "revealFailed": "Kontaktlar ko‘rsatilmadi: jurnal mavjud emas, birozdan so‘ng qayta urinib ko‘ring."
+      "revealFailed": "Kontaktlar ko‘rsatilmadi: jurnal mavjud emas, birozdan so‘ng qayta urinib ko‘ring.",
+      "empty": {
+        "title": "Heç kim topilmadi",
+        "text": "Filtrni yoki qidiruvni özgartiring"
+      }
     }
   },
   "admin": {

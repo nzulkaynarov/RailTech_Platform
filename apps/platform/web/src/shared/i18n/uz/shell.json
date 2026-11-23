@@ -1,7 +1,5 @@
 {
   "docTitle": "{{page}} — {{name}}",
-  "soon": "Yaqin yangilanishda paydo bo‘ladi",
-  "soonPilot": "Pilotgacha paydo bo‘ladi",
   "skip": "Tarkibga o‘tish",
   "loading": "Yuklanmoqda…",
   "rail": {
@@ -257,7 +255,7 @@
     "sectionTag": "Bo‘lim",
     "keywords": {
       "erp": {
-        "calc": "kalkulyator, tannarx",
+        "requests": "kalkulyator, tannarx",
         "catalog": "ma’lumotnomalar, nomenklatura"
       }
     },
@@ -269,13 +267,10 @@
     "title": "Yaratish",
     "search": "Topish: xat, lid, ariza…",
     "frequent": "Ko‘p yaratasiz",
-    "soon": "tez orada",
-    "withChats": "chatlar bilan",
     "empty": "Hech narsa topilmadi",
     "groups": {
       "sales": "Savdo",
-      "documents": "Hujjatlar",
-      "talk": "Muloqot"
+      "documents": "Hujjatlar"
     },
     "kinds": {
       "lead": "Lid",
@@ -283,9 +278,7 @@
       "calc": "Hisob-kitob",
       "incoming": "Kiruvchi hujjat",
       "letter": "Chiquvchi xat",
-      "internal": "Ichki hujjat",
-      "message": "Xabar",
-      "assignment": "Topshiriq"
+      "internal": "Ichki hujjat"
     },
     "hints": {
       "lead": "Yangi murojaat: qo‘ng‘iroq, xat, tavsiya",
@@ -293,9 +286,7 @@
       "calc": "Ariza, fayl yoki oldingi o‘xshash hisob bo‘yicha",
       "incoming": "Kompaniyaga kelgan xatni ro‘yxatga olish",
       "letter": "Kompaniya blankasida, raqam va imzo bilan",
-      "internal": "Xizmat xati, ariza, hisobot",
-      "message": "Hamkasbga yozish",
-      "assignment": "Muddat va ijrochi bilan vazifa"
+      "internal": "Xizmat xati, ariza, hisobot"
     }
   }
 }

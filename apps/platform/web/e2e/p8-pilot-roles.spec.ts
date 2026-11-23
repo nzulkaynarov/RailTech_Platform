@@ -152,10 +152,14 @@ test.describe("P8: роли пилота и регистрация входящ�
       await expect(row).toContainText("ГНИ Демо-района");
       await shot(page, "director-queue");
 
-      await spaGoto(page, "/eds/inbox/%D0%92%D0%A5-108%2F26?panel=open&tab=resolution");
+      // ЕД-7: вид и способ поступления — во вкладке «Сведения»; старая метка окна «resolution» ведёт к форме в центре и
+      // снимает параметры окна, поэтому сведения открываем своей меткой, а форму — по чистому адресу карточки
+      await spaGoto(page, "/eds/inbox/%D0%92%D0%A5-108%2F26?panel=open&tab=facts");
       await expect(page.getByRole("heading", { level: 1, name: /ВХ-108\/26/ })).toBeVisible();
       await expect(page.getByText("Требование или уведомление ГНК")).toBeVisible();
       await expect(page.getByText("Кабинет налогоплательщика my.soliq")).toBeVisible();
+      await spaGoto(page, "/eds/inbox/%D0%92%D0%A5-108%2F26");
+      await expect(page.getByRole("heading", { level: 1, name: /ВХ-108\/26/ })).toBeVisible();
       if (width >= 768) {
         // P8b: требование ГНК — путь делопроизводства, резолюция трёх типов
         await expect(page.getByRole("radio", { name: /К исполнению/ })).toBeChecked();

@@ -18,17 +18,8 @@
   text-decoration: underline;
 }
 
-.pf-people-card,
-.pf-people-actions {
-  display: flex;
-  gap: 16px;
-}
-
 .pf-people-card {
+  display: flex;
   flex-direction: column;
-}
-
-.pf-people-actions {
-  flex-wrap: wrap;
-  gap: 8px;
+  gap: 16px;
 }

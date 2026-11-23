@@ -1,5 +1,5 @@
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
-import { HttpResponse, http } from "msw";
+import { HttpResponse, delay, http } from "msw";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { endSession } from "../../../mocks/mockSession";
@@ -94,5 +94,38 @@ describe("Органайзер · Люди", () => {
       "href",
       "mailto:partner@demo.example",
     );
+  });
+
+  it("список — в общей рамке: карточка, скелетон на загрузке, пустое состояние словами", async () => {
+    server.use(
+      http.get("*/eds/staff", async () => {
+        await delay(150);
+        return HttpResponse.json({ items: [] });
+      }),
+      http.get("*/crm/leads", () => HttpResponse.json({ items: [], total: 0 })),
+      http.get("*/people/contacts", () => HttpResponse.json({ items: [], total: 0 })),
+    );
+    signInAs("all@demo.example");
+    renderApp("/chats/contacts");
+
+    // пока грузится — скелетон внутри карточки, а не голый блок
+    await screen.findByRole("heading", { level: 1, name: "Люди" });
+    const frame = document.querySelector(".ant-card");
+    expect(frame?.querySelector("[data-pf-skeleton]")).not.toBeNull();
+
+    // нет людей — одна строка словами в той же рамке, без «Данные появятся здесь»
+    expect(await screen.findByText("Никого не найдено")).toBeVisible();
+    expect(frame?.contains(screen.getByText("Никого не найдено"))).toBe(true);
+    expect(screen.queryByText("Данные появятся здесь")).toBeNull();
+  });
+
+  it("таблица в рамке карточки на общем DataTable; кнопок без действия («Написать», «Позвонить») нет", async () => {
+    signInAs("all@demo.example");
+    renderApp("/chats/contacts");
+
+    fireEvent.click(await screen.findByRole("button", { name: "Демо Клиентов" }));
+    const card = await screen.findByRole("dialog", { name: "Демо Клиентов" });
+    expect(within(card).queryByRole("button", { name: /Написать|Позвонить/ })).toBeNull();
+    expect(document.querySelector(".ant-card table.pf-dt-table")).not.toBeNull();
   });
 });

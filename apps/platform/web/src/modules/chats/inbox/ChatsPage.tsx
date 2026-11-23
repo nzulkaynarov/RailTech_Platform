@@ -12,7 +12,6 @@ import { useTranslation } from "react-i18next";
 
 import { useDocumentTitle } from "../../../shared/lib/useDocumentTitle";
 import { PageHeader } from "../../../shared/ui/PageHeader";
-import { SoonButton } from "../../../shared/ui/SoonButton";
 import "./chats.css";
 
 const GROUPS = ["objects", "direct"] as const;
@@ -26,7 +25,7 @@ export function ChatsPage() {
 
   return (
     <div className="pf-chats">
-      <PageHeader title={title} extra={<SoonButton>{t("modules:chats.inbox.call")}</SoonButton>} />
+      <PageHeader title={title} />
       <MainContainer>
         <Sidebar position="left">
           <Search placeholder={t("modules:chats.inbox.search")} disabled />

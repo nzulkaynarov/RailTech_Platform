@@ -3,27 +3,24 @@ import { canEdit } from "../access";
 
 /**
  * Виды окна «Создать» (план 2026-11-12 п. 0.1, docs/product/NAVIGATION.md): один реестр для окна и поиска ⌘K. Пункт
- * открывает форму, а не список; без адреса вид виден приглушённым и подписан, когда появится.
+ * открывает форму, а не список.
  */
-export type CreateGroup = "sales" | "documents" | "talk";
+export type CreateGroup = "sales" | "documents";
 
-export type CreateKindKey =
-  "lead" | "request" | "calc" | "incoming" | "letter" | "internal" | "message" | "assignment";
+export type CreateKindKey = "lead" | "request" | "calc" | "incoming" | "letter" | "internal";
 
 export interface CreateKind {
   key: CreateKindKey;
   group: CreateGroup;
   /** Нужен полный доступ хотя бы к одному разделу */
   resources: readonly string[];
-  /** Форма; нет — вид ещё не готов */
-  to?: string;
-  /** Когда появится, если адреса нет: ключ `shell:create.<soon>` */
-  soon?: "soon" | "withChats";
+  /** Форма, которую открывает вид: вида без действия в окне нет */
+  to: string;
   /** Слова для поиска ⌘K (строчные, три языка), кроме названия вида */
   keywords: readonly string[];
 }
 
-export const CREATE_GROUPS: readonly CreateGroup[] = ["sales", "documents", "talk"];
+export const CREATE_GROUPS: readonly CreateGroup[] = ["sales", "documents"];
 
 export const CREATE_KINDS: readonly CreateKind[] = [
   {
@@ -81,20 +78,6 @@ export const CREATE_KINDS: readonly CreateKind[] = [
       "hisobot",
     ],
   },
-  {
-    key: "message",
-    group: "talk",
-    resources: ["chats.internal"],
-    soon: "withChats",
-    keywords: ["сообщение", "написать", "message", "xabar"],
-  },
-  {
-    key: "assignment",
-    group: "talk",
-    resources: ["eds.inbox"],
-    soon: "withChats",
-    keywords: ["поручение", "задачу", "assignment", "topshiriq"],
-  },
 ];
 
 let freshCounter = 0;
@@ -134,11 +117,11 @@ export function countFrequent(key: CreateKindKey): void {
   }
 }
 
-/** Два вида, открытые хотя бы дважды, по убыванию — из доступных сотруднику и готовых. */
+/** Два вида, открытые хотя бы дважды, по убыванию — из доступных сотруднику. */
 export function frequentKinds(kinds: readonly CreateKind[]): CreateKind[] {
   const counts = readFrequent();
   return kinds
-    .filter((kind) => kind.to !== undefined && (counts[kind.key] ?? 0) >= 2)
+    .filter((kind) => (counts[kind.key] ?? 0) >= 2)
     .sort((a, b) => (counts[b.key] ?? 0) - (counts[a.key] ?? 0))
     .slice(0, 2);
 }

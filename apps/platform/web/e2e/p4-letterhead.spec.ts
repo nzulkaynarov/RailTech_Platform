@@ -203,7 +203,7 @@ test.describe("P4: письмо на бланке", () => {
     await pickAddressee(page, "Мирабад", "ГНИ Мирабадского района");
     await (await reveal(page.getByLabel("Почта адресата"))).fill("gni-mirabad@example.uz");
     await (
-      await reveal(page.getByLabel("Кому (должность и ФИО)"))
+      await reveal(page.getByLabel("Строка адресата"))
     ).fill("Начальнику ГНИ Мирабадского района Каримову А. А.");
     await fillLetterBody(page);
     await openStep(page, "Согласование и подпись");

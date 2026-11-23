@@ -1056,25 +1056,28 @@ describe("Категории и запросы", () => {
 });
 
 describe("Платформенные настройки", () => {
-  it("администратор меняет ставку НДС", async () => {
-    await openTab("platform", "admin@demo.example");
-    const vat = await screen.findByLabelText("Ставка НДС, %");
-    expect(vat).toHaveDisplayValue(/^12/);
-    expect(await screen.findByText(/1 USD = 12\s650,50 сум/)).toBeInTheDocument();
-    fireEvent.change(vat, { target: { value: "15" } });
-    fireEvent.click(await button("Сохранить настройки"));
-    expect(await screen.findByText("Сохранено")).toBeInTheDocument();
-    expect(readCompanyMock().platform.vat_rate).toBe("15.00");
+  it("«Налоги и валюты»: ставка НДС — одно поле (в новом КП), курс вводится одной формой (ЕВ-0)", async () => {
+    await openTab("platform", "director@demo.example");
+    expect(await screen.findByLabelText("Адрес поддержки")).toBeInTheDocument();
+    expect(await screen.findByLabelText("Ставка НДС в новом КП, %")).toBeInTheDocument();
+    // второго поля, которое расчёт не читает, нет
+    expect(screen.getAllByLabelText(/Ставка НДС/)).toHaveLength(1);
+    // ручной ввод курса — форма «Курс валюты к суму»; кнопки «Ввести курс USD» у списка курсов нет
+    expect(await screen.findByRole("form", { name: "Ручной ввод курса" })).toBeInTheDocument();
+    expect(screen.getAllByRole("form", { name: /курс/i })).toHaveLength(1);
+    await screen.findAllByText("Вручную");
+    expect(screen.queryByRole("button", { name: "Ввести курс USD" })).toBeNull();
+    expect(screen.getAllByRole("button", { name: /Сохранить курс|Ввести курс/ })).toHaveLength(1);
   });
 
-  it("директору ERP ставку менять не даёт — отказ словами, ставка прежняя", async () => {
+  it("директору ERP адрес поддержки менять не даёт — отказ словами, адрес прежний", async () => {
     await openTab("platform", "director@demo.example");
-    const vat = await screen.findByLabelText("Ставка НДС, %");
-    fireEvent.change(vat, { target: { value: "15" } });
+    const field = await screen.findByLabelText("Адрес поддержки");
+    fireEvent.change(field, { target: { value: "help@rt.uz" } });
     fireEvent.click(await button("Сохранить настройки"));
     // дождаться отказа: иначе ответ придёт уже в следующем тесте
     expect(await screen.findByRole("alert")).toBeInTheDocument();
-    expect(readCompanyMock().platform.vat_rate).toBe("12.00");
+    expect(readCompanyMock().platform.support_email).toBe("");
   });
 
   it("адрес поддержки задаётся здесь; неверный адрес — сообщение у поля (СЦ-3)", async () => {

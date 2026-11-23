@@ -45,6 +45,7 @@ import { PanelContent } from "./PanelContent";
 import {
   FORM_TAB,
   effectivePanelTab,
+  panelAvailable,
   panelHasContent,
   hasBuiltInTab,
   usePanelClaims,
@@ -103,11 +104,8 @@ export function AppShell() {
   // Окно само (по умолчанию на карточке) не открывается, пока экран ничего в него не положил (форма создания, загрузка, ошибка):
   // пустое окно с заглушкой нарушило бы ЕД-7. Явное открытие (`?panel=open`, кнопка) остаётся за пользователем.
   const explicitOpen = new URLSearchParams(location.search).get("panel") === "open";
-  const autoOpenBlocked =
-    !panelForced &&
-    !explicitOpen &&
-    forcedPanels.panelOpen &&
-    !panelHasContent(forcedPanels.tabs, claimedTabs, builtIn);
+  const hasContent = panelHasContent(forcedPanels.tabs, claimedTabs, builtIn);
+  const autoOpenBlocked = !panelForced && !explicitOpen && forcedPanels.panelOpen && !hasContent;
   const panelOpen = forcedPanels.panelOpen && !autoOpenBlocked;
   const panels = {
     ...forcedPanels,
@@ -394,7 +392,12 @@ export function AppShell() {
     ),
   };
 
-  const hasPanel = match !== undefined && sectionAllowed(match.section);
+  // Кнопки и окна нет там, где экран ничего в окно не кладёт и у раздела нет карточек объектов (форма «Новое письмо»,
+  // «Люди», списки настроек): строка таблицы окно не наполняет, пока экран сам не занял вкладку (`PanelPortal`).
+  const hasPanel =
+    match !== undefined &&
+    sectionAllowed(match.section) &&
+    panelAvailable(panelForced, hasContent, match.section.detail !== undefined);
   const menuHidden = viewport.mobile ? true : !panels.menuOpen;
   // Рядом — только булавкой и если помещается (≥ 1280 px и рабочей области ≥ 736 px); иначе поверх, выбор помнится.
   const panelDocked = panels.panelMode === "docked" && viewport.canDock && dockFits;

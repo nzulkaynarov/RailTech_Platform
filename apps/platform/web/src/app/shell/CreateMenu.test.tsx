@@ -33,6 +33,17 @@ describe("окно «Создать» (план 2026-11-12 п. 0.1)", () => {
     expect(within(dialog).getByText("Ничего не найдено")).toBeInTheDocument();
   });
 
+  it("каждый пункт — рабочая ссылка: пунктов «скоро» и «вместе с чатами» нет", async () => {
+    signInAs("all@demo.example");
+    renderApp("/dashboard/queue");
+    const dialog = await openCreate();
+    const links = within(dialog).getAllByRole("link");
+    expect(links.length).toBeGreaterThanOrEqual(6);
+    for (const link of links) expect(link.getAttribute("href")).toMatch(/^\//);
+    expect(dialog.querySelector("[aria-disabled='true']")).toBeNull();
+    expect(within(dialog).queryByText(/Сообщение|Поручение|скоро|вместе с чатами/)).toBeNull();
+  });
+
   it("«Часто у вас» — вид, открытый дважды", async () => {
     signInAs("manager@demo.example");
     renderApp("/dashboard/queue");

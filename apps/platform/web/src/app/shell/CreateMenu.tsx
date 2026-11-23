@@ -111,7 +111,7 @@ function CreateWindow({ kinds, onClose }: { kinds: CreateKind[]; onClose: () => 
             {frequent.map((kind) => (
               <Link
                 key={kind.key}
-                to={kind.to ?? "#"}
+                to={kind.to}
                 state={{ fresh: freshMark() }}
                 className="pf-create-chip pf-focusable"
                 onClick={() => {
@@ -154,17 +154,6 @@ function KindRow({ kind, onOpen }: { kind: CreateKind; onOpen: (kind: CreateKind
   const { t } = useTranslation("shell");
   const label = t(`create.kinds.${kind.key}`);
   const hint = t(`create.hints.${kind.key}`);
-  if (kind.to === undefined) {
-    return (
-      <div className="pf-create-kind pf-create-kind--soon" aria-disabled="true">
-        <span className="pf-create-kind-title">
-          {label}
-          <span className="pf-create-soon">{t(`create.${kind.soon ?? "soon"}`)}</span>
-        </span>
-        <span className="pf-create-kind-hint">{hint}</span>
-      </div>
-    );
-  }
   return (
     <Link
       to={kind.to}

@@ -134,15 +134,16 @@ describe("EDS · Создать документ: форма", () => {
   it("адресат письма — выбор из контрагентов: компания даёт ИНН и почту, человек из её карточки — «Кому» и свою почту; сбросить — снять", async () => {
     await openForm("director@demo.example", "?type=letter");
     expect(screen.getByLabelText("Кому — человек")).toBeDisabled();
+    // строка «Кому» на бланке — одна, подписана как строка адресата; прежнего «Кому (должность и ФИО)» рядом нет
+    expect(screen.getByLabelText("Строка адресата")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Кому (должность и ФИО)")).toBeNull();
     await pickAddressee();
     expect(selectedLabel(screen.getByLabelText("Адресат (организация)"))).toBe("АО «Демо-Путь»");
     expect(screen.getByText("ИНН 300000777")).toBeVisible();
     expect(screen.getByLabelText("Почта адресата")).toHaveValue("office@demo-put.example");
     // человек: люди компании из её карточки; выбор подставляет должность, имя и его почту
     await chooseOption(screen.getByLabelText("Кому — человек"), "Демо Клиентов");
-    expect(screen.getByLabelText("Кому (должность и ФИО)")).toHaveValue(
-      "Главный инженер Демо Клиентов",
-    );
+    expect(screen.getByLabelText("Строка адресата")).toHaveValue("Главный инженер Демо Клиентов");
     expect(screen.getByLabelText("Почта адресата")).toHaveValue("d.klientov@demo-put.example");
     // свободного текста нет: поле даёт только выбор, очистка снимает компанию и выключает «человека»
     const clear = screen
@@ -166,18 +167,18 @@ describe("EDS · Создать документ: форма", () => {
     fireEvent.mouseDown(clearPerson as Element);
     fireEvent.click(clearPerson as Element);
     expect(screen.getByLabelText("Почта адресата")).toHaveValue("office@demo-put.example");
-    expect(screen.getByLabelText("Кому (должность и ФИО)")).toHaveValue("");
+    expect(screen.getByLabelText("Строка адресата")).toHaveValue("");
     // компания A -> человек -> компания B без почты: ничего от A
     await chooseOption(screen.getByLabelText("Кому — человек"), "Демо Клиентов");
     await pickAddressee("гни", "ГНИ Мирабадского района");
     expect(screen.getByLabelText("Почта адресата")).toHaveValue("");
-    expect(screen.getByLabelText("Кому (должность и ФИО)")).toHaveValue("");
+    expect(screen.getByLabelText("Строка адресата")).toHaveValue("");
     // «Кому», которое вписал сам сотрудник, смена компании не трогает
-    fireEvent.change(screen.getByLabelText("Кому (должность и ФИО)"), {
+    fireEvent.change(screen.getByLabelText("Строка адресата"), {
       target: { value: "Начальнику отдела" },
     });
     await pickAddressee("демо", "АО «Демо-Путь»");
-    expect(screen.getByLabelText("Кому (должность и ФИО)")).toHaveValue("Начальнику отдела");
+    expect(screen.getByLabelText("Строка адресата")).toHaveValue("Начальнику отдела");
   });
 
   it("адресата нет среди контрагентов: «Завести» последней строкой — и она становится адресатом; тот же ИНН — предлагается существующая (ЕД-6)", async () => {
@@ -196,7 +197,7 @@ describe("EDS · Создать документ: форма", () => {
 
     expect(screen.getByLabelText("Адресат (организация)")).toBeVisible();
     expect(screen.getByLabelText("Почта адресата")).toBeVisible();
-    expect(screen.getByLabelText("Кому (должность и ФИО)")).toBeVisible();
+    expect(screen.getByLabelText("Строка адресата")).toBeVisible();
     expect(screen.queryByLabelText("Кому")).toBeNull();
     expect(screen.queryByLabelText("Сумма, сум")).toBeNull();
     expect(screen.queryByLabelText("Нужно до")).toBeNull();
@@ -538,13 +539,11 @@ describe("EDS · Создать документ: форма", () => {
     ).not.toBeNull();
   });
 
-  it("боковое окно: скрыть панель не стирает введённое; повторный переход из «Создать» открывает пустую форму", async () => {
+  it("боковое окно: у формы кнопки окна нет; повторный переход из «Создать» открывает пустую форму", async () => {
     const { router } = await openForm("manager@demo.example");
     type("Тема", "Закупка");
-    fireEvent.click(await screen.findByRole("button", { name: /Скрыть панель|Показать панель/ }));
-    await waitFor(() => {
-      expect(router.state.location.search).toContain("panel=");
-    });
+    // форма ничего в окно не кладёт и таблицы на ней нет — «Показать панель» не рисуется (ЕВ-0)
+    expect(screen.queryByRole("button", { name: /Скрыть панель|Показать панель/ })).toBeNull();
     expect(screen.getByLabelText("Тема")).toHaveValue("Закупка");
     // намеренный переход с меткой «Создать» — форма новая
     await router.navigate("/eds/new?type=memo", { state: { fresh: 1 } });

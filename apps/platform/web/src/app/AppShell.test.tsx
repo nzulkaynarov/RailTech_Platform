@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { createQueryClient } from "./queryClient";
 import { HttpResponse, http } from "msw";
 import { RouterProvider, createMemoryRouter } from "react-router";
@@ -204,10 +204,43 @@ describe("каркас на 1440", () => {
     await screen.findByRole("heading", { level: 1, name: "Лиды" });
     expect(screen.queryByRole("complementary", { name: "Боковое окно" })).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Показать панель" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Показать панель" }));
     expect(await screen.findByRole("complementary", { name: "Боковое окно" })).toBeVisible();
     expect(router.state.location.search).toContain("panel=open");
     expect(screen.getByRole("tab", { name: "Карточка" })).toBeVisible();
+  });
+
+  it("форма без таблицы: кнопки окна нет, пустое окно с «Объект не выбран» не открывается даже по ?panel=open (ЕВ-0)", async () => {
+    signIn("manager@demo.example");
+    renderAt("/eds/new?type=memo&panel=open");
+    await screen.findByRole("heading", {
+      level: 1,
+      name: /^(Внутренний документ|Исходящее письмо|Новый документ)$/,
+    });
+    expect(screen.queryByRole("button", { name: "Показать панель" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Скрыть панель" })).toBeNull();
+    expect(screen.queryByRole("complementary", { name: "Боковое окно" })).toBeNull();
+    expect(screen.queryByText("Объект не выбран")).toBeNull();
+  });
+
+  it("«Люди» и список настроек: строка окно не наполняет — кнопки и окна нет даже по ?panel=open (ЕВ-0)", async () => {
+    signIn("director@demo.example");
+    renderAt("/chats/contacts?panel=open");
+    await screen.findByRole("heading", { level: 1, name: "Люди" });
+    expect(screen.queryByRole("button", { name: /Показать панель|Скрыть панель/ })).toBeNull();
+    expect(screen.queryByText("Объект не выбран")).toBeNull();
+    cleanup();
+    renderAt("/admin/taxes?panel=open");
+    await screen.findByRole("heading", { level: 1, name: "Налоги и валюты" });
+    expect(screen.queryByRole("button", { name: /Показать панель|Скрыть панель/ })).toBeNull();
+    expect(screen.queryByText("Объект не выбран")).toBeNull();
+  });
+
+  it("экран с таблицей: кнопка окна есть, пока строка не выбрана — подсказка в окне", async () => {
+    signIn("manager@demo.example");
+    renderAt("/crm/leads?panel=open");
+    expect(await screen.findByRole("button", { name: "Скрыть панель" })).toBeVisible();
+    expect(await screen.findByText("Объект не выбран")).toBeVisible();
   });
 
   it("подменю сворачивается, состояние пишется в localStorage по пользователю (одно на все разделы)", async () => {
@@ -337,7 +370,7 @@ describe("узкие экраны", () => {
 });
 
 describe("единая кнопка «Создать»", () => {
-  it("окно с группами: виды по правам роли, у вида строка «что получится», неготовое приглушено", async () => {
+  it("окно с группами: виды по правам роли, у вида строка «что получится»", async () => {
     signIn("manager@demo.example");
     renderAt("/crm/leads");
     await screen.findByRole("heading", { level: 1, name: "Лиды" });
@@ -356,10 +389,9 @@ describe("единая кнопка «Создать»", () => {
     expect(within(dialog).getByRole("link", { name: /^Внутренний документ/ })).toHaveAccessibleName(
       /Служебная записка, заявление, отчёт/,
     );
-    expect(within(dialog).getByText("Сообщение").closest("[aria-disabled]")).toHaveAttribute(
-      "aria-disabled",
-      "true",
-    );
+    // кнопок без действия в окне нет: ни «Сообщение», ни «Поручение»
+    expect(within(dialog).queryByText("Сообщение")).toBeNull();
+    expect(dialog.querySelector("[aria-disabled]")).toBeNull();
     // чего роли нельзя — того в окне нет; расчёт у менеджера есть с 0.3 (FR-7), с 1.1 — ведёт к выбору заявки
     expect(within(dialog).queryByText("Входящий документ")).toBeNull();
     expect(within(dialog).getByText("Расчёт").closest("a")).toHaveAttribute(

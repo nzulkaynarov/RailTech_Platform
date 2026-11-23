@@ -72,12 +72,14 @@ describe("Ролевая матрица · вкладка «Журнал»", () 
     expect(await within(side).findByText("Создана роль «Менеджер»")).toBeVisible();
   });
 
-  it("роль не выбрана — подсказка вкладки", async () => {
+  it("роль не выбрана — окна и кнопки окна нет, выбор роли открывает окно с вкладкой «Журнал» (ЕВ-0)", async () => {
     signInAs("admin@demo.example");
     renderApp("/admin/roles?panel=open&tab=journal");
 
-    // ЕД-7: пустые вкладки скрыты — пока роль не выбрана, окно показывает одну первую вкладку с её пояснением.
-    expect(await within(await panelEl()).findByText("Роль не выбрана")).toBeVisible();
+    await screen.findByRole("heading", { level: 1, name: "Роли и права" });
+    expect(screen.queryByRole("complementary", { name: "Боковое окно" })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Показать панель|Скрыть панель/ })).toBeNull();
+    expect(screen.queryByText("Роль не выбрана")).toBeNull();
   });
 
   it("ошибка CRM — слова и «Повторить»", async () => {

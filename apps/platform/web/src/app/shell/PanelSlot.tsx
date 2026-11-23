@@ -30,7 +30,16 @@ export function PanelSlotProvider({ children }: { children: ReactNode }) {
     };
   }, []);
   const value = useMemo(
-    () => ({ element, setElement, claimed, claim, tab, setTab, overs, claimOver }),
+    () => ({
+      element,
+      setElement,
+      claimed,
+      claim,
+      tab,
+      setTab,
+      overs,
+      claimOver,
+    }),
     [element, claimed, claim, tab, overs, claimOver],
   );
   return <PanelSlotContext.Provider value={value}>{children}</PanelSlotContext.Provider>;

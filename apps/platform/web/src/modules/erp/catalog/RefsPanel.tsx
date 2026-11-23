@@ -8,11 +8,8 @@ import { useAuth } from "../../../app/auth/useAuth";
 import { canEdit } from "../../../app/access";
 import type { ExchangeRateRow, HsCode, Manufacturer } from "../../../shared/api/generated/model";
 import {
-  getGetFxRateQueryKey,
-  getListCatalogExchangeRatesQueryKey,
   getListHsCodesQueryKey,
   getListManufacturersQueryKey,
-  useCreateFxRate,
   useCreateHsCode,
   useCreateManufacturer,
   useGetCatalogLookups,
@@ -31,14 +28,12 @@ import { EmptyState } from "../../../shared/ui/EmptyState";
 import { FormField, QueryState } from "../../../shared/ui/FormParts";
 import { CompanyPicker, useApplyCompanyRole, type PickedCompany } from "../../../shared/ui/pickers";
 import { StatusTag } from "../../../shared/ui/StatusTag";
-import { type Column, DataList, FormModal, FormPanel, PAGE_SIZE, Pager } from "./common";
+import { type Column, DataList, FormPanel, PAGE_SIZE, Pager } from "./common";
 import { useDebounced } from "./useDebounced";
 import { errorFields } from "./errors";
 import { queryLabels } from "./labels";
 import { RequestsPanel } from "./RequestsPanel";
 import { FilterBar, FilterField } from "../../../shared/ui/FilterBar";
-import { UnitLabel } from "../../../shared/ui/UnitLabel";
-import { unitOf } from "../../../shared/lib/unit";
 
 const PARTS = ["hs", "brands", "requests"] as const;
 type Part = (typeof PARTS)[number];
@@ -77,10 +72,8 @@ export function RefsPanel({ initial = "hs" }: { initial?: Part }) {
 export function RatesView() {
   const { t } = useTranslation("catalog");
   const { date } = useFormat();
-  const { me } = useAuth();
   const [currency, setCurrency] = useState<string | undefined>(undefined);
   const [page, setPage] = useState(1);
-  const [entering, setEntering] = useState(false);
   const id = useId();
   // Курс ведётся по каждой включённой валюте справочника (источник «ЦБ», решение 2026-11-11), UZS — база.
   const currencies = (useListDictionaryItems("currencies").data?.items ?? [])
@@ -112,23 +105,7 @@ export function RatesView() {
   ];
   return (
     <>
-      <FilterBar
-        tools
-        actions={
-          <>
-            {canEdit(me, "company.settings") ? (
-              <Button
-                type="primary"
-                onClick={() => {
-                  setEntering(true);
-                }}
-              >
-                {t("refs.rates.enter")}
-              </Button>
-            ) : null}
-          </>
-        }
-      >
+      <FilterBar tools>
         <FilterField id={id} label={t("refs.rates.filter")} width={160}>
           <Select
             id={id}
@@ -161,70 +138,7 @@ export function RatesView() {
           )
         }
       </QueryState>
-      {entering ? (
-        <RateForm
-          onClose={() => {
-            setEntering(false);
-          }}
-        />
-      ) : null}
     </>
-  );
-}
-
-function RateForm({ onClose }: { onClose: () => void }) {
-  const { t } = useTranslation("catalog");
-  const queryClient = useQueryClient();
-  const [day, setDay] = useState("2026-10-28");
-  const [rate, setRate] = useState("");
-  const ids = { day: useId(), rate: useId() };
-  const mutation = useCreateFxRate({
-    mutation: {
-      onSuccess: () => {
-        void queryClient.invalidateQueries({ queryKey: getListCatalogExchangeRatesQueryKey() });
-        void queryClient.invalidateQueries({ queryKey: getGetFxRateQueryKey() });
-        onClose();
-      },
-    },
-  });
-  const fields = errorFields(mutation.error);
-  return (
-    <FormModal
-      title={t("refs.rates.form.title")}
-      okLabel={t("refs.rates.form.ok")}
-      loading={mutation.isPending}
-      error={mutation.error}
-      disabled={day === "" || rate.trim() === ""}
-      onOk={() => {
-        mutation.mutate({ data: { rate_date: day, rate_to_uzs: rate.trim().replace(",", ".") } });
-      }}
-      onCancel={onClose}
-    >
-      <FormField id={ids.day} label={t("refs.rates.form.date")}>
-        <DateField
-          id={ids.day}
-          value={day}
-          status={fields.includes("rate_date") ? "error" : undefined}
-          onChange={setDay}
-        />
-      </FormField>
-      <FormField
-        id={ids.rate}
-        label={<UnitLabel label={t("refs.rates.form.rate")} />}
-        hint={t("refs.rates.form.rateHint")}
-      >
-        <Input
-          id={ids.rate}
-          suffix={unitOf(t("refs.rates.form.rate"))}
-          inputMode="decimal"
-          value={rate}
-          status={fields.includes("rate_to_uzs") ? "error" : undefined}
-          onChange={(e) => {
-            setRate(e.target.value);
-          }}
-        />
-      </FormField>
-    </FormModal>
   );
 }
 

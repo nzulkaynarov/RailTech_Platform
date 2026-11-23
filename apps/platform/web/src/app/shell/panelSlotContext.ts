@@ -37,6 +37,15 @@ export function usePanelForced(): boolean {
   return (useContext(PanelSlotContext)?.overs ?? 0) > 0;
 }
 
+/**
+ * Нужна ли экрану кнопка окна: окно открывает форма поверх, его наполнил экран (занятая или встроенная вкладка) или у
+ * раздела есть карточка объекта (`detail`). Форма без карточки и список без карточки в окне (справочники, «Люди»)
+ * окна не имеют: пустое окно с «Объект не выбран» не открывается.
+ */
+export function panelAvailable(forced: boolean, hasContent: boolean, hasDetail: boolean): boolean {
+  return forced || hasContent || hasDetail;
+}
+
 /** Для каркаса: какие вкладки сейчас заняты страницами (`PanelPortal`). */
 export function usePanelClaims(): readonly string[] {
   return useContext(PanelSlotContext)?.claimed ?? [];
