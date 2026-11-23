@@ -206,6 +206,17 @@ class QuoteClientDecision(BaseModel):
     can_record: bool
 
 
+class QuoteClientLink(BaseModel):
+    """Ссылка клиента на КП в Кабинете (ДК-1): состояние, кому ушла, открывал ли."""
+
+    state: Literal["none", "active", "revoked", "expired", "superseded"]
+    recipient_hint: str | None
+    expires_at: dt.datetime | None
+    first_opened_at: dt.datetime | None
+    last_opened_at: dt.datetime | None
+    can_revoke: bool
+
+
 class QuoteApprovalCard(BaseModel):
     id: str
     number: str
@@ -239,6 +250,7 @@ class QuoteApprovalCard(BaseModel):
     delivery: QuoteDelivery | None
     client_comments: list[QuoteClientComment]
     client_decision: QuoteClientDecision | None = None
+    client_link: QuoteClientLink | None = None
     sources: Sources
 
 

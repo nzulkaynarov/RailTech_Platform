@@ -1407,7 +1407,12 @@
     "BANK_HOLDER_LATIN_INVALID": "The Latin holder name has characters SWIFT does not allow.",
     "BANK_INTERMEDIARY_INVALID": "Invalid intermediary bank SWIFT.",
     "LEGAL_ACCEPTANCE_REQUIRED": "Accept the terms of use and the policy first.",
-    "LEGAL_EDITION_CHANGED": "A new edition has been published — the text is updated. Read and accept it."
+    "LEGAL_EDITION_CHANGED": "A new edition has been published — the text is updated. Read and accept it.",
+    "DOC_LINK_REVOKED": "The link is revoked — ask the sender for a new one.",
+    "DOC_LINK_EXPIRED": "The link has expired — ask the sender for a new one.",
+    "DOC_LINK_SUPERSEDED": "There is a newer version — open the link from the latest e-mail.",
+    "CODE_RESEND_TOO_SOON": "A new code can be requested after 45 seconds.",
+    "GENERATING": "The file is still being prepared — try again in a few seconds."
   },
   "widgets": {
     "actionRequired": {
@@ -1860,5 +1865,96 @@
     "policyLink": "Personal data processing policy",
     "notPublished": "The policy has not been published yet.",
     "backToLogin": "Back to sign in"
+  },
+  "docLink": {
+    "title": "Document by link",
+    "header": "You are viewing one document sent to {{email}}",
+    "quoteTitle": "Quote {{number}}",
+    "facts": {
+      "from": "From",
+      "to": "To",
+      "total": "Total",
+      "validUntil": "Valid until"
+    },
+    "withVat": "{{amount}} incl. VAT",
+    "lines": {
+      "title": "Quote contents",
+      "vat": "VAT",
+      "subtotal": "Subtotal excl. VAT",
+      "total": "Total incl. VAT",
+      "payment": "Payment: {{terms}}",
+      "delivery": "Delivery within {{days}} days",
+      "note": "Delivery terms: {{note}}",
+      "price": "{{quantity}} × {{price}}"
+    },
+    "download": "Download PDF",
+    "downloadNamed": "Download PDF: quote {{number}}",
+    "preparing": "Preparing the file…",
+    "stillPreparing": "The file is still being prepared — try again in a few seconds.",
+    "actions": {
+      "accept": "Accept the quote",
+      "reject": "Return with remarks",
+      "question": "Ask a question",
+      "open": "Open the Cabinet"
+    },
+    "codeNote": "Any action needs the code we send to {{email}}. No other documents or sections open by this link.",
+    "memberNote": "You are signed in as {{name}} — no code needed.",
+    "linkUntil": "The link works until {{date}} — the sender can revoke it.",
+    "state": {
+      "accepted": "The quote is accepted. The contract will appear in your Cabinet.",
+      "rejected": "The quote was returned with remarks.",
+      "expired": "The quote has expired. Ask the seller to update it."
+    },
+    "reason": {
+      "no_right": "Your contact has no right to decide — ask your company administrator.",
+      "no_access": "Your Cabinet access has no «Quotes» section.",
+      "other_company": "You are signed in to another company's Cabinet.",
+      "no_contact": "The recipient address is not connected to the Cabinet — contact the sender."
+    },
+    "otherCompany": {
+      "title": "You are in another Cabinet",
+      "text": "This link is addressed to another company: actions on it are unavailable. Sign out and open the link again.",
+      "signOut": "Sign out"
+    },
+    "dialog": {
+      "title": "Confirm it is you",
+      "sent": "We sent a code to {{email}}. It is valid for {{minutes}} minutes.",
+      "sending": "Sending the code…",
+      "label": "Code from the e-mail",
+      "spam": "Not there? Check «Spam».",
+      "resend": "Send again",
+      "resendIn": "Send again in {{time}}",
+      "remarks": "What needs to be fixed?",
+      "question": "Your question",
+      "codeShort": "Enter the six digits of the code.",
+      "legal": "On your first sign-in you accept the terms of use and the personal data policy — without consent the action is not performed.",
+      "memberTitle": "Accept the quote?",
+      "memberText": "Total {{total}}. The contract will appear in your Cabinet.",
+      "working": "Working…",
+      "openTitle": "Open the Cabinet"
+    },
+    "done": {
+      "accept": "Quote accepted",
+      "reject": "Remarks sent",
+      "question": "Question sent to the manager"
+    },
+    "gone": {
+      "revoked": {
+        "title": "The link is revoked",
+        "text": "The sender revoked this link. Ask them for a new one."
+      },
+      "expired": {
+        "title": "The link has expired",
+        "text": "This link is no longer valid. Ask the sender for a new one."
+      },
+      "superseded": {
+        "title": "There is a newer version of the quote",
+        "text": "This link belongs to an earlier version. Open the link from the latest e-mail."
+      },
+      "notFound": {
+        "title": "Link not found",
+        "text": "Check the address or ask the sender for a new link."
+      }
+    }
   }
 }

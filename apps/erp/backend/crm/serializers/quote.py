@@ -19,6 +19,16 @@ from .item import QuoteItemSerializer
 from .quote_client_decision import QuoteClientDecisionMetaSerializer, client_decision_of
 
 
+class QuoteClientLinkSerializer(serializers.Serializer):
+    """Ссылка клиента на КП в Кабинете (ДК-1): что отправитель видит на документе и что может отозвать."""
+
+    state = serializers.ChoiceField(choices=["none", "active", "revoked", "expired", "superseded"])
+    recipient_hint = serializers.CharField(allow_null=True, help_text="Адрес получателя, замаскированный")
+    expires_at = serializers.DateTimeField(allow_null=True, help_text="Когда гаснет самая поздняя живая ссылка")
+    first_opened_at = serializers.DateTimeField(allow_null=True)
+    last_opened_at = serializers.DateTimeField(allow_null=True)
+
+
 class QuoteEconomicsSerializer(serializers.Serializer):
     """Documentation-only shape of ``compute_quote_economics()`` as it lands in the API.
 
@@ -251,6 +261,18 @@ class QuoteSerializer(serializers.ModelSerializer):
     client_decision = serializers.SerializerMethodField()
     can_record_client_decision = serializers.SerializerMethodField()
 
+    # ДК-1: ссылка клиента на КП в Кабинете (состояние, кому, открывали ли) — для «Отозвать ссылку» в Платформе.
+    client_link = serializers.SerializerMethodField()
+
+    @extend_schema_field(QuoteClientLinkSerializer(allow_null=True))
+    def get_client_link(self, obj) -> dict | None:
+        """Ссылка получателя КП в Кабинет: только в карточке одного КП и только сотрудникам продавца."""
+        if not self.context.get("include_economics"):
+            return None
+        from portal.services.doc_links import client_link_summary
+
+        return client_link_summary(obj)
+
     @extend_schema_field(QuoteClientDecisionMetaSerializer(allow_null=True))
     def get_client_decision(self, obj) -> dict | None:
         return client_decision_of(obj)
@@ -414,6 +436,7 @@ class QuoteSerializer(serializers.ModelSerializer):
             "can_send",
             "client_decision",
             "can_record_client_decision",
+            "client_link",
             "client_reject_reason",
             "items",
             "charges",
@@ -509,6 +532,7 @@ class QuoteSerializer(serializers.ModelSerializer):
         "can_send",
         "client_decision",
         "can_record_client_decision",
+        "client_link",
         "client_reject_reason",
     )
 

@@ -24,6 +24,7 @@ import { RecordTab } from "../decision/RecordTab";
 import { ApprovalPanel } from "./ApprovalPanel";
 import { quotePath, quoteRef } from "./api";
 import { ClientDecisionCard } from "./ClientDecision";
+import { ClientLinkCard } from "./ClientLink";
 import { DeliveryReport } from "./DeliveryReport";
 import { useStateLabels } from "./labels";
 import { QuoteStatusTag } from "./QuoteStatus";
@@ -156,6 +157,7 @@ function Content({
       </section>
       <ClientDecisionCard quote={quote} />
       <DeliveryReport quote={quote} />
+      <ClientLinkCard quote={quote} />
       <Card size="small" title={<h2 className="pf-dec-title">{t("card.lines")}</h2>}>
         <QuoteLines quote={quote} />
       </Card>

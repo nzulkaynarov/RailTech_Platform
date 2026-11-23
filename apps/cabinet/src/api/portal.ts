@@ -196,6 +196,42 @@ export const acceptLegal = (editionIds: number[], language: LegalLang) => {
 /** Действующая политика для экрана входа; `policy: null` — ещё не опубликована. */
 export const getLegalPolicy = () => portalRequest<Schemas['LegalPolicy']>('/legal/policy');
 
+// --- документ по ссылке из письма (ДК-1, ДК-2, ADR-0030) -------------------------------------------
+
+export type DocLinkView = Schemas['DocLinkView'];
+export type DocLinkCodeSent = Schemas['DocLinkCodeSent'];
+export type DocLinkAvailability = Schemas['DocLinkAvailability'];
+export type DocLinkAction = 'accept' | 'reject' | 'question';
+
+/** Токен — из адреса `/d/<токен>`; в теле запроса, не в пути: журналы серверов и прокси его не видят. */
+export const openDocLink = (token: string) =>
+  portalRequest<DocLinkView>('/doc-links/open', { method: 'POST', body: { token } satisfies JsonBody<paths['/doc-links/open']['post']> });
+
+/** Код действия — на адрес получателя; адреса в запросе нет. */
+export const requestDocLinkCode = (token: string) =>
+  portalRequest<DocLinkCodeSent>('/doc-links/code', { method: 'POST', body: { token } });
+
+/** Верный код открывает сессию контакта-получателя (cookie) и возвращает `Me`. */
+export const verifyDocLinkCode = (token: string, code: string) => {
+  const body: JsonBody<paths['/doc-links/verify']['post']> = { token, code };
+  return portalRequest<Me>('/doc-links/verify', { method: 'POST', body });
+};
+
+export const actOnDocLink = (token: string, action: DocLinkAction, text?: string) => {
+  const body: JsonBody<paths['/doc-links/act']['post']> = { token, action, ...(text ? { text } : {}) };
+  return portalRequest<DocLinkView>('/doc-links/act', { method: 'POST', body });
+};
+
+/** PDF документа по ссылке: 200 — файл, 202 — ещё собирается (`Retry-After`). */
+export async function getDocLinkPdf(token: string): Promise<DocumentFile> {
+  const response = await send('/doc-links/pdf', { method: 'POST', body: { token }, accept: 'application/pdf' });
+  if (response.status === 202) {
+    const header = Number(response.headers.get('Retry-After'));
+    return { state: 'pending', retryAfterSeconds: header >= 1 ? header : DEFAULT_RETRY_AFTER_SECONDS };
+  }
+  return { state: 'ready', blob: await response.blob(), fileName: fileNameFrom(response.headers.get('Content-Disposition')) };
+}
+
 export function logout(): Promise<void> {
   return portalRequest<void>('/auth/logout', { method: 'POST' });
 }

@@ -48,6 +48,9 @@ ALLOWED_HOSTS = [
 # Client Portal (Cabinet -> ERP, M2-ERP-01, M2-ERP-02)
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN") or os.environ.get("ERP_TELEGRAM_BOT_TOKEN", "")
 CABINET_URL = os.environ.get("CABINET_URL", "http://cabinet.localhost")
+# ДК-1: старая ссылка на страницу КП (`/api/v1/public/quotes/<токен>/`) в браузере ведёт в Кабинет. Выключатель — на случай
+# отката перехода: 0 возвращает прежнюю страницу ERP, ссылки и данные при этом не меняются.
+PUBLIC_QUOTE_REDIRECT_TO_CABINET = os.environ.get("PUBLIC_QUOTE_REDIRECT_TO_CABINET", "1") == "1"
 
 
 def _origin_of(url: str) -> str:

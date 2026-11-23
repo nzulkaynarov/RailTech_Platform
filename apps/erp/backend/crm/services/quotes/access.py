@@ -278,7 +278,7 @@ def public_quote_gate(quote) -> Optional[str]:
         return "QUOTE_LINK_EXPIRED"
     now = timezone.now()
     # valid_until is the КП's own validity date; a passed date closes the public link too.
-    if quote.valid_until and quote.valid_until < now.date():
+    if quote.valid_until and quote.valid_until < timezone.localdate(now):
         return "QUOTE_LINK_EXPIRED"
     # Optional token-specific TTL (independent of valid_until); NULL = no separate TTL.
     if quote.public_token_expires_at and quote.public_token_expires_at < now:

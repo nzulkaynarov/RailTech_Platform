@@ -57,6 +57,12 @@ SAMPLE_CONTEXTS: dict[str, dict] = {
         "login_code": "123456",
         "telegram_notifications_url": "https://cabinet.example.com/profile#notifications",
     },
+    "document_link_code": {
+        "code": "123456",
+        "document_number": "QT-0118",
+        "seller_name": "ООО «Поставщик»",
+        "expires_minutes": 10,
+    },
     "portal_magic_link": {
         "contact_name": "Алиса",
         "company_name": "ООО «Покупатель»",

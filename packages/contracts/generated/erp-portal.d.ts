@@ -633,6 +633,125 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/doc-links/open": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Открыть документ по ссылке из письма
+     * @description ДК-1. Токен — из адреса `/d/<токен>` Кабинета, в теле (путь токена не несёт). Без сессии отвечает гостю: один документ
+     *     в клиентской проекции (без себестоимости и наценки), ключевые факты и что кнопки действий могут. Сессия контакта той же
+     *     компании (`session = member`) видит то же с правами своего контакта; сессия другой компании (`other_company`) — гостевой
+     *     вид. Отозванная, просроченная или заменённая новой версией ссылка не показывает ничего, кроме причины (410
+     *     `DOC_LINK_REVOKED`, `DOC_LINK_EXPIRED`, `DOC_LINK_SUPERSEDED`); неизвестный токен — всегда 404 `NOT_FOUND`
+     *     (наличие токена не раскрывается). Каждое открытие пишется в журнал ссылки.
+     */
+    post: operations["openDocLink"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/doc-links/pdf": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Скачать PDF документа по ссылке
+     * @description ДК-1. Тот же PDF, что ушёл письмом (клиентская проекция). PDF ещё собирается — 202 `GENERATING` и `Retry-After`.
+     *     Состояния ссылки и ответы — как у `POST /doc-links/open`; код для скачивания не нужен.
+     */
+    post: operations["downloadDocLinkPdf"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/doc-links/code": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Прислать код действия на адрес получателя
+     * @description ДК-2. Любое действие гостя (принять, вернуть, вопрос, открыть кабинет) начинается здесь. Код — 6 цифр, живёт 10 минут,
+     *     в базе только хеш. Уходит только на адрес, на который отправлен документ: адрес в запросе не принимается и в диалоге
+     *     не меняется. Новый код гасит прежний; повтор — не раньше чем через 45 секунд (429 `CODE_RESEND_TOO_SOON`, `Retry-After`),
+     *     не больше шести в час на ссылку (429 `TOO_MANY_REQUESTS`). У получателя нет контакта кабинета или компания закрыта —
+     *     403 `FORBIDDEN`; письмо не ушло — 503 `DELIVERY_FAILED`.
+     */
+    post: operations["requestDocLinkCode"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/doc-links/verify": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Подтвердить код — войти контактом-получателем
+     * @description ДК-2. Верный код открывает сессию контакта-получателя (cookie `Set-Cookie`), отмечает его приглашённым и возвращает
+     *     `Me`: права — ровно те, что сотрудник задал контакту (`can_act`, `is_admin`), первый контакт компании администратором
+     *     сам не становится. Если у контакта есть непринятые оферта и политика — `legal_pending = true`: Кабинет показывает
+     *     принятие (ДВ-5) и продолжает начатое действие через `POST /doc-links/act`. Неверный, просроченный или чужой код —
+     *     422 `LOGIN_CODE_INVALID`; пятая неверная попытка подряд — 429 `LOGIN_CODE_LOCKED`, нужен новый код.
+     */
+    post: operations["verifyDocLinkCode"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/doc-links/act": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Принять, вернуть с замечаниями или задать вопрос по документу из ссылки
+     * @description ДК-2. Действие продолжает то, что гость начал до кода: сессия уже есть (получена `POST /doc-links/verify` или была
+     *     раньше), второго кода не нужно. Права не шире контакта сессии: нет `can_act` — 403 `FORBIDDEN`; сессия другой компании —
+     *     403 `FORBIDDEN`; без принятых оферты и политики — 403 `LEGAL_ACCEPTANCE_REQUIRED`. `accept` принимает КП (договор
+     *     создаётся, как при приёме в кабинете), `reject` возвращает с замечаниями (`text` — замечания, обязательны),
+     *     `question` пишет вопрос менеджеру (`text`). КП уже решено или срок вышел — 409 `QUOTE_FINALIZED`, `QUOTE_EXPIRED`.
+     *     Ответ — документ в том же виде, что у `POST /doc-links/open`.
+     */
+    post: operations["actOnDocLink"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/contracts": {
     parameters: {
       query?: never;
@@ -2815,6 +2934,73 @@ export interface components {
       /** @description Id главного фото; миниатюра — `/items/{id}/thumbnail?v=<photo>`, `null` — значок типа */
       photo: number | null;
     };
+    DocLinkToken: {
+      /** @description Токен из адреса `/d/<токен>` */
+      token: string;
+    };
+    /** @description Может ли кнопка действия сработать; неактивная кнопка называет причину рядом с собой */
+    DocLinkAvailability: {
+      allowed: boolean;
+      /**
+       * @description `accepted`, `rejected`, `expired` — КП уже решено или срок вышел; `other_company` — вошёл контакт другой
+       *     компании; `no_contact`, `no_access` — у получателя нет контакта или модуля в кабинете; `no_right` — у контакта нет права действовать
+       * @enum {string|null}
+       */
+      reason:
+        | "accepted"
+        | "rejected"
+        | "expired"
+        | "other_company"
+        | "no_contact"
+        | "no_access"
+        | "no_right"
+        | null;
+    };
+    DocLinkCodeSent: {
+      /** @description Адрес получателя, замаскированный (`i***@example.com`) */
+      sent_to: string;
+      /** @description Сколько секунд код действует */
+      expires_in: number;
+      /** @description Через сколько секунд можно запросить новый */
+      resend_after: number;
+    };
+    /** @description Документ по ссылке — клиентская проекция КП без себестоимости, наценки и внутренних полей */
+    DocLinkView: {
+      /** @enum {string} */
+      kind: "quote";
+      number: string;
+      version: number;
+      /** @description Кто прислал (продавец) */
+      from_name: string;
+      /** @description Кому (компания клиента) */
+      to_name: string;
+      total: components["schemas"]["Money"];
+      subtotal?: components["schemas"]["Money"];
+      vat?: components["schemas"]["Money"];
+      /** Format: date */
+      valid_until: string | null;
+      /**
+       * @description Из фактов КП, а не из ссылки
+       * @enum {string}
+       */
+      state: "open" | "accepted" | "rejected" | "expired";
+      /** Format: date-time */
+      link_expires_at: string;
+      /** @description Адрес получателя, замаскированный; на него уходит код */
+      recipient_hint: string;
+      /**
+       * @description `none` — гость; `member` — вошёл контакт той же компании (действует без кода); `other_company` — вошла сессия
+       *     другой компании: гостевой вид и предложение сменить вход
+       * @enum {string}
+       */
+      session: "none" | "member" | "other_company";
+      decide: components["schemas"]["DocLinkAvailability"];
+      ask: components["schemas"]["DocLinkAvailability"];
+      payment_terms?: string | null;
+      delivery_days?: number | null;
+      delivery_note?: string | null;
+      lines: components["schemas"]["QuoteLine"][];
+    };
     /** @description Строка КП для клиента — цена продажи без себестоимости и наценки; `unit_price` и `total` без НДС (Q-FIX21-2) */
     QuoteLine: {
       /** @description Позиция каталога строки (ЕД-4); `null` — строка без карточки */
@@ -4710,6 +4896,338 @@ export interface operations {
       };
       415: components["responses"]["UnsupportedMediaType"];
       /** @description Текст пуст (`TEXT_REQUIRED`) или длиннее 2000 символов (`VALIDATION_ERROR`) */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      429: components["responses"]["TooManyRequests"];
+    };
+  };
+  openDocLink: {
+    parameters: {
+      query?: never;
+      header: {
+        /**
+         * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
+         *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
+         *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
+         */
+        "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DocLinkToken"];
+      };
+    };
+    responses: {
+      /** @description Документ */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DocLinkView"];
+        };
+      };
+      400: components["responses"]["IdempotencyKeyRequired"];
+      404: components["responses"]["NotFound"];
+      /** @description Ссылка отозвана, просрочена или заменена новой версией (`DOC_LINK_REVOKED`, `DOC_LINK_EXPIRED`, `DOC_LINK_SUPERSEDED`) */
+      410: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      415: components["responses"]["UnsupportedMediaType"];
+      /** @description `VALIDATION_ERROR` — тело не по схеме */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      429: components["responses"]["TooManyRequests"];
+    };
+  };
+  downloadDocLinkPdf: {
+    parameters: {
+      query?: never;
+      header: {
+        /**
+         * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
+         *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
+         *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
+         */
+        "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DocLinkToken"];
+      };
+    };
+    responses: {
+      /** @description PDF */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/pdf": string;
+        };
+      };
+      /** @description PDF собирается — повторить через `Retry-After` секунд (`GENERATING`) */
+      202: {
+        headers: {
+          "Retry-After"?: number;
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      400: components["responses"]["IdempotencyKeyRequired"];
+      404: components["responses"]["NotFound"];
+      /** @description Ссылка отозвана, просрочена или заменена (`DOC_LINK_REVOKED`, `DOC_LINK_EXPIRED`, `DOC_LINK_SUPERSEDED`) */
+      410: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      415: components["responses"]["UnsupportedMediaType"];
+      /** @description `VALIDATION_ERROR` — тело не по схеме */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      429: components["responses"]["TooManyRequests"];
+    };
+  };
+  requestDocLinkCode: {
+    parameters: {
+      query?: never;
+      header: {
+        /**
+         * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
+         *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
+         *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
+         */
+        "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DocLinkToken"];
+      };
+    };
+    responses: {
+      /** @description Код отправлен */
+      202: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DocLinkCodeSent"];
+        };
+      };
+      400: components["responses"]["IdempotencyKeyRequired"];
+      /** @description Кабинет получателю не открыт (`FORBIDDEN`) */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      404: components["responses"]["NotFound"];
+      /** @description Ссылка отозвана, просрочена или заменена (`DOC_LINK_REVOKED`, `DOC_LINK_EXPIRED`, `DOC_LINK_SUPERSEDED`) */
+      410: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      415: components["responses"]["UnsupportedMediaType"];
+      /** @description `VALIDATION_ERROR` — тело не по схеме */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      /** @description `CODE_RESEND_TOO_SOON` — новый код раньше чем через 45 секунд; `TOO_MANY_REQUESTS` — лимит частоты */
+      429: {
+        headers: {
+          /** @description Через сколько секунд можно повторить */
+          "Retry-After"?: number;
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      /** @description Письмо с кодом не ушло (`DELIVERY_FAILED`) */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+    };
+  };
+  verifyDocLinkCode: {
+    parameters: {
+      query?: never;
+      header: {
+        /**
+         * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
+         *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
+         *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
+         */
+        "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": {
+          token: string;
+          code: string;
+        };
+      };
+    };
+    responses: {
+      /** @description Сессия выдана (cookie `Set-Cookie`) */
+      200: {
+        headers: {
+          "Set-Cookie"?: string;
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Me"];
+        };
+      };
+      400: components["responses"]["IdempotencyKeyRequired"];
+      403: components["responses"]["CompanyArchived"];
+      404: components["responses"]["NotFound"];
+      /** @description Ссылка отозвана, просрочена или заменена (`DOC_LINK_REVOKED`, `DOC_LINK_EXPIRED`, `DOC_LINK_SUPERSEDED`) */
+      410: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      415: components["responses"]["UnsupportedMediaType"];
+      /** @description `LOGIN_CODE_INVALID` — код неверный, устарел или чужой; `VALIDATION_ERROR` — тело не по схеме */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      /** @description `LOGIN_CODE_LOCKED` — 5 неверных кодов подряд, нужен новый код; `TOO_MANY_REQUESTS` — лимит частоты по IP */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+    };
+  };
+  actOnDocLink: {
+    parameters: {
+      query?: never;
+      header: {
+        /**
+         * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
+         *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
+         *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
+         */
+        "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": {
+          token: string;
+          /** @enum {string} */
+          action: "accept" | "reject" | "question";
+          text?: string;
+        };
+      };
+    };
+    responses: {
+      /** @description Действие выполнено */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DocLinkView"];
+        };
+      };
+      400: components["responses"]["IdempotencyKeyRequired"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      /** @description КП уже решено или срок вышел (`QUOTE_FINALIZED`, `QUOTE_EXPIRED`) */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      /** @description Ссылка отозвана, просрочена или заменена (`DOC_LINK_REVOKED`, `DOC_LINK_EXPIRED`, `DOC_LINK_SUPERSEDED`) */
+      410: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      415: components["responses"]["UnsupportedMediaType"];
+      /** @description `VALIDATION_ERROR` — тело не по схеме, `REASON_REQUIRED` — замечания не заполнены */
       422: {
         headers: {
           [name: string]: unknown;

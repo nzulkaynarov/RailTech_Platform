@@ -10,6 +10,11 @@ from django.utils.translation import gettext_lazy as _
 from core.storage import get_private_storage
 
 from .models_bank_change import BankDetailsChangeRequest, BankDetailsChangeStatus  # noqa: F401
+from .models_doclink import (  # noqa: F401 — ссылка документа в Кабинет (ДК-1)
+    DocumentLink,
+    DocumentLinkEvent,
+    DocumentLinkKind,
+)
 from .models_legal import LegalAcceptance, LegalEdition, LegalKind  # noqa: F401 — оферта и политика Кабинета (ДВ-5)
 from .models_letters import LetterDirection, LetterState, PortalLetter  # noqa: F401 — письма компании (ЛИД-8, ADR-0026)
 from .models_notices import NoticeChannel, NoticeEmailState, PortalNotice  # noqa: F401 — лента колокольчика (NOTIFY-2)
@@ -78,6 +83,7 @@ class MagicLinkToken(models.Model):
 
     PURPOSE_LOGIN = "login"
     PURPOSE_INVITE = "invite"
+    PURPOSE_DOCUMENT = "document"
 
     token_hash = models.CharField(
         max_length=64,
@@ -87,7 +93,11 @@ class MagicLinkToken(models.Model):
     )
     purpose = models.CharField(
         max_length=10,
-        choices=[(PURPOSE_LOGIN, _("Вход по запросу клиента")), (PURPOSE_INVITE, _("Приглашение из ERP"))],
+        choices=[
+            (PURPOSE_LOGIN, _("Вход по запросу клиента")),
+            (PURPOSE_INVITE, _("Приглашение из ERP")),
+            (PURPOSE_DOCUMENT, _("Код действия по ссылке документа")),
+        ],
         default=PURPOSE_LOGIN,
         verbose_name=_("Назначение"),
     )
@@ -105,6 +115,15 @@ class MagicLinkToken(models.Model):
         help_text=_("Сырой 6-значный код есть только в письме; пусто — у записи нет кода"),
     )
     code_attempts = models.PositiveSmallIntegerField(default=0, verbose_name=_("Неверных попыток кода"))
+    document_link = models.ForeignKey(
+        "portal.DocumentLink",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="codes",
+        verbose_name=_("Ссылка документа"),
+        help_text=_("Код действия по ссылке документа (ДК-2) гасится только с этой ссылкой"),
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     expires_at = models.DateTimeField(db_index=True)
     used_at = models.DateTimeField(null=True, blank=True)

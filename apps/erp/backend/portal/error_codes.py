@@ -87,6 +87,11 @@ ERROR_CODES = (
     "BANK_HOLDER_LATIN_INVALID",
     "BANK_INTERMEDIARY_INVALID",
     "SESSION_ALREADY_ENDED",
+    "DOC_LINK_REVOKED",
+    "DOC_LINK_EXPIRED",
+    "DOC_LINK_SUPERSEDED",
+    "CODE_RESEND_TOO_SOON",
+    "GENERATING",
 )
 
 #: Код по HTTP-статусу для ошибок, у которых своего кода нет (чужие исключения DRF и Django).

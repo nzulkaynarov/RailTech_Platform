@@ -4426,6 +4426,35 @@ paths:
         '503':
           $ref: '#/components/responses/BackendUnavailable'
 
+  /eds/quotes/{id}/revoke-link:
+    post:
+      tags: [eds-approvals]
+      operationId: revokeQuoteClientLink
+      summary: 'EDS · Отозвать ссылку клиента на отправленное КП («Отозвать ссылку»)'
+      description: >-
+        ДК-1. Для того, кто отправляет КП (раздел `crm.clients` полный, право ERP `quote.send`; объектную проверку делает ERP): ERP
+        `POST /crm/quotes/{id}/revoke-public-link/` по КП маршрута. Все ссылки получателей в Кабинет (`/d/<токен>`) и старая страница
+        ERP перестают открываться — клиент по ссылке видит только «ссылка отозвана»; повтор безвреден. Новая отправка КП даёт новую
+        ссылку. Ответ — обновлённая карточка КП (`client_link.state = revoked`).
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/ApprovalIdPath'
+      responses:
+        '200':
+          description: Ссылка отозвана
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuoteApprovalCard'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
   /eds/quotes/{id}/client-decision:
     post:
       tags: [eds-approvals]
@@ -22033,7 +22062,25 @@ components:
         client_decision:
           oneOf: [{$ref: '#/components/schemas/QuoteClientDecision'}, {type: 'null'}]
           description: 'Решение клиента по отправленному КП (A1 волны 18a); `null` — КП ещё не отправлено или ERP не ответила'
+        client_link:
+          oneOf: [{$ref: '#/components/schemas/QuoteClientLink'}, {type: 'null'}]
+          description: 'Ссылка клиента на отправленное КП в Кабинете (ДК-1); `null` — КП ещё не отправлено или ERP не ответила'
         sources: {$ref: '#/components/schemas/Sources'}
+    QuoteClientLink:
+      type: object
+      additionalProperties: false
+      required: [state, recipient_hint, expires_at, first_opened_at, last_opened_at, can_revoke]
+      description: 'Ссылка клиента на КП в Кабинете (ДК-1): состояние, кому ушла (адрес замаскирован) и открывал ли'
+      properties:
+        state:
+          type: string
+          enum: [none, active, revoked, expired, superseded]
+          description: '`active` — ссылка открывается; `revoked` — отозвана на документе; `expired` — срок вышел; `superseded` — есть более новая отправленная версия КП; `none` — ссылки нет'
+        recipient_hint: {type: [string, 'null'], description: 'Адрес получателя, замаскированный (`a***@example.uz`)'}
+        expires_at: {type: [string, 'null'], format: date-time, description: Когда гаснет самая поздняя живая ссылка}
+        first_opened_at: {type: [string, 'null'], format: date-time}
+        last_opened_at: {type: [string, 'null'], format: date-time}
+        can_revoke: {type: boolean, description: 'Показать «Отозвать ссылку»: ссылка действует и у сотрудника право отправлять КП (решает ERP)'}
     QuoteClientDecision:
       type: object
       additionalProperties: false

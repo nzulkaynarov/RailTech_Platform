@@ -17,6 +17,12 @@ from crm.models import ActivityLog, Quote, QuoteStatus
 from crm.tests.test_public_quote_page_wave_a import _make_sent_quote, _url, lookups  # noqa: F401
 
 
+@pytest.fixture(autouse=True)
+def _legacy_page(settings):
+    """Здесь проверяется сама страница ERP (ссылки до перехода в Кабинет, ДК-1): переход выключен."""
+    settings.PUBLIC_QUOTE_REDIRECT_TO_CABINET = False
+
+
 def _page(quote):
     return APIClient().get(_url(quote), SERVER_NAME="localhost", HTTP_ACCEPT="text/html")
 

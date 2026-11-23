@@ -6984,3 +6984,27 @@ msgstr "Sign-in to the cabinet from a new device"
 #, python-format
 msgid "Ваш менеджер — %(manager_name)s"
 msgstr "Your manager is %(manager_name)s"
+
+# ── emails/document_link_code (ДК-2) ───────────────────────────────────────────────
+#, python-format
+msgid "Код подтверждения: %(document_number)s"
+msgstr "Verification code: %(document_number)s"
+
+msgid "Подтвердите, что это вы"
+msgstr "Confirm it is you"
+
+#, python-format
+msgid "Вы выполняете действие с документом <strong>%(document_number)s</strong> от %(seller_name)s."
+msgstr "You are acting on document <strong>%(document_number)s</strong> from %(seller_name)s."
+
+#, python-format
+msgid "Вы выполняете действие с документом %(document_number)s от %(seller_name)s."
+msgstr "You are acting on document %(document_number)s from %(seller_name)s."
+
+#, python-format
+msgid "Код действует <strong>%(expires_minutes)s минут</strong> и срабатывает один раз. Введите его на странице документа."
+msgstr "The code is valid for <strong>%(expires_minutes)s minutes</strong> and works once. Enter it on the document page."
+
+#, python-format
+msgid "Код действует %(expires_minutes)s минут и срабатывает один раз. Введите его на странице документа."
+msgstr "The code is valid for %(expires_minutes)s minutes and works once. Enter it on the document page."

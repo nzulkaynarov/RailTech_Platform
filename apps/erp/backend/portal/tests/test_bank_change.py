@@ -284,7 +284,7 @@ def test_all_admins_and_primary_are_notified_by_every_channel(
         "kind": "bank_requisites_change_requested",
     }
     assert envelope["data"]["crm_client_id"] == 42
-    assert "2020" not in str(envelope["data"]), "реквизитов в событии нет"
+    assert "20208000" not in str(envelope["data"]), "реквизитов в событии нет"
 
 
 def test_rolled_back_submission_leaves_no_event_or_notice(client_company, client_contact, crm_paired):

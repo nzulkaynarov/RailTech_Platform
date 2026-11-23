@@ -29,6 +29,7 @@ from app.eds_approvals import (
     quote_page,
     quote_route_id,
     record_client_decision,
+    revoke_client_link,
     send_quote,
     signing_page,
 )
@@ -172,6 +173,19 @@ async def send_quote_by_channel(
 ) -> QuoteApprovalCard:
     proxy = _proxy(authed)
     route = await send_quote(authed, proxy, str(id), body.channel)
+    return await quote_card(authed, proxy, route)
+
+
+@router.post(
+    "/quotes/{id}/revoke-link",
+    response_model=QuoteApprovalCard,
+    response_model_exclude_unset=True,
+    operation_id="revokeQuoteClientLink",
+)
+async def revoke_quote_client_link(id: ApprovalId, authed: QuoteSender) -> QuoteApprovalCard:
+    """«Отозвать ссылку» на отправленное КП (ДК-1): ссылки клиента перестают открываться."""
+    proxy = _proxy(authed)
+    route = await revoke_client_link(authed, proxy, str(id))
     return await quote_card(authed, proxy, route)
 
 

@@ -132,7 +132,12 @@ class QuoteViewSet(
         # Compute the (cost-gated) unit-economics block ONLY on the single-quote detail —
         # the КП builder reads it there. Off for list endpoints to avoid an items+charges N+1.
         ctx = super().get_serializer_context()
-        ctx["include_economics"] = self.action in ("retrieve", "fx_override", "record_client_decision")
+        ctx["include_economics"] = self.action in (
+            "retrieve",
+            "fx_override",
+            "record_client_decision",
+            "revoke_public_link",
+        )
         return ctx
 
     def get_queryset(self):
@@ -463,8 +468,10 @@ class QuoteViewSet(
 
     @extend_schema(
         summary="Revoke the public no-login link of a sent КП",
-        description="Seller pulls the shared client link (post-send panel). Idempotent; further "
-        "opens return 410 QUOTE_LINK_REVOKED. Same authorization as send-to-client.",
+        description="Seller pulls every client link to the КП: the recipients' Cabinet links (`/d/<token>`, ДК-1) and the "
+        "old ERP page link. Idempotent; further opens return 410 (`DOC_LINK_REVOKED` in the Cabinet, "
+        "QUOTE_LINK_REVOKED on the old page). Same authorization as send-to-client; the response carries the "
+        "refreshed `client_link`.",
         tags=["CRM"],
     )
     @action(detail=True, methods=["post"], url_path="revoke-public-link", permission_classes=[IsAuthenticated])

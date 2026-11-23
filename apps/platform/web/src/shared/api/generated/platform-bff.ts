@@ -16355,6 +16355,101 @@ export const useSendQuoteByChannel = <
   return useMutation(getSendQuoteByChannelMutationOptions(options), queryClient);
 };
 
+export const getRevokeQuoteClientLinkUrl = (id: string) => {
+  return `/api/v1/eds/quotes/${id}/revoke-link`;
+};
+
+/**
+ * ДК-1. Для того, кто отправляет КП (раздел `crm.clients` полный, право ERP `quote.send`; объектную проверку делает ERP): ERP `POST /crm/quotes/{id}/revoke-public-link/` по КП маршрута. Все ссылки получателей в Кабинет (`/d/<токен>`) и старая страница ERP перестают открываться — клиент по ссылке видит только «ссылка отозвана»; повтор безвреден. Новая отправка КП даёт новую ссылку. Ответ — обновлённая карточка КП (`client_link.state = revoked`).
+ * @summary EDS · Отозвать ссылку клиента на отправленное КП («Отозвать ссылку»)
+ */
+export const revokeQuoteClientLink = async (
+  id: string,
+  options?: Parameters<typeof http>[1],
+): Promise<QuoteApprovalCard> => {
+  return http<QuoteApprovalCard>(getRevokeQuoteClientLinkUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getRevokeQuoteClientLinkMutationKey = () => ["revokeQuoteClientLink"] as const;
+
+export const getRevokeQuoteClientLinkMutationOptions = <
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof revokeQuoteClientLink>>,
+    TError,
+    RevokeQuoteClientLinkMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof revokeQuoteClientLink>>,
+  TError,
+  RevokeQuoteClientLinkMutationVariables,
+  TContext
+> => {
+  const mutationKey = getRevokeQuoteClientLinkMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof revokeQuoteClientLink>>,
+    RevokeQuoteClientLinkMutationVariables
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return revokeQuoteClientLink(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RevokeQuoteClientLinkMutationResult = NonNullable<
+  Awaited<ReturnType<typeof revokeQuoteClientLink>>
+>;
+
+export type RevokeQuoteClientLinkMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+export type RevokeQuoteClientLinkMutationVariables = { id: string };
+
+/**
+ * @summary EDS · Отозвать ссылку клиента на отправленное КП («Отозвать ссылку»)
+ */
+export const useRevokeQuoteClientLink = <
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof revokeQuoteClientLink>>,
+      TError,
+      RevokeQuoteClientLinkMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof revokeQuoteClientLink>>,
+  TError,
+  RevokeQuoteClientLinkMutationVariables,
+  TContext
+> => {
+  return useMutation(getRevokeQuoteClientLinkMutationOptions(options), queryClient);
+};
+
 export const getRecordQuoteClientDecisionUrl = (id: string) => {
   return `/api/v1/eds/quotes/${id}/client-decision`;
 };

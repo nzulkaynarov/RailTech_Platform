@@ -343,6 +343,7 @@ import type {
   QuoteApprovalPage,
   QuoteChannels,
   QuoteClientDecision,
+  QuoteClientLink,
   QuoteDefaults,
   QuoteDelivery,
   QuoteLetterRef,
@@ -10956,6 +10957,38 @@ export const getGetQuoteApprovalResponseQuoteClientDecisionMock = (
   ...overrideResponse,
 });
 
+export const getGetQuoteApprovalResponseQuoteClientLinkMock = (
+  overrideResponse: Partial<QuoteClientLink> = {},
+): QuoteClientLink => ({
+  ...{
+    state: faker.helpers.arrayElement([
+      "none",
+      "active",
+      "revoked",
+      "expired",
+      "superseded",
+    ] as const),
+    recipient_hint: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    expires_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    first_opened_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    last_opened_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    can_revoke: faker.datatype.boolean(),
+  },
+  ...overrideResponse,
+});
+
 export const getGetQuoteApprovalResponseMock = (
   overrideResponse: Partial<Extract<QuoteApprovalCard, object>> = {},
 ): QuoteApprovalCard => ({
@@ -11103,6 +11136,10 @@ export const getGetQuoteApprovalResponseMock = (
   })),
   client_decision: faker.helpers.arrayElement([
     { ...getGetQuoteApprovalResponseQuoteClientDecisionMock() },
+    null,
+  ]),
+  client_link: faker.helpers.arrayElement([
+    { ...getGetQuoteApprovalResponseQuoteClientLinkMock() },
     null,
   ]),
   sources: {
@@ -11299,6 +11336,38 @@ export const getDecideQuoteApprovalResponseQuoteClientDecisionMock = (
   ...overrideResponse,
 });
 
+export const getDecideQuoteApprovalResponseQuoteClientLinkMock = (
+  overrideResponse: Partial<QuoteClientLink> = {},
+): QuoteClientLink => ({
+  ...{
+    state: faker.helpers.arrayElement([
+      "none",
+      "active",
+      "revoked",
+      "expired",
+      "superseded",
+    ] as const),
+    recipient_hint: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    expires_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    first_opened_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    last_opened_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    can_revoke: faker.datatype.boolean(),
+  },
+  ...overrideResponse,
+});
+
 export const getDecideQuoteApprovalResponseMock = (
   overrideResponse: Partial<Extract<QuoteApprovalCard, object>> = {},
 ): QuoteApprovalCard => ({
@@ -11452,6 +11521,10 @@ export const getDecideQuoteApprovalResponseMock = (
   })),
   client_decision: faker.helpers.arrayElement([
     { ...getDecideQuoteApprovalResponseQuoteClientDecisionMock() },
+    null,
+  ]),
+  client_link: faker.helpers.arrayElement([
+    { ...getDecideQuoteApprovalResponseQuoteClientLinkMock() },
     null,
   ]),
   sources: {
@@ -11648,6 +11721,38 @@ export const getSendQuoteByChannelResponseQuoteClientDecisionMock = (
   ...overrideResponse,
 });
 
+export const getSendQuoteByChannelResponseQuoteClientLinkMock = (
+  overrideResponse: Partial<QuoteClientLink> = {},
+): QuoteClientLink => ({
+  ...{
+    state: faker.helpers.arrayElement([
+      "none",
+      "active",
+      "revoked",
+      "expired",
+      "superseded",
+    ] as const),
+    recipient_hint: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    expires_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    first_opened_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    last_opened_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    can_revoke: faker.datatype.boolean(),
+  },
+  ...overrideResponse,
+});
+
 export const getSendQuoteByChannelResponseMock = (
   overrideResponse: Partial<Extract<QuoteApprovalCard, object>> = {},
 ): QuoteApprovalCard => ({
@@ -11798,6 +11903,398 @@ export const getSendQuoteByChannelResponseMock = (
   })),
   client_decision: faker.helpers.arrayElement([
     { ...getSendQuoteByChannelResponseQuoteClientDecisionMock() },
+    null,
+  ]),
+  client_link: faker.helpers.arrayElement([
+    { ...getSendQuoteByChannelResponseQuoteClientLinkMock() },
+    null,
+  ]),
+  sources: {
+    crm: faker.helpers.arrayElement(Object.values(SourceState)),
+    erp: faker.helpers.arrayElement(Object.values(SourceState)),
+    eds: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(SourceState)),
+      undefined,
+    ]),
+  },
+  ...overrideResponse,
+});
+
+export const getRevokeQuoteClientLinkResponseEdsPersonMock = (
+  overrideResponse: Partial<EdsPerson> = {},
+): EdsPerson => ({
+  ...{
+    crm_user_id: faker.number.int(),
+    full_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getRevokeQuoteClientLinkResponseLetterRequestMock = (
+  overrideResponse: Partial<LetterRequest> = {},
+): LetterRequest => ({
+  ...{
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    title: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    files: faker.helpers.arrayElement([
+      Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+        id: faker.number.int({ min: 1 }),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        uploaded_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      })),
+      undefined,
+    ]),
+  },
+  ...overrideResponse,
+});
+
+export const getRevokeQuoteClientLinkResponseQuoteLetterRefMock = (
+  overrideResponse: Partial<QuoteLetterRef> = {},
+): QuoteLetterRef => ({
+  ...{
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getRevokeQuoteClientLinkResponseEdsMoneyMock = (
+  overrideResponse: Partial<EdsMoney> = {},
+): EdsMoney => ({
+  ...{
+    amount: faker.helpers.fromRegExp("^\\d+\\.\\d{2}$"),
+    currency: faker.helpers.fromRegExp("^[A-Z]{3}$"),
+  },
+  ...overrideResponse,
+});
+
+export const getRevokeQuoteClientLinkResponseItemRefMock = (
+  overrideResponse: Partial<ItemRef> = {},
+): ItemRef => ({
+  ...{
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    sku: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    kind: faker.helpers.arrayElement(["goods", "service"] as const),
+    thumbnail: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
+export const getRevokeQuoteClientLinkResponseQuoteTotalsMock = (
+  overrideResponse: Partial<QuoteTotals> = {},
+): QuoteTotals => ({
+  ...{
+    currency: faker.helpers.fromRegExp("^[A-Z]{3}$"),
+    subtotal: faker.helpers.arrayElement([faker.helpers.fromRegExp("^-?\\d+(\\.\\d+)?$"), null]),
+    vat_rate: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    vat_amount: faker.helpers.arrayElement([faker.helpers.fromRegExp("^-?\\d+(\\.\\d+)?$"), null]),
+    total: faker.helpers.fromRegExp("^-?\\d+(\\.\\d+)?$"),
+  },
+  ...overrideResponse,
+});
+
+export const getRevokeQuoteClientLinkResponseQuoteChannelsMock = (
+  overrideResponse: Partial<QuoteChannels> = {},
+): QuoteChannels => ({
+  ...{
+    contact_name: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    telegram: faker.datatype.boolean(),
+    cabinet: faker.datatype.boolean(),
+    email: faker.datatype.boolean(),
+    reasons: {
+      telegram: faker.helpers.arrayElement([
+        faker.helpers.arrayElement(Object.values(QuoteDeliveryReason)),
+        null,
+      ]),
+      cabinet: faker.helpers.arrayElement([
+        faker.helpers.arrayElement(Object.values(QuoteDeliveryReason)),
+        null,
+      ]),
+      email: faker.helpers.arrayElement([
+        faker.helpers.arrayElement(Object.values(QuoteDeliveryReason)),
+        null,
+      ]),
+    },
+  },
+  ...overrideResponse,
+});
+
+export const getRevokeQuoteClientLinkResponseQuoteDeliveryMock = (
+  overrideResponse: Partial<QuoteDelivery> = {},
+): QuoteDelivery => ({
+  ...{
+    state: faker.helpers.arrayElement(["ready", "sent", "closed"] as const),
+    lines: Array.from({ length: faker.number.int({ min: 3, max: 3 }) }, (_, i) => i + 1).map(
+      () => ({
+        channel: faker.helpers.arrayElement(Object.values(QuoteSendChannel)),
+        status: faker.helpers.arrayElement(Object.values(QuoteDeliveryStatus)),
+        reason: faker.helpers.arrayElement([
+          faker.helpers.arrayElement(Object.values(QuoteDeliveryReason)),
+          null,
+        ]),
+        can_send: faker.datatype.boolean(),
+      }),
+    ),
+    error: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(QuoteDeliveryReason)),
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
+export const getRevokeQuoteClientLinkResponseOnBehalfRecordMock = (
+  overrideResponse: Partial<OnBehalfRecord> = {},
+): OnBehalfRecord => ({
+  ...{
+    staff_name: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    channel: faker.helpers.arrayElement(Object.values(OnBehalfChannel)),
+    counterparty_person: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    occurred_on: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+    comment: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    evidence_name: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    evidence_url: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
+export const getRevokeQuoteClientLinkResponseQuoteClientDecisionMock = (
+  overrideResponse: Partial<QuoteClientDecision> = {},
+): QuoteClientDecision => ({
+  ...{
+    state: faker.helpers.arrayElement(["awaiting", "accepted", "rejected", "expired"] as const),
+    decided_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    reason: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    recorded_by_staff: faker.helpers.arrayElement([
+      { ...getRevokeQuoteClientLinkResponseOnBehalfRecordMock() },
+      null,
+    ]),
+    can_record: faker.datatype.boolean(),
+  },
+  ...overrideResponse,
+});
+
+export const getRevokeQuoteClientLinkResponseQuoteClientLinkMock = (
+  overrideResponse: Partial<QuoteClientLink> = {},
+): QuoteClientLink => ({
+  ...{
+    state: faker.helpers.arrayElement([
+      "none",
+      "active",
+      "revoked",
+      "expired",
+      "superseded",
+    ] as const),
+    recipient_hint: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    expires_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    first_opened_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    last_opened_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    can_revoke: faker.datatype.boolean(),
+  },
+  ...overrideResponse,
+});
+
+export const getRevokeQuoteClientLinkResponseMock = (
+  overrideResponse: Partial<Extract<QuoteApprovalCard, object>> = {},
+): QuoteApprovalCard => ({
+  id: faker.string.uuid(),
+  number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  version: faker.number.int({ min: 1 }),
+  superseded_by: faker.helpers.arrayElement([faker.number.int({ min: 2 }), null]),
+  round: faker.number.int({ min: 1 }),
+  status: faker.helpers.arrayElement(Object.values(ApprovalRouteStatus)),
+  stage: faker.helpers.arrayElement(Object.values(StepCode)),
+  can_decide: faker.datatype.boolean(),
+  acting_for: faker.helpers.arrayElement([
+    { ...getRevokeQuoteClientLinkResponseEdsPersonMock() },
+    null,
+  ]),
+  allowed_decisions: faker.helpers.arrayElements(Object.values(ApprovalDecision)),
+  approved_late: faker.datatype.boolean(),
+  outgoing_number: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  ready_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
+  due: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  client_name: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  request: faker.helpers.arrayElement([
+    { ...getRevokeQuoteClientLinkResponseLetterRequestMock() },
+    null,
+  ]),
+  letter: faker.helpers.arrayElement([
+    { ...getRevokeQuoteClientLinkResponseQuoteLetterRefMock() },
+    null,
+  ]),
+  calculated_by: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      zone: faker.helpers.arrayElement(["goods", "services"] as const),
+    }),
+  ),
+  snapshot_total: faker.helpers.arrayElement([
+    { ...getRevokeQuoteClientLinkResponseEdsMoneyMock() },
+    null,
+  ]),
+  totals_mismatch: faker.datatype.boolean(),
+  lines: faker.helpers.arrayElement([
+    Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+      position: faker.number.int({ min: 1 }),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      item: faker.helpers.arrayElement([
+        { ...getRevokeQuoteClientLinkResponseItemRefMock() },
+        null,
+      ]),
+      quantity: faker.number.float({ min: 0, fractionDigits: 2 }),
+      unit: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      unit_price: faker.helpers.fromRegExp("^-?\\d+(\\.\\d+)?$"),
+      amount: faker.helpers.fromRegExp("^-?\\d+(\\.\\d+)?$"),
+      lead_time_days: faker.helpers.arrayElement([faker.number.int(), null]),
+      optional: faker.datatype.boolean(),
+    })),
+    null,
+  ]),
+  totals: faker.helpers.arrayElement([
+    { ...getRevokeQuoteClientLinkResponseQuoteTotalsMock() },
+    null,
+  ]),
+  internal: faker.helpers.arrayElement([
+    {
+      cost: faker.helpers.arrayElement([faker.helpers.fromRegExp("^-?\\d+(\\.\\d+)?$"), null]),
+      margin_amount: faker.helpers.arrayElement([
+        faker.helpers.fromRegExp("^-?\\d+(\\.\\d+)?$"),
+        null,
+      ]),
+      margin_pct: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      min_margin_pct: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      payment_terms: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      valid_until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+      supplier_price_until: faker.helpers.arrayElement([
+        faker.date.past().toISOString().slice(0, 10),
+        null,
+      ]),
+    },
+    undefined,
+  ]),
+  checklist: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      code: faker.helpers.arrayElement(Object.values(ChecklistCode)),
+      ok: faker.datatype.boolean(),
+      blocking: faker.datatype.boolean(),
+      by_name: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
+      value: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+    }),
+  ),
+  steps: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    label: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    status: faker.helpers.arrayElement([
+      "pending",
+      "current",
+      "approved",
+      "returned",
+      "rejected",
+      "skipped",
+    ] as const),
+    decided_by: faker.helpers.arrayElement([
+      { ...getRevokeQuoteClientLinkResponseEdsPersonMock() },
+      null,
+    ]),
+    decided_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    comment: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  })),
+  channels: faker.helpers.arrayElement([
+    { ...getRevokeQuoteClientLinkResponseQuoteChannelsMock() },
+    null,
+  ]),
+  delivery: faker.helpers.arrayElement([
+    { ...getRevokeQuoteClientLinkResponseQuoteDeliveryMock() },
+    null,
+  ]),
+  client_comments: Array.from(
+    { length: faker.number.int({ min: 1, max: 10 }) },
+    (_, i) => i + 1,
+  ).map(() => ({
+    author: faker.helpers.arrayElement(["client", "manager"] as const),
+    author_name: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  })),
+  client_decision: faker.helpers.arrayElement([
+    { ...getRevokeQuoteClientLinkResponseQuoteClientDecisionMock() },
+    null,
+  ]),
+  client_link: faker.helpers.arrayElement([
+    { ...getRevokeQuoteClientLinkResponseQuoteClientLinkMock() },
     null,
   ]),
   sources: {
@@ -11994,6 +12491,38 @@ export const getRecordQuoteClientDecisionResponseQuoteClientDecisionMock = (
   ...overrideResponse,
 });
 
+export const getRecordQuoteClientDecisionResponseQuoteClientLinkMock = (
+  overrideResponse: Partial<QuoteClientLink> = {},
+): QuoteClientLink => ({
+  ...{
+    state: faker.helpers.arrayElement([
+      "none",
+      "active",
+      "revoked",
+      "expired",
+      "superseded",
+    ] as const),
+    recipient_hint: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    expires_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    first_opened_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    last_opened_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    can_revoke: faker.datatype.boolean(),
+  },
+  ...overrideResponse,
+});
+
 export const getRecordQuoteClientDecisionResponseMock = (
   overrideResponse: Partial<Extract<QuoteApprovalCard, object>> = {},
 ): QuoteApprovalCard => ({
@@ -12150,6 +12679,10 @@ export const getRecordQuoteClientDecisionResponseMock = (
   })),
   client_decision: faker.helpers.arrayElement([
     { ...getRecordQuoteClientDecisionResponseQuoteClientDecisionMock() },
+    null,
+  ]),
+  client_link: faker.helpers.arrayElement([
+    { ...getRecordQuoteClientDecisionResponseQuoteClientLinkMock() },
     null,
   ]),
   sources: {
@@ -42484,6 +43017,30 @@ export const getSendQuoteByChannelMockHandler = (
   );
 };
 
+export const getRevokeQuoteClientLinkMockHandler = (
+  overrideResponse?:
+    | QuoteApprovalCard
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<QuoteApprovalCard> | QuoteApprovalCard),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/eds/quotes/:id/revoke-link",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getRevokeQuoteClientLinkResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
 export const getRecordQuoteClientDecisionMockHandler = (
   overrideResponse?:
     | QuoteApprovalCard
@@ -51596,6 +52153,7 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getGetQuoteApprovalMockHandler(),
   getDecideQuoteApprovalMockHandler(),
   getSendQuoteByChannelMockHandler(),
+  getRevokeQuoteClientLinkMockHandler(),
   getRecordQuoteClientDecisionMockHandler(),
   getDownloadQuoteClientDecisionEvidenceMockHandler(),
   getListMemoApprovalsMockHandler(),

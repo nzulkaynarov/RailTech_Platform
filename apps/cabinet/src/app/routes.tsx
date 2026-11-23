@@ -19,13 +19,15 @@ import { LoginSentPage } from '@/pages/auth/LoginSentPage';
 import { MagicLinkPage } from '@/pages/auth/MagicLinkPage';
 import { NewClientPage } from '@/pages/auth/NewClientPage';
 import { BecomePartnerPage } from '@/pages/auth/BecomePartnerPage';
+import { DocLinkPage } from '@/pages/docLink/DocLinkPage';
 import { PrivacyPage } from '@/pages/legal/PrivacyPage';
 import { VerifyPage } from '@/pages/verify/VerifyPage';
 import { HomeRedirect, RequireLegal, RequireModule, RequireSession, WebOnly } from './guards';
 import { RootErrorPage } from './RootErrorPage';
 
 /**
- * Маршруты Cabinet. Публичные (`/login`, `/login/sent`, `/login/code` — вход по коду из письма, `/new-client`) — только в вебе;
+ * Маршруты Cabinet. Публичные (`/login`, `/login/sent`, `/login/code` — вход по коду из письма, `/new-client`, `/d/<токен>` —
+ * документ по ссылке из письма) — только в вебе;
  * `/auth/magic#token=…` — ссылка из письма (токен во фрагменте; ссылок с токеном в пути на проде нет);
  * всё остальное — за сессией портала в оболочке. Непойманная ошибка любого маршрута —
  * `RootErrorPage` (корневой `errorElement`), а не белый экран.
@@ -44,6 +46,8 @@ export const routes: RouteObject[] = [
           { path: '/new-client', element: <NewClientPage /> },
           { path: '/become-partner', element: <BecomePartnerPage /> },
           { path: '/privacy', element: <PrivacyPage /> },
+          // ДК-1: документ по ссылке из письма — гость видит один документ, действия по коду (без сессии)
+          { path: '/d/:token', element: <DocLinkPage /> },
         ],
       },
       { path: '/auth/magic', element: <MagicLinkPage /> },

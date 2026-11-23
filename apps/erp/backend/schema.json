@@ -1379,6 +1379,146 @@
                 }
             }
         },
+        "/api/portal/v1/doc-links/act": {
+            "post": {
+                "operationId": "api_portal_v1_doc_links_act_create",
+                "description": "POST /doc-links/act {token, action, text?} — решение или вопрос; права — контакта сессии, не шире.",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/doc-links/act/": {
+            "post": {
+                "operationId": "api_portal_v1_doc_links_act_create_2",
+                "description": "POST /doc-links/act {token, action, text?} — решение или вопрос; права — контакта сессии, не шире.",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/doc-links/code": {
+            "post": {
+                "operationId": "api_portal_v1_doc_links_code_create",
+                "description": "POST /doc-links/code {token} — код на адрес получателя; адреса в запросе нет.",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/doc-links/code/": {
+            "post": {
+                "operationId": "api_portal_v1_doc_links_code_create_2",
+                "description": "POST /doc-links/code {token} — код на адрес получателя; адреса в запросе нет.",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/doc-links/open": {
+            "post": {
+                "operationId": "api_portal_v1_doc_links_open_create",
+                "description": "POST /doc-links/open {token} — документ гостю или вошедшему контакту; открытие пишется в журнал ссылки.",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/doc-links/open/": {
+            "post": {
+                "operationId": "api_portal_v1_doc_links_open_create_2",
+                "description": "POST /doc-links/open {token} — документ гостю или вошедшему контакту; открытие пишется в журнал ссылки.",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/doc-links/pdf": {
+            "post": {
+                "operationId": "api_portal_v1_doc_links_pdf_create",
+                "description": "POST /doc-links/pdf {token} — тот же PDF, что ушёл письмом; ещё собирается — 202 и `Retry-After`.",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/doc-links/pdf/": {
+            "post": {
+                "operationId": "api_portal_v1_doc_links_pdf_create_2",
+                "description": "POST /doc-links/pdf {token} — тот же PDF, что ушёл письмом; ещё собирается — 202 и `Retry-After`.",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/doc-links/verify": {
+            "post": {
+                "operationId": "api_portal_v1_doc_links_verify_create",
+                "description": "POST /doc-links/verify {token, code} — код погашен, сессия контакта-получателя открыта.",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/doc-links/verify/": {
+            "post": {
+                "operationId": "api_portal_v1_doc_links_verify_create_2",
+                "description": "POST /doc-links/verify {token, code} — код погашен, сессия контакта-получателя открыта.",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
         "/api/portal/v1/documents": {
             "get": {
                 "operationId": "api_portal_v1_documents_retrieve",
@@ -27120,7 +27260,7 @@
         "/api/v1/crm/quotes/{id}/revoke-public-link/": {
             "post": {
                 "operationId": "crm_quotes_revoke_public_link_create",
-                "description": "Seller pulls the shared client link (post-send panel). Idempotent; further opens return 410 QUOTE_LINK_REVOKED. Same authorization as send-to-client.",
+                "description": "Seller pulls every client link to the КП: the recipients' Cabinet links (`/d/<token>`, ДК-1) and the old ERP page link. Idempotent; further opens return 410 (`DOC_LINK_REVOKED` in the Cabinet, QUOTE_LINK_REVOKED on the old page). Same authorization as send-to-client; the response carries the refreshed `client_link`.",
                 "summary": "Revoke the public no-login link of a sent КП",
                 "parameters": [
                     {
@@ -57368,6 +57508,15 @@
                         "nullable": true,
                         "readOnly": true
                     },
+                    "client_link": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/QuoteClientLink"
+                            }
+                        ],
+                        "nullable": true,
+                        "readOnly": true
+                    },
                     "client_reject_reason": {
                         "type": "string",
                         "readOnly": true,
@@ -57433,6 +57582,7 @@
                     "charges_total",
                     "client_comments",
                     "client_decision",
+                    "client_link",
                     "client_reject_reason",
                     "created_at",
                     "deal",
@@ -57798,6 +57948,54 @@
                     "recorded_at",
                     "recorded_by_name"
                 ]
+            },
+            "QuoteClientLink": {
+                "type": "object",
+                "description": "Ссылка клиента на КП в Кабинете (ДК-1): что отправитель видит на документе и что может отозвать.",
+                "properties": {
+                    "state": {
+                        "$ref": "#/components/schemas/QuoteClientLinkStateEnum"
+                    },
+                    "recipient_hint": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "Адрес получателя, замаскированный"
+                    },
+                    "expires_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true,
+                        "description": "Когда гаснет самая поздняя живая ссылка"
+                    },
+                    "first_opened_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "last_opened_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "expires_at",
+                    "first_opened_at",
+                    "last_opened_at",
+                    "recipient_hint",
+                    "state"
+                ]
+            },
+            "QuoteClientLinkStateEnum": {
+                "enum": [
+                    "none",
+                    "active",
+                    "revoked",
+                    "expired",
+                    "superseded"
+                ],
+                "type": "string",
+                "description": "* `none` - none\n* `active` - active\n* `revoked` - revoked\n* `expired` - expired\n* `superseded` - superseded"
             },
             "QuoteDeliverRequestChannelEnum": {
                 "enum": [

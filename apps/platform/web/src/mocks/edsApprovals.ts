@@ -206,6 +206,10 @@ function presentQuote(
     client_decision: card.client_decision
       ? { ...card.client_decision, can_record: card.client_decision.can_record && maySend }
       : null,
+    // «Отозвать ссылку» — у того, кто отправляет КП (раздел «Клиенты» полный, ERP `quote.send`; ДК-1)
+    client_link: card.client_link
+      ? { ...card.client_link, can_revoke: card.client_link.can_revoke && maySend }
+      : null,
     // ERP отказывает роли без доступа к КП (403): состав и итоги не приходят, снимка EDS у неё нет
     ...(mayDecide
       ? {}
@@ -337,6 +341,20 @@ export const edsApprovalsHandlers = [
     const next = updateQuote(card.id, (current) => ({
       ...current,
       delivery: deliveryAfterSend(delivery, channel),
+    }));
+    return HttpResponse.json(presentQuote(next ?? card, ok.who.margin, false, true));
+  }),
+
+  http.post("*/eds/quotes/:id/revoke-link", ({ params }) => {
+    const ok = guard(["crm.clients"], "full");
+    if (ok.error) return ok.error;
+    const card = findQuote(String(params["id"]));
+    if (!card) return failure(404, "NOT_FOUND", "КП не найдено.", "eds");
+    const next = updateQuote(card.id, (current) => ({
+      ...current,
+      client_link: current.client_link
+        ? { ...current.client_link, state: "revoked", expires_at: null, can_revoke: false }
+        : null,
     }));
     return HttpResponse.json(presentQuote(next ?? card, ok.who.margin, false, true));
   }),

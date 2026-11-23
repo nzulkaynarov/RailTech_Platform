@@ -1,0 +1,13 @@
+{% load i18n %}{% translate "Здравствуйте!" %}
+
+{% blocktranslate %}Вы выполняете действие с документом {{ document_number }} от {{ seller_name }}.{% endblocktranslate %}
+
+{% translate "Ваш код:" %} {{ code }}
+
+{% blocktranslate %}Код действует {{ expires_minutes }} минут и срабатывает один раз. Введите его на странице документа.{% endblocktranslate %}
+
+{% translate "Если вы не запрашивали этот код — просто игнорируйте это письмо." %}
+{% translate "Мы не просим пароль и код в письме или по телефону. Не пересылайте этот код." %}
+
+{% translate "С уважением," %}
+{% blocktranslate with platform=platform_name|default:'ERP' %}команда {{ platform }}{% endblocktranslate %}

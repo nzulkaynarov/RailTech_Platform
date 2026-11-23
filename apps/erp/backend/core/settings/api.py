@@ -68,6 +68,9 @@ REST_FRAMEWORK = {
         "portal_login": os.environ.get(
             "PORTAL_LOGIN_RATE", "10/minute"
         ),  # вход без сессии, на IP (magic-link, initData)
+        "portal_doclink": os.environ.get(
+            "PORTAL_DOCLINK_RATE", "30/minute"
+        ),  # открытие и PDF документа по ссылке без сессии, на IP (ДК-1)
         "portal_accept": os.environ.get("PORTAL_ACCEPT_RATE", "10/minute"),  # акцепт КП с кодом, на сессию
         "portal_verify": os.environ.get(
             "PORTAL_VERIFY_RATE", "30/minute"

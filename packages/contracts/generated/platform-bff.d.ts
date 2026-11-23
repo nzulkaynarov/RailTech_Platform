@@ -2291,6 +2291,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/eds/quotes/{id}/revoke-link": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * EDS · Отозвать ссылку клиента на отправленное КП («Отозвать ссылку»)
+     * @description ДК-1. Для того, кто отправляет КП (раздел `crm.clients` полный, право ERP `quote.send`; объектную проверку делает ERP): ERP `POST /crm/quotes/{id}/revoke-public-link/` по КП маршрута. Все ссылки получателей в Кабинет (`/d/<токен>`) и старая страница ERP перестают открываться — клиент по ссылке видит только «ссылка отозвана»; повтор безвреден. Новая отправка КП даёт новую ссылку. Ответ — обновлённая карточка КП (`client_link.state = revoked`).
+     */
+    post: operations["revokeQuoteClientLink"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/eds/quotes/{id}/client-decision": {
     parameters: {
       query?: never;
@@ -12387,7 +12407,30 @@ export interface components {
       client_comments: components["schemas"]["QuoteClientComment"][];
       /** @description Решение клиента по отправленному КП (A1 волны 18a); `null` — КП ещё не отправлено или ERP не ответила */
       client_decision?: components["schemas"]["QuoteClientDecision"] | null;
+      /** @description Ссылка клиента на отправленное КП в Кабинете (ДК-1); `null` — КП ещё не отправлено или ERP не ответила */
+      client_link?: components["schemas"]["QuoteClientLink"] | null;
       sources: components["schemas"]["Sources"];
+    };
+    /** @description Ссылка клиента на КП в Кабинете (ДК-1): состояние, кому ушла (адрес замаскирован) и открывал ли */
+    QuoteClientLink: {
+      /**
+       * @description `active` — ссылка открывается; `revoked` — отозвана на документе; `expired` — срок вышел; `superseded` — есть более новая отправленная версия КП; `none` — ссылки нет
+       * @enum {string}
+       */
+      state: "none" | "active" | "revoked" | "expired" | "superseded";
+      /** @description Адрес получателя, замаскированный (`a***@example.uz`) */
+      recipient_hint: string | null;
+      /**
+       * Format: date-time
+       * @description Когда гаснет самая поздняя живая ссылка
+       */
+      expires_at: string | null;
+      /** Format: date-time */
+      first_opened_at: string | null;
+      /** Format: date-time */
+      last_opened_at: string | null;
+      /** @description Показать «Отозвать ссылку»: ссылка действует и у сотрудника право отправлять КП (решает ERP) */
+      can_revoke: boolean;
     };
     QuoteClientDecision: {
       /**
@@ -22904,6 +22947,36 @@ export interface operations {
         };
       };
       422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  revokeQuoteClientLink: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description UUID маршрута согласования EDS (`id` карточки КП, `approval_id` карточки документа) */
+        id: components["parameters"]["ApprovalIdPath"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Ссылка отозвана */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["QuoteApprovalCard"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
       503: components["responses"]["BackendUnavailable"];
     };
   };

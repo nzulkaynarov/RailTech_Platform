@@ -47,6 +47,7 @@ from app.schemas_eds_approvals import (
     QuoteChecklistLine,
     QuoteClientComment,
     QuoteClientDecision,
+    QuoteClientLink,
     QuoteDelivery,
     QuoteDeliveryLine,
     QuoteInternal,
@@ -605,6 +606,22 @@ def _client_decision(
     )
 
 
+def _client_link(erp_quote: dict[str, Any] | None, may_revoke: bool) -> QuoteClientLink | None:
+    """Ссылка клиента на КП (ДК-1): факты ERP; «Отозвать» — пока действует и есть право."""
+    link = erp_quote.get("client_link") if erp_quote else None
+    states = ("none", "active", "revoked", "expired", "superseded")
+    if not isinstance(link, dict) or link.get("state") not in states:
+        return None
+    return QuoteClientLink(
+        state=link["state"],
+        recipient_hint=_text(link.get("recipient_hint")),
+        expires_at=link.get("expires_at"),
+        first_opened_at=link.get("first_opened_at"),
+        last_opened_at=link.get("last_opened_at"),
+        can_revoke=bool(may_revoke and link["state"] == "active"),
+    )
+
+
 def _stage(deal: dict[str, Any] | None) -> StepCode:
     """«КП» — пока заявка в ERP не ушла дальше (договор, оплата, выполнено) или не закрыта."""
     if deal is None:
@@ -755,6 +772,7 @@ async def quote_card(authed: Authed, proxy: EdsProxy, body: Any) -> QuoteApprova
         client_decision=_client_decision(
             erp_quote, raw.id, allows(authed.access, "crm.clients", "full")
         ),
+        client_link=_client_link(erp_quote, may_send),
         sources=feed.sources,
         **extra,
     )
@@ -822,6 +840,19 @@ async def record_client_decision(
         content=content,
         content_type=content_type,
     )
+    if response.status_code != 200:
+        raise project_error(response)
+    return body
+
+
+async def revoke_client_link(authed: Authed, proxy: EdsProxy, approval_id: str) -> Any:
+    """«Отозвать ссылку» (ДК-1): ERP `revoke-public-link` по КП маршрута — гасит ссылки клиента и
+    старую страницу; право и повтор решает ERP (идемпотентно). Ответ — маршрут EDS."""
+    from app.eds_projects import project_error
+
+    body, quote_id = await _route_quote_id(authed, proxy, approval_id)
+    path = f"/api/v1/crm/quotes/{quote_id}/revoke-public-link/"
+    response = await authed.call("erp", "POST", path)
     if response.status_code != 200:
         raise project_error(response)
     return body
