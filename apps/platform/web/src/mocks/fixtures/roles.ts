@@ -24,7 +24,8 @@ export type PresetCode =
   | "ENGINEER"
   | "ACCOUNTANT"
   | "REGISTRAR"
-  | "MANAGER_ALL";
+  | "MANAGER_ALL"
+  | "LAWYER";
 
 export const ROLE_ID: Record<PresetCode, string> = {
   ADMIN: "1",
@@ -36,6 +37,8 @@ export const ROLE_ID: Record<PresetCode, string> = {
   // P8: шаблоны пилота (делопроизводитель, менеджер-универсал)
   REGISTRAR: "7",
   MANAGER_ALL: "8",
+  // ЕВ-5а: юрист (шаблон каталога) — подсказки первого входа и пустая «Главная» по разделу визы
+  LAWYER: "9",
 };
 
 export interface MockRole {
@@ -64,10 +67,11 @@ const DESCRIPTIONS: Partial<Record<PresetCode, string>> = {
   ACCOUNTANT: "Счета, оплаты, акты и сканы договоров.",
   REGISTRAR: "Входящая корреспонденция без резолюции; первая линия по лидам.",
   MANAGER_ALL: "Продажи, расчёт обеих зон, снабжение, договор, акт, счета и оплаты.",
+  LAWYER: "Виза юриста на договор.",
 };
 
 /** Шаблоны пилота своих демо-наборов не имеют: их очередь — строки всех наборов, положенные матрице. */
-const NO_DEMO: ReadonlySet<PresetCode> = new Set(["REGISTRAR", "MANAGER_ALL"]);
+const NO_DEMO: ReadonlySet<PresetCode> = new Set(["REGISTRAR", "MANAGER_ALL", "LAWYER"]);
 
 function fromCatalog(code: PresetCode, role: CatalogRole, system: boolean): MockRole {
   return {
@@ -94,6 +98,7 @@ export function seedRoles(): MockRole[] {
     fromCatalog("ACCOUNTANT", TEMPLATES.ACCOUNTANT, false),
     fromCatalog("REGISTRAR", TEMPLATES.REGISTRAR, false),
     fromCatalog("MANAGER_ALL", TEMPLATES.MANAGER_ALL, false),
+    fromCatalog("LAWYER", TEMPLATES.LAWYER, false),
   ];
 }
 

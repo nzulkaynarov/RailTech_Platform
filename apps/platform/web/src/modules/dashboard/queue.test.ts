@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import i18n from "../../shared/i18n";
 import type { Me, QueueItem } from "../../shared/api/generated/model";
-import { isUrgent, queueEmptyKind } from "./queue";
+import { isUrgent, queueEmptyKinds } from "./queue";
 import {
   acquaintLetterId,
   actionKeyOf,
@@ -17,25 +17,66 @@ import {
 const me = (resources: Record<string, "read" | "full">): Me =>
   ({ resources, modules: [], roles: [] }) as unknown as Me;
 
-describe("queueEmptyKind: пустое состояние — по разделам каталога, не по кодам ролей", () => {
+describe("queueEmptyKinds: пустое состояние — по разделам каталога, не по кодам ролей", () => {
   it.each([
-    ["письма и резолюции", { "eds.inbox": "full" }, "director"],
-    ["одобрение КП", { "eds.drafts": "full", "eds.payments": "full" }, "director"],
-    ["согласование служебок", { "eds.memo.approve": "full" }, "director"],
+    ["письма и резолюции", { "eds.inbox": "full" }, ["director"]],
+    ["одобрение КП", { "eds.drafts": "full", "eds.payments": "full" }, ["director"]],
+    ["согласование служебок", { "eds.memo.approve": "full" }, ["director"]],
     [
       "продажи, расчёт, счета и оплаты (менеджер-универсал)",
       { "crm.leads": "full", "erp.calc": "full", "eds.payments": "full", "eds.inbox": "read" },
-      "universal",
+      ["universal"],
     ],
-    ["платёжки", { "eds.payments": "full", "erp.calc": "read" }, "accountant"],
-    ["виза товаров и склада", { "erp.calc.goods": "full", "erp.stock": "full" }, "supply"],
-    ["виза услуг", { "erp.calc.services": "full", "erp.stock": "full" }, "engineer"],
-    ["лиды", { "crm.leads": "full", "eds.inbox": "read" }, "manager"],
-    ["настройки", { admin: "full" }, "admin"],
-    ["только чтение", { "crm.leads": "read", "eds.payments": "read" }, "default"],
-    ["ничего", {}, "default"],
+    ["платёжки", { "eds.payments": "full", "erp.calc": "read" }, ["accountant"]],
+    ["виза товаров и склада", { "erp.calc.goods": "full", "erp.stock": "full" }, ["supply"]],
+    ["виза услуг", { "erp.calc.services": "full", "erp.stock": "full" }, ["engineer"]],
+    ["лиды", { "crm.leads": "full", "eds.inbox": "read" }, ["manager"]],
+    ["настройки", { admin: "full" }, ["admin"]],
+    ["только чтение", { "crm.leads": "read", "eds.payments": "read" }, ["default"]],
+    ["ничего", {}, ["default"]],
   ] as const)("%s → %s", (_name, resources, expected) => {
-    expect(queueEmptyKind(me({ ...resources }))).toBe(expected);
+    expect(queueEmptyKinds(me({ ...resources }))).toEqual(expected);
+  });
+
+  // ЕВ-5а: делопроизводитель, юрист и подписант — свои тексты по разделам, а не «по умолчанию»
+  it.each([
+    ["регистрация входящих", { "eds.inbox": "read", "eds.inbox.register": "full" }, ["registrar"]],
+    ["первая линия по лидам", { "crm.leads": "read", "crm.leads.triage": "full" }, ["registrar"]],
+    ["виза юриста", { "eds.visa.legal": "full", "crm.clients": "read" }, ["lawyer"]],
+    ["права подписи", { "eds.signing.manage": "full" }, ["signer"]],
+    ["только чтение этих разделов", { "eds.visa.legal": "read" }, ["default"]],
+  ] as const)("%s → %s", (_name, resources, expected) => {
+    expect(queueEmptyKinds(me({ ...resources }))).toEqual(expected);
+  });
+
+  it("несколько разделов — тексты по каждому: основной вид и добавленные", () => {
+    const resources = {
+      "crm.leads": "full",
+      "crm.leads.triage": "full",
+      "eds.visa.legal": "full",
+      "eds.signing.manage": "full",
+    } as const;
+    expect(queueEmptyKinds(me({ ...resources }))).toEqual([
+      "manager",
+      "registrar",
+      "lawyer",
+      "signer",
+    ]);
+  });
+
+  it("решающий директор сохраняет свой вид: регистрация и резолюция — один текст", () => {
+    const director = {
+      "eds.inbox": "full",
+      "eds.inbox.register": "full",
+      "eds.drafts": "full",
+      "eds.memo.approve": "full",
+      "erp.calc.goods": "full",
+    } as const;
+    expect(queueEmptyKinds(me({ ...director }))).toEqual(["director"]);
+  });
+
+  it("администратор: права подписи покрыты его текстом, отдельного «подписанта» нет", () => {
+    expect(queueEmptyKinds(me({ admin: "full", "eds.signing.manage": "full" }))).toEqual(["admin"]);
   });
 });
 

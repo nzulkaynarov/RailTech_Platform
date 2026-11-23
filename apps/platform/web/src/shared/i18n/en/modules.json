@@ -61,6 +61,18 @@
         "default": {
           "title": "No tasks for you",
           "text": "New tasks will appear here and in the bell."
+        },
+        "registrar": {
+          "title": "No tasks for you",
+          "text": "New letters to register and leads to sort will appear here and in the bell."
+        },
+        "lawyer": {
+          "title": "No tasks for you",
+          "text": "Contracts for your visa will appear here and in the bell."
+        },
+        "signer": {
+          "title": "No tasks for you",
+          "text": "Documents to sign will appear here and in the bell."
         }
       },
       "partial": {

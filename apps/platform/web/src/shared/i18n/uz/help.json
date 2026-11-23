@@ -104,6 +104,32 @@
           "Qidiruv (Ctrl K) va qo‘ng‘iroqcha kerakli narsani yo‘qotmaslikka yordam beradi.",
           "Biror narsa yetishmasa — «Administratorga yozish»."
         ]
+      },
+      "registrar": {
+        "title": "Iş yurituvçi",
+        "steps": [
+          "«Hujjatlar · Kiruvçi»: kelgan xatni röyxatga oling — raqam va qabul qiluvçi; rezolyutsiyani direktor qöyadi.",
+          "«Poçta»: umumiy qutidagi röyxatga olinmagan xatlar — saralang, röyxatga oling yoki takror deb belgilang.",
+          "«Kontaktlar · Lidlar»: yangi lidning mohiyatini yozing va menejerga izoh bilan uzating.",
+          "Qoğozdagi çiquvçi xat: xat kartoçkasida yuborilganini belgilang."
+        ]
+      },
+      "lawyer": {
+        "title": "Yurist",
+        "steps": [
+          "«Vazifalar»: şartnomalar vizangizni kutmoqda — ularni imzo marşruti keltiradi.",
+          "Şartnomani oçing, şartlarni tekşiring va viza qöying yoki sabab bilan rad eting: rad etiş imzolaşni töxtatadi.",
+          "Vizangizsiz şartnoma marşruti işga tuşmaydi — siz bölmasangiz, administrator boşqa yuristni tayinlaydi."
+        ]
+      },
+      "signer": {
+        "title": "Imzolovçi",
+        "steps": [
+          "«Vazifalar»: «Imzolaş» qatorlari — imzolaşga haqqingiz bölgan xatlar, TTlar, şartnomalar va dalolatnomalar.",
+          "Hujjatni oçing, matn va summani tekşiring: imzo kompaniya qarorini mustahkamlaydi.",
+          "«Sozlamalar · Imzo huquqlari»: kim, nimani va qança summagaça imzolaşi mumkin; vakolatni uzaytiring yoki bekor qiling.",
+          "Vakolat tugaşiga 14 kun qolganda eslatma keladi."
+        ]
       }
     }
   },

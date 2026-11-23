@@ -61,6 +61,18 @@
         "default": {
           "title": "Sizga vazifalar yo‘q",
           "text": "Yangi vazifalar shu yerda va qo‘ng‘iroqchada paydo bo‘ladi."
+        },
+        "registrar": {
+          "title": "Sizga vazifalar yo‘q",
+          "text": "Röyxatga olinadigan yangi xatlar va saralanadigan lidlar şu yerda va qönğiroqçada paydo böladi."
+        },
+        "lawyer": {
+          "title": "Sizga vazifalar yo‘q",
+          "text": "Vizangizni kutayotgan şartnomalar şu yerda va qönğiroqçada paydo böladi."
+        },
+        "signer": {
+          "title": "Sizga vazifalar yo‘q",
+          "text": "Imzolanadigan hujjatlar şu yerda va qönğiroqçada paydo böladi."
         }
       },
       "partial": {
