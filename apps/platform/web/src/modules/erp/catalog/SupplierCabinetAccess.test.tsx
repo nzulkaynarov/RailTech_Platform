@@ -69,20 +69,20 @@ describe("Партнёр: блок «Доступ в кабинет»", () => {
     expect(within(section).getByText("nodira@sever-supply.example")).toBeVisible();
   });
 
-  it("право контакта действовать: по умолчанию включено, выключается у контакта и в форме", async () => {
+  it("право контакта действовать: у заведённого в карточке выключено, включается; в форме нового — включено", async () => {
     const drawer = await openSupplier("supply@demo.example", "1", "ООО «Поставщик Север»");
     const section = await block(drawer);
     const aziz = await within(section).findByRole("switch", {
       name: "Может подтверждать: Азиз Тошматов",
     });
-    expect(aziz).toBeChecked();
+    expect(aziz).not.toBeChecked();
     fireEvent.click(aziz);
     await waitFor(() => {
       expect(
         within(section).getByRole("switch", {
           name: "Может подтверждать: Азиз Тошматов",
         }),
-      ).not.toBeChecked();
+      ).toBeChecked();
     });
 
     fireEvent.click(within(section).getByRole("button", { name: "Добавить контакт" }));
@@ -116,9 +116,39 @@ describe("Партнёр: блок «Доступ в кабинет»", () => {
     expect(await within(form).findByRole("alert")).toHaveTextContent(/уже есть/);
   });
 
+  it("пригласить контакт без права: право выбирает приглашающий, по умолчанию включено (ДК-5)", async () => {
+    const drawer = await openSupplier("supply@demo.example", "1", "ООО «Поставщик Север»");
+    const section = await block(drawer);
+    const right = within(section).getByRole("switch", {
+      name: "Может подтверждать: Азиз Тошматов",
+    });
+    expect(right).not.toBeChecked();
+    fireEvent.click(
+      await within(section).findByRole("button", { name: "Пригласить: Азиз Тошматов" }),
+    );
+    const ask = await findModal("Пригласить в кабинет");
+    expect(within(ask).getByRole("switch", { name: "Может подтверждать" })).toBeChecked();
+    fireEvent.click(within(ask).getByRole("button", { name: "Пригласить" }));
+    await modalClosed("Пригласить в кабинет");
+    expect(await within(section).findByText("Приглашён")).toBeVisible();
+    await waitFor(() => {
+      expect(
+        within(section).getByRole("switch", { name: "Может подтверждать: Азиз Тошматов" }),
+      ).toBeChecked();
+    });
+  });
+
   it("пригласить: отношение «Приглашён», в кабинете «Партнёр», у контакта «Пригласить ещё раз»", async () => {
     const drawer = await openSupplier("supply@demo.example", "1", "ООО «Поставщик Север»");
     const section = await block(drawer);
+    fireEvent.click(
+      await within(section).findByRole("switch", { name: "Может подтверждать: Азиз Тошматов" }),
+    );
+    await waitFor(() => {
+      expect(
+        within(section).getByRole("switch", { name: "Может подтверждать: Азиз Тошматов" }),
+      ).toBeChecked();
+    });
     fireEvent.click(
       await within(section).findByRole("button", { name: "Пригласить: Азиз Тошматов" }),
     );
@@ -138,6 +168,9 @@ describe("Партнёр: блок «Доступ в кабинет»", () => {
     fireEvent.click(await within(section).findByRole("switch", { name: /Мои товары/ }));
     expect(within(section).getByRole("switch", { name: /Мои товары/ })).not.toBeChecked();
     fireEvent.click(within(section).getByRole("button", { name: "Пригласить: Азиз Тошматов" }));
+    fireEvent.click(
+      within(await findModal("Пригласить в кабинет")).getByRole("button", { name: "Пригласить" }),
+    );
     await within(section).findByText("Приглашён");
     expect(within(section).getByRole("switch", { name: /Мои товары/ })).not.toBeChecked();
     expect(within(section).getByRole("switch", { name: /Каталог и заявки/ })).not.toBeChecked();

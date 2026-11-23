@@ -82,17 +82,70 @@ def test_partner_without_a_cabinet_gets_the_old_letter_and_staff_records_the_con
     assert confirmed.status_code == 200 and confirmed.json()["status"] == "confirmed"
 
 
-def test_explicit_address_gets_the_old_letter_and_the_same_address_is_not_mailed_twice(world):
-    _cabinet_partner(world)
-    order = _draft(world)
+def _send_to(world, order, address):
     from inventory.tests.support import complete_order
 
     complete_order(order["id"])
-    sent = api(world["supply"]).post(
-        f"{STOCK}orders/{order['id']}/send/", {"to_email": "dilshod@vendor.example"}, format="json"
-    )
+    sent = api(world["supply"]).post(f"{STOCK}orders/{order['id']}/send/", {"to_email": address}, format="json")
     assert sent.status_code == 200, sent.json()
-    assert len(_letters_about(order)) == 1, "тот же адрес — одно письмо, а не два"
+
+
+def test_explicit_contact_address_gets_the_link_letter_only(world):
+    _cabinet_partner(world)
+    order = _draft(world)
+    _send_to(world, order, "dilshod@vendor.example")
+    letters = _letters_about(order)
+    assert len(letters) == 1 and isinstance(letters[0], PortalNotice), "тот же адрес — одно письмо со ссылкой"
+    assert not EmailLog.objects.filter(template="supplier_order").exists()
+
+
+def test_explicit_foreign_address_never_asks_to_reply_while_the_cabinet_confirms(world):
+    _cabinet_partner(world)
+    order = _draft(world)
+    _send_to(world, order, "office@vendor.example")
+    assert EmailLog.objects.filter(template="supplier_order").count() == 1
+    letter = next(m for m in mail.outbox if m.to == ["office@vendor.example"])
+    assert "ответом на это письмо" not in letter.body
+    assert "личном кабинете партнёра" in letter.body
+    assert api(world["supply"]).get(f"{STOCK}orders/{order['id']}/").json()["actions"]["confirm"] is False
+
+
+def test_contact_who_turned_order_mail_off_does_not_trigger_the_reply_letter(world):
+    contact = _cabinet_partner(world)
+    contact.notification_settings = {"partner_products": {"email": False}}
+    contact.save()
+    order = _draft(world)
+    assert _act(world, order["id"], "send").status_code == 200
+    assert not EmailLog.objects.filter(
+        template="supplier_order"
+    ).exists(), "письма «ответьте» нет, пока подтверждает Кабинет"
+    assert api(world["supply"]).get(f"{STOCK}orders/{order['id']}/").json()["actions"]["confirm"] is False
+
+
+def test_contact_without_the_right_gets_no_confirm_notice(world):
+    _cabinet_partner(world, can_act=False)
+    order = _draft(world)
+    assert _act(world, order["id"], "send").status_code == 200
+    assert not PortalNotice.objects.filter(kind="partner_order_sent", object_id=order["id"]).exists()
+    assert EmailLog.objects.filter(template="supplier_order").count() == 1, "подтверждает сотрудник — прежнее письмо"
+
+
+def test_mail_state_of_a_cabinet_partner_comes_from_the_notice(world):
+    from portal.models import NoticeEmailState
+
+    _cabinet_partner(world)
+    order = _draft(world)
+    assert _act(world, order["id"], "send").status_code == 200
+    url = f"{STOCK}orders/{order['id']}/"
+    notice = PortalNotice.objects.get(kind="partner_order_sent", object_id=order["id"])
+    for state, expected in (
+        (NoticeEmailState.PENDING, "queued"),
+        (NoticeEmailState.SENT, "sent"),
+        (NoticeEmailState.FAILED, "failed"),
+    ):
+        PortalNotice.objects.filter(pk=notice.pk).update(email_state=state, email_reason="rejected: no mailbox")
+        mail_state = api(world["supply"]).get(url).json()["mail"]
+        assert mail_state and mail_state["state"] == expected, (state, mail_state)
 
 
 def test_staff_cannot_confirm_for_a_partner_who_confirms_in_the_cabinet(world):

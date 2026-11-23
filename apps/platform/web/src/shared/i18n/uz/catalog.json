@@ -755,6 +755,7 @@
     "inviteAgain": "Yana taklif qilish",
     "inviteNamed": "{{action}}: {{name}}",
     "inviteSent": "Kirish kodi bilan xat yuborildi.",
+    "inviteForm": { "title": "Kabinetga taklif qilish" },
     "suspend": "Kirishni to'xtatish",
     "readOnly": "Taklif qilish va huquqlarni o'zgartirishni hamkorlarni yuritish huquqi bor xodimlar qiladi.",
     "contactForm": {

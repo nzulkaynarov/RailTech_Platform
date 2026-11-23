@@ -70,6 +70,8 @@ function AccessBody({ supplierId, data }: { supplierId: string; data: AccessData
   const [contactForm, setContactForm] = useState<SupplierCabinetContact | "new" | null>(null);
   const [suspending, setSuspending] = useState(false);
   const [inviting, setInviting] = useState<string | null>(null);
+  // Контакту без права подтверждать приглашающий выбирает право в момент приглашения (ДК-5)
+  const [askRight, setAskRight] = useState<SupplierCabinetContact | null>(null);
   const refresh = (next: AccessData) => {
     queryClient.setQueryData(getGetSupplierCabinetAccessQueryKey(supplierId), next);
   };
@@ -85,6 +87,17 @@ function AccessBody({ supplierId, data }: { supplierId: string; data: AccessData
       },
     },
   });
+  const sendInvite = (contact: SupplierCabinetContact, canAct: boolean) => {
+    setInviting(contact.id);
+    invite.mutate({
+      id: supplierId,
+      data: {
+        contact_id: contact.id,
+        can_act: canAct,
+        ...(relationship ? {} : { modules: draftModules, kind: draftKind }),
+      },
+    });
+  };
   const modules: Module[] = relationship ? relationship.modules : draftModules;
   const kind = relationship ? relationship.kind : draftKind;
   const toggle = (module: Module, on: boolean) => {
@@ -248,15 +261,8 @@ function AccessBody({ supplierId, data }: { supplierId: string; data: AccessData
                       name: contact.name,
                     })}
                     onClick={() => {
-                      setInviting(contact.id);
-                      invite.mutate({
-                        id: supplierId,
-                        data: {
-                          contact_id: contact.id,
-                          can_act: contact.can_act,
-                          ...(relationship ? {} : { modules: draftModules, kind: draftKind }),
-                        },
-                      });
+                      if (contact.can_act) sendInvite(contact, true);
+                      else setAskRight(contact);
                     }}
                   >
                     {inviteLabel(contact)}
@@ -305,6 +311,19 @@ function AccessBody({ supplierId, data }: { supplierId: string; data: AccessData
           }}
         />
       ) : null}
+      {askRight ? (
+        <InviteRightPanel
+          contact={askRight}
+          loading={invite.isPending}
+          onOk={(canAct) => {
+            sendInvite(askRight, canAct);
+            setAskRight(null);
+          }}
+          onClose={() => {
+            setAskRight(null);
+          }}
+        />
+      ) : null}
       {suspending ? (
         <SuspendModal
           supplierId={supplierId}
@@ -318,6 +337,47 @@ function AccessBody({ supplierId, data }: { supplierId: string; data: AccessData
         />
       ) : null}
     </div>
+  );
+}
+
+/** «Пригласить» контакта без права подтверждать: право выбирает приглашающий, по умолчанию включено (ДК-5). */
+function InviteRightPanel({
+  contact,
+  loading,
+  onOk,
+  onClose,
+}: {
+  contact: SupplierCabinetContact;
+  loading: boolean;
+  onOk: (canAct: boolean) => void;
+  onClose: () => void;
+}) {
+  const { t } = useTranslation("catalog");
+  const id = useId();
+  const [canAct, setCanAct] = useState(true);
+  return (
+    <FormPanel
+      title={t("cabinetAccess.inviteForm.title")}
+      okLabel={t("cabinetAccess.invite")}
+      loading={loading}
+      error={null}
+      onOk={() => {
+        onOk(canAct);
+      }}
+      onCancel={onClose}
+    >
+      <p>{contact.name}</p>
+      <div className="pf-cat-switch">
+        <Switch
+          checked={canAct}
+          aria-labelledby={`${id}-label`}
+          onChange={(on) => {
+            setCanAct(on);
+          }}
+        />
+        <span id={`${id}-label`}>{t("cabinetAccess.contactForm.canAct")}</span>
+      </div>
+    </FormPanel>
   );
 }
 

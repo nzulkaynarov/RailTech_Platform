@@ -245,11 +245,11 @@ def partner_card_decision(product, decision: str, *, reason: str = "", issues=()
     return len(rows)
 
 
-def partner_order_sent(order, *, already_emailed=()) -> list:
+def partner_order_sent(order, *, contact_ids=None) -> list:
     """Заказ поставщику отправлен — ждёт подтверждения (колокольчик и письмо контактам партнёра).
 
     Возвращает созданные уведомления: по каналу видно, кому ушло письмо со ссылкой (ДК-5 — оно единственное по заказу).
-    `already_emailed` — адреса, которым письмо по заказу уже ушло другим путём."""
+    `contact_ids` — кому писать: подтвердить заказ могут только контакты с этим правом."""
     from .access import company_access
 
     company = getattr(order, "supplier", None)
@@ -268,7 +268,7 @@ def partner_order_sent(order, *, already_emailed=()) -> list:
         link=f"/partner/orders?orderId={order.pk}",
         dedup=f"{order.pk}:sent",
         bot_reaches=False,
-        already_emailed=already_emailed,
+        contact_ids=contact_ids,
     )
     return rows
 

@@ -43,7 +43,7 @@ function seed(): Record<string, Entry> {
           email: "aziz@sever-supply.example",
           phone: "+998 90 000 00 01",
           language: "uz",
-          can_act: true,
+          can_act: false,
           invited_at: null,
           last_login_at: null,
         },

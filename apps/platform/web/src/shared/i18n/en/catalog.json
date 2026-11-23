@@ -755,6 +755,7 @@
     "inviteAgain": "Invite again",
     "inviteNamed": "{{action}}: {{name}}",
     "inviteSent": "The e-mail with the sign-in code has been sent.",
+    "inviteForm": { "title": "Invite to the cabinet" },
     "suspend": "Suspend access",
     "readOnly": "Only staff allowed to manage partners can invite and change rights.",
     "contactForm": {
