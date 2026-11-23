@@ -6088,6 +6088,11 @@ components:
       required: [body]
       properties:
         body: {$ref: '#/components/schemas/DocumentBody'}
+        kind:
+          type: string
+          enum: [letter, memo]
+          default: letter
+          description: Вид шаблона; служебная записка — компактный лист без окна и подвала компании
     CallNoteIn:
       type: object
       additionalProperties: false

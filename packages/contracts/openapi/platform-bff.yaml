@@ -20642,6 +20642,11 @@ components:
       required: [body]
       properties:
         body: {$ref: '#/components/schemas/EdsDocumentBody'}
+        kind:
+          type: string
+          enum: [letter, memo]
+          default: letter
+          description: Вид шаблона; служебная записка — компактный лист без окна и подвала компании
     EdsTemplatePreview:
       type: object
       additionalProperties: false

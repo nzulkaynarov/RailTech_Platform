@@ -11418,6 +11418,12 @@ export interface components {
     };
     EdsTemplatePreviewIn: {
       body: components["schemas"]["EdsDocumentBody"];
+      /**
+       * @description Вид шаблона; служебная записка — компактный лист без окна и подвала компании
+       * @default letter
+       * @enum {string}
+       */
+      kind: "letter" | "memo";
     };
     EdsTemplatePreview: {
       hash: string;
