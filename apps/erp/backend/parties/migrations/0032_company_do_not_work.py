@@ -10,7 +10,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('parties', '0030_latin_number_texts'),
+        ('parties', '0031_catalog_required_codes'),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
