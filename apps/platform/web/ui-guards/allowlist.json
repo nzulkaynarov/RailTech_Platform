@@ -26,11 +26,6 @@
       "reason": "phone bottom sheet copied per module; use shared Sheet (ЕВ-1б)"
     },
     {
-      "path": "src/modules/eds/inbox/ResolutionPanel.tsx",
-      "count": 1,
-      "reason": "phone bottom sheet copied per module; use shared Sheet (ЕВ-1б)"
-    },
-    {
       "path": "src/modules/eds/mail/MailBody.tsx",
       "count": 1,
       "reason": "Drawer min(100vw, 960) for a letter preview; moves to the shared panel at 640 (ЕВ-1б)"

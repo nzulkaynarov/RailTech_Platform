@@ -15,9 +15,8 @@ import {
 } from "../../ui-guards/detect.mjs";
 import plugin from "../../ui-guards/eslint-plugin.mjs";
 
-RuleTester.afterAll = afterAll;
-RuleTester.describe = describe;
-RuleTester.it = it;
+// RuleTester вызывает эти функции, если они заданы; в типах ESLint поля afterAll нет — задаём через Object.assign.
+Object.assign(RuleTester, { afterAll, describe, it });
 
 /**
  * ЕВ-1а: «новых нарушений нет, список сокращается». Сырые Drawer / Modal / Popconfirm / Table / Spin, `<table>`, свои
