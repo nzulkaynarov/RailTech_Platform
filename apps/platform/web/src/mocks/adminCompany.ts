@@ -25,9 +25,6 @@ import type {
   NumberingUpdate,
   PlatformSettingsUpdate,
   QuoteDefaultsUpdate,
-  ReferenceItem,
-  ReferenceItemIn,
-  ReferenceItemUpdate,
   ReferenceKind,
 } from "../shared/api/generated/model";
 import { isSystemAdmin } from "../entities/role/roles";
@@ -315,31 +312,6 @@ function quoteFor(caller: Caller, quote: CompanyMock["quote"]) {
   return caller.margins
     ? quote
     : omit(quote, ["default_margin_percent", "min_margin_percent", "target_margin_percent"]);
-}
-
-const referenceExtras: Record<ReferenceKind, string[]> = {
-  countries: ["alpha2", "alpha3", "iso_numeric", "vat_rate"],
-  currencies: ["symbol"],
-  units: [],
-  "delivery-basis": [
-    "description",
-    "seller_pays_freight",
-    "seller_pays_insurance",
-    "seller_pays_import",
-    "seller_pays_delivery",
-  ],
-};
-/** Строки, на которые «ссылаются документы»: удалить нельзя, только отключить. */
-const IN_USE = new Set(["UZS", "USD", "UZ", "PCS", "FCA"]);
-
-function pickReference(kind: ReferenceKind, body: Record<string, unknown>): Partial<ReferenceItem> {
-  const allowed = new Set(["code", "name", "sort_order", "is_active", ...referenceExtras[kind]]);
-  return Object.fromEntries(Object.entries(body).filter(([k]) => allowed.has(k)));
-}
-
-function foreignFields(kind: ReferenceKind, body: Record<string, unknown>): string[] {
-  const allowed = new Set(["code", "name", "sort_order", "is_active", ...referenceExtras[kind]]);
-  return Object.keys(body).filter((k) => !allowed.has(k));
 }
 
 const isKind = (value: unknown): value is ReferenceKind =>
@@ -826,61 +798,6 @@ export const adminCompanyHandlers = [
           : { ...rest, names: { ru: row.name, uz: name_uz, en: name_en ?? "" } };
       }),
     }));
-  }),
-  http.post("*/admin/company/reference/:kind", ({ request, params }) => {
-    const kind = params["kind"];
-    if (!isKind(kind)) return validation(["kind"]);
-    return write<ReferenceItemIn>(
-      request,
-      (body, s) => {
-        const foreign = foreignFields(kind, body as unknown as Record<string, unknown>);
-        if (foreign.length > 0) return validation(foreign, "field_not_in_reference");
-        if (s.reference[kind].some((r) => r.code.toLowerCase() === body.code.toLowerCase())) {
-          return validation(["code"]);
-        }
-        const created: ReferenceItem = {
-          sort_order: s.reference[kind].length + 1,
-          is_active: true,
-          ...pickReference(kind, body as unknown as Record<string, unknown>),
-          id: nextId(s),
-          code: body.code,
-          name: body.name,
-        };
-        s.reference[kind].push(created);
-        return created;
-      },
-      201,
-    );
-  }),
-  http.patch("*/admin/company/reference/:kind/:id", ({ request, params }) => {
-    const kind = params["kind"];
-    if (!isKind(kind)) return validation(["kind"]);
-    return write<ReferenceItemUpdate>(request, (body, s) => {
-      const row = s.reference[kind].find((r) => r.id === params["id"]);
-      if (!row) return notFound();
-      const foreign = foreignFields(kind, body as unknown as Record<string, unknown>);
-      if (foreign.length > 0) return validation(foreign, "field_not_in_reference");
-      Object.assign(row, pickReference(kind, body as unknown as Record<string, unknown>));
-      return row;
-    });
-  }),
-  http.delete("*/admin/company/reference/:kind/:id", ({ params }) => {
-    const kind = params["kind"];
-    if (!isKind(kind)) return validation(["kind"]);
-    const caller = guard("full");
-    if (isResponse(caller)) return caller;
-    return updateCompanyMock((s) => {
-      const row = s.reference[kind].find((r) => r.id === params["id"]);
-      if (!row) return notFound();
-      if (IN_USE.has(row.code)) {
-        return conflict(
-          "lookup_in_use",
-          "Строка используется в документах и данных. Отключите её вместо удаления.",
-        );
-      }
-      s.reference[kind] = s.reference[kind].filter((r) => r.id !== row.id);
-      return noContent();
-    });
   }),
 
   // --- категории и запросы

@@ -15,12 +15,14 @@ function menuOf(code: ModuleKey): string[] {
 describe("меню — docs/product/NAVIGATION.md", () => {
   it("пункты модулей", () => {
     expect(menuOf("dashboard")).toEqual(["Задачи", "Проекты", "Сводка"]);
-    expect(menuOf("crm")).toEqual(["Лиды", "Контрагенты", "Почта", "База знаний"]);
-    expect(menuOf("eds")).toEqual(["Входящие", "Исходящие", "Внутренние", "Архив", "Шаблоны"]);
+    expect(menuOf("crm")).toEqual(["Лиды", "Контрагенты", "База знаний"]);
+    // ЕВ-3а: «Почта» общего ящика — рядом с «Входящими», «Шаблонов» в меню нет (они — в «Настройках · Компания»)
+    expect(menuOf("eds")).toEqual(["Входящие", "Почта", "Исходящие", "Внутренние", "Архив"]);
     expect(menuOf("erp")).toEqual(["Заявки", "Каталог", "Финансы"]);
-    expect(menuOf("chats")).toEqual(["Календарь", "Чаты", "Люди"]);
+    // ЕВ-3а (q.2): «Чаты» — макет без сообщений, в меню их нет
+    expect(menuOf("chats")).toEqual(["Календарь", "Люди"]);
     expect(menuOf("admin")).toEqual(["Сотрудники", "Компания", "Подключения", "Журнал"]);
-    expect(MODULES.flatMap((m) => menuOf(m.code))).toHaveLength(22);
+    expect(MODULES.flatMap((m) => menuOf(m.code))).toHaveLength(20);
   });
 
   it("у каждого раздела из меню есть конфигурация", () => {
@@ -52,11 +54,13 @@ describe("меню — docs/product/NAVIGATION.md", () => {
     // индекс группы — страница «Все настройки», пункты меню ведут на сами страницы
     expect(at("/admin?group=channels")).toBeUndefined();
     expect(at("/admin/telegram")).toBe("admin.channels.telegram");
-    expect(at("/admin/templates")).toBe("eds.templates");
+    expect(at("/admin/templates")).toBe("admin.company.templates");
+    expect(at("/eds/mail")).toBe("eds.mail");
+    expect(at("/eds/mail/42")).toBe("eds.mail");
     expect(at("/erp/stock")).toBe("erp.catalog.stock");
     expect(at("/erp/stock?view=orders")).toBe("erp.requests.purchases");
     expect(at("/erp/calc")).toBe("erp.requests.sales");
-    expect(at("/crm/messages")).toBe("crm.leads");
+    expect(at("/crm/leads")).toBe("crm.leads");
   });
 });
 
@@ -133,17 +137,12 @@ describe("имена модулей — UX-оценка 2026-10-27 §6.1", () =>
 describe("карта маршрутов SPEC-v3 §6.3", () => {
   const listPaths = [
     "/dashboard/queue",
-    "/dashboard/projects",
     "/dashboard/summary",
-    "/crm/messages",
     "/crm/leads",
     "/crm/clients",
-    "/crm/requests",
-    "/crm/channels",
     "/crm/kb",
     "/eds/documents",
     "/eds/inbox",
-    "/eds/outbox",
     "/eds/projects",
     "/eds/drafts",
     "/eds/approvals",
@@ -188,7 +187,6 @@ describe("карта маршрутов SPEC-v3 §6.3", () => {
     "/crm/leads/L-2041",
     "/crm/clients/42",
     "/eds/inbox/%D0%92%D0%A5-104%2F26",
-    "/eds/outbox/1",
     "/eds/projects/%D0%9F%D0%A0-2026-104",
     "/eds/drafts/1",
     "/eds/approvals/1",
@@ -223,9 +221,8 @@ describe("карта маршрутов SPEC-v3 §6.3", () => {
     expect(hit?.objectId).toBeUndefined();
   });
 
-  it("?scope=internal|external выбирает пункт Chats, без параметра — «Все чаты»", () => {
-    expect(matchSection("/chats", "?scope=internal")?.section.key).toBe("internal");
-    expect(matchSection("/chats", "?scope=external")?.section.key).toBe("external");
+  it("/chats — «Все чаты» с любым фильтром: старые ?scope= уводит legacyRedirects", () => {
+    expect(matchSection("/chats", "?scope=internal")?.section.key).toBe("all");
     expect(matchSection("/chats", "")?.section.key).toBe("all");
     expect(matchSection("/chats", "?panel=open")?.section.key).toBe("all");
   });
@@ -269,9 +266,8 @@ describe("карта маршрутов SPEC-v3 §6.3", () => {
   });
 });
 
-describe("Chats: ?scope= — фильтр списка, ?tab= — вкладка бокового окна", () => {
-  it("?tab= не меняет выбранный пункт Chats", () => {
-    expect(matchSection("/chats", "?scope=internal&tab=files")?.section.key).toBe("internal");
+describe("Chats: ?tab= — вкладка бокового окна", () => {
+  it("?tab= не меняет выбранный раздел Chats", () => {
     expect(matchSection("/chats", "?tab=files")?.section.key).toBe("all");
   });
 });
