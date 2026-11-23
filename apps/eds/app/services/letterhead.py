@@ -13,6 +13,7 @@ from datetime import datetime
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
+from rt_docs.labels import grid_label
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -162,3 +163,33 @@ def requisites(row: Letterhead, lang: str = "ru") -> list[str]:
 
 def footer(row: Letterhead, lang: str = "ru") -> list[str]:
     return [line.strip() for line in text(row, "footer_text", lang).splitlines() if line.strip()]
+
+
+def footer_columns(row: Letterhead, lang: str = "ru") -> list[dict[str, Any]]:
+    """Подвал сетки документа (стандарт §4) из бланка: компания и адрес; руководство; строки подвала бланка; банк; ИНН.
+
+    У EDS нет телефона, сайта и регистрации компании — колонки из того, что есть в проекции; пустая не печатается."""
+    code: Any = lang if lang in ("ru", "uz", "en") else "ru"
+    columns: list[dict[str, Any]] = []
+    address = [line.strip() for line in text(row, "legal_address", lang).splitlines() if line.strip()]
+    columns.append({"title": text(row, "company_name", lang), "lines": address[:3]})
+    signer = row.signatory_name.strip()
+    if signer:
+        position = text(row, "signatory_position", lang).strip()
+        columns.append(
+            {"title": grid_label("management", code), "lines": [f"{position}: {signer}" if position else signer]}
+        )
+    if footer_lines := footer(row, lang):
+        columns.append({"title": None, "lines": footer_lines[:4]})
+    bank = [line.strip() for line in row.bank_details.splitlines() if line.strip()]
+    if bank:
+        columns.append({"title": bank[0], "lines": bank[1:4]})
+    if row.inn.strip():
+        columns.append({"title": None, "lines": [f"{_INN.get(lang, _INN['ru'])} {row.inn.strip()}"]})
+    return [column for column in columns if column["title"] or column["lines"]][:5]
+
+
+def return_address(row: Letterhead, lang: str = "ru") -> str:
+    """Строка обратного адреса над окном конверта: название и первые строки адреса."""
+    address = [line.strip() for line in text(row, "legal_address", lang).splitlines() if line.strip()]
+    return " · ".join([text(row, "company_name", lang), *address[:2]])

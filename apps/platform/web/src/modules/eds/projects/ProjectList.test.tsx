@@ -17,8 +17,8 @@ describe("Проекты: список", () => {
     renderAt("/eds/projects");
 
     const rows = within(await table()).getAllByRole("row");
-    // шапка + шесть проектов мока
-    expect(rows).toHaveLength(8);
+    // шапка + семь проектов мока (111 — договор с собранными визами, Х-1)
+    expect(rows).toHaveLength(9);
     const first = rows.find((r) => r.textContent.includes("ПР-2026-105"));
     expect(first).toBeDefined();
     const row = within(first as HTMLElement);

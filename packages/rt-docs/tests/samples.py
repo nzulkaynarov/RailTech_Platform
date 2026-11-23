@@ -347,3 +347,24 @@ GRID_META = DocumentMeta(
     ),
     contact=(InfoRow("Контактное лицо", "Р. Ахмедов"),),
 )
+
+
+GRID_LETTER_META = DocumentMeta(
+    kind_label="Письмо",
+    number="ИСХ-015/26",
+    date=date(2026, 11, 23),
+    addressee=("АО «Пример Логистик»", "Директору Б. Бахтиярову", "ул. Амира Темура, 108", "100084 Ташкент"),
+    addressee_strong=0,
+    executor="Д. Сафаров",
+    verification_code="AB12CD34",
+    verification_url="https://cabinet.test.uz/v/AB12CD34",
+    signed_text="23.11.2026 10:15",
+    info=(
+        InfoRow("Исх. №", "ИСХ-015/26", code=True, role="number"),
+        InfoRow("Дата", "23.11.2026", role="date"),
+        InfoRow("На ваш №", "12 от 01.11.2026"),
+        InfoRow("Исполнитель", "Д. Сафаров"),
+        InfoRow("Почта", "d.safarov@test.uz"),
+        InfoRow("Код проверки", "AB12CD34", code=True, role="verify"),
+    ),
+)

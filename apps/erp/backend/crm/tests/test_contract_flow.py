@@ -18,7 +18,7 @@ from crm.constants import ContractStatusCode as S
 from crm.constants import DealStageCode
 from crm.models import ActivityLog, Contract, Deal
 from crm.services import contract_flow
-from crm.tests.projects_world import PDF, PNG, api, contract_in, pw, scan  # noqa: F401
+from crm.tests.projects_world import PDF, PNG, api, collect_visas, contract_in, pw, scan  # noqa: F401
 
 pytestmark = pytest.mark.django_db
 
@@ -56,6 +56,7 @@ def test_full_chain_from_project_to_signed_scan(pw):  # noqa: F811
     assert contract_flow.contract_v3_status(contract) == "project" and not contract_flow.contract_sent_to_client(
         contract
     )
+    collect_visas(contract)  # Х-1: до виз договор клиенту не уходит
 
     assert _post(pw.accountant, contract, "send-to-client").status_code == 200
     assert _status(contract) == S.PENDING_CLIENT
@@ -116,6 +117,8 @@ def test_reject_needs_a_reason_and_revise_returns_the_draft(pw):  # noqa: F811
 @pytest.mark.parametrize("status", ALL)
 def test_transition_only_from_allowed_statuses(pw, action, slug, body, allowed, status):  # noqa: F811
     contract = contract_in(pw, status)
+    if action == "send_to_client":
+        collect_visas(contract)  # Х-1: здесь проверяется статус, а не визы
     response = _post(pw.accountant, contract, slug, body)
     if status in allowed:
         assert response.status_code == 200, response.content
@@ -232,6 +235,7 @@ def test_a_stranger_does_not_see_the_contract_nor_acts_on_it(pw):  # noqa: F811
 def test_service_checks_the_right_even_without_the_view_gate(pw):  # noqa: F811
     """Сервис не полагается на вьюху: вызов напрямую от менеджера без `contract.manage` — отказ."""
     contract = contract_in(pw, S.DRAFT)
+    collect_visas(contract)
     updated, error = contract_flow.apply_transition(contract.id, "send_to_client", pw.manager)
     assert updated is None and error == "MEMBER_REQUIRED_FOR_ACTION"
     updated, error = contract_flow.apply_transition(contract.id, "send_to_client", pw.director)
@@ -266,14 +270,16 @@ def test_generate_from_quote_without_sending_keeps_the_draft(pw):  # noqa: F811
     assert event["data"]["payload"]["status"] == "project" and event["data"]["payload"]["sent_to_client"] is False
     bus_support.assert_matches_contract(event)
 
+    collect_visas(contract)
     assert _post(pw.accountant, contract, "send-to-client").status_code == 200
     assert bus_support.published("contract.status_changed")[-1]["data"]["payload"]["sent_to_client"] is True
     assert len(bus_support.published("document.created")) == 1, "договор стал виден клиенту — один раз"
 
 
-def test_generate_from_quote_default_keeps_the_old_behaviour(pw):  # noqa: F811
+def test_generate_from_quote_default_waits_for_visas(pw):  # noqa: F811
+    """Х-1: без виз «по умолчанию» договор остаётся проектом (раньше уходил клиенту сразу)."""
     contract, error = crm_services.generate_contract_from_quote(pw.quote.id, actor=pw.director)
-    assert error is None and contract.status.code == S.PENDING_CLIENT
+    assert error is None and contract.status.code == S.DRAFT
 
 
 def test_generate_from_quote_requires_staff_rights(pw):  # noqa: F811

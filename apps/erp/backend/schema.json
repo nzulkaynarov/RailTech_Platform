@@ -17349,14 +17349,14 @@
                         }
                     },
                     "409": {
-                        "description": "CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот",
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/ErrorDetail"
+                                    "$ref": "#/components/schemas/ContractConflict"
                                 }
                             }
-                        }
+                        },
+                        "description": "CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот; CONTRACT_VISAS_REQUIRED (Х-1): отправка договора клиенту до сбора виз — в теле `reason` (причина словами) и `missing` (роли без визы)"
                     },
                     "401": {
                         "$ref": "#/components/responses/UnauthorizedResponse"
@@ -17619,14 +17619,14 @@
                         }
                     },
                     "409": {
-                        "description": "CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот",
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/ErrorDetail"
+                                    "$ref": "#/components/schemas/ContractConflict"
                                 }
                             }
-                        }
+                        },
+                        "description": "CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот; CONTRACT_VISAS_REQUIRED (Х-1): отправка договора клиенту до сбора виз — в теле `reason` (причина словами) и `missing` (роли без визы)"
                     },
                     "401": {
                         "$ref": "#/components/responses/UnauthorizedResponse"
@@ -18876,14 +18876,14 @@
                         }
                     },
                     "409": {
-                        "description": "CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот",
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/ErrorDetail"
+                                    "$ref": "#/components/schemas/ContractConflict"
                                 }
                             }
-                        }
+                        },
+                        "description": "CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот; CONTRACT_VISAS_REQUIRED (Х-1): отправка договора клиенту до сбора виз — в теле `reason` (причина словами) и `missing` (роли без визы)"
                     },
                     "401": {
                         "$ref": "#/components/responses/UnauthorizedResponse"
@@ -19046,14 +19046,14 @@
                         }
                     },
                     "409": {
-                        "description": "CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот",
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/ErrorDetail"
+                                    "$ref": "#/components/schemas/ContractConflict"
                                 }
                             }
-                        }
+                        },
+                        "description": "CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот; CONTRACT_VISAS_REQUIRED (Х-1): отправка договора клиенту до сбора виз — в теле `reason` (причина словами) и `missing` (роли без визы)"
                     },
                     "401": {
                         "$ref": "#/components/responses/UnauthorizedResponse"
@@ -19315,14 +19315,14 @@
                         }
                     },
                     "409": {
-                        "description": "CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот",
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/ErrorDetail"
+                                    "$ref": "#/components/schemas/ContractConflict"
                                 }
                             }
-                        }
+                        },
+                        "description": "CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот; CONTRACT_VISAS_REQUIRED (Х-1): отправка договора клиенту до сбора виз — в теле `reason` (причина словами) и `missing` (роли без визы)"
                     },
                     "401": {
                         "$ref": "#/components/responses/UnauthorizedResponse"
@@ -19415,14 +19415,14 @@
                         }
                     },
                     "409": {
-                        "description": "CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот",
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/ErrorDetail"
+                                    "$ref": "#/components/schemas/ContractConflict"
                                 }
                             }
-                        }
+                        },
+                        "description": "CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот; CONTRACT_VISAS_REQUIRED (Х-1): отправка договора клиенту до сбора виз — в теле `reason` (причина словами) и `missing` (роли без визы)"
                     },
                     "401": {
                         "$ref": "#/components/responses/UnauthorizedResponse"
@@ -19584,14 +19584,14 @@
                         }
                     },
                     "409": {
-                        "description": "CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот",
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/ErrorDetail"
+                                    "$ref": "#/components/schemas/ContractConflict"
                                 }
                             }
-                        }
+                        },
+                        "description": "CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот; CONTRACT_VISAS_REQUIRED (Х-1): отправка договора клиенту до сбора виз — в теле `reason` (причина словами) и `missing` (роли без визы)"
                     },
                     "401": {
                         "$ref": "#/components/responses/UnauthorizedResponse"
@@ -19754,14 +19754,14 @@
                         }
                     },
                     "409": {
-                        "description": "CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот",
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/ErrorDetail"
+                                    "$ref": "#/components/schemas/ContractConflict"
                                 }
                             }
-                        }
+                        },
+                        "description": "CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот; CONTRACT_VISAS_REQUIRED (Х-1): отправка договора клиенту до сбора виз — в теле `reason` (причина словами) и `missing` (роли без визы)"
                     },
                     "401": {
                         "$ref": "#/components/responses/UnauthorizedResponse"
@@ -41404,6 +41404,18 @@
                         "type": "boolean",
                         "description": "Проект ушёл клиенту на согласование и виден ему в портале"
                     },
+                    "send_blocker_code": {
+                        "nullable": true,
+                        "description": "Х-1: пока проект не ушёл клиенту — код причины, по которой его нельзя отправить (визы маршрута подписи); `null` — ничего не мешает. Слова и роли — `send_blocker` карточки\n\n* `visas_not_requested` - visas_not_requested\n* `visas_declined` - visas_declined\n* `visas_pending` - visas_pending\n* `visas_returned` - visas_returned\n* `no_visa_holder` - no_visa_holder",
+                        "oneOf": [
+                            {
+                                "$ref": "#/components/schemas/ContractSendBlockerCodeEnum"
+                            },
+                            {
+                                "$ref": "#/components/schemas/NullEnum"
+                            }
+                        ]
+                    },
                     "total": {
                         "allOf": [
                             {
@@ -41439,6 +41451,15 @@
                         },
                         "description": "Что можно сделать СЕЙЧАС этому сотруднику: допустимо из статуса и разрешено правами роли"
                     },
+                    "send_blocker": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/ContractSendBlocker"
+                            }
+                        ],
+                        "nullable": true,
+                        "description": "Х-1: пока проект не ушёл клиенту — что мешает его отправить; `null` — ничего (действие `send_to_client` в `actions`)"
+                    },
                     "history": {
                         "type": "array",
                         "items": {
@@ -41472,6 +41493,30 @@
                 ],
                 "type": "string",
                 "description": "* `send_to_client` - send_to_client\n* `client_agreed` - client_agreed\n* `reject` - reject\n* `revise` - revise\n* `mark_issued` - mark_issued\n* `attach_scan` - attach_scan"
+            },
+            "ContractConflict": {
+                "type": "object",
+                "description": "Тело 409 действий по договору и акту: код; при `CONTRACT_VISAS_REQUIRED` (Х-1) ещё причина словами и роли без визы.",
+                "properties": {
+                    "detail": {
+                        "type": "string",
+                        "description": "Код отказа"
+                    },
+                    "reason": {
+                        "type": "string",
+                        "description": "Причина словами («Нужны визы: бухгалтер, юрист»)"
+                    },
+                    "missing": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "description": "Роли без визы словами в нижнем регистре"
+                    }
+                },
+                "required": [
+                    "detail"
+                ]
             },
             "ContractFlow": {
                 "type": "object",
@@ -41650,6 +41695,18 @@
                     "sent_to_client": {
                         "type": "boolean",
                         "description": "Проект ушёл клиенту на согласование и виден ему в портале"
+                    },
+                    "send_blocker_code": {
+                        "nullable": true,
+                        "description": "Х-1: пока проект не ушёл клиенту — код причины, по которой его нельзя отправить (визы маршрута подписи); `null` — ничего не мешает. Слова и роли — `send_blocker` карточки\n\n* `visas_not_requested` - visas_not_requested\n* `visas_declined` - visas_declined\n* `visas_pending` - visas_pending\n* `visas_returned` - visas_returned\n* `no_visa_holder` - no_visa_holder",
+                        "oneOf": [
+                            {
+                                "$ref": "#/components/schemas/ContractSendBlockerCodeEnum"
+                            },
+                            {
+                                "$ref": "#/components/schemas/NullEnum"
+                            }
+                        ]
                     }
                 },
                 "required": [
@@ -41715,6 +41772,64 @@
                 "required": [
                     "file"
                 ]
+            },
+            "ContractSendBlocker": {
+                "type": "object",
+                "description": "Х-1: почему проект договора нельзя отправить клиенту — визы маршрута подписи не собраны (ADR-0025).",
+                "properties": {
+                    "code": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/ContractSendBlockerCodeEnum"
+                            }
+                        ],
+                        "description": "visas_not_requested — договор ещё не на визах; visas_declined — EDS не принял договор на визы (причина в remark); visas_pending — не все визы поставлены; visas_returned — виза возвращена с замечанием; no_visa_holder — в компании нет держателя нужного права\n\n* `visas_not_requested` - visas_not_requested\n* `visas_declined` - visas_declined\n* `visas_pending` - visas_pending\n* `visas_returned` - visas_returned\n* `no_visa_holder` - no_visa_holder"
+                    },
+                    "message": {
+                        "type": "string",
+                        "description": "Причина словами для сотрудника («Нужны визы: бухгалтер, юрист»)"
+                    },
+                    "missing": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "description": "Роли, чьих виз не хватает, словами в нижнем регистре"
+                    },
+                    "missing_permissions": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "description": "Те же визы кодами прав маршрута (`approvals.visa_finance`): Платформа переводит их на язык сотрудника"
+                    },
+                    "remark": {
+                        "type": "string",
+                        "description": "Замечание визирующего или причина отказа EDS, как написаны; пусто — нет"
+                    },
+                    "settings_link": {
+                        "type": "boolean",
+                        "description": "Нужной роли нет ни у одного сотрудника: назначить её можно в настройках (ссылка без тупика)"
+                    }
+                },
+                "required": [
+                    "code",
+                    "message",
+                    "missing",
+                    "remark",
+                    "settings_link"
+                ]
+            },
+            "ContractSendBlockerCodeEnum": {
+                "enum": [
+                    "visas_not_requested",
+                    "visas_declined",
+                    "visas_pending",
+                    "visas_returned",
+                    "no_visa_holder"
+                ],
+                "type": "string",
+                "description": "* `visas_not_requested` - visas_not_requested\n* `visas_declined` - visas_declined\n* `visas_pending` - visas_pending\n* `visas_returned` - visas_returned\n* `no_visa_holder` - no_visa_holder"
             },
             "ContractTransitionInRequest": {
                 "type": "object",
