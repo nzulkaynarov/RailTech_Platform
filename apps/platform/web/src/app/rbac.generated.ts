@@ -174,7 +174,7 @@ export const RESOURCES = {
   "eds.visa.legal": {
     module: "eds",
     levels: ["full"],
-    backends: [],
+    backends: ["erp"],
     label: {
       ru: "Документы · Виза юриста: договор",
       uz: "Hujjatlar · Yurist vizasi: shartnoma",

@@ -52,6 +52,9 @@ class Permission(models.TextChoices):
     # Договоры
     CONTRACT_MANAGE = "contract.manage", "Готовить договоры"
     CONTRACT_SIGN = "contract.sign", "Подписывать договоры от компании"
+    # ДОК-10 (DECISIONS 2026-11-23): утверждает шаблоны договоров и решает по отступлениям держатель зоны «Право».
+    # Права вычисляет CRM из раздела каталога `eds.visa.legal` (platform-rbac.yaml).
+    CONTRACT_APPROVE_TEMPLATE = "contract.approve_template", "Утверждать шаблоны договоров"
     # Каталог
     CATALOG_MANAGE = "catalog.manage", "Вести каталог"
     CATALOG_PUBLISH = "catalog.publish", "Публиковать карточки"

@@ -28,6 +28,7 @@ import { fileUrl, projectRef } from "./api";
 import { reasonText } from "./errors";
 import { FileLinks } from "./FileLinks";
 import { NoteField, ReasonForm, ScanForm } from "./forms";
+import { ContractTemplateBlock } from "./ContractTemplateBlock";
 import { contractStateKey } from "./model";
 import { SigningButton } from "./SigningButton";
 import { useApplyCard } from "./useProjectMutations";
@@ -45,7 +46,8 @@ function primaryOf(
   const pick = (action: ProjectContractActionsItem) => (allowed.includes(action) ? action : null);
   switch (contract.status) {
     case "project":
-      return contract.sent_to_client ? pick("client_agreed") : pick("send_to_client");
+      if (contract.sent_to_client) return pick("client_agreed");
+      return pick("send_to_client"); // ДОК-10: ERP не отдаёт действие, пока договору по шаблону что-то мешает
     case "client_agreed":
       return pick("mark_issued");
     case "issued_at_operator":
@@ -68,7 +70,7 @@ function visaRoles(t: TFunction<"projects">, blocker: ProjectContractSendBlocker
 }
 
 /**
- * Х-1: договор не уходит клиенту, пока не собраны визы. Действие «На согласование клиенту» ERP не предлагает
+ * Договор не уходит клиенту, пока не собраны визы (Х-1) или не выполнены правила шаблона (ДОК-10): одна проверка ERP. Действие «На согласование клиенту» ERP не предлагает
  * (`actions`), а здесь — причина словами и, если некому визировать, путь без тупика: ссылка в «Сотрудники» тому, у кого
  * есть доступ, остальным — кого попросить.
  */
@@ -81,9 +83,13 @@ function SendBlocker({ blocker }: { blocker: ProjectContractSendBlocker }) {
   // Запрос открыт, а кто поставил визы, ещё не пришло: слов о ролях нет — «Визы собираются»
   const key =
     blocker.code === "visas_pending" && blocker.missing.length === 0 ? "collecting" : blocker.code;
+  // Правила шаблона (ДОК-10) — свои слова; визы (Х-1) — по коду причины. Проверка на сервере одна.
+  const text = blocker.code.startsWith("CONTRACT_")
+    ? t(`contract.template.blocker.${blocker.code}`)
+    : t(`contract.blocker.${key}`, { roles });
   return (
     <div className="pf-hint" role="status" data-testid="contract-send-blocker">
-      <p style={{ margin: 0 }}>{t(`contract.blocker.${key}`, { roles })}</p>
+      <p style={{ margin: 0 }}>{text}</p>
       {blocker.remark ? (
         <p style={{ margin: 0 }}>{t("contract.blocker.remark", { text: blocker.remark })}</p>
       ) : null}
@@ -162,6 +168,8 @@ function ContractBody({
       note?: string;
       channel?: OnBehalfChannel;
       counterparty_person?: string;
+      text?: string;
+      approve?: boolean;
     } = {},
   ) => {
     setError(null);
@@ -310,6 +318,14 @@ function ContractBody({
         />
       </section>
 
+      {contract.template ? (
+        <ContractTemplateBlock
+          template={contract.template}
+          busy={busy}
+          pending={pending}
+          send={send}
+        />
+      ) : null}
       {contract.send_blocker && !contract.sent_to_client ? (
         <SendBlocker blocker={contract.send_blocker} />
       ) : null}

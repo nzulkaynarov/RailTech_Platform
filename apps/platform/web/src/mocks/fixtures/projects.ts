@@ -4,6 +4,7 @@ import type {
   ProjectCard,
   ProjectContract,
   ProjectContractActionsItem,
+  ProjectContractTemplate,
   ProjectContractSendBlocker,
   ProjectDeliveryAction,
   ProjectFulfillment,
@@ -46,8 +47,19 @@ interface MutableContract {
   client_agreed_at: string | null;
   signed_at: string | null;
   has_scan: boolean;
+  /** ДОК-10: договор собран из утверждённого шаблона; шаги пути и «что мешает» считает `templateOf` из фактов */
+  template?: MutableContractTemplate;
   /** Х-1: визы маршрута подписи до отправки клиенту; нет поля — собраны (все прежние проекты уже у клиента). */
   visas?: "none" | "pending" | "returned" | "no_holder" | "collected" | "collecting";
+}
+
+export interface MutableContractTemplate {
+  id: number;
+  name: string;
+  edition: number;
+  deviation: "none" | "requested" | "approved" | "rejected";
+  deviation_text: string;
+  signed_ours_at: string | null;
 }
 
 interface MutableAct {
@@ -587,11 +599,11 @@ export function problemsOf(p: ProjectState): ProjectRow["problems"] {
   return problems;
 }
 
-/** Х-1: что мешает отправить проект клиенту (как `contract_visas.send_blocker` ERP); `null` — визы собраны. */
-export function sendBlockerOf(c: MutableContract): ProjectContractSendBlocker | null {
-  if (c.sent_to_client || c.status !== "project") return null;
+function visasBlocker(
+  visas: NonNullable<MutableContract["visas"]> | "collected",
+): ProjectContractSendBlocker | null {
   const base = { remark: "", settings_link: false, missing_permissions: [] as string[] };
-  switch (c.visas ?? "collected") {
+  switch (visas) {
     case "none":
       return {
         ...base,
@@ -635,6 +647,37 @@ export function sendBlockerOf(c: MutableContract): ProjectContractSendBlocker | 
   }
 }
 
+function templateBlocker(code: "CONTRACT_DEVIATION_PENDING" | "CONTRACT_NEEDS_OUR_SIGNATURE") {
+  return {
+    code,
+    message:
+      code === "CONTRACT_DEVIATION_PENDING"
+        ? "Отступление от шаблона ждёт решения: отправить договор клиенту можно после него."
+        : "Нужна наша подпись: по правилам компании договор уходит клиенту подписанным.",
+    missing: [] as string[],
+    missing_permissions: [] as string[],
+    remark: "",
+    settings_link: false,
+  };
+}
+
+/**
+ * ОДНА проверка «можно ли отправить проект клиенту» (как `contract_flow.send_blocker` ERP); `null` — можно.
+ * По утверждённому шаблону без отступления виз нет, мешает только наша подпись; отступление на решении — своя причина;
+ * одобренное отступление и договор вне шаблона идут по визам маршрута (Х-1).
+ */
+export function sendBlockerOf(c: MutableContract): ProjectContractSendBlocker | null {
+  if (c.sent_to_client || c.status !== "project") return null;
+  const tpl = c.template;
+  if (!tpl) return visasBlocker(c.visas ?? "collected");
+  if (tpl.deviation === "requested") return templateBlocker("CONTRACT_DEVIATION_PENDING");
+  if (tpl.deviation === "approved") {
+    const visas = visasBlocker(c.visas ?? "none");
+    if (visas) return visas;
+  }
+  return tpl.signed_ours_at === null ? templateBlocker("CONTRACT_NEEDS_OUR_SIGNATURE") : null;
+}
+
 /** Действия по договору, доступные сейчас: допустимо из статуса (таблица ERP) и разрешено правами (`full` — директор, бухгалтер). */
 export function contractActions(c: MutableContract, writer: boolean): ProjectContractActionsItem[] {
   if (!writer) return [];
@@ -651,6 +694,48 @@ export function contractActions(c: MutableContract, writer: boolean): ProjectCon
     default:
       return [];
   }
+}
+
+/**
+ * Блок «договор по шаблону» из фактов (как `crm/services/contract_templates.py`): путь — собран, наша подпись, в Кабинете,
+ * подписан обеими; визы нужны только с отступлением. «Что мешает отправить» — одна `sendBlockerOf` (как ERP).
+ */
+export function templateOf(
+  c: MutableContract,
+  writer: boolean,
+  approver: boolean,
+): ProjectContractTemplate | null {
+  const tpl = c.template;
+  if (!tpl) return null;
+  const draft = c.status === "project" && !c.sent_to_client;
+  const keys = [
+    { key: "assembled", done: true, at: c.created_at },
+    { key: "our_signature", done: tpl.signed_ours_at !== null, at: tpl.signed_ours_at },
+    { key: "in_cabinet", done: c.sent_to_client, at: c.sent_to_client ? c.created_at : null },
+    { key: "signed_both", done: c.status === "signed", at: c.signed_at },
+  ] as const;
+  let current = false;
+  const steps = keys.map((step) => {
+    const state: "done" | "current" | "next" = step.done ? "done" : current ? "next" : "current";
+    if (!step.done) current = true;
+    return { key: step.key, state, at: step.at };
+  });
+  const actions: ProjectContractTemplate["actions"] = [];
+  if (draft && writer) {
+    if (tpl.signed_ours_at === null) actions.push("sign_ours");
+    if (tpl.deviation !== "requested") actions.push("request_deviation");
+  }
+  if (draft && tpl.deviation === "requested" && approver) actions.push("decide_deviation");
+  return {
+    id: tpl.id,
+    name: tpl.name,
+    edition: tpl.edition,
+    deviation: tpl.deviation,
+    deviation_text: tpl.deviation_text,
+    visas_required: tpl.deviation === "requested" || tpl.deviation === "approved",
+    steps,
+    actions,
+  };
 }
 
 export function actActions(a: MutableAct, writer: boolean): ProjectActActionsItem[] {
@@ -713,7 +798,12 @@ export function actDelivered(p: ProjectState): boolean {
   return ["DELIVERED", "ACCEPTED"].includes(p.fulfillment?.status ?? "");
 }
 
-export function toCard(p: ProjectState, writer: boolean, marker = false): ProjectCard {
+export function toCard(
+  p: ProjectState,
+  writer: boolean,
+  marker = false,
+  approver = false,
+): ProjectCard {
   const c = p.contract;
   const a = p.act;
   const issuable = p.invoices.some((i) =>
@@ -742,6 +832,7 @@ export function toCard(p: ProjectState, writer: boolean, marker = false): Projec
           has_pdf: true,
           has_scan: c.has_scan,
           actions: contractActions(c, writer),
+          template: templateOf(c, writer, approver),
           send_blocker: sendBlockerOf(c),
           history: historyOf(p, "contract"),
         }

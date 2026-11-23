@@ -6,6 +6,7 @@ import type { ProjectContractActionsItem } from "./projectContractActionsItem";
 import type { ProjectContractSendBlocker } from "./projectContractSendBlocker";
 import type { ProjectContractSendBlockerCode } from "./projectContractSendBlockerCode";
 import type { ProjectContractStatus } from "./projectContractStatus";
+import type { ProjectContractTemplate } from "./projectContractTemplate";
 import type { ProjectJournalEntry } from "./projectJournalEntry";
 import type { ProjectMoney } from "./projectMoney";
 
@@ -32,6 +33,8 @@ export interface ProjectContract {
   has_scan: boolean;
   /** Что можно сделать СЕЙЧАС этому сотруднику (допустимо из статуса и разрешено правами ERP); считает ERP, SPA не угадывает */
   actions: ProjectContractActionsItem[];
+  /** ДОК-10: договор собран из утверждённого шаблона — название и редакция, отступление, путь по фактам; null — договор прежним путём */
+  template?: ProjectContractTemplate | null;
   /** Х-1: пока проект договора не ушёл клиенту — что мешает его отправить (визы маршрута подписи не собраны); null — ничего, действие send_to_client в actions. Считает ERP */
   send_blocker?: ProjectContractSendBlocker | null;
   history: ProjectJournalEntry[];

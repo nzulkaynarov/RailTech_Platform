@@ -500,9 +500,39 @@ def _contract_card(contract, user, journal: list) -> Optional[dict]:
         "has_pdf": bool(contract.pdf_file),
         "has_scan": bool(contract.signed_file),
         "actions": contract_flow.allowed_actions(contract, user),
+        "template": _contract_template_card(contract, user),
         # Х-1: пока проект не ушёл клиенту — что мешает его отправить (визы словами); `null` — ничего.
         "send_blocker": contract_flow.send_blocker(contract) if _awaits_send(contract) else None,
         "history": _history_for(journal, "contract", contract.number),
+    }
+
+
+def _contract_template_card(contract, user) -> Optional[dict]:
+    """ДОК-10: договор по утверждённому шаблону — редакция, отступление, путь по фактам и доступные действия."""
+    if contract.template_id is None:
+        return None
+    from . import contract_templates as templates
+
+    state = templates.deviation_state(contract)
+    draft = contract.status_code == ContractStatusCode.DRAFT
+    actions = []
+    if draft and contract_flow.is_staff(user):
+        if contract.manager_signed_at is None and contract_flow.may(user, "contract.sign"):
+            actions.append("sign_ours")
+        rules = templates.contract_rules(templates._own_seller(contract))
+        if rules["deviations_allowed"] and state != "requested" and contract_flow.may(user, "contract.manage"):
+            actions.append("request_deviation")
+        if state == "requested" and templates.is_approver(user):
+            actions.append("decide_deviation")
+    return {
+        "id": contract.template_id,
+        "name": contract.template.name,
+        "edition": contract.template_edition or contract.template.edition,
+        "deviation": state,
+        "deviation_text": contract.deviation_text,
+        "visas_required": templates.visas_required(contract),
+        "steps": templates.path_steps(contract),
+        "actions": actions,
     }
 
 

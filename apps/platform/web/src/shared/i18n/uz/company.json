@@ -289,6 +289,12 @@
         "note": "Keyingi eslatmadan boşlab amal qiladi.",
         "save": "Eslatmalarni saqlaş"
       },
+      "contracts": {
+        "title": "Şartnomalar",
+        "hint": "TT qabul qilingaç şartnoma qanday yiğiladi va ketadi.",
+        "note": "Qoidalar yangi şartnomalar uçun amal qiladi; yiğilganlar özgarmaydi.",
+        "save": "Qoidalarni saqlaş"
+      },
       "supplier": {
         "title": "Yetkazib beruvçi narxlarining dolzarbligi",
         "hint": "Hamkor narxi neça kun tasdiqlangan hisoblanadi va tugaşidan neça kun oldin ogohlantiriş.",
@@ -296,6 +302,15 @@
         "save": "Muddatlarni saqlaş"
       }
     },
+    "contract_auto_send": "Tasdiqlangan şablon böyiça şartnoma TT qabul qilingaç özi Kabinetga ketadi",
+    "contract_auto_sendHint": "Çetlanişsiz viza kerak emas. Öçirilsa — şartnoma qölda yuboriladi.",
+    "contract_sign_before_send": "Bizning imzo — mijozga yuborişdan oldin",
+    "contract_sign_before_sendHint": "Öçirilsa — şartnoma tayyor bölişi bilan ketadi.",
+    "contract_deviations_allowed": "Şablondan çetlaniş — «Huquq» egasiga ariza bilan",
+    "contract_deviations_allowedHint": "Çetlanişli şartnoma viza yönalişidan ötadi va vizalargaça mijozga ketmaydi.",
+    "defaultClientTemplate": "Standart şablon: mijoz",
+    "defaultPartnerTemplate": "Standart şablon: hamkor",
+    "edition": "{{n}}-tahrir",
     "requireMxik": "E’lon qilişda MXIK majburiy",
     "requireMxikHint": "MXIK (IKPU) kodsiz kartani e’lon qilib bölmaydi. E’lon qilinganlar qoladi; tekşiriş — keyingi e’londa.",
     "requireHs": "Olib kirilgan tovar uçun TIF TN majburiy",
@@ -331,6 +346,7 @@
     "parts": {
       "documents": "Hujjatlar",
       "emails": "Xatlar",
+      "contracts": "Şartnomalar",
       "resolutions": "Rezolyutsiyalar"
     },
     "documents": {
@@ -667,6 +683,64 @@
       "resolution": "Rezolyutsiya",
       "reply": "Bot javobi",
       "memo": "Xizmat xati"
+    }
+  },
+  "contractTemplates": {
+    "title": "Şartnoma şablonlari",
+    "hint": "Yurist bir marta tasdiqlaydi — bitimda faqat tasdiqlanganlari tanlanadi.",
+    "add": "Yangi şablon",
+    "createTitle": "Yangi şartnoma şabloni",
+    "createSubmit": "Yaratiş",
+    "empty": {
+      "title": "Şartnoma şablonlari hali yöq",
+      "text": "Standart matndan şablon yarating va tasdiqlaşga yuboring: bitimda faqat tasdiqlanganlari taklif etiladi."
+    },
+    "columns": {
+      "name": "Şablon",
+      "counterparty": "Kim uçun",
+      "subject": "Predmet",
+      "edition": "Tahrir"
+    },
+    "counterparty": {
+      "client": "Mijoz",
+      "partner": "Hamkor"
+    },
+    "subject": {
+      "supply": "Yetkazib beriş",
+      "services": "Xizmatlar"
+    },
+    "status": {
+      "draft": "Qoralama",
+      "on_approval": "Tasdiqlaşda",
+      "approved": "Tasdiqlangan"
+    },
+    "approvedLine": "{{edition}}-tahrir, {{date}} · tasdiqladi: {{who}}",
+    "waitingLine": "{{edition}}-tahrir · «Huquq» kutmoqda, {{date}} dan",
+    "draftLine": "{{edition}}-tahrir",
+    "replaced": "yangi tahrir bilan almaştirilgan",
+    "notOffered": "bitimda taklif etilmaydi",
+    "fallback": "uz va en — rus matni",
+    "actions": {
+      "edition": "Yangi tahrir",
+      "submit": "Tasdiqlaşga",
+      "approve": "Tasdiqlaş",
+      "back": "Qoralamaga qaytariş"
+    },
+    "done": {
+      "edition": "Yangi tahrir yaratildi",
+      "submit": "Tasdiqlaşga yuborildi",
+      "approve": "Şablon tasdiqlandi",
+      "back": "Qoralamaga qaytarildi",
+      "create": "Şablon yaratildi"
+    },
+    "note": "Yangi şablonni «Huquq» zonasi egasi tasdiqlaydi. Mustahkamlangan matn faqat yangi tahrir bilan özgaradi; şartnomalar öz tahririda qoladi.",
+    "errors": {
+      "generic": "Bajarilmadi. Sahifani yangilab, qayta urinib köring.",
+      "template_locked": "Tasdiqlangan matn özgarmaydi. Yangi tahrir yarating.",
+      "template_transition_not_allowed": "Şablon boşqa holatda. Sahifani yangilang.",
+      "template_edition_in_progress": "Yangi tahrir allaqaçon işlanmoqda.",
+      "template_counterparty_required": "Şablon kim uçun ekanini belgilang.",
+      "template_approval_forbidden": "«Huquq» zonasi egasi tasdiqlaydi."
     }
   }
 }

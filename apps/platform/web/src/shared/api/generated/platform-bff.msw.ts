@@ -167,6 +167,8 @@ import type {
   CompanyBankAccount,
   CompanyBankAccountList,
   CompanyProfile,
+  ContractTemplate,
+  ContractTemplateList,
   ConversationCard,
   ConversationThread,
   CounterpartyCard,
@@ -297,6 +299,7 @@ import type {
   NotificationSettings,
   NumberingPreview,
   NumberingScheme,
+  OfferedContractTemplates,
   OffsiteBackup,
   OffsiteCheck,
   OnBehalfNote,
@@ -324,6 +327,7 @@ import type {
   ProjectContract,
   ProjectContractRef,
   ProjectContractSendBlocker,
+  ProjectContractTemplate,
   ProjectFileGenerating,
   ProjectFulfillment,
   ProjectInvoiceRef,
@@ -2545,6 +2549,253 @@ export const getListNotificationsResponseMock = (
 
 export const getStreamEventsResponseMock = (): string => faker.word.sample();
 
+export const getListContractTemplatesResponseMock = (
+  overrideResponse: Partial<Extract<ContractTemplateList, object>> = {},
+): ContractTemplateList => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    edition: faker.number.int(),
+    status: faker.helpers.arrayElement(["draft", "on_approval", "approved"] as const),
+    counterparty: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(["client", "partner"] as const),
+      null,
+    ]),
+    subject: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(["supply", "services"] as const),
+      null,
+    ]),
+    approved_by: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    approved_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    submitted_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    is_active: faker.datatype.boolean(),
+    locked: faker.datatype.boolean(),
+    languages: faker.helpers.arrayElements(["ru", "uz", "en"] as const),
+    updated_at: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  })),
+  ...overrideResponse,
+});
+
+export const getCreateContractTemplateResponseMock = (
+  overrideResponse: Partial<Extract<ContractTemplate, object>> = {},
+): ContractTemplate => ({
+  id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  edition: faker.number.int(),
+  status: faker.helpers.arrayElement(["draft", "on_approval", "approved"] as const),
+  counterparty: faker.helpers.arrayElement([
+    faker.helpers.arrayElement(["client", "partner"] as const),
+    null,
+  ]),
+  subject: faker.helpers.arrayElement([
+    faker.helpers.arrayElement(["supply", "services"] as const),
+    null,
+  ]),
+  approved_by: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  approved_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
+  submitted_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
+  is_active: faker.datatype.boolean(),
+  locked: faker.datatype.boolean(),
+  languages: faker.helpers.arrayElements(["ru", "uz", "en"] as const),
+  updated_at: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  ...overrideResponse,
+});
+
+export const getListOfferedContractTemplatesResponseMock = (
+  overrideResponse: Partial<Extract<OfferedContractTemplates, object>> = {},
+): OfferedContractTemplates => ({
+  counterparty: faker.helpers.arrayElement(["client", "partner"] as const),
+  default_id: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    edition: faker.number.int(),
+    status: faker.helpers.arrayElement(["draft", "on_approval", "approved"] as const),
+    counterparty: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(["client", "partner"] as const),
+      null,
+    ]),
+    subject: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(["supply", "services"] as const),
+      null,
+    ]),
+    approved_by: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    approved_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    submitted_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    is_active: faker.datatype.boolean(),
+    locked: faker.datatype.boolean(),
+    languages: faker.helpers.arrayElements(["ru", "uz", "en"] as const),
+    updated_at: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  })),
+  ...overrideResponse,
+});
+
+export const getNewContractTemplateEditionResponseMock = (
+  overrideResponse: Partial<Extract<ContractTemplate, object>> = {},
+): ContractTemplate => ({
+  id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  edition: faker.number.int(),
+  status: faker.helpers.arrayElement(["draft", "on_approval", "approved"] as const),
+  counterparty: faker.helpers.arrayElement([
+    faker.helpers.arrayElement(["client", "partner"] as const),
+    null,
+  ]),
+  subject: faker.helpers.arrayElement([
+    faker.helpers.arrayElement(["supply", "services"] as const),
+    null,
+  ]),
+  approved_by: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  approved_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
+  submitted_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
+  is_active: faker.datatype.boolean(),
+  locked: faker.datatype.boolean(),
+  languages: faker.helpers.arrayElements(["ru", "uz", "en"] as const),
+  updated_at: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  ...overrideResponse,
+});
+
+export const getSubmitContractTemplateResponseMock = (
+  overrideResponse: Partial<Extract<ContractTemplate, object>> = {},
+): ContractTemplate => ({
+  id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  edition: faker.number.int(),
+  status: faker.helpers.arrayElement(["draft", "on_approval", "approved"] as const),
+  counterparty: faker.helpers.arrayElement([
+    faker.helpers.arrayElement(["client", "partner"] as const),
+    null,
+  ]),
+  subject: faker.helpers.arrayElement([
+    faker.helpers.arrayElement(["supply", "services"] as const),
+    null,
+  ]),
+  approved_by: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  approved_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
+  submitted_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
+  is_active: faker.datatype.boolean(),
+  locked: faker.datatype.boolean(),
+  languages: faker.helpers.arrayElements(["ru", "uz", "en"] as const),
+  updated_at: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  ...overrideResponse,
+});
+
+export const getApproveContractTemplateResponseMock = (
+  overrideResponse: Partial<Extract<ContractTemplate, object>> = {},
+): ContractTemplate => ({
+  id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  edition: faker.number.int(),
+  status: faker.helpers.arrayElement(["draft", "on_approval", "approved"] as const),
+  counterparty: faker.helpers.arrayElement([
+    faker.helpers.arrayElement(["client", "partner"] as const),
+    null,
+  ]),
+  subject: faker.helpers.arrayElement([
+    faker.helpers.arrayElement(["supply", "services"] as const),
+    null,
+  ]),
+  approved_by: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  approved_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
+  submitted_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
+  is_active: faker.datatype.boolean(),
+  locked: faker.datatype.boolean(),
+  languages: faker.helpers.arrayElements(["ru", "uz", "en"] as const),
+  updated_at: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  ...overrideResponse,
+});
+
+export const getReturnContractTemplateToDraftResponseMock = (
+  overrideResponse: Partial<Extract<ContractTemplate, object>> = {},
+): ContractTemplate => ({
+  id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  edition: faker.number.int(),
+  status: faker.helpers.arrayElement(["draft", "on_approval", "approved"] as const),
+  counterparty: faker.helpers.arrayElement([
+    faker.helpers.arrayElement(["client", "partner"] as const),
+    null,
+  ]),
+  subject: faker.helpers.arrayElement([
+    faker.helpers.arrayElement(["supply", "services"] as const),
+    null,
+  ]),
+  approved_by: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  approved_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
+  submitted_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
+  is_active: faker.datatype.boolean(),
+  locked: faker.datatype.boolean(),
+  languages: faker.helpers.arrayElements(["ru", "uz", "en"] as const),
+  updated_at: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  ...overrideResponse,
+});
+
 export const getListTemplateCatalogResponseMock = (
   overrideResponse: Partial<Extract<TemplateCatalog, object>> = {},
 ): TemplateCatalog => ({
@@ -3933,6 +4184,37 @@ export const getGetEdsProjectResponseProjectQuoteMock = (
   ...overrideResponse,
 });
 
+export const getGetEdsProjectResponseProjectContractTemplateMock = (
+  overrideResponse: Partial<ProjectContractTemplate> = {},
+): ProjectContractTemplate => ({
+  ...{
+    id: faker.helpers.arrayElement([faker.number.int(), null]),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    edition: faker.number.int(),
+    deviation: faker.helpers.arrayElement(["none", "requested", "approved", "rejected"] as const),
+    deviation_text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    visas_required: faker.datatype.boolean(),
+    steps: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        key: faker.helpers.arrayElement([
+          "assembled",
+          "our_signature",
+          "in_cabinet",
+          "signed_both",
+        ] as const),
+        state: faker.helpers.arrayElement(["done", "current", "next"] as const),
+        at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
+      }),
+    ),
+    actions: faker.helpers.arrayElements([
+      "sign_ours",
+      "request_deviation",
+      "decide_deviation",
+    ] as const),
+  },
+  ...overrideResponse,
+});
+
 export const getGetEdsProjectResponseProjectContractSendBlockerMock = (
   overrideResponse: Partial<ProjectContractSendBlocker> = {},
 ): ProjectContractSendBlocker => ({
@@ -4003,6 +4285,10 @@ export const getGetEdsProjectResponseProjectContractMock = (
       "mark_issued",
       "attach_scan",
     ] as const),
+    template: faker.helpers.arrayElement([
+      { ...getGetEdsProjectResponseProjectContractTemplateMock() },
+      null,
+    ]),
     send_blocker: faker.helpers.arrayElement([
       { ...getGetEdsProjectResponseProjectContractSendBlockerMock() },
       null,
@@ -4384,6 +4670,37 @@ export const getCreateEdsProjectContractResponseProjectQuoteMock = (
   ...overrideResponse,
 });
 
+export const getCreateEdsProjectContractResponseProjectContractTemplateMock = (
+  overrideResponse: Partial<ProjectContractTemplate> = {},
+): ProjectContractTemplate => ({
+  ...{
+    id: faker.helpers.arrayElement([faker.number.int(), null]),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    edition: faker.number.int(),
+    deviation: faker.helpers.arrayElement(["none", "requested", "approved", "rejected"] as const),
+    deviation_text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    visas_required: faker.datatype.boolean(),
+    steps: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        key: faker.helpers.arrayElement([
+          "assembled",
+          "our_signature",
+          "in_cabinet",
+          "signed_both",
+        ] as const),
+        state: faker.helpers.arrayElement(["done", "current", "next"] as const),
+        at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
+      }),
+    ),
+    actions: faker.helpers.arrayElements([
+      "sign_ours",
+      "request_deviation",
+      "decide_deviation",
+    ] as const),
+  },
+  ...overrideResponse,
+});
+
 export const getCreateEdsProjectContractResponseProjectContractSendBlockerMock = (
   overrideResponse: Partial<ProjectContractSendBlocker> = {},
 ): ProjectContractSendBlocker => ({
@@ -4457,6 +4774,10 @@ export const getCreateEdsProjectContractResponseProjectContractMock = (
       "mark_issued",
       "attach_scan",
     ] as const),
+    template: faker.helpers.arrayElement([
+      { ...getCreateEdsProjectContractResponseProjectContractTemplateMock() },
+      null,
+    ]),
     send_blocker: faker.helpers.arrayElement([
       { ...getCreateEdsProjectContractResponseProjectContractSendBlockerMock() },
       null,
@@ -4868,6 +5189,37 @@ export const getActEdsProjectContractResponseProjectQuoteMock = (
   ...overrideResponse,
 });
 
+export const getActEdsProjectContractResponseProjectContractTemplateMock = (
+  overrideResponse: Partial<ProjectContractTemplate> = {},
+): ProjectContractTemplate => ({
+  ...{
+    id: faker.helpers.arrayElement([faker.number.int(), null]),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    edition: faker.number.int(),
+    deviation: faker.helpers.arrayElement(["none", "requested", "approved", "rejected"] as const),
+    deviation_text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    visas_required: faker.datatype.boolean(),
+    steps: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        key: faker.helpers.arrayElement([
+          "assembled",
+          "our_signature",
+          "in_cabinet",
+          "signed_both",
+        ] as const),
+        state: faker.helpers.arrayElement(["done", "current", "next"] as const),
+        at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
+      }),
+    ),
+    actions: faker.helpers.arrayElements([
+      "sign_ours",
+      "request_deviation",
+      "decide_deviation",
+    ] as const),
+  },
+  ...overrideResponse,
+});
+
 export const getActEdsProjectContractResponseProjectContractSendBlockerMock = (
   overrideResponse: Partial<ProjectContractSendBlocker> = {},
 ): ProjectContractSendBlocker => ({
@@ -4941,6 +5293,10 @@ export const getActEdsProjectContractResponseProjectContractMock = (
       "mark_issued",
       "attach_scan",
     ] as const),
+    template: faker.helpers.arrayElement([
+      { ...getActEdsProjectContractResponseProjectContractTemplateMock() },
+      null,
+    ]),
     send_blocker: faker.helpers.arrayElement([
       { ...getActEdsProjectContractResponseProjectContractSendBlockerMock() },
       null,
@@ -5349,6 +5705,37 @@ export const getScanEdsProjectContractResponseProjectQuoteMock = (
   ...overrideResponse,
 });
 
+export const getScanEdsProjectContractResponseProjectContractTemplateMock = (
+  overrideResponse: Partial<ProjectContractTemplate> = {},
+): ProjectContractTemplate => ({
+  ...{
+    id: faker.helpers.arrayElement([faker.number.int(), null]),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    edition: faker.number.int(),
+    deviation: faker.helpers.arrayElement(["none", "requested", "approved", "rejected"] as const),
+    deviation_text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    visas_required: faker.datatype.boolean(),
+    steps: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        key: faker.helpers.arrayElement([
+          "assembled",
+          "our_signature",
+          "in_cabinet",
+          "signed_both",
+        ] as const),
+        state: faker.helpers.arrayElement(["done", "current", "next"] as const),
+        at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
+      }),
+    ),
+    actions: faker.helpers.arrayElements([
+      "sign_ours",
+      "request_deviation",
+      "decide_deviation",
+    ] as const),
+  },
+  ...overrideResponse,
+});
+
 export const getScanEdsProjectContractResponseProjectContractSendBlockerMock = (
   overrideResponse: Partial<ProjectContractSendBlocker> = {},
 ): ProjectContractSendBlocker => ({
@@ -5422,6 +5809,10 @@ export const getScanEdsProjectContractResponseProjectContractMock = (
       "mark_issued",
       "attach_scan",
     ] as const),
+    template: faker.helpers.arrayElement([
+      { ...getScanEdsProjectContractResponseProjectContractTemplateMock() },
+      null,
+    ]),
     send_blocker: faker.helpers.arrayElement([
       { ...getScanEdsProjectContractResponseProjectContractSendBlockerMock() },
       null,
@@ -5830,6 +6221,37 @@ export const getRequestEdsProjectSigningResponseProjectQuoteMock = (
   ...overrideResponse,
 });
 
+export const getRequestEdsProjectSigningResponseProjectContractTemplateMock = (
+  overrideResponse: Partial<ProjectContractTemplate> = {},
+): ProjectContractTemplate => ({
+  ...{
+    id: faker.helpers.arrayElement([faker.number.int(), null]),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    edition: faker.number.int(),
+    deviation: faker.helpers.arrayElement(["none", "requested", "approved", "rejected"] as const),
+    deviation_text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    visas_required: faker.datatype.boolean(),
+    steps: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        key: faker.helpers.arrayElement([
+          "assembled",
+          "our_signature",
+          "in_cabinet",
+          "signed_both",
+        ] as const),
+        state: faker.helpers.arrayElement(["done", "current", "next"] as const),
+        at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
+      }),
+    ),
+    actions: faker.helpers.arrayElements([
+      "sign_ours",
+      "request_deviation",
+      "decide_deviation",
+    ] as const),
+  },
+  ...overrideResponse,
+});
+
 export const getRequestEdsProjectSigningResponseProjectContractSendBlockerMock = (
   overrideResponse: Partial<ProjectContractSendBlocker> = {},
 ): ProjectContractSendBlocker => ({
@@ -5903,6 +6325,10 @@ export const getRequestEdsProjectSigningResponseProjectContractMock = (
       "mark_issued",
       "attach_scan",
     ] as const),
+    template: faker.helpers.arrayElement([
+      { ...getRequestEdsProjectSigningResponseProjectContractTemplateMock() },
+      null,
+    ]),
     send_blocker: faker.helpers.arrayElement([
       { ...getRequestEdsProjectSigningResponseProjectContractSendBlockerMock() },
       null,
@@ -6337,6 +6763,37 @@ export const getActEdsProjectActResponseProjectQuoteMock = (
   ...overrideResponse,
 });
 
+export const getActEdsProjectActResponseProjectContractTemplateMock = (
+  overrideResponse: Partial<ProjectContractTemplate> = {},
+): ProjectContractTemplate => ({
+  ...{
+    id: faker.helpers.arrayElement([faker.number.int(), null]),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    edition: faker.number.int(),
+    deviation: faker.helpers.arrayElement(["none", "requested", "approved", "rejected"] as const),
+    deviation_text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    visas_required: faker.datatype.boolean(),
+    steps: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        key: faker.helpers.arrayElement([
+          "assembled",
+          "our_signature",
+          "in_cabinet",
+          "signed_both",
+        ] as const),
+        state: faker.helpers.arrayElement(["done", "current", "next"] as const),
+        at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
+      }),
+    ),
+    actions: faker.helpers.arrayElements([
+      "sign_ours",
+      "request_deviation",
+      "decide_deviation",
+    ] as const),
+  },
+  ...overrideResponse,
+});
+
 export const getActEdsProjectActResponseProjectContractSendBlockerMock = (
   overrideResponse: Partial<ProjectContractSendBlocker> = {},
 ): ProjectContractSendBlocker => ({
@@ -6407,6 +6864,10 @@ export const getActEdsProjectActResponseProjectContractMock = (
       "mark_issued",
       "attach_scan",
     ] as const),
+    template: faker.helpers.arrayElement([
+      { ...getActEdsProjectActResponseProjectContractTemplateMock() },
+      null,
+    ]),
     send_blocker: faker.helpers.arrayElement([
       { ...getActEdsProjectActResponseProjectContractSendBlockerMock() },
       null,
@@ -6803,6 +7264,37 @@ export const getScanEdsProjectActResponseProjectQuoteMock = (
   ...overrideResponse,
 });
 
+export const getScanEdsProjectActResponseProjectContractTemplateMock = (
+  overrideResponse: Partial<ProjectContractTemplate> = {},
+): ProjectContractTemplate => ({
+  ...{
+    id: faker.helpers.arrayElement([faker.number.int(), null]),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    edition: faker.number.int(),
+    deviation: faker.helpers.arrayElement(["none", "requested", "approved", "rejected"] as const),
+    deviation_text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    visas_required: faker.datatype.boolean(),
+    steps: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        key: faker.helpers.arrayElement([
+          "assembled",
+          "our_signature",
+          "in_cabinet",
+          "signed_both",
+        ] as const),
+        state: faker.helpers.arrayElement(["done", "current", "next"] as const),
+        at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
+      }),
+    ),
+    actions: faker.helpers.arrayElements([
+      "sign_ours",
+      "request_deviation",
+      "decide_deviation",
+    ] as const),
+  },
+  ...overrideResponse,
+});
+
 export const getScanEdsProjectActResponseProjectContractSendBlockerMock = (
   overrideResponse: Partial<ProjectContractSendBlocker> = {},
 ): ProjectContractSendBlocker => ({
@@ -6876,6 +7368,10 @@ export const getScanEdsProjectActResponseProjectContractMock = (
       "mark_issued",
       "attach_scan",
     ] as const),
+    template: faker.helpers.arrayElement([
+      { ...getScanEdsProjectActResponseProjectContractTemplateMock() },
+      null,
+    ]),
     send_blocker: faker.helpers.arrayElement([
       { ...getScanEdsProjectActResponseProjectContractSendBlockerMock() },
       null,
@@ -7275,6 +7771,37 @@ export const getMarkEdsProjectDeliveryResponseProjectQuoteMock = (
   ...overrideResponse,
 });
 
+export const getMarkEdsProjectDeliveryResponseProjectContractTemplateMock = (
+  overrideResponse: Partial<ProjectContractTemplate> = {},
+): ProjectContractTemplate => ({
+  ...{
+    id: faker.helpers.arrayElement([faker.number.int(), null]),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    edition: faker.number.int(),
+    deviation: faker.helpers.arrayElement(["none", "requested", "approved", "rejected"] as const),
+    deviation_text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    visas_required: faker.datatype.boolean(),
+    steps: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        key: faker.helpers.arrayElement([
+          "assembled",
+          "our_signature",
+          "in_cabinet",
+          "signed_both",
+        ] as const),
+        state: faker.helpers.arrayElement(["done", "current", "next"] as const),
+        at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
+      }),
+    ),
+    actions: faker.helpers.arrayElements([
+      "sign_ours",
+      "request_deviation",
+      "decide_deviation",
+    ] as const),
+  },
+  ...overrideResponse,
+});
+
 export const getMarkEdsProjectDeliveryResponseProjectContractSendBlockerMock = (
   overrideResponse: Partial<ProjectContractSendBlocker> = {},
 ): ProjectContractSendBlocker => ({
@@ -7348,6 +7875,10 @@ export const getMarkEdsProjectDeliveryResponseProjectContractMock = (
       "mark_issued",
       "attach_scan",
     ] as const),
+    template: faker.helpers.arrayElement([
+      { ...getMarkEdsProjectDeliveryResponseProjectContractTemplateMock() },
+      null,
+    ]),
     send_blocker: faker.helpers.arrayElement([
       { ...getMarkEdsProjectDeliveryResponseProjectContractSendBlockerMock() },
       null,
@@ -16699,6 +17230,11 @@ export const getGetQuoteDefaultsResponseMock = (
   offer_confirm_days: faker.number.int({ min: 1, max: 365 }),
   offer_expiring_days: faker.number.int({ min: 1, max: 90 }),
   act_reminder_hours: faker.number.int({ min: 1, max: 720 }),
+  contract_auto_send: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
+  contract_sign_before_send: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
+  contract_deviations_allowed: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
+  default_client_contract_template: faker.helpers.arrayElement([faker.number.int(), null]),
+  default_partner_contract_template: faker.helpers.arrayElement([faker.number.int(), null]),
   ...overrideResponse,
 });
 
@@ -16742,6 +17278,11 @@ export const getUpdateQuoteDefaultsResponseMock = (
   offer_confirm_days: faker.number.int({ min: 1, max: 365 }),
   offer_expiring_days: faker.number.int({ min: 1, max: 90 }),
   act_reminder_hours: faker.number.int({ min: 1, max: 720 }),
+  contract_auto_send: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
+  contract_sign_before_send: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
+  contract_deviations_allowed: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
+  default_client_contract_template: faker.helpers.arrayElement([faker.number.int(), null]),
+  default_partner_contract_template: faker.helpers.arrayElement([faker.number.int(), null]),
   ...overrideResponse,
 });
 
@@ -40652,6 +41193,174 @@ export const getStreamEventsMockHandler = (
   );
 };
 
+export const getListContractTemplatesMockHandler = (
+  overrideResponse?:
+    | ContractTemplateList
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<ContractTemplateList> | ContractTemplateList),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/document-templates/contracts",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListContractTemplatesResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getCreateContractTemplateMockHandler = (
+  overrideResponse?:
+    | ContractTemplate
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<ContractTemplate> | ContractTemplate),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/document-templates/contracts",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getCreateContractTemplateResponseMock(),
+        { status: 201 },
+      );
+    },
+    options,
+  );
+};
+
+export const getListOfferedContractTemplatesMockHandler = (
+  overrideResponse?:
+    | OfferedContractTemplates
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<OfferedContractTemplates> | OfferedContractTemplates),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/document-templates/contracts/offered",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListOfferedContractTemplatesResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getNewContractTemplateEditionMockHandler = (
+  overrideResponse?:
+    | ContractTemplate
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<ContractTemplate> | ContractTemplate),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/document-templates/contracts/:id/new-edition",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getNewContractTemplateEditionResponseMock(),
+        { status: 201 },
+      );
+    },
+    options,
+  );
+};
+
+export const getSubmitContractTemplateMockHandler = (
+  overrideResponse?:
+    | ContractTemplate
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<ContractTemplate> | ContractTemplate),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/document-templates/contracts/:id/submit",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getSubmitContractTemplateResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getApproveContractTemplateMockHandler = (
+  overrideResponse?:
+    | ContractTemplate
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<ContractTemplate> | ContractTemplate),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/document-templates/contracts/:id/approve",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getApproveContractTemplateResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getReturnContractTemplateToDraftMockHandler = (
+  overrideResponse?:
+    | ContractTemplate
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<ContractTemplate> | ContractTemplate),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/document-templates/contracts/:id/return-to-draft",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getReturnContractTemplateToDraftResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
 export const getListTemplateCatalogMockHandler = (
   overrideResponse?:
     | TemplateCatalog
@@ -50832,6 +51541,13 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getMarkNotificationReadMockHandler(),
   getMarkAllNotificationsReadMockHandler(),
   getStreamEventsMockHandler(),
+  getListContractTemplatesMockHandler(),
+  getCreateContractTemplateMockHandler(),
+  getListOfferedContractTemplatesMockHandler(),
+  getNewContractTemplateEditionMockHandler(),
+  getSubmitContractTemplateMockHandler(),
+  getApproveContractTemplateMockHandler(),
+  getReturnContractTemplateToDraftMockHandler(),
   getListTemplateCatalogMockHandler(),
   getListSentMailMockHandler(),
   getGetSentMailBodyMockHandler(),

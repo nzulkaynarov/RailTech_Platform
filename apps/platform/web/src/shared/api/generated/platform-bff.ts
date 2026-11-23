@@ -117,6 +117,10 @@ import type {
   CompanyItemRef,
   CompanyProfile,
   CompanyProfileUpdate,
+  ContractTemplate,
+  ContractTemplateConflictResponse,
+  ContractTemplateIn,
+  ContractTemplateList,
   ConversationCard,
   ConversationThread,
   CounterpartyCard,
@@ -322,6 +326,7 @@ import type {
   ListManufacturersParams,
   ListMemoApprovalsParams,
   ListNotificationsParams,
+  ListOfferedContractTemplatesParams,
   ListPartnerApplicationsParams,
   ListPaymentMemosParams,
   ListPaymentsParams,
@@ -364,6 +369,7 @@ import type {
   NumberingPreviewIn,
   NumberingScheme,
   NumberingUpdate,
+  OfferedContractTemplates,
   OfficeResolutionIn,
   OffsiteBackup,
   OffsiteBackupIn,
@@ -9178,6 +9184,825 @@ export function useStreamEvents<
   return withQueryKey(query, queryOptions.queryKey);
 }
 
+export const getListContractTemplatesUrl = () => {
+  return `/api/v1/document-templates/contracts`;
+};
+
+/**
+ * Шаблоны договоров своей компании со статусом (черновик, на утверждении, утверждён), редакцией и тем, кто и когда утвердил. Читают разделы `eds.projects`, `company.settings`, `eds.visa.legal`.
+ * @summary Документы · Шаблоны · Договоры (ДОК-10)
+ */
+export const listContractTemplates = async (
+  options?: Parameters<typeof http>[1],
+): Promise<ContractTemplateList> => {
+  return http<ContractTemplateList>(getListContractTemplatesUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListContractTemplatesQueryKey = () => {
+  return [`/api/v1/document-templates/contracts`] as const;
+};
+
+export const getListContractTemplatesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listContractTemplates>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(options?: {
+  query?: Partial<
+    UseQueryOptions<Awaited<ReturnType<typeof listContractTemplates>>, TError, TData>
+  >;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListContractTemplatesQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listContractTemplates>>> = ({ signal }) =>
+    listContractTemplates({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listContractTemplates>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListContractTemplatesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listContractTemplates>>
+>;
+export type ListContractTemplatesQueryError = ErrorType<SessionExpiredResponse | ForbiddenResponse>;
+
+export function useListContractTemplates<
+  TData = Awaited<ReturnType<typeof listContractTemplates>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listContractTemplates>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listContractTemplates>>,
+          TError,
+          Awaited<ReturnType<typeof listContractTemplates>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListContractTemplates<
+  TData = Awaited<ReturnType<typeof listContractTemplates>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listContractTemplates>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listContractTemplates>>,
+          TError,
+          Awaited<ReturnType<typeof listContractTemplates>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListContractTemplates<
+  TData = Awaited<ReturnType<typeof listContractTemplates>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listContractTemplates>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Документы · Шаблоны · Договоры (ДОК-10)
+ */
+
+export function useListContractTemplates<
+  TData = Awaited<ReturnType<typeof listContractTemplates>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listContractTemplates>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListContractTemplatesQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getCreateContractTemplateUrl = () => {
+  return `/api/v1/document-templates/contracts`;
+};
+
+/**
+ * Текст — образец платформы вида «Договор»; для кого и предмет задаются сразу. В сделке шаблон не предлагается, пока его не утвердит держатель зоны «Право».
+ * @summary Новый шаблон договора из стандартного текста (черновик, редакция 1)
+ */
+export const createContractTemplate = async (
+  contractTemplateIn: ContractTemplateIn,
+  options?: Parameters<typeof http>[1],
+): Promise<ContractTemplate> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<ContractTemplate>(getCreateContractTemplateUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(contractTemplateIn),
+  });
+};
+
+export const getCreateContractTemplateMutationKey = () => ["createContractTemplate"] as const;
+
+export const getCreateContractTemplateMutationOptions = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createContractTemplate>>,
+    TError,
+    CreateContractTemplateMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createContractTemplate>>,
+  TError,
+  CreateContractTemplateMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCreateContractTemplateMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createContractTemplate>>,
+    CreateContractTemplateMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createContractTemplate(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateContractTemplateMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createContractTemplate>>
+>;
+export type CreateContractTemplateMutationBody = ContractTemplateIn;
+export type CreateContractTemplateMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse
+>;
+export type CreateContractTemplateMutationVariables = { data: ContractTemplateIn };
+
+/**
+ * @summary Новый шаблон договора из стандартного текста (черновик, редакция 1)
+ */
+export const useCreateContractTemplate = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createContractTemplate>>,
+      TError,
+      CreateContractTemplateMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof createContractTemplate>>,
+  TError,
+  CreateContractTemplateMutationVariables,
+  TContext
+> => {
+  return useMutation(getCreateContractTemplateMutationOptions(options), queryClient);
+};
+
+export const getListOfferedContractTemplatesUrl = (params: ListOfferedContractTemplatesParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/document-templates/contracts/offered?${stringifiedParams}`
+    : `/api/v1/document-templates/contracts/offered`;
+};
+
+/**
+ * Только утверждённые и действующие шаблоны вида контрагента сделки; `default_id` — шаблон по умолчанию из настроек «Правила работы · Продажи».
+ * @summary Шаблоны договора, предлагаемые в сделке
+ */
+export const listOfferedContractTemplates = async (
+  params: ListOfferedContractTemplatesParams,
+  options?: Parameters<typeof http>[1],
+): Promise<OfferedContractTemplates> => {
+  return http<OfferedContractTemplates>(getListOfferedContractTemplatesUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListOfferedContractTemplatesQueryKey = (
+  params?: ListOfferedContractTemplatesParams,
+) => {
+  return [`/api/v1/document-templates/contracts/offered`, ...(params ? [params] : [])] as const;
+};
+
+export const getListOfferedContractTemplatesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listOfferedContractTemplates>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+>(
+  params: ListOfferedContractTemplatesParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listOfferedContractTemplates>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListOfferedContractTemplatesQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listOfferedContractTemplates>>> = ({
+    signal,
+  }) => listOfferedContractTemplates(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listOfferedContractTemplates>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListOfferedContractTemplatesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listOfferedContractTemplates>>
+>;
+export type ListOfferedContractTemplatesQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse
+>;
+
+export function useListOfferedContractTemplates<
+  TData = Awaited<ReturnType<typeof listOfferedContractTemplates>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+>(
+  params: ListOfferedContractTemplatesParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listOfferedContractTemplates>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listOfferedContractTemplates>>,
+          TError,
+          Awaited<ReturnType<typeof listOfferedContractTemplates>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListOfferedContractTemplates<
+  TData = Awaited<ReturnType<typeof listOfferedContractTemplates>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+>(
+  params: ListOfferedContractTemplatesParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listOfferedContractTemplates>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listOfferedContractTemplates>>,
+          TError,
+          Awaited<ReturnType<typeof listOfferedContractTemplates>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListOfferedContractTemplates<
+  TData = Awaited<ReturnType<typeof listOfferedContractTemplates>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+>(
+  params: ListOfferedContractTemplatesParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listOfferedContractTemplates>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Шаблоны договора, предлагаемые в сделке
+ */
+
+export function useListOfferedContractTemplates<
+  TData = Awaited<ReturnType<typeof listOfferedContractTemplates>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+>(
+  params: ListOfferedContractTemplatesParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listOfferedContractTemplates>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListOfferedContractTemplatesQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getNewContractTemplateEditionUrl = (id: string) => {
+  return `/api/v1/document-templates/contracts/${id}/new-edition`;
+};
+
+/**
+ * Копия в черновике с номером редакции на единицу больше; прежняя редакция и договоры по ней остаются как были. Раздел `eds.projects`, `company.settings` или `eds.visa.legal` — полный.
+ * @summary Новая редакция утверждённого шаблона
+ */
+export const newContractTemplateEdition = async (
+  id: string,
+  options?: Parameters<typeof http>[1],
+): Promise<ContractTemplate> => {
+  return http<ContractTemplate>(getNewContractTemplateEditionUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getNewContractTemplateEditionMutationKey = () =>
+  ["newContractTemplateEdition"] as const;
+
+export const getNewContractTemplateEditionMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | ContractTemplateConflictResponse
+    | ValidationFailedResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof newContractTemplateEdition>>,
+    TError,
+    NewContractTemplateEditionMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof newContractTemplateEdition>>,
+  TError,
+  NewContractTemplateEditionMutationVariables,
+  TContext
+> => {
+  const mutationKey = getNewContractTemplateEditionMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof newContractTemplateEdition>>,
+    NewContractTemplateEditionMutationVariables
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return newContractTemplateEdition(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type NewContractTemplateEditionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof newContractTemplateEdition>>
+>;
+
+export type NewContractTemplateEditionMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | ContractTemplateConflictResponse
+  | ValidationFailedResponse
+>;
+export type NewContractTemplateEditionMutationVariables = { id: string };
+
+/**
+ * @summary Новая редакция утверждённого шаблона
+ */
+export const useNewContractTemplateEdition = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | ContractTemplateConflictResponse
+    | ValidationFailedResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof newContractTemplateEdition>>,
+      TError,
+      NewContractTemplateEditionMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof newContractTemplateEdition>>,
+  TError,
+  NewContractTemplateEditionMutationVariables,
+  TContext
+> => {
+  return useMutation(getNewContractTemplateEditionMutationOptions(options), queryClient);
+};
+
+export const getSubmitContractTemplateUrl = (id: string) => {
+  return `/api/v1/document-templates/contracts/${id}/submit`;
+};
+
+/**
+ * Черновик уходит держателю зоны «Право»; нужны обязательные блоки договора и указанные «для кого» и предмет (422 `template_missing_required_blocks`).
+ * @summary На утверждение
+ */
+export const submitContractTemplate = async (
+  id: string,
+  options?: Parameters<typeof http>[1],
+): Promise<ContractTemplate> => {
+  return http<ContractTemplate>(getSubmitContractTemplateUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getSubmitContractTemplateMutationKey = () => ["submitContractTemplate"] as const;
+
+export const getSubmitContractTemplateMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | ContractTemplateConflictResponse
+    | ValidationFailedResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof submitContractTemplate>>,
+    TError,
+    SubmitContractTemplateMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof submitContractTemplate>>,
+  TError,
+  SubmitContractTemplateMutationVariables,
+  TContext
+> => {
+  const mutationKey = getSubmitContractTemplateMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof submitContractTemplate>>,
+    SubmitContractTemplateMutationVariables
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return submitContractTemplate(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SubmitContractTemplateMutationResult = NonNullable<
+  Awaited<ReturnType<typeof submitContractTemplate>>
+>;
+
+export type SubmitContractTemplateMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | ContractTemplateConflictResponse
+  | ValidationFailedResponse
+>;
+export type SubmitContractTemplateMutationVariables = { id: string };
+
+/**
+ * @summary На утверждение
+ */
+export const useSubmitContractTemplate = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | ContractTemplateConflictResponse
+    | ValidationFailedResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof submitContractTemplate>>,
+      TError,
+      SubmitContractTemplateMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof submitContractTemplate>>,
+  TError,
+  SubmitContractTemplateMutationVariables,
+  TContext
+> => {
+  return useMutation(getSubmitContractTemplateMutationOptions(options), queryClient);
+};
+
+export const getApproveContractTemplateUrl = (id: string) => {
+  return `/api/v1/document-templates/contracts/${id}/approve`;
+};
+
+/**
+ * Только держатель права `contract.approve_template` (зона «Право»; раздел `eds.visa.legal` или `admin`). Прежняя утверждённая редакция снимается с показа.
+ * @summary Утвердить шаблон договора
+ */
+export const approveContractTemplate = async (
+  id: string,
+  options?: Parameters<typeof http>[1],
+): Promise<ContractTemplate> => {
+  return http<ContractTemplate>(getApproveContractTemplateUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getApproveContractTemplateMutationKey = () => ["approveContractTemplate"] as const;
+
+export const getApproveContractTemplateMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | ContractTemplateConflictResponse
+    | ValidationFailedResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof approveContractTemplate>>,
+    TError,
+    ApproveContractTemplateMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof approveContractTemplate>>,
+  TError,
+  ApproveContractTemplateMutationVariables,
+  TContext
+> => {
+  const mutationKey = getApproveContractTemplateMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof approveContractTemplate>>,
+    ApproveContractTemplateMutationVariables
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return approveContractTemplate(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ApproveContractTemplateMutationResult = NonNullable<
+  Awaited<ReturnType<typeof approveContractTemplate>>
+>;
+
+export type ApproveContractTemplateMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | ContractTemplateConflictResponse
+  | ValidationFailedResponse
+>;
+export type ApproveContractTemplateMutationVariables = { id: string };
+
+/**
+ * @summary Утвердить шаблон договора
+ */
+export const useApproveContractTemplate = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | ContractTemplateConflictResponse
+    | ValidationFailedResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof approveContractTemplate>>,
+      TError,
+      ApproveContractTemplateMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof approveContractTemplate>>,
+  TError,
+  ApproveContractTemplateMutationVariables,
+  TContext
+> => {
+  return useMutation(getApproveContractTemplateMutationOptions(options), queryClient);
+};
+
+export const getReturnContractTemplateToDraftUrl = (id: string) => {
+  return `/api/v1/document-templates/contracts/${id}/return-to-draft`;
+};
+
+/**
+ * Держатель «Право» снимает шаблон с утверждения на доработку.
+ * @summary Вернуть шаблон в черновик
+ */
+export const returnContractTemplateToDraft = async (
+  id: string,
+  options?: Parameters<typeof http>[1],
+): Promise<ContractTemplate> => {
+  return http<ContractTemplate>(getReturnContractTemplateToDraftUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getReturnContractTemplateToDraftMutationKey = () =>
+  ["returnContractTemplateToDraft"] as const;
+
+export const getReturnContractTemplateToDraftMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | ContractTemplateConflictResponse
+    | ValidationFailedResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof returnContractTemplateToDraft>>,
+    TError,
+    ReturnContractTemplateToDraftMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof returnContractTemplateToDraft>>,
+  TError,
+  ReturnContractTemplateToDraftMutationVariables,
+  TContext
+> => {
+  const mutationKey = getReturnContractTemplateToDraftMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof returnContractTemplateToDraft>>,
+    ReturnContractTemplateToDraftMutationVariables
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return returnContractTemplateToDraft(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ReturnContractTemplateToDraftMutationResult = NonNullable<
+  Awaited<ReturnType<typeof returnContractTemplateToDraft>>
+>;
+
+export type ReturnContractTemplateToDraftMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | ContractTemplateConflictResponse
+  | ValidationFailedResponse
+>;
+export type ReturnContractTemplateToDraftMutationVariables = { id: string };
+
+/**
+ * @summary Вернуть шаблон в черновик
+ */
+export const useReturnContractTemplateToDraft = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | ContractTemplateConflictResponse
+    | ValidationFailedResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof returnContractTemplateToDraft>>,
+      TError,
+      ReturnContractTemplateToDraftMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof returnContractTemplateToDraft>>,
+  TError,
+  ReturnContractTemplateToDraftMutationVariables,
+  TContext
+> => {
+  return useMutation(getReturnContractTemplateToDraftMutationOptions(options), queryClient);
+};
+
 export const getListTemplateCatalogUrl = () => {
   return `/api/v1/templates`;
 };
@@ -10817,7 +11642,7 @@ export const getActEdsProjectContractUrl = (ref: string) => {
 };
 
 /**
- * Переход статуса договора SPEC-v3 §2.4 в ERP (`crm/contracts/{id}/<действие>/`). `send_to_client` — «На согласование клиенту» (Проект → у клиента, договор появляется в кабинете); `client_agreed` — «Согласован клиентом» (клиент согласовал вне кабинета или в нём); `reject` — «Отклонён клиентом», `reason` обязательна (422 в BFF до ERP); `revise` — вернуть отклонённый проект в работу; `mark_issued` — «Выставлен у оператора» (ЭДО вне платформы; `note` — оператор или номер). Подготовку (`send_to_client`, `client_agreed`, `reject`, `revise`) ERP разрешает с правом `contract.manage`, `mark_issued` — `contract.sign`; недопустимый переход — 409 `contract_transition_not_allowed`. Раздел `eds.projects` — полный. Ответ — обновлённая карточка.
+ * Переход статуса договора SPEC-v3 §2.4 в ERP (`crm/contracts/{id}/<действие>/`). `send_to_client` — «На согласование клиенту» (Проект → у клиента, договор появляется в кабинете); `client_agreed` — «Согласован клиентом» (клиент согласовал вне кабинета или в нём); `reject` — «Отклонён клиентом», `reason` обязательна (422 в BFF до ERP); `revise` — вернуть отклонённый проект в работу; `mark_issued` — «Выставлен у оператора» (ЭДО вне платформы; `note` — оператор или номер). Подготовку (`send_to_client`, `client_agreed`, `reject`, `revise`) ERP разрешает с правом `contract.manage`, `mark_issued` — `contract.sign`; недопустимый переход — 409 `contract_transition_not_allowed`. Раздел `eds.projects` — полный. Ответ — обновлённая карточка. Договор по утверждённому шаблону (ДОК-10): `sign_ours` — наша подпись до отправки (`contract.sign`); `request_deviation` — заявка держателю зоны «Право» на отступление, `text` обязателен; `decide_deviation` — решение держателя («Право»: раздел `eds.visa.legal` полный вместо `eds.projects`), `approve` обязателен. Пока нет нашей подписи или отступление без решения, `send_to_client` — 409 `contract_needs_our_signature` / `contract_deviation_pending`.
  * @summary EDS · Проект: действие по договору
  */
 export const actEdsProjectContract = async (

@@ -370,6 +370,15 @@ async def test_menu_badge_of_my_costings_counts_the_queue_rows(web: Web, fb: Fee
             "Ждёт виз договор ДОГ-2027/106 по ПР-2027-104",
         ),
         (
+            # ДОК-10: у договора по шаблону шаг — по факту «нет нашей подписи», а не «отправить»
+            project(
+                104,
+                contract=contract("project", sent=False, blocker="CONTRACT_NEEDS_OUR_SIGNATURE"),
+            ),
+            "issue_contract",
+            "Подписать от компании договор ДОГ-2027/106 по ПР-2027-104",
+        ),
+        (
             project(104, client_status="contract_signing", contract=contract("client_agreed")),
             "issue_contract",
             "Выставить у оператора договор ДОГ-2027/106 по ПР-2027-104",
@@ -392,6 +401,21 @@ async def test_contract_step_waiting_for_the_company_is_a_row(
     assert [i["title"] for i in items] == [title]
     assert "panel=open" not in items[0]["object"]["path"]
     assert items[0]["object"]["path"].startswith("/eds/projects/")
+
+
+async def test_contract_waiting_for_a_deviation_decision_is_not_the_senders_row(
+    web: Web, fb: FeedBackends
+) -> None:
+    """ДОК-10: отступление ждёт решения «Право» — отправлять нечего, строки отправителю нет."""
+    row = project(
+        104, contract=contract("project", sent=False, blocker="CONTRACT_DEVIATION_PENDING")
+    )
+    fb.state["projects"] = {"CONTRACT": [row], "PAYMENT": []}
+    await web.login(["ACCOUNTANT"])
+
+    kinds = {i["kind"] for i in await queue_of(web)}
+
+    assert "issue_contract" not in kinds
 
 
 async def test_contract_at_the_client_or_signed_is_not_a_row(web: Web, fb: FeedBackends) -> None:

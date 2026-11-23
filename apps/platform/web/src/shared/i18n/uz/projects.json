@@ -305,9 +305,62 @@
       "mark_issued": "Belgilandi: shartnoma operatorda rasmiylashtirildi.",
       "attach_scan": "Skan biriktirildi, shartnoma imzolandi.",
       "reject": "Rad etish yozildi.",
-      "revise": "Loyiha ishga qaytarildi."
+      "revise": "Loyiha işga qaytarildi.",
+      "sign_ours": "Şartnoma kompaniya nomidan imzolandi.",
+      "request_deviation": "Ariza «Huquq» egasiga yuborildi.",
+      "decide_deviation": "Qaror yozildi."
     },
-    "readOnly": "Faqat ko‘rish.",
+    "readOnly": "Faqat köriş.",
+    "template": {
+      "title": "Şablon böyiça şartnoma",
+      "path": "Şartnoma yöli",
+      "line": "«{{name}}», {{edition}}-tahrir · rekvizit, summa va spetsifikatsiya TTdan",
+      "tag": {
+        "none": "Şablon böyiça · çetlanişsiz",
+        "requested": "Çetlaniş «Huquq»da",
+        "approved": "Şablon böyiça · çetlaniş bilan"
+      },
+      "steps": {
+        "assembled": "Yiğildi",
+        "our_signature": "Bizning imzo",
+        "in_cabinet": "Mijoz Kabinetida",
+        "signed_both": "Ikki tomon imzoladi"
+      },
+      "state": {
+        "done": "tayyor",
+        "current": "hozir",
+        "next": "keyin"
+      },
+      "visas": "Çetlanişli şartnoma viza yönalişidan ötadi va vizalargaça mijozga ketmaydi.",
+      "deviation": {
+        "none": "Çetlanişsiz",
+        "requested": "Çetlaniş söraldi",
+        "approved": "Çetlaniş ma’qullandi",
+        "rejected": "Çetlaniş rad etildi"
+      },
+      "blocker": {
+        "CONTRACT_NEEDS_OUR_SIGNATURE": "Bizning imzodan keyin mijozga ketadi.",
+        "CONTRACT_DEVIATION_PENDING": "«Huquq» egasi çetlaniş böyiça qaror qilmagunça mijozga ketmaydi."
+      },
+      "action": {
+        "sign_ours": "Kompaniya nomidan imzolaş",
+        "request_deviation": "Çetlaniş söraş",
+        "approve": "Çetlanişni ma’qullaş",
+        "reject": "Rad etiş"
+      },
+      "ask": {
+        "title": "Çetlaniş sörovi",
+        "label": "Band va sabab",
+        "hint": "Ariza «Huquq» egasiga ketadi.",
+        "submit": "Arizani yuboriş",
+        "cancel": "Kerak emas"
+      },
+      "done": {
+        "sign_ours": "Şartnoma kompaniya nomidan imzolandi.",
+        "request_deviation": "Ariza «Huquq» egasiga yuborildi.",
+        "decide_deviation": "Qaror yozildi."
+      }
+    },
     "blocker": {
       "visas_not_requested": "Vizalar kerak. «Imzoga yuboriş» tugmasini bosing: vizalar yiğilgaç, şartnomani mijozga yuboriş mumkin.",
       "visas_declined": "Şartnoma vizaga qabul qilinmadi. Uni qayta imzoga yuboring.",
@@ -410,6 +463,15 @@
     "payload": "Fayl 20 MB dan katta.",
     "unknown": "Bajarilmadi. Qayta urinib ko‘ring.",
     "failed": "Bajarilmadi: {{reason}}",
+    "contract_deviation_pending": "Çetlaniş «Huquq» qarorini kutmoqda.",
+    "contract_needs_our_signature": "Avval şartnomani kompaniya nomidan imzolang.",
+    "contract_already_sent": "Şartnoma mijozga ketgan. Sahifani yangilang.",
+    "contract_deviations_disabled": "Şablondan çetlaniş sozlamalarda öçirilgan.",
+    "deviation_text_required": "Çetlanişni yozing.",
+    "deviation_already_requested": "Ariza allaqaçon berilgan.",
+    "deviation_not_requested": "Ariza endi yöq. Sahifani yangilang.",
+    "deviation_decision_forbidden": "«Huquq» egasi qaror qiladi.",
+    "contract_template_unfilled": "Şartnomada şablonning töldirilmagan joylari qoldi.",
     "contract_visas_required": "Avval vizalar kerak. Sahifani yangilang."
   },
   "state": {

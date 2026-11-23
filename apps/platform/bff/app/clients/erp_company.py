@@ -49,6 +49,31 @@ _CONFLICTS: dict[str, tuple[str, str]] = {
         "already_reviewed",
         "Запрос уже рассмотрен. Обновите список.",
     ),
+    # ДОК-10: шаблоны договоров с утверждением
+    "TEMPLATE_LOCKED": (
+        "template_locked",
+        "Утверждённый текст не правится. Создайте новую редакцию.",
+    ),
+    "TEMPLATE_EDITION_NEEDS_APPROVED": (
+        "template_edition_needs_approved",
+        "Новая редакция делается от утверждённого шаблона.",
+    ),
+    "TEMPLATE_EDITION_IN_PROGRESS": (
+        "template_edition_in_progress",
+        "Новая редакция уже в работе: откройте её.",
+    ),
+    "TEMPLATE_TRANSITION_NOT_ALLOWED": (
+        "template_transition_not_allowed",
+        "Шаблон сейчас в другом статусе. Обновите страницу.",
+    ),
+    "TEMPLATE_COUNTERPARTY_REQUIRED": (
+        "template_counterparty_required",
+        "Укажите, для кого шаблон и какой у него предмет.",
+    ),
+    "TEMPLATE_APPROVAL_FORBIDDEN": (
+        "template_approval_forbidden",
+        "Утверждает держатель зоны «Право».",
+    ),
     "TEMPLATE_IN_USE": (
         "template_in_use",
         "По шаблону уже оформлены документы. Отключите его вместо удаления.",
@@ -116,6 +141,7 @@ _FIELD_OF: dict[str, str] = {
     "BAD_PUBLISH_THRESHOLD": "catalog_publish_threshold",
     "BAD_FX_RATE_MAX_AGE_DAYS": "fx_rate_max_age_days",
     "BAD_BOOLEAN": "remind_overdue_invoices",
+    "BAD_CONTRACT_TEMPLATE": "default_client_contract_template",
     "FX_RATE_INVALID": "rate_to_uzs",
     "FX_RATE_DATE_INVALID": "rate_date",
     "FX_RATE_DATE_IN_FUTURE": "rate_date",

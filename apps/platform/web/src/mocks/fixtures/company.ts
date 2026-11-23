@@ -176,6 +176,11 @@ function seed(): CompanyMock {
       offer_confirm_days: 30,
       offer_expiring_days: 14,
       act_reminder_hours: 24,
+      contract_auto_send: true,
+      contract_sign_before_send: true,
+      contract_deviations_allowed: true,
+      default_client_contract_template: 1,
+      default_partner_contract_template: null,
     },
     chargeTypes: [
       { id: "1", code: "FREIGHT", name: "Фрахт" },

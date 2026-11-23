@@ -134,6 +134,37 @@ def update_company_settings(
         settings_row.remind_overdue_invoices = value
         changed.append("remind_overdue_invoices")
 
+    # ДОК-10: правила договора по шаблону — три флага и шаблон по умолчанию на вид контрагента (только утверждённый).
+    for flag in ("contract_auto_send", "contract_sign_before_send", "contract_deviations_allowed"):
+        if flag in data:
+            if not isinstance(data.get(flag), bool):
+                return None, "BAD_BOOLEAN"
+            setattr(settings_row, flag, data[flag])
+            changed.append(flag)
+    for field, kind in (
+        ("default_client_contract_template", "client"),
+        ("default_partner_contract_template", "partner"),
+    ):
+        if field in data:
+            raw = data.get(field)
+            if raw in (None, ""):
+                setattr(settings_row, field, None)
+            else:
+                from documents.models.documents import DocumentTemplate, TemplateApproval
+
+                found = DocumentTemplate.objects.filter(
+                    pk=raw if isinstance(raw, int) else 0,
+                    company=company,
+                    kind__code="CONTRACT",
+                    approval_status=TemplateApproval.APPROVED,
+                    is_active=True,
+                    counterparty_kind=kind,
+                ).first()
+                if found is None:
+                    return None, "BAD_CONTRACT_TEMPLATE"
+                setattr(settings_row, field, found)
+            changed.append(field)
+
     # Политики каталога (M1-ERP-07): видимость цен по умолчанию и порог публикации.
     if "catalog_price_visibility" in data:
         from catalog.constants import PriceVisibility

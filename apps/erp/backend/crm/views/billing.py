@@ -185,6 +185,10 @@ class ContractViewSet(
         "cancel": ADMIN_ONLY,
         "force_cancel": ADMIN_ONLY,
         "sign_manager": "contract.sign",
+        # ДОК-10: наша подпись до отправки, отступление от шаблона и решение «Право»
+        "sign_ours": "contract.sign",
+        "request_deviation": "contract.manage",
+        "decide_deviation": "contract.approve_template",
         "request_signing": "contract.manage",
         "signing_status": "contract.manage",
     }
@@ -256,15 +260,72 @@ class ContractViewSet(
         quote_id = request.data.get("quote_id")
         if not quote_id:
             return Response({"detail": "QUOTE_ID_REQUIRED"}, status=400)
+        try:
+            quote_id = int(quote_id)
+            raw_template = request.data.get("template_id") or None
+            template_id = int(raw_template) if raw_template is not None else None
+        except (TypeError, ValueError):
+            return Response({"detail": "BAD_ID"}, status=400)
         contract, err = crm_services.generate_contract_from_quote(
-            int(quote_id),
+            quote_id,
             actor=request.user,
             notes=request.data.get("notes", ""),
             send_to_client=str(request.data.get("send_to_client", "true")).lower() not in ("false", "0"),
+            template_id=template_id,
         )
         if err:
             return Response({"detail": err}, status=400)
         return Response(ContractFlowSerializer(contract).data, status=201)
+
+    def _template_flow(self, fn, *args, **kwargs):
+        contract, err = fn(*args, **kwargs)
+        if err:
+            forbidden = err in {"MEMBER_REQUIRED_FOR_ACTION", "DEVIATION_DECISION_FORBIDDEN"}
+            return Response({"detail": err}, status=403 if forbidden else 409)
+        return Response(ContractFlowSerializer(contract).data)
+
+    @extend_schema(
+        summary="Sign a template contract by the company before sending (ДОК-10)",
+        tags=["CRM"],
+        request=None,
+        responses={200: ContractFlowSerializer},
+    )
+    @action(detail=True, methods=["post"], url_path="sign-ours")
+    def sign_ours(self, request, pk=None):
+        from crm.services import contract_templates
+
+        return self._template_flow(contract_templates.sign_by_company, self.get_object().pk, request.user)
+
+    @extend_schema(
+        summary="Request a deviation from the approved template (ДОК-10)",
+        tags=["CRM"],
+        request=inline_serializer("ContractDeviationRequest", fields={"text": drf_serializers.CharField()}),
+        responses={200: ContractFlowSerializer},
+    )
+    @action(detail=True, methods=["post"], url_path="request-deviation")
+    def request_deviation(self, request, pk=None):
+        from crm.services import contract_templates
+
+        return self._template_flow(
+            contract_templates.request_deviation, self.get_object().pk, request.user, request.data.get("text", "")
+        )
+
+    @extend_schema(
+        summary="Decide on a deviation request (holder of contract.approve_template, ДОК-10)",
+        tags=["CRM"],
+        request=inline_serializer("ContractDeviationDecision", fields={"approve": drf_serializers.BooleanField()}),
+        responses={200: ContractFlowSerializer},
+    )
+    @action(detail=True, methods=["post"], url_path="decide-deviation")
+    def decide_deviation(self, request, pk=None):
+        from crm.services import contract_templates
+
+        approve = request.data.get("approve")
+        if not isinstance(approve, bool):
+            return Response({"detail": "BAD_BOOLEAN"}, status=400)
+        return self._template_flow(
+            contract_templates.decide_deviation, self.get_object().pk, request.user, approve_it=approve
+        )
 
     @extend_schema(
         summary="Select an approved wording variant for THIS contract (E4 playbook)",

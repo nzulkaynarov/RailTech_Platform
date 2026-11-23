@@ -29,7 +29,21 @@ ContractWord = Literal[
 ]
 InvoiceWord = Literal["to_issue", "issued", "partial", "paid", "overdue", "cancelled"]
 ActWord = Literal["project", "returned", "issued", "signed", "cancelled"]
-ContractAction = Literal["send_to_client", "client_agreed", "reject", "revise", "mark_issued"]
+ContractAction = Literal[
+    "send_to_client",
+    "client_agreed",
+    "reject",
+    "revise",
+    "mark_issued",
+    # ДОК-10: договор по утверждённому шаблону
+    "sign_ours",
+    "request_deviation",
+    "decide_deviation",
+]
+TemplateActionCode = Literal["sign_ours", "request_deviation", "decide_deviation"]
+DeviationState = Literal["none", "requested", "approved", "rejected"]
+ContractPathStepKey = Literal["assembled", "our_signature", "in_cabinet", "signed_both"]
+ContractPathStepState = Literal["done", "current", "next"]
 ContractActionCode = Literal[
     "send_to_client", "client_agreed", "reject", "revise", "mark_issued", "attach_scan"
 ]
@@ -66,8 +80,15 @@ class ProjectSigningIn(BaseModel):
     document_id: int
 
 
+# One ERP check (`contract_flow.send_blocker`): route visas (Х-1) and template rules (ДОК-10).
 SendBlockerCode = Literal[
-    "visas_not_requested", "visas_declined", "visas_pending", "visas_returned", "no_visa_holder"
+    "visas_not_requested",
+    "visas_declined",
+    "visas_pending",
+    "visas_returned",
+    "no_visa_holder",
+    "CONTRACT_DEVIATION_PENDING",
+    "CONTRACT_NEEDS_OUR_SIGNATURE",
 ]
 
 
@@ -76,7 +97,7 @@ class ProjectContractRef(BaseModel):
     number: str
     status: ContractWord
     sent_to_client: bool
-    # Х-1: while the project is unsent, why it cannot go to the client (visas); older ERP omits it.
+    # Х-1/ДОК-10: why the unsent project cannot go to the client; older ERP omits it.
     send_blocker_code: SendBlockerCode | None = None
 
 
@@ -151,6 +172,25 @@ class ProjectQuote(ProjectQuoteRef):
     valid_until: dt.date | None
 
 
+class ContractPathStep(BaseModel):
+    key: ContractPathStepKey
+    state: ContractPathStepState
+    at: dt.datetime | None = None
+
+
+class ProjectContractTemplate(BaseModel):
+    """Договор по утверждённому шаблону (ДОК-10): имя и редакция, отступление, путь по фактам."""
+
+    id: int | None
+    name: str
+    edition: int
+    deviation: DeviationState
+    deviation_text: str
+    visas_required: bool
+    steps: list[ContractPathStep]
+    actions: list[TemplateActionCode]
+
+
 class ProjectContractSendBlocker(BaseModel):
     """Х-1: почему проект договора нельзя отправить клиенту (визы не собраны); считает ERP."""
 
@@ -164,6 +204,7 @@ class ProjectContractSendBlocker(BaseModel):
 
 
 class ProjectContract(ProjectContractRef):
+    template: ProjectContractTemplate | None = None
     total: ProjectMoney | None
     created_at: dt.datetime
     client_agreed_at: dt.datetime | None
@@ -270,9 +311,15 @@ class ContractActionIn(BaseModel):
     note: str | None = Field(default=None, max_length=500)
     channel: OnBehalfChannel | None = None
     counterparty_person: str | None = Field(default=None, max_length=200)
+    text: str | None = Field(default=None, max_length=4000, description="Отступление от шаблона")
+    approve: bool | None = Field(default=None, description="Решение по отступлению")
 
     @model_validator(mode="after")
     def _reason_for_reject(self) -> "ContractActionIn":
+        if self.action == "request_deviation" and not (self.text or "").strip():
+            raise ValueError("text")
+        if self.action == "decide_deviation" and self.approve is None:
+            raise ValueError("approve")
         if self.action == "reject" and not (self.reason or "").strip():
             raise ValueError("reason")
         if self.action == "client_agreed":

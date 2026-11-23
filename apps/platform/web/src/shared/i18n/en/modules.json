@@ -258,7 +258,8 @@
       "register": "Register an incoming document",
       "tasks": "Instruction",
       "mail": "Mail",
-      "mymail": "My mail"
+      "mymail": "My mail",
+      "contracttpl": "Contract templates"
     },
     "action": "New document",
     "nav": {

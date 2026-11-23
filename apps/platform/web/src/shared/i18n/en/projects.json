@@ -305,9 +305,62 @@
       "mark_issued": "Marked: contract issued at the operator.",
       "attach_scan": "Scan attached, contract signed.",
       "reject": "Rejection recorded.",
-      "revise": "Draft returned to work."
+      "revise": "Draft returned to work.",
+      "sign_ours": "The contract is signed for the company.",
+      "request_deviation": "The request went to the Legal holder.",
+      "decide_deviation": "Decision recorded."
     },
     "readOnly": "View only.",
+    "template": {
+      "title": "Contract from a template",
+      "path": "Contract path",
+      "line": "“{{name}}”, ed. {{edition}} · requisites, sum and specification from the quote",
+      "tag": {
+        "none": "From template · no deviations",
+        "requested": "Deviation waits for Legal",
+        "approved": "From template · with deviation"
+      },
+      "steps": {
+        "assembled": "Assembled",
+        "our_signature": "Our signature",
+        "in_cabinet": "In the client Cabinet",
+        "signed_both": "Signed by both"
+      },
+      "state": {
+        "done": "done",
+        "current": "now",
+        "next": "next"
+      },
+      "visas": "A contract with a deviation follows the visa route and does not go to the client before it.",
+      "deviation": {
+        "none": "No deviations",
+        "requested": "Deviation requested",
+        "approved": "Deviation approved",
+        "rejected": "Deviation rejected"
+      },
+      "blocker": {
+        "CONTRACT_NEEDS_OUR_SIGNATURE": "It goes to the client after our signature.",
+        "CONTRACT_DEVIATION_PENDING": "It does not go to the client until the Legal holder decides on the deviation."
+      },
+      "action": {
+        "sign_ours": "Sign for the company",
+        "request_deviation": "Request a deviation",
+        "approve": "Approve the deviation",
+        "reject": "Reject"
+      },
+      "ask": {
+        "title": "Deviation request",
+        "label": "Clause and reason",
+        "hint": "The request goes to the Legal holder.",
+        "submit": "Send request",
+        "cancel": "Not needed"
+      },
+      "done": {
+        "sign_ours": "The contract is signed for the company.",
+        "request_deviation": "The request went to the Legal holder.",
+        "decide_deviation": "Decision recorded."
+      }
+    },
     "blocker": {
       "visas_not_requested": "Visas are needed. Press “Send for signature”: once they are collected, the contract can go to the client.",
       "visas_declined": "The contract was not accepted for visas. Send it for signature again.",
@@ -410,6 +463,15 @@
     "payload": "The file is larger than 20 MB.",
     "unknown": "It did not work. Try again.",
     "failed": "It did not work: {{reason}}",
+    "contract_deviation_pending": "The deviation waits for Legal.",
+    "contract_needs_our_signature": "Sign the contract for the company first.",
+    "contract_already_sent": "The contract is already with the client. Refresh the page.",
+    "contract_deviations_disabled": "Deviations from the template are off in settings.",
+    "deviation_text_required": "Describe the deviation.",
+    "deviation_already_requested": "The request is already filed.",
+    "deviation_not_requested": "There is no request any more. Refresh the page.",
+    "deviation_decision_forbidden": "The Legal holder decides.",
+    "contract_template_unfilled": "The contract has unfilled template places.",
     "contract_visas_required": "Visas are needed first. Refresh the page."
   },
   "state": {

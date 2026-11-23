@@ -4,7 +4,7 @@
  */
 
 /**
- * visas_not_requested — договор ещё не на визах; visas_declined — EDS не принял договор на визы (причина в remark); visas_pending — не все визы поставлены; visas_returned — виза возвращена с замечанием; no_visa_holder — в компании нет держателя нужного права (ссылка в настройки)
+ * visas_not_requested — договор ещё не на визах; visas_declined — EDS не принял договор на визы (причина в remark); visas_pending — не все визы поставлены; visas_returned — виза возвращена с замечанием; no_visa_holder — в компании нет держателя нужного права (ссылка в настройки); CONTRACT_DEVIATION_PENDING — отступление от шаблона ждёт решения (ДОК-10); CONTRACT_NEEDS_OUR_SIGNATURE — нужна наша подпись до отправки (ДОК-10)
  */
 export type ProjectContractSendBlockerCode =
   (typeof ProjectContractSendBlockerCode)[keyof typeof ProjectContractSendBlockerCode];
@@ -15,4 +15,6 @@ export const ProjectContractSendBlockerCode = {
   visas_pending: "visas_pending",
   visas_returned: "visas_returned",
   no_visa_holder: "no_visa_holder",
+  CONTRACT_DEVIATION_PENDING: "CONTRACT_DEVIATION_PENDING",
+  CONTRACT_NEEDS_OUR_SIGNATURE: "CONTRACT_NEEDS_OUR_SIGNATURE",
 } as const;

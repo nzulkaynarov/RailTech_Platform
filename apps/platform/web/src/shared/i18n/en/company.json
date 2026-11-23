@@ -289,6 +289,12 @@
         "note": "Takes effect from the next reminder.",
         "save": "Save reminders"
       },
+      "contracts": {
+        "title": "Contracts",
+        "hint": "How a contract is assembled and sent after the quote is accepted.",
+        "note": "Rules apply to new contracts; assembled ones do not change.",
+        "save": "Save rules"
+      },
       "supplier": {
         "title": "Supplier price freshness",
         "hint": "How many days a partner price counts as confirmed and how many days ahead to warn about expiry.",
@@ -296,6 +302,15 @@
         "save": "Save terms"
       }
     },
+    "contract_auto_send": "A contract from an approved template goes to the Cabinet by itself after the quote is accepted",
+    "contract_auto_sendHint": "No visas without deviations. Off — the contract is sent by hand.",
+    "contract_sign_before_send": "Our signature comes before sending to the client",
+    "contract_sign_before_sendHint": "Off — the contract goes out as soon as it is assembled.",
+    "contract_deviations_allowed": "Deviations from the template — by request to the Legal holder",
+    "contract_deviations_allowedHint": "A contract with a deviation follows the visa route and does not go to the client before it.",
+    "defaultClientTemplate": "Default template: client",
+    "defaultPartnerTemplate": "Default template: partner",
+    "edition": "ed. {{n}}",
     "requireMxik": "MXIK is required to publish",
     "requireMxikHint": "A card without an MXIK (IKPU) code cannot be published. Published cards stay; the check applies on the next publish.",
     "requireHs": "HS code is required for imported goods",
@@ -331,6 +346,7 @@
     "parts": {
       "documents": "Documents",
       "emails": "Emails",
+      "contracts": "Contracts",
       "resolutions": "Resolutions"
     },
     "documents": {
@@ -667,6 +683,64 @@
       "resolution": "Resolution",
       "reply": "Bot reply",
       "memo": "Memo"
+    }
+  },
+  "contractTemplates": {
+    "title": "Contract templates",
+    "hint": "The lawyer approves once — in a deal only approved templates are chosen.",
+    "add": "New template",
+    "createTitle": "New contract template",
+    "createSubmit": "Create",
+    "empty": {
+      "title": "No contract templates yet",
+      "text": "Create a template from the standard text and send it for approval: a deal offers approved templates only."
+    },
+    "columns": {
+      "name": "Template",
+      "counterparty": "For",
+      "subject": "Subject",
+      "edition": "Edition"
+    },
+    "counterparty": {
+      "client": "Client",
+      "partner": "Partner"
+    },
+    "subject": {
+      "supply": "Supply",
+      "services": "Services"
+    },
+    "status": {
+      "draft": "Draft",
+      "on_approval": "On approval",
+      "approved": "Approved"
+    },
+    "approvedLine": "ed. {{edition}} of {{date}} · approved by {{who}}",
+    "waitingLine": "ed. {{edition}} · waiting for Legal since {{date}}",
+    "draftLine": "ed. {{edition}}",
+    "replaced": "replaced by a newer edition",
+    "notOffered": "not offered in a deal",
+    "fallback": "uz and en — Russian text",
+    "actions": {
+      "edition": "New edition",
+      "submit": "Send for approval",
+      "approve": "Approve",
+      "back": "Return to draft"
+    },
+    "done": {
+      "edition": "New edition created",
+      "submit": "Sent for approval",
+      "approve": "Template approved",
+      "back": "Returned to draft",
+      "create": "Template created"
+    },
+    "note": "A new template is approved by the holder of the Legal zone. Locked text changes only through a new edition; contracts stay on their own edition.",
+    "errors": {
+      "generic": "Failed. Refresh the page and try again.",
+      "template_locked": "Approved text is not edited. Create a new edition.",
+      "template_transition_not_allowed": "The template is in another status. Refresh the page.",
+      "template_edition_in_progress": "A new edition is already in progress.",
+      "template_counterparty_required": "Choose who the template is for.",
+      "template_approval_forbidden": "Approved by the holder of the Legal zone."
     }
   }
 }
