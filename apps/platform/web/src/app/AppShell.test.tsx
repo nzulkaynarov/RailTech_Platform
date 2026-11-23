@@ -301,6 +301,31 @@ describe("узкие экраны", () => {
     expect(await screen.findByRole("navigation", { name: "Разделы модуля" })).toBeVisible();
   });
 
+  it("390: Настройки в меню профиля у роли только с company.settings, без ресурса admin", async () => {
+    setViewportWidth(390);
+    signIn("manager@demo.example");
+    const session = readSession();
+    const me = session ? buildMe(session) : undefined;
+    if (!me) throw new Error("нет Me");
+    const resources: Record<string, string> = { ...me.resources };
+    delete resources["admin"];
+    server.use(
+      http.get("*/me", () =>
+        HttpResponse.json({
+          ...me,
+          modules: [...me.modules, "admin"],
+          resources: { ...resources, "company.settings": "full" },
+        }),
+      ),
+    );
+    renderAt("/dashboard/queue");
+    await screen.findByRole("heading", { level: 1, name: "Задачи" });
+    const bar = screen.getByRole("navigation", { name: "Модули" });
+    expect(within(bar).queryByRole("link", { name: "Настройки" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /профиль и настройки/ }));
+    expect(await screen.findByRole("menuitem", { name: "Настройки" })).toBeInTheDocument();
+  });
+
   it("1100: боковое окно — Drawer, закрыт по умолчанию", async () => {
     setViewportWidth(1100);
     signIn("director@demo.example");

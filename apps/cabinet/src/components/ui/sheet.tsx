@@ -4,6 +4,7 @@ import * as React from "react"
 import { XIcon } from "lucide-react"
 import { Dialog as SheetPrimitive } from "radix-ui"
 
+import { useKeyboardInset } from "@/hooks/useKeyboardInset"
 import { cn } from "@/lib/utils"
 
 function Sheet({ ...props }: React.ComponentProps<typeof SheetPrimitive.Root>) {
@@ -54,6 +55,7 @@ function SheetContent({
   side?: "top" | "right" | "bottom" | "left"
   showCloseButton?: boolean
 }) {
+  useKeyboardInset()
   return (
     <SheetPortal>
       <SheetOverlay />
@@ -68,7 +70,7 @@ function SheetContent({
           side === "top" &&
             "inset-x-0 top-0 h-auto border-b",
           side === "bottom" &&
-            "inset-x-0 bottom-0 h-auto border-t",
+            "inset-x-0 bottom-[var(--kb-inset,0px)] h-auto max-h-[calc(100dvh-var(--kb-inset,0px))] overflow-y-auto border-t",
           className
         )}
         {...props}

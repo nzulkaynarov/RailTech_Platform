@@ -173,18 +173,6 @@
 .pf-ticket-row-selected {
   background: var(--rt-color-primary-bg);
 }
-.pf-ticket-footer {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 12px 24px;
-  border-top: 1px solid var(--rt-color-surface-split);
-}
-.pf-ticket-table-row-selected > td {
-  background: var(--rt-color-primary-bg) !important;
-}
 .pf-help-nav {
   margin-bottom: 16px;
   border-bottom: 1px solid var(--rt-color-surface-split);

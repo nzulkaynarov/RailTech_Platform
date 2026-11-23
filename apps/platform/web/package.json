@@ -19,7 +19,8 @@
     "test": "vitest run",
     "e2e": "playwright test",
     "gen:api": "orval && prettier --write src/shared/api/generated --log-level warn",
-    "kb:sync": "node scripts/sync-kb-docs.mjs"
+    "kb:sync": "node scripts/sync-kb-docs.mjs",
+    "ui:coverage": "node ui-guards/coverage.mjs"
   },
   "dependencies": {
     "@ant-design/charts": "^2.6.7",
