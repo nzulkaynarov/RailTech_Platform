@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { HttpResponse, http } from "msw";
 import { describe, expect, it } from "vitest";
 
@@ -512,5 +512,60 @@ describe("Платёжка у оплаченного счёта", () => {
       expect(within(list).getByText("Лишняя: счёт уже оплачен")).toBeVisible();
       expect(within(list).queryByText("Ждёт подтверждения")).toBeNull();
     }
+  });
+});
+
+describe("Счета и оплаты: порядок по шапке (Х-15б)", () => {
+  const spy = () => {
+    const asked: (string | null)[] = [];
+    server.use(
+      http.get("*/eds/payments", ({ request }) => {
+        asked.push(new URL(request.url).searchParams.get("sort"));
+        return undefined; // дальше отвечает общий мок, он тоже сортирует по белому списку
+      }),
+    );
+    return asked;
+  };
+  const numbers = () =>
+    within(screen.getByRole("table", { name: "Счета" }))
+      .getAllByRole("row")
+      .slice(1)
+      .map((tr) => (tr as HTMLTableRowElement).cells.item(0)?.textContent.slice(0, 12));
+
+  it("щелчок по «Сумме» и «Счёту» уходит серверу как sort, весь список меняет порядок, а не страница", async () => {
+    const asked = spy();
+    signIn("accountant@demo.example");
+    renderAt("/eds/payments?show=all");
+    await screen.findByRole("table", { name: "Счета" });
+    expect(asked).toEqual([null]);
+    const before = numbers();
+
+    fireEvent.click(screen.getByRole("button", { name: "Счёт и проект" }));
+    fireEvent.click(await screen.findByRole("button", { name: /Счёт и проект/ }));
+    await waitFor(() => {
+      expect(asked).toContain("-number");
+    });
+    await waitFor(() => {
+      expect(numbers()).toEqual([...before].sort().reverse());
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Сумма" }));
+    await waitFor(() => {
+      expect(asked).toContain("amount");
+    });
+  });
+
+  it("порядок из адреса уходит серверу, чужое поле — нет", async () => {
+    const asked = spy();
+    signIn("accountant@demo.example");
+    renderAt("/eds/payments?show=all&sort=-due");
+    await screen.findByRole("table", { name: "Счета" });
+    expect(asked).toEqual(["-due"]);
+
+    cleanup();
+    asked.length = 0;
+    renderAt("/eds/payments?show=all&sort=deal__company__name");
+    await screen.findByRole("table", { name: "Счета" });
+    expect(asked).toEqual([null]);
   });
 });

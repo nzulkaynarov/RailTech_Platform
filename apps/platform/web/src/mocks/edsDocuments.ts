@@ -39,6 +39,7 @@ import letterSampleUrl from "./fixtures/letter-sample.pdf?url";
 import { addresseeById } from "./peopleContacts";
 import { readLetters } from "./fixtures/letters";
 import { buildMe, readSession } from "./mockSession";
+import { orderBy } from "./orderBy";
 
 /**
  * Моки EDS · Создать документ и «Мои документы» (D1-5, BFF 0.17.0). Права — как в BFF: список, карточка и вложения читает любой
@@ -173,6 +174,19 @@ function matches(row: EdsDocumentRow, kinds: string[], statuses: string[]): bool
 
 function newestFirst(a: EdsDocumentRow, b: EdsDocumentRow): number {
   return b.created_at.localeCompare(a.created_at);
+}
+
+/** Порядок «щелчком по шапке» (Х-15б): белый список полей EDS; по умолчанию — от новых. */
+function ordered(rows: EdsDocumentRow[], sort: string | null): EdsDocumentRow[] {
+  return sort
+    ? orderBy(rows, sort, {
+        number: (row) => row.number,
+        subject: (row) => row.subject,
+        status: (row) => row.status,
+        amount: (row) => (row.amount ? Number(row.amount.amount) : null),
+        created: (row) => row.created_at,
+      })
+    : [...rows].sort(newestFirst);
 }
 
 function page(rows: EdsDocumentRow[], cursor: string | null, limit: number): EdsDocumentPage {
@@ -616,6 +630,7 @@ export const edsDocumentsHandlers = [
     const stage = url.searchParams.get("stage");
     const cursor = url.searchParams.get("cursor");
     const limit = Number(url.searchParams.get("limit") ?? "50");
+    const sort = url.searchParams.get("sort");
     const state = readEds();
     if (scope === "all") {
       if (!allows(held, REGISTRY)) return forbidden("eds.inbox", "read");
@@ -640,9 +655,10 @@ export const edsDocumentsHandlers = [
       ];
       return HttpResponse.json(
         page(
-          rows
-            .filter((row) => matches(row, kinds, statuses) && inStage(row, stage))
-            .sort(newestFirst),
+          ordered(
+            rows.filter((row) => matches(row, kinds, statuses) && inStage(row, stage)),
+            sort,
+          ),
           cursor,
           limit,
         ),
@@ -656,9 +672,8 @@ export const edsDocumentsHandlers = [
     const rows = state.documents
       .filter((doc) => doc.ownerId === me)
       .map(rowOf)
-      .filter((row) => matches(row, onlyDocuments, statuses) && inStage(row, stage))
-      .sort(newestFirst);
-    return HttpResponse.json(page(rows, cursor, limit));
+      .filter((row) => matches(row, onlyDocuments, statuses) && inStage(row, stage));
+    return HttpResponse.json(page(ordered(rows, sort), cursor, limit));
   }),
 
   http.post("*/eds/documents", async ({ request }) => {

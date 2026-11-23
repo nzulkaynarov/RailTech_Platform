@@ -15,6 +15,7 @@ import {
 import { useDocumentTitle } from "../../../shared/lib/useDocumentTitle";
 import { useLastDefined, useShownKey } from "../../../shared/lib/useShownKey";
 import { DataBlock, ListSkeleton } from "../../../shared/ui/DataBlock";
+import { useSortParam } from "../../../shared/ui/DataTable/sort";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { PageHeader } from "../../../shared/ui/PageHeader";
 import { withParams } from "../inbox/api";
@@ -24,7 +25,7 @@ import { MemoSlot } from "./MemoPanel";
 import { PaymentSlot } from "./PaymentPanel";
 import { BankDetailsNotice } from "./BankDetailsNotice";
 import { useStateLabels } from "./labels";
-import { INVOICE_TABS, type InvoiceTab, PAGE, showTab } from "./model";
+import { INVOICE_SORT_KEYS, INVOICE_TABS, type InvoiceTab, PAGE, showTab } from "./model";
 import { FilterBar, FilterField } from "../../../shared/ui/FilterBar";
 
 /** Куда ведёт кнопка пустого состояния вкладки (SPEC-v3 §7: пустое состояние — словами и с действием). */
@@ -77,9 +78,11 @@ export function PaymentList() {
 
   const separateTab = tab === "memos";
   const invoiceTab: InvoiceTab = separateTab ? "awaiting" : tab;
+  const sort = useSortParam(INVOICE_SORT_KEYS);
   const boardParams = {
     tab: invoiceTab,
     ...(query && !separateTab ? { q: query } : {}),
+    ...(sort && !separateTab ? { sort } : {}),
     limit: separateTab ? 1 : PAGE,
   };
   const boardKey = getListPaymentsQueryKey(boardParams);
