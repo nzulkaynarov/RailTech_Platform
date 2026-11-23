@@ -629,6 +629,8 @@
     "partial": "Some sections did not answer — not all templates are shown.",
     "error": "Templates did not load",
     "errorText": "Refresh the page.",
+    "empty": "No templates yet",
+    "emptyText": "They will appear here once created in the document and letter sections.",
     "columns": {
       "name": "Name",
       "kind": "Kind",

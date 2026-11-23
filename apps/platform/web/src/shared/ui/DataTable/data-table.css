@@ -81,3 +81,31 @@
 .pf-tools-slot {
   margin-left: auto;
 }
+
+/* Общий вид таблицы списка (ЕВ-1а): шапка с подложкой, заголовки влево, линии между строками, заливка выбранной строки
+   (`data-selected="true"` — её ставит `RegistryTable` по `selectedKey`). Вес нулевой (`:where`): правила модулей, пока они
+   не удалены, перекрывают общий вид; новые правила таблицы в модулях запрещены (`ui-guards`). Числовые колонки
+   (`pf-col-num`, ui.css) выравниваются вправо с более высоким весом. */
+:where(table.pf-dt-table) {
+  border-collapse: collapse;
+}
+:where(table.pf-dt-table) > thead > tr > th {
+  padding-block: 10px;
+  background: var(--rt-color-surface-subtle);
+  border-bottom: 1px solid var(--rt-color-surface-border);
+  text-align: left;
+  vertical-align: middle;
+}
+:where(table.pf-dt-table) > tbody > tr > :is(td, th) {
+  padding-block: 10px;
+  border-bottom: 1px solid var(--rt-color-surface-split);
+  text-align: left;
+  vertical-align: top;
+}
+:where(table.pf-dt-table) > tbody > tr:last-child > :is(td, th) {
+  border-bottom: 0;
+}
+:where(table.pf-dt-table) > tbody > tr[data-selected="true"] > :is(td, th),
+.pf-dt-table > tbody > tr[data-selected="true"] > [style*="sticky"] {
+  background: var(--rt-color-primary-bg);
+}

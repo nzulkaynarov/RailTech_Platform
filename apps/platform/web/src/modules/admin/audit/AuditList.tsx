@@ -7,7 +7,8 @@ import { useFormat } from "../../../shared/lib/useFormat";
 import { actorText, entityText } from "./describe";
 
 import "./audit.css";
-import { DataTable } from "../../../shared/ui/DataTable/DataTable";
+import { RegistryTable, type RegistryPagination } from "../../../shared/ui/RegistryTable";
+import type { ReactNode } from "react";
 
 export interface AuditListProps {
   items: readonly AuditEntry[];
@@ -17,10 +18,31 @@ export interface AuditListProps {
   names: ReadonlyMap<string, string>;
   /** Блок уже таблицы: строки списком, без колонок */
   compact: boolean;
+  /** Рамка списка (RegistryTable): состояния и подвал */
+  loading: boolean;
+  error: ReactNode;
+  empty: ReactNode;
+  busy: boolean;
+  resetKey: string;
+  toolbar: ReactNode;
+  pagination: RegistryPagination;
 }
 
 /** Журнал: таблица на широком экране, список строк на узком. Действие — ссылка, открывает запись в боковом окне. */
-export function AuditList({ items, selectedId, hrefOf, names, compact }: AuditListProps) {
+export function AuditList({
+  items,
+  selectedId,
+  hrefOf,
+  names,
+  compact,
+  loading,
+  error,
+  empty,
+  busy,
+  resetKey,
+  toolbar,
+  pagination,
+}: AuditListProps) {
   const { t } = useTranslation("audit");
   const format = useFormat();
   const link = (entry: AuditEntry) => {
@@ -37,35 +59,40 @@ export function AuditList({ items, selectedId, hrefOf, names, compact }: AuditLi
     );
   };
 
-  if (compact) {
-    return (
-      <ul className="pf-list" aria-label={t("listLabel")}>
-        {items.map((entry) => (
-          <li
-            key={entry.id}
-            className={`pf-audit-row${entry.id === selectedId ? " pf-audit-row-selected" : ""}`}
-          >
-            {link(entry)}
-            <span className="pf-hint">
-              {format.date(entry.at, "datetime")} · {actorText(t, entry, names)}
-            </span>
-            <span className="pf-hint">{entityText(t, entry, names)}</span>
-          </li>
-        ))}
-      </ul>
-    );
-  }
+  const list = compact ? (
+    <ul className="pf-list" aria-label={t("listLabel")}>
+      {items.map((entry) => (
+        <li
+          key={entry.id}
+          className={`pf-audit-row${entry.id === selectedId ? " pf-audit-row-selected" : ""}`}
+        >
+          {link(entry)}
+          <span className="pf-hint">
+            {format.date(entry.at, "datetime")} · {actorText(t, entry, names)}
+          </span>
+          <span className="pf-hint">{entityText(t, entry, names)}</span>
+        </li>
+      ))}
+    </ul>
+  ) : undefined;
 
   return (
-    <DataTable<AuditEntry>
+    <RegistryTable<AuditEntry>
       tableId="admin.audit"
       caption={t("listLabel")}
       scrollLabel={t("listLabel")}
       rows={items}
       rowKey={(row) => row.id}
-      rowAttrs={(row) => ({
-        className: row.id === selectedId ? "pf-audit-table-row-selected" : "",
-      })}
+      selectedKey={selectedId}
+      loading={loading}
+      skeletonRows={pagination.pageSize}
+      error={error}
+      empty={empty}
+      busy={busy}
+      resetKey={resetKey}
+      toolbar={toolbar}
+      list={list}
+      pagination={pagination}
       columns={[
         {
           id: "when",

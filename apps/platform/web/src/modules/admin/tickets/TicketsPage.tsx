@@ -1,5 +1,5 @@
 import { keepPreviousData } from "@tanstack/react-query";
-import { Button, Card, Pagination, Select } from "antd";
+import { Button, Select } from "antd";
 import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
@@ -19,13 +19,12 @@ import { useCompactBlock } from "../../../shared/lib/useCompactBlock";
 import { useDocumentTitle } from "../../../shared/lib/useDocumentTitle";
 import { useFormat } from "../../../shared/lib/useFormat";
 import { useShownKey } from "../../../shared/lib/useShownKey";
-import { DataBlock, ListSkeleton } from "../../../shared/ui/DataBlock";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { PageHeader } from "../../../shared/ui/PageHeader";
 import { TicketCard } from "./TicketCard";
 
 import "../../../features/help/help.css";
-import { DataTable } from "../../../shared/ui/DataTable/DataTable";
+import { RegistryTable } from "../../../shared/ui/RegistryTable";
 import { FilterBar, FilterField } from "../../../shared/ui/FilterBar";
 
 const PATH = "/admin/tickets";
@@ -82,187 +81,173 @@ export function TicketsPage({ objectId }: { objectId?: string | undefined }) {
   );
 
   const shownKey = useShownKey(list.queryKey, list.isPlaceholderData);
-  let body;
-  if (list.isPending) {
-    body = <ListSkeleton rows={PAGE} />;
-  } else if (list.isError) {
-    body = (
-      <EmptyState
-        title={t("admin.loadError")}
-        text={t("admin.loadErrorText")}
-        action={
-          <Button
-            onClick={() => {
-              void list.refetch();
-            }}
-          >
-            {t("admin.retry")}
-          </Button>
-        }
-      />
-    );
-  } else if (items.length === 0 && filtered) {
-    body = (
-      <EmptyState
-        title={t("admin.noMatch")}
-        text={t("admin.noMatchText")}
-        action={<Button onClick={reset}>{t("admin.reset")}</Button>}
-      />
-    );
-  } else if (items.length === 0) {
-    body = <EmptyState title={t("admin.empty")} text={t("admin.emptyText")} />;
-  } else if (compact) {
-    body = (
-      <ul
-        className="pf-list"
-        aria-label={t("admin.listLabel")}
-        style={{ margin: 0, padding: 0, listStyle: "none" }}
-      >
-        {items.map((row) => (
-          <li
-            key={row.number}
-            className={`pf-ticket-row${row.number === objectId ? " pf-ticket-row-selected" : ""}`}
-          >
-            <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-              {numberLink(row)}
-              <TicketStatusTag status={row.status} />
-            </div>
-            <div>{t(`ticket.subject.${row.subject}`)}</div>
-            <div className="pf-hint">
-              {row.author.name} · {format.activity(row.updated_at)}
-            </div>
-            <div className="pf-hint">{row.preview}</div>
-          </li>
-        ))}
-      </ul>
-    );
-  } else {
-    body = (
-      <DataTable<TicketRow>
-        tableId="admin.tickets"
-        caption={t("admin.listLabel")}
-        scrollLabel={t("admin.listLabel")}
-        rows={items}
-        rowKey={(row) => row.number}
-        rowAttrs={(row) => ({
-          className: row.number === objectId ? "pf-ticket-table-row-selected" : "",
-        })}
-        columns={[
-          {
-            id: "number",
-            header: t("admin.columns.number"),
-            width: 154,
-            cell: (row) => numberLink(row),
-          },
-          {
-            id: "subject",
-            header: t("admin.columns.subject"),
-            width: 330,
-            cell: (row) => (
-              <div>
-                <div>{t(`ticket.subject.${row.subject}`)}</div>
-                <div className="pf-hint">{row.preview}</div>
-              </div>
-            ),
-          },
-          {
-            id: "author",
-            header: t("admin.columns.author"),
-            width: 242,
-            cell: (row) => (
-              <div>
-                <div>{row.author.name}</div>
-                <div className="pf-hint">{row.author_role}</div>
-              </div>
-            ),
-          },
-          {
-            id: "status",
-            header: t("admin.columns.status"),
-            width: 176,
-            cell: (row) => <TicketStatusTag status={row.status} />,
-          },
-          {
-            id: "updated",
-            header: t("admin.columns.updated"),
-            width: 198,
-            cell: (row) => format.activity(row.updated_at),
-          },
-        ]}
-      />
-    );
-  }
+  const error = list.isError ? (
+    <EmptyState
+      title={t("admin.loadError")}
+      text={t("admin.loadErrorText")}
+      action={
+        <Button
+          onClick={() => {
+            void list.refetch();
+          }}
+        >
+          {t("admin.retry")}
+        </Button>
+      }
+    />
+  ) : undefined;
+  const empty = filtered ? (
+    <EmptyState
+      title={t("admin.noMatch")}
+      text={t("admin.noMatchText")}
+      action={<Button onClick={reset}>{t("admin.reset")}</Button>}
+    />
+  ) : (
+    <EmptyState title={t("admin.empty")} text={t("admin.emptyText")} />
+  );
+  const cards = compact ? (
+    <ul
+      className="pf-list"
+      aria-label={t("admin.listLabel")}
+      style={{ margin: 0, padding: 0, listStyle: "none" }}
+    >
+      {items.map((row) => (
+        <li
+          key={row.number}
+          className={`pf-ticket-row${row.number === objectId ? " pf-ticket-row-selected" : ""}`}
+        >
+          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+            {numberLink(row)}
+            <TicketStatusTag status={row.status} />
+          </div>
+          <div>{t(`ticket.subject.${row.subject}`)}</div>
+          <div className="pf-hint">
+            {row.author.name} · {format.activity(row.updated_at)}
+          </div>
+          <div className="pf-hint">{row.preview}</div>
+        </li>
+      ))}
+    </ul>
+  ) : undefined;
 
   return (
     <>
       <PageHeader title={title} subtitle={t("admin.subtitle")} />
       <div ref={blockRef}>
-        <Card styles={{ body: { padding: 0 } }}>
-          <FilterBar
-            inset
-            label={t("admin.filtersLabel")}
-            actions={
-              counts ? (
-                <span className="pf-hint" aria-live="polite">
-                  {t("admin.countsNew", { count: counts.new })} ·{" "}
-                  {t("admin.countsWork", { count: counts.in_progress })} ·{" "}
-                  {t("admin.countsDone", { count: counts.resolved })}
-                </span>
-              ) : undefined
-            }
-          >
-            <FilterField id={`${base}-status`} label={t("admin.status")}>
-              <Select<TicketStatus>
-                id={`${base}-status`}
-                allowClear
-                placeholder={t("admin.allStatuses")}
-                value={status}
-                options={TICKET_STATUSES.map((value) => ({
-                  value,
-                  label: t(`ticket.status.${value}`),
-                }))}
-                onChange={(value?: TicketStatus) => {
-                  setStatus(value);
-                  setPage(1);
-                }}
-              />
-            </FilterField>
-            <FilterField id={`${base}-subject`} label={t("admin.subject")}>
-              <Select<TicketSubject>
-                id={`${base}-subject`}
-                allowClear
-                placeholder={t("admin.allSubjects")}
-                value={subject}
-                options={TICKET_SUBJECTS.map((value) => ({
-                  value,
-                  label: t(`ticket.subject.${value}`),
-                }))}
-                onChange={(value?: TicketSubject) => {
-                  setSubject(value);
-                  setPage(1);
-                }}
-              />
-            </FilterField>
-            {filtered ? <Button onClick={reset}>{t("admin.reset")}</Button> : null}
-          </FilterBar>
-          <DataBlock busy={list.isPlaceholderData} resetKey={shownKey}>
-            {body}
-          </DataBlock>
-          {list.data && total > PAGE ? (
-            <div className="pf-ticket-footer">
-              <span className="pf-hint">{t("admin.total", { count: total })}</span>
-              <Pagination
-                current={page}
-                pageSize={PAGE}
-                total={total}
-                showSizeChanger={false}
-                size="small"
-                aria-label={t("admin.pager")}
-                onChange={setPage}
-              />
-            </div>
-          ) : null}
-        </Card>
+        <RegistryTable<TicketRow>
+          tableId="admin.tickets"
+          caption={t("admin.listLabel")}
+          scrollLabel={t("admin.listLabel")}
+          rows={items}
+          rowKey={(row) => row.number}
+          selectedKey={objectId ?? null}
+          loading={list.isPending}
+          skeletonRows={PAGE}
+          error={error}
+          empty={empty}
+          busy={list.isPlaceholderData}
+          resetKey={shownKey}
+          list={cards}
+          toolbar={
+            <FilterBar
+              inset
+              label={t("admin.filtersLabel")}
+              actions={
+                counts ? (
+                  <span className="pf-hint" aria-live="polite">
+                    {t("admin.countsNew", { count: counts.new })} ·{" "}
+                    {t("admin.countsWork", { count: counts.in_progress })} ·{" "}
+                    {t("admin.countsDone", { count: counts.resolved })}
+                  </span>
+                ) : undefined
+              }
+            >
+              <FilterField id={`${base}-status`} label={t("admin.status")}>
+                <Select<TicketStatus>
+                  id={`${base}-status`}
+                  allowClear
+                  placeholder={t("admin.allStatuses")}
+                  value={status}
+                  options={TICKET_STATUSES.map((value) => ({
+                    value,
+                    label: t(`ticket.status.${value}`),
+                  }))}
+                  onChange={(value?: TicketStatus) => {
+                    setStatus(value);
+                    setPage(1);
+                  }}
+                />
+              </FilterField>
+              <FilterField id={`${base}-subject`} label={t("admin.subject")}>
+                <Select<TicketSubject>
+                  id={`${base}-subject`}
+                  allowClear
+                  placeholder={t("admin.allSubjects")}
+                  value={subject}
+                  options={TICKET_SUBJECTS.map((value) => ({
+                    value,
+                    label: t(`ticket.subject.${value}`),
+                  }))}
+                  onChange={(value?: TicketSubject) => {
+                    setSubject(value);
+                    setPage(1);
+                  }}
+                />
+              </FilterField>
+              {filtered ? <Button onClick={reset}>{t("admin.reset")}</Button> : null}
+            </FilterBar>
+          }
+          pagination={{
+            current: page,
+            pageSize: PAGE,
+            total,
+            onChange: setPage,
+            label: t("admin.pager"),
+            summary: t("admin.total", { count: total }),
+          }}
+          columns={[
+            {
+              id: "number",
+              header: t("admin.columns.number"),
+              width: 154,
+              cell: (row) => numberLink(row),
+            },
+            {
+              id: "subject",
+              header: t("admin.columns.subject"),
+              width: 330,
+              cell: (row) => (
+                <div>
+                  <div>{t(`ticket.subject.${row.subject}`)}</div>
+                  <div className="pf-hint">{row.preview}</div>
+                </div>
+              ),
+            },
+            {
+              id: "author",
+              header: t("admin.columns.author"),
+              width: 242,
+              cell: (row) => (
+                <div>
+                  <div>{row.author.name}</div>
+                  <div className="pf-hint">{row.author_role}</div>
+                </div>
+              ),
+            },
+            {
+              id: "status",
+              header: t("admin.columns.status"),
+              width: 176,
+              cell: (row) => <TicketStatusTag status={row.status} />,
+            },
+            {
+              id: "updated",
+              header: t("admin.columns.updated"),
+              width: 198,
+              cell: (row) => format.activity(row.updated_at),
+            },
+          ]}
+        />
       </div>
       <PanelPortal tab="card">
         {objectId ? (
