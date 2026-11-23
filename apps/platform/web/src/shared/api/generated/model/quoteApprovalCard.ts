@@ -13,6 +13,7 @@ import type { QuoteChannels } from "./quoteChannels";
 import type { QuoteChecklistLine } from "./quoteChecklistLine";
 import type { QuoteClientComment } from "./quoteClientComment";
 import type { QuoteClientDecision } from "./quoteClientDecision";
+import type { QuoteClientLink } from "./quoteClientLink";
 import type { QuoteDelivery } from "./quoteDelivery";
 import type { QuoteInternal } from "./quoteInternal";
 import type { QuoteLetterRef } from "./quoteLetterRef";
@@ -89,5 +90,7 @@ export interface QuoteApprovalCard {
   client_comments: QuoteClientComment[];
   /** Решение клиента по отправленному КП (A1 волны 18a); `null` — КП ещё не отправлено или ERP не ответила */
   client_decision?: QuoteClientDecision | null;
+  /** Ссылка клиента на отправленное КП в Кабинете (ДК-1); `null` — КП ещё не отправлено или ERP не ответила */
+  client_link?: QuoteClientLink | null;
   sources: Sources;
 }

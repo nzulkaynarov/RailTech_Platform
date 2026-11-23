@@ -926,6 +926,8 @@ export * from "./quoteClientDecision";
 export * from "./quoteClientDecisionIn";
 export * from "./quoteClientDecisionInDecision";
 export * from "./quoteClientDecisionState";
+export * from "./quoteClientLink";
+export * from "./quoteClientLinkState";
 export * from "./quoteDecisionIn";
 export * from "./quoteDefaults";
 export * from "./quoteDefaultsCatalogPriceVisibility";

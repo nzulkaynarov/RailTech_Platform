@@ -642,6 +642,92 @@ async def test_send_needs_the_clients_section_and_rejects_the_cabinet(
     assert eds.delivered == []
 
 
+# --- КП: ссылка клиента в Кабинете и «Отозвать ссылку» (ДК-1) ---------------------------------
+
+CLIENT_LINK = {
+    "state": "active",
+    "recipient_hint": "a***@vostok.uz",
+    "expires_at": "2026-12-27T23:59:59.999999+05:00",
+    "first_opened_at": "2026-11-20T10:00:00+05:00",
+    "last_opened_at": "2026-11-21T09:00:00+05:00",
+}
+
+
+async def test_sent_quote_card_shows_the_client_link_and_who_may_revoke_it(
+    web: Web, eds: ApprovalsFake, check: ContractChecker
+) -> None:
+    _approved(eds, "SENT", {}, client_link=CLIENT_LINK)
+    assert (await web.login(["MANAGER"])).status_code == 200
+
+    response = await web.client.get(QUOTE)
+
+    check(response, "/eds/quotes/{ref}", "get")
+    assert response.json()["client_link"] == {**CLIENT_LINK, "can_revoke": True}
+
+
+async def test_reader_without_the_clients_section_cannot_revoke_in_the_card(
+    web: Web, eds: ApprovalsFake
+) -> None:
+    _approved(eds, "SENT", {}, client_link=CLIENT_LINK)
+    reader = custom(95, "Только КП", {"eds.drafts": "read"})
+    assert (await web.login([reader])).status_code == 200
+
+    assert (await web.client.get(QUOTE)).json()["client_link"]["can_revoke"] is False
+
+
+async def test_revoked_link_is_not_offered_for_revoking_again(web: Web, eds: ApprovalsFake) -> None:
+    _approved(eds, "SENT", {}, client_link={**CLIENT_LINK, "state": "revoked"})
+    assert (await web.login(["MANAGER"])).status_code == 200
+
+    link = (await web.client.get(QUOTE)).json()["client_link"]
+
+    assert (link["state"], link["can_revoke"]) == ("revoked", False)
+
+
+async def test_a_quote_not_sent_yet_has_no_client_link(web: Web, eds: ApprovalsFake) -> None:
+    _approved(eds, "READY_TO_SEND", {})
+    assert (await web.login(["MANAGER"])).status_code == 200
+
+    assert (await web.client.get(QUOTE)).json()["client_link"] is None
+
+
+async def test_revoke_link_calls_erp_and_returns_the_refreshed_card(
+    web: Web, eds: ApprovalsFake, check: ContractChecker
+) -> None:
+    _approved(eds, "SENT", {}, client_link=CLIENT_LINK)
+    assert (await web.login(["MANAGER"])).status_code == 200
+
+    response = await web.send("POST", f"{QUOTE}/revoke-link")
+
+    check(response, "/eds/quotes/{id}/revoke-link", "post")
+    assert response.status_code == 200, response.text
+    assert eds.revoked == ["/api/v1/crm/quotes/1203/revoke-public-link/"]
+    assert response.json()["client_link"]["state"] == "revoked"
+    assert response.json()["client_link"]["can_revoke"] is False
+
+
+async def test_revoke_link_needs_the_clients_section(web: Web, eds: ApprovalsFake) -> None:
+    _approved(eds, "SENT", {}, client_link=CLIENT_LINK)
+    reader = custom(96, "Только КП", {"eds.drafts": "read"})
+    assert (await web.login([reader])).status_code == 200
+
+    response = await web.send("POST", f"{QUOTE}/revoke-link")
+
+    assert response.status_code == 403
+    assert eds.revoked == []
+
+
+async def test_revoke_link_refused_by_erp_is_forbidden(web: Web, eds: ApprovalsFake) -> None:
+    _approved(eds, "SENT", {}, client_link=CLIENT_LINK)
+    eds.revoke_error = (403, "ROLE_NOT_PERMITTED")
+    assert (await web.login(["MANAGER"])).status_code == 200
+
+    response = await web.send("POST", f"{QUOTE}/revoke-link")
+
+    assert response.status_code == 403
+    assert eds.revoked == []
+
+
 # --- КП: решение клиента по его подтверждению (A1 волны 18a) --------------------------------------
 
 

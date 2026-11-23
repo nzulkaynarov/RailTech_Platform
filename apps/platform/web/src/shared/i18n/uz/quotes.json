@@ -211,6 +211,24 @@
         },
         "failed": "Yozilmadi: {{reason}}"
       }
+    },
+    "clientLink": {
+      "title": "Mijozning Kabinetdagi havolasi",
+      "state": {
+        "active": "Havola {{date}} gacha amal qiladi.",
+        "revoked": "Havola bekor qilindi: mijoz u orqali hech narsani ocha olmaydi. TTni qayta yuborsangiz, yangi havola beriladi.",
+        "expired": "Havola muddati tugadi.",
+        "none": "Havola yöq."
+      },
+      "to": "Qabul qiluvchi — {{to}}.",
+      "opened": "Mijoz ochgan: {{date}}.",
+      "notOpened": "Mijoz hali ochmagan.",
+      "revoke": "Havolani bekor qilish",
+      "confirmText": "Mijoz u orqali endi hech narsani köra olmaydi. TTni qayta yuborsangiz, yangi havola beriladi.",
+      "done": "Havola bekor qilindi.",
+      "failed": "Havolani bekor qilib bölmadi.",
+      "confirmAction": "Bekor qilish",
+      "confirmObject": "TT havolasini"
     }
   },
   "panel": {

@@ -365,6 +365,15 @@ function approvedQuote(): QuoteApprovalCard {
     },
     // A1: КП у клиента — ждёт решения; ответил письмом — менеджер записывает «Клиент принял / отклонил»
     client_decision: AWAITING_CLIENT,
+    // ДК-1: ссылка клиента в Кабинете — действует, клиент открывал; «Отозвать ссылку» — у того, кто отправляет КП
+    client_link: {
+      state: "active",
+      recipient_hint: "a***@demo-put.example",
+      expires_at: "2026-12-27T18:59:59Z",
+      first_opened_at: "2026-10-28T06:10:00Z",
+      last_opened_at: "2026-10-28T06:15:00Z",
+      can_revoke: true,
+    },
     // КП отправлено клиенту, клиент спросил в кабинете (B-CABFIX-1)
     client_comments: [
       {

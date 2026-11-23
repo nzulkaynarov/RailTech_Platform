@@ -211,6 +211,24 @@
         },
         "failed": "Not recorded: {{reason}}"
       }
+    },
+    "clientLink": {
+      "title": "Client link in the Cabinet",
+      "state": {
+        "active": "The link works until {{date}}.",
+        "revoked": "The link is revoked: the client can open nothing with it. Sending the quote again gives a new link.",
+        "expired": "The link has expired.",
+        "none": "There is no link."
+      },
+      "to": "Recipient: {{to}}.",
+      "opened": "The client opened it: {{date}}.",
+      "notOpened": "The client has not opened it yet.",
+      "revoke": "Revoke the link",
+      "confirmText": "The client will see nothing with it any more. Sending the quote again gives a new link.",
+      "done": "The link is revoked.",
+      "failed": "Could not revoke the link.",
+      "confirmAction": "Revoke",
+      "confirmObject": "the quote link"
     }
   },
   "panel": {

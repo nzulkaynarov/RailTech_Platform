@@ -337,6 +337,12 @@ class ApprovalsFake(EdsFake):
         be.router.post(url__regex=rf"^{re.escape(ERP_URL)}/api/v1/crm/quotes/\d+/deliver/$").mock(
             side_effect=self._deliver
         )
+        # ДК-1: «Отозвать ссылку» — ERP гасит ссылки; None — 200, иначе (статус, код ERP).
+        self.revoke_error: tuple[int, str] | None = None
+        self.revoked: list[str] = []
+        be.router.post(
+            url__regex=rf"^{re.escape(ERP_URL)}/api/v1/crm/quotes/\d+/revoke-public-link/$"
+        ).mock(side_effect=self._revoke)
         # A1: «Клиент принял / отклонил» по подтверждению клиента и файл подтверждения.
         self.decision_error: tuple[int, str] | None = None
         self.decisions: list[httpx.Request] = []
@@ -369,6 +375,23 @@ class ApprovalsFake(EdsFake):
                 s for s in report.get("skipped", []) if s["channel"] != body["channel"]
             ]
             self.erp_quote = {**self.erp_quote, "status_code": "SENT", "send_report": report}
+        return httpx.Response(200, json={"id": 1203})
+
+    def _revoke(self, request: httpx.Request) -> httpx.Response:
+        self.erp_paths.append(request.url.path)
+        if self.revoke_error is not None:
+            status, code = self.revoke_error
+            return httpx.Response(status, json={"detail": code})
+        self.revoked.append(request.url.path)
+        if isinstance(self.erp_quote, dict) and isinstance(self.erp_quote.get("client_link"), dict):
+            self.erp_quote = {
+                **self.erp_quote,
+                "client_link": {
+                    **self.erp_quote["client_link"],
+                    "state": "revoked",
+                    "expires_at": None,
+                },
+            }
         return httpx.Response(200, json={"id": 1203})
 
     def _evidence(self, request: httpx.Request) -> httpx.Response:
