@@ -8,7 +8,7 @@
 Откат: таблица удаляется вместе с зонами и назначениями (журнал `audit_log` остаётся).
 
 Revision ID: 4c04e621fc60
-Revises: 4d6593eef5f9
+Revises: 7b1e3c9a52d4
 Create Date: 2026-11-23 07:14:08.503159+00:00
 """
 
@@ -19,7 +19,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision: str = "4c04e621fc60"
-down_revision: str | Sequence[str] | None = "4d6593eef5f9"
+down_revision: str | Sequence[str] | None = "7b1e3c9a52d4"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

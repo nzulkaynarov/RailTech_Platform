@@ -23,7 +23,7 @@ from tests.integration.roles_helpers import audit_rows
 
 pytestmark = pytest.mark.integration
 ZONES = "/api/v1/responsibility-zones"
-BEFORE = "4d6593eef5f9"
+BEFORE = "7b1e3c9a52d4"
 NINE = {
     "finance",
     "legal",
