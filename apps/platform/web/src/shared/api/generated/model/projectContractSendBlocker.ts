@@ -14,6 +14,8 @@ export interface ProjectContractSendBlocker {
   message: string;
   /** Роли без визы словами в нижнем регистре */
   missing: string[];
+  /** Те же визы кодами прав маршрута (approvals.visa_finance): Платформа переводит их на язык сотрудника */
+  missing_permissions?: string[];
   /** Замечание визирующего или причина отказа EDS, как написаны; пусто — нет */
   remark: string;
   /** Нужной роли нет ни у одного сотрудника: назначить её можно в настройках */

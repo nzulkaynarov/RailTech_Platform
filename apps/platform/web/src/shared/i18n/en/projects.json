@@ -326,7 +326,13 @@
       "visas_returned": "Visas returned: {{roles}}. Fix the contract and send it for signature again.",
       "no_visa_holder": "Nobody can give the visa: {{roles}}. Assign the role to an employee.",
       "remark": "Remark: {{text}}",
-      "settings": "Employees"
+      "settings": "Employees",
+      "collecting": "Visas are being collected.",
+      "askAdmin": "Ask an administrator to assign the role: {{roles}}.",
+      "role": {
+        "visa_finance": "accountant",
+        "visa_legal": "lawyer"
+      }
     }
   },
   "act": {

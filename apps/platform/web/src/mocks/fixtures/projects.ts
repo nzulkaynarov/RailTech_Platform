@@ -47,7 +47,7 @@ interface MutableContract {
   signed_at: string | null;
   has_scan: boolean;
   /** Х-1: визы маршрута подписи до отправки клиенту; нет поля — собраны (все прежние проекты уже у клиента). */
-  visas?: "none" | "pending" | "returned" | "no_holder" | "collected";
+  visas?: "none" | "pending" | "returned" | "no_holder" | "collected" | "collecting";
 }
 
 interface MutableAct {
@@ -590,7 +590,7 @@ export function problemsOf(p: ProjectState): ProjectRow["problems"] {
 /** Х-1: что мешает отправить проект клиенту (как `contract_visas.send_blocker` ERP); `null` — визы собраны. */
 export function sendBlockerOf(c: MutableContract): ProjectContractSendBlocker | null {
   if (c.sent_to_client || c.status !== "project") return null;
-  const base = { remark: "", settings_link: false };
+  const base = { remark: "", settings_link: false, missing_permissions: [] as string[] };
   switch (c.visas ?? "collected") {
     case "none":
       return {
@@ -606,13 +606,18 @@ export function sendBlockerOf(c: MutableContract): ProjectContractSendBlocker | 
         code: "visas_pending",
         message: "Нужны визы: бухгалтер, юрист",
         missing: ["бухгалтер", "юрист"],
+        missing_permissions: ["approvals.visa_finance", "approvals.visa_legal"],
       };
+    case "collecting":
+      // запрос открыт, проекция виз ещё не пришла (событие в пути): ролей в причине нет
+      return { ...base, code: "visas_pending", message: "Визы собираются.", missing: [] };
     case "returned":
       return {
         ...base,
         code: "visas_returned",
         message: "Визы возвращены: бухгалтер. Нет графика платежей",
         missing: ["бухгалтер"],
+        missing_permissions: ["approvals.visa_finance"],
         remark: "Нет графика платежей",
       };
     case "no_holder":
@@ -622,6 +627,7 @@ export function sendBlockerOf(c: MutableContract): ProjectContractSendBlocker | 
         message:
           "Нет сотрудника для визы: юрист. Назначьте роль в настройках и отправьте договор «На подпись» снова.",
         missing: ["юрист"],
+        missing_permissions: ["approvals.visa_legal"],
         settings_link: true,
       };
     default:
@@ -682,7 +688,13 @@ export function toRow(p: ProjectState): ProjectRow {
         version: p.quote.version,
       },
       contract: c
-        ? { id: c.id, number: c.number, status: c.status, sent_to_client: c.sent_to_client }
+        ? {
+            id: c.id,
+            number: c.number,
+            status: c.status,
+            sent_to_client: c.sent_to_client,
+            send_blocker_code: sendBlockerOf(c)?.code ?? null,
+          }
         : null,
       invoice: last
         ? { id: last.id, number: last.number, status: last.status, count: live.length }

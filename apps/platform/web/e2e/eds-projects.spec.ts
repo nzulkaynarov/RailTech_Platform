@@ -85,6 +85,8 @@ test.describe("Проекты: бухгалтер", () => {
     await expectNoViolations(page, "договор: визы не запрошены");
     await created.getByRole("button", { name: "На подпись" }).click();
     await expect(blocker).toContainText("Нужны визы: бухгалтер, юрист");
+    // запрос открыт: повторное «На подпись» отказало бы, кнопки нет
+    await expect(created.getByRole("button", { name: "На подпись" })).toHaveCount(0);
     await settledScreenshot(page, "contract-visas-pending");
     await expectNoViolations(page, "договор: ждёт виз бухгалтера и юриста");
 
@@ -267,6 +269,7 @@ test.describe("Проекты: телефон", () => {
       await expect(draft.getByTestId("contract-send-blocker")).toContainText(
         "Нужны визы: бухгалтер, юрист",
       );
+      await expect(draft.getByRole("button", { name: "На подпись" })).toHaveCount(0);
       await settledScreenshot(page, "mobile-contract-visas-pending");
       await expectNoViolations(page, "мобильная карточка: договор ждёт виз");
 
