@@ -189,6 +189,18 @@ def test_acceptance_is_per_contact(portal_client, client_company, client_contact
     assert other.get(f"{BASE}/me").json()["legal_pending"] is True
 
 
+def test_a_read_only_contact_can_accept(readonly_portal_client, readonly_contact):
+    """Принять текст может любой контакт: право «действовать» для акцепта не нужно, иначе читатель остался бы за дверью."""
+    privacy, terms = publish_all()
+    assert readonly_portal_client.get(GATED).status_code == 403
+    response = readonly_portal_client.post(
+        f"{BASE}/legal/accept", {"edition_ids": [privacy.pk, terms.pk], "language": "ru"}, format="json"
+    )
+    assert response.status_code == 200
+    assert LegalAcceptance.objects.filter(contact=readonly_contact).count() == 2
+    assert readonly_portal_client.get(GATED).status_code == 200
+
+
 def test_only_one_kind_published_gates_on_that_kind(portal_client):
     privacy = legal.release_edition(LegalEdition.objects.get(kind="privacy").pk, actor=None)
     assert portal_client.get(GATED).status_code == 403
