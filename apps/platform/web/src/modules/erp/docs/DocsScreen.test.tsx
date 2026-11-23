@@ -87,7 +87,7 @@ describe("Техдокументация: список", () => {
 });
 
 describe("Техдокументация: просмотр", () => {
-  it("PDF открывается в боковом окне: байты файла получены, про чат сказано словами, кнопки «Отправить клиенту» нет", async () => {
+  it("PDF открывается в боковом окне: байты файла получены, обещания про чат нет, кнопки «Отправить клиенту» нет", async () => {
     await open("manager@demo.example");
     fireEvent.click(
       await screen.findByRole("button", { name: "Открыть файл «Чертёж рельса Р65»" }),
@@ -97,9 +97,7 @@ describe("Техдокументация: просмотр", () => {
     expect(await within(drawer).findByTestId("pdf-stub")).toHaveTextContent(
       "Чертёж рельса Р65: %PDF-1.4",
     );
-    expect(
-      within(drawer).getByText(/Отправить клиенту в чат: появится вместе с разделом «Чаты»/),
-    ).toBeVisible();
+    expect(within(drawer).queryByText(/появится вместе с разделом «Чаты»/)).toBeNull();
     expect(within(drawer).queryByRole("button", { name: /Отправить клиенту/ })).toBeNull();
     expect(within(drawer).getByRole("button", { name: "Скачать" })).toBeVisible();
     // читателю удаление не положено

@@ -1,4 +1,4 @@
-import { useId, useState, type FormEvent } from 'react';
+import { useEffect, useId, useState, type FormEvent } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useMutation } from '@tanstack/react-query';
@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { clearLegalDecline, peekLegalDecline } from '@/session/legalDecline';
 import { useMe } from '@/session/useMe';
 import { AuthLayout } from './AuthLayout';
 
@@ -28,6 +29,11 @@ export function LoginPage() {
   const [email, setEmail] = useState('');
   const me = useMe().data;
   const telegramLink = useBotLink();
+  // ДВ-5: пришёл после отказа принять оферту и политику — один раз объясняем, почему вышли
+  const [declined] = useState(peekLegalDecline);
+  useEffect(() => {
+    clearLegalDecline();
+  }, []);
 
   const magicLink = useMutation({
     mutationFn: (address: string) => requestMagicLink(address),
@@ -44,6 +50,11 @@ export function LoginPage() {
 
   return (
     <AuthLayout title={t('auth.login.title')}>
+      {declined ? (
+        <Alert>
+          <AlertDescription>{t('legal.declined.loginNotice')}</AlertDescription>
+        </Alert>
+      ) : null}
       <Card>
         <CardHeader>
           <CardTitle>

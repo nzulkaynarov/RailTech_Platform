@@ -77,7 +77,7 @@ async def test_manager_queue_comes_from_crm_inbox(
     assert first["due_label"] == "today"
     assert "Демо Клиентов" in first["subtitle"]
     assert "Просит цену и договор" in first["subtitle"]
-    assert first["object"]["path"] == "/crm/messages?lead=L-2041"
+    assert first["object"]["path"] == "/crm/leads?scope=waiting&lead=L-2041"
     assert body["items"][1]["title"] == "Ответить лиду L-2050"
     assert "3 ч назад" in body["items"][1]["subtitle"]
     assert fb.calls(fb.erp["approvals"]) == 0  # у менеджера ERP-очереди нет
@@ -625,6 +625,15 @@ async def test_activity_admin_events_are_words_not_raw_verbs(
     ]
     for raw in ("deleted", "created", "updated"):
         assert all(raw not in i["text"] for i in items)
+
+
+def test_cabinet_legal_events_have_russian_feed_text() -> None:
+    from app.feeds.events import event_text
+
+    assert event_text("portal.legal.accepted", "Acceptance of privacy edition x") == (
+        "Клиент принял условия или политику кабинета"
+    )
+    assert "edition" not in event_text("admin.portal_legal.published", "Published terms edition x")
 
 
 async def test_activity_falls_back_to_deal_timelines_when_log_is_closed(

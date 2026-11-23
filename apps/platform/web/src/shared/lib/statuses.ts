@@ -238,6 +238,8 @@ export const STATUS_TONE = {
   article: { draft: DR, published: OK },
   /** Карточка каталога у строки документа (ADR-0027): черновик или опубликована */
   catalogItem: { draft: DR, published: OK },
+  /** Редакция оферты или политики Кабинета (ДВ-5): черновик, действует, заменена новой */
+  legalEdition: { draft: DR, current: OK, retired: OFF },
   /** Уровень здоровья интеграции и важность пункта «Требует внимания» */
   integration: { ok: OK, warn: W, fail: NO, unknown: NONE, off: OFF, info: NONE },
   /** Состояние сервиса (интеграции, «О системе») */

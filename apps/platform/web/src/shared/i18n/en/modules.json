@@ -4,7 +4,6 @@
     "title": "Home",
     "sections": {
       "queue": "Tasks",
-      "projects": "Projects",
       "summary": "Summary"
     },
     "queue": {
@@ -204,6 +203,9 @@
           "exchange_rate": {
             "manual": "Exchange rate entered manually",
             "auto_skipped": "Central bank rate not applied: a manual rate is in force"
+          },
+          "portal_legal": {
+            "published": "A new edition of a Cabinet document was published"
           }
         }
       }
@@ -217,7 +219,6 @@
       "byDue": "Tasks by due date",
       "stuck": "Overdue",
       "noStuck": "No overdue tasks",
-      "noData": "Data will appear here",
       "loadError": "Could not load the summary",
       "retry": "Retry",
       "due": {
@@ -225,11 +226,6 @@
         "today": "Today",
         "tomorrow": "Tomorrow",
         "later": "Later"
-      },
-      "blocks": {
-        "requests": "Requests by stage",
-        "profit": "Profit by project",
-        "targets": "12-month targets"
       }
     }
   },
@@ -237,18 +233,14 @@
     "name": "Contacts",
     "title": "Contacts",
     "sections": {
-      "messages": "Awaiting reply",
       "leads": "Leads",
       "clients": "Counterparties",
-      "requests": "Requests",
-      "channels": "Channels",
       "kb": "Knowledge base"
     },
     "action": "New request",
     "nav": {
       "leads": "Leads",
       "clients": "Counterparties",
-      "mail": "Mail",
       "kb": "Knowledge base"
     }
   },
@@ -258,7 +250,6 @@
     "sections": {
       "documents": "All documents",
       "inbox": "Incoming",
-      "outbox": "Outgoing",
       "projects": "Projects",
       "drafts": "Quotes to approve",
       "approvals": "Awaiting approval",
@@ -272,10 +263,10 @@
     "action": "New document",
     "nav": {
       "inbox": "Incoming",
+      "mail": "Mail",
       "outbox": "Outgoing",
       "internal": "Internal",
-      "archive": "Archive",
-      "templates": "Templates"
+      "archive": "Archive"
     }
   },
   "erp": {
@@ -307,15 +298,12 @@
     "title": "Organizer",
     "sections": {
       "all": "Chats",
-      "internal": "Team",
-      "external": "With clients",
       "contacts": "People",
       "calendar": "Calendar"
     },
     "action": "Create chat",
     "nav": {
       "calendar": "Calendar",
-      "chats": "Chats",
       "people": "People"
     },
     "calendar": {
@@ -387,6 +375,7 @@
       "taxes": "Taxes & currencies",
       "sales": "Sales",
       "articles": "Company articles",
+      "legal": "Offer and policy",
       "telegram": "Telegram",
       "mail": "Mail",
       "forms": "Website forms",
@@ -682,7 +671,8 @@
         "openCard": "Open card",
         "notSentUnavailable": "The employee was added with the status “Invited”, but CRM did not respond and the email was not sent. Try again later with “Send the invitation again” in the card.",
         "resend": "Send the invitation again",
-        "resendHint": "A new email with a new temporary password goes out; the previous one stops working.",
+        "resendHint": "A new email with a 72-hour “Set your password” link goes out; the previous link and password stop working.",
+        "tooMany": "Too many links for this employee in an hour. Try again later.",
         "resendNotSent": "The email was not sent: mail is not connected or unavailable. Connect it in Settings · Connections and try again.",
         "delivery": "How to hand over access",
         "deliveryMail": "By email",

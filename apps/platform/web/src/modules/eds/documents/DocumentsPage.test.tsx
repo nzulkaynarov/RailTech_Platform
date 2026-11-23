@@ -61,6 +61,17 @@ describe("EDS · Документы: список", () => {
     expect(screen.queryByText("Запрос цен на рельсы Р65")).toBeNull();
   });
 
+  it("ЕВ-3а: «Шаблоны» ушли из меню «Документов» — ссылка на экране только у директора (право на шаблоны компании)", async () => {
+    await openDocuments("director@demo.example");
+    expect(await screen.findByRole("link", { name: "Шаблоны документов" })).toHaveAttribute(
+      "href",
+      "/admin/templates",
+    );
+    cleanup();
+    await openDocuments("manager@demo.example");
+    expect(screen.queryByRole("link", { name: "Шаблоны документов" })).toBeNull();
+  });
+
   it("менеджер с доступом к входящим: по умолчанию реестр «Все» — чужие документы, письма и КП; письма и КП открываются своей карточкой", async () => {
     await openDocuments("manager@demo.example");
 

@@ -205,6 +205,7 @@ SPECS: dict[str, Spec] = {
             ("Банки", "Banklar", "Banks"),
             attrs=(Attr("swift", "text", ("SWIFT", "SWIFT", "SWIFT"), 11),),
             code_upper=False,
+            source="cbu",
         ),
         Spec(
             "delivery-basis",
@@ -480,13 +481,13 @@ def update(kind: str, code: str, data: dict[str, Any]) -> dict[str, Any]:
 
 
 def sync(kind: str) -> dict[str, Any]:
-    """«Обновить» список с источником: ставит в очередь задачу расписания (курсы и список валют ЦБ)."""
+    """«Обновить» список с источником: ставит в очередь задачу расписания (валюты и курсы ЦБ; банки — файл ЦБ)."""
     spec = spec_of(kind)
     if spec.source is None:
         raise DictionaryError(404, "NOT_FOUND", "У этого справочника нет источника.")
-    from .tasks import refresh_exchange_rates
+    from .tasks import refresh_bank_codes, refresh_exchange_rates
 
-    refresh_exchange_rates.delay()
+    (refresh_bank_codes if spec.model is Bank else refresh_exchange_rates).delay()
     return {"queued": True}
 
 

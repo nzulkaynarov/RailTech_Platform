@@ -327,6 +327,14 @@
       "network": "No connection to the server — check your internet and try again.",
       "unknown": "Could not send the request — try again later or message us in Telegram.",
       "tokenUnavailable": "The form is unavailable right now. Try again or message us in Telegram."
+    },
+    "next": {
+      "number": "Request number",
+      "withinMinutes_one": "{{count}} minute",
+      "withinMinutes_other": "{{count}} minutes",
+      "withinHours_one": "{{count}} hour",
+      "withinHours_other": "{{count}} hours",
+      "text": "A manager will reply by phone or e-mail within {{within}} during business hours. If you prefer chatting, message us in Telegram."
     }
   },
   "manager": {
@@ -461,6 +469,9 @@
       "summaryHint": "Describe the task in your own words: what, how much and by when. Up to 5000 characters.",
       "summaryRequired": "Describe what you need — at least one sentence.",
       "prefillSummary": "I need a catalog item: {{name}}",
+      "draftOffer": "You have a draft from {{date}}",
+      "draftResume": "Continue",
+      "draftRestart": "Start over",
       "lines": "Items or stages",
       "linesHint": "List items or work in free text — exact part numbers are not required. Empty lines are not sent.",
       "lineText": "Line {{n}}",
@@ -1394,7 +1405,9 @@
     "BANK_CODE_INVALID": "Invalid bank code (MFO).",
     "BANK_SWIFT_INVALID": "Invalid SWIFT/BIC or it belongs to another country.",
     "BANK_HOLDER_LATIN_INVALID": "The Latin holder name has characters SWIFT does not allow.",
-    "BANK_INTERMEDIARY_INVALID": "Invalid intermediary bank SWIFT."
+    "BANK_INTERMEDIARY_INVALID": "Invalid intermediary bank SWIFT.",
+    "LEGAL_ACCEPTANCE_REQUIRED": "Accept the terms of use and the policy first.",
+    "LEGAL_EDITION_CHANGED": "A new edition has been published — the text is updated. Read and accept it."
   },
   "widgets": {
     "actionRequired": {
@@ -1815,5 +1828,37 @@
     "partnerContractDesc": "Review conditions and agree to terms",
     "inviteTeam": "Invite colleagues",
     "inviteTeamDesc": "Add team members for collaboration"
+  },
+  "maintenance": {
+    "soon": "Cabinet update at {{time}} — work will be interrupted for {{duration}}. Save your changes.",
+    "soonUrgent": "Urgent Cabinet fix at {{time}} — work will be interrupted for {{duration}}. Save your changes.",
+    "running": "Update in progress — the page will refresh by itself in a couple of minutes.",
+    "runningUrgent": "Urgent fix in progress — the page will refresh by itself in a couple of minutes.",
+    "minutes_one": "{{range}} minute",
+    "minutes_other": "{{range}} minutes",
+    "hide": "Hide"
+  },
+  "legal": {
+    "title": "Terms for using the cabinet",
+    "intro": "To continue, read and accept the personal data processing policy and the terms of use of the cabinet (the offer). You do this once — we ask again only when a new edition is published.",
+    "documents": "Documents",
+    "tabs": {
+      "terms": "Terms of use",
+      "privacy": "Personal data policy"
+    },
+    "edition": "Edition of {{date}}",
+    "consent": "By pressing “I accept” you confirm that you have read both documents, accept the terms of use and consent to the processing of personal data under the policy. We record the edition, date and time.",
+    "accept": "I accept",
+    "accepting": "Saving…",
+    "decline": "I do not accept",
+    "declined": {
+      "title": "The cabinet stays closed until you accept",
+      "text": "We cannot open the cabinet until the terms and the policy are accepted. When you are ready, sign in again and accept them; you can ask your manager any questions.",
+      "back": "Back to the text",
+      "loginNotice": "You did not accept the terms and the policy, so you have been signed out. To work in the cabinet, sign in again and accept them."
+    },
+    "policyLink": "Personal data processing policy",
+    "notPublished": "The policy has not been published yet.",
+    "backToLogin": "Back to sign in"
   }
 }

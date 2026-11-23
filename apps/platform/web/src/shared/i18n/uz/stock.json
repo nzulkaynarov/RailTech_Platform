@@ -212,7 +212,6 @@
     },
     "overdueBanner": "{{date}} gacha kutilgan, tovar olinmagan — {{count}} kun kechikish. Hamkor bilan bog‘laning va kutilayotgan sanani yangilang.",
     "cancelledBanner": "Buyurtma bekor qilingan. Sabab: {{reason}}",
-    "details": "Buyurtma rekvizitlari",
     "supplier": "Hamkor",
     "email": "Hamkor pochtasi",
     "expected": "Kutilayotgan sana",
@@ -224,7 +223,6 @@
     "partnerNote": "Hamkorga izoh",
     "linesTitle": "Buyurtma tarkibi",
     "receiptsTitle": "Qabul qilishlar",
-    "logTitle": "Buyurtma jurnali",
     "notFound": {
       "title": "Buyurtma yo‘q",
       "text": "Bunday raqamli buyurtma yo‘q yoki rolingizga ochiq emas.",

@@ -523,7 +523,7 @@ async def test_two_versions_of_one_quote_give_one_hit_and_returned_opens_the_dra
     assert [h["number"] for h in hits] == ["КП-2026/118", "КП-2026/119"]
     # возвращённое КП — в «Черновик» на «Одобрение»; одобренное (отправленное) — в «Исходящие»
     assert hits[0]["path"] == "/eds/drafts/%D0%9A%D0%9F-2026%2F118?panel=open&tab=approve"
-    assert hits[1]["path"].startswith("/eds/outbox/")
+    assert hits[1]["path"].startswith("/eds/drafts/")
 
 
 async def test_memo_row_kind_follows_the_permission_of_the_current_step(

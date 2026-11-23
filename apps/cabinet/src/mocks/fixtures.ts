@@ -1283,6 +1283,68 @@ export function meFor(
   };
 }
 
+// --- Оферта и политика Кабинета (ДВ-5) ------------------------------------------------------------
+
+const legalText = (ru: string, uz: string, en: string): Schemas["LegalLangText"] => ({ ru, uz, en });
+
+/** Раздел-образец: два абзаца и список — как в настоящих текстах (простой текст, пункты «— »). */
+function legalSection(n: number, ru: string, uz: string, en: string): Schemas["LegalSection"] {
+  return {
+    title: legalText(`${n}. ${ru}`, `${n}. ${uz}`, `${n}. ${en}`),
+    body: legalText(
+      `Настоящий раздел описывает порядок: «${ru.toLowerCase()}». Оператор действует в пределах закона и обязательств перед клиентом.\nУсловия применяются к каждому контакту организации, получившему приглашение в Кабинет.\n— запись о действии хранится в журнале;\n— контакт может обратиться к менеджеру в любой момент;\n— изменения вступают в силу с новой редакции.`,
+      `Ushbu bölim «${uz.toLowerCase()}» tartibini bayon qiladi. Operator qonun va mijoz oldidagi majburiyatlar doirasida harakat qiladi.\nŞartlar Kabinetga taklif olgan taşkilotning har bir kontaktiga tatbiq etiladi.\n— harakat haqidagi yozuv jurnalda saqlanadi;\n— kontakt istalgan vaqtda menejerga murojaat qila oladi;\n— özgartişlar yangi tahrir bilan kuçga kiradi.`,
+      `This section describes the procedure: “${en.toLowerCase()}”. The operator acts within the law and its obligations to the client.\nThe terms apply to every contact of the organisation that received an invitation to the Cabinet.\n— a record of the action is kept in the log;\n— the contact can reach the manager at any time;\n— changes take effect with a new edition.`,
+    ),
+  };
+}
+
+function legalEdition(id: number, kind: "privacy" | "terms"): Schemas["LegalEdition"] {
+  const privacy = kind === "privacy";
+  return {
+    id,
+    kind,
+    label: "2026-11-23",
+    published_at: "2026-11-23T09:00:00Z",
+    title: privacy
+      ? legalText(
+          "Политика обработки персональных данных в Кабинете",
+          "Kabinetda şaxsga doir maʼlumotlarga işlov beriş siyosati",
+          "Personal data processing policy for the Cabinet",
+        )
+      : legalText("Условия использования Кабинета (оферта)", "Kabinetdan foydalaniş şartlari (oferta)", "Cabinet terms of use (offer)"),
+    lead: legalText(
+      "Как RailTech собирает, использует, хранит и защищает данные представителей клиентов и партнёров в Кабинете.",
+      "RailTech Kabinetda mijozlar va hamkorlar vakillarining maʼlumotlarini qanday yiğişi, ulardan foydalanişi va himoya qilişi.",
+      "How RailTech collects, uses, stores and protects data of client and partner representatives in the Cabinet.",
+    ),
+    sections: privacy
+      ? [
+          legalSection(1, "Общие положения", "Umumiy qoidalar", "General provisions"),
+          legalSection(2, "Какие данные мы обрабатываем", "Qanday maʼlumotlarga işlov beramiz", "What data we process"),
+          legalSection(3, "Цели и основания", "Maqsad va asoslar", "Purposes and grounds"),
+          legalSection(4, "Согласие и его отзыв", "Rozilik va uni chaqirib olish", "Consent and its withdrawal"),
+          legalSection(5, "Передача данных", "Maʼlumotlarni uzatiş", "Data transfers"),
+          legalSection(6, "Права субъекта данных", "Maʼlumotlar subyektining huquqlari", "Data subject rights"),
+        ]
+      : [
+          legalSection(1, "Предмет и акцепт", "Predmet va aksept", "Subject and acceptance"),
+          legalSection(2, "Доступ по приглашению", "Taklif orqali kiriş", "Access by invitation"),
+          legalSection(3, "Действия в Кабинете", "Kabinetdagi harakatlar", "Actions in the Cabinet"),
+          legalSection(4, "Код как подпись", "Kod imzo sifatida", "The code as a signature"),
+          legalSection(5, "Ответственность", "Javobgarlik", "Liability"),
+          legalSection(6, "Новая редакция", "Yangi tahrir", "New edition"),
+        ],
+  };
+}
+
+export const LEGAL_PRIVACY_ID = 21;
+export const LEGAL_TERMS_ID = 22;
+export const legalEditions = (): Schemas["LegalEdition"][] => [
+  legalEdition(LEGAL_TERMS_ID, "terms"),
+  legalEdition(LEGAL_PRIVACY_ID, "privacy"),
+];
+
 // --- Telegram контакта (NOTIFY-1, ADR-0023 п. 3) -------------------------------------------------
 
 export interface TelegramMock {

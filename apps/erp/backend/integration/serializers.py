@@ -288,7 +288,9 @@ class AiUsageRowSerializer(serializers.Serializer):
 class ExternalServiceSerializer(serializers.Serializer):
     """`ExternalService` контракта (M3-ERP-06): состояние внешнего сервиса ERP."""
 
-    code = serializers.ChoiceField(choices=["cbu_rates", "customs_tariff", "mail", "litellm", "s3", "sentry"])
+    code = serializers.ChoiceField(
+        choices=["cbu_rates", "customs_tariff", "cbu_banks", "mail", "litellm", "s3", "sentry"]
+    )
     status = serializers.ChoiceField(choices=["ok", "degraded", "fail", "unknown", "disabled"])
     enabled = serializers.BooleanField()
     switchable = serializers.BooleanField()

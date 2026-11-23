@@ -8,6 +8,7 @@ from rest_framework import authentication, exceptions
 
 from .models import PortalSession
 from .services.access import access_from_row, cabinet_company_q, role_annotations
+from .services.legal import pending_annotation
 from .services.tokens import hash_token
 
 
@@ -19,6 +20,7 @@ class PortalAuthentication(authentication.BaseAuthentication):
       - `request.portal_session`: PortalSession
       - `request.portal_contact`: Contact
       - `request.portal_company`: Company
+      - `request.portal_legal_pending`: у контакта есть действующая редакция оферты или политики без его акцепта (ДВ-5)
       - `request.portal_roles`, `request.portal_modules`: роли (`client`, `partner`) и модули компании сессии — по модулю
         эндпоинт решает, кого пустить (`portal.permissions.HasPortalModule`); читаются тем же запросом, что и сессия
     Возвращает (AnonymousUser(), session).
@@ -42,7 +44,7 @@ class PortalAuthentication(authentication.BaseAuthentication):
         session = (
             PortalSession.objects.filter(token_hash=hash_token(token))
             .filter(cabinet_company_q("company"), active_contact_q("contact"), company_id=F("contact__company_id"))
-            .annotate(**role_annotations("company"))
+            .annotate(**role_annotations("company"), legal_pending=pending_annotation())
             .select_related("contact", "company")
             .first()
         )
@@ -54,5 +56,7 @@ class PortalAuthentication(authentication.BaseAuthentication):
         request.portal_contact = session.contact
         request.portal_company = session.company
         request.portal_roles, request.portal_modules = access_from_row(session)
+        # ДВ-5: нет акцепта действующей оферты/политики — кабинет закрыт (`IsPortalAuthenticated`), открыты только профиль и документы
+        request.portal_legal_pending = bool(session.legal_pending)
 
         return (AnonymousUser(), session)

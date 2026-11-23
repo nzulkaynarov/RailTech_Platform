@@ -43,6 +43,7 @@ describe("i18n", () => {
     "payments",
     "help",
     "articles",
+    "legal",
     "signing",
     "zones",
     "stock",

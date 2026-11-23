@@ -25,8 +25,10 @@ import { adminRolesHandlers } from "./adminRoles";
 import { botKbHandlers } from "./botKb";
 import { calendarLinkHandlers } from "./calendarLink";
 import { companyArticlesHandlers } from "./companyArticlesHandlers";
+import { legalHandlers } from "./legalHandlers";
 import { callNoteHandlers, crmLeadsHandlers } from "./crmLeads";
 import { crmMessagesHandlers } from "./crmMessages";
+import { maintenanceHandlers } from "./maintenance";
 import { edsApprovalsHandlers } from "./edsApprovals";
 import { edsProjectsHandlers } from "./edsProjects";
 import { erpCatalogHandlers } from "./erpCatalog";
@@ -99,6 +101,8 @@ const sessionExpired = () => failure(401, "SESSION_EXPIRED", "Сессия ис�
  * `wrong-password`; адреса `disabled@`, `norole@`, `busy@`, `down@` дают ошибки входа.
  */
 export const handlers = [
+  // Раньше всех, включая «калитку» ниже: `/maintenance.json` лежит вне `/api/v1/`.
+  ...maintenanceHandlers,
   // Раньше `/eds/payments/:id`: иначе путь очереди поймал бы карточку счёта.
   ...edsBankChangesHandlers,
   // Сгенерированные orval обработчики слушают `*/queue`, `*/me`, `*/health`…: без этой «калитки» они перехватили бы и
@@ -228,6 +232,7 @@ export const handlers = [
   ...mailTypesHandlers, // MAIL-TYPES: правила отправителя
   ...inboundMailHandlers, // W18A-P2: входящая почта общего ящика и приём в «Подключениях»
   ...companyArticlesHandlers,
+  ...legalHandlers,
   // Раньше «Создать документ»: вложения служебок к оплате (счёт партнёра, платёжка) отдаются здесь, остальное — дальше.
   ...edsPaymentsHandlers,
   ...edsDocumentsHandlers,

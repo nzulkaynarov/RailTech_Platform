@@ -191,15 +191,6 @@ export const adminRolesHandlers = [
     return HttpResponse.json(toRole(role, 0), { status: 201 });
   }),
 
-  http.get("*/admin/roles/:id", ({ params }) => {
-    const denied = guard("read");
-    if (denied) return denied;
-    const role = readRoles().find((r) => r.id === params["id"]);
-    return role
-      ? HttpResponse.json(toRole(role, holders(role.id)))
-      : failure(404, "NOT_FOUND", "Не найдено.", "crm");
-  }),
-
   http.patch("*/admin/roles/:id", async ({ request, params }) => {
     const denied = guard("full");
     if (denied) return denied;

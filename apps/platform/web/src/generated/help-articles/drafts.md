@@ -1,8 +1,8 @@
 ---
 title: КП на одобрение
-sections: eds.drafts, eds.outbox
+sections: eds.drafts
 order: 50
-screens: [/eds/drafts, /eds/outbox]
+screens: [/eds/drafts]
 ---
 Когда расчёт готов и собраны все визы, коммерческое предложение появляется в «Документы · КП на одобрение». Клиенту оно уходит только после одобрения директора.
 

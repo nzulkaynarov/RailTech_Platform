@@ -110,6 +110,20 @@ async def test_unknown_employee_is_404(web: Web, reset: CrmReset, check: Contrac
     assert response.json()["code"] == "NOT_FOUND"
 
 
+async def test_too_many_links_is_429_not_a_generic_error(
+    web: Web, reset: CrmReset, check: ContractChecker
+) -> None:
+    """ДВ-7: больше трёх ссылок в час на сотрудника — CRM 429, а не «сбой»."""
+    reset.response = error(429, "rate_limited", "rate_limited")
+    await login_as(web, "ADMIN")
+
+    response = await web.send("POST", "/api/v1/admin/users/11/reset-password/email")
+
+    assert response.status_code == 429
+    check(response, "/admin/users/{id}/reset-password/email", "post")
+    assert response.json()["code"] == "TOO_MANY_REQUESTS"
+
+
 async def test_crm_unavailable_is_503(web: Web, reset: CrmReset, check: ContractChecker) -> None:
     await login_as(web, "ADMIN")
     reset.down = True

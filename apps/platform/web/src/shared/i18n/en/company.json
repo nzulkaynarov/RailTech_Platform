@@ -27,8 +27,7 @@
     "charges": "Charge items",
     "templates": "Templates",
     "reference": "Reference lists",
-    "categories": "Categories",
-    "platform": "Platform"
+    "categories": "Categories"
   },
   "kinds": {
     "request": "Request",
@@ -131,6 +130,11 @@
     "sections": {
       "company": "Company",
       "contacts": "Contacts"
+    },
+    "needs": {
+      "innRequired": "Enter the TIN — invoices need it",
+      "addressRequired": "Enter the legal address — invoices need it",
+      "contactRequired": "Enter a phone or an email"
     }
   },
   "brand": {

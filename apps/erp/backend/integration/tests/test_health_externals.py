@@ -52,11 +52,12 @@ def ago(**kwargs) -> datetime.datetime:
 # ── Общая форма ─────────────────────────────────────────────────────────────────────────────────────
 
 
-def test_health_lists_the_five_services_in_contract_order_without_mail(client):
+def test_health_lists_the_six_services_in_contract_order_without_mail(client):
     body = client.get(HEALTH).json()
     assert [row["code"] for row in body["externals"]] == [
         "cbu_rates",
         "customs_tariff",
+        "cbu_banks",
         "litellm",
         "s3",
         "sentry",
@@ -102,7 +103,7 @@ def test_health_without_externals_support_still_answers_when_building_fails(clie
     monkeypatch.setitem(__import__("integration.services.externals", fromlist=["_BUILDERS"])._BUILDERS, "s3", broken)
     rows = externals(client)
     assert rows["s3"]["status"] == "unknown"
-    assert rows["cbu_rates"]["status"] == "unknown" and len(rows) == 5
+    assert rows["cbu_rates"]["status"] == "unknown" and len(rows) == 6
 
 
 # ── Курсы ЦБ ────────────────────────────────────────────────────────────────────────────────────────
@@ -432,3 +433,24 @@ def test_status_rules():
     assert derive_status(Facts(True, None, now - h(hours=1), "x", 0, 1), **on) == "fail"
     assert derive_status(Facts(True, now - h(days=4), None, None, 0, 0, h(days=3)), **on) == "degraded"
     assert derive_status(Facts(True, now - h(days=2), None, None, 0, 0, h(days=3)), **on) == "ok"
+
+
+# ── Справочник банков из файла ЦБ ──────────────────────────────────────────────────────────────────
+
+
+def test_cbu_banks_status_follows_its_own_monthly_threshold_and_not_the_rates(client):
+    ext.record_success("cbu_banks", at=ago(days=20))
+    assert (
+        externals(client)["cbu_banks"]["status"] == "ok"
+    ), "раз в месяц: 20 дней — не просрочка (у курсов порог 3 дня)"
+
+    ext.record_failure("cbu_banks", RuntimeError("на странице ЦБ нет ссылки"), at=ago(hours=1))
+    row = externals(client)["cbu_banks"]
+    assert row["status"] == "fail" and "нет ссылки" in row["last_error"]
+    assert externals(client)["cbu_rates"]["status"] == "unknown", "отметка банков не трогает состояние курсов"
+
+    from django.core.cache import cache
+
+    cache.clear()
+    ext.record_success("cbu_banks", at=ago(days=60))
+    assert externals(client)["cbu_banks"]["status"] == "degraded"

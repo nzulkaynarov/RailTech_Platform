@@ -47,6 +47,8 @@ export const keys = {
   verify: (code: string) => ['verify', code] as const,
   partnerApplication: ['company', 'partner-application'] as const,
   securityLog: ['company', 'security-log'] as const,
+  legal: ['legal'] as const,
+  legalPolicy: ['legal', 'policy'] as const,
 };
 
 /** Список раздела грузится, только если у сессии есть его модуль (партнёру клиентские разделы закрыты, ADR-0022). */
@@ -423,3 +425,28 @@ export const useDeletePartnerProductDocument = () =>
       portal.deletePartnerProductDocument(productId, docId),
     [keys.partnerProducts],
   );
+
+// --- Оферта и политика Кабинета (ДВ-5) --------------------------------------------------------
+
+/** Действующие редакции для экрана принятия; ключ не под `['me']`, но выход стирает и его. */
+export const useLegal = ({ enabled = true }: { enabled?: boolean } = {}) =>
+  useQuery({ queryKey: keys.legal, queryFn: portal.getLegal, enabled, staleTime: 0, retry: false });
+
+/** Политика для ссылки на экране входа: не опубликована или запрос не удался — ссылки нет. */
+export const useLegalPolicy = () =>
+  useQuery({ queryKey: keys.legalPolicy, queryFn: portal.getLegalPolicy, staleTime: 10 * 60_000, retry: false });
+
+/** Принять действующие редакции; после — `['me'].legal_pending` гаснет, и кабинет открывается. */
+export function useAcceptLegal() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ editionIds, language }: { editionIds: number[]; language: portal.LegalLang }) =>
+      portal.acceptLegal(editionIds, language),
+    onSuccess: (result) => {
+      queryClient.setQueryData(keys.legal, result);
+      void queryClient.invalidateQueries({ queryKey: ['me'] });
+    },
+    // 409: за время чтения вышла новая редакция — экран перечитывает действующие
+    onError: () => void queryClient.invalidateQueries({ queryKey: keys.legal }),
+  });
+}

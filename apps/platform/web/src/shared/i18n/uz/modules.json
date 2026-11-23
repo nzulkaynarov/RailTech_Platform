@@ -4,7 +4,6 @@
     "title": "Bosh sahifa",
     "sections": {
       "queue": "Vazifalar",
-      "projects": "Loyihalar",
       "summary": "Xulosa"
     },
     "queue": {
@@ -204,6 +203,9 @@
           "exchange_rate": {
             "manual": "Valyuta kursi qo‘lda kiritildi",
             "auto_skipped": "Markaziy bank kursi qo‘llanmadi: qo‘lda kiritilgan kurs amal qiladi"
+          },
+          "portal_legal": {
+            "published": "Kabinet hujjatining yangi tahriri e’lon qilindi"
           }
         }
       }
@@ -217,7 +219,6 @@
       "byDue": "Muddat bo‘yicha vazifalar",
       "stuck": "Muddati o‘tgan",
       "noStuck": "Muddati o‘tgan vazifalar yo‘q",
-      "noData": "Ma’lumotlar shu yerda paydo bo‘ladi",
       "loadError": "Xulosani yuklab bo‘lmadi",
       "retry": "Qayta urinish",
       "due": {
@@ -225,11 +226,6 @@
         "today": "Bugun",
         "tomorrow": "Ertaga",
         "later": "Keyinroq"
-      },
-      "blocks": {
-        "requests": "Bosqichlar bo‘yicha arizalar",
-        "profit": "Loyihalar foydasi",
-        "targets": "12 oylik maqsadlar"
       }
     }
   },
@@ -237,18 +233,14 @@
     "name": "Kontaktlar",
     "title": "Kontaktlar",
     "sections": {
-      "messages": "Javob kutmoqda",
       "leads": "Lidlar",
       "clients": "Kontragentlar",
-      "requests": "Arizalar",
-      "channels": "Aloqa kanallari",
       "kb": "Bilimlar bazasi"
     },
     "action": "Ariza yaratish",
     "nav": {
       "leads": "Lidlar",
       "clients": "Kontragentlar",
-      "mail": "Pochta",
       "kb": "Bilimlar bazasi"
     }
   },
@@ -258,7 +250,6 @@
     "sections": {
       "documents": "Barcha hujjatlar",
       "inbox": "Kiruvchi",
-      "outbox": "Chiquvchi",
       "projects": "Loyihalar",
       "drafts": "Tasdiqlash uchun TT",
       "approvals": "Kelishuvda",
@@ -272,10 +263,10 @@
     "action": "Hujjat yaratish",
     "nav": {
       "inbox": "Kiruvchi",
+      "mail": "Pochta",
       "outbox": "Chiquvchi",
       "internal": "Ichki",
-      "archive": "Arxiv",
-      "templates": "Shablonlar"
+      "archive": "Arxiv"
     }
   },
   "erp": {
@@ -307,15 +298,12 @@
     "title": "Organayzer",
     "sections": {
       "all": "Chatlar",
-      "internal": "Jamoa",
-      "external": "Mijozlar bilan",
       "contacts": "Odamlar",
       "calendar": "Taqvim"
     },
     "action": "Chat yaratish",
     "nav": {
       "calendar": "Taqvim",
-      "chats": "Chatlar",
       "people": "Odamlar"
     },
     "calendar": {
@@ -387,6 +375,7 @@
       "taxes": "Soliqlar va valyutalar",
       "sales": "Sotuvlar",
       "articles": "Kompaniya maqolalari",
+      "legal": "Oferta va siyosat",
       "telegram": "Telegram",
       "mail": "Pochta",
       "forms": "Sayt shakllari",
@@ -682,7 +671,8 @@
         "openCard": "Kartochkani ochish",
         "notSentUnavailable": "Xodim ro'yxatga «Taklif qilingan» holatida qo'shildi, lekin CRM javob bermadi va xat yuborilmadi. Keyinroq kartochkadagi «Taklifni qayta yuborish» tugmasi bilan takrorlang.",
         "resend": "Taklifni qayta yuborish",
-        "resendHint": "Yangi vaqtinchalik parolli yangi xat yuboriladi; avvalgisi amal qilmay qoladi.",
+        "resendHint": "72 soatlik “Parolni örnating” havolasi bilan yangi xat yuboriladi; avvalgi havola va parol amal qilmaydi.",
+        "tooMany": "Bu xodim uçun bir soatda havolalar juda köp. Keyinroq takrorlang.",
         "resendNotSent": "Xat yuborilmadi: pochta ulanmagan yoki mavjud emas. Uni Sozlamalar · Ulanishlar bo‘limida ulang va takrorlang.",
         "delivery": "Kirishni qanday berish",
         "deliveryMail": "Pochtaga xat bilan",
