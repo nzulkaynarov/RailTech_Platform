@@ -218,6 +218,30 @@ async def test_default_tab_is_awaiting_and_a_bad_tab_is_422_before_erp(
     assert len(fake.erp_made("GET")) == 1
 
 
+@pytest.mark.parametrize("sort", ["number", "-client", "amount", "-issued", "due", "-status"])
+async def test_board_sends_the_allow_listed_order_to_erp(
+    web: Web, fake: PaymentsFake, check: ContractChecker, sort: str
+) -> None:
+    """Х-15б: порядок щелчком по шапке уходит ERP как `ordering`; без него параметра нет."""
+    await web.login(["ACCOUNTANT"])
+    response = await web.client.get(f"{BASE}/payments", params={"tab": "all", "sort": sort})
+    check(response, "/eds/payments", "get")
+    [call] = fake.erp_made("GET")
+    assert call.url.params["ordering"] == sort
+    fake.erp_requests.clear()
+    await web.client.get(f"{BASE}/payments", params={"tab": "all"})
+    [call] = fake.erp_made("GET")
+    assert "ordering" not in call.url.params
+
+
+async def test_board_rejects_an_order_outside_the_allow_list(web: Web, fake: PaymentsFake) -> None:
+    await web.login(["ACCOUNTANT"])
+    for sort in ("deal__company__name", "-created_at", "id", "number;x", "--number", "NUMBER"):
+        response = await web.client.get(f"{BASE}/payments", params={"sort": sort})
+        assert response.status_code == 422, sort
+    assert fake.erp_made("GET") == []
+
+
 async def test_eds_down_keeps_the_board_without_the_memo_number(
     web: Web, fake: PaymentsFake, check: ContractChecker
 ) -> None:
