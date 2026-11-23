@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform ERP — Portal API (Cabinet → ERP)
-  version: 0.20.0
+  version: 0.21.0
   summary: Пространство `/api/portal/v1/` — вызывает Cabinet SPA от имени клиента.
   description: |
     Контракт по `docs/architecture/CONTRACTS.md` §4 и ADR-0004 (Cabinet без бэкенда). Версия 0 (M0-INF-02):
@@ -75,6 +75,8 @@ tags:
   - name: auth
     description: Вход по Telegram initData или magic-link; регистрации «с улицы» нет
   - name: me
+  - name: legal
+    description: Оферта и политика Кабинета (ДВ-5) — акцепт при первом входе и при каждой новой редакции
   - name: requests
   - name: quotes
   - name: contracts
@@ -435,6 +437,87 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PortalOperator'
+
+  /legal:
+    get:
+      tags: [legal]
+      operationId: getLegal
+      summary: Действующие оферта и политика Кабинета и нужен ли акцепт контакту
+      description: |
+        ДВ-5. Действующие редакции (по одной на вид: `privacy`, `terms`) с текстом на трёх языках; подстановки `{{company.*}}`
+        уже заполнены реквизитами компании. `needs_acceptance` — у контакта сессии есть действующая редакция без его акцепта.
+        Пока ни одна редакция не опубликована, `editions` пуст и кабинет открыт без акцепта. Открыт и сессии без акцепта.
+      responses:
+        '200':
+          description: Действующие редакции
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LegalCurrent'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /legal/accept:
+    post:
+      tags: [legal]
+      operationId: acceptLegal
+      summary: Принять действующие оферту и политику
+      description: |
+        Явный акцепт контакта: записываются редакция, дата и время, контакт, организация, язык показанного текста, адрес и
+        устройство. `edition_ids` — редакции, которые контакт видел на экране; если за это время вышла новая, ответ 409
+        `LEGAL_EDITION_CHANGED` — экран перечитывает `GET /legal`. Повтор безопасен. Право «действовать» не нужно: принять
+        может любой контакт. До акцепта все остальные эндпоинты кабинета (кроме `/me` и `/legal`) отвечают 403
+        `LEGAL_ACCEPTANCE_REQUIRED`.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LegalAcceptRequest'
+      responses:
+        '200':
+          description: Акцепт записан; состояние после него
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LegalCurrent'
+        '400':
+          $ref: '#/components/responses/IdempotencyKeyRequired'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          description: Вышла новая редакция (`LEGAL_EDITION_CHANGED`) — перечитайте `GET /legal`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /legal/policy:
+    get:
+      tags: [legal]
+      operationId: getLegalPolicy
+      summary: Действующая политика обработки персональных данных (до входа)
+      description: >-
+        Публичный текст политики для ссылки на экране входа (ДВ-5). `policy: null` — редакция ещё не опубликована, ссылки
+        нет. Других данных нет.
+      security: []
+      responses:
+        '200':
+          description: Действующая политика или `null`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LegalPolicy'
 
   /me:
     get:
@@ -3370,6 +3453,11 @@ components:
         - OFFER_EXPIRED
         - IMPORT_FAILED
         - CONSENT_REQUIRED
+        - LEGAL_ACCEPTANCE_REQUIRED
+        - LEGAL_EDITION_CHANGED
+        - LEGAL_DRAFT_EXISTS
+        - LEGAL_EDITION_PUBLISHED
+        - LEGAL_LABEL_TAKEN
         - HONEYPOT_DETECTED
         - ALREADY_PARTNER
         - APPLICATION_EXISTS
@@ -4980,6 +5068,83 @@ components:
           description: Скан подписанного акта из `POST /uploads` (PDF или изображение, ≤ 10 МБ)
       additionalProperties: false
 
+    LegalLangText:
+      type: object
+      description: Текст на трёх языках
+      properties:
+        ru: {type: string}
+        uz: {type: string}
+        en: {type: string}
+      required: [ru, uz, en]
+
+    LegalSection:
+      type: object
+      properties:
+        title:
+          $ref: '#/components/schemas/LegalLangText'
+        body:
+          $ref: '#/components/schemas/LegalLangText'
+      required: [title, body]
+
+    LegalEdition:
+      type: object
+      description: Редакция документа Кабинета с заполненными подстановками реквизитов компании
+      properties:
+        id: {type: integer}
+        kind:
+          type: string
+          enum: [privacy, terms]
+          description: '`privacy` — политика обработки персональных данных, `terms` — условия использования (оферта)'
+        label: {type: string, description: 'Название редакции, например `2026-11-23`'}
+        published_at: {type: string, format: date-time}
+        accepted:
+          type: boolean
+          description: Контакт сессии уже принял эту редакцию (нет в публичной политике)
+        title:
+          $ref: '#/components/schemas/LegalLangText'
+        lead:
+          $ref: '#/components/schemas/LegalLangText'
+        sections:
+          type: array
+          items:
+            $ref: '#/components/schemas/LegalSection'
+      required: [id, kind, label, title, lead, sections]
+
+    LegalCurrent:
+      type: object
+      properties:
+        needs_acceptance: {type: boolean}
+        editions:
+          type: array
+          items:
+            $ref: '#/components/schemas/LegalEdition'
+      required: [needs_acceptance, editions]
+
+    LegalAcceptRequest:
+      type: object
+      properties:
+        edition_ids:
+          type: array
+          minItems: 1
+          maxItems: 2
+          items: {type: integer, minimum: 1}
+          description: Редакции, которые контакт видел на экране
+        language:
+          type: string
+          enum: [ru, uz, en]
+          description: Язык, на котором контакт читал текст
+      required: [edition_ids, language]
+      additionalProperties: false
+
+    LegalPolicy:
+      type: object
+      properties:
+        policy:
+          oneOf:
+            - $ref: '#/components/schemas/LegalEdition'
+            - type: 'null'
+      required: [policy]
+
     Me:
       type: object
       properties:
@@ -5014,6 +5179,9 @@ components:
           type: integer
           minimum: 0
           description: Непрочитанные контактом ответы менеджера в чате кабинета (бейдж «Сообщения»); 0 — нет или модуля нет
+        legal_pending:
+          type: boolean
+          description: У контакта есть действующая оферта или политика без его акцепта (ДВ-5) — кабинет закрыт до принятия, остальные эндпоинты отвечают 403 `LEGAL_ACCEPTANCE_REQUIRED`
       required: [contact, company, can_act, auth_method, roles, modules, unread, notifications_unread]
       x-role-modules:
         client: [catalog_requests, quotes, documents, letters, contracts, invoices, acts, deliveries, messages, company, team, profile]

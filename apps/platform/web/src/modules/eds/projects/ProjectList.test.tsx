@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { HttpResponse, http } from "msw";
 import { describe, expect, it } from "vitest";
 
@@ -101,6 +101,29 @@ describe("Проекты: список", () => {
     renderAt("/eds/projects?problems=1");
     expect(await screen.findByText("По фильтрам проектов нет")).toBeVisible();
     expect(screen.getByRole("button", { name: "Сбросить фильтры" })).toBeVisible();
+  });
+
+  it("Х-15: щелчок по «Срок» уходит серверу как sort, порядок из адреса — тоже, чужое поле не уходит", async () => {
+    const asked: (string | null)[] = [];
+    server.use(
+      http.get("*/eds/projects", ({ request }) => {
+        asked.push(new URL(request.url).searchParams.get("sort"));
+        return HttpResponse.json({ items: [], total: 0, offset: 0, limit: 25 });
+      }),
+    );
+    signIn("director@demo.example");
+    renderAt("/eds/projects?sort=-due_date");
+    await waitFor(() => {
+      expect(asked).toContain("-due_date");
+    });
+
+    asked.length = 0;
+    cleanup();
+    renderAt("/eds/projects?sort=company__name");
+    await waitFor(() => {
+      expect(asked.length).toBeGreaterThan(0);
+    });
+    expect(asked).toEqual([null]);
   });
 
   it("ERP не отвечает — слова и «Повторить», не пустая таблица", async () => {

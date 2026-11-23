@@ -1,13 +1,14 @@
-"""«Пригласить» и «Сбросить пароль по почте» (M3-CRM-08): без SMTP пароль не трогаем."""
+"""«Пригласить» и «Сбросить пароль по почте» (M3-CRM-08, ДВ-7): в письме ссылка, пароля нет."""
 
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from types import SimpleNamespace
-from typing import Any
+from typing import Any, ClassVar
 
 import pytest
 
-from app.domain.errors import ConflictError, NotFoundError, Reason
+from app.domain import password_reset as rules
+from app.domain.errors import ConflictError, NotFoundError, RateLimitedError, Reason
 from app.security.audit import Actor
 from app.security.passwords import hash_password, verify_password
 from app.services import user_invites as svc
@@ -18,9 +19,24 @@ PLATFORM = "https://platform.example.com"
 
 
 class FakeSession:
+    """Сессия без БД: считает уже выпущенные ссылки и запоминает добавленные и погашенные."""
+
+    recent = 0
+    added: ClassVar[list[Any]] = []
+    voided = 0
+
     @asynccontextmanager
     async def begin(self) -> AsyncIterator[None]:
         yield
+
+    async def scalar(self, _statement: Any) -> int:
+        return FakeSession.recent
+
+    async def execute(self, _statement: Any) -> None:
+        FakeSession.voided += 1
+
+    def add(self, row: Any) -> None:
+        FakeSession.added.append(row)
 
 
 def fake_sessions() -> Any:
@@ -63,7 +79,9 @@ def make_service(mail: FakeMail, platform_url: str | None = PLATFORM) -> svc.Use
 
 @pytest.fixture
 def user(monkeypatch: pytest.MonkeyPatch) -> Any:
+    FakeSession.recent, FakeSession.added, FakeSession.voided = 0, [], 0
     account = SimpleNamespace(
+        language="ru",
         id=7,
         email="aziz@railtech.uz",
         full_name="Азиз",
@@ -94,14 +112,14 @@ def user(monkeypatch: pytest.MonkeyPatch) -> Any:
 
 
 @pytest.mark.parametrize(
-    ("method", "template", "action"),
+    ("method", "template", "action", "ttl"),
     [
-        ("invite", "invite", "user.invite"),
-        ("reset_password_email", "password_reset", "user.reset_password_email"),
+        ("invite", "invite", "user.invite", rules.INVITE_TTL),
+        ("reset_password_email", "password_reset", "user.reset_password_email", rules.TOKEN_TTL),
     ],
 )
-async def test_rotates_password_and_sends_letter(
-    user: Any, method: str, template: str, action: str
+async def test_sends_one_time_link_and_never_a_password(
+    user: Any, method: str, template: str, action: str, ttl: Any
 ) -> None:
     mail = FakeMail()
     service = make_service(mail)
@@ -115,15 +133,37 @@ async def test_rotates_password_and_sends_letter(
         1,
     )
     context = letter["context"]
-    # Письмо ведёт в Платформу, а не в старый фронт CRM (`company.crm_base_url`), W15-H8a.
-    assert context["platform_url"] == PLATFORM
+    # Ссылка ведёт в Платформу, а не в старый фронт CRM (`company.crm_base_url`), W15-H8a.
+    assert context["set_password_url"].startswith(f"{PLATFORM}/reset-password?token=")
     assert "crm_url" not in context
     assert context["company"] == "RailTech"
-    assert verify_password(user.password_hash, context["temporary_password"])
+    # ДВ-7: пароля в письме нет — ни в значениях, ни под другим ключом.
+    assert "temporary_password" not in context
+    assert "password" not in {key.lower() for key in context}
+    # Токен: в письме открытый, в базе — только хеш; срок по виду письма; прежние ссылки погашены.
+    token = context["set_password_url"].split("token=")[1]
+    (row,) = FakeSession.added
+    assert row.token_hash == rules.hash_token(token)
+    assert token not in vars(row).values()
+    assert row.channel == "email"
+    assert row.expires_at - row.created_at == ttl
+    assert FakeSession.voided == 1
+    # Прежний пароль больше не действует, нового никто не знает; статус — «Приглашён».
     assert not verify_password(user.password_hash, OLD_PASSWORD)
     assert (user.must_change_password, user.failed_logins) == (True, 0)
     assert user.audits == [(action, 7)]
     assert user.revoked == [7]
+
+
+@pytest.mark.parametrize("method", ["invite", "reset_password_email"])
+async def test_link_requests_are_rate_limited_per_account(user: Any, method: str) -> None:
+    FakeSession.recent = rules.MAX_REQUESTS_PER_HOUR
+    mail = FakeMail()
+    with pytest.raises(RateLimitedError):
+        await getattr(make_service(mail), method)(ACTOR, 7)
+    assert mail.sent == []
+    assert FakeSession.added == []
+    assert (user.audits, user.revoked) == ([], [])
 
 
 async def test_without_smtp_password_is_untouched_and_error_is_clear(user: Any) -> None:

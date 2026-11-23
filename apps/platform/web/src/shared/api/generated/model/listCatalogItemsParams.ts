@@ -38,4 +38,9 @@ export type ListCatalogItemsParams = {
    * `waiting` — очередь проверки партнёров (PART-3): карточки на проверке и с открытыми предложениями партнёров, старые отправки сверху; в строке — `review` (срок) и `completeness`. `requests` — «Новые из заявок» (ADR-0027): черновики из строк расчёта и КП, самые спрашиваемые сверху; в строке — `demand`, `asked_in`, `asked_total`, `duplicate`, `completeness`
    */
   review?: ListCatalogItemsReview;
+  /**
+   * Порядок щелчком по шапке (Х-15): `name`, `sku`, `created_at`, `updated_at`; `-` в начале — по убыванию. Другое поле — 422. Не задан — порядок ERP по умолчанию.
+   * @pattern ^-?(name|sku|created_at|updated_at)$
+   */
+  sort?: string;
 };

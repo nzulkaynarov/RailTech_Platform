@@ -15,6 +15,7 @@ from app.api import (
     admin_bus,
     admin_company,
     admin_integrations,
+    admin_legal,
     admin_passwords,
     admin_roles,
     admin_users,
@@ -137,6 +138,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(admin_integrations.router, prefix=API_PREFIX)
     app.include_router(consoles.router, prefix=API_PREFIX)
     app.include_router(admin_company.router, prefix=API_PREFIX)
+    app.include_router(admin_legal.router, prefix=API_PREFIX)
     app.include_router(admin_bus.router, prefix=API_PREFIX)
     app.include_router(admin_bot.router, prefix=API_PREFIX)
     app.include_router(crm_kb.router, prefix=API_PREFIX)

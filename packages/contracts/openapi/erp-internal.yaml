@@ -5065,6 +5065,12 @@ paths:
           - stock
         description: Тип позиции.
       - in: query
+        name: ordering
+        schema:
+          type: string
+        description: 'Порядок общего списка (без `review`): `name`, `sku`, `created_at`, `updated_at`; `-` в начале — по убыванию.
+          Другое поле игнорируется (порядок по названию).'
+      - in: query
         name: page
         schema:
           type: integer
@@ -12872,6 +12878,12 @@ paths:
           type: integer
         description: Сдвиг
       - in: query
+        name: ordering
+        schema:
+          type: string
+        description: 'Порядок: `number`, `client`, `step`, `due_date`, `responsible`; `-` в начале — по убыванию. Другое поле
+          игнорируется (порядок от новых); пустые значения — в конце.'
+      - in: query
         name: problems
         schema:
           type: boolean
@@ -15371,7 +15383,8 @@ paths:
   /api/v1/dictionaries/{kind}/sync:
     post:
       operationId: syncDictionary
-      description: Queues the scheduled source job (currencies — the central bank list and rates). 404 — no source.
+      description: Queues the scheduled source job (currencies — the central bank list and rates; banks — the central bank
+        branch-code file). 404 — no source.
       summary: Refresh a dictionary from its open source
       parameters:
       - in: path
@@ -18661,6 +18674,315 @@ paths:
           $ref: '#/components/responses/ForbiddenResponse'
         '404':
           $ref: '#/components/responses/NotFoundResponse'
+  /api/v1/settings/legal-acceptances/:
+    get:
+      operationId: settings_legal_acceptances_list
+      description: 'Журнал акцептов: кто из контактов, когда и какую редакцию принял. Только чтение.'
+      summary: List cabinet legal acceptances
+      parameters:
+      - in: query
+        name: edition
+        schema:
+          type: integer
+        description: Только акцепты этой редакции.
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - in: query
+        name: q
+        schema:
+          type: string
+        description: Поиск по имени и адресу контакта и названию компании.
+      tags:
+      - Settings
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedDeskLegalAcceptanceList'
+          description: ''
+        '403':
+          description: Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+  /api/v1/settings/legal-editions/:
+    get:
+      operationId: settings_legal_editions_list
+      description: 'Редакции оферты и политики Кабинета по видам: статус, кто и когда опубликовал, число акцептов.'
+      summary: List cabinet legal editions
+      tags:
+      - Settings
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DeskLegalEditionList'
+          description: ''
+        '403':
+          description: Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+    post:
+      operationId: settings_legal_editions_create
+      description: Новая редакция — черновик, копия действующей. Черновик одного вида — один.
+      summary: Create a draft edition
+      tags:
+      - Settings
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeskLegalEditionCreateInRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DeskLegalEditionCreateInRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DeskLegalEditionCreateInRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeskLegalEditionDetail'
+          description: ''
+        '400':
+          description: 'Отказ проверки: код в `detail` или ошибки полей.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+        '403':
+          description: Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '409':
+          description: Черновик этого вида уже есть (`LEGAL_DRAFT_EXISTS`), редакция уже опубликована (`LEGAL_EDITION_PUBLISHED`)
+            или метка занята (`LEGAL_LABEL_TAKEN`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+  /api/v1/settings/legal-editions/{id}/:
+    get:
+      operationId: settings_legal_editions_retrieve
+      description: 'Текст редакции на трёх языках: как написан и с подстановками реквизитов компании.'
+      summary: Get a cabinet legal edition
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^\d+$
+        required: true
+      tags:
+      - Settings
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeskLegalEditionDetail'
+          description: ''
+        '403':
+          description: Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '404':
+          description: Объекта нет.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+    patch:
+      operationId: settings_legal_editions_update
+      description: Меняет метку и текст черновика. Опубликованную редакцию править нельзя — создайте новую.
+      summary: Edit a draft edition
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^\d+$
+        required: true
+      tags:
+      - Settings
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedDeskLegalEditionUpdateInRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedDeskLegalEditionUpdateInRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedDeskLegalEditionUpdateInRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeskLegalEditionDetail'
+          description: ''
+        '400':
+          description: 'Отказ проверки: код в `detail` или ошибки полей.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+        '403':
+          description: Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '404':
+          description: Объекта нет.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '409':
+          description: Черновик этого вида уже есть (`LEGAL_DRAFT_EXISTS`), редакция уже опубликована (`LEGAL_EDITION_PUBLISHED`)
+            или метка занята (`LEGAL_LABEL_TAKEN`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+    delete:
+      operationId: settings_legal_editions_destroy
+      description: Чтение — любой сотрудник бэк-офиса своей компании; мутации — `required_permissions` вьюхи (закрыты, пока
+        не объявлены).
+      summary: Discard a draft edition
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^\d+$
+        required: true
+      tags:
+      - Settings
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: Черновик удалён.
+        '403':
+          description: Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '404':
+          description: Объекта нет.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '409':
+          description: Черновик этого вида уже есть (`LEGAL_DRAFT_EXISTS`), редакция уже опубликована (`LEGAL_EDITION_PUBLISHED`)
+            или метка занята (`LEGAL_LABEL_TAKEN`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+  /api/v1/settings/legal-editions/{id}/publish/:
+    post:
+      operationId: settings_legal_editions_publish
+      description: Делает черновик действующей редакцией, прежняя действующая этого вида снимается. С этого момента все контакты
+        Кабинета принимают новую редакцию при следующем входе; открытые сессии закрываются экраном принятия.
+      summary: Publish a draft edition
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^\d+$
+        required: true
+      tags:
+      - Settings
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeskLegalEditionDetail'
+          description: ''
+        '400':
+          description: 'Отказ проверки: код в `detail` или ошибки полей.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+        '403':
+          description: Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '404':
+          description: Объекта нет.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '409':
+          description: Черновик этого вида уже есть (`LEGAL_DRAFT_EXISTS`), редакция уже опубликована (`LEGAL_EDITION_PUBLISHED`)
+            или метка занята (`LEGAL_LABEL_TAKEN`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
   /api/v1/setup/company/:
     post:
       operationId: setup_company_create
@@ -26559,6 +26881,239 @@ components:
       - unit
       - vat_effective
       - vat_rate
+    DeskLegalAcceptance:
+      type: object
+      properties:
+        id:
+          type: integer
+        accepted_at:
+          type: string
+          format: date-time
+        kind:
+          $ref: '#/components/schemas/LegalKindEnum'
+        edition:
+          type: string
+        edition_id:
+          type: integer
+        language:
+          $ref: '#/components/schemas/LanguageEnum'
+        auth_method:
+          type: string
+        contact:
+          $ref: '#/components/schemas/DeskLegalAcceptanceContact'
+        company:
+          $ref: '#/components/schemas/DeskLegalAcceptanceCompany'
+      required:
+      - accepted_at
+      - auth_method
+      - company
+      - contact
+      - edition
+      - edition_id
+      - id
+      - kind
+      - language
+    DeskLegalAcceptanceCompany:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+      required:
+      - id
+      - name
+    DeskLegalAcceptanceContact:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+      required:
+      - email
+      - id
+      - name
+    DeskLegalContent:
+      type: object
+      properties:
+        title:
+          $ref: '#/components/schemas/DeskLegalText'
+        lead:
+          $ref: '#/components/schemas/DeskLegalText'
+        sections:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeskLegalSection'
+      required:
+      - lead
+      - sections
+      - title
+    DeskLegalContentRequest:
+      type: object
+      properties:
+        title:
+          $ref: '#/components/schemas/DeskLegalTextRequest'
+        lead:
+          $ref: '#/components/schemas/DeskLegalTextRequest'
+        sections:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeskLegalSectionRequest'
+      required:
+      - lead
+      - sections
+      - title
+    DeskLegalEditionCreateInRequest:
+      type: object
+      properties:
+        kind:
+          $ref: '#/components/schemas/LegalKindEnum'
+      required:
+      - kind
+    DeskLegalEditionDetail:
+      type: object
+      properties:
+        id:
+          type: integer
+        kind:
+          $ref: '#/components/schemas/LegalKindEnum'
+        label:
+          type: string
+        status:
+          $ref: '#/components/schemas/LegalEditionStatusEnum'
+        created_at:
+          type: string
+          format: date-time
+        published_at:
+          type: string
+          format: date-time
+          nullable: true
+        published_by:
+          type: string
+        retired_at:
+          type: string
+          format: date-time
+          nullable: true
+        acceptances_count:
+          type: integer
+        content:
+          allOf:
+          - $ref: '#/components/schemas/DeskLegalContent'
+          description: Текст как написан, с подстановками `{{company.*}}`.
+        rendered:
+          allOf:
+          - $ref: '#/components/schemas/DeskLegalContent'
+          description: Тот же текст с подстановками из реквизитов компании — как увидит контакт.
+      required:
+      - acceptances_count
+      - content
+      - created_at
+      - id
+      - kind
+      - label
+      - published_at
+      - published_by
+      - rendered
+      - retired_at
+      - status
+    DeskLegalEditionList:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeskLegalEditionRow'
+      required:
+      - results
+    DeskLegalEditionRow:
+      type: object
+      properties:
+        id:
+          type: integer
+        kind:
+          $ref: '#/components/schemas/LegalKindEnum'
+        label:
+          type: string
+        status:
+          $ref: '#/components/schemas/LegalEditionStatusEnum'
+        created_at:
+          type: string
+          format: date-time
+        published_at:
+          type: string
+          format: date-time
+          nullable: true
+        published_by:
+          type: string
+        retired_at:
+          type: string
+          format: date-time
+          nullable: true
+        acceptances_count:
+          type: integer
+      required:
+      - acceptances_count
+      - created_at
+      - id
+      - kind
+      - label
+      - published_at
+      - published_by
+      - retired_at
+      - status
+    DeskLegalSection:
+      type: object
+      properties:
+        title:
+          $ref: '#/components/schemas/DeskLegalText'
+        body:
+          allOf:
+          - $ref: '#/components/schemas/DeskLegalText'
+          description: Абзацы через перевод строки; пункты списка начинаются с «— ».
+      required:
+      - body
+      - title
+    DeskLegalSectionRequest:
+      type: object
+      properties:
+        title:
+          $ref: '#/components/schemas/DeskLegalTextRequest'
+        body:
+          allOf:
+          - $ref: '#/components/schemas/DeskLegalTextRequest'
+          description: Абзацы через перевод строки; пункты списка начинаются с «— ».
+      required:
+      - body
+      - title
+    DeskLegalText:
+      type: object
+      properties:
+        ru:
+          type: string
+        uz:
+          type: string
+        en:
+          type: string
+      required:
+      - en
+      - ru
+      - uz
+    DeskLegalTextRequest:
+      type: object
+      properties:
+        ru:
+          type: string
+        uz:
+          type: string
+        en:
+          type: string
+      required:
+      - en
+      - ru
+      - uz
     DeskMergeInRequest:
       type: object
       properties:
@@ -29768,6 +30323,24 @@ components:
         * `boxed` - В рамках
         * `bold` - Контрастный
         * `striped` - Полосатый
+    LegalEditionStatusEnum:
+      enum:
+      - draft
+      - current
+      - retired
+      type: string
+      description: |-
+        * `draft` - draft
+        * `current` - current
+        * `retired` - retired
+    LegalKindEnum:
+      enum:
+      - privacy
+      - terms
+      type: string
+      description: |-
+        * `privacy` - privacy
+        * `terms` - terms
     LevelEnum:
       enum:
       - INFO
@@ -31487,6 +32060,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/DeskItemRow'
+    PaginatedDeskLegalAcceptanceList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeskLegalAcceptance'
     PaginatedDeskOfferHistoryRowList:
       type: object
       required:
@@ -32926,6 +33522,15 @@ components:
         warranty_terms:
           type: string
           description: Условия гарантии.
+    PatchedDeskLegalEditionUpdateInRequest:
+      type: object
+      properties:
+        label:
+          type: string
+          minLength: 1
+          maxLength: 40
+        content:
+          $ref: '#/components/schemas/DeskLegalContentRequest'
     PatchedDeskOfferInRequest:
       type: object
       properties:

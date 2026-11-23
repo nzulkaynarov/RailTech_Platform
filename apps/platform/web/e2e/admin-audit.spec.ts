@@ -185,14 +185,14 @@ test.describe("Сброс пароля сотрудника", () => {
 
     await side.getByRole("button", { name: "Сбросить и отправить письмо" }).click();
     await expect(
-      page.getByText("Письмо с новым паролем отправлено на manager@demo.example"),
+      page.getByText("Письмо со ссылкой отправлено на manager@demo.example"),
     ).toBeVisible();
 
     // Действие записано в журнал.
     await spaGoto(page, "/admin/audit");
     await expect(
       page
-        .getByRole("link", { name: /Открыть запись: Сбросил пароль и отправил по почте/ })
+        .getByRole("link", { name: /Открыть запись: Сбросил пароль и отправил ссылку по почте/ })
         .first(),
     ).toBeVisible();
 

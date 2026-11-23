@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { CheckCircle2, Loader2, Send, UserPlus } from 'lucide-react';
 
-import { crmBaseUrl, fetchFormToken, isCrmFormError, submitWebLead } from '@/api/crm';
+import { crmBaseUrl, fetchFormToken, isCrmFormError, submitWebLead, type WebLeadAccepted } from '@/api/crm';
 import { useBotLink } from '@/app/links';
 import { EmptyState } from '@/components/EmptyState';
 import { TelegramLinkButton } from '@/components/TelegramLinkButton';
@@ -17,6 +17,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import i18n from '@/i18n';
 import {
+  currentOrigin,
   EMPTY_LEAD_FORM,
   LEAD_FORM_LIMITS,
   submitWithFreshToken,
@@ -52,12 +53,12 @@ export function NewClientPage() {
   const [searchParams] = useSearchParams();
   const initialEmail = searchParams.get('email') ?? '';
   const telegramLink = useBotLink('web');
-  const [sent, setSent] = useState(false);
+  const [sent, setSent] = useState<WebLeadAccepted | null>(null);
   const formAvailable = crmBaseUrl() !== null;
 
   let body;
-  if (sent) body = <SentCard telegramLink={telegramLink} />;
-  else if (formAvailable) body = <LeadForm telegramLink={telegramLink} onSent={() => setSent(true)} initialEmail={initialEmail} />;
+  if (sent) body = <SentCard telegramLink={telegramLink} accepted={sent} />;
+  else if (formAvailable) body = <LeadForm telegramLink={telegramLink} onSent={setSent} initialEmail={initialEmail} />;
   else {
     body = (
       <>
@@ -90,7 +91,7 @@ function LeadForm({
   initialEmail = '',
 }: {
   telegramLink: string | null;
-  onSent: () => void;
+  onSent: (accepted: WebLeadAccepted) => void;
   initialEmail?: string;
 }) {
   const { t } = useTranslation();
@@ -118,7 +119,7 @@ function LeadForm({
     mutationFn: (form: LeadFormValues) => {
       if (!token.data) throw new Error('form token is not loaded');
       return submitWithFreshToken({
-        build: (formToken) => toWebLead(form, i18n.resolvedLanguage, formToken),
+        build: (formToken) => toWebLead(form, i18n.resolvedLanguage, formToken, currentOrigin()),
         token: token.data,
         refreshToken: () => queryClient.fetchQuery({ queryKey: FORM_TOKEN_KEY, queryFn: fetchFormToken, staleTime: 0 }),
         submit: submitWebLead,
@@ -302,13 +303,29 @@ function LeadForm({
   );
 }
 
-function SentCard({ telegramLink }: { telegramLink: string | null }) {
+/** «Что дальше» (LID-5): номер заявки и срок первого ответа из настроек «Время и сроки»; без них — общий текст. */
+function SentCard({ telegramLink, accepted }: { telegramLink: string | null; accepted: WebLeadAccepted }) {
   const { t } = useTranslation();
+  const minutes = accepted.first_response_minutes ?? null;
+  const number = accepted.request_number ?? null;
+  const within =
+    minutes === null
+      ? null
+      : minutes % 60 === 0
+        ? t('newClient.next.withinHours', { count: minutes / 60 })
+        : t('newClient.next.withinMinutes', { count: minutes });
   return (
     <section className="flex flex-col items-center gap-3 rounded-lg border bg-card px-4 py-8 text-center" aria-live="polite">
       <CheckCircle2 className="size-10 text-success" aria-hidden="true" />
       <h1 className="text-xl font-semibold">{t('newClient.sentTitle')}</h1>
-      <p className="max-w-md text-sm text-muted-foreground">{t('newClient.sentText')}</p>
+      {number ? (
+        <p className="text-sm">
+          {t('newClient.next.number')}: <strong className="font-semibold">{number}</strong>
+        </p>
+      ) : null}
+      <p className="max-w-md text-sm text-muted-foreground">
+        {within ? t('newClient.next.text', { within }) : t('newClient.sentText')}
+      </p>
       {telegramLink ? (
         <TelegramLinkButton href={telegramLink}>
           <Send aria-hidden="true" />

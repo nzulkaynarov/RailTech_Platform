@@ -7,8 +7,9 @@ import type { Employee } from "../../shared/api/generated/model";
 import { getListEmployeesQueryKey, useResendInvite } from "../../shared/api/generated/platform-bff";
 
 /**
- * «Отправить приглашение снова» у сотрудника со статусом «Приглашён» (Q-PLT-15-1 п. 3, BFF 0.3.0). CRM меняет временный
- * пароль только при отправке письма: без подключённой почты пароль прежний, письмо не уходит — говорим об этом словами.
+ * «Отправить приглашение снова» у сотрудника со статусом «Приглашён» (Q-PLT-15-1 п. 3, BFF 0.3.0; ДВ-7). В письме
+ * одноразовая ссылка «Задайте пароль», пароля нет. Без подключённой почты ничего не меняется и письмо не уходит;
+ * больше трёх ссылок в час на сотрудника — 429. Говорим об этом словами.
  */
 export function ResendInvite({ employee }: { employee: Employee }) {
   const { t } = useTranslation("modules");
@@ -23,6 +24,7 @@ export function ResendInvite({ employee }: { employee: Employee }) {
     },
   });
   const notSent = resend.error instanceof ApiError && resend.error.details["invite"] === "not_sent";
+  const tooMany = resend.error instanceof ApiError && resend.error.code === "TOO_MANY_REQUESTS";
   return (
     <div className="pf-panel-stack" style={{ gap: 8 }}>
       <Button
@@ -42,7 +44,13 @@ export function ResendInvite({ employee }: { employee: Employee }) {
           type={notSent ? "warning" : "error"}
           showIcon
           role="alert"
-          message={t(notSent ? "admin.org.invite.resendNotSent" : "admin.org.errors.DEFAULT")}
+          message={t(
+            notSent
+              ? "admin.org.invite.resendNotSent"
+              : tooMany
+                ? "admin.org.invite.tooMany"
+                : "admin.org.errors.DEFAULT",
+          )}
         />
       ) : null}
     </div>

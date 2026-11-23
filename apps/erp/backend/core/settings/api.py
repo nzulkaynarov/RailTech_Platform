@@ -174,6 +174,9 @@ SPECTACULAR_SETTINGS = {
             "visas_returned",
             "no_visa_holder",
         ],
+        # ДВ-5: вид и статус редакции оферты и политики Кабинета (общее имя вместо хешированного).
+        "LegalKindEnum": ["privacy", "terms"],
+        "LegalEditionStatusEnum": ["draft", "current", "retired"],
         # Те же наборы значений в служебных сериализаторах (приглашение контакта, офлайн-клиент, сопряжение с CRM) —
         # одно имя, иначе drf-spectacular придумывает хешированные (D2-0, выгрузка без предупреждений).
         "ContactPreferredChannelEnum": ["email", "telegram", "both"],

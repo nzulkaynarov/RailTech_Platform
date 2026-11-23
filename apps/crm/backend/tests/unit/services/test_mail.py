@@ -23,8 +23,7 @@ CIPHER = SecretCipher("k" * 40)
 CONTEXT = {
     "full_name": "Азиз",
     "email": "aziz@railtech.uz",
-    "temporary_password": "Tmp-pass-4321",
-    "platform_url": "https://platform.example.com",
+    "set_password_url": "https://platform.example.com/reset-password?token=Tmp-4321",
     "company": "RailTech",
 }
 
@@ -144,13 +143,13 @@ async def test_send_queues_encrypted_body_and_delivery_marks_sent() -> None:
     assert queued == [view.id]
     row = db.rows[view.id]
     assert row.body_ciphertext is not None
-    assert CONTEXT["temporary_password"].encode() not in row.body_ciphertext
-    assert CONTEXT["temporary_password"] not in row.subject
+    assert CONTEXT["set_password_url"].encode() not in row.body_ciphertext
+    assert CONTEXT["set_password_url"] not in row.subject
 
     assert await service.deliver(view.id) is True
     (to, subject, body) = transport.sent[0]
     assert (to, subject) == ("aziz@railtech.uz", row.subject)
-    assert CONTEXT["temporary_password"] in body
+    assert CONTEXT["set_password_url"] in body
     assert (row.status, row.attempts) == ("sent", 1)
     assert row.body_ciphertext is None
     assert row.sent_at is not None

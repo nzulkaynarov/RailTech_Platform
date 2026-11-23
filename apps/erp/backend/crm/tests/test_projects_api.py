@@ -119,6 +119,31 @@ def test_filters_step_mine_q_and_deal_id(pw):  # noqa: F811
     assert page["count"] == 2 and len(page["results"]) == 1
 
 
+def test_ordering_uses_a_white_list_and_keeps_empty_values_last(pw):  # noqa: F811
+    contract_in(pw, S.PENDING_CLIENT)
+    other = w.make_deal(pw.client, DealStageCode.CLOSED_WON, title="Другой проект")
+    other_quote = w.add_quote(other, 1, QuoteStatusCode.APPROVED, "100")
+    w.add_contract(other, other_quote, S.SIGNED)
+    client = api(pw.manager)
+    default = [r["deal_id"] for r in client.get(LIST).json()["results"]]
+    assert sorted(default) == sorted([pw.deal.id, other.id])
+    by_step = [r["step"] for r in client.get(LIST, {"ordering": "step"}).json()["results"]]
+    assert by_step == ["CONTRACT", "PAYMENT"]
+    by_step_desc = [r["step"] for r in client.get(LIST, {"ordering": "-step"}).json()["results"]]
+    assert by_step_desc == ["PAYMENT", "CONTRACT"]
+    # чужое поле не сортирует и не раскрывает данных: порядок остаётся прежним
+    for field in ("company__name", "-created_at", "deal_id", "password", "number; drop"):
+        assert [r["deal_id"] for r in client.get(LIST, {"ordering": field}).json()["results"]] == default
+    # пустые значения — в конце при любом направлении
+    rows = [{"number": "ПР-2", "due_date": None}, {"number": "ПР-1", "due_date": datetime.date(2026, 1, 1)}]
+    assert [r["number"] for r in projects.sort_rows(rows, "due_date")] == ["ПР-1", "ПР-2"]
+    assert [r["number"] for r in projects.sort_rows(rows, "-due_date")] == ["ПР-1", "ПР-2"]
+    numbered = [{"number": "ПР-2026-1000", "deal_id": 1000}, {"number": "ПР-2026-999", "deal_id": 999}]
+    assert [r["number"] for r in projects.sort_rows(numbered, "number")] == ["ПР-2026-999", "ПР-2026-1000"]
+    assert projects.parse_ordering("-number") == ("number", True)
+    assert projects.parse_ordering("deal_id") == ("", False)
+
+
 def test_card_has_documents_history_and_actions_for_the_accountant(pw):  # noqa: F811
     contract = contract_in(pw, S.PENDING_MANAGER)
     api(pw.accountant).post(f"/api/v1/crm/contracts/{contract.id}/mark-issued/", {"note": "Didox"}, format="json")
