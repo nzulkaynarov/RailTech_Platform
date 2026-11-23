@@ -3383,6 +3383,12 @@ export interface components {
     };
     TemplatePreviewIn: {
       body: components["schemas"]["DocumentBody"];
+      /**
+       * @description Вид шаблона; служебная записка — компактный лист без окна и подвала компании
+       * @default letter
+       * @enum {string}
+       */
+      kind: "letter" | "memo";
     };
     CallNoteIn: {
       /** @description Ключ формы заявки; с сотрудником даёт идентификатор файла записки */

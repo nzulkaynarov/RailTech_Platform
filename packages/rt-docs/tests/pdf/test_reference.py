@@ -113,13 +113,13 @@ def test_uzbek_latin_and_cyrillic_letters_are_printed_and_extractable() -> None:
         samples.letter_uz(),
         letterhead=samples.LETTERHEAD,
         layout=Layout.LETTER,
-        meta=DocumentMeta(number="CHQ-7/26", executor="Ijrochi: A. Petrova"),
+        meta=DocumentMeta(number="CHQ-7/26", executor="Ijroçi: A. Petrova"),
         values={**samples.VALUES, "deal.number": "ZV-2026-104"},
     )
     assert_reference("letter_uz", result)
     assert not [w for w in result.warnings if "characters missing" in w]
     text = pages(result.pdf)[0].text
-    for fragment in ("Oʻzbekiston", "gʻalla", "qoʻshimcha", "ўқғҳ", "ЎҚҒҲ", "boʻyicha", "M. Oʻ.", "imzo"):
+    for fragment in ("Oʻzbekiston", "gʻalla", "qoʻshimcha", "ўқғҳ", "ЎҚҒҲ", "boʻyicha", "imzo"):
         assert fragment in text, fragment
 
 

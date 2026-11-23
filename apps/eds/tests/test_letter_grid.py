@@ -7,11 +7,13 @@
 """
 
 import copy
+import re
 from typing import Any
 
 import httpx
 import pytest
 from rt_docs import Layout
+from rt_docs.labels import EXECUTOR, GRID_LABELS, STAMP
 from rt_docs.prepare import document_html, prepare
 
 from app.container import Container
@@ -126,3 +128,7 @@ async def test_letter_in_uzbek_has_uzbek_labels_in_the_owner_alphabet(
     assert payload["meta"]["kind_label"] == "Xat"
     assert labels[:2] == ["Çiqiş №", "Sana"] and "Ijroçi" in labels and "Poçta" in labels
     assert all(ch not in label for label in labels for ch in "ʻʼ'"), "только Ö Ğ Ş Ç, без Oʻ Gʻ Sh Ch"
+    old_digraphs = re.compile(r"sh|ch|oʻ|gʻ", re.IGNORECASE)
+    printed = [*labels, GRID_LABELS["verify"]["uz"], GRID_LABELS["internal_note"]["uz"], STAMP["uz"], EXECUTOR["uz"]]
+    assert not [text for text in printed if old_digraphs.search(text)]
+    assert EXECUTOR["uz"].strip(": ") == "Ijroçi", "the footer executor line and the info block spell the word alike"

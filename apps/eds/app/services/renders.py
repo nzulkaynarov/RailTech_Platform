@@ -116,6 +116,7 @@ def grid_meta(
     project: str | None,
     code: str | None,
     signed_text: str | None,
+    memo: bool = False,
 ) -> dict[str, Any]:
     """Сетка письма (стандарт документов §4–§5): вид и инфоблок «метка — значение» вместо паспорта письма.
 
@@ -126,6 +127,8 @@ def grid_meta(
         info_row(grid_label("number_out", key), number or "—", code=True, role="number"),
         info_row(grid_label("date", key), day or "—", role="date"),
     ]
+    if memo:  # a memo is the compact sheet: no outgoing number, no window (standard §4)
+        rows = [info_row(grid_label("date", key), day or "—", role="date")]
     if reply_to:
         rows.append(info_row(grid_label("reply_to", key), reply_to.removeprefix("№ ")))
     if project:
@@ -136,7 +139,8 @@ def grid_meta(
         rows.append(info_row(grid_label("email", key), email))
     if code:
         rows.append(info_row(grid_label("verify", key), code, code=True, role="verify"))
-    return {"kind_label": grid_label("kind_letter", key), "info": rows, "signed_text": signed_text}
+    kind = "kind_memo" if memo else "kind_letter"
+    return {"kind_label": grid_label(kind, key), "info": rows, "signed_text": signed_text}
 
 
 def grid_letterhead(head: Any, lang: str) -> dict[str, Any]:
@@ -216,16 +220,17 @@ async def build_payload(session: AsyncSession, document: Document) -> tuple[dict
     return payload, head.logo_sha256
 
 
-async def request_preview(session: AsyncSession, body: dict[str, Any]) -> DocumentRender:
+async def request_preview(session: AsyncSession, body: dict[str, Any], kind: str = "letter") -> DocumentRender:
     """Предпросмотр шаблона (TPL-4): тело на бланке без документа — проект с подписантом бланка, та же очередь и
     тот же кэш по хешу ввода, что у писем; нет бланка — 409 `letterhead_missing`."""
     head = await letterhead.current(session)
     if head is None:
         raise conflict("letterhead_missing", LETTERHEAD_MISSING)
     lang = str(body.get("lang") or "ru")
+    memo = kind == "memo"
     payload: dict[str, Any] = {
         "renderer": RENDERER_VERSION,
-        "layout": LAYOUT,
+        "layout": "internal" if memo else LAYOUT,
         "body": _with_signature(
             body, head.signatory_name.strip(), letterhead.text(head, "signatory_position", lang).strip()
         ),
@@ -248,6 +253,7 @@ async def request_preview(session: AsyncSession, body: dict[str, Any]) -> Docume
                 project=None,
                 code=None,
                 signed_text=None,
+                memo=memo,
             ),
         },
         "letterhead": grid_letterhead(head, lang),

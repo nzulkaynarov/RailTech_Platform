@@ -387,6 +387,7 @@ export * from "./edsTemplateList";
 export * from "./edsTemplateOrigin";
 export * from "./edsTemplatePreview";
 export * from "./edsTemplatePreviewIn";
+export * from "./edsTemplatePreviewInKind";
 export * from "./edsTemplatePreviewStatus";
 export * from "./edsTemplateVariants";
 export * from "./edsTemplateVariantsProperty";

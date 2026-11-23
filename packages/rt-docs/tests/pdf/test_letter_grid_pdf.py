@@ -133,3 +133,15 @@ def test_memo_has_no_company_footer_and_a_closing_line() -> None:
 def test_only_package_fonts(one_page: RenderResult) -> None:
     used = fonts(one_page.pdf)
     assert used and all("RT-Doc" in name for name in used), used
+
+
+def test_uzbek_fixed_labels_have_no_old_digraphs_and_one_executor_spelling() -> None:
+    import re
+
+    from rt_docs import labels
+
+    old = re.compile(r"sh|ch|oʻ|gʻ", re.IGNORECASE)
+    texts = [v["uz"] for v in labels.GRID_LABELS.values()]
+    texts += [labels.STAMP["uz"], labels.EXECUTOR["uz"], labels.VERIFY_CODE["uz"], labels.VERIFY_QR_NOTE["uz"]]
+    assert not [t for t in texts if old.search(t)]
+    assert labels.EXECUTOR["uz"].strip(": ") == labels.GRID_LABELS["executor"]["uz"], "one spelling per sheet"
