@@ -78,8 +78,9 @@ const PAGE_OF: Record<string, string> = {
 
 async function openTab(tab: string, email = "director@demo.example") {
   signInAs(email);
-  renderApp(`/admin/company?tab=${tab}`);
+  const app = renderApp(`/admin/company?tab=${tab}`);
   await screen.findByRole("heading", { level: 1, name: PAGE_OF[tab] ?? "Реквизиты и бланк" });
+  return app;
 }
 
 const button = (name: string | RegExp) => screen.findByRole("button", { name });
@@ -229,7 +230,13 @@ describe("Admin · Компания: доступ и каркас", () => {
       within(nav)
         .getAllByRole("link")
         .map((link) => link.textContent),
-    ).toEqual(["Реквизиты и бланк", "Нумерация", "Налоги и валюты", "Статьи компании"]);
+    ).toEqual([
+      "Реквизиты и бланк",
+      "Нумерация",
+      "Налоги и валюты",
+      "Статьи компании",
+      "Оферта и политика",
+    ]);
     expect(within(nav).getByRole("link", { name: "Реквизиты и бланк" })).toHaveAttribute(
       "aria-current",
       "page",
@@ -296,7 +303,7 @@ describe("Admin · Компания: доступ и каркас", () => {
     writeEmployees(
       readEmployees().map((e) => (e.id === "u-demo-manager" ? { ...e, role_ids: ["50"] } : e)),
     );
-    await openTab("details", "manager@demo.example");
+    const app = await openTab("details", "manager@demo.example");
     await screen.findByLabelText("Телефон");
 
     // Бланк — на той же странице; поля заблокированы, вид образца переключается
@@ -310,17 +317,8 @@ describe("Admin · Компания: доступ и каркас", () => {
       );
     });
 
-    // «Шаблоны» — пункт «Документов»
-    fireEvent.click(
-      within(screen.getByRole("navigation", { name: "Модули" })).getByRole("link", {
-        name: "Документы",
-      }),
-    );
-    fireEvent.click(
-      within(await screen.findByRole("navigation", { name: "Разделы модуля" })).getByRole("link", {
-        name: "Шаблоны",
-      }),
-    );
+    // ЕВ-3а: «Шаблоны» — страница группы «Правила работы», в меню «Документов» их нет
+    await act(() => app.router.navigate("/admin/templates"));
     // Раздел открывается на «Все шаблоны» (план 2.7): шаблоны документов — своя вкладка
     fireEvent.click(await screen.findByRole("tab", { name: "Документы" }));
     fireEvent.click(await screen.findByRole("button", { name: "Открыть: Договор поставки (наш)" }));

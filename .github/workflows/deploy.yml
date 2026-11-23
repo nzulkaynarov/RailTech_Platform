@@ -11,7 +11,8 @@
 #           Образ rt-cabinet в режиме deploy собирает job deploy (build-args берутся из variables environment production, а в job
 #           без environment они недоступны), поэтому в матрице deploy — шесть образов.
 # deploy:   environment production (одобрение владельца) -> образ rt-cabinet -> загрузка infra/ на VPS 1 по SSH -> deploy.sh на сервере
-#           (pg_dump-гейт баз crm, erp и eds, миграции, up) -> smoke четырёх доменов с раннера.
+#           (pg_dump-гейт баз crm, erp и eds, миграции, up) -> smoke четырёх доменов с раннера -> снятие предупреждения о
+#           плановом обновлении (/opt/rt/maintenance/maintenance.json, DECISIONS 2026-11-23).
 # build:    (action = build) только сборка без выкладки: любой ref (ветка задачи), push в GHCR НЕТ (push: false), SSH и production не
 #           используются — режим проверки скорости и целостности сборки.
 # rollback: rollback.sh на VPS 1 — предыдущий тег (по state на сервере), затем smoke с раннера: те же четыре домена, если в релизе
@@ -357,6 +358,12 @@ jobs:
         if: steps.already.outputs.skip != 'true'
         run: |
           bash infra/deploy/smoke.sh --domains "$CRM_DOMAIN" "$ERP_DOMAIN" "$CABINET_DOMAIN" "$PLATFORM_DOMAIN" --retries 12
+
+      - name: Снять предупреждение о плановом обновлении
+        # Баннер «Обновление в ЧЧ:ММ» (DECISIONS 2026-11-23) показывается, пока на VPS 1 лежит /opt/rt/maintenance/maintenance.json
+        # (scripts/maintenance-notice.sh). После успешной выкладки и smoke файл удаляется; сбой удаления выкладку не отменяет.
+        if: steps.already.outputs.skip != 'true'
+        run: ssh app "rm -f /opt/rt/maintenance/maintenance.json" || echo "::warning::не удалось снять предупреждение о плановом обновлении - scripts/maintenance-notice.sh clear на VPS 1"
 
       - name: Выход из GHCR на сервере
         if: always()

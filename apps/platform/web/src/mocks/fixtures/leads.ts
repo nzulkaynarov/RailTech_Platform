@@ -399,6 +399,16 @@ function initial(): LeadsMock {
       handoff: {},
       unread: true,
       interest: ["Рельсы"],
+      // лид бота по ссылке ?start=src-google_cmp-spring: форма не пишется, только кампания и источник (LID-5b)
+      origin: {
+        form: null,
+        page: null,
+        referrer: null,
+        utm_medium: null,
+        campaign: "spring",
+        utm_source: "google",
+        language: "uz",
+      },
     }),
     lead(base, {
       id: 2044,

@@ -1,0 +1,21 @@
+/* Плашка планового обновления над шапкой (DECISIONS 2026-11-23). Тот же вид, что у SourceBanner, но на всю ширину. */
+.pf-maint {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  padding: 8px 16px;
+  background: var(--rt-color-warning-bg);
+  border-bottom: 1px solid var(--rt-color-warning-border);
+  color: var(--rt-color-text-default);
+}
+.pf-maint-icon {
+  flex: 0 0 auto;
+  display: inline-flex;
+  color: var(--rt-color-warning-text);
+}
+.pf-maint-text {
+  flex: 1 1 200px;
+  min-width: 0;
+}

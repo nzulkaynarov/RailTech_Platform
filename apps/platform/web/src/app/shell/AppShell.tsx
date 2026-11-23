@@ -10,6 +10,7 @@ import { SETTINGS_HOME } from "../../modules/admin/module";
 import { SETTINGS } from "../../modules/admin/settingsRegistry";
 import type { SectionConfig } from "../../modules/types";
 import { SetupBanner } from "../../features/first-run/SetupBanner";
+import { MaintenanceBanner } from "../../features/maintenance/MaintenanceBanner";
 import { useLateSetupBanner, useSetupKnown } from "../../features/first-run/useSetupKnown";
 import { GlobalSearch } from "../../features/global-search/GlobalSearch";
 import { HelpDrawer } from "../../features/help/HelpDrawer";
@@ -233,8 +234,6 @@ export function AppShell() {
   const badgeOfItem = (targets: readonly string[]) => {
     const badges = targets.flatMap((ref) => {
       const [module = "", key = ""] = ref.split(".");
-      const section = MODULES.find((m) => m.code === module)?.sections.find((s) => s.key === key);
-      if (!section) return [];
       const counter = counters.data?.items.find((c) => c.module === module && c.section === key);
       return badgeFor(counter) ?? [];
     });
@@ -244,7 +243,11 @@ export function AppShell() {
       attention: badges.some((b) => b.attention),
     };
   };
-  const refsOf = (item: NavItem) => [...item.targets.map((x) => x.section), ...(item.also ?? [])];
+  const refsOf = (item: NavItem) => [
+    ...item.targets.map((x) => x.section),
+    ...(item.also ?? []),
+    ...(item.counters ?? []),
+  ];
   const itemLabel = (code: string, item: NavItem) => t(`modules:${code}.nav.${item.key}`);
   const isActiveItem = (code: string, item: NavItem) =>
     nav?.module === code && nav.item.key === item.key;
@@ -432,6 +435,7 @@ export function AppShell() {
         </>
       )}
       <Layout style={{ minWidth: 0 }}>
+        <MaintenanceBanner />
         <TopBar
           crumbs={crumbs}
           labels={{

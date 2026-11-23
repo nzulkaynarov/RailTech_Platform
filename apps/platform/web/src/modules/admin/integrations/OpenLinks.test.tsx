@@ -2,7 +2,7 @@ import { screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import { mailLinks, modelProviderLinks, offsiteLinks, telegramLinks } from "./serviceLinks";
-import { openCard, signIn, setupIntegrationsTests } from "./testkit";
+import { openCard, renderAt, signIn, setupIntegrationsTests } from "./testkit";
 
 setupIntegrationsTests();
 
@@ -72,11 +72,11 @@ describe("карточки: «Открыть» и «Открыть консол�
     expect(consoleLink).toHaveAttribute("target", "_blank");
   });
 
-  it("директор — служебной консоли нет", async () => {
-    const side = await openPanel("erp", DIRECTOR);
-    expect(await within(side).findByText("Сопряжена")).toBeVisible();
-    expect(within(side).queryByRole("link", { name: /Открыть консоль/ })).toBeNull();
-    screen.getByRole("heading", { level: 1, name: "Сервисы" });
+  it("директор — страницы «Сервисы» нет вовсе (ЕВ-2а: каналы и подключения — у администратора)", async () => {
+    signIn(DIRECTOR);
+    renderAt("/admin/integrations");
+    expect(await screen.findByRole("heading", { level: 1, name: "Нет доступа" })).toBeVisible();
+    expect(screen.queryByRole("link", { name: /Открыть консоль/ })).toBeNull();
   });
 
   it("бот: BotFather и сам бот", async () => {

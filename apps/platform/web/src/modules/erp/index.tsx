@@ -1,4 +1,4 @@
-import { Navigate, useLocation } from "react-router";
+import { useLocation } from "react-router";
 
 import { RequireAccess } from "../../app/RequireAccess";
 import { ModuleRoutes } from "../ModuleRoutes";
@@ -16,18 +16,6 @@ import { StockScreen } from "./stock/StockScreen";
  * `/erp/requests/ЗВ-…`) — расчёт по заявке (D2-1, SPEC-v3 §7.4); «Склад» (остатки и резервы, заказы поставщикам, приёмка,
  * отгрузки; D2-2) — `/erp/stock`, карточка заказа `/erp/stock/ЗП-…`; «Номенклатура и поставщики» и «Техдокументация» (D2-3).
  */
-/** Партнёры и заявки на подключение переехали в «Контакты · Контрагенты»: старые адреса каталога ведут туда. */
-function movedPartnerPath(search: string): string | undefined {
-  const params = new URLSearchParams(search);
-  const part = params.get("part");
-  if (part === "applications") return "/crm/clients?kind=applications";
-  if (part !== "suppliers") return undefined;
-  const id = params.get("supplier");
-  return id
-    ? `/crm/clients?partner=${encodeURIComponent(id)}&panel=open&tab=card`
-    : "/crm/clients?kind=partners";
-}
-
 export function Component() {
   const location = useLocation();
   const match = matchSection(location.pathname, location.search);
@@ -35,10 +23,7 @@ export function Component() {
     match?.module.code === "erp" &&
     (match.section.key === "requests" || match.section.key === "calc")
   ) {
-    // «Мои расчёты» стали фильтром списка заявок; карточка расчёта остаётся по своему адресу
-    if (match.section.key === "calc" && !match.objectId) {
-      return <Navigate to="/erp/requests?mine=1" replace />;
-    }
+    // Список `/erp/calc` без номера — `legacyRedirects.ts`; карточка расчёта остаётся по своему адресу
     return (
       <RequireAccess rule={match.section.access}>
         {match.objectId ? <CalcScreen number={match.objectId} /> : <RequestsScreen />}
@@ -59,8 +44,6 @@ export function Component() {
     );
   }
   if (match?.module.code === "erp" && match.section.key === "catalog") {
-    const moved = movedPartnerPath(location.search);
-    if (moved) return <Navigate to={moved} replace />;
     return (
       <RequireAccess rule={match.section.access}>
         <CatalogScreen />

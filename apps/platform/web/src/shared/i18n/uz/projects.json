@@ -234,19 +234,10 @@
       "delivery_delivered": "Mijozga yetkazildi"
     },
     "by": "{{date}} · {{name}}",
-    "bySystem": "{{date}} · tizim",
     "reason": "Izoh: {{reason}}"
   },
   "panel": {
-    "contractLabel": "Loyiha shartnomasi",
-    "actLabel": "Loyiha dalolatnomasi",
-    "sheetClose": "Yopish",
-    "sheetContract": "{{number}} shartnomasi",
-    "sheetAct": "{{number}} dalolatnomasi",
-    "sheetContractNone": "Shartnoma",
-    "sheetActNone": "Dalolatnoma",
-    "journalEmpty": "Jurnal bo‘sh",
-    "journalHint": "Yozuvlar shartnoma va dalolatnoma bo‘yicha birinchi amallardan keyin paydo bo‘ladi."
+    "sheetClose": "Yopish"
   },
   "contract": {
     "number": "{{number}} shartnomasi",
@@ -303,8 +294,6 @@
       "submit": "Skanni biriktirish",
       "choose": "Skan faylini tanlang — tugma faollashadi."
     },
-    "history": "Shartnoma tarixi",
-    "historyEmpty": "Shartnoma bo‘yicha amallar hali bo‘lmagan.",
     "files": {
       "pdf": "Shartnoma PDF",
       "scan": "Imzolangan skan"
@@ -366,7 +355,6 @@
       "choose": "Skan faylini tanlang — tugma faollashadi."
     },
     "history": "Dalolatnoma tarixi",
-    "historyEmpty": "Dalolatnoma bo‘yicha amallar hali bo‘lmagan.",
     "files": {
       "pdf": "Dalolatnoma PDF",
       "scan": "Imzolangan skan"

@@ -32,6 +32,8 @@ export interface NavItem {
   targets: readonly NavTarget[];
   /** Разделы без своего пункта, которые подсвечивают этот; их счётчики входят в бейдж */
   also?: readonly string[];
+  /** Счётчики BFF (`<module>.<section>`), которые входят в бейдж, хотя такого раздела в Платформе больше нет */
+  counters?: readonly string[];
   /** Вкладки над экраном: разные объекты одного пункта */
   tabs?: readonly NavTab[];
 }
@@ -71,21 +73,21 @@ const TECH_DOCS: readonly NavTarget[] = [{ section: "erp.docs" }];
 export const NAVIGATION: Readonly<Record<ModuleCode, readonly NavItem[]>> = {
   dashboard: [
     { key: "queue", targets: [{ section: "dashboard.queue" }], also: ["eds.tasks", "eds.mymail"] },
-    { key: "projects", targets: [{ section: "eds.projects" }], also: ["dashboard.projects"] },
+    { key: "projects", targets: [{ section: "eds.projects" }] },
     { key: "summary", targets: [{ section: "dashboard.summary" }] },
   ],
   crm: [
-    { key: "leads", targets: [{ section: "crm.leads" }], also: ["crm.messages"] },
+    { key: "leads", targets: [{ section: "crm.leads" }], counters: ["crm.messages"] },
     { key: "clients", targets: [{ section: "crm.clients" }] },
-    { key: "mail", targets: [{ section: "eds.mail" }] },
     { key: "kb", targets: [{ section: "crm.kb" }] },
   ],
   eds: [
     { key: "inbox", targets: [{ section: "eds.inbox" }], also: ["eds.register"] },
-    { key: "outbox", targets: [docs("outgoing")], also: ["eds.outbox", "eds.drafts"] },
+    // ЕВ-3а (владелец 2026-11-23): общий ящик — рядом с «Входящими»; адрес `/eds/mail` прежний.
+    { key: "mail", targets: [{ section: "eds.mail" }] },
+    { key: "outbox", targets: [docs("outgoing")], also: ["eds.drafts"] },
     { key: "internal", targets: [docs("internal")], also: ["eds.approvals"] },
     { key: "archive", targets: [docs("archive")] },
-    { key: "templates", targets: [{ section: "admin.templates" }] },
   ],
   erp: [
     {
@@ -117,11 +119,7 @@ export const NAVIGATION: Readonly<Record<ModuleCode, readonly NavItem[]>> = {
   ],
   chats: [
     { key: "calendar", targets: [{ section: "chats.calendar" }] },
-    {
-      key: "chats",
-      targets: [{ section: "chats.all" }],
-      also: ["chats.internal", "chats.external"],
-    },
+    // ЕВ-3а (q.2): «Чаты» — макет без сообщений, пункта в меню нет, пока их нет; адрес `/chats` остаётся.
     { key: "people", targets: [{ section: "chats.contacts" }] },
   ],
   admin: [
@@ -130,7 +128,7 @@ export const NAVIGATION: Readonly<Record<ModuleCode, readonly NavItem[]>> = {
     settingsItem("people", "people"),
     settingsItem("company", "company"),
     settingsItem("rules", "rules"),
-    settingsItem("channels", "channels", [], ["crm.channels"]),
+    settingsItem("channels", "channels"),
     settingsItem("journal", "journal", [], ["admin.bus"]),
   ],
 };

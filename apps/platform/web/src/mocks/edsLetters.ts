@@ -135,9 +135,6 @@ function row(letter: LetterCard): LetterRow {
   };
 }
 
-const squash = (value: string | null | undefined) =>
-  (value ?? "").trim().replace(/\s+/g, " ").toLowerCase();
-
 function nextNumber(): string {
   const max = Math.max(
     0,
@@ -250,29 +247,6 @@ export const edsLettersHandlers = [
     const held = guard("read");
     if (held.error) return held.error;
     return HttpResponse.json(activeLetterKinds());
-  }),
-
-  http.get("*/eds/letter-duplicates", ({ request }) => {
-    const held = guard("read");
-    if (held.error) return held.error;
-    const url = new URL(request.url);
-    const ref = (url.searchParams.get("ref_number") ?? "").trim();
-    const sender = squash(url.searchParams.get("sender_name"));
-    const found: LetterDuplicateList = {
-      items: readLetters()
-        .filter((l) => ref && sender && (l.sender_ref.number ?? "").trim() === ref)
-        .filter((l) => squash(l.sender.name) === sender)
-        .slice(0, 5)
-        .map((l) => ({
-          id: l.id,
-          number: l.number,
-          subject: l.subject,
-          received_at: l.received_at,
-          status: l.status,
-          path: `/eds/inbox/${encodeURIComponent(l.number)}`,
-        })),
-    };
-    return HttpResponse.json(found);
   }),
 
   // EDS-DUP: фоновая проверка формы — то же письмо и похожие.

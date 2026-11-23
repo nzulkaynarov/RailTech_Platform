@@ -195,7 +195,7 @@ describe("rbac.generated: доступ по матрицам ролей", () => 
 
   it("пункты меню: виден любой из разделов пункта", () => {
     const mixed: Access = { "crm.leads": "full", "eds.payments": "full" };
-    expect(visibleMenuItems(mixed, "crm")).toEqual(["messages", "leads", "channels", "kb"]);
+    expect(visibleMenuItems(mixed, "crm")).toEqual(["leads", "kb"]);
     // 0.3 (FR-10): «Почта» — и держателям лидов (менеджеру — свои письма)
     expect(visibleMenuItems(mixed, "eds")).toEqual(["documents", "mail", "payments"]);
     expect(menuItemVisible(catalog.ACCOUNTANT.access, "dashboard", "summary")).toBe(true);

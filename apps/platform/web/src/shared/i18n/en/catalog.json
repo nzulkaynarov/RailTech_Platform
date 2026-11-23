@@ -279,25 +279,9 @@
     }
   },
   "suppliers": {
-    "search": "Search by name and TIN",
-    "table": "Partners",
-    "open": "Open partner {{name}}",
-    "card": "Partner",
-    "tin": "TIN {{tin}}",
-    "columns": {
-      "name": "Partner",
-      "offers": "Offers",
-      "terms": "Price validity"
-    },
     "expired": "Expired: {{count}}",
     "expiring": "Expiring soon: {{count}}",
     "allValid": "All prices valid",
-    "nearest": "nearest end {{date}}",
-    "empty": {
-      "title": "No partners",
-      "text": "Add a partner or upload their price list.",
-      "filtered": "No partners for this query."
-    },
     "fields": {
       "tin": "TIN",
       "country": "Country",
@@ -315,8 +299,6 @@
     "offers": "Offers by item",
     "offersTable": "Partner offers",
     "noOffers": "No offers.",
-    "reg": "reg. no. {{reg}}",
-    "add": "Add partner",
     "edit": "Edit",
     "maker": "Manufacturer",
     "dealer": "Partner"
@@ -575,7 +557,6 @@
     "downloadError": "Could not download the file.",
     "delete": "Delete file",
     "deleted": "File deleted.",
-    "chatLater": "Send to the client in chat: will appear together with the “Chats” section. For now download the file and send it by hand.",
     "preview": "Preview",
     "noPreview": "This format cannot be previewed — download the file.",
     "gone": {
@@ -604,7 +585,7 @@
       "steps": [
         "The file is saved in the protected storage.",
         "It appears on the item and the request it is linked to.",
-        "The “Visible to client” mark is saved; the client portal will show it later."
+        "The “Visible to client” mark is saved."
       ],
       "number": "Number",
       "issuedBy": "Issued by",
@@ -612,7 +593,7 @@
       "validUntil": "Valid until",
       "validUntilHint": "Empty — no expiry",
       "clientVisible": "Visible to client",
-      "clientVisibleHint": "A mark for the client portal; showing it is enabled later."
+      "clientVisibleHint": "A mark for the client portal."
     },
     "review": {
       "filter": "Review",
@@ -964,7 +945,7 @@
     "addSteps": [
       "The file is saved in the protected storage.",
       "It appears on the item card and in “Technical documents”.",
-      "The “Visible to client” mark is saved; the client portal will show it later."
+      "The “Visible to client” mark is saved."
     ],
     "editSteps": ["The changes are saved in the document.", "The file itself does not change."],
     "saved": "Document saved."
