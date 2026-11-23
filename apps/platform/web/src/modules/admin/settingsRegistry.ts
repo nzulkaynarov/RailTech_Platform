@@ -11,15 +11,20 @@ import type { AccessRule } from "../types";
 export type Lang = "ru" | "uz" | "en";
 export type Texts = Readonly<Record<Lang, string>>;
 
-export const SETTINGS_GROUPS = ["people", "company", "channels", "system"] as const;
+export const SETTINGS_GROUPS = ["people", "company", "rules", "channels", "journal"] as const;
 export type SettingsGroup = (typeof SETTINGS_GROUPS)[number];
 
 /** Названия групп; совпадают с `modules:admin.groups.<group>`. */
 export const GROUP_NAMES: Readonly<Record<SettingsGroup, Texts>> = {
-  people: { ru: "Сотрудники", uz: "Xodimlar", en: "Employees" },
+  people: { ru: "Люди и доступ", uz: "Odamlar va kiriş", en: "People & access" },
   company: { ru: "Компания", uz: "Kompaniya", en: "Company" },
-  channels: { ru: "Подключения", uz: "Ulanishlar", en: "Connections" },
-  system: { ru: "Журнал", uz: "Jurnal", en: "Log" },
+  rules: { ru: "Правила работы", uz: "Iş qoidalari", en: "Work rules" },
+  channels: {
+    ru: "Каналы и подключения",
+    uz: "Kanallar va ulanişlar",
+    en: "Channels & connections",
+  },
+  journal: { ru: "Журнал", uz: "Jurnal", en: "Log" },
 };
 
 export interface SettingEntry {
@@ -37,6 +42,8 @@ export interface SettingEntry {
 
 const ADMIN: AccessRule = { resource: "admin" };
 const COMPANY: AccessRule = { resource: "company.settings" };
+/** ЕВ-2а: страницы фундамента (каналы, подключения, ИИ, выгрузки) — только администратор; директору они не показываются. */
+const SYSTEM: AccessRule = { resource: "admin.system" };
 /** SIGN-2 (ADR-0024 п. 1): реестр полномочий подписи ведёт держатель раздела `eds.signing.manage` (системная роль администратора). */
 const SIGNING: AccessRule = { resource: "eds.signing.manage" };
 
@@ -144,9 +151,9 @@ export const SETTINGS: readonly SettingEntry[] = [
     access: COMPANY,
     name: { ru: "Реквизиты и бланк", uz: "Rekvizitlar va blanka", en: "Details & letterhead" },
     description: {
-      ru: "Данные компании, логотип и вид документов",
-      uz: "Kompaniya ma’lumotlari, logotip va hujjatlar ko‘rinishi",
-      en: "Company details, logo and document look",
+      ru: "Данные и контакты компании, логотип и вид документов",
+      uz: "Kompaniya ma’lumotlari, kontaktlar, logotip va blanka",
+      en: "Company details, contacts, logo and document look",
     },
     keywords: {
       ru: [
@@ -159,9 +166,11 @@ export const SETTINGS: readonly SettingEntry[] = [
         "адрес",
         "телефон",
         "печать",
+        "поддержка",
+        "адрес поддержки",
       ],
-      uz: ["stir", "bank", "hisob raqam", "logotip", "manzil", "telefon"],
-      en: ["tax id", "bank", "account", "logo", "brand", "address", "phone"],
+      uz: ["stir", "bank", "hisob raqam", "logotip", "manzil", "telefon", "yordam"],
+      en: ["tax id", "bank", "account", "logo", "brand", "address", "phone", "support"],
     },
   },
   {
@@ -199,8 +208,25 @@ export const SETTINGS: readonly SettingEntry[] = [
     },
   },
   {
-    key: "sales",
+    key: "articles",
     group: "company",
+    path: "/admin/articles",
+    access: ADMIN,
+    name: { ru: "Статьи компании", uz: "Kompaniya maqolalari", en: "Company articles" },
+    description: {
+      ru: "Инструкции «как у нас принято» для сотрудников",
+      uz: "Xodimlar uchun ichki yo‘riqnomalar",
+      en: "In-house how-to articles for employees",
+    },
+    keywords: {
+      ru: ["инструкция", "регламент", "помощь", "статья"],
+      uz: ["yo‘riqnoma", "yordam", "maqola"],
+      en: ["instruction", "policy", "help", "article"],
+    },
+  },
+  {
+    key: "sales",
+    group: "rules",
     path: "/admin/sales",
     access: COMPANY,
     name: { ru: "Продажи", uz: "Sotuvlar", en: "Sales" },
@@ -219,6 +245,7 @@ export const SETTINGS: readonly SettingEntry[] = [
         "маржа",
         "базис поставки",
         "каталог",
+        "свежесть цен поставщиков",
         "цена в каталоге",
         "порог карточки",
       ],
@@ -279,93 +306,33 @@ export const SETTINGS: readonly SettingEntry[] = [
     },
   },
   {
-    key: "articles",
-    group: "company",
-    path: "/admin/articles",
+    key: "timing",
+    group: "rules",
+    path: "/admin/timing",
     access: ADMIN,
-    name: { ru: "Статьи компании", uz: "Kompaniya maqolalari", en: "Company articles" },
+    name: { ru: "Время и сроки", uz: "Vaqt va muddatlar", en: "Hours & deadlines" },
     description: {
-      ru: "Инструкции «как у нас принято» для сотрудников",
-      uz: "Xodimlar uchun ichki yo‘riqnomalar",
-      en: "In-house how-to articles for employees",
-    },
-    keywords: {
-      ru: ["инструкция", "регламент", "помощь", "статья"],
-      uz: ["yo‘riqnoma", "yordam", "maqola"],
-      en: ["instruction", "policy", "help", "article"],
-    },
-  },
-  {
-    key: "telegram",
-    group: "channels",
-    path: "/admin/telegram",
-    access: ADMIN,
-    name: { ru: "Telegram", uz: "Telegram", en: "Telegram" },
-    description: {
-      ru: "Бот: подключение, тексты, ответы и база знаний",
-      uz: "Bot: ulanish, matnlar, javoblar va bilimlar bazasi",
-      en: "Bot: connection, texts, replies and knowledge base",
+      ru: "Часы работы, праздники и срок первого ответа",
+      uz: "Iş vaqti, bayramlar va birinçi javob muddati",
+      en: "Working hours, holidays and first reply time",
     },
     keywords: {
       ru: [
-        "бот",
-        "токен",
-        "тексты бота",
-        "шаблоны ответов",
-        "база знаний",
-        "стоп-слова",
-        "конкуренты",
-        "квалификация",
+        "sla",
+        "рабочие часы",
+        "выходные",
+        "праздники",
+        "срок ответа",
+        "срок первого ответа",
+        "напоминание менеджеру",
       ],
-      uz: ["bot", "token", "javob shablonlari", "bilimlar bazasi"],
-      en: [
-        "bot",
-        "token",
-        "bot texts",
-        "reply templates",
-        "knowledge base",
-        "stop words",
-        "qualification",
-      ],
-    },
-  },
-  {
-    key: "mail",
-    group: "channels",
-    path: "/admin/mail",
-    access: ADMIN,
-    name: { ru: "Почта", uz: "Pochta", en: "Mail" },
-    description: {
-      ru: "Отправка писем и приём в общий ящик",
-      uz: "Xat yuborish va umumiy qutiga qabul",
-      en: "Sending mail and the shared inbox",
-    },
-    keywords: {
-      ru: ["email", "smtp", "imap", "письма", "ящик", "отправитель", "спам"],
-      uz: ["email", "smtp", "imap", "xat", "quti"],
-      en: ["email", "smtp", "imap", "letters", "inbox", "sender", "spam"],
-    },
-  },
-  {
-    key: "forms",
-    group: "channels",
-    path: "/admin/web-forms",
-    access: ADMIN,
-    name: { ru: "Формы сайта", uz: "Sayt shakllari", en: "Website forms" },
-    description: {
-      ru: "Заявка с сайта и защита от спама",
-      uz: "Saytdan ariza va spamdan himoya",
-      en: "Website request form and spam protection",
-    },
-    keywords: {
-      ru: ["сайт", "форма", "заявка", "антиспам"],
-      uz: ["sayt", "shakl", "ariza"],
-      en: ["website", "form", "request", "anti-spam"],
+      uz: ["sla", "ish soatlari", "bayramlar", "javob muddati", "birinçi javob"],
+      en: ["sla", "working hours", "holidays", "reply time", "first reply", "manager reminder"],
     },
   },
   {
     key: "dictionaries",
-    group: "company",
+    group: "rules",
     path: "/admin/dictionaries",
     // Списки продаж и документов — `admin`, списки расчёта — `company.settings`: страница открыта, если есть любой.
     access: { anyOf: ["admin", "company.settings"] },
@@ -408,66 +375,32 @@ export const SETTINGS: readonly SettingEntry[] = [
     },
   },
   {
-    key: "resolutions",
-    group: "company",
-    path: "/admin/resolutions",
-    access: ADMIN,
-    name: { ru: "Шаблоны резолюций", uz: "Rezolyutsiya shablonlari", en: "Resolution templates" },
-    description: {
-      ru: "Готовые резолюции для входящих писем",
-      uz: "Kiruvchi xatlar uchun tayyor rezolyutsiyalar",
-      en: "Ready resolutions for incoming letters",
-    },
-    keywords: {
-      ru: ["резолюция", "поручение", "входящие"],
-      uz: ["rezolyutsiya", "topshiriq"],
-      en: ["resolution", "instruction", "incoming"],
-    },
-  },
-  {
     key: "templates",
-    group: "company",
+    group: "rules",
     path: "/admin/templates",
     access: COMPANY,
-    name: { ru: "Шаблоны документов", uz: "Hujjat shablonlari", en: "Document templates" },
+    name: { ru: "Шаблоны", uz: "Şablonlar", en: "Templates" },
     description: {
-      ru: "КП, договоры, счета, акты и письма",
-      uz: "TT, shartnoma, hisob, dalolatnoma va xatlar",
-      en: "Quotes, contracts, invoices, acts and letters",
+      ru: "КП, договоры, счета, акты, письма и резолюции",
+      uz: "TT, şartnoma, hisob, dalolatnoma, xatlar va rezolyutsiyalar",
+      en: "Quotes, contracts, invoices, acts, letters and resolutions",
     },
     keywords: {
-      ru: ["шаблон", "письма", "бланк"],
-      uz: ["shablon", "xatlar", "blank"],
-      en: ["template", "letters", "letterhead"],
-    },
-  },
-  {
-    key: "timing",
-    group: "company",
-    path: "/admin/timing",
-    access: ADMIN,
-    name: { ru: "Время и сроки", uz: "Vaqt va muddatlar", en: "Hours & deadlines" },
-    description: {
-      ru: "Часы работы, срок ответа и передача менеджеру",
-      uz: "Ish vaqti, javob muddati va menejerga uzatish",
-      en: "Working hours, reply time and handoff to managers",
-    },
-    keywords: {
-      ru: ["sla", "рабочие часы", "выходные", "праздники", "срок ответа", "передача", "эскалация"],
-      uz: ["sla", "ish soatlari", "bayramlar", "javob muddati"],
-      en: ["sla", "working hours", "holidays", "reply time", "handoff", "escalation"],
+      ru: ["шаблон", "письма", "бланк", "резолюция", "поручение", "входящие"],
+      uz: ["shablon", "xatlar", "blank", "rezolyutsiya", "topshiriq"],
+      en: ["template", "letters", "letterhead", "resolution", "instruction", "incoming"],
     },
   },
   {
     key: "notifications",
-    group: "company",
+    group: "rules",
     path: "/admin/notifications",
     access: ADMIN,
     name: { ru: "Уведомления", uz: "Bildirishnomalar", en: "Notifications" },
     description: {
-      ru: "Канал команды и оповещения о сбоях",
-      uz: "Jamoa kanali va nosozlik haqida xabarlar",
-      en: "Team channel and failure alerts",
+      ru: "Напоминания и оповещения о сбоях",
+      uz: "Eslatmalar va nosozlik haqida xabarlar",
+      en: "Reminders and failure alerts",
     },
     keywords: {
       ru: [
@@ -501,10 +434,93 @@ export const SETTINGS: readonly SettingEntry[] = [
     },
   },
   {
+    key: "telegram",
+    group: "channels",
+    path: "/admin/telegram",
+    access: SYSTEM,
+    name: { ru: "Telegram", uz: "Telegram", en: "Telegram" },
+    description: {
+      ru: "Бот: подключение, канал команды, тексты и передача",
+      uz: "Bot: ulaniş, jamoa kanali, matnlar va topşiriş",
+      en: "Bot: connection, team channel, texts and handoff",
+    },
+    keywords: {
+      ru: [
+        "бот",
+        "токен",
+        "тексты бота",
+        "шаблоны ответов",
+        "база знаний",
+        "стоп-слова",
+        "конкуренты",
+        "квалификация",
+        "канал команды",
+        "передача менеджеру",
+        "порог передачи",
+      ],
+      uz: ["bot", "token", "javob shablonlari", "bilimlar bazasi", "jamoa kanali", "topşiriş"],
+      en: [
+        "bot",
+        "token",
+        "bot texts",
+        "reply templates",
+        "knowledge base",
+        "stop words",
+        "qualification",
+        "team channel",
+        "handoff",
+      ],
+    },
+  },
+  {
+    key: "mail",
+    group: "channels",
+    path: "/admin/mail",
+    access: SYSTEM,
+    name: { ru: "Почта", uz: "Pochta", en: "Mail" },
+    description: {
+      ru: "Отправка, общий ящик, виды писем и отправители",
+      uz: "Yuboriş, umumiy quti, xat turlari va jönatuvçilar",
+      en: "Sending, shared inbox, letter kinds and senders",
+    },
+    keywords: {
+      ru: [
+        "email",
+        "smtp",
+        "imap",
+        "письма",
+        "ящик",
+        "отправитель",
+        "спам",
+        "виды писем",
+        "типы писем",
+      ],
+      uz: ["email", "smtp", "imap", "xat", "quti", "xat turlari"],
+      en: ["email", "smtp", "imap", "letters", "inbox", "sender", "spam", "letter kinds"],
+    },
+  },
+  {
+    key: "forms",
+    group: "channels",
+    path: "/admin/web-forms",
+    access: SYSTEM,
+    name: { ru: "Формы сайта", uz: "Sayt shakllari", en: "Website forms" },
+    description: {
+      ru: "Заявка с сайта и защита от спама",
+      uz: "Saytdan ariza va spamdan himoya",
+      en: "Website request form and spam protection",
+    },
+    keywords: {
+      ru: ["сайт", "форма", "заявка", "антиспам"],
+      uz: ["sayt", "shakl", "ariza"],
+      en: ["website", "form", "request", "anti-spam"],
+    },
+  },
+  {
     key: "integrations",
     group: "channels",
     path: "/admin/integrations",
-    access: ADMIN,
+    access: SYSTEM,
     name: { ru: "Сервисы", uz: "Servislar", en: "Services" },
     description: {
       ru: "Состояние сервисов, модели ИИ, хранилище и копии",
@@ -530,8 +546,8 @@ export const SETTINGS: readonly SettingEntry[] = [
     key: "spend",
     group: "channels",
     path: "/admin/ai-spend",
-    access: ADMIN,
-    name: { ru: "Расходы на ИИ", uz: "SI xarajatlari", en: "AI spend" },
+    access: SYSTEM,
+    name: { ru: "ИИ", uz: "SI", en: "AI" },
     description: {
       ru: "Расходы, дневной лимит и защита данных для ИИ",
       uz: "Xarajatlar, kunlik limit va SI uchun ma’lumotlar himoyasi",
@@ -568,26 +584,26 @@ export const SETTINGS: readonly SettingEntry[] = [
   },
   {
     key: "audit",
-    group: "system",
+    group: "journal",
     path: "/admin/audit",
     access: ADMIN,
     name: { ru: "История", uz: "Tarix", en: "History" },
     description: {
-      ru: "Кто, что и когда изменил",
-      uz: "Kim, nimani va qachon o‘zgartirgan",
-      en: "Who changed what and when",
+      ru: "Действия людей и обмен между системами",
+      uz: "Odamlar harakatlari va tizimlararo almaşinuv",
+      en: "People’s actions and exchange between systems",
     },
     keywords: {
-      ru: ["аудит", "лог", "история", "изменения"],
-      uz: ["audit", "tarix", "o‘zgarishlar"],
-      en: ["audit", "log", "history", "changes"],
+      ru: ["аудит", "лог", "история", "изменения", "шина", "события", "доставка", "повторить"],
+      uz: ["audit", "tarix", "özgarişlar", "hodisalar", "yetkazish"],
+      en: ["audit", "log", "history", "changes", "bus", "events", "delivery", "retry"],
     },
   },
   {
     key: "exports",
-    group: "system",
+    group: "journal",
     path: "/admin/exports",
-    access: ADMIN,
+    access: SYSTEM,
     name: { ru: "Выгрузки", uz: "Eksport", en: "Exports" },
     description: {
       ru: "Сделки в файл для Excel, без контактов",
@@ -600,24 +616,19 @@ export const SETTINGS: readonly SettingEntry[] = [
       en: ["export", "csv", "excel", "download"],
     },
   },
-  {
-    key: "bus",
-    group: "system",
-    path: "/admin/bus",
-    access: { resource: "admin", level: "full" },
-    name: { ru: "Обмен между системами", uz: "Tizimlararo almashinuv", en: "System exchange" },
-    description: {
-      ru: "Доставка событий между частями платформы",
-      uz: "Platforma qismlari orasida hodisalar yetkazilishi",
-      en: "Event delivery between parts of the platform",
-    },
-    keywords: {
-      ru: ["шина", "события", "доставка", "повторить"],
-      uz: ["hodisalar", "yetkazish"],
-      en: ["bus", "events", "delivery", "retry"],
-    },
-  },
 ];
+
+/** Страницы без пункта в меню, которые показываются внутри группы своей родительской страницы. */
+const PARENT_PAGE: Readonly<Record<string, string>> = { "/admin/bus": "audit" };
+
+/** Страница Настроек, на которой стоит адрес (с учётом скрытых страниц-видов). */
+export function entryAt(pathname: string): SettingEntry | undefined {
+  const path = pathname.length > 1 ? pathname.replace(/\/+$/, "") : pathname;
+  const parent = PARENT_PAGE[path];
+  return SETTINGS.find(
+    (entry) => entry.key === parent || path === entry.path || path.startsWith(`${entry.path}/`),
+  );
+}
 
 export function settingByKey(key: string): SettingEntry | undefined {
   return SETTINGS.find((entry) => entry.key === key);

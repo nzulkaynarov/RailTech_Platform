@@ -121,7 +121,7 @@ export function MailCheck({
         aria-label={t("mail.check.resultLabel")}
       >
         {outcome ? (
-          <CheckResult outcome={outcome} admin={canSee(me, { resource: "admin" })} />
+          <CheckResult outcome={outcome} admin={canSee(me, { resource: "admin.system" })} />
         ) : null}
       </div>
     </div>

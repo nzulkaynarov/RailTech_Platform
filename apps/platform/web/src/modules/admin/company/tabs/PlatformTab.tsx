@@ -18,19 +18,29 @@ interface Values {
   support_email: string;
 }
 
-/** Платформенные настройки ERP: адрес поддержки в письмах клиентам (`system-settings`, СЦ-3) и курс USD→UZS с ручным вводом на дату (`FxRateSection`). */
+/** Курсы валют к суму: курс на сегодня и ручной ввод на дату (`FxRateSection`). Адрес поддержки — на «Реквизитах» (`SupportAddress`, ЕВ-2а). */
 export function PlatformTab() {
+  const { t } = useTranslation("company");
+  return (
+    <div className="pf-co-body">
+      <TabHeader title={t("platform.title")} hint={t("platform.hint")} />
+      <FxRateSection />
+    </div>
+  );
+}
+
+/** Контакт компании: адрес поддержки в письмах клиентам (`system-settings`, СЦ-3). Живёт на странице «Реквизиты и бланк» (ЕВ-2а, отчёт §8.2 п. 12). */
+export function SupportAddress() {
   const { t } = useTranslation("company");
   const query = useGetPlatformSettings();
   return (
     <div className="pf-co-body">
-      <TabHeader title={t("platform.title")} hint={t("platform.hint")} />
+      <TabHeader title={t("platform.supportTitle")} hint={t("platform.supportHint")} />
       <ReadOnlyFence>
         <QueryGate query={query}>
           {(settings) => <PlatformForm key={JSON.stringify(settings)} settings={settings} />}
         </QueryGate>
       </ReadOnlyFence>
-      <FxRateSection />
     </div>
   );
 }
@@ -83,7 +93,6 @@ function PlatformForm({ settings }: { settings: PlatformSettings }) {
         <Form.Item
           name="support_email"
           label={t("platform.support")}
-          extra={t("platform.supportHint")}
           rules={[
             { required: Boolean(settings.support_email), message: t("required") },
             { type: "email", message: t("platform.invalidSupport") },

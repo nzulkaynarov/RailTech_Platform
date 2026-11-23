@@ -28,24 +28,19 @@ afterEach(() => {
   endSession();
 });
 
-const PAGE = "/admin/dictionaries?list=doc%3Amail-types";
+/** ЕВ-2а: виды входящих писем и правила отправителей — часть страницы канала «Почта», а не «Справочников». */
+const PAGE = "/admin/mail";
 
 async function rowOf(name: string): Promise<HTMLElement> {
   const cell = await screen.findByText(name, { selector: "b" });
   return cell.closest("tr") as HTMLElement;
 }
 
-describe("Настройки · Процессы · Справочники · Типы входящих писем (MAIL-TYPES)", () => {
-  it("раздел «Почта» слева; девять стартовых типов с действием по умолчанию из закрытого списка; использованный не удаляется", async () => {
+describe("Настройки · Каналы · Почта · Типы входящих писем (MAIL-TYPES)", () => {
+  it("виды писем — на странице «Почта», в «Справочниках» их больше нет; девять стартовых типов с действием по умолчанию из закрытого списка; использованный не удаляется", async () => {
     signInAs("admin@demo.example");
     renderApp(PAGE);
-    expect(await screen.findByRole("heading", { level: 1, name: "Справочники" })).toBeVisible();
-    const nav = screen.getByRole("navigation", { name: "Справочники по разделам" });
-    expect(within(nav).getByText("Почта")).toBeVisible();
-    expect(within(nav).getByRole("link", { name: "Типы входящих писем" })).toHaveAttribute(
-      "aria-current",
-      "page",
-    );
+    expect(await screen.findByRole("heading", { level: 1, name: "Почта" })).toBeVisible();
     expect(await rowOf("Запрос клиента")).toHaveTextContent("Создать лид → менеджеру");
     expect(await rowOf("КП или прайс партнёра")).toHaveTextContent(
       "Загрузить прайс или КП партнёра",
@@ -111,12 +106,22 @@ describe("Настройки · Процессы · Справочники · Т
     expect(await screen.findByText("Правил нет")).toBeVisible();
   });
 
-  it("директор видит справочник и правила, но не меняет их", async () => {
+  it("старый адрес справочника уводит на «Почту»; в «Справочниках» раздела «Почта» нет", async () => {
+    signInAs("admin@demo.example");
+    renderApp("/admin/dictionaries?list=doc%3Amail-types");
+    expect(await screen.findByRole("heading", { level: 1, name: "Почта" })).toBeVisible();
+    expect(await rowOf("Запрос клиента")).toBeVisible();
+    cleanup();
+    renderApp("/admin/dictionaries");
+    const nav = await screen.findByRole("navigation", { name: "Справочники по разделам" });
+    expect(within(nav).queryByText("Почта")).toBeNull();
+    expect(within(nav).queryByRole("link", { name: "Типы входящих писем" })).toBeNull();
+  });
+
+  it("директор страницу «Почта» не видит: канал — фундамент администратора (ЕВ-2а)", async () => {
     signInAs("director@demo.example");
     renderApp(PAGE);
-    expect(await screen.findByRole("heading", { level: 1, name: "Справочники" })).toBeVisible();
-    expect(await rowOf("Запрос клиента")).toBeVisible();
-    expect(screen.getByRole("button", { name: "Добавить значение" })).toBeDisabled();
+    expect(await screen.findByRole("heading", { level: 1, name: "Нет доступа" })).toBeVisible();
     expect(screen.queryByRole("button", { name: "Добавить правило" })).toBeNull();
   });
 });

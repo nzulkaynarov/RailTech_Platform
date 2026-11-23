@@ -334,7 +334,7 @@ describe("Глобальный поиск", () => {
     expect(screen.queryByRole("group", { name: "Разделы" })).toBeNull();
   });
 
-  it("«почта» в поиске — страница «Почта» группы «Каналы связи»; переход по Enter", async () => {
+  it("«почта» в поиске — страница «Почта» группы «Каналы и подключения»; переход по Enter", async () => {
     signInAs("admin@demo.example");
     const { router } = renderApp("/dashboard/queue");
     const box = await searchBox();
@@ -343,7 +343,7 @@ describe("Глобальный поиск", () => {
     const settings = await screen.findByRole("group", { name: "Настройки" });
     const first = within(settings).getAllByRole("option")[0] as HTMLElement;
     expect(first).toHaveTextContent("Почта");
-    expect(first).toHaveTextContent("Подключения");
+    expect(first).toHaveTextContent("Каналы и подключения");
     fireEvent.click(first);
     await waitFor(() => {
       expect(router.state.location.pathname).toBe("/admin/mail");

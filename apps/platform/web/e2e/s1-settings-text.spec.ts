@@ -79,7 +79,7 @@ test.describe("S1 · Настройки короче", () => {
       // «Первый запуск», «Роли и права», «Сотрудники»: подзаголовок — одна строка
       for (const [path, title, name] of [
         ["/admin/setup", "Первый запуск", "s1-setup"],
-        ["/admin", "Все настройки", "s1-index"],
+        ["/admin", "Состояние", "s1-index"],
         ["/admin/roles", "Роли и права", "s1-roles"],
         ["/admin/org", "Сотрудники", "s1-org"],
       ] as const) {

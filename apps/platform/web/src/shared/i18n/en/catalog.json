@@ -730,8 +730,8 @@
       "editNamed": "Edit contact {{name}}",
       "lastLoginAt": "signed in {{date}}",
       "notInvited": "not invited",
-      "canAct": "Can create requests and upload files",
-      "canActNamed": "Can create requests and upload files: {{name}}"
+      "canAct": "Can approve",
+      "canActNamed": "Can approve: {{name}}"
     },
     "languages": {
       "ru": "Русский",
@@ -743,6 +743,7 @@
     "inviteAgain": "Invite again",
     "inviteNamed": "{{action}}: {{name}}",
     "inviteSent": "The e-mail with the sign-in code has been sent.",
+    "inviteForm": { "title": "Invite to the cabinet" },
     "suspend": "Suspend access",
     "readOnly": "Only staff allowed to manage partners can invite and change rights.",
     "contactForm": {
@@ -755,7 +756,7 @@
         "The contact appears on the partner card",
         "The invitation is sent by the separate Invite button"
       ],
-      "canAct": "Can create requests and upload files"
+      "canAct": "Can approve"
     },
     "suspendForm": {
       "title": "Suspend cabinet access",

@@ -180,22 +180,13 @@ describe("Admin · Внешние интеграции: обзор", () => {
     expect(await within(tile("ERP")).findByRole("alert")).toHaveTextContent("ERP не отвечает.");
   });
 
-  it("директор: экран открыт на чтение — «Только просмотр», ни одной кнопки проверки и изменения", async () => {
+  it("директор: «Сервисы» — страница фундамента, ему «Нет доступа» (ЕВ-2а); BFF на изменение отвечает 403 и без интерфейса", async () => {
     signIn("director@demo.example");
     renderAt("/admin/integrations?card=erp&panel=open");
 
-    expect(await screen.findByRole("heading", { level: 1, name: "Сервисы" })).toBeVisible();
-    expect(await screen.findByText("Только просмотр")).toBeVisible();
+    expect(await screen.findByRole("heading", { level: 1, name: "Нет доступа" })).toBeVisible();
+    expect(screen.queryByRole("heading", { level: 1, name: "Сервисы" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^Проверить/ })).not.toBeInTheDocument();
-    // «Расходы» и «Состояние системы» — отчёты: директору есть «Обновить»
-    expect(
-      within(tile("Расходы")).getByRole("button", { name: "Обновить: Расходы" }),
-    ).toBeEnabled();
-    const side = await panelEl();
-    for (const name of ["Проверить связь", "Подключить заново", "Ротация ключа"]) {
-      expect(within(side).queryByRole("button", { name })).not.toBeInTheDocument();
-    }
-    // BFF на изменение отвечает 403 и без интерфейса
     const response = await fetch("/api/v1/admin/integrations/erp/check", {
       method: "POST",
       headers: { "X-CSRF-Token": "mock-csrf-token-0123456789abcdef" },
@@ -203,11 +194,11 @@ describe("Admin · Внешние интеграции: обзор", () => {
     expect(response.status).toBe(403);
   });
 
-  it("директор читает расходы", async () => {
-    signIn("director@demo.example");
-    // Расходы — своя страница «Система · Расходы на ИИ» (SET-IA); старый адрес карточки уводит туда
+  it("администратор читает расходы", async () => {
+    signIn("admin@demo.example");
+    // Расходы — своя страница «Каналы и подключения · ИИ» (SET-IA, ЕВ-2а); старый адрес карточки уводит туда
     renderAt("/admin/integrations?card=spend&panel=open");
-    await screen.findByRole("heading", { level: 1, name: "Расходы на ИИ" });
+    await screen.findByRole("heading", { level: 1, name: "ИИ" });
     const side = document.getElementById("main-content") as HTMLElement;
     expect(
       await within(side).findByRole("heading", { level: 4, name: "Расходы бота" }),
@@ -220,7 +211,7 @@ describe("Admin · Внешние интеграции: обзор", () => {
   });
 
   it("CRM отказала в части данных: карточка помечена, остальные работают, в панели — «Недоступно вашей роли»", async () => {
-    signIn("director@demo.example");
+    signIn("admin@demo.example");
     server.use(
       http.get("*/admin/integrations/models", () =>
         HttpResponse.json({ code: "FORBIDDEN", message: "x", source: "crm" }, { status: 403 }),
@@ -287,7 +278,7 @@ describe("Admin · Внешние интеграции: доступ", () => {
     renderAt("/admin/integrations");
 
     const menu = await screen.findByRole("navigation", { name: "Разделы модуля" });
-    expect(within(menu).getByRole("link", { name: /Подключения/ })).toHaveAttribute(
+    expect(within(menu).getByRole("link", { name: /Каналы и подключения/ })).toHaveAttribute(
       "aria-current",
       "page",
     );

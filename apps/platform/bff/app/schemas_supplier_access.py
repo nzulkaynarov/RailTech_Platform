@@ -114,6 +114,7 @@ class SupplierCabinetInvite(Body):
     kind: PartnerKind | None = None
     contract_number: str | None = None
     contract_date: str | None = None
+    can_act: bool | None = None
 
 
 def _person(raw: Any) -> dict[str, Any] | None:

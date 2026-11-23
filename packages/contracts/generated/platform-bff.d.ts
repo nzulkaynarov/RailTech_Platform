@@ -17766,7 +17766,7 @@ export interface components {
        * @enum {string}
        */
       language: "ru" | "uz" | "en";
-      /** @description Может создавать запросы и загружать файлы (участник); иначе — только просмотр */
+      /** @description Может подтверждать (участник); иначе — только просмотр */
       can_act: boolean;
       /** Format: date-time */
       invited_at: string | null;
@@ -17897,6 +17897,8 @@ export interface components {
        * @description Дата партнёрского договора
        */
       contract_date?: string | null;
+      /** @description Контакт может подтверждать заказы («Может подтверждать» в Платформе и в Кабинете); не указано — право контакта не меняется */
+      can_act?: boolean;
     };
     /**
      * @description Откуда заявка — внешний вход, кабинет клиента или входящее письмо (сотрудник, план 1.9)

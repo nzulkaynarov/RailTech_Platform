@@ -183,3 +183,120 @@
   color: var(--rt-color-primary-text);
   line-height: 32px;
 }
+
+/* Рамка страницы Настроек (ЕВ-2а): меню страниц группы слева, страница справа; форма — не шире 768 px (отчёт §7 п. 20). */
+.pf-set-frame {
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+@media (max-width: 767px) {
+  .pf-set-frame {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+}
+.pf-set-frame-body {
+  min-width: 0;
+}
+.pf-set-frame-nav {
+  position: sticky;
+  top: 16px;
+}
+.pf-set-frame-title {
+  margin: 0 0 8px;
+  padding: 0 8px;
+  color: var(--rt-color-text-secondary);
+  font-size: 12px;
+  line-height: 20px;
+  font-weight: 600;
+}
+.pf-set-frame-nav ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.pf-set-frame-link {
+  display: block;
+  padding: 6px 8px;
+  border-radius: 6px;
+  color: var(--rt-color-text-default);
+  line-height: 22px;
+}
+.pf-set-frame-link:hover {
+  color: var(--rt-color-text-default);
+  background: var(--rt-color-surface-layout);
+}
+.pf-set-frame-link[aria-current="page"] {
+  background: var(--rt-color-primary-bg);
+  color: var(--rt-color-primary-text);
+  font-weight: 500;
+}
+/* Страница-форма: поля не шире 768 px; таблицы и журналы занимают всю ширину рамки */
+.pf-set-narrow > :not(.pf-set-wide) {
+  max-width: 768px;
+}
+.pf-set-save-dock {
+  margin-top: 16px;
+}
+
+/* «Состояние» (ЕВ-2а): три карточки — требует внимания, службы, готовность */
+.pf-set-state-head {
+  padding: 16px 20px 8px;
+}
+.pf-set-state-empty {
+  margin: 0;
+  padding: 0 20px 16px;
+  color: var(--rt-color-text-secondary);
+}
+.pf-set-state-foot {
+  margin: 0;
+  padding: 8px 20px 16px;
+}
+.pf-set-state-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.pf-set-state-list > li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  padding: 12px 20px;
+  border-top: 1px solid var(--rt-color-surface-split);
+}
+.pf-set-state-plain > li {
+  justify-content: flex-start;
+  padding: 8px 20px;
+}
+.pf-set-state-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1 1 320px;
+}
+.pf-set-state-title {
+  font-weight: 600;
+  line-height: 22px;
+}
+.pf-set-state-detail {
+  color: var(--rt-color-text-secondary);
+  line-height: 22px;
+}
+.pf-set-state-list li[data-state="todo"] .pf-set-state-detail,
+.pf-set-state-list li[data-state="broken"] .pf-set-state-detail {
+  color: var(--rt-color-text-default);
+  font-weight: 600;
+}
+.pf-set-state-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-right: 20px;
+  flex-wrap: wrap;
+}

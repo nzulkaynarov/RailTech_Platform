@@ -6,13 +6,12 @@ import { Link } from "react-router";
 import { useDryRunEscalation, useSaveBotSetting } from "../../../shared/api/generated/platform-bff";
 import type { EscalationDryRun } from "../../../shared/api/generated/model";
 import { ErrorNote } from "../../../shared/ui/FormParts";
-import { StatusTag } from "../../../shared/ui/StatusTag";
-import { UnsavedGuard } from "../../../shared/ui/UnsavedGuard";
+import { ContextualSaveBar } from "../../../shared/ui/ContextualSaveBar";
 import { DryRunPanel } from "./DryRunPanel";
 import { botErrorText, invalidPaths } from "./errors";
 import { useRefreshBot } from "./refresh";
 import { SchemaField } from "./SchemaField";
-import { type JsonSchema, normalize, withoutFields } from "./schemaForm";
+import { type JsonSchema, normalize, onlyFields, withoutFields } from "./schemaForm";
 import { TextsSection } from "./TextsSection";
 
 type Values = Record<string, unknown>;
@@ -26,6 +25,10 @@ interface Props {
   editable: boolean;
   /** Раздел сохранён и перечитан: экран пересоздаёт форму с новыми значениями. */
   onSaved: () => void;
+  /** Показать только эти поля раздела: остальные правятся на другой странице (`FIELD_MOVES`, ЕВ-2а) */
+  only?: readonly string[] | undefined;
+  /** Не показывать эти поля раздела: их правят на другой странице */
+  hide?: readonly string[] | undefined;
 }
 
 /** Поля, которые правятся на другом экране («Внешние интеграции») и здесь не показываются. */
@@ -71,6 +74,8 @@ export function SettingsForm({
   samples,
   editable,
   onSaved,
+  only,
+  hide,
 }: Props) {
   const { t } = useTranslation(["bot", "kb"]);
   const [form] = Form.useForm<Values>();
@@ -98,7 +103,9 @@ export function SettingsForm({
     },
   });
 
-  const visible = HIDDEN[settingKey] ? withoutFields(schema, HIDDEN[settingKey]) : schema;
+  const hidden = [...(HIDDEN[settingKey] ?? []), ...(hide ?? [])];
+  const withoutHidden = hidden.length > 0 ? withoutFields(schema, hidden) : schema;
+  const visible = only ? onlyFields(schema, only) : withoutHidden;
 
   return (
     <Form
@@ -116,38 +123,12 @@ export function SettingsForm({
         save.mutate({ key: settingKey, data: body() });
       }}
     >
-      <UnsavedGuard when={dirty} busy={save.isPending} />
       <div className="pf-bot-form-head">
         <h2 className="pf-bot-section-title" id={`pf-bot-section-${settingKey}`}>
           {title}
         </h2>
-        {editable ? (
-          <div className="pf-bot-form-actions">
-            <span role="status">
-              {dirty ? (
-                <StatusTag tone="gold">{t("bot:form.unsaved")}</StatusTag>
-              ) : (
-                <span className="pf-hint">{t("bot:form.allSaved")}</span>
-              )}
-            </span>
-            {dirty ? (
-              <Button
-                onClick={() => {
-                  form.resetFields();
-                  setDirty(false);
-                  setInvalid([]);
-                }}
-              >
-                {t("bot:form.discard")}
-              </Button>
-            ) : null}
-            <Button type="primary" htmlType="submit" loading={save.isPending} disabled={!dirty}>
-              {t("bot:form.save")}
-            </Button>
-          </div>
-        ) : null}
       </div>
-      {t(`bot:sectionHints.${settingKey}`, { defaultValue: "" }) ? (
+      {!only && t(`bot:sectionHints.${settingKey}`, { defaultValue: "" }) ? (
         <p className="pf-fp-sub">{t(`bot:sectionHints.${settingKey}`)}</p>
       ) : null}
       <ErrorNote message={save.isError ? botErrorText(t, save.error) : null} />
@@ -185,8 +166,26 @@ export function SettingsForm({
           <SchemaField name={[]} schema={visible} root={schema} label="" samples={samples} />
         )}
       </Card>
-      {settingKey === "escalation" && editable ? (
+      {settingKey === "escalation" && editable && !only ? (
         <DryRun body={body} disabled={save.isPending} />
+      ) : null}
+      {/* Одна полоса «Сохранить» на всех страницах Настроек (отчёт 2026-11-22 §7 п. 20): вместо кнопок в шапке раздела */}
+      {editable ? (
+        <ContextualSaveBar
+          className="pf-set-save-dock"
+          visible={dirty}
+          saveLabel={t("bot:form.save")}
+          discardLabel={t("bot:form.discard")}
+          loading={save.isPending}
+          onSave={() => {
+            form.submit();
+          }}
+          onDiscard={() => {
+            form.resetFields();
+            setDirty(false);
+            setInvalid([]);
+          }}
+        />
       ) : null}
     </Form>
   );

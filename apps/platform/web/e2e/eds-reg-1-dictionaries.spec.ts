@@ -64,7 +64,7 @@ test.describe("EDS-REG · справочники документооборот�
       .click();
     await page
       .getByRole("navigation", { name: "Разделы модуля" })
-      .getByRole("link", { name: "Компания" })
+      .getByRole("link", { name: "Правила работы", exact: true })
       .click();
     await page.getByRole("link", { name: /Справочники/ }).click();
     await expect(page).toHaveURL(/\/admin\/dictionaries/);

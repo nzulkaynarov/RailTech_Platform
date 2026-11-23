@@ -44,6 +44,10 @@ CONTACT = {
 }
 
 
+#: Партнёр с разделом покупателя: ДК-5 — по умолчанию его нет, включает сотрудник.
+BUYER = ["my_products", "catalog_requests"]
+
+
 def add_contact(world, **extra):
     response = call(world, "supply", "post", "contacts/", {**CONTACT, **extra})
     assert response.status_code == 201, response.content
@@ -121,7 +125,7 @@ class TestContacts:
 
         created = add_contact(world, can_act=False)
         assert created["can_act"] is False
-        call(world, "supply", "post", "invite/", {"contact_id": created["id"]})
+        call(world, "supply", "post", "invite/", {"contact_id": created["id"], "modules": BUYER})
         code = re.search(r"\b(\d{6})\b", mail.outbox[0].body).group(1)
         portal = PortalAPIClient()
         portal.post("/api/portal/v1/auth/code", {"email": created["email"], "code": code}, format="json")
@@ -159,6 +163,19 @@ class TestInvite:
         assert message.to == ["dilshod@supplier-north.example.uz"]
         assert re.search(r"\b\d{6}\b", message.body) and "mahsulotlaringiz" in message.body  # uz, текст партнёра
 
+    @pytest.mark.parametrize(
+        ("sent", "stored", "expected"),
+        [(True, False, True), (False, True, False), (None, True, True), (None, False, False)],
+    )
+    def test_inviter_chooses_whether_the_contact_may_confirm_orders(self, world, sent, stored, expected):
+        """ДК-5: право «Может подтверждать» ставится при приглашении; не указано — остаётся как было."""
+        created = add_contact(world, can_act=stored)
+        body = {"contact_id": created["id"]}
+        if sent is not None:
+            body["can_act"] = sent
+        assert call(world, "supply", "post", "invite/", body).status_code == 200
+        assert Contact.objects.get(pk=created["id"]).can_act is expected
+
     def test_invite_response_never_carries_the_login_link_or_code(self, world):
         contact_id = add_contact(world)["id"]
         response = call(world, "supply", "post", "invite/", {"contact_id": contact_id})
@@ -169,7 +186,7 @@ class TestInvite:
         from portal.tests.conftest import PortalAPIClient
 
         contact_id = add_contact(world)["id"]
-        call(world, "supply", "post", "invite/", {"contact_id": contact_id})
+        call(world, "supply", "post", "invite/", {"contact_id": contact_id, "modules": BUYER})
         code = re.search(r"\b(\d{6})\b", mail.outbox[0].body).group(1)
 
         portal = PortalAPIClient()
@@ -186,7 +203,7 @@ class TestInvite:
             "profile",
         ]
         assert CompanyRelationship.objects.get(company=world["supplier"]).status == RelationshipStatus.ACTIVE
-        assert portal.get("/api/portal/v1/catalog").status_code == 200  # «Каталог и заявки» включён по умолчанию
+        assert portal.get("/api/portal/v1/catalog").status_code == 200  # «Каталог и заявки» включил сотрудник
         assert portal.get("/api/portal/v1/quotes").status_code == 403
 
     def test_reinvite_keeps_responsible_and_does_not_duplicate(self, world):
@@ -282,7 +299,7 @@ class TestRights:
         from portal.tests.conftest import PortalAPIClient
 
         contact_id = add_contact(world)["id"]
-        call(world, "supply", "post", "invite/", {"contact_id": contact_id})
+        call(world, "supply", "post", "invite/", {"contact_id": contact_id, "modules": BUYER})
         code = re.search(r"\b(\d{6})\b", mail.outbox[0].body).group(1)
         portal = PortalAPIClient()
         assert (
@@ -297,15 +314,13 @@ class TestRights:
         state = call(world, "supply", "get").json()
         assert state["partner_modules"] == {
             "allowed": ["my_products", "catalog_requests"],
-            "default": ["my_products", "catalog_requests"],
+            "default": ["my_products"],  # ДК-5: раздел покупателя партнёру включает сотрудник
         }
         assert state["cabinet_roles"] == [] and state["cabinet_modules"] == []  # кабинет поставщику ещё не открывали
         add = call(world, "supply", "post", "invite/", {"contact_id": add_contact(world)["id"]}).json()
-        assert (
-            add["relationship"]["modules"] == ["my_products", "catalog_requests"] and add["relationship"]["kind"] == ""
-        )
+        assert add["relationship"]["modules"] == ["my_products"] and add["relationship"]["kind"] == ""
         assert add["cabinet_roles"] == ["partner"]
-        assert add["cabinet_modules"] == ["my_products", "catalog_requests", "letters", "messages", "profile"]
+        assert add["cabinet_modules"] == ["my_products", "letters", "messages", "profile"]
 
     def test_invite_with_chosen_modules_and_kind(self, world):
         contact_id = add_contact(world)["id"]
@@ -337,7 +352,7 @@ class TestRights:
             response = call(world, "supply", "patch", "relationship/", {"modules": [module]})
             assert response.status_code == 400, module
         relationship = CompanyRelationship.objects.get()
-        assert relationship.modules == ["my_products", "catalog_requests"]
+        assert relationship.modules == ["my_products"]
         invite = call(
             world,
             "supply",
@@ -355,13 +370,13 @@ class TestRights:
         for kind in ("manufacturer", "supplier", "principal", "other", ""):
             response = call(world, "supply", "patch", "relationship/", {"kind": kind})
             assert response.status_code == 200 and response.json()["relationship"]["kind"] == kind
-            assert response.json()["relationship"]["modules"] == ["my_products", "catalog_requests"]
+            assert response.json()["relationship"]["modules"] == ["my_products"]
         assert call(world, "supply", "patch", "relationship/", {"kind": "vendor"}).status_code == 400
 
     def test_who_and_when_is_in_history_and_journal(self, world):
         from parties.models import CompanyRelationship as Model
 
-        call(world, "supply", "post", "invite/", {"contact_id": add_contact(world)["id"]})
+        call(world, "supply", "post", "invite/", {"contact_id": add_contact(world)["id"], "modules": BUYER})
         call(world, "director", "patch", "relationship/", {"modules": ["my_products"]})
         event = Model.pgh_event_model.objects.order_by("-pgh_id").first()
         assert event.modules == ["my_products"]

@@ -71,7 +71,7 @@ test.describe("P2-2: старые письма и папка «Спам»", () =
       await form.getByRole("button", { name: "Сохранить настройки" }).click();
       await expect(page.getByText("INBOX, Spam (спам)")).toBeVisible();
 
-      await page.getByRole("button", { name: "Загрузить", exact: true }).click();
+      await page.getByRole("button", { name: "Загрузить", exact: true }).first().click();
       await expect(
         page.getByText(/Загружается: \d из 3|Ищем письма в ящике/).first(),
       ).toBeVisible();

@@ -159,7 +159,7 @@ test.describe("Шапка и бар несохранённого", () => {
       await page.getByRole("button", { name: /^Контакты/, expanded: false }).click();
       await page.getByLabel("Телефон", { exact: true }).focus();
 
-      // Уход со страницы с правками (рейлом «Настройки» — на первую страницу группы «Сотрудники») спрашивает
+      // Уход со страницы с правками (рейлом «Настройки» — на «Состояние» (ЕВ-2а)) спрашивает
       // на телефоне «Настройки» — в меню профиля, не в нижней панели (ЕВ-0)
       const openSettings = async (): Promise<void> => {
         if (width === 390) {
@@ -180,7 +180,7 @@ test.describe("Шапка и бар несохранённого", () => {
       await page.getByRole("button", { name: "Отменить" }).click();
       await expect(save).toBeHidden();
       await openSettings();
-      await expect(page.getByRole("heading", { level: 1, name: "Сотрудники" })).toBeVisible();
+      await expect(page.getByRole("heading", { level: 1, name: "Состояние" })).toBeVisible();
     });
   }
 

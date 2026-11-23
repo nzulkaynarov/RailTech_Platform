@@ -12,7 +12,7 @@ export const SETTINGS_REDIRECTS_REMOVE_AFTER = "2027-04-01";
 const BOT_SECTION: Record<string, string> = {
   company: "/admin/company?part=contacts",
   business_hours: "/admin/timing",
-  escalation: "/admin/timing",
+  escalation: "/admin/telegram?tab=behavior",
   bot: "/admin/telegram?tab=behavior",
   stop_words: "/admin/telegram?tab=behavior",
   competitors: "/admin/telegram?tab=behavior",
@@ -52,7 +52,7 @@ const COMPANY_TAB: Record<string, string> = {
 
 const DOCFLOW_TAB: Record<string, string> = {
   dictionaries: "/admin/dictionaries?list=doc",
-  templates: "/admin/resolutions",
+  templates: "/admin/templates?tab=resolutions",
   ai: "/admin/ai-spend",
 };
 
@@ -64,6 +64,12 @@ const INTEGRATION_CARD: Record<string, string> = {
 };
 
 export const TICKETS_HOME = "/dashboard/queue";
+
+/**
+ * ЕВ-2а (2026-11-23): «Шаблоны резолюций» стали вкладкой «Шаблонов», «Виды писем и правила отправителей» — частью страницы
+ * «Почта». Перенос — по таблице ниже; запись с датой, чтобы устаревшие строки можно было снять.
+ */
+const MAIL_KINDS_LIST = /^(doc:)?mail-types$/;
 
 /** Что открыто в боковом окне бота — текст или шаблон ответа — переносится на новый адрес (ссылки на конкретный текст). */
 const CARRIED = ["text", "template", "panel"] as const;
@@ -105,6 +111,12 @@ export function legacySettingsPath(pathname: string, search = ""): string | null
   }
   if (path === "/admin/templates" && params.get("tab") === "quote") return "/admin/sales";
   if (path === "/admin/tickets") return TICKETS_HOME;
+  // ЕВ-2а (2026-11-23): шаблоны резолюций — вкладка «Шаблонов»
+  if (path === "/admin/resolutions") return withCarried("/admin/templates?tab=resolutions", params);
+  // ЕВ-2а (2026-11-23): виды писем и правила отправителей — страница «Почта»
+  if (path === "/admin/dictionaries" && MAIL_KINDS_LIST.test(params.get("list") ?? "")) {
+    return "/admin/mail#pf-mail-kinds";
+  }
   if (path === "/admin/integrations") {
     const card = params.get("card");
     if (card && INTEGRATION_CARD[card]) return INTEGRATION_CARD[card];

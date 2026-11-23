@@ -28,10 +28,10 @@ afterEach(() => {
   endSession();
 });
 
-const page = () => screen.findByRole("heading", { level: 1, name: "Расходы на ИИ" });
+const page = () => screen.findByRole("heading", { level: 1, name: "ИИ" });
 const policy = () => screen.findByRole("region", { name: "Защита данных для ИИ" });
 
-describe("Настройки · Расходы на ИИ · Защита данных для ИИ (PD-BIZ)", () => {
+describe("Настройки · ИИ · Защита данных для ИИ (PD-BIZ)", () => {
   it("по умолчанию «Деловая»: у каждой политики одно предложение о том, что скрывается; сканы читаются с подписью", async () => {
     signInAs("admin@demo.example");
     renderApp("/admin/ai-spend");
@@ -56,7 +56,8 @@ describe("Настройки · Расходы на ИИ · Защита дан�
     await page();
     const card = within(await policy());
     fireEvent.click(card.getByRole("radio", { name: /Строгая/ }));
-    expect(await screen.findByText("Есть несохранённые изменения")).toBeVisible();
+    // у каждой формы страницы своя полоса: видна и озвучена только та, где есть правки
+    expect(await card.findByRole("status")).toHaveTextContent("Есть несохранённые изменения");
     // до сохранения CRM ничего не получила
     expect(readKb().settings["ai"]).toEqual({ pii_policy: "business" });
     fireEvent.click(card.getByRole("button", { name: "Сохранить" }));
@@ -89,14 +90,11 @@ describe("Настройки · Расходы на ИИ · Защита дан�
     expect(screen.getByRole("switch", { name: "Читать сканы и фото писем" })).not.toBeChecked();
   });
 
-  it("директор только смотрит: политика и переключатель заблокированы, кнопки «Сохранить» нет", async () => {
+  it("директор страницу «ИИ» не видит: политика и расходы — фундамент администратора, «Нет доступа» (ЕВ-2а)", async () => {
     signInAs("director@demo.example");
     renderApp("/admin/ai-spend");
-    await page();
-    const card = within(await policy());
-    expect(card.getByRole("radio", { name: /Деловая/ })).toBeDisabled();
-    expect(card.queryByRole("button", { name: "Сохранить" })).toBeNull();
-    expect(await screen.findByRole("switch", { name: "Читать сканы и фото писем" })).toBeDisabled();
+    expect(await screen.findByRole("heading", { level: 1, name: "Нет доступа" })).toBeVisible();
+    expect(screen.queryByRole("switch", { name: "Читать сканы и фото писем" })).toBeNull();
   });
 
   it("документооборот отстаёт от CRM: предупреждение и фактическое состояние сканов", async () => {

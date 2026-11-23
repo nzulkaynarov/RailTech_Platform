@@ -21,4 +21,6 @@ export interface SupplierCabinetInvite {
    * @nullable
    */
   contract_date?: string | null;
+  /** Контакт может подтверждать заказы («Может подтверждать» в Платформе и в Кабинете); не указано — право контакта не меняется */
+  can_act?: boolean;
 }

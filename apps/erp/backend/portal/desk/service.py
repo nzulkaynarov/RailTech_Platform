@@ -240,8 +240,11 @@ def invite(
     kind=None,
     contract_number=None,
     contract_date=None,
+    can_act=None,
 ) -> dict:
     """Создать/вернуть отношение `partner` и отправить контакту письмо с кодом входа.
+
+    `can_act` — приглашающий решает, вправе ли контакт подтверждать заказы (ДК-5): `None` — право не меняется.
 
     `modules` — включённые партнёру модули (нет — у нового отношения значения шаблона по умолчанию, у существующего
     прежние), `kind` — метка вида партнёра. Не ушло письмо — отношение остаётся как было (приглашения не случилось). Повторное приглашение того же отношения
@@ -293,6 +296,9 @@ def invite(
             # Возврат после приостановки: бывавший в кабинете остаётся активным, новый — приглашённым.
             relationship.status = RelationshipStatus.ACTIVE if relationship.activated_at else RelationshipStatus.INVITED
             relationship.save()
+            if can_act is not None and contact.can_act != bool(can_act):
+                contact.can_act = bool(can_act)
+                contact.save(update_fields=["can_act", "updated_at"])
             outcome = invite_contact(contact, actor=user, channel="email", language=contact.language)
             if outcome.error:
                 raise _Undo(outcome.error)
@@ -305,7 +311,7 @@ def invite(
                 event="invited",
                 action="Партнёр приглашён в кабинет",
                 before=before,
-                after={**_snapshot(relationship), "contact": contact.pk},
+                after={**_snapshot(relationship), "contact": contact.pk, "can_act": contact.can_act},
                 detail=company.name,
             )
     except _Undo as undo:
@@ -361,6 +367,7 @@ def update_relationship(company: Company, data: dict, user) -> dict:
         if relationship is None:
             raise AccessError("NOT_FOUND", 404)
         before = _snapshot(relationship)
+        was_buyer = partner_client.partner_is_buyer(company)
         if modules is not None:
             relationship.modules = modules
         if kind is not None:
@@ -372,6 +379,9 @@ def update_relationship(company: Company, data: dict, user) -> dict:
         if "contract_date" in data:
             relationship.contract_date = data.get("contract_date")
         relationship.save()
+        if modules is not None and not was_buyer and partner_client.partner_is_buyer(company):
+            # Раздел покупателя включили партнёру, который до этого только продавал, — теперь он ещё и клиент (ДК-5).
+            request_client_in_crm(company, user)
         record(
             user,
             entity="supplier_access",

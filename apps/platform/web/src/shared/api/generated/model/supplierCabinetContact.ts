@@ -12,7 +12,7 @@ export interface SupplierCabinetContact {
   phone: string;
   /** Язык писем контакту */
   language: SupplierCabinetContactLanguage;
-  /** Может создавать запросы и загружать файлы (участник); иначе — только просмотр */
+  /** Может подтверждать (участник); иначе — только просмотр */
   can_act: boolean;
   /** @nullable */
   invited_at: string | null;

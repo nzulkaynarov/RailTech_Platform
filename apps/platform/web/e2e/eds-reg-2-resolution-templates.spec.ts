@@ -58,7 +58,7 @@ test.describe("EDS-REG · шаблоны резолюций", () => {
     // 1. Администратор: Настройки → Процессы · Шаблоны резолюций (старый адрес «Документооборота» уводит туда), новый шаблон.
     await loginAndWait(page, "admin@demo.example");
     await spaGoto(page, "/admin/docflow?tab=templates");
-    await expect(page.getByRole("heading", { level: 1, name: "Шаблоны резолюций" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Шаблоны" })).toBeVisible();
     // Список загружен (общий шаблон мока виден) — кнопка «Добавить шаблон» одна.
     await expect(page.getByText("Банк — к сведению бухгалтерии", { exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Добавить шаблон" }).click();
