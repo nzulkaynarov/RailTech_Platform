@@ -120,7 +120,6 @@
       "comment": "Comment",
       "reason": "Rejection reason"
     },
-    "returned": "The letter was returned to the manager",
     "rejected": "The letter was rejected",
     "journal": "History",
     "actionUnknown": "Action on the letter",
@@ -892,14 +891,6 @@
     "historyTag": "From history",
     "spamCaption": "Suspicious mail",
     "spamIntro": "Mail from the mailbox Spam folder. Return the ones you need to the queue.",
-    "spamEmpty": {
-      "title": "No suspicious mail",
-      "text": "Mail from the Spam folder lands here if the folder is chosen in the receiving settings."
-    },
-    "historyEmpty": {
-      "title": "No mail from history",
-      "text": ""
-    },
     "spam": {
       "title": "Suspicious mail",
       "what": "Arrived in the mailbox Spam folder. Check the sender and the text.",
@@ -1091,14 +1082,6 @@
     }
   },
   "settings": {
-    "subtitle": "Letter lists, resolution templates and the registration AI assistant.",
-    "tabsLabel": "Document flow sections",
-    "tabs": {
-      "dictionaries": "Lists",
-      "templates": "Resolution templates",
-      "ai": "AI assistant"
-    },
-    "readOnly": "View only.",
     "dict": {
       "title": "Lists",
       "hint": "New values appear in forms at once. A used value can only be hidden.",

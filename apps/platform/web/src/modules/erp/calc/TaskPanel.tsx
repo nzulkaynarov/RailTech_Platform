@@ -118,12 +118,6 @@ export function TaskBody({ sheet, brief = false }: { sheet: CalcSheet; brief?: b
           ))}
         </ul>
       </section>
-      <section aria-labelledby="pf-calc-task-chat">
-        <h3 id="pf-calc-task-chat" className="pf-calc-task-title">
-          {t("task.chat")}
-        </h3>
-        <p className="pf-hint">{t("task.chatText")}</p>
-      </section>
       {canEdit(me, "eds.memo.create") ? (
         <section className="pf-calc-task-memo">
           <p className="pf-hint">{t("task.memo")}</p>

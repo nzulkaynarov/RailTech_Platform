@@ -142,7 +142,7 @@ export function QueuePage() {
   };
   const emptyKind = queueEmptyKind(me);
 
-  const projects = matchSection("/dashboard/projects");
+  const projects = matchSection("/eds/projects");
   const showLink = projects !== undefined && canSee(me, projects.section.access);
   const retry = () => {
     void queue.refetch();
@@ -180,7 +180,7 @@ export function QueuePage() {
         text={t(`modules:dashboard.queue.empty.${emptyKind}.text`)}
         action={
           emptyKind === "director" && showLink ? (
-            <LinkButton to="/dashboard/projects">
+            <LinkButton to="/eds/projects">
               {t("modules:dashboard.queue.empty.director.action")}
             </LinkButton>
           ) : undefined

@@ -4,7 +4,6 @@
     "title": "Home",
     "sections": {
       "queue": "Tasks",
-      "projects": "Projects",
       "summary": "Summary"
     },
     "queue": {
@@ -205,7 +204,6 @@
       "byDue": "Tasks by due date",
       "stuck": "Overdue",
       "noStuck": "No overdue tasks",
-      "noData": "Data will appear here",
       "loadError": "Could not load the summary",
       "retry": "Retry",
       "due": {
@@ -213,11 +211,6 @@
         "today": "Today",
         "tomorrow": "Tomorrow",
         "later": "Later"
-      },
-      "blocks": {
-        "requests": "Requests by stage",
-        "profit": "Profit by project",
-        "targets": "12-month targets"
       }
     }
   },
@@ -225,18 +218,14 @@
     "name": "Contacts",
     "title": "Contacts",
     "sections": {
-      "messages": "Awaiting reply",
       "leads": "Leads",
       "clients": "Counterparties",
-      "requests": "Requests",
-      "channels": "Channels",
       "kb": "Knowledge base"
     },
     "action": "New request",
     "nav": {
       "leads": "Leads",
       "clients": "Counterparties",
-      "mail": "Mail",
       "kb": "Knowledge base"
     }
   },
@@ -246,7 +235,6 @@
     "sections": {
       "documents": "All documents",
       "inbox": "Incoming",
-      "outbox": "Outgoing",
       "projects": "Projects",
       "drafts": "Quotes to approve",
       "approvals": "Awaiting approval",
@@ -260,10 +248,10 @@
     "action": "New document",
     "nav": {
       "inbox": "Incoming",
+      "mail": "Mail",
       "outbox": "Outgoing",
       "internal": "Internal",
-      "archive": "Archive",
-      "templates": "Templates"
+      "archive": "Archive"
     }
   },
   "erp": {
@@ -295,15 +283,12 @@
     "title": "Organizer",
     "sections": {
       "all": "Chats",
-      "internal": "Team",
-      "external": "With clients",
       "contacts": "People",
       "calendar": "Calendar"
     },
     "action": "Create chat",
     "nav": {
       "calendar": "Calendar",
-      "chats": "Chats",
       "people": "People"
     },
     "calendar": {
