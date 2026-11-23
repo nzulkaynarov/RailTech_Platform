@@ -202,3 +202,40 @@ def test_monthly_job_is_scheduled_by_the_migration():
 
     job = PeriodicTask.objects.get(task="master_data.tasks.refresh_bank_codes")
     assert job.enabled and job.crontab.day_of_month == "1" and job.crontab.month_of_year == "*"
+
+
+@pytest.mark.django_db
+def test_failed_monthly_job_is_reported_in_the_service_status_without_retries():
+    """The failure shows up in «Состояние» (service `cbu_banks`), and a broken page is not retried four times."""
+    from django.core.cache import cache
+
+    from core import external_status as ext
+    from master_data.tasks import refresh_bank_codes
+
+    cache.clear()
+    assert BankFileError in refresh_bank_codes.dont_autoretry_for
+    with mock.patch.object(
+        cbu_banks, "fetch_file", side_effect=BankFileError("на странице ЦБ нет ссылки на файл xlsx")
+    ):
+        with pytest.raises(BankFileError):
+            refresh_bank_codes.run()
+    _, last_error, text = ext.last_marks("cbu_banks")
+    assert last_error is not None and "нет ссылки" in text
+    assert ext.counts("cbu_banks") == (0, 1)
+    assert ext.last_marks("cbu_rates") == (None, None, None)  # the rates service is not touched
+
+
+@pytest.mark.django_db
+def test_monthly_job_success_is_marked_and_switch_off_skips_the_download():
+    from django.core.cache import cache
+
+    from core import external_status as ext
+    from master_data.tasks import refresh_bank_codes
+
+    cache.clear()
+    with mock.patch.object(cbu_banks, "fetch_file", return_value=_xlsx()):
+        assert refresh_bank_codes.run()["added"] == 3
+    assert ext.last_marks("cbu_banks")[0] is not None
+    ext.set_enabled("cbu_banks", False, "test")
+    with mock.patch.object(cbu_banks, "fetch_file", side_effect=AssertionError("must not download")):
+        assert refresh_bank_codes.run() == {"skipped": "switched_off"}

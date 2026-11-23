@@ -161,6 +161,7 @@ ROUTES: Final[dict[str, Route]] = {
 ERP_EXTERNAL_ROUTES: Final[dict[str, Route]] = {
     "erp.cbu_rates": Route("provider", "recheck"),
     "erp.customs_tariff": Route("provider", "recheck"),
+    "erp.cbu_banks": Route("provider", "recheck"),
     "erp.litellm": Route("owner", "write_owner", ("recheck",)),
     "erp.s3": _HOSTING,
     "erp.sentry": Route("hosting", "write_hosting"),

@@ -310,9 +310,18 @@ function DictionaryTable({ dictionary, readOnly }: { dictionary: Dictionary; rea
                   width: null,
                   cell: (row: DictionaryItem) =>
                     row.source?.missing ? (
-                      <StatusTag kind="origin" status="missing">
-                        {t("settings.dict.source.missing")}
-                      </StatusTag>
+                      <>
+                        <StatusTag kind="origin" status="missing">
+                          {t("settings.dict.source.missing")}
+                        </StatusTag>
+                        {row.source.synced_at ? (
+                          <div className="pf-co-hint">
+                            {t("settings.dict.source.missingSince", {
+                              when: date(row.source.synced_at),
+                            })}
+                          </div>
+                        ) : null}
+                      </>
                     ) : row.source ? (
                       [
                         localName(row.source.name, i18n.language),
