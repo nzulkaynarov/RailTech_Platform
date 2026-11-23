@@ -6589,11 +6589,19 @@ components:
         must_change_password:
           title: Must Change Password
           type: boolean
+        notify_decisions:
+          default: true
+          title: Notify Decisions
+          type: boolean
         notify_leads:
           title: Notify Leads
           type: boolean
         notify_system:
           title: Notify System
+          type: boolean
+        notify_tasks:
+          default: false
+          title: Notify Tasks
           type: boolean
         onboarding_done:
           default: true
@@ -6709,6 +6717,11 @@ components:
             type: string
           - type: 'null'
           title: Language
+        notify_decisions:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Notify Decisions
         notify_leads:
           anyOf:
           - type: boolean
@@ -6719,6 +6732,11 @@ components:
           - type: boolean
           - type: 'null'
           title: Notify System
+        notify_tasks:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Notify Tasks
         onboarding_done:
           anyOf:
           - const: true
@@ -10359,11 +10377,19 @@ components:
         must_change_password:
           title: Must Change Password
           type: boolean
+        notify_decisions:
+          default: true
+          title: Notify Decisions
+          type: boolean
         notify_leads:
           title: Notify Leads
           type: boolean
         notify_system:
           title: Notify System
+          type: boolean
+        notify_tasks:
+          default: false
+          title: Notify Tasks
           type: boolean
         onboarding_done:
           default: true

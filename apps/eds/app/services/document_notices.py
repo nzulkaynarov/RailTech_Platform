@@ -20,7 +20,7 @@ from rt_bus.sqlalchemy import AsyncBus
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import clock
-from app.models import Document
+from app.models import Document, Letter
 from app.schemas.documents import DocumentKind, DocumentStatus
 from app.services import events, signing_reminders, signing_resolve
 from app.services.people import load_directory
@@ -39,10 +39,53 @@ _DECIDED = {
 }
 
 
-def _name(document: Document) -> str:
+def name_of(document: Document) -> str:
     """«Служебка MEMO-2026/014»; у документа без номера — одно слово."""
     word = _KIND_WORD.get(document.kind, "Документ")
     return f"{word} {document.number}" if document.number else word
+
+
+async def publish_notice(
+    session: AsyncSession,
+    bus: AsyncBus,
+    *,
+    kind: str,
+    key: str,
+    recipients: Iterable[int | None],
+    title: str,
+    subtitle: str | None,
+    actor_id: int | None,
+    document: Document | None = None,
+    letter: Letter | None = None,
+    approval: dict[str, Any] | None = None,
+) -> None:
+    """`document.notice_requested`: нет получателей — нет события. Объект: документ, письмо или маршрут."""
+    people = list(dict.fromkeys(uid for uid in recipients if uid is not None))
+    if not people:
+        return
+    data: dict[str, Any] = {
+        "notice_key": key,
+        "kind": kind,
+        "recipients": people,
+        "title": title[:200],
+        "subtitle": subtitle[:200] if subtitle else None,
+        "actor": events.actor(actor_id),
+    }
+    subject = "notice"
+    if document is not None:
+        data["document"] = {
+            "eds_document_id": str(document.id),
+            "number": document.number,
+            "subject": document.subject[:300],
+        }
+        subject = f"document/{document.id}"
+    if letter is not None:
+        data["letter"] = {"eds_letter_id": str(letter.id), "number": letter.number, "subject": letter.subject[:300]}
+        subject = f"letter/{letter.id}"
+    if approval is not None:
+        data["approval"] = approval
+        subject = f"approval/{approval['eds_approval_id']}"
+    await events.publish(bus, session, "document.notice_requested", data, subject=subject)
 
 
 async def _publish(
@@ -57,23 +100,17 @@ async def _publish(
     subtitle: str | None,
     actor_id: int,
 ) -> None:
-    people = list(dict.fromkeys(uid for uid in recipients if uid is not None))
-    if not people:
-        return
-    data: dict[str, Any] = {
-        "notice_key": key,
-        "kind": kind,
-        "recipients": people,
-        "title": title[:200],
-        "subtitle": subtitle[:200] if subtitle else None,
-        "document": {
-            "eds_document_id": str(document.id),
-            "number": document.number,
-            "subject": document.subject[:300],
-        },
-        "actor": events.actor(actor_id),
-    }
-    await events.publish(bus, session, "document.notice_requested", data, subject=f"document/{document.id}")
+    await publish_notice(
+        session,
+        bus,
+        kind=kind,
+        key=key,
+        recipients=recipients,
+        title=title,
+        subtitle=subtitle,
+        actor_id=actor_id,
+        document=document,
+    )
 
 
 async def memo_decided(
@@ -86,11 +123,11 @@ async def memo_decided(
     approved_word, rejected_word = words
     status = document.status
     if status == DocumentStatus.REJECTED.value:
-        title, subtitle = f"{_name(document)} {rejected_word}", comment or document.subject
+        title, subtitle = f"{name_of(document)} {rejected_word}", comment or document.subject
     elif status == DocumentStatus.TO_ACCOUNTANT.value:
-        title, subtitle = f"{_name(document)} {approved_word}", f"Передана на оплату · {document.subject}"
+        title, subtitle = f"{name_of(document)} {approved_word}", f"Передана на оплату · {document.subject}"
     elif status == DocumentStatus.APPROVED.value:
-        title, subtitle = f"{_name(document)} {approved_word}", document.subject
+        title, subtitle = f"{name_of(document)} {approved_word}", document.subject
     else:
         return
     await _publish(
@@ -124,7 +161,7 @@ async def memo_paid(
         kind="memo_paid",
         key=f"document:{document.id}:memo_paid",
         recipients=[document.author_crm_user_id] if document.author_crm_user_id != actor_id else [],
-        title=f"{_name(document)} оплачена",
+        title=f"{name_of(document)} оплачена",
         subtitle=f"{paid_on:%d.%m.%Y} · {amount:.2f} {currency}",
         actor_id=actor_id,
     )
@@ -213,7 +250,7 @@ async def letter_signed(
         kind="letter_signed",
         key=f"document:{document.id}:letter_signed",
         recipients=[document.author_crm_user_id],
-        title=f"{_name(document)} подписано",
+        title=f"{name_of(document)} подписано",
         subtitle=f"{document.subject} · {signer_name}",
         actor_id=signer_id,
     )

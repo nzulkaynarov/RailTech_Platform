@@ -96,7 +96,10 @@ async def test_letter_decisions_rolled_back_publish_nothing(
 
     for op in (resolve, back, reject):
         await rolled_back(container, 3, op)
-    assert len(await outbox(container)) == 1  # только исходная регистрация
+    assert [e["type"].split(".")[-3:-1] for e in await outbox(container)] == [  # только исходная регистрация
+        ["letter", "registered"],
+        ["document", "notice_requested"],  # и сигнал директору о резолюции (ГЛ-2)
+    ]
     status = (await client.get(f"/api/v1/letters/{letter_id}", headers=staff["director"].headers)).json()["status"]
     assert status == "awaiting_resolution"
 

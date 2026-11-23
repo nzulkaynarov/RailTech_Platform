@@ -89,12 +89,17 @@ async def update_me(body: MePatch, principal: Settled, container: ContainerDep) 
         view = await svc.set_ui_mode(principal.actor, principal.user_id, body.ui_mode)
     if body.language is not None:
         view = await svc.set_language(principal.actor, principal.user_id, body.language)
-    if body.notify_system is not None or body.notify_leads is not None:
+    if any(
+        v is not None
+        for v in (body.notify_system, body.notify_leads, body.notify_decisions, body.notify_tasks)
+    ):
         view = await svc.set_notify(
             principal.actor,
             principal.user_id,
             system=body.notify_system,
             leads=body.notify_leads,
+            decisions=body.notify_decisions,
+            tasks=body.notify_tasks,
         )
     if body.onboarding_done:
         view = await svc.set_onboarding_done(principal.actor, principal.user_id)

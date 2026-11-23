@@ -90,9 +90,15 @@ def notice(recipients: list[int], **over: Any) -> dict[str, Any]:
     }
 
 
-async def _link(sessions: async_sessionmaker[AsyncSession], user_id: int, tg: int) -> None:
+async def _link(
+    sessions: async_sessionmaker[AsyncSession],
+    user_id: int,
+    tg: int,
+    **flags: bool,
+) -> None:
+    """Привязать Telegram; `flags` — переключатели профиля (`notify_decisions`, `notify_tasks`)."""
     async with sessions() as session, session.begin():
-        await session.execute(update(User).where(User.id == user_id).values(tg_user_id=tg))
+        await session.execute(update(User).where(User.id == user_id).values(tg_user_id=tg, **flags))
 
 
 async def test_bell_and_telegram_for_each_active_recipient(stand: Stand) -> None:
@@ -100,7 +106,7 @@ async def test_bell_and_telegram_for_each_active_recipient(stand: Stand) -> None
     executor, _ = await make_user(sessions, "exec@x.uz", ["manager"])
     reader, _ = await make_user(sessions, "reader@x.uz", ["manager"])
     gone, _ = await make_user(sessions, "gone@x.uz", ["manager"])
-    await _link(sessions, executor.id, 8101)
+    await _link(sessions, executor.id, 8101, notify_tasks=True)
     async with sessions() as session, session.begin():
         await session.execute(update(User).where(User.id == gone.id).values(is_active=False))
 
@@ -144,7 +150,7 @@ async def test_failed_processing_leaves_nothing(
     stand: Stand, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     executor, _ = await make_user(stand.h.sessions, "rb@x.uz", ["manager"])
-    await _link(stand.h.sessions, executor.id, 8102)
+    await _link(stand.h.sessions, executor.id, 8102, notify_tasks=True)
 
     def broken(*_args: Any, **_kwargs: Any) -> None:
         raise RuntimeError("сбой после строки колокольчика")
@@ -174,7 +180,7 @@ async def test_unknown_field_is_accepted_and_kind_sets_the_tab(stand: Stand) -> 
 async def test_reply_notice_points_to_the_outgoing_document(stand: Stand) -> None:
     """EDS-REPLY-1: уведомление про ответ на ВХ (`document`) ведёт в карточку исходящего."""
     registrar, _ = await make_user(stand.h.sessions, "regs@x.uz", ["manager"])
-    await _link(stand.h.sessions, registrar.id, 8103)
+    await _link(stand.h.sessions, registrar.id, 8103, notify_tasks=True)
     doc_id = "50000000-0000-4000-8000-000000000201"
     data = notice(
         [registrar.id],
@@ -279,7 +285,7 @@ def document_notice(recipients: list[int], **over: Any) -> dict[str, Any]:
 async def test_document_notice_reaches_the_author_with_a_link_to_the_document(stand: Stand) -> None:
     author, _ = await make_user(stand.h.sessions, "author@x.uz", ["manager"])
     other, _ = await make_user(stand.h.sessions, "author2@x.uz", ["manager"])
-    await _link(stand.h.sessions, author.id, 8301)
+    await _link(stand.h.sessions, author.id, 8301, notify_tasks=True)
 
     event_id = await stand.receive(
         document_notice([author.id, other.id, 999_999], future_field=1),
@@ -341,7 +347,7 @@ async def test_missing_signer_notice_points_to_the_signing_settings(stand: Stand
 
 async def test_withdrawn_notice_v2_has_no_link_to_the_hidden_document(stand: Stand) -> None:
     signer, _ = await make_user(stand.h.sessions, "signer2@x.uz", ["admin"])
-    await _link(stand.h.sessions, signer.id, 8303)
+    await _link(stand.h.sessions, signer.id, 8303, notify_tasks=True)  # итог — класс «задачи»
     data = document_notice(
         [signer.id], kind="letter_sign_withdrawn", title="Письмо отозвано с подписи"
     )
@@ -374,6 +380,7 @@ async def test_document_notice_failed_processing_leaves_nothing(
     stand: Stand, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     author, _ = await make_user(stand.h.sessions, "author4@x.uz", ["manager"])
+    await _link(stand.h.sessions, author.id, 8304, notify_tasks=True)
 
     def broken(*_args: Any, **_kwargs: Any) -> None:
         raise RuntimeError("сбой после строки колокольчика")
@@ -383,3 +390,110 @@ async def test_document_notice_failed_processing_leaves_nothing(
     assert await stand.h.process(event_id) != "processed"
     assert await stand.bell() == []
     assert stand.h.bot.sent == []
+
+
+APPROVAL_ID = "6b1d0e2a-4c7f-4a39-8f15-3e9a7c2d5b40"
+
+
+def task_notice(recipients: list[int], **over: Any) -> dict[str, Any]:
+    """Тело `document.notice_requested.v2` (ГЛ-2): КП на одобрение, объект — маршрут."""
+    return {
+        "notice_key": f"approval:{APPROVAL_ID}:s1:approve_quote",
+        "kind": "approve_quote",
+        "recipients": recipients,
+        "title": "КП на одобрение: КП-0042 v2",
+        "subtitle": "ЗВ-2026-104",
+        "approval": {"eds_approval_id": APPROVAL_ID, "template": "quote", "number": "КП-0042"},
+        "actor": {"type": "system"},
+        **over,
+    }
+
+
+async def test_decision_task_goes_to_bell_and_to_telegram_by_default(stand: Stand) -> None:
+    director, _ = await make_user(stand.h.sessions, "dir@x.uz", ["manager"])
+    await _link(stand.h.sessions, director.id, 8401)
+
+    event_id = await stand.receive(task_notice([director.id]), event_type=DOCUMENT_NOTICE_TYPE_V2)
+    assert await stand.h.process(event_id) == "processed"
+
+    [row] = await stand.bell()
+    assert (row.kind, row.tab, row.object_kind, row.object_id, row.object_number) == (
+        "eds.approve_quote",
+        "decisions",
+        "approval",
+        APPROVAL_ID,
+        "КП-0042",
+    )
+    [(chat, text)] = stand.h.bot.sent
+    assert chat == 8401
+    assert text.endswith(
+        "https://platform.example.com/eds/drafts/%D0%9A%D0%9F-0042?panel=open&tab=approve"
+    )
+
+
+async def test_decisions_switch_off_leaves_only_the_bell(stand: Stand) -> None:
+    director, _ = await make_user(stand.h.sessions, "dir2@x.uz", ["manager"])
+    await _link(stand.h.sessions, director.id, 8402, notify_decisions=False)
+
+    event_id = await stand.receive(task_notice([director.id]), event_type=DOCUMENT_NOTICE_TYPE_V2)
+    assert await stand.h.process(event_id) == "processed"
+
+    assert len(await stand.bell()) == 1  # строка колокольчика не зависит от переключателя
+    assert stand.h.bot.sent == []
+
+
+async def test_other_tasks_reach_telegram_only_when_the_profile_asks(stand: Stand) -> None:
+    quiet, _ = await make_user(stand.h.sessions, "quiet@x.uz", ["manager"])
+    loud, _ = await make_user(stand.h.sessions, "loud@x.uz", ["manager"])
+    await _link(stand.h.sessions, quiet.id, 8403)  # notify_tasks по умолчанию выключен
+    await _link(stand.h.sessions, loud.id, 8404, notify_tasks=True)
+
+    event_id = await stand.receive(notice([quiet.id, loud.id]))  # поручение — не решение
+    assert await stand.h.process(event_id) == "processed"
+
+    assert len(await stand.bell()) == 2
+    assert [chat for chat, _ in stand.h.bot.sent] == [8404]
+
+
+async def test_rework_is_bell_only_even_when_every_switch_is_on(stand: Stand) -> None:
+    author, _ = await make_user(stand.h.sessions, "rework@x.uz", ["manager"])
+    await _link(stand.h.sessions, author.id, 8405, notify_tasks=True, notify_decisions=True)
+    data = document_notice(
+        [author.id],
+        kind="rework_document",
+        title="Доработайте: Служебка MEMO-2026/014",
+        subtitle="Вернул Рустам Директоров: Уточните сумму",
+    )
+    event_id = await stand.receive(data, event_type=DOCUMENT_NOTICE_TYPE_V2)
+    assert await stand.h.process(event_id) == "processed"
+
+    [row] = await stand.bell()
+    assert (row.kind, row.tab, row.object_kind) == ("eds.rework_document", "decisions", "document")
+    assert stand.h.bot.sent == []
+
+
+async def test_inbound_letter_resolution_task_links_to_the_letter(stand: Stand) -> None:
+    director, _ = await make_user(stand.h.sessions, "dir3@x.uz", ["manager"])
+    await _link(stand.h.sessions, director.id, 8406)
+    data = {
+        "notice_key": f"letter:{LETTER_ID}:resolve_letter",
+        "kind": "resolve_letter",
+        "recipients": [director.id],
+        "title": "Наложите резолюцию: ВХ-112/26",
+        "subtitle": "ГНК · Требование о пояснениях",
+        "letter": {"eds_letter_id": LETTER_ID, "number": "ВХ-112/26", "subject": "Требование"},
+        "actor": {"type": "staff", "crm_user_id": 4},
+    }
+    event_id = await stand.receive(data, event_type=DOCUMENT_NOTICE_TYPE_V2)
+    assert await stand.h.process(event_id) == "processed"
+
+    [row] = await stand.bell()
+    assert (row.kind, row.object_kind, row.object_id, row.object_number) == (
+        "eds.resolve_letter",
+        "letter",
+        LETTER_ID,
+        "ВХ-112/26",
+    )
+    [(chat, text)] = stand.h.bot.sent
+    assert chat == 8406
+    assert text.endswith(f"https://platform.example.com/eds/tasks/{LETTER_ID}")
