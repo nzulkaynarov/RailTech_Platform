@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import { findInvoice } from "../../../mocks/fixtures/payments";
 import { server } from "../../../test/server";
 import { panelEl, renderAt, setupPaymentTests, signIn } from "../../../test/paymentsKit";
+import { decisionEl, openSideTab } from "../../../test/panel";
 import { confirmDialog } from "../../../test/confirmDialog";
 
 setupPaymentTests();
@@ -331,7 +332,7 @@ describe("Служебки к оплате", () => {
     signIn("accountant@demo.example");
     renderAt("/eds/payments/60000000-0000-4000-8000-000000000015");
 
-    const panel = await panelEl();
+    const panel = await decisionEl();
     const form = await within(panel).findByRole("form", { name: "Оплата служебной записки" });
     fireEvent.change(within(form).getByLabelText(/Сумма оплаты/), {
       target: { value: "4200000.01" },
@@ -387,9 +388,51 @@ describe("Карточка счёта", () => {
     expect(screen.getByRole("table", { name: "Позиции счёта" })).toBeVisible();
     const payments = screen.getByRole("table", { name: "Оплаты по счёту" });
     expect(within(payments).getByText("BANK-147")).toBeVisible();
-    expect(screen.getByRole("list", { name: "Журнал счёта" })).toHaveTextContent(
+    // Журнал — одна «История» в боковом окне, в центре его нет (ЕД-7)
+    expect(screen.queryByRole("heading", { name: "Журнал" })).toBeNull();
+    const history = await openSideTab("История");
+    expect(within(history).getByRole("list", { name: "Журнал счёта" })).toHaveTextContent(
       "Оплата подтверждена",
     );
+  });
+
+  it("каждое сведение один раз: номер и статус — в шапке, клиент и проект — в «Сведениях», платёжки — одним списком в центре", async () => {
+    server.use(
+      http.get("*/eds/payments/:id", () =>
+        HttpResponse.json({
+          ...findInvoice(142),
+          proofs: [
+            {
+              id: 5,
+              source: "EMAIL",
+              status: "PENDING",
+              original_name: "пп-142.pdf",
+              claimed_amount: null,
+              claimed_date: null,
+              note: "",
+              received_at: "2026-10-27T15:00:00Z",
+              recorded_by: null,
+              payment_id: null,
+            },
+          ],
+        }),
+      ),
+    );
+    signIn("accountant@demo.example");
+    renderAt(`/eds/payments/${encodeURIComponent("СЧ-2026/142")}`);
+
+    expect(await screen.findByRole("heading", { level: 1, name: "СЧ-2026/142" })).toBeVisible();
+    expect(screen.getAllByText("СЧ-2026/142")).toHaveLength(1);
+    const facts = await openSideTab("Сведения");
+    expect(within(facts).getAllByText("Клиент", { selector: "dt" })).toHaveLength(1);
+    expect(screen.getAllByText("ООО «Демо-Рейл»")).toHaveLength(1);
+    expect(within(facts).queryByText("Сумма", { selector: "dt" })).toBeNull();
+    // форма подтверждения — в центре, а не вкладкой «Оплата»
+    expect(
+      within(await decisionEl()).getByRole("form", { name: "Подтверждение оплаты" }),
+    ).toBeVisible();
+    expect(within(await panelEl()).queryByRole("tab", { name: "Оплата" })).toBeNull();
+    expect(screen.getAllByRole("list", { name: "Платёжки клиента" })).toHaveLength(1);
   });
 
   it("ссылка из очереди с номером и ?panel=open&tab=payment: карточка по id, боковое окно остаётся", async () => {
@@ -400,9 +443,30 @@ describe("Карточка счёта", () => {
 
     expect(await screen.findByRole("heading", { level: 1, name: "СЧ-2026/142" })).toBeVisible();
     expect(router.state.location.pathname).toBe("/eds/payments/142");
-    expect(router.state.location.search).toBe("?panel=open&tab=payment");
-    const panel = await panelEl();
-    expect(await within(panel).findByRole("form", { name: "Подтверждение оплаты" })).toBeVisible();
+    // Старая вкладка «Оплата» — теперь блок в центре: ссылка ведёт к форме и снимает параметры окна
+    const center = await decisionEl();
+    expect(await within(center).findByRole("form", { name: "Подтверждение оплаты" })).toBeVisible();
+    await waitFor(() => {
+      expect(router.state.location.search).toBe("");
+    });
+  });
+
+  it("служебка к оплате: тема один раз, журнал — «История», форма «Оплачено» — в центре, окно — «Сведения»", async () => {
+    signIn("accountant@demo.example");
+    renderAt("/eds/payments/60000000-0000-4000-8000-000000000015");
+
+    const center = await decisionEl();
+    expect(
+      await within(center).findByRole("form", { name: "Оплата служебной записки" }),
+    ).toBeVisible();
+    expect(await screen.findByRole("heading", { level: 1, name: "СЗ-2026/015" })).toBeVisible();
+    expect(screen.getAllByText("Оплата командировочных расходов")).toHaveLength(1);
+    expect(screen.queryByRole("heading", { name: "Журнал" })).toBeNull();
+    const side = await panelEl();
+    const tabs = within(side)
+      .getAllByRole("tab")
+      .map((tab) => tab.textContent);
+    expect(tabs).toEqual(["Сведения", "История"]);
   });
 
   it("счёта нет: «Счёт не найден» и ссылка к списку", async () => {
@@ -443,6 +507,7 @@ describe("Платёжка у оплаченного счёта", () => {
     renderAt("/eds/payments/146");
 
     const lists = await screen.findAllByRole("list", { name: "Платёжки клиента" });
+    expect(lists).toHaveLength(1);
     for (const list of lists) {
       expect(within(list).getByText("Лишняя: счёт уже оплачен")).toBeVisible();
       expect(within(list).queryByText("Ждёт подтверждения")).toBeNull();

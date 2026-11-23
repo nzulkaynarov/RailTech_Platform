@@ -1,10 +1,8 @@
-import { Button, Card, Skeleton } from "antd";
+import { Card, Skeleton } from "antd";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useLocation, useNavigate, useSearchParams } from "react-router";
+import { useLocation, useNavigate } from "react-router";
 
-import { useAuth } from "../../../app/auth/useAuth";
-import { useViewport } from "../../../app/shell/useViewport";
 import { ApiError } from "../../../shared/api/errors";
 import type { PaymentCard } from "../../../shared/api/generated/model";
 import { listPayments, useGetPayment } from "../../../shared/api/generated/platform-bff";
@@ -15,15 +13,17 @@ import { EmptyState } from "../../../shared/ui/EmptyState";
 import { DataTable } from "../../../shared/ui/DataTable/DataTable";
 import { DefinitionList } from "../../../shared/ui/DefinitionList";
 import { QueryState } from "../../../shared/ui/FormParts";
-import { History, type HistoryItem } from "../../../shared/ui/History";
 import { LinkButton } from "../../../shared/ui/LinkButton";
 import { MoneyText } from "../../../shared/ui/MoneyText";
 import { PageHeader } from "../../../shared/ui/PageHeader";
+import { RecordHistory, type RecordHistoryEntry } from "../../../shared/ui/RecordHistory";
+import { DecisionCenter } from "../decision/DecisionCenter";
+import { RecordTab } from "../decision/RecordTab";
 import { InvoiceStatus } from "./InvoiceStatus";
-import { InvoiceBrief, PaymentSlot } from "./PaymentPanel";
-import { ProofList } from "./ProofsBlock";
+import { InvoiceFacts, PaymentPanel } from "./PaymentPanel";
+import { ProofsBlock } from "./ProofsBlock";
 import { useStateLabels } from "./labels";
-import { invoicePath, isOpen, moneyProps } from "./model";
+import { invoicePath, moneyProps } from "./model";
 
 type Line = PaymentCard["items"][number];
 type Paid = PaymentCard["payments"][number];
@@ -145,45 +145,20 @@ function Payments({ card }: { card: PaymentCard }) {
   );
 }
 
-function Log({ card }: { card: PaymentCard }) {
-  const { t, i18n } = useTranslation("payments");
-  const { date } = useFormat();
-  if (card.history.length === 0) return <p className="pf-hint">{t("history.empty")}</p>;
-  const items: HistoryItem[] = card.history.map((entry) => ({
-    state: "done",
-    title: i18n.exists(`payments:history.code.${entry.code.replace(".", "_")}`)
-      ? t(`history.code.${entry.code.replace(".", "_")}`)
-      : entry.text,
-    meta: `${date(entry.at, "datetime")}${entry.by ? ` · ${entry.by}` : ""}`,
-  }));
-  return <History items={items} label={t("history.title")} />;
-}
-
 function Content({ card }: { card: PaymentCard }) {
-  const { t } = useTranslation("payments");
-  const { me } = useAuth();
-  const { wide, mobile } = useViewport();
-  const [, setParams] = useSearchParams();
-  const mayAct = me.resources["eds.payments"] === "full" && card.can_confirm;
-  // Черновик выставляют там же, в окне «Оплата» (B-D24-4): на узком экране окно открывает кнопка
-  const mayIssue = me.resources["eds.payments"] === "full" && card.status === "draft";
-  const openPanel = () => {
-    setParams(
-      (prev) => {
-        const next = new URLSearchParams(prev);
-        if (mobile) next.set("sheet", "payment");
-        else next.set("panel", "open");
-        next.set("tab", "payment");
-        return next;
-      },
-      { replace: true },
-    );
-  };
+  const { t, i18n } = useTranslation("payments");
+  const history: RecordHistoryEntry[] = card.history.map((entry) => {
+    const key = `history.code.${entry.code.replace(".", "_")}`;
+    return {
+      at: entry.at,
+      by: entry.by ?? null,
+      action: i18n.exists(`payments:${key}`) ? t(key) : entry.text,
+    };
+  });
   return (
-    <div className="pf-dec-page">
+    <div className="pf-dec-page pf-overlay-aware">
       <PageHeader
         title={card.number}
-        subtitle={t("view.projectLine", { project: card.project_number, client: card.client_name })}
         extra={
           <div className="pf-dec-row">
             <InvoiceStatus status={card.status} />
@@ -191,36 +166,26 @@ function Content({ card }: { card: PaymentCard }) {
           </div>
         }
       />
-      {(mayAct || mayIssue) && !wide ? (
-        <div>
-          <Button type="primary" onClick={openPanel}>
-            {mayIssue ? t("issue.submit") : t("confirm.name")}
-          </Button>
-        </div>
+      <Card size="small" title={<h2 className="pf-dec-title">{t("items.title")}</h2>}>
+        <Items card={card} />
+      </Card>
+      <Card size="small" title={<h2 className="pf-dec-title">{t("payments.title")}</h2>}>
+        <Payments card={card} />
+      </Card>
+      <Card size="small" title={<h2 className="pf-dec-title">{t("proofs.title")}</h2>}>
+        <ProofsBlock card={card} heading={false} />
+      </Card>
+      <DecisionCenter legacyTab="payment" legacySheet="payment" label={t("panel.sheetLabel")}>
+        <PaymentPanel invoiceId={card.id} />
+      </DecisionCenter>
+      <RecordTab tab="facts">
+        <InvoiceFacts card={card} />
+      </RecordTab>
+      {history.length > 0 ? (
+        <RecordTab tab="history">
+          <RecordHistory label={t("history.title")} entries={history} />
+        </RecordTab>
       ) : null}
-      {isOpen(card.status) && !mayAct ? (
-        <p className="pf-hint">{t("panel.readOnly.text")}</p>
-      ) : null}
-      <div className="pf-dec-grid">
-        <div className="pf-dec-main">
-          <Card size="small" title={<h2 className="pf-dec-title">{t("items.title")}</h2>}>
-            <Items card={card} />
-          </Card>
-          <Card size="small" title={<h2 className="pf-dec-title">{t("payments.title")}</h2>}>
-            <Payments card={card} />
-          </Card>
-          <Card size="small" title={<h2 className="pf-dec-title">{t("proofs.title")}</h2>}>
-            <ProofList card={card} />
-          </Card>
-          <Card size="small" title={<h2 className="pf-dec-title">{t("history.title")}</h2>}>
-            <Log card={card} />
-          </Card>
-        </div>
-        <aside className="pf-dec-side" aria-label={t("brief.amount")}>
-          <InvoiceBrief card={card} />
-        </aside>
-      </div>
-      <PaymentSlot invoiceId={card.id} />
     </div>
   );
 }

@@ -40,8 +40,6 @@ async function shoot(page: Page, name: string): Promise<void> {
   await page.setViewportSize({ width: 1440, height: 900 });
 }
 
-const SIDE = { name: "Боковое окно" } as const;
-
 test.describe("Задачи: «Открыть»", () => {
   test.skip(({ isMobile }) => isMobile, "ширины задаёт сам сценарий");
   test("директор: письмо, КП и служебка (родные экраны) — «Открыть» открывает объект в боковом окне на вкладке решения; primary у срочных писем", async ({
@@ -65,21 +63,21 @@ test.describe("Задачи: «Открыть»", () => {
     const cases = [
       {
         row: /Открыть: Наложить резолюцию на письмо ВХ-104/,
-        url: /\/eds\/inbox\/%D0%92%D0%A5-104%2F26\?panel=open&tab=resolution$/,
+        url: /\/eds\/inbox\/%D0%92%D0%A5-104%2F26$/,
         heading: "Письмо ВХ-104/26",
-        tab: "Резолюция",
+        form: "Резолюция",
       },
       {
         row: /Открыть: Одобрить КП-2026\/118/,
-        url: /\/eds\/drafts\/%D0%9A%D0%9F-2026%2F118\?panel=open&tab=approve$/,
+        url: /\/eds\/drafts\/%D0%9A%D0%9F-2026%2F118$/,
         heading: "КП-2026/118",
-        tab: "Одобрение",
+        form: "Одобрение КП",
       },
       {
         row: /Открыть: Согласовать СЗ-2026\/031/,
-        url: /\/eds\/approvals\/%D0%A1%D0%97-2026%2F031\?panel=open&tab=agree$/,
+        url: /\/eds\/approvals\/%D0%A1%D0%97-2026%2F031$/,
         heading: "СЗ-2026/031",
-        tab: "Согласование",
+        form: "Согласование документа",
       },
     ];
     for (const item of cases) {
@@ -90,9 +88,8 @@ test.describe("Задачи: «Открыть»", () => {
         .click();
       await expect(page).toHaveURL(item.url);
       await expect(page.getByRole("heading", { level: 1, name: item.heading })).toBeVisible();
-      await expect(
-        page.getByRole("complementary", SIDE).getByRole("tab", { name: item.tab, selected: true }),
-      ).toBeVisible();
+      // the decision form lives in the centre; the legacy side-panel params are dropped
+      await expect(page.getByRole("region", { name: item.form })).toBeVisible();
     }
   });
 
@@ -242,25 +239,19 @@ test.describe("Колокольчик: объект без экрана", () => 
 /** Объекты D1: адрес, заголовок экрана и выбранная вкладка бокового окна (SPEC-v3 §6.3, §6.4). */
 const OBJECTS = {
   letter: {
-    path: /\/eds\/inbox\/%D0%92%D0%A5-104%2F26\?/,
-    url: /\/eds\/inbox\/%D0%92%D0%A5-104%2F26\?panel=open&tab=resolution$/,
+    url: /\/eds\/inbox\/%D0%92%D0%A5-104%2F26$/,
     heading: "Письмо ВХ-104/26",
-    tab: "Резолюция",
-    sheet: /^Резолюция/,
+    form: "Резолюция",
   },
   quote: {
-    path: /\/eds\/drafts\/%D0%9A%D0%9F-2026%2F118\?/,
-    url: /\/eds\/drafts\/%D0%9A%D0%9F-2026%2F118\?panel=open&tab=approve$/,
+    url: /\/eds\/drafts\/%D0%9A%D0%9F-2026%2F118$/,
     heading: "КП-2026/118",
-    tab: "Одобрение",
-    sheet: /^Одобрение/,
+    form: "Одобрение КП",
   },
   memo: {
-    path: /\/eds\/approvals\/%D0%A1%D0%97-2026%2F031\?/,
-    url: /\/eds\/approvals\/%D0%A1%D0%97-2026%2F031\?panel=open&tab=agree$/,
+    url: /\/eds\/approvals\/%D0%A1%D0%97-2026%2F031$/,
     heading: "СЗ-2026/031",
-    tab: "Согласование",
-    sheet: /^Согласование/,
+    form: "Согласование документа",
   },
 } as const;
 
@@ -268,9 +259,7 @@ async function expectOpened(page: Page, key: keyof typeof OBJECTS): Promise<void
   const object = OBJECTS[key];
   await expect(page).toHaveURL(object.url);
   await expect(page.getByRole("heading", { level: 1, name: object.heading })).toBeVisible();
-  await expect(
-    page.getByRole("complementary", SIDE).getByRole("tab", { name: object.tab, selected: true }),
-  ).toBeVisible();
+  await expect(page.getByRole("region", { name: object.form })).toBeVisible();
 }
 
 test.describe("Поиск ⌘K: письмо, КП и служебка открываются в боковом окне", () => {
@@ -281,7 +270,7 @@ test.describe("Поиск ⌘K: письмо, КП и служебка откр�
     ["КП-2026/118", /КП-2026\/118/, "quote"],
     ["СЗ-2026/031", /СЗ-2026\/031/, "memo"],
   ] as const) {
-    test(`директор: «${query}» → вкладка «${OBJECTS[key].tab}», «Где посмотреть» нет`, async ({
+    test(`директор: «${query}» → форма «${OBJECTS[key].form}» в карточке, «Где посмотреть» нет`, async ({
       page,
     }) => {
       await loginAndWait(page, "director@demo.example");
@@ -303,7 +292,7 @@ test.describe("Колокольчик: объект с экраном откры
     [/КП-2026\/118 ждёт вашего согласования/, "quote"],
     [/СЗ-2026\/031 на согласовании/, "memo"],
   ] as const) {
-    test(`директор: ${String(title)} → «${OBJECTS[key].tab}»`, async ({ page }) => {
+    test(`директор: ${String(title)} → форма «${OBJECTS[key].form}»`, async ({ page }) => {
       await loginAndWait(page, "director@demo.example");
       await page.getByRole("button", { name: /^Центр уведомлений/ }).click();
       const center = page.getByRole("dialog", { name: "Центр уведомлений" });
@@ -329,7 +318,7 @@ test.describe("Колокольчик: объект с экраном откры
 });
 
 test.describe("Переходы на телефоне @mobile", () => {
-  test("@mobile директор: из очереди письмо, КП и служебка открываются листом на весь экран; менеджер — диалогом", async ({
+  test("@mobile директор: из очереди письмо, КП и служебка открываются с формой решения в карточке; менеджер — диалогом", async ({
     page,
   }) => {
     await page.setViewportSize({ width: 390, height: 844 });
@@ -345,33 +334,34 @@ test.describe("Переходы на телефоне @mobile", () => {
         .getByRole("region", { name: "Что сделать сейчас" })
         .getByRole("link", { name: row })
         .click();
-      // на телефоне `panel=open` становится листом (`sheet=`): адрес проверяем по объекту, а не по окну
-      await expect(page).toHaveURL(OBJECTS[key].path);
-      const sheet = page.getByRole("dialog", { name: OBJECTS[key].sheet });
-      await expect(sheet).toBeVisible();
-      const box = await sheet.boundingBox();
-      expect(box?.width).toBeGreaterThanOrEqual(389);
-      expect(box?.height).toBeGreaterThanOrEqual(843);
-      await expectNoViolations(page, `лист ${key}`);
+      // на телефоне форма решения — в самой карточке, листа нет
+      await expect(page).toHaveURL(OBJECTS[key].url);
+      await expect(
+        page.getByRole("dialog", { name: /^(Резолюция|Одобрение|Согласование)/ }),
+      ).toHaveCount(0);
+      await expect(page.getByRole("region", { name: OBJECTS[key].form })).toBeVisible();
+      await expectNoViolations(page, `карточка ${key}`);
     }
   });
 
-  test("@mobile колокольчик и поиск открывают письмо листом «Резолюция»", async ({ page }) => {
+  test("@mobile колокольчик и поиск открывают письмо с формой резолюции в карточке", async ({
+    page,
+  }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await loginAndWait(page, "director@demo.example");
     await page.getByRole("button", { name: /^Центр уведомлений/ }).click();
     const center = page.getByRole("dialog", { name: "Центр уведомлений" });
     await center.locator(".ant-segmented-item-label", { hasText: /^Все$/ }).click();
     await center.getByRole("link", { name: /Письмо ВХ-104\/26 ждёт резолюции/ }).click();
-    await expect(page).toHaveURL(OBJECTS.letter.path);
-    await expect(page.getByRole("dialog", { name: /^Резолюция/ })).toBeVisible();
+    await expect(page).toHaveURL(OBJECTS.letter.url);
+    await expect(page.getByRole("region", { name: OBJECTS.letter.form })).toBeVisible();
     await settledScreenshot(page, "bell-opened-letter-mobile");
 
     await spaGoto(page, "/dashboard/queue");
     await page.getByRole("combobox", { name: "Глобальный поиск" }).fill("КП-2026/118");
     await page.getByRole("option", { name: /КП-2026\/118/ }).click();
-    await expect(page).toHaveURL(OBJECTS.quote.path);
-    await expect(page.getByRole("dialog", { name: /^Одобрение/ })).toBeVisible();
+    await expect(page).toHaveURL(OBJECTS.quote.url);
+    await expect(page.getByRole("region", { name: OBJECTS.quote.form })).toBeVisible();
   });
 
   test("@mobile менеджер: передача из очереди — диалог на весь экран", async ({ page }) => {
