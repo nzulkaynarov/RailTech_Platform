@@ -8,7 +8,6 @@ import type { ProjectContractSendBlockerCode } from "./projectContractSendBlocke
  * Х-1: почему проект договора нельзя отправить клиенту — визы маршрута подписи (ADR-0025) не собраны
  */
 export interface ProjectContractSendBlocker {
-  /** visas_not_requested — договор ещё не на визах; visas_declined — EDS не принял договор на визы (причина в remark); visas_pending — не все визы поставлены; visas_returned — виза возвращена с замечанием; no_visa_holder — в компании нет держателя нужного права (ссылка в настройки) */
   code: ProjectContractSendBlockerCode;
   /** Причина словами («Нужны визы: бухгалтер, юрист») */
   message: string;

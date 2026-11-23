@@ -10837,15 +10837,7 @@ export interface components {
       /** @description Проект ушёл клиенту на согласование редакции и виден ему в кабинете */
       sent_to_client: boolean;
       /** @description Х-1: пока проект не ушёл клиенту — код причины, по которой его нельзя отправить (визы не собраны); null — ничего не мешает. Считает ERP */
-      send_blocker_code?:
-        | (
-            | "visas_not_requested"
-            | "visas_declined"
-            | "visas_pending"
-            | "visas_returned"
-            | "no_visa_holder"
-          )
-        | null;
+      send_blocker_code?: components["schemas"]["ProjectContractSendBlockerCode"] | null;
     };
     ProjectInvoiceRef: {
       id: number;
@@ -10943,18 +10935,19 @@ export interface components {
       /** Format: date */
       valid_until: string | null;
     };
+    /**
+     * @description visas_not_requested — договор ещё не на визах; visas_declined — EDS не принял договор на визы (причина в remark); visas_pending — не все визы поставлены; visas_returned — виза возвращена с замечанием; no_visa_holder — в компании нет держателя нужного права (ссылка в настройки)
+     * @enum {string}
+     */
+    ProjectContractSendBlockerCode:
+      | "visas_not_requested"
+      | "visas_declined"
+      | "visas_pending"
+      | "visas_returned"
+      | "no_visa_holder";
     /** @description Х-1: почему проект договора нельзя отправить клиенту — визы маршрута подписи (ADR-0025) не собраны */
     ProjectContractSendBlocker: {
-      /**
-       * @description visas_not_requested — договор ещё не на визах; visas_declined — EDS не принял договор на визы (причина в remark); visas_pending — не все визы поставлены; visas_returned — виза возвращена с замечанием; no_visa_holder — в компании нет держателя нужного права (ссылка в настройки)
-       * @enum {string}
-       */
-      code:
-        | "visas_not_requested"
-        | "visas_declined"
-        | "visas_pending"
-        | "visas_returned"
-        | "no_visa_holder";
+      code: components["schemas"]["ProjectContractSendBlockerCode"];
       /** @description Причина словами («Нужны визы: бухгалтер, юрист») */
       message: string;
       /** @description Роли без визы словами в нижнем регистре */
@@ -10979,15 +10972,7 @@ export interface components {
         | "cancelled";
       sent_to_client: boolean;
       /** @description Х-1: пока проект не ушёл клиенту — код причины, по которой его нельзя отправить (визы не собраны); null — ничего не мешает. Считает ERP */
-      send_blocker_code?:
-        | (
-            | "visas_not_requested"
-            | "visas_declined"
-            | "visas_pending"
-            | "visas_returned"
-            | "no_visa_holder"
-          )
-        | null;
+      send_blocker_code?: components["schemas"]["ProjectContractSendBlockerCode"] | null;
       total: components["schemas"]["ProjectMoney"] | null;
       /** Format: date-time */
       created_at: string;

@@ -70,6 +70,7 @@ import {
   PaymentProofSource,
   PaymentTab,
   PriceImportMode,
+  ProjectContractSendBlockerCode,
   ProjectDeliveryAction,
   QueueCategory,
   QueueGroup,
@@ -3646,13 +3647,7 @@ export const getListEdsProjectsResponseProjectContractRefMock = (
     ] as const),
     sent_to_client: faker.datatype.boolean(),
     send_blocker_code: faker.helpers.arrayElement([
-      faker.helpers.arrayElement([
-        "visas_not_requested",
-        "visas_declined",
-        "visas_pending",
-        "visas_returned",
-        "no_visa_holder",
-      ] as const),
+      faker.helpers.arrayElement(Object.values(ProjectContractSendBlockerCode)),
       null,
     ]),
   },
@@ -3797,13 +3792,7 @@ export const getGetEdsProjectResponseProjectContractRefMock = (
     ] as const),
     sent_to_client: faker.datatype.boolean(),
     send_blocker_code: faker.helpers.arrayElement([
-      faker.helpers.arrayElement([
-        "visas_not_requested",
-        "visas_declined",
-        "visas_pending",
-        "visas_returned",
-        "no_visa_holder",
-      ] as const),
+      faker.helpers.arrayElement(Object.values(ProjectContractSendBlockerCode)),
       null,
     ]),
   },
@@ -3868,13 +3857,7 @@ export const getGetEdsProjectResponseProjectContractSendBlockerMock = (
   overrideResponse: Partial<ProjectContractSendBlocker> = {},
 ): ProjectContractSendBlocker => ({
   ...{
-    code: faker.helpers.arrayElement([
-      "visas_not_requested",
-      "visas_declined",
-      "visas_pending",
-      "visas_returned",
-      "no_visa_holder",
-    ] as const),
+    code: faker.helpers.arrayElement(Object.values(ProjectContractSendBlockerCode)),
     message: faker.string.alpha({ length: { min: 10, max: 20 } }),
     missing: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
       () => faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -3917,13 +3900,7 @@ export const getGetEdsProjectResponseProjectContractMock = (
     ] as const),
     sent_to_client: faker.datatype.boolean(),
     send_blocker_code: faker.helpers.arrayElement([
-      faker.helpers.arrayElement([
-        "visas_not_requested",
-        "visas_declined",
-        "visas_pending",
-        "visas_returned",
-        "no_visa_holder",
-      ] as const),
+      faker.helpers.arrayElement(Object.values(ProjectContractSendBlockerCode)),
       null,
     ]),
     total: faker.helpers.arrayElement([{ ...getGetEdsProjectResponseProjectMoneyMock() }, null]),
@@ -4250,13 +4227,7 @@ export const getCreateEdsProjectContractResponseProjectContractRefMock = (
     ] as const),
     sent_to_client: faker.datatype.boolean(),
     send_blocker_code: faker.helpers.arrayElement([
-      faker.helpers.arrayElement([
-        "visas_not_requested",
-        "visas_declined",
-        "visas_pending",
-        "visas_returned",
-        "no_visa_holder",
-      ] as const),
+      faker.helpers.arrayElement(Object.values(ProjectContractSendBlockerCode)),
       null,
     ]),
   },
@@ -4321,13 +4292,7 @@ export const getCreateEdsProjectContractResponseProjectContractSendBlockerMock =
   overrideResponse: Partial<ProjectContractSendBlocker> = {},
 ): ProjectContractSendBlocker => ({
   ...{
-    code: faker.helpers.arrayElement([
-      "visas_not_requested",
-      "visas_declined",
-      "visas_pending",
-      "visas_returned",
-      "no_visa_holder",
-    ] as const),
+    code: faker.helpers.arrayElement(Object.values(ProjectContractSendBlockerCode)),
     message: faker.string.alpha({ length: { min: 10, max: 20 } }),
     missing: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
       () => faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -4370,13 +4335,7 @@ export const getCreateEdsProjectContractResponseProjectContractMock = (
     ] as const),
     sent_to_client: faker.datatype.boolean(),
     send_blocker_code: faker.helpers.arrayElement([
-      faker.helpers.arrayElement([
-        "visas_not_requested",
-        "visas_declined",
-        "visas_pending",
-        "visas_returned",
-        "no_visa_holder",
-      ] as const),
+      faker.helpers.arrayElement(Object.values(ProjectContractSendBlockerCode)),
       null,
     ]),
     total: faker.helpers.arrayElement([
@@ -4733,13 +4692,7 @@ export const getActEdsProjectContractResponseProjectContractRefMock = (
     ] as const),
     sent_to_client: faker.datatype.boolean(),
     send_blocker_code: faker.helpers.arrayElement([
-      faker.helpers.arrayElement([
-        "visas_not_requested",
-        "visas_declined",
-        "visas_pending",
-        "visas_returned",
-        "no_visa_holder",
-      ] as const),
+      faker.helpers.arrayElement(Object.values(ProjectContractSendBlockerCode)),
       null,
     ]),
   },
@@ -4804,13 +4757,7 @@ export const getActEdsProjectContractResponseProjectContractSendBlockerMock = (
   overrideResponse: Partial<ProjectContractSendBlocker> = {},
 ): ProjectContractSendBlocker => ({
   ...{
-    code: faker.helpers.arrayElement([
-      "visas_not_requested",
-      "visas_declined",
-      "visas_pending",
-      "visas_returned",
-      "no_visa_holder",
-    ] as const),
+    code: faker.helpers.arrayElement(Object.values(ProjectContractSendBlockerCode)),
     message: faker.string.alpha({ length: { min: 10, max: 20 } }),
     missing: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
       () => faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -4853,13 +4800,7 @@ export const getActEdsProjectContractResponseProjectContractMock = (
     ] as const),
     sent_to_client: faker.datatype.boolean(),
     send_blocker_code: faker.helpers.arrayElement([
-      faker.helpers.arrayElement([
-        "visas_not_requested",
-        "visas_declined",
-        "visas_pending",
-        "visas_returned",
-        "no_visa_holder",
-      ] as const),
+      faker.helpers.arrayElement(Object.values(ProjectContractSendBlockerCode)),
       null,
     ]),
     total: faker.helpers.arrayElement([
@@ -5213,13 +5154,7 @@ export const getScanEdsProjectContractResponseProjectContractRefMock = (
     ] as const),
     sent_to_client: faker.datatype.boolean(),
     send_blocker_code: faker.helpers.arrayElement([
-      faker.helpers.arrayElement([
-        "visas_not_requested",
-        "visas_declined",
-        "visas_pending",
-        "visas_returned",
-        "no_visa_holder",
-      ] as const),
+      faker.helpers.arrayElement(Object.values(ProjectContractSendBlockerCode)),
       null,
     ]),
   },
@@ -5284,13 +5219,7 @@ export const getScanEdsProjectContractResponseProjectContractSendBlockerMock = (
   overrideResponse: Partial<ProjectContractSendBlocker> = {},
 ): ProjectContractSendBlocker => ({
   ...{
-    code: faker.helpers.arrayElement([
-      "visas_not_requested",
-      "visas_declined",
-      "visas_pending",
-      "visas_returned",
-      "no_visa_holder",
-    ] as const),
+    code: faker.helpers.arrayElement(Object.values(ProjectContractSendBlockerCode)),
     message: faker.string.alpha({ length: { min: 10, max: 20 } }),
     missing: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
       () => faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -5333,13 +5262,7 @@ export const getScanEdsProjectContractResponseProjectContractMock = (
     ] as const),
     sent_to_client: faker.datatype.boolean(),
     send_blocker_code: faker.helpers.arrayElement([
-      faker.helpers.arrayElement([
-        "visas_not_requested",
-        "visas_declined",
-        "visas_pending",
-        "visas_returned",
-        "no_visa_holder",
-      ] as const),
+      faker.helpers.arrayElement(Object.values(ProjectContractSendBlockerCode)),
       null,
     ]),
     total: faker.helpers.arrayElement([
@@ -5693,13 +5616,7 @@ export const getRequestEdsProjectSigningResponseProjectContractRefMock = (
     ] as const),
     sent_to_client: faker.datatype.boolean(),
     send_blocker_code: faker.helpers.arrayElement([
-      faker.helpers.arrayElement([
-        "visas_not_requested",
-        "visas_declined",
-        "visas_pending",
-        "visas_returned",
-        "no_visa_holder",
-      ] as const),
+      faker.helpers.arrayElement(Object.values(ProjectContractSendBlockerCode)),
       null,
     ]),
   },
@@ -5764,13 +5681,7 @@ export const getRequestEdsProjectSigningResponseProjectContractSendBlockerMock =
   overrideResponse: Partial<ProjectContractSendBlocker> = {},
 ): ProjectContractSendBlocker => ({
   ...{
-    code: faker.helpers.arrayElement([
-      "visas_not_requested",
-      "visas_declined",
-      "visas_pending",
-      "visas_returned",
-      "no_visa_holder",
-    ] as const),
+    code: faker.helpers.arrayElement(Object.values(ProjectContractSendBlockerCode)),
     message: faker.string.alpha({ length: { min: 10, max: 20 } }),
     missing: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
       () => faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -5813,13 +5724,7 @@ export const getRequestEdsProjectSigningResponseProjectContractMock = (
     ] as const),
     sent_to_client: faker.datatype.boolean(),
     send_blocker_code: faker.helpers.arrayElement([
-      faker.helpers.arrayElement([
-        "visas_not_requested",
-        "visas_declined",
-        "visas_pending",
-        "visas_returned",
-        "no_visa_holder",
-      ] as const),
+      faker.helpers.arrayElement(Object.values(ProjectContractSendBlockerCode)),
       null,
     ]),
     total: faker.helpers.arrayElement([
@@ -6199,13 +6104,7 @@ export const getActEdsProjectActResponseProjectContractRefMock = (
     ] as const),
     sent_to_client: faker.datatype.boolean(),
     send_blocker_code: faker.helpers.arrayElement([
-      faker.helpers.arrayElement([
-        "visas_not_requested",
-        "visas_declined",
-        "visas_pending",
-        "visas_returned",
-        "no_visa_holder",
-      ] as const),
+      faker.helpers.arrayElement(Object.values(ProjectContractSendBlockerCode)),
       null,
     ]),
   },
@@ -6270,13 +6169,7 @@ export const getActEdsProjectActResponseProjectContractSendBlockerMock = (
   overrideResponse: Partial<ProjectContractSendBlocker> = {},
 ): ProjectContractSendBlocker => ({
   ...{
-    code: faker.helpers.arrayElement([
-      "visas_not_requested",
-      "visas_declined",
-      "visas_pending",
-      "visas_returned",
-      "no_visa_holder",
-    ] as const),
+    code: faker.helpers.arrayElement(Object.values(ProjectContractSendBlockerCode)),
     message: faker.string.alpha({ length: { min: 10, max: 20 } }),
     missing: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
       () => faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -6319,13 +6212,7 @@ export const getActEdsProjectActResponseProjectContractMock = (
     ] as const),
     sent_to_client: faker.datatype.boolean(),
     send_blocker_code: faker.helpers.arrayElement([
-      faker.helpers.arrayElement([
-        "visas_not_requested",
-        "visas_declined",
-        "visas_pending",
-        "visas_returned",
-        "no_visa_holder",
-      ] as const),
+      faker.helpers.arrayElement(Object.values(ProjectContractSendBlockerCode)),
       null,
     ]),
     total: faker.helpers.arrayElement([{ ...getActEdsProjectActResponseProjectMoneyMock() }, null]),
@@ -6664,13 +6551,7 @@ export const getScanEdsProjectActResponseProjectContractRefMock = (
     ] as const),
     sent_to_client: faker.datatype.boolean(),
     send_blocker_code: faker.helpers.arrayElement([
-      faker.helpers.arrayElement([
-        "visas_not_requested",
-        "visas_declined",
-        "visas_pending",
-        "visas_returned",
-        "no_visa_holder",
-      ] as const),
+      faker.helpers.arrayElement(Object.values(ProjectContractSendBlockerCode)),
       null,
     ]),
   },
@@ -6735,13 +6616,7 @@ export const getScanEdsProjectActResponseProjectContractSendBlockerMock = (
   overrideResponse: Partial<ProjectContractSendBlocker> = {},
 ): ProjectContractSendBlocker => ({
   ...{
-    code: faker.helpers.arrayElement([
-      "visas_not_requested",
-      "visas_declined",
-      "visas_pending",
-      "visas_returned",
-      "no_visa_holder",
-    ] as const),
+    code: faker.helpers.arrayElement(Object.values(ProjectContractSendBlockerCode)),
     message: faker.string.alpha({ length: { min: 10, max: 20 } }),
     missing: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
       () => faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -6784,13 +6659,7 @@ export const getScanEdsProjectActResponseProjectContractMock = (
     ] as const),
     sent_to_client: faker.datatype.boolean(),
     send_blocker_code: faker.helpers.arrayElement([
-      faker.helpers.arrayElement([
-        "visas_not_requested",
-        "visas_declined",
-        "visas_pending",
-        "visas_returned",
-        "no_visa_holder",
-      ] as const),
+      faker.helpers.arrayElement(Object.values(ProjectContractSendBlockerCode)),
       null,
     ]),
     total: faker.helpers.arrayElement([
@@ -7135,13 +7004,7 @@ export const getMarkEdsProjectDeliveryResponseProjectContractRefMock = (
     ] as const),
     sent_to_client: faker.datatype.boolean(),
     send_blocker_code: faker.helpers.arrayElement([
-      faker.helpers.arrayElement([
-        "visas_not_requested",
-        "visas_declined",
-        "visas_pending",
-        "visas_returned",
-        "no_visa_holder",
-      ] as const),
+      faker.helpers.arrayElement(Object.values(ProjectContractSendBlockerCode)),
       null,
     ]),
   },
@@ -7206,13 +7069,7 @@ export const getMarkEdsProjectDeliveryResponseProjectContractSendBlockerMock = (
   overrideResponse: Partial<ProjectContractSendBlocker> = {},
 ): ProjectContractSendBlocker => ({
   ...{
-    code: faker.helpers.arrayElement([
-      "visas_not_requested",
-      "visas_declined",
-      "visas_pending",
-      "visas_returned",
-      "no_visa_holder",
-    ] as const),
+    code: faker.helpers.arrayElement(Object.values(ProjectContractSendBlockerCode)),
     message: faker.string.alpha({ length: { min: 10, max: 20 } }),
     missing: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
       () => faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -7255,13 +7112,7 @@ export const getMarkEdsProjectDeliveryResponseProjectContractMock = (
     ] as const),
     sent_to_client: faker.datatype.boolean(),
     send_blocker_code: faker.helpers.arrayElement([
-      faker.helpers.arrayElement([
-        "visas_not_requested",
-        "visas_declined",
-        "visas_pending",
-        "visas_returned",
-        "no_visa_holder",
-      ] as const),
+      faker.helpers.arrayElement(Object.values(ProjectContractSendBlockerCode)),
       null,
     ]),
     total: faker.helpers.arrayElement([
