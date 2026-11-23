@@ -136,6 +136,7 @@ async def test_start_passes_the_telegram_language_to_the_link_service() -> None:
 
     links = _StartLinks(["ok"])
     msg = message(text="/start")
+    assert msg.from_user is not None
     msg = msg.model_copy(
         update={"from_user": msg.from_user.model_copy(update={"language_code": "uz"})}
     )
