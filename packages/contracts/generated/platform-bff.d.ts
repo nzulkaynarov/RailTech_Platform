@@ -7908,6 +7908,30 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/people/counterparties/{id}/do-not-work": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Карточка контрагента: «Не работать»
+     * @description ERP `POST parties/organizations/{id}/do-not-work/` (Х-8). Причина обязательна, дата окончания по желанию; повторная отметка заменяет прежнюю. Новые КП, договор, заказ поставщику и заявка у такой компании ERP отказывает 409 `CONFLICT` (`details.reason = company_do_not_work`, `details.do_not_work` — причина и кто отметил); приглашения её контактов в кабинет не уходят; документы в работе не отменяются. Отметка попадает в журнал и в CRM снимком компании. Раздел `crm.clients` или `erp.stock` — полный; в ERP — право `deal.manage` или `supply.manage`, иначе 403.
+     */
+    post: operations["setCounterpartyDoNotWork"];
+    /**
+     * Карточка контрагента: «Снова работать»
+     * @description ERP `DELETE parties/organizations/{id}/do-not-work/` (Х-8): снять отметку; повтор безопасен. Тот же доступ, что у «Не работать». Запись в журнале и снимок в CRM — как при установке.
+     */
+    delete: operations["clearCounterpartyDoNotWork"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/people/counterparties/{id}/roles": {
     parameters: {
       query?: never;
@@ -16361,6 +16385,8 @@ export interface components {
       last_activity_at: string | null;
       /** @enum {string|null} */
       handoff_status: "pending" | "done" | "failed" | null;
+      /** @description Х-8: у компании действует отметка «Не работать» (фильтр «Не работаем») */
+      do_not_work?: boolean;
     };
     ClientList: {
       items: components["schemas"]["ClientRow"][];
@@ -16464,6 +16490,8 @@ export interface components {
         requests: components["schemas"]["SourceState"];
         documents: components["schemas"]["SourceState"];
       };
+      /** @description Х-8: отметка «Не работать» компании (из ERP снимком `company.updated`) — полоса «С компанией не работаем»; нет — работаем */
+      do_not_work?: components["schemas"]["DoNotWork"] | null;
     };
     /** @description Партнёр из ERP (PART-CRM), приглашённый в кабинет: по ключу совпал с этим клиентом, но клиент ничей — привязка только с подтверждения менеджера */
     ClientPartnerRequest: {
@@ -17048,6 +17076,8 @@ export interface components {
       expiring_count: number;
       /** Format: date */
       nearest_valid_until: string | null;
+      /** @description Х-8: с поставщиком не работаем — действует отметка «Не работать» */
+      do_not_work?: boolean;
     };
     /** @description Организация-контрагент для поля «Организация» письма; `attention` — контактное лицо для строки «Кому». */
     EdsAddressee: {
@@ -17190,6 +17220,31 @@ export interface components {
       accounts_masked: boolean;
       /** @description Бренды, которые выпускает компания */
       brands: components["schemas"]["CounterpartyRef"][];
+      /** @description Х-8: отметка «Не работать» — причина, кто и когда поставил, срок; нет — работаем */
+      do_not_work?: components["schemas"]["DoNotWork"] | null;
+    };
+    /** @description Отметка «Не работать» у контрагента (Х-8) — факты, а не флаг */
+    DoNotWork: {
+      /** @description Причина — текст для коллег */
+      reason: string;
+      /** @description Кто поставил отметку (имя сотрудника) */
+      set_by: string | null;
+      /** Format: date-time */
+      set_at: string;
+      /**
+       * Format: date
+       * @description До какого дня действует; null — без срока
+       */
+      until: string | null;
+    };
+    DoNotWorkIn: {
+      /** @description Причина — обязательный текст */
+      reason: string;
+      /**
+       * Format: date
+       * @description Необязательная дата окончания; не раньше сегодняшнего дня
+       */
+      until?: string | null;
     };
     /** @description Реквизиты контрагента (СУЩ-2.7) — только переданные поля */
     CounterpartyRequisitesIn: {
@@ -32400,6 +32455,69 @@ export interface operations {
     requestBody?: never;
     responses: {
       /** @description Карточка */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CounterpartyCard"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  setCounterpartyDoNotWork: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        id: components["schemas"]["CompanyItemRef"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DoNotWorkIn"];
+      };
+    };
+    responses: {
+      /** @description Карточка с отметкой */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CounterpartyCard"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  clearCounterpartyDoNotWork: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        id: components["schemas"]["CompanyItemRef"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Карточка без отметки */
       200: {
         headers: {
           [name: string]: unknown;

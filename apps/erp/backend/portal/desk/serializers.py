@@ -356,6 +356,22 @@ class DeskCounterpartyAccount(serializers.Serializer):
     is_default = serializers.BooleanField(help_text="Основной в своей валюте")
 
 
+class DeskDoNotWork(serializers.Serializer):
+    """Факты отметки «Не работать» (Х-8)."""
+
+    reason = serializers.CharField()
+    set_by = serializers.CharField(allow_null=True, help_text="Кто поставил отметку (имя сотрудника)")
+    set_at = serializers.DateTimeField()
+    until = serializers.DateField(allow_null=True, help_text="До какой даты действует; `null` — без срока")
+
+
+class DeskDoNotWorkIn(serializers.Serializer):
+    reason = serializers.CharField(
+        max_length=1000, allow_blank=True, help_text="Причина — обязательный текст (пустая — 400 `REASON_REQUIRED`)"
+    )
+    until = serializers.DateField(required=False, allow_null=True, help_text="Необязательная дата окончания")
+
+
 class DeskCounterparty(serializers.Serializer):
     """Карточка контрагента — одна компания во всех ролях (ADR-0028, СУЩ-2.5)."""
 
@@ -371,6 +387,10 @@ class DeskCounterparty(serializers.Serializer):
     bank_accounts = DeskCounterpartyAccount(many=True)
     accounts_masked = serializers.BooleanField(help_text="Номера счетов скрыты: нет `finance.view`")
     brands = DeskRef(many=True, help_text="Бренды, которые выпускает компания (справочник «Бренды»)")
+    do_not_work = DeskDoNotWork(
+        allow_null=True,
+        help_text="Отметка «Не работать» (Х-8): причина, кто и когда поставил, срок; `null` — с компанией работаем",
+    )
 
 
 class DeskOrganizationIn(serializers.Serializer):

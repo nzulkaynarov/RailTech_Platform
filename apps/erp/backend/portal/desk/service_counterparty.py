@@ -14,7 +14,9 @@ import re
 
 from django.conf import settings
 from django.db import transaction
+from django.utils import timezone
 from integration.models import CrmClientMapping
+from parties import do_not_work
 from parties.banking import grouped, masked
 from parties.models import Company, CompanyType
 from parties.models.relationships import CompanyRelationship, RelationshipRole, RelationshipStatus
@@ -121,6 +123,7 @@ def card(company: Company, client_ids: set, user) -> dict:
             {"id": brand.pk, "name": brand.name}
             for brand in Manufacturer.objects.filter(company=company).order_by("name")
         ],
+        "do_not_work": do_not_work.facts(company),
     }
 
 
@@ -280,4 +283,66 @@ def update_requisites(company: Company, data: dict, *, actor) -> Company:
             after=after,
             detail=company.name,
         )
+    return company
+
+
+#: Причина «Не работать» — текст для коллег, не заметка на полях: короткий отказ без причины не принимается
+REASON_MAX = 1000
+
+
+@transaction.atomic
+def set_do_not_work(company: Company, data: dict, *, actor) -> Company:
+    """Отметить «Не работать» (Х-8): причина обязательна, дата «до» — по желанию (не раньше сегодняшней).
+
+    Повторная отметка заменяет прежнюю (новая причина, срок, автор). Пустая причина — 400 `REASON_REQUIRED`, дата в прошлом —
+    400 `UNTIL_PAST`. Отметка не отменяет документы в работе: она отказывает только новым КП, договору, заказу и заявке.
+    """
+    reason = " ".join((data.get("reason") or "").split())[:REASON_MAX]
+    if not reason:
+        raise ItemError("REASON_REQUIRED", "reason")
+    until = data.get("until")
+    if until is not None and until < timezone.localdate():
+        raise ItemError("UNTIL_PAST", "until")
+    company = Company.objects.select_for_update().get(pk=company.pk)
+    before = do_not_work.facts(company)
+    company.do_not_work_at = timezone.now()
+    company.do_not_work_by = actor if getattr(actor, "pk", None) else None
+    company.do_not_work_reason = reason
+    company.do_not_work_until = until
+    company.save()
+    record(
+        actor,
+        entity="company",
+        instance=company,
+        event="updated",
+        action="Контрагенту поставлено «Не работать»",
+        before=before,
+        after=do_not_work.facts(company),
+        detail=company.name,
+    )
+    return company
+
+
+@transaction.atomic
+def clear_do_not_work(company: Company, *, actor) -> Company:
+    """Снять «Не работать»; отметки нет — ничего не меняется и не пишется (повтор безопасен)."""
+    company = Company.objects.select_for_update().get(pk=company.pk)
+    if company.do_not_work_at is None:
+        return company
+    before = do_not_work.facts(company, only_active=False)
+    company.do_not_work_at = None
+    company.do_not_work_by = None
+    company.do_not_work_reason = ""
+    company.do_not_work_until = None
+    company.save()
+    record(
+        actor,
+        entity="company",
+        instance=company,
+        event="updated",
+        action="С контрагента снято «Не работать»",
+        before=before,
+        after=None,
+        detail=company.name,
+    )
     return company

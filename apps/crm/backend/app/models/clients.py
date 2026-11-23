@@ -2,6 +2,7 @@
 
 from datetime import date, datetime
 from typing import Any, Final
+from zoneinfo import ZoneInfo
 
 from sqlalchemy import (
     BigInteger,
@@ -23,6 +24,8 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, TimestampMixin
 
+# Срок «Не работать» считается по календарю бизнеса (как в ERP), а не по часовому поясу сервера
+BUSINESS_TZ: Final = ZoneInfo("Asia/Tashkent")
 DOC_TYPES: Final = "'contract','proposal','letter','invoice','act','other'"
 # Поиск по документам клиента: заголовок и номер весомее текста.
 DOC_TSV: Final = (
@@ -58,12 +61,33 @@ class Client(TimestampMixin, Base):
     # компании ERP; время последнего применённого снимка `erp.company.updated` (более старый не
     # применяется).
     erp_requisites_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Х-8: отметка «Не работать» — проекция компании ERP (факты из того же снимка): причина, кто и
+    # когда поставил, срок. Пусто — отметки нет. «Действует ли» считает `do_not_work` по дате.
+    do_not_work_reason: Mapped[str | None] = mapped_column(Text)
+    do_not_work_by: Mapped[str | None] = mapped_column(String(255))
+    do_not_work_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    do_not_work_until: Mapped[date | None] = mapped_column(Date)
     # Передача в бэк-офис идёт задачей после коммита клиента (FIX-31): состояние для карточки.
     # `NULL` — передачи не было (режим local или клиент создан вручную).
     erp_handoff_status: Mapped[str | None] = mapped_column(String(16))
     erp_handoff_error: Mapped[str | None] = mapped_column(String(500))
     # Заявку в ERP ещё предстоит завести: не теряется при повторе после сбоя.
     erp_handoff_request: Mapped[bool] = mapped_column(Boolean, server_default=sql("false"))
+
+    @property
+    def do_not_work(self) -> dict[str, Any] | None:
+        """Действующая отметка «Не работать» (Х-8): факты из ERP; нет или срок вышел — `None`."""
+        if self.do_not_work_at is None or not self.do_not_work_reason:
+            return None
+        until = self.do_not_work_until
+        if until is not None and until < datetime.now(BUSINESS_TZ).date():
+            return None
+        return {
+            "reason": self.do_not_work_reason,
+            "set_by": self.do_not_work_by,
+            "set_at": self.do_not_work_at,
+            "until": until,
+        }
 
 
 class PartnerClientRequest(TimestampMixin, Base):

@@ -137,3 +137,52 @@ async def test_name_and_inn_of_a_linked_client_are_not_edited_in_crm(
     # клиент без компании ERP правится как раньше
     await service.update(who, unlinked_id, {"name": "Новое имя", "inn": "300000111"})
     assert (await client_of(harness, unlinked_id)).name == "Новое имя"
+
+
+# --- Х-8: отметка «Не работать» едет в том же снимке ---------------------------------------
+
+
+def mark(**fields: Any) -> dict[str, Any]:
+    return {
+        "reason": "Спор по оплате",
+        "set_by": "Менеджер Демо",
+        "set_at": "2026-11-18T09:00:00Z",
+        "until": None,
+        **fields,
+    }
+
+
+async def test_the_do_not_work_mark_is_projected_as_facts_and_cleared_by_null(
+    harness: Harness,
+) -> None:
+    client_id, _ = await harness.seed_client()
+    await apply(harness, snapshot(at="2026-11-18T10:00:00Z", do_not_work=mark()))
+    client = await client_of(harness, client_id)
+    assert client.do_not_work is not None
+    assert (client.do_not_work["reason"], client.do_not_work["set_by"]) == (
+        "Спор по оплате",
+        "Менеджер Демо",
+    )
+
+    # снимок без поля (прежний издатель) отметку не трогает
+    without = snapshot(at="2026-11-18T11:00:00Z", name="Без отметки в снимке")
+    del without["company"]["do_not_work"]
+    await apply(harness, without)
+    assert (await client_of(harness, client_id)).do_not_work is not None
+
+    # более старый снимок не снимает и не ставит отметку
+    await apply(harness, snapshot(at="2026-11-18T08:00:00Z", do_not_work=None))
+    assert (await client_of(harness, client_id)).do_not_work is not None
+
+    await apply(harness, snapshot(at="2026-11-18T12:00:00Z", do_not_work=None))
+    cleared = await client_of(harness, client_id)
+    assert cleared.do_not_work is None
+    assert cleared.do_not_work_reason is None
+
+
+async def test_an_expired_mark_does_not_act(harness: Harness) -> None:
+    client_id, _ = await harness.seed_client()
+    await apply(harness, snapshot(do_not_work=mark(until="2020-01-01")))
+    client = await client_of(harness, client_id)
+    assert client.do_not_work_until is not None
+    assert client.do_not_work is None

@@ -323,6 +323,8 @@ export * from "./documentTemplateKind";
 export * from "./documentTemplateList";
 export * from "./documentTemplatePreviewIn";
 export * from "./documentTemplateUpdate";
+export * from "./doNotWork";
+export * from "./doNotWorkIn";
 export * from "./downloadCsvExportParams";
 export * from "./downloadEdsProjectFileParams";
 export * from "./downloadEdsProjectFileVariant";

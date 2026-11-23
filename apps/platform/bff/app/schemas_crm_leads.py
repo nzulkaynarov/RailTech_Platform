@@ -15,6 +15,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from app.feeds.models import PersonRef, SourceState, StepCode
 from app.schemas_crm_messages import ConversationContacts, HandoffFacts, HandoffInfo, Language
+from app.schemas_do_not_work import DoNotWork
 
 LeadTab = Literal["all", "new", "dialog", "wants_quote", "client"]
 LeadScope = Literal["all", "mine", "overdue"]
@@ -139,6 +140,8 @@ class ClientRow(BaseModel):
     open_requests: int
     last_activity_at: datetime | None
     handoff_status: Transfer | None
+    # Х-8: с компанией не работаем (действующая отметка «Не работать»)
+    do_not_work: bool = False
 
 
 class ClientList(BaseModel):
@@ -235,6 +238,8 @@ class ClientCard(BaseModel):
     invitation: ClientInvitation | None
     partner_requests: list[ClientPartnerRequest]
     sources: ClientSources
+    # Х-8: отметка «Не работать» из ERP — полоса «С компанией не работаем» в карточке
+    do_not_work: DoNotWork | None = None
 
 
 class InvitationResendIn(BaseModel):

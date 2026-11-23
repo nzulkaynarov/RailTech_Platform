@@ -15,6 +15,7 @@ from django.utils import timezone
 from integration.services import partner_client
 from integration.services.partner_client import crm_client_state, lock_company, request_client_in_crm
 from parties.company_admin import ensure_company_admin
+from parties.do_not_work import fresh, is_marked
 from parties.models import (
     Company,
     CompanyRelationship,
@@ -249,6 +250,8 @@ def invite(
     contact = Contact.objects.filter(active_contact_q(), company=company, pk=contact_id).first()
     if contact is None:
         raise AccessError("NOT_FOUND", 404)
+    if is_marked(fresh(company)):
+        raise AccessError("COMPANY_DO_NOT_WORK", 409)  # Х-8: с компанией не работаем
     if not contact.email:
         raise AccessError("CONTACT_EMAIL_REQUIRED")
     if _email_ambiguous(contact):

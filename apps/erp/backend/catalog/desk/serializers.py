@@ -329,6 +329,9 @@ class DeskSupplierRow(serializers.Serializer):
     expired_count = serializers.IntegerField(help_text="Действующих предложений с истёкшим сроком цены.")
     expiring_count = serializers.IntegerField(help_text="Срок цены истекает в ближайшие 14 дней.")
     nearest_valid_until = serializers.DateField(allow_null=True)
+    do_not_work = serializers.BooleanField(
+        help_text="С поставщиком не работаем: действует отметка «Не работать» (Х-8)."
+    )
 
 
 class DeskSupplierDetail(DeskSupplierRow):
