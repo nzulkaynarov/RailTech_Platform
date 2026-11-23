@@ -15,6 +15,11 @@ export type ListCrmLeadsParams = {
   q?: string;
   channel?: MessageChannel;
   /**
+   * Порядок щелчком по шапке (Х-15): `last_message`, `created`; `-` в начале — по убыванию; лиды без сообщений — в конце. Другое поле — 422. Не задан — новые по последнему сообщению.
+   * @pattern ^-?(last_message|created)$
+   */
+  sort?: string;
+  /**
    * @minimum 0
    */
   offset?: number;

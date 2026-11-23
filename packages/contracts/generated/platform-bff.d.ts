@@ -20684,6 +20684,8 @@ export interface operations {
         problems?: boolean;
         step?: components["schemas"]["ProjectStage"];
         q?: string;
+        /** @description Порядок щелчком по шапке (Х-15): `number`, `client`, `step`, `due_date`, `responsible`; `-` в начале — по убыванию, пустые значения — в конце. Другое поле — 422. Не задан — от новых. */
+        sort?: string;
         limit?: number;
         offset?: number;
       };
@@ -31062,6 +31064,8 @@ export interface operations {
         scope?: "all" | "mine" | "overdue";
         q?: string;
         channel?: components["schemas"]["MessageChannel"];
+        /** @description Порядок щелчком по шапке (Х-15): `last_message`, `created`; `-` в начале — по убыванию; лиды без сообщений — в конце. Другое поле — 422. Не задан — новые по последнему сообщению. */
+        sort?: string;
         offset?: number;
         limit?: number;
       };
@@ -31562,6 +31566,8 @@ export interface operations {
         proposals?: "pending";
         /** @description `waiting` — очередь проверки партнёров (PART-3): карточки на проверке и с открытыми предложениями партнёров, старые отправки сверху; в строке — `review` (срок) и `completeness`. `requests` — «Новые из заявок» (ADR-0027): черновики из строк расчёта и КП, самые спрашиваемые сверху; в строке — `demand`, `asked_in`, `asked_total`, `duplicate`, `completeness` */
         review?: "waiting" | "requests";
+        /** @description Порядок щелчком по шапке (Х-15): `name`, `sku`, `created_at`, `updated_at`; `-` в начале — по убыванию. Другое поле — 422. Не задан — порядок ERP по умолчанию. */
+        sort?: string;
       };
       header?: never;
       path?: never;

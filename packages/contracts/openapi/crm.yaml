@@ -15393,6 +15393,16 @@ paths:
           pattern: ^(last_message|score|created)$
           title: Sort
           type: string
+      - description: 'Направление `sort`: по умолчанию `desc` (новые и сильные сверху)'
+        in: query
+        name: order
+        required: false
+        schema:
+          default: desc
+          description: 'Направление `sort`: по умолчанию `desc` (новые и сильные сверху)'
+          pattern: ^(asc|desc)$
+          title: Order
+          type: string
       - in: query
         name: limit
         required: false

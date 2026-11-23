@@ -23,6 +23,8 @@ export interface Column<T> {
   num?: boolean;
   /** Ширина колонки, px; без неё — числа 130 px, остальные делят остаток поровну (UX-1c, S9) */
   width?: number;
+  /** Колонка сортируется щелчком по шапке: ключ отправляется серверу (`sort`), порядок — в адресе страницы (Х-15) */
+  sortKey?: string;
 }
 
 /** Ширина колонки таблицы: своя, у чисел 130 px, у прочих — гибкая (`null`). */
@@ -41,6 +43,7 @@ export function DataList<T extends object>({
   columns,
   rowKey,
   selectedKey,
+  sortMode,
 }: {
   /** Идентификатор таблицы для настроек столбцов сотрудника, например `erp.catalog.items` */
   tableId: string;
@@ -49,6 +52,8 @@ export function DataList<T extends object>({
   columns: readonly Column<T>[];
   rowKey: (row: T) => string;
   selectedKey?: string | null;
+  /** `server` — постраничный список, порядок отдаёт сервер (колонки с `sortKey`) */
+  sortMode?: "client" | "server";
 }) {
   const { mobile } = useViewport();
   const [primary, ...rest] = columns;
@@ -81,10 +86,12 @@ export function DataList<T extends object>({
       flexMin={160}
       rows={rows}
       rowKey={rowKey}
+      {...(sortMode ? { sortMode } : {})}
       rowAttrs={(row) => ({ "data-selected": selectedKey === rowKey(row) })}
       columns={columns.map((column, index) => ({
         id: column.key,
         header: column.title,
+        ...(column.sortKey ? { sortKey: column.sortKey } : {}),
         width: columnWidth(column),
         numeric: column.num,
         cellClassName: index === 0 ? "pf-cat-main" : undefined,

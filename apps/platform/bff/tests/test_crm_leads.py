@@ -82,6 +82,30 @@ async def test_tab_scope_and_channel_become_crm_filters(
     assert crm.params("GET", "leads") == {"offset": "0", "limit": "25", **expected}
 
 
+@pytest.mark.parametrize(
+    ("sort", "expected"),
+    [
+        ("last_message", {"sort": "last_message", "order": "asc"}),
+        ("-last_message", {"sort": "last_message", "order": "desc"}),
+        ("-created", {"sort": "created", "order": "desc"}),
+    ],
+)
+async def test_order_becomes_crm_sort_and_direction(
+    web: Web, crm: CrmLeadsFake, sort: str, expected: dict[str, str]
+) -> None:
+    """Х-15: `sort=field` / `-field` → `sort` и `order` CRM."""
+    await web.login(["MANAGER"])
+    assert (await web.client.get(f"{BASE}?sort={sort}")).status_code == 200
+    assert crm.params("GET", "leads") == {"offset": "0", "limit": "25", **expected}
+
+
+async def test_order_outside_the_allow_list_is_422_before_crm(web: Web, crm: CrmLeadsFake) -> None:
+    await web.login(["MANAGER"])
+    for sort in ("score", "assigned_user_id", "-id", "last_message;drop", "-"):
+        assert (await web.client.get(f"{BASE}?sort={sort}")).status_code == 422, sort
+    assert crm.calls == []
+
+
 async def test_bad_filters_are_422_before_crm(web: Web, crm: CrmLeadsFake) -> None:
     await web.login(["MANAGER"])
     for query in ("tab=lost", "scope=team", "channel=Web!", "limit=101", "offset=-1"):

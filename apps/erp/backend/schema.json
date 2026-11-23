@@ -11637,6 +11637,14 @@
                     },
                     {
                         "in": "query",
+                        "name": "ordering",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "Порядок общего списка (без `review`): `name`, `sku`, `created_at`, `updated_at`; `-` в начале — по убыванию. Другое поле игнорируется (порядок по названию)."
+                    },
+                    {
+                        "in": "query",
                         "name": "page",
                         "schema": {
                             "type": "integer"
@@ -23688,6 +23696,14 @@
                             "type": "integer"
                         },
                         "description": "Сдвиг"
+                    },
+                    {
+                        "in": "query",
+                        "name": "ordering",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "Порядок: `number`, `client`, `step`, `due_date`, `responsible`; `-` в начале — по убыванию. Другое поле игнорируется (порядок от новых); пустые значения — в конце."
                     },
                     {
                         "in": "query",
