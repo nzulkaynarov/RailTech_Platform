@@ -1260,6 +1260,130 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/document-templates/contracts": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Документы · Шаблоны · Договоры (ДОК-10)
+     * @description Шаблоны договоров своей компании со статусом (черновик, на утверждении, утверждён), редакцией и тем, кто и когда утвердил. Читают разделы `eds.projects`, `company.settings`, `eds.visa.legal`.
+     */
+    get: operations["listContractTemplates"];
+    put?: never;
+    /**
+     * Новый шаблон договора из стандартного текста (черновик, редакция 1)
+     * @description Текст — образец платформы вида «Договор»; для кого и предмет задаются сразу. В сделке шаблон не предлагается, пока его не утвердит держатель зоны «Право».
+     */
+    post: operations["createContractTemplate"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/document-templates/contracts/offered": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Шаблоны договора, предлагаемые в сделке
+     * @description Только утверждённые и действующие шаблоны вида контрагента сделки; `default_id` — шаблон по умолчанию из настроек «Правила работы · Продажи».
+     */
+    get: operations["listOfferedContractTemplates"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/document-templates/contracts/{id}/new-edition": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Новая редакция утверждённого шаблона
+     * @description Копия в черновике с номером редакции на единицу больше; прежняя редакция и договоры по ней остаются как были. Раздел `eds.projects`, `company.settings` или `eds.visa.legal` — полный.
+     */
+    post: operations["newContractTemplateEdition"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/document-templates/contracts/{id}/submit": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * На утверждение
+     * @description Черновик уходит держателю зоны «Право»; нужны обязательные блоки договора и указанные «для кого» и предмет (422 `template_missing_required_blocks`).
+     */
+    post: operations["submitContractTemplate"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/document-templates/contracts/{id}/approve": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Утвердить шаблон договора
+     * @description Только держатель права `contract.approve_template` (зона «Право»; раздел `eds.visa.legal` или `admin`). Прежняя утверждённая редакция снимается с показа.
+     */
+    post: operations["approveContractTemplate"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/document-templates/contracts/{id}/return-to-draft": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Вернуть шаблон в черновик
+     * @description Держатель «Право» снимает шаблон с утверждения на доработку.
+     */
+    post: operations["returnContractTemplateToDraft"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/templates": {
     parameters: {
       query?: never;
@@ -1479,7 +1603,7 @@ export interface paths {
     put?: never;
     /**
      * EDS · Проект: действие по договору
-     * @description Переход статуса договора SPEC-v3 §2.4 в ERP (`crm/contracts/{id}/<действие>/`). `send_to_client` — «На согласование клиенту» (Проект → у клиента, договор появляется в кабинете); `client_agreed` — «Согласован клиентом» (клиент согласовал вне кабинета или в нём); `reject` — «Отклонён клиентом», `reason` обязательна (422 в BFF до ERP); `revise` — вернуть отклонённый проект в работу; `mark_issued` — «Выставлен у оператора» (ЭДО вне платформы; `note` — оператор или номер). Подготовку (`send_to_client`, `client_agreed`, `reject`, `revise`) ERP разрешает с правом `contract.manage`, `mark_issued` — `contract.sign`; недопустимый переход — 409 `contract_transition_not_allowed`. Раздел `eds.projects` — полный. Ответ — обновлённая карточка.
+     * @description Переход статуса договора SPEC-v3 §2.4 в ERP (`crm/contracts/{id}/<действие>/`). `send_to_client` — «На согласование клиенту» (Проект → у клиента, договор появляется в кабинете); `client_agreed` — «Согласован клиентом» (клиент согласовал вне кабинета или в нём); `reject` — «Отклонён клиентом», `reason` обязательна (422 в BFF до ERP); `revise` — вернуть отклонённый проект в работу; `mark_issued` — «Выставлен у оператора» (ЭДО вне платформы; `note` — оператор или номер). Подготовку (`send_to_client`, `client_agreed`, `reject`, `revise`) ERP разрешает с правом `contract.manage`, `mark_issued` — `contract.sign`; недопустимый переход — 409 `contract_transition_not_allowed`. Раздел `eds.projects` — полный. Ответ — обновлённая карточка. Договор по утверждённому шаблону (ДОК-10): `sign_ours` — наша подпись до отправки (`contract.sign`); `request_deviation` — заявка держателю зоны «Право» на отступление, `text` обязателен; `decide_deviation` — решение держателя («Право»: раздел `eds.visa.legal` полный вместо `eds.projects`), `approve` обязателен. Пока нет нашей подписи или отступление без решения, `send_to_client` — 409 `contract_needs_our_signature` / `contract_deviation_pending`.
      */
     post: operations["actEdsProjectContract"];
     delete?: never;
@@ -10969,7 +11093,31 @@ export interface components {
         | "mark_issued"
         | "attach_scan"
       )[];
+      /** @description ДОК-10: договор собран из утверждённого шаблона — название и редакция, отступление, путь по фактам; null — договор прежним путём */
+      template?: components["schemas"]["ProjectContractTemplate"] | null;
       history: components["schemas"]["ProjectJournalEntry"][];
+    };
+    ProjectContractTemplate: {
+      id: number | null;
+      name: string;
+      edition: number;
+      /** @enum {string} */
+      deviation: "none" | "requested" | "approved" | "rejected";
+      deviation_text: string;
+      /** @description Договор идёт по маршруту виз — только с отступлением; по шаблону без отступлений виз нет */
+      visas_required: boolean;
+      /** @description Что мешает отправить клиенту сейчас: `CONTRACT_DEVIATION_PENDING`, `CONTRACT_NEEDS_OUR_SIGNATURE` или null */
+      send_blocker: string | null;
+      steps: components["schemas"]["ContractPathStep"][];
+      actions: ("sign_ours" | "request_deviation" | "decide_deviation")[];
+    };
+    ContractPathStep: {
+      /** @enum {string} */
+      key: "assembled" | "our_signature" | "in_cabinet" | "signed_both";
+      /** @enum {string} */
+      state: "done" | "current" | "next";
+      /** Format: date-time */
+      at?: string | null;
     };
     ProjectInvoice: {
       id: number;
@@ -11102,14 +11250,29 @@ export interface components {
     };
     /** @description Действие по договору. `reason` обязательна для `reject`, `channel` и `counterparty_person` — для `client_agreed`: пустые BFF отклоняет (422). */
     ProjectContractActionIn: {
-      /** @enum {string} */
-      action: "send_to_client" | "client_agreed" | "reject" | "revise" | "mark_issued";
+      /**
+       * @description `sign_ours`, `request_deviation`, `decide_deviation` — договор по утверждённому шаблону (ДОК-10): наша подпись до отправки, заявка на отступление, решение держателя «Право»
+       * @enum {string}
+       */
+      action:
+        | "send_to_client"
+        | "client_agreed"
+        | "reject"
+        | "revise"
+        | "mark_issued"
+        | "sign_ours"
+        | "request_deviation"
+        | "decide_deviation";
       reason?: string | null;
       note?: string | null;
       /** @description Только `client_agreed`, обязательно: как клиент сообщил согласие (A2 волны 18a) */
       channel?: components["schemas"]["OnBehalfChannel"] | null;
       /** @description Только `client_agreed`, обязательно: кто со стороны клиента (ФИО, должность) */
       counterparty_person?: string | null;
+      /** @description Только `request_deviation`, обязательно: пункт и причина отступления */
+      text?: string | null;
+      /** @description Только `decide_deviation`, обязательно: одобрить или отклонить */
+      approve?: boolean | null;
     };
     OnBehalfNote: {
       channel: components["schemas"]["OnBehalfChannel"];
@@ -12620,6 +12783,16 @@ export interface components {
       offer_expiring_days: number;
       /** @description Пауза между напоминаниями клиенту об акте, часов */
       act_reminder_hours: number;
+      /** @description ДОК-10: договор по утверждённому шаблону без отступлений после принятия КП сам уходит в Кабинет (по умолчанию да) */
+      contract_auto_send?: boolean;
+      /** @description ДОК-10: наша подпись до отправки клиенту (по умолчанию да) */
+      contract_sign_before_send?: boolean;
+      /** @description ДОК-10: «Запросить отступление» от шаблона доступно (по умолчанию да) */
+      contract_deviations_allowed?: boolean;
+      /** @description ДОК-10: шаблон договора по умолчанию для клиента — только утверждённый */
+      default_client_contract_template?: number | null;
+      /** @description ДОК-10: шаблон договора по умолчанию для партнёра — только утверждённый */
+      default_partner_contract_template?: number | null;
     };
     /** @description Поля маржи без права на `cost_margin` — 403 `FORBIDDEN` (`details.fields`). */
     QuoteDefaultsUpdate: {
@@ -12660,6 +12833,57 @@ export interface components {
       offer_expiring_days?: number;
       /** @description Пауза между напоминаниями клиенту об акте, часов */
       act_reminder_hours?: number;
+      /** @description ДОК-10: договор по утверждённому шаблону без отступлений после принятия КП сам уходит в Кабинет (по умолчанию да) */
+      contract_auto_send?: boolean;
+      /** @description ДОК-10: наша подпись до отправки клиенту (по умолчанию да) */
+      contract_sign_before_send?: boolean;
+      /** @description ДОК-10: «Запросить отступление» от шаблона доступно (по умолчанию да) */
+      contract_deviations_allowed?: boolean;
+      /** @description ДОК-10: шаблон договора по умолчанию для клиента — только утверждённый */
+      default_client_contract_template?: number | null;
+      /** @description ДОК-10: шаблон договора по умолчанию для партнёра — только утверждённый */
+      default_partner_contract_template?: number | null;
+    };
+    /** @description Шаблон договора с утверждением (ДОК-10) */
+    ContractTemplate: {
+      id: string;
+      name: string;
+      edition: number;
+      /** @enum {string} */
+      status: "draft" | "on_approval" | "approved";
+      /** @enum {string|null} */
+      counterparty: "client" | "partner" | null;
+      /** @enum {string|null} */
+      subject: "supply" | "services" | null;
+      approved_by: string | null;
+      /** Format: date-time */
+      approved_at: string | null;
+      /** Format: date-time */
+      submitted_at: string | null;
+      /** @description Действующая редакция: предлагается в сделке, если утверждена */
+      is_active: boolean;
+      /** @description Закреплённый текст: правится только новой редакцией */
+      locked: boolean;
+      /** @description Языки с заполненным текстом; пустой uz/en — русский с пометкой (ДОК-16 дозаполняет) */
+      languages: ("ru" | "uz" | "en")[];
+      updated_at: string;
+    };
+    ContractTemplateList: {
+      items: components["schemas"]["ContractTemplate"][];
+    };
+    ContractTemplateIn: {
+      name: string;
+      /** @enum {string} */
+      counterparty: "client" | "partner";
+      /** @enum {string} */
+      subject: "supply" | "services";
+    };
+    /** @description Что предлагается в сделке: только утверждённые шаблоны вида контрагента; `default_id` — шаблон по умолчанию из настроек */
+    OfferedContractTemplates: {
+      /** @enum {string} */
+      counterparty: "client" | "partner";
+      default_id: string | null;
+      items: components["schemas"]["ContractTemplate"][];
     };
     ChargeType: {
       id: components["schemas"]["CompanyItemRef"];
@@ -18130,6 +18354,15 @@ export interface components {
         "application/json": components["schemas"]["Error"];
       };
     };
+    /** @description 409 `CONFLICT` — `details.reason`: `template_locked` (утверждённый текст не правится — новая редакция), `template_transition_not_allowed` (шаблон в другом статусе), `template_edition_in_progress`, `template_edition_needs_approved`; обновите список */
+    ContractTemplateConflict: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content: {
+        "application/json": components["schemas"]["Error"];
+      };
+    };
     /** @description 409 `CONFLICT` — запрос нельзя решить: `details.reason` — `bank_change_not_pending` (уже решён иначе), `bank_change_stale` (реквизиты изменились после подачи), `company_archived` (компания в архиве); обновите очередь */
     BankChangeConflict: {
       headers: {
@@ -20411,6 +20644,207 @@ export interface operations {
       };
       401: components["responses"]["SessionExpired"];
       403: components["responses"]["Forbidden"];
+    };
+  };
+  listContractTemplates: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Шаблоны договоров */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ContractTemplateList"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+    };
+  };
+  createContractTemplate: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ContractTemplateIn"];
+      };
+    };
+    responses: {
+      /** @description Шаблон создан */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ContractTemplate"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      422: components["responses"]["ValidationFailed"];
+    };
+  };
+  listOfferedContractTemplates: {
+    parameters: {
+      query: {
+        deal_id: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Предложенные шаблоны */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["OfferedContractTemplates"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+    };
+  };
+  newContractTemplateEdition: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Id объекта ERP (строкой) */
+        id: components["parameters"]["CompanyItemId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Редакция создана */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ContractTemplate"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["ContractTemplateConflict"];
+      422: components["responses"]["ValidationFailed"];
+    };
+  };
+  submitContractTemplate: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Id объекта ERP (строкой) */
+        id: components["parameters"]["CompanyItemId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Шаблон */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ContractTemplate"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["ContractTemplateConflict"];
+      422: components["responses"]["ValidationFailed"];
+    };
+  };
+  approveContractTemplate: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Id объекта ERP (строкой) */
+        id: components["parameters"]["CompanyItemId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Шаблон */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ContractTemplate"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["ContractTemplateConflict"];
+      422: components["responses"]["ValidationFailed"];
+    };
+  };
+  returnContractTemplateToDraft: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Id объекта ERP (строкой) */
+        id: components["parameters"]["CompanyItemId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Шаблон */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ContractTemplate"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["ContractTemplateConflict"];
+      422: components["responses"]["ValidationFailed"];
     };
   };
   listTemplateCatalog: {
