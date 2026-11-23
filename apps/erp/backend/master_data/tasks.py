@@ -54,3 +54,18 @@ def refresh_tnved_codes():
         return {"skipped": "switched_off"}
     logger.info("ТН ВЭД: %s", summary)
     return summary
+
+
+@shared_task(
+    time_limit=600,
+    soft_time_limit=540,
+    max_retries=3,
+    autoretry_for=(Exception,),
+    retry_backoff=True,
+)
+def refresh_bank_codes():
+    """Monthly Celery-beat job (Х-12): новые коды банков и названия из файла ЦБ; ничего не удаляется."""
+    from .cbu_banks import refresh_banks
+
+    summary = refresh_banks()
+    return {"added": summary.added, "updated": summary.updated, "missing": summary.missing, "total": summary.total}
