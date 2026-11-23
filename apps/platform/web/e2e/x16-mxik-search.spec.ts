@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test";
 import { loginAndWait, settledScreenshot, spaGoto } from "./support/app";
 import { expectNoViolations } from "./support/axe";
 
-// X-16: поиск МХИК по слову («накладка» — рельсовые и вагонные позиции, под каждой путь по группам), публикация без МХИК
+// X-16: поиск МХИК по слову («накладка» — позиции со словом в названии, под каждой путь по группам), публикация без МХИК
 // закрыта словами и ведёт к полю, обязательные коды — переключатели в «Продажи». Снимки — docs/screens/x16-mxik-search.
 const WIDTHS = [1440, 390] as const;
 
@@ -25,9 +25,11 @@ for (const width of WIDTHS) {
     const field = page.getByLabel("МХИК (ИКПУ)");
     await expect(field).toBeFocused();
     await field.fill("накладка");
-    const hit = page.getByText("Изделия из чёрных металлов › Детали железнодорожного пути");
-    await expect(hit).toBeVisible();
-    await expect(page.getByText(/Накладки тормозные для вагонов/)).toBeVisible();
+    await expect(page.getByText(/Накладка тормозная для автомобилей: HOWO/)).toBeVisible();
+    await expect(
+      page.getByText(/используемые для железнодорожных или трамвайных путей \(кроме/),
+    ).toBeVisible();
+    await expect(page.getByText(/Фрикционные материалы и изделия из них/).first()).toBeVisible();
     await expect(page.getByText(/пассажиров|газоснабжение/i)).toHaveCount(0);
     await settledScreenshot(page, "search-results");
   });
