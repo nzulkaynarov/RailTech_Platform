@@ -1,0 +1,129 @@
+{
+  "subtitle": "What clients and partners accept when they first sign in to the cabinet",
+  "kinds": {
+    "terms": "Terms of use (offer)",
+    "privacy": "Personal data processing policy"
+  },
+  "noneYet": "Nothing is published yet — the cabinet is open without acceptance. Once you publish, every contact accepts the text on sign-in.",
+  "loadError": "Could not load the editions",
+  "loadErrorText": "Check the connection and try again.",
+  "retry": "Retry",
+  "card": {
+    "current": "In force: edition of {{date}}",
+    "by": "Published by: {{who}}",
+    "accepted": "Accepted by: {{count}}",
+    "notPublished": "Not published",
+    "draft": "Draft “{{label}}”",
+    "noDraft": "No draft"
+  },
+  "actions": {
+    "read": "Read",
+    "newEdition": "New edition",
+    "editDraft": "Edit draft",
+    "publish": "Publish",
+    "discard": "Delete draft",
+    "back": "Back to list"
+  },
+  "statuses": {
+    "draft": "Draft",
+    "current": "In force",
+    "retired": "Replaced"
+  },
+  "languages": {
+    "ru": "Русский",
+    "uz": "Oʻzbekcha",
+    "en": "English"
+  },
+  "editions": {
+    "title": "Editions",
+    "listLabel": "Editions of the offer and the policy",
+    "columns": {
+      "kind": "Document",
+      "label": "Edition",
+      "status": "Status",
+      "published": "Published",
+      "accepted": "Acceptances",
+      "actions": "Actions"
+    }
+  },
+  "publish": {
+    "title": "Publish edition “{{label}}”?",
+    "text": "All cabinet contacts will accept the new edition the next time they sign in. Those in the cabinet now will see the acceptance screen on their next action.",
+    "replaces": "It replaces edition “{{label}}”: its acceptances stay in the log.",
+    "immutable": "A published text cannot be changed — a new edition is created for any correction.",
+    "ok": "Publish",
+    "cancel": "Cancel",
+    "done": "Edition “{{label}}” is published."
+  },
+  "discard": {
+    "title": "Delete draft “{{label}}”?",
+    "text": "The draft text will be lost. The edition in force does not change.",
+    "ok": "Delete",
+    "cancel": "Cancel",
+    "done": "Draft deleted."
+  },
+  "created": "Draft “{{label}}” created — a copy of the edition in force.",
+  "reader": {
+    "title": "{{kind}} · edition of {{date}}",
+    "language": "Text language",
+    "note": "This is what the contact sees: company details are already filled in.",
+    "close": "Close"
+  },
+  "editor": {
+    "title": "Draft: {{kind}}",
+    "label": "Edition name",
+    "labelHelp": "For example, a date: 2026-12-01. Shown in the acceptance log.",
+    "language": "Text language",
+    "docTitle": "Document title",
+    "lead": "Introduction",
+    "section": "Section {{n}}",
+    "sectionTitle": "Section title",
+    "sectionBody": "Section text",
+    "bodyHelp": "Paragraphs go on new lines; list items start with “— ”. Placeholders are filled with company details: {{list}}.",
+    "addSection": "Add a section",
+    "removeSection": "Delete section {{n}}",
+    "threeLanguages": "Each section needs a title and text in all three languages — switch the language above. The list of sections is shared by the languages.",
+    "consequence": "Clients see the edition in force until the draft is published. Publish from the list of editions.",
+    "unsaved": "There are unsaved changes",
+    "save": "Save draft",
+    "saved": "Draft saved.",
+    "discardTitle": "Leave without saving?",
+    "discardText": "Changes to the text will be lost.",
+    "discardOk": "Leave",
+    "discardCancel": "Stay"
+  },
+  "errors": {
+    "default": "The action failed. Please try again.",
+    "legal_draft_exists": "This document already has a draft: open it and edit.",
+    "legal_edition_published": "The edition is already published and does not change. Create a new one.",
+    "legal_label_taken": "This name is already used. Choose another.",
+    "VALIDATION_FAILED": "Check that every section has a title and text in all three languages.",
+    "FORBIDDEN": "You are not allowed to change the offer and the policy.",
+    "NOT_FOUND": "The edition no longer exists. Refresh the page."
+  },
+  "log": {
+    "title": "Who accepted",
+    "label": "Acceptance filter",
+    "edition": "Edition",
+    "allEditions": "All editions",
+    "search": "Name, address or organisation",
+    "count": "Acceptances in total: {{total}}",
+    "capped": "Showing the latest {{shown}} — narrow the search.",
+    "tableLabel": "Acceptance log",
+    "columns": {
+      "when": "When",
+      "contact": "Contact",
+      "company": "Organisation",
+      "document": "Document",
+      "language": "Language"
+    },
+    "empty": "No acceptances yet",
+    "emptyText": "They appear once contacts sign in to the cabinet after publication.",
+    "noMatch": "Nothing found",
+    "noMatchText": "Change the edition or the search."
+  },
+  "panel": {
+    "title": "Offer and policy",
+    "text": "Editions, publication and the acceptance log. A published text does not change."
+  }
+}

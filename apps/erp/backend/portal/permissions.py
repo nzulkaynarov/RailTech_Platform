@@ -2,6 +2,9 @@
 
 from rest_framework import exceptions, permissions
 
+#: Код отказа кабинета без акцепта действующей редакции оферты и политики (ДВ-5); есть в `ErrorCode` контракта.
+LEGAL_ACCEPTANCE_REQUIRED = "LEGAL_ACCEPTANCE_REQUIRED"
+
 
 class IsPortalAuthenticated(permissions.BasePermission):
     """Требует активной сессии клиентского портала."""
@@ -11,6 +14,10 @@ class IsPortalAuthenticated(permissions.BasePermission):
     def has_permission(self, request, view):
         if not getattr(request, "portal_session", None):
             raise exceptions.NotAuthenticated(self.message)
+        # ДВ-5: пока контакт не принял действующую оферту и политику, открыты только вьюхи с `legal_exempt = True`
+        # (профиль и сами документы). Проверка здесь, а не в каждой вьюхе: новый эндпоинт закрыт по умолчанию.
+        if getattr(request, "portal_legal_pending", False) and not getattr(view, "legal_exempt", False):
+            raise exceptions.PermissionDenied(LEGAL_ACCEPTANCE_REQUIRED)
         return True
 
 

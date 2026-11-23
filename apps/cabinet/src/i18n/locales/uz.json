@@ -1394,7 +1394,9 @@
     "BANK_CODE_INVALID": "Bank kodi (MFO) notoğri.",
     "BANK_SWIFT_INVALID": "SWIFT/BIC notoğri yoki boşqa mamlakatniki.",
     "BANK_HOLDER_LATIN_INVALID": "Lotinça ismda ruxsat etilmagan belgilar bor.",
-    "BANK_INTERMEDIARY_INVALID": "Vositaçi bank SWIFT notoğri."
+    "BANK_INTERMEDIARY_INVALID": "Vositaçi bank SWIFT notoğri.",
+    "LEGAL_ACCEPTANCE_REQUIRED": "Avval foydalaniş şartlari va siyosatni qabul qiling.",
+    "LEGAL_EDITION_CHANGED": "Yangi tahrir çiqdi — matn yangilandi. Uni öqib, qabul qiling."
   },
   "widgets": {
     "actionRequired": {
@@ -1815,5 +1817,28 @@
     "partnerContractDesc": "Shartlar bilan tanishib, kelishing",
     "inviteTeam": "Hamkasblarni taklif qilish",
     "inviteTeamDesc": "Birgalikda ishlash uchun xodimlarni qoʻshing"
+  },
+  "legal": {
+    "title": "Kabinetda işlaş şartlari",
+    "intro": "Davom etiş uçun şaxsga doir maʼlumotlarga işlov beriş siyosati va kabinetdan foydalaniş şartlarini (oferta) öqib, qabul qiling. Bu bir marta kerak: qayta faqat yangi tahrir çiqqanda söraymiz.",
+    "documents": "Hujjatlar",
+    "tabs": {
+      "terms": "Foydalaniş şartlari",
+      "privacy": "Şaxsga doir maʼlumotlar siyosati"
+    },
+    "edition": "Tahrir sanasi: {{date}}",
+    "consent": "«Qabul qilaman» tugmasini bosib, siz ikkala hujjatni öqiganingizni, foydalaniş şartlarini qabul qilganingizni va şaxsga doir maʼlumotlarga siyosat şartlarida işlov berişga rozilik berganingizni tasdiqlaysiz. Tahrir, sana va vaqtni yozib qöyamiz.",
+    "accept": "Qabul qilaman",
+    "accepting": "Saqlanmoqda…",
+    "decline": "Qabul qilmayman",
+    "declined": {
+      "title": "Qabul qilmasdan kabinet oçilmaydi",
+      "text": "Şartlar va siyosat qabul qilinmaguça kabinetni oça olmaymiz. Tayyor bölganingizda qayta kiring va ularni qabul qiling; savollar bölsa, menejerga yozing.",
+      "back": "Matnga qaytiş",
+      "loginNotice": "Siz şartlar va siyosatni qabul qilmadingiz, şuning uçun kabinetdan çiqdingiz. Kabinetda işlaş uçun qayta kiring va ularni qabul qiling."
+    },
+    "policyLink": "Şaxsga doir maʼlumotlarga işlov beriş siyosati",
+    "notPublished": "Siyosat hali eʼlon qilinmagan.",
+    "backToLogin": "Kiriş sahifasiga"
   }
 }
