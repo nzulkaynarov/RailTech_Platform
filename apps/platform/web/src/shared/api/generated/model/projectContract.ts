@@ -3,6 +3,7 @@
  * RailTech Platform — BFF API (Платформа → CRM и ERP)
  */
 import type { ProjectContractActionsItem } from "./projectContractActionsItem";
+import type { ProjectContractSendBlocker } from "./projectContractSendBlocker";
 import type { ProjectContractStatus } from "./projectContractStatus";
 import type { ProjectJournalEntry } from "./projectJournalEntry";
 import type { ProjectMoney } from "./projectMoney";
@@ -28,5 +29,7 @@ export interface ProjectContract {
   has_scan: boolean;
   /** Что можно сделать СЕЙЧАС этому сотруднику (допустимо из статуса и разрешено правами ERP); считает ERP, SPA не угадывает */
   actions: ProjectContractActionsItem[];
+  /** Х-1: пока проект договора не ушёл клиенту — что мешает его отправить (визы маршрута подписи не собраны); null — ничего, действие send_to_client в actions. Считает ERP */
+  send_blocker?: ProjectContractSendBlocker | null;
   history: ProjectJournalEntry[];
 }

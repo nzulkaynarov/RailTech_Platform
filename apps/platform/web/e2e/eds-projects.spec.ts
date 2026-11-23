@@ -72,12 +72,27 @@ test.describe("Проекты: бухгалтер", () => {
 
     // карточка проекта без договора: «Сформировать проект договора» из принятого КП
     await openProject(page, 104);
-    const panel = page.getByRole(DOCS.role, { name: DOCS.name });
+    const created = page.getByRole(DOCS.role, { name: DOCS.name });
     await settledScreenshot(page, "contract-none");
     await expectNoViolations(page, "договор: нет проекта");
-    await panel.getByRole("button", { name: "Сформировать проект договора по КП" }).click();
+    await created.getByRole("button", { name: "Сформировать проект договора по КП" }).click();
 
+    // Х-1: договор не на визах — «На согласование клиенту» нет, причина словами; «На подпись» открывает круг виз
+    const blocker = created.getByTestId("contract-send-blocker");
+    await expect(blocker).toContainText("Нужны визы. Нажмите «На подпись»");
+    await expect(created.getByRole("button", { name: "На согласование клиенту" })).toHaveCount(0);
+    await settledScreenshot(page, "contract-visas-not-requested");
+    await expectNoViolations(page, "договор: визы не запрошены");
+    await created.getByRole("button", { name: "На подпись" }).click();
+    await expect(blocker).toContainText("Нужны визы: бухгалтер, юрист");
+    await settledScreenshot(page, "contract-visas-pending");
+    await expectNoViolations(page, "договор: ждёт виз бухгалтера и юриста");
+
+    // визы собраны (проект 111): договор уходит клиенту
+    await openProject(page, 111);
+    const panel = page.getByRole(DOCS.role, { name: DOCS.name });
     await expect(panel.getByText("Проект ещё не отправлен клиенту.")).toBeVisible();
+    await expect(panel.getByTestId("contract-send-blocker")).toHaveCount(0);
     await panel.getByRole("button", { name: "На согласование клиенту" }).click();
     await expect(panel.getByText("Проект у клиента на согласовании редакции.")).toBeVisible();
     // A2: согласие клиента — как сообщил и кто со стороны клиента
@@ -242,10 +257,18 @@ test.describe("Проекты: телефон", () => {
       // Ссылка из очереди/колокольчика ведёт на проект без `?panel=open&tab=…`: окно закрыто, кнопка шага доступна.
       await openProject(page, 104);
       await expect(page.locator(PANEL)).toBeHidden();
-      await page
-        .getByRole(DOCS.role, { name: DOCS.name })
-        .getByRole("button", { name: "Сформировать проект договора по КП" })
-        .click({ trial: true });
+      const draft = page.getByRole(DOCS.role, { name: DOCS.name });
+      await draft.getByRole("button", { name: "Сформировать проект договора по КП" }).click();
+
+      // Х-1 на 390 px: договор не на визах — причина словами, «На согласование клиенту» нет; «На подпись» собирает визы
+      await expect(draft.getByTestId("contract-send-blocker")).toContainText("Нужны визы");
+      await expect(draft.getByRole("button", { name: "На согласование клиенту" })).toHaveCount(0);
+      await draft.getByRole("button", { name: "На подпись" }).click();
+      await expect(draft.getByTestId("contract-send-blocker")).toContainText(
+        "Нужны визы: бухгалтер, юрист",
+      );
+      await settledScreenshot(page, "mobile-contract-visas-pending");
+      await expectNoViolations(page, "мобильная карточка: договор ждёт виз");
 
       await openProject(page, 97);
       await page.getByTestId("panel-toggle").click();

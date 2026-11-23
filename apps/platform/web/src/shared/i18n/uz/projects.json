@@ -318,7 +318,16 @@
       "reject": "Rad etish yozildi.",
       "revise": "Loyiha ishga qaytarildi."
     },
-    "readOnly": "Faqat ko‘rish."
+    "readOnly": "Faqat ko‘rish.",
+    "blocker": {
+      "visas_not_requested": "Vizalar kerak. «Imzoga yuborish» tugmasini bosing: vizalar yig‘ilgach, shartnomani mijozga yuborish mumkin.",
+      "visas_declined": "Shartnoma vizaga qabul qilinmadi. Uni qayta imzoga yuboring.",
+      "visas_pending": "Vizalar kerak: {{roles}}",
+      "visas_returned": "Vizalar qaytarildi: {{roles}}. Shartnomani to‘g‘rilab, qayta imzoga yuboring.",
+      "no_visa_holder": "Viza qo‘yadigan xodim yo‘q: {{roles}}. Rolni xodimga tayinlang.",
+      "remark": "Izoh: {{text}}",
+      "settings": "Xodimlar"
+    }
   },
   "act": {
     "number": "{{number}} dalolatnomasi",
@@ -406,7 +415,8 @@
     "unavailable": "ERP javob bermayapti. Keyinroq urinib ko‘ring.",
     "payload": "Fayl 20 MB dan katta.",
     "unknown": "Bajarilmadi. Qayta urinib ko‘ring.",
-    "failed": "Bajarilmadi: {{reason}}"
+    "failed": "Bajarilmadi: {{reason}}",
+    "contract_visas_required": "Avval vizalar kerak. Sahifani yangilang."
   },
   "state": {
     "retry": "Qayta urinish",

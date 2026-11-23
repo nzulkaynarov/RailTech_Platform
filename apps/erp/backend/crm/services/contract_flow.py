@@ -144,7 +144,20 @@ def allowed_actions(contract, user) -> list:
     Единый источник для карточки проекта: страница не вычисляет сама, что можно (CONVENTIONS Платформы, правило 2).
     """
     code = _status_code(contract)
-    return [t.action for t in TRANSITIONS.values() if code in t.sources and may(user, t.permission) and is_staff(user)]
+    actions = [
+        t.action for t in TRANSITIONS.values() if code in t.sources and may(user, t.permission) and is_staff(user)
+    ]
+    # Х-1: «Отправить клиенту» не предлагается, пока визы не собраны (причина — `send_blocker` карточки).
+    if "send_to_client" in actions and send_blocker(contract) is not None:
+        actions.remove("send_to_client")
+    return actions
+
+
+def send_blocker(contract) -> Optional[dict]:
+    """Х-1: почему договор нельзя отправить клиенту (`None` — можно). Подробности — `contract_visas.send_blocker`."""
+    from .contract_visas import send_blocker as visas_blocker
+
+    return visas_blocker(contract)
 
 
 def is_staff(user) -> bool:
@@ -248,7 +261,8 @@ def apply_transition(
     Коды: `CONTRACT_NOT_FOUND`, `MEMBER_REQUIRED_FOR_ACTION` (нет права `contract.*` в своей компании),
     `CONTRACT_TRANSITION_NOT_ALLOWED` (статус не тот), `REASON_REQUIRED` (отклонение без причины), `SCAN_REQUIRED` и
     `SCAN_INVALID` (скан не приложен или не PDF/изображение, больше лимита, подделана сигнатура), `CHANNEL_INVALID` и
-    `COUNTERPARTY_PERSON_REQUIRED` («Согласован клиентом» без канала или лица со стороны клиента, A2 волны 18a).
+    `COUNTERPARTY_PERSON_REQUIRED` («Согласован клиентом» без канала или лица со стороны клиента, A2 волны 18a),
+    `CONTRACT_VISAS_REQUIRED` (отправка клиенту до сбора виз, Х-1: HTTP 409, слова — `send_blocker`).
     """
     transition = TRANSITIONS.get(action)
     if transition is None:
@@ -277,6 +291,8 @@ def apply_transition(
     on_behalf, error = _on_behalf_note(transition, channel, counterparty_person)
     if error:
         return None, error
+    if action == "send_to_client" and send_blocker(contract) is not None:
+        return None, "CONTRACT_VISAS_REQUIRED"  # Х-1: до виз договор клиенту не уходит
 
     from integration.services import document_events, events
 

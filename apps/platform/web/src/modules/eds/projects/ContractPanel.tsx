@@ -7,6 +7,7 @@ import type {
   ProjectCard,
   ProjectContractActionInAction,
   ProjectContractActionsItem,
+  ProjectContractSendBlocker,
 } from "../../../shared/api/generated/model";
 import {
   useActEdsProjectContract,
@@ -16,6 +17,7 @@ import {
 import { useFormat } from "../../../shared/lib/useFormat";
 import { DefinitionList } from "../../../shared/ui/DefinitionList";
 import { ActionToggle } from "../../../shared/ui/FormParts";
+import { LinkButton } from "../../../shared/ui/LinkButton";
 import { MoneyText } from "../../../shared/ui/MoneyText";
 import { OnBehalfFields } from "../../../shared/ui/OnBehalf";
 import { fileUrl, projectRef } from "./api";
@@ -49,6 +51,28 @@ function primaryOf(
     default:
       return null;
   }
+}
+
+/**
+ * Х-1: договор не уходит клиенту, пока не собраны визы. Действие «На согласование клиенту» ERP не предлагает
+ * (`actions`), а здесь — причина словами и, если некому визировать, ссылка в настройки (без тупика).
+ */
+function SendBlocker({ blocker }: { blocker: ProjectContractSendBlocker }) {
+  const { t } = useTranslation("projects");
+  const roles = blocker.missing.join(", ");
+  return (
+    <div className="pf-hint" role="status" data-testid="contract-send-blocker">
+      <p style={{ margin: 0 }}>{t(`contract.blocker.${blocker.code}`, { roles })}</p>
+      {blocker.remark ? (
+        <p style={{ margin: 0 }}>{t("contract.blocker.remark", { text: blocker.remark })}</p>
+      ) : null}
+      {blocker.settings_link ? (
+        <LinkButton size="small" to="/admin/org">
+          {t("contract.blocker.settings")}
+        </LinkButton>
+      ) : null}
+    </div>
+  );
 }
 
 function ContractBody({
@@ -259,8 +283,11 @@ function ContractBody({
         />
       </section>
 
+      {contract.send_blocker && !contract.sent_to_client ? (
+        <SendBlocker blocker={contract.send_blocker} />
+      ) : null}
       {primaryBlock}
-      {allowed.length === 0 && !FINAL.has(contract.status) ? (
+      {allowed.length === 0 && !FINAL.has(contract.status) && !contract.send_blocker ? (
         <p className="pf-hint">{t("contract.readOnly")}</p>
       ) : null}
 

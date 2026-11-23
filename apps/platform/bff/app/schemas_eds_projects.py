@@ -143,6 +143,21 @@ class ProjectQuote(ProjectQuoteRef):
     valid_until: dt.date | None
 
 
+SendBlockerCode = Literal[
+    "visas_not_requested", "visas_declined", "visas_pending", "visas_returned", "no_visa_holder"
+]
+
+
+class ProjectContractSendBlocker(BaseModel):
+    """Х-1: почему проект договора нельзя отправить клиенту (визы не собраны); считает ERP."""
+
+    code: SendBlockerCode
+    message: str
+    missing: list[str]
+    remark: str
+    settings_link: bool
+
+
 class ProjectContract(ProjectContractRef):
     total: ProjectMoney | None
     created_at: dt.datetime
@@ -151,6 +166,8 @@ class ProjectContract(ProjectContractRef):
     has_pdf: bool
     has_scan: bool
     actions: list[ContractActionCode]
+    # ERP до Х-1 поля не присылает: нет причины — действие решают `actions`.
+    send_blocker: ProjectContractSendBlocker | None = None
     history: list[ProjectJournalEntry]
 
 

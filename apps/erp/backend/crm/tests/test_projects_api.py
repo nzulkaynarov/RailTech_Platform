@@ -18,7 +18,7 @@ from crm.constants import DealStageCode, InvoiceStatusCode, QuoteStatusCode
 from crm.models import ActivityLog
 from crm.services import projects
 from crm.tests.delivery_support import mark_delivered
-from crm.tests.projects_world import api, contract_in, pw  # noqa: F401
+from crm.tests.projects_world import api, collect_visas, contract_in, pw  # noqa: F401
 
 pytestmark = pytest.mark.django_db
 
@@ -193,6 +193,8 @@ def test_everyone_outside_the_staff_gets_403_and_not_found_hides_the_object(pw):
 def test_admin_reads_and_acts_everywhere(pw):  # noqa: F811
     contract = contract_in(pw, S.DRAFT)
     assert api(pw.admin).get(LIST).json()["count"] == 1
+    assert _card(pw.admin, pw.deal.id).json()["contract"]["actions"] == []  # Х-1: визы не собраны
+    collect_visas(contract)
     assert _card(pw.admin, pw.deal.id).json()["contract"]["actions"] == ["send_to_client"]
     assert (
         api(pw.admin).post(f"/api/v1/crm/contracts/{contract.id}/send-to-client/", {}, format="json").status_code == 200

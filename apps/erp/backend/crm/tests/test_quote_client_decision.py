@@ -87,7 +87,8 @@ def test_accept_by_staff_gives_the_same_result_as_online_acceptance(pw):  # noqa
     assert response.status_code == 200, response.content
     assert outcome(quote) == expected
     assert expected["quote"] == QuoteStatusCode.APPROVED and expected["stage"] == DealStageCode.CONTRACT_SIGNED
-    assert expected["contracts"] == [ContractStatusCode.PENDING_CLIENT] and expected["project"]
+    # Х-1: без виз договор после акцепта остаётся проектом, клиенту уходит после виз
+    assert expected["contracts"] == [ContractStatusCode.DRAFT] and expected["project"]
     assert response.json()["client_decision"]["decision"] == "accept"
     assert response.json()["can_record_client_decision"] is False, "решение принято — кнопок больше нет"
 
