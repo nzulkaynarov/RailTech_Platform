@@ -25,6 +25,15 @@ KINDS = tuple(LegalKind.values)
 PLACEHOLDER = re.compile(r"\{\{\s*company\.(name|inn|address|support_email|phone)\s*\}\}")
 #: Предел размера текста редакции: страховка от случайной вставки файла в поле.
 MAX_TEXT = 60_000
+#: Journal fallback texts (Russian, as core.audit requires); the SPA translates by event_code.
+_ACCEPT_TEXT = {
+    LegalKind.PRIVACY: "Клиент принял политику обработки персональных данных",
+    LegalKind.TERMS: "Клиент принял условия использования кабинета",
+}
+_PUBLISH_TEXT = {
+    LegalKind.PRIVACY: "Опубликована редакция политики обработки персональных данных",
+    LegalKind.TERMS: "Опубликована редакция условий использования кабинета",
+}
 
 
 # ── подстановки ────────────────────────────────────────────────────────────────────────────────────────────────
@@ -157,7 +166,7 @@ def accept(session, edition_ids: list[int], language: str, *, ip: str, user_agen
             log_admin_action(
                 entity_type="portal.legaledition",
                 entity_id=edition.pk,
-                action=f"Acceptance of {edition.kind} edition {edition.label}",
+                action=f"{_ACCEPT_TEXT[edition.kind]}, редакция {edition.label}",
                 actor=None,
                 company_id=session.company_id,
                 contact_id=session.contact_id,
@@ -305,7 +314,7 @@ def release_edition(edition_id: int, *, actor) -> LegalEdition:
     log_admin_action(
         entity_type="portal.legaledition",
         entity_id=edition.pk,
-        action=f"Published {edition.kind} edition {edition.label}",
+        action=f"{_PUBLISH_TEXT[edition.kind]} {edition.label}",
         actor=actor,
         event_code="admin.portal_legal.published",
         event_params={"kind": edition.kind, "edition": edition.label, "replaced": [old.label for old in previous]},

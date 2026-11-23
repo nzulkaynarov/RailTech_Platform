@@ -118,6 +118,9 @@ def test_published_edition_closes_cabinet_until_accepted(portal_client, client_c
     assert portal_client.get(GATED).status_code == 200
     assert portal_client.get(f"{BASE}/me").json()["legal_pending"] is False
     assert ActivityLog.objects.filter(event_code="portal.legal.accepted", contact_id=client_contact.pk).count() == 2
+    # the fallback text is Russian (the feed shows it when the code has no translation)
+    for row in ActivityLog.objects.filter(event_code="portal.legal.accepted"):
+        assert row.action.startswith("Клиент принял") and "Acceptance" not in row.action
 
 
 def test_accept_is_idempotent_and_records_origin(portal_client, client_contact):
@@ -312,6 +315,7 @@ def test_desk_lists_edits_and_publishes_with_audit():
     assert published.json()["published_by"]
     entry = ActivityLog.objects.get(event_code="admin.portal_legal.published")
     assert entry.event_params["edition"] == "2026-12-01" and entry.user is not None
+    assert entry.action.startswith("Опубликована редакция") and "Published" not in entry.action
 
     # опубликованное не правится и не публикуется повторно, черновик нового издания — копия действующей
     assert director.patch(f"{DESK}{draft['id']}/", {"label": "x"}, format="json").status_code == 409

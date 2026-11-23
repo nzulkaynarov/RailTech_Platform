@@ -204,6 +204,9 @@
           "exchange_rate": {
             "manual": "Exchange rate entered manually",
             "auto_skipped": "Central bank rate not applied: a manual rate is in force"
+          },
+          "portal_legal": {
+            "published": "A new edition of a Cabinet document was published"
           }
         }
       }

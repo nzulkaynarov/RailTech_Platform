@@ -204,6 +204,9 @@
           "exchange_rate": {
             "manual": "Valyuta kursi qo‘lda kiritildi",
             "auto_skipped": "Markaziy bank kursi qo‘llanmadi: qo‘lda kiritilgan kurs amal qiladi"
+          },
+          "portal_legal": {
+            "published": "Kabinet hujjatining yangi tahriri e’lon qilindi"
           }
         }
       }
