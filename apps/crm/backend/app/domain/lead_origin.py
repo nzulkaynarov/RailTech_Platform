@@ -88,7 +88,8 @@ def build_origin(
 # Telegram bot deep link `t.me/<bot>?start=<payload>` (LID-5b). Telegram allows only [A-Za-z0-9_-],
 # up to 64 characters. Compact form: segments joined by `_`, each `<key>-<value>`, keys `src`
 # (utm_source), `med` (utm_medium), `cmp` (utm_campaign), `cnt` (utm_content), `trm` (utm_term),
-# e.g. `src-google_cmp-spring`. Any other safe payload is just a form key, e.g. `pricing_page`.
+# e.g. `src-google_cmp-spring`. Segments that are not UTM form the form key (`pricing_page`);
+# a payload made only of UTM segments has no form.
 _START_SAFE: Final = re.compile(r"[A-Za-z0-9_-]{1,64}")
 _START_UTM: Final = {
     "src": "utm_source",
@@ -109,8 +110,15 @@ def origin_from_start_payload(raw: str | None, language_code: str | None = None)
     if not _START_SAFE.fullmatch(text) or text.lower().startswith(_START_RESERVED):
         return LeadOrigin()
     utm: dict[str, str | None] = {}
+    rest: list[str] = []
     for segment in text.split("_"):
         key, _, value = segment.partition("-")
-        if key in _START_UTM and value:
-            utm[_START_UTM[key]] = value
-    return build_origin(form=text, utm=utm or None, lang=(language_code or "")[:2])
+        if key in _START_UTM:
+            if value:
+                utm[_START_UTM[key]] = value
+        elif segment:
+            rest.append(segment)
+    # The form key is built from the non-UTM segments only; `web` is the channel itself (the site
+    # button), not a form, so only the language is kept for it.
+    form = None if text.lower() == "web" else "_".join(rest) or None
+    return build_origin(form=form, utm=utm or None, lang=(language_code or "")[:2])

@@ -105,7 +105,7 @@ class StartLinkService:
         if not fresh or lead.source != "telegram" or lead.source_form or lead.source_utm:
             return False
         origin = origin_from_start_payload(payload, language_code)
-        if not (origin.form or origin.utm):
+        if origin.is_empty():
             return False
         lead.source_form = origin.form
         lead.source_utm = origin.utm

@@ -34,3 +34,16 @@ def test_reserved_and_unsafe_payloads_give_nothing() -> None:
         None,
     ):
         assert parse(raw).is_empty(), raw
+
+
+def test_form_is_built_from_non_utm_segments_only() -> None:
+    mixed = parse("pricing_cmp-spring")
+    assert (mixed.form, mixed.utm) == ("pricing", {"utm_campaign": "spring"})
+    only_utm = parse("src-google_cmp-spring")
+    assert only_utm.form is None
+    assert only_utm.utm == {"utm_source": "google", "utm_campaign": "spring"}
+
+
+def test_web_payload_is_the_channel_not_a_form() -> None:
+    origin = parse("web", "ru")
+    assert (origin.form, origin.lang) == (None, "ru")

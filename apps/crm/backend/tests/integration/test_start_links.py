@@ -294,19 +294,19 @@ async def test_start_payload_is_stored_as_origin_of_a_new_lead(
     lead_id = await telegram_lead(sessions)
     await links.apply(USER, "src-google_cmp-spring", language_code="uz")
     form, utm, lang, source = await origin_of(sessions, lead_id)
-    assert form == "src-google_cmp-spring"
+    assert form is None
     assert utm == {"utm_source": "google", "utm_campaign": "spring"}
     assert lang == "uz"
     assert source == "telegram"
 
 
-async def test_start_web_payload_also_stores_the_form_key(
+async def test_start_web_payload_keeps_the_channel_and_no_form_key(
     sessions: async_sessionmaker[AsyncSession], links: StartLinkService
 ) -> None:
     lead_id = await telegram_lead(sessions)
-    await links.apply(USER, "web")
-    form, _, _, source = await origin_of(sessions, lead_id)
-    assert (form, source) == ("web", "web")
+    await links.apply(USER, "web", language_code="ru")
+    form, _, lang, source = await origin_of(sessions, lead_id)
+    assert (form, lang, source) == (None, "ru", "web")
 
 
 async def test_staff_payload_is_never_a_lead_source(
