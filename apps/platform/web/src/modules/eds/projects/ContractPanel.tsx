@@ -22,6 +22,7 @@ import { fileUrl, projectRef } from "./api";
 import { reasonText } from "./errors";
 import { FileLinks } from "./FileLinks";
 import { NoteField, ReasonForm, ScanForm } from "./forms";
+import { ContractTemplateBlock } from "./ContractTemplateBlock";
 import { contractStateKey } from "./model";
 import { SigningButton } from "./SigningButton";
 import { useApplyCard } from "./useProjectMutations";
@@ -39,7 +40,9 @@ function primaryOf(
   const pick = (action: ProjectContractActionsItem) => (allowed.includes(action) ? action : null);
   switch (contract.status) {
     case "project":
-      return contract.sent_to_client ? pick("client_agreed") : pick("send_to_client");
+      if (contract.sent_to_client) return pick("client_agreed");
+      // ДОК-10: пока договору по шаблону что-то мешает (наша подпись, решение по отступлению), «На согласование» не предлагается
+      return contract.template?.send_blocker ? null : pick("send_to_client");
     case "client_agreed":
       return pick("mark_issued");
     case "issued_at_operator":
@@ -113,6 +116,8 @@ function ContractBody({
       note?: string;
       channel?: OnBehalfChannel;
       counterparty_person?: string;
+      text?: string;
+      approve?: boolean;
     } = {},
   ) => {
     setError(null);
@@ -259,6 +264,14 @@ function ContractBody({
         />
       </section>
 
+      {contract.template ? (
+        <ContractTemplateBlock
+          template={contract.template}
+          busy={busy}
+          pending={pending}
+          send={send}
+        />
+      ) : null}
       {primaryBlock}
       {allowed.length === 0 && !FINAL.has(contract.status) ? (
         <p className="pf-hint">{t("contract.readOnly")}</p>

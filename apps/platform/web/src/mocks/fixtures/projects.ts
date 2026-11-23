@@ -4,6 +4,7 @@ import type {
   ProjectCard,
   ProjectContract,
   ProjectContractActionsItem,
+  ProjectContractTemplate,
   ProjectDeliveryAction,
   ProjectFulfillment,
   ProjectInvoice,
@@ -45,6 +46,17 @@ interface MutableContract {
   client_agreed_at: string | null;
   signed_at: string | null;
   has_scan: boolean;
+  /** ДОК-10: договор собран из утверждённого шаблона; шаги пути и «что мешает» считает `templateOf` из фактов */
+  template?: MutableContractTemplate;
+}
+
+export interface MutableContractTemplate {
+  id: number;
+  name: string;
+  edition: number;
+  deviation: "none" | "requested" | "approved" | "rejected";
+  deviation_text: string;
+  signed_ours_at: string | null;
 }
 
 interface MutableAct {
@@ -569,6 +581,59 @@ export function contractActions(c: MutableContract, writer: boolean): ProjectCon
   }
 }
 
+/**
+ * Блок «договор по шаблону» из фактов (как `crm/services/contract_templates.py`): путь — собран, наша подпись, в Кабинете,
+ * подписан обеими; «что мешает» — нет нашей подписи или отступление ждёт решения; визы нужны только с отступлением.
+ */
+export function templateOf(
+  c: MutableContract,
+  writer: boolean,
+  approver: boolean,
+): ProjectContractTemplate | null {
+  const tpl = c.template;
+  if (!tpl) return null;
+  const draft = c.status === "project" && !c.sent_to_client;
+  const keys = [
+    { key: "assembled", done: true, at: c.created_at },
+    { key: "our_signature", done: tpl.signed_ours_at !== null, at: tpl.signed_ours_at },
+    { key: "in_cabinet", done: c.sent_to_client, at: c.sent_to_client ? c.created_at : null },
+    { key: "signed_both", done: c.status === "signed", at: c.signed_at },
+  ] as const;
+  let current = false;
+  const steps = keys.map((step) => {
+    const state: "done" | "current" | "next" = step.done ? "done" : current ? "next" : "current";
+    if (!step.done) current = true;
+    return { key: step.key, state, at: step.at };
+  });
+  const blocker =
+    !draft || tpl.deviation === "none"
+      ? !draft || tpl.signed_ours_at
+        ? null
+        : "CONTRACT_NEEDS_OUR_SIGNATURE"
+      : tpl.deviation === "requested"
+        ? "CONTRACT_DEVIATION_PENDING"
+        : tpl.signed_ours_at
+          ? null
+          : "CONTRACT_NEEDS_OUR_SIGNATURE";
+  const actions: ProjectContractTemplate["actions"] = [];
+  if (draft && writer) {
+    if (tpl.signed_ours_at === null) actions.push("sign_ours");
+    if (tpl.deviation !== "requested") actions.push("request_deviation");
+  }
+  if (draft && tpl.deviation === "requested" && approver) actions.push("decide_deviation");
+  return {
+    id: tpl.id,
+    name: tpl.name,
+    edition: tpl.edition,
+    deviation: tpl.deviation,
+    deviation_text: tpl.deviation_text,
+    visas_required: tpl.deviation === "requested" || tpl.deviation === "approved",
+    send_blocker: blocker,
+    steps,
+    actions,
+  };
+}
+
 export function actActions(a: MutableAct, writer: boolean): ProjectActActionsItem[] {
   if (!writer) return [];
   if (a.status === "issued") return ["attach_scan", "return"];
@@ -623,7 +688,12 @@ export function actDelivered(p: ProjectState): boolean {
   return ["DELIVERED", "ACCEPTED"].includes(p.fulfillment?.status ?? "");
 }
 
-export function toCard(p: ProjectState, writer: boolean, marker = false): ProjectCard {
+export function toCard(
+  p: ProjectState,
+  writer: boolean,
+  marker = false,
+  approver = false,
+): ProjectCard {
   const c = p.contract;
   const a = p.act;
   const issuable = p.invoices.some((i) =>
@@ -652,6 +722,7 @@ export function toCard(p: ProjectState, writer: boolean, marker = false): Projec
           has_pdf: true,
           has_scan: c.has_scan,
           actions: contractActions(c, writer),
+          template: templateOf(c, writer, approver),
           history: historyOf(p, "contract"),
         }
       : null,

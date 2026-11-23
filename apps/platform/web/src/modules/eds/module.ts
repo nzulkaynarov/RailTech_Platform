@@ -110,6 +110,15 @@ export const eds: ModuleConfig = {
       actionTo: "/dashboard/queue",
     },
     {
+      // ДОК-10: «Документы · Шаблоны · Договоры» для держателя зоны «Право» (юрист без раздела Настроек); остальным — вкладка
+      // «Договоры» в «Настройки · Шаблоны».
+      key: "contracttpl",
+      path: "/eds/contract-templates",
+      access: { anyOf: ["eds.visa.legal", "eds.projects"] },
+      hidden: true,
+      defaults: { panelOpen: false },
+    },
+    {
       key: "new",
       path: "/eds/new",
       access: { resource: "eds.memo.create" },

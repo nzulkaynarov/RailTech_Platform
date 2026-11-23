@@ -869,3 +869,17 @@ async def test_card_passes_the_template_block_through(
         False,
     )
     assert [s["state"] for s in body["steps"]] == ["done", "current", "next", "next"]
+
+
+async def test_lawyer_decides_a_deviation_but_nothing_else_on_the_card(
+    web: Web, erp: ProjectsFake
+) -> None:
+    await _as(web, "LAWYER")
+    decided = await web.send(
+        "POST", f"{BASE}/{NUMBER}/contract", json={"action": "decide_deviation", "approve": True}
+    )
+    assert decided.status_code == 200
+    assert erp.body("POST", rf"contracts/{CONTRACT_ID}/decide-deviation/") == {"approve": True}
+    other = await web.send("POST", f"{BASE}/{NUMBER}/contract", json={"action": "sign_ours"})
+    assert other.status_code == 403
+    assert len(erp.posts()) == 1

@@ -270,7 +270,8 @@
       "register": "Kiruvchi hujjatni ro‘yxatga olish",
       "tasks": "Topshiriq",
       "mail": "Pochta",
-      "mymail": "Mening pochtam"
+      "mymail": "Mening pochtam",
+      "contracttpl": "Shartnoma shablonlari"
     },
     "action": "Hujjat yaratish",
     "nav": {

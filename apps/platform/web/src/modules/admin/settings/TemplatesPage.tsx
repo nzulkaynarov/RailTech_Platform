@@ -2,6 +2,7 @@ import { Card } from "antd";
 import { useTranslation } from "react-i18next";
 
 import { SectionTabs } from "../company/SectionTabs";
+import { ContractTemplates } from "../company/tabs/ContractTemplates";
 import { DocumentTemplates } from "../company/tabs/DocumentTemplates";
 import { EmailTemplates } from "../company/tabs/EmailTemplates";
 import { LetterTemplates } from "../company/tabs/LetterTemplates";
@@ -11,7 +12,7 @@ import { useTabParam } from "./useTabParam";
 
 import "../company/company.css";
 
-const TABS = ["all", "documents", "letters", "emails"] as const;
+const TABS = ["all", "documents", "contracts", "letters", "emails"] as const;
 
 /**
  * Процессы · Шаблоны документов (SET-IA): шаблоны КП, договоров, счетов и актов, шаблоны писем клиентам. «Условия КП» — не шаблон,
@@ -44,6 +45,10 @@ export function TemplatesPage() {
           ) : active === "documents" ? (
             <div className="pf-co-body">
               <DocumentTemplates />
+            </div>
+          ) : active === "contracts" ? (
+            <div className="pf-co-body">
+              <ContractTemplates />
             </div>
           ) : active === "letters" ? (
             <div className="pf-co-body">

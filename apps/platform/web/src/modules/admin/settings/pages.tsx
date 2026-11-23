@@ -70,6 +70,9 @@ export function SalesPage() {
         <QuoteSettings group="sales" />
       </Card>
       <Card styles={{ body: { padding: 0 } }}>
+        <QuoteSettings group="contracts" />
+      </Card>
+      <Card styles={{ body: { padding: 0 } }}>
         <QuoteSettings group="catalog" />
       </Card>
     </SettingsPage>

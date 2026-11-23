@@ -316,9 +316,62 @@
       "mark_issued": "Belgilandi: shartnoma operatorda rasmiylashtirildi.",
       "attach_scan": "Skan biriktirildi, shartnoma imzolandi.",
       "reject": "Rad etish yozildi.",
-      "revise": "Loyiha ishga qaytarildi."
+      "revise": "Loyiha ishga qaytarildi.",
+      "sign_ours": "Shartnoma kompaniya nomidan imzolandi.",
+      "request_deviation": "Ariza «Huquq» egasiga yuborildi.",
+      "decide_deviation": "Qaror yozildi."
     },
-    "readOnly": "Faqat ko‘rish."
+    "readOnly": "Faqat ko‘rish.",
+    "template": {
+      "title": "Shablon bo‘yicha shartnoma",
+      "path": "Shartnoma yo‘li",
+      "line": "«{{name}}», {{edition}}-tahrir · rekvizit, summa va spetsifikatsiya TTdan",
+      "tag": {
+        "none": "Shablon bo‘yicha · chetlanishsiz",
+        "requested": "Chetlanish «Huquq»da",
+        "approved": "Shablon bo‘yicha · chetlanish bilan"
+      },
+      "steps": {
+        "assembled": "Yig‘ildi",
+        "our_signature": "Bizning imzo",
+        "in_cabinet": "Mijoz Kabinetida",
+        "signed_both": "Ikki tomon imzoladi"
+      },
+      "state": {
+        "done": "tayyor",
+        "current": "hozir",
+        "next": "keyin"
+      },
+      "visas": "Chetlanishli shartnoma viza yo‘nalishidan o‘tadi va vizalargacha mijozga ketmaydi.",
+      "deviation": {
+        "none": "Chetlanishsiz",
+        "requested": "Chetlanish so‘raldi",
+        "approved": "Chetlanish ma’qullandi",
+        "rejected": "Chetlanish rad etildi"
+      },
+      "blocker": {
+        "CONTRACT_NEEDS_OUR_SIGNATURE": "Bizning imzodan keyin mijozga ketadi.",
+        "CONTRACT_DEVIATION_PENDING": "«Huquq» egasi chetlanish bo‘yicha qaror qilmaguncha mijozga ketmaydi."
+      },
+      "action": {
+        "sign_ours": "Kompaniya nomidan imzolash",
+        "request_deviation": "Chetlanish so‘rash",
+        "approve": "Chetlanishni ma’qullash",
+        "reject": "Rad etish"
+      },
+      "ask": {
+        "title": "Chetlanish so‘rovi",
+        "label": "Band va sabab",
+        "hint": "Ariza «Huquq» egasiga ketadi.",
+        "submit": "Arizani yuborish",
+        "cancel": "Kerak emas"
+      },
+      "done": {
+        "sign_ours": "Shartnoma kompaniya nomidan imzolandi.",
+        "request_deviation": "Ariza «Huquq» egasiga yuborildi.",
+        "decide_deviation": "Qaror yozildi."
+      }
+    }
   },
   "act": {
     "number": "{{number}} dalolatnomasi",
@@ -406,7 +459,16 @@
     "unavailable": "ERP javob bermayapti. Keyinroq urinib ko‘ring.",
     "payload": "Fayl 20 MB dan katta.",
     "unknown": "Bajarilmadi. Qayta urinib ko‘ring.",
-    "failed": "Bajarilmadi: {{reason}}"
+    "failed": "Bajarilmadi: {{reason}}",
+    "contract_deviation_pending": "Chetlanish «Huquq» qarorini kutmoqda.",
+    "contract_needs_our_signature": "Avval shartnomani kompaniya nomidan imzolang.",
+    "contract_already_sent": "Shartnoma mijozga ketgan. Sahifani yangilang.",
+    "contract_deviations_disabled": "Shablondan chetlanish sozlamalarda o‘chirilgan.",
+    "deviation_text_required": "Chetlanishni yozing.",
+    "deviation_already_requested": "Ariza allaqachon berilgan.",
+    "deviation_not_requested": "Ariza endi yo‘q. Sahifani yangilang.",
+    "deviation_decision_forbidden": "«Huquq» egasi qaror qiladi.",
+    "contract_template_unfilled": "Shartnomada shablonning to‘ldirilmagan joylari qoldi."
   },
   "state": {
     "retry": "Qayta urinish",

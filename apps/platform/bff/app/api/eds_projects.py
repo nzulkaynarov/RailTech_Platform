@@ -16,9 +16,10 @@ from fastapi import APIRouter, Depends, Path, Query, Request, Response, status
 from fastapi.responses import JSONResponse, StreamingResponse
 
 from app.api.eds_documents import FileStream
-from app.deps import Authed, require
+from app.deps import Authed, require, require_any
 from app.eds_projects import ErpProjects, project_error
 from app.errors import PlatformError
+from app.rbac import allows
 from app.schemas_eds_projects import (
     ActActionIn,
     ContractActionIn,
@@ -35,6 +36,10 @@ router = APIRouter(prefix="/eds", tags=["eds-projects"])
 
 Reader = Annotated[Authed, Depends(require("eds.projects", "read"))]
 Writer = Annotated[Authed, Depends(require("eds.projects", "full"))]
+# ДОК-10: решает по отступлению держатель «Право» (`eds.visa.legal`); «Проекты» у него — чтение.
+Decider = Annotated[
+    Authed, Depends(require_any(("eds.projects", "full"), ("eds.visa.legal", "full")))
+]
 Ref = Annotated[str, Path(min_length=1, max_length=64)]
 
 MAX_SCAN_BYTES = 20 * 1024 * 1024
@@ -137,7 +142,14 @@ async def create_contract(ref: Ref, authed: Writer) -> ProjectCard:
 @router.post(
     "/projects/{ref}/contract", response_model=ProjectCard, operation_id="actEdsProjectContract"
 )
-async def contract_action(ref: Ref, body: ContractActionIn, authed: Writer) -> ProjectCard:
+async def contract_action(ref: Ref, body: ContractActionIn, authed: Decider) -> ProjectCard:
+    if body.action != "decide_deviation" and not allows(authed.access, "eds.projects", "full"):
+        raise PlatformError(
+            "FORBIDDEN",
+            "Раздел или действие не положены вашей роли.",
+            status_code=403,
+            details={"resource": "eds.projects", "need": "full"},
+        )
     return await _erp(authed).contract_action(ref, body)
 
 

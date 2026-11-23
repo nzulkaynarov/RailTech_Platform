@@ -4,6 +4,7 @@ import { RequireAccess } from "../../app/RequireAccess";
 import { ModuleRoutes } from "../ModuleRoutes";
 import { matchSection } from "../registry";
 import { ApprovalsScreen } from "./approvals/ApprovalsScreen";
+import { ContractTemplatesPage } from "./contracttpl/ContractTemplatesPage";
 import { DocumentsPage } from "./documents/DocumentsPage";
 import { DraftsScreen } from "./drafts/DraftsScreen";
 import { InboxScreen } from "./inbox/InboxScreen";
@@ -126,6 +127,13 @@ export function Component() {
     return (
       <RequireAccess rule={match.section.access}>
         <TasksScreen objectId={match.objectId} />
+      </RequireAccess>
+    );
+  }
+  if (match?.module.code === "eds" && match.section.key === "contracttpl") {
+    return (
+      <RequireAccess rule={match.section.access}>
+        <ContractTemplatesPage />
       </RequireAccess>
     );
   }

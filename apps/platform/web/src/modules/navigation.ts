@@ -94,7 +94,7 @@ export const NAVIGATION: Readonly<Record<ModuleCode, readonly NavItem[]>> = {
     { key: "outbox", targets: [docs("outgoing")], also: ["eds.outbox", "eds.drafts"] },
     { key: "internal", targets: [docs("internal")], also: ["eds.approvals"] },
     { key: "archive", targets: [docs("archive")] },
-    { key: "templates", targets: [{ section: "admin.templates" }] },
+    { key: "templates", targets: [{ section: "admin.templates" }, { section: "eds.contracttpl" }] },
   ],
   erp: [
     {

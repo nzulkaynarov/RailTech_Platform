@@ -656,7 +656,28 @@ describe("Условия КП разошлись по страницам сво�
     expect(await screen.findByLabelText("Срок действия КП, дней")).toBeInTheDocument();
     expect(screen.getByLabelText("Цена в каталоге")).toBeInTheDocument();
     expect(screen.queryByLabelText("Валюта себестоимости")).toBeNull();
-    expect(screen.queryByRole("switch")).toBeNull();
+    expect(
+      screen.queryByRole("switch", { name: "Напоминать клиентам о просроченных счетах" }),
+    ).toBeNull();
+  });
+
+  it("«Продажи» · «Договоры»: правила договора по шаблону — настройки; сохраняются, а не зашиты в код (ДОК-10)", async () => {
+    await openTab("quote");
+    const before = readCompanyMock().quote;
+    expect(before.contract_auto_send).toBe(true);
+    const sign = await screen.findByRole("switch", { name: "Наша подпись — до отправки клиенту" });
+    expect(sign).toBeChecked();
+    expect(
+      screen.getByRole("switch", {
+        name: "Договор по утверждённому шаблону уходит в Кабинет сам после принятия КП",
+      }),
+    ).toBeChecked();
+    expect(screen.getByLabelText("Шаблон по умолчанию: клиент")).toBeInTheDocument();
+    fireEvent.click(sign);
+    fireEvent.click(await button("Сохранить правила"));
+    expect(await screen.findByText("Сохранено")).toBeInTheDocument();
+    expect(readCompanyMock().quote.contract_sign_before_send).toBe(false);
+    expect(readCompanyMock().quote.contract_auto_send).toBe(true);
   });
 
   it("«Налоги и валюты»: валюта и возраст курса сохраняются, поля «Продаж» не уходят", async () => {
