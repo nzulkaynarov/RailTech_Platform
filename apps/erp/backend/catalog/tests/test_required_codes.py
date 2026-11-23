@@ -120,3 +120,17 @@ def test_already_published_item_stays_published_the_check_applies_on_the_next_pu
 
     unpublish_product(card, world["user"])
     assert publish_product(Product.objects.get(pk=card.pk), world["user"])[1] == "PRODUCT_INCOMPLETE:mxik_code"
+
+
+def test_admin_publish_action_does_not_bypass_the_required_codes(world):
+    from catalog import services
+
+    without = _card(world, name="Без МХИК", mxik_code="")
+    complete = _card(world, name="С МХИК")
+
+    updated, skipped = services.publish_products(Product.objects.filter(pk__in=[without.pk, complete.pk]))
+
+    without.refresh_from_db()
+    complete.refresh_from_db()
+    assert updated == 1 and skipped == ["Без МХИК"]
+    assert without.status.code == "DRAFT" and complete.status.code == "PUBLISHED"

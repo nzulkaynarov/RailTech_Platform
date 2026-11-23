@@ -124,12 +124,12 @@ class MxikSearchView(APIView):
         tags=["Master Data"],
     )
     def get(self, request):
-        from catalog.mxik import MxikUnavailable, search
+        from catalog.mxik import MxikUnavailable, has_cyrillic, search
 
         try:
             query = request.query_params.get("q", "")
-            # Слово латиницей — узбекский справочник (`uz_latn`), кириллицей — русский; явный `lang` главнее.
-            guessed = "uz" if query.isascii() and not query.strip().isdigit() else "ru"
+            # Есть кириллица — русский справочник, слово латиницей (в т.ч. Ö Ğ Ş Ç, ʻ) — узбекский `uz_latn`; явный `lang` главнее.
+            guessed = "ru" if has_cyrillic(query) or query.strip().isdigit() else "uz"
             rows = search(query, lang=request.query_params.get("lang", guessed))
         except MxikUnavailable:
             return Response({"detail": "MXIK_UNAVAILABLE"}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
