@@ -83,3 +83,34 @@ def build_origin(
         utm=clean_utm(utm),
         lang=language if language in _LANGS else None,
     )
+
+
+# Telegram bot deep link `t.me/<bot>?start=<payload>` (LID-5b). Telegram allows only [A-Za-z0-9_-],
+# up to 64 characters. Compact form: segments joined by `_`, each `<key>-<value>`, keys `src`
+# (utm_source), `med` (utm_medium), `cmp` (utm_campaign), `cnt` (utm_content), `trm` (utm_term),
+# e.g. `src-google_cmp-spring`. Any other safe payload is just a form key, e.g. `pricing_page`.
+_START_SAFE: Final = re.compile(r"[A-Za-z0-9_-]{1,64}")
+_START_UTM: Final = {
+    "src": "utm_source",
+    "med": "utm_medium",
+    "cmp": "utm_campaign",
+    "cnt": "utm_content",
+    "trm": "utm_term",
+}
+# Payloads with their own meaning (staff linking, cabinet request, signed email link, contact
+# linking) are never a lead source.
+_START_RESERVED: Final = ("staff_", "deal_", "lead_", "tg_")
+
+
+def origin_from_start_payload(raw: str | None, language_code: str | None = None) -> LeadOrigin:
+    """Origin facts of a lead created by the bot from `/start <payload>`; empty when the payload
+    is absent, unsafe or reserved. Language is the Telegram user language when it is ru/uz/en."""
+    text = (raw or "").strip()
+    if not _START_SAFE.fullmatch(text) or text.lower().startswith(_START_RESERVED):
+        return LeadOrigin()
+    utm: dict[str, str | None] = {}
+    for segment in text.split("_"):
+        key, _, value = segment.partition("-")
+        if key in _START_UTM and value:
+            utm[_START_UTM[key]] = value
+    return build_origin(form=text, utm=utm or None, lang=(language_code or "")[:2])

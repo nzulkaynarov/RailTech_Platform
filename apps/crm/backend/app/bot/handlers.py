@@ -124,7 +124,9 @@ async def on_start(
         # Deep-link (D1-9): `web`, `deal_<id>`, подписанная ссылка из письма. Ошибка разбора не
         # ломает приветствие.
         try:
-            extra = await start_links.apply(_user(message).id, command.args)
+            extra = await start_links.apply(
+                _user(message).id, command.args, language_code=_user(message).language_code
+            )
         except Exception:
             logger.exception("start_link_failed")
         else:

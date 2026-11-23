@@ -7,6 +7,8 @@
 ответил:
 
 * `web` — новый лид получает источник `web` («пришёл с сайта»); у существующего ничего не меняется;
+* любой другой безопасный параметр — метка источника нового лида (`domain/lead_origin.py`,
+  SPEC «Откуда пришёл лид»);
 * `deal_<id>` — привязка к заявке только если этот Telegram уже привязан и проверен как клиент и
   заявка принадлежит
   именно этому клиенту; иначе — обычное приветствие и запись в аудит (чужую заявку подставить
@@ -28,6 +30,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.domain import client_texts
+from app.domain.lead_origin import origin_from_start_payload
 from app.domain.start_link import StartLink, parse_start_payload, verify_lead_link
 from app.models.deals import Deal
 from app.models.leads import Lead, LeadNote, TelegramIdentity
@@ -63,10 +66,17 @@ class StartLinkService:
         self._contacts = contacts
 
     async def apply(
-        self, tg_user_id: int, payload: str | None, now: datetime | None = None
+        self,
+        tg_user_id: int,
+        payload: str | None,
+        now: datetime | None = None,
+        language_code: str | None = None,
     ) -> StartLinkResult:
         link = parse_start_payload(payload)
-        if link.kind in ("none", "unknown"):
+        if link.kind == "none":
+            return StartLinkResult()
+        if link.kind == "unknown":
+            await self._origin(tg_user_id, payload, language_code)
             return StartLinkResult()
         moment = now or datetime.now(UTC)
         if link.kind == "contact":
@@ -82,10 +92,47 @@ class StartLinkService:
             if lead is None or lead.erased_at is not None:
                 return StartLinkResult()
             if link.kind == "web":
+                self._write_origin(lead, payload, language_code)
                 return await self._web(session, lead)
             if link.kind == "deal":
                 return await self._deal(session, lead, identity, link)
             return await self._lead(session, lead, identity, link, moment)
+
+    @staticmethod
+    def _write_origin(lead: Lead, payload: str | None, language_code: str | None) -> bool:
+        """Origin facts of a brand-new lead (no history, no facts yet); never overwrites."""
+        fresh = lead.last_lead_msg_at is None and lead.notes_count == 0
+        if not fresh or lead.source != "telegram" or lead.source_form or lead.source_utm:
+            return False
+        origin = origin_from_start_payload(payload, language_code)
+        if not (origin.form or origin.utm):
+            return False
+        lead.source_form = origin.form
+        lead.source_utm = origin.utm
+        lead.source_lang = lead.source_lang or origin.lang
+        return True
+
+    async def _origin(
+        self, tg_user_id: int, payload: str | None, language_code: str | None
+    ) -> None:
+        """Payload that is only a source label (`pricing`, `src-google_cmp-spring`)."""
+        async with self._sessions() as session, session.begin():
+            identity = await repo.get_identity(session, tg_user_id)
+            if identity is None or identity.lead_id is None:
+                return
+            lead = await repo.get_lead(session, identity.lead_id, for_update=True)
+            if lead is None or lead.erased_at is not None:
+                return
+            if self._write_origin(lead, payload, language_code):
+                await audit.record(
+                    session,
+                    audit.Actor.system(),
+                    "lead.start_origin",
+                    "lead",
+                    lead.id,
+                    after={"form": lead.source_form, "utm": lead.source_utm},
+                )
+                await events.publish(session, "lead.updated", lead_id=lead.id)
 
     async def _web(self, session: AsyncSession, lead: Lead) -> StartLinkResult:
         """Метка источника: только у только что созданного лида (без истории)."""

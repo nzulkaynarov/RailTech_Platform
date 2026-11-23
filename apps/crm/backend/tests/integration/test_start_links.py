@@ -274,3 +274,75 @@ async def test_unknown_payloads_and_users_are_silent(
     assert (await links.apply(777000, "web")).texts == [], "аккаунта нет в базе"
     async with sessions() as session:
         assert (await session.scalars(select(TelegramIdentity.id))).all()
+
+
+# ── source label (LID-5b) ──────────────────────────────────────────────────────────────────────
+
+
+async def origin_of(
+    sessions: async_sessionmaker[AsyncSession], lead_id: int
+) -> tuple[str | None, dict[str, str] | None, str | None, str]:
+    async with sessions() as session:
+        lead = await session.get(Lead, lead_id)
+        assert lead is not None
+        return lead.source_form, lead.source_utm, lead.source_lang, lead.source
+
+
+async def test_start_payload_is_stored_as_origin_of_a_new_lead(
+    sessions: async_sessionmaker[AsyncSession], links: StartLinkService
+) -> None:
+    lead_id = await telegram_lead(sessions)
+    await links.apply(USER, "src-google_cmp-spring", language_code="uz")
+    form, utm, lang, source = await origin_of(sessions, lead_id)
+    assert form == "src-google_cmp-spring"
+    assert utm == {"utm_source": "google", "utm_campaign": "spring"}
+    assert lang == "uz"
+    assert source == "telegram"
+
+
+async def test_start_web_payload_also_stores_the_form_key(
+    sessions: async_sessionmaker[AsyncSession], links: StartLinkService
+) -> None:
+    lead_id = await telegram_lead(sessions)
+    await links.apply(USER, "web")
+    form, _, _, source = await origin_of(sessions, lead_id)
+    assert (form, source) == ("web", "web")
+
+
+async def test_staff_payload_is_never_a_lead_source(
+    sessions: async_sessionmaker[AsyncSession], links: StartLinkService
+) -> None:
+    lead_id = await telegram_lead(sessions)
+    await links.apply(USER, "staff_AbCdEfGhIjKlMnOp")
+    assert await origin_of(sessions, lead_id) == (None, None, None, "telegram")
+
+
+async def test_unsafe_payload_is_rejected(
+    sessions: async_sessionmaker[AsyncSession], links: StartLinkService
+) -> None:
+    lead_id = await telegram_lead(sessions)
+    await links.apply(USER, "<script>alert(1)</script>")
+    await links.apply(USER, "a" * 65)
+    assert await origin_of(sessions, lead_id) == (None, None, None, "telegram")
+
+
+async def test_start_payload_does_not_overwrite_existing_origin(
+    sessions: async_sessionmaker[AsyncSession], links: StartLinkService
+) -> None:
+    lead_id = await telegram_lead(sessions)
+    await links.apply(USER, "first_ad")
+    await links.apply(USER, "src-other_cmp-x", language_code="en")
+    form, utm, _, _ = await origin_of(sessions, lead_id)
+    assert (form, utm) == ("first_ad", None)
+
+
+async def test_start_payload_does_not_touch_a_lead_with_history(
+    sessions: async_sessionmaker[AsyncSession], links: StartLinkService
+) -> None:
+    lead_id = await telegram_lead(sessions)
+    async with sessions() as session, session.begin():
+        lead = await session.get(Lead, lead_id)
+        assert lead is not None
+        lead.last_lead_msg_at = datetime.now(UTC)
+    await links.apply(USER, "late_ad")
+    assert (await origin_of(sessions, lead_id))[0] is None
