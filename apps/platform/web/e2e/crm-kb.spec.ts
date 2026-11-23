@@ -203,10 +203,8 @@ test.describe("База знаний: администратор", () => {
     await ignore.getByRole("button", { name: "Игнорировать пробел" }).click();
     await expect(page.getByText("Пробел скрыт")).toBeVisible();
 
-    // окно поверх закрывает фильтр справа над таблицей (ORCHESTRATOR §3 п. 18): сначала скрыть его
-    // (у раздела нет карточки, поэтому после действия окно закрывается само — скрываем, только если оно ещё открыто)
-    const hide = page.getByRole("button", { name: "Скрыть боковое окно" });
-    if (await hide.isVisible()) await hide.click();
+    // ЕВ-0: у раздела нет карточки, поэтому после действия окно закрывается само и не закрывает фильтр над таблицей
+    await expect(page.getByRole("button", { name: "Скрыть боковое окно" })).toHaveCount(0);
     await page.getByText("Игнорируемые", { exact: true }).click();
     await page.getByRole("link", { name: "Открыть пробел: Do you deliver to Samarkand?" }).click();
     await panel.getByRole("button", { name: "Вернуть в открытые" }).click();
