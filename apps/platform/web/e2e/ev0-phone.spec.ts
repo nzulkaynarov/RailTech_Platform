@@ -94,8 +94,10 @@ test.describe("Гигиена телефона @mobile", () => {
     await page.setViewportSize({ width: 390, height: 844 });
     await loginAndWait(page, "director@demo.example");
     await spaGoto(page, `/eds/drafts/${encodeURIComponent("КП-2026/115")}?panel=open&tab=approve`);
-    const sheet = page.getByRole("dialog", { name: /^Одобрение/ });
-    await expect(sheet.getByRole("form", { name: "Одобрение КП" })).toBeVisible();
+    // после ЕД-7 форма решения — блок в центре карточки; параметры окна старой ссылки снимаются, блок прокручен в поле зрения
+    const sheet = page.getByRole("region", { name: "Одобрение КП" });
+    await expect(sheet).toBeVisible();
+    await expect(page).not.toHaveURL(/panel=|tab=approve/);
 
     const approve = sheet.getByRole("button", { name: "Одобрить КП" });
     const back = sheet.getByRole("button", { name: "Вернуть на доработку" });
@@ -109,7 +111,7 @@ test.describe("Гигиена телефона @mobile", () => {
     await approve.click({ trial: true });
     await settledScreenshot(page, "approval");
 
-    // экранная клавиатура 320 px: лист поднят над ней, кнопки на виду, панель модулей скрыта
+    // экранная клавиатура 320 px: кнопки на виду, панель модулей скрыта
     // поле «Комментарий» в фокусе — путь «ввести комментарий → вернуть на доработку» при открытой клавиатуре
     const comment = sheet.getByRole("textbox", { name: "Комментарий" });
     await comment.focus();
@@ -121,8 +123,6 @@ test.describe("Гигиена телефона @mobile", () => {
     await expect(comment).toBeInViewport({ ratio: 1 });
     await expect(back).toBeInViewport({ ratio: 1 });
     await expect(page.getByRole("navigation", { name: "Модули" })).toBeHidden();
-    const sheetBox = await sheet.boundingBox();
-    expect((sheetBox?.y ?? 0) + (sheetBox?.height ?? 0)).toBeLessThanOrEqual(844 - 320 + 1);
     await expect(approve).toBeInViewport();
     await settledScreenshot(page, "approval-keyboard");
     await page.evaluate("window.__kb(0)");
@@ -145,9 +145,16 @@ test.describe("Гигиена телефона @mobile", () => {
     ).toBeLessThanOrEqual(0);
     await settledScreenshot(page, "memo");
     await spaGoto(page, `/eds/approvals/${encodeURIComponent("СЗ-2026/014")}?panel=open&tab=agree`);
-    const sheet = page.getByRole("dialog", { name: /^Согласование/ });
-    const agree = sheet.getByRole("button", { name: "Согласовать" });
+    // старая ссылка (ЕД-7): окна нет, форма согласования — блок карточки
+    const block = page.getByRole("region", { name: "Согласование документа" });
+    await expect(block).toBeVisible();
+    const agree = block.getByRole("button", { name: "Согласовать" });
     await expect(agree).toBeInViewport();
+    expect(
+      await page.evaluate(
+        "document.documentElement.scrollWidth - document.documentElement.clientWidth",
+      ),
+    ).toBeLessThanOrEqual(0);
     expect((await agree.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
     await agree.click();
     await confirmDialog(page);
