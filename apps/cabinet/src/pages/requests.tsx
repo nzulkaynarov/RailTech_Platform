@@ -404,36 +404,47 @@ function RequestForm() {
   const summaryId = useId();
   const fileInputId = useId();
 
-  // Черновик (C-9): без предзаполнения из каталога форма поднимается из sessionStorage; предзаполнение — явное
-  // действие «Запросить», оно главнее старого черновика и затирает его при первом же сохранении.
+  // Черновик (C-9, Х-18): без предзаполнения из каталога сохранённый в sessionStorage черновик только предлагается —
+  // «Продолжить» поднимает его в форму, «Начать заново» стирает; молча он не подставляется. Пока выбор не сделан, форма
+  // его не перезаписывает. Предзаполнение из каталога — явное действие «Запросить», оно главнее старого черновика.
   const me = useMe().data;
   const draftKey = me ? requestDraftKey({ companyId: me.company.id, contactId: me.contact.id }) : null;
-  const [restored] = useState(() => (prefillLines.length || locationState?.summary || !draftKey ? null : loadRequestDraft(draftKey)));
+  const [offered, setOffered] = useState(() =>
+    prefillLines.length || locationState?.summary || !draftKey ? null : loadRequestDraft(draftKey),
+  );
 
   const [summary, setSummary] = useState(() =>
     locationState?.summary
       ? locationState.summary
-      : restored
-        ? restored.summary
-        : prefillLines.length === 1
+      : prefillLines.length === 1
           ? t('pages.requestNew.prefillSummary', { name: prefillLines[0].text })
           : prefillLines.length > 1
             ? t('pages.requestNew.prefillSummary', { name: prefillLines.map((l) => l.text).join(', ') })
             : '',
   );
   const [lines, setLines] = useState<LineDraft[]>(() =>
-    restored?.lines.length
-      ? restored.lines.map((l) => blankLine(l))
-      : prefillLines.length
-        ? prefillLines.map((l) => blankLine({ text: l.text, quantity: l.quantity ?? '', unit: l.unit ?? '' }))
-        : [blankLine()],
+    prefillLines.length
+      ? prefillLines.map((l) => blankLine({ text: l.text, quantity: l.quantity ?? '', unit: l.unit ?? '' }))
+      : [blankLine()],
   );
   const [submitted, setSubmitted] = useState(false);
   // СЦ-10: приложенные файлы живут в черновике вместе с текстом — ссылками на загрузку в ERP.
-  const [attachments, setAttachments] = useState<UploadedFileRef[]>(() => restored?.attachments ?? []);
+  const [attachments, setAttachments] = useState<UploadedFileRef[]>([]);
+
+  const resumeDraft = () => {
+    if (!offered) return;
+    setSummary(offered.summary);
+    setLines(offered.lines.length ? offered.lines.map((l) => blankLine(l)) : [blankLine()]);
+    setAttachments(offered.attachments);
+    setOffered(null);
+  };
+  const discardDraft = () => {
+    if (draftKey) clearRequestDraft(draftKey);
+    setOffered(null);
+  };
 
   useEffect(() => {
-    if (!draftKey || submitted) return;
+    if (!draftKey || submitted || offered) return;
     saveRequestDraft(draftKey, {
       summary,
       lines: lines.map(({ text, quantity, unit }) => ({ text, quantity, unit })),
@@ -441,7 +452,7 @@ function RequestForm() {
         size_bytes === undefined ? { upload_id, name } : { upload_id, name, size_bytes },
       ),
     });
-  }, [draftKey, submitted, summary, lines, attachments]);
+  }, [draftKey, submitted, offered, summary, lines, attachments]);
 
   const [isUploading, setIsUploading] = useState(false);
   const [isCatalogPickerOpen, setIsCatalogPickerOpen] = useState(false);
@@ -524,6 +535,21 @@ function RequestForm() {
   return (
     <>
       <form onSubmit={submit} noValidate className="flex flex-col gap-6">
+        {offered ? (
+          <Alert role="status" data-testid="request-draft-offer">
+            <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <span>{t('pages.requestNew.draftOffer', { date: formatDateTime(new Date(offered.savedAt).toISOString()) })}</span>
+              <span className="flex gap-2">
+                <Button type="button" size="sm" onClick={resumeDraft}>
+                  {t('pages.requestNew.draftResume')}
+                </Button>
+                <Button type="button" size="sm" variant="outline" onClick={discardDraft}>
+                  {t('pages.requestNew.draftRestart')}
+                </Button>
+              </span>
+            </AlertDescription>
+          </Alert>
+        ) : null}
         <div className="flex flex-col gap-2">
           <Label htmlFor={summaryId}>{t('pages.requestNew.summary')}</Label>
           <p id={`${summaryId}-hint`} className="text-xs text-muted-foreground">

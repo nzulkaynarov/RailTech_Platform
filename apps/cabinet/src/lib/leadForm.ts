@@ -56,9 +56,47 @@ function optional(value: string): string | null {
   return text ? text : null;
 }
 
-/** Тело формы для CRM; язык — текущий язык интерфейса (`ru | uz | en`). */
-export function toWebLead(values: LeadFormValues, language: string | undefined, formToken: string): WebLeadIn {
+/** Ключ формы в факте об источнике лида (LID-5): заявка со страницы входа Cabinet. */
+export const LEAD_FORM_KEY = 'cabinet_request';
+
+const UTM_KEYS = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'] as const;
+
+/** Где форма показана: путь страницы, откуда пришли, UTM адреса. Читается при отправке; CRM чистит и ограничивает. */
+export interface LeadOrigin {
+  page: string;
+  referrer: string;
+  search: string;
+}
+
+export function currentOrigin(): LeadOrigin {
+  return { page: window.location.pathname, referrer: document.referrer, search: window.location.search };
+}
+
+function originFacts(origin: LeadOrigin | undefined): Pick<WebLeadIn, 'form' | 'page' | 'referrer' | 'utm'> {
+  const params = new URLSearchParams(origin?.search ?? '');
+  const utm: Record<string, string> = {};
+  for (const key of UTM_KEYS) {
+    const value = params.get(key)?.trim();
+    if (value) utm[key] = value;
+  }
   return {
+    form: LEAD_FORM_KEY,
+    page: optional(origin?.page ?? ''),
+    referrer: optional(origin?.referrer ?? ''),
+    utm: Object.keys(utm).length ? utm : null,
+  };
+}
+
+/** Тело формы для CRM; язык — текущий язык интерфейса (`ru | uz | en`). */
+export function toWebLead(
+  values: LeadFormValues,
+  language: string | undefined,
+  formToken: string,
+  origin?: LeadOrigin,
+): WebLeadIn {
+  return {
+    ...originFacts(origin),
+    landing_language: localeFor(language).code,
     name: values.name.trim(),
     company: optional(values.company),
     phone: optional(values.phone),

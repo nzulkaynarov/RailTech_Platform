@@ -97,7 +97,7 @@ async def test_web_form_creates_lead_in_inbox_without_auth(
     # Honeypot: принято, но лида нет.
     trap = client.post("/api/v1/leads/web", json=web_body(live_settings, website="http://spam"))
     assert trap.status_code == 202
-    assert trap.json() == {"lead_id": None}
+    assert trap.json()["lead_id"] is None
 
     # Слишком быстрое заполнение и без контактов — единый формат ошибок ADR-0017.
     fast = client.post(
@@ -346,3 +346,58 @@ async def test_phone_without_match_merges_nothing(
     assert (identity.lead_id, identity.phone_e164) == (tg_id, "+998933333333")
     assert leads == [tg_id]
     assert "lead.merge" not in await audit_actions(sessions)
+
+
+async def test_web_form_stores_origin_facts_and_channels_filter(
+    client: TestClient, sessions: async_sessionmaker[AsyncSession], live_settings: Settings
+) -> None:
+    """LID-5: UTM, form, page, referrer and landing language are stored as facts; the channel
+    follows the intake path and the list filters by it."""
+    origin = {
+        "form": "Request",
+        "page": "https://railtech.uz/pos?utm_source=tg#top",
+        "referrer": "https://t.me/channel/42?secret=1",
+        "utm": {"utm_source": "tg", "utm_medium": "post", "utm_campaign": "pos-nov"},
+        "landing_language": "en",
+    }
+    accepted = client.post("/api/v1/leads/web", json=web_body(live_settings, **origin))
+    assert accepted.status_code == 202, accepted.text
+    data = accepted.json()
+    lead_id = data["lead_id"]
+    assert data["request_number"] == f"L-{lead_id:04d}"
+    assert data["first_response_minutes"] == 15
+
+    manager, password = await make_user(sessions, "origin-mgr@railtech.uz", ["manager"])
+    auth = login(client, manager.email, password)
+    manual = client.post(
+        "/api/v1/leads", json={"source": "email", "name": "Карим", "email": "k@x.uz"}, headers=auth
+    )
+    assert manual.status_code == 201, manual.text
+
+    detail = client.get(f"/api/v1/leads/{lead_id}", headers=auth).json()
+    assert detail["source"] == "web"
+    assert detail["origin"] == {
+        "form": "request",
+        "page": "/pos",
+        "referrer": "t.me/channel/42",
+        "utm": {"utm_source": "tg", "utm_medium": "post", "utm_campaign": "pos-nov"},
+        "landing_language": "en",
+    }
+    manual_detail = client.get(f"/api/v1/leads/{manual.json()['id']}", headers=auth).json()
+    assert (manual_detail["source"], manual_detail["origin"]) == ("email", None)
+
+    web_only = client.get("/api/v1/leads", params={"source": "web"}, headers=auth).json()
+    assert [row["id"] for row in web_only["items"]] == [lead_id]
+    email_only = client.get("/api/v1/leads", params={"source": "email"}, headers=auth).json()
+    assert [row["id"] for row in email_only["items"]] == [manual.json()["id"]]
+
+
+async def test_web_form_without_origin_facts_still_accepted(
+    client: TestClient, sessions: async_sessionmaker[AsyncSession], live_settings: Settings
+) -> None:
+    """Old clients (no origin fields) keep working; the card has no origin."""
+    accepted = client.post("/api/v1/leads/web", json=web_body(live_settings))
+    lead_id = accepted.json()["lead_id"]
+    manager, password = await make_user(sessions, "origin-mgr2@railtech.uz", ["manager"])
+    auth = login(client, manager.email, password)
+    assert client.get(f"/api/v1/leads/{lead_id}", headers=auth).json()["origin"] is None

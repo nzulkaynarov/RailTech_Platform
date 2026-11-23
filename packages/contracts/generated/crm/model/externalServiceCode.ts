@@ -4,13 +4,14 @@
  */
 
 /**
- * `cbu_rates` — курсы ЦБ РУз; `customs_tariff` — классификатор ТН ВЭД и тариф (tarif.customs.uz); `mail` — бывшая почта ERP (W18A-P1: ERP его больше не передаёт — письма отправляет почтовый сервис CRM); `litellm` — вызовы моделей через шлюз; `s3` — файловое хранилище; `sentry` — сбор ошибок. Читатель пропускает неизвестный код.
+ * `cbu_rates` — курсы ЦБ РУз; `customs_tariff` — классификатор ТН ВЭД и тариф (tarif.customs.uz); `cbu_banks` — справочник банков из файла ЦБ (раз в месяц); `mail` — бывшая почта ERP (W18A-P1: ERP его больше не передаёт — письма отправляет почтовый сервис CRM); `litellm` — вызовы моделей через шлюз; `s3` — файловое хранилище; `sentry` — сбор ошибок. Читатель пропускает неизвестный код.
  */
 export type ExternalServiceCode = (typeof ExternalServiceCode)[keyof typeof ExternalServiceCode];
 
 export const ExternalServiceCode = {
   cbu_rates: "cbu_rates",
   customs_tariff: "customs_tariff",
+  cbu_banks: "cbu_banks",
   mail: "mail",
   litellm: "litellm",
   s3: "s3",

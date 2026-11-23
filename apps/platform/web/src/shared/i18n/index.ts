@@ -2,6 +2,7 @@ import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 
 import enArticles from "./en/articles.json";
+import enLegal from "./en/legal.json";
 import enAudit from "./en/audit.json";
 import enCalc from "./en/calc.json";
 import enBus from "./en/bus.json";
@@ -30,6 +31,7 @@ import enSigning from "./en/signing.json";
 import enStock from "./en/stock.json";
 import enUi from "./en/ui.json";
 import ruArticles from "./ru/articles.json";
+import ruLegal from "./ru/legal.json";
 import ruAudit from "./ru/audit.json";
 import ruCalc from "./ru/calc.json";
 import ruBus from "./ru/bus.json";
@@ -58,6 +60,7 @@ import ruSigning from "./ru/signing.json";
 import ruStock from "./ru/stock.json";
 import ruUi from "./ru/ui.json";
 import uzArticles from "./uz/articles.json";
+import uzLegal from "./uz/legal.json";
 import uzAudit from "./uz/audit.json";
 import uzCalc from "./uz/calc.json";
 import uzBus from "./uz/bus.json";
@@ -93,6 +96,7 @@ export const resources = {
   ru: {
     common: ruCommon,
     articles: ruArticles,
+    legal: ruLegal,
     audit: ruAudit,
     calc: ruCalc,
     shell: ruShell,
@@ -123,6 +127,7 @@ export const resources = {
   uz: {
     common: uzCommon,
     articles: uzArticles,
+    legal: uzLegal,
     audit: uzAudit,
     calc: uzCalc,
     shell: uzShell,
@@ -153,6 +158,7 @@ export const resources = {
   en: {
     common: enCommon,
     articles: enArticles,
+    legal: enLegal,
     audit: enAudit,
     calc: enCalc,
     shell: enShell,
@@ -235,6 +241,7 @@ void i18n.use(initReactI18next).init({
     "payments",
     "help",
     "articles",
+    "legal",
     "signing",
   ],
   interpolation: { escapeValue: false },

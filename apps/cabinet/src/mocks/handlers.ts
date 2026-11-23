@@ -132,6 +132,7 @@ export function resetMockPortal(): void {
   setMockSession(null);
   dbs = { demo: createDb('demo'), empty: createDb('empty') };
   resetMockCrmForm();
+  resetMockLegal();
 }
 
 /** Для тестов: состояние Telegram контакта в данных демо-компании (статус, доступность, авто-привязка). */
@@ -175,6 +176,60 @@ function me(session: MockSession): Schemas['Me'] {
     ...fixtures.meFor(contactFor(session.role), session.auth_method, session.access, unreadOf(db)),
     company: db.company,
     notifications_unread: db.notifications.filter((item) => item.read_at === null).length,
+    legal_pending: legalPending(),
+  };
+}
+
+// --- Оферта и политика Кабинета (ДВ-5) --------------------------------------------------------------------------
+// По умолчанию в моке ничего не опубликовано — кабинет открыт, как в ERP до первой публикации. `setMockLegal` (тесты) или
+// `sessionStorage['cabinet.mock.legal']` (dev, снимки) включает публикацию; принятие запоминается в той же записи.
+
+const LEGAL_KEY = 'cabinet.mock.legal';
+export interface MockLegal {
+  published: boolean;
+  accepted: boolean;
+}
+let memoryLegal: MockLegal = { published: false, accepted: false };
+
+function readLegal(): MockLegal {
+  try {
+    const raw = window.sessionStorage.getItem(LEGAL_KEY);
+    return raw ? (JSON.parse(raw) as MockLegal) : memoryLegal;
+  } catch {
+    return memoryLegal;
+  }
+}
+
+export function setMockLegal(state: MockLegal): void {
+  memoryLegal = state;
+  try {
+    window.sessionStorage.setItem(LEGAL_KEY, JSON.stringify(state));
+  } catch {
+    // Хранилище недоступно — состояние живёт до перезагрузки.
+  }
+}
+
+/** Тесты: вернуть «ничего не опубликовано». */
+export function resetMockLegal(): void {
+  memoryLegal = { published: false, accepted: false };
+  try {
+    window.sessionStorage.removeItem(LEGAL_KEY);
+  } catch {
+    // нет хранилища
+  }
+}
+
+function legalPending(): boolean {
+  const state = readLegal();
+  return state.published && !state.accepted;
+}
+
+function legalCurrent(): Schemas['LegalCurrent'] {
+  const state = readLegal();
+  if (!state.published) return { needs_acceptance: false, editions: [] };
+  return {
+    needs_acceptance: !state.accepted,
+    editions: fixtures.legalEditions().map((edition) => ({ ...edition, accepted: state.accepted })),
   };
 }
 
@@ -256,11 +311,13 @@ function json<T extends JsonBodyType>(body: T, status = 200) {
 /** Обёртка эндпоинта с сессией: без неё 401, для действий без `can_act` — 403. */
 function withSession<P>(
   resolver: (args: { session: MockSession; db: Db; params: P; request: Request }) => Response | Promise<Response>,
-  { action = false }: { action?: boolean } = {},
+  { action = false, legalExempt = false }: { action?: boolean; legalExempt?: boolean } = {},
 ) {
   return ({ params, request }: { params: P; request: Request }) => {
     const session = readSession();
     if (!session) return error(401, 'UNAUTHORIZED');
+    // ДВ-5: как в ERP — без принятия действующих оферты и политики открыты только профиль и сами документы
+    if (!legalExempt && legalPending()) return error(403, 'LEGAL_ACCEPTANCE_REQUIRED');
     if (action && !contactFor(session.role).can_act) return error(403, 'FORBIDDEN');
     return resolver({ session, db: dbOf(session), params, request });
   };
@@ -349,6 +406,29 @@ export const handlers = [
   http.get('/maintenance.json', () => new HttpResponse(null, { status: 404 })),
   // Название оператора до входа (задача «Н3a2»): в CRM — «Настройки · Компания».
   http.get(`${API}/operator`, () => HttpResponse.json({ name: 'RailTech', bot_username: 'railtech_test_bot', logo_url: null })),
+  // Оферта и политика Кабинета (ДВ-5): до принятия остальные эндпоинты отвечают 403 `LEGAL_ACCEPTANCE_REQUIRED` (`withSession`).
+  http.get(`${API}/legal/policy`, () =>
+    json({ policy: readLegal().published ? (fixtures.legalEditions().find((e) => e.kind === 'privacy') ?? null) : null }),
+  ),
+  http.get(
+    `${API}/legal`,
+    withSession(() => json(legalCurrent()), { legalExempt: true }),
+  ),
+  http.post(
+    `${API}/legal/accept`,
+    withSession(
+      async ({ request }) => {
+        const body = await readJson<{ edition_ids: number[]; language: string }>(request);
+        const current = legalCurrent().editions.map((edition) => edition.id).sort();
+        const sent = [...(body.edition_ids ?? [])].sort();
+        if (!['ru', 'uz', 'en'].includes(body.language ?? '')) return error(422, 'VALIDATION_ERROR');
+        if (current.length === 0 || current.join() !== sent.join()) return error(409, 'LEGAL_EDITION_CHANGED');
+        setMockLegal({ published: true, accepted: true });
+        return json(legalCurrent());
+      },
+      { legalExempt: true },
+    ),
+  ),
   http.get(`${API}/countries`, () => {
     return json([
       { code: 'UZ', name: 'Узбекистан', phone_code: '+998', phone_mask: '+998 (99) 999-99-99', phone_placeholder: '+998 90 123-45-67', tax_label: 'ИНН (STIR)', tax_placeholder: '123456789', is_uzbekistan: true },
@@ -396,10 +476,13 @@ export const handlers = [
   }),
   http.post(
     `${API}/auth/logout`,
-    withSession(() => {
-      setMockSession(null);
-      return new HttpResponse(null, { status: 204 });
-    }),
+    withSession(
+      () => {
+        setMockSession(null);
+        return new HttpResponse(null, { status: 204 });
+      },
+      { legalExempt: true },
+    ),
   ),
   http.get(
     `${API}/auth/sessions`,
@@ -413,7 +496,7 @@ export const handlers = [
       return json({ revoked_count: revokedCount });
     }),
   ),
-  http.get(`${API}/me`, withSession(({ session }) => json(me(session)))),
+  http.get(`${API}/me`, withSession(({ session }) => json(me(session)), { legalExempt: true })),
   http.get(
     `${API}/me/telegram`,
     withSession(({ db }) => {

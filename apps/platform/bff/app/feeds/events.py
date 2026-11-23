@@ -104,6 +104,8 @@ EVENT_TEXTS: dict[str, str] = {
     "integration.paired_bootstrap": "ERP сопряжена с CRM",
     "integration.paired_code": "ERP сопряжена с CRM по коду",
     "integration.pairing_code_issued": "Выдан код сопряжения",
+    "portal.legal.accepted": "Клиент принял условия или политику кабинета",
+    "admin.portal_legal.published": "Опубликована новая редакция документа кабинета",
     "admin.company.own_created": "Создана своя компания",
     "admin.company.archived": "Компания отправлена в архив",
     "admin.company.unarchived": "Компания возвращена в оборот",
