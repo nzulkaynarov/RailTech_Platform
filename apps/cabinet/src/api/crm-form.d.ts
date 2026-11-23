@@ -120,7 +120,7 @@ export interface components {
          *
          *     For the «What next» screen (LID-5): `request_number` is the number to show to the submitter
          *     (`L-0042`, same as in the staff card) and `first_response_minutes` is the first-response time
-         *     from the «Time and deadlines» settings. Both are null when the request was dropped.
+         *     from the «Website forms» settings. Both are null when the request was dropped.
          */
         WebLeadAccepted: {
             /** First Response Minutes */
