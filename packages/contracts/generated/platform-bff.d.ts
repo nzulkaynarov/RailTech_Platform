@@ -8835,6 +8835,10 @@ export interface components {
       notify_leads: boolean;
       /** @description Системные оповещения (мониторинг, сбои) — администратору */
       notify_system: boolean;
+      /** @description Telegram по решениям — подписать, согласовать, резолюция, оплата, виза (по умолчанию включено); колокольчик приходит всегда */
+      notify_decisions?: boolean;
+      /** @description Telegram по прочим задачам — поручения, ознакомление, итоги (по умолчанию выключено) */
+      notify_tasks?: boolean;
       /**
        * Format: date-time
        * @description Когда последний раз личное сообщение бота не дошло; нет — доставка исправна
@@ -8844,6 +8848,8 @@ export interface components {
     NotificationSettingsUpdate: {
       notify_leads?: boolean;
       notify_system?: boolean;
+      notify_decisions?: boolean;
+      notify_tasks?: boolean;
     };
     RoleCreate: {
       name: string;

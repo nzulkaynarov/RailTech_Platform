@@ -107,6 +107,9 @@ class UserOut(BaseModel):
     ui_mode: str
     notify_system: bool
     notify_leads: bool
+    # GL-2: Telegram по задачам EDS (решения / прочие задачи); колокольчик приходит всегда.
+    notify_decisions: bool = True
+    notify_tasks: bool = False
     # Когда Telegram последний раз отказал в личном сообщении; None — доставка работает.
     tg_dm_failed_at: datetime | None = None
     # Куда пользователю можно (FIX-11): `["crm"]` по умолчанию, `["crm", "erp"]` — доступ к ERP
@@ -178,6 +181,8 @@ class MePatch(BaseModel):
     ui_mode: UiMode | None = None
     notify_system: bool | None = None
     notify_leads: bool | None = None
+    notify_decisions: bool | None = None
+    notify_tasks: bool | None = None
     language: Language | None = None
     full_name: str | None = Field(default=None, min_length=1, max_length=255)
     phone: str | None = Field(default=None, max_length=40)

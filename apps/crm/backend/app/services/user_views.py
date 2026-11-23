@@ -22,6 +22,8 @@ class UserView:
     ui_mode: str
     notify_system: bool = True
     notify_leads: bool = True
+    notify_decisions: bool = True
+    notify_tasks: bool = False
     tg_dm_failed_at: datetime | None = None
     platform_access: list[str] = field(default_factory=lambda: ["crm"])
     erp_role_codes: list[str] = field(default_factory=list)
@@ -85,6 +87,8 @@ def view_of(
         ui_mode=user.ui_mode,
         notify_system=user.notify_system,
         notify_leads=user.notify_leads,
+        notify_decisions=user.notify_decisions,
+        notify_tasks=user.notify_tasks,
         tg_dm_failed_at=user.tg_dm_failed_at,
         platform_access=access,
         erp_role_codes=list(user.erp_role_codes or []),

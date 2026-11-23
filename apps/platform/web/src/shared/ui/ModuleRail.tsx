@@ -2,6 +2,7 @@ import { Layout, Popover } from "antd";
 import { useState, type ReactNode } from "react";
 import { Link } from "react-router";
 
+import { countLabel } from "../lib/useTaskCountTitle";
 import { MODULE_ICONS } from "./moduleIcons";
 import "./shell.css";
 
@@ -26,6 +27,8 @@ export interface RailModule {
   to: string;
   active: boolean;
   sections?: readonly RailSubmenuItem[];
+  /** Число задач на значке модуля (ГЛ-2): `label` читает скринридер вместо одного названия */
+  badge?: { count: number; label: string };
 }
 
 export interface ModuleRailProps {
@@ -57,9 +60,19 @@ function RailLink({ module, onClick }: { module: RailModule; onClick?: () => voi
       title={module.title ?? module.name}
       className="pf-rail-btn pf-focusable"
       aria-current={module.active ? "page" : undefined}
+      aria-label={module.badge?.label}
     >
       <Icon />
       <span>{module.name}</span>
+      {module.badge ? (
+        // Число — из `data-count` через ::after: в тексте ссылки его нет, видимое имя («Главная») входит в aria-label
+        <b
+          className="pf-rail-count"
+          data-testid={`rail-count-${module.code}`}
+          data-count={countLabel(module.badge.count)}
+          aria-hidden="true"
+        />
+      ) : null}
     </Link>
   );
 }

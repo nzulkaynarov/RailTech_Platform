@@ -32,6 +32,7 @@ import {
   PANEL_WIDE,
 } from "../../shared/ui/ContextPanel";
 import { ModuleMenu, ModuleMenuContent, type MenuItem } from "../../shared/ui/ModuleMenu";
+import { useTaskCountTitle } from "../../shared/lib/useTaskCountTitle";
 import { ModuleRail, type RailModule } from "../../shared/ui/ModuleRail";
 import { TopBar, type Crumb } from "../../shared/ui/TopBar";
 import "../../shared/ui/shell.css";
@@ -141,6 +142,10 @@ export function AppShell() {
   const readNotes = useReadNotifications();
 
   const unreadCount = unread.data?.unread_count ?? 0;
+  // «Задачи» из тех же счётчиков меню: число на значке «Главной» и в заголовке вкладки (ГЛ-2); 0 — без значка.
+  const taskCount =
+    counters.data?.items.find((c) => c.module === "dashboard" && c.section === "queue")?.count ?? 0;
+  useTaskCountTitle(taskCount);
 
   // ⌘K / Ctrl+K фокусирует поиск, но не перехватывает ввод в других полях (работает и в раскладке RU).
   useEffect(() => {
@@ -253,6 +258,14 @@ export function AppShell() {
       to: sections[0]?.path ?? `/${module.code}`,
       active: (nav !== undefined || matchedVisible === true) && module.code === activeModule.code,
       sections,
+      ...(module.code === "dashboard" && taskCount > 0
+        ? {
+            badge: {
+              count: taskCount,
+              label: t("rail.tasks", { name: t(`modules:${module.code}.name`), count: taskCount }),
+            },
+          }
+        : {}),
     };
   });
 

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { createQueryClient } from "./queryClient";
 import { HttpResponse, http } from "msw";
 import { RouterProvider, createMemoryRouter } from "react-router";
@@ -125,6 +125,21 @@ describe("каркас на 1440", () => {
     expect(within(rail).getAllByRole("link")).toHaveLength(6);
   });
 
+  it("число задач из счётчиков меню — на значке «Главной» и в заголовке вкладки (ГЛ-2)", async () => {
+    signIn("manager@demo.example");
+    renderAt("/crm/leads");
+    await screen.findByRole("heading", { level: 1, name: "Лиды" });
+    const rail = screen.getByRole("navigation", { name: "Модули" });
+    const home = await within(rail).findByRole("link", { name: /^Главная, задач: \d+$/ });
+    const count = home.querySelector("b")?.getAttribute("data-count") ?? "";
+    expect(Number(count)).toBeGreaterThan(0);
+    await waitFor(() => {
+      expect(document.title).toMatch(new RegExp(`^\\(${count}\\) `));
+    });
+    // у соседних модулей числа нет
+    expect(within(rail).getByRole("link", { name: "Контакты" }).querySelector("b")).toBeNull();
+  });
+
   it("403 при выбранной активной роли: нейтральный текст и подсказка про «Все роли»", async () => {
     signIn("all@demo.example", "ACCOUNTANT");
     renderAt("/admin/roles");
@@ -145,7 +160,7 @@ describe("каркас на 1440", () => {
     expect(
       within(rail)
         .getAllByRole("link")
-        .map((a) => a.textContent),
+        .map((a) => a.querySelector("span")?.textContent ?? a.textContent),
     ).toEqual(["RT", "Главная", "Контакты", "Документы", "Операции", "Органайзер"]);
     expect(within(rail).getByRole("link", { name: "Контакты" })).toHaveAttribute(
       "aria-current",
@@ -234,7 +249,7 @@ describe("каркас на 1440", () => {
       expect(
         within(rail())
           .getAllByRole("link")
-          .map((a) => a.textContent),
+          .map((a) => a.querySelector("span")?.textContent ?? a.textContent),
       ).toEqual(["RT", "Главная", "Контакты", "Документы", "Органайзер", "Настройки"]);
     });
   });

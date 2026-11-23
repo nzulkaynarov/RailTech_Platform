@@ -22,7 +22,7 @@ from app.errors import conflict, forbidden_reason, not_found
 from app.models import ApprovalRoute, ApprovalStep, Document, Employee
 from app.schemas.approvals import ApprovalTemplate, Decision, DecisionIn, RouteStatus
 from app.security.permissions import EdsPermission as P
-from app.services import access, checklist, document_notices, document_state, events, journal, numbering
+from app.services import access, checklist, document_notices, document_state, events, journal, numbering, task_notices
 from app.services.people import load_directory
 
 DIRECTOR = "Директор"
@@ -154,6 +154,11 @@ async def open_route(
         document_id=route.document_id,
         version=round_no,
     )
+    first = await session.scalar(
+        select(ApprovalStep).where(ApprovalStep.approval_id == route.id, ApprovalStep.index == 1)
+    )
+    if first is not None:  # ГЛ-2: первый шаг пришёл к сотруднику — сигнал в колокольчик и Telegram
+        await task_notices.step_arrived(session, bus, route, document, first, actor_id=actor_id)
     if template is ApprovalTemplate.SIGNING:  # итог подписи — событие `signing.decided`, не `approval.*`
         return route
     data = {
@@ -302,6 +307,8 @@ async def _apply(
         )
     if route.template != ApprovalTemplate.SIGNING.value:
         await _publish_decided(session, bus, employee, route, document, current, body, route_status, now)
+    if route_status is RouteStatus.OPEN and following is not None:  # ГЛ-2: следующий шаг пришёл к сотруднику
+        await task_notices.step_arrived(session, bus, route, document, following, actor_id=employee.crm_user_id)
     if route_status is RouteStatus.OPEN and following is not None and route.template != ApprovalTemplate.SIGNING.value:
         # Маршрут подписи (ADR-0025: визы, затем «Подписать») `approval.*` не публикует: итог — `signing.decided`.
         await _publish_step_requested(session, bus, employee, route, document, following)
@@ -319,6 +326,10 @@ async def _apply(
         await document_notices.memo_decided(
             session, bus, document, round_=route.round, comment=body.comment, actor_id=employee.crm_user_id
         )
+        if decision is Decision.RETURN:  # ГЛ-2: автору — «Доработать» (строка очереди остаётся, сигнал — в колокольчик)
+            await task_notices.returned_to_author(
+                session, bus, route, document, comment=body.comment, actor_id=employee.crm_user_id
+            )
     return route
 
 
