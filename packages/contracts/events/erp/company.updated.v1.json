@@ -70,6 +70,49 @@
           "type": "string",
           "format": "date-time",
           "description": "Когда ERP изменила реквизиты — порядок снимков"
+        },
+        "do_not_work": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": false,
+          "required": [
+            "reason",
+            "set_by",
+            "set_at",
+            "until"
+          ],
+          "description": "Отметка «Не работать» (план Х-8): факты, а не флаг. null — отметки нет или она снята. Поле необязательное: снимок без него отметку не меняет (старый издатель). Срок CRM сверяет сам — отметка действует, пока until пуст или не раньше сегодняшнего дня.",
+          "properties": {
+            "reason": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1000,
+              "description": "Причина — текст для коллег"
+            },
+            "set_by": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 255,
+              "description": "Кто поставил отметку (имя сотрудника ERP); null — сотрудник удалён"
+            },
+            "set_at": {
+              "type": "string",
+              "format": "date-time",
+              "description": "Когда поставлена"
+            },
+            "until": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "date",
+              "description": "До какой даты действует; null — без срока"
+            }
+          }
         }
       }
     }

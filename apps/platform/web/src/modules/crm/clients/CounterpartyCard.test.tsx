@@ -2,6 +2,7 @@ import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { HttpResponse, http } from "msw";
 import { beforeEach, describe, expect, it } from "vitest";
 
+import { resetMarks } from "../../../mocks/doNotWorkMarks";
 import { resetLeads } from "../../../mocks/fixtures/leads";
 import { panelEl, renderAt, setupBotTests, signIn } from "../../../test/botKit";
 import { server } from "../../../test/server";
@@ -10,6 +11,7 @@ setupBotTests();
 
 beforeEach(() => {
   resetLeads();
+  resetMarks();
 });
 
 async function open(email: string, path: string) {
@@ -158,6 +160,56 @@ describe("Карточка контрагента", () => {
   it("бухгалтер реквизиты не правит: кнопки нет", async () => {
     const panel = await open("accountant@demo.example", "/crm/clients/3?panel=open&tab=card");
     await within(panel).findByRole("heading", { name: "ООО Рельс-Сервис Демо" });
+    expect(within(panel).queryByRole("button", { name: "Реквизиты" })).toBeNull();
+  });
+});
+
+/** Х-8: «Не работать» — факты у компании; полоса в карточке, «Снова работать» снимает. */
+describe("Карточка контрагента: «Не работать»", () => {
+  it("снабженец отмечает компанию с причиной; полоса показывает причину и кто отметил; «Снова работать» снимает", async () => {
+    const panel = await open("supply@demo.example", "/crm/clients?partner=1&panel=open&tab=card");
+    await within(panel).findByRole("heading", { name: /Поставщик Север/ });
+    expect(within(panel).queryByRole("status")).toBeNull();
+
+    fireEvent.click(within(panel).getByRole("button", { name: "Не работать" }));
+    const dialog = await screen.findByRole("dialog", { name: "С компанией не работаем" });
+    const submit = within(dialog).getByRole("button", { name: "Отметить" });
+    // без причины отметить нельзя
+    expect(submit).toBeDisabled();
+    fireEvent.change(within(dialog).getByLabelText("Причина"), {
+      target: { value: "Дважды не оплатил отгрузку" },
+    });
+    expect(submit).toBeEnabled();
+    fireEvent.click(submit);
+
+    const strip = await within(panel).findByRole("status");
+    expect(strip).toHaveTextContent("С компанией не работаем: Дважды не оплатил отгрузку");
+    expect(strip).toHaveTextContent("Отметил:");
+    expect(within(panel).queryByRole("button", { name: "Не работать" })).toBeNull();
+
+    fireEvent.click(within(panel).getByRole("button", { name: "Снова работать" }));
+    await waitFor(() => {
+      expect(within(panel).queryByRole("status")).toBeNull();
+    });
+    expect(await within(panel).findByRole("button", { name: "Не работать" })).toBeVisible();
+  });
+
+  it("менеджер клиентов отмечает клиента — отметка видна в списке («Не работаем») и в строке клиента", async () => {
+    const panel = await open("manager@demo.example", "/crm/clients/3?panel=open&tab=card");
+    await within(panel).findByRole("heading", { name: "ООО Рельс-Сервис Демо" });
+    fireEvent.click(within(panel).getByRole("button", { name: "Не работать" }));
+    const dialog = await screen.findByRole("dialog", { name: "С компанией не работаем" });
+    fireEvent.change(within(dialog).getByLabelText("Причина"), {
+      target: { value: "Спор по оплате" },
+    });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Отметить" }));
+    expect(await within(panel).findByRole("status")).toHaveTextContent("Спор по оплате");
+  });
+
+  it("бухгалтер отметку видит, но поставить её не может", async () => {
+    const panel = await open("accountant@demo.example", "/crm/clients/3?panel=open&tab=card");
+    await within(panel).findByRole("heading", { name: "ООО Рельс-Сервис Демо" });
+    expect(within(panel).queryByRole("button", { name: "Не работать" })).toBeNull();
     expect(within(panel).queryByRole("button", { name: "Реквизиты" })).toBeNull();
   });
 });

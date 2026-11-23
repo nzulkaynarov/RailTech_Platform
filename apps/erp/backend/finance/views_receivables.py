@@ -103,6 +103,15 @@ class ReceivableBoardView(APIView):
             OpenApiParameter("q", str, description="Поиск по номеру счёта и названию клиента."),
             OpenApiParameter("limit", int, description="Строк на странице, 1–100 (по умолчанию 50)."),
             OpenApiParameter("offset", int, description="Сколько строк пропустить."),
+            OpenApiParameter(
+                "ordering",
+                str,
+                description=(
+                    "Порядок: `number`, `client`, `amount`, `issued`, `due`, `status`; `-` в начале — по убыванию. "
+                    "Другое поле игнорируется (порядок вкладки); пустые значения — в конце, равные — по id. "
+                    "`number` — строковый порядок: у счёта нет сохранённого порядкового номера."
+                ),
+            ),
         ],
         responses={
             200: ReceivableBoardSerializer,
@@ -124,7 +133,12 @@ class ReceivableBoardView(APIView):
             return _error("PAGINATION_INVALID")
         day = receivables.today()
         page, total = receivables.board(
-            tab=tab, day=day, q=request.query_params.get("q", ""), limit=limit, offset=offset
+            tab=tab,
+            day=day,
+            q=request.query_params.get("q", ""),
+            limit=limit,
+            offset=offset,
+            ordering=request.query_params.get("ordering", "")[:32],
         )
         data = {
             "tab": tab,

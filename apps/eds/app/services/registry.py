@@ -42,7 +42,7 @@ from app.models import ApprovalRoute, ApprovalStep, Document, Employee, Letter, 
 from app.schemas.common import ErpLinks, LetterSender, Money, PersonRef
 from app.schemas.pagination import decode_cursor
 from app.schemas.registry import RegistryItem, RegistryKind, RegistryPage, RegistryStage
-from app.services import access, delivery, paging, signing_resolve, signing_state
+from app.services import access, delivery, paging, signing_resolve, signing_state, status_rank
 from app.services.letters_read import escape_like
 from app.services.people import Directory, load_directory
 
@@ -272,12 +272,43 @@ async def _signers(session: AsyncSession, ids: list[uuid.UUID]) -> dict[uuid.UUI
 
 
 async def list_page(
-    session: AsyncSession, employee: Employee, filters: Filters, *, cursor: str | None, limit: int
+    session: AsyncSession,
+    employee: Employee,
+    filters: Filters,
+    *,
+    cursor: str | None,
+    limit: int,
+    sort: str | None = None,
 ) -> RegistryPage:
     sub = _filtered(employee, filters).subquery("page")
-    stmt = paging.apply(select(sub), sub.c.registered_at, sub.c.id, decode_cursor(cursor), limit)
-    rows = list((await session.execute(stmt)).all())
-    page, next_cursor = paging.cut(rows, limit, lambda r: r.registered_at, lambda r: r.id)
+    ordering = paging.parse_sort(sort)
+    if ordering is None:
+        stmt = paging.apply(select(sub), sub.c.registered_at, sub.c.id, decode_cursor(cursor), limit)
+        rows = list((await session.execute(stmt)).all())
+        page, next_cursor = paging.cut(rows, limit, lambda r: r.registered_at, lambda r: r.id)
+    else:
+
+        def columns(src: Any) -> Any:
+            return {
+                "number": src.c.number,
+                "subject": src.c.title,
+                "status": status_rank.rank_expr(src.c.status, src.c.awaiting_signature),
+                "amount": src.c.amount,
+                "created": src.c.registered_at,
+            }[ordering[0]]
+
+        mirror = sub.alias("anchor")
+        stmt = paging.apply_sorted(
+            select(sub),
+            columns(sub),
+            sub.c.id,
+            ordering,
+            cursor,
+            limit,
+            lambda k: select(columns(mirror)).where(mirror.c.id == k).scalar_subquery(),
+        )
+        rows = list((await session.execute(stmt)).all())
+        page, next_cursor = paging.cut_sorted(rows, limit, ordering, lambda r: r.id)
     directory = await load_directory(session, (r.responsible for r in page))
     signers = await _signers(session, [r.id for r in page if r.awaiting_signature])
     return RegistryPage(items=[_item(r, directory, signers) for r in page], next_cursor=next_cursor)

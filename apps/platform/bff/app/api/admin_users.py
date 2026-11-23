@@ -9,10 +9,10 @@ BFF не решает: роли Платформы — данные CRM (`platfo
 
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, Path, Query, status
+from fastapi import APIRouter, Depends, Path, Query, Response, status
 
 from app.clients.crm_users import CrmUsers, roles_required
-from app.deps import Authed, require
+from app.deps import Authed, StepUpDep, require
 from app.errors import PlatformError
 from app.schemas_admin import (
     Employee,
@@ -23,6 +23,7 @@ from app.schemas_admin import (
     to_employee,
 )
 from app.schemas_integrations import MailQueued
+from app.schemas_profile import SecondFactorResetIn
 from app.session import SessionData
 
 router = APIRouter(tags=["admin"])
@@ -89,8 +90,11 @@ async def list_employees(
     status_code=status.HTTP_201_CREATED,
     operation_id="inviteEmployee",
 )
-async def invite_employee(body: EmployeeInvite, authed: Writer) -> Employee:
-    """Создать пользователя в CRM с ролями Платформы и отправить приглашение по почте."""
+async def invite_employee(
+    body: EmployeeInvite, authed: Writer, step_up: StepUpDep = None
+) -> Employee:
+    """Создать пользователя в CRM с ролями Платформы и отправить приглашение по почте.
+    Роль при создании — выдача роли: нужен свежий код второго фактора (`X-Step-Up-Token`, ДВ-4б)."""
     users = _users(authed)
     payload: dict[str, Any] = {
         "email": body.email.strip(),
@@ -99,7 +103,7 @@ async def invite_employee(body: EmployeeInvite, authed: Writer) -> Employee:
     }
     if body.position and body.position.strip():
         payload["position"] = body.position.strip()
-    user = await users.create(payload)
+    user = await users.create(payload, step_up)
     try:
         await users.invite(str(user["id"]))
     except PlatformError as exc:
@@ -207,9 +211,11 @@ async def get_employee(id: EmployeeId, authed: Reader) -> Employee:
     response_model_exclude_none=True,
     operation_id="updateEmployee",
 )
-async def update_employee(id: EmployeeId, body: EmployeeUpdate, authed: Writer) -> Employee:
+async def update_employee(
+    id: EmployeeId, body: EmployeeUpdate, authed: Writer, step_up: StepUpDep = None
+) -> Employee:
     """Роли (`platform_role_ids` в CRM, хотя бы одна), должность, отключение, передача лидов;
-    инварианты — CRM.
+    инварианты — CRM. Выдача роли требует свежий код второго фактора (`X-Step-Up-Token`, ДВ-4б).
 
     Роли уходят полным набором id: BFF не читает и не дописывает роли кодами (иначе слетели бы
     роли без кода)."""
@@ -224,8 +230,29 @@ async def update_employee(id: EmployeeId, body: EmployeeUpdate, authed: Writer) 
         payload["position"] = (body.position or "").strip()
     if "is_active" in body.model_fields_set:
         payload["is_active"] = body.is_active
-    employee = to_employee(await _users(authed).update(id, payload))
+    employee = to_employee(await _users(authed).update(id, payload, step_up))
     if _is_self(id, authed):
         # Свои роли изменены: следующий `/me` перечитывает профиль CRM, а не ждёт конца кэша (60 с).
         await authed.service.store.update(authed.sid, _expire_profile)
     return employee
+
+
+@router.post(
+    "/admin/users/{id}/second-factor/reset",
+    status_code=status.HTTP_204_NO_CONTENT,
+    operation_id="resetEmployeeSecondFactor",
+)
+async def reset_employee_second_factor(
+    id: EmployeeId, body: SecondFactorResetIn, authed: Writer
+) -> Response:
+    """Сбросить второй фактор сотруднику (потерян телефон; ДВ-4б): причина — в журнале CRM, его
+    сессии закрываются, при следующем входе он настраивает фактор заново. Себе нельзя (409)."""
+    if _is_self(id, authed):
+        raise PlatformError(
+            "CONFLICT",
+            "Свой фактор меняет другой администратор.",
+            status_code=status.HTTP_409_CONFLICT,
+            details={"reason": "second_factor_self_reset"},
+        )
+    await _users(authed).reset_second_factor(id, body.reason.strip())
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

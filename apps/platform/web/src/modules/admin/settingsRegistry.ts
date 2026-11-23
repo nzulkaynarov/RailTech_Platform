@@ -84,6 +84,32 @@ export const SETTINGS: readonly SettingEntry[] = [
     },
   },
   {
+    key: "zones",
+    group: "people",
+    path: "/admin/zones",
+    access: ADMIN,
+    name: { ru: "Зоны ответственности", uz: "Masʼuliyat zonalari", en: "Responsibility zones" },
+    description: {
+      ru: "Ответственный, замещающий и куратор по каждой зоне",
+      uz: "Har bir zona uçun masʼul, örinbosar va kurator",
+      en: "Responsible, deputy and curator for each zone",
+    },
+    keywords: {
+      ru: [
+        "зона",
+        "ответственный",
+        "куратор",
+        "замещающий",
+        "приказ",
+        "финансы",
+        "право",
+        "снабжение",
+      ],
+      uz: ["zona", "masʼul", "kurator", "örinbosar", "buyruq", "moliya", "huquq"],
+      en: ["zone", "responsible", "owner", "curator", "deputy", "order", "finance", "legal"],
+    },
+  },
+  {
     key: "signing",
     group: "people",
     path: "/admin/signing",

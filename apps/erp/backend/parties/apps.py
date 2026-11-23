@@ -12,3 +12,8 @@ class PartiesConfig(AppConfig):
         from parties.company_events import connect
 
         connect()
+
+        # Х-8: у компании с отметкой «Не работать» новые КП, договор, заказ и заявка отказываются
+        from parties.do_not_work import connect as connect_do_not_work
+
+        connect_do_not_work()

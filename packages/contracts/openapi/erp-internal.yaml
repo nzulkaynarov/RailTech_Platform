@@ -15932,6 +15932,13 @@ paths:
           type: integer
         description: Сколько строк пропустить.
       - in: query
+        name: ordering
+        schema:
+          type: string
+        description: 'Порядок: `number`, `client`, `amount`, `issued`, `due`, `status`; `-` в начале — по убыванию. Другое
+          поле игнорируется (порядок вкладки); пустые значения — в конце, равные — по id. `number` — строковый порядок: у
+          счёта нет сохранённого порядкового номера.'
+      - in: query
         name: q
         schema:
           type: string
@@ -17895,6 +17902,101 @@ paths:
                 $ref: '#/components/schemas/ErrorDetail'
         '409':
           description: 'Отказ проверки: код в `detail` или ошибки полей.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+  /api/v1/parties/organizations/{id}/do-not-work/:
+    post:
+      operationId: parties_organizations_do_not_work_set
+      description: 'Х-8. Отметить «Не работать»: причина обязательна (400 `REASON_REQUIRED`), дата окончания по желанию (в
+        прошлом — 400 `UNTIL_PAST`); повторная отметка заменяет прежнюю. Право `deal.manage` или `supply.manage`. Новые КП,
+        договор, заказ поставщику и заявка у такой компании отказываются 409 `COMPANY_DO_NOT_WORK` с причиной и тем, кто отметил;
+        приглашения её контактов в кабинет не уходят; документы в работе не отменяются, кабинет читает как прежде. Действие
+        пишется в журнал, CRM получает отметку в снимке `company.updated`. Ответ — карточка контрагента.'
+      summary: Mark a counterparty «do not work»
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^\d+$
+        required: true
+      tags:
+      - Parties
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeskDoNotWorkInRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DeskDoNotWorkInRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DeskDoNotWorkInRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeskCounterparty'
+          description: ''
+        '400':
+          description: 'Отказ проверки: код в `detail` или ошибки полей.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+        '403':
+          description: Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '404':
+          description: Объекта нет.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+    delete:
+      operationId: parties_organizations_do_not_work_clear
+      description: Х-8. Снять отметку «Не работать»; отметки нет — ничего не меняется (повтор безопасен). Тот же доступ.
+      summary: Remove the «do not work» mark
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^\d+$
+        required: true
+      tags:
+      - Parties
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeskCounterparty'
+          description: ''
+        '403':
+          description: Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '404':
+          description: Объекта нет.
           content:
             application/json:
               schema:
@@ -24383,6 +24485,14 @@ components:
           minimum: 1
           title: Порог публикации (%)
           description: Минимальная полнота карточки, при которой её можно опубликовать.
+        catalog_require_mxik:
+          type: boolean
+          title: МХИК обязателен для публикации
+          description: 'Карточку без кода МХИК (ИКПУ) опубликовать нельзя: он нужен в счёте-фактуре.'
+        catalog_require_hs_imported:
+          type: boolean
+          title: ТН ВЭД обязателен для ввозимого товара
+          description: Товар не из Узбекистана (или страна не указана) без кода ТН ВЭД опубликовать нельзя.
         fx_rate_max_age_days:
           type: integer
           maximum: 90
@@ -26243,12 +26353,18 @@ components:
           items:
             $ref: '#/components/schemas/DeskRef'
           description: Бренды, которые выпускает компания (справочник «Бренды»)
+        do_not_work:
+          allOf:
+          - $ref: '#/components/schemas/DoNotWorkFacts'
+          nullable: true
+          description: 'Отметка «Не работать» (Х-8): причина, кто и когда поставил, срок; `null` — с компанией работаем'
       required:
       - accounts_masked
       - bank_accounts
       - brands
       - country
       - crm_client_id
+      - do_not_work
       - id
       - inn
       - legal_address
@@ -26377,6 +26493,20 @@ components:
       required:
       - amount
       - currency
+    DeskDoNotWorkInRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+          description: Причина — обязательный текст (пустая — 400 `REASON_REQUIRED`)
+          maxLength: 1000
+        until:
+          type: string
+          format: date
+          nullable: true
+          description: Необязательная дата окончания
+      required:
+      - reason
     DeskDocumentKind:
       type: object
       properties:
@@ -27169,6 +27299,9 @@ components:
         group:
           type: string
           description: Группа или класс классификатора
+        path:
+          type: string
+          description: Путь по классификатору «группа › класс › позиция», без самого названия
       required:
       - code
       - group
@@ -28434,6 +28567,9 @@ components:
           type: string
           format: date
           nullable: true
+        do_not_work:
+          type: boolean
+          description: 'С поставщиком не работаем: действует отметка «Не работать» (Х-8).'
         contact_person:
           type: string
         phone:
@@ -28466,6 +28602,7 @@ components:
       - country
       - country_id
       - currency
+      - do_not_work
       - email
       - expired_count
       - expiring_count
@@ -28563,10 +28700,14 @@ components:
           type: string
           format: date
           nullable: true
+        do_not_work:
+          type: boolean
+          description: 'С поставщиком не работаем: действует отметка «Не работать» (Х-8).'
       required:
       - country
       - country_id
       - currency
+      - do_not_work
       - expired_count
       - expiring_count
       - id
@@ -28917,6 +29058,29 @@ components:
         * `ITEM` - Позиция
         * `SECTION` - Раздел
         * `NOTE` - Заметка
+    DoNotWorkFacts:
+      type: object
+      description: 'Факты отметки «Не работать» в ответах API: карточка контрагента, карточка проекта.'
+      properties:
+        reason:
+          type: string
+        set_by:
+          type: string
+          nullable: true
+          description: Кто поставил отметку (имя сотрудника)
+        set_at:
+          type: string
+          format: date-time
+        until:
+          type: string
+          format: date
+          nullable: true
+          description: До какой даты действует; `null` — без срока
+      required:
+      - reason
+      - set_at
+      - set_by
+      - until
     DocTypeEnum:
       enum:
       - KP
@@ -33059,6 +33223,14 @@ components:
           minimum: 1
           title: Порог публикации (%)
           description: Минимальная полнота карточки, при которой её можно опубликовать.
+        catalog_require_mxik:
+          type: boolean
+          title: МХИК обязателен для публикации
+          description: 'Карточку без кода МХИК (ИКПУ) опубликовать нельзя: он нужен в счёте-фактуре.'
+        catalog_require_hs_imported:
+          type: boolean
+          title: ТН ВЭД обязателен для ввозимого товара
+          description: Товар не из Узбекистана (или страна не указана) без кода ТН ВЭД опубликовать нельзя.
         fx_rate_max_age_days:
           type: integer
           maximum: 90
@@ -35663,6 +35835,11 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ProjectJournalEntry'
+        do_not_work:
+          allOf:
+          - $ref: '#/components/schemas/DoNotWorkFacts'
+          nullable: true
+          description: 'Х-8: у компании проекта отметка «Не работать» — полоса в карточке; документы в работе не отменяются'
       required:
       - act
       - act_blocker
@@ -35674,6 +35851,7 @@ components:
       - created_at
       - deal_id
       - delivery_lines
+      - do_not_work
       - documents
       - due_date
       - fulfillment

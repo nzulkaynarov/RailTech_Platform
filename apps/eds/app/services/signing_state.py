@@ -5,17 +5,20 @@
 После `sign()` статус `sent` — признак гаснет сам.
 """
 
+from typing import Any
+
 from sqlalchemy import ColumnElement, and_
 
 from app.models import Document
 from app.schemas.documents import DocumentKind, DocumentStatus
 
 
-def awaiting_signature() -> ColumnElement[bool]:
+def awaiting_signature(document: Any = Document) -> ColumnElement[bool]:
+    """Предикат SQL; `document` — `Document` или его `aliased(...)` (подзапрос значения курсора порядка)."""
     return and_(
-        Document.kind == DocumentKind.LETTER_OUT.value,
-        Document.status == DocumentStatus.DRAFT.value,
-        Document.registration_requested_at.is_not(None),
+        document.kind == DocumentKind.LETTER_OUT.value,
+        document.status == DocumentStatus.DRAFT.value,
+        document.registration_requested_at.is_not(None),
     )
 
 

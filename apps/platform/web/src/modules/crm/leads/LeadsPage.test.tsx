@@ -1,6 +1,7 @@
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it } from "vitest";
 
+import { resetMarks, setMark } from "../../../mocks/doNotWorkMarks";
 import { resetLeads } from "../../../mocks/fixtures/leads";
 import { resetMessages } from "../../../mocks/fixtures/messages";
 import { panelEl, renderAt, setupBotTests, signIn } from "../../../test/botKit";
@@ -10,6 +11,7 @@ setupBotTests();
 beforeEach(() => {
   resetLeads();
   resetMessages();
+  resetMarks();
 });
 
 async function open(email: string, path = "/crm/leads") {
@@ -120,6 +122,18 @@ describe("Клиенты · Лиды (D1-2b)", () => {
       "href",
       "/crm/leads?lead=L-2041&create=1&panel=open&tab=card",
     );
+  });
+
+  it("Х-8: у клиента лида отметка «Не работать» — в карточке лида полоса с причиной", async () => {
+    setMark("1003", "ООО Рельс-Сервис Демо", {
+      reason: "Спор по оплате",
+      set_by: "Менеджер Демо",
+      set_at: "2026-11-23T09:30:00Z",
+      until: null,
+    });
+    await open("manager@demo.example", "/crm/leads?lead=L-2033&panel=open&tab=card");
+    const panel = await panelEl();
+    expect(await within(panel).findByText("С компанией не работаем: Спор по оплате")).toBeVisible();
   });
 
   it("карточка лида: «Что известно от бота» только у лида из бота, у звонка — нейтрально; согласие по каналу (СЦ-6)", async () => {

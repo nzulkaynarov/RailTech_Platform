@@ -8,11 +8,15 @@ import type {
   ChangePasswordIn,
   LoginIn,
   MeUpdate,
+  EnrollIn,
   SecondFactorLoginIn,
 } from "../shared/api/generated/model";
 import {
+  acceptEnrollment,
   acceptSecondFactor,
   challengeOf,
+  enrollChallengeOf,
+  needsEnrollment,
   needsSecondFactor,
   secondFactorHandlers,
 } from "./secondFactor";
@@ -51,6 +55,7 @@ import { resolutionTemplatesHandlers } from "./resolutionTemplates";
 import { sentMailHandlers } from "./sentMail";
 import { templateCatalogHandlers } from "./templateCatalog";
 import { signingHandlers } from "./signing";
+import { zonesHandlers } from "./zones";
 import { edsSigningHandlers } from "./edsSigning";
 import { erpCalcHandlers } from "./erpCalc";
 import { erpStockHandlers } from "./erpStock";
@@ -134,6 +139,17 @@ export const handlers = [
     if (isEmployeeDisabled(user.id)) {
       return failure(401, "INVALID_CREDENTIALS", "Неверная почта или пароль", "crm");
     }
+    // ДВ-4б: фактор обязателен по разделам доступа, но не настроен — 202 с настройкой, сессии нет
+    if (needsEnrollment(user)) {
+      return HttpResponse.json(
+        {
+          second_factor_required: true,
+          challenge: enrollChallengeOf(user.id),
+          enrollment_required: true,
+        },
+        { status: 202 },
+      );
+    }
     // ДВ-4: второй фактор включён и устройство не запомнено — 202 без сессии
     if (needsSecondFactor(user.id)) {
       return HttpResponse.json(
@@ -158,6 +174,21 @@ export const handlers = [
     const user = findUserById(result.userId);
     const session = user ? buildSession(startSession(user)) : null;
     return session ? HttpResponse.json(session) : failure(500, "INTERNAL_ERROR", "Нет сессии");
+  }),
+  http.post("*/auth/login/enroll", async ({ request }) => {
+    const result = acceptEnrollment((await request.json()) as EnrollIn);
+    if ("error" in result) {
+      return failure(
+        401,
+        result.error,
+        result.error === "SECOND_FACTOR_INVALID" ? "Неверный код." : "Время вышло.",
+        "crm",
+      );
+    }
+    const session = buildSession(startSession(result.user));
+    return session
+      ? HttpResponse.json({ ...session, backup_codes: result.backup })
+      : failure(500, "INTERNAL_ERROR", "Нет сессии");
   }),
   ...secondFactorHandlers,
   ...calendarLinkHandlers,
@@ -246,6 +277,7 @@ export const handlers = [
   ...sentMailHandlers,
   ...edsTemplatesHandlers,
   ...signingHandlers,
+  ...zonesHandlers, // ЕВ-З: реестр зон ответственности
   ...edsSigningHandlers,
   ...letterIntakeHandlers,
   ...edsApprovalsHandlers,

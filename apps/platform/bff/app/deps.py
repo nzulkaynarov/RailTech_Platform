@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from typing import Annotated, Any
 
 import httpx
-from fastapi import Depends, Request
+from fastapi import Depends, Header, Request
 from redis.asyncio import Redis
 
 from app.auth import AuthService, LoginLimiter
@@ -157,6 +157,8 @@ async def get_authed(request: Request, service: AuthServiceDep) -> Authed:
 
 
 AuthedDep = Annotated[Authed, Depends(get_authed)]
+# Свежий код второго фактора (ДВ-4б): токен от `POST /me/second-factor/step-up`, действует 5 минут.
+StepUpDep = Annotated[str | None, Header(alias="X-Step-Up-Token")]
 
 
 def require(resource: str, need: Need = "read") -> Callable[[Authed], Awaitable[Authed]]:

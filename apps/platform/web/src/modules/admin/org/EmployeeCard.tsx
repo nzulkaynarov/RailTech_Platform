@@ -5,6 +5,7 @@ import { AssignRoleForm } from "../../../features/assign-role/AssignRoleForm";
 import { DisableEmployee } from "../../../features/assign-role/DisableEmployee";
 import { RetryErpSync } from "../../../features/assign-role/RetryErpSync";
 import { ResetPassword } from "../../../features/reset-password/ResetPassword";
+import { ResetSecondFactor } from "../../../features/reset-second-factor/ResetSecondFactor";
 import { ResendInvite } from "../../../features/invite-employee/ResendInvite";
 import { erpAttention, erpSyncReason } from "../../../entities/employee/status";
 import type { Employee } from "../../../shared/api/generated/model";
@@ -91,6 +92,7 @@ export function EmployeeCard({ employee, selfId, canEdit, otherActiveAdmins }: E
           />
           {employee.status === "invited" ? <ResendInvite employee={employee} /> : null}
           <ResetPassword employee={employee} selfId={selfId} />
+          <ResetSecondFactor employee={employee} selfId={selfId} />
           <DisableEmployee
             employee={employee}
             selfId={selfId}

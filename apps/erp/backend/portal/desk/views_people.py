@@ -20,6 +20,7 @@ from portal.desk.serializers import (
     DeskCounterparty,
     DeskCounterpartyRequisitesIn,
     DeskCounterpartyRoleIn,
+    DeskDoNotWorkIn,
     DeskOrganizationIn,
     DeskOrganizationPage,
     DeskOrganizationPeople,
@@ -244,6 +245,8 @@ class OrganizationsDeskViewSet(DeskViewSet):
         "create": SELF_SERVICE,
         # СУЩ-2.7: реквизиты контрагента правит менеджер или снабжение — их ведёт ERP
         "partial_update": ("deal.manage", "supply.manage"),
+        # Х-8: «Не работать» ставит и снимает тот же, кто правит реквизиты контрагента
+        "do_not_work": ("deal.manage", "supply.manage"),
     }
 
     def _company(self, request, pk) -> tuple[Company, set]:
@@ -393,4 +396,43 @@ class OrganizationsDeskViewSet(DeskViewSet):
         except ItemError as error:
             return refuse(error)
         # снятая роль может вывести компанию из списка контрагентов — карточка отдаётся по прежним границам
+        return Response(counterparty.card(company, client_ids, request.user))
+
+    @extend_schema(
+        methods=["POST"],
+        operation_id="parties_organizations_do_not_work_set",
+        summary="Mark a counterparty «do not work»",
+        description=(
+            "Х-8. Отметить «Не работать»: причина обязательна (400 `REASON_REQUIRED`), дата окончания по желанию (в прошлом — "
+            "400 `UNTIL_PAST`); повторная отметка заменяет прежнюю. Право `deal.manage` или `supply.manage`. Новые КП, договор, "
+            "заказ поставщику и заявка у такой компании отказываются 409 `COMPANY_DO_NOT_WORK` с причиной и тем, кто "
+            "отметил; приглашения её контактов в кабинет не уходят; документы в работе не отменяются, кабинет читает как "
+            "прежде. Действие пишется в журнал, CRM получает отметку в снимке `company.updated`. Ответ — карточка контрагента."
+        ),
+        request=DeskDoNotWorkIn,
+        responses={200: DeskCounterparty, 400: REFUSED, 403: FORBIDDEN, 404: NOT_FOUND},
+        tags=["Parties"],
+    )
+    @extend_schema(
+        methods=["DELETE"],
+        operation_id="parties_organizations_do_not_work_clear",
+        summary="Remove the «do not work» mark",
+        description="Х-8. Снять отметку «Не работать»; отметки нет — ничего не меняется (повтор безопасен). Тот же доступ.",
+        request=None,
+        responses={200: DeskCounterparty, 403: FORBIDDEN, 404: NOT_FOUND},
+        tags=["Parties"],
+    )
+    @action(detail=True, methods=["post", "delete"], url_path="do-not-work", url_name="do-not-work")
+    def do_not_work(self, request, pk=None):
+        company, client_ids = self._company(request, pk)
+        if request.method == "DELETE":
+            counterparty.clear_do_not_work(company, actor=request.user)
+        else:
+            body = DeskDoNotWorkIn(data=request.data)
+            body.is_valid(raise_exception=True)
+            try:
+                counterparty.set_do_not_work(company, body.validated_data, actor=request.user)
+            except ItemError as error:
+                return refuse(error)
+        company.refresh_from_db()
         return Response(counterparty.card(company, client_ids, request.user))

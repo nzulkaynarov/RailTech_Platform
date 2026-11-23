@@ -15,6 +15,7 @@ import {
   serviceRows,
   signingRows,
   ticketRows,
+  zoneRows,
 } from "./model";
 
 /** «Состояние» (ЕВ-2а): строка «Требует внимания» выводится из факта — правим факт и ждём, что строка появится или уйдёт. */
@@ -161,6 +162,15 @@ describe("службы", () => {
     expect(rows.map((r) => [r.severity, r.to])).toEqual([
       ["fail", "/admin/telegram"],
       ["warn", "/admin/integrations?card=erp&panel=open"],
+    ]);
+  });
+});
+
+describe("зоны без ответственного", () => {
+  it("строка только если такие зоны есть; ведёт на «Зоны ответственности»", () => {
+    expect(zoneRows(0)).toEqual([]);
+    expect(zoneRows(2)).toMatchObject([
+      { kind: "zones", to: "/admin/zones", page: "zones", params: { count: 2 } },
     ]);
   });
 });

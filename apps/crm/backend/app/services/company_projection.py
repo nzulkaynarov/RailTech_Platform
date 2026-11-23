@@ -14,6 +14,7 @@ from typing import Final
 import structlog
 from pydantic import ValidationError
 from rt_bus import Event
+from rt_contracts.events.erp import Company as CompanySnapshot
 from rt_contracts.events.erp import CompanyUpdatedV1
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -29,6 +30,17 @@ COMPANY_UPDATED: Final = "uz.railtech.erp.company.updated.v1"
 
 class CompanySnapshotError(Exception):
     """Снимок не читается: шина повторит обработку, затем пометит запись `failed`."""
+
+
+def _apply_do_not_work(client: Client, snapshot: CompanySnapshot) -> None:
+    """Х-8: отметка «Не работать» — факты из снимка; поля нет (прежний издатель) — не меняется."""
+    if "do_not_work" not in snapshot.model_fields_set:
+        return
+    mark = snapshot.do_not_work
+    client.do_not_work_reason = mark.reason.strip()[:1000] if mark else None
+    client.do_not_work_by = (mark.set_by or "").strip()[:255] or None if mark else None
+    client.do_not_work_at = mark.set_at if mark else None
+    client.do_not_work_until = mark.until if mark else None
 
 
 async def apply(session: AsyncSession, event: Event) -> int:
@@ -63,6 +75,7 @@ async def apply(session: AsyncSession, event: Event) -> int:
         changed = [field for field, value in wanted.items() if getattr(client, field) != value]
         for field in changed:
             setattr(client, field, wanted[field])
+        _apply_do_not_work(client, snapshot)
         client.erp_requisites_at = at
         if changed:
             changed_total += 1

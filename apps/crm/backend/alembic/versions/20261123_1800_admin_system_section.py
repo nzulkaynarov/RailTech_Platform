@@ -7,7 +7,7 @@
 Downgrade снимает раздел и тоже поднимает версию.
 
 Revision ID: 5a8e2c1f7b30
-Revises: 7b1e3c9a52d4
+Revises: cae4f42de3cd
 Create Date: 2026-11-23 18:00:00+00:00
 """
 
@@ -17,7 +17,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision: str = "5a8e2c1f7b30"
-down_revision: str | None = "7b1e3c9a52d4"
+down_revision: str | None = "cae4f42de3cd"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

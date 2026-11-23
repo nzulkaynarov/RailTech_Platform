@@ -420,3 +420,15 @@
   max-width: 100%;
   overflow-x: auto;
 }
+
+/* Подбор МХИК: название позиции целиком, под ним путь по группам — не в одну обрезанную строку. */
+.pf-mxik-popup .ant-select-item-option-content {
+  white-space: normal;
+}
+.pf-mxik-hit {
+  display: block;
+}
+.pf-mxik-path {
+  display: block;
+  margin-top: 2px;
+}

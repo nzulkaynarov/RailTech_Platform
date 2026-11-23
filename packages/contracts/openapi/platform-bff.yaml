@@ -462,6 +462,10 @@ paths:
         `SecondFactorChallenge` без сессии; код — `POST /auth/login/second-factor`. С меткой `pf_device` (HttpOnly,
         путь `/api/v1/auth`, 30 дней — ставит второй шаг с `remember_device`) код не спрашивается, пока не сменились
         пароль и сам фактор.
+
+        Обязательный фактор (ДВ-4б): у держателя разделов с деньгами и доступом (полные `eds.payments`, `eds.memo.approve`,
+        `eds.drafts`, `admin` — по разделам, не по названию роли) без настроенного фактора ответ — тоже 202 с
+        `enrollment_required = true`: сессии нет, настройка — `POST /auth/login/enroll/setup` и `POST /auth/login/enroll`.
       security: []
       requestBody:
         required: true
@@ -513,6 +517,84 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+
+  /auth/login/enroll/setup:
+    post:
+      tags: [auth]
+      operationId: loginEnrollSetup
+      summary: Настройка обязательного второго фактора при входе — секрет и адрес для QR (ДВ-4б)
+      description: >-
+        Без сессии: `challenge` из ответа 202 на `/auth/login` с `enrollment_required` (живёт 15 минут). Секрет для
+        приложения-аутентификатора и адрес `otpauth://`; запись подписана названием компании. Время вышло — 401
+        `SECOND_FACTOR_EXPIRED`, войти заново. Тот же лимит попыток по IP, что у входа.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EnrollSetupIn'
+      responses:
+        '200':
+          description: Секрет
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SecondFactorSetup'
+        '401':
+          description: '`SECOND_FACTOR_EXPIRED` — время на настройку вышло'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /auth/login/enroll:
+    post:
+      tags: [auth]
+      operationId: loginEnroll
+      summary: Включить обязательный второй фактор кодом и войти (ДВ-4б)
+      description: >-
+        Без сессии: `challenge` и код из приложения. Код включает фактор и открывает сессию одной операцией; ответ — сессия и
+        восемь резервных кодов, показываются один раз (`Cache-Control: no-store`). Неверный код — 401
+        `SECOND_FACTOR_INVALID` (неверные коды считает CRM: после десяти — 423 `ACCOUNT_LOCKED`); время вышло — 401
+        `SECOND_FACTOR_EXPIRED`.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EnrollIn'
+      responses:
+        '200':
+          description: Фактор включён, вошёл
+          headers:
+            Set-Cookie:
+              description: '`rt_pf_session` и `rt_pf_csrf`'
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnrolledSession'
+        '401':
+          description: '`SECOND_FACTOR_INVALID` — неверный код; `SECOND_FACTOR_EXPIRED` — время вышло'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '423':
+          description: '`ACCOUNT_LOCKED`'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
 
   /auth/login/second-factor:
     post:
@@ -983,7 +1065,9 @@ paths:
       tags: [me]
       operationId: getSecondFactor
       summary: Второй фактор входа — состояние (ДВ-4)
-      description: Свой фактор; доступно каждому вошедшему сотруднику (CRM `/me/second-factor`).
+      description: >-
+        Свой фактор; доступно каждому вошедшему сотруднику (CRM `/me/second-factor`). `required` — фактор обязателен по
+        разделам доступа сотрудника (ДВ-4б).
       responses:
         '200':
           description: Состояние
@@ -1051,12 +1135,53 @@ paths:
         '422':
           $ref: '#/components/responses/ValidationFailed'
 
+  /me/second-factor/step-up:
+    post:
+      tags: [me]
+      operationId: stepUpSecondFactor
+      summary: Свежий код перед чувствительным действием (ДВ-4б)
+      description: >-
+        Верный код приложения или резервный даёт токен на 5 минут — его фронт шлёт заголовком `X-Step-Up-Token` при выдаче
+        роли и подтверждении новых банковских реквизитов. Неверный код — 422 `VALIDATION_FAILED`
+        (`second_factor_code_invalid`) и в счёт блокировки; фактор не включён — 403 `STEP_UP_REQUIRED`
+        (`details.reason = second_factor_not_enrolled`).
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SecondFactorCodeIn'
+      responses:
+        '200':
+          description: Код принят
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StepUp'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '423':
+          description: '`ACCOUNT_LOCKED`'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
   /me/second-factor/disable:
     post:
       tags: [me]
       operationId: disableSecondFactor
       summary: Выключить второй фактор (ДВ-4)
-      description: Кодом из приложения или резервным. Неверный — 422 `VALIDATION_FAILED` (`second_factor_code_invalid`).
+      description: >-
+        Кодом из приложения или резервным (он же «свежий код»). Неверный — 422 `VALIDATION_FAILED`
+        (`second_factor_code_invalid`). Фактор обязателен по разделам доступа (`required` в состоянии) — 409 `CONFLICT`
+        (`details.reason = second_factor_required`), отключить нельзя (ДВ-4б).
       parameters:
         - $ref: '#/components/parameters/CsrfToken'
       requestBody:
@@ -2730,11 +2855,20 @@ paths:
         - name: cursor
           in: query
           required: false
+          description: Курсор из `next_cursor`; привязан к порядку `sort`, при смене порядка начинают с первой страницы
           schema: {type: string, maxLength: 2000}
         - name: limit
           in: query
           required: false
           schema: {type: integer, minimum: 1, maximum: 100, default: 50}
+        - name: sort
+          in: query
+          required: false
+          description: >-
+            Порядок щелчком по шапке (Х-15б): `number`, `subject`, `status`, `amount`, `created`; `-` в начале — по убыванию.
+            Пустые значения (нет номера, нет суммы) — в конце, равные — по id. `number` и `subject` — строковый порядок: номер
+            непрозрачен, число в нём не разбирается. Другое поле — 422. Не задан — от новых.
+          schema: {type: string, pattern: '^-?(number|subject|status|amount|created)$'}
       responses:
         '200':
           description: Страница документов
@@ -4320,6 +4454,15 @@ paths:
           in: query
           required: false
           schema: {type: integer, minimum: 0, maximum: 100000, default: 0}
+        - name: sort
+          in: query
+          required: false
+          description: >-
+            Порядок щелчком по шапке (Х-15б): `number`, `client`, `amount`, `issued`, `due`, `status` (слово статуса строки);
+            `-` в начале — по убыванию. Пустые значения (нет срока, нет даты выставления) — в конце, равные — по id. `number` —
+            строковый порядок: у счёта нет сохранённого порядкового номера, префикс настраивается и не разбирается. Другое
+            поле — 422. Не задан — порядок вкладки.
+          schema: {type: string, pattern: '^-?(number|client|amount|issued|due|status)$'}
       responses:
         '200':
           description: Счета вкладки и счётчики
@@ -4503,8 +4646,9 @@ paths:
       tags: [eds-payments]
       operationId: approveBankChangeRequest
       summary: 'Счета и оплаты · Смена реквизитов: подтвердить'
-      description: ERP `POST finance/bank-changes/{id}/approve/` — право `finance.payment`. Применяет новые реквизиты компании и уведомляет её администраторов и основной контакт по всем каналам. Повтор на подтверждённом запросе — тот же ответ без второго эффекта. Отклонённый запрос — 409 `bank_change_not_pending`; компания в архиве — 409 `company_archived`; реквизиты изменились после подачи — 409 `bank_change_stale`.
+      description: ERP `POST finance/bank-changes/{id}/approve/` — право `finance.payment`. Нужен свежий код второго фактора (заголовок `X-Step-Up-Token`, ДВ-4б) — без него 403 `STEP_UP_REQUIRED`, ERP не вызывается. Применяет новые реквизиты компании и уведомляет её администраторов и основной контакт по всем каналам. Повтор на подтверждённом запросе — тот же ответ без второго эффекта. Отклонённый запрос — 409 `bank_change_not_pending`; компания в архиве — 409 `company_archived`; реквизиты изменились после подачи — 409 `bank_change_stale`.
       parameters:
+        - $ref: '#/components/parameters/StepUpToken'
         - $ref: '#/components/parameters/CsrfToken'
         - {name: id, in: path, required: true, description: Id запроса, schema: {$ref: '#/components/schemas/CompanyItemRef'}}
       responses:
@@ -7006,10 +7150,11 @@ paths:
       summary: Добавить сотрудника без почты — временный пароль показывается один раз
       description: >-
         Раздел `admin` — полный. Для тех, кому письмо не придёт (почта ещё не подключена, у сотрудника нет почты на этом адресе).
-        BFF создаёт пользователя в CRM с ролями Платформы (CRM `/users`) и отдаёт **временный пароль в этом ответе — единственный
+        Роль при создании — выдача роли: нужен свежий код второго фактора (`X-Step-Up-Token`, ДВ-4б). BFF создаёт пользователя в CRM с ролями Платформы (CRM `/users`) и отдаёт **временный пароль в этом ответе — единственный
         раз**: BFF не пишет его в журнал, не кэширует и не хранит; ответ — `Cache-Control: no-store`. Сотрудник при первом входе
         обязан сменить пароль. Потерянный пароль не восстановить — выдать новый: `POST /admin/users/{id}/temporary-password`.
       parameters:
+        - $ref: '#/components/parameters/StepUpToken'
         - $ref: '#/components/parameters/CsrfToken'
       requestBody:
         required: true
@@ -7044,16 +7189,55 @@ paths:
         '503':
           $ref: '#/components/responses/BackendUnavailable'
 
+  /admin/users/{id}/second-factor/reset:
+    post:
+      tags: [admin]
+      operationId: resetEmployeeSecondFactor
+      summary: Сбросить сотруднику второй фактор (потерян телефон; ДВ-4б)
+      description: >-
+        Раздел `admin` — полный. Причина (от 3 знаков) пишется в журнал CRM, сессии сотрудника закрываются, при следующем
+        входе он настраивает фактор заново (если он обязателен по его разделам) или входит по паролю. Себе — 409 `CONFLICT`
+        (`details.reason = second_factor_self_reset`): свой фактор сбрасывает другой администратор. Фактор не включён — 422.
+      parameters:
+        - $ref: '#/components/parameters/EmployeeId'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SecondFactorResetIn'
+      responses:
+        '204':
+          description: Сброшен
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: '`CONFLICT` — себе сбросить нельзя'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
   /admin/users/invite:
     post:
       tags: [admin]
       operationId: inviteEmployee
       summary: Пригласить сотрудника по почте
       description: >-
-        BFF создаёт пользователя в CRM с ролями Платформы (`role_ids`) и отправляет приглашение (CRM `/users`,
+        Роль при создании — выдача роли: нужен свежий код второго фактора (`X-Step-Up-Token`, ДВ-4б). BFF создаёт пользователя в CRM с ролями Платформы (`role_ids`) и отправляет приглашение (CRM `/users`,
         `/users/{id}/invite`); провижининг в ERP делает CRM. Раздел `admin` — полный. Письмо не ушло — 409 `CONFLICT` с
         `details.invite = not_sent` и `details.employee_id` (сотрудник создан; повтор — `POST /admin/users/{id}/invite`).
       parameters:
+        - $ref: '#/components/parameters/StepUpToken'
         - $ref: '#/components/parameters/CsrfToken'
       requestBody:
         required: true
@@ -7225,13 +7409,16 @@ paths:
       operationId: updateEmployee
       summary: Роли, должность, отключение — единое место выдачи ролей обеих систем
       description: >-
-        Раздел `admin` — полный. Роли — полный новый набор `role_ids`; права в CRM и ERP вычисляет CRM. Снять последнего
+        Раздел `admin` — полный. Роли — полный новый набор `role_ids`; права в CRM и ERP вычисляет CRM. Выдача роли (появилась
+        роль, которой не было) требует свежий код второго фактора (`X-Step-Up-Token`, ДВ-4б) — иначе 403 `STEP_UP_REQUIRED`;
+        снятие роли и прочие правки кода не требуют. Снять последнего
         активного администратора или директора (роль или отключение) нельзя — 409 `LAST_ADMIN` / `LAST_DIRECTOR`. У сотрудника
         есть лиды в работе, а изменение отнимает у него работу с лидами, — 409 `CONFLICT` с
         `details.reason = user_has_active_leads`; повтор с `transfer_to_user_id` передаёт лиды коллеге. Пустой набор ролей —
         422 `ROLES_REQUIRED` (0.6.0): у сотрудника хотя бы одна роль, закрыть доступ — `is_active = false`.
       parameters:
         - $ref: '#/components/parameters/EmployeeId'
+        - $ref: '#/components/parameters/StepUpToken'
         - $ref: '#/components/parameters/CsrfToken'
       requestBody:
         required: true
@@ -7485,6 +7672,187 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+
+  /admin/responsibility-zones:
+    get:
+      tags: [admin]
+      operationId: listResponsibilityZones
+      summary: Зоны ответственности (Настройки · Люди и доступ) — с людьми и проблемами по фактам
+      description: >-
+        Реестр «зона → ответственный → замещающий → куратор» (ЕВ-З): каждая зона — запись с основанием, сроком и журналом
+        изменений в CRM. `problems` считается при каждом чтении: нет ответственного, у ответственного нет разделов зоны
+        (`severity = warning`, не запрет), ответственный или замещающий не действует, срок вышел. Раздел `admin` — от
+        чтения (администратор и директор). Зоны не маршрутизируют уведомления и согласования.
+      responses:
+        '200':
+          description: Зоны в порядке заведения
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ZoneList'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags: [admin]
+      operationId: createResponsibilityZone
+      summary: Завести зону из существующих разделов прав
+      description: >-
+        Только `admin: full`. Разделы — из каталога прав, неизвестный — 422; повтор `code` — 409 `CONFLICT`.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ZoneCreate'
+      responses:
+        '201':
+          description: Создана, людей в ней нет
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Zone'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: '`CONFLICT` — зона с таким `code` уже есть'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+
+  /admin/responsibility-zones/summary:
+    get:
+      tags: [admin]
+      operationId: getResponsibilityZonesSummary
+      summary: Сколько действующих зон без ответственного — для сигналов Настроек и Главной
+      description: >-
+        Раздел `company.settings: full` (администратор и директор); без списка людей.
+      responses:
+        '200':
+          description: Числа по действующим зонам
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ZoneSummary'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /admin/responsibility-zones/{id}:
+    get:
+      tags: [admin]
+      operationId: getResponsibilityZone
+      summary: Зона ответственности
+      parameters:
+        - $ref: '#/components/parameters/ZoneIdPath'
+      responses:
+        '200':
+          description: Зона
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Zone'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags: [admin]
+      operationId: updateResponsibilityZone
+      summary: Назначить ответственного, замещающего и куратора, указать основание и срок
+      description: >-
+        Раздел `company.settings: full` (администратор и директор). Не присланное поле не меняется, `null` снимает значение.
+        Сотрудник должен действовать, замещающий — другой человек, чем ответственный (422); у выключенной зоны людей не
+        меняют — 409 `CONFLICT`. Каждое изменение пишется в журнал CRM с «до» и «после».
+      parameters:
+        - $ref: '#/components/parameters/ZoneIdPath'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ZoneUpdate'
+      responses:
+        '200':
+          description: Зона после изменения
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Zone'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: '`CONFLICT` — зона выключена'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+
+  /admin/responsibility-zones/{id}/deactivate:
+    post:
+      tags: [admin]
+      operationId: deactivateResponsibilityZone
+      summary: Выключить зону — не удаляется, назначения и журнал остаются
+      description: >-
+        Только `admin: full`. У выключенной зоны проблем нет, в сигналах она не считается.
+      parameters:
+        - $ref: '#/components/parameters/ZoneIdPath'
+        - $ref: '#/components/parameters/CsrfToken'
+      responses:
+        '200':
+          description: Зона выключена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Zone'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /admin/responsibility-zones/{id}/activate:
+    post:
+      tags: [admin]
+      operationId: activateResponsibilityZone
+      summary: Включить выключенную зону
+      description: >-
+        Только `admin: full`.
+      parameters:
+        - $ref: '#/components/parameters/ZoneIdPath'
+        - $ref: '#/components/parameters/CsrfToken'
+      responses:
+        '200':
+          description: Зона включена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Zone'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
   /admin/roles/{id}/journal:
     get:
@@ -14461,6 +14829,68 @@ paths:
           $ref: '#/components/responses/NotFound'
         '503':
           $ref: '#/components/responses/BackendUnavailable'
+  /people/counterparties/{id}/do-not-work:
+    post:
+      tags: [chats]
+      operationId: setCounterpartyDoNotWork
+      summary: 'Карточка контрагента: «Не работать»'
+      description: >-
+        ERP `POST parties/organizations/{id}/do-not-work/` (Х-8). Причина обязательна, дата окончания по желанию; повторная
+        отметка заменяет прежнюю. Новые КП, договор, заказ поставщику и заявка у такой компании ERP отказывает 409 `CONFLICT`
+        (`details.reason = company_do_not_work`, `details.do_not_work` — причина и кто отметил); приглашения её контактов в
+        кабинет не уходят; документы в работе не отменяются. Отметка попадает в журнал и в CRM снимком компании. Раздел
+        `crm.clients` или `erp.stock` — полный; в ERP — право `deal.manage` или `supply.manage`, иначе 403.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - {name: id, in: path, required: true, schema: {$ref: '#/components/schemas/CompanyItemRef'}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DoNotWorkIn'
+      responses:
+        '200':
+          description: Карточка с отметкой
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CounterpartyCard'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+    delete:
+      tags: [chats]
+      operationId: clearCounterpartyDoNotWork
+      summary: 'Карточка контрагента: «Снова работать»'
+      description: >-
+        ERP `DELETE parties/organizations/{id}/do-not-work/` (Х-8): снять отметку; повтор безопасен. Тот же доступ, что у
+        «Не работать». Запись в журнале и снимок в CRM — как при установке.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - {name: id, in: path, required: true, schema: {$ref: '#/components/schemas/CompanyItemRef'}}
+      responses:
+        '200':
+          description: Карточка без отметки
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CounterpartyCard'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
   /people/counterparties/{id}/roles:
     post:
       tags: [chats]
@@ -16001,6 +16431,14 @@ components:
       description: Id роли Платформы (CRM)
       schema:
         $ref: '#/components/schemas/RoleId'
+    ZoneIdPath:
+      name: id
+      in: path
+      required: true
+      description: Id зоны ответственности (CRM)
+      schema:
+        type: string
+        pattern: '^[1-9][0-9]*$'
     RoleQuery:
       name: role
       in: query
@@ -16094,6 +16532,16 @@ components:
       schema:
         type: string
         minLength: 16
+    StepUpToken:
+      name: X-Step-Up-Token
+      in: header
+      required: false
+      description: >-
+        Свежий код второго фактора (ДВ-4б): токен из `POST /me/second-factor/step-up`, действует 5 минут. Нужен при выдаче роли и
+        подтверждении новых банковских реквизитов; без него или с просроченным — 403 `STEP_UP_REQUIRED`
+        (`details.reason = second_factor_not_enrolled` — фактор ещё не включён)
+      schema:
+        type: string
     KbDocumentId:
       name: id
       in: path
@@ -16473,7 +16921,7 @@ components:
       properties:
         code:
           type: string
-          description: Стабильный код (`INVALID_CREDENTIALS`, `SESSION_EXPIRED`, `CSRF_FAILED`, `FORBIDDEN`, `NOT_FOUND`, `VALIDATION_FAILED`, `TOO_MANY_REQUESTS`, `BACKEND_UNAVAILABLE`, `NO_PLATFORM_ROLE`, `USER_DISABLED`, `ACCOUNT_LOCKED`, `CONFLICT`, `WRONG_PASSWORD`, `EMAIL_EXISTS`, `LAST_ADMIN`, `LAST_DIRECTOR`, `ROLE_IN_USE`, `ROLE_SYSTEM`, `ROLES_REQUIRED`, `NOT_CONFIGURED`, `SECRETS_KEY_MISSING`, `SERVICE_NOT_SWITCHABLE`, `INTEGRATION_FAILED`, `PAYLOAD_TOO_LARGE`, `UNSUPPORTED_MEDIA_TYPE`, `COMPANY_NOT_SET`, `SETUP_DONE`, `SETUP_CODE_INVALID`, `SETUP_CODE_EXPIRED`, `SETUP_LOCKED`, `OWN_COMPANY_ALREADY_EXISTS`, `ERP_NOT_CONNECTED`, `INTERNAL_ERROR`, `BAD_REQUEST`, `METHOD_NOT_ALLOWED`, `HTTP_<статус>`)
+          description: Стабильный код (`INVALID_CREDENTIALS`, `SESSION_EXPIRED`, `CSRF_FAILED`, `FORBIDDEN`, `NOT_FOUND`, `VALIDATION_FAILED`, `TOO_MANY_REQUESTS`, `BACKEND_UNAVAILABLE`, `NO_PLATFORM_ROLE`, `USER_DISABLED`, `ACCOUNT_LOCKED`, `CONFLICT`, `WRONG_PASSWORD`, `EMAIL_EXISTS`, `LAST_ADMIN`, `LAST_DIRECTOR`, `ROLE_IN_USE`, `ROLE_SYSTEM`, `ROLES_REQUIRED`, `STEP_UP_REQUIRED`, `NOT_CONFIGURED`, `SECRETS_KEY_MISSING`, `SERVICE_NOT_SWITCHABLE`, `INTEGRATION_FAILED`, `PAYLOAD_TOO_LARGE`, `UNSUPPORTED_MEDIA_TYPE`, `COMPANY_NOT_SET`, `SETUP_DONE`, `SETUP_CODE_INVALID`, `SETUP_CODE_EXPIRED`, `SETUP_LOCKED`, `OWN_COMPANY_ALREADY_EXISTS`, `ERP_NOT_CONNECTED`, `INTERNAL_ERROR`, `BAD_REQUEST`, `METHOD_NOT_ALLOWED`, `HTTP_<статус>`)
           examples: [SESSION_EXPIRED]
         message:
           type: string
@@ -16799,6 +17247,148 @@ components:
         updated_at:
           type: string
           format: date-time
+
+    ZoneText:
+      type: object
+      additionalProperties: false
+      required: [ru, uz, en]
+      properties:
+        ru: {type: string}
+        uz: {type: string, description: 'Латиница нового алфавита (Ö Ğ Ş Ç, ʼ)'}
+        en: {type: string}
+
+    ZonePerson:
+      type: object
+      additionalProperties: false
+      required: [id, name, active]
+      properties:
+        id:
+          type: string
+          description: '`crm_user_id` сотрудника'
+        name: {type: string}
+        position: {type: string}
+        active:
+          type: boolean
+          description: Сотрудник действует (не отключён)
+
+    ZoneProblem:
+      type: object
+      additionalProperties: false
+      required: [code, severity]
+      properties:
+        code:
+          type: string
+          enum: [no_responsible, responsible_lacks_permissions, responsible_inactive, deputy_inactive, term_expired]
+        severity:
+          type: string
+          enum: [problem, warning]
+          description: '`warning` — только «у ответственного нет разделов зоны»: не запрет, а подсказка'
+        sections:
+          type: array
+          items: {type: string}
+          description: Ключи разделов каталога, которых не хватает ответственному (только `responsible_lacks_permissions`)
+
+    Zone:
+      type: object
+      additionalProperties: false
+      required: [id, code, name, description, sections, basis, active, problems, updated_at]
+      properties:
+        id: {type: string, pattern: '^[1-9][0-9]*$'}
+        code:
+          type: string
+          description: Стабильный слаг зоны (не меняется)
+        name:
+          $ref: '#/components/schemas/ZoneText'
+        description:
+          $ref: '#/components/schemas/ZoneText'
+        sections:
+          type: array
+          items: {type: string}
+          description: Ключи разделов каталога прав, к которым относится зона
+        responsible:
+          $ref: '#/components/schemas/ZonePerson'
+        deputy:
+          $ref: '#/components/schemas/ZonePerson'
+        curator:
+          $ref: '#/components/schemas/ZonePerson'
+        basis:
+          type: string
+          description: Основание назначения — номер и дата приказа
+        valid_from: {type: string, format: date}
+        valid_to: {type: string, format: date}
+        active: {type: boolean}
+        problems:
+          type: array
+          items:
+            $ref: '#/components/schemas/ZoneProblem'
+        updated_at: {type: string, format: date-time}
+
+    ZoneList:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Zone'
+
+    ZoneSummary:
+      type: object
+      additionalProperties: false
+      required: [zones_total, without_responsible, with_problems]
+      properties:
+        zones_total: {type: integer, minimum: 0}
+        without_responsible:
+          type: integer
+          minimum: 0
+          description: Действующих зон без действующего ответственного
+        with_problems: {type: integer, minimum: 0}
+
+    ZoneCreate:
+      type: object
+      additionalProperties: false
+      required: [code, name, sections]
+      properties:
+        code:
+          type: string
+          pattern: '^[a-z][a-z0-9_]{1,39}$'
+        name:
+          $ref: '#/components/schemas/ZoneText'
+        description:
+          type: object
+          additionalProperties: false
+          properties:
+            ru: {type: string, maxLength: 1000}
+            uz: {type: string, maxLength: 1000}
+            en: {type: string, maxLength: 1000}
+        sections:
+          type: array
+          minItems: 1
+          maxItems: 24
+          uniqueItems: true
+          items: {type: string}
+          description: Ключи разделов каталога прав
+
+    ZoneUpdate:
+      type: object
+      additionalProperties: false
+      description: Не присланное поле не меняется, `null` снимает значение
+      properties:
+        responsible_id:
+          type: [string, 'null']
+          pattern: '^[1-9][0-9]*$'
+        deputy_id:
+          type: [string, 'null']
+          pattern: '^[1-9][0-9]*$'
+        curator_id:
+          type: [string, 'null']
+          pattern: '^[1-9][0-9]*$'
+        basis:
+          type: [string, 'null']
+          maxLength: 500
+        valid_from: {type: [string, 'null'], format: date}
+        valid_to: {type: [string, 'null'], format: date}
 
     RoleList:
       type: object
@@ -18090,7 +18680,45 @@ components:
       required: [second_factor_required, challenge]
       properties:
         second_factor_required: {type: boolean, enum: [true]}
-        challenge: {type: string, description: 'Непрозрачная строка на 5 минут для `/auth/login/second-factor`'}
+        challenge: {type: string, description: 'Непрозрачная строка на 5 минут для `/auth/login/second-factor`; при `enrollment_required` — на 15 минут для `/auth/login/enroll/*`'}
+        enrollment_required: {type: boolean, default: false, description: 'ДВ-4б: фактор обязателен по разделам доступа, но не настроен — экран настройки вместо ввода кода'}
+    EnrollSetupIn:
+      type: object
+      additionalProperties: false
+      required: [challenge]
+      properties:
+        challenge: {type: string, minLength: 1, maxLength: 2048}
+    EnrollIn:
+      type: object
+      additionalProperties: false
+      required: [challenge, code]
+      properties:
+        challenge: {type: string, minLength: 1, maxLength: 2048}
+        code: {type: string, minLength: 6, maxLength: 16, description: '6 цифр из приложения'}
+    EnrolledSession:
+      description: Сессия (как `Session`) после настройки обязательного фактора при входе; резервные коды показываются один раз
+      type: object
+      additionalProperties: false
+      required: [me, expires_at, must_change_password, backup_codes]
+      properties:
+        me:
+          $ref: '#/components/schemas/Me'
+        must_change_password: {type: boolean}
+        expires_at: {type: string, format: date-time}
+        backup_codes: {type: array, items: {type: string}}
+    StepUp:
+      type: object
+      additionalProperties: false
+      required: [token, expires_in]
+      properties:
+        token: {type: string, description: 'Для заголовка `X-Step-Up-Token`'}
+        expires_in: {type: integer, minimum: 1, description: 'Секунды (300)'}
+    SecondFactorResetIn:
+      type: object
+      additionalProperties: false
+      required: [reason]
+      properties:
+        reason: {type: string, minLength: 3, maxLength: 500, description: 'Причина — в журнале'}
     SecondFactorLoginIn:
       type: object
       additionalProperties: false
@@ -18122,6 +18750,7 @@ components:
         enabled: {type: boolean}
         enabled_at: {type: [string, 'null'], format: date-time}
         backup_codes_left: {type: integer, minimum: 0}
+        required: {type: boolean, default: false, description: 'ДВ-4б: фактор обязателен по разделам доступа — отключить нельзя'}
     SecondFactorSetup:
       type: object
       additionalProperties: false
@@ -19604,7 +20233,7 @@ components:
       properties:
         key:
           type: string
-          description: '`letters_without_resolution`, `quotes_to_approve`, `memos_to_approve`, `projects_in_work`, `leads_without_answer`…'
+          description: '`letters_without_resolution`, `quotes_to_approve`, `memos_to_approve`, `projects_in_work`, `leads_without_answer`, `zones_without_responsible` (держателям `company.settings`, пока есть зона без ответственного)…'
         label:
           type: string
         count:
@@ -20306,6 +20935,11 @@ components:
           items:
             $ref: '#/components/schemas/ProjectJournalEntry'
           type: array
+        do_not_work:
+          description: 'Х-8: у компании проекта отметка «Не работать» (причина, кто, когда) — полоса «С компанией не работаем» в карточке; документы в работе не отменяются. null — работаем'
+          oneOf:
+            - $ref: '#/components/schemas/DoNotWork'
+            - type: 'null'
       required: [number, request_number, title, client_name, step, client_status, total, due_date, manager, responsible, documents, problems, created_at, quote, contract, can_create_contract, invoices, act, act_blocker, fulfillment, delivery_lines, journal]
       additionalProperties: false
     ProjectContractActionIn:
@@ -22266,6 +22900,12 @@ components:
           minimum: 1
           maximum: 100
           description: Порог полноты карточки для публикации, %
+        catalog_require_mxik:
+          type: boolean
+          description: МХИК (ИКПУ) обязателен для публикации карточки; по умолчанию включено
+        catalog_require_hs_imported:
+          type: boolean
+          description: ТН ВЭД обязателен для ввозимого товара (страна происхождения не Узбекистан или не указана); по умолчанию включено
         fx_rate_max_age_days:
           type: integer
           minimum: 1
@@ -22355,6 +22995,12 @@ components:
           minimum: 1
           maximum: 100
           description: Порог полноты карточки для публикации, %
+        catalog_require_mxik:
+          type: boolean
+          description: МХИК (ИКПУ) обязателен для публикации карточки; по умолчанию включено
+        catalog_require_hs_imported:
+          type: boolean
+          description: ТН ВЭД обязателен для ввозимого товара (страна происхождения не Узбекистан или не указана); по умолчанию включено
         fx_rate_max_age_days:
           type: integer
           minimum: 1
@@ -27774,6 +28420,11 @@ components:
         id: {type: integer}
         name: {type: string}
         inn: {type: [string, 'null']}
+        do_not_work:
+          oneOf:
+            - $ref: '#/components/schemas/DoNotWork'
+            - type: 'null'
+          description: 'Х-8: отметка «Не работать» клиента лида — полоса в карточке лида'
 
     ClientRow:
       type: object
@@ -27787,6 +28438,7 @@ components:
         open_requests: {type: integer, minimum: 0}
         last_activity_at: {type: [string, 'null'], format: date-time}
         handoff_status: {type: [string, 'null'], enum: [pending, done, failed, null]}
+        do_not_work: {type: boolean, description: 'Х-8: у компании действует отметка «Не работать» (фильтр «Не работаем»)'}
 
     ClientList:
       type: object
@@ -27907,6 +28559,11 @@ components:
             contacts: {$ref: '#/components/schemas/SourceState'}
             requests: {$ref: '#/components/schemas/SourceState'}
             documents: {$ref: '#/components/schemas/SourceState'}
+        do_not_work:
+          oneOf:
+            - $ref: '#/components/schemas/DoNotWork'
+            - type: 'null'
+          description: 'Х-8: отметка «Не работать» компании (из ERP снимком `company.updated`) — полоса «С компанией не работаем»; нет — работаем'
 
     ClientPartnerRequest:
       type: object
@@ -28074,6 +28731,7 @@ components:
         code: {type: string, pattern: '^[0-9]{17}$'}
         name: {type: string}
         group: {type: string, description: Группа или класс классификатора}
+        path: {type: string, description: 'Путь по классификатору «группа › класс › позиция» без самого названия; пусто, если его нет'}
         unit: {type: string}
         package: {type: string}
 
@@ -28512,6 +29170,7 @@ components:
         expired_count: {type: integer, minimum: 0, description: Действующих предложений с истёкшим сроком цены}
         expiring_count: {type: integer, minimum: 0, description: Срок цены истекает в ближайшие 14 дней}
         nearest_valid_until: {type: [string, 'null'], format: date}
+        do_not_work: {type: boolean, description: 'Х-8: с поставщиком не работаем — действует отметка «Не работать»'}
     EdsAddressee:
       type: object
       additionalProperties: false
@@ -28691,6 +29350,28 @@ components:
           type: array
           items: {$ref: '#/components/schemas/CounterpartyRef'}
           description: 'Бренды, которые выпускает компания'
+        do_not_work:
+          oneOf:
+            - $ref: '#/components/schemas/DoNotWork'
+            - type: 'null'
+          description: 'Х-8: отметка «Не работать» — причина, кто и когда поставил, срок; нет — работаем'
+    DoNotWork:
+      type: object
+      additionalProperties: false
+      description: Отметка «Не работать» у контрагента (Х-8) — факты, а не флаг
+      required: [reason, set_by, set_at, until]
+      properties:
+        reason: {type: string, description: Причина — текст для коллег}
+        set_by: {type: [string, 'null'], description: 'Кто поставил отметку (имя сотрудника)'}
+        set_at: {type: string, format: date-time}
+        until: {type: [string, 'null'], format: date, description: 'До какого дня действует; null — без срока'}
+    DoNotWorkIn:
+      type: object
+      additionalProperties: false
+      required: [reason]
+      properties:
+        reason: {type: string, minLength: 1, maxLength: 1000, description: Причина — обязательный текст}
+        until: {type: [string, 'null'], format: date, description: 'Необязательная дата окончания; не раньше сегодняшнего дня'}
     CounterpartyRequisitesIn:
       type: object
       additionalProperties: false
@@ -28742,6 +29423,7 @@ components:
         expired_count: {type: integer, minimum: 0, description: Действующих предложений с истёкшим сроком цены}
         expiring_count: {type: integer, minimum: 0, description: Срок цены истекает в ближайшие 14 дней}
         nearest_valid_until: {type: [string, 'null'], format: date}
+        do_not_work: {type: boolean, description: 'Х-8: с поставщиком не работаем — действует отметка «Не работать»'}
         contact_person: {type: string}
         phone: {type: string}
         email: {type: string}

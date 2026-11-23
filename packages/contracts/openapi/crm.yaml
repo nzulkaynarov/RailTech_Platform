@@ -1282,6 +1282,10 @@ components:
           format: date-time
           title: Created At
           type: string
+        do_not_work:
+          anyOf:
+          - $ref: '#/components/schemas/DoNotWorkOut'
+          - type: 'null'
         erp_company_id:
           anyOf:
           - type: integer
@@ -1377,6 +1381,10 @@ components:
           format: date-time
           title: Created At
           type: string
+        do_not_work:
+          anyOf:
+          - $ref: '#/components/schemas/DoNotWorkOut'
+          - type: 'null'
         erp_company_id:
           anyOf:
           - type: integer
@@ -2710,6 +2718,34 @@ components:
       - codes
       title: DictionaryOrderIn
       type: object
+    DoNotWorkOut:
+      description: 'Отметка «Не работать» (Х-8): проекция компании ERP, факты как есть.'
+      properties:
+        reason:
+          title: Reason
+          type: string
+        set_at:
+          format: date-time
+          title: Set At
+          type: string
+        set_by:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Set By
+        until:
+          anyOf:
+          - format: date
+            type: string
+          - type: 'null'
+          title: Until
+      required:
+      - reason
+      - set_by
+      - set_at
+      - until
+      title: DoNotWorkOut
+      type: object
     DocumentOut:
       properties:
         client_id:
@@ -3041,6 +3077,39 @@ components:
       - erp_gained
       - erp_lost
       title: EmployeeImpactOut
+      type: object
+    EnrollRequest:
+      properties:
+        challenge:
+          maxLength: 2048
+          minLength: 1
+          title: Challenge
+          type: string
+        code:
+          maxLength: 16
+          minLength: 6
+          title: Code
+          type: string
+      required:
+      - challenge
+      - code
+      title: EnrollRequest
+      type: object
+    EnrollSetupRequest:
+      properties:
+        challenge:
+          maxLength: 2048
+          minLength: 1
+          title: Challenge
+          type: string
+        issuer:
+          default: ''
+          maxLength: 60
+          title: Issuer
+          type: string
+      required:
+      - challenge
+      title: EnrollSetupRequest
       type: object
     ErpCheckOut:
       description: 'Итог «Проверить связь»: ответ ERP `GET /api/integration/v1/health` (схема `Health`) и время.
@@ -6217,6 +6286,48 @@ components:
       - tg_user_id
       title: LinkTelegram
       type: object
+    LocalizedDescription:
+      properties:
+        en:
+          default: ''
+          maxLength: 1000
+          title: En
+          type: string
+        ru:
+          default: ''
+          maxLength: 1000
+          title: Ru
+          type: string
+        uz:
+          default: ''
+          maxLength: 1000
+          title: Uz
+          type: string
+      title: LocalizedDescription
+      type: object
+    LocalizedInput:
+      properties:
+        en:
+          maxLength: 120
+          minLength: 1
+          title: En
+          type: string
+        ru:
+          maxLength: 120
+          minLength: 1
+          title: Ru
+          type: string
+        uz:
+          maxLength: 120
+          minLength: 1
+          title: Uz
+          type: string
+      required:
+      - ru
+      - uz
+      - en
+      title: LocalizedInput
+      type: object
     LocalizedName:
       properties:
         en:
@@ -8420,6 +8531,172 @@ components:
       - document_id
       title: ResolveGap
       type: object
+    ResponsibilityZoneCreate:
+      properties:
+        code:
+          pattern: ^[a-z][a-z0-9_]{1,39}$
+          title: Code
+          type: string
+        description:
+          $ref: '#/components/schemas/LocalizedDescription'
+        name:
+          $ref: '#/components/schemas/LocalizedInput'
+        sections:
+          items:
+            type: string
+          maxItems: 24
+          minItems: 1
+          title: Sections
+          type: array
+      required:
+      - code
+      - name
+      - sections
+      title: ResponsibilityZoneCreate
+      type: object
+    ResponsibilityZoneList:
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/ResponsibilityZoneOut'
+          title: Items
+          type: array
+      required:
+      - items
+      title: ResponsibilityZoneList
+      type: object
+    ResponsibilityZoneOut:
+      properties:
+        basis:
+          title: Basis
+          type: string
+        code:
+          title: Code
+          type: string
+        curator:
+          anyOf:
+          - $ref: '#/components/schemas/ZonePerson'
+          - type: 'null'
+        deputy:
+          anyOf:
+          - $ref: '#/components/schemas/ZonePerson'
+          - type: 'null'
+        description:
+          $ref: '#/components/schemas/ZoneText'
+        id:
+          title: Id
+          type: integer
+        is_active:
+          title: Is Active
+          type: boolean
+        name:
+          $ref: '#/components/schemas/ZoneText'
+        problems:
+          items:
+            $ref: '#/components/schemas/ZoneProblemOut'
+          title: Problems
+          type: array
+        responsible:
+          anyOf:
+          - $ref: '#/components/schemas/ZonePerson'
+          - type: 'null'
+        sections:
+          items:
+            type: string
+          title: Sections
+          type: array
+        updated_at:
+          format: date-time
+          title: Updated At
+          type: string
+        valid_from:
+          anyOf:
+          - format: date
+            type: string
+          - type: 'null'
+          title: Valid From
+        valid_to:
+          anyOf:
+          - format: date
+            type: string
+          - type: 'null'
+          title: Valid To
+      required:
+      - id
+      - code
+      - name
+      - description
+      - sections
+      - responsible
+      - deputy
+      - curator
+      - basis
+      - valid_from
+      - valid_to
+      - is_active
+      - problems
+      - updated_at
+      title: ResponsibilityZoneOut
+      type: object
+    ResponsibilityZoneSummary:
+      description: Сигнал «зона без ответственного» для Настроек и Главной (без списка людей).
+      properties:
+        with_problems:
+          description: Действующих зон хотя бы с одной проблемой
+          title: With Problems
+          type: integer
+        without_responsible:
+          description: Действующих зон без действующего ответственного
+          title: Without Responsible
+          type: integer
+        zones_total:
+          description: Действующих зон
+          title: Zones Total
+          type: integer
+      required:
+      - zones_total
+      - without_responsible
+      - with_problems
+      title: ResponsibilityZoneSummary
+      type: object
+    ResponsibilityZoneUpdate:
+      description: 'Люди, основание и срок: `null` снимает значение, не присланное поле не меняется.'
+      properties:
+        basis:
+          anyOf:
+          - maxLength: 500
+            type: string
+          - type: 'null'
+          title: Basis
+        curator_user_id:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Curator User Id
+        deputy_user_id:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Deputy User Id
+        responsible_user_id:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Responsible User Id
+        valid_from:
+          anyOf:
+          - format: date
+            type: string
+          - type: 'null'
+          title: Valid From
+        valid_to:
+          anyOf:
+          - format: date
+            type: string
+          - type: 'null'
+          title: Valid To
+      title: ResponsibilityZoneUpdate
+      type: object
     ReturnToBot:
       properties:
         note:
@@ -8616,11 +8893,19 @@ components:
       title: SearchResponse
       type: object
     SecondFactorChallengeResponse:
-      description: '202 на входе: пароль верен, нужен код второго фактора (ДВ-4); сессии ещё нет.'
+      description: '202 на входе: пароль верен, нужен код второго фактора (ДВ-4); сессии ещё нет.
+
+        `enrollment_required` — фактор обязателен по разделам доступа, но не настроен (ДВ-4б):
+
+        `challenge` годится только для `/auth/login/enroll/*`.'
       properties:
         challenge:
           title: Challenge
           type: string
+        enrollment_required:
+          default: false
+          title: Enrollment Required
+          type: boolean
         second_factor_required:
           const: true
           default: true
@@ -8673,6 +8958,18 @@ components:
       - code
       title: SecondFactorLoginRequest
       type: object
+    SecondFactorResetRequest:
+      description: 'Сброс фактора администратором: причина попадает в журнал.'
+      properties:
+        reason:
+          maxLength: 500
+          minLength: 3
+          title: Reason
+          type: string
+      required:
+      - reason
+      title: SecondFactorResetRequest
+      type: object
     SecondFactorSetupRequest:
       properties:
         issuer:
@@ -8709,6 +9006,10 @@ components:
             type: string
           - type: 'null'
           title: Enabled At
+        required:
+          default: false
+          title: Required
+          type: boolean
       required:
       - enabled
       - enabled_at
@@ -9786,6 +10087,20 @@ components:
       - unread_count
       title: StaffNotificationsOut
       type: object
+    StepUpResponse:
+      description: 'Свежий код принят (ДВ-4б): токен на 5 минут для заголовка `X-Step-Up-Token`.'
+      properties:
+        expires_in:
+          title: Expires In
+          type: integer
+        token:
+          title: Token
+          type: string
+      required:
+      - token
+      - expires_in
+      title: StepUpResponse
+      type: object
     SystemStatusOut:
       properties:
         checked_at:
@@ -10247,6 +10562,13 @@ components:
         access_token:
           title: Access Token
           type: string
+        backup_codes:
+          anyOf:
+          - items:
+              type: string
+            type: array
+          - type: 'null'
+          title: Backup Codes
         device_token:
           anyOf:
           - type: string
@@ -10803,6 +11125,67 @@ components:
           title: Utm Term
       title: WebLeadUtm
       type: object
+    ZonePerson:
+      properties:
+        id:
+          title: Id
+          type: integer
+        is_active:
+          title: Is Active
+          type: boolean
+        name:
+          title: Name
+          type: string
+        position:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Position
+      required:
+      - id
+      - name
+      - position
+      - is_active
+      title: ZonePerson
+      type: object
+    ZoneProblemOut:
+      properties:
+        code:
+          title: Code
+          type: string
+        sections:
+          items:
+            type: string
+          title: Sections
+          type: array
+        severity:
+          enum:
+          - problem
+          - warning
+          title: Severity
+          type: string
+      required:
+      - code
+      - severity
+      title: ZoneProblemOut
+      type: object
+    ZoneText:
+      properties:
+        en:
+          title: En
+          type: string
+        ru:
+          title: Ru
+          type: string
+        uz:
+          title: Uz
+          type: string
+      required:
+      - ru
+      - uz
+      - en
+      title: ZoneText
+      type: object
   securitySchemes:
     HTTPBearer:
       scheme: bearer
@@ -11279,7 +11662,9 @@ paths:
     post:
       description: 'Вход паролем. Со вторым фактором (ДВ-4) и без запомненного устройства — 202 с `challenge`:
 
-        сессии ещё нет, код — `POST /auth/login/second-factor`.'
+        сессии ещё нет, код — `POST /auth/login/second-factor`. Фактор обязателен по разделам доступа
+
+        (ДВ-4б), но не настроен — 202 с `enrollment_required`: настройка — `/auth/login/enroll/*`.'
       operationId: login
       requestBody:
         content:
@@ -11307,6 +11692,62 @@ paths:
                 $ref: '#/components/schemas/ErrorOut'
           description: Ошибка валидации
       summary: Login
+      tags:
+      - auth
+  /api/v1/auth/login/enroll:
+    post:
+      description: 'Код из приложения включает фактор и открывает сессию; резервные коды — в `backup_codes`,
+
+        один раз. Неверный код — 401 `second_factor_invalid` (в счёт блокировки).'
+      operationId: login_enroll
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EnrollRequest'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      summary: Login Enroll
+      tags:
+      - auth
+  /api/v1/auth/login/enroll/setup:
+    post:
+      description: 'Секрет и адрес для QR при входе, когда фактор обязателен, но не настроен (ДВ-4б).
+
+        `challenge` из 202 на `/auth/login` с `enrollment_required`; просрочен — 401 `auth_failed`.'
+      operationId: login_enroll_setup
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EnrollSetupRequest'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SecondFactorSetupResponse'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      summary: Login Enroll Setup
       tags:
       - auth
   /api/v1/auth/login/second-factor:
@@ -17056,7 +17497,9 @@ paths:
       - me
   /api/v1/me/second-factor/disable:
     post:
-      description: Выключить — кодом из приложения или резервным.
+      description: 'Выключить — кодом из приложения или резервным; код в теле и есть «свежий код» (ДВ-4б).
+
+        Держателю разделов с деньгами и доступом отключить нельзя: 409 `second_factor_required`.'
       operationId: second_factor_disable
       requestBody:
         content:
@@ -17134,6 +17577,69 @@ paths:
       security:
       - HTTPBearer: []
       summary: Second Factor Setup
+      tags:
+      - me
+  /api/v1/me/second-factor/step-up:
+    post:
+      description: '«Свежий код» (ДВ-4б): верный код приложения или резервный — токен на 5 минут. Его фронт
+
+        шлёт заголовком `X-Step-Up-Token` на чувствительных действиях (выдача роли, подтверждение
+
+        новых банковских реквизитов). Фактор не настроен — 403 `step_up_required`,
+
+        `reason = second_factor_not_enrolled`.'
+      operationId: second_factor_step_up
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SecondFactorCodeRequest'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StepUpResponse'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: Second Factor Step Up
+      tags:
+      - me
+  /api/v1/me/second-factor/step-up/check:
+    post:
+      description: 'Проверка токена «свежего кода» для BFF перед действием в другой системе (подтверждение
+
+        банковских реквизитов в ERP): 204 или 403 `step_up_required`.'
+      operationId: second_factor_step_up_check
+      parameters:
+      - in: header
+        name: x-step-up-token
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Step-Up-Token
+      responses:
+        '204':
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: Second Factor Step Up Check
       tags:
       - me
   /api/v1/me/telegram-link:
@@ -17722,6 +18228,192 @@ paths:
       summary: Update Reply Template
       tags:
       - reply-templates
+  /api/v1/responsibility-zones:
+    get:
+      operationId: list_zones
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponsibilityZoneList'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: List Zones
+      tags:
+      - responsibility-zones
+    post:
+      operationId: create_zone
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResponsibilityZoneCreate'
+        required: true
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponsibilityZoneOut'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: Create Zone
+      tags:
+      - responsibility-zones
+  /api/v1/responsibility-zones/summary:
+    get:
+      description: 'Числа для сигналов: доступны держателям `company.settings`, без списка людей.'
+      operationId: zones_summary
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponsibilityZoneSummary'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: Zones Summary
+      tags:
+      - responsibility-zones
+  /api/v1/responsibility-zones/{zone_id}:
+    get:
+      operationId: get_zone
+      parameters:
+      - in: path
+        name: zone_id
+        required: true
+        schema:
+          title: Zone Id
+          type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponsibilityZoneOut'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: Get Zone
+      tags:
+      - responsibility-zones
+    patch:
+      operationId: update_zone
+      parameters:
+      - in: path
+        name: zone_id
+        required: true
+        schema:
+          title: Zone Id
+          type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResponsibilityZoneUpdate'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponsibilityZoneOut'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: Update Zone
+      tags:
+      - responsibility-zones
+  /api/v1/responsibility-zones/{zone_id}/activate:
+    post:
+      operationId: activate_zone
+      parameters:
+      - in: path
+        name: zone_id
+        required: true
+        schema:
+          title: Zone Id
+          type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponsibilityZoneOut'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: Activate Zone
+      tags:
+      - responsibility-zones
+  /api/v1/responsibility-zones/{zone_id}/deactivate:
+    post:
+      operationId: deactivate_zone
+      parameters:
+      - in: path
+        name: zone_id
+        required: true
+        schema:
+          title: Zone Id
+          type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponsibilityZoneOut'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: Deactivate Zone
+      tags:
+      - responsibility-zones
   /api/v1/sandbox/messages:
     post:
       description: 'Сообщение боту от имени тестового лида админа: тот же ход, что в Telegram.
@@ -18597,7 +19289,17 @@ paths:
       tags:
       - users
     post:
+      description: 'Новый сотрудник. Роль при создании — выдача роли: нужен свежий код (`X-Step-Up-Token`).'
       operationId: create_user
+      parameters:
+      - in: header
+        name: x-step-up-token
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Step-Up-Token
       requestBody:
         content:
           application/json:
@@ -18655,7 +19357,11 @@ paths:
 
         422 `roles_required` (R3-D-1: закрыть доступ — `is_active = false`); снять последнего
 
-        администратора или директора — 409 `last_admin` / `last_director`.'
+        администратора или директора — 409 `last_admin` / `last_director`. Выдача роли (появилась роль,
+
+        которой не было) требует свежий код второго фактора в `X-Step-Up-Token` (ДВ-4б), иначе 403
+
+        `step_up_required`.'
       operationId: update_user
       parameters:
       - in: path
@@ -18664,6 +19370,14 @@ paths:
         schema:
           title: User Id
           type: integer
+      - in: header
+        name: x-step-up-token
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Step-Up-Token
       requestBody:
         content:
           application/json:
@@ -18817,6 +19531,41 @@ paths:
       security:
       - HTTPBearer: []
       summary: Reset Password By Email
+      tags:
+      - users
+  /api/v1/users/{user_id}/second-factor/reset:
+    post:
+      description: 'Сбросить второй фактор сотруднику (потерян телефон; ДВ-4б): причина — в журнал, его сессии
+
+        закрываются, при следующем входе он настраивает фактор заново. Себе — 409
+
+        `second_factor_self_reset`; фактор не включён — 422 `second_factor_not_enabled`.'
+      operationId: reset_second_factor
+      parameters:
+      - in: path
+        name: user_id
+        required: true
+        schema:
+          title: User Id
+          type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SecondFactorResetRequest'
+        required: true
+      responses:
+        '204':
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: Reset Second Factor
       tags:
       - users
   /health:

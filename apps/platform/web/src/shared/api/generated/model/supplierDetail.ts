@@ -36,6 +36,8 @@ export interface SupplierDetail {
   expiring_count: number;
   /** @nullable */
   nearest_valid_until: string | null;
+  /** Х-8: с поставщиком не работаем — действует отметка «Не работать» */
+  do_not_work?: boolean;
   contact_person: string;
   phone: string;
   email: string;

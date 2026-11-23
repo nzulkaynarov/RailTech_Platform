@@ -7,6 +7,7 @@ const TRANSFER_ERRORS = new Set([
   "erp_inn_conflict",
   "erp_partner_verification",
   "enqueue_failed",
+  "erp_company_do_not_work",
 ]);
 
 /** Причина ошибки передачи в бэк-офис словами; неизвестный код CRM — «причина не определена», без сырого кода. */

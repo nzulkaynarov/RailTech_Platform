@@ -18,6 +18,7 @@ import {
   useGetIntegrationsOverview,
   useGetMenuCounters,
   useGetPlatformSettings,
+  useGetResponsibilityZonesSummary,
   useListSigningAuthorities,
 } from "../../../shared/api/generated/platform-bff";
 import { useFormat } from "../../../shared/lib/useFormat";
@@ -38,6 +39,7 @@ import {
   serviceRows,
   signingRows,
   ticketRows,
+  zoneRows,
 } from "./model";
 
 import "../settings/settings.css";
@@ -192,6 +194,11 @@ function StateBody() {
   const platform = useGetPlatformSettings({ query: { enabled: withCompany, retry: false } });
   const bus = useGetBusJournal({ query: { enabled: canEdit(me, "admin"), retry: false } });
 
+  // Зоны без ответственного — тем, кто назначает людей в зоны: полное право «Настройки компании»
+  const zones = useGetResponsibilityZonesSummary({
+    query: { enabled: canEdit(me, "company.settings"), retry: false },
+  });
+  const zonesWithout = canEdit(me, "company.settings") ? (zones.data?.without_responsible ?? 0) : 0;
   const tickets =
     counters.data?.items.find((c) => c.module === "admin" && c.section === "tickets")?.count ?? 0;
   // Кнопку к странице, закрытой зрителю, не показываем: остаётся «исправляет администратор»
@@ -204,6 +211,7 @@ function StateBody() {
     ...signingRows(signing.data?.items ?? []),
     ...fxRows(fx.data),
     ...blankRows(brand.data),
+    ...zoneRows(zonesWithout),
     ...ticketRows(tickets),
   ]);
   const cards = overview.data?.cards ?? [];

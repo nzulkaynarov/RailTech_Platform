@@ -30,6 +30,7 @@ from app.schemas_crm_leads import (
     ContactChannel,
     DocumentType,
 )
+from app.schemas_do_not_work import DoNotWork
 
 _DOC_TYPES: tuple[str, ...] = get_args(DocumentType)
 Handoff = Literal["pending", "done", "failed"]
@@ -37,6 +38,13 @@ Handoff = Literal["pending", "done", "failed"]
 
 class _Crm(BaseModel):
     model_config = ConfigDict(extra="ignore")
+
+
+class CrmDoNotWork(_Crm):
+    reason: str
+    set_by: str | None = None
+    set_at: datetime
+    until: date | None = None
 
 
 class CrmClientItem(_Crm):
@@ -47,6 +55,7 @@ class CrmClientItem(_Crm):
     erp_handoff_status: Handoff | None = None
     open_deals: int = 0
     last_activity_at: datetime | None = None
+    do_not_work: CrmDoNotWork | None = None
 
 
 class CrmLeadBrief(_Crm):
@@ -75,6 +84,7 @@ class CrmClientDetail(_Crm):
     leads: list[CrmLeadBrief] = []
     invitation: crm.InvitationOut | None = None
     partner_requests: list[crm.PartnerRequestOut] = []
+    do_not_work: CrmDoNotWork | None = None
 
 
 class CrmContact(_Crm):
@@ -147,6 +157,7 @@ def client_row(item: CrmClientItem) -> ClientRow:
         open_requests=max(item.open_deals, 0),
         last_activity_at=item.last_activity_at,
         handoff_status=item.erp_handoff_status,
+        do_not_work=item.do_not_work is not None,
     )
 
 
@@ -326,4 +337,7 @@ def client_card(
         sources=ClientSources(
             contacts=state(contacts), requests=state(deals), documents=state(documents)
         ),
+        do_not_work=DoNotWork.model_validate(detail.do_not_work.model_dump())
+        if detail.do_not_work
+        else None,
     )

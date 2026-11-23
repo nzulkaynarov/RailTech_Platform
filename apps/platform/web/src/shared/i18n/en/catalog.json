@@ -233,7 +233,8 @@
       "warrantyMonths": "Warranty, months",
       "warrantyMonthsHint": "Empty — {{months}} mo., the company default",
       "warrantyMonthsHintNone": "Empty — no company default is set",
-      "warrantyTerms": "Warranty terms"
+      "warrantyTerms": "Warranty terms",
+      "mxikNone": "Nothing found — type the code by hand"
     },
     "originBrand": "(manufacturer's country)",
     "originNone": "Not set",
@@ -825,7 +826,12 @@
       "category": "category",
       "hs_code": "HS code",
       "list_price": "list price",
-      "conformity_doc": "a valid conformity document with a number"
+      "conformity_doc": "a valid conformity document with a number",
+      "mxik_code": "MXIK (IKPU) code"
+    },
+    "fill": {
+      "mxik": "Add MXIK",
+      "hs": "Add HS code"
     }
   },
   "import": {

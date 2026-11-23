@@ -22,7 +22,8 @@ export const SIGNING_WARN_DAYS = 14;
 /** Кто исправляет: слова словаря `modules:admin.state.owner.*` */
 export type StateOwner = ServiceOwner | "director" | "accountant";
 
-export type AttentionKind = "service" | "signing" | "signingExpired" | "fx" | "blank" | "tickets";
+export type AttentionKind =
+  "service" | "signing" | "signingExpired" | "fx" | "blank" | "tickets" | "zones";
 
 export interface AttentionRow {
   id: string;
@@ -170,6 +171,22 @@ export function ticketRows(count: number): AttentionRow[] {
       to: "/dashboard/queue",
       page: null,
       params: { count },
+    },
+  ];
+}
+
+/** Зоны без ответственного (ЕВ-З): сигнал реестра зон; зон без ответственного нет — строки нет. Кнопка — на «Зоны ответственности». */
+export function zoneRows(without: number): AttentionRow[] {
+  if (without <= 0) return [];
+  return [
+    {
+      id: "zones:without-responsible",
+      kind: "zones",
+      severity: "warn",
+      owner: "director",
+      to: "/admin/zones",
+      page: "zones",
+      params: { count: without },
     },
   ];
 }

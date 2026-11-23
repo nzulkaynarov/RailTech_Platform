@@ -41,7 +41,14 @@ const COLS = {
   last: 200,
 };
 
-const KINDS = ["all", "clients", "partners", "applications", "bank_changes"] as const;
+const KINDS = [
+  "all",
+  "clients",
+  "partners",
+  "do_not_work",
+  "applications",
+  "bank_changes",
+] as const;
 type KindFilter = (typeof KINDS)[number];
 type RelationKind = "client" | "partner" | "both";
 
@@ -85,6 +92,13 @@ function PriceTermsTag({ terms }: { terms: PriceTerms | undefined }) {
 
 function StateTag({ row, terms }: { row: ClientRow; terms: PriceTerms | undefined }) {
   const { t } = useTranslation("clients");
+  // Х-8: отметка «Не работать» важнее остальных состояний — её видно в списке без открытия карточки
+  if (row.do_not_work)
+    return (
+      <StatusTag kind="access" status="error">
+        {t("kinds.do_not_work")}
+      </StatusTag>
+    );
   if (isPartnerOnly(row)) return <PriceTermsTag terms={terms} />;
   if (row.handoff_status === "failed")
     return (
@@ -192,6 +206,7 @@ export function ClientsPage({ objectId }: { objectId?: string | undefined }) {
   );
   const shownKinds = KINDS.filter((value) => {
     if (value === "partners" || value === "applications") return seesPartners;
+    if (value === "do_not_work") return seesClients || seesPartners; // Х-8: «Не работаем» — отметка видна тем, кто видит компании
     if (value === "bank_changes") return seesBankChanges;
     return seesClients; // «Все» и «Клиенты» — только тем, кто видит клиентов
   });
@@ -208,6 +223,9 @@ export function ClientsPage({ objectId }: { objectId?: string | undefined }) {
     return t(`clients:kinds.${value}`);
   };
   const partnerInns = new Set((suppliers.data?.items ?? []).flatMap((s) => s.tin || []));
+  const markedPartners = new Set(
+    (suppliers.data?.items ?? []).filter((s) => s.do_not_work).map((s) => s.id),
+  );
   const relationOf = (row: ClientRow): RelationKind => {
     if (isPartnerOnly(row)) return "partner";
     return row.inn && partnerInns.has(row.inn) ? "both" : "client";
@@ -224,10 +242,12 @@ export function ClientsPage({ objectId }: { objectId?: string | undefined }) {
         open_requests: 0,
         last_activity_at: null,
         handoff_status: null,
+        do_not_work: markedPartners.has(s.id),
       }));
     const all = [...clients, ...partners];
     if (kind === "clients") return all.filter((row) => relationOf(row) !== "partner");
     if (kind === "partners") return all.filter((row) => relationOf(row) !== "client");
+    if (kind === "do_not_work") return all.filter((row) => row.do_not_work === true);
     return all;
   };
   const selected = parseClientId(objectId) ?? parseClientId(params.get("client"));

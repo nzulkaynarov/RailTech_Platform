@@ -475,3 +475,103 @@ async def test_accountant_cannot_edit_counterparty_requisites(web: Web) -> None:
         "/api/v1/people/counterparties/9", json={"name": "X"}, headers={"X-CSRF-Token": web.csrf}
     )
     assert response.status_code == 403
+
+
+# --- Х-8: «Не работать» у контрагента ----------------------------------------------------------
+
+MARK = {
+    "reason": "Дважды не оплатил отгрузку",
+    "set_by": "Менеджер Демо",
+    "set_at": "2026-11-23T09:30:00Z",
+    "until": None,
+}
+
+
+async def test_do_not_work_is_set_and_removed_in_erp(
+    web: Web, be: Any, check: ContractChecker
+) -> None:
+    await web.login(["SUPPLY"])
+    router: respx.MockRouter = be.router
+    url = f"{API}/parties/organizations/9/do-not-work/"
+    post = router.post(url).mock(
+        return_value=httpx.Response(200, json={**CARD, "do_not_work": MARK})
+    )
+    delete = router.delete(url).mock(
+        return_value=httpx.Response(200, json={**CARD, "do_not_work": None})
+    )
+    headers = {"X-CSRF-Token": web.csrf}
+
+    marked = await web.client.post(
+        "/api/v1/people/counterparties/9/do-not-work",
+        json={"reason": "Дважды не оплатил отгрузку", "until": "2026-12-31"},
+        headers=headers,
+    )
+    assert marked.status_code == 200, marked.text
+    check(marked, "/people/counterparties/{id}/do-not-work", "post")
+    assert marked.json()["do_not_work"]["reason"] == "Дважды не оплатил отгрузку"
+    assert marked.json()["do_not_work"]["set_by"] == "Менеджер Демо"
+    assert json.loads(post.calls.last.request.content) == {
+        "reason": "Дважды не оплатил отгрузку",
+        "until": "2026-12-31",
+    }
+
+    removed = await web.client.delete(
+        "/api/v1/people/counterparties/9/do-not-work", headers=headers
+    )
+    assert removed.status_code == 200, removed.text
+    check(removed, "/people/counterparties/{id}/do-not-work", "delete")
+    assert removed.json()["do_not_work"] is None
+    assert delete.called
+
+
+async def test_do_not_work_needs_a_reason_and_the_requisites_section(web: Web, be: Any) -> None:
+    await web.login(["SUPPLY"])
+    headers = {"X-CSRF-Token": web.csrf}
+    empty = await web.client.post(
+        "/api/v1/people/counterparties/9/do-not-work", json={"reason": ""}, headers=headers
+    )
+    assert empty.status_code == 422
+    # ERP отказала по причине: её код и поле доходят как есть
+    router: respx.MockRouter = be.router
+    router.post(f"{API}/parties/organizations/9/do-not-work/").mock(
+        return_value=httpx.Response(400, json={"detail": "UNTIL_PAST"})
+    )
+    past = await web.client.post(
+        "/api/v1/people/counterparties/9/do-not-work",
+        json={"reason": "Спор", "until": "2020-01-01"},
+        headers=headers,
+    )
+    assert past.status_code == 422
+    assert past.json()["details"]["fields"] == ["until"]
+
+
+async def test_accountant_cannot_mark_do_not_work(web: Web) -> None:
+    await web.login(["ACCOUNTANT"])
+    headers = {"X-CSRF-Token": web.csrf}
+    marked = await web.client.post(
+        "/api/v1/people/counterparties/9/do-not-work", json={"reason": "Спор"}, headers=headers
+    )
+    assert marked.status_code == 403
+    cleared = await web.client.delete(
+        "/api/v1/people/counterparties/9/do-not-work", headers=headers
+    )
+    assert cleared.status_code == 403
+
+
+async def test_erp_refusal_for_a_marked_company_names_the_reason_and_who(web: Web, be: Any) -> None:
+    await web.login(["SUPPLY"])
+    router: respx.MockRouter = be.router
+    router.patch(f"{API}/parties/organizations/9/").mock(
+        return_value=httpx.Response(
+            409,
+            json={"detail": "COMPANY_DO_NOT_WORK", "company_id": 9, "do_not_work": MARK},
+        )
+    )
+    response = await web.client.patch(
+        "/api/v1/people/counterparties/9", json={"name": "X"}, headers={"X-CSRF-Token": web.csrf}
+    )
+    assert response.status_code == 409
+    details = response.json()["details"]
+    assert details["reason"] == "company_do_not_work"
+    assert details["do_not_work"]["reason"] == "Дважды не оплатил отгрузку"
+    assert details["do_not_work"]["set_by"] == "Менеджер Демо"

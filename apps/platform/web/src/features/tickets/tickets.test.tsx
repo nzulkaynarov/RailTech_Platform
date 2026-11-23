@@ -172,20 +172,17 @@ describe("Обращения к администратору", () => {
     expect(screen.queryByText("Ответить на обращение TK-0001")).toBeNull();
   });
 
-  it("старый адрес списка обращений ведёт в «Задачи» (SET-IA); на индексе Настроек — счётчик со ссылкой", async () => {
+  it("старый адрес списка обращений ведёт в «Задачи» (SET-IA); на индексе Настроек списка нет", async () => {
     signInAs("admin@demo.example");
     const { router } = renderApp("/admin/tickets");
     expect(await screen.findByRole("heading", { level: 1, name: "Задачи" })).toBeInTheDocument();
     expect(router.state.location.pathname).toBe("/dashboard/queue");
     cleanup();
     renderApp("/admin");
-    expect(
-      await screen.findByText(/Обращения сотрудников — в «Моих задачах», новых: \d+\./),
-    ).toBeInTheDocument();
-    expect(await screen.findByRole("link", { name: "Открыть" })).toHaveAttribute(
-      "href",
-      "/dashboard/queue",
-    );
+    // на индексе Настроек (ЕВ-2а — «Состояние») списка обращений нет; строка со счётчиком — в «Требует внимания»
+    // (кнопка на «Задачи»), её вид покрыт в модели «Состояния» (`ticketRows`)
+    expect(await screen.findByRole("heading", { level: 1, name: "Состояние" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Обращения сотрудников" })).toBeNull();
   });
 
   it("директор читает обращения, но отвечать не может", async () => {

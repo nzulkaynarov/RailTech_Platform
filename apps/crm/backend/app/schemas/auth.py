@@ -34,13 +34,29 @@ class TokenResponse(BaseModel):
     must_change_password: bool
     # После второго фактора с «запомнить устройство» — метка на 30 дней (ДВ-4)
     device_token: str | None = None
+    # После настройки фактора при входе (ДВ-4б) — резервные коды, показываются один раз
+    backup_codes: list[str] | None = None
 
 
 class SecondFactorChallengeResponse(BaseModel):
-    """202 на входе: пароль верен, нужен код второго фактора (ДВ-4); сессии ещё нет."""
+    """202 на входе: пароль верен, нужен код второго фактора (ДВ-4); сессии ещё нет.
+    `enrollment_required` — фактор обязателен по разделам доступа, но не настроен (ДВ-4б):
+    `challenge` годится только для `/auth/login/enroll/*`."""
 
     second_factor_required: Literal[True] = True
     challenge: str
+    enrollment_required: bool = False
+
+
+class EnrollSetupRequest(BaseModel):
+    challenge: str = Field(min_length=1, max_length=2048)
+    # Название в приложении-аутентификаторе (компания из «Настройки · Компания»)
+    issuer: str = Field(default="", max_length=60)
+
+
+class EnrollRequest(BaseModel):
+    challenge: str = Field(min_length=1, max_length=2048)
+    code: str = Field(min_length=6, max_length=16)
 
 
 class SecondFactorLoginRequest(BaseModel):
@@ -59,6 +75,8 @@ class SecondFactorStatusResponse(BaseModel):
     enabled: bool
     enabled_at: datetime | None
     backup_codes_left: int
+    # ДВ-4б: фактор обязателен по разделам доступа сотрудника — отключить нельзя
+    required: bool = False
 
 
 class SecondFactorSetupRequest(BaseModel):
@@ -77,6 +95,19 @@ class SecondFactorCodeRequest(BaseModel):
 
 class SecondFactorEnabledResponse(BaseModel):
     backup_codes: list[str]
+
+
+class StepUpResponse(BaseModel):
+    """Свежий код принят (ДВ-4б): токен на 5 минут для заголовка `X-Step-Up-Token`."""
+
+    token: str
+    expires_in: int
+
+
+class SecondFactorResetRequest(BaseModel):
+    """Сброс фактора администратором: причина попадает в журнал."""
+
+    reason: str = Field(min_length=3, max_length=500)
 
 
 class ChangePasswordRequest(BaseModel):

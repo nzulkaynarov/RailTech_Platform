@@ -368,6 +368,7 @@
       "overview": "Holat",
       "org": "Xodimlar",
       "roles": "Rollar va huquqlar",
+      "zones": "Masʼuliyat zonalari",
       "signing": "Imzo huquqlari",
       "company": "Rekvizitlar va blanka",
       "numbering": "Raqamlash",
@@ -728,6 +729,20 @@
         "label": "Ishdagi lidlarni kimga topshirish",
         "placeholder": "Hamkasbni tanlang",
         "save": "Lidlarni topshirib saqlash"
+      },
+      "resetFactor": {
+        "button": "Ikkinci omilni tiklaş",
+        "title": "Ikkinci omilni tiklaş",
+        "what": "Xodim tizimdan çiqadi, keyingi kirişda kodni qaytadan sozlaydi. Sabab jurnalga yoziladi.",
+        "reason": "Sabab",
+        "confirm": "Tiklaş",
+        "cancel": "Bekor qiliş",
+        "done": "Ikkinci omil tiklandi: {{name}}",
+        "self": "Öz omilingizni boşqa administrator tiklaydi.",
+        "errors": {
+          "notEnabled": "Xodimda kod bilan kiriş yoqilmagan.",
+          "default": "Bölmadi. Qayta urinib köring."
+        }
       }
     },
     "roles": {
@@ -886,6 +901,10 @@
         "tickets": {
           "title": "Xodimlar murojaatlari: {{count}}",
           "ifNot": "xodimlar javob kutmoqda"
+        },
+        "zones": {
+          "title": "Masʼuli yoʻq zonalar: {{count}}",
+          "ifNot": "zona boʻyicha arizalar va vazifalarni olishga hech kim yoʻq"
         }
       },
       "services": "Xizmatlar",

@@ -125,7 +125,8 @@
     "erp_inn_conflict": "this TIN already belongs to another client",
     "erp_partner_verification": "a cabinet partner has this TIN: the handoff is held. A back-office colleague will check the TIN and invite the partner again, then confirm the link in this card — the handoff will repeat on its own",
     "enqueue_failed": "could not queue the transfer",
-    "other": "reason unknown"
+    "other": "reason unknown",
+    "erp_company_do_not_work": "we do not work with this company: the request was not created. Remove the mark in the counterparty card and resend"
   },
   "kinds": {
     "filter": "Counterparty type",
@@ -137,7 +138,8 @@
     "partner": "Partner",
     "both": "Client and partner",
     "applications": "Join requests",
-    "bank_changes": "Bank details change"
+    "bank_changes": "Bank details change",
+    "do_not_work": "Not working"
   },
   "addPartner": "Add partner",
   "counterparty": {
@@ -189,6 +191,22 @@
       "exists": "Another company already has this tax ID or registration number.",
       "forbidden": "Requisites are edited by a manager or procurement.",
       "failed": "Could not save the requisites. Try again."
+    },
+    "doNotWork": {
+      "set": "Do not work",
+      "clear": "Work again",
+      "title": "We do not work with this company",
+      "reason": "Reason",
+      "reasonHint": "Everyone who works with the company will see it.",
+      "until": "Valid until (optional)",
+      "submit": "Mark",
+      "marked": "Mark set",
+      "cleared": "Mark removed",
+      "reasonRequired": "Enter a reason.",
+      "untilPast": "The date cannot be in the past.",
+      "forbidden": "The mark is set and removed by a manager or procurement.",
+      "failed": "Could not save. Try again.",
+      "newRequestClosed": "New requests are closed: we do not work with this company."
     }
   }
 }

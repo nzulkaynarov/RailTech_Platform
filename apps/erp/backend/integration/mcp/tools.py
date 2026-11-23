@@ -199,6 +199,10 @@ def create_request_tool(context: AgentContext, arguments: Dict[str, Any]) -> Dic
     if not company:
         raise ToolExecutionError("company not found")
 
+    from parties.do_not_work import is_marked
+
+    if is_marked(company):  # объект только что прочитан из базы
+        raise ToolExecutionError("company_do_not_work")  # Х-8: заявку от такой компании не заводим
     primary_contact = company.contacts.filter(is_primary=True).first() or company.contacts.first()
     request_stage = initial_fsm_stage()
 

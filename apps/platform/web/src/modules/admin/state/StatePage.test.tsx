@@ -184,6 +184,28 @@ describe("Настройки · «Состояние» (ЕВ-2а, доска 37)
     );
   });
 
+  it("зоны без ответственного (ЕВ-З): N > 0 → строка с кнопкой «Зоны ответственности»; N = 0 → строки нет", async () => {
+    const summary = (without: number) =>
+      http.get("*/admin/responsibility-zones/summary", () =>
+        HttpResponse.json({ zones_total: 5, without_responsible: without, with_problems: 0 }),
+      );
+    server.use(summary(2));
+    await openState("admin@demo.example");
+    const row = (await within(await attention()).findByText("Зон без ответственного: 2")).closest(
+      "li",
+    ) as HTMLElement;
+    expect(
+      within(row).getByRole("link", { name: "Открыть «Зоны ответственности»" }),
+    ).toHaveAttribute("href", "/admin/zones");
+    cleanup();
+
+    server.use(summary(0));
+    await openState("admin@demo.example");
+    await attention();
+    await screen.findByRole("region", { name: "Службы" });
+    expect(screen.queryByText(/Зон без ответственного/)).toBeNull();
+  });
+
   it("⚙ из других модулей (`?group=`) ведёт на первую страницу группы, а не на «Состояние»", async () => {
     signInAs("admin@demo.example");
     renderApp("/admin?group=channels");

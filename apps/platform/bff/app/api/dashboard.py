@@ -112,6 +112,7 @@ async def get_queue_cards(authed: QueueAuthed, role: RoleParam = None) -> QueueC
         tickets=True,
         stock=True,
         work=True,
+        zones=True,
     )
     items = queue.build_queue(feed, view, snap)
     return QueueCards(cards=queue.build_cards(view, snap, items), sources=feed.sources)

@@ -23,7 +23,7 @@ describe("реестр настроек (SET-IA)", () => {
     expect(SETTINGS_GROUPS).toEqual(["people", "company", "rules", "channels", "journal"]);
     // состав групп — по отчёту 2026-11-22 §8.1
     const of = (group: string) => SETTINGS.filter((s) => s.group === group).map((s) => s.key);
-    expect(of("people")).toEqual(["org", "roles", "signing"]);
+    expect(of("people")).toEqual(["org", "roles", "zones", "signing"]);
     expect(of("company")).toEqual(["company", "numbering", "taxes", "articles", "legal"]);
     expect(of("rules")).toEqual(["sales", "timing", "dictionaries", "templates", "notifications"]);
     expect(of("channels")).toEqual(["telegram", "mail", "forms", "integrations", "spend"]);
