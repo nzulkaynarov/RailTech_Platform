@@ -208,6 +208,8 @@ class StaffCard(BaseModel):
     position: str | None
     avatar_url: str | None
     active: bool
+    # Роли Платформы названиями (карточка сотрудника в «Людях»); без матрицы прав
+    roles: list[str] = []
 
 
 class StaffDirectory(BaseModel):
@@ -241,6 +243,7 @@ async def list_staff_directory(authed: AuthedDep) -> StaffDirectory:
                 if active
                 else None,
                 active=active,
+                roles=[r for r in (row.get("roles") or []) if isinstance(r, str) and r],
             )
         )
     return StaffDirectory(items=items)
