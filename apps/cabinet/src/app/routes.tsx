@@ -19,8 +19,9 @@ import { LoginSentPage } from '@/pages/auth/LoginSentPage';
 import { MagicLinkPage } from '@/pages/auth/MagicLinkPage';
 import { NewClientPage } from '@/pages/auth/NewClientPage';
 import { BecomePartnerPage } from '@/pages/auth/BecomePartnerPage';
+import { PrivacyPage } from '@/pages/legal/PrivacyPage';
 import { VerifyPage } from '@/pages/verify/VerifyPage';
-import { HomeRedirect, RequireModule, RequireSession, WebOnly } from './guards';
+import { HomeRedirect, RequireLegal, RequireModule, RequireSession, WebOnly } from './guards';
 import { RootErrorPage } from './RootErrorPage';
 
 /**
@@ -42,6 +43,7 @@ export const routes: RouteObject[] = [
           { path: '/login/code', element: <LoginSentPage mode="code" /> },
           { path: '/new-client', element: <NewClientPage /> },
           { path: '/become-partner', element: <BecomePartnerPage /> },
+          { path: '/privacy', element: <PrivacyPage /> },
         ],
       },
       { path: '/auth/magic', element: <MagicLinkPage /> },
@@ -50,34 +52,40 @@ export const routes: RouteObject[] = [
         element: <RequireSession />,
         children: [
           {
-            element: <AppShell />,
+            // ДВ-5: без принятия действующих оферты и политики вместо оболочки — экран принятия
+            element: <RequireLegal />,
             children: [
-              { index: true, path: '/', element: <HomeRedirect /> },
               {
-                // Разделы за модулями сессии (`/me.modules`, ADR-0022)
-                element: <RequireModule />,
+                element: <AppShell />,
                 children: [
-                  { path: '/my-products', element: <MyProductsPage /> },
-                  { path: '/partner/orders', element: <PartnerOrdersPage /> },
-                  { path: '/requests', element: <RequestsPage /> },
-                  { path: '/requests/new', element: <RequestNewPage /> },
-                  { path: '/requests/:id', element: <RequestDetailPage /> },
-                  { path: '/quotes', element: <QuotesPage /> },
-                  { path: '/quotes/:id', element: <QuoteDetailPage /> },
-                  { path: '/contracts', element: <ContractsPage /> },
-                  { path: '/invoices', element: <InvoicesPage /> },
-                  { path: '/acts', element: <ActsPage /> },
-                  { path: '/deliveries', element: <DeliveriesPage /> },
-                  { path: '/documents', element: <DocumentsPage /> },
-                  { path: '/letters', element: <LettersPage /> },
-                  { path: '/catalog', element: <CatalogPage /> },
-                  { path: '/catalog/:id', element: <CatalogItemPage /> },
-                  { path: '/messages', element: <MessagesPage /> },
-                  { path: '/company', element: <CompanyPage /> },
-                  { path: '/team', element: <TeamPage /> },
-                  { path: '/deals/:id', element: <DealPage /> },
-                  { path: '/profile', element: <ProfilePage /> },
-                  { path: '*', element: <NotFoundPage /> },
+                  { index: true, path: '/', element: <HomeRedirect /> },
+                  {
+                    // Разделы за модулями сессии (`/me.modules`, ADR-0022)
+                    element: <RequireModule />,
+                    children: [
+                      { path: '/my-products', element: <MyProductsPage /> },
+                      { path: '/partner/orders', element: <PartnerOrdersPage /> },
+                      { path: '/requests', element: <RequestsPage /> },
+                      { path: '/requests/new', element: <RequestNewPage /> },
+                      { path: '/requests/:id', element: <RequestDetailPage /> },
+                      { path: '/quotes', element: <QuotesPage /> },
+                      { path: '/quotes/:id', element: <QuoteDetailPage /> },
+                      { path: '/contracts', element: <ContractsPage /> },
+                      { path: '/invoices', element: <InvoicesPage /> },
+                      { path: '/acts', element: <ActsPage /> },
+                      { path: '/deliveries', element: <DeliveriesPage /> },
+                      { path: '/documents', element: <DocumentsPage /> },
+                      { path: '/letters', element: <LettersPage /> },
+                      { path: '/catalog', element: <CatalogPage /> },
+                      { path: '/catalog/:id', element: <CatalogItemPage /> },
+                      { path: '/messages', element: <MessagesPage /> },
+                      { path: '/company', element: <CompanyPage /> },
+                      { path: '/team', element: <TeamPage /> },
+                      { path: '/deals/:id', element: <DealPage /> },
+                      { path: '/profile', element: <ProfilePage /> },
+                      { path: '*', element: <NotFoundPage /> },
+                    ],
+                  },
                 ],
               },
             ],
