@@ -205,6 +205,40 @@ async def test_call_without_a_lead_has_its_own_name_and_footnote(
     assert ref["name"] == "Записка о звонке 2026-11-20.pdf"
 
 
+async def test_note_of_a_non_phone_lead_carries_the_message_and_attachments(
+    client: httpx.AsyncClient, staff: dict[str, Person], container: Container, deferred: list[str]
+) -> None:
+    """One rule for every channel: the same note, titled as a request note, with the original message and file names."""
+    await deliver_letterhead(client, container)
+    ordered = await order(
+        client,
+        staff["manager"],
+        channel="telegram",
+        message="Нужны рельсы Р65.\nСрочно.",
+        attachments=["ТЗ.pdf", "схема.png"],
+    )
+    assert ordered.status_code == 202, ordered.text
+    stub = StubRenderer()
+    assert await work(container, stub, deferred[0]) == "ready"
+    [payload] = stub.calls
+    assert dict(cells(payload))["Канал"] == "Telegram"
+    assert payload["body"]["doc"]["content"][0]["content"][0]["text"] == "Записка о запросе"
+    assert paragraphs(payload) == [
+        "Что просил",
+        "Нужен расчёт на 20 вагонов.",
+        "Срок — до пятницы.",
+        "Исходное сообщение",
+        "Нужны рельсы Р65.",
+        "Срочно.",
+        "Вложения",
+        "ТЗ.pdf",
+        "схема.png",
+        "Составлена системой по лиду L-0001",
+    ]
+    ref = (await client.get(f"{URL}/{ordered.json()['id']}", headers=staff["manager"].headers)).json()["file"]
+    assert ref["name"] == "Записка о запросе L-0001.pdf"
+
+
 async def test_failed_render_is_reported_and_repeated_by_the_same_request(
     client: httpx.AsyncClient, staff: dict[str, Person], container: Container, deferred: list[str]
 ) -> None:

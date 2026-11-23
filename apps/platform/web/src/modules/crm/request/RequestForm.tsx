@@ -26,7 +26,7 @@ import {
 import { useLeftSteps } from "../../../shared/ui/StepSections/useLeftSteps";
 import { reasonError } from "../common/errors";
 import { clientPath, useRefreshCrm } from "../common/params";
-import { noteLanguage, useCallNote } from "./callNote";
+import { noteContext, noteLanguage, useCallNote, type NoteKind } from "./callNote";
 import {
   clearRequestDraft,
   REQUEST_SECTIONS,
@@ -241,8 +241,9 @@ export function RequestForm({
   // Основание по звонку (СЦ-6): лид со звонка — записка собирается сама при входе на шаг «Запрос», когда согласие уже есть
   // (дано в CRM или отмечено на «Контакте»); без лида (повторный звонок клиента) — по кнопке «Основание — звонок».
   const consentPresent = lead === null || lead.consent.given_at !== null || state.consentMarked;
-  const phoneLead = lead !== null && lead.channel === "phone";
-  const callBasis = (lead === null || phoneLead) && !incomingLetter;
+  // Основание строится из лида любого канала (Х-18): звонок — «Записка о звонке», сайт, Кабинет, Telegram — «о запросе».
+  const noteKind: NoteKind = lead !== null && lead.channel !== "phone" ? "request" : "call";
+  const callBasis = !incomingLetter;
   const caller = contacts.find((c) => c.id === form.contactId);
   const callerName = caller ? caller.name : state.fullName.trim();
   // Результат сборки применяется, только пока записка ещё «в работе»: файл, который сотрудник выбрал сам, или
@@ -254,7 +255,7 @@ export function RequestForm({
         ? { ...prev, letter }
         : prev,
     );
-  });
+  }, noteKind);
   // Без лида записка фиксирует поля формы: ключ меняется вместе с содержимым, иначе EDS вернёт прежний файл.
   const noteKey = useRef<{ sig: string; key: string } | null>(null);
   const startCallNote = () => {
@@ -287,7 +288,7 @@ export function RequestForm({
   const noteBlockedReason = lead
     ? consentPresent
       ? null
-      : t("request:letter.noteNeedsConsent")
+      : t("request:letter.noteNeedsConsent", { context: noteContext(noteKind) })
     : !callerName
       ? t("request:letter.noteNeedsCaller")
       : !state.summary.trim()
@@ -295,7 +296,7 @@ export function RequestForm({
         : null;
   const autoNote = useRef(false);
   const wantsAutoNote =
-    phoneLead &&
+    lead !== null &&
     consentPresent &&
     callBasis &&
     !offer &&
@@ -749,6 +750,7 @@ export function RequestForm({
                         ? {
                             onStart: startCallNote,
                             blockedReason: noteBlockedReason,
+                            kind: noteKind,
                           }
                         : undefined
                     }

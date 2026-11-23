@@ -505,17 +505,10 @@ export const callNoteHandlers = [
     if (body.lead) {
       const lead = findLead(readLeads(), body.lead);
       if (!lead) return failure(404, "NOT_FOUND", "Лид не найден.", "crm");
-      if (lead.card.channel !== "phone") {
-        return rejected(
-          409,
-          "call_note_not_phone",
-          "Записка составляется только по лиду со звонка.",
-        );
-      }
       if (lead.card.consent.given_at === null && !body.consent) {
         return rejected(409, "call_note_no_consent", "Нет согласия клиента.");
       }
-      name = `Записка о звонке ${lead.row.lead}.pdf`;
+      name = `${lead.card.channel === "phone" ? "Записка о звонке" : "Записка о запросе"} ${lead.row.lead}.pdf`;
     } else if (!body.caller) {
       return rejected(422, "caller_required", "Укажите, кто звонил.", ["caller"]);
     }

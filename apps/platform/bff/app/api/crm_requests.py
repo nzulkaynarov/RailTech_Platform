@@ -184,7 +184,6 @@ async def copy_message_attachment(body: RequestFileFromMessageIn, authed: Copier
     )
 
 
-_NOT_PHONE = "Записка о звонке составляется только по лиду со звонка."
 _NO_CONSENT = "Нет согласия клиента на обработку данных — записку о звонке не составить."
 
 
@@ -194,8 +193,22 @@ def _conflict(reason: str, message: str) -> PlatformError:
     )
 
 
+async def _first_message(authed: Authed, lead: str) -> crm.MessageOut | None:
+    """The first client message of the lead with its attachments; none for a call."""
+    try:
+        rows = await CrmProxy(authed.call).get_list(
+            crm.MessageOut, f"{API}/leads/{_lead_id(lead)}/messages", params={"limit": 200}
+        )
+    except PlatformError:  # no access to the thread: the note is still built from the lead fields
+        return None
+    mine = [row for row in rows if row.role == "lead"]
+    return min(mine, key=lambda row: row.created_at) if mine else None
+
+
 async def _lead_call_note(authed: Authed, body: RequestCallNoteIn, lead: str) -> dict[str, object]:
-    """Тело EDS по лиду со звонка: телефонный лид и согласие (в CRM или отмеченное в форме).
+    """Тело EDS по лиду любого канала (звонок, сайт, Кабинет, Telegram): согласие в CRM или в форме.
+
+    Для не-звонка в записку идут исходное сообщение клиента и имена его вложений (Х-18).
 
     Ключ записки выводится из лида и языка, а не берётся из формы: форма при каждом открытии
     получает новый ключ, а EDS по (ключ, сотрудник) возвращает уже готовый файл — повторное
@@ -204,12 +217,15 @@ async def _lead_call_note(authed: Authed, body: RequestCallNoteIn, lead: str) ->
     detail = await CrmProxy(authed.call).get_model(
         crm.LeadDetail, "GET", f"{API}/leads/{_lead_id(lead)}"
     )
-    if detail.source != "phone":
-        raise _conflict("call_note_not_phone", _NOT_PHONE)
     if detail.consent_given_at is None and not body.consent:
         raise _conflict("call_note_no_consent", _NO_CONSENT)
+    first = None if detail.source == "phone" else await _first_message(authed, lead)
+    attachments = [str(a["name"]) for a in first.attachments if a.get("name")] if first else []
     return {
         "request_key": str(uuid5(NAMESPACE_URL, f"rt-call-note:{detail.id}:{body.lang}")),
+        "channel": detail.source,
+        "message": first.text if first and first.text.strip() else None,
+        "attachments": attachments,
         "lang": body.lang,
         "lead": lead_number(detail.id),
         "caller_name": detail.display_name,
