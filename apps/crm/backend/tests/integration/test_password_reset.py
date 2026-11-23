@@ -328,3 +328,82 @@ async def test_young_telegram_is_not_a_fallback_when_mail_fails(
     await service.request("dilshod@railtech.uz")
     assert bot.sent == []
     assert await tokens(sessions) == []
+
+
+# --- ДВ-7: ссылка приглашения и сброса от администратора ---------------------------------------
+
+
+async def admin_link(
+    sessions: async_sessionmaker[AsyncSession], user_id: int, method: str = "invite"
+) -> str:
+    """Выпустить ссылку как администратор и вернуть токен из «письма»."""
+    from app.security.audit import Actor
+    from app.services.user_invites import UserInviteService
+
+    mail = FakeMail()
+    service = UserInviteService(sessions, mail, FakeSettings(), PLATFORM)  # type: ignore[arg-type]
+    await getattr(service, method if method == "invite" else "reset_password_email")(
+        Actor(user_id=1), user_id
+    )
+    (sent,) = mail.sent
+    assert "temporary_password" not in sent["context"]
+    return token_in(sent["context"]["set_password_url"])
+
+
+async def test_invite_link_lives_72_hours_and_burns_on_use(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    service, _, _, clock = make(sessions)
+    invited, _ = await make_user(sessions, "aziz@railtech.uz", ["manager"])
+    token = await admin_link(sessions, invited.id)
+    ((row),) = await tokens(sessions)
+    assert row.token_hash == rules.hash_token(token) != token
+    assert row.expires_at - row.created_at == rules.INVITE_TTL == timedelta(hours=72)
+
+    clock.now = row.created_at + timedelta(hours=72, minutes=1)
+    with pytest.raises(ValidationFailedError):
+        await service.reset(token, NEW_PASSWORD)  # просроченная ссылка
+
+    clock.now = row.created_at + timedelta(hours=71)
+    await service.reset(token, NEW_PASSWORD)
+    with pytest.raises(ValidationFailedError):
+        await service.reset(token, NEW_PASSWORD)  # одноразовая
+    async with sessions() as session:
+        user = await session.get(User, invited.id)
+        actions = list(await session.scalars(select(AuditLog.action)))
+    assert user is not None
+    assert verify_password(user.password_hash, NEW_PASSWORD)
+    assert user.must_change_password is False
+    assert {"user.invite", "user.password_reset_link"} <= set(actions)
+
+
+async def test_admin_reset_link_lives_one_hour_and_a_new_link_voids_the_old(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    service, _, _, clock = make(sessions)
+    manager, old_password = await make_user(sessions, "dilshod@railtech.uz", ["manager"])
+    first = await admin_link(sessions, manager.id, "reset")
+    second = await admin_link(sessions, manager.id, "reset")
+    rows = await tokens(sessions)
+    assert rows[1].expires_at - rows[1].created_at == rules.TOKEN_TTL
+    with pytest.raises(ValidationFailedError):
+        await service.reset(first, NEW_PASSWORD)  # прежняя ссылка погашена новой
+    async with sessions() as session:
+        user = await session.get(User, manager.id)
+    assert user is not None
+    assert not verify_password(user.password_hash, old_password)  # прежний пароль закрыт
+    clock.now = rows[1].created_at + timedelta(hours=1, minutes=5)
+    with pytest.raises(ValidationFailedError):
+        await service.reset(second, NEW_PASSWORD)
+
+
+async def test_admin_links_are_rate_limited_per_account(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    from app.domain.errors import RateLimitedError
+
+    manager, _ = await make_user(sessions, "dilshod@railtech.uz", ["manager"])
+    for _ in range(rules.MAX_REQUESTS_PER_HOUR):
+        await admin_link(sessions, manager.id)
+    with pytest.raises(RateLimitedError):
+        await admin_link(sessions, manager.id)

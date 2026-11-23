@@ -2,12 +2,12 @@ Subject: $company Platformasiga taklif
 
 Assalomu alaykum, $full_name!
 
-Siz uchun $company Platformasida hisob yaratildi.
+Siz uçun $company Platformasida hisob yaratildi. Login: $email
 
-Kirish: $platform_url/login
-Login: $email
-Vaqtinchalik parol: $temporary_password
+Parolni örnatiş va kiriş uçun havolani oçing:
 
-Birinchi kirishda tizim parolni almashtirishni soʻraydi. Agar bu xatni kutmagan boʻlsangiz — unga javob bermang va administratorga xabar bering.
+$set_password_url
+
+Havola 72 soat amal qiladi va faqat bir marta işlaydi. Muddati tugagan bölsa, kiriş sahifasida “Parolni unutdingizmi?” ni tanlab, yangisini sörang. Agar bu xatni kutmagan bölsangiz — unga javob bermang va administratorga xabar bering.
 
 — $company Platformasi

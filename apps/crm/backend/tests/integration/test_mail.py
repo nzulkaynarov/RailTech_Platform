@@ -12,9 +12,10 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.config import Settings
 from app.domain.errors import ConflictError
+from app.domain.password_reset import hash_token
 from app.integrations.smtp import SmtpCheck, SmtpConnection, SmtpProbeError
 from app.main import create_app
-from app.models.auth import AuditLog
+from app.models.auth import AuditLog, PasswordResetToken
 from app.models.email import EmailLog
 from app.models.integrations import IntegrationSecret
 from app.security.secrets_store import SecretCipher
@@ -187,7 +188,7 @@ async def test_connector_saved_checked_and_letters_flow_through_journal(
     assert rejected.json()["details"]["reason"] == "smtp_auth_failed"
     harness.transport.error = None
 
-    # Приглашение: пароль сменён, письмо в очереди; доставка воркером → `sent`, тело стёрто.
+    # Приглашение: прежний пароль закрыт, письмо со ссылкой в очереди; доставка → `sent`.
     manager, old_password = await make_user(sessions, "m@railtech.uz", ["manager"])
     invite = client.post(f"/api/v1/users/{manager.id}/invite", headers=auth)
     assert invite.status_code == 200, invite.text
@@ -204,10 +205,24 @@ async def test_connector_saved_checked_and_letters_flow_through_journal(
     (to, subject, body) = harness.transport.sent[0]
     assert to == "m@railtech.uz"
     assert "RailTech" in subject
-    assert "Вход: https://platform.example.com/login" in body  # Платформа, не localhost (W15-H8a)
+    # ДВ-7: в письме ссылка «Задайте пароль» на Платформу, пароля нет.
+    assert "https://platform.example.com/reset-password?token=" in body
     assert "localhost" not in body
-    temporary = body.split("Временный пароль: ")[1].splitlines()[0]
-    login(client, manager.email, temporary)  # письмо содержит рабочий временный пароль
+    assert "емпорар" not in body.lower()
+    assert "temporary" not in body.lower()
+    assert old_password not in body
+    temporary = body.split("token=")[1].split()[0]  # токен ссылки: в базе его быть не должно
+    new_password = "Fresh-secret-2026-x"
+    set_password = client.post(
+        "/api/v1/auth/reset-password", json={"token": temporary, "new_password": new_password}
+    )
+    assert set_password.status_code == 204, set_password.text
+    login(client, manager.email, new_password)
+    again = client.post(
+        "/api/v1/auth/reset-password", json={"token": temporary, "new_password": new_password}
+    )
+    assert again.status_code == 422  # ссылка одноразовая
+    assert again.json()["details"]["reason"] == "reset_token_invalid"
 
     # Сброс по почте и тестовое письмо — тоже в журнале; фильтр по статусу работает.
     reset = client.post(f"/api/v1/users/{manager.id}/reset-password/email", headers=auth)
@@ -221,7 +236,7 @@ async def test_connector_saved_checked_and_letters_flow_through_journal(
         ("invite", "sent"),
     ]
     assert client.get(f"{URL}/log?status=sent", headers=auth).json()[0]["id"] == email_log_id
-    assert all("Временный пароль" not in row["subject"] for row in log)
+    assert all(temporary not in row["subject"] for row in log)
 
     async with sessions() as session:
         rows = (await session.execute(select(EmailLog))).scalars().all()
@@ -231,6 +246,10 @@ async def test_connector_saved_checked_and_letters_flow_through_journal(
     assert (sent_row.status, sent_row.body_ciphertext, sent_row.attempts) == ("sent", None, 1)
     assert sent_row.sent_at is not None
     assert all(temporary.encode() not in (r.body_ciphertext or b"") for r in rows)
+    async with sessions() as session:
+        stored = (await session.execute(select(PasswordResetToken))).scalars().all()
+    assert {t.token_hash for t in stored} >= {hash_token(temporary)}
+    assert all(t.token_hash != temporary for t in stored)
     assert {s.key for s in secrets} >= {"smtp_username", "smtp_password"}
     assert all(RELAY_PASSWORD.encode() not in s.ciphertext for s in secrets)
     actions = [a.action for a in audits]
