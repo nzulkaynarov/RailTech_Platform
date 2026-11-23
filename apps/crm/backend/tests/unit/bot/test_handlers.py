@@ -79,9 +79,13 @@ class _StartLinks:
     def __init__(self, texts: list[str] | Exception) -> None:
         self.texts = texts
         self.calls: list[tuple[int, str]] = []
+        self.languages: list[str | None] = []
 
-    async def apply(self, tg_user_id: int, payload: str) -> Any:
+    async def apply(
+        self, tg_user_id: int, payload: str, now: Any = None, language_code: str | None = None
+    ) -> Any:
         self.calls.append((tg_user_id, payload))
+        self.languages.append(language_code)
         if isinstance(self.texts, Exception):
             raise self.texts
         return type("R", (), {"texts": self.texts})()
@@ -123,6 +127,22 @@ async def test_start_with_payload_adds_the_link_reply_after_the_greeting() -> No
     links = _StartLinks(["Вижу вашу заявку."])
     assert await _start("deal_5", links) == ["Здравствуйте!", "Вижу вашу заявку."]
     assert links.calls == [(42, "deal_5")]
+
+
+async def test_start_passes_the_telegram_language_to_the_link_service() -> None:
+    from aiogram.filters import CommandObject
+
+    from app.bot.handlers import on_start
+
+    links = _StartLinks(["ok"])
+    msg = message(text="/start")
+    assert msg.from_user is not None
+    msg = msg.model_copy(
+        update={"from_user": msg.from_user.model_copy(update={"language_code": "uz"})}
+    )
+    command = CommandObject(prefix="/", command="start", args="pricing")
+    await on_start(msg, _Bot(), _Conversation(), _Settings(), command, links)
+    assert links.languages == ["uz"]
 
 
 async def test_a_broken_link_never_breaks_the_greeting() -> None:
