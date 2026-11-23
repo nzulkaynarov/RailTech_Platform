@@ -41,4 +41,20 @@ describe("Новый партнёр · галочки шагов (Х-18)", () =>
     fireEvent.click(within(form).getByRole("button", { name: /^Контакт/ }));
     expect(ticked(within(form).getByRole("button", { name: /^Компания/ }))).toBe(false);
   });
+
+  it("пока ИНН и рег. номер пусты, шаг «Компания» без галочки, а на шаге после ухода названо, чего не хватает", async () => {
+    signIn("supply@demo.example");
+    renderAt("/crm/clients?partner=new&panel=open&tab=card");
+    const form = await screen.findByRole("region", { name: "Новый партнёр" });
+    fireEvent.change(within(form).getByLabelText("Название"), { target: { value: "Демо Сталь" } });
+    fireEvent.click(within(form).getByRole("button", { name: /^Контакт/ }));
+    const head = within(form).getByRole("button", { name: /^Компания/ });
+    expect(ticked(head)).toBe(false);
+    fireEvent.click(head);
+    const section = within(form).getByRole("region", { name: /^Компания/ });
+    expect(within(section).getByText("Укажите ИНН или рег. номер")).toBeVisible();
+    fireEvent.change(within(form).getByLabelText("Рег. номер"), { target: { value: "DE-77" } });
+    fireEvent.click(within(form).getByRole("button", { name: /^Контакт/ }));
+    expect(ticked(within(form).getByRole("button", { name: /^Компания/ }))).toBe(true);
+  });
 });

@@ -654,6 +654,12 @@
     "sections": {
       "company": "Company",
       "contact": "Contact"
+    },
+    "needs": {
+      "name": "Enter the name",
+      "tinOrReg": "Enter the TIN or the registration number",
+      "tinInvalid": "TIN is 9 digits",
+      "emailInvalid": "Email as name@company.uz"
     }
   },
   "cabinetAccess": {
