@@ -74,20 +74,17 @@ test.describe("Консоли сервисов и внешние кабинет�
       await expectNoViolations(page, `storage ${String(width)}`);
     });
 
-    test(`директор на ${String(width)}: консолей нет, кабинеты есть, axe`, async ({ page }) => {
+    test(`директор на ${String(width)}: страниц фундамента нет (ЕВ-2а), прямой адрес — «Нет доступа», axe`, async ({
+      page,
+    }) => {
       await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
       await loginAndWait(page, "director@demo.example");
 
-      await openCard(page, "models");
-      const side = page.locator(PANEL);
-      await expect(
-        side.getByRole("link", { name: "Консоль Anthropic — откроется в новой вкладке" }),
-      ).toBeVisible();
-      await expect(side.getByRole("link", { name: /Открыть консоль/ })).toHaveCount(0);
-      await openCard(page, "erp");
-      await expect(side.getByRole("heading", { level: 3, name: "ERP" })).toBeVisible();
-      await expect(side.getByRole("link", { name: /Открыть консоль/ })).toHaveCount(0);
-      await expectNoViolations(page, `director erp ${String(width)}`);
+      // Консоли и внешние кабинеты — страница «Сервисы» (раздел `admin.system`): директору она не показывается
+      await spaGoto(page, "/admin/integrations?card=erp&panel=open");
+      await expect(page.getByRole("heading", { level: 1, name: "Нет доступа" })).toBeVisible();
+      await expect(page.getByRole("link", { name: /Открыть консоль/ })).toHaveCount(0);
+      await expectNoViolations(page, `director no access ${String(width)}`);
       await settledScreenshot(page, "director-erp");
     });
   }

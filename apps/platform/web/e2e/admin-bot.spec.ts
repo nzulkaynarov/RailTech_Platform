@@ -82,14 +82,14 @@ test.describe("Настройки бота: администратор", () => {
     await settledScreenshot(page, "company");
 
     await contacts.getByLabel("Название компании").fill("RailTech Групп (демо)");
-    await expect(contacts.getByText("Есть несохранённые изменения")).toBeVisible();
+    await expect(contacts.getByText("Есть несохранённые изменения").first()).toBeVisible();
     await contacts.getByRole("button", { name: "Отменить изменения" }).click();
     await expect(contacts.getByLabel("Название компании")).toHaveValue("RailTech (демо)");
 
     await contacts.getByLabel("Название компании").fill("RailTech Групп (демо)");
     await contacts.getByRole("button", { name: "Сохранить", exact: true }).click();
     await expect(page.getByText("Настройки «Контакты для клиентов» сохранены")).toBeVisible();
-    await expect(contacts.getByText("Изменений нет")).toBeVisible();
+    await expect(contacts.getByRole("button", { name: "Сохранить", exact: true })).toHaveCount(0);
     await settledScreenshot(page, "company-saved");
   });
 
@@ -210,7 +210,7 @@ test.describe("Настройки бота: администратор", () => {
     );
     await settledScreenshot(page, "escalation-dry-run");
     await expect(
-      form(page, "Правила передачи").getByText("Есть несохранённые изменения"),
+      form(page, "Правила передачи").getByText("Есть несохранённые изменения").first(),
     ).toBeVisible();
   });
 
@@ -356,7 +356,7 @@ test.describe("Настройки бота: права", () => {
     await settledScreenshot(page, "director-view");
   });
 
-  test("менеджер: пункта «Telegram» нет, прямой адрес — «Нет доступа»; в Настройках у директора пункт есть", async ({
+  test("менеджер: пункта «Telegram» нет, прямой адрес — «Нет доступа»; директору «Каналы и подключения» не показываются (ЕВ-2а)", async ({
     page,
   }) => {
     await loginAndWait(page, "manager@demo.example");
@@ -368,11 +368,12 @@ test.describe("Настройки бота: права", () => {
     await spaGoto(page, "/login");
     await loginAndWait(page, "director@demo.example");
     await spaGoto(page, "/admin/roles");
-    await expect(
-      page
-        .getByRole("navigation", { name: "Разделы модуля" })
-        .getByRole("link", { name: "Подключения", exact: true }),
-    ).toBeVisible();
+    // EV-2a: страницы фундамента (раздел `admin.system`) директору не показываются
+    const menu = page.getByRole("navigation", { name: "Разделы модуля" });
+    await expect(menu.getByRole("link", { name: "Правила работы", exact: true })).toBeVisible();
+    await expect(menu.getByRole("link", { name: "Каналы и подключения", exact: true })).toHaveCount(
+      0,
+    );
   });
 });
 

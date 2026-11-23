@@ -111,10 +111,10 @@ test.describe("Компания: права и меню", () => {
     page,
   }) => {
     await loginAndWait(page, "director@demo.example");
-    await spaGoto(page, "/admin?group=company");
+    await spaGoto(page, "/admin");
     await page
-      .getByRole("region", { name: "Компания" })
-      .getByRole("link", { name: /Реквизиты и бланк/ })
+      .getByRole("navigation", { name: "Разделы модуля" })
+      .getByRole("link", { name: "Компания", exact: true })
       .click();
     await expect(page).toHaveURL(/\/admin\/company/);
     await expect(page.getByRole("heading", { level: 1, name: "Реквизиты и бланк" })).toBeVisible();
@@ -497,13 +497,15 @@ test.describe("Компания: категории, запросы, платф�
     await expect(page.getByText(/1 USD = 12\s650,50 сум/)).toBeVisible();
     // второго поля НДС нет: расчёт читает только «Ставку НДС в новом КП»; форма шлёт один адрес поддержки
     await expect(page.getByLabel("Ставка НДС, %")).toHaveCount(0);
+    // Адрес поддержки — на «Реквизитах и бланке» (ЕВ-2а)
+    await openCompany(page, "details");
     await page.getByLabel("Адрес поддержки").fill("help@rt.uz");
     await page.getByRole("button", { name: "Сохранить настройки" }).click();
     await expect(toast(page, "Сохранено")).toBeVisible();
     await signOut(page);
 
     await loginAndWait(page, "director@demo.example");
-    await openCompany(page, "platform");
+    await openCompany(page, "details");
     await page.getByLabel("Адрес поддержки").fill("other@rt.uz");
     await page.getByRole("button", { name: "Сохранить настройки" }).click();
   });

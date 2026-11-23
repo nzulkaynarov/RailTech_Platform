@@ -193,7 +193,8 @@ async def catalog(feed: Feed, access: Access) -> TemplateCatalog:
         or allows(access, "eds.inbox.register", "full")
         or allows(access, "admin", "read")
     )
-    # Ответы бота правит страница «Telegram» (раздел `admin.system`): без неё у строки нет места, куда вести, — строк нет
+    # Ответы бота правит страница «Telegram» (раздел `admin.system`):
+    # без неё у строки нет места, куда вести, — строк нет
     replies = allows(access, "admin.system", "read")
     letters = (
         allows(access, "eds.memo.create", "read")

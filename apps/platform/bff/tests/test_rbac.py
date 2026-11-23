@@ -264,7 +264,8 @@ def test_menu_examples() -> None:
     assert "crm" not in rbac.modules_for(admin)
     director = rbac.menu_for(rbac.merge(roles("DIRECTOR")))
     # директор видит те же пункты на чтение; «Обмен между системами» прячет web (`level: full`);
-    # SIGN-2: полномочия подписи (`signing`) и EV-2a: страницы раздела `admin.system` — только администратор
+    # SIGN-2: полномочия подписи (`signing`) и EV-2a: страницы раздела `admin.system` —
+    # только администратор
     assert director["admin"] == [s for s in SETTINGS_MENU if s not in SYSTEM_ONLY]
     assert "kb" in director["crm"]
     assert "telegram" not in rbac.menu_for(rbac.merge(roles("MANAGER")))["admin"]
