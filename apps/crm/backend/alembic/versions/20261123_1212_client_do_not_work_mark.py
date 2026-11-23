@@ -8,7 +8,7 @@
 Downgrade удаляет колонки.
 
 Revision ID: cae4f42de3cd
-Revises: 4d6593eef5f9
+Revises: 4c04e621fc60
 Create Date: 2026-11-23 12:12:07.473268+00:00
 """
 
@@ -18,7 +18,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision: str = "cae4f42de3cd"
-down_revision: str | Sequence[str] | None = "7b1e3c9a52d4"
+down_revision: str | Sequence[str] | None = "4c04e621fc60"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
