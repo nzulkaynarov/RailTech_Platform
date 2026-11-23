@@ -43,7 +43,7 @@ describe("Admin · Журнал аудита (экран целиком на MSW
     // заголовок + 13 записей без двух входов (15 всего)
     expect(rows).toHaveLength(14);
     expect(
-      within(rows[1] as HTMLElement).getByText("Сбросил пароль и отправил по почте"),
+      within(rows[1] as HTMLElement).getByText("Сбросил пароль и отправил ссылку по почте"),
     ).toBeVisible();
     expect(within(table).queryByText("Вход")).toBeNull();
     expect(screen.getByText("Записей: 13")).toBeVisible();

@@ -178,7 +178,7 @@ class CrmUsers:
         )
 
     async def invite(self, user_id: str) -> None:
-        """Письмо-приглашение с новым временным паролем (коннектор «Почта» CRM)."""
+        """Письмо-приглашение с одноразовой ссылкой «Задайте пароль» (коннектор «Почта» CRM)."""
         await self._json("POST", f"/api/v1/users/{user_id}/invite", 200)
 
     async def erp_sync(self, user_id: str) -> dict[str, Any]:
@@ -187,7 +187,7 @@ class CrmUsers:
         return user
 
     async def reset_password_email(self, user_id: str) -> dict[str, Any]:
-        """Новый временный пароль и письмо о нём (коннектор «Почта» CRM); сессии сотрудника гаснут.
+        """Письмо со ссылкой на новый пароль (коннектор «Почта» CRM); сессии сотрудника гаснут.
 
         Ошибки переводит `integration_error`: «почта не подключена» -> 409 `NOT_CONFIGURED`,
         «нет ключа шифрования» -> 409 `SECRETS_KEY_MISSING`; 404 и 403 CRM — как есть.

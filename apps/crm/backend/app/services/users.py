@@ -26,7 +26,7 @@ from app.domain.errors import (
 )
 from app.domain.lead_access import loses_work_role
 from app.domain.platform_roles import derive_access
-from app.models.auth import RefreshToken, User
+from app.models.auth import PasswordResetToken, RefreshToken, User
 from app.models.platform_roles import PlatformRole
 from app.repositories import platform_roles as prepo
 from app.repositories import users as repo
@@ -218,6 +218,7 @@ class UserService:
                 await hand_over_work(session, actor, user_id, patch.transfer_to_user_id)
             if patch.is_active is False:
                 await revoke_tokens(session, user_id)
+                await burn_link_tokens(session, user_id)
                 # Секретная ссылка календаря отзывается вместе с входом (BFF удаляет свою копию по
                 # событию `identity.user.deactivated`).
                 user.calendar_token_hash = None
@@ -283,6 +284,7 @@ class UserService:
             user.failed_logins = 0
             user.locked_until = None
             await close_sessions(session, user_id)
+            await burn_link_tokens(session, user_id)
             await audit.record(session, actor, "user.reset_password", "user", user_id)
         return password
 
@@ -317,6 +319,7 @@ class UserService:
             user.password_hash = hash_password(new)
             user.must_change_password = False
             changed = await close_sessions(session, user_id)
+            await burn_link_tokens(session, user_id)
             await audit.record(session, actor, "user.change_password", "user", user_id)
         return changed
 
@@ -586,6 +589,15 @@ async def close_sessions(session: AsyncSession, user_id: int) -> datetime:
         update(User).where(User.id == user_id).values(password_changed_at=changed)
     )
     return changed
+
+
+async def burn_link_tokens(session: AsyncSession, user_id: int) -> None:
+    """Unused set-password links die with the old password or the account."""
+    await session.execute(
+        update(PasswordResetToken)
+        .where(PasswordResetToken.user_id == user_id, PasswordResetToken.used_at.is_(None))
+        .values(used_at=datetime.now(UTC))
+    )
 
 
 async def revoke_tokens(session: AsyncSession, user_id: int) -> None:

@@ -149,10 +149,12 @@ async def reset_password(user_id: int, who: Writer, container: ContainerDep) -> 
 
 @router.post("/{user_id}/invite", response_model=EmailQueuedOut)
 async def invite_user(user_id: int, who: Writer, container: ContainerDep) -> EmailQueuedOut:
-    """Пригласить по почте (M3-CRM-08): новый временный пароль и письмо через коннектор «Почта».
+    """Пригласить по почте (ДВ-7): письмо с одноразовой ссылкой «Задайте пароль» (72 ч), без пароля.
 
-    Без коннектора — 409 `smtp_not_configured`, пароль не меняется (выдайте его вручную,
-    как прежде); без `SECRETS_KEY` — 409 `secrets_key_missing`. Итог доставки — в журнале писем.
+    Прежний пароль и сессии закрываются, статус — «Приглашён». Без коннектора — 409
+    `smtp_not_configured`, ничего не меняется (выдайте временный пароль на экране); без
+    `SECRETS_KEY` — 409 `secrets_key_missing`; больше 3 ссылок в час на сотрудника — 429.
+    Итог доставки — в журнале писем.
     """
     return queued_out(await container.user_invites.invite(who.actor, user_id))
 
@@ -161,9 +163,10 @@ async def invite_user(user_id: int, who: Writer, container: ContainerDep) -> Ema
 async def reset_password_by_email(
     user_id: int, who: Writer, container: ContainerDep
 ) -> EmailQueuedOut:
-    """Сбросить пароль и отправить временный по почте (M3-CRM-08); сессии завершаются.
+    """Сбросить пароль по почте (ДВ-7): письмо с одноразовой ссылкой на 1 час, пароля в письме нет.
 
-    Без коннектора — 409 `smtp_not_configured`, пароль не меняется.
+    Прежний пароль закрывается, сессии завершаются. Без коннектора — 409 `smtp_not_configured`,
+    пароль не меняется; больше 3 ссылок в час на сотрудника — 429.
     """
     return queued_out(await container.user_invites.reset_password_email(who.actor, user_id))
 

@@ -466,6 +466,8 @@ menu:
     numbering: [company.settings]
     taxes: [company.settings]
     sales: [company.settings]
+    # ДВ-5: оферта и политика Кабинета — правило компании, правят директор и администратор
+    legal: [company.settings]
     articles: [admin]
     telegram: [admin]
     mail: [admin]

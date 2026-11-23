@@ -135,7 +135,7 @@
     }
   },
   "reset": {
-    "title": "New password",
+    "title": "Set your password",
     "lead": "Choose a password of at least 10 characters: letters and digits. After saving, sign in with the new password.",
     "new": "New password",
     "confirm": "Repeat the password",
@@ -148,7 +148,7 @@
     "toLogin": "To sign in",
     "requestNew": "Request a new link",
     "errors": {
-      "reset_token_invalid": "The link is invalid or has expired. Request a new one.",
+      "reset_token_invalid": "The link has already been used or has expired. Request a new one — it will arrive by email.",
       "weak_password": "The password is too simple: at least 10 characters, letters and digits.",
       "TOO_MANY_REQUESTS": "Too many attempts. Try again later.",
       "BACKEND_UNAVAILABLE": "Cannot reach CRM. Try again later.",

@@ -29,6 +29,7 @@ import { adminRolesHandlers } from "./adminRoles";
 import { botKbHandlers } from "./botKb";
 import { calendarLinkHandlers } from "./calendarLink";
 import { companyArticlesHandlers } from "./companyArticlesHandlers";
+import { legalHandlers } from "./legalHandlers";
 import { callNoteHandlers, crmLeadsHandlers } from "./crmLeads";
 import { crmMessagesHandlers } from "./crmMessages";
 import { edsApprovalsHandlers } from "./edsApprovals";
@@ -257,6 +258,7 @@ export const handlers = [
   ...mailTypesHandlers, // MAIL-TYPES: правила отправителя
   ...inboundMailHandlers, // W18A-P2: входящая почта общего ящика и приём в «Подключениях»
   ...companyArticlesHandlers,
+  ...legalHandlers,
   // Раньше «Создать документ»: вложения служебок к оплате (счёт партнёра, платёжка) отдаются здесь, остальное — дальше.
   ...edsPaymentsHandlers,
   ...edsDocumentsHandlers,

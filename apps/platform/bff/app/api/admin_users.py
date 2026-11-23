@@ -107,8 +107,8 @@ async def invite_employee(
     try:
         await users.invite(str(user["id"]))
     except PlatformError as exc:
-        # Пользователь уже создан, временный пароль BFF наружу не отдаёт: письмо — единственный
-        # путь. Повтор — `POST /admin/users/{id}/invite`; ошибка несёт id сотрудника.
+        # Пользователь уже создан; в письме одноразовая ссылка, пароля нет. Повтор —
+        # `POST /admin/users/{id}/invite`; ошибка несёт id сотрудника.
         raise _not_sent(exc, str(user["id"]), INVITE_CRM_UNAVAILABLE) from exc
     return to_employee(user)
 
@@ -124,7 +124,11 @@ def _not_sent(exc: PlatformError, employee_id: str, unavailable: str) -> Platfor
             source=exc.body.source,
             details=details,
         )
-    if exc.status_code in (status.HTTP_404_NOT_FOUND, status.HTTP_403_FORBIDDEN):
+    if exc.status_code in (
+        status.HTTP_404_NOT_FOUND,
+        status.HTTP_403_FORBIDDEN,
+        status.HTTP_429_TOO_MANY_REQUESTS,
+    ):
         return exc
     return PlatformError(
         "CONFLICT",
@@ -142,8 +146,10 @@ def _not_sent(exc: PlatformError, employee_id: str, unavailable: str) -> Platfor
     operation_id="resendInvite",
 )
 async def resend_invite(id: EmployeeId, authed: Writer) -> Employee:
-    """Отправить приглашение снова. CRM меняет временный пароль только при отправке письма: без
-    подключённой почты пароль прежний, ответ — 409 `CONFLICT` с `details.invite = not_sent`."""
+    """Отправить приглашение снова: письмо с одноразовой ссылкой «Задайте пароль» (72 часа),
+    пароля в нём нет; новая ссылка гасит прежнюю. Без подключённой почты ничего не меняется,
+    ответ — 409 `CONFLICT` с `details.invite = not_sent`;
+    больше трёх ссылок в час на сотрудника — 429."""
     users = _users(authed)
     try:
         await users.invite(id)
@@ -173,11 +179,11 @@ SELF_RESET_MESSAGE = "Свой пароль здесь не сбросить: в
     operation_id="resetEmployeePasswordByEmail",
 )
 async def reset_employee_password_by_email(id: EmployeeId, authed: Writer) -> MailQueued:
-    """Сбросить пароль сотрудника: CRM выдаёт новый временный пароль и шлёт письмо, сессии гаснут.
+    """Сбросить пароль сотрудника: CRM шлёт письмо с одноразовой ссылкой на час, сессии гаснут.
 
     Себе сбросить нельзя: CRM завершила бы собственную сессию администратора, а письмо ушло бы
     на его же адрес — для своего пароля есть «Сменить пароль». Запрос в CRM в этом случае не уходит.
-    Пароль в ответ не попадает."""
+    Пароля нет ни в письме, ни в ответе; больше трёх ссылок в час на сотрудника — 429."""
     if _is_self(id, authed):
         raise PlatformError(
             "CONFLICT",

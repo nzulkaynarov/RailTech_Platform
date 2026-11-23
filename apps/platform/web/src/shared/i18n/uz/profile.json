@@ -135,7 +135,7 @@
     }
   },
   "reset": {
-    "title": "Yangi parol",
+    "title": "Parolni örnating",
     "lead": "Kamida 10 belgidan iborat parol o‘ylab toping: harflar va raqamlar. Saqlagandan keyin yangi parol bilan kiring.",
     "new": "Yangi parol",
     "confirm": "Parolni takrorlang",
@@ -148,7 +148,7 @@
     "toLogin": "Kirishga",
     "requestNew": "Yangi havola so‘rash",
     "errors": {
-      "reset_token_invalid": "Havola yaroqsiz yoki eskirgan. Yangisini so‘rang.",
+      "reset_token_invalid": "Havola işlatilgan yoki muddati tugagan. Yangisini sörang — poçtaga keladi.",
       "weak_password": "Parol juda oddiy: kamida 10 belgi, harflar va raqamlar.",
       "TOO_MANY_REQUESTS": "Urinishlar juda ko‘p. Keyinroq takrorlang.",
       "BACKEND_UNAVAILABLE": "CRM bilan bog‘lanib bo‘lmadi. Keyinroq takrorlang.",

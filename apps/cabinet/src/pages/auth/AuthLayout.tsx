@@ -3,6 +3,9 @@ import { useTranslation } from 'react-i18next';
 
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { BrandMark } from '@/components/shell/BrandMark';
+import { Link } from 'react-router-dom';
+
+import { useLegalPolicy } from '@/api/queries';
 import { usePageTitle } from '@/hooks/usePageTitle';
 
 /**
@@ -12,6 +15,8 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 export function AuthLayout({ title, children }: { title: string; children: ReactNode }) {
   const { t } = useTranslation();
   usePageTitle(title);
+  // ДВ-5: ссылка на действующую политику — пока она не опубликована, ссылки нет
+  const policy = useLegalPolicy().data?.policy;
   return (
     <div className="flex min-h-dvh flex-col bg-muted text-foreground">
       <header className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
@@ -28,6 +33,13 @@ export function AuthLayout({ title, children }: { title: string; children: React
         <div className="flex w-full max-w-md flex-col gap-4">
           {children}
           <p className="rounded-md bg-background px-3 py-2 text-xs text-muted-foreground">{t('auth.antiPhishing')}</p>
+          {policy ? (
+            <p className="text-center text-xs text-muted-foreground">
+              <Link to="/privacy" className="underline underline-offset-4 hover:text-foreground">
+                {t('legal.policyLink')}
+              </Link>
+            </p>
+          ) : null}
         </div>
       </main>
     </div>
