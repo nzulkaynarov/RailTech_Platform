@@ -49,6 +49,7 @@ export const keys = {
   securityLog: ['company', 'security-log'] as const,
   legal: ['legal'] as const,
   legalPolicy: ['legal', 'policy'] as const,
+  docLink: (token: string) => ['doc-link', token] as const,
 };
 
 /** Список раздела грузится, только если у сессии есть его модуль (партнёру клиентские разделы закрыты, ADR-0022). */
@@ -448,5 +449,35 @@ export function useAcceptLegal() {
     },
     // 409: за время чтения вышла новая редакция — экран перечитывает действующие
     onError: () => void queryClient.invalidateQueries({ queryKey: keys.legal }),
+  });
+}
+
+// --- документ по ссылке из письма (ДК-1, ДК-2) -------------------------------------------------------------------
+
+/** Документ по ссылке: открытие пишется в журнал ссылки, поэтому без повторов и без перезапроса при возврате на вкладку. */
+export const useDocLink = (token: string) =>
+  useQuery({
+    queryKey: keys.docLink(token),
+    queryFn: () => portal.openDocLink(token),
+    retry: false,
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
+  });
+
+export const useRequestDocLinkCode = (token: string) => useMutation({ mutationFn: () => portal.requestDocLinkCode(token) });
+
+export const useVerifyDocLinkCode = (token: string) =>
+  useMutation({ mutationFn: (code: string) => portal.verifyDocLinkCode(token, code) });
+
+/** Действие по ссылке; ответ — документ после действия, он кладётся в кэш, прочие списки кабинета устаревают. */
+export function useActOnDocLink(token: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ action, text }: { action: portal.DocLinkAction; text?: string }) => portal.actOnDocLink(token, action, text),
+    onSuccess: (view) => {
+      queryClient.setQueryData(keys.docLink(token), view);
+      void queryClient.invalidateQueries({ queryKey: keys.quotes });
+      void queryClient.invalidateQueries({ queryKey: keys.requests });
+    },
   });
 }

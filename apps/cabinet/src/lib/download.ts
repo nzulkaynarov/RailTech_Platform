@@ -1,4 +1,11 @@
-import { getCatalogItemDocumentFile, getDocumentFile, getLetterFile, getPartnerProductDocumentFile } from '@/api/portal';
+import {
+  getCatalogItemDocumentFile,
+  getDocLinkPdf,
+  getDocumentFile,
+  getLetterFile,
+  getPartnerProductDocumentFile,
+  type DocumentFile,
+} from '@/api/portal';
 
 /**
  * Скачивание документа `GET /documents/{id}/file` (по образцу B2B `lib/download.ts`): 202 — PDF ещё
@@ -32,10 +39,19 @@ export function setDownloadWait(wait: ((ms: number) => Promise<void>) | null): v
 }
 
 export async function downloadDocument(id: number, fallbackName: string, options: DownloadOptions = {}): Promise<void> {
+  await pollAndSave(() => getDocumentFile(id), fallbackName, options);
+}
+
+/** PDF документа по ссылке из письма (ДК-1): та же очередь «готовится» (202), токен — в теле запроса. */
+export async function downloadDocLinkPdf(token: string, fallbackName: string, options: DownloadOptions = {}): Promise<void> {
+  await pollAndSave(() => getDocLinkPdf(token), fallbackName, options);
+}
+
+async function pollAndSave(load: () => Promise<DocumentFile>, fallbackName: string, options: DownloadOptions): Promise<void> {
   const wait = options.wait ?? defaultWait;
   for (let attempt = 0; attempt < DOWNLOAD_MAX_ATTEMPTS; attempt += 1) {
     if (options.signal?.aborted) return;
-    const file = await getDocumentFile(id);
+    const file = await load();
     if (file.state === 'ready') {
       saveBlob(file.blob, file.fileName ?? fallbackName);
       return;

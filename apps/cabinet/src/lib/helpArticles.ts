@@ -56,6 +56,44 @@ export const HELP_ARTICLES: HelpArticle[] = [
     },
   },
   {
+    id: 'quotes-by-link',
+    category: 'quotes',
+    routePatterns: ['/quotes'],
+    title: {
+      ru: 'Предложение пришло ссылкой в письме: что с ней можно сделать?',
+      uz: 'Taklif xatda havola bilan keldi: u bilan nima qilish mumkin?',
+      en: 'The quote came as a link in an e-mail: what can I do with it?',
+    },
+    summary: {
+      ru: 'Ссылка открывает один документ; любое действие — после кода на вашу почту, и этот же код открывает ваш Кабинет.',
+      uz: 'Havola bitta hujjatni ochadi; har qanday amal — pochtangizga kelgan koddan keyin, shu kod Kabinetingizni ham ochadi.',
+      en: 'The link opens one document; any action needs the code sent to your e-mail, and the same code opens your Cabinet.',
+    },
+    content: {
+      ru: [
+        'Ссылка из письма открывает только это предложение: состав, сумму, срок и «Скачать PDF». Других документов и разделов по ней не видно.',
+        'Чтобы принять предложение, вернуть его с замечаниями или задать вопрос, нажмите нужную кнопку — на адрес, куда пришло письмо, придёт код из шести цифр. Он действует 10 минут; новый код можно запросить через 45 секунд. Адрес в окне не меняется.',
+        'Код — это и вход: после него открыт ваш Кабинет с договором, счетами и актами, а начатое действие выполняется само. При первом входе нужно принять условия использования и политику обработки персональных данных.',
+        'Если вы уже вошли в Кабинет, код не нужен. Кнопки решения неактивны, если у вашего контакта нет права принимать решения, — обратитесь к администратору компании.',
+        'Ссылку может отозвать отправитель, а срок её действия ограничен: тогда страница покажет только причину. Запросите новую у отправителя.',
+      ],
+      uz: [
+        'Xatdagi havola faqat shu taklifni ochadi: tarkibi, summa, muddat va «PDF yuklab olish». Boşqa hujjat va bölimlar körinmaydi.',
+        'Taklifni qabul qilişi, izoh bilan qaytariş yoki savol berişi uçun kerakli tugmani bosing — xat kelgan manzilga oltita raqamli kod keladi. U 10 daqiqa amal qiladi; yangi kodni 45 soniyadan keyin söraş mumkin. Oynada manzil özgarmaydi.',
+        'Kod — bu kiriş ham: undan keyin şartnoma, hisoblar va dalolatnomalar bilan Kabinetingiz oçiladi, boşlangan amal özi bajariladi. Birinçi kirişda foydalaniş şartlari va şaxsga doir maʼlumotlarga işlov beriş siyosatini qabul qilişingiz kerak.',
+        'Kabinetga allaqaçon kirgan bölsangiz, kod kerak emas. Kontaktingizda qaror qabul qilişga huquq bölmasa, qaror tugmalari faol bölmaydi — kompaniya administratoriga murojaat qiling.',
+        'Havolani yuboruvçi bekor qilişi mumkin, uning amal qilish muddati ham çegaralangan: bunda sahifa faqat sababni körsatadi. Yuboruvçidan yangisini sörang.',
+      ],
+      en: [
+        'The link in the e-mail opens only this quote: contents, total, deadline and «Download PDF». No other documents or sections are visible through it.',
+        'To accept the quote, return it with remarks or ask a question, press the button — a six-digit code goes to the address the e-mail came to. It is valid for 10 minutes; a new one can be requested after 45 seconds. The address in the window cannot be changed.',
+        'The code is also your sign-in: after it your Cabinet opens with contracts, invoices and acts, and the action you started runs by itself. On the first sign-in you accept the terms of use and the personal data policy.',
+        'If you are already signed in, no code is needed. The decision buttons are inactive if your contact has no right to decide — ask your company administrator.',
+        'The sender can revoke the link and it has an expiry date: then the page shows only the reason. Ask the sender for a new one.',
+      ],
+    },
+  },
+  {
     id: 'contracts-eds',
     category: 'billing',
     routePatterns: ['/billing', '/contracts'],

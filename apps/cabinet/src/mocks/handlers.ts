@@ -32,6 +32,10 @@ import * as partner from './partnerMock';
  * `DELETE /me/telegram` отвечает 202 с прежним `linked`, следующий опрос — уже `linked=false` (проекция пришла);
  * привязанному `POST /me/telegram-link` — 409 `TELEGRAM_ALREADY_LINKED`; `account` — имя привязанного аккаунта;
  * `POST /me/telegram/test` — 202, чаще раза в минуту — 429 с `Retry-After`, без привязки — 409 `TELEGRAM_NOT_LINKED`.
+ * Документ по ссылке из письма (ДК-1, ДК-2): токен `/d/<токен>` — `revoked…` → 410 `DOC_LINK_REVOKED`, `expired…` →
+ * 410 `DOC_LINK_EXPIRED`, `superseded…` → 410 `DOC_LINK_SUPERSEDED`, `unknown…` или короче 16 знаков → 404; `viewer…` —
+ * получатель без права действовать; `foreign…` — ссылка другой компании (сессия видит гостевой вид); `done…` — КП уже принято;
+ * `toosoon…` — повтор кода раньше срока (429). Код: `000000` — неверный, `111111` — пять неверных подряд, иной — вход.
  * Чат кабинета (CHAT-1): лента компании `GET /messages[?after_id]`, `POST /messages` (повтор того же `client_message_id`
  * — прежнее сообщение, 200; текст `fail` — 503 для сценария «Не отправлено»), `POST /messages/read` — отметка не назад,
  * чужой `last_id` → 404; `/me.unread` — ответы менеджера после отметки. `pushManagerReply` — ответ менеджера для опроса.
@@ -130,6 +134,7 @@ let dbs: Record<Dataset, Db> = { demo: createDb('demo'), empty: createDb('empty'
 /** Для тестов: чистая сессия и данные фикстур. */
 export function resetMockPortal(): void {
   setMockSession(null);
+  docLinkStates.clear();
   dbs = { demo: createDb('demo'), empty: createDb('empty') };
   resetMockCrmForm();
   resetMockLegal();
@@ -384,7 +389,123 @@ const endedSessions = (db: Db): Set<number> => {
   return ended;
 };
 
+// --- Документ по ссылке из письма (ДК-1, ДК-2) --------------------------------------------------------------------
+
+/** Что решено по КП ссылки: токен → `accepted` / `rejected`; нет записи — ждёт ответа (`done…` — уже принято). */
+const docLinkStates = new Map<string, 'accepted' | 'rejected'>();
+const DOC_LINK_MIN = 16;
+
+function docLinkGone(token: string): Response | null {
+  if (token.length < DOC_LINK_MIN || token.startsWith('unknown')) return error(404, 'NOT_FOUND');
+  if (token.startsWith('revoked')) return error(410, 'DOC_LINK_REVOKED');
+  if (token.startsWith('expired')) return error(410, 'DOC_LINK_EXPIRED');
+  if (token.startsWith('superseded')) return error(410, 'DOC_LINK_SUPERSEDED');
+  return null;
+}
+
+function docLinkState(token: string): Schemas['DocLinkView']['state'] {
+  return docLinkStates.get(token) ?? (token.startsWith('done') ? 'accepted' : 'open');
+}
+
+function docLinkAvailability(token: string, session: MockSession | null): Schemas['DocLinkAvailability'] {
+  const state = docLinkState(token);
+  if (state !== 'open') return { allowed: false, reason: state };
+  if (session && token.includes('foreign')) return { allowed: false, reason: 'other_company' };
+  const canAct = session ? contactFor(session.role).can_act : !token.includes('viewer');
+  return canAct ? { allowed: true, reason: null } : { allowed: false, reason: 'no_right' };
+}
+
+function docLinkView(token: string): Schemas['DocLinkView'] {
+  const session = readSession();
+  const quote = fixtures.quotes[0];
+  const availability = docLinkAvailability(token, session);
+  const valid = new Date(`${businessToday()}T00:00:00Z`);
+  valid.setUTCDate(valid.getUTCDate() + 16);
+  const expires = new Date(valid);
+  expires.setUTCDate(expires.getUTCDate() + 30);
+  return {
+    kind: 'quote',
+    number: 'QT-0118',
+    version: 1,
+    from_name: 'ООО «РейлТех»',
+    to_name: 'ООО «Восток Транс»',
+    total: quote.total,
+    subtotal: quote.subtotal,
+    vat: quote.vat,
+    valid_until: valid.toISOString().slice(0, 10),
+    state: docLinkState(token),
+    link_expires_at: expires.toISOString(),
+    recipient_hint: 'p***@vostok-trans.uz',
+    session: !session ? 'none' : token.includes('foreign') ? 'other_company' : 'member',
+    decide: availability,
+    ask: availability,
+    payment_terms: quote.payment_terms,
+    delivery_days: quote.delivery_days,
+    delivery_note: quote.delivery_note,
+    lines: quote.lines,
+  };
+}
+
+const docLinkHandlers = [
+  http.post(`${API}/doc-links/open`, async ({ request }) => {
+    const { token } = await readJson<{ token?: string }>(request);
+    if (typeof token !== 'string' || !token) return error(422, 'VALIDATION_ERROR');
+    return docLinkGone(token) ?? json(docLinkView(token));
+  }),
+  http.post(`${API}/doc-links/pdf`, async ({ request }) => {
+    const { token } = await readJson<{ token?: string }>(request);
+    if (typeof token !== 'string' || !token) return error(422, 'VALIDATION_ERROR');
+    const gone = docLinkGone(token);
+    if (gone) return gone;
+    return new HttpResponse(new Uint8Array([0x25, 0x50, 0x44, 0x46, 0x2d, 0x31, 0x2e, 0x34]), {
+      headers: { 'Content-Type': 'application/pdf', 'Content-Disposition': 'attachment; filename="QT-0118.pdf"' },
+    });
+  }),
+  http.post(`${API}/doc-links/code`, async ({ request }) => {
+    const { token } = await readJson<{ token?: string }>(request);
+    if (typeof token !== 'string' || !token) return error(422, 'VALIDATION_ERROR');
+    const gone = docLinkGone(token);
+    if (gone) return gone;
+    if (token.startsWith('toosoon')) {
+      return HttpResponse.json({ detail: 'CODE_RESEND_TOO_SOON' }, { status: 429, headers: { 'Retry-After': '30' } });
+    }
+    return json({ sent_to: 'p***@vostok-trans.uz', expires_in: 600, resend_after: 45 } satisfies Schemas['DocLinkCodeSent'], 202);
+  }),
+  http.post(`${API}/doc-links/verify`, async ({ request }) => {
+    const { token, code } = await readJson<{ token?: string; code?: string }>(request);
+    if (typeof token !== 'string' || !/^\d{6}$/.test(code ?? '')) return error(422, 'VALIDATION_ERROR');
+    const gone = docLinkGone(token);
+    if (gone) return gone;
+    if (code === '000000') return error(422, 'LOGIN_CODE_INVALID');
+    if (code === '111111') return error(429, 'LOGIN_CODE_LOCKED');
+    const session = sessionFromToken(token, 'magic_link');
+    setMockSession(session);
+    return json(me(session));
+  }),
+  http.post(
+    `${API}/doc-links/act`,
+    withSession(
+      async ({ request }) => {
+        const { token, action, text } = await readJson<{ token?: string; action?: string; text?: string }>(request);
+        if (typeof token !== 'string' || !['accept', 'reject', 'question'].includes(action ?? '')) {
+          return error(422, 'VALIDATION_ERROR');
+        }
+        const gone = docLinkGone(token);
+        if (gone) return gone;
+        if (token.includes('foreign')) return error(403, 'FORBIDDEN');
+        if (docLinkState(token) !== 'open') return error(409, 'QUOTE_FINALIZED');
+        if (action !== 'accept' && !text?.trim()) return error(422, action === 'reject' ? 'REASON_REQUIRED' : 'TEXT_REQUIRED');
+        if (action === 'accept') docLinkStates.set(token, 'accepted');
+        if (action === 'reject') docLinkStates.set(token, 'rejected');
+        return json(docLinkView(token));
+      },
+      { action: true },
+    ),
+  ),
+];
+
 export const handlers = [
+  ...docLinkHandlers,
   // --- auth -----------------------------------------------------------------------------
   http.post(`${API}/auth/telegram`, async ({ request }) => {
     const body = await readJson<{ init_data: string }>(request);

@@ -24,8 +24,8 @@
 		request>headers>X-Portal-Session delete
 		request>headers>X-Api-Key delete
 		request>headers>X-Csrftoken delete
-		request>uri regexp `(/auth/magic/|/public/(?:quotes|documents|doc-links)/|[?&](?:token|access_token|key|api_key|signature|sig|code|secret)=)[^/?#&\s"']+` `${1}REDACTED`
-		request>headers>Referer regexp `(/auth/magic/|/public/(?:quotes|documents|doc-links)/|[?&](?:token|access_token|key|api_key|signature|sig|code|secret)=)[^/?#&\s"']+` `${1}REDACTED`
+		request>uri regexp `(/auth/magic/|/d/|/public/(?:quotes|documents|doc-links)/|[?&](?:token|access_token|key|api_key|signature|sig|code|secret)=)[^/?#&\s"']+` `${1}REDACTED`
+		request>headers>Referer regexp `(/auth/magic/|/d/|/public/(?:quotes|documents|doc-links)/|[?&](?:token|access_token|key|api_key|signature|sig|code|secret)=)[^/?#&\s"']+` `${1}REDACTED`
 		resp_headers>Set-Cookie delete
 	}
 }
