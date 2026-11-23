@@ -429,6 +429,8 @@ services:
       - caddy_data:/data
       - caddy_config:/config
       - ../caddy/Caddyfile.prod:/etc/caddy/Caddyfile:ro
+      # Файл-предупреждение о плановом обновлении (maintenance.json), пишет scripts/maintenance-notice.sh; Caddy только читает.
+      - ${RT_MAINTENANCE_DIR:-/opt/rt/maintenance}:/srv/maintenance:ro
     ports: ["80:80", "443:443", "443:443/udp"]
 
   # ─── Профиль observability: Langfuse (наружу не публикуется, доступ — SSH-туннель) ─────────
