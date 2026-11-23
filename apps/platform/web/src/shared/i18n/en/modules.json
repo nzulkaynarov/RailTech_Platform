@@ -204,6 +204,9 @@
           "exchange_rate": {
             "manual": "Exchange rate entered manually",
             "auto_skipped": "Central bank rate not applied: a manual rate is in force"
+          },
+          "portal_legal": {
+            "published": "A new edition of a Cabinet document was published"
           }
         }
       }
@@ -386,6 +389,7 @@
       "taxes": "Taxes & currencies",
       "sales": "Sales",
       "articles": "Company articles",
+      "legal": "Offer and policy",
       "telegram": "Telegram",
       "mail": "Mail",
       "forms": "Website forms",
@@ -681,7 +685,8 @@
         "openCard": "Open card",
         "notSentUnavailable": "The employee was added with the status “Invited”, but CRM did not respond and the email was not sent. Try again later with “Send the invitation again” in the card.",
         "resend": "Send the invitation again",
-        "resendHint": "A new email with a new temporary password goes out; the previous one stops working.",
+        "resendHint": "A new email with a 72-hour “Set your password” link goes out; the previous link and password stop working.",
+        "tooMany": "Too many links for this employee in an hour. Try again later.",
         "resendNotSent": "The email was not sent: mail is not connected or unavailable. Connect it in Settings · Connections and try again.",
         "delivery": "How to hand over access",
         "deliveryMail": "By email",

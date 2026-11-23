@@ -82,6 +82,31 @@ def seed_beat_tasks(apps=None, schema_editor=None):
     # 5. Напоминания клиентам о просроченных счетах: 10:00 по Ташкенту (NOTIFY-2, DECISIONS 2026-11-04). Сама отправка — под
     # настройкой компании-продавца «Напоминать клиентам о просроченных счетах» (по умолчанию выключено).
     seed_payment_reminders_task(apps)
+    seed_bank_codes_task(apps)
+
+
+#: Имя задачи Beat ежемесячной загрузки кодов банков (Х-12) — его же создаёт миграция `core/0012` в существующих базах.
+BANK_CODES_TASK = "Refresh bank codes from CBU file (monthly)"
+
+
+def seed_bank_codes_task(apps) -> None:
+    try:
+        CrontabSchedule = apps.get_model("django_celery_beat", "CrontabSchedule")
+        PeriodicTask = apps.get_model("django_celery_beat", "PeriodicTask")
+    except LookupError:
+        return
+    schedule, _ = CrontabSchedule.objects.get_or_create(
+        minute="30", hour="3", day_of_week="*", day_of_month="1", month_of_year="*"
+    )
+    PeriodicTask.objects.get_or_create(
+        name=BANK_CODES_TASK,
+        defaults={
+            "crontab": schedule,
+            "task": "master_data.tasks.refresh_bank_codes",
+            "enabled": True,
+            "description": "Раз в месяц: новые коды банков (МФО) и названия из файла ЦБ РУз; ничего не удаляется.",
+        },
+    )
 
 
 #: Имя задачи Beat напоминаний о просрочке — его же создаёт миграция `parties/0012` в существующих базах.

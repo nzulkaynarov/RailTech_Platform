@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { apiErrorKey, loginErrorText } from '@/api/errors';
 import { isPortalApiError } from '@/api/portal';
 import { useCompanyPartnerApplication } from '@/api/queries';
+import { LegalAcceptancePage } from '@/pages/legal/LegalAcceptancePage';
 import { PartnerApplicationCard } from '@/pages/company';
 import { useBotLink } from './links';
 import { StatusScreen } from '@/components/StatusScreen';
@@ -46,6 +47,18 @@ export function RequireSession() {
     );
   }
   if (!session.data) return <Navigate to="/login" replace state={{ from: location.pathname }} />;
+  return <Outlet />;
+}
+
+/**
+ * Кабинет открыт только контакту, принявшему действующие оферту и политику (ДВ-5): иначе на месте любого раздела —
+ * экран принятия, а адрес остаётся прежним (ссылка из письма, deep link Mini App), поэтому после «Принимаю» человек
+ * попадает туда, куда шёл. Признак — `legal_pending` из `/me`; сервер при этом сам закрывает все данные (403
+ * `LEGAL_ACCEPTANCE_REQUIRED`), экран — это объяснение, а не защита.
+ */
+export function RequireLegal() {
+  const session = useMe();
+  if (session.data?.legal_pending) return <LegalAcceptancePage />;
   return <Outlet />;
 }
 

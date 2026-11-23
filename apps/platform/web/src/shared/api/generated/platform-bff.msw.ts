@@ -51,6 +51,7 @@ import {
   LeadOwnerMode,
   LeadPlatformStatus,
   LeadRequestType,
+  LegalKind,
   LetterResolutionKind,
   LetterStatus,
   LetterTrack,
@@ -258,7 +259,11 @@ import type {
   LeadCreated,
   LeadManagerList,
   LeadNotice,
+  LeadOrigin,
   LeadPage,
+  LegalAcceptancePage,
+  LegalEditionDetail,
+  LegalEditionList,
   LetterAssistSuggestion,
   LetterCard,
   LetterClient,
@@ -1255,6 +1260,366 @@ export const getListCompanyArticlesResponseMock = (
       undefined,
     ]),
   })),
+  ...overrideResponse,
+});
+
+export const getListLegalEditionsResponseMock = (
+  overrideResponse: Partial<Extract<LegalEditionList, object>> = {},
+): LegalEditionList => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    kind: faker.helpers.arrayElement(Object.values(LegalKind)),
+    label: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    status: faker.helpers.arrayElement(["draft", "current", "retired"] as const),
+    created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    published_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      undefined,
+    ]),
+    published_by: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      undefined,
+    ]),
+    retired_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      undefined,
+    ]),
+    acceptances_count: faker.number.int({ min: 0 }),
+  })),
+  ...overrideResponse,
+});
+
+export const getCreateLegalEditionResponseMock = (
+  overrideResponse: Partial<Extract<LegalEditionDetail, object>> = {},
+): LegalEditionDetail => ({
+  id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  kind: faker.helpers.arrayElement(Object.values(LegalKind)),
+  label: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  status: faker.helpers.arrayElement(["draft", "current", "retired"] as const),
+  created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  published_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    undefined,
+  ]),
+  published_by: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
+  retired_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    undefined,
+  ]),
+  acceptances_count: faker.number.int({ min: 0 }),
+  content: {
+    title: {
+      ru: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    },
+    lead: {
+      ru: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    },
+    sections: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        title: {
+          ru: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        },
+        body: {
+          ru: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        },
+      }),
+    ),
+  },
+  rendered: {
+    title: {
+      ru: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    },
+    lead: {
+      ru: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    },
+    sections: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        title: {
+          ru: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        },
+        body: {
+          ru: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        },
+      }),
+    ),
+  },
+  ...overrideResponse,
+});
+
+export const getGetLegalEditionResponseMock = (
+  overrideResponse: Partial<Extract<LegalEditionDetail, object>> = {},
+): LegalEditionDetail => ({
+  id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  kind: faker.helpers.arrayElement(Object.values(LegalKind)),
+  label: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  status: faker.helpers.arrayElement(["draft", "current", "retired"] as const),
+  created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  published_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    undefined,
+  ]),
+  published_by: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
+  retired_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    undefined,
+  ]),
+  acceptances_count: faker.number.int({ min: 0 }),
+  content: {
+    title: {
+      ru: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    },
+    lead: {
+      ru: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    },
+    sections: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        title: {
+          ru: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        },
+        body: {
+          ru: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        },
+      }),
+    ),
+  },
+  rendered: {
+    title: {
+      ru: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    },
+    lead: {
+      ru: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    },
+    sections: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        title: {
+          ru: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        },
+        body: {
+          ru: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        },
+      }),
+    ),
+  },
+  ...overrideResponse,
+});
+
+export const getUpdateLegalEditionResponseMock = (
+  overrideResponse: Partial<Extract<LegalEditionDetail, object>> = {},
+): LegalEditionDetail => ({
+  id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  kind: faker.helpers.arrayElement(Object.values(LegalKind)),
+  label: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  status: faker.helpers.arrayElement(["draft", "current", "retired"] as const),
+  created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  published_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    undefined,
+  ]),
+  published_by: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
+  retired_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    undefined,
+  ]),
+  acceptances_count: faker.number.int({ min: 0 }),
+  content: {
+    title: {
+      ru: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    },
+    lead: {
+      ru: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    },
+    sections: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        title: {
+          ru: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        },
+        body: {
+          ru: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        },
+      }),
+    ),
+  },
+  rendered: {
+    title: {
+      ru: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    },
+    lead: {
+      ru: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    },
+    sections: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        title: {
+          ru: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        },
+        body: {
+          ru: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        },
+      }),
+    ),
+  },
+  ...overrideResponse,
+});
+
+export const getPublishLegalEditionResponseMock = (
+  overrideResponse: Partial<Extract<LegalEditionDetail, object>> = {},
+): LegalEditionDetail => ({
+  id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  kind: faker.helpers.arrayElement(Object.values(LegalKind)),
+  label: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  status: faker.helpers.arrayElement(["draft", "current", "retired"] as const),
+  created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  published_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    undefined,
+  ]),
+  published_by: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
+  retired_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    undefined,
+  ]),
+  acceptances_count: faker.number.int({ min: 0 }),
+  content: {
+    title: {
+      ru: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    },
+    lead: {
+      ru: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    },
+    sections: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        title: {
+          ru: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        },
+        body: {
+          ru: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        },
+      }),
+    ),
+  },
+  rendered: {
+    title: {
+      ru: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    },
+    lead: {
+      ru: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    },
+    sections: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        title: {
+          ru: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        },
+        body: {
+          ru: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        },
+      }),
+    ),
+  },
+  ...overrideResponse,
+});
+
+export const getListLegalAcceptancesResponseMock = (
+  overrideResponse: Partial<Extract<LegalAcceptancePage, object>> = {},
+): LegalAcceptancePage => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    accepted_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    kind: faker.helpers.arrayElement(Object.values(LegalKind)),
+    edition: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    edition_id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    language: faker.helpers.arrayElement(["ru", "uz", "en"] as const),
+    auth_method: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      undefined,
+    ]),
+    contact: {
+      id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      email: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    },
+    company: {
+      id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    },
+  })),
+  total: faker.number.int({ min: 0 }),
+  page: faker.number.int({ min: 1 }),
+  page_size: faker.number.int({ min: 1 }),
   ...overrideResponse,
 });
 
@@ -32181,6 +32546,36 @@ export const getGetCrmLeadResponseClientInvitationMock = (
   ...overrideResponse,
 });
 
+export const getGetCrmLeadResponseLeadOriginMock = (
+  overrideResponse: Partial<LeadOrigin> = {},
+): LeadOrigin => ({
+  ...{
+    form: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    page: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    referrer: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    campaign: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    utm_source: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    utm_medium: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    language: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(["ru", "uz", "en"] as const),
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
 export const getGetCrmLeadResponseMock = (
   overrideResponse: Partial<Extract<LeadCard, object>> = {},
 ): LeadCard => ({
@@ -32263,6 +32658,7 @@ export const getGetCrmLeadResponseMock = (
     { ...getGetCrmLeadResponseClientInvitationMock() },
     null,
   ]),
+  origin: faker.helpers.arrayElement([{ ...getGetCrmLeadResponseLeadOriginMock() }, null]),
   ...overrideResponse,
 });
 
@@ -38027,6 +38423,168 @@ export const getListCompanyArticlesMockHandler = (
             ? await overrideResponse(info)
             : overrideResponse
           : getListCompanyArticlesResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getListLegalEditionsMockHandler = (
+  overrideResponse?:
+    | LegalEditionList
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<LegalEditionList> | LegalEditionList),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/admin/legal-editions",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListLegalEditionsResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getCreateLegalEditionMockHandler = (
+  overrideResponse?:
+    | LegalEditionDetail
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<LegalEditionDetail> | LegalEditionDetail),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/admin/legal-editions",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getCreateLegalEditionResponseMock(),
+        { status: 201 },
+      );
+    },
+    options,
+  );
+};
+
+export const getGetLegalEditionMockHandler = (
+  overrideResponse?:
+    | LegalEditionDetail
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<LegalEditionDetail> | LegalEditionDetail),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/admin/legal-editions/:id",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetLegalEditionResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getUpdateLegalEditionMockHandler = (
+  overrideResponse?:
+    | LegalEditionDetail
+    | ((
+        info: Parameters<Parameters<typeof http.patch>[1]>[0],
+      ) => Promise<LegalEditionDetail> | LegalEditionDetail),
+  options?: RequestHandlerOptions,
+) => {
+  return http.patch(
+    "*/admin/legal-editions/:id",
+    async (info: Parameters<Parameters<typeof http.patch>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getUpdateLegalEditionResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getDeleteLegalEditionMockHandler = (
+  overrideResponse?:
+    void | ((info: Parameters<Parameters<typeof http.delete>[1]>[0]) => Promise<void> | void),
+  options?: RequestHandlerOptions,
+) => {
+  return http.delete(
+    "*/admin/legal-editions/:id",
+    async (info: Parameters<Parameters<typeof http.delete>[1]>[0]) => {
+      if (typeof overrideResponse === "function") {
+        await overrideResponse(info);
+      }
+
+      return new HttpResponse(null, { status: 204 });
+    },
+    options,
+  );
+};
+
+export const getPublishLegalEditionMockHandler = (
+  overrideResponse?:
+    | LegalEditionDetail
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<LegalEditionDetail> | LegalEditionDetail),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/admin/legal-editions/:id/publish",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getPublishLegalEditionResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getListLegalAcceptancesMockHandler = (
+  overrideResponse?:
+    | LegalAcceptancePage
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<LegalAcceptancePage> | LegalAcceptancePage),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/admin/legal-acceptances",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListLegalAcceptancesResponseMock(),
         { status: 200 },
       );
     },
@@ -48669,6 +49227,13 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getReplyTicketMockHandler(),
   getSetTicketStatusMockHandler(),
   getListCompanyArticlesMockHandler(),
+  getListLegalEditionsMockHandler(),
+  getCreateLegalEditionMockHandler(),
+  getGetLegalEditionMockHandler(),
+  getUpdateLegalEditionMockHandler(),
+  getDeleteLegalEditionMockHandler(),
+  getPublishLegalEditionMockHandler(),
+  getListLegalAcceptancesMockHandler(),
   getListAdminCompanyArticlesMockHandler(),
   getCreateCompanyArticleMockHandler(),
   getUpdateCompanyArticleMockHandler(),

@@ -104,6 +104,9 @@ GET_CASES = {
     "/company/partner-application/contract-pdf": lambda w: ["/company/partner-application/contract-pdf"],
     "/countries": lambda w: ["/countries"],
     "/operator": lambda w: ["/operator"],  # Н3a2: название оператора до входа
+    # ДВ-5: схемы проверяются на настоящих редакциях — они опубликованы, а контакт сессии их принял (кабинет остаётся открыт)
+    "/legal": lambda w: [_publish_and_accept_legal(w) or "/legal"],
+    "/legal/policy": lambda w: ["/legal/policy"],
     "/team": lambda w: ["/team"],
     "/me/telegram": lambda w: ["/me/telegram"],  # NOTIFY-1: статус привязки по проекции CRM
     "/auth/sessions": lambda w: ["/auth/sessions"],
@@ -152,6 +155,21 @@ def api(path: str) -> str:
     return PREFIX + path
 
 
+def _publish_and_accept_legal(world) -> None:
+    from portal.models import LegalEdition, PortalSession
+    from portal.services import legal
+
+    for draft in LegalEdition.objects.filter(published_at__isnull=True):
+        legal.release_edition(draft.pk, actor=None)
+    session = (
+        PortalSession.objects.select_related("contact", "company")
+        .filter(contact__email="azamat.client@example.uz")
+        .first()
+    )
+    ids = [edition.pk for edition in legal.current_editions().values()]
+    legal.accept(session, ids, "ru", ip="", user_agent="")
+
+
 def anonymous_for(path: str) -> bool:
     if path == "/auth/sessions":
         return False
@@ -160,6 +178,7 @@ def anonymous_for(path: str) -> bool:
         or path.startswith("/verify")
         or path.startswith("/countries")
         or path.startswith("/operator")
+        or path == "/legal/policy"
     )
 
 
@@ -173,7 +192,7 @@ def fetch(client, anon_client, contract_path: str, url: str):
 def test_contract_is_mounted_and_readable():
     path = find_contract_path()
     assert path.name == "erp-portal.yaml"
-    assert load_contract()["info"]["version"] == "0.20.0"
+    assert load_contract()["info"]["version"] == "0.21.0"
 
 
 #: GET раздела «Мои товары» партнёра (PART-2): сессия клиента сюда не допущена (403 `MODULE_REQUIRED`), поэтому их

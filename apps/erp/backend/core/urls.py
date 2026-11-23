@@ -35,6 +35,7 @@ from inventory.views import (
 )
 from portal.desk.views import SupplierAccessViewSet
 from portal.desk.views_bank_changes import BankChangeDeskViewSet
+from portal.desk.views_legal import LegalAcceptanceDeskViewSet, LegalEditionDeskViewSet
 from portal.desk.views_partner_applications import PartnerApplicationDeskViewSet
 from portal.desk.views_people import OrganizationsDeskViewSet, PeopleDeskViewSet
 from portal.exceptions import portal_not_found
@@ -203,6 +204,9 @@ router.register(r"parties/people", PeopleDeskViewSet, basename="desk-people")
 router.register(r"parties/organizations", OrganizationsDeskViewSet, basename="desk-organizations")
 router.register(r"catalog/partner-applications", PartnerApplicationDeskViewSet, basename="desk-partner-application")
 router.register(r"finance/bank-changes", BankChangeDeskViewSet, basename="desk-bank-change")
+# ДВ-5: оферта и политика Кабинета в «Настройках» Платформы (`settings.edit`).
+router.register(r"settings/legal-editions", LegalEditionDeskViewSet, basename="desk-legal-edition")
+router.register(r"settings/legal-acceptances", LegalAcceptanceDeskViewSet, basename="desk-legal-acceptance")
 router.register(r"catalog/field-proposals", ProposalDeskViewSet, basename="desk-field-proposal")
 router.register(r"catalog/brigades", BrigadeDeskViewSet, basename="desk-brigade")
 router.register(r"catalog/tech-docs", TechDocDeskViewSet, basename="desk-tech-doc")

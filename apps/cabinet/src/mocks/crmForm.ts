@@ -74,7 +74,11 @@ export const crmFormHandlers = [
     const phone = body.phone?.trim() ?? '';
     if (!phone && !body.email?.trim()) return invalid('contact_required', 'phone');
     if (phone && phone.replace(/\D/g, '').length < 9) return invalid('invalid_phone', 'phone');
-    const accepted: WebLeadAccepted = { lead_id: state.nextLeadId };
+    const accepted: WebLeadAccepted = {
+      lead_id: state.nextLeadId,
+      request_number: `L-${String(state.nextLeadId).padStart(4, '0')}`,
+      first_response_minutes: 15,
+    };
     state.nextLeadId += 1;
     return HttpResponse.json(accepted, { status: 202 });
   }),

@@ -92,7 +92,7 @@ from portal.serializers import (
 )
 from portal.services import bank_details_change, catalog_documents
 from portal.services import documents as portal_documents
-from portal.services import new_device, notices
+from portal.services import legal, new_device, notices
 from portal.services.acceptance import ContactChannelRequired, request_acceptance_code
 from portal.services.access import company_access
 from portal.services.act_scan import annotate_scan_documents, attach_scan_document, load_scan
@@ -178,7 +178,12 @@ def _parse_reason(data) -> str:
     return serializer.validated_data["reason"].strip()
 
 
-def _me_data(session, auth_method: str | None = None, access: tuple[list[str], list[str]] | None = None) -> dict:
+def _me_data(
+    session,
+    auth_method: str | None = None,
+    access: tuple[list[str], list[str]] | None = None,
+    legal_pending: bool | None = None,
+) -> dict:
     """Тело `Me`: контакт, компания, права, роли и модули кабинета (общее для входа и `GET /me`)."""
     roles, modules = company_access(session.company_id) if access is None else access
     return {
@@ -192,6 +197,8 @@ def _me_data(session, auth_method: str | None = None, access: tuple[list[str], l
         "modules": modules,
         # Непрочитанные ответы менеджера в чате кабинета (CHAT-1): бейдж «Сообщения»; без модуля — 0.
         "unread": unread_count(session.company_id, session.contact_id) if "messages" in modules else 0,
+        # ДВ-5: есть действующая оферта или политика без акцепта контакта — кабинет закрыт до принятия
+        "legal_pending": legal.needs_acceptance(session.contact_id) if legal_pending is None else legal_pending,
     }
 
 
@@ -557,10 +564,17 @@ class MeView(BasePortalView):
     """GET /me — Текущий профиль сессии (контакт, компания, права, роли и модули кабинета)."""
 
     required_module = ANY_MODULE  # профиль нужен любой сессии: по ролям и модулям Cabinet строит меню
+    legal_exempt = True  # ДВ-5: профиль отвечает и без акцепта — по `legal_pending` Cabinet показывает экран принятия
 
     def get(self, request):
         return Response(
-            MeSerializer(_me_data(request.portal_session, access=(request.portal_roles, request.portal_modules))).data
+            MeSerializer(
+                _me_data(
+                    request.portal_session,
+                    access=(request.portal_roles, request.portal_modules),
+                    legal_pending=request.portal_legal_pending,
+                )
+            ).data
         )
 
 

@@ -654,6 +654,12 @@
     "sections": {
       "company": "Компания",
       "contact": "Контакт"
+    },
+    "needs": {
+      "name": "Укажите название",
+      "tinOrReg": "Укажите ИНН или рег. номер",
+      "tinInvalid": "ИНН — 9 цифр",
+      "emailInvalid": "Почта в формате name@company.uz"
     }
   },
   "cabinetAccess": {

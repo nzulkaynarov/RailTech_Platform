@@ -158,7 +158,7 @@ def test_health_externals_cover_every_contract_code_and_status_is_in_the_enum(cl
     из enum; сторож не проходит на пустом `externals`."""
     health = client.get(f"{PREFIX}/health").json()
     codes = [item["code"] for item in health["externals"]]
-    assert sorted(codes) == sorted(set(enum_values("ExternalServiceCode")) - {"mail"}) and len(codes) == 5
+    assert sorted(codes) == sorted(set(enum_values("ExternalServiceCode")) - {"mail"}) and len(codes) == 6
     allowed = set(component("ExternalService")["properties"]["status"]["enum"])
     assert {item["status"] for item in health["externals"]} <= allowed
     assert not check_response(health, response_schema("/health"))

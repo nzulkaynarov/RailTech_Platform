@@ -184,7 +184,6 @@ async def copy_message_attachment(body: RequestFileFromMessageIn, authed: Copier
     )
 
 
-_NOT_PHONE = "Записка о звонке составляется только по лиду со звонка."
 _NO_CONSENT = "Нет согласия клиента на обработку данных — записку о звонке не составить."
 
 
@@ -194,8 +193,53 @@ def _conflict(reason: str, message: str) -> PlatformError:
     )
 
 
+_PAGE = 200
+_MAX_PAGES = 50  # 10 000 messages: a thread longer than that is not a request basis anyway
+# Limits of CallNoteIn in eds.yaml: a longer value is a 422 on every retry.
+_MESSAGE_MAX = 4000
+_ATTACHMENTS_MAX = 20
+_NAME_MAX = 200
+
+
+def _cut(text: str, limit: int) -> str:
+    return text if len(text) <= limit else text[: limit - 1].rstrip() + "…"
+
+
+def _opt(text: str | None, limit: int) -> str | None:
+    return None if text is None else _cut(text, limit)
+
+
+async def _first_message(authed: Authed, lead: str) -> crm.MessageOut | None:
+    """The first client message of the lead with its attachments; none for a call.
+
+    CRM returns the LAST page of the thread, so we page back by `before_id` until it runs out.
+    """
+    proxy = CrmProxy(authed.call)
+    first: crm.MessageOut | None = None
+    before: int | None = None
+    for _ in range(_MAX_PAGES):
+        params: dict[str, int] = {"limit": _PAGE}
+        if before is not None:
+            params["before_id"] = before
+        try:
+            rows = await proxy.get_list(
+                crm.MessageOut, f"{API}/leads/{_lead_id(lead)}/messages", params=params
+            )
+        except PlatformError:  # no access to the thread: the note is still built from the lead
+            return first
+        mine = [row for row in rows if row.role == "lead"]
+        if mine:
+            first = min(mine, key=lambda row: row.id)
+        if len(rows) < _PAGE:
+            break
+        before = min(row.id for row in rows)
+    return first
+
+
 async def _lead_call_note(authed: Authed, body: RequestCallNoteIn, lead: str) -> dict[str, object]:
-    """Тело EDS по лиду со звонка: телефонный лид и согласие (в CRM или отмеченное в форме).
+    """Тело EDS по лиду любого канала (звонок, сайт, Кабинет, Telegram): согласие в CRM или в форме.
+
+    Для не-звонка в записку идут исходное сообщение клиента и имена его вложений (Х-18).
 
     Ключ записки выводится из лида и языка, а не берётся из формы: форма при каждом открытии
     получает новый ключ, а EDS по (ключ, сотрудник) возвращает уже готовый файл — повторное
@@ -204,21 +248,29 @@ async def _lead_call_note(authed: Authed, body: RequestCallNoteIn, lead: str) ->
     detail = await CrmProxy(authed.call).get_model(
         crm.LeadDetail, "GET", f"{API}/leads/{_lead_id(lead)}"
     )
-    if detail.source != "phone":
-        raise _conflict("call_note_not_phone", _NOT_PHONE)
     if detail.consent_given_at is None and not body.consent:
         raise _conflict("call_note_no_consent", _NO_CONSENT)
+    first = None if detail.source == "phone" else await _first_message(authed, lead)
+    names = [
+        _cut(str(a["name"]).strip(), _NAME_MAX)
+        for a in (first.attachments if first else [])
+        if str(a.get("name") or "").strip()
+    ]
+    attachments = names[:_ATTACHMENTS_MAX]
     return {
         "request_key": str(uuid5(NAMESPACE_URL, f"rt-call-note:{detail.id}:{body.lang}")),
+        "channel": detail.source,
+        "message": _cut(first.text, _MESSAGE_MAX) if first and first.text.strip() else None,
+        "attachments": attachments,
         "lang": body.lang,
         "lead": lead_number(detail.id),
-        "caller_name": detail.display_name,
-        "company": detail.company_name,
-        "phone": detail.phone_e164 or detail.client_phone_e164,
-        "email": detail.email,
+        "caller_name": _cut(detail.display_name, _NAME_MAX),
+        "company": _opt(detail.company_name, _NAME_MAX),
+        "phone": _opt(detail.phone_e164 or detail.client_phone_e164, 64),
+        "email": _opt(detail.email, _NAME_MAX),
         "called_at": detail.created_at.isoformat(),
-        "taken_by": detail.assigned_user_name,
-        "need": detail.need_summary,
+        "taken_by": _opt(detail.assigned_user_name, _NAME_MAX),
+        "need": _opt(detail.need_summary, _MESSAGE_MAX),
     }
 
 

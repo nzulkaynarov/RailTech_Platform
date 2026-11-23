@@ -233,6 +233,7 @@ class MeSerializer(serializers.Serializer):
     roles = serializers.ListField(child=serializers.ChoiceField(choices=["client", "partner"]))
     modules = serializers.ListField(child=serializers.CharField())
     unread = serializers.IntegerField(min_value=0)  # непрочитанные ответы менеджера в чате кабинета (CHAT-1)
+    legal_pending = serializers.BooleanField(default=False)  # ДВ-5: нужно принять действующую оферту или политику
 
 
 class TelegramAuthSerializer(serializers.Serializer):
