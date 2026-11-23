@@ -84,12 +84,13 @@ class FooterColumn:
 
 @dataclass(frozen=True)
 class InfoRow:
-    """Пара «метка — значение» инфоблока. `code` — значение моноширинным; `role` — номер и дата заменяются в проекте."""
+    """Пара «метка — значение» инфоблока. `code` — значение моноширинным; `role` — номер и дата заменяются в проекте,
+    `verify` — строка кода проверки (в проекте не печатается)."""
 
     label: str
     value: str
     code: bool = False
-    role: Literal["", "number", "date"] = ""
+    role: Literal["", "number", "date", "verify"] = ""
 
 
 @dataclass(frozen=True)
@@ -138,6 +139,9 @@ class DocumentMeta:
     contact: Sequence[InfoRow] = ()  # «Контактное лицо», «Почта» — под адресатом
     addressee_strong: int | None = None  # строка адресата полужирным (обычно организация)
     window: bool = True  # адресат в окне конверта; договор и спецификация — без окна
+    # Факт подписания (письмо по сетке, стандарт §5 п. 4): «дата время» уже в часовом поясе компании. Есть — в строке
+    # подписи отметка электронной подписи, нет — «М. П.» только если тело его просит; изображений подписи нет.
+    signed_text: str | None = None
 
 
 @dataclass(frozen=True)

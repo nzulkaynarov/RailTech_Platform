@@ -215,6 +215,16 @@ h1.rt-title { font-size: 13pt; font-weight: 600; color: #475569; margin: 0 0 3mm
 table.rt-fcols { width: 100%; border-collapse: collapse; table-layout: fixed; border-top: 0.75pt solid #cbd5e1; }
 table.rt-fcols td { vertical-align: top; padding: 1.2mm 2.5mm 0 0; overflow-wrap: break-word; }
 table.rt-fcols td:nth-child(4) { width: 23%; }
+.rt-id-note { border-top: 0.75pt solid #cbd5e1; padding-top: 1.2mm; font-size: 7pt; }
+table.rt-sign-row { width: 100%; border-collapse: collapse; table-layout: fixed; margin: 1.6em 0 0; break-inside: avoid;
+                    break-before: avoid; }
+table.rt-sign-row td { vertical-align: bottom; padding: 0 4mm 0 0; line-height: 1.35; }
+td.rt-sign-who { width: 38%; }
+td.rt-sign-mark { width: 34%; font-size: 7.5pt; color: #475569; }
+td.rt-sign-qr { width: 28%; padding-right: 0; }
+.rt-sign-qrbox { border: 0.75pt solid #cbd5e1; padding: 1.5mm; width: 27mm; font-size: 7pt; color: #475569;
+                 text-align: center; }
+.rt-sign-qrimg svg { width: 22mm; height: 22mm; display: block; }
 .rt-id-executor { margin-top: 8mm; font-size: 7.5pt; color: #475569; }
 
 /* Таблицы и итоги сетки (стандарт документов §6): без вертикальных линий, шапка — прописные на подложке. */
