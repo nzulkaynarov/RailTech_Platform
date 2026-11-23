@@ -61,7 +61,9 @@ def test_status_mapping(erp_status: str, expected: str) -> None:
     assert rules.erp_external("erp.cbu_rates", facts(row)).status == expected
 
 
-@pytest.mark.parametrize("code", ["cbu_rates", "customs_tariff", "mail", "litellm", "s3"])
+@pytest.mark.parametrize(
+    "code", ["cbu_rates", "customs_tariff", "cbu_banks", "mail", "litellm", "s3"]
+)
 def test_failure_has_what_happened_the_error_and_what_to_do(code: str) -> None:
     row = item(
         code,

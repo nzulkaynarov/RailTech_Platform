@@ -27,6 +27,8 @@ logger = logging.getLogger(__name__)
 #: Плановые задачи: давно не было успеха — «degraded». Курсы — раз в сутки, ТН ВЭД — раз в неделю.
 CBU_STALE_AFTER = timedelta(days=3)
 TNVED_STALE_AFTER = timedelta(days=14)
+#: Справочник банков из файла ЦБ — раз в месяц (1-го числа); свой порог, чтобы не искажать состояние курсов.
+BANKS_STALE_AFTER = timedelta(days=45)
 #: Статусы вызова шлюза, при которых сам шлюз ответил (качество ответа модели — не сбой сервиса).
 AI_SERVED = ("ok", "refusal", "truncated", "invalid_json")
 AI_FAILED = "error"
@@ -89,6 +91,18 @@ def _customs_tariff(now: datetime) -> Facts:
     return facts
 
 
+def _cbu_banks(now: datetime) -> Facts:
+    facts = _from_marks("cbu_banks", configured=True, now=now, stale_after=BANKS_STALE_AFTER)
+    if facts.last_success_at is None and facts.last_error_at is None:
+        from core.models import Bank
+        from master_data.cbu import SOURCE
+
+        newest = Bank.objects.filter(source=SOURCE).aggregate(at=Max("synced_at"))["at"]
+        if newest is not None:  # кэш пуст (Redis потерян): последняя отметка загрузки в справочнике — оценка успеха
+            return Facts(True, newest, None, None, 0, 0, None)
+    return facts
+
+
 def _litellm_configured() -> bool:
     return bool(
         getattr(settings, "AI_IMPORT_ENABLED", False)
@@ -128,6 +142,7 @@ def _sentry(now: datetime) -> Facts:
 _BUILDERS: dict[str, Callable[[datetime], Facts]] = {
     "cbu_rates": _cbu_rates,
     "customs_tariff": _customs_tariff,
+    "cbu_banks": _cbu_banks,
     "litellm": _litellm,
     "s3": _s3,
     "sentry": _sentry,
