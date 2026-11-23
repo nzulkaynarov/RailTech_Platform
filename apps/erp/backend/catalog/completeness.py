@@ -55,6 +55,10 @@ def _hs_is_current(product, ctx) -> bool:
 
 
 _HS = ("hs_code", _("Код ТН ВЭД (действующий)"), _hs_is_current)
+_MXIK = ("mxik_code", _("Код МХИК (ИКПУ)"), lambda p, ctx: bool((p.mxik_code or "").strip()))
+#: Коды, без которых публикация закрыта при любом пороге полноты (X-16): их включает политика каталога компании.
+#: ТН ВЭД попадает сюда только у ввозимого товара (см. `CompletenessContext.is_imported`).
+_HARD_CODES = frozenset({"mxik_code"})
 _IDENTITY = (
     "identity",
     _("Артикул производителя или ГОСТ/чертёж"),
@@ -103,6 +107,12 @@ def requirements_for(product, ctx: "CompletenessContext | None" = None) -> tuple
 
     policy = ctx.policy_for(product) if ctx is not None else None
     partners = ctx.partner_visibility if ctx is not None else None
+    if ctx is not None:
+        # X-16: ТН ВЭД — у ввозимого (настройка компании); МХИК — у любой позиции, которую продаём (настройка компании).
+        if not policy.require_hs_imported or not ctx.is_imported(product):
+            requirements = tuple(req for req in requirements if req[0] != "hs_code")
+        if policy.require_mxik:
+            requirements = (*requirements, _MXIK)
     if effective_price_visibility(product, policy, partners) == PriceVisibility.CABINET:
         requirements = (*requirements, _LIST_PRICE)
     if ctx is not None and getattr(product, "category_id", None) in ctx.conformity_categories:
@@ -133,6 +143,7 @@ class CompletenessContext:
         )
 
         self._load_conformity(products)
+        self._load_origin(products)
 
         codes = {digits for digits in (hs_digits(product) for product in products) if digits}
         if not codes:
@@ -150,6 +161,23 @@ class CompletenessContext:
             # Хоть один код страницы нашёлся — значит справочник наполнен, отдельный
             # `exists()` спрашивать не о чем.
             self._hs_populated = True
+
+    def _load_origin(self, products) -> None:
+        """Страны карточек пачки: своя страна или страна бренда (двумя запросами на пачку)."""
+        from core.models import Country
+
+        from .models import Manufacturer
+
+        self._domestic_id = Country.objects.filter(code="UZ").values_list("pk", flat=True).first()
+        brand_ids = {p.brand_id for p in products if getattr(p, "brand_id", None) and not p.country_of_origin_id}
+        self._brand_country = (
+            dict(Manufacturer.objects.filter(pk__in=brand_ids).values_list("pk", "country_id")) if brand_ids else {}
+        )
+
+    def is_imported(self, product) -> bool:
+        """Ввозимый: страна происхождения (своя, иначе страна бренда) не Узбекистан или не указана вовсе."""
+        country_id = product.country_of_origin_id or self._brand_country.get(getattr(product, "brand_id", None))
+        return country_id is None or country_id != self._domestic_id
 
     def _load_conformity(self, products) -> None:
         """Категории с требованием документа соответствия и товары пачки, у которых такой документ есть (два запроса на пачку)."""
@@ -217,11 +245,16 @@ def completeness(product, ctx: CompletenessContext | None = None) -> dict:
     # обязательное»), ниже — осознанное решение администратора. Без имени не публикуется никогда.
     threshold = ctx.policy_for(product).publish_threshold
     has_name = not any(item["code"] == "name" for item in missing)
+    # X-16: МХИК и ТН ВЭД ввозимого товара не «добираются» процентами полноты — без них публикации нет.
+    hard = set(_HARD_CODES)
+    if ctx.policy_for(product).require_hs_imported and ctx.is_imported(product):
+        hard.add("hs_code")
+    has_hard = any(item["code"] in hard for item in missing)
     return {
         "percent": percent,
         "missing": missing,
         "threshold": threshold,
-        "is_publishable": has_name and percent >= threshold,
+        "is_publishable": has_name and not has_hard and percent >= threshold,
     }
 
 

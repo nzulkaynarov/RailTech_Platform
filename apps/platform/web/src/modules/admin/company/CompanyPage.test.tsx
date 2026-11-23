@@ -660,7 +660,23 @@ describe("Условия КП разошлись по страницам сво�
     expect(await screen.findByLabelText("Срок действия КП, дней")).toBeInTheDocument();
     expect(screen.getByLabelText("Цена в каталоге")).toBeInTheDocument();
     expect(screen.queryByLabelText("Валюта себестоимости")).toBeNull();
-    expect(screen.queryByRole("switch")).toBeNull();
+    expect(
+      screen.queryByRole("switch", { name: "Напоминать клиентам о просроченных счетах" }),
+    ).toBeNull();
+  });
+
+  it("«Продажи»: обязательные коды для публикации включены, выключение МХИК сохраняется (X-16)", async () => {
+    await openTab("quote");
+    const mxik = await screen.findByRole("switch", { name: "МХИК обязателен для публикации" });
+    expect(mxik).toBeChecked();
+    expect(
+      screen.getByRole("switch", { name: "ТН ВЭД обязателен для ввозимого товара" }),
+    ).toBeChecked();
+    fireEvent.click(mxik);
+    fireEvent.click(await button("Сохранить каталог"));
+    expect(await screen.findByText("Сохранено")).toBeInTheDocument();
+    expect(readCompanyMock().quote.catalog_require_mxik).toBe(false);
+    expect(readCompanyMock().quote.catalog_require_hs_imported).toBe(true);
   });
 
   it("«Налоги и валюты»: валюта и возраст курса сохраняются, поля «Продаж» не уходят", async () => {

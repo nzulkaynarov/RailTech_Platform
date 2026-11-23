@@ -12768,6 +12768,10 @@ export interface components {
       catalog_price_visibility: "cabinet" | "on_request";
       /** @description Порог полноты карточки для публикации, % */
       catalog_publish_threshold: number;
+      /** @description МХИК (ИКПУ) обязателен для публикации карточки; по умолчанию включено */
+      catalog_require_mxik?: boolean;
+      /** @description ТН ВЭД обязателен для ввозимого товара (страна происхождения не Узбекистан или не указана); по умолчанию включено */
+      catalog_require_hs_imported?: boolean;
       /** @description Предельный возраст курса, дней */
       fx_rate_max_age_days: number;
       /** @description Через сколько дней без подтверждения цена партнёра «устарела» (задача «Н3c») */
@@ -12808,6 +12812,10 @@ export interface components {
       catalog_price_visibility?: "cabinet" | "on_request";
       /** @description Порог полноты карточки для публикации, % */
       catalog_publish_threshold?: number;
+      /** @description МХИК (ИКПУ) обязателен для публикации карточки; по умолчанию включено */
+      catalog_require_mxik?: boolean;
+      /** @description ТН ВЭД обязателен для ввозимого товара (страна происхождения не Узбекистан или не указана); по умолчанию включено */
+      catalog_require_hs_imported?: boolean;
       /** @description Предельный возраст курса, дней */
       fx_rate_max_age_days?: number;
       /** @description Через сколько дней без подтверждения цена партнёра «устарела» (задача «Н3c») */
@@ -16777,6 +16785,8 @@ export interface components {
       name: string;
       /** @description Группа или класс классификатора */
       group: string;
+      /** @description Путь по классификатору «группа › класс › позиция» без самого названия; пусто, если его нет */
+      path?: string;
       unit: string;
       package: string;
     };

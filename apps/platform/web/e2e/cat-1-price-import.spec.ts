@@ -116,7 +116,7 @@ test.describe("CAT-1: загрузка прайса партнёра", () => {
 
     await openCatalog(page, "?item=5");
     const card = page.getByRole("dialog", { name: "Пусконаладочные работы" });
-    await expect(card.getByText(/Для публикации заполните: категория, код ТН ВЭД/)).toBeVisible();
+    await expect(card.getByText(/Для публикации заполните: категория, код МХИК/)).toBeVisible();
     await expect(card.getByRole("button", { name: "Опубликовать" })).toBeDisabled();
   });
 });

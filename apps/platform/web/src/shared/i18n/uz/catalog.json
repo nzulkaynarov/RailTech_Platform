@@ -233,7 +233,8 @@
       "warrantyMonths": "Kafolat, oy",
       "warrantyMonthsHint": "Bo‘sh — {{months}} oy, kompaniyadagidek",
       "warrantyMonthsHintNone": "Bo‘sh — kompaniya muddati belgilanmagan",
-      "warrantyTerms": "Kafolat shartlari"
+      "warrantyTerms": "Kafolat shartlari",
+      "mxikNone": "Hech narsa topilmadi — kodni qölda kiriting"
     },
     "originBrand": "(ishlab chiqaruvchi mamlakati)",
     "originNone": "Ko‘rsatilmagan",
@@ -825,7 +826,12 @@
       "category": "toifa",
       "hs_code": "TIF TN kodi",
       "list_price": "vitrina narxi",
-      "conformity_doc": "raqamli amaldagi muvofiqlik hujjati"
+      "conformity_doc": "raqamli amaldagi muvofiqlik hujjati",
+      "mxik_code": "MXIK (IKPU) kodi"
+    },
+    "fill": {
+      "mxik": "MXIK kiritiş",
+      "hs": "TIF TN kiritiş"
     }
   },
   "import": {

@@ -170,6 +170,8 @@ function seed(): CompanyMock {
       default_warranty_months: 12,
       catalog_price_visibility: "on_request",
       catalog_publish_threshold: 70,
+      catalog_require_mxik: true,
+      catalog_require_hs_imported: true,
       fx_rate_max_age_days: 7,
       offer_confirm_days: 30,
       offer_expiring_days: 14,

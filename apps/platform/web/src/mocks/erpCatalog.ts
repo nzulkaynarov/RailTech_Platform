@@ -164,7 +164,7 @@ function reviewOf(item: MockItem): CatalogReviewInfo | null {
   };
 }
 
-const completenessOf = (item: MockItem) => 100 - missingOf(item).length * 25;
+const completenessOf = (item: MockItem) => 100 - missingOf(item).length * 20;
 
 function rowOf(item: MockItem): CatalogItem {
   const { offers } = readErpCatalog();
@@ -233,12 +233,19 @@ function offerOf(offer: MockOffer, prices: boolean): CatalogOffer {
   };
 }
 
-/** Порог публикации мока: название, категория, единица и код ТН ВЭД (как полнота ERP по умолчанию). */
+/**
+ * Порог публикации мока (X-16, настройки компании по умолчанию): категория, единица, МХИК и — у товара, ввозимого
+ * (страна происхождения не Узбекистан или не указана), ТН ВЭД; у услуг ТН ВЭД не требуется, как на сервере.
+ */
 function missingOf(item: MockItem): string[] {
+  const isGoods = item.kind === "stock" || item.kind === "on_order";
+  const origin = originOf(item).effective;
+  const imported = isGoods && origin?.id !== "1";
   return [
     ...(item.categoryId ? [] : ["category"]),
     ...(item.unitId ? [] : ["uom"]),
-    ...(item.hs_code ? [] : ["hs_code"]),
+    ...(!imported || item.hs_code ? [] : ["hs_code"]),
+    ...(item.mxik ? [] : ["mxik_code"]),
   ];
 }
 
@@ -1343,6 +1350,38 @@ export const erpCatalogHandlers = [
         },
         { status: 503 },
       );
+    }
+    if (q.startsWith("накладк")) {
+      // X-16: настоящий ответ классификатора на «накладка», как его отдаёт ERP: слово в названии, код товара выше узла группы,
+      // под названием — путь по группам
+      return HttpResponse.json({
+        items: [
+          {
+            code: "06813002002002005",
+            name: "Накладка тормозная для автомобилей: HOWO, передняя (1 шт, 10 отв)",
+            group: "ИЗДЕЛИЯ ИЗ КАМНЯ, ГИПСА, ЦЕМЕНТА, АСБЕСТА, СЛЮДЫ ИЛИ АНАЛОГИЧНЫХ МАТЕРИАЛОВ",
+            path: "ИЗДЕЛИЯ ИЗ КАМНЯ, ГИПСА, ЦЕМЕНТА, АСБЕСТА, СЛЮДЫ ИЛИ АНАЛОГИЧНЫХ МАТЕРИАЛОВ › Фрикционные материалы и изделия из них, не содержащие асбест",
+            unit: "шт.",
+            package: "",
+          },
+          {
+            code: "07302001001000370",
+            name: "Изделия из черных металлов, используемые для железнодорожных или трамвайных путей (кроме рельсов, подкладок рельсовых и стыковых накладок)",
+            group: "ИЗДЕЛИЯ ИЗ ЧЕРНЫХ МЕТАЛЛОВ",
+            path: "ИЗДЕЛИЯ ИЗ ЧЕРНЫХ МЕТАЛЛОВ › Изделия из черных металлов, используемые для железнодорожных или трамвайных путей",
+            unit: "шт.",
+            package: "",
+          },
+          {
+            code: "06813002002000000",
+            name: "Накладка тормозная для автомобилей",
+            group: "ИЗДЕЛИЯ ИЗ КАМНЯ, ГИПСА, ЦЕМЕНТА, АСБЕСТА, СЛЮДЫ ИЛИ АНАЛОГИЧНЫХ МАТЕРИАЛОВ",
+            path: "ИЗДЕЛИЯ ИЗ КАМНЯ, ГИПСА, ЦЕМЕНТА, АСБЕСТА, СЛЮДЫ ИЛИ АНАЛОГИЧНЫХ МАТЕРИАЛОВ › Фрикционные материалы и изделия из них, не содержащие асбест",
+            unit: "шт.",
+            package: "",
+          },
+        ],
+      });
     }
     const items = q.startsWith("кабел")
       ? [

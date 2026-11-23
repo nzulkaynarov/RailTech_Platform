@@ -324,6 +324,7 @@ class Mxik(Out):
 
 class MxikHit(Mxik):
     group: str
+    path: str = ""
 
 
 class MxikPage(Out):
@@ -631,6 +632,7 @@ def to_mxik_page(raw: Any) -> MxikPage:
                 code=str(row.get("code") or ""),
                 name=text(row.get("name")),
                 group=text(row.get("group")),
+                path=text(row.get("path")),
                 unit=text(row.get("unit")),
                 package=text(row.get("package")),
             )

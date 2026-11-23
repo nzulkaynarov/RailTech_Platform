@@ -173,7 +173,10 @@ test("план 1.8: МХИК подбирается из классификат�
   await card.getByRole("button", { name: "Изменить позицию" }).click();
   const edit = page.getByRole("dialog", { name: "Изменить позицию" });
   await edit.getByLabel("МХИК (ИКПУ)").fill("кабель");
-  await page.getByText("08544001001000000 · Кабели силовые с медными жилами · метр").click();
+  // Список подсказок теперь выше (название переносится, под ним путь) и не умещается под полем — выбор клавишами
+  await expect(page.getByRole("option", { name: "08544001001000000" })).toBeAttached();
+  await edit.getByLabel("МХИК (ИКПУ)").press("ArrowDown");
+  await edit.getByLabel("МХИК (ИКПУ)").press("Enter");
   await expect(edit.getByText("Кабели силовые с медными жилами", { exact: true })).toBeVisible();
   await settledScreenshot(page, "card-mxik-form");
   await expectNoViolations(page, "карточка: подбор МХИК");
