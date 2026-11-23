@@ -27,16 +27,6 @@ PROBLEMS = ["no_contract", "contract_rejected", "act_returned", "invoice_overdue
 CONTRACT_ACTIONS = ["send_to_client", "client_agreed", "reject", "revise", "mark_issued", "attach_scan"]
 #: ДОК-10: действия договора по шаблону, доступные сейчас (отдельный список — у прежних действий схема не меняется).
 CONTRACT_TEMPLATE_ACTIONS = ["sign_ours", "request_deviation", "decide_deviation"]
-#: Одна проверка «можно ли отправить договор клиенту» (`contract_flow.send_blocker`): визы Х-1 и правила шаблона ДОК-10.
-SEND_BLOCKER_CODES = [
-    "visas_not_requested",
-    "visas_declined",
-    "visas_pending",
-    "visas_returned",
-    "no_visa_holder",
-    "CONTRACT_DEVIATION_PENDING",
-    "CONTRACT_NEEDS_OUR_SIGNATURE",
-]
 ACT_ACTIONS = ["attach_scan", "return", "reissue"]
 ACT_BLOCKERS = ["no_invoice", "act_exists", "forbidden"]
 JOURNAL_DOCUMENTS = ["contract", "act", "invoice", "quote", "project"]
@@ -64,13 +54,13 @@ class ContractRefSerializer(serializers.Serializer):
     number = serializers.CharField()
     status = serializers.ChoiceField(choices=CONTRACT_WORDS)
     sent_to_client = serializers.BooleanField(help_text="Проект ушёл клиенту на согласование и виден ему в портале")
-    send_blocker_code = serializers.ChoiceField(
-        choices=SEND_BLOCKER_CODES,
+    send_blocker_code = serializers.CharField(
         allow_null=True,
         required=False,
         help_text=(
             "Х-1: пока проект не ушёл клиенту — код причины, по которой его нельзя отправить (визы маршрута подписи); "
-            "`null` — ничего не мешает (визы Х-1 и правила шаблона ДОК-10 — одна проверка). Слова и роли — `send_blocker` карточки"
+            "`null` — ничего не мешает (визы Х-1 и правила шаблона ДОК-10 — одна проверка). Открытое множество кодов: "
+            "см. `send_blocker.code`. Слова и роли — `send_blocker` карточки"
         ),
     )
 
@@ -182,9 +172,9 @@ class ContractTemplateCardSerializer(serializers.Serializer):
 class ContractSendBlockerSerializer(serializers.Serializer):
     """Почему проект договора нельзя отправить клиенту: визы Х-1 (ADR-0025), отступление или наша подпись (ДОК-10)."""
 
-    code = serializers.ChoiceField(
-        choices=SEND_BLOCKER_CODES,
+    code = serializers.CharField(
         help_text=(
+            "Открытое множество (новые причины добавляются без смены контракта): "
             "visas_not_requested — договор ещё не на визах; visas_declined — EDS не принял договор на визы (причина в remark); visas_pending — не все визы поставлены; visas_returned — "
             "виза возвращена с замечанием; no_visa_holder — в компании нет держателя нужного права; "
             "CONTRACT_DEVIATION_PENDING — отступление от шаблона ждёт решения; CONTRACT_NEEDS_OUR_SIGNATURE — нужна "

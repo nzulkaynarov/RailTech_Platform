@@ -458,7 +458,10 @@ export const edsProjectsHandlers = [
     if (blocker) {
       return blocker.code.startsWith("CONTRACT_")
         ? conflict(blocker.code.toLowerCase(), blocker.message)
-        : conflict("contract_visas_required", "Договор нельзя отправить клиенту: сначала нужны визы.");
+        : conflict(
+            "contract_visas_required",
+            "Договор нельзя отправить клиенту: сначала нужны визы.",
+          );
     }
     if (!rule.from.includes(stateOf(p))) {
       return conflict("contract_transition_not_allowed", "Договор сейчас в другом статусе.");

@@ -599,7 +599,9 @@ export function problemsOf(p: ProjectState): ProjectRow["problems"] {
   return problems;
 }
 
-function visasBlocker(visas: NonNullable<MutableContract["visas"]> | "collected"): ProjectContractSendBlocker | null {
+function visasBlocker(
+  visas: NonNullable<MutableContract["visas"]> | "collected",
+): ProjectContractSendBlocker | null {
   const base = { remark: "", settings_link: false, missing_permissions: [] as string[] };
   switch (visas) {
     case "none":

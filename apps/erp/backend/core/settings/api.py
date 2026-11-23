@@ -166,16 +166,6 @@ SPECTACULAR_SETTINGS = {
         # письмо партнёру по заказу (0.10, FR-12) — одно перечисление под прежним именем (переименование ломало бы схему).
         "InviteDeliveryEnum": ["queued", "sent", "failed"],
         "ReviewKindEnum": ["card", "changes"],
-        # Х-1: причина, по которой проект договора не уходит клиенту (визы, правила шаблона ДОК-10), в строке проекта и в карточке — одно имя.
-        "ContractSendBlockerCodeEnum": [
-            "visas_not_requested",
-            "visas_declined",
-            "visas_pending",
-            "visas_returned",
-            "no_visa_holder",
-            "CONTRACT_DEVIATION_PENDING",
-            "CONTRACT_NEEDS_OUR_SIGNATURE",
-        ],
         # ДВ-5: вид и статус редакции оферты и политики Кабинета (общее имя вместо хешированного).
         "LegalKindEnum": ["privacy", "terms"],
         "LegalEditionStatusEnum": ["draft", "current", "retired"],

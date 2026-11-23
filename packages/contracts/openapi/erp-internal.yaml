@@ -3,7 +3,7 @@
 openapi: 3.0.3
 info:
   title: RailTech Platform ERP — Internal API (ERP SPA)
-  version: 1.22.0
+  version: 1.21.0
   description: 'Внутренний API ERP для ERP SPA (бэк-офис), пространство `/api/v1/` (CONTRACTS §1). Файл генерируется из схемы
     бэкенда — это не отдельное описание, а её срез; расхождение с кодом невозможно: CI перегенерирует схему и падает при diff.'
   contact:
@@ -25339,20 +25339,11 @@ components:
           type: boolean
           description: Проект ушёл клиенту на согласование и виден ему в портале
         send_blocker_code:
+          type: string
           nullable: true
-          description: |-
-            Х-1: пока проект не ушёл клиенту — код причины, по которой его нельзя отправить (визы маршрута подписи); `null` — ничего не мешает (визы Х-1 и правила шаблона ДОК-10 — одна проверка). Слова и роли — `send_blocker` карточки
-
-            * `visas_not_requested` - visas_not_requested
-            * `visas_declined` - visas_declined
-            * `visas_pending` - visas_pending
-            * `visas_returned` - visas_returned
-            * `no_visa_holder` - no_visa_holder
-            * `CONTRACT_DEVIATION_PENDING` - CONTRACT_DEVIATION_PENDING
-            * `CONTRACT_NEEDS_OUR_SIGNATURE` - CONTRACT_NEEDS_OUR_SIGNATURE
-          oneOf:
-          - $ref: '#/components/schemas/ContractSendBlockerCodeEnum'
-          - $ref: '#/components/schemas/NullEnum'
+          description: 'Х-1: пока проект не ушёл клиенту — код причины, по которой его нельзя отправить (визы маршрута подписи);
+            `null` — ничего не мешает (визы Х-1 и правила шаблона ДОК-10 — одна проверка). Открытое множество кодов: см. `send_blocker.code`.
+            Слова и роли — `send_blocker` карточки'
         template:
           allOf:
           - $ref: '#/components/schemas/ContractTemplateCard'
@@ -25601,20 +25592,11 @@ components:
           type: boolean
           description: Проект ушёл клиенту на согласование и виден ему в портале
         send_blocker_code:
+          type: string
           nullable: true
-          description: |-
-            Х-1: пока проект не ушёл клиенту — код причины, по которой его нельзя отправить (визы маршрута подписи); `null` — ничего не мешает (визы Х-1 и правила шаблона ДОК-10 — одна проверка). Слова и роли — `send_blocker` карточки
-
-            * `visas_not_requested` - visas_not_requested
-            * `visas_declined` - visas_declined
-            * `visas_pending` - visas_pending
-            * `visas_returned` - visas_returned
-            * `no_visa_holder` - no_visa_holder
-            * `CONTRACT_DEVIATION_PENDING` - CONTRACT_DEVIATION_PENDING
-            * `CONTRACT_NEEDS_OUR_SIGNATURE` - CONTRACT_NEEDS_OUR_SIGNATURE
-          oneOf:
-          - $ref: '#/components/schemas/ContractSendBlockerCodeEnum'
-          - $ref: '#/components/schemas/NullEnum'
+          description: 'Х-1: пока проект не ушёл клиенту — код причины, по которой его нельзя отправить (визы маршрута подписи);
+            `null` — ничего не мешает (визы Х-1 и правила шаблона ДОК-10 — одна проверка). Открытое множество кодов: см. `send_blocker.code`.
+            Слова и роли — `send_blocker` карточки'
       required:
       - id
       - number
@@ -25667,18 +25649,12 @@ components:
       description: 'Почему проект договора нельзя отправить клиенту: визы Х-1 (ADR-0025), отступление или наша подпись (ДОК-10).'
       properties:
         code:
-          allOf:
-          - $ref: '#/components/schemas/ContractSendBlockerCodeEnum'
-          description: |-
-            visas_not_requested — договор ещё не на визах; visas_declined — EDS не принял договор на визы (причина в remark); visas_pending — не все визы поставлены; visas_returned — виза возвращена с замечанием; no_visa_holder — в компании нет держателя нужного права; CONTRACT_DEVIATION_PENDING — отступление от шаблона ждёт решения; CONTRACT_NEEDS_OUR_SIGNATURE — нужна наша подпись до отправки (ДОК-10)
-
-            * `visas_not_requested` - visas_not_requested
-            * `visas_declined` - visas_declined
-            * `visas_pending` - visas_pending
-            * `visas_returned` - visas_returned
-            * `no_visa_holder` - no_visa_holder
-            * `CONTRACT_DEVIATION_PENDING` - CONTRACT_DEVIATION_PENDING
-            * `CONTRACT_NEEDS_OUR_SIGNATURE` - CONTRACT_NEEDS_OUR_SIGNATURE
+          type: string
+          description: 'Открытое множество (новые причины добавляются без смены контракта): visas_not_requested — договор
+            ещё не на визах; visas_declined — EDS не принял договор на визы (причина в remark); visas_pending — не все визы
+            поставлены; visas_returned — виза возвращена с замечанием; no_visa_holder — в компании нет держателя нужного права;
+            CONTRACT_DEVIATION_PENDING — отступление от шаблона ждёт решения; CONTRACT_NEEDS_OUR_SIGNATURE — нужна наша подпись
+            до отправки (ДОК-10)'
         message:
           type: string
           description: 'Причина словами для сотрудника («Нужны визы: бухгалтер, юрист»)'
@@ -25704,24 +25680,6 @@ components:
       - missing
       - remark
       - settings_link
-    ContractSendBlockerCodeEnum:
-      enum:
-      - visas_not_requested
-      - visas_declined
-      - visas_pending
-      - visas_returned
-      - no_visa_holder
-      - CONTRACT_DEVIATION_PENDING
-      - CONTRACT_NEEDS_OUR_SIGNATURE
-      type: string
-      description: |-
-        * `visas_not_requested` - visas_not_requested
-        * `visas_declined` - visas_declined
-        * `visas_pending` - visas_pending
-        * `visas_returned` - visas_returned
-        * `no_visa_holder` - no_visa_holder
-        * `CONTRACT_DEVIATION_PENDING` - CONTRACT_DEVIATION_PENDING
-        * `CONTRACT_NEEDS_OUR_SIGNATURE` - CONTRACT_NEEDS_OUR_SIGNATURE
     ContractTemplateCard:
       type: object
       description: 'Договор по шаблону (ДОК-10): имя и редакция, отступление, путь по фактам. Пусто у договоров прежним путём.'
