@@ -76,6 +76,8 @@ const ORACLE: Record<string, string> = {
   "chats.internal": "FFFFFFFFF",
   "chats.external": "HRFHHFRFH",
   admin: "FRHHHHHHH",
+  // ЕВ-2а: страницы фундамента Настроек (каналы, ИИ, выгрузки) — только администратор
+  "admin.system": "FHHHHHHHH",
   "company.settings": "FFHHHHHHH",
 };
 const COLUMNS = [

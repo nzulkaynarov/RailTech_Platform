@@ -54,6 +54,8 @@ MATRIX: Final[dict[str, str]] = {
     "chats.internal": "FFFFFFFFF",
     "chats.external": "HRFHHFRFH",
     "admin": "FRHHHHHHH",
+    # ЕВ-2а: страницы фундамента Настроек (каналы, ИИ, выгрузки) — только администратор.
+    "admin.system": "FHHHHHHHH",
     "company.settings": "FFHHHHHHH",
 }
 
