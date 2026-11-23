@@ -367,7 +367,10 @@
       "empty": {
         "title": "Nobody found",
         "text": "Change the filter or search"
-      }
+      },
+      "roles": "Roles",
+      "reveal": "Show contacts",
+      "close": "Close"
     }
   },
   "admin": {
