@@ -185,9 +185,12 @@
       "second_factor_code_invalid": "Kod notöğri. Telefondagi vaqtni tekşirib, qayta urinib köring.",
       "second_factor_already_enabled": "Kod bilan kirish allaqachon yoqilgan.",
       "secrets_key_missing": "Yoqib bölmaydi: administrator maxfiy kalitlarni şifrlash kalitini körsatmagan.",
-      "default": "Bölmadi. Qayta urinib köring."
+      "default": "Bölmadi. Qayta urinib köring.",
+      "second_factor_required": "Öçirib bölmaydi: ruxsatingiz uçun kod majburiy."
     },
-    "qrLabel": "Autentifikator ilovasi uçun QR-kod"
+    "qrLabel": "Autentifikator ilovasi uçun QR-kod",
+    "requiredNote": "Ruxsatingiz uçun kod majburiy — uni öçirib bölmaydi. Telefon yöqolsa, administrator kodni tiklaydi.",
+    "offRequired": "Ruxsatingiz uçun kod bilan kiriş kerak. Yoqing: aks holda kiriş yopiladi."
   },
   "calendarLink": {
     "title": "Taqvim havolasi",
@@ -204,5 +207,19 @@
     "once": "Havolani hozir nusxalang: keyin uni körsatmaymiz. Yöqotdingizmi — havolani almaştiring.",
     "refreshHint": "Muddatlar Platformaga kirganingizda yangilanadi.",
     "error": "Havolani olib bölmadi. Qayta urinib köring."
+  },
+  "stepUp": {
+    "title": "Ilovadagi kodni kiriting",
+    "lead": "Bu harakat yangi kod bilan tasdiqlanadi.",
+    "hint": "Kirişda hozirgina kod kiritgan bölsangiz, keyingisini kuting.",
+    "code": "Ilovadagi kod yoki zaxira kod",
+    "confirm": "Tasdiqlaş",
+    "wrong": "Kod notöğri. Telefondagi vaqtni tekşirib, qayta urinib köring.",
+    "locked": "Juda köp notöğri uriniş. Keyinroq qayta urinib köring.",
+    "default": "Bölmadi. Qayta urinib köring.",
+    "notEnrolledTitle": "Avval kod bilan kirişni yoqing",
+    "notEnrolled": "Bu harakat ilovadagi kod bilan tasdiqlanadi, sizda esa kod bilan kiriş hali yoqilmagan.",
+    "toProfile": "Profilni oçiş",
+    "close": "Yopiş"
   }
 }

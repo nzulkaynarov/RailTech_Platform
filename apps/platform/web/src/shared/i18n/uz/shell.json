@@ -139,6 +139,11 @@
       "useBackup": "Telefon yöq — zaxira kod",
       "useApp": "Ilovadagi kod",
       "back": "Orqaga"
+    },
+    "enroll": {
+      "title": "Kod bilan kirişni sozlang",
+      "lead": "Ruxsatingiz tölovlar, tasdiqlaş yoki sozlamalarni qamrab oladi — kiriş faqat ilovadagi kod bilan. Bir daqiqa vaqt oladi.",
+      "doneTitle": "Kod bilan kiriş yoqildi"
     }
   },
   "changePassword": {

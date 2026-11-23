@@ -737,6 +737,20 @@
         "label": "Who takes over the leads in progress",
         "placeholder": "Pick a colleague",
         "save": "Hand over leads and save"
+      },
+      "resetFactor": {
+        "button": "Reset second factor",
+        "title": "Reset second factor",
+        "what": "The employee will be signed out and will set up the code again at the next sign-in. The reason goes to the journal.",
+        "reason": "Reason",
+        "confirm": "Reset",
+        "cancel": "Cancel",
+        "done": "Second factor reset: {{name}}",
+        "self": "Another administrator resets your own factor.",
+        "errors": {
+          "notEnabled": "Sign-in with a code is not on for this employee.",
+          "default": "Something went wrong. Try again."
+        }
       }
     },
     "roles": {

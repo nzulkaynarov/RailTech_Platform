@@ -185,9 +185,12 @@
       "second_factor_code_invalid": "Wrong code. Check the time on your phone and try again.",
       "second_factor_already_enabled": "Sign-in with a code is already on.",
       "secrets_key_missing": "Cannot turn on: the administrator has not set the secrets encryption key.",
-      "default": "Something went wrong. Try again."
+      "default": "Something went wrong. Try again.",
+      "second_factor_required": "Cannot be turned off: the code is required for your access."
     },
-    "qrLabel": "QR code for the authenticator app"
+    "qrLabel": "QR code for the authenticator app",
+    "requiredNote": "The code is required for your access and cannot be turned off. If you lose your phone, an administrator can reset it.",
+    "offRequired": "Your access needs sign-in with a code. Turn it on: without it sign-in will be closed."
   },
   "calendarLink": {
     "title": "Calendar link",
@@ -204,5 +207,19 @@
     "once": "Copy the link now: we will not show it again. Lost it? Change the link.",
     "refreshHint": "Deadlines refresh when you sign in to the Platform.",
     "error": "Could not get the link. Try again."
+  },
+  "stepUp": {
+    "title": "Enter the code from the app",
+    "lead": "This action is confirmed with a fresh code.",
+    "hint": "If you just entered a code at sign-in, wait for the next one.",
+    "code": "Code from the app or backup code",
+    "confirm": "Confirm",
+    "wrong": "Wrong code. Check the time on your phone and try again.",
+    "locked": "Too many wrong attempts. Try again later.",
+    "default": "Something went wrong. Try again.",
+    "notEnrolledTitle": "Turn on sign-in with a code first",
+    "notEnrolled": "This action is confirmed with a code from the app, and sign-in with a code is not on for you yet.",
+    "toProfile": "Open profile",
+    "close": "Close"
   }
 }
