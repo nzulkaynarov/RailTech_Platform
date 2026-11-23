@@ -251,7 +251,10 @@ test.describe("узкие экраны", () => {
       await expect(bar).toBeVisible();
       const box = await bar.boundingBox();
       expect(box?.y ?? 0).toBeGreaterThan(700);
-      await expect(bar.getByRole("link")).toHaveCount(visibleModules("DIRECTOR").length);
+      // «Настройки» на телефоне — в меню профиля, в нижней панели остальные модули (ЕВ-0)
+      await expect(bar.getByRole("link")).toHaveCount(
+        visibleModules("DIRECTOR").filter((name) => name !== "Настройки").length,
+      );
       // рейл слева и подменю не занимают экран
       await expect(page.getByRole("navigation", { name: "Разделы модуля" })).toHaveCount(0);
 

@@ -5,6 +5,7 @@ import { Loader2, RotateCcw, Save } from 'lucide-react';
 
 import { ActionDialog } from '@/components/ActionDialog';
 import { Button } from '@/components/ui/button';
+import { useKeyboardInset } from '@/hooks/useKeyboardInset';
 import { shortcutLabel } from '@/lib/keyboard';
 import { cn } from '@/lib/utils';
 
@@ -46,6 +47,7 @@ function scrollParent(node: HTMLElement): HTMLElement | null {
  */
 export function UnsavedChangesBar({ dirty, onSave, onReset, pending = false, className }: UnsavedChangesBarProps) {
   const { t } = useTranslation();
+  useKeyboardInset();
   const dockRef = useRef<HTMLDivElement>(null);
   const barRef = useRef<HTMLDivElement>(null);
   const [confirmReset, setConfirmReset] = useState(false);
@@ -105,7 +107,7 @@ export function UnsavedChangesBar({ dirty, onSave, onReset, pending = false, cla
     <div
       ref={dockRef}
       data-save-dock=""
-      className={cn('sticky bottom-[calc(4rem+env(safe-area-inset-bottom))] z-20 mt-2 md:bottom-3', className)}
+      className={cn('sticky bottom-[calc(4rem+env(safe-area-inset-bottom))] z-20 mt-2 md:bottom-3 [[data-kb=open]_&]:bottom-[calc(var(--kb-inset,0px)+0.5rem)]', className)}
     >
       <span role="status" className="sr-only">
         {dirty ? message : ''}

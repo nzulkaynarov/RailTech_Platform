@@ -23,11 +23,14 @@ export function AvatarMenu({
   me,
   placement,
   onHelp,
+  settings,
 }: {
   me: Me;
   placement: "topLeft" | "topRight";
   /** Пункт «Помощь» открывает окно помощи (W15-H7); нет — пункта нет */
   onHelp?: () => void;
+  /** Phone: Настройки are not in the bottom bar, the profile menu leads to them */
+  settings?: { to: string; label: string } | undefined;
 }) {
   const { t } = useTranslation("shell");
   const navigate = useNavigate();
@@ -98,6 +101,7 @@ export function AvatarMenu({
       ),
       children: [
         { key: "profile", label: t("avatar.profile") },
+        ...(settings ? [{ key: "settings", label: settings.label }] : []),
         ...(onHelp ? [{ key: "help", label: t("avatar.help") }] : []),
         { key: "password", label: t("avatar.changePassword") },
       ],
@@ -133,6 +137,7 @@ export function AvatarMenu({
 
   const onClick: MenuProps["onClick"] = ({ key }) => {
     if (key === "profile") void navigate("/me");
+    else if (key === "settings" && settings) void navigate(settings.to);
     else if (key === "help") onHelp?.();
     else if (key === "password") void navigate("/change-password");
     else if (key === "about") void navigate("/help/about");

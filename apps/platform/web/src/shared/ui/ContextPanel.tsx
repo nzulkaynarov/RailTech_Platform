@@ -211,8 +211,8 @@ export function ContextPanelDrawer({
 }: ContextPanelProps & {
   open: boolean;
   onClose: () => void;
-  offsetTop: number;
-  offsetBottom: number;
+  offsetTop: number | string;
+  offsetBottom: number | string;
 }) {
   return (
     <Drawer

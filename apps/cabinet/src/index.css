@@ -43,3 +43,47 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* Телефон и касание (ЕВ-0, правила 26-31 отчёта). Без слоя: правила должны перебивать утилиты Tailwind.
+   1. Корень прокрутки не пружинит и не передаёт прокрутку страницы.
+   2. Управление: без задержки двойного тапа, без серой вспышки и без выделения текста по долгому нажатию; номера,
+      артикулы, номера документов и контакты остаются выделяемыми (их копируют).
+   3. Поля на телефоне — 16 px, иначе iOS приближает страницу при фокусе.
+   4. Указатель coarse: основные действия, действия строки и нижняя панель — от 44 px.
+   Сдвиг над экранной клавиатурой `--kb-inset` ставит hooks/useKeyboardInset.ts (лист, бар несохранённого). */
+html,
+body {
+  overscroll-behavior: none;
+}
+:where([role='dialog'], [data-slot='sheet-content'], [data-slot='scroll-area-viewport']) {
+  overscroll-behavior: contain;
+}
+:where(button, [role='button'], [role='tab'], [role='menuitem'], [role='switch'], summary, select, a, input, textarea) {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+:where(button, [role='button'], [role='tab'], [role='menuitem'], [role='switch']) {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+:where(.tabular-nums, [translate='no'], .selectable, a[href^='tel:'], a[href^='mailto:']) {
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
+}
+@media (max-width: 767px) {
+  input:not([type='checkbox'], [type='radio'], [type='range'], [type='file']),
+  textarea,
+  select {
+    font-size: 16px;
+  }
+}
+@media (pointer: coarse) {
+  [data-slot='button']:not([data-variant='link']) {
+    min-height: 44px;
+  }
+  [data-slot='button'][data-size^='icon'] {
+    min-width: 44px;
+  }
+}

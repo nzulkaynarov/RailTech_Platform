@@ -160,17 +160,26 @@ test.describe("Шапка и бар несохранённого", () => {
       await page.getByLabel("Телефон", { exact: true }).focus();
 
       // Уход со страницы с правками (рейлом «Настройки» — на первую страницу группы «Сотрудники») спрашивает
-      const settings = page
-        .getByRole("navigation", { name: "Модули" })
-        .getByRole("link", { name: "Настройки" });
-      await settings.click();
+      // на телефоне «Настройки» — в меню профиля, не в нижней панели (ЕВ-0)
+      const openSettings = async (): Promise<void> => {
+        if (width === 390) {
+          await page.getByRole("button", { name: /профиль и настройки/ }).click();
+          await page.getByRole("menuitem", { name: "Настройки" }).click();
+        } else {
+          await page
+            .getByRole("navigation", { name: "Модули" })
+            .getByRole("link", { name: "Настройки" })
+            .click();
+        }
+      };
+      await openSettings();
       const dialog = page.getByRole("dialog", { name: "Выйти без сохранения?" });
       await expect(dialog).toBeVisible();
       await dialog.getByRole("button", { name: "Остаться" }).click();
       await expect(page.getByLabel("Телефон", { exact: true })).toHaveValue("+998 11 111 11 11");
       await page.getByRole("button", { name: "Отменить" }).click();
       await expect(save).toBeHidden();
-      await settings.click();
+      await openSettings();
       await expect(page.getByRole("heading", { level: 1, name: "Сотрудники" })).toBeVisible();
     });
   }
