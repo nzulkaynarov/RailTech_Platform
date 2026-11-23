@@ -15,7 +15,7 @@ from app.domain import password_reset as rules
 from app.domain.errors import ConflictError, Reason, ValidationFailedError
 from app.main import create_app
 from app.models.auth import AuditLog, PasswordResetToken, RefreshToken, User
-from app.security.passwords import verify_password
+from app.security.passwords import hash_password, verify_password
 from app.services.password_reset import PasswordResetService
 from tests.integration.crm_helpers import PASSWORD, FakeSender, login, make_user
 
@@ -407,3 +407,50 @@ async def test_admin_links_are_rate_limited_per_account(
         await admin_link(sessions, manager.id)
     with pytest.raises(RateLimitedError):
         await admin_link(sessions, manager.id)
+
+
+async def test_unused_set_password_links_die_with_the_old_password_or_the_account(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    """A link left in the mailbox must not outlive an on-screen reset, a self-change or a block."""
+    from app.security.audit import Actor
+    from app.services.user_views import UserPatch
+    from app.services.users import UserService
+
+    users = UserService(sessions)
+
+    async def open_links(user_id: int) -> int:
+        async with sessions() as session:
+            return len(
+                list(
+                    await session.scalars(
+                        select(PasswordResetToken).where(
+                            PasswordResetToken.user_id == user_id,
+                            PasswordResetToken.used_at.is_(None),
+                        )
+                    )
+                )
+            )
+
+    onscreen, _ = await make_user(sessions, "umid@railtech.uz", ["manager"])
+    await admin_link(sessions, onscreen.id)
+    assert await open_links(onscreen.id) == 1
+    await users.reset_password(Actor(user_id=1), onscreen.id)
+    assert await open_links(onscreen.id) == 0
+
+    own, password = await make_user(sessions, "zafar@railtech.uz", ["manager"])
+    await admin_link(sessions, own.id)
+    async with (
+        sessions() as session,
+        session.begin(),
+    ):  # restore the old password
+        await session.execute(
+            update(User).where(User.id == own.id).values(password_hash=hash_password(password))
+        )
+    await users.change_password(Actor(user_id=own.id), own.id, password, NEW_PASSWORD)
+    assert await open_links(own.id) == 0
+
+    blocked, _ = await make_user(sessions, "sanjar@railtech.uz", ["manager"])
+    await admin_link(sessions, blocked.id)
+    await users.update(Actor(user_id=1), blocked.id, UserPatch(is_active=False))
+    assert await open_links(blocked.id) == 0

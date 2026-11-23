@@ -148,7 +148,7 @@
     "toLogin": "Kirishga",
     "requestNew": "Yangi havola so‘rash",
     "errors": {
-      "reset_token_invalid": "Havola ishlatilgan yoki muddati tugagan. Yangisini sörang — pochtaga keladi.",
+      "reset_token_invalid": "Havola işlatilgan yoki muddati tugagan. Yangisini sörang — poçtaga keladi.",
       "weak_password": "Parol juda oddiy: kamida 10 belgi, harflar va raqamlar.",
       "TOO_MANY_REQUESTS": "Urinishlar juda ko‘p. Keyinroq takrorlang.",
       "BACKEND_UNAVAILABLE": "CRM bilan bog‘lanib bo‘lmadi. Keyinroq takrorlang.",
