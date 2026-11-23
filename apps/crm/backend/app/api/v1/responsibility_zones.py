@@ -13,7 +13,6 @@ from fastapi import APIRouter, Depends, status
 
 from app.api.deps import ContainerDep, require
 from app.schemas.responsibility_zones import (
-    LocalizedText,
     ResponsibilityZoneCreate,
     ResponsibilityZoneList,
     ResponsibilityZoneOut,
@@ -21,6 +20,7 @@ from app.schemas.responsibility_zones import (
     ResponsibilityZoneUpdate,
     ZonePerson,
     ZoneProblemOut,
+    ZoneText,
 )
 from app.security.principal import Principal
 from app.services.responsibility_zones import PersonView, ZonePatch, ZoneView
@@ -53,8 +53,8 @@ def to_out(view: ZoneView) -> ResponsibilityZoneOut:
     return ResponsibilityZoneOut(
         id=view.id,
         code=view.code,
-        name=LocalizedText(**view.name),
-        description=LocalizedText(**view.description),
+        name=ZoneText(**view.name),
+        description=ZoneText(**view.description),
         sections=view.sections,
         responsible=_person(view.responsible),
         deputy=_person(view.deputy),

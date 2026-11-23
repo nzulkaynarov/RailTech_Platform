@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field, model_validator
 CODE_PATTERN = r"^[a-z][a-z0-9_]{1,39}$"
 
 
-class LocalizedText(BaseModel):
+class ZoneText(BaseModel):
     ru: str
     uz: str
     en: str
@@ -44,8 +44,8 @@ class ZoneProblemOut(BaseModel):
 class ResponsibilityZoneOut(BaseModel):
     id: int
     code: str
-    name: LocalizedText
-    description: LocalizedText
+    name: ZoneText
+    description: ZoneText
     sections: list[str]
     responsible: ZonePerson | None
     deputy: ZonePerson | None

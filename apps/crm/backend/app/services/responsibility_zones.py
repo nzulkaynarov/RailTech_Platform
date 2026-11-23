@@ -148,9 +148,15 @@ async def _required(
     return zone
 
 
-def _checked_person(users: Mapping[int, User], value: object, name: str) -> int | None:
+def _checked_person(
+    users: Mapping[int, User], value: object, name: str, current: int | None = None
+) -> int | None:
     if value is None:
         return None
+    if value == current:
+        # an unchanged assignment is not re-validated: a deactivated person already in the
+        # zone must not block saving the basis, the term or another person
+        return current
     user = users.get(value) if isinstance(value, int) else None
     if user is None or not user.is_active:
         raise ValidationFailedError("the employee is not found or inactive", field=name)
@@ -215,15 +221,18 @@ class ResponsibilityZoneService:
             before = zone_snapshot(zone)
             if patch.responsible_user_id is not UNSET:
                 zone.responsible_user_id = _checked_person(
-                    people.users, patch.responsible_user_id, "responsible_user_id"
+                    people.users,
+                    patch.responsible_user_id,
+                    "responsible_user_id",
+                    zone.responsible_user_id,
                 )
             if patch.deputy_user_id is not UNSET:
                 zone.deputy_user_id = _checked_person(
-                    people.users, patch.deputy_user_id, "deputy_user_id"
+                    people.users, patch.deputy_user_id, "deputy_user_id", zone.deputy_user_id
                 )
             if patch.curator_user_id is not UNSET:
                 zone.curator_user_id = _checked_person(
-                    people.users, patch.curator_user_id, "curator_user_id"
+                    people.users, patch.curator_user_id, "curator_user_id", zone.curator_user_id
                 )
             if zone.responsible_user_id is not None and (
                 zone.responsible_user_id == zone.deputy_user_id

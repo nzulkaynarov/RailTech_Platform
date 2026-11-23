@@ -717,7 +717,7 @@ components:
     BotProfileOut:
       properties:
         profile:
-          $ref: '#/components/schemas/BotProfileSettings-Output'
+          $ref: '#/components/schemas/BotProfileSettings'
         published:
           anyOf:
           - $ref: '#/components/schemas/ProfilePublishOut'
@@ -727,31 +727,17 @@ components:
       - published
       title: BotProfileOut
       type: object
-    BotProfileSettings-Input:
+    BotProfileSettings:
       additionalProperties: false
       properties:
         description:
-          $ref: '#/components/schemas/LocalizedText-Input'
+          $ref: '#/components/schemas/LocalizedText'
           description: «Что умеет этот бот?» — видно до /start, до 512 символов
         name:
-          $ref: '#/components/schemas/LocalizedText-Input'
+          $ref: '#/components/schemas/LocalizedText'
           description: Имя бота в Telegram, до 64 символов
         short_description:
-          $ref: '#/components/schemas/LocalizedText-Input'
-          description: Краткое описание в профиле бота и при пересылке, до 120 символов
-      title: BotProfileSettings
-      type: object
-    BotProfileSettings-Output:
-      additionalProperties: false
-      properties:
-        description:
-          $ref: '#/components/schemas/app__schemas__settings_base__LocalizedText'
-          description: «Что умеет этот бот?» — видно до /start, до 512 символов
-        name:
-          $ref: '#/components/schemas/app__schemas__settings_base__LocalizedText'
-          description: Имя бота в Telegram, до 64 символов
-        short_description:
-          $ref: '#/components/schemas/app__schemas__settings_base__LocalizedText'
+          $ref: '#/components/schemas/LocalizedText'
           description: Краткое описание в профиле бота и при пересылке, до 120 символов
       title: BotProfileSettings
       type: object
@@ -6276,7 +6262,7 @@ components:
       - ru
       title: LocalizedNameIn
       type: object
-    LocalizedText-Input:
+    LocalizedText:
       additionalProperties: false
       properties:
         en:
@@ -8192,7 +8178,7 @@ components:
       additionalProperties: false
       properties:
         text:
-          $ref: '#/components/schemas/LocalizedText-Input'
+          $ref: '#/components/schemas/LocalizedText'
         title:
           maxLength: 120
           minLength: 1
@@ -8210,7 +8196,7 @@ components:
           title: Id
           type: integer
         text:
-          $ref: '#/components/schemas/app__schemas__settings_base__LocalizedText'
+          $ref: '#/components/schemas/LocalizedText'
         title:
           maxLength: 120
           minLength: 1
@@ -8491,7 +8477,7 @@ components:
           - $ref: '#/components/schemas/ZonePerson'
           - type: 'null'
         description:
-          $ref: '#/components/schemas/app__schemas__responsibility_zones__LocalizedText'
+          $ref: '#/components/schemas/ZoneText'
         id:
           title: Id
           type: integer
@@ -8499,7 +8485,7 @@ components:
           title: Is Active
           type: boolean
         name:
-          $ref: '#/components/schemas/app__schemas__responsibility_zones__LocalizedText'
+          $ref: '#/components/schemas/ZoneText'
         problems:
           items:
             $ref: '#/components/schemas/ZoneProblemOut'
@@ -10921,7 +10907,7 @@ components:
       - severity
       title: ZoneProblemOut
       type: object
-    app__schemas__responsibility_zones__LocalizedText:
+    ZoneText:
       properties:
         en:
           title: En
@@ -10936,25 +10922,7 @@ components:
       - ru
       - uz
       - en
-      title: LocalizedText
-      type: object
-    app__schemas__settings_base__LocalizedText:
-      additionalProperties: false
-      properties:
-        en:
-          title: En
-          type: string
-        ru:
-          title: Ru
-          type: string
-        uz:
-          title: Uz
-          type: string
-      required:
-      - ru
-      - uz
-      - en
-      title: LocalizedText
+      title: ZoneText
       type: object
   securitySchemes:
     HTTPBearer:
@@ -15093,7 +15061,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/BotProfileSettings-Input'
+              $ref: '#/components/schemas/BotProfileSettings'
         required: true
       responses:
         '200':

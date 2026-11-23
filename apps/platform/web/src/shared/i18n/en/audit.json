@@ -309,6 +309,12 @@
     },
     "console": {
       "open": "Opened a service console"
+    },
+    "responsibility_zone": {
+      "create": "Created a responsibility zone",
+      "update": "Changed a responsibility zone",
+      "deactivate": "Turned off a responsibility zone",
+      "activate": "Turned on a responsibility zone"
     }
   },
   "entities": {
@@ -334,7 +340,8 @@
     "platform_role": "Platform role",
     "staff_ticket": "Staff request",
     "company_article": "Company article",
-    "console": "Service console"
+    "console": "Service console",
+    "responsibility_zone": "Responsibility zone"
   },
   "fields": {
     "email": "Email",

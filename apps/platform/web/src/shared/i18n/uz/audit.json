@@ -309,6 +309,12 @@
     },
     "console": {
       "open": "Xizmat konsolini ochdi"
+    },
+    "responsibility_zone": {
+      "create": "Masʼuliyat zonasini yaratdi",
+      "update": "Masʼuliyat zonasini özgartirdi",
+      "deactivate": "Masʼuliyat zonasini öçirdi",
+      "activate": "Masʼuliyat zonasini yoqdi"
     }
   },
   "entities": {
@@ -334,7 +340,8 @@
     "platform_role": "Platforma roli",
     "staff_ticket": "Xodim murojaati",
     "company_article": "Kompaniya maqolasi",
-    "console": "Xizmat konsoli"
+    "console": "Xizmat konsoli",
+    "responsibility_zone": "Masʼuliyat zonasi"
   },
   "fields": {
     "email": "Elektron pochta",

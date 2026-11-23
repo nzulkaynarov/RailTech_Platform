@@ -208,6 +208,38 @@ async def test_assign_rejects_unknown_inactive_same_person_and_reversed_term(
     assert client.patch(url, json=reversed_term, headers=admin).status_code == 422
 
 
+async def test_inactive_assigned_person_does_not_block_saving_other_fields(
+    client: TestClient,
+    sessions: async_sessionmaker[AsyncSession],
+    staff: dict[str, tuple[int, dict[str, str]]],
+) -> None:
+    admin = staff["admin"][1]
+    zid = _create(client, admin)["id"]
+    url = f"{ZONES}/{zid}"
+    deputy, _ = await make_user(sessions, "deputy@railtech.uz", ["viewer"])
+    curator, _ = await make_user(sessions, "curator@railtech.uz", ["viewer"])
+    ids = {"deputy_user_id": deputy.id, "curator_user_id": curator.id}
+    assert client.patch(url, json=ids, headers=admin).status_code == 200
+    async with sessions() as session, session.begin():
+        await session.execute(
+            text("UPDATE users SET is_active = false WHERE id IN (:a, :b)"),
+            {"a": deputy.id, "b": curator.id},
+        )
+    # the form resends every person: the unchanged inactive ones must not give 422
+    resend = {**ids, "responsible_user_id": staff["manager"][0], "basis": "Order 12"}
+    saved = client.patch(url, json=resend, headers=admin)
+    assert saved.status_code == 200, saved.text
+    assert saved.json()["basis"] == "Order 12"
+    # a NEW inactive person is still refused
+    spare, _ = await make_user(sessions, "spare@railtech.uz", ["viewer"])
+    async with sessions() as session, session.begin():
+        await session.execute(
+            text("UPDATE users SET is_active = false WHERE id = :i"), {"i": spare.id}
+        )
+    refused = client.patch(url, json={"curator_user_id": spare.id}, headers=admin)
+    assert refused.status_code == 422
+
+
 # --- проблемы по фактам ------------------------------------------------------------------------
 
 
