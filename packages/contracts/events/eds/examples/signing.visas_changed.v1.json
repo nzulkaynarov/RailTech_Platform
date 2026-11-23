@@ -1,0 +1,40 @@
+{
+  "specversion": "1.0",
+  "id": "2f3e4d5c-6b7a-4c8d-9e0f-1a2b3c4d5e6f",
+  "source": "rt://eds",
+  "type": "uz.railtech.eds.signing.visas_changed.v1",
+  "time": "2026-11-23T09:15:00Z",
+  "subject": "CT-2026/00142",
+  "datacontenttype": "application/json",
+  "dataschema": "rt://contracts/events/eds/signing.visas_changed/v1",
+  "tenant": "railtech",
+  "correlationid": "0a9b8c7d-6e5f-4a3b-2c1d-0e9f8a7b6c5d",
+  "data": {
+    "object": {
+      "kind": "contract",
+      "object_id": 142,
+      "number": "CT-2026/00142",
+      "version": 15234567
+    },
+    "visas": [
+      {
+        "permission": "approvals.visa_finance",
+        "label": "Виза бухгалтера",
+        "role": "Бухгалтер",
+        "status": "approved"
+      },
+      {
+        "permission": "approvals.visa_legal",
+        "label": "Виза юриста",
+        "role": "Юрист",
+        "status": "pending"
+      }
+    ],
+    "all_approved": false,
+    "changed_at": "2026-11-23T09:15:00Z",
+    "actor": {
+      "type": "staff",
+      "crm_user_id": 5
+    }
+  }
+}

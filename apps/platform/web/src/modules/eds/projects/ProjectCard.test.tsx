@@ -1,9 +1,10 @@
-import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { HttpResponse, http } from "msw";
 import { describe, expect, it } from "vitest";
 
 import { chooseOption } from "../../../test/fields";
 import { clientStatusOf, readProjects, writeProject } from "../../../mocks/fixtures/projects";
+import i18n from "../../../shared/i18n";
 import ruProjects from "../../../shared/i18n/ru/projects.json";
 import { server } from "../../../test/server";
 
@@ -173,16 +174,12 @@ describe("Проект: карточка", () => {
 
 describe("Проект: договор (строка документа)", () => {
   it("весь путь: формирование проекта → на согласование клиенту → согласован → выставлен у оператора → скан → Подписан", async () => {
-    const { panel } = await openCard("accountant@demo.example", 104);
-
-    // договора нет: бухгалтер формирует проект
-    expect(await within(panel).findByText(/Проекта договора ещё нет/)).toBeVisible();
-    fireEvent.click(
-      within(panel).getByRole("button", { name: "Сформировать проект договора по КП" }),
-    );
+    // проект договора готов, визы бухгалтера и юриста собраны (Х-1) — его можно отправить клиенту
+    const { panel } = await openCard("accountant@demo.example", 111);
 
     // проект не отправлен клиенту
     expect(await within(panel).findByText("Проект ещё не отправлен клиенту.")).toBeVisible();
+    expect(within(panel).queryByTestId("contract-send-blocker")).toBeNull();
     fireEvent.click(within(panel).getByRole("button", { name: "На согласование клиенту" }));
 
     expect(
@@ -228,9 +225,126 @@ describe("Проект: договор (строка документа)", () =>
     expect(within(history).queryByText(/Причина: Didox/)).toBeNull();
   });
 
-  it("A2: «Согласован клиентом» — без канала и лица не отмечается; в истории — «Отмечено сотрудником»", async () => {
+  it("Х-1: новый проект договора — «На согласование клиенту» не предлагается, причина словами; «На подпись» собирает визы", async () => {
     const { panel } = await openCard("accountant@demo.example", 104);
-    await click(panel, "Сформировать проект договора по КП");
+    fireEvent.click(
+      await within(panel).findByRole("button", { name: "Сформировать проект договора по КП" }),
+    );
+
+    // договор не на визах: действия «На согласование клиенту» нет, причина — рядом
+    const blocker = await within(panel).findByTestId("contract-send-blocker");
+    expect(blocker).toHaveTextContent("Нужны визы. Нажмите «На подпись»");
+    expect(within(panel).queryByRole("button", { name: "На согласование клиенту" })).toBeNull();
+    expect(within(panel).queryByText("Только просмотр.")).toBeNull();
+
+    // «На подпись» открывает круг виз: причина называет, чьих виз не хватает
+    fireEvent.click(within(panel).getByRole("button", { name: "На подпись" }));
+    await waitFor(() => {
+      expect(within(panel).getByTestId("contract-send-blocker")).toHaveTextContent(
+        "Нужны визы: бухгалтер, юрист",
+      );
+    });
+    expect(within(panel).queryByRole("button", { name: "На согласование клиенту" })).toBeNull();
+  });
+
+  it("Х-1: визы возвращены — замечание визирующего в причине", async () => {
+    const returned = readProjects().find((p) => p.id === 111);
+    if (!returned?.contract) throw new Error("нет проекта 111");
+    writeProject({ ...returned, contract: { ...returned.contract, visas: "returned" } });
+    const { panel } = await openCard("accountant@demo.example", 111);
+    const blocker = await within(panel).findByTestId("contract-send-blocker");
+    expect(blocker).toHaveTextContent("Визы возвращены: бухгалтер");
+    expect(blocker).toHaveTextContent("Замечание: Нет графика платежей");
+    expect(within(panel).queryByRole("button", { name: "На согласование клиенту" })).toBeNull();
+  });
+
+  it("Х-1: некому визировать — администратору ссылка на «Сотрудники», без тупика", async () => {
+    const found = readProjects().find((p) => p.id === 111);
+    if (!found?.contract) throw new Error("нет проекта 111");
+    writeProject({ ...found, contract: { ...found.contract, visas: "no_holder" } });
+    const { panel } = await openCard("all@demo.example", 111);
+    const noHolder = await within(panel).findByTestId("contract-send-blocker");
+    expect(noHolder).toHaveTextContent("Некому поставить визу: юрист");
+    expect(within(noHolder).getByRole("link", { name: "Сотрудники" })).toHaveAttribute(
+      "href",
+      "/admin/org",
+    );
+  });
+
+  it("Х-1: некому визировать — тому, у кого нет доступа к «Сотрудникам», вместо ссылки слова, кого просить", async () => {
+    const found = readProjects().find((p) => p.id === 111);
+    if (!found?.contract) throw new Error("нет проекта 111");
+    writeProject({ ...found, contract: { ...found.contract, visas: "no_holder" } });
+    const { panel } = await openCard("accountant@demo.example", 111);
+    const noHolder = await within(panel).findByTestId("contract-send-blocker");
+    expect(noHolder).toHaveTextContent("Некому поставить визу: юрист");
+    expect(within(noHolder).queryByRole("link")).toBeNull();
+    expect(noHolder).toHaveTextContent("Попросите администратора назначить роль: юрист.");
+  });
+
+  it("Х-1: визы собираются — «На подпись» не предлагается (повтор отказал бы), причина по факту открытого запроса", async () => {
+    const found = readProjects().find((p) => p.id === 111);
+    if (!found?.contract) throw new Error("нет проекта 111");
+    writeProject({ ...found, contract: { ...found.contract, visas: "pending" } });
+    const { panel } = await openCard("accountant@demo.example", 111);
+    expect(await within(panel).findByTestId("contract-send-blocker")).toHaveTextContent(
+      "Нужны визы: бухгалтер, юрист",
+    );
+    expect(within(panel).queryByRole("button", { name: "На подпись" })).toBeNull();
+  });
+
+  it("Х-1: визы возвращены — запроса по текущей редакции нет, «На подпись» можно повторить", async () => {
+    const found = readProjects().find((p) => p.id === 111);
+    if (!found?.contract) throw new Error("нет проекта 111");
+    writeProject({ ...found, contract: { ...found.contract, visas: "returned" } });
+    const { panel } = await openCard("accountant@demo.example", 111);
+    expect(await within(panel).findByRole("button", { name: "На подпись" })).toBeVisible();
+  });
+
+  it("Х-1: запрос открыт, а проекция виз ещё не пришла — «Визы собираются», без пустого хвоста", async () => {
+    const found = readProjects().find((p) => p.id === 111);
+    if (!found?.contract) throw new Error("нет проекта 111");
+    writeProject({ ...found, contract: { ...found.contract, visas: "collecting" } });
+    const { panel } = await openCard("accountant@demo.example", 111);
+    const blocker = await within(panel).findByTestId("contract-send-blocker");
+    expect(blocker).toHaveTextContent("Визы собираются.");
+    expect(blocker).not.toHaveTextContent("Нужны визы:");
+  });
+
+  it("Х-1: роли виз названы на языке сотрудника, а не словами EDS", async () => {
+    const found = readProjects().find((p) => p.id === 111);
+    if (!found?.contract) throw new Error("нет проекта 111");
+    writeProject({ ...found, contract: { ...found.contract, visas: "pending" } });
+    const { panel } = await openCard("accountant@demo.example", 111);
+    await within(panel).findByTestId("contract-send-blocker");
+    try {
+      await act(async () => {
+        await i18n.changeLanguage("en");
+      });
+      const blocker = await within(panel).findByTestId("contract-send-blocker");
+      expect(blocker).toHaveTextContent("Visas needed: accountant, lawyer");
+      expect(blocker).not.toHaveTextContent("бухгалтер");
+    } finally {
+      await i18n.changeLanguage("ru");
+    }
+  });
+
+  it("Х-1: визы собраны — действие есть, причины нет; сервер отказывает, если визы пропали (кто-то опередил)", async () => {
+    const { panel } = await openCard("accountant@demo.example", 111);
+    const button = await within(panel).findByRole("button", { name: "На согласование клиенту" });
+    expect(within(panel).queryByTestId("contract-send-blocker")).toBeNull();
+
+    // карточка устарела: за это время визу вернули — отказ словами, договор у клиента не появился
+    const stale = readProjects().find((p) => p.id === 111);
+    if (!stale?.contract) throw new Error("нет проекта 111");
+    writeProject({ ...stale, contract: { ...stale.contract, visas: "pending" } });
+    fireEvent.click(button);
+    expect(await within(panel).findByText(/Сначала нужны визы/)).toBeVisible();
+    expect(readProjects().find((p) => p.id === 111)?.contract?.sent_to_client).toBe(false);
+  });
+
+  it("A2: «Согласован клиентом» — без канала и лица не отмечается; в истории — «Отмечено сотрудником»", async () => {
+    const { panel } = await openCard("accountant@demo.example", 111);
     await click(panel, "На согласование клиенту");
     await click(panel, "Отметить: согласован клиентом");
 
@@ -249,8 +363,7 @@ describe("Проект: договор (строка документа)", () =>
   });
 
   it("скан не того типа: кнопка остаётся неактивной, слово о типе; ошибка ERP показывается словами", async () => {
-    const { panel } = await openCard("accountant@demo.example", 104);
-    await click(panel, "Сформировать проект договора по КП");
+    const { panel } = await openCard("accountant@demo.example", 111);
     await click(panel, "На согласование клиенту");
     await agree(panel);
     await click(panel, "Отметить: выставлен у оператора");

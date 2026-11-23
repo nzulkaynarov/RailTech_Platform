@@ -19810,6 +19810,11 @@ components:
         sent_to_client:
           description: 'Проект ушёл клиенту на согласование редакции и виден ему в кабинете'
           type: boolean
+        send_blocker_code:
+          description: 'Х-1: пока проект не ушёл клиенту — код причины, по которой его нельзя отправить (визы не собраны); null — ничего не мешает. Считает ERP'
+          oneOf:
+            - $ref: '#/components/schemas/ProjectContractSendBlockerCode'
+            - type: 'null'
       required: [id, number, status, sent_to_client]
       additionalProperties: false
     ProjectInvoiceRef:
@@ -19979,6 +19984,37 @@ components:
           type: [string, 'null']
       required: [id, number, status, version, outgoing_number, valid_until]
       additionalProperties: false
+    ProjectContractSendBlockerCode:
+      description: 'visas_not_requested — договор ещё не на визах; visas_declined — EDS не принял договор на визы (причина в remark); visas_pending — не все визы поставлены; visas_returned — виза возвращена с замечанием; no_visa_holder — в компании нет держателя нужного права (ссылка в настройки)'
+      type: string
+      enum: [visas_not_requested, visas_declined, visas_pending, visas_returned, no_visa_holder]
+    ProjectContractSendBlocker:
+      type: object
+      description: 'Х-1: почему проект договора нельзя отправить клиенту — визы маршрута подписи (ADR-0025) не собраны'
+      properties:
+        code:
+          $ref: '#/components/schemas/ProjectContractSendBlockerCode'
+        message:
+          description: 'Причина словами («Нужны визы: бухгалтер, юрист»)'
+          type: string
+        missing:
+          description: 'Роли без визы словами в нижнем регистре'
+          items:
+            type: string
+          type: array
+        missing_permissions:
+          description: 'Те же визы кодами прав маршрута (approvals.visa_finance): Платформа переводит их на язык сотрудника'
+          items:
+            type: string
+          type: array
+        remark:
+          description: 'Замечание визирующего или причина отказа EDS, как написаны; пусто — нет'
+          type: string
+        settings_link:
+          description: 'Нужной роли нет ни у одного сотрудника: назначить её можно в настройках'
+          type: boolean
+      required: [code, message, missing, remark, settings_link]
+      additionalProperties: false
     ProjectContract:
       type: object
       properties:
@@ -19991,6 +20027,11 @@ components:
           type: string
         sent_to_client:
           type: boolean
+        send_blocker_code:
+          description: 'Х-1: пока проект не ушёл клиенту — код причины, по которой его нельзя отправить (визы не собраны); null — ничего не мешает. Считает ERP'
+          oneOf:
+            - $ref: '#/components/schemas/ProjectContractSendBlockerCode'
+            - type: 'null'
         total:
           oneOf:
             - $ref: '#/components/schemas/ProjectMoney'
@@ -20016,6 +20057,11 @@ components:
             enum: [send_to_client, client_agreed, reject, revise, mark_issued, attach_scan]
             type: string
           type: array
+        send_blocker:
+          description: 'Х-1: пока проект договора не ушёл клиенту — что мешает его отправить (визы маршрута подписи не собраны); null — ничего, действие send_to_client в actions. Считает ERP'
+          oneOf:
+            - $ref: '#/components/schemas/ProjectContractSendBlocker'
+            - type: 'null'
         history:
           items:
             $ref: '#/components/schemas/ProjectJournalEntry'

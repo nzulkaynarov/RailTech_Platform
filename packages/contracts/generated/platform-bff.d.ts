@@ -10836,6 +10836,8 @@ export interface components {
         | "cancelled";
       /** @description Проект ушёл клиенту на согласование редакции и виден ему в кабинете */
       sent_to_client: boolean;
+      /** @description Х-1: пока проект не ушёл клиенту — код причины, по которой его нельзя отправить (визы не собраны); null — ничего не мешает. Считает ERP */
+      send_blocker_code?: components["schemas"]["ProjectContractSendBlockerCode"] | null;
     };
     ProjectInvoiceRef: {
       id: number;
@@ -10933,6 +10935,30 @@ export interface components {
       /** Format: date */
       valid_until: string | null;
     };
+    /**
+     * @description visas_not_requested — договор ещё не на визах; visas_declined — EDS не принял договор на визы (причина в remark); visas_pending — не все визы поставлены; visas_returned — виза возвращена с замечанием; no_visa_holder — в компании нет держателя нужного права (ссылка в настройки)
+     * @enum {string}
+     */
+    ProjectContractSendBlockerCode:
+      | "visas_not_requested"
+      | "visas_declined"
+      | "visas_pending"
+      | "visas_returned"
+      | "no_visa_holder";
+    /** @description Х-1: почему проект договора нельзя отправить клиенту — визы маршрута подписи (ADR-0025) не собраны */
+    ProjectContractSendBlocker: {
+      code: components["schemas"]["ProjectContractSendBlockerCode"];
+      /** @description Причина словами («Нужны визы: бухгалтер, юрист») */
+      message: string;
+      /** @description Роли без визы словами в нижнем регистре */
+      missing: string[];
+      /** @description Те же визы кодами прав маршрута (approvals.visa_finance): Платформа переводит их на язык сотрудника */
+      missing_permissions?: string[];
+      /** @description Замечание визирующего или причина отказа EDS, как написаны; пусто — нет */
+      remark: string;
+      /** @description Нужной роли нет ни у одного сотрудника: назначить её можно в настройках */
+      settings_link: boolean;
+    };
     ProjectContract: {
       id: number;
       number: string;
@@ -10945,6 +10971,8 @@ export interface components {
         | "rejected"
         | "cancelled";
       sent_to_client: boolean;
+      /** @description Х-1: пока проект не ушёл клиенту — код причины, по которой его нельзя отправить (визы не собраны); null — ничего не мешает. Считает ERP */
+      send_blocker_code?: components["schemas"]["ProjectContractSendBlockerCode"] | null;
       total: components["schemas"]["ProjectMoney"] | null;
       /** Format: date-time */
       created_at: string;
@@ -10969,6 +10997,8 @@ export interface components {
         | "mark_issued"
         | "attach_scan"
       )[];
+      /** @description Х-1: пока проект договора не ушёл клиенту — что мешает его отправить (визы маршрута подписи не собраны); null — ничего, действие send_to_client в actions. Считает ERP */
+      send_blocker?: components["schemas"]["ProjectContractSendBlocker"] | null;
       history: components["schemas"]["ProjectJournalEntry"][];
     };
     ProjectInvoice: {

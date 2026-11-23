@@ -102,10 +102,9 @@ test.describe("A2: «Согласован клиентом» с каналом �
       // ЕД-7: действия по договору — в строке документа в центре, окна и листа для них больше нет.
       await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
       await loginAndWait(page, "accountant@demo.example");
-      const project = `/eds/projects/${encodeURIComponent("ПР-2026-104")}`;
+      const project = `/eds/projects/${encodeURIComponent("ПР-2026-111")}`; // Х-1: договор с собранными визами — без них «На согласование клиенту» нет
       await spaGoto(page, project);
       const panel = page.getByRole("region", { name: "Документы проекта" });
-      await panel.getByRole("button", { name: "Сформировать проект договора по КП" }).click();
       await panel.getByRole("button", { name: "На согласование клиенту" }).click();
       await expect(panel.getByLabel("Как клиент сообщил")).toBeVisible();
 

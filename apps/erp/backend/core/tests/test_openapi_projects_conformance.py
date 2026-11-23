@@ -12,7 +12,7 @@ from core.tests.openapi_internal import response_errors  # noqa: F401
 from crm.constants import ActStatusCode as A
 from crm.constants import ContractStatusCode as S
 from crm.constants import InvoiceStatusCode
-from crm.tests.projects_world import PDF, api, contract_in, pw, scan  # noqa: F401
+from crm.tests.projects_world import PDF, api, collect_visas, contract_in, pw, scan  # noqa: F401
 
 pytestmark = pytest.mark.django_db
 
@@ -51,6 +51,8 @@ def test_card_with_every_document_follows_the_contract(pw):  # noqa: F811
 )
 def test_contract_transitions_follow_the_contract(pw, action, start, body):  # noqa: F811
     contract = contract_in(pw, start)
+    if action == "send-to-client":
+        collect_visas(contract)  # Х-1: без виз отправка клиенту — 409 (тест ниже)
     template = f"{CONTRACTS}{{id}}/{action}/"
     url = f"{CONTRACTS}{contract.id}/{action}/"
     conforms(api(pw.accountant).post(url, body, format="json"), template, "post", status=200)
@@ -58,6 +60,13 @@ def test_contract_transitions_follow_the_contract(pw, action, start, body):  # n
     # второй раз тот же переход уже недопустим
     if action != "reject":
         conforms(api(pw.accountant).post(url, body, format="json"), template, "post", status=409)
+
+
+def test_contract_send_before_visas_follows_the_contract(pw):  # noqa: F811
+    contract = contract_in(pw, S.DRAFT)
+    response = api(pw.accountant).post(f"{CONTRACTS}{contract.id}/send-to-client/", {}, format="json")
+    conforms(response, f"{CONTRACTS}{{id}}/send-to-client/", "post", status=409)
+    assert response.json()["detail"] == "CONTRACT_VISAS_REQUIRED" and response.json()["reason"]
 
 
 def test_contract_refusals_follow_the_contract(pw):  # noqa: F811
