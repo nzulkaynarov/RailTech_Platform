@@ -125,7 +125,8 @@
     "erp_inn_conflict": "bu STIR boshqa mijozga tegishli",
     "erp_partner_verification": "bu STIRdagi kompaniya kabinet hamkori: topshirish ushlab turildi. Orqa ofis xodimi STIRni tekshirib hamkorni qayta taklif qiladi, so'ng shu kartochkada bog'lanishni tasdiqlang — topshirish o'zi takrorlanadi",
     "enqueue_failed": "navbatga qo‘yib bo‘lmadi",
-    "other": "sababi aniqlanmadi"
+    "other": "sababi aniqlanmadi",
+    "erp_company_do_not_work": "kompaniya bilan işlamaymiz: ariza yaratilmadi. Kontragent kartasida belgini olib taşlang va qayta yuboring"
   },
   "kinds": {
     "filter": "Kontragent turi",
@@ -137,7 +138,8 @@
     "partner": "Hamkor",
     "both": "Mijoz va hamkor",
     "applications": "Ulanish arizalari",
-    "bank_changes": "Rekvizitlarni oʻzgartirish"
+    "bank_changes": "Rekvizitlarni oʻzgartirish",
+    "do_not_work": "Işlamaymiz"
   },
   "addPartner": "Hamkor qo‘shish",
   "counterparty": {
@@ -189,6 +191,22 @@
       "exists": "Bu STIR yoki röyxat raqami boşqa kompaniyada bor.",
       "forbidden": "Rekvizitlarni menejer yoki taʼminot özgartiradi.",
       "failed": "Rekvizitlarni saqlab bölmadi. Qayta urinib köring."
+    },
+    "doNotWork": {
+      "set": "Işlamaslik",
+      "clear": "Yana işlaş",
+      "title": "Kompaniya bilan işlamaymiz",
+      "reason": "Sabab",
+      "reasonHint": "Kompaniya bilan işlaydigan hamma köradi.",
+      "until": "Amal qilish muddati (ixtiyoriy)",
+      "submit": "Belgilaş",
+      "marked": "Belgi qöyildi",
+      "cleared": "Belgi olib taşlandi",
+      "reasonRequired": "Sababni kiriting.",
+      "untilPast": "Sana öthgan bölmasligi kerak.",
+      "forbidden": "Belgini menejer yoki taʼminot qöyadi va olib taşlaydi.",
+      "failed": "Saqlab bölmadi. Qayta urinib köring.",
+      "newRequestClosed": "Yangi ariza yopiq: kompaniya bilan işlamaymiz."
     }
   }
 }

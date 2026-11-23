@@ -149,6 +149,12 @@ def _result(response: httpx.Response) -> ClientRequestResult:
         raise rate_limited(response)
     if status in (401, 403):
         raise UpstreamUnavailableError(f"HTTP {status}", reason=Reason.ERP_UNAUTHORIZED)
+    if status == 409 and _detail_of(response) == "COMPANY_DO_NOT_WORK":
+        raise ConflictError(
+            "ERP: с компанией не работаем — заявка не создана",
+            reason=Reason.ERP_COMPANY_DO_NOT_WORK,
+            erp_detail="COMPANY_DO_NOT_WORK",
+        )
     if status == 409:
         # Тот же ключ идемпотентности с другим телом (`IDEMPOTENCY_CONFLICT`): данные заявки
         # изменились после первой отправки — ERP ничего не создала и не перезаписала.

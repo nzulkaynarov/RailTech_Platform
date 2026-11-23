@@ -4020,6 +4020,21 @@ export const getGetEdsProjectResponseProjectFulfillmentMock = (
   ...overrideResponse,
 });
 
+export const getGetEdsProjectResponseDoNotWorkMock = (
+  overrideResponse: Partial<DoNotWork> = {},
+): DoNotWork => ({
+  ...{
+    reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    set_by: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    set_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  },
+  ...overrideResponse,
+});
+
 export const getGetEdsProjectResponseMock = (
   overrideResponse: Partial<Extract<ProjectCard, object>> = {},
 ): ProjectCard => ({
@@ -4140,6 +4155,7 @@ export const getGetEdsProjectResponseMock = (
       ]),
     }),
   ),
+  do_not_work: faker.helpers.arrayElement([{ ...getGetEdsProjectResponseDoNotWorkMock() }, null]),
   ...overrideResponse,
 });
 
@@ -4428,6 +4444,21 @@ export const getCreateEdsProjectContractResponseProjectFulfillmentMock = (
   ...overrideResponse,
 });
 
+export const getCreateEdsProjectContractResponseDoNotWorkMock = (
+  overrideResponse: Partial<DoNotWork> = {},
+): DoNotWork => ({
+  ...{
+    reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    set_by: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    set_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  },
+  ...overrideResponse,
+});
+
 export const getCreateEdsProjectContractResponseMock = (
   overrideResponse: Partial<Extract<ProjectCard, object>> = {},
 ): ProjectCard => ({
@@ -4572,6 +4603,10 @@ export const getCreateEdsProjectContractResponseMock = (
       ]),
     }),
   ),
+  do_not_work: faker.helpers.arrayElement([
+    { ...getCreateEdsProjectContractResponseDoNotWorkMock() },
+    null,
+  ]),
   ...overrideResponse,
 });
 
@@ -4860,6 +4895,21 @@ export const getActEdsProjectContractResponseProjectFulfillmentMock = (
   ...overrideResponse,
 });
 
+export const getActEdsProjectContractResponseDoNotWorkMock = (
+  overrideResponse: Partial<DoNotWork> = {},
+): DoNotWork => ({
+  ...{
+    reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    set_by: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    set_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  },
+  ...overrideResponse,
+});
+
 export const getActEdsProjectContractResponseMock = (
   overrideResponse: Partial<Extract<ProjectCard, object>> = {},
 ): ProjectCard => ({
@@ -5001,6 +5051,10 @@ export const getActEdsProjectContractResponseMock = (
       ]),
     }),
   ),
+  do_not_work: faker.helpers.arrayElement([
+    { ...getActEdsProjectContractResponseDoNotWorkMock() },
+    null,
+  ]),
   ...overrideResponse,
 });
 
@@ -5289,6 +5343,21 @@ export const getScanEdsProjectContractResponseProjectFulfillmentMock = (
   ...overrideResponse,
 });
 
+export const getScanEdsProjectContractResponseDoNotWorkMock = (
+  overrideResponse: Partial<DoNotWork> = {},
+): DoNotWork => ({
+  ...{
+    reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    set_by: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    set_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  },
+  ...overrideResponse,
+});
+
 export const getScanEdsProjectContractResponseMock = (
   overrideResponse: Partial<Extract<ProjectCard, object>> = {},
 ): ProjectCard => ({
@@ -5430,6 +5499,10 @@ export const getScanEdsProjectContractResponseMock = (
       ]),
     }),
   ),
+  do_not_work: faker.helpers.arrayElement([
+    { ...getScanEdsProjectContractResponseDoNotWorkMock() },
+    null,
+  ]),
   ...overrideResponse,
 });
 
@@ -5718,6 +5791,21 @@ export const getRequestEdsProjectSigningResponseProjectFulfillmentMock = (
   ...overrideResponse,
 });
 
+export const getRequestEdsProjectSigningResponseDoNotWorkMock = (
+  overrideResponse: Partial<DoNotWork> = {},
+): DoNotWork => ({
+  ...{
+    reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    set_by: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    set_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  },
+  ...overrideResponse,
+});
+
 export const getRequestEdsProjectSigningResponseMock = (
   overrideResponse: Partial<Extract<ProjectCard, object>> = {},
 ): ProjectCard => ({
@@ -5862,6 +5950,10 @@ export const getRequestEdsProjectSigningResponseMock = (
       ]),
     }),
   ),
+  do_not_work: faker.helpers.arrayElement([
+    { ...getRequestEdsProjectSigningResponseDoNotWorkMock() },
+    null,
+  ]),
   ...overrideResponse,
 });
 
@@ -6167,6 +6259,21 @@ export const getActEdsProjectActResponseProjectFulfillmentMock = (
   ...overrideResponse,
 });
 
+export const getActEdsProjectActResponseDoNotWorkMock = (
+  overrideResponse: Partial<DoNotWork> = {},
+): DoNotWork => ({
+  ...{
+    reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    set_by: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    set_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  },
+  ...overrideResponse,
+});
+
 export const getActEdsProjectActResponseMock = (
   overrideResponse: Partial<Extract<ProjectCard, object>> = {},
 ): ProjectCard => ({
@@ -6299,6 +6406,10 @@ export const getActEdsProjectActResponseMock = (
       ]),
     }),
   ),
+  do_not_work: faker.helpers.arrayElement([
+    { ...getActEdsProjectActResponseDoNotWorkMock() },
+    null,
+  ]),
   ...overrideResponse,
 });
 
@@ -6587,6 +6698,21 @@ export const getScanEdsProjectActResponseProjectFulfillmentMock = (
   ...overrideResponse,
 });
 
+export const getScanEdsProjectActResponseDoNotWorkMock = (
+  overrideResponse: Partial<DoNotWork> = {},
+): DoNotWork => ({
+  ...{
+    reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    set_by: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    set_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  },
+  ...overrideResponse,
+});
+
 export const getScanEdsProjectActResponseMock = (
   overrideResponse: Partial<Extract<ProjectCard, object>> = {},
 ): ProjectCard => ({
@@ -6719,6 +6845,10 @@ export const getScanEdsProjectActResponseMock = (
       ]),
     }),
   ),
+  do_not_work: faker.helpers.arrayElement([
+    { ...getScanEdsProjectActResponseDoNotWorkMock() },
+    null,
+  ]),
   ...overrideResponse,
 });
 
@@ -7007,6 +7137,21 @@ export const getMarkEdsProjectDeliveryResponseProjectFulfillmentMock = (
   ...overrideResponse,
 });
 
+export const getMarkEdsProjectDeliveryResponseDoNotWorkMock = (
+  overrideResponse: Partial<DoNotWork> = {},
+): DoNotWork => ({
+  ...{
+    reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    set_by: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    set_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  },
+  ...overrideResponse,
+});
+
 export const getMarkEdsProjectDeliveryResponseMock = (
   overrideResponse: Partial<Extract<ProjectCard, object>> = {},
 ): ProjectCard => ({
@@ -7148,6 +7293,10 @@ export const getMarkEdsProjectDeliveryResponseMock = (
       ]),
     }),
   ),
+  do_not_work: faker.helpers.arrayElement([
+    { ...getMarkEdsProjectDeliveryResponseDoNotWorkMock() },
+    null,
+  ]),
   ...overrideResponse,
 });
 

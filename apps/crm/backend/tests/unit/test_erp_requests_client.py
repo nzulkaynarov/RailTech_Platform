@@ -22,6 +22,15 @@ def test_idempotency_conflict_is_a_permanent_conflict_with_a_reason() -> None:
     assert "другими данными" in caught.value.message
 
 
+def test_company_do_not_work_is_its_own_reason_not_a_changed_request() -> None:
+    """Х-8: отказ ERP по отметке «Не работать» не выдаётся за «данные заявки изменились»."""
+    response = httpx.Response(409, json={"detail": "COMPANY_DO_NOT_WORK"})
+    with pytest.raises(ConflictError) as caught:
+        _result(response)
+    assert caught.value.details["reason"] == Reason.ERP_COMPANY_DO_NOT_WORK
+    assert "не работаем" in caught.value.message
+
+
 @pytest.mark.parametrize(
     ("status", "error"),
     [

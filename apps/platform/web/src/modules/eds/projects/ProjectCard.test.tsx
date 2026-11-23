@@ -3,6 +3,7 @@ import { HttpResponse, http } from "msw";
 import { describe, expect, it } from "vitest";
 
 import { chooseOption } from "../../../test/fields";
+import { resetMarks, setMark } from "../../../mocks/doNotWorkMarks";
 import { clientStatusOf, readProjects, writeProject } from "../../../mocks/fixtures/projects";
 import ruProjects from "../../../shared/i18n/ru/projects.json";
 import { server } from "../../../test/server";
@@ -155,6 +156,33 @@ describe("Проект: карточка", () => {
       within(panel).queryByRole("button", { name: /Отметить: согласован клиентом/ }),
     ).toBeNull();
     expect(within(panel).queryByRole("button", { name: "Клиент отклонил договор…" })).toBeNull();
+  });
+
+  it("Х-8: у компании проекта «Не работать» — полоса с причиной, а договор в работе остаётся на месте", async () => {
+    resetMarks();
+    setMark("2001", "АО «Демо-Транс»", {
+      reason: "Спор по оплате прошлой поставки",
+      set_by: "Менеджер Демо",
+      set_at: "2026-11-23T09:30:00Z",
+      until: null,
+    });
+    signIn("director@demo.example");
+    renderAt(PR(105));
+    expect(
+      await screen.findByText("С компанией не работаем: Спор по оплате прошлой поставки"),
+    ).toBeVisible();
+    expect(screen.getByText(/Отметил: Менеджер Демо/)).toBeVisible();
+    const panel = await screen.findByRole("region", { name: "Документы проекта" });
+    expect(await within(panel).findByText("ДОГ-2026/105", { exact: false })).toBeVisible();
+    resetMarks();
+  });
+
+  it("без отметки полосы нет", async () => {
+    resetMarks();
+    signIn("director@demo.example");
+    renderAt(PR(104));
+    await screen.findByRole("region", { name: "Документы проекта" });
+    expect(screen.queryByText(/С компанией не работаем/)).toBeNull();
   });
 
   it("проекта нет — «Проект не найден» со ссылкой на список", async () => {

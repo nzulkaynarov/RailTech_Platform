@@ -786,3 +786,23 @@ async def test_signing_request_created_by_erp_with_201_is_success(
     check(response, "/eds/projects/{ref}/signing", "post")
     assert response.status_code == 200, response.text
     assert len(erp.calls_to("POST", rf"{slug}/{doc_id}/request-signing/")) == 1
+
+
+async def test_card_carries_the_do_not_work_mark_of_the_company(
+    web: Web, erp: ProjectsFake, check: ContractChecker
+) -> None:
+    """Х-8: документы в работе остаются, а карточка проекта несёт отметку компании для полосы."""
+    await _as(web, "ACCOUNTANT")
+    mark = {
+        "reason": "Спор по оплате",
+        "set_by": "Менеджер Демо",
+        "set_at": "2026-11-23T09:30:00Z",
+        "until": None,
+    }
+    erp.cards[DEAL] = card(do_not_work=mark)
+    marked = check(await web.client.get(f"{BASE}/{NUMBER}"), "/eds/projects/{ref}", "get")
+    assert marked.json()["do_not_work"] == mark
+    assert marked.json()["contract"] is not None, "договор в работе не отменён"
+    erp.cards[DEAL] = card()
+    clear = check(await web.client.get(f"{BASE}/{NUMBER}"), "/eds/projects/{ref}", "get")
+    assert clear.json()["do_not_work"] is None

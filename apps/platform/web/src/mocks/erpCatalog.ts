@@ -62,6 +62,7 @@ import { readCompanyMock, updateCompanyMock } from "./fixtures/company";
 import { partnerPriceVisibility } from "./erpSupplierAccess";
 import { buildMe, readSession } from "./mockSession";
 import { thumbnailOf } from "./fixtures/itemRef";
+import { markOf } from "./doNotWorkMarks";
 
 /**
  * Моки «Расчёт · Номенклатура и партнёры» и «Техдокументация» (D2-3, BFF 0.26.0). Права — как в BFF: раздел `erp.stock`
@@ -382,6 +383,7 @@ function supplierRowOf(supplier: MockSupplier): SupplierRow {
     expired_count: states.filter((s) => s === "expired").length,
     expiring_count: states.filter((s) => s === "expiring").length,
     nearest_valid_until: live[0] ?? null,
+    do_not_work: markOf(supplier.id) !== null,
   };
 }
 

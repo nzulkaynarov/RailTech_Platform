@@ -1,5 +1,6 @@
 """Схемы запросов и ответов доступа поставщика в кабинет (имена компонентов — `DeskSupplierAccess*`)."""
 
+from parties.do_not_work import DoNotWorkFacts
 from rest_framework import serializers
 
 from catalog.desk.serializers import DeskRef
@@ -356,15 +357,6 @@ class DeskCounterpartyAccount(serializers.Serializer):
     is_default = serializers.BooleanField(help_text="Основной в своей валюте")
 
 
-class DeskDoNotWork(serializers.Serializer):
-    """Факты отметки «Не работать» (Х-8)."""
-
-    reason = serializers.CharField()
-    set_by = serializers.CharField(allow_null=True, help_text="Кто поставил отметку (имя сотрудника)")
-    set_at = serializers.DateTimeField()
-    until = serializers.DateField(allow_null=True, help_text="До какой даты действует; `null` — без срока")
-
-
 class DeskDoNotWorkIn(serializers.Serializer):
     reason = serializers.CharField(
         max_length=1000, allow_blank=True, help_text="Причина — обязательный текст (пустая — 400 `REASON_REQUIRED`)"
@@ -387,7 +379,7 @@ class DeskCounterparty(serializers.Serializer):
     bank_accounts = DeskCounterpartyAccount(many=True)
     accounts_masked = serializers.BooleanField(help_text="Номера счетов скрыты: нет `finance.view`")
     brands = DeskRef(many=True, help_text="Бренды, которые выпускает компания (справочник «Бренды»)")
-    do_not_work = DeskDoNotWork(
+    do_not_work = DoNotWorkFacts(
         allow_null=True,
         help_text="Отметка «Не работать» (Х-8): причина, кто и когда поставил, срок; `null` — с компанией работаем",
     )

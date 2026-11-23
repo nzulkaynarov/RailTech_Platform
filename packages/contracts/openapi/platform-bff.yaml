@@ -20301,6 +20301,11 @@ components:
           items:
             $ref: '#/components/schemas/ProjectJournalEntry'
           type: array
+        do_not_work:
+          description: 'Х-8: у компании проекта отметка «Не работать» (причина, кто, когда) — полоса «С компанией не работаем» в карточке; документы в работе не отменяются. null — работаем'
+          oneOf:
+            - $ref: '#/components/schemas/DoNotWork'
+            - type: 'null'
       required: [number, request_number, title, client_name, step, client_status, total, due_date, manager, responsible, documents, problems, created_at, quote, contract, can_create_contract, invoices, act, act_blocker, fulfillment, delivery_lines, journal]
       additionalProperties: false
     ProjectContractActionIn:

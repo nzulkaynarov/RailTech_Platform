@@ -14,7 +14,7 @@ from typing import Any, Dict, Optional
 
 from django.db.models.signals import pre_save
 from django.utils import timezone
-from rest_framework import status
+from rest_framework import serializers, status
 from rest_framework.exceptions import APIException
 
 CODE = "COMPANY_DO_NOT_WORK"
@@ -100,3 +100,12 @@ def connect() -> None:
         pre_save.connect(
             _guard(getter), sender=model, weak=False, dispatch_uid=f"rt_do_not_work_{model.__name__.lower()}"
         )
+
+
+class DoNotWorkFacts(serializers.Serializer):
+    """Факты отметки «Не работать» в ответах API: карточка контрагента, карточка проекта."""
+
+    reason = serializers.CharField()
+    set_by = serializers.CharField(allow_null=True, help_text="Кто поставил отметку (имя сотрудника)")
+    set_at = serializers.DateTimeField()
+    until = serializers.DateField(allow_null=True, help_text="До какой даты действует; `null` — без срока")
