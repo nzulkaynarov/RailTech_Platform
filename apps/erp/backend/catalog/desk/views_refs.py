@@ -127,7 +127,10 @@ class MxikSearchView(APIView):
         from catalog.mxik import MxikUnavailable, search
 
         try:
-            rows = search(request.query_params.get("q", ""), lang=request.query_params.get("lang", "ru"))
+            query = request.query_params.get("q", "")
+            # Слово латиницей — узбекский справочник (`uz_latn`), кириллицей — русский; явный `lang` главнее.
+            guessed = "uz" if query.isascii() and not query.strip().isdigit() else "ru"
+            rows = search(query, lang=request.query_params.get("lang", guessed))
         except MxikUnavailable:
             return Response({"detail": "MXIK_UNAVAILABLE"}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
         return Response({"results": rows})

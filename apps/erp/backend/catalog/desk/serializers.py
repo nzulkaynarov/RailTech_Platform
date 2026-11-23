@@ -258,6 +258,11 @@ class DeskMxik(serializers.Serializer):
 
 class DeskMxikHit(DeskMxik):
     group = serializers.CharField(allow_blank=True, help_text="Группа или класс классификатора")
+    path = serializers.CharField(
+        allow_blank=True,
+        required=False,
+        help_text="Путь по классификатору «группа › класс › позиция», без самого названия",
+    )
 
 
 class DeskMxikSearch(serializers.Serializer):
