@@ -18,6 +18,7 @@ from app.api import (
     admin_passwords,
     admin_roles,
     admin_users,
+    admin_zones,
     auth,
     calendar,
     chats,
@@ -133,6 +134,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(admin_passwords.router, prefix=API_PREFIX)
     app.include_router(setup.router, prefix=API_PREFIX)
     app.include_router(admin_roles.router, prefix=API_PREFIX)
+    app.include_router(admin_zones.router, prefix=API_PREFIX)
     app.include_router(admin_audit.router, prefix=API_PREFIX)
     app.include_router(admin_integrations.router, prefix=API_PREFIX)
     app.include_router(consoles.router, prefix=API_PREFIX)

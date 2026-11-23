@@ -1115,6 +1115,19 @@ def build_cards(view: View, snap: Snapshot, queue: list[QueueItem]) -> list[Queu
             hint="Главная · Проекты",
             path="/eds/projects",
         )
+    if snap.zones_without_responsible:
+        # ЕВ-З: сигнал, а не счётчик работы — пока есть зона без ответственного; первой, чтобы
+        # лимит карточек не отрезал её.
+        cards = {
+            "zones_without_responsible": QueueCard(
+                key="zones_without_responsible",
+                label="Зоны без ответственного",
+                count=snap.zones_without_responsible,
+                hint="Настройки · Люди и доступ · Зоны ответственности",
+                path="/admin/zones",
+            ),
+            **cards,
+        }
     return list(cards.values())[:MAX_CARDS]
 
 

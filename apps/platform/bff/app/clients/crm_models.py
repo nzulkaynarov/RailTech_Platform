@@ -135,6 +135,15 @@ class AiSystemBudget(BaseModel):
     today_usd: Annotated[float, Field(title="Today Usd")]
 
 
+class AppSchemasSettingsBaseLocalizedText(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    en: Annotated[str, Field(title="En")]
+    ru: Annotated[str, Field(title="Ru")]
+    uz: Annotated[str, Field(title="Uz")]
+
+
 class AssistOut(BaseModel):
     """
     Текст для поля ответа (клиенту не отправляется). `notice`: `numbers_removed` — из
@@ -214,23 +223,23 @@ class BaseUrlSource(StrEnum):
 
 
 class BotProfileOut(BaseModel):
-    profile: BotProfileSettings
+    profile: BotProfileSettingsOutput
     published: ProfilePublishOut | None
 
 
-class BotProfileSettings(BaseModel):
+class BotProfileSettingsOutput(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
     )
-    description: LocalizedText | None = None
+    description: AppSchemasSettingsBaseLocalizedText | None = None
     """
     «Что умеет этот бот?» — видно до /start, до 512 символов
     """
-    name: LocalizedText | None = None
+    name: AppSchemasSettingsBaseLocalizedText | None = None
     """
     Имя бота в Telegram, до 64 символов
     """
-    short_description: LocalizedText | None = None
+    short_description: AppSchemasSettingsBaseLocalizedText | None = None
     """
     Краткое описание в профиле бота и при пересылке, до 120 символов
     """
@@ -1441,15 +1450,6 @@ class LocalizedName(BaseModel):
     uz: Annotated[str, Field(title="Uz")]
 
 
-class LocalizedText(BaseModel):
-    model_config = ConfigDict(
-        extra="forbid",
-    )
-    en: Annotated[str, Field(title="En")]
-    ru: Annotated[str, Field(title="Ru")]
-    uz: Annotated[str, Field(title="Uz")]
-
-
 class MailSenderRule(BaseModel):
     created_at: Annotated[AwareDatetime, Field(title="Created At")]
     created_by: Annotated[str | None, Field(title="Created By")] = None
@@ -1749,7 +1749,7 @@ class ReplyTemplateOut(BaseModel):
         extra="forbid",
     )
     id: Annotated[int, Field(title="Id")]
-    text: LocalizedText
+    text: AppSchemasSettingsBaseLocalizedText
     title: Annotated[str, Field(max_length=120, min_length=1, title="Title")]
     updated_at: Annotated[AwareDatetime, Field(title="Updated At")]
 
