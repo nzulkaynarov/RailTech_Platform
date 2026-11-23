@@ -7395,7 +7395,7 @@ export interface paths {
     put?: never;
     /**
      * Записка о звонке — основание заявки по звонку (PDF в EDS)
-     * @description EDS `POST /call-notes` от имени сотрудника (СЦ-6): одностраничный PDF «Кто звонил / Что просил» на бланке компании, который становится его файлом — тем, что форма отдаёт как `letter_file_id`. Рендер идёт в воркере EDS, поэтому ответ 202 `CallNoteView`: `status = pending` — опрашивать `GET /crm/request-files/call-note/{id}`; повтор с тем же `request_key` отдаёт ту же записку. С `lead` BFF читает лид в CRM: нужен канал `phone` (иначе 409 `call_note_not_phone`) и согласие на данные — данное в CRM или отмеченное в форме (`consent = true`; иначе 409 `call_note_no_consent`); «Кто звонил», «Компания», «Телефон», «Почта», «Когда» (создание лида), «Принял» (ответственный за лид) и «Что просил» — из лида, `caller` и `need` игнорируются. Без `lead` (повторный звонок клиента) записка составляется по `caller` и `need` формы, «Когда» — сейчас, «Принял» — сам сотрудник; `caller` обязателен (422). Нет бланка компании — 409 `details.reason = letterhead_missing` (форма просит приложить файл). Раздел `crm.clients` полный.
+     * @description EDS `POST /call-notes` от имени сотрудника (СЦ-6): одностраничный PDF «Кто звонил / Что просил» на бланке компании, который становится его файлом — тем, что форма отдаёт как `letter_file_id`. Рендер идёт в воркере EDS, поэтому ответ 202 `CallNoteView`: `status = pending` — опрашивать `GET /crm/request-files/call-note/{id}`; повтор с тем же `request_key` отдаёт ту же записку. С `lead` BFF читает лид в CRM — любого канала (звонок, сайт, Кабинет, Telegram; Х-18) — и согласие на данные, данное в CRM или отмеченное в форме (`consent = true`; иначе 409 `call_note_no_consent`); «Кто звонил», «Компания», «Телефон», «Почта», «Когда» (создание лида), «Принял» (ответственный за лид) и «Что просил» — из лида, `caller` и `need` игнорируются. Не со звонка записка называется «Запиской о запросе» и несёт канал, исходное сообщение клиента и имена его вложений (из переписки лида; нет доступа к переписке — записка без них). Без `lead` (повторный звонок клиента) записка составляется по `caller` и `need` формы, «Когда» — сейчас, «Принял» — сам сотрудник; `caller` обязателен (422). Нет бланка компании — 409 `details.reason = letterhead_missing` (форма просит приложить файл). Раздел `crm.clients` полный.
      */
     post: operations["createCrmRequestCallNote"];
     delete?: never;
@@ -18049,7 +18049,7 @@ export interface components {
         "application/json": components["schemas"]["Error"];
       };
     };
-    /** @description 409 `CONFLICT` — CRM отказала по состоянию; код — в `details.reason` (`request_not_allowed`, `request_key_reused`, `consent_via_bot`, `erp_not_configured`, `telegram_linked_elsewhere`, `request_not_failed`, `request_not_retryable`; записка о звонке — `call_note_not_phone`, `call_note_no_consent`, `letterhead_missing`) */
+    /** @description 409 `CONFLICT` — CRM отказала по состоянию; код — в `details.reason` (`request_not_allowed`, `request_key_reused`, `consent_via_bot`, `erp_not_configured`, `telegram_linked_elsewhere`, `request_not_failed`, `request_not_retryable`; записка о звонке — `call_note_no_consent`, `letterhead_missing`) */
     RequestConflict: {
       headers: {
         [name: string]: unknown;
