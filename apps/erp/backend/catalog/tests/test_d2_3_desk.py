@@ -13,7 +13,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.utils import timezone
 from parties.models import CompanySettings
 
-from catalog.desk import tech_docs
+from catalog.desk import items, tech_docs
 from catalog.models import Brigade, HSCode, Manufacturer, Product, TechDocument
 from catalog.tests.desk_world import build_world
 from core.models import ExchangeRate
@@ -63,6 +63,20 @@ def test_items_list_search_and_type_filters(world):
     assert get(world, "manager", "catalog/items/", kind="service_fixed").json()["count"] == 0
     in_category = get(world, "manager", "catalog/items/", category=world["category"].pk).json()
     assert [r["id"] for r in in_category["results"]] == [world["cable"].pk]
+
+
+def test_items_list_orders_by_white_listed_field_only(world):
+    def names(**params):
+        return [r["name"] for r in get(world, "manager", "catalog/items/", **params).json()["results"]]
+
+    default = names()
+    assert default == sorted(default)
+    assert names(ordering="name") == default
+    assert names(ordering="-name") == list(reversed(default))
+    for foreign in ("offers__base_price", "-offers__base_price", "status__code", "password", "name; drop"):
+        assert names(ordering=foreign) == default, foreign
+    assert items.ordering_terms("-sku") == ("-sku", "id")
+    assert items.ordering_terms("offers__base_price") == ("name", "id")
 
 
 def test_items_row_has_type_unit_vat_and_offers_summary(world):

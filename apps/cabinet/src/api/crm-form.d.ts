@@ -20,7 +20,9 @@ export interface paths {
          *     Q-12). Ошибки: 422 `validation_failed` с `details.reason` (`consent_required` |
          *     `form_token_invalid` | `form_too_fast` | `form_token_expired` | `contact_required` |
          *     `invalid_phone` | `invalid_email`), 429 `rate_limited`.
-         *     Повторный запрос известного контакта дополняет существующую карточку.
+         *     Повторный запрос известного контакта дополняет существующую карточку. Необязательные факты
+         *     об источнике (`form`, `page`, `referrer`, `utm`, `landing_language`) сохраняются в лиде. Ответ
+         *     для экрана «Что дальше»: `request_number` и `first_response_minutes`.
          */
         post: operations["web_lead"];
         delete?: never;
@@ -115,10 +117,18 @@ export interface components {
         /**
          * WebLeadAccepted
          * @description 202: запрос принят. `lead_id` пустой — запрос отброшен антиспамом (honeypot).
+         *
+         *     For the «What next» screen (LID-5): `request_number` is the number to show to the submitter
+         *     (`L-0042`, same as in the staff card) and `first_response_minutes` is the first-response time
+         *     from the «Website forms» settings. Both are null when the request was dropped.
          */
         WebLeadAccepted: {
+            /** First Response Minutes */
+            first_response_minutes?: number | null;
             /** Lead Id */
             lead_id: number | null;
+            /** Request Number */
+            request_number?: string | null;
         };
         /**
          * WebLeadIn
@@ -139,8 +149,15 @@ export interface components {
             consent: boolean;
             /** Email */
             email?: string | null;
+            /**
+             * Form
+             * @description Form key, e.g. `request`.
+             */
+            form?: string | null;
             /** Form Token */
             form_token: string;
+            /** Landing Language */
+            landing_language?: string | null;
             /**
              * Language
              * @default ru
@@ -149,12 +166,36 @@ export interface components {
             language: "ru" | "uz" | "en";
             /** Name */
             name: string;
+            /**
+             * Page
+             * @description Landing page path.
+             */
+            page?: string | null;
             /** Phone */
             phone?: string | null;
+            /** Referrer */
+            referrer?: string | null;
             /** Text */
             text: string;
+            utm?: components["schemas"]["WebLeadUtm"] | null;
             /** Website */
             website?: string | null;
+        };
+        /**
+         * WebLeadUtm
+         * @description UTM parameters of the landing URL, as the site saw them; all optional.
+         */
+        WebLeadUtm: {
+            /** Utm Campaign */
+            utm_campaign?: string | null;
+            /** Utm Content */
+            utm_content?: string | null;
+            /** Utm Medium */
+            utm_medium?: string | null;
+            /** Utm Source */
+            utm_source?: string | null;
+            /** Utm Term */
+            utm_term?: string | null;
         };
     };
     responses: never;

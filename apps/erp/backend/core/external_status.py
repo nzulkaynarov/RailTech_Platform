@@ -27,7 +27,7 @@ from rest_framework.exceptions import APIException
 logger = logging.getLogger(__name__)
 
 #: Коды сервисов — те же, что в контракте (`ExternalServiceCode`).
-CODES: tuple[str, ...] = ("cbu_rates", "customs_tariff", "mail", "litellm", "s3", "sentry")
+CODES: tuple[str, ...] = ("cbu_rates", "customs_tariff", "cbu_banks", "mail", "litellm", "s3", "sentry")
 #: Что ERP показывает в `/health` externals. Почты в ERP больше нет (W18A-P1): письма отправляет почтовый сервис CRM, строка
 #: здоровья «Почта» одна на ансамбль — в CRM. Код `mail` остаётся в контракте (`ExternalServiceCode`), выключатель
 #: `PUT /externals/mail/switch` принимается и хранится, но ни на что в ERP не влияет (паузу почты держит очередь CRM).

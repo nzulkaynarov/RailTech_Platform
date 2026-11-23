@@ -98,6 +98,10 @@ def _attachment_name(kind: str, doc_id: int, variant: str, upstream: httpx.Heade
 # --- список и карточка -------------------------------------------------------------------------
 
 
+# Порядок (Х-15): `field` — по возрастанию, `-field` — по убыванию; поле только из списка.
+PROJECT_SORT = r"^-?(number|client|step|due_date|responsible)$"
+
+
 @router.get("/projects", response_model=ProjectPage, operation_id="listEdsProjects")
 async def list_projects(
     authed: Reader,
@@ -105,10 +109,13 @@ async def list_projects(
     problems: bool = False,
     step: ProjectStage | None = None,
     q: Annotated[str | None, Query(max_length=100)] = None,
+    sort: Annotated[str | None, Query(pattern=PROJECT_SORT)] = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 25,
     offset: Annotated[int, Query(ge=0, le=100000)] = 0,
 ) -> ProjectPage:
     params: dict[str, str | int] = {"limit": limit, "offset": offset}
+    if sort:
+        params["ordering"] = sort  # то же имя и знак `-`: белый список ERP повторяет этот
     if mine:
         params["mine"] = "true"
     if problems:

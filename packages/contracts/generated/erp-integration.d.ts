@@ -869,14 +869,21 @@ export interface components {
       queue_alive: boolean;
       /** Format: date-time */
       checked_at: string;
-      /** @description Внешние сервисы ERP (M3-ERP-06): курсы ЦБ, ТН ВЭД/тариф, почта, модели (LiteLLM), S3, Sentry. Поле необязательное: нет его — ERP старше M3-ERP-06, CRM показывает «нет данных». Строится без обращений к самим сервисам (по журналам и счётчикам ERP), ответ `/health` остаётся быстрым. */
+      /** @description Внешние сервисы ERP (M3-ERP-06): курсы ЦБ, ТН ВЭД/тариф, справочник банков ЦБ, почта, модели (LiteLLM), S3, Sentry. Поле необязательное: нет его — ERP старше M3-ERP-06, CRM показывает «нет данных». Строится без обращений к самим сервисам (по журналам и счётчикам ERP), ответ `/health` остаётся быстрым. */
       externals?: components["schemas"]["ExternalService"][];
     };
     /**
-     * @description `cbu_rates` — курсы ЦБ РУз; `customs_tariff` — классификатор ТН ВЭД и тариф (tarif.customs.uz); `mail` — бывшая почта ERP (W18A-P1: ERP его больше не передаёт — письма отправляет почтовый сервис CRM); `litellm` — вызовы моделей через шлюз; `s3` — файловое хранилище; `sentry` — сбор ошибок. Читатель пропускает неизвестный код.
+     * @description `cbu_rates` — курсы ЦБ РУз; `customs_tariff` — классификатор ТН ВЭД и тариф (tarif.customs.uz); `cbu_banks` — справочник банков из файла ЦБ (раз в месяц); `mail` — бывшая почта ERP (W18A-P1: ERP его больше не передаёт — письма отправляет почтовый сервис CRM); `litellm` — вызовы моделей через шлюз; `s3` — файловое хранилище; `sentry` — сбор ошибок. Читатель пропускает неизвестный код.
      * @enum {string}
      */
-    ExternalServiceCode: "cbu_rates" | "customs_tariff" | "mail" | "litellm" | "s3" | "sentry";
+    ExternalServiceCode:
+      | "cbu_rates"
+      | "customs_tariff"
+      | "cbu_banks"
+      | "mail"
+      | "litellm"
+      | "s3"
+      | "sentry";
     ExternalService: {
       code: components["schemas"]["ExternalServiceCode"];
       /**

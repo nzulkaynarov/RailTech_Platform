@@ -71,18 +71,25 @@ def _filtered(f: LeadFilter, me: int) -> Select[Lead]:
 
 
 async def list_leads(
-    session: AsyncSession, f: LeadFilter, me: int, limit: int, offset: int, sort: str
+    session: AsyncSession,
+    f: LeadFilter,
+    me: int,
+    limit: int,
+    offset: int,
+    sort: str,
+    ascending: bool = False,
 ) -> tuple[Sequence[Lead], int]:
     stmt = _filtered(f, me)
     total = int(await session.scalar(select(func.count()).select_from(stmt.subquery())) or 0)
+    # Список порядков закрытый: `sort` приходит из запроса (Х-15). Без времени сообщения — в конце.
+    last = Lead.last_lead_msg_at
     orders: dict[str, ColumnElement[Any]] = {
-        "score": Lead.score.desc(),
-        "created": Lead.created_at.desc(),
+        "score": Lead.score.asc() if ascending else Lead.score.desc(),
+        "created": Lead.created_at.asc() if ascending else Lead.created_at.desc(),
     }
-    order = orders.get(sort, Lead.last_lead_msg_at.desc().nulls_last())
-    rows = (
-        await session.scalars(stmt.order_by(order, Lead.id.desc()).limit(limit).offset(offset))
-    ).all()
+    order = orders.get(sort, last.asc().nulls_last() if ascending else last.desc().nulls_last())
+    tie = Lead.id.asc() if ascending else Lead.id.desc()
+    rows = (await session.scalars(stmt.order_by(order, tie).limit(limit).offset(offset))).all()
     return rows, total
 
 
