@@ -36,6 +36,7 @@ import type {
   SupplierOrderSendIn,
 } from "../shared/api/generated/model";
 import { formatQuantity } from "../shared/lib/money";
+import { isDeciderRole } from "./erpWork";
 import { CATALOG } from "./fixtures/calc";
 import {
   type MockOrder,
@@ -710,13 +711,9 @@ export function supplyTaskQueueItems(
 ): QueueItem[] {
   const full = view.find((r) => r.access["erp.stock"] === "full");
   if (!full) return [];
-  // СЦ-9: строки по проекту — «Заказать недостающее» и «Отгрузить товар» (ERP считает их сам); системному директору не приходят.
+  // СЦ-9: строки по проекту — «Заказать недостающее» и «Отгрузить товар» (ERP считает их сам); ролям «решающего» (одобрение КП и служебок) не приходят.
   const project = REQUESTS.find((r) => r.project);
-  const executor = view.find(
-    (r) =>
-      r.access["erp.stock"] === "full" &&
-      !("system" in r && r.system && "code" in r && r.code === "DIRECTOR"),
-  );
+  const executor = view.find((r) => r.access["erp.stock"] === "full" && !isDeciderRole(r));
   const projectItems: QueueItem[] =
     project && executor
       ? [

@@ -8,6 +8,7 @@ from pydantic import BaseModel
 from app.api.deps import ContainerDep
 from app.api.v1.me import Settled
 from app.domain.errors import NotFoundError
+from app.security import audit
 
 router = APIRouter(prefix="/api/v1/staff", tags=["staff"])
 
@@ -15,7 +16,8 @@ router = APIRouter(prefix="/api/v1/staff", tags=["staff"])
 class StaffCard(BaseModel):
     """Сотрудник для ссылки «кто сделал» (СУЩ-3): то, что видит любой коллега.
 
-    Без почты, телефона и ролей.
+    Без почты и телефона: их открывает `POST /staff/{id}/contacts` с записью в журнал. Роли — только
+    названиями (для карточки «Людей»), без матрицы прав.
     """
 
     id: int
@@ -24,6 +26,16 @@ class StaffCard(BaseModel):
     #: Версия фото (секунды epoch замены); `None` — фото нет, рисуются инициалы
     avatar_version: int | None
     is_active: bool
+    #: Названия ролей Платформы словами (карточка сотрудника в «Людях»)
+    roles: list[str] = []
+
+
+class StaffContacts(BaseModel):
+    """Телефон и почта сотрудника: отдаются только вместе с записью журнала `contact.reveal`."""
+
+    id: int
+    phone: str | None
+    email: str | None
 
 
 @router.get("", response_model=list[StaffCard])
@@ -36,9 +48,33 @@ async def list_staff(_: Settled, container: ContainerDep) -> list[StaffCard]:
             position=view.position,
             avatar_version=view.avatar_version,
             is_active=view.is_active,
+            roles=[ref.name for ref in view.platform_role_refs],
         )
         for view in await container.user_service.list_all()
     ]
+
+
+@router.post("/{user_id}/contacts", response_model=StaffContacts)
+async def reveal_staff_contacts(
+    user_id: Annotated[int, Path(gt=0)], who: Settled, container: ContainerDep
+) -> StaffContacts:
+    """Показ телефона и почты коллеги (решение 10.11): запись «кто, когда, чьи» и ответ — в одной
+    транзакции, нет записи — нет и контактов. Отключённый сотрудник — 404. Выгрузки нет."""
+    view = await container.user_service.get(user_id)
+    if not view.is_active:
+        raise NotFoundError("user not found")
+    async with container.session_factory() as session, session.begin():
+        await audit.record(
+            session,
+            who.actor,
+            "contact.reveal",
+            "staff",
+            view.id,
+            after={"name": view.full_name},
+        )
+    return StaffContacts(
+        id=view.id, phone=(view.phone or "").strip() or None, email=view.email.strip() or None
+    )
 
 
 @router.get(

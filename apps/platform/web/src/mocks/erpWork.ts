@@ -35,11 +35,19 @@ function money(amount: string, currency: string): string {
 const join = (...parts: (string | null | undefined)[]) => parts.filter(Boolean).join(" · ");
 
 /**
- * Роли исполнения — роли «вида» без системной роли DIRECTOR (решение архитектора 2026-11-02, как `feeds/work_roles.py`
- * BFF): в очереди директора только решения, исполнение ERP — у ролей из шаблона и созданных ролей по каталогу.
+ * «Решающая» роль, как `is_decider_role` в `feeds/work_roles.py` BFF (ЕВ-5а): держит оба раздела одобрения полным уровнем —
+ * одобрение КП (`eds.drafts`) и согласование служебок (`eds.memo.approve`). Название и код роли не смотрим.
+ */
+export function isDeciderRole(role: { access: Partial<Record<string, string>> }): boolean {
+  return role.access["eds.drafts"] === "full" && role.access["eds.memo.approve"] === "full";
+}
+
+/**
+ * Роли исполнения — роли «вида» без «решающих» (решение архитектора 2026-11-02, как `feeds/work_roles.py` BFF): в очереди
+ * директора и ролей с теми же разделами одобрения только решения, исполнение ERP — у остальных ролей по каталогу.
  */
 function executors(view: readonly MockRole[]): MockRole[] {
-  return view.filter((role) => !(role.system && role.code === "DIRECTOR"));
+  return view.filter((role) => !isDeciderRole(role));
 }
 
 function roleFor(view: readonly MockRole[], kind: Kind): MockRole | undefined {

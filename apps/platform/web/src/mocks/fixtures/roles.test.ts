@@ -19,7 +19,7 @@ const spec = parse(
 ) as { system_roles: Record<string, CatalogRole>; templates: Record<string, CatalogRole> };
 
 describe("роли MSW = системные роли и шаблоны каталога (как CRM при первом запуске)", () => {
-  it("восемь ролей с id 1–8: две системные с кодом, шесть из шаблонов `tpl:` (с P8 — роли пилота)", () => {
+  it("девять ролей с id 1–9: две системные с кодом, семь из шаблонов `tpl:` (с P8 — роли пилота, с ЕВ-5а — юрист)", () => {
     const roles = seedRoles();
     expect(roles.map((r) => [r.id, r.code, r.system])).toEqual([
       ["1", "ADMIN", true],
@@ -30,6 +30,7 @@ describe("роли MSW = системные роли и шаблоны ката�
       ["6", "tpl:ACCOUNTANT", false],
       ["7", "tpl:REGISTRAR", false],
       ["8", "tpl:MANAGER_ALL", false],
+      ["9", "tpl:LAWYER", false],
     ]);
     expect(ROLE_ID.ACCOUNTANT).toBe("6");
   });
