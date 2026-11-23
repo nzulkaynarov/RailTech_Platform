@@ -246,6 +246,7 @@ async def list_page(
     cursor: str | None,
     limit: int,
     stage: RegistryStage | None = None,
+    sort: str | None = None,
 ) -> DocumentPage:
     stmt = select(Document).where(access.document_visible(employee))
     if kinds:
@@ -259,9 +260,22 @@ async def list_page(
         # Недоставленное письмо — не конец пути (СЦ-1): остаётся в «Исходящих».
         done = and_(Document.status.in_(registry.DONE_STATUSES["memo"]), ~delivery.undelivered())
         stmt = stmt.where(done if stage == RegistryStage.DONE else ~done)
-    stmt = paging.apply(stmt, Document.created_at, Document.id, decode_cursor(cursor), limit)
-    rows = list((await session.execute(stmt)).scalars().all())
-    page, next_cursor = paging.cut(rows, limit, lambda r: r.created_at, lambda r: r.id)
+    ordering = paging.parse_sort(sort)
+    if ordering is None:
+        stmt = paging.apply(stmt, Document.created_at, Document.id, decode_cursor(cursor), limit)
+        rows = list((await session.execute(stmt)).scalars().all())
+        page, next_cursor = paging.cut(rows, limit, lambda r: r.created_at, lambda r: r.id)
+    else:
+        attr = {
+            "number": "number",
+            "subject": "subject",
+            "status": "status",
+            "amount": "amount",
+            "created": "created_at",
+        }[ordering[0]]
+        stmt = paging.apply_sorted(stmt, getattr(Document, attr), Document.id, ordering, cursor, limit)
+        rows = list((await session.execute(stmt)).scalars().all())
+        page, next_cursor = paging.cut_sorted(rows, limit, ordering, lambda r: getattr(r, attr), lambda r: r.id)
     directory = await load_directory(session, (r.author_crm_user_id for r in page))
     ids = [r.id for r in page]
     count_rows = await session.execute(

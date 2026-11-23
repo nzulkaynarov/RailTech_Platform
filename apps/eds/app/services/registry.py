@@ -272,12 +272,40 @@ async def _signers(session: AsyncSession, ids: list[uuid.UUID]) -> dict[uuid.UUI
 
 
 async def list_page(
-    session: AsyncSession, employee: Employee, filters: Filters, *, cursor: str | None, limit: int
+    session: AsyncSession,
+    employee: Employee,
+    filters: Filters,
+    *,
+    cursor: str | None,
+    limit: int,
+    sort: str | None = None,
 ) -> RegistryPage:
     sub = _filtered(employee, filters).subquery("page")
-    stmt = paging.apply(select(sub), sub.c.registered_at, sub.c.id, decode_cursor(cursor), limit)
-    rows = list((await session.execute(stmt)).all())
-    page, next_cursor = paging.cut(rows, limit, lambda r: r.registered_at, lambda r: r.id)
+    ordering = paging.parse_sort(sort)
+    if ordering is None:
+        stmt = paging.apply(select(sub), sub.c.registered_at, sub.c.id, decode_cursor(cursor), limit)
+        rows = list((await session.execute(stmt)).all())
+        page, next_cursor = paging.cut(rows, limit, lambda r: r.registered_at, lambda r: r.id)
+    else:
+        column = {
+            "number": sub.c.number,
+            "subject": sub.c.title,
+            "status": sub.c.status,
+            "amount": sub.c.amount,
+            "created": sub.c.registered_at,
+        }[ordering[0]]
+        stmt = paging.apply_sorted(select(sub), column, sub.c.id, ordering, cursor, limit)
+        rows = list((await session.execute(stmt)).all())
+        attr = {
+            "number": "number",
+            "subject": "title",
+            "status": "status",
+            "amount": "amount",
+            "created": "registered_at",
+        }
+        page, next_cursor = paging.cut_sorted(
+            rows, limit, ordering, lambda r: getattr(r, attr[ordering[0]]), lambda r: r.id
+        )
     directory = await load_directory(session, (r.responsible for r in page))
     signers = await _signers(session, [r.id for r in page if r.awaiting_signature])
     return RegistryPage(items=[_item(r, directory, signers) for r in page], next_cursor=next_cursor)

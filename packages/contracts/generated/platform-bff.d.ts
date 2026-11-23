@@ -20576,8 +20576,11 @@ export interface operations {
         stage?: "open" | "done";
         /** @description Поиск по номеру и теме (только `scope=all`) */
         q?: string;
+        /** @description Курсор из `next_cursor`; привязан к порядку `sort`, при смене порядка начинают с первой страницы */
         cursor?: string;
         limit?: number;
+        /** @description Порядок щелчком по шапке (Х-15б): `number`, `subject`, `status`, `amount`, `created`; `-` в начале — по убыванию. Пустые значения (нет номера, нет суммы) — в конце, равные — по id. `number` и `subject` — строковый порядок: номер непрозрачен, число в нём не разбирается. Другое поле — 422. Не задан — от новых. */
+        sort?: string;
       };
       header?: never;
       path?: never;
@@ -22106,6 +22109,8 @@ export interface operations {
         q?: string;
         limit?: number;
         offset?: number;
+        /** @description Порядок щелчком по шапке (Х-15б): `number`, `client`, `amount`, `issued`, `due`, `status` (слово статуса строки); `-` в начале — по убыванию. Пустые значения (нет срока, нет даты выставления) — в конце, равные — по id. `number` — строковый порядок: у счёта нет сохранённого порядкового номера, префикс настраивается и не разбирается. Другое поле — 422. Не задан — порядок вкладки. */
+        sort?: string;
       };
       header?: never;
       path?: never;

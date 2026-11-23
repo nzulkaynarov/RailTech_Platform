@@ -4053,8 +4053,16 @@ export interface components {
     DocumentId: components["schemas"]["Uuid"];
     ApprovalId: components["schemas"]["Uuid"];
     FileId: components["schemas"]["Uuid"];
-    /** @description Непрозрачный курсор из `next_cursor` */
+    /** @description Непрозрачный курсор из `next_cursor`. При порядке `sort` курсор помнит значение поля (до 300 знаков темы), поэтому длиннее */
     Cursor: string;
+    /**
+     * @description Порядок списка (Х-15б): `поле` — по возрастанию, `-поле` — по убыванию; без параметра — от новых к старым. Поля:
+     *     `number`, `subject`, `status`, `amount`, `created`. Пустые значения (нет номера, нет суммы) всегда в конце, при равных
+     *     значениях порядок держит id. `number` и `subject` — строковый порядок базы: номер непрозрачен, число в нём не
+     *     разбирается. Курсор привязан к порядку: с курсором от другого `sort` — 422 `VALIDATION_FAILED` (`cursor`), при смене порядка
+     *     клиент начинает с первой страницы. Поле вне списка — 422.
+     */
+    Sort: string;
     Limit: number;
     BusSubscriberQuery: components["schemas"]["BusSubscriberName"];
     /** @description Подстрока типа события (`quote.`, `letter.registered`) */
@@ -4471,7 +4479,7 @@ export interface operations {
         overdue?: boolean;
         /** @description Только письма этого вида документа — код справочника `letter-kinds` (EDS-REG) */
         kind?: string;
-        /** @description Непрозрачный курсор из `next_cursor` */
+        /** @description Непрозрачный курсор из `next_cursor`. При порядке `sort` курсор помнит значение поля (до 300 знаков темы), поэтому длиннее */
         cursor?: components["parameters"]["Cursor"];
         limit?: components["parameters"]["Limit"];
       };
@@ -5884,9 +5892,17 @@ export interface operations {
         mine?: boolean;
         /** @description `open` — документ ждёт чьего-то действия, в том числе контрагента («Исходящие», «Внутренние»); `done` — путь завершён («Архив»). Конечные статусы по виду: входящее — `executed`, `noted`, `duplicate`, `closed`, `rejected`; документ — `approved`, `rejected`, `paid`, `sent`; КП — `rejected`; договор — `signed`, `rejected`; счёт — `paid`; акт — `signed`. */
         stage?: components["parameters"]["RegistryStage"];
-        /** @description Непрозрачный курсор из `next_cursor` */
+        /** @description Непрозрачный курсор из `next_cursor`. При порядке `sort` курсор помнит значение поля (до 300 знаков темы), поэтому длиннее */
         cursor?: components["parameters"]["Cursor"];
         limit?: components["parameters"]["Limit"];
+        /**
+         * @description Порядок списка (Х-15б): `поле` — по возрастанию, `-поле` — по убыванию; без параметра — от новых к старым. Поля:
+         *     `number`, `subject`, `status`, `amount`, `created`. Пустые значения (нет номера, нет суммы) всегда в конце, при равных
+         *     значениях порядок держит id. `number` и `subject` — строковый порядок базы: номер непрозрачен, число в нём не
+         *     разбирается. Курсор привязан к порядку: с курсором от другого `sort` — 422 `VALIDATION_FAILED` (`cursor`), при смене порядка
+         *     клиент начинает с первой страницы. Поле вне списка — 422.
+         */
+        sort?: components["parameters"]["Sort"];
       };
       header?: never;
       path?: never;
@@ -6386,7 +6402,7 @@ export interface operations {
         mine?: boolean;
         status?: components["schemas"]["RouteStatus"][];
         template?: components["schemas"]["ApprovalTemplate"][];
-        /** @description Непрозрачный курсор из `next_cursor` */
+        /** @description Непрозрачный курсор из `next_cursor`. При порядке `sort` курсор помнит значение поля (до 300 знаков темы), поэтому длиннее */
         cursor?: components["parameters"]["Cursor"];
         limit?: components["parameters"]["Limit"];
       };
@@ -6535,9 +6551,17 @@ export interface operations {
         number?: components["parameters"]["RegistryNumber"];
         /** @description Поиск по номеру и теме */
         q?: components["parameters"]["RegistryQuery"];
-        /** @description Непрозрачный курсор из `next_cursor` */
+        /** @description Непрозрачный курсор из `next_cursor`. При порядке `sort` курсор помнит значение поля (до 300 знаков темы), поэтому длиннее */
         cursor?: components["parameters"]["Cursor"];
         limit?: components["parameters"]["Limit"];
+        /**
+         * @description Порядок списка (Х-15б): `поле` — по возрастанию, `-поле` — по убыванию; без параметра — от новых к старым. Поля:
+         *     `number`, `subject`, `status`, `amount`, `created`. Пустые значения (нет номера, нет суммы) всегда в конце, при равных
+         *     значениях порядок держит id. `number` и `subject` — строковый порядок базы: номер непрозрачен, число в нём не
+         *     разбирается. Курсор привязан к порядку: с курсором от другого `sort` — 422 `VALIDATION_FAILED` (`cursor`), при смене порядка
+         *     клиент начинает с первой страницы. Поле вне списка — 422.
+         */
+        sort?: components["parameters"]["Sort"];
       };
       header?: never;
       path?: never;
