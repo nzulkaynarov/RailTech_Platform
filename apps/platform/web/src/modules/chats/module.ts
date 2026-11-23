@@ -38,7 +38,8 @@ export const chats: ModuleConfig = {
       path: "/chats/contacts",
       // Как в секции `menu` каталога: «Контакты» — по разделу внутреннего чата.
       access: { resource: "chats.internal" },
-      tabs: CHATS_TABS,
+      // Карточка человека в общем боковом окне; чата и документов у человека нет
+      tabs: [{ key: "card" }],
     },
   ],
 };

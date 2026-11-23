@@ -8,6 +8,7 @@ import type {
   ProfileUpdate,
   ResetPasswordIn,
 } from "../shared/api/generated/model";
+import { type CatalogRole, SYSTEM_ROLES, TEMPLATES } from "../app/rbac.generated";
 import { readEmployees, writeEmployees } from "./fixtures/employees";
 import { allUsers, findUserById } from "./fixtures/users";
 import { buildMe, readSession, sessionRoles, updateSession } from "./mockSession";
@@ -258,6 +259,12 @@ export const profileHandlers = [
         position: user.position || null,
         avatar_url: avatarUrlOf(user.id) ?? null,
         active: true,
+        roles: user.roles.map((code) => {
+          const role =
+            (SYSTEM_ROLES as Record<string, CatalogRole>)[code] ??
+            (TEMPLATES as Record<string, CatalogRole>)[code];
+          return role?.name.ru ?? code;
+        }),
       })),
     });
   }),

@@ -355,7 +355,10 @@
       "empty": {
         "title": "Heç kim topilmadi",
         "text": "Filtrni yoki qidiruvni özgartiring"
-      }
+      },
+      "roles": "Rollar",
+      "reveal": "Kontaktlarni ko‘rsatish",
+      "close": "Yopish"
     }
   },
   "admin": {

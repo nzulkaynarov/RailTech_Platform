@@ -23,3 +23,21 @@
   flex-direction: column;
   gap: 16px;
 }
+
+.pf-people-card__title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.pf-people-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+@media (max-width: 767px) {
+  .pf-people-card__actions .ant-btn {
+    min-height: 44px;
+  }
+}
