@@ -17,6 +17,7 @@ import { ListSkeleton } from "../../../shared/ui/DataBlock";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { FormField } from "../../../shared/ui/FormParts";
 import { StatusTag } from "../../../shared/ui/StatusTag";
+import { isStepUpError, useStepUp } from "../../../features/step-up/useStepUp";
 import { errorReason, useRefreshPayments } from "./api";
 
 type Filter = "pending" | "all";
@@ -189,6 +190,11 @@ function ApproveModal({ item, onClose }: { item: BankChangeItem; onClose: () => 
   const { t } = useTranslation("payments");
   const done = useAfterDecision(onClose);
   const approve = useApproveBankChangeRequest({ mutation: { onSuccess: done } });
+  const stepUp = useStepUp();
+  // Подтверждение реквизитов — со свежим кодом второго фактора (ДВ-4б): сервер отказал — окно спрашивает код и повторяет
+  const run = () => {
+    approve.mutate({ id: item.id }, { onError: (error) => stepUp.ask(error, run) });
+  };
   return (
     <Dialog
       open
@@ -198,14 +204,7 @@ function ApproveModal({ item, onClose }: { item: BankChangeItem; onClose: () => 
         <Button key="cancel" onClick={onClose}>
           {t("bankChanges.cancel")}
         </Button>,
-        <Button
-          key="ok"
-          type="primary"
-          loading={approve.isPending}
-          onClick={() => {
-            approve.mutate({ id: item.id });
-          }}
-        >
+        <Button key="ok" type="primary" loading={approve.isPending} onClick={run}>
           {t("bankChanges.approve")}
         </Button>,
       ]}
@@ -223,9 +222,10 @@ function ApproveModal({ item, onClose }: { item: BankChangeItem; onClose: () => 
             : t("bankChanges.approveModal.noPhone")
         }
       />
-      {approve.isError ? (
+      {approve.isError && !isStepUpError(approve.error) ? (
         <Alert type="error" showIcon role="alert" message={conflictMessage(approve.error, t)} />
       ) : null}
+      {stepUp.dialog}
     </Dialog>
   );
 }

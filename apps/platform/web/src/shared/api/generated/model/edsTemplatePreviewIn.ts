@@ -3,7 +3,10 @@
  * RailTech Platform — BFF API (Платформа → CRM и ERP)
  */
 import type { EdsDocumentBody } from "./edsDocumentBody";
+import type { EdsTemplatePreviewInKind } from "./edsTemplatePreviewInKind";
 
 export interface EdsTemplatePreviewIn {
   body: EdsDocumentBody;
+  /** Вид шаблона; служебная записка — компактный лист без окна и подвала компании */
+  kind?: EdsTemplatePreviewInKind;
 }

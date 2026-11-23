@@ -144,7 +144,47 @@ def allowed_actions(contract, user) -> list:
     Единый источник для карточки проекта: страница не вычисляет сама, что можно (CONVENTIONS Платформы, правило 2).
     """
     code = _status_code(contract)
-    return [t.action for t in TRANSITIONS.values() if code in t.sources and may(user, t.permission) and is_staff(user)]
+    actions = [
+        t.action for t in TRANSITIONS.values() if code in t.sources and may(user, t.permission) and is_staff(user)
+    ]
+    # Х-1: «Отправить клиенту» не предлагается, пока визы не собраны (причина — `send_blocker` карточки).
+    if "send_to_client" in actions and send_blocker(contract) is not None:
+        actions.remove("send_to_client")
+    return actions
+
+
+def send_blocker(contract) -> Optional[dict]:
+    """Х-1: почему договор нельзя отправить клиенту (`None` — можно). Подробности — `contract_visas.send_blocker`."""
+    from .contract_visas import send_blocker as visas_blocker
+
+    return visas_blocker(contract)
+
+
+def _drop_company_stamp(contract) -> list:
+    """Х-1: «Доработать» — новая редакция, штамп подписи компании на ней не остаётся.
+
+    Иначе договор, подписанный директором до отправки и отклонённый клиентом, не проходит маршрут заново: «На подпись»
+    отвечает `ALREADY_SIGNED`, а визы прежней подписи пропускали бы новую редакцию. Запрос подписи закрывается как
+    устаревший, проверка по коду показывает «Отозван»; маршрут «визы → клиенту → подпись» идёт с начала.
+    """
+    from integration.models import CommercialSigningRequest as Request
+    from portal.models import PortalDocumentVerification
+
+    code = contract.verification_code
+    if not code:
+        return []
+    PortalDocumentVerification.objects.filter(code=code).update(
+        status="revoked", revoked_at=timezone.now(), revocation_reason="Новая редакция договора"
+    )
+    Request.objects.filter(kind="contract", object_id=contract.pk, status=Request.Status.SIGNED).update(
+        status=Request.Status.STALE, comment="Новая редакция договора: подпись прежней не переносится."
+    )
+    contract.verification_code = ""
+    contract.signatory_name = ""
+    contract.signatory_position = ""
+    contract.signatory_basis_text = ""
+    contract.signed_at = None
+    return ["verification_code", "signatory_name", "signatory_position", "signatory_basis_text", "signed_at"]
 
 
 def is_staff(user) -> bool:
@@ -248,7 +288,8 @@ def apply_transition(
     Коды: `CONTRACT_NOT_FOUND`, `MEMBER_REQUIRED_FOR_ACTION` (нет права `contract.*` в своей компании),
     `CONTRACT_TRANSITION_NOT_ALLOWED` (статус не тот), `REASON_REQUIRED` (отклонение без причины), `SCAN_REQUIRED` и
     `SCAN_INVALID` (скан не приложен или не PDF/изображение, больше лимита, подделана сигнатура), `CHANNEL_INVALID` и
-    `COUNTERPARTY_PERSON_REQUIRED` («Согласован клиентом» без канала или лица со стороны клиента, A2 волны 18a).
+    `COUNTERPARTY_PERSON_REQUIRED` («Согласован клиентом» без канала или лица со стороны клиента, A2 волны 18a),
+    `CONTRACT_VISAS_REQUIRED` (отправка клиенту до сбора виз, Х-1: HTTP 409, слова — `send_blocker`).
     """
     transition = TRANSITIONS.get(action)
     if transition is None:
@@ -277,6 +318,8 @@ def apply_transition(
     on_behalf, error = _on_behalf_note(transition, channel, counterparty_person)
     if error:
         return None, error
+    if action == "send_to_client" and send_blocker(contract) is not None:
+        return None, "CONTRACT_VISAS_REQUIRED"  # Х-1: до виз договор клиенту не уходит
 
     from integration.services import document_events, events
 
@@ -297,6 +340,7 @@ def apply_transition(
             contract.manager_signed_at = None
             contract.manager_signer = None
             fields += ["client_signed_at", "client_signer", "manager_signed_at", "manager_signer"]
+            fields += _drop_company_stamp(contract)
         elif action == "attach_scan":
             contract.signed_file = scan
             contract.manager_signed_at = now

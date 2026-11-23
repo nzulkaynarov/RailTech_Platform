@@ -139,6 +139,11 @@
       "useBackup": "No phone — use a backup code",
       "useApp": "Code from the app",
       "back": "Back"
+    },
+    "enroll": {
+      "title": "Set up sign-in with a code",
+      "lead": "Your access covers payments, approvals or settings, so sign-in needs a code from the app. It takes a minute.",
+      "doneTitle": "Sign-in with a code is on"
     }
   },
   "changePassword": {

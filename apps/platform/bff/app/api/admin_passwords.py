@@ -12,7 +12,7 @@ from fastapi import APIRouter, Depends, Path, Response, status
 
 from app.clients import crm_setup
 from app.clients.crm_users import CrmUsers, crm_error
-from app.deps import Authed, require
+from app.deps import Authed, StepUpDep, require
 from app.errors import PlatformError
 from app.schemas_admin import EmployeeInvite, to_employee
 from app.schemas_setup import EmployeeCredentials
@@ -38,9 +38,10 @@ def _no_store(response: Response) -> None:
     operation_id="createEmployee",
 )
 async def create_employee(
-    body: EmployeeInvite, authed: Writer, response: Response
+    body: EmployeeInvite, authed: Writer, response: Response, step_up: StepUpDep = None
 ) -> EmployeeCredentials:
-    """Создать пользователя в CRM с ролями Платформы; временный пароль — в этом ответе, один раз."""
+    """Создать пользователя в CRM с ролями Платформы; временный пароль — в этом ответе, один раз.
+    Роль при создании — выдача роли: нужен свежий код второго фактора (`X-Step-Up-Token`, ДВ-4б)."""
     payload: dict[str, Any] = {
         "email": body.email.strip(),
         "full_name": body.name,
@@ -48,7 +49,9 @@ async def create_employee(
     }
     if body.position and body.position.strip():
         payload["position"] = body.position.strip()
-    user, password = await crm_setup.create_user_with_password(authed.call, payload, crm_error)
+    user, password = await crm_setup.create_user_with_password(
+        authed.call, payload, crm_error, step_up
+    )
     _no_store(response)
     return EmployeeCredentials(employee=to_employee(user), temporary_password=password)
 

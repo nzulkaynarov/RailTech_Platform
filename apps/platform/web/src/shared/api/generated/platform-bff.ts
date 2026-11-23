@@ -185,6 +185,9 @@ import type {
   EmployeeInvite,
   EmployeeList,
   EmployeeUpdate,
+  EnrollIn,
+  EnrollSetupIn,
+  EnrolledSession,
   ErpCheck,
   ErpConnector,
   ErpPairIn,
@@ -457,6 +460,7 @@ import type {
   SecondFactorCodeIn,
   SecondFactorEnabled,
   SecondFactorLoginIn,
+  SecondFactorResetIn,
   SecondFactorSetup,
   SecondFactorStatus,
   SentMail,
@@ -492,6 +496,7 @@ import type {
   SpendReport,
   StaffDirectory,
   StartPriceImportParams,
+  StepUp,
   StockAdjustIn,
   StockBalanceList,
   StockConflictResponse,
@@ -585,6 +590,10 @@ export const getLoginUrl = () => {
  * `SecondFactorChallenge` без сессии; код — `POST /auth/login/second-factor`. С меткой `pf_device` (HttpOnly,
  * путь `/api/v1/auth`, 30 дней — ставит второй шаг с `remember_device`) код не спрашивается, пока не сменились
  * пароль и сам фактор.
+ *
+ * Обязательный фактор (ДВ-4б): у держателя разделов с деньгами и доступом (полные `eds.payments`, `eds.memo.approve`,
+ * `eds.drafts`, `admin` — по разделам, не по названию роли) без настроенного фактора ответ — тоже 202 с
+ * `enrollment_required = true`: сессии нет, настройка — `POST /auth/login/enroll/setup` и `POST /auth/login/enroll`.
  * @summary Вход сотрудника
  */
 export const login = async (
@@ -681,6 +690,226 @@ export const useLogin = <TError = ErrorType<Error | TooManyRequestsResponse>, TC
   TContext
 > => {
   return useMutation(getLoginMutationOptions(options), queryClient);
+};
+
+export const getLoginEnrollSetupUrl = () => {
+  return `/api/v1/auth/login/enroll/setup`;
+};
+
+/**
+ * Без сессии: `challenge` из ответа 202 на `/auth/login` с `enrollment_required` (живёт 15 минут). Секрет для приложения-аутентификатора и адрес `otpauth://`; запись подписана названием компании. Время вышло — 401 `SECOND_FACTOR_EXPIRED`, войти заново. Тот же лимит попыток по IP, что у входа.
+ * @summary Настройка обязательного второго фактора при входе — секрет и адрес для QR (ДВ-4б)
+ */
+export const loginEnrollSetup = async (
+  enrollSetupIn: EnrollSetupIn,
+  options?: Parameters<typeof http>[1],
+): Promise<SecondFactorSetup> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<SecondFactorSetup>(getLoginEnrollSetupUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(enrollSetupIn),
+  });
+};
+
+export const getLoginEnrollSetupMutationKey = () => ["loginEnrollSetup"] as const;
+
+export const getLoginEnrollSetupMutationOptions = <
+  TError = ErrorType<Error | ValidationFailedResponse | TooManyRequestsResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof loginEnrollSetup>>,
+    TError,
+    LoginEnrollSetupMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof loginEnrollSetup>>,
+  TError,
+  LoginEnrollSetupMutationVariables,
+  TContext
+> => {
+  const mutationKey = getLoginEnrollSetupMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof loginEnrollSetup>>,
+    LoginEnrollSetupMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return loginEnrollSetup(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type LoginEnrollSetupMutationResult = NonNullable<
+  Awaited<ReturnType<typeof loginEnrollSetup>>
+>;
+export type LoginEnrollSetupMutationBody = EnrollSetupIn;
+export type LoginEnrollSetupMutationError = ErrorType<
+  Error | ValidationFailedResponse | TooManyRequestsResponse
+>;
+export type LoginEnrollSetupMutationVariables = { data: EnrollSetupIn };
+
+/**
+ * @summary Настройка обязательного второго фактора при входе — секрет и адрес для QR (ДВ-4б)
+ */
+export const useLoginEnrollSetup = <
+  TError = ErrorType<Error | ValidationFailedResponse | TooManyRequestsResponse>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof loginEnrollSetup>>,
+      TError,
+      LoginEnrollSetupMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof loginEnrollSetup>>,
+  TError,
+  LoginEnrollSetupMutationVariables,
+  TContext
+> => {
+  return useMutation(getLoginEnrollSetupMutationOptions(options), queryClient);
+};
+
+export const getLoginEnrollUrl = () => {
+  return `/api/v1/auth/login/enroll`;
+};
+
+/**
+ * Без сессии: `challenge` и код из приложения. Код включает фактор и открывает сессию одной операцией; ответ — сессия и восемь резервных кодов, показываются один раз (`Cache-Control: no-store`). Неверный код — 401 `SECOND_FACTOR_INVALID` (неверные коды считает CRM: после десяти — 423 `ACCOUNT_LOCKED`); время вышло — 401 `SECOND_FACTOR_EXPIRED`.
+ * @summary Включить обязательный второй фактор кодом и войти (ДВ-4б)
+ */
+export const loginEnroll = async (
+  enrollIn: EnrollIn,
+  options?: Parameters<typeof http>[1],
+): Promise<EnrolledSession> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<EnrolledSession>(getLoginEnrollUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(enrollIn),
+  });
+};
+
+export const getLoginEnrollMutationKey = () => ["loginEnroll"] as const;
+
+export const getLoginEnrollMutationOptions = <
+  TError = ErrorType<Error | TooManyRequestsResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof loginEnroll>>,
+    TError,
+    LoginEnrollMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof loginEnroll>>,
+  TError,
+  LoginEnrollMutationVariables,
+  TContext
+> => {
+  const mutationKey = getLoginEnrollMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof loginEnroll>>,
+    LoginEnrollMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return loginEnroll(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type LoginEnrollMutationResult = NonNullable<Awaited<ReturnType<typeof loginEnroll>>>;
+export type LoginEnrollMutationBody = EnrollIn;
+export type LoginEnrollMutationError = ErrorType<Error | TooManyRequestsResponse>;
+export type LoginEnrollMutationVariables = { data: EnrollIn };
+
+/**
+ * @summary Включить обязательный второй фактор кодом и войти (ДВ-4б)
+ */
+export const useLoginEnroll = <
+  TError = ErrorType<Error | TooManyRequestsResponse>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof loginEnroll>>,
+      TError,
+      LoginEnrollMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof loginEnroll>>,
+  TError,
+  LoginEnrollMutationVariables,
+  TContext
+> => {
+  return useMutation(getLoginEnrollMutationOptions(options), queryClient);
 };
 
 export const getLoginSecondFactorUrl = () => {
@@ -2470,7 +2699,7 @@ export const getGetSecondFactorUrl = () => {
 };
 
 /**
- * Свой фактор; доступно каждому вошедшему сотруднику (CRM `/me/second-factor`).
+ * Свой фактор; доступно каждому вошедшему сотруднику (CRM `/me/second-factor`). `required` — фактор обязателен по разделам доступа сотрудника (ДВ-4б).
  * @summary Второй фактор входа — состояние (ДВ-4)
  */
 export const getSecondFactor = async (
@@ -2765,12 +2994,124 @@ export const useEnableSecondFactor = <
   return useMutation(getEnableSecondFactorMutationOptions(options), queryClient);
 };
 
+export const getStepUpSecondFactorUrl = () => {
+  return `/api/v1/me/second-factor/step-up`;
+};
+
+/**
+ * Верный код приложения или резервный даёт токен на 5 минут — его фронт шлёт заголовком `X-Step-Up-Token` при выдаче роли и подтверждении новых банковских реквизитов. Неверный код — 422 `VALIDATION_FAILED` (`second_factor_code_invalid`) и в счёт блокировки; фактор не включён — 403 `STEP_UP_REQUIRED` (`details.reason = second_factor_not_enrolled`).
+ * @summary Свежий код перед чувствительным действием (ДВ-4б)
+ */
+export const stepUpSecondFactor = async (
+  secondFactorCodeIn: SecondFactorCodeIn,
+  options?: Parameters<typeof http>[1],
+): Promise<StepUp> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<StepUp>(getStepUpSecondFactorUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(secondFactorCodeIn),
+  });
+};
+
+export const getStepUpSecondFactorMutationKey = () => ["stepUpSecondFactor"] as const;
+
+export const getStepUpSecondFactorMutationOptions = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse | Error>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof stepUpSecondFactor>>,
+    TError,
+    StepUpSecondFactorMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof stepUpSecondFactor>>,
+  TError,
+  StepUpSecondFactorMutationVariables,
+  TContext
+> => {
+  const mutationKey = getStepUpSecondFactorMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof stepUpSecondFactor>>,
+    StepUpSecondFactorMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return stepUpSecondFactor(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type StepUpSecondFactorMutationResult = NonNullable<
+  Awaited<ReturnType<typeof stepUpSecondFactor>>
+>;
+export type StepUpSecondFactorMutationBody = SecondFactorCodeIn;
+export type StepUpSecondFactorMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse | Error
+>;
+export type StepUpSecondFactorMutationVariables = { data: SecondFactorCodeIn };
+
+/**
+ * @summary Свежий код перед чувствительным действием (ДВ-4б)
+ */
+export const useStepUpSecondFactor = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse | Error>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof stepUpSecondFactor>>,
+      TError,
+      StepUpSecondFactorMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof stepUpSecondFactor>>,
+  TError,
+  StepUpSecondFactorMutationVariables,
+  TContext
+> => {
+  return useMutation(getStepUpSecondFactorMutationOptions(options), queryClient);
+};
+
 export const getDisableSecondFactorUrl = () => {
   return `/api/v1/me/second-factor/disable`;
 };
 
 /**
- * Кодом из приложения или резервным. Неверный — 422 `VALIDATION_FAILED` (`second_factor_code_invalid`).
+ * Кодом из приложения или резервным (он же «свежий код»). Неверный — 422 `VALIDATION_FAILED` (`second_factor_code_invalid`). Фактор обязателен по разделам доступа (`required` в состоянии) — 409 `CONFLICT` (`details.reason = second_factor_required`), отключить нельзя (ДВ-4б).
  * @summary Выключить второй фактор (ДВ-4)
  */
 export const disableSecondFactor = async (
@@ -16873,7 +17214,7 @@ export const getApproveBankChangeRequestUrl = (id: CompanyItemRef) => {
 };
 
 /**
- * ERP `POST finance/bank-changes/{id}/approve/` — право `finance.payment`. Применяет новые реквизиты компании и уведомляет её администраторов и основной контакт по всем каналам. Повтор на подтверждённом запросе — тот же ответ без второго эффекта. Отклонённый запрос — 409 `bank_change_not_pending`; компания в архиве — 409 `company_archived`; реквизиты изменились после подачи — 409 `bank_change_stale`.
+ * ERP `POST finance/bank-changes/{id}/approve/` — право `finance.payment`. Нужен свежий код второго фактора (заголовок `X-Step-Up-Token`, ДВ-4б) — без него 403 `STEP_UP_REQUIRED`, ERP не вызывается. Применяет новые реквизиты компании и уведомляет её администраторов и основной контакт по всем каналам. Повтор на подтверждённом запросе — тот же ответ без второго эффекта. Отклонённый запрос — 409 `bank_change_not_pending`; компания в архиве — 409 `company_archived`; реквизиты изменились после подачи — 409 `bank_change_stale`.
  * @summary Счета и оплаты · Смена реквизитов: подтвердить
  */
 export const approveBankChangeRequest = async (
@@ -26488,7 +26829,7 @@ export const getCreateEmployeeUrl = () => {
 };
 
 /**
- * Раздел `admin` — полный. Для тех, кому письмо не придёт (почта ещё не подключена, у сотрудника нет почты на этом адресе). BFF создаёт пользователя в CRM с ролями Платформы (CRM `/users`) и отдаёт **временный пароль в этом ответе — единственный раз**: BFF не пишет его в журнал, не кэширует и не хранит; ответ — `Cache-Control: no-store`. Сотрудник при первом входе обязан сменить пароль. Потерянный пароль не восстановить — выдать новый: `POST /admin/users/{id}/temporary-password`.
+ * Раздел `admin` — полный. Для тех, кому письмо не придёт (почта ещё не подключена, у сотрудника нет почты на этом адресе). Роль при создании — выдача роли: нужен свежий код второго фактора (`X-Step-Up-Token`, ДВ-4б). BFF создаёт пользователя в CRM с ролями Платформы (CRM `/users`) и отдаёт **временный пароль в этом ответе — единственный раз**: BFF не пишет его в журнал, не кэширует и не хранит; ответ — `Cache-Control: no-store`. Сотрудник при первом входе обязан сменить пароль. Потерянный пароль не восстановить — выдать новый: `POST /admin/users/{id}/temporary-password`.
  * @summary Добавить сотрудника без почты — временный пароль показывается один раз
  */
 export const createEmployee = async (
@@ -26609,12 +26950,144 @@ export const useCreateEmployee = <
   return useMutation(getCreateEmployeeMutationOptions(options), queryClient);
 };
 
+export const getResetEmployeeSecondFactorUrl = (id: string) => {
+  return `/api/v1/admin/users/${id}/second-factor/reset`;
+};
+
+/**
+ * Раздел `admin` — полный. Причина (от 3 знаков) пишется в журнал CRM, сессии сотрудника закрываются, при следующем входе он настраивает фактор заново (если он обязателен по его разделам) или входит по паролю. Себе — 409 `CONFLICT` (`details.reason = second_factor_self_reset`): свой фактор сбрасывает другой администратор. Фактор не включён — 422.
+ * @summary Сбросить сотруднику второй фактор (потерян телефон; ДВ-4б)
+ */
+export const resetEmployeeSecondFactor = async (
+  id: string,
+  secondFactorResetIn: SecondFactorResetIn,
+  options?: Parameters<typeof http>[1],
+): Promise<void> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<void>(getResetEmployeeSecondFactorUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(secondFactorResetIn),
+  });
+};
+
+export const getResetEmployeeSecondFactorMutationKey = () => ["resetEmployeeSecondFactor"] as const;
+
+export const getResetEmployeeSecondFactorMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | Error
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof resetEmployeeSecondFactor>>,
+    TError,
+    ResetEmployeeSecondFactorMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof resetEmployeeSecondFactor>>,
+  TError,
+  ResetEmployeeSecondFactorMutationVariables,
+  TContext
+> => {
+  const mutationKey = getResetEmployeeSecondFactorMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof resetEmployeeSecondFactor>>,
+    ResetEmployeeSecondFactorMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return resetEmployeeSecondFactor(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ResetEmployeeSecondFactorMutationResult = NonNullable<
+  Awaited<ReturnType<typeof resetEmployeeSecondFactor>>
+>;
+export type ResetEmployeeSecondFactorMutationBody = SecondFactorResetIn;
+export type ResetEmployeeSecondFactorMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | Error
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type ResetEmployeeSecondFactorMutationVariables = { id: string; data: SecondFactorResetIn };
+
+/**
+ * @summary Сбросить сотруднику второй фактор (потерян телефон; ДВ-4б)
+ */
+export const useResetEmployeeSecondFactor = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | Error
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof resetEmployeeSecondFactor>>,
+      TError,
+      ResetEmployeeSecondFactorMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof resetEmployeeSecondFactor>>,
+  TError,
+  ResetEmployeeSecondFactorMutationVariables,
+  TContext
+> => {
+  return useMutation(getResetEmployeeSecondFactorMutationOptions(options), queryClient);
+};
+
 export const getInviteEmployeeUrl = () => {
   return `/api/v1/admin/users/invite`;
 };
 
 /**
- * BFF создаёт пользователя в CRM с ролями Платформы (`role_ids`) и отправляет приглашение (CRM `/users`, `/users/{id}/invite`); провижининг в ERP делает CRM. Раздел `admin` — полный. Письмо не ушло — 409 `CONFLICT` с `details.invite = not_sent` и `details.employee_id` (сотрудник создан; повтор — `POST /admin/users/{id}/invite`).
+ * Роль при создании — выдача роли: нужен свежий код второго фактора (`X-Step-Up-Token`, ДВ-4б). BFF создаёт пользователя в CRM с ролями Платформы (`role_ids`) и отправляет приглашение (CRM `/users`, `/users/{id}/invite`); провижининг в ERP делает CRM. Раздел `admin` — полный. Письмо не ушло — 409 `CONFLICT` с `details.invite = not_sent` и `details.employee_id` (сотрудник создан; повтор — `POST /admin/users/{id}/invite`).
  * @summary Пригласить сотрудника по почте
  */
 export const inviteEmployee = async (
@@ -27137,7 +27610,7 @@ export const getUpdateEmployeeUrl = (id: string) => {
 };
 
 /**
- * Раздел `admin` — полный. Роли — полный новый набор `role_ids`; права в CRM и ERP вычисляет CRM. Снять последнего активного администратора или директора (роль или отключение) нельзя — 409 `LAST_ADMIN` / `LAST_DIRECTOR`. У сотрудника есть лиды в работе, а изменение отнимает у него работу с лидами, — 409 `CONFLICT` с `details.reason = user_has_active_leads`; повтор с `transfer_to_user_id` передаёт лиды коллеге. Пустой набор ролей — 422 `ROLES_REQUIRED` (0.6.0): у сотрудника хотя бы одна роль, закрыть доступ — `is_active = false`.
+ * Раздел `admin` — полный. Роли — полный новый набор `role_ids`; права в CRM и ERP вычисляет CRM. Выдача роли (появилась роль, которой не было) требует свежий код второго фактора (`X-Step-Up-Token`, ДВ-4б) — иначе 403 `STEP_UP_REQUIRED`; снятие роли и прочие правки кода не требуют. Снять последнего активного администратора или директора (роль или отключение) нельзя — 409 `LAST_ADMIN` / `LAST_DIRECTOR`. У сотрудника есть лиды в работе, а изменение отнимает у него работу с лидами, — 409 `CONFLICT` с `details.reason = user_has_active_leads`; повтор с `transfer_to_user_id` передаёт лиды коллеге. Пустой набор ролей — 422 `ROLES_REQUIRED` (0.6.0): у сотрудника хотя бы одна роль, закрыть доступ — `is_active = false`.
  * @summary Роли, должность, отключение — единое место выдачи ролей обеих систем
  */
 export const updateEmployee = async (

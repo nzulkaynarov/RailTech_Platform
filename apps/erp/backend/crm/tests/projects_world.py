@@ -87,3 +87,32 @@ def pw(db, grant):
 def contract_in(pw, status=ContractStatusCode.PENDING_CLIENT, **fields):
     """Договор проекта в нужном статусе ERP."""
     return w.add_contract(pw.deal, pw.quote, status, **fields)
+
+
+VISAS_APPROVED = [
+    {"permission": "approvals.visa_finance", "label": "Виза бухгалтера", "role": "Бухгалтер", "status": "approved"},
+    {"permission": "approvals.visa_legal", "label": "Виза юриста", "role": "Юрист", "status": "approved"},
+]
+
+
+def collect_visas(contract, visas=None, *, status="pending", comment=""):
+    """Х-1: договор отправлен «На подпись» и визы собраны (по умолчанию обе поставлены).
+
+    Запрос подписи привязан к ТЕКУЩЕЙ редакции договора (отпечаток), как в рабочем потоке.
+    """
+    from django.utils import timezone
+    from integration.models import CommercialSigningRequest
+
+    from crm.services.signing_outbound import fingerprint
+
+    contract.refresh_from_db()
+    return CommercialSigningRequest.objects.create(
+        kind="contract",
+        object_id=contract.pk,
+        number=contract.number,
+        fingerprint=fingerprint("contract", contract),
+        status=status,
+        comment=comment,
+        visas=VISAS_APPROVED if visas is None else visas,
+        visas_changed_at=timezone.now(),
+    )

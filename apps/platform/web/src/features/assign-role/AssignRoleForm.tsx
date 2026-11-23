@@ -10,6 +10,7 @@ import { useRoles } from "./useRoles";
 import { hasActiveLeads } from "./leads";
 import { TransferLeads } from "./TransferLeads";
 import { useEmployeeUpdate } from "./useEmployeeMutations";
+import { isStepUpError, useStepUp } from "../step-up/useStepUp";
 
 import "./assign-role.css";
 
@@ -36,6 +37,7 @@ export function AssignRoleForm({ employee, selfId, otherActiveAdmins }: AssignRo
   const [draftRoles, setDraftRoles] = useState<string[] | null>(null);
   const [draftPosition, setDraftPosition] = useState<string | null>(null);
   const [transferTo, setTransferTo] = useState<string | null>(null);
+  const stepUp = useStepUp();
   const update = useEmployeeUpdate(selfId, () => {
     setDraftRoles(null);
     setDraftPosition(null);
@@ -66,72 +68,79 @@ export function AssignRoleForm({ employee, selfId, otherActiveAdmins }: AssignRo
   const leads = update.isError && hasActiveLeads(update.error);
 
   const save = () => {
-    update.mutate({
-      id: employee.id,
-      data: {
-        ...(rolesChanged ? { role_ids: selected } : {}),
-        ...(positionChanged ? { position: position.trim() } : {}),
-        ...(leads && transferTo ? { transfer_to_user_id: transferTo } : {}),
+    update.mutate(
+      {
+        id: employee.id,
+        data: {
+          ...(rolesChanged ? { role_ids: selected } : {}),
+          ...(positionChanged ? { position: position.trim() } : {}),
+          ...(leads && transferTo ? { transfer_to_user_id: transferTo } : {}),
+        },
       },
-    });
+      // Выдача роли требует свежий код второго фактора (ДВ-4б): окно спрашивает код и повторяет сохранение
+      { onError: (error) => stepUp.ask(error, save) },
+    );
   };
 
   return (
-    <form
-      className="pf-panel-stack"
-      onSubmit={(event) => {
-        event.preventDefault();
-        if (dirty && !blocker && !update.isPending) save();
-      }}
-      noValidate
-    >
-      <div>
-        <label htmlFor={positionId} style={{ display: "block", marginBottom: 4 }}>
-          {t("admin.org.form.positionLabel")}
-        </label>
-        <Input
-          id={positionId}
-          value={position}
-          maxLength={120}
-          autoComplete="off"
-          aria-describedby={`${positionId}-hint`}
-          onChange={(event) => {
-            setDraftPosition(event.target.value);
-          }}
-        />
-        <p id={`${positionId}-hint`} className="pf-hint" style={{ margin: "4px 0 0" }}>
-          {t("admin.org.form.positionHint")}
-        </p>
-      </div>
-      <RoleCheckboxes
-        roles={roles}
-        loading={query.isPending}
-        error={query.isError}
-        onRetry={() => {
-          void query.refetch();
+    <>
+      <form
+        className="pf-panel-stack"
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (dirty && !blocker && !update.isPending) save();
         }}
-        value={selected}
-        onChange={setDraftRoles}
-        note={blocker ? { id: noteId, text: blocker } : null}
-      />
-      {update.isError ? (
-        <Alert type="error" showIcon message={employeeErrorText(t, update.error)} role="alert" />
-      ) : null}
-      {leads ? (
-        <TransferLeads employee={employee} value={transferTo} onChange={setTransferTo} />
-      ) : null}
-      <div>
-        <Button
-          type="primary"
-          htmlType="submit"
-          block
-          loading={update.isPending}
-          disabled={!dirty || blocker !== null || (leads && !transferTo)}
-        >
-          {leads ? t("admin.org.transfer.save") : t("admin.org.form.save")}
-        </Button>
-      </div>
-      {blocker ? null : null}
-    </form>
+        noValidate
+      >
+        <div>
+          <label htmlFor={positionId} style={{ display: "block", marginBottom: 4 }}>
+            {t("admin.org.form.positionLabel")}
+          </label>
+          <Input
+            id={positionId}
+            value={position}
+            maxLength={120}
+            autoComplete="off"
+            aria-describedby={`${positionId}-hint`}
+            onChange={(event) => {
+              setDraftPosition(event.target.value);
+            }}
+          />
+          <p id={`${positionId}-hint`} className="pf-hint" style={{ margin: "4px 0 0" }}>
+            {t("admin.org.form.positionHint")}
+          </p>
+        </div>
+        <RoleCheckboxes
+          roles={roles}
+          loading={query.isPending}
+          error={query.isError}
+          onRetry={() => {
+            void query.refetch();
+          }}
+          value={selected}
+          onChange={setDraftRoles}
+          note={blocker ? { id: noteId, text: blocker } : null}
+        />
+        {update.isError && !isStepUpError(update.error) ? (
+          <Alert type="error" showIcon message={employeeErrorText(t, update.error)} role="alert" />
+        ) : null}
+        {leads ? (
+          <TransferLeads employee={employee} value={transferTo} onChange={setTransferTo} />
+        ) : null}
+        <div>
+          <Button
+            type="primary"
+            htmlType="submit"
+            block
+            loading={update.isPending}
+            disabled={!dirty || blocker !== null || (leads && !transferTo)}
+          >
+            {leads ? t("admin.org.transfer.save") : t("admin.org.form.save")}
+          </Button>
+        </div>
+        {blocker ? null : null}
+      </form>
+      {stepUp.dialog}
+    </>
   );
 }

@@ -285,7 +285,7 @@ function TemplateEditor({
           {isBlank(variants[lang]) ? (
             <p className="pf-co-hint">{t("letterTemplates.previewEmpty")}</p>
           ) : (
-            <TemplatePdf body={toBody(variants[lang], lang)} />
+            <TemplatePdf body={toBody(variants[lang], lang)} kind={kind} />
           )}
         </div>
       </form>
@@ -318,14 +318,14 @@ function TemplateEditor({
 }
 
 /** PDF варианта на бланке: запрос через секунду после паузы в наборе, опрос, пока строится; прежние страницы остаются. */
-function TemplatePdf({ body }: { body: Body }) {
+function TemplatePdf({ body, kind }: { body: Body; kind: EdsTemplateIn["kind"] }) {
   const { t } = useTranslation("company");
   const key = JSON.stringify(body);
   const [hash, setHash] = useState<string | null>(null);
   const [failed, setFailed] = useState<string | null>(null);
   useEffect(() => {
     const timer = window.setTimeout(() => {
-      previewEdsTemplate({ body: JSON.parse(key) as Body })
+      previewEdsTemplate({ body: JSON.parse(key) as Body, kind })
         .then((answer) => {
           setFailed(null);
           setHash(answer.hash);
@@ -337,7 +337,7 @@ function TemplatePdf({ body }: { body: Body }) {
     return () => {
       window.clearTimeout(timer);
     };
-  }, [key, t]);
+  }, [key, kind, t]);
   const status = useGetEdsTemplatePreview(hash ?? "", {
     query: {
       enabled: Boolean(hash),

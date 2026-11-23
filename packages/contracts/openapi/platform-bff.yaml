@@ -462,6 +462,10 @@ paths:
         `SecondFactorChallenge` без сессии; код — `POST /auth/login/second-factor`. С меткой `pf_device` (HttpOnly,
         путь `/api/v1/auth`, 30 дней — ставит второй шаг с `remember_device`) код не спрашивается, пока не сменились
         пароль и сам фактор.
+
+        Обязательный фактор (ДВ-4б): у держателя разделов с деньгами и доступом (полные `eds.payments`, `eds.memo.approve`,
+        `eds.drafts`, `admin` — по разделам, не по названию роли) без настроенного фактора ответ — тоже 202 с
+        `enrollment_required = true`: сессии нет, настройка — `POST /auth/login/enroll/setup` и `POST /auth/login/enroll`.
       security: []
       requestBody:
         required: true
@@ -513,6 +517,84 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+
+  /auth/login/enroll/setup:
+    post:
+      tags: [auth]
+      operationId: loginEnrollSetup
+      summary: Настройка обязательного второго фактора при входе — секрет и адрес для QR (ДВ-4б)
+      description: >-
+        Без сессии: `challenge` из ответа 202 на `/auth/login` с `enrollment_required` (живёт 15 минут). Секрет для
+        приложения-аутентификатора и адрес `otpauth://`; запись подписана названием компании. Время вышло — 401
+        `SECOND_FACTOR_EXPIRED`, войти заново. Тот же лимит попыток по IP, что у входа.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EnrollSetupIn'
+      responses:
+        '200':
+          description: Секрет
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SecondFactorSetup'
+        '401':
+          description: '`SECOND_FACTOR_EXPIRED` — время на настройку вышло'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /auth/login/enroll:
+    post:
+      tags: [auth]
+      operationId: loginEnroll
+      summary: Включить обязательный второй фактор кодом и войти (ДВ-4б)
+      description: >-
+        Без сессии: `challenge` и код из приложения. Код включает фактор и открывает сессию одной операцией; ответ — сессия и
+        восемь резервных кодов, показываются один раз (`Cache-Control: no-store`). Неверный код — 401
+        `SECOND_FACTOR_INVALID` (неверные коды считает CRM: после десяти — 423 `ACCOUNT_LOCKED`); время вышло — 401
+        `SECOND_FACTOR_EXPIRED`.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EnrollIn'
+      responses:
+        '200':
+          description: Фактор включён, вошёл
+          headers:
+            Set-Cookie:
+              description: '`rt_pf_session` и `rt_pf_csrf`'
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnrolledSession'
+        '401':
+          description: '`SECOND_FACTOR_INVALID` — неверный код; `SECOND_FACTOR_EXPIRED` — время вышло'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '423':
+          description: '`ACCOUNT_LOCKED`'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
 
   /auth/login/second-factor:
     post:
@@ -983,7 +1065,9 @@ paths:
       tags: [me]
       operationId: getSecondFactor
       summary: Второй фактор входа — состояние (ДВ-4)
-      description: Свой фактор; доступно каждому вошедшему сотруднику (CRM `/me/second-factor`).
+      description: >-
+        Свой фактор; доступно каждому вошедшему сотруднику (CRM `/me/second-factor`). `required` — фактор обязателен по
+        разделам доступа сотрудника (ДВ-4б).
       responses:
         '200':
           description: Состояние
@@ -1051,12 +1135,53 @@ paths:
         '422':
           $ref: '#/components/responses/ValidationFailed'
 
+  /me/second-factor/step-up:
+    post:
+      tags: [me]
+      operationId: stepUpSecondFactor
+      summary: Свежий код перед чувствительным действием (ДВ-4б)
+      description: >-
+        Верный код приложения или резервный даёт токен на 5 минут — его фронт шлёт заголовком `X-Step-Up-Token` при выдаче
+        роли и подтверждении новых банковских реквизитов. Неверный код — 422 `VALIDATION_FAILED`
+        (`second_factor_code_invalid`) и в счёт блокировки; фактор не включён — 403 `STEP_UP_REQUIRED`
+        (`details.reason = second_factor_not_enrolled`).
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SecondFactorCodeIn'
+      responses:
+        '200':
+          description: Код принят
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StepUp'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '423':
+          description: '`ACCOUNT_LOCKED`'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
   /me/second-factor/disable:
     post:
       tags: [me]
       operationId: disableSecondFactor
       summary: Выключить второй фактор (ДВ-4)
-      description: Кодом из приложения или резервным. Неверный — 422 `VALIDATION_FAILED` (`second_factor_code_invalid`).
+      description: >-
+        Кодом из приложения или резервным (он же «свежий код»). Неверный — 422 `VALIDATION_FAILED`
+        (`second_factor_code_invalid`). Фактор обязателен по разделам доступа (`required` в состоянии) — 409 `CONFLICT`
+        (`details.reason = second_factor_required`), отключить нельзя (ДВ-4б).
       parameters:
         - $ref: '#/components/parameters/CsrfToken'
       requestBody:
@@ -4532,8 +4657,9 @@ paths:
       tags: [eds-payments]
       operationId: approveBankChangeRequest
       summary: 'Счета и оплаты · Смена реквизитов: подтвердить'
-      description: ERP `POST finance/bank-changes/{id}/approve/` — право `finance.payment`. Применяет новые реквизиты компании и уведомляет её администраторов и основной контакт по всем каналам. Повтор на подтверждённом запросе — тот же ответ без второго эффекта. Отклонённый запрос — 409 `bank_change_not_pending`; компания в архиве — 409 `company_archived`; реквизиты изменились после подачи — 409 `bank_change_stale`.
+      description: ERP `POST finance/bank-changes/{id}/approve/` — право `finance.payment`. Нужен свежий код второго фактора (заголовок `X-Step-Up-Token`, ДВ-4б) — без него 403 `STEP_UP_REQUIRED`, ERP не вызывается. Применяет новые реквизиты компании и уведомляет её администраторов и основной контакт по всем каналам. Повтор на подтверждённом запросе — тот же ответ без второго эффекта. Отклонённый запрос — 409 `bank_change_not_pending`; компания в архиве — 409 `company_archived`; реквизиты изменились после подачи — 409 `bank_change_stale`.
       parameters:
+        - $ref: '#/components/parameters/StepUpToken'
         - $ref: '#/components/parameters/CsrfToken'
         - {name: id, in: path, required: true, description: Id запроса, schema: {$ref: '#/components/schemas/CompanyItemRef'}}
       responses:
@@ -7035,10 +7161,11 @@ paths:
       summary: Добавить сотрудника без почты — временный пароль показывается один раз
       description: >-
         Раздел `admin` — полный. Для тех, кому письмо не придёт (почта ещё не подключена, у сотрудника нет почты на этом адресе).
-        BFF создаёт пользователя в CRM с ролями Платформы (CRM `/users`) и отдаёт **временный пароль в этом ответе — единственный
+        Роль при создании — выдача роли: нужен свежий код второго фактора (`X-Step-Up-Token`, ДВ-4б). BFF создаёт пользователя в CRM с ролями Платформы (CRM `/users`) и отдаёт **временный пароль в этом ответе — единственный
         раз**: BFF не пишет его в журнал, не кэширует и не хранит; ответ — `Cache-Control: no-store`. Сотрудник при первом входе
         обязан сменить пароль. Потерянный пароль не восстановить — выдать новый: `POST /admin/users/{id}/temporary-password`.
       parameters:
+        - $ref: '#/components/parameters/StepUpToken'
         - $ref: '#/components/parameters/CsrfToken'
       requestBody:
         required: true
@@ -7073,16 +7200,55 @@ paths:
         '503':
           $ref: '#/components/responses/BackendUnavailable'
 
+  /admin/users/{id}/second-factor/reset:
+    post:
+      tags: [admin]
+      operationId: resetEmployeeSecondFactor
+      summary: Сбросить сотруднику второй фактор (потерян телефон; ДВ-4б)
+      description: >-
+        Раздел `admin` — полный. Причина (от 3 знаков) пишется в журнал CRM, сессии сотрудника закрываются, при следующем
+        входе он настраивает фактор заново (если он обязателен по его разделам) или входит по паролю. Себе — 409 `CONFLICT`
+        (`details.reason = second_factor_self_reset`): свой фактор сбрасывает другой администратор. Фактор не включён — 422.
+      parameters:
+        - $ref: '#/components/parameters/EmployeeId'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SecondFactorResetIn'
+      responses:
+        '204':
+          description: Сброшен
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: '`CONFLICT` — себе сбросить нельзя'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
   /admin/users/invite:
     post:
       tags: [admin]
       operationId: inviteEmployee
       summary: Пригласить сотрудника по почте
       description: >-
-        BFF создаёт пользователя в CRM с ролями Платформы (`role_ids`) и отправляет приглашение (CRM `/users`,
+        Роль при создании — выдача роли: нужен свежий код второго фактора (`X-Step-Up-Token`, ДВ-4б). BFF создаёт пользователя в CRM с ролями Платформы (`role_ids`) и отправляет приглашение (CRM `/users`,
         `/users/{id}/invite`); провижининг в ERP делает CRM. Раздел `admin` — полный. Письмо не ушло — 409 `CONFLICT` с
         `details.invite = not_sent` и `details.employee_id` (сотрудник создан; повтор — `POST /admin/users/{id}/invite`).
       parameters:
+        - $ref: '#/components/parameters/StepUpToken'
         - $ref: '#/components/parameters/CsrfToken'
       requestBody:
         required: true
@@ -7254,13 +7420,16 @@ paths:
       operationId: updateEmployee
       summary: Роли, должность, отключение — единое место выдачи ролей обеих систем
       description: >-
-        Раздел `admin` — полный. Роли — полный новый набор `role_ids`; права в CRM и ERP вычисляет CRM. Снять последнего
+        Раздел `admin` — полный. Роли — полный новый набор `role_ids`; права в CRM и ERP вычисляет CRM. Выдача роли (появилась
+        роль, которой не было) требует свежий код второго фактора (`X-Step-Up-Token`, ДВ-4б) — иначе 403 `STEP_UP_REQUIRED`;
+        снятие роли и прочие правки кода не требуют. Снять последнего
         активного администратора или директора (роль или отключение) нельзя — 409 `LAST_ADMIN` / `LAST_DIRECTOR`. У сотрудника
         есть лиды в работе, а изменение отнимает у него работу с лидами, — 409 `CONFLICT` с
         `details.reason = user_has_active_leads`; повтор с `transfer_to_user_id` передаёт лиды коллеге. Пустой набор ролей —
         422 `ROLES_REQUIRED` (0.6.0): у сотрудника хотя бы одна роль, закрыть доступ — `is_active = false`.
       parameters:
         - $ref: '#/components/parameters/EmployeeId'
+        - $ref: '#/components/parameters/StepUpToken'
         - $ref: '#/components/parameters/CsrfToken'
       requestBody:
         required: true
@@ -16123,6 +16292,16 @@ components:
       schema:
         type: string
         minLength: 16
+    StepUpToken:
+      name: X-Step-Up-Token
+      in: header
+      required: false
+      description: >-
+        Свежий код второго фактора (ДВ-4б): токен из `POST /me/second-factor/step-up`, действует 5 минут. Нужен при выдаче роли и
+        подтверждении новых банковских реквизитов; без него или с просроченным — 403 `STEP_UP_REQUIRED`
+        (`details.reason = second_factor_not_enrolled` — фактор ещё не включён)
+      schema:
+        type: string
     KbDocumentId:
       name: id
       in: path
@@ -16502,7 +16681,7 @@ components:
       properties:
         code:
           type: string
-          description: Стабильный код (`INVALID_CREDENTIALS`, `SESSION_EXPIRED`, `CSRF_FAILED`, `FORBIDDEN`, `NOT_FOUND`, `VALIDATION_FAILED`, `TOO_MANY_REQUESTS`, `BACKEND_UNAVAILABLE`, `NO_PLATFORM_ROLE`, `USER_DISABLED`, `ACCOUNT_LOCKED`, `CONFLICT`, `WRONG_PASSWORD`, `EMAIL_EXISTS`, `LAST_ADMIN`, `LAST_DIRECTOR`, `ROLE_IN_USE`, `ROLE_SYSTEM`, `ROLES_REQUIRED`, `NOT_CONFIGURED`, `SECRETS_KEY_MISSING`, `SERVICE_NOT_SWITCHABLE`, `INTEGRATION_FAILED`, `PAYLOAD_TOO_LARGE`, `UNSUPPORTED_MEDIA_TYPE`, `COMPANY_NOT_SET`, `SETUP_DONE`, `SETUP_CODE_INVALID`, `SETUP_CODE_EXPIRED`, `SETUP_LOCKED`, `OWN_COMPANY_ALREADY_EXISTS`, `ERP_NOT_CONNECTED`, `INTERNAL_ERROR`, `BAD_REQUEST`, `METHOD_NOT_ALLOWED`, `HTTP_<статус>`)
+          description: Стабильный код (`INVALID_CREDENTIALS`, `SESSION_EXPIRED`, `CSRF_FAILED`, `FORBIDDEN`, `NOT_FOUND`, `VALIDATION_FAILED`, `TOO_MANY_REQUESTS`, `BACKEND_UNAVAILABLE`, `NO_PLATFORM_ROLE`, `USER_DISABLED`, `ACCOUNT_LOCKED`, `CONFLICT`, `WRONG_PASSWORD`, `EMAIL_EXISTS`, `LAST_ADMIN`, `LAST_DIRECTOR`, `ROLE_IN_USE`, `ROLE_SYSTEM`, `ROLES_REQUIRED`, `STEP_UP_REQUIRED`, `NOT_CONFIGURED`, `SECRETS_KEY_MISSING`, `SERVICE_NOT_SWITCHABLE`, `INTEGRATION_FAILED`, `PAYLOAD_TOO_LARGE`, `UNSUPPORTED_MEDIA_TYPE`, `COMPANY_NOT_SET`, `SETUP_DONE`, `SETUP_CODE_INVALID`, `SETUP_CODE_EXPIRED`, `SETUP_LOCKED`, `OWN_COMPANY_ALREADY_EXISTS`, `ERP_NOT_CONNECTED`, `INTERNAL_ERROR`, `BAD_REQUEST`, `METHOD_NOT_ALLOWED`, `HTTP_<статус>`)
           examples: [SESSION_EXPIRED]
         message:
           type: string
@@ -18119,7 +18298,45 @@ components:
       required: [second_factor_required, challenge]
       properties:
         second_factor_required: {type: boolean, enum: [true]}
-        challenge: {type: string, description: 'Непрозрачная строка на 5 минут для `/auth/login/second-factor`'}
+        challenge: {type: string, description: 'Непрозрачная строка на 5 минут для `/auth/login/second-factor`; при `enrollment_required` — на 15 минут для `/auth/login/enroll/*`'}
+        enrollment_required: {type: boolean, default: false, description: 'ДВ-4б: фактор обязателен по разделам доступа, но не настроен — экран настройки вместо ввода кода'}
+    EnrollSetupIn:
+      type: object
+      additionalProperties: false
+      required: [challenge]
+      properties:
+        challenge: {type: string, minLength: 1, maxLength: 2048}
+    EnrollIn:
+      type: object
+      additionalProperties: false
+      required: [challenge, code]
+      properties:
+        challenge: {type: string, minLength: 1, maxLength: 2048}
+        code: {type: string, minLength: 6, maxLength: 16, description: '6 цифр из приложения'}
+    EnrolledSession:
+      description: Сессия (как `Session`) после настройки обязательного фактора при входе; резервные коды показываются один раз
+      type: object
+      additionalProperties: false
+      required: [me, expires_at, must_change_password, backup_codes]
+      properties:
+        me:
+          $ref: '#/components/schemas/Me'
+        must_change_password: {type: boolean}
+        expires_at: {type: string, format: date-time}
+        backup_codes: {type: array, items: {type: string}}
+    StepUp:
+      type: object
+      additionalProperties: false
+      required: [token, expires_in]
+      properties:
+        token: {type: string, description: 'Для заголовка `X-Step-Up-Token`'}
+        expires_in: {type: integer, minimum: 1, description: 'Секунды (300)'}
+    SecondFactorResetIn:
+      type: object
+      additionalProperties: false
+      required: [reason]
+      properties:
+        reason: {type: string, minLength: 3, maxLength: 500, description: 'Причина — в журнале'}
     SecondFactorLoginIn:
       type: object
       additionalProperties: false
@@ -18151,6 +18368,7 @@ components:
         enabled: {type: boolean}
         enabled_at: {type: [string, 'null'], format: date-time}
         backup_codes_left: {type: integer, minimum: 0}
+        required: {type: boolean, default: false, description: 'ДВ-4б: фактор обязателен по разделам доступа — отключить нельзя'}
     SecondFactorSetup:
       type: object
       additionalProperties: false
@@ -19839,6 +20057,11 @@ components:
         sent_to_client:
           description: 'Проект ушёл клиенту на согласование редакции и виден ему в кабинете'
           type: boolean
+        send_blocker_code:
+          description: 'Х-1: пока проект не ушёл клиенту — код причины, по которой его нельзя отправить (визы не собраны); null — ничего не мешает. Считает ERP'
+          oneOf:
+            - $ref: '#/components/schemas/ProjectContractSendBlockerCode'
+            - type: 'null'
       required: [id, number, status, sent_to_client]
       additionalProperties: false
     ProjectInvoiceRef:
@@ -20008,6 +20231,37 @@ components:
           type: [string, 'null']
       required: [id, number, status, version, outgoing_number, valid_until]
       additionalProperties: false
+    ProjectContractSendBlockerCode:
+      description: 'visas_not_requested — договор ещё не на визах; visas_declined — EDS не принял договор на визы (причина в remark); visas_pending — не все визы поставлены; visas_returned — виза возвращена с замечанием; no_visa_holder — в компании нет держателя нужного права (ссылка в настройки)'
+      type: string
+      enum: [visas_not_requested, visas_declined, visas_pending, visas_returned, no_visa_holder]
+    ProjectContractSendBlocker:
+      type: object
+      description: 'Х-1: почему проект договора нельзя отправить клиенту — визы маршрута подписи (ADR-0025) не собраны'
+      properties:
+        code:
+          $ref: '#/components/schemas/ProjectContractSendBlockerCode'
+        message:
+          description: 'Причина словами («Нужны визы: бухгалтер, юрист»)'
+          type: string
+        missing:
+          description: 'Роли без визы словами в нижнем регистре'
+          items:
+            type: string
+          type: array
+        missing_permissions:
+          description: 'Те же визы кодами прав маршрута (approvals.visa_finance): Платформа переводит их на язык сотрудника'
+          items:
+            type: string
+          type: array
+        remark:
+          description: 'Замечание визирующего или причина отказа EDS, как написаны; пусто — нет'
+          type: string
+        settings_link:
+          description: 'Нужной роли нет ни у одного сотрудника: назначить её можно в настройках'
+          type: boolean
+      required: [code, message, missing, remark, settings_link]
+      additionalProperties: false
     ProjectContract:
       type: object
       properties:
@@ -20020,6 +20274,11 @@ components:
           type: string
         sent_to_client:
           type: boolean
+        send_blocker_code:
+          description: 'Х-1: пока проект не ушёл клиенту — код причины, по которой его нельзя отправить (визы не собраны); null — ничего не мешает. Считает ERP'
+          oneOf:
+            - $ref: '#/components/schemas/ProjectContractSendBlockerCode'
+            - type: 'null'
         total:
           oneOf:
             - $ref: '#/components/schemas/ProjectMoney'
@@ -20045,6 +20304,11 @@ components:
             enum: [send_to_client, client_agreed, reject, revise, mark_issued, attach_scan]
             type: string
           type: array
+        send_blocker:
+          description: 'Х-1: пока проект договора не ушёл клиенту — что мешает его отправить (визы маршрута подписи не собраны); null — ничего, действие send_to_client в actions. Считает ERP'
+          oneOf:
+            - $ref: '#/components/schemas/ProjectContractSendBlocker'
+            - type: 'null'
         history:
           items:
             $ref: '#/components/schemas/ProjectJournalEntry'
@@ -20671,6 +20935,11 @@ components:
       required: [body]
       properties:
         body: {$ref: '#/components/schemas/EdsDocumentBody'}
+        kind:
+          type: string
+          enum: [letter, memo]
+          default: letter
+          description: Вид шаблона; служебная записка — компактный лист без окна и подвала компании
     EdsTemplatePreview:
       type: object
       additionalProperties: false

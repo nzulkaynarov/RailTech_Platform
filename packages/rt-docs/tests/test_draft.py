@@ -39,7 +39,7 @@ def test_draft_has_mark_footer_and_no_number(layout: Layout, lang: Lang) -> None
     assert "ИСХ-015/26" not in out and "28.10.2026" not in out and "2026-10-28" not in out
     if layout is not Layout.INTERNAL:  # у служебки нет номера в шапке (бланк без реквизитов документа)
         assert NO_NUMBER[lang] in out
-    assert "М. П." not in out and "M. Oʻ." not in out and "Seal" not in out  # печати нет
+    assert "М. П." not in out and "M. Ö." not in out and "Seal" not in out  # печати нет
 
 
 def test_final_is_unchanged() -> None:

@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
 
+import pyotp
 from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -44,6 +45,17 @@ async def make_user(
 
 def login(client: TestClient, email: str, password: str) -> dict[str, str]:
     response = client.post("/api/v1/auth/login", json={"email": email, "password": password})
+    if response.status_code == 202 and response.json().get("enrollment_required"):
+        # A holder of money/access sections (DV-4b) enrolls the second factor at the first sign-in.
+        challenge = response.json()["challenge"]
+        setup = client.post(
+            "/api/v1/auth/login/enroll/setup", json={"challenge": challenge, "issuer": "RT"}
+        )
+        assert setup.status_code == 200, setup.text
+        code = pyotp.TOTP(setup.json()["secret"]).now()
+        response = client.post(
+            "/api/v1/auth/login/enroll", json={"challenge": challenge, "code": code}
+        )
     assert response.status_code == 200, response.text
     return {"Authorization": f"Bearer {response.json()['access_token']}"}
 

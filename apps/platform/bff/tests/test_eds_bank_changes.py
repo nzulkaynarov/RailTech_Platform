@@ -7,7 +7,7 @@ import httpx
 import respx
 
 from tests.conftest import ContractChecker, Web
-from tests.consts import ERP_URL
+from tests.consts import CRM_URL, ERP_URL
 
 API = f"{ERP_URL}/api/v1/finance/bank-changes"
 BASE = "/eds/payments/bank-changes"
@@ -38,12 +38,26 @@ def mock(be: Any) -> respx.MockRouter:
     return router
 
 
-async def call(web: Web, method: str, path: str, body: Any = None) -> httpx.Response:
+STEP_UP_CHECK = f"{CRM_URL}/api/v1/me/second-factor/step-up/check"
+
+
+def fresh_code(be: Any) -> respx.Route:
+    """CRM принимает токен «свежего кода» (ДВ-4б): подтверждение реквизитов идёт дальше в ERP."""
+    route: respx.Route = mock(be).post(STEP_UP_CHECK).mock(return_value=httpx.Response(204))
+    return route
+
+
+async def call(
+    web: Web, method: str, path: str, body: Any = None, *, step_up: str | None = "fresh"
+) -> httpx.Response:
+    headers = {"X-CSRF-Token": web.csrf}
+    if step_up:
+        headers["X-Step-Up-Token"] = step_up
     return await web.client.request(
         method,
         f"/api/v1{path}",
         json=body if body is not None else ({} if method != "GET" else None),
-        headers={"X-CSRF-Token": web.csrf},
+        headers=headers,
     )
 
 
@@ -75,6 +89,7 @@ async def test_list_is_not_captured_by_the_invoice_route(web: Web, be: Any) -> N
 
 async def test_approve(web: Web, be: Any, check: ContractChecker) -> None:
     await web.login(["ACCOUNTANT"])
+    checked = fresh_code(be)
     mock(be).post(f"{API}/7/approve/").mock(
         return_value=httpx.Response(200, json={**RAW, "status": "approved"})
     )
@@ -84,6 +99,30 @@ async def test_approve(web: Web, be: Any, check: ContractChecker) -> None:
     assert response.status_code == 200
     check(response, f"{BASE}/{{id}}/approve", "post")
     assert response.json()["status"] == "approved"
+    assert checked.calls.last.request.headers["X-Step-Up-Token"] == "fresh"
+
+
+async def test_approve_without_a_fresh_code_never_reaches_erp(web: Web, be: Any) -> None:
+    """ДВ-4б: CRM отказал в «свежем коде» — реквизиты не меняются, ERP не вызывается."""
+    await web.login(["ACCOUNTANT"])
+    mock(be).post(STEP_UP_CHECK).mock(
+        return_value=httpx.Response(
+            403,
+            json={
+                "code": "step_up_required",
+                "message": "x",
+                "details": {"reason": "second_factor_not_enrolled"},
+            },
+        )
+    )
+    erp = mock(be).post(f"{API}/7/approve/")
+
+    response = await call(web, "POST", f"{BASE}/7/approve", step_up=None)
+
+    assert response.status_code == 403
+    assert response.json()["code"] == "STEP_UP_REQUIRED"
+    assert response.json()["details"]["reason"] == "second_factor_not_enrolled"
+    assert not erp.called
 
 
 async def test_reject_sends_the_reason(web: Web, be: Any, check: ContractChecker) -> None:
@@ -117,6 +156,7 @@ async def test_reject_without_a_reason_is_refused_by_the_bff(web: Web, be: Any) 
 
 async def test_conflict_carries_reason(web: Web, be: Any) -> None:
     await web.login(["ACCOUNTANT"])
+    fresh_code(be)
     mock(be).post(f"{API}/7/approve/").mock(
         return_value=httpx.Response(409, json={"detail": "BANK_CHANGE_STALE"})
     )
