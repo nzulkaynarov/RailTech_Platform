@@ -295,6 +295,8 @@
     "running": "Yangilaniş ketmoqda — bir-ikki daqiqadan söng sahifa özi yangilanadi.",
     "runningUrgent": "Şoşilinç tuzatiş ketmoqda — bir-ikki daqiqadan söng sahifa özi yangilanadi.",
     "minutes_one": "{{range}} daqiqa",
+    "minutes_few": "{{range}} daqiqa",
+    "minutes_many": "{{range}} daqiqa",
     "minutes_other": "{{range}} daqiqa",
     "hide": "Yopish"
   }
