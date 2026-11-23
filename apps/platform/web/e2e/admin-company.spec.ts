@@ -489,20 +489,22 @@ test.describe("Компания: категории, запросы, платф�
     await approve.getByRole("button", { name: "Одобрить" }).click();
   });
 
-  test("платформенные настройки: администратор меняет НДС; директору ERP откажет", async ({
+  test("платформенные настройки: администратор меняет адрес поддержки; директору ERP откажет", async ({
     page,
   }) => {
     await loginAndWait(page, "admin@demo.example");
     await openCompany(page, "platform");
     await expect(page.getByText(/1 USD = 12\s650,50 сум/)).toBeVisible();
-    await page.getByLabel("Ставка НДС, %").fill("15");
+    // второго поля НДС нет: расчёт читает только «Ставку НДС в новом КП»; форма шлёт один адрес поддержки
+    await expect(page.getByLabel("Ставка НДС, %")).toHaveCount(0);
+    await page.getByLabel("Адрес поддержки").fill("help@rt.uz");
     await page.getByRole("button", { name: "Сохранить настройки" }).click();
     await expect(toast(page, "Сохранено")).toBeVisible();
     await signOut(page);
 
     await loginAndWait(page, "director@demo.example");
     await openCompany(page, "platform");
-    await page.getByLabel("Ставка НДС, %").fill("13");
+    await page.getByLabel("Адрес поддержки").fill("other@rt.uz");
     await page.getByRole("button", { name: "Сохранить настройки" }).click();
   });
 });

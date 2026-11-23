@@ -119,13 +119,13 @@ describe("Органайзер · Люди", () => {
     expect(screen.queryByText("Данные появятся здесь")).toBeNull();
   });
 
-  it("таблица в рамке со своим классом заголовков; кнопок без действия («Написать», «Позвонить») нет", async () => {
+  it("таблица в рамке карточки на общем DataTable; кнопок без действия («Написать», «Позвонить») нет", async () => {
     signInAs("all@demo.example");
     renderApp("/chats/contacts");
 
     fireEvent.click(await screen.findByRole("button", { name: "Демо Клиентов" }));
     const card = await screen.findByRole("dialog", { name: "Демо Клиентов" });
     expect(within(card).queryByRole("button", { name: /Написать|Позвонить/ })).toBeNull();
-    expect(document.querySelector(".ant-card table.pf-people-table")).not.toBeNull();
+    expect(document.querySelector(".ant-card table.pf-dt-table")).not.toBeNull();
   });
 });

@@ -19,7 +19,7 @@ test.describe("ЕВ-0: быстрые правки", () => {
       await loginAndWait(page, "director@demo.example");
       await spaGoto(page, "/chats/contacts?panel=open");
       await expect(page.getByRole("heading", { level: 1, name: "Люди" })).toBeVisible();
-      const row = page.locator(".ant-card .pf-people-table tbody tr").first();
+      const row = page.locator(".ant-card .pf-dt-table tbody tr").first();
       await expect(row).toBeVisible();
       await expect(page.getByTestId("panel-toggle")).toBeHidden();
       await expect(page.getByText("Объект не выбран")).toHaveCount(0);

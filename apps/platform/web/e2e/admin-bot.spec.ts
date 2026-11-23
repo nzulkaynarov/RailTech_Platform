@@ -252,11 +252,11 @@ test.describe("Настройки бота: администратор", () => {
       page.getByRole("link", { name: "Открыть шаблон: Скидка по согласованию" }),
     ).toHaveCount(0);
 
-    await side(page)
+    // после удаления окно может закрыться само (у раздела нет карточки) — закрываем, только если оно ещё открыто
+    const close = side(page)
       .getByRole("button", { name: /Закрыть|Скрыть/ })
-      .first()
-      .click()
-      .catch(() => undefined);
+      .first();
+    if (await close.isVisible()) await close.click();
     await page.getByRole("link", { name: "Новый шаблон" }).click();
     const bad = side(page).getByRole("form", { name: "Новый шаблон" });
     await bad.getByLabel("Название").fill("Ошибка");

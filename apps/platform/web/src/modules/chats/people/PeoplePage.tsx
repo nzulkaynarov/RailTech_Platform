@@ -233,7 +233,6 @@ export function PeoplePage() {
               tableId="chats.people"
               caption={title}
               scrollLabel={title}
-              className="pf-people-table"
               columns={columns}
               rows={rows}
               rowKey={(row) => row.key}
