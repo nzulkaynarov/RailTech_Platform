@@ -10,7 +10,6 @@ const WIDTHS = [1440, 390] as const;
 const UNIVERSAL = "universal@demo.example";
 const DIRECTOR = "director@demo.example";
 const REJECTED = "ЗВ-2026-109";
-const PANEL = "#pf-context-panel";
 
 async function expectNoViolations(page: Page, context: string): Promise<void> {
   await waitForMotionEnd(page);
@@ -111,8 +110,10 @@ test.describe("D26G: жизненный цикл КП — доработка, о
       await expect(page.getByText(/Это версия/)).toHaveCount(0);
       await shot(page, "quote-v2-current");
       await expectNoViolations(page, `версия 2 ${String(width)}`);
-      if (width >= 768) {
-        const form = page.locator(PANEL).getByRole("form", { name: "Одобрение КП" });
+      {
+        // ЕД-7: форма одобрения — блок в центре карточки, на любой ширине
+        const form = page.locator(".pf-dec-center").getByRole("form", { name: "Одобрение КП" });
+        await form.scrollIntoViewIfNeeded();
         const approve = form.getByRole("button", { name: "Одобрить КП" });
         await expect(approve).toBeEnabled();
         await approve.click();

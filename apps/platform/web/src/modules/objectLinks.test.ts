@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { objectIdOf, objectLink, routeTarget } from "./objectLinks";
+import { DECISION_TABS, objectIdOf, objectLink, routeTarget } from "./objectLinks";
 
 const seg = encodeURIComponent;
 const UUID = "5f0c7a52-3b1e-4c53-9d0a-1c6a1f0e2b77";
@@ -116,5 +116,15 @@ describe("переходы: адрес и вкладка бокового окн
     });
     expect(routeTarget("/eds/drafts/%D0%9A%D0%9F-2026%2F118")?.objectId).toBe("КП-2026/118");
     expect(routeTarget("/nowhere")).toBeUndefined();
+  });
+});
+
+describe("ЕД-7: метки блока решения в ссылках совпадают с картами раздела", () => {
+  it("«Резолюция», «Одобрение», «Согласование» — метки `DecisionCenter` на карточках (форма в центре, а не вкладка окна)", () => {
+    expect(Object.fromEntries(Object.entries(DECISION_TABS).map(([k, v]) => [k, v.tab]))).toEqual({
+      "eds.inbox": "resolution",
+      "eds.drafts": "approve",
+      "eds.approvals": "agree",
+    });
   });
 });

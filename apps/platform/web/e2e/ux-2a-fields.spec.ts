@@ -101,15 +101,11 @@ test.describe("UX-2a: поля даты, файла и выбора", () => {
       await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
       await loginAndWait(page, "director@demo.example");
       await spaGoto(page, "/eds/inbox/%D0%92%D0%A5-104%2F26");
-      let form: Locator;
-      if (width === 390) {
-        await page.getByRole("button", { name: "Наложить резолюцию" }).click();
-        form = page
-          .getByRole("dialog", { name: /^Резолюция/ })
-          .getByRole("form", { name: "Резолюция директора" });
-      } else {
-        form = page.locator(PANEL).getByRole("form", { name: "Резолюция директора" });
-      }
+      // ЕД-7: форма резолюции — блок в центре карточки на любой ширине
+      const form: Locator = page
+        .locator(".pf-dec-center")
+        .getByRole("form", { name: "Резолюция директора" });
+      await form.scrollIntoViewIfNeeded();
       await expect(form).toBeVisible();
       await form.getByLabel("Текст резолюции").fill("Посчитать с запасом по складу.");
       const employee = form.getByLabel("Сотрудник: Снабженец");
