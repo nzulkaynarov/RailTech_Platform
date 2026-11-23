@@ -3,6 +3,9 @@
  * RailTech Platform — BFF API (Платформа → CRM и ERP)
  */
 
+/**
+ * `sign_ours`, `request_deviation`, `decide_deviation` — договор по утверждённому шаблону (ДОК-10): наша подпись до отправки, заявка на отступление, решение держателя «Право»
+ */
 export type ProjectContractActionInAction =
   (typeof ProjectContractActionInAction)[keyof typeof ProjectContractActionInAction];
 
@@ -12,4 +15,7 @@ export const ProjectContractActionInAction = {
   reject: "reject",
   revise: "revise",
   mark_issued: "mark_issued",
+  sign_ours: "sign_ours",
+  request_deviation: "request_deviation",
+  decide_deviation: "decide_deviation",
 } as const;

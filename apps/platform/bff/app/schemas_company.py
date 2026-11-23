@@ -493,6 +493,12 @@ class QuoteDefaults(BaseModel):
     offer_confirm_days: int
     offer_expiring_days: int
     act_reminder_hours: int
+    # ДОК-10: правила договора по шаблону («Правила работы · Продажи»)
+    contract_auto_send: bool = True
+    contract_sign_before_send: bool = True
+    contract_deviations_allowed: bool = True
+    default_client_contract_template: int | None = None
+    default_partner_contract_template: int | None = None
 
 
 class QuoteDefaultsUpdate(Patch):
@@ -505,6 +511,8 @@ class QuoteDefaultsUpdate(Patch):
             "default_offer_validity_days",
             "payment_terms_days",
             "default_warranty_months",
+            "default_client_contract_template",
+            "default_partner_contract_template",
         }
     )
 
@@ -525,6 +533,11 @@ class QuoteDefaultsUpdate(Patch):
     offer_confirm_days: int | None = Field(default=None, ge=1, le=365)
     offer_expiring_days: int | None = Field(default=None, ge=1, le=90)
     act_reminder_hours: int | None = Field(default=None, ge=1, le=720)
+    contract_auto_send: bool | None = None
+    contract_sign_before_send: bool | None = None
+    contract_deviations_allowed: bool | None = None
+    default_client_contract_template: int | None = None
+    default_partner_contract_template: int | None = None
 
 
 def to_quote_defaults(raw: Mapping[str, Any], visible_groups: Collection[str]) -> QuoteDefaults:
@@ -545,6 +558,13 @@ def to_quote_defaults(raw: Mapping[str, Any], visible_groups: Collection[str]) -
         "offer_confirm_days": whole(raw.get("offer_confirm_days"), 30),
         "offer_expiring_days": whole(raw.get("offer_expiring_days"), 14),
         "act_reminder_hours": whole(raw.get("act_reminder_hours"), 24),
+        "contract_auto_send": raw.get("contract_auto_send") is not False,
+        "contract_sign_before_send": raw.get("contract_sign_before_send") is not False,
+        "contract_deviations_allowed": raw.get("contract_deviations_allowed") is not False,
+        "default_client_contract_template": maybe_int(raw.get("default_client_contract_template")),
+        "default_partner_contract_template": maybe_int(
+            raw.get("default_partner_contract_template")
+        ),
     }
     if COST_MARGIN_GROUP in visible_groups:
         for name in MARGIN_FIELDS:

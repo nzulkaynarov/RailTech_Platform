@@ -9,6 +9,7 @@ import type { ProjectContractActionInAction } from "./projectContractActionInAct
  * Действие по договору. `reason` обязательна для `reject`, `channel` и `counterparty_person` — для `client_agreed`: пустые BFF отклоняет (422).
  */
 export interface ProjectContractActionIn {
+  /** `sign_ours`, `request_deviation`, `decide_deviation` — договор по утверждённому шаблону (ДОК-10): наша подпись до отправки, заявка на отступление, решение держателя «Право» */
   action: ProjectContractActionInAction;
   /**
    * @maxLength 1000
@@ -28,4 +29,15 @@ export interface ProjectContractActionIn {
    * @nullable
    */
   counterparty_person?: string | null;
+  /**
+   * Только `request_deviation`, обязательно: пункт и причина отступления
+   * @maxLength 4000
+   * @nullable
+   */
+  text?: string | null;
+  /**
+   * Только `decide_deviation`, обязательно: одобрить или отклонить
+   * @nullable
+   */
+  approve?: boolean | null;
 }

@@ -786,3 +786,86 @@ async def test_signing_request_created_by_erp_with_201_is_success(
     check(response, "/eds/projects/{ref}/signing", "post")
     assert response.status_code == 200, response.text
     assert len(erp.calls_to("POST", rf"{slug}/{doc_id}/request-signing/")) == 1
+
+
+# --- ДОК-10: договор по утверждённому шаблону ---------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("body", "slug", "expected"),
+    [
+        ({"action": "sign_ours"}, "sign-ours", {}),
+        (
+            {"action": "request_deviation", "text": "  Оплата 30 дней  "},
+            "request-deviation",
+            {"text": "Оплата 30 дней"},
+        ),
+        ({"action": "decide_deviation", "approve": False}, "decide-deviation", {"approve": False}),
+    ],
+)
+async def test_template_contract_actions_go_to_the_erp(
+    web: Web,
+    erp: ProjectsFake,
+    check: ContractChecker,
+    body: dict[str, Any],
+    slug: str,
+    expected: dict[str, Any],
+) -> None:
+    await _as(web, "ACCOUNTANT")
+    response = await web.send("POST", f"{BASE}/{NUMBER}/contract", json=body)
+    check(response, "/eds/projects/{ref}/contract", "post")
+    assert response.status_code == 200
+    assert erp.body("POST", rf"contracts/{CONTRACT_ID}/{slug}/") == expected
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        {"action": "request_deviation"},
+        {"action": "request_deviation", "text": "   "},
+        {"action": "decide_deviation"},
+    ],
+)
+async def test_deviation_needs_text_or_decision_before_the_erp(
+    web: Web, erp: ProjectsFake, body: dict[str, Any]
+) -> None:
+    await _as(web, "ACCOUNTANT")
+    response = await web.send("POST", f"{BASE}/{NUMBER}/contract", json=body)
+    assert response.status_code == 422
+    assert erp.posts() == []
+
+
+async def test_card_passes_the_template_block_through(
+    web: Web, erp: ProjectsFake, check: ContractChecker
+) -> None:
+    template = {
+        "id": 12,
+        "name": "Договор с клиентом · поставка",
+        "edition": 3,
+        "deviation": "none",
+        "deviation_text": "",
+        "visas_required": False,
+        "send_blocker": None,
+        "steps": [
+            {"key": "assembled", "state": "done", "at": "2026-11-21T10:00:00+05:00"},
+            {"key": "our_signature", "state": "current", "at": None},
+            {"key": "in_cabinet", "state": "next", "at": None},
+            {"key": "signed_both", "state": "next", "at": None},
+        ],
+        "actions": ["sign_ours", "request_deviation"],
+    }
+    erp.answer(
+        "GET",
+        rf"projects/{DEAL}/",
+        lambda _r: httpx.Response(200, json=card(contract=contract_card(template=template))),
+    )
+    await _as(web, "ACCOUNTANT")
+    response = await web.client.get(f"{BASE}/{NUMBER}")
+    check(response, "/eds/projects/{ref}", "get")
+    body = response.json()["contract"]["template"]
+    assert (body["name"], body["edition"], body["visas_required"]) == (
+        "Договор с клиентом · поставка",
+        3,
+        False,
+    )
+    assert [s["state"] for s in body["steps"]] == ["done", "current", "next", "next"]

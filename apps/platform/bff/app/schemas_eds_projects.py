@@ -28,7 +28,21 @@ ContractWord = Literal[
 ]
 InvoiceWord = Literal["to_issue", "issued", "partial", "paid", "overdue", "cancelled"]
 ActWord = Literal["project", "returned", "issued", "signed", "cancelled"]
-ContractAction = Literal["send_to_client", "client_agreed", "reject", "revise", "mark_issued"]
+ContractAction = Literal[
+    "send_to_client",
+    "client_agreed",
+    "reject",
+    "revise",
+    "mark_issued",
+    # ДОК-10: договор по утверждённому шаблону
+    "sign_ours",
+    "request_deviation",
+    "decide_deviation",
+]
+TemplateActionCode = Literal["sign_ours", "request_deviation", "decide_deviation"]
+DeviationState = Literal["none", "requested", "approved", "rejected"]
+ContractPathStepKey = Literal["assembled", "our_signature", "in_cabinet", "signed_both"]
+ContractPathStepState = Literal["done", "current", "next"]
 ContractActionCode = Literal[
     "send_to_client", "client_agreed", "reject", "revise", "mark_issued", "attach_scan"
 ]
@@ -143,7 +157,28 @@ class ProjectQuote(ProjectQuoteRef):
     valid_until: dt.date | None
 
 
+class ContractPathStep(BaseModel):
+    key: ContractPathStepKey
+    state: ContractPathStepState
+    at: dt.datetime | None = None
+
+
+class ProjectContractTemplate(BaseModel):
+    """Договор по утверждённому шаблону (ДОК-10): имя и редакция, отступление, путь по фактам."""
+
+    id: int | None
+    name: str
+    edition: int
+    deviation: DeviationState
+    deviation_text: str
+    visas_required: bool
+    send_blocker: str | None
+    steps: list[ContractPathStep]
+    actions: list[TemplateActionCode]
+
+
 class ProjectContract(ProjectContractRef):
+    template: ProjectContractTemplate | None = None
     total: ProjectMoney | None
     created_at: dt.datetime
     client_agreed_at: dt.datetime | None
@@ -247,9 +282,15 @@ class ContractActionIn(BaseModel):
     note: str | None = Field(default=None, max_length=500)
     channel: OnBehalfChannel | None = None
     counterparty_person: str | None = Field(default=None, max_length=200)
+    text: str | None = Field(default=None, max_length=4000, description="Отступление от шаблона")
+    approve: bool | None = Field(default=None, description="Решение по отступлению")
 
     @model_validator(mode="after")
     def _reason_for_reject(self) -> "ContractActionIn":
+        if self.action == "request_deviation" and not (self.text or "").strip():
+            raise ValueError("text")
+        if self.action == "decide_deviation" and self.approve is None:
+            raise ValueError("approve")
         if self.action == "reject" and not (self.reason or "").strip():
             raise ValueError("reason")
         if self.action == "client_agreed":

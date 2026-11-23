@@ -4,6 +4,7 @@
  */
 import type { ProjectContractActionsItem } from "./projectContractActionsItem";
 import type { ProjectContractStatus } from "./projectContractStatus";
+import type { ProjectContractTemplate } from "./projectContractTemplate";
 import type { ProjectJournalEntry } from "./projectJournalEntry";
 import type { ProjectMoney } from "./projectMoney";
 
@@ -28,5 +29,7 @@ export interface ProjectContract {
   has_scan: boolean;
   /** Что можно сделать СЕЙЧАС этому сотруднику (допустимо из статуса и разрешено правами ERP); считает ERP, SPA не угадывает */
   actions: ProjectContractActionsItem[];
+  /** ДОК-10: договор собран из утверждённого шаблона — название и редакция, отступление, путь по фактам; null — договор прежним путём */
+  template?: ProjectContractTemplate | null;
   history: ProjectJournalEntry[];
 }

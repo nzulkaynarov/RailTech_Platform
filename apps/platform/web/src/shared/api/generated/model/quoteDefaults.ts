@@ -81,4 +81,20 @@ export interface QuoteDefaults {
    * @maximum 720
    */
   act_reminder_hours: number;
+  /** ДОК-10: договор по утверждённому шаблону без отступлений после принятия КП сам уходит в Кабинет (по умолчанию да) */
+  contract_auto_send?: boolean;
+  /** ДОК-10: наша подпись до отправки клиенту (по умолчанию да) */
+  contract_sign_before_send?: boolean;
+  /** ДОК-10: «Запросить отступление» от шаблона доступно (по умолчанию да) */
+  contract_deviations_allowed?: boolean;
+  /**
+   * ДОК-10: шаблон договора по умолчанию для клиента — только утверждённый
+   * @nullable
+   */
+  default_client_contract_template?: number | null;
+  /**
+   * ДОК-10: шаблон договора по умолчанию для партнёра — только утверждённый
+   * @nullable
+   */
+  default_partner_contract_template?: number | null;
 }

@@ -24,6 +24,7 @@ from app.api import (
     chats,
     company_articles,
     consoles,
+    contract_templates,
     crm_clients,
     crm_kb,
     crm_leads,
@@ -138,6 +139,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(admin_integrations.router, prefix=API_PREFIX)
     app.include_router(consoles.router, prefix=API_PREFIX)
     app.include_router(admin_company.router, prefix=API_PREFIX)
+    app.include_router(contract_templates.router, prefix=API_PREFIX)
     app.include_router(admin_legal.router, prefix=API_PREFIX)
     app.include_router(admin_bus.router, prefix=API_PREFIX)
     app.include_router(admin_bot.router, prefix=API_PREFIX)
