@@ -30,6 +30,7 @@ import {
 } from "./fixtures/leads";
 import { buildMe, currentActor, readSession } from "./mockSession";
 import { initialsOf } from "./profileStore";
+import { markOf } from "./doNotWorkMarks";
 
 /**
  * Моки «Клиенты · Лиды, Клиенты и „Создать заявку“» (D1-2b). Права — как в BFF: лиды — `crm.leads`, клиенты и
@@ -206,7 +207,13 @@ export const crmLeadsHandlers = [
     const denied = guard("crm.leads", "read");
     if (denied) return denied;
     const lead = findLead(readLeads(), String(params["lead"]));
-    return lead ? HttpResponse.json(lead.card) : leadNotFound();
+    if (!lead) return leadNotFound();
+    const client = lead.card.client;
+    return HttpResponse.json(
+      client
+        ? { ...lead.card, client: { ...client, do_not_work: markOf(String(1000 + client.id)) } }
+        : lead.card,
+    );
   }),
 
   http.get("*/api/v1/crm/clients", ({ request }) => {
@@ -215,7 +222,7 @@ export const crmLeadsHandlers = [
     const q = (new URL(request.url).searchParams.get("q") ?? "").trim().toLowerCase();
     const items = readLeads()
       .clients.filter((c) => !q || c.name.toLowerCase().includes(q) || (c.inn ?? "").includes(q))
-      .map(clientRow);
+      .map((c) => ({ ...clientRow(c), do_not_work: markOf(String(1000 + c.id)) !== null }));
     return HttpResponse.json({ items });
   }),
 
@@ -223,7 +230,9 @@ export const crmLeadsHandlers = [
     const denied = guard("crm.clients", "read");
     if (denied) return denied;
     const client = readLeads().clients.find((c) => c.id === Number(params["id"]));
-    return client ? HttpResponse.json(client) : clientNotFound();
+    return client
+      ? HttpResponse.json({ ...client, do_not_work: markOf(String(1000 + client.id)) })
+      : clientNotFound();
   }),
 
   http.post("*/api/v1/crm/clients/:id/invitation", async ({ request, params }) => {

@@ -1,7 +1,8 @@
 """Клиенты, документы, привязка Telegram, сервисные запросы (PLAN Фаза 6, SPEC §10.1)."""
 
-from datetime import date
+from datetime import date, datetime
 from typing import Annotated
+from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, File, Form, Query, UploadFile, status
 from fastapi.responses import Response
@@ -9,6 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import ContainerDep, require
+from app.container import Container
 from app.domain.errors import NotFoundError
 from app.models.clients import Client, Document, DocumentAccessLog, ServiceRequest
 from app.models.leads import Lead, TelegramIdentity
@@ -28,6 +30,7 @@ from app.schemas.clients import (
     DocType,
     DocumentOut,
     DocumentUpdate,
+    DoNotWorkOut,
     IdentityOut,
     LeadBrief,
     LinkTelegram,
@@ -54,8 +57,17 @@ DocReader = Annotated[Principal, Depends(require("documents", "read"))]
 DocWriter = Annotated[Principal, Depends(require("documents", "write"))]
 
 
-def _client_out(c: Client) -> ClientOut:
-    return ClientOut.model_validate(c, from_attributes=True)
+def _client_out(c: Client, today: date) -> ClientOut:
+    out = ClientOut.model_validate(c, from_attributes=True)
+    mark = c.do_not_work_on(today)
+    out.do_not_work = DoNotWorkOut(**mark) if mark is not None else None
+    return out
+
+
+async def _today(container: Container) -> date:
+    """«Сегодня» по часовому поясу из настроек (`business_hours.timezone`), как расходы и бюджет."""
+    tz = (await container.settings_service.get()).business_hours.timezone
+    return datetime.now(ZoneInfo(tz)).date()
 
 
 @router.get("/clients", response_model=list[ClientListItem])
@@ -64,8 +76,11 @@ async def list_clients(
 ) -> list[ClientListItem]:
     async with container.session_factory() as session:
         rows = await clients_repo.list_with_stats(session, q, 500)
+    today = await _today(container)
     return [
-        ClientListItem(**_client_out(c).model_dump(), open_deals=deals, last_activity_at=last)
+        ClientListItem(
+            **_client_out(c, today).model_dump(), open_deals=deals, last_activity_at=last
+        )
         for c, deals, last in rows
     ]
 
@@ -98,7 +113,7 @@ async def get_client(client_id: int, _: ClientReader, container: ContainerDep) -
         invitation = await container.portal_invites.current(session, client_id)
         partner_requests = await container.partner_clients.pending_of(session, client_id)
     return ClientDetail(
-        **_client_out(client).model_dump(),
+        **_client_out(client, await _today(container)).model_dump(),
         partner_requests=[
             PartnerRequestOut(
                 id=r.id,

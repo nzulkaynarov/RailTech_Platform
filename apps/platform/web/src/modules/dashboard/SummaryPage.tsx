@@ -14,7 +14,6 @@ import { objectLink } from "../objectLinks";
 import "./summary.css";
 
 const DUE_ORDER: readonly DueLabel[] = ["overdue", "today", "tomorrow", "later"];
-const PENDING_BLOCKS = ["requests", "profit", "targets"] as const;
 const STUCK_LIMIT = 5;
 
 function countByDue(items: readonly QueueItem[]) {
@@ -24,7 +23,7 @@ function countByDue(items: readonly QueueItem[]) {
   }));
 }
 
-/** Главная · Сводка: счётчики и сроки из очереди; блоки без источника данных показывают свою раскладку. */
+/** Главная · Сводка: счётчики и сроки из очереди; блоков без данных нет (ЕВ-3а). */
 export function SummaryPage() {
   const { t } = useTranslation(["modules"]);
   const { me } = useAuth();
@@ -99,15 +98,6 @@ export function SummaryPage() {
             </ul>
           )}
         </Card>
-        {PENDING_BLOCKS.map((block) => (
-          <Card
-            key={block}
-            title={t(`modules:dashboard.summary.blocks.${block}`)}
-            className="pf-summary-pending"
-          >
-            <p className="pf-hint">{t("modules:dashboard.summary.noData")}</p>
-          </Card>
-        ))}
       </div>
     </div>
   );

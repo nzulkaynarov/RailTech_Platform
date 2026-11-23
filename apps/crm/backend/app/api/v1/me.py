@@ -2,7 +2,7 @@
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Header, Request
 
 from app.api.avatar_upload import read_avatar
 from app.api.deps import ContainerDep, PrincipalDep, get_rbac
@@ -23,6 +23,7 @@ from app.schemas.auth import (
     SecondFactorSetupRequest,
     SecondFactorSetupResponse,
     SecondFactorStatusResponse,
+    StepUpResponse,
     TelegramLinkOut,
 )
 from app.schemas.leads import ActionResult
@@ -224,6 +225,7 @@ async def second_factor_status(
         enabled=found.enabled,
         enabled_at=found.enabled_at,
         backup_codes_left=found.backup_codes_left,
+        required=found.required,
     )
 
 
@@ -253,7 +255,8 @@ async def second_factor_enable(
 async def second_factor_disable(
     body: SecondFactorCodeRequest, principal: Settled, container: ContainerDep
 ) -> None:
-    """Выключить — кодом из приложения или резервным."""
+    """Выключить — кодом из приложения или резервным; код в теле и есть «свежий код» (ДВ-4б).
+    Держателю разделов с деньгами и доступом отключить нельзя: 409 `second_factor_required`."""
     await container.second_factor_service.disable(principal.actor, principal.user_id, body.code)
 
 
@@ -263,3 +266,28 @@ async def calendar_link_issue(principal: Settled, container: ContainerDep) -> Ca
     перестаёт действовать. Ссылку из токена собирает Платформа."""
     issued = await container.calendar_link_service.issue(principal.actor, principal.user_id)
     return CalendarLinkOut(token=issued.token, issued_at=issued.issued_at)
+
+
+@router.post("/second-factor/step-up", response_model=StepUpResponse)
+async def second_factor_step_up(
+    body: SecondFactorCodeRequest, principal: Settled, container: ContainerDep
+) -> StepUpResponse:
+    """«Свежий код» (ДВ-4б): верный код приложения или резервный — токен на 5 минут. Его фронт
+    шлёт заголовком `X-Step-Up-Token` на чувствительных действиях (выдача роли, подтверждение
+    новых банковских реквизитов). Фактор не настроен — 403 `step_up_required`,
+    `reason = second_factor_not_enrolled`."""
+    issued = await container.second_factor_service.step_up(
+        principal.actor, principal.user_id, body.code
+    )
+    return StepUpResponse(token=issued.token, expires_in=issued.expires_in)
+
+
+@router.post("/second-factor/step-up/check", status_code=204)
+async def second_factor_step_up_check(
+    principal: Settled,
+    container: ContainerDep,
+    x_step_up_token: Annotated[str | None, Header()] = None,
+) -> None:
+    """Проверка токена «свежего кода» для BFF перед действием в другой системе (подтверждение
+    банковских реквизитов в ERP): 204 или 403 `step_up_required`."""
+    await container.second_factor_service.require_step_up(principal.user_id, x_step_up_token)

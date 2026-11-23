@@ -27,7 +27,7 @@ from app.schemas.documents import (
     LetterheadOut,
     SignerChangeIn,
 )
-from app.schemas.pagination import Cursor, Limit
+from app.schemas.pagination import Cursor, Limit, Sort
 from app.schemas.registry import RegistryStage
 from app.security.permissions import EdsPermission as P
 from app.services import documents, documents_read, idempotency, letter_mail, letterhead, payments, renders
@@ -62,9 +62,10 @@ async def list_documents(
     stage: RegistryStage | None = None,
     cursor: Cursor = None,
     limit: Limit = 50,
+    sort: Sort = None,
 ) -> DocumentPage:
     return await documents_read.list_page(
-        session, employee, kinds=kind, statuses=status, mine=mine, cursor=cursor, limit=limit, stage=stage
+        session, employee, kinds=kind, statuses=status, mine=mine, cursor=cursor, limit=limit, stage=stage, sort=sort
     )
 
 

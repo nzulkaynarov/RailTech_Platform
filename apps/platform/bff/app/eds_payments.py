@@ -597,9 +597,17 @@ async def memos_to_pay_count(proxy: EdsProxy) -> int | None:
 
 
 async def build_board(
-    authed: Authed, *, tab: InvoiceTab, q: str | None, limit: int, offset: int
+    authed: Authed,
+    *,
+    tab: InvoiceTab,
+    q: str | None,
+    limit: int,
+    offset: int,
+    sort: str | None = None,
 ) -> PaymentBoard:
     params: dict[str, Any] = {"tab": tab, "limit": limit, "offset": offset}
+    if sort:
+        params["ordering"] = sort  # то же имя и знак `-`: белый список ERP повторяет этот
     if q:
         params["q"] = q
     erp_raw, memos = await asyncio.gather(

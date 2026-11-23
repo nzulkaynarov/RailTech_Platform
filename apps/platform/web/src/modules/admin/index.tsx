@@ -1,5 +1,5 @@
 import type { ComponentType } from "react";
-import { Navigate, useLocation } from "react-router";
+import { useLocation } from "react-router";
 
 import { RequireAccess } from "../../app/RequireAccess";
 import { ModuleRoutes } from "../ModuleRoutes";
@@ -11,9 +11,9 @@ import { CompanyPage } from "./company/CompanyPage";
 import { IntegrationsPage } from "./integrations/IntegrationsPage";
 import { LegalPage } from "./legal/LegalPage";
 import { OrgPage } from "./org/OrgPage";
-import { legacySettingsPath } from "./redirects";
 import { RolesPage } from "./roles/RolesPage";
 import { SigningPage } from "./signing/SigningPage";
+import { ZonesPage } from "./zones/ZonesPage";
 import { DictionariesPage } from "./settings/DictionariesPage";
 import {
   AiSpendPage,
@@ -38,6 +38,7 @@ const PAGES: Readonly<Record<string, ComponentType>> = {
   overview: SettingsHome,
   roles: RolesPage,
   signing: SigningPage,
+  zones: ZonesPage,
   company: CompanyPage,
   numbering: NumberingPage,
   taxes: TaxesPage,
@@ -66,8 +67,6 @@ const PAGES: Readonly<Record<string, ComponentType>> = {
  */
 export function Component() {
   const location = useLocation();
-  const legacy = legacySettingsPath(location.pathname, location.search);
-  if (legacy) return <Navigate to={legacy} replace />;
   const match = matchSection(location.pathname, location.search);
   if (match?.module.code !== "admin") return <ModuleRoutes />;
   const { section, objectId } = match;

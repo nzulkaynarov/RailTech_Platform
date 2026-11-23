@@ -8689,11 +8689,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorDetail'
         '409':
-          description: 'CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот'
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorDetail'
+                $ref: '#/components/schemas/ContractConflict'
+          description: 'CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот; CONTRACT_VISAS_REQUIRED (Х-1):
+            отправка договора клиенту до сбора виз — в теле `reason` (причина словами) и `missing` (роли без визы)'
         '401':
           $ref: '#/components/responses/UnauthorizedResponse'
   /api/v1/crm/acts/{id}/cancel/:
@@ -8870,11 +8871,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorDetail'
         '409':
-          description: 'CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот'
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorDetail'
+                $ref: '#/components/schemas/ContractConflict'
+          description: 'CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот; CONTRACT_VISAS_REQUIRED (Х-1):
+            отправка договора клиенту до сбора виз — в теле `reason` (причина словами) и `missing` (роли без визы)'
         '401':
           $ref: '#/components/responses/UnauthorizedResponse'
   /api/v1/crm/acts/{id}/reissue/:
@@ -9733,11 +9735,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorDetail'
         '409':
-          description: 'CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот'
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorDetail'
+                $ref: '#/components/schemas/ContractConflict'
+          description: 'CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот; CONTRACT_VISAS_REQUIRED (Х-1):
+            отправка договора клиенту до сбора виз — в теле `reason` (причина словами) и `missing` (роли без визы)'
         '401':
           $ref: '#/components/responses/UnauthorizedResponse'
   /api/v1/crm/contracts/{id}/cancel/:
@@ -9836,11 +9839,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorDetail'
         '409':
-          description: 'CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот'
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorDetail'
+                $ref: '#/components/schemas/ContractConflict'
+          description: 'CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот; CONTRACT_VISAS_REQUIRED (Х-1):
+            отправка договора клиенту до сбора виз — в теле `reason` (причина словами) и `missing` (роли без визы)'
         '401':
           $ref: '#/components/responses/UnauthorizedResponse'
   /api/v1/crm/contracts/{id}/download-pdf/:
@@ -10000,11 +10004,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorDetail'
         '409':
-          description: 'CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот'
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorDetail'
+                $ref: '#/components/schemas/ContractConflict'
+          description: 'CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот; CONTRACT_VISAS_REQUIRED (Х-1):
+            отправка договора клиенту до сбора виз — в теле `reason` (причина словами) и `missing` (роли без визы)'
         '401':
           $ref: '#/components/responses/UnauthorizedResponse'
   /api/v1/crm/contracts/{id}/reject/:
@@ -10060,11 +10065,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorDetail'
         '409':
-          description: 'CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот'
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorDetail'
+                $ref: '#/components/schemas/ContractConflict'
+          description: 'CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот; CONTRACT_VISAS_REQUIRED (Х-1):
+            отправка договора клиенту до сбора виз — в теле `reason` (причина словами) и `missing` (роли без визы)'
         '401':
           $ref: '#/components/responses/UnauthorizedResponse'
   /api/v1/crm/contracts/{id}/request-signing/:
@@ -10162,11 +10168,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorDetail'
         '409':
-          description: 'CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот'
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorDetail'
+                $ref: '#/components/schemas/ContractConflict'
+          description: 'CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот; CONTRACT_VISAS_REQUIRED (Х-1):
+            отправка договора клиенту до сбора виз — в теле `reason` (причина словами) и `missing` (роли без визы)'
         '401':
           $ref: '#/components/responses/UnauthorizedResponse'
   /api/v1/crm/contracts/{id}/select-wording/:
@@ -10265,11 +10272,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorDetail'
         '409':
-          description: 'CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот'
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorDetail'
+                $ref: '#/components/schemas/ContractConflict'
+          description: 'CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот; CONTRACT_VISAS_REQUIRED (Х-1):
+            отправка договора клиенту до сбора виз — в теле `reason` (причина словами) и `missing` (роли без визы)'
         '401':
           $ref: '#/components/responses/UnauthorizedResponse'
   /api/v1/crm/contracts/{id}/sign-manager/:
@@ -15924,6 +15932,13 @@ paths:
           type: integer
         description: Сколько строк пропустить.
       - in: query
+        name: ordering
+        schema:
+          type: string
+        description: 'Порядок: `number`, `client`, `amount`, `issued`, `due`, `status`; `-` в начале — по убыванию. Другое
+          поле игнорируется (порядок вкладки); пустые значения — в конце, равные — по id. `number` — строковый порядок: у
+          счёта нет сохранённого порядкового номера.'
+      - in: query
         name: q
         schema:
           type: string
@@ -17887,6 +17902,101 @@ paths:
                 $ref: '#/components/schemas/ErrorDetail'
         '409':
           description: 'Отказ проверки: код в `detail` или ошибки полей.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+  /api/v1/parties/organizations/{id}/do-not-work/:
+    post:
+      operationId: parties_organizations_do_not_work_set
+      description: 'Х-8. Отметить «Не работать»: причина обязательна (400 `REASON_REQUIRED`), дата окончания по желанию (в
+        прошлом — 400 `UNTIL_PAST`); повторная отметка заменяет прежнюю. Право `deal.manage` или `supply.manage`. Новые КП,
+        договор, заказ поставщику и заявка у такой компании отказываются 409 `COMPANY_DO_NOT_WORK` с причиной и тем, кто отметил;
+        приглашения её контактов в кабинет не уходят; документы в работе не отменяются, кабинет читает как прежде. Действие
+        пишется в журнал, CRM получает отметку в снимке `company.updated`. Ответ — карточка контрагента.'
+      summary: Mark a counterparty «do not work»
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^\d+$
+        required: true
+      tags:
+      - Parties
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeskDoNotWorkInRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DeskDoNotWorkInRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DeskDoNotWorkInRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeskCounterparty'
+          description: ''
+        '400':
+          description: 'Отказ проверки: код в `detail` или ошибки полей.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+        '403':
+          description: Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '404':
+          description: Объекта нет.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+    delete:
+      operationId: parties_organizations_do_not_work_clear
+      description: Х-8. Снять отметку «Не работать»; отметки нет — ничего не меняется (повтор безопасен). Тот же доступ.
+      summary: Remove the «do not work» mark
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^\d+$
+        required: true
+      tags:
+      - Parties
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeskCounterparty'
+          description: ''
+        '403':
+          description: Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '404':
+          description: Объекта нет.
           content:
             application/json:
               schema:
@@ -24376,6 +24486,14 @@ components:
           minimum: 1
           title: Порог публикации (%)
           description: Минимальная полнота карточки, при которой её можно опубликовать.
+        catalog_require_mxik:
+          type: boolean
+          title: МХИК обязателен для публикации
+          description: 'Карточку без кода МХИК (ИКПУ) опубликовать нельзя: он нужен в счёте-фактуре.'
+        catalog_require_hs_imported:
+          type: boolean
+          title: ТН ВЭД обязателен для ввозимого товара
+          description: Товар не из Узбекистана (или страна не указана) без кода ТН ВЭД опубликовать нельзя.
         fx_rate_max_age_days:
           type: integer
           maximum: 90
@@ -24804,6 +24922,19 @@ components:
         sent_to_client:
           type: boolean
           description: Проект ушёл клиенту на согласование и виден ему в портале
+        send_blocker_code:
+          nullable: true
+          description: |-
+            Х-1: пока проект не ушёл клиенту — код причины, по которой его нельзя отправить (визы маршрута подписи); `null` — ничего не мешает. Слова и роли — `send_blocker` карточки
+
+            * `visas_not_requested` - visas_not_requested
+            * `visas_declined` - visas_declined
+            * `visas_pending` - visas_pending
+            * `visas_returned` - visas_returned
+            * `no_visa_holder` - no_visa_holder
+          oneOf:
+          - $ref: '#/components/schemas/ContractSendBlockerCodeEnum'
+          - $ref: '#/components/schemas/NullEnum'
         total:
           allOf:
           - $ref: '#/components/schemas/ProjectMoney'
@@ -24828,6 +24959,12 @@ components:
           items:
             $ref: '#/components/schemas/ContractCardActionsEnum'
           description: 'Что можно сделать СЕЙЧАС этому сотруднику: допустимо из статуса и разрешено правами роли'
+        send_blocker:
+          allOf:
+          - $ref: '#/components/schemas/ContractSendBlocker'
+          nullable: true
+          description: 'Х-1: пока проект не ушёл клиенту — что мешает его отправить; `null` — ничего (действие `send_to_client`
+            в `actions`)'
         history:
           type: array
           items:
@@ -24861,6 +24998,24 @@ components:
         * `revise` - revise
         * `mark_issued` - mark_issued
         * `attach_scan` - attach_scan
+    ContractConflict:
+      type: object
+      description: 'Тело 409 действий по договору и акту: код; при `CONTRACT_VISAS_REQUIRED` (Х-1) ещё причина словами и роли
+        без визы.'
+      properties:
+        detail:
+          type: string
+          description: Код отказа
+        reason:
+          type: string
+          description: 'Причина словами («Нужны визы: бухгалтер, юрист»)'
+        missing:
+          type: array
+          items:
+            type: string
+          description: Роли без визы словами в нижнем регистре
+      required:
+      - detail
     ContractFlow:
       type: object
       description: |-
@@ -25007,6 +25162,19 @@ components:
         sent_to_client:
           type: boolean
           description: Проект ушёл клиенту на согласование и виден ему в портале
+        send_blocker_code:
+          nullable: true
+          description: |-
+            Х-1: пока проект не ушёл клиенту — код причины, по которой его нельзя отправить (визы маршрута подписи); `null` — ничего не мешает. Слова и роли — `send_blocker` карточки
+
+            * `visas_not_requested` - visas_not_requested
+            * `visas_declined` - visas_declined
+            * `visas_pending` - visas_pending
+            * `visas_returned` - visas_returned
+            * `no_visa_holder` - no_visa_holder
+          oneOf:
+          - $ref: '#/components/schemas/ContractSendBlockerCodeEnum'
+          - $ref: '#/components/schemas/NullEnum'
       required:
       - id
       - number
@@ -25054,6 +25222,60 @@ components:
           type: string
       required:
       - file
+    ContractSendBlocker:
+      type: object
+      description: 'Х-1: почему проект договора нельзя отправить клиенту — визы маршрута подписи не собраны (ADR-0025).'
+      properties:
+        code:
+          allOf:
+          - $ref: '#/components/schemas/ContractSendBlockerCodeEnum'
+          description: |-
+            visas_not_requested — договор ещё не на визах; visas_declined — EDS не принял договор на визы (причина в remark); visas_pending — не все визы поставлены; visas_returned — виза возвращена с замечанием; no_visa_holder — в компании нет держателя нужного права
+
+            * `visas_not_requested` - visas_not_requested
+            * `visas_declined` - visas_declined
+            * `visas_pending` - visas_pending
+            * `visas_returned` - visas_returned
+            * `no_visa_holder` - no_visa_holder
+        message:
+          type: string
+          description: 'Причина словами для сотрудника («Нужны визы: бухгалтер, юрист»)'
+        missing:
+          type: array
+          items:
+            type: string
+          description: Роли, чьих виз не хватает, словами в нижнем регистре
+        missing_permissions:
+          type: array
+          items:
+            type: string
+          description: 'Те же визы кодами прав маршрута (`approvals.visa_finance`): Платформа переводит их на язык сотрудника'
+        remark:
+          type: string
+          description: Замечание визирующего или причина отказа EDS, как написаны; пусто — нет
+        settings_link:
+          type: boolean
+          description: 'Нужной роли нет ни у одного сотрудника: назначить её можно в настройках (ссылка без тупика)'
+      required:
+      - code
+      - message
+      - missing
+      - remark
+      - settings_link
+    ContractSendBlockerCodeEnum:
+      enum:
+      - visas_not_requested
+      - visas_declined
+      - visas_pending
+      - visas_returned
+      - no_visa_holder
+      type: string
+      description: |-
+        * `visas_not_requested` - visas_not_requested
+        * `visas_declined` - visas_declined
+        * `visas_pending` - visas_pending
+        * `visas_returned` - visas_returned
+        * `no_visa_holder` - no_visa_holder
     ContractTransitionInRequest:
       type: object
       properties:
@@ -26132,12 +26354,18 @@ components:
           items:
             $ref: '#/components/schemas/DeskRef'
           description: Бренды, которые выпускает компания (справочник «Бренды»)
+        do_not_work:
+          allOf:
+          - $ref: '#/components/schemas/DoNotWorkFacts'
+          nullable: true
+          description: 'Отметка «Не работать» (Х-8): причина, кто и когда поставил, срок; `null` — с компанией работаем'
       required:
       - accounts_masked
       - bank_accounts
       - brands
       - country
       - crm_client_id
+      - do_not_work
       - id
       - inn
       - legal_address
@@ -26266,6 +26494,20 @@ components:
       required:
       - amount
       - currency
+    DeskDoNotWorkInRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+          description: Причина — обязательный текст (пустая — 400 `REASON_REQUIRED`)
+          maxLength: 1000
+        until:
+          type: string
+          format: date
+          nullable: true
+          description: Необязательная дата окончания
+      required:
+      - reason
     DeskDocumentKind:
       type: object
       properties:
@@ -27058,6 +27300,9 @@ components:
         group:
           type: string
           description: Группа или класс классификатора
+        path:
+          type: string
+          description: Путь по классификатору «группа › класс › позиция», без самого названия
       required:
       - code
       - group
@@ -28327,6 +28572,9 @@ components:
           type: string
           format: date
           nullable: true
+        do_not_work:
+          type: boolean
+          description: 'С поставщиком не работаем: действует отметка «Не работать» (Х-8).'
         contact_person:
           type: string
         phone:
@@ -28359,6 +28607,7 @@ components:
       - country
       - country_id
       - currency
+      - do_not_work
       - email
       - expired_count
       - expiring_count
@@ -28456,10 +28705,14 @@ components:
           type: string
           format: date
           nullable: true
+        do_not_work:
+          type: boolean
+          description: 'С поставщиком не работаем: действует отметка «Не работать» (Х-8).'
       required:
       - country
       - country_id
       - currency
+      - do_not_work
       - expired_count
       - expiring_count
       - id
@@ -28810,6 +29063,29 @@ components:
         * `ITEM` - Позиция
         * `SECTION` - Раздел
         * `NOTE` - Заметка
+    DoNotWorkFacts:
+      type: object
+      description: 'Факты отметки «Не работать» в ответах API: карточка контрагента, карточка проекта.'
+      properties:
+        reason:
+          type: string
+        set_by:
+          type: string
+          nullable: true
+          description: Кто поставил отметку (имя сотрудника)
+        set_at:
+          type: string
+          format: date-time
+        until:
+          type: string
+          format: date
+          nullable: true
+          description: До какой даты действует; `null` — без срока
+      required:
+      - reason
+      - set_at
+      - set_by
+      - until
     DocTypeEnum:
       enum:
       - KP
@@ -32952,6 +33228,14 @@ components:
           minimum: 1
           title: Порог публикации (%)
           description: Минимальная полнота карточки, при которой её можно опубликовать.
+        catalog_require_mxik:
+          type: boolean
+          title: МХИК обязателен для публикации
+          description: 'Карточку без кода МХИК (ИКПУ) опубликовать нельзя: он нужен в счёте-фактуре.'
+        catalog_require_hs_imported:
+          type: boolean
+          title: ТН ВЭД обязателен для ввозимого товара
+          description: Товар не из Узбекистана (или страна не указана) без кода ТН ВЭД опубликовать нельзя.
         fx_rate_max_age_days:
           type: integer
           maximum: 90
@@ -35556,6 +35840,11 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ProjectJournalEntry'
+        do_not_work:
+          allOf:
+          - $ref: '#/components/schemas/DoNotWorkFacts'
+          nullable: true
+          description: 'Х-8: у компании проекта отметка «Не работать» — полоса в карточке; документы в работе не отменяются'
       required:
       - act
       - act_blocker
@@ -35567,6 +35856,7 @@ components:
       - created_at
       - deal_id
       - delivery_lines
+      - do_not_work
       - documents
       - due_date
       - fulfillment

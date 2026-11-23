@@ -4,11 +4,13 @@ import type {
   CounterpartyCard,
   CounterpartyRequisitesIn,
   CounterpartyRoleIn,
+  DoNotWorkIn,
 } from "../shared/api/generated/model";
+import { clearMark, markOf, setMark } from "./doNotWorkMarks";
 import { failure } from "./adminUsers";
 import { readErpCatalog } from "./fixtures/erpCatalog";
 import { readLeads } from "./fixtures/leads";
-import { buildMe, readSession } from "./mockSession";
+import { buildMe, currentActor, readSession } from "./mockSession";
 
 /**
  * Карточка контрагента на моках (ADR-0028, СУЩ-2.5): компания ERP — поставщик каталога (id поставщика) или клиент CRM,
@@ -125,7 +127,7 @@ function guard(write = false) {
 
 function cardOf(id: string): CounterpartyCard | null {
   const card = baseCardOf(id);
-  return card ? { ...card, ...requisites.get(id) } : null;
+  return card ? { ...card, ...requisites.get(id), do_not_work: markOf(id) } : null;
 }
 
 export const counterpartyHandlers = [
@@ -152,6 +154,36 @@ export const counterpartyHandlers = [
       patch.registration_number = body.registration_number;
     if (body.legal_address !== undefined) patch.legal_address = body.legal_address;
     requisites.set(id, { ...requisites.get(id), ...patch });
+    return HttpResponse.json(cardOf(id));
+  }),
+  // Х-8: «Не работать» ставит и снимает тот, кто правит реквизиты (раздел клиентов или каталога — полный)
+  http.post("*/people/counterparties/:id/do-not-work", async ({ params, request }) => {
+    const denied = guard();
+    if (denied) return denied;
+    if (level("crm.clients") !== "full" && level("erp.stock") !== "full") {
+      return failure(403, "FORBIDDEN", "Раздел или действие не положены вашей роли.", "bff");
+    }
+    const id = String(params["id"]);
+    const card = cardOf(id);
+    if (!card) return notFound();
+    const body = (await request.json()) as DoNotWorkIn;
+    setMark(id, card.name, {
+      reason: body.reason.trim(),
+      set_by: currentActor()?.name ?? null,
+      set_at: new Date().toISOString(),
+      until: body.until ?? null,
+    });
+    return HttpResponse.json(cardOf(id));
+  }),
+  http.delete("*/people/counterparties/:id/do-not-work", ({ params }) => {
+    const denied = guard();
+    if (denied) return denied;
+    if (level("crm.clients") !== "full" && level("erp.stock") !== "full") {
+      return failure(403, "FORBIDDEN", "Раздел или действие не положены вашей роли.", "bff");
+    }
+    const id = String(params["id"]);
+    if (!cardOf(id)) return notFound();
+    clearMark(id);
     return HttpResponse.json(cardOf(id));
   }),
   http.get("*/people/clients/:id/counterparty", ({ params }) => {

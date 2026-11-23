@@ -236,6 +236,10 @@ class Company(BaseModel):
     """
     Когда ERP изменила реквизиты — порядок снимков
     """
+    do_not_work: DoNotWork | None = None
+    """
+    Отметка «Не работать» (план Х-8): факты, а не флаг. null — отметки нет или она снята. Поле необязательное: снимок без него отметку не меняет (старый издатель). Срок CRM сверяет сам — отметка действует, пока until пуст или не раньше сегодняшнего дня.
+    """
 
 
 class CompanyUpdatedV1(BaseModel):
@@ -721,6 +725,32 @@ class DeliveryStatusChangedV1(BaseModel):
     telegram_muted_user_ids: list[int] | None = None
     """
     Telegram-аккаунты контактов, отключивших эту группу уведомлений в кабинете: бот CRM им не пишет (FX-9). Нет поля — ограничений нет.
+    """
+
+
+class DoNotWork(BaseModel):
+    """
+    Отметка «Не работать» (план Х-8): факты, а не флаг. null — отметки нет или она снята. Поле необязательное: снимок без него отметку не меняет (старый издатель). Срок CRM сверяет сам — отметка действует, пока until пуст или не раньше сегодняшнего дня.
+    """
+
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    reason: Annotated[str, Field(max_length=1000, min_length=1)]
+    """
+    Причина — текст для коллег
+    """
+    set_by: Annotated[str | None, Field(max_length=255)]
+    """
+    Кто поставил отметку (имя сотрудника ERP); null — сотрудник удалён
+    """
+    set_at: AwareDatetime
+    """
+    Когда поставлена
+    """
+    until: date | None
+    """
+    До какой даты действует; null — без срока
     """
 
 

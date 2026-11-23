@@ -182,14 +182,9 @@ RESOURCE_BACKENDS: Final[dict[str, tuple[str, ...]]] = {
 MENU: Final[dict[ModuleCode, dict[str, tuple[str, ...]]]] = {
     "dashboard": {
         "queue": ("dashboard.queue",),
-        "projects": ("eds.projects",),
         "summary": ("dashboard.summary",),
     },
     "crm": {
-        "messages": (
-            "crm.leads",
-            "crm.leads.triage",
-        ),
         "leads": (
             "crm.leads",
             "crm.leads.triage",
@@ -198,8 +193,6 @@ MENU: Final[dict[ModuleCode, dict[str, tuple[str, ...]]]] = {
             "crm.clients",
             "erp.stock",
         ),
-        "requests": ("crm.clients",),
-        "channels": ("crm.leads",),
         "kb": ("crm.leads",),
     },
     "eds": {
@@ -221,7 +214,6 @@ MENU: Final[dict[ModuleCode, dict[str, tuple[str, ...]]]] = {
             "crm.leads",
             "crm.mail",
         ),
-        "outbox": ("eds.drafts",),
         "projects": ("eds.projects",),
         "drafts": ("eds.drafts",),
         "approvals": (
@@ -242,14 +234,13 @@ MENU: Final[dict[ModuleCode, dict[str, tuple[str, ...]]]] = {
             "chats.internal",
             "chats.external",
         ),
-        "internal": ("chats.internal",),
-        "external": ("chats.external",),
         "contacts": ("chats.internal",),
     },
     "admin": {
         "overview": ("admin",),
         "org": ("admin",),
         "roles": ("admin",),
+        "zones": ("admin",),
         "signing": ("eds.signing.manage",),
         "company": ("company.settings",),
         "numbering": ("company.settings",),

@@ -215,7 +215,8 @@ def _set(deal: Deal, status: str, error: str | None) -> None:
 
 
 def _code(exc: BaseException) -> str:
-    reason = exc.details.get("reason") if isinstance(exc, DomainError) else None
+    details = exc.details if isinstance(exc, DomainError) else {}
+    reason = details.get("reason") or details.get("failure_code")
     return str(reason) if reason else type(exc).__name__
 
 

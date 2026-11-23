@@ -206,5 +206,11 @@
       "placeholder": "Person from the company card",
       "empty": "The company card has no people"
     }
+  },
+  "doNotWork": {
+    "title": "We do not work with this company",
+    "by": "Marked by {{name}}, {{date}}",
+    "until": "until {{date}}",
+    "unknown": "unknown employee"
   }
 }

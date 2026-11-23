@@ -2230,6 +2230,7 @@ paths:
         - $ref: '#/components/parameters/RegistryStage'
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Sort'
       responses:
         '200':
           description: Страница документов
@@ -3002,6 +3003,7 @@ paths:
         - $ref: '#/components/parameters/RegistryQuery'
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Sort'
       responses:
         '200':
           description: Страница реестра
@@ -3497,10 +3499,23 @@ components:
       name: cursor
       in: query
       required: false
-      description: Непрозрачный курсор из `next_cursor`
+      description: Непрозрачный курсор из `next_cursor`. При порядке `sort` курсор помнит значение поля (до 300 знаков темы), поэтому длиннее
       schema:
         type: string
-        maxLength: 500
+        maxLength: 1200
+    Sort:
+      name: sort
+      in: query
+      required: false
+      description: |
+        Порядок списка (Х-15б): `поле` — по возрастанию, `-поле` — по убыванию; без параметра — от новых к старым. Поля:
+        `number`, `subject`, `status`, `amount`, `created`. Пустые значения (нет номера, нет суммы) всегда в конце, при равных
+        значениях порядок держит id. `number` и `subject` — строковый порядок базы: номер непрозрачен, число в нём не
+        разбирается. Курсор привязан к порядку: с курсором от другого `sort` — 422 `VALIDATION_FAILED` (`cursor`), при смене порядка
+        клиент начинает с первой страницы. Поле вне списка — 422.
+      schema:
+        type: string
+        pattern: '^-?(number|subject|status|amount|created)$'
     Limit:
       name: limit
       in: query
@@ -6088,6 +6103,11 @@ components:
       required: [body]
       properties:
         body: {$ref: '#/components/schemas/DocumentBody'}
+        kind:
+          type: string
+          enum: [letter, memo]
+          default: letter
+          description: Вид шаблона; служебная записка — компактный лист без окна и подвала компании
     CallNoteIn:
       type: object
       additionalProperties: false

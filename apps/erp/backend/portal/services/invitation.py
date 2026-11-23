@@ -20,6 +20,7 @@ from typing import Dict, List, Optional, Tuple
 
 from django.db import transaction
 from django.utils import timezone
+from parties.do_not_work import ensure_may_work, fresh, is_marked
 from parties.models import Contact, active_contact_q
 from portal.exceptions import PortalDeliveryFailed, PortalValidationError
 from portal.models import MagicLinkToken
@@ -140,7 +141,7 @@ def invite_contact(
     Каналы: `email`, `telegram`, `both`; по умолчанию — `contact.preferred_channel`. `both` пробует оба: приглашение
     считается ушедшим, если ушло хотя бы по одному (причина второго — в `errors`). Не ушло никуда — `error` с кодом
     причины: `CONTACT_EMAIL_REQUIRED`, `CONTACT_TELEGRAM_REQUIRED`, `EMAIL_DELIVERY_FAILED`, `CONTACT_CHANNEL_REQUIRED`
-    (`both` без обоих адресов), `INVALID_CHANNEL`, `CONTACT_WITHOUT_COMPANY`, `COMPANY_ARCHIVED`, `COMPANY_NOT_CLIENT` (в кабинет входят клиенты и поставщики с отношением, `portal/services/access.py`; имя кода прежнее), `CONTACT_ARCHIVED`.
+    (`both` без обоих адресов), `INVALID_CHANNEL`, `CONTACT_WITHOUT_COMPANY`, `COMPANY_ARCHIVED`, `COMPANY_DO_NOT_WORK` (у компании отметка «Не работать», Х-8), `COMPANY_NOT_CLIENT` (в кабинет входят клиенты и поставщики с отношением, `portal/services/access.py`; имя кода прежнее), `CONTACT_ARCHIVED`.
     """
 
     def failed(code: str) -> InviteOutcome:
@@ -150,6 +151,8 @@ def invite_contact(
         return failed("CONTACT_WITHOUT_COMPANY")
     if not company_in_circulation(contact.company_id):
         return failed("COMPANY_ARCHIVED")
+    if is_marked(fresh(contact.company)):
+        return failed("COMPANY_DO_NOT_WORK")  # Х-8: с компанией не работаем — новых людей в кабинет не зовём
     if not company_has_cabinet_access(contact.company_id):
         return failed("COMPANY_NOT_CLIENT")  # кабинет закрыт: не клиент и нет действующего отношения — войти не сможет
     if contact.is_archived:
@@ -220,6 +223,7 @@ def invite_team_member(company, inviter, data: dict) -> Contact:
     (`CONTACT_EMAIL_REQUIRED`) → дубль в компании (`TEAM_MEMBER_EXISTS`). Контакт остаётся, только если письмо ушло:
     при сбое доставки он удаляется (повторить можно сразу), клиенту — 503, а не «отправлено».
     """
+    ensure_may_work(company)  # Х-8: кабинет компании с отметкой «Не работать» — только чтение, коллег не зовёт
     if not company_has_cabinet_access(company.pk):
         # Сессия такой компании не живёт (PortalAuthentication), сюда доходят только прямым вызовом: коллега не заводится.
         raise PermissionDenied("FORBIDDEN")

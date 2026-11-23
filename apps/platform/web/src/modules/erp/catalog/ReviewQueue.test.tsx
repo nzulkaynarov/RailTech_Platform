@@ -31,7 +31,7 @@ describe("Очередь проверки: список", () => {
     expect(within(rows[0] as HTMLElement).getByText("Болт М20×80 оцинкованный")).toBeVisible();
     expect(within(rows[0] as HTMLElement).getByText("АО «Южный Металл»")).toBeVisible();
     expect(within(rows[0] as HTMLElement).getByText("Просрочено")).toBeVisible();
-    expect(within(rows[0] as HTMLElement).getByText("75 %")).toBeVisible();
+    expect(within(rows[0] as HTMLElement).getByText("60 %")).toBeVisible();
     expect(within(rows[1] as HTMLElement).getByText("Хомут кабельный 200 мм")).toBeVisible();
     expect(within(rows[2] as HTMLElement).getByText("Шайба пружинная 20")).toBeVisible();
     expect(within(rows[2] as HTMLElement).getByText("В срок")).toBeVisible();

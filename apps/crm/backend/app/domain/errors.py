@@ -215,18 +215,26 @@ class Reason(StrEnum):
     SECOND_FACTOR_NOT_ENABLED = "second_factor_not_enabled"
 
 
+# ДВ-4б: подкоды второго фактора — строками вне `Reason`: значение в схеме ответов (enum) не
+# расширяется, контракт остаётся аддитивным; BFF и фронт читают `details.reason` как строку.
+SECOND_FACTOR_REQUIRED = "second_factor_required"  # фактор обязателен по разделам: не отключить
+SECOND_FACTOR_NOT_ENROLLED = "second_factor_not_enrolled"  # step-up без настроенного фактора
+SECOND_FACTOR_SELF_RESET = "second_factor_self_reset"  # администратор сбрасывает фактор себе
+
+
 class DomainError(Exception):
     """Базовое исключение; `code` — машинно-читаемый код для фронта, `reason` — подкод."""
 
     code = "domain_error"
 
     def __init__(
-        self, message: str = "", *, reason: Reason | None = None, **details: object
+        self, message: str = "", *, reason: Reason | str | None = None, **details: object
     ) -> None:
         super().__init__(message or self.code)
         self.message = message or self.code
+        code = reason.value if isinstance(reason, Reason) else reason
         self.details: dict[str, object] = (
-            {"reason": reason.value, **details} if reason is not None else details
+            {"reason": code, **details} if code is not None else details
         )
 
 
@@ -300,6 +308,14 @@ class SecondFactorCodeError(AuthError):
     """Неверный код второго фактора на входе (ДВ-4): 401, неудача считается в блокировку."""
 
     code = "second_factor_invalid"
+
+
+class StepUpRequiredError(ForbiddenError):
+    """Чувствительное действие без свежего кода второго фактора (ДВ-4б): 403, фронт спрашивает код
+    и повторяет запрос с `X-Step-Up-Token`. `reason = second_factor_not_enrolled` — фактор ещё не
+    включён: сначала включить в профиле."""
+
+    code = "step_up_required"
 
 
 class SecondFactorSetupError(DomainError):

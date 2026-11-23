@@ -139,6 +139,7 @@ import type {
   DictionaryList,
   DictionaryOrderIn,
   DictionarySyncResult,
+  DoNotWorkIn,
   DocflowSettings,
   DocflowSettingsPatch,
   DocumentPlaceholders,
@@ -185,6 +186,9 @@ import type {
   EmployeeInvite,
   EmployeeList,
   EmployeeUpdate,
+  EnrollIn,
+  EnrollSetupIn,
+  EnrolledSession,
   ErpCheck,
   ErpConnector,
   ErpPairIn,
@@ -457,6 +461,7 @@ import type {
   SecondFactorCodeIn,
   SecondFactorEnabled,
   SecondFactorLoginIn,
+  SecondFactorResetIn,
   SecondFactorSetup,
   SecondFactorStatus,
   SentMail,
@@ -492,6 +497,7 @@ import type {
   SpendReport,
   StaffDirectory,
   StartPriceImportParams,
+  StepUp,
   StockAdjustIn,
   StockBalanceList,
   StockConflictResponse,
@@ -551,6 +557,11 @@ import type {
   Waiting,
   WaitingKind,
   WhatsNewMark,
+  Zone,
+  ZoneCreate,
+  ZoneList,
+  ZoneSummary,
+  ZoneUpdate,
 } from "./model";
 
 import { http } from "../http";
@@ -585,6 +596,10 @@ export const getLoginUrl = () => {
  * `SecondFactorChallenge` без сессии; код — `POST /auth/login/second-factor`. С меткой `pf_device` (HttpOnly,
  * путь `/api/v1/auth`, 30 дней — ставит второй шаг с `remember_device`) код не спрашивается, пока не сменились
  * пароль и сам фактор.
+ *
+ * Обязательный фактор (ДВ-4б): у держателя разделов с деньгами и доступом (полные `eds.payments`, `eds.memo.approve`,
+ * `eds.drafts`, `admin` — по разделам, не по названию роли) без настроенного фактора ответ — тоже 202 с
+ * `enrollment_required = true`: сессии нет, настройка — `POST /auth/login/enroll/setup` и `POST /auth/login/enroll`.
  * @summary Вход сотрудника
  */
 export const login = async (
@@ -681,6 +696,226 @@ export const useLogin = <TError = ErrorType<Error | TooManyRequestsResponse>, TC
   TContext
 > => {
   return useMutation(getLoginMutationOptions(options), queryClient);
+};
+
+export const getLoginEnrollSetupUrl = () => {
+  return `/api/v1/auth/login/enroll/setup`;
+};
+
+/**
+ * Без сессии: `challenge` из ответа 202 на `/auth/login` с `enrollment_required` (живёт 15 минут). Секрет для приложения-аутентификатора и адрес `otpauth://`; запись подписана названием компании. Время вышло — 401 `SECOND_FACTOR_EXPIRED`, войти заново. Тот же лимит попыток по IP, что у входа.
+ * @summary Настройка обязательного второго фактора при входе — секрет и адрес для QR (ДВ-4б)
+ */
+export const loginEnrollSetup = async (
+  enrollSetupIn: EnrollSetupIn,
+  options?: Parameters<typeof http>[1],
+): Promise<SecondFactorSetup> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<SecondFactorSetup>(getLoginEnrollSetupUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(enrollSetupIn),
+  });
+};
+
+export const getLoginEnrollSetupMutationKey = () => ["loginEnrollSetup"] as const;
+
+export const getLoginEnrollSetupMutationOptions = <
+  TError = ErrorType<Error | ValidationFailedResponse | TooManyRequestsResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof loginEnrollSetup>>,
+    TError,
+    LoginEnrollSetupMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof loginEnrollSetup>>,
+  TError,
+  LoginEnrollSetupMutationVariables,
+  TContext
+> => {
+  const mutationKey = getLoginEnrollSetupMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof loginEnrollSetup>>,
+    LoginEnrollSetupMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return loginEnrollSetup(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type LoginEnrollSetupMutationResult = NonNullable<
+  Awaited<ReturnType<typeof loginEnrollSetup>>
+>;
+export type LoginEnrollSetupMutationBody = EnrollSetupIn;
+export type LoginEnrollSetupMutationError = ErrorType<
+  Error | ValidationFailedResponse | TooManyRequestsResponse
+>;
+export type LoginEnrollSetupMutationVariables = { data: EnrollSetupIn };
+
+/**
+ * @summary Настройка обязательного второго фактора при входе — секрет и адрес для QR (ДВ-4б)
+ */
+export const useLoginEnrollSetup = <
+  TError = ErrorType<Error | ValidationFailedResponse | TooManyRequestsResponse>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof loginEnrollSetup>>,
+      TError,
+      LoginEnrollSetupMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof loginEnrollSetup>>,
+  TError,
+  LoginEnrollSetupMutationVariables,
+  TContext
+> => {
+  return useMutation(getLoginEnrollSetupMutationOptions(options), queryClient);
+};
+
+export const getLoginEnrollUrl = () => {
+  return `/api/v1/auth/login/enroll`;
+};
+
+/**
+ * Без сессии: `challenge` и код из приложения. Код включает фактор и открывает сессию одной операцией; ответ — сессия и восемь резервных кодов, показываются один раз (`Cache-Control: no-store`). Неверный код — 401 `SECOND_FACTOR_INVALID` (неверные коды считает CRM: после десяти — 423 `ACCOUNT_LOCKED`); время вышло — 401 `SECOND_FACTOR_EXPIRED`.
+ * @summary Включить обязательный второй фактор кодом и войти (ДВ-4б)
+ */
+export const loginEnroll = async (
+  enrollIn: EnrollIn,
+  options?: Parameters<typeof http>[1],
+): Promise<EnrolledSession> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<EnrolledSession>(getLoginEnrollUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(enrollIn),
+  });
+};
+
+export const getLoginEnrollMutationKey = () => ["loginEnroll"] as const;
+
+export const getLoginEnrollMutationOptions = <
+  TError = ErrorType<Error | TooManyRequestsResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof loginEnroll>>,
+    TError,
+    LoginEnrollMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof loginEnroll>>,
+  TError,
+  LoginEnrollMutationVariables,
+  TContext
+> => {
+  const mutationKey = getLoginEnrollMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof loginEnroll>>,
+    LoginEnrollMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return loginEnroll(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type LoginEnrollMutationResult = NonNullable<Awaited<ReturnType<typeof loginEnroll>>>;
+export type LoginEnrollMutationBody = EnrollIn;
+export type LoginEnrollMutationError = ErrorType<Error | TooManyRequestsResponse>;
+export type LoginEnrollMutationVariables = { data: EnrollIn };
+
+/**
+ * @summary Включить обязательный второй фактор кодом и войти (ДВ-4б)
+ */
+export const useLoginEnroll = <
+  TError = ErrorType<Error | TooManyRequestsResponse>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof loginEnroll>>,
+      TError,
+      LoginEnrollMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof loginEnroll>>,
+  TError,
+  LoginEnrollMutationVariables,
+  TContext
+> => {
+  return useMutation(getLoginEnrollMutationOptions(options), queryClient);
 };
 
 export const getLoginSecondFactorUrl = () => {
@@ -2470,7 +2705,7 @@ export const getGetSecondFactorUrl = () => {
 };
 
 /**
- * Свой фактор; доступно каждому вошедшему сотруднику (CRM `/me/second-factor`).
+ * Свой фактор; доступно каждому вошедшему сотруднику (CRM `/me/second-factor`). `required` — фактор обязателен по разделам доступа сотрудника (ДВ-4б).
  * @summary Второй фактор входа — состояние (ДВ-4)
  */
 export const getSecondFactor = async (
@@ -2765,12 +3000,124 @@ export const useEnableSecondFactor = <
   return useMutation(getEnableSecondFactorMutationOptions(options), queryClient);
 };
 
+export const getStepUpSecondFactorUrl = () => {
+  return `/api/v1/me/second-factor/step-up`;
+};
+
+/**
+ * Верный код приложения или резервный даёт токен на 5 минут — его фронт шлёт заголовком `X-Step-Up-Token` при выдаче роли и подтверждении новых банковских реквизитов. Неверный код — 422 `VALIDATION_FAILED` (`second_factor_code_invalid`) и в счёт блокировки; фактор не включён — 403 `STEP_UP_REQUIRED` (`details.reason = second_factor_not_enrolled`).
+ * @summary Свежий код перед чувствительным действием (ДВ-4б)
+ */
+export const stepUpSecondFactor = async (
+  secondFactorCodeIn: SecondFactorCodeIn,
+  options?: Parameters<typeof http>[1],
+): Promise<StepUp> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<StepUp>(getStepUpSecondFactorUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(secondFactorCodeIn),
+  });
+};
+
+export const getStepUpSecondFactorMutationKey = () => ["stepUpSecondFactor"] as const;
+
+export const getStepUpSecondFactorMutationOptions = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse | Error>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof stepUpSecondFactor>>,
+    TError,
+    StepUpSecondFactorMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof stepUpSecondFactor>>,
+  TError,
+  StepUpSecondFactorMutationVariables,
+  TContext
+> => {
+  const mutationKey = getStepUpSecondFactorMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof stepUpSecondFactor>>,
+    StepUpSecondFactorMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return stepUpSecondFactor(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type StepUpSecondFactorMutationResult = NonNullable<
+  Awaited<ReturnType<typeof stepUpSecondFactor>>
+>;
+export type StepUpSecondFactorMutationBody = SecondFactorCodeIn;
+export type StepUpSecondFactorMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse | Error
+>;
+export type StepUpSecondFactorMutationVariables = { data: SecondFactorCodeIn };
+
+/**
+ * @summary Свежий код перед чувствительным действием (ДВ-4б)
+ */
+export const useStepUpSecondFactor = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse | Error>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof stepUpSecondFactor>>,
+      TError,
+      StepUpSecondFactorMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof stepUpSecondFactor>>,
+  TError,
+  StepUpSecondFactorMutationVariables,
+  TContext
+> => {
+  return useMutation(getStepUpSecondFactorMutationOptions(options), queryClient);
+};
+
 export const getDisableSecondFactorUrl = () => {
   return `/api/v1/me/second-factor/disable`;
 };
 
 /**
- * Кодом из приложения или резервным. Неверный — 422 `VALIDATION_FAILED` (`second_factor_code_invalid`).
+ * Кодом из приложения или резервным (он же «свежий код»). Неверный — 422 `VALIDATION_FAILED` (`second_factor_code_invalid`). Фактор обязателен по разделам доступа (`required` в состоянии) — 409 `CONFLICT` (`details.reason = second_factor_required`), отключить нельзя (ДВ-4б).
  * @summary Выключить второй фактор (ДВ-4)
  */
 export const disableSecondFactor = async (
@@ -16778,7 +17125,7 @@ export const getApproveBankChangeRequestUrl = (id: CompanyItemRef) => {
 };
 
 /**
- * ERP `POST finance/bank-changes/{id}/approve/` — право `finance.payment`. Применяет новые реквизиты компании и уведомляет её администраторов и основной контакт по всем каналам. Повтор на подтверждённом запросе — тот же ответ без второго эффекта. Отклонённый запрос — 409 `bank_change_not_pending`; компания в архиве — 409 `company_archived`; реквизиты изменились после подачи — 409 `bank_change_stale`.
+ * ERP `POST finance/bank-changes/{id}/approve/` — право `finance.payment`. Нужен свежий код второго фактора (заголовок `X-Step-Up-Token`, ДВ-4б) — без него 403 `STEP_UP_REQUIRED`, ERP не вызывается. Применяет новые реквизиты компании и уведомляет её администраторов и основной контакт по всем каналам. Повтор на подтверждённом запросе — тот же ответ без второго эффекта. Отклонённый запрос — 409 `bank_change_not_pending`; компания в архиве — 409 `company_archived`; реквизиты изменились после подачи — 409 `bank_change_stale`.
  * @summary Счета и оплаты · Смена реквизитов: подтвердить
  */
 export const approveBankChangeRequest = async (
@@ -26393,7 +26740,7 @@ export const getCreateEmployeeUrl = () => {
 };
 
 /**
- * Раздел `admin` — полный. Для тех, кому письмо не придёт (почта ещё не подключена, у сотрудника нет почты на этом адресе). BFF создаёт пользователя в CRM с ролями Платформы (CRM `/users`) и отдаёт **временный пароль в этом ответе — единственный раз**: BFF не пишет его в журнал, не кэширует и не хранит; ответ — `Cache-Control: no-store`. Сотрудник при первом входе обязан сменить пароль. Потерянный пароль не восстановить — выдать новый: `POST /admin/users/{id}/temporary-password`.
+ * Раздел `admin` — полный. Для тех, кому письмо не придёт (почта ещё не подключена, у сотрудника нет почты на этом адресе). Роль при создании — выдача роли: нужен свежий код второго фактора (`X-Step-Up-Token`, ДВ-4б). BFF создаёт пользователя в CRM с ролями Платформы (CRM `/users`) и отдаёт **временный пароль в этом ответе — единственный раз**: BFF не пишет его в журнал, не кэширует и не хранит; ответ — `Cache-Control: no-store`. Сотрудник при первом входе обязан сменить пароль. Потерянный пароль не восстановить — выдать новый: `POST /admin/users/{id}/temporary-password`.
  * @summary Добавить сотрудника без почты — временный пароль показывается один раз
  */
 export const createEmployee = async (
@@ -26514,12 +26861,144 @@ export const useCreateEmployee = <
   return useMutation(getCreateEmployeeMutationOptions(options), queryClient);
 };
 
+export const getResetEmployeeSecondFactorUrl = (id: string) => {
+  return `/api/v1/admin/users/${id}/second-factor/reset`;
+};
+
+/**
+ * Раздел `admin` — полный. Причина (от 3 знаков) пишется в журнал CRM, сессии сотрудника закрываются, при следующем входе он настраивает фактор заново (если он обязателен по его разделам) или входит по паролю. Себе — 409 `CONFLICT` (`details.reason = second_factor_self_reset`): свой фактор сбрасывает другой администратор. Фактор не включён — 422.
+ * @summary Сбросить сотруднику второй фактор (потерян телефон; ДВ-4б)
+ */
+export const resetEmployeeSecondFactor = async (
+  id: string,
+  secondFactorResetIn: SecondFactorResetIn,
+  options?: Parameters<typeof http>[1],
+): Promise<void> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<void>(getResetEmployeeSecondFactorUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(secondFactorResetIn),
+  });
+};
+
+export const getResetEmployeeSecondFactorMutationKey = () => ["resetEmployeeSecondFactor"] as const;
+
+export const getResetEmployeeSecondFactorMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | Error
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof resetEmployeeSecondFactor>>,
+    TError,
+    ResetEmployeeSecondFactorMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof resetEmployeeSecondFactor>>,
+  TError,
+  ResetEmployeeSecondFactorMutationVariables,
+  TContext
+> => {
+  const mutationKey = getResetEmployeeSecondFactorMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof resetEmployeeSecondFactor>>,
+    ResetEmployeeSecondFactorMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return resetEmployeeSecondFactor(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ResetEmployeeSecondFactorMutationResult = NonNullable<
+  Awaited<ReturnType<typeof resetEmployeeSecondFactor>>
+>;
+export type ResetEmployeeSecondFactorMutationBody = SecondFactorResetIn;
+export type ResetEmployeeSecondFactorMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | Error
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type ResetEmployeeSecondFactorMutationVariables = { id: string; data: SecondFactorResetIn };
+
+/**
+ * @summary Сбросить сотруднику второй фактор (потерян телефон; ДВ-4б)
+ */
+export const useResetEmployeeSecondFactor = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | Error
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof resetEmployeeSecondFactor>>,
+      TError,
+      ResetEmployeeSecondFactorMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof resetEmployeeSecondFactor>>,
+  TError,
+  ResetEmployeeSecondFactorMutationVariables,
+  TContext
+> => {
+  return useMutation(getResetEmployeeSecondFactorMutationOptions(options), queryClient);
+};
+
 export const getInviteEmployeeUrl = () => {
   return `/api/v1/admin/users/invite`;
 };
 
 /**
- * BFF создаёт пользователя в CRM с ролями Платформы (`role_ids`) и отправляет приглашение (CRM `/users`, `/users/{id}/invite`); провижининг в ERP делает CRM. Раздел `admin` — полный. Письмо не ушло — 409 `CONFLICT` с `details.invite = not_sent` и `details.employee_id` (сотрудник создан; повтор — `POST /admin/users/{id}/invite`).
+ * Роль при создании — выдача роли: нужен свежий код второго фактора (`X-Step-Up-Token`, ДВ-4б). BFF создаёт пользователя в CRM с ролями Платформы (`role_ids`) и отправляет приглашение (CRM `/users`, `/users/{id}/invite`); провижининг в ERP делает CRM. Раздел `admin` — полный. Письмо не ушло — 409 `CONFLICT` с `details.invite = not_sent` и `details.employee_id` (сотрудник создан; повтор — `POST /admin/users/{id}/invite`).
  * @summary Пригласить сотрудника по почте
  */
 export const inviteEmployee = async (
@@ -27042,7 +27521,7 @@ export const getUpdateEmployeeUrl = (id: string) => {
 };
 
 /**
- * Раздел `admin` — полный. Роли — полный новый набор `role_ids`; права в CRM и ERP вычисляет CRM. Снять последнего активного администратора или директора (роль или отключение) нельзя — 409 `LAST_ADMIN` / `LAST_DIRECTOR`. У сотрудника есть лиды в работе, а изменение отнимает у него работу с лидами, — 409 `CONFLICT` с `details.reason = user_has_active_leads`; повтор с `transfer_to_user_id` передаёт лиды коллеге. Пустой набор ролей — 422 `ROLES_REQUIRED` (0.6.0): у сотрудника хотя бы одна роль, закрыть доступ — `is_active = false`.
+ * Раздел `admin` — полный. Роли — полный новый набор `role_ids`; права в CRM и ERP вычисляет CRM. Выдача роли (появилась роль, которой не было) требует свежий код второго фактора (`X-Step-Up-Token`, ДВ-4б) — иначе 403 `STEP_UP_REQUIRED`; снятие роли и прочие правки кода не требуют. Снять последнего активного администратора или директора (роль или отключение) нельзя — 409 `LAST_ADMIN` / `LAST_DIRECTOR`. У сотрудника есть лиды в работе, а изменение отнимает у него работу с лидами, — 409 `CONFLICT` с `details.reason = user_has_active_leads`; повтор с `transfer_to_user_id` передаёт лиды коллеге. Пустой набор ролей — 422 `ROLES_REQUIRED` (0.6.0): у сотрудника хотя бы одна роль, закрыть доступ — `is_active = false`.
  * @summary Роли, должность, отключение — единое место выдачи ролей обеих систем
  */
 export const updateEmployee = async (
@@ -27905,6 +28384,815 @@ export const useDeleteRole = <
   TContext
 > => {
   return useMutation(getDeleteRoleMutationOptions(options), queryClient);
+};
+
+export const getListResponsibilityZonesUrl = () => {
+  return `/api/v1/admin/responsibility-zones`;
+};
+
+/**
+ * Реестр «зона → ответственный → замещающий → куратор» (ЕВ-З): каждая зона — запись с основанием, сроком и журналом изменений в CRM. `problems` считается при каждом чтении: нет ответственного, у ответственного нет разделов зоны (`severity = warning`, не запрет), ответственный или замещающий не действует, срок вышел. Раздел `admin` — от чтения (администратор и директор). Зоны не маршрутизируют уведомления и согласования.
+ * @summary Зоны ответственности (Настройки · Люди и доступ) — с людьми и проблемами по фактам
+ */
+export const listResponsibilityZones = async (
+  options?: Parameters<typeof http>[1],
+): Promise<ZoneList> => {
+  return http<ZoneList>(getListResponsibilityZonesUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListResponsibilityZonesQueryKey = () => {
+  return [`/api/v1/admin/responsibility-zones`] as const;
+};
+
+export const getListResponsibilityZonesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listResponsibilityZones>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(options?: {
+  query?: Partial<
+    UseQueryOptions<Awaited<ReturnType<typeof listResponsibilityZones>>, TError, TData>
+  >;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListResponsibilityZonesQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listResponsibilityZones>>> = ({
+    signal,
+  }) => listResponsibilityZones({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listResponsibilityZones>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListResponsibilityZonesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listResponsibilityZones>>
+>;
+export type ListResponsibilityZonesQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse
+>;
+
+export function useListResponsibilityZones<
+  TData = Awaited<ReturnType<typeof listResponsibilityZones>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listResponsibilityZones>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listResponsibilityZones>>,
+          TError,
+          Awaited<ReturnType<typeof listResponsibilityZones>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListResponsibilityZones<
+  TData = Awaited<ReturnType<typeof listResponsibilityZones>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listResponsibilityZones>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listResponsibilityZones>>,
+          TError,
+          Awaited<ReturnType<typeof listResponsibilityZones>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListResponsibilityZones<
+  TData = Awaited<ReturnType<typeof listResponsibilityZones>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listResponsibilityZones>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Зоны ответственности (Настройки · Люди и доступ) — с людьми и проблемами по фактам
+ */
+
+export function useListResponsibilityZones<
+  TData = Awaited<ReturnType<typeof listResponsibilityZones>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listResponsibilityZones>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListResponsibilityZonesQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getCreateResponsibilityZoneUrl = () => {
+  return `/api/v1/admin/responsibility-zones`;
+};
+
+/**
+ * Только `admin: full`. Разделы — из каталога прав, неизвестный — 422; повтор `code` — 409 `CONFLICT`.
+ * @summary Завести зону из существующих разделов прав
+ */
+export const createResponsibilityZone = async (
+  zoneCreate: ZoneCreate,
+  options?: Parameters<typeof http>[1],
+): Promise<Zone> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<Zone>(getCreateResponsibilityZoneUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(zoneCreate),
+  });
+};
+
+export const getCreateResponsibilityZoneMutationKey = () => ["createResponsibilityZone"] as const;
+
+export const getCreateResponsibilityZoneMutationOptions = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | Error | ValidationFailedResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createResponsibilityZone>>,
+    TError,
+    CreateResponsibilityZoneMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createResponsibilityZone>>,
+  TError,
+  CreateResponsibilityZoneMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCreateResponsibilityZoneMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createResponsibilityZone>>,
+    CreateResponsibilityZoneMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createResponsibilityZone(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateResponsibilityZoneMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createResponsibilityZone>>
+>;
+export type CreateResponsibilityZoneMutationBody = ZoneCreate;
+export type CreateResponsibilityZoneMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | Error | ValidationFailedResponse
+>;
+export type CreateResponsibilityZoneMutationVariables = { data: ZoneCreate };
+
+/**
+ * @summary Завести зону из существующих разделов прав
+ */
+export const useCreateResponsibilityZone = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | Error | ValidationFailedResponse>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createResponsibilityZone>>,
+      TError,
+      CreateResponsibilityZoneMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof createResponsibilityZone>>,
+  TError,
+  CreateResponsibilityZoneMutationVariables,
+  TContext
+> => {
+  return useMutation(getCreateResponsibilityZoneMutationOptions(options), queryClient);
+};
+
+export const getGetResponsibilityZonesSummaryUrl = () => {
+  return `/api/v1/admin/responsibility-zones/summary`;
+};
+
+/**
+ * Раздел `company.settings: full` (администратор и директор); без списка людей.
+ * @summary Сколько действующих зон без ответственного — для сигналов Настроек и Главной
+ */
+export const getResponsibilityZonesSummary = async (
+  options?: Parameters<typeof http>[1],
+): Promise<ZoneSummary> => {
+  return http<ZoneSummary>(getGetResponsibilityZonesSummaryUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetResponsibilityZonesSummaryQueryKey = () => {
+  return [`/api/v1/admin/responsibility-zones/summary`] as const;
+};
+
+export const getGetResponsibilityZonesSummaryQueryOptions = <
+  TData = Awaited<ReturnType<typeof getResponsibilityZonesSummary>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(options?: {
+  query?: Partial<
+    UseQueryOptions<Awaited<ReturnType<typeof getResponsibilityZonesSummary>>, TError, TData>
+  >;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetResponsibilityZonesSummaryQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getResponsibilityZonesSummary>>> = ({
+    signal,
+  }) => getResponsibilityZonesSummary({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getResponsibilityZonesSummary>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetResponsibilityZonesSummaryQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getResponsibilityZonesSummary>>
+>;
+export type GetResponsibilityZonesSummaryQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse
+>;
+
+export function useGetResponsibilityZonesSummary<
+  TData = Awaited<ReturnType<typeof getResponsibilityZonesSummary>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getResponsibilityZonesSummary>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getResponsibilityZonesSummary>>,
+          TError,
+          Awaited<ReturnType<typeof getResponsibilityZonesSummary>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetResponsibilityZonesSummary<
+  TData = Awaited<ReturnType<typeof getResponsibilityZonesSummary>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getResponsibilityZonesSummary>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getResponsibilityZonesSummary>>,
+          TError,
+          Awaited<ReturnType<typeof getResponsibilityZonesSummary>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetResponsibilityZonesSummary<
+  TData = Awaited<ReturnType<typeof getResponsibilityZonesSummary>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getResponsibilityZonesSummary>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Сколько действующих зон без ответственного — для сигналов Настроек и Главной
+ */
+
+export function useGetResponsibilityZonesSummary<
+  TData = Awaited<ReturnType<typeof getResponsibilityZonesSummary>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getResponsibilityZonesSummary>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetResponsibilityZonesSummaryQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getGetResponsibilityZoneUrl = (id: string) => {
+  return `/api/v1/admin/responsibility-zones/${id}`;
+};
+
+/**
+ * @summary Зона ответственности
+ */
+export const getResponsibilityZone = async (
+  id: string,
+  options?: Parameters<typeof http>[1],
+): Promise<Zone> => {
+  return http<Zone>(getGetResponsibilityZoneUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetResponsibilityZoneQueryKey = (id: string) => {
+  return [`/api/v1/admin/responsibility-zones/${id}`] as const;
+};
+
+export const getGetResponsibilityZoneQueryOptions = <
+  TData = Awaited<ReturnType<typeof getResponsibilityZone>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+>(
+  id: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getResponsibilityZone>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetResponsibilityZoneQueryKey(id);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getResponsibilityZone>>> = ({ signal }) =>
+    getResponsibilityZone(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: id !== null && id !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof getResponsibilityZone>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type GetResponsibilityZoneQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getResponsibilityZone>>
+>;
+export type GetResponsibilityZoneQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse
+>;
+
+export function useGetResponsibilityZone<
+  TData = Awaited<ReturnType<typeof getResponsibilityZone>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+>(
+  id: string,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getResponsibilityZone>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getResponsibilityZone>>,
+          TError,
+          Awaited<ReturnType<typeof getResponsibilityZone>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetResponsibilityZone<
+  TData = Awaited<ReturnType<typeof getResponsibilityZone>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+>(
+  id: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getResponsibilityZone>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getResponsibilityZone>>,
+          TError,
+          Awaited<ReturnType<typeof getResponsibilityZone>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetResponsibilityZone<
+  TData = Awaited<ReturnType<typeof getResponsibilityZone>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+>(
+  id: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getResponsibilityZone>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Зона ответственности
+ */
+
+export function useGetResponsibilityZone<
+  TData = Awaited<ReturnType<typeof getResponsibilityZone>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+>(
+  id: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getResponsibilityZone>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetResponsibilityZoneQueryOptions(id, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getUpdateResponsibilityZoneUrl = (id: string) => {
+  return `/api/v1/admin/responsibility-zones/${id}`;
+};
+
+/**
+ * Раздел `company.settings: full` (администратор и директор). Не присланное поле не меняется, `null` снимает значение. Сотрудник должен действовать, замещающий — другой человек, чем ответственный (422); у выключенной зоны людей не меняют — 409 `CONFLICT`. Каждое изменение пишется в журнал CRM с «до» и «после».
+ * @summary Назначить ответственного, замещающего и куратора, указать основание и срок
+ */
+export const updateResponsibilityZone = async (
+  id: string,
+  zoneUpdate: ZoneUpdate,
+  options?: Parameters<typeof http>[1],
+): Promise<Zone> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<Zone>(getUpdateResponsibilityZoneUrl(id), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(zoneUpdate),
+  });
+};
+
+export const getUpdateResponsibilityZoneMutationKey = () => ["updateResponsibilityZone"] as const;
+
+export const getUpdateResponsibilityZoneMutationOptions = <
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | Error | ValidationFailedResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateResponsibilityZone>>,
+    TError,
+    UpdateResponsibilityZoneMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateResponsibilityZone>>,
+  TError,
+  UpdateResponsibilityZoneMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUpdateResponsibilityZoneMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateResponsibilityZone>>,
+    UpdateResponsibilityZoneMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return updateResponsibilityZone(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateResponsibilityZoneMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateResponsibilityZone>>
+>;
+export type UpdateResponsibilityZoneMutationBody = ZoneUpdate;
+export type UpdateResponsibilityZoneMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | Error | ValidationFailedResponse
+>;
+export type UpdateResponsibilityZoneMutationVariables = { id: string; data: ZoneUpdate };
+
+/**
+ * @summary Назначить ответственного, замещающего и куратора, указать основание и срок
+ */
+export const useUpdateResponsibilityZone = <
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | Error | ValidationFailedResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof updateResponsibilityZone>>,
+      TError,
+      UpdateResponsibilityZoneMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof updateResponsibilityZone>>,
+  TError,
+  UpdateResponsibilityZoneMutationVariables,
+  TContext
+> => {
+  return useMutation(getUpdateResponsibilityZoneMutationOptions(options), queryClient);
+};
+
+export const getDeactivateResponsibilityZoneUrl = (id: string) => {
+  return `/api/v1/admin/responsibility-zones/${id}/deactivate`;
+};
+
+/**
+ * Только `admin: full`. У выключенной зоны проблем нет, в сигналах она не считается.
+ * @summary Выключить зону — не удаляется, назначения и журнал остаются
+ */
+export const deactivateResponsibilityZone = async (
+  id: string,
+  options?: Parameters<typeof http>[1],
+): Promise<Zone> => {
+  return http<Zone>(getDeactivateResponsibilityZoneUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getDeactivateResponsibilityZoneMutationKey = () =>
+  ["deactivateResponsibilityZone"] as const;
+
+export const getDeactivateResponsibilityZoneMutationOptions = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deactivateResponsibilityZone>>,
+    TError,
+    DeactivateResponsibilityZoneMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deactivateResponsibilityZone>>,
+  TError,
+  DeactivateResponsibilityZoneMutationVariables,
+  TContext
+> => {
+  const mutationKey = getDeactivateResponsibilityZoneMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deactivateResponsibilityZone>>,
+    DeactivateResponsibilityZoneMutationVariables
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return deactivateResponsibilityZone(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeactivateResponsibilityZoneMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deactivateResponsibilityZone>>
+>;
+
+export type DeactivateResponsibilityZoneMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse
+>;
+export type DeactivateResponsibilityZoneMutationVariables = { id: string };
+
+/**
+ * @summary Выключить зону — не удаляется, назначения и журнал остаются
+ */
+export const useDeactivateResponsibilityZone = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof deactivateResponsibilityZone>>,
+      TError,
+      DeactivateResponsibilityZoneMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof deactivateResponsibilityZone>>,
+  TError,
+  DeactivateResponsibilityZoneMutationVariables,
+  TContext
+> => {
+  return useMutation(getDeactivateResponsibilityZoneMutationOptions(options), queryClient);
+};
+
+export const getActivateResponsibilityZoneUrl = (id: string) => {
+  return `/api/v1/admin/responsibility-zones/${id}/activate`;
+};
+
+/**
+ * Только `admin: full`.
+ * @summary Включить выключенную зону
+ */
+export const activateResponsibilityZone = async (
+  id: string,
+  options?: Parameters<typeof http>[1],
+): Promise<Zone> => {
+  return http<Zone>(getActivateResponsibilityZoneUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getActivateResponsibilityZoneMutationKey = () =>
+  ["activateResponsibilityZone"] as const;
+
+export const getActivateResponsibilityZoneMutationOptions = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof activateResponsibilityZone>>,
+    TError,
+    ActivateResponsibilityZoneMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof activateResponsibilityZone>>,
+  TError,
+  ActivateResponsibilityZoneMutationVariables,
+  TContext
+> => {
+  const mutationKey = getActivateResponsibilityZoneMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof activateResponsibilityZone>>,
+    ActivateResponsibilityZoneMutationVariables
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return activateResponsibilityZone(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ActivateResponsibilityZoneMutationResult = NonNullable<
+  Awaited<ReturnType<typeof activateResponsibilityZone>>
+>;
+
+export type ActivateResponsibilityZoneMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse
+>;
+export type ActivateResponsibilityZoneMutationVariables = { id: string };
+
+/**
+ * @summary Включить выключенную зону
+ */
+export const useActivateResponsibilityZone = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof activateResponsibilityZone>>,
+      TError,
+      ActivateResponsibilityZoneMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof activateResponsibilityZone>>,
+  TError,
+  ActivateResponsibilityZoneMutationVariables,
+  TContext
+> => {
+  return useMutation(getActivateResponsibilityZoneMutationOptions(options), queryClient);
 };
 
 export const getGetRoleJournalUrl = (id: string, params?: GetRoleJournalParams) => {
@@ -57140,6 +58428,231 @@ export function useGetCounterpartyByClient<
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+export const getSetCounterpartyDoNotWorkUrl = (id: CompanyItemRef) => {
+  return `/api/v1/people/counterparties/${id}/do-not-work`;
+};
+
+/**
+ * ERP `POST parties/organizations/{id}/do-not-work/` (Х-8). Причина обязательна, дата окончания по желанию; повторная отметка заменяет прежнюю. Новые КП, договор, заказ поставщику и заявка у такой компании ERP отказывает 409 `CONFLICT` (`details.reason = company_do_not_work`, `details.do_not_work` — причина и кто отметил); приглашения её контактов в кабинет не уходят; документы в работе не отменяются. Отметка попадает в журнал и в CRM снимком компании. Раздел `crm.clients` или `erp.stock` — полный; в ERP — право `deal.manage` или `supply.manage`, иначе 403.
+ * @summary Карточка контрагента: «Не работать»
+ */
+export const setCounterpartyDoNotWork = async (
+  id: CompanyItemRef,
+  doNotWorkIn: DoNotWorkIn,
+  options?: Parameters<typeof http>[1],
+): Promise<CounterpartyCard> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<CounterpartyCard>(getSetCounterpartyDoNotWorkUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(doNotWorkIn),
+  });
+};
+
+export const getSetCounterpartyDoNotWorkMutationKey = () => ["setCounterpartyDoNotWork"] as const;
+
+export const getSetCounterpartyDoNotWorkMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof setCounterpartyDoNotWork>>,
+    TError,
+    SetCounterpartyDoNotWorkMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof setCounterpartyDoNotWork>>,
+  TError,
+  SetCounterpartyDoNotWorkMutationVariables,
+  TContext
+> => {
+  const mutationKey = getSetCounterpartyDoNotWorkMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof setCounterpartyDoNotWork>>,
+    SetCounterpartyDoNotWorkMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return setCounterpartyDoNotWork(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SetCounterpartyDoNotWorkMutationResult = NonNullable<
+  Awaited<ReturnType<typeof setCounterpartyDoNotWork>>
+>;
+export type SetCounterpartyDoNotWorkMutationBody = DoNotWorkIn;
+export type SetCounterpartyDoNotWorkMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type SetCounterpartyDoNotWorkMutationVariables = { id: CompanyItemRef; data: DoNotWorkIn };
+
+/**
+ * @summary Карточка контрагента: «Не работать»
+ */
+export const useSetCounterpartyDoNotWork = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof setCounterpartyDoNotWork>>,
+      TError,
+      SetCounterpartyDoNotWorkMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof setCounterpartyDoNotWork>>,
+  TError,
+  SetCounterpartyDoNotWorkMutationVariables,
+  TContext
+> => {
+  return useMutation(getSetCounterpartyDoNotWorkMutationOptions(options), queryClient);
+};
+
+export const getClearCounterpartyDoNotWorkUrl = (id: CompanyItemRef) => {
+  return `/api/v1/people/counterparties/${id}/do-not-work`;
+};
+
+/**
+ * ERP `DELETE parties/organizations/{id}/do-not-work/` (Х-8): снять отметку; повтор безопасен. Тот же доступ, что у «Не работать». Запись в журнале и снимок в CRM — как при установке.
+ * @summary Карточка контрагента: «Снова работать»
+ */
+export const clearCounterpartyDoNotWork = async (
+  id: CompanyItemRef,
+  options?: Parameters<typeof http>[1],
+): Promise<CounterpartyCard> => {
+  return http<CounterpartyCard>(getClearCounterpartyDoNotWorkUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getClearCounterpartyDoNotWorkMutationKey = () =>
+  ["clearCounterpartyDoNotWork"] as const;
+
+export const getClearCounterpartyDoNotWorkMutationOptions = <
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof clearCounterpartyDoNotWork>>,
+    TError,
+    ClearCounterpartyDoNotWorkMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof clearCounterpartyDoNotWork>>,
+  TError,
+  ClearCounterpartyDoNotWorkMutationVariables,
+  TContext
+> => {
+  const mutationKey = getClearCounterpartyDoNotWorkMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof clearCounterpartyDoNotWork>>,
+    ClearCounterpartyDoNotWorkMutationVariables
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return clearCounterpartyDoNotWork(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ClearCounterpartyDoNotWorkMutationResult = NonNullable<
+  Awaited<ReturnType<typeof clearCounterpartyDoNotWork>>
+>;
+
+export type ClearCounterpartyDoNotWorkMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+export type ClearCounterpartyDoNotWorkMutationVariables = { id: CompanyItemRef };
+
+/**
+ * @summary Карточка контрагента: «Снова работать»
+ */
+export const useClearCounterpartyDoNotWork = <
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof clearCounterpartyDoNotWork>>,
+      TError,
+      ClearCounterpartyDoNotWorkMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof clearCounterpartyDoNotWork>>,
+  TError,
+  ClearCounterpartyDoNotWorkMutationVariables,
+  TContext
+> => {
+  return useMutation(getClearCounterpartyDoNotWorkMutationOptions(options), queryClient);
+};
 
 export const getSetCounterpartyRoleUrl = (id: CompanyItemRef) => {
   return `/api/v1/people/counterparties/${id}/roles`;

@@ -9,6 +9,8 @@ export interface CatalogMxikHit {
   name: string;
   /** Группа или класс классификатора */
   group: string;
+  /** Путь по классификатору «группа › класс › позиция» без самого названия; пусто, если его нет */
+  path?: string;
   unit: string;
   package: string;
 }

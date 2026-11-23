@@ -293,7 +293,7 @@ test.describe("На согласовании: служебные записки"
     await confirmDialog(page);
     await expect(page.getByText("Документ отклонён", { exact: true }).first()).toBeVisible();
     await page.locator(PANEL).getByRole("tab", { name: "Маршрут" }).click();
-    await expect(page.locator(PANEL).getByText("Нужны данные по неликвиду.")).toBeVisible();
+    await expect(page.locator(PANEL).getByText("Нужны данные по неликвиду.").first()).toBeVisible();
 
     await spaGoto(page, `/eds/approvals/${encodeURIComponent("ЗЯ-2026/003")}`);
     const form2 = memoForm(page);

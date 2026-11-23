@@ -13,6 +13,7 @@ import {
   useLoginSecondFactor,
 } from "../../shared/api/generated/platform-bff";
 import { AuthLayout } from "./AuthLayout";
+import { EnrollmentStep } from "./EnrollmentStep";
 import { authErrorText } from "./errors";
 import { homePath } from "../access";
 import type { Me, Session } from "../../shared/api/generated/model";
@@ -48,6 +49,8 @@ export function LoginPage() {
   const setupState = useGetSetupState({ query: { retry: false } });
   // ДВ-4: пароль верен, нужен код второго фактора — `challenge` на 5 минут, сессии ещё нет
   const [challenge, setChallenge] = useState<string | null>(null);
+  // ДВ-4б: фактор обязателен по разделам доступа, но не настроен — экран настройки вместо ввода кода
+  const [enrolling, setEnrolling] = useState(false);
   const [backup, setBackup] = useState(false);
   const signedIn = (session: Session) => {
     queryClient.setQueryData(getGetSessionQueryKey(), session);
@@ -63,6 +66,7 @@ export function LoginPage() {
       onSuccess: (result) => {
         if ("second_factor_required" in result) {
           setChallenge(result.challenge);
+          setEnrolling(result.enrollment_required === true);
           return;
         }
         signedIn(result);
@@ -99,6 +103,19 @@ export function LoginPage() {
       <Navigate
         to={existing.data.must_change_password ? "/change-password" : target(existing.data.me)}
         replace
+      />
+    );
+  }
+
+  if (challenge && enrolling) {
+    return (
+      <EnrollmentStep
+        challenge={challenge}
+        onSignedIn={signedIn}
+        onRestart={() => {
+          setChallenge(null);
+          setEnrolling(false);
+        }}
       />
     );
   }

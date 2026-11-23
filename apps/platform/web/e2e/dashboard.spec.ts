@@ -62,8 +62,11 @@ test.describe("Задачи", () => {
     await expect(main.getByText(/^[^·]+ · 10 решений · просрочено: 1$/)).toBeVisible();
     const cards = main.getByRole("region", { name: "Счётчики очереди" }).getByRole("link");
     await expect(cards).toHaveCount(4);
-    await expect(cards.nth(0)).toContainText("Входящие без резолюции");
-    await expect(cards.nth(3)).toContainText("1 ждёт оплаты · 1 в отгрузке");
+    // ЕВ-З: сигнал «Зоны без ответственного» — первой карточкой, остальные идут по порядку
+    await expect(cards.nth(0)).toContainText("Зоны без ответственного");
+    await expect(cards.nth(1)).toContainText("Входящие без резолюции");
+    // карточек не больше четырёх: сигнал зон занимает место, карточка «1 ждёт оплаты · 1 в отгрузке» в набор не входит
+    await expect(cards.nth(3)).toContainText("Служебные записки");
 
     const queue = main.getByRole("region", { name: "Что ждёт вас" });
     const rows = queue.getByRole("listitem");
@@ -81,8 +84,8 @@ test.describe("Задачи", () => {
     await expect(rows.filter({ hasText: "Одобрить КП-2026/115" })).toHaveCount(1);
     // СЦ-9: подпись договора и счёта на мне — строки «Подписать …»
     await expect(rows.filter({ hasText: /^.*Подписать (договор|счёт) / })).toHaveCount(2);
-    await expect(cards.nth(1)).toContainText("КП на одобрение");
-    await expect(cards.nth(1)).toContainText("4");
+    await expect(cards.nth(2)).toContainText("КП на одобрение");
+    await expect(cards.nth(2)).toContainText("4");
 
     // боковое окно в очереди закрыто по умолчанию (ORCHESTRATOR §3 п. 18) — «Панель» открывает «Сегодня»
     await page.getByRole("button", { name: "Показать панель", exact: true }).click();

@@ -41,9 +41,19 @@ def test_grid_needs_a_document_kind() -> None:
     assert 'class="rt-id"' not in plain and "rt-brand" in plain
 
 
-def test_internal_documents_keep_their_compact_head() -> None:
-    html = grid_html(layout=Layout.INTERNAL)
+def test_internal_documents_keep_their_compact_head_without_a_kind() -> None:
+    html = grid_html(replace(samples.GRID_META, kind_label=None), layout=Layout.INTERNAL)
     assert 'class="rt-id"' not in html and "rt-int-head" in html
+
+
+def test_memo_is_the_same_sheet_without_window_and_company_footer() -> None:
+    """Служебная записка (стандарт §4): вид и инфоблок как у всех, без окна и подвала из колонок, внизу — строка."""
+    meta = replace(samples.GRID_META, kind_label="Служебная записка", verification_code="AB12CD34")
+    html = grid_html(meta, layout=Layout.INTERNAL)
+    assert 'class="rt-id"' in html and "Служебная записка" in html
+    assert 'class="rt-id-window"' not in html and 'class="rt-id-return"' not in html
+    assert '<table class="rt-fcols">' not in html and "Руководство" not in html
+    assert "Внутренний документ · Код проверки AB12CD34" in html
 
 
 def test_info_block_window_and_contact() -> None:

@@ -5,6 +5,7 @@
  * экран входа появится в фазе P1.
  */
 import { ApiError, toApiError } from "./errors";
+import { freshStepUp } from "./stepUp";
 
 const CSRF_COOKIE = "rt_pf_csrf";
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
@@ -30,6 +31,9 @@ function withSession(options: RequestInit): RequestInit {
   const method = (options.method ?? "GET").toUpperCase();
   const csrf = SAFE_METHODS.has(method) ? null : readCookie(CSRF_COOKIE);
   if (csrf) headers.set("X-CSRF-Token", csrf);
+  // ДВ-4б: свежий код второго фактора идёт с изменяющими запросами, пока токен действует
+  const stepUp = SAFE_METHODS.has(method) ? null : freshStepUp();
+  if (stepUp && !headers.has("X-Step-Up-Token")) headers.set("X-Step-Up-Token", stepUp);
   return { ...options, headers, credentials: "same-origin" };
 }
 

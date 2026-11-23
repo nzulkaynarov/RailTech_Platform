@@ -111,6 +111,41 @@ async def test_preview_needs_the_letterhead_and_is_served_only_as_a_preview(
     assert (await client.get(f"{PREVIEW}/{'0' * 64}", headers=manager.headers)).status_code == 404
 
 
+async def test_memo_preview_is_the_compact_sheet_without_the_letter_word_window_and_outgoing_number(
+    client: httpx.AsyncClient, staff: dict[str, Person], container: Container
+) -> None:
+    from rt_docs import Layout
+    from rt_docs.prepare import document_html, prepare
+
+    from app.models import DocumentRender
+    from app.services import render_process
+
+    await deliver_letterhead(client, container)
+    htmls: dict[str, str] = {}
+    for kind in ("letter", "memo"):
+        request = {"body": body("ru", "Коллеги!"), "kind": kind}
+        answer = await client.post(PREVIEW, json=request, headers=staff["manager"].headers)
+        assert answer.status_code == 202, answer.text
+        async with container.session_factory() as session:
+            row = await session.get(DocumentRender, answer.json()["hash"])
+            assert row is not None
+            payload = row.payload
+        letterhead, meta = render_process.render_inputs(payload, None, None)
+        prepared = prepare(
+            payload["body"],
+            letterhead=letterhead,
+            layout=Layout(payload["layout"]),
+            meta=meta,
+            highlight_missing=False,
+            draft=True,
+        )
+        htmls[kind] = document_html(prepared, page_numbers=True)
+    assert "Служебная записка" in htmls["memo"]
+    for fragment in ("Письмо", "Исх. №", '<div class="rt-id-window'):
+        assert fragment not in htmls["memo"], fragment
+    assert "Письмо" in htmls["letter"] and "Исх. №" in htmls["letter"], "the letter preview is unchanged"
+
+
 async def test_former_erp_samples_are_letter_templates_in_three_languages(
     client: httpx.AsyncClient, staff: dict[str, Person]
 ) -> None:

@@ -20,7 +20,7 @@ from decimal import Decimal
 from typing import Any, Optional, Tuple
 
 from django.db import transaction
-from django.db.models import Count, Exists, OuterRef, Q, QuerySet, Subquery
+from django.db.models import Case, Count, Exists, F, IntegerField, OuterRef, Q, QuerySet, Subquery, Value, When
 from django.utils import timezone
 from finance.models import Invoice, Payment, PaymentConfirmation
 
@@ -93,13 +93,58 @@ def counts(day: date) -> dict[str, int]:
     return annotated().aggregate(**aggregates)
 
 
-def board(*, tab: str, day: date, q: str = "", limit: int = 50, offset: int = 0) -> Tuple[QuerySet, int]:
-    """Страница счетов вкладки: самые срочные сверху. Возвращает выборку страницы и общее число."""
+#: Белый список порядка (Х-15б): ключ параметра `ordering` → поле выборки. Поле вне списка не сортирует: порядок по
+#: произвольному имени недопустим. `number` — строка: у счёта нет сохранённого порядкового номера, а префикс настраивается
+#: и не разбирается; `status` — ранг слова статуса строки (`DISPLAY_STATUSES`), выведенного из фактов.
+ORDERING = {
+    "number": "number",
+    "client": "deal__company__name",
+    "amount": "total_incl_vat",
+    "issued": "issued_at",
+    "due": "due_date",
+    "status": "status_rank",
+}
+
+
+def parse_ordering(raw: str) -> tuple[str, bool]:
+    """`field` или `-field` → `(поле выборки, по убыванию)`; чужое поле → `("", False)` (порядок вкладки)."""
+    text = (raw or "").strip()
+    desc = text.startswith("-")
+    field = text[1:] if desc else text
+    return (ORDERING[field], desc) if field in ORDERING else ("", False)
+
+
+def _status_rank(day: date) -> Case:
+    """Ранг слова статуса строки: тот же порядок проверок, что у `display_status`, значения — по `DISPLAY_STATUSES`."""
+    rank = {name: index for index, name in enumerate(DISPLAY_STATUSES)}
+    return Case(
+        When(status__code=InvoiceStatusCode.CANCELLED, then=Value(rank["cancelled"])),
+        When(status__code=InvoiceStatusCode.PAID, then=Value(rank["paid"])),
+        When(status__code=InvoiceStatusCode.DRAFT, then=Value(rank["draft"])),
+        When(has_proof=True, then=Value(rank["proof_received"])),
+        When(Q(due_date__lt=day) & Q(total_incl_vat__gt=F("amount_paid")), then=Value(rank["overdue"])),
+        When(status__code=InvoiceStatusCode.PARTIAL, then=Value(rank["partially_paid"])),
+        default=Value(rank["issued"]),
+        output_field=IntegerField(),
+    )
+
+
+def board(
+    *, tab: str, day: date, q: str = "", limit: int = 50, offset: int = 0, ordering: str = ""
+) -> Tuple[QuerySet, int]:
+    """Страница счетов вкладки: самые срочные сверху, либо порядок `ordering` из белого списка (пустые значения — в конце,
+    равные — по id). Возвращает выборку страницы и общее число."""
     qs = annotated().filter(tab_q(tab, day))
     needle = q.strip()
     if needle:
         qs = qs.filter(number_search_q("number", needle) | Q(deal__company__name__icontains=needle))
-    if tab == "proofs":
+    field, desc = parse_ordering(ordering)
+    if field:
+        if field == "status_rank":
+            qs = qs.annotate(status_rank=_status_rank(day))
+        column = F(field)
+        qs = qs.order_by(column.desc(nulls_last=True) if desc else column.asc(nulls_last=True), "-id" if desc else "id")
+    elif tab == "proofs":
         qs = qs.order_by("proof_at", "id")
     elif tab in ("awaiting", "overdue"):
         qs = qs.order_by("due_date", "id")

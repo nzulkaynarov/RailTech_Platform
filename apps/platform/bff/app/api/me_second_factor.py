@@ -20,6 +20,7 @@ from app.schemas_profile import (
     SecondFactorEnabled,
     SecondFactorSetup,
     SecondFactorStatus,
+    StepUpOut,
 )
 
 router = APIRouter(tags=["me"])
@@ -32,6 +33,14 @@ def _body(response: httpx.Response, ok: int = 200) -> dict[str, Any]:
         body = response.json()
         if isinstance(body, dict):
             return body
+    if response.status_code == 409 and backend_reason(response) == "second_factor_required":
+        raise PlatformError(
+            "CONFLICT",
+            "Для вашего доступа второй фактор обязателен.",
+            status_code=409,
+            source="crm",
+            details={"reason": "second_factor_required"},
+        )
     if response.status_code == 422:
         reason = backend_reason(response) or "second_factor_code_invalid"
         raise PlatformError(
@@ -85,3 +94,13 @@ async def disable_second_factor(body: SecondFactorCodeIn, authed: AuthedDep) -> 
     if response.status_code != 204:
         _body(response, ok=204)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post(
+    "/me/second-factor/step-up", response_model=StepUpOut, operation_id="stepUpSecondFactor"
+)
+async def step_up_second_factor(body: SecondFactorCodeIn, authed: AuthedDep) -> StepUpOut:
+    """Свежий код (ДВ-4б): токен на 5 минут для чувствительных действий — выдача роли и
+    подтверждение новых банковских реквизитов (заголовок `X-Step-Up-Token`)."""
+    response = await authed.call("crm", "POST", f"{BASE}/step-up", json={"code": body.code})
+    return StepUpOut.model_validate(_body(response))

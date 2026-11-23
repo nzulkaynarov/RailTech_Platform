@@ -7,6 +7,7 @@ ERP проецирует контакты клиентов CRM) и партнё�
 журнал не принял запись — контактов нет.
 """
 
+from datetime import date
 from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, Path, Query, status
@@ -15,6 +16,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from app.clients.erp_company import ErpCompany
 from app.deps import Authed, require, require_any
 from app.errors import PlatformError, from_backend
+from app.schemas_do_not_work import DoNotWork
 from app.schemas_erp_catalog import page_meta, rows_of
 
 router = APIRouter(tags=["chats"])
@@ -201,6 +203,7 @@ class CounterpartyCard(BaseModel):
     bank_accounts: list[CounterpartyAccount]
     accounts_masked: bool
     brands: list[CounterpartyRef]
+    do_not_work: DoNotWork | None = None
 
 
 class CounterpartyRoleIn(BaseModel):
@@ -211,6 +214,10 @@ class CounterpartyRoleIn(BaseModel):
 
 def _rows(value: Any) -> list[dict[str, Any]]:
     return [row for row in value if isinstance(row, dict)] if isinstance(value, list) else []
+
+
+def to_do_not_work(raw: Any) -> DoNotWork | None:
+    return DoNotWork.model_validate(raw) if isinstance(raw, dict) else None
 
 
 def to_card(raw: Any) -> CounterpartyCard:
@@ -262,6 +269,7 @@ def to_card(raw: Any) -> CounterpartyCard:
             CounterpartyRef(id=str(brand.get("id", "")), name=str(brand.get("name") or ""))
             for brand in _rows(row.get("brands"))
         ],
+        do_not_work=to_do_not_work(row.get("do_not_work")),
     )
 
 
@@ -326,6 +334,43 @@ async def update_counterparty_requisites(
     if "inn" in sent:
         sent["tin"] = sent.pop("inn")
     data = await ErpCompany(authed.call).data("PATCH", f"parties/organizations/{id}/", json=sent)
+    return to_card(data)
+
+
+class DoNotWorkIn(BaseModel):
+    """«Не работать» (Х-8): причина — обязательный текст, дата окончания — по желанию."""
+
+    model_config = ConfigDict(extra="forbid")
+    reason: str = Field(min_length=1, max_length=1000)
+    until: date | None = None
+
+
+@router.post(
+    "/people/counterparties/{id}/do-not-work",
+    response_model=CounterpartyCard,
+    operation_id="setCounterpartyDoNotWork",
+)
+async def set_counterparty_do_not_work(
+    id: CompanyId, body: DoNotWorkIn, authed: RequisitesWriter
+) -> CounterpartyCard:
+    """Отметить «Не работать» (Х-8); право — как на реквизиты (ERP deal.manage, supply.manage)."""
+    sent = {"reason": body.reason, "until": body.until.isoformat() if body.until else None}
+    data = await ErpCompany(authed.call).data(
+        "POST", f"parties/organizations/{id}/do-not-work/", json=sent
+    )
+    return to_card(data)
+
+
+@router.delete(
+    "/people/counterparties/{id}/do-not-work",
+    response_model=CounterpartyCard,
+    operation_id="clearCounterpartyDoNotWork",
+)
+async def clear_counterparty_do_not_work(
+    id: CompanyId, authed: RequisitesWriter
+) -> CounterpartyCard:
+    """Снять «Не работать» (Х-8); повтор безопасен."""
+    data = await ErpCompany(authed.call).data("DELETE", f"parties/organizations/{id}/do-not-work/")
     return to_card(data)
 
 

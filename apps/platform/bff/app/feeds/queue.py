@@ -1034,7 +1034,7 @@ def build_cards(view: View, snap: Snapshot, queue: list[QueueItem]) -> list[Queu
             label="Лиды разобрать",
             count=triage,
             hint="Контакты · Лиды",
-            path="/crm/messages",
+            path="/crm/leads?scope=waiting",
         )
     elif wants_inbox(view):
         answer = sum(1 for i in queue if i.kind == "answer_lead" and i.on_behalf_of is None)
@@ -1044,14 +1044,14 @@ def build_cards(view: View, snap: Snapshot, queue: list[QueueItem]) -> list[Queu
             label="Лиды без ответа",
             count=answer,
             hint="Контакты · Лиды",
-            path="/crm/messages",
+            path="/crm/leads?scope=waiting",
         )
         cards["leads_to_take"] = QueueCard(
             key="leads_to_take",
             label="Лиды без менеджера",
             count=take,
             hint="Контакты · Лиды",
-            path="/crm/messages",
+            path="/crm/leads?scope=waiting",
         )
     if wants_letters(view) and snap.letters is not None:
         cards["letters_without_resolution"] = QueueCard(
@@ -1067,7 +1067,7 @@ def build_cards(view: View, snap: Snapshot, queue: list[QueueItem]) -> list[Queu
             label="Входящая почта",
             count=snap.mail_total,
             hint=(
-                "Контакты · Почта"
+                "Документы · Почта"
                 if snap.mail_configured
                 else "Почта не подключена — Настройки · Подключения · Почта"
             ),
@@ -1115,6 +1115,19 @@ def build_cards(view: View, snap: Snapshot, queue: list[QueueItem]) -> list[Queu
             hint="Главная · Проекты",
             path="/eds/projects",
         )
+    if snap.zones_without_responsible:
+        # ЕВ-З: сигнал, а не счётчик работы — пока есть зона без ответственного; первой, чтобы
+        # лимит карточек не отрезал её.
+        cards = {
+            "zones_without_responsible": QueueCard(
+                key="zones_without_responsible",
+                label="Зоны без ответственного",
+                count=snap.zones_without_responsible,
+                hint="Настройки · Люди и доступ · Зоны ответственности",
+                path="/admin/zones",
+            ),
+            **cards,
+        }
     return list(cards.values())[:MAX_CARDS]
 
 

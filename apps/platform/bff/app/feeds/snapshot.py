@@ -115,6 +115,9 @@ class Snapshot:
     # Проекты на шагах «Договор» и «Оплата» (ERP `/crm/projects/?step=`): договор и акт к действию.
     projects_contract: list[dict[str, Any]] = field(default_factory=list)
     projects_payment: list[dict[str, Any]] = field(default_factory=list)
+    # ЕВ-З: действующих зон без действующего ответственного (CRM `responsibility-zones/summary`);
+    # `None` — не читали, роли не положено или CRM не ответил (карточки нет: ноль был бы ложью).
+    zones_without_responsible: int | None = None
 
     @property
     def deal_index(self) -> dict[int, dict[str, Any]]:
@@ -155,6 +158,12 @@ LETTER_TASKS_PATH = "/api/v1/letter-tasks"
 
 def wants_letter_tasks(view: View) -> bool:
     return any(view.wants(kind) for kind in LETTER_TASK_KINDS)
+
+
+def wants_zones(view: View) -> bool:
+    """Сигнал зон — тому, кто назначает людей в зоны: раздел `company.settings` (администратор,
+    директор). Вида работы в очереди у него нет, поэтому раздел проверяется прямо."""
+    return allows(view.access, "company.settings", "full")
 
 
 def wants_tickets(view: View) -> bool:
@@ -270,6 +279,8 @@ async def _quote_snapshots(feed: Feed, routes: list[dict[str, Any]]) -> dict[str
 
 OVERDUE_PATH = "/api/v1/stock/overdue/"
 SUPPLY_TASKS_PATH = "/api/v1/stock/tasks/"
+# ЕВ-З: сигнал «зона без ответственного» держателям `company.settings` (CRM `ticket_label:read`).
+ZONES_SUMMARY_PATH = "/api/v1/responsibility-zones/summary"
 TICKETS_PATH = "/api/v1/staff-tickets"
 TICKETS_PARAMS = {"status": "new", "limit": 20}
 MAIL_PATH = "/api/v1/inbound-mail"
@@ -290,6 +301,7 @@ async def load_snapshot(
     eds: bool = False,
     stock: bool = False,
     work: bool = False,
+    zones: bool = False,
 ) -> Snapshot:
     """Параллельно прочитать нужные источники. `view` — роли «вида» (активная роль, если задана);
     сделки нужны и для подписей к очереди и уведомлениям, поэтому их читает тот, кто их просит."""
@@ -358,6 +370,13 @@ async def load_snapshot(
             snap.tickets = rows(payload)
             total = payload.get("total") if isinstance(payload, dict) else None
             snap.tickets_total = total if isinstance(total, int) else len(snap.tickets)
+
+    async def load_zones() -> None:
+        if zones and wants_zones(view):
+            payload = await feed.get("crm", ZONES_SUMMARY_PATH, ttl=SNAPSHOT_TTL_SECONDS)
+            count = payload.get("without_responsible") if isinstance(payload, dict) else None
+            if isinstance(count, int) and not isinstance(count, bool):
+                snap.zones_without_responsible = count
 
     async def load_mail() -> None:
         if tickets and (wants_mail(view) or wants_mail_mine(view)):
@@ -431,5 +450,6 @@ async def load_snapshot(
         load_stock(),
         load_letter_tasks(),
         load_signing(),
+        load_zones(),
     )
     return snap

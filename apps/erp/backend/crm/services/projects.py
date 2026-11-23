@@ -21,6 +21,7 @@ from typing import Any, Optional
 from django.db import transaction
 from django.db.models import Q, QuerySet
 from django.utils import timezone
+from parties import do_not_work
 
 from core.currency import BASE_CURRENCY
 
@@ -349,11 +350,14 @@ def _quote_ref(quote) -> Optional[dict]:
 def _contract_ref(contract) -> Optional[dict]:
     if contract is None:
         return None
+    sent = contract_flow.contract_sent_to_client(contract)
     return {
         "id": contract.id,
         "number": contract.number,
         "status": contract_flow.contract_v3_status(contract),
-        "sent_to_client": contract_flow.contract_sent_to_client(contract),
+        "sent_to_client": sent,
+        # Х-1: список и «Мои задачи» говорят «Отправить клиенту» только когда визы собраны.
+        "send_blocker_code": None if sent else (contract_flow.send_blocker(contract) or {}).get("code"),
     }
 
 
@@ -480,6 +484,10 @@ def _history_for(journal: list, kind: str, number: Optional[str]) -> list:
     return [row for row in journal if row["document"] == kind and (number is None or row["number"] in (None, number))]
 
 
+def _awaits_send(contract) -> bool:
+    return not contract_flow.contract_sent_to_client(contract)
+
+
 def _contract_card(contract, user, journal: list) -> Optional[dict]:
     if contract is None:
         return None
@@ -492,6 +500,8 @@ def _contract_card(contract, user, journal: list) -> Optional[dict]:
         "has_pdf": bool(contract.pdf_file),
         "has_scan": bool(contract.signed_file),
         "actions": contract_flow.allowed_actions(contract, user),
+        # Х-1: пока проект не ушёл клиенту — что мешает его отправить (визы словами); `null` — ничего.
+        "send_blocker": contract_flow.send_blocker(contract) if _awaits_send(contract) else None,
         "history": _history_for(journal, "contract", contract.number),
     }
 
@@ -608,6 +618,8 @@ def project_card(deal, user) -> dict:
         "fulfillment": _fulfillment_card(deal, user),
         "delivery_lines": _delivery_lines(deal),
         "journal": journal,
+        # Х-8: с компанией не работаем — полоса в карточке; документы в работе не отменяются
+        "do_not_work": do_not_work.facts(deal.company) if deal.company_id else None,
     }
 
 

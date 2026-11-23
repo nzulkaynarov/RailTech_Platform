@@ -45,6 +45,7 @@ describe("i18n", () => {
     "articles",
     "legal",
     "signing",
+    "zones",
     "stock",
   ] as const)("пространство %s: uz и en — те же ключи, что ru", (ns) => {
     for (const lng of ["uz", "en"] as const) {
@@ -95,6 +96,7 @@ describe("i18n", () => {
         "help",
         "articles",
         "signing",
+        "zones",
       ] as const) {
         for (const key of keys(resources[lng][ns])) {
           const value = key
@@ -131,6 +133,7 @@ const SETTINGS_SUBTITLES = [
   "audit:page.subtitle",
   "letters:settings.subtitle",
   "signing:subtitle",
+  "zones:subtitle",
 ] as const;
 const CARD_PURPOSES = [
   "erp",

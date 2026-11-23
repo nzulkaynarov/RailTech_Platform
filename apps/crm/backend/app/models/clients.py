@@ -58,12 +58,35 @@ class Client(TimestampMixin, Base):
     # компании ERP; время последнего применённого снимка `erp.company.updated` (более старый не
     # применяется).
     erp_requisites_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Х-8: отметка «Не работать» — проекция компании ERP (факты из того же снимка): причина, кто и
+    # когда поставил, срок. Пусто — отметки нет. «Действует ли» считает `do_not_work` по дате.
+    do_not_work_reason: Mapped[str | None] = mapped_column(Text)
+    do_not_work_by: Mapped[str | None] = mapped_column(String(255))
+    do_not_work_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    do_not_work_until: Mapped[date | None] = mapped_column(Date)
     # Передача в бэк-офис идёт задачей после коммита клиента (FIX-31): состояние для карточки.
     # `NULL` — передачи не было (режим local или клиент создан вручную).
     erp_handoff_status: Mapped[str | None] = mapped_column(String(16))
     erp_handoff_error: Mapped[str | None] = mapped_column(String(500))
     # Заявку в ERP ещё предстоит завести: не теряется при повторе после сбоя.
     erp_handoff_request: Mapped[bool] = mapped_column(Boolean, server_default=sql("false"))
+
+    def do_not_work_on(self, today: date) -> dict[str, Any] | None:
+        """Действующая на дату `today` отметка «Не работать» (Х-8); нет или срок вышел — `None`.
+
+        Дату «сегодня» передаёт вызывающий по настройке `business_hours.timezone` (не зашита здесь).
+        """
+        if self.do_not_work_at is None or not self.do_not_work_reason:
+            return None
+        until = self.do_not_work_until
+        if until is not None and until < today:
+            return None
+        return {
+            "reason": self.do_not_work_reason,
+            "set_by": self.do_not_work_by,
+            "set_at": self.do_not_work_at,
+            "until": until,
+        }
 
 
 class PartnerClientRequest(TimestampMixin, Base):

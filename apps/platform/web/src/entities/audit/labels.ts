@@ -115,6 +115,10 @@ export const AUDIT_ACTIONS = [
   "external_service.disable",
   "external_service.enable",
   "console.open",
+  "responsibility_zone.create",
+  "responsibility_zone.update",
+  "responsibility_zone.deactivate",
+  "responsibility_zone.activate",
 ] as const;
 
 export const AUDIT_ENTITIES = [
@@ -141,6 +145,7 @@ export const AUDIT_ENTITIES = [
   "reply_template",
   "sandbox",
   "export",
+  "responsibility_zone",
 ] as const;
 
 export function actionKey(code: string): string {

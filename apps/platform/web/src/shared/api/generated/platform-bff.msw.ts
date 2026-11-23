@@ -70,6 +70,7 @@ import {
   PaymentProofSource,
   PaymentTab,
   PriceImportMode,
+  ProjectContractSendBlockerCode,
   ProjectDeliveryAction,
   QueueCategory,
   QueueGroup,
@@ -183,6 +184,7 @@ import type {
   DictionaryList,
   DictionarySource,
   DictionarySyncResult,
+  DoNotWork,
   DocflowSettings,
   DocumentPlaceholders,
   DocumentPreview,
@@ -215,6 +217,7 @@ import type {
   Employee,
   EmployeeCredentials,
   EmployeeList,
+  EnrolledSession,
   ErpCheck,
   ErpConnector,
   ErpPairing,
@@ -320,6 +323,7 @@ import type {
   ProjectCard,
   ProjectContract,
   ProjectContractRef,
+  ProjectContractSendBlocker,
   ProjectFileGenerating,
   ProjectFulfillment,
   ProjectInvoiceRef,
@@ -381,6 +385,7 @@ import type {
   SmtpConnector,
   SpendReport,
   StaffDirectory,
+  StepUp,
   StockBalanceList,
   StockProduct,
   StockReceipts,
@@ -416,6 +421,9 @@ import type {
   TicketList,
   TicketPage,
   Waiting,
+  Zone,
+  ZoneList,
+  ZoneSummary,
 } from "./model";
 
 export const getLoginResponseMock = (
@@ -475,9 +483,74 @@ export const getLoginResponseMock = (
     {
       second_factor_required: faker.helpers.arrayElement([true] as const),
       challenge: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      enrollment_required: faker.datatype.boolean(),
       ...overrideResponse,
     },
   ]);
+
+export const getLoginEnrollSetupResponseMock = (
+  overrideResponse: Partial<Extract<SecondFactorSetup, object>> = {},
+): SecondFactorSetup => ({
+  secret: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  otpauth_uri: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  ...overrideResponse,
+});
+
+export const getLoginEnrollResponseMock = (
+  overrideResponse: Partial<Extract<EnrolledSession, object>> = {},
+): EnrolledSession => ({
+  me: {
+    id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    email: faker.internet.email(),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+    position: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      undefined,
+    ]),
+    avatar_url: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      undefined,
+    ]),
+    language: faker.helpers.arrayElement(Object.values(Language)),
+    roles: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        id: faker.helpers.fromRegExp("^[1-9][0-9]*$"),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        system: faker.datatype.boolean(),
+        code: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          undefined,
+        ]),
+      }),
+    ),
+    active_role: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[1-9][0-9]*$"), null]),
+    modules: faker.helpers.arrayElements(Object.values(ModuleCode)),
+    resources: {
+      [faker.string.alphanumeric(5)]: faker.helpers.arrayElement(Object.values(AccessLevel)),
+    },
+    restricted_fields: faker.helpers.arrayElement([
+      faker.helpers.arrayElements(Object.values(RestrictedField)),
+      undefined,
+    ]),
+    access: { crm: faker.datatype.boolean(), erp: faker.datatype.boolean() },
+    onboarding_done: faker.datatype.boolean(),
+    whats_new_shown: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^\\d{4}-\\d{2}-\\d{2}$"),
+      null,
+    ]),
+    whats_new_read: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^\\d{4}-\\d{2}-\\d{2}$"),
+      null,
+    ]),
+  },
+  must_change_password: faker.datatype.boolean(),
+  expires_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  backup_codes: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => faker.string.alpha({ length: { min: 10, max: 20 } }),
+  ),
+  ...overrideResponse,
+});
 
 export const getLoginSecondFactorResponseMock = (
   overrideResponse: Partial<Extract<Session, object>> = {},
@@ -832,6 +905,7 @@ export const getGetSecondFactorResponseMock = (
     null,
   ]),
   backup_codes_left: faker.number.int({ min: 0 }),
+  required: faker.datatype.boolean(),
   ...overrideResponse,
 });
 
@@ -849,6 +923,14 @@ export const getEnableSecondFactorResponseMock = (
   backup_codes: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
     () => faker.string.alpha({ length: { min: 10, max: 20 } }),
   ),
+  ...overrideResponse,
+});
+
+export const getStepUpSecondFactorResponseMock = (
+  overrideResponse: Partial<Extract<StepUp, object>> = {},
+): StepUp => ({
+  token: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  expires_in: faker.number.int({ min: 1 }),
   ...overrideResponse,
 });
 
@@ -3644,6 +3726,10 @@ export const getListEdsProjectsResponseProjectContractRefMock = (
       "cancelled",
     ] as const),
     sent_to_client: faker.datatype.boolean(),
+    send_blocker_code: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(ProjectContractSendBlockerCode)),
+      null,
+    ]),
   },
   ...overrideResponse,
 });
@@ -3785,6 +3871,10 @@ export const getGetEdsProjectResponseProjectContractRefMock = (
       "cancelled",
     ] as const),
     sent_to_client: faker.datatype.boolean(),
+    send_blocker_code: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(ProjectContractSendBlockerCode)),
+      null,
+    ]),
   },
   ...overrideResponse,
 });
@@ -3843,6 +3933,27 @@ export const getGetEdsProjectResponseProjectQuoteMock = (
   ...overrideResponse,
 });
 
+export const getGetEdsProjectResponseProjectContractSendBlockerMock = (
+  overrideResponse: Partial<ProjectContractSendBlocker> = {},
+): ProjectContractSendBlocker => ({
+  ...{
+    code: faker.helpers.arrayElement(Object.values(ProjectContractSendBlockerCode)),
+    message: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    missing: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => faker.string.alpha({ length: { min: 10, max: 20 } }),
+    ),
+    missing_permissions: faker.helpers.arrayElement([
+      Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() =>
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+      ),
+      undefined,
+    ]),
+    remark: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    settings_link: faker.datatype.boolean(),
+  },
+  ...overrideResponse,
+});
+
 export const getGetEdsProjectResponseOnBehalfNoteMock = (
   overrideResponse: Partial<OnBehalfNote> = {},
 ): OnBehalfNote => ({
@@ -3868,6 +3979,10 @@ export const getGetEdsProjectResponseProjectContractMock = (
       "cancelled",
     ] as const),
     sent_to_client: faker.datatype.boolean(),
+    send_blocker_code: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(ProjectContractSendBlockerCode)),
+      null,
+    ]),
     total: faker.helpers.arrayElement([{ ...getGetEdsProjectResponseProjectMoneyMock() }, null]),
     created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
     client_agreed_at: faker.helpers.arrayElement([
@@ -3888,6 +4003,10 @@ export const getGetEdsProjectResponseProjectContractMock = (
       "mark_issued",
       "attach_scan",
     ] as const),
+    send_blocker: faker.helpers.arrayElement([
+      { ...getGetEdsProjectResponseProjectContractSendBlockerMock() },
+      null,
+    ]),
     history: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
       () => ({
         at: faker.date.past().toISOString().slice(0, 19) + "Z",
@@ -4020,6 +4139,21 @@ export const getGetEdsProjectResponseProjectFulfillmentMock = (
   ...overrideResponse,
 });
 
+export const getGetEdsProjectResponseDoNotWorkMock = (
+  overrideResponse: Partial<DoNotWork> = {},
+): DoNotWork => ({
+  ...{
+    reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    set_by: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    set_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  },
+  ...overrideResponse,
+});
+
 export const getGetEdsProjectResponseMock = (
   overrideResponse: Partial<Extract<ProjectCard, object>> = {},
 ): ProjectCard => ({
@@ -4140,6 +4274,7 @@ export const getGetEdsProjectResponseMock = (
       ]),
     }),
   ),
+  do_not_work: faker.helpers.arrayElement([{ ...getGetEdsProjectResponseDoNotWorkMock() }, null]),
   ...overrideResponse,
 });
 
@@ -4187,6 +4322,10 @@ export const getCreateEdsProjectContractResponseProjectContractRefMock = (
       "cancelled",
     ] as const),
     sent_to_client: faker.datatype.boolean(),
+    send_blocker_code: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(ProjectContractSendBlockerCode)),
+      null,
+    ]),
   },
   ...overrideResponse,
 });
@@ -4245,6 +4384,27 @@ export const getCreateEdsProjectContractResponseProjectQuoteMock = (
   ...overrideResponse,
 });
 
+export const getCreateEdsProjectContractResponseProjectContractSendBlockerMock = (
+  overrideResponse: Partial<ProjectContractSendBlocker> = {},
+): ProjectContractSendBlocker => ({
+  ...{
+    code: faker.helpers.arrayElement(Object.values(ProjectContractSendBlockerCode)),
+    message: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    missing: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => faker.string.alpha({ length: { min: 10, max: 20 } }),
+    ),
+    missing_permissions: faker.helpers.arrayElement([
+      Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() =>
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+      ),
+      undefined,
+    ]),
+    remark: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    settings_link: faker.datatype.boolean(),
+  },
+  ...overrideResponse,
+});
+
 export const getCreateEdsProjectContractResponseOnBehalfNoteMock = (
   overrideResponse: Partial<OnBehalfNote> = {},
 ): OnBehalfNote => ({
@@ -4270,6 +4430,10 @@ export const getCreateEdsProjectContractResponseProjectContractMock = (
       "cancelled",
     ] as const),
     sent_to_client: faker.datatype.boolean(),
+    send_blocker_code: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(ProjectContractSendBlockerCode)),
+      null,
+    ]),
     total: faker.helpers.arrayElement([
       { ...getCreateEdsProjectContractResponseProjectMoneyMock() },
       null,
@@ -4293,6 +4457,10 @@ export const getCreateEdsProjectContractResponseProjectContractMock = (
       "mark_issued",
       "attach_scan",
     ] as const),
+    send_blocker: faker.helpers.arrayElement([
+      { ...getCreateEdsProjectContractResponseProjectContractSendBlockerMock() },
+      null,
+    ]),
     history: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
       () => ({
         at: faker.date.past().toISOString().slice(0, 19) + "Z",
@@ -4424,6 +4592,21 @@ export const getCreateEdsProjectContractResponseProjectFulfillmentMock = (
       faker.string.alpha({ length: { min: 10, max: 20 } }),
       null,
     ]),
+  },
+  ...overrideResponse,
+});
+
+export const getCreateEdsProjectContractResponseDoNotWorkMock = (
+  overrideResponse: Partial<DoNotWork> = {},
+): DoNotWork => ({
+  ...{
+    reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    set_by: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    set_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
   },
   ...overrideResponse,
 });
@@ -4572,6 +4755,10 @@ export const getCreateEdsProjectContractResponseMock = (
       ]),
     }),
   ),
+  do_not_work: faker.helpers.arrayElement([
+    { ...getCreateEdsProjectContractResponseDoNotWorkMock() },
+    null,
+  ]),
   ...overrideResponse,
 });
 
@@ -4619,6 +4806,10 @@ export const getActEdsProjectContractResponseProjectContractRefMock = (
       "cancelled",
     ] as const),
     sent_to_client: faker.datatype.boolean(),
+    send_blocker_code: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(ProjectContractSendBlockerCode)),
+      null,
+    ]),
   },
   ...overrideResponse,
 });
@@ -4677,6 +4868,27 @@ export const getActEdsProjectContractResponseProjectQuoteMock = (
   ...overrideResponse,
 });
 
+export const getActEdsProjectContractResponseProjectContractSendBlockerMock = (
+  overrideResponse: Partial<ProjectContractSendBlocker> = {},
+): ProjectContractSendBlocker => ({
+  ...{
+    code: faker.helpers.arrayElement(Object.values(ProjectContractSendBlockerCode)),
+    message: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    missing: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => faker.string.alpha({ length: { min: 10, max: 20 } }),
+    ),
+    missing_permissions: faker.helpers.arrayElement([
+      Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() =>
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+      ),
+      undefined,
+    ]),
+    remark: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    settings_link: faker.datatype.boolean(),
+  },
+  ...overrideResponse,
+});
+
 export const getActEdsProjectContractResponseOnBehalfNoteMock = (
   overrideResponse: Partial<OnBehalfNote> = {},
 ): OnBehalfNote => ({
@@ -4702,6 +4914,10 @@ export const getActEdsProjectContractResponseProjectContractMock = (
       "cancelled",
     ] as const),
     sent_to_client: faker.datatype.boolean(),
+    send_blocker_code: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(ProjectContractSendBlockerCode)),
+      null,
+    ]),
     total: faker.helpers.arrayElement([
       { ...getActEdsProjectContractResponseProjectMoneyMock() },
       null,
@@ -4725,6 +4941,10 @@ export const getActEdsProjectContractResponseProjectContractMock = (
       "mark_issued",
       "attach_scan",
     ] as const),
+    send_blocker: faker.helpers.arrayElement([
+      { ...getActEdsProjectContractResponseProjectContractSendBlockerMock() },
+      null,
+    ]),
     history: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
       () => ({
         at: faker.date.past().toISOString().slice(0, 19) + "Z",
@@ -4856,6 +5076,21 @@ export const getActEdsProjectContractResponseProjectFulfillmentMock = (
       faker.string.alpha({ length: { min: 10, max: 20 } }),
       null,
     ]),
+  },
+  ...overrideResponse,
+});
+
+export const getActEdsProjectContractResponseDoNotWorkMock = (
+  overrideResponse: Partial<DoNotWork> = {},
+): DoNotWork => ({
+  ...{
+    reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    set_by: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    set_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
   },
   ...overrideResponse,
 });
@@ -5001,6 +5236,10 @@ export const getActEdsProjectContractResponseMock = (
       ]),
     }),
   ),
+  do_not_work: faker.helpers.arrayElement([
+    { ...getActEdsProjectContractResponseDoNotWorkMock() },
+    null,
+  ]),
   ...overrideResponse,
 });
 
@@ -5048,6 +5287,10 @@ export const getScanEdsProjectContractResponseProjectContractRefMock = (
       "cancelled",
     ] as const),
     sent_to_client: faker.datatype.boolean(),
+    send_blocker_code: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(ProjectContractSendBlockerCode)),
+      null,
+    ]),
   },
   ...overrideResponse,
 });
@@ -5106,6 +5349,27 @@ export const getScanEdsProjectContractResponseProjectQuoteMock = (
   ...overrideResponse,
 });
 
+export const getScanEdsProjectContractResponseProjectContractSendBlockerMock = (
+  overrideResponse: Partial<ProjectContractSendBlocker> = {},
+): ProjectContractSendBlocker => ({
+  ...{
+    code: faker.helpers.arrayElement(Object.values(ProjectContractSendBlockerCode)),
+    message: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    missing: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => faker.string.alpha({ length: { min: 10, max: 20 } }),
+    ),
+    missing_permissions: faker.helpers.arrayElement([
+      Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() =>
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+      ),
+      undefined,
+    ]),
+    remark: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    settings_link: faker.datatype.boolean(),
+  },
+  ...overrideResponse,
+});
+
 export const getScanEdsProjectContractResponseOnBehalfNoteMock = (
   overrideResponse: Partial<OnBehalfNote> = {},
 ): OnBehalfNote => ({
@@ -5131,6 +5395,10 @@ export const getScanEdsProjectContractResponseProjectContractMock = (
       "cancelled",
     ] as const),
     sent_to_client: faker.datatype.boolean(),
+    send_blocker_code: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(ProjectContractSendBlockerCode)),
+      null,
+    ]),
     total: faker.helpers.arrayElement([
       { ...getScanEdsProjectContractResponseProjectMoneyMock() },
       null,
@@ -5154,6 +5422,10 @@ export const getScanEdsProjectContractResponseProjectContractMock = (
       "mark_issued",
       "attach_scan",
     ] as const),
+    send_blocker: faker.helpers.arrayElement([
+      { ...getScanEdsProjectContractResponseProjectContractSendBlockerMock() },
+      null,
+    ]),
     history: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
       () => ({
         at: faker.date.past().toISOString().slice(0, 19) + "Z",
@@ -5285,6 +5557,21 @@ export const getScanEdsProjectContractResponseProjectFulfillmentMock = (
       faker.string.alpha({ length: { min: 10, max: 20 } }),
       null,
     ]),
+  },
+  ...overrideResponse,
+});
+
+export const getScanEdsProjectContractResponseDoNotWorkMock = (
+  overrideResponse: Partial<DoNotWork> = {},
+): DoNotWork => ({
+  ...{
+    reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    set_by: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    set_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
   },
   ...overrideResponse,
 });
@@ -5430,6 +5717,10 @@ export const getScanEdsProjectContractResponseMock = (
       ]),
     }),
   ),
+  do_not_work: faker.helpers.arrayElement([
+    { ...getScanEdsProjectContractResponseDoNotWorkMock() },
+    null,
+  ]),
   ...overrideResponse,
 });
 
@@ -5477,6 +5768,10 @@ export const getRequestEdsProjectSigningResponseProjectContractRefMock = (
       "cancelled",
     ] as const),
     sent_to_client: faker.datatype.boolean(),
+    send_blocker_code: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(ProjectContractSendBlockerCode)),
+      null,
+    ]),
   },
   ...overrideResponse,
 });
@@ -5535,6 +5830,27 @@ export const getRequestEdsProjectSigningResponseProjectQuoteMock = (
   ...overrideResponse,
 });
 
+export const getRequestEdsProjectSigningResponseProjectContractSendBlockerMock = (
+  overrideResponse: Partial<ProjectContractSendBlocker> = {},
+): ProjectContractSendBlocker => ({
+  ...{
+    code: faker.helpers.arrayElement(Object.values(ProjectContractSendBlockerCode)),
+    message: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    missing: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => faker.string.alpha({ length: { min: 10, max: 20 } }),
+    ),
+    missing_permissions: faker.helpers.arrayElement([
+      Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() =>
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+      ),
+      undefined,
+    ]),
+    remark: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    settings_link: faker.datatype.boolean(),
+  },
+  ...overrideResponse,
+});
+
 export const getRequestEdsProjectSigningResponseOnBehalfNoteMock = (
   overrideResponse: Partial<OnBehalfNote> = {},
 ): OnBehalfNote => ({
@@ -5560,6 +5876,10 @@ export const getRequestEdsProjectSigningResponseProjectContractMock = (
       "cancelled",
     ] as const),
     sent_to_client: faker.datatype.boolean(),
+    send_blocker_code: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(ProjectContractSendBlockerCode)),
+      null,
+    ]),
     total: faker.helpers.arrayElement([
       { ...getRequestEdsProjectSigningResponseProjectMoneyMock() },
       null,
@@ -5583,6 +5903,10 @@ export const getRequestEdsProjectSigningResponseProjectContractMock = (
       "mark_issued",
       "attach_scan",
     ] as const),
+    send_blocker: faker.helpers.arrayElement([
+      { ...getRequestEdsProjectSigningResponseProjectContractSendBlockerMock() },
+      null,
+    ]),
     history: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
       () => ({
         at: faker.date.past().toISOString().slice(0, 19) + "Z",
@@ -5714,6 +6038,21 @@ export const getRequestEdsProjectSigningResponseProjectFulfillmentMock = (
       faker.string.alpha({ length: { min: 10, max: 20 } }),
       null,
     ]),
+  },
+  ...overrideResponse,
+});
+
+export const getRequestEdsProjectSigningResponseDoNotWorkMock = (
+  overrideResponse: Partial<DoNotWork> = {},
+): DoNotWork => ({
+  ...{
+    reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    set_by: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    set_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
   },
   ...overrideResponse,
 });
@@ -5862,6 +6201,10 @@ export const getRequestEdsProjectSigningResponseMock = (
       ]),
     }),
   ),
+  do_not_work: faker.helpers.arrayElement([
+    { ...getRequestEdsProjectSigningResponseDoNotWorkMock() },
+    null,
+  ]),
   ...overrideResponse,
 });
 
@@ -5932,6 +6275,10 @@ export const getActEdsProjectActResponseProjectContractRefMock = (
       "cancelled",
     ] as const),
     sent_to_client: faker.datatype.boolean(),
+    send_blocker_code: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(ProjectContractSendBlockerCode)),
+      null,
+    ]),
   },
   ...overrideResponse,
 });
@@ -5990,6 +6337,27 @@ export const getActEdsProjectActResponseProjectQuoteMock = (
   ...overrideResponse,
 });
 
+export const getActEdsProjectActResponseProjectContractSendBlockerMock = (
+  overrideResponse: Partial<ProjectContractSendBlocker> = {},
+): ProjectContractSendBlocker => ({
+  ...{
+    code: faker.helpers.arrayElement(Object.values(ProjectContractSendBlockerCode)),
+    message: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    missing: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => faker.string.alpha({ length: { min: 10, max: 20 } }),
+    ),
+    missing_permissions: faker.helpers.arrayElement([
+      Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() =>
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+      ),
+      undefined,
+    ]),
+    remark: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    settings_link: faker.datatype.boolean(),
+  },
+  ...overrideResponse,
+});
+
 export const getActEdsProjectActResponseOnBehalfNoteMock = (
   overrideResponse: Partial<OnBehalfNote> = {},
 ): OnBehalfNote => ({
@@ -6015,6 +6383,10 @@ export const getActEdsProjectActResponseProjectContractMock = (
       "cancelled",
     ] as const),
     sent_to_client: faker.datatype.boolean(),
+    send_blocker_code: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(ProjectContractSendBlockerCode)),
+      null,
+    ]),
     total: faker.helpers.arrayElement([{ ...getActEdsProjectActResponseProjectMoneyMock() }, null]),
     created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
     client_agreed_at: faker.helpers.arrayElement([
@@ -6035,6 +6407,10 @@ export const getActEdsProjectActResponseProjectContractMock = (
       "mark_issued",
       "attach_scan",
     ] as const),
+    send_blocker: faker.helpers.arrayElement([
+      { ...getActEdsProjectActResponseProjectContractSendBlockerMock() },
+      null,
+    ]),
     history: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
       () => ({
         at: faker.date.past().toISOString().slice(0, 19) + "Z",
@@ -6163,6 +6539,21 @@ export const getActEdsProjectActResponseProjectFulfillmentMock = (
       faker.string.alpha({ length: { min: 10, max: 20 } }),
       null,
     ]),
+  },
+  ...overrideResponse,
+});
+
+export const getActEdsProjectActResponseDoNotWorkMock = (
+  overrideResponse: Partial<DoNotWork> = {},
+): DoNotWork => ({
+  ...{
+    reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    set_by: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    set_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
   },
   ...overrideResponse,
 });
@@ -6299,6 +6690,10 @@ export const getActEdsProjectActResponseMock = (
       ]),
     }),
   ),
+  do_not_work: faker.helpers.arrayElement([
+    { ...getActEdsProjectActResponseDoNotWorkMock() },
+    null,
+  ]),
   ...overrideResponse,
 });
 
@@ -6346,6 +6741,10 @@ export const getScanEdsProjectActResponseProjectContractRefMock = (
       "cancelled",
     ] as const),
     sent_to_client: faker.datatype.boolean(),
+    send_blocker_code: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(ProjectContractSendBlockerCode)),
+      null,
+    ]),
   },
   ...overrideResponse,
 });
@@ -6404,6 +6803,27 @@ export const getScanEdsProjectActResponseProjectQuoteMock = (
   ...overrideResponse,
 });
 
+export const getScanEdsProjectActResponseProjectContractSendBlockerMock = (
+  overrideResponse: Partial<ProjectContractSendBlocker> = {},
+): ProjectContractSendBlocker => ({
+  ...{
+    code: faker.helpers.arrayElement(Object.values(ProjectContractSendBlockerCode)),
+    message: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    missing: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => faker.string.alpha({ length: { min: 10, max: 20 } }),
+    ),
+    missing_permissions: faker.helpers.arrayElement([
+      Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() =>
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+      ),
+      undefined,
+    ]),
+    remark: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    settings_link: faker.datatype.boolean(),
+  },
+  ...overrideResponse,
+});
+
 export const getScanEdsProjectActResponseOnBehalfNoteMock = (
   overrideResponse: Partial<OnBehalfNote> = {},
 ): OnBehalfNote => ({
@@ -6429,6 +6849,10 @@ export const getScanEdsProjectActResponseProjectContractMock = (
       "cancelled",
     ] as const),
     sent_to_client: faker.datatype.boolean(),
+    send_blocker_code: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(ProjectContractSendBlockerCode)),
+      null,
+    ]),
     total: faker.helpers.arrayElement([
       { ...getScanEdsProjectActResponseProjectMoneyMock() },
       null,
@@ -6452,6 +6876,10 @@ export const getScanEdsProjectActResponseProjectContractMock = (
       "mark_issued",
       "attach_scan",
     ] as const),
+    send_blocker: faker.helpers.arrayElement([
+      { ...getScanEdsProjectActResponseProjectContractSendBlockerMock() },
+      null,
+    ]),
     history: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
       () => ({
         at: faker.date.past().toISOString().slice(0, 19) + "Z",
@@ -6583,6 +7011,21 @@ export const getScanEdsProjectActResponseProjectFulfillmentMock = (
       faker.string.alpha({ length: { min: 10, max: 20 } }),
       null,
     ]),
+  },
+  ...overrideResponse,
+});
+
+export const getScanEdsProjectActResponseDoNotWorkMock = (
+  overrideResponse: Partial<DoNotWork> = {},
+): DoNotWork => ({
+  ...{
+    reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    set_by: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    set_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
   },
   ...overrideResponse,
 });
@@ -6719,6 +7162,10 @@ export const getScanEdsProjectActResponseMock = (
       ]),
     }),
   ),
+  do_not_work: faker.helpers.arrayElement([
+    { ...getScanEdsProjectActResponseDoNotWorkMock() },
+    null,
+  ]),
   ...overrideResponse,
 });
 
@@ -6766,6 +7213,10 @@ export const getMarkEdsProjectDeliveryResponseProjectContractRefMock = (
       "cancelled",
     ] as const),
     sent_to_client: faker.datatype.boolean(),
+    send_blocker_code: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(ProjectContractSendBlockerCode)),
+      null,
+    ]),
   },
   ...overrideResponse,
 });
@@ -6824,6 +7275,27 @@ export const getMarkEdsProjectDeliveryResponseProjectQuoteMock = (
   ...overrideResponse,
 });
 
+export const getMarkEdsProjectDeliveryResponseProjectContractSendBlockerMock = (
+  overrideResponse: Partial<ProjectContractSendBlocker> = {},
+): ProjectContractSendBlocker => ({
+  ...{
+    code: faker.helpers.arrayElement(Object.values(ProjectContractSendBlockerCode)),
+    message: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    missing: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => faker.string.alpha({ length: { min: 10, max: 20 } }),
+    ),
+    missing_permissions: faker.helpers.arrayElement([
+      Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() =>
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+      ),
+      undefined,
+    ]),
+    remark: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    settings_link: faker.datatype.boolean(),
+  },
+  ...overrideResponse,
+});
+
 export const getMarkEdsProjectDeliveryResponseOnBehalfNoteMock = (
   overrideResponse: Partial<OnBehalfNote> = {},
 ): OnBehalfNote => ({
@@ -6849,6 +7321,10 @@ export const getMarkEdsProjectDeliveryResponseProjectContractMock = (
       "cancelled",
     ] as const),
     sent_to_client: faker.datatype.boolean(),
+    send_blocker_code: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(ProjectContractSendBlockerCode)),
+      null,
+    ]),
     total: faker.helpers.arrayElement([
       { ...getMarkEdsProjectDeliveryResponseProjectMoneyMock() },
       null,
@@ -6872,6 +7348,10 @@ export const getMarkEdsProjectDeliveryResponseProjectContractMock = (
       "mark_issued",
       "attach_scan",
     ] as const),
+    send_blocker: faker.helpers.arrayElement([
+      { ...getMarkEdsProjectDeliveryResponseProjectContractSendBlockerMock() },
+      null,
+    ]),
     history: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
       () => ({
         at: faker.date.past().toISOString().slice(0, 19) + "Z",
@@ -7003,6 +7483,21 @@ export const getMarkEdsProjectDeliveryResponseProjectFulfillmentMock = (
       faker.string.alpha({ length: { min: 10, max: 20 } }),
       null,
     ]),
+  },
+  ...overrideResponse,
+});
+
+export const getMarkEdsProjectDeliveryResponseDoNotWorkMock = (
+  overrideResponse: Partial<DoNotWork> = {},
+): DoNotWork => ({
+  ...{
+    reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    set_by: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    set_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
   },
   ...overrideResponse,
 });
@@ -7148,6 +7643,10 @@ export const getMarkEdsProjectDeliveryResponseMock = (
       ]),
     }),
   ),
+  do_not_work: faker.helpers.arrayElement([
+    { ...getMarkEdsProjectDeliveryResponseDoNotWorkMock() },
+    null,
+  ]),
   ...overrideResponse,
 });
 
@@ -15221,6 +15720,500 @@ export const getUpdateRoleResponseMock = (
   ...overrideResponse,
 });
 
+export const getListResponsibilityZonesResponseMock = (
+  overrideResponse: Partial<Extract<ZoneList, object>> = {},
+): ZoneList => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.helpers.fromRegExp("^[1-9][0-9]*$"),
+    code: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    name: {
+      ru: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    },
+    description: {
+      ru: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    },
+    sections: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => faker.string.alpha({ length: { min: 10, max: 20 } }),
+    ),
+    responsible: faker.helpers.arrayElement([
+      {
+        id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        position: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          undefined,
+        ]),
+        active: faker.datatype.boolean(),
+      },
+      undefined,
+    ]),
+    deputy: faker.helpers.arrayElement([
+      {
+        id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        position: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          undefined,
+        ]),
+        active: faker.datatype.boolean(),
+      },
+      undefined,
+    ]),
+    curator: faker.helpers.arrayElement([
+      {
+        id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        position: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          undefined,
+        ]),
+        active: faker.datatype.boolean(),
+      },
+      undefined,
+    ]),
+    basis: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    valid_from: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 10),
+      undefined,
+    ]),
+    valid_to: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), undefined]),
+    active: faker.datatype.boolean(),
+    problems: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        code: faker.helpers.arrayElement([
+          "no_responsible",
+          "responsible_lacks_permissions",
+          "responsible_inactive",
+          "deputy_inactive",
+          "term_expired",
+        ] as const),
+        severity: faker.helpers.arrayElement(["problem", "warning"] as const),
+        sections: faker.helpers.arrayElement([
+          Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() =>
+            faker.string.alpha({ length: { min: 10, max: 20 } }),
+          ),
+          undefined,
+        ]),
+      }),
+    ),
+    updated_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  })),
+  ...overrideResponse,
+});
+
+export const getCreateResponsibilityZoneResponseMock = (
+  overrideResponse: Partial<Extract<Zone, object>> = {},
+): Zone => ({
+  id: faker.helpers.fromRegExp("^[1-9][0-9]*$"),
+  code: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  name: {
+    ru: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  description: {
+    ru: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  sections: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() =>
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+  ),
+  responsible: faker.helpers.arrayElement([
+    {
+      id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      position: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        undefined,
+      ]),
+      active: faker.datatype.boolean(),
+    },
+    undefined,
+  ]),
+  deputy: faker.helpers.arrayElement([
+    {
+      id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      position: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        undefined,
+      ]),
+      active: faker.datatype.boolean(),
+    },
+    undefined,
+  ]),
+  curator: faker.helpers.arrayElement([
+    {
+      id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      position: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        undefined,
+      ]),
+      active: faker.datatype.boolean(),
+    },
+    undefined,
+  ]),
+  basis: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  valid_from: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), undefined]),
+  valid_to: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), undefined]),
+  active: faker.datatype.boolean(),
+  problems: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      code: faker.helpers.arrayElement([
+        "no_responsible",
+        "responsible_lacks_permissions",
+        "responsible_inactive",
+        "deputy_inactive",
+        "term_expired",
+      ] as const),
+      severity: faker.helpers.arrayElement(["problem", "warning"] as const),
+      sections: faker.helpers.arrayElement([
+        Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() =>
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+        ),
+        undefined,
+      ]),
+    }),
+  ),
+  updated_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  ...overrideResponse,
+});
+
+export const getGetResponsibilityZonesSummaryResponseMock = (
+  overrideResponse: Partial<Extract<ZoneSummary, object>> = {},
+): ZoneSummary => ({
+  zones_total: faker.number.int({ min: 0 }),
+  without_responsible: faker.number.int({ min: 0 }),
+  with_problems: faker.number.int({ min: 0 }),
+  ...overrideResponse,
+});
+
+export const getGetResponsibilityZoneResponseMock = (
+  overrideResponse: Partial<Extract<Zone, object>> = {},
+): Zone => ({
+  id: faker.helpers.fromRegExp("^[1-9][0-9]*$"),
+  code: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  name: {
+    ru: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  description: {
+    ru: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  sections: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() =>
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+  ),
+  responsible: faker.helpers.arrayElement([
+    {
+      id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      position: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        undefined,
+      ]),
+      active: faker.datatype.boolean(),
+    },
+    undefined,
+  ]),
+  deputy: faker.helpers.arrayElement([
+    {
+      id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      position: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        undefined,
+      ]),
+      active: faker.datatype.boolean(),
+    },
+    undefined,
+  ]),
+  curator: faker.helpers.arrayElement([
+    {
+      id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      position: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        undefined,
+      ]),
+      active: faker.datatype.boolean(),
+    },
+    undefined,
+  ]),
+  basis: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  valid_from: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), undefined]),
+  valid_to: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), undefined]),
+  active: faker.datatype.boolean(),
+  problems: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      code: faker.helpers.arrayElement([
+        "no_responsible",
+        "responsible_lacks_permissions",
+        "responsible_inactive",
+        "deputy_inactive",
+        "term_expired",
+      ] as const),
+      severity: faker.helpers.arrayElement(["problem", "warning"] as const),
+      sections: faker.helpers.arrayElement([
+        Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() =>
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+        ),
+        undefined,
+      ]),
+    }),
+  ),
+  updated_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  ...overrideResponse,
+});
+
+export const getUpdateResponsibilityZoneResponseMock = (
+  overrideResponse: Partial<Extract<Zone, object>> = {},
+): Zone => ({
+  id: faker.helpers.fromRegExp("^[1-9][0-9]*$"),
+  code: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  name: {
+    ru: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  description: {
+    ru: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  sections: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() =>
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+  ),
+  responsible: faker.helpers.arrayElement([
+    {
+      id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      position: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        undefined,
+      ]),
+      active: faker.datatype.boolean(),
+    },
+    undefined,
+  ]),
+  deputy: faker.helpers.arrayElement([
+    {
+      id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      position: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        undefined,
+      ]),
+      active: faker.datatype.boolean(),
+    },
+    undefined,
+  ]),
+  curator: faker.helpers.arrayElement([
+    {
+      id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      position: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        undefined,
+      ]),
+      active: faker.datatype.boolean(),
+    },
+    undefined,
+  ]),
+  basis: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  valid_from: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), undefined]),
+  valid_to: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), undefined]),
+  active: faker.datatype.boolean(),
+  problems: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      code: faker.helpers.arrayElement([
+        "no_responsible",
+        "responsible_lacks_permissions",
+        "responsible_inactive",
+        "deputy_inactive",
+        "term_expired",
+      ] as const),
+      severity: faker.helpers.arrayElement(["problem", "warning"] as const),
+      sections: faker.helpers.arrayElement([
+        Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() =>
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+        ),
+        undefined,
+      ]),
+    }),
+  ),
+  updated_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  ...overrideResponse,
+});
+
+export const getDeactivateResponsibilityZoneResponseMock = (
+  overrideResponse: Partial<Extract<Zone, object>> = {},
+): Zone => ({
+  id: faker.helpers.fromRegExp("^[1-9][0-9]*$"),
+  code: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  name: {
+    ru: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  description: {
+    ru: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  sections: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() =>
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+  ),
+  responsible: faker.helpers.arrayElement([
+    {
+      id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      position: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        undefined,
+      ]),
+      active: faker.datatype.boolean(),
+    },
+    undefined,
+  ]),
+  deputy: faker.helpers.arrayElement([
+    {
+      id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      position: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        undefined,
+      ]),
+      active: faker.datatype.boolean(),
+    },
+    undefined,
+  ]),
+  curator: faker.helpers.arrayElement([
+    {
+      id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      position: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        undefined,
+      ]),
+      active: faker.datatype.boolean(),
+    },
+    undefined,
+  ]),
+  basis: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  valid_from: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), undefined]),
+  valid_to: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), undefined]),
+  active: faker.datatype.boolean(),
+  problems: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      code: faker.helpers.arrayElement([
+        "no_responsible",
+        "responsible_lacks_permissions",
+        "responsible_inactive",
+        "deputy_inactive",
+        "term_expired",
+      ] as const),
+      severity: faker.helpers.arrayElement(["problem", "warning"] as const),
+      sections: faker.helpers.arrayElement([
+        Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() =>
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+        ),
+        undefined,
+      ]),
+    }),
+  ),
+  updated_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  ...overrideResponse,
+});
+
+export const getActivateResponsibilityZoneResponseMock = (
+  overrideResponse: Partial<Extract<Zone, object>> = {},
+): Zone => ({
+  id: faker.helpers.fromRegExp("^[1-9][0-9]*$"),
+  code: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  name: {
+    ru: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  description: {
+    ru: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  sections: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() =>
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+  ),
+  responsible: faker.helpers.arrayElement([
+    {
+      id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      position: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        undefined,
+      ]),
+      active: faker.datatype.boolean(),
+    },
+    undefined,
+  ]),
+  deputy: faker.helpers.arrayElement([
+    {
+      id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      position: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        undefined,
+      ]),
+      active: faker.datatype.boolean(),
+    },
+    undefined,
+  ]),
+  curator: faker.helpers.arrayElement([
+    {
+      id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      position: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        undefined,
+      ]),
+      active: faker.datatype.boolean(),
+    },
+    undefined,
+  ]),
+  basis: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  valid_from: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), undefined]),
+  valid_to: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), undefined]),
+  active: faker.datatype.boolean(),
+  problems: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      code: faker.helpers.arrayElement([
+        "no_responsible",
+        "responsible_lacks_permissions",
+        "responsible_inactive",
+        "deputy_inactive",
+        "term_expired",
+      ] as const),
+      severity: faker.helpers.arrayElement(["problem", "warning"] as const),
+      sections: faker.helpers.arrayElement([
+        Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() =>
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+        ),
+        undefined,
+      ]),
+    }),
+  ),
+  updated_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  ...overrideResponse,
+});
+
 export const getGetRoleJournalResponseMock = (
   overrideResponse: Partial<Extract<RoleJournal, object>> = {},
 ): RoleJournal => ({
@@ -15700,6 +16693,8 @@ export const getGetQuoteDefaultsResponseMock = (
   default_warranty_months: faker.helpers.arrayElement([faker.number.int({ min: 0 }), null]),
   catalog_price_visibility: faker.helpers.arrayElement(["cabinet", "on_request"] as const),
   catalog_publish_threshold: faker.number.int({ min: 1, max: 100 }),
+  catalog_require_mxik: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
+  catalog_require_hs_imported: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
   fx_rate_max_age_days: faker.number.int({ min: 1, max: 90 }),
   offer_confirm_days: faker.number.int({ min: 1, max: 365 }),
   offer_expiring_days: faker.number.int({ min: 1, max: 90 }),
@@ -15741,6 +16736,8 @@ export const getUpdateQuoteDefaultsResponseMock = (
   default_warranty_months: faker.helpers.arrayElement([faker.number.int({ min: 0 }), null]),
   catalog_price_visibility: faker.helpers.arrayElement(["cabinet", "on_request"] as const),
   catalog_publish_threshold: faker.number.int({ min: 1, max: 100 }),
+  catalog_require_mxik: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
+  catalog_require_hs_imported: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
   fx_rate_max_age_days: faker.number.int({ min: 1, max: 90 }),
   offer_confirm_days: faker.number.int({ min: 1, max: 365 }),
   offer_expiring_days: faker.number.int({ min: 1, max: 90 }),
@@ -32486,6 +33483,21 @@ export const getGetCrmLeadResponseHandoffInfoMock = (
   ...overrideResponse,
 });
 
+export const getGetCrmLeadResponseDoNotWorkMock = (
+  overrideResponse: Partial<DoNotWork> = {},
+): DoNotWork => ({
+  ...{
+    reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    set_by: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    set_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  },
+  ...overrideResponse,
+});
+
 export const getGetCrmLeadResponseClientShortMock = (
   overrideResponse: Partial<ClientShort> = {},
 ): ClientShort => ({
@@ -32493,6 +33505,7 @@ export const getGetCrmLeadResponseClientShortMock = (
     id: faker.number.int(),
     name: faker.string.alpha({ length: { min: 10, max: 20 } }),
     inn: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    do_not_work: faker.helpers.arrayElement([{ ...getGetCrmLeadResponseDoNotWorkMock() }, null]),
   },
   ...overrideResponse,
 });
@@ -32679,6 +33692,7 @@ export const getListCrmClientsResponseMock = (
       faker.helpers.arrayElement(["pending", "done", "failed"] as const),
       null,
     ]),
+    do_not_work: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
   })),
   ...overrideResponse,
 });
@@ -32710,6 +33724,21 @@ export const getGetCrmClientResponseClientInvitationMock = (
       null,
     ]),
     can_resend: faker.datatype.boolean(),
+  },
+  ...overrideResponse,
+});
+
+export const getGetCrmClientResponseDoNotWorkMock = (
+  overrideResponse: Partial<DoNotWork> = {},
+): DoNotWork => ({
+  ...{
+    reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    set_by: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    set_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
   },
   ...overrideResponse,
 });
@@ -32842,6 +33871,7 @@ export const getGetCrmClientResponseMock = (
     requests: faker.helpers.arrayElement(Object.values(SourceState)),
     documents: faker.helpers.arrayElement(Object.values(SourceState)),
   },
+  do_not_work: faker.helpers.arrayElement([{ ...getGetCrmClientResponseDoNotWorkMock() }, null]),
   ...overrideResponse,
 });
 
@@ -35399,6 +36429,21 @@ export const getListCounterpartyPickerPeopleResponseMock = (
   ...overrideResponse,
 });
 
+export const getGetCounterpartyResponseDoNotWorkMock = (
+  overrideResponse: Partial<DoNotWork> = {},
+): DoNotWork => ({
+  ...{
+    reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    set_by: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    set_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  },
+  ...overrideResponse,
+});
+
 export const getGetCounterpartyResponseMock = (
   overrideResponse: Partial<Extract<CounterpartyCard, object>> = {},
 ): CounterpartyCard => ({
@@ -35461,6 +36506,22 @@ export const getGetCounterpartyResponseMock = (
       name: faker.string.alpha({ length: { min: 10, max: 20 } }),
     }),
   ),
+  do_not_work: faker.helpers.arrayElement([{ ...getGetCounterpartyResponseDoNotWorkMock() }, null]),
+  ...overrideResponse,
+});
+
+export const getUpdateCounterpartyRequisitesResponseDoNotWorkMock = (
+  overrideResponse: Partial<DoNotWork> = {},
+): DoNotWork => ({
+  ...{
+    reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    set_by: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    set_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  },
   ...overrideResponse,
 });
 
@@ -35526,6 +36587,25 @@ export const getUpdateCounterpartyRequisitesResponseMock = (
       name: faker.string.alpha({ length: { min: 10, max: 20 } }),
     }),
   ),
+  do_not_work: faker.helpers.arrayElement([
+    { ...getUpdateCounterpartyRequisitesResponseDoNotWorkMock() },
+    null,
+  ]),
+  ...overrideResponse,
+});
+
+export const getGetCounterpartyByClientResponseDoNotWorkMock = (
+  overrideResponse: Partial<DoNotWork> = {},
+): DoNotWork => ({
+  ...{
+    reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    set_by: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    set_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  },
   ...overrideResponse,
 });
 
@@ -35591,6 +36671,193 @@ export const getGetCounterpartyByClientResponseMock = (
       name: faker.string.alpha({ length: { min: 10, max: 20 } }),
     }),
   ),
+  do_not_work: faker.helpers.arrayElement([
+    { ...getGetCounterpartyByClientResponseDoNotWorkMock() },
+    null,
+  ]),
+  ...overrideResponse,
+});
+
+export const getSetCounterpartyDoNotWorkResponseDoNotWorkMock = (
+  overrideResponse: Partial<DoNotWork> = {},
+): DoNotWork => ({
+  ...{
+    reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    set_by: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    set_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  },
+  ...overrideResponse,
+});
+
+export const getSetCounterpartyDoNotWorkResponseMock = (
+  overrideResponse: Partial<Extract<CounterpartyCard, object>> = {},
+): CounterpartyCard => ({
+  id: faker.helpers.fromRegExp("^[0-9]+$"),
+  name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  inn: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  registration_number: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  country: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  legal_address: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  crm_client_id: faker.helpers.arrayElement([faker.number.int(), null]),
+  roles: {
+    client: faker.datatype.boolean(),
+    supplier: faker.datatype.boolean(),
+    manufacturer: faker.datatype.boolean(),
+    partner: faker.datatype.boolean(),
+    organization: faker.datatype.boolean(),
+  },
+  people: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.helpers.fromRegExp("^[0-9]+$"),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      position: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      is_primary: faker.datatype.boolean(),
+      has_cabinet: faker.datatype.boolean(),
+      has_phone: faker.datatype.boolean(),
+      has_email: faker.datatype.boolean(),
+    }),
+  ),
+  bank_accounts: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.helpers.fromRegExp("^[0-9]+$"),
+      currency: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      bank_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      bank_country: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      account: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      mfo: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      swift: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      is_default: faker.datatype.boolean(),
+    }),
+  ),
+  accounts_masked: faker.datatype.boolean(),
+  brands: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.helpers.fromRegExp("^[0-9]+$"),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    }),
+  ),
+  do_not_work: faker.helpers.arrayElement([
+    { ...getSetCounterpartyDoNotWorkResponseDoNotWorkMock() },
+    null,
+  ]),
+  ...overrideResponse,
+});
+
+export const getClearCounterpartyDoNotWorkResponseDoNotWorkMock = (
+  overrideResponse: Partial<DoNotWork> = {},
+): DoNotWork => ({
+  ...{
+    reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    set_by: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    set_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  },
+  ...overrideResponse,
+});
+
+export const getClearCounterpartyDoNotWorkResponseMock = (
+  overrideResponse: Partial<Extract<CounterpartyCard, object>> = {},
+): CounterpartyCard => ({
+  id: faker.helpers.fromRegExp("^[0-9]+$"),
+  name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  inn: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  registration_number: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  country: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  legal_address: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  crm_client_id: faker.helpers.arrayElement([faker.number.int(), null]),
+  roles: {
+    client: faker.datatype.boolean(),
+    supplier: faker.datatype.boolean(),
+    manufacturer: faker.datatype.boolean(),
+    partner: faker.datatype.boolean(),
+    organization: faker.datatype.boolean(),
+  },
+  people: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.helpers.fromRegExp("^[0-9]+$"),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      position: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      is_primary: faker.datatype.boolean(),
+      has_cabinet: faker.datatype.boolean(),
+      has_phone: faker.datatype.boolean(),
+      has_email: faker.datatype.boolean(),
+    }),
+  ),
+  bank_accounts: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.helpers.fromRegExp("^[0-9]+$"),
+      currency: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      bank_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      bank_country: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      account: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      mfo: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      swift: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      is_default: faker.datatype.boolean(),
+    }),
+  ),
+  accounts_masked: faker.datatype.boolean(),
+  brands: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.helpers.fromRegExp("^[0-9]+$"),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    }),
+  ),
+  do_not_work: faker.helpers.arrayElement([
+    { ...getClearCounterpartyDoNotWorkResponseDoNotWorkMock() },
+    null,
+  ]),
+  ...overrideResponse,
+});
+
+export const getSetCounterpartyRoleResponseDoNotWorkMock = (
+  overrideResponse: Partial<DoNotWork> = {},
+): DoNotWork => ({
+  ...{
+    reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    set_by: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    set_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  },
   ...overrideResponse,
 });
 
@@ -35656,6 +36923,10 @@ export const getSetCounterpartyRoleResponseMock = (
       name: faker.string.alpha({ length: { min: 10, max: 20 } }),
     }),
   ),
+  do_not_work: faker.helpers.arrayElement([
+    { ...getSetCounterpartyRoleResponseDoNotWorkMock() },
+    null,
+  ]),
   ...overrideResponse,
 });
 
@@ -35684,6 +36955,7 @@ export const getListCatalogSuppliersResponseMock = (
       faker.date.past().toISOString().slice(0, 10),
       null,
     ]),
+    do_not_work: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
   })),
   total: faker.number.int({ min: 0 }),
   page: faker.number.int({ min: 1 }),
@@ -35725,6 +36997,7 @@ export const getCreateCatalogSupplierResponseMock = (
     faker.date.past().toISOString().slice(0, 10),
     null,
   ]),
+  do_not_work: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
   contact_person: faker.string.alpha({ length: { min: 10, max: 20 } }),
   phone: faker.string.alpha({ length: { min: 10, max: 20 } }),
   email: faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -35819,6 +37092,7 @@ export const getGetCatalogSupplierResponseMock = (
     faker.date.past().toISOString().slice(0, 10),
     null,
   ]),
+  do_not_work: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
   contact_person: faker.string.alpha({ length: { min: 10, max: 20 } }),
   phone: faker.string.alpha({ length: { min: 10, max: 20 } }),
   email: faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -35913,6 +37187,7 @@ export const getUpdateCatalogSupplierResponseMock = (
     faker.date.past().toISOString().slice(0, 10),
     null,
   ]),
+  do_not_work: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
   contact_person: faker.string.alpha({ length: { min: 10, max: 20 } }),
   phone: faker.string.alpha({ length: { min: 10, max: 20 } }),
   email: faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -37296,6 +38571,10 @@ export const getSearchMxikResponseMock = (
     code: faker.helpers.fromRegExp("^[0-9]{17}$"),
     name: faker.string.alpha({ length: { min: 10, max: 20 } }),
     group: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    path: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      undefined,
+    ]),
     unit: faker.string.alpha({ length: { min: 10, max: 20 } }),
     package: faker.string.alpha({ length: { min: 10, max: 20 } }),
   })),
@@ -37705,6 +38984,54 @@ export const getLoginMockHandler = (
             ? await overrideResponse(info)
             : overrideResponse
           : getLoginResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getLoginEnrollSetupMockHandler = (
+  overrideResponse?:
+    | SecondFactorSetup
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<SecondFactorSetup> | SecondFactorSetup),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/auth/login/enroll/setup",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getLoginEnrollSetupResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getLoginEnrollMockHandler = (
+  overrideResponse?:
+    | EnrolledSession
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<EnrolledSession> | EnrolledSession),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/auth/login/enroll",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getLoginEnrollResponseMock(),
         { status: 200 },
       );
     },
@@ -38124,6 +39451,27 @@ export const getEnableSecondFactorMockHandler = (
             ? await overrideResponse(info)
             : overrideResponse
           : getEnableSecondFactorResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getStepUpSecondFactorMockHandler = (
+  overrideResponse?:
+    StepUp | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<StepUp> | StepUp),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/me/second-factor/step-up",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getStepUpSecondFactorResponseMock(),
         { status: 200 },
       );
     },
@@ -42527,6 +43875,24 @@ export const getCreateEmployeeMockHandler = (
   );
 };
 
+export const getResetEmployeeSecondFactorMockHandler = (
+  overrideResponse?:
+    void | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<void> | void),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/admin/users/:id/second-factor/reset",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      if (typeof overrideResponse === "function") {
+        await overrideResponse(info);
+      }
+
+      return new HttpResponse(null, { status: 204 });
+    },
+    options,
+  );
+};
+
 export const getInviteEmployeeMockHandler = (
   overrideResponse?:
     | Employee
@@ -42805,6 +44171,155 @@ export const getDeleteRoleMockHandler = (
       }
 
       return new HttpResponse(null, { status: 204 });
+    },
+    options,
+  );
+};
+
+export const getListResponsibilityZonesMockHandler = (
+  overrideResponse?:
+    | ZoneList
+    | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<ZoneList> | ZoneList),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/admin/responsibility-zones",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListResponsibilityZonesResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getCreateResponsibilityZoneMockHandler = (
+  overrideResponse?:
+    Zone | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<Zone> | Zone),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/admin/responsibility-zones",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getCreateResponsibilityZoneResponseMock(),
+        { status: 201 },
+      );
+    },
+    options,
+  );
+};
+
+export const getGetResponsibilityZonesSummaryMockHandler = (
+  overrideResponse?:
+    | ZoneSummary
+    | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<ZoneSummary> | ZoneSummary),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/admin/responsibility-zones/summary",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetResponsibilityZonesSummaryResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getGetResponsibilityZoneMockHandler = (
+  overrideResponse?:
+    Zone | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<Zone> | Zone),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/admin/responsibility-zones/:id",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetResponsibilityZoneResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getUpdateResponsibilityZoneMockHandler = (
+  overrideResponse?:
+    Zone | ((info: Parameters<Parameters<typeof http.patch>[1]>[0]) => Promise<Zone> | Zone),
+  options?: RequestHandlerOptions,
+) => {
+  return http.patch(
+    "*/admin/responsibility-zones/:id",
+    async (info: Parameters<Parameters<typeof http.patch>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getUpdateResponsibilityZoneResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getDeactivateResponsibilityZoneMockHandler = (
+  overrideResponse?:
+    Zone | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<Zone> | Zone),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/admin/responsibility-zones/:id/deactivate",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getDeactivateResponsibilityZoneResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getActivateResponsibilityZoneMockHandler = (
+  overrideResponse?:
+    Zone | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<Zone> | Zone),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/admin/responsibility-zones/:id/activate",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getActivateResponsibilityZoneResponseMock(),
+        { status: 200 },
+      );
     },
     options,
   );
@@ -48143,6 +49658,54 @@ export const getGetCounterpartyByClientMockHandler = (
   );
 };
 
+export const getSetCounterpartyDoNotWorkMockHandler = (
+  overrideResponse?:
+    | CounterpartyCard
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<CounterpartyCard> | CounterpartyCard),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/people/counterparties/:id/do-not-work",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getSetCounterpartyDoNotWorkResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getClearCounterpartyDoNotWorkMockHandler = (
+  overrideResponse?:
+    | CounterpartyCard
+    | ((
+        info: Parameters<Parameters<typeof http.delete>[1]>[0],
+      ) => Promise<CounterpartyCard> | CounterpartyCard),
+  options?: RequestHandlerOptions,
+) => {
+  return http.delete(
+    "*/people/counterparties/:id/do-not-work",
+    async (info: Parameters<Parameters<typeof http.delete>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getClearCounterpartyDoNotWorkResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
 export const getSetCounterpartyRoleMockHandler = (
   overrideResponse?:
     | CounterpartyCard
@@ -49194,6 +50757,8 @@ export const getListTechDocDealOptionsMockHandler = (
 };
 export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getLoginMockHandler(),
+  getLoginEnrollSetupMockHandler(),
+  getLoginEnrollMockHandler(),
   getLoginSecondFactorMockHandler(),
   getForgotPasswordMockHandler(),
   getResetPasswordMockHandler(),
@@ -49213,6 +50778,7 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getGetSecondFactorMockHandler(),
   getSetupSecondFactorMockHandler(),
   getEnableSecondFactorMockHandler(),
+  getStepUpSecondFactorMockHandler(),
   getDisableSecondFactorMockHandler(),
   getGetNotificationSettingsMockHandler(),
   getUpdateNotificationSettingsMockHandler(),
@@ -49406,6 +50972,7 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getRetryBusInboxMockHandler(),
   getListEmployeesMockHandler(),
   getCreateEmployeeMockHandler(),
+  getResetEmployeeSecondFactorMockHandler(),
   getInviteEmployeeMockHandler(),
   getResendInviteMockHandler(),
   getRetryEmployeeErpSyncMockHandler(),
@@ -49419,6 +50986,13 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getGetRoleMockHandler(),
   getUpdateRoleMockHandler(),
   getDeleteRoleMockHandler(),
+  getListResponsibilityZonesMockHandler(),
+  getCreateResponsibilityZoneMockHandler(),
+  getGetResponsibilityZonesSummaryMockHandler(),
+  getGetResponsibilityZoneMockHandler(),
+  getUpdateResponsibilityZoneMockHandler(),
+  getDeactivateResponsibilityZoneMockHandler(),
+  getActivateResponsibilityZoneMockHandler(),
   getGetRoleJournalMockHandler(),
   getListAuditMockHandler(),
   getGetCompanyMockHandler(),
@@ -49650,6 +51224,8 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getGetCounterpartyMockHandler(),
   getUpdateCounterpartyRequisitesMockHandler(),
   getGetCounterpartyByClientMockHandler(),
+  getSetCounterpartyDoNotWorkMockHandler(),
+  getClearCounterpartyDoNotWorkMockHandler(),
   getSetCounterpartyRoleMockHandler(),
   getListCatalogSuppliersMockHandler(),
   getCreateCatalogSupplierMockHandler(),

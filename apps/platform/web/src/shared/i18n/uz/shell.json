@@ -139,6 +139,11 @@
       "useBackup": "Telefon yöq — zaxira kod",
       "useApp": "Ilovadagi kod",
       "back": "Orqaga"
+    },
+    "enroll": {
+      "title": "Kod bilan kirişni sozlang",
+      "lead": "Ruxsatingiz tölovlar, tasdiqlaş yoki sozlamalarni qamrab oladi — kiriş faqat ilovadagi kod bilan. Bir daqiqa vaqt oladi.",
+      "doneTitle": "Kod bilan kiriş yoqildi"
     }
   },
   "changePassword": {
@@ -288,5 +293,16 @@
       "letter": "Kompaniya blankasida, raqam va imzo bilan",
       "internal": "Xizmat xati, ariza, hisobot"
     }
+  },
+  "maintenance": {
+    "soon": "Platforma soat {{time}}da yangilanadi — ish {{duration}}ga uziladi. Özgarişlarni saqlang.",
+    "soonUrgent": "Platformada şoşilinç tuzatiş soat {{time}}da — ish {{duration}}ga uziladi. Özgarişlarni saqlang.",
+    "running": "Yangilaniş ketmoqda — bir-ikki daqiqadan söng sahifa özi yangilanadi.",
+    "runningUrgent": "Şoşilinç tuzatiş ketmoqda — bir-ikki daqiqadan söng sahifa özi yangilanadi.",
+    "minutes_one": "{{range}} daqiqa",
+    "minutes_few": "{{range}} daqiqa",
+    "minutes_many": "{{range}} daqiqa",
+    "minutes_other": "{{range}} daqiqa",
+    "hide": "Yopish"
   }
 }

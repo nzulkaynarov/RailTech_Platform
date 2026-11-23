@@ -154,6 +154,14 @@ def update_company_settings(
         settings_row.catalog_publish_threshold = threshold
         changed.append("catalog_publish_threshold")
 
+    # X-16: обязательные коды для публикации карточки — только `true` / `false`.
+    for flag in ("catalog_require_mxik", "catalog_require_hs_imported"):
+        if flag in data:
+            if not isinstance(data.get(flag), bool):
+                return None, "BAD_BOOLEAN"
+            setattr(settings_row, flag, data[flag])
+            changed.append(flag)
+
     # Политика курса валют (M1-ERP-09): допустимый возраст курса ЦБ РУз (1..90 дней).
     if "fx_rate_max_age_days" in data:
         try:

@@ -18,6 +18,7 @@ import {
   numberOf,
   problemsOf,
   readProjects,
+  sendBlockerOf,
   stepOf,
   toCard,
   toRow,
@@ -25,6 +26,7 @@ import {
 } from "./fixtures/projects";
 import { companyToday } from "../shared/lib/dates";
 import { buildMe, readSession } from "./mockSession";
+import { markOfName } from "./doNotWorkMarks";
 
 /**
  * Моки EDS · Проекты (D2-5, BFF 0.26.0). Права — как в BFF: чтение — `eds.projects` (менеджер, снабженец, гл. инженер, директор,
@@ -284,7 +286,12 @@ export const edsProjectsHandlers = [
     const ok = guard("read");
     if (ok.error) return ok.error;
     const project = findProject(refOf(request));
-    return project ? HttpResponse.json(toCard(project, ok.writer, ok.marker)) : notFound();
+    return project
+      ? HttpResponse.json({
+          ...toCard(project, ok.writer, ok.marker),
+          do_not_work: markOfName(project.client),
+        })
+      : notFound();
   }),
 
   http.post("*/eds/projects/:ref/contract/draft", ({ request }) => {
@@ -307,6 +314,7 @@ export const edsProjectsHandlers = [
           client_agreed_at: null,
           signed_at: null,
           has_scan: false,
+          visas: "none",
         },
       },
       "contract.created",
@@ -336,6 +344,13 @@ export const edsProjectsHandlers = [
       });
     }
     const rule = TRANSITIONS[body.action];
+    // Х-1: до виз договор клиенту не уходит (ERP отвечает 409 `CONTRACT_VISAS_REQUIRED`).
+    if (body.action === "send_to_client" && sendBlockerOf(p.contract)) {
+      return conflict(
+        "contract_visas_required",
+        "Договор нельзя отправить клиенту: сначала нужны визы.",
+      );
+    }
     if (!rule.from.includes(stateOf(p))) {
       return conflict("contract_transition_not_allowed", "Договор сейчас в другом статусе.");
     }
@@ -365,6 +380,22 @@ export const edsProjectsHandlers = [
         ? { channel: body.channel, counterparty_person: (body.counterparty_person ?? "").trim() }
         : null,
     );
+    writeProject(next);
+    return HttpResponse.json(toCard(next, ok.writer, ok.marker));
+  }),
+
+  // «На подпись» (SIGN-4): у договора открывает круг виз бухгалтера и юриста; сколько виз собрано, решают они в EDS.
+  http.post("*/eds/projects/:ref/signing", async ({ request }) => {
+    const ok = guard("full");
+    if (ok.error) return ok.error;
+    const p = findProject(refOf(request));
+    if (!p) return notFound();
+    const body = (await request.json()) as { kind: string };
+    const c = p.contract;
+    const next =
+      body.kind === "contract" && c && c.visas === "none"
+        ? { ...p, contract: { ...c, visas: "pending" as const } }
+        : p;
     writeProject(next);
     return HttpResponse.json(toCard(next, ok.writer, ok.marker));
   }),

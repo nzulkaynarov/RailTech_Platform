@@ -14,6 +14,7 @@ import {
 import type { SecondFactorSetup } from "../../shared/api/generated/model";
 import { useFormat } from "../../shared/lib/useFormat";
 import { Dialog } from "../../shared/ui/Dialog";
+import { BackupCodes } from "./BackupCodes";
 import { Section } from "./Section";
 
 /** Текст отказа по `details.reason` (CRM) — иначе общий. */
@@ -25,6 +26,7 @@ function reasonText(t: (key: string) => string, error: unknown): string {
   const known = [
     "second_factor_code_invalid",
     "second_factor_already_enabled",
+    "second_factor_required",
     "secrets_key_missing",
   ];
   return t(`secondFactor.errors.${known.includes(reason) ? reason : "default"}`);
@@ -69,68 +71,18 @@ export function SecondFactorSection() {
     },
   });
 
-  const download = (codes: string[]) => {
-    const url = URL.createObjectURL(new Blob([`${codes.join("\n")}\n`], { type: "text/plain" }));
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "backup-codes.txt";
-    link.click();
-    URL.revokeObjectURL(url);
-  };
-
   const enabled = status.data?.enabled ?? false;
+  // ДВ-4б: фактор обязателен по разделам доступа — отключить нельзя, а без него вход закрыт
+  const required = status.data?.required ?? false;
   return (
     <Section title={t("secondFactor.title")} lead={t("secondFactor.lead")} testId="profile-2fa">
       {backup ? (
-        <Space direction="vertical" size={12} style={{ width: "100%" }}>
-          <Alert type="success" showIcon message={t("secondFactor.backupTitle")} />
-          <p className="pf-hint" style={{ margin: 0 }}>
-            {t("secondFactor.backupHint")}
-          </p>
-          <ul
-            aria-label={t("secondFactor.backupTitle")}
-            className="pf-num"
-            style={{
-              margin: 0,
-              padding: 12,
-              listStyle: "none",
-              display: "grid",
-              gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-              gap: "4px 16px",
-              background: "var(--rt-color-surface-subtle, #f5f5f5)",
-              borderRadius: 6,
-            }}
-          >
-            {backup.map((item) => (
-              <li key={item}>{item}</li>
-            ))}
-          </ul>
-          <Space wrap>
-            <Button
-              onClick={() => {
-                download(backup);
-              }}
-            >
-              {t("secondFactor.download")}
-            </Button>
-            <Button
-              onClick={() => {
-                void navigator.clipboard.writeText(backup.join("\n"));
-                void message.success(t("secondFactor.copied"));
-              }}
-            >
-              {t("secondFactor.copy")}
-            </Button>
-            <Button
-              type="primary"
-              onClick={() => {
-                setBackup(null);
-              }}
-            >
-              {t("secondFactor.saved")}
-            </Button>
-          </Space>
-        </Space>
+        <BackupCodes
+          codes={backup}
+          onSaved={() => {
+            setBackup(null);
+          }}
+        />
       ) : setup ? (
         <Space direction="vertical" size={12} style={{ width: "100%" }}>
           <p style={{ margin: 0 }}>{t("secondFactor.scan")}</p>
@@ -203,17 +155,25 @@ export function SecondFactorSection() {
               left: status.data?.backup_codes_left ?? 0,
             })}
           </p>
-          <Button
-            onClick={() => {
-              setDisabling(true);
-            }}
-          >
-            {t("secondFactor.disable")}
-          </Button>
+          {required ? (
+            <p className="pf-hint" style={{ margin: 0 }}>
+              {t("secondFactor.requiredNote")}
+            </p>
+          ) : (
+            <Button
+              onClick={() => {
+                setDisabling(true);
+              }}
+            >
+              {t("secondFactor.disable")}
+            </Button>
+          )}
         </Space>
       ) : (
         <Space direction="vertical" size={12}>
-          <p style={{ margin: 0 }}>{t("secondFactor.off")}</p>
+          <p style={{ margin: 0 }}>
+            {t(required ? "secondFactor.offRequired" : "secondFactor.off")}
+          </p>
           {start.isError ? (
             <Alert type="error" showIcon role="alert" message={reasonText(t, start.error)} />
           ) : null}

@@ -29,6 +29,7 @@ from .labels import (
     STAMP,
     VERIFY_CODE,
     VERIFY_QR_NOTE,
+    grid_label,
     number_line,
 )
 from .model import DocumentMeta, FooterColumn, InfoRow, Lang, Layout, Letterhead, Orientation
@@ -74,6 +75,8 @@ class _Writer:
         self.options = options
         self.meta = meta or DocumentMeta()
         self.out: list[str] = []
+        self.grid_letter = False  # письмо по сетке: подпись одной строкой с отметкой и QR (стандарт §5 п. 4)
+        self.verified_inline = False  # QR проверки уже напечатан в строке подписи — отдельный блок не нужен
 
     def w(self, *parts: str) -> None:
         self.out.extend(parts)
@@ -213,6 +216,9 @@ class _Writer:
 
     def signature(self, node: Mapping[str, Any]) -> None:
         parties: list[Mapping[str, Any]] = list(node["parties"])
+        if self.grid_letter and len(parties) == 1:
+            self.signature_row(node, parties[0])
+            return
         self.w('<table class="rt-signature"><tr>')
         for i, party in enumerate([*parties, *([{}] if len(parties) == 1 else [])]):
             self.w("<td>")
@@ -233,6 +239,39 @@ class _Writer:
                     self.w(f'<div class="rt-stamp">{e(STAMP[self.lang])}</div>')
             self.w("</td>")
         self.w("</tr></table>")
+
+    def signature_row(self, node: Mapping[str, Any], party: Mapping[str, Any]) -> None:
+        """Подпись письма одной строкой (стандарт §5 п. 4): должность и ФИО · отметка подписи · QR проверки с кодом.
+
+        Отметка — факт подписания (дата и время, основание полномочия) или «М. П.», если тело его просит; картинки
+        подписи и печати не рисуются (стандарт §10)."""
+        lang, meta, draft = self.lang, self.meta, self.options.draft
+        self.w('<table class="rt-sign-row"><tr><td class="rt-sign-who">')
+        if party.get("position"):
+            self.w(f"<div>{self.field(party['position'])}</div>")
+        if party.get("name"):
+            self.w(f'<div class="rt-strong">{self.field(party["name"])}</div>')
+        self.w('</td><td class="rt-sign-mark">')
+        if not draft and meta.signed_text:
+            self.w(f'<div class="rt-strong">{e(grid_label("signed", lang))}</div><div>{e(meta.signed_text)}</div>')
+            basis = party.get("basis") or meta.basis_text
+            if basis:
+                self.w(
+                    f'<div class="rt-sign-basis">{self.field(basis) if isinstance(basis, tuple) else e(basis)}</div>'
+                )
+        elif node.get("stamp") and not draft:
+            self.w(f"<div>{e(STAMP[lang])}</div>")
+        self.w('</td><td class="rt-sign-qr">')
+        url = meta.verification_url or (
+            f"https://cabinet.railtech.uz/v/{meta.verification_code}" if meta.verification_code else ""
+        )
+        if url and not draft:
+            self.w(f'<div class="rt-sign-qrbox"><div class="rt-sign-qrimg">{generate_qr_svg(url)}</div>')
+            if meta.verification_code:
+                self.w(f'<div class="rt-code">{e(meta.verification_code)}</div>')
+            self.w("</div>")
+            self.verified_inline = True
+        self.w("</td></tr></table>")
 
     def field(self, value: tuple[str, bool]) -> str:
         text, missing = value
@@ -323,8 +362,9 @@ def _letter_meta(w: _Writer, meta: DocumentMeta, layout: Layout) -> None:
 
 
 def identity_grid(meta: DocumentMeta, layout: Layout) -> bool:
-    """Сетка документа (стандарт документов §4) — у письма и коммерческих документов, когда задан вид документа."""
-    return bool(meta.kind_label) and layout is not Layout.INTERNAL
+    """Сетка документа (стандарт документов §4) — у письма, служебной записки и коммерческих документов, когда задан
+    вид документа. Служебная записка (`internal`) — тот же лист, но компактный: без окна, без подвала из колонок."""
+    return bool(meta.kind_label)
 
 
 def _info_rows(w: _Writer, rows: Sequence[InfoRow], css_class: str = "rt-info") -> None:
@@ -342,13 +382,14 @@ def _brand(w: _Writer, letterhead: Letterhead) -> None:
         w.w(f'<div class="rt-company">{e(letterhead.company_name)}</div>')
 
 
-def _identity_head(w: _Writer, letterhead: Letterhead, meta: DocumentMeta) -> None:
+def _identity_head(w: _Writer, letterhead: Letterhead, meta: DocumentMeta, layout: Layout) -> None:
     """Первая страница: знак слева и вид документа справа; ниже — окно адресата слева, инфоблок справа."""
     w.w('<header class="rt-id"><table class="rt-id-top"><tr><td class="rt-id-brand">')
     _brand(w, letterhead)
     w.w(f'</td><td class="rt-id-kind">{e(meta.kind_label or "")}</td></tr></table>')
     w.w('<table class="rt-id-main"><tr><td class="rt-id-left">')
-    if meta.window and (meta.addressee or letterhead.return_address):
+    internal = layout is Layout.INTERNAL
+    if meta.window and not internal and (meta.addressee or letterhead.return_address):
         w.w('<div class="rt-id-window">')
         if letterhead.return_address:
             w.w(f'<div class="rt-id-return">{e(letterhead.return_address)}</div>')
@@ -364,19 +405,26 @@ def _identity_head(w: _Writer, letterhead: Letterhead, meta: DocumentMeta) -> No
     w.w("</td></tr></table></header>")
 
 
-def _identity_running(w: _Writer, letterhead: Letterhead, meta: DocumentMeta) -> None:
+def _identity_running(w: _Writer, letterhead: Letterhead, meta: DocumentMeta, layout: Layout) -> None:
     """Бегущие элементы сетки: шапка со 2-й страницы (знак и первые две строки инфоблока) и подвал из колонок."""
     w.w('<div class="rt-runhead"><table class="rt-id-top"><tr><td class="rt-id-brand">')
     _brand(w, letterhead)
     w.w('</td><td class="rt-id-rhinfo">')
     _info_rows(w, meta.info[:2], "rt-info rt-info-box")
     w.w("</td></tr></table></div>")
-    columns = list(letterhead.footer_columns)
-    if not columns and letterhead.footer:
+    internal = layout is Layout.INTERNAL
+    columns = [] if internal else list(letterhead.footer_columns)
+    if not columns and letterhead.footer and not internal:
         columns = [FooterColumn(lines=tuple(letterhead.footer))]
     w.w('<div class="rt-idfoot">')
     if w.options.page_numbers:
         w.w('<div class="rt-pn"></div>')
+    if internal:
+        # Служебная записка: без реквизитов компании — «Внутренний документ · код проверки» (стандарт §4)
+        note = grid_label("internal_note", w.lang)
+        if meta.verification_code and not w.options.draft:
+            note += f" · {grid_label('verify', w.lang)} {meta.verification_code}"
+        w.w(f'<div class="rt-id-note">{e(note)}</div>')
     if columns:
         w.w('<table class="rt-fcols"><tr>')
         for column in columns[:5]:
@@ -440,12 +488,13 @@ def build_html(
     grid = identity_grid(meta, layout)
     if grid:
         # Бегущие элементы — в начале потока: действуют с первой страницы (шапка — со второй, правило @page :first).
-        _identity_running(w, letterhead, meta)
+        _identity_running(w, letterhead, meta, layout)
         if setup.orientation is Orientation.PORTRAIT:
             # Метки сгиба 105 и 210 мм и дырокола 148,5 мм на левом краю каждой страницы (position: fixed).
             w.w('<div class="rt-fold rt-fold-1"></div><div class="rt-fold rt-hole"></div>')
             w.w('<div class="rt-fold rt-fold-2"></div>')
-        _identity_head(w, letterhead, meta)
+        _identity_head(w, letterhead, meta, layout)
+        w.grid_letter = layout is Layout.LETTER
     else:
         if layout is Layout.COMMERCIAL and letterhead.footer:
             # Бегущий подвал — в начале потока: значение действует с первой страницы до последней.
@@ -456,7 +505,7 @@ def build_html(
         w.w(f'<h1 class="rt-title">{e(meta.title)}</h1>')
     w.w('<main class="rt-body">')
     w.blocks(content)
-    if not options.draft and (meta.verification_code or meta.verification_url):
+    if not options.draft and not w.verified_inline and (meta.verification_code or meta.verification_url):
         _render_verification_block(w, meta)
     if grid and meta.executor:
         # В сетке подвал занят колонками: «Исполнитель» — последней строкой потока, над подвалом последней страницы.

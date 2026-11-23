@@ -2,7 +2,7 @@ import type { ModuleConfig } from "../types";
 
 const CHATS_TABS = [{ key: "about" }, { key: "documents" }, { key: "files" }] as const;
 
-/** Фильтр списка — `?scope=internal|external` (решение архитектора по Q-PLT-12-3: `?tab=` везде только вкладка бокового окна). */
+/** Старые фильтры `?scope=internal|external` — `legacyRedirects.ts`. */
 export const chats: ModuleConfig = {
   code: "chats",
   sections: [
@@ -19,19 +19,6 @@ export const chats: ModuleConfig = {
       detail: "/chats/:id",
       access: { anyOf: ["chats.internal", "chats.external"] },
       tabs: CHATS_TABS,
-    },
-    {
-      key: "internal",
-      path: "/chats?scope=internal",
-      access: { resource: "chats.internal" },
-      tabs: CHATS_TABS,
-    },
-    {
-      key: "external",
-      path: "/chats?scope=external",
-      access: { resource: "chats.external" },
-      tabs: CHATS_TABS,
-      actionTo: "/chats?scope=internal",
     },
     {
       key: "contacts",

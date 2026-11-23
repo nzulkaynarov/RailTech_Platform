@@ -2,6 +2,7 @@ import { HttpResponse, http } from "msw";
 
 import type { BankChangeItem } from "../shared/api/generated/model";
 import { readSession } from "./mockSession";
+import { stepUpRefusal } from "./secondFactor";
 
 const SEED: BankChangeItem[] = [
   {
@@ -44,7 +45,9 @@ export const edsBankChangesHandlers = [
     if (!readSession()) return new HttpResponse(null, { status: 401 });
     return HttpResponse.json(list(new URL(request.url)));
   }),
-  http.post("*/eds/payments/bank-changes/:id/approve", ({ params }) => {
+  http.post("*/eds/payments/bank-changes/:id/approve", ({ params, request }) => {
+    const refusal = stepUpRefusal(request);
+    if (refusal) return refusal;
     const item = items.find((row) => row.id === params["id"]);
     if (!item) return new HttpResponse(null, { status: 404 });
     if (item.status === "rejected") {

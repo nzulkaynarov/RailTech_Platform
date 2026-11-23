@@ -302,17 +302,8 @@ describe("Admin · Компания: доступ и каркас", () => {
       );
     });
 
-    // «Шаблоны документов» — пункт «Документов»
-    fireEvent.click(
-      within(screen.getByRole("navigation", { name: "Модули" })).getByRole("link", {
-        name: "Документы",
-      }),
-    );
-    fireEvent.click(
-      within(await screen.findByRole("navigation", { name: "Разделы модуля" })).getByRole("link", {
-        name: "Шаблоны",
-      }),
-    );
+    // ЕВ-3а: «Шаблоны документов» — страница группы «Компания» (вход и из «Документов»), в меню «Документов» их нет
+    fireEvent.click(await screen.findByRole("link", { name: "Шаблоны документов" }));
     // Раздел открывается на «Все шаблоны» (план 2.7): шаблоны документов — своя вкладка
     fireEvent.click(await screen.findByRole("tab", { name: "Документы" }));
     fireEvent.click(await screen.findByRole("button", { name: "Открыть: Договор поставки (наш)" }));
@@ -669,7 +660,23 @@ describe("Условия КП разошлись по страницам сво�
     expect(await screen.findByLabelText("Срок действия КП, дней")).toBeInTheDocument();
     expect(screen.getByLabelText("Цена в каталоге")).toBeInTheDocument();
     expect(screen.queryByLabelText("Валюта себестоимости")).toBeNull();
-    expect(screen.queryByRole("switch")).toBeNull();
+    expect(
+      screen.queryByRole("switch", { name: "Напоминать клиентам о просроченных счетах" }),
+    ).toBeNull();
+  });
+
+  it("«Продажи»: обязательные коды для публикации включены, выключение МХИК сохраняется (X-16)", async () => {
+    await openTab("quote");
+    const mxik = await screen.findByRole("switch", { name: "МХИК обязателен для публикации" });
+    expect(mxik).toBeChecked();
+    expect(
+      screen.getByRole("switch", { name: "ТН ВЭД обязателен для ввозимого товара" }),
+    ).toBeChecked();
+    fireEvent.click(mxik);
+    fireEvent.click(await button("Сохранить каталог"));
+    expect(await screen.findByText("Сохранено")).toBeInTheDocument();
+    expect(readCompanyMock().quote.catalog_require_mxik).toBe(false);
+    expect(readCompanyMock().quote.catalog_require_hs_imported).toBe(true);
   });
 
   it("«Налоги и валюты»: валюта и возраст курса сохраняются, поля «Продаж» не уходят", async () => {

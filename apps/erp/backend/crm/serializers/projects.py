@@ -5,6 +5,7 @@
 акт — `act_word`.
 """
 
+from parties.do_not_work import DoNotWorkFacts
 from rest_framework import serializers
 
 from core.quantity import QuantityField
@@ -51,6 +52,15 @@ class ContractRefSerializer(serializers.Serializer):
     number = serializers.CharField()
     status = serializers.ChoiceField(choices=CONTRACT_WORDS)
     sent_to_client = serializers.BooleanField(help_text="Проект ушёл клиенту на согласование и виден ему в портале")
+    send_blocker_code = serializers.ChoiceField(
+        choices=["visas_not_requested", "visas_declined", "visas_pending", "visas_returned", "no_visa_holder"],
+        allow_null=True,
+        required=False,
+        help_text=(
+            "Х-1: пока проект не ушёл клиенту — код причины, по которой его нельзя отправить (визы маршрута подписи); "
+            "`null` — ничего не мешает. Слова и роли — `send_blocker` карточки"
+        ),
+    )
 
 
 class InvoiceRefSerializer(serializers.Serializer):
@@ -137,6 +147,43 @@ class QuoteCardSerializer(QuoteRefSerializer):
     valid_until = serializers.DateField(allow_null=True)
 
 
+class ContractSendBlockerSerializer(serializers.Serializer):
+    """Х-1: почему проект договора нельзя отправить клиенту — визы маршрута подписи не собраны (ADR-0025)."""
+
+    code = serializers.ChoiceField(
+        choices=["visas_not_requested", "visas_declined", "visas_pending", "visas_returned", "no_visa_holder"],
+        help_text=(
+            "visas_not_requested — договор ещё не на визах; visas_declined — EDS не принял договор на визы (причина в remark); visas_pending — не все визы поставлены; visas_returned — "
+            "виза возвращена с замечанием; no_visa_holder — в компании нет держателя нужного права"
+        ),
+    )
+    message = serializers.CharField(help_text="Причина словами для сотрудника («Нужны визы: бухгалтер, юрист»)")
+    missing = serializers.ListField(
+        child=serializers.CharField(), help_text="Роли, чьих виз не хватает, словами в нижнем регистре"
+    )
+    missing_permissions = serializers.ListField(
+        child=serializers.CharField(),
+        required=False,
+        help_text="Те же визы кодами прав маршрута (`approvals.visa_finance`): Платформа переводит их на язык сотрудника",
+    )
+    remark = serializers.CharField(
+        allow_blank=True, help_text="Замечание визирующего или причина отказа EDS, как написаны; пусто — нет"
+    )
+    settings_link = serializers.BooleanField(
+        help_text="Нужной роли нет ни у одного сотрудника: назначить её можно в настройках (ссылка без тупика)"
+    )
+
+
+class ContractConflictSerializer(serializers.Serializer):
+    """Тело 409 действий по договору и акту: код; при `CONTRACT_VISAS_REQUIRED` (Х-1) ещё причина словами и роли без визы."""
+
+    detail = serializers.CharField(help_text="Код отказа")
+    reason = serializers.CharField(required=False, help_text="Причина словами («Нужны визы: бухгалтер, юрист»)")
+    missing = serializers.ListField(
+        child=serializers.CharField(), required=False, help_text="Роли без визы словами в нижнем регистре"
+    )
+
+
 class ContractCardSerializer(ContractRefSerializer):
     total = ProjectMoneySerializer(allow_null=True)
     created_at = serializers.DateTimeField()
@@ -147,6 +194,11 @@ class ContractCardSerializer(ContractRefSerializer):
     actions = serializers.ListField(
         child=serializers.ChoiceField(choices=CONTRACT_ACTIONS),
         help_text="Что можно сделать СЕЙЧАС этому сотруднику: допустимо из статуса и разрешено правами роли",
+    )
+    send_blocker = ContractSendBlockerSerializer(
+        allow_null=True,
+        required=False,
+        help_text="Х-1: пока проект не ушёл клиенту — что мешает его отправить; `null` — ничего (действие `send_to_client` в `actions`)",
     )
     history = ProjectJournalEntrySerializer(many=True)
 
@@ -228,6 +280,10 @@ class ProjectCardSerializer(ProjectRowSerializer):
     fulfillment = FulfillmentCardSerializer(allow_null=True)
     delivery_lines = DeliveryLineCardSerializer(many=True)
     journal = ProjectJournalEntrySerializer(many=True)
+    do_not_work = DoNotWorkFacts(
+        allow_null=True,
+        help_text="Х-8: у компании проекта отметка «Не работать» — полоса в карточке; документы в работе не отменяются",
+    )
 
 
 class ContractTransitionInSerializer(serializers.Serializer):

@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://railtech.uz/contracts/events/eds/signing.visas_changed.v1.json",
+  "title": "Состояние виз перед подписью коммерческого документа",
+  "description": "Тип uz.railtech.eds.signing.visas_changed.v1, источник rt://eds. Поле data конверта (envelope.v1.json). Визы маршрута подписи (ADR-0025: «Виза бухгалтера», «Виза юриста» по праву EDS) — состояние ПОСЛЕ изменения: маршрут открыт (все визы pending), виза поставлена (approved), виза возвращена с замечанием (returned) или некому визировать (no_holder: в компании нет активного держателя права). Одно событие — полный список виз документа, не приращение. object.version — версия редакции из запроса erp.signing.requested; changed_at — момент изменения: ERP не применяет событие старее уже применённого. ERP хранит проекцию у запроса подписи и не отправляет договор клиенту, пока all_approved не станет true для текущей редакции (Х-1). Подписчик: erp.",
+  "type": "object",
+  "required": ["object", "visas", "all_approved", "changed_at", "actor"],
+  "properties": {
+    "object": {
+      "type": "object",
+      "required": ["kind", "object_id", "number"],
+      "properties": {
+        "kind": {"type": "string", "enum": ["quote", "contract", "invoice", "act"]},
+        "object_id": {"type": "integer", "description": "Идентификатор сущности в ERP"},
+        "number": {"type": "string", "minLength": 1, "maxLength": 64},
+        "version": {"type": ["integer", "null"]}
+      },
+      "additionalProperties": false
+    },
+    "visas": {
+      "type": "array",
+      "description": "Все визы маршрута документа по порядку шагов. Пустой список — для вида документа виз нет.",
+      "items": {
+        "type": "object",
+        "required": ["permission", "label", "role", "status"],
+        "properties": {
+          "permission": {"$ref": "_defs.v1.json#/$defs/EdsPermission", "description": "Право EDS, по которому визирует любой держатель"},
+          "label": {"type": "string", "minLength": 1, "maxLength": 120, "description": "Подпись шага, например «Виза бухгалтера»"},
+          "role": {"type": "string", "minLength": 1, "maxLength": 80, "description": "Роль словами для причины отказа, например «Бухгалтер»"},
+          "status": {"type": "string", "enum": ["pending", "approved", "returned", "no_holder"]}
+        },
+        "additionalProperties": false
+      }
+    },
+    "all_approved": {"type": "boolean", "description": "Все визы поставлены (true и для пустого списка)"},
+    "changed_at": {"type": "string", "format": "date-time"},
+    "actor": {"$ref": "_defs.v1.json#/$defs/Actor"}
+  },
+  "additionalProperties": false
+}

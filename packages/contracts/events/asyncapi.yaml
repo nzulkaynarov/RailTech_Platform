@@ -528,6 +528,12 @@ channels:
     messages:
       uz.railtech.eds.signing.decided.v1:
         $ref: '#/components/messages/uz.railtech.eds.signing.decided.v1'
+  uz.railtech.eds.signing.visas_changed.v1:
+    address: uz.railtech.eds.signing.visas_changed.v1
+    title: Состояние виз перед подписью коммерческого документа
+    messages:
+      uz.railtech.eds.signing.visas_changed.v1:
+        $ref: '#/components/messages/uz.railtech.eds.signing.visas_changed.v1'
   uz.railtech.erp.signing.requested.v1:
     address: uz.railtech.erp.signing.requested.v1
     title: Запрос на официальную подпись коммерческого документа
@@ -1253,6 +1259,15 @@ operations:
       $ref: '#/channels/uz.railtech.eds.signing.decided.v1'
     messages:
       - $ref: '#/channels/uz.railtech.eds.signing.decided.v1/messages/uz.railtech.eds.signing.decided.v1'
+    bindings:
+      $ref: '#/components/operationBindings/delivery'
+  publish.uz.railtech.eds.signing.visas_changed.v1:
+    action: send
+    summary: rt://eds публикует uz.railtech.eds.signing.visas_changed.v1
+    channel:
+      $ref: '#/channels/uz.railtech.eds.signing.visas_changed.v1'
+    messages:
+      - $ref: '#/channels/uz.railtech.eds.signing.visas_changed.v1/messages/uz.railtech.eds.signing.visas_changed.v1'
     bindings:
       $ref: '#/components/operationBindings/delivery'
   publish.uz.railtech.erp.signing.requested.v1:
@@ -3311,6 +3326,31 @@ components:
                   const: rt://contracts/events/eds/signing.decided/v1
                 data:
                   $ref: './eds/signing.decided.v1.json'
+    uz.railtech.eds.signing.visas_changed.v1:
+      name: uz.railtech.eds.signing.visas_changed.v1
+      title: Состояние виз перед подписью коммерческого документа
+      contentType: application/cloudevents+json
+      correlationId:
+        location: '$message.payload#/correlationid'
+      headers:
+        $ref: '#/components/schemas/DeliveryHeaders'
+      bindings:
+        $ref: '#/components/messageBindings/delivery'
+      payload:
+        schemaFormat: application/schema+json;version=draft-07
+        schema:
+          allOf:
+            - $ref: './envelope.v1.json'
+            - type: object
+              properties:
+                source:
+                  const: rt://eds
+                type:
+                  const: uz.railtech.eds.signing.visas_changed.v1
+                dataschema:
+                  const: rt://contracts/events/eds/signing.visas_changed/v1
+                data:
+                  $ref: './eds/signing.visas_changed.v1.json'
     uz.railtech.erp.signing.requested.v1:
       name: uz.railtech.erp.signing.requested.v1
       title: Запрос на официальную подпись коммерческого документа

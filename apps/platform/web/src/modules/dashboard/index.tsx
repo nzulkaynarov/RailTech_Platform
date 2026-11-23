@@ -1,5 +1,5 @@
 import { Suspense, lazy } from "react";
-import { Navigate, useLocation } from "react-router";
+import { useLocation } from "react-router";
 
 import { RequireAccess } from "../../app/RequireAccess";
 import { ModuleRoutes } from "../ModuleRoutes";
@@ -30,9 +30,6 @@ export function Component() {
         </Suspense>
       </RequireAccess>
     );
-  }
-  if (match?.module.code === "dashboard" && match.section.key === "projects") {
-    return <Navigate to="/eds/projects" replace />;
   }
   return <ModuleRoutes />;
 }

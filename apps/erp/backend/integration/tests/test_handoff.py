@@ -547,3 +547,21 @@ def test_handoff_sets_the_client_role_explicitly_and_it_is_not_restored_after_re
     company.types.clear()
 
     assert not company.types.exists()
+
+
+@pytest.mark.django_db
+def test_handoff_for_a_marked_company_found_by_inn_is_refused_with_409_and_creates_nothing(api):
+    """Х-8: передача лида с заявкой в компанию с отметкой «Не работать» — 409 `COMPANY_DO_NOT_WORK`, ничего не создано."""
+    from parties import do_not_work
+
+    marked = Company.objects.create(name="ООО Отмечена", inn="555666777")
+    marked.do_not_work_at = timezone.now()
+    marked.do_not_work_reason = "Спор по оплате"
+    marked.save()
+    assert do_not_work.is_marked(marked)
+
+    refused = handoff(api, payload(crm_client_id=4004, inn="555666777"))
+
+    assert refused.status_code == 409 and refused.json()["detail"] == "COMPANY_DO_NOT_WORK"
+    assert not Deal.objects.filter(company=marked).exists()
+    assert not CrmClientMapping.objects.filter(crm_client_id=4004).exists()

@@ -18,7 +18,7 @@ from crm.constants import DealStageCode, InvoiceStatusCode, QuoteStatusCode
 from crm.models import ActivityLog
 from crm.services import projects
 from crm.tests.delivery_support import mark_delivered
-from crm.tests.projects_world import api, contract_in, pw  # noqa: F401
+from crm.tests.projects_world import api, collect_visas, contract_in, pw  # noqa: F401
 
 pytestmark = pytest.mark.django_db
 
@@ -218,6 +218,8 @@ def test_everyone_outside_the_staff_gets_403_and_not_found_hides_the_object(pw):
 def test_admin_reads_and_acts_everywhere(pw):  # noqa: F811
     contract = contract_in(pw, S.DRAFT)
     assert api(pw.admin).get(LIST).json()["count"] == 1
+    assert _card(pw.admin, pw.deal.id).json()["contract"]["actions"] == []  # Х-1: визы не собраны
+    collect_visas(contract)
     assert _card(pw.admin, pw.deal.id).json()["contract"]["actions"] == ["send_to_client"]
     assert (
         api(pw.admin).post(f"/api/v1/crm/contracts/{contract.id}/send-to-client/", {}, format="json").status_code == 200
@@ -263,3 +265,17 @@ def test_done_project_reports_the_done_step(pw):  # noqa: F811
     assert row["step"] == "DONE" and row["client_status"] == "done"
     deal = projects.project_queryset().get(pk=pw.deal.pk)
     assert projects.project_is_done(deal)
+
+
+def test_card_carries_the_do_not_work_mark_and_keeps_documents_in_work(pw):  # noqa: F811
+    """Х-8: отметка компании — полоса в карточке; договор и КП в работе не отменяются."""
+    from portal.desk.service_counterparty import clear_do_not_work, set_do_not_work
+
+    contract_in(pw, S.PENDING_CLIENT)
+    assert _card(pw.director, pw.deal.id).json()["do_not_work"] is None
+    set_do_not_work(pw.deal.company, {"reason": "Спор по оплате"}, actor=pw.director)
+    body = _card(pw.director, pw.deal.id).json()
+    assert body["do_not_work"]["reason"] == "Спор по оплате" and body["do_not_work"]["set_by"]
+    assert body["contract"]["status"] == "project" and body["quote"] is not None
+    clear_do_not_work(pw.deal.company, actor=pw.director)
+    assert _card(pw.director, pw.deal.id).json()["do_not_work"] is None

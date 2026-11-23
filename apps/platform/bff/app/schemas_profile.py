@@ -160,6 +160,8 @@ class SecondFactorStatus(BaseModel):
     enabled: bool
     enabled_at: datetime | None
     backup_codes_left: int
+    # Фактор обязателен по разделам доступа сотрудника (ДВ-4б): отключить нельзя
+    required: bool = False
 
 
 class SecondFactorSetup(BaseModel):
@@ -179,3 +181,18 @@ class SecondFactorEnabled(BaseModel):
     """Резервные коды — показываются один раз, каждый на один вход без телефона."""
 
     backup_codes: list[str]
+
+
+class StepUpOut(BaseModel):
+    """Свежий код принят (ДВ-4б): токен на 5 минут для заголовка `X-Step-Up-Token`."""
+
+    token: str
+    expires_in: int
+
+
+class SecondFactorResetIn(BaseModel):
+    """Сброс фактора сотруднику: причина попадает в журнал."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    reason: str = Field(min_length=3, max_length=500)

@@ -324,6 +324,7 @@ class Mxik(Out):
 
 class MxikHit(Mxik):
     group: str
+    path: str = ""
 
 
 class MxikPage(Out):
@@ -631,6 +632,7 @@ def to_mxik_page(raw: Any) -> MxikPage:
                 code=str(row.get("code") or ""),
                 name=text(row.get("name")),
                 group=text(row.get("group")),
+                path=text(row.get("path")),
                 unit=text(row.get("unit")),
                 package=text(row.get("package")),
             )
@@ -664,6 +666,7 @@ class SupplierRow(Out):
     expired_count: int
     expiring_count: int
     nearest_valid_until: str | None
+    do_not_work: bool = False
 
 
 class SupplierDetail(SupplierRow):
@@ -696,6 +699,7 @@ def to_supplier(raw: Mapping[str, Any]) -> dict[str, Any]:
         "expired_count": int(raw.get("expired_count") or 0),
         "expiring_count": int(raw.get("expiring_count") or 0),
         "nearest_valid_until": raw.get("nearest_valid_until"),
+        "do_not_work": bool(raw.get("do_not_work")),
     }
 
 

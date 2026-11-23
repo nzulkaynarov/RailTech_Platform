@@ -14,6 +14,7 @@ import { recordAudit } from "./fixtures/audit";
 import { ROLE_ID, readRoles } from "./fixtures/roles";
 import { buildMe, currentActor, readSession } from "./mockSession";
 import { rememberTemporaryPassword, registerUser, updateExtraUser } from "./fixtures/users";
+import { stepUpRefusal } from "./secondFactor";
 import { markStepDone } from "./setupState";
 
 export function failure(
@@ -104,6 +105,9 @@ export const adminUsersHandlers = [
   http.post("*/admin/users", async ({ request }) => {
     const denied = guard("full");
     if (denied) return denied;
+    // ДВ-4б: роль при создании — выдача роли, нужен свежий код второго фактора
+    const refusal = stepUpRefusal(request);
+    if (refusal) return refusal;
     const body = (await request.json()) as EmployeeInvite;
     const items = readEmployees();
     const email = body.email.trim().toLowerCase();
@@ -189,6 +193,9 @@ export const adminUsersHandlers = [
   http.post("*/admin/users/invite", async ({ request }) => {
     const denied = guard("full");
     if (denied) return denied;
+    // ДВ-4б: роль при создании — выдача роли, нужен свежий код второго фактора
+    const refusal = stepUpRefusal(request);
+    if (refusal) return refusal;
     const body = (await request.json()) as EmployeeInvite;
     const items = readEmployees();
     const email = body.email.trim().toLowerCase();
@@ -259,15 +266,6 @@ export const adminUsersHandlers = [
     return HttpResponse.json(toEmployee(next));
   }),
 
-  http.get("*/admin/users/:id", ({ params }) => {
-    const denied = guard("read");
-    if (denied) return denied;
-    const employee = readEmployees().find((e) => e.id === params["id"]);
-    return employee
-      ? HttpResponse.json(toEmployee(employee))
-      : failure(404, "NOT_FOUND", "Не найдено.", "crm");
-  }),
-
   http.patch("*/admin/users/:id", async ({ request, params }) => {
     const denied = guard("full");
     if (denied) return denied;
@@ -275,6 +273,11 @@ export const adminUsersHandlers = [
     const items = readEmployees();
     const current = items.find((e) => e.id === params["id"]);
     if (!current) return failure(404, "NOT_FOUND", "Не найдено.", "crm");
+    // ДВ-4б: выдача роли (появилась роль, которой не было) — со свежим кодом второго фактора
+    if (body.role_ids?.some((id) => !current.role_ids.includes(id))) {
+      const refusal = stepUpRefusal(request);
+      if (refusal) return refusal;
+    }
     // Как BFF 0.6.0: пустой набор ролей в CRM не уходит (закрыть доступ — «Отключить сотрудника»).
     if (body.role_ids !== undefined && body.role_ids.length === 0) {
       return failure(

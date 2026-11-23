@@ -16,7 +16,8 @@ def publish_products(products: QuerySet[Product]) -> Tuple[int, List[str]]:
     """
     Publish products: set status to PUBLISHED.
 
-    Only publishes DRAFT products. Skips products without domain_type.
+    Only publishes DRAFT products. Skips products without domain_type and products that fail the same completeness
+    check as the desk button (name, required МХИК, ТН ВЭД of an imported item, threshold) — this path is not a bypass.
 
     Returns:
         (count_published, list_of_skipped_product_names)
@@ -31,8 +32,17 @@ def publish_products(products: QuerySet[Product]) -> Tuple[int, List[str]]:
 
     skipped = list(draft_products.filter(domain_type__isnull=True).values_list("name", flat=True))
 
-    publishable = draft_products.exclude(domain_type__isnull=True)
-    updated = publishable.update(status=published_status)
+    from .completeness import CompletenessContext, completeness
+
+    candidates = list(draft_products.exclude(domain_type__isnull=True))
+    ctx = CompletenessContext(candidates)  # one context per batch
+    ready = []
+    for product in candidates:
+        if completeness(product, ctx)["is_publishable"]:
+            ready.append(product.pk)
+        else:
+            skipped.append(product.name)
+    updated = Product.objects.filter(pk__in=ready).update(status=published_status)
     return updated, skipped
 
 
