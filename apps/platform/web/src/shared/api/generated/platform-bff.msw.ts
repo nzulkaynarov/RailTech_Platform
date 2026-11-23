@@ -411,6 +411,9 @@ import type {
   TicketList,
   TicketPage,
   Waiting,
+  Zone,
+  ZoneList,
+  ZoneSummary,
 } from "./model";
 
 export const getLoginResponseMock = (
@@ -14846,6 +14849,500 @@ export const getUpdateRoleResponseMock = (
   },
   restricted_fields: faker.helpers.arrayElements(Object.values(RestrictedField)),
   employees: faker.number.int({ min: 0 }),
+  updated_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  ...overrideResponse,
+});
+
+export const getListResponsibilityZonesResponseMock = (
+  overrideResponse: Partial<Extract<ZoneList, object>> = {},
+): ZoneList => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.helpers.fromRegExp("^[1-9][0-9]*$"),
+    code: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    name: {
+      ru: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    },
+    description: {
+      ru: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    },
+    sections: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => faker.string.alpha({ length: { min: 10, max: 20 } }),
+    ),
+    responsible: faker.helpers.arrayElement([
+      {
+        id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        position: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          undefined,
+        ]),
+        active: faker.datatype.boolean(),
+      },
+      undefined,
+    ]),
+    deputy: faker.helpers.arrayElement([
+      {
+        id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        position: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          undefined,
+        ]),
+        active: faker.datatype.boolean(),
+      },
+      undefined,
+    ]),
+    curator: faker.helpers.arrayElement([
+      {
+        id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        position: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          undefined,
+        ]),
+        active: faker.datatype.boolean(),
+      },
+      undefined,
+    ]),
+    basis: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    valid_from: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 10),
+      undefined,
+    ]),
+    valid_to: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), undefined]),
+    active: faker.datatype.boolean(),
+    problems: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        code: faker.helpers.arrayElement([
+          "no_responsible",
+          "responsible_lacks_permissions",
+          "responsible_inactive",
+          "deputy_inactive",
+          "term_expired",
+        ] as const),
+        severity: faker.helpers.arrayElement(["problem", "warning"] as const),
+        sections: faker.helpers.arrayElement([
+          Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() =>
+            faker.string.alpha({ length: { min: 10, max: 20 } }),
+          ),
+          undefined,
+        ]),
+      }),
+    ),
+    updated_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  })),
+  ...overrideResponse,
+});
+
+export const getCreateResponsibilityZoneResponseMock = (
+  overrideResponse: Partial<Extract<Zone, object>> = {},
+): Zone => ({
+  id: faker.helpers.fromRegExp("^[1-9][0-9]*$"),
+  code: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  name: {
+    ru: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  description: {
+    ru: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  sections: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() =>
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+  ),
+  responsible: faker.helpers.arrayElement([
+    {
+      id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      position: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        undefined,
+      ]),
+      active: faker.datatype.boolean(),
+    },
+    undefined,
+  ]),
+  deputy: faker.helpers.arrayElement([
+    {
+      id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      position: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        undefined,
+      ]),
+      active: faker.datatype.boolean(),
+    },
+    undefined,
+  ]),
+  curator: faker.helpers.arrayElement([
+    {
+      id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      position: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        undefined,
+      ]),
+      active: faker.datatype.boolean(),
+    },
+    undefined,
+  ]),
+  basis: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  valid_from: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), undefined]),
+  valid_to: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), undefined]),
+  active: faker.datatype.boolean(),
+  problems: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      code: faker.helpers.arrayElement([
+        "no_responsible",
+        "responsible_lacks_permissions",
+        "responsible_inactive",
+        "deputy_inactive",
+        "term_expired",
+      ] as const),
+      severity: faker.helpers.arrayElement(["problem", "warning"] as const),
+      sections: faker.helpers.arrayElement([
+        Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() =>
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+        ),
+        undefined,
+      ]),
+    }),
+  ),
+  updated_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  ...overrideResponse,
+});
+
+export const getGetResponsibilityZonesSummaryResponseMock = (
+  overrideResponse: Partial<Extract<ZoneSummary, object>> = {},
+): ZoneSummary => ({
+  zones_total: faker.number.int({ min: 0 }),
+  without_responsible: faker.number.int({ min: 0 }),
+  with_problems: faker.number.int({ min: 0 }),
+  ...overrideResponse,
+});
+
+export const getGetResponsibilityZoneResponseMock = (
+  overrideResponse: Partial<Extract<Zone, object>> = {},
+): Zone => ({
+  id: faker.helpers.fromRegExp("^[1-9][0-9]*$"),
+  code: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  name: {
+    ru: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  description: {
+    ru: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  sections: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() =>
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+  ),
+  responsible: faker.helpers.arrayElement([
+    {
+      id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      position: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        undefined,
+      ]),
+      active: faker.datatype.boolean(),
+    },
+    undefined,
+  ]),
+  deputy: faker.helpers.arrayElement([
+    {
+      id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      position: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        undefined,
+      ]),
+      active: faker.datatype.boolean(),
+    },
+    undefined,
+  ]),
+  curator: faker.helpers.arrayElement([
+    {
+      id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      position: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        undefined,
+      ]),
+      active: faker.datatype.boolean(),
+    },
+    undefined,
+  ]),
+  basis: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  valid_from: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), undefined]),
+  valid_to: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), undefined]),
+  active: faker.datatype.boolean(),
+  problems: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      code: faker.helpers.arrayElement([
+        "no_responsible",
+        "responsible_lacks_permissions",
+        "responsible_inactive",
+        "deputy_inactive",
+        "term_expired",
+      ] as const),
+      severity: faker.helpers.arrayElement(["problem", "warning"] as const),
+      sections: faker.helpers.arrayElement([
+        Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() =>
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+        ),
+        undefined,
+      ]),
+    }),
+  ),
+  updated_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  ...overrideResponse,
+});
+
+export const getUpdateResponsibilityZoneResponseMock = (
+  overrideResponse: Partial<Extract<Zone, object>> = {},
+): Zone => ({
+  id: faker.helpers.fromRegExp("^[1-9][0-9]*$"),
+  code: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  name: {
+    ru: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  description: {
+    ru: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  sections: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() =>
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+  ),
+  responsible: faker.helpers.arrayElement([
+    {
+      id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      position: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        undefined,
+      ]),
+      active: faker.datatype.boolean(),
+    },
+    undefined,
+  ]),
+  deputy: faker.helpers.arrayElement([
+    {
+      id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      position: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        undefined,
+      ]),
+      active: faker.datatype.boolean(),
+    },
+    undefined,
+  ]),
+  curator: faker.helpers.arrayElement([
+    {
+      id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      position: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        undefined,
+      ]),
+      active: faker.datatype.boolean(),
+    },
+    undefined,
+  ]),
+  basis: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  valid_from: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), undefined]),
+  valid_to: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), undefined]),
+  active: faker.datatype.boolean(),
+  problems: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      code: faker.helpers.arrayElement([
+        "no_responsible",
+        "responsible_lacks_permissions",
+        "responsible_inactive",
+        "deputy_inactive",
+        "term_expired",
+      ] as const),
+      severity: faker.helpers.arrayElement(["problem", "warning"] as const),
+      sections: faker.helpers.arrayElement([
+        Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() =>
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+        ),
+        undefined,
+      ]),
+    }),
+  ),
+  updated_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  ...overrideResponse,
+});
+
+export const getDeactivateResponsibilityZoneResponseMock = (
+  overrideResponse: Partial<Extract<Zone, object>> = {},
+): Zone => ({
+  id: faker.helpers.fromRegExp("^[1-9][0-9]*$"),
+  code: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  name: {
+    ru: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  description: {
+    ru: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  sections: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() =>
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+  ),
+  responsible: faker.helpers.arrayElement([
+    {
+      id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      position: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        undefined,
+      ]),
+      active: faker.datatype.boolean(),
+    },
+    undefined,
+  ]),
+  deputy: faker.helpers.arrayElement([
+    {
+      id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      position: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        undefined,
+      ]),
+      active: faker.datatype.boolean(),
+    },
+    undefined,
+  ]),
+  curator: faker.helpers.arrayElement([
+    {
+      id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      position: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        undefined,
+      ]),
+      active: faker.datatype.boolean(),
+    },
+    undefined,
+  ]),
+  basis: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  valid_from: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), undefined]),
+  valid_to: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), undefined]),
+  active: faker.datatype.boolean(),
+  problems: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      code: faker.helpers.arrayElement([
+        "no_responsible",
+        "responsible_lacks_permissions",
+        "responsible_inactive",
+        "deputy_inactive",
+        "term_expired",
+      ] as const),
+      severity: faker.helpers.arrayElement(["problem", "warning"] as const),
+      sections: faker.helpers.arrayElement([
+        Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() =>
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+        ),
+        undefined,
+      ]),
+    }),
+  ),
+  updated_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  ...overrideResponse,
+});
+
+export const getActivateResponsibilityZoneResponseMock = (
+  overrideResponse: Partial<Extract<Zone, object>> = {},
+): Zone => ({
+  id: faker.helpers.fromRegExp("^[1-9][0-9]*$"),
+  code: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  name: {
+    ru: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  description: {
+    ru: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  sections: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() =>
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+  ),
+  responsible: faker.helpers.arrayElement([
+    {
+      id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      position: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        undefined,
+      ]),
+      active: faker.datatype.boolean(),
+    },
+    undefined,
+  ]),
+  deputy: faker.helpers.arrayElement([
+    {
+      id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      position: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        undefined,
+      ]),
+      active: faker.datatype.boolean(),
+    },
+    undefined,
+  ]),
+  curator: faker.helpers.arrayElement([
+    {
+      id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      position: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        undefined,
+      ]),
+      active: faker.datatype.boolean(),
+    },
+    undefined,
+  ]),
+  basis: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  valid_from: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), undefined]),
+  valid_to: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), undefined]),
+  active: faker.datatype.boolean(),
+  problems: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      code: faker.helpers.arrayElement([
+        "no_responsible",
+        "responsible_lacks_permissions",
+        "responsible_inactive",
+        "deputy_inactive",
+        "term_expired",
+      ] as const),
+      severity: faker.helpers.arrayElement(["problem", "warning"] as const),
+      sections: faker.helpers.arrayElement([
+        Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() =>
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+        ),
+        undefined,
+      ]),
+    }),
+  ),
   updated_at: faker.date.past().toISOString().slice(0, 19) + "Z",
   ...overrideResponse,
 });
@@ -42237,6 +42734,155 @@ export const getDeleteRoleMockHandler = (
   );
 };
 
+export const getListResponsibilityZonesMockHandler = (
+  overrideResponse?:
+    | ZoneList
+    | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<ZoneList> | ZoneList),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/admin/responsibility-zones",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListResponsibilityZonesResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getCreateResponsibilityZoneMockHandler = (
+  overrideResponse?:
+    Zone | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<Zone> | Zone),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/admin/responsibility-zones",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getCreateResponsibilityZoneResponseMock(),
+        { status: 201 },
+      );
+    },
+    options,
+  );
+};
+
+export const getGetResponsibilityZonesSummaryMockHandler = (
+  overrideResponse?:
+    | ZoneSummary
+    | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<ZoneSummary> | ZoneSummary),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/admin/responsibility-zones/summary",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetResponsibilityZonesSummaryResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getGetResponsibilityZoneMockHandler = (
+  overrideResponse?:
+    Zone | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<Zone> | Zone),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/admin/responsibility-zones/:id",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetResponsibilityZoneResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getUpdateResponsibilityZoneMockHandler = (
+  overrideResponse?:
+    Zone | ((info: Parameters<Parameters<typeof http.patch>[1]>[0]) => Promise<Zone> | Zone),
+  options?: RequestHandlerOptions,
+) => {
+  return http.patch(
+    "*/admin/responsibility-zones/:id",
+    async (info: Parameters<Parameters<typeof http.patch>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getUpdateResponsibilityZoneResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getDeactivateResponsibilityZoneMockHandler = (
+  overrideResponse?:
+    Zone | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<Zone> | Zone),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/admin/responsibility-zones/:id/deactivate",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getDeactivateResponsibilityZoneResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getActivateResponsibilityZoneMockHandler = (
+  overrideResponse?:
+    Zone | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<Zone> | Zone),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/admin/responsibility-zones/:id/activate",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getActivateResponsibilityZoneResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
 export const getGetRoleJournalMockHandler = (
   overrideResponse?:
     | RoleJournal
@@ -48815,6 +49461,13 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getGetRoleMockHandler(),
   getUpdateRoleMockHandler(),
   getDeleteRoleMockHandler(),
+  getListResponsibilityZonesMockHandler(),
+  getCreateResponsibilityZoneMockHandler(),
+  getGetResponsibilityZonesSummaryMockHandler(),
+  getGetResponsibilityZoneMockHandler(),
+  getUpdateResponsibilityZoneMockHandler(),
+  getDeactivateResponsibilityZoneMockHandler(),
+  getActivateResponsibilityZoneMockHandler(),
   getGetRoleJournalMockHandler(),
   getListAuditMockHandler(),
   getGetCompanyMockHandler(),

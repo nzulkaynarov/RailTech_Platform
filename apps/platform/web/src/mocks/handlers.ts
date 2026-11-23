@@ -49,6 +49,7 @@ import { resolutionTemplatesHandlers } from "./resolutionTemplates";
 import { sentMailHandlers } from "./sentMail";
 import { templateCatalogHandlers } from "./templateCatalog";
 import { signingHandlers } from "./signing";
+import { zonesHandlers } from "./zones";
 import { edsSigningHandlers } from "./edsSigning";
 import { erpCalcHandlers } from "./erpCalc";
 import { erpStockHandlers } from "./erpStock";
@@ -241,6 +242,7 @@ export const handlers = [
   ...sentMailHandlers,
   ...edsTemplatesHandlers,
   ...signingHandlers,
+  ...zonesHandlers, // ЕВ-З: реестр зон ответственности
   ...edsSigningHandlers,
   ...letterIntakeHandlers,
   ...edsApprovalsHandlers,

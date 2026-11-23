@@ -545,6 +545,11 @@ import type {
   Waiting,
   WaitingKind,
   WhatsNewMark,
+  Zone,
+  ZoneCreate,
+  ZoneList,
+  ZoneSummary,
+  ZoneUpdate,
 } from "./model";
 
 import { http } from "../http";
@@ -26990,6 +26995,815 @@ export const useDeleteRole = <
   TContext
 > => {
   return useMutation(getDeleteRoleMutationOptions(options), queryClient);
+};
+
+export const getListResponsibilityZonesUrl = () => {
+  return `/api/v1/admin/responsibility-zones`;
+};
+
+/**
+ * Реестр «зона → ответственный → замещающий → куратор» (ЕВ-З): каждая зона — запись с основанием, сроком и журналом изменений в CRM. `problems` считается при каждом чтении: нет ответственного, у ответственного нет разделов зоны (`severity = warning`, не запрет), ответственный или замещающий не действует, срок вышел. Раздел `admin` — от чтения (администратор и директор). Зоны не маршрутизируют уведомления и согласования.
+ * @summary Зоны ответственности (Настройки · Люди и доступ) — с людьми и проблемами по фактам
+ */
+export const listResponsibilityZones = async (
+  options?: Parameters<typeof http>[1],
+): Promise<ZoneList> => {
+  return http<ZoneList>(getListResponsibilityZonesUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListResponsibilityZonesQueryKey = () => {
+  return [`/api/v1/admin/responsibility-zones`] as const;
+};
+
+export const getListResponsibilityZonesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listResponsibilityZones>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(options?: {
+  query?: Partial<
+    UseQueryOptions<Awaited<ReturnType<typeof listResponsibilityZones>>, TError, TData>
+  >;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListResponsibilityZonesQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listResponsibilityZones>>> = ({
+    signal,
+  }) => listResponsibilityZones({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listResponsibilityZones>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListResponsibilityZonesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listResponsibilityZones>>
+>;
+export type ListResponsibilityZonesQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse
+>;
+
+export function useListResponsibilityZones<
+  TData = Awaited<ReturnType<typeof listResponsibilityZones>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listResponsibilityZones>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listResponsibilityZones>>,
+          TError,
+          Awaited<ReturnType<typeof listResponsibilityZones>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListResponsibilityZones<
+  TData = Awaited<ReturnType<typeof listResponsibilityZones>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listResponsibilityZones>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listResponsibilityZones>>,
+          TError,
+          Awaited<ReturnType<typeof listResponsibilityZones>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListResponsibilityZones<
+  TData = Awaited<ReturnType<typeof listResponsibilityZones>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listResponsibilityZones>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Зоны ответственности (Настройки · Люди и доступ) — с людьми и проблемами по фактам
+ */
+
+export function useListResponsibilityZones<
+  TData = Awaited<ReturnType<typeof listResponsibilityZones>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listResponsibilityZones>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListResponsibilityZonesQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getCreateResponsibilityZoneUrl = () => {
+  return `/api/v1/admin/responsibility-zones`;
+};
+
+/**
+ * Только `admin: full`. Разделы — из каталога прав, неизвестный — 422; повтор `code` — 409 `CONFLICT`.
+ * @summary Завести зону из существующих разделов прав
+ */
+export const createResponsibilityZone = async (
+  zoneCreate: ZoneCreate,
+  options?: Parameters<typeof http>[1],
+): Promise<Zone> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<Zone>(getCreateResponsibilityZoneUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(zoneCreate),
+  });
+};
+
+export const getCreateResponsibilityZoneMutationKey = () => ["createResponsibilityZone"] as const;
+
+export const getCreateResponsibilityZoneMutationOptions = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | Error | ValidationFailedResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createResponsibilityZone>>,
+    TError,
+    CreateResponsibilityZoneMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createResponsibilityZone>>,
+  TError,
+  CreateResponsibilityZoneMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCreateResponsibilityZoneMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createResponsibilityZone>>,
+    CreateResponsibilityZoneMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createResponsibilityZone(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateResponsibilityZoneMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createResponsibilityZone>>
+>;
+export type CreateResponsibilityZoneMutationBody = ZoneCreate;
+export type CreateResponsibilityZoneMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | Error | ValidationFailedResponse
+>;
+export type CreateResponsibilityZoneMutationVariables = { data: ZoneCreate };
+
+/**
+ * @summary Завести зону из существующих разделов прав
+ */
+export const useCreateResponsibilityZone = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | Error | ValidationFailedResponse>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createResponsibilityZone>>,
+      TError,
+      CreateResponsibilityZoneMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof createResponsibilityZone>>,
+  TError,
+  CreateResponsibilityZoneMutationVariables,
+  TContext
+> => {
+  return useMutation(getCreateResponsibilityZoneMutationOptions(options), queryClient);
+};
+
+export const getGetResponsibilityZonesSummaryUrl = () => {
+  return `/api/v1/admin/responsibility-zones/summary`;
+};
+
+/**
+ * Раздел `company.settings: full` (администратор и директор); без списка людей.
+ * @summary Сколько действующих зон без ответственного — для сигналов Настроек и Главной
+ */
+export const getResponsibilityZonesSummary = async (
+  options?: Parameters<typeof http>[1],
+): Promise<ZoneSummary> => {
+  return http<ZoneSummary>(getGetResponsibilityZonesSummaryUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetResponsibilityZonesSummaryQueryKey = () => {
+  return [`/api/v1/admin/responsibility-zones/summary`] as const;
+};
+
+export const getGetResponsibilityZonesSummaryQueryOptions = <
+  TData = Awaited<ReturnType<typeof getResponsibilityZonesSummary>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(options?: {
+  query?: Partial<
+    UseQueryOptions<Awaited<ReturnType<typeof getResponsibilityZonesSummary>>, TError, TData>
+  >;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetResponsibilityZonesSummaryQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getResponsibilityZonesSummary>>> = ({
+    signal,
+  }) => getResponsibilityZonesSummary({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getResponsibilityZonesSummary>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetResponsibilityZonesSummaryQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getResponsibilityZonesSummary>>
+>;
+export type GetResponsibilityZonesSummaryQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse
+>;
+
+export function useGetResponsibilityZonesSummary<
+  TData = Awaited<ReturnType<typeof getResponsibilityZonesSummary>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getResponsibilityZonesSummary>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getResponsibilityZonesSummary>>,
+          TError,
+          Awaited<ReturnType<typeof getResponsibilityZonesSummary>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetResponsibilityZonesSummary<
+  TData = Awaited<ReturnType<typeof getResponsibilityZonesSummary>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getResponsibilityZonesSummary>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getResponsibilityZonesSummary>>,
+          TError,
+          Awaited<ReturnType<typeof getResponsibilityZonesSummary>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetResponsibilityZonesSummary<
+  TData = Awaited<ReturnType<typeof getResponsibilityZonesSummary>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getResponsibilityZonesSummary>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Сколько действующих зон без ответственного — для сигналов Настроек и Главной
+ */
+
+export function useGetResponsibilityZonesSummary<
+  TData = Awaited<ReturnType<typeof getResponsibilityZonesSummary>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getResponsibilityZonesSummary>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetResponsibilityZonesSummaryQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getGetResponsibilityZoneUrl = (id: string) => {
+  return `/api/v1/admin/responsibility-zones/${id}`;
+};
+
+/**
+ * @summary Зона ответственности
+ */
+export const getResponsibilityZone = async (
+  id: string,
+  options?: Parameters<typeof http>[1],
+): Promise<Zone> => {
+  return http<Zone>(getGetResponsibilityZoneUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetResponsibilityZoneQueryKey = (id: string) => {
+  return [`/api/v1/admin/responsibility-zones/${id}`] as const;
+};
+
+export const getGetResponsibilityZoneQueryOptions = <
+  TData = Awaited<ReturnType<typeof getResponsibilityZone>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+>(
+  id: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getResponsibilityZone>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetResponsibilityZoneQueryKey(id);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getResponsibilityZone>>> = ({ signal }) =>
+    getResponsibilityZone(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: id !== null && id !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof getResponsibilityZone>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type GetResponsibilityZoneQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getResponsibilityZone>>
+>;
+export type GetResponsibilityZoneQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse
+>;
+
+export function useGetResponsibilityZone<
+  TData = Awaited<ReturnType<typeof getResponsibilityZone>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+>(
+  id: string,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getResponsibilityZone>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getResponsibilityZone>>,
+          TError,
+          Awaited<ReturnType<typeof getResponsibilityZone>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetResponsibilityZone<
+  TData = Awaited<ReturnType<typeof getResponsibilityZone>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+>(
+  id: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getResponsibilityZone>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getResponsibilityZone>>,
+          TError,
+          Awaited<ReturnType<typeof getResponsibilityZone>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetResponsibilityZone<
+  TData = Awaited<ReturnType<typeof getResponsibilityZone>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+>(
+  id: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getResponsibilityZone>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Зона ответственности
+ */
+
+export function useGetResponsibilityZone<
+  TData = Awaited<ReturnType<typeof getResponsibilityZone>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+>(
+  id: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getResponsibilityZone>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetResponsibilityZoneQueryOptions(id, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getUpdateResponsibilityZoneUrl = (id: string) => {
+  return `/api/v1/admin/responsibility-zones/${id}`;
+};
+
+/**
+ * Раздел `company.settings: full` (администратор и директор). Не присланное поле не меняется, `null` снимает значение. Сотрудник должен действовать, замещающий — другой человек, чем ответственный (422); у выключенной зоны людей не меняют — 409 `CONFLICT`. Каждое изменение пишется в журнал CRM с «до» и «после».
+ * @summary Назначить ответственного, замещающего и куратора, указать основание и срок
+ */
+export const updateResponsibilityZone = async (
+  id: string,
+  zoneUpdate: ZoneUpdate,
+  options?: Parameters<typeof http>[1],
+): Promise<Zone> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<Zone>(getUpdateResponsibilityZoneUrl(id), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(zoneUpdate),
+  });
+};
+
+export const getUpdateResponsibilityZoneMutationKey = () => ["updateResponsibilityZone"] as const;
+
+export const getUpdateResponsibilityZoneMutationOptions = <
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | Error | ValidationFailedResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateResponsibilityZone>>,
+    TError,
+    UpdateResponsibilityZoneMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateResponsibilityZone>>,
+  TError,
+  UpdateResponsibilityZoneMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUpdateResponsibilityZoneMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateResponsibilityZone>>,
+    UpdateResponsibilityZoneMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return updateResponsibilityZone(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateResponsibilityZoneMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateResponsibilityZone>>
+>;
+export type UpdateResponsibilityZoneMutationBody = ZoneUpdate;
+export type UpdateResponsibilityZoneMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | Error | ValidationFailedResponse
+>;
+export type UpdateResponsibilityZoneMutationVariables = { id: string; data: ZoneUpdate };
+
+/**
+ * @summary Назначить ответственного, замещающего и куратора, указать основание и срок
+ */
+export const useUpdateResponsibilityZone = <
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | Error | ValidationFailedResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof updateResponsibilityZone>>,
+      TError,
+      UpdateResponsibilityZoneMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof updateResponsibilityZone>>,
+  TError,
+  UpdateResponsibilityZoneMutationVariables,
+  TContext
+> => {
+  return useMutation(getUpdateResponsibilityZoneMutationOptions(options), queryClient);
+};
+
+export const getDeactivateResponsibilityZoneUrl = (id: string) => {
+  return `/api/v1/admin/responsibility-zones/${id}/deactivate`;
+};
+
+/**
+ * Только `admin: full`. У выключенной зоны проблем нет, в сигналах она не считается.
+ * @summary Выключить зону — не удаляется, назначения и журнал остаются
+ */
+export const deactivateResponsibilityZone = async (
+  id: string,
+  options?: Parameters<typeof http>[1],
+): Promise<Zone> => {
+  return http<Zone>(getDeactivateResponsibilityZoneUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getDeactivateResponsibilityZoneMutationKey = () =>
+  ["deactivateResponsibilityZone"] as const;
+
+export const getDeactivateResponsibilityZoneMutationOptions = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deactivateResponsibilityZone>>,
+    TError,
+    DeactivateResponsibilityZoneMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deactivateResponsibilityZone>>,
+  TError,
+  DeactivateResponsibilityZoneMutationVariables,
+  TContext
+> => {
+  const mutationKey = getDeactivateResponsibilityZoneMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deactivateResponsibilityZone>>,
+    DeactivateResponsibilityZoneMutationVariables
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return deactivateResponsibilityZone(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeactivateResponsibilityZoneMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deactivateResponsibilityZone>>
+>;
+
+export type DeactivateResponsibilityZoneMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse
+>;
+export type DeactivateResponsibilityZoneMutationVariables = { id: string };
+
+/**
+ * @summary Выключить зону — не удаляется, назначения и журнал остаются
+ */
+export const useDeactivateResponsibilityZone = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof deactivateResponsibilityZone>>,
+      TError,
+      DeactivateResponsibilityZoneMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof deactivateResponsibilityZone>>,
+  TError,
+  DeactivateResponsibilityZoneMutationVariables,
+  TContext
+> => {
+  return useMutation(getDeactivateResponsibilityZoneMutationOptions(options), queryClient);
+};
+
+export const getActivateResponsibilityZoneUrl = (id: string) => {
+  return `/api/v1/admin/responsibility-zones/${id}/activate`;
+};
+
+/**
+ * Только `admin: full`.
+ * @summary Включить выключенную зону
+ */
+export const activateResponsibilityZone = async (
+  id: string,
+  options?: Parameters<typeof http>[1],
+): Promise<Zone> => {
+  return http<Zone>(getActivateResponsibilityZoneUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getActivateResponsibilityZoneMutationKey = () =>
+  ["activateResponsibilityZone"] as const;
+
+export const getActivateResponsibilityZoneMutationOptions = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof activateResponsibilityZone>>,
+    TError,
+    ActivateResponsibilityZoneMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof activateResponsibilityZone>>,
+  TError,
+  ActivateResponsibilityZoneMutationVariables,
+  TContext
+> => {
+  const mutationKey = getActivateResponsibilityZoneMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof activateResponsibilityZone>>,
+    ActivateResponsibilityZoneMutationVariables
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return activateResponsibilityZone(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ActivateResponsibilityZoneMutationResult = NonNullable<
+  Awaited<ReturnType<typeof activateResponsibilityZone>>
+>;
+
+export type ActivateResponsibilityZoneMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse
+>;
+export type ActivateResponsibilityZoneMutationVariables = { id: string };
+
+/**
+ * @summary Включить выключенную зону
+ */
+export const useActivateResponsibilityZone = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof activateResponsibilityZone>>,
+      TError,
+      ActivateResponsibilityZoneMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof activateResponsibilityZone>>,
+  TError,
+  ActivateResponsibilityZoneMutationVariables,
+  TContext
+> => {
+  return useMutation(getActivateResponsibilityZoneMutationOptions(options), queryClient);
 };
 
 export const getGetRoleJournalUrl = (id: string, params?: GetRoleJournalParams) => {

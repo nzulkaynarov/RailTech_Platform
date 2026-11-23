@@ -23,6 +23,7 @@ import { edsDecisionQueueItems, quoteCounter, quotesToApprove } from "./edsQueue
 import { coveredQueueItems } from "./profileStore";
 import { handOverNotificationsOf, handOverQueueItems } from "./crmMessages";
 import { readErpCatalog } from "./fixtures/erpCatalog";
+import { zoneCards } from "./zones";
 import { markReminded, remindedAt, waitingForView, withQueueMeta } from "./queueMeta";
 
 /**
@@ -183,6 +184,8 @@ export const feedHandlers = [
     // «КП на одобрение» — число строк «Одобрить КП» очереди (D26G-4)
     const quotes = quotesToApprove(roles.view) ?? 0;
     const base = [
+      // ЕВ-З: сигнал «зона без ответственного» — держателям `company.settings`, пока такая зона есть; первой в наборе.
+      ...zoneCards(roles.view),
       ...cardsForView(roles.view).map((c) =>
         c.key === "quotes_to_approve" ? { ...c, count: quotes } : c,
       ),

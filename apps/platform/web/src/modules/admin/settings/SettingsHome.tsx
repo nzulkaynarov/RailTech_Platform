@@ -21,6 +21,7 @@ import type {
 import {
   useGetIntegrationsOverview,
   useGetMenuCounters,
+  useGetResponsibilityZonesSummary,
 } from "../../../shared/api/generated/platform-bff";
 import { useDocumentTitle } from "../../../shared/lib/useDocumentTitle";
 import { LinkButton } from "../../../shared/ui/LinkButton";
@@ -156,6 +157,7 @@ function FirstRunChecklist({
  */
 export function SettingsHome() {
   const { t, i18n } = useTranslation("modules");
+  const { t: tz } = useTranslation("zones");
   const { me } = useAuth();
   const [params] = useSearchParams();
   const [query, setQuery] = useState("");
@@ -175,6 +177,11 @@ export function SettingsHome() {
   const counters = useGetMenuCounters({
     query: { enabled: canSee(me, { resource: "dashboard.queue" }) },
   });
+  // ЕВ-З: «зона без ответственного» — тем, кто назначает людей в зоны (администратор и директор).
+  const zones = useGetResponsibilityZonesSummary({
+    query: { enabled: canEdit(me, "company.settings") },
+  });
+  const zonesWithout = zones.data?.without_responsible ?? 0;
   const tickets =
     counters.data?.items.find((c) => c.module === "admin" && c.section === "tickets")?.count ?? 0;
 
@@ -268,6 +275,14 @@ export function SettingsHome() {
               {t("admin.home.tickets", { count: tickets })}{" "}
               <Link className="pf-focusable pf-set-inline" to="/dashboard/queue">
                 {t("admin.home.ticketsLink")}
+              </Link>
+            </p>
+          ) : null}
+          {!focusGroup && zonesWithout > 0 ? (
+            <p className="pf-set-tickets" role="status">
+              {tz("signal.settings", { count: zonesWithout })}{" "}
+              <Link className="pf-focusable pf-set-inline" to="/admin/zones">
+                {tz("signal.link")}
               </Link>
             </p>
           ) : null}

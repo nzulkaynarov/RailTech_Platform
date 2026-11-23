@@ -1,0 +1,89 @@
+{
+  "subtitle": "Kim nimaga javob beradi: har bir zona böyiçha masʼul, örinbosar va kurator",
+  "note": "Hozirça zonalar faqat yozib qöyiladi: bildirişnoma va kelişuvlarni yönaltirmaydi.",
+  "add": "Yangi zona",
+  "filter": {
+    "label": "Körsatiş",
+    "active": "Amaldagilar",
+    "all": "Hammasi"
+  },
+  "list": {
+    "label": "Masʼuliyat zonalari"
+  },
+  "unavailable": "Zonalarni yuklab bölmadi. Sahifani yangilang.",
+  "empty": {
+    "title": "Zonalar yöq",
+    "text": "Mavjud huquq bölimlaridan zona yarating.",
+    "activeText": "Amaldagi zonalar yöq. Öçirilganlarni köriş uçun «Hammasi»ni tanlang."
+  },
+  "col": {
+    "zone": "Zona",
+    "responsible": "Masʼul",
+    "deputy": "Örinbosar",
+    "curator": "Kurator",
+    "problems": "Muammolar",
+    "actions": "Amallar"
+  },
+  "notAssigned": "Tayinlanmagan",
+  "personInactive": "öçirilgan",
+  "noProblems": "Hammasi joyida",
+  "off": "Öçirilgan",
+  "open": "Oçiş",
+  "openNamed": "«{{name}}» zonasini oçiş",
+  "problem": {
+    "no_responsible": "Masʼul yöq",
+    "responsible_lacks_permissions": "Zona huquqlari yöq",
+    "responsible_inactive": "Masʼul öçirilgan",
+    "deputy_inactive": "Örinbosar öçirilgan",
+    "term_expired": "Muddat tugagan"
+  },
+  "problemText": {
+    "no_responsible": "Masʼul şaxsni tayinlang.",
+    "responsible_lacks_permissions": "Masʼulda şu bölimlar yöq: {{sections}}. Bu ogohlantiriş — tayinlaş mumkin, huquqlar «Rollar va huquqlar»da beriladi.",
+    "responsible_inactive": "Masʼul öçirilgan. Boşqasini tayinlang.",
+    "deputy_inactive": "Örinbosar öçirilgan. Boşqasini tayinlang yoki olib taşlang.",
+    "term_expired": "Tayinlaş muddati tugagan. Muddatni uzaytiring yoki boşqasini tayinlang."
+  },
+  "sheet": {
+    "addTitle": "Yangi zona",
+    "editTitle": "«{{name}}» zonasi",
+    "covers": "Nimalarni öz içiga oladi",
+    "sections": "Zonaning huquq bölimlari",
+    "sectionsHint": "Masʼulga şu bölimlar kerak; tekşiriş faqat ogohlantiradi.",
+    "responsible": "Masʼul",
+    "deputy": "Örinbosar",
+    "curator": "Kurator",
+    "pick": "Xodimni tanlang",
+    "noStaff": "Xodimlar yöq",
+    "basis": "Asos",
+    "basisPlaceholder": "Buyruq № … sana …",
+    "validFrom": "Tayinlangan sana",
+    "validTo": "Tayinlaş muddati",
+    "save": "Saqlaş",
+    "create": "Yaratiş",
+    "deactivate": "Zonani öçiriş",
+    "activate": "Zonani yoqiş",
+    "nameRu": "Rusça nomi",
+    "nameUz": "Özbekça nomi",
+    "nameEn": "Ingliz tilidagi nomi",
+    "descRu": "Rusça tavsif",
+    "descUz": "Özbekça tavsif",
+    "descEn": "Ingliz tilidagi tavsif"
+  },
+  "saved": "Saqlandi",
+  "created": "Zona yaratildi",
+  "deactivated": "Zona öçirildi",
+  "activated": "Zona yoqildi",
+  "required": "Maydonni töldiring",
+  "pickSections": "Kamida bitta bölimni tanlang",
+  "errors": {
+    "DEFAULT": "Saqlab bölmadi. Qayta urinib köring.",
+    "invalid": "Maydonlarni tekşiring: xodim amalda bölişi, örinbosar boşqa şaxs, muddat tartibda bölişi kerak.",
+    "conflict": "Bunday nomli zona bor yoki zona öçirilgan.",
+    "FORBIDDEN": "Bu amal sizga ruxsat etilmagan."
+  },
+  "signal": {
+    "settings": "Masʼulsiz zonalar: {{count}}.",
+    "link": "Oçiş"
+  }
+}
