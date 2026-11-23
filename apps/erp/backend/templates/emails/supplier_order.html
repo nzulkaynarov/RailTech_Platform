@@ -24,7 +24,7 @@
         {% endfor %}
       </table>
       {% if note %}<p style="margin:0 0 16px 0;">{{ note|linebreaksbr }}</p>{% endif %}
-      <p style="margin:0 0 16px 0;">{% translate "Просим подтвердить заказ и срок поставки ответом на это письмо." %}</p>
+      <p style="margin:0 0 16px 0;">{% if confirm_in_cabinet %}{% translate "Заказ подтверждается в личном кабинете партнёра." %}{% else %}{% translate "Просим подтвердить заказ и срок поставки ответом на это письмо." %}{% endif %}</p>
       <p style="margin:0;">{{ sender_name }}</p>
     </td></tr>
   </table>

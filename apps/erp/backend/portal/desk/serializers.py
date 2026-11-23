@@ -12,9 +12,7 @@ class DeskSupplierAccessContact(serializers.Serializer):
     email = serializers.CharField()
     phone = serializers.CharField()
     language = serializers.ChoiceField(choices=["ru", "uz", "en"])
-    can_act = serializers.BooleanField(
-        help_text="Может создавать запросы и загружать файлы (участник); иначе — просмотр."
-    )
+    can_act = serializers.BooleanField(help_text="Может подтверждать (участник); иначе — просмотр.")
     invited_at = serializers.DateTimeField(allow_null=True)
     last_login_at = serializers.DateTimeField(allow_null=True)
 
@@ -128,6 +126,10 @@ class DeskSupplierAccessInviteIn(serializers.Serializer):
     kind = serializers.CharField(required=False, allow_blank=True, max_length=20)
     contract_number = serializers.CharField(required=False, allow_blank=True, max_length=64)
     contract_date = serializers.DateField(required=False, allow_null=True)
+    can_act = serializers.BooleanField(
+        required=False,
+        help_text="Право контакта подтверждать заказы поставщику (в Кабинете и в Платформе — «Может подтверждать»); не указано — не меняется.",
+    )
 
 
 class DeskSupplierAccessRelationshipPatch(serializers.Serializer):

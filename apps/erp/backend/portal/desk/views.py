@@ -159,6 +159,7 @@ class SupplierAccessViewSet(DeskViewSet):
                     kind=data.get("kind"),
                     contract_number=data.get("contract_number"),
                     contract_date=data.get("contract_date"),
+                    can_act=data.get("can_act"),
                 )
             )
         except service.AccessError as error:

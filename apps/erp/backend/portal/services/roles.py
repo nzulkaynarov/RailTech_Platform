@@ -41,12 +41,17 @@ ROLE_MODULES: dict[str, tuple[str, ...]] = {
 #: компании с нами (ADR-0026: всё официальное — в кабинете).
 ALWAYS_ON = ("profile", "messages", "letters")
 
-#: Что получает новое отношение. Клиент — всё (тип CLIENT, отношения у клиента нет); партнёр — «Мои товары» и «Каталог и
-#: заявки» (владелец 2026-11-04: оба включены по умолчанию, сотрудник выключает переключателем в Платформе).
+#: Что получает новое отношение. Клиент — всё (тип CLIENT, отношения у клиента нет); партнёр — «Мои товары» и заказы на
+#: поставку (ДК-5, ADR-0022: модули открывает отношение компании). «Каталог и заявки» — раздел покупателя: сотрудник
+#: включает его партнёру переключателем в Платформе, и только тогда партнёр становится ещё и клиентом CRM
+#: (`integration.services.partner_client.request_client_in_crm`).
 ROLE_DEFAULT_MODULES: dict[str, tuple[str, ...]] = {
     RelationshipRole.CLIENT.value: CLIENT_MODULES,
-    RelationshipRole.PARTNER.value: ("my_products", "catalog_requests", "letters", "messages", "profile"),
+    RelationshipRole.PARTNER.value: ("my_products", "letters", "messages", "profile"),
 }
+
+#: Модуль-раздел покупателя у партнёра: включён — компания ещё и покупает у нас (клиент), выключен — только продаёт.
+BUYER_MODULE = "catalog_requests"
 
 #: Модули партнёра, которые сотрудник включает и выключает (шаблон роли без обязательных).
 PARTNER_TOGGLEABLE = tuple(m for m in ROLE_MODULES[RelationshipRole.PARTNER.value] if m not in ALWAYS_ON)

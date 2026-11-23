@@ -61,9 +61,12 @@ def contact(supplier):
     )
 
 
-def invite(world, contact, who="supply"):
+def invite(world, contact, who="supply", modules=("my_products", "catalog_requests")):
+    """Приглашение партнёра с разделом покупателя (ДК-5: без него партнёр клиентом CRM не становится)."""
     return world["clients"][who].post(
-        f"/api/v1/catalog/supplier-access/{contact.company_id}/invite/", {"contact_id": contact.pk}, format="json"
+        f"/api/v1/catalog/supplier-access/{contact.company_id}/invite/",
+        {"contact_id": contact.pk, "modules": list(modules)},
+        format="json",
     )
 
 
@@ -116,6 +119,38 @@ class TestRequest:
         assert partner_client.crm_client_state(supplier) == {"status": "requested", "crm_client_id": None}
         # окружение события: ни токенов, ни ссылок входа
         assert "token" not in str(event).lower()
+
+    def test_partner_who_only_sells_is_not_turned_into_a_client(self, world, supplier, contact):
+        """ДК-5: приглашение партнёра без раздела покупателя не просит CRM завести клиента и не пишет связь."""
+        assert invite(world, contact, modules=("my_products",)).status_code == 200
+        assert bus_support.published("partner.client_requested") == []
+        assert not PartnerCrmLink.objects.filter(company=supplier).exists()
+        assert not supplier.types.filter(code="CLIENT").exists()
+        assert partner_client.crm_client_state(supplier)["status"] == "none"
+
+    def test_default_invite_is_a_seller_only_and_enabling_the_buyer_section_asks_crm_once(
+        self, world, supplier, contact
+    ):
+        response = world["clients"]["supply"].post(
+            f"/api/v1/catalog/supplier-access/{supplier.pk}/invite/", {"contact_id": contact.pk}, format="json"
+        )
+        assert response.status_code == 200 and response.json()["relationship"]["modules"] == ["my_products"]
+        assert bus_support.published("partner.client_requested") == []
+
+        patch = world["clients"]["supply"].patch(
+            f"/api/v1/catalog/supplier-access/{supplier.pk}/relationship/",
+            {"modules": ["my_products", "catalog_requests"]},
+            format="json",
+        )
+        assert patch.status_code == 200
+        assert len(bus_support.published("partner.client_requested")) == 1
+        # повторное сохранение того же набора второй запрос не шлёт
+        world["clients"]["supply"].patch(
+            f"/api/v1/catalog/supplier-access/{supplier.pk}/relationship/",
+            {"modules": ["my_products", "catalog_requests"]},
+            format="json",
+        )
+        assert len(bus_support.published("partner.client_requested")) == 1
 
     def test_foreign_company_goes_with_country_and_registration_number(self, world, supplier, contact):
         from core.models import Country

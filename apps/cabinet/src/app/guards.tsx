@@ -96,6 +96,7 @@ export function WebOnly() {
  */
 export function HomeRedirect() {
   const { work } = useNav();
+  const roles = useMe().data?.roles ?? [];
   // Кандидат в партнёры (`invited`, модули — только обязательные): его рабочее место — заявка и договор (FX-1)
   const onlyChat = work.length > 0 && work.every((item) => item.module === 'messages');
   const application = useCompanyPartnerApplication({ enabled: onlyChat });
@@ -115,7 +116,10 @@ export function HomeRedirect() {
   }
   // Нет рабочих разделов — остаёмся на «/»: оболочка показывает «Доступ открыт» и «Профиль» в меню
   if (work.length === 0) return null;
-  return <Navigate to={work[0]?.to ?? '/requests'} replace />;
+  // Партнёр, который только продаёт нам (нет клиентской роли и раздела покупателя, ДК-5): главное — заказы на поставку
+  const sellerOnly = roles.includes('partner') && !roles.includes('client') && !work.some((item) => item.group === 'buy');
+  const orders = sellerOnly ? work.find((item) => item.to === '/partner/orders') : undefined;
+  return <Navigate to={orders?.to ?? work[0]?.to ?? '/requests'} replace />;
 }
 
 /**
