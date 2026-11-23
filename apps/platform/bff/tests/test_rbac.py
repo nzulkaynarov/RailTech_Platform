@@ -231,6 +231,7 @@ SETTINGS_MENU = [
     "overview",
     "org",
     "roles",
+    "zones",
     "signing",
     "company",
     "numbering",

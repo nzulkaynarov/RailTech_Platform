@@ -309,6 +309,7 @@ export const MENU = {
     overview: ["admin"],
     org: ["admin"],
     roles: ["admin"],
+    zones: ["admin"],
     signing: ["eds.signing.manage"],
     company: ["company.settings"],
     numbering: ["company.settings"],

@@ -7673,6 +7673,187 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /admin/responsibility-zones:
+    get:
+      tags: [admin]
+      operationId: listResponsibilityZones
+      summary: Зоны ответственности (Настройки · Люди и доступ) — с людьми и проблемами по фактам
+      description: >-
+        Реестр «зона → ответственный → замещающий → куратор» (ЕВ-З): каждая зона — запись с основанием, сроком и журналом
+        изменений в CRM. `problems` считается при каждом чтении: нет ответственного, у ответственного нет разделов зоны
+        (`severity = warning`, не запрет), ответственный или замещающий не действует, срок вышел. Раздел `admin` — от
+        чтения (администратор и директор). Зоны не маршрутизируют уведомления и согласования.
+      responses:
+        '200':
+          description: Зоны в порядке заведения
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ZoneList'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags: [admin]
+      operationId: createResponsibilityZone
+      summary: Завести зону из существующих разделов прав
+      description: >-
+        Только `admin: full`. Разделы — из каталога прав, неизвестный — 422; повтор `code` — 409 `CONFLICT`.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ZoneCreate'
+      responses:
+        '201':
+          description: Создана, людей в ней нет
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Zone'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: '`CONFLICT` — зона с таким `code` уже есть'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+
+  /admin/responsibility-zones/summary:
+    get:
+      tags: [admin]
+      operationId: getResponsibilityZonesSummary
+      summary: Сколько действующих зон без ответственного — для сигналов Настроек и Главной
+      description: >-
+        Раздел `company.settings: full` (администратор и директор); без списка людей.
+      responses:
+        '200':
+          description: Числа по действующим зонам
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ZoneSummary'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /admin/responsibility-zones/{id}:
+    get:
+      tags: [admin]
+      operationId: getResponsibilityZone
+      summary: Зона ответственности
+      parameters:
+        - $ref: '#/components/parameters/ZoneIdPath'
+      responses:
+        '200':
+          description: Зона
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Zone'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags: [admin]
+      operationId: updateResponsibilityZone
+      summary: Назначить ответственного, замещающего и куратора, указать основание и срок
+      description: >-
+        Раздел `company.settings: full` (администратор и директор). Не присланное поле не меняется, `null` снимает значение.
+        Сотрудник должен действовать, замещающий — другой человек, чем ответственный (422); у выключенной зоны людей не
+        меняют — 409 `CONFLICT`. Каждое изменение пишется в журнал CRM с «до» и «после».
+      parameters:
+        - $ref: '#/components/parameters/ZoneIdPath'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ZoneUpdate'
+      responses:
+        '200':
+          description: Зона после изменения
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Zone'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: '`CONFLICT` — зона выключена'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+
+  /admin/responsibility-zones/{id}/deactivate:
+    post:
+      tags: [admin]
+      operationId: deactivateResponsibilityZone
+      summary: Выключить зону — не удаляется, назначения и журнал остаются
+      description: >-
+        Только `admin: full`. У выключенной зоны проблем нет, в сигналах она не считается.
+      parameters:
+        - $ref: '#/components/parameters/ZoneIdPath'
+        - $ref: '#/components/parameters/CsrfToken'
+      responses:
+        '200':
+          description: Зона выключена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Zone'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /admin/responsibility-zones/{id}/activate:
+    post:
+      tags: [admin]
+      operationId: activateResponsibilityZone
+      summary: Включить выключенную зону
+      description: >-
+        Только `admin: full`.
+      parameters:
+        - $ref: '#/components/parameters/ZoneIdPath'
+        - $ref: '#/components/parameters/CsrfToken'
+      responses:
+        '200':
+          description: Зона включена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Zone'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /admin/roles/{id}/journal:
     get:
       tags: [admin]
@@ -16188,6 +16369,14 @@ components:
       description: Id роли Платформы (CRM)
       schema:
         $ref: '#/components/schemas/RoleId'
+    ZoneIdPath:
+      name: id
+      in: path
+      required: true
+      description: Id зоны ответственности (CRM)
+      schema:
+        type: string
+        pattern: '^[1-9][0-9]*$'
     RoleQuery:
       name: role
       in: query
@@ -16996,6 +17185,148 @@ components:
         updated_at:
           type: string
           format: date-time
+
+    ZoneText:
+      type: object
+      additionalProperties: false
+      required: [ru, uz, en]
+      properties:
+        ru: {type: string}
+        uz: {type: string, description: 'Латиница нового алфавита (Ö Ğ Ş Ç, ʼ)'}
+        en: {type: string}
+
+    ZonePerson:
+      type: object
+      additionalProperties: false
+      required: [id, name, active]
+      properties:
+        id:
+          type: string
+          description: '`crm_user_id` сотрудника'
+        name: {type: string}
+        position: {type: string}
+        active:
+          type: boolean
+          description: Сотрудник действует (не отключён)
+
+    ZoneProblem:
+      type: object
+      additionalProperties: false
+      required: [code, severity]
+      properties:
+        code:
+          type: string
+          enum: [no_responsible, responsible_lacks_permissions, responsible_inactive, deputy_inactive, term_expired]
+        severity:
+          type: string
+          enum: [problem, warning]
+          description: '`warning` — только «у ответственного нет разделов зоны»: не запрет, а подсказка'
+        sections:
+          type: array
+          items: {type: string}
+          description: Ключи разделов каталога, которых не хватает ответственному (только `responsible_lacks_permissions`)
+
+    Zone:
+      type: object
+      additionalProperties: false
+      required: [id, code, name, description, sections, basis, active, problems, updated_at]
+      properties:
+        id: {type: string, pattern: '^[1-9][0-9]*$'}
+        code:
+          type: string
+          description: Стабильный слаг зоны (не меняется)
+        name:
+          $ref: '#/components/schemas/ZoneText'
+        description:
+          $ref: '#/components/schemas/ZoneText'
+        sections:
+          type: array
+          items: {type: string}
+          description: Ключи разделов каталога прав, к которым относится зона
+        responsible:
+          $ref: '#/components/schemas/ZonePerson'
+        deputy:
+          $ref: '#/components/schemas/ZonePerson'
+        curator:
+          $ref: '#/components/schemas/ZonePerson'
+        basis:
+          type: string
+          description: Основание назначения — номер и дата приказа
+        valid_from: {type: string, format: date}
+        valid_to: {type: string, format: date}
+        active: {type: boolean}
+        problems:
+          type: array
+          items:
+            $ref: '#/components/schemas/ZoneProblem'
+        updated_at: {type: string, format: date-time}
+
+    ZoneList:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Zone'
+
+    ZoneSummary:
+      type: object
+      additionalProperties: false
+      required: [zones_total, without_responsible, with_problems]
+      properties:
+        zones_total: {type: integer, minimum: 0}
+        without_responsible:
+          type: integer
+          minimum: 0
+          description: Действующих зон без действующего ответственного
+        with_problems: {type: integer, minimum: 0}
+
+    ZoneCreate:
+      type: object
+      additionalProperties: false
+      required: [code, name, sections]
+      properties:
+        code:
+          type: string
+          pattern: '^[a-z][a-z0-9_]{1,39}$'
+        name:
+          $ref: '#/components/schemas/ZoneText'
+        description:
+          type: object
+          additionalProperties: false
+          properties:
+            ru: {type: string, maxLength: 1000}
+            uz: {type: string, maxLength: 1000}
+            en: {type: string, maxLength: 1000}
+        sections:
+          type: array
+          minItems: 1
+          maxItems: 24
+          uniqueItems: true
+          items: {type: string}
+          description: Ключи разделов каталога прав
+
+    ZoneUpdate:
+      type: object
+      additionalProperties: false
+      description: Не присланное поле не меняется, `null` снимает значение
+      properties:
+        responsible_id:
+          type: [string, 'null']
+          pattern: '^[1-9][0-9]*$'
+        deputy_id:
+          type: [string, 'null']
+          pattern: '^[1-9][0-9]*$'
+        curator_id:
+          type: [string, 'null']
+          pattern: '^[1-9][0-9]*$'
+        basis:
+          type: [string, 'null']
+          maxLength: 500
+        valid_from: {type: [string, 'null'], format: date}
+        valid_to: {type: [string, 'null'], format: date}
 
     RoleList:
       type: object
@@ -19840,7 +20171,7 @@ components:
       properties:
         key:
           type: string
-          description: '`letters_without_resolution`, `quotes_to_approve`, `memos_to_approve`, `projects_in_work`, `leads_without_answer`…'
+          description: '`letters_without_resolution`, `quotes_to_approve`, `memos_to_approve`, `projects_in_work`, `leads_without_answer`, `zones_without_responsible` (держателям `company.settings`, пока есть зона без ответственного)…'
         label:
           type: string
         count:

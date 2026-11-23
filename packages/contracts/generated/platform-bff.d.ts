@@ -4121,6 +4121,111 @@ export interface paths {
     patch: operations["updateRole"];
     trace?: never;
   };
+  "/admin/responsibility-zones": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Зоны ответственности (Настройки · Люди и доступ) — с людьми и проблемами по фактам
+     * @description Реестр «зона → ответственный → замещающий → куратор» (ЕВ-З): каждая зона — запись с основанием, сроком и журналом изменений в CRM. `problems` считается при каждом чтении: нет ответственного, у ответственного нет разделов зоны (`severity = warning`, не запрет), ответственный или замещающий не действует, срок вышел. Раздел `admin` — от чтения (администратор и директор). Зоны не маршрутизируют уведомления и согласования.
+     */
+    get: operations["listResponsibilityZones"];
+    put?: never;
+    /**
+     * Завести зону из существующих разделов прав
+     * @description Только `admin: full`. Разделы — из каталога прав, неизвестный — 422; повтор `code` — 409 `CONFLICT`.
+     */
+    post: operations["createResponsibilityZone"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/responsibility-zones/summary": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Сколько действующих зон без ответственного — для сигналов Настроек и Главной
+     * @description Раздел `company.settings: full` (администратор и директор); без списка людей.
+     */
+    get: operations["getResponsibilityZonesSummary"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/responsibility-zones/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Зона ответственности */
+    get: operations["getResponsibilityZone"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /**
+     * Назначить ответственного, замещающего и куратора, указать основание и срок
+     * @description Раздел `company.settings: full` (администратор и директор). Не присланное поле не меняется, `null` снимает значение. Сотрудник должен действовать, замещающий — другой человек, чем ответственный (422); у выключенной зоны людей не меняют — 409 `CONFLICT`. Каждое изменение пишется в журнал CRM с «до» и «после».
+     */
+    patch: operations["updateResponsibilityZone"];
+    trace?: never;
+  };
+  "/admin/responsibility-zones/{id}/deactivate": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Выключить зону — не удаляется, назначения и журнал остаются
+     * @description Только `admin: full`. У выключенной зоны проблем нет, в сигналах она не считается.
+     */
+    post: operations["deactivateResponsibilityZone"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/responsibility-zones/{id}/activate": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Включить выключенную зону
+     * @description Только `admin: full`.
+     */
+    post: operations["activateResponsibilityZone"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/admin/roles/{id}/journal": {
     parameters: {
       query?: never;
@@ -9012,6 +9117,89 @@ export interface components {
       /** Format: date-time */
       updated_at: string;
     };
+    ZoneText: {
+      ru: string;
+      /** @description Латиница нового алфавита (Ö Ğ Ş Ç, ʼ) */
+      uz: string;
+      en: string;
+    };
+    ZonePerson: {
+      /** @description `crm_user_id` сотрудника */
+      id: string;
+      name: string;
+      position?: string;
+      /** @description Сотрудник действует (не отключён) */
+      active: boolean;
+    };
+    ZoneProblem: {
+      /** @enum {string} */
+      code:
+        | "no_responsible"
+        | "responsible_lacks_permissions"
+        | "responsible_inactive"
+        | "deputy_inactive"
+        | "term_expired";
+      /**
+       * @description `warning` — только «у ответственного нет разделов зоны»: не запрет, а подсказка
+       * @enum {string}
+       */
+      severity: "problem" | "warning";
+      /** @description Ключи разделов каталога, которых не хватает ответственному (только `responsible_lacks_permissions`) */
+      sections?: string[];
+    };
+    Zone: {
+      id: string;
+      /** @description Стабильный слаг зоны (не меняется) */
+      code: string;
+      name: components["schemas"]["ZoneText"];
+      description: components["schemas"]["ZoneText"];
+      /** @description Ключи разделов каталога прав, к которым относится зона */
+      sections: string[];
+      responsible?: components["schemas"]["ZonePerson"];
+      deputy?: components["schemas"]["ZonePerson"];
+      curator?: components["schemas"]["ZonePerson"];
+      /** @description Основание назначения — номер и дата приказа */
+      basis: string;
+      /** Format: date */
+      valid_from?: string;
+      /** Format: date */
+      valid_to?: string;
+      active: boolean;
+      problems: components["schemas"]["ZoneProblem"][];
+      /** Format: date-time */
+      updated_at: string;
+    };
+    ZoneList: {
+      items: components["schemas"]["Zone"][];
+    };
+    ZoneSummary: {
+      zones_total: number;
+      /** @description Действующих зон без действующего ответственного */
+      without_responsible: number;
+      with_problems: number;
+    };
+    ZoneCreate: {
+      code: string;
+      name: components["schemas"]["ZoneText"];
+      description?: {
+        ru?: string;
+        uz?: string;
+        en?: string;
+      };
+      /** @description Ключи разделов каталога прав */
+      sections: string[];
+    };
+    /** @description Не присланное поле не меняется, `null` снимает значение */
+    ZoneUpdate: {
+      responsible_id?: string | null;
+      deputy_id?: string | null;
+      curator_id?: string | null;
+      basis?: string | null;
+      /** Format: date */
+      valid_from?: string | null;
+      /** Format: date */
+      valid_to?: string | null;
+    };
     RoleList: {
       items: components["schemas"]["Role"][];
     };
@@ -10851,7 +11039,7 @@ export interface components {
       reminded_at: string;
     };
     QueueCard: {
-      /** @description `letters_without_resolution`, `quotes_to_approve`, `memos_to_approve`, `projects_in_work`, `leads_without_answer`… */
+      /** @description `letters_without_resolution`, `quotes_to_approve`, `memos_to_approve`, `projects_in_work`, `leads_without_answer`, `zones_without_responsible` (держателям `company.settings`, пока есть зона без ответственного)… */
       key: string;
       label: string;
       count: number;
@@ -18372,6 +18560,8 @@ export interface components {
     EmployeeId: string;
     /** @description Id роли Платформы (CRM) */
     RoleIdPath: components["schemas"]["RoleId"];
+    /** @description Id зоны ответственности (CRM) */
+    ZoneIdPath: string;
     /** @description Только по этой роли сотрудника (id); чужая роль — 403 */
     RoleQuery: components["schemas"]["RoleId"];
     /** @description Размер страницы */
@@ -25549,6 +25739,216 @@ export interface operations {
         };
       };
       422: components["responses"]["ValidationFailed"];
+    };
+  };
+  listResponsibilityZones: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Зоны в порядке заведения */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ZoneList"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+    };
+  };
+  createResponsibilityZone: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ZoneCreate"];
+      };
+    };
+    responses: {
+      /** @description Создана, людей в ней нет */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Zone"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      /** @description `CONFLICT` — зона с таким `code` уже есть */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      422: components["responses"]["ValidationFailed"];
+    };
+  };
+  getResponsibilityZonesSummary: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Числа по действующим зонам */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ZoneSummary"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+    };
+  };
+  getResponsibilityZone: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Id зоны ответственности (CRM) */
+        id: components["parameters"]["ZoneIdPath"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Зона */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Zone"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+    };
+  };
+  updateResponsibilityZone: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Id зоны ответственности (CRM) */
+        id: components["parameters"]["ZoneIdPath"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ZoneUpdate"];
+      };
+    };
+    responses: {
+      /** @description Зона после изменения */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Zone"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      /** @description `CONFLICT` — зона выключена */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      422: components["responses"]["ValidationFailed"];
+    };
+  };
+  deactivateResponsibilityZone: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Id зоны ответственности (CRM) */
+        id: components["parameters"]["ZoneIdPath"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Зона выключена */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Zone"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+    };
+  };
+  activateResponsibilityZone: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Id зоны ответственности (CRM) */
+        id: components["parameters"]["ZoneIdPath"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Зона включена */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Zone"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
     };
   };
   getRoleJournal: {
