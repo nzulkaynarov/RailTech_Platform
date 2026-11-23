@@ -143,16 +143,81 @@ def allowed_actions(contract, user) -> list:
 
     Единый источник для карточки проекта: страница не вычисляет сама, что можно (CONVENTIONS Платформы, правило 2).
     """
-    from .contract_templates import send_blocker
-
     code = _status_code(contract)
     actions = [
         t.action for t in TRANSITIONS.values() if code in t.sources and may(user, t.permission) and is_staff(user)
     ]
-    # ДОК-10: «На согласование» не обещаем, пока отправка ответит 409 (нет нашей подписи, отступление ждёт решения)
+    # Х-1 и ДОК-10: «Отправить клиенту» не предлагается, пока отправка ответит 409 (причина — `send_blocker`).
     if "send_to_client" in actions and send_blocker(contract) is not None:
         actions.remove("send_to_client")
     return actions
+
+
+#: Причины блокировки отправки по правилам шаблона (ДОК-10); визы — коды `contract_visas` (Х-1).
+TEMPLATE_BLOCKER_WORDS = {
+    "CONTRACT_DEVIATION_PENDING": "Отступление от шаблона ждёт решения: отправить договор клиенту можно после него.",
+    "CONTRACT_NEEDS_OUR_SIGNATURE": "Нужна наша подпись: по правилам компании договор уходит клиенту подписанным.",
+}
+
+
+def send_blocker(contract) -> Optional[dict]:
+    """ЕДИНАЯ проверка «можно ли отправить договор клиенту» (`None` — можно) для всех путей: действие `send_to_client`,
+    список действий, карточка проекта, «Мои задачи» и Платформа. Результат — `{code, message, missing, ...}`.
+
+    Порядок и правила (ДОК-10 + Х-1, ADR-0025):
+
+    1. договор по утверждённому шаблону без отступления визам не подчиняется (а): ему мешает только наша подпись,
+       если компания её требует до отправки (`CONTRACT_NEEDS_OUR_SIGNATURE`);
+    2. отступление ждёт решения — своя причина (в): `CONTRACT_DEVIATION_PENDING`;
+    3. договор с одобренным отступлением и договор не из утверждённого шаблона (переходный режим, прежние) идут по
+       маршруту виз (б): коды `visas_*` из `contract_visas.send_blocker`, недостающие визы названы словами;
+    4. после виз — наша подпись, если компания требует её до отправки.
+    """
+    from . import contract_templates as templates
+    from .contract_visas import _blocker
+    from .contract_visas import send_blocker as visas_blocker
+
+    def template_blocker(code: str) -> dict:
+        return _blocker(code, TEMPLATE_BLOCKER_WORDS[code])
+
+    if contract.template_id is None:
+        return visas_blocker(contract)  # переходный режим и прежние договоры: маршрут виз Х-1
+    if templates.deviation_state(contract) == "requested":
+        return template_blocker("CONTRACT_DEVIATION_PENDING")
+    if templates.visas_required(contract):
+        blocker = visas_blocker(contract)
+        if blocker is not None:
+            return blocker
+    if templates.requires_our_signature(contract):
+        return template_blocker("CONTRACT_NEEDS_OUR_SIGNATURE")
+    return None
+
+
+def _drop_company_stamp(contract) -> list:
+    """Х-1: «Доработать» — новая редакция, штамп подписи компании на ней не остаётся.
+
+    Иначе договор, подписанный директором до отправки и отклонённый клиентом, не проходит маршрут заново: «На подпись»
+    отвечает `ALREADY_SIGNED`, а визы прежней подписи пропускали бы новую редакцию. Запрос подписи закрывается как
+    устаревший, проверка по коду показывает «Отозван»; маршрут «визы → клиенту → подпись» идёт с начала.
+    """
+    from integration.models import CommercialSigningRequest as Request
+    from portal.models import PortalDocumentVerification
+
+    code = contract.verification_code
+    if not code:
+        return []
+    PortalDocumentVerification.objects.filter(code=code).update(
+        status="revoked", revoked_at=timezone.now(), revocation_reason="Новая редакция договора"
+    )
+    Request.objects.filter(kind="contract", object_id=contract.pk, status=Request.Status.SIGNED).update(
+        status=Request.Status.STALE, comment="Новая редакция договора: подпись прежней не переносится."
+    )
+    contract.verification_code = ""
+    contract.signatory_name = ""
+    contract.signatory_position = ""
+    contract.signatory_basis_text = ""
+    contract.signed_at = None
+    return ["verification_code", "signatory_name", "signatory_position", "signatory_basis_text", "signed_at"]
 
 
 def is_staff(user) -> bool:
@@ -256,7 +321,8 @@ def apply_transition(
     Коды: `CONTRACT_NOT_FOUND`, `MEMBER_REQUIRED_FOR_ACTION` (нет права `contract.*` в своей компании),
     `CONTRACT_TRANSITION_NOT_ALLOWED` (статус не тот), `REASON_REQUIRED` (отклонение без причины), `SCAN_REQUIRED` и
     `SCAN_INVALID` (скан не приложен или не PDF/изображение, больше лимита, подделана сигнатура), `CHANNEL_INVALID` и
-    `COUNTERPARTY_PERSON_REQUIRED` («Согласован клиентом» без канала или лица со стороны клиента, A2 волны 18a).
+    `COUNTERPARTY_PERSON_REQUIRED` («Согласован клиентом» без канала или лица со стороны клиента, A2 волны 18a),
+    `CONTRACT_VISAS_REQUIRED` (отправка клиенту до сбора виз, Х-1: HTTP 409, слова — `send_blocker`).
     """
     transition = TRANSITIONS.get(action)
     if transition is None:
@@ -275,11 +341,9 @@ def apply_transition(
     if before not in transition.sources:
         return None, "CONTRACT_TRANSITION_NOT_ALLOWED"
     if action == "send_to_client":
-        from .contract_templates import send_blocker
-
-        blocker = send_blocker(contract)  # ДОК-10: отступление без решения, нет нашей подписи; сюда же — визы Х-1
+        blocker = send_blocker(contract)  # одна проверка: шаблон (ДОК-10) и визы (Х-1)
         if blocker:
-            return None, blocker
+            return None, blocker["code"] if blocker["code"] in TEMPLATE_BLOCKER_WORDS else "CONTRACT_VISAS_REQUIRED"
     reason = (reason or "").strip()
     note = (note or "").strip()
     if transition.needs_reason and not reason:
@@ -311,6 +375,7 @@ def apply_transition(
             contract.manager_signed_at = None
             contract.manager_signer = None
             fields += ["client_signed_at", "client_signer", "manager_signed_at", "manager_signer"]
+            fields += _drop_company_stamp(contract)
         elif action == "attach_scan":
             contract.signed_file = scan
             contract.manager_signed_at = now

@@ -10,9 +10,9 @@ PAGE_OF: dict[Lang, tuple[str, str, str]] = {
     "uz": ("Sahifa ", ", jami ", ""),
     "en": ("Page ", " of ", ""),
 }
-STAMP: dict[Lang, str] = {"ru": "М. П.", "uz": "M. Oʻ.", "en": "Seal"}
+STAMP: dict[Lang, str] = {"ru": "М. П.", "uz": "M. Ö.", "en": "Seal"}
 SIGN: dict[Lang, str] = {"ru": "подпись", "uz": "imzo", "en": "signature"}
-EXECUTOR: dict[Lang, str] = {"ru": "Исп.: ", "uz": "Ijrochi: ", "en": "Prepared by: "}
+EXECUTOR: dict[Lang, str] = {"ru": "Исп.: ", "uz": "Ijroçi: ", "en": "Prepared by: "}
 REPLY_TO: dict[Lang, str] = {"ru": "На ", "uz": "Javoban: ", "en": "Re: "}
 MISSING_BLOCK: dict[Lang, str] = {
     "ru": "Блок «{label}»: данные подставит система",
@@ -34,12 +34,12 @@ NO_DATE = "—"
 #: Проверка подлинности (ADR-0024 п. 5): код в колонтитуле и QR-код на последней странице.
 VERIFY_CODE: dict[Lang, str] = {
     "ru": "Код проверки: ",
-    "uz": "Tekshirish kodi: ",
+    "uz": "Tekşiriş kodi: ",
     "en": "Verification code: ",
 }
 VERIFY_QR_NOTE: dict[Lang, str] = {
     "ru": "Проверка подлинности документа",
-    "uz": "Hujjatning haqiqiyligini tekshirish",
+    "uz": "Hujjatning haqiqiyligini tekşiriş",
     "en": "Verify document authenticity",
 }
 
@@ -55,3 +55,30 @@ def number_line(lang: Lang, number: str | None, date_text: str | None) -> str:
     if number:
         return {"ru": f"№ {number}", "uz": f"№ {number}", "en": f"No. {number}"}[lang]
     return date_text or ""
+
+
+#: Подписи сетки документа по языку документа (стандарт §4–§5): вид, метки инфоблока, подвал, отметка подписи.
+#: Узбекский — латиница нового алфавита владельца (Ö Ğ Ş Ç вместо Oʻ Gʻ Sh Ch).
+GRID_LABELS: dict[str, dict[Lang, str]] = {
+    "kind_letter": {"ru": "Письмо", "uz": "Xat", "en": "Letter"},
+    "kind_memo": {"ru": "Служебная записка", "uz": "Xizmat yozuvi", "en": "Memo"},
+    "number_out": {"ru": "Исх. №", "uz": "Çiqiş №", "en": "Outgoing No."},
+    "date": {"ru": "Дата", "uz": "Sana", "en": "Date"},
+    "reply_to": {"ru": "На ваш №", "uz": "Sizning №", "en": "Your ref."},
+    "project": {"ru": "Проект", "uz": "Loyiha", "en": "Project"},
+    "executor": {"ru": "Исполнитель", "uz": "Ijroçi", "en": "Prepared by"},
+    "phone": {"ru": "Телефон", "uz": "Telefon", "en": "Phone"},
+    "email": {"ru": "Почта", "uz": "Poçta", "en": "Email"},
+    "verify": {"ru": "Код проверки", "uz": "Tekşiriş kodi", "en": "Verification code"},
+    "management": {"ru": "Руководство", "uz": "Rahbariyat", "en": "Management"},
+    "internal_note": {"ru": "Внутренний документ", "uz": "Içki hujjat", "en": "Internal document"},
+    "signed": {
+        "ru": "Подписано электронной подписью",
+        "uz": "Elektron imzo bilan imzolangan",
+        "en": "Electronically signed",
+    },
+}
+
+
+def grid_label(key: str, lang: Lang) -> str:
+    return GRID_LABELS[key][lang]

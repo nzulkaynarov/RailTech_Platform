@@ -360,6 +360,21 @@
         "request_deviation": "The request went to the Legal holder.",
         "decide_deviation": "Decision recorded."
       }
+    },
+    "blocker": {
+      "visas_not_requested": "Visas are needed. Press “Send for signature”: once they are collected, the contract can go to the client.",
+      "visas_declined": "The contract was not accepted for visas. Send it for signature again.",
+      "visas_pending": "Visas needed: {{roles}}",
+      "visas_returned": "Visas returned: {{roles}}. Fix the contract and send it for signature again.",
+      "no_visa_holder": "Nobody can give the visa: {{roles}}. Assign the role to an employee.",
+      "remark": "Remark: {{text}}",
+      "settings": "Employees",
+      "collecting": "Visas are being collected.",
+      "askAdmin": "Ask an administrator to assign the role: {{roles}}.",
+      "role": {
+        "visa_finance": "accountant",
+        "visa_legal": "lawyer"
+      }
     }
   },
   "act": {
@@ -456,7 +471,8 @@
     "deviation_already_requested": "The request is already filed.",
     "deviation_not_requested": "There is no request any more. Refresh the page.",
     "deviation_decision_forbidden": "The Legal holder decides.",
-    "contract_template_unfilled": "The contract has unfilled template places."
+    "contract_template_unfilled": "The contract has unfilled template places.",
+    "contract_visas_required": "Visas are needed first. Refresh the page."
   },
   "state": {
     "retry": "Retry",

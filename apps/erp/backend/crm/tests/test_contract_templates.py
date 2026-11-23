@@ -2,7 +2,8 @@
 
 Каждый тест проверяет факт, из которого выводится статус: строка шаблона (`approval_status`, кто, когда), строка договора
 (шаблон, редакция, замороженный текст, статус) и записи журнала. Защиты, без которых тест краснеет (мутационная проверка в PR):
-фильтр «утверждён» в `offered_templates`, `is_approver`, `is_locked`, `unfilled_variables`, `send_blocker`.
+фильтр «утверждён» в `offered_templates`, `is_approver`, `is_locked`, `unfilled_variables`, единая `contract_flow.send_blocker`
+(освобождение шаблона без отступления от виз, виз для отступления, отдельная причина «отступление ждёт решения»).
 """
 
 import pytest
@@ -11,9 +12,10 @@ from parties.models.company_settings import CompanySettings
 
 from crm.constants import ContractStatusCode as S
 from crm.models import ActivityLog, Contract
+from crm.services import contract_flow
 from crm.services import contract_templates as svc
 from crm.services.contracts import generate_contract_from_quote
-from crm.tests.projects_world import api, pw  # noqa: F401
+from crm.tests.projects_world import api, collect_visas, contract_in, pw  # noqa: F401
 
 pytestmark = pytest.mark.django_db
 
@@ -213,7 +215,10 @@ def test_our_signature_comes_first_and_then_it_goes(pw):  # noqa: F811
     rules(pw, contract_auto_send=True, contract_sign_before_send=True)
     make_template(pw)
     contract, _ = generate(pw)
-    assert contract.status.code == S.DRAFT and svc.send_blocker(contract) == "CONTRACT_NEEDS_OUR_SIGNATURE"
+    assert (
+        contract.status.code == S.DRAFT
+        and (contract_flow.send_blocker(contract) or {}).get("code") == "CONTRACT_NEEDS_OUR_SIGNATURE"
+    )
     assert post(pw.accountant, contract, "send-to-client").status_code == 409
 
     assert post(pw.director, contract, "sign-ours").status_code == 200
@@ -244,6 +249,9 @@ def test_deviation_blocks_until_decision_and_visas_apply_only_to_it(pw, approver
     assert contract.deviation_decision == "approved" and "Оплата 30 дней" in contract.notes
     assert contract.status.code == S.DRAFT  # с отступлением сам не уходит: дальше визы
     assert svc.visas_required(contract)
+    no_visas = post(pw.accountant, contract, "send-to-client")  # одобренное отступление идёт по виз-маршруту (Х-1)
+    assert no_visas.status_code == 409 and no_visas.json()["detail"] == "CONTRACT_VISAS_REQUIRED"
+    collect_visas(contract)
     assert post(pw.accountant, contract, "send-to-client").status_code == 200
 
 
@@ -278,7 +286,9 @@ def test_deviations_can_be_switched_off(pw):  # noqa: F811
 def test_without_approved_templates_the_old_path_still_works(pw):  # noqa: F811
     make_template(pw, status=TemplateApproval.DRAFT)
     contract, error = generate(pw)
-    assert error is None and contract.template_id is None and contract.status.code == S.PENDING_CLIENT
+    # переходный режим: договор собран прежним путём, но уходит клиенту по визам маршрута (Х-1), а не безусловно
+    assert error is None and contract.template_id is None and contract.status.code == S.DRAFT
+    assert _blocker_code(contract) == "visas_not_requested"
 
 
 def test_default_template_comes_from_settings(pw):  # noqa: F811
@@ -390,6 +400,8 @@ def test_card_hides_send_while_deviation_is_requested(pw, approver):  # noqa: F8
     assert "send_to_client" not in contract_flow.allowed_actions(contract, pw.accountant)
     post(approver, contract, "decide-deviation", {"approve": True})
     contract.refresh_from_db()
+    assert "send_to_client" not in contract_flow.allowed_actions(contract, pw.accountant)  # одобрено: нужны визы Х-1
+    collect_visas(contract)
     assert "send_to_client" in contract_flow.allowed_actions(contract, pw.accountant)
 
 
@@ -427,3 +439,75 @@ def test_template_actions_respect_the_contract_scope(pw):  # noqa: F811
     contract.refresh_from_db()
     assert contract.manager_signed_at is None and svc.deviation_state(contract) == "none"
     assert api(pw.stranger).get(f"{TPL}offered/?deal_id={pw.deal.id}").status_code in (403, 404)
+
+
+# ── ОДНА проверка отправки: шаблон (ДОК-10) + визы (Х-1, #833) ───────────────────────────────────────────────────
+
+
+def _blocker_code(contract):
+    return (contract_flow.send_blocker(contract) or {}).get("code")
+
+
+def test_a_contract_from_an_approved_template_without_deviation_needs_no_visas(pw):  # noqa: F811
+    """(а) по утверждённому шаблону без отступления виз нет: нет подписи компании — только она; есть — договор уходит."""
+    rules(pw, contract_auto_send=False, contract_sign_before_send=False)
+    make_template(pw)
+    contract, _ = generate(pw)
+    assert contract.template_id and not svc.visas_required(contract)
+    assert contract_flow.send_blocker(contract) is None, "визы не запрашивались и не нужны"
+    assert "send_to_client" in contract_flow.allowed_actions(contract, pw.accountant)
+    assert post(pw.accountant, contract, "send-to-client").status_code == 200
+
+    rules(pw, contract_sign_before_send=True)
+    Contract.objects.filter(pk=contract.pk).delete()
+    signed_later, _ = generate(pw)
+    assert _blocker_code(signed_later) == "CONTRACT_NEEDS_OUR_SIGNATURE"  # причина — наша подпись, не визы
+    assert post(pw.director, signed_later, "sign-ours").status_code == 200
+    signed_later.refresh_from_db()
+    assert contract_flow.send_blocker(signed_later) is None
+    assert post(pw.accountant, signed_later, "send-to-client").status_code == 200
+
+
+def test_an_approved_deviation_and_a_contract_outside_templates_need_the_visas_of_the_route(pw, approver):  # noqa: F811
+    """(б) визы маршрута нужны договору с одобренным отступлением и договору не из утверждённого шаблона; роли — словами."""
+    rules(pw, contract_auto_send=False, contract_sign_before_send=False)
+    make_template(pw)
+    deviated, _ = generate(pw)
+    post(pw.accountant, deviated, "request-deviation", {"text": "Оплата 30 дней"})
+    post(approver, deviated, "decide-deviation", {"approve": True})
+    deviated.refresh_from_db()
+    assert svc.deviation_state(deviated) == "approved"
+    assert _blocker_code(deviated) == "visas_not_requested"
+    collect_visas(deviated, [{"permission": "approvals.visa_finance", "role": "Бухгалтер", "status": "pending"}])
+    blocker = contract_flow.send_blocker(deviated)
+    assert blocker["code"] == "visas_pending" and blocker["missing"] == ["бухгалтер"]
+    refused = post(pw.accountant, deviated, "send-to-client")
+    assert refused.status_code == 409 and refused.json()["detail"] == "CONTRACT_VISAS_REQUIRED"
+    assert refused.json()["missing"] == ["бухгалтер"]
+    assert "send_to_client" not in contract_flow.allowed_actions(deviated, pw.accountant)
+
+    legacy = contract_in(pw, S.DRAFT)  # переходный режим / прежний договор: шаблона нет
+    assert legacy.template_id is None and _blocker_code(legacy) == "visas_not_requested"
+    assert post(pw.accountant, legacy, "send-to-client").status_code == 409
+    collect_visas(legacy)
+    assert contract_flow.send_blocker(legacy) is None
+    assert post(pw.accountant, legacy, "send-to-client").status_code == 200
+
+
+def test_a_deviation_awaiting_the_decision_has_its_own_reason_before_the_visas(pw):  # noqa: F811
+    """(в) отступление на решении — своя причина (не виз и не подписи), в ответе, в действиях и в карточке одна и та же."""
+    rules(pw, contract_auto_send=False, contract_sign_before_send=True)
+    make_template(pw)
+    contract, _ = generate(pw)
+    post(pw.accountant, contract, "request-deviation", {"text": "Оплата 30 дней"})
+    post(pw.director, contract, "sign-ours")
+    contract.refresh_from_db()
+    collect_visas(contract)  # даже собранные визы не снимают ожидание решения
+    assert _blocker_code(contract) == "CONTRACT_DEVIATION_PENDING"
+    refused = post(pw.accountant, contract, "send-to-client")
+    assert refused.status_code == 409 and refused.json()["detail"] == "CONTRACT_DEVIATION_PENDING"
+    assert "send_to_client" not in contract_flow.allowed_actions(contract, pw.accountant)
+    from crm.services import projects as project_card
+
+    ref = project_card._contract_ref(contract)
+    assert ref["send_blocker_code"] == "CONTRACT_DEVIATION_PENDING"

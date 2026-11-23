@@ -73,11 +73,6 @@ export function ContractTemplateBlock({
           {t(`contract.template.deviation.${template.deviation}`)}: {template.deviation_text}
         </p>
       ) : null}
-      {template.send_blocker ? (
-        <p className="pf-hint" role="status">
-          {t(`contract.template.blocker.${template.send_blocker}`)}
-        </p>
-      ) : null}
 
       {may("sign_ours") ? (
         <Button

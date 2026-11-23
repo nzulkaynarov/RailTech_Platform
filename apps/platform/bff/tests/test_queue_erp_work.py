@@ -119,7 +119,7 @@ def contract(
         "number": number,
         "status": status,
         "sent_to_client": sent,
-        "send_blocker": blocker,
+        "send_blocker_code": blocker,
     }
 
 
@@ -357,6 +357,17 @@ async def test_menu_badge_of_my_costings_counts_the_queue_rows(web: Web, fb: Fee
             project(104, contract=contract("project", sent=False)),
             "issue_contract",
             "Отправить клиенту проект договора ДОГ-2027/106 по ПР-2027-104",
+        ),
+        (
+            # Х-1: без собранных виз «Отправить клиенту» не говорим — слово по факту блокировки ERP
+            project(104, contract=contract("project", sent=False, blocker="visas_not_requested")),
+            "issue_contract",
+            "Отправить на визы договор ДОГ-2027/106 по ПР-2027-104",
+        ),
+        (
+            project(104, contract=contract("project", sent=False, blocker="visas_pending")),
+            "issue_contract",
+            "Ждёт виз договор ДОГ-2027/106 по ПР-2027-104",
         ),
         (
             # ДОК-10: у договора по шаблону шаг — по факту «нет нашей подписи», а не «отправить»

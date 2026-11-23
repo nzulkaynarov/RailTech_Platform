@@ -70,6 +70,7 @@ import {
   PaymentProofSource,
   PaymentTab,
   PriceImportMode,
+  ProjectContractSendBlockerCode,
   ProjectDeliveryAction,
   QueueCategory,
   QueueGroup,
@@ -323,6 +324,7 @@ import type {
   ProjectCard,
   ProjectContract,
   ProjectContractRef,
+  ProjectContractSendBlocker,
   ProjectContractTemplate,
   ProjectFileGenerating,
   ProjectFulfillment,
@@ -3895,8 +3897,8 @@ export const getListEdsProjectsResponseProjectContractRefMock = (
       "cancelled",
     ] as const),
     sent_to_client: faker.datatype.boolean(),
-    send_blocker: faker.helpers.arrayElement([
-      faker.string.alpha({ length: { min: 10, max: 20 } }),
+    send_blocker_code: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(ProjectContractSendBlockerCode)),
       null,
     ]),
   },
@@ -4040,8 +4042,8 @@ export const getGetEdsProjectResponseProjectContractRefMock = (
       "cancelled",
     ] as const),
     sent_to_client: faker.datatype.boolean(),
-    send_blocker: faker.helpers.arrayElement([
-      faker.string.alpha({ length: { min: 10, max: 20 } }),
+    send_blocker_code: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(ProjectContractSendBlockerCode)),
       null,
     ]),
   },
@@ -4112,10 +4114,6 @@ export const getGetEdsProjectResponseProjectContractTemplateMock = (
     deviation: faker.helpers.arrayElement(["none", "requested", "approved", "rejected"] as const),
     deviation_text: faker.string.alpha({ length: { min: 10, max: 20 } }),
     visas_required: faker.datatype.boolean(),
-    send_blocker: faker.helpers.arrayElement([
-      faker.string.alpha({ length: { min: 10, max: 20 } }),
-      null,
-    ]),
     steps: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
       () => ({
         key: faker.helpers.arrayElement([
@@ -4133,6 +4131,27 @@ export const getGetEdsProjectResponseProjectContractTemplateMock = (
       "request_deviation",
       "decide_deviation",
     ] as const),
+  },
+  ...overrideResponse,
+});
+
+export const getGetEdsProjectResponseProjectContractSendBlockerMock = (
+  overrideResponse: Partial<ProjectContractSendBlocker> = {},
+): ProjectContractSendBlocker => ({
+  ...{
+    code: faker.helpers.arrayElement(Object.values(ProjectContractSendBlockerCode)),
+    message: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    missing: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => faker.string.alpha({ length: { min: 10, max: 20 } }),
+    ),
+    missing_permissions: faker.helpers.arrayElement([
+      Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() =>
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+      ),
+      undefined,
+    ]),
+    remark: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    settings_link: faker.datatype.boolean(),
   },
   ...overrideResponse,
 });
@@ -4162,6 +4181,10 @@ export const getGetEdsProjectResponseProjectContractMock = (
       "cancelled",
     ] as const),
     sent_to_client: faker.datatype.boolean(),
+    send_blocker_code: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(ProjectContractSendBlockerCode)),
+      null,
+    ]),
     total: faker.helpers.arrayElement([{ ...getGetEdsProjectResponseProjectMoneyMock() }, null]),
     created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
     client_agreed_at: faker.helpers.arrayElement([
@@ -4184,6 +4207,10 @@ export const getGetEdsProjectResponseProjectContractMock = (
     ] as const),
     template: faker.helpers.arrayElement([
       { ...getGetEdsProjectResponseProjectContractTemplateMock() },
+      null,
+    ]),
+    send_blocker: faker.helpers.arrayElement([
+      { ...getGetEdsProjectResponseProjectContractSendBlockerMock() },
       null,
     ]),
     history: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
@@ -4485,8 +4512,8 @@ export const getCreateEdsProjectContractResponseProjectContractRefMock = (
       "cancelled",
     ] as const),
     sent_to_client: faker.datatype.boolean(),
-    send_blocker: faker.helpers.arrayElement([
-      faker.string.alpha({ length: { min: 10, max: 20 } }),
+    send_blocker_code: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(ProjectContractSendBlockerCode)),
       null,
     ]),
   },
@@ -4557,10 +4584,6 @@ export const getCreateEdsProjectContractResponseProjectContractTemplateMock = (
     deviation: faker.helpers.arrayElement(["none", "requested", "approved", "rejected"] as const),
     deviation_text: faker.string.alpha({ length: { min: 10, max: 20 } }),
     visas_required: faker.datatype.boolean(),
-    send_blocker: faker.helpers.arrayElement([
-      faker.string.alpha({ length: { min: 10, max: 20 } }),
-      null,
-    ]),
     steps: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
       () => ({
         key: faker.helpers.arrayElement([
@@ -4578,6 +4601,27 @@ export const getCreateEdsProjectContractResponseProjectContractTemplateMock = (
       "request_deviation",
       "decide_deviation",
     ] as const),
+  },
+  ...overrideResponse,
+});
+
+export const getCreateEdsProjectContractResponseProjectContractSendBlockerMock = (
+  overrideResponse: Partial<ProjectContractSendBlocker> = {},
+): ProjectContractSendBlocker => ({
+  ...{
+    code: faker.helpers.arrayElement(Object.values(ProjectContractSendBlockerCode)),
+    message: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    missing: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => faker.string.alpha({ length: { min: 10, max: 20 } }),
+    ),
+    missing_permissions: faker.helpers.arrayElement([
+      Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() =>
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+      ),
+      undefined,
+    ]),
+    remark: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    settings_link: faker.datatype.boolean(),
   },
   ...overrideResponse,
 });
@@ -4607,6 +4651,10 @@ export const getCreateEdsProjectContractResponseProjectContractMock = (
       "cancelled",
     ] as const),
     sent_to_client: faker.datatype.boolean(),
+    send_blocker_code: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(ProjectContractSendBlockerCode)),
+      null,
+    ]),
     total: faker.helpers.arrayElement([
       { ...getCreateEdsProjectContractResponseProjectMoneyMock() },
       null,
@@ -4632,6 +4680,10 @@ export const getCreateEdsProjectContractResponseProjectContractMock = (
     ] as const),
     template: faker.helpers.arrayElement([
       { ...getCreateEdsProjectContractResponseProjectContractTemplateMock() },
+      null,
+    ]),
+    send_blocker: faker.helpers.arrayElement([
+      { ...getCreateEdsProjectContractResponseProjectContractSendBlockerMock() },
       null,
     ]),
     history: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
@@ -4960,8 +5012,8 @@ export const getActEdsProjectContractResponseProjectContractRefMock = (
       "cancelled",
     ] as const),
     sent_to_client: faker.datatype.boolean(),
-    send_blocker: faker.helpers.arrayElement([
-      faker.string.alpha({ length: { min: 10, max: 20 } }),
+    send_blocker_code: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(ProjectContractSendBlockerCode)),
       null,
     ]),
   },
@@ -5032,10 +5084,6 @@ export const getActEdsProjectContractResponseProjectContractTemplateMock = (
     deviation: faker.helpers.arrayElement(["none", "requested", "approved", "rejected"] as const),
     deviation_text: faker.string.alpha({ length: { min: 10, max: 20 } }),
     visas_required: faker.datatype.boolean(),
-    send_blocker: faker.helpers.arrayElement([
-      faker.string.alpha({ length: { min: 10, max: 20 } }),
-      null,
-    ]),
     steps: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
       () => ({
         key: faker.helpers.arrayElement([
@@ -5053,6 +5101,27 @@ export const getActEdsProjectContractResponseProjectContractTemplateMock = (
       "request_deviation",
       "decide_deviation",
     ] as const),
+  },
+  ...overrideResponse,
+});
+
+export const getActEdsProjectContractResponseProjectContractSendBlockerMock = (
+  overrideResponse: Partial<ProjectContractSendBlocker> = {},
+): ProjectContractSendBlocker => ({
+  ...{
+    code: faker.helpers.arrayElement(Object.values(ProjectContractSendBlockerCode)),
+    message: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    missing: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => faker.string.alpha({ length: { min: 10, max: 20 } }),
+    ),
+    missing_permissions: faker.helpers.arrayElement([
+      Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() =>
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+      ),
+      undefined,
+    ]),
+    remark: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    settings_link: faker.datatype.boolean(),
   },
   ...overrideResponse,
 });
@@ -5082,6 +5151,10 @@ export const getActEdsProjectContractResponseProjectContractMock = (
       "cancelled",
     ] as const),
     sent_to_client: faker.datatype.boolean(),
+    send_blocker_code: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(ProjectContractSendBlockerCode)),
+      null,
+    ]),
     total: faker.helpers.arrayElement([
       { ...getActEdsProjectContractResponseProjectMoneyMock() },
       null,
@@ -5107,6 +5180,10 @@ export const getActEdsProjectContractResponseProjectContractMock = (
     ] as const),
     template: faker.helpers.arrayElement([
       { ...getActEdsProjectContractResponseProjectContractTemplateMock() },
+      null,
+    ]),
+    send_blocker: faker.helpers.arrayElement([
+      { ...getActEdsProjectContractResponseProjectContractSendBlockerMock() },
       null,
     ]),
     history: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
@@ -5432,8 +5509,8 @@ export const getScanEdsProjectContractResponseProjectContractRefMock = (
       "cancelled",
     ] as const),
     sent_to_client: faker.datatype.boolean(),
-    send_blocker: faker.helpers.arrayElement([
-      faker.string.alpha({ length: { min: 10, max: 20 } }),
+    send_blocker_code: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(ProjectContractSendBlockerCode)),
       null,
     ]),
   },
@@ -5504,10 +5581,6 @@ export const getScanEdsProjectContractResponseProjectContractTemplateMock = (
     deviation: faker.helpers.arrayElement(["none", "requested", "approved", "rejected"] as const),
     deviation_text: faker.string.alpha({ length: { min: 10, max: 20 } }),
     visas_required: faker.datatype.boolean(),
-    send_blocker: faker.helpers.arrayElement([
-      faker.string.alpha({ length: { min: 10, max: 20 } }),
-      null,
-    ]),
     steps: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
       () => ({
         key: faker.helpers.arrayElement([
@@ -5525,6 +5598,27 @@ export const getScanEdsProjectContractResponseProjectContractTemplateMock = (
       "request_deviation",
       "decide_deviation",
     ] as const),
+  },
+  ...overrideResponse,
+});
+
+export const getScanEdsProjectContractResponseProjectContractSendBlockerMock = (
+  overrideResponse: Partial<ProjectContractSendBlocker> = {},
+): ProjectContractSendBlocker => ({
+  ...{
+    code: faker.helpers.arrayElement(Object.values(ProjectContractSendBlockerCode)),
+    message: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    missing: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => faker.string.alpha({ length: { min: 10, max: 20 } }),
+    ),
+    missing_permissions: faker.helpers.arrayElement([
+      Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() =>
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+      ),
+      undefined,
+    ]),
+    remark: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    settings_link: faker.datatype.boolean(),
   },
   ...overrideResponse,
 });
@@ -5554,6 +5648,10 @@ export const getScanEdsProjectContractResponseProjectContractMock = (
       "cancelled",
     ] as const),
     sent_to_client: faker.datatype.boolean(),
+    send_blocker_code: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(ProjectContractSendBlockerCode)),
+      null,
+    ]),
     total: faker.helpers.arrayElement([
       { ...getScanEdsProjectContractResponseProjectMoneyMock() },
       null,
@@ -5579,6 +5677,10 @@ export const getScanEdsProjectContractResponseProjectContractMock = (
     ] as const),
     template: faker.helpers.arrayElement([
       { ...getScanEdsProjectContractResponseProjectContractTemplateMock() },
+      null,
+    ]),
+    send_blocker: faker.helpers.arrayElement([
+      { ...getScanEdsProjectContractResponseProjectContractSendBlockerMock() },
       null,
     ]),
     history: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
@@ -5904,8 +6006,8 @@ export const getRequestEdsProjectSigningResponseProjectContractRefMock = (
       "cancelled",
     ] as const),
     sent_to_client: faker.datatype.boolean(),
-    send_blocker: faker.helpers.arrayElement([
-      faker.string.alpha({ length: { min: 10, max: 20 } }),
+    send_blocker_code: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(ProjectContractSendBlockerCode)),
       null,
     ]),
   },
@@ -5976,10 +6078,6 @@ export const getRequestEdsProjectSigningResponseProjectContractTemplateMock = (
     deviation: faker.helpers.arrayElement(["none", "requested", "approved", "rejected"] as const),
     deviation_text: faker.string.alpha({ length: { min: 10, max: 20 } }),
     visas_required: faker.datatype.boolean(),
-    send_blocker: faker.helpers.arrayElement([
-      faker.string.alpha({ length: { min: 10, max: 20 } }),
-      null,
-    ]),
     steps: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
       () => ({
         key: faker.helpers.arrayElement([
@@ -5997,6 +6095,27 @@ export const getRequestEdsProjectSigningResponseProjectContractTemplateMock = (
       "request_deviation",
       "decide_deviation",
     ] as const),
+  },
+  ...overrideResponse,
+});
+
+export const getRequestEdsProjectSigningResponseProjectContractSendBlockerMock = (
+  overrideResponse: Partial<ProjectContractSendBlocker> = {},
+): ProjectContractSendBlocker => ({
+  ...{
+    code: faker.helpers.arrayElement(Object.values(ProjectContractSendBlockerCode)),
+    message: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    missing: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => faker.string.alpha({ length: { min: 10, max: 20 } }),
+    ),
+    missing_permissions: faker.helpers.arrayElement([
+      Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() =>
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+      ),
+      undefined,
+    ]),
+    remark: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    settings_link: faker.datatype.boolean(),
   },
   ...overrideResponse,
 });
@@ -6026,6 +6145,10 @@ export const getRequestEdsProjectSigningResponseProjectContractMock = (
       "cancelled",
     ] as const),
     sent_to_client: faker.datatype.boolean(),
+    send_blocker_code: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(ProjectContractSendBlockerCode)),
+      null,
+    ]),
     total: faker.helpers.arrayElement([
       { ...getRequestEdsProjectSigningResponseProjectMoneyMock() },
       null,
@@ -6051,6 +6174,10 @@ export const getRequestEdsProjectSigningResponseProjectContractMock = (
     ] as const),
     template: faker.helpers.arrayElement([
       { ...getRequestEdsProjectSigningResponseProjectContractTemplateMock() },
+      null,
+    ]),
+    send_blocker: faker.helpers.arrayElement([
+      { ...getRequestEdsProjectSigningResponseProjectContractSendBlockerMock() },
       null,
     ]),
     history: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
@@ -6402,8 +6529,8 @@ export const getActEdsProjectActResponseProjectContractRefMock = (
       "cancelled",
     ] as const),
     sent_to_client: faker.datatype.boolean(),
-    send_blocker: faker.helpers.arrayElement([
-      faker.string.alpha({ length: { min: 10, max: 20 } }),
+    send_blocker_code: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(ProjectContractSendBlockerCode)),
       null,
     ]),
   },
@@ -6474,10 +6601,6 @@ export const getActEdsProjectActResponseProjectContractTemplateMock = (
     deviation: faker.helpers.arrayElement(["none", "requested", "approved", "rejected"] as const),
     deviation_text: faker.string.alpha({ length: { min: 10, max: 20 } }),
     visas_required: faker.datatype.boolean(),
-    send_blocker: faker.helpers.arrayElement([
-      faker.string.alpha({ length: { min: 10, max: 20 } }),
-      null,
-    ]),
     steps: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
       () => ({
         key: faker.helpers.arrayElement([
@@ -6495,6 +6618,27 @@ export const getActEdsProjectActResponseProjectContractTemplateMock = (
       "request_deviation",
       "decide_deviation",
     ] as const),
+  },
+  ...overrideResponse,
+});
+
+export const getActEdsProjectActResponseProjectContractSendBlockerMock = (
+  overrideResponse: Partial<ProjectContractSendBlocker> = {},
+): ProjectContractSendBlocker => ({
+  ...{
+    code: faker.helpers.arrayElement(Object.values(ProjectContractSendBlockerCode)),
+    message: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    missing: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => faker.string.alpha({ length: { min: 10, max: 20 } }),
+    ),
+    missing_permissions: faker.helpers.arrayElement([
+      Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() =>
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+      ),
+      undefined,
+    ]),
+    remark: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    settings_link: faker.datatype.boolean(),
   },
   ...overrideResponse,
 });
@@ -6524,6 +6668,10 @@ export const getActEdsProjectActResponseProjectContractMock = (
       "cancelled",
     ] as const),
     sent_to_client: faker.datatype.boolean(),
+    send_blocker_code: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(ProjectContractSendBlockerCode)),
+      null,
+    ]),
     total: faker.helpers.arrayElement([{ ...getActEdsProjectActResponseProjectMoneyMock() }, null]),
     created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
     client_agreed_at: faker.helpers.arrayElement([
@@ -6546,6 +6694,10 @@ export const getActEdsProjectActResponseProjectContractMock = (
     ] as const),
     template: faker.helpers.arrayElement([
       { ...getActEdsProjectActResponseProjectContractTemplateMock() },
+      null,
+    ]),
+    send_blocker: faker.helpers.arrayElement([
+      { ...getActEdsProjectActResponseProjectContractSendBlockerMock() },
       null,
     ]),
     history: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
@@ -6859,8 +7011,8 @@ export const getScanEdsProjectActResponseProjectContractRefMock = (
       "cancelled",
     ] as const),
     sent_to_client: faker.datatype.boolean(),
-    send_blocker: faker.helpers.arrayElement([
-      faker.string.alpha({ length: { min: 10, max: 20 } }),
+    send_blocker_code: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(ProjectContractSendBlockerCode)),
       null,
     ]),
   },
@@ -6931,10 +7083,6 @@ export const getScanEdsProjectActResponseProjectContractTemplateMock = (
     deviation: faker.helpers.arrayElement(["none", "requested", "approved", "rejected"] as const),
     deviation_text: faker.string.alpha({ length: { min: 10, max: 20 } }),
     visas_required: faker.datatype.boolean(),
-    send_blocker: faker.helpers.arrayElement([
-      faker.string.alpha({ length: { min: 10, max: 20 } }),
-      null,
-    ]),
     steps: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
       () => ({
         key: faker.helpers.arrayElement([
@@ -6952,6 +7100,27 @@ export const getScanEdsProjectActResponseProjectContractTemplateMock = (
       "request_deviation",
       "decide_deviation",
     ] as const),
+  },
+  ...overrideResponse,
+});
+
+export const getScanEdsProjectActResponseProjectContractSendBlockerMock = (
+  overrideResponse: Partial<ProjectContractSendBlocker> = {},
+): ProjectContractSendBlocker => ({
+  ...{
+    code: faker.helpers.arrayElement(Object.values(ProjectContractSendBlockerCode)),
+    message: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    missing: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => faker.string.alpha({ length: { min: 10, max: 20 } }),
+    ),
+    missing_permissions: faker.helpers.arrayElement([
+      Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() =>
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+      ),
+      undefined,
+    ]),
+    remark: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    settings_link: faker.datatype.boolean(),
   },
   ...overrideResponse,
 });
@@ -6981,6 +7150,10 @@ export const getScanEdsProjectActResponseProjectContractMock = (
       "cancelled",
     ] as const),
     sent_to_client: faker.datatype.boolean(),
+    send_blocker_code: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(ProjectContractSendBlockerCode)),
+      null,
+    ]),
     total: faker.helpers.arrayElement([
       { ...getScanEdsProjectActResponseProjectMoneyMock() },
       null,
@@ -7006,6 +7179,10 @@ export const getScanEdsProjectActResponseProjectContractMock = (
     ] as const),
     template: faker.helpers.arrayElement([
       { ...getScanEdsProjectActResponseProjectContractTemplateMock() },
+      null,
+    ]),
+    send_blocker: faker.helpers.arrayElement([
+      { ...getScanEdsProjectActResponseProjectContractSendBlockerMock() },
       null,
     ]),
     history: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
@@ -7322,8 +7499,8 @@ export const getMarkEdsProjectDeliveryResponseProjectContractRefMock = (
       "cancelled",
     ] as const),
     sent_to_client: faker.datatype.boolean(),
-    send_blocker: faker.helpers.arrayElement([
-      faker.string.alpha({ length: { min: 10, max: 20 } }),
+    send_blocker_code: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(ProjectContractSendBlockerCode)),
       null,
     ]),
   },
@@ -7394,10 +7571,6 @@ export const getMarkEdsProjectDeliveryResponseProjectContractTemplateMock = (
     deviation: faker.helpers.arrayElement(["none", "requested", "approved", "rejected"] as const),
     deviation_text: faker.string.alpha({ length: { min: 10, max: 20 } }),
     visas_required: faker.datatype.boolean(),
-    send_blocker: faker.helpers.arrayElement([
-      faker.string.alpha({ length: { min: 10, max: 20 } }),
-      null,
-    ]),
     steps: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
       () => ({
         key: faker.helpers.arrayElement([
@@ -7415,6 +7588,27 @@ export const getMarkEdsProjectDeliveryResponseProjectContractTemplateMock = (
       "request_deviation",
       "decide_deviation",
     ] as const),
+  },
+  ...overrideResponse,
+});
+
+export const getMarkEdsProjectDeliveryResponseProjectContractSendBlockerMock = (
+  overrideResponse: Partial<ProjectContractSendBlocker> = {},
+): ProjectContractSendBlocker => ({
+  ...{
+    code: faker.helpers.arrayElement(Object.values(ProjectContractSendBlockerCode)),
+    message: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    missing: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => faker.string.alpha({ length: { min: 10, max: 20 } }),
+    ),
+    missing_permissions: faker.helpers.arrayElement([
+      Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() =>
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+      ),
+      undefined,
+    ]),
+    remark: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    settings_link: faker.datatype.boolean(),
   },
   ...overrideResponse,
 });
@@ -7444,6 +7638,10 @@ export const getMarkEdsProjectDeliveryResponseProjectContractMock = (
       "cancelled",
     ] as const),
     sent_to_client: faker.datatype.boolean(),
+    send_blocker_code: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(ProjectContractSendBlockerCode)),
+      null,
+    ]),
     total: faker.helpers.arrayElement([
       { ...getMarkEdsProjectDeliveryResponseProjectMoneyMock() },
       null,
@@ -7469,6 +7667,10 @@ export const getMarkEdsProjectDeliveryResponseProjectContractMock = (
     ] as const),
     template: faker.helpers.arrayElement([
       { ...getMarkEdsProjectDeliveryResponseProjectContractTemplateMock() },
+      null,
+    ]),
+    send_blocker: faker.helpers.arrayElement([
+      { ...getMarkEdsProjectDeliveryResponseProjectContractSendBlockerMock() },
       null,
     ]),
     history: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(

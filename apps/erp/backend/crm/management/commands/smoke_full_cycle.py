@@ -299,6 +299,32 @@ class Command(BaseCommand):
         if err:
             raise Exception(f"generate_contract_from_quote failed: {err}")
         info(f"contract={contract.number} status={contract.status_code}")
+        # Х-1: договор клиенту не уходит до виз. EDS в смоке нет — состояние виз кладём так, как его проецирует событие
+        # `eds.signing.visas_changed` (запрос подписи текущей редакции, обе визы поставлены), и отправляем договор.
+        from integration.models import CommercialSigningRequest
+
+        from crm.services.signing_outbound import fingerprint
+
+        CommercialSigningRequest.objects.create(
+            kind="contract",
+            object_id=contract.pk,
+            number=contract.number,
+            fingerprint=fingerprint("contract", contract),
+            visas=[
+                {
+                    "permission": "approvals.visa_finance",
+                    "label": "Виза бухгалтера",
+                    "role": "Бухгалтер",
+                    "status": "approved",
+                },
+                {"permission": "approvals.visa_legal", "label": "Виза юриста", "role": "Юрист", "status": "approved"},
+            ],
+            visas_changed_at=timezone.now(),
+        )
+        contract, err = crm_services.generate_contract_from_quote(quote.id, actor=manager, notes="smoke contract")
+        if err:
+            raise Exception(f"send contract to client failed: {err}")
+        info(f"contract sent, status={contract.status_code}")
         # Подпись клиента — шаг портала (FIX-22): контакт своей компании с `can_act`, договор «ждёт клиента».
         contract, err = crm_services.sign_contract_by_client(contract.id, portal_contact=client_contact)
         if err:

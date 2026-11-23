@@ -349,16 +349,14 @@ def _quote_ref(quote) -> Optional[dict]:
 def _contract_ref(contract) -> Optional[dict]:
     if contract is None:
         return None
-    from .contract_templates import send_blocker
-
     sent = contract_flow.contract_sent_to_client(contract)
     return {
         "id": contract.id,
         "number": contract.number,
         "status": contract_flow.contract_v3_status(contract),
         "sent_to_client": sent,
-        # Только у ещё не отправленного договора по шаблону: остальным «что мешает» не нужно (и запроса не делаем).
-        "send_blocker": send_blocker(contract) if contract.template_id and not sent else None,
+        # Х-1: список и «Мои задачи» говорят «Отправить клиенту» только когда визы собраны.
+        "send_blocker_code": None if sent else (contract_flow.send_blocker(contract) or {}).get("code"),
     }
 
 
@@ -485,6 +483,10 @@ def _history_for(journal: list, kind: str, number: Optional[str]) -> list:
     return [row for row in journal if row["document"] == kind and (number is None or row["number"] in (None, number))]
 
 
+def _awaits_send(contract) -> bool:
+    return not contract_flow.contract_sent_to_client(contract)
+
+
 def _contract_card(contract, user, journal: list) -> Optional[dict]:
     if contract is None:
         return None
@@ -498,6 +500,8 @@ def _contract_card(contract, user, journal: list) -> Optional[dict]:
         "has_scan": bool(contract.signed_file),
         "actions": contract_flow.allowed_actions(contract, user),
         "template": _contract_template_card(contract, user),
+        # Х-1: пока проект не ушёл клиенту — что мешает его отправить (визы словами); `null` — ничего.
+        "send_blocker": contract_flow.send_blocker(contract) if _awaits_send(contract) else None,
         "history": _history_for(journal, "contract", contract.number),
     }
 
@@ -526,7 +530,6 @@ def _contract_template_card(contract, user) -> Optional[dict]:
         "deviation": state,
         "deviation_text": contract.deviation_text,
         "visas_required": templates.visas_required(contract),
-        "send_blocker": templates.send_blocker(contract) if draft else None,
         "steps": templates.path_steps(contract),
         "actions": actions,
     }

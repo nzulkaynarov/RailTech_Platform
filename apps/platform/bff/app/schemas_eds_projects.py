@@ -79,17 +79,25 @@ class ProjectSigningIn(BaseModel):
     document_id: int
 
 
+# One ERP check (`contract_flow.send_blocker`): route visas (Х-1) and template rules (ДОК-10).
+SendBlockerCode = Literal[
+    "visas_not_requested",
+    "visas_declined",
+    "visas_pending",
+    "visas_returned",
+    "no_visa_holder",
+    "CONTRACT_DEVIATION_PENDING",
+    "CONTRACT_NEEDS_OUR_SIGNATURE",
+]
+
+
 class ProjectContractRef(BaseModel):
     id: int
     number: str
     status: ContractWord
     sent_to_client: bool
-
-
-class ProjectListContractRef(ProjectContractRef):
-    """Договор в строке списка: что мешает отправить его по шаблону."""
-
-    send_blocker: str | None = None
+    # Х-1/ДОК-10: why the unsent project cannot go to the client; older ERP omits it.
+    send_blocker_code: SendBlockerCode | None = None
 
 
 class ProjectInvoiceRef(BaseModel):
@@ -109,7 +117,7 @@ class ProjectActRef(BaseModel):
 
 class ProjectDocuments(BaseModel):
     quote: ProjectQuoteRef | None
-    contract: ProjectListContractRef | None
+    contract: ProjectContractRef | None
     invoice: ProjectInvoiceRef | None
     act: ProjectActRef | None
 
@@ -178,9 +186,20 @@ class ProjectContractTemplate(BaseModel):
     deviation: DeviationState
     deviation_text: str
     visas_required: bool
-    send_blocker: str | None
     steps: list[ContractPathStep]
     actions: list[TemplateActionCode]
+
+
+class ProjectContractSendBlocker(BaseModel):
+    """Х-1: почему проект договора нельзя отправить клиенту (визы не собраны); считает ERP."""
+
+    code: SendBlockerCode
+    message: str
+    missing: list[str]
+    # The same visas as route permission codes (`approvals.visa_finance`): the web translates them.
+    missing_permissions: list[str] = []
+    remark: str
+    settings_link: bool
 
 
 class ProjectContract(ProjectContractRef):
@@ -192,6 +211,8 @@ class ProjectContract(ProjectContractRef):
     has_pdf: bool
     has_scan: bool
     actions: list[ContractActionCode]
+    # ERP до Х-1 поля не присылает: нет причины — действие решают `actions`.
+    send_blocker: ProjectContractSendBlocker | None = None
     history: list[ProjectJournalEntry]
 
 

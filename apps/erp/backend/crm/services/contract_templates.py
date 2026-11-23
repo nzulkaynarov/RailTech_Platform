@@ -11,9 +11,9 @@
 * в сделке предлагаются только `approved` и активные шаблоны вида контрагента (`offered_templates`);
 * правила — настройки компании (`CompanySettings.contract_*`): авто-отправка, наша подпись до отправки, допустимость
   отступлений, шаблон по умолчанию на вид контрагента;
-* что мешает отправить договор клиенту — `send_blocker`: отступление без решения, нет нашей подписи. Визы Х-1 (#833)
-  подключаются сюда же: `visas_required` говорит, что договор идёт по маршруту виз (есть отступление); без отступления
-  виз нет.
+* что мешает отправить договор клиенту — ОДНА проверка `contract_flow.send_blocker` (шаблон ДОК-10 + визы Х-1, #833):
+  здесь только факты для неё — `deviation_state`, `visas_required` (визы нужны с отступлением; по утверждённому шаблону
+  без отступления их нет), `requires_our_signature`.
 
 Переходный режим: пока у компании нет ни одного утверждённого шаблона вида контрагента, договор собирается как раньше
 (`Contract.template` пуст) — без блокировок и настроек; владелец утверждает редакцию 1 в «Документы · Шаблоны · Договоры».
@@ -339,21 +339,9 @@ def visas_required(contract) -> bool:
     return contract.template_id is not None and deviation_state(contract) in {"requested", "approved"}
 
 
-def send_blocker(contract) -> Optional[str]:
-    """Код причины, по которой договор нельзя отправить клиенту сейчас, или `None`.
-
-    Договор вне шаблона (прежний путь) ничем не ограничен. Крючок для виз Х-1: когда `visas_required` и визы не собраны,
-    их проверка добавляется здесь же, до возврата `None`.
-    """
-    if contract.template_id is None:
-        return None
-    state = deviation_state(contract)
-    if state == "requested":
-        return "CONTRACT_DEVIATION_PENDING"
-    rules = contract_rules(_own_seller(contract))
-    if rules["sign_before_send"] and contract.manager_signed_at is None:
-        return "CONTRACT_NEEDS_OUR_SIGNATURE"
-    return None
+def requires_our_signature(contract) -> bool:
+    """Правило компании «наша подпись до отправки» не выполнено: договор по шаблону без подписи продавца."""
+    return contract_rules(_own_seller(contract))["sign_before_send"] and contract.manager_signed_at is None
 
 
 def seller_of_quote(quote):
@@ -581,7 +569,7 @@ def try_auto_send(contract) -> bool:
 
     С отступлением (одобренным или нет решения) договор сам не уходит: его отправляют после виз.
     """
-    from .contract_flow import apply_transition
+    from .contract_flow import apply_transition, send_blocker
 
     if contract.template_id is None or contract.status_code != "DRAFT":
         return False

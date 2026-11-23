@@ -15,11 +15,6 @@ export interface ProjectContractTemplate {
   deviation_text: string;
   /** Договор идёт по маршруту виз — только с отступлением; по шаблону без отступлений виз нет */
   visas_required: boolean;
-  /**
-   * Что мешает отправить клиенту сейчас: `CONTRACT_DEVIATION_PENDING`, `CONTRACT_NEEDS_OUR_SIGNATURE` или null
-   * @nullable
-   */
-  send_blocker: string | null;
   steps: ContractPathStep[];
   actions: ProjectContractTemplateActionsItem[];
 }

@@ -180,10 +180,16 @@ def _generate_contract_from_quote(
     from integration.services import document_events
 
     was_draft = contract.status_code == ContractStatusCode.DRAFT
-    # ДОК-10: договор по шаблону уходит клиенту по правилам компании (авто-отправка, наша подпись, отступления), а не
-    # безусловно: здесь он остаётся проектом, а `try_auto_send` отправит его, когда помех нет.
+    # ДОК-10 + Х-1: «сразу у клиента» — только если единая проверка `send_blocker` ничего не находит. У нового договора
+    # по шаблону она сверяется с правилами компании (авто-отправка, наша подпись, отступления) — отправит `try_auto_send`;
+    # у договора вне шаблона визов ещё нет — он остаётся проектом, менеджер видит причину и отправляет договор клиенту
+    # после виз (`send-to-client`).
     from_template = contract.template_id is not None
     send_now = send_to_client and not from_template
+    if send_now and was_draft:
+        from .contract_flow import send_blocker
+
+        send_now = send_blocker(contract) is None
     with document_events.watch_document_issue("contract", contract):  # document.created на выпуске (шина rt_bus)
         if was_draft and send_now:
             contract.status = _cstatus(ContractStatusCode.PENDING_CLIENT)

@@ -53,6 +53,7 @@ from rt_contracts.events.eds import (
     NoticeRequestedV2,
     SigningAuthorityExpiringV1,
     SigningDecidedV1,
+    SigningVisasChangedV1,
 )
 from rt_contracts.events.envelope import Envelope
 from rt_contracts.events.erp import (
@@ -172,6 +173,7 @@ TYPES: dict[str, type[BaseModel]] = {
     "uz.railtech.eds.notice.requested.v1": NoticeRequestedV1,
     "uz.railtech.eds.notice.requested.v2": NoticeRequestedV2,
     "uz.railtech.eds.signing.decided.v1": SigningDecidedV1,
+    "uz.railtech.eds.signing.visas_changed.v1": SigningVisasChangedV1,
     "uz.railtech.eds.signing_authority.expiring.v1": SigningAuthorityExpiringV1,
     "uz.railtech.identity.user.created.v1": UserCreatedV1,
     "uz.railtech.identity.user.deactivated.v1": UserDeactivatedV1,
@@ -260,6 +262,7 @@ __all__ = [
     "SigningAuthorityExpiringV1",
     "SigningDecidedV1",
     "SigningRequestedV1",
+    "SigningVisasChangedV1",
     "UserCreatedV1",
     "UserDeactivatedV1",
     "UserUpdatedV1",

@@ -3,6 +3,7 @@
  * RailTech Platform — BFF API (Платформа → CRM и ERP)
  */
 import type { ProjectContractRefStatus } from "./projectContractRefStatus";
+import type { ProjectContractSendBlockerCode } from "./projectContractSendBlockerCode";
 
 export interface ProjectContractRef {
   id: number;
@@ -10,9 +11,6 @@ export interface ProjectContractRef {
   status: ProjectContractRefStatus;
   /** Проект ушёл клиенту на согласование редакции и виден ему в кабинете */
   sent_to_client: boolean;
-  /**
-   * Что мешает отправить договор по шаблону клиенту сейчас: CONTRACT_NEEDS_OUR_SIGNATURE, CONTRACT_DEVIATION_PENDING; null — ничего
-   * @nullable
-   */
-  send_blocker?: string | null;
+  /** Х-1: пока проект не ушёл клиенту — код причины, по которой его нельзя отправить (визы не собраны); null — ничего не мешает. Считает ERP */
+  send_blocker_code?: ProjectContractSendBlockerCode | null;
 }

@@ -58,6 +58,49 @@ async def _missing_visa_role(session: AsyncSession, kind: str) -> str | None:
     return None
 
 
+async def _holders(session: AsyncSession) -> set[str]:
+    """Права виз, у которых есть хотя бы один активный держатель."""
+    held: set[str] = set()
+    for permission in VISA_PERMISSIONS:
+        holder = await session.scalar(
+            select(Employee.crm_user_id)
+            .where(Employee.is_active.is_(True), literal(permission) == any_(Employee.permissions_eds))
+            .limit(1)
+        )
+        if holder is not None:
+            held.add(permission)
+    return held
+
+
+_VISA_STEP_STATUS = {"approved": "approved", "returned": "returned", "rejected": "returned"}
+
+
+async def _publish_visas(
+    session: AsyncSession,
+    bus: AsyncBus,
+    snap: dict[str, Any],
+    statuses: dict[str, str],
+    by: int | None,
+) -> None:
+    """Х-1: полный список виз документа после изменения — ERP не отправляет договор клиенту, пока визы не собраны.
+
+    `statuses` — статус каждого права визы документа (`pending`, `approved`, `returned`, `no_holder`); состав и порядок
+    виз берутся из `DOCUMENT_VISAS` (данные маршрута), роли в событии — словами, чтобы причина отказа в ERP называла их.
+    """
+    visas = [
+        {"permission": permission, "label": label, "role": role, "status": statuses.get(permission, "pending")}
+        for label, permission, role in DOCUMENT_VISAS.get(snap["kind"], ())
+    ]
+    data = {
+        "object": _object_ref(snap),
+        "visas": visas,
+        "all_approved": all(v["status"] == "approved" for v in visas),
+        "changed_at": clock.now().isoformat(),
+        "actor": events.actor(by),
+    }
+    await events.publish(bus, session, "signing.visas_changed", data, subject=snap["number"])
+
+
 def _object_ref(snap: dict[str, Any]) -> dict[str, Any]:
     return {
         "kind": snap["kind"],
@@ -225,6 +268,14 @@ async def handle_signing_request(
 
     missing = await _missing_visa_role(session, obj.kind)
     if missing is not None:
+        held = await _holders(session)
+        await _publish_visas(
+            session,
+            bus,
+            snap,
+            {p: "pending" if p in held else "no_holder" for _, p, _ in DOCUMENT_VISAS.get(obj.kind, ())},
+            data.requested_by.crm_user_id,
+        )
         return await _publish_rejected(
             session,
             bus,
@@ -247,6 +298,13 @@ async def handle_signing_request(
         actor_id=data.requested_by.crm_user_id,
         round_no=len(routes) + 1,
         fields={"signing_snapshot": snap, "erp_deal_id": obj.deal_id},
+    )
+    await _publish_visas(
+        session,
+        bus,
+        snap,
+        {p: "pending" for _, p, _ in DOCUMENT_VISAS.get(obj.kind, ())},
+        data.requested_by.crm_user_id,
     )
     await journal.record(
         session,
@@ -275,6 +333,17 @@ async def decide(
     now = clock.now()
     if current.assignee_permission in VISA_PERMISSIONS:
         result = await approvals.complete_step(session, bus, employee, route, steps, current, body)
+        await _publish_visas(
+            session,
+            bus,
+            snap,
+            {
+                step.assignee_permission: _VISA_STEP_STATUS.get(step.status, "pending")
+                for step in steps
+                if step.assignee_permission in VISA_PERMISSIONS
+            },
+            employee.crm_user_id,
+        )
         if body.decision is not Decision.APPROVE:
             # Несогласие останавливает круг (правило владельца 7): ERP получает отказ с замечанием визирующего.
             visa = {

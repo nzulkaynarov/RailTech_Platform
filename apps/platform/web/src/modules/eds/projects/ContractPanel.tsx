@@ -1,12 +1,17 @@
 import { App, Button } from "antd";
 import { type ReactNode, useId, useState } from "react";
+import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 
+import { canSee } from "../../../app/access";
+import { useAuth } from "../../../app/auth/useAuth";
+import { settingByKey } from "../../admin/settingsRegistry";
 import type {
   OnBehalfChannel,
   ProjectCard,
   ProjectContractActionInAction,
   ProjectContractActionsItem,
+  ProjectContractSendBlocker,
 } from "../../../shared/api/generated/model";
 import {
   useActEdsProjectContract,
@@ -16,6 +21,7 @@ import {
 import { useFormat } from "../../../shared/lib/useFormat";
 import { DefinitionList } from "../../../shared/ui/DefinitionList";
 import { ActionToggle } from "../../../shared/ui/FormParts";
+import { LinkButton } from "../../../shared/ui/LinkButton";
 import { MoneyText } from "../../../shared/ui/MoneyText";
 import { OnBehalfFields } from "../../../shared/ui/OnBehalf";
 import { fileUrl, projectRef } from "./api";
@@ -51,6 +57,53 @@ function primaryOf(
     default:
       return null;
   }
+}
+
+/** Роли виз словами на языке сотрудника: по коду права маршрута, слово сервера — запасное (право без перевода). */
+function visaRoles(t: TFunction<"projects">, blocker: ProjectContractSendBlocker): string {
+  return blocker.missing
+    .map((word, i) => {
+      const code = blocker.missing_permissions?.[i]?.split(".").pop() ?? "";
+      return code ? t(`contract.blocker.role.${code}`, { defaultValue: word }) : word;
+    })
+    .join(", ");
+}
+
+/**
+ * Договор не уходит клиенту, пока не собраны визы (Х-1) или не выполнены правила шаблона (ДОК-10): одна проверка ERP. Действие «На согласование клиенту» ERP не предлагает
+ * (`actions`), а здесь — причина словами и, если некому визировать, путь без тупика: ссылка в «Сотрудники» тому, у кого
+ * есть доступ, остальным — кого попросить.
+ */
+function SendBlocker({ blocker }: { blocker: ProjectContractSendBlocker }) {
+  const { t } = useTranslation("projects");
+  const { me } = useAuth();
+  const roles = visaRoles(t, blocker);
+  const org = settingByKey("org");
+  const canOpenSettings = org !== undefined && canSee(me, org.access);
+  // Запрос открыт, а кто поставил визы, ещё не пришло: слов о ролях нет — «Визы собираются»
+  const key =
+    blocker.code === "visas_pending" && blocker.missing.length === 0 ? "collecting" : blocker.code;
+  // Правила шаблона (ДОК-10) — свои слова; визы (Х-1) — по коду причины. Проверка на сервере одна.
+  const text = blocker.code.startsWith("CONTRACT_")
+    ? t(`contract.template.blocker.${blocker.code}`)
+    : t(`contract.blocker.${key}`, { roles });
+  return (
+    <div className="pf-hint" role="status" data-testid="contract-send-blocker">
+      <p style={{ margin: 0 }}>{text}</p>
+      {blocker.remark ? (
+        <p style={{ margin: 0 }}>{t("contract.blocker.remark", { text: blocker.remark })}</p>
+      ) : null}
+      {blocker.settings_link ? (
+        canOpenSettings ? (
+          <LinkButton size="small" to="/admin/org">
+            {t("contract.blocker.settings")}
+          </LinkButton>
+        ) : (
+          <p style={{ margin: 0 }}>{t("contract.blocker.askAdmin", { roles })}</p>
+        )
+      ) : null}
+    </div>
+  );
 }
 
 function ContractBody({
@@ -213,6 +266,8 @@ function ContractBody({
     );
   }
 
+  // «На подпись» не предлагается, пока по текущей редакции запрос открыт (визы собираются): повтор — `ALREADY_REQUESTED`
+  const requestOpen = !contract.sent_to_client && contract.send_blocker?.code === "visas_pending";
   const canReject = may("reject");
   const stateKey = contractStateKey(contract);
   return (
@@ -271,8 +326,11 @@ function ContractBody({
           send={send}
         />
       ) : null}
+      {contract.send_blocker && !contract.sent_to_client ? (
+        <SendBlocker blocker={contract.send_blocker} />
+      ) : null}
       {primaryBlock}
-      {allowed.length === 0 && !FINAL.has(contract.status) ? (
+      {allowed.length === 0 && !FINAL.has(contract.status) && !contract.send_blocker ? (
         <p className="pf-hint">{t("contract.readOnly")}</p>
       ) : null}
 
@@ -309,7 +367,8 @@ function ContractBody({
       {/* План 0.7 (FR-30): подписанный, отклонённый или отменённый договор на подпись не отправляют */}
       {contract.status !== "signed" &&
       contract.status !== "rejected" &&
-      contract.status !== "cancelled" ? (
+      contract.status !== "cancelled" &&
+      !requestOpen ? (
         <SigningButton objectId={objectId} kind="contract" documentId={contract.id} />
       ) : null}
     </div>

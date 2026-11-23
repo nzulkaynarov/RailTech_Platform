@@ -56,6 +56,8 @@ _ERP_REASONS: dict[str, str] = {
     "DEVIATION_DECISION_FORBIDDEN": "Решает держатель «Право».",
     "CONTRACT_TEMPLATE_UNFILLED": "В договоре остались незаполненные места шаблона.",
     "CONTRACT_TEMPLATE_NOT_OFFERED": "Этот шаблон не утверждён для такого контрагента.",
+    # Х-1: до виз договор клиенту не уходит; слова с названием виз ERP присылает в `reason`.
+    "CONTRACT_VISAS_REQUIRED": "Договор нельзя отправить клиенту: сначала нужны визы.",
     # A1, A2 волны 18a: решение клиента по КП и согласие с договором записывает сотрудник.
     "QUOTE_NOT_SENT": "КП уже не ждёт решения клиента. Обновите страницу.",
     "DEAL_STAGE_CONFLICT": "Заявка сейчас не на стадии КП. Обновите страницу.",
@@ -125,6 +127,16 @@ def deal_id_of_ref(ref: str) -> int | None:
     return int(text) if text.isdigit() and int(text) <= MAX_ID else None
 
 
+def _erp_reason_text(response: httpx.Response) -> str | None:
+    """Причина словами из тела отказа ERP (`reason`): «Нужны визы: бухгалтер, юрист»."""
+    try:
+        body = response.json()
+    except ValueError:
+        return None
+    text = body.get("reason") if isinstance(body, dict) else None
+    return text.strip() if isinstance(text, str) and text.strip() else None
+
+
 def project_error(response: httpx.Response) -> PlatformError:
     """Ответ ERP 4xx -> ошибка контракта (`source = erp`): 400 -> 422 с полем, 409 -> `CONFLICT`."""
     code = backend_code(response)
@@ -158,9 +170,12 @@ def project_error(response: httpx.Response) -> PlatformError:
             "NOT_FOUND", "Не найдено.", status_code=404, source="erp", details=details
         )
     if status == 409:
+        message = _ERP_REASONS.get(reason or "", "Объект изменился. Обновите страницу.")
+        if reason == "CONTRACT_VISAS_REQUIRED":
+            message = _erp_reason_text(response) or message
         return PlatformError(
             "CONFLICT",
-            _ERP_REASONS.get(reason or "", "Объект изменился. Обновите страницу."),
+            message,
             status_code=409,
             source="erp",
             details=details,

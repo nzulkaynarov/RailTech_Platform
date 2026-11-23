@@ -10960,8 +10960,8 @@ export interface components {
         | "cancelled";
       /** @description Проект ушёл клиенту на согласование редакции и виден ему в кабинете */
       sent_to_client: boolean;
-      /** @description Что мешает отправить договор по шаблону клиенту сейчас: CONTRACT_NEEDS_OUR_SIGNATURE, CONTRACT_DEVIATION_PENDING; null — ничего */
-      send_blocker?: string | null;
+      /** @description Х-1: пока проект не ушёл клиенту — код причины, по которой его нельзя отправить (визы не собраны); null — ничего не мешает. Считает ERP */
+      send_blocker_code?: components["schemas"]["ProjectContractSendBlockerCode"] | null;
     };
     ProjectInvoiceRef: {
       id: number;
@@ -11059,6 +11059,32 @@ export interface components {
       /** Format: date */
       valid_until: string | null;
     };
+    /**
+     * @description visas_not_requested — договор ещё не на визах; visas_declined — EDS не принял договор на визы (причина в remark); visas_pending — не все визы поставлены; visas_returned — виза возвращена с замечанием; no_visa_holder — в компании нет держателя нужного права (ссылка в настройки); CONTRACT_DEVIATION_PENDING — отступление от шаблона ждёт решения (ДОК-10); CONTRACT_NEEDS_OUR_SIGNATURE — нужна наша подпись до отправки (ДОК-10)
+     * @enum {string}
+     */
+    ProjectContractSendBlockerCode:
+      | "visas_not_requested"
+      | "visas_declined"
+      | "visas_pending"
+      | "visas_returned"
+      | "no_visa_holder"
+      | "CONTRACT_DEVIATION_PENDING"
+      | "CONTRACT_NEEDS_OUR_SIGNATURE";
+    /** @description Почему проект договора нельзя отправить клиенту: визы маршрута подписи не собраны (Х-1, ADR-0025), отступление ждёт решения или нет нашей подписи (ДОК-10) — одна проверка ERP */
+    ProjectContractSendBlocker: {
+      code: components["schemas"]["ProjectContractSendBlockerCode"];
+      /** @description Причина словами («Нужны визы: бухгалтер, юрист») */
+      message: string;
+      /** @description Роли без визы словами в нижнем регистре */
+      missing: string[];
+      /** @description Те же визы кодами прав маршрута (approvals.visa_finance): Платформа переводит их на язык сотрудника */
+      missing_permissions?: string[];
+      /** @description Замечание визирующего или причина отказа EDS, как написаны; пусто — нет */
+      remark: string;
+      /** @description Нужной роли нет ни у одного сотрудника: назначить её можно в настройках */
+      settings_link: boolean;
+    };
     ProjectContract: {
       id: number;
       number: string;
@@ -11071,6 +11097,8 @@ export interface components {
         | "rejected"
         | "cancelled";
       sent_to_client: boolean;
+      /** @description Х-1: пока проект не ушёл клиенту — код причины, по которой его нельзя отправить (визы не собраны); null — ничего не мешает. Считает ERP */
+      send_blocker_code?: components["schemas"]["ProjectContractSendBlockerCode"] | null;
       total: components["schemas"]["ProjectMoney"] | null;
       /** Format: date-time */
       created_at: string;
@@ -11097,6 +11125,8 @@ export interface components {
       )[];
       /** @description ДОК-10: договор собран из утверждённого шаблона — название и редакция, отступление, путь по фактам; null — договор прежним путём */
       template?: components["schemas"]["ProjectContractTemplate"] | null;
+      /** @description Х-1: пока проект договора не ушёл клиенту — что мешает его отправить (визы маршрута подписи не собраны); null — ничего, действие send_to_client в actions. Считает ERP */
+      send_blocker?: components["schemas"]["ProjectContractSendBlocker"] | null;
       history: components["schemas"]["ProjectJournalEntry"][];
     };
     ProjectContractTemplate: {
@@ -11108,8 +11138,6 @@ export interface components {
       deviation_text: string;
       /** @description Договор идёт по маршруту виз — только с отступлением; по шаблону без отступлений виз нет */
       visas_required: boolean;
-      /** @description Что мешает отправить клиенту сейчас: `CONTRACT_DEVIATION_PENDING`, `CONTRACT_NEEDS_OUR_SIGNATURE` или null */
-      send_blocker: string | null;
       steps: components["schemas"]["ContractPathStep"][];
       actions: ("sign_ours" | "request_deviation" | "decide_deviation")[];
     };
@@ -11583,6 +11611,12 @@ export interface components {
     };
     EdsTemplatePreviewIn: {
       body: components["schemas"]["EdsDocumentBody"];
+      /**
+       * @description Вид шаблона; служебная записка — компактный лист без окна и подвала компании
+       * @default letter
+       * @enum {string}
+       */
+      kind: "letter" | "memo";
     };
     EdsTemplatePreview: {
       hash: string;

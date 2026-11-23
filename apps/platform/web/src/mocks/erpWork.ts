@@ -193,6 +193,12 @@ function contractStep(row: ProjectRow): [Kind, string, string] | null {
       ? ["issue_contract", "Сформировать проект договора по", "КП принято клиентом"]
       : null;
   }
+  if (c.status === "project" && !c.sent_to_client && c.send_blocker_code) {
+    // Х-1: слово по факту блокировки ERP, не по статусу
+    return c.send_blocker_code === "visas_pending"
+      ? ["issue_contract", `Ждёт виз договор ${c.number} по`, "визы собираются"]
+      : ["issue_contract", `Отправить на визы договор ${c.number} по`, "визы не собраны"];
+  }
   if (c.status === "project" && !c.sent_to_client) {
     return [
       "issue_contract",

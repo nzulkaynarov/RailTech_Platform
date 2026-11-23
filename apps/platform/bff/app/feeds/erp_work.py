@@ -181,6 +181,17 @@ def invoice_rows(snap: Snapshot, now: datetime, view: View, role_of: RoleOf) -> 
     return out
 
 
+#: Х-1: причины, при которых шаг за сотрудником — отправить договор «На подпись».
+_VISAS_TO_REQUEST = {"visas_not_requested", "visas_declined", "visas_returned", "no_visa_holder"}
+_BLOCKER_WHY = {
+    "visas_not_requested": "визы не запрошены",
+    "visas_declined": "договор не принят на визы",
+    "visas_returned": "виза возвращена",
+    "no_visa_holder": "некому поставить визу",
+    "visas_pending": "визы собираются",
+}
+
+
 def _contract_step(row: RawRow) -> tuple[QueueItemKind, str, str] | None:
     """Шаг договора, который ждёт сотрудника: (вид, действие, подпись) или `None` — ход за
     клиентом или договор подписан."""
@@ -190,14 +201,25 @@ def _contract_step(row: RawRow) -> tuple[QueueItemKind, str, str] | None:
             return None
         return "issue_contract", "Сформировать проект договора по", "КП принято клиентом"
     if contract.status == "project" and not contract.sent_to_client:
-        # ДОК-10: шаг по фактам шаблона (ERP отдаёт `send_blocker`), а не по одному статусу
-        if contract.send_blocker == "CONTRACT_DEVIATION_PENDING":
+        # Х-1 и ДОК-10: шаг по факту единой проверки ERP (`send_blocker_code`), не по статусу.
+        code = contract.send_blocker_code
+        if code == "CONTRACT_DEVIATION_PENDING":
             return None  # ход за держателем «Право»: у отправителя строки нет
-        if contract.send_blocker == "CONTRACT_NEEDS_OUR_SIGNATURE":
+        if code == "CONTRACT_NEEDS_OUR_SIGNATURE":
             return (
                 "issue_contract",
                 f"Подписать от компании договор {contract.number} по",
                 "до отправки клиенту нужна наша подпись",
+            )
+        if code is not None:
+            return (
+                "issue_contract",
+                (
+                    f"Отправить на визы договор {contract.number} по"
+                    if code in _VISAS_TO_REQUEST
+                    else f"Ждёт виз договор {contract.number} по"
+                ),
+                _BLOCKER_WHY[code],
             )
         return (
             "issue_contract",

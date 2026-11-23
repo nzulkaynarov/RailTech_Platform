@@ -26,6 +26,16 @@ PROBLEMS = ["no_contract", "contract_rejected", "act_returned", "invoice_overdue
 CONTRACT_ACTIONS = ["send_to_client", "client_agreed", "reject", "revise", "mark_issued", "attach_scan"]
 #: ДОК-10: действия договора по шаблону, доступные сейчас (отдельный список — у прежних действий схема не меняется).
 CONTRACT_TEMPLATE_ACTIONS = ["sign_ours", "request_deviation", "decide_deviation"]
+#: Одна проверка «можно ли отправить договор клиенту» (`contract_flow.send_blocker`): визы Х-1 и правила шаблона ДОК-10.
+SEND_BLOCKER_CODES = [
+    "visas_not_requested",
+    "visas_declined",
+    "visas_pending",
+    "visas_returned",
+    "no_visa_holder",
+    "CONTRACT_DEVIATION_PENDING",
+    "CONTRACT_NEEDS_OUR_SIGNATURE",
+]
 ACT_ACTIONS = ["attach_scan", "return", "reissue"]
 ACT_BLOCKERS = ["no_invoice", "act_exists", "forbidden"]
 JOURNAL_DOCUMENTS = ["contract", "act", "invoice", "quote", "project"]
@@ -53,11 +63,14 @@ class ContractRefSerializer(serializers.Serializer):
     number = serializers.CharField()
     status = serializers.ChoiceField(choices=CONTRACT_WORDS)
     sent_to_client = serializers.BooleanField(help_text="Проект ушёл клиенту на согласование и виден ему в портале")
-    send_blocker = serializers.CharField(
-        required=False,
+    send_blocker_code = serializers.ChoiceField(
+        choices=SEND_BLOCKER_CODES,
         allow_null=True,
-        help_text="Что мешает отправить договор по шаблону клиенту сейчас (`CONTRACT_NEEDS_OUR_SIGNATURE`, "
-        "`CONTRACT_DEVIATION_PENDING`); `null` — ничего. «Мои задачи» строят шаг договора по нему",
+        required=False,
+        help_text=(
+            "Х-1: пока проект не ушёл клиенту — код причины, по которой его нельзя отправить (визы маршрута подписи); "
+            "`null` — ничего не мешает (визы Х-1 и правила шаблона ДОК-10 — одна проверка). Слова и роли — `send_blocker` карточки"
+        ),
     )
 
 
@@ -156,13 +169,51 @@ class ContractTemplateCardSerializer(serializers.Serializer):
     )
     deviation_text = serializers.CharField(allow_blank=True)
     visas_required = serializers.BooleanField(help_text="Договор идёт по маршруту виз (Х-1) — только с отступлением")
-    send_blocker = serializers.CharField(allow_null=True, help_text="Что мешает отправить клиенту: код или null")
     steps = serializers.ListField(
         child=serializers.DictField(), help_text="Путь: assembled, our_signature, in_cabinet, signed_both"
     )
     actions = serializers.ListField(
         child=serializers.ChoiceField(choices=CONTRACT_TEMPLATE_ACTIONS),
         help_text="Что можно сделать СЕЙЧАС этому сотруднику с договором по шаблону",
+    )
+
+
+class ContractSendBlockerSerializer(serializers.Serializer):
+    """Почему проект договора нельзя отправить клиенту: визы Х-1 (ADR-0025), отступление или наша подпись (ДОК-10)."""
+
+    code = serializers.ChoiceField(
+        choices=SEND_BLOCKER_CODES,
+        help_text=(
+            "visas_not_requested — договор ещё не на визах; visas_declined — EDS не принял договор на визы (причина в remark); visas_pending — не все визы поставлены; visas_returned — "
+            "виза возвращена с замечанием; no_visa_holder — в компании нет держателя нужного права; "
+            "CONTRACT_DEVIATION_PENDING — отступление от шаблона ждёт решения; CONTRACT_NEEDS_OUR_SIGNATURE — нужна "
+            "наша подпись до отправки (ДОК-10)"
+        ),
+    )
+    message = serializers.CharField(help_text="Причина словами для сотрудника («Нужны визы: бухгалтер, юрист»)")
+    missing = serializers.ListField(
+        child=serializers.CharField(), help_text="Роли, чьих виз не хватает, словами в нижнем регистре"
+    )
+    missing_permissions = serializers.ListField(
+        child=serializers.CharField(),
+        required=False,
+        help_text="Те же визы кодами прав маршрута (`approvals.visa_finance`): Платформа переводит их на язык сотрудника",
+    )
+    remark = serializers.CharField(
+        allow_blank=True, help_text="Замечание визирующего или причина отказа EDS, как написаны; пусто — нет"
+    )
+    settings_link = serializers.BooleanField(
+        help_text="Нужной роли нет ни у одного сотрудника: назначить её можно в настройках (ссылка без тупика)"
+    )
+
+
+class ContractConflictSerializer(serializers.Serializer):
+    """Тело 409 действий по договору и акту: код; при `CONTRACT_VISAS_REQUIRED` (Х-1) ещё причина словами и роли без визы."""
+
+    detail = serializers.CharField(help_text="Код отказа")
+    reason = serializers.CharField(required=False, help_text="Причина словами («Нужны визы: бухгалтер, юрист»)")
+    missing = serializers.ListField(
+        child=serializers.CharField(), required=False, help_text="Роли без визы словами в нижнем регистре"
     )
 
 
@@ -177,6 +228,11 @@ class ContractCardSerializer(ContractRefSerializer):
     actions = serializers.ListField(
         child=serializers.ChoiceField(choices=CONTRACT_ACTIONS),
         help_text="Что можно сделать СЕЙЧАС этому сотруднику: допустимо из статуса и разрешено правами роли",
+    )
+    send_blocker = ContractSendBlockerSerializer(
+        allow_null=True,
+        required=False,
+        help_text="Х-1: пока проект не ушёл клиенту — что мешает его отправить; `null` — ничего (действие `send_to_client` в `actions`)",
     )
     history = ProjectJournalEntrySerializer(many=True)
 

@@ -360,6 +360,21 @@
         "request_deviation": "Ariza «Huquq» egasiga yuborildi.",
         "decide_deviation": "Qaror yozildi."
       }
+    },
+    "blocker": {
+      "visas_not_requested": "Vizalar kerak. «Imzoga yuboriş» tugmasini bosing: vizalar yiğilgaç, şartnomani mijozga yuboriş mumkin.",
+      "visas_declined": "Şartnoma vizaga qabul qilinmadi. Uni qayta imzoga yuboring.",
+      "visas_pending": "Vizalar kerak: {{roles}}",
+      "visas_returned": "Vizalar qaytarildi: {{roles}}. Şartnomani töğrilab, qayta imzoga yuboring.",
+      "no_visa_holder": "Viza qöyadigan xodim yöq: {{roles}}. Rolni xodimga tayinlang.",
+      "remark": "Izoh: {{text}}",
+      "settings": "Xodimlar",
+      "collecting": "Vizalar yiğilmoqda.",
+      "askAdmin": "Administratordan rolni tayinlashni sörang: {{roles}}.",
+      "role": {
+        "visa_finance": "buxgalter",
+        "visa_legal": "yurist"
+      }
     }
   },
   "act": {
@@ -456,7 +471,8 @@
     "deviation_already_requested": "Ariza allaqaçon berilgan.",
     "deviation_not_requested": "Ariza endi yöq. Sahifani yangilang.",
     "deviation_decision_forbidden": "«Huquq» egasi qaror qiladi.",
-    "contract_template_unfilled": "Şartnomada şablonning töldirilmagan joylari qoldi."
+    "contract_template_unfilled": "Şartnomada şablonning töldirilmagan joylari qoldi.",
+    "contract_visas_required": "Avval vizalar kerak. Sahifani yangilang."
   },
   "state": {
     "retry": "Qayta urinish",
@@ -479,8 +495,8 @@
     }
   },
   "signing": {
-    "action": "Imzoga yuborish",
+    "action": "Imzoga yuboriş",
     "sent": "Hujjat imzoga yuborildi",
-    "failed": "Imzoga yuborib bo'lmadi"
+    "failed": "Imzoga yuborib bölmadi"
   }
 }

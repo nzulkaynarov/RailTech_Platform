@@ -394,6 +394,75 @@ async def test_without_a_lawyer_the_contract_route_does_not_start(
     assert "«Юрист»" in event["data"]["comment"]
 
 
+# ── Х-1: ERP не отправляет договор клиенту, пока визы не собраны — EDS сообщает их состояние ─────
+
+
+def _statuses(event: dict[str, Any]) -> dict[str, str]:
+    return {visa["role"]: visa["status"] for visa in event["data"]["visas"]}
+
+
+async def test_visas_state_follows_the_route(
+    client: httpx.AsyncClient, container: Container, staff: dict[str, Person]
+) -> None:
+    await _grant_director(client, staff)
+    await deliver_erp(client, container, _request(staff))
+    [opened] = await outbox(container, "signing.visas_changed")
+    assert _statuses(opened) == {"Бухгалтер": "pending", "Юрист": "pending"}
+    assert opened["data"]["all_approved"] is False
+    assert opened["data"]["object"]["kind"] == "contract" and opened["data"]["object"]["object_id"] == 500
+
+    [approval_id] = await _open_ids(client, staff)
+    resp = await client.post(
+        f"/api/v1/approvals/{approval_id}/decision", json={"decision": "approve"}, headers=staff["accountant"].headers
+    )
+    assert resp.status_code == 200, resp.text
+    events = await outbox(container, "signing.visas_changed")
+    assert _statuses(events[-1]) == {"Бухгалтер": "approved", "Юрист": "pending"}
+    assert events[-1]["data"]["all_approved"] is False
+
+    resp = await client.post(
+        f"/api/v1/approvals/{approval_id}/decision", json={"decision": "approve"}, headers=staff["lawyer"].headers
+    )
+    assert resp.status_code == 200, resp.text
+    events = await outbox(container, "signing.visas_changed")
+    assert _statuses(events[-1]) == {"Бухгалтер": "approved", "Юрист": "approved"}
+    assert events[-1]["data"]["all_approved"] is True
+
+
+async def test_returned_visa_is_reported_as_returned(
+    client: httpx.AsyncClient, container: Container, staff: dict[str, Person]
+) -> None:
+    await _grant_director(client, staff)
+    await deliver_erp(client, container, _request(staff))
+    [approval_id] = await _open_ids(client, staff)
+    resp = await client.post(
+        f"/api/v1/approvals/{approval_id}/decision",
+        json={"decision": "return", "comment": "Нет графика платежей"},
+        headers=staff["accountant"].headers,
+    )
+    assert resp.status_code == 200, resp.text
+    last = (await outbox(container, "signing.visas_changed"))[-1]
+    assert _statuses(last)["Бухгалтер"] == "returned"
+    assert last["data"]["all_approved"] is False
+
+
+async def test_visa_without_a_holder_is_reported_with_its_role(
+    client: httpx.AsyncClient, container: Container, staff: dict[str, Person]
+) -> None:
+    from sqlalchemy import text
+
+    await _grant_director(client, staff)
+    async with container.session_factory() as session:
+        await session.execute(
+            text("UPDATE employees SET permissions_eds = array_remove(permissions_eds, 'approvals.visa_legal')")
+        )
+        await session.commit()
+    await deliver_erp(client, container, _request(staff))
+    [event] = await outbox(container, "signing.visas_changed")
+    assert _statuses(event) == {"Бухгалтер": "pending", "Юрист": "no_holder"}
+    assert event["data"]["all_approved"] is False
+
+
 # ── План 0.7 (FR-30): подписанный или принятый документ уходит из «Ждут вашей подписи» ─────────
 
 

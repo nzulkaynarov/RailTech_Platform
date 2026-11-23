@@ -462,6 +462,45 @@ async def test_erp_refusals_are_translated(web: Web, erp: ProjectsFake) -> None:
     assert (await web.send("POST", url, json=AGREED)).status_code == 503
 
 
+async def test_send_before_visas_is_refused_with_the_missing_visas_in_words(
+    web: Web, erp: ProjectsFake, check: ContractChecker
+) -> None:
+    """Х-1: ERP отказывает отправку клиенту без виз; сотрудник читает причину ERP."""
+    await _as(web, "ACCOUNTANT")
+    blocker = {
+        "code": "visas_pending",
+        "message": "Нужны визы: бухгалтер, юрист",
+        "missing": ["бухгалтер", "юрист"],
+        "missing_permissions": ["approvals.visa_finance", "approvals.visa_legal"],
+        "remark": "",
+        "settings_link": False,
+    }
+    erp.cards[DEAL] = card(
+        contract=contract_card(sent_to_client=False, actions=[], send_blocker=blocker)
+    )
+    card_response = await web.client.get(f"{BASE}/{NUMBER}")
+    check(card_response, "/eds/projects/{ref}", "get")
+    assert card_response.json()["contract"]["send_blocker"] == blocker
+
+    erp.answer(
+        "POST",
+        r"contracts/\d+/send-to-client/",
+        httpx.Response(
+            409,
+            json={
+                "detail": "CONTRACT_VISAS_REQUIRED",
+                "reason": "Нужны визы: бухгалтер, юрист",
+                "missing": ["бухгалтер", "юрист"],
+            },
+        ),
+    )
+    refused = await web.send("POST", f"{BASE}/{NUMBER}/contract", json={"action": "send_to_client"})
+    assert refused.status_code == 409
+    assert refused.json()["code"] == "CONFLICT"
+    assert refused.json()["message"] == "Нужны визы: бухгалтер, юрист"
+    assert refused.json()["details"]["reason"] == "contract_visas_required"
+
+
 async def test_create_contract_calls_generate_without_sending(
     web: Web, erp: ProjectsFake, check: ContractChecker
 ) -> None:
@@ -868,7 +907,6 @@ async def test_card_passes_the_template_block_through(
         "deviation": "none",
         "deviation_text": "",
         "visas_required": False,
-        "send_blocker": None,
         "steps": [
             {"key": "assembled", "state": "done", "at": "2026-11-21T10:00:00+05:00"},
             {"key": "our_signature", "state": "current", "at": None},
