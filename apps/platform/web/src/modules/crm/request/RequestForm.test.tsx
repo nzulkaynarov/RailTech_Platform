@@ -20,6 +20,7 @@ import { requestDraftScope } from "./draft";
 import {
   type RequestContext,
   emptyRequestForm,
+  noteConsentBlock,
   toRequestPayload,
   validateRequest,
 } from "./formModel";
@@ -297,7 +298,6 @@ describe("«Создать заявку» из лида и из клиента (
     const list = remainingList(panel);
     expect(within(list).getByText(/Выберите компанию/)).toBeVisible();
     expect(within(list).getByText(/Опишите суть запроса/)).toBeVisible();
-    expect(within(list).getByText(/Приложите письмо клиента или файл запроса/)).toBeVisible();
     expect(submit).toHaveAttribute("aria-describedby", list.id);
     // ссылка из списка ведёт на шаг, где это исправить
     fireEvent.click(within(list).getByRole("button", { name: "Клиент" }));
@@ -568,6 +568,15 @@ describe("черновик заявки и лид из Telegram без согл�
   });
 });
 
+describe("основание заявки без согласия", () => {
+  it("Telegram: согласие даёт только бот, остальные каналы — отметка на шаге «Контакт»", () => {
+    expect(noteConsentBlock("telegram", false)).toBe("via_bot");
+    expect(noteConsentBlock("web", false)).toBe("mark");
+    expect(noteConsentBlock("phone", false)).toBe("mark");
+    expect(noteConsentBlock("telegram", true)).toBeNull();
+  });
+});
+
 describe("кнопка «Создать заявку» у чужого лида", () => {
   const me = (resources: Record<string, "full" | "read">) =>
     ({ id: "7", resources }) as unknown as Me;
@@ -667,7 +676,7 @@ describe("записка о звонке как основание заявки 
     open(panel, "Проверка и отправка");
     expect(
       within(panel).getAllByText(
-        "Отметьте согласие на шаге «Контакт» — записка о звонке соберётся сама, или приложите файл",
+        "Отметьте согласие на шаге «Контакт» — записка соберётся сама, или приложите файл",
       ).length,
     ).toBeGreaterThan(0);
     await new Promise((resolve) => setTimeout(resolve, 50));
@@ -675,13 +684,19 @@ describe("записка о звонке как основание заявки 
     server.events.removeAllListeners();
   });
 
-  it("лид не со звонка: записки и кнопки «Основание — звонок» нет, основание — файл", async () => {
+  it("лид не со звонка (сайт, Кабинет, Telegram): «Записка о запросе» собирается сама из лида, файл не нужен (Х-18)", async () => {
     const notes = recordNotes();
     const panel = await openForm("/crm/leads?lead=L-2044&create=1&panel=open&tab=card");
     open(panel, "Запрос");
-    expect(within(panel).queryByRole("button", { name: "Основание — звонок" })).toBeNull();
-    await new Promise((resolve) => setTimeout(resolve, 50));
-    expect(notes.bodies).toHaveLength(0);
+    expect(await within(panel).findByText("Записка о запросе приложена")).toBeVisible();
+    expect(within(panel).queryByText("Записка о звонке приложена")).toBeNull();
+    await waitFor(() => {
+      expect(notes.bodies).toHaveLength(1);
+    });
+    expect(notes.bodies[0]).toMatchObject({ lead: "L-2044", lang: "ru" });
+    // файла нет, а шаг и заявка не требуют основания
+    open(panel, "Проверка и отправка");
+    expect(within(panel).queryByText(/Приложите письмо клиента/)).toBeNull();
     server.events.removeAllListeners();
   });
 

@@ -138,6 +138,15 @@ export const crmLeadsHandlers = [
           !q || row.name.toLowerCase().includes(q) || (row.need ?? "").toLowerCase().includes(q),
       )
       .sort((a, b) => (b.last_message_at ?? "").localeCompare(a.last_message_at ?? ""));
+    // Порядок щелчком по шапке (Х-15): `last_message` по возрастанию, `-last_message` по убыванию; без времени — в конце
+    const sort = url.searchParams.get("sort");
+    if (sort === "last_message" || sort === "-last_message") {
+      const withTime = rows.filter((row) => row.last_message_at);
+      const without = rows.filter((row) => !row.last_message_at);
+      withTime.sort((a, b) => (a.last_message_at ?? "").localeCompare(b.last_message_at ?? ""));
+      if (sort.startsWith("-")) withTime.reverse();
+      rows.splice(0, rows.length, ...withTime, ...without);
+    }
     const page: LeadPage = { items: rows.slice(offset, offset + limit), total: rows.length };
     return HttpResponse.json(page);
   }),
@@ -514,17 +523,10 @@ export const callNoteHandlers = [
     if (body.lead) {
       const lead = findLead(readLeads(), body.lead);
       if (!lead) return failure(404, "NOT_FOUND", "Лид не найден.", "crm");
-      if (lead.card.channel !== "phone") {
-        return rejected(
-          409,
-          "call_note_not_phone",
-          "Записка составляется только по лиду со звонка.",
-        );
-      }
       if (lead.card.consent.given_at === null && !body.consent) {
         return rejected(409, "call_note_no_consent", "Нет согласия клиента.");
       }
-      name = `Записка о звонке ${lead.row.lead}.pdf`;
+      name = `${lead.card.channel === "phone" ? "Записка о звонке" : "Записка о запросе"} ${lead.row.lead}.pdf`;
     } else if (!body.caller) {
       return rejected(422, "caller_required", "Укажите, кто звонил.", ["caller"]);
     }

@@ -111,6 +111,16 @@ class LeadFirstResponse(BaseModel):
     overdue: bool
 
 
+class LeadOrigin(BaseModel):
+    form: str | None
+    page: str | None
+    referrer: str | None
+    campaign: str | None
+    utm_source: str | None
+    utm_medium: str | None
+    language: Language | None
+
+
 class LeadCard(BaseModel):
     lead: str
     name: str
@@ -129,6 +139,7 @@ class LeadCard(BaseModel):
     confirmation: LeadNotice | None
     first_response: LeadFirstResponse
     invitation: ClientInvitation | None
+    origin: LeadOrigin | None = None
 
 
 # --- клиенты --------------------------------------------------------------------------------------

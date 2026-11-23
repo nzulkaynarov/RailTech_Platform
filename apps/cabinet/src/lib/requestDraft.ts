@@ -36,6 +36,17 @@ export function requestDraftKey({ companyId, contactId }: { companyId: number; c
 
 const isString = (value: unknown): value is string => typeof value === 'string';
 
+const CLOCK_SKEW_MS = 5 * 60 * 1000;
+
+function isSavedAt(value: unknown): value is number {
+  return (
+    typeof value === 'number' &&
+    Number.isFinite(value) &&
+    value <= Date.now() + CLOCK_SKEW_MS &&
+    !Number.isNaN(new Date(value).getTime())
+  );
+}
+
 function parseDraft(raw: string | null): RequestDraft | null {
   if (!raw) return null;
   try {
@@ -50,7 +61,8 @@ function parseDraft(raw: string | null): RequestDraft | null {
     if (!isString(summary) || !Array.isArray(lines)) return null;
     // Прежний формат v1 — без вложений и времени: читается как «без файлов, сохранён сейчас».
     if (attachments !== undefined && !Array.isArray(attachments)) return null;
-    if (savedAt !== undefined && (typeof savedAt !== 'number' || !Number.isFinite(savedAt))) return null;
+    // Дата показывается человеку: число вне диапазона Date или «из будущего» — повреждённый черновик.
+    if (savedAt !== undefined && !isSavedAt(savedAt)) return null;
     const files: RequestDraftAttachment[] = [];
     for (const file of attachments ?? []) {
       if (typeof file !== 'object' || file === null) return null;

@@ -260,6 +260,7 @@ import type {
   LeadCreated,
   LeadManagerList,
   LeadNotice,
+  LeadOrigin,
   LeadPage,
   LegalAcceptancePage,
   LegalEditionDetail,
@@ -32711,6 +32712,36 @@ export const getGetCrmLeadResponseClientInvitationMock = (
   ...overrideResponse,
 });
 
+export const getGetCrmLeadResponseLeadOriginMock = (
+  overrideResponse: Partial<LeadOrigin> = {},
+): LeadOrigin => ({
+  ...{
+    form: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    page: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    referrer: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    campaign: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    utm_source: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    utm_medium: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    language: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(["ru", "uz", "en"] as const),
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
 export const getGetCrmLeadResponseMock = (
   overrideResponse: Partial<Extract<LeadCard, object>> = {},
 ): LeadCard => ({
@@ -32793,6 +32824,7 @@ export const getGetCrmLeadResponseMock = (
     { ...getGetCrmLeadResponseClientInvitationMock() },
     null,
   ]),
+  origin: faker.helpers.arrayElement([{ ...getGetCrmLeadResponseLeadOriginMock() }, null]),
   ...overrideResponse,
 });
 

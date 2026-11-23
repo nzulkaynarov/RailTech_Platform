@@ -23,6 +23,20 @@ import "../crm.css";
 
 type Format = ReturnType<typeof useFormat>;
 
+/** «Откуда» одной строкой: канал словами, форма, страница, кампания (LID-5); без фактов — только канал. */
+function originText(t: TFunction, card: LeadCard): string {
+  const parts = [channelLabel(t, card.channel)];
+  const origin = card.origin;
+  if (origin) {
+    if (origin.form) {
+      parts.push(t(`leads:origin.forms.${origin.form}`, { defaultValue: origin.form }));
+    }
+    if (origin.page) parts.push(origin.page);
+    if (origin.campaign) parts.push(t("leads:origin.campaign", { name: origin.campaign }));
+  }
+  return parts.join(" · ");
+}
+
 /** Итог уведомления клиенту (подтверждение заявки, приглашение) одной строкой: статус, канал, причина отказа. */
 function noticeText(t: TFunction, fmt: Format, notice: LeadNotice | ClientInvitation): string {
   const parts = [
@@ -103,7 +117,7 @@ function Body({ card, sheet, onClose }: { card: LeadCard; sheet: boolean; onClos
         <h4>{t("leads:card.about")}</h4>
         <DefinitionList
           items={[
-            { label: t("leads:card.channel"), value: channelLabel(t, card.channel) },
+            { label: t("leads:card.channel"), value: originText(t, card) },
             {
               label: t("leads:card.language"),
               value: t(`messages:card.languages.${card.language}`),

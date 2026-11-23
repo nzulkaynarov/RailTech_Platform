@@ -82,6 +82,30 @@ async def test_tab_scope_and_channel_become_crm_filters(
     assert crm.params("GET", "leads") == {"offset": "0", "limit": "25", **expected}
 
 
+@pytest.mark.parametrize(
+    ("sort", "expected"),
+    [
+        ("last_message", {"sort": "last_message", "order": "asc"}),
+        ("-last_message", {"sort": "last_message", "order": "desc"}),
+        ("-created", {"sort": "created", "order": "desc"}),
+    ],
+)
+async def test_order_becomes_crm_sort_and_direction(
+    web: Web, crm: CrmLeadsFake, sort: str, expected: dict[str, str]
+) -> None:
+    """Х-15: `sort=field` / `-field` → `sort` и `order` CRM."""
+    await web.login(["MANAGER"])
+    assert (await web.client.get(f"{BASE}?sort={sort}")).status_code == 200
+    assert crm.params("GET", "leads") == {"offset": "0", "limit": "25", **expected}
+
+
+async def test_order_outside_the_allow_list_is_422_before_crm(web: Web, crm: CrmLeadsFake) -> None:
+    await web.login(["MANAGER"])
+    for sort in ("score", "assigned_user_id", "-id", "last_message;drop", "-"):
+        assert (await web.client.get(f"{BASE}?sort={sort}")).status_code == 422, sort
+    assert crm.calls == []
+
+
 async def test_bad_filters_are_422_before_crm(web: Web, crm: CrmLeadsFake) -> None:
     await web.login(["MANAGER"])
     for query in ("tab=lost", "scope=team", "channel=Web!", "limit=101", "offset=-1"):
@@ -257,3 +281,40 @@ async def test_create_lead_missing_contact_points_at_the_field(web: Web, crm: Cr
     response = await web.send("POST", BASE, json={"source": "email", "name": "A"})
     assert response.status_code == 422
     assert response.json()["details"]["fields"] == ["email"]
+
+
+async def test_card_shows_origin_facts_of_a_web_lead(
+    web: Web, crm: CrmLeadsFake, check: ContractChecker
+) -> None:
+    """LID-5: form, page, referrer and campaign reach the card; no origin means null."""
+    crm.answer(
+        "GET",
+        "leads/2041",
+        body=lead_detail(
+            2041,
+            source="web",
+            origin={
+                "form": "cabinet_request",
+                "page": "/new-client",
+                "referrer": "t.me/channel/42",
+                "utm": {"utm_source": "tg", "utm_medium": "post", "utm_campaign": "pos-nov"},
+                "landing_language": "uz",
+            },
+        ),
+    )
+    await web.login(["MANAGER"])
+    card = check(await web.client.get(f"{BASE}/L-2041"), "/crm/leads/{lead}", "get").json()
+    assert card["channel"] == "web"
+    assert card["origin"] == {
+        "form": "cabinet_request",
+        "page": "/new-client",
+        "referrer": "t.me/channel/42",
+        "campaign": "pos-nov",
+        "utm_source": "tg",
+        "utm_medium": "post",
+        "language": "uz",
+    }
+
+    crm.answer("GET", "leads/2041", body=lead_detail(2041, source="phone"))
+    plain = check(await web.client.get(f"{BASE}/L-2041"), "/crm/leads/{lead}", "get").json()
+    assert plain["origin"] is None

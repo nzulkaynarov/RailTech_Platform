@@ -5,6 +5,7 @@ import type {
   ProjectContractActionIn,
   ProjectJournalEntry,
   ProjectPage,
+  ProjectRow,
   ProjectStage,
 } from "../shared/api/generated/model";
 import {
@@ -221,6 +222,32 @@ function fieldFailure(reason: string, field: string, message: string) {
 
 // --- обработчики --------------------------------------------------------------------------------------------
 
+const STEP_ORDER = ["CONTRACT", "PAYMENT", "DONE"];
+/** Порядок «щелчком по шапке» (Х-15), как у ERP: белый список полей, `-` — по убыванию, пустые — в конце. */
+const SORT_FIELDS: Record<string, (row: ProjectRow) => string | number | null> = {
+  number: (row) => row.number,
+  client: (row) => row.client_name,
+  step: (row) => STEP_ORDER.indexOf(row.step),
+  due_date: (row) => row.due_date,
+  responsible: (row) => row.responsible?.name ?? null,
+};
+
+function sortedBy(rows: ProjectRow[], sort: string | null): ProjectRow[] {
+  const desc = sort?.startsWith("-") ?? false;
+  const value = SORT_FIELDS[desc ? (sort ?? "").slice(1) : (sort ?? "")];
+  if (!value) return rows;
+  const filled = rows.filter((row) => value(row) !== null && value(row) !== "");
+  const empty = rows.filter((row) => value(row) === null || value(row) === "");
+  filled.sort((a, b) => {
+    const x = value(a);
+    const y = value(b);
+    const result =
+      typeof x === "number" && typeof y === "number" ? x - y : String(x).localeCompare(String(y));
+    return desc ? -result : result;
+  });
+  return [...filled, ...empty];
+}
+
 export const edsProjectsHandlers = [
   http.get("*/eds/projects", ({ request }) => {
     const ok = guard("read");
@@ -244,8 +271,9 @@ export const edsProjectsHandlers = [
             .filter(Boolean)
             .some((v) => String(v).toLowerCase().includes(q)),
       );
+    const rows = sortedBy(found.map(toRow), url.searchParams.get("sort"));
     const page: ProjectPage = {
-      items: found.slice(offset, offset + limit).map(toRow),
+      items: rows.slice(offset, offset + limit),
       total: found.length,
       offset,
       limit,

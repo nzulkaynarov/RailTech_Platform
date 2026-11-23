@@ -7395,7 +7395,7 @@ export interface paths {
     put?: never;
     /**
      * Записка о звонке — основание заявки по звонку (PDF в EDS)
-     * @description EDS `POST /call-notes` от имени сотрудника (СЦ-6): одностраничный PDF «Кто звонил / Что просил» на бланке компании, который становится его файлом — тем, что форма отдаёт как `letter_file_id`. Рендер идёт в воркере EDS, поэтому ответ 202 `CallNoteView`: `status = pending` — опрашивать `GET /crm/request-files/call-note/{id}`; повтор с тем же `request_key` отдаёт ту же записку. С `lead` BFF читает лид в CRM: нужен канал `phone` (иначе 409 `call_note_not_phone`) и согласие на данные — данное в CRM или отмеченное в форме (`consent = true`; иначе 409 `call_note_no_consent`); «Кто звонил», «Компания», «Телефон», «Почта», «Когда» (создание лида), «Принял» (ответственный за лид) и «Что просил» — из лида, `caller` и `need` игнорируются. Без `lead` (повторный звонок клиента) записка составляется по `caller` и `need` формы, «Когда» — сейчас, «Принял» — сам сотрудник; `caller` обязателен (422). Нет бланка компании — 409 `details.reason = letterhead_missing` (форма просит приложить файл). Раздел `crm.clients` полный.
+     * @description EDS `POST /call-notes` от имени сотрудника (СЦ-6): одностраничный PDF «Кто звонил / Что просил» на бланке компании, который становится его файлом — тем, что форма отдаёт как `letter_file_id`. Рендер идёт в воркере EDS, поэтому ответ 202 `CallNoteView`: `status = pending` — опрашивать `GET /crm/request-files/call-note/{id}`; повтор с тем же `request_key` отдаёт ту же записку. С `lead` BFF читает лид в CRM — любого канала (звонок, сайт, Кабинет, Telegram; Х-18) — и согласие на данные, данное в CRM или отмеченное в форме (`consent = true`; иначе 409 `call_note_no_consent`); «Кто звонил», «Компания», «Телефон», «Почта», «Когда» (создание лида), «Принял» (ответственный за лид) и «Что просил» — из лида, `caller` и `need` игнорируются. Не со звонка записка называется «Запиской о запросе» и несёт канал, исходное сообщение клиента и имена его вложений (из переписки лида; нет доступа к переписке — записка без них). Без `lead` (повторный звонок клиента) записка составляется по `caller` и `need` формы, «Когда» — сейчас, «Принял» — сам сотрудник; `caller` обязателен (422). Нет бланка компании — 409 `details.reason = letterhead_missing` (форма просит приложить файл). Раздел `crm.clients` полный.
      */
     post: operations["createCrmRequestCallNote"];
     delete?: never;
@@ -16370,6 +16370,26 @@ export interface components {
         overdue: boolean;
       };
       invitation: components["schemas"]["ClientInvitation"] | null;
+      /** @description Откуда пришёл лид кроме канала (LID-5): форма, страница, откуда перешли, кампания. `null` — у лидов других каналов и прежних лидов фактов нет. */
+      origin?: components["schemas"]["LeadOrigin"] | null;
+    };
+    /** @description Факты об источнике лида, сохранённые при приёме заявки с сайта или из Cabinet */
+    LeadOrigin: {
+      /** @description Ключ формы, например `cabinet_request` */
+      form: string | null;
+      /** @description Путь страницы, где была форма */
+      page: string | null;
+      /** @description Откуда перешли: хост и путь без параметров */
+      referrer: string | null;
+      /** @description utm_campaign */
+      campaign: string | null;
+      utm_source: string | null;
+      utm_medium: string | null;
+      /**
+       * @description Язык страницы заявки
+       * @enum {string|null}
+       */
+      language: "ru" | "uz" | "en" | null;
     };
     ClientShort: {
       id: number;
@@ -18108,7 +18128,7 @@ export interface components {
         "application/json": components["schemas"]["Error"];
       };
     };
-    /** @description 409 `CONFLICT` — CRM отказала по состоянию; код — в `details.reason` (`request_not_allowed`, `request_key_reused`, `consent_via_bot`, `erp_not_configured`, `telegram_linked_elsewhere`, `request_not_failed`, `request_not_retryable`; записка о звонке — `call_note_not_phone`, `call_note_no_consent`, `letterhead_missing`) */
+    /** @description 409 `CONFLICT` — CRM отказала по состоянию; код — в `details.reason` (`request_not_allowed`, `request_key_reused`, `consent_via_bot`, `erp_not_configured`, `telegram_linked_elsewhere`, `request_not_failed`, `request_not_retryable`; записка о звонке — `call_note_no_consent`, `letterhead_missing`) */
     RequestConflict: {
       headers: {
         [name: string]: unknown;
@@ -20743,6 +20763,8 @@ export interface operations {
         problems?: boolean;
         step?: components["schemas"]["ProjectStage"];
         q?: string;
+        /** @description Порядок щелчком по шапке (Х-15): `number`, `client`, `step`, `due_date`, `responsible`; `-` в начале — по убыванию, пустые значения — в конце. Другое поле — 422. Не задан — от новых. */
+        sort?: string;
         limit?: number;
         offset?: number;
       };
@@ -31121,6 +31143,8 @@ export interface operations {
         scope?: "all" | "mine" | "overdue";
         q?: string;
         channel?: components["schemas"]["MessageChannel"];
+        /** @description Порядок щелчком по шапке (Х-15): `last_message`, `created`; `-` в начале — по убыванию; лиды без сообщений — в конце. Другое поле — 422. Не задан — новые по последнему сообщению. */
+        sort?: string;
         offset?: number;
         limit?: number;
       };
@@ -31621,6 +31645,8 @@ export interface operations {
         proposals?: "pending";
         /** @description `waiting` — очередь проверки партнёров (PART-3): карточки на проверке и с открытыми предложениями партнёров, старые отправки сверху; в строке — `review` (срок) и `completeness`. `requests` — «Новые из заявок» (ADR-0027): черновики из строк расчёта и КП, самые спрашиваемые сверху; в строке — `demand`, `asked_in`, `asked_total`, `duplicate`, `completeness` */
         review?: "waiting" | "requests";
+        /** @description Порядок щелчком по шапке (Х-15): `name`, `sku`, `created_at`, `updated_at`; `-` в начале — по убыванию. Другое поле — 422. Не задан — порядок ERP по умолчанию. */
+        sort?: string;
       };
       header?: never;
       path?: never;

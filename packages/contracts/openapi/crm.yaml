@@ -5990,6 +5990,10 @@ components:
           - type: integer
           - type: 'null'
           title: Open Service Request Id
+        origin:
+          anyOf:
+          - $ref: '#/components/schemas/LeadOriginOut'
+          - type: 'null'
         owner_mode:
           title: Owner Mode
           type: string
@@ -6067,6 +6071,38 @@ components:
       - notes_count
       - snoozed_until
       title: LeadDetail
+      type: object
+    LeadOriginOut:
+      description: 'Where the lead came from beyond the channel: form key, landing path, referrer, UTM.'
+      properties:
+        form:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Form
+        landing_language:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Landing Language
+        page:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Page
+        referrer:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Referrer
+        utm:
+          anyOf:
+          - additionalProperties:
+              type: string
+            type: object
+          - type: 'null'
+          title: Utm
+      title: LeadOriginOut
       type: object
     LeadOut:
       properties:
@@ -10642,13 +10678,30 @@ components:
       title: WebFormToken
       type: object
     WebLeadAccepted:
-      description: '202: запрос принят. `lead_id` пустой — запрос отброшен антиспамом (honeypot).'
+      description: '202: запрос принят. `lead_id` пустой — запрос отброшен антиспамом (honeypot).
+
+
+        For the «What next» screen (LID-5): `request_number` is the number to show to the submitter
+
+        (`L-0042`, same as in the staff card) and `first_response_minutes` is the first-response time
+
+        from the «Website forms» settings. Both are null when the request was dropped.'
       properties:
+        first_response_minutes:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: First Response Minutes
         lead_id:
           anyOf:
           - type: integer
           - type: 'null'
           title: Lead Id
+        request_number:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Request Number
       required:
       - lead_id
       title: WebLeadAccepted
@@ -10680,11 +10733,24 @@ components:
             type: string
           - type: 'null'
           title: Email
+        form:
+          anyOf:
+          - maxLength: 128
+            type: string
+          - type: 'null'
+          description: Form key, e.g. `request`.
+          title: Form
         form_token:
           maxLength: 64
           minLength: 1
           title: Form Token
           type: string
+        landing_language:
+          anyOf:
+          - maxLength: 8
+            type: string
+          - type: 'null'
+          title: Landing Language
         language:
           default: ru
           enum:
@@ -10698,17 +10764,34 @@ components:
           minLength: 1
           title: Name
           type: string
+        page:
+          anyOf:
+          - maxLength: 1024
+            type: string
+          - type: 'null'
+          description: Landing page path.
+          title: Page
         phone:
           anyOf:
           - maxLength: 32
             type: string
           - type: 'null'
           title: Phone
+        referrer:
+          anyOf:
+          - maxLength: 1024
+            type: string
+          - type: 'null'
+          title: Referrer
         text:
           maxLength: 10000
           minLength: 1
           title: Text
           type: string
+        utm:
+          anyOf:
+          - $ref: '#/components/schemas/WebLeadUtm'
+          - type: 'null'
         website:
           anyOf:
           - maxLength: 255
@@ -10720,6 +10803,41 @@ components:
       - text
       - form_token
       title: WebLeadIn
+      type: object
+    WebLeadUtm:
+      description: UTM parameters of the landing URL, as the site saw them; all optional.
+      properties:
+        utm_campaign:
+          anyOf:
+          - maxLength: 256
+            type: string
+          - type: 'null'
+          title: Utm Campaign
+        utm_content:
+          anyOf:
+          - maxLength: 256
+            type: string
+          - type: 'null'
+          title: Utm Content
+        utm_medium:
+          anyOf:
+          - maxLength: 256
+            type: string
+          - type: 'null'
+          title: Utm Medium
+        utm_source:
+          anyOf:
+          - maxLength: 256
+            type: string
+          - type: 'null'
+          title: Utm Source
+        utm_term:
+          anyOf:
+          - maxLength: 256
+            type: string
+          - type: 'null'
+          title: Utm Term
+      title: WebLeadUtm
       type: object
   securitySchemes:
     HTTPBearer:
@@ -15429,6 +15547,16 @@ paths:
           pattern: ^(last_message|score|created)$
           title: Sort
           type: string
+      - description: 'Направление `sort`: по умолчанию `desc` (новые и сильные сверху)'
+        in: query
+        name: order
+        required: false
+        schema:
+          default: desc
+          description: 'Направление `sort`: по умолчанию `desc` (новые и сильные сверху)'
+          pattern: ^(asc|desc)$
+          title: Order
+          type: string
       - in: query
         name: limit
         required: false
@@ -15566,7 +15694,11 @@ paths:
 
         `invalid_phone` | `invalid_email`), 429 `rate_limited`.
 
-        Повторный запрос известного контакта дополняет существующую карточку.'
+        Повторный запрос известного контакта дополняет существующую карточку. Необязательные факты
+
+        об источнике (`form`, `page`, `referrer`, `utm`, `landing_language`) сохраняются в лиде. Ответ
+
+        для экрана «Что дальше»: `request_number` и `first_response_minutes`.'
       operationId: web_lead
       requestBody:
         content:

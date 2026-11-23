@@ -105,7 +105,21 @@ def list_queryset(params):
         from catalog.review_queue import waiting_queryset
 
         return waiting_queryset(queryset.select_related("source_supplier"))
-    return queryset.order_by("name", "id")
+    return queryset.order_by(*ordering_terms(params.get("ordering")))
+
+
+#: Белый список порядка общего списка (Х-15): `field` по возрастанию, `-field` по убыванию; чужое поле порядок не меняет.
+ORDERING_FIELDS = ("name", "sku", "created_at", "updated_at")
+
+
+def ordering_terms(raw) -> tuple:
+    """Термы `order_by` для `ordering`: поле из белого списка и хвост `id`; иначе по умолчанию — по названию."""
+    text = str(raw or "").strip()[:32]
+    desc = text.startswith("-")
+    field = text[1:] if desc else text
+    if field not in ORDERING_FIELDS:
+        return ("name", "id")
+    return (f"-{field}" if desc else field, "id")
 
 
 def queue_rows(products) -> dict[int, dict]:
