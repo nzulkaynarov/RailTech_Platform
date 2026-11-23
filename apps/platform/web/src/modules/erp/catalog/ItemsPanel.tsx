@@ -544,8 +544,8 @@ function ItemDrawer({ id, onClose }: { id: string; onClose: () => void }) {
                   <>
                     {" "}
                     {[
-                      card.publish.missing.includes("mxik_code") ? "mxik" : null,
-                      card.publish.missing.includes("hs_code") ? "hs" : null,
+                      card.publish.missing.includes("mxik_code") ? ("mxik" as const) : null,
+                      card.publish.missing.includes("hs_code") ? ("hs" as const) : null,
                     ]
                       .filter((field) => field !== null)
                       .map((field) => (
