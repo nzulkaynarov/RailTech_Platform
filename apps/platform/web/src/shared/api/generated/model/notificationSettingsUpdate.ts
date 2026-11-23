@@ -6,4 +6,6 @@
 export interface NotificationSettingsUpdate {
   notify_leads?: boolean;
   notify_system?: boolean;
+  notify_decisions?: boolean;
+  notify_tasks?: boolean;
 }

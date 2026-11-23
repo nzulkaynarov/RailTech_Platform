@@ -50,7 +50,7 @@ VERSION = dict.fromkeys(
         "approval.requested",
         "approval.decided",
         "notice.requested",
-        "document.notice_requested",  # ГЛ-0: вид letter_sign_withdrawn (v1 — прежние виды)
+        "document.notice_requested",  # ГЛ-0, ГЛ-2: v2 — все виды уведомлений о документе
     ),
     2,
 )

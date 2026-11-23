@@ -4,7 +4,8 @@
   "loading": "Yuklanmoqda…",
   "rail": {
     "label": "Modullar",
-    "logo": "{{initials}} — {{name}}"
+    "logo": "{{initials}} — {{name}}",
+    "tasks": "{{name}}, vazifalar: {{count}}"
   },
   "menu": {
     "nav": "Modul bo‘limlari",

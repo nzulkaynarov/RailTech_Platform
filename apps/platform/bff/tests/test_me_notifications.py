@@ -83,6 +83,8 @@ async def test_every_signed_in_employee_reads_own_settings(
         "telegram_linked": True,
         "notify_leads": True,
         "notify_system": False,
+        "notify_decisions": True,  # ГЛ-2: по умолчанию решения — в Telegram, прочие задачи — нет
+        "notify_tasks": False,
     }
 
 
@@ -124,6 +126,23 @@ async def test_update_settings_goes_to_crm(web: Web, crm_me: CrmMe, check: Contr
     assert response.json()["notify_leads"] is False
     again = await web.client.get("/api/v1/me/notification-settings")
     assert again.json()["notify_leads"] is False
+
+
+async def test_update_decision_and_task_switches_goes_to_crm(
+    web: Web, crm_me: CrmMe, check: ContractChecker
+) -> None:
+    await web.login(["MANAGER"])
+
+    response = await web.send(
+        "PATCH",
+        "/api/v1/me/notification-settings",
+        json={"notify_decisions": False, "notify_tasks": True},
+    )
+
+    assert response.status_code == 200
+    check(response, "/me/notification-settings", "patch")
+    assert crm_me.patches == [{"notify_decisions": False, "notify_tasks": True}]
+    assert (response.json()["notify_decisions"], response.json()["notify_tasks"]) == (False, True)
 
 
 @pytest.mark.parametrize(

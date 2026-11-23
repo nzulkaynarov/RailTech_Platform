@@ -4,7 +4,8 @@
   "loading": "Загружаем…",
   "rail": {
     "label": "Модули",
-    "logo": "{{initials}} — {{name}}"
+    "logo": "{{initials}} — {{name}}",
+    "tasks": "{{name}}, задач: {{count}}"
   },
   "menu": {
     "nav": "Разделы модуля",

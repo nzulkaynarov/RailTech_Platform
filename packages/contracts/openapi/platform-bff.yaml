@@ -16564,6 +16564,12 @@ components:
         notify_system:
           type: boolean
           description: Системные оповещения (мониторинг, сбои) — администратору
+        notify_decisions:
+          type: boolean
+          description: Telegram по решениям — подписать, согласовать, резолюция, оплата, виза (по умолчанию включено); колокольчик приходит всегда
+        notify_tasks:
+          type: boolean
+          description: Telegram по прочим задачам — поручения, ознакомление, итоги (по умолчанию выключено)
         delivery_failed_at:
           type: string
           format: date-time
@@ -16577,6 +16583,10 @@ components:
         notify_leads:
           type: boolean
         notify_system:
+          type: boolean
+        notify_decisions:
+          type: boolean
+        notify_tasks:
           type: boolean
 
     RoleCreate:

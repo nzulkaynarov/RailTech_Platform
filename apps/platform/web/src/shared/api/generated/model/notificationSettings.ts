@@ -13,6 +13,10 @@ export interface NotificationSettings {
   notify_leads: boolean;
   /** Системные оповещения (мониторинг, сбои) — администратору */
   notify_system: boolean;
+  /** Telegram по решениям — подписать, согласовать, резолюция, оплата, виза (по умолчанию включено); колокольчик приходит всегда */
+  notify_decisions?: boolean;
+  /** Telegram по прочим задачам — поручения, ознакомление, итоги (по умолчанию выключено) */
+  notify_tasks?: boolean;
   /** Когда последний раз личное сообщение бота не дошло; нет — доставка исправна */
   delivery_failed_at?: string;
 }

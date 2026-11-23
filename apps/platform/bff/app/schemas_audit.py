@@ -282,6 +282,9 @@ class NotificationSettings(BaseModel):
     telegram_linked: bool
     notify_leads: bool
     notify_system: bool
+    # ГЛ-2: Telegram по решениям (подписать, согласовать, резолюция, оплата) и по прочим задачам.
+    notify_decisions: bool = True
+    notify_tasks: bool = False
     delivery_failed_at: datetime | None = None
 
 
@@ -290,11 +293,13 @@ class NotificationSettingsUpdate(BaseModel):
 
     notify_leads: StrictBool | None = None
     notify_system: StrictBool | None = None
+    notify_decisions: StrictBool | None = None
+    notify_tasks: StrictBool | None = None
 
     @model_validator(mode="after")
     def _not_empty(self) -> "NotificationSettingsUpdate":
         if not self.model_fields_set:
-            raise ValueError("укажите notify_leads или notify_system")
+            raise ValueError("укажите хотя бы один переключатель уведомлений")
         for name in self.model_fields_set:
             if getattr(self, name) is None:
                 raise ValueError(f"{name} не может быть null")
@@ -308,5 +313,7 @@ def to_notification_settings(me: dict[str, Any]) -> NotificationSettings:
         telegram_linked=me.get("tg_user_id") is not None,
         notify_leads=bool(me.get("notify_leads", True)),
         notify_system=bool(me.get("notify_system", True)),
+        notify_decisions=bool(me.get("notify_decisions", True)),
+        notify_tasks=bool(me.get("notify_tasks", False)),
         delivery_failed_at=failed if isinstance(failed, str) and failed else None,
     )

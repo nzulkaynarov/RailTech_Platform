@@ -20,7 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import clock
 from app.errors import EdsError, conflict, invalid_fields, not_found
-from app.models import Document, Letter
+from app.models import Document, JournalEntry, Letter
 from app.schemas.common import ErpLinksIn
 from app.schemas.letters import (
     LetterCreate,
@@ -31,7 +31,7 @@ from app.schemas.letters import (
     LetterTrack,
     ResolutionIn,
 )
-from app.services import dictionaries, events, files, instructions, journal, letter_dedup, numbering
+from app.services import dictionaries, events, files, instructions, journal, letter_dedup, numbering, task_notices
 from app.services.people import active_ids, default_director, load_directory, zone_mismatches
 
 log = structlog.get_logger(__name__)
@@ -134,6 +134,7 @@ async def _publish_registered(
     if source is not None:  # W18A-P2: письмо общего ящика CRM — CRM снимает его с очереди
         data["source"] = source
     await events.publish(bus, session, "letter.registered", data, subject=letter.number)
+    await task_notices.letter_awaits_resolution(session, bus, letter, addressee=director, actor_id=actor_id)  # ГЛ-2
 
 
 async def _insert(
@@ -513,9 +514,10 @@ async def _check_request_link(session: AsyncSession, letter: Letter, links: ErpL
 
 
 async def resubmit(
-    session: AsyncSession, *, actor_id: int, letter_id: uuid.UUID, data: LetterSubmitIn | None
+    session: AsyncSession, bus: AsyncBus, *, actor_id: int, letter_id: uuid.UUID, data: LetterSubmitIn | None
 ) -> Letter:
-    """Повторная подача возвращённого письма: правки, `awaiting_resolution`, номер прежний, событие не публикуется."""
+    """Повторная подача возвращённого письма: правки, `awaiting_resolution`, номер прежний, `letter.registered` не
+    публикуется; у адресата снова строка «Наложить резолюцию» — значит, и сигнал (ГЛ-2)."""
     letter = await get_for_update(session, letter_id)
     _require(letter, LetterStatus.RETURNED)
     edits = data or LetterSubmitIn()
@@ -531,4 +533,13 @@ async def resubmit(
         await files.attach(session, edits.file_ids, actor_id=actor_id, letter_id=letter.id)
     letter.status, letter.return_comment, letter.updated_at = LetterStatus.AWAITING_RESOLUTION.value, None, clock.now()
     await journal.record(session, "letter.resubmitted", by=actor_id, letter_id=letter.id, comment=edits.comment)
+    rounds = await session.scalar(
+        select(func.count())
+        .select_from(JournalEntry)
+        .where(JournalEntry.letter_id == letter.id, JournalEntry.action == "letter.resubmitted")
+    )
+    director = letter.addressee_crm_user_id or await default_director(session)
+    await task_notices.letter_awaits_resolution(
+        session, bus, letter, addressee=director, actor_id=actor_id, round_no=int(rounds or 1)
+    )
     return letter

@@ -4,7 +4,8 @@
   "loading": "Loading…",
   "rail": {
     "label": "Modules",
-    "logo": "{{initials}} — {{name}}"
+    "logo": "{{initials}} — {{name}}",
+    "tasks": "{{name}}, {{count}} tasks"
   },
   "menu": {
     "nav": "Module sections",

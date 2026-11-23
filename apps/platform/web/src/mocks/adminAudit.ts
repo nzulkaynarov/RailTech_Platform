@@ -21,6 +21,8 @@ const NOTIFY_KEY = "rt-pf-mock-notify";
 interface MockNotify {
   notify_leads: boolean;
   notify_system: boolean;
+  notify_decisions?: boolean;
+  notify_tasks?: boolean;
   delivery_failed_at?: string;
 }
 
@@ -33,8 +35,14 @@ function readNotify(userId: string): MockNotify {
   }
   // У бухгалтера демонстрируется «доставка не удалась»: так виден путь «нажмите Старт».
   return userId === "u-demo-accountant"
-    ? { notify_leads: true, notify_system: false, delivery_failed_at: "2026-10-25T10:00:00Z" }
-    : { notify_leads: true, notify_system: false };
+    ? {
+        notify_leads: true,
+        notify_system: false,
+        notify_decisions: true,
+        notify_tasks: false,
+        delivery_failed_at: "2026-10-25T10:00:00Z",
+      }
+    : { notify_leads: true, notify_system: false, notify_decisions: true, notify_tasks: false };
 }
 
 function writeNotify(userId: string, value: MockNotify): void {
@@ -164,6 +172,10 @@ export const adminAuditHandlers = [
     writeNotify(userId, {
       notify_leads: current.notify_leads,
       notify_system: current.notify_system,
+      ...(current.notify_decisions === undefined
+        ? {}
+        : { notify_decisions: current.notify_decisions }),
+      ...(current.notify_tasks === undefined ? {} : { notify_tasks: current.notify_tasks }),
     });
     return new HttpResponse(null, { status: 204 });
   }),
