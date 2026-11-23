@@ -85,7 +85,7 @@ async def test_letter_signature_row_goes_to_whoever_eds_returned_it_to(
     assert row["id"] == f"sign_document:{DOC}"
     assert row["title"] == "Подписать исходящее: ответ на ВХ-112/26"
     assert row["subtitle"] == "Пояснения по требованию · Иван Исполнитель"
-    assert row["due_label"] == "today"
+    assert row["due_label"] == "later"  # срока у подписи письма нет: «сегодня» не выдумываем (ГЛ-1)
     assert row["role_id"] == rid("DIRECTOR")
     assert "on_behalf_of" not in row
     assert row["object"] == {
@@ -118,7 +118,7 @@ async def test_letter_without_incoming_and_old_eds_registrations_are_not_a_row(
     assert row["object"]["number"] == "Пояснения по требованию"
 
 
-async def test_commercial_signing_step_is_a_sign_document_row_visa_is_not(
+async def test_commercial_signing_step_and_visa_are_both_rows_a_visa_is_not_a_signature(
     web: Web, fb: FeedBackends, check: ContractChecker
 ) -> None:
     visa = signing_route(
@@ -138,8 +138,18 @@ async def test_commercial_signing_step_is_a_sign_document_row_visa_is_not(
     response = await web.client.get("/api/v1/queue")
 
     check(response, "/queue", "get")
-    [row] = [i for i in response.json()["items"] if i["kind"] == "sign_document"]
-    assert row["id"] == f"sign_document:{SIGN_ROUTE}"
+    rows = {i["id"]: i for i in response.json()["items"] if i["kind"] == "sign_document"}
+    # виза бухгалтера — строка бухгалтера, а не подпись (ГЛ-1, Х-19): другая кнопка и вид работы
+    visa_row = rows["sign_document:80000000-0000-4000-8000-000000000082"]
+    assert visa_row["title"] == "Завизировать счёт INV-2026-031"
+    assert (visa_row["category"], visa_row["action_label"]) == ("approve", "Завизировать")
+    assert "виза" in visa_row["reason"]
+    row = rows[f"sign_document:{SIGN_ROUTE}"]
+    assert (row["category"], row["action_label"], row["due_label"]) == (
+        "sign",
+        "Подписать",
+        "later",
+    )
     assert row["title"] == "Подписать договор CT-2026-014"
     assert row["subtitle"].startswith(
         "Договор поставки · Демо-Рейл · 12\u00a0500\u00a0000\u00a0сум"

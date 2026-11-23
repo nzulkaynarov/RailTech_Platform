@@ -20,6 +20,7 @@ from app.api.v1 import (
     resolution_templates,
     service,
     signing,
+    waiting,
 )
 
 ROUTERS: tuple[APIRouter, ...] = (
@@ -42,4 +43,5 @@ ROUTERS: tuple[APIRouter, ...] = (
     signing.upload_router,
     ai.router,
     service.router,
+    waiting.router,
 )

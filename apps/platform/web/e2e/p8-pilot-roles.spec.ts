@@ -145,7 +145,7 @@ test.describe("P8: роли пилота и регистрация входящ�
     for (const width of WIDTHS) {
       await signInAt(page, "DIRECTOR", width);
       const row = page
-        .getByRole("region", { name: "Что сделать сейчас" })
+        .getByRole("region", { name: "Что ждёт вас" })
         .getByRole("listitem")
         .filter({ hasText: "Наложить резолюцию на письмо ВХ-108/26" });
       await expect(row).toBeVisible();

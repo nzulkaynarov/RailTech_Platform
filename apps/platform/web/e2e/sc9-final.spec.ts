@@ -32,12 +32,12 @@ test.describe("СЦ-9: подпись и замещение в «Задачах�
       await expect(main.getByText("Подписать счёт INV-2026-031")).toBeVisible();
       await expect(main.getByText(/Зарегистрировать исходящее/)).toHaveCount(0);
 
-      await contract
-        .locator("xpath=ancestor::li[1]")
-        .getByRole("link", { name: /Открыть/ })
-        .click();
+      await contract.locator("xpath=ancestor::li[1]").getByRole("link").click();
       await expect(page).toHaveURL(/\/dashboard\/queue\?signing=/);
-      await expect(main.locator('[aria-current="true"]')).toContainText("Договор поставки");
+      // строка подписи открывает окно решения «Подписать» / «Отказать» (ГЛ-1: блока под списком больше нет)
+      const decision = page.getByRole("dialog", { name: /Договор поставки/ });
+      await expect(decision.getByRole("button", { name: "Подписать" })).toBeVisible();
+      await expect(decision.getByRole("button", { name: "Отказать" })).toBeVisible();
       await settledScreenshot(page, "sign-tasks");
       await expectNoViolations(page, `sign-tasks-${String(width)}`);
       await noHorizontalScroll(page);
@@ -75,7 +75,7 @@ test.describe("СЦ-9: подпись и замещение в «Задачах�
       await loginAndWait(page, "manager@demo.example");
       const main = page.getByRole("main");
       await expect(main.getByText(/Вы замещаете Демо Директоров до/)).toBeVisible();
-      await expect(main.getByText(/^за Демо Директоров · /).first()).toBeVisible();
+      await expect(main.getByText(/вы замещаете Демо Директоров · /).first()).toBeVisible();
       if (width === 1440) {
         // Бейдж «Задачи» в меню равен числу строк списка, «за …» тоже (BFF считает так же)
         const decisions = (
@@ -90,16 +90,17 @@ test.describe("СЦ-9: подпись и замещение в «Задачах�
       }
       await main.locator(".ant-segmented-item", { hasText: "За Демо Директоров" }).click();
       await expect(main.getByText("Ответить лиду L-2050")).toHaveCount(0);
-      await expect(main.getByText(/^Согласовать /)).toBeVisible();
+      await expect(main.getByRole("listitem").getByText(/^Согласовать /)).toBeVisible();
       await settledScreenshot(page, "deputy-tasks");
       await expectNoViolations(page, `deputy-tasks-${String(width)}`);
       await noHorizontalScroll(page);
 
       // Строка ведёт до конца: у заместителя-менеджера (раздела согласования нет) открывается форма «за …»
       await main
+        .getByRole("listitem")
         .getByText(/^Согласовать /)
         .locator("xpath=ancestor::li[1]")
-        .getByRole("link", { name: /Открыть/ })
+        .getByRole("link")
         .click();
       const agree = page.getByRole("form", { name: "Согласование документа" });
       const button = agree.getByRole("button", { name: "Согласовать за Демо Директоров" });

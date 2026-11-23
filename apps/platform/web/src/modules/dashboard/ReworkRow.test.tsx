@@ -20,14 +20,14 @@ async function queue(email: string) {
 }
 
 describe("Моя очередь · «Доработать»", () => {
-  it("у автора — строка: кто вернул и комментарий; «Открыть» ведёт в форму «Продолжить»", async () => {
+  it("у автора — строка: кто вернул и комментарий; «Доработать» ведёт в форму «Продолжить»", async () => {
     const { page, router } = await queue("manager@demo.example");
 
     expect(await within(page).findByText(TITLE)).toBeVisible();
     expect(
       within(page).getByText(/Вернул Демо Директоров: Добавьте смету расходов\./),
     ).toBeVisible();
-    const open = within(page).getByRole("link", { name: `Открыть: ${TITLE}` });
+    const open = within(page).getByRole("link", { name: `Доработать: ${TITLE}` });
     expect(open).toHaveAttribute("href", `/eds/new?draft=${SEED_ID}`);
     // родной экран есть: «Где сделать» вместо «Открыть» не нужно
     expect(within(page).queryByRole("button", { name: `Где сделать: ${TITLE}` })).toBeNull();

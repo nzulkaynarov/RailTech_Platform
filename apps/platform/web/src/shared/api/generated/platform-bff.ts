@@ -411,6 +411,7 @@ import type {
   ReferenceItemIn,
   ReferenceItemList,
   ReferenceItemUpdate,
+  Reminded,
   ReplyIn,
   ReplyTemplateIn,
   ReplyTemplateList,
@@ -541,6 +542,8 @@ import type {
   TicketStatusChange,
   TooManyRequestsResponse,
   ValidationFailedResponse,
+  Waiting,
+  WaitingKind,
   WhatsNewMark,
 } from "./model";
 
@@ -6887,7 +6890,13 @@ export const getGetQueueUrl = (params?: GetQueueParams) => {
  * Подпись (СЦ-9): `sign_document` — «Подписать исходящее: ответ на ВХ-…» / «Подписать исходящее: тема» (EDS
  * `GET /letter-tasks`, `signatures`; строка открывает карточку письма `/eds/documents?scope=all&doc=…&panel=open`) и
  * «Подписать договор CT-…», счёт, акт, КП (EDS `GET /approvals?mine&template=signing&status=open`, только шаг подписи,
- * виза — нет; строка ведёт к блоку «Подписи» под очередью). Кому подписывать, решает EDS; роль строку не режет.
+ * виза — тот же вид `sign_document` с `category = approve` и `action_label = «Завизировать»` (ГЛ-1: новое значение вида ломало бы клиентов); строка открывает окно решения «Подписать»/«Отказать» или «Завизировать»/«Вернуть»
+ * на `/dashboard/queue?signing=<маршрут>`). Кому подписывать, решает EDS; роль строку не режет.
+ *
+ * ГЛ-1 «Что ждёт вас»: у строки есть `reason` («почему это у вас», из факта источника), `group` (просрочено, сегодня,
+ * позже — только из срока; у подписи письма, подписи и визы коммерческого документа срока нет — «позже»; у переноса
+ * срока — действующий срок поручения), `category` (вид работы для фильтра) и `action_label` (глагол кнопки).
+ * `truncated` — «показаны не все».
  *
  * Замещение (СЦ-9): шаги замещаемого, которые EDS отдал заместителю (`acting_for`: согласование служебки и КП, поручение,
  * перенос срока, подпись по полномочию), и лиды замещаемого приходят с `on_behalf_of`; решает и действует EDS (право
@@ -7140,6 +7149,229 @@ export function useGetQueueCards<
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+export const getGetQueueWaitingUrl = () => {
+  return `/api/v1/queue/waiting`;
+};
+
+/**
+ * EDS `GET /waiting`: мои исходящие письма на подписи (кто подписант по реестру полномочий), мои служебки и заявления на согласовании (чей шаг), выданные мной поручения в работе. Строки выводятся из фактов, своего статуса нет; погасают сами (подписано, решено, исполнено). `truncated` — один из списков обрезан. Адрес строки — объект, который передан.
+ * @summary «Вы ждёте других» — что я передал и жду от другого (ГЛ-1)
+ */
+export const getQueueWaiting = async (options?: Parameters<typeof http>[1]): Promise<Waiting> => {
+  return http<Waiting>(getGetQueueWaitingUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetQueueWaitingQueryKey = () => {
+  return [`/api/v1/queue/waiting`] as const;
+};
+
+export const getGetQueueWaitingQueryOptions = <
+  TData = Awaited<ReturnType<typeof getQueueWaiting>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getQueueWaiting>>, TError, TData>>;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetQueueWaitingQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getQueueWaiting>>> = ({ signal }) =>
+    getQueueWaiting({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getQueueWaiting>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetQueueWaitingQueryResult = NonNullable<Awaited<ReturnType<typeof getQueueWaiting>>>;
+export type GetQueueWaitingQueryError = ErrorType<SessionExpiredResponse | ForbiddenResponse>;
+
+export function useGetQueueWaiting<
+  TData = Awaited<ReturnType<typeof getQueueWaiting>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getQueueWaiting>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getQueueWaiting>>,
+          TError,
+          Awaited<ReturnType<typeof getQueueWaiting>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetQueueWaiting<
+  TData = Awaited<ReturnType<typeof getQueueWaiting>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getQueueWaiting>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getQueueWaiting>>,
+          TError,
+          Awaited<ReturnType<typeof getQueueWaiting>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetQueueWaiting<
+  TData = Awaited<ReturnType<typeof getQueueWaiting>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getQueueWaiting>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary «Вы ждёте других» — что я передал и жду от другого (ГЛ-1)
+ */
+
+export function useGetQueueWaiting<
+  TData = Awaited<ReturnType<typeof getQueueWaiting>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getQueueWaiting>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetQueueWaitingQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getRemindQueueWaitingUrl = (kind: WaitingKind, id: string) => {
+  return `/api/v1/queue/waiting/${kind}/${id}/remind`;
+};
+
+/**
+ * EDS `POST /waiting/{kind}/{id}/remind`: повторяет существующее уведомление текущему адресату (подписанту, шагу маршрута, исполнителю). Не чаще раза в час на объект: иначе 429 `TOO_MANY_REQUESTS` с `details.reason = remind_rate_limited` и `Retry-After`. Объект не мой или уже не ждёт — 404; напоминать некому — 409.
+ * @summary «Напомнить» тому, кого ждёте (ГЛ-1)
+ */
+export const remindQueueWaiting = async (
+  kind: WaitingKind,
+  id: string,
+  options?: Parameters<typeof http>[1],
+): Promise<Reminded> => {
+  return http<Reminded>(getRemindQueueWaitingUrl(kind, id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getRemindQueueWaitingMutationKey = () => ["remindQueueWaiting"] as const;
+
+export const getRemindQueueWaitingMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | EdsConflictResponse
+    | TooManyRequestsResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof remindQueueWaiting>>,
+    TError,
+    RemindQueueWaitingMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof remindQueueWaiting>>,
+  TError,
+  RemindQueueWaitingMutationVariables,
+  TContext
+> => {
+  const mutationKey = getRemindQueueWaitingMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof remindQueueWaiting>>,
+    RemindQueueWaitingMutationVariables
+  > = (props) => {
+    const { kind, id } = props ?? {};
+
+    return remindQueueWaiting(kind, id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RemindQueueWaitingMutationResult = NonNullable<
+  Awaited<ReturnType<typeof remindQueueWaiting>>
+>;
+
+export type RemindQueueWaitingMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | EdsConflictResponse
+  | TooManyRequestsResponse
+  | BackendUnavailableResponse
+>;
+export type RemindQueueWaitingMutationVariables = { kind: WaitingKind; id: string };
+
+/**
+ * @summary «Напомнить» тому, кого ждёте (ГЛ-1)
+ */
+export const useRemindQueueWaiting = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | EdsConflictResponse
+    | TooManyRequestsResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof remindQueueWaiting>>,
+      TError,
+      RemindQueueWaitingMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof remindQueueWaiting>>,
+  TError,
+  RemindQueueWaitingMutationVariables,
+  TContext
+> => {
+  return useMutation(getRemindQueueWaitingMutationOptions(options), queryClient);
+};
 
 export const getGetActivityTodayUrl = () => {
   return `/api/v1/activity/today`;

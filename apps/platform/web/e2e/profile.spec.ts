@@ -186,8 +186,8 @@ test.describe("Профиль /me", () => {
     await signOut(page);
 
     await loginAndWait(page, "manager@demo.example");
-    const queue = page.getByRole("region", { name: "Что сделать сейчас" });
-    await expect(queue.getByText(/^за Демо Директоров · /).first()).toBeVisible();
+    const queue = page.getByRole("region", { name: "Что ждёт вас" });
+    await expect(queue.getByText(/вы замещаете Демо Директоров · /).first()).toBeVisible();
     await expect(queue.getByText("Ответить лиду L-2050")).toBeVisible();
     await settledScreenshot(page, "queue-covering");
     await openProfile(page);

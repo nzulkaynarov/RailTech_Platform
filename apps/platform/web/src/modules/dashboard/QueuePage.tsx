@@ -1,5 +1,5 @@
 import { Alert, Button, Card, Segmented, Skeleton } from "antd";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useSearchParams } from "react-router";
 import { useTranslation } from "react-i18next";
 
@@ -19,15 +19,16 @@ import { CounterCard, CounterGrid, CounterGridSkeleton } from "../../shared/ui/C
 import { EmptyState } from "../../shared/ui/EmptyState";
 import { LinkButton } from "../../shared/ui/LinkButton";
 import { PageHeader } from "../../shared/ui/PageHeader";
-import { QueueList, type QueueItem as RowItem } from "../../shared/ui/QueueList";
-import { SigningList } from "../eds/approvals/SigningList";
+import { SigningDecision } from "../eds/approvals/SigningDecision";
 
 import "../eds/decision/decision.css";
 import { bannerKind } from "../../shared/ui/bannerKind";
 import { SourceBanner } from "../../shared/ui/SourceBanner";
 import { matchSection } from "../registry";
-import { objectLink } from "../objectLinks";
-import { dueBadge, isUrgent, pluralForm, queueEmptyKind } from "./queue";
+import { pluralForm, queueEmptyKind } from "./queue";
+import { categoryOf, chipsOf, groupsOf } from "./queueModel";
+import { QueueRow } from "./QueueRow";
+import { WaitingBlock } from "./WaitingBlock";
 import { useCardsCount } from "./useCardsCount";
 import "./dashboard.css";
 
@@ -70,17 +71,32 @@ export function QueuePage() {
   const profile = useGetProfile({ query: { staleTime: 60_000 } });
   const covering = profile.data?.covering ?? [];
   const [forId, setForId] = useState("all");
-  const [search] = useSearchParams();
+  const [search, setSearch] = useSearchParams();
   const focusSigning = search.get("signing");
+  const [kind, setKind] = useState<string>("all");
+  const closeSigning = useCallback(() => {
+    setSearch(
+      (current) => {
+        const next = new URLSearchParams(current);
+        next.delete("signing");
+        return next;
+      },
+      { replace: true },
+    );
+  }, [setSearch]);
   const title = t("modules:dashboard.sections.queue");
   useDocumentTitle(title);
 
   const count = queue.data?.items.length;
+  const overdueNow = groupsOf(queue.data?.items ?? [])
+    .filter((block) => block.group === "overdue")
+    .reduce((sum, block) => sum + block.items.length, 0);
   const subtitle = [
     todayLabel(i18n.language),
     count === undefined
       ? null
       : t(`modules:dashboard.queue.decisions.${pluralForm(i18n.language, count)}`, { count }),
+    overdueNow > 0 ? t("modules:dashboard.queue.overdueCount", { count: overdueNow }) : null,
   ]
     .filter(Boolean)
     .join(" · ");
@@ -97,25 +113,11 @@ export function QueuePage() {
   const activeFor = behalf.some((person) => person.id === forId) ? forId : "all";
   const shown =
     activeFor === "all" ? allItems : allItems.filter((item) => item.on_behalf_of?.id === activeFor);
-  const rows: RowItem[] = shown.map((item) => {
-    // Письмо, КП, служебка и диалог клиента открываются в своём экране на нужной вкладке (D1-6), без «моста» в старую систему.
-    const to = objectLink(item.object);
-    return {
-      id: item.id,
-      badge: dueBadge(
-        item,
-        (key, options) => t(key, options),
-        (value) => format.date(value, "short"),
-      ),
-      title: item.title,
-      // Строка замещаемого коллеги (W15-H6): «за Имя · …» — чья это работа.
-      caption: item.on_behalf_of
-        ? `${t("modules:dashboard.queue.onBehalf", { name: item.on_behalf_of.name })} · ${item.subtitle}`
-        : item.subtitle,
-      to,
-      urgent: isUrgent(item),
-    };
-  });
+  // Фильтр по виду работы: чипы считают строки до фильтра «за {имя}»? Нет — по тому, что показано выбранным человеком
+  const chips = chipsOf(shown);
+  const activeKind = chips.some((chip) => chip.category === kind) ? kind : "all";
+  const visible = activeKind === "all" ? shown : shown.filter((i) => categoryOf(i) === activeKind);
+  const blocks = groupsOf(visible);
 
   const sources = mergeSources(queue.data?.sources, cards.data?.sources);
   const crmDown = sources?.crm === "unavailable";
@@ -165,33 +167,84 @@ export function QueuePage() {
       </Card>
     );
   } else {
-    list = (
-      <QueueList
-        title={t("modules:dashboard.queue.title")}
-        items={rows}
-        empty={
-          partial ? (
-            <EmptyState
-              level={3}
-              title={t("modules:dashboard.queue.partialEmpty.title")}
-              text={t("modules:dashboard.queue.partialEmpty.text")}
-            />
-          ) : (
-            <EmptyState
-              level={3}
-              title={t(`modules:dashboard.queue.empty.${emptyKind}.title`)}
-              text={t(`modules:dashboard.queue.empty.${emptyKind}.text`)}
-              action={
-                emptyKind === "director" && showLink ? (
-                  <LinkButton to="/dashboard/projects">
-                    {t("modules:dashboard.queue.empty.director.action")}
-                  </LinkButton>
-                ) : undefined
-              }
-            />
-          )
+    const empty = partial ? (
+      <EmptyState
+        level={3}
+        title={t("modules:dashboard.queue.partialEmpty.title")}
+        text={t("modules:dashboard.queue.partialEmpty.text")}
+      />
+    ) : (
+      <EmptyState
+        level={3}
+        title={t(`modules:dashboard.queue.empty.${emptyKind}.title`)}
+        text={t(`modules:dashboard.queue.empty.${emptyKind}.text`)}
+        action={
+          emptyKind === "director" && showLink ? (
+            <LinkButton to="/dashboard/projects">
+              {t("modules:dashboard.queue.empty.director.action")}
+            </LinkButton>
+          ) : undefined
         }
       />
+    );
+    list = (
+      <section className="pf-card pf-queue" aria-labelledby="pf-queue-title">
+        <div className="pf-card-head">
+          <h2 id="pf-queue-title" className="pf-card-title">
+            {t("modules:dashboard.queue.title")}
+          </h2>
+        </div>
+        {chips.length > 1 ? (
+          <div
+            className="pf-queue-chips"
+            role="group"
+            aria-label={t("modules:dashboard.queue.filterLabel")}
+          >
+            <button
+              type="button"
+              className="pf-queue-chip"
+              aria-pressed={activeKind === "all"}
+              onClick={() => {
+                setKind("all");
+              }}
+            >
+              {t("modules:dashboard.queue.filterAll")} <span>{shown.length}</span>
+            </button>
+            {chips.map((chip) => (
+              <button
+                key={chip.category}
+                type="button"
+                className="pf-queue-chip"
+                aria-pressed={activeKind === chip.category}
+                onClick={() => {
+                  setKind(chip.category);
+                }}
+              >
+                {t(`modules:dashboard.queue.categories.${chip.category}`)} <span>{chip.count}</span>
+              </button>
+            ))}
+          </div>
+        ) : null}
+        {queue.data.truncated ? (
+          <p className="pf-hint pf-queue-truncated" role="note">
+            {t("modules:dashboard.queue.truncated")}
+          </p>
+        ) : null}
+        {blocks.length === 0
+          ? empty
+          : blocks.map((block) => (
+              <div key={block.group} className="pf-queue-group">
+                <h3 className="pf-queue-group-title">
+                  {t(`modules:dashboard.queue.groups.${block.group}`)} · {block.items.length}
+                </h3>
+                <ul className="pf-list">
+                  {block.items.map((item) => (
+                    <QueueRow key={item.id} item={item} />
+                  ))}
+                </ul>
+              </div>
+            ))}
+      </section>
     );
   }
 
@@ -244,10 +297,9 @@ export function QueuePage() {
         />
       ) : null}
       {list}
-      {/* Подписи ERP ждут того, кто согласует служебки (SIGN-4); под списком и после него — их загрузка ничего не сдвигает */}
-      {!queue.isPending && canSee(me, { anyOf: ["eds.memo.approve", "eds.memo.create"] }) ? (
-        <SigningList focusId={focusSigning} />
-      ) : null}
+      {!queue.isPending ? <WaitingBlock /> : null}
+      {/* Подпись и виза документа ERP (SIGN-4): строка очереди ведёт сюда, решение — в окне */}
+      <SigningDecision id={focusSigning} onClose={closeSigning} />
     </div>
   );
 }

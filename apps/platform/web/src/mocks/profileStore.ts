@@ -150,7 +150,7 @@ export function coveredQueueItems(userId: string, roleId: string): QueueItem[] {
       kind: "answer_lead",
       title: `Ответить лиду L-${String(number)}`,
       subtitle: "ООО «Демо-Мост» · уточняет сроки поставки · 2 ч назад",
-      due_label: "today",
+      due_label: "later",
       object: {
         kind: "lead",
         number: `L-${String(number)}`,

@@ -8,7 +8,7 @@
       "summary": "Xulosa"
     },
     "queue": {
-      "title": "Hozir nima qilish kerak",
+      "title": "Sizni nima kutmoqda",
       "cardsLabel": "Navbat hisoblagichlari",
       "decisions": {
         "one": "{{count}} qaror",
@@ -80,6 +80,85 @@
         "filterAll": "Hammasi",
         "filterFor": "{{name}} uçun",
         "filterLabel": "Kimning vazifalari"
+      },
+      "overdueCount": "muddati ötgan: {{count}}",
+      "filterLabel": "Ish turi",
+      "filterAll": "Hammasi",
+      "groups": {
+        "overdue": "Muddati ötgan",
+        "today": "Bugun",
+        "later": "Keyinroq"
+      },
+      "categories": {
+        "sign": "Imzolash",
+        "approve": "Kelişiş",
+        "resolution": "Rezolyutsiya",
+        "instruction": "Topşiriqlar",
+        "payment": "Tölov",
+        "lead": "Lidlar",
+        "mail": "Poçta",
+        "supply": "Ta’minot",
+        "project": "Loyihalar",
+        "other": "Boşqa"
+      },
+      "why": "Nima uçun sizda:",
+      "actions": {
+        "sign_document": "Imzolaş",
+        "visa": "Vizalaş",
+        "approve_quote": "Maqullaş",
+        "approve_memo": "Kelişiş",
+        "pay_memo": "Tölovga qabul qiliş",
+        "resolve_letter": "Rezolyusiya qöyiş",
+        "instruction": "Bajariş",
+        "instruction_reply": "Javob tayyorlaş",
+        "instruction_extension": "Hal qiliş",
+        "acquaint": "Tanişdim",
+        "rework_document": "Qayta işlaş",
+        "answer_lead": "Javob beriş",
+        "take_lead": "Oliş",
+        "triage_lead": "Saralaş",
+        "inbound_mail": "Saralaş",
+        "inbound_mail_mine": "Yakunlaş",
+        "ticket": "Javob beriş",
+        "calc_task": "Hisoblaş",
+        "confirm_payment": "Tasdiqlaş",
+        "issue_invoice": "Hisob yoziş",
+        "issue_contract": "Rasmiylaştiriş",
+        "attach_scan": "Skan biriktiriş",
+        "issue_act": "Akt çiqariş",
+        "supplier_overdue": "Aniqlaş",
+        "send_supplier_order": "Yuboriş",
+        "partner_date_change": "Hal qiliş",
+        "receive_goods": "Qabul qiliş",
+        "partner_application": "Körib çiqiş",
+        "order_shortage": "Buyurtma beriş",
+        "ship_project": "Jönatiş"
+      },
+      "openLabel": "{{action}}: {{title}}",
+      "truncated": "Barça vazifalar körsatilmadi: manba faqat bir qismini berdi. Qolgani bölimlarda.",
+      "quick": {
+        "acknowledged": "Belgilandi",
+        "taken": "Lid sizniki",
+        "failed": "Bajarilmadi"
+      },
+      "waiting": {
+        "title": "Siz boşqalarni kutyapsiz",
+        "loadError": "Siz kutayotganlarni yuklab bölmadi",
+        "onSignature": "{{name}}da imzoda",
+        "noSigner": "imzolovçi yök",
+        "onApproval": "kelişişda: {{name}}",
+        "onInstruction": "topşiriq: {{name}}",
+        "until": "muddat {{date}}",
+        "age": {
+          "minutes": "{{count}} daq",
+          "hours": "{{count}} soat",
+          "days": "{{count}} kun"
+        },
+        "remind": "Eslatish",
+        "remindLabel": "Eslatish: {{title}}",
+        "reminded": "Eslatma yuborildi",
+        "again": "Allaqaçon eslatilgan, keyinroq qayta uriniş",
+        "failed": "Eslatma yuborilmadi"
       }
     },
     "activity": {

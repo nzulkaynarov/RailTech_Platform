@@ -163,9 +163,7 @@ test.describe("Данные без мигания", () => {
       await page.getByRole("button", { name: "Войти" }).click();
       await expect(page).toHaveURL(/\/dashboard\/queue$/);
       await expect(page.getByRole("region", { name: "Настройка Платформы" })).toBeVisible();
-      await expect(
-        page.getByRole("heading", { level: 2, name: "Что сделать сейчас" }),
-      ).toBeVisible();
+      await expect(page.getByRole("heading", { level: 2, name: "Что ждёт вас" })).toBeVisible();
       await expect(page.locator(".pf-counter-skel")).toHaveCount(0);
       await page.waitForTimeout(1500);
       expect(await shiftsSince(page, mark)).toBeLessThanOrEqual(width === 390 ? 0.05 : 0.01);

@@ -2071,7 +2071,13 @@ paths:
         Подпись (СЦ-9): `sign_document` — «Подписать исходящее: ответ на ВХ-…» / «Подписать исходящее: тема» (EDS
         `GET /letter-tasks`, `signatures`; строка открывает карточку письма `/eds/documents?scope=all&doc=…&panel=open`) и
         «Подписать договор CT-…», счёт, акт, КП (EDS `GET /approvals?mine&template=signing&status=open`, только шаг подписи,
-        виза — нет; строка ведёт к блоку «Подписи» под очередью). Кому подписывать, решает EDS; роль строку не режет.
+        виза — тот же вид `sign_document` с `category = approve` и `action_label = «Завизировать»` (ГЛ-1: новое значение вида ломало бы клиентов); строка открывает окно решения «Подписать»/«Отказать» или «Завизировать»/«Вернуть»
+        на `/dashboard/queue?signing=<маршрут>`). Кому подписывать, решает EDS; роль строку не режет.
+
+        ГЛ-1 «Что ждёт вас»: у строки есть `reason` («почему это у вас», из факта источника), `group` (просрочено, сегодня,
+        позже — только из срока; у подписи письма, подписи и визы коммерческого документа срока нет — «позже»; у переноса
+        срока — действующий срок поручения), `category` (вид работы для фильтра) и `action_label` (глагол кнопки).
+        `truncated` — «показаны не все».
 
         Замещение (СЦ-9): шаги замещаемого, которые EDS отдал заместителю (`acting_for`: согласование служебки и КП, поручение,
         перенос срока, подпись по полномочию), и лиды замещаемого приходят с `on_behalf_of`; решает и действует EDS (право
@@ -2108,6 +2114,69 @@ paths:
           $ref: '#/components/responses/SessionExpired'
         '403':
           $ref: '#/components/responses/Forbidden'
+
+  /queue/waiting:
+    get:
+      tags: [dashboard]
+      operationId: getQueueWaiting
+      summary: «Вы ждёте других» — что я передал и жду от другого (ГЛ-1)
+      description: >-
+        EDS `GET /waiting`: мои исходящие письма на подписи (кто подписант по реестру полномочий), мои служебки и заявления
+        на согласовании (чей шаг), выданные мной поручения в работе. Строки выводятся из фактов, своего статуса нет; погасают
+        сами (подписано, решено, исполнено). `truncated` — один из списков обрезан. Адрес строки — объект, который передан.
+      responses:
+        '200':
+          description: Ждём от других
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Waiting'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /queue/waiting/{kind}/{id}/remind:
+    post:
+      tags: [dashboard]
+      operationId: remindQueueWaiting
+      summary: «Напомнить» тому, кого ждёте (ГЛ-1)
+      description: >-
+        EDS `POST /waiting/{kind}/{id}/remind`: повторяет существующее уведомление текущему адресату (подписанту, шагу
+        маршрута, исполнителю). Не чаще раза в час на объект: иначе 429 `TOO_MANY_REQUESTS` с `details.reason =
+        remind_rate_limited` и `Retry-After`. Объект не мой или уже не ждёт — 404; напоминать некому — 409.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - name: kind
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/WaitingKind'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Напоминание отправлено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reminded'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/EdsConflict'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
 
   /activity/today:
     get:
@@ -18921,6 +18990,31 @@ components:
           $ref: '#/components/schemas/ObjectRef'
         on_behalf_of:
           $ref: '#/components/schemas/QueueOwner'
+        reason:
+          type: string
+          description: >-
+            ГЛ-1: «почему это у вас» одной строкой, из факта источника — «вы подписант по реестру полномочий · передал Дилшод Р.»,
+            «резолюция от 18.11 · вы ответственный», «вы замещаете Нодиру Алиеву», «ваш клиент». Есть у каждой строки текущего BFF;
+            у старого ответа поля может не быть.
+        group:
+          $ref: '#/components/schemas/QueueGroup'
+        category:
+          $ref: '#/components/schemas/QueueCategory'
+        action_label:
+          type: string
+          description: 'ГЛ-1, глагол кнопки строки — «Подписать», «Согласовать», «Ознакомлен», «Взять»; нет — «Открыть»'
+
+    QueueGroup:
+      type: string
+      enum: [overdue, today, later]
+      description: >-
+        ГЛ-1: группа списка «Что ждёт вас» — только из срока строки: просрочено, сегодня, «позже» (всё остальное, в том числе
+        строки без срока: «сегодня» без срока не выдумывается)
+
+    QueueCategory:
+      type: string
+      enum: [sign, approve, resolution, instruction, payment, lead, mail, supply, project, other]
+      description: 'ГЛ-1, вид работы для фильтра со счётчиком (подписи, согласования и визы, резолюции, поручения, оплата, лиды, почта, снабжение, проекты)'
 
     Queue:
       type: object
@@ -18933,6 +19027,76 @@ components:
             $ref: '#/components/schemas/QueueItem'
         sources:
           $ref: '#/components/schemas/Sources'
+        truncated:
+          type: boolean
+          description: >-
+            ГЛ-1: `true` — один из источников отдал не всё (предел страницы EDS, задач, возвратов, обращений): «показаны не все».
+            Нет поля — очередь полная.
+
+    WaitingKind:
+      type: string
+      enum: [letter_signature, approval, instruction]
+
+    WaitingRow:
+      type: object
+      additionalProperties: false
+      required: [id, kind, object_id, title, since, remindable, object]
+      properties:
+        id:
+          type: string
+        kind:
+          $ref: '#/components/schemas/WaitingKind'
+        object_id:
+          type: string
+          format: uuid
+          description: Документ (`letter_signature`), маршрут (`approval`) или поручение (`instruction`) — идентификатор для «Напомнить»
+        title:
+          type: string
+        waiting_on:
+          $ref: '#/components/schemas/QueueOwner'
+        waiting_label:
+          type: string
+          description: Кого ждём, когда нет конкретного человека — шаг «любой с правом» («Бухгалтер») или «Подписанта нет»
+        since:
+          type: string
+          format: date-time
+          description: С какого момента ждём (передача на подпись, начало круга согласования, выдача поручения)
+        due_at:
+          type: string
+          format: date-time
+          description: Срок поручения; у подписи и согласования срока нет
+        remindable:
+          type: boolean
+          description: Напомнить можно сейчас (с прошлого напоминания прошёл час, есть кому напоминать)
+        remind_available_at:
+          type: string
+          format: date-time
+          description: С какого момента можно напомнить снова
+        object:
+          $ref: '#/components/schemas/ObjectRef'
+
+    Waiting:
+      type: object
+      additionalProperties: false
+      required: [items, sources]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/WaitingRow'
+        truncated:
+          type: boolean
+        sources:
+          $ref: '#/components/schemas/Sources'
+
+    Reminded:
+      type: object
+      additionalProperties: false
+      required: [reminded_at]
+      properties:
+        reminded_at:
+          type: string
+          format: date-time
 
     QueueCard:
       type: object

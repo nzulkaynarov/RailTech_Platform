@@ -133,7 +133,7 @@ test.describe("UX-2b: суммы, статусы, телефон", () => {
     expect(wide).toEqual([]);
   });
 
-  test("Визы и подписи на 390: длинные слова без пробелов переносятся, а не раздвигают область (Х-19)", async ({
+  test("Окно визы на 390: длинные слова без пробелов переносятся, а не раздвигают страницу (Х-19, ГЛ-1)", async ({
     page,
   }) => {
     // без заглушки ответ «Визы и подписи» — случайные строки из схемы: слово без пробелов в этапе или сумме давало +3…+50 px
@@ -168,7 +168,9 @@ test.describe("UX-2b: суммы, статусы, телефон", () => {
     })()`);
     await page.setViewportSize({ width: 390, height: 844 });
     await loginAndWait(page, "all@demo.example");
-    await expect(page.getByRole("list", { name: "Визы и подписи" })).toBeVisible();
+    // строка визы ведёт в окно решения: адрес `?signing=<маршрут>`
+    await spaGoto(page, "/dashboard/queue?signing=00000000-0000-4000-8000-000000000001");
+    await expect(page.getByRole("dialog", { name: /ДлинноеСлово/ })).toBeVisible();
     expect(await settledOverflow(page)).toEqual({ page: 0, main: 0 });
   });
 

@@ -35,8 +35,8 @@ SIGNING_EXPIRING_TYPE: Final = "uz.railtech.eds.signing_authority.expiring.v1"
 SIGNING_EXPIRING_KIND: Final = "signing_authority_expiring"
 # СЦ-9: уведомления по документам без входящего письма (служебка, подпись письма) — тот же путь.
 DOCUMENT_NOTICE_TYPE: Final = "uz.railtech.eds.document.notice_requested.v1"
-# v2 (ГЛ-0, ГЛ-2): вид `letter_sign_withdrawn` и новые виды задач «Главной» (КП, резолюция,
-# шаги маршрута, подпись, виза, доработка); объект — документ, письмо или маршрут.
+# v2 (ГЛ-0, ГЛ-1, ГЛ-2): виды `letter_sign_withdrawn`, `approval_reminder` и задач «Главной» (КП,
+# резолюция, шаги маршрута, подпись, виза, доработка); объект — документ, письмо или маршрут.
 DOCUMENT_NOTICE_TYPE_V2: Final = "uz.railtech.eds.document.notice_requested.v2"
 # «Подписать некому» ведёт держателя права в Настройки, а не к документу, которого он не видит.
 _SETTINGS_KIND: Final = "letter_signer_missing"
@@ -52,6 +52,7 @@ _DECISIONS: Final = frozenset(
         "acquaint_requested",
         "letter_sign_requested",
         "letter_signer_missing",
+        "approval_reminder",
         "approve_quote",
         "resolve_letter",
         "approve_memo",
@@ -75,6 +76,7 @@ _TELEGRAM_DECISIONS: Final = frozenset(
         "pay_memo",
         "sign_commercial",
         "visa_commercial",
+        "approval_reminder",  # ГЛ-1: напоминание о шаге — тот же вопрос «решите»
         SIGNING_EXPIRING_KIND,
     }
 )

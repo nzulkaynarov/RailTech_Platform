@@ -25,9 +25,7 @@ test.describe("axe и скриншоты", () => {
     test(`Моя очередь (директор) на ${String(width)}: axe без нарушений`, async ({ page }) => {
       await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
       await loginAndWait(page, "director@demo.example");
-      await expect(
-        page.getByRole("heading", { level: 2, name: "Что сделать сейчас" }),
-      ).toBeVisible();
+      await expect(page.getByRole("heading", { level: 2, name: "Что ждёт вас" })).toBeVisible();
       await expect(page.getByText("Наложить резолюцию на письмо ВХ-104/26")).toBeVisible();
       if (width >= 1200) {
         // Боковое окно в списке закрыто по умолчанию и открывается поверх очереди (ORCHESTRATOR §3 п. 18).

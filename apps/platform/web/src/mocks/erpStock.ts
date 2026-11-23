@@ -726,7 +726,7 @@ export function supplyTaskQueueItems(
             kind: "order_shortage",
             title: `Заказать недостающее по ${project.number}`,
             subtitle: `${project.client} · Болт М22: 5 шт.`,
-            due_label: "today",
+            due_label: "later",
             object: {
               kind: "project",
               number: project.number,
