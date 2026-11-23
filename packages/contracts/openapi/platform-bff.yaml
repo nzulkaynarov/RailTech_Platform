@@ -28843,6 +28843,7 @@ components:
         expired_count: {type: integer, minimum: 0, description: Действующих предложений с истёкшим сроком цены}
         expiring_count: {type: integer, minimum: 0, description: Срок цены истекает в ближайшие 14 дней}
         nearest_valid_until: {type: [string, 'null'], format: date}
+        do_not_work: {type: boolean, description: 'Х-8: с поставщиком не работаем — действует отметка «Не работать»'}
         contact_person: {type: string}
         phone: {type: string}
         email: {type: string}

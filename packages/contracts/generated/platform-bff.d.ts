@@ -17351,6 +17351,8 @@ export interface components {
       expiring_count: number;
       /** Format: date */
       nearest_valid_until: string | null;
+      /** @description Х-8: с поставщиком не работаем — действует отметка «Не работать» */
+      do_not_work?: boolean;
       contact_person: string;
       phone: string;
       email: string;
