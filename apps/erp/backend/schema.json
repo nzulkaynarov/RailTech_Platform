@@ -47632,22 +47632,26 @@
                         "title": "Отправлен на утверждение"
                     },
                     "counterparty_kind": {
-                        "allOf": [
+                        "readOnly": true,
+                        "oneOf": [
                             {
                                 "$ref": "#/components/schemas/DocumentTemplateCounterpartyKindEnum"
+                            },
+                            {
+                                "$ref": "#/components/schemas/BlankEnum"
                             }
-                        ],
-                        "readOnly": true,
-                        "title": "Для кого"
+                        ]
                     },
                     "subject": {
-                        "allOf": [
+                        "readOnly": true,
+                        "oneOf": [
                             {
                                 "$ref": "#/components/schemas/DocumentTemplateSubjectEnum"
+                            },
+                            {
+                                "$ref": "#/components/schemas/BlankEnum"
                             }
-                        ],
-                        "readOnly": true,
-                        "title": "Предмет"
+                        ]
                     },
                     "is_locked": {
                         "type": "boolean",

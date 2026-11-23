@@ -29538,15 +29538,15 @@ components:
           nullable: true
           title: Отправлен на утверждение
         counterparty_kind:
-          allOf:
+          readOnly: true
+          oneOf:
           - $ref: '#/components/schemas/DocumentTemplateCounterpartyKindEnum'
-          readOnly: true
-          title: Для кого
+          - $ref: '#/components/schemas/BlankEnum'
         subject:
-          allOf:
-          - $ref: '#/components/schemas/DocumentTemplateSubjectEnum'
           readOnly: true
-          title: Предмет
+          oneOf:
+          - $ref: '#/components/schemas/DocumentTemplateSubjectEnum'
+          - $ref: '#/components/schemas/BlankEnum'
         is_locked:
           type: boolean
           readOnly: true

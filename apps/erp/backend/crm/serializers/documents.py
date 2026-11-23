@@ -5,6 +5,7 @@ derivation, numbering, status transitions), so these are thin read serializers p
 a couple of write fields the ViewSet hands to the services.
 """
 
+from documents.models.documents import ContractSubject, CounterpartyKind
 from rest_framework import serializers
 
 from crm.models import CompanyWordingVariant, DocumentTemplate, GeneratedDocument
@@ -21,6 +22,9 @@ class DocumentTemplateSerializer(serializers.ModelSerializer):
     approved_by_name = serializers.SerializerMethodField()
     is_locked = serializers.SerializerMethodField()
     languages = serializers.SerializerMethodField()
+    # Только у шаблонов договора; у остальных видов пусто — схема обязана это допускать.
+    counterparty_kind = serializers.ChoiceField(choices=CounterpartyKind.choices, allow_blank=True, read_only=True)
+    subject = serializers.ChoiceField(choices=ContractSubject.choices, allow_blank=True, read_only=True)
 
     class Meta:
         model = DocumentTemplate

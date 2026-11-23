@@ -36,9 +36,9 @@ for (const width of WIDTHS) {
     });
 
     test("проект: договор по шаблону, путь и заявка на отступление", async ({ page }) => {
-      await page.addInitScript(() => {
-        window.localStorage.setItem("rt-pf-mock-contract-template", "on");
-      });
+      await page.addInitScript(
+        `window.localStorage.setItem("rt-pf-mock-contract-template", "on");`,
+      );
       await loginAndWait(page, "accountant@demo.example");
       await spaGoto(page, PROJECT);
       const docs = page.getByRole("region", { name: "Документы проекта" });
@@ -74,8 +74,8 @@ for (const width of WIDTHS) {
           .screenshot({ path: `${dir}/dok10-sales-rules-${String(width)}.png` });
       }
       await expectNoViolations(page, "правила договора в настройках продаж");
-      const overflow = await page.evaluate(
-        () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+      const overflow = await page.evaluate<boolean>(
+        "document.documentElement.scrollWidth > document.documentElement.clientWidth",
       );
       expect(overflow, "горизонтальной прокрутки нет").toBe(false);
     });
