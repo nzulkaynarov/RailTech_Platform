@@ -142,6 +142,7 @@ export function InvoiceRows({
     {
       id: "number",
       header: t("list.columns.number"),
+      sortKey: "number",
       width: COLS.number,
       cellClassName: "pf-num",
       cell: (row) => (
@@ -162,6 +163,7 @@ export function InvoiceRows({
     {
       id: "client",
       header: t("list.columns.client"),
+      sortKey: "client",
       width: null,
       cellClassName: "pf-ell",
       cellTitle: (row) => row.client_name,
@@ -170,6 +172,7 @@ export function InvoiceRows({
     {
       id: "amount",
       header: t("list.columns.amount"),
+      sortKey: "amount",
       width: COLS.amount,
       numeric: true,
       cell: (row) => (
@@ -181,6 +184,7 @@ export function InvoiceRows({
     {
       id: "issued",
       header: t("list.columns.issued"),
+      sortKey: "issued",
       width: COLS.issued,
       cellClassName: "pf-num",
       cell: (row) => (row.issued_at ? date(row.issued_at) : "—"),
@@ -188,6 +192,7 @@ export function InvoiceRows({
     {
       id: "due",
       header: t("list.columns.due"),
+      sortKey: "due",
       width: COLS.due,
       cellClassName: "pf-num",
       cell: (row) => (
@@ -199,6 +204,7 @@ export function InvoiceRows({
     {
       id: "status",
       header: t("list.columns.status"),
+      sortKey: "status",
       width: COLS.status,
       cell: (row) => (
         <>
@@ -225,6 +231,7 @@ export function InvoiceRows({
       scrollLabel={t("list.scroll")}
       className="pf-dec-table pf-pay-table"
       flexMin={200}
+      sortMode="server"
       columns={columns}
       rows={items}
       rowKey={(row) => String(row.id)}

@@ -2855,11 +2855,20 @@ paths:
         - name: cursor
           in: query
           required: false
+          description: Курсор из `next_cursor`; привязан к порядку `sort`, при смене порядка начинают с первой страницы
           schema: {type: string, maxLength: 2000}
         - name: limit
           in: query
           required: false
           schema: {type: integer, minimum: 1, maximum: 100, default: 50}
+        - name: sort
+          in: query
+          required: false
+          description: >-
+            Порядок щелчком по шапке (Х-15б): `number`, `subject`, `status`, `amount`, `created`; `-` в начале — по убыванию.
+            Пустые значения (нет номера, нет суммы) — в конце, равные — по id. `number` и `subject` — строковый порядок: номер
+            непрозрачен, число в нём не разбирается. Другое поле — 422. Не задан — от новых.
+          schema: {type: string, pattern: '^-?(number|subject|status|amount|created)$'}
       responses:
         '200':
           description: Страница документов
@@ -4445,6 +4454,15 @@ paths:
           in: query
           required: false
           schema: {type: integer, minimum: 0, maximum: 100000, default: 0}
+        - name: sort
+          in: query
+          required: false
+          description: >-
+            Порядок щелчком по шапке (Х-15б): `number`, `client`, `amount`, `issued`, `due`, `status` (слово статуса строки);
+            `-` в начале — по убыванию. Пустые значения (нет срока, нет даты выставления) — в конце, равные — по id. `number` —
+            строковый порядок: у счёта нет сохранённого порядкового номера, префикс настраивается и не разбирается. Другое
+            поле — 422. Не задан — порядок вкладки.
+          schema: {type: string, pattern: '^-?(number|client|amount|issued|due|status)$'}
       responses:
         '200':
           description: Счета вкладки и счётчики

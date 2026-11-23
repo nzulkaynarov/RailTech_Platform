@@ -130,6 +130,10 @@ async def upload_receipt(request: Request, authed: Writer) -> EdsFile:
 # -----------------------------------------------------------------------------
 
 
+# Порядок (Х-15б): `field` — по возрастанию, `-field` — по убыванию; поле только из списка.
+INVOICE_SORT = r"^-?(number|client|amount|issued|due|status)$"
+
+
 @router.get("/payments", response_model=PaymentBoard, operation_id="listPayments")
 async def list_payments(
     authed: Reader,
@@ -137,8 +141,9 @@ async def list_payments(
     q: Annotated[str | None, Query(max_length=200)] = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 50,
     offset: Annotated[int, Query(ge=0, le=100000)] = 0,
+    sort: Annotated[str | None, Query(pattern=INVOICE_SORT)] = None,
 ) -> PaymentBoard:
-    return await build_board(authed, tab=tab, q=q, limit=limit, offset=offset)
+    return await build_board(authed, tab=tab, q=q, limit=limit, offset=offset, sort=sort)
 
 
 @router.get("/payments/{id}", response_model=PaymentCard, operation_id="getPayment")

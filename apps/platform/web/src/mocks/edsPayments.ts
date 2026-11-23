@@ -35,6 +35,18 @@ import {
   writeInvoices,
 } from "./fixtures/payments";
 import { buildMe, readSession } from "./mockSession";
+import { orderBy } from "./orderBy";
+
+/** Порядок слов статуса при сортировке — как у ERP (`DISPLAY_STATUSES`) */
+const STATUS_RANK = [
+  "draft",
+  "issued",
+  "proof_received",
+  "partially_paid",
+  "paid",
+  "overdue",
+  "cancelled",
+];
 
 /**
  * Моки EDS · Счета и оплаты бухгалтера (D2-4). Права — как в BFF: чтение — `eds.payments` (менеджер, директор,
@@ -266,13 +278,21 @@ export const edsPaymentsHandlers = [
       )
       .sort((a, b) => (a.due_date ?? "9").localeCompare(b.due_date ?? "9") || a.id - b.id)
       .map(rowOf);
+    const sorted = orderBy(found, url.searchParams.get("sort"), {
+      number: (row) => row.number,
+      client: (row) => row.client_name,
+      amount: (row) => Number(row.amount.amount),
+      issued: (row) => row.issued_at,
+      due: (row) => row.due_date,
+      status: (row) => STATUS_RANK.indexOf(row.status),
+    });
     const board: PaymentBoard = {
       tab,
-      count: found.length,
+      count: sorted.length,
       counts: counts(),
       memos_to_pay: readMemos().filter((m) => isPayable(m) && MEMO_STATUS(m) === "to_pay").length,
       bank_details_ready: companyBankReady(),
-      items: found.slice(offset, offset + limit),
+      items: sorted.slice(offset, offset + limit),
       sources: { erp: "ok", eds: "ok" },
     };
     return HttpResponse.json(board);

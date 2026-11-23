@@ -175,6 +175,33 @@ async def test_mine_lists_own_documents_with_staff_token(
     assert (query["limit"], query["cursor"]) == ("20", "c1")
 
 
+@pytest.mark.parametrize("scope", ["mine", "all"])
+@pytest.mark.parametrize("sort", ["number", "-subject", "status", "-amount", "created"])
+async def test_list_sends_the_allow_listed_order_and_the_cursor_to_eds(
+    web: Web, eds: EdsFake, check: ContractChecker, scope: str, sort: str
+) -> None:
+    """Х-15б: порядок щелчком по шапке уходит EDS как `sort` вместе с курсором этого порядка."""
+    await web.login(["MANAGER"])
+    response = await web.client.get(
+        f"{BASE}/documents", params={"scope": scope, "sort": sort, "cursor": "c1"}
+    )
+    assert response.status_code == 200, response.text
+    check(response, "/eds/documents", "get")
+    path = "documents" if scope == "mine" else "registry"
+    assert eds.last("GET", path).url.params["sort"] == sort
+    assert eds.last("GET", path).url.params["cursor"] == "c1"
+    await web.client.get(f"{BASE}/documents", params={"scope": scope})
+    assert "sort" not in eds.last("GET", path).url.params
+
+
+async def test_list_rejects_an_order_outside_the_allow_list(web: Web, eds: EdsFake) -> None:
+    await web.login(["MANAGER"])
+    for sort in ("author_crm_user_id", "-id", "due_date", "number;x", "NUMBER"):
+        response = await web.client.get(f"{BASE}/documents", params={"sort": sort})
+        assert response.status_code == 422, sort
+    assert eds.requests("GET", "documents") == []
+
+
 async def test_mine_ignores_kinds_that_are_not_documents(web: Web, eds: EdsFake) -> None:
     await web.login(["MANAGER"])
 
