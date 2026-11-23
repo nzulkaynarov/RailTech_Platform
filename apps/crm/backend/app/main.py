@@ -37,6 +37,7 @@ from app.api.v1 import (
     models_admin,
     platform_roles,
     reply_templates,
+    responsibility_zones,
     sandbox,
     setup,
     spend,
@@ -163,6 +164,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         company_articles,
         users,
         platform_roles,
+        responsibility_zones,
         # Раньше `leads`: `/leads/web*` не должен перехватываться `/leads/{lead_id}`.
         lead_intake,
         leads,

@@ -17,6 +17,7 @@ from app.models import (  # noqa: F401
     platform_roles,
     qualification,
     reply_templates,
+    responsibility_zones,
     staff_tickets,
     system,
 )
