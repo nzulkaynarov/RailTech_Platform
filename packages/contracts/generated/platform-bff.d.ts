@@ -753,7 +753,7 @@ export interface paths {
     };
     /**
      * Справочник сотрудников
-     * @description CRM `GET /api/v1/staff` (СУЩ-3): все сотрудники — имя, должность, адрес фото с версией; отключённые — с `active: false` и без фото, чтобы «кто сделал» в старом документе по-прежнему называл человека. Почты, телефона и ролей нет. Любой сотрудник; общий компонент человека находит здесь фото и должность по `id` ссылки.
+     * @description CRM `GET /api/v1/staff` (СУЩ-3): все сотрудники — имя, должность, адрес фото с версией; отключённые — с `active: false` и без фото, чтобы «кто сделал» в старом документе по-прежнему называл человека. Роли — названиями; почты и телефона нет, их открывает `POST /people/staff/{id}/reveal` с записью в журнал. Любой сотрудник; общий компонент человека находит здесь фото и должность по `id` ссылки.
      */
     get: operations["listStaffDirectory"];
     put?: never;
@@ -7708,6 +7708,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/people/staff/{id}/reveal": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Органайзер · Люди: показать телефон и почту сотрудника
+     * @description Решение 10.11: имя, должность и роли коллеги видят все (`GET /staff`), телефон и почта открываются по нажатию. Показ пишется в журнал CRM (`contact.reveal`, объект `staff`) в той же транзакции, что и ответ: не записалось — контактов нет. Контакты берутся из профиля сотрудника в CRM; отключённый сотрудник — 404. Выгрузки нет. Раздел `chats.internal` — чтение.
+     */
+    post: operations["revealStaffContacts"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/people/counterparties": {
     parameters: {
       query?: never;
@@ -9815,6 +9835,8 @@ export interface components {
       avatar_url: string | null;
       /** @description `false` — сотрудник отключён */
       active: boolean;
+      /** @description Роли Платформы названиями — для карточки сотрудника в «Людях»; без матрицы прав */
+      roles?: string[];
     };
     StaffDirectory: {
       items: components["schemas"]["StaffCard"][];
@@ -31716,6 +31738,35 @@ export interface operations {
       };
       path: {
         id: components["schemas"]["CompanyItemRef"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Телефон и почта */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CounterpartyContacts"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  revealStaffContacts: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        id: string;
       };
       cookie?: never;
     };

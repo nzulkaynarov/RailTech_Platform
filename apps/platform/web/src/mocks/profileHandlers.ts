@@ -8,7 +8,8 @@ import type {
   ProfileUpdate,
   ResetPasswordIn,
 } from "../shared/api/generated/model";
-import { readEmployees, writeEmployees } from "./fixtures/employees";
+import { type CatalogRole, SYSTEM_ROLES, TEMPLATES } from "../app/rbac.generated";
+import { isEmployeeDisabled, readEmployees, writeEmployees } from "./fixtures/employees";
 import { allUsers, findUserById } from "./fixtures/users";
 import { buildMe, readSession, sessionRoles, updateSession } from "./mockSession";
 import {
@@ -257,7 +258,13 @@ export const profileHandlers = [
         name: nameOf(user.id),
         position: user.position || null,
         avatar_url: avatarUrlOf(user.id) ?? null,
-        active: true,
+        active: user.loginError?.code !== "USER_DISABLED" && !isEmployeeDisabled(user.id),
+        roles: user.roles.map((code) => {
+          const role =
+            (SYSTEM_ROLES as Record<string, CatalogRole>)[code] ??
+            (TEMPLATES as Record<string, CatalogRole>)[code];
+          return role?.name.ru ?? code;
+        }),
       })),
     });
   }),
