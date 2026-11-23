@@ -448,6 +448,7 @@ async def test_send_before_visas_is_refused_with_the_missing_visas_in_words(
         "code": "visas_pending",
         "message": "Нужны визы: бухгалтер, юрист",
         "missing": ["бухгалтер", "юрист"],
+        "missing_permissions": ["approvals.visa_finance", "approvals.visa_legal"],
         "remark": "",
         "settings_link": False,
     }

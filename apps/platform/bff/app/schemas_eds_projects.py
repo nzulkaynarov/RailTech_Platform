@@ -65,11 +65,18 @@ class ProjectSigningIn(BaseModel):
     document_id: int
 
 
+SendBlockerCode = Literal[
+    "visas_not_requested", "visas_declined", "visas_pending", "visas_returned", "no_visa_holder"
+]
+
+
 class ProjectContractRef(BaseModel):
     id: int
     number: str
     status: ContractWord
     sent_to_client: bool
+    # Х-1: while the project is unsent, why it cannot go to the client (visas); older ERP omits it.
+    send_blocker_code: SendBlockerCode | None = None
 
 
 class ProjectInvoiceRef(BaseModel):
@@ -143,17 +150,14 @@ class ProjectQuote(ProjectQuoteRef):
     valid_until: dt.date | None
 
 
-SendBlockerCode = Literal[
-    "visas_not_requested", "visas_declined", "visas_pending", "visas_returned", "no_visa_holder"
-]
-
-
 class ProjectContractSendBlocker(BaseModel):
     """Х-1: почему проект договора нельзя отправить клиенту (визы не собраны); считает ERP."""
 
     code: SendBlockerCode
     message: str
     missing: list[str]
+    # The same visas as route permission codes (`approvals.visa_finance`): the web translates them.
+    missing_permissions: list[str] = []
     remark: str
     settings_link: bool
 

@@ -181,6 +181,17 @@ def invoice_rows(snap: Snapshot, now: datetime, view: View, role_of: RoleOf) -> 
     return out
 
 
+#: Х-1: причины, при которых шаг за сотрудником — отправить договор «На подпись».
+_VISAS_TO_REQUEST = {"visas_not_requested", "visas_declined", "visas_returned", "no_visa_holder"}
+_BLOCKER_WHY = {
+    "visas_not_requested": "визы не запрошены",
+    "visas_declined": "договор не принят на визы",
+    "visas_returned": "виза возвращена",
+    "no_visa_holder": "некому поставить визу",
+    "visas_pending": "визы собираются",
+}
+
+
 def _contract_step(row: RawRow) -> tuple[QueueItemKind, str, str] | None:
     """Шаг договора, который ждёт сотрудника: (вид, действие, подпись) или `None` — ход за
     клиентом или договор подписан."""
@@ -190,6 +201,17 @@ def _contract_step(row: RawRow) -> tuple[QueueItemKind, str, str] | None:
             return None
         return "issue_contract", "Сформировать проект договора по", "КП принято клиентом"
     if contract.status == "project" and not contract.sent_to_client:
+        # Х-1: до виз договор клиенту не уходит — слово по факту блокировки ERP, а не по статусу.
+        if contract.send_blocker_code is not None:
+            return (
+                "issue_contract",
+                (
+                    f"Отправить на визы договор {contract.number} по"
+                    if contract.send_blocker_code in _VISAS_TO_REQUEST
+                    else f"Ждёт виз договор {contract.number} по"
+                ),
+                _BLOCKER_WHY[contract.send_blocker_code],
+            )
         return (
             "issue_contract",
             f"Отправить клиенту проект договора {contract.number} по",
