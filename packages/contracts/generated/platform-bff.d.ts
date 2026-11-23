@@ -16344,6 +16344,26 @@ export interface components {
         overdue: boolean;
       };
       invitation: components["schemas"]["ClientInvitation"] | null;
+      /** @description Откуда пришёл лид кроме канала (LID-5): форма, страница, откуда перешли, кампания. `null` — у лидов других каналов и прежних лидов фактов нет. */
+      origin?: components["schemas"]["LeadOrigin"] | null;
+    };
+    /** @description Факты об источнике лида, сохранённые при приёме заявки с сайта или из Cabinet */
+    LeadOrigin: {
+      /** @description Ключ формы, например `cabinet_request` */
+      form: string | null;
+      /** @description Путь страницы, где была форма */
+      page: string | null;
+      /** @description Откуда перешли: хост и путь без параметров */
+      referrer: string | null;
+      /** @description utm_campaign */
+      campaign: string | null;
+      utm_source: string | null;
+      utm_medium: string | null;
+      /**
+       * @description Язык страницы заявки
+       * @enum {string|null}
+       */
+      language: "ru" | "uz" | "en" | null;
     };
     ClientShort: {
       id: number;

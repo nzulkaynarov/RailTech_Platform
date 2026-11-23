@@ -27693,6 +27693,27 @@ components:
           oneOf:
             - $ref: '#/components/schemas/ClientInvitation'
             - type: 'null'
+        origin:
+          description: >-
+            Откуда пришёл лид кроме канала (LID-5): форма, страница, откуда перешли, кампания. `null` — у лидов
+            других каналов и прежних лидов фактов нет.
+          oneOf:
+            - $ref: '#/components/schemas/LeadOrigin'
+            - type: 'null'
+
+    LeadOrigin:
+      type: object
+      additionalProperties: false
+      required: [form, page, referrer, campaign, utm_source, utm_medium, language]
+      description: Факты об источнике лида, сохранённые при приёме заявки с сайта или из Cabinet
+      properties:
+        form: {type: [string, 'null'], description: 'Ключ формы, например `cabinet_request`'}
+        page: {type: [string, 'null'], description: 'Путь страницы, где была форма'}
+        referrer: {type: [string, 'null'], description: 'Откуда перешли: хост и путь без параметров'}
+        campaign: {type: [string, 'null'], description: 'utm_campaign'}
+        utm_source: {type: [string, 'null']}
+        utm_medium: {type: [string, 'null']}
+        language: {type: [string, 'null'], enum: [ru, uz, en, null], description: Язык страницы заявки}
 
     ClientShort:
       type: object

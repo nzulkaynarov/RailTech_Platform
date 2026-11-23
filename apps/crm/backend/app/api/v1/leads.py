@@ -39,6 +39,7 @@ from app.schemas.leads import (
     HandOver,
     InboxResponse,
     LeadDetail,
+    LeadOriginOut,
     LeadOut,
     LeadPage,
     MessageContextOut,
@@ -101,6 +102,18 @@ def _handed_by(escalations: dict[int, Escalation]) -> list[int | None]:
 def _platform_status(lead: Lead, escalation: Escalation | None) -> str:
     asks_price, sla_overdue = lead_status.escalation_flags(escalation)
     return platform_status(lead.stage, asks_price=asks_price, sla_overdue=sla_overdue).value
+
+
+def _origin_out(lead: Lead) -> LeadOriginOut | None:
+    if not (lead.source_form or lead.source_page or lead.source_referrer or lead.source_utm):
+        return None
+    return LeadOriginOut(
+        form=lead.source_form,
+        page=lead.source_page,
+        referrer=lead.source_referrer,
+        utm=lead.source_utm,
+        landing_language=lead.source_lang,
+    )
 
 
 def lead_out(
@@ -346,6 +359,7 @@ async def get_lead(lead_id: int, _: Reader, container: ContainerDep) -> LeadDeta
         first_response_overdue=web_lead_sla.overdue(
             lead.first_response_due_at, lead.assigned_user_id, now
         ),
+        origin=_origin_out(lead),
         confirmation=NoticeOut.model_validate(confirmation, from_attributes=True)
         if confirmation is not None
         else None,

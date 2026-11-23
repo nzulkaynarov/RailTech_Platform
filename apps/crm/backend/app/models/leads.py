@@ -82,6 +82,13 @@ class Lead(TimestampMixin, Base):
     erased_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     # `telegram` | `web` | `phone` | `email` | `referral` (`domain/lead_sources.py`) | `sandbox`.
     source: Mapped[str] = mapped_column(String(16), server_default=sql("'telegram'"))
+    # Origin facts (LID-5): form key, landing path, referrer (host+path), UTM, landing language.
+    # Filled at intake of the public web form; NULL for other channels and for older leads.
+    source_form: Mapped[str | None] = mapped_column(String(64))
+    source_page: Mapped[str | None] = mapped_column(String(512))
+    source_referrer: Mapped[str | None] = mapped_column(String(512))
+    source_utm: Mapped[dict[str, str] | None] = mapped_column(JSONB)
+    source_lang: Mapped[str | None] = mapped_column(String(8))
     notes_count: Mapped[int] = mapped_column(Integer, server_default=sql("0"))
     # Контакты лида без Telegram (сайт, звонок, почта, рекомендация — M3-CRM-05); номер из
     # Telegram остаётся в `telegram_identities.phone_e164`, склейка — по обоим (`lead_sources`).
