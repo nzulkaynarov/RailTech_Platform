@@ -56,9 +56,9 @@ export const RESOURCES = {
     levels: ["full"],
     backends: ["crm"],
     label: {
-      ru: "Контакты · Лиды и Почта · разбор и передача менеджеру",
-      uz: "Kontaktlar · Lidlar va pochta · saralash va menejerga topshirish",
-      en: "Contacts · Leads and mail · triage and hand over to a manager",
+      ru: "Контакты · Лиды; Документы · Почта · разбор и передача менеджеру",
+      uz: "Kontaktlar · Lidlar; Hujjatlar · Pochta · saralash va menejerga topshirish",
+      en: "Contacts · Leads; Documents · Mail · triage and hand over to a manager",
     },
   },
   "crm.mail": {
@@ -66,9 +66,9 @@ export const RESOURCES = {
     levels: ["read"],
     backends: ["crm"],
     label: {
-      ru: "Контакты · Почта · вся очередь, чтение",
-      uz: "Kontaktlar · Pochta · butun navbat, o‘qish",
-      en: "Contacts · Mail · whole queue, read",
+      ru: "Документы · Почта · вся очередь, чтение",
+      uz: "Hujjatlar · Pochta · butun navbat, o‘qish",
+      en: "Documents · Mail · whole queue, read",
     },
   },
   "crm.clients": {
@@ -270,15 +270,11 @@ export const RESOURCE_KEYS = Object.keys(RESOURCES) as ResourceKey[];
 export const MENU = {
   dashboard: {
     queue: ["dashboard.queue"],
-    projects: ["eds.projects"],
     summary: ["dashboard.summary"],
   },
   crm: {
-    messages: ["crm.leads", "crm.leads.triage"],
     leads: ["crm.leads", "crm.leads.triage"],
     clients: ["crm.clients", "erp.stock"],
-    requests: ["crm.clients"],
-    channels: ["crm.leads"],
     kb: ["crm.leads"],
   },
   eds: {
@@ -293,7 +289,6 @@ export const MENU = {
     ],
     inbox: ["eds.inbox", "eds.inbox.register"],
     mail: ["crm.leads.triage", "crm.leads", "crm.mail"],
-    outbox: ["eds.drafts"],
     projects: ["eds.projects"],
     drafts: ["eds.drafts"],
     approvals: ["eds.memo.approve", "eds.memo.create"],
@@ -308,8 +303,6 @@ export const MENU = {
   },
   chats: {
     all: ["chats.internal", "chats.external"],
-    internal: ["chats.internal"],
-    external: ["chats.external"],
     contacts: ["chats.internal"],
   },
   admin: {

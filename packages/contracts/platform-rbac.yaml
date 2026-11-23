@@ -213,7 +213,7 @@ resources:
   - key: crm.leads.triage
     module: crm
     levels: [full]
-    label: { ru: "Контакты · Лиды и Почта · разбор и передача менеджеру", uz: "Kontaktlar · Lidlar va pochta · saralash va menejerga topshirish", en: "Contacts · Leads and mail · triage and hand over to a manager" }
+    label: { ru: "Контакты · Лиды; Документы · Почта · разбор и передача менеджеру", uz: "Kontaktlar · Lidlar; Hujjatlar · Pochta · saralash va menejerga topshirish", en: "Contacts · Leads; Documents · Mail · triage and hand over to a manager" }
     # W18A-P2 (B-INB-5): та же первая линия разбирает общий почтовый ящик — очередь «Входящая почта» (`mail_inbox`):
     # карточка письма, «Создать лид», «Архив», ответ в цепочку; «Зарегистрировать ВХ» — право EDS `letters.register`
     # раздела `eds.inbox.register` (у шаблона «Делопроизводитель» есть оба). Директору очередь не приходит.
@@ -226,7 +226,7 @@ resources:
   - key: crm.mail
     module: crm
     levels: [read]
-    label: { ru: "Контакты · Почта · вся очередь, чтение", uz: "Kontaktlar · Pochta · butun navbat, o‘qish", en: "Contacts · Mail · whole queue, read" }
+    label: { ru: "Документы · Почта · вся очередь, чтение", uz: "Hujjatlar · Pochta · butun navbat, o‘qish", en: "Documents · Mail · whole queue, read" }
     backend:
       crm:
         read: [mail_inbox:read]
@@ -418,15 +418,11 @@ resources:
 menu:
   dashboard:
     queue: [dashboard.queue]
-    projects: [eds.projects]
     summary: [dashboard.summary]
   crm:
-    messages: [crm.leads, crm.leads.triage]
     leads: [crm.leads, crm.leads.triage]
     # «Контрагенты»: снабженец без `crm.clients` видит в них партнёров каталога (0.3, FR-13).
     clients: [crm.clients, erp.stock]
-    requests: [crm.clients]
-    channels: [crm.leads]
     # W15-H4: в подменю Клиентов база знаний — для ролей с лидами (чтение); администратор (kb:write у раздела admin) входит
     # в неё из Настроек · Telegram-бот, адрес /crm/kb для него открыт (`access` раздела в apps/platform/web/src/modules/crm/module.ts).
     kb: [crm.leads]
@@ -436,7 +432,6 @@ menu:
     # W18A-P2: «Входящая почта» — письма общего ящика до регистрации (первая линия, `crm.leads.triage`). 0.3 (FR-10): ещё и
     # держатели `crm.leads` (менеджер — свои письма) и `crm.mail` (директор — вся очередь без действий).
     mail: [crm.leads.triage, crm.leads, crm.mail]
-    outbox: [eds.drafts]
     projects: [eds.projects]
     drafts: [eds.drafts]
     approvals: [eds.memo.approve, eds.memo.create]
@@ -449,8 +444,6 @@ menu:
     docs: [erp.stock]
   chats:
     all: [chats.internal, chats.external]
-    internal: [chats.internal]
-    external: [chats.external]
     contacts: [chats.internal]
   admin:
     # SET-IA (владелец 2026-11-03): индекс «Все настройки» и пять групп — Люди и доступ · Компания · Каналы связи ·

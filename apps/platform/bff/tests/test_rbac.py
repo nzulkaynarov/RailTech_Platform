@@ -271,9 +271,9 @@ def test_menu_examples() -> None:
     assert "kb" not in rbac.menu_for(rbac.merge(roles("SUPPLY")))["crm"]
     assert "summary" in rbac.menu_for(rbac.merge(roles("ACCOUNTANT")))["dashboard"]
     assert "summary" not in rbac.menu_for(rbac.merge(roles("MANAGER", "SUPPLY")))["dashboard"]
-    assert rbac.menu_for(rbac.merge(roles("SUPPLY")))["chats"] == ["all", "internal", "contacts"]
+    assert rbac.menu_for(rbac.merge(roles("SUPPLY")))["chats"] == ["all", "contacts"]
     mixed = rbac.menu_for(rbac.merge(roles(MIXED)))
-    assert mixed["crm"] == ["messages", "leads", "channels", "kb"]
+    assert mixed["crm"] == ["leads", "kb"]
     assert mixed["eds"] == ["documents", "mail", "payments"]  # 0.3 (FR-10): почта держателю лидов
     assert mixed["dashboard"] == []
 
