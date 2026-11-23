@@ -10,6 +10,7 @@ export function resetErrorKey(error: unknown): string {
     "FORBIDDEN",
     "NOT_FOUND",
     "BACKEND_UNAVAILABLE",
+    "TOO_MANY_REQUESTS",
   ].includes(error.code)
     ? error.code
     : "DEFAULT";

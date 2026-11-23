@@ -25722,7 +25722,7 @@ export const getResendInviteUrl = (id: string) => {
 };
 
 /**
- * Повтор письма-приглашения сотруднику со статусом «Приглашён» (CRM `/users/{id}/invite`). CRM выдаёт новый временный пароль только при отправке письма: без подключённой почты пароль не меняется и ответ — 409 `CONFLICT` с `details.invite = not_sent`. Раздел `admin` — полный.
+ * Повтор письма-приглашения сотруднику со статусом «Приглашён» (CRM `/users/{id}/invite`). В письме одноразовая ссылка «Задайте пароль» на 72 часа, пароля в нём нет; новая ссылка гасит прежние, прежний пароль закрывается. Без подключённой почты ничего не меняется и ответ — 409 `CONFLICT` с `details.invite = not_sent`; больше трёх ссылок в час на сотрудника — 429 `TOO_MANY_REQUESTS`. Раздел `admin` — полный.
  * @summary Отправить приглашение снова
  */
 export const resendInvite = async (
@@ -25738,7 +25738,9 @@ export const resendInvite = async (
 export const getResendInviteMutationKey = () => ["resendInvite"] as const;
 
 export const getResendInviteMutationOptions = <
-  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | Error>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | Error | TooManyRequestsResponse
+  >,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
@@ -25776,7 +25778,7 @@ export const getResendInviteMutationOptions = <
 export type ResendInviteMutationResult = NonNullable<Awaited<ReturnType<typeof resendInvite>>>;
 
 export type ResendInviteMutationError = ErrorType<
-  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | Error
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | Error | TooManyRequestsResponse
 >;
 export type ResendInviteMutationVariables = { id: string };
 
@@ -25784,7 +25786,9 @@ export type ResendInviteMutationVariables = { id: string };
  * @summary Отправить приглашение снова
  */
 export const useResendInvite = <
-  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | Error>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | Error | TooManyRequestsResponse
+  >,
   TContext = unknown,
 >(
   options?: {
@@ -26242,8 +26246,8 @@ export const getResetEmployeePasswordByEmailUrl = (id: string) => {
 };
 
 /**
- * CRM `/users/{id}/reset-password/email`: новый временный пароль, письмо через коннектор «Почта», сессии сотрудника завершаются, при входе он обязан сменить пароль (статус «Приглашён»). Пароль в ответе не возвращается. Раздел `admin` — полный. Себе сбросить нельзя — 409 `CONFLICT` с `details.reason = self_reset` (в CRM запрос не уходит; свой пароль — «Сменить пароль» в меню аватара). Почта не подключена — 409 `NOT_CONFIGURED`, пароль не меняется; нет ключа шифрования секретов — 409 `SECRETS_KEY_MISSING`.
- * @summary Сбросить пароль сотрудника и отправить временный по почте
+ * CRM `/users/{id}/reset-password/email`: письмо через коннектор «Почта» с одноразовой ссылкой «Задайте пароль» на час (пароля в письме нет), прежний пароль закрывается, сессии сотрудника завершаются (статус «Приглашён», пока он не задаст новый). Пароль в ответе не возвращается. Больше трёх ссылок в час на сотрудника — 429 `TOO_MANY_REQUESTS`. Раздел `admin` — полный. Себе сбросить нельзя — 409 `CONFLICT` с `details.reason = self_reset` (в CRM запрос не уходит; свой пароль — «Сменить пароль» в меню аватара). Почта не подключена — 409 `NOT_CONFIGURED`, пароль не меняется; нет ключа шифрования секретов — 409 `SECRETS_KEY_MISSING`.
+ * @summary Сбросить пароль сотрудника и отправить ссылку по почте
  */
 export const resetEmployeePasswordByEmail = async (
   id: string,
@@ -26259,7 +26263,9 @@ export const getResetEmployeePasswordByEmailMutationKey = () =>
   ["resetEmployeePasswordByEmail"] as const;
 
 export const getResetEmployeePasswordByEmailMutationOptions = <
-  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | Error>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | Error | TooManyRequestsResponse
+  >,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
@@ -26299,15 +26305,17 @@ export type ResetEmployeePasswordByEmailMutationResult = NonNullable<
 >;
 
 export type ResetEmployeePasswordByEmailMutationError = ErrorType<
-  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | Error
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | Error | TooManyRequestsResponse
 >;
 export type ResetEmployeePasswordByEmailMutationVariables = { id: string };
 
 /**
- * @summary Сбросить пароль сотрудника и отправить временный по почте
+ * @summary Сбросить пароль сотрудника и отправить ссылку по почте
  */
 export const useResetEmployeePasswordByEmail = <
-  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | Error>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | Error | TooManyRequestsResponse
+  >,
   TContext = unknown,
 >(
   options?: {

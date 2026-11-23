@@ -92,7 +92,7 @@ describe("Новый пароль по ссылке", () => {
   it("недействительная ссылка: слова и «Запросить новую ссылку»", async () => {
     await submit("expired-token-0123456789abcdef", "Brand-new-secret-77");
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      "Ссылка недействительна или устарела",
+      "Ссылка уже использована или срок её действия истёк",
     );
     expect(screen.getByRole("link", { name: "Запросить новую ссылку" })).toHaveAttribute(
       "href",
