@@ -8,7 +8,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('documents', '0007_dok10_contract_template_approval'),
-        ('parties', '0030_latin_number_texts'),
+        ('parties', '0032_company_do_not_work'),
     ]
 
     operations = [
