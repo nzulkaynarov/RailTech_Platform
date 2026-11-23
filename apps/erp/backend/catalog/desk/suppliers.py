@@ -14,6 +14,7 @@ import pghistory
 from django.conf import settings
 from django.db.models import Count, Min, Q
 from django.utils import timezone
+from parties.do_not_work import is_marked
 from parties.models import Company
 from parties.people import contact_name, set_contact_name
 
@@ -80,6 +81,7 @@ def supplier_row(company) -> dict:
         "expired_count": getattr(company, "expired_count", 0),
         "expiring_count": getattr(company, "expiring_count", 0),
         "nearest_valid_until": getattr(company, "nearest_valid_until", None),
+        "do_not_work": is_marked(company),
     }
 
 

@@ -1004,6 +1004,7 @@ async def test_mxik_search_and_card_and_manual_code(
         "code": MXIK_CODE,
         "name": "Кабели силовые",
         "group": "Кабели",
+        "path": "Кабели › Кабельная продукция",
         "unit": "метр",
         "package": "барабан",
     }

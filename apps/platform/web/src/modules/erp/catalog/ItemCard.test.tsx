@@ -328,6 +328,9 @@ describe("Карточка товара: страна происхождения
 describe("МХИК в карточке товара (план 1.8)", () => {
   it("подбор из классификатора: выбор подставляет код и название; карточка показывает их", async () => {
     let sent: unknown = null;
+    const cable = readErpCatalog().items.find((item) => item.id === "1");
+    if (!cable) throw new Error("fixture item 1");
+    cable.mxik = null; // the fixture card already carries a code; this scenario picks one for a card without
     server.use(
       http.patch("*/erp/catalog/items/:id", async ({ request }) => {
         sent = await request.clone().json();
@@ -368,5 +371,47 @@ describe("МХИК в карточке товара (план 1.8)", () => {
     expect(within(form).getByRole("button", { name: "Сохранить" })).toBeDisabled();
     fireEvent.change(field, { target: { value: "08544001001000000" } });
     expect(within(form).getByRole("button", { name: "Сохранить" })).toBeEnabled();
+  });
+});
+
+describe("МХИК: поиск по слову и обязательный код для публикации (X-16)", () => {
+  it("«накладка» даёт позиции со словом в названии, рельсовые тоже, под каждой — путь по группам", async () => {
+    const drawer = await openCable("supply@demo.example");
+    fireEvent.click(await within(drawer).findByRole("button", { name: "Изменить позицию" }));
+    const form = await findModal("Изменить позицию");
+    fireEvent.change(within(form).getByLabelText("МХИК (ИКПУ)"), {
+      target: { value: "накладка" },
+    });
+    expect(
+      await screen.findByText(/06813002002002005 · Накладка тормозная для автомобилей: HOWO/),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        /07302001001000370 · Изделия из черных металлов, используемые для железнодорожных/,
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getAllByText(/Фрикционные материалы и изделия из них, не содержащие асбест/).length,
+    ).toBeGreaterThan(0);
+    expect(screen.queryByText(/пассажиров|газоснабжение/i)).toBeNull();
+  });
+
+  it("нет МХИК — публикация закрыта словами, а «Указать МХИК» открывает форму на этом поле", async () => {
+    const draft = readErpCatalog().items.find((item) => item.id === "5");
+    if (!draft) throw new Error("fixture item 5");
+    Object.assign(draft, { categoryId: "1", hs_code: "7302100000", mxik: null });
+    signIn("supply@demo.example");
+    renderAt("/erp/catalog?item=5");
+    const drawer = await screen.findByRole("dialog", { name: "Пусконаладочные работы" });
+
+    expect(
+      await within(drawer).findByText(/Для публикации заполните: код МХИК \(ИКПУ\)\./),
+    ).toBeVisible();
+    expect(within(drawer).getByRole("button", { name: "Опубликовать" })).toBeDisabled();
+    fireEvent.click(within(drawer).getByRole("button", { name: "Указать МХИК" }));
+    const form = await findModal("Изменить позицию");
+    await waitFor(() => {
+      expect(within(form).getByLabelText("МХИК (ИКПУ)")).toHaveFocus();
+    });
   });
 });

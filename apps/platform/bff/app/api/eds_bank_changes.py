@@ -10,8 +10,10 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Path, Query
 
+from app.clients.crm_users import STEP_UP_HEADER
 from app.clients.erp_company import ErpCompany
-from app.deps import Authed, require
+from app.deps import Authed, StepUpDep, require
+from app.errors import from_backend
 from app.schemas_bank_changes import (
     BankChangeItem,
     BankChangeList,
@@ -47,7 +49,19 @@ async def list_bank_change_requests(
 @router.post(
     "/{id}/approve", response_model=BankChangeItem, operation_id="approveBankChangeRequest"
 )
-async def approve_bank_change_request(id: ChangeId, authed: Writer) -> BankChangeItem:
+async def approve_bank_change_request(
+    id: ChangeId, authed: Writer, step_up: StepUpDep = None
+) -> BankChangeItem:
+    """Подтвердить новые реквизиты. Нужен свежий код второго фактора (`X-Step-Up-Token`, ДВ-4б):
+    проверяет CRM до обращения к ERP; нет кода — 403 `STEP_UP_REQUIRED`."""
+    checked = await authed.call(
+        "crm",
+        "POST",
+        "/api/v1/me/second-factor/step-up/check",
+        headers={STEP_UP_HEADER: step_up} if step_up else None,
+    )
+    if checked.status_code != 204:
+        raise from_backend("crm", checked)
     return to_item(await _erp(authed).data("POST", _path(id, "approve/")))
 
 

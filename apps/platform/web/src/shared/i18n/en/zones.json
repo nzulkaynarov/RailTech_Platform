@@ -1,0 +1,89 @@
+{
+  "subtitle": "Who is accountable for what: responsible, deputy and curator for each zone",
+  "note": "For now zones are only recorded: they do not route notifications or approvals.",
+  "add": "New zone",
+  "filter": {
+    "label": "Show",
+    "active": "Active",
+    "all": "All"
+  },
+  "list": {
+    "label": "Responsibility zones"
+  },
+  "unavailable": "Could not load the zones. Reload the page.",
+  "empty": {
+    "title": "No zones",
+    "text": "Create a zone from the existing permission sections.",
+    "activeText": "No active zones. Show “All” to see switched-off ones."
+  },
+  "col": {
+    "zone": "Zone",
+    "responsible": "Responsible",
+    "deputy": "Deputy",
+    "curator": "Curator",
+    "problems": "Issues",
+    "actions": "Actions"
+  },
+  "notAssigned": "Not assigned",
+  "personInactive": "deactivated",
+  "noProblems": "All good",
+  "off": "Switched off",
+  "open": "Open",
+  "openNamed": "Open zone “{{name}}”",
+  "problem": {
+    "no_responsible": "No responsible",
+    "responsible_lacks_permissions": "Lacks zone permissions",
+    "responsible_inactive": "Responsible deactivated",
+    "deputy_inactive": "Deputy deactivated",
+    "term_expired": "Term expired"
+  },
+  "problemText": {
+    "no_responsible": "Assign a responsible person.",
+    "responsible_lacks_permissions": "The responsible person lacks these sections: {{sections}}. This is a warning: you can still assign, permissions are granted in “Roles & permissions”.",
+    "responsible_inactive": "The responsible person is deactivated. Assign someone else.",
+    "deputy_inactive": "The deputy is deactivated. Assign someone else or clear it.",
+    "term_expired": "The assignment term has ended. Extend it or assign someone else."
+  },
+  "sheet": {
+    "addTitle": "New zone",
+    "editTitle": "Zone “{{name}}”",
+    "covers": "What it covers",
+    "sections": "Permission sections of the zone",
+    "sectionsHint": "The responsible person needs these sections; the check only warns.",
+    "responsible": "Responsible",
+    "deputy": "Deputy",
+    "curator": "Curator",
+    "pick": "Choose an employee",
+    "noStaff": "No employees",
+    "basis": "Basis",
+    "basisPlaceholder": "Order No. … dated …",
+    "validFrom": "Assigned from",
+    "validTo": "Assigned until",
+    "save": "Save",
+    "create": "Create",
+    "deactivate": "Switch off zone",
+    "activate": "Switch on zone",
+    "nameRu": "Name in Russian",
+    "nameUz": "Name in Uzbek",
+    "nameEn": "Name in English",
+    "descRu": "Description in Russian",
+    "descUz": "Description in Uzbek",
+    "descEn": "Description in English"
+  },
+  "saved": "Saved",
+  "created": "Zone created",
+  "deactivated": "Zone switched off",
+  "activated": "Zone switched on",
+  "required": "Fill in the field",
+  "pickSections": "Choose at least one section",
+  "errors": {
+    "DEFAULT": "Could not save. Try again.",
+    "invalid": "Check the fields: the employee must be active, the deputy another person, the term in order.",
+    "conflict": "A zone with this name already exists or the zone is switched off.",
+    "FORBIDDEN": "You are not allowed to do this."
+  },
+  "signal": {
+    "settings": "Zones without a responsible person: {{count}}.",
+    "link": "Open"
+  }
+}

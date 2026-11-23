@@ -121,6 +121,11 @@ _CONFLICTS: dict[str, tuple[str, str]] = {
     ),
     # PART-1: доступ партнёра в кабинет
     "CONTACT_EXISTS": ("contact_exists", "Контакт с таким адресом у компании уже есть."),
+    # Х-8: у компании отметка «Не работать» — причина и кто отметил едут в `details.do_not_work`
+    "COMPANY_DO_NOT_WORK": (
+        "company_do_not_work",
+        "С компанией не работаем: новые КП, договоры, заказы, заявки и приглашения закрыты.",
+    ),
     "CONTACT_EMAIL_AMBIGUOUS": (
         "contact_email_ambiguous",
         "Этот адрес уже указан у контакта другой компании кабинета. Укажите другой адрес.",
@@ -142,6 +147,7 @@ _FIELD_OF: dict[str, str] = {
     "FX_RATE_DATE_IN_FUTURE": "rate_date",
     "FX_RATE_DATE_TOO_OLD": "rate_date",
     "REASON_REQUIRED": "reason",
+    "UNTIL_PAST": "until",
     "CATEGORY_REQUIRED": "category_id",
     "CATEGORY_REQUEST_NAME_REQUIRED": "name",
     # D2-3: коды ERP «Номенклатура и поставщики» -> поле формы
@@ -307,6 +313,9 @@ def erp_error(response: httpx.Response) -> PlatformError:
         details["reason"] = reason
         if erp_code in _FIELD_OF:
             details["fields"] = [_FIELD_OF[erp_code]]
+        facts = body.get("do_not_work") if isinstance(body, dict) else None
+        if erp_code == "COMPANY_DO_NOT_WORK" and isinstance(facts, dict):
+            details["do_not_work"] = facts
         # дубль называет уже существующую запись: её выбирают, а не заводят заново
         existing = body.get("existing_id") if isinstance(body, dict) else None
         if isinstance(existing, int) and not isinstance(existing, bool):

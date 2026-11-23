@@ -13,11 +13,23 @@ from typing import Any, Dict, Optional, Tuple
 
 from django.db import transaction
 from django.db.models.signals import post_save, pre_save
+from parties import do_not_work
 
 COMPANY_UPDATED = "uz.railtech.erp.company.updated.v1"
 
 #: Поля, которыми ERP владеет и которые проецирует CRM
-TRACKED = ("name", "inn", "registration_number", "country_id", "legal_address")
+TRACKED = (
+    "name",
+    "inn",
+    "registration_number",
+    "country_id",
+    "legal_address",
+    # Х-8: отметка «Не работать» едет в том же снимке — CRM показывает её в карточке клиента
+    "do_not_work_at",
+    "do_not_work_by_id",
+    "do_not_work_reason",
+    "do_not_work_until",
+)
 
 
 def _values(company) -> Tuple[Any, ...]:
@@ -44,6 +56,8 @@ def company_data(company, user=None) -> Dict[str, Any]:
             "country": country if country and len(country) == 2 else None,
             "legal_address": _text(company.legal_address, 1000),
             "updated_at": company.updated_at.isoformat(),
+            # Х-8: `null` — отметки нет или снята; срок CRM сверяет сам (отметка действует до `until`)
+            "do_not_work": do_not_work.facts(company, only_active=False),
         },
     }
 

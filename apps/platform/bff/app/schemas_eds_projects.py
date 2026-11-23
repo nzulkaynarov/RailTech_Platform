@@ -12,6 +12,7 @@ from typing import Any, Literal, Self
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
 from app.errors import backend_unavailable
+from app.schemas_do_not_work import DoNotWork
 
 ProjectStage = Literal["CONTRACT", "PAYMENT", "DONE"]
 ClientStatus = Literal[
@@ -293,6 +294,7 @@ class ProjectCard(ProjectRow):
     fulfillment: ProjectFulfillment | None
     delivery_lines: list[ProjectDeliveryLine]
     journal: list[ProjectJournalEntry]
+    do_not_work: DoNotWork | None = None  # Х-8: полоса «С компанией не работаем»
 
 
 # --- тела действий ----------------------------------------------------------------------------
@@ -394,6 +396,7 @@ class RawCard(RawRow):
     fulfillment: RawFulfillment | None = None
     delivery_lines: list[ProjectDeliveryLine] = Field(default_factory=list)
     journal: list[ProjectJournalEntry] = Field(default_factory=list)
+    do_not_work: DoNotWork | None = None  # Х-8: отметка компании проекта
 
 
 def parse[T: BaseModel](model: type[T], body: Any, what: str) -> T:

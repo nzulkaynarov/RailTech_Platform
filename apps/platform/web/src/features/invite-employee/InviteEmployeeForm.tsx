@@ -10,6 +10,7 @@ import { useCreateEmployeeWithPassword } from "../temporary-password/useTemporar
 import { RoleCheckboxes } from "../assign-role/RoleCheckboxes";
 import { useRoles } from "../assign-role/useRoles";
 import { useEmployeeInvite } from "../assign-role/useEmployeeMutations";
+import { isStepUpError, useStepUp } from "../step-up/useStepUp";
 
 import "../assign-role/assign-role.css";
 
@@ -60,6 +61,7 @@ export function InviteEmployeeForm({
   const [delivery, setDelivery] = useState<Delivery>("mail");
   const deliveryId = useId();
   const [credentials, setCredentials] = useState<EmployeeCredentials | null>(null);
+  const stepUp = useStepUp();
   const create = useCreateEmployeeWithPassword();
   const invite = useEmployeeInvite((employee) => {
     void message.success(t("admin.org.invite.sent", { email: employee.email }));
@@ -99,6 +101,13 @@ export function InviteEmployeeForm({
             create.reset();
           },
           onError: (error) => {
+            // Роль при создании — выдача роли: нужен свежий код второго фактора (ДВ-4б)
+            if (
+              stepUp.ask(error, () => {
+                submit(values);
+              })
+            )
+              return;
             if (error instanceof ApiError && error.code === "EMAIL_EXISTS") {
               form.setFields([{ name: "email", errors: [t("admin.org.errors.EMAIL_EXISTS")] }]);
             }
@@ -111,6 +120,13 @@ export function InviteEmployeeForm({
       { data },
       {
         onError: (error) => {
+          if (
+            stepUp.ask(error, () => {
+              submit(values);
+            })
+          ) {
+            return;
+          }
           if (error instanceof ApiError && error.code === "EMAIL_EXISTS") {
             form.setFields([{ name: "email", errors: [t("admin.org.errors.EMAIL_EXISTS")] }]);
           } else if (error instanceof ApiError && error.details["invite"] === "not_sent") {
@@ -129,9 +145,11 @@ export function InviteEmployeeForm({
 
   const showRoleNote = rolesTouched && roles.length === 0;
   const failed = delivery === "password" ? create : invite;
+  const failure: unknown = failed.error;
   const fieldError =
     failed.isError &&
-    !(failed.error instanceof ApiError && failed.error.code === "EMAIL_EXISTS") &&
+    !isStepUpError(failure) &&
+    !(failure instanceof ApiError && failure.code === "EMAIL_EXISTS") &&
     notSent === null;
 
   if (credentials !== null) {
@@ -151,111 +169,116 @@ export function InviteEmployeeForm({
   }
 
   return (
-    <Form<Values>
-      // Своё имя формы — свои id полей: в мастере первого запуска рядом бывает форма компании с теми же полями
-      name="invite-employee"
-      form={form}
-      layout="vertical"
-      onFinish={submit}
-      onFinishFailed={() => {
-        setRolesTouched(true);
-      }}
-      className="pf-panel-stack"
-      style={{ gap: 16 }}
-    >
-      <Form.Item
-        name="name"
-        label={t("admin.org.invite.name")}
-        rules={[{ required: true, whitespace: true, message: t("admin.org.invite.nameRequired") }]}
-        style={{ margin: 0 }}
-      >
-        <Input maxLength={120} autoComplete="off" />
-      </Form.Item>
-      <Form.Item
-        name="email"
-        label={t("admin.org.invite.email")}
-        rules={[
-          { required: true, whitespace: true, message: t("admin.org.invite.emailRequired") },
-          { type: "email", message: t("admin.org.invite.emailInvalid") },
-        ]}
-        style={{ margin: 0 }}
-      >
-        <Input type="email" maxLength={254} autoComplete="off" inputMode="email" />
-      </Form.Item>
-      <Form.Item
-        name="position"
-        label={t("admin.org.invite.position")}
-        rules={[{ max: 120 }]}
-        required={false}
-        style={{ margin: 0 }}
-      >
-        <Input maxLength={120} autoComplete="off" />
-      </Form.Item>
-      <div role="radiogroup" aria-labelledby={deliveryId}>
-        <span id={deliveryId} style={{ display: "block", fontWeight: 600, marginBottom: 4 }}>
-          {t("admin.org.invite.delivery")}
-        </span>
-        <Radio.Group
-          value={delivery}
-          onChange={(event) => {
-            setDelivery(event.target.value as Delivery);
-          }}
-        >
-          <Space direction="vertical" size={4}>
-            <Radio value="mail">{t("admin.org.invite.deliveryMail")}</Radio>
-            <Radio value="password">{t("admin.org.invite.deliveryPassword")}</Radio>
-          </Space>
-        </Radio.Group>
-      </div>
-      <RoleCheckboxes
-        roles={companyRoles}
-        loading={rolesQuery.isPending}
-        error={rolesQuery.isError}
-        onRetry={() => {
-          void rolesQuery.refetch();
-        }}
-        value={roles}
-        onChange={(next) => {
-          setRoles(next);
+    <>
+      <Form<Values>
+        // Своё имя формы — свои id полей: в мастере первого запуска рядом бывает форма компании с теми же полями
+        name="invite-employee"
+        form={form}
+        layout="vertical"
+        onFinish={submit}
+        onFinishFailed={() => {
           setRolesTouched(true);
         }}
-        note={showRoleNote ? { id: noteId, text: t("admin.org.invite.needRole") } : null}
-      />
-      {notSent !== null ? (
-        <Alert
-          type="warning"
-          showIcon
-          role="alert"
-          message={t(
-            notSent.crmDown ? "admin.org.invite.notSentUnavailable" : "admin.org.invite.notSent",
-          )}
-          action={
-            notSent.id ? (
-              <Button
-                size="small"
-                onClick={() => {
-                  onOpenCard(notSent.id);
-                }}
-              >
-                {t("admin.org.invite.openCard")}
-              </Button>
-            ) : null
-          }
+        className="pf-panel-stack"
+        style={{ gap: 16 }}
+      >
+        <Form.Item
+          name="name"
+          label={t("admin.org.invite.name")}
+          rules={[
+            { required: true, whitespace: true, message: t("admin.org.invite.nameRequired") },
+          ]}
+          style={{ margin: 0 }}
+        >
+          <Input maxLength={120} autoComplete="off" />
+        </Form.Item>
+        <Form.Item
+          name="email"
+          label={t("admin.org.invite.email")}
+          rules={[
+            { required: true, whitespace: true, message: t("admin.org.invite.emailRequired") },
+            { type: "email", message: t("admin.org.invite.emailInvalid") },
+          ]}
+          style={{ margin: 0 }}
+        >
+          <Input type="email" maxLength={254} autoComplete="off" inputMode="email" />
+        </Form.Item>
+        <Form.Item
+          name="position"
+          label={t("admin.org.invite.position")}
+          rules={[{ max: 120 }]}
+          required={false}
+          style={{ margin: 0 }}
+        >
+          <Input maxLength={120} autoComplete="off" />
+        </Form.Item>
+        <div role="radiogroup" aria-labelledby={deliveryId}>
+          <span id={deliveryId} style={{ display: "block", fontWeight: 600, marginBottom: 4 }}>
+            {t("admin.org.invite.delivery")}
+          </span>
+          <Radio.Group
+            value={delivery}
+            onChange={(event) => {
+              setDelivery(event.target.value as Delivery);
+            }}
+          >
+            <Space direction="vertical" size={4}>
+              <Radio value="mail">{t("admin.org.invite.deliveryMail")}</Radio>
+              <Radio value="password">{t("admin.org.invite.deliveryPassword")}</Radio>
+            </Space>
+          </Radio.Group>
+        </div>
+        <RoleCheckboxes
+          roles={companyRoles}
+          loading={rolesQuery.isPending}
+          error={rolesQuery.isError}
+          onRetry={() => {
+            void rolesQuery.refetch();
+          }}
+          value={roles}
+          onChange={(next) => {
+            setRoles(next);
+            setRolesTouched(true);
+          }}
+          note={showRoleNote ? { id: noteId, text: t("admin.org.invite.needRole") } : null}
         />
-      ) : null}
-      {fieldError ? (
-        <Alert type="error" showIcon role="alert" message={employeeErrorText(t, failed.error)} />
-      ) : null}
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        <Button type="primary" htmlType="submit" block loading={failed.isPending}>
-          {delivery === "password"
-            ? t("admin.org.invite.submitPassword")
-            : t("admin.org.invite.submit")}
-        </Button>
-        <Button block onClick={onCancel}>
-          {t("admin.org.invite.cancel")}
-        </Button>
-      </div>
-    </Form>
+        {notSent !== null ? (
+          <Alert
+            type="warning"
+            showIcon
+            role="alert"
+            message={t(
+              notSent.crmDown ? "admin.org.invite.notSentUnavailable" : "admin.org.invite.notSent",
+            )}
+            action={
+              notSent.id ? (
+                <Button
+                  size="small"
+                  onClick={() => {
+                    onOpenCard(notSent.id);
+                  }}
+                >
+                  {t("admin.org.invite.openCard")}
+                </Button>
+              ) : null
+            }
+          />
+        ) : null}
+        {fieldError ? (
+          <Alert type="error" showIcon role="alert" message={employeeErrorText(t, failed.error)} />
+        ) : null}
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <Button type="primary" htmlType="submit" block loading={failed.isPending}>
+            {delivery === "password"
+              ? t("admin.org.invite.submitPassword")
+              : t("admin.org.invite.submit")}
+          </Button>
+          <Button block onClick={onCancel}>
+            {t("admin.org.invite.cancel")}
+          </Button>
+        </div>
+      </Form>
+      {stepUp.dialog}
+    </>
   );
 }

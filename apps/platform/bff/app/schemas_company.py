@@ -488,6 +488,9 @@ class QuoteDefaults(BaseModel):
     default_warranty_months: int | None
     catalog_price_visibility: Literal["cabinet", "on_request"]
     catalog_publish_threshold: int
+    # X-16: обязательные коды для публикации карточки (МХИК; ТН ВЭД ввозимого товара).
+    catalog_require_mxik: bool = True
+    catalog_require_hs_imported: bool = True
     fx_rate_max_age_days: int
     # Сроки (задача «Н3c»): подтверждение и окончание цен партнёров, пауза напоминаний об акте.
     offer_confirm_days: int
@@ -529,6 +532,8 @@ class QuoteDefaultsUpdate(Patch):
     default_warranty_months: int | None = Field(default=None, ge=0)
     catalog_price_visibility: Literal["cabinet", "on_request"] | None = None
     catalog_publish_threshold: int | None = Field(default=None, ge=1, le=100)
+    catalog_require_mxik: bool | None = None
+    catalog_require_hs_imported: bool | None = None
     fx_rate_max_age_days: int | None = Field(default=None, ge=1, le=90)
     offer_confirm_days: int | None = Field(default=None, ge=1, le=365)
     offer_expiring_days: int | None = Field(default=None, ge=1, le=90)
@@ -554,6 +559,8 @@ def to_quote_defaults(raw: Mapping[str, Any], visible_groups: Collection[str]) -
         "default_warranty_months": maybe_int(raw.get("default_warranty_months")),
         "catalog_price_visibility": visibility if visibility == "cabinet" else "on_request",
         "catalog_publish_threshold": whole(raw.get("catalog_publish_threshold"), 70),
+        "catalog_require_mxik": raw.get("catalog_require_mxik") is not False,
+        "catalog_require_hs_imported": raw.get("catalog_require_hs_imported") is not False,
         "fx_rate_max_age_days": whole(raw.get("fx_rate_max_age_days"), 7),
         "offer_confirm_days": whole(raw.get("offer_confirm_days"), 30),
         "offer_expiring_days": whole(raw.get("offer_expiring_days"), 14),

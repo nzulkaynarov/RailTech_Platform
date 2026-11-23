@@ -28,6 +28,7 @@ export type ListEdsDocumentsParams = {
    */
   q?: string;
   /**
+   * Курсор из `next_cursor`; привязан к порядку `sort`, при смене порядка начинают с первой страницы
    * @maxLength 2000
    */
   cursor?: string;
@@ -36,4 +37,9 @@ export type ListEdsDocumentsParams = {
    * @maximum 100
    */
   limit?: number;
+  /**
+   * Порядок щелчком по шапке (Х-15б): `number`, `subject`, `status`, `amount`, `created`; `-` в начале — по убыванию. Пустые значения (нет номера, нет суммы) — в конце, равные — по id. `number` и `subject` — строковый порядок: номер непрозрачен, число в нём не разбирается. Другое поле — 422. Не задан — от новых.
+   * @pattern ^-?(number|subject|status|amount|created)$
+   */
+  sort?: string;
 };

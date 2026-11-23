@@ -104,6 +104,10 @@ def _proxy(authed: Authed) -> EdsProxy:
 # --- список ---------------------------------------------------------------------------------------
 
 
+# Порядок (Х-15б): `field` — по возрастанию, `-field` — по убыванию; только поля из списка EDS.
+DOCUMENT_SORT = r"^-?(number|subject|status|amount|created)$"
+
+
 @router.get("/eds/documents", response_model=EdsDocumentPage, operation_id="listEdsDocuments")
 async def list_documents(
     authed: Reader,
@@ -114,9 +118,12 @@ async def list_documents(
     q: Annotated[str | None, Query(max_length=200)] = None,
     cursor: Annotated[str | None, Query(max_length=2000)] = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 50,
+    sort: Annotated[str | None, Query(pattern=DOCUMENT_SORT)] = None,
 ) -> EdsDocumentPage:
     proxy = _proxy(authed)
     params: dict[str, Any] = {"limit": limit}
+    if sort:
+        params["sort"] = sort  # тот же порядок у EDS; курсор привязан к нему
     if cursor:
         params["cursor"] = cursor
     if stage:

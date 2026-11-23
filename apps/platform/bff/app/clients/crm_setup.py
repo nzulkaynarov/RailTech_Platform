@@ -343,10 +343,15 @@ def _safe_json(response: httpx.Response) -> Any | None:
 
 
 async def create_user_with_password(
-    call: Call, payload: dict[str, Any], failure: Callable[[httpx.Response], PlatformError]
+    call: Call,
+    payload: dict[str, Any],
+    failure: Callable[[httpx.Response], PlatformError],
+    step_up: str | None = None,
 ) -> tuple[dict[str, Any], str]:
-    """`POST /users` CRM: пользователь и временный пароль «показывается один раз»."""
-    response = await call("crm", "POST", "/api/v1/users", json=payload)
+    """`POST /users` CRM: пользователь и временный пароль «показывается один раз». `step_up` —
+    свежий код второго фактора: роль при создании — выдача роли (ДВ-4б)."""
+    headers = {"X-Step-Up-Token": step_up} if step_up else None
+    response = await call("crm", "POST", "/api/v1/users", json=payload, headers=headers)
     if response.status_code != 201:
         raise failure(response)
     body = _safe_json(response)

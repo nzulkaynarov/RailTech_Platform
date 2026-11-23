@@ -28,6 +28,7 @@ from django.db import transaction
 from django.utils import timezone
 from inventory.access import StockError
 from inventory.services import stock
+from parties import do_not_work
 from supply.models import OrderLogKind, OrderStatus, SupplierOrder
 from supply.services import orders
 from supply.services.shortage import ordered_by_item
@@ -133,6 +134,7 @@ def provision_accepted_quote(quote) -> dict:
     ordered = ordered_by_item(shortage)
     groups: dict[int, tuple[Any, list[tuple[Any, int, Any]]]] = {}
     without: list[Any] = []
+    refused: dict[int, Any] = {}  # поставщики с отметкой «Не работать» (Х-8): строка идёт «без поставщика», резерв цел
     for item_id, missing in shortage.items():
         quantity = missing - ordered.get(item_id, 0)
         if quantity <= 0:
@@ -140,6 +142,9 @@ def provision_accepted_quote(quote) -> dict:
         item = items[item_id]
         offer = line_supplier_offer(item)
         supplier = _supplier_or_none(offer)
+        if supplier is not None and do_not_work.is_marked(do_not_work.fresh(supplier)):
+            refused[supplier.pk] = supplier
+            supplier = None
         if supplier is None:
             without.append((item, quantity))
             continue
@@ -166,12 +171,13 @@ def provision_accepted_quote(quote) -> dict:
             {"deal_id": deal.pk, "orders": summary["orders"]},
         )
     if without:
+        refusal_note = "".join(f" С поставщиком {supplier.name} не работаем." for supplier in refused.values())
         names = "; ".join(f"{item.imported_raw_name or item.product.name}: {quantity}" for item, quantity in without)
         stock._log_deal(
             deal,
             None,
             "Дефицит без поставщика",
-            names,
+            names + refusal_note,
             "supply.shortage_without_supplier",
             {"lines": len(without)},
         )
@@ -179,7 +185,7 @@ def provision_accepted_quote(quote) -> dict:
             deal,
             "Дефицит без поставщика",
             f"Проект {deal.number}: КП принято, у позиций нет предложения поставщика ({names}). Выберите поставщика: "
-            "Закупки · Новый заказ · На дефицит заявки.",
+            "Закупки · Новый заказ · На дефицит заявки." + refusal_note,
             "supply.shortage_without_supplier",
             {"deal_id": deal.pk, "lines": len(without)},
         )

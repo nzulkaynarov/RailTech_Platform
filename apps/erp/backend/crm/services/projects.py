@@ -21,6 +21,7 @@ from typing import Any, Optional
 from django.db import transaction
 from django.db.models import Q, QuerySet
 from django.utils import timezone
+from parties import do_not_work
 
 from core.currency import BASE_CURRENCY
 
@@ -647,6 +648,8 @@ def project_card(deal, user) -> dict:
         "fulfillment": _fulfillment_card(deal, user),
         "delivery_lines": _delivery_lines(deal),
         "journal": journal,
+        # Х-8: с компанией не работаем — полоса в карточке; документы в работе не отменяются
+        "do_not_work": do_not_work.facts(deal.company) if deal.company_id else None,
     }
 
 

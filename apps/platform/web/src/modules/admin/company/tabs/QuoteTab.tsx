@@ -47,7 +47,12 @@ const GROUPS: Record<QuoteGroup, readonly (keyof QuoteDefaults)[]> = {
     "default_client_contract_template",
     "default_partner_contract_template",
   ],
-  catalog: ["catalog_price_visibility", "catalog_publish_threshold"],
+  catalog: [
+    "catalog_price_visibility",
+    "catalog_publish_threshold",
+    "catalog_require_mxik",
+    "catalog_require_hs_imported",
+  ],
   taxes: ["default_cost_currency", "default_vat_rate", "fx_rate_max_age_days"],
   reminders: ["remind_overdue_invoices", "act_reminder_hours"],
 };
@@ -306,6 +311,28 @@ function QuoteForm({ defaults, group }: { defaults: QuoteDefaults; group: QuoteG
               precision={0}
               {...NUMBER}
             />
+          </Form.Item>
+        ) : null}
+        {shows("catalog_require_mxik") ? (
+          <Form.Item
+            name="catalog_require_mxik"
+            label={t("quote.requireMxik")}
+            extra={t("quote.requireMxikHint")}
+            valuePropName="checked"
+            className="pf-co-wide"
+          >
+            <Switch />
+          </Form.Item>
+        ) : null}
+        {shows("catalog_require_hs_imported") ? (
+          <Form.Item
+            name="catalog_require_hs_imported"
+            label={t("quote.requireHs")}
+            extra={t("quote.requireHsHint")}
+            valuePropName="checked"
+            className="pf-co-wide"
+          >
+            <Switch />
           </Form.Item>
         ) : null}
         {shows("fx_rate_max_age_days") ? (

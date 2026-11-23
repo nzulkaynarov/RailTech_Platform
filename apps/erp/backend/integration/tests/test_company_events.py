@@ -41,6 +41,7 @@ def test_a_change_of_requisites_of_a_crm_company_publishes_a_full_snapshot():
         "registration_number": None,
         "country": "UZ",
         "legal_address": "Ташкент",
+        "do_not_work": None,
         "updated_at": data["company"]["updated_at"],
     }
 

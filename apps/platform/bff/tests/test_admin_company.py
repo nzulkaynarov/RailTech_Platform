@@ -1049,6 +1049,8 @@ def settings_json(**extra: Any) -> dict[str, Any]:
         "default_warranty_months": 12,
         "catalog_price_visibility": "cabinet",
         "catalog_publish_threshold": 70,
+        "catalog_require_mxik": True,
+        "catalog_require_hs_imported": False,
         "fx_rate_max_age_days": 7,
         "offer_confirm_days": 30,
         "offer_expiring_days": 10,
@@ -1078,6 +1080,8 @@ async def test_quote_defaults_director_sees_margins(
     assert "doc_number_prefix" not in body
     # сроки — настройки компании (задача «Н3c»)
     assert (body["offer_expiring_days"], body["act_reminder_hours"]) == (10, 48)
+    # обязательные коды для публикации карточки (X-16)
+    assert (body["catalog_require_mxik"], body["catalog_require_hs_imported"]) == (True, False)
 
 
 async def test_quote_defaults_administrator_does_not_get_margin_fields(
@@ -1130,7 +1134,12 @@ async def test_quote_defaults_patch_sends_codes_and_returns_masked_result(
     response = await web.send(
         "PATCH",
         "/api/v1/admin/company/quote-defaults",
-        json={"default_cost_currency": "UZS", "default_vat_rate": "15", "payment_terms_days": None},
+        json={
+            "default_cost_currency": "UZS",
+            "default_vat_rate": "15",
+            "payment_terms_days": None,
+            "catalog_require_mxik": False,
+        },
     )
 
     assert response.status_code == 200
@@ -1139,6 +1148,7 @@ async def test_quote_defaults_patch_sends_codes_and_returns_masked_result(
         "default_cost_currency": "UZS",
         "default_vat_rate": "15",
         "payment_terms_days": None,
+        "catalog_require_mxik": False,
     }
     assert response.json()["default_cost_currency"] == "UZS"
     assert "min_margin_percent" not in response.json()

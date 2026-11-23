@@ -13,6 +13,7 @@ import { LegalPage } from "./legal/LegalPage";
 import { OrgPage } from "./org/OrgPage";
 import { RolesPage } from "./roles/RolesPage";
 import { SigningPage } from "./signing/SigningPage";
+import { ZonesPage } from "./zones/ZonesPage";
 import { DictionariesPage } from "./settings/DictionariesPage";
 import {
   AiSpendPage,
@@ -37,6 +38,7 @@ const PAGES: Readonly<Record<string, ComponentType>> = {
   overview: SettingsHome,
   roles: RolesPage,
   signing: SigningPage,
+  zones: ZonesPage,
   company: CompanyPage,
   numbering: NumberingPage,
   taxes: TaxesPage,

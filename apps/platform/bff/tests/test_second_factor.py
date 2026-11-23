@@ -48,7 +48,11 @@ async def test_password_step_gives_a_challenge_without_session(
 
     assert response.status_code == 202
     check(response, "/auth/login", "post")
-    assert response.json() == {"second_factor_required": True, "challenge": "ch-1"}
+    assert response.json() == {
+        "second_factor_required": True,
+        "challenge": "ch-1",
+        "enrollment_required": False,
+    }
     assert not web.redis.session_keys()
     assert "rt_pf_session" not in response.headers.get("set-cookie", "")
 

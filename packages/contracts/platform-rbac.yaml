@@ -455,6 +455,9 @@ menu:
     overview: [admin]
     org: [admin]
     roles: [admin]
+    # ЕВ-З: «Зоны ответственности» — реестр «зона → ответственный → замещающий → куратор»; видит `admin` (директор — на чтение),
+    # людей назначает `company.settings: full` (в странице, не в меню).
+    zones: [admin]
     # SIGN-2: «Права подписи» — реестр полномочий подписи (ADR-0024); открывает раздел `eds.signing.manage`.
     signing: [eds.signing.manage]
     company: [company.settings]

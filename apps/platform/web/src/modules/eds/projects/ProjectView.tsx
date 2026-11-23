@@ -11,6 +11,7 @@ import { useGetEdsProject } from "../../../shared/api/generated/platform-bff";
 import { useDocumentTitle } from "../../../shared/lib/useDocumentTitle";
 import { useFormat } from "../../../shared/lib/useFormat";
 import { DefinitionList } from "../../../shared/ui/DefinitionList";
+import { DoNotWorkStrip } from "../../../shared/ui/DoNotWorkStrip";
 import { DocList, DocRow } from "../../../shared/ui/DocRow";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { QueryState } from "../../../shared/ui/FormParts";
@@ -312,6 +313,7 @@ function Content({ card, objectId }: { card: ProjectCard; objectId: string }) {
           </div>
         }
       />
+      <DoNotWorkStrip mark={card.do_not_work} />
       <section className="pf-card pf-dec-steps" aria-label={t("card.steps")}>
         <RequestSteps stage={card.step} number={card.request_number} />
       </section>

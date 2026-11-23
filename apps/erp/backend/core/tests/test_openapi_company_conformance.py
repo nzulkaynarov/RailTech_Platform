@@ -35,6 +35,8 @@ def test_company_settings_patch_describes_codes_bff_sends(admin, company):
         "default_warranty_months": 12,
         "catalog_price_visibility": "cabinet",
         "catalog_publish_threshold": 70,
+        "catalog_require_mxik": False,
+        "catalog_require_hs_imported": False,
         "fx_rate_max_age_days": 7,
         "doc_number_prefix": "D20",
     }
@@ -42,6 +44,7 @@ def test_company_settings_patch_describes_codes_bff_sends(admin, company):
     response = admin.patch(f"{API}accounts/companies/{company.id}/settings/", body, format="json")
     conforms(response, template, "patch", status=200)
     assert response.json()["default_cost_currency_code"] == "USD"
+    assert response.json()["catalog_require_mxik"] is False and response.json()["catalog_require_hs_imported"] is False
     conforms(admin.get(f"{API}accounts/companies/{company.id}/settings/"), template, "get", status=200)
 
 
@@ -201,3 +204,12 @@ def test_setup_status_and_me(admin, company):
     conforms(status, f"{API}setup/status/", "get", status=200)
     assert status.json()["own_company_id"] == company.id
     conforms(admin.get(f"{API}accounts/me/"), f"{API}accounts/me/", "get", status=200)
+
+
+def test_required_codes_flags_default_on_and_accept_only_booleans(admin, company):
+    """X-16: МХИК и ТН ВЭД ввозимого обязательны по умолчанию; в PATCH — только `true` / `false`."""
+    url = f"{API}accounts/companies/{company.id}/settings/"
+    body = admin.get(url).json()
+    assert body["catalog_require_mxik"] is True and body["catalog_require_hs_imported"] is True
+    refused = admin.patch(url, {"catalog_require_mxik": "no"}, format="json")
+    assert refused.status_code == 400 and refused.json() == {"detail": "BAD_BOOLEAN"}

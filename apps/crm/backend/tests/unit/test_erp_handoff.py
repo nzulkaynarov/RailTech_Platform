@@ -26,6 +26,7 @@ from app.integrations.erp import (
     handoff_payload_to_dict,
 )
 from app.security.secrets_store import SecretsStore
+from app.services import erp_handoff
 
 
 class _DummyStore(SecretsStore):
@@ -186,6 +187,22 @@ async def test_handoff_client_inn_conflict_is_a_permanent_conflict_error() -> No
         with pytest.raises(ConflictError) as exc_info:
             await client.handoff_client(_sample_payload())
     assert exc_info.value.details["reason"] == Reason.ERP_INN_CONFLICT.value
+
+
+@pytest.mark.asyncio
+async def test_handoff_client_do_not_work_keeps_its_own_failure_code() -> None:
+    """Х-8: 409 `COMPANY_DO_NOT_WORK` — код `erp_company_do_not_work` в карточке, не «ответ ERP»."""
+    config = Settings(erp_base_url="https://erp.internal", erp_service_token="test-token")
+    client = HttpxErpClient(_DummyStore("test-token"), config)
+
+    with respx.mock:
+        respx.post("https://erp.internal/api/integration/v1/clients/handoff").respond(
+            409, json={"detail": "COMPANY_DO_NOT_WORK"}
+        )
+        with pytest.raises(ConflictError) as exc_info:
+            await client.handoff_client(_sample_payload())
+    assert exc_info.value.details["failure_code"] == "erp_company_do_not_work"
+    assert erp_handoff._code(exc_info.value) == "erp_company_do_not_work"
 
 
 @pytest.mark.asyncio

@@ -163,6 +163,18 @@ class CompanySettings(models.Model):
         verbose_name=_("Порог публикации (%)"),
         help_text=_("Минимальная полнота карточки, при которой её можно опубликовать."),
     )
+    #: X-16: что обязательно для публикации карточки — МХИК у позиции, которую продаём, ТН ВЭД у ввозимой. Проверяет
+    #: `catalog.completeness` при публикации; уже опубликованные карточки остаются, проверка — при следующей публикации.
+    catalog_require_mxik = models.BooleanField(
+        default=True,
+        verbose_name=_("МХИК обязателен для публикации"),
+        help_text=_("Карточку без кода МХИК (ИКПУ) опубликовать нельзя: он нужен в счёте-фактуре."),
+    )
+    catalog_require_hs_imported = models.BooleanField(
+        default=True,
+        verbose_name=_("ТН ВЭД обязателен для ввозимого товара"),
+        help_text=_("Товар не из Узбекистана (или страна не указана) без кода ТН ВЭД опубликовать нельзя."),
+    )
     #: PART-2: через сколько дней без подтверждения цена поставщика считается устаревшей (признак «устарела» в кабинете партнёра).
     offer_confirm_days = models.PositiveSmallIntegerField(
         default=DEFAULT_OFFER_CONFIRM_DAYS,

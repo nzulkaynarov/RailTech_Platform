@@ -86,6 +86,7 @@ if TYPE_CHECKING:
     from app.services.platform_roles import PlatformRoleService
     from app.services.portal_invites import PortalInviteService
     from app.services.request_retry import RequestRetryService
+    from app.services.responsibility_zones import ResponsibilityZoneService
     from app.services.sandbox import SandboxService
     from app.services.second_factor import SecondFactorService
     from app.services.setup import SetupService
@@ -287,6 +288,13 @@ class Container:
         from app.services.platform_roles import PlatformRoleService
 
         return PlatformRoleService(self.session_factory, erp_sync=_enqueue_erp_sync)
+
+    @cached_property
+    def responsibility_zone_service(self) -> "ResponsibilityZoneService":
+        """Реестр зон ответственности (ЕВ-З): люди зон, проблемы по фактам, журнал."""
+        from app.services.responsibility_zones import ResponsibilityZoneService
+
+        return ResponsibilityZoneService(self.session_factory)
 
     @cached_property
     def erp_access_service(self) -> "ErpAccessService":

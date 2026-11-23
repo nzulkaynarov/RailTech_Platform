@@ -164,6 +164,9 @@ _BACKEND_CODES: dict[int, str] = {
 }
 
 
+STEP_UP = "step_up_required"  # код отказа CRM: нужен свежий код второго фактора (ДВ-4б)
+
+
 def backend_code(response: httpx.Response) -> str | None:
     """Код ошибки бэкенда: у CRM `code` в теле, у ERP `detail`."""
     try:
@@ -208,6 +211,20 @@ def from_backend(source: Source, response: httpx.Response) -> PlatformError:
     code = _BACKEND_CODES.get(response.status_code)
     if code is None:
         return backend_unavailable(source, f"HTTP {response.status_code}")
+    if response.status_code == status.HTTP_403_FORBIDDEN and backend_code(response) == STEP_UP:
+        # ДВ-4б: чувствительному действию нужен свежий код второго фактора; `details.reason`
+        # = `second_factor_not_enrolled` — фактор ещё не включён (сначала включить в профиле).
+        return PlatformError(
+            "STEP_UP_REQUIRED",
+            "Введите свежий код из приложения-аутентификатора.",
+            status_code=403,
+            source=source,
+            details={
+                "backend_status": 403,
+                "backend_code": STEP_UP,
+                **({"reason": r} if (r := backend_reason(response)) else {}),
+            },
+        )
     message = _MESSAGES[code]
     details: dict[str, Any] = {"backend_status": response.status_code}
     if (b_code := backend_code(response)) is not None:

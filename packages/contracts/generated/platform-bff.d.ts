@@ -22,8 +22,52 @@ export interface paths {
      *     `SecondFactorChallenge` без сессии; код — `POST /auth/login/second-factor`. С меткой `pf_device` (HttpOnly,
      *     путь `/api/v1/auth`, 30 дней — ставит второй шаг с `remember_device`) код не спрашивается, пока не сменились
      *     пароль и сам фактор.
+     *
+     *     Обязательный фактор (ДВ-4б): у держателя разделов с деньгами и доступом (полные `eds.payments`, `eds.memo.approve`,
+     *     `eds.drafts`, `admin` — по разделам, не по названию роли) без настроенного фактора ответ — тоже 202 с
+     *     `enrollment_required = true`: сессии нет, настройка — `POST /auth/login/enroll/setup` и `POST /auth/login/enroll`.
      */
     post: operations["login"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/auth/login/enroll/setup": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Настройка обязательного второго фактора при входе — секрет и адрес для QR (ДВ-4б)
+     * @description Без сессии: `challenge` из ответа 202 на `/auth/login` с `enrollment_required` (живёт 15 минут). Секрет для приложения-аутентификатора и адрес `otpauth://`; запись подписана названием компании. Время вышло — 401 `SECOND_FACTOR_EXPIRED`, войти заново. Тот же лимит попыток по IP, что у входа.
+     */
+    post: operations["loginEnrollSetup"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/auth/login/enroll": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Включить обязательный второй фактор кодом и войти (ДВ-4б)
+     * @description Без сессии: `challenge` и код из приложения. Код включает фактор и открывает сессию одной операцией; ответ — сессия и восемь резервных кодов, показываются один раз (`Cache-Control: no-store`). Неверный код — 401 `SECOND_FACTOR_INVALID` (неверные коды считает CRM: после десяти — 423 `ACCOUNT_LOCKED`); время вышло — 401 `SECOND_FACTOR_EXPIRED`.
+     */
+    post: operations["loginEnroll"];
     delete?: never;
     options?: never;
     head?: never;
@@ -315,7 +359,7 @@ export interface paths {
     };
     /**
      * Второй фактор входа — состояние (ДВ-4)
-     * @description Свой фактор; доступно каждому вошедшему сотруднику (CRM `/me/second-factor`).
+     * @description Свой фактор; доступно каждому вошедшему сотруднику (CRM `/me/second-factor`). `required` — фактор обязателен по разделам доступа сотрудника (ДВ-4б).
      */
     get: operations["getSecondFactor"];
     put?: never;
@@ -366,6 +410,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/me/second-factor/step-up": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Свежий код перед чувствительным действием (ДВ-4б)
+     * @description Верный код приложения или резервный даёт токен на 5 минут — его фронт шлёт заголовком `X-Step-Up-Token` при выдаче роли и подтверждении новых банковских реквизитов. Неверный код — 422 `VALIDATION_FAILED` (`second_factor_code_invalid`) и в счёт блокировки; фактор не включён — 403 `STEP_UP_REQUIRED` (`details.reason = second_factor_not_enrolled`).
+     */
+    post: operations["stepUpSecondFactor"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/me/second-factor/disable": {
     parameters: {
       query?: never;
@@ -377,7 +441,7 @@ export interface paths {
     put?: never;
     /**
      * Выключить второй фактор (ДВ-4)
-     * @description Кодом из приложения или резервным. Неверный — 422 `VALIDATION_FAILED` (`second_factor_code_invalid`).
+     * @description Кодом из приложения или резервным (он же «свежий код»). Неверный — 422 `VALIDATION_FAILED` (`second_factor_code_invalid`). Фактор обязателен по разделам доступа (`required` в состоянии) — 409 `CONFLICT` (`details.reason = second_factor_required`), отключить нельзя (ДВ-4б).
      */
     post: operations["disableSecondFactor"];
     delete?: never;
@@ -2458,7 +2522,7 @@ export interface paths {
     put?: never;
     /**
      * Счета и оплаты · Смена реквизитов: подтвердить
-     * @description ERP `POST finance/bank-changes/{id}/approve/` — право `finance.payment`. Применяет новые реквизиты компании и уведомляет её администраторов и основной контакт по всем каналам. Повтор на подтверждённом запросе — тот же ответ без второго эффекта. Отклонённый запрос — 409 `bank_change_not_pending`; компания в архиве — 409 `company_archived`; реквизиты изменились после подачи — 409 `bank_change_stale`.
+     * @description ERP `POST finance/bank-changes/{id}/approve/` — право `finance.payment`. Нужен свежий код второго фактора (заголовок `X-Step-Up-Token`, ДВ-4б) — без него 403 `STEP_UP_REQUIRED`, ERP не вызывается. Применяет новые реквизиты компании и уведомляет её администраторов и основной контакт по всем каналам. Повтор на подтверждённом запросе — тот же ответ без второго эффекта. Отклонённый запрос — 409 `bank_change_not_pending`; компания в архиве — 409 `company_archived`; реквизиты изменились после подачи — 409 `bank_change_stale`.
      */
     post: operations["approveBankChangeRequest"];
     delete?: never;
@@ -3962,9 +4026,29 @@ export interface paths {
     put?: never;
     /**
      * Добавить сотрудника без почты — временный пароль показывается один раз
-     * @description Раздел `admin` — полный. Для тех, кому письмо не придёт (почта ещё не подключена, у сотрудника нет почты на этом адресе). BFF создаёт пользователя в CRM с ролями Платформы (CRM `/users`) и отдаёт **временный пароль в этом ответе — единственный раз**: BFF не пишет его в журнал, не кэширует и не хранит; ответ — `Cache-Control: no-store`. Сотрудник при первом входе обязан сменить пароль. Потерянный пароль не восстановить — выдать новый: `POST /admin/users/{id}/temporary-password`.
+     * @description Раздел `admin` — полный. Для тех, кому письмо не придёт (почта ещё не подключена, у сотрудника нет почты на этом адресе). Роль при создании — выдача роли: нужен свежий код второго фактора (`X-Step-Up-Token`, ДВ-4б). BFF создаёт пользователя в CRM с ролями Платформы (CRM `/users`) и отдаёт **временный пароль в этом ответе — единственный раз**: BFF не пишет его в журнал, не кэширует и не хранит; ответ — `Cache-Control: no-store`. Сотрудник при первом входе обязан сменить пароль. Потерянный пароль не восстановить — выдать новый: `POST /admin/users/{id}/temporary-password`.
      */
     post: operations["createEmployee"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/users/{id}/second-factor/reset": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Сбросить сотруднику второй фактор (потерян телефон; ДВ-4б)
+     * @description Раздел `admin` — полный. Причина (от 3 знаков) пишется в журнал CRM, сессии сотрудника закрываются, при следующем входе он настраивает фактор заново (если он обязателен по его разделам) или входит по паролю. Себе — 409 `CONFLICT` (`details.reason = second_factor_self_reset`): свой фактор сбрасывает другой администратор. Фактор не включён — 422.
+     */
+    post: operations["resetEmployeeSecondFactor"];
     delete?: never;
     options?: never;
     head?: never;
@@ -3982,7 +4066,7 @@ export interface paths {
     put?: never;
     /**
      * Пригласить сотрудника по почте
-     * @description BFF создаёт пользователя в CRM с ролями Платформы (`role_ids`) и отправляет приглашение (CRM `/users`, `/users/{id}/invite`); провижининг в ERP делает CRM. Раздел `admin` — полный. Письмо не ушло — 409 `CONFLICT` с `details.invite = not_sent` и `details.employee_id` (сотрудник создан; повтор — `POST /admin/users/{id}/invite`).
+     * @description Роль при создании — выдача роли: нужен свежий код второго фактора (`X-Step-Up-Token`, ДВ-4б). BFF создаёт пользователя в CRM с ролями Платформы (`role_ids`) и отправляет приглашение (CRM `/users`, `/users/{id}/invite`); провижининг в ERP делает CRM. Раздел `admin` — полный. Письмо не ушло — 409 `CONFLICT` с `details.invite = not_sent` и `details.employee_id` (сотрудник создан; повтор — `POST /admin/users/{id}/invite`).
      */
     post: operations["inviteEmployee"];
     delete?: never;
@@ -4067,7 +4151,7 @@ export interface paths {
     head?: never;
     /**
      * Роли, должность, отключение — единое место выдачи ролей обеих систем
-     * @description Раздел `admin` — полный. Роли — полный новый набор `role_ids`; права в CRM и ERP вычисляет CRM. Снять последнего активного администратора или директора (роль или отключение) нельзя — 409 `LAST_ADMIN` / `LAST_DIRECTOR`. У сотрудника есть лиды в работе, а изменение отнимает у него работу с лидами, — 409 `CONFLICT` с `details.reason = user_has_active_leads`; повтор с `transfer_to_user_id` передаёт лиды коллеге. Пустой набор ролей — 422 `ROLES_REQUIRED` (0.6.0): у сотрудника хотя бы одна роль, закрыть доступ — `is_active = false`.
+     * @description Раздел `admin` — полный. Роли — полный новый набор `role_ids`; права в CRM и ERP вычисляет CRM. Выдача роли (появилась роль, которой не было) требует свежий код второго фактора (`X-Step-Up-Token`, ДВ-4б) — иначе 403 `STEP_UP_REQUIRED`; снятие роли и прочие правки кода не требуют. Снять последнего активного администратора или директора (роль или отключение) нельзя — 409 `LAST_ADMIN` / `LAST_DIRECTOR`. У сотрудника есть лиды в работе, а изменение отнимает у него работу с лидами, — 409 `CONFLICT` с `details.reason = user_has_active_leads`; повтор с `transfer_to_user_id` передаёт лиды коллеге. Пустой набор ролей — 422 `ROLES_REQUIRED` (0.6.0): у сотрудника хотя бы одна роль, закрыть доступ — `is_active = false`.
      */
     patch: operations["updateEmployee"];
     trace?: never;
@@ -4159,6 +4243,111 @@ export interface paths {
      * @description Не присланное поле не меняется (кроме `version` нужно хотя бы одно — иначе 422); `version` — обязательная версия роли, которую видел клиент. Права сотрудников с этой ролью CRM пересчитывает сразу (CRM) и фоном (ERP). Системную роль изменить нельзя — 409 `ROLE_SYSTEM`; изменение, после которого не остаётся ни одного администратора, — 409 `LAST_ADMIN`; роль изменена после чтения клиентом — 409 `CONFLICT` с `details.reason = role_version_conflict` (SPA предлагает обновить страницу).
      */
     patch: operations["updateRole"];
+    trace?: never;
+  };
+  "/admin/responsibility-zones": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Зоны ответственности (Настройки · Люди и доступ) — с людьми и проблемами по фактам
+     * @description Реестр «зона → ответственный → замещающий → куратор» (ЕВ-З): каждая зона — запись с основанием, сроком и журналом изменений в CRM. `problems` считается при каждом чтении: нет ответственного, у ответственного нет разделов зоны (`severity = warning`, не запрет), ответственный или замещающий не действует, срок вышел. Раздел `admin` — от чтения (администратор и директор). Зоны не маршрутизируют уведомления и согласования.
+     */
+    get: operations["listResponsibilityZones"];
+    put?: never;
+    /**
+     * Завести зону из существующих разделов прав
+     * @description Только `admin: full`. Разделы — из каталога прав, неизвестный — 422; повтор `code` — 409 `CONFLICT`.
+     */
+    post: operations["createResponsibilityZone"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/responsibility-zones/summary": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Сколько действующих зон без ответственного — для сигналов Настроек и Главной
+     * @description Раздел `company.settings: full` (администратор и директор); без списка людей.
+     */
+    get: operations["getResponsibilityZonesSummary"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/responsibility-zones/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Зона ответственности */
+    get: operations["getResponsibilityZone"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /**
+     * Назначить ответственного, замещающего и куратора, указать основание и срок
+     * @description Раздел `company.settings: full` (администратор и директор). Не присланное поле не меняется, `null` снимает значение. Сотрудник должен действовать, замещающий — другой человек, чем ответственный (422); у выключенной зоны людей не меняют — 409 `CONFLICT`. Каждое изменение пишется в журнал CRM с «до» и «после».
+     */
+    patch: operations["updateResponsibilityZone"];
+    trace?: never;
+  };
+  "/admin/responsibility-zones/{id}/deactivate": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Выключить зону — не удаляется, назначения и журнал остаются
+     * @description Только `admin: full`. У выключенной зоны проблем нет, в сигналах она не считается.
+     */
+    post: operations["deactivateResponsibilityZone"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/responsibility-zones/{id}/activate": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Включить выключенную зону
+     * @description Только `admin: full`.
+     */
+    post: operations["activateResponsibilityZone"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
     trace?: never;
   };
   "/admin/roles/{id}/journal": {
@@ -8032,6 +8221,30 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/people/counterparties/{id}/do-not-work": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Карточка контрагента: «Не работать»
+     * @description ERP `POST parties/organizations/{id}/do-not-work/` (Х-8). Причина обязательна, дата окончания по желанию; повторная отметка заменяет прежнюю. Новые КП, договор, заказ поставщику и заявка у такой компании ERP отказывает 409 `CONFLICT` (`details.reason = company_do_not_work`, `details.do_not_work` — причина и кто отметил); приглашения её контактов в кабинет не уходят; документы в работе не отменяются. Отметка попадает в журнал и в CRM снимком компании. Раздел `crm.clients` или `erp.stock` — полный; в ERP — право `deal.manage` или `supply.manage`, иначе 403.
+     */
+    post: operations["setCounterpartyDoNotWork"];
+    /**
+     * Карточка контрагента: «Снова работать»
+     * @description ERP `DELETE parties/organizations/{id}/do-not-work/` (Х-8): снять отметку; повтор безопасен. Тот же доступ, что у «Не работать». Запись в журнале и снимок в CRM — как при установке.
+     */
+    delete: operations["clearCounterpartyDoNotWork"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/people/counterparties/{id}/roles": {
     parameters: {
       query?: never;
@@ -8794,7 +9007,7 @@ export interface components {
   schemas: {
     Error: {
       /**
-       * @description Стабильный код (`INVALID_CREDENTIALS`, `SESSION_EXPIRED`, `CSRF_FAILED`, `FORBIDDEN`, `NOT_FOUND`, `VALIDATION_FAILED`, `TOO_MANY_REQUESTS`, `BACKEND_UNAVAILABLE`, `NO_PLATFORM_ROLE`, `USER_DISABLED`, `ACCOUNT_LOCKED`, `CONFLICT`, `WRONG_PASSWORD`, `EMAIL_EXISTS`, `LAST_ADMIN`, `LAST_DIRECTOR`, `ROLE_IN_USE`, `ROLE_SYSTEM`, `ROLES_REQUIRED`, `NOT_CONFIGURED`, `SECRETS_KEY_MISSING`, `SERVICE_NOT_SWITCHABLE`, `INTEGRATION_FAILED`, `PAYLOAD_TOO_LARGE`, `UNSUPPORTED_MEDIA_TYPE`, `COMPANY_NOT_SET`, `SETUP_DONE`, `SETUP_CODE_INVALID`, `SETUP_CODE_EXPIRED`, `SETUP_LOCKED`, `OWN_COMPANY_ALREADY_EXISTS`, `ERP_NOT_CONNECTED`, `INTERNAL_ERROR`, `BAD_REQUEST`, `METHOD_NOT_ALLOWED`, `HTTP_<статус>`)
+       * @description Стабильный код (`INVALID_CREDENTIALS`, `SESSION_EXPIRED`, `CSRF_FAILED`, `FORBIDDEN`, `NOT_FOUND`, `VALIDATION_FAILED`, `TOO_MANY_REQUESTS`, `BACKEND_UNAVAILABLE`, `NO_PLATFORM_ROLE`, `USER_DISABLED`, `ACCOUNT_LOCKED`, `CONFLICT`, `WRONG_PASSWORD`, `EMAIL_EXISTS`, `LAST_ADMIN`, `LAST_DIRECTOR`, `ROLE_IN_USE`, `ROLE_SYSTEM`, `ROLES_REQUIRED`, `STEP_UP_REQUIRED`, `NOT_CONFIGURED`, `SECRETS_KEY_MISSING`, `SERVICE_NOT_SWITCHABLE`, `INTEGRATION_FAILED`, `PAYLOAD_TOO_LARGE`, `UNSUPPORTED_MEDIA_TYPE`, `COMPANY_NOT_SET`, `SETUP_DONE`, `SETUP_CODE_INVALID`, `SETUP_CODE_EXPIRED`, `SETUP_LOCKED`, `OWN_COMPANY_ALREADY_EXISTS`, `ERP_NOT_CONNECTED`, `INTERNAL_ERROR`, `BAD_REQUEST`, `METHOD_NOT_ALLOWED`, `HTTP_<статус>`)
        * @example SESSION_EXPIRED
        */
       code: string;
@@ -9051,6 +9264,89 @@ export interface components {
       employees: number;
       /** Format: date-time */
       updated_at: string;
+    };
+    ZoneText: {
+      ru: string;
+      /** @description Латиница нового алфавита (Ö Ğ Ş Ç, ʼ) */
+      uz: string;
+      en: string;
+    };
+    ZonePerson: {
+      /** @description `crm_user_id` сотрудника */
+      id: string;
+      name: string;
+      position?: string;
+      /** @description Сотрудник действует (не отключён) */
+      active: boolean;
+    };
+    ZoneProblem: {
+      /** @enum {string} */
+      code:
+        | "no_responsible"
+        | "responsible_lacks_permissions"
+        | "responsible_inactive"
+        | "deputy_inactive"
+        | "term_expired";
+      /**
+       * @description `warning` — только «у ответственного нет разделов зоны»: не запрет, а подсказка
+       * @enum {string}
+       */
+      severity: "problem" | "warning";
+      /** @description Ключи разделов каталога, которых не хватает ответственному (только `responsible_lacks_permissions`) */
+      sections?: string[];
+    };
+    Zone: {
+      id: string;
+      /** @description Стабильный слаг зоны (не меняется) */
+      code: string;
+      name: components["schemas"]["ZoneText"];
+      description: components["schemas"]["ZoneText"];
+      /** @description Ключи разделов каталога прав, к которым относится зона */
+      sections: string[];
+      responsible?: components["schemas"]["ZonePerson"];
+      deputy?: components["schemas"]["ZonePerson"];
+      curator?: components["schemas"]["ZonePerson"];
+      /** @description Основание назначения — номер и дата приказа */
+      basis: string;
+      /** Format: date */
+      valid_from?: string;
+      /** Format: date */
+      valid_to?: string;
+      active: boolean;
+      problems: components["schemas"]["ZoneProblem"][];
+      /** Format: date-time */
+      updated_at: string;
+    };
+    ZoneList: {
+      items: components["schemas"]["Zone"][];
+    };
+    ZoneSummary: {
+      zones_total: number;
+      /** @description Действующих зон без действующего ответственного */
+      without_responsible: number;
+      with_problems: number;
+    };
+    ZoneCreate: {
+      code: string;
+      name: components["schemas"]["ZoneText"];
+      description?: {
+        ru?: string;
+        uz?: string;
+        en?: string;
+      };
+      /** @description Ключи разделов каталога прав */
+      sections: string[];
+    };
+    /** @description Не присланное поле не меняется, `null` снимает значение */
+    ZoneUpdate: {
+      responsible_id?: string | null;
+      deputy_id?: string | null;
+      curator_id?: string | null;
+      basis?: string | null;
+      /** Format: date */
+      valid_from?: string | null;
+      /** Format: date */
+      valid_to?: string | null;
     };
     RoleList: {
       items: components["schemas"]["Role"][];
@@ -10066,8 +10362,39 @@ export interface components {
     SecondFactorChallenge: {
       /** @enum {boolean} */
       second_factor_required: true;
-      /** @description Непрозрачная строка на 5 минут для `/auth/login/second-factor` */
+      /** @description Непрозрачная строка на 5 минут для `/auth/login/second-factor`; при `enrollment_required` — на 15 минут для `/auth/login/enroll/*` */
       challenge: string;
+      /**
+       * @description ДВ-4б: фактор обязателен по разделам доступа, но не настроен — экран настройки вместо ввода кода
+       * @default false
+       */
+      enrollment_required: boolean;
+    };
+    EnrollSetupIn: {
+      challenge: string;
+    };
+    EnrollIn: {
+      challenge: string;
+      /** @description 6 цифр из приложения */
+      code: string;
+    };
+    /** @description Сессия (как `Session`) после настройки обязательного фактора при входе; резервные коды показываются один раз */
+    EnrolledSession: {
+      me: components["schemas"]["Me"];
+      must_change_password: boolean;
+      /** Format: date-time */
+      expires_at: string;
+      backup_codes: string[];
+    };
+    StepUp: {
+      /** @description Для заголовка `X-Step-Up-Token` */
+      token: string;
+      /** @description Секунды (300) */
+      expires_in: number;
+    };
+    SecondFactorResetIn: {
+      /** @description Причина — в журнале */
+      reason: string;
     };
     SecondFactorLoginIn: {
       challenge: string;
@@ -10098,6 +10425,11 @@ export interface components {
       /** Format: date-time */
       enabled_at: string | null;
       backup_codes_left: number;
+      /**
+       * @description ДВ-4б: фактор обязателен по разделам доступа — отключить нельзя
+       * @default false
+       */
+      required: boolean;
     };
     SecondFactorSetup: {
       /** @description Ключ для ручного ввода в приложение (base32) */
@@ -10855,7 +11187,7 @@ export interface components {
       reminded_at: string;
     };
     QueueCard: {
-      /** @description `letters_without_resolution`, `quotes_to_approve`, `memos_to_approve`, `projects_in_work`, `leads_without_answer`… */
+      /** @description `letters_without_resolution`, `quotes_to_approve`, `memos_to_approve`, `projects_in_work`, `leads_without_answer`, `zones_without_responsible` (держателям `company.settings`, пока есть зона без ответственного)… */
       key: string;
       label: string;
       count: number;
@@ -11277,6 +11609,8 @@ export interface components {
       delivery_lines: components["schemas"]["ProjectDeliveryLine"][];
       /** @description История документов проекта (договор, счета, акт), новые первыми: кто, когда, что и по какой причине */
       journal: components["schemas"]["ProjectJournalEntry"][];
+      /** @description Х-8: у компании проекта отметка «Не работать» (причина, кто, когда) — полоса «С компанией не работаем» в карточке; документы в работе не отменяются. null — работаем */
+      do_not_work?: components["schemas"]["DoNotWork"] | null;
     };
     /** @description Действие по договору. `reason` обязательна для `reject`, `channel` и `counterparty_person` — для `client_agreed`: пустые BFF отклоняет (422). */
     ProjectContractActionIn: {
@@ -12811,6 +13145,10 @@ export interface components {
       catalog_price_visibility: "cabinet" | "on_request";
       /** @description Порог полноты карточки для публикации, % */
       catalog_publish_threshold: number;
+      /** @description МХИК (ИКПУ) обязателен для публикации карточки; по умолчанию включено */
+      catalog_require_mxik?: boolean;
+      /** @description ТН ВЭД обязателен для ввозимого товара (страна происхождения не Узбекистан или не указана); по умолчанию включено */
+      catalog_require_hs_imported?: boolean;
       /** @description Предельный возраст курса, дней */
       fx_rate_max_age_days: number;
       /** @description Через сколько дней без подтверждения цена партнёра «устарела» (задача «Н3c») */
@@ -12861,6 +13199,10 @@ export interface components {
       catalog_price_visibility?: "cabinet" | "on_request";
       /** @description Порог полноты карточки для публикации, % */
       catalog_publish_threshold?: number;
+      /** @description МХИК (ИКПУ) обязателен для публикации карточки; по умолчанию включено */
+      catalog_require_mxik?: boolean;
+      /** @description ТН ВЭД обязателен для ввозимого товара (страна происхождения не Узбекистан или не указана); по умолчанию включено */
+      catalog_require_hs_imported?: boolean;
       /** @description Предельный возраст курса, дней */
       fx_rate_max_age_days?: number;
       /** @description Через сколько дней без подтверждения цена партнёра «устарела» (задача «Н3c») */
@@ -16629,6 +16971,8 @@ export interface components {
       id: number;
       name: string;
       inn: string | null;
+      /** @description Х-8: отметка «Не работать» клиента лида — полоса в карточке лида */
+      do_not_work?: components["schemas"]["DoNotWork"] | null;
     };
     ClientRow: {
       id: number;
@@ -16641,6 +16985,8 @@ export interface components {
       last_activity_at: string | null;
       /** @enum {string|null} */
       handoff_status: "pending" | "done" | "failed" | null;
+      /** @description Х-8: у компании действует отметка «Не работать» (фильтр «Не работаем») */
+      do_not_work?: boolean;
     };
     ClientList: {
       items: components["schemas"]["ClientRow"][];
@@ -16744,6 +17090,8 @@ export interface components {
         requests: components["schemas"]["SourceState"];
         documents: components["schemas"]["SourceState"];
       };
+      /** @description Х-8: отметка «Не работать» компании (из ERP снимком `company.updated`) — полоса «С компанией не работаем»; нет — работаем */
+      do_not_work?: components["schemas"]["DoNotWork"] | null;
     };
     /** @description Партнёр из ERP (PART-CRM), приглашённый в кабинет: по ключу совпал с этим клиентом, но клиент ничей — привязка только с подтверждения менеджера */
     ClientPartnerRequest: {
@@ -16881,6 +17229,8 @@ export interface components {
       name: string;
       /** @description Группа или класс классификатора */
       group: string;
+      /** @description Путь по классификатору «группа › класс › позиция» без самого названия; пусто, если его нет */
+      path?: string;
       unit: string;
       package: string;
     };
@@ -17328,6 +17678,8 @@ export interface components {
       expiring_count: number;
       /** Format: date */
       nearest_valid_until: string | null;
+      /** @description Х-8: с поставщиком не работаем — действует отметка «Не работать» */
+      do_not_work?: boolean;
     };
     /** @description Организация-контрагент для поля «Организация» письма; `attention` — контактное лицо для строки «Кому». */
     EdsAddressee: {
@@ -17470,6 +17822,31 @@ export interface components {
       accounts_masked: boolean;
       /** @description Бренды, которые выпускает компания */
       brands: components["schemas"]["CounterpartyRef"][];
+      /** @description Х-8: отметка «Не работать» — причина, кто и когда поставил, срок; нет — работаем */
+      do_not_work?: components["schemas"]["DoNotWork"] | null;
+    };
+    /** @description Отметка «Не работать» у контрагента (Х-8) — факты, а не флаг */
+    DoNotWork: {
+      /** @description Причина — текст для коллег */
+      reason: string;
+      /** @description Кто поставил отметку (имя сотрудника) */
+      set_by: string | null;
+      /** Format: date-time */
+      set_at: string;
+      /**
+       * Format: date
+       * @description До какого дня действует; null — без срока
+       */
+      until: string | null;
+    };
+    DoNotWorkIn: {
+      /** @description Причина — обязательный текст */
+      reason: string;
+      /**
+       * Format: date
+       * @description Необязательная дата окончания; не раньше сегодняшнего дня
+       */
+      until?: string | null;
     };
     /** @description Реквизиты контрагента (СУЩ-2.7) — только переданные поля */
     CounterpartyRequisitesIn: {
@@ -17516,6 +17893,8 @@ export interface components {
       expiring_count: number;
       /** Format: date */
       nearest_valid_until: string | null;
+      /** @description Х-8: с поставщиком не работаем — действует отметка «Не работать» */
+      do_not_work?: boolean;
       contact_person: string;
       phone: string;
       email: string;
@@ -18475,6 +18854,8 @@ export interface components {
     EmployeeId: string;
     /** @description Id роли Платформы (CRM) */
     RoleIdPath: components["schemas"]["RoleId"];
+    /** @description Id зоны ответственности (CRM) */
+    ZoneIdPath: string;
     /** @description Только по этой роли сотрудника (id); чужая роль — 403 */
     RoleQuery: components["schemas"]["RoleId"];
     /** @description Размер страницы */
@@ -18499,6 +18880,8 @@ export interface components {
     SigningAuthorityId: string;
     /** @description Значение cookie `rt_pf_csrf` */
     CsrfToken: string;
+    /** @description Свежий код второго фактора (ДВ-4б): токен из `POST /me/second-factor/step-up`, действует 5 минут. Нужен при выдаче роли и подтверждении новых банковских реквизитов; без него или с просроченным — 403 `STEP_UP_REQUIRED` (`details.reason = second_factor_not_enrolled` — фактор ещё не включён) */
+    StepUpToken: string;
     /** @description Id документа базы знаний (CRM) */
     KbDocumentId: number;
     /** @description Id пробела базы знаний (CRM) */
@@ -18614,6 +18997,86 @@ export interface operations {
           "application/json": components["schemas"]["Error"];
         };
       };
+    };
+  };
+  loginEnrollSetup: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["EnrollSetupIn"];
+      };
+    };
+    responses: {
+      /** @description Секрет */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SecondFactorSetup"];
+        };
+      };
+      /** @description `SECOND_FACTOR_EXPIRED` — время на настройку вышло */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      422: components["responses"]["ValidationFailed"];
+      429: components["responses"]["TooManyRequests"];
+    };
+  };
+  loginEnroll: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["EnrollIn"];
+      };
+    };
+    responses: {
+      /** @description Фактор включён, вошёл */
+      200: {
+        headers: {
+          /** @description `rt_pf_session` и `rt_pf_csrf` */
+          "Set-Cookie"?: string;
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["EnrolledSession"];
+        };
+      };
+      /** @description `SECOND_FACTOR_INVALID` — неверный код; `SECOND_FACTOR_EXPIRED` — время вышло */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      /** @description `ACCOUNT_LOCKED` */
+      423: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      429: components["responses"]["TooManyRequests"];
     };
   };
   loginSecondFactor: {
@@ -19185,6 +19648,45 @@ export interface operations {
       401: components["responses"]["SessionExpired"];
       403: components["responses"]["Forbidden"];
       422: components["responses"]["ValidationFailed"];
+    };
+  };
+  stepUpSecondFactor: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SecondFactorCodeIn"];
+      };
+    };
+    responses: {
+      /** @description Код принят */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["StepUp"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      422: components["responses"]["ValidationFailed"];
+      /** @description `ACCOUNT_LOCKED` */
+      423: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
     };
   };
   disableSecondFactor: {
@@ -21046,8 +21548,11 @@ export interface operations {
         stage?: "open" | "done";
         /** @description Поиск по номеру и теме (только `scope=all`) */
         q?: string;
+        /** @description Курсор из `next_cursor`; привязан к порядку `sort`, при смене порядка начинают с первой страницы */
         cursor?: string;
         limit?: number;
+        /** @description Порядок щелчком по шапке (Х-15б): `number`, `subject`, `status`, `amount`, `created`; `-` в начале — по убыванию. Пустые значения (нет номера, нет суммы) — в конце, равные — по id. `number` и `subject` — строковый порядок: номер непрозрачен, число в нём не разбирается. Другое поле — 422. Не задан — от новых. */
+        sort?: string;
       };
       header?: never;
       path?: never;
@@ -22576,6 +23081,8 @@ export interface operations {
         q?: string;
         limit?: number;
         offset?: number;
+        /** @description Порядок щелчком по шапке (Х-15б): `number`, `client`, `amount`, `issued`, `due`, `status` (слово статуса строки); `-` в начале — по убыванию. Пустые значения (нет срока, нет даты выставления) — в конце, равные — по id. `number` — строковый порядок: у счёта нет сохранённого порядкового номера, префикс настраивается и не разбирается. Другое поле — 422. Не задан — порядок вкладки. */
+        sort?: string;
       };
       header?: never;
       path?: never;
@@ -22753,6 +23260,8 @@ export interface operations {
     parameters: {
       query?: never;
       header: {
+        /** @description Свежий код второго фактора (ДВ-4б): токен из `POST /me/second-factor/step-up`, действует 5 минут. Нужен при выдаче роли и подтверждении новых банковских реквизитов; без него или с просроченным — 403 `STEP_UP_REQUIRED` (`details.reason = second_factor_not_enrolled` — фактор ещё не включён) */
+        "X-Step-Up-Token"?: components["parameters"]["StepUpToken"];
         /** @description Значение cookie `rt_pf_csrf` */
         "X-CSRF-Token": components["parameters"]["CsrfToken"];
       };
@@ -25135,6 +25644,8 @@ export interface operations {
     parameters: {
       query?: never;
       header: {
+        /** @description Свежий код второго фактора (ДВ-4б): токен из `POST /me/second-factor/step-up`, действует 5 минут. Нужен при выдаче роли и подтверждении новых банковских реквизитов; без него или с просроченным — 403 `STEP_UP_REQUIRED` (`details.reason = second_factor_not_enrolled` — фактор ещё не включён) */
+        "X-Step-Up-Token"?: components["parameters"]["StepUpToken"];
         /** @description Значение cookie `rt_pf_csrf` */
         "X-CSRF-Token": components["parameters"]["CsrfToken"];
       };
@@ -25173,10 +25684,54 @@ export interface operations {
       503: components["responses"]["BackendUnavailable"];
     };
   };
+  resetEmployeeSecondFactor: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description `crm_user_id` — число без ведущих нулей (`07` и `007` — не адрес сотрудника) */
+        id: components["parameters"]["EmployeeId"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SecondFactorResetIn"];
+      };
+    };
+    responses: {
+      /** @description Сброшен */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      /** @description `CONFLICT` — себе сбросить нельзя */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
   inviteEmployee: {
     parameters: {
       query?: never;
       header: {
+        /** @description Свежий код второго фактора (ДВ-4б): токен из `POST /me/second-factor/step-up`, действует 5 минут. Нужен при выдаче роли и подтверждении новых банковских реквизитов; без него или с просроченным — 403 `STEP_UP_REQUIRED` (`details.reason = second_factor_not_enrolled` — фактор ещё не включён) */
+        "X-Step-Up-Token"?: components["parameters"]["StepUpToken"];
         /** @description Значение cookie `rt_pf_csrf` */
         "X-CSRF-Token": components["parameters"]["CsrfToken"];
       };
@@ -25378,6 +25933,8 @@ export interface operations {
     parameters: {
       query?: never;
       header: {
+        /** @description Свежий код второго фактора (ДВ-4б): токен из `POST /me/second-factor/step-up`, действует 5 минут. Нужен при выдаче роли и подтверждении новых банковских реквизитов; без него или с просроченным — 403 `STEP_UP_REQUIRED` (`details.reason = second_factor_not_enrolled` — фактор ещё не включён) */
+        "X-Step-Up-Token"?: components["parameters"]["StepUpToken"];
         /** @description Значение cookie `rt_pf_csrf` */
         "X-CSRF-Token": components["parameters"]["CsrfToken"];
       };
@@ -25677,6 +26234,216 @@ export interface operations {
         };
       };
       422: components["responses"]["ValidationFailed"];
+    };
+  };
+  listResponsibilityZones: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Зоны в порядке заведения */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ZoneList"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+    };
+  };
+  createResponsibilityZone: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ZoneCreate"];
+      };
+    };
+    responses: {
+      /** @description Создана, людей в ней нет */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Zone"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      /** @description `CONFLICT` — зона с таким `code` уже есть */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      422: components["responses"]["ValidationFailed"];
+    };
+  };
+  getResponsibilityZonesSummary: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Числа по действующим зонам */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ZoneSummary"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+    };
+  };
+  getResponsibilityZone: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Id зоны ответственности (CRM) */
+        id: components["parameters"]["ZoneIdPath"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Зона */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Zone"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+    };
+  };
+  updateResponsibilityZone: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Id зоны ответственности (CRM) */
+        id: components["parameters"]["ZoneIdPath"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ZoneUpdate"];
+      };
+    };
+    responses: {
+      /** @description Зона после изменения */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Zone"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      /** @description `CONFLICT` — зона выключена */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      422: components["responses"]["ValidationFailed"];
+    };
+  };
+  deactivateResponsibilityZone: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Id зоны ответственности (CRM) */
+        id: components["parameters"]["ZoneIdPath"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Зона выключена */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Zone"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+    };
+  };
+  activateResponsibilityZone: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Id зоны ответственности (CRM) */
+        id: components["parameters"]["ZoneIdPath"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Зона включена */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Zone"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
     };
   };
   getRoleJournal: {
@@ -32896,6 +33663,69 @@ export interface operations {
     requestBody?: never;
     responses: {
       /** @description Карточка */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CounterpartyCard"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  setCounterpartyDoNotWork: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        id: components["schemas"]["CompanyItemRef"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DoNotWorkIn"];
+      };
+    };
+    responses: {
+      /** @description Карточка с отметкой */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CounterpartyCard"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  clearCounterpartyDoNotWork: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        id: components["schemas"]["CompanyItemRef"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Карточка без отметки */
       200: {
         headers: {
           [name: string]: unknown;

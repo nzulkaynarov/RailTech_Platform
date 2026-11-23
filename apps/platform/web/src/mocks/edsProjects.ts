@@ -27,6 +27,7 @@ import {
 } from "./fixtures/projects";
 import { companyToday } from "../shared/lib/dates";
 import { buildMe, readSession } from "./mockSession";
+import { markOfName } from "./doNotWorkMarks";
 
 /**
  * Моки EDS · Проекты (D2-5, BFF 0.26.0). Права — как в BFF: чтение — `eds.projects` (менеджер, снабженец, гл. инженер, директор,
@@ -367,7 +368,10 @@ export const edsProjectsHandlers = [
     if (ok.error) return ok.error;
     const project = findProject(refOf(request));
     return project
-      ? HttpResponse.json(toCard(project, ok.writer, ok.marker, ok.approver))
+      ? HttpResponse.json({
+          ...toCard(project, ok.writer, ok.marker, ok.approver),
+          do_not_work: markOfName(project.client),
+        })
       : notFound();
   }),
 

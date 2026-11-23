@@ -145,7 +145,7 @@ describe("Карточка: изготовитель, артикул, ТН ВЭ�
     await open("supply@demo.example", "?item=5");
     const drawer = await screen.findByRole("dialog", { name: "Пусконаладочные работы" });
     expect(
-      await within(drawer).findByText(/Для публикации заполните: категория, код ТН ВЭД/),
+      await within(drawer).findByText(/Для публикации заполните: категория, код МХИК/),
     ).toBeVisible();
     expect(within(drawer).getByRole("button", { name: "Опубликовать" })).toBeDisabled();
   });

@@ -46,7 +46,7 @@ export interface paths {
      *     `both` — оба канала. Контакт — по `crm_contact_id`, без него — основной контакт компании. Ответ всегда 200:
      *     `error` называет причину, по которой приглашение не ушло ни одним из каналов
      *     (`CONTACT_EMAIL_REQUIRED`, `CONTACT_TELEGRAM_REQUIRED`, `EMAIL_DELIVERY_FAILED`, `INVALID_CHANNEL`,
-     *     `CONTACT_WITHOUT_COMPANY`, `COMPANY_ARCHIVED`, `COMPANY_NOT_CLIENT` (у компании нет типа CLIENT — в кабинет входят только клиенты, K0), `CONTACT_ARCHIVED`, `CONTACT_NOT_FOUND` — в компании нет такого контакта
+     *     `CONTACT_WITHOUT_COMPANY`, `COMPANY_ARCHIVED`, `COMPANY_DO_NOT_WORK` (Х-8: отметка «Не работать»), `COMPANY_NOT_CLIENT` (у компании нет типа CLIENT — в кабинет входят только клиенты, K0), `CONTACT_ARCHIVED`, `CONTACT_NOT_FOUND` — в компании нет такого контакта
      *     или он не сопоставлен с контактом CRM); CRM переводит её в слова для менеджера. 404 — неизвестен сам клиент.
      *     Не идемпотентно по смыслу (каждое нажатие — новое приглашение), `Idempotency-Key` защищает только от
      *     повтора одного запроса.
@@ -500,7 +500,7 @@ export interface components {
         sent_via: ("telegram" | "email")[];
         /** Format: uri */
         cabinet_url: string;
-        /** @description Код причины, по которой приглашение не ушло ни одним каналом (0.8.0): `CONTACT_EMAIL_REQUIRED`, `CONTACT_TELEGRAM_REQUIRED`, `EMAIL_DELIVERY_FAILED`, `INVALID_CHANNEL`, `CONTACT_WITHOUT_COMPANY`, `COMPANY_ARCHIVED`, `COMPANY_NOT_CLIENT`, `CONTACT_ARCHIVED`, `CONTACT_CHANNEL_REQUIRED`, `CONTACT_NOT_FOUND`, `COMPANY_LINKED_BY_INN` (передача нашла компанию по ИНН — приглашение не отправлено до проверки контактов); `null` — ушло или приглашение не запрашивалось. Терпимый читатель: незнакомый код CRM показывает как «причина не определена». */
+        /** @description Код причины, по которой приглашение не ушло ни одним каналом (0.8.0): `CONTACT_EMAIL_REQUIRED`, `CONTACT_TELEGRAM_REQUIRED`, `EMAIL_DELIVERY_FAILED`, `INVALID_CHANNEL`, `CONTACT_WITHOUT_COMPANY`, `COMPANY_ARCHIVED`, `COMPANY_DO_NOT_WORK` (Х-8: у компании отметка «Не работать»), `COMPANY_NOT_CLIENT`, `CONTACT_ARCHIVED`, `CONTACT_CHANNEL_REQUIRED`, `CONTACT_NOT_FOUND`, `COMPANY_LINKED_BY_INN` (передача нашла компанию по ИНН — приглашение не отправлено до проверки контактов); `null` — ушло или приглашение не запрашивалось. Терпимый читатель: незнакомый код CRM показывает как «причина не определена». */
         error?: string | null;
         /** @description Ключ письма-приглашения в почтовом сервисе CRM (`request_key` события `uz.railtech.erp.mail.requested.v1`, B-MAIL-1): по нему CRM берёт итог доставки из своего журнала почты (в очереди · отправлено · не отправлено с причиной) и показывает менеджеру в карточке клиента. `null` — письмо не уходило. */
         email_request_key?: string | null;
@@ -1045,7 +1045,7 @@ export interface operations {
         };
       };
       401: components["responses"]["Unauthorized"];
-      /** @description `INN_CONFLICT` — ИНН принадлежит компании ERP, связанной с другим `crm_client_id`; ничего не создаётся и не переписывается. CRM показывает менеджеру ошибку и не повторяет передачу автоматически. `PARTNER_VERIFICATION_REQUIRED` (PART-CRM) — компания, найденная по ИНН, — партнёр кабинета без подтверждённой связи с этим клиентом: сопоставление не создаётся, заявки партнёра не выпускаются, сотруднику бэк-офиса уходит уведомление «сверьте ИНН». Подтверждает связь менеджер CRM после повторного приглашения партнёра; повтор передачи сам ничего не изменит. */
+      /** @description `INN_CONFLICT` — ИНН принадлежит компании ERP, связанной с другим `crm_client_id`; ничего не создаётся и не переписывается. CRM показывает менеджеру ошибку и не повторяет передачу автоматически. `PARTNER_VERIFICATION_REQUIRED` (PART-CRM) — компания, найденная по ИНН, — партнёр кабинета без подтверждённой связи с этим клиентом: сопоставление не создаётся, заявки партнёра не выпускаются, сотруднику бэк-офиса уходит уведомление «сверьте ИНН». Подтверждает связь менеджер CRM после повторного приглашения партнёра; повтор передачи сам ничего не изменит. `COMPANY_DO_NOT_WORK` (Х-8) — у компании, найденной по ИНН, отметка «Не работать»: ничего не создаётся; CRM показывает менеджеру причину `erp_company_do_not_work`. После снятия отметки в ERP передачу можно повторить. */
       409: {
         headers: {
           [name: string]: unknown;
@@ -1267,7 +1267,7 @@ export interface operations {
           "application/json": components["schemas"]["Error"];
         };
       };
-      /** @description `IDEMPOTENCY_CONFLICT` — тот же `Idempotency-Key` пришёл с другим телом (данные заявки изменились после первой отправки): ничего не создано и не перезаписано. CRM повтор не делает — заявка `failed` с причиной `erp_request_conflict`, менеджер создаёт заявку заново. */
+      /** @description `IDEMPOTENCY_CONFLICT` — тот же `Idempotency-Key` пришёл с другим телом (данные заявки изменились после первой отправки): ничего не создано и не перезаписано. CRM повтор не делает — заявка `failed` с причиной `erp_request_conflict`, менеджер создаёт заявку заново. `COMPANY_DO_NOT_WORK` — у компании отметка «Не работать» (Х-8): новая заявка не создана; CRM помечает заявку `failed` с причиной `erp_company_do_not_work`, повтор — после снятия отметки в ERP. */
       409: {
         headers: {
           [name: string]: unknown;

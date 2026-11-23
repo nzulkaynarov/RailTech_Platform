@@ -182,10 +182,9 @@ describe("Обращения к администратору", () => {
     expect(
       await screen.findByText(/Обращения сотрудников — в «Моих задачах», новых: \d+\./),
     ).toBeInTheDocument();
-    expect(await screen.findByRole("link", { name: "Открыть" })).toHaveAttribute(
-      "href",
-      "/dashboard/queue",
-    );
+    // рядом может быть сигнал «зона без ответственного» (ЕВ-З) с такой же подписью ссылки — берём ссылку на «Задачи»
+    const links = await screen.findAllByRole("link", { name: "Открыть" });
+    expect(links.map((link) => link.getAttribute("href"))).toContain("/dashboard/queue");
   });
 
   it("директор читает обращения, но отвечать не может", async () => {

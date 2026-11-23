@@ -304,7 +304,11 @@
     "contract_deviations_allowedHint": "Çetlanişli şartnoma viza yönalişidan ötadi va vizalargaça mijozga ketmaydi.",
     "defaultClientTemplate": "Standart şablon: mijoz",
     "defaultPartnerTemplate": "Standart şablon: hamkor",
-    "edition": "{{n}}-tahrir"
+    "edition": "{{n}}-tahrir",
+    "requireMxik": "E’lon qilişda MXIK majburiy",
+    "requireMxikHint": "MXIK (IKPU) kodsiz kartani e’lon qilib bölmaydi. E’lon qilinganlar qoladi; tekşiriş — keyingi e’londa.",
+    "requireHs": "Olib kirilgan tovar uçun TIF TN majburiy",
+    "requireHsHint": "Çiqiş mamlakati Özbekiston emas yoki körsatilmagan — TIF TN kodisiz e’lon qilib bölmaydi."
   },
   "charges": {
     "title": "TT xarajat moddalari",

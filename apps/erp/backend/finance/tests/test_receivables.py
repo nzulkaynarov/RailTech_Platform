@@ -162,6 +162,58 @@ def test_search_by_number_or_client_and_pagination(world):
     assert page["count"] == 4 and len(page["results"]) == 1
 
 
+def _numbers(user, **params):
+    return [r["number"] for r in _get(user, BASE, tab="all", **params).json()["results"]]
+
+
+def test_ordering_by_header_is_allow_listed_with_empty_values_last_and_id_as_tiebreak(world):
+    """Х-15б: порядок щелчком по шапке идёт сервером по всему списку; пустые значения — в конце в обе стороны."""
+    base = world["invoice"]
+    a = _invoice(world, "SCH-A", "ISSUED", total="300.00", due=world["day"] + datetime.timedelta(days=5))
+    b = _invoice(world, "SCH-B", "ISSUED", total="100.00", due=None)
+    c = _invoice(world, "SCH-C", "ISSUED", total="100.00", due=world["day"] + datetime.timedelta(days=1))
+    Invoice.objects.filter(pk=c.pk).update(issued_at=None)
+    user = world["finance"]
+    ours = lambda numbers: [n for n in numbers if n.startswith("SCH-")]  # noqa: E731
+
+    assert ours(_numbers(user, ordering="due")) == ["SCH-C", "SCH-A", "SCH-B"]  # без срока — в конце
+    assert ours(_numbers(user, ordering="-due")) == ["SCH-A", "SCH-C", "SCH-B"]  # и при убывании
+    Invoice.objects.filter(pk=base.pk).update(issued_at=None)
+    for ordering in ("issued", "-issued"):  # нет даты выставления — в конце в обе стороны
+        assert set(_numbers(user, ordering=ordering)[-2:]) == {"SCH-C", base.number}
+    # Равная сумма: порядок держит id, в обе стороны зеркально
+    assert ours(_numbers(user, ordering="amount")) == ["SCH-B", "SCH-C", "SCH-A"]
+    assert ours(_numbers(user, ordering="-amount")) == ["SCH-A", "SCH-C", "SCH-B"]
+    # Номер — строка: у счёта нет сохранённого порядкового номера
+    assert ours(_numbers(user, ordering="number")) == ["SCH-A", "SCH-B", "SCH-C"]
+    assert base.pk and a.pk and b.pk
+
+
+def test_ordering_by_status_follows_the_row_status_word_derived_from_facts(world):
+    _invoice(world, "SCH-1", "DRAFT")
+    _invoice(world, "SCH-5", "CANCELLED")
+    late = _invoice(world, "SCH-2", "ISSUED", days_ago=5)
+    _invoice(world, "SCH-3", "PAID", paid="112")
+    _invoice(world, "SCH-4", "PARTIAL", paid="40", due=world["day"] + datetime.timedelta(days=3))
+    # факт «платёжка ждёт подтверждения»: код счёта остаётся ISSUED, слово — proof_received
+    waiting = _invoice(world, "SCH-6", "ISSUED", due=world["day"] + datetime.timedelta(days=3))
+    PaymentConfirmation.objects.create(invoice=waiting, file="x.pdf", status=PaymentConfirmation.Status.PENDING)
+    _invoice(world, "SCH-7", "ISSUED", due=world["day"] + datetime.timedelta(days=4))  # позже платёжки: id не спасает
+    rows = _get(world["finance"], BASE, tab="all", ordering="status").json()["results"]
+    words = [r["display_status"] for r in rows]
+    assert words == ["draft", "issued", "issued", "proof_received", "partially_paid", "paid", "overdue", "cancelled"]
+    assert [r["number"] for r in rows][-2] == late.number and len(rows) == 8
+    back = _get(world["finance"], BASE, tab="all", ordering="-status").json()["results"]
+    assert [r["display_status"] for r in back] == list(reversed(words))
+
+
+@pytest.mark.parametrize("raw", ["deal_id", "-pk", "number; drop", "status_rank", "created_at", "NUMBER"])
+def test_ordering_outside_the_allow_list_keeps_the_tab_order(world, raw):
+    _invoice(world, "SCH-X0", "ISSUED", days_ago=3)
+    _invoice(world, "SCH-X1", "ISSUED", days_ago=1)
+    assert _numbers(world["finance"], ordering=raw) == _numbers(world["finance"])
+
+
 @pytest.mark.parametrize("params", [{"tab": "paid"}, {"limit": "many"}])
 def test_bad_query_is_a_400_with_a_code(world, params):
     response = _get(world["finance"], BASE, **params)

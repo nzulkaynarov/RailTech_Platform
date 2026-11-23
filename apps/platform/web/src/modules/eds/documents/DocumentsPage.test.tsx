@@ -488,3 +488,60 @@ describe("«Исходящие» и «Архив» по стадии (план 2
     );
   });
 });
+
+describe("EDS · Документы: порядок по шапке (Х-15б)", () => {
+  const stubRow = {
+    kind: "memo",
+    id: "00000000-0000-4000-8000-0000000000aa",
+    number: "СЗ-2026/001",
+    subject: "Первая страница",
+    status: "approved",
+    author: null,
+    amount: null,
+    due_date: null,
+    created_at: "2026-11-01T10:00:00Z",
+    openable: true,
+    undelivered: false,
+    awaiting_signature: false,
+  };
+  const spy = () => {
+    const asked: { sort: string | null; cursor: string | null }[] = [];
+    server.use(
+      http.get("*/eds/documents", ({ request }) => {
+        const params = new URL(request.url).searchParams;
+        asked.push({ sort: params.get("sort"), cursor: params.get("cursor") });
+        return HttpResponse.json({ items: [stubRow], next_cursor: "c1" });
+      }),
+    );
+    return asked;
+  };
+
+  it("порядок из адреса уходит серверу вместе с курсором, чужое поле — нет", async () => {
+    const asked = spy();
+    await openDocuments("manager@demo.example", "?scope=mine&sort=-amount");
+    await screen.findByRole("link", { name: "Открыть документ: Первая страница" });
+    expect(asked[0]).toEqual({ sort: "-amount", cursor: null });
+
+    cleanup();
+    asked.length = 0;
+    await openDocuments("manager@demo.example", "?scope=mine&sort=author_crm_user_id");
+    await screen.findByRole("link", { name: "Открыть документ: Первая страница" });
+    expect(asked[0]).toEqual({ sort: null, cursor: null });
+  });
+
+  it("смена порядка сбрасывает курсор: запрос идёт с первой страницы", async () => {
+    const asked = spy();
+    await openDocuments("manager@demo.example", "?scope=mine");
+    await screen.findByRole("link", { name: "Открыть документ: Первая страница" });
+    fireEvent.click(screen.getByRole("button", { name: "Дальше" }));
+    await waitFor(() => {
+      expect(asked.at(-1)).toEqual({ sort: null, cursor: "c1" });
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Сумма" }));
+    await waitFor(() => {
+      expect(asked.at(-1)).toEqual({ sort: "amount", cursor: null });
+    });
+    expect(screen.getByText("Страница 1")).toBeVisible();
+  });
+});

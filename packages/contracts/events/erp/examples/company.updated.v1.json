@@ -22,7 +22,13 @@
       "registration_number": null,
       "country": "UZ",
       "legal_address": "Ташкент, ул. Примерная, 1",
-      "updated_at": "2026-11-18T09:00:00Z"
+      "updated_at": "2026-11-18T09:00:00Z",
+      "do_not_work": {
+        "reason": "Дважды не оплатил отгруженный заказ",
+        "set_by": "Менеджер Демо",
+        "set_at": "2026-11-18T09:00:00Z",
+        "until": null
+      }
     }
   }
 }

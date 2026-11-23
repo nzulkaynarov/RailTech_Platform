@@ -13,7 +13,13 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.config import Settings
-from app.domain.errors import AccountLockedError, AuthError, SecondFactorCodeError
+from app.domain.errors import (
+    AccountLockedError,
+    AuthError,
+    Reason,
+    SecondFactorCodeError,
+    SecondFactorSetupError,
+)
 from app.models.auth import RefreshToken, User
 from app.repositories import users as repo
 from app.security import audit, reauth, second_factor
@@ -31,6 +37,7 @@ from app.security.tokens import (
     new_refresh_token,
     password_version,
 )
+from app.services.second_factor import FactorSetup, SecondFactorService, factor_required
 
 logger = structlog.get_logger(__name__)
 
@@ -52,6 +59,20 @@ class SecondFactorRequired:
     """Пароль верен, нужен код второго фактора (ДВ-4): сессии ещё нет, `challenge` — на 5 минут."""
 
     challenge: str
+
+
+@dataclass(frozen=True, slots=True)
+class EnrollmentRequired:
+    """Пароль верен, фактор обязателен по разделам доступа, но не настроен (ДВ-4б): сессии нет,
+    `challenge` — на 15 минут, им настраивают фактор (`enroll_setup`, `enroll_complete`)."""
+
+    challenge: str
+
+
+@dataclass(frozen=True, slots=True)
+class Enrolled:
+    session: Session
+    backup_codes: list[str]
 
 
 @dataclass(frozen=True, slots=True)
@@ -85,12 +106,13 @@ class AuthService:
 
     async def login(
         self, email: str, password: str, client: ClientInfo, device_token: str | None = None
-    ) -> Session | SecondFactorRequired:
+    ) -> Session | SecondFactorRequired | EnrollmentRequired:
         """Пароль; у сотрудника со вторым фактором — `SecondFactorRequired`, если устройство не
-        запомнено (ДВ-4). Сессию тогда выдаёт `second_factor`."""
+        запомнено (ДВ-4). Сессию тогда выдаёт `second_factor`. Фактор обязателен по разделам
+        доступа, но не настроен — `EnrollmentRequired` (ДВ-4б): входа без фактора нет."""
         now = datetime.now(UTC)
         failure: AuthError | None = None
-        result: Session | SecondFactorRequired
+        result: Session | SecondFactorRequired | EnrollmentRequired
         async with self._sessions() as session, session.begin():
             user = await repo.by_email(session, email, for_update=True)
             if user is None or not user.is_active:
@@ -115,6 +137,18 @@ class AuthService:
                     result = SecondFactorRequired(
                         second_factor.issue_challenge(self._key, claims, now)
                     )
+                elif user.totp_enabled_at is None and await factor_required(
+                    session, user, self._settings
+                ):
+                    claims = FactorClaims(user.id, password_version(user.password_changed_at))
+                    result = EnrollmentRequired(second_factor.issue_enroll(self._key, claims, now))
+                    await audit.record(
+                        session,
+                        Actor(user.id, ip=client.ip),
+                        "auth.enrollment_required",
+                        "user",
+                        user.id,
+                    )
                 else:
                     user.last_login_at = now
                     result = await self._issue(session, user, new_family(), client, now)
@@ -124,6 +158,67 @@ class AuthService:
         if failure is not None:
             raise failure
         return result
+
+    def _enroll_claims(self, token: str) -> FactorClaims:
+        try:
+            return second_factor.decode_enroll(self._key, token)
+        except TokenError as exc:
+            raise AuthError("second factor challenge expired") from exc
+
+    @staticmethod
+    def _enrollable(user: User | None, claims: FactorClaims) -> User:
+        if (
+            user is None
+            or not user.is_active
+            or user.totp_enabled_at is not None
+            or claims.password_version != password_version(user.password_changed_at)
+        ):
+            raise AuthError("second factor challenge expired")
+        return user
+
+    async def enroll_setup(self, challenge: str, issuer: str, client: ClientInfo) -> FactorSetup:
+        """Секрет и адрес для QR при входе, когда фактор обязателен, но не настроен (ДВ-4б)."""
+        claims = self._enroll_claims(challenge)
+        service = SecondFactorService(self._sessions, self._settings)
+        async with self._sessions() as session, session.begin():
+            user = self._enrollable(
+                await repo.get(session, claims.user_id, for_update=True), claims
+            )
+            return await service.setup_locked(session, Actor(user.id, ip=client.ip), user, issuer)
+
+    async def enroll_complete(self, challenge: str, code: str, client: ClientInfo) -> Enrolled:
+        """Код из приложения включает фактор и открывает сессию одной транзакцией (ДВ-4б);
+        резервные коды — в ответе, один раз. Неверный код — в счёт блокировки."""
+        now = datetime.now(UTC)
+        claims = self._enroll_claims(challenge)
+        service = SecondFactorService(self._sessions, self._settings)
+        failure: Exception | None = None
+        enrolled: Enrolled | None = None
+        async with self._sessions() as session, session.begin():
+            user = self._enrollable(
+                await repo.get(session, claims.user_id, for_update=True), claims
+            )
+            if user.locked_until is not None and user.locked_until > now:
+                raise AccountLockedError("account locked", until=user.locked_until.isoformat())
+            actor = Actor(user.id, ip=client.ip)
+            try:
+                codes = await service.enable_locked(session, actor, user, code, now)
+            except SecondFactorSetupError as exc:
+                if exc.details.get("reason") != Reason.SECOND_FACTOR_CODE_INVALID.value:
+                    raise
+                failure = self._register_failure(user, now)
+                if not isinstance(failure, AccountLockedError):
+                    failure = SecondFactorCodeError("invalid second factor code")
+            else:
+                user.failed_logins, user.locked_until, user.last_login_at = 0, None, now
+                enrolled = Enrolled(
+                    await self._issue(session, user, new_family(), client, now), codes
+                )
+                await audit.record(session, actor, "auth.login", "user", user.id)
+        if failure is not None:
+            raise failure
+        assert enrolled is not None  # noqa: S101 — set whenever no failure was recorded
+        return enrolled
 
     async def second_factor(
         self, challenge: str, code: str, remember: bool, client: ClientInfo

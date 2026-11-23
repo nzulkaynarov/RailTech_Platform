@@ -66,6 +66,7 @@ def _build(settings) -> dict:
         uom=unit,
         category=category,
         hs_code="8708301009",
+        mxik_code="87083010001000000",
     )
     ProductReview.objects.create(product=card, submitted_by_contact=contact)
     return {"own": own, "staff": staff, "partner": partner, "contact": contact, "card": card, "category": category}

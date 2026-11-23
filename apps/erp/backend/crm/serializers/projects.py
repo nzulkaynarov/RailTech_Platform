@@ -5,6 +5,7 @@
 акт — `act_word`.
 """
 
+from parties.do_not_work import DoNotWorkFacts
 from rest_framework import serializers
 
 from core.quantity import QuantityField
@@ -314,6 +315,10 @@ class ProjectCardSerializer(ProjectRowSerializer):
     fulfillment = FulfillmentCardSerializer(allow_null=True)
     delivery_lines = DeliveryLineCardSerializer(many=True)
     journal = ProjectJournalEntrySerializer(many=True)
+    do_not_work = DoNotWorkFacts(
+        allow_null=True,
+        help_text="Х-8: у компании проекта отметка «Не работать» — полоса в карточке; документы в работе не отменяются",
+    )
 
 
 class ContractTransitionInSerializer(serializers.Serializer):

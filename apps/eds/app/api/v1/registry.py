@@ -13,7 +13,7 @@ from app import clock
 from app.api.deps import get_session, require_permission
 from app.errors import EdsError
 from app.models import Employee
-from app.schemas.pagination import Cursor, Limit
+from app.schemas.pagination import Cursor, Limit, Sort
 from app.schemas.registry import RegistryKind, RegistryPage, RegistryStage
 from app.security.permissions import EdsPermission as P
 from app.services import journal, registry, registry_export
@@ -58,8 +58,9 @@ async def list_registry(
     flt: Filter,
     cursor: Cursor = None,
     limit: Limit = 50,
+    sort: Sort = None,
 ) -> RegistryPage:
-    return await registry.list_page(session, employee, flt, cursor=cursor, limit=limit)
+    return await registry.list_page(session, employee, flt, cursor=cursor, limit=limit, sort=sort)
 
 
 @router.get("/registry/export", operation_id="exportRegistry", response_class=Response)

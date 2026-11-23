@@ -471,4 +471,5 @@ def present(raw: RawCard) -> ProjectCard:
         fulfillment=_fulfillment(raw, base["number"]),
         delivery_lines=raw.delivery_lines,
         journal=raw.journal,
+        do_not_work=raw.do_not_work,
     )

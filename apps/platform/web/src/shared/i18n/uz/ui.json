@@ -206,5 +206,11 @@
       "placeholder": "Kompaniya kartasidagi odam",
       "empty": "Kompaniya kartasida odamlar yöq"
     }
+  },
+  "doNotWork": {
+    "title": "Kompaniya bilan işlamaymiz",
+    "by": "{{name}} belgilagan, {{date}}",
+    "until": "{{date}} gacha",
+    "unknown": "xodim körsatilmagan"
   }
 }

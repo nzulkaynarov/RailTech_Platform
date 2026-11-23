@@ -44,6 +44,7 @@ def desk(partner_world):
 def publishable(card):
     """Партнёр заполнил своё, остальное (ТН ВЭД) дописал сотрудник — карточка проходит порог полноты."""
     card.hs_code = HS
+    card.mxik_code = "87083010001000000"
     card.save()
     return card
 

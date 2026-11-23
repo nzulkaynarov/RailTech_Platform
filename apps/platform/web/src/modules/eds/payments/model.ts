@@ -91,3 +91,6 @@ export function newKey(): string {
 export function remainderAfter(card: Pick<PaymentCard, "balance">, amount: string): string {
   return fromCents(toCents(card.balance.amount) - toCents(amount));
 }
+
+/** Порядок щелчком по шапке (Х-15б): ключи те же, что принимает BFF `sort` (белый список там и в ERP) */
+export const INVOICE_SORT_KEYS = ["number", "client", "amount", "issued", "due", "status"] as const;
