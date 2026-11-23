@@ -122,6 +122,7 @@ def _locked_candidates(contact: Contact) -> List[MagicLinkToken]:
             used_at__isnull=True,
             expires_at__gt=timezone.now(),
             code_attempts__lt=LOGIN_CODE_MAX_ATTEMPTS,
+            document_link__isnull=True,  # код ссылки документа (ДК-2) гасится только вместе с её токеном
         )
         .exclude(code_hash="")
         .order_by("-created_at")

@@ -94,6 +94,8 @@ class IdempotencyMiddleware:
 
     @staticmethod
     def _serialize(response):
+        if getattr(response, "streaming", False):
+            return None  # файл или поток (PDF по POST, ДК-1) — не кэшируем и не читаем `content`
         try:
             content = response.content
         except ContentNotRenderedError:

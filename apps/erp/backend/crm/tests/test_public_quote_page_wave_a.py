@@ -53,6 +53,12 @@ def locmem_email(settings):
     settings.EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
 
 
+@pytest.fixture(autouse=True)
+def _legacy_page(settings):
+    """Здесь проверяется сама страница ERP (ссылки до перехода в Кабинет, ДК-1): переход выключен."""
+    settings.PUBLIC_QUOTE_REDIRECT_TO_CABINET = False
+
+
 @pytest.fixture
 def lookups(db):
     for code in ["RFQ_OPEN", "SOURCING", "CALCULATING", "QUOTE_SENT", "CONTRACT_SIGNED"]:

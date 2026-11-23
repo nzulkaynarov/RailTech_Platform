@@ -35,6 +35,12 @@ def _next_inn():
     return str(_INN_SEQ[0])
 
 
+@pytest.fixture(autouse=True)
+def _legacy_page(settings):
+    """Здесь проверяется сама страница ERP (ссылки до перехода в Кабинет, ДК-1): переход выключен."""
+    settings.PUBLIC_QUOTE_REDIRECT_TO_CABINET = False
+
+
 @pytest.fixture
 def lookups(db):
     DealStage.objects.get_or_create(code="QUOTE_SENT", defaults={"name": "QUOTE_SENT", "sort_order": 10})

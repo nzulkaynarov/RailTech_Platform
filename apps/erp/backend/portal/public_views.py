@@ -167,6 +167,15 @@ class PublicQuoteView(_PublicQuoteBase):
         wants_pdf = request.GET.get("export") == "pdf" or "application/pdf" in request.META.get("HTTP_ACCEPT", "")
         wants_html = "text/html" in request.META.get("HTTP_ACCEPT", "")
         if wants_html and not wants_pdf:
+            # ДК-1: ссылка, разосланная до перехода, ведёт в Кабинет — на ту же ссылку получателя, что и новое письмо.
+            # Срок и отзыв старой ссылки уже проверены выше; нет получателя — остаётся страница ERP.
+            from django.conf import settings
+            from django.http import HttpResponseRedirect
+            from portal.services.doc_links import legacy_redirect_url
+
+            target = legacy_redirect_url(quote) if settings.PUBLIC_QUOTE_REDIRECT_TO_CABINET else None
+            if target:
+                return HttpResponseRedirect(target)
             return self._render_page(request, quote)
         return self._stream_pdf(request, quote)
 

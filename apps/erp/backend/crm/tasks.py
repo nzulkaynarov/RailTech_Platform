@@ -368,7 +368,16 @@ def send_quote_email(self, quote_id: int) -> dict:
 
     from crm.services.documents import public_quote_url
 
-    public_link = public_quote_url(quote) or ""
+    # ДК-1: письмо ведёт в Кабинет — своя ссылка на получателя (`/d/<токен>`, в базе только хеш). Не получилось выпустить
+    # (нет получателя уже отсечено выше) — прежняя страница ERP, КП всё равно уходит.
+    try:
+        from portal.services.doc_links import build_url, mint_quote_link
+
+        _link, raw_link_token = mint_quote_link(quote)
+        public_link = build_url(raw_link_token)
+    except Exception:  # noqa: BLE001 — письмо с КП важнее ссылки: падаем назад на страницу ERP, ошибку не прячем
+        logger.exception("Quote %s: document link was not minted, falling back to the ERP page", quote_id)
+        public_link = public_quote_url(quote) or ""
 
     # The КП is prepared by the REAL selling company, never the platform — the email must name it
     # (Rule 1: no hardcoded platform identity). Same resolution as the public page / acceptance code.

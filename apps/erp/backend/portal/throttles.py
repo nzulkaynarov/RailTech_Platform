@@ -65,3 +65,12 @@ class PortalPartnerAppRateThrottle(SimpleRateThrottle):
 
     def get_cache_key(self, request, view):
         return self.cache_format % {"scope": self.scope, "ident": self.get_ident(request)}
+
+
+class PortalDocLinkRateThrottle(SimpleRateThrottle):
+    """Открытие и PDF документа по ссылке без сессии (ДК-1): лимит на IP, поверх 256 бит токена."""
+
+    scope = "portal_doclink"
+
+    def get_cache_key(self, request, view):
+        return self.cache_format % {"scope": self.scope, "ident": self.get_ident(request)}

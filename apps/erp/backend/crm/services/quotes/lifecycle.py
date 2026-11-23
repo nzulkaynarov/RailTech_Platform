@@ -359,8 +359,13 @@ class QuoteLifecycleService:
         """
         from ._shared import _log_quote
 
+        from portal.services.doc_links import revoke_quote_links
+
         quote = Quote.objects.select_related("deal", "status").get(pk=quote_id)
-        if not quote.public_token_revoked:
+        # ДК-1: отзыв на документе гасит и ссылки получателей в Кабинет (`/d/<токен>`), и страницу ERP старой ссылки;
+        # повтор безвреден — ссылки, выпущенные после отзыва (повторная отправка), он тоже отзывает.
+        revoked_links = revoke_quote_links(quote, actor)
+        if not quote.public_token_revoked or revoked_links:
             quote.public_token_revoked = True
             quote.save(update_fields=["public_token_revoked", "updated_at"])
             _log_quote(

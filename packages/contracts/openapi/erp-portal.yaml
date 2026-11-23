@@ -79,6 +79,8 @@ tags:
     description: Оферта и политика Кабинета (ДВ-5) — акцепт при первом входе и при каждой новой редакции
   - name: requests
   - name: quotes
+  - name: doc-links
+    description: Документ по ссылке из письма (ДК-1, ДК-2, ADR-0030) — гость видит один документ, действие — по коду на адрес получателя, код открывает сессию
   - name: contracts
   - name: invoices
   - name: acts
@@ -1181,6 +1183,323 @@ paths:
           $ref: '#/components/responses/IdempotencyKeyRequired'
         '415':
           $ref: '#/components/responses/UnsupportedMediaType'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /doc-links/open:
+    post:
+      tags: [doc-links]
+      operationId: openDocLink
+      summary: Открыть документ по ссылке из письма
+      description: |
+        ДК-1. Токен — из адреса `/d/<токен>` Кабинета, в теле (путь токена не несёт). Без сессии отвечает гостю: один документ
+        в клиентской проекции (без себестоимости и наценки), ключевые факты и что кнопки действий могут. Сессия контакта той же
+        компании (`session = member`) видит то же с правами своего контакта; сессия другой компании (`other_company`) — гостевой
+        вид. Отозванная, просроченная или заменённая новой версией ссылка не показывает ничего, кроме причины (410
+        `DOC_LINK_REVOKED`, `DOC_LINK_EXPIRED`, `DOC_LINK_SUPERSEDED`); неизвестный токен — всегда 404 `NOT_FOUND`
+        (наличие токена не раскрывается). Каждое открытие пишется в журнал ссылки.
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DocLinkToken'
+      responses:
+        '200':
+          description: 'Документ'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocLinkView'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '410':
+          description: 'Ссылка отозвана, просрочена или заменена новой версией (`DOC_LINK_REVOKED`, `DOC_LINK_EXPIRED`, `DOC_LINK_SUPERSEDED`)'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '400':
+          $ref: '#/components/responses/IdempotencyKeyRequired'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '422':
+          description: '`VALIDATION_ERROR` — тело не по схеме'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /doc-links/pdf:
+    post:
+      tags: [doc-links]
+      operationId: downloadDocLinkPdf
+      summary: Скачать PDF документа по ссылке
+      description: |
+        ДК-1. Тот же PDF, что ушёл письмом (клиентская проекция). PDF ещё собирается — 202 `GENERATING` и `Retry-After`.
+        Состояния ссылки и ответы — как у `POST /doc-links/open`; код для скачивания не нужен.
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DocLinkToken'
+      responses:
+        '200':
+          description: 'PDF'
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        '202':
+          description: 'PDF собирается — повторить через `Retry-After` секунд (`GENERATING`)'
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+                minimum: 1
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '410':
+          description: 'Ссылка отозвана, просрочена или заменена (`DOC_LINK_REVOKED`, `DOC_LINK_EXPIRED`, `DOC_LINK_SUPERSEDED`)'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '400':
+          $ref: '#/components/responses/IdempotencyKeyRequired'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '422':
+          description: '`VALIDATION_ERROR` — тело не по схеме'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /doc-links/code:
+    post:
+      tags: [doc-links]
+      operationId: requestDocLinkCode
+      summary: Прислать код действия на адрес получателя
+      description: |
+        ДК-2. Любое действие гостя (принять, вернуть, вопрос, открыть кабинет) начинается здесь. Код — 6 цифр, живёт 10 минут,
+        в базе только хеш. Уходит только на адрес, на который отправлен документ: адрес в запросе не принимается и в диалоге
+        не меняется. Новый код гасит прежний; повтор — не раньше чем через 45 секунд (429 `CODE_RESEND_TOO_SOON`, `Retry-After`),
+        не больше шести в час на ссылку (429 `TOO_MANY_REQUESTS`). У получателя нет контакта кабинета или компания закрыта —
+        403 `FORBIDDEN`; письмо не ушло — 503 `DELIVERY_FAILED`.
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DocLinkToken'
+      responses:
+        '202':
+          description: 'Код отправлен'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocLinkCodeSent'
+        '403':
+          description: 'Кабинет получателю не открыт (`FORBIDDEN`)'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '410':
+          description: 'Ссылка отозвана, просрочена или заменена (`DOC_LINK_REVOKED`, `DOC_LINK_EXPIRED`, `DOC_LINK_SUPERSEDED`)'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '400':
+          $ref: '#/components/responses/IdempotencyKeyRequired'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '422':
+          description: '`VALIDATION_ERROR` — тело не по схеме'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: >-
+            `CODE_RESEND_TOO_SOON` — новый код раньше чем через 45 секунд; `TOO_MANY_REQUESTS` — лимит частоты
+          headers:
+            Retry-After:
+              description: 'Через сколько секунд можно повторить'
+              schema:
+                type: integer
+                minimum: 1
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: 'Письмо с кодом не ушло (`DELIVERY_FAILED`)'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /doc-links/verify:
+    post:
+      tags: [doc-links]
+      operationId: verifyDocLinkCode
+      summary: Подтвердить код — войти контактом-получателем
+      description: |
+        ДК-2. Верный код открывает сессию контакта-получателя (cookie `Set-Cookie`), отмечает его приглашённым и возвращает
+        `Me`: права — ровно те, что сотрудник задал контакту (`can_act`, `is_admin`), первый контакт компании администратором
+        сам не становится. Если у контакта есть непринятые оферта и политика — `legal_pending = true`: Кабинет показывает
+        принятие (ДВ-5) и продолжает начатое действие через `POST /doc-links/act`. Неверный, просроченный или чужой код —
+        422 `LOGIN_CODE_INVALID`; пятая неверная попытка подряд — 429 `LOGIN_CODE_LOCKED`, нужен новый код.
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, code]
+              properties:
+                token:
+                  type: string
+                  minLength: 1
+                  maxLength: 200
+                code:
+                  type: string
+                  pattern: '^\d{6}$'
+              additionalProperties: false
+      responses:
+        '200':
+          description: 'Сессия выдана (cookie `Set-Cookie`)'
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Me'
+        '403':
+          $ref: '#/components/responses/CompanyArchived'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '410':
+          description: 'Ссылка отозвана, просрочена или заменена (`DOC_LINK_REVOKED`, `DOC_LINK_EXPIRED`, `DOC_LINK_SUPERSEDED`)'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '400':
+          $ref: '#/components/responses/IdempotencyKeyRequired'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '422':
+          description: '`LOGIN_CODE_INVALID` — код неверный, устарел или чужой; `VALIDATION_ERROR` — тело не по схеме'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: >-
+            `LOGIN_CODE_LOCKED` — 5 неверных кодов подряд, нужен новый код; `TOO_MANY_REQUESTS` — лимит частоты по IP
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /doc-links/act:
+    post:
+      tags: [doc-links]
+      operationId: actOnDocLink
+      summary: Принять, вернуть с замечаниями или задать вопрос по документу из ссылки
+      description: |
+        ДК-2. Действие продолжает то, что гость начал до кода: сессия уже есть (получена `POST /doc-links/verify` или была
+        раньше), второго кода не нужно. Права не шире контакта сессии: нет `can_act` — 403 `FORBIDDEN`; сессия другой компании —
+        403 `FORBIDDEN`; без принятых оферты и политики — 403 `LEGAL_ACCEPTANCE_REQUIRED`. `accept` принимает КП (договор
+        создаётся, как при приёме в кабинете), `reject` возвращает с замечаниями (`text` — замечания, обязательны),
+        `question` пишет вопрос менеджеру (`text`). КП уже решено или срок вышел — 409 `QUOTE_FINALIZED`, `QUOTE_EXPIRED`.
+        Ответ — документ в том же виде, что у `POST /doc-links/open`.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, action]
+              properties:
+                token:
+                  type: string
+                  minLength: 1
+                  maxLength: 200
+                action:
+                  type: string
+                  enum: [accept, reject, question]
+                text:
+                  type: string
+                  maxLength: 2000
+              additionalProperties: false
+      responses:
+        '200':
+          description: 'Действие выполнено'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocLinkView'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: 'КП уже решено или срок вышел (`QUOTE_FINALIZED`, `QUOTE_EXPIRED`)'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '410':
+          description: 'Ссылка отозвана, просрочена или заменена (`DOC_LINK_REVOKED`, `DOC_LINK_EXPIRED`, `DOC_LINK_SUPERSEDED`)'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '400':
+          $ref: '#/components/responses/IdempotencyKeyRequired'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '422':
+          description: '`VALIDATION_ERROR` — тело не по схеме, `REASON_REQUIRED` — замечания не заполнены'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '429':
           $ref: '#/components/responses/TooManyRequests'
 
@@ -3482,6 +3801,11 @@ components:
         - BANK_HOLDER_LATIN_INVALID
         - BANK_INTERMEDIARY_INVALID
         - SESSION_ALREADY_ENDED
+        - DOC_LINK_REVOKED
+        - DOC_LINK_EXPIRED
+        - DOC_LINK_SUPERSEDED
+        - CODE_RESEND_TOO_SOON
+        - GENERATING
 
     PartnerKind:
       type: string
@@ -5596,6 +5920,99 @@ components:
         photo:
           type: [integer, 'null']
           description: Id главного фото; миниатюра — `/items/{id}/thumbnail?v=<photo>`, `null` — значок типа
+    DocLinkToken:
+      type: object
+      required: [token]
+      properties:
+        token:
+          type: string
+          minLength: 1
+          maxLength: 200
+          description: Токен из адреса `/d/<токен>`
+      additionalProperties: false
+    DocLinkAvailability:
+      type: object
+      required: [allowed, reason]
+      description: Может ли кнопка действия сработать; неактивная кнопка называет причину рядом с собой
+      properties:
+        allowed:
+          type: boolean
+        reason:
+          type: [string, 'null']
+          enum: [accepted, rejected, expired, other_company, no_contact, no_access, no_right, null]
+          description: |
+            `accepted`, `rejected`, `expired` — КП уже решено или срок вышел; `other_company` — вошёл контакт другой
+            компании; `no_contact`, `no_access` — у получателя нет контакта или модуля в кабинете; `no_right` — у контакта нет права действовать
+    DocLinkCodeSent:
+      type: object
+      required: [sent_to, expires_in, resend_after]
+      properties:
+        sent_to:
+          type: string
+          description: Адрес получателя, замаскированный (`i***@example.com`)
+        expires_in:
+          type: integer
+          description: Сколько секунд код действует
+        resend_after:
+          type: integer
+          description: Через сколько секунд можно запросить новый
+    DocLinkView:
+      type: object
+      description: Документ по ссылке — клиентская проекция КП без себестоимости, наценки и внутренних полей
+      required: [kind, number, version, from_name, to_name, total, valid_until, state, link_expires_at, recipient_hint, session, decide, ask, lines]
+      properties:
+        kind:
+          type: string
+          enum: [quote]
+        number:
+          type: string
+        version:
+          type: integer
+        from_name:
+          type: string
+          description: Кто прислал (продавец)
+        to_name:
+          type: string
+          description: Кому (компания клиента)
+        total:
+          $ref: '#/components/schemas/Money'
+        subtotal:
+          $ref: '#/components/schemas/Money'
+        vat:
+          $ref: '#/components/schemas/Money'
+        valid_until:
+          type: [string, 'null']
+          format: date
+        state:
+          type: string
+          enum: [open, accepted, rejected, expired]
+          description: Из фактов КП, а не из ссылки
+        link_expires_at:
+          type: string
+          format: date-time
+        recipient_hint:
+          type: string
+          description: Адрес получателя, замаскированный; на него уходит код
+        session:
+          type: string
+          enum: [none, member, other_company]
+          description: |
+            `none` — гость; `member` — вошёл контакт той же компании (действует без кода); `other_company` — вошла сессия
+            другой компании: гостевой вид и предложение сменить вход
+        decide:
+          $ref: '#/components/schemas/DocLinkAvailability'
+        ask:
+          $ref: '#/components/schemas/DocLinkAvailability'
+        payment_terms:
+          type: [string, 'null']
+        delivery_days:
+          type: [integer, 'null']
+        delivery_note:
+          type: [string, 'null']
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/QuoteLine'
     QuoteLine:
       type: object
       description: Строка КП для клиента — цена продажи без себестоимости и наценки; `unit_price` и `total` без НДС (Q-FIX21-2)

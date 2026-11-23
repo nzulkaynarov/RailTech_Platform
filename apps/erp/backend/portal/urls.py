@@ -57,6 +57,7 @@ from portal.views import (
     TelegramAuthView,
     UploadView,
 )
+from portal.views_doclinks import DocLinkActView, DocLinkCodeView, DocLinkOpenView, DocLinkPdfView, DocLinkVerifyView
 from portal.views_items import ItemThumbnailView
 from portal.views_legal import LegalAcceptView, LegalCurrentView, LegalPolicyView
 from portal.views_letters import LetterDetailView, LetterFileView, LetterListView
@@ -114,6 +115,17 @@ urlpatterns = [
         PublicPartnerApplicationView.as_view(),
         name="portal-auth-partner-application-slash",
     ),
+    # Документ по ссылке из письма (ДК-1, ДК-2, ADR-0030): токен в теле, гость без сессии, действие — по коду
+    path("doc-links/open", DocLinkOpenView.as_view(), name="portal-doc-link-open"),
+    path("doc-links/open/", DocLinkOpenView.as_view(), name="portal-doc-link-open-slash"),
+    path("doc-links/pdf", DocLinkPdfView.as_view(), name="portal-doc-link-pdf"),
+    path("doc-links/pdf/", DocLinkPdfView.as_view(), name="portal-doc-link-pdf-slash"),
+    path("doc-links/code", DocLinkCodeView.as_view(), name="portal-doc-link-code"),
+    path("doc-links/code/", DocLinkCodeView.as_view(), name="portal-doc-link-code-slash"),
+    path("doc-links/verify", DocLinkVerifyView.as_view(), name="portal-doc-link-verify"),
+    path("doc-links/verify/", DocLinkVerifyView.as_view(), name="portal-doc-link-verify-slash"),
+    path("doc-links/act", DocLinkActView.as_view(), name="portal-doc-link-act"),
+    path("doc-links/act/", DocLinkActView.as_view(), name="portal-doc-link-act-slash"),
     # Countries (Справочник стран и метаданных для онбординга, COUNTRY-MASK-1)
     path("operator", OperatorView.as_view(), name="portal-operator"),
     path("operator/", OperatorView.as_view(), name="portal-operator-slash"),

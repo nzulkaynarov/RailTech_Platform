@@ -40,8 +40,9 @@ class PortalTooManyRequests(APIException):
     default_detail = "TOO_MANY_REQUESTS"
     default_code = "too_many_requests"
 
-    def __init__(self, detail="TOO_MANY_REQUESTS"):
+    def __init__(self, detail="TOO_MANY_REQUESTS", retry_after=None):
         super().__init__(detail=detail, code=detail)
+        self.retry_after = retry_after  # секунды до повтора → заголовок `Retry-After`
 
 
 class PortalDeliveryFailed(APIException):
@@ -110,6 +111,9 @@ def portal_exception_handler(exc, context):
     if detail not in ERROR_CODES:
         detail = FALLBACK_BY_STATUS.get(response.status_code, "VALIDATION_ERROR")
     response.data = {"detail": detail}
+    retry_after = getattr(exc, "retry_after", None)
+    if retry_after:
+        response["Retry-After"] = str(int(retry_after))
     return response
 
 

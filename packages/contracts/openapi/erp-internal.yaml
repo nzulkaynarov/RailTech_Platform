@@ -14731,8 +14731,9 @@ paths:
   /api/v1/crm/quotes/{id}/revoke-public-link/:
     post:
       operationId: crm_quotes_revoke_public_link_create
-      description: Seller pulls the shared client link (post-send panel). Idempotent; further opens return 410 QUOTE_LINK_REVOKED.
-        Same authorization as send-to-client.
+      description: 'Seller pulls every client link to the КП: the recipients'' Cabinet links (`/d/<token>`, ДК-1) and the
+        old ERP page link. Idempotent; further opens return 410 (`DOC_LINK_REVOKED` in the Cabinet, QUOTE_LINK_REVOKED on
+        the old page). Same authorization as send-to-client; the response carries the refreshed `client_link`.'
       summary: Revoke the public no-login link of a sent КП
       parameters:
       - in: path
@@ -36161,6 +36162,11 @@ components:
           type: boolean
           nullable: true
           readOnly: true
+        client_link:
+          allOf:
+          - $ref: '#/components/schemas/QuoteClientLink'
+          nullable: true
+          readOnly: true
         client_reject_reason:
           type: string
           readOnly: true
@@ -36211,6 +36217,7 @@ components:
       - charges_total
       - client_comments
       - client_decision
+      - client_link
       - client_reject_reason
       - created_at
       - deal
@@ -36508,6 +36515,47 @@ components:
       - occurred_on
       - recorded_at
       - recorded_by_name
+    QuoteClientLink:
+      type: object
+      description: 'Ссылка клиента на КП в Кабинете (ДК-1): что отправитель видит на документе и что может отозвать.'
+      properties:
+        state:
+          $ref: '#/components/schemas/QuoteClientLinkStateEnum'
+        recipient_hint:
+          type: string
+          nullable: true
+          description: Адрес получателя, замаскированный
+        expires_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Когда гаснет самая поздняя живая ссылка
+        first_opened_at:
+          type: string
+          format: date-time
+          nullable: true
+        last_opened_at:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+      - expires_at
+      - first_opened_at
+      - last_opened_at
+      - recipient_hint
+      - state
+    QuoteClientLinkStateEnum:
+      enum:
+      - none
+      - active
+      - revoked
+      - expired
+      type: string
+      description: |-
+        * `none` - none
+        * `active` - active
+        * `revoked` - revoked
+        * `expired` - expired
     QuoteDeliverRequestChannelEnum:
       enum:
       - telegram
