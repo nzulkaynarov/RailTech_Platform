@@ -1,8 +1,8 @@
 ---
 title: Лиды, «Ждут ответа» и заявки
-sections: crm.messages, crm.leads, crm.clients, crm.requests
+sections: crm.leads, crm.clients
 order: 20
-screens: [/crm/messages, /crm/leads, /crm/clients, /crm/requests]
+screens: [/crm/leads, /crm/clients]
 ---
 Лид — человек или компания, которые написали впервые (например, в Telegram-бота). Бот отвечает сам, пока вопрос простой; когда нужен человек, диалог попадает в «Лиды» → «Ждут ответа».
 

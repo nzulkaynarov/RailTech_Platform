@@ -1834,6 +1834,15 @@
     "inviteTeam": "Hamkasblarni taklif qilish",
     "inviteTeamDesc": "Birgalikda ishlash uchun xodimlarni qoʻshing"
   },
+  "maintenance": {
+    "soon": "Kabinet soat {{time}}da yangilanadi — ish {{duration}}ga uziladi. Özgarişlarni saqlang.",
+    "soonUrgent": "Kabinetda şoşilinç tuzatiş soat {{time}}da — ish {{duration}}ga uziladi. Özgarişlarni saqlang.",
+    "running": "Yangilaniş ketmoqda — bir-ikki daqiqadan söng sahifa özi yangilanadi.",
+    "runningUrgent": "Şoşilinç tuzatiş ketmoqda — bir-ikki daqiqadan söng sahifa özi yangilanadi.",
+    "minutes_one": "{{range}} daqiqa",
+    "minutes_other": "{{range}} daqiqa",
+    "hide": "Yopish"
+  },
   "legal": {
     "title": "Kabinetda işlaş şartlari",
     "intro": "Davom etiş uçun şaxsga doir maʼlumotlarga işlov beriş siyosati va kabinetdan foydalaniş şartlarini (oferta) öqib, qabul qiling. Bu bir marta kerak: qayta faqat yangi tahrir çiqqanda söraymiz.",

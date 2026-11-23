@@ -10,8 +10,6 @@ import type {
   MemoApprovalRow,
   MemoDecisionIn,
   QuoteApprovalCard,
-  QuoteApprovalPage,
-  QuoteApprovalRow,
   QuoteDecisionIn,
 } from "../shared/api/generated/model";
 import {
@@ -225,26 +223,6 @@ function presentQuote(
   return view;
 }
 
-function quoteRow(card: QuoteApprovalCard, mayDecide: boolean): QuoteApprovalRow {
-  return {
-    id: card.id,
-    number: card.number,
-    version: card.version,
-    superseded_by: card.superseded_by,
-    request_number: card.request?.number ?? null,
-    client_name: mayDecide ? card.client_name : null,
-    total:
-      mayDecide && card.totals
-        ? { amount: card.totals.total, currency: card.totals.currency }
-        : null,
-    due: mayDecide ? card.due : null,
-    status: card.status,
-    can_decide: card.can_decide && mayDecide,
-    outgoing_number: card.outgoing_number,
-    created_at: card.created_at,
-  };
-}
-
 function updateQuote(id: string, change: (q: QuoteApprovalCard) => QuoteApprovalCard) {
   const all = readQuotes();
   const index = all.findIndex((q) => q.id === id);
@@ -309,23 +287,6 @@ if (typeof window !== "undefined") {
 }
 
 export const edsApprovalsHandlers = [
-  http.get("*/eds/quotes", ({ request }) => {
-    const ok = guard(QUOTES, "read");
-    if (ok.error) return ok.error;
-    const url = new URL(request.url);
-    const mine = (url.searchParams.get("scope") ?? "mine") === "mine";
-    const director = ok.who.levels["eds.drafts"] === "full";
-    const statuses = wantedStatuses(url);
-    const found = readQuotes()
-      .filter((q) =>
-        mine ? q.status === "open" && q.can_decide && (director || q.acting_for) : true,
-      )
-      .filter((q) => statuses.length === 0 || statuses.includes(q.status))
-      .map((q) => quoteRow(q, director || Boolean(q.acting_for)));
-    const page: QuoteApprovalPage = paged(url, found);
-    return HttpResponse.json(page);
-  }),
-
   // A1: файл подтверждения клиента — раньше карточки по номеру (`/eds/quotes/*` съел бы адрес).
   http.get("*/eds/quotes/:id/client-decision/evidence", ({ params }) => {
     const ok = guard(QUOTES, "read");

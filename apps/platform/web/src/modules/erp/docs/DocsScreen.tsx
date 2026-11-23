@@ -450,7 +450,6 @@ function DocDrawer({
           {doc.review_state === "pending" ? (
             <p className="pf-cat-note">{t("docs.review.note")}</p>
           ) : null}
-          <p className="pf-cat-note">{t("docs.chatLater")}</p>
           <h3 className="pf-cat-section">{t("docs.preview")}</h3>
           {!doc.previewable ? (
             <p className="pf-cat-note">{t("docs.noPreview")}</p>

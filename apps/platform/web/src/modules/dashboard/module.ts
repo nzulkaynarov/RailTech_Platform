@@ -8,13 +8,7 @@ export const dashboard: ModuleConfig = {
       path: "/dashboard/queue",
       access: { resource: "dashboard.queue" },
       tabs: [{ key: "today" }, { key: "notifications" }],
-      actionTo: "/dashboard/projects",
-    },
-    {
-      key: "projects",
-      path: "/dashboard/projects",
-      access: { resource: "eds.projects" },
-      actionTo: "/dashboard/queue",
+      actionTo: "/eds/projects",
     },
     {
       key: "summary",

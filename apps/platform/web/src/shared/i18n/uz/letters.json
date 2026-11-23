@@ -120,7 +120,6 @@
       "comment": "Izoh",
       "reason": "Rad etish sababi"
     },
-    "returned": "Xat menejerga qaytarildi",
     "rejected": "Xat rad etildi",
     "journal": "Tarix",
     "actionUnknown": "Xatdagi amal",
@@ -892,14 +891,6 @@
     "historyTag": "Tarixdan",
     "spamCaption": "Shubhali xatlar",
     "spamIntro": "Pochta qutisidagi «Spam» jildidan xatlar. Keraklilarini navbatga qaytaring.",
-    "spamEmpty": {
-      "title": "Shubhali xatlar yoʻq",
-      "text": "Bu yerga «Spam» jildidan xatlar tushadi, agar u qabul sozlamalarida tanlangan boʻlsa."
-    },
-    "historyEmpty": {
-      "title": "Tarixdan xatlar yoʻq",
-      "text": ""
-    },
     "spam": {
       "title": "Shubhali xat",
       "what": "Pochta qutisining «Spam» jildiga kelgan. Joʻnatuvchi va matnni tekshiring.",
@@ -1091,14 +1082,6 @@
     }
   },
   "settings": {
-    "subtitle": "Xatlar ma’lumotnomalari, rezolyutsiya shablonlari va ro‘yxatga olish SI yordamchisi.",
-    "tabsLabel": "Hujjat aylanishi bo‘limlari",
-    "tabs": {
-      "dictionaries": "Ma’lumotnomalar",
-      "templates": "Rezolyutsiya shablonlari",
-      "ai": "SI yordamchi"
-    },
-    "readOnly": "Faqat ko‘rish.",
     "dict": {
       "title": "Ma’lumotnomalar",
       "hint": "Yangi qiymatlar shaklda darhol paydo bo‘ladi. Ishlatilganini faqat yashirish mumkin.",
