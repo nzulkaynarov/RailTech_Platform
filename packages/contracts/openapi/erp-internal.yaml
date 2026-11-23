@@ -27529,7 +27529,7 @@ components:
           $ref: '#/components/schemas/LanguageEnum'
         can_act:
           type: boolean
-          description: Может создавать запросы и загружать файлы (участник); иначе — просмотр.
+          description: Может подтверждать (участник); иначе — просмотр.
         invited_at:
           type: string
           format: date-time

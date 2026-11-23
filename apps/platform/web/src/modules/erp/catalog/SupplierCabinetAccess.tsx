@@ -253,6 +253,7 @@ function AccessBody({ supplierId, data }: { supplierId: string; data: AccessData
                         id: supplierId,
                         data: {
                           contact_id: contact.id,
+                          can_act: contact.can_act,
                           ...(relationship ? {} : { modules: draftModules, kind: draftKind }),
                         },
                       });

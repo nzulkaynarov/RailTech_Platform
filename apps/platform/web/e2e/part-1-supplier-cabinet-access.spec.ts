@@ -25,13 +25,16 @@ for (const width of WIDTHS) {
     await form.getByRole("button", { name: "Добавить" }).click();
     await expect(form).toBeHidden();
     await expect(block.getByText("Нодира Рахимова")).toBeVisible();
-    await block.getByRole("switch", { name: /Каталог и заявки/ }).click();
+    // ДК-5: право подтверждать — одно название в Платформе и Кабинете; раздел покупателя новому партнёру не включён
+    await expect(
+      block.getByRole("switch", { name: /Может подтверждать: Нодира Рахимова/ }),
+    ).toBeChecked();
+    await expect(block.getByRole("switch", { name: /Каталог и заявки/ })).not.toBeChecked();
     await block.getByRole("button", { name: "Пригласить: Нодира Рахимова" }).click();
     await expect(block.getByText("Приглашён", { exact: true })).toBeVisible();
     await expect(block.getByText("В кабинете: Партнёр")).toBeVisible();
-    // PART-CRM: приглашение просит CRM завести клиента — «Ожидает»
-    await expect(block.getByText("Клиент в CRM")).toBeVisible();
-    await expect(block.getByText("Ожидает", { exact: true })).toBeVisible();
+    // ДК-5: только продающий партнёр клиентом не становится — CRM ничего не просят (с «Каталог и заявки» — см. part-crm-client-in-crm)
+    await expect(block.getByText("Ожидает", { exact: true })).toBeHidden();
     await expectNoViolations(page, `Партнёр · доступ в кабинет`);
     await block.scrollIntoViewIfNeeded();
     await settledScreenshot(page, "supplier-cabinet-access");

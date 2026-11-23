@@ -33,6 +33,8 @@ const PARTNER_DEFAULT = {
   roles: ['partner' as const],
   modules: ['my_products', 'catalog_requests', 'letters', 'messages', 'profile'],
 };
+/** То, что сервер даёт новому партнёру: раздела покупателя нет (ДК-5), он — только поставщик. */
+const PARTNER_SELLER = { roles: ['partner' as const], modules: ['my_products', 'letters', 'messages', 'profile'] };
 const PARTNER_PRODUCTS_ONLY = { roles: ['partner' as const], modules: ['my_products', 'profile'] };
 /** Партнёр, у которого сотрудник выключил оба раздела: остался только «Профиль». */
 const PARTNER_NOTHING = { roles: ['partner' as const], modules: ['profile'] };
@@ -145,7 +147,7 @@ describe('меню из /me.modules', () => {
       new Set(template.client),
     );
     expect(new Set(NAV_ITEMS.filter((item) => item.group === 'sell').map((item) => item.module))).toEqual(new Set(['my_products']));
-    expect(contract.components.schemas.Me['x-role-default-modules'].partner).toEqual(PARTNER_DEFAULT.modules);
+    expect(contract.components.schemas.Me['x-role-default-modules'].partner).toEqual(PARTNER_SELLER.modules);
   });
 
   it('навигация: неизвестные модули не рисуются, пустой список — пустое меню', () => {
@@ -255,11 +257,11 @@ describe('меню из /me.modules', () => {
     }
   });
 
-  it('партнёр только с «Мои товары»: два пункта, корень ведёт в «Мои товары», клиентские разделы закрыты', async () => {
+  it('партнёр только с «Мои товары»: два пункта, корень ведёт в «Заказы на поставку», клиентские разделы закрыты', async () => {
     signedIn('actor', 'demo', PARTNER_PRODUCTS_ONLY);
     const { router } = renderApp('/');
-    await screen.findByRole('heading', { level: 1, name: 'Мои товары' });
-    expect(router.state.location.pathname).toBe('/my-products');
+    await screen.findByRole('heading', { level: 1, name: 'Заказы на поставку' });
+    expect(router.state.location.pathname).toBe('/partner/orders');
     const side = screen.getByRole('navigation', { name: 'Разделы кабинета' });
     expect(
       within(side)
@@ -268,6 +270,19 @@ describe('меню из /me.modules', () => {
     ).toEqual(['Мои товары', 'Заказы на поставку', 'Профиль']);
     await router.navigate('/requests');
     await waitFor(() => expect(router.state.location.pathname).toBe('/my-products'));
+  });
+
+  it('новый партнёр (шаблон сервера): раздела покупателя в меню нет, вход ведёт в «Заказы на поставку» (ДК-5)', async () => {
+    signedIn('actor', 'demo', PARTNER_SELLER);
+    const { router } = renderApp('/');
+    await screen.findByRole('heading', { level: 1, name: 'Заказы на поставку' });
+    expect(router.state.location.pathname).toBe('/partner/orders');
+    const side = screen.getByRole('navigation', { name: 'Разделы кабинета' });
+    const names = within(side)
+      .getAllByRole('link')
+      .map((link) => link.textContent?.replace(/\d+/g, '').trim());
+    expect(names).not.toContain('Заявки');
+    expect(names).not.toContain('Каталог');
   });
 
   it('партнёр без разделов (оба модуля выключены): «Доступ открыт…», в меню только «Профиль»', async () => {

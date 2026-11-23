@@ -30,7 +30,7 @@ async function block(drawer: HTMLElement): Promise<HTMLElement> {
 }
 
 describe("Партнёр: блок «Доступ в кабинет»", () => {
-  it("кабинет не открывали: статус, подсказка, разделы по умолчанию включены, роли пусты", async () => {
+  it("кабинет не открывали: статус, подсказка, «Мои товары» включён, раздел покупателя нет (ДК-5), роли пусты", async () => {
     const drawer = await openSupplier("supply@demo.example", "1", "ООО «Поставщик Север»");
     const section = await block(drawer);
 
@@ -38,7 +38,7 @@ describe("Партнёр: блок «Доступ в кабинет»", () => {
     expect(within(section).getByText("Кабинет закрыт: партнёр войти не может.")).toBeVisible();
     expect(within(section).getByRole("switch", { name: /Мои товары/ })).toBeChecked();
     const catalog = within(section).getByRole("switch", { name: /Каталог и заявки/ });
-    expect(catalog).toBeChecked();
+    expect(catalog).not.toBeChecked();
     expect(
       within(section).getByText(
         "Каталог — как у клиентов: опубликованные товары и цены, без партнёров.",
@@ -73,14 +73,14 @@ describe("Партнёр: блок «Доступ в кабинет»", () => {
     const drawer = await openSupplier("supply@demo.example", "1", "ООО «Поставщик Север»");
     const section = await block(drawer);
     const aziz = await within(section).findByRole("switch", {
-      name: "Может создавать запросы и загружать файлы: Азиз Тошматов",
+      name: "Может подтверждать: Азиз Тошматов",
     });
     expect(aziz).toBeChecked();
     fireEvent.click(aziz);
     await waitFor(() => {
       expect(
         within(section).getByRole("switch", {
-          name: "Может создавать запросы и загружать файлы: Азиз Тошматов",
+          name: "Может подтверждать: Азиз Тошматов",
         }),
       ).not.toBeChecked();
     });
@@ -98,7 +98,7 @@ describe("Партнёр: блок «Доступ в кабинет»", () => {
     await modalClosed("Новый контакт партнёра");
     expect(
       await within(section).findByRole("switch", {
-        name: "Может создавать запросы и загружать файлы: Нодира Рахимова",
+        name: "Может подтверждать: Нодира Рахимова",
       }),
     ).not.toBeChecked();
   });
@@ -135,16 +135,16 @@ describe("Партнёр: блок «Доступ в кабинет»", () => {
   it("выбор разделов до приглашения уходит с приглашением; потом переключатель правит сразу", async () => {
     const drawer = await openSupplier("supply@demo.example", "1", "ООО «Поставщик Север»");
     const section = await block(drawer);
-    fireEvent.click(await within(section).findByRole("switch", { name: /Каталог и заявки/ }));
-    expect(within(section).getByRole("switch", { name: /Каталог и заявки/ })).not.toBeChecked();
+    fireEvent.click(await within(section).findByRole("switch", { name: /Мои товары/ }));
+    expect(within(section).getByRole("switch", { name: /Мои товары/ })).not.toBeChecked();
     fireEvent.click(within(section).getByRole("button", { name: "Пригласить: Азиз Тошматов" }));
     await within(section).findByText("Приглашён");
-    expect(within(section).getByRole("switch", { name: /Мои товары/ })).toBeChecked();
+    expect(within(section).getByRole("switch", { name: /Мои товары/ })).not.toBeChecked();
     expect(within(section).getByRole("switch", { name: /Каталог и заявки/ })).not.toBeChecked();
 
-    fireEvent.click(within(section).getByRole("switch", { name: /Каталог и заявки/ }));
+    fireEvent.click(within(section).getByRole("switch", { name: /Мои товары/ }));
     await waitFor(() => {
-      expect(within(section).getByRole("switch", { name: /Каталог и заявки/ })).toBeChecked();
+      expect(within(section).getByRole("switch", { name: /Мои товары/ })).toBeChecked();
     });
   });
 
@@ -181,8 +181,6 @@ describe("Партнёр: блок «Доступ в кабинет»", () => {
       expect(within(section).queryByRole("button", { name })).toBeNull();
     }
     expect(within(section).getByRole("switch", { name: /Мои товары/ })).toBeDisabled();
-    expect(
-      within(section).getByRole("switch", { name: /Может создавать запросы и загружать файлы/ }),
-    ).toBeDisabled();
+    expect(within(section).getByRole("switch", { name: /Может подтверждать/ })).toBeDisabled();
   });
 });

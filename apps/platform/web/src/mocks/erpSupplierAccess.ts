@@ -14,6 +14,7 @@ import { buildMe, readSession } from "./mockSession";
  * «партнёр» по партнёру; письмо «уходит» только в виде отметки о приглашении (ссылки и кода в ответах нет).
  */
 const ALLOWED = ["my_products", "catalog_requests"] as const;
+const DEFAULT_MODULES = ["my_products"] as const;
 type Module = (typeof ALLOWED)[number];
 const MODULE_SET = new Set<string>(ALLOWED);
 const MOCK_NOW = "2026-11-04T10:00:00+05:00";
@@ -174,7 +175,8 @@ function view(id: string, entry: Entry, canManage = true): SupplierCabinetAccess
     company_name: entry.name,
     relationship,
     contacts: entry.contacts,
-    partner_modules: { allowed: [...ALLOWED], default: [...ALLOWED] },
+    // ДК-5: раздел покупателя («Каталог и заявки») новому партнёру не включён, его включает сотрудник
+    partner_modules: { allowed: [...ALLOWED], default: [...DEFAULT_MODULES] },
     cabinet_roles: [
       ...(entry.client ? (["client"] as const) : []),
       ...(open ? (["partner"] as const) : []),
@@ -340,6 +342,7 @@ export const erpSupplierAccessHandlers = [
       kind?: SupplierCabinetRelationship["kind"];
       contract_number?: string;
       contract_date?: string | null;
+      can_act?: boolean;
     }>(request);
     const contact = found[1].contacts.find((c) => c.id === data.contact_id);
     if (!contact) return missing();
@@ -350,7 +353,7 @@ export const erpSupplierAccessHandlers = [
     found[1].relationship = {
       role: "partner",
       kind: data.kind ?? current?.kind ?? "",
-      modules: modules ?? current?.modules ?? [...ALLOWED],
+      modules: modules ?? current?.modules ?? [...DEFAULT_MODULES],
       catalog_price_visibility: current?.catalog_price_visibility ?? "",
       contract_number: data.contract_number ?? current?.contract_number ?? "",
       contract_date: data.contract_date ?? current?.contract_date ?? null,
@@ -362,8 +365,14 @@ export const erpSupplierAccessHandlers = [
       invited_by: person,
     };
     contact.invited_at = MOCK_NOW;
-    // Приглашение просит CRM завести клиента; клиент, уже заведённый или в конфликте, остаётся как есть.
-    if (found[1].crm.status === "none") found[1].crm = { status: "requested", crm_client_id: null };
+    if (data.can_act !== undefined) contact.can_act = data.can_act;
+    // Приглашение партнёра с разделом покупателя просит CRM завести клиента; только продающий партнёр клиентом не становится
+    // (ДК-5); клиент, уже заведённый или в конфликте, остаётся как есть.
+    if (
+      found[1].crm.status === "none" &&
+      found[1].relationship.modules.includes("catalog_requests")
+    )
+      found[1].crm = { status: "requested", crm_client_id: null };
     return HttpResponse.json(view(...found));
   }),
   // PART-CRM: «Найден клиент CRM по ИНН. Это та же компания?» — «Да» / «Нет»
