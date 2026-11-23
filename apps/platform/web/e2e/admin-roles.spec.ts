@@ -115,7 +115,12 @@ test.describe("Ролевая матрица: роли — данные", () => 
     await expect(page.getByRole("option", { name: /ИНН 300000001/ })).toHaveCount(0);
     await search.press("Escape");
     await railLinks(page).filter({ hasText: "Документы" }).click();
-    await expect(submenu.getByRole("link")).toHaveText([/Почта/, /Исходящие/, /Внутренние/, /Архив/]);
+    await expect(submenu.getByRole("link")).toHaveText([
+      /Почта/,
+      /Исходящие/,
+      /Внутренние/,
+      /Архив/,
+    ]);
     // Название роли под аватаром — из данных.
     await expect(
       page.getByRole("button", { name: new RegExp(`${MIXED}: профиль и настройки`) }),
