@@ -201,16 +201,25 @@ def _contract_step(row: RawRow) -> tuple[QueueItemKind, str, str] | None:
             return None
         return "issue_contract", "Сформировать проект договора по", "КП принято клиентом"
     if contract.status == "project" and not contract.sent_to_client:
-        # Х-1: до виз договор клиенту не уходит — слово по факту блокировки ERP, а не по статусу.
-        if contract.send_blocker_code is not None:
+        # Х-1 и ДОК-10: шаг по факту единой проверки ERP (`send_blocker_code`), не по статусу.
+        code = contract.send_blocker_code
+        if code == "CONTRACT_DEVIATION_PENDING":
+            return None  # ход за держателем «Право»: у отправителя строки нет
+        if code == "CONTRACT_NEEDS_OUR_SIGNATURE":
+            return (
+                "issue_contract",
+                f"Подписать от компании договор {contract.number} по",
+                "до отправки клиенту нужна наша подпись",
+            )
+        if code is not None:
             return (
                 "issue_contract",
                 (
                     f"Отправить на визы договор {contract.number} по"
-                    if contract.send_blocker_code in _VISAS_TO_REQUEST
+                    if code in _VISAS_TO_REQUEST
                     else f"Ждёт виз договор {contract.number} по"
                 ),
-                _BLOCKER_WHY[contract.send_blocker_code],
+                _BLOCKER_WHY[code],
             )
         return (
             "issue_contract",

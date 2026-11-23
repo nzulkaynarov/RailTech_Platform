@@ -624,3 +624,22 @@ class TestLegacyRedirect:
     def test_old_link_of_a_quote_without_a_recipient_keeps_the_erp_page(self, quote):
         Deal.objects.filter(pk=quote.deal_id).update(contact=None)
         assert self.get(quote).status_code == 200
+
+
+class TestValidUntilUsesCompanyDay:
+    """«Действует до» — день компании (Asia/Tashkent), а не UTC: с 00:00 до 05:00 по Ташкенту вчерашний срок уже вышел."""
+
+    def test_old_page_is_closed_after_midnight_in_tashkent(self, quote):
+        import zoneinfo
+
+        from crm.services.quotes import public_quote_gate
+
+        tashkent_00_30 = datetime.datetime(2026, 11, 24, 0, 30, tzinfo=zoneinfo.ZoneInfo("Asia/Tashkent")).astimezone(
+            datetime.timezone.utc
+        )
+        Quote.objects.filter(pk=quote.pk).update(valid_until=datetime.date(2026, 11, 23))
+        quote.refresh_from_db()
+        from unittest import mock
+
+        with mock.patch("django.utils.timezone.now", return_value=tashkent_00_30):
+            assert public_quote_gate(quote) is not None

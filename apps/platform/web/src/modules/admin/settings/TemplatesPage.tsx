@@ -5,6 +5,7 @@ import { canEdit, canSee } from "../../../app/access";
 import { useAuth } from "../../../app/auth/useAuth";
 import { TemplatesTab as ResolutionTemplates } from "../docflow/TemplatesTab";
 import { SectionTabs } from "../company/SectionTabs";
+import { ContractTemplates } from "../company/tabs/ContractTemplates";
 import { DocumentTemplates } from "../company/tabs/DocumentTemplates";
 import { EmailTemplates } from "../company/tabs/EmailTemplates";
 import { LetterTemplates } from "../company/tabs/LetterTemplates";
@@ -14,7 +15,7 @@ import { useTabParam } from "./useTabParam";
 
 import "../company/company.css";
 
-const TABS = ["all", "documents", "letters", "emails", "resolutions"] as const;
+const TABS = ["all", "documents", "contracts", "letters", "emails", "resolutions"] as const;
 
 /**
  * Правила работы · Шаблоны (SET-IA, ЕВ-2а: «Шаблоны резолюций» — вкладка «Резолюции», её видит администратор): шаблоны КП, договоров, счетов и актов, шаблоны писем клиентам. «Условия КП» — не шаблон,
@@ -52,6 +53,10 @@ export function TemplatesPage() {
           ) : active === "documents" ? (
             <div className="pf-co-body">
               <DocumentTemplates />
+            </div>
+          ) : active === "contracts" ? (
+            <div className="pf-co-body">
+              <ContractTemplates />
             </div>
           ) : active === "letters" ? (
             <div className="pf-co-body">

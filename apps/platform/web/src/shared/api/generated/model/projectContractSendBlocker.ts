@@ -5,7 +5,7 @@
 import type { ProjectContractSendBlockerCode } from "./projectContractSendBlockerCode";
 
 /**
- * Х-1: почему проект договора нельзя отправить клиенту — визы маршрута подписи (ADR-0025) не собраны
+ * Почему проект договора нельзя отправить клиенту: визы маршрута подписи не собраны (Х-1, ADR-0025), отступление ждёт решения или нет нашей подписи (ДОК-10) — одна проверка ERP
  */
 export interface ProjectContractSendBlocker {
   code: ProjectContractSendBlockerCode;

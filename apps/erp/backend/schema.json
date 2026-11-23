@@ -17496,7 +17496,7 @@
                                 }
                             }
                         },
-                        "description": "CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот; CONTRACT_VISAS_REQUIRED (Х-1): отправка договора клиенту до сбора виз — в теле `reason` (причина словами) и `missing` (роли без визы)"
+                        "description": "CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот; CONTRACT_DEVIATION_PENDING / CONTRACT_NEEDS_OUR_SIGNATURE: договор по шаблону ещё нельзя отправить (ДОК-10); CONTRACT_VISAS_REQUIRED (Х-1): отправка договора клиенту до сбора виз — в теле `reason` (причина словами) и `missing` (роли без визы)"
                     },
                     "401": {
                         "$ref": "#/components/responses/UnauthorizedResponse"
@@ -17766,7 +17766,7 @@
                                 }
                             }
                         },
-                        "description": "CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот; CONTRACT_VISAS_REQUIRED (Х-1): отправка договора клиенту до сбора виз — в теле `reason` (причина словами) и `missing` (роли без визы)"
+                        "description": "CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот; CONTRACT_DEVIATION_PENDING / CONTRACT_NEEDS_OUR_SIGNATURE: договор по шаблону ещё нельзя отправить (ДОК-10); CONTRACT_VISAS_REQUIRED (Х-1): отправка договора клиенту до сбора виз — в теле `reason` (причина словами) и `missing` (роли без визы)"
                     },
                     "401": {
                         "$ref": "#/components/responses/UnauthorizedResponse"
@@ -19023,7 +19023,7 @@
                                 }
                             }
                         },
-                        "description": "CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот; CONTRACT_VISAS_REQUIRED (Х-1): отправка договора клиенту до сбора виз — в теле `reason` (причина словами) и `missing` (роли без визы)"
+                        "description": "CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот; CONTRACT_DEVIATION_PENDING / CONTRACT_NEEDS_OUR_SIGNATURE: договор по шаблону ещё нельзя отправить (ДОК-10); CONTRACT_VISAS_REQUIRED (Х-1): отправка договора клиенту до сбора виз — в теле `reason` (причина словами) и `missing` (роли без визы)"
                     },
                     "401": {
                         "$ref": "#/components/responses/UnauthorizedResponse"
@@ -19193,10 +19193,80 @@
                                 }
                             }
                         },
-                        "description": "CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот; CONTRACT_VISAS_REQUIRED (Х-1): отправка договора клиенту до сбора виз — в теле `reason` (причина словами) и `missing` (роли без визы)"
+                        "description": "CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот; CONTRACT_DEVIATION_PENDING / CONTRACT_NEEDS_OUR_SIGNATURE: договор по шаблону ещё нельзя отправить (ДОК-10); CONTRACT_VISAS_REQUIRED (Х-1): отправка договора клиенту до сбора виз — в теле `reason` (причина словами) и `missing` (роли без визы)"
                     },
                     "401": {
                         "$ref": "#/components/responses/UnauthorizedResponse"
+                    }
+                }
+            }
+        },
+        "/api/v1/crm/contracts/{id}/decide-deviation/": {
+            "post": {
+                "operationId": "crm_contracts_decide_deviation_create",
+                "description": "Contracts -- generated from approved quotes, double-signed.",
+                "summary": "Decide on a deviation request (holder of contract.approve_template, ДОК-10)",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "A unique integer value identifying this Контракт.",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "CRM"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ContractDeviationDecisionRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ContractDeviationDecisionRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ContractDeviationDecisionRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ContractFlow"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/BadRequestResponse"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/ForbiddenResponse"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFoundResponse"
                     }
                 }
             }
@@ -19462,7 +19532,7 @@
                                 }
                             }
                         },
-                        "description": "CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот; CONTRACT_VISAS_REQUIRED (Х-1): отправка договора клиенту до сбора виз — в теле `reason` (причина словами) и `missing` (роли без визы)"
+                        "description": "CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот; CONTRACT_DEVIATION_PENDING / CONTRACT_NEEDS_OUR_SIGNATURE: договор по шаблону ещё нельзя отправить (ДОК-10); CONTRACT_VISAS_REQUIRED (Х-1): отправка договора клиенту до сбора виз — в теле `reason` (причина словами) и `missing` (роли без визы)"
                     },
                     "401": {
                         "$ref": "#/components/responses/UnauthorizedResponse"
@@ -19562,10 +19632,80 @@
                                 }
                             }
                         },
-                        "description": "CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот; CONTRACT_VISAS_REQUIRED (Х-1): отправка договора клиенту до сбора виз — в теле `reason` (причина словами) и `missing` (роли без визы)"
+                        "description": "CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот; CONTRACT_DEVIATION_PENDING / CONTRACT_NEEDS_OUR_SIGNATURE: договор по шаблону ещё нельзя отправить (ДОК-10); CONTRACT_VISAS_REQUIRED (Х-1): отправка договора клиенту до сбора виз — в теле `reason` (причина словами) и `missing` (роли без визы)"
                     },
                     "401": {
                         "$ref": "#/components/responses/UnauthorizedResponse"
+                    }
+                }
+            }
+        },
+        "/api/v1/crm/contracts/{id}/request-deviation/": {
+            "post": {
+                "operationId": "crm_contracts_request_deviation_create",
+                "description": "Contracts -- generated from approved quotes, double-signed.",
+                "summary": "Request a deviation from the approved template (ДОК-10)",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "A unique integer value identifying this Контракт.",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "CRM"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ContractDeviationRequestRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ContractDeviationRequestRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ContractDeviationRequestRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ContractFlow"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/BadRequestResponse"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/ForbiddenResponse"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFoundResponse"
                     }
                 }
             }
@@ -19731,7 +19871,7 @@
                                 }
                             }
                         },
-                        "description": "CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот; CONTRACT_VISAS_REQUIRED (Х-1): отправка договора клиенту до сбора виз — в теле `reason` (причина словами) и `missing` (роли без визы)"
+                        "description": "CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот; CONTRACT_DEVIATION_PENDING / CONTRACT_NEEDS_OUR_SIGNATURE: договор по шаблону ещё нельзя отправить (ДОК-10); CONTRACT_VISAS_REQUIRED (Х-1): отправка договора клиенту до сбора виз — в теле `reason` (причина словами) и `missing` (роли без визы)"
                     },
                     "401": {
                         "$ref": "#/components/responses/UnauthorizedResponse"
@@ -19901,7 +20041,7 @@
                                 }
                             }
                         },
-                        "description": "CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот; CONTRACT_VISAS_REQUIRED (Х-1): отправка договора клиенту до сбора виз — в теле `reason` (причина словами) и `missing` (роли без визы)"
+                        "description": "CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот; CONTRACT_DEVIATION_PENDING / CONTRACT_NEEDS_OUR_SIGNATURE: договор по шаблону ещё нельзя отправить (ДОК-10); CONTRACT_VISAS_REQUIRED (Х-1): отправка договора клиенту до сбора виз — в теле `reason` (причина словами) и `missing` (роли без визы)"
                     },
                     "401": {
                         "$ref": "#/components/responses/UnauthorizedResponse"
@@ -19966,6 +20106,53 @@
                     },
                     "400": {
                         "$ref": "#/components/responses/BadRequestResponse"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/ForbiddenResponse"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFoundResponse"
+                    }
+                }
+            }
+        },
+        "/api/v1/crm/contracts/{id}/sign-ours/": {
+            "post": {
+                "operationId": "crm_contracts_sign_ours_create",
+                "description": "Contracts -- generated from approved quotes, double-signed.",
+                "summary": "Sign a template contract by the company before sending (ДОК-10)",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "A unique integer value identifying this Контракт.",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "CRM"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ContractFlow"
+                                }
+                            }
+                        },
+                        "description": ""
                     },
                     "401": {
                         "$ref": "#/components/responses/UnauthorizedResponse"
@@ -21701,6 +21888,63 @@
                 }
             }
         },
+        "/api/v1/crm/document-templates/{id}/approve/": {
+            "post": {
+                "operationId": "crm_document_templates_approve_create",
+                "description": "Company template library. Read = own templates + platform samples («скопировать\nк себе»); write is gated on the `settings.edit` CompanyRole permission and limited\nto the caller's own company (never samples, never another tenant).",
+                "summary": "Approve a contract template (holder of contract.approve_template)",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "A unique integer value identifying this Шаблон документа.",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "CRM"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DocumentTemplate"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DocumentTemplateError"
+                                }
+                            }
+                        },
+                        "description": "TEMPLATE_NAME_REQUIRED / TEMPLATE_NAME_TOO_LONG / TEMPLATE_BODY_TOO_LARGE / TEMPLATE_KIND_INVALID / TEMPLATE_MISSING_REQUIRED_BLOCKS (with `missing_blocks`) / TEMPLATE_IN_USE (delete)"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/ForbiddenResponse"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFoundResponse"
+                    }
+                }
+            }
+        },
         "/api/v1/crm/document-templates/{id}/copy/": {
             "post": {
                 "operationId": "crm_document_templates_copy_create",
@@ -21780,6 +22024,342 @@
                     },
                     "404": {
                         "$ref": "#/components/responses/NotFoundResponse"
+                    }
+                }
+            }
+        },
+        "/api/v1/crm/document-templates/{id}/new-edition/": {
+            "post": {
+                "operationId": "crm_document_templates_new_edition_create",
+                "description": "Company template library. Read = own templates + platform samples («скопировать\nк себе»); write is gated on the `settings.edit` CompanyRole permission and limited\nto the caller's own company (never samples, never another tenant).",
+                "summary": "New edition of an approved contract template (draft copy)",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "A unique integer value identifying this Шаблон документа.",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "CRM"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DocumentTemplate"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DocumentTemplateError"
+                                }
+                            }
+                        },
+                        "description": "TEMPLATE_NAME_REQUIRED / TEMPLATE_NAME_TOO_LONG / TEMPLATE_BODY_TOO_LARGE / TEMPLATE_KIND_INVALID / TEMPLATE_MISSING_REQUIRED_BLOCKS (with `missing_blocks`) / TEMPLATE_IN_USE (delete)"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/ForbiddenResponse"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFoundResponse"
+                    }
+                }
+            }
+        },
+        "/api/v1/crm/document-templates/{id}/return-to-draft/": {
+            "post": {
+                "operationId": "crm_document_templates_return_to_draft_create",
+                "description": "Company template library. Read = own templates + platform samples («скопировать\nк себе»); write is gated on the `settings.edit` CompanyRole permission and limited\nto the caller's own company (never samples, never another tenant).",
+                "summary": "Return a contract template on approval back to draft",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "A unique integer value identifying this Шаблон документа.",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "CRM"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DocumentTemplate"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DocumentTemplateError"
+                                }
+                            }
+                        },
+                        "description": "TEMPLATE_NAME_REQUIRED / TEMPLATE_NAME_TOO_LONG / TEMPLATE_BODY_TOO_LARGE / TEMPLATE_KIND_INVALID / TEMPLATE_MISSING_REQUIRED_BLOCKS (with `missing_blocks`) / TEMPLATE_IN_USE (delete)"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/ForbiddenResponse"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFoundResponse"
+                    }
+                }
+            }
+        },
+        "/api/v1/crm/document-templates/{id}/submit/": {
+            "post": {
+                "operationId": "crm_document_templates_submit_create",
+                "description": "Company template library. Read = own templates + platform samples («скопировать\nк себе»); write is gated on the `settings.edit` CompanyRole permission and limited\nto the caller's own company (never samples, never another tenant).",
+                "summary": "Send a draft contract template to approval",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "A unique integer value identifying this Шаблон документа.",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "CRM"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DocumentTemplate"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DocumentTemplateError"
+                                }
+                            }
+                        },
+                        "description": "TEMPLATE_NAME_REQUIRED / TEMPLATE_NAME_TOO_LONG / TEMPLATE_BODY_TOO_LARGE / TEMPLATE_KIND_INVALID / TEMPLATE_MISSING_REQUIRED_BLOCKS (with `missing_blocks`) / TEMPLATE_IN_USE (delete)"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/ForbiddenResponse"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFoundResponse"
+                    }
+                }
+            }
+        },
+        "/api/v1/crm/document-templates/contracts/": {
+            "get": {
+                "operationId": "crm_document_templates_contracts_list",
+                "description": "Company template library. Read = own templates + platform samples («скопировать\nк себе»); write is gated on the `settings.edit` CompanyRole permission and limited\nto the caller's own company (never samples, never another tenant).",
+                "summary": "Contract templates of the company with approval status (ДОК-10)",
+                "parameters": [
+                    {
+                        "name": "search",
+                        "required": false,
+                        "in": "query",
+                        "description": "A search term.",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "tags": [
+                    "CRM"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/DocumentTemplate"
+                                    }
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/ForbiddenResponse"
+                    }
+                }
+            }
+        },
+        "/api/v1/crm/document-templates/create-contract/": {
+            "post": {
+                "operationId": "crm_document_templates_create_contract_create",
+                "description": "Company template library. Read = own templates + platform samples («скопировать\nк себе»); write is gated on the `settings.edit` CompanyRole permission and limited\nto the caller's own company (never samples, never another tenant).",
+                "summary": "New contract template from the standard text, draft edition 1 (ДОК-10)",
+                "tags": [
+                    "CRM"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ContractTemplateCreateRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ContractTemplateCreateRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ContractTemplateCreateRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DocumentTemplate"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DocumentTemplateError"
+                                }
+                            }
+                        },
+                        "description": "TEMPLATE_NAME_REQUIRED / TEMPLATE_NAME_TOO_LONG / TEMPLATE_BODY_TOO_LARGE / TEMPLATE_KIND_INVALID / TEMPLATE_MISSING_REQUIRED_BLOCKS (with `missing_blocks`) / TEMPLATE_IN_USE (delete)"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/ForbiddenResponse"
+                    }
+                }
+            }
+        },
+        "/api/v1/crm/document-templates/offered/": {
+            "get": {
+                "operationId": "crm_document_templates_offered_list",
+                "description": "Только утверждённые шаблоны вида контрагента сделки; `default` — шаблон по умолчанию из настроек.",
+                "summary": "Approved contract templates offered in a deal (ДОК-10)",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "deal_id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    },
+                    {
+                        "name": "search",
+                        "required": false,
+                        "in": "query",
+                        "description": "A search term.",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "tags": [
+                    "CRM"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/DocumentTemplate"
+                                    }
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/ForbiddenResponse"
                     }
                 }
             }
@@ -37499,6 +38079,15 @@
                     "step_id"
                 ]
             },
+            "ApprovalStatusEnum": {
+                "enum": [
+                    "draft",
+                    "on_approval",
+                    "approved"
+                ],
+                "type": "string",
+                "description": "* `draft` - Черновик\n* `on_approval` - На утверждении\n* `approved` - Утверждён"
+            },
             "ArchiveCompanyRequest": {
                 "type": "object",
                 "properties": {
@@ -41196,6 +41785,31 @@
                         "minimum": 1,
                         "title": "Пауза между напоминаниями об акте (часов)"
                     },
+                    "contract_auto_send": {
+                        "type": "boolean",
+                        "title": "Договор по шаблону сам уходит в Кабинет",
+                        "description": "После принятия КП договор по утверждённому шаблону без отступлений уходит клиенту без визы."
+                    },
+                    "contract_sign_before_send": {
+                        "type": "boolean",
+                        "title": "Наша подпись до отправки",
+                        "description": "Договор уходит клиенту после подписи от компании; выключено — сразу."
+                    },
+                    "contract_deviations_allowed": {
+                        "type": "boolean",
+                        "title": "Отступления от шаблона по заявке",
+                        "description": "Выключено — «Запросить отступление» недоступно."
+                    },
+                    "default_client_contract_template": {
+                        "type": "integer",
+                        "nullable": true,
+                        "title": "Шаблон договора по умолчанию: клиент"
+                    },
+                    "default_partner_contract_template": {
+                        "type": "integer",
+                        "nullable": true,
+                        "title": "Шаблон договора по умолчанию: партнёр"
+                    },
                     "doc_number_prefix": {
                         "type": "string",
                         "title": "Префикс нумерации документов",
@@ -41713,16 +42327,17 @@
                         "description": "Проект ушёл клиенту на согласование и виден ему в портале"
                     },
                     "send_blocker_code": {
+                        "type": "string",
                         "nullable": true,
-                        "description": "Х-1: пока проект не ушёл клиенту — код причины, по которой его нельзя отправить (визы маршрута подписи); `null` — ничего не мешает. Слова и роли — `send_blocker` карточки\n\n* `visas_not_requested` - visas_not_requested\n* `visas_declined` - visas_declined\n* `visas_pending` - visas_pending\n* `visas_returned` - visas_returned\n* `no_visa_holder` - no_visa_holder",
-                        "oneOf": [
+                        "description": "Х-1: пока проект не ушёл клиенту — код причины, по которой его нельзя отправить (визы маршрута подписи); `null` — ничего не мешает (визы Х-1 и правила шаблона ДОК-10 — одна проверка). Открытое множество кодов: см. `send_blocker.code`. Слова и роли — `send_blocker` карточки"
+                    },
+                    "template": {
+                        "allOf": [
                             {
-                                "$ref": "#/components/schemas/ContractSendBlockerCodeEnum"
-                            },
-                            {
-                                "$ref": "#/components/schemas/NullEnum"
+                                "$ref": "#/components/schemas/ContractTemplateCard"
                             }
-                        ]
+                        ],
+                        "nullable": true
                     },
                     "total": {
                         "allOf": [
@@ -41787,6 +42402,7 @@
                     "sent_to_client",
                     "signed_at",
                     "status",
+                    "template",
                     "total"
                 ]
             },
@@ -41824,6 +42440,29 @@
                 },
                 "required": [
                     "detail"
+                ]
+            },
+            "ContractDeviationDecisionRequest": {
+                "type": "object",
+                "properties": {
+                    "approve": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "approve"
+                ]
+            },
+            "ContractDeviationRequestRequest": {
+                "type": "object",
+                "properties": {
+                    "text": {
+                        "type": "string",
+                        "minLength": 1
+                    }
+                },
+                "required": [
+                    "text"
                 ]
             },
             "ContractFlow": {
@@ -42005,16 +42644,9 @@
                         "description": "Проект ушёл клиенту на согласование и виден ему в портале"
                     },
                     "send_blocker_code": {
+                        "type": "string",
                         "nullable": true,
-                        "description": "Х-1: пока проект не ушёл клиенту — код причины, по которой его нельзя отправить (визы маршрута подписи); `null` — ничего не мешает. Слова и роли — `send_blocker` карточки\n\n* `visas_not_requested` - visas_not_requested\n* `visas_declined` - visas_declined\n* `visas_pending` - visas_pending\n* `visas_returned` - visas_returned\n* `no_visa_holder` - no_visa_holder",
-                        "oneOf": [
-                            {
-                                "$ref": "#/components/schemas/ContractSendBlockerCodeEnum"
-                            },
-                            {
-                                "$ref": "#/components/schemas/NullEnum"
-                            }
-                        ]
+                        "description": "Х-1: пока проект не ушёл клиенту — код причины, по которой его нельзя отправить (визы маршрута подписи); `null` — ничего не мешает (визы Х-1 и правила шаблона ДОК-10 — одна проверка). Открытое множество кодов: см. `send_blocker.code`. Слова и роли — `send_blocker` карточки"
                     }
                 },
                 "required": [
@@ -42083,15 +42715,11 @@
             },
             "ContractSendBlocker": {
                 "type": "object",
-                "description": "Х-1: почему проект договора нельзя отправить клиенту — визы маршрута подписи не собраны (ADR-0025).",
+                "description": "Почему проект договора нельзя отправить клиенту: визы Х-1 (ADR-0025), отступление или наша подпись (ДОК-10).",
                 "properties": {
                     "code": {
-                        "allOf": [
-                            {
-                                "$ref": "#/components/schemas/ContractSendBlockerCodeEnum"
-                            }
-                        ],
-                        "description": "visas_not_requested — договор ещё не на визах; visas_declined — EDS не принял договор на визы (причина в remark); visas_pending — не все визы поставлены; visas_returned — виза возвращена с замечанием; no_visa_holder — в компании нет держателя нужного права\n\n* `visas_not_requested` - visas_not_requested\n* `visas_declined` - visas_declined\n* `visas_pending` - visas_pending\n* `visas_returned` - visas_returned\n* `no_visa_holder` - no_visa_holder"
+                        "type": "string",
+                        "description": "Открытое множество (новые причины добавляются без смены контракта): visas_not_requested — договор ещё не на визах; visas_declined — EDS не принял договор на визы (причина в remark); visas_pending — не все визы поставлены; visas_returned — виза возвращена с замечанием; no_visa_holder — в компании нет держателя нужного права; CONTRACT_DEVIATION_PENDING — отступление от шаблона ждёт решения; CONTRACT_NEEDS_OUR_SIGNATURE — нужна наша подпись до отправки (ДОК-10)"
                     },
                     "message": {
                         "type": "string",
@@ -42128,16 +42756,98 @@
                     "settings_link"
                 ]
             },
-            "ContractSendBlockerCodeEnum": {
+            "ContractTemplateCard": {
+                "type": "object",
+                "description": "Договор по шаблону (ДОК-10): имя и редакция, отступление, путь по фактам. Пусто у договоров прежним путём.",
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "edition": {
+                        "type": "integer"
+                    },
+                    "deviation": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/DeviationEnum"
+                            }
+                        ],
+                        "description": "Отступление от шаблона: из фактов договора\n\n* `none` - none\n* `requested` - requested\n* `approved` - approved\n* `rejected` - rejected"
+                    },
+                    "deviation_text": {
+                        "type": "string"
+                    },
+                    "visas_required": {
+                        "type": "boolean",
+                        "description": "Договор идёт по маршруту виз (Х-1) — только с отступлением"
+                    },
+                    "steps": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": {}
+                        },
+                        "description": "Путь: assembled, our_signature, in_cabinet, signed_both"
+                    },
+                    "actions": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ContractTemplateCardActionsEnum"
+                        },
+                        "description": "Что можно сделать СЕЙЧАС этому сотруднику с договором по шаблону"
+                    }
+                },
+                "required": [
+                    "actions",
+                    "deviation",
+                    "deviation_text",
+                    "edition",
+                    "id",
+                    "name",
+                    "steps",
+                    "visas_required"
+                ]
+            },
+            "ContractTemplateCardActionsEnum": {
                 "enum": [
-                    "visas_not_requested",
-                    "visas_declined",
-                    "visas_pending",
-                    "visas_returned",
-                    "no_visa_holder"
+                    "sign_ours",
+                    "request_deviation",
+                    "decide_deviation"
                 ],
                 "type": "string",
-                "description": "* `visas_not_requested` - visas_not_requested\n* `visas_declined` - visas_declined\n* `visas_pending` - visas_pending\n* `visas_returned` - visas_returned\n* `no_visa_holder` - no_visa_holder"
+                "description": "* `sign_ours` - sign_ours\n* `request_deviation` - request_deviation\n* `decide_deviation` - decide_deviation"
+            },
+            "ContractTemplateCreateRequest": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "counterparty_kind": {
+                        "$ref": "#/components/schemas/DeskPersonKindEnum"
+                    },
+                    "subject": {
+                        "$ref": "#/components/schemas/ContractTemplateCreateSubjectEnum"
+                    }
+                },
+                "required": [
+                    "counterparty_kind",
+                    "name",
+                    "subject"
+                ]
+            },
+            "ContractTemplateCreateSubjectEnum": {
+                "enum": [
+                    "supply",
+                    "services"
+                ],
+                "type": "string",
+                "description": "* `supply` - supply\n* `services` - services"
             },
             "ContractTransitionInRequest": {
                 "type": "object",
@@ -47072,6 +47782,16 @@
                 "type": "string",
                 "description": "* `item` - item\n* `company` - company\n* `none` - none"
             },
+            "DeviationEnum": {
+                "enum": [
+                    "none",
+                    "requested",
+                    "approved",
+                    "rejected"
+                ],
+                "type": "string",
+                "description": "* `none` - none\n* `requested` - requested\n* `approved` - approved\n* `rejected` - rejected"
+            },
             "DisplayStatusEnum": {
                 "enum": [
                     "draft",
@@ -47334,6 +48054,70 @@
                         "description": "True when the requester's company owns this template (vs a platform sample).",
                         "readOnly": true
                     },
+                    "approval_status": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/ApprovalStatusEnum"
+                            }
+                        ],
+                        "readOnly": true,
+                        "title": "Статус утверждения"
+                    },
+                    "edition": {
+                        "type": "integer",
+                        "readOnly": true,
+                        "title": "Редакция"
+                    },
+                    "approved_by_name": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "approved_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true,
+                        "nullable": true,
+                        "title": "Дата утверждения"
+                    },
+                    "submitted_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true,
+                        "nullable": true,
+                        "title": "Отправлен на утверждение"
+                    },
+                    "counterparty_kind": {
+                        "readOnly": true,
+                        "oneOf": [
+                            {
+                                "$ref": "#/components/schemas/DocumentTemplateCounterpartyKindEnum"
+                            },
+                            {
+                                "$ref": "#/components/schemas/BlankEnum"
+                            }
+                        ]
+                    },
+                    "subject": {
+                        "readOnly": true,
+                        "oneOf": [
+                            {
+                                "$ref": "#/components/schemas/DocumentTemplateSubjectEnum"
+                            },
+                            {
+                                "$ref": "#/components/schemas/BlankEnum"
+                            }
+                        ]
+                    },
+                    "is_locked": {
+                        "type": "boolean",
+                        "readOnly": true
+                    },
+                    "languages": {
+                        "type": "array",
+                        "items": {},
+                        "description": "Языки, на которых текст заполнен (ДОК-16 дозаполняет uz и en; пустой — русский с пометкой).",
+                        "readOnly": true
+                    },
                     "created_at": {
                         "type": "string",
                         "format": "date-time",
@@ -47348,15 +48132,24 @@
                     }
                 },
                 "required": [
+                    "approval_status",
+                    "approved_at",
+                    "approved_by_name",
+                    "counterparty_kind",
                     "created_at",
+                    "edition",
                     "id",
+                    "is_locked",
                     "is_owned",
                     "is_sample",
                     "kind",
                     "kind_code",
                     "kind_name",
+                    "languages",
                     "name",
                     "placeholders_used",
+                    "subject",
+                    "submitted_at",
                     "updated_at"
                 ]
             },
@@ -47370,6 +48163,14 @@
                         "maxLength": 255
                     }
                 }
+            },
+            "DocumentTemplateCounterpartyKindEnum": {
+                "enum": [
+                    "client",
+                    "partner"
+                ],
+                "type": "string",
+                "description": "* `client` - Клиент\n* `partner` - Партнёр"
             },
             "DocumentTemplateCreateRequest": {
                 "type": "object",
@@ -47463,6 +48264,14 @@
                         "description": "Код вида шаблона (CONTRACT, INVOICE, ACT — каркас вида и образцы блоков; иначе общий каркас)."
                     }
                 }
+            },
+            "DocumentTemplateSubjectEnum": {
+                "enum": [
+                    "supply",
+                    "services"
+                ],
+                "type": "string",
+                "description": "* `supply` - Поставка\n* `services` - Услуги"
             },
             "DocumentTemplateWriteRequest": {
                 "type": "object",
@@ -52479,6 +53288,31 @@
                         "maximum": 720,
                         "minimum": 1,
                         "title": "Пауза между напоминаниями об акте (часов)"
+                    },
+                    "contract_auto_send": {
+                        "type": "boolean",
+                        "title": "Договор по шаблону сам уходит в Кабинет",
+                        "description": "После принятия КП договор по утверждённому шаблону без отступлений уходит клиенту без визы."
+                    },
+                    "contract_sign_before_send": {
+                        "type": "boolean",
+                        "title": "Наша подпись до отправки",
+                        "description": "Договор уходит клиенту после подписи от компании; выключено — сразу."
+                    },
+                    "contract_deviations_allowed": {
+                        "type": "boolean",
+                        "title": "Отступления от шаблона по заявке",
+                        "description": "Выключено — «Запросить отступление» недоступно."
+                    },
+                    "default_client_contract_template": {
+                        "type": "integer",
+                        "nullable": true,
+                        "title": "Шаблон договора по умолчанию: клиент"
+                    },
+                    "default_partner_contract_template": {
+                        "type": "integer",
+                        "nullable": true,
+                        "title": "Шаблон договора по умолчанию: партнёр"
                     },
                     "doc_number_prefix": {
                         "type": "string",

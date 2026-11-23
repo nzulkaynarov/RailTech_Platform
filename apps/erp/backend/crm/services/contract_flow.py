@@ -147,17 +147,50 @@ def allowed_actions(contract, user) -> list:
     actions = [
         t.action for t in TRANSITIONS.values() if code in t.sources and may(user, t.permission) and is_staff(user)
     ]
-    # Х-1: «Отправить клиенту» не предлагается, пока визы не собраны (причина — `send_blocker` карточки).
+    # Х-1 и ДОК-10: «Отправить клиенту» не предлагается, пока отправка ответит 409 (причина — `send_blocker`).
     if "send_to_client" in actions and send_blocker(contract) is not None:
         actions.remove("send_to_client")
     return actions
 
 
+#: Причины блокировки отправки по правилам шаблона (ДОК-10); визы — коды `contract_visas` (Х-1).
+TEMPLATE_BLOCKER_WORDS = {
+    "CONTRACT_DEVIATION_PENDING": "Отступление от шаблона ждёт решения: отправить договор клиенту можно после него.",
+    "CONTRACT_NEEDS_OUR_SIGNATURE": "Нужна наша подпись: по правилам компании договор уходит клиенту подписанным.",
+}
+
+
 def send_blocker(contract) -> Optional[dict]:
-    """Х-1: почему договор нельзя отправить клиенту (`None` — можно). Подробности — `contract_visas.send_blocker`."""
+    """ЕДИНАЯ проверка «можно ли отправить договор клиенту» (`None` — можно) для всех путей: действие `send_to_client`,
+    список действий, карточка проекта, «Мои задачи» и Платформа. Результат — `{code, message, missing, ...}`.
+
+    Порядок и правила (ДОК-10 + Х-1, ADR-0025):
+
+    1. договор по утверждённому шаблону без отступления визам не подчиняется (а): ему мешает только наша подпись,
+       если компания её требует до отправки (`CONTRACT_NEEDS_OUR_SIGNATURE`);
+    2. отступление ждёт решения — своя причина (в): `CONTRACT_DEVIATION_PENDING`;
+    3. договор с одобренным отступлением и договор не из утверждённого шаблона (переходный режим, прежние) идут по
+       маршруту виз (б): коды `visas_*` из `contract_visas.send_blocker`, недостающие визы названы словами;
+    4. после виз — наша подпись, если компания требует её до отправки.
+    """
+    from . import contract_templates as templates
+    from .contract_visas import _blocker
     from .contract_visas import send_blocker as visas_blocker
 
-    return visas_blocker(contract)
+    def template_blocker(code: str) -> dict:
+        return _blocker(code, TEMPLATE_BLOCKER_WORDS[code])
+
+    if contract.template_id is None:
+        return visas_blocker(contract)  # переходный режим и прежние договоры: маршрут виз Х-1
+    if templates.deviation_state(contract) == "requested":
+        return template_blocker("CONTRACT_DEVIATION_PENDING")
+    if templates.visas_required(contract):
+        blocker = visas_blocker(contract)
+        if blocker is not None:
+            return blocker
+    if templates.requires_our_signature(contract):
+        return template_blocker("CONTRACT_NEEDS_OUR_SIGNATURE")
+    return None
 
 
 def _drop_company_stamp(contract) -> list:
@@ -307,6 +340,10 @@ def apply_transition(
     before = _status_code(contract) or ""
     if before not in transition.sources:
         return None, "CONTRACT_TRANSITION_NOT_ALLOWED"
+    if action == "send_to_client":
+        blocker = send_blocker(contract)  # одна проверка: шаблон (ДОК-10) и визы (Х-1)
+        if blocker:
+            return None, blocker["code"] if blocker["code"] in TEMPLATE_BLOCKER_WORDS else "CONTRACT_VISAS_REQUIRED"
     reason = (reason or "").strip()
     note = (note or "").strip()
     if transition.needs_reason and not reason:
@@ -318,8 +355,6 @@ def apply_transition(
     on_behalf, error = _on_behalf_note(transition, channel, counterparty_person)
     if error:
         return None, error
-    if action == "send_to_client" and send_blocker(contract) is not None:
-        return None, "CONTRACT_VISAS_REQUIRED"  # Х-1: до виз договор клиенту не уходит
 
     from integration.services import document_events, events
 

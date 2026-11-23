@@ -20,6 +20,7 @@ import {
   readProjects,
   sendBlockerOf,
   stepOf,
+  templateOf,
   toCard,
   toRow,
   writeProject,
@@ -63,6 +64,8 @@ function guard(need: Level) {
     writer: level === "full",
     // Отметки доставки (L0-1) — право ERP `fulfillment.manage`: раздел «Склад» полный.
     marker: me.resources["erp.stock"] === "full",
+    // ДОК-10: решает по отступлению держатель зоны «Право» (раздел `eds.visa.legal`) или администратор
+    approver: me.resources["eds.visa.legal"] === "full" || me.resources["admin"] === "full",
     staffId: MOCK_STAFF_ID[session.userId],
   };
 }
@@ -80,6 +83,19 @@ function refOf(request: Request): string {
 }
 
 const now = () => new Date().toISOString();
+
+/**
+ * Режим «у компании есть утверждённые шаблоны договоров» (ДОК-10): `localStorage["rt-pf-mock-contract-template"] = "on"`
+ * до формирования проекта. Без ключа проект собирается прежним путём (переходный режим ERP), и сценарии прежних экранов
+ * не меняются.
+ */
+function templateMode(): boolean {
+  try {
+    return window.localStorage.getItem("rt-pf-mock-contract-template") === "on";
+  } catch {
+    return false;
+  }
+}
 const ACTOR = "Демо Бухгалтеров";
 
 function logged(
@@ -103,7 +119,10 @@ function logged(
 // --- договор ------------------------------------------------------------------------------------------------
 
 const TRANSITIONS: Record<
-  Exclude<ProjectContractActionIn["action"], never>,
+  Exclude<
+    ProjectContractActionIn["action"],
+    "sign_ours" | "request_deviation" | "decide_deviation"
+  >,
   { from: string[]; to: string; code: string; text: string }
 > = {
   send_to_client: {
@@ -137,6 +156,68 @@ const TRANSITIONS: Record<
     text: "Договор выставлен у оператора",
   },
 };
+
+/** Наша подпись, заявка на отступление и решение «Право»; после подписи без помех договор уходит в Кабинет сам. */
+function templateAction(
+  p: ProjectState,
+  body: ProjectContractActionIn,
+  ok: { writer: boolean; marker: boolean; approver: boolean },
+): Response {
+  const c = p.contract;
+  const tpl = c?.template;
+  if (!c || !tpl) return conflict("contract_not_from_template", "Договор собран не по шаблону.");
+  if (c.sent_to_client) return conflict("contract_already_sent", "Договор уже ушёл клиенту.");
+  const decided = body.approve === true ? "approved" : "rejected";
+  let step: { template: typeof tpl; code: string; label: string };
+  if (body.action === "sign_ours") {
+    if (tpl.signed_ours_at) {
+      return conflict("contract_already_signed_by_us", "Договор уже подписан от компании.");
+    }
+    step = {
+      template: { ...tpl, signed_ours_at: now() },
+      code: "contract.signed_by_us",
+      label: "Договор подписан от компании до отправки",
+    };
+  } else if (body.action === "request_deviation") {
+    if (!body.text?.trim()) {
+      return failure(422, "VALIDATION_FAILED", "Проверьте заполнение полей.", "bff", {
+        fields: ["text"],
+      });
+    }
+    step = {
+      template: { ...tpl, deviation: "requested", deviation_text: body.text.trim() },
+      code: "contract.deviation_requested",
+      label: "Запрошено отступление от шаблона договора",
+    };
+  } else {
+    if (!ok.approver) {
+      return failure(403, "FORBIDDEN", "Действие не положено вашей роли.", "erp", {
+        backend_status: 403,
+      });
+    }
+    step = {
+      template: { ...tpl, deviation: decided },
+      code: `contract.deviation_${decided}`,
+      label: `Отступление от шаблона ${decided === "approved" ? "одобрено" : "отклонено"}`,
+    };
+  }
+  let contract: typeof c = { ...c, template: step.template };
+  // Авто-отправка: отступления нет (виз нет) и ничто не мешает.
+  const free = templateOf(contract, true, ok.approver);
+  if (free && !free.visas_required && sendBlockerOf(contract) === null) {
+    contract = { ...contract, sent_to_client: true };
+  }
+  const next = logged(
+    { ...p, contract },
+    step.code,
+    "contract",
+    c.number,
+    step.label,
+    step.template.deviation_text,
+  );
+  writeProject(next);
+  return HttpResponse.json(toCard(next, ok.writer, ok.marker, ok.approver));
+}
 
 function stateOf(p: ProjectState): string {
   const c = p.contract;
@@ -288,7 +369,7 @@ export const edsProjectsHandlers = [
     const project = findProject(refOf(request));
     return project
       ? HttpResponse.json({
-          ...toCard(project, ok.writer, ok.marker),
+          ...toCard(project, ok.writer, ok.marker, ok.approver),
           do_not_work: markOfName(project.client),
         })
       : notFound();
@@ -315,6 +396,19 @@ export const edsProjectsHandlers = [
           signed_at: null,
           has_scan: false,
           visas: "none",
+          // ДОК-10: проект собирается из утверждённого шаблона вида контрагента (шаблон по умолчанию из настроек)
+          ...(templateMode()
+            ? {
+                template: {
+                  id: 1,
+                  name: "Договор с клиентом · поставка",
+                  edition: 3,
+                  deviation: "none" as const,
+                  deviation_text: "",
+                  signed_ours_at: null,
+                },
+              }
+            : {}),
         },
       },
       "contract.created",
@@ -323,15 +417,22 @@ export const edsProjectsHandlers = [
       "Создан проект договора",
     );
     writeProject(next);
-    return HttpResponse.json(toCard(next, ok.writer, ok.marker), { status: 201 });
+    return HttpResponse.json(toCard(next, ok.writer, ok.marker, ok.approver), { status: 201 });
   }),
 
   http.post("*/eds/projects/:ref/contract", async ({ request }) => {
-    const ok = guard("full");
+    // Решение по отступлению принимает держатель «Право» (раздел `eds.visa.legal`); «Проекты» у него — чтение (как BFF).
+    const ok = guard("read");
     if (ok.error) return ok.error;
     const p = findProject(refOf(request));
     if (!p?.contract) return notFound();
     const body = (await request.json()) as ProjectContractActionIn;
+    if (!ok.writer && !(body.action === "decide_deviation" && ok.approver)) {
+      return failure(403, "FORBIDDEN", "Раздел или действие не положены вашей роли.", "bff", {
+        resource: "eds.projects",
+        need: "full",
+      });
+    }
     if (body.action === "reject" && !body.reason?.trim()) {
       return failure(422, "VALIDATION_FAILED", "Проверьте заполнение полей.", "bff", {
         fields: ["reason"],
@@ -343,13 +444,24 @@ export const edsProjectsHandlers = [
         fields: [body.channel ? "counterparty_person" : "channel"],
       });
     }
+    if (
+      body.action === "sign_ours" ||
+      body.action === "request_deviation" ||
+      body.action === "decide_deviation"
+    ) {
+      return templateAction(p, body, ok);
+    }
     const rule = TRANSITIONS[body.action];
-    // Х-1: до виз договор клиенту не уходит (ERP отвечает 409 `CONTRACT_VISAS_REQUIRED`).
-    if (body.action === "send_to_client" && sendBlockerOf(p.contract)) {
-      return conflict(
-        "contract_visas_required",
-        "Договор нельзя отправить клиенту: сначала нужны визы.",
-      );
+    // Одна проверка ERP (`contract_flow.send_blocker`): правила шаблона (ДОК-10) отвечают своим кодом, визы (Х-1) — 409
+    // `CONTRACT_VISAS_REQUIRED`.
+    const blocker = body.action === "send_to_client" ? sendBlockerOf(p.contract) : null;
+    if (blocker) {
+      return blocker.code.startsWith("CONTRACT_")
+        ? conflict(blocker.code.toLowerCase(), blocker.message)
+        : conflict(
+            "contract_visas_required",
+            "Договор нельзя отправить клиенту: сначала нужны визы.",
+          );
     }
     if (!rule.from.includes(stateOf(p))) {
       return conflict("contract_transition_not_allowed", "Договор сейчас в другом статусе.");
@@ -381,7 +493,7 @@ export const edsProjectsHandlers = [
         : null,
     );
     writeProject(next);
-    return HttpResponse.json(toCard(next, ok.writer, ok.marker));
+    return HttpResponse.json(toCard(next, ok.writer, ok.marker, ok.approver));
   }),
 
   // «На подпись» (SIGN-4): у договора открывает круг виз бухгалтера и юриста; сколько виз собрано, решают они в EDS.
@@ -436,7 +548,7 @@ export const edsProjectsHandlers = [
       "Прикреплён скан подписанного договора",
     );
     writeProject(next);
-    return HttpResponse.json(toCard(next, ok.writer, ok.marker));
+    return HttpResponse.json(toCard(next, ok.writer, ok.marker, ok.approver));
   }),
 
   // --- акт --------------------------------------------------------------------------------------------------
@@ -484,7 +596,7 @@ export const edsProjectsHandlers = [
         "Акт выпущен",
       );
       writeProject(next);
-      return HttpResponse.json(toCard(next, ok.writer, ok.marker));
+      return HttpResponse.json(toCard(next, ok.writer, ok.marker, ok.approver));
     }
     const a = p.act;
     if (!a) return notFound();
@@ -501,7 +613,7 @@ export const edsProjectsHandlers = [
         reason,
       );
       writeProject(next);
-      return HttpResponse.json(toCard(next, ok.writer, ok.marker));
+      return HttpResponse.json(toCard(next, ok.writer, ok.marker, ok.approver));
     }
     if (a.status !== "returned")
       return conflict("act_sign_not_allowed", "Акт сейчас в другом статусе.");
@@ -513,7 +625,7 @@ export const edsProjectsHandlers = [
       "Акт выпущен заново",
     );
     writeProject(next);
-    return HttpResponse.json(toCard(next, ok.writer, ok.marker));
+    return HttpResponse.json(toCard(next, ok.writer, ok.marker, ok.approver));
   }),
 
   http.post("*/eds/projects/:ref/act/scan", async ({ request }) => {
@@ -539,7 +651,7 @@ export const edsProjectsHandlers = [
       next = logged(next, "project.done", "project", "", "Проект выполнен");
     }
     writeProject(next);
-    return HttpResponse.json(toCard(next, ok.writer, ok.marker));
+    return HttpResponse.json(toCard(next, ok.writer, ok.marker, ok.approver));
   }),
 
   // --- доставка клиенту (L0-1) -------------------------------------------------------------------------------
@@ -608,7 +720,7 @@ export const edsProjectsHandlers = [
       delivered ? "Доставлено клиенту" : "Отправлено клиенту, в пути",
     );
     writeProject(next);
-    return HttpResponse.json(toCard(next, ok.writer, ok.marker));
+    return HttpResponse.json(toCard(next, ok.writer, ok.marker, ok.approver));
   }),
 
   http.get("*/eds/projects/:ref/delivery/proof", ({ request }) => {

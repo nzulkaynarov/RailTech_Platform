@@ -42,6 +42,20 @@ _ERP_REASONS: dict[str, str] = {
     "ACT_AWAITING_REISSUE": "Акт возвращён заказчиком: выпустите его заново.",
     "ACT_INVALID_INVOICE_STATUS": "Акт можно выпустить по выставленному счёту.",
     "CONTRACT_NEEDS_APPROVAL": "Проект договора можно сформировать только из принятого КП.",
+    # ДОК-10: договор по утверждённому шаблону
+    "CONTRACT_DEVIATION_PENDING": "Отступление ждёт решения «Право»: договор клиенту не уходит.",
+    "CONTRACT_NEEDS_OUR_SIGNATURE": "Сначала подпишите договор от компании.",
+    "CONTRACT_ALREADY_SENT": "Договор уже ушёл клиенту.",
+    "CONTRACT_ALREADY_SIGNED_BY_US": "Договор уже подписан от компании.",
+    "CONTRACT_NOT_FROM_TEMPLATE": "Договор собран не по шаблону.",
+    "CONTRACT_DEVIATIONS_DISABLED": "Отступления от шаблона в компании отключены.",
+    "DEVIATION_ALREADY_REQUESTED": "Заявка на отступление уже подана.",
+    "DEVIATION_TEXT_REQUIRED": "Опишите отступление.",
+    "DEVIATION_TEXT_TOO_LONG": "Описание отступления слишком длинное.",
+    "DEVIATION_NOT_REQUESTED": "Заявки на отступление нет. Обновите страницу.",
+    "DEVIATION_DECISION_FORBIDDEN": "Решает держатель «Право».",
+    "CONTRACT_TEMPLATE_UNFILLED": "В договоре остались незаполненные места шаблона.",
+    "CONTRACT_TEMPLATE_NOT_OFFERED": "Этот шаблон не утверждён для такого контрагента.",
     # Х-1: до виз договор клиенту не уходит; слова с названием виз ERP присылает в `reason`.
     "CONTRACT_VISAS_REQUIRED": "Договор нельзя отправить клиенту: сначала нужны визы.",
     # A1, A2 волны 18a: решение клиента по КП и согласие с договором записывает сотрудник.
@@ -70,6 +84,8 @@ _FIELD_OF: dict[str, str] = {
     "REASON_REQUIRED": "reason",
     "SCAN_REQUIRED": "file",
     "SCAN_INVALID": "file",
+    "DEVIATION_TEXT_REQUIRED": "text",
+    "DEVIATION_TEXT_TOO_LONG": "text",
     "NO_FILE_PROVIDED": "file",
     "EVIDENCE_REQUIRED": "file",
     "EVIDENCE_INVALID": "file",
@@ -256,16 +272,19 @@ class ErpProjects:
         if card.contract is None:
             raise not_found()
         slug = body.action.replace("_", "-")
-        payload = {
+        payload: dict[str, Any] = {
             k: v.strip()
             for k, v in (
                 ("reason", body.reason),
                 ("note", body.note),
                 ("channel", body.channel),
                 ("counterparty_person", body.counterparty_person),
+                ("text", body.text),
             )
             if v and v.strip()
         }
+        if body.action == "decide_deviation":
+            payload["approve"] = bool(body.approve)
         await self._json("POST", f"{API}/contracts/{card.contract.id}/{slug}/", json=payload)
         return await self.card(ref)
 

@@ -29,6 +29,9 @@ _HTTP = {
     "CONTRACT_TRANSITION_NOT_ALLOWED": 409,
     "CONTRACT_VISAS_REQUIRED": 409,
     "ACT_SIGN_NOT_ALLOWED": 409,
+    # ДОК-10: что мешает отправить договор по шаблону клиенту
+    "CONTRACT_DEVIATION_PENDING": 409,
+    "CONTRACT_NEEDS_OUR_SIGNATURE": 409,
 }
 _ERRORS = {
     400: OpenApiResponse(
@@ -42,7 +45,8 @@ _ERRORS = {
     409: OpenApiResponse(
         ContractConflictSerializer,
         description=(
-            "CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот; CONTRACT_VISAS_REQUIRED (Х-1): "
+            "CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот; CONTRACT_DEVIATION_PENDING / "
+            "CONTRACT_NEEDS_OUR_SIGNATURE: договор по шаблону ещё нельзя отправить (ДОК-10); CONTRACT_VISAS_REQUIRED (Х-1): "
             "отправка договора клиенту до сбора виз — в теле `reason` (причина словами) и `missing` (роли без визы)"
         ),
     ),

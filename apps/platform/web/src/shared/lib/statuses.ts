@@ -234,6 +234,8 @@ export const STATUS_TONE = {
   setupStep: { done: OK, todo: W, unknown: NONE },
   /** Полномочие подписи (SIGN-2): действует, скоро истекает, ещё не началось, срок вышел, отозвано */
   signingAuthority: { active: OK, expiring: W, scheduled: GO, expired: NO, revoked: OFF },
+  /** Шаблон договора (ДОК-10): черновик, на утверждении у держателя «Право», утверждён */
+  contractTemplate: { draft: DR, on_approval: W, approved: OK },
   /** Статья компании */
   article: { draft: DR, published: OK },
   /** Карточка каталога у строки документа (ADR-0027): черновик или опубликована */

@@ -116,6 +116,39 @@ class CompanySettings(models.Model):
         help_text=_("Желаемая валовая маржа (на цене) — зелёная зона в конструкторе КП."),
     )
 
+    # ── Договор из шаблона (ДОК-10, DECISIONS 2026-11-23): правила — данные, не код ──────────
+    contract_auto_send = models.BooleanField(
+        default=True,
+        verbose_name=_("Договор по шаблону сам уходит в Кабинет"),
+        help_text=_("После принятия КП договор по утверждённому шаблону без отступлений уходит клиенту без визы."),
+    )
+    contract_sign_before_send = models.BooleanField(
+        default=True,
+        verbose_name=_("Наша подпись до отправки"),
+        help_text=_("Договор уходит клиенту после подписи от компании; выключено — сразу."),
+    )
+    contract_deviations_allowed = models.BooleanField(
+        default=True,
+        verbose_name=_("Отступления от шаблона по заявке"),
+        help_text=_("Выключено — «Запросить отступление» недоступно."),
+    )
+    default_client_contract_template = models.ForeignKey(
+        "documents.DocumentTemplate",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+        verbose_name=_("Шаблон договора по умолчанию: клиент"),
+    )
+    default_partner_contract_template = models.ForeignKey(
+        "documents.DocumentTemplate",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+        verbose_name=_("Шаблон договора по умолчанию: партнёр"),
+    )
+
     # ── Политики каталога (M1-ERP-07, ARCHITECTURE §7) ────────────────────────
     catalog_price_visibility = models.CharField(
         max_length=16,

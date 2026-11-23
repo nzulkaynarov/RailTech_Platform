@@ -5,6 +5,7 @@ derivation, numbering, status transitions), so these are thin read serializers p
 a couple of write fields the ViewSet hands to the services.
 """
 
+from documents.models.documents import ContractSubject, CounterpartyKind
 from rest_framework import serializers
 
 from crm.models import CompanyWordingVariant, DocumentTemplate, GeneratedDocument
@@ -17,6 +18,13 @@ class DocumentTemplateSerializer(serializers.ModelSerializer):
     kind_code = serializers.CharField(source="kind.code", read_only=True)
     kind_name = serializers.CharField(source="kind.name", read_only=True)
     is_owned = serializers.SerializerMethodField()
+    # ДОК-10: утверждение шаблона договора (для остальных видов — значения по умолчанию, UI их не показывает).
+    approved_by_name = serializers.SerializerMethodField()
+    is_locked = serializers.SerializerMethodField()
+    languages = serializers.SerializerMethodField()
+    # Только у шаблонов договора; у остальных видов пусто — схема обязана это допускать.
+    counterparty_kind = serializers.ChoiceField(choices=CounterpartyKind.choices, allow_blank=True, read_only=True)
+    subject = serializers.ChoiceField(choices=ContractSubject.choices, allow_blank=True, read_only=True)
 
     class Meta:
         model = DocumentTemplate
@@ -31,10 +39,42 @@ class DocumentTemplateSerializer(serializers.ModelSerializer):
             "is_sample",
             "is_active",
             "is_owned",
+            "approval_status",
+            "edition",
+            "approved_by_name",
+            "approved_at",
+            "submitted_at",
+            "counterparty_kind",
+            "subject",
+            "is_locked",
+            "languages",
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["placeholders_used", "is_sample", "created_at", "updated_at"]
+        read_only_fields = [
+            "placeholders_used",
+            "is_sample",
+            "approval_status",
+            "edition",
+            "approved_at",
+            "submitted_at",
+            "counterparty_kind",
+            "subject",
+            "created_at",
+            "updated_at",
+        ]
+
+    def get_approved_by_name(self, obj) -> str:
+        return (obj.approved_by.get_full_name() or obj.approved_by.email) if obj.approved_by_id else ""
+
+    def get_is_locked(self, obj) -> bool:
+        from crm.services.contract_templates import is_locked
+
+        return is_locked(obj)
+
+    def get_languages(self, obj) -> list:
+        """Языки, на которых текст заполнен (ДОК-16 дозаполняет uz и en; пустой — русский с пометкой)."""
+        return ["ru"] + [code for code, body in (("uz", obj.body_html_uz), ("en", obj.body_html_en)) if body.strip()]
 
     def get_is_owned(self, obj) -> bool:
         """True when the requester's company owns this template (vs a platform sample)."""

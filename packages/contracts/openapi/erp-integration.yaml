@@ -46,6 +46,9 @@ info:
     D2-1 (волна 17, в 0.9.0; аддитивно, без подъёма версии): `ErpPermission` + `quote.visa_goods`, `quote.visa_services` —
     виза строки расчёта по типу позиции (ADR-0012 п. 6). CRM выдаёт их из разделов `erp.calc.goods` и `erp.calc.services`
     каталога Платформы.
+
+    ДОК-10 (аддитивно, без подъёма версии): `ErpPermission` + `contract.approve_template` — утверждение шаблонов договоров
+    и решение по отступлениям; CRM выдаёт его из раздела `eds.visa.legal` (держатель зоны «Право»).
   contact:
     name: RailTech Platform — docs/architecture/CONTRACTS.md
 servers:
@@ -1545,6 +1548,7 @@ components:
         - quote.visa_services
         - contract.manage
         - contract.sign
+        - contract.approve_template
         - catalog.manage
         - catalog.publish
         - supply.manage

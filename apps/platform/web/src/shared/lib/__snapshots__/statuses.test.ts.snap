@@ -77,6 +77,11 @@ exports[`карты статусов > снимок карты: изменени
     "rejected": "red",
     "signed": "green",
   },
+  "contractTemplate": {
+    "approved": "green",
+    "draft": "default",
+    "on_approval": "gold",
+  },
   "crmClient": {
     "conflict": "red",
     "held": "gold",

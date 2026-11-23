@@ -20,6 +20,7 @@ export const ErpPermission = {
   quotevisa_services: "quote.visa_services",
   contractmanage: "contract.manage",
   contractsign: "contract.sign",
+  contractapprove_template: "contract.approve_template",
   catalogmanage: "catalog.manage",
   catalogpublish: "catalog.publish",
   supplymanage: "supply.manage",

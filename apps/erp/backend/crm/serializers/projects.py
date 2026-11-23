@@ -25,6 +25,8 @@ CLIENT_STATUSES = [
 ]
 PROBLEMS = ["no_contract", "contract_rejected", "act_returned", "invoice_overdue"]
 CONTRACT_ACTIONS = ["send_to_client", "client_agreed", "reject", "revise", "mark_issued", "attach_scan"]
+#: ДОК-10: действия договора по шаблону, доступные сейчас (отдельный список — у прежних действий схема не меняется).
+CONTRACT_TEMPLATE_ACTIONS = ["sign_ours", "request_deviation", "decide_deviation"]
 ACT_ACTIONS = ["attach_scan", "return", "reissue"]
 ACT_BLOCKERS = ["no_invoice", "act_exists", "forbidden"]
 JOURNAL_DOCUMENTS = ["contract", "act", "invoice", "quote", "project"]
@@ -52,13 +54,13 @@ class ContractRefSerializer(serializers.Serializer):
     number = serializers.CharField()
     status = serializers.ChoiceField(choices=CONTRACT_WORDS)
     sent_to_client = serializers.BooleanField(help_text="Проект ушёл клиенту на согласование и виден ему в портале")
-    send_blocker_code = serializers.ChoiceField(
-        choices=["visas_not_requested", "visas_declined", "visas_pending", "visas_returned", "no_visa_holder"],
+    send_blocker_code = serializers.CharField(
         allow_null=True,
         required=False,
         help_text=(
             "Х-1: пока проект не ушёл клиенту — код причины, по которой его нельзя отправить (визы маршрута подписи); "
-            "`null` — ничего не мешает. Слова и роли — `send_blocker` карточки"
+            "`null` — ничего не мешает (визы Х-1 и правила шаблона ДОК-10 — одна проверка). Открытое множество кодов: "
+            "см. `send_blocker.code`. Слова и роли — `send_blocker` карточки"
         ),
     )
 
@@ -147,14 +149,36 @@ class QuoteCardSerializer(QuoteRefSerializer):
     valid_until = serializers.DateField(allow_null=True)
 
 
-class ContractSendBlockerSerializer(serializers.Serializer):
-    """Х-1: почему проект договора нельзя отправить клиенту — визы маршрута подписи не собраны (ADR-0025)."""
+class ContractTemplateCardSerializer(serializers.Serializer):
+    """Договор по шаблону (ДОК-10): имя и редакция, отступление, путь по фактам. Пусто у договоров прежним путём."""
 
-    code = serializers.ChoiceField(
-        choices=["visas_not_requested", "visas_declined", "visas_pending", "visas_returned", "no_visa_holder"],
+    id = serializers.IntegerField(allow_null=True)
+    name = serializers.CharField()
+    edition = serializers.IntegerField()
+    deviation = serializers.ChoiceField(
+        choices=["none", "requested", "approved", "rejected"], help_text="Отступление от шаблона: из фактов договора"
+    )
+    deviation_text = serializers.CharField(allow_blank=True)
+    visas_required = serializers.BooleanField(help_text="Договор идёт по маршруту виз (Х-1) — только с отступлением")
+    steps = serializers.ListField(
+        child=serializers.DictField(), help_text="Путь: assembled, our_signature, in_cabinet, signed_both"
+    )
+    actions = serializers.ListField(
+        child=serializers.ChoiceField(choices=CONTRACT_TEMPLATE_ACTIONS),
+        help_text="Что можно сделать СЕЙЧАС этому сотруднику с договором по шаблону",
+    )
+
+
+class ContractSendBlockerSerializer(serializers.Serializer):
+    """Почему проект договора нельзя отправить клиенту: визы Х-1 (ADR-0025), отступление или наша подпись (ДОК-10)."""
+
+    code = serializers.CharField(
         help_text=(
+            "Открытое множество (новые причины добавляются без смены контракта): "
             "visas_not_requested — договор ещё не на визах; visas_declined — EDS не принял договор на визы (причина в remark); visas_pending — не все визы поставлены; visas_returned — "
-            "виза возвращена с замечанием; no_visa_holder — в компании нет держателя нужного права"
+            "виза возвращена с замечанием; no_visa_holder — в компании нет держателя нужного права; "
+            "CONTRACT_DEVIATION_PENDING — отступление от шаблона ждёт решения; CONTRACT_NEEDS_OUR_SIGNATURE — нужна "
+            "наша подпись до отправки (ДОК-10)"
         ),
     )
     message = serializers.CharField(help_text="Причина словами для сотрудника («Нужны визы: бухгалтер, юрист»)")
@@ -185,6 +209,7 @@ class ContractConflictSerializer(serializers.Serializer):
 
 
 class ContractCardSerializer(ContractRefSerializer):
+    template = ContractTemplateCardSerializer(allow_null=True)
     total = ProjectMoneySerializer(allow_null=True)
     created_at = serializers.DateTimeField()
     client_agreed_at = serializers.DateTimeField(allow_null=True)

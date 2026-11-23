@@ -23,6 +23,24 @@ from core.storage import generated_document_pdf_path, get_private_storage
 from .lookups import DocumentTemplateKind, GeneratedDocumentStatus
 
 
+class TemplateApproval(models.TextChoices):
+    """ДОК-10: статус утверждения шаблона договора (решение владельца 2026-11-23)."""
+
+    DRAFT = "draft", _("Черновик")
+    ON_APPROVAL = "on_approval", _("На утверждении")
+    APPROVED = "approved", _("Утверждён")
+
+
+class CounterpartyKind(models.TextChoices):
+    CLIENT = "client", _("Клиент")
+    PARTNER = "partner", _("Партнёр")
+
+
+class ContractSubject(models.TextChoices):
+    SUPPLY = "supply", _("Поставка")
+    SERVICES = "services", _("Услуги")
+
+
 class DocumentTemplate(models.Model):
     """Company template with `{{placeholder}}` tokens, rendered to a GeneratedDocument.
 
@@ -66,6 +84,42 @@ class DocumentTemplate(models.Model):
         help_text=_("Глобальный шаблон-заготовка (company пусто) для копирования к себе."),
     )
     is_active = models.BooleanField(default=True, verbose_name=_("Активен"))
+    # ДОК-16: тексты на узбекском и английском; пустой — в договоре печатается русский с пометкой.
+    body_html_uz = models.TextField(blank=True, default="", verbose_name=_("HTML-тело (uz)"))
+    body_html_en = models.TextField(blank=True, default="", verbose_name=_("HTML-тело (en)"))
+    # ДОК-10: утверждение шаблона договора. Для остальных видов поля не используются.
+    approval_status = models.CharField(
+        max_length=16,
+        choices=TemplateApproval.choices,
+        default=TemplateApproval.DRAFT,
+        db_index=True,
+        verbose_name=_("Статус утверждения"),
+    )
+    edition = models.PositiveSmallIntegerField(default=1, verbose_name=_("Редакция"))
+    previous_edition = models.ForeignKey(
+        "self",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="next_editions",
+        verbose_name=_("Предыдущая редакция"),
+    )
+    submitted_at = models.DateTimeField(null=True, blank=True, verbose_name=_("Отправлен на утверждение"))
+    approved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="approved_document_templates",
+        verbose_name=_("Кем утверждён"),
+    )
+    approved_at = models.DateTimeField(null=True, blank=True, verbose_name=_("Дата утверждения"))
+    counterparty_kind = models.CharField(
+        max_length=16, choices=CounterpartyKind.choices, blank=True, default="", verbose_name=_("Для кого")
+    )
+    subject = models.CharField(
+        max_length=16, choices=ContractSubject.choices, blank=True, default="", verbose_name=_("Предмет")
+    )
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,

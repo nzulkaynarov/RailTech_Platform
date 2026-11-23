@@ -322,6 +322,8 @@ resources:
     levels: [full]
     label: { ru: "Документы · Виза юриста: договор", uz: "Hujjatlar · Yurist vizasi: shartnoma", en: "Documents · Lawyer visa: contract" }
     backend:
+      # ДОК-10 (DECISIONS 2026-11-23): держатель зоны «Право» утверждает шаблоны договоров и решает по отступлениям от них.
+      erp: { full: [contract.approve_template] }
       eds: { full: [approvals.visa_legal] }
   - key: erp.calc
     module: erp

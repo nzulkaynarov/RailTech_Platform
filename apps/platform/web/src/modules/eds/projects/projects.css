@@ -76,3 +76,50 @@
 .pf-doc--detail {
   display: block;
 }
+
+/* ДОК-10: договор по утверждённому шаблону — метка, путь по фактам, отступление */
+.pf-ctpl {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rt-space-2, 8px);
+}
+.pf-ctpl-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--rt-space-2, 8px);
+  margin: 0;
+}
+.pf-ctpl-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--rt-space-2, 8px);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.pf-ctpl-step {
+  display: flex;
+  flex: 1 1 140px;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--rt-space-2, 8px) var(--rt-space-3, 12px);
+  border: 1px solid var(--rt-border-secondary);
+  border-left-width: 3px;
+  border-radius: var(--rt-radius, 8px);
+  font-size: 13px;
+}
+.pf-ctpl-done {
+  border-left-color: var(--rt-success);
+}
+.pf-ctpl-current {
+  border-left-color: var(--rt-primary);
+}
+.pf-ctpl-next {
+  border-left-color: var(--rt-border);
+}
+.pf-ctpl-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--rt-space-2, 8px);
+}

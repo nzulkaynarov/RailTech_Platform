@@ -7,6 +7,7 @@ import type { QuoteDefaults } from "../../../../shared/api/generated/model";
 import {
   getGetQuoteDefaultsQueryKey,
   useGetQuoteDefaults,
+  useListContractTemplates,
   useListReferenceItems,
   useUpdateQuoteDefaults,
 } from "../../../../shared/api/generated/platform-bff";
@@ -25,7 +26,7 @@ const MARGINS = ["default_margin_percent", "min_margin_percent", "target_margin_
  * гарантия, маржа, базис; «Каталог» — цена и порог карточки; «Налоги и валюты» — валюта, НДС и возраст курса;
  * «Уведомления» — напоминания о счетах и актах; «Свежесть цен поставщиков» — отдельная карточка рядом с каталогом. Одна и та же запись настроек компании ERP, у каждой страницы свои поля.
  */
-export type QuoteGroup = "sales" | "catalog" | "supplier" | "taxes" | "reminders";
+export type QuoteGroup = "sales" | "contracts" | "catalog" | "supplier" | "taxes" | "reminders";
 
 const GROUPS: Record<QuoteGroup, readonly (keyof QuoteDefaults)[]> = {
   sales: [
@@ -35,6 +36,14 @@ const GROUPS: Record<QuoteGroup, readonly (keyof QuoteDefaults)[]> = {
     "payment_terms_days",
     "default_warranty_months",
     "default_payment_terms",
+  ],
+  // ДОК-10: правила договора по утверждённому шаблону — данные компании, не код
+  contracts: [
+    "contract_auto_send",
+    "contract_sign_before_send",
+    "contract_deviations_allowed",
+    "default_client_contract_template",
+    "default_partner_contract_template",
   ],
   catalog: [
     "catalog_price_visibility",
@@ -88,6 +97,17 @@ function QuoteForm({ defaults, group }: { defaults: QuoteDefaults; group: QuoteG
   const changed = changedFields(initial, watched);
   const currencies = useListReferenceItems("currencies");
   const bases = useListReferenceItems("delivery-basis");
+  const contractTemplates = useListContractTemplates({ query: { enabled: group === "contracts" } });
+  /** Шаблонами по умолчанию могут быть только утверждённые действующие шаблоны вида контрагента. */
+  const templateOptions = (counterparty: "client" | "partner") =>
+    (contractTemplates.data?.items ?? [])
+      .filter(
+        (row) => row.status === "approved" && row.is_active && row.counterparty === counterparty,
+      )
+      .map((row) => ({
+        value: Number(row.id),
+        label: `${row.name} · ${t("quote.edition", { n: row.edition })}`,
+      }));
   // Без права на группу `cost_margin` BFF не присылает поля маржи совсем.
   const marginsVisible = defaults.default_margin_percent !== undefined;
 
@@ -205,6 +225,50 @@ function QuoteForm({ defaults, group }: { defaults: QuoteDefaults; group: QuoteG
             className="pf-co-wide"
           >
             <Switch />
+          </Form.Item>
+        ) : null}
+        {(
+          [
+            "contract_auto_send",
+            "contract_sign_before_send",
+            "contract_deviations_allowed",
+          ] as const
+        ).map((name) =>
+          shows(name) ? (
+            <Form.Item
+              key={name}
+              name={name}
+              label={t(`quote.${name}`)}
+              extra={t(`quote.${name}Hint`)}
+              valuePropName="checked"
+              className="pf-co-wide"
+            >
+              <Switch />
+            </Form.Item>
+          ) : null,
+        )}
+        {shows("default_client_contract_template") ? (
+          <Form.Item
+            name="default_client_contract_template"
+            label={t("quote.defaultClientTemplate")}
+          >
+            <Select
+              allowClear
+              loading={contractTemplates.isPending}
+              options={templateOptions("client")}
+            />
+          </Form.Item>
+        ) : null}
+        {shows("default_partner_contract_template") ? (
+          <Form.Item
+            name="default_partner_contract_template"
+            label={t("quote.defaultPartnerTemplate")}
+          >
+            <Select
+              allowClear
+              loading={contractTemplates.isPending}
+              options={templateOptions("partner")}
+            />
           </Form.Item>
         ) : null}
         {shows("default_warranty_months") ? (

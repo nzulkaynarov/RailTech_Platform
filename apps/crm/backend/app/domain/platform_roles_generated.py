@@ -311,7 +311,9 @@ ERP_BACKEND: Final[dict[str, dict[str, tuple[str, ...]]]] = {
     "eds.memo.approve": {},
     "eds.signing.manage": {},
     "eds.visa.finance": {},
-    "eds.visa.legal": {},
+    "eds.visa.legal": {
+        "full": ("contract.approve_template",),
+    },
     "erp.calc": {
         "full": (
             "deal.manage",

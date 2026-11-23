@@ -6,7 +6,13 @@ platform-admin viewers are refused on every mutation via the services.
 """
 
 from django.db.models import ProtectedError, Q
-from drf_spectacular.utils import OpenApiResponse, extend_schema, extend_schema_view, inline_serializer
+from drf_spectacular.utils import (
+    OpenApiParameter,
+    OpenApiResponse,
+    extend_schema,
+    extend_schema_view,
+    inline_serializer,
+)
 from rest_framework import mixins
 from rest_framework import serializers as drf_serializers
 from rest_framework import viewsets
@@ -145,6 +151,12 @@ class DocumentTemplateViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
         "destroy": "settings.edit",
         "copy": "settings.edit",
         "preview": "settings.edit",
+        # ДОК-10: редакции и утверждение шаблонов договоров; утверждает держатель зоны «Право».
+        "create_contract": "contract.manage",
+        "new_edition": "contract.manage",
+        "submit": "contract.manage",
+        "approve": "contract.approve_template",
+        "return_to_draft": "contract.approve_template",
     }
 
     serializer_class = DocumentTemplateSerializer
@@ -229,6 +241,10 @@ class DocumentTemplateViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
         instance = self.get_object()
         self._owner_company()
         self._assert_owned(instance)
+        from crm.services.contract_templates import is_locked
+
+        if is_locked(instance):  # утверждённый шаблон договора — след для договоров; не удаляется
+            return Response({"detail": "TEMPLATE_LOCKED"}, status=400)
         try:
             instance.delete()
         except ProtectedError:
@@ -237,6 +253,151 @@ class DocumentTemplateViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
             # (is_active=False) instead (III-1).
             return Response({"detail": "TEMPLATE_IN_USE"}, status=400)
         return Response(status=204)
+
+    # ── ДОК-10: шаблоны договоров ──────────────────────────────────────────────────────────────────────────────────────
+
+    def _contract_action(self, request, fn, *args, status=200):
+        template, err = fn(*args)
+        if err:
+            return Response({"detail": err}, status=403 if err.endswith("FORBIDDEN") else 400)
+        return Response(self.get_serializer(template).data, status=status)
+
+    @extend_schema(
+        summary="Contract templates of the company with approval status (ДОК-10)",
+        tags=["CRM"],
+        responses={200: DocumentTemplateSerializer(many=True)},
+    )
+    @action(detail=False, methods=["get"], url_path="contracts")
+    def contracts(self, request):
+        from crm.services import contract_templates as svc
+
+        company_id = crm_services.resolve_owner_company_id(request.user)
+        rows = svc.contract_templates_of(company_id).order_by("counterparty_kind", "subject", "name", "-edition")
+        return Response(self.get_serializer(rows, many=True).data)
+
+    @extend_schema(
+        summary="Approved contract templates offered in a deal (ДОК-10)",
+        tags=["CRM"],
+        parameters=[OpenApiParameter("deal_id", int, required=True)],
+        responses={200: DocumentTemplateSerializer(many=True)},
+    )
+    @action(detail=False, methods=["get"], url_path="offered")
+    def offered(self, request):
+        """Только утверждённые шаблоны вида контрагента сделки; `default` — шаблон по умолчанию из настроек."""
+        from accounts.services.permissions import is_seller, sees_all_deals
+        from crm.models import Deal
+        from crm.services import contract_templates as svc
+
+        try:
+            deal_id = int(request.query_params.get("deal_id") or 0)
+        except ValueError:
+            return Response({"detail": "BAD_ID"}, status=400)
+        deals = Deal.objects.select_related("company").filter(pk=deal_id)
+        if not (sees_all_deals(request.user) or is_seller(request.user)):
+            deals = deals.filter(
+                company_id__in=request.user.memberships.filter(is_active=True).values_list("company_id", flat=True)
+            )
+        deal = deals.first()
+        if deal is None:
+            return Response({"detail": "DEAL_NOT_FOUND"}, status=404)
+        company_id = crm_services.resolve_owner_company_id(request.user)
+        from accounts.models import Company
+
+        seller = Company.objects.get(pk=company_id)
+        kind = svc.counterparty_kind_of(deal.company)
+        chosen, _ = svc.pick_template(seller, deal.company)
+        rows = svc.offered_templates(seller, kind).order_by("subject", "name")
+        data = self.get_serializer(rows, many=True).data
+        return Response({"counterparty_kind": kind, "default_id": chosen.id if chosen else None, "items": data})
+
+    @extend_schema(
+        summary="New contract template from the standard text, draft edition 1 (ДОК-10)",
+        tags=["CRM"],
+        request=inline_serializer(
+            "ContractTemplateCreate",
+            fields={
+                "name": drf_serializers.CharField(),
+                "counterparty_kind": drf_serializers.ChoiceField(choices=["client", "partner"]),
+                "subject": drf_serializers.ChoiceField(choices=["supply", "services"]),
+            },
+        ),
+        responses={201: DocumentTemplateSerializer, 400: _TEMPLATE_REFUSAL},
+    )
+    @action(detail=False, methods=["post"], url_path="create-contract")
+    def create_contract(self, request):
+        from django.core.exceptions import ValidationError as DjangoValidationError
+
+        from accounts.models import Company
+        from crm.services import contract_templates as svc
+
+        company_id = crm_services.resolve_owner_company_id(request.user)
+        if not company_id:
+            return Response({"detail": "NO_COMPANY"}, status=400)
+        try:
+            template, err = svc.create_from_standard(
+                Company.objects.get(pk=company_id),
+                request.user,
+                name=request.data.get("name", ""),
+                counterparty_kind=request.data.get("counterparty_kind", ""),
+                subject=request.data.get("subject", ""),
+            )
+        except DjangoValidationError as exc:
+            return _template_error(exc)
+        if err:
+            return Response({"detail": err}, status=400)
+        return Response(self.get_serializer(template).data, status=201)
+
+    @extend_schema(
+        summary="New edition of an approved contract template (draft copy)",
+        tags=["CRM"],
+        request=None,
+        responses={201: DocumentTemplateSerializer, 400: _TEMPLATE_REFUSAL},
+    )
+    @action(detail=True, methods=["post"], url_path="new-edition")
+    def new_edition(self, request, pk=None):
+        from crm.services import contract_templates as svc
+
+        self._assert_owned(self.get_object())
+        return self._contract_action(request, svc.new_edition, self.get_object(), request.user, status=201)
+
+    @extend_schema(
+        summary="Send a draft contract template to approval",
+        tags=["CRM"],
+        request=None,
+        responses={200: DocumentTemplateSerializer, 400: _TEMPLATE_REFUSAL},
+    )
+    @action(detail=True, methods=["post"], url_path="submit")
+    def submit(self, request, pk=None):
+        from crm.services import contract_templates as svc
+
+        self._assert_owned(self.get_object())
+        return self._contract_action(request, svc.submit_for_approval, self.get_object(), request.user)
+
+    @extend_schema(
+        summary="Approve a contract template (holder of contract.approve_template)",
+        tags=["CRM"],
+        request=None,
+        responses={200: DocumentTemplateSerializer, 400: _TEMPLATE_REFUSAL},
+    )
+    @action(detail=True, methods=["post"], url_path="approve")
+    def approve(self, request, pk=None):
+        from crm.services import contract_templates as svc
+
+        self._assert_owned(self.get_object())
+        return self._contract_action(request, svc.approve, self.get_object(), request.user)
+
+    @extend_schema(
+        summary="Return a contract template on approval back to draft",
+        tags=["CRM"],
+        request=None,
+        responses={200: DocumentTemplateSerializer, 400: _TEMPLATE_REFUSAL},
+    )
+    @action(detail=True, methods=["post"], url_path="return-to-draft")
+    def return_to_draft(self, request, pk=None):
+        from crm.services import contract_templates as svc
+
+        self._assert_owned(self.get_object())
+        return self._contract_action(request, svc.return_to_draft, self.get_object(), request.user)
 
     @extend_schema(
         summary="Copy a platform sample into the caller's company",

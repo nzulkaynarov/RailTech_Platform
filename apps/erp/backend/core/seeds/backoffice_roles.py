@@ -267,3 +267,22 @@ def grant_finance_view(apps, schema_editor):
             if missing:
                 role.permissions = list(role.permissions or []) + missing
                 role.save(update_fields=["permissions"])
+
+
+# ДОК-10 (миграция accounts/0014): новый код `contract.approve_template` — утверждение шаблонов договоров и решение по
+# отступлениям (держатель зоны «Право»). Системной роли «Руководитель» своей компании. Замороженная копия: каталог после
+# 0014 = CATALOG_0012 + ADDED_0014, шаблоны = BACKOFFICE_ROLES + ROLE_GRANTS_0004 + 0011 + 0012 + ROLE_GRANTS_0014.
+ADDED_0014 = ["contract.approve_template"]
+ROLE_GRANTS_0014 = {"HEAD": ADDED_0014}
+CATALOG_0014 = CATALOG_0012 + ADDED_0014
+
+
+def grant_contract_template_approval(apps, schema_editor):
+    """Догнать системную роль «Руководитель» до шаблона с `contract.approve_template`."""
+    CompanyRole = apps.get_model("accounts", "CompanyRole")
+    for code, added in ROLE_GRANTS_0014.items():
+        for role in CompanyRole.objects.filter(code=code, is_system=True):
+            missing = [perm for perm in added if perm not in (role.permissions or [])]
+            if missing:
+                role.permissions = list(role.permissions or []) + missing
+                role.save(update_fields=["permissions"])

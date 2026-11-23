@@ -33,6 +33,7 @@ ERP_PERMISSIONS: Final[tuple[str, ...]] = (
     "quote.visa_services",
     "contract.manage",
     "contract.sign",
+    "contract.approve_template",
     "catalog.manage",
     "catalog.publish",
     "supply.manage",
