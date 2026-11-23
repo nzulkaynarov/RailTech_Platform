@@ -212,7 +212,6 @@
     },
     "overdueBanner": "Expected by {{date}}, goods not received — {{count}} d. overdue. Contact the partner and update the expected date.",
     "cancelledBanner": "The order is cancelled. Reason: {{reason}}",
-    "details": "Order details",
     "supplier": "Partner",
     "email": "Partner email",
     "expected": "Expected date",
@@ -224,7 +223,6 @@
     "partnerNote": "Comment to the partner",
     "linesTitle": "Order lines",
     "receiptsTitle": "Receipts",
-    "logTitle": "Order log",
     "notFound": {
       "title": "No such order",
       "text": "There is no order with this number, or it is not available to your role.",

@@ -801,14 +801,6 @@ export const adminIntegrationsHandlers = [
       groups: groupsOf(items, state.models, MOCK_NOW),
     });
   }),
-  http.get("*/admin/integrations/services/:key", ({ params }) => {
-    const denied = guard("read");
-    if (denied) return denied;
-    const service = findService(readIntegrations(), String(params["key"]));
-    return service
-      ? HttpResponse.json(detail(service))
-      : failure(404, "NOT_FOUND", "Не найдено.", "crm");
-  }),
   http.post("*/admin/integrations/services/:key/check", ({ params }) => {
     const denied = guard("full");
     if (denied) return denied;

@@ -126,7 +126,7 @@ class DictionarySyncView(_Base):
     @extend_schema(
         operation_id="syncDictionary",
         summary="Refresh a dictionary from its open source",
-        description="Queues the scheduled source job (currencies — the central bank list and rates). 404 — no source.",
+        description="Queues the scheduled source job (currencies — the central bank list and rates; banks — the central bank branch-code file). 404 — no source.",
         request=None,
         responses={202: OpenApiTypes.OBJECT},
         tags=_TAGS,

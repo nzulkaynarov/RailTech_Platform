@@ -70,7 +70,7 @@ async def test_registrar_triages_free_leads_and_never_sees_handed_ones(
     ]
     assert items[0]["title"] == "Разобрать лида L-2041"
     assert items[0]["role_id"] == rid("REGISTRAR")
-    assert items[0]["object"]["path"] == "/crm/messages?lead=L-2041"
+    assert items[0]["object"]["path"] == "/crm/leads?scope=waiting&lead=L-2041"
 
     cards = check(await web.client.get("/api/v1/queue/cards"), "/queue/cards", "get").json()
     # «Проекты в работе» — от раздела «Проекты» (чтение); «Входящая почта» — W18A-P2
@@ -104,7 +104,7 @@ async def test_manager_gets_the_handed_lead_with_the_note_and_others_do_not(
     assert row["title"] == "Новый лид от делопроизводителя L-2045"
     assert NOTE[:40] in row["subtitle"]
     assert "передал(а) Камила Делопроизводитель" in row["subtitle"]
-    assert row["object"]["path"] == "/crm/messages?lead=L-2045"
+    assert row["object"]["path"] == "/crm/leads?scope=waiting&lead=L-2045"
 
 
 async def test_lead_notification_opens_the_conversation(web: Web, fb: FeedBackends) -> None:
@@ -134,7 +134,7 @@ async def test_lead_notification_opens_the_conversation(web: Web, fb: FeedBacken
     assert note["object"] == {
         "kind": "lead",
         "number": "L-2045",
-        "path": "/crm/messages?lead=L-2045",
+        "path": "/crm/leads?scope=waiting&lead=L-2045",
     }
 
 
