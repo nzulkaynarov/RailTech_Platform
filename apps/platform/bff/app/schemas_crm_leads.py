@@ -97,6 +97,8 @@ class ClientShort(BaseModel):
     id: int
     name: str
     inn: str | None
+    # Х-8: отметка «Не работать» клиента лида — полоса в карточке лида
+    do_not_work: DoNotWork | None = None
 
 
 class LeadConsent(BaseModel):

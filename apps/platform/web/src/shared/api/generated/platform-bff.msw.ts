@@ -32635,6 +32635,21 @@ export const getGetCrmLeadResponseHandoffInfoMock = (
   ...overrideResponse,
 });
 
+export const getGetCrmLeadResponseDoNotWorkMock = (
+  overrideResponse: Partial<DoNotWork> = {},
+): DoNotWork => ({
+  ...{
+    reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    set_by: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    set_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  },
+  ...overrideResponse,
+});
+
 export const getGetCrmLeadResponseClientShortMock = (
   overrideResponse: Partial<ClientShort> = {},
 ): ClientShort => ({
@@ -32642,6 +32657,7 @@ export const getGetCrmLeadResponseClientShortMock = (
     id: faker.number.int(),
     name: faker.string.alpha({ length: { min: 10, max: 20 } }),
     inn: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    do_not_work: faker.helpers.arrayElement([{ ...getGetCrmLeadResponseDoNotWorkMock() }, null]),
   },
   ...overrideResponse,
 });

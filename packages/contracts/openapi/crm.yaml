@@ -8116,7 +8116,6 @@ components:
       - request_not_allowed
       - request_key_reused
       - erp_request_conflict
-      - erp_company_do_not_work
       - request_not_failed
       - request_not_retryable
       - mail_in_work_by_other

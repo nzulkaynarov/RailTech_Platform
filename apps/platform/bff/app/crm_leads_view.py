@@ -28,6 +28,7 @@ from app.schemas_crm_leads import (
     LeadTab,
 )
 from app.schemas_crm_messages import Author, ConversationContacts
+from app.schemas_do_not_work import DoNotWork
 
 _STATUSES: tuple[str, ...] = get_args(LeadPlatformStatus)
 _AUTHORS: tuple[str, ...] = get_args(Author)
@@ -192,8 +193,12 @@ def client_short(raw: Any, lead: crm.LeadDetail) -> ClientShort | None:
         return None
     if isinstance(raw, dict) and isinstance(raw.get("name"), str):
         inn = raw.get("inn")
+        mark = raw.get("do_not_work")
         return ClientShort(
-            id=lead.client_id, name=raw["name"], inn=inn if isinstance(inn, str) else None
+            id=lead.client_id,
+            name=raw["name"],
+            inn=inn if isinstance(inn, str) else None,
+            do_not_work=DoNotWork.model_validate(mark) if isinstance(mark, dict) else None,
         )
     if lead.company_name:
         return ClientShort(id=lead.client_id, name=lead.company_name, inn=None)

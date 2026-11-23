@@ -27748,6 +27748,11 @@ components:
         id: {type: integer}
         name: {type: string}
         inn: {type: [string, 'null']}
+        do_not_work:
+          oneOf:
+            - $ref: '#/components/schemas/DoNotWork'
+            - type: 'null'
+          description: 'Х-8: отметка «Не работать» клиента лида — полоса в карточке лида'
 
     ClientRow:
       type: object

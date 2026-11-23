@@ -27,7 +27,8 @@ def test_company_do_not_work_is_its_own_reason_not_a_changed_request() -> None:
     response = httpx.Response(409, json={"detail": "COMPANY_DO_NOT_WORK"})
     with pytest.raises(ConflictError) as caught:
         _result(response)
-    assert caught.value.details["reason"] == Reason.ERP_COMPANY_DO_NOT_WORK
+    assert caught.value.details["failure_code"] == "erp_company_do_not_work"
+    assert "reason" not in caught.value.details
     assert "не работаем" in caught.value.message
 
 
@@ -52,3 +53,13 @@ def test_created_request() -> None:
         )
     )
     assert (result.erp_request_id, result.number) == (2, "ЗВ-2026-001")
+
+
+def test_the_failure_code_of_a_refused_request_reaches_the_deal() -> None:
+    """Х-8: код заявки `failed` — `failure_code` отказа без `reason`; `Reason` не растёт."""
+    from app.services.erp_requests import _code
+
+    response = httpx.Response(409, json={"detail": "COMPANY_DO_NOT_WORK"})
+    with pytest.raises(ConflictError) as caught:
+        _result(response)
+    assert _code(caught.value) == "erp_company_do_not_work"

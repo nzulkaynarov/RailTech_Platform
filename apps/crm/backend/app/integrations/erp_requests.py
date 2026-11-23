@@ -143,6 +143,9 @@ class HttpxErpRequestClient:
         return _result(response)
 
 
+DO_NOT_WORK_FAILURE = "erp_company_do_not_work"
+
+
 def _result(response: httpx.Response) -> ClientRequestResult:
     status = response.status_code
     if status == 429:
@@ -150,9 +153,11 @@ def _result(response: httpx.Response) -> ClientRequestResult:
     if status in (401, 403):
         raise UpstreamUnavailableError(f"HTTP {status}", reason=Reason.ERP_UNAUTHORIZED)
     if status == 409 and _detail_of(response) == "COMPANY_DO_NOT_WORK":
+        # Х-8: заявка `failed` с этим кодом (`details.failure_code`, а не `reason`: перечень
+        # `Reason` — контракт API CRM); после снятия отметки в ERP её можно повторить.
         raise ConflictError(
             "ERP: с компанией не работаем — заявка не создана",
-            reason=Reason.ERP_COMPANY_DO_NOT_WORK,
+            failure_code=DO_NOT_WORK_FAILURE,
             erp_detail="COMPANY_DO_NOT_WORK",
         )
     if status == 409:

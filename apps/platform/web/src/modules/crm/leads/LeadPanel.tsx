@@ -10,6 +10,7 @@ import type { ClientInvitation, LeadCard, LeadNotice } from "../../../shared/api
 import { useGetCrmLead } from "../../../shared/api/generated/platform-bff";
 import { useFormat } from "../../../shared/lib/useFormat";
 import { DefinitionList } from "../../../shared/ui/DefinitionList";
+import { DoNotWorkStrip } from "../../../shared/ui/DoNotWorkStrip";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { LinkButton } from "../../../shared/ui/LinkButton";
 import { StatusTag } from "../../../shared/ui/StatusTag";
@@ -86,6 +87,8 @@ function Body({ card, sheet, onClose }: { card: LeadCard; sheet: boolean; onClos
           <StatusTag kind="lead" status={card.status} />
         </div>
       </div>
+
+      <DoNotWorkStrip mark={card.client?.do_not_work} />
 
       <div className="pf-fp-block">
         <h4>{t("leads:card.contacts")}</h4>

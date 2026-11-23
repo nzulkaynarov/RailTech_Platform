@@ -198,7 +198,13 @@ export const crmLeadsHandlers = [
     const denied = guard("crm.leads", "read");
     if (denied) return denied;
     const lead = findLead(readLeads(), String(params["lead"]));
-    return lead ? HttpResponse.json(lead.card) : leadNotFound();
+    if (!lead) return leadNotFound();
+    const client = lead.card.client;
+    return HttpResponse.json(
+      client
+        ? { ...lead.card, client: { ...client, do_not_work: markOf(String(1000 + client.id)) } }
+        : lead.card,
+    );
   }),
 
   http.get("*/api/v1/crm/clients", ({ request }) => {

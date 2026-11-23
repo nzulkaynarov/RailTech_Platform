@@ -132,7 +132,12 @@ async def test_card_collects_contacts_facts_messages_and_d1_9_notices(
         "system",
         "lead",
     ]
-    assert card["client"] == {"id": 12, "name": "ООО Демо-Логистик", "inn": "000000001"}
+    assert card["client"] == {
+        "id": 12,
+        "name": "ООО Демо-Логистик",
+        "inn": "000000001",
+        "do_not_work": None,
+    }
     assert card["confirmation"] == {
         "channel": "telegram",
         "status": "sent",
@@ -156,7 +161,30 @@ async def test_card_opens_without_messages_and_client_when_crm_fails(
     await web.login(["MANAGER"])
     card = check(await web.client.get(f"{BASE}/L-2041"), "/crm/leads/{lead}", "get").json()
     assert card["last_messages"] == []
-    assert card["client"] == {"id": 12, "name": "ООО Демо-Логистик", "inn": None}
+    assert card["client"] == {
+        "id": 12,
+        "name": "ООО Демо-Логистик",
+        "inn": None,
+        "do_not_work": None,
+    }
+
+
+async def test_lead_card_carries_the_do_not_work_mark_of_its_client(
+    web: Web, crm: CrmLeadsFake, check: ContractChecker
+) -> None:
+    """Х-8: клиент лида с отметкой «Не работать» — карточка лида несёт её для полосы."""
+    from tests.crm_leads_support import client_detail
+
+    mark = {
+        "reason": "Спор по оплате",
+        "set_by": "Менеджер Демо",
+        "set_at": "2026-11-23T09:30:00Z",
+        "until": None,
+    }
+    crm.answer("GET", "clients/12", body=client_detail(12, do_not_work=mark))
+    await web.login(["MANAGER"])
+    card = check(await web.client.get(f"{BASE}/L-2041"), "/crm/leads/{lead}", "get").json()
+    assert card["client"]["do_not_work"] == mark
 
 
 async def test_card_of_a_lead_without_client_and_notices(

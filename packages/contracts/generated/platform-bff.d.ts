@@ -11123,6 +11123,8 @@ export interface components {
       delivery_lines: components["schemas"]["ProjectDeliveryLine"][];
       /** @description История документов проекта (договор, счета, акт), новые первыми: кто, когда, что и по какой причине */
       journal: components["schemas"]["ProjectJournalEntry"][];
+      /** @description Х-8: у компании проекта отметка «Не работать» (причина, кто, когда) — полоса «С компанией не работаем» в карточке; документы в работе не отменяются. null — работаем */
+      do_not_work?: components["schemas"]["DoNotWork"] | null;
     };
     /** @description Действие по договору. `reason` обязательна для `reject`, `channel` и `counterparty_person` — для `client_agreed`: пустые BFF отклоняет (422). */
     ProjectContractActionIn: {
@@ -16373,6 +16375,8 @@ export interface components {
       id: number;
       name: string;
       inn: string | null;
+      /** @description Х-8: отметка «Не работать» клиента лида — полоса в карточке лида */
+      do_not_work?: components["schemas"]["DoNotWork"] | null;
     };
     ClientRow: {
       id: number;
