@@ -20,21 +20,21 @@ import {
   MailPage,
   NotificationsPage,
   NumberingPage,
-  ResolutionsPage,
   SalesPage,
   TaxesPage,
   TimingPage,
   WebFormsPage,
 } from "./settings/pages";
-import { SettingsHome } from "./settings/SettingsHome";
+import { SettingsFrame } from "./settings/SettingsFrame";
 import { TelegramPage } from "./settings/TelegramPage";
 import { TemplatesPage } from "./settings/TemplatesPage";
 import { SetupWizardPage } from "./setup/SetupWizardPage";
+import { StatePage } from "./state/StatePage";
 import { TicketsPage } from "./tickets/TicketsPage";
 
 /** Страницы разделов без своего номера объекта; ключ — раздел модуля (`module.ts`, реестр настроек). */
 const PAGES: Readonly<Record<string, ComponentType>> = {
-  overview: SettingsHome,
+  overview: StatePage,
   roles: RolesPage,
   signing: SigningPage,
   company: CompanyPage,
@@ -46,7 +46,6 @@ const PAGES: Readonly<Record<string, ComponentType>> = {
   mail: MailPage,
   forms: WebFormsPage,
   dictionaries: DictionariesPage,
-  resolutions: ResolutionsPage,
   templates: TemplatesPage,
   timing: TimingPage,
   notifications: NotificationsPage,
@@ -71,9 +70,11 @@ export function Component() {
   const { section, objectId } = match;
   if (section.key === "org") {
     return (
-      <RequireAccess rule={section.access}>
-        <OrgPage objectId={objectId} />
-      </RequireAccess>
+      <SettingsFrame>
+        <RequireAccess rule={section.access}>
+          <OrgPage objectId={objectId} />
+        </RequireAccess>
+      </SettingsFrame>
     );
   }
   if (section.key === "tickets") {
@@ -86,8 +87,10 @@ export function Component() {
   const Page = PAGES[section.key];
   if (!Page) return <ModuleRoutes />;
   return (
-    <RequireAccess rule={section.access}>
-      <Page />
-    </RequireAccess>
+    <SettingsFrame>
+      <RequireAccess rule={section.access}>
+        <Page />
+      </RequireAccess>
+    </SettingsFrame>
   );
 }

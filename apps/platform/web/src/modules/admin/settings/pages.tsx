@@ -10,8 +10,9 @@ import { NumberingTab } from "../company/tabs/NumberingTab";
 import { PlatformTab } from "../company/tabs/PlatformTab";
 import { QuoteSettings } from "../company/tabs/QuoteTab";
 import { AiTab } from "../docflow/AiTab";
+import { DictionariesTab } from "../docflow/DictionariesTab";
+import { MailRules } from "../docflow/MailRules";
 import { PiiPolicyCard } from "../docflow/PiiPolicyCard";
-import { TemplatesTab as ResolutionTemplates } from "../docflow/TemplatesTab";
 import { MailPanel } from "../integrations/MailPanel";
 import { SpendPanel } from "../integrations/SpendPanel";
 import { RatesView } from "../../erp/catalog/RefsPanel";
@@ -42,7 +43,7 @@ export function NumberingPage() {
   );
 }
 
-/** Компания · Налоги и валюты: НДС и курс USD → валюта компании (бывшая вкладка «Платформа»). */
+/** Компания · Налоги и валюты: НДС в новом КП и курсы валют к суму (адрес поддержки — на «Реквизитах», ЕВ-2а). */
 export function TaxesPage() {
   const { me } = useAuth();
   return (
@@ -72,17 +73,33 @@ export function SalesPage() {
       <Card styles={{ body: { padding: 0 } }}>
         <QuoteSettings group="catalog" />
       </Card>
+      <Card styles={{ body: { padding: 0 } }}>
+        <QuoteSettings group="supplier" />
+      </Card>
     </SettingsPage>
   );
 }
 
-/** Каналы связи · Почта: отправка (SMTP), приём в общий ящик (IMAP), журнал доставки — бывшая карточка «Подключений». */
+/** Тип входящих писем: справочник «Типы входящих писем» (каталог BFF) — вид письма, по которому работает разбор ящика. */
+export const MAIL_KINDS_LIST = "mail-types";
+
+/**
+ * Каналы и подключения · Почта: отправка (SMTP), приём в общий ящик (IMAP), журнал доставки, а также виды входящих писем и
+ * правила отправителей — настройки самого канала (ЕВ-2а, отчёт §8.2 п. 14; раньше — «Справочники · Почта»).
+ */
 export function MailPage() {
   const { me } = useAuth();
+  const editable = canEdit(me, "admin");
   return (
     <SettingsPage sectionKey="mail">
       <Card>
-        <MailPanel editable={canEdit(me, "admin")} titled={false} />
+        <MailPanel editable={editable} titled={false} />
+      </Card>
+      <Card id="pf-mail-kinds" styles={{ body: { padding: 0 } }}>
+        <DictionariesTab readOnly={!editable} kind={MAIL_KINDS_LIST} />
+      </Card>
+      <Card id="pf-mail-rules" styles={{ body: { padding: 0 } }}>
+        <MailRules readOnly={!editable} />
       </Card>
     </SettingsPage>
   );
@@ -97,19 +114,7 @@ export function WebFormsPage() {
   );
 }
 
-/** Процессы · Шаблоны резолюций (бывшая вкладка «Документооборота»). */
-export function ResolutionsPage() {
-  const { me } = useAuth();
-  return (
-    <SettingsPage sectionKey="resolutions">
-      <Solo>
-        <ResolutionTemplates readOnly={!canEdit(me, "admin")} />
-      </Solo>
-    </SettingsPage>
-  );
-}
-
-/** Процессы · Время и сроки: рабочие часы и правила передачи менеджеру со сроком ответа (SLA). */
+/** Правила работы · Время и сроки: рабочие часы и срок первого ответа лиду — оба поля (бот и сайт) здесь (ЕВ-2а, отчёт §8.2 п. 7). */
 export function TimingPage() {
   return (
     <SettingsPage sectionKey="timing">
@@ -118,7 +123,7 @@ export function TimingPage() {
   );
 }
 
-/** Процессы · Уведомления: канал команды и оповещения о сбоях; личные уведомления — в Профиле. */
+/** Правила работы · Уведомления: кого оповещать, напоминания и сбои; канал команды — в Telegram, личные уведомления — в Профиле. */
 export function NotificationsPage() {
   const { t } = useTranslation("modules");
   const { me } = useAuth();
@@ -144,7 +149,7 @@ export function NotificationsPage() {
   );
 }
 
-/** Система · Расходы на ИИ: отчёт, дневной лимит, защита данных для ИИ и ИИ-помощник в документах. */
+/** Каналы и подключения · ИИ: отчёт, дневной лимит, защита данных для ИИ и ИИ-помощник в документах. */
 export function AiSpendPage() {
   return (
     <SettingsPage sectionKey="spend">
@@ -162,7 +167,7 @@ export function AiSpendPage() {
   );
 }
 
-/** Система · Выгрузки: лиды, клиенты и сделки в CSV (бывшая вкладка «Telegram-бота»). */
+/** Журнал · Выгрузки: лиды, клиенты и сделки в CSV (бывшая вкладка «Telegram-бота»). */
 export function ExportsPage() {
   return (
     <SettingsPage sectionKey="exports">

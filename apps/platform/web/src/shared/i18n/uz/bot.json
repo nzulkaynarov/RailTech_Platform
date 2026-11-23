@@ -44,7 +44,7 @@
     "competitors": "Raqobatchilar",
     "escalation": "Uzatish qoidalari",
     "qualification": "Kvalifikatsiya",
-    "notifications": "Jamoa kanali",
+    "notifications": "Jamoa ogohlantirishlari",
     "budget": "Modellar byudjeti",
     "deals": "Rad etish sabablari",
     "web_form": "Saytdan «Ariza» formasi",
@@ -58,7 +58,7 @@
     "stop_words": "Stop-so‘zli xabar darhol menejerga uzatiladi. «so‘z*» — istalgan tugallanma.",
     "competitors": "Raqobatchi tilga olinishi — menejerga uzatish sababi.",
     "escalation": "Bot suhbatni jamoaga qachon uzatadi va jamoa qanchalik tez javob berishi kerak.",
-    "notifications": "Uzatish kartochkalari qayerga keladi va eslatmalarda kimni tilga olish kerak.",
+    "notifications": "Eslatmalarda kimni tilga olish va menejerga qanchalik tez-tez yozish.",
     "budget": "AI modellar xarajatlarining kunlik limiti.",
     "service_alerts": "Tashqi xizmat (Telegram, AI modellar, pochta…) ishdan chiqqanda va tiklanganda kimga yozish kerak. Nosozlik haqida bitta xabar va tiklanish haqida bitta xabar.",
     "deals": "Bitimni yopish uchun rad etish sabablari va yangi bitimlar valyutasi."
@@ -637,7 +637,8 @@
     "email_admins": "Administratorlarga pochta xati",
     "extra_emails": "Xatlar uchun qo‘shimcha manzillar",
     "repeat_minutes": "Xizmat nosozligi haqida ogohlantirish bir martadan tez-tez emas",
-    "pii_policy": "Ma’lumotlar himoyasi siyosati"
+    "pii_policy": "Ma’lumotlar himoyasi siyosati",
+    "first_response_sla_minutes": "Saytdan arizaga birinchi javob vaqti"
   },
   "hints": {
     "cabinet_url": "TT va hisoblar haqidagi xabarlar ostidagi «Kabinet» tugmasi; bo‘sh — tugma yo‘q.",
@@ -666,7 +667,8 @@
     "telegram_channel": "«Shaxsiyga hech kimga yetkazilmasa» — kanal lidlar haqida qoladi, nosozliklarni jamoa faqat zaxira yo‘l sifatida ko‘radi.",
     "email_admins": "Pochtasi bor faol administratorlarga; «Pochta» konnektori ulangan bo‘lishi kerak.",
     "extra_emails": "Masalan, navbatchi muhandis; Enter — qo‘shish.",
-    "repeat_minutes": "Xizmat «miltillasa», shu muddatdan oldingi yangi nosozlik xabarsiz hodisalar jurnaliga yoziladi."
+    "repeat_minutes": "Xizmat «miltillasa», shu muddatdan oldingi yangi nosozlik xabarsiz hodisalar jurnaliga yoziladi.",
+    "first_response_sla_minutes": "Odam saytdan kelgan arizaga javob berishi kerak bölgan ish daqiqalari."
   },
   "units": {
     "repeat_minutes": "daq",
@@ -680,7 +682,8 @@
     "daily_usd": "$",
     "erp_daily_usd": "$",
     "anthropic": "$",
-    "gemini": "$"
+    "gemini": "$",
+    "first_response_sla_minutes": "daq"
   },
   "options": {
     "need": "Ehtiyoj",
@@ -715,5 +718,10 @@
     "text": "Bot javob beradigan hujjatlar, «Bot nimani topadi» qidiruvi, bo‘shliqlar va qum qutisi — bilimlar bazasi ekranida. Quyida — bot bazadan qanday foydalanadi.",
     "readOnlyText": "Hujjatlar, bo‘shliqlar va «Bot nimani topadi» qidiruvi — bilimlar bazasi ekranida, faqat o‘qish uchun.",
     "open": "Bilimlar bazasini ochish"
+  },
+  "movedKeys": {
+    "escalation": "Birinchi javob muddati va eslatma",
+    "web_form": "Saytdan arizaga birinchi javob muddati",
+    "bot": "Menejerga SI yordami"
   }
 }

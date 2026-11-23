@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { MENU } from "../../app/rbac.generated";
+import { MENU, SYSTEM_ROLES } from "../../app/rbac.generated";
 import { resources } from "../../shared/i18n";
 import { admin } from "./module";
 import {
@@ -17,10 +17,17 @@ const LANGS = ["ru", "uz", "en"] as const;
 const FORBIDDEN = /\b(CRM|ERP|EDS)\b|ансамбл|ansambl|ensemble|бэк-офис|back-?office|воркер|getMe/i;
 
 describe("реестр настроек (SET-IA)", () => {
-  it("ключи и адреса уникальны; группы — четыре, в порядке индекса", () => {
+  it("ключи и адреса уникальны; групп пять, в порядке меню (ЕВ-2а)", () => {
     expect(new Set(SETTINGS.map((s) => s.key)).size).toBe(SETTINGS.length);
     expect(new Set(SETTINGS.map((s) => s.path)).size).toBe(SETTINGS.length);
-    expect(SETTINGS_GROUPS).toEqual(["people", "company", "channels", "system"]);
+    expect(SETTINGS_GROUPS).toEqual(["people", "company", "rules", "channels", "journal"]);
+    // состав групп — по отчёту 2026-11-22 §8.1
+    const of = (group: string) => SETTINGS.filter((s) => s.group === group).map((s) => s.key);
+    expect(of("people")).toEqual(["org", "roles", "signing"]);
+    expect(of("company")).toEqual(["company", "numbering", "taxes", "articles"]);
+    expect(of("rules")).toEqual(["sales", "timing", "dictionaries", "templates", "notifications"]);
+    expect(of("channels")).toEqual(["telegram", "mail", "forms", "integrations", "spend"]);
+    expect(of("journal")).toEqual(["audit", "exports"]);
   });
 
   it.each(LANGS)(
@@ -60,11 +67,37 @@ describe("реестр настроек (SET-IA)", () => {
     expect(Object.keys(MENU.admin)).toEqual(["overview", ...SETTINGS.map((s) => s.key)]);
   });
 
+  it("директор не видит страницы фундамента: каналы, ИИ, выгрузки — раздел `admin.system`, коммерческие правила — `company.settings`", () => {
+    const resourceOf = (key: string) => {
+      const access = SETTINGS.find((s) => s.key === key)?.access;
+      return access && "resource" in access ? access.resource : null;
+    };
+    for (const key of ["telegram", "mail", "forms", "integrations", "spend", "exports"]) {
+      expect(resourceOf(key), key).toBe("admin.system");
+    }
+    for (const key of ["sales", "taxes", "templates", "company", "numbering"]) {
+      expect(resourceOf(key), key).toBe("company.settings");
+    }
+    // каталог: директор получает коммерческий раздел полностью, раздела фундамента у него нет вовсе
+    expect((SYSTEM_ROLES.DIRECTOR.access as Record<string, string>)["company.settings"]).toBe(
+      "full",
+    );
+    expect(
+      (SYSTEM_ROLES.DIRECTOR.access as Record<string, string>)["admin.system"],
+    ).toBeUndefined();
+    expect((SYSTEM_ROLES.ADMIN.access as Record<string, string>)["admin.system"]).toBe("full");
+  });
+
   it("разделы пунктов: `admin`, `company.settings` и (SIGN-2) `eds.signing.manage` для «Прав подписи»", () => {
     const resourcesOf = (entry: SettingEntry) =>
       "resource" in entry.access ? [entry.access.resource] : [...entry.access.anyOf];
     const used = new Set(SETTINGS.flatMap(resourcesOf));
-    expect([...used].sort()).toEqual(["admin", "company.settings", "eds.signing.manage"]);
+    expect([...used].sort()).toEqual([
+      "admin",
+      "admin.system",
+      "company.settings",
+      "eds.signing.manage",
+    ]);
   });
 });
 
@@ -104,7 +137,7 @@ describe("поиск по настройкам", () => {
   it("короткий запрос ничего не ищет; недоступное ролям не находится", () => {
     expect(keys("п")).toEqual([]);
     expect(keys("")).toEqual([]);
-    expect(keys("обмен", (e) => e.key !== "bus")).not.toContain("bus");
+    expect(keys("почта", (e) => e.key !== "mail")).not.toContain("mail");
   });
 
   it("язык интерфейса: uz, en; прочее — ru", () => {

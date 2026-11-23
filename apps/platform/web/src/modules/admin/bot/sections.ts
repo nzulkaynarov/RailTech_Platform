@@ -18,7 +18,7 @@ export const BOT_PLACEMENT: Readonly<Record<string, string>> = {
   competitors: "telegram.behavior",
   company: "company",
   business_hours: "timing",
-  escalation: "timing",
+  escalation: "telegram.behavior",
   web_form: "forms",
   notifications: "notifications",
   service_alerts: "notifications",
@@ -28,12 +28,57 @@ export const BOT_PLACEMENT: Readonly<Record<string, string>> = {
   ai: "spend.policy",
 };
 
+/**
+ * Поля раздела, которые живут на другой странице (ЕВ-2а, отчёт 2026-11-22 §8.2): одно значение — одно место. Поле показывает
+ * только страница `page`; остальные поля раздела остаются там, куда его ставит `BOT_PLACEMENT`. Значения полей, которых нет
+ * на странице, всё равно уходят в тело сохранения (`withoutFields` не теряет их).
+ *  — срок первого ответа лиду (стр. 7): `escalation.sla_minutes` и `web_form.first_response_sla_minutes` — оба на «Время и сроки»;
+ *  — пороги передачи лида менеджеру (стр. 10): остальные поля `escalation` — к поведению бота (Telegram · Поведение);
+ *  — переключатель ИИ-помощи менеджеру (стр. 17): `bot.assist_enabled` — на странице «ИИ»;
+ *  — адрес кабинета клиента (стр. 3): `company.cabinet_url` правится только в «Сервисах» (`CabinetAddress` с проверкой доступности).
+ */
+export const FIELD_MOVES: Readonly<
+  Record<string, readonly { page: string; fields: readonly string[] }[]>
+> = {
+  escalation: [{ page: "timing", fields: ["sla_minutes", "reminder_minutes"] }],
+  web_form: [{ page: "timing", fields: ["first_response_sla_minutes"] }],
+  company: [{ page: "integrations", fields: ["cabinet_url"] }],
+  // Переключатели ИИ — одна страница «ИИ» (стр. 17): помощь менеджеру при ответе из «Поведения бота» — к расходам и защите данных
+  bot: [{ page: "spend", fields: ["assist_enabled"] }],
+};
+
+export interface BotPart {
+  section: string;
+  /** Показать только эти поля раздела (чужие значения сохраняются как были) */
+  only?: readonly string[];
+  /** Не показывать эти поля: их правят на другой странице */
+  hide?: readonly string[];
+}
+
 /** Порядок разделов внутри страницы — порядок `BOT_PLACEMENT`; неизвестные — в конце «Поведения». */
 export function botSectionsFor(page: string, available: readonly string[]): string[] {
+  return botPartsFor(page, available).map((part) => part.section);
+}
+
+/** Части разделов страницы: целые разделы и перенесённые сюда поля (`FIELD_MOVES`). */
+export function botPartsFor(page: string, available: readonly string[]): BotPart[] {
   const order = Object.keys(BOT_PLACEMENT);
-  const placed = order.filter((key) => BOT_PLACEMENT[key] === page && available.includes(key));
-  if (page !== "telegram.behavior") return placed;
-  return [...placed, ...available.filter((key) => BOT_PLACEMENT[key] === undefined)];
+  const own = order.filter((key) => BOT_PLACEMENT[key] === page && available.includes(key));
+  const unknown =
+    page === "telegram.behavior"
+      ? available.filter((key) => BOT_PLACEMENT[key] === undefined)
+      : [];
+  const parts: BotPart[] = [...own, ...unknown].map((section) => {
+    const moved = (FIELD_MOVES[section] ?? []).flatMap((move) => move.fields);
+    return moved.length > 0 ? { section, hide: moved } : { section };
+  });
+  for (const [section, moves] of Object.entries(FIELD_MOVES)) {
+    if (!available.includes(section)) continue;
+    for (const move of moves) {
+      if (move.page === page) parts.push({ section, only: move.fields });
+    }
+  }
+  return parts;
 }
 
 const TEXT_GROUPS: Record<string, readonly string[]> = {

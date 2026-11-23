@@ -377,7 +377,7 @@
     "name": "Sozlamalar",
     "title": "Sozlamalar",
     "sections": {
-      "overview": "Barcha sozlamalar",
+      "overview": "Holat",
       "org": "Xodimlar",
       "roles": "Rollar va huquqlar",
       "signing": "Imzo huquqlari",
@@ -391,11 +391,11 @@
       "forms": "Sayt shakllari",
       "dictionaries": "Ma’lumotnomalar",
       "resolutions": "Rezolyutsiya shablonlari",
-      "templates": "Hujjat shablonlari",
+      "templates": "Shablonlar",
       "timing": "Vaqt va muddatlar",
       "notifications": "Bildirishnomalar",
       "integrations": "Servislar",
-      "spend": "SI xarajatlari",
+      "spend": "SI",
       "audit": "Tarix",
       "exports": "Eksport",
       "bus": "Tizimlararo almashinuv",
@@ -403,10 +403,11 @@
       "tickets": "Xodimlar murojaatlari"
     },
     "groups": {
-      "people": "Xodimlar",
+      "people": "Odamlar va kirish",
       "company": "Kompaniya",
-      "channels": "Ulanishlar",
-      "system": "Jurnal"
+      "channels": "Kanallar va ulanişlar",
+      "rules": "Ish qoidalari",
+      "journal": "Jurnal"
     },
     "home": {
       "viewOnly": "Faqat ko‘rish",
@@ -846,10 +847,82 @@
       "systems": "Tizimlararo almashinuv"
     },
     "nav": {
-      "people": "Xodimlar",
+      "people": "Odamlar va kirish",
       "company": "Kompaniya",
-      "channels": "Ulanishlar",
-      "system": "Jurnal"
+      "channels": "Kanallar va ulanişlar",
+      "state": "Holat",
+      "rules": "Ish qoidalari",
+      "journal": "Jurnal"
+    },
+    "frame": {
+      "nav": "«{{group}}» sahifalari"
+    },
+    "state": {
+      "subtitle": "Hozir nimaga e’tibor kerak, kim tuzatadi va qayerga borish kerak",
+      "attention": "E’tibor talab qiladi · {{count}}",
+      "none": "Hammasi ishlayapti: nosozlik va muddati ötgan sozlama yöq.",
+      "fixer": "tuzatadi: {{who}}",
+      "open": "«{{page}}»ni ochish",
+      "openPlain": "Ochish",
+      "affected": "ta’sirlanadi: {{list}}",
+      "owner": {
+        "admin": "administrator",
+        "owner": "kompaniya egasi",
+        "hosting": "xosting",
+        "provider": "provayder",
+        "director": "direktor",
+        "accountant": "buxgalter"
+      },
+      "row": {
+        "signing": {
+          "title": "Imzo huquqi {{days}} kundan keyin tugaydi",
+          "what": "{{name}}, {{basis}}, muddat: {{until}}",
+          "ifNot": "muddatdan keyin hujjatlarni imzolaydigan odam bölmaydi"
+        },
+        "fx": {
+          "title": "{{currency}} kursi {{days}} kundan beri yangilanmagan",
+          "ifNot": "dollardagi TT yangi kurs bilan hisoblanmaydi"
+        },
+        "blank": {
+          "title": "Kompaniya blankasi berilmagan",
+          "ifNot": "blankadagi xatlar tayyorlanmaydi va manzilga yetmaydi"
+        },
+        "tickets": {
+          "title": "Xodimlar murojaatlari: {{count}}",
+          "ifNot": "xodimlar javob kutmoqda"
+        }
+      },
+      "services": "Xizmatlar",
+      "service": {
+        "mail": "Pochta",
+        "bot": "Telegram",
+        "erp": "ERP",
+        "backups": "Zaxira nusxalar",
+        "ai": "SI",
+        "bus": "Tizimlararo almashinuv"
+      },
+      "bus": {
+        "empty": "navbat bösh",
+        "queued": "navbatda: {{count}}",
+        "dead": "yetkazilmagan: {{count}}"
+      },
+      "external": {
+        "title": "Tashqi ishlash tekshiruvi",
+        "off": "ulanmagan",
+        "text": "nosozlik haqida egaga xabar bormaydi"
+      },
+      "readiness": "Tayyorlik · {{done}} / {{total}}",
+      "ready": {
+        "works": "ishlayapti",
+        "filled": "töldirilgan",
+        "broken": "ishlamayapti",
+        "todo": "bajarilmagan",
+        "unknown": "ma’lumot yöq"
+      },
+      "extra": {
+        "blank": "Kompaniya blankasi",
+        "support": "Yordam manzili"
+      }
     }
   },
   "tabs": {

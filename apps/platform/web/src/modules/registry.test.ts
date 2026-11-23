@@ -19,8 +19,16 @@ describe("меню — docs/product/NAVIGATION.md", () => {
     expect(menuOf("eds")).toEqual(["Входящие", "Исходящие", "Внутренние", "Архив", "Шаблоны"]);
     expect(menuOf("erp")).toEqual(["Заявки", "Каталог", "Финансы"]);
     expect(menuOf("chats")).toEqual(["Календарь", "Чаты", "Люди"]);
-    expect(menuOf("admin")).toEqual(["Сотрудники", "Компания", "Подключения", "Журнал"]);
-    expect(MODULES.flatMap((m) => menuOf(m.code))).toHaveLength(22);
+    // ЕВ-2а: «Состояние» первым, затем пять групп
+    expect(menuOf("admin")).toEqual([
+      "Состояние",
+      "Люди и доступ",
+      "Компания",
+      "Правила работы",
+      "Каналы и подключения",
+      "Журнал",
+    ]);
+    expect(MODULES.flatMap((m) => menuOf(m.code))).toHaveLength(24);
   });
 
   it("у каждого раздела из меню есть конфигурация", () => {
@@ -48,10 +56,12 @@ describe("меню — docs/product/NAVIGATION.md", () => {
     expect(at("/eds/payments")).toBe("erp.finance.invoices");
     expect(at("/eds/payments?show=memos")).toBe("erp.finance.memos");
     expect(at("/eds/projects")).toBe("dashboard.projects");
-    expect(at("/admin/org")).toBe("admin.people.org");
-    // индекс группы — страница «Все настройки», пункты меню ведут на сами страницы
-    expect(at("/admin?group=channels")).toBeUndefined();
-    expect(at("/admin/telegram")).toBe("admin.channels.telegram");
+    expect(at("/admin/org")).toBe("admin.people");
+    // «Состояние» — первый пункт; группа открывает свою первую страницу, остальные — меню слева рамки страницы
+    expect(at("/admin")).toBe("admin.state");
+    expect(at("/admin/telegram")).toBe("admin.channels");
+    // «Обмен между системами» — вид «Истории»: подсвечивает пункт «Журнал»
+    expect(at("/admin/bus")).toBe("admin.journal");
     expect(at("/admin/templates")).toBe("eds.templates");
     expect(at("/erp/stock")).toBe("erp.catalog.stock");
     expect(at("/erp/stock?view=orders")).toBe("erp.requests.purchases");
@@ -169,7 +179,6 @@ describe("карта маршрутов SPEC-v3 §6.3", () => {
     "/admin/mail",
     "/admin/web-forms",
     "/admin/dictionaries",
-    "/admin/resolutions",
     "/admin/templates",
     "/admin/timing",
     "/admin/notifications",

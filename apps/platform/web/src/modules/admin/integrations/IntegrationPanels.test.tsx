@@ -1,6 +1,8 @@
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
+import { readEmployees, writeEmployees } from "../../../mocks/fixtures/employees";
+import { readRoles, writeRoles } from "../../../mocks/fixtures/roles";
 import { readIntegrations, writeIntegrations } from "../../../mocks/fixtures/integrations";
 import { DEMO_WRONG_PASSWORD } from "../../../mocks/fixtures/users";
 import { openCard, renderAt, signIn, setupIntegrationsTests } from "./testkit";
@@ -12,6 +14,30 @@ const PASSWORD = "demo-pass-1";
 async function openPanel(card: string, email = "admin@demo.example"): Promise<HTMLElement> {
   signIn(email);
   return openCard(card);
+}
+
+/**
+ * Читатель фундамента: `admin` — чтение, `admin.system` — страницы открыты (ЕВ-2а). Директору страницы фундамента не показываются,
+ * поэтому «только чтение» панелей проверяется на пользовательской роли с этими двумя разделами.
+ */
+const READER = "manager@demo.example";
+function seedSystemReader(): void {
+  writeRoles([
+    ...readRoles(),
+    {
+      id: "51",
+      name: "Читатель фундамента",
+      description: "",
+      system: false,
+      version: 1,
+      access: { "dashboard.queue": "full", admin: "read", "admin.system": "full" },
+      restricted_fields: [],
+      updated_at: "2026-10-26T00:00:00.000Z",
+    },
+  ]);
+  writeEmployees(
+    readEmployees().map((e) => (e.id === "u-demo-manager" ? { ...e, role_ids: ["51"] } : e)),
+  );
 }
 
 /** Подключение бота — Настройки · Каналы связи · Telegram, вкладка «Подключение» (SET-IA), не боковое окно «Подключений». */
@@ -275,7 +301,7 @@ describe("карточка «Почта»", () => {
   it("пропущенных писем нет или только чтение — предложения нет", async () => {
     const state = readIntegrations();
     writeIntegrations({ ...state, smtp: { ...state.smtp, missed: 2 } });
-    const side = await openPanel("mail", "director@demo.example");
+    const side = await (seedSystemReader(), openPanel("mail", READER));
     await within(side).findByText("smtp.demo.example:587");
     expect(within(side).queryByText(/Не ушли, пока почта не была настроена/)).toBeNull();
   });
@@ -469,8 +495,8 @@ describe("карточка «Модели ИИ»", () => {
     ).toBeVisible();
   });
 
-  it("директор читает модели и маску ключа, кнопок изменения нет", async () => {
-    const side = await openPanel("models", "director@demo.example");
+  it("читатель фундамента читает модели и маску ключа, кнопок изменения нет", async () => {
+    const side = await (seedSystemReader(), openPanel("models", READER));
     expect(await within(side).findByText("Диалог с клиентом")).toBeVisible();
     expect(within(side).getAllByText("•••• 77aa").length).toBeGreaterThan(0);
     expect(
@@ -494,8 +520,8 @@ describe("карточка «Хранилище и бэкапы»", () => {
     expect(within(side).getByRole("button", { name: "Сделать копию сейчас" })).toBeDisabled();
   });
 
-  it("директор читает файлы и копии, «Сделать копию» нет", async () => {
-    const side = await openPanel("storage", "director@demo.example");
+  it("читатель фундамента читает файлы и копии, «Сделать копию» нет", async () => {
+    const side = await (seedSystemReader(), openPanel("storage", READER));
     expect(await within(side).findByText("Хранилище файлов (S3)")).toBeVisible();
     expect(await within(side).findByText("crm-2026-10-26.dump")).toBeVisible();
     expect(
@@ -637,8 +663,8 @@ describe("«Внешняя копия бэкапов» в «Хранилище»
     });
   });
 
-  it("директор видит состояние, но не настраивает и не проверяет", async () => {
-    const side = await openPanel("storage", "director@demo.example");
+  it("читатель фундамента видит состояние, но не настраивает и не проверяет", async () => {
+    const side = await (seedSystemReader(), openPanel("storage", READER));
     const section = await offsiteSection(side);
     expect(await within(section).findByText("Логин Яндекс 360")).toBeVisible();
     expect(within(section).queryByRole("button", { name: "Настроить" })).toBeNull();

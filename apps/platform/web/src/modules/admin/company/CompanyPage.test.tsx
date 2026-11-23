@@ -69,7 +69,7 @@ const PAGE_OF: Record<string, string> = {
   brand: "Реквизиты и бланк",
   numbering: "Нумерация",
   quote: "Продажи",
-  templates: "Шаблоны документов",
+  templates: "Шаблоны",
   charges: "Справочники",
   reference: "Справочники",
   categories: "Справочники",
@@ -221,11 +221,19 @@ describe("Admin · Компания: доступ и каркас", () => {
     expect(screen.queryByRole("link", { name: "Реквизиты и бланк" })).toBeNull();
   });
 
-  it("администратор видит пункт «Реквизиты и бланк» в группе «Компания» меню Настроек", async () => {
+  it("администратор видит «Реквизиты и бланк» в меню слева страниц группы «Компания»; ⚙ с `?group=` ведёт на первую страницу группы (ЕВ-2а)", async () => {
     signInAs("admin@demo.example");
     renderApp("/admin?group=company");
-    const group = await screen.findByRole("region", { name: "Компания" });
-    expect(within(group).getByRole("link", { name: /Реквизиты и бланк/ })).toBeInTheDocument();
+    const nav = await screen.findByRole("navigation", { name: "Страницы группы «Компания»" });
+    expect(
+      within(nav)
+        .getAllByRole("link")
+        .map((link) => link.textContent),
+    ).toEqual(["Реквизиты и бланк", "Нумерация", "Налоги и валюты", "Статьи компании"]);
+    expect(within(nav).getByRole("link", { name: "Реквизиты и бланк" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
   });
 
   it("своей компании в ERP нет — слово и действие «Проверить снова», а не пустая страница", async () => {
@@ -302,7 +310,7 @@ describe("Admin · Компания: доступ и каркас", () => {
       );
     });
 
-    // «Шаблоны документов» — пункт «Документов»
+    // «Шаблоны» — пункт «Документов»
     fireEvent.click(
       within(screen.getByRole("navigation", { name: "Модули" })).getByRole("link", {
         name: "Документы",
@@ -324,13 +332,19 @@ describe("Admin · Компания: доступ и каркас", () => {
     expect(screen.getByRole("button", { name: "Создать шаблон" })).toBeDisabled();
     expect(screen.queryByRole("button", { name: /^Изменить:/ })).toBeNull();
 
-    // Справочники расчёта — страница «Процессы · Справочники»: открыта и с одним `company.settings`
+    // Справочники расчёта — страница «Правила работы · Справочники»: открыта и с одним `company.settings`
     fireEvent.click(
       within(screen.getByRole("navigation", { name: "Модули" })).getByRole("link", {
         name: "Настройки",
       }),
     );
-    fireEvent.click(await screen.findByRole("link", { name: /Справочники/ }));
+    fireEvent.click(
+      await within(await screen.findByRole("navigation", { name: "Разделы модуля" })).findByRole(
+        "link",
+        { name: "Правила работы" },
+      ),
+    );
+    fireEvent.click(await screen.findByRole("link", { name: "Справочники" }));
     expect(await screen.findByText("Казахстан")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Добавить значение" })).toBeDisabled();
     fireEvent.click(screen.getByRole("link", { name: "Валюты" }));
@@ -623,8 +637,12 @@ describe("Условия КП: маржа — группа cost_margin", () => {
       "Предупреждать об окончании цены партнёра, за дней",
     );
     expect(expiring).toHaveDisplayValue("14");
+    // свежесть цен поставщиков — своя карточка рядом с каталогом, не «Условия нового КП» (ЕВ-2а, стр. 13)
+    expect(expiring.closest("form")).not.toContainElement(
+      screen.getByLabelText("Срок действия КП, дней"),
+    );
     fireEvent.change(expiring, { target: { value: "7" } });
-    fireEvent.click(await button("Сохранить условия"));
+    fireEvent.click(await button("Сохранить сроки"));
     expect(await screen.findByText("Сохранено")).toBeInTheDocument();
     expect(readCompanyMock().quote.offer_expiring_days).toBe(7);
   });
@@ -647,11 +665,11 @@ describe("Условия КП разошлись по страницам сво�
   it("в «Шаблонах документов» вкладки «Условия КП» нет; старый адрес ведёт в «Продажи»", async () => {
     signInAs("director@demo.example");
     renderApp("/admin/templates");
-    await screen.findByRole("heading", { level: 1, name: "Шаблоны документов" });
+    await screen.findByRole("heading", { level: 1, name: "Шаблоны" });
     expect(screen.queryByRole("tab", { name: "Условия КП" })).toBeNull();
   });
 
-  it("«Продажи»: срок и каталог — две части, валюты и напоминаний здесь нет", async () => {
+  it("«Продажи»: срок, каталог и свежесть цен поставщиков — три части, валюты и напоминаний здесь нет", async () => {
     await openTab("quote");
     expect(await screen.findByLabelText("Срок действия КП, дней")).toBeInTheDocument();
     expect(screen.getByLabelText("Цена в каталоге")).toBeInTheDocument();
@@ -1058,8 +1076,9 @@ describe("Категории и запросы", () => {
 describe("Платформенные настройки", () => {
   it("«Налоги и валюты»: ставка НДС — одно поле (в новом КП), курс вводится одной формой (ЕВ-0)", async () => {
     await openTab("platform", "director@demo.example");
-    expect(await screen.findByLabelText("Адрес поддержки")).toBeInTheDocument();
     expect(await screen.findByLabelText("Ставка НДС в новом КП, %")).toBeInTheDocument();
+    // адрес поддержки — контакт компании: на «Реквизитах и бланке», здесь его нет (ЕВ-2а, стр. 12)
+    expect(screen.queryByLabelText("Адрес поддержки")).toBeNull();
     // второго поля, которое расчёт не читает, нет
     expect(screen.getAllByLabelText(/Ставка НДС/)).toHaveLength(1);
     // ручной ввод курса — форма «Курс валюты к суму»; кнопки «Ввести курс USD» у списка курсов нет
@@ -1071,7 +1090,7 @@ describe("Платформенные настройки", () => {
   });
 
   it("директору ERP адрес поддержки менять не даёт — отказ словами, адрес прежний", async () => {
-    await openTab("platform", "director@demo.example");
+    await openTab("details", "director@demo.example");
     const field = await screen.findByLabelText("Адрес поддержки");
     fireEvent.change(field, { target: { value: "help@rt.uz" } });
     fireEvent.click(await button("Сохранить настройки"));
@@ -1081,7 +1100,7 @@ describe("Платформенные настройки", () => {
   });
 
   it("адрес поддержки задаётся здесь; неверный адрес — сообщение у поля (СЦ-3)", async () => {
-    await openTab("platform", "admin@demo.example");
+    await openTab("details", "admin@demo.example");
     const field = await screen.findByLabelText("Адрес поддержки");
     expect(field).toHaveValue("");
     fireEvent.change(field, { target: { value: "help" } });

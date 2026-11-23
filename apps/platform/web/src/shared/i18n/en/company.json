@@ -284,6 +284,12 @@
         "hint": "Overdue invoices and acts: when and how often to remind.",
         "note": "Takes effect from the next reminder.",
         "save": "Save reminders"
+      },
+      "supplier": {
+        "title": "Supplier price freshness",
+        "hint": "How many days a partner price counts as confirmed and how many days ahead to warn about expiry.",
+        "note": "Applies to purchasing at once.",
+        "save": "Save terms"
       }
     }
   },
@@ -316,7 +322,8 @@
     "part": "Template type",
     "parts": {
       "documents": "Documents",
-      "emails": "Emails"
+      "emails": "Emails",
+      "resolutions": "Resolutions"
     },
     "documents": {
       "name": "Name",
@@ -483,8 +490,8 @@
     "docShort": "document"
   },
   "platform": {
-    "title": "Platform settings",
-    "hint": "The support address and exchange rates to UZS for the whole platform.",
+    "title": "Exchange rates",
+    "hint": "Exchange rates to the home currency for the whole platform.",
     "currencyUzs": "UZS",
     "updated": "Settings updated",
     "save": "Save settings",
@@ -525,7 +532,8 @@
     },
     "support": "Support address",
     "supportHint": "Clients see it in letters. Empty — letters have no “Questions?” line.",
-    "invalidSupport": "Enter an email address"
+    "invalidSupport": "Enter an email address",
+    "supportTitle": "Support address"
   },
   "bank": {
     "title": "Bank accounts",

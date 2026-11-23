@@ -284,6 +284,12 @@
         "hint": "Muddati ötgan hisoblar va dalolatnomalar: qaçon va qançalik tez eslatiş.",
         "note": "Keyingi eslatmadan boşlab amal qiladi.",
         "save": "Eslatmalarni saqlaş"
+      },
+      "supplier": {
+        "title": "Yetkazib beruvçi narxlarining dolzarbligi",
+        "hint": "Hamkor narxi necha kun tasdiqlangan hisoblanadi va tugashidan necha kun oldin ogohlantirish.",
+        "note": "Xaridga darhol qöllanadi.",
+        "save": "Muddatlarni saqlash"
       }
     }
   },
@@ -316,7 +322,8 @@
     "part": "Shablon turi",
     "parts": {
       "documents": "Hujjatlar",
-      "emails": "Xatlar"
+      "emails": "Xatlar",
+      "resolutions": "Rezolyutsiyalar"
     },
     "documents": {
       "name": "Nomi",
@@ -483,8 +490,8 @@
     "docShort": "hujjat"
   },
   "platform": {
-    "title": "Platforma sozlamalari",
-    "hint": "Butun platforma uçun yordam manzili va valyutalarning sömga kursi.",
+    "title": "Valyuta kurslari",
+    "hint": "Butun platforma uçun valyutalarning sömga kurslari.",
     "currencyUzs": "so'm",
     "updated": "Sozlamalar yangilangan",
     "save": "Sozlamalarni saqlaş",
@@ -525,7 +532,8 @@
     },
     "support": "Yordam manzili",
     "supportHint": "Mijozlar uni xatlarda köradi. Böş bölsa, xatlarda «Savollar bormi?» qatori yöq.",
-    "invalidSupport": "Pochta manzilini kiriting"
+    "invalidSupport": "Pochta manzilini kiriting",
+    "supportTitle": "Yordam manzili"
   },
   "bank": {
     "title": "Bank hisoblari",
