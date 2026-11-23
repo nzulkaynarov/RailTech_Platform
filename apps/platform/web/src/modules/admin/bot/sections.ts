@@ -65,9 +65,7 @@ export function botPartsFor(page: string, available: readonly string[]): BotPart
   const order = Object.keys(BOT_PLACEMENT);
   const own = order.filter((key) => BOT_PLACEMENT[key] === page && available.includes(key));
   const unknown =
-    page === "telegram.behavior"
-      ? available.filter((key) => BOT_PLACEMENT[key] === undefined)
-      : [];
+    page === "telegram.behavior" ? available.filter((key) => BOT_PLACEMENT[key] === undefined) : [];
   const parts: BotPart[] = [...own, ...unknown].map((section) => {
     const moved = (FIELD_MOVES[section] ?? []).flatMap((move) => move.fields);
     return moved.length > 0 ? { section, hide: moved } : { section };

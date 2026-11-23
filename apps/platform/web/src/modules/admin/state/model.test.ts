@@ -72,9 +72,7 @@ describe("истёкшее полномочие подписи", () => {
   it("есть действующий преемник на те же виды подписи — строки нет; на другие виды — есть", () => {
     const successor = authority({ id: "new", status: "active", expires_in_days: 300 });
     expect(signingRows([expired, successor])).toEqual([]);
-    expect(
-      signingRows([expired, { ...successor, kinds: ["other"] }]),
-    ).toHaveLength(1);
+    expect(signingRows([expired, { ...successor, kinds: ["other"] }])).toHaveLength(1);
     // отключённый держатель преемником не считается
     expect(signingRows([expired, { ...successor, holder_active: false }])).toHaveLength(1);
   });

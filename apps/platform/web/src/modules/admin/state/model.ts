@@ -112,7 +112,7 @@ export function signingRows(authorities: readonly SigningAuthority[]): Attention
     } else if (
       a.status === "expired" &&
       a.holder_active &&
-      (a.kinds).some((kind) => !covered.has(kind))
+      a.kinds.some((kind) => !covered.has(kind))
     ) {
       rows.push({
         id: `signing:${a.id}`,
