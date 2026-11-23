@@ -798,6 +798,20 @@ async def test_invite_when_mail_is_not_configured(
     assert crm.users[101]["email"] == "new.employee@demo.example"
 
 
+async def test_resend_invite_over_the_hourly_limit_is_429(
+    web: Web, crm: CrmUsers, check: ContractChecker
+) -> None:
+    """ДВ-7: лимит ссылок на сотрудника доходит до администратора как 429."""
+    await login_as(web, "ADMIN")
+    crm.invite_response = CrmUsers._error(429, "rate_limited", reason="rate_limited")
+
+    response = await web.send("POST", "/api/v1/admin/users/12/invite")
+
+    assert response.status_code == 429
+    check(response, "/admin/users/{id}/invite", "post")
+    assert response.json()["code"] == "TOO_MANY_REQUESTS"
+
+
 @pytest.mark.parametrize(
     "payload",
     [

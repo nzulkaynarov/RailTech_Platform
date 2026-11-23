@@ -14,8 +14,7 @@ from app.services.mail import MailService
 CONTEXT = {
     "full_name": "Азиз Каримов",
     "email": "aziz@railtech.uz",
-    "temporary_password": "Tmp-pass-4321",
-    "platform_url": "https://platform.example.com",
+    "set_password_url": "https://platform.example.com/reset-password?token=Tmp-4321",
     "company": "RailTech",
 }
 
@@ -27,18 +26,18 @@ def test_renders_every_language_without_leftover_placeholders(template: str, lan
     assert rendered.lang == lang
     assert rendered.subject
     assert not re.search(r"\$[a-z_]+", rendered.subject + rendered.body)
-    assert CONTEXT["temporary_password"] in rendered.body
-    assert f"{CONTEXT['platform_url']}/login" in rendered.body
+    assert CONTEXT["set_password_url"] in rendered.body
     assert "localhost" not in rendered.subject + rendered.body
 
 
 @pytest.mark.parametrize("template", ["invite", "password_reset"])
-def test_dev_stand_link_points_to_platform_not_crm(template: str) -> None:
-    """Стенд: ссылка «Вход» — `platform.localhost:<порт>/login` (маршрут входа Платформы)."""
-    values = {**CONTEXT, "platform_url": "http://platform.localhost:8088"}
-    body = mail_templates.render(template, "ru", **values).body
-    assert "Вход: http://platform.localhost:8088/login" in body
-    assert "crm.localhost" not in body
+@pytest.mark.parametrize("lang", ["ru", "uz", "en"])
+def test_staff_letters_carry_a_link_and_no_password(template: str, lang: str) -> None:
+    """ДВ-7: в письме сотруднику нет слота для пароля, есть слот ссылки."""
+    source = mail_templates.template_path(template, lang).read_text(encoding="utf-8")
+    assert "$temporary_password" not in source
+    assert "$password" not in source
+    assert "$set_password_url" in source
 
 
 @pytest.mark.parametrize("lang", ["ru", "uz", "en"])
@@ -75,7 +74,7 @@ def test_missing_dictionary_falls_back_to_russian() -> None:
 
 def test_missing_placeholder_fails_loudly() -> None:
     values = dict(CONTEXT)
-    values.pop("temporary_password")
+    values.pop("set_password_url")
     with pytest.raises(KeyError):
         mail_templates.render("invite", "ru", **values)
 

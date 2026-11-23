@@ -257,6 +257,7 @@ MENU: Final[dict[ModuleCode, dict[str, tuple[str, ...]]]] = {
         "company": ("company.settings",),
         "numbering": ("company.settings",),
         "taxes": ("company.settings",),
+        "legal": ("company.settings",),
         "articles": ("admin",),
         "sales": ("company.settings",),
         "timing": ("admin",),

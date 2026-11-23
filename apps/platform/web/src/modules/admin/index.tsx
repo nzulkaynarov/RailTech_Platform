@@ -9,6 +9,7 @@ import { AuditPage } from "./audit/AuditPage";
 import { BusJournalPage } from "./bus/BusJournalPage";
 import { CompanyPage } from "./company/CompanyPage";
 import { IntegrationsPage } from "./integrations/IntegrationsPage";
+import { LegalPage } from "./legal/LegalPage";
 import { OrgPage } from "./org/OrgPage";
 import { legacySettingsPath } from "./redirects";
 import { RolesPage } from "./roles/RolesPage";
@@ -42,6 +43,7 @@ const PAGES: Readonly<Record<string, ComponentType>> = {
   taxes: TaxesPage,
   sales: SalesPage,
   articles: ArticlesPage,
+  legal: LegalPage,
   telegram: TelegramPage,
   mail: MailPage,
   forms: WebFormsPage,

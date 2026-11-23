@@ -1,0 +1,129 @@
+{
+  "subtitle": "Mijozlar va hamkorlar kabinetga birinçi kirişda nimani qabul qiladi",
+  "kinds": {
+    "terms": "Foydalaniş şartlari (oferta)",
+    "privacy": "Şaxsga doir maʼlumotlarga işlov beriş siyosati"
+  },
+  "noneYet": "Hozircha hech narsa eʼlon qilinmagan — kabinet qabul qilmasdan ochiq. Eʼlon qilingandan keyin har bir kontakt kirişda matnni qabul qiladi.",
+  "loadError": "Tahrirlarni yuklab bölmadi",
+  "loadErrorText": "Ulanişni tekşirib, qayta urinib köring.",
+  "retry": "Qayta urinib köriş",
+  "card": {
+    "current": "Amalda: {{date}} sanasidagi tahrir",
+    "by": "Eʼlon qildi: {{who}}",
+    "accepted": "Qabul qilganlar: {{count}}",
+    "notPublished": "Eʼlon qilinmagan",
+    "draft": "Qoralama «{{label}}»",
+    "noDraft": "Qoralama yöq"
+  },
+  "actions": {
+    "read": "Öqiş",
+    "newEdition": "Yangi tahrir",
+    "editDraft": "Qoralamani tahrirlaş",
+    "publish": "Eʼlon qiliş",
+    "discard": "Qoralamani öçiriş",
+    "back": "Röyxatga"
+  },
+  "statuses": {
+    "draft": "Qoralama",
+    "current": "Amalda",
+    "retired": "Almaştirilgan"
+  },
+  "languages": {
+    "ru": "Русский",
+    "uz": "Oʻzbekcha",
+    "en": "English"
+  },
+  "editions": {
+    "title": "Tahrirlar",
+    "listLabel": "Oferta va siyosat tahrirlari",
+    "columns": {
+      "kind": "Hujjat",
+      "label": "Tahrir",
+      "status": "Holat",
+      "published": "Eʼlon qilingan",
+      "accepted": "Qabullar",
+      "actions": "Amallar"
+    }
+  },
+  "publish": {
+    "title": "«{{label}}» tahririni eʼlon qilasizmi?",
+    "text": "Kabinetning barça kontaktlari yangi tahrirni keyingi kirişda qabul qiladi. Hozir kabinetda bölganlar eng yaqin harakatda qabul qiliş ekranini köradi.",
+    "replaces": "«{{label}}» tahririni almaştiradi: uning qabullari jurnalda qoladi.",
+    "immutable": "Eʼlon qilingan matnni özgartirib bölmaydi — tuzatiş uçun yangi tahrir yaratiladi.",
+    "ok": "Eʼlon qiliş",
+    "cancel": "Bekor qiliş",
+    "done": "«{{label}}» tahriri eʼlon qilindi."
+  },
+  "discard": {
+    "title": "«{{label}}» qoralamasini öçirasizmi?",
+    "text": "Qoralama matni yöqoladi. Amaldagi tahrir özgarmaydi.",
+    "ok": "Öçiriş",
+    "cancel": "Bekor qiliş",
+    "done": "Qoralama öçirildi."
+  },
+  "created": "«{{label}}» qoralamasi yaratildi — amaldagi tahrirning nusxasi.",
+  "reader": {
+    "title": "{{kind}} · {{date}} sanasidagi tahrir",
+    "language": "Matn tili",
+    "note": "Kontakt matnni şunday köradi: kompaniya rekvizitlari qöyib bölingan.",
+    "close": "Yopiş"
+  },
+  "editor": {
+    "title": "Qoralama: {{kind}}",
+    "label": "Tahrir nomi",
+    "labelHelp": "Masalan, sana: 2026-12-01. Qabullar jurnalida körinadi.",
+    "language": "Matn tili",
+    "docTitle": "Hujjat nomi",
+    "lead": "Kiriş abzas",
+    "section": "{{n}}-bölim",
+    "sectionTitle": "Bölim nomi",
+    "sectionBody": "Bölim matni",
+    "bodyHelp": "Abzaslar — yangi qatordan; röyxat bandlari «— » bilan boşlanadi. Almaştirişlar kompaniya rekvizitlari bilan töldiriladi: {{list}}.",
+    "addSection": "Bölim qöşiş",
+    "removeSection": "{{n}}-bölimni öçiriş",
+    "threeLanguages": "Har bir bölimning nomi va matni uç tilda ham kerak — yuqorida tilni almaştiring. Bölimlar tarkibi tillar uçun umumiy.",
+    "consequence": "Qoralama eʼlon qilinmaguça mijozlar amaldagi tahrirni köradi. Eʼlon qiliş tahrirlar röyxatidan amalga oşiriladi.",
+    "unsaved": "Saqlanmagan özgartişlar bor",
+    "save": "Qoralamani saqlaş",
+    "saved": "Qoralama saqlandi.",
+    "discardTitle": "Saqlamasdan çiqasizmi?",
+    "discardText": "Matndagi özgartişlar yöqoladi.",
+    "discardOk": "Çiqiş",
+    "discardCancel": "Qoliş"
+  },
+  "errors": {
+    "default": "Amalni bajarib bölmadi. Qayta urinib köring.",
+    "legal_draft_exists": "Bu hujjatning qoralamasi allaqaçon bor: uni oçib tahrirlang.",
+    "legal_edition_published": "Tahrir allaqaçon eʼlon qilingan va özgarmaydi. Yangisini yarating.",
+    "legal_label_taken": "Bunday nom allaqaçon bor. Boşqasini tanlang.",
+    "VALIDATION_FAILED": "Har bir bölimning nomi va matni uç tilda ham töldirilganini tekşiring.",
+    "FORBIDDEN": "Oferta va siyosatni özgartiriş huquqingiz yöq.",
+    "NOT_FOUND": "Tahrir endi yöq. Sahifani yangilang."
+  },
+  "log": {
+    "title": "Kim qabul qilgan",
+    "label": "Qabullar filtri",
+    "edition": "Tahrir",
+    "allEditions": "Barça tahrirlar",
+    "search": "Ism, manzil yoki taşkilot",
+    "count": "Jami qabullar: {{total}}",
+    "capped": "Oxirgi {{shown}} ta körsatilgan — qidiruvni aniqlaştiring.",
+    "tableLabel": "Qabullar jurnali",
+    "columns": {
+      "when": "Qaçon",
+      "contact": "Kontakt",
+      "company": "Taşkilot",
+      "document": "Hujjat",
+      "language": "Til"
+    },
+    "empty": "Hozircha qabullar yöq",
+    "emptyText": "Eʼlon qilingandan keyin kontaktlar kabinetga kirişni boşlaganda paydo böladi.",
+    "noMatch": "Heç narsa topilmadi",
+    "noMatchText": "Tahrir yoki qidiruvni özgartiring."
+  },
+  "panel": {
+    "title": "Oferta va siyosat",
+    "text": "Tahrirlar, eʼlon qiliş va qabullar jurnali. Eʼlon qilingan matn özgarmaydi."
+  }
+}

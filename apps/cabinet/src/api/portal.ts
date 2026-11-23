@@ -180,6 +180,22 @@ export function exchangeLoginCode(email: string, code: string): Promise<Me> {
   return portalRequest<Me>('/auth/code', { method: 'POST', body });
 }
 
+// --- Оферта и политика Кабинета (ДВ-5) --------------------------------------------------------
+
+export type LegalCurrent = Schemas['LegalCurrent'];
+export type LegalEdition = Schemas['LegalEdition'];
+export type LegalLang = Schemas['LegalAcceptRequest']['language'];
+
+/** Действующие редакции и «нужно принять» для контакта сессии; открыт и сессии без акцепта. */
+export const getLegal = () => portalRequest<LegalCurrent>('/legal');
+/** Явный акцепт: id редакций, которые контакт видел, и язык текста; новая редакция за это время → 409 `LEGAL_EDITION_CHANGED`. */
+export const acceptLegal = (editionIds: number[], language: LegalLang) => {
+  const body: JsonBody<paths['/legal/accept']['post']> = { edition_ids: editionIds, language };
+  return portalRequest<LegalCurrent>('/legal/accept', { method: 'POST', body });
+};
+/** Действующая политика для экрана входа; `policy: null` — ещё не опубликована. */
+export const getLegalPolicy = () => portalRequest<Schemas['LegalPolicy']>('/legal/policy');
+
 export function logout(): Promise<void> {
   return portalRequest<void>('/auth/logout', { method: 'POST' });
 }

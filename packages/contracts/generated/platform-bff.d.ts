@@ -611,6 +611,98 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/admin/legal-editions": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Редакции оферты и политики Кабинета (Настройки · Оферта и политика)
+     * @description Раздел `company.settings` от чтения. Редакции по видам (`privacy`, `terms`): статус (`draft`, `current`, `retired`), кто и когда опубликовал, число акцептов. Текст — отдельным запросом.
+     */
+    get: operations["listLegalEditions"];
+    put?: never;
+    /**
+     * Новая редакция — черновик, копия действующей
+     * @description Раздел `company.settings` — полный. Черновик одного вида — один: второй — 409 `CONFLICT` (`details.reason` `legal_draft_exists`). Меняет кабинет только публикация.
+     */
+    post: operations["createLegalEdition"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/legal-editions/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Текст редакции на трёх языках
+     * @description Раздел `company.settings` от чтения. `content` — как написано, с подстановками `{{company.*}}`; `rendered` — с реквизитами компании, как увидит контакт.
+     */
+    get: operations["getLegalEdition"];
+    put?: never;
+    post?: never;
+    /**
+     * Удалить черновик
+     * @description Раздел `company.settings` — полный. Опубликованную редакцию удалить нельзя — 409 `CONFLICT`.
+     */
+    delete: operations["deleteLegalEdition"];
+    options?: never;
+    head?: never;
+    /**
+     * Править черновик (метка и текст)
+     * @description Раздел `company.settings` — полный. Опубликованную редакцию править нельзя — 409 `CONFLICT` (`legal_edition_published`); создайте новую. Пустое поле на каком-либо языке — 422 `VALIDATION_FAILED`.
+     */
+    patch: operations["updateLegalEdition"];
+    trace?: never;
+  };
+  "/admin/legal-editions/{id}/publish": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Опубликовать черновик
+     * @description Раздел `company.settings` — полный. Черновик становится действующей редакцией, прежняя действующая этого вида снимается; все контакты Кабинета примут новую редакцию при следующем входе, а уже открытые сессии закроются экраном принятия. Публикация пишется в журнал действий.
+     */
+    post: operations["publishLegalEdition"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/legal-acceptances": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Журнал акцептов оферты и политики (только чтение)
+     * @description Раздел `company.settings` от чтения. Кто из контактов, когда, какую редакцию и на каком языке принял. Новые — выше.
+     */
+    get: operations["listLegalAcceptances"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/admin/company-articles": {
     parameters: {
       query?: never;
@@ -3786,7 +3878,7 @@ export interface paths {
     put?: never;
     /**
      * Отправить приглашение снова
-     * @description Повтор письма-приглашения сотруднику со статусом «Приглашён» (CRM `/users/{id}/invite`). CRM выдаёт новый временный пароль только при отправке письма: без подключённой почты пароль не меняется и ответ — 409 `CONFLICT` с `details.invite = not_sent`. Раздел `admin` — полный.
+     * @description Повтор письма-приглашения сотруднику со статусом «Приглашён» (CRM `/users/{id}/invite`). В письме одноразовая ссылка «Задайте пароль» на 72 часа, пароля в нём нет; новая ссылка гасит прежние, прежний пароль закрывается. Без подключённой почты ничего не меняется и ответ — 409 `CONFLICT` с `details.invite = not_sent`; больше трёх ссылок в час на сотрудника — 429 `TOO_MANY_REQUESTS`. Раздел `admin` — полный.
      */
     post: operations["resendInvite"];
     delete?: never;
@@ -3866,8 +3958,8 @@ export interface paths {
     get?: never;
     put?: never;
     /**
-     * Сбросить пароль сотрудника и отправить временный по почте
-     * @description CRM `/users/{id}/reset-password/email`: новый временный пароль, письмо через коннектор «Почта», сессии сотрудника завершаются, при входе он обязан сменить пароль (статус «Приглашён»). Пароль в ответе не возвращается. Раздел `admin` — полный. Себе сбросить нельзя — 409 `CONFLICT` с `details.reason = self_reset` (в CRM запрос не уходит; свой пароль — «Сменить пароль» в меню аватара). Почта не подключена — 409 `NOT_CONFIGURED`, пароль не меняется; нет ключа шифрования секретов — 409 `SECRETS_KEY_MISSING`.
+     * Сбросить пароль сотрудника и отправить ссылку по почте
+     * @description CRM `/users/{id}/reset-password/email`: письмо через коннектор «Почта» с одноразовой ссылкой «Задайте пароль» на час (пароля в письме нет), прежний пароль закрывается, сессии сотрудника завершаются (статус «Приглашён», пока он не задаст новый). Пароль в ответе не возвращается. Больше трёх ссылок в час на сотрудника — 429 `TOO_MANY_REQUESTS`. Раздел `admin` — полный. Себе сбросить нельзя — 409 `CONFLICT` с `details.reason = self_reset` (в CRM запрос не уходит; свой пароль — «Сменить пароль» в меню аватара). Почта не подключена — 409 `NOT_CONFIGURED`, пароль не меняется; нет ключа шифрования секретов — 409 `SECRETS_KEY_MISSING`.
      */
     post: operations["resetEmployeePasswordByEmail"];
     delete?: never;
@@ -10061,6 +10153,106 @@ export interface components {
       title?: string;
       body?: string;
       language?: components["schemas"]["CompanyArticleLanguage"];
+    };
+    /**
+     * @description `privacy` — политика обработки персональных данных, `terms` — условия использования (оферта)
+     * @enum {string}
+     */
+    LegalKind: "privacy" | "terms";
+    LegalLangText: {
+      ru: string;
+      uz: string;
+      en: string;
+    };
+    LegalSection: {
+      title: components["schemas"]["LegalLangText"];
+      body: components["schemas"]["LegalLangText"];
+    };
+    LegalContent: {
+      title: components["schemas"]["LegalLangText"];
+      lead: components["schemas"]["LegalLangText"];
+      sections: components["schemas"]["LegalSection"][];
+    };
+    LegalEditionRow: {
+      id: string;
+      kind: components["schemas"]["LegalKind"];
+      /** @description Название редакции, например `2026-11-23` */
+      label: string;
+      /** @enum {string} */
+      status: "draft" | "current" | "retired";
+      /** Format: date-time */
+      created_at: string;
+      /**
+       * Format: date-time
+       * @description Когда опубликована; у черновика поля нет
+       */
+      published_at?: string;
+      /** @description Кто опубликовал; пусто, если сотрудник удалён */
+      published_by?: string;
+      /**
+       * Format: date-time
+       * @description Когда заменена новой; у действующей и черновика поля нет
+       */
+      retired_at?: string;
+      acceptances_count: number;
+    };
+    LegalEditionList: {
+      items: components["schemas"]["LegalEditionRow"][];
+    };
+    LegalEditionDetail: {
+      id: string;
+      kind: components["schemas"]["LegalKind"];
+      label: string;
+      /** @enum {string} */
+      status: "draft" | "current" | "retired";
+      /** Format: date-time */
+      created_at: string;
+      /** Format: date-time */
+      published_at?: string;
+      published_by?: string;
+      /** Format: date-time */
+      retired_at?: string;
+      acceptances_count: number;
+      content: components["schemas"]["LegalContent"];
+      rendered: components["schemas"]["LegalContent"];
+    };
+    LegalEditionCreate: {
+      kind: components["schemas"]["LegalKind"];
+    };
+    LegalEditionUpdate: {
+      label?: string;
+      content?: components["schemas"]["LegalContent"];
+    };
+    LegalAcceptance: {
+      id: string;
+      /** Format: date-time */
+      accepted_at: string;
+      kind: components["schemas"]["LegalKind"];
+      /** @description Название принятой редакции */
+      edition: string;
+      edition_id: string;
+      /**
+       * @description Язык текста, который видел контакт
+       * @enum {string}
+       */
+      language: "ru" | "uz" | "en";
+      /** @description Как контакт вошёл (`telegram`, `magic_link`) */
+      auth_method?: string;
+      contact: {
+        id: string;
+        name: string;
+        email: string;
+      };
+      company: {
+        id: string;
+        name: string;
+      };
+    };
+    LegalAcceptancePage: {
+      items: components["schemas"]["LegalAcceptance"][];
+      total: number;
+      page: number;
+      page_size: number;
     };
     CompanyArticle: {
       id: number;
@@ -17980,6 +18172,8 @@ export interface components {
     InboundMailId: number;
     /** @description Идентификатор статьи компании */
     CompanyArticleIdPath: number;
+    /** @description Идентификатор редакции оферты или политики Кабинета */
+    LegalEditionIdPath: string;
     /** @description Номер обращения `TK-0012` или прежний `ОБР-0012` (в адресе — закодированный) */
     TicketNumberPath: string;
     /** @description Клиент CRM (id) */
@@ -19135,6 +19329,248 @@ export interface operations {
       };
       401: components["responses"]["SessionExpired"];
       403: components["responses"]["Forbidden"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  listLegalEditions: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Все редакции */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LegalEditionList"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  createLegalEdition: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["LegalEditionCreate"];
+      };
+    };
+    responses: {
+      /** @description Черновик создан */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LegalEditionDetail"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      /** @description Черновик этого вида уже есть, редакция уже опубликована или метка занята (`CONFLICT`, `details.reason`) — `legal_draft_exists`, `legal_edition_published`, `legal_label_taken` */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  getLegalEdition: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Идентификатор редакции оферты или политики Кабинета */
+        id: components["parameters"]["LegalEditionIdPath"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Редакция */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LegalEditionDetail"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  deleteLegalEdition: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Идентификатор редакции оферты или политики Кабинета */
+        id: components["parameters"]["LegalEditionIdPath"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Черновик удалён */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      /** @description Черновик этого вида уже есть, редакция уже опубликована или метка занята (`CONFLICT`, `details.reason`) — `legal_draft_exists`, `legal_edition_published`, `legal_label_taken` */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  updateLegalEdition: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Идентификатор редакции оферты или политики Кабинета */
+        id: components["parameters"]["LegalEditionIdPath"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["LegalEditionUpdate"];
+      };
+    };
+    responses: {
+      /** @description Обновлённый черновик */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LegalEditionDetail"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      /** @description Черновик этого вида уже есть, редакция уже опубликована или метка занята (`CONFLICT`, `details.reason`) — `legal_draft_exists`, `legal_edition_published`, `legal_label_taken` */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  publishLegalEdition: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Идентификатор редакции оферты или политики Кабинета */
+        id: components["parameters"]["LegalEditionIdPath"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Опубликованная редакция */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LegalEditionDetail"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      /** @description Черновик этого вида уже есть, редакция уже опубликована или метка занята (`CONFLICT`, `details.reason`) — `legal_draft_exists`, `legal_edition_published`, `legal_label_taken` */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  listLegalAcceptances: {
+    parameters: {
+      query?: {
+        /** @description Только акцепты этой редакции */
+        edition?: string;
+        /** @description Поиск по имени и адресу контакта и названию организации */
+        q?: string;
+        page?: number;
+        page_size?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Страница журнала */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LegalAcceptancePage"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      422: components["responses"]["ValidationFailed"];
       503: components["responses"]["BackendUnavailable"];
     };
   };
@@ -24329,6 +24765,7 @@ export interface operations {
           "application/json": components["schemas"]["Error"];
         };
       };
+      429: components["responses"]["TooManyRequests"];
       /** @description `BACKEND_UNAVAILABLE` */
       503: {
         headers: {
@@ -24532,6 +24969,7 @@ export interface operations {
           "application/json": components["schemas"]["Error"];
         };
       };
+      429: components["responses"]["TooManyRequests"];
       /** @description `BACKEND_UNAVAILABLE` */
       503: {
         headers: {
