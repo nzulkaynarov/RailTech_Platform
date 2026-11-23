@@ -191,7 +191,7 @@ describe("Карточка контрагента: «Не работать»", (
     await waitFor(() => {
       expect(within(panel).queryByRole("status")).toBeNull();
     });
-    expect(within(panel).getByRole("button", { name: "Не работать" })).toBeVisible();
+    expect(await within(panel).findByRole("button", { name: "Не работать" })).toBeVisible();
   });
 
   it("менеджер клиентов отмечает клиента — отметка видна в списке («Не работаем») и в строке клиента", async () => {

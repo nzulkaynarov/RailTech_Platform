@@ -175,6 +175,7 @@ function Loaded({
           {requisitesEditable ? (
             card.do_not_work ? (
               <Button
+                key="do-not-work-clear"
                 size="small"
                 loading={clearMark.isPending}
                 onClick={() => {
@@ -185,6 +186,7 @@ function Loaded({
               </Button>
             ) : (
               <Button
+                key="do-not-work-set"
                 size="small"
                 danger
                 onClick={() => {
