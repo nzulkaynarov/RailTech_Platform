@@ -47,6 +47,21 @@ test.describe('публичные экраны кабинета', () => {
     await snap(page, '05-new-client-sent');
   });
 
+  test('«Что дальше» после заявки: номер и срок ответа, uz', async ({ page }) => {
+    await page.addInitScript(() => window.localStorage.setItem('cabinet.language', 'uz'));
+    await page.goto('/new-client');
+    const fields = page.locator('form input:not([type=checkbox]), form textarea');
+    await fields.nth(0).fill('Alisher');
+    await fields.nth(1).fill('Rels Demo MChJ');
+    await fields.nth(2).fill('+998 90 123 45 67');
+    await fields.nth(3).fill('alisher@example.com');
+    await page.locator('form textarea').fill('R65 relslari yetkazib berish hisobi kerak, 50 tonna');
+    await page.getByRole('checkbox').check();
+    await page.locator('form button[type=submit]').click();
+    await expect(page.getByText('L-1001')).toBeVisible();
+    await snap(page, '08-new-client-sent-uz');
+  });
+
   test('uz и en: «Мы отправили письмо» и ссылка нового клиента переведены', async ({ page }) => {
     await page.addInitScript(() => window.localStorage.setItem('cabinet.language', 'uz'));
     await page.goto('/login/code');

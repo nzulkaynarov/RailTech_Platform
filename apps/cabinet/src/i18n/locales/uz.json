@@ -327,6 +327,14 @@
       "network": "Server bilan aloqa yoʻq — internetni tekshirib, qayta urinib koʻring.",
       "unknown": "Arizani yuborib boʻlmadi — keyinroq urinib koʻring yoki bizga Telegramda yozing.",
       "tokenUnavailable": "Shakl hozir mavjud emas. Qayta urinib koʻring yoki bizga Telegramda yozing."
+    },
+    "next": {
+      "number": "Ariza raqami",
+      "withinMinutes_one": "{{count}} daqiqa",
+      "withinMinutes_other": "{{count}} daqiqa",
+      "withinHours_one": "{{count}} soat",
+      "withinHours_other": "{{count}} soat",
+      "text": "Menejer iş vaqtida {{within}} içida telefon yoki e-mail orqali javob beradi. Yozişmalar qulayroq bölsa — bizga Telegramda yozing."
     }
   },
   "manager": {
@@ -461,6 +469,9 @@
       "summaryHint": "Vazifani oʻz soʻzlaringiz bilan yozing: nima, qancha va qaysi muddatga. 5000 belgigacha.",
       "summaryRequired": "Nima kerakligini hech boʻlmaganda bir jumla bilan yozing.",
       "prefillSummary": "Katalogdagi pozitsiya kerak: {{name}}",
+      "draftOffer": "Sizda {{date}} dagi qoralama bor",
+      "draftResume": "Davom etiş",
+      "draftRestart": "Qaytadan boşlaş",
       "lines": "Pozitsiyalar yoki bosqichlar",
       "linesHint": "Pozitsiyalar yoki ishlarni erkin matnda sanab oʻting — aniq artikul shart emas. Boʻsh qatorlar yuborilmaydi.",
       "lineText": "{{n}}-qator",

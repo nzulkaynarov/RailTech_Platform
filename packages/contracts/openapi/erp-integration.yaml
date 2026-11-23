@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform ERP — Integration API (CRM → ERP)
-  version: 0.9.0
+  version: 0.10.0
   summary: Пространство `/api/integration/v1/` — вызывает только CRM под сервисным токеном.
   description: |
     Контракт по `docs/architecture/CONTRACTS.md` §0 и §2. Версия 0 (M0-INF-02): форма запросов и ответов, по которой
@@ -1618,7 +1618,7 @@ components:
         externals:
           type: array
           description: >-
-            Внешние сервисы ERP (M3-ERP-06): курсы ЦБ, ТН ВЭД/тариф, почта, модели (LiteLLM), S3, Sentry. Поле
+            Внешние сервисы ERP (M3-ERP-06): курсы ЦБ, ТН ВЭД/тариф, справочник банков ЦБ, почта, модели (LiteLLM), S3, Sentry. Поле
             необязательное: нет его — ERP старше M3-ERP-06, CRM показывает «нет данных». Строится без обращений к самим
             сервисам (по журналам и счётчикам ERP), ответ `/health` остаётся быстрым.
           items:
@@ -1628,10 +1628,10 @@ components:
     ExternalServiceCode:
       type: string
       description: >-
-        `cbu_rates` — курсы ЦБ РУз; `customs_tariff` — классификатор ТН ВЭД и тариф (tarif.customs.uz); `mail` — бывшая
+        `cbu_rates` — курсы ЦБ РУз; `customs_tariff` — классификатор ТН ВЭД и тариф (tarif.customs.uz); `cbu_banks` — справочник банков из файла ЦБ (раз в месяц); `mail` — бывшая
         почта ERP (W18A-P1: ERP его больше не передаёт — письма отправляет почтовый сервис CRM); `litellm` — вызовы моделей через шлюз; `s3` — файловое хранилище; `sentry` — сбор ошибок. Читатель
         пропускает неизвестный код.
-      enum: [cbu_rates, customs_tariff, mail, litellm, s3, sentry]
+      enum: [cbu_rates, customs_tariff, cbu_banks, mail, litellm, s3, sentry]
 
     ExternalService:
       type: object
