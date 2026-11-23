@@ -229,3 +229,40 @@ async def test_create_lead_missing_contact_points_at_the_field(web: Web, crm: Cr
     response = await web.send("POST", BASE, json={"source": "email", "name": "A"})
     assert response.status_code == 422
     assert response.json()["details"]["fields"] == ["email"]
+
+
+async def test_card_shows_origin_facts_of_a_web_lead(
+    web: Web, crm: CrmLeadsFake, check: ContractChecker
+) -> None:
+    """LID-5: form, page, referrer and campaign reach the card; no origin means null."""
+    crm.answer(
+        "GET",
+        "leads/2041",
+        body=lead_detail(
+            2041,
+            source="web",
+            origin={
+                "form": "cabinet_request",
+                "page": "/new-client",
+                "referrer": "t.me/channel/42",
+                "utm": {"utm_source": "tg", "utm_medium": "post", "utm_campaign": "pos-nov"},
+                "landing_language": "uz",
+            },
+        ),
+    )
+    await web.login(["MANAGER"])
+    card = check(await web.client.get(f"{BASE}/L-2041"), "/crm/leads/{lead}", "get").json()
+    assert card["channel"] == "web"
+    assert card["origin"] == {
+        "form": "cabinet_request",
+        "page": "/new-client",
+        "referrer": "t.me/channel/42",
+        "campaign": "pos-nov",
+        "utm_source": "tg",
+        "utm_medium": "post",
+        "language": "uz",
+    }
+
+    crm.answer("GET", "leads/2041", body=lead_detail(2041, source="phone"))
+    plain = check(await web.client.get(f"{BASE}/L-2041"), "/crm/leads/{lead}", "get").json()
+    assert plain["origin"] is None

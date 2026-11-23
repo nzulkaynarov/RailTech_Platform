@@ -22,6 +22,7 @@ from app.schemas_crm_leads import (
     LeadFirstResponse,
     LeadMessagePreview,
     LeadNotice,
+    LeadOrigin,
     LeadPlatformStatus,
     LeadRow,
     LeadScope,
@@ -183,6 +184,23 @@ def lead_card(
             due_at=lead.first_response_due_at, overdue=bool(lead.first_response_overdue)
         ),
         invitation=invitation(lead.invitation),
+        origin=origin_of(lead.origin),
+    )
+
+
+def origin_of(raw: crm.LeadOriginOut | None) -> LeadOrigin | None:
+    if raw is None:
+        return None
+    utm = raw.utm or {}
+    lang = raw.landing_language
+    return LeadOrigin(
+        form=raw.form,
+        page=raw.page,
+        referrer=raw.referrer,
+        campaign=utm.get("utm_campaign"),
+        utm_source=utm.get("utm_source"),
+        utm_medium=utm.get("utm_medium"),
+        language=lang if lang in ("ru", "uz", "en") else None,
     )
 
 

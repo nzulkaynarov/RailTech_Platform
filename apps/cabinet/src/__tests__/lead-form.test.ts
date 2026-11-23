@@ -31,6 +31,20 @@ describe('validateLeadForm', () => {
   });
 });
 
+describe('toWebLead origin facts', () => {
+  it('UTM, путь страницы и откуда пришли уходят фактами; чужие параметры — нет', () => {
+    const body = toWebLead(filled, 'ru', 't1', {
+      page: '/new-client',
+      referrer: 'https://t.me/channel/42',
+      search: '?utm_source=tg&utm_campaign=pos-nov&utm_term=%20&email=a@rail.uz',
+    });
+    expect(body.form).toBe('cabinet_request');
+    expect(body.page).toBe('/new-client');
+    expect(body.referrer).toBe('https://t.me/channel/42');
+    expect(body.utm).toEqual({ utm_source: 'tg', utm_campaign: 'pos-nov' });
+  });
+});
+
 describe('toWebLead', () => {
   it('обрезает пробелы, пустое — null, язык — код контракта, согласие и honeypot как есть', () => {
     expect(toWebLead({ ...filled, company: ' ', website: '' }, 'uz-Latn-UZ', 't1')).toEqual<WebLeadIn>({
@@ -43,6 +57,11 @@ describe('toWebLead', () => {
       consent: true,
       form_token: 't1',
       website: null,
+      form: 'cabinet_request',
+      page: null,
+      referrer: null,
+      utm: null,
+      landing_language: 'uz',
     });
     expect(toWebLead(filled, 'de', 't1').language).toBe('ru');
     expect(toWebLead({ ...filled, website: 'http://spam' }, 'en', 't1').website).toBe('http://spam');

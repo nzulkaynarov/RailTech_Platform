@@ -327,6 +327,14 @@
       "network": "No connection to the server — check your internet and try again.",
       "unknown": "Could not send the request — try again later or message us in Telegram.",
       "tokenUnavailable": "The form is unavailable right now. Try again or message us in Telegram."
+    },
+    "next": {
+      "number": "Request number",
+      "withinMinutes_one": "{{count}} minute",
+      "withinMinutes_other": "{{count}} minutes",
+      "withinHours_one": "{{count}} hour",
+      "withinHours_other": "{{count}} hours",
+      "text": "A manager will reply by phone or e-mail within {{within}} during business hours. If you prefer chatting, message us in Telegram."
     }
   },
   "manager": {
