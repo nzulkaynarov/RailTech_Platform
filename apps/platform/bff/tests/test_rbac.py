@@ -235,37 +235,37 @@ SETTINGS_MENU = [
     "company",
     "numbering",
     "taxes",
-    "sales",
     "legal",
     "articles",
+    "sales",
+    "timing",
+    "dictionaries",
+    "templates",
+    "notifications",
     "telegram",
     "mail",
     "forms",
-    "dictionaries",
-    "resolutions",
-    "templates",
-    "timing",
-    "notifications",
     "integrations",
     "spend",
     "audit",
     "exports",
-    "bus",
 ]
+# EV-2a: pages of the admin.system section (foundation and connections) stay closed to the director
+SYSTEM_ONLY = {"signing", "telegram", "mail", "forms", "integrations", "spend", "exports"}
 
 
 def test_menu_examples() -> None:
     admin = rbac.merge(roles("ADMIN"))
     assert rbac.menu_for(admin)["dashboard"] == ["queue"]
-    # SET-IA: «Все настройки» и пять групп; у «Первого запуска» и «Обращений» пунктов нет
+    # EV-2a: «Состояние» и пять групп; у «Первого запуска» и «Обращений» пунктов нет
     assert rbac.menu_for(admin)["admin"] == SETTINGS_MENU
     # W15-H4: базу знаний администратор открывает из Настроек · Telegram (Клиентов в рейле нет)
     assert rbac.menu_for(admin)["crm"] == []
     assert "crm" not in rbac.modules_for(admin)
     director = rbac.menu_for(rbac.merge(roles("DIRECTOR")))
     # директор видит те же пункты на чтение; «Обмен между системами» прячет web (`level: full`);
-    # SIGN-2: полномочия подписи (`signing`) скрыты от директора — ведёт только администратор
-    assert director["admin"] == [s for s in SETTINGS_MENU if s != "signing"]
+    # SIGN-2: полномочия подписи (`signing`) и EV-2a: страницы раздела `admin.system` — только администратор
+    assert director["admin"] == [s for s in SETTINGS_MENU if s not in SYSTEM_ONLY]
     assert "kb" in director["crm"]
     assert "telegram" not in rbac.menu_for(rbac.merge(roles("MANAGER")))["admin"]
     assert "kb" in rbac.menu_for(rbac.merge(roles("MANAGER")))["crm"]
