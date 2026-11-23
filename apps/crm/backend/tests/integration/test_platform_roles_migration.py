@@ -141,8 +141,9 @@ def test_codes_become_roles_the_column_goes_and_downgrade_brings_the_codes_back(
         # «Администратор» — 2 (SIGN-2: реестр полномочий подписи `eds.signing.manage: full`);
         # «Менеджер» и «Снабженец» — 2 (0.3: расчёт менеджеру, снабженцу — без клиентов CRM);
         # «Менеджер-универсал» — 2, «Бухгалтер» — 3 (ADR-0025: виза бухгалтера `eds.visa.finance`).
-        twice = ["ADMIN", "tpl:REGISTRAR", "tpl:MANAGER", "tpl:SUPPLY", "tpl:MANAGER_ALL"]
-        thrice = ["tpl:ACCOUNTANT"]
+        # «Администратор» — 3 (ЕВ-2а: раздел `admin.system` — страницы фундамента Настроек).
+        twice = ["tpl:REGISTRAR", "tpl:MANAGER", "tpl:SUPPLY", "tpl:MANAGER_ALL"]
+        thrice = ["ADMIN", "tpl:ACCOUNTANT"]
         assert conn.execute(
             "SELECT DISTINCT version FROM platform_roles WHERE NOT (code = ANY(%s))",
             (["DIRECTOR", *twice, *thrice],),

@@ -104,19 +104,19 @@
   flex-direction: column;
   gap: 2px;
   padding: var(--rt-space-2, 8px) var(--rt-space-3, 12px);
-  border: 1px solid var(--rt-border-secondary, #f0f0f0);
+  border: 1px solid var(--rt-border-secondary);
   border-left-width: 3px;
   border-radius: var(--rt-radius, 8px);
   font-size: 13px;
 }
 .pf-ctpl-done {
-  border-left-color: var(--rt-success, #52c41a);
+  border-left-color: var(--rt-success);
 }
 .pf-ctpl-current {
-  border-left-color: var(--rt-primary, #1677ff);
+  border-left-color: var(--rt-primary);
 }
 .pf-ctpl-next {
-  border-left-color: var(--rt-border, #d9d9d9);
+  border-left-color: var(--rt-border);
 }
 .pf-ctpl-row {
   display: flex;

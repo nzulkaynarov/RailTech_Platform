@@ -29823,7 +29823,7 @@ components:
         email: {type: string}
         phone: {type: string}
         language: {type: string, enum: [ru, uz, en], description: Язык писем контакту}
-        can_act: {type: boolean, description: 'Может создавать запросы и загружать файлы (участник); иначе — только просмотр'}
+        can_act: {type: boolean, description: 'Может подтверждать (участник); иначе — только просмотр'}
         invited_at: {type: [string, 'null'], format: date-time}
         last_login_at: {type: [string, 'null'], format: date-time}
     SupplierCabinetRelationship:
@@ -29951,6 +29951,7 @@ components:
         kind: {type: string, enum: ['', manufacturer, supplier, principal, other]}
         contract_number: {type: string, maxLength: 64, description: 'Номер партнёрского договора'}
         contract_date: {type: [string, 'null'], format: date, description: 'Дата партнёрского договора'}
+        can_act: {type: boolean, description: 'Контакт может подтверждать заказы («Может подтверждать» в Платформе и в Кабинете); не указано — право контакта не меняется'}
     PartnerApplicationSource:
       type: string
       enum: [public, client_cabinet, letter]

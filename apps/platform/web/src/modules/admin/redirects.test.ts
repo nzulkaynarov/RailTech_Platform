@@ -14,7 +14,7 @@ const LEGACY: [string, string][] = [
   ["/admin/bot?part=exports", "/admin/exports"],
   ["/admin/bot?section=company", "/admin/company?part=contacts"],
   ["/admin/bot?part=behavior&section=business_hours", "/admin/timing"],
-  ["/admin/bot?section=escalation", "/admin/timing"],
+  ["/admin/bot?section=escalation", "/admin/telegram?tab=behavior"],
   ["/admin/bot?section=stop_words", "/admin/telegram?tab=behavior"],
   ["/admin/bot?section=web_form", "/admin/web-forms"],
   ["/admin/bot?section=notifications", "/admin/notifications"],
@@ -45,7 +45,13 @@ const LEGACY: [string, string][] = [
   ["/admin/company?tab=nope", "/admin/company"],
   ["/admin/docflow", "/admin/dictionaries?list=doc"],
   ["/admin/docflow?tab=dictionaries", "/admin/dictionaries?list=doc"],
-  ["/admin/docflow?tab=templates", "/admin/resolutions"],
+  ["/admin/docflow?tab=templates", "/admin/templates?tab=resolutions"],
+  // ЕВ-2а (2026-11-23): шаблоны резолюций — вкладка «Шаблонов»; ссылка на конкретный шаблон сохраняется
+  ["/admin/resolutions", "/admin/templates?tab=resolutions"],
+  [
+    "/admin/resolutions?template=7&panel=open",
+    "/admin/templates?tab=resolutions&template=7&panel=open",
+  ],
   ["/admin/docflow?tab=ai", "/admin/ai-spend"],
   ["/admin/tickets", "/dashboard/queue"],
   ["/admin/tickets/", "/dashboard/queue"],
@@ -55,6 +61,16 @@ const LEGACY: [string, string][] = [
 ];
 
 describe("старые адреса Настроек → новые (SET-IA)", () => {
+  it("виды писем и правила отправителей: из «Справочников» — на страницу «Почта» (ЕВ-2а, 2026-11-23)", () => {
+    for (const list of ["mail-types", "doc:mail-types"]) {
+      expect(legacySettingsPath("/admin/dictionaries", `list=${list}`)).toBe(
+        "/admin/mail#pf-mail-kinds",
+      );
+    }
+    // остальные справочники остаются на месте
+    expect(legacySettingsPath("/admin/dictionaries", "list=deals")).toBeNull();
+  });
+
   it.each(LEGACY)("%s → %s", (from, to) => {
     const [pathname = "", search = ""] = from.split("?");
     expect(legacySettingsPath(pathname, search)).toBe(to);

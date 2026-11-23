@@ -271,6 +271,17 @@ async def test_invite_sends_contact_id_as_number_and_returns_state_without_secre
     assert "token" not in response.text.lower()
 
 
+async def test_invite_passes_the_right_to_confirm_orders(web: Web, be: Any) -> None:
+    """ДК-5: право подтверждать доходит до ERP как есть, включая «нет»."""
+    await web.login(["SUPPLY"])
+    url = f"{API}/catalog/supplier-access/9/invite/"
+    route = mock(be).post(url).mock(return_value=httpx.Response(200, json=STATE))
+    for value in (True, False):
+        response = await call(web, "POST", f"{BASE}/invite", {"contact_id": "21", "can_act": value})
+        assert response.status_code == 200
+        assert body_of(route) == {"contact_id": 21, "can_act": value}
+
+
 async def test_rights_update_and_suspend(web: Web, be: Any, check: ContractChecker) -> None:
     await web.login(["DIRECTOR"])
     router = mock(be)

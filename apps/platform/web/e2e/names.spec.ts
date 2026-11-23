@@ -35,8 +35,8 @@ const RU = [
     code: "admin",
     name: "Настройки",
     title: "Настройки",
-    path: /\/admin\/org$/,
-    first: "Сотрудники",
+    path: /\/admin$/,
+    first: "Состояние",
   },
 ] as const;
 

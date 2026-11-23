@@ -16,6 +16,9 @@ for (const width of WIDTHS) {
     const drawer = partnerCard(page, "ООО «Поставщик Север»");
     const block = drawer.getByRole("region", { name: "Доступ в кабинет" });
     await expect(block.getByText("Не открыт")).toBeVisible();
+    // На телефоне пустое боковое окно ложится поверх листа карточки: сворачиваем его, чтобы лист был виден
+    const hidePanel = page.locator("#pf-context-panel .pf-panel-hide");
+    if (width === 390 && (await hidePanel.isVisible())) await hidePanel.click();
 
     // Контакт и приглашение
     await block.getByRole("button", { name: "Добавить контакт" }).click();
@@ -25,15 +28,31 @@ for (const width of WIDTHS) {
     await form.getByRole("button", { name: "Добавить" }).click();
     await expect(form).toBeHidden();
     await expect(block.getByText("Нодира Рахимова")).toBeVisible();
-    await block.getByRole("switch", { name: /Каталог и заявки/ }).click();
-    await block.getByRole("button", { name: "Пригласить: Нодира Рахимова" }).click();
+    // ДК-5: право подтверждать — одно название в Платформе и Кабинете; раздел покупателя новому партнёру не включён
+    await expect(
+      block.getByRole("switch", { name: /Может подтверждать: Нодира Рахимова/ }),
+    ).toBeChecked();
+    await expect(block.getByRole("switch", { name: /Каталог и заявки/ })).not.toBeChecked();
+    // ДК-5: контакт, заведённый в карточке, без права подтверждать — приглашающий выбирает право в самом приглашении
+    await expect(
+      block.getByRole("switch", { name: /Может подтверждать: Азиз Тошматов/ }),
+    ).not.toBeChecked();
+    await block.getByRole("button", { name: "Пригласить: Азиз Тошматов" }).click();
+    const ask = page.getByRole("dialog", { name: "Пригласить в кабинет" });
+    await expect(ask.getByRole("switch", { name: "Может подтверждать" })).toBeChecked();
+    await ask.getByRole("button", { name: "Пригласить" }).click();
+    await expect(ask).toBeHidden();
+    await expect(
+      block.getByRole("switch", { name: /Может подтверждать: Азиз Тошматов/ }),
+    ).toBeChecked();
     await expect(block.getByText("Приглашён", { exact: true })).toBeVisible();
     await expect(block.getByText("В кабинете: Партнёр")).toBeVisible();
-    // PART-CRM: приглашение просит CRM завести клиента — «Ожидает»
-    await expect(block.getByText("Клиент в CRM")).toBeVisible();
-    await expect(block.getByText("Ожидает", { exact: true })).toBeVisible();
+    // ДК-5: только продающий партнёр клиентом не становится — CRM ничего не просят (с «Каталог и заявки» — см. part-crm-client-in-crm)
+    await expect(block.getByText("Ожидает", { exact: true })).toBeHidden();
     await expectNoViolations(page, `Партнёр · доступ в кабинет`);
-    await block.scrollIntoViewIfNeeded();
+    await block
+      .getByRole("list", { name: /Контакты/ })
+      .evaluate("(el) => { el.scrollIntoView({ block: 'start' }); }");
     await settledScreenshot(page, "supplier-cabinet-access");
 
     // Приостановка просит подтверждение

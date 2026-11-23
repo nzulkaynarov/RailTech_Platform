@@ -7,6 +7,7 @@ import { MODULES, matchSection } from "../../modules/registry";
 import { findNavItem, visibleItems, type NavItem } from "../../modules/navigation";
 import { MODULE_SETTINGS } from "../../modules/admin/moduleSettings";
 import { SETTINGS_HOME } from "../../modules/admin/module";
+import { SETTINGS } from "../../modules/admin/settingsRegistry";
 import type { SectionConfig } from "../../modules/types";
 import { SetupBanner } from "../../features/first-run/SetupBanner";
 import { MaintenanceBanner } from "../../features/maintenance/MaintenanceBanner";
@@ -295,8 +296,11 @@ export function AppShell() {
 
   // ⚙ в заголовке подменю модуля — его группа Настроек (SET-IA, HubSpot): только тем, кому Настройки видны.
   const settingsGroup = MODULE_SETTINGS[activeModule.code];
+  // и только если в группе есть страница, открытая этому сотруднику (директор не видит «Каналы и подключения»)
   const settingsLink =
-    settingsGroup && canSee(me, { resource: "admin" })
+    settingsGroup &&
+    canSee(me, { resource: "admin" }) &&
+    SETTINGS.some((entry) => entry.group === settingsGroup && canSee(me, entry.access))
       ? {
           to: `${SETTINGS_HOME}?group=${settingsGroup}`,
           label: t("menu.settings", { group: t(`modules:admin.groups.${settingsGroup}`) }),

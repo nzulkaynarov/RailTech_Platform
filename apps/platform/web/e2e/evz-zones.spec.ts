@@ -5,7 +5,7 @@ import { loginAndWait, settledScreenshot, spaGoto, waitForMotionEnd } from "./su
 import { chooseOption } from "./support/fields";
 
 // ЕВ-З на MSW: «Настройки · Люди и доступ · Зоны ответственности». Девять зон без людей, директор назначает ответственного
-// и основание, администратор заводит зону, сигнал «зона без ответственного» на «Всех настройках» и карточка на Главной.
+// и основание, администратор заводит зону, сигнал «зона без ответственного» в «Состоянии» и карточка на Главной.
 // axe 0 и снимки 1440 и 390 (`E2E_SCREENSHOT_DIR` → docs/screens/evz-zones/).
 const WIDTHS = [1440, 390] as const;
 
@@ -65,12 +65,12 @@ test.describe("ЕВ-З · Зоны ответственности", () => {
     await shoot(page, "zones-assigned");
   });
 
-  test("администратор: «Новая зона» из существующих разделов и строка-сигнал на «Всех настройках»", async ({
+  test("администратор: «Новая зона» из существующих разделов и строка-сигнал в «Состоянии»", async ({
     page,
   }) => {
     await loginAndWait(page, "admin@demo.example");
     await spaGoto(page, "/admin");
-    await expect(page.getByText(/Зон без ответственного: 9\./)).toBeVisible();
+    await expect(page.getByText(/Зон без ответственного: 9/)).toBeVisible();
     await shoot(page, "zones-settings-signal");
 
     await spaGoto(page, "/admin/zones");

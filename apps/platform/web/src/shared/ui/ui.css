@@ -544,6 +544,11 @@ tr > td.pf-col-num {
   bottom: var(--pf-save-bar-offset, 0px);
   z-index: 100;
   flex: none;
+  /* Без правок бар невидим: пустая липкая полоса не перехватывает нажатия на кнопки под ней */
+  pointer-events: none;
+}
+.pf-save-dock > .pf-save-bar {
+  pointer-events: auto;
 }
 /* Поля формы с баром: прокрутка к полю (Tab, фокус) оставляет его над баром */
 :has(> .pf-save-dock)

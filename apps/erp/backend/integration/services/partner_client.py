@@ -192,13 +192,29 @@ def build_request_data(company: Company, user: Any = None) -> Optional[Dict[str,
     return data
 
 
+def partner_is_buyer(company: Company) -> bool:
+    """Партнёру включён раздел покупателя (`catalog_requests`) — только тогда он ещё и клиент (ДК-5, ADR-0022).
+
+    Нет партнёрского отношения — вызывающий не партнёрский путь, решение прежнее (да).
+    """
+    from portal.services.roles import BUYER_MODULE, partner_enabled
+
+    relationship = CompanyRelationship.objects.filter(company=company, role=RelationshipRole.PARTNER).first()
+    if relationship is None:
+        return True
+    return BUYER_MODULE in partner_enabled(relationship.modules)
+
+
 def request_client_in_crm(company: Company, user: Any = None) -> Optional[Event]:
     """Попросить CRM завести (или найти) клиента для компании партнёра. Вызывать внутри `transaction.atomic()` приглашения.
 
-    `None` — просить не нужно: компания уже сопоставлена клиенту CRM, либо у неё нет контакта с e-mail. Ошибка публикации
-    (`data` не по схеме) идёт наружу и откатывает приглашение.
+    `None` — просить не нужно: компания уже сопоставлена клиенту CRM, у неё нет контакта с e-mail, либо она только
+    продаёт нам (ДК-5): раздел покупателя «Каталог и заявки» партнёру не включён, значит клиентом он не становится.
+    Ошибка публикации (`data` не по схеме) идёт наружу и откатывает приглашение.
     """
     if CrmClientMapping.objects.filter(company=company).exists():
+        return None
+    if not partner_is_buyer(company):
         return None
     data = build_request_data(company, user)
     if data is None:

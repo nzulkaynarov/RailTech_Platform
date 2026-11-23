@@ -487,7 +487,7 @@ class TestApproveKeepsWhatIsThere:
         assert post(supply, app, "approve", {"contract_number": "D-1"}).status_code == 200
 
         rel.refresh_from_db()
-        assert set(rel.modules) == {"my_products", "catalog_requests"}
+        assert set(rel.modules) == {"my_products"}  # ДК-5: раздел покупателя не включается сам
 
     def test_empty_date_does_not_erase_saved_one(self, supply, company):
         rel = CompanyRelationship.objects.create(

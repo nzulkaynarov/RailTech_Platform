@@ -56,9 +56,7 @@ test.describe("ЕВ-3: меню модулей", () => {
       await settledScreenshot(page, "documents-templates-link");
       await link.click();
       await expect(page).toHaveURL(/\/admin\/templates/);
-      await expect(
-        page.getByRole("heading", { level: 1, name: "Шаблоны документов" }),
-      ).toBeVisible();
+      await expect(page.getByRole("heading", { level: 1, name: "Шаблоны" })).toBeVisible();
     });
 
     test(`Органайзер без «Чатов», ${String(width)}`, async ({ page }) => {

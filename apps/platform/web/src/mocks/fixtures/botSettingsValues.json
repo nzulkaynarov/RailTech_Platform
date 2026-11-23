@@ -476,7 +476,8 @@
     "min_fill_seconds": 3,
     "token_ttl_minutes": 60,
     "rate_limit_per_hour": 5,
-    "max_text_chars": 4000
+    "max_text_chars": 4000,
+    "first_response_sla_minutes": 15
   },
   "service_alerts": {
     "telegram_admins": true,

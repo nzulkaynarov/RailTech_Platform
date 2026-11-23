@@ -183,17 +183,6 @@ describe("Требует внимания: одна причина — одна 
 
     await within(row).findByRole("form", { name: "Выключить сервис: OpenAI" });
   });
-
-  it("директор: видит причину и «Написать владельцу», но не кнопки изменения и проверки", async () => {
-    signIn("director@demo.example");
-    renderAt("/admin/integrations");
-    const row = await groupRow(/Ключ OpenAI отклонён/);
-
-    expect(within(row).getByRole("button", { name: /Написать владельцу/ })).toBeVisible();
-    expect(within(row).queryByRole("button", { name: /Ввести новый ключ/ })).toBeNull();
-    expect(within(row).queryByRole("button", { name: /Выключить провайдера/ })).toBeNull();
-    expect(within(row).queryByRole("button", { name: /Проверить снова/ })).toBeNull();
-  });
 });
 
 describe("Нестабильно: дребезг без сбоя и писем", () => {

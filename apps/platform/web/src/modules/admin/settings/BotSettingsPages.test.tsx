@@ -1,6 +1,7 @@
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
+import { readKb } from "../../../mocks/fixtures/kb";
 import { panelEl, renderAt, setupBotTests, signIn } from "../../../test/botKit";
 
 setupBotTests();
@@ -8,7 +9,7 @@ setupBotTests();
 /**
  * Разделы бывшего «Telegram-бота» после SET-IA — на страницах своих групп Настроек: Каналы связи · Telegram (вкладки
  * «Подключение · Тексты · Поведение · Шаблоны ответов · База знаний»), Время и сроки, Уведомления, Формы сайта, Справочники
- * (причины отказа), Реквизиты и бланк (контакты для клиентов), Расходы на ИИ (дневной лимит), Выгрузки.
+ * (причины отказа), Реквизиты и бланк (контакты для клиентов), ИИ (дневной лимит), Выгрузки.
  */
 async function openPage(email: string, path: string, title: string) {
   signIn(email);
@@ -70,16 +71,21 @@ describe("Настройки · Telegram и разделы бота по гру�
     for (const [name, label] of Object.entries(expectations)) {
       expect(await within(await form(name)).findAllByText(label)).not.toHaveLength(0);
     }
-    // Разделы других групп сюда не попали
-    expect(screen.queryByRole("region", { name: "Правила передачи" })).toBeNull();
+    // Пороги передачи лида менеджеру — поведение бота (ЕВ-2а, стр. 10): здесь, а срок ответа — на «Времени и сроках»
+    const handoff = await form("Правила передачи");
+    expect(await within(handoff).findAllByText("Оценка лида для передачи")).not.toHaveLength(0);
+    expect(within(handoff).queryByLabelText("Время на ответ (SLA)")).toBeNull();
+    expect(within(handoff).queryByLabelText("Повторное напоминание через")).toBeNull();
+    // Разделы других групп сюда не попали; переключатель ИИ — на странице «ИИ»
     expect(screen.queryByRole("region", { name: "Причины отказа" })).toBeNull();
+    expect(screen.queryByText(/ИИ-помощь менеджеру при ответе/)).toBeNull();
   });
 
   // По тесту на страницу: восемь открытий подряд в одном тесте под полной нагрузкой не укладывались в 20 с.
   const BOT_PAGES: [string, string, string, string][] = [
     ["/admin/timing", "Время и сроки", "Рабочие часы", "Начало рабочего дня"],
-    ["/admin/timing", "Время и сроки", "Правила передачи", "Оценка лида для передачи"],
-    ["/admin/notifications", "Уведомления", "Канал команды", "Дежурные"],
+    ["/admin/timing", "Время и сроки", "Срок первого ответа и напоминание", "Время на ответ (SLA)"],
+    ["/admin/notifications", "Уведомления", "Оповещения команды", "Дежурные"],
     [
       "/admin/notifications",
       "Уведомления",
@@ -93,7 +99,13 @@ describe("Настройки · Telegram и разделы бота по гру�
       "Минимальное время заполнения формы",
     ],
     ["/admin/dictionaries?list=deals", "Справочники", "Причины отказа", "Причины отказа"],
-    ["/admin/ai-spend", "Расходы на ИИ", "Бюджет моделей", "Дневной бюджет"],
+    ["/admin/ai-spend", "ИИ", "Бюджет моделей", "Дневной бюджет"],
+    [
+      "/admin/ai-spend",
+      "ИИ",
+      "ИИ-помощь менеджеру",
+      "ИИ-помощь менеджеру при ответе («Черновик», «Улучшить»)",
+    ],
     ["/admin/company", "Реквизиты и бланк", "Контакты для клиентов", "Название компании"],
   ];
   it.each(BOT_PAGES)(
@@ -105,9 +117,43 @@ describe("Настройки · Telegram и разделы бота по гру�
     },
   );
 
+  it("срок первого ответа лиду — оба поля (Telegram и сайт) на «Времени и сроках», а порогов передачи там нет (ЕВ-2а, стр. 7 и 10)", async () => {
+    await openPage("admin@demo.example", "/admin/timing", "Время и сроки");
+    const telegram = await form("Срок первого ответа и напоминание");
+    expect(await within(telegram).findByLabelText("Время на ответ (SLA)")).toBeVisible();
+    const site = await form("Срок первого ответа на заявку с сайта");
+    expect(await within(site).findByLabelText("Время на первый ответ с сайта")).toBeVisible();
+    expect(screen.queryByLabelText("Оценка лида для передачи")).toBeNull();
+    expect(screen.queryByRole("region", { name: "Правила передачи" })).toBeNull();
+  });
+
+  it("«Формы сайта»: антиспам остаётся, срока ответа здесь нет — он на «Времени и сроках»", async () => {
+    await openPage("admin@demo.example", "/admin/web-forms", "Формы сайта");
+    const spam = await form("Форма «Заявка» с сайта");
+    expect(await within(spam).findByLabelText("Минимальное время заполнения формы")).toBeVisible();
+    expect(within(spam).queryByLabelText("Время на первый ответ с сайта")).toBeNull();
+  });
+
+  it("срок первого ответа с сайта сохраняется вместе с остальными полями раздела: чужие значения не теряются", async () => {
+    await openPage("admin@demo.example", "/admin/timing", "Время и сроки");
+    const site = await form("Срок первого ответа на заявку с сайта");
+    const field = await within(site).findByLabelText("Время на первый ответ с сайта");
+    fireEvent.change(field, { target: { value: "30" } });
+    fireEvent.click(await within(site).findByRole("button", { name: /Сохранить/ }));
+    expect(
+      await screen.findByText("Настройки «Срок первого ответа на заявку с сайта» сохранены"),
+    ).toBeVisible();
+    // антиспам-поля раздела не показаны на этой странице, но в теле сохранения остались как были
+    expect(readKb().settings["web_form"]).toMatchObject({
+      first_response_sla_minutes: 30,
+      min_fill_seconds: 3,
+      token_ttl_minutes: 60,
+    });
+  });
+
   it("канал команды выбирается в «Telegram · Подключение» — ссылка туда из «Уведомлений»", async () => {
     await openPage("admin@demo.example", "/admin/notifications", "Уведомления");
-    const channel = await form("Канал команды");
+    const channel = await form("Оповещения команды");
     expect(within(channel).queryByLabelText("ID приватного канала")).toBeNull();
     expect(within(channel).getByRole("link", { name: "Открыть «Telegram»" })).toHaveAttribute(
       "href",
@@ -118,10 +164,16 @@ describe("Настройки · Telegram и разделы бота по гру�
   it("сохранение раздела: «Есть несохранённые изменения», сообщение; «Отменить изменения» возвращает значения", async () => {
     await openPage("admin@demo.example", "/admin/company", "Реквизиты и бланк");
     const contacts = await form("Контакты для клиентов");
+    // Адрес кабинета клиента правится только в «Сервисах» (ЕВ-2а, стр. 3): в контактах его нет
+    expect(within(contacts).queryByLabelText(/Адрес кабинета/)).toBeNull();
     const name = await within(contacts).findByLabelText("Название компании");
 
     fireEvent.change(name, { target: { value: "RailTech Групп (демо)" } });
-    expect(await within(contacts).findByText("Есть несохранённые изменения")).toBeVisible();
+    await waitFor(() => {
+      expect(within(contacts).getByRole("status")).toHaveTextContent(
+        "Есть несохранённые изменения",
+      );
+    });
     fireEvent.click(within(contacts).getByRole("button", { name: "Отменить изменения" }));
     await waitFor(() => {
       expect(within(contacts).getByLabelText("Название компании")).toHaveValue("RailTech (демо)");
@@ -132,9 +184,6 @@ describe("Настройки · Telegram и разделы бота по гру�
     });
     fireEvent.click(within(contacts).getByRole("button", { name: /Сохранить/ }));
     expect(await screen.findByText("Настройки «Контакты для клиентов» сохранены")).toBeVisible();
-    await waitFor(() => {
-      expect(within(contacts).getByText("Изменений нет")).toBeVisible();
-    });
     // Сохранение настройки — без «Что произойдёт» (CONVENTIONS §2 п. 8, S1)
     expect(within(contacts).queryByRole("group", { name: "Что произойдёт" })).toBeNull();
   });
@@ -165,13 +214,15 @@ describe("Настройки · Telegram и разделы бота по гру�
     expect(within(days).getByRole("checkbox", { name: "Пн" })).toBeChecked();
     expect(within(days).getByRole("checkbox", { name: "Сб" })).not.toBeChecked();
     fireEvent.click(within(days).getByRole("checkbox", { name: "Сб" }));
-    expect(await within(hours).findByText("Есть несохранённые изменения")).toBeVisible();
+    await waitFor(() => {
+      expect(within(hours).getByRole("status")).toHaveTextContent("Есть несохранённые изменения");
+    });
     fireEvent.click(within(hours).getByRole("button", { name: /Сохранить/ }));
     expect(await screen.findByText("Настройки «Рабочие часы» сохранены")).toBeVisible();
   });
 
   it("правила передачи: пробный прогон считает на значениях из формы и ничего не сохраняет", async () => {
-    await openPage("admin@demo.example", "/admin/timing", "Время и сроки");
+    await openTelegram("admin@demo.example", "?tab=behavior");
     await form("Правила передачи");
     const dry = await screen.findByRole("region", { name: "Пробный прогон правил передачи" });
     fireEvent.click(
@@ -198,8 +249,10 @@ describe("Настройки · Telegram и разделы бота по гру�
     });
     expect(within(dry).getByText(/Изменится у лидов: 2/)).toBeVisible();
     expect(
-      within(await form("Правила передачи")).getByText("Есть несохранённые изменения"),
-    ).toBeVisible();
+      within(await form("Правила передачи"))
+        .getAllByRole("status")
+        .map((el) => el.textContent),
+    ).toContain("Есть несохранённые изменения");
   });
 
   it("несохранённые изменения: уход со страницы спрашивает «Выйти без сохранения?», «Остаться» оставляет форму", async () => {
@@ -217,7 +270,7 @@ describe("Настройки · Telegram и разделы бота по гру�
       await screen.findByRole("dialog", { name: "Выйти без сохранения?" }),
     ).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Остаться" }));
-    expect(within(hours).getByText("Есть несохранённые изменения")).toBeVisible();
+    expect(within(hours).getByRole("status")).toHaveTextContent("Есть несохранённые изменения");
 
     fireEvent.click(within(menu).getByRole("link", { name: "Журнал" }));
     const leave = await screen.findAllByRole("button", { name: "Выйти без сохранения" });
@@ -390,13 +443,12 @@ describe("Настройки · Система · Выгрузки CSV", () => {
     vi.restoreAllMocks();
   });
 
-  it("директор видит выгрузки без права скачивать", async () => {
-    await openPage("director@demo.example", "/admin/exports", "Выгрузки");
+  it("директор выгрузок не видит: страница фундамента — раздел `admin.system` (ЕВ-2а)", async () => {
+    signIn("director@demo.example");
+    renderAt("/admin/exports");
 
-    expect(
-      await screen.findByText("Только просмотр: выгружает данные администратор."),
-    ).toBeVisible();
-    expect(screen.getByRole("button", { name: "Скачать: Сделки" })).toBeDisabled();
+    expect(await screen.findByRole("heading", { level: 1, name: "Нет доступа" })).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Скачать: Сделки" })).toBeNull();
   });
 });
 
@@ -410,12 +462,15 @@ describe("Admin · Настройки бота: права", () => {
     expect(await within(hours).findByLabelText("Начало рабочего дня")).toBeDisabled();
     expect(screen.queryByRole("button", { name: /Проверить на последних 50 диалогах/ })).toBeNull();
     router.dispose();
+  });
 
-    await openTelegram("director@demo.example", "?tab=templates");
-    expect(screen.queryByRole("link", { name: "Новый шаблон" })).toBeNull();
-    expect(
-      await screen.findByRole("link", { name: "Открыть шаблон: Пришлю КП сегодня" }),
-    ).toBeVisible();
+  it("директор: каналы и подключения ему не показываются — «Нет доступа», пункта «Telegram» нет (ЕВ-2а)", async () => {
+    signIn("director@demo.example");
+    renderAt("/admin/telegram");
+
+    expect(await screen.findByRole("heading", { level: 1, name: "Нет доступа" })).toBeVisible();
+    expect(screen.queryByRole("tablist", { name: "Разделы Telegram-бота" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Каналы и подключения" })).toBeNull();
   });
 
   it("менеджер: пункта «Telegram» в меню нет, по прямому адресу — «Нет доступа»; старый адрес бота уводит туда же", async () => {

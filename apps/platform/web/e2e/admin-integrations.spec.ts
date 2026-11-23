@@ -37,7 +37,7 @@ async function expectNoViolations(page: Page, context: string): Promise<void> {
 const OWN_PAGE: Partial<Record<string, readonly [string, string]>> = {
   telegram: ["/admin/telegram", "Telegram"],
   mail: ["/admin/mail", "Почта"],
-  spend: ["/admin/ai-spend", "Расходы на ИИ"],
+  spend: ["/admin/ai-spend", "ИИ"],
 };
 /** Открыта ли сейчас своя страница карточки (тогда её содержимое — в основном окне). */
 let ownPage = false;
@@ -359,15 +359,13 @@ test.describe("Внешние интеграции: администратор",
 test.describe("Внешние интеграции: директор и права", () => {
   test.skip(({ isMobile }) => isMobile, "сценарии на десктопе; ширины проверяет блок axe");
 
-  test("директор читает экран и расходы, кнопок изменения нет, BFF на изменения отвечает 403", async ({
+  test("директору «Сервисы» не показываются (ЕВ-2а): «Нет доступа», BFF на изменения отвечает 403", async ({
     page,
   }) => {
     await loginAndWait(page, "director@demo.example");
-    await openIntegrations(page, "erp");
-    await expect(page.getByText(/^Только просмотр/).first()).toBeVisible();
-    await expect(page.getByRole("button", { name: /^Проверить/ })).toHaveCount(0);
-    await expect(side(page).getByRole("button", { name: "Ротация ключа" })).toHaveCount(0);
-    await settledScreenshot(page, "director-readonly");
+    await spaGoto(page, "/admin/integrations");
+    await expect(page.getByRole("heading", { level: 1, name: "Нет доступа" })).toBeVisible();
+    await settledScreenshot(page, "director-forbidden");
 
     // fetch из страницы: ответ даёт тот же мок BFF, что видит экран
     const status = await page.evaluate<number>(`(async () => {
@@ -380,20 +378,6 @@ test.describe("Внешние интеграции: директор и прав
       return response.status;
     })()`);
     expect(status).toBe(403);
-
-    await openIntegrations(page, "spend");
-    await expect(side(page).getByRole("table", { name: "Провайдеры за сегодня" })).toBeVisible();
-    await settledScreenshot(page, "director-spend");
-
-    // модели и копии директору — на чтение (W13-A1, решение архитектора по Q-W13-A1-1)
-    await openIntegrations(page, "models");
-    await expect(side(page).getByText("Диалог с клиентом")).toBeVisible();
-    await expect(side(page).getByText("•••• 77aa").first()).toBeVisible();
-    await expect(side(page).getByRole("button", { name: /^Сменить модель/ })).toHaveCount(0);
-    await settledScreenshot(page, "director-models");
-    await openIntegrations(page, "storage");
-    await expect(side(page).getByText("crm-2026-10-26.dump")).toBeVisible();
-    await expect(side(page).getByRole("button", { name: "Сделать копию сейчас" })).toHaveCount(0);
   });
 
   test("без раздела «Admin» пункта нет, прямой адрес — «Нет доступа»", async ({ page }) => {
@@ -553,16 +537,6 @@ test.describe("Внешние интеграции: axe и снимки", () => 
         await panel.screenshot({ path: `${dir}/h3-states-${String(wide)}.png` });
       }
       await page.setViewportSize({ width: wide, height: wide === 390 ? 844 : 900 });
-    });
-
-    test(`директор на ${String(width)}: просмотр без нарушений axe`, async ({ page }) => {
-      await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
-      await loginAndWait(page, "director@demo.example");
-      await openIntegrations(page);
-      await expectNoViolations(page, `director overview ${String(width)}`);
-      await openIntegrations(page, "spend");
-      await expect(side(page).locator(".ant-skeleton, [data-pf-skeleton]")).toHaveCount(0);
-      await expectNoViolations(page, `director spend ${String(width)}`);
     });
   }
 });

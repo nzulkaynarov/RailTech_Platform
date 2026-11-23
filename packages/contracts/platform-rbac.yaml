@@ -23,7 +23,7 @@ system_roles:
   ADMIN:
     name: { ru: Администратор, uz: Administrator, en: Administrator }
     # SIGN-2 (ADR-0024 п. 1): администратор ведёт реестр полномочий подписи — раздел `eds.signing.manage`.
-    access: { admin: full, company.settings: full, dashboard.queue: full, chats.internal: full, eds.memo.create: full, eds.signing.manage: full }
+    access: { admin: full, admin.system: full, company.settings: full, dashboard.queue: full, chats.internal: full, eds.memo.create: full, eds.signing.manage: full }
     restricted_fields: []
   DIRECTOR:
     name: { ru: Директор, uz: Direktor, en: Director }
@@ -404,6 +404,14 @@ resources:
       # (у EDS кода раздела `admin` не было). В CRM журнал — `integrations:read`/`integrations:write`.
       erp: { full: [team.manage] }
       eds: { full: [bus.manage] }
+  # ЕВ-2а (отчёт 2026-11-22 §8.1, решение владельца 2026-11-23): страницы фундамента — каналы и подключения, ИИ, выгрузки,
+  # обмен между системами — ведёт администратор; директор по карте меню видит компанию, сотрудников и журнал, поэтому эти
+  # страницы ему не показываются. Права бэкендов раздел не даёт: данные по-прежнему отдаются по `admin`, раздел решает
+  # только, какие страницы Настроек открыть в меню.
+  - key: admin.system
+    module: admin
+    levels: [full]
+    label: { ru: "Настройки · Каналы, подключения, ИИ, выгрузки", uz: "Sozlamalar · Kanallar, ulanishlar, SI, eksport", en: "Settings · Channels, connections, AI, exports" }
   # Реквизиты, шаблоны документов, нумерация, условия оплаты компании (решение архитектора по Q-R1-1):
   # у ролей из шаблонов раздела нет, у директора и администратора — full.
   - key: company.settings
@@ -448,10 +456,12 @@ menu:
     all: [chats.internal, chats.external]
     contacts: [chats.internal]
   admin:
-    # SET-IA (владелец 2026-11-03): индекс «Все настройки» и пять групп — Люди и доступ · Компания · Каналы связи ·
-    # Процессы · Система (группы — `apps/platform/web/src/modules/admin/settingsRegistry.ts`). Новых разделов каталога нет:
-    # пункты открываются прежними `admin` и `company.settings`. «Первый запуск» — чек-лист на индексе, «Обращения
-    # сотрудников» — в «Моих задачах»: своих пунктов у них нет.
+    # ЕВ-2а (отчёт 2026-11-22 §8.1, DECISIONS q.5 и q.29): «Состояние» первым экраном, затем пять групп — Люди и доступ ·
+    # Компания · Правила работы · Каналы и подключения · Журнал (группы — `apps/platform/web/src/modules/admin/settingsRegistry.ts`).
+    # Коммерческие правила (Продажи, Налоги и валюты, Шаблоны) правит директор — раздел `company.settings`; страницы
+    # фундамента открывает только `admin.system` (администратор). «Первый запуск» — часть «Состояния», «Обращения
+    # сотрудников» — в «Моих задачах»: своих пунктов у них нет. Шаблоны резолюций — вкладка «Шаблонов», обмен между
+    # системами (шина, W13-A2, `admin: full`) — вид той же «Истории»: пунктов меню у них нет.
     overview: [admin]
     org: [admin]
     roles: [admin]
@@ -463,24 +473,21 @@ menu:
     company: [company.settings]
     numbering: [company.settings]
     taxes: [company.settings]
-    sales: [company.settings]
-    # ДВ-5: оферта и политика Кабинета — правило компании, правят директор и администратор
-    legal: [company.settings]
     articles: [admin]
-    telegram: [admin]
-    mail: [admin]
-    forms: [admin]
-    dictionaries: [admin, company.settings]
-    resolutions: [admin]
-    templates: [company.settings]
+    sales: [company.settings]
+    # ДВ-5: оферта и политика Кабинета — правило компании («Компания»), правят директор и администратор
+    legal: [company.settings]
     timing: [admin]
+    dictionaries: [admin, company.settings]
+    templates: [company.settings]
     notifications: [admin]
-    integrations: [admin]
-    spend: [admin]
+    telegram: [admin.system]
+    mail: [admin.system]
+    forms: [admin.system]
+    integrations: [admin.system]
+    spend: [admin.system]
     audit: [admin]
-    exports: [admin]
-    # «Обмен между системами» (шина, W13-A2) открывается только при `admin: full` (`level` в реестре настроек).
-    bus: [admin]
+    exports: [admin.system]
 
 # Поля с ограничением внутри экранов (SPEC-v3 §4.2). Роль перечисляет поля, которые она ВИДИТ; поле скрыто, если ни одна роль
 # сотрудника его не видит. `supplier_prices` и `totals_only` своих прав ERP не дают: в расчёте (D2-1) ERP режет цены поставщика

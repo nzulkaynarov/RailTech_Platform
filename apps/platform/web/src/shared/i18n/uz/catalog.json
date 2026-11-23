@@ -730,8 +730,8 @@
       "editNamed": "{{name}} kontaktini o'zgartirish",
       "lastLoginAt": "kirgan {{date}}",
       "notInvited": "taklif qilinmagan",
-      "canAct": "So'rovlar yaratishi va fayllar yuklashi mumkin",
-      "canActNamed": "So'rovlar yaratishi va fayllar yuklashi mumkin: {{name}}"
+      "canAct": "Tasdiqlay oladi",
+      "canActNamed": "Tasdiqlay oladi: {{name}}"
     },
     "languages": {
       "ru": "Русский",
@@ -743,6 +743,7 @@
     "inviteAgain": "Yana taklif qilish",
     "inviteNamed": "{{action}}: {{name}}",
     "inviteSent": "Kirish kodi bilan xat yuborildi.",
+    "inviteForm": { "title": "Kabinetga taklif qilish" },
     "suspend": "Kirishni to'xtatish",
     "readOnly": "Taklif qilish va huquqlarni o'zgartirishni hamkorlarni yuritish huquqi bor xodimlar qiladi.",
     "contactForm": {
@@ -755,7 +756,7 @@
         "Kontakt hamkor kartochkasida paydo bo'ladi",
         "Taklif alohida «Taklif qilish» tugmasi bilan yuboriladi"
       ],
-      "canAct": "So'rovlar yaratishi va fayllar yuklashi mumkin"
+      "canAct": "Tasdiqlay oladi"
     },
     "suspendForm": {
       "title": "Kabinetga kirishni to'xtatish",

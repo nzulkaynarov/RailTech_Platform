@@ -24,9 +24,9 @@ const MARGINS = ["default_margin_percent", "min_margin_percent", "target_margin_
 /**
  * Условия нового КП разнесены по страницам своих дел (ДОК-13, решение владельца 2026-11-20): «Продажи» — срок, оплата,
  * гарантия, маржа, базис; «Каталог» — цена и порог карточки; «Налоги и валюты» — валюта, НДС и возраст курса;
- * «Уведомления» — напоминания о счетах и актах. Одна и та же запись настроек компании ERP, у каждой страницы свои поля.
+ * «Уведомления» — напоминания о счетах и актах; «Свежесть цен поставщиков» — отдельная карточка рядом с каталогом. Одна и та же запись настроек компании ERP, у каждой страницы свои поля.
  */
-export type QuoteGroup = "sales" | "contracts" | "catalog" | "taxes" | "reminders";
+export type QuoteGroup = "sales" | "contracts" | "catalog" | "supplier" | "taxes" | "reminders";
 
 const GROUPS: Record<QuoteGroup, readonly (keyof QuoteDefaults)[]> = {
   sales: [
@@ -36,8 +36,6 @@ const GROUPS: Record<QuoteGroup, readonly (keyof QuoteDefaults)[]> = {
     "payment_terms_days",
     "default_warranty_months",
     "default_payment_terms",
-    "offer_confirm_days",
-    "offer_expiring_days",
   ],
   // ДОК-10: правила договора по утверждённому шаблону — данные компании, не код
   contracts: [
@@ -53,6 +51,8 @@ const GROUPS: Record<QuoteGroup, readonly (keyof QuoteDefaults)[]> = {
     "catalog_require_mxik",
     "catalog_require_hs_imported",
   ],
+  // Свежесть цен поставщиков — закупка, а не условия КП (ЕВ-2а, отчёт §8.2 п. 13): своя карточка рядом с каталогом
+  supplier: ["offer_confirm_days", "offer_expiring_days"],
   taxes: ["default_cost_currency", "default_vat_rate", "fx_rate_max_age_days"],
   reminders: ["remind_overdue_invoices", "act_reminder_hours"],
 };

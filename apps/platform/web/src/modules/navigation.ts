@@ -39,8 +39,8 @@ export interface NavItem {
 }
 
 /**
- * Пункт Настроек: открывает первую доступную страницу группы, остальные страницы группы — вкладками над ней (как «Каталог»).
- * Индекс `/admin` с поиском и чек-листом первого запуска остаётся по своему адресу.
+ * Пункт Настроек: группа из пяти (ЕВ-2а, отчёт §8.1) открывает первую доступную страницу группы. Остальные страницы группы
+ * — меню слева рамки страницы (`settings/SettingsFrame.tsx`), вкладок над экраном нет.
  */
 function settingsItem(
   key: string,
@@ -50,16 +50,7 @@ function settingsItem(
 ): NavItem {
   const entries = SETTINGS.filter((entry) => entry.group === group && !skip.includes(entry.key));
   const targets = entries.map((entry): NavTarget => ({ section: `admin.${entry.key}` }));
-  return {
-    key,
-    targets,
-    ...(also ? { also } : {}),
-    tabs: entries.map((entry) => ({
-      key: entry.key,
-      label: `modules:admin.sections.${entry.key}`,
-      targets: [{ section: `admin.${entry.key}` }],
-    })),
-  };
+  return { key, targets, ...(also ? { also } : {}) };
 }
 
 const docs = (box: string): NavTarget => ({
@@ -132,10 +123,13 @@ export const NAVIGATION: Readonly<Record<ModuleCode, readonly NavItem[]>> = {
     { key: "people", targets: [{ section: "chats.contacts" }] },
   ],
   admin: [
+    // «Состояние» — первый экран: открывается по нажатию на модуль, остальные страницы — пять групп.
+    { key: "state", targets: [{ section: "admin.overview" }] },
     settingsItem("people", "people"),
     settingsItem("company", "company"),
+    settingsItem("rules", "rules"),
     settingsItem("channels", "channels"),
-    settingsItem("system", "system"),
+    settingsItem("journal", "journal", [], ["admin.bus"]),
   ],
 };
 

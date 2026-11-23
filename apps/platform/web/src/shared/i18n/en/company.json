@@ -294,6 +294,12 @@
         "hint": "How a contract is assembled and sent after the quote is accepted.",
         "note": "Rules apply to new contracts; assembled ones do not change.",
         "save": "Save rules"
+      },
+      "supplier": {
+        "title": "Supplier price freshness",
+        "hint": "How many days a partner price counts as confirmed and how many days ahead to warn about expiry.",
+        "note": "Applies to purchasing at once.",
+        "save": "Save terms"
       }
     },
     "contract_auto_send": "A contract from an approved template goes to the Cabinet by itself after the quote is accepted",
@@ -340,7 +346,8 @@
     "parts": {
       "documents": "Documents",
       "emails": "Emails",
-      "contracts": "Contracts"
+      "contracts": "Contracts",
+      "resolutions": "Resolutions"
     },
     "documents": {
       "name": "Name",
@@ -507,8 +514,8 @@
     "docShort": "document"
   },
   "platform": {
-    "title": "Platform settings",
-    "hint": "The support address and exchange rates to UZS for the whole platform.",
+    "title": "Exchange rates",
+    "hint": "Exchange rates to the home currency for the whole platform.",
     "currencyUzs": "UZS",
     "updated": "Settings updated",
     "save": "Save settings",
@@ -549,7 +556,8 @@
     },
     "support": "Support address",
     "supportHint": "Clients see it in letters. Empty — letters have no “Questions?” line.",
-    "invalidSupport": "Enter an email address"
+    "invalidSupport": "Enter an email address",
+    "supportTitle": "Support address"
   },
   "bank": {
     "title": "Bank accounts",

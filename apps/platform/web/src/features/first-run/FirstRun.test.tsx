@@ -662,11 +662,11 @@ describe("Баннер настройки и мастер", () => {
     expect(await screen.findByRole("region", { name: "Настройка Платформы" })).toBeVisible();
   });
 
-  it("чек-лист «Первый запуск» на индексе Настроек — пока шаги не завершены; пункта в меню нет (SET-IA)", async () => {
+  it("готовность на «Состоянии»: «Продолжить настройку», пока шаги не завершены, и остаётся после них; пункта «Первый запуск» в меню нет (ЕВ-2а)", async () => {
     signInAs("admin@demo.example");
     renderApp("/admin");
     const checklist = await screen.findByRole("region", {
-      name: /^Первый запуск: готово \d+ из \d+$/,
+      name: /^Готовность · \d+ из \d+$/,
     });
     const steps = within(checklist).getByRole("list", { name: "Шаги настройки" });
     expect(within(steps).getAllByRole("listitem").length).toBeGreaterThan(0);
@@ -691,11 +691,13 @@ describe("Баннер настройки и мастер", () => {
       }),
     );
     renderApp("/admin");
-    expect(await screen.findByRole("heading", { level: 2, name: "Сотрудники" })).toBeVisible();
+    // все шаги сделаны: кнопки мастера нет, но готовность не исчезает (отчёт §8.3: список пропадал после настройки)
+    const after = await screen.findByRole("region", { name: /^Готовность · \d+ из \d+$/ });
     await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, 150));
     });
-    expect(screen.queryByRole("region", { name: /^Первый запуск/ })).toBeNull();
+    expect(within(after).queryByRole("link", { name: "Продолжить настройку" })).toBeNull();
+    expect(within(after).getAllByRole("listitem").length).toBeGreaterThan(0);
   });
 
   it("ERP ещё не выдала доступ: мастер ждёт, сам перепроверяет и показывает форму компании без «Проверить снова»", async () => {

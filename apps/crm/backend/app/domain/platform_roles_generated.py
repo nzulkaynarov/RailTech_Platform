@@ -49,6 +49,7 @@ RESOURCE_KEYS: Final[tuple[str, ...]] = (
     "chats.internal",
     "chats.external",
     "admin",
+    "admin.system",
     "company.settings",
 )
 
@@ -122,6 +123,7 @@ RESOURCE_LEVELS: Final[dict[str, tuple[str, ...]]] = {
         "read",
         "full",
     ),
+    "admin.system": ("full",),
     "company.settings": (
         "read",
         "full",
@@ -257,6 +259,7 @@ CRM_BACKEND: Final[dict[str, dict[str, tuple[str, ...]]]] = {
             "company_articles:write",
         ),
     },
+    "admin.system": {},
     "company.settings": {
         "full": (
             "ticket_label:read",
@@ -344,6 +347,7 @@ ERP_BACKEND: Final[dict[str, dict[str, tuple[str, ...]]]] = {
     "admin": {
         "full": ("team.manage",),
     },
+    "admin.system": {},
     "company.settings": {
         "full": (
             "settings.edit",
@@ -421,6 +425,7 @@ EDS_BACKEND: Final[dict[str, dict[str, tuple[str, ...]]]] = {
     "admin": {
         "full": ("bus.manage",),
     },
+    "admin.system": {},
     "company.settings": {},
 }
 
@@ -484,6 +489,7 @@ ROLE_NAMES: Final[dict[str, dict[str, str]]] = {
 ROLE_ACCESS: Final[dict[str, dict[str, str]]] = {
     "ADMIN": {
         "admin": "full",
+        "admin.system": "full",
         "company.settings": "full",
         "dashboard.queue": "full",
         "chats.internal": "full",

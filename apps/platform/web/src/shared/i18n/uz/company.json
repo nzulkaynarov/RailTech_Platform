@@ -294,6 +294,12 @@
         "hint": "TT qabul qilingaç şartnoma qanday yiğiladi va ketadi.",
         "note": "Qoidalar yangi şartnomalar uçun amal qiladi; yiğilganlar özgarmaydi.",
         "save": "Qoidalarni saqlaş"
+      },
+      "supplier": {
+        "title": "Yetkazib beruvçi narxlarining dolzarbligi",
+        "hint": "Hamkor narxi neça kun tasdiqlangan hisoblanadi va tugaşidan neça kun oldin ogohlantiriş.",
+        "note": "Xaridga darhol qöllanadi.",
+        "save": "Muddatlarni saqlaş"
       }
     },
     "contract_auto_send": "Tasdiqlangan şablon böyiça şartnoma TT qabul qilingaç özi Kabinetga ketadi",
@@ -340,7 +346,8 @@
     "parts": {
       "documents": "Hujjatlar",
       "emails": "Xatlar",
-      "contracts": "Şartnomalar"
+      "contracts": "Şartnomalar",
+      "resolutions": "Rezolyutsiyalar"
     },
     "documents": {
       "name": "Nomi",
@@ -507,8 +514,8 @@
     "docShort": "hujjat"
   },
   "platform": {
-    "title": "Platforma sozlamalari",
-    "hint": "Butun platforma uçun yordam manzili va valyutalarning sömga kursi.",
+    "title": "Valyuta kurslari",
+    "hint": "Butun platforma uçun valyutalarning sömga kurslari.",
     "currencyUzs": "so'm",
     "updated": "Sozlamalar yangilangan",
     "save": "Sozlamalarni saqlaş",
@@ -549,7 +556,8 @@
     },
     "support": "Yordam manzili",
     "supportHint": "Mijozlar uni xatlarda köradi. Böş bölsa, xatlarda «Savollar bormi?» qatori yöq.",
-    "invalidSupport": "Pochta manzilini kiriting"
+    "invalidSupport": "Poçta manzilini kiriting",
+    "supportTitle": "Yordam manzili"
   },
   "bank": {
     "title": "Bank hisoblari",
