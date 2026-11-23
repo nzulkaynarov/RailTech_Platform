@@ -2,12 +2,12 @@ Subject: Invitation to $company Platform
 
 Hello, $full_name!
 
-An account has been created for you in $company Platform.
+An account has been created for you in $company Platform. Login: $email
 
-Sign in: $platform_url/login
-Login: $email
-Temporary password: $temporary_password
+To set your password and sign in, open this link:
 
-You will be asked to change the password on first sign-in. If you did not expect this email, do not reply and let your administrator know.
+$set_password_url
+
+The link is valid for 72 hours and works once. If it has expired, choose "Forgot password?" on the sign-in page and request a new one. If you did not expect this email, do not reply and let your administrator know.
 
 — $company Platform
