@@ -16,7 +16,7 @@ export function ContractTemplatesPage() {
   return (
     <div className="pf-co-body">
       <PageHeader title={t("contractTemplates.title")} />
-      <ContractTemplates />
+      <ContractTemplates titled={false} />
     </div>
   );
 }

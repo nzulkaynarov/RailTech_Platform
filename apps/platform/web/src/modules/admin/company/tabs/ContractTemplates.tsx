@@ -38,7 +38,7 @@ function refusal(t: (key: string, options?: { defaultValue: string }) => string,
  * «Новая редакция» (от утверждённого), «На утверждение» (черновик), «Утвердить» (держателю зоны «Право»). Закреплённый текст
  * в сделке не правится; в сделке предлагаются только утверждённые шаблоны вида контрагента.
  */
-export function ContractTemplates() {
+export function ContractTemplates({ titled = true }: { titled?: boolean }) {
   const { t } = useTranslation("company");
   const { message } = App.useApp();
   const queryClient = useQueryClient();
@@ -102,21 +102,24 @@ export function ContractTemplates() {
     return t("contractTemplates.draftLine", { edition: row.edition });
   };
 
-  const add = (
+  const add = mayPrepare ? (
     <Button
       type="primary"
-      disabled={!mayPrepare}
       onClick={() => {
         setCreating(true);
       }}
     >
       {t("contractTemplates.add")}
     </Button>
-  );
+  ) : null;
 
   return (
     <div className="pf-fp-stack">
-      <TabHeader title={t("contractTemplates.title")} hint={t("contractTemplates.hint")} />
+      {titled ? (
+        <TabHeader title={t("contractTemplates.title")} hint={t("contractTemplates.hint")} />
+      ) : (
+        <Typography.Paragraph type="secondary">{t("contractTemplates.hint")}</Typography.Paragraph>
+      )}
       <QueryGate query={query}>
         {({ items }) => (
           <>
