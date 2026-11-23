@@ -73,7 +73,7 @@ test.describe("Доработать возвращённый документ", 
 
     // автор: в «Моих задачах» — строка с тем, кто вернул и что написал
     await loginAndWait(page, "manager@demo.example");
-    const queue = page.getByRole("region", { name: "Что сделать сейчас" });
+    const queue = page.getByRole("region", { name: "Что ждёт вас" });
     await expect(queue.getByText(ROW)).toBeVisible();
     await expect(queue.getByText(`Вернул Демо Директоров: ${REMARK}`)).toBeVisible();
     // старая возвращённая служебка автора лежит тут же: у каждой своя строка
@@ -82,7 +82,7 @@ test.describe("Доработать возвращённый документ", 
     await shoot(page, "queue-rework");
 
     // «Открыть» ведёт в форму «Продолжить» — текст на месте, тип нельзя менять
-    await queue.getByRole("link", { name: `Открыть: ${ROW}` }).click();
+    await queue.getByRole("link", { name: `Доработать: ${ROW}` }).click();
     await expect(page).toHaveURL(/\/eds\/new\?draft=/);
     await expect(
       page.getByRole("heading", { level: 1, name: "Внутренний документ" }),
@@ -104,7 +104,7 @@ test.describe("Доработать возвращённый документ", 
 
     // строки «Доработать» по этому документу больше нет, вторая возвращённая служебка осталась
     await spaGoto(page, "/dashboard/queue");
-    const again = page.getByRole("region", { name: "Что сделать сейчас" });
+    const again = page.getByRole("region", { name: "Что ждёт вас" });
     await expect(again.getByText(/^Доработать: СЗ-2026\/028/)).toBeVisible();
     await expect(again.getByText(/^Доработать: СЗ-2026\/014/)).toHaveCount(0);
     await expect(page.getByRole("main").getByText(/^[^·]+ · 3 решения$/)).toBeVisible();
@@ -112,7 +112,7 @@ test.describe("Доработать возвращённый документ", 
 
   test("у директора нет чужих «Доработать»: возврат касается только автора", async ({ page }) => {
     await loginAndWait(page, "director@demo.example");
-    const queue = page.getByRole("region", { name: "Что сделать сейчас" });
+    const queue = page.getByRole("region", { name: "Что ждёт вас" });
     await expect(queue.getByText("Наложить резолюцию на письмо ВХ-104/26")).toBeVisible();
     await expect(queue.getByText(/^Доработать:/)).toHaveCount(0);
   });
@@ -125,7 +125,7 @@ test.describe("Доработать возвращённый документ: �
     async ({ page, isMobile }) => {
       test.skip(!isMobile, "узкий экран — проект mobile");
       await loginAndWait(page, "manager@demo.example");
-      const queue = page.getByRole("region", { name: "Что сделать сейчас" });
+      const queue = page.getByRole("region", { name: "Что ждёт вас" });
       const row = queue.getByText(/^Доработать: СЗ-2026\/028/);
       await expect(row).toBeVisible();
       const overflow = Number(
@@ -137,7 +137,7 @@ test.describe("Доработать возвращённый документ: �
       await settledScreenshot(page, "mobile-queue-rework");
       await expectNoViolations(page, "мобильная очередь");
 
-      await queue.getByRole("link", { name: /^Открыть: Доработать: СЗ-2026\/028/ }).click();
+      await queue.getByRole("link", { name: /^Доработать: Доработать: СЗ-2026\/028/ }).click();
       await expect(page.getByLabel("Тема")).toHaveValue("Командировка в Самарканд");
     },
   );

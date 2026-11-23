@@ -145,9 +145,11 @@ export function TopBar({
         display: "flex",
         alignItems: "center",
         gap: mobile ? 8 : 12,
-        height: 56,
+        height: "calc(56px + env(safe-area-inset-top, 0px))",
         lineHeight: "normal",
-        padding: mobile ? "0 12px" : "0 24px",
+        padding: mobile
+          ? "env(safe-area-inset-top, 0px) max(12px, env(safe-area-inset-right, 0px)) 0 max(12px, env(safe-area-inset-left, 0px))"
+          : "0 24px",
         borderBottom: `1px solid ${token.colorSplit}`,
         flex: "0 0 auto",
       }}

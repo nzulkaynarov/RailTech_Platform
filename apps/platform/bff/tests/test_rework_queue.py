@@ -92,7 +92,8 @@ async def test_author_sees_the_returned_document_as_a_rework_row(
     assert row["role_id"] == rid("MANAGER")
     assert row["title"] == "Доработать: СЗ-2026/028 · Командировка в Самарканд"
     assert row["subtitle"].startswith("Вернул Рустам Директоров: Добавьте смету расходов.")
-    assert row["due_label"] == "today"  # «нужно до» не задан — срочное, сегодня
+    # «нужно до» не задан — «сегодня» не выдумывается: позже, без срока
+    assert (row["due_label"], row["group"]) == ("later", "later")
     assert row["object"]["kind"] == "memo"
     assert row["object"]["number"] == "СЗ-2026/028"
     assert row["object"]["path"] == f"/eds/new?draft={DOC_ID}"  # форма «Продолжить» D1-5

@@ -319,9 +319,10 @@ async def test_erp_down_keeps_crm_part_and_marks_source(
     body = response.json()
     assert body["sources"] == {"crm": "ok", "erp": "unavailable", "eds": "ok"}
     # D26G-4: КП на одобрении — маршруты EDS: без ERP строки остаются (клиент и сумма — снимок EDS)
+    # ГЛ-1: у лида без срока «сегодня» не выдумывается — он идёт после КП со сроком
     assert [i["object"]["number"] for i in body["items"]] == [
-        "L-2060",
         "КП-2026/118",
+        "L-2060",
         "Коммерческое предложение, версия 3",
     ]
 

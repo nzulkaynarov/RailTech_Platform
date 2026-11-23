@@ -76,7 +76,7 @@ async function switchTo(page: Page, email: string): Promise<void> {
 
 function queueRow(page: Page, text: string) {
   return page
-    .getByRole("region", { name: "Что сделать сейчас" })
+    .getByRole("region", { name: "Что ждёт вас" })
     .getByRole("listitem")
     .filter({ hasText: text });
 }
@@ -156,7 +156,7 @@ test.describe("P8b: поручения по входящим", () => {
     const task = queueRow(page, "Исполнить поручение по письму IN-109/26");
     await expect(task).toBeVisible();
     await expect(task).toContainText(ru(due).slice(0, 5));
-    await task.getByRole("link", { name: /^Открыть:/ }).click();
+    await task.getByRole("link", { name: /^(?!Открыть документ)[А-ЯЁ][а-яё ]+: / }).click();
     await expect(
       page.getByRole("heading", { level: 1, name: "Поручение по письму IN-109/26" }),
     ).toBeVisible();
@@ -181,7 +181,7 @@ test.describe("P8b: поручения по входящим", () => {
     await switchTo(page, "director@demo.example");
     const extRow = queueRow(page, "Решить перенос срока по письму IN-109/26");
     await expect(extRow).toBeVisible();
-    await extRow.getByRole("link", { name: /^Открыть:/ }).click();
+    await extRow.getByRole("link", { name: /^(?!Открыть документ)[А-ЯЁ][а-яё ]+: / }).click();
     const decide = page.getByRole("region", { name: "Перенос срока: нужно ваше решение" });
     await expect(decide).toContainText("Демо Широков просит перенести срок");
     await expect(decide.getByRole("button", { name: "Одобрить перенос" })).toBeDisabled();
@@ -192,7 +192,7 @@ test.describe("P8b: поручения по входящим", () => {
     // 5. Исполнитель: «Исполнено» с отчётом.
     await switchTo(page, "universal@demo.example");
     await queueRow(page, "Исполнить поручение по письму IN-109/26")
-      .getByRole("link", { name: /^Открыть:/ })
+      .getByRole("link", { name: /^(?!Открыть документ)[А-ЯЁ][а-яё ]+: / })
       .click();
     await expect(page.getByText(/отклонено/).first()).toBeVisible();
     const done = page.getByRole("form", { name: "Отметить исполнение" });
@@ -229,7 +229,7 @@ test.describe("P8b: поручения по входящим", () => {
 
     await switchTo(page, "universal@demo.example");
     await queueRow(page, "Исполнить поручение по письму ВХ-108/26")
-      .getByRole("link", { name: /^Открыть:/ })
+      .getByRole("link", { name: /^(?!Открыть документ)[А-ЯЁ][а-яё ]+: / })
       .click();
     const ext = page.getByRole("form", { name: "Не успеваете? Запросите перенос" });
     await fillDate(ext.getByLabel("Новый срок"), companyDay(30));
@@ -239,7 +239,7 @@ test.describe("P8b: поручения по входящим", () => {
 
     await switchTo(page, "director@demo.example");
     await queueRow(page, "Решить перенос срока по письму ВХ-108/26")
-      .getByRole("link", { name: /^Открыть:/ })
+      .getByRole("link", { name: /^(?!Открыть документ)[А-ЯЁ][а-яё ]+: / })
       .click();
     const decide = page.getByRole("region", { name: "Перенос срока: нужно ваше решение" });
     const approve = decide.getByRole("button", { name: "Одобрить перенос" });
@@ -270,9 +270,9 @@ test.describe("P8b: поручения по входящим", () => {
     await switchTo(page, "accountant@demo.example");
     const row = queueRow(page, "Ознакомиться с письмом ВХ-108/26");
     await expect(row).toBeVisible();
-    await row.getByRole("link", { name: /^Открыть:/ }).click();
-    await page.getByRole("button", { name: "Ознакомиться" }).click();
-    await expect(page.getByText("Ознакомление отмечено")).toBeVisible();
-    await expect(page.getByText(/ознакомление: \d{2}\.\d{2}\.\d{4}/)).toBeVisible();
+    // «Ознакомлен» — простое действие, делается в самой строке; строка уходит, когда источник её погасил (ГЛ-1)
+    await row.getByRole("button", { name: /^Ознакомлен: / }).click();
+    await expect(page.getByText("Отмечено", { exact: true })).toBeVisible();
+    await expect(row).toHaveCount(0);
   });
 });

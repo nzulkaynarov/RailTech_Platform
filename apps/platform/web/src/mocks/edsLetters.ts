@@ -163,7 +163,7 @@ export function registeredQueueItems(view: readonly MockRole[]): QueueItem[] {
       kind: "resolve_letter",
       title: `Наложить резолюцию на письмо ${l.number}`,
       subtitle: [l.sender.name, l.subject].filter(Boolean).join(" · "),
-      due_label: l.urgent ? "today" : "later",
+      due_label: "later",
       object: {
         kind: "letter",
         number: l.number,

@@ -6,6 +6,7 @@ import { MoreHorizontal, X } from 'lucide-react';
 import { type NavItem, isWithin } from '@/app/nav';
 import { Sheet, SheetClose, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { useNavBadges } from '@/hooks/useActionRequired';
+import { useKeyboardInset } from '@/hooks/useKeyboardInset';
 import { useUnreadText } from '@/hooks/useUnread';
 import { cn } from '@/lib/utils';
 import { useNav } from '@/session/useNav';
@@ -29,6 +30,7 @@ export function BottomNav() {
   const unreadText = useUnreadText(unread);
   const tabNoteId = useId();
   const sheetNoteId = useId();
+  useKeyboardInset(); // on-screen keyboard open: the bar steps aside, sheets and the save bar sit above it
   // Счётчики действий (волна J1): КП, договоры, счета, акты, поставки, товары, заявки, чат
   const badgeOf = (item: NavItem) => badges[item.to] ?? 0;
   const moreBadge = secondary.reduce((sum, item) => sum + badgeOf(item), 0);
@@ -38,7 +40,7 @@ export function BottomNav() {
   return (
     <nav
       aria-label={t('app.mainNav')}
-      className="fixed inset-x-0 bottom-0 z-40 border-t bg-background pb-[env(safe-area-inset-bottom)] md:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 border-t bg-background pb-[env(safe-area-inset-bottom)] md:hidden [[data-kb=open]_&]:hidden"
     >
       {/* Вкладок столько, сколько разделов у сессии (+ «Ещё», если есть остальные): у клиента прежние пять */}
       <ul
@@ -93,7 +95,7 @@ export function BottomNav() {
                     <SheetDescription>{t('nav.moreDescription')}</SheetDescription>
                   </div>
                   <SheetClose
-                    className="rounded-md p-2 text-muted-foreground outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring"
+                    className="rounded-md p-2 pointer-coarse:p-3.5 text-muted-foreground outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring"
                     aria-label={t('common.close')}
                     title={t('common.close')}
                   >

@@ -228,7 +228,7 @@ describe('меню из /me.modules', () => {
     await screen.findByText('ЗВ-2026-061');
     expect(screen.queryByRole('link', { name: i18n.t('pages.requests.new') })).not.toBeInTheDocument();
     expect(screen.getByText(i18n.t('common.viewOnly'))).toBeInTheDocument();
-  });
+  }, 60_000); // 12 s alone (same on main), 30 s under CI load: first render of the whole app
 
   it('партнёр открывает клиентский раздел по адресу — возвращается в доступный', async () => {
     signedIn('actor', 'demo', PARTNER_DEFAULT);

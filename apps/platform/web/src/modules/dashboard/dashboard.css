@@ -4,3 +4,67 @@
   flex-direction: column;
   gap: 16px;
 }
+
+/* «Что ждёт вас» (ГЛ-1): чипы вида работы, группы срока, причина строки, «Вы ждёте других». */
+.pf-queue-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px 24px;
+  border-bottom: 1px solid var(--rt-color-surface-split);
+}
+.pf-queue-chip {
+  min-height: 32px;
+  padding: 4px 12px;
+  border: 1px solid var(--rt-color-surface-control);
+  border-radius: 16px;
+  background: var(--rt-color-surface-card);
+  color: var(--rt-color-text-default);
+  font: inherit;
+  cursor: pointer;
+}
+.pf-queue-chip span {
+  margin-left: 4px;
+  color: var(--rt-color-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+.pf-queue-chip[aria-pressed="true"] {
+  border-color: var(--rt-color-primary-default);
+  background: var(--rt-color-primary-bg);
+}
+.pf-queue-chip:focus-visible {
+  outline: 2px solid var(--rt-color-primary-default);
+  outline-offset: 2px;
+}
+.pf-queue-group-title {
+  margin: 0;
+  padding: 12px 24px 4px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.pf-queue-why {
+  color: var(--rt-color-text-default);
+  font-size: 13px;
+}
+.pf-queue-truncated,
+.pf-waiting-note {
+  margin: 0;
+  padding: 10px 24px;
+}
+@media (max-width: 560px) {
+  .pf-queue-chips {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding: 12px 16px;
+  }
+  .pf-queue-chip {
+    flex: 0 0 auto;
+  }
+  .pf-queue-group-title {
+    padding: 12px 16px 4px;
+  }
+  .pf-queue-truncated,
+  .pf-waiting-note {
+    padding: 10px 16px;
+  }
+}

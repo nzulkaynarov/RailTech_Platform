@@ -56,6 +56,9 @@ ANY_EMPLOYEE = {
     # План 1.9: соисполнителя привлекает ответственный — проверка внутри операции
     ("post", "/api/v1/letters/{letter_id}/co-executors"),
     ("post", "/api/v1/instructions/{instruction_id}/complete"),
+    # ГЛ-1: «Вы ждёте других» — свои переданные объекты, сужение (автор) внутри операции
+    ("get", "/api/v1/waiting"),
+    ("post", "/api/v1/waiting/{kind}/{object_id}/remind"),
     ("post", "/api/v1/instructions/{instruction_id}/extension"),
     ("post", "/api/v1/instructions/{instruction_id}/extension/decision"),
     # Исходы письма (решение владельца 2026-11-11): право решает EDS по роли в поручении и авторству резолюции

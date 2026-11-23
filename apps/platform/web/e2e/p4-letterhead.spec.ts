@@ -74,7 +74,7 @@ async function switchTo(page: Page, email: string): Promise<void> {
 
 function queueRow(page: Page, text: string) {
   return page
-    .getByRole("region", { name: "Что сделать сейчас" })
+    .getByRole("region", { name: "Что ждёт вас" })
     .getByRole("listitem")
     .filter({ hasText: text });
 }
@@ -190,7 +190,7 @@ test.describe("P4: письмо на бланке", () => {
     // 3. Исполнитель без права регистрировать: «Подготовить ответ» → письмо на бланке → PDF → «Передать на подпись».
     await switchTo(page, "universal@demo.example");
     await queueRow(page, "Подготовить ответ на письмо IN-109/26")
-      .getByRole("link", { name: /^Открыть:/ })
+      .getByRole("link", { name: /^(?!Открыть документ)[А-ЯЁ][а-яё ]+: / })
       .click();
     await page.getByRole("link", { name: "Ответить" }).click();
     await expect(page).toHaveURL(/\/eds\/new\?type=letter&reply_to=/);
@@ -291,7 +291,7 @@ test.describe("P4: письмо на бланке", () => {
 
     await switchTo(page, "director@demo.example");
     await queueRow(page, "Подписать исходящее: О сроках поставки")
-      .getByRole("link", { name: /^Открыть:/ })
+      .getByRole("link", { name: /^(?!Открыть документ)[А-ЯЁ][а-яё ]+: / })
       .click();
     const card = side(page);
     await card.getByRole("button", { name: "Подписать", exact: true }).click();

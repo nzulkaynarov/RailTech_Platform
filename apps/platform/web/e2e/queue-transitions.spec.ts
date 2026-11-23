@@ -46,35 +46,35 @@ test.describe("Задачи: «Открыть»", () => {
     page,
   }) => {
     await loginAndWait(page, "director@demo.example");
-    const queue = page.getByRole("region", { name: "Что сделать сейчас" });
+    const queue = page.getByRole("region", { name: "Что ждёт вас" });
     const letter = queue.getByRole("link", {
-      name: /Открыть: Наложить резолюцию на письмо ВХ-104/,
+      name: /Наложить резолюцию: Наложить резолюцию на письмо ВХ-104/,
     });
     await expect(letter).toHaveClass(/ant-btn-primary/);
     await expect(
-      queue.getByRole("link", { name: /Открыть: Одобрить КП-2026\/118/ }),
+      queue.getByRole("link", { name: /Одобрить: Одобрить КП-2026\/118/ }),
     ).not.toHaveClass(/ant-btn-primary/);
     await expect(
-      queue.getByRole("link", { name: /Открыть: Согласовать СЗ-2026\/031/ }),
+      queue.getByRole("link", { name: /Согласовать: Согласовать СЗ-2026\/031/ }),
     ).toBeVisible();
     await expect(queue.getByRole("button", { name: /^Где сделать/ })).toHaveCount(0);
     await settledScreenshot(page, "queue-director");
 
     const cases = [
       {
-        row: /Открыть: Наложить резолюцию на письмо ВХ-104/,
+        row: /Наложить резолюцию: Наложить резолюцию на письмо ВХ-104/,
         url: /\/eds\/inbox\/%D0%92%D0%A5-104%2F26$/,
         heading: "Письмо ВХ-104/26",
         form: "Резолюция",
       },
       {
-        row: /Открыть: Одобрить КП-2026\/118/,
+        row: /Одобрить: Одобрить КП-2026\/118/,
         url: /\/eds\/drafts\/%D0%9A%D0%9F-2026%2F118$/,
         heading: "КП-2026/118",
         form: "Одобрение КП",
       },
       {
-        row: /Открыть: Согласовать СЗ-2026\/031/,
+        row: /Согласовать: Согласовать СЗ-2026\/031/,
         url: /\/eds\/approvals\/%D0%A1%D0%97-2026%2F031$/,
         heading: "СЗ-2026/031",
         form: "Согласование документа",
@@ -83,7 +83,7 @@ test.describe("Задачи: «Открыть»", () => {
     for (const item of cases) {
       await spaGoto(page, "/dashboard/queue");
       await page
-        .getByRole("region", { name: "Что сделать сейчас" })
+        .getByRole("region", { name: "Что ждёт вас" })
         .getByRole("link", { name: item.row })
         .click();
       await expect(page).toHaveURL(item.url);
@@ -97,9 +97,8 @@ test.describe("Задачи: «Открыть»", () => {
     page,
   }) => {
     await loginAndWait(page, "manager@demo.example");
-    const queue = page.getByRole("region", { name: "Что сделать сейчас" });
-    const take = queue.getByRole("link", { name: "Открыть: Взять в работу лида L-2041" });
-    await expect(take).toHaveClass(/ant-btn-primary/);
+    const queue = page.getByRole("region", { name: "Что ждёт вас" });
+    const take = queue.getByRole("button", { name: "Взять: Взять в работу лида L-2041" });
     await expect(queue.getByRole("button", { name: /^Где сделать/ })).toHaveCount(0);
     await settledScreenshot(page, "queue-manager");
 
@@ -325,13 +324,13 @@ test.describe("Переходы на телефоне @mobile", () => {
     await loginAndWait(page, "director@demo.example");
     await settledScreenshot(page, "queue-director-mobile");
     for (const [row, key] of [
-      [/Открыть: Наложить резолюцию на письмо ВХ-104/, "letter"],
-      [/Открыть: Одобрить КП-2026\/118/, "quote"],
-      [/Открыть: Согласовать СЗ-2026\/031/, "memo"],
+      [/Наложить резолюцию: Наложить резолюцию на письмо ВХ-104/, "letter"],
+      [/Одобрить: Одобрить КП-2026\/118/, "quote"],
+      [/Согласовать: Согласовать СЗ-2026\/031/, "memo"],
     ] as const) {
       await spaGoto(page, "/dashboard/queue");
       await page
-        .getByRole("region", { name: "Что сделать сейчас" })
+        .getByRole("region", { name: "Что ждёт вас" })
         .getByRole("link", { name: row })
         .click();
       // на телефоне форма решения — в самой карточке, листа нет
@@ -368,8 +367,8 @@ test.describe("Переходы на телефоне @mobile", () => {
     await page.setViewportSize({ width: 390, height: 844 });
     await loginAndWait(page, "manager@demo.example");
     await page
-      .getByRole("region", { name: "Что сделать сейчас" })
-      .getByRole("link", { name: "Открыть: Взять в работу лида L-2041" })
+      .getByRole("region", { name: "Что ждёт вас" })
+      .getByRole("button", { name: "Взять: Взять в работу лида L-2041" })
       .click();
     await expect(page).toHaveURL(/\/crm\/leads\?scope=waiting&lead=L-2041$/);
     await expect(page.getByRole("heading", { level: 2, name: "Азиз Демо" })).toBeVisible();

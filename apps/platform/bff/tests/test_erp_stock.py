@@ -1312,7 +1312,7 @@ async def test_shortage_and_ship_rows_name_the_project_and_open_prefilled_screen
     number = quote("ПР-2026-007", safe="")
     assert short["title"] == "Заказать недостающее по ПР-2026-007"
     assert short["subtitle"] == "ООО Вымышленный Заказчик · Болт М22: 5 шт."
-    assert short["due_label"] == "today"
+    assert short["due_label"] == "later"  # ГЛ-1: срока нет — «сегодня» не выдумываем
     assert short["object"]["path"] == f"/erp/stock/new?mode=shortage&request={number}"
     assert ship["title"] == "Отгрузить товар по ПР-2026-007"
     assert ship["subtitle"] == "ООО Вымышленный Заказчик · в резерве 40 т"

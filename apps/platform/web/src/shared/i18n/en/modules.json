@@ -8,7 +8,7 @@
       "summary": "Summary"
     },
     "queue": {
-      "title": "What to do now",
+      "title": "Waiting for you",
       "cardsLabel": "Queue counters",
       "decisions": {
         "one": "{{count}} decision",
@@ -80,6 +80,85 @@
         "filterAll": "All",
         "filterFor": "For {{name}}",
         "filterLabel": "Whose tasks"
+      },
+      "overdueCount": "overdue: {{count}}",
+      "filterLabel": "Kind of work",
+      "filterAll": "All",
+      "groups": {
+        "overdue": "Overdue",
+        "today": "Today",
+        "later": "Later"
+      },
+      "categories": {
+        "sign": "Sign",
+        "approve": "Approve",
+        "resolution": "Resolution",
+        "instruction": "Instructions",
+        "payment": "Payment",
+        "lead": "Leads",
+        "mail": "Mail",
+        "supply": "Supply",
+        "project": "Projects",
+        "other": "Other"
+      },
+      "why": "Why it is yours:",
+      "actions": {
+        "sign_document": "Sign",
+        "visa": "Endorse",
+        "approve_quote": "Approve",
+        "approve_memo": "Approve",
+        "pay_memo": "Accept for payment",
+        "resolve_letter": "Add resolution",
+        "instruction": "Carry out",
+        "instruction_reply": "Prepare reply",
+        "instruction_extension": "Decide",
+        "acquaint": "Acknowledged",
+        "rework_document": "Revise",
+        "answer_lead": "Reply",
+        "take_lead": "Take",
+        "triage_lead": "Sort out",
+        "inbound_mail": "Sort out",
+        "inbound_mail_mine": "Follow up",
+        "ticket": "Reply",
+        "calc_task": "Calculate",
+        "confirm_payment": "Confirm",
+        "issue_invoice": "Issue",
+        "issue_contract": "Prepare",
+        "attach_scan": "Attach scan",
+        "issue_act": "Issue act",
+        "supplier_overdue": "Find out",
+        "send_supplier_order": "Send",
+        "partner_date_change": "Decide",
+        "receive_goods": "Receive",
+        "partner_application": "Review",
+        "order_shortage": "Order",
+        "ship_project": "Ship"
+      },
+      "openLabel": "{{action}}: {{title}}",
+      "truncated": "Not every task is shown: a source returned only part. The rest is in the sections.",
+      "quick": {
+        "acknowledged": "Noted",
+        "taken": "The lead is yours",
+        "failed": "Failed"
+      },
+      "waiting": {
+        "title": "You are waiting for others",
+        "loadError": "Could not load what you are waiting for",
+        "onSignature": "with {{name}} for signature",
+        "noSigner": "no signer",
+        "onApproval": "on approval: {{name}}",
+        "onInstruction": "instruction: {{name}}",
+        "until": "due {{date}}",
+        "age": {
+          "minutes": "{{count}} min",
+          "hours": "{{count}} h",
+          "days": "{{count}} d"
+        },
+        "remind": "Remind",
+        "remindLabel": "Remind: {{title}}",
+        "reminded": "Reminder sent",
+        "again": "Already reminded, try again later",
+        "failed": "Reminder not sent"
       }
     },
     "activity": {

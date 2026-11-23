@@ -75,6 +75,9 @@ _TEMPLATE = {
 APPROVER = "Согласующий"
 #: «Напомнить» подписанту — не чаще раза в этот срок (ГЛ-0)
 REMIND_INTERVAL = timedelta(hours=1)
+# One journal fact for "the signer of this letter was reminded": the letter card (GL-0) and the waiting list (GL-1)
+# both write and read it, so a reminder through either path blocks the other for an hour.
+SIGN_REMINDED = "document.sign_reminded"
 
 
 def required_permission(kind: DocumentKind) -> P:
@@ -690,7 +693,7 @@ async def remind_signer(
     session: AsyncSession, bus: AsyncBus, *, employee: Employee, document_id: uuid.UUID
 ) -> Document:
     """«Напомнить» (ГЛ-0): подписанту письма на подписи повторно уходит «Подпишите исходящее»; не чаще раза в час —
-    факт берётся из журнала (`document.sign_reminded`), отдельного поля нет."""
+    факт берётся из журнала (`SIGN_REMINDED`, общий с «Вы ждёте других»), отдельного поля нет."""
     document = await get_for_update(session, document_id)
     if not await access.can_view_document(session, employee, document.id):
         raise not_found("Документ не найден.")
@@ -699,7 +702,7 @@ async def remind_signer(
     last = (
         await session.execute(
             select(func.max(JournalEntry.at)).where(
-                JournalEntry.document_id == document.id, JournalEntry.action == "document.sign_reminded"
+                JournalEntry.document_id == document.id, JournalEntry.action == SIGN_REMINDED
             )
         )
     ).scalar_one()
@@ -709,7 +712,7 @@ async def remind_signer(
             "Напоминание уже отправлено. Повторить можно через час.",
             retry_at=(last + REMIND_INTERVAL).isoformat(),
         )
-    await journal.record(session, "document.sign_reminded", by=employee.crm_user_id, document_id=document.id)
+    await journal.record(session, SIGN_REMINDED, by=employee.crm_user_id, document_id=document.id)
     await document_notices.letter_handed_over(
         session, bus, document, today=clock.company_date(now), actor_id=employee.crm_user_id, again=True
     )

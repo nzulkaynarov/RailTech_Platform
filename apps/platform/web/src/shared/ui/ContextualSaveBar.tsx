@@ -3,6 +3,7 @@ import { useEffect, useRef, type CSSProperties } from "react";
 import { useTranslation } from "react-i18next";
 
 import { UnsavedGuard } from "./UnsavedGuard";
+import { useKeyboardInset } from "./useKeyboardInset";
 
 export interface ContextualSaveBarProps {
   /** Есть несохранённые изменения — бар виден только тогда (место под него зарезервировано всегда) */
@@ -79,6 +80,7 @@ export function ContextualSaveBar({
 }: ContextualSaveBarProps) {
   const { t } = useTranslation("ui");
   const { token } = theme.useToken();
+  useKeyboardInset();
   const rootRef = useRef<HTMLDivElement>(null);
   const barRef = useRef<HTMLDivElement>(null);
   // «Отменить» может сам увести с формы (новая роль закрывается): этот переход вопроса не вызывает.

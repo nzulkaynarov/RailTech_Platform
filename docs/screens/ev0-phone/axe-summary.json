@@ -1,0 +1,32 @@
+[
+  {
+    "screen": "cabinet-requests",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 39,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "cabinet-requests",
+    "width": 768,
+    "axe": true,
+    "rulesPassed": 40,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "approval-quote",
+    "width": 390,
+    "rulesPassed": 31,
+    "violations": [],
+    "axe": true
+  },
+  {
+    "screen": "approval-quote",
+    "width": 768,
+    "rulesPassed": 34,
+    "violations": [],
+    "axe": true
+  }
+]

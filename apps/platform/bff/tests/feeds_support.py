@@ -94,6 +94,8 @@ class FeedBackends:
                 "acquaintances": [],
                 "signatures": [],
             },
+            # ГЛ-1: «Вы ждёте других» (EDS `GET /waiting`)
+            "waiting": {"items": [], "more": False},
             # D2-8, работа ERP: мои задания на расчёт, доска счетов по вкладкам, проекты по шагам
             "calc_tasks": {"results": []},
             "receivables": {"proofs": [], "to_issue": []},
@@ -161,7 +163,15 @@ class FeedBackends:
             ).mock(side_effect=self._approval),
             "registry": self._eds("registry", router.get(f"{EDS_URL}/api/v1/registry")),
             "letter_tasks": self._eds("letter_tasks", router.get(f"{EDS_URL}/api/v1/letter-tasks")),
+            "waiting": self._eds("waiting", router.get(f"{EDS_URL}/api/v1/waiting")),
         }
+        # ГЛ-1: «Напомнить» — ответ EDS (статус, тело) подменяется тестом
+        self.remind_reply: tuple[int, Any] = (200, {"reminded_at": "2027-01-14T09:00:00Z"})
+        self.remind = router.post(
+            url__regex=re.compile(rf"^{EDS_URL}/api/v1/waiting/[a-z_]+/[0-9a-f-]+/remind$")
+        ).mock(
+            side_effect=lambda _r: httpx.Response(self.remind_reply[0], json=self.remind_reply[1])
+        )
         self.eds_exchange = router.post(f"{EDS_URL}/api/v1/auth/sso/exchange").mock(
             side_effect=self._eds_exchange
         )

@@ -49,9 +49,7 @@ describe("Статьи компании в Помощи (W18A-P5, B-079)", () =>
     expect(within(company).getByRole("link", { name: "Где лежат шаблоны писем" })).toBeVisible();
     expect(within(company).queryByText(/График отпусков/)).toBeNull();
     const product = screen.getByRole("region", { name: "Статьи Платформы" });
-    expect(
-      within(product).getByRole("link", { name: "Задачи — что сделать сейчас" }),
-    ).toBeVisible();
+    expect(within(product).getByRole("link", { name: "Задачи — что ждёт вас" })).toBeVisible();
   });
 
   it("статья компании открывается по адресу: текст, заголовки и списки отрисованы, помечена «Как у нас принято»", async () => {
