@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { ChevronRight, Copy, Eye, PanelLeft, PanelLeftClose, UserRound } from 'lucide-react';
 import { toast } from '@/lib/toast';
 
+import { MaintenanceBanner } from '@/components/MaintenanceBanner';
 import { TelegramBanner } from '@/components/TelegramBanner';
 import { Button } from '@/components/ui/button';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -152,6 +153,7 @@ export function AppShell() {
 
         <div className="flex min-w-0 flex-1 flex-col md:p-2.5">
           <div className="flex min-w-0 flex-1 flex-col rounded-none border-0 bg-background shadow-none md:rounded-lg md:border md:border-border md:shadow-xs">
+            <MaintenanceBanner />
             {mode === 'web' ? (
               <header
                 role="banner"

@@ -3,6 +3,7 @@
 #   /opt/rt/.env.prod            переменные прода (chmod 600), только на сервере
 #   /opt/rt/releases/<тег>/      infra/ и apps/crm/infra/casbin выбранной версии (кладёт deploy.yml)
 #   /opt/rt/state/               current_tag, previous_tag, predeploy/ (дампы перед миграциями)
+#   /opt/rt/maintenance/         maintenance.json - предупреждение о плановом обновлении (scripts/maintenance-notice.sh), Caddy читает
 #   /opt/rt/secrets/             секреты владельца вне .env.prod (gdrive-sa.json — ключ внешней копии), chmod 700
 # shellcheck shell=bash
 
@@ -12,6 +13,7 @@ RT_RELEASES="${RT_RELEASES:-$RT_ROOT/releases}"
 RT_STATE="${RT_STATE:-$RT_ROOT/state}"
 # Секреты, которые владелец кладёт на сервер сам (ключ сервисного аккаунта Google для offsite-backup, OPS-GDRIVE): chmod 700, владелец deploy.
 RT_SECRETS_DIR="${RT_SECRETS_DIR:-$RT_ROOT/secrets}"
+RT_MAINTENANCE_DIR="${RT_MAINTENANCE_DIR:-$RT_ROOT/maintenance}"
 
 log() { printf '▸ %s\n' "$*"; }
 die() { printf '✘ %s\n' "$*" >&2; exit 1; }
