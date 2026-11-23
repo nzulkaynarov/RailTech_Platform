@@ -2,7 +2,6 @@
 
 from datetime import date, datetime
 from typing import Any, Final
-from zoneinfo import ZoneInfo
 
 from sqlalchemy import (
     BigInteger,
@@ -24,8 +23,6 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, TimestampMixin
 
-# Срок «Не работать» считается по календарю бизнеса (как в ERP), а не по часовому поясу сервера
-BUSINESS_TZ: Final = ZoneInfo("Asia/Tashkent")
 DOC_TYPES: Final = "'contract','proposal','letter','invoice','act','other'"
 # Поиск по документам клиента: заголовок и номер весомее текста.
 DOC_TSV: Final = (
@@ -74,13 +71,15 @@ class Client(TimestampMixin, Base):
     # Заявку в ERP ещё предстоит завести: не теряется при повторе после сбоя.
     erp_handoff_request: Mapped[bool] = mapped_column(Boolean, server_default=sql("false"))
 
-    @property
-    def do_not_work(self) -> dict[str, Any] | None:
-        """Действующая отметка «Не работать» (Х-8): факты из ERP; нет или срок вышел — `None`."""
+    def do_not_work_on(self, today: date) -> dict[str, Any] | None:
+        """Действующая на дату `today` отметка «Не работать» (Х-8); нет или срок вышел — `None`.
+
+        Дату «сегодня» передаёт вызывающий по настройке `business_hours.timezone` (не зашита здесь).
+        """
         if self.do_not_work_at is None or not self.do_not_work_reason:
             return None
         until = self.do_not_work_until
-        if until is not None and until < datetime.now(BUSINESS_TZ).date():
+        if until is not None and until < today:
             return None
         return {
             "reason": self.do_not_work_reason,

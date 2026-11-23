@@ -9,6 +9,7 @@ ERP публикует `uz.railtech.erp.company.updated.v1`; CRM принима�
 
 import copy
 from collections.abc import AsyncIterator
+from datetime import date
 from typing import Any
 
 import pytest
@@ -23,6 +24,8 @@ from app.services.company_projection import COMPANY_UPDATED
 from tests.bus_events import example_data
 from tests.integration.bus_harness import ERP_COMPANY, Harness
 from tests.integration.crm_helpers import make_user
+
+TODAY = date(2026, 11, 23)
 
 pytestmark = pytest.mark.integration
 
@@ -158,8 +161,9 @@ async def test_the_do_not_work_mark_is_projected_as_facts_and_cleared_by_null(
     client_id, _ = await harness.seed_client()
     await apply(harness, snapshot(at="2026-11-18T10:00:00Z", do_not_work=mark()))
     client = await client_of(harness, client_id)
-    assert client.do_not_work is not None
-    assert (client.do_not_work["reason"], client.do_not_work["set_by"]) == (
+    active = client.do_not_work_on(TODAY)
+    assert active is not None
+    assert (active["reason"], active["set_by"]) == (
         "Спор по оплате",
         "Менеджер Демо",
     )
@@ -168,15 +172,15 @@ async def test_the_do_not_work_mark_is_projected_as_facts_and_cleared_by_null(
     without = snapshot(at="2026-11-18T11:00:00Z", name="Без отметки в снимке")
     del without["company"]["do_not_work"]
     await apply(harness, without)
-    assert (await client_of(harness, client_id)).do_not_work is not None
+    assert (await client_of(harness, client_id)).do_not_work_on(TODAY) is not None
 
     # более старый снимок не снимает и не ставит отметку
     await apply(harness, snapshot(at="2026-11-18T08:00:00Z", do_not_work=None))
-    assert (await client_of(harness, client_id)).do_not_work is not None
+    assert (await client_of(harness, client_id)).do_not_work_on(TODAY) is not None
 
     await apply(harness, snapshot(at="2026-11-18T12:00:00Z", do_not_work=None))
     cleared = await client_of(harness, client_id)
-    assert cleared.do_not_work is None
+    assert cleared.do_not_work_on(TODAY) is None
     assert cleared.do_not_work_reason is None
 
 
@@ -185,4 +189,7 @@ async def test_an_expired_mark_does_not_act(harness: Harness) -> None:
     await apply(harness, snapshot(do_not_work=mark(until="2020-01-01")))
     client = await client_of(harness, client_id)
     assert client.do_not_work_until is not None
-    assert client.do_not_work is None
+    assert client.do_not_work_on(TODAY) is None
+    # the same fact is active on the last day of the term and the day before it
+    assert client.do_not_work_on(date(2020, 1, 1)) is not None
+    assert client.do_not_work_on(date(2020, 1, 2)) is None
