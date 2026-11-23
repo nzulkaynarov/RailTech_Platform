@@ -17,4 +17,6 @@ export interface ClientRow {
   last_activity_at: string | null;
   /** @nullable */
   handoff_status: ClientRowHandoffStatus;
+  /** Х-8: у компании действует отметка «Не работать» (фильтр «Не работаем») */
+  do_not_work?: boolean;
 }

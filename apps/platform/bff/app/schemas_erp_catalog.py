@@ -666,6 +666,7 @@ class SupplierRow(Out):
     expired_count: int
     expiring_count: int
     nearest_valid_until: str | None
+    do_not_work: bool = False
 
 
 class SupplierDetail(SupplierRow):
@@ -698,6 +699,7 @@ def to_supplier(raw: Mapping[str, Any]) -> dict[str, Any]:
         "expired_count": int(raw.get("expired_count") or 0),
         "expiring_count": int(raw.get("expiring_count") or 0),
         "nearest_valid_until": raw.get("nearest_valid_until"),
+        "do_not_work": bool(raw.get("do_not_work")),
     }
 
 

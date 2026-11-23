@@ -139,6 +139,7 @@ import type {
   DictionaryList,
   DictionaryOrderIn,
   DictionarySyncResult,
+  DoNotWorkIn,
   DocflowSettings,
   DocflowSettingsPatch,
   DocumentPlaceholders,
@@ -58427,6 +58428,231 @@ export function useGetCounterpartyByClient<
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+export const getSetCounterpartyDoNotWorkUrl = (id: CompanyItemRef) => {
+  return `/api/v1/people/counterparties/${id}/do-not-work`;
+};
+
+/**
+ * ERP `POST parties/organizations/{id}/do-not-work/` (Х-8). Причина обязательна, дата окончания по желанию; повторная отметка заменяет прежнюю. Новые КП, договор, заказ поставщику и заявка у такой компании ERP отказывает 409 `CONFLICT` (`details.reason = company_do_not_work`, `details.do_not_work` — причина и кто отметил); приглашения её контактов в кабинет не уходят; документы в работе не отменяются. Отметка попадает в журнал и в CRM снимком компании. Раздел `crm.clients` или `erp.stock` — полный; в ERP — право `deal.manage` или `supply.manage`, иначе 403.
+ * @summary Карточка контрагента: «Не работать»
+ */
+export const setCounterpartyDoNotWork = async (
+  id: CompanyItemRef,
+  doNotWorkIn: DoNotWorkIn,
+  options?: Parameters<typeof http>[1],
+): Promise<CounterpartyCard> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<CounterpartyCard>(getSetCounterpartyDoNotWorkUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(doNotWorkIn),
+  });
+};
+
+export const getSetCounterpartyDoNotWorkMutationKey = () => ["setCounterpartyDoNotWork"] as const;
+
+export const getSetCounterpartyDoNotWorkMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof setCounterpartyDoNotWork>>,
+    TError,
+    SetCounterpartyDoNotWorkMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof setCounterpartyDoNotWork>>,
+  TError,
+  SetCounterpartyDoNotWorkMutationVariables,
+  TContext
+> => {
+  const mutationKey = getSetCounterpartyDoNotWorkMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof setCounterpartyDoNotWork>>,
+    SetCounterpartyDoNotWorkMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return setCounterpartyDoNotWork(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SetCounterpartyDoNotWorkMutationResult = NonNullable<
+  Awaited<ReturnType<typeof setCounterpartyDoNotWork>>
+>;
+export type SetCounterpartyDoNotWorkMutationBody = DoNotWorkIn;
+export type SetCounterpartyDoNotWorkMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type SetCounterpartyDoNotWorkMutationVariables = { id: CompanyItemRef; data: DoNotWorkIn };
+
+/**
+ * @summary Карточка контрагента: «Не работать»
+ */
+export const useSetCounterpartyDoNotWork = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof setCounterpartyDoNotWork>>,
+      TError,
+      SetCounterpartyDoNotWorkMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof setCounterpartyDoNotWork>>,
+  TError,
+  SetCounterpartyDoNotWorkMutationVariables,
+  TContext
+> => {
+  return useMutation(getSetCounterpartyDoNotWorkMutationOptions(options), queryClient);
+};
+
+export const getClearCounterpartyDoNotWorkUrl = (id: CompanyItemRef) => {
+  return `/api/v1/people/counterparties/${id}/do-not-work`;
+};
+
+/**
+ * ERP `DELETE parties/organizations/{id}/do-not-work/` (Х-8): снять отметку; повтор безопасен. Тот же доступ, что у «Не работать». Запись в журнале и снимок в CRM — как при установке.
+ * @summary Карточка контрагента: «Снова работать»
+ */
+export const clearCounterpartyDoNotWork = async (
+  id: CompanyItemRef,
+  options?: Parameters<typeof http>[1],
+): Promise<CounterpartyCard> => {
+  return http<CounterpartyCard>(getClearCounterpartyDoNotWorkUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getClearCounterpartyDoNotWorkMutationKey = () =>
+  ["clearCounterpartyDoNotWork"] as const;
+
+export const getClearCounterpartyDoNotWorkMutationOptions = <
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof clearCounterpartyDoNotWork>>,
+    TError,
+    ClearCounterpartyDoNotWorkMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof clearCounterpartyDoNotWork>>,
+  TError,
+  ClearCounterpartyDoNotWorkMutationVariables,
+  TContext
+> => {
+  const mutationKey = getClearCounterpartyDoNotWorkMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof clearCounterpartyDoNotWork>>,
+    ClearCounterpartyDoNotWorkMutationVariables
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return clearCounterpartyDoNotWork(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ClearCounterpartyDoNotWorkMutationResult = NonNullable<
+  Awaited<ReturnType<typeof clearCounterpartyDoNotWork>>
+>;
+
+export type ClearCounterpartyDoNotWorkMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+export type ClearCounterpartyDoNotWorkMutationVariables = { id: CompanyItemRef };
+
+/**
+ * @summary Карточка контрагента: «Снова работать»
+ */
+export const useClearCounterpartyDoNotWork = <
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof clearCounterpartyDoNotWork>>,
+      TError,
+      ClearCounterpartyDoNotWorkMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof clearCounterpartyDoNotWork>>,
+  TError,
+  ClearCounterpartyDoNotWorkMutationVariables,
+  TContext
+> => {
+  return useMutation(getClearCounterpartyDoNotWorkMutationOptions(options), queryClient);
+};
 
 export const getSetCounterpartyRoleUrl = (id: CompanyItemRef) => {
   return `/api/v1/people/counterparties/${id}/roles`;

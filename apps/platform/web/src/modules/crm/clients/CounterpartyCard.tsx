@@ -14,11 +14,19 @@ import type {
 import {
   getGetCounterpartyByClientQueryKey,
   getGetCounterpartyQueryKey,
+  getListCatalogSuppliersQueryKey,
+  getListCrmClientsQueryKey,
   useGetCounterparty,
   useGetCounterpartyByClient,
+  useClearCounterpartyDoNotWork,
+  useSetCounterpartyDoNotWork,
   useSetCounterpartyRole,
   useUpdateCounterpartyRequisites,
 } from "../../../shared/api/generated/platform-bff";
+import { companyToday } from "../../../shared/lib/dates";
+import { DateField } from "../../../shared/ui/DateField";
+import { Dialog } from "../../../shared/ui/Dialog";
+import { DoNotWorkStrip } from "../../../shared/ui/DoNotWorkStrip";
 import { PersonCell } from "../../../shared/ui/EntityCell";
 import { ErrorNote, FormField } from "../../../shared/ui/FormParts";
 import { FormSheet } from "../../../shared/ui/FormSheet";
@@ -91,6 +99,7 @@ function Loaded({
   // СУЩ-2.7: реквизиты ведёт ERP — правит менеджер клиентов или снабжение (в ERP — право роли)
   const requisitesEditable = canEdit(me, "crm.clients") || editable;
   const [editing, setEditing] = useState(false);
+  const [marking, setMarking] = useState(false);
   const hasClient = seesClients && clientId !== null;
   const hasSupplier = seesStock && (card.roles.supplier || card.roles.manufacturer);
   const first: Part =
@@ -107,7 +116,23 @@ function Loaded({
       queryClient.setQueryData(getGetCounterpartyByClientQueryKey(String(clientId)), next);
     }
   };
+  // Х-8: отметка видна в списке («Не работаем») — списки клиентов и партнёров перечитываются
+  const refreshLists = () => {
+    void queryClient.invalidateQueries({ queryKey: getListCrmClientsQueryKey() });
+    void queryClient.invalidateQueries({ queryKey: getListCatalogSuppliersQueryKey() });
+  };
   const setRole = useSetCounterpartyRole({ mutation: { onSuccess: store } });
+  const { message } = App.useApp();
+  // Х-8: «Снова работать» — обратимое действие, без вопроса; «Не работать» просит причину
+  const clearMark = useClearCounterpartyDoNotWork({
+    mutation: {
+      onSuccess: (next) => {
+        store(next);
+        refreshLists();
+        void message.success(t("counterparty.doNotWork.cleared"));
+      },
+    },
+  });
   const conflict = setRole.error instanceof ApiError && setRole.error.status === 409;
 
   const items = [
@@ -147,6 +172,31 @@ function Loaded({
               {t("counterparty.requisites.edit")}
             </Button>
           ) : null}
+          {requisitesEditable ? (
+            card.do_not_work ? (
+              <Button
+                key="do-not-work-clear"
+                size="small"
+                loading={clearMark.isPending}
+                onClick={() => {
+                  clearMark.mutate({ id: card.id });
+                }}
+              >
+                {t("counterparty.doNotWork.clear")}
+              </Button>
+            ) : (
+              <Button
+                key="do-not-work-set"
+                size="small"
+                danger
+                onClick={() => {
+                  setMarking(true);
+                }}
+              >
+                {t("counterparty.doNotWork.set")}
+              </Button>
+            )
+          ) : null}
         </div>
         <span className="pf-hint">
           {[card.inn ? `${t("card.inn")} ${card.inn}` : null, card.legal_address]
@@ -154,6 +204,23 @@ function Loaded({
             .join(" · ") || t("card.noInn")}
         </span>
       </div>
+      <DoNotWorkStrip mark={card.do_not_work} />
+      {clearMark.isError ? (
+        <Alert type="warning" showIcon role="alert" message={t("counterparty.doNotWork.failed")} />
+      ) : null}
+      {marking ? (
+        <DoNotWorkDialog
+          card={card}
+          onSaved={(next) => {
+            store(next);
+            refreshLists();
+            setMarking(false);
+          }}
+          onCancel={() => {
+            setMarking(false);
+          }}
+        />
+      ) : null}
       {editing ? (
         <RequisitesSheet
           card={card}
@@ -418,5 +485,84 @@ function RequisitesSheet({
         />
       </FormField>
     </FormSheet>
+  );
+}
+
+/** «Не работать» (Х-8): причина обязательна, дата окончания — по желанию; окно по центру — две строки формы. */
+function DoNotWorkDialog({
+  card,
+  onSaved,
+  onCancel,
+}: {
+  card: Card;
+  onSaved: (next: Card) => void;
+  onCancel: () => void;
+}) {
+  const { t } = useTranslation("clients");
+  const { message } = App.useApp();
+  const [reason, setReason] = useState("");
+  const [until, setUntil] = useState("");
+  const save = useSetCounterpartyDoNotWork({
+    mutation: {
+      onSuccess: (next) => {
+        void message.success(t("counterparty.doNotWork.marked"));
+        onSaved(next);
+      },
+    },
+  });
+  const status = save.error instanceof ApiError ? save.error.status : null;
+  const error = save.error
+    ? t(
+        status === 403
+          ? "counterparty.doNotWork.forbidden"
+          : status === 422
+            ? "counterparty.doNotWork.untilPast"
+            : "counterparty.doNotWork.failed",
+      )
+    : null;
+  return (
+    <Dialog
+      title={t("counterparty.doNotWork.title")}
+      okLabel={t("counterparty.doNotWork.submit")}
+      okDisabled={reason.trim() === ""}
+      loading={save.isPending}
+      danger
+      onOk={() => {
+        save.mutate({
+          id: card.id,
+          data: { reason: reason.trim(), until: until || null },
+        });
+      }}
+      onCancel={onCancel}
+    >
+      <div className="pf-fp-stack">
+        <FormField
+          id="cp-dnw-reason"
+          label={t("counterparty.doNotWork.reason")}
+          hint={t("counterparty.doNotWork.reasonHint")}
+        >
+          <Input.TextArea
+            id="cp-dnw-reason"
+            value={reason}
+            maxLength={1000}
+            autoSize={{ minRows: 3, maxRows: 6 }}
+            aria-describedby="cp-dnw-reason-hint"
+            onChange={(event) => {
+              setReason(event.target.value);
+            }}
+          />
+        </FormField>
+        <FormField id="cp-dnw-until" label={t("counterparty.doNotWork.until")}>
+          <DateField
+            id="cp-dnw-until"
+            value={until}
+            min={companyToday()}
+            onChange={setUntil}
+            allowClear
+          />
+        </FormField>
+        <ErrorNote message={error} />
+      </div>
+    </Dialog>
   );
 }

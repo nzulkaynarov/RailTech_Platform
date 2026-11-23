@@ -14829,6 +14829,68 @@ paths:
           $ref: '#/components/responses/NotFound'
         '503':
           $ref: '#/components/responses/BackendUnavailable'
+  /people/counterparties/{id}/do-not-work:
+    post:
+      tags: [chats]
+      operationId: setCounterpartyDoNotWork
+      summary: 'Карточка контрагента: «Не работать»'
+      description: >-
+        ERP `POST parties/organizations/{id}/do-not-work/` (Х-8). Причина обязательна, дата окончания по желанию; повторная
+        отметка заменяет прежнюю. Новые КП, договор, заказ поставщику и заявка у такой компании ERP отказывает 409 `CONFLICT`
+        (`details.reason = company_do_not_work`, `details.do_not_work` — причина и кто отметил); приглашения её контактов в
+        кабинет не уходят; документы в работе не отменяются. Отметка попадает в журнал и в CRM снимком компании. Раздел
+        `crm.clients` или `erp.stock` — полный; в ERP — право `deal.manage` или `supply.manage`, иначе 403.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - {name: id, in: path, required: true, schema: {$ref: '#/components/schemas/CompanyItemRef'}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DoNotWorkIn'
+      responses:
+        '200':
+          description: Карточка с отметкой
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CounterpartyCard'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+    delete:
+      tags: [chats]
+      operationId: clearCounterpartyDoNotWork
+      summary: 'Карточка контрагента: «Снова работать»'
+      description: >-
+        ERP `DELETE parties/organizations/{id}/do-not-work/` (Х-8): снять отметку; повтор безопасен. Тот же доступ, что у
+        «Не работать». Запись в журнале и снимок в CRM — как при установке.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - {name: id, in: path, required: true, schema: {$ref: '#/components/schemas/CompanyItemRef'}}
+      responses:
+        '200':
+          description: Карточка без отметки
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CounterpartyCard'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
   /people/counterparties/{id}/roles:
     post:
       tags: [chats]
@@ -20873,6 +20935,11 @@ components:
           items:
             $ref: '#/components/schemas/ProjectJournalEntry'
           type: array
+        do_not_work:
+          description: 'Х-8: у компании проекта отметка «Не работать» (причина, кто, когда) — полоса «С компанией не работаем» в карточке; документы в работе не отменяются. null — работаем'
+          oneOf:
+            - $ref: '#/components/schemas/DoNotWork'
+            - type: 'null'
       required: [number, request_number, title, client_name, step, client_status, total, due_date, manager, responsible, documents, problems, created_at, quote, contract, can_create_contract, invoices, act, act_blocker, fulfillment, delivery_lines, journal]
       additionalProperties: false
     ProjectContractActionIn:
@@ -28353,6 +28420,11 @@ components:
         id: {type: integer}
         name: {type: string}
         inn: {type: [string, 'null']}
+        do_not_work:
+          oneOf:
+            - $ref: '#/components/schemas/DoNotWork'
+            - type: 'null'
+          description: 'Х-8: отметка «Не работать» клиента лида — полоса в карточке лида'
 
     ClientRow:
       type: object
@@ -28366,6 +28438,7 @@ components:
         open_requests: {type: integer, minimum: 0}
         last_activity_at: {type: [string, 'null'], format: date-time}
         handoff_status: {type: [string, 'null'], enum: [pending, done, failed, null]}
+        do_not_work: {type: boolean, description: 'Х-8: у компании действует отметка «Не работать» (фильтр «Не работаем»)'}
 
     ClientList:
       type: object
@@ -28486,6 +28559,11 @@ components:
             contacts: {$ref: '#/components/schemas/SourceState'}
             requests: {$ref: '#/components/schemas/SourceState'}
             documents: {$ref: '#/components/schemas/SourceState'}
+        do_not_work:
+          oneOf:
+            - $ref: '#/components/schemas/DoNotWork'
+            - type: 'null'
+          description: 'Х-8: отметка «Не работать» компании (из ERP снимком `company.updated`) — полоса «С компанией не работаем»; нет — работаем'
 
     ClientPartnerRequest:
       type: object
@@ -29092,6 +29170,7 @@ components:
         expired_count: {type: integer, minimum: 0, description: Действующих предложений с истёкшим сроком цены}
         expiring_count: {type: integer, minimum: 0, description: Срок цены истекает в ближайшие 14 дней}
         nearest_valid_until: {type: [string, 'null'], format: date}
+        do_not_work: {type: boolean, description: 'Х-8: с поставщиком не работаем — действует отметка «Не работать»'}
     EdsAddressee:
       type: object
       additionalProperties: false
@@ -29271,6 +29350,28 @@ components:
           type: array
           items: {$ref: '#/components/schemas/CounterpartyRef'}
           description: 'Бренды, которые выпускает компания'
+        do_not_work:
+          oneOf:
+            - $ref: '#/components/schemas/DoNotWork'
+            - type: 'null'
+          description: 'Х-8: отметка «Не работать» — причина, кто и когда поставил, срок; нет — работаем'
+    DoNotWork:
+      type: object
+      additionalProperties: false
+      description: Отметка «Не работать» у контрагента (Х-8) — факты, а не флаг
+      required: [reason, set_by, set_at, until]
+      properties:
+        reason: {type: string, description: Причина — текст для коллег}
+        set_by: {type: [string, 'null'], description: 'Кто поставил отметку (имя сотрудника)'}
+        set_at: {type: string, format: date-time}
+        until: {type: [string, 'null'], format: date, description: 'До какого дня действует; null — без срока'}
+    DoNotWorkIn:
+      type: object
+      additionalProperties: false
+      required: [reason]
+      properties:
+        reason: {type: string, minLength: 1, maxLength: 1000, description: Причина — обязательный текст}
+        until: {type: [string, 'null'], format: date, description: 'Необязательная дата окончания; не раньше сегодняшнего дня'}
     CounterpartyRequisitesIn:
       type: object
       additionalProperties: false
@@ -29322,6 +29423,7 @@ components:
         expired_count: {type: integer, minimum: 0, description: Действующих предложений с истёкшим сроком цены}
         expiring_count: {type: integer, minimum: 0, description: Срок цены истекает в ближайшие 14 дней}
         nearest_valid_until: {type: [string, 'null'], format: date}
+        do_not_work: {type: boolean, description: 'Х-8: с поставщиком не работаем — действует отметка «Не работать»'}
         contact_person: {type: string}
         phone: {type: string}
         email: {type: string}
