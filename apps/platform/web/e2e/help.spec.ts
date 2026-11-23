@@ -59,7 +59,7 @@ test.describe("Помощь", () => {
     const button = page.getByRole("button", { name: "Помощь (клавиша ?)" });
     await button.click();
     const help = page.getByRole("dialog", { name: "Помощь" });
-    await expect(help.getByRole("heading", { name: "Задачи — что сделать сейчас" })).toBeVisible();
+    await expect(help.getByRole("heading", { name: "Задачи — что ждёт вас" })).toBeVisible();
     await expect(help.getByRole("link", { name: "Все статьи" })).toBeVisible();
     await expect(help.getByRole("button", { name: "Написать администратору" })).toBeVisible();
 
