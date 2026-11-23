@@ -4,7 +4,7 @@
  */
 
 /**
- * `active` — ссылка открывается; `revoked` — отозвана на документе; `expired` — срок вышел; `none` — ссылки нет
+ * `active` — ссылка открывается; `revoked` — отозвана на документе; `expired` — срок вышел; `superseded` — есть более новая отправленная версия КП; `none` — ссылки нет
  */
 export type QuoteClientLinkState = (typeof QuoteClientLinkState)[keyof typeof QuoteClientLinkState];
 
@@ -13,4 +13,5 @@ export const QuoteClientLinkState = {
   active: "active",
   revoked: "revoked",
   expired: "expired",
+  superseded: "superseded",
 } as const;

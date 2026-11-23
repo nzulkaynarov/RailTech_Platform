@@ -9930,7 +9930,13 @@ export const getGetQuoteApprovalResponseQuoteClientLinkMock = (
   overrideResponse: Partial<QuoteClientLink> = {},
 ): QuoteClientLink => ({
   ...{
-    state: faker.helpers.arrayElement(["none", "active", "revoked", "expired"] as const),
+    state: faker.helpers.arrayElement([
+      "none",
+      "active",
+      "revoked",
+      "expired",
+      "superseded",
+    ] as const),
     recipient_hint: faker.helpers.arrayElement([
       faker.string.alpha({ length: { min: 10, max: 20 } }),
       null,
@@ -10303,7 +10309,13 @@ export const getDecideQuoteApprovalResponseQuoteClientLinkMock = (
   overrideResponse: Partial<QuoteClientLink> = {},
 ): QuoteClientLink => ({
   ...{
-    state: faker.helpers.arrayElement(["none", "active", "revoked", "expired"] as const),
+    state: faker.helpers.arrayElement([
+      "none",
+      "active",
+      "revoked",
+      "expired",
+      "superseded",
+    ] as const),
     recipient_hint: faker.helpers.arrayElement([
       faker.string.alpha({ length: { min: 10, max: 20 } }),
       null,
@@ -10682,7 +10694,13 @@ export const getSendQuoteByChannelResponseQuoteClientLinkMock = (
   overrideResponse: Partial<QuoteClientLink> = {},
 ): QuoteClientLink => ({
   ...{
-    state: faker.helpers.arrayElement(["none", "active", "revoked", "expired"] as const),
+    state: faker.helpers.arrayElement([
+      "none",
+      "active",
+      "revoked",
+      "expired",
+      "superseded",
+    ] as const),
     recipient_hint: faker.helpers.arrayElement([
       faker.string.alpha({ length: { min: 10, max: 20 } }),
       null,
@@ -11058,7 +11076,13 @@ export const getRevokeQuoteClientLinkResponseQuoteClientLinkMock = (
   overrideResponse: Partial<QuoteClientLink> = {},
 ): QuoteClientLink => ({
   ...{
-    state: faker.helpers.arrayElement(["none", "active", "revoked", "expired"] as const),
+    state: faker.helpers.arrayElement([
+      "none",
+      "active",
+      "revoked",
+      "expired",
+      "superseded",
+    ] as const),
     recipient_hint: faker.helpers.arrayElement([
       faker.string.alpha({ length: { min: 10, max: 20 } }),
       null,
@@ -11440,7 +11464,13 @@ export const getRecordQuoteClientDecisionResponseQuoteClientLinkMock = (
   overrideResponse: Partial<QuoteClientLink> = {},
 ): QuoteClientLink => ({
   ...{
-    state: faker.helpers.arrayElement(["none", "active", "revoked", "expired"] as const),
+    state: faker.helpers.arrayElement([
+      "none",
+      "active",
+      "revoked",
+      "expired",
+      "superseded",
+    ] as const),
     recipient_hint: faker.helpers.arrayElement([
       faker.string.alpha({ length: { min: 10, max: 20 } }),
       null,

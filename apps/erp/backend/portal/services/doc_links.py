@@ -429,24 +429,43 @@ def revoke_quote_links(quote, actor) -> int:
 # ── Что видит отправитель ────────────────────────────────────────────────────────────────────────────────────────
 
 
-def client_link_summary(quote) -> Optional[dict]:
-    """Ссылка клиента для карточки КП в Платформе: `none`/`active`/`revoked`/`expired`, адрес и открытия.
+def _old_page_expiry(quote) -> Optional[datetime]:
+    """Когда гаснет старая страница ERP: срок токена, иначе конец последнего дня `valid_until`; `None` — без срока."""
+    if quote.public_token_expires_at:
+        return quote.public_token_expires_at
+    if quote.valid_until:
+        return timezone.make_aware(datetime.combine(quote.valid_until, time.max))
+    return None
 
-    `None` — КП клиенту ещё не уходило. Старая ссылка страницы ERP (разослана до перехода) считается живой, пока её не
-    отозвали: она ведёт в Кабинет через переход.
+
+def client_link_summary(quote) -> Optional[dict]:
+    """Ссылка клиента для карточки КП в Платформе: `none`/`active`/`revoked`/`expired`/`superseded`, адрес и открытия.
+
+    Состояние выводится из тех же фактов, по которым ссылка открывается у клиента (`link_gone_reason`,
+    `public_quote_gate`), а не из наличия записей. `None` — КП клиенту ещё не уходило. Старая ссылка страницы ERP
+    (разослана до перехода, записей ссылок нет) живёт, пока её пропускает старый затвор: он же решает, куда ведёт
+    переход — в живой документ или в причину.
     """
     if quote.frozen_at is None:
         return None
-    now = timezone.now()
     links = list(quote.document_links.all())
-    live = [link for link in links if link.revoked_at is None and link.expires_at >= now]
-    old_page_alive = bool(quote.public_access_token) and not quote.public_token_revoked
-    if live or (old_page_alive and not links):
+    superseded = projections_link.newer_sent_version(quote) is not None
+    live = [link for link in links if link_gone_reason(link) is None]
+    expires_at = max((link.expires_at for link in live), default=None)
+    if live:
         state = "active"
-    elif links and all(link.revoked_at is not None for link in links) or quote.public_token_revoked:
-        state = "revoked"
     elif links:
-        state = "expired"
+        reasons = {link_gone_reason(link) for link in links}
+        state = "superseded" if "superseded" in reasons else "expired" if "expired" in reasons else "revoked"
+    elif quote.public_access_token:
+        from crm.services.quotes import public_quote_gate
+
+        gate = public_quote_gate(quote)
+        if gate is None:
+            state = "superseded" if superseded else "active"
+            expires_at = _old_page_expiry(quote)
+        else:
+            state = "revoked" if gate == "QUOTE_LINK_REVOKED" else "expired"
     else:
         state = "none"
     opened = [link.first_opened_at for link in links if link.first_opened_at]
@@ -460,7 +479,7 @@ def client_link_summary(quote) -> Optional[dict]:
     return {
         "state": state,
         "recipient_hint": mask_email(recipient) if recipient else None,
-        "expires_at": max((link.expires_at for link in live), default=None),
+        "expires_at": expires_at,
         "first_opened_at": min(opened, default=quote.first_viewed_at),
         "last_opened_at": max(last, default=quote.first_viewed_at),
     }

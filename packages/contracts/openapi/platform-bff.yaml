@@ -21123,8 +21123,8 @@ components:
       properties:
         state:
           type: string
-          enum: [none, active, revoked, expired]
-          description: '`active` — ссылка открывается; `revoked` — отозвана на документе; `expired` — срок вышел; `none` — ссылки нет'
+          enum: [none, active, revoked, expired, superseded]
+          description: '`active` — ссылка открывается; `revoked` — отозвана на документе; `expired` — срок вышел; `superseded` — есть более новая отправленная версия КП; `none` — ссылки нет'
         recipient_hint: {type: [string, 'null'], description: 'Адрес получателя, замаскированный (`a***@example.uz`)'}
         expires_at: {type: [string, 'null'], format: date-time, description: Когда гаснет самая поздняя живая ссылка}
         first_opened_at: {type: [string, 'null'], format: date-time}

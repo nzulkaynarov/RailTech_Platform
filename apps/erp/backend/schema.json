@@ -56761,10 +56761,11 @@
                     "none",
                     "active",
                     "revoked",
-                    "expired"
+                    "expired",
+                    "superseded"
                 ],
                 "type": "string",
-                "description": "* `none` - none\n* `active` - active\n* `revoked` - revoked\n* `expired` - expired"
+                "description": "* `none` - none\n* `active` - active\n* `revoked` - revoked\n* `expired` - expired\n* `superseded` - superseded"
             },
             "QuoteDeliverRequestChannelEnum": {
                 "enum": [

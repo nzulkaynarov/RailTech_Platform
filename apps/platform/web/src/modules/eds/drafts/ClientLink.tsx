@@ -44,10 +44,13 @@ export function ClientLinkCard({ quote }: { quote: QuoteApprovalCard }) {
     });
   };
 
+  // «Ссылки нет» — только у state=none; живая ссылка без срока (КП без срока действия) — просто «действует».
   const state =
-    link.state === "active" && link.expires_at
-      ? t("card.clientLink.state.active", { date: date(link.expires_at, "date") })
-      : t(`card.clientLink.state.${link.state === "active" ? "none" : link.state}`);
+    link.state !== "active"
+      ? t(`card.clientLink.state.${link.state}`)
+      : link.expires_at
+        ? t("card.clientLink.state.active", { date: date(link.expires_at, "date") })
+        : t("card.clientLink.state.activeNoDate");
   return (
     <Card size="small" title={<h2 className="pf-dec-title">{t("card.clientLink.title")}</h2>}>
       <p className="pf-dec-note">{state}</p>

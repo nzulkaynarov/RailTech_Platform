@@ -525,6 +525,50 @@ class TestRevoke:
         assert doc_links.client_link_summary(quote)["state"] == "revoked"
 
 
+class TestSummaryFromFacts:
+    """Состояние ссылки на карточке КП выводится из тех же фактов, что решают, откроется ли она у клиента."""
+
+    def test_a_live_pre_transition_quote_is_active_with_the_expiry_date(self, quote):
+        summary = doc_links.client_link_summary(quote)
+        assert summary["state"] == "active"
+        assert timezone.localtime(summary["expires_at"]).date() == quote.valid_until
+
+    def test_a_pre_transition_quote_past_valid_until_is_expired_and_has_no_revoke(self, quote):
+        Quote.objects.filter(pk=quote.pk).update(valid_until=timezone.localdate() - datetime.timedelta(days=1))
+        quote.refresh_from_db()
+        summary = doc_links.client_link_summary(quote)
+        assert summary["state"] == "expired" and summary["expires_at"] is None
+
+    def test_a_pre_transition_quote_with_a_lapsed_token_ttl_is_expired(self, quote):
+        Quote.objects.filter(pk=quote.pk).update(public_token_expires_at=timezone.now() - datetime.timedelta(hours=1))
+        quote.refresh_from_db()
+        assert doc_links.client_link_summary(quote)["state"] == "expired"
+
+    def test_a_pre_transition_quote_without_a_deadline_is_active_without_a_date(self, quote):
+        Quote.objects.filter(pk=quote.pk).update(valid_until=None)
+        quote.refresh_from_db()
+        summary = doc_links.client_link_summary(quote)
+        assert summary["state"] == "active" and summary["expires_at"] is None
+
+    def test_a_revoked_old_page_is_revoked(self, quote):
+        Quote.objects.filter(pk=quote.pk).update(public_token_revoked=True)
+        quote.refresh_from_db()
+        assert doc_links.client_link_summary(quote)["state"] == "revoked"
+
+    def test_a_link_of_a_superseded_version_is_not_active(self, quote, minted):
+        Quote.objects.create(deal=quote.deal, version=2, status=quote.status, frozen_at=timezone.now())
+        assert doc_links.client_link_summary(quote)["state"] == "superseded"
+
+    def test_an_old_page_of_a_superseded_version_is_not_active(self, quote):
+        Quote.objects.create(deal=quote.deal, version=2, status=quote.status, frozen_at=timezone.now())
+        assert doc_links.client_link_summary(quote)["state"] == "superseded"
+
+    def test_an_expired_link_row_is_expired(self, quote, minted):
+        link, _ = minted
+        DocumentLink.objects.filter(pk=link.pk).update(expires_at=timezone.now() - datetime.timedelta(minutes=1))
+        assert doc_links.client_link_summary(quote)["state"] == "expired"
+
+
 # ── старые ссылки страницы ERP ────────────────────────────────────────────────────────────────────────────────────
 
 
@@ -564,6 +608,14 @@ class TestLegacyRedirect:
 
         response = APIClient().get(self.OLD.format(quote.public_access_token) + "?export=pdf", SERVER_NAME="localhost")
         assert response.status_code == 200
+
+    def test_old_link_of_a_superseded_quote_redirects_and_the_cabinet_names_the_reason(self, quote):
+        Quote.objects.create(deal=quote.deal, version=2, status=quote.status, frozen_at=timezone.now())
+        response = self.get(quote)
+        assert response.status_code == 302
+        raw = response["Location"].rsplit("/", 1)[1]
+        opened = open_(raw)
+        assert opened.status_code == status.HTTP_410_GONE and opened.json() == {"detail": "DOC_LINK_SUPERSEDED"}
 
     def test_switch_returns_the_erp_page(self, quote, settings):
         settings.PUBLIC_QUOTE_REDIRECT_TO_CABINET = False

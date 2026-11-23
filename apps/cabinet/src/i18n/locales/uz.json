@@ -1401,7 +1401,7 @@
     "DOC_LINK_EXPIRED": "Havola muddati tugagan — yuboruvçidan yangisini sörang.",
     "DOC_LINK_SUPERSEDED": "Yangi versiya bor — oxirgi xatdagi havolani oçing.",
     "CODE_RESEND_TOO_SOON": "Yangi kodni 45 soniyadan keyin söraş mumkin.",
-    "GENERATING": "Fayl hali tayyorlanmoqda — bir necha soniyadan keyin qayta urining."
+    "GENERATING": "Fayl hali tayyorlanmoqda — bir neça soniyadan keyin qayta urining."
   },
   "widgets": {
     "actionRequired": {
@@ -1854,7 +1854,7 @@
       "from": "Kimdan",
       "to": "Kimga",
       "total": "Summa",
-      "validUntil": "Amal qilish muddati"
+      "validUntil": "Amal qiliş muddati"
     },
     "withVat": "{{amount}} QQS bilan",
     "lines": {
@@ -1863,18 +1863,18 @@
       "subtotal": "QQSsiz jami",
       "total": "QQS bilan jami",
       "payment": "Tölov: {{terms}}",
-      "delivery": "Yetkazib berish — {{days}} kungaça",
-      "note": "Yetkazib berish şartlari: {{note}}",
+      "delivery": "Yetkazib beriş — {{days}} kungaça",
+      "note": "Yetkazib beriş şartlari: {{note}}",
       "price": "{{quantity}} × {{price}}"
     },
-    "download": "PDF yuklab olish",
-    "downloadNamed": "PDF yuklab olish: {{number}} taklifi",
+    "download": "PDF yuklab oliş",
+    "downloadNamed": "PDF yuklab oliş: {{number}} taklifi",
     "preparing": "Fayl tayyorlanmoqda…",
-    "stillPreparing": "Fayl hali tayyorlanmoqda — bir necha soniyadan keyin qayta urining.",
+    "stillPreparing": "Fayl hali tayyorlanmoqda — bir neça soniyadan keyin qayta urining.",
     "actions": {
-      "accept": "Taklifni qabul qilish",
-      "reject": "Izoh bilan qaytarish",
-      "question": "Savol berish",
+      "accept": "Taklifni qabul qiliş",
+      "reject": "Izoh bilan qaytariş",
+      "question": "Savol beriş",
       "open": "Kabinetni oçiş"
     },
     "codeNote": "Har qanday amal {{email}} manziliga keladigan koddan keyin bajariladi. Bu havola orqali boşqa hujjat va bölimlar oçilmaydi.",
@@ -1883,7 +1883,7 @@
     "state": {
       "accepted": "Taklif qabul qilindi. Şartnoma Kabinetingizda paydo böladi.",
       "rejected": "Taklif izoh bilan qaytarildi.",
-      "expired": "Taklifning amal qilish muddati tugadi. Sotuvçidan uni yangilaşni sörang."
+      "expired": "Taklifning amal qiliş muddati tugadi. Sotuvçidan uni yangilaşni sörang."
     },
     "reason": {
       "no_right": "Kontaktingizda qaror qabul qilişga huquq yöq — kompaniyangiz administratoriga murojaat qiling.",
@@ -1902,8 +1902,8 @@
       "sending": "Kod yuborilmoqda…",
       "label": "Xatdagi kod",
       "spam": "Kelmadimi? «Spam» jildini tekşiring.",
-      "resend": "Qayta yuborish",
-      "resendIn": "{{time}} dan keyin qayta yuborish",
+      "resend": "Qayta yuboriş",
+      "resendIn": "{{time}} dan keyin qayta yuboriş",
       "remarks": "Nimani tuzatiş kerak?",
       "question": "Savolingiz",
       "codeShort": "Kodning oltita raqamini kiriting.",
@@ -1925,7 +1925,7 @@
       },
       "expired": {
         "title": "Havola muddati tugagan",
-        "text": "Bu havolaning amal qilish muddati tugadi. Yuboruvçidan yangisini sörang."
+        "text": "Bu havolaning amal qiliş muddati tugadi. Yuboruvçidan yangisini sörang."
       },
       "superseded": {
         "title": "Taklifning yangi versiyasi bor",

@@ -36550,12 +36550,14 @@ components:
       - active
       - revoked
       - expired
+      - superseded
       type: string
       description: |-
         * `none` - none
         * `active` - active
         * `revoked` - revoked
         * `expired` - expired
+        * `superseded` - superseded
     QuoteDeliverRequestChannelEnum:
       enum:
       - telegram

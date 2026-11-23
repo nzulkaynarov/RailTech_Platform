@@ -209,7 +209,7 @@ class QuoteClientDecision(BaseModel):
 class QuoteClientLink(BaseModel):
     """Ссылка клиента на КП в Кабинете (ДК-1): состояние, кому ушла, открывал ли."""
 
-    state: Literal["none", "active", "revoked", "expired"]
+    state: Literal["none", "active", "revoked", "expired", "superseded"]
     recipient_hint: str | None
     expires_at: dt.datetime | None
     first_opened_at: dt.datetime | None

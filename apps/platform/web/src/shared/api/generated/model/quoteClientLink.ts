@@ -8,7 +8,7 @@ import type { QuoteClientLinkState } from "./quoteClientLinkState";
  * Ссылка клиента на КП в Кабинете (ДК-1): состояние, кому ушла (адрес замаскирован) и открывал ли
  */
 export interface QuoteClientLink {
-  /** `active` — ссылка открывается; `revoked` — отозвана на документе; `expired` — срок вышел; `none` — ссылки нет */
+  /** `active` — ссылка открывается; `revoked` — отозвана на документе; `expired` — срок вышел; `superseded` — есть более новая отправленная версия КП; `none` — ссылки нет */
   state: QuoteClientLinkState;
   /**
    * Адрес получателя, замаскированный (`a***@example.uz`)

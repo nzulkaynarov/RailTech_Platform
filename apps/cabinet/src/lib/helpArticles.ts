@@ -61,12 +61,12 @@ export const HELP_ARTICLES: HelpArticle[] = [
     routePatterns: ['/quotes'],
     title: {
       ru: 'Предложение пришло ссылкой в письме: что с ней можно сделать?',
-      uz: 'Taklif xatda havola bilan keldi: u bilan nima qilish mumkin?',
+      uz: 'Taklif xatda havola bilan keldi: u bilan nima qiliş mumkin?',
       en: 'The quote came as a link in an e-mail: what can I do with it?',
     },
     summary: {
       ru: 'Ссылка открывает один документ; любое действие — после кода на вашу почту, и этот же код открывает ваш Кабинет.',
-      uz: 'Havola bitta hujjatni ochadi; har qanday amal — pochtangizga kelgan koddan keyin, shu kod Kabinetingizni ham ochadi.',
+      uz: 'Havola bitta hujjatni oçadi; har qanday amal — poçtangizga kelgan koddan keyin, şu kod Kabinetingizni ham oçadi.',
       en: 'The link opens one document; any action needs the code sent to your e-mail, and the same code opens your Cabinet.',
     },
     content: {
@@ -78,11 +78,11 @@ export const HELP_ARTICLES: HelpArticle[] = [
         'Ссылку может отозвать отправитель, а срок её действия ограничен: тогда страница покажет только причину. Запросите новую у отправителя.',
       ],
       uz: [
-        'Xatdagi havola faqat shu taklifni ochadi: tarkibi, summa, muddat va «PDF yuklab olish». Boşqa hujjat va bölimlar körinmaydi.',
+        'Xatdagi havola faqat şu taklifni oçadi: tarkibi, summa, muddat va «PDF yuklab oliş». Boşqa hujjat va bölimlar körinmaydi.',
         'Taklifni qabul qilişi, izoh bilan qaytariş yoki savol berişi uçun kerakli tugmani bosing — xat kelgan manzilga oltita raqamli kod keladi. U 10 daqiqa amal qiladi; yangi kodni 45 soniyadan keyin söraş mumkin. Oynada manzil özgarmaydi.',
         'Kod — bu kiriş ham: undan keyin şartnoma, hisoblar va dalolatnomalar bilan Kabinetingiz oçiladi, boşlangan amal özi bajariladi. Birinçi kirişda foydalaniş şartlari va şaxsga doir maʼlumotlarga işlov beriş siyosatini qabul qilişingiz kerak.',
         'Kabinetga allaqaçon kirgan bölsangiz, kod kerak emas. Kontaktingizda qaror qabul qilişga huquq bölmasa, qaror tugmalari faol bölmaydi — kompaniya administratoriga murojaat qiling.',
-        'Havolani yuboruvçi bekor qilişi mumkin, uning amal qilish muddati ham çegaralangan: bunda sahifa faqat sababni körsatadi. Yuboruvçidan yangisini sörang.',
+        'Havolani yuboruvçi bekor qilişi mumkin, uning amal qiliş muddati ham çegaralangan: bunda sahifa faqat sababni körsatadi. Yuboruvçidan yangisini sörang.',
       ],
       en: [
         'The link in the e-mail opens only this quote: contents, total, deadline and «Download PDF». No other documents or sections are visible through it.',

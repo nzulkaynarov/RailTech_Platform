@@ -69,6 +69,40 @@ describe("Ссылка клиента на КП", () => {
     expect(within(card).queryByRole("button")).toBeNull();
   });
 
+  it("живая ссылка без срока не говорит «Ссылки нет»", async () => {
+    writeQuotes(
+      readQuotes().map((q) =>
+        q.number === "КП-2026/113" && q.client_link
+          ? { ...q, client_link: { ...q.client_link, state: "active", expires_at: null } }
+          : q,
+      ),
+    );
+    signIn("manager@demo.example");
+    renderAt(APPROVED);
+
+    const card = await linkCard();
+
+    expect(within(card).getByText("Ссылка действует.")).toBeVisible();
+    expect(within(card).queryByText("Ссылки нет.")).toBeNull();
+  });
+
+  it("ссылка заменённой версии называет причину и не предлагает отзыв", async () => {
+    writeQuotes(
+      readQuotes().map((q) =>
+        q.number === "КП-2026/113" && q.client_link
+          ? { ...q, client_link: { ...q.client_link, state: "superseded", can_revoke: false } }
+          : q,
+      ),
+    );
+    signIn("manager@demo.example");
+    renderAt(APPROVED);
+
+    const card = await linkCard();
+
+    expect(within(card).getByText(/Есть более новая версия КП/)).toBeVisible();
+    expect(within(card).queryByRole("button")).toBeNull();
+  });
+
   it("у КП, которое клиенту ещё не уходило, карточки ссылки нет", async () => {
     signIn("director@demo.example");
     renderAt(`/eds/drafts/${encodeURIComponent("КП-2026/117")}`);

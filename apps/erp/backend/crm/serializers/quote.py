@@ -22,7 +22,7 @@ from .quote_client_decision import QuoteClientDecisionMetaSerializer, client_dec
 class QuoteClientLinkSerializer(serializers.Serializer):
     """Ссылка клиента на КП в Кабинете (ДК-1): что отправитель видит на документе и что может отозвать."""
 
-    state = serializers.ChoiceField(choices=["none", "active", "revoked", "expired"])
+    state = serializers.ChoiceField(choices=["none", "active", "revoked", "expired", "superseded"])
     recipient_hint = serializers.CharField(allow_null=True, help_text="Адрес получателя, замаскированный")
     expires_at = serializers.DateTimeField(allow_null=True, help_text="Когда гаснет самая поздняя живая ссылка")
     first_opened_at = serializers.DateTimeField(allow_null=True)

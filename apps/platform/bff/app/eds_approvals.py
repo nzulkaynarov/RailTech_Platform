@@ -609,7 +609,7 @@ def _client_decision(
 def _client_link(erp_quote: dict[str, Any] | None, may_revoke: bool) -> QuoteClientLink | None:
     """Ссылка клиента на КП (ДК-1): факты ERP; «Отозвать» — пока действует и есть право."""
     link = erp_quote.get("client_link") if erp_quote else None
-    states = ("none", "active", "revoked", "expired")
+    states = ("none", "active", "revoked", "expired", "superseded")
     if not isinstance(link, dict) or link.get("state") not in states:
         return None
     return QuoteClientLink(

@@ -347,10 +347,10 @@ msgstr "Sizning menejeringiz — %(manager_name)s"
 # ── emails/document_link_code (ДК-2) ───────────────────────────────────────────────
 #, python-format
 msgid "Код подтверждения: %(document_number)s"
-msgstr "Tasdiqlash kodi: %(document_number)s"
+msgstr "Tasdiqlaş kodi: %(document_number)s"
 
 msgid "Код подтверждения"
-msgstr "Tasdiqlash kodi"
+msgstr "Tasdiqlaş kodi"
 
 msgid "Подтвердите, что это вы"
 msgstr "Bu siz ekaningizni tasdiqlang"
@@ -365,11 +365,11 @@ msgstr "Siz %(seller_name)s yuborgan %(document_number)s hujjati bilan amal baja
 
 #, python-format
 msgid "Код действует <strong>%(expires_minutes)s минут</strong> и срабатывает один раз. Введите его на странице документа."
-msgstr "Kod <strong>%(expires_minutes)s daqiqa</strong> amal qiladi va bir marta ishlaydi. Uni hujjat sahifasiga kiriting."
+msgstr "Kod <strong>%(expires_minutes)s daqiqa</strong> amal qiladi va bir marta işlaydi. Uni hujjat sahifasiga kiriting."
 
 #, python-format
 msgid "Код действует %(expires_minutes)s минут и срабатывает один раз. Введите его на странице документа."
-msgstr "Kod %(expires_minutes)s daqiqa amal qiladi va bir marta ishlaydi. Uni hujjat sahifasiga kiriting."
+msgstr "Kod %(expires_minutes)s daqiqa amal qiladi va bir marta işlaydi. Uni hujjat sahifasiga kiriting."
 
 msgid "Ваш код:"
 msgstr "Sizning kodingiz:"
