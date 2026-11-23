@@ -7,6 +7,7 @@ ERP не подписывает документ сам. Из рабочего �
 from __future__ import annotations
 
 import hashlib
+import json
 import logging
 from decimal import Decimal
 from typing import Any, Literal, Optional
@@ -50,7 +51,26 @@ def _currency(kind: str, doc: Any) -> str:
 
 
 def fingerprint(kind: str, doc: Any) -> str:
-    """Отпечаток редакции: любое изменение документа после запроса меняет `updated_at`."""
+    """Отпечаток редакции: любое изменение документа после запроса меняет `updated_at`.
+
+    У договора — по содержанию, не по `updated_at` (Х-1, ADR-0025): отправка клиенту, отклонение и «Доработать» меняют
+    статус, но не редакцию; иначе визы и подпись, собранные до отправки, пропадали бы от самого маршрута.
+    """
+    if kind == "contract":
+        body = json.dumps(
+            [
+                doc.frozen_template_body,
+                doc.wording_selections,
+                str(doc.valid_from or ""),
+                str(doc.valid_until or ""),
+                doc.notes,
+            ],
+            sort_keys=True,
+            default=str,
+        )
+        content = hashlib.sha256(body.encode()).hexdigest()
+        raw = f"{kind}|{doc.pk}|{doc.number}|{_amount(doc)}|{_currency(kind, doc)}|{content}"
+        return hashlib.sha256(raw.encode()).hexdigest()
     raw = f"{kind}|{doc.pk}|{doc.number}|{_amount(doc)}|{_currency(kind, doc)}|{doc.updated_at.isoformat()}"
     return hashlib.sha256(raw.encode()).hexdigest()
 

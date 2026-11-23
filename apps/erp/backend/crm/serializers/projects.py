@@ -51,6 +51,15 @@ class ContractRefSerializer(serializers.Serializer):
     number = serializers.CharField()
     status = serializers.ChoiceField(choices=CONTRACT_WORDS)
     sent_to_client = serializers.BooleanField(help_text="Проект ушёл клиенту на согласование и виден ему в портале")
+    send_blocker_code = serializers.ChoiceField(
+        choices=["visas_not_requested", "visas_declined", "visas_pending", "visas_returned", "no_visa_holder"],
+        allow_null=True,
+        required=False,
+        help_text=(
+            "Х-1: пока проект не ушёл клиенту — код причины, по которой его нельзя отправить (визы маршрута подписи); "
+            "`null` — ничего не мешает. Слова и роли — `send_blocker` карточки"
+        ),
+    )
 
 
 class InvoiceRefSerializer(serializers.Serializer):
@@ -150,6 +159,11 @@ class ContractSendBlockerSerializer(serializers.Serializer):
     message = serializers.CharField(help_text="Причина словами для сотрудника («Нужны визы: бухгалтер, юрист»)")
     missing = serializers.ListField(
         child=serializers.CharField(), help_text="Роли, чьих виз не хватает, словами в нижнем регистре"
+    )
+    missing_permissions = serializers.ListField(
+        child=serializers.CharField(),
+        required=False,
+        help_text="Те же визы кодами прав маршрута (`approvals.visa_finance`): Платформа переводит их на язык сотрудника",
     )
     remark = serializers.CharField(
         allow_blank=True, help_text="Замечание визирующего или причина отказа EDS, как написаны; пусто — нет"

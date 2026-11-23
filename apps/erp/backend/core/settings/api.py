@@ -166,6 +166,14 @@ SPECTACULAR_SETTINGS = {
         # письмо партнёру по заказу (0.10, FR-12) — одно перечисление под прежним именем (переименование ломало бы схему).
         "InviteDeliveryEnum": ["queued", "sent", "failed"],
         "ReviewKindEnum": ["card", "changes"],
+        # Х-1: причина, по которой проект договора не уходит клиенту (визы), в строке проекта и в карточке — одно имя.
+        "ContractSendBlockerCodeEnum": [
+            "visas_not_requested",
+            "visas_declined",
+            "visas_pending",
+            "visas_returned",
+            "no_visa_holder",
+        ],
         # Те же наборы значений в служебных сериализаторах (приглашение контакта, офлайн-клиент, сопряжение с CRM) —
         # одно имя, иначе drf-spectacular придумывает хешированные (D2-0, выгрузка без предупреждений).
         "ContactPreferredChannelEnum": ["email", "telegram", "both"],

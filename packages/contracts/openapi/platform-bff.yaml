@@ -19311,6 +19311,12 @@ components:
         sent_to_client:
           description: 'Проект ушёл клиенту на согласование редакции и виден ему в кабинете'
           type: boolean
+        send_blocker_code:
+          description: 'Х-1: пока проект не ушёл клиенту — код причины, по которой его нельзя отправить (визы не собраны); null — ничего не мешает. Считает ERP'
+          oneOf:
+            - enum: [visas_not_requested, visas_declined, visas_pending, visas_returned, no_visa_holder]
+              type: string
+            - type: 'null'
       required: [id, number, status, sent_to_client]
       additionalProperties: false
     ProjectInvoiceRef:
@@ -19496,6 +19502,11 @@ components:
           items:
             type: string
           type: array
+        missing_permissions:
+          description: 'Те же визы кодами прав маршрута (approvals.visa_finance): Платформа переводит их на язык сотрудника'
+          items:
+            type: string
+          type: array
         remark:
           description: 'Замечание визирующего или причина отказа EDS, как написаны; пусто — нет'
           type: string
@@ -19516,6 +19527,12 @@ components:
           type: string
         sent_to_client:
           type: boolean
+        send_blocker_code:
+          description: 'Х-1: пока проект не ушёл клиенту — код причины, по которой его нельзя отправить (визы не собраны); null — ничего не мешает. Считает ERP'
+          oneOf:
+            - enum: [visas_not_requested, visas_declined, visas_pending, visas_returned, no_visa_holder]
+              type: string
+            - type: 'null'
         total:
           oneOf:
             - $ref: '#/components/schemas/ProjectMoney'

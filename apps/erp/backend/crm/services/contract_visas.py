@@ -29,20 +29,34 @@ def _roles(visas: list, *statuses: str) -> list[str]:
     return [str(v.get("role") or v.get("label") or "").lower() for v in visas if v.get("status") in statuses]
 
 
-def _blocker(code: str, message: str, missing=None, *, remark: str = "", settings_link: bool = False) -> dict:
+def _permissions(visas: list, *statuses: str) -> list[str]:
+    return [str(v["permission"]) for v in visas if v.get("status") in statuses and v.get("permission")]
+
+
+def _blocker(
+    code: str,
+    message: str,
+    missing=None,
+    *,
+    remark: str = "",
+    settings_link: bool = False,
+    permissions=None,
+) -> dict:
     return {
         "code": code,
         "message": message,
         "missing": list(missing or []),
+        "missing_permissions": list(permissions or []),
         "remark": remark,
         "settings_link": settings_link,
     }
 
 
 def send_blocker(contract) -> Optional[dict]:
-    """`None` — визы собраны, договор можно отправлять; иначе `{code, message, missing, remark, settings_link}`.
+    """`None` — визы собраны, договор можно отправлять; иначе `{code, message, missing, missing_permissions, remark, settings_link}`.
 
-    `missing` — роли не поставивших визу словами в нижнем регистре («бухгалтер», «юрист»); `remark` — слова человека или
+    `missing` — роли не поставивших визу словами в нижнем регистре («бухгалтер», «юрист»), `missing_permissions` — те же
+    визы кодами прав маршрута (`approvals.visa_finance`): по ним Платформа переводит слова на язык сотрудника; `remark` — слова человека или
     EDS (замечание визирующего, причина отказа), как написаны; `settings_link` — в компании
     нет держателя нужного права, назначить его можно в настройках (без тупика).
     """
@@ -81,16 +95,23 @@ def send_blocker(contract) -> Optional[dict]:
             f"Нет сотрудника для визы: {roles}. Назначьте роль в настройках и отправьте договор «На подпись» снова.",
             no_holder,
             settings_link=True,
+            permissions=_permissions(visas, "no_holder"),
         )
     returned = _roles(visas, "returned")
     if returned:
         remark = f" {request.comment}" if request.comment else ""
         return _blocker(
-            RETURNED, f"Визы возвращены: {', '.join(returned)}.{remark}".strip(), returned, remark=request.comment
+            RETURNED,
+            f"Визы возвращены: {', '.join(returned)}.{remark}".strip(),
+            returned,
+            remark=request.comment,
+            permissions=_permissions(visas, "returned"),
         )
     missing = _roles(visas, "pending")
     if missing:
-        return _blocker(PENDING, f"Нужны визы: {', '.join(missing)}", missing)
+        return _blocker(
+            PENDING, f"Нужны визы: {', '.join(missing)}", missing, permissions=_permissions(visas, "pending")
+        )
     return None
 
 

@@ -23258,20 +23258,6 @@ components:
         * `fulfilling` - fulfilling
         * `awaiting_acceptance` - awaiting_acceptance
         * `done` - done
-    CodeEnum:
-      enum:
-      - visas_not_requested
-      - visas_declined
-      - visas_pending
-      - visas_returned
-      - no_visa_holder
-      type: string
-      description: |-
-        * `visas_not_requested` - visas_not_requested
-        * `visas_declined` - visas_declined
-        * `visas_pending` - visas_pending
-        * `visas_returned` - visas_returned
-        * `no_visa_holder` - no_visa_holder
     Company:
       type: object
       properties:
@@ -24503,6 +24489,19 @@ components:
         sent_to_client:
           type: boolean
           description: Проект ушёл клиенту на согласование и виден ему в портале
+        send_blocker_code:
+          nullable: true
+          description: |-
+            Х-1: пока проект не ушёл клиенту — код причины, по которой его нельзя отправить (визы маршрута подписи); `null` — ничего не мешает. Слова и роли — `send_blocker` карточки
+
+            * `visas_not_requested` - visas_not_requested
+            * `visas_declined` - visas_declined
+            * `visas_pending` - visas_pending
+            * `visas_returned` - visas_returned
+            * `no_visa_holder` - no_visa_holder
+          oneOf:
+          - $ref: '#/components/schemas/ContractSendBlockerCodeEnum'
+          - $ref: '#/components/schemas/NullEnum'
         total:
           allOf:
           - $ref: '#/components/schemas/ProjectMoney'
@@ -24730,6 +24729,19 @@ components:
         sent_to_client:
           type: boolean
           description: Проект ушёл клиенту на согласование и виден ему в портале
+        send_blocker_code:
+          nullable: true
+          description: |-
+            Х-1: пока проект не ушёл клиенту — код причины, по которой его нельзя отправить (визы маршрута подписи); `null` — ничего не мешает. Слова и роли — `send_blocker` карточки
+
+            * `visas_not_requested` - visas_not_requested
+            * `visas_declined` - visas_declined
+            * `visas_pending` - visas_pending
+            * `visas_returned` - visas_returned
+            * `no_visa_holder` - no_visa_holder
+          oneOf:
+          - $ref: '#/components/schemas/ContractSendBlockerCodeEnum'
+          - $ref: '#/components/schemas/NullEnum'
       required:
       - id
       - number
@@ -24783,7 +24795,7 @@ components:
       properties:
         code:
           allOf:
-          - $ref: '#/components/schemas/CodeEnum'
+          - $ref: '#/components/schemas/ContractSendBlockerCodeEnum'
           description: |-
             visas_not_requested — договор ещё не на визах; visas_declined — EDS не принял договор на визы (причина в remark); visas_pending — не все визы поставлены; visas_returned — виза возвращена с замечанием; no_visa_holder — в компании нет держателя нужного права
 
@@ -24800,6 +24812,11 @@ components:
           items:
             type: string
           description: Роли, чьих виз не хватает, словами в нижнем регистре
+        missing_permissions:
+          type: array
+          items:
+            type: string
+          description: 'Те же визы кодами прав маршрута (`approvals.visa_finance`): Платформа переводит их на язык сотрудника'
         remark:
           type: string
           description: Замечание визирующего или причина отказа EDS, как написаны; пусто — нет
@@ -24812,6 +24829,20 @@ components:
       - missing
       - remark
       - settings_link
+    ContractSendBlockerCodeEnum:
+      enum:
+      - visas_not_requested
+      - visas_declined
+      - visas_pending
+      - visas_returned
+      - no_visa_holder
+      type: string
+      description: |-
+        * `visas_not_requested` - visas_not_requested
+        * `visas_declined` - visas_declined
+        * `visas_pending` - visas_pending
+        * `visas_returned` - visas_returned
+        * `no_visa_holder` - no_visa_holder
     ContractTransitionInRequest:
       type: object
       properties:

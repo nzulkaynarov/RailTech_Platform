@@ -10622,6 +10622,16 @@ export interface components {
         | "cancelled";
       /** @description Проект ушёл клиенту на согласование редакции и виден ему в кабинете */
       sent_to_client: boolean;
+      /** @description Х-1: пока проект не ушёл клиенту — код причины, по которой его нельзя отправить (визы не собраны); null — ничего не мешает. Считает ERP */
+      send_blocker_code?:
+        | (
+            | "visas_not_requested"
+            | "visas_declined"
+            | "visas_pending"
+            | "visas_returned"
+            | "no_visa_holder"
+          )
+        | null;
     };
     ProjectInvoiceRef: {
       id: number;
@@ -10735,6 +10745,8 @@ export interface components {
       message: string;
       /** @description Роли без визы словами в нижнем регистре */
       missing: string[];
+      /** @description Те же визы кодами прав маршрута (approvals.visa_finance): Платформа переводит их на язык сотрудника */
+      missing_permissions?: string[];
       /** @description Замечание визирующего или причина отказа EDS, как написаны; пусто — нет */
       remark: string;
       /** @description Нужной роли нет ни у одного сотрудника: назначить её можно в настройках */
@@ -10752,6 +10764,16 @@ export interface components {
         | "rejected"
         | "cancelled";
       sent_to_client: boolean;
+      /** @description Х-1: пока проект не ушёл клиенту — код причины, по которой его нельзя отправить (визы не собраны); null — ничего не мешает. Считает ERP */
+      send_blocker_code?:
+        | (
+            | "visas_not_requested"
+            | "visas_declined"
+            | "visas_pending"
+            | "visas_returned"
+            | "no_visa_holder"
+          )
+        | null;
       total: components["schemas"]["ProjectMoney"] | null;
       /** Format: date-time */
       created_at: string;

@@ -160,6 +160,33 @@ def send_blocker(contract) -> Optional[dict]:
     return visas_blocker(contract)
 
 
+def _drop_company_stamp(contract) -> list:
+    """Х-1: «Доработать» — новая редакция, штамп подписи компании на ней не остаётся.
+
+    Иначе договор, подписанный директором до отправки и отклонённый клиентом, не проходит маршрут заново: «На подпись»
+    отвечает `ALREADY_SIGNED`, а визы прежней подписи пропускали бы новую редакцию. Запрос подписи закрывается как
+    устаревший, проверка по коду показывает «Отозван»; маршрут «визы → клиенту → подпись» идёт с начала.
+    """
+    from integration.models import CommercialSigningRequest as Request
+    from portal.models import PortalDocumentVerification
+
+    code = contract.verification_code
+    if not code:
+        return []
+    PortalDocumentVerification.objects.filter(code=code).update(
+        status="revoked", revoked_at=timezone.now(), revocation_reason="Новая редакция договора"
+    )
+    Request.objects.filter(kind="contract", object_id=contract.pk, status=Request.Status.SIGNED).update(
+        status=Request.Status.STALE, comment="Новая редакция договора: подпись прежней не переносится."
+    )
+    contract.verification_code = ""
+    contract.signatory_name = ""
+    contract.signatory_position = ""
+    contract.signatory_basis_text = ""
+    contract.signed_at = None
+    return ["verification_code", "signatory_name", "signatory_position", "signatory_basis_text", "signed_at"]
+
+
 def is_staff(user) -> bool:
     from accounts.services.permissions import is_seller
 
@@ -313,6 +340,7 @@ def apply_transition(
             contract.manager_signed_at = None
             contract.manager_signer = None
             fields += ["client_signed_at", "client_signer", "manager_signed_at", "manager_signer"]
+            fields += _drop_company_stamp(contract)
         elif action == "attach_scan":
             contract.signed_file = scan
             contract.manager_signed_at = now

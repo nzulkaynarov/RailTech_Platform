@@ -155,12 +155,28 @@ def test_project_card_carries_the_blocker_while_the_draft_is_unsent(pw):  # noqa
         "code": "visas_pending",
         "message": "Нужны визы: юрист",
         "missing": ["юрист"],
+        "missing_permissions": ["approvals.visa_legal"],
         "remark": "",
         "settings_link": False,
     }
     CommercialSigningRequest.objects.update(visas=VISAS_APPROVED)
     card = api(pw.accountant).get(f"/api/v1/crm/projects/{pw.deal.pk}/").json()["contract"]
     assert card["send_blocker"] is None and "send_to_client" in card["actions"]
+
+
+def test_list_row_says_why_the_unsent_project_waits(pw):  # noqa: F811
+    """«Мои задачи» и «Главная» берут слово шага из строки списка: код причины там же, где `sent_to_client`."""
+    contract = contract_in(pw, S.DRAFT)
+
+    def code():
+        rows = api(pw.accountant).get("/api/v1/crm/projects/").json()["results"]
+        return rows[0]["documents"]["contract"]["send_blocker_code"]
+
+    assert code() == "visas_not_requested"
+    collect_visas(contract, _visas("approved", "pending"))
+    assert code() == "visas_pending"
+    CommercialSigningRequest.objects.update(visas=VISAS_APPROVED)
+    assert code() is None
 
 
 def test_contract_already_at_the_client_has_no_blocker(pw):  # noqa: F811
@@ -202,6 +218,76 @@ def test_contract_with_collected_visas_may_be_created_at_the_client(pw):  # noqa
 
     assert error is None and contract.pk == draft.pk
     assert contract.status.code == S.PENDING_CLIENT
+
+
+# ── Маршрут «визы → клиенту → подпись» без тупиков (ADR-0025) ──────────────────────────────────────
+
+
+def _director_signs(contract, code="DOG0000001"):
+    from unittest.mock import patch
+
+    from integration.services.eds_inbound import apply_signing_decided
+
+    event = {
+        "object": {"kind": "contract", "object_id": contract.pk, "number": contract.number, "version": None},
+        "decision": "signed",
+        "signer": {"full_name": "Директор", "position": "Директор"},
+        "verification_code": code,
+        "signed_at": timezone.now().isoformat(),
+        "basis": "charter",
+    }
+    with patch("crm.services.contracts._render_contract_pdf"):
+        return apply_signing_decided(event)
+
+
+def test_signature_after_sending_to_the_client_is_still_applied(pw):  # noqa: F811
+    """Визы собраны, шаг «Подписать» открыт, договор ушёл клиенту: подпись директора применяется, визы не пропадают."""
+    contract = contract_in(pw, S.DRAFT)
+    collect_visas(contract)
+    assert _send(pw.accountant, contract).status_code == 200
+
+    outcome = _director_signs(contract)
+
+    assert (outcome.applied, outcome.reason) == (True, "contract_signed")
+    contract.refresh_from_db()
+    assert contract.verification_code == "DOG0000001"
+    assert CommercialSigningRequest.objects.get().status == "signed"
+
+
+def test_rejected_by_the_client_after_the_signature_can_go_through_the_route_again(pw):  # noqa: F811
+    """Директор подписал до отправки, клиент отклонил, «Доработать»: новая редакция — визы и подпись с начала, путь есть."""
+    contract = contract_in(pw, S.DRAFT)
+    collect_visas(contract)
+    assert _send(pw.accountant, contract).status_code == 200
+    _director_signs(contract)
+    for action, extra in (("reject", {"reason": "Не устраивает срок"}), ("revise", {})):
+        _, error = contract_flow.apply_transition(contract.pk, action, pw.accountant, **extra)
+        assert error is None, error
+
+    contract.refresh_from_db()
+    assert contract.status.code == S.DRAFT and contract.verification_code == ""
+    blocker = contract_flow.send_blocker(contract)
+    assert blocker["code"] == contract_visas.NOT_REQUESTED, "новая редакция снова идёт через визы"
+    from integration.models import CrmUserMapping
+
+    from crm.services.signing_outbound import request_commercial_signing
+
+    CrmUserMapping.objects.create(crm_user_id=7001, user=pw.accountant)
+    request_commercial_signing(kind="contract", doc=contract, user=pw.accountant)  # больше не ALREADY_SIGNED
+
+    CommercialSigningRequest.objects.filter(status="pending").update(visas=VISAS_APPROVED)
+    assert contract_flow.send_blocker(contract) is None
+    assert _send(pw.accountant, contract).status_code == 200
+
+
+def test_status_change_does_not_change_the_edition_of_a_contract(pw):  # noqa: F811
+    from crm.services.signing_outbound import fingerprint
+
+    contract = contract_in(pw, S.DRAFT)
+    before = fingerprint("contract", contract)
+    contract.status = contract_flow._status_row(S.PENDING_CLIENT)
+    contract.save()
+    assert fingerprint("contract", contract) == before
 
 
 # ── Проекция события EDS ──────────────────────────────────────────────────────────────────────────

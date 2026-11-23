@@ -315,11 +315,14 @@ def _quote_ref(quote) -> Optional[dict]:
 def _contract_ref(contract) -> Optional[dict]:
     if contract is None:
         return None
+    sent = contract_flow.contract_sent_to_client(contract)
     return {
         "id": contract.id,
         "number": contract.number,
         "status": contract_flow.contract_v3_status(contract),
-        "sent_to_client": contract_flow.contract_sent_to_client(contract),
+        "sent_to_client": sent,
+        # Х-1: список и «Мои задачи» говорят «Отправить клиенту» только когда визы собраны.
+        "send_blocker_code": None if sent else (contract_flow.send_blocker(contract) or {}).get("code"),
     }
 
 
