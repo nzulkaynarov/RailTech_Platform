@@ -109,3 +109,38 @@
 .pf-dt-table > tbody > tr[data-selected="true"] > [style*="sticky"] {
   background: var(--rt-color-primary-bg);
 }
+/* Сортировка по шапке (Х-15): кнопка во всю ячейку заголовка, одна стрелка у столбца, по которому идёт порядок */
+.pf-dt-sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  min-height: 24px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: inherit;
+  cursor: pointer;
+}
+.pf-dt-sort-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pf-dt-sort-arrow {
+  flex: none;
+  color: var(--rt-color-primary-default);
+}
+.pf-dt-sort:hover .pf-dt-sort-label {
+  text-decoration: underline;
+}
+.pf-dt-sort:focus-visible {
+  outline: 2px solid var(--rt-color-primary-default);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+.pf-col-num .pf-dt-sort {
+  flex-direction: row-reverse;
+}

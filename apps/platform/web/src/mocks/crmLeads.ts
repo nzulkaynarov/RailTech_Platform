@@ -137,6 +137,15 @@ export const crmLeadsHandlers = [
           !q || row.name.toLowerCase().includes(q) || (row.need ?? "").toLowerCase().includes(q),
       )
       .sort((a, b) => (b.last_message_at ?? "").localeCompare(a.last_message_at ?? ""));
+    // Порядок щелчком по шапке (Х-15): `last_message` по возрастанию, `-last_message` по убыванию; без времени — в конце
+    const sort = url.searchParams.get("sort");
+    if (sort === "last_message" || sort === "-last_message") {
+      const withTime = rows.filter((row) => row.last_message_at);
+      const without = rows.filter((row) => !row.last_message_at);
+      withTime.sort((a, b) => (a.last_message_at ?? "").localeCompare(b.last_message_at ?? ""));
+      if (sort.startsWith("-")) withTime.reverse();
+      rows.splice(0, rows.length, ...withTime, ...without);
+    }
     const page: LeadPage = { items: rows.slice(offset, offset + limit), total: rows.length };
     return HttpResponse.json(page);
   }),
