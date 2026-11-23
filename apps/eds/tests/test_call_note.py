@@ -229,7 +229,7 @@ async def test_note_of_a_non_phone_lead_carries_the_message_and_attachments(
     # Nobody called: the requisite is "Клиент", never "Кто звонил".
     assert "Кто звонил" not in dict(cells(payload))
     assert dict(cells(payload))["Клиент"]
-    assert payload["body"]["doc"]["content"][0]["content"][0]["text"] == "Записка о запросе"
+    assert payload["meta"]["kind_label"] == "Записка о запросе", "вид документа — в инфоблоке листа (ДОК-5)"
     assert paragraphs(payload) == [
         "Что просил",
         "Нужен расчёт на 20 вагонов.",
