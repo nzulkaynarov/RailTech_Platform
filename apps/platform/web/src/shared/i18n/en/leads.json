@@ -88,7 +88,7 @@
       "paper": "on paper"
     },
     "assigned": "Handled by",
-    "channel": "Channel",
+    "channel": "Source",
     "language": "Language",
     "messages": "Latest messages",
     "noMessages": "No messages yet",
@@ -145,5 +145,12 @@
       "openClient": "Open the client",
       "generic": "The lead was not created. Try again."
     }
+  },
+  "origin": {
+    "forms": {
+      "cabinet_request": "Cabinet request",
+      "request": "Request form"
+    },
+    "campaign": "campaign {{name}}"
   }
 }

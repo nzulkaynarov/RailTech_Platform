@@ -179,9 +179,10 @@ class ExchangeRate(models.Model):
         return f"{self.currency.code} = {self.rate_to_uzs} UZS @ {self.rate_date}"
 
 
-class Bank(LocalizedNames, AbstractLookup):
-    """Банки (план 2.9, исследование 2026-11-11 «Справочники» §D п. 7): код — МФО, название; список загружается файлом
-    ЦБ через «Настройки · Справочники» и подставляется в диалоге банковского счёта компании."""
+class Bank(LocalizedNames, SourceTracked, AbstractLookup):
+    """Банки (план 2.9, исследование 2026-11-11 «Справочники» §D п. 7): код — МФО, название; список ведёт файл ЦБ
+    (`master_data/cbu_banks.py`, раз в месяц, Х-12) и подставляется в диалоге банковского счёта компании. Код, которого
+    нет в последнем файле, не удаляется: `in_source = False`."""
 
     swift = models.CharField(max_length=11, blank=True, default="", verbose_name=_("SWIFT"))
 

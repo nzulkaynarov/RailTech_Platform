@@ -1388,6 +1388,7 @@ class LeadDetail(BaseModel):
     open_service_request_id: Annotated[
         int | None, Field(title="Open Service Request Id")
     ] = None
+    origin: LeadOriginOut | None = None
     owner_mode: Annotated[str, Field(title="Owner Mode")]
     phone_e164: Annotated[str | None, Field(title="Phone E164")] = None
     platform_status: Annotated[
@@ -1402,6 +1403,18 @@ class LeadDetail(BaseModel):
     stage: Annotated[str, Field(title="Stage")]
     tg_username: Annotated[str | None, Field(title="Tg Username")]
     unread: Annotated[bool | None, Field(title="Unread")] = False
+
+
+class LeadOriginOut(BaseModel):
+    """
+    Where the lead came from beyond the channel: form key, landing path, referrer, UTM.
+    """
+
+    form: Annotated[str | None, Field(title="Form")] = None
+    landing_language: Annotated[str | None, Field(title="Landing Language")] = None
+    page: Annotated[str | None, Field(title="Page")] = None
+    referrer: Annotated[str | None, Field(title="Referrer")] = None
+    utm: Annotated[dict[str, str] | None, Field(title="Utm")] = None
 
 
 class LeadOut(BaseModel):

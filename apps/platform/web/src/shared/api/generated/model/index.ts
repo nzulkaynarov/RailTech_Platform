@@ -591,6 +591,8 @@ export * from "./leadMessagePreview";
 export * from "./leadMessagePreviewAuthor";
 export * from "./leadNotice";
 export * from "./leadNoticeStatus";
+export * from "./leadOrigin";
+export * from "./leadOriginLanguage";
 export * from "./leadOwnerMode";
 export * from "./leadPage";
 export * from "./leadPlatformStatus";
