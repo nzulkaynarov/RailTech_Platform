@@ -190,17 +190,21 @@ def test_ordering_by_header_is_allow_listed_with_empty_values_last_and_id_as_tie
 
 
 def test_ordering_by_status_follows_the_row_status_word_derived_from_facts(world):
-    draft = _invoice(world, "SCH-1", "DRAFT")
+    _invoice(world, "SCH-1", "DRAFT")
+    _invoice(world, "SCH-5", "CANCELLED")
     late = _invoice(world, "SCH-2", "ISSUED", days_ago=5)
-    paid = _invoice(world, "SCH-3", "PAID", paid="112")
-    partial = _invoice(world, "SCH-4", "PARTIAL", paid="40", due=world["day"] + datetime.timedelta(days=3))
+    _invoice(world, "SCH-3", "PAID", paid="112")
+    _invoice(world, "SCH-4", "PARTIAL", paid="40", due=world["day"] + datetime.timedelta(days=3))
+    # факт «платёжка ждёт подтверждения»: код счёта остаётся ISSUED, слово — proof_received
+    waiting = _invoice(world, "SCH-6", "ISSUED", due=world["day"] + datetime.timedelta(days=3))
+    PaymentConfirmation.objects.create(invoice=waiting, file="x.pdf", status=PaymentConfirmation.Status.PENDING)
+    _invoice(world, "SCH-7", "ISSUED", due=world["day"] + datetime.timedelta(days=4))  # позже платёжки: id не спасает
     rows = _get(world["finance"], BASE, tab="all", ordering="status").json()["results"]
     words = [r["display_status"] for r in rows]
-    assert words == ["draft", "issued", "partially_paid", "paid", "overdue"]
-    assert [r["number"] for r in rows][-1] == late.number
+    assert words == ["draft", "issued", "issued", "proof_received", "partially_paid", "paid", "overdue", "cancelled"]
+    assert [r["number"] for r in rows][-2] == late.number and len(rows) == 8
     back = _get(world["finance"], BASE, tab="all", ordering="-status").json()["results"]
     assert [r["display_status"] for r in back] == list(reversed(words))
-    assert draft.pk and paid.pk and partial.pk
 
 
 @pytest.mark.parametrize("raw", ["deal_id", "-pk", "number; drop", "status_rank", "created_at", "NUMBER"])
