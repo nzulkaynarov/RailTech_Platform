@@ -1,9 +1,11 @@
 """Чтение документов: карточка с решениями и журналом, страница списка с видимостью «автор или участник»."""
 
 import uuid
+from typing import Any
 
 from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import aliased
 
 from app import clock
 from app.config import get_settings
@@ -38,6 +40,7 @@ from app.services import (
     renders,
     reply,
     signing_state,
+    status_rank,
 )
 from app.services.people import Directory, load_directory
 
@@ -266,16 +269,28 @@ async def list_page(
         rows = list((await session.execute(stmt)).scalars().all())
         page, next_cursor = paging.cut(rows, limit, lambda r: r.created_at, lambda r: r.id)
     else:
-        attr = {
-            "number": "number",
-            "subject": "subject",
-            "status": "status",
-            "amount": "amount",
-            "created": "created_at",
-        }[ordering[0]]
-        stmt = paging.apply_sorted(stmt, getattr(Document, attr), Document.id, ordering, cursor, limit)
+
+        def columns(src: Any) -> Any:
+            return {
+                "number": src.number,
+                "subject": src.subject,
+                "status": status_rank.rank_expr(src.status, signing_state.awaiting_signature(src)),
+                "amount": src.amount,
+                "created": src.created_at,
+            }[ordering[0]]
+
+        mirror = aliased(Document)
+        stmt = paging.apply_sorted(
+            stmt,
+            columns(Document),
+            Document.id,
+            ordering,
+            cursor,
+            limit,
+            lambda k: select(columns(mirror)).where(mirror.id == k).scalar_subquery(),
+        )
         rows = list((await session.execute(stmt)).scalars().all())
-        page, next_cursor = paging.cut_sorted(rows, limit, ordering, lambda r: getattr(r, attr), lambda r: r.id)
+        page, next_cursor = paging.cut_sorted(rows, limit, ordering, lambda r: r.id)
     directory = await load_directory(session, (r.author_crm_user_id for r in page))
     ids = [r.id for r in page]
     count_rows = await session.execute(

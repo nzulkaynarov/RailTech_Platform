@@ -36,13 +36,16 @@ def decode_cursor(value: str | None) -> tuple[dt.datetime, uuid.UUID] | None:
         raise invalid_fields("Неверный курсор.", cursor="malformed") from exc
 
 
-def encode_sort_cursor(sort: str, value: str | None, key: uuid.UUID) -> str:
-    """Курсор списка с порядком по полю: порядок (`sort`), значение поля последней строки (`None` — пусто) и id."""
-    raw = json.dumps({"s": sort, "v": value, "k": str(key)}, ensure_ascii=False).encode()
+def encode_sort_cursor(sort: str, key: uuid.UUID) -> str:
+    """Курсор списка с порядком по полю: порядок (`sort`) и id последней строки; значение поля берёт сервер по id.
+
+    Значение в курсор не кладётся: тема внешнего письма может быть любой длины и любых символов, а курсор — в URL.
+    """
+    raw = json.dumps({"s": sort, "k": str(key)}).encode()
     return base64.urlsafe_b64encode(raw).decode().rstrip("=")
 
 
-def decode_sort_cursor(value: str | None, sort: str) -> tuple[str | None, uuid.UUID] | None:
+def decode_sort_cursor(value: str | None, sort: str) -> uuid.UUID | None:
     """Разобрать курсор порядка `sort`; курсор другого порядка или повреждённый — 422 `VALIDATION_FAILED` (`cursor`)."""
     if value is None:
         return None
@@ -50,9 +53,6 @@ def decode_sort_cursor(value: str | None, sort: str) -> tuple[str | None, uuid.U
         raw = json.loads(base64.urlsafe_b64decode(value + "=" * (-len(value) % 4)))
         if raw["s"] != sort:
             raise ValueError("other order")
-        field = raw["v"]
-        if field is not None and not isinstance(field, str):
-            raise ValueError("value")
-        return field, uuid.UUID(raw["k"])
+        return uuid.UUID(raw["k"])
     except (binascii.Error, ValueError, KeyError, TypeError) as exc:
         raise invalid_fields("Неверный курсор.", cursor="malformed") from exc
