@@ -1,0 +1,29 @@
+/* Рамка рабочего списка (`RegistryTable`, ЕВ-1а): подвал с итогом и переключателем страниц. Вид самой таблицы — в
+   DataTable/data-table.css. */
+.pf-reg {
+  min-width: 0;
+}
+.pf-reg-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  min-height: 48px;
+  padding: 8px 16px;
+  border-top: 1px solid var(--rt-color-surface-split);
+}
+.pf-reg-footer .ant-pagination {
+  margin-left: auto;
+}
+/* Переключатель страниц, который рисует сама таблица (страницы на клиенте), стоит так же — в подвале рамки. */
+.pf-reg .pf-dt-pager {
+  margin: 0;
+  padding: 8px 16px;
+  border-top: 1px solid var(--rt-color-surface-split);
+}
+/* Внутри карточки страницы (вкладка настроек): рамка у страницы уже есть, вторую не рисуем. */
+.pf-reg--nested.ant-card {
+  border: 0;
+  border-radius: 0;
+}

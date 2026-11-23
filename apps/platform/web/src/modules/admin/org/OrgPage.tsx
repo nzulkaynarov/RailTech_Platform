@@ -1,4 +1,4 @@
-import { Button, Card, Input, Select, Skeleton } from "antd";
+import { Button, Input, Select, Skeleton } from "antd";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate, useSearchParams } from "react-router";
@@ -88,27 +88,23 @@ export function OrgPage({ objectId }: { objectId?: string }) {
     items.filter((e) => e.id !== id && e.status !== "disabled" && e.roles.some(isSystemAdmin))
       .length;
 
-  let body;
-  if (list.isPending) {
-    body = <Skeleton active paragraph={{ rows: 6 }} title={false} />;
-  } else if (list.isError) {
-    body = (
-      <EmptyState
-        title={t("modules:admin.org.loadError.title")}
-        text={t("modules:admin.org.loadError.text")}
-        action={
-          <Button
-            onClick={() => {
-              void list.refetch();
-            }}
-          >
-            {t("modules:admin.org.loadError.retry")}
-          </Button>
-        }
-      />
-    );
-  } else if (items.length === 0) {
-    body = (
+  const error = list.isError ? (
+    <EmptyState
+      title={t("modules:admin.org.loadError.title")}
+      text={t("modules:admin.org.loadError.text")}
+      action={
+        <Button
+          onClick={() => {
+            void list.refetch();
+          }}
+        >
+          {t("modules:admin.org.loadError.retry")}
+        </Button>
+      }
+    />
+  ) : undefined;
+  const empty =
+    items.length === 0 ? (
       <EmptyState
         title={t("modules:admin.org.empty.title")}
         text={t("modules:admin.org.empty.text")}
@@ -120,9 +116,7 @@ export function OrgPage({ objectId }: { objectId?: string }) {
           ) : undefined
         }
       />
-    );
-  } else if (filtered.length === 0) {
-    body = (
+    ) : (
       <EmptyState
         title={t("modules:admin.org.noMatch.title")}
         text={t("modules:admin.org.noMatch.text")}
@@ -138,16 +132,6 @@ export function OrgPage({ objectId }: { objectId?: string }) {
         }
       />
     );
-  } else {
-    body = (
-      <EmployeeList
-        items={filtered}
-        selectedId={selected?.id ?? null}
-        hrefOf={employeeHref}
-        compact={compact}
-      />
-    );
-  }
 
   let panel = null;
   if (inviting) {
@@ -204,45 +188,53 @@ export function OrgPage({ objectId }: { objectId?: string }) {
         }
       />
       <div ref={blockRef}>
-        <Card styles={{ body: { padding: 0 } }}>
-          <FilterBar
-            inset
-            actions={
-              list.data ? (
-                <span className="pf-hint" aria-live="polite">
-                  {t("modules:admin.org.count", { count: filtered.length })}
-                </span>
-              ) : undefined
-            }
-          >
-            <FilterField id="pf-org-q" label={t("modules:admin.org.search.label")} grow>
-              <Input.Search
-                id="pf-org-q"
-                allowClear
-                value={query}
-                onChange={(event) => {
-                  setQuery(event.target.value);
-                }}
-                placeholder={t("modules:admin.org.search.placeholder")}
-              />
-            </FilterField>
-            <FilterField id="pf-org-status" label={t("modules:admin.org.statusFilter.label")}>
-              <Select<EmployeeStatus | "all">
-                id="pf-org-status"
-                value={status}
-                onChange={setStatus}
-                options={[
-                  { value: "all", label: t("modules:admin.org.statusFilter.all") },
-                  ...EMPLOYEE_STATUSES.map((value) => ({
-                    value,
-                    label: t(`modules:admin.org.status.${value}`),
-                  })),
-                ]}
-              />
-            </FilterField>
-          </FilterBar>
-          {body}
-        </Card>
+        <EmployeeList
+          items={filtered}
+          selectedId={selected?.id ?? null}
+          hrefOf={employeeHref}
+          compact={compact}
+          loading={list.isPending}
+          error={error}
+          empty={empty}
+          toolbar={
+            <FilterBar
+              inset
+              actions={
+                list.data ? (
+                  <span className="pf-hint" aria-live="polite">
+                    {t("modules:admin.org.count", { count: filtered.length })}
+                  </span>
+                ) : undefined
+              }
+            >
+              <FilterField id="pf-org-q" label={t("modules:admin.org.search.label")} grow>
+                <Input.Search
+                  id="pf-org-q"
+                  allowClear
+                  value={query}
+                  onChange={(event) => {
+                    setQuery(event.target.value);
+                  }}
+                  placeholder={t("modules:admin.org.search.placeholder")}
+                />
+              </FilterField>
+              <FilterField id="pf-org-status" label={t("modules:admin.org.statusFilter.label")}>
+                <Select<EmployeeStatus | "all">
+                  id="pf-org-status"
+                  value={status}
+                  onChange={setStatus}
+                  options={[
+                    { value: "all", label: t("modules:admin.org.statusFilter.all") },
+                    ...EMPLOYEE_STATUSES.map((value) => ({
+                      value,
+                      label: t(`modules:admin.org.status.${value}`),
+                    })),
+                  ]}
+                />
+              </FilterField>
+            </FilterBar>
+          }
+        />
       </div>
       {panel ? <PanelPortal tab="card">{panel}</PanelPortal> : null}
     </>
