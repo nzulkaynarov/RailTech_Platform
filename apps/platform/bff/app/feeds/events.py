@@ -47,6 +47,8 @@ EVENT_TEXTS: dict[str, str] = {
     "quote.expired": "Срок действия КП истёк",
     "quote.duplicated": "КП скопировано",
     "quote.link_revoked": "Ссылка на КП отозвана",
+    "quote.link_code_sent": "Клиенту отправлен код по ссылке на КП",
+    "quote.link_code_used": "Клиент подтвердил код по ссылке на КП",
     "quote.item_rematched": "В строке КП заменён товар",
     "quote.fx_fixed": "Курс в КП зафиксирован",
     "quote.fx_overridden": "Курс в КП задан вручную",
