@@ -86,6 +86,12 @@ export function StepUpDialog({
           type="error"
           showIcon
           role="alert"
+          description={
+            verify.error instanceof ApiError &&
+            verify.error.details["reason"] === "second_factor_code_invalid"
+              ? t("stepUp.hint")
+              : undefined
+          }
           message={t(
             verify.error instanceof ApiError &&
               verify.error.details["reason"] === "second_factor_code_invalid"

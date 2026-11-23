@@ -18020,7 +18020,7 @@ components:
           $ref: '#/components/schemas/Me'
         must_change_password: {type: boolean}
         expires_at: {type: string, format: date-time}
-        backup_codes: {type: array, items: {type: string}, minItems: 1}
+        backup_codes: {type: array, items: {type: string}}
     StepUp:
       type: object
       additionalProperties: false

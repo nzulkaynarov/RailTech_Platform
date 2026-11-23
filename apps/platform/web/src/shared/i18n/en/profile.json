@@ -169,7 +169,7 @@
     "disable": "Turn off",
     "disableTitle": "Turn off sign-in with a code?",
     "codeOrBackup": "App code or backup code",
-    "scan": "Scan the QR code with an authenticator app (Google Authenticator, Microsoft Authenticator, etc.).",
+    "scan": "Scan the QR code with an authenticator app.",
     "manual": "Cannot scan — enter the key manually:",
     "code": "Code from the app",
     "confirm": "Confirm",

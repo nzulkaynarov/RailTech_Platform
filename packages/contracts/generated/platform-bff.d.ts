@@ -9950,8 +9950,12 @@ export interface components {
       /** @description 6 цифр из приложения */
       code: string;
     };
-    /** @description Сессия после настройки обязательного фактора при входе; резервные коды показываются один раз */
-    EnrolledSession: components["schemas"]["Session"] & {
+    /** @description Сессия (как `Session`) после настройки обязательного фактора при входе; резервные коды показываются один раз */
+    EnrolledSession: {
+      me: components["schemas"]["Me"];
+      must_change_password: boolean;
+      /** Format: date-time */
+      expires_at: string;
       backup_codes: string[];
     };
     StepUp: {

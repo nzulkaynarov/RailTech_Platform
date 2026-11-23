@@ -169,7 +169,7 @@
     "disable": "Öçirish",
     "disableTitle": "Kod bilan kirish öçirilsinmi?",
     "codeOrBackup": "Ilovadagi kod yoki zaxira kod",
-    "scan": "QR-kodni autentifikator ilovasi bilan skanerlang (Google Authenticator, Microsoft Authenticator va b.).",
+    "scan": "QR-kodni autentifikator ilovasi bilan skanerlang.",
     "manual": "Skanerlanmasa — kalitni qölda kiriting:",
     "code": "Ilovadagi kod",
     "confirm": "Tasdiqlash",

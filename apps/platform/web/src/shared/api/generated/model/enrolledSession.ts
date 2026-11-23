@@ -11,6 +11,5 @@ export interface EnrolledSession {
   me: Me;
   must_change_password: boolean;
   expires_at: string;
-  /** @minItems 1 */
   backup_codes: string[];
 }

@@ -145,10 +145,11 @@ export function InviteEmployeeForm({
 
   const showRoleNote = rolesTouched && roles.length === 0;
   const failed = delivery === "password" ? create : invite;
+  const failure: unknown = failed.error;
   const fieldError =
     failed.isError &&
-    !isStepUpError(failed.error) &&
-    !(failed.error instanceof ApiError && failed.error.code === "EMAIL_EXISTS") &&
+    !isStepUpError(failure) &&
+    !(failure instanceof ApiError && failure.code === "EMAIL_EXISTS") &&
     notSent === null;
 
   if (credentials !== null) {
