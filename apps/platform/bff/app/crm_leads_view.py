@@ -38,10 +38,16 @@ LAST_MESSAGES = 5
 
 
 def list_params(
-    tab: LeadTab, scope: LeadScope, q: str | None, source: str | None, offset: int, limit: int
+    tab: LeadTab,
+    scope: LeadScope,
+    q: str | None,
+    source: str | None,
+    offset: int,
+    limit: int,
+    sort: str | None = None,
 ) -> dict[str, Any]:
     """Параметры CRM `GET /leads`: вкладка — `platform_status`, «мои» — `owner=me`, «просроченные» —
-    `overdue=true`, канал — `source`."""
+    `overdue=true`, канал — `source`, порядок (`field` / `-field`) — `sort` и `order` CRM."""
     params: dict[str, Any] = {"offset": offset, "limit": limit}
     if tab != "all":
         params["platform_status"] = tab
@@ -53,6 +59,9 @@ def list_params(
         params["q"] = q.strip()
     if source:
         params["source"] = source
+    if sort:
+        params["sort"] = sort.removeprefix("-")
+        params["order"] = "desc" if sort.startswith("-") else "asc"
     return params
 
 

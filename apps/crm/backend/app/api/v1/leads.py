@@ -194,6 +194,13 @@ async def list_leads(
     created_from: datetime | None = None,
     created_to: datetime | None = None,
     sort: str = Query(default="last_message", pattern="^(last_message|score|created)$"),
+    order: Annotated[
+        str,
+        Query(
+            pattern="^(asc|desc)$",
+            description="Направление `sort`: по умолчанию `desc` (новые и сильные сверху)",
+        ),
+    ] = "desc",
     limit: Annotated[int, Query(ge=1, le=200)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,
     platform_status: Annotated[
@@ -227,7 +234,9 @@ async def list_leads(
         source,
     )
     async with container.session_factory() as session:
-        rows, total = await crm.list_leads(session, flt, who.user_id, limit, offset, sort)
+        rows, total = await crm.list_leads(
+            session, flt, who.user_id, limit, offset, sort, order == "asc"
+        )
         escalations = await crm.active_escalations(session, [r.id for r in rows])
         names = await crm.user_names(session, rows, _handed_by(escalations))
     return LeadPage(items=[lead_out(r, escalations.get(r.id), names) for r in rows], total=total)

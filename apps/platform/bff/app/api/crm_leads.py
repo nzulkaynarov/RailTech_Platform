@@ -33,6 +33,10 @@ LeadParam = Annotated[str, Path(pattern=r"^[Ll]-?\d{1,9}$")]
 Creator = Annotated[Authed, Depends(require("crm.leads", "full"))]
 
 
+# Порядок (Х-15): `field` — по возрастанию, `-field` — по убыванию; без него — новые сверху.
+LEAD_SORT = r"^-?(last_message|created)$"
+
+
 @router.get("/crm/leads", response_model=LeadPage, operation_id="listCrmLeads")
 async def list_leads(
     authed: Reader,
@@ -40,11 +44,12 @@ async def list_leads(
     scope: LeadScope = "all",
     q: Annotated[str | None, Query(max_length=100)] = None,
     channel: Annotated[str | None, Query(pattern=r"^[a-z][a-z_]{0,15}$")] = None,
+    sort: Annotated[str | None, Query(pattern=LEAD_SORT)] = None,
     offset: Annotated[int, Query(ge=0)] = 0,
     limit: Annotated[int, Query(ge=1, le=100)] = 25,
 ) -> LeadPage:
     api = _Crm(authed)
-    params = list_params(tab, scope, q, channel, offset, limit)
+    params = list_params(tab, scope, q, channel, offset, limit, sort)
     raw = await api.json("GET", f"{API}/leads", params=params)
     body = raw if isinstance(raw, dict) else {}
     leads = [crm.LeadOut.model_validate(item) for item in body.get("items") or []]

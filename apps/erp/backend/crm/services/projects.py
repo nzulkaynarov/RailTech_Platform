@@ -286,8 +286,39 @@ def _apply_sql_filters(qs: QuerySet, filters: Filters, user) -> QuerySet:
     return qs
 
 
-def list_projects(user, filters: Filters, *, limit: int, offset: int) -> tuple:
-    """Страница проектов `(строки, всего)`: SQL-фильтры, затем шаг и «с проблемами» по выведенным значениям."""
+#: Белый список порядка (Х-15): ключ параметра `ordering` → значение для сравнения. Поле вне списка не сортирует: порядок
+#: по произвольному имени из адреса недопустим.
+ORDERING = {
+    "number": lambda row: row["number"] or "",
+    "client": lambda row: (row["company_name"] or "").casefold(),
+    "step": lambda row: STEPS.index(row["step"]) if row["step"] in STEPS else len(STEPS),
+    "due_date": lambda row: row["due_date"],
+    "responsible": lambda row: ((row["responsible"] or {}).get("name") or "").casefold(),
+}
+
+
+def parse_ordering(raw: str) -> tuple:
+    """`field` или `-field` → `(поле, по убыванию)`; чужое поле → `("", False)` (порядок по умолчанию — от новых)."""
+    text = (raw or "").strip()
+    desc = text.startswith("-")
+    field = text[1:] if desc else text
+    return (field, desc) if field in ORDERING else ("", False)
+
+
+def sort_rows(rows: list, ordering: str) -> list:
+    """Порядок по белому списку; пустые значения — в конце при любом направлении, равные — как были (стабильно)."""
+    field, desc = parse_ordering(ordering)
+    if not field:
+        return rows
+    key = ORDERING[field]
+    filled = [row for row in rows if key(row) not in (None, "")]
+    empty = [row for row in rows if key(row) in (None, "")]
+    return sorted(filled, key=key, reverse=desc) + empty
+
+
+def list_projects(user, filters: Filters, *, limit: int, offset: int, ordering: str = "") -> tuple:
+    """Страница проектов `(строки, всего)`: SQL-фильтры, затем шаг и «с проблемами» по выведенным значениям; порядок —
+    `ordering` из белого списка, иначе от новых."""
     qs = _apply_sql_filters(project_queryset(), filters, user)[:SCAN_LIMIT]
     rows = []
     for deal in qs:
@@ -297,6 +328,7 @@ def list_projects(user, filters: Filters, *, limit: int, offset: int) -> tuple:
         if filters.problems and not item["problems"]:
             continue
         rows.append(item)
+    rows = sort_rows(rows, ordering)
     return rows[offset : offset + limit], len(rows)
 
 

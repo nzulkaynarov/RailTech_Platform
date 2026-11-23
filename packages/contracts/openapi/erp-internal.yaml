@@ -12864,6 +12864,12 @@ paths:
           type: integer
         description: Сдвиг
       - in: query
+        name: ordering
+        schema:
+          type: string
+        description: 'Порядок: `number`, `client`, `step`, `due_date`, `responsible`; `-` в начале — по убыванию. Другое поле
+          игнорируется (порядок от новых); пустые значения — в конце.'
+      - in: query
         name: problems
         schema:
           type: boolean
