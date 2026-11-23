@@ -4,13 +4,6 @@ export const crm: ModuleConfig = {
   code: "crm",
   sections: [
     {
-      key: "messages",
-      path: "/crm/messages",
-      // Первая линия (`crm.leads.triage`, D17G-1) — разбор и «Передать менеджеру»
-      access: { anyOf: ["crm.leads", "crm.leads.triage"] },
-      actionTo: "/crm/leads",
-    },
-    {
       key: "leads",
       path: "/crm/leads",
       detail: "/crm/leads/:id",
@@ -25,8 +18,6 @@ export const crm: ModuleConfig = {
       access: { anyOf: ["crm.clients", "erp.stock"] },
       actionTo: "/crm/leads",
     },
-    { key: "requests", path: "/crm/requests", access: { resource: "crm.clients" } },
-    { key: "channels", path: "/crm/channels", access: { resource: "crm.leads" } },
     // База знаний: читают лиды (`crm.leads`) и администратор (`admin`, он её ведёт — `kb:write`), W13-A5
     {
       key: "kb",

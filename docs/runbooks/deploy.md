@@ -242,6 +242,29 @@ mcp-tools.json` монтируется в контейнер по пути `../.
 
 Вручную с сервера (без Actions): `/opt/rt/releases/<sha>/infra/deploy/deploy.sh <sha>`; без миграций и дампа — `make up-prod RT_IMAGE_TAG=<sha>`.
 
+### 2.1. Окно выкладки и предупреждение о плановом обновлении (DECISIONS 2026-11-23)
+
+- **Окно.** Одна выкладка в прод в день, **19:15–20:00 по Ташкенту** (выходные тоже). Тихие часы — 08:00–19:00: в них не выкладываем.
+  Одобрение `production` владелец/архитектор даёт в окне; слитое днём ждёт вечера.
+- **Срочное исправление** (ошибка, инцидент или тупик на проде, блокирующий работу сейчас) — в любое время. Путь: ветка от
+  выложенного кода (`git switch -c fix/<что> $(ssh app cat /opt/rt/state/current_tag)`), PR в `main`; затем Actions → Deploy → Run workflow,
+  `action` = `deploy`, `ref` = sha слитого исправления (он должен входить в `main`). Предупреждение — как ниже, с `urgent`.
+- **Предупреждение за 30 минут.** Платформа и Cabinet опрашивают `/maintenance.json` (Caddy отдаёт его из `/opt/rt/maintenance/`,
+  каталог создаёт `deploy.sh`, в Caddy он смонтирован только на чтение, `Cache-Control: no-store`; нет файла — баннера нет). Пишет файл
+  `scripts/maintenance-notice.sh`; **выкладка сама удаляет его после успешного smoke** (шаг «Снять предупреждение…» в `deploy.yml`).
+  Баннер виден с `starts_at − 30 мин` до `starts_at + minutes`, скрывается на 10 минут, за 5 минут до начала возвращается; окно
+  «Платформа обновлена» после выкладки остаётся как есть.
+
+```bash
+# за 30 минут до нажатия «Approve» (время ташкентское; прошло — значит завтра; по умолчанию 3 минуты, planned):
+ssh deploy@<VPS 1> 'bash -s set 19:15' < scripts/maintenance-notice.sh
+ssh deploy@<VPS 1> 'bash -s set 14:40 5 urgent' < scripts/maintenance-notice.sh   # «Срочное исправление», 5 минут
+ssh deploy@<VPS 1> 'bash -s show' < scripts/maintenance-notice.sh
+ssh deploy@<VPS 1> 'bash -s clear' < scripts/maintenance-notice.sh                # отмена, если выкладку отложили
+```
+  Формат файла: `{"starts_at":"2026-11-23T19:15:00+05:00","minutes":3,"kind":"planned"}`. Тест скрипта — `scripts/tests/maintenance-notice-test.sh`
+  (входит в `make deploy-check`). Если выкладку отложили или откатили — `clear` вручную: откат файл не снимает.
+
 ### Номера заявок ЗВ/ПР после выкладки (ERP-09, W16-D1-2)
 
 Миграция `sales/0008_backfill_deal_numbers` выдаёт номера сделкам, которые уже есть в базе, а новым сделкам номер

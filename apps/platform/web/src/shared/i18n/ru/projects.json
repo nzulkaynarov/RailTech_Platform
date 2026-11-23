@@ -234,19 +234,10 @@
       "delivery_delivered": "Доставлено клиенту"
     },
     "by": "{{date}} · {{name}}",
-    "bySystem": "{{date}} · система",
     "reason": "Комментарий: {{reason}}"
   },
   "panel": {
-    "contractLabel": "Договор проекта",
-    "actLabel": "Акт проекта",
-    "sheetClose": "Закрыть",
-    "sheetContract": "Договор {{number}}",
-    "sheetAct": "Акт {{number}}",
-    "sheetContractNone": "Договор",
-    "sheetActNone": "Акт",
-    "journalEmpty": "Журнал пуст",
-    "journalHint": "Записи появятся после первых действий по договору и акту."
+    "sheetClose": "Закрыть"
   },
   "contract": {
     "number": "Договор {{number}}",
@@ -303,8 +294,6 @@
       "submit": "Прикрепить скан",
       "choose": "Выберите файл скана — кнопка станет доступной."
     },
-    "history": "История договора",
-    "historyEmpty": "Действий по договору ещё не было.",
     "files": {
       "pdf": "PDF договора",
       "scan": "Скан подписанного"
@@ -381,7 +370,6 @@
       "choose": "Выберите файл скана — кнопка станет доступной."
     },
     "history": "История акта",
-    "historyEmpty": "Действий по акту ещё не было.",
     "files": {
       "pdf": "PDF акта",
       "scan": "Скан подписанного"

@@ -259,15 +259,6 @@ export const adminUsersHandlers = [
     return HttpResponse.json(toEmployee(next));
   }),
 
-  http.get("*/admin/users/:id", ({ params }) => {
-    const denied = guard("read");
-    if (denied) return denied;
-    const employee = readEmployees().find((e) => e.id === params["id"]);
-    return employee
-      ? HttpResponse.json(toEmployee(employee))
-      : failure(404, "NOT_FOUND", "Не найдено.", "crm");
-  }),
-
   http.patch("*/admin/users/:id", async ({ request, params }) => {
     const denied = guard("full");
     if (denied) return denied;

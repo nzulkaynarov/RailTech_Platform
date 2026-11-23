@@ -234,19 +234,10 @@
       "delivery_delivered": "Delivered to the client"
     },
     "by": "{{date}} · {{name}}",
-    "bySystem": "{{date}} · system",
     "reason": "Comment: {{reason}}"
   },
   "panel": {
-    "contractLabel": "Project contract",
-    "actLabel": "Project act",
-    "sheetClose": "Close",
-    "sheetContract": "Contract {{number}}",
-    "sheetAct": "Act {{number}}",
-    "sheetContractNone": "Contract",
-    "sheetActNone": "Act",
-    "journalEmpty": "The log is empty",
-    "journalHint": "Entries appear after the first actions on the contract and act."
+    "sheetClose": "Close"
   },
   "contract": {
     "number": "Contract {{number}}",
@@ -303,8 +294,6 @@
       "submit": "Attach scan",
       "choose": "Choose a scan file — the button becomes available."
     },
-    "history": "Contract history",
-    "historyEmpty": "No actions on the contract yet.",
     "files": {
       "pdf": "Contract PDF",
       "scan": "Signed scan"
@@ -381,7 +370,6 @@
       "choose": "Choose a scan file — the button becomes available."
     },
     "history": "Act history",
-    "historyEmpty": "No actions on the act yet.",
     "files": {
       "pdf": "Act PDF",
       "scan": "Signed scan"

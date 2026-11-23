@@ -106,6 +106,17 @@
 	}
 }
 
+# Плановое обновление (DECISIONS 2026-11-23): файл-предупреждение /maintenance.json лежит на хосте (/opt/rt/maintenance, монтируется
+# в Caddy только на чтение), пишет его scripts/maintenance-notice.sh, снимает выкладка. Нет файла — 404 (баннера нет). SPA опрашивает
+# его раз в минуту, поэтому no-store. Подключается на доменах Cabinet и Платформы.
+(maintenance_notice) {
+	handle /maintenance.json {
+		root * /srv/maintenance
+		header Cache-Control "no-store"
+		file_server
+	}
+}
+
 (access_log) {
 	log {
 		output stdout
@@ -206,6 +217,7 @@
 	encode zstd gzip
 	import security_headers
 	import no_mcp
+	import maintenance_notice
 	handle /api/portal/* {
 		reverse_proxy erp-backend:8000
 	}
@@ -230,6 +242,7 @@
 	header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'"
 
 	import service_consoles
+	import maintenance_notice
 	handle /api/v1/me/avatar {
 		# Фото профиля (W15-H6): тело больше 1 МБ с запасом на multipart отсекается до BFF
 		request_body {

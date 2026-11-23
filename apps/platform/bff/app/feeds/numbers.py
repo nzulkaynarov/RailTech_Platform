@@ -106,7 +106,7 @@ def lead_ref(lead_id: int, title: str | None, *, conversation: bool = False) -> 
     ответа» (D1-6): там «Забрать», лента и ответ."""
     number = lead_number(lead_id)
     path = (
-        f"/crm/messages?lead={segment(number)}"
+        f"/crm/leads?scope=waiting&lead={segment(number)}"
         if conversation
         else f"/crm/leads?lead={segment(number)}&panel=open&tab=card"
     )
@@ -164,7 +164,7 @@ def quote_ref(quote: dict[str, Any], *, title: str | None, drafting: bool) -> Ob
     if drafting:
         path = f"/eds/drafts/{segment(number)}?panel=open&tab=approve"
     else:
-        path = f"/eds/outbox/{segment(number)}?panel=open&tab=card"
+        path = f"/eds/drafts/{segment(number)}?panel=open&tab=card"
     return ObjectRef(kind="quote", number=number, title=title, path=path)
 
 
