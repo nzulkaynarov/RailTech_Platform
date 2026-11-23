@@ -28476,6 +28476,14 @@
                     },
                     {
                         "in": "query",
+                        "name": "ordering",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "Порядок: `number`, `client`, `amount`, `issued`, `due`, `status`; `-` в начале — по убыванию. Другое поле игнорируется (порядок вкладки); пустые значения — в конце, равные — по id. `number` — строковый порядок: у счёта нет сохранённого порядкового номера."
+                    },
+                    {
+                        "in": "query",
                         "name": "q",
                         "schema": {
                             "type": "string"
