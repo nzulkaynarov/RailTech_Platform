@@ -20,6 +20,9 @@ async function filteredList(page: Page, width: number): Promise<void> {
   await expectNoViolations(page, `список ${String(width)}`);
 }
 
+// ЛИД-5b: лид бота по ссылке ?start=src-google_cmp-spring — канал и кампания, без технической строки формы.
+const BOT_ORIGIN = "Telegram · кампания spring";
+
 test.describe("ЛИД-5: откуда пришёл лид", () => {
   test.skip(({ isMobile }) => isMobile, "сценарий на десктопе; 390 — отдельный сценарий @mobile");
 
@@ -32,6 +35,17 @@ test.describe("ЛИД-5: откуда пришёл лид", () => {
     await expect(panel).toContainText(ORIGIN);
     await settledScreenshot(page, "lead-card-origin");
     await expectNoViolations(page, "карточка 1440");
+  });
+
+  test("1440: лид бота с кампанией → «Откуда» без кода формы", async ({ page }) => {
+    await loginAndWait(page, "manager@demo.example");
+    await spaGoto(page, "/crm/leads?channel=telegram");
+    await page.getByRole("link", { name: "Открыть карточку Азиз Демо" }).first().click();
+    const panel = page.locator("#pf-context-panel");
+    await expect(panel).toContainText(BOT_ORIGIN);
+    await expect(panel).not.toContainText("src-google");
+    await settledScreenshot(page, "lead-card-bot-origin");
+    await expectNoViolations(page, "карточка бота 1440");
   });
 });
 
@@ -47,5 +61,20 @@ test(
     await expect(card).toContainText(ORIGIN);
     await settledScreenshot(page, "lead-card-origin");
     await expectNoViolations(page, "карточка 390");
+  },
+);
+
+test(
+  "390: лид бота с кампанией → «Откуда» без кода формы",
+  { tag: "@mobile" },
+  async ({ page, isMobile }) => {
+    test.skip(!isMobile, "узкий экран — проект mobile");
+    await loginAndWait(page, "manager@demo.example");
+    await spaGoto(page, "/crm/leads?channel=telegram");
+    await page.getByRole("link", { name: "Открыть карточку Азиз Демо" }).first().click();
+    const card = page.getByRole("dialog").filter({ hasText: "Азиз Демо" });
+    await expect(card).toContainText(BOT_ORIGIN);
+    await settledScreenshot(page, "lead-card-bot-origin");
+    await expectNoViolations(page, "карточка бота 390");
   },
 );

@@ -71,6 +71,7 @@ class EdsTemplatePreviewIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     body: EdsDocumentBody
+    kind: Kind = "letter"
 
 
 class EdsTemplatePreview(BaseModel):

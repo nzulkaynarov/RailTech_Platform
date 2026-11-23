@@ -417,6 +417,17 @@ class CommercialSigningRequest(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True)
     decided_at = models.DateTimeField(null=True, blank=True)
+    visas = models.JSONField(
+        default=list,
+        blank=True,
+        help_text=_(
+            "Визы перед подписью по `eds.signing.visas_changed` (Х-1): [{permission, label, role, status}], "
+            "status — pending, approved, returned, no_holder"
+        ),
+    )
+    visas_changed_at = models.DateTimeField(
+        null=True, blank=True, help_text=_("Момент изменения виз в EDS: событие старее не применяется")
+    )
 
     class Meta:
         indexes = [models.Index(fields=["kind", "object_id"], name="integration_kind_obj_idx")]

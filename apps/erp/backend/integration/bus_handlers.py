@@ -133,3 +133,11 @@ def _event_uuid(event: Event) -> Optional[UUID]:
         return UUID(str(event.id))
     except ValueError:
         return None
+
+
+@subscribe("uz.railtech.eds.signing.visas_changed.v1")
+def on_signing_visas_changed(event: Event) -> None:
+    """Х-1: состояние виз договора — ERP не отправляет его клиенту, пока визы не собраны."""
+    from crm.services.contract_visas import apply_visas_changed
+
+    apply_visas_changed(event.data)

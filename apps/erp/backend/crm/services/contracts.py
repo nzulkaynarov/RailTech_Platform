@@ -130,6 +130,12 @@ def generate_contract_from_quote(
     from integration.services import document_events
 
     was_draft = contract.status_code == ContractStatusCode.DRAFT
+    # Х-1: «сразу у клиента» допустимо, только если визы уже собраны; у нового договора их нет — он остаётся проектом,
+    # а менеджер видит причину и отправляет договор клиенту после виз (`send-to-client`).
+    if send_to_client and was_draft:
+        from .contract_flow import send_blocker
+
+        send_to_client = send_blocker(contract) is None
     with document_events.watch_document_issue("contract", contract):  # document.created на выпуске (шина rt_bus)
         if was_draft and send_to_client:
             contract.status = _cstatus(ContractStatusCode.PENDING_CLIENT)
