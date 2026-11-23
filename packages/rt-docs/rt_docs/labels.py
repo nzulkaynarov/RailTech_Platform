@@ -71,7 +71,6 @@ GRID_LABELS: dict[str, dict[Lang, str]] = {
     "email": {"ru": "Почта", "uz": "Poçta", "en": "Email"},
     "verify": {"ru": "Код проверки", "uz": "Tekshirish kodi", "en": "Verification code"},
     "management": {"ru": "Руководство", "uz": "Rahbariyat", "en": "Management"},
-    "tin": {"ru": "ИНН", "uz": "STIR", "en": "TIN"},
     "internal_note": {"ru": "Внутренний документ", "uz": "Ichki hujjat", "en": "Internal document"},
     "signed": {
         "ru": "Подписано электронной подписью",

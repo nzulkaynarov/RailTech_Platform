@@ -20,6 +20,7 @@ from datetime import datetime, timedelta
 from typing import Any, Final
 
 import structlog
+from rt_docs.labels import grid_label
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -27,7 +28,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app import clock
 from app.config import get_settings
 from app.errors import conflict
-from app.models import Document, DocumentRender, Letter, LetterheadLogo
+from app.models import Document, DocumentRender, Employee, Letter, LetterheadLogo
 from app.schemas.documents import DocumentPdf
 from app.services import letterhead
 from app.services.people import load_directory
@@ -36,7 +37,9 @@ from app.services.storage import ObjectStorage
 
 log = structlog.get_logger(__name__)
 
-RENDERER_VERSION: Final = "rt-docs/letter-1"  # меняется вместе с вёрсткой письма — старый кэш не применяется
+RENDERER_VERSION: Final = (
+    "rt-docs/letter-2"  # меняется вместе с вёрсткой письма — старый кэш не применяется (letter-2: сетка, ДОК-5)
+)
 LAYOUT: Final = "letter"
 DEFAULT_ACCENT: Final = "#15294d"
 SWEEP_AFTER: Final = timedelta(minutes=1)
@@ -97,6 +100,58 @@ async def _reply_to(session: AsyncSession, document: Document, lang: str) -> str
     return f"№ {number} {word} {_date_text(lang, day)}".replace("  ", " ").strip() if day else f"№ {number}"
 
 
+def info_row(label: str, value: str, *, code: bool = False, role: str = "") -> dict[str, Any]:
+    """Строка инфоблока сетки в вводе рендера: `{label, value, code, role}` (rt_docs.InfoRow)."""
+    return {"label": label, "value": value, "code": code, "role": role}
+
+
+def grid_meta(
+    lang: str,
+    *,
+    number: str | None,
+    day: str | None,
+    reply_to: str | None,
+    executor: str | None,
+    email: str | None,
+    project: str | None,
+    code: str | None,
+    signed_text: str | None,
+) -> dict[str, Any]:
+    """Сетка письма (стандарт документов §4–§5): вид и инфоблок «метка — значение» вместо паспорта письма.
+
+    Подписи — на языке письма (`rt_docs.labels`); первые две строки (номер, дата) — мини-инфоблок со 2-й страницы.
+    Номер и дата проекта рендер заменяет сам, строка кода проверки есть только у итогового письма."""
+    key: Any = lang if lang in ("ru", "uz", "en") else "ru"
+    rows = [
+        info_row(grid_label("number_out", key), number or "—", code=True, role="number"),
+        info_row(grid_label("date", key), day or "—", role="date"),
+    ]
+    if reply_to:
+        rows.append(info_row(grid_label("reply_to", key), reply_to.removeprefix("№ ")))
+    if project:
+        rows.append(info_row(grid_label("project", key), project, code=True))
+    if executor:
+        rows.append(info_row(grid_label("executor", key), executor))
+    if email:
+        rows.append(info_row(grid_label("email", key), email))
+    if code:
+        rows.append(info_row(grid_label("verify", key), code, code=True, role="verify"))
+    return {"kind_label": grid_label("kind_letter", key), "info": rows, "signed_text": signed_text}
+
+
+def grid_letterhead(head: Any, lang: str) -> dict[str, Any]:
+    """Бланк для рендера: название, реквизиты, подвал, цвет, шрифт + колонки подвала сетки и строка обратного адреса."""
+    return {
+        "company_name": letterhead.text(head, "company_name", lang),
+        "requisites": letterhead.requisites(head, lang),
+        "footer": letterhead.footer(head, lang),
+        "accent": head.accent_color or DEFAULT_ACCENT,
+        "font": head.font_family,
+        "footer_columns": letterhead.footer_columns(head, lang),
+        "return_address": letterhead.return_address(head, lang),
+    }
+
+
 def is_final(document: Document) -> bool:
     return document.status == "sent" and document.number is not None and document.registered_at is not None
 
@@ -113,7 +168,17 @@ async def build_payload(session: AsyncSession, document: Document) -> tuple[dict
     directory = await load_directory(session, [document.author_crm_user_id])
     name = (document.signatory_name or head.signatory_name).strip()
     position = (document.signatory_position or letterhead.text(head, "signatory_position", lang)).strip()
-    addressee = [line for line in (document.recipient_attention, document.recipient_name) if line and line.strip()]
+    # Окно конверта (стандарт §4): организация первой строкой (в сетке — полужирным), ниже должность и ФИО
+    addressee = [line for line in (document.recipient_name, document.recipient_attention) if line and line.strip()]
+    author = await session.get(Employee, document.author_crm_user_id)
+    reply_to = await _reply_to(session, document, lang)
+    registered = clock.company_date(document.registered_at) if final and document.registered_at else None
+    day = registered.isoformat() if registered else None
+    signed_text = (
+        document.signed_at.astimezone(clock.COMPANY_TZ).strftime("%d.%m.%Y %H:%M")
+        if final and document.signed_at
+        else None
+    )
     basis_text = document.signatory_basis_text if final else None
     verification_code = document.verification_code if final else None
     verification_url = f"https://{get_settings().cabinet_domain}/v/{verification_code}" if verification_code else None
@@ -123,23 +188,27 @@ async def build_payload(session: AsyncSession, document: Document) -> tuple[dict
         "body": _with_signature(document.body, name, position, basis_text=basis_text),
         "meta": {
             "number": document.number if final else None,
-            "date": clock.company_date(document.registered_at).isoformat()
-            if final and document.registered_at
-            else None,
+            "date": day,
             "addressee": addressee,
-            "reply_to": await _reply_to(session, document, lang),
+            "addressee_strong": 0 if document.recipient_name and document.recipient_name.strip() else None,
+            "reply_to": reply_to,
             "executor": directory.name(document.author_crm_user_id),
             "basis_text": basis_text,
             "verification_code": verification_code,
             "verification_url": verification_url,
+            **grid_meta(
+                lang,
+                number=document.number if final else None,
+                day=_date_text(lang, registered),
+                reply_to=reply_to,
+                executor=directory.name(document.author_crm_user_id),
+                email=author.email if author and author.email else None,
+                project=document.deal_number,
+                code=verification_code,
+                signed_text=signed_text,
+            ),
         },
-        "letterhead": {
-            "company_name": letterhead.text(head, "company_name", lang),
-            "requisites": letterhead.requisites(head, lang),
-            "footer": letterhead.footer(head, lang),
-            "accent": head.accent_color or DEFAULT_ACCENT,
-            "font": head.font_family,
-        },
+        "letterhead": grid_letterhead(head, lang),
         "logo_sha256": head.logo_sha256,
     }
     if not final:
@@ -169,14 +238,19 @@ async def request_preview(session: AsyncSession, body: dict[str, Any]) -> Docume
             "basis_text": None,
             "verification_code": None,
             "verification_url": None,
+            **grid_meta(
+                lang,
+                number=None,
+                day=None,
+                reply_to=None,
+                executor=None,
+                email=None,
+                project=None,
+                code=None,
+                signed_text=None,
+            ),
         },
-        "letterhead": {
-            "company_name": letterhead.text(head, "company_name", lang),
-            "requisites": letterhead.requisites(head, lang),
-            "footer": letterhead.footer(head, lang),
-            "accent": head.accent_color or DEFAULT_ACCENT,
-            "font": head.font_family,
-        },
+        "letterhead": grid_letterhead(head, lang),
         "logo_sha256": head.logo_sha256,
         "draft": True,
         "preview": True,  # выдаётся по хешу только такой рендер — черновик чужого письма так не получить

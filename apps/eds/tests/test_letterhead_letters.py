@@ -195,8 +195,8 @@ async def test_pdf_cache_failure_and_letterhead_missing(
     assert len(stub.calls) == 1
     payload = stub.calls[0]
     assert payload["meta"]["number"] is None and payload["meta"]["addressee"] == [
+        "ГНИ Мирабадского района",  # окно конверта (стандарт §4): организация первой, ниже должность и ФИО
         "Начальнику инспекции Каримову А. А.",
-        "ГНИ Мирабадского района",
     ]
     assert payload["body"]["doc"]["content"][-1] == {
         "type": "signature",

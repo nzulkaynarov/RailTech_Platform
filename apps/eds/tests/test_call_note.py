@@ -107,6 +107,9 @@ async def test_note_is_rendered_in_the_worker_and_becomes_the_callers_file(
         ("Компания", "ООО «Восток Рейл»"),
         ("Телефон", "+998901234567"),
         ("Почта", "nigora@example.com"),
+    ]
+    assert payload["meta"]["kind_label"] == "Записка о звонке", "вид документа — в инфоблоке листа, не заголовком тела"
+    assert [(r["label"], r["value"]) for r in payload["meta"]["info"]] == [
         ("Когда", "20.11.2026 14:30"),
         ("Принял", "Алия Каримова"),
         ("Лид", "L-0001"),
@@ -198,8 +201,9 @@ async def test_call_without_a_lead_has_its_own_name_and_footnote(
     stub = StubRenderer()
     assert await work(container, stub, deferred[0]) == "ready"
     [payload] = stub.calls
-    assert [label for label, _ in cells(payload)] == ["Кто звонил", "Когда", "Принял"]
-    assert dict(cells(payload))["Принял"] == "Алия Каримова", "без `taken_by` — вызывающий сотрудник"
+    assert [label for label, _ in cells(payload)] == ["Кто звонил"]
+    info = {row["label"]: row["value"] for row in payload["meta"]["info"]}
+    assert list(info) == ["Когда", "Принял"] and info["Принял"] == "Алия Каримова", "без `taken_by` — сам сотрудник"
     assert paragraphs(payload)[-1] == "Составлена системой по звонку"
     ref = (await client.get(f"{URL}/{ordered.json()['id']}", headers=staff["manager"].headers)).json()["file"]
     assert ref["name"] == "Записка о звонке 2026-11-20.pdf"
