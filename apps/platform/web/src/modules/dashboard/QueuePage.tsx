@@ -25,7 +25,7 @@ import "../eds/decision/decision.css";
 import { bannerKind } from "../../shared/ui/bannerKind";
 import { SourceBanner } from "../../shared/ui/SourceBanner";
 import { matchSection } from "../registry";
-import { pluralForm, queueEmptyKind } from "./queue";
+import { pluralForm, queueEmptyKinds } from "./queue";
 import { categoryOf, chipsOf, groupsOf } from "./queueModel";
 import { QueueRow } from "./QueueRow";
 import { WaitingBlock } from "./WaitingBlock";
@@ -140,7 +140,14 @@ export function QueuePage() {
     both: t("modules:dashboard.queue.partial.both", names),
     multi: t("modules:dashboard.queue.partial.multi", { names: downNames }),
   };
-  const emptyKind = queueEmptyKind(me);
+  const emptyKinds = queueEmptyKinds(me);
+  const [soleKind] = emptyKinds;
+  const emptyKind = emptyKinds.length === 1 && soleKind ? soleKind : "default";
+  // Несколько разделов (несколько ролей) — нейтральный заголовок и по тексту на каждый раздел
+  const emptyText =
+    emptyKinds.length === 1
+      ? t(`modules:dashboard.queue.empty.${emptyKind}.text`)
+      : emptyKinds.map((kind) => t(`modules:dashboard.queue.empty.${kind}.text`)).join(" ");
 
   const projects = matchSection("/eds/projects");
   const showLink = projects !== undefined && canSee(me, projects.section.access);
@@ -177,7 +184,7 @@ export function QueuePage() {
       <EmptyState
         level={3}
         title={t(`modules:dashboard.queue.empty.${emptyKind}.title`)}
-        text={t(`modules:dashboard.queue.empty.${emptyKind}.text`)}
+        text={emptyText}
         action={
           emptyKind === "director" && showLink ? (
             <LinkButton to="/eds/projects">

@@ -1171,6 +1171,7 @@
         "queued": "Refresh started. The list will update within a minute.",
         "column": "Source",
         "missing": "Not in source",
+        "missingSince": "last in the file {{when}}",
         "manual": "Manual"
       },
       "file": {

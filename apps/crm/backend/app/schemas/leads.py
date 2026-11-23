@@ -86,6 +86,16 @@ class LeadOut(BaseModel):
     reply_channel: str | None = None
 
 
+class LeadOriginOut(BaseModel):
+    """Where the lead came from beyond the channel: form key, landing path, referrer, UTM."""
+
+    form: str | None = None
+    page: str | None = None
+    referrer: str | None = None
+    utm: dict[str, str] | None = None
+    landing_language: str | None = None
+
+
 class LeadDetail(LeadOut):
     qualification: dict[str, Any]
     consent_given_at: datetime | None
@@ -118,6 +128,8 @@ class LeadDetail(LeadOut):
     # просрочен ли он.
     first_response_due_at: datetime | None = None
     first_response_overdue: bool = False
+    # Origin facts of a web-form lead (LID-5); null for other channels and older leads.
+    origin: "LeadOriginOut | None" = None
     # Подтверждение запроса клиенту: канал, итог, причина словами (null — не заводилось).
     confirmation: NoticeOut | None = None
     # Приглашение клиента лида в кабинет: итог, каналы контакта, «повторить другим каналом» (null —

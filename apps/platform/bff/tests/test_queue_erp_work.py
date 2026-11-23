@@ -509,15 +509,47 @@ async def test_director_with_a_second_role_gets_execution_by_that_role(
     assert {i["role_id"] for i in rows} == {rid("MANAGER_ALL")}
 
 
-async def test_a_created_role_with_director_sections_gets_execution_by_the_catalog(
-    web: Web, fb: FeedBackends
+async def test_a_created_role_with_the_director_approval_sections_gets_only_decisions(
+    web: Web, fb: FeedBackends, check: ContractChecker
 ) -> None:
-    """Правило — про системную роль DIRECTOR, не про разделы: созданная роль с теми же разделами
-    получает строки по каталогу."""
+    """ЕВ-5а: «только решения» — признак набора прав (одобрение КП и служебок), а не названия роли:
+    созданная роль с разделами директора получает ту же очередь, ERP за исполнением не спрошен."""
     everything(fb)
     own = custom(70, "Своя роль с разделами директора", access_of("DIRECTOR"))
     await web.login([own])
 
-    kinds = {i["kind"] for i in await queue_of(web)}
+    items = await queue_of(web, check)
 
-    assert {"issue_contract", "attach_scan"} <= kinds
+    assert not {i["kind"] for i in items} & (EXECUTION | {"issue_act"})
+    assert fb.calls(fb.erp["calc_tasks"]) == 0
+    assert fb.calls(fb.erp["projects"]) == 0
+    assert fb.calls(fb.erp["receivables"]) == 0
+
+
+async def test_a_role_without_one_of_the_approval_sections_keeps_execution_rows(
+    web: Web, fb: FeedBackends
+) -> None:
+    """Без одного из двух разделов одобрения роль — исполнитель: строки по каталогу."""
+    everything(fb)
+    for missing in ("eds.drafts", "eds.memo.approve"):
+        access = {k: v for k, v in access_of("DIRECTOR").items() if k != missing}
+        await web.login([custom(71, f"Без {missing}", access)])
+
+        kinds = {i["kind"] for i in await queue_of(web)}
+
+        assert {"issue_contract", "attach_scan"} <= kinds, missing
+
+
+async def test_a_created_role_with_approval_sections_and_a_second_role_executes_by_the_second(
+    web: Web, fb: FeedBackends
+) -> None:
+    """Заместитель по зоне (своя роль с одобрением) и менеджер-универсал в одном лице: исполнение —
+    по второй роли, как у директора с двумя ролями."""
+    everything(fb)
+    own = custom(72, "Заместитель", access_of("DIRECTOR"))
+    await web.login([own, "MANAGER_ALL"])
+
+    rows = [i for i in await queue_of(web) if i["kind"] in EXECUTION]
+
+    assert {i["kind"] for i in rows} == EXECUTION
+    assert {i["role_id"] for i in rows} == {rid("MANAGER_ALL")}

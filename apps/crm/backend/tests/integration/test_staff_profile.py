@@ -338,4 +338,52 @@ async def test_staff_directory_names_everyone_with_photo_version_and_nothing_pri
     assert rows[manager.id]["avatar_version"] == view.avatar_version
     assert rows[gone.id]["is_active"] is False
     assert rows[gone.id]["avatar_version"] is None
-    assert set(rows[manager.id]) == {"id", "full_name", "position", "avatar_version", "is_active"}
+    assert set(rows[manager.id]) == {
+        "id",
+        "full_name",
+        "position",
+        "avatar_version",
+        "is_active",
+        "roles",
+    }
+    assert "email" not in rows[manager.id]
+    assert "phone" not in rows[manager.id]
+
+
+async def test_staff_contacts_reveal_is_journaled_with_the_answer(
+    client: TestClient, sessions: async_sessionmaker[AsyncSession]
+) -> None:
+    """Решение 10.11: телефон и почта коллеги — по нажатию, показ — запись `contact.reveal`."""
+    viewer, password = await make_user(sessions, "viewer@railtech.uz", ["viewer"])
+    colleague, _ = await make_user(sessions, "colleague@railtech.uz", ["manager"])
+    gone, _ = await make_user(sessions, "gone@railtech.uz", ["manager"])
+    async with sessions() as session, session.begin():
+        user = await session.get(User, colleague.id)
+        other = await session.get(User, gone.id)
+        assert user is not None
+        assert other is not None
+        user.phone = "+998901112233"
+        other.is_active = False
+    url = f"/api/v1/staff/{colleague.id}/contacts"
+    assert client.post(url).status_code == 401
+
+    headers = login(client, viewer.email, password)
+    response = client.post(url, headers=headers)
+    assert response.status_code == 200, response.text
+    assert response.json() == {
+        "id": colleague.id,
+        "phone": "+998901112233",
+        "email": "colleague@railtech.uz",
+    }
+    assert client.post(f"/api/v1/staff/{gone.id}/contacts", headers=headers).status_code == 404
+
+    async with sessions() as session:
+        rows = (
+            await session.scalars(select(AuditLog).where(AuditLog.action == "contact.reveal"))
+        ).all()
+        stored = await session.get(User, colleague.id)
+    assert stored is not None
+    assert [(r.entity_type, r.entity_id, r.actor_user_id) for r in rows] == [
+        ("staff", str(colleague.id), viewer.id)
+    ]
+    assert rows[0].after == {"name": stored.full_name}

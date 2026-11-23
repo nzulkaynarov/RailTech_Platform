@@ -16,6 +16,7 @@ import { useListCrmLeads, useTakeCrmLead } from "../../../shared/api/generated/p
 import { useDocumentTitle } from "../../../shared/lib/useDocumentTitle";
 import { useFormat } from "../../../shared/lib/useFormat";
 import { DataTable, type DataColumn } from "../../../shared/ui/DataTable/DataTable";
+import { useSortParam } from "../../../shared/ui/DataTable/sort";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { ErrorNote, QueryState } from "../../../shared/ui/FormParts";
 import { LinkButton } from "../../../shared/ui/LinkButton";
@@ -43,6 +44,8 @@ import "../crm.css";
 import { FilterBar, FilterField } from "../../../shared/ui/FilterBar";
 
 const PAGE_SIZE = 50;
+/** Порядок щелчком по шапке (Х-15): ключи, которые принимает BFF `sort` */
+const LEAD_SORT_KEYS = ["last_message"] as const;
 const TABS = [
   "all",
   "new",
@@ -250,6 +253,7 @@ function LeadsTable({
     {
       id: "last",
       header: t("leads:columns.last"),
+      sortKey: "last_message",
       width: COLS.last,
       cell: (row) => (
         <>
@@ -275,6 +279,7 @@ function LeadsTable({
       scrollLabel={t("leads:tableScroll")}
       className="pf-crm-table"
       flexMin={200}
+      sortMode="server"
       columns={columns}
       rows={items}
       rowKey={(row) => row.lead}
@@ -343,6 +348,7 @@ export function LeadsPage({ objectId }: { objectId?: string | undefined }) {
   const channel = pick(["", ...CHANNELS], params.get("channel"), "");
   const q = params.get("q") ?? "";
   const offset = Math.max(0, Number(params.get("offset") ?? "0") || 0);
+  const sort = useSortParam(LEAD_SORT_KEYS);
   const lead = parseLead(objectId) ?? parseLead(params.get("lead"));
   const creating = lead !== null && params.get("create") === "1";
   // «Создать · Лид» из окна «Создать» (план 2026-11-12 п. 0.1)
@@ -359,10 +365,11 @@ export function LeadsPage({ objectId }: { objectId?: string | undefined }) {
       scope,
       ...(channel ? { channel } : {}),
       ...(q ? { q } : {}),
+      ...(sort ? { sort } : {}),
       offset,
       limit: PAGE_SIZE,
     }),
-    [tab, scope, channel, q, offset],
+    [tab, scope, channel, q, sort, offset],
   );
   const list = useListCrmLeads(query, { query: { enabled: !waiting } });
   const filtered = tab !== "all" || scope !== "all" || channel !== "" || q !== "";

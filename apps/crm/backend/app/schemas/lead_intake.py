@@ -19,6 +19,16 @@ class WebFormToken(BaseModel):
     min_fill_seconds: int
 
 
+class WebLeadUtm(BaseModel):
+    """UTM parameters of the landing URL, as the site saw them; all optional."""
+
+    utm_source: str | None = Field(default=None, max_length=256)
+    utm_medium: str | None = Field(default=None, max_length=256)
+    utm_campaign: str | None = Field(default=None, max_length=256)
+    utm_content: str | None = Field(default=None, max_length=256)
+    utm_term: str | None = Field(default=None, max_length=256)
+
+
 class WebLeadIn(BaseModel):
     """Форма «Запрос» со страницы входа Cabinet: вложений в первой версии нет (Q-12).
 
@@ -43,12 +53,26 @@ class WebLeadIn(BaseModel):
         "(иначе 422 consent_required).",
     )
     website: str | None = Field(default=None, max_length=255)
+    # Origin facts (LID-5), all optional: which form, the landing page path, the referrer, UTM and
+    # the language of the landing page. Stored as facts on the lead and shown in its card.
+    form: str | None = Field(default=None, max_length=128, description="Form key, e.g. `request`.")
+    page: str | None = Field(default=None, max_length=1024, description="Landing page path.")
+    referrer: str | None = Field(default=None, max_length=1024)
+    utm: WebLeadUtm | None = None
+    landing_language: str | None = Field(default=None, max_length=8)
 
 
 class WebLeadAccepted(BaseModel):
-    """202: запрос принят. `lead_id` пустой — запрос отброшен антиспамом (honeypot)."""
+    """202: запрос принят. `lead_id` пустой — запрос отброшен антиспамом (honeypot).
+
+    For the «What next» screen (LID-5): `request_number` is the number to show to the submitter
+    (`L-0042`, same as in the staff card) and `first_response_minutes` is the first-response time
+    from the «Website forms» settings. Both are null when the request was dropped.
+    """
 
     lead_id: int | None
+    request_number: str | None = None
+    first_response_minutes: int | None = None
 
 
 class ManualLeadIn(BaseModel):

@@ -263,7 +263,7 @@ test.describe("«Забыли пароль?»", () => {
     page,
   }) => {
     await page.goto(RESET_URL);
-    await expect(page.getByRole("heading", { level: 1, name: "Новый пароль" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Задайте пароль" })).toBeVisible();
     // Токен сразу уходит из адреса (история, журналы прокси, Referer), а страница не отдаёт Referer
     await expect(page).toHaveURL(/\/reset-password$/);
     await expect(page.locator('meta[name="referrer"]')).toHaveAttribute("content", "no-referrer");
@@ -281,7 +281,11 @@ test.describe("«Забыли пароль?»", () => {
     await page.getByLabel("Новый пароль").fill("Brand-new-secret-77");
     await page.getByLabel("Повторите пароль").fill("Brand-new-secret-77");
     await page.getByRole("button", { name: "Сохранить пароль" }).click();
-    await expect(page.getByRole("alert")).toContainText("Ссылка недействительна или устарела");
+    await expect(page.getByRole("alert")).toContainText(
+      "Ссылка уже использована или срок её действия истёк",
+    );
+    await settledScreenshot(page, "reset-password-expired");
+    await expectNoViolations(page, "ссылка устарела");
     await page.getByRole("link", { name: "Запросить новую ссылку" }).click();
     await expect(page).toHaveURL(/\/forgot-password$/);
   });
@@ -299,6 +303,19 @@ test.describe("«Забыли пароль?»", () => {
         path.startsWith("/forgot") ? "forgot-password" : "reset-password",
       );
     }
+    // Использованная или просроченная ссылка (приглашение, ДВ-7): причина словами и путь к новой ссылке
+    await visit(page, "/reset-password?token=expired-token-0123456789abcdef");
+    await page.getByLabel("Новый пароль").fill("Brand-new-secret-77");
+    await page.getByLabel("Повторите пароль").fill("Brand-new-secret-77");
+    await page.getByRole("button", { name: "Сохранить пароль" }).click();
+    await expect(page.getByRole("link", { name: "Запросить новую ссылку" })).toBeVisible();
+    expect(
+      await page.evaluate(
+        "document.documentElement.scrollWidth > document.documentElement.clientWidth",
+      ),
+    ).toBe(false);
+    await expectNoViolations(page, "ссылка устарела 390");
+    await settledScreenshot(page, "reset-password-expired");
   });
 });
 

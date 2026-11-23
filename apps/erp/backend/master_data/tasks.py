@@ -2,6 +2,8 @@ import logging
 
 from celery import shared_task
 
+from .cbu_banks import BankFileError
+
 logger = logging.getLogger(__name__)
 
 
@@ -54,3 +56,27 @@ def refresh_tnved_codes():
         return {"skipped": "switched_off"}
     logger.info("ТН ВЭД: %s", summary)
     return summary
+
+
+@shared_task(
+    time_limit=600,
+    soft_time_limit=540,
+    max_retries=3,
+    autoretry_for=(Exception,),
+    dont_autoretry_for=(BankFileError,),
+    retry_backoff=True,
+)
+def refresh_bank_codes():
+    """Monthly Celery-beat job (Х-12): новые коды банков и названия из файла ЦБ; ничего не удаляется."""
+    from core.external_status import ExternalSwitchedOff, external_call
+
+    from .cbu_banks import refresh_banks
+
+    try:
+        # Исход — в состояние сервиса «справочник банков ЦБ» (`/health` integration); выключатель из CRM пропускает прогон.
+        with external_call("cbu_banks"):
+            summary = refresh_banks()
+    except ExternalSwitchedOff:
+        logger.info("CBU banks: refresh skipped — service switched off from CRM")
+        return {"skipped": "switched_off"}
+    return {"added": summary.added, "updated": summary.updated, "missing": summary.missing, "total": summary.total}

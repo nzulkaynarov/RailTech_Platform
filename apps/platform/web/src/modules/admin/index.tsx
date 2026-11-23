@@ -9,6 +9,7 @@ import { AuditPage } from "./audit/AuditPage";
 import { BusJournalPage } from "./bus/BusJournalPage";
 import { CompanyPage } from "./company/CompanyPage";
 import { IntegrationsPage } from "./integrations/IntegrationsPage";
+import { LegalPage } from "./legal/LegalPage";
 import { OrgPage } from "./org/OrgPage";
 import { RolesPage } from "./roles/RolesPage";
 import { SigningPage } from "./signing/SigningPage";
@@ -41,6 +42,7 @@ const PAGES: Readonly<Record<string, ComponentType>> = {
   taxes: TaxesPage,
   sales: SalesPage,
   articles: ArticlesPage,
+  legal: LegalPage,
   telegram: TelegramPage,
   mail: MailPage,
   forms: WebFormsPage,

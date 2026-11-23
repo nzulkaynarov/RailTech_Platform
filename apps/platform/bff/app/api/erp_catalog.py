@@ -187,6 +187,11 @@ async def get_lookups(authed: Reader) -> Lookups:
 # --- позиции -----------------------------------------------------------------------------------
 
 
+# Порядок (Х-15): `field` по возрастанию, `-field` по убыванию; поле только из белого списка ERP
+# (`ordering_terms` общего списка позиций): цену и другие закрытые поля сортировкой не раскрыть.
+ITEM_SORT = r"^-?(name|sku|created_at|updated_at)$"
+
+
 @router.get("/erp/catalog/items", response_model=ItemPage, operation_id="listCatalogItems")
 async def list_items(
     authed: Reader,
@@ -195,6 +200,7 @@ async def list_items(
     category_id: Annotated[str | None, Query(pattern=r"^[0-9]+$")] = None,
     proposals: Annotated[str | None, Query(pattern=r"^pending$")] = None,
     review: Annotated[str | None, Query(pattern=r"^(waiting|requests)$")] = None,
+    sort: Annotated[str | None, Query(pattern=ITEM_SORT)] = None,
     page: Page = 1,
     page_size: PageSize = 25,
 ) -> ItemPage:
@@ -207,6 +213,7 @@ async def list_items(
             category=category_id,
             proposals=proposals,
             review=review,
+            ordering=sort,
             page=page,
             page_size=page_size,
         ),

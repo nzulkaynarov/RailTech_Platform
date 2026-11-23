@@ -203,6 +203,72 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/legal": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Действующие оферта и политика Кабинета и нужен ли акцепт контакту
+     * @description ДВ-5. Действующие редакции (по одной на вид: `privacy`, `terms`) с текстом на трёх языках; подстановки `{{company.*}}`
+     *     уже заполнены реквизитами компании. `needs_acceptance` — у контакта сессии есть действующая редакция без его акцепта.
+     *     Пока ни одна редакция не опубликована, `editions` пуст и кабинет открыт без акцепта. Открыт и сессии без акцепта.
+     */
+    get: operations["getLegal"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/legal/accept": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Принять действующие оферту и политику
+     * @description Явный акцепт контакта: записываются редакция, дата и время, контакт, организация, язык показанного текста, адрес и
+     *     устройство. `edition_ids` — редакции, которые контакт видел на экране; если за это время вышла новая, ответ 409
+     *     `LEGAL_EDITION_CHANGED` — экран перечитывает `GET /legal`. Повтор безопасен. Право «действовать» не нужно: принять
+     *     может любой контакт. До акцепта все остальные эндпоинты кабинета (кроме `/me` и `/legal`) отвечают 403
+     *     `LEGAL_ACCEPTANCE_REQUIRED`.
+     */
+    post: operations["acceptLegal"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/legal/policy": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Действующая политика обработки персональных данных (до входа)
+     * @description Публичный текст политики для ссылки на экране входа (ДВ-5). `policy: null` — редакция ещё не опубликована, ссылки нет. Других данных нет.
+     */
+    get: operations["getLegalPolicy"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/me": {
     parameters: {
       query?: never;
@@ -2420,6 +2486,50 @@ export interface components {
       /** @description Скан подписанного акта из `POST /uploads` (PDF или изображение, ≤ 10 МБ) */
       upload_id?: string;
     };
+    /** @description Текст на трёх языках */
+    LegalLangText: {
+      ru: string;
+      uz: string;
+      en: string;
+    };
+    LegalSection: {
+      title: components["schemas"]["LegalLangText"];
+      body: components["schemas"]["LegalLangText"];
+    };
+    /** @description Редакция документа Кабинета с заполненными подстановками реквизитов компании */
+    LegalEdition: {
+      id: number;
+      /**
+       * @description `privacy` — политика обработки персональных данных, `terms` — условия использования (оферта)
+       * @enum {string}
+       */
+      kind: "privacy" | "terms";
+      /** @description Название редакции, например `2026-11-23` */
+      label: string;
+      /** Format: date-time */
+      published_at?: string;
+      /** @description Контакт сессии уже принял эту редакцию (нет в публичной политике) */
+      accepted?: boolean;
+      title: components["schemas"]["LegalLangText"];
+      lead: components["schemas"]["LegalLangText"];
+      sections: components["schemas"]["LegalSection"][];
+    };
+    LegalCurrent: {
+      needs_acceptance: boolean;
+      editions: components["schemas"]["LegalEdition"][];
+    };
+    LegalAcceptRequest: {
+      /** @description Редакции, которые контакт видел на экране */
+      edition_ids: number[];
+      /**
+       * @description Язык, на котором контакт читал текст
+       * @enum {string}
+       */
+      language: "ru" | "uz" | "en";
+    };
+    LegalPolicy: {
+      policy: components["schemas"]["LegalEdition"] | null;
+    };
     Me: {
       contact: components["schemas"]["TeamMember"];
       company: components["schemas"]["Company"];
@@ -2437,6 +2547,8 @@ export interface components {
       modules: components["schemas"]["ModuleCode"][];
       /** @description Непрочитанные контактом ответы менеджера в чате кабинета (бейдж «Сообщения»); 0 — нет или модуля нет */
       unread: number;
+      /** @description У контакта есть действующая оферта или политика без его акцепта (ДВ-5) — кабинет закрыт до принятия, остальные эндпоинты отвечают 403 `LEGAL_ACCEPTANCE_REQUIRED` */
+      legal_pending?: boolean;
     };
     TelegramStatus: {
       /** @description Telegram привязан к контакту (по проекции CRM) — уведомления приходят в бот, Mini App входит без письма */
@@ -3806,6 +3918,93 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["PortalOperator"];
+        };
+      };
+    };
+  };
+  getLegal: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Действующие редакции */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LegalCurrent"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      429: components["responses"]["TooManyRequests"];
+    };
+  };
+  acceptLegal: {
+    parameters: {
+      query?: never;
+      header: {
+        /**
+         * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
+         *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
+         *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
+         */
+        "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["LegalAcceptRequest"];
+      };
+    };
+    responses: {
+      /** @description Акцепт записан; состояние после него */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LegalCurrent"];
+        };
+      };
+      400: components["responses"]["IdempotencyKeyRequired"];
+      401: components["responses"]["Unauthorized"];
+      /** @description Вышла новая редакция (`LEGAL_EDITION_CHANGED`) — перечитайте `GET /legal` */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      415: components["responses"]["UnsupportedMediaType"];
+      422: components["responses"]["ValidationError"];
+      429: components["responses"]["TooManyRequests"];
+    };
+  };
+  getLegalPolicy: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Действующая политика или `null` */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LegalPolicy"];
         };
       };
     };

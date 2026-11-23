@@ -23,6 +23,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
+import { useInRouterContext, useSearchParams } from "react-router";
 
 import { AuthContext } from "../../../app/auth/useAuth";
 import { TableCols } from "../DataBlock";
@@ -30,6 +31,15 @@ import { ScrollRegion } from "../FormParts";
 import { tableMinWidth } from "../tableWidth";
 import { ColumnsMenu } from "./ColumnsMenu";
 import { useToolsTarget } from "./toolsContext";
+import {
+  SORT_PARAM,
+  type SortState,
+  type SortValue,
+  formatSort,
+  nextSort,
+  parseSort,
+  useSortedRows,
+} from "./sort";
 import { type TableSettings, tableKey, useTablesStore } from "./tableSettings";
 
 import "./data-table.css";
@@ -58,6 +68,14 @@ export interface DataColumn<Row> {
   hideable?: boolean;
   /** Ячейка — заголовок строки (`<th scope="row">`): сводки и отчёты, где первая ячейка называет строку */
   rowHeader?: boolean;
+  /**
+   * Столбец сортируется щелчком по шапке. Ключ — имя поля: латиницей, он же уходит в адрес страницы (`?sort=key`,
+   * `?sort=-key`) и, у постраничного списка, серверу. Только из списка, объявленного столбцами: чужое имя из адреса
+   * игнорируется.
+   */
+  sortKey?: string;
+  /** Значение для сортировки на клиенте; без него столбец не сортируется на клиенте (на сервере нужен только `sortKey`) */
+  sortValue?: (row: Row) => SortValue;
 }
 
 export interface DataTableProps<Row> {
@@ -79,6 +97,20 @@ export interface DataTableProps<Row> {
    * строку). Не задан — кнопка над таблицей, как прежде.
    */
   toolsTarget?: HTMLElement | null;
+  /**
+   * Кто сортирует: `client` (по умолчанию) — таблица сама, по `sortValue`; `server` — постраничный список: таблица только
+   * ведёт порядок в адресе страницы и номер страницы сбрасывает, а строки в нужном порядке отдаёт сервер (экран читает
+   * порядок через `useSortParam`).
+   */
+  sortMode?: "client" | "server";
+  /** Имя параметра адреса, если на странице несколько таблиц (по умолчанию `sort`) */
+  sortParam?: string;
+}
+
+/** Порядок в адресе страницы: сырое значение и способ его записать (`null` — убрать параметр, номер страницы тоже). */
+interface UrlSort {
+  raw: string | null;
+  set: (value: string | null) => void;
 }
 
 const features = tableFeatures({
@@ -104,7 +136,42 @@ function clamp(value: number, min: number, max: number): number {
  * (мышь, стрелки на ручке, двойной щелчок — по содержимому) меняется только действием сотрудника, поэтому столбцы стоят на
  * месте при смене фильтра и страницы (инвариант 6). «Столбцы» — видимость, порядок, закрепление слева, «Сбросить».
  */
-export function DataTable<Row extends RowData>({
+export function DataTable<Row extends RowData>(props: DataTableProps<Row>) {
+  // Вне маршрутизатора (витрины и юнит-тесты) порядок живёт в состоянии таблицы, в приложении — в адресе страницы.
+  const inRouter = useInRouterContext();
+  return inRouter ? <RoutedTable {...props} /> : <TableView {...props} />;
+}
+
+function RoutedTable<Row extends RowData>(props: DataTableProps<Row>) {
+  const [params, setParams] = useSearchParams();
+  const param = props.sortParam ?? SORT_PARAM;
+  const raw = params.get(param);
+  const urlSort = useMemo<UrlSort>(
+    () => ({
+      raw,
+      set: (value) => {
+        setParams(
+          (prev) => {
+            const next = new URLSearchParams(prev);
+            if (value === null) next.delete(param);
+            else next.set(param, value);
+            // другой порядок — другая первая страница (`page` — номер, `offset` — сдвиг у списков со сдвигом)
+            next.delete("page");
+            next.delete("offset");
+            return next;
+          },
+          { replace: true },
+        );
+      },
+    }),
+    [raw, param, setParams],
+  );
+  return <TableView {...props} urlSort={urlSort} />;
+}
+
+function TableView<Row extends RowData>({
+  urlSort,
+  sortMode = "client",
   tableId,
   caption,
   scrollLabel,
@@ -116,11 +183,11 @@ export function DataTable<Row extends RowData>({
   flexMin = 170,
   pageSize,
   toolsTarget: ownTarget,
-}: DataTableProps<Row>) {
+}: DataTableProps<Row> & { urlSort?: UrlSort }) {
   // Место «Столбцов»: своё (свойство) или объявленное экраном через `RegistryTools`.
   const slotTarget = useToolsTarget();
   const toolsTarget = ownTarget !== undefined ? ownTarget : slotTarget;
-  const { t } = useTranslation("ui");
+  const { t, i18n } = useTranslation("ui");
   const userId = useContext(AuthContext)?.me.id ?? "-";
   const key = tableKey(userId, tableId);
   const saved = useTablesStore((state) => state.entries[key]) ?? EMPTY;
@@ -161,13 +228,33 @@ export function DataTable<Row extends RowData>({
     };
   }, [saved, byId, columns, firstId]);
 
+  // Порядок: столбцы с `sortKey` (на клиенте — ещё и с `sortValue`); значение из адреса — только из этого списка.
+  const sortable = (column: DataColumn<Row>): boolean =>
+    column.sortKey !== undefined && (sortMode === "server" || column.sortValue !== undefined);
+  const sortKeys = columns.filter(sortable).map((column) => column.sortKey ?? "");
+  const [localSort, setLocalSort] = useState<string | null>(null);
+  const rawSort = urlSort ? urlSort.raw : localSort;
+  const sort: SortState | null = parseSort(rawSort, sortKeys);
+  const changeSort = (key: string) => {
+    const value = formatSort(nextSort(sort, key));
+    if (urlSort) urlSort.set(value);
+    else setLocalSort(value);
+  };
+  const sortValue = sort ? columns.find((c) => c.sortKey === sort.key)?.sortValue : undefined;
+  const sortedRows = useSortedRows(
+    rows,
+    sortMode === "client" ? sortValue : undefined,
+    sort?.dir,
+    i18n.language,
+  );
+
   // Номер страницы держится в пределах: после фильтра строк меньше — показываем последнюю страницу, а не пустоту.
   const [page, setPage] = useState(1);
   const pages = pageSize ? Math.max(1, Math.ceil(rows.length / pageSize)) : 1;
   const current = Math.min(page, pages);
   const shown = useMemo(
-    () => (pageSize ? rows.slice((current - 1) * pageSize, current * pageSize) : rows),
-    [rows, pageSize, current],
+    () => (pageSize ? sortedRows.slice((current - 1) * pageSize, current * pageSize) : sortedRows),
+    [sortedRows, pageSize, current],
   );
 
   const table = useTable({
@@ -367,6 +454,8 @@ export function DataTable<Row extends RowData>({
                 {ordered.map((column) => {
                   const def = byId.get(column.id);
                   if (!def) return null;
+                  const canSort = sortable(def) && !def.headerHidden;
+                  const active = canSort && sort?.key === def.sortKey ? sort : null;
                   return (
                     <th
                       key={column.id}
@@ -375,9 +464,33 @@ export function DataTable<Row extends RowData>({
                       data-pinned={column.id === lastPinned ? "last" : undefined}
                       className={def.numeric ? "pf-col-num" : undefined}
                       style={stick(column)}
+                      aria-sort={
+                        canSort
+                          ? active
+                            ? active.dir === "asc"
+                              ? "ascending"
+                              : "descending"
+                            : "none"
+                          : undefined
+                      }
                     >
                       {def.headerHidden ? (
                         <span className="pf-sr-only">{def.header}</span>
+                      ) : canSort && def.sortKey ? (
+                        <button
+                          type="button"
+                          className="pf-dt-sort"
+                          onClick={() => {
+                            changeSort(def.sortKey ?? "");
+                          }}
+                        >
+                          <span className="pf-dt-sort-label">{def.header}</span>
+                          {active ? (
+                            <span className="pf-dt-sort-arrow" aria-hidden="true">
+                              {active.dir === "asc" ? "↑" : "↓"}
+                            </span>
+                          ) : null}
+                        </button>
                       ) : (
                         def.header
                       )}

@@ -50,9 +50,10 @@ describe("Admin · Ролевая матрица (R-2, ADR-0012)", () => {
       "Бухгалтер",
       "Делопроизводитель",
       "Менеджер-универсал",
+      "Юрист",
     ]);
     const row = within(table()).getByRole("row", { name: /Сводка/ });
-    expect(within(row).getAllByText("Скрыто")).toHaveLength(6);
+    expect(within(row).getAllByText("Скрыто")).toHaveLength(7);
     expect(within(row).getAllByText("Полный доступ")).toHaveLength(1);
     expect(within(row).getAllByText("Только чтение")).toHaveLength(1);
   });

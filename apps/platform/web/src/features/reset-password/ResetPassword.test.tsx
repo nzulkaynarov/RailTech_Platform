@@ -42,7 +42,7 @@ describe("Сброс пароля сотрудника по почте (карт
     fireEvent.click(within(group).getByRole("button", { name: "Сбросить и отправить письмо" }));
 
     expect(
-      await screen.findByText("Письмо с новым паролем отправлено на manager@demo.example"),
+      await screen.findByText("Письмо со ссылкой отправлено на manager@demo.example"),
     ).toBeVisible();
     await waitFor(() => {
       expect(within(side).queryByRole("group", { name: "Сброс пароля" })).toBeNull();
@@ -116,6 +116,23 @@ describe("Сброс пароля сотрудника по почте (карт
     const button = within(side).getByRole("button", { name: "Сбросить пароль" });
     expect(button).toBeDisabled();
     expect(button).toHaveAccessibleDescription(/Свой пароль здесь не сбросить/);
+  });
+
+  it("лимит ссылок (429) — словами, письмо не отправлено", async () => {
+    server.use(
+      http.post("*/admin/users/:id/reset-password/email", () =>
+        HttpResponse.json(
+          { code: "TOO_MANY_REQUESTS", message: "x", source: "crm" },
+          { status: 429 },
+        ),
+      ),
+    );
+    signInAs("admin@demo.example");
+    const side = await openCard("u-demo-manager");
+    fireEvent.click(within(side).getByRole("button", { name: "Сбросить пароль" }));
+    fireEvent.click(within(side).getByRole("button", { name: "Сбросить и отправить письмо" }));
+
+    expect(await within(side).findByRole("alert")).toHaveTextContent("Слишком много ссылок");
   });
 
   it("ответ 409 self_reset от BFF показывается словами", async () => {

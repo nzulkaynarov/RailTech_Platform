@@ -58,6 +58,7 @@ from portal.views import (
     UploadView,
 )
 from portal.views_items import ItemThumbnailView
+from portal.views_legal import LegalAcceptView, LegalCurrentView, LegalPolicyView
 from portal.views_letters import LetterDetailView, LetterFileView, LetterListView
 from portal.views_notifications import NotificationListView, NotificationReadView, NotificationSettingsView
 from portal.views_partner import (
@@ -118,6 +119,13 @@ urlpatterns = [
     path("operator/", OperatorView.as_view(), name="portal-operator-slash"),
     path("countries", CountriesView.as_view(), name="portal-countries"),
     path("countries/", CountriesView.as_view(), name="portal-countries-slash"),
+    # Оферта и политика Кабинета (ДВ-5)
+    path("legal", LegalCurrentView.as_view(), name="portal-legal"),
+    path("legal/", LegalCurrentView.as_view(), name="portal-legal-slash"),
+    path("legal/accept", LegalAcceptView.as_view(), name="portal-legal-accept"),
+    path("legal/accept/", LegalAcceptView.as_view(), name="portal-legal-accept-slash"),
+    path("legal/policy", LegalPolicyView.as_view(), name="portal-legal-policy"),
+    path("legal/policy/", LegalPolicyView.as_view(), name="portal-legal-policy-slash"),
     # Me
     path("me", MeView.as_view(), name="portal-me"),
     path("me/", MeView.as_view(), name="portal-me-slash"),

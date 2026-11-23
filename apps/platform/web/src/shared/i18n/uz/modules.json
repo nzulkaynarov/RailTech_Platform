@@ -60,6 +60,18 @@
         "default": {
           "title": "Sizga vazifalar yo‘q",
           "text": "Yangi vazifalar shu yerda va qo‘ng‘iroqchada paydo bo‘ladi."
+        },
+        "registrar": {
+          "title": "Sizga vazifalar yöq",
+          "text": "Röyxatga olinadigan yangi xatlar va saralanadigan lidlar şu yerda va qönğiroqçada paydo böladi."
+        },
+        "lawyer": {
+          "title": "Sizga vazifalar yöq",
+          "text": "Vizangizni kutayotgan şartnomalar şu yerda va qönğiroqçada paydo böladi."
+        },
+        "signer": {
+          "title": "Sizga vazifalar yöq",
+          "text": "Muddati tugayotgan vakolatlar şu yerda va qönğiroqçada paydo böladi."
         }
       },
       "partial": {
@@ -191,6 +203,9 @@
           "exchange_rate": {
             "manual": "Valyuta kursi qo‘lda kiritildi",
             "auto_skipped": "Markaziy bank kursi qo‘llanmadi: qo‘lda kiritilgan kurs amal qiladi"
+          },
+          "portal_legal": {
+            "published": "Kabinet hujjatining yangi tahriri e’lon qilindi"
           }
         }
       }
@@ -340,7 +355,10 @@
       "empty": {
         "title": "Heç kim topilmadi",
         "text": "Filtrni yoki qidiruvni özgartiring"
-      }
+      },
+      "roles": "Rollar",
+      "reveal": "Kontaktlarni körsatish",
+      "close": "Yopish"
     }
   },
   "admin": {
@@ -356,6 +374,7 @@
       "taxes": "Soliqlar va valyutalar",
       "sales": "Sotuvlar",
       "articles": "Kompaniya maqolalari",
+      "legal": "Oferta va siyosat",
       "telegram": "Telegram",
       "mail": "Pochta",
       "forms": "Sayt shakllari",
@@ -651,7 +670,8 @@
         "openCard": "Kartochkani ochish",
         "notSentUnavailable": "Xodim ro'yxatga «Taklif qilingan» holatida qo'shildi, lekin CRM javob bermadi va xat yuborilmadi. Keyinroq kartochkadagi «Taklifni qayta yuborish» tugmasi bilan takrorlang.",
         "resend": "Taklifni qayta yuborish",
-        "resendHint": "Yangi vaqtinchalik parolli yangi xat yuboriladi; avvalgisi amal qilmay qoladi.",
+        "resendHint": "72 soatlik “Parolni örnating” havolasi bilan yangi xat yuboriladi; avvalgi havola va parol amal qilmaydi.",
+        "tooMany": "Bu xodim uçun bir soatda havolalar juda köp. Keyinroq takrorlang.",
         "resendNotSent": "Xat yuborilmadi: pochta ulanmagan yoki mavjud emas. Uni Sozlamalar · Ulanishlar bo‘limida ulang va takrorlang.",
         "delivery": "Kirishni qanday berish",
         "deliveryMail": "Pochtaga xat bilan",

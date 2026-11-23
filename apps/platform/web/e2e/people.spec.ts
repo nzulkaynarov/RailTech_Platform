@@ -18,5 +18,30 @@ test.describe("Органайзер · Люди", () => {
       await expectNoViolations(page, `people ${String(width)}`);
       await settledScreenshot(page, "people");
     });
+
+    test(`карточка коллеги: контакты скрыты, «Показать контакты» открывает их, ${String(width)}`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
+      await loginAndWait(page, "accountant@demo.example");
+      await spaGoto(page, "/chats/contacts");
+      await expect(page.locator(".pf-people tbody tr").first()).toBeVisible();
+      // бухгалтер видит коллег: решение 10.11 — имя, должность и роли открыты всем
+      await page
+        .getByRole("button", { name: "Сотрудники" })
+        .or(page.getByText("Сотрудники", { exact: true }))
+        .first()
+        .click();
+      await page.locator(".pf-people-name").first().click();
+      const card = page.locator(".pf-people-card");
+      await expect(card).toBeVisible();
+      await expect(card.getByText("•••").first()).toBeVisible();
+      await expectNoViolations(page, `people card ${String(width)}`);
+      await settledScreenshot(page, "people-card");
+      await card.getByRole("button", { name: "Показать контакты" }).click();
+      await expect(card.getByRole("link", { name: /@demo\.example$/ })).toBeVisible();
+      await expectNoViolations(page, `people revealed ${String(width)}`);
+      await settledScreenshot(page, "people-revealed");
+    });
   }
 });

@@ -121,3 +121,8 @@ OWN_COMPANY_ID = int(os.environ["OWN_COMPANY_ID"]) if os.environ.get("OWN_COMPAN
 # отправку на согласование, PDF и отправку клиенту, пока ЦБ не обновит курс или финансист не задаст
 # курс КП вручную). Политика курса переедет в «Настройки» ERP (M1-ERP-09).
 FX_RATE_MAX_AGE_DAYS = int((os.environ.get("FX_RATE_MAX_AGE_DAYS") or "7").strip() or "7")
+
+# Список кодов банков (МФО): страница ЦБ РУз «Филиалы коммерческих банков» с файлом xlsx (адрес файла содержит случайную
+# часть и меняется, поэтому настроен адрес страницы; прямой адрес xlsx тоже подходит). Раз в месяц — задача Beat
+# `master_data.tasks.refresh_bank_codes` (Х-12).
+CBU_BANKS_URL = (os.environ.get("CBU_BANKS_URL") or "https://cbu.uz/ru/credit-organizations/banks/branches/").strip()

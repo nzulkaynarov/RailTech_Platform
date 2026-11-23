@@ -14,7 +14,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from app.clients.erp_company import ErpCompany
 from app.deps import Authed, require, require_any
-from app.errors import PlatformError
+from app.errors import PlatformError, from_backend
 from app.schemas_erp_catalog import page_meta, rows_of
 
 router = APIRouter(tags=["chats"])
@@ -124,6 +124,25 @@ async def reveal_contacts(id: ContactId, authed: Reader) -> CounterpartyContacts
     return CounterpartyContacts(
         id=str(row.get("id", id)), phone=_text(row.get("phone")), email=_text(row.get("email"))
     )
+
+
+StaffId = Annotated[str, Path(pattern=r"^[1-9][0-9]*$")]
+
+
+@router.post(
+    "/people/staff/{id}/reveal",
+    response_model=CounterpartyContacts,
+    operation_id="revealStaffContacts",
+)
+async def reveal_staff_contacts(id: StaffId, authed: Reader) -> CounterpartyContacts:
+    """Телефон и почта коллеги из профиля CRM. Запись журнала `contact.reveal` и ответ — одна
+    транзакция CRM: нет записи — нет и контактов (решение 10.11)."""
+    response = await authed.call("crm", "POST", f"/api/v1/staff/{id}/contacts")
+    if response.status_code != status.HTTP_200_OK:
+        raise from_backend("crm", response)
+    body = response.json()
+    row: dict[str, Any] = body if isinstance(body, dict) else {}
+    return CounterpartyContacts(id=id, phone=_text(row.get("phone")), email=_text(row.get("email")))
 
 
 # --- Карточка контрагента: одна компания во всех ролях (ADR-0028, СУЩ-2.5) -----------------------

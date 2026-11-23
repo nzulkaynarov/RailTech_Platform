@@ -15,7 +15,9 @@ import { LinkButton } from "../../../shared/ui/LinkButton";
 import { PageHeader } from "../../../shared/ui/PageHeader";
 import { CompanyPicker, useApplyCompanyRole, type PickedCompany } from "../../../shared/ui/pickers";
 import { StepSections } from "../../../shared/ui/StepSections/StepSections";
+import { useLeftSteps } from "../../../shared/ui/StepSections/useLeftSteps";
 import { clean, orderPath, useErrorText, useRefreshStock } from "./api";
+import { MIN_QUANTITY, orderRequirements } from "./orderModel";
 
 interface LineValues {
   product_id?: string;
@@ -92,6 +94,7 @@ export function OrderCreatePage() {
   const rights = useListSupplierOrders({});
   const prices = rights.data?.rights.prices ?? false;
   const [active, setActive] = useState<SectionKey>("supplier");
+  const { left } = useLeftSteps(active);
   const { message } = App.useApp();
   const navigate = useNavigate();
   const refresh = useRefreshStock();
@@ -137,10 +140,17 @@ export function OrderCreatePage() {
   const watchedLines: LineValues[] | undefined = Form.useWatch("lines", form);
   const lines = (watchedLines ?? []).filter((l) => l.product_id);
   const manual = mode !== "shortage";
-  // Галочка шага «Строки» — когда у каждой строки есть позиция и количество больше нуля (как требует форма).
-  const linesDone =
-    (watchedLines ?? []).length > 0 &&
-    (watchedLines ?? []).every((l) => Boolean(l.product_id) && Number(l.quantity) >= 0.001);
+  // Галочки шагов и их требования — из одной проверки (`orderRequirements`), а не руками на каждом шаге; текст — тот же,
+  // что у правил полей формы.
+  const watchedRequest: string | undefined = Form.useWatch("request", form);
+  const missing = orderRequirements({
+    supplierId,
+    manual,
+    request: watchedRequest,
+    lines: watchedLines ?? [],
+  });
+  const needs = (key: "supplier" | "lines") =>
+    missing[key].map((requirement) => t(`create.${requirement}Required`));
   return (
     <div className="pf-stock-new">
       <PageHeader
@@ -206,7 +216,9 @@ export function OrderCreatePage() {
                 summary: [supplierName, t(manual ? "create.modeManual" : "create.modeShortage")]
                   .filter(Boolean)
                   .join(" · "),
-                complete: Boolean(supplierId),
+                complete: true,
+                requirements: needs("supplier"),
+                showRequirements: left.has("supplier"),
                 content: (
                   <>
                     <Form.Item
@@ -261,7 +273,9 @@ export function OrderCreatePage() {
                       key: "lines",
                       title: t("create.sections.lines"),
                       summary: t("create.linesSummary", { count: lines.length }),
-                      complete: linesDone,
+                      complete: true,
+                      requirements: needs("lines"),
+                      showRequirements: left.has("lines"),
                       content: (
                         <>
                           <div className="pf-calc-add-row">
@@ -310,7 +324,7 @@ export function OrderCreatePage() {
                                       ]}
                                     >
                                       <InputNumber
-                                        min={0.001}
+                                        min={MIN_QUANTITY}
                                         aria-label={t("create.quantityLabel", { n: index + 1 })}
                                       />
                                     </Form.Item>

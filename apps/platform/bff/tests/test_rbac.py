@@ -236,6 +236,7 @@ SETTINGS_MENU = [
     "numbering",
     "taxes",
     "sales",
+    "legal",
     "articles",
     "telegram",
     "mail",

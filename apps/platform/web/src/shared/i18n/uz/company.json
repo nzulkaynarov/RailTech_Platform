@@ -130,6 +130,11 @@
     "sections": {
       "company": "Kompaniya",
       "contacts": "Kontaktlar"
+    },
+    "needs": {
+      "innRequired": "STIRni kiriting — hisob-faktura uçun kerak",
+      "addressRequired": "Yuridik manzilni kiriting — hisob-faktura uçun kerak",
+      "contactRequired": "Telefon yoki poçtani kiriting"
     }
   },
   "brand": {

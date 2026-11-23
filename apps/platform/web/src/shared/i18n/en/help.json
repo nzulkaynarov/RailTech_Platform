@@ -104,6 +104,31 @@
           "Search (Ctrl K) and the bell help you not to lose anything.",
           "Something is missing — “Write to the administrator”."
         ]
+      },
+      "registrar": {
+        "title": "Office clerk",
+        "steps": [
+          "“Documents · Incoming”: register a received letter, with its number and addressee; the director adds the resolution.",
+          "“Mail”: letters in the shared mailbox before registration — sort them, register them or mark a duplicate.",
+          "“Contacts · Leads”: note what a new lead wants and hand it to a manager with a note.",
+          "Outgoing on paper: record that it was sent on the letter card."
+        ]
+      },
+      "lawyer": {
+        "title": "Lawyer",
+        "steps": [
+          "“Tasks”: contracts waiting for your visa — the signing route brings them.",
+          "Open the contract, check its terms and give the visa or refuse with a reason: a refusal stops the signing.",
+          "Without your visa the contract route does not start — if you are away, an administrator assigns another lawyer."
+        ]
+      },
+      "signer": {
+        "title": "Signing authority",
+        "steps": [
+          "“Settings · Signing authority”: the register — who may sign what, up to which amount.",
+          "Extend an authority before it expires, or revoke it when the person may no longer sign.",
+          "A reminder arrives 14 days before an authority expires."
+        ]
       }
     }
   },

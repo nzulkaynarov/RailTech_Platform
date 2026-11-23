@@ -627,6 +627,15 @@ async def test_activity_admin_events_are_words_not_raw_verbs(
         assert all(raw not in i["text"] for i in items)
 
 
+def test_cabinet_legal_events_have_russian_feed_text() -> None:
+    from app.feeds.events import event_text
+
+    assert event_text("portal.legal.accepted", "Acceptance of privacy edition x") == (
+        "Клиент принял условия или политику кабинета"
+    )
+    assert "edition" not in event_text("admin.portal_legal.published", "Published terms edition x")
+
+
 async def test_activity_falls_back_to_deal_timelines_when_log_is_closed(
     web: Web, fb: FeedBackends, check: ContractChecker
 ) -> None:

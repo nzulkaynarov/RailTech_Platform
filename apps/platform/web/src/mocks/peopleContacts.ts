@@ -6,6 +6,7 @@ import type {
   EdsAddressee,
 } from "../shared/api/generated/model";
 import { pickedCompanyById, pickedPeople } from "./counterpartyPick";
+import { findUserById } from "./fixtures/users";
 
 /** Люди клиентов и партнёров (FR-11): контакты контрагентов демо-мира, как их отдаёт ERP `parties/people/`. */
 const PEOPLE: CounterpartyPerson[] = [
@@ -90,6 +91,21 @@ export const peopleContactsHandlers = [
     const items = PEOPLE.filter((person) => !kind || person.kind === kind);
     const pageSize = Number(url.searchParams.get("page_size") ?? "100");
     return HttpResponse.json({ items, total: items.length, page: 1, page_size: pageSize });
+  }),
+  // Решение 10.11: контакты коллеги — по нажатию; телефон и почта — из профиля CRM, показ пишется в журнал
+  http.post("*/people/staff/:id/reveal", ({ params }) => {
+    const user = findUserById(String(params.id));
+    if (!user) {
+      return HttpResponse.json(
+        { code: "NOT_FOUND", message: "Не найдено.", source: "crm" },
+        { status: 404 },
+      );
+    }
+    return HttpResponse.json({
+      id: user.id,
+      phone: `+99890${user.id.replace(/\D/g, "").padStart(7, "0").slice(-7)}`,
+      email: user.email,
+    });
   }),
   http.post("*/people/contacts/:id/reveal", ({ params }) => {
     const found = CONTACTS[String(params.id)];

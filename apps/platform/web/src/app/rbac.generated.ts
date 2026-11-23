@@ -314,6 +314,7 @@ export const MENU = {
     numbering: ["company.settings"],
     taxes: ["company.settings"],
     sales: ["company.settings"],
+    legal: ["company.settings"],
     articles: ["admin"],
     telegram: ["admin"],
     mail: ["admin"],

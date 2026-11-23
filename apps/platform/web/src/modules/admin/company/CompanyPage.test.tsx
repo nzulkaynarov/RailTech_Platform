@@ -386,6 +386,19 @@ describe("Реквизиты и логотип", () => {
     expect(ticked(head(/^Контакты/))).toBe(true);
   });
 
+  it("Х-18: без ИНН шаг «Компания» без галочки, а на шаге после ухода названо, что нужно для счетов", async () => {
+    await openTab("details");
+    await screen.findByLabelText(/^ИНН/);
+    type(/^ИНН/, "");
+    const company = () => screen.getByRole("button", { name: /^Компания/ });
+    fireEvent.click(screen.getByRole("button", { name: /^Контакты/ }));
+    fireEvent.click(company());
+    const section = screen.getByRole("region", { name: /^Компания/ });
+    expect(within(section).getByText("Укажите ИНН — он нужен для счетов")).toBeVisible();
+    type(/^ИНН/, "123456789");
+    expect(within(section).queryByText("Укажите ИНН — он нужен для счетов")).toBeNull();
+  });
+
   it("логотип: загрузка файла и удаление", async () => {
     await openTab("details");
     const input = await screen.findByLabelText("Выбрать файл: Логотип компании");

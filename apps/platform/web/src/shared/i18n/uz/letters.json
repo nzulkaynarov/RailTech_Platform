@@ -1171,6 +1171,7 @@
         "queued": "Yangilash boshlandi. Ro‘yxat bir daqiqa ichida yangilanadi.",
         "column": "Manba",
         "missing": "Manbada yo‘q",
+        "missingSince": "faylda oxirgi marta {{when}}",
         "manual": "Qo‘lda"
       },
       "file": {

@@ -130,6 +130,11 @@
     "sections": {
       "company": "Company",
       "contacts": "Contacts"
+    },
+    "needs": {
+      "innRequired": "Enter the TIN — invoices need it",
+      "addressRequired": "Enter the legal address — invoices need it",
+      "contactRequired": "Enter a phone or an email"
     }
   },
   "brand": {
