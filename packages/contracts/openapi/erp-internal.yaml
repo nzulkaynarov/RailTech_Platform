@@ -8683,11 +8683,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorDetail'
         '409':
-          description: 'CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот'
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorDetail'
+                $ref: '#/components/schemas/ContractConflict'
+          description: 'CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот; CONTRACT_VISAS_REQUIRED (Х-1):
+            отправка договора клиенту до сбора виз — в теле `reason` (причина словами) и `missing` (роли без визы)'
         '401':
           $ref: '#/components/responses/UnauthorizedResponse'
   /api/v1/crm/acts/{id}/cancel/:
@@ -8864,11 +8865,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorDetail'
         '409':
-          description: 'CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот'
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorDetail'
+                $ref: '#/components/schemas/ContractConflict'
+          description: 'CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот; CONTRACT_VISAS_REQUIRED (Х-1):
+            отправка договора клиенту до сбора виз — в теле `reason` (причина словами) и `missing` (роли без визы)'
         '401':
           $ref: '#/components/responses/UnauthorizedResponse'
   /api/v1/crm/acts/{id}/reissue/:
@@ -9727,11 +9729,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorDetail'
         '409':
-          description: 'CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот'
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorDetail'
+                $ref: '#/components/schemas/ContractConflict'
+          description: 'CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот; CONTRACT_VISAS_REQUIRED (Х-1):
+            отправка договора клиенту до сбора виз — в теле `reason` (причина словами) и `missing` (роли без визы)'
         '401':
           $ref: '#/components/responses/UnauthorizedResponse'
   /api/v1/crm/contracts/{id}/cancel/:
@@ -9830,11 +9833,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorDetail'
         '409':
-          description: 'CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот'
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorDetail'
+                $ref: '#/components/schemas/ContractConflict'
+          description: 'CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот; CONTRACT_VISAS_REQUIRED (Х-1):
+            отправка договора клиенту до сбора виз — в теле `reason` (причина словами) и `missing` (роли без визы)'
         '401':
           $ref: '#/components/responses/UnauthorizedResponse'
   /api/v1/crm/contracts/{id}/download-pdf/:
@@ -9994,11 +9998,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorDetail'
         '409':
-          description: 'CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот'
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorDetail'
+                $ref: '#/components/schemas/ContractConflict'
+          description: 'CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот; CONTRACT_VISAS_REQUIRED (Х-1):
+            отправка договора клиенту до сбора виз — в теле `reason` (причина словами) и `missing` (роли без визы)'
         '401':
           $ref: '#/components/responses/UnauthorizedResponse'
   /api/v1/crm/contracts/{id}/reject/:
@@ -10054,11 +10059,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorDetail'
         '409':
-          description: 'CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот'
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorDetail'
+                $ref: '#/components/schemas/ContractConflict'
+          description: 'CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот; CONTRACT_VISAS_REQUIRED (Х-1):
+            отправка договора клиенту до сбора виз — в теле `reason` (причина словами) и `missing` (роли без визы)'
         '401':
           $ref: '#/components/responses/UnauthorizedResponse'
   /api/v1/crm/contracts/{id}/request-signing/:
@@ -10156,11 +10162,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorDetail'
         '409':
-          description: 'CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот'
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorDetail'
+                $ref: '#/components/schemas/ContractConflict'
+          description: 'CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот; CONTRACT_VISAS_REQUIRED (Х-1):
+            отправка договора клиенту до сбора виз — в теле `reason` (причина словами) и `missing` (роли без визы)'
         '401':
           $ref: '#/components/responses/UnauthorizedResponse'
   /api/v1/crm/contracts/{id}/select-wording/:
@@ -10259,11 +10266,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorDetail'
         '409':
-          description: 'CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот'
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorDetail'
+                $ref: '#/components/schemas/ContractConflict'
+          description: 'CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот; CONTRACT_VISAS_REQUIRED (Х-1):
+            отправка договора клиенту до сбора виз — в теле `reason` (причина словами) и `missing` (роли без визы)'
         '401':
           $ref: '#/components/responses/UnauthorizedResponse'
   /api/v1/crm/contracts/{id}/sign-manager/:
@@ -23250,6 +23258,20 @@ components:
         * `fulfilling` - fulfilling
         * `awaiting_acceptance` - awaiting_acceptance
         * `done` - done
+    CodeEnum:
+      enum:
+      - visas_not_requested
+      - visas_declined
+      - visas_pending
+      - visas_returned
+      - no_visa_holder
+      type: string
+      description: |-
+        * `visas_not_requested` - visas_not_requested
+        * `visas_declined` - visas_declined
+        * `visas_pending` - visas_pending
+        * `visas_returned` - visas_returned
+        * `no_visa_holder` - no_visa_holder
     Company:
       type: object
       properties:
@@ -24505,6 +24527,12 @@ components:
           items:
             $ref: '#/components/schemas/ContractCardActionsEnum'
           description: 'Что можно сделать СЕЙЧАС этому сотруднику: допустимо из статуса и разрешено правами роли'
+        send_blocker:
+          allOf:
+          - $ref: '#/components/schemas/ContractSendBlocker'
+          nullable: true
+          description: 'Х-1: пока проект не ушёл клиенту — что мешает его отправить; `null` — ничего (действие `send_to_client`
+            в `actions`)'
         history:
           type: array
           items:
@@ -24538,6 +24566,24 @@ components:
         * `revise` - revise
         * `mark_issued` - mark_issued
         * `attach_scan` - attach_scan
+    ContractConflict:
+      type: object
+      description: 'Тело 409 действий по договору и акту: код; при `CONTRACT_VISAS_REQUIRED` (Х-1) ещё причина словами и роли
+        без визы.'
+      properties:
+        detail:
+          type: string
+          description: Код отказа
+        reason:
+          type: string
+          description: 'Причина словами («Нужны визы: бухгалтер, юрист»)'
+        missing:
+          type: array
+          items:
+            type: string
+          description: Роли без визы словами в нижнем регистре
+      required:
+      - detail
     ContractFlow:
       type: object
       description: |-
@@ -24731,6 +24777,41 @@ components:
           type: string
       required:
       - file
+    ContractSendBlocker:
+      type: object
+      description: 'Х-1: почему проект договора нельзя отправить клиенту — визы маршрута подписи не собраны (ADR-0025).'
+      properties:
+        code:
+          allOf:
+          - $ref: '#/components/schemas/CodeEnum'
+          description: |-
+            visas_not_requested — договор ещё не на визах; visas_declined — EDS не принял договор на визы (причина в remark); visas_pending — не все визы поставлены; visas_returned — виза возвращена с замечанием; no_visa_holder — в компании нет держателя нужного права
+
+            * `visas_not_requested` - visas_not_requested
+            * `visas_declined` - visas_declined
+            * `visas_pending` - visas_pending
+            * `visas_returned` - visas_returned
+            * `no_visa_holder` - no_visa_holder
+        message:
+          type: string
+          description: 'Причина словами для сотрудника («Нужны визы: бухгалтер, юрист»)'
+        missing:
+          type: array
+          items:
+            type: string
+          description: Роли, чьих виз не хватает, словами в нижнем регистре
+        remark:
+          type: string
+          description: Замечание визирующего или причина отказа EDS, как написаны; пусто — нет
+        settings_link:
+          type: boolean
+          description: 'Нужной роли нет ни у одного сотрудника: назначить её можно в настройках (ссылка без тупика)'
+      required:
+      - code
+      - message
+      - missing
+      - remark
+      - settings_link
     ContractTransitionInRequest:
       type: object
       properties:

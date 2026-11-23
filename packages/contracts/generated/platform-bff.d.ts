@@ -10719,6 +10719,27 @@ export interface components {
       /** Format: date */
       valid_until: string | null;
     };
+    /** @description Х-1: почему проект договора нельзя отправить клиенту — визы маршрута подписи (ADR-0025) не собраны */
+    ProjectContractSendBlocker: {
+      /**
+       * @description visas_not_requested — договор ещё не на визах; visas_declined — EDS не принял договор на визы (причина в remark); visas_pending — не все визы поставлены; visas_returned — виза возвращена с замечанием; no_visa_holder — в компании нет держателя нужного права (ссылка в настройки)
+       * @enum {string}
+       */
+      code:
+        | "visas_not_requested"
+        | "visas_declined"
+        | "visas_pending"
+        | "visas_returned"
+        | "no_visa_holder";
+      /** @description Причина словами («Нужны визы: бухгалтер, юрист») */
+      message: string;
+      /** @description Роли без визы словами в нижнем регистре */
+      missing: string[];
+      /** @description Замечание визирующего или причина отказа EDS, как написаны; пусто — нет */
+      remark: string;
+      /** @description Нужной роли нет ни у одного сотрудника: назначить её можно в настройках */
+      settings_link: boolean;
+    };
     ProjectContract: {
       id: number;
       number: string;
@@ -10755,6 +10776,8 @@ export interface components {
         | "mark_issued"
         | "attach_scan"
       )[];
+      /** @description Х-1: пока проект договора не ушёл клиенту — что мешает его отправить (визы маршрута подписи не собраны); null — ничего, действие send_to_client в actions. Считает ERP */
+      send_blocker?: components["schemas"]["ProjectContractSendBlocker"] | null;
       history: components["schemas"]["ProjectJournalEntry"][];
     };
     ProjectInvoice: {

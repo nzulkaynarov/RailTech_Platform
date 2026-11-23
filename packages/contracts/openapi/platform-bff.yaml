@@ -19480,6 +19480,30 @@ components:
           type: [string, 'null']
       required: [id, number, status, version, outgoing_number, valid_until]
       additionalProperties: false
+    ProjectContractSendBlocker:
+      type: object
+      description: 'Х-1: почему проект договора нельзя отправить клиенту — визы маршрута подписи (ADR-0025) не собраны'
+      properties:
+        code:
+          description: 'visas_not_requested — договор ещё не на визах; visas_declined — EDS не принял договор на визы (причина в remark); visas_pending — не все визы поставлены; visas_returned — виза возвращена с замечанием; no_visa_holder — в компании нет держателя нужного права (ссылка в настройки)'
+          enum: [visas_not_requested, visas_declined, visas_pending, visas_returned, no_visa_holder]
+          type: string
+        message:
+          description: 'Причина словами («Нужны визы: бухгалтер, юрист»)'
+          type: string
+        missing:
+          description: 'Роли без визы словами в нижнем регистре'
+          items:
+            type: string
+          type: array
+        remark:
+          description: 'Замечание визирующего или причина отказа EDS, как написаны; пусто — нет'
+          type: string
+        settings_link:
+          description: 'Нужной роли нет ни у одного сотрудника: назначить её можно в настройках'
+          type: boolean
+      required: [code, message, missing, remark, settings_link]
+      additionalProperties: false
     ProjectContract:
       type: object
       properties:
@@ -19517,6 +19541,11 @@ components:
             enum: [send_to_client, client_agreed, reject, revise, mark_issued, attach_scan]
             type: string
           type: array
+        send_blocker:
+          description: 'Х-1: пока проект договора не ушёл клиенту — что мешает его отправить (визы маршрута подписи не собраны); null — ничего, действие send_to_client в actions. Считает ERP'
+          oneOf:
+            - $ref: '#/components/schemas/ProjectContractSendBlocker'
+            - type: 'null'
         history:
           items:
             $ref: '#/components/schemas/ProjectJournalEntry'

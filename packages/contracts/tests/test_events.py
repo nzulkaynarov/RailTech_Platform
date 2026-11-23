@@ -218,6 +218,8 @@ EDS_EVENTS = {
     "document.signed",
     # SIGN-4: решение уполномоченного лица по коммерческому документу ERP (подписан/отклонён).
     "signing.decided",
+    # Х-1: состояние виз перед подписью (ERP не отправляет договор клиенту до виз).
+    "signing.visas_changed",
 }
 
 
@@ -454,6 +456,7 @@ def test_initial_subscriptions_v1() -> None:
         "uz.railtech.eds.letter.resolved.v1",
         "uz.railtech.eds.letter.resolved.v2",
         "uz.railtech.eds.signing.decided.v1",
+        "uz.railtech.eds.signing.visas_changed.v1",
     ]
 
 

@@ -1330,6 +1330,19 @@ class Object(BaseModel):
     version: int | None = None
 
 
+class Object1(BaseModel):
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    kind: Kind6
+    object_id: int
+    """
+    Идентификатор сущности в ERP
+    """
+    number: Annotated[str, Field(max_length=64, min_length=1)]
+    version: int | None = None
+
+
 class OutgoingNumber(RootModel[str]):
     root: Annotated[str, Field(pattern="^ИСХ-\\d{3,}/\\d{2}$")]
     """
@@ -1580,6 +1593,27 @@ class SigningDecidedV1(BaseModel):
     actor: Actor
 
 
+class SigningVisasChangedV1(BaseModel):
+    """
+    Тип uz.railtech.eds.signing.visas_changed.v1, источник rt://eds. Поле data конверта (envelope.v1.json). Визы маршрута подписи (ADR-0025: «Виза бухгалтера», «Виза юриста» по праву EDS) — состояние ПОСЛЕ изменения: маршрут открыт (все визы pending), виза поставлена (approved), виза возвращена с замечанием (returned) или некому визировать (no_holder: в компании нет активного держателя права). Одно событие — полный список виз документа, не приращение. object.version — версия редакции из запроса erp.signing.requested; changed_at — момент изменения: ERP не применяет событие старее уже применённого. ERP хранит проекцию у запроса подписи и не отправляет договор клиенту, пока all_approved не станет true для текущей редакции (Х-1). Подписчик: erp.
+    """
+
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    object: Object1
+    visas: list[Visa]
+    """
+    Все визы маршрута документа по порядку шагов. Пустой список — для вида документа виз нет.
+    """
+    all_approved: bool
+    """
+    Все визы поставлены (true и для пустого списка)
+    """
+    changed_at: AwareDatetime
+    actor: Actor
+
+
 class Source(BaseModel):
     """
     Откуда письмо (W18A-P2, необязательное, с 2026-11-02): письмо общего ящика CRM, зарегистрированное из очереди «Входящая почта», — CRM снимает его с очереди и пишет номер ВХ. Нет поля — регистрация не из очереди.
@@ -1592,6 +1626,13 @@ class Source(BaseModel):
     """
     id письма в CRM (`inbound_mail.id`)
     """
+
+
+class Status(StrEnum):
+    pending = "pending"
+    approved = "approved"
+    returned = "returned"
+    no_holder = "no_holder"
 
 
 class Step(BaseModel):
@@ -1660,6 +1701,25 @@ class Uuid(RootModel[UUID]):
 
 class UuidV2(RootModel[UUID]):
     root: UUID
+
+
+class Visa(BaseModel):
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    permission: EdsPermission
+    """
+    Право EDS, по которому визирует любой держатель
+    """
+    label: Annotated[str, Field(max_length=120, min_length=1)]
+    """
+    Подпись шага, например «Виза бухгалтера»
+    """
+    role: Annotated[str, Field(max_length=80, min_length=1)]
+    """
+    Роль словами для причины отказа, например «Бухгалтер»
+    """
+    status: Status
 
 
 class Zone(StrEnum):
