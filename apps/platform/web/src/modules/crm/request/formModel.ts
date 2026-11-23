@@ -156,3 +156,12 @@ export function toRequestPayload(
   }
   return payload;
 }
+
+/** Why the request note of a lead cannot be built yet: Telegram consent comes only from the bot, others - the Contact step. */
+export function noteConsentBlock(
+  leadChannel: string | null,
+  consentPresent: boolean,
+): "via_bot" | "mark" | null {
+  if (consentPresent) return null;
+  return leadChannel === "telegram" ? "via_bot" : "mark";
+}

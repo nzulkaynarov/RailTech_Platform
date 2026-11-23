@@ -20,6 +20,7 @@ import { requestDraftScope } from "./draft";
 import {
   type RequestContext,
   emptyRequestForm,
+  noteConsentBlock,
   toRequestPayload,
   validateRequest,
 } from "./formModel";
@@ -564,6 +565,15 @@ describe("черновик заявки и лид из Telegram без согл�
     const panel = await panelEl();
     expect(await within(panel).findByText(/Лид из Telegram даёт согласие в боте/)).toBeVisible();
     expect(within(panel).queryByRole("form", { name: "Создать заявку" })).toBeNull();
+  });
+});
+
+describe("основание заявки без согласия", () => {
+  it("Telegram: согласие даёт только бот, остальные каналы — отметка на шаге «Контакт»", () => {
+    expect(noteConsentBlock("telegram", false)).toBe("via_bot");
+    expect(noteConsentBlock("web", false)).toBe("mark");
+    expect(noteConsentBlock("phone", false)).toBe("mark");
+    expect(noteConsentBlock("telegram", true)).toBeNull();
   });
 });
 

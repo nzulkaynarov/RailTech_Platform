@@ -127,6 +127,18 @@ describe('«Новый запрос»: черновик переживает у�
     expect(screen.getByLabelText('Что нужно')).toHaveValue('');
   });
 
+  it.each([1e20, Date.now() + 10 * 24 * 60 * 60 * 1000])(
+    'черновик с датой вне диапазона (%s) отбрасывается, страница не падает',
+    async (savedAt) => {
+      signedIn();
+      window.sessionStorage.setItem(KEY, JSON.stringify({ summary: 'старое', lines: [], attachments: [], savedAt }));
+      renderApp('/requests/new');
+      await heading('Новая заявка');
+      expect(screen.getByLabelText('Что нужно')).toHaveValue('');
+      expect(screen.queryByText(/У вас есть черновик/)).not.toBeInTheDocument();
+    },
+  );
+
   it('хранилище недоступно (приватный режим, запрет) — форма работает, запрос уходит', async () => {
     signedIn();
     vi.spyOn(window.sessionStorage, 'getItem').mockImplementation(() => {

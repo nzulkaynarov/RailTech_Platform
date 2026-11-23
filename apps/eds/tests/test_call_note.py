@@ -222,6 +222,9 @@ async def test_note_of_a_non_phone_lead_carries_the_message_and_attachments(
     assert await work(container, stub, deferred[0]) == "ready"
     [payload] = stub.calls
     assert dict(cells(payload))["Канал"] == "Telegram"
+    # Nobody called: the requisite is "Клиент", never "Кто звонил".
+    assert "Кто звонил" not in dict(cells(payload))
+    assert dict(cells(payload))["Клиент"]
     assert payload["body"]["doc"]["content"][0]["content"][0]["text"] == "Записка о запросе"
     assert paragraphs(payload) == [
         "Что просил",

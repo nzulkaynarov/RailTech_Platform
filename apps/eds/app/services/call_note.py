@@ -36,6 +36,7 @@ TEXT: Final[dict[str, dict[str, str]]] = {
     "ru": {
         "title": "Записка о звонке",
         "caller": "Кто звонил",
+        "client": "Клиент",
         "company": "Компания",
         "phone": "Телефон",
         "email": "Почта",
@@ -58,6 +59,7 @@ TEXT: Final[dict[str, dict[str, str]]] = {
     "en": {
         "title": "Call note",
         "caller": "Caller",
+        "client": "Client",
         "company": "Company",
         "phone": "Phone",
         "email": "Email",
@@ -80,6 +82,7 @@ TEXT: Final[dict[str, dict[str, str]]] = {
     "uz": {
         "title": "Qönğiroq haqida yozuv",
         "caller": "Kim qönğiroq qildi",
+        "client": "Mijoz",
         "company": "Kompaniya",
         "phone": "Telefon",
         "email": "Poçta",
@@ -140,7 +143,7 @@ def build_body(data: CallNoteIn, taken_by: str) -> dict[str, Any]:
     call = is_call(data)
     when = data.called_at.astimezone(clock.COMPANY_TZ).strftime("%d.%m.%Y %H:%M")
     pairs = [
-        (text["caller"], data.caller_name),
+        (text["caller" if call else "client"], data.caller_name),
         (text["company"], data.company),
         (text["phone"], data.phone),
         (text["email"], data.email),

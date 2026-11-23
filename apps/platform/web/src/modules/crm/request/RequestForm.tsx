@@ -40,6 +40,7 @@ import {
   type RequestErrors,
   type RequestFormState,
   emptyRequestForm,
+  noteConsentBlock,
   toRequestPayload,
   validateRequest,
 } from "./formModel";
@@ -285,10 +286,13 @@ export function RequestForm({
     if (noteKey.current?.sig !== sig) noteKey.current = { sig, key: newKey() };
     void callNote.start({ request_key: noteKey.current.key, lang, ...content });
   };
+  const consentBlock = lead ? noteConsentBlock(lead.channel, consentPresent) : null;
   const noteBlockedReason = lead
-    ? consentPresent
-      ? null
-      : t("request:letter.noteNeedsConsent", { context: noteContext(noteKind) })
+    ? consentBlock === "via_bot"
+      ? t("request:errors.consent_via_bot")
+      : consentBlock === "mark"
+        ? t("request:letter.noteNeedsConsent", { context: noteContext(noteKind) })
+        : null
     : !callerName
       ? t("request:letter.noteNeedsCaller")
       : !state.summary.trim()

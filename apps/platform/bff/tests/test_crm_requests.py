@@ -8,8 +8,13 @@ platform-bff.yaml. Проверяется то, что делает BFF: раз�
 именем из CRM; записка о звонке (СЦ-6) — лид из CRM (канал, согласие), поля в EDS и ответ EDS.
 """
 
+from pathlib import Path
+from typing import Any
+
 import httpx
+import jsonschema
 import pytest
+import yaml
 
 from app.api import crm_requests
 from app.cookies import CSRF_HEADER
@@ -402,6 +407,62 @@ async def test_note_of_a_lead_of_any_channel_carries_its_message_and_attachments
     assert sent["message"] == "Нужны рельсы Р65"
     assert sent["attachments"] == ["ТЗ.pdf"]
     assert sent["lead"] == "L-2041"
+
+
+EDS_CONTRACT = Path(__file__).resolve().parents[4] / "packages/contracts/openapi/eds.yaml"
+
+
+def _eds_call_note_schema() -> dict[str, Any]:
+    spec = yaml.safe_load(EDS_CONTRACT.read_text(encoding="utf-8"))
+    return {**spec["components"]["schemas"]["CallNoteIn"], "components": spec["components"]}
+
+
+async def test_note_of_a_lead_with_hostile_input_still_passes_the_eds_contract(
+    web: Web, crm: CrmLeadsFake, eds: EdsFake
+) -> None:
+    """A 4096-char Telegram message, 25 files, a 300-char name: EDS must not answer 422."""
+    await web.login(["MANAGER"])
+    phone_lead(crm, source="telegram", display_name="Я" * 300, company_name="К" * 255)
+    crm.answer(
+        "GET",
+        "leads/2041/messages",
+        200,
+        [
+            message(
+                90,
+                "lead",
+                text="Ж" * 4096,
+                attachments=[{"kind": "file", "name": f"{'ф' * 234}{i}.pdf"} for i in range(25)]
+                + [{"kind": "file", "name": "   "}],
+            )
+        ],
+    )
+    eds.answer("POST", "call-notes", 202, PENDING)
+    assert (await web.send("POST", NOTE, json=note_form())).status_code == 202
+    sent = eds.body("POST", "call-notes")
+    jsonschema.Draft202012Validator(_eds_call_note_schema()).validate(sent)
+    assert sent["message"].endswith("…")
+    assert len(sent["message"]) == 4000
+    assert len(sent["attachments"]) == 20
+
+
+async def test_the_original_message_is_found_on_an_earlier_page_of_a_long_thread(
+    web: Web, crm: CrmLeadsFake, eds: EdsFake
+) -> None:
+    """CRM gives the last 200 messages: the first client message is paged back by before_id."""
+    await web.login(["MANAGER"])
+    phone_lead(crm, source="telegram")
+    last_page = [message(1000 + i, "bot", text=f"бот {i}") for i in range(200)]
+    first_page = [message(900, "lead", text="Самое первое"), message(901, "bot", text="Привет")]
+
+    def thread(request: httpx.Request) -> httpx.Response:
+        before = request.url.params.get("before_id")
+        return httpx.Response(200, json=last_page if before is None else first_page)
+
+    crm.overrides[("GET", "/api/v1/leads/2041/messages")] = thread
+    eds.answer("POST", "call-notes", 202, PENDING)
+    assert (await web.send("POST", NOTE, json=note_form())).status_code == 202
+    assert eds.body("POST", "call-notes")["message"] == "Самое первое"
 
 
 async def test_note_of_a_lead_without_thread_access_is_still_built_from_the_lead(
