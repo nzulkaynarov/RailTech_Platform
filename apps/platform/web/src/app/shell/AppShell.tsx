@@ -9,6 +9,7 @@ import { MODULE_SETTINGS } from "../../modules/admin/moduleSettings";
 import { SETTINGS_HOME } from "../../modules/admin/module";
 import type { SectionConfig } from "../../modules/types";
 import { SetupBanner } from "../../features/first-run/SetupBanner";
+import { MaintenanceBanner } from "../../features/maintenance/MaintenanceBanner";
 import { useLateSetupBanner, useSetupKnown } from "../../features/first-run/useSetupKnown";
 import { GlobalSearch } from "../../features/global-search/GlobalSearch";
 import { HelpDrawer } from "../../features/help/HelpDrawer";
@@ -428,6 +429,7 @@ export function AppShell() {
         </>
       )}
       <Layout style={{ minWidth: 0 }}>
+        <MaintenanceBanner />
         <TopBar
           crumbs={crumbs}
           labels={{
