@@ -3401,6 +3401,12 @@ export interface components {
       need?: string | null;
       /** @enum {string} */
       lang: "ru" | "uz" | "en";
+      /** @description Канал лида (`phone`, `web`, `cabinet`, `telegram`, …); пусто или `phone` — «Записка о звонке», иначе «Записка о запросе» с тем же телом */
+      channel?: string | null;
+      /** @description Исходное сообщение клиента (лид с сайта, из Кабинета, Telegram) */
+      message?: string | null;
+      /** @description Имена вложений исходного сообщения; в записку попадают списком */
+      attachments?: string[];
     };
     CallNote: {
       id: components["schemas"]["Uuid"];

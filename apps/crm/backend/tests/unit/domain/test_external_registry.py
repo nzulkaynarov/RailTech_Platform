@@ -50,6 +50,7 @@ def test_registry_lists_every_external_service_of_the_ensemble() -> None:
         "tls.cabinet",
         "erp.cbu_rates",
         "erp.customs_tariff",
+        "erp.cbu_banks",
         "erp.litellm",
         "erp.s3",
         "erp.sentry",
@@ -98,6 +99,7 @@ def test_erp_entries_are_the_services_of_the_contract_without_mail() -> None:
     assert [s.key for s in erp] == [
         "erp.cbu_rates",
         "erp.customs_tariff",
+        "erp.cbu_banks",
         "erp.litellm",
         "erp.s3",
         "erp.sentry",
@@ -106,6 +108,7 @@ def test_erp_entries_are_the_services_of_the_contract_without_mail() -> None:
     assert {s.key: s.switch for s in erp} == {
         "erp.cbu_rates": "erp",
         "erp.customs_tariff": "erp",
+        "erp.cbu_banks": "erp",
         "erp.litellm": "erp",
         "erp.s3": "erp",
         "erp.sentry": None,

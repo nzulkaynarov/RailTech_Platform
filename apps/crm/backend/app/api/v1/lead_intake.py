@@ -36,10 +36,12 @@ async def web_lead(body: WebLeadIn, request: Request, container: ContainerDep) -
     Q-12). Ошибки: 422 `validation_failed` с `details.reason` (`consent_required` |
     `form_token_invalid` | `form_too_fast` | `form_token_expired` | `contact_required` |
     `invalid_phone` | `invalid_email`), 429 `rate_limited`.
-    Повторный запрос известного контакта дополняет существующую карточку.
+    Повторный запрос известного контакта дополняет существующую карточку. Необязательные факты
+    об источнике (`form`, `page`, `referrer`, `utm`, `landing_language`) сохраняются в лиде. Ответ
+    для экрана «Что дальше»: `request_number` и `first_response_minutes`.
     """
     lead_id = await container.lead_intake.create_web(body, client_ip(request))
-    return WebLeadAccepted(lead_id=lead_id)
+    return await container.lead_intake.accepted(lead_id)
 
 
 @router.post("/leads", response_model=Created, status_code=status.HTTP_201_CREATED)

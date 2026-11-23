@@ -521,6 +521,30 @@ describe("Склад · приёмка и отгрузки", () => {
     expect(tickOf(lines())).toBe(true);
   });
 
+  it("Х-18: шаг «Партнёр и способ» получает галочку только по проверке; пока её нет — на шаге названо, чего не хватает", async () => {
+    signIn("supply@demo.example");
+    renderAt("/erp/stock/new");
+    await screen.findByRole("heading", { level: 1, name: "Новый заказ партнёру" });
+    const first = () => screen.getByRole("button", { name: /^Партнёр и способ/ });
+    // пока шаг не покидали, он не пестрит требованиями
+    expect(
+      within(screen.getByRole("region", { name: /^Партнёр и способ/ })).queryByText(
+        "Чтобы шаг был готов:",
+      ),
+    ).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: /^Строки/, expanded: false }));
+    expect(tickOf(first())).toBe(false);
+    fireEvent.click(first());
+    const section = screen.getByRole("region", { name: /^Партнёр и способ/ });
+    expect(within(section).getByText("Чтобы шаг был готов:")).toBeVisible();
+    expect(within(section).getByText("Выберите партнёра")).toBeVisible();
+
+    const partner = await screen.findByRole("combobox", { name: "Партнёр" });
+    await pickCompany(partner, "Демо-Путь", "АО «Демо-Путь»");
+    fireEvent.click(screen.getByRole("button", { name: /^Строки/, expanded: false }));
+    expect(tickOf(first())).toBe(true);
+  });
+
   it("непроект (заявка ЗВ) не отгружается: понятный отказ", async () => {
     await openStock("supply@demo.example", "shipments");
     fireEvent.change(screen.getByRole("searchbox", { name: "Номер проекта" }), {

@@ -88,7 +88,7 @@
       "paper": "qog‘ozda"
     },
     "assigned": "Mas’ul",
-    "channel": "Kanal",
+    "channel": "Qayerdan",
     "language": "Til",
     "messages": "Oxirgi xabarlar",
     "noMessages": "Hozircha xabarlar yo‘q",
@@ -145,5 +145,12 @@
       "openClient": "Mijozni ochish",
       "generic": "Lid yaratilmadi. Qayta urinib ko‘ring."
     }
+  },
+  "origin": {
+    "forms": {
+      "cabinet_request": "kabinetdagi ariza",
+      "request": "«Sörov» shakli"
+    },
+    "campaign": "kampaniya {{name}}"
   }
 }

@@ -327,6 +327,25 @@ async def test_merge_sends_the_target_and_reports_refusals(
     assert same.json()["details"]["reason"] == "merge_same_product"
 
 
+async def test_items_list_forwards_the_allow_listed_order_as_ordering(web: Web, be: Any) -> None:
+    """Х-15: `sort` позиций — только поля из `ordering_fields` ERP, цену сортировкой не раскрыть."""
+    await web.login(["MANAGER"])
+    route = (
+        mock(be)
+        .get(f"{API}/catalog/items/")
+        .mock(return_value=httpx.Response(200, json=page([ITEM])))
+    )
+    assert (
+        await web.client.get("/api/v1/erp/catalog/items", params={"sort": "-name"})
+    ).status_code == 200
+    assert route.calls.last.request.url.params["ordering"] == "-name"
+    calls = len(route.calls)
+    for sort in ("offers__base_price", "-price", "demand_count", "name,sku"):
+        response = await web.client.get("/api/v1/erp/catalog/items", params={"sort": sort})
+        assert response.status_code == 422, sort
+    assert len(route.calls) == calls
+
+
 async def test_items_list_rejects_unknown_kind_before_erp(web: Web, be: Any) -> None:
     await web.login(["SUPPLY"])
     response = await web.client.get("/api/v1/erp/catalog/items", params={"kind": "ghost"})

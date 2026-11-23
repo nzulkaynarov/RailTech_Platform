@@ -1,5 +1,6 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
-import { beforeEach, describe, expect, it } from "vitest";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { MemoryRouter, useLocation } from "react-router";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import "../../i18n";
 import { DataTable, type DataColumn } from "./DataTable";
@@ -185,5 +186,111 @@ describe("sanitizeSettings", () => {
     );
     expect(screen.getByText("СЗ-002")).toBeInTheDocument();
     expect(screen.queryByRole("list", { name: "Страницы: Документы" })).toBeNull();
+  });
+});
+
+describe("DataTable sorting by header (Х-15)", () => {
+  const ITEMS = [
+    { id: "1", number: "СЗ-10", due: "2026-03-01" as string | null },
+    { id: "2", number: "СЗ-2", due: null },
+    { id: "3", number: "СЗ-1", due: "2026-01-15" },
+  ];
+  const COLS: DataColumn<(typeof ITEMS)[number]>[] = [
+    {
+      id: "number",
+      header: "Номер",
+      width: 120,
+      sortKey: "number",
+      sortValue: (row) => row.number,
+      cell: (row) => row.number,
+    },
+    {
+      id: "due",
+      header: "Срок",
+      width: 120,
+      sortKey: "due_date",
+      sortValue: (row) => row.due,
+      cell: (row) => row.due ?? "—",
+    },
+    { id: "plain", header: "Без сортировки", width: 120, cell: () => "x" },
+  ];
+
+  afterEach(cleanup);
+
+  function Where() {
+    return <output data-testid="where">{useLocation().search}</output>;
+  }
+
+  function renderSorted(url = "/", mode: "client" | "server" = "client") {
+    return render(
+      <MemoryRouter initialEntries={[url]}>
+        <DataTable
+          tableId="test.sort"
+          caption="Список"
+          scrollLabel="Таблица"
+          columns={COLS}
+          rows={ITEMS}
+          rowKey={(row) => row.id}
+          sortMode={mode}
+        />
+        <Where />
+      </MemoryRouter>,
+    );
+  }
+
+  const numbers = () =>
+    within(screen.getByRole("table"))
+      .getAllByRole("row")
+      .slice(1)
+      .map((tr) => (tr as HTMLTableRowElement).cells.item(0)?.textContent);
+  const where = () => screen.getByTestId("where").textContent;
+  const header = (name: string) => screen.getByRole("columnheader", { name: new RegExp(name) });
+
+  it("cycles ascending, descending, off and keeps the state in the address", () => {
+    renderSorted();
+    expect(numbers()).toEqual(["СЗ-10", "СЗ-2", "СЗ-1"]);
+    fireEvent.click(screen.getByRole("button", { name: "Номер" }));
+    expect(where()).toBe("?sort=number");
+    expect(numbers()).toEqual(["СЗ-1", "СЗ-2", "СЗ-10"]);
+    expect(header("Номер").getAttribute("aria-sort")).toBe("ascending");
+    fireEvent.click(screen.getByRole("button", { name: /Номер/ }));
+    expect(where()).toBe("?sort=-number");
+    expect(numbers()).toEqual(["СЗ-10", "СЗ-2", "СЗ-1"]);
+    expect(header("Номер").getAttribute("aria-sort")).toBe("descending");
+    fireEvent.click(screen.getByRole("button", { name: /Номер/ }));
+    expect(where()).toBe("");
+    expect(header("Номер").getAttribute("aria-sort")).toBe("none");
+  });
+
+  it("restores the order from the address and shows exactly one arrow", () => {
+    renderSorted("/?sort=-due_date");
+    expect(numbers()).toEqual(["СЗ-10", "СЗ-1", "СЗ-2"]);
+    expect(document.querySelectorAll(".pf-dt-sort-arrow")).toHaveLength(1);
+  });
+
+  it("puts empty values last in both directions", () => {
+    renderSorted("/?sort=due_date");
+    expect(numbers()).toEqual(["СЗ-1", "СЗ-10", "СЗ-2"]);
+    fireEvent.click(screen.getByRole("button", { name: /Срок/ }));
+    expect(numbers()).toEqual(["СЗ-10", "СЗ-1", "СЗ-2"]);
+  });
+
+  it("ignores a field from the address that no column declares", () => {
+    renderSorted("/?sort=secret");
+    expect(numbers()).toEqual(["СЗ-10", "СЗ-2", "СЗ-1"]);
+    expect(document.querySelectorAll(".pf-dt-sort-arrow")).toHaveLength(0);
+  });
+
+  it("makes only declared columns sortable", () => {
+    renderSorted();
+    expect(header("Без сортировки").getAttribute("aria-sort")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Без сортировки" })).toBeNull();
+  });
+
+  it("server mode keeps the rows as given and drops the page number", () => {
+    renderSorted("/?sort=number&page=3", "server");
+    expect(numbers()).toEqual(["СЗ-10", "СЗ-2", "СЗ-1"]);
+    fireEvent.click(screen.getByRole("button", { name: /Номер/ }));
+    expect(where()).toBe("?sort=-number");
   });
 });

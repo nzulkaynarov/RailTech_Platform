@@ -27,6 +27,7 @@ import { useFormat } from "../../../shared/lib/useFormat";
 import { DateField } from "../../../shared/ui/DateField";
 import { FormField, QueryState } from "../../../shared/ui/FormParts";
 import { StepSections } from "../../../shared/ui/StepSections/StepSections";
+import { useLeftSteps } from "../../../shared/ui/StepSections/useLeftSteps";
 import { FormPanel, PanelTable, PriceCell } from "./common";
 import { catalogErrorText, errorFields } from "./errors";
 import { localName } from "../../eds/dictionaries";
@@ -35,7 +36,7 @@ import { OFFER_SOURCES } from "./kinds";
 import { useDebounced } from "./useDebounced";
 import { UnitLabel } from "../../../shared/ui/UnitLabel";
 import { unitOf } from "../../../shared/lib/unit";
-import { isEmailLike } from "../../../shared/lib/email";
+import { supplierRequirements } from "./supplierModel";
 
 /** Поля секции «Компания»: ошибка сервера в них отмечает секцию */
 const COMPANY_FIELDS: ReadonlySet<string> = new Set([
@@ -75,6 +76,7 @@ export function SupplierForm({
   const [phone, setPhone] = useState(supplier?.phone ?? "");
   const [maker, setMaker] = useState(supplier?.is_manufacturer ?? false);
   const [active, setActive] = useState("company");
+  const { left } = useLeftSteps(active);
   const ids = {
     title: useId(),
     name: useId(),
@@ -97,10 +99,12 @@ export function SupplierForm({
   const mutation = supplier ? update : create;
   const fields = errorFields(mutation.error);
   const error = mutation.error ? catalogErrorText(t, mutation.error) : null;
-  const tinValid = tin.trim() === "" || /^\d{9}$/.test(tin.trim());
-  const emailValid = email.trim() === "" || isEmailLike(email);
-  const valid =
-    name.trim() !== "" && (tin.trim() !== "" || reg.trim() !== "") && tinValid && emailValid;
+  // Кнопка, галочки шагов и список «нужно» — из одной проверки (`supplierRequirements`).
+  const missing = supplierRequirements({ name, tin, reg, email });
+  const tinValid = !missing.company.includes("tinInvalid");
+  const emailValid = missing.contact.length === 0;
+  const valid = missing.company.length === 0 && missing.contact.length === 0;
+  const needs = (list: readonly string[]) => list.map((key) => t(`supplierForm.needs.${key}`));
   const submit = () => {
     const data: SupplierCreate = {
       name: name.trim(),
@@ -116,7 +120,6 @@ export function SupplierForm({
     if (supplier) update.mutate({ id: supplier.id, data });
     else create.mutate({ data });
   };
-  const companyDone = name.trim() !== "" && (tin.trim() !== "" || reg.trim() !== "") && tinValid;
   return (
     <section className="pf-cat-sheet-form" aria-labelledby={ids.title}>
       <h2 className="pf-cat-sheet-title" id={ids.title}>
@@ -139,7 +142,9 @@ export function SupplierForm({
               key: "company",
               title: t("supplierForm.sections.company"),
               summary: [name.trim(), tin.trim() || reg.trim()].filter(Boolean).join(" · "),
-              complete: companyDone,
+              complete: true,
+              requirements: needs(missing.company),
+              showRequirements: left.has("company"),
               invalid: fields.some((field) => COMPANY_FIELDS.has(field)) || !tinValid,
               content: (
                 <>
@@ -235,9 +240,10 @@ export function SupplierForm({
               key: "contact",
               title: t("supplierForm.sections.contact"),
               summary: [contact.trim(), email.trim() || phone.trim()].filter(Boolean).join(" · "),
-              // галочка — только если заполнено и проходит ту же проверку, что и отправка формы
-              complete:
-                (contact.trim() !== "" || email.trim() !== "" || phone.trim() !== "") && emailValid,
+              // необязательный шаг: галочка — когда что-то заполнено и проверка отправки проходит
+              complete: contact.trim() !== "" || email.trim() !== "" || phone.trim() !== "",
+              requirements: needs(missing.contact),
+              showRequirements: left.has("contact"),
               invalid: !emailValid,
               content: (
                 <>

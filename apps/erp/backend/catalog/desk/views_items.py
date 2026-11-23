@@ -35,6 +35,14 @@ from catalog.models import Product, ProductFieldProposal, SupplierOffer
 
 _KIND = OpenApiParameter("kind", str, enum=list(items.ALL_KINDS), description="Тип позиции.")
 _CATEGORY = OpenApiParameter("category", int, description="Id категории.")
+_ORDERING = OpenApiParameter(
+    "ordering",
+    str,
+    description=(
+        "Порядок общего списка (без `review`): `name`, `sku`, `created_at`, `updated_at`; `-` в начале — по убыванию. "
+        "Другое поле игнорируется (порядок по названию)."
+    ),
+)
 _REVIEW = OpenApiParameter(
     "review",
     str,
@@ -95,7 +103,7 @@ class ItemDeskViewSet(DeskViewSet):
             "Позиции номенклатуры с типом, единицей, НДС и числом предложений. Цены поставщиков здесь нет вовсе — они в "
             "карточке и только с правом на `supplier_prices`."
         ),
-        parameters=[SEARCH, _KIND, _CATEGORY, _PROPOSALS, _REVIEW, PAGE, PAGE_SIZE],
+        parameters=[SEARCH, _KIND, _CATEGORY, _PROPOSALS, _REVIEW, _ORDERING, PAGE, PAGE_SIZE],
         responses={200: DeskItemRow},
         tags=["Catalog"],
     )
