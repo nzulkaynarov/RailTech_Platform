@@ -59,7 +59,7 @@ describe('«Я новый клиент»: форма запроса → лид C
     await user.click(screen.getByRole('button', { name: 'Отправить заявку' }));
 
     expect(await heading('Спасибо! Заявка отправлена')).toBeInTheDocument();
-    expect(screen.getByText(/Менеджер свяжется с вами/)).toBeInTheDocument();
+    expect(screen.getByText(/Менеджер ответит по телефону или e-mail/)).toBeInTheDocument();
     const telegram = await screen.findByRole('link', { name: 'Написать в Telegram' });
     expect(telegram).toHaveAttribute('href', 'https://t.me/railtech_test_bot?start=web');
 
@@ -75,6 +75,11 @@ describe('«Я новый клиент»: форма запроса → лид C
         consent: true,
         form_token: 'mock-form-1',
         website: null,
+        form: 'cabinet_request',
+        page: '/',
+        referrer: null,
+        utm: null,
+        landing_language: 'ru',
       },
     ]);
     await expectNoAxeViolations();
@@ -99,6 +104,9 @@ describe('«Я новый клиент»: форма запроса → лид C
     expect(screen.queryByText(/Без согласия/)).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Отправить заявку' }));
     expect(await heading('Спасибо! Заявка отправлена')).toBeInTheDocument();
+    // «Что дальше»: номер заявки и срок первого ответа из настроек CRM.
+    expect(screen.getByText('L-1001')).toBeInTheDocument();
+    expect(screen.getByText(/в течение 15 минут/)).toBeInTheDocument();
   });
 
   it('телефон или e-mail — хотя бы одно (проверка до отправки)', async () => {

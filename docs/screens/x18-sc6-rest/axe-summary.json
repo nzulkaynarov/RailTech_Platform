@@ -1,0 +1,34 @@
+[
+  {
+    "screen": "draft-offer",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 39,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "draft-offer",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 39,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "draft-continued",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 39,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "draft-continued",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 39,
+    "overflowPx": 0,
+    "violations": []
+  }
+]

@@ -56,6 +56,14 @@ class ProjectListView(APIView):
             OpenApiParameter("step", str, enum=["CONTRACT", "PAYMENT", "DONE"], description="Шаг пути заявки"),
             OpenApiParameter("deal_id", int, description="Одна сделка по id"),
             OpenApiParameter("number", str, description="Одна сделка по номеру (год и NNN, префикс не важен)"),
+            OpenApiParameter(
+                "ordering",
+                str,
+                description=(
+                    "Порядок: `number`, `client`, `step`, `due_date`, `responsible`; `-` в начале — по убыванию. "
+                    "Другое поле игнорируется (порядок от новых); пустые значения — в конце."
+                ),
+            ),
             OpenApiParameter("limit", int, description="Размер страницы, 1–100 (по умолчанию 25)"),
             OpenApiParameter("offset", int, description="Сдвиг"),
         ],
@@ -81,6 +89,7 @@ class ProjectListView(APIView):
             filters,
             limit=_int(params.get("limit"), 25, low=1, high=PAGE_MAX),
             offset=_int(params.get("offset"), 0, low=0, high=10**6),
+            ordering=params.get("ordering", "")[:32],
         )
         return Response(ProjectPageSerializer({"count": total, "results": rows}).data)
 

@@ -12,6 +12,7 @@ import type { LeadCardConsent } from "./leadCardConsent";
 import type { LeadCardFirstResponse } from "./leadCardFirstResponse";
 import type { LeadMessagePreview } from "./leadMessagePreview";
 import type { LeadNotice } from "./leadNotice";
+import type { LeadOrigin } from "./leadOrigin";
 import type { LeadPlatformStatus } from "./leadPlatformStatus";
 import type { MessageChannel } from "./messageChannel";
 import type { PersonRef } from "./personRef";
@@ -39,4 +40,6 @@ export interface LeadCard {
   /** Срок первого ответа на запрос с сайта (D1-9) */
   first_response: LeadCardFirstResponse;
   invitation: ClientInvitation | null;
+  /** Откуда пришёл лид кроме канала (LID-5): форма, страница, откуда перешли, кампания. `null` — у лидов других каналов и прежних лидов фактов нет. */
+  origin?: LeadOrigin | null;
 }

@@ -666,3 +666,44 @@ async def test_leads_are_filtered_by_channel(sessions: async_sessionmaker[AsyncS
     assert await ids("web") == {web_id}
     assert await ids("telegram") == {tg}
     assert await ids("telegram,web") == {tg, web_id}
+
+
+async def test_leads_sort_by_last_message_both_ways_with_empty_last(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    """Порядок «Последнее» экрана «Лиды» (Х-15): в обе стороны, лиды без сообщений — в конце."""
+    now = datetime.now(UTC)
+    ids: dict[str, int] = {}
+    async with sessions() as session, session.begin():
+        for name, when in (
+            ("старый", now - timedelta(days=3)),
+            ("новый", now - timedelta(hours=1)),
+            ("без сообщений", None),
+        ):
+            lead = Lead(
+                display_name=name,
+                stage="new",
+                owner_mode="bot",
+                language="ru",
+                source="web",
+                last_lead_msg_at=when,
+            )
+            session.add(lead)
+            await session.flush()
+            ids[name] = lead.id
+
+    async def order(ascending: bool) -> list[int]:
+        async with sessions() as session:
+            rows, _ = await crm.list_leads(
+                session,
+                crm.LeadFilter(source="web"),
+                0,
+                100,
+                0,
+                "last_message",
+                ascending,
+            )
+        return [r.id for r in rows]
+
+    assert await order(False) == [ids["новый"], ids["старый"], ids["без сообщений"]]
+    assert await order(True) == [ids["старый"], ids["новый"], ids["без сообщений"]]

@@ -96,6 +96,7 @@ export interface Spec {
   unread?: boolean;
   clientId?: number;
   interest?: string[];
+  origin?: LeadCard["origin"];
 }
 
 export function lead(base: number, spec: Spec): LeadMockRow {
@@ -149,6 +150,7 @@ export function lead(base: number, spec: Spec): LeadMockRow {
     confirmation: null,
     first_response: { due_at: null, overdue: false },
     invitation: null,
+    origin: spec.origin ?? null,
   };
   return { row, card, consent: spec.consent };
 }
@@ -410,6 +412,15 @@ function initial(): LeadsMock {
       company: "ООО Демо-Строй",
       assigned: MANAGER,
       handoff: { state: "taken", taken_by: MANAGER },
+      origin: {
+        form: "cabinet_request",
+        page: "/new-client",
+        referrer: "t.me/railtech_news",
+        campaign: "pos-nov",
+        utm_source: "tg",
+        utm_medium: "post",
+        language: "ru",
+      },
     }),
     lead(base, {
       id: 2048,

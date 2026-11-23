@@ -30,6 +30,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.bus import events as bus_events
 from app.domain.contacts import contact_email
 from app.domain.errors import ConflictError, RateLimitedError, Reason, ValidationFailedError
+from app.domain.lead_origin import build_origin
 from app.domain.lead_sources import WEB_NOTE_MARK, LeadSource, normalize_phone_e164
 from app.domain.stages import OwnerMode, Stage, TransitionSource
 from app.domain.web_form import (
@@ -42,7 +43,7 @@ from app.domain.web_form import (
 from app.models.leads import Lead, LeadNote
 from app.repositories import events
 from app.repositories import lead_intake as repo
-from app.schemas.lead_intake import ManualLeadIn, WebFormToken, WebLeadIn
+from app.schemas.lead_intake import ManualLeadIn, WebFormToken, WebLeadAccepted, WebLeadIn
 from app.schemas.settings import AppSettings, WebFormSettings
 from app.security import audit
 from app.security.principal import Principal
@@ -89,6 +90,8 @@ def _audit_view(lead: Lead) -> dict[str, object]:
         "has_phone": lead.phone_e164 is not None,
         "has_email": lead.email is not None,
         "company_name": lead.company_name,
+        "source_form": lead.source_form,
+        "source_utm": lead.source_utm,
     }
 
 
@@ -131,6 +134,17 @@ class LeadIntakeService:
             token=issue_form_token(self._key, moment),
             expires_at=moment + timedelta(minutes=cfg.token_ttl_minutes),
             min_fill_seconds=cfg.min_fill_seconds,
+        )
+
+    async def accepted(self, lead_id: int | None) -> WebLeadAccepted:
+        """Answer for the «What next» screen: request number and first-response time."""
+        if lead_id is None:
+            return WebLeadAccepted(lead_id=None)
+        cfg = (await self._settings.get()).web_form
+        return WebLeadAccepted(
+            lead_id=lead_id,
+            request_number=f"L-{lead_id:04d}",
+            first_response_minutes=cfg.first_response_sla_minutes,
         )
 
     async def create_web(
@@ -275,6 +289,18 @@ async def _new_web_lead(
         consent_version=WEB_CONSENT_VERSION,
         first_response_due_at=web_lead_sla.due_at(cfg, moment),
     )
+    origin = build_origin(
+        form=body.form,
+        page=body.page,
+        referrer=body.referrer,
+        utm=body.utm.model_dump() if body.utm else None,
+        lang=body.landing_language or body.language,
+    )
+    lead.source_form = origin.form
+    lead.source_page = origin.page
+    lead.source_referrer = origin.referrer
+    lead.source_utm = origin.utm
+    lead.source_lang = origin.lang
     session.add(lead)
     await session.flush()
     await audit.record(

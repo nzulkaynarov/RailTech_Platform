@@ -636,6 +636,9 @@ test.describe('G. Новый запрос из каталога → отказ �
     await open('/requests');
     await expect(client.getByRole('heading', { level: 1, name: 'Заявки' })).toBeVisible();
     await open('/requests/new');
+    // Х-18: черновик предлагается, а не подставляется молча
+    await expect(client.getByLabel('Что нужно')).toHaveValue('');
+    await client.getByRole('button', { name: 'Продолжить' }).click();
     await expect(client.getByLabel('Что нужно')).toHaveValue(draftText);
     await expect(client.getByLabel(/^Строка 1/)).toHaveValue('FIX-51b: болт М20 в черновике');
     await expect(client.getByLabel('Количество').first()).toHaveValue('50');

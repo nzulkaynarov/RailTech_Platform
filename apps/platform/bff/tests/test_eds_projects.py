@@ -109,6 +109,29 @@ async def test_search_by_text_is_passed_as_text(web: Web, erp: ProjectsFake) -> 
     assert "deal_id" not in call.url.params
 
 
+@pytest.mark.parametrize("sort", ["number", "-client", "step", "-due_date", "responsible"])
+async def test_list_sends_the_allow_listed_order_to_erp(
+    web: Web, erp: ProjectsFake, check: ContractChecker, sort: str
+) -> None:
+    """Х-15: порядок щелчком по шапке уходит ERP как `ordering`; без него параметра нет."""
+    await _as(web, "DIRECTOR")
+    response = await web.client.get(BASE, params={"sort": sort})
+    check(response, "/eds/projects", "get")
+    [call] = erp.calls_to("GET", "projects/")
+    assert call.url.params["ordering"] == sort
+    erp.calls.clear()
+    await web.client.get(BASE)
+    [call] = erp.calls_to("GET", "projects/")
+    assert "ordering" not in call.url.params
+
+
+async def test_list_rejects_an_order_outside_the_allow_list(web: Web, erp: ProjectsFake) -> None:
+    await _as(web, "DIRECTOR")
+    for sort in ("company__name", "-created_at", "deal_id", "number;x", "--number", "NUMBER"):
+        assert (await web.client.get(BASE, params={"sort": sort})).status_code == 422, sort
+    assert erp.calls == []
+
+
 async def test_list_when_erp_is_down_is_503(web: Web, erp: ProjectsFake) -> None:
     await _as(web, "DIRECTOR")
     erp.answer("GET", "projects/", httpx.Response(502, text="bad gateway"))

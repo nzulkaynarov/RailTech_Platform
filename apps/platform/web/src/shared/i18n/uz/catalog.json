@@ -655,6 +655,12 @@
     "sections": {
       "company": "Kompaniya",
       "contact": "Kontakt"
+    },
+    "needs": {
+      "name": "Nomini kiriting",
+      "tinOrReg": "STIR yoki röyxat raqamini kiriting",
+      "tinInvalid": "STIR — 9 ta raqam",
+      "emailInvalid": "Poçta name@company.uz körinişida"
     }
   },
   "cabinetAccess": {

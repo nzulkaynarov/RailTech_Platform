@@ -13,6 +13,11 @@ export type ListEdsProjectsParams = {
    */
   q?: string;
   /**
+   * Порядок щелчком по шапке (Х-15): `number`, `client`, `step`, `due_date`, `responsible`; `-` в начале — по убыванию, пустые значения — в конце. Другое поле — 422. Не задан — от новых.
+   * @pattern ^-?(number|client|step|due_date|responsible)$
+   */
+  sort?: string;
+  /**
    * @minimum 1
    * @maximum 100
    */

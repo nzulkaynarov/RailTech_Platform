@@ -12,6 +12,7 @@ import { useDocumentTitle } from "../../../shared/lib/useDocumentTitle";
 import { useFormat } from "../../../shared/lib/useFormat";
 import { useShownKey } from "../../../shared/lib/useShownKey";
 import { DataTable, type DataColumn } from "../../../shared/ui/DataTable/DataTable";
+import { useSortParam } from "../../../shared/ui/DataTable/sort";
 import { DataBlock, ListSkeleton } from "../../../shared/ui/DataBlock";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { LinkButton } from "../../../shared/ui/LinkButton";
@@ -26,6 +27,9 @@ import "../decision/decision.css";
 import "./projects.css";
 import { RowOpenLink } from "../../../shared/ui/RowOpenLink";
 import { FilterBar, FilterField } from "../../../shared/ui/FilterBar";
+
+/** Порядок щелчком по шапке (Х-15): ключи те же, что принимает BFF `sort` (белый список там и в ERP) */
+const PROJECT_SORT_KEYS = ["number", "client", "step", "due_date", "responsible"] as const;
 
 /**
  * Ширины колонок: номер и сумма, клиент и название (гибкая), шаг, статус клиента, документы, срок, ответственный, действие
@@ -143,6 +147,7 @@ function Rows({ items }: { items: readonly ProjectRow[] }) {
     {
       id: "number",
       header: t("list.columns.number"),
+      sortKey: "number",
       width: COLS.number,
       cellClassName: "pf-num",
       cell: (row) => (
@@ -159,6 +164,7 @@ function Rows({ items }: { items: readonly ProjectRow[] }) {
     {
       id: "client",
       header: t("list.columns.client"),
+      sortKey: "client",
       width: null,
       cell: (row) => (
         <>
@@ -170,6 +176,7 @@ function Rows({ items }: { items: readonly ProjectRow[] }) {
     {
       id: "step",
       header: t("list.columns.step"),
+      sortKey: "step",
       width: COLS.step,
       cell: (row) => (
         <>
@@ -197,6 +204,7 @@ function Rows({ items }: { items: readonly ProjectRow[] }) {
     {
       id: "due",
       header: t("list.columns.due"),
+      sortKey: "due_date",
       width: COLS.due,
       cellClassName: "pf-num",
       cell: (row) => (row.due_date ? date(row.due_date) : "—"),
@@ -204,6 +212,7 @@ function Rows({ items }: { items: readonly ProjectRow[] }) {
     {
       id: "responsible",
       header: t("list.columns.responsible"),
+      sortKey: "responsible",
       width: COLS.responsible,
       cellClassName: "pf-ell",
       cellTitle: (row) => row.responsible?.name ?? undefined,
@@ -232,6 +241,7 @@ function Rows({ items }: { items: readonly ProjectRow[] }) {
       scrollLabel={t("list.scroll")}
       className="pf-dec-table"
       flexMin={150}
+      sortMode="server"
       columns={columns}
       rows={items}
       rowKey={(row) => row.number}
@@ -256,6 +266,7 @@ export function ProjectList() {
   const step = stepOf(params.get("step"));
   const q = (params.get("q") ?? "").trim();
   const page = Math.max(1, Number(params.get("page") ?? 1) || 1);
+  const sort = useSortParam(PROJECT_SORT_KEYS);
   const filtered = scope === "mine" || problems || step !== undefined || q !== "";
 
   const query = useListEdsProjects(
@@ -266,6 +277,7 @@ export function ProjectList() {
       ...(problems ? { problems: true } : {}),
       ...(step ? { step } : {}),
       ...(q ? { q } : {}),
+      ...(sort ? { sort } : {}),
     },
     { query: { placeholderData: keepPreviousData } },
   );

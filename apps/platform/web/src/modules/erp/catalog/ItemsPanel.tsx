@@ -66,6 +66,10 @@ import { ItemCell } from "../../../shared/ui/EntityCell";
 import { FilterBar, FilterField } from "../../../shared/ui/FilterBar";
 import { UnitLabel } from "../../../shared/ui/UnitLabel";
 import { unitOf } from "../../../shared/lib/unit";
+import { useSortParam } from "../../../shared/ui/DataTable/sort";
+
+/** Порядок щелчком по шапке (Х-15): ключи, которые принимает BFF `sort` */
+const ITEM_SORT_KEYS = ["name"] as const;
 
 export function KindTag({ kind }: { kind: CatalogItemKind }) {
   const { t } = useTranslation("catalog");
@@ -85,7 +89,16 @@ export function ItemsPanel() {
   const [text, setText] = useState("");
   const [kind, setKind] = useState<CatalogItemKind | undefined>(undefined);
   const [category, setCategory] = useState<string | undefined>(undefined);
-  const [page, setPage] = useState(1);
+  // Номер страницы относится к порядку, при котором выбран: другой порядок — снова первая страница (Х-15)
+  const sort = useSortParam(ITEM_SORT_KEYS);
+  const [pageAt, setPageAt] = useState<{ page: number; sort: string | undefined }>({
+    page: 1,
+    sort: undefined,
+  });
+  const page = pageAt.sort === sort ? pageAt.page : 1;
+  const setPage = (next: number) => {
+    setPageAt({ page: next, sort });
+  };
   const [creating, setCreating] = useState(false);
   const q = useDebounced(text.trim());
   const lookups = useGetCatalogLookups();
@@ -104,6 +117,7 @@ export function ItemsPanel() {
     ...(category ? { category_id: category } : {}),
     ...(pending ? { proposals: "pending" as const } : {}),
     ...(view !== "all" ? { review: view } : {}),
+    ...(sort && view === "all" ? { sort } : {}),
     page,
     page_size: PAGE_SIZE,
   } satisfies ListCatalogItemsParams);
@@ -126,6 +140,8 @@ export function ItemsPanel() {
   const nameColumn: Column<CatalogItem> = {
     key: "name",
     title: t("items.columns.name"),
+    // порядок щелчком — только в общем списке: очередям ERP задаёт свой (старые отправки, самые спрашиваемые)
+    ...(view === "all" ? { sortKey: "name" } : {}),
     // ЕД-4: миниатюра 32 px слева от названия — колонке позиции нужна своя ширина, иначе название ломается по буквам
     width: 300,
     render: (row) => (
@@ -391,6 +407,7 @@ export function ItemsPanel() {
                 columns={shownColumns}
                 rowKey={(row) => row.id}
                 selectedKey={selected}
+                sortMode="server"
               />
               <Pager total={data.total} page={page} onChange={setPage} />
             </>
