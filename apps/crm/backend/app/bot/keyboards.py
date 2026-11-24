@@ -17,7 +17,7 @@ ERASE_CANCEL = "erase:cancel"
 OFFER_HUMAN = "offer:human"
 OFFER_NO = "offer:no"
 DOC_PREFIX = "doc:"
-LANGUAGE_LABELS: dict[Language, str] = {"ru": "Русский", "uz": "Oʻzbekcha", "en": "English"}
+LANGUAGE_LABELS: dict[Language, str] = {"ru": "Русский", "uz": "Özbekça", "en": "English"}
 
 
 def consent(settings: AppSettings, language: Language) -> InlineKeyboardMarkup:

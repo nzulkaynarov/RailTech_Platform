@@ -129,7 +129,7 @@ def _reply(out: Outgoing, cfg: AppSettings, language: Language) -> SandboxReply:
         ],
         "consent": [texts.consent_button.get(language), texts.consent_decline_button.get(language)],
         "erase_confirm": [texts.erase_button.get(language), texts.cancel_button.get(language)],
-        "language": ["Русский", "Oʻzbekcha", "English"],
+        "language": ["Русский", "Özbekça", "English"],
     }
     buttons = labels.get(out.keyboard, []) if out.keyboard else []
     if out.document:

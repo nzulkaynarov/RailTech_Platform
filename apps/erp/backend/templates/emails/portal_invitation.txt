@@ -1,6 +1,6 @@
 {% load i18n %}{% translate "Здравствуйте" %}{% if contact_name %}, {{ contact_name }}{% endif %}!
 
-{% blocktranslate with company=company_name platform=platform_name|default:'ERP' %}Вас пригласили в личный кабинет компании «{{ company }}» на платформе {{ platform }}.{% endblocktranslate %}
+{% blocktranslate with company=company_name %}Вас пригласили в кабинет компании «{{ company }}».{% endblocktranslate %}
 {% if portal_role == "partner" %}{% translate "В кабинете — ваши товары и цены: вы заполняете карточки, мы проверяем и публикуем их." %}{% else %}{% translate "В кабинете — ваши коммерческие предложения, договоры, счета, поставки и документы." %}{% endif %}
 
 {% translate "Код входа:" %} {{ login_code }}
@@ -8,10 +8,10 @@
 {% translate "Введите код на странице входа или откройте ссылку:" %}
 {{ invite_url }}
 {% if telegram_notifications_url %}
-{% translate "Получать мгновенно в Telegram" %} — {% translate "после входа подключите бот в разделе Профиль → «Уведомления»: счета, акты и ответы менеджера будут приходить сразу." %}
+{% translate "Уведомления в Telegram" %} — {% translate "после входа подключите бот в разделе Профиль → «Уведомления»: счета, акты и ответы менеджера придут в Telegram." %}
 {{ telegram_notifications_url }}
 {% endif %}
 {% translate "Код и ссылка действуют 24 часа." %}
 {% translate "Если вы не ожидали это приглашение, просто проигнорируйте письмо." %}
 
-— {% blocktranslate with platform=platform_name|default:'ERP' %}Команда {{ platform }}{% endblocktranslate %}
+{% if platform_name %}— {{ platform_name }}{% endif %}

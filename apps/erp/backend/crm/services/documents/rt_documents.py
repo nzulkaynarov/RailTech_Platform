@@ -479,8 +479,8 @@ def _dated(value) -> str:
 
 
 def _act_refs(act, invoice) -> list[dict[str, Any]]:
-    """Блок `{{doc.refs}}`: сделка, договор и счёт — как в прежнем акте."""
-    parts = [f"{_('Сделка:')} #{act.deal_id}"]
+    """Блок `{{doc.refs}}`: проект, договор и счёт — как в прежнем акте (номер проекта, не внутренний id)."""
+    parts = [f"{_('Проект:')} {act.deal.number}"] if act.deal.number else []
     if act.contract_id:
         parts.append(f"{_('Договор:')} {act.contract.number}" + _dated(act.contract.created_at))
     if invoice is not None:
@@ -1157,7 +1157,7 @@ def quote_pdf(quote, *, items, optional_items, extras: dict[str, Any], brand: di
 
     if code:
         content += [
-            _para(_text(_("ДОКУМЕНТ ОФИЦИАЛЬНО ПОДПИСАН"), bold=True)),
+            _para(_text(_("Подписано"), bold=True)),
             _para(f"{quote.signatory_name} ({quote.signatory_position})"),
             _para(
                 f"{quote.signatory_basis_text or _('на основании Устава')} · {_moment(quote.signed_at)}",
