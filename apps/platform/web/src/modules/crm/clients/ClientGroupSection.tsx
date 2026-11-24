@@ -16,7 +16,7 @@ import "./telegram-group.css";
 /**
  * Раздел «Группа с клиентом» карточки клиента (ТГ-1б, ADR-0032): название группы, с какого дня она подключена, состояние и
  * «Переписка группы» — лента группы в карточке, только чтение (ответ из Платформы — ТГ-2). Группы нет — раздела нет.
- * Ленту читает тот, кто видит диалоги (`crm.leads` или `chats.external`); у остальных раздел без ссылки на ленту.
+ * Ленту читает тот, кто видит реестр лидов (`crm.leads`); у остальных раздел без ссылки на ленту.
  */
 export function ClientGroupSection({ clientId }: { clientId: number }) {
   const { t } = useTranslation("clients");
@@ -27,7 +27,7 @@ export function ClientGroupSection({ clientId }: { clientId: number }) {
   const query = useGetCrmClientTelegramGroup(clientId);
   const group = query.data?.group;
   if (!group) return null;
-  const reads = canSee(me, { resource: "crm.leads" }) || canSee(me, { resource: "chats.external" });
+  const reads = canSee(me, { resource: "crm.leads" });
   return (
     <section className="pf-fp-block" aria-labelledby={headingId}>
       <h4 id={headingId}>{t("tgGroups.card.title")}</h4>

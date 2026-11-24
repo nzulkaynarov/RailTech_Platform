@@ -98,6 +98,8 @@ const FEED: ThreadMessage[] = [
     created_at: "2026-11-24T07:05:00Z",
     attachments: [],
     channel: "group",
+    context: null,
+    delivery: null,
   },
   {
     id: 9102,
@@ -115,6 +117,8 @@ const FEED: ThreadMessage[] = [
       },
     ],
     channel: "group",
+    context: null,
+    delivery: null,
   },
   {
     id: 9103,
@@ -133,6 +137,8 @@ const FEED: ThreadMessage[] = [
       },
     ],
     channel: "group",
+    context: null,
+    delivery: null,
   },
 ];
 
@@ -147,11 +153,11 @@ export const telegramGroupsHandlers = [
     if (denied) return denied;
     const body = (await request.json()) as TelegramGroupBindIn;
     if (body.code === EXPIRED_CODE) {
-      return failure(409, "CONFLICT", "Код истёк.", "crm", { reason: "code_expired" });
+      return failure(409, "CONFLICT", "Код истёк.", "crm", { reason: "group_code_expired" });
     }
     const target = group(WAITING_CHAT);
     if (body.code !== GOOD_CODE || !target) {
-      return failure(404, "NOT_FOUND", "Код не найден.", "crm", { reason: "code_not_found" });
+      return failure(404, "NOT_FOUND", "Код не найден.", "crm", { reason: "group_code_invalid" });
     }
     const bound: TelegramGroup = {
       ...target,

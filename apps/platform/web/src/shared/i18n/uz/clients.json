@@ -272,10 +272,12 @@
     "emptyText": "Botni mijoz guruhiga qöşing — guruh şu yerda paydo böladi.",
     "errors": {
       "wrongCode": "Kod mos kelmadi. Guruhdagi kodni tekşiring.",
-      "expiredCode": "Kod muddati tugagan yoki işlatilgan. Yangi kod — guruhda /connect.",
-      "forbidden": "Guruh ulaş huquqi yoq.",
+      "forbidden": "Guruh ulaş huquqi yöq.",
       "generic": "Bajarilmadi. Qayta uriniş.",
-      "load": "Guruhlarni yuklab bölmadi. Sahifani yangilang."
+      "load": "Guruhlarni yuklab bölmadi. Sahifani yangilang.",
+      "expired": "Kod muddati tugagan yoki işlatilgan. Yangi kod — guruhda /connect.",
+      "alreadyBound": "Bu guruh allaqachon ulangan.",
+      "teamChannel": "Bu jamoa kanali, uni mijoz guruhi qilib bölmaydi."
     },
     "card": {
       "title": "Mijoz bilan guruh",
@@ -284,8 +286,7 @@
       "state": "Holati",
       "open": "Guruh yozişmasi",
       "close": "Yozişmani yaşiriş",
-      "replyInGroup": "Javob guruhning özida yoziladi.",
-      "feedLabel": "Guruh yozişmasi"
+      "replyInGroup": "Javob guruhning özida yoziladi."
     },
     "noAccess": {
       "title": "Mijozlar bölimiga ruxsat kerak",

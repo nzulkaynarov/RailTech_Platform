@@ -28,7 +28,12 @@ import "./telegram-groups.css";
 function bindError(t: (key: string) => string, error: unknown): string {
   if (error instanceof ApiError) {
     if (error.status === 404) return t("tgGroups.errors.wrongCode");
-    if (error.status === 409) return t("tgGroups.errors.expiredCode");
+    if (error.status === 409) {
+      const reason = error.details["reason"];
+      if (reason === "group_already_bound") return t("tgGroups.errors.alreadyBound");
+      if (reason === "group_is_team_channel") return t("tgGroups.errors.teamChannel");
+      return t("tgGroups.errors.expired");
+    }
     if (error.status === 403) return t("tgGroups.errors.forbidden");
   }
   return t("tgGroups.errors.generic");
@@ -194,7 +199,8 @@ export function TelegramGroups() {
   const { t } = useTranslation("clients");
   const { me } = useAuth();
   const seesClients = canSee(me, { resource: "crm.clients" });
-  const editable = canEdit(me, "crm.clients");
+  // кнопки — как на странице Telegram: правка настроек (`admin: full`) и клиенты (`crm.clients: full`)
+  const editable = canEdit(me, "crm.clients") && canEdit(me, "admin");
   const list = useListCrmTelegramGroups({ query: { enabled: seesClients } });
   if (!seesClients) {
     return (

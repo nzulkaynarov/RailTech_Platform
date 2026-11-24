@@ -272,10 +272,12 @@
     "emptyText": "Add the bot to a client group and it will appear here.",
     "errors": {
       "wrongCode": "The code did not match. Check the code in the group.",
-      "expiredCode": "The code expired or was already used. New code: /connect in the group.",
       "forbidden": "You cannot connect groups.",
       "generic": "Failed. Try again.",
-      "load": "Could not load groups. Reload the page."
+      "load": "Could not load groups. Reload the page.",
+      "expired": "The code expired or was already used. New code: /connect in the group.",
+      "alreadyBound": "This group is already connected.",
+      "teamChannel": "This is the team channel; it cannot be a client group."
     },
     "card": {
       "title": "Client group",
@@ -284,8 +286,7 @@
       "state": "State",
       "open": "Group conversation",
       "close": "Hide conversation",
-      "replyInGroup": "Replies go in the group itself.",
-      "feedLabel": "Group conversation"
+      "replyInGroup": "Replies go in the group itself."
     },
     "noAccess": {
       "title": "Client access needed",

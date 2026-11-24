@@ -101,6 +101,14 @@ async def test_list_derives_the_state_from_status_access_and_code(
     assert all("code" not in item and "code_active" not in item for item in res.json()["items"])
 
 
+async def test_list_is_refused_before_crm_without_the_clients_section(
+    web: Web, crm: CrmGroups
+) -> None:
+    await web.login(["ADMIN"])
+    assert (await web.client.get(BASE)).status_code == 403
+    assert crm.calls == []
+
+
 async def test_bind_sends_code_and_client_and_refuses_without_the_right(
     web: Web, crm: CrmGroups, check: ContractChecker
 ) -> None:
