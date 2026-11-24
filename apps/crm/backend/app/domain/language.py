@@ -119,6 +119,8 @@ _SWITCH: Final[dict[Language, tuple[str, ...]]] = {
         "rus tilida",
     ),
     "uz": (
+        "özbekça",
+        "özbek tilida",
         "o'zbekcha",
         "ozbekcha",
         "uzbekcha",
