@@ -17,6 +17,7 @@ import { RecordHistory, type RecordHistoryEntry } from "../../../shared/ui/Recor
 import { LinkButton } from "../../../shared/ui/LinkButton";
 import { PageHeader } from "../../../shared/ui/PageHeader";
 import { useStateLabels, withUnit } from "./api";
+import { ReceiptLines } from "./ReceiptLines";
 import { OrderStatusTag } from "./OrdersTab";
 import {
   CancelModal,
@@ -28,10 +29,10 @@ import {
 } from "./OrderModals";
 import { MoneyText } from "../../../shared/ui/MoneyText";
 import { ItemRefCell } from "../../ItemRefCell";
+import { PersonRefCell } from "../../PersonRefCell";
 
 import "../calc/calc.css";
 import "./stock.css";
-import { PersonRefCell } from "../../PersonRefCell";
 
 type Dialog = "send" | "price" | "confirm" | "receive" | "cancel" | "edit" | null;
 
@@ -161,7 +162,7 @@ function Lines({ order }: { order: SupplierOrderDetail }) {
 
 function Receipts({ order }: { order: SupplierOrderDetail }) {
   const { t } = useTranslation("stock");
-  const { activity, qty } = useFormat();
+  const { activity } = useFormat();
   if (order.receipts.length === 0)
     return <p className="pf-hint pf-calc-empty">{t("order.receipts.empty")}</p>;
   return (
@@ -169,19 +170,17 @@ function Receipts({ order }: { order: SupplierOrderDetail }) {
       {order.receipts.map((r) => (
         <li key={r.id}>
           <span>
-            {r.lines
-              .map((l) => {
-                const unit = order.lines.find((x) => x.id === l.order_line_id)?.unit;
-                return `${l.name} · ${withUnit(qty(l.quantity), unit)}${l.cell ? ` (${l.cell})` : ""}`;
-              })
-              .join("; ")}
+            <ReceiptLines
+              lines={r.lines}
+              unitOf={(l) => order.lines.find((x) => x.id === l.order_line_id)?.unit}
+            />
             {r.supplier_doc ? (
               <span className="pf-hint"> · {t("order.receipts.doc", { doc: r.supplier_doc })}</span>
             ) : null}
           </span>
-          <span className="pf-hint">
-            {activity(r.received_at)}
-            {r.received_by ? ` · ${r.received_by.name}` : ""}
+          <span className="pf-stock-by">
+            <span className="pf-hint">{activity(r.received_at)}</span>
+            {r.received_by ? <PersonRefCell person={r.received_by} caption={null} /> : null}
           </span>
         </li>
       ))}

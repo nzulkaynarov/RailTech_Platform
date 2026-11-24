@@ -354,3 +354,21 @@
   font-size: 13px;
   font-weight: 400;
 }
+
+/* ЕД-3: люди в резолюции, поручениях и ознакомлении — общая ячейка человека */
+.pf-instr-people,
+.pf-instr-by,
+.pf-instr-acq > li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+}
+.pf-instr-acq {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.pf-instr-by {
+  margin-top: 4px;
+}
