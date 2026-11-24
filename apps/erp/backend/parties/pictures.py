@@ -19,6 +19,9 @@ from core.validators import AVATAR_MAX_SIZE, _validate_file
 logger = logging.getLogger(__name__)
 
 SIDE = 256
+#: Предел исходной картинки: маленький файл с огромными размерами («бомба») не должен распаковываться в гигабайты
+MAX_PIXELS = 25_000_000
+MAX_SIDE = 6000
 ROW_SIDE = 96
 MAX_BYTES = AVATAR_MAX_SIZE
 EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
@@ -44,14 +47,27 @@ def normalize(file) -> bytes:
     try:
         file.seek(0)
         with Image.open(file) as source:
+            width, height = source.size  # из заголовка, пиксели ещё не разобраны
+            if width > MAX_SIDE or height > MAX_SIDE or width * height > MAX_PIXELS:
+                raise ItemError("IMAGE_TOO_LARGE", "file")
+            if source.format == "JPEG":
+                source.draft("RGB", (SIDE * 2, SIDE * 2))  # JPEG декодируется сразу в уменьшенном виде
             picture = ImageOps.exif_transpose(source)
             picture = picture.convert("RGBA" if "A" in picture.getbands() or "transparency" in picture.info else "RGB")
             picture = ImageOps.fit(picture, (SIDE, SIDE), method=Image.Resampling.LANCZOS)
+    except ItemError:
+        raise
     except Exception:  # noqa: BLE001 — любой сбой разбора: это не картинка, а подделка под неё
         raise ItemError("FILE_CONTENT_MISMATCH", "file") from None
     out = BytesIO()
     picture.save(out, format="WEBP", quality=85, method=4)
     return out.getvalue()
+
+
+def company_logo_path(company) -> str | None:
+    """Адрес логотипа компании в нашем API с версией (`None` — логотипа нет): единственный вид, в котором он выходит наружу."""
+    ver = version(company.logo) if company.pk else None
+    return f"/api/v1/parties/organizations/{company.pk}/logo/?v={ver}" if ver else None
 
 
 def version(field) -> str | None:

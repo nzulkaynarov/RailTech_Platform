@@ -66,10 +66,14 @@ class CompanyDocumentsMixin:
         except ValidationError as e:
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
-        if company.logo:
-            company.logo.delete(save=False)
-        company.logo = logo_file
-        company.save(update_fields=["logo"])
+        from parties import pictures
+
+        from catalog.desk.items import ItemError
+
+        try:
+            pictures.replace(company, "logo", logo_file, extra_fields=())
+        except ItemError as error:
+            return Response({"detail": error.code}, status=status.HTTP_400_BAD_REQUEST)
         return Response(CompanySerializer(company, context={"request": request}).data)
 
     @extend_schema(
@@ -81,10 +85,9 @@ class CompanyDocumentsMixin:
     def delete_logo(self, request, pk=None):
         company = self.get_object()
         self._assert_member_or_admin(company)
-        if company.logo:
-            company.logo.delete(save=False)
-            company.logo = None
-            company.save(update_fields=["logo"])
+        from parties import pictures
+
+        pictures.remove(company, "logo", extra_fields=())
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @extend_schema(

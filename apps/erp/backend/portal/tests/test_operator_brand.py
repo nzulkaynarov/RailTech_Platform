@@ -22,12 +22,19 @@ def test_operator_without_own_company_has_no_logo(settings):
 
 
 @pytest.mark.django_db
-def test_operator_logo_is_public_media_path(settings):
+def test_operator_logo_is_a_versioned_api_path_not_a_media_path(settings):
     company = Company.objects.create(name="ООО Оператор", inn="301000111")
-    company.logo.save("logo.png", ContentFile(PNG), save=True)
+    import io
+
+    from PIL import Image
+
+    out = io.BytesIO()
+    Image.new("RGB", (30, 30), (1, 2, 3)).save(out, format="PNG")
+    company.logo.save("logo.png", ContentFile(out.getvalue()), save=True)
     settings.OWN_COMPANY_ID = company.pk
 
     body = APIClient().get(OPERATOR).json()
 
-    assert body["logo_url"] == f"/media/{company.logo.name}"
-    assert body["logo_url"].startswith(f"/media/companies/{company.pk}/logo/")
+    assert body["logo_url"].startswith("/api/portal/v1/operator/logo?v=")
+    assert "/media/" not in body["logo_url"]
+    assert APIClient().get("/api/portal/v1/operator/logo").status_code == 200

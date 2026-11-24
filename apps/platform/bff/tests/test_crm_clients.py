@@ -416,3 +416,25 @@ async def test_list_asks_erp_for_the_companies_of_the_rows_only(
     calls = [c for r in be.router.routes for c in r.calls if str(c.request.url).startswith(LOGOS)]
     assert calls
     assert dict(calls[-1].request.url.params) == {"ids": "501"}
+
+
+async def test_list_fetches_logos_in_batches_for_every_row(
+    web: Web, be: Backends, crm: CrmLeadsFake, check: ContractChecker
+) -> None:
+    """CRM отдаёт до 500 строк: логотипы просят пачками по 100, свежие строки не теряются."""
+    asked: list[list[int]] = []
+
+    def answer(request: httpx.Request) -> httpx.Response:
+        ids = [int(i) for i in request.url.params["ids"].split(",")]
+        asked.append(ids)
+        return httpx.Response(200, json={"results": {str(i): f"v{i}" for i in ids}})
+
+    be.router.get(LOGOS).mock(side_effect=answer)
+    rows = [client_item(1000 + n, erp_company_id=2000 + n) for n in range(250)]
+    crm.answer("GET", "clients", body=rows)
+    await web.login(["DIRECTOR"])
+    items = check(await web.client.get(BASE), "/crm/clients", "get").json()["items"]
+    assert [len(batch) for batch in asked] == [100, 100, 50]
+    assert all(row["logo_url"] for row in items)
+    newest = next(row for row in items if row["id"] == 1249)
+    assert newest["logo_url"] == "/api/v1/people/counterparties/2249/logo?v=v2249"

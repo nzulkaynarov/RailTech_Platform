@@ -203,6 +203,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/operator/logo": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Логотип компании-оператора до входа (ДВ-3)
+     * @description WebP 96×96 (`size=full` — 256×256) логотипа своей компании: намеренно публичный, как название оператора. Адрес — из `PortalOperator.logo_url` с `?v=<версия>`. Файл закрыт в хранилище, отдаёт его только ERP. Логотипа нет — 404.
+     */
+    get: operations["getOperatorLogo"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/legal": {
     parameters: {
       query?: never;
@@ -2603,7 +2623,7 @@ export interface components {
     PortalOperator: {
       /** @description Название компании-оператора; `null` — не задано */
       name: string | null;
-      /** @description Логотип компании-оператора (ДВ-3): относительный адрес публичного файла `/media/companies/<id>/logo/…` на домене кабинета; `null` — не загружен, кабинет показывает буквы названия */
+      /** @description Логотип компании-оператора (ДВ-3): относительный адрес `/api/portal/v1/operator/logo?v=<версия>` на домене кабинета; `null` — не загружен, кабинет показывает буквы названия */
       logo_url: string | null;
       /** @description Имя Telegram-бота без @ — для входа через Telegram, «Я новый клиент» и ссылок на бота в кабинете. Владелец — CRM (процесс бота узнаёт имя у Telegram), в ERP — проекция из `crm.bot.changed`. `null` — бот ещё не запускался: кабинет не показывает ссылки на бота */
       bot_username: string | null;
@@ -4136,6 +4156,31 @@ export interface operations {
           "application/json": components["schemas"]["PortalOperator"];
         };
       };
+    };
+  };
+  getOperatorLogo: {
+    parameters: {
+      query?: {
+        size?: "row" | "full";
+        /** @description Версия логотипа — только для кэша браузера */
+        v?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Логотип */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "image/webp": string;
+        };
+      };
+      404: components["responses"]["NotFound"];
     };
   };
   getLegal: {

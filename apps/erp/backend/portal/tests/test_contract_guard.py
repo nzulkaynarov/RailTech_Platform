@@ -214,7 +214,9 @@ def test_contract_is_mounted_and_readable():
 
 #: GET раздела «Мои товары» партнёра (PART-2): сессия клиента сюда не допущена (403 `MODULE_REQUIRED`), поэтому их
 #: опрашивает `test_partner_contract.py` на мире партнёра, а не этот сторож.
+#: Логотип оператора (ДВ-3) отдаёт картинку без входа и зависит от «своей компании»: его опрашивает `test_pictures.py`.
 PARTNER_GET_PATHS = {
+    "/operator/logo",
     "/partner/products",
     "/partner/products/{id}",
     "/partner/products/{id}/documents",

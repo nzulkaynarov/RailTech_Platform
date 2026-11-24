@@ -233,3 +233,70 @@ def test_cabinet_non_admin_with_can_act_gets_admin_required(client_company, clie
     client.credentials(HTTP_X_PORTAL_SESSION=session.raw_token)
     response = client.put("/api/portal/v1/company/logo", {"file": picture()}, format="multipart")
     assert response.status_code == 409 and response.json()["detail"] == "ADMIN_REQUIRED"
+
+
+# --- закрытое хранилище и «бомбы» ------------------------------------------------------------------------------
+
+
+def test_hostile_png_with_huge_dimensions_is_refused_before_decoding(world):
+    """Файл в сотни байт с заголовком 12000×12000 не должен распаковываться (~430 МБ в RGBA): отказ по размерам."""
+    import struct
+    import zlib
+
+    def chunk(kind, data):
+        body = kind + data
+        return struct.pack(">I", len(data)) + body + struct.pack(">I", zlib.crc32(body) & 0xFFFFFFFF)
+
+    side = 12000
+    header = struct.pack(">IIBBBBB", side, side, 8, 2, 0, 0, 0)
+    raw = zlib.compress(b"\x00" * (side * 3 + 1) * 4)  # лишь несколько строк: заголовок врёт о размере
+    png = b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", header) + chunk(b"IDAT", raw) + chunk(b"IEND", b"")
+    assert len(png) < 5000
+    bomb = SimpleUploadedFile("bomb.png", png, content_type="image/png")
+    response = put(world["clients"]["supply"], f"{ORGS}{world['supplier'].pk}/logo/", bomb)
+    assert response.status_code == 400 and response.json()["detail"] == "IMAGE_TOO_LARGE", response.content
+    world["supplier"].refresh_from_db()
+    assert not world["supplier"].logo
+
+
+def test_company_logo_is_private_and_never_leaves_as_a_storage_path(world):
+    """`Company.logo` лежит в закрытом хранилище; везде наружу выходит только наш версионный путь API."""
+    from catalog.serializers import CompanyLightSerializer
+    from core.storage import get_private_storage
+
+    supplier = world["supplier"]
+    put(world["clients"]["supply"], f"{ORGS}{supplier.pk}/logo/", picture())
+    supplier.refresh_from_db()
+    assert supplier._meta.get_field("logo").storage is get_private_storage() or (
+        supplier._meta.get_field("logo").storage.__class__ is get_private_storage().__class__
+    )
+    shown = CompanyLightSerializer(supplier).data["logo"]
+    assert shown == f"/api/v1/parties/organizations/{supplier.pk}/logo/?v={pictures_version(supplier)}"
+    assert "/media/" not in shown and supplier.logo.name not in shown
+    # публичный список медиа больше не отдаёт файл логотипа компании
+    from django.test import Client
+
+    assert Client().get(f"/media/{supplier.logo.name}").status_code == 404
+
+
+def pictures_version(company):
+    from parties import pictures
+
+    return pictures.version(company.logo)
+
+
+def test_operator_logo_is_public_through_the_api_only(client_company, anon_portal_client):
+    from parties import pictures
+
+    from catalog.desk.items import ItemError  # noqa: F401
+    from core.tenant import own_company  # noqa: F401
+
+    client_company.logo = None
+    pictures.replace(client_company, "logo", picture())
+    from unittest import mock
+
+    with mock.patch("core.tenant.own_company", return_value=client_company):
+        info = anon_portal_client.get("/api/portal/v1/operator").json()
+        assert info["logo_url"] == f"/api/portal/v1/operator/logo?v={pictures_version(client_company)}"
+        served = anon_portal_client.get("/api/portal/v1/operator/logo")
+    assert served.status_code == 200 and served["Content-Type"] == "image/webp"

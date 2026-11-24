@@ -217,7 +217,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
         'Kompaniya administratori «Jamoa» bo‘limida xodimlarni taklif qilishi mumkin.',
         'Rollar huquqlarni belgilaydi: ko‘rish, imzolash huquqi (can_act) va administrator (is_admin).',
         'Muhim: bank rekvizitlarini o‘zgartirish so‘rovini faqat administrator yuboradi, o‘zgarish xodim tasdig‘idan keyin qo‘llanadi; shu vaqtgacha eski rekvizitlar amalda. Barcha administratorlar va asosiy kontakt barcha kanallarda bildirishnoma oladi.',
-        'Kompaniya logotipini «Kompaniya» sahifasida barcha ishtirokçilar köradi; administrator uni «Logotip yuklaş» tugmasi bilan yuklaydi (PNG, JPEG yoki WebP, 2 MB gaça, markazdan kvadratga kesiladi), almaştiradi yoki olib taşlaydi. Logotip bölmaganda kompaniya nomining harflari körsatiladi.',
+        'Kompaniya logotipini «Kompaniya» sahifasida barcha iştirokçilar köradi; administrator uni «Logotip yuklaş» tugmasi bilan yuklaydi (PNG, JPEG yoki WebP, 2 MB gaça, markazdan kvadratga kesiladi), almaştiradi yoki olib taşlaydi. Logotip bölmaganda kompaniya nomining harflari körsatiladi.',
       ],
       en: [
         'Company administrators can invite colleagues in the "Team" section.',

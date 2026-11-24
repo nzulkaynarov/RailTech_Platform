@@ -388,7 +388,10 @@ async def test_company_logo_is_forwarded_as_multipart(
     await web.login(["DIRECTOR"])
     route = erp.post(f"{COMPANY}/upload-logo/").mock(
         return_value=httpx.Response(
-            200, json=company_json(logo="https://erp-backend:8000/media/companies/3/logo/a1b2.png")
+            200,
+            json=company_json(
+                logo="https://erp-backend:8000/api/v1/parties/organizations/3/logo/?v=a1b2"
+            ),
         )
     )
 
@@ -463,7 +466,10 @@ async def test_logo_images_are_served_by_the_bff_not_by_erp_address(
     await web.login(["DIRECTOR"])
     erp.get(f"{COMPANY}/").mock(
         return_value=httpx.Response(
-            200, json=company_json(logo="http://erp-backend:8000/media/companies/3/logo/a1b2.svg")
+            200,
+            json=company_json(
+                logo="http://erp-backend:8000/api/v1/parties/organizations/3/logo/?v=a1b2"
+            ),
         )
     )
     erp.get(f"{COMPANY}/document-profile/").mock(
@@ -474,7 +480,7 @@ async def test_logo_images_are_served_by_the_bff_not_by_erp_address(
             ),
         )
     )
-    file = erp.get(f"{ERP_URL}/media/companies/3/logo/a1b2.svg").mock(
+    file = erp.get(f"{ERP_URL}/api/v1/parties/organizations/3/logo/").mock(
         return_value=httpx.Response(
             200, content=b"<svg/>", headers={"content-type": "image/svg+xml"}
         )
@@ -523,7 +529,10 @@ async def test_logo_image_takes_only_own_company_files_within_the_size_cap(
     await web.login(["DIRECTOR"])
     erp.get(f"{COMPANY}/").mock(
         return_value=httpx.Response(
-            200, json=company_json(logo="http://erp-backend:8000/media/companies/8/logo/other.png")
+            200,
+            json=company_json(
+                logo="http://erp-backend:8000/api/v1/parties/organizations/8/logo/?v=other"
+            ),
         )
     )
     erp.get(f"{COMPANY}/document-profile/").mock(
@@ -534,7 +543,7 @@ async def test_logo_image_takes_only_own_company_files_within_the_size_cap(
             ),
         )
     )
-    foreign = erp.get(f"{ERP_URL}/media/companies/8/logo/other.png").mock(
+    foreign = erp.get(f"{ERP_URL}/api/v1/parties/organizations/8/logo/").mock(
         return_value=httpx.Response(200, content=PNG, headers={"content-type": "image/png"})
     )
     erp.get(f"{ERP_URL}/media/companies/3/doc-profile/logo/big.png").mock(

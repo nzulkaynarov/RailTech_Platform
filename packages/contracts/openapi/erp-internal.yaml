@@ -24369,6 +24369,7 @@ components:
         * `done` - done
     Company:
       type: object
+      description: '`logo` of a company is our versioned API path (ЕД-5), never a storage address: the file is private.'
       properties:
         id:
           type: integer
@@ -24445,8 +24446,7 @@ components:
           type: string
           format: uri
           nullable: true
-          title: Логотип
-          description: Логотип компании для отображения на платформе
+          readOnly: true
         created_at:
           type: string
           format: date-time
@@ -24495,6 +24495,7 @@ components:
       - delete_blocker
       - id
       - is_active
+      - logo
       - name
       - trust_score
       - user_count
@@ -24793,7 +24794,10 @@ components:
       - updated_at
     CompanyLight:
       type: object
-      description: Lightweight company serializer for nested use — no extra queries.
+      description: |-
+        Lightweight company serializer for nested use — no extra queries.
+
+        `logo` is our versioned API path (ЕД-5), not a storage address: the file is private and only the API serves it.
       properties:
         id:
           type: integer
@@ -24817,10 +24821,10 @@ components:
           type: string
           format: uri
           nullable: true
-          title: Логотип
-          description: Логотип компании для отображения на платформе
+          readOnly: true
       required:
       - id
+      - logo
       - name
     CompanyMatchPendingEnum:
       enum:
@@ -24917,6 +24921,7 @@ components:
       - groups
     CompanyRequest:
       type: object
+      description: '`logo` of a company is our versioned API path (ЕД-5), never a storage address: the file is private.'
       properties:
         name:
           type: string
@@ -24982,12 +24987,6 @@ components:
             maxLength: 254
           - type: string
             maxLength: 0
-        logo:
-          type: string
-          format: binary
-          nullable: true
-          title: Логотип
-          description: Логотип компании для отображения на платформе
         types:
           type: array
           items:
@@ -33951,6 +33950,7 @@ components:
           description: Печатать курс ЦБ (FX-базис) на клиентском КП. По умолчанию скрыто — клиент видит цену в сумах.
     PatchedCompanyRequest:
       type: object
+      description: '`logo` of a company is our versioned API path (ЕД-5), never a storage address: the file is private.'
       properties:
         name:
           type: string
@@ -34016,12 +34016,6 @@ components:
             maxLength: 254
           - type: string
             maxLength: 0
-        logo:
-          type: string
-          format: binary
-          nullable: true
-          title: Логотип
-          description: Логотип компании для отображения на платформе
         types:
           type: array
           items:
@@ -35955,8 +35949,7 @@ components:
           type: string
           format: uri
           nullable: true
-          title: Логотип
-          description: Логотип компании для отображения на платформе
+          readOnly: true
         company_types:
           type: array
           items: {}
@@ -35964,6 +35957,7 @@ components:
       required:
       - company_types
       - id
+      - logo
       - name
     ProblemsEnum:
       enum:

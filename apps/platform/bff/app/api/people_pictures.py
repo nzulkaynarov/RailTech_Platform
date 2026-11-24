@@ -32,6 +32,7 @@ PhotoReader = Annotated[
     ),
 ]
 
+LOGO_BATCH = 100
 MAX_PICTURE_BYTES = 2 * 1024 * 1024
 MAX_BODY_BYTES = MAX_PICTURE_BYTES + 256 * 1024  # поля формы и границы multipart
 _NO_PICTURE = "Картинки нет."
@@ -178,21 +179,26 @@ async def logo_urls(authed: Authed, company_ids: list[int]) -> dict[int, str]:
 
     ERP не ответил — строки без логотипа (буквы названия): картинка не должна ломать реестр.
     """
-    ids = sorted(set(company_ids))[:100]
-    if not ids:
-        return {}
-    try:
-        data = await ErpCompany(authed.call).data(
-            "GET", "parties/organizations/logos/", params={"ids": ",".join(str(i) for i in ids)}
-        )
-    except PlatformError:
-        return {}
-    results = data.get("results") if isinstance(data, dict) else None
-    if not isinstance(results, dict):
-        return {}
+    ids = sorted(set(company_ids))
     urls: dict[int, str] = {}
-    for key, version in results.items():
-        url = company_logo_url(key, version)
-        if url and str(key).isdigit():
-            urls[int(key)] = url
+    erp = ErpCompany(authed.call)
+    for start in range(
+        0, len(ids), LOGO_BATCH
+    ):  # ERP берёт до 100 id за запрос; обрезать нельзя: пропадут свежие строки
+        batch = ids[start : start + LOGO_BATCH]
+        try:
+            data = await erp.data(
+                "GET",
+                "parties/organizations/logos/",
+                params={"ids": ",".join(str(i) for i in batch)},
+            )
+        except PlatformError:
+            continue
+        results = data.get("results") if isinstance(data, dict) else None
+        if not isinstance(results, dict):
+            continue
+        for key, version in results.items():
+            url = company_logo_url(key, version)
+            if url and str(key).isdigit():
+                urls[int(key)] = url
     return urls

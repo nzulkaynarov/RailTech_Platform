@@ -527,7 +527,7 @@ class CountriesView(APIView):
 class OperatorView(APIView):
     """GET /operator — название оператора платформы для кабинета до входа (задача «Н3a2»): ведётся в CRM
     («Настройки · Компания»), проекция в ERP — `SystemSetting.platform_name`. Ещё — адрес логотипа своей компании
-    (ДВ-3): публичный путь `/media/companies/<id>/logo/…`, тот же, что кабинет уже отдаёт на своём домене."""
+    (ДВ-3): `/operator/logo` с версией; файл закрыт в хранилище."""
 
     authentication_classes = []
     permission_classes = []
@@ -550,11 +550,38 @@ class OperatorView(APIView):
 
 def _operator_logo_url():
     """Логотип своей компании — относительный адрес публичного media (allowlist `core/urls.py`) или None."""
+    from parties.pictures import version
+
     from core.tenant import own_company
 
     company = own_company()
-    logo = getattr(company, "logo", None)
-    return f"/media/{logo.name}" if logo and logo.name else None
+    ver = version(getattr(company, "logo", None))
+    return f"/api/portal/v1/operator/logo?v={ver}" if ver else None
+
+
+class OperatorLogoView(APIView):
+    """GET /operator/logo — логотип своей компании до входа (ДВ-3): намеренно публичный, как название оператора.
+    Файл закрыт в хранилище, отдаёт его только ERP; чужих компаний здесь нет."""
+
+    authentication_classes = []
+    permission_classes = []
+
+    def get_exception_handler(self):
+        return portal_exception_handler
+
+    def get(self, request):
+        from parties import pictures
+
+        from core.tenant import own_company
+
+        logo = getattr(own_company(), "logo", None)
+        if not logo:
+            raise Http404
+        try:
+            data = pictures.render(logo, request.query_params.get("size", "row"))
+        except (OSError, ValueError):
+            raise Http404 from None
+        return HttpResponse(data, content_type="image/webp", headers={"Cache-Control": "public, max-age=3600"})
 
 
 # ── 2. Me ───────────────────────────────────────────────────────────────────

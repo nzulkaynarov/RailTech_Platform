@@ -445,6 +445,13 @@ class OrganizationsDeskViewSet(DeskViewSet):
     )
     @action(detail=True, methods=["get", "put", "delete"], url_path="logo", parser_classes=[MultiPartParser])
     def logo(self, request, pk=None):
+        if request.method == "GET":
+            # своя компания не контрагент, но её логотип показывают «Компания» и бланки: читать его можно
+            from core.tenant import own_company
+
+            own = own_company()
+            if own is not None and str(own.pk) == str(pk):
+                return picture_response(own.logo, request)
         company, client_ids = self._company(request, pk)
         if request.method == "GET":
             return picture_response(company.logo, request)

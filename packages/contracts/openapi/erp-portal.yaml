@@ -440,6 +440,29 @@ paths:
               schema:
                 $ref: '#/components/schemas/PortalOperator'
 
+  /operator/logo:
+    get:
+      tags: [lookups]
+      operationId: getOperatorLogo
+      summary: Логотип компании-оператора до входа (ДВ-3)
+      description: >-
+        WebP 96×96 (`size=full` — 256×256) логотипа своей компании: намеренно публичный, как название оператора. Адрес — из
+        `PortalOperator.logo_url` с `?v=<версия>`. Файл закрыт в хранилище, отдаёт его только ERP. Логотипа нет — 404.
+      security: []
+      parameters:
+        - {name: size, in: query, required: false, schema: {type: string, enum: [row, full]}}
+        - {name: v, in: query, required: false, schema: {type: string}, description: Версия логотипа — только для кэша браузера}
+      responses:
+        '200':
+          description: Логотип
+          content:
+            image/webp:
+              schema:
+                type: string
+                format: binary
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /legal:
     get:
       tags: [legal]
@@ -5421,8 +5444,8 @@ components:
         logo_url:
           type: [string, 'null']
           description: >-
-            Логотип компании-оператора (ДВ-3): относительный адрес публичного файла `/media/companies/<id>/logo/…` на
-            домене кабинета; `null` — не загружен, кабинет показывает буквы названия
+            Логотип компании-оператора (ДВ-3): относительный адрес `/api/portal/v1/operator/logo?v=<версия>` на домене
+            кабинета; `null` — не загружен, кабинет показывает буквы названия
         bot_username:
           type: [string, 'null']
           pattern: '^[A-Za-z][A-Za-z0-9_]{3,31}$'

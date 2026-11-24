@@ -2330,7 +2330,7 @@
         "/api/portal/v1/operator": {
             "get": {
                 "operationId": "api_portal_v1_operator_retrieve",
-                "description": "GET /operator — название оператора платформы для кабинета до входа (задача «Н3a2»): ведётся в CRM\n(«Настройки · Компания»), проекция в ERP — `SystemSetting.platform_name`. Ещё — адрес логотипа своей компании\n(ДВ-3): публичный путь `/media/companies/<id>/logo/…`, тот же, что кабинет уже отдаёт на своём домене.",
+                "description": "GET /operator — название оператора платформы для кабинета до входа (задача «Н3a2»): ведётся в CRM\n(«Настройки · Компания»), проекция в ERP — `SystemSetting.platform_name`. Ещё — адрес логотипа своей компании\n(ДВ-3): `/operator/logo` с версией; файл закрыт в хранилище.",
                 "tags": [
                     "api"
                 ],
@@ -2344,7 +2344,35 @@
         "/api/portal/v1/operator/": {
             "get": {
                 "operationId": "api_portal_v1_operator_retrieve_2",
-                "description": "GET /operator — название оператора платформы для кабинета до входа (задача «Н3a2»): ведётся в CRM\n(«Настройки · Компания»), проекция в ERP — `SystemSetting.platform_name`. Ещё — адрес логотипа своей компании\n(ДВ-3): публичный путь `/media/companies/<id>/logo/…`, тот же, что кабинет уже отдаёт на своём домене.",
+                "description": "GET /operator — название оператора платформы для кабинета до входа (задача «Н3a2»): ведётся в CRM\n(«Настройки · Компания»), проекция в ERP — `SystemSetting.platform_name`. Ещё — адрес логотипа своей компании\n(ДВ-3): `/operator/logo` с версией; файл закрыт в хранилище.",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/operator/logo": {
+            "get": {
+                "operationId": "api_portal_v1_operator_logo_retrieve",
+                "description": "GET /operator/logo — логотип своей компании до входа (ДВ-3): намеренно публичный, как название оператора.\nФайл закрыт в хранилище, отдаёт его только ERP; чужих компаний здесь нет.",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/operator/logo/": {
+            "get": {
+                "operationId": "api_portal_v1_operator_logo_retrieve_2",
+                "description": "GET /operator/logo — логотип своей компании до входа (ДВ-3): намеренно публичный, как название оператора.\nФайл закрыт в хранилище, отдаёт его только ERP; чужих компаний здесь нет.",
                 "tags": [
                     "api"
                 ],
@@ -41209,6 +41237,7 @@
             },
             "Company": {
                 "type": "object",
+                "description": "`logo` of a company is our versioned API path (ЕД-5), never a storage address: the file is private.",
                 "properties": {
                     "id": {
                         "type": "integer",
@@ -41313,8 +41342,7 @@
                         "type": "string",
                         "format": "uri",
                         "nullable": true,
-                        "title": "Логотип",
-                        "description": "Логотип компании для отображения на платформе"
+                        "readOnly": true
                     },
                     "created_at": {
                         "type": "string",
@@ -41369,6 +41397,7 @@
                     "delete_blocker",
                     "id",
                     "is_active",
+                    "logo",
                     "name",
                     "trust_score",
                     "user_count"
@@ -41732,7 +41761,7 @@
             },
             "CompanyLight": {
                 "type": "object",
-                "description": "Lightweight company serializer for nested use — no extra queries.",
+                "description": "Lightweight company serializer for nested use — no extra queries.\n\n`logo` is our versioned API path (ЕД-5), not a storage address: the file is private and only the API serves it.",
                 "properties": {
                     "id": {
                         "type": "integer",
@@ -41764,18 +41793,18 @@
                         "type": "string",
                         "format": "uri",
                         "nullable": true,
-                        "title": "Логотип",
-                        "description": "Логотип компании для отображения на платформе"
+                        "readOnly": true
                     }
                 },
                 "required": [
                     "id",
+                    "logo",
                     "name"
                 ]
             },
             "CompanyLightRequest": {
                 "type": "object",
-                "description": "Lightweight company serializer for nested use — no extra queries.",
+                "description": "Lightweight company serializer for nested use — no extra queries.\n\n`logo` is our versioned API path (ЕД-5), not a storage address: the file is private and only the API serves it.",
                 "properties": {
                     "name": {
                         "type": "string",
@@ -41799,13 +41828,6 @@
                                 "maxLength": 0
                             }
                         ]
-                    },
-                    "logo": {
-                        "type": "string",
-                        "format": "binary",
-                        "nullable": true,
-                        "title": "Логотип",
-                        "description": "Логотип компании для отображения на платформе"
                     }
                 },
                 "required": [
@@ -41971,6 +41993,7 @@
             },
             "CompanyRequest": {
                 "type": "object",
+                "description": "`logo` of a company is our versioned API path (ЕД-5), never a storage address: the file is private.",
                 "properties": {
                     "name": {
                         "type": "string",
@@ -42061,13 +42084,6 @@
                                 "maxLength": 0
                             }
                         ]
-                    },
-                    "logo": {
-                        "type": "string",
-                        "format": "binary",
-                        "nullable": true,
-                        "title": "Логотип",
-                        "description": "Логотип компании для отображения на платформе"
                     },
                     "types": {
                         "type": "array",
@@ -53638,6 +53654,7 @@
             },
             "PatchedCompanyRequest": {
                 "type": "object",
+                "description": "`logo` of a company is our versioned API path (ЕД-5), never a storage address: the file is private.",
                 "properties": {
                     "name": {
                         "type": "string",
@@ -53728,13 +53745,6 @@
                                 "maxLength": 0
                             }
                         ]
-                    },
-                    "logo": {
-                        "type": "string",
-                        "format": "binary",
-                        "nullable": true,
-                        "title": "Логотип",
-                        "description": "Логотип компании для отображения на платформе"
                     },
                     "types": {
                         "type": "array",
@@ -56200,8 +56210,7 @@
                         "type": "string",
                         "format": "uri",
                         "nullable": true,
-                        "title": "Логотип",
-                        "description": "Логотип компании для отображения на платформе"
+                        "readOnly": true
                     },
                     "company_types": {
                         "type": "array",
@@ -56212,6 +56221,7 @@
                 "required": [
                     "company_types",
                     "id",
+                    "logo",
                     "name"
                 ]
             },
@@ -56247,13 +56257,6 @@
                         "nullable": true,
                         "title": "Страна",
                         "description": "Страна регистрации юридического лица"
-                    },
-                    "logo": {
-                        "type": "string",
-                        "format": "binary",
-                        "nullable": true,
-                        "title": "Логотип",
-                        "description": "Логотип компании для отображения на платформе"
                     }
                 },
                 "required": [
