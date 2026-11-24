@@ -382,3 +382,84 @@ msgstr "Hurmat bilan,"
 
 msgid "команда ERP"
 msgstr "ERP jamoasi"
+
+msgid "Договор № %(number)s на подписание"
+msgstr "Imzolaş uçun %(number)s-sonli şartnoma"
+
+msgid "Акт № %(number)s ждёт вашего ответа"
+msgstr "%(number)s-sonli dalolatnoma javobingizni kutmoqda"
+
+msgid "Напоминание: счёт № %(number)s"
+msgstr "Eslatma: %(number)s-sonli hisob"
+
+msgid "Счёт № %(number)s на оплату"
+msgstr "Tölov uçun %(number)s-sonli hisob"
+
+msgid "от %(seller_name)s"
+msgstr "%(seller_name)s tomonidan"
+
+msgid "Счёт к оплате"
+msgstr "Tölov uçun hisob"
+
+msgid "Компания <strong>%(seller_name)s</strong> отправила договор <strong>№ %(number)s</strong> на подписание."
+msgstr "<strong>%(seller_name)s</strong> sizga imzolaş uçun <strong>%(number)s-sonli</strong> şartnomani yubordi."
+
+msgid "Вам отправлен договор <strong>№ %(number)s</strong> на подписание."
+msgstr "Sizga imzolaş uçun <strong>%(number)s-sonli</strong> şartnoma yuborildi."
+
+msgid "Компания <strong>%(seller_name)s</strong> выставила акт <strong>№ %(number)s</strong>. Примите его или верните с замечаниями."
+msgstr "<strong>%(seller_name)s</strong> <strong>%(number)s-sonli</strong> dalolatnomani taqdim etdi. Uni qabul qiling yoki izoh bilan qaytaring."
+
+msgid "Вам выставлен акт <strong>№ %(number)s</strong>. Примите его или верните с замечаниями."
+msgstr "Sizga <strong>%(number)s-sonli</strong> dalolatnoma taqdim etildi. Uni qabul qiling yoki izoh bilan qaytaring."
+
+msgid "Срок оплаты счёта <strong>№ %(number)s</strong> прошёл."
+msgstr "<strong>%(number)s-sonli</strong> hisobning tölov muddati ötdi."
+
+msgid "Компания <strong>%(seller_name)s</strong> выставила счёт <strong>№ %(number)s</strong> на оплату."
+msgstr "<strong>%(seller_name)s</strong> tölov uçun <strong>%(number)s-sonli</strong> hisobni taqdim etdi."
+
+msgid "Вам выставлен счёт <strong>№ %(number)s</strong> на оплату."
+msgstr "Sizga tölov uçun <strong>%(number)s-sonli</strong> hisob taqdim etildi."
+
+msgid "Компания %(seller_name)s отправила договор № %(number)s на подписание."
+msgstr "%(seller_name)s sizga imzolaş uçun %(number)s-sonli şartnomani yubordi."
+
+msgid "Вам отправлен договор № %(number)s на подписание."
+msgstr "Sizga imzolaş uçun %(number)s-sonli şartnoma yuborildi."
+
+msgid "Компания %(seller_name)s выставила акт № %(number)s. Примите его или верните с замечаниями."
+msgstr "%(seller_name)s %(number)s-sonli dalolatnomani taqdim etdi. Uni qabul qiling yoki izoh bilan qaytaring."
+
+msgid "Вам выставлен акт № %(number)s. Примите его или верните с замечаниями."
+msgstr "Sizga %(number)s-sonli dalolatnoma taqdim etildi. Uni qabul qiling yoki izoh bilan qaytaring."
+
+msgid "Срок оплаты счёта № %(number)s прошёл."
+msgstr "%(number)s-sonli hisobning tölov muddati ötdi."
+
+msgid "Компания %(seller_name)s выставила счёт № %(number)s на оплату."
+msgstr "%(seller_name)s tölov uçun %(number)s-sonli hisobni taqdim etdi."
+
+msgid "Вам выставлен счёт № %(number)s на оплату."
+msgstr "Sizga tölov uçun %(number)s-sonli hisob taqdim etildi."
+
+msgid "Сумма:"
+msgstr "Summa:"
+
+msgid "К оплате:"
+msgstr "Tölaş kerak:"
+
+msgid "Срок оплаты:"
+msgstr "Tölov muddati:"
+
+msgid "PDF документа приложен к этому письму."
+msgstr "Hujjatning PDF faylı uşbu xatga ilova qilingan."
+
+msgid "Открыть документ онлайн"
+msgstr "Hujjatni onlayn oçiş"
+
+msgid "Открыть документ онлайн:"
+msgstr "Hujjatni onlayn oçiş:"
+
+msgid "Если кнопка не работает, скопируйте ссылку в браузер:"
+msgstr "Tugma işlamasa, havolani brauzerga nusxalang:"

@@ -16,6 +16,7 @@ import { LegalAcceptancePage } from '@/pages/legal/LegalAcceptancePage';
 import { ME_QUERY_KEY } from '@/session/session';
 import { useMe, useSetSession } from '@/session/useMe';
 import { DocLinkDialog, type DocLinkIntent } from './DocLinkDialog';
+import { DocLinkExtra } from './DocLinkExtra';
 import { DocLinkLines } from './DocLinkLines';
 import { GuestShell } from './GuestShell';
 
@@ -95,6 +96,7 @@ function DocLinkBody({ token, doc }: { token: string; doc: DocLinkView }) {
   const [downloading, setDownloading] = useState<'idle' | 'loading' | 'pending'>('idle');
   const member = doc.session === 'member';
   const decideOpen = doc.state === 'open';
+  const kind = doc.kind;
 
   const finishOpen = () => navigate('/');
   const run = (next: DocLinkIntent, text: string) => {
@@ -106,7 +108,7 @@ function DocLinkBody({ token, doc }: { token: string; doc: DocLinkView }) {
       { action: next.action, ...(text ? { text } : {}) },
       {
         onSuccess: () => {
-          toast.success(t(`docLink.done.${next.action}`));
+          toast.success(t(`docLink.done.${next.action}`, { context: kind }));
           setPhase('idle');
           setIntent(null);
         },
@@ -159,29 +161,38 @@ function DocLinkBody({ token, doc }: { token: string; doc: DocLinkView }) {
   };
 
   const reasonText = (availability: DocLinkAvailability) =>
-    availability.reason && !availability.allowed ? t(`docLink.reason.${availability.reason}`) : null;
+    availability.reason && !availability.allowed && availability.reason !== 'no_actions'
+      ? t(`docLink.reason.${availability.reason}`)
+      : null;
   const blocked = decideOpen ? reasonText(doc.decide) : null;
   const noContact = doc.decide.reason === 'no_contact';
   const other = doc.session === 'other_company';
   const name = me?.contact.name ?? '';
-  const buttons = [
-    { action: 'accept', variant: 'default' },
-    { action: 'reject', variant: 'outline' },
-    { action: 'question', variant: 'outline' },
-  ] as const;
+  // Действия вида документа (ДК-3): КП — три, договор — «подписать», акт — «принять» и «вернуть», счёт — ни одного
+  const offered: readonly string[] = doc.actions ?? ['accept', 'reject', 'question'];
+  const buttons = (
+    [
+      { action: 'accept', variant: 'default' },
+      { action: 'reject', variant: 'outline' },
+      { action: 'question', variant: 'outline' },
+    ] as const
+  ).filter(({ action }) => offered.includes(action));
+  const title = t('docLink.docTitle', { number: doc.number, context: kind });
+  const money = (value: DocLinkView['total']) =>
+    kind === 'quote' || kind === 'invoice' ? t('docLink.withVat', { amount: formatMoney(value) }) : formatMoney(value);
 
   return (
-    <GuestShell title={t('docLink.quoteTitle', { number: doc.number })} note={t('docLink.header', { email: doc.recipient_hint })}>
+    <GuestShell title={title} note={t('docLink.header', { email: doc.recipient_hint })}>
       <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
         <div className="flex flex-col gap-3">
-          <DocLinkLines doc={doc} />
+          {doc.lines.length > 0 ? <DocLinkLines doc={doc} /> : <DocLinkExtra doc={doc} />}
           <div>
             <Button
               type="button"
               variant="outline"
               disabled={downloading !== 'idle'}
               onClick={() => void download()}
-              aria-label={t('docLink.downloadNamed', { number: doc.number })}
+              aria-label={t('docLink.downloadNamed', { number: doc.number, context: kind })}
             >
               {downloading === 'idle' ? <Download aria-hidden="true" /> : <Loader2 className="motion-safe:animate-spin" aria-hidden="true" />}
               {downloading === 'pending' ? t('docLink.preparing') : t('docLink.download')}
@@ -191,7 +202,7 @@ function DocLinkBody({ token, doc }: { token: string; doc: DocLinkView }) {
 
         <section aria-labelledby="doc-card-title" className="order-first flex flex-col gap-4 rounded-lg border bg-card p-4 sm:p-5 lg:order-none">
           <h1 id="doc-card-title" className="text-lg font-semibold">
-            {t('docLink.quoteTitle', { number: doc.number })}
+            {title}
           </h1>
           <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-2 text-sm">
             <dt className="text-muted-foreground">{t('docLink.facts.from')}</dt>
@@ -199,9 +210,37 @@ function DocLinkBody({ token, doc }: { token: string; doc: DocLinkView }) {
             <dt className="text-muted-foreground">{t('docLink.facts.to')}</dt>
             <dd className="break-words">{doc.to_name}</dd>
             <dt className="text-muted-foreground">{t('docLink.facts.total')}</dt>
-            <dd className="font-medium tabular-nums">{t('docLink.withVat', { amount: formatMoney(doc.total) })}</dd>
-            <dt className="text-muted-foreground">{t('docLink.facts.validUntil')}</dt>
-            <dd>{formatDate(doc.valid_until)}</dd>
+            <dd className="font-medium tabular-nums">{money(doc.total)}</dd>
+            {kind === 'quote' ? (
+              <>
+                <dt className="text-muted-foreground">{t('docLink.facts.validUntil')}</dt>
+                <dd>{formatDate(doc.valid_until)}</dd>
+              </>
+            ) : null}
+            {kind === 'invoice' ? (
+              <>
+                <dt className="text-muted-foreground">{t('docLink.facts.dueDate')}</dt>
+                <dd>{formatDate(doc.due_date)}</dd>
+                {doc.balance_due ? (
+                  <>
+                    <dt className="text-muted-foreground">{t('docLink.facts.balance')}</dt>
+                    <dd className="font-medium tabular-nums">{formatMoney(doc.balance_due)}</dd>
+                  </>
+                ) : null}
+              </>
+            ) : null}
+            {kind === 'contract' && doc.signed_at ? (
+              <>
+                <dt className="text-muted-foreground">{t('docLink.facts.signedAt')}</dt>
+                <dd>{formatDate(doc.signed_at)}</dd>
+              </>
+            ) : null}
+            {kind === 'act' && doc.issued_at ? (
+              <>
+                <dt className="text-muted-foreground">{t('docLink.facts.issuedAt')}</dt>
+                <dd>{formatDate(doc.issued_at)}</dd>
+              </>
+            ) : null}
           </dl>
 
           {other ? (
@@ -226,9 +265,9 @@ function DocLinkBody({ token, doc }: { token: string; doc: DocLinkView }) {
 
           {!decideOpen ? (
             <p className="rounded-md bg-muted px-3 py-2 text-sm" role="status">
-              {t(`docLink.state.${doc.state as 'accepted' | 'rejected' | 'expired'}`)}
+              {t(`docLink.state.${doc.state}`, { context: kind })}
             </p>
-          ) : (
+          ) : buttons.length === 0 ? null : (
             <div className="flex flex-col gap-2">
               {buttons.map(({ action, variant }) => (
                 <Button
@@ -239,7 +278,7 @@ function DocLinkBody({ token, doc }: { token: string; doc: DocLinkView }) {
                   aria-describedby={blocked ? 'doc-blocked' : undefined}
                   onClick={() => start({ action })}
                 >
-                  {t(`docLink.actions.${action}`)}
+                  {t(`docLink.actions.${action}`, { context: kind })}
                 </Button>
               ))}
               {blocked ? (
