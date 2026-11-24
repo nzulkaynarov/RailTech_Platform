@@ -32003,6 +32003,10 @@ export const getListCalcPriceRequestsResponseMock = (
         faker.string.alpha({ length: { min: 10, max: 20 } }),
         null,
       ]),
+      logo_url: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
     },
     request: faker.helpers.arrayElement([
       faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -32063,6 +32067,10 @@ export const getCreateCalcPriceRequestResponseMock = (
     id: faker.helpers.fromRegExp("^[0-9]+$"),
     name: faker.string.alpha({ length: { min: 10, max: 20 } }),
     email: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    logo_url: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
   },
   request: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
   order: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
@@ -32117,6 +32125,10 @@ export const getAnswerPriceRequestResponseMock = (
     id: faker.helpers.fromRegExp("^[0-9]+$"),
     name: faker.string.alpha({ length: { min: 10, max: 20 } }),
     email: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    logo_url: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
   },
   request: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
   order: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
@@ -32185,6 +32197,10 @@ export const getListSupplierOrdersResponseMock = (
       id: faker.helpers.fromRegExp("^[0-9]+$"),
       name: faker.string.alpha({ length: { min: 10, max: 20 } }),
       email: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      logo_url: faker.helpers.arrayElement([
         faker.string.alpha({ length: { min: 10, max: 20 } }),
         null,
       ]),
@@ -32327,6 +32343,10 @@ export const getCreateSupplierOrderResponseMock = (
     id: faker.helpers.fromRegExp("^[0-9]+$"),
     name: faker.string.alpha({ length: { min: 10, max: 20 } }),
     email: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    logo_url: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
   },
   expected_date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
   overdue: faker.datatype.boolean(),
@@ -32593,6 +32613,10 @@ export const getCreateSupplierOrderFromRequestResponseMock = (
     id: faker.helpers.fromRegExp("^[0-9]+$"),
     name: faker.string.alpha({ length: { min: 10, max: 20 } }),
     email: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    logo_url: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
   },
   expected_date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
   overdue: faker.datatype.boolean(),
@@ -32865,6 +32889,10 @@ export const getGetSupplierOrderResponseMock = (
     id: faker.helpers.fromRegExp("^[0-9]+$"),
     name: faker.string.alpha({ length: { min: 10, max: 20 } }),
     email: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    logo_url: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
   },
   expected_date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
   overdue: faker.datatype.boolean(),
@@ -33125,6 +33153,10 @@ export const getUpdateSupplierOrderResponseMock = (
     id: faker.helpers.fromRegExp("^[0-9]+$"),
     name: faker.string.alpha({ length: { min: 10, max: 20 } }),
     email: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    logo_url: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
   },
   expected_date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
   overdue: faker.datatype.boolean(),
@@ -33391,6 +33423,10 @@ export const getSendSupplierOrderResponseMock = (
     id: faker.helpers.fromRegExp("^[0-9]+$"),
     name: faker.string.alpha({ length: { min: 10, max: 20 } }),
     email: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    logo_url: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
   },
   expected_date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
   overdue: faker.datatype.boolean(),
@@ -33580,6 +33616,10 @@ export const getRequestSupplierOrderPriceResponseMock = (
     id: faker.helpers.fromRegExp("^[0-9]+$"),
     name: faker.string.alpha({ length: { min: 10, max: 20 } }),
     email: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    logo_url: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
   },
   request: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
   order: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
@@ -33711,6 +33751,10 @@ export const getConfirmSupplierOrderResponseMock = (
     id: faker.helpers.fromRegExp("^[0-9]+$"),
     name: faker.string.alpha({ length: { min: 10, max: 20 } }),
     email: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    logo_url: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
   },
   expected_date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
   overdue: faker.datatype.boolean(),
@@ -33977,6 +34021,10 @@ export const getCancelSupplierOrderResponseMock = (
     id: faker.helpers.fromRegExp("^[0-9]+$"),
     name: faker.string.alpha({ length: { min: 10, max: 20 } }),
     email: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    logo_url: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
   },
   expected_date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
   overdue: faker.datatype.boolean(),
@@ -34243,6 +34291,10 @@ export const getReceiveSupplierOrderResponseMock = (
     id: faker.helpers.fromRegExp("^[0-9]+$"),
     name: faker.string.alpha({ length: { min: 10, max: 20 } }),
     email: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    logo_url: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
   },
   expected_date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
   overdue: faker.datatype.boolean(),
@@ -34784,6 +34836,10 @@ export const getListOverdueSupplierOrdersResponseMock = (
       id: faker.helpers.fromRegExp("^[0-9]+$"),
       name: faker.string.alpha({ length: { min: 10, max: 20 } }),
       email: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      logo_url: faker.helpers.arrayElement([
         faker.string.alpha({ length: { min: 10, max: 20 } }),
         null,
       ]),
@@ -37786,6 +37842,10 @@ export const getListCounterpartyPeopleResponseMock = (
     },
     kind: faker.helpers.arrayElement(["client", "partner"] as const),
     photo_url: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    company_logo_url: faker.helpers.arrayElement([
       faker.string.alpha({ length: { min: 10, max: 20 } }),
       null,
     ]),

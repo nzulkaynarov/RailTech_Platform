@@ -355,11 +355,13 @@ describe("Баннер настройки и мастер", () => {
     expect(await screen.findByRole("heading", { level: 1, name: "Нет доступа" })).toBeVisible();
   });
 
-  it("директор открывает мастер по адресу — видит, что это работа администратора", async () => {
+  it("директор открывает мастер по адресу — пустой страницы нет, его место «Состояние»", async () => {
     signInAs("director@demo.example");
     renderApp("/admin/setup");
 
-    expect(await screen.findByRole("heading", { level: 1, name: "Первый запуск" })).toBeVisible();
+    expect(await screen.findByRole("heading", { level: 1, name: "Состояние" })).toBeVisible();
+    expect(screen.queryByRole("heading", { level: 1, name: "Первый запуск" })).toBeNull();
+    expect(screen.queryByText("Недостаточно прав.")).toBeNull();
     expect(screen.queryByRole("button", { name: /Создать компанию/ })).toBeNull();
   });
 

@@ -159,6 +159,15 @@ describe('«Я новый клиент»: форма запроса → лид C
     await expectNoAxeViolations();
   });
 
+  it('+998 без одной цифры CRM отклоняет как неверный номер', async () => {
+    const { user } = await openForm();
+    await fill(user, { phone: '+998 90 118 90 0' });
+    await user.click(screen.getByRole('button', { name: 'Отправить заявку' }));
+    expect(
+      await screen.findByText('Номер не распознан — укажите его с кодом страны, например +998 90 123 45 67.'),
+    ).toBeInTheDocument();
+  });
+
   it('contact_required и consent_required с сервера — тем же текстом, что и проверка формы', async () => {
     crmFails('contact_required', 422, 'phone');
     const { user } = await openForm();

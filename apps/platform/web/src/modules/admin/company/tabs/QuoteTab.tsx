@@ -16,6 +16,7 @@ import { changedFields, codeLabel, isEmptyObject } from "../diff";
 import { errorFields } from "../errors";
 import { UnitLabel } from "../../../../shared/ui/UnitLabel";
 import { unitOf } from "../../../../shared/lib/unit";
+import { decimalInputProps } from "../../../../shared/lib/numberInput";
 
 type Values = Partial<QuoteDefaults>;
 
@@ -87,7 +88,8 @@ export function QuoteSettings({ group }: { group: QuoteGroup }) {
 const NUMBER = { style: { width: "100%" } } as const;
 
 function QuoteForm({ defaults, group }: { defaults: QuoteDefaults; group: QuoteGroup }) {
-  const { t } = useTranslation("company");
+  const { t, i18n } = useTranslation("company");
+  const decimal = decimalInputProps(i18n.language);
   const { message } = App.useApp();
   const queryClient = useQueryClient();
   const [form] = Form.useForm<Values>();
@@ -180,6 +182,7 @@ function QuoteForm({ defaults, group }: { defaults: QuoteDefaults; group: QuoteG
               min="0"
               max="100"
               step="0.5"
+              {...decimal}
               {...NUMBER}
             />
           </Form.Item>
@@ -193,6 +196,7 @@ function QuoteForm({ defaults, group }: { defaults: QuoteDefaults; group: QuoteG
                   min="0"
                   max="100"
                   step="0.5"
+                  {...decimal}
                   {...NUMBER}
                 />
               </Form.Item>

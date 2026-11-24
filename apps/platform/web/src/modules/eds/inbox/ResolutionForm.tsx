@@ -298,9 +298,7 @@ export function ResolutionForm({ letter, variant = "panel", onDone }: Resolution
                     aria-describedby={errors[zone] ? id(`pick-${zone}-error`) : undefined}
                     options={candidates.map((candidate) => ({
                       value: candidate.id,
-                      label: candidate.position
-                        ? `${candidate.name} · ${candidate.position}`
-                        : candidate.name,
+                      label: candidate.name,
                     }))}
                     onChange={(value: string) => {
                       patchPick(zone, { userId: value });

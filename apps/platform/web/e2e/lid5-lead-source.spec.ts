@@ -5,7 +5,7 @@ import { expectNoViolations } from "./support/axe";
 
 // ЛИД-5: в карточке лида видно, откуда он пришёл (канал словами, форма, страница, кампания) одной строкой «Откуда»,
 // список лидов фильтруется по каналу. axe 0 и снимки 1440 и 390 (`E2E_SCREENSHOT_DIR=docs/screens/lid5-lead-source`).
-const ORIGIN = "Веб-форма · заявка в кабинете · /new-client · кампания pos-nov";
+const ORIGIN = "Веб-форма · сайт · производитель или партнёр · /contacts/ · кампания depo-nov";
 
 async function filteredList(page: Page, width: number): Promise<void> {
   await loginAndWait(page, "manager@demo.example");

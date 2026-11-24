@@ -286,12 +286,12 @@
       "internal": "Ichki hujjat"
     },
     "hints": {
-      "lead": "Yangi murojaat: qo‘ng‘iroq, xat, tavsiya",
-      "request": "Mijoz tijorat taklifini so‘rayapti: mijozni tanlang va so‘rovni yozing",
-      "calc": "Ariza, fayl yoki oldingi o‘xshash hisob bo‘yicha",
-      "incoming": "Kompaniyaga kelgan xatni ro‘yxatga olish",
-      "letter": "Kompaniya blankasida, raqam va imzo bilan",
-      "internal": "Xizmat xati, ariza, hisobot"
+      "lead": "Yangi murojaat",
+      "request": "Mijozning taklif sörovi",
+      "calc": "Ariza böyicha narx",
+      "incoming": "Kompaniyaga kelgan xat",
+      "letter": "Kompaniya blankasidagi xat",
+      "internal": "Yozuv, ariza, hisobot"
     }
   },
   "maintenance": {

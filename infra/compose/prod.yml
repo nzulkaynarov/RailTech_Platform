@@ -192,7 +192,7 @@ services:
     build: !reset null
     environment:
       <<: *crm-prod-env
-      CABINET_ORIGIN: ${CABINET_ORIGIN:-https://${CABINET_DOMAIN},https://${WEBSITE_DOMAIN:-railtech.uz}}
+      CABINET_ORIGIN: ${CABINET_ORIGIN:-https://${CABINET_DOMAIN},https://${WEBSITE_DOMAIN:-railtech.uz},https://www.${WEBSITE_DOMAIN:-railtech.uz}}
     depends_on: !override
       crm-migrate:
         condition: service_completed_successfully

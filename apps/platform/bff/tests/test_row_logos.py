@@ -219,3 +219,37 @@ async def test_a_narrow_role_asking_for_an_arbitrary_company_gets_erp_404_with_i
     assert response.status_code == 404
     [call] = route.calls
     assert call.request.headers["authorization"].startswith("Bearer ey")  # токен ERP сотрудника
+
+
+async def test_people_list_carries_company_logos_in_one_batch(
+    web: Web, be: Backends, asked: list[list[int]], check: ContractChecker
+) -> None:
+    """ЕД-3: «Люди» — логотип компании контакта пакетом на весь список, как в реестрах."""
+    person = {
+        "has_email": False,
+        "has_phone": False,
+        "is_primary": False,
+        "position": "",
+        "kind": "client",
+    }
+    page = {
+        "count": 3,
+        "next": None,
+        "previous": None,
+        "results": [
+            {"id": 1, "name": "А", "company": {"id": 7, "name": "ООО Юг"}, **person},
+            {"id": 2, "name": "Б", "company": {"id": 7, "name": "ООО Юг"}, **person},
+            {"id": 3, "name": "В", "company": {"id": 9, "name": "ООО Север"}, **person},
+        ],
+    }
+    be.router.get(f"{ERP_URL}/api/v1/parties/people/").mock(
+        return_value=httpx.Response(200, json=page)
+    )
+    await web.login(["DIRECTOR"])
+
+    response = await web.client.get("/api/v1/people/contacts")
+
+    items = check(response, "/people/contacts", "get").json()["items"]
+    assert [i["company_logo_url"] for i in items] == [LOGO_7, LOGO_7, LOGO_9]
+    assert asked == [[7, 9]], "один пакетный запрос на весь список"
+    no_storage_address(items, "company_logo_url")

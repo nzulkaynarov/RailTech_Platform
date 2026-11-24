@@ -12,4 +12,9 @@ export interface StockSupplierRef {
    * @nullable
    */
   email?: string | null;
+  /**
+   * Логотип поставщика: адрес на BFF с `?v=<версия>`, только в списке заказов, пакетно (ЕД-3); null — буквы названия
+   * @nullable
+   */
+  logo_url?: string | null;
 }

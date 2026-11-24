@@ -200,7 +200,7 @@ test.describe("КП на одобрение: данные ERP", () => {
     await spaGoto(page, `/eds/drafts/${encodeURIComponent("КП-2026/118")}`);
     await expect(page.getByRole("heading", { level: 1, name: "КП-2026/118" })).toBeVisible();
 
-    await expect(page.getByText("Раздел «Операции» не отвечает, данные неполные")).toBeVisible();
+    await expect(page.getByText("Часть данных не загрузилась. Повторите позже.")).toBeVisible();
     await expect(page.getByText(/Состав КП не получен/)).toBeVisible();
     await expect(page.getByText("Итог по снимку КП")).toBeVisible();
     const form = quoteForm(page);
