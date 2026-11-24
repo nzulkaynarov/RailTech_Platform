@@ -320,7 +320,7 @@ export const edsPaymentsHandlers = [
     const card = findInvoice(Number(params["id"]));
     if (!card) return notFound("Счёт не найден.");
     const proof = body.proof_id ? card.proofs.find((p) => p.id === body.proof_id) : undefined;
-    if (body.proof_id && !proof) return notFound("Платёжка не найдена.");
+    if (body.proof_id && !proof) return notFound("Подтверждение не найдено.");
     if (proof?.status === "CONFIRMED") {
       return HttpResponse.json({ ...withFlags(card), replayed: true });
     }
@@ -458,7 +458,7 @@ export const edsPaymentsHandlers = [
           {
             at: now,
             code: "payment_doc.attached",
-            text: "Приложена платёжка клиента",
+            text: "Приложено подтверждение оплаты",
             by: ACCOUNTANT_NAME,
           },
           ...current.history,
@@ -473,8 +473,8 @@ export const edsPaymentsHandlers = [
     if (ok.error) return ok.error;
     const card = findInvoice(Number(params["id"]));
     const proof = card?.proofs.find((p) => p.id === Number(params["proofId"]));
-    if (!card || !proof) return notFound("Платёжка не найдена.");
-    return new HttpResponse(`Демонстрационное содержимое платёжки «${proof.original_name}».`, {
+    if (!card || !proof) return notFound("Подтверждение не найдено.");
+    return new HttpResponse(`Демонстрационное содержимое подтверждения «${proof.original_name}».`, {
       headers: {
         "content-type": "application/octet-stream",
         "content-disposition": `attachment; filename*=UTF-8''${encodeURIComponent(proof.original_name)}`,
@@ -545,7 +545,7 @@ export const edsPaymentsHandlers = [
         {
           at: now,
           code: "payment_doc.requested",
-          text: "Запрошена платёжка у клиента",
+          text: "Запрошено подтверждение у клиента",
           by: ACCOUNTANT_NAME,
         },
         ...current.history,

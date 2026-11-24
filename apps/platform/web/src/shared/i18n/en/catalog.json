@@ -46,8 +46,8 @@
       "text": "Check the connection and retry. Nothing is lost."
     },
     "unavailable": {
-      "title": "ERP is unavailable",
-      "text": "This section shows ERP data. Retry in a minute."
+      "title": "The “Operations” section is unavailable",
+      "text": "The section data did not load. Retry in a minute."
     },
     "forbidden": {
       "title": "This section is not for your role",
@@ -57,13 +57,13 @@
   "errors": {
     "DEFAULT": "The action failed. Please retry.",
     "FORBIDDEN": "This action is not allowed for your role.",
-    "ERP_FORBIDDEN": "ERP refused: you need the right to manage the catalogue or partners.",
+    "ERP_FORBIDDEN": "Not allowed: you need the right to manage the catalogue or partners.",
     "SUPPLIER_PRICES_REQUIRED": "Partner prices can only be changed by those who can see them (supply, director).",
     "CREW_RATES_REQUIRED": "Crew rates can only be changed by the chief engineer, supply or the director.",
     "VALIDATION_FAILED": "Check the fields.",
     "CONFLICT": "This record already exists. Refresh the list.",
     "NOT_FOUND": "The record is gone. Refresh the list.",
-    "BACKEND_UNAVAILABLE": "ERP did not answer. Retry in a minute.",
+    "BACKEND_UNAVAILABLE": "The “Operations” section did not answer. Retry in a minute.",
     "reason": {
       "merge_same_product": "Choose another card to merge with.",
       "item_name_required": "Enter the item name.",
@@ -341,7 +341,7 @@
       "active": "Works",
       "addSteps": [
         "The crew appears in the list.",
-        "The chief engineer picks it when costing a service.",
+        "It can be picked when costing a service.",
         "The client does not see the rate."
       ],
       "editSteps": [
@@ -516,7 +516,6 @@
     }
   },
   "docs": {
-    "subtitle": "Documents of items and requests: certificates, passports, manuals, drawings.",
     "search": "Search by name, file and item",
     "filterKind": "Kind",
     "anyKind": "Any kind",

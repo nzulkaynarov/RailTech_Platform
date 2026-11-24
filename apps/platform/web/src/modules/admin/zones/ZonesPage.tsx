@@ -22,6 +22,14 @@ import { ZoneSheet, type ZoneTarget } from "./ZoneSheet";
 
 type Filter = "active" | "all";
 
+/**
+ * «Нет ответственного» уже сказано ячейкой «Не назначен» и одной сводкой над таблицей; красная метка в каждой строке —
+ * шум (аудит 2026-11-24, девять одинаковых меток), поэтому в строке остаются только остальные проблемы.
+ */
+function shownProblems(zone: Zone) {
+  return zone.problems.filter((problem) => problem.code !== "no_responsible");
+}
+
 function PersonCell({ person }: { person: ZonePerson | undefined }) {
   const { t } = useTranslation("zones");
   if (!person) return <span className="pf-hint">{t("notAssigned")}</span>;
@@ -49,6 +57,9 @@ export function ZonesPage() {
   const canManage = canEdit(me, "admin");
   const all = list.data?.items ?? [];
   const rows = filter === "active" ? all.filter((zone) => zone.active) : all;
+  const unassigned = rows.filter((zone) =>
+    zone.problems.some((problem) => problem.code === "no_responsible"),
+  ).length;
 
   const refresh = () => {
     void queryClient.invalidateQueries({ queryKey: getListResponsibilityZonesQueryKey() });
@@ -115,11 +126,13 @@ export function ZonesPage() {
       header: t("col.problems"),
       width: null,
       cell: (row) =>
-        row.problems.length === 0 ? (
-          <span className="pf-hint">{row.active ? t("noProblems") : "—"}</span>
+        shownProblems(row).length === 0 ? (
+          <span className="pf-hint">
+            {row.active && row.problems.length === 0 ? t("noProblems") : "—"}
+          </span>
         ) : (
           <div>
-            {row.problems.map((problem) =>
+            {shownProblems(row).map((problem) =>
               problem.severity === "warning" ? (
                 <StatusTag key={problem.code} tone="gold">
                   {t(`problem.${problem.code}`)}
@@ -150,6 +163,14 @@ export function ZonesPage() {
       </FilterBar>
       {list.isError ? (
         <Alert type="error" showIcon role="alert" message={t("unavailable")} />
+      ) : null}
+      {unassigned > 0 ? (
+        <Alert
+          type="warning"
+          showIcon
+          role="status"
+          message={t("summary.noResponsible", { count: unassigned })}
+        />
       ) : null}
       <ListTable<Zone>
         tableId="admin.zones"

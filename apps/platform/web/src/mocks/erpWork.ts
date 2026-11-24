@@ -159,7 +159,7 @@ function invoiceItems(view: readonly MockRole[]): QueueItem[] {
           card.client_name,
           money(card.balance.amount, card.balance.currency),
           card.project_number,
-          "платёжка получена",
+          "подтверждение получено",
         ),
         due_label: "later",
         object: invoiceRef(card),
@@ -209,7 +209,7 @@ function contractStep(row: ProjectRow): [Kind, string, string] | null {
   if (c.status === "client_agreed") {
     return [
       "issue_contract",
-      `Выставить у оператора договор ${c.number} по`,
+      `Выставить в ЭДО договор ${c.number} по`,
       "клиент согласовал редакцию",
     ];
   }
@@ -217,7 +217,7 @@ function contractStep(row: ProjectRow): [Kind, string, string] | null {
     return [
       "attach_scan",
       `Прикрепить скан подписанного договора ${c.number} по`,
-      "договор выставлен у оператора",
+      "договор выставлен в ЭДО",
     ];
   }
   if (c.status === "rejected") {
@@ -313,7 +313,7 @@ export function erpWorkCards(view: readonly MockRole[]): QueueCard[] {
   if (roleFor(view, "confirm_payment")) {
     cards.push({
       key: "payments_to_confirm",
-      label: "Платёжки на подтверждение",
+      label: "Оплаты на подтверждение",
       count: items.filter((i) => i.kind === "confirm_payment").length,
       hint: "Документы · Счета и оплаты",
       path: "/eds/payments?show=proofs",

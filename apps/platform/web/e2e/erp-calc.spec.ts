@@ -62,7 +62,7 @@ test.describe("Расчёт по заявке: снабженец и гл. ин�
       .filter({ has: page.getByRole("link", { name: `Открыть расчёт по заявке ${NUMBER}` }) });
     await expect(row.getByText("АО «Пример Логистик»")).toBeVisible();
     await expect(row.getByText("Снабжение · ждёт")).toBeVisible();
-    await expect(row.getByText("Гл. инженер · ждёт")).toBeVisible();
+    await expect(row.getByText("Услуги · ждёт")).toBeVisible();
     await settledScreenshot(page, "requests");
     await expectNoViolations(page, "заявки в расчёте");
 
@@ -85,9 +85,9 @@ test.describe("Расчёт по заявке: снабженец и гл. ин�
     await expect(line(page, DRIVE).getByText("На складе · 6")).toBeVisible();
     await expect(page.getByRole("button", { name: READY })).toBeDisabled();
     await expect(
-      page.getByText(/без визы 3\. Ждут визы: Склад, Снабжение, Гл\. инженер\./),
+      page.getByText(/без визы 3\. Ждут визы: Склад, Снабжение, Услуги\./),
     ).toBeVisible();
-    await expect(line(page, MOUNTING).getByText("Гл. инженер · ждёт")).toBeVisible();
+    await expect(line(page, MOUNTING).getByText("Услуги · ждёт")).toBeVisible();
     await settledScreenshot(page, "calc-supply");
     await expectNoViolations(page, "расчёт снабженца");
 
@@ -104,7 +104,7 @@ test.describe("Расчёт по заявке: снабженец и гл. ин�
       .getByRole("button", { name: `Подтвердить строку «${DRIVE}»` })
       .click();
     await expect(line(page, DRIVE).getByText("Склад ✓ Демо Снабженцев")).toBeVisible();
-    await expect(page.getByText(/без визы 1\. Ждут визы: Гл\. инженер\./)).toBeVisible();
+    await expect(page.getByText(/без визы 1\. Ждут визы: Услуги\./)).toBeVisible();
     await expect(page.getByRole("button", { name: READY })).toBeDisabled();
     await expect(
       line(page, MOUNTING).getByRole("button", { name: /Подтвердить строку/ }),
@@ -125,7 +125,7 @@ test.describe("Расчёт по заявке: снабженец и гл. ин�
     await line(page, MOUNTING)
       .getByRole("button", { name: `Подтвердить строку «${MOUNTING}»` })
       .click();
-    await expect(line(page, MOUNTING).getByText("Гл. инженер ✓ Демо Инженеров")).toBeVisible();
+    await expect(line(page, MOUNTING).getByText("Услуги ✓ Демо Инженеров")).toBeVisible();
     const ready = page.getByRole("button", { name: READY });
     await expect(ready).toBeEnabled();
     await settledScreenshot(page, "calc-engineer-ready");

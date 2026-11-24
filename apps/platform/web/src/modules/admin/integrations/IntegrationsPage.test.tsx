@@ -177,7 +177,9 @@ describe("Admin · Внешние интеграции: обзор", () => {
 
     fireEvent.click(within(tile("ERP")).getByRole("button", { name: "Проверить: ERP" }));
 
-    expect(await within(tile("ERP")).findByRole("alert")).toHaveTextContent("ERP не отвечает.");
+    expect(await within(tile("ERP")).findByRole("alert")).toHaveTextContent(
+      "Раздел «Операции» не отвечает.",
+    );
   });
 
   it("директор: «Сервисы» — страница фундамента, ему «Нет доступа» (ЕВ-2а); BFF на изменение отвечает 403 и без интерфейса", async () => {
@@ -246,7 +248,7 @@ describe("Admin · Внешние интеграции: обзор", () => {
     expect(within(models).getAllByText("Нет данных").length).toBeGreaterThanOrEqual(2);
   });
 
-  it("CRM не ответила целиком: понятный текст и «Повторить»", async () => {
+  it("Раздел «Контакты» не ответил целиком: понятный текст и «Повторить»", async () => {
     signIn("admin@demo.example");
     server.use(
       http.get("*/admin/integrations", () =>

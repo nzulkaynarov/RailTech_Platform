@@ -35,8 +35,6 @@
     }
   },
   "list": {
-    "subtitle": "Documents you created: drafts, in approval and completed. The company register is on the “All” tab.",
-    "subtitleAll": "Company register: letters, quotes, memos, applications and reports with number, status and owner.",
     "scope": {
       "label": "Whose documents",
       "mine": "Mine",
@@ -424,7 +422,6 @@
       "label": "In reply to incoming",
       "hint": "Incoming number, e.g. IN-112/26: signing the letter closes the \"Prepare a reply\" instruction."
     },
-    "subtitleLetterHandover": "A letter on the company letterhead: see the real PDF and hand it over for signing — the letter gets its number when signed.",
     "attention": {
       "label": "Addressee line",
       "hint": "Filled in by picking a person; you can edit it"

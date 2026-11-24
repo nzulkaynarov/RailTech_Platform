@@ -74,19 +74,19 @@ describe("Admin · Оргструктура (экран целиком на MSW)
     renderAt("/admin/org");
 
     const row = await screen.findByRole("row", { name: /Демо Приглашённая/ });
-    expect(within(row).getByText("ERP: выдаётся")).toBeVisible();
+    expect(within(row).getByText("Операции: выдаётся")).toBeVisible();
 
     await waitFor(
       () => {
         const next = screen.getByRole("row", { name: /Демо Приглашённая/ });
-        expect(within(next).queryByText("ERP: выдаётся")).toBeNull();
-        expect(within(next).getByText("ERP")).toBeVisible();
+        expect(within(next).queryByText("Операции: выдаётся")).toBeNull();
+        expect(within(next).getByText("Операции")).toBeVisible();
       },
       { timeout: 7000 },
     );
   }, 12000);
 
-  it("сбой без текста: «Доступ в ERP не выдан.» и «Повторить», который вызывает маршрут", async () => {
+  it("сбой без текста: «Доступ к «Операциям» не выдан.» и «Повторить», который вызывает маршрут", async () => {
     signIn("admin@demo.example");
     writeEmployees(
       readEmployees().map((e) =>
@@ -96,7 +96,7 @@ describe("Admin · Оргструктура (экран целиком на MSW)
     renderAt("/admin/org?employee=u-demo-manager&panel=open");
 
     const panel = await panelEl();
-    expect(await within(panel).findByText("Доступ в ERP не выдан.")).toBeVisible();
+    expect(await within(panel).findByText("Доступ к «Операциям» не выдан.")).toBeVisible();
     fireEvent.click(within(panel).getByRole("button", { name: "Повторить" }));
 
     await waitFor(() => {
@@ -107,11 +107,11 @@ describe("Admin · Оргструктура (экран целиком на MSW)
   it.each([
     [
       "erp_provision_user: erp_not_configured: ERP не подключена — укажите адрес",
-      "нет связи с ERP",
+      "нет связи по настройкам подключения",
     ],
-    ["erp_provision_user: erp_unauthorized: HTTP 401", "нет связи с ERP"],
-    ["erp_provision_user: erp_unavailable: timeout", "ERP не ответила"],
-    ["erp_provision_user: erp_email_conflict: busy", "ERP не приняла учётную запись"],
+    ["erp_provision_user: erp_unauthorized: HTTP 401", "нет связи по настройкам подключения"],
+    ["erp_provision_user: erp_unavailable: timeout", "раздел не ответил"],
+    ["erp_provision_user: erp_email_conflict: busy", "учётная запись не принята"],
     ["provision: задача не поставлена в очередь", "не поставилась в очередь"],
   ])(
     "сбой с текстом CRM «%s»: причина словами, кода и текста сервера на экране нет",
@@ -144,8 +144,8 @@ describe("Admin · Оргструктура (экран целиком на MSW)
     renderAt("/admin/org");
 
     const row = await screen.findByRole("row", { name: /Демо Отключённый/ });
-    expect(within(row).queryByText("ERP: выдаётся")).toBeNull();
-    expect(within(row).queryByText("ERP")).toBeNull();
+    expect(within(row).queryByText("Операции: выдаётся")).toBeNull();
+    expect(within(row).queryByText("Операции")).toBeNull();
   });
 
   it("карточка открывается из адреса и по клику на имя", async () => {

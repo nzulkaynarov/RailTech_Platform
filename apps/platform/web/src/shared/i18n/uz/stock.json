@@ -18,7 +18,7 @@
       "text": "Sahifani yangilang yoki keyinroq qayta urining."
     },
     "unavailable": {
-      "title": "ERP javob bermayapti",
+      "title": "«Amallar» bölimi javob bermayapti",
       "text": "Ombor ma’lumotlari hozir mavjud emas. Bir daqiqadan keyin qayta urining."
     },
     "forbidden": {
@@ -28,14 +28,14 @@
   },
   "errors": {
     "forbidden": "Bu amal rolingizga ruxsat etilmagan.",
-    "unavailable": "ERP hozir javob bermayapti. Keyinroq qayta urining.",
+    "unavailable": "«Amallar» bölimi hozir javob bermayapti. Keyinroq qayta urining.",
     "other": "Bajarilmadi: {{message}}",
     "not_enough_stock": "Omborda bunchalik bo‘sh tovar yo‘q (bo‘sh: {{free}}).",
     "below_reserved": "Qoldiq loyihalar zaxirasidan kam bo‘lishi mumkin emas.",
     "below_shipped": "Zaxira allaqachon jo‘natilganidan kam bo‘lishi mumkin emas.",
     "transition_not_allowed": "Buyurtma allaqachon boshqa holatda: ekranni yangilang.",
     "order_not_draft": "Tarkib, hamkor va hamkorga izohni faqat qoralamada özgartirish mumkin.",
-    "order_closed": "Buyurtma yopilgan: uni o‘zgartirib bo‘lmaydi.",
+    "order_closed": "Buyurtma yopilgan: uni özgartirib bölmaydi.",
     "order_not_confirmed": "Tovarni tasdiqlangan buyurtma bo‘yicha qabul qilish mumkin.",
     "order_has_receipts": "Buyurtma bo‘yicha qabul bor: uni bekor qilib bo‘lmaydi.",
     "expected_date_required": "Kutilayotgan yetkazib berish sanasini kiriting.",

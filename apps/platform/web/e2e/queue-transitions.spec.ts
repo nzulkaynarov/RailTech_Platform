@@ -42,7 +42,7 @@ async function shoot(page: Page, name: string): Promise<void> {
 
 test.describe("Задачи: «Открыть»", () => {
   test.skip(({ isMobile }) => isMobile, "ширины задаёт сам сценарий");
-  test("директор: письмо, КП и служебка (родные экраны) — «Открыть» открывает объект в боковом окне на вкладке решения; primary у срочных писем", async ({
+  test("директор: письмо, КП и записка (родные экраны) — «Открыть» открывает объект в боковом окне на вкладке решения; primary только у первой срочной строки", async ({
     page,
   }) => {
     await loginAndWait(page, "director@demo.example");
@@ -50,7 +50,9 @@ test.describe("Задачи: «Открыть»", () => {
     const letter = queue.getByRole("link", {
       name: /Наложить резолюцию: Наложить резолюцию на письмо ВХ-104/,
     });
-    await expect(letter).toHaveClass(/ant-btn-primary/);
+    // главная кнопка на экране одна: у первой срочной строки (просрочен заказ), у письма «срок сегодня» — обычная
+    await expect(queue.getByRole("link", { name: /^Выяснить/ })).toHaveClass(/ant-btn-primary/);
+    await expect(letter).not.toHaveClass(/ant-btn-primary/);
     await expect(
       queue.getByRole("link", { name: /Одобрить: Одобрить КП-2026\/118/ }),
     ).not.toHaveClass(/ant-btn-primary/);
@@ -121,14 +123,14 @@ test.describe("Задачи: пустые состояния и частичны
     const main = page.getByRole("main");
     await expect(main.getByText("Подтвердить оплату по счёту СЧ-2026/145")).toBeVisible();
     await expect(main.getByText("Выставить счёт СЧ-2026/143")).toBeVisible();
-    await expect(
-      main.getByText("Платёжек на подтверждение и счетов к выставлению нет"),
-    ).toHaveCount(0);
+    await expect(main.getByText("Оплат на подтверждение и счетов к выставлению нет")).toHaveCount(
+      0,
+    );
     await expect(page.getByText("Решений от вас пока не требуется")).toHaveCount(0);
     await shoot(page, "queue-accountant");
   });
 
-  test("ERP не отвечает: данные CRM показаны, плашка называет «Документы» и «Расчёт»", async ({
+  test("Раздел «Операции» не отвечает: данные CRM показаны, плашка называет «Документы» и «Расчёт»", async ({
     page,
   }) => {
     await loginAndWait(page, "all@demo.example");
@@ -141,7 +143,9 @@ test.describe("Задачи: пустые состояния и частичны
     await shoot(page, "queue-partial-erp");
   });
 
-  test("CRM не отвечает: данные ERP показаны, плашка называет «Клиенты»", async ({ page }) => {
+  test("Раздел «Контакты» не отвечает: данные ERP показаны, плашка называет «Клиенты»", async ({
+    page,
+  }) => {
     await loginAndWait(page, "director@demo.example");
     await setMock(page, "rt-pf-mock-crm-down", "1");
     await page.reload();
@@ -261,7 +265,7 @@ async function expectOpened(page: Page, key: keyof typeof OBJECTS): Promise<void
   await expect(page.getByRole("region", { name: object.form })).toBeVisible();
 }
 
-test.describe("Поиск ⌘K: письмо, КП и служебка открываются в боковом окне", () => {
+test.describe("Поиск ⌘K: письмо, КП и записка открываются в боковом окне", () => {
   test.skip(({ isMobile }) => isMobile, "ширины задаёт сам сценарий");
 
   for (const [query, option, key] of [
@@ -317,7 +321,7 @@ test.describe("Колокольчик: объект с экраном откры
 });
 
 test.describe("Переходы на телефоне @mobile", () => {
-  test("@mobile директор: из очереди письмо, КП и служебка открываются с формой решения в карточке; менеджер — диалогом", async ({
+  test("@mobile директор: из очереди письмо, КП и записка открываются с формой решения в карточке; менеджер — диалогом", async ({
     page,
   }) => {
     await page.setViewportSize({ width: 390, height: 844 });

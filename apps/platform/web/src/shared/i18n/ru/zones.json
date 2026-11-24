@@ -28,6 +28,9 @@
   "noProblems": "Всё в порядке",
   "off": "Выключена",
   "openNamed": "Открыть зону «{{name}}»",
+  "summary": {
+    "noResponsible": "Зон без ответственного: {{count}}"
+  },
   "problem": {
     "no_responsible": "Нет ответственного",
     "responsible_lacks_permissions": "Нет прав зоны",

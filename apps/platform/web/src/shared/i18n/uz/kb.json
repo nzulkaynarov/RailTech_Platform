@@ -1,6 +1,5 @@
 {
   "subtitle": "Bot mijozlarga javob berish uchun foydalanadigan hujjatlar: «Bot nimani topadi» qidiruvi, bo‘shliqlar — javobsiz savollar — va botni tekshirish uchun sinov maydoni.",
-  "readOnlySubtitle": "Faqat ko‘rish: hujjatlar, bo‘shliqlar va sinov maydonini administrator o‘zgartiradi.",
   "viewOnly": "Faqat ko‘rish",
   "common": {
     "retry": "Qayta urinish",
@@ -34,7 +33,7 @@
       "text": "Qayta urinib ko‘ring: ma’lumotlar yo‘qolmagan."
     },
     "unavailable": {
-      "title": "CRM javob bermayapti",
+      "title": "«Kontaktlar» bölimi javob bermayapti",
       "text": "Bir daqiqa kutib, qayta urinib ko‘ring: ma’lumotlar yo‘qolmagan."
     },
     "forbidden": {
@@ -108,7 +107,7 @@
       "offStep2": "Fayl va parchalar o‘chirilmaydi — hujjatni qayta yoqish mumkin.",
       "onStep1": "Hujjat yana bot qidiruvida ishtirok etadi.",
       "onStep2": "Parchalar tayyor, qayta indekslash shart emas.",
-      "step3": "O‘zgarish CRM audit jurnaliga tushadi: kim va qachon.",
+      "step3": "O‘zgarish audit jurnaliga tushadi: kim va qachon.",
       "submitOff": "Hujjatni o‘chirish",
       "submitOn": "Hujjatni yoqish",
       "doneOff": "Hujjat o‘chirildi",
@@ -119,7 +118,7 @@
       "submit": "Hujjatni qayta indekslash",
       "step1": "Hujjat indekslash navbatiga qo‘yiladi — holati «Navbatda».",
       "step2": "Parchalar saqlangan fayldan qaytadan yig‘iladi; bunga bir daqiqagacha vaqt ketadi.",
-      "step3": "Hujjat aynan hozir indekslanayotgan bo‘lsa, CRM rad etadi: kutib, qayta urinib ko‘ring.",
+      "step3": "Hujjat aynan hozir indekslanayotgan bo‘lsa, özgartirib bölmaydi: kutib, qayta urinib ko‘ring.",
       "done": "Hujjat qayta indekslashga qo‘yildi"
     },
     "chunks": {
@@ -145,7 +144,7 @@
     "step1": "Hujjat indekslash navbatiga tushadi — holati «Navbatda».",
     "step1Gap": "Hujjat indekslash navbatiga tushadi, u yaratilgan bo‘shliq esa yopiladi.",
     "step2": "Bir daqiqadan so‘ng bot yangi hujjat bo‘yicha javob bera boshlaydi; buni «Bot nimani topadi» orqali tekshirish mumkin.",
-    "step3": "Yuklash CRM audit jurnaliga tushadi: kim va qachon.",
+    "step3": "Yuklash audit jurnaliga tushadi: kim va qachon.",
     "done": "Hujjat qo‘shildi — indekslash bir daqiqagacha davom etadi",
     "doneGap": "Hujjat qo‘shildi, bo‘shliq yopildi — indekslash bir daqiqagacha davom etadi",
     "errors": {
@@ -209,7 +208,7 @@
   },
   "gapPanel": {
     "notFound": "Bo‘shliq bu ro‘yxatda topilmadi: ehtimol, u allaqachon yopilgan.",
-    "stepAudit": "O‘zgarish CRM audit jurnaliga tushadi: kim va qachon.",
+    "stepAudit": "O‘zgarish audit jurnaliga tushadi: kim va qachon.",
     "fields": {
       "occurrences": "So‘ralgan",
       "language": "Til",
@@ -269,7 +268,7 @@
       "submit": "Suhbatni tozalash",
       "step1": "Sinov suhbati butunlay o‘chiriladi — mijozlar va menejerlarda u yo‘q.",
       "step2": "Ekrandagi lenta tozalanadi, bot suhbatni toza varaqdan boshlaydi.",
-      "step3": "Amal CRM audit jurnaliga tushadi: kim va qachon."
+      "step3": "Amal audit jurnaliga tushadi: kim va qachon."
     },
     "why": {
       "title": "Bot nega bunday javob berdi",
@@ -312,7 +311,7 @@
     "DEFAULT": "Amal bajarilmadi. Keyinroq qayta urinib ko‘ring yoki administratorga murojaat qiling.",
     "FORBIDDEN": "Bu amal rolingizga ruxsat etilmagan.",
     "NOT_FOUND": "Obyekt topilmadi: ehtimol, u o‘zgartirilgan. Sahifani yangilang.",
-    "BACKEND_UNAVAILABLE": "CRM javob bermayapti. Bir daqiqa kutib, qayta urinib ko‘ring.",
+    "BACKEND_UNAVAILABLE": "«Kontaktlar» bölimi javob bermayapti. Bir daqiqa kutib, qayta urinib ko‘ring.",
     "INTEGRATION_FAILED": "Javob uchun kerakli xizmat javob bermadi. Keyinroq qayta urinib ko‘ring.",
     "TOO_MANY_REQUESTS": "So‘rovlar juda ko‘p. Bir daqiqadan so‘ng qayta urinib ko‘ring.",
     "VALIDATION_FAILED": "Maydonlarning to‘ldirilishini tekshiring.",

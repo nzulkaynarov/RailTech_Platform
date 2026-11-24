@@ -46,8 +46,8 @@
       "text": "Ulanishni tekshirib, qayta urinib ko'ring. Ma'lumotlar yo'qolmagan."
     },
     "unavailable": {
-      "title": "ERP hozir mavjud emas",
-      "text": "Bo'lim ERP ma'lumotlarini ko'rsatadi. Bir daqiqadan so'ng qayta urinib ko'ring."
+      "title": "«Amallar» bölimi hozir mavjud emas",
+      "text": "Bo'lim ma'lumotlari yuklanmadi. Bir daqiqadan so'ng qayta urinib ko'ring."
     },
     "forbidden": {
       "title": "Bu bo'lim rolingiz uchun emas",
@@ -57,13 +57,13 @@
   "errors": {
     "DEFAULT": "Amalni bajarib bo'lmadi. Qayta urinib ko'ring.",
     "FORBIDDEN": "Bu amal rolingizga ruxsat etilmagan.",
-    "ERP_FORBIDDEN": "ERP ruxsat bermadi: katalogni yoki hamkorlarni yuritish huquqi kerak.",
+    "ERP_FORBIDDEN": "Ruxsat berilmadi: katalogni yoki hamkorlarni yuritish huquqi kerak.",
     "SUPPLIER_PRICES_REQUIRED": "Hamkor narxlarini faqat ularni ko'ra oladiganlar (ta'minot, direktor) o'zgartiradi.",
     "CREW_RATES_REQUIRED": "Brigada stavkalarini bosh muhandis, ta'minot yoki direktor o'zgartiradi.",
     "VALIDATION_FAILED": "Maydonlarni tekshiring.",
     "CONFLICT": "Bunday yozuv allaqachon bor. Ro'yxatni yangilang.",
     "NOT_FOUND": "Yozuv endi yo'q. Ro'yxatni yangilang.",
-    "BACKEND_UNAVAILABLE": "ERP javob bermadi. Bir daqiqadan so'ng qayta urinib ko'ring.",
+    "BACKEND_UNAVAILABLE": "«Amallar» bölimi javob bermadi. Bir daqiqadan so'ng qayta urinib ko'ring.",
     "reason": {
       "merge_same_product": "Birlashtirish uchun boshqa kartochkani tanlang.",
       "item_name_required": "Pozitsiya nomini kiriting.",
@@ -341,7 +341,7 @@
       "active": "Ishlaydi",
       "addSteps": [
         "Brigada ma'lumotnomada paydo bo'ladi.",
-        "Bosh muhandis uni xizmat hisob-kitobida tanlaydi.",
+        "Uni xizmat hisob-kitobida tanlaydi.",
         "Mijoz stavkani ko'rmaydi."
       ],
       "editSteps": [
@@ -516,7 +516,6 @@
     }
   },
   "docs": {
-    "subtitle": "Pozitsiya va arizalar hujjatlari: sertifikat, pasport, yo‘riqnoma, chizma.",
     "search": "Nomi, fayl va pozitsiya bo'yicha qidiruv",
     "filterKind": "Turi",
     "anyKind": "Istalgan tur",

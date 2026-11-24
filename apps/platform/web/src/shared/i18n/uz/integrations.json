@@ -1,6 +1,5 @@
 {
   "subtitle": "Ulanishlar, kalitlar va xizmatlar holati. Sirlar saqlangandan keyin ko‘rsatilmaydi.",
-  "readOnlySubtitle": "Ko‘rish rejimi: ulanishlar va kalitlarni administrator o‘zgartiradi.",
   "setupLink": "Platformani sozlash",
   "viewOnly": "Faqat ko‘rish",
   "cardsTitle": "Xizmatlar",
@@ -505,7 +504,7 @@
         "gemini": "gemini-3.8-flash, gemini-embedding-2",
         "openai": "OpenAI konsolidagi identifikator"
       },
-      "key": "Provayder kaliti",
+      "key": "Kirish kaliti",
       "keyHint": "Bo‘sh — server sozlamalaridagi kalit. Kiritilgan kalit ko‘rsatilmaydi.",
       "base": "API manzili (ixtiyoriy)",
       "baseHint": "Provayderning o‘z shlyuzi uchun kerak.",
@@ -757,7 +756,7 @@
       "erp_invalid_url": "ERP manzili noto‘g‘ri kiritilgan.",
       "erp_https_required": "Ish muhitida ERP manzili https bilan boshlanishi kerak.",
       "erp_unauthorized": "ERP CRM kalitini qabul qilmadi: juftlashni qaytadan bajaring.",
-      "erp_unavailable": "ERP javob bermayapti.",
+      "erp_unavailable": "«Amallar» bölimi javob bermayapti.",
       "erp_bad_response": "ERP tushunarsiz javob berdi: ERP versiyasini tekshiring.",
       "erp_rate_limited": "ERP kutib, qayta urinishni so‘rayapti.",
       "erp_pairing_code_invalid": "ERP juftlash kodini qabul qilmadi. Ulanishni qaytaring.",

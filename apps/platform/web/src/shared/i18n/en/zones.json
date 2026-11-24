@@ -28,8 +28,11 @@
   "noProblems": "All good",
   "off": "Switched off",
   "openNamed": "Open zone “{{name}}”",
+  "summary": {
+    "noResponsible": "Zones without a responsible person: {{count}}"
+  },
   "problem": {
-    "no_responsible": "No responsible",
+    "no_responsible": "No responsible person",
     "responsible_lacks_permissions": "Lacks zone permissions",
     "responsible_inactive": "Responsible deactivated",
     "deputy_inactive": "Deputy deactivated",

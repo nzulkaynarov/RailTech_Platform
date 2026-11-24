@@ -15,12 +15,12 @@
   "tableScroll": "Mijozlar jadvali",
   "listLabel": "Mijozlar",
   "open": "{{name}} kartasini ochish",
-  "inErp": "Uzatilgan",
-  "notInErp": "Uzatilmagan",
+  "inErp": "Kiritilgan",
+  "notInErp": "Kiritilmagan",
   "handoff": {
-    "pending": "Uzatilmoqda",
-    "failed": "Uzatishda xato",
-    "done": "Uzatilgan"
+    "pending": "Kiritilmoqda",
+    "failed": "Kiritib bölmadi",
+    "done": "Kiritilgan"
   },
   "empty": {
     "title": "Hozircha mijozlar yo‘q",
@@ -37,7 +37,7 @@
     "partner": {
       "title": "Kabinetdagi hamkor tasdiqlashni kutmoqda",
       "text": "Ishlab chiqaruvchi yoki hamkor kabinetga taklif qilindi va uning rekvizitlari shu mijozga mos keldi. Biz ularni o'zimiz birlashtirmaymiz: agar bu bir kompaniya bo'lsa, tasdiqlang — hamkor so'rovlari shu mijoz kartochkasiga keladi; aks holda hamkor uchun yangi mijoz yaratamiz.",
-      "erp": "ERP kompaniyasi №",
+      "erp": "«Amallar» kompaniyasi №",
       "matchedBy": {
         "inn": "STIR mos keldi",
         "registration_number": "davlat va ro'yxatdan o'tish raqami mos keldi"
@@ -50,7 +50,7 @@
     "inn": "STIR",
     "noInn": "STIR ko‘rsatilmagan",
     "segment": "Segment",
-    "erp": "Bek-ofis",
+    "erp": "Hisob",
     "newRequest": "Mijoz uchun yangi ariza",
     "contacts": "Kontaktlar",
     "noContacts": "Hozircha kontaktlar yo‘q",
@@ -71,12 +71,12 @@
     "urgent": "Shoshilinch",
     "clientSees": "Mijoz kabinetida: «{{text}}»",
     "transfer": {
-      "pending": "Bek-ofisga uzatilmoqda",
-      "failed": "Bek-ofisga uzatilmadi: {{reason}}"
+      "pending": "Ariza yuborilmoqda",
+      "failed": "Ariza yuborilmadi: {{reason}}"
     },
-    "retry": "ERPga qayta yuborish",
-    "retryLabel": "«{{title}}» arizasini ERPga qayta yuborish",
-    "retried": "Ariza ERPga qayta yuborildi",
+    "retry": "Qayta yuborish",
+    "retryLabel": "«{{title}}» arizasini qayta yuborish",
+    "retried": "Ariza qayta yuborildi",
     "documents": "Hujjatlar",
     "noDocuments": "Hozircha hujjatlar yo‘q",
     "docTypes": {

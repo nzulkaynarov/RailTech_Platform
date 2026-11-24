@@ -23,7 +23,7 @@ describe("окно «Создать» (план 2026-11-12 п. 0.1)", () => {
     renderApp("/dashboard/queue");
     const dialog = await openCreate();
     fireEvent.change(within(dialog).getByRole("searchbox", { name: /Найти/ }), {
-      target: { value: "служебка" },
+      target: { value: "записка" },
     });
     expect(within(dialog).getByRole("link", { name: /^Внутренний документ/ })).toBeInTheDocument();
     expect(within(dialog).queryByRole("link", { name: /^Лид/ })).toBeNull();

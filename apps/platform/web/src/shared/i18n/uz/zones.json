@@ -28,8 +28,11 @@
   "noProblems": "Hammasi joyida",
   "off": "Öçirilgan",
   "openNamed": "«{{name}}» zonasini oçiş",
+  "summary": {
+    "noResponsible": "Mas’ulsiz zonalar: {{count}}"
+  },
   "problem": {
-    "no_responsible": "Masʼul yöq",
+    "no_responsible": "Mas’ul yöq",
     "responsible_lacks_permissions": "Zona huquqlari yöq",
     "responsible_inactive": "Masʼul öçirilgan",
     "deputy_inactive": "Örinbosar öçirilgan",

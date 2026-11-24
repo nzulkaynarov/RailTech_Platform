@@ -11,7 +11,7 @@ import {
 
 // EDS · «КП на одобрение» и «На согласовании» на MSW (D1-4): сценарий директора целиком — КП на одобрение → карточка → «Одобрить
 // КП → отправить клиенту» (каналы) → в «Моём шаге» его больше нет; КП с незелёным чек-листом — кнопка неактивна с подписью;
-// «Вернуть на доработку»; служебка → «Согласовать», «Отклонить» с комментарием; менеджер видит КП без маржи и без кнопок решения;
+// «Вернуть на доработку»; записка → «Согласовать», «Отклонить» с комментарием; менеджер видит КП без маржи и без кнопок решения;
 // axe (WCAG 2.1 AA); на 390 px «Одобрение» и «Согласование» — лист на весь экран с кнопками внизу (@mobile).
 const PANEL = "#pf-context-panel";
 // ЕД-7: форма решения — блок в центре карточки
@@ -200,7 +200,7 @@ test.describe("КП на одобрение: данные ERP", () => {
     await spaGoto(page, `/eds/drafts/${encodeURIComponent("КП-2026/118")}`);
     await expect(page.getByRole("heading", { level: 1, name: "КП-2026/118" })).toBeVisible();
 
-    await expect(page.getByText("ERP не отвечает, данные неполные")).toBeVisible();
+    await expect(page.getByText("Раздел «Операции» не отвечает, данные неполные")).toBeVisible();
     await expect(page.getByText(/Состав КП не получен из ERP/)).toBeVisible();
     await expect(page.getByText("Итог по снимку КП")).toBeVisible();
     const form = quoteForm(page);
@@ -247,7 +247,7 @@ test.describe("КП на одобрение: менеджер", () => {
 test.describe("На согласовании: служебные записки", () => {
   test.skip(({ isMobile }) => isMobile, "сценарии на десктопе; телефон — блок @mobile");
 
-  test("служебка с суммой: карточка → «Согласовать» → документ идёт бухгалтеру", async ({
+  test("записка с суммой: карточка → «Согласовать» → документ идёт бухгалтеру", async ({
     page,
   }) => {
     await loginAndWait(page, "director@demo.example");
@@ -322,7 +322,7 @@ test.describe("На согласовании: служебные записки"
 test.describe("На согласовании: бухгалтер", () => {
   test.skip(({ isMobile }) => isMobile, "сценарии на десктопе");
 
-  test("служебка на шаге бухгалтера: «Оплатить в «Финансы»» (EDS 0.5.0+, B-D24-5) и «Вернуть»", async ({
+  test("записка на шаге бухгалтера: «Оплатить в «Финансы»» (EDS 0.5.0+, B-D24-5) и «Вернуть»", async ({
     page,
   }) => {
     await loginAndWait(page, "accountant@demo.example");
@@ -385,7 +385,7 @@ test.describe("Одобрение и согласование на телефо�
     await settledScreenshot(page, "mobile-blocked");
   });
 
-  test("@mobile служебка: форма «Согласование» — в центре карточки", async ({ page }) => {
+  test("@mobile записка: форма «Согласование» — в центре карточки", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await loginAndWait(page, "director@demo.example");
     await spaGoto(page, `/eds/approvals/${encodeURIComponent("СЗ-2026/014")}?panel=open&tab=agree`);

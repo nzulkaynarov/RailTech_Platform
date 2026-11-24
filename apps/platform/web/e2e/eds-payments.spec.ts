@@ -11,9 +11,9 @@ import {
 import { pickFiles } from "./support/fields";
 
 // EDS · «Счета и оплаты» бухгалтера на MSW (D2-4): сценарий целиком — платёжка клиента на подтверждение → сверка с выпиской →
-// «Подтвердить оплату» → счёт «Оплачен»; частичная оплата с видимым остатком; «Запросить платёжку»; служебка к оплате →
+// «Подтвердить оплату» → счёт «Оплачен»; частичная оплата с видимым остатком; «Запросить подтверждение»; записка к оплате →
 // «Оплачено» (дата, сумма, платёжка); менеджер читает без кнопок; снабженцу раздел закрыт; axe (WCAG 2.1 AA) на списке,
-// карточке и служебках; на 390 px — карточки и лист «Оплата» на весь экран (@mobile).
+// карточке и записках; на 390 px — карточки и лист «Оплата» на весь экран (@mobile).
 const PANEL = "#pf-context-panel";
 
 async function expectNoViolations(page: Page, context: string): Promise<void> {
@@ -54,7 +54,7 @@ test.describe("Счета и оплаты: бухгалтер", () => {
     const pick = (name: string) => status.getByText(name, { exact: false }).click();
     await expect(status.getByRole("radio", { name: "Ждут оплаты · 2" })).toBeChecked();
     await expect(status.getByText("К выставлению · 1")).toBeVisible();
-    await expect(status.getByText("Платёжки на подтверждение · 1")).toBeVisible();
+    await expect(status.getByText("Оплаты на подтверждение · 1")).toBeVisible();
     await expect(status.getByText("Просрочены · 1")).toBeVisible();
     await expect(
       page.locator(".pf-shell-tabs").getByRole("link", { name: "Заявки на оплату" }),
@@ -76,10 +76,10 @@ test.describe("Счета и оплаты: бухгалтер", () => {
     await pick("К выставлению");
     await expect(row(page, "СЧ-2026/143").getByText("Не выставлен")).toBeVisible();
 
-    await pick("Платёжки на подтверждение");
-    await expect(row(page, "СЧ-2026/145").getByText("Платёжка получена")).toBeVisible();
+    await pick("Оплаты на подтверждение");
+    await expect(row(page, "СЧ-2026/145").getByText("Подтверждение получено")).toBeVisible();
     await settledScreenshot(page, "list-proofs");
-    await expectNoViolations(page, "список: Платёжки на подтверждение");
+    await expectNoViolations(page, "список: Оплаты на подтверждение");
 
     await pick("Все счета");
     await expect(page.getByRole("row")).toHaveCount(1 + 6);
@@ -114,7 +114,7 @@ test.describe("Счета и оплаты: бухгалтер", () => {
     await settledScreenshot(page, "card-proof-from-client");
     await panel.getByRole("heading", { level: 3, name: "СЧ-2026/145" }).scrollIntoViewIfNeeded();
     await expect(
-      panel.getByRole("link", { name: "Скачать платёжку платёжка-0127.pdf" }),
+      panel.getByRole("link", { name: "Скачать подтверждение платёжка-0127.pdf" }),
     ).toBeVisible();
     await expect(form.getByRole("radio", { name: "платёжка-0127.pdf" })).toBeChecked();
     await expect(form.getByLabel(/Сумма по выписке/)).toHaveValue(/^28\s000\s000$/);
@@ -127,9 +127,7 @@ test.describe("Счета и оплаты: бухгалтер", () => {
     await confirmDialog(page);
 
     await expect(page.getByText(/Оплата подтверждена: 28\s000\s000/)).toBeVisible();
-    await expect(
-      page.getByRole("heading", { name: "Платёжек на подтверждение нет" }),
-    ).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Оплат на подтверждение нет" })).toBeVisible();
 
     // счёт в «Все счета» — «Оплачен»
     await openPayments(page, "?show=all");
@@ -188,7 +186,7 @@ test.describe("Счета и оплаты: бухгалтер", () => {
     await expect(page.getByRole("row", { name: /СЧ-2026\/142/ })).toHaveCount(0);
   });
 
-  test("«Запросить платёжку»: шаблон сообщения клиенту и отметка; «Приложить платёжку»", async ({
+  test("«Запросить подтверждение»: шаблон сообщения клиенту и отметка; «Приложить подтверждение»", async ({
     page,
   }) => {
     await loginAndWait(page, "accountant@demo.example");
@@ -196,33 +194,33 @@ test.describe("Счета и оплаты: бухгалтер", () => {
     await row(page, "СЧ-2026/142").getByText("ООО «Демо-Рейл»").click();
     const panel = page.locator(PANEL);
 
-    await panel.getByRole("button", { name: "Запросить платёжку" }).click();
+    await panel.getByRole("button", { name: "Запросить подтверждение" }).click();
     await expect(panel.getByLabel("Текст сообщения")).toHaveValue(/по счёту СЧ-2026\/142 на сумму/);
     await expect(
       panel.getByText(/Автоматической отправки клиенту в бот и почту пока нет/),
     ).toBeVisible();
-    await panel.getByRole("button", { name: "Отметить: платёжку запросили" }).click();
-    await expect(page.getByText("Запрос платёжки отмечен в журнале счёта")).toBeVisible();
-    await expect(panel.getByText(/Платёжку запросили/)).toBeVisible();
+    await panel.getByRole("button", { name: "Отметить: подтверждение запросили" }).click();
+    await expect(page.getByText("Запрос подтверждения отмечен в журнале счёта")).toBeVisible();
+    await expect(panel.getByText(/Подтверждение запросили/)).toBeVisible();
     await settledScreenshot(page, "request-proof");
 
-    await panel.getByRole("button", { name: "Приложить платёжку" }).click();
-    await pickFiles(panel.getByLabel("Файл платёжки"), {
+    await panel.getByRole("button", { name: "Приложить подтверждение" }).click();
+    await pickFiles(panel.getByLabel("Файл подтверждения"), {
       name: "pp-142.pdf",
       mimeType: "application/pdf",
       buffer: Buffer.from("%PDF-1.4 demo"),
     });
     await panel.getByRole("button", { name: "Приложить", exact: true }).click();
-    await expect(page.getByText("Платёжка приложена")).toBeVisible();
-    await expect(panel.getByRole("link", { name: "Скачать платёжку pp-142.pdf" })).toBeVisible();
-    // счёт переехал на вкладку «Платёжки на подтверждение»
+    await expect(page.getByText("Подтверждение приложено")).toBeVisible();
+    await expect(
+      panel.getByRole("link", { name: "Скачать подтверждение pp-142.pdf" }),
+    ).toBeVisible();
+    // счёт переехал на вкладку «Оплаты на подтверждение»
     await openPayments(page, "?show=proofs");
-    await expect(row(page, "СЧ-2026/142").getByText("Платёжка получена")).toBeVisible();
+    await expect(row(page, "СЧ-2026/142").getByText("Подтверждение получено")).toBeVisible();
   });
 
-  test("служебка к оплате → «Оплачено» (дата, сумма, платёжка) → в оплаченных", async ({
-    page,
-  }) => {
+  test("записка к оплате → «Оплачено» (дата, сумма, платёжка) → в оплаченных", async ({ page }) => {
     await loginAndWait(page, "accountant@demo.example");
     await openPayments(page, "?show=memos");
 
@@ -230,7 +228,7 @@ test.describe("Счета и оплаты: бухгалтер", () => {
     await expect(first.getByText("Передана бухгалтеру")).toBeVisible();
     await expect(first.getByText("Приложен")).toBeVisible();
     await settledScreenshot(page, "memos-list");
-    await expectNoViolations(page, "служебки к оплате");
+    await expectNoViolations(page, "записки к оплате");
 
     await first.getByText("Оплата командировочных расходов").click();
     const panel = page.locator(PANEL);
@@ -238,27 +236,27 @@ test.describe("Счета и оплаты: бухгалтер", () => {
     await expect(panel.getByRole("link", { name: "Скачать счёт-аренда.pdf" })).toBeVisible();
     const form = memoForm(page);
     await expect(form.getByLabel(/Сумма оплаты/)).toHaveValue(/^4\s200\s000$/);
-    await pickFiles(form.getByLabel(/Платёжка/), {
+    await pickFiles(form.getByLabel(/Подтверждение/), {
       name: "pp-015.pdf",
       mimeType: "application/pdf",
       buffer: Buffer.from("%PDF-1.4 demo"),
     });
     await settledScreenshot(page, "memo-card");
-    await expectNoViolations(page, "служебка к оплате с формой «Оплачено»");
+    await expectNoViolations(page, "записка к оплате с формой «Оплачено»");
     await form.getByRole("button", { name: "Оплачено" }).click();
     await confirmDialog(page);
 
-    await expect(page.getByText("Служебка СЗ-2026/015 оплачена")).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Служебок к оплате нет" })).toBeVisible();
+    await expect(page.getByText("Записка СЗ-2026/015 оплачена")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Записок к оплате нет" })).toBeVisible();
     await page
-      .getByRole("radiogroup", { name: "Какие служебки показать" })
+      .getByRole("radiogroup", { name: "Какие записки показать" })
       .getByText("Оплаченные")
       .click();
     await expect(row(page, "СЗ-2026/015").getByText(/Оплачена/)).toBeVisible();
     // окно поверх списка закрывает правые столбцы (ORCHESTRATOR §3 п. 18): сначала скрыть его
     await page.getByRole("button", { name: "Скрыть боковое окно" }).click();
     await row(page, "СЗ-2026/015")
-      .getByRole("link", { name: "Открыть служебку СЗ-2026/015" })
+      .getByRole("link", { name: "Открыть записку СЗ-2026/015" })
       .click();
     await expect(page.getByRole("heading", { level: 1, name: "СЗ-2026/015" })).toBeVisible();
     await page.locator(PANEL).getByRole("tab", { name: "История" }).click();
@@ -301,7 +299,7 @@ test.describe("Счета и оплаты: чтение и закрытые ро
     await expectNoViolations(page, "директор: счёт только для чтения");
   });
 
-  test("менеджер читает: счета видны без формы, служебки видны без кнопки «Оплачено»", async ({
+  test("менеджер читает: счета видны без формы, записки видны без кнопки «Оплачено»", async ({
     page,
   }) => {
     await loginAndWait(page, "manager@demo.example");
@@ -352,15 +350,15 @@ test.describe("Счета и оплаты на телефоне @mobile", () => 
     await expect(page.getByRole("dialog")).toHaveCount(0);
   });
 
-  test("@mobile служебки к оплате: карточки и лист «Оплачено»", async ({ page }) => {
+  test("@mobile записки к оплате: карточки и лист «Оплачено»", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await loginAndWait(page, "accountant@demo.example");
     await spaGoto(page, "/eds/payments?show=memos");
     await expect(page.getByRole("list", { name: "Заявки на оплату" })).toBeVisible();
     await settledScreenshot(page, "mobile-memos");
-    await expectNoViolations(page, "телефон: служебки к оплате");
+    await expectNoViolations(page, "телефон: записки к оплате");
 
-    await page.getByRole("link", { name: "Показать служебку СЗ-2026/015 в боковом окне" }).click();
+    await page.getByRole("link", { name: "Показать записку СЗ-2026/015 в боковом окне" }).click();
     const sheet = page.getByRole("dialog", { name: /^Оплата/ });
     await expect(sheet.getByRole("form", { name: "Оплата служебной записки" })).toBeVisible();
     await expect(sheet.getByRole("button", { name: "Оплачено" })).toBeVisible();

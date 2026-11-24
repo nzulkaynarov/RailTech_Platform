@@ -32,9 +32,11 @@ function useRefreshQueue(): () => void {
 
 /**
  * Строка «Что ждёт вас» (ГЛ-1): срок, заголовок, «Почему у вас: …» из факта источника и кнопка с названием действия.
+
+ * Главная кнопка на экране одна (стандарт «одна главная кнопка»): её получает только первая срочная строка (`primary`).
  * Быстрое действие в самой строке — только простое («Ознакомлен», «Взять»); остальное открывает объект, где решение.
  */
-export function QueueRow({ item }: { item: QueueItem }) {
+export function QueueRow({ item, primary = false }: { item: QueueItem; primary?: boolean }) {
   const { t } = useTranslation(["modules", "ui"]);
   const format = useFormat();
   const { message } = App.useApp();
@@ -116,7 +118,7 @@ export function QueueRow({ item }: { item: QueueItem }) {
       ) : (
         <LinkButton
           to={objectLink(item.object)}
-          type={isUrgent(item) ? "primary" : "default"}
+          type={primary && isUrgent(item) ? "primary" : "default"}
           aria-label={label}
         >
           {action}

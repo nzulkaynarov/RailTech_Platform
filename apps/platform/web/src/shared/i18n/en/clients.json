@@ -15,12 +15,12 @@
   "tableScroll": "Clients table",
   "listLabel": "Clients",
   "open": "Open the card of {{name}}",
-  "inErp": "Transferred",
-  "notInErp": "Not transferred",
+  "inErp": "Set up",
+  "notInErp": "Not set up",
   "handoff": {
-    "pending": "Transferring",
-    "failed": "Transfer error",
-    "done": "Transferred"
+    "pending": "Setting up",
+    "failed": "Could not set up",
+    "done": "Set up"
   },
   "empty": {
     "title": "No clients yet",
@@ -37,7 +37,7 @@
     "partner": {
       "title": "A partner from the cabinet is waiting for confirmation",
       "text": "A manufacturer or partner was invited to the cabinet and its details match this client. We never merge them on our own: if it is the same company, confirm and the partner's requests will arrive in this client's card; if not, we will create a new client for the partner.",
-      "erp": "ERP company #",
+      "erp": "“Operations” company #",
       "matchedBy": {
         "inn": "tax ID matches",
         "registration_number": "country and registration number match"
@@ -50,7 +50,7 @@
     "inn": "TIN",
     "noInn": "TIN not provided",
     "segment": "Segment",
-    "erp": "Back office",
+    "erp": "Records",
     "newRequest": "New request for the client",
     "contacts": "Contacts",
     "noContacts": "No contacts yet",
@@ -71,12 +71,12 @@
     "urgent": "Urgent",
     "clientSees": "In the client cabinet: “{{text}}”",
     "transfer": {
-      "pending": "Being transferred to the back office",
-      "failed": "Not transferred to the back office: {{reason}}"
+      "pending": "The request is being sent",
+      "failed": "The request was not sent: {{reason}}"
     },
-    "retry": "Retry sending to ERP",
-    "retryLabel": "Retry sending request “{{title}}” to ERP",
-    "retried": "The request was sent to ERP again",
+    "retry": "Retry sending",
+    "retryLabel": "Retry sending request “{{title}}”",
+    "retried": "The request was sent again",
     "documents": "Documents",
     "noDocuments": "No documents yet",
     "docTypes": {

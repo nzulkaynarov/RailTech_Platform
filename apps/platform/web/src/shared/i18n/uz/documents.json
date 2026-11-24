@@ -35,8 +35,6 @@
     }
   },
   "list": {
-    "subtitle": "O‘zingiz yaratgan hujjatlar: qoralamalar, kelishuvdagi va yakunlanganlar. Kompaniya reestri — «Hammasi» yorlig‘ida.",
-    "subtitleAll": "Kompaniya reestri: xatlar, TTlar, xizmat xatlari, arizalar va hisobotlar — raqami, holati va mas’ul bilan.",
     "scope": {
       "label": "Kimning hujjatlari",
       "mine": "Meniki",
@@ -259,7 +257,7 @@
     "formLabel": "Yangi hujjat",
     "type": {
       "label": "Hujjat turi",
-      "locked": "Yaratilgandan keyin turini o‘zgartirib bo‘lmaydi.",
+      "locked": "Yaratilgandan keyin turini özgartirib bölmaydi.",
       "letterHandover": "Xatni siz tayyorlaysiz, vakolatli şaxs imzolaydi: raqam va yuboriş — imzodan keyin."
     },
     "subject": {
@@ -424,7 +422,6 @@
       "label": "Kiruvchi xatga javoban",
       "hint": "Kiruvçi xat raqami, masalan IN-112/26: xat imzolansa, «Javob tayyorlaş» topşiriği yopiladi."
     },
-    "subtitleLetterHandover": "Kompaniya blankidagi xat: haqiqiy PDF ni köring va imzoga topşiring — raqamni xat imzolanganda oladi.",
     "attention": {
       "label": "Adresat qatori",
       "hint": "Şaxs tanlanganda töldiriladi; töğrilash mümkin"

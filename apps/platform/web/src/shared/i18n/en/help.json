@@ -159,7 +159,7 @@
       {
         "title": "Contract",
         "who": "accountant",
-        "text": "The client agrees the wording, the contract is issued and signed with the operator outside the Platform; the scan is attached by hand."
+        "text": "The client agrees the wording, the contract is issued and signed in e-docs outside the Platform; the scan is attached by hand."
       },
       {
         "title": "Payment",
@@ -215,10 +215,10 @@
       },
       {
         "term": "Contract (CT-2026/104)",
-        "text": "A draft contract from the accepted quote; signed with the operator, the scan is attached."
+        "text": "A draft contract from the accepted quote; signed in e-docs, the scan is attached."
       },
       {
-        "term": "Invoice (INV-2026/142)",
+        "term": "Invoice (INV-2026-142)",
         "text": "An invoice for payment: prepayment, balance or stage."
       },
       {
@@ -399,7 +399,6 @@
     "sent": "Sent"
   },
   "admin": {
-    "subtitle": "What colleagues write to the administrator: access, notifications, templates, errors",
     "filtersLabel": "Request filters",
     "status": "Status",
     "allStatuses": "All statuses",

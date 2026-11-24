@@ -1,6 +1,5 @@
 {
   "subtitle": "Connections, keys and service status. Secrets are not shown after saving.",
-  "readOnlySubtitle": "View mode: connections and keys are managed by the administrator.",
   "setupLink": "Platform setup",
   "viewOnly": "View only",
   "cardsTitle": "Services",
@@ -505,7 +504,7 @@
         "gemini": "gemini-3.8-flash, gemini-embedding-2",
         "openai": "the ID from the OpenAI console"
       },
-      "key": "Provider key",
+      "key": "Access key",
       "keyHint": "Empty — the key from the server settings. The key you enter is not shown.",
       "base": "API address (optional)",
       "baseHint": "Needed for the provider's own gateway.",
@@ -757,7 +756,7 @@
       "erp_invalid_url": "The ERP address is incorrect.",
       "erp_https_required": "In production the ERP address must start with https.",
       "erp_unauthorized": "ERP did not accept the CRM key: pair again.",
-      "erp_unavailable": "ERP is not responding.",
+      "erp_unavailable": "The “Operations” section is not responding.",
       "erp_bad_response": "ERP answered unexpectedly: check the ERP version.",
       "erp_rate_limited": "ERP asks to wait and retry.",
       "erp_pairing_code_invalid": "ERP did not accept the pairing code. Connect again.",

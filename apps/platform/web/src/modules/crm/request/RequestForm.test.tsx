@@ -236,7 +236,12 @@ describe("«Создать заявку» из лида и из клиента (
         async ({ request }) => {
           keys.push(((await request.clone().json()) as RequestFormIn).request_key);
           return HttpResponse.json(
-            { code: "BACKEND_UNAVAILABLE", message: "CRM не отвечает", source: "crm", details: {} },
+            {
+              code: "BACKEND_UNAVAILABLE",
+              message: "Раздел «Контакты» не отвечает",
+              source: "crm",
+              details: {},
+            },
             { status: 503 },
           );
         },

@@ -80,7 +80,7 @@ test.describe("Задачи", () => {
     const undated = rows.filter({ hasText: "Наложить резолюцию на письмо ВХ-108/26" });
     await expect(undated).toHaveCount(1);
     await expect(undated).not.toContainText("срок сегодня");
-    await expect(rows.filter({ hasText: "служебка" })).toHaveCount(1);
+    await expect(rows.filter({ hasText: "записка" })).toHaveCount(1);
     await expect(rows.filter({ hasText: "Одобрить КП-2026/115" })).toHaveCount(1);
     // СЦ-9: подпись договора и счёта на мне — строки «Подписать …»
     await expect(rows.filter({ hasText: /^.*Подписать (договор|счёт) / })).toHaveCount(2);
@@ -129,7 +129,7 @@ test.describe("Задачи", () => {
     await expectNoViolations(page, "empty queue");
   });
 
-  test("ERP не отвечает: данные CRM и плашка «ERP не отвечает, данные неполные»", async ({
+  test("Раздел «Операции» не отвечает: данные CRM и плашка «Раздел «Операции» не отвечает, данные неполные»", async ({
     page,
   }) => {
     await loginAndWait(page, "all@demo.example");

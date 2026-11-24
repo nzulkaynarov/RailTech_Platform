@@ -126,7 +126,7 @@ describe("Проекты: список", () => {
     expect(asked).toEqual([null]);
   });
 
-  it("ERP не отвечает — слова и «Повторить», не пустая таблица", async () => {
+  it("Раздел «Операции» не отвечает — слова и «Повторить», не пустая таблица", async () => {
     server.use(
       http.get("*/eds/projects", () =>
         HttpResponse.json(
@@ -137,7 +137,7 @@ describe("Проекты: список", () => {
     );
     signIn("director@demo.example");
     renderAt("/eds/projects");
-    expect(await screen.findByText("ERP не отвечает")).toBeVisible();
+    expect(await screen.findByText("Раздел «Операции» не отвечает")).toBeVisible();
     expect(screen.getByRole("button", { name: "Повторить" })).toBeVisible();
   });
 

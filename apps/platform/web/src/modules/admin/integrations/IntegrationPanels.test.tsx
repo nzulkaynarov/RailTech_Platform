@@ -396,7 +396,7 @@ describe("карточка «Модели ИИ»", () => {
     );
     const form = within(side).getByRole("form", { name: "Сменить модель: Поиск по базе знаний" });
     type("Модель", "embedding-demo-2", form);
-    type("Ключ провайдера", "demo-provider-key-91zx", form);
+    type("Ключ доступа", "demo-provider-key-91zx", form);
     submitPassword(form);
     press(form, "Сменить модель");
 
@@ -456,7 +456,7 @@ describe("карточка «Модели ИИ»", () => {
     );
     const form = within(side).getByRole("form", { name: "Сменить модель: Диалог с клиентом" });
     type("Модель", "anthropic/claude-demo-chat-2", form);
-    type("Ключ провайдера", "demo-provider-key-91zx", form);
+    type("Ключ доступа", "demo-provider-key-91zx", form);
     submitPassword(form);
     press(form, "Сменить модель");
 
@@ -472,7 +472,7 @@ describe("карточка «Модели ИИ»", () => {
     );
     const form = within(side).getByRole("form", { name: "Сменить модель: Диалог с клиентом" });
     type("Модель", "openai/gpt-demo", form);
-    type("Ключ провайдера", "demo-provider-key-91zx", form);
+    type("Ключ доступа", "demo-provider-key-91zx", form);
     submitPassword(form);
     press(form, "Сменить модель");
 
@@ -483,9 +483,9 @@ describe("карточка «Модели ИИ»", () => {
     expect(field).toHaveAttribute("aria-invalid", "true");
     expect(field.getAttribute("aria-describedby")).toContain("model-dialog-model-error");
     expect(field.closest(".ant-input")).toHaveClass("ant-input-status-error");
-    expect(within(form).getByLabelText("Ключ провайдера")).not.toHaveAttribute("aria-invalid");
+    expect(within(form).getByLabelText("Ключ доступа")).not.toHaveAttribute("aria-invalid");
     // секретные поля не очищаются: исправить имя и отправить снова можно без повторного ввода
-    expect(within(form).getByLabelText("Ключ провайдера")).toHaveValue("demo-provider-key-91zx");
+    expect(within(form).getByLabelText("Ключ доступа")).toHaveValue("demo-provider-key-91zx");
     expect(within(form).getByLabelText("Ваш пароль администратора")).toHaveValue(PASSWORD);
 
     type("Модель", "claude-demo-chat-2", form);

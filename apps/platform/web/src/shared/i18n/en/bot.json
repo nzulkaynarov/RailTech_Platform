@@ -1,6 +1,5 @@
 {
   "subtitle": "Bot connection, texts and behaviour, reply templates and exports. Applies at once.",
-  "readOnlySubtitle": "View only: the bot settings are changed by the administrator.",
   "viewOnly": "View only",
   "common": {
     "retry": "Retry"

@@ -1,6 +1,5 @@
 {
   "list": {
-    "subtitle": "Direktor rezolyutsiyasidan keyingi hisob-kitob topshiriqlari: muddat, qatorlar vizalari va mas’ul",
     "caption": "Hisob-kitobdagi arizalar",
     "scroll": "Hisob-kitobdagi arizalar jadvali",
     "columns": {
@@ -44,7 +43,7 @@
   "groups": {
     "stock": "Ombor",
     "supply": "Ta’minot",
-    "engineer": "Bosh muhandis"
+    "engineer": "Xizmatlar"
   },
   "visaState": {
     "done": "{{group}} ✓",
@@ -277,7 +276,7 @@
     "zone_not_permitted": "Ruxsat yetarli emas.",
     "cost_forbidden": "Xarid narxi va ustamani tannarxga ruxsati bor xodim o‘zgartiradi.",
     "forbidden": "Bu amal rolingizga ruxsat etilmagan.",
-    "unavailable": "ERP javob bermadi. Bir daqiqadan keyin qayta urinib ko‘ring.",
+    "unavailable": "«Amallar» bölimi javob bermadi. Bir daqiqadan keyin qayta urinib ko‘ring.",
     "other": "Saqlanmadi: {{message}}",
     "deal_not_in_calculation": "Ariza yopilgan yoki hisob-kitobdan keyingi bosqichda.",
     "quote_not_rejected_by_client": "Yangi versiya va voz kechish mijoz TTni rad etgandan keyin mavjud.",
@@ -291,7 +290,7 @@
       "text": "Sahifani yangilang yoki bir daqiqadan keyin qayta urinib ko‘ring."
     },
     "unavailable": {
-      "title": "ERP javob bermayapti",
+      "title": "«Amallar» bölimi javob bermayapti",
       "text": "Hisob-kitob ma’lumotlari vaqtincha mavjud emas. Bir daqiqadan keyin qayta urinib ko‘ring."
     },
     "forbidden": {

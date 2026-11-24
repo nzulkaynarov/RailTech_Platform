@@ -22,13 +22,13 @@ async function open(email: string, path = "/crm/clients") {
 }
 
 describe("Клиенты · Клиенты (D1-2b)", () => {
-  it("список с поиском по названию и ИНН; ошибка передачи в бэк-офис — словом", async () => {
+  it("список с поиском по названию и ИНН; ошибка заведения клиента — словом", async () => {
     await open("manager@demo.example");
     const table = await screen.findByRole("table", { name: "Клиенты" });
     expect(
       within(table).getByRole("link", { name: "Открыть карточку ООО Рельс-Сервис Демо" }),
     ).toBeVisible();
-    expect(within(table).getByText("Ошибка передачи")).toBeVisible();
+    expect(within(table).getByText("Не удалось завести")).toBeVisible();
 
     const search = screen.getByRole("searchbox", { name: "Поиск по названию и ИНН" });
     fireEvent.change(search, { target: { value: "300000003" } });
@@ -77,15 +77,15 @@ describe("Клиенты · Клиенты (D1-2b)", () => {
     );
   });
 
-  it("«Повторить отправку в ERP»: заявка без номера получает номер, кнопка уходит", async () => {
+  it("«Повторить отправку»: заявка без номера получает номер, кнопка уходит", async () => {
     await open("manager@demo.example", "/crm/clients/3?panel=open&tab=card");
     const panel = await panelEl();
     const requests = await within(panel).findByRole("region", { name: "Заявки и проекты" });
-    expect(within(requests).getByText(/Не передана в бэк-офис: бэк-офис не ответил/)).toBeVisible();
+    expect(within(requests).getByText(/Заявка не отправлена: бэк-офис не ответил/)).toBeVisible();
 
     fireEvent.click(
       within(requests).getByRole("button", {
-        name: "Повторить отправку в ERP заявки «Заявка: ООО Рельс-Сервис Демо»",
+        name: "Повторить отправку заявки «Заявка: ООО Рельс-Сервис Демо»",
       }),
     );
     await waitFor(() => {

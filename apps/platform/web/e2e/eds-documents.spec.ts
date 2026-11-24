@@ -62,7 +62,7 @@ async function send(page: Page, name: string): Promise<void> {
 test.describe("Создать документ: сотрудник", () => {
   test.skip(({ isMobile }) => isMobile, "сценарии на десктопе; телефон — отдельный блок @mobile");
 
-  test("служебка с суммой и вложением уходит на согласование и видна в «Мои» со статусом «На согласовании»", async ({
+  test("записка с суммой и вложением уходит на согласование и видна в «Мои» со статусом «На согласовании»", async ({
     page,
   }) => {
     await loginAndWait(page, "manager@demo.example");

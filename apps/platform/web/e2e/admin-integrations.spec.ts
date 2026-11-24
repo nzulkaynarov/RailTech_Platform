@@ -319,7 +319,7 @@ test.describe("Внешние интеграции: администратор",
 
     await panel.getByRole("button", { name: "Сменить модель: Поиск по базе знаний" }).click();
     const form = panel.getByRole("form", { name: "Сменить модель: Поиск по базе знаний" });
-    await form.getByLabel("Ключ провайдера").fill("demo-provider-key-91zx");
+    await form.getByLabel("Ключ доступа").fill("demo-provider-key-91zx");
     await tallScreenshot(page, "models-change");
     await password(form);
     await form.getByRole("button", { name: "Сменить модель" }).click();
@@ -426,12 +426,12 @@ test.describe("Внешние интеграции: axe и снимки", () => 
       await expect(models.getByLabel("Модель")).toHaveValue("claude-demo-chat");
       await tallScreenshot(page, "f2-model-default");
       await models.getByLabel("Модель").fill("openai/gpt-demo");
-      await models.getByLabel("Ключ провайдера").fill("demo-provider-key-91zx");
+      await models.getByLabel("Ключ доступа").fill("demo-provider-key-91zx");
       await password(models);
       await models.getByRole("button", { name: "Сменить модель" }).click();
       await expect(models.getByRole("alert")).toContainText("Имя модели не принято");
       await expect(models.getByLabel("Модель")).toHaveAttribute("aria-invalid", "true");
-      await expect(models.getByLabel("Ключ провайдера")).toHaveValue("demo-provider-key-91zx");
+      await expect(models.getByLabel("Ключ доступа")).toHaveValue("demo-provider-key-91zx");
       await expectNoViolations(page, `models form error ${String(width)}`);
       await tallScreenshot(page, "f2-model-error");
       await openIntegrations(page, "services");
