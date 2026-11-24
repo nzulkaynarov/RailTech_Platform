@@ -23,6 +23,10 @@ on:
     types: [opened, synchronize, reopened, ready_for_review]
   push:
     branches: [main]
+  # Очередь слияния (DECISIONS 2026-11-24): каждый PR перед входом в main проверяется вместе с уже стоящими впереди —
+  # те же быстрые задания, что и на push в main (миграции, контракты, lint, unit), по файлам «main + PR».
+  merge_group:
+    types: [checks_requested]
   schedule:
     - cron: "17 1 * * *"  # 01:17 UTC (06:17 по Ташкенту); GitHub запускает расписание только на ветке по умолчанию
   workflow_dispatch:
@@ -66,17 +70,20 @@ jobs:
       infra: ${{ contains(fromJSON('["schedule","workflow_dispatch"]'), github.event_name) || steps.filter.outputs.infra == 'true' }}
       cpu: ${{ contains(fromJSON('["schedule","workflow_dispatch"]'), github.event_name) || steps.filter.outputs.cpu == 'true' }}
       cpurules: ${{ contains(fromJSON('["schedule","workflow_dispatch"]'), github.event_name) || steps.filter.outputs.cpurules == 'true' }}
-      heavy: ${{ github.event_name != 'push' }}
+      heavy: ${{ github.event_name != 'push' && github.event_name != 'merge_group' }}
     steps:
       - uses: actions/checkout@v7
-        if: github.event_name == 'pull_request' || github.event_name == 'push'
+        if: contains(fromJSON('["pull_request","push","merge_group"]'), github.event_name)
         with:
-          # push: фильтру нужен коммит до push (при необходимости он докачивает глубже сам); PR читает список файлов через API
-          fetch-depth: ${{ github.event_name == 'push' && 100 || 1 }}
+          # push: фильтру нужен коммит до push (при необходимости он докачивает глубже сам); PR читает список файлов через API;
+          # merge_group: сравнение вершины main (base_sha) с проверяемым коммитом очереди (head_sha)
+          fetch-depth: ${{ github.event_name != 'pull_request' && 100 || 1 }}
       - uses: dorny/paths-filter@v3
-        if: github.event_name == 'pull_request' || github.event_name == 'push'
+        if: contains(fromJSON('["pull_request","push","merge_group"]'), github.event_name)
         id: filter
         with:
+          base: ${{ github.event_name == 'merge_group' && github.event.merge_group.base_sha || '' }}
+          ref: ${{ github.event_name == 'merge_group' && github.event.merge_group.head_sha || '' }}
           # Карта «файл контракта → потребители» проверена по коду (grep читателей каждого файла packages/contracts:
           # тесты-сторожа, генераторы клиентов, Dockerfile с контекстом contracts, compose); таблица — docs/systems/infra/ci.md.
           filters: |
@@ -614,10 +621,14 @@ jobs:
       - name: База для проверки совместимости
         env:
           BEFORE: ${{ github.event.before }}
+          QUEUE_BASE: ${{ github.event.merge_group.base_sha }}
         run: |
           if [ "${{ github.event_name }}" = "push" ] && [ -n "$BEFORE" ] && [ "$BEFORE" != "0000000000000000000000000000000000000000" ]; then
             git fetch --no-tags --depth=1 origin "$BEFORE"
             echo "CONTRACTS_BASE_REF=$BEFORE" >> "$GITHUB_ENV"
+          elif [ "${{ github.event_name }}" = "merge_group" ] && [ -n "$QUEUE_BASE" ]; then
+            git fetch --no-tags --depth=1 origin "$QUEUE_BASE"
+            echo "CONTRACTS_BASE_REF=$QUEUE_BASE" >> "$GITHUB_ENV"
           else
             git fetch --no-tags --depth=1 origin +refs/heads/main:refs/remotes/origin/main
             echo "CONTRACTS_BASE_REF=origin/main" >> "$GITHUB_ENV"
