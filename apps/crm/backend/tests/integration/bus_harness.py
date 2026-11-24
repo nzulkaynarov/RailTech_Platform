@@ -24,6 +24,7 @@ from app.models.clients import Client
 from app.models.deals import Deal
 from app.models.integrations import ErpEventNotice
 from app.models.leads import Lead, TelegramIdentity
+from app.services.document_link_telegram import DocumentLinkTelegramDelivery
 from app.services.erp_acceptance_code import AcceptanceCodeDelivery
 from app.services.erp_events import ErpEventsService
 from app.services.settings import SettingsService
@@ -94,6 +95,7 @@ def data_for(
 
 
 class FakeContainer:
+    document_link_telegram: Any = None
     """Минимум контейнера для обработчиков шины и публикаций: сервис событий ERP и шина."""
 
     def __init__(self, service: ErpEventsService, bus: CrmBus) -> None:
@@ -150,7 +152,11 @@ class Harness:
         self.bus.secret_cache.set_webhook_secrets([WEBHOOK_SECRET])
         from app.bus import handlers  # noqa: F401 — регистрирует обработчики
 
-        runtime.install(cast(Any, FakeContainer(self.service, self.bus)))
+        container = FakeContainer(self.service, self.bus)
+        container.document_link_telegram = DocumentLinkTelegramDelivery(
+            sessions, cast(Any, self._bot)
+        )
+        runtime.install(cast(Any, container))
 
     def close(self) -> None:
         runtime.install(None)

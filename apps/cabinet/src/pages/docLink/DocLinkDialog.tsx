@@ -126,10 +126,12 @@ export function DocLinkDialog({
       ? t('docLink.dialog.memberTitle', { context: doc.kind })
       : t(`docLink.actions.${intent.action}`, { context: doc.kind });
   const email = doc.recipient_hint;
+  // ДК-4: код ушёл и в Telegram получателя — диалог говорит, куда именно, и не отсылает к папке «Спам»
+  const viaTelegram = request.data?.channels?.includes('telegram') ?? false;
   const description = needsCode
     ? request.isPending
       ? t('docLink.dialog.sending')
-      : t('docLink.dialog.sent', { email: request.data?.sent_to ?? email, minutes: 10 })
+      : t(viaTelegram ? 'docLink.dialog.sentTelegram' : 'docLink.dialog.sent', { email: request.data?.sent_to ?? email, minutes: 10 })
     : intent.action === 'accept'
       ? t('docLink.dialog.memberText', { total: formatMoney(doc.total), context: doc.kind })
       : t('docLink.docTitle', { number: doc.number, context: doc.kind });
@@ -157,7 +159,7 @@ export function DocLinkDialog({
       {needsCode ? (
         <div className="flex flex-col gap-3">
           <div className="flex flex-col gap-2">
-            <Label htmlFor={codeId}>{t('docLink.dialog.label')}</Label>
+            <Label htmlFor={codeId}>{t(viaTelegram ? 'docLink.dialog.labelTelegram' : 'docLink.dialog.label')}</Label>
             <Input
               id={codeId}
               type="text"
@@ -172,7 +174,7 @@ export function DocLinkDialog({
               aria-invalid={verify.isError || undefined}
             />
           </div>
-          <p className="text-sm text-muted-foreground">{t('docLink.dialog.spam')}</p>
+          <p className="text-sm text-muted-foreground">{t(viaTelegram ? 'docLink.dialog.notInMail' : 'docLink.dialog.spam')}</p>
           <Button type="button" variant="outline" size="sm" className="self-start" disabled={wait > 0 || request.isPending} onClick={resend}>
             <RotateCw aria-hidden="true" />
             {wait > 0 ? t('docLink.dialog.resendIn', { time: clock(wait) }) : t('docLink.dialog.resend')}

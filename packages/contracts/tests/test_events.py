@@ -46,9 +46,10 @@ def test_types_present() -> None:
     domains = {t.domain for t in TYPES}
     assert {"erp", "crm", "identity", "eds"} <= domains
     assert (
-        len([t for t in TYPES if t.domain == "erp"]) == 35
+        len([t for t in TYPES if t.domain == "erp"]) == 36
     )  # + contract.status_changed (D2-5), mail.requested (W18A-P1), letterhead.updated (W18A-P4), FX-4, CHAT-1,
-    # NOTIFY-1, partner (PART-CRM), signing.requested (SIGN-4), company.updated (СУЩ-2.7)
+    # NOTIFY-1, partner (PART-CRM), signing.requested (SIGN-4), company.updated (СУЩ-2.7),
+    # document_link.telegram_requested (ДК-4)
 
 
 @pytest.mark.parametrize("path", schema_files(), ids=lambda p: p.relative_to(CONTRACTS).as_posix())
@@ -165,6 +166,7 @@ ERP_EVENTS_NOTIFY = {
     "contact.telegram_unlink_requested",
     "contact.telegram_test_requested",
     "contact.security_notice_requested",
+    "document_link.telegram_requested",
 }
 #: CHAT-1 (ADR-0023): сообщение контакта в чат кабинета — CRM кладёт его в беседу канала cabinet.
 ERP_EVENTS_CHAT = {"cabinet.message_posted"}

@@ -16,6 +16,8 @@ MASK = "***"
 #: Тип события → пути секретных полей в `data` (через точку).
 DEFAULT_SECRET_FIELDS: Mapping[str, tuple[str, ...]] = {
     "uz.railtech.erp.quote.acceptance_code_requested.v1": ("payload.code",),
+    # ДК-4: код входа по ссылке документа и сама личная ссылка (токен) — только в кэше и в теле доставки.
+    "uz.railtech.erp.document_link.telegram_requested.v1": ("payload.code", "payload.url"),
 }
 
 

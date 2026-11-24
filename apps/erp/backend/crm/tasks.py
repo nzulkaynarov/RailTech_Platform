@@ -387,11 +387,13 @@ def send_quote_email(self, quote_id: int) -> dict:
 
     # ДК-1: письмо ведёт в Кабинет — своя ссылка на получателя (`/d/<токен>`, в базе только хеш). Не получилось выпустить
     # (нет получателя уже отсечено выше) — прежняя страница ERP, КП всё равно уходит.
+    minted = None
     try:
         from portal.services.doc_links import build_url, mint_quote_link
 
         _link, raw_link_token = mint_quote_link(quote)
         public_link = build_url(raw_link_token)
+        minted = (_link, raw_link_token)
     except Exception:  # noqa: BLE001 — письмо с КП важнее ссылки: падаем назад на страницу ERP, ошибку не прячем
         logger.exception("Quote %s: document link was not minted, falling back to the ERP page", quote_id)
         public_link = public_quote_url(quote) or ""
@@ -429,6 +431,14 @@ def send_quote_email(self, quote_id: int) -> dict:
         ref=("quote", quote.pk),
     )
     logger.info("Quote %s email handed to the CRM mail service for %s", quote_id, to_email)
+    if minted is not None:
+        # ДК-4: та же личная ссылка — в бот, если у получателя привязан Telegram (письмо остаётся основным каналом).
+        from portal.services.doc_links import send_link_telegram
+
+        try:  # письмо уже передано: сбой бота не должен повторить задачу и второй раз отправить письмо
+            send_link_telegram(*minted)
+        except Exception:  # noqa: BLE001
+            logger.exception("Quote %s: telegram link event failed", quote_id)
     return {"quote_id": quote_id, "status": "sent", "to": to_email}
 
 

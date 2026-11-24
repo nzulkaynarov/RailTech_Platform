@@ -94,6 +94,10 @@ def deliver_document_letter(kind: str, doc_id: int, email: str, name: str, remin
         link.revoked_at = timezone.now()
         link.save(update_fields=["revoked_at"])
         return {"kind": kind, "id": doc_id, "status": "failed", "to": email}
+    try:  # ДК-4: та же ссылка — в бот, если у получателя привязан Telegram; письмо уже ушло, сбой бота его не отменяет
+        doc_links.send_link_telegram(link, raw)
+    except Exception:  # noqa: BLE001
+        logger.exception("%s #%s: telegram link event failed for %s", kind, doc_id, email)
     return {"kind": kind, "id": doc_id, "status": "sent", "to": email}
 
 
