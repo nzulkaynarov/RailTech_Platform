@@ -18200,6 +18200,34 @@ paths:
           $ref: '#/components/responses/UnauthorizedResponse'
         '403':
           $ref: '#/components/responses/ForbiddenResponse'
+  /api/v1/parties/organizations/logos/:
+    get:
+      operationId: parties_organizations_logos
+      description: 'Версии логотипов компаний `ids` (до 100, через запятую) в границах списка контрагентов: строки реестров,
+        где компания приходит из CRM, получают адрес `…/logo/?v=` одним запросом. Чужие и неизвестные id в ответ не входят.'
+      summary: Logo versions of several counterparties
+      parameters:
+      - in: query
+        name: ids
+        schema:
+          type: string
+        description: id компаний через запятую, до 100
+        required: true
+      tags:
+      - Parties
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeskCounterpartyLogos'
+          description: ''
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+        '403':
+          $ref: '#/components/responses/ForbiddenResponse'
   /api/v1/parties/organizations/{id}/:
     get:
       operationId: parties_organizations_retrieve
@@ -18359,6 +18387,135 @@ paths:
       operationId: parties_organizations_do_not_work_clear
       description: Х-8. Снять отметку «Не работать»; отметки нет — ничего не меняется (повтор безопасен). Тот же доступ.
       summary: Remove the «do not work» mark
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^\d+$
+        required: true
+      tags:
+      - Parties
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeskCounterparty'
+          description: ''
+        '403':
+          description: Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '404':
+          description: Объекта нет.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+  /api/v1/parties/organizations/{id}/logo/:
+    get:
+      operationId: parties_organizations_logo_get
+      description: 'Логотип: WebP 96 px (`size=full` — 256 px). Читает любой сотрудник в границах списка контрагентов; логотипа
+        нет — 404.'
+      summary: Counterparty logo
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^\d+$
+        required: true
+      - in: query
+        name: size
+        schema:
+          type: string
+          enum:
+          - full
+          - row
+        description: row | full
+      tags:
+      - Parties
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: string
+                format: binary
+          description: ''
+        '404':
+          description: Объекта нет.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+        '403':
+          $ref: '#/components/responses/ForbiddenResponse'
+    put:
+      operationId: parties_organizations_logo_put
+      description: ЕД-5. Квадрат, обрезанный клиентом; JPEG, PNG или WebP до 2 МБ, сервер перекодирует в WebP 256×256. Право
+        `deal.manage` или `supply.manage`. Отказы файла — 400 `FILE_TYPE_NOT_ALLOWED`, `FILE_CONTENT_MISMATCH`, `FILE_TOO_LARGE`.
+        Ответ — карточка контрагента с новой `logo_version`.
+      summary: Upload or replace the counterparty logo
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^\d+$
+        required: true
+      tags:
+      - Parties
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DeskPictureInRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeskCounterparty'
+          description: ''
+        '400':
+          description: 'Отказ проверки: код в `detail` или ошибки полей.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+        '403':
+          description: Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '404':
+          description: Объекта нет.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+    delete:
+      operationId: parties_organizations_logo_delete
+      description: Убирает логотип и файл; повтор безопасен. Тот же доступ. Ответ — карточка контрагента.
+      summary: Remove the counterparty logo
       parameters:
       - in: path
         name: id
@@ -18564,6 +18721,135 @@ paths:
           $ref: '#/components/responses/UnauthorizedResponse'
         '403':
           $ref: '#/components/responses/ForbiddenResponse'
+  /api/v1/parties/people/{id}/photo/:
+    get:
+      operationId: parties_people_photo_get
+      description: 'Фото контакта: WebP 96 px (`size=full` — 256 px). Читает любой сотрудник в границах списка «Люди»; фото
+        нет — 404.'
+      summary: Photo of a counterparty person
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^\d+$
+        required: true
+      - in: query
+        name: size
+        schema:
+          type: string
+          enum:
+          - full
+          - row
+        description: row | full
+      tags:
+      - Parties
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: string
+                format: binary
+          description: ''
+        '404':
+          description: Объекта нет.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+        '403':
+          $ref: '#/components/responses/ForbiddenResponse'
+    put:
+      operationId: parties_people_photo_put
+      description: СУЩ-3. Квадратное фото (клиент уже обрезал по кругу), JPEG, PNG или WebP до 2 МБ; сервер перекодирует в
+        WebP 256×256. Право `deal.manage` или `supply.manage`. Не тот тип — 400 `FILE_TYPE_NOT_ALLOWED`, подпись не совпала
+        — 400 `FILE_CONTENT_MISMATCH`, больше 2 МБ — 400 `FILE_TOO_LARGE`. Ответ — `photo_version`.
+      summary: Upload or replace the photo of a counterparty person
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^\d+$
+        required: true
+      tags:
+      - Parties
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DeskPictureInRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeskPersonPhoto'
+          description: ''
+        '400':
+          description: 'Отказ проверки: код в `detail` или ошибки полей.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+        '403':
+          description: Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '404':
+          description: Объекта нет.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+    delete:
+      operationId: parties_people_photo_delete
+      description: 'Убирает фото и файл; повтор безопасен. Тот же доступ. Ответ — `photo_version: null`.'
+      summary: Remove the photo of a counterparty person
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^\d+$
+        required: true
+      tags:
+      - Parties
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeskPersonPhoto'
+          description: ''
+        '403':
+          description: Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '404':
+          description: Объекта нет.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
   /api/v1/public/doc-links/{token}/:
     get:
       operationId: public_doc_links_retrieve
@@ -26820,6 +27106,10 @@ components:
           type: integer
           nullable: true
           description: Клиент CRM, с которым связана компания
+        logo_version:
+          type: string
+          nullable: true
+          description: Версия логотипа; `null` — логотипа нет
         roles:
           $ref: '#/components/schemas/DeskCounterpartyRoles'
         people:
@@ -26853,6 +27143,7 @@ components:
       - id
       - inn
       - legal_address
+      - logo_version
       - name
       - people
       - registration_number
@@ -26890,6 +27181,18 @@ components:
       - is_default
       - mfo
       - swift
+    DeskCounterpartyLogos:
+      type: object
+      description: Версии логотипов нескольких компаний одним ответом — для строк списков, где сама компания приходит из CRM.
+      properties:
+        results:
+          type: object
+          additionalProperties:
+            type: string
+            nullable: true
+          description: '`{id компании: версия логотипа или null}`'
+      required:
+      - results
     DeskCounterpartyPerson:
       type: object
       properties:
@@ -26910,6 +27213,10 @@ components:
           type: boolean
         has_email:
           type: boolean
+        photo_version:
+          type: string
+          nullable: true
+          description: Версия фото контакта; `null` — фото нет
       required:
       - has_cabinet
       - has_email
@@ -26917,6 +27224,7 @@ components:
       - id
       - is_primary
       - name
+      - photo_version
       - position
     DeskCounterpartyRoleInRequest:
       type: object
@@ -28020,6 +28328,10 @@ components:
           type: integer
           nullable: true
           description: Клиент CRM, с которым связана компания
+        logo_version:
+          type: string
+          nullable: true
+          description: Версия логотипа (отпечаток файла); `null` — логотипа нет. Адреса хранилища не отдаются
       required:
       - contact_person
       - country
@@ -28028,6 +28340,7 @@ components:
       - id
       - inn
       - kind
+      - logo_version
       - name
       - roles
     DeskOrganizationInRequest:
@@ -28104,11 +28417,16 @@ components:
           nullable: true
         is_primary:
           type: boolean
+        photo_version:
+          type: string
+          nullable: true
+          description: Версия фото контакта; `null` — фото нет
       required:
       - email
       - id
       - is_primary
       - name
+      - photo_version
       - position
     DeskOrigin:
       type: object
@@ -28567,6 +28885,10 @@ components:
           $ref: '#/components/schemas/DeskRef'
         kind:
           $ref: '#/components/schemas/DeskPersonKindEnum'
+        photo_version:
+          type: string
+          nullable: true
+          description: Версия фото контакта (отпечаток файла); `null` — фото нет. Адреса хранилища не отдаются
       required:
       - company
       - has_email
@@ -28575,6 +28897,7 @@ components:
       - is_primary
       - kind
       - name
+      - photo_version
       - position
     DeskPersonContacts:
       type: object
@@ -28603,6 +28926,28 @@ components:
       description: |-
         * `client` - client
         * `partner` - partner
+    DeskPersonPhoto:
+      type: object
+      properties:
+        id:
+          type: integer
+        photo_version:
+          type: string
+          nullable: true
+          description: Новая версия фото; `null` — фото убрано
+      required:
+      - id
+      - photo_version
+    DeskPictureInRequest:
+      type: object
+      description: 'Загрузка логотипа или фото (ЕД-5, СУЩ-3): квадрат, уже обрезанный клиентом.'
+      properties:
+        file:
+          type: string
+          format: binary
+          description: JPEG, PNG или WebP до 2 МБ; сервер перекодирует в квадрат 256×256 WebP
+      required:
+      - file
     DeskProposal:
       type: object
       properties:

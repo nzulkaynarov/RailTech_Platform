@@ -3126,6 +3126,98 @@ paths:
         '429':
           $ref: '#/components/responses/TooManyRequests'
 
+  /company/logo:
+    get:
+      tags: [company]
+      operationId: getCompanyLogo
+      summary: Логотип своей компании (ЕД-5)
+      description: >-
+        Логотип WebP 96×96 (`size=full` — 256×256). Читает любой участник компании; логотипа нет — 404. Адрес строит Cabinet из
+        `company.logo_version` с `?v=<версия>`: новая загрузка — новый адрес. Адресов хранилища API не отдаёт.
+      parameters:
+        - {name: size, in: query, required: false, schema: {type: string, enum: [row, full]}}
+        - {name: v, in: query, required: false, schema: {type: string}, description: Версия логотипа — только для кэша браузера}
+      responses:
+        '200':
+          description: Логотип
+          content:
+            image/webp:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [company]
+      operationId: uploadCompanyLogo
+      summary: Загрузить или заменить логотип (ЕД-5)
+      description: >-
+        Только администратор компании (иначе 409 `ADMIN_REQUIRED`). Квадрат, уже обрезанный в браузере; JPEG, PNG или WebP до
+        2 МБ, сервер перекодирует в WebP 256×256. Файл не передан — 400 `FILE_REQUIRED`; не тот тип — 422
+        `FILE_TYPE_NOT_ALLOWED`, подпись не совпала — 422 `FILE_CONTENT_MISMATCH`, больше 2 МБ — 422 `FILE_TOO_LARGE`.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Логотип сохранён; в ответе компания с новой `logo_version`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Company'
+        '400':
+          description: Файл не передан (`FILE_REQUIRED`)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: Не администратор компании (`ADMIN_REQUIRED`)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    delete:
+      tags: [company]
+      operationId: deleteCompanyLogo
+      summary: Убрать логотип (ЕД-5)
+      description: Только администратор компании (иначе 409 `ADMIN_REQUIRED`); повтор безопасен. Ответ — компания, у которой `logo_version` равна `null`.
+      responses:
+        '200':
+          description: Логотип убран
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Company'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: Не администратор компании (`ADMIN_REQUIRED`)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
   /company/bank-directory/{mfo}:
     get:
       tags: [company]
@@ -6651,6 +6743,9 @@ components:
             - type: 'null'
         language:
           $ref: '#/components/schemas/Language'
+        logo_version:
+          type: [string, 'null']
+          description: Версия логотипа (ЕД-5); логотип — `/company/logo?v=<версия>`, `null` — логотипа нет, показываются буквы названия
         relationship_status:
           $ref: '#/components/schemas/PortalRelationshipStatus'
         relationships:

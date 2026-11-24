@@ -1457,6 +1457,52 @@ class CompanyView(BasePortalView):
         return Response(self._company_data(request, company))
 
 
+class CompanyLogoView(BasePortalView):
+    """GET/PUT/DELETE /company/logo — логотип своей компании (ЕД-5): читает любой участник, меняет администратор компании."""
+
+    required_module = "company"
+    parser_classes = [MultiPartParser, FormParser]
+
+    def get(self, request):
+        from parties import pictures
+
+        logo = request.portal_company.logo
+        if not logo:
+            raise Http404
+        try:
+            data = pictures.render(logo, request.query_params.get("size", "row"))
+        except (OSError, ValueError):
+            raise Http404 from None
+        return HttpResponse(data, content_type="image/webp", headers={"Cache-Control": "private, max-age=86400"})
+
+    def put(self, request):
+        from parties import pictures
+
+        from catalog.desk.items import ItemError
+
+        self._admin_only(request)
+        file_obj = request.FILES.get("file")
+        if not file_obj:
+            raise PortalBadRequest("FILE_REQUIRED")
+        try:
+            pictures.replace(request.portal_company, "logo", file_obj)
+        except ItemError as error:
+            raise PortalValidationError(error.code) from None
+        return Response(CompanyView._company_data(request, request.portal_company))
+
+    def delete(self, request):
+        from parties import pictures
+
+        self._admin_only(request)
+        pictures.remove(request.portal_company, "logo")
+        return Response(CompanyView._company_data(request, request.portal_company))
+
+    @staticmethod
+    def _admin_only(request):
+        if not getattr(request.portal_contact, "is_admin", False):
+            raise PortalConflict("ADMIN_REQUIRED")
+
+
 class CompanySecurityLogView(BasePortalView):
     """GET /company/security-log — Журнал событий безопасности (J2-audit, только администратор компании)."""
 
