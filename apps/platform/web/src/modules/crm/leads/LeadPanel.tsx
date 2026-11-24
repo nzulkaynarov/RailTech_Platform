@@ -1,4 +1,5 @@
 import { Button, Skeleton } from "antd";
+import { useState } from "react";
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 
@@ -7,16 +8,21 @@ import { useAuth } from "../../../app/auth/useAuth";
 import { useViewport } from "../../../app/shell/useViewport";
 import { ApiError } from "../../../shared/api/errors";
 import type { ClientInvitation, LeadCard, LeadNotice } from "../../../shared/api/generated/model";
-import { useGetCrmLead } from "../../../shared/api/generated/platform-bff";
+import { useGetCrmLead, useReopenCrmLead } from "../../../shared/api/generated/platform-bff";
 import { useFormat } from "../../../shared/lib/useFormat";
 import { DefinitionList } from "../../../shared/ui/DefinitionList";
 import { DoNotWorkStrip } from "../../../shared/ui/DoNotWorkStrip";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { LinkButton } from "../../../shared/ui/LinkButton";
 import { StatusTag } from "../../../shared/ui/StatusTag";
+import { CloseMenu } from "../messages/CloseMenu";
 import { HandOverButton } from "../messages/HandOver";
-import { channelLabel, factRows } from "../messages/labels";
+import { useRefreshMessages } from "../messages/actions";
+import { actionError, channelLabel, factRows } from "../messages/labels";
 import { canCreateFromLead } from "../common/access";
+import { leadActionRules } from "../common/leadActions";
+import { ContactsBlock } from "./ContactsBlock";
+import { ErrorNote } from "../../../shared/ui/FormParts";
 import { clientPath } from "../common/params";
 
 import "../crm.css";
@@ -77,20 +83,25 @@ function Body({ card, sheet, onClose }: { card: LeadCard; sheet: boolean; onClos
   const fmt = useFormat();
   const { me } = useAuth();
   const canCreate = canCreateFromLead(me, card.assigned) && card.status !== "lost";
+  const rules = leadActionRules(me, card.assigned, card.status);
+  const refresh = useRefreshMessages();
+  const [reopenFailure, setReopenFailure] = useState<string | null>(null);
+  const reopen = useReopenCrmLead({
+    mutation: {
+      onSuccess: () => {
+        setReopenFailure(null);
+        refresh();
+      },
+      onError: (error) => {
+        setReopenFailure(actionError(t, error));
+      },
+    },
+  });
   // Первая линия (D17G-1): «Передать менеджеру» вместо «Забрать» и ответа — пока лида не ведёт сотрудник
   // (свободен или передан, но не забран).
   const triage = !canEdit(me, "crm.leads") && canEdit(me, "crm.leads.triage");
   const handable =
     triage && (!card.assigned || Boolean(card.handoff?.reasons.includes("handed_over")));
-  const contacts = [
-    {
-      label: t("messages:card.telegram"),
-      value: card.contacts.telegram ? `@${card.contacts.telegram}` : "",
-    },
-    { label: t("messages:card.phone"), value: card.contacts.phone ?? "" },
-    { label: t("messages:card.email"), value: card.contacts.email ?? "" },
-    { label: t("messages:card.company"), value: card.contacts.company ?? "" },
-  ].filter((row) => row.value);
   const facts = factRows(t, card.facts);
   return (
     <div className="pf-fp-stack">
@@ -99,19 +110,30 @@ function Body({ card, sheet, onClose }: { card: LeadCard; sheet: boolean; onClos
         <div className="pf-fp-row" style={{ alignItems: "center" }}>
           <span className="pf-hint">{card.lead}</span>
           <StatusTag kind="lead" status={card.status} />
+          {card.discarded ? (
+            <span className="pf-hint">
+              {t(`leads:discarded.${card.discarded}`)}
+              {card.duplicate_of ? (
+                <>
+                  {" · "}
+                  <LinkButton
+                    type="link"
+                    size="small"
+                    style={{ padding: 0 }}
+                    to={`/crm/leads?lead=${card.duplicate_of}&panel=open`}
+                  >
+                    {card.duplicate_of}
+                  </LinkButton>
+                </>
+              ) : null}
+            </span>
+          ) : null}
         </div>
       </div>
 
       <DoNotWorkStrip mark={card.client?.do_not_work} />
 
-      <div className="pf-fp-block">
-        <h4>{t("leads:card.contacts")}</h4>
-        {contacts.length ? (
-          <DefinitionList items={contacts} />
-        ) : (
-          <p className="pf-fp-sub">{t("leads:card.none")}</p>
-        )}
-      </div>
+      <ContactsBlock key={card.lead} card={card} canEdit={rules.edit} />
 
       <div className="pf-fp-block">
         <h4>{t("leads:card.about")}</h4>
@@ -209,8 +231,20 @@ function Body({ card, sheet, onClose }: { card: LeadCard; sheet: boolean; onClos
         <LinkButton to={`/crm/leads?scope=waiting&lead=${card.lead}`}>
           {t(triage ? "leads:actions.openChat" : "leads:actions.reply")}
         </LinkButton>
+        {rules.reopen ? (
+          <Button
+            loading={reopen.isPending}
+            onClick={() => {
+              reopen.mutate({ lead: card.lead });
+            }}
+          >
+            {t("leads:actions.reopen")}
+          </Button>
+        ) : null}
+        <CloseMenu lead={card.lead} name={card.name} close={rules.close} discard={rules.discard} />
         {sheet ? <Button onClick={onClose}>{t("leads:card.close")}</Button> : null}
       </div>
+      <ErrorNote message={reopenFailure} />
     </div>
   );
 }

@@ -6,6 +6,7 @@ import { useReturnCrmLeadToBot, useTakeCrmLead } from "../../../shared/api/gener
 import { actionError } from "./labels";
 
 const PREFIX = "/api/v1/crm/messages";
+const LEADS = "/api/v1/crm/leads";
 
 /** После действия: очередь, открытая переписка и бейджи меню перечитываются (переходы — по ответу сервера). */
 export function useRefreshMessages(): () => void {
@@ -16,6 +17,7 @@ export function useRefreshMessages(): () => void {
         const key = String(query.queryKey[0]);
         return (
           key.startsWith(PREFIX) ||
+          key.startsWith(LEADS) ||
           key === "/api/v1/menu-counters" ||
           key.startsWith("/api/v1/queue")
         );

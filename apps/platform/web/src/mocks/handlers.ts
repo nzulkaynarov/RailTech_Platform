@@ -31,6 +31,7 @@ import { calendarLinkHandlers } from "./calendarLink";
 import { companyArticlesHandlers } from "./companyArticlesHandlers";
 import { legalHandlers } from "./legalHandlers";
 import { callNoteHandlers, crmLeadsHandlers } from "./crmLeads";
+import { crmLeadActionsHandlers } from "./crmLeadActions";
 import { crmMessagesHandlers } from "./crmMessages";
 import { maintenanceHandlers } from "./maintenance";
 import { edsApprovalsHandlers } from "./edsApprovals";
@@ -258,6 +259,7 @@ export const handlers = [
   ...botKbHandlers,
   ...crmMessagesHandlers,
   ...crmLeadsHandlers,
+  ...crmLeadActionsHandlers,
   ...callNoteHandlers,
   ...ticketsHandlers,
   ...mailTypesHandlers, // MAIL-TYPES: правила отправителя

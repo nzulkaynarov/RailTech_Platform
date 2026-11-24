@@ -129,7 +129,8 @@ export const crmLeadsHandlers = [
     const limit = Number(url.searchParams.get("limit") ?? "50");
     const me = currentActor()?.id;
     const rows = readLeads()
-      .leads.map((l) => l.row)
+      .leads.filter((l) => !l.card.discarded)
+      .map((l) => l.row)
       .filter((row) => tab === "all" || row.status === tab)
       .filter((row) => scope !== "mine" || (me !== undefined && row.assigned?.id === me))
       .filter((row) => scope !== "overdue" || row.overdue)

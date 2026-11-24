@@ -256,6 +256,7 @@ async def test_update_contacts_normalises_and_audits(
     )
     journal = await audited(sessions, "lead.update_contacts")
     assert len(journal) == 1
+    assert journal[0].after is not None
     assert journal[0].after["fields"] == ["company", "email", "name", "phone"]
     cleared = patch(client, lead_id, headers, {"company": ""})
     assert cleared.status_code == 200
