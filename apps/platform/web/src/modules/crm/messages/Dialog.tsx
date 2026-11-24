@@ -17,7 +17,7 @@ import { HandOverButton, ReassignButton } from "./HandOver";
 import { HandoffNoteBox } from "./HandoffNoteBox";
 import { channelLabel } from "./labels";
 import { LeadCard } from "./LeadCard";
-import { canHandOver, canTake } from "./logic";
+import { canHandOver, canTake, canTakeCard } from "./logic";
 import { Thread } from "./Thread";
 
 function ownerText(
@@ -53,7 +53,7 @@ function Actions({
       <HandOverButton lead={card.lead} name={card.name} />
     ) : null;
   }
-  const takeable = item ? canTake(item, me.id) : card.owner_mode === "waiting" && !card.assigned;
+  const takeable = item ? canTake(item, me.id) : canTakeCard(card, me.id);
   const mine = card.owner_mode === "manager" && card.assigned?.id === me.id;
   const rules = dialogActionRules(me, card.owner_mode, card.assigned);
   return (
@@ -63,7 +63,7 @@ function Actions({
           {t("actions.take")}
         </Button>
       ) : null}
-      {mine ? (
+      {mine && card.can_return_to_bot ? (
         <Button loading={actions.returning} onClick={actions.returnToBot}>
           {t("actions.returnToBot")}
         </Button>

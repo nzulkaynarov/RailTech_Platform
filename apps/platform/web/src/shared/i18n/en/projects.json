@@ -275,7 +275,7 @@
     "note": {
       "label": "Operator or number in the EDI system",
       "hint": "Optional: goes to the log.",
-      "placeholder": "For example: Didox, No. 77"
+      "placeholder": "For example: EDI, No. 77"
     },
     "reject": {
       "title": "The client rejected the contract",

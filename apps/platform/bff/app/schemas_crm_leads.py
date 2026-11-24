@@ -14,7 +14,13 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.feeds.models import PersonRef, SourceState, StepCode
-from app.schemas_crm_messages import ConversationContacts, HandoffFacts, HandoffInfo, Language
+from app.schemas_crm_messages import (
+    ConversationContacts,
+    HandoffFacts,
+    HandoffInfo,
+    Language,
+    ReplyBlocked,
+)
 from app.schemas_do_not_work import DoNotWork
 
 LeadTab = Literal["all", "new", "dialog", "wants_quote", "client"]
@@ -139,6 +145,9 @@ class LeadCard(BaseModel):
     language: Language
     assigned: PersonRef | None
     contacts: ConversationContacts
+    # CH-1: канал ответа решает CRM; `None` — отвечать некуда, причина в `reply_blocked`
+    reply_via: str | None = None
+    reply_blocked: ReplyBlocked | None = None
     consent: LeadConsent
     facts: HandoffFacts
     need: str | None

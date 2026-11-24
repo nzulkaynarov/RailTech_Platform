@@ -189,6 +189,17 @@ function NameCell({
   );
 }
 
+/** «Запрос» в списке: не больше двух строк (письмо лида из почты бывает в 40 строк), полный текст — в подсказке и в карточке. */
+function NeedText({ need }: { need: string | null }) {
+  if (!need) return <span aria-hidden="true">—</span>;
+  const flat = need.replace(/\s+/g, " ").trim();
+  return (
+    <span className="pf-crm-need-clamp" title={flat}>
+      {flat}
+    </span>
+  );
+}
+
 function LastMessage({ row }: { row: LeadRow }) {
   const fmt = useFormat();
   return row.last_message_at ? (
@@ -239,7 +250,7 @@ function LeadsTable({
       header: t("leads:columns.need"),
       width: null,
       cellClassName: "pf-crm-need",
-      cell: (row) => row.need ?? <span aria-hidden="true">—</span>,
+      cell: (row) => <NeedText need={row.need} />,
     },
     {
       id: "assigned",
@@ -311,7 +322,11 @@ function LeadsList({
             <span className="pf-hint">{row.lead}</span>
           </div>
           <NameCell row={row} params={params} selected={selected === row.lead} />
-          {row.need ? <div className="pf-crm-need">{row.need}</div> : null}
+          {row.need ? (
+            <div className="pf-crm-need">
+              <NeedText need={row.need} />
+            </div>
+          ) : null}
           <div className="pf-crm-item-meta">
             <span>{channelLabel(t, row.channel)}</span>
             <span>{row.assigned?.name ?? t("leads:nobody")}</span>

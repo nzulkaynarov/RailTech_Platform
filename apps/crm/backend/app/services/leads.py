@@ -45,6 +45,7 @@ from app.security.principal import Principal
 from app.services import (
     cabinet_chat,
     deals,
+    lead_email_reply,
     lead_parts,
     lead_snooze,
     staff_deputy,
@@ -55,6 +56,7 @@ from app.services import team as team_service
 from app.services.escalation import OPEN_STATUSES, open_escalation
 from app.services.lead_erase import LeadErasure, erase_in_session, forget_after_commit
 from app.services.lead_messenger import DeliveryError, LeadMessenger
+from app.services.mail import MailService
 from app.services.settings import SettingsService
 
 logger = structlog.get_logger(__name__)
@@ -72,6 +74,17 @@ DiscardKind = Literal["spam", "test", "duplicate"]
 # Причина отказа в сделке при «Спам», «Тест», «Дубль» (LH-1); код — `discarded_kind`.
 DISCARD_REASONS: Final[dict[str, str]] = {"spam": "Спам", "test": "Тест", "duplicate": "Дубль"}
 _active_escalation = lead_parts.active_escalation
+
+
+def _no_channel_reason(blocked: str | None) -> Reason:
+    """Подкод отказа «отвечать некуда»; `details.blocked` несёт ту же причину для экрана."""
+    return {
+        "no_consent": Reason.NO_CONSENT,
+        "email_undeliverable": Reason.EMAIL_UNDELIVERABLE,
+        "no_email_consent": Reason.NO_EMAIL_CONSENT,
+    }.get(blocked or "", Reason.NO_REPLY_CHANNEL)
+
+
 LANGUAGES: Final[dict[str, Language]] = {"ru": "ru", "uz": "uz", "en": "en"}
 
 
@@ -94,8 +107,10 @@ class LeadService:
         backoffice_mode: BackofficeModeProvider | None = None,
         erase_attachments: Callable[[list[str]], Awaitable[None]] | None = None,
         forget_agent: Callable[[int], Awaitable[None]] | None = None,
+        mail: MailService | None = None,
     ) -> None:
         self._sessions = sessions
+        self._mail = mail  # ответ лиду письмом (CH-1)
         # Режим жизненного цикла (ADR-0022): без провайдера — `local`, как до ансамбля.
         self._backoffice_mode = backoffice_mode
         self._settings = settings
@@ -171,6 +186,11 @@ class LeadService:
             if lead.owner_mode == OwnerMode.BOT:
                 raise ConflictError(
                     "lead is already handled by the bot", reason=Reason.ALREADY_WITH_BOT
+                )
+            if lead_id not in await cabinet_repo.bot_channel_leads(session, [lead_id]):
+                # Лид без Telegram (веб, почта, звонок): бот ему не пишет, из очереди он пропал бы.
+                raise ConflictError(
+                    "the bot has no chat with the lead", reason=Reason.NO_BOT_CHANNEL
                 )
             before = lead_parts.snapshot(lead)
             if lead.stage in (Stage.HANDOFF, Stage.IN_PROGRESS):
@@ -569,6 +589,24 @@ class LeadService:
     async def reply(
         self, who: Principal, lead_id: int, text: str, *, client_message_id: str | None = None
     ) -> int:
+        message_id, fresh, on_behalf = await self._reply(who, lead_id, text, client_message_id)
+        if fresh:
+            # Аудит — после успешной отправки: отказ канала записью «ответил» не становится.
+            async with self._sessions() as session, session.begin():
+                await audit.record(
+                    session,
+                    who.actor,
+                    "lead.reply",
+                    "lead",
+                    lead_id,
+                    after={"on_behalf_of_user_id": on_behalf} if on_behalf is not None else None,
+                )
+        return message_id
+
+    async def _reply(
+        self, who: Principal, lead_id: int, text: str, client_message_id: str | None
+    ) -> tuple[int, bool, int | None]:
+        """Ответ лиду: (id сообщения, отправлено этим вызовом, за кого ответил заместитель)."""
         body = text.strip()
         if not body or len(body) > 4000:
             raise ValidationFailedError("message must be 1..4000 characters", field="text")
@@ -579,26 +617,38 @@ class LeadService:
             if done is not None and state == "unconfirmed":
                 raise ConflictError("delivery is not confirmed", reason=Reason.DELIVERY_UNCONFIRMED)
             if done is not None and state != "sending":
-                return done.id  # уже доставлен раньше: «лид отвечен» не сдвигаем
+                return done.id, False, None  # уже доставлен раньше: «лид отвечен» не сдвигаем
         async with self._sessions() as session, session.begin():
             lead = await _lead(session, lead_id)
             if lead.owner_mode != OwnerMode.HUMAN:
                 raise ConflictError("take the lead before replying", reason=Reason.TAKE_FIRST)
             on_behalf = await _require_owner(session, lead, who)
-            # Ответ — в канал последнего сообщения клиента (CHAT-1): кабинет или Telegram.
-            channel = await cabinet_repo.last_inbound_channel(session, lead_id)
-            if lead.consent_given_at is None and channel != cabinet_repo.CABINET:
-                # Без согласия на обработку данных писать лиду в Telegram нельзя (аудит P2); в
-                # кабинет компания написала сама, по договору — ответ в её же канал.
-                raise ConflictError("lead has not given consent", reason=Reason.NO_CONSENT)
-            await audit.record(
-                session,
-                who.actor,
-                "lead.reply",
-                "lead",
+            # Канал ответа решает правило CRM (CH-1): последний входящий, иначе любой доступный,
+            # иначе почта; без канала — отказ с причиной, а не «Telegram не ответил».
+            via = (await cabinet_repo.reply_vias(session, [lead]))[lead_id]
+            channel = via.channel
+            if channel is None:
+                raise ConflictError(
+                    "no channel to reply to the lead",
+                    reason=_no_channel_reason(via.blocked),
+                    blocked=via.blocked,
+                )
+        if channel == lead_email_reply.EMAIL:
+            if self._mail is None:
+                raise ConflictError("mail is not available", reason=Reason.SMTP_NOT_CONFIGURED)
+            # Без почты отказ — до записи в журнал писем: иначе строка `skipped_no_smtp` уйдёт позже
+            # «Отправить пропущенные», а повторы наплодят дублей.
+            await self._mail.ensure_configured()
+            email_id = await lead_email_reply.send_reply(
+                self._sessions,
+                self._mail,
                 lead_id,
-                after={"on_behalf_of_user_id": on_behalf} if on_behalf is not None else None,
+                body,
+                client_message_id,
+                sent_by_user_id=who.user_id,
+                on_behalf_of=on_behalf,
             )
+            return email_id, True, on_behalf
         if channel == cabinet_repo.CABINET:
             cabinet_id, _ = await cabinet_chat.send_reply(
                 self._sessions,
@@ -608,7 +658,7 @@ class LeadService:
                 sent_by_user_id=who.user_id,
                 on_behalf_of=on_behalf,
             )
-            return cabinet_id
+            return cabinet_id, True, on_behalf
         if client_message_id is not None:
             reply = await self._messenger.send_once(
                 lead_id,
@@ -635,7 +685,7 @@ class LeadService:
             async with self._sessions() as session, session.begin():
                 lead = await _lead(session, lead_id)
                 lead.last_human_msg_at = datetime.now(UTC)
-        return message_id
+        return message_id, delivered_now, on_behalf
 
     async def _finish(
         self,

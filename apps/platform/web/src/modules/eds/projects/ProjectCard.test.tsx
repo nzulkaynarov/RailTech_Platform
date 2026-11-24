@@ -217,7 +217,7 @@ describe("Проект: договор (строка документа)", () =>
 
     expect(await within(panel).findByText(/Клиент согласовал редакцию/)).toBeVisible();
     fireEvent.change(within(panel).getByLabelText(/Оператор или номер/), {
-      target: { value: "Didox, № 77" },
+      target: { value: "ЭДО, № 77" },
     });
     fireEvent.click(within(panel).getByRole("button", { name: "Отметить: выставлен в ЭДО" }));
 
@@ -249,8 +249,8 @@ describe("Проект: договор (строка документа)", () =>
     );
     expect(within(history).getAllByRole("listitem")[0]).toHaveTextContent("Демо Бухгалтеров");
     // СЦ-7: подпись записи — «Комментарий», а не «Причина»; после ЕД-7 запись живёт только в «Истории»
-    expect(within(history).getByText("Комментарий: Didox, № 77")).toBeVisible();
-    expect(within(history).queryByText(/Причина: Didox/)).toBeNull();
+    expect(within(history).getByText("Комментарий: ЭДО, № 77")).toBeVisible();
+    expect(within(history).queryByText(/Причина: ЭДО/)).toBeNull();
   });
 
   it("Х-1: новый проект договора — «На согласование клиенту» не предлагается, причина словами; «На подпись» собирает визы", async () => {

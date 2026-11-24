@@ -687,13 +687,13 @@
   },
   "contractTemplates": {
     "title": "Contract templates",
-    "hint": "The lawyer approves once — in a deal only approved templates are chosen.",
+    "hint": "The lawyer approves once — in a project only approved templates are chosen.",
     "add": "New template",
     "createTitle": "New contract template",
     "createSubmit": "Create",
     "empty": {
       "title": "No contract templates yet",
-      "text": "Create a template from the standard text and send it for approval: a deal offers approved templates only."
+      "text": "Create a template from the standard text and send it for approval: a project offers approved templates only."
     },
     "columns": {
       "name": "Template",
@@ -718,7 +718,7 @@
     "waitingLine": "ed. {{edition}} · waiting for Legal since {{date}}",
     "draftLine": "ed. {{edition}}",
     "replaced": "replaced by a newer edition",
-    "notOffered": "not offered in a deal",
+    "notOffered": "not offered in a project",
     "fallback": "uz and en — Russian text",
     "actions": {
       "edition": "New edition",

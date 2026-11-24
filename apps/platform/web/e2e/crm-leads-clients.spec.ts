@@ -37,6 +37,10 @@ test.describe("Лиды → «Создать заявку» → карточка
     await expect(page.getByRole("heading", { level: 1, name: "Лиды" })).toBeVisible();
     const table = page.getByRole("table", { name: "Лиды" });
     await expect(table.getByRole("link", { name: "Открыть карточку Азиз Демо" })).toBeVisible();
+    // Лид из письма: запрос — две строки, а не всё письмо (строка ниже ~100 px)
+    const letterRow = table.getByRole("row", { name: /Письмо Демо/ });
+    await expect(letterRow.locator(".pf-crm-need-clamp")).toBeVisible();
+    expect((await letterRow.boundingBox())?.height ?? 9999).toBeLessThan(110);
     await settledScreenshot(page, "leads");
     await expectNoViolations(page, "список лидов");
 

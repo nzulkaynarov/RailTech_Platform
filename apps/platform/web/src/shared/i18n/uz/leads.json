@@ -1,11 +1,11 @@
 {
-  "subtitle": "Botga, saytga, poçtaga yozgan yoki qönğiroq qilgan barça. TT söraganlar — darhol «Ariza yaratiş»ga.",
+  "subtitle": "Botga, saytga, pochtaga yozgan yoki qo‘ng‘iroq qilgan barcha. TT so‘raganlar — darhol «Ariza yaratish»ga.",
   "tabs": {
     "label": "Lid holati",
     "all": "Hammasi",
     "new": "Yangi",
     "dialog": "Suhbatda",
-    "wants_quote": "TT söramoqda",
+    "wants_quote": "TT so‘ramoqda",
     "client": "Mijozga aylangan"
   },
   "scope": {
@@ -13,11 +13,11 @@
     "all": "Hammasi",
     "mine": "Meniki",
     "waiting": "Javob kutmoqda",
-    "overdue": "Muddati ötgan"
+    "overdue": "Muddati o‘tgan"
   },
   "search": {
-    "label": "Ism va sörov böyiça qidiriş",
-    "placeholder": "Ism yoki sörov"
+    "label": "Ism va so‘rov bo‘yicha qidirish",
+    "placeholder": "Ism yoki so‘rov"
   },
   "channel": {
     "label": "Kanal",
@@ -26,31 +26,32 @@
   "columns": {
     "name": "Kim",
     "status": "Holat",
-    "need": "Sörov",
-    "assigned": "Masʼul",
+    "need": "So‘rov",
+    "assigned": "Mas’ul",
     "last": "Xabar",
     "action": "Amal"
   },
   "caption": "Lidlar",
   "tableScroll": "Lidlar jadvali",
   "listLabel": "Lidlar",
-  "open": "{{name}} kartasini oçiş",
+  "open": "{{name}} kartasini ochish",
   "nobody": "Tayinlanmagan",
-  "overdue": "Javob muddati ötdi",
+  "overdue": "Javob muddati o‘tdi",
   "unread": "Yangi xabar",
   "actions": {
-    "take": "Oliş",
-    "reply": "Javob beriş",
-    "create": "Ariza yaratiş",
+    "take": "Olish",
+    "reply": "Javob berish",
+    "create": "Ariza yaratish",
     "client": "Mijoz kartasi",
-    "takeLabel": "{{name}}ni «Javob kutmoqda»ga oliş",
-    "replyLabel": "{{name}}ga «Javob kutmoqda»da javob beriş",
-    "createLabel": "{{name}} uçun ariza yaratiş",
+    "takeLabel": "{{name}}ni «Javob kutmoqda»ga olish",
+    "replyLabel": "{{name}}ga «Javob kutmoqda»da javob berish",
+    "createLabel": "{{name}} uchun ariza yaratish",
     "clientLabel": "{{name}} mijoz kartasi",
-    "handOver": "Menejerga topşiriş",
-    "openChat": "Yozişmani oçiş",
-    "triage": "Saralaş",
-    "triageLabel": "{{name}} — «Javob kutmoqda»da saralaş",
+    "handOver": "Menejerga topshirish",
+    "call": "Qönğiroq qiliş",
+    "openChat": "Yozishmani ochish",
+    "triage": "Saralash",
+    "triageLabel": "{{name}} — «Javob kutmoqda»da saralash",
     "reopen": "Qayta oçiş"
   },
   "paging": {
@@ -60,25 +61,25 @@
     "range": "{{total}} dan {{from}}–{{to}}"
   },
   "empty": {
-    "title": "Hozirça lidlar yöq",
-    "text": "Kimdir botga yozsa yoki saytda sörov qoldirsa, yangi lidlar paydo böladi.",
-    "filteredTitle": "Heç narsa topilmadi",
-    "filteredText": "Yorliq, filtr yoki qidiruvni özgartiring."
+    "title": "Hozircha lidlar yo‘q",
+    "text": "Kimdir botga yozsa yoki saytda so‘rov qoldirsa, yangi lidlar paydo bo‘ladi.",
+    "filteredTitle": "Hech narsa topilmadi",
+    "filteredText": "Yorliq, filtr yoki qidiruvni o‘zgartiring."
   },
   "loadError": {
-    "title": "Lidlarni yuklab bölmadi",
-    "text": "Server javob bermadi. Birozdan keyin qayta urinib köring."
+    "title": "Lidlarni yuklab bo‘lmadi",
+    "text": "Server javob bermadi. Birozdan keyin qayta urinib ko‘ring."
   },
-  "retry": "Qayta uriniş",
+  "retry": "Qayta urinish",
   "card": {
     "label": "Lid kartasi",
     "close": "Orqaga",
     "contacts": "Kontaktlar",
     "about": "Lid haqida",
-    "facts": "Bot aniqlagan maʼlumotlar",
-    "factsOther": "Maʼlumotlar",
-    "need": "Sörov",
-    "consent": "Maʼlumotlarga rozilik",
+    "facts": "Bot aniqlagan ma’lumotlar",
+    "factsOther": "Ma’lumotlar",
+    "need": "So‘rov",
+    "consent": "Ma’lumotlarga rozilik",
     "consentBot": "botda {{date}} berilgan",
     "consentStaff": "xodim tomonidan {{date}} belgilangan ({{method}})",
     "consentMissing": "yöq — ariza yaratayotganda belgilang",
@@ -86,13 +87,13 @@
     "methods": {
       "phone": "telefon orqali",
       "email": "xat orqali",
-      "paper": "qoğozda"
+      "paper": "qog‘ozda"
     },
-    "assigned": "Masʼul",
+    "assigned": "Mas’ul",
     "channel": "Qayerdan",
     "language": "Til",
     "messages": "Oxirgi xabarlar",
-    "noMessages": "Hozirça xabarlar yöq",
+    "noMessages": "Hozircha xabarlar yo‘q",
     "authors": {
       "lead": "Mijoz",
       "bot": "Bot",
@@ -100,10 +101,10 @@
       "system": "Tizim"
     },
     "client": "Mijoz",
-    "confirmation": "Mijozga ariza tasdiği",
-    "firstResponse": "Saytdagi sörovga birinçi javob",
-    "firstResponseDue": "{{date}} gaça",
-    "firstResponseOverdue": "muddat ötdi: {{date}}",
+    "confirmation": "Mijozga ariza tasdig‘i",
+    "firstResponse": "Saytdagi so‘rovga birinchi javob",
+    "firstResponseDue": "{{date}} gacha",
+    "firstResponseOverdue": "muddat o‘tdi: {{date}}",
     "invitation": "Kabinetga taklif",
     "notice": {
       "queued": "navbatda",
@@ -112,49 +113,49 @@
       "skipped": "yuborilmagan",
       "channel": "kanal: {{channel}}"
     },
-    "none": "maʼlumot yöq"
+    "none": "—"
   },
   "newLead": {
     "title": "Yangi lid",
-    "submit": "Lid yaratiş",
-    "cancel": "Bekor qiliş",
+    "submit": "Lid yaratish",
+    "cancel": "Bekor qilish",
     "fields": {
       "source": "Manba",
       "name": "Ism",
       "company": "Kompaniya",
       "phone": "Telefon",
-      "email": "Poçta",
+      "email": "Pochta",
       "need": "Nima kerak",
       "language": "Muloqot tili"
     },
     "sources": {
-      "phone": "Qönğiroq",
+      "phone": "Qo‘ng‘iroq",
       "email": "Xat",
       "referral": "Tavsiya"
     },
     "languages": {
       "ru": "Русский",
-      "uz": "Özbekça",
+      "uz": "O‘zbekcha",
       "en": "English"
     },
     "errors": {
       "name": "Ismni kiriting",
       "phone": "Telefonni kiriting",
-      "email": "Poçtani kiriting",
-      "leadExists": "Bu kontaktli lid allaqaçon bor:",
-      "clientExists": "Bu telefonli mijoz allaqaçon bor.",
-      "openClient": "Mijozni oçiş",
-      "generic": "Lid yaratilmadi. Qayta urinib köring.",
-      "emailDomain": "Poçta manzilini tekşiring — bunday poçta domeni yöq"
+      "email": "Pochtani kiriting",
+      "leadExists": "Bu kontaktli lid allaqachon bor:",
+      "clientExists": "Bu telefonli mijoz allaqachon bor.",
+      "openClient": "Mijozni ochish",
+      "generic": "Lid yaratilmadi. Qayta urinib ko‘ring.",
+      "emailDomain": "Pochta manzilini tekşiring — bunday pochta domeni yöq"
     }
   },
   "origin": {
     "forms": {
-      "site": "saytdagi şakl",
-      "site-customer": "sayt · buyurtmaçi",
-      "site-partner": "sayt · işlab çiqaruvçi yoki hamkor",
+      "site": "saytdagi shakl",
+      "site-customer": "sayt · buyurtmachi",
+      "site-partner": "sayt · ishlab chiqaruvchi yoki hamkor",
       "cabinet_request": "kabinetdagi ariza",
-      "request": "«Sörov» şakli"
+      "request": "«Sörov» shakli"
     },
     "campaign": "kampaniya {{name}}"
   },

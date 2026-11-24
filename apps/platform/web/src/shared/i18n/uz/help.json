@@ -5,28 +5,28 @@
   },
   "drawer": {
     "title": "Yordam",
-    "close": "Yordamni yopiş",
-    "forSection": "Uşbu bölim haqida",
-    "noArticle": "Bu bölim uçun alohida maqola hali yöq. «Barça maqolalar»ni köring yoki administratorga yozing.",
-    "searchLabel": "Maqolalardan qidiriş",
+    "close": "Yordamni yopish",
+    "forSection": "Ushbu bo‘lim haqida",
+    "noArticle": "Bu bo‘lim uchun alohida maqola hali yo‘q. «Barcha maqolalar»ni ko‘ring yoki administratorga yozing.",
+    "searchLabel": "Maqolalardan qidirish",
     "searchPlaceholder": "Masalan: rezolyutsiya, TT, hisob-faktura",
     "found": "Topilgan maqolalar: {{count}}",
-    "noResults": "«{{query}}» böyiça maqola yöq. Boşqa sözni sinab köring yoki administratorga yozing.",
-    "readFull": "«Yordam» sahifasida oçiş",
-    "all": "Barça maqolalar",
-    "write": "Administratorga yoziş",
+    "noResults": "«{{query}}» bo‘yicha maqola yo‘q. Boshqa so‘zni sinab ko‘ring yoki administratorga yozing.",
+    "readFull": "«Yordam» sahifasida ochish",
+    "all": "Barcha maqolalar",
+    "write": "Administratorga yozish",
     "myRequests": "Mening murojaatlarim",
-    "onlyRussian": "Maqolalar hozirça rus tilida yozilgan.",
+    "onlyRussian": "Maqolalar hozircha rus tilida yozilgan.",
     "articlesLabel": "Maqolalar"
   },
   "page": {
     "title": "Yordam",
-    "subtitle": "Nimadan boşlaş, ariza yöli, luğat va tezkor tugmalar",
-    "tabsLabel": "Yordam bölimlari",
+    "subtitle": "Nimadan boshlash, ariza yo‘li, lug‘at va tezkor tugmalar",
+    "tabsLabel": "Yordam bo‘limlari",
     "tabs": {
-      "start": "Nimadan boşlaş",
-      "path": "Ariza yöli",
-      "glossary": "Luğat",
+      "start": "Nimadan boshlash",
+      "path": "Ariza yo‘li",
+      "glossary": "Lug‘at",
       "articles": "Maqolalar",
       "keys": "Tezkor tugmalar",
       "news": "Yangiliklar",
@@ -34,75 +34,75 @@
       "about": "Tizim haqida",
       "requests": "Mening murojaatlarim"
     },
-    "write": "Administratorga yoziş",
-    "back": "Barça maqolalar",
-    "notFoundTitle": "Bunday maqola yöq",
-    "notFoundText": "Maqola qayta nomlangan yoki öçirilgan. Maqolalar röyxatini oçing."
+    "write": "Administratorga yozish",
+    "back": "Barcha maqolalar",
+    "notFoundTitle": "Bunday maqola yo‘q",
+    "notFoundText": "Maqola qayta nomlangan yoki o‘chirilgan. Maqolalar ro‘yxatini oching."
   },
   "start": {
-    "intro": "Ertalab «Vazifalar»ni oçing: har bir qator sizning rolingiz uçun bitta iş. Qönğiroqça yangilikni bildiradi, qidiruv (Ctrl K) xat, ariza, mijoz yoki hisobni raqami böyiça topadi.",
+    "intro": "Ertalab «Vazifalar»ni oching: har bir qator sizning rolingiz uchun bitta ish. Qo‘ng‘iroqcha yangilikni bildiradi, qidiruv (Ctrl K) xat, ariza, mijoz yoki hisobni raqami bo‘yicha topadi.",
     "yours": "Sizning rolingiz: {{role}}",
-    "others": "Boşqa rollar uçun",
+    "others": "Boshqa rollar uchun",
     "kinds": {
       "director": {
         "title": "Direktor",
         "steps": [
-          "«Vazifalar»ni oçing: rezolyutsiyasiz xatlar, tasdiqlaş uçun TT va xizmat yozuvlari sizni kutmoqda.",
-          "Kiruvçi xatlar: rezolyutsiya qöying — ijroçilarni va hisob-kitob muddatini tanlang.",
-          "Tasdiqlaş uçun TT: marja va vizalarni tekşiring, tasdiqlang yoki qaytaring.",
-          "Xizmat yozuvlari: kelişing, qaytaring yoki rad eting; rad etiş sababi majburiy.",
-          "Loyihalar va kompaniya xulosasi: nima qotib qolganini köring."
+          "«Vazifalar»ni oching: rezolyutsiyasiz xatlar, tasdiqlash uchun TT va xizmat yozuvlari sizni kutmoqda.",
+          "Kiruvchi xatlar: rezolyutsiya qo‘ying — ijrochilarni va hisob-kitob muddatini tanlang.",
+          "Tasdiqlash uchun TT: marja va vizalarni tekshiring, tasdiqlang yoki qaytaring.",
+          "Xizmat yozuvlari: kelishing, qaytaring yoki rad eting; rad etish sababi majburiy.",
+          "Loyihalar va kompaniya xulosasi: nima qotib qolganini ko‘ring."
         ]
       },
       "manager": {
         "title": "Menejer",
         "steps": [
-          "«Javob kutmoqda»: botdan ötkazmalar va mijoz xabarlari — javob bering yoki işga oling.",
-          "Lidan ariza yarating: mijoz va ariza raqami (masalan, RQ-2026-104) paydo böladi.",
-          "Ariza bosqiçini uning kartoçkasida kuzating: rezolyutsiya, hisob-kitob, TT.",
-          "Iş uçun biror narsa sotib oliş kerak bölsa — xizmat yozuvini rasmiylaştiring."
+          "«Javob kutmoqda»: botdan o‘tkazmalar va mijoz xabarlari — javob bering yoki ishga oling.",
+          "Lidan ariza yarating: mijoz va ariza raqami paydo böladi.",
+          "Ariza bosqichini uning kartochkasida kuzating: rezolyutsiya, hisob-kitob, TT.",
+          "Ish uchun biror narsa sotib olish kerak bo‘lsa — xizmat yozuvini rasmiylashtiring."
         ]
       },
       "supply": {
-        "title": "Taʼminotçi",
+        "title": "Ta’minotchi",
         "steps": [
-          "«Vazifalar»: hisob-kitob topşiriqlari direktor rezolyutsiyasidan keyin keladi.",
-          "Pozitsiyalarni tanlang: ombor, hamkorlar, yetkaziş muddati.",
-          "«Tovarlar va ombor» vizasini qöying. Vizalar yiğilgaç, TT direktorga ketadi."
+          "«Vazifalar»: hisob-kitob topshiriqlari direktor rezolyutsiyasidan keyin keladi.",
+          "Pozitsiyalarni tanlang: ombor, hamkorlar, yetkazish muddati.",
+          "«Tovarlar va ombor» vizasini qo‘ying. Vizalar yig‘ilgach, TT direktorga ketadi."
         ]
       },
       "engineer": {
-        "title": "Boş muhandis",
+        "title": "Bosh muhandis",
         "steps": [
-          "«Vazifalar»: xizmatlar böyiça topşiriqlar direktor rezolyutsiyasidan keyin keladi.",
-          "Xizmatlarni hisoblang: texnik topşiriq, brigada, muddatlar.",
-          "«Xizmatlar» vizasini qöying. Vizalar yiğilgaç, TT direktorga ketadi."
+          "«Vazifalar»: xizmatlar bo‘yicha topshiriqlar direktor rezolyutsiyasidan keyin keladi.",
+          "Xizmatlarni hisoblang: texnik topshiriq, brigada, muddatlar.",
+          "«Xizmatlar» vizasini qo‘ying. Vizalar yig‘ilgach, TT direktorga ketadi."
         ]
       },
       "accountant": {
         "title": "Buxgalter",
         "steps": [
-          "«Vazifalar»: tasdiqlanadigan tölov topşiriqnomalari va çiqariladigan hisoblar.",
-          "Tölovni köçirma böyiça tasdiqlang: hisob töliq yoki qisman yopiladi.",
-          "Şartnomalar va dalolatnomalar: çiqarilganini va imzolanganini kiriting, skanerni biriktiring.",
-          "Muddati ötgan hisoblar ham vazifa bölib keladi."
+          "«Vazifalar»: tasdiqlanadigan to‘lov topshiriqnomalari va chiqariladigan hisoblar.",
+          "To‘lovni ko‘chirma bo‘yicha tasdiqlang: hisob to‘liq yoki qisman yopiladi.",
+          "Shartnomalar va dalolatnomalar: chiqarilganini va imzolanganini kiriting, skanerni biriktiring.",
+          "Muddati o‘tgan hisoblar ham vazifa bo‘lib keladi."
         ]
       },
       "admin": {
         "title": "Administrator",
         "steps": [
-          "«Sozlamalar»: rollar, xodimlar, ulanişlar va jurnal.",
-          "Yangi xodim uçun: «Xodimni taklif qiliş» va rol bering.",
-          "Ulanişlarda «Eʼtibor talab qiladi»: nima buzilgan va kim tuzatmoqda.",
+          "«Sozlamalar»: rollar, xodimlar, ulanishlar va jurnal.",
+          "Yangi xodim uchun: «Xodimni taklif qilish» va rol bering.",
+          "Ulanishlarda «E’tibor talab qiladi»: nima buzilgan va kim tuzatmoqda.",
           "«Xodimlar murojaatlari»: hamkasblar savollariga javob bering."
         ]
       },
       "default": {
         "title": "Istalgan rol",
         "steps": [
-          "«Vazifalar» — rolingiz uçun işlar. Bitta qator — bitta harakat.",
-          "Qidiruv (Ctrl K) va qönğiroqça kerakli narsani yöqotmaslikka yordam beradi.",
-          "Biror narsa yetişmasa — «Administratorga yoziş»."
+          "«Vazifalar» — rolingiz uchun ishlar. Bitta qator — bitta harakat.",
+          "Qidiruv (Ctrl K) va qo‘ng‘iroqcha kerakli narsani yo‘qotmaslikka yordam beradi.",
+          "Biror narsa yetishmasa — «Administratorga yozish»."
         ]
       },
       "registrar": {
@@ -126,14 +126,14 @@
         "title": "Imzo huquqlari",
         "steps": [
           "«Sozlamalar · Imzo huquqlari»: vakolatlar reyestri — kim, nimani va qança summagaça imzolaşi mumkin.",
-          "Vakolatni muddati tugagunça uzaytiring yoki odam endi imzolay olmasa, bekor qiling.",
+          "Vakolatni muddati tugaguncha uzaytiring yoki odam endi imzolay olmasa, bekor qiling.",
           "Vakolat tugaşiga 14 kun qolganda eslatma keladi."
         ]
       }
     }
   },
   "path": {
-    "intro": "Ariza yetti bosqiçdan ötadi — hamma uçun bir xil. Joriy bosqiç kartoçka sarlavhasida doim körinadi; har bir bosqiçning bitta egasi va bitta asosiy tugmasi bor.",
+    "intro": "Ariza yetti bosqichdan o‘tadi — hamma uchun bir xil. Joriy bosqich kartochka sarlavhasida doim ko‘rinadi; har bir bosqichning bitta egasi va bitta asosiy tugmasi bor.",
     "owner": "Yuritadi: {{who}}",
     "steps": [
       {
@@ -144,54 +144,54 @@
       {
         "title": "Rezolyutsiya",
         "who": "direktor",
-        "text": "Direktor rezolyutsiya qöyadi: qaror, ijroçilar, hisob-kitob muddati. Yoki menejerga qaytaradi, yoki rad etadi."
+        "text": "Direktor rezolyutsiya qo‘yadi: qaror, ijrochilar, hisob-kitob muddati. Yoki menejerga qaytaradi, yoki rad etadi."
       },
       {
         "title": "Hisob-kitob",
-        "who": "taʼminotçi va boş muhandis",
-        "text": "Mutaxassislar narxlar, ombor va xizmatlarni hisoblab, viza qöyadi. Vizalar yiğilgaç, hisob-kitob tayyor."
+        "who": "ta’minotchi va bosh muhandis",
+        "text": "Mutaxassislar narxlar, ombor va xizmatlarni hisoblab, viza qo‘yadi. Vizalar yig‘ilgach, hisob-kitob tayyor."
       },
       {
         "title": "TT",
         "who": "direktor",
-        "text": "Direktor tijorat taklifini tasdiqlaydi; mijoz uni öz kanali orqali oladi va qabul qiladi yoki rad etadi."
+        "text": "Direktor tijorat taklifini tasdiqlaydi; mijoz uni o‘z kanali orqali oladi va qabul qiladi yoki rad etadi."
       },
       {
-        "title": "Şartnoma",
+        "title": "Shartnoma",
         "who": "buxgalter",
         "text": "Mijoz tahrirni kelişadi, şartnoma Platformadan taşqarida EHTda rasmiylaştiriladi va imzolanadi; skaner qölda biriktiriladi."
       },
       {
-        "title": "Tölov",
+        "title": "To‘lov",
         "who": "buxgalter",
-        "text": "Hisob çiqariladi, mijoz tölov topşiriqnomasini biriktiradi, buxgalter tölovni köçirma böyiça tasdiqlaydi. Bajariş parallel ketadi."
+        "text": "Hisob chiqariladi, mijoz to‘lov topshiriqnomasini biriktiradi, buxgalter to‘lovni ko‘chirma bo‘yicha tasdiqlaydi. Bajarish parallel ketadi."
       },
       {
         "title": "Bajarildi",
         "who": "tizim",
-        "text": "Mijoz dalolatnomani qabul qildi, barça hisoblar tölandi — ariza yopildi."
+        "text": "Mijoz dalolatnomani qabul qildi, barcha hisoblar tölandi — ariza yopildi."
       }
     ],
-    "lost": "2–5-bosqiçlarda arizani sabab bilan yopiş mumkin — «Rad etildi»; uni «Hisob-kitob» bosqiçida tiklaş mumkin."
+    "lost": "2–5-bosqichlarda arizani sabab bilan yopish mumkin — «Rad etildi»; uni «Hisob-kitob» bosqichida tiklash mumkin."
   },
   "glossary": {
-    "intro": "Bu sözlar butun interfeysda bir xil.",
+    "intro": "Bu so‘zlar butun interfeysda bir xil.",
     "items": [
       {
         "term": "Lid (L-2041)",
-        "text": "Birinçi marta yozgan şaxs yoki kompaniya; hali mijoz emas."
+        "text": "Birinchi marta yozgan shaxs yoki kompaniya; hali mijoz emas."
       },
       {
         "term": "Mijoz",
-        "text": "Kontaktlari bor kompaniya. Menejer lidan ariza yaratganda paydo böladi."
+        "text": "Kontaktlari bor kompaniya. Menejer lidan ariza yaratganda paydo bo‘ladi."
       },
       {
-        "term": "Ariza (RQ-2026-104)",
-        "text": "Mijoz ehtiyoji: matn, qatorlar, ilovalar, xat. Yetti bosqiçdan ötadi."
+        "term": "Ariza",
+        "text": "Mijoz ehtiyoji: matn, qatorlar, ilovalar, xat. Yetti bosqichdan o‘tadi."
       },
       {
         "term": "Loyiha (PRJ-2026-104)",
-        "text": "Mijoz TTni qabul qilgandan keyingi öşa ariza; raqami ariza raqamidan olinadi."
+        "text": "Mijoz TTni qabul qilgandan keyingi o‘sha ariza; raqami ariza raqamidan olinadi."
       },
       {
         "term": "Kiruvçi xat (IN-104/26)",
@@ -199,11 +199,11 @@
       },
       {
         "term": "Rezolyutsiya",
-        "text": "Direktorning kiruvçi xat böyiça qarori: matn, ijroçilar, muddat, marja çegarasi."
+        "text": "Direktorning kiruvchi xat bo‘yicha qarori: matn, ijrochilar, muddat, marja chegarasi."
       },
       {
         "term": "Hisob-kitob",
-        "text": "Ombor va hamkor maʼlumotlari hamda mutaxassis vizalari bilan ariza qatorlari."
+        "text": "Ombor va hamkor ma’lumotlari hamda mutaxassis vizalari bilan ariza qatorlari."
       },
       {
         "term": "TT (QT-2026/118)",
@@ -211,7 +211,7 @@
       },
       {
         "term": "Çiquvçi (OUT-082/26)",
-        "text": "TT tasdiqlanganda oladigan çiquvçi raqam."
+        "text": "TT tasdiqlanganda oladigan chiquvchi raqam."
       },
       {
         "term": "Şartnoma (CT-2026/104)",
@@ -219,62 +219,62 @@
       },
       {
         "term": "Hisob (INV-2026-142)",
-        "text": "Tölov uçun hisob: avans, qoldiq yoki bosqiç."
+        "text": "To‘lov uchun hisob: avans, qoldiq yoki bosqich."
       },
       {
-        "term": "Tölov topşiriqnomasi",
-        "text": "Mijozning tölov topşiriqnomasi (fayl); buxgalter tasdiqlaydi."
+        "term": "To‘lov topshiriqnomasi",
+        "text": "Mijozning to‘lov topshiriqnomasi (fayl); buxgalter tasdiqlaydi."
       },
       {
         "term": "Dalolatnoma (ACT-2026/058)",
-        "text": "Bajarilgan iş yoki yetkazib beriş dalolatnomasi; imzolangan skaner biriktiriladi."
+        "text": "Bajarilgan ish yoki yetkazib berish dalolatnomasi; imzolangan skaner biriktiriladi."
       },
       {
         "term": "Xizmat yozuvi (MEMO-2026/031)",
-        "text": "Xodimning direktor nomiga içki hujjati: mavzu, matn, summa yoki muddat."
+        "text": "Xodimning direktor nomiga ichki hujjati: mavzu, matn, summa yoki muddat."
       },
       {
         "term": "Murojaat (TK-0012)",
-        "text": "Administratorga savolingiz: kiriş, bildirişnomalar, şablon, xato. Mijozning loyiha böyiça murojaati bilan adaştirmang."
+        "text": "Administratorga savolingiz: kirish, bildirishnomalar, shablon, xato. Mijozning loyiha bo‘yicha murojaati bilan adashtirmang."
       }
     ]
   },
   "keys": {
-    "intro": "Kursor kiritiş maydonida bölganda tezkor tugmalar işlamaydi.",
+    "intro": "Kursor kiritish maydonida bo‘lganda tezkor tugmalar ishlamaydi.",
     "items": [
       {
         "keys": "Ctrl K yoki ⌘ K",
-        "text": "Raqam, nom yoki STIR böyiça qidiruvga ötiş."
+        "text": "Raqam, nom yoki STIR bo‘yicha qidiruvga o‘tish."
       },
       {
         "keys": "?",
-        "text": "Joriy ekran uçun yordamni oçiş."
+        "text": "Joriy ekran uchun yordamni ochish."
       },
       {
         "keys": "Esc",
-        "text": "Oynani yopiş: yordam, bildirişnomalar, qidiruv."
+        "text": "Oynani yopish: yordam, bildirishnomalar, qidiruv."
       },
       {
         "keys": "Tab va Shift Tab",
-        "text": "Keyingi va oldingi elementga ötiş; Enter tugmani bosadi yoki havolani oçadi."
+        "text": "Keyingi va oldingi elementga o‘tish; Enter tugmani bosadi yoki havolani ochadi."
       }
     ]
   },
   "news": {
-    "intro": "Platformada nima özgardi — çiqarilgan sanalar böyiça. Banddagi belgi — özgariş kim uçun.",
-    "forAll": "Hamma uçun",
-    "empty": "Hozirça yozuvlar yöq: ular keyingi yangilanişdan söng paydo böladi."
+    "intro": "Platformada nima o‘zgardi — chiqarilgan sanalar bo‘yicha. Banddagi belgi — o‘zgarish kim uchun.",
+    "forAll": "Hamma uchun",
+    "empty": "Hozircha yozuvlar yo‘q: ular keyingi yangilanishdan so‘ng paydo bo‘ladi."
   },
   "roadmap": {
-    "missing": "Reja hali eʼlon qilinmagan."
+    "missing": "Reja hali e’lon qilinmagan."
   },
   "about": {
     "title": "Tizim haqida",
     "versionWithSha": "Platforma {{version}} · {{sha}}",
     "version": "Platforma {{version}}",
-    "localBuild": "Platforma · mahalliy yiğma",
+    "localBuild": "Platforma · mahalliy yig‘ma",
     "releasedAt": "Yangilangan: {{date}}",
-    "builtAt": "Yiğilgan: {{date}}",
+    "builtAt": "Yig‘ilgan: {{date}}",
     "services": "Xizmatlar",
     "service": {
       "bff": "Platforma (BFF)",
@@ -283,19 +283,19 @@
       "eds": "Hujjatlar (EDS)"
     },
     "status": {
-      "ok": "Işlayapti",
+      "ok": "Ishlayapti",
       "fail": "Javob bermayapti",
       "disabled": "Ulanmagan"
     },
     "serviceVersion": "versiya {{version}}",
     "noVersion": "versiyani bildirmaydi",
-    "copy": "Qöllab-quvvatlaş uçun maʼlumotlarni nusxalaş",
-    "copied": "Nusxalandi. Murojaat yoki administratorga xabarga qöying.",
-    "copyFailed": "Brauzer nusxalaşga ruxsat bermadi. Yuqoridagi matnni belgilab, qölda nusxalang.",
-    "supportLabel": "Qöllab-quvvatlaş uçun maʼlumotlar",
-    "supportHint": "Ism, poçta va telefonsiz: versiya, rol, til, brauzer, ekran va vaqt.",
-    "loading": "Versiyani aniqlayapmiz va xizmatlarni tekşiryapmiz…",
-    "error": "Versiyani aniqlab bölmadi: Platforma javob bermadi. Sahifani yangilang.",
+    "copy": "Qo‘llab-quvvatlash uchun ma’lumotlarni nusxalash",
+    "copied": "Nusxalandi. Murojaat yoki administratorga xabarga qo‘ying.",
+    "copyFailed": "Brauzer nusxalashga ruxsat bermadi. Yuqoridagi matnni belgilab, qo‘lda nusxalang.",
+    "supportLabel": "Qo‘llab-quvvatlash uchun ma’lumotlar",
+    "supportHint": "Ism, pochta va telefonsiz: versiya, rol, til, brauzer, ekran va vaqt.",
+    "loading": "Versiyani aniqlayapmiz va xizmatlarni tekshiryapmiz…",
+    "error": "Versiyani aniqlab bo‘lmadi: Platforma javob bermadi. Sahifani yangilang.",
     "menu": "Tizim haqida",
     "support": {
       "version": "Versiya: {{value}}",
@@ -308,9 +308,9 @@
   },
   "whatsNew": {
     "title": "Platforma yangilandi",
-    "text": "{{date}}: {{title}}. Siz uçun nima yangi ekanini köring.",
+    "text": "{{date}}: {{title}}. Siz uchun nima yangi ekanini ko‘ring.",
     "open": "Yangiliklar",
-    "close": "Yopiş",
+    "close": "Yopish",
     "fresh": "Yangi",
     "helpFresh": "Yordam (? tugmasi), yangilik bor"
   },
@@ -318,119 +318,119 @@
     "label": "Maqola haqida fikr",
     "question": "Maqola yordam berdimi?",
     "yes": "Ha",
-    "no": "Yöq",
+    "no": "Yo‘q",
     "thanks": "Rahmat! Yordam berganidan xursandmiz.",
-    "sorry": "Afsus. Nima yetişmaganini yozing — administrator maqolani tuzatadi.",
-    "write": "Administratorga yoziş",
+    "sorry": "Afsus. Nima yetishmaganini yozing — administrator maqolani tuzatadi.",
+    "write": "Administratorga yozish",
     "outdated": "Bu yer eskirgan",
-    "outdatedBody": "Yordam maqolasi «{{title}}» eskirgan: {{link}}\nNima özgardi: ",
-    "missingBody": "Yordam maqolasi «{{title}}» yordam bermadi: {{link}}\nNima yetişmadi: "
+    "outdatedBody": "Yordam maqolasi «{{title}}» eskirgan: {{link}}\nNima o‘zgardi: ",
+    "missingBody": "Yordam maqolasi «{{title}}» yordam bermadi: {{link}}\nNima yetishmadi: "
   },
   "articles": {
-    "intro": "Platforma bölimlari böyiça maqolalar. Sarlavhadagi «?» tugmasi kerakli maqolaga olib boradi.",
-    "empty": "Maqolalar hali yöq.",
-    "forSection": "Bölim uçun maqola"
+    "intro": "Platforma bo‘limlari bo‘yicha maqolalar. Sarlavhadagi «?» tugmasi kerakli maqolaga olib boradi.",
+    "empty": "Maqolalar hali yo‘q.",
+    "forSection": "Bo‘lim uchun maqola"
   },
   "ticket": {
     "subject": {
-      "access": "Bölimga kiriş kerak",
-      "notification": "Bildirişnoma kelmayapti",
-      "template": "Hujjat şabloni kerak",
+      "access": "Bo‘limga kirish kerak",
+      "notification": "Bildirishnoma kelmayapti",
+      "template": "Hujjat shabloni kerak",
       "error": "Xato",
-      "other": "Boşqa"
+      "other": "Boshqa"
     },
     "status": {
       "new": "Yangi",
-      "in_progress": "Işda",
+      "in_progress": "Ishda",
       "resolved": "Hal qilindi"
     }
   },
   "write": {
-    "title": "Administratorga yoziş",
-    "lead": "Nima bölganini yozing. Administrator Platformada va Telegramda javob beradi.",
+    "title": "Administratorga yozish",
+    "lead": "Nima bo‘lganini yozing. Administrator Platformada va Telegramda javob beradi.",
     "subject": "Mavzu",
     "subjectPlaceholder": "Mavzuni tanlang",
-    "body": "Nima böldi",
-    "bodyPlaceholder": "Masalan: taʼminotçi topşiriqlarini köriş uçun «Hisob-kitob» bölimiga kiriş kerak",
-    "bodyHint": "4000 belgigaça.",
+    "body": "Nima bo‘ldi",
+    "bodyPlaceholder": "Masalan: xarid topşiriqlarini körish uçun «Hisob-kitob» bölimiga kirish kerak",
+    "bodyHint": "4000 belgigacha.",
     "auto": "Avtomatik biriktiriladi: sahifa {{page}}, rol {{role}}, Platforma versiyasi.",
     "autoNoPage": "Avtomatik biriktiriladi: rol {{role}}, Platforma versiyasi.",
-    "submit": "Yuboriş",
-    "cancel": "Bekor qiliş",
+    "submit": "Yuborish",
+    "cancel": "Bekor qilish",
     "sending": "Yuborilmoqda…",
     "doneTitle": "{{number}}-murojaat yuborildi",
-    "doneText": "Administrator qönğiroqçada va Telegramda javob beradi. Holat — «Mening murojaatlarim»da.",
-    "open": "Murojaatni oçiş",
-    "close": "Yopiş",
+    "doneText": "Administrator qo‘ng‘iroqchada va Telegramda javob beradi. Holat — «Mening murojaatlarim»da.",
+    "open": "Murojaatni ochish",
+    "close": "Yopish",
     "subjectRequired": "Mavzuni tanlang",
-    "bodyRequired": "Nima bölganini yozing",
+    "bodyRequired": "Nima bo‘lganini yozing",
     "bodyTooLong": "Matn 4000 belgidan uzun: qisqartiring",
     "errors": {
-      "TOO_MANY_REQUESTS": "Siz juda köp murojaat yubordingiz. Biroz kutib, qayta urinib köring.",
-      "BACKEND_UNAVAILABLE": "Murojaatlar xizmati javob bermayapti. Bir daqiqadan keyin qayta urinib köring.",
-      "default": "Murojaatni yuborib bölmadi. Qayta urinib köring."
+      "TOO_MANY_REQUESTS": "Siz juda ko‘p murojaat yubordingiz. Biroz kutib, qayta urinib ko‘ring.",
+      "BACKEND_UNAVAILABLE": "Murojaatlar xizmati javob bermayapti. Bir daqiqadan keyin qayta urinib ko‘ring.",
+      "default": "Murojaatni yuborib bo‘lmadi. Qayta urinib ko‘ring."
     }
   },
   "requests": {
     "title": "Mening murojaatlarim",
-    "intro": "Administratorga murojaatlaringiz va uning javoblari. Boşqa xodimlar ularni körmaydi.",
-    "write": "Administratorga yoziş",
-    "empty": "Murojaatlar yöq",
-    "emptyText": "Bölimga kiriş bölmasa, bildirişnoma kelmasa yoki biror narsa buzilgan bölsa, administratorga yozing.",
-    "loadError": "Murojaatlarni yuklab bölmadi",
-    "loadErrorText": "Server javob bermadi. Birozdan keyin qayta urinib köring.",
-    "retry": "Qayta uriniş",
+    "intro": "Administratorga murojaatlaringiz va uning javoblari. Boshqa xodimlar ularni ko‘rmaydi.",
+    "write": "Administratorga yozish",
+    "empty": "Murojaatlar yo‘q",
+    "emptyText": "Bo‘limga kirish bo‘lmasa, bildirishnoma kelmasa yoki biror narsa buzilgan bo‘lsa, administratorga yozing.",
+    "loadError": "Murojaatlarni yuklab bo‘lmadi",
+    "loadErrorText": "Server javob bermadi. Birozdan keyin qayta urinib ko‘ring.",
+    "retry": "Qayta urinish",
     "listLabel": "Mening murojaatlarim",
-    "open": "{{number}}-murojaatni oçiş",
+    "open": "{{number}}-murojaatni ochish",
     "columns": {
       "number": "Raqam",
       "subject": "Mavzu",
       "status": "Holat",
-      "updated": "Özgargan"
+      "updated": "O‘zgargan"
     },
-    "back": "Barça murojaatlarim",
+    "back": "Barcha murojaatlarim",
     "page": "Sahifa",
     "yourText": "Sizning matningiz",
     "answers": "Administrator javoblari",
-    "noAnswers": "Javob hali yöq. U qönğiroqçaga va Telegramga keladi.",
+    "noAnswers": "Javob hali yo‘q. U qo‘ng‘iroqchaga va Telegramga keladi.",
     "answerFrom": "{{name}}, {{when}}",
-    "notFound": "Bunday murojaat yöq",
-    "notFoundText": "Raqam notöğri yoki bu boşqa xodimning murojaati.",
+    "notFound": "Bunday murojaat yo‘q",
+    "notFoundText": "Raqam noto‘g‘ri yoki bu boshqa xodimning murojaati.",
     "sent": "Yuborilgan"
   },
   "admin": {
     "filtersLabel": "Murojaat filtrlari",
     "status": "Holat",
-    "allStatuses": "Barça holatlar",
+    "allStatuses": "Barcha holatlar",
     "subject": "Mavzu",
-    "allSubjects": "Barça mavzular",
-    "reset": "Filtrlarni tozalaş",
+    "allSubjects": "Barcha mavzular",
+    "reset": "Filtrlarni tozalash",
     "listLabel": "Xodimlar murojaatlari",
     "columns": {
       "number": "Raqam",
       "subject": "Mavzu",
       "author": "Kimdan",
       "status": "Holat",
-      "updated": "Özgargan"
+      "updated": "O‘zgargan"
     },
-    "open": "{{number}}-murojaatni oçiş",
+    "open": "{{number}}-murojaatni ochish",
     "countsNew": "Yangi: {{count}}",
-    "countsWork": "Işda: {{count}}",
+    "countsWork": "Ishda: {{count}}",
     "countsDone": "Hal qilindi: {{count}}",
-    "empty": "Murojaatlar yöq",
-    "emptyText": "Xodimlar bu yerga «Ruxsat yöq» ekranidan va «Yordam»dan yozadi.",
-    "noMatch": "Filtrga heç narsa mos kelmadi",
-    "noMatchText": "Barça murojaatlarni köriş uçun filtrlarni tozalang.",
-    "loadError": "Murojaatlarni yuklab bölmadi",
-    "loadErrorText": "Server javob bermadi. Birozdan keyin qayta urinib köring.",
-    "retry": "Qayta uriniş",
+    "empty": "Murojaatlar yo‘q",
+    "emptyText": "Xodimlar bu yerga «Ruxsat yo‘q» ekranidan va «Yordam»dan yozadi.",
+    "noMatch": "Filtrga hech narsa mos kelmadi",
+    "noMatchText": "Barcha murojaatlarni ko‘rish uchun filtrlarni tozalang.",
+    "loadError": "Murojaatlarni yuklab bo‘lmadi",
+    "loadErrorText": "Server javob bermadi. Birozdan keyin qayta urinib ko‘ring.",
+    "retry": "Qayta urinish",
     "pager": "Murojaat sahifalari",
     "total": "Murojaatlar: {{count}}",
     "card": {
       "hintTitle": "Murojaat tanlanmagan",
-      "hint": "Röyxatdan murojaatni oçing — bu yerda matn, sahifa, javoblar va «Javob beriş» tugmasi paydo böladi.",
-      "notFound": "Bunday murojaat yöq",
-      "notFoundText": "Raqam notöğri yoki murojaat öçirilgan.",
+      "hint": "Ro‘yxatdan murojaatni oching — bu yerda matn, sahifa, javoblar va «Javob berish» tugmasi paydo bo‘ladi.",
+      "notFound": "Bunday murojaat yo‘q",
+      "notFoundText": "Raqam noto‘g‘ri yoki murojaat o‘chirilgan.",
       "from": "Kimdan",
       "role": "Murojaat paytidagi rol",
       "page": "Sahifa",
@@ -438,59 +438,59 @@
       "status": "Holat",
       "text": "Matn",
       "answers": "Javoblar",
-      "noAnswers": "Javoblar hali yöq.",
+      "noAnswers": "Javoblar hali yo‘q.",
       "reply": "Sizning javobingiz",
-      "replyPlaceholder": "Nima qilindi yoki nimani aniqlaştiriş kerak",
-      "send": "Javobni yuboriş",
-      "sendResolve": "Javob berib, hal qilindi deb belgilaş",
-      "toWork": "Işga oliş",
-      "resolve": "Hal qilindi deb belgilaş",
-      "reopen": "Işga qaytariş",
+      "replyPlaceholder": "Nima qilindi yoki nimani aniqlashtirish kerak",
+      "send": "Javobni yuborish",
+      "sendResolve": "Javob berib, hal qilindi deb belgilash",
+      "toWork": "Ishga olish",
+      "resolve": "Hal qilindi deb belgilash",
+      "reopen": "Ishga qaytarish",
       "resolveConsequence": "Muallif murojaat hal qilinganini bilib oladi.",
-      "readOnly": "Direktor murojaatlarni öqiydi; administrator javob beradi va holatni özgartiradi.",
+      "readOnly": "Direktor murojaatlarni o‘qiydi; administrator javob beradi va holatni o‘zgartiradi.",
       "replyRequired": "Javob yozing",
       "errors": {
         "ticket_status_transition": "Holatni bunday özgartirib bölmaydi: sahifani yangilang.",
-        "default": "Saqlab bölmadi. Qayta urinib köring."
+        "default": "Saqlab bo‘lmadi. Qayta urinib ko‘ring."
       },
       "saved": "Javob yuborildi",
-      "statusSaved": "Holat özgardi",
-      "openPage": "Bu sahifani oçiş"
+      "statusSaved": "Holat o‘zgardi",
+      "openPage": "Bu sahifani ochish"
     }
   },
   "welcome": {
-    "title": "Xuş kelibsiz, {{name}}",
+    "title": "Xush kelibsiz, {{name}}",
     "role": "Sizning rolingiz — {{role}}.",
-    "lead": "Ertalab siz şularni qilasiz:",
-    "tour": "Nima qayerda ekanini körsatiş",
-    "skip": "Ötkazib yuboriş",
-    "never": "Boşqa körsatilmasin",
-    "close": "Xuş kelibsiz oynasini yopiş"
+    "lead": "Ertalab siz shularni qilasiz:",
+    "tour": "Nima qayerda ekanini ko‘rsatish",
+    "skip": "O‘tkazib yuborish",
+    "never": "Boshqa ko‘rsatilmasin",
+    "close": "Xush kelibsiz oynasini yopish"
   },
   "tour": {
-    "label": "Platforma bilan tanişuv",
+    "label": "Platforma bilan tanishuv",
     "progress": "{{current}}-qadam, jami {{total}}",
     "next": "Keyingisi",
     "prev": "Orqaga",
     "done": "Tayyor",
-    "skip": "Ötkazib yuboriş",
-    "never": "Boşqa körsatilmasin",
+    "skip": "O‘tkazib yuborish",
+    "never": "Boshqa ko‘rsatilmasin",
     "steps": {
       "rail": {
         "title": "Modullar",
-        "text": "Çapda (telefonda — pastda) faqat rolingizga tegişli modullar körinadi. Qolganlari yaşirilgan, kiriş mumkin bölmagan bölim buni özi aytadi."
+        "text": "Chapda (telefonda — pastda) faqat rolingizga tegishli modullar ko‘rinadi. Qolganlari yashirilgan, kirish mumkin bo‘lmagan bo‘lim buni o‘zi aytadi."
       },
       "menu": {
         "title": "«Vazifalar»",
-        "text": "Boş sahifaning birinçi bandi — hozir nima qiliş kerak. Bitta qator — bitta iş; «Oçiş» tugmasi unga olib boradi."
+        "text": "Bosh sahifaning birinchi bandi — hozir nima qilish kerak. Bitta qator — bitta ish; «Ochish» tugmasi unga olib boradi."
       },
       "bell": {
-        "title": "Qönğiroqça",
-        "text": "Qarorlar, mijoz xabarlari va administrator javoblari. Telegram ulangan bölsa, ular u yerga ham keladi."
+        "title": "Qo‘ng‘iroqcha",
+        "text": "Qarorlar, mijoz xabarlari va administrator javoblari. Telegram ulangan bo‘lsa, ular u yerga ham keladi."
       },
       "help": {
         "title": "Yordam",
-        "text": "«?» tugmasi joriy ekran uçun maqolani oçadi. U yerdan administratorga yoziş mumkin."
+        "text": "«?» tugmasi joriy ekran uchun maqolani ochadi. U yerdan administratorga yozish mumkin."
       }
     }
   }

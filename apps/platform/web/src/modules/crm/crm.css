@@ -46,6 +46,14 @@
   max-width: 320px;
   overflow-wrap: break-word;
 }
+.pf-crm-need-clamp {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
 .pf-crm-table td:first-child {
   min-width: 150px;
 }

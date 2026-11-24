@@ -48,6 +48,7 @@
     "createLabel": "Create a request for {{name}}",
     "clientLabel": "Client card of {{name}}",
     "handOver": "Hand over to a manager",
+    "call": "Call",
     "openChat": "Open the conversation",
     "triage": "Triage",
     "triageLabel": "Triage {{name}} in “Awaiting reply”",
@@ -112,7 +113,7 @@
       "skipped": "not sent",
       "channel": "channel: {{channel}}"
     },
-    "none": "no data"
+    "none": "—"
   },
   "newLead": {
     "title": "New lead",
