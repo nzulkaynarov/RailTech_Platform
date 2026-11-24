@@ -7,7 +7,7 @@
     {% translate "Здравствуйте" %}{% if contact_name %}, {{ contact_name }}{% endif %}!
   </h1>
   <p style="margin:0 0 16px 0; font-size:15px; line-height:1.5; color:#374151;">
-    {% blocktranslate with company=company_name platform=platform_name|default:'ERP' %}Вы запросили вход в личный кабинет компании «{{ company }}» на платформе {{ platform }}.{% endblocktranslate %}
+    {% blocktranslate with company=company_name %}Вы запросили вход в кабинет компании «{{ company }}».{% endblocktranslate %}
   </p>
   <p style="margin:0 0 4px 0; font-size:14px; color:#374151;">{% translate "Код входа:" %}</p>
   <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 16px 0;">

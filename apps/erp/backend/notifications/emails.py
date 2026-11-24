@@ -229,7 +229,7 @@ def send_templated_email(
 
     # Platform-wide defaults every email template may reference (footer support contact, links).
     # Merged UNDER the caller's context so an explicit value always wins.
-    platform_name = getattr(settings, "PLATFORM_NAME", "ERP")
+    platform_name = getattr(settings, "PLATFORM_NAME", "")
     support_email = getattr(settings, "SUPPORT_EMAIL", "")
     try:
         from core.models.settings import SystemSetting
@@ -242,6 +242,9 @@ def send_templated_email(
     except Exception:
         pass
 
+    # The stock «ERP» placeholder (env default) is a system word, never a company name: show nothing instead.
+    if (platform_name or "").strip().upper() == "ERP":
+        platform_name = ""
     context = {
         "platform_name": platform_name,
         "brand_name": platform_name,

@@ -1,14 +1,13 @@
 {% extends "emails/base.html" %}
 {% load i18n %}
-{% block subject %}{% blocktranslate with platform=platform_name|default:'ERP' %}Для вас создан аккаунт на {{ platform }}{% endblocktranslate %}{% endblock %}
+{% block subject %}{% translate "Для вас открыт доступ" %}{% endblock %}
 {% block header_hint %}{% translate "Новый аккаунт" %}{% endblock %}
 {% block content %}
   <h1 style="margin:0 0 16px 0; font-size:22px; line-height:1.3; color:#111827;">
-    {% translate "Для вас создан аккаунт" %}
+    {% translate "Для вас открыт доступ" %}
   </h1>
   <p style="margin:0 0 16px 0;">
-    {% blocktranslate with platform=platform_name|default:'ERP' %}Оператор платформы {{ platform }} создал для вас аккаунт. Чтобы начать работу,
-    установите пароль — до этого войти в систему нельзя.{% endblocktranslate %}
+    {% translate "Чтобы войти, задайте пароль — до этого войти нельзя." %}
   </p>
   <table role="presentation" cellpadding="0" cellspacing="0" style="margin:24px 0;">
     <tr><td style="border-radius:8px; background-color:#2563eb;">
