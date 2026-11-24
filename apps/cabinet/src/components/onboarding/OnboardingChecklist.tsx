@@ -58,6 +58,7 @@ export function OnboardingChecklist() {
   const hasMyProducts = useHasModule('my_products');
 
   const [dismissed, setDismissed] = useState(isChecklistDismissed);
+  const [expanded, setExpanded] = useState(false);
 
   const inMiniApp = isMiniApp();
   const companyQuery = useCompany({ enabled: !dismissed });
@@ -176,6 +177,39 @@ export function OnboardingChecklist() {
   const completedCount = steps.filter((s) => s.done).length;
   const totalCount = steps.length;
   const allCompleted = completedCount === totalCount;
+
+  // Почти готово (выполнена половина и больше) — одна компактная строка, чтобы таблица под ней не уезжала за экран.
+  if (completedCount * 2 >= totalCount && !expanded) {
+    return (
+      <div className="mb-4 flex items-center justify-between gap-2 rounded-lg border border-border/60 bg-card/80 py-1.5 pr-1.5 pl-3 text-sm">
+        <div className="flex min-w-0 items-center gap-2">
+          <Sparkles className="size-4 shrink-0 text-primary" aria-hidden="true" />
+          <span className="min-w-0 truncate">
+            <span className="font-medium text-foreground">{t('onboarding.title')}</span>
+            <span className="text-muted-foreground">
+              {' · '}
+              {allCompleted ? t('onboarding.allDoneShort') : t('onboarding.progress', { done: completedCount, total: totalCount })}
+            </span>
+          </span>
+        </div>
+        <div className="flex shrink-0 items-center gap-1">
+          <Button type="button" variant="ghost" size="sm" aria-expanded={false} onClick={() => setExpanded(true)}>
+            {t('onboarding.expand')}
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-7 rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground"
+            onClick={handleDismiss}
+            aria-label={t('onboarding.dismiss')}
+            title={t('onboarding.dismiss')}
+          >
+            <X className="size-4" aria-hidden="true" />
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <Card className="portal-card group relative mb-6 border-border/80 bg-card/80 backdrop-blur-xs transition-colors hover:border-border">
