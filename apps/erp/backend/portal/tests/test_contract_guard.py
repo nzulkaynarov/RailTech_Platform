@@ -67,6 +67,22 @@ def _photographed(world) -> str:
     return f"/items/{product.pk}/thumbnail"
 
 
+def _with_logo(world) -> str:
+    """Логотип (ЕД-5): у компании мира его нет — сторож загружает, чтобы опросить 200, а не 404."""
+    from io import BytesIO
+
+    from django.core.files.uploadedfile import SimpleUploadedFile
+    from parties import pictures
+    from PIL import Image
+
+    company = world["company"]
+    if not company.logo:
+        out = BytesIO()
+        Image.new("RGB", (40, 40), (10, 20, 30)).save(out, format="PNG")
+        pictures.replace(company, "logo", SimpleUploadedFile("l.png", out.getvalue(), content_type="image/png"))
+    return "/company/logo"
+
+
 GET_CASES = {
     "/me": lambda w: ["/me"],
     "/notifications": lambda w: ["/notifications", "/notifications?limit=2"],
@@ -99,6 +115,7 @@ GET_CASES = {
     ],
     "/company": lambda w: ["/company"],
     "/company/security-log": lambda w: ["/company/security-log"],
+    "/company/logo": lambda w: [_with_logo(w)],
     "/company/bank-directory/{mfo}": lambda w: ["/company/bank-directory/00440"],
     "/company/partner-application": lambda w: ["/company/partner-application"],
     "/company/partner-application/contract-pdf": lambda w: ["/company/partner-application/contract-pdf"],
@@ -268,6 +285,7 @@ JSON_GET_PATHS = sorted(
         "/catalog/{id}/documents/{doc_id}/file",
         "/company/partner-application/contract-pdf",
         "/items/{id}/thumbnail",
+        "/company/logo",
     }
 )
 
