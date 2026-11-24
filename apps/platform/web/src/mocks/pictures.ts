@@ -1,4 +1,4 @@
-import { HttpResponse, http } from "msw";
+import { HttpResponse, type JsonBodyType, http } from "msw";
 
 import { failure } from "./adminUsers";
 import { parseUploadedFile } from "./edsDocuments";
@@ -68,7 +68,7 @@ async function acceptedFile(request: Request): Promise<Response | null> {
   return null;
 }
 
-export function pictureHandlers(cardOf: (companyId: string) => unknown) {
+export function pictureHandlers(cardOf: (companyId: string) => JsonBodyType) {
   return [
     http.get("*/people/counterparties/:id/logo", ({ params }) => {
       const denied = guard(false);
