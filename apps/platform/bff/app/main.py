@@ -62,6 +62,7 @@ from app.api import (
     me_second_factor,
     notifications,
     people_contacts,
+    people_leads,
     people_pictures,
     search,
     setup,
@@ -168,6 +169,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(erp_partner_applications.router, prefix=API_PREFIX)
     app.include_router(erp_supplier_access.router, prefix=API_PREFIX)
     app.include_router(people_contacts.router, prefix=API_PREFIX)
+    app.include_router(people_leads.router, prefix=API_PREFIX)
     app.include_router(people_pictures.router, prefix=API_PREFIX)
     app.include_router(erp_docs.router, prefix=API_PREFIX)
     app.include_router(erp_images.router, prefix=API_PREFIX)
