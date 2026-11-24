@@ -1429,6 +1429,9 @@ class LeadDetail(BaseModel):
         bool | None, Field(title="First Response Overdue")
     ] = False
     handoff_note: HandoffNote | None = None
+    has_email: Annotated[bool | None, Field(title="Has Email")] = False
+    has_phone: Annotated[bool | None, Field(title="Has Phone")] = False
+    has_telegram: Annotated[bool | None, Field(title="Has Telegram")] = False
     id: Annotated[int, Field(title="Id")]
     invitation: InvitationOut | None = None
     language: Annotated[str, Field(title="Language")]
@@ -1471,10 +1474,14 @@ class LeadOut(BaseModel):
     assigned_user_id: Annotated[int | None, Field(title="Assigned User Id")]
     assigned_user_name: Annotated[str | None, Field(title="Assigned User Name")] = None
     client_id: Annotated[int | None, Field(title="Client Id")] = None
+    company_name: Annotated[str | None, Field(title="Company Name")] = None
     created_at: Annotated[AwareDatetime, Field(title="Created At")]
     display_name: Annotated[str, Field(title="Display Name")]
     escalation: EscalationOut | None = None
     handoff_note: HandoffNote | None = None
+    has_email: Annotated[bool | None, Field(title="Has Email")] = False
+    has_phone: Annotated[bool | None, Field(title="Has Phone")] = False
+    has_telegram: Annotated[bool | None, Field(title="Has Telegram")] = False
     id: Annotated[int, Field(title="Id")]
     language: Annotated[str, Field(title="Language")]
     last_lead_msg_at: Annotated[AwareDatetime | None, Field(title="Last Lead Msg At")]

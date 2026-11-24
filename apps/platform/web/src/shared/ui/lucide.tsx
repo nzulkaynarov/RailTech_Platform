@@ -23,6 +23,7 @@ import {
   Minimize2,
   Minus,
   Monitor,
+  Phone,
   Pin,
   Plus,
   RefreshCw,
@@ -87,6 +88,7 @@ export const RemoveIcon = make(Minus);
 export const ListOrderedIcon = make(ListOrdered);
 export const MegaphoneIcon = make(Megaphone);
 export const MailIcon = make(Mail);
+export const PhoneIcon = make(Phone);
 export const LinkIcon = make(Link);
 export const ItalicIcon = make(Italic);
 export const BoldIcon = make(Bold);

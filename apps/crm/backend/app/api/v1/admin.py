@@ -124,7 +124,7 @@ async def audit_contact_reveal(
             session,
             who.actor,
             "contact.reveal",
-            "erp_contact",
+            body.kind,
             body.contact,
             after={"name": body.name},
         )
