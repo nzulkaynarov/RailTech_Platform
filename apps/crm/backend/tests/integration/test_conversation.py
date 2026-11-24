@@ -111,7 +111,7 @@ async def test_first_message_asks_language_then_consent_and_does_not_answer(stac
     assert "Choose your language" in out[0].text
     out = await stack.service.set_language(USER, "uz")
     assert [o.keyboard for o in out] == [None, "consent"]
-    assert out[1].text.startswith("Davom etish uchun")
+    assert out[1].text.startswith("Davom etiş uçun")
     assert stack.model.requests == []
     async with stack.sessions() as session:
         roles = (await session.scalars(select(Message.role).order_by(Message.id))).all()

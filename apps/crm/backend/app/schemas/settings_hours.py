@@ -1,6 +1,6 @@
 """Рабочие часы в настройках (`business_hours`) и их описание словами для текстов бота.
 
-Вынесено из `settings.py` (лимит размера файла). Узбекский — латиница oʻ/gʻ.
+Вынесено из `settings.py` (лимит размера файла). Узбекский — новая латиница (Ö Ğ Ş Ç).
 """
 
 from datetime import date, datetime, time
@@ -13,7 +13,7 @@ from app.schemas.settings_base import Language, StrictModel
 
 _DAYS: Final[dict[str, tuple[str, ...]]] = {
     "ru": ("пн", "вт", "ср", "чт", "пт", "сб", "вс"),
-    "uz": ("dushanba", "seshanba", "chorshanba", "payshanba", "juma", "shanba", "yakshanba"),
+    "uz": ("duşanba", "seşanba", "çorşanba", "payşanba", "juma", "şanba", "yakşanba"),
     "en": ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"),
 }
 # «ответим в понедельник с 9:00» — день недели в нужной форме.
@@ -44,7 +44,7 @@ _TODAY: Final = {
     "en": ("today", "tomorrow"),
 }
 _ZONES: Final[dict[str, dict[str, str]]] = {
-    "Asia/Tashkent": {"ru": "по Ташкенту", "uz": "Toshkent vaqti bilan", "en": "Tashkent time"},
+    "Asia/Tashkent": {"ru": "по Ташкенту", "uz": "Toşkent vaqti bilan", "en": "Tashkent time"},
 }
 _WEEK: Final = 7
 

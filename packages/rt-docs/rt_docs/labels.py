@@ -16,7 +16,7 @@ EXECUTOR: dict[Lang, str] = {"ru": "Исп.: ", "uz": "Ijroçi: ", "en": "Prepar
 REPLY_TO: dict[Lang, str] = {"ru": "На ", "uz": "Javoban: ", "en": "Re: "}
 MISSING_BLOCK: dict[Lang, str] = {
     "ru": "Блок «{label}»: данные подставит система",
-    "uz": "«{label}» bloki: maʼlumotlarni tizim qoʻyadi",
+    "uz": "«{label}» bloki: maʼlumotlarni tizim qöyadi",
     "en": "Block “{label}”: the system will insert the data",
 }
 

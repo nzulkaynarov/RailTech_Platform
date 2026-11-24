@@ -81,7 +81,7 @@ SEED: Final[tuple[SeedType, ...]] = (
     SeedType(
         "client_request",
         "Запрос клиента",
-        "Mijoz so'rovi",
+        "Mijoz sörovi",
         "Customer request",
         "green",
         "mail",
@@ -99,7 +99,7 @@ SEED: Final[tuple[SeedType, ...]] = (
     SeedType(
         "meeting",
         "Приглашение на встречу",
-        "Uchrashuvga taklif",
+        "Uçraşuvga taklif",
         "Meeting invitation",
         "cyan",
         "calendar",
@@ -108,7 +108,7 @@ SEED: Final[tuple[SeedType, ...]] = (
     SeedType(
         "supplier_price",
         "КП или прайс поставщика",
-        "Yetkazib beruvchi narxnomasi",
+        "Yetkazib beruvçi narxnomasi",
         "Supplier quote or price list",
         "blue",
         "file",
@@ -117,7 +117,7 @@ SEED: Final[tuple[SeedType, ...]] = (
     SeedType(
         "supplier_invoice",
         "Счёт поставщика",
-        "Yetkazib beruvchi hisobi",
+        "Yetkazib beruvçi hisobi",
         "Supplier invoice",
         "gold",
         "wallet",
@@ -126,7 +126,7 @@ SEED: Final[tuple[SeedType, ...]] = (
     SeedType(
         "supplier_document",
         "Документ поставщика (договор, акт сверки)",
-        "Yetkazib beruvchi hujjati (shartnoma, solishtirma dalolatnoma)",
+        "Yetkazib beruvçi hujjati (şartnoma, soliştirma dalolatnoma)",
         "Supplier document (contract, reconciliation act)",
         "blue",
         "file",

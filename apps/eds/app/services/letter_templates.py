@@ -46,7 +46,7 @@ BUILTINS: Final[dict[str, dict[str, Any]]] = {
         "name": "Деловое письмо",
         "variants": {
             "ru": _paragraphs("ru", ["Уважаемые коллеги!", "", "Сообщаем следующее.", "", "С уважением,"]),
-            "uz": _paragraphs("uz", ["Hurmatli hamkasblar!", "", "Quyidagilarni ma’lum qilamiz.", "", "Hurmat bilan,"]),
+            "uz": _paragraphs("uz", ["Hurmatli hamkasblar!", "", "Quyidagilarni maʼlum qilamiz.", "", "Hurmat bilan,"]),
             "en": _paragraphs(
                 "en", ["Dear colleagues,", "", "We would like to inform you of the following.", "", "Best regards,"]
             ),
@@ -153,7 +153,7 @@ BUILTINS: Final[dict[str, dict[str, Any]]] = {
             "uz": _paragraphs(
                 "uz",
                 [
-                    "Da’vo",
+                    "Daʼvo",
                     "",
                     "Şartnoma doirasidagi bitimda majburiyatlar bajarilmagani aniqlandi.",
                     "",

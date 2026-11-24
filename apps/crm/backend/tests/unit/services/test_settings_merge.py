@@ -47,7 +47,7 @@ def test_all_texts_have_three_languages() -> None:
         ([0, 1, 2, 3, 4], "ru", "пн–пт с 9:00 до 18:00 по Ташкенту"),
         ([0, 2, 4], "ru", "пн, ср, пт с 9:00 до 18:00 по Ташкенту"),
         ([0, 1, 2, 3, 4, 5], "en", "Mon–Sat, 9:00–18:00 Tashkent time"),
-        ([0, 1, 2, 3, 4], "uz", "dushanba–juma, Toshkent vaqti bilan 9:00 dan 18:00 gacha"),
+        ([0, 1, 2, 3, 4], "uz", "duşanba–juma, Toşkent vaqti bilan 9:00 dan 18:00 gacha"),
     ],
 )
 def test_off_hours_text_follows_business_hours(

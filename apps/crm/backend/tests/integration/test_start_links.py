@@ -195,7 +195,7 @@ async def test_signed_link_joins_the_telegram_chat_to_the_web_request(
     result = await links.apply(USER, link)
 
     assert len(result.texts) == 1
-    assert any(word in result.texts[0] for word in ("связан", "bogʻlandi", "linked"))
+    assert any(word in result.texts[0] for word in ("связан", "boğlandi", "linked"))
     async with sessions() as session:
         identity = await repo.get_identity(session, USER)
         assert identity is not None

@@ -1,8 +1,8 @@
 """Форматтеры по языку документа: даты, числа, суммы, валюта, сумма прописью (ru, uz-латиница, en).
 
 Русская и английская пропись — перенос `apps/erp/backend/crm/services/money_words.py` (тот же формат:
-«Двадцать миллионов шестьсот восемь тысяч сум 00 тийин»), узбекская (латиница, ʻ = U+02BB) — новая:
-«Bir million ikki yuz ming soʻm 00 tiyin».
+«Двадцать миллионов шестьсот восемь тысяч сум 00 тийин»), узбекская (новая латиница владельца: Ö Ğ Ş Ç, ʼ = U+02BC) —
+«Bir million ikki yuz ming söm 00 tiyin».
 Пропись — денежный реквизит, поэтому таблицы выписаны явно; неизвестная валюта словом не называется (код ISO и /100).
 """
 
@@ -81,18 +81,18 @@ def format_number(value: Decimal | int, lang: Lang, *, decimals: int = 2) -> str
 
 
 _CURRENCY_NAMES: dict[str, dict[Lang, str]] = {
-    "UZS": {"ru": "сум", "uz": "soʻm", "en": "UZS"},
+    "UZS": {"ru": "сум", "uz": "söm", "en": "UZS"},
 }
 
 
 def currency_label(currency: str, lang: Lang) -> str:
-    """Название валюты после суммы: UZS — «сум» / «soʻm»; прочие — код ISO (USD, EUR, RUB)."""
+    """Название валюты после суммы: UZS — «сум» / «söm»; прочие — код ISO (USD, EUR, RUB)."""
     code = currency.upper()
     return _CURRENCY_NAMES.get(code, {}).get(lang, code)
 
 
 def format_money(value: Money, lang: Lang) -> str:
-    """«1 234 567,89 сум» / «1 234 567,89 soʻm» / «1,234,567.89 UZS»."""
+    """«1 234 567,89 сум» / «1 234 567,89 söm» / «1,234,567.89 UZS»."""
     return f"{format_number(value.amount, lang)}{NBSP}{currency_label(value.currency, lang)}"
 
 
@@ -244,12 +244,12 @@ def _ru(value: Decimal | int | str | None, currency: str) -> str:
 
 # ─── узбекский (латиница) ─────────────────────────────────────────────────────────────────────
 
-_UZ_ONES = ("", "bir", "ikki", "uch", "toʻrt", "besh", "olti", "yetti", "sakkiz", "toʻqqiz")
-_UZ_TENS = ("", "oʻn", "yigirma", "oʻttiz", "qirq", "ellik", "oltmish", "yetmish", "sakson", "toʻqson")
+_UZ_ONES = ("", "bir", "ikki", "uç", "tört", "beş", "olti", "yetti", "sakkiz", "töqqiz")
+_UZ_TENS = ("", "ön", "yigirma", "öttiz", "qirq", "ellik", "oltmiş", "yetmiş", "sakson", "töqson")
 _UZ_SCALES = ("", "ming", "million", "milliard", "trillion")
 #: Валюта: (основная, дробная). Существительное после числительного в узбекском не изменяется.
 _UZ_CURRENCIES = {
-    "UZS": ("soʻm", "tiyin"),
+    "UZS": ("söm", "tiyin"),
     "RUB": ("rubl", "kopeyka"),
     "USD": ("AQSH dollari", "sent"),
     "EUR": ("yevro", "sent"),

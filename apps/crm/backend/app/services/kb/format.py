@@ -70,7 +70,7 @@ def not_markdown_error() -> ValidationFailedError:
     messages: Messages = {
         "ru": "Принимаются только документы Markdown (.md) по формату базы знаний — см. инструкцию",
         "uz": "Faqat bilimlar bazasi formatidagi Markdown (.md) hujjatlari qabul qilinadi — "
-        "yo‘riqnomaga qarang",
+        "yöriqnomaga qarang",
         "en": "Only Markdown (.md) documents in the knowledge base format are accepted — "
         "see the instructions",
     }
@@ -96,7 +96,7 @@ class _Checker:
             raise _fail(
                 "size",
                 f"Документ больше {kb} КБ — разбейте его на несколько документов по темам",
-                f"Hujjat {kb} KB dan katta — uni mavzular bo‘yicha bir nechta hujjatga bo‘ling",
+                f"Hujjat {kb} KB dan katta — uni mavzular böyiça bir neçta hujjatga böling",
                 f"The document is larger than {kb} KB — split it into several documents by topic",
             )
         if _FRONT_MATTER.match(raw.lstrip("﻿")) is None:
@@ -104,8 +104,8 @@ class _Checker:
                 "front_matter_missing",
                 "В начале файла нет front matter: добавьте блок между строками --- "
                 "с полями title, language, source, updated",
-                "Fayl boshida front matter yo‘q: --- qatorlari orasiga title, language, "
-                "source, updated maydonlarini qo‘shing",
+                "Fayl boşida front matter yöq: --- qatorlari orasiga title, language, "
+                "source, updated maydonlarini qöşing",
                 "The file has no front matter: add a block between --- lines with the fields "
                 "title, language, source, updated",
             )
@@ -114,7 +114,7 @@ class _Checker:
             raise _fail(
                 "front_matter_invalid",
                 "Front matter не разобран: это должен быть корректный YAML вида «поле: значение»",
-                "Front matter o‘qilmadi: «maydon: qiymat» ko‘rinishidagi to‘g‘ri YAML bo‘lishi kerak",
+                "Front matter öqilmadi: «maydon: qiymat» körinişidagi töğri YAML bölişi kerak",
                 "Front matter could not be parsed: it must be valid YAML of the form 'field: value'",
             )
         self._fields(parsed.meta)
@@ -128,7 +128,7 @@ class _Checker:
                 raise _fail(
                     "field_missing",
                     f"В front matter нет обязательного поля «{name}»",
-                    f"Front matterda majburiy «{name}» maydoni yo‘q",
+                    f"Front matterda majburiy «{name}» maydoni yöq",
                     f"Front matter is missing the required field '{name}'",
                     missing=name,
                 )
@@ -137,7 +137,7 @@ class _Checker:
                 raise _fail(
                     "field_type",
                     f"Поле «{name}» должно быть строкой",
-                    f"«{name}» maydoni matn bo‘lishi kerak",
+                    f"«{name}» maydoni matn bölişi kerak",
                     f"The field '{name}' must be a string",
                     missing=name,
                 )
@@ -146,7 +146,7 @@ class _Checker:
             raise _fail(
                 "language_invalid",
                 "Поле language должно быть одним из: ru, uz, en",
-                "language maydoni quyidagilardan biri bo‘lishi kerak: ru, uz, en",
+                "language maydoni quyidagilardan biri bölişi kerak: ru, uz, en",
                 "The language field must be one of: ru, uz, en",
             )
         if self.language is not None and language != self.language:
@@ -165,7 +165,7 @@ class _Checker:
             raise _fail(
                 "updated_invalid",
                 "Поле updated — дата в виде ГГГГ-ММ-ДД, например 2026-10-21",
-                "updated maydoni — YYYY-MM-DD ko‘rinishidagi sana, masalan 2026-10-21",
+                "updated maydoni — YYYY-MM-DD körinişidagi sana, masalan 2026-10-21",
                 "The updated field must be a date as YYYY-MM-DD, e.g. 2026-10-21",
             )
         tags = meta.get("tags")
@@ -175,7 +175,7 @@ class _Checker:
             raise _fail(
                 "tags_invalid",
                 "Поле tags — список строк: tags: [доставка, гарантия]",
-                "tags maydoni — matnlar ro‘yxati: tags: [yetkazish, kafolat]",
+                "tags maydoni — matnlar röyxati: tags: [yetkaziş, kafolat]",
                 "The tags field must be a list of strings: tags: [delivery, warranty]",
             )
 
@@ -194,21 +194,21 @@ class _Checker:
                 raise _fail(
                     "images",
                     "В документе есть картинка — уберите её и опишите смысл словами",
-                    "Hujjatda rasm bor — uni olib tashlang va ma’nosini so‘z bilan yozing",
+                    "Hujjatda rasm bor — uni olib taşlang va maʼnosini söz bilan yozing",
                     "The document contains an image — remove it and describe it in words",
                 )
             if _FILE_LINK.search(line):
                 raise _fail(
                     "file_links",
                     "В документе есть ссылка на файл — уберите её, нужное перенесите в текст",
-                    "Hujjatda faylga havola bor — uni olib tashlang, kerakli ma’lumotni matnga o‘tkazing",
+                    "Hujjatda faylga havola bor — uni olib taşlang, kerakli maʼlumotni matnga ötkazing",
                     "The document links to a file — remove the link and move the content into the text",
                 )
         if h1_count == 0:
             raise _fail(
                 "h1_missing",
                 "Нет заголовка первого уровня: после front matter добавьте строку «# Название»",
-                "Birinchi darajali sarlavha yo‘q: front matterdan keyin «# Nomi» qatorini qo‘shing",
+                "Birinçi darajali sarlavha yöq: front matterdan keyin «# Nomi» qatorini qöşing",
                 "There is no level-1 heading: add a '# Title' line after the front matter",
             )
         if h1_count > 1:
@@ -216,8 +216,8 @@ class _Checker:
                 "h1_multiple",
                 "Заголовков первого уровня («# …») должен быть ровно один; "
                 "разделы оформляйте как «##» и «###»",
-                "Birinchi darajali sarlavha («# …») aynan bitta bo‘lishi kerak; "
-                "bo‘limlar uchun «##» va «###» ishlating",
+                "Birinçi darajali sarlavha («# …») aynan bitta bölişi kerak; "
+                "bölimlar uçun «##» va «###» işlating",
                 "There must be exactly one level-1 heading ('# …'); use '##' and '###' for sections",
             )
 

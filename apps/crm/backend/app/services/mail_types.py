@@ -45,7 +45,7 @@ from app.schemas import mail_types as dto
 from app.security import audit
 from app.security.principal import Principal
 
-_NAME: Final = ("Типы входящих писем", "Kiruvchi xat turlari", "Incoming mail types")
+_NAME: Final = ("Типы входящих писем", "Kiruvçi xat turlari", "Incoming mail types")
 
 _ATTRS: Final[tuple[tuple[str, tuple[str, str, str], tuple[str, ...]], ...]] = (
     ("default_action", ("Действие по умолчанию", "Standart harakat", "Default action"), ACTIONS),
@@ -55,22 +55,22 @@ _ATTRS: Final[tuple[tuple[str, tuple[str, str, str], tuple[str, ...]], ...]] = (
 _ACTION_NAMES: Final[dict[str, tuple[str, str, str]]] = {
     "register_incoming": (
         "Зарегистрировать как входящее → директору",
-        "Kiruvchi sifatida ro'yxatdan o'tkazish → direktorga",
+        "Kiruvçi sifatida röyxatdan ötkaziş → direktorga",
         "Register as incoming → director",
     ),
     "create_lead": (
         "Создать лид → менеджеру",
-        "Lid yaratish → menejerga",
+        "Lid yaratiş → menejerga",
         "Create a lead → manager",
     ),
     "supplier_price": (
         "Загрузить прайс или КП поставщика",
-        "Yetkazib beruvchi narxnomasini yuklash",
+        "Yetkazib beruvçi narxnomasini yuklaş",
         "Upload supplier price list or quote",
     ),
     "to_accountant": (
         "Передать бухгалтеру",
-        "Buxgalterga topshirish",
+        "Buxgalterga topşiriş",
         "Hand over to the accountant",
     ),
     "archive_mailing": (
@@ -78,15 +78,15 @@ _ACTION_NAMES: Final[dict[str, tuple[str, str, str]]] = {
         "Reklama sifatida arxivga",
         "Archive as a newsletter",
     ),
-    "reply_template": ("Ответить шаблоном", "Shablon bilan javob berish", "Reply with a template"),
-    "suspicious": ("В «Подозрительные» (спам)", "«Shubhali»ga (spam)", "To Suspicious (spam)"),
+    "reply_template": ("Ответить шаблоном", "Şablon bilan javob beriş", "Reply with a template"),
+    "suspicious": ("В «Подозрительные» (спам)", "«Şubhali»ga (spam)", "To Suspicious (spam)"),
 }
 _COLOR_NAMES: Final[dict[str, tuple[str, str, str]]] = {
-    "blue": ("Синий", "Ko'k", "Blue"),
-    "green": ("Зелёный", "Yashil", "Green"),
+    "blue": ("Синий", "Kök", "Blue"),
+    "green": ("Зелёный", "Yaşil", "Green"),
     "gold": ("Жёлтый", "Sariq", "Yellow"),
     "red": ("Красный", "Qizil", "Red"),
-    "purple": ("Фиолетовый", "Binafsha", "Purple"),
+    "purple": ("Фиолетовый", "Binafşa", "Purple"),
     "cyan": ("Бирюзовый", "Firuza", "Cyan"),
     "default": ("Серый", "Kulrang", "Grey"),
 }
@@ -98,12 +98,12 @@ _ICON_NAMES: Final[dict[str, tuple[str, str, str]]] = {
     "wallet": ("Деньги", "Pul", "Money"),
     "bank": ("Учреждение", "Muassasa", "Institution"),
     "notification": ("Рассылка", "Xabarnoma", "Newsletter"),
-    "stop": ("Стоп", "To'xtash", "Stop"),
+    "stop": ("Стоп", "Töxtaş", "Stop"),
 }
 _ATTR_NAMES = {"default_action": _ACTION_NAMES, "color": _COLOR_NAMES, "icon": _ICON_NAMES}
 _LETTER_KIND_NAME: Final = (
     "Вид документа при регистрации",
-    "Ro'yxatga olishdagi hujjat turi",
+    "Röyxatga olişdagi hujjat turi",
     "Document type on registration",
 )
 _LETTER_KIND: Final = re.compile(CODE_PATTERN)

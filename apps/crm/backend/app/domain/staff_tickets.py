@@ -158,7 +158,7 @@ _STATUS_TITLE: Final = {
 }
 _TELEGRAM: Final = {
     "ru": ("Администратор ответил на ваше обращение {number}:\n{text}", "Открыть"),
-    "uz": ("Administrator {number} murojaatingizga javob berdi:\n{text}", "Ochish"),
+    "uz": ("Administrator {number} murojaatingizga javob berdi:\n{text}", "Oçiş"),
     "en": ("The administrator replied to your request {number}:\n{text}", "Open"),
 }
 _SNIPPET: Final = 110

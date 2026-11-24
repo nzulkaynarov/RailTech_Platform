@@ -133,7 +133,7 @@ TASHKENT_MONDAY_19 = datetime(2026, 10, 12, 14, 0, tzinfo=UTC)  # пн 19:00 п�
         (TASHKENT_MONDAY_19, [], "ru", "завтра с 9:00"),
         (TASHKENT_MONDAY_19, [date(2026, 10, 13)], "ru", "в среду с 9:00"),
         (datetime(2026, 10, 16, 14, 0, tzinfo=UTC), [], "ru", "в понедельник с 9:00"),
-        (datetime(2026, 10, 16, 14, 0, tzinfo=UTC), [], "uz", "dushanba kuni soat 9:00 dan"),
+        (datetime(2026, 10, 16, 14, 0, tzinfo=UTC), [], "uz", "duşanba kuni soat 9:00 dan"),
         (TASHKENT_MONDAY_19, [], "en", "tomorrow from 9:00"),
     ],
 )
