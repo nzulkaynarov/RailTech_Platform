@@ -8,7 +8,6 @@ BFF не фильтрует чужие документы и ничего не �
 
 import asyncio
 import json
-import time
 from typing import Any
 
 import httpx
@@ -182,18 +181,27 @@ async def test_slow_cards_do_not_hold_the_queue(
     """Общий бюджет на карточки: по его исходу — строки без комментария, а не ожидание EDS."""
     monkeypatch.setattr(rework_module, "CARDS_BUDGET", 0.1)
 
+    never = asyncio.Event()  # the card of EDS never answers
+    entered = asyncio.Event()
+    answered: list[bool] = []
+
     async def slow(_request: httpx.Request) -> httpx.Response:
-        await asyncio.sleep(2)
+        entered.set()
+        await never.wait()
+        answered.append(True)
         return httpx.Response(200, json=card(DOC_ID, returned("Не успела.")))
 
     fb.state["returned"] = page(item())
     fb.eds["card"].mock(side_effect=slow)
     await web.login(["MANAGER"])
 
-    started = time.monotonic()
-    body = (await web.client.get("/api/v1/queue")).json()
+    # The guard only turns a queue that waits for the card into a failure instead of a hang;
+    # the check itself is the fact: the answer came while the card was still in flight.
+    response = await asyncio.wait_for(web.client.get("/api/v1/queue"), timeout=30)
+    body = response.json()
 
-    assert time.monotonic() - started < 1.5
+    assert entered.is_set()
+    assert answered == []
     (row,) = rework(body)
     assert row["subtitle"].startswith("Возвращён на доработку")
     assert body["sources"]["eds"] == "ok"
