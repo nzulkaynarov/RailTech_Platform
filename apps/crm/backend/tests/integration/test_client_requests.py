@@ -195,6 +195,55 @@ async def test_request_from_any_active_stage_makes_a_client_and_a_pending_reques
             assert (escalation.status, escalation.outcome) == ("closed", "request_created")
 
 
+@pytest.mark.parametrize(
+    ("typed", "stored"),
+    [
+        ("90 123 45 67", "+998901234567"),
+        ("+998 (90) 123-45-67", "+998901234567"),
+        ("998901234567", "+998901234567"),
+        ("+7 495 123-45-67", "+74951234567"),
+    ],
+)
+async def test_contact_phone_of_the_form_is_stored_as_e164(
+    sessions: async_sessionmaker[AsyncSession], typed: str, stored: str
+) -> None:
+    who = await _manager(sessions)
+    lead_id = await _lead(sessions)
+
+    created = await _service(sessions).create_from_lead(
+        who,
+        lead_id,
+        _body(contact={"full_name": "Иван", "phone": typed, "email": " Ivan@Example.COM "}),
+    )
+
+    async with sessions() as session:
+        deal = await session.get(Deal, created.deal_id)
+        assert deal is not None
+        contact = await session.get(ClientContact, deal.request_contact_id)
+        assert contact is not None
+        assert contact.phone_e164 == stored, "duplicate search by phone needs E.164"
+        assert contact.email == "ivan@example.com"
+
+
+@pytest.mark.parametrize("typed", ["abc", "8 90 123 45 67", "+998 90 123", "12"])
+async def test_contact_phone_of_the_form_that_is_not_a_number_is_a_field_error(
+    sessions: async_sessionmaker[AsyncSession], typed: str
+) -> None:
+    who = await _manager(sessions)
+    lead_id = await _lead(sessions)
+
+    with pytest.raises(ValidationFailedError) as caught:
+        await _service(sessions).create_from_lead(
+            who,
+            lead_id,
+            _body(contact={"full_name": "Иван", "phone": typed, "email": "ivan@example.com"}),
+        )
+
+    assert caught.value.details["reason"] == Reason.INVALID_PHONE
+    async with sessions() as session:
+        assert (await session.scalars(select(Client))).first() is None, "nothing is half-created"
+
+
 async def test_lost_lead_cannot_get_a_request(sessions: async_sessionmaker[AsyncSession]) -> None:
     who = await _manager(sessions)
     lead_id = await _lead(sessions, stage="lost")

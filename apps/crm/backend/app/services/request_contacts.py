@@ -9,7 +9,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.bus import events as bus_events
 from app.domain.client_requests import contact_channels
+from app.domain.contacts import contact_email
 from app.domain.errors import Reason, ValidationFailedError
+from app.domain.lead_sources import normalize_phone_e164
 from app.models.clients import Client, ClientContact
 from app.models.leads import Lead, TelegramIdentity
 from app.schemas.client_requests import RequestContactIn
@@ -31,6 +33,19 @@ async def _lead_identity(session: AsyncSession, lead: Lead | None) -> TelegramId
     )
 
 
+def _phone(raw: str | None) -> str | None:
+    if raw is None or not raw.strip():
+        return None
+    value = normalize_phone_e164(raw)
+    if value is None:
+        raise ValidationFailedError(
+            "phone must be in international format",
+            reason=Reason.INVALID_PHONE,
+            field="contact.phone",
+        )
+    return value
+
+
 async def request_contact(
     session: AsyncSession, client: Client, lead: Lead | None, data: RequestContactIn, who: Principal
 ) -> ClientContact:
@@ -48,12 +63,15 @@ async def request_contact(
             .where(ClientContact.client_id == client.id, ClientContact.is_primary)
             .limit(1)
         )
+        # Same normaliser as the web intake (+998 and 9 digits, other countries E.164): duplicate
+        # search by phone, the hand-over and the bus snapshot all expect E.164 (G6).
+        phone = _phone(data.phone)
         contact = ClientContact(
             client_id=client.id,
             full_name=(data.full_name or "").strip(),
             position=(data.position or "").strip() or None,
-            phone_e164=(data.phone or "").strip() or (identity.phone_e164 if identity else None),
-            email=(data.email or "").strip().lower() or None,
+            phone_e164=phone or (identity.phone_e164 if identity else None),
+            email=contact_email(data.email),
             telegram_identity_id=identity.id if identity else None,
             is_primary=has_primary is None,
         )
