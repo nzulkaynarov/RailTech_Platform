@@ -516,11 +516,11 @@
   "platform": {
     "title": "Valyuta kurslari",
     "hint": "Butun platforma uçun valyutalarning sömga kurslari.",
-    "currencyUzs": "so'm",
+    "currencyUzs": "söm",
     "updated": "Sozlamalar yangilangan",
     "save": "Sozlamalarni saqlaş",
     "fx": {
-      "title": "Valyutaning so‘mga kursi",
+      "title": "Valyutaning sömga kursi",
       "current": "Joriy kurs",
       "date": "Kurs sanasi",
       "source": "Manba",
@@ -532,14 +532,14 @@
       "formLabel": "Kursni qo‘lda kiritish",
       "dateField": "Kurs sanasi",
       "dateHint": "Bugundan kech emas va bir yildan eski emas.",
-      "rateField": "Kurs, 1 {{currency}} uchun so‘m",
+      "rateField": "Kurs, 1 {{currency}} uchun söm",
       "rateHint": "Noldan katta son, verguldan keyin 6 tagacha raqam. Masalan, 12650,5.",
       "save": "Kursni saqlash",
       "saved": "Kurs saqlandi",
       "journal": {
         "title": "Kurs jurnali",
         "date": "Kurs sanasi",
-        "rate": "Kurs, so‘m",
+        "rate": "Kurs, söm",
         "event": "Hodisa",
         "manual": "Qo‘lda kiritilgan",
         "autoSkipped": "Avtomatik kurs qo‘llanmadi",
@@ -687,13 +687,13 @@
   },
   "contractTemplates": {
     "title": "Şartnoma şablonlari",
-    "hint": "Yurist bir marta tasdiqlaydi — bitimda faqat tasdiqlanganlari tanlanadi.",
+    "hint": "Yurist bir marta tasdiqlaydi — loyihada faqat tasdiqlanganlari tanlanadi.",
     "add": "Yangi şablon",
     "createTitle": "Yangi şartnoma şabloni",
     "createSubmit": "Yaratiş",
     "empty": {
       "title": "Şartnoma şablonlari hali yöq",
-      "text": "Standart matndan şablon yarating va tasdiqlaşga yuboring: bitimda faqat tasdiqlanganlari taklif etiladi."
+      "text": "Standart matndan şablon yarating va tasdiqlaşga yuboring: loyihada faqat tasdiqlanganlari taklif etiladi."
     },
     "columns": {
       "name": "Şablon",
@@ -718,7 +718,7 @@
     "waitingLine": "{{edition}}-tahrir · «Huquq» kutmoqda, {{date}} dan",
     "draftLine": "{{edition}}-tahrir",
     "replaced": "yangi tahrir bilan almaştirilgan",
-    "notOffered": "bitimda taklif etilmaydi",
+    "notOffered": "loyihada taklif etilmaydi",
     "fallback": "uz va en — rus matni",
     "actions": {
       "edition": "Yangi tahrir",

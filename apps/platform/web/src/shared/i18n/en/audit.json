@@ -144,7 +144,7 @@
     "tasks": "Other tasks: instructions, acknowledgements, outcomes",
     "tasksHint": "Off by default: these tasks are on the home screen and in the bell.",
     "system": "System alerts",
-    "systemHint": "Integration and monitoring failures, for administrators.",
+    "systemHint": "Connection failures, for whoever manages settings.",
     "saved": "Saved",
     "test": "Test notification",
     "testHint": "The bot sends you a test message in Telegram, so you can check that delivery works.",

@@ -24,7 +24,7 @@ for (const width of WIDTHS) {
       ).toBeVisible();
       const table = page.getByRole("table", { name: "Шаблоны договоров" });
       await expect(table.getByText("ред. 3 от 20.11.2026 · утвердил А. Юсупов")).toBeVisible();
-      await expect(table.getByText("в сделке не предлагается")).toBeVisible();
+      await expect(table.getByText("в проекте не предлагается")).toBeVisible();
       await settledScreenshot(page, "dok10-templates-list");
       await expectNoViolations(page, "список шаблонов договоров");
 

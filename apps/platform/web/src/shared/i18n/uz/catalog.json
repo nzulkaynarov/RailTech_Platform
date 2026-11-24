@@ -402,7 +402,7 @@
       "table": "So'mga valyuta kurslari",
       "columns": {
         "currency": "Valyuta",
-        "rate": "Kurs, so'm",
+        "rate": "Kurs, söm",
         "date": "Sana",
         "source": "Manba"
       },
@@ -712,7 +712,7 @@
       "none": "Ko'rsatilmagan",
       "manufacturer": "Ishlab chiqaruvchi",
       "supplier": "Hamkor",
-      "principal": "Printsipal",
+      "principal": "Buyurtmaçi",
       "other": "Boshqa"
     },
     "contacts": "Kompaniya kontaktlari",
@@ -1149,7 +1149,7 @@
       "title": "Arizani rad etish: {{name}}",
       "hint": "Rad etish sababini ko'rsating. U jurnalda qayd etiladi va arizachiga yuboriladi.",
       "reasonLabel": "Rad etish sababi",
-      "reasonPlaceholder": "Masalan: mahsulot yo'nalishimizga to'g'ri kelmaydi / hujjatlar taqdim etilmadi",
+      "reasonPlaceholder": "Masalan: bunday mahsulotni yetkazmaymiz / sertifikatlar yoʼq",
       "ok": "Arizani rad etish"
     }
   },

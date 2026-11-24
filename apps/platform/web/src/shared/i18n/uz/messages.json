@@ -152,7 +152,7 @@
     "channelCabinet": "Kabinet",
     "channelEmail": "Poçta",
     "context": {
-      "deal": "Bitim {{number}}",
+      "deal": "Ariza {{number}}",
       "quote": "TK {{number}}",
       "invoice": "Hisob {{number}}",
       "act": "Dalolatnoma {{number}}"

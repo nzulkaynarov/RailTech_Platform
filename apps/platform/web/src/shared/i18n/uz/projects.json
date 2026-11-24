@@ -275,7 +275,7 @@
     "note": {
       "label": "EHT tizimidagi operator yoki raqam",
       "hint": "Ixtiyoriy: jurnalga tushadi.",
-      "placeholder": "Masalan: Didox, № 77"
+      "placeholder": "Masalan: EHT, № 77"
     },
     "reject": {
       "title": "Mijoz shartnomani rad etdi",

@@ -152,7 +152,7 @@
     "channelCabinet": "Cabinet",
     "channelEmail": "E-mail",
     "context": {
-      "deal": "Deal {{number}}",
+      "deal": "Request {{number}}",
       "quote": "Quote {{number}}",
       "invoice": "Invoice {{number}}",
       "act": "Act {{number}}"

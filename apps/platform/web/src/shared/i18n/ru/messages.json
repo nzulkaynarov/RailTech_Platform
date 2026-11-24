@@ -152,7 +152,7 @@
     "channelCabinet": "Кабинет",
     "channelEmail": "Почта",
     "context": {
-      "deal": "Сделка {{number}}",
+      "deal": "Заявка {{number}}",
       "quote": "КП {{number}}",
       "invoice": "Счёт {{number}}",
       "act": "Акт {{number}}"

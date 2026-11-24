@@ -164,7 +164,7 @@ export function ReasonForm({
   );
 }
 
-/** Необязательная заметка к действию («Didox, № 77»). */
+/** Необязательная заметка к действию («ЭДО, № 77»). */
 export function NoteField({
   label,
   hint,
