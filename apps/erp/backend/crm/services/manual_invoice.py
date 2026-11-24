@@ -19,6 +19,7 @@ from typing import Optional, Tuple
 
 from django.db import transaction
 
+from core.currency import line_amount
 from core.quantity import to_qty
 
 from ..constants import DEFAULT_INVOICE_DUE_DAYS, InvoiceStatusCode
@@ -184,7 +185,7 @@ def create_manual_invoice(
             )
 
     for description, quantity, unit_price, product in manual_lines:
-        line_total = (unit_price * quantity).quantize(_PENNY, rounding=ROUND_HALF_UP)
+        line_total = line_amount(unit_price, quantity)
         line_vat = (line_total * vat_rate).quantize(_PENNY, rounding=ROUND_HALF_UP)
         subtotal += line_total
         vat_amount += line_vat
@@ -214,7 +215,7 @@ def create_manual_invoice(
                 unit=unit,
                 unit_code=unit_code,
                 unit_price_excl_vat=unit_price,
-                line_total_excl_vat=(unit_price * quantity).quantize(_PENNY, rounding=ROUND_HALF_UP),
+                line_total_excl_vat=line_amount(unit_price, quantity),
                 source_quote_item=source_quote_item,
             )
             for description, quantity, unit_price, product, unit, unit_code, source_quote_item in item_specs

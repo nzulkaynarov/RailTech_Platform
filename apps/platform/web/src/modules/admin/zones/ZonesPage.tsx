@@ -75,7 +75,16 @@ export function ZonesPage() {
       width: null,
       cell: (row) => (
         <div>
-          <b>{zoneText(row.name, i18n.language)}</b>
+          <Button
+            type="link"
+            className="pf-dt-link"
+            aria-label={t("openNamed", { name: zoneText(row.name, i18n.language) })}
+            onClick={() => {
+              setTarget({ mode: "edit", id: row.id });
+            }}
+          >
+            <b>{zoneText(row.name, i18n.language)}</b>
+          </Button>
           {!row.active ? <StatusTag tone="default">{t("off")}</StatusTag> : null}
           <div className="pf-hint">{zoneText(row.description, i18n.language)}</div>
         </div>
@@ -91,12 +100,14 @@ export function ZonesPage() {
       id: "deputy",
       header: t("col.deputy"),
       width: null,
+      priority: 2,
       cell: (row) => <PersonCell person={row.deputy} />,
     },
     {
       id: "curator",
       header: t("col.curator"),
       width: null,
+      priority: 1,
       cell: (row) => <PersonCell person={row.curator} />,
     },
     {
@@ -122,28 +133,10 @@ export function ZonesPage() {
           </div>
         ),
     },
-    {
-      id: "actions",
-      header: t("col.actions"),
-      headerHidden: true,
-      width: 120,
-      cell: (row) => (
-        <Button
-          type="link"
-          size="small"
-          aria-label={t("openNamed", { name: zoneText(row.name, i18n.language) })}
-          onClick={() => {
-            setTarget({ mode: "edit", id: row.id });
-          }}
-        >
-          {t("open")}
-        </Button>
-      ),
-    },
   ];
 
   return (
-    <SettingsPage sectionKey="zones" subtitle={t("subtitle")} extra={add} editable={canAssign}>
+    <SettingsPage sectionKey="zones" extra={add} editable={canAssign}>
       <FilterBar>
         <Segmented<Filter>
           aria-label={t("filter.label")}

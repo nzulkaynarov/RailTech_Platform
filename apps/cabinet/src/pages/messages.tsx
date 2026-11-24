@@ -5,6 +5,7 @@ import { Eye, MessagesSquare, Paperclip, Send, Tag, UserRound, X } from 'lucide-
 
 import type { MessageContext, PortalMessage } from '@/api/portal';
 import { useBotLink } from '@/app/links';
+import { CutText } from '@/components/list/CutText';
 import { EmptyState } from '@/components/EmptyState';
 import { PageHeader } from '@/components/PageHeader';
 import { ErrorState, ListSkeleton } from '@/components/QueryStates';
@@ -48,7 +49,6 @@ export function MessagesPage() {
     <>
       <PageHeader
         title={t('pages.messages.title')}
-        subtitle={t('pages.messages.subtitle')}
         icon={MessagesSquare}
         actions={
           bot ? (
@@ -310,11 +310,13 @@ function Composer({ onSend }: { onSend: (text: string, context: MessageContext |
         >
           <span className="flex min-w-0 items-center gap-2">
             <Tag className="size-4 shrink-0" aria-hidden="true" />
-            <span className="truncate">
-              {t('pages.messages.about', {
+            <CutText
+              lines={1}
+              className="min-w-0"
+              text={t('pages.messages.about', {
                 what: t(contextKey(context), { number: context.number }),
               })}
-            </span>
+            />
           </span>
           <Button
             type="button"

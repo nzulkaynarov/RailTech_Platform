@@ -36,7 +36,7 @@ describe("Очередь проверки: список", () => {
     expect(within(rows[2] as HTMLElement).getByText("Шайба пружинная 20")).toBeVisible();
     expect(within(rows[2] as HTMLElement).getByText("В срок")).toBeVisible();
     expect(await screen.findByText("Ждут проверки · 3")).toBeVisible();
-    expect(screen.getByRole("radio", { name: "Все позиции" })).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "Вид списка" })).toBeInTheDocument();
   });
 
   it("пустая очередь говорит словами, что делать", async () => {

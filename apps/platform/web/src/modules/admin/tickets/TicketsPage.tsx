@@ -132,7 +132,7 @@ export function TicketsPage({ objectId }: { objectId?: string | undefined }) {
 
   return (
     <>
-      <PageHeader title={title} subtitle={t("admin.subtitle")} />
+      <PageHeader title={title} />
       <div ref={blockRef}>
         <RegistryTable<TicketRow>
           tableId="admin.tickets"

@@ -18,4 +18,15 @@ describe("PageHeader", () => {
     expect(screen.getByText("Директор · четверг")).toBeVisible();
     expect(screen.getByRole("button", { name: "Действие" })).toBeVisible();
   });
+
+  it("readOnly: одна плашка «Только просмотр» рядом с действием", () => {
+    renderUi(<PageHeader title="Сотрудники" readOnly extra={<button type="button">Ещё</button>} />);
+    expect(screen.getAllByText("Только просмотр")).toHaveLength(1);
+    expect(screen.getByRole("button", { name: "Ещё" })).toBeVisible();
+  });
+
+  it("без readOnly плашки нет", () => {
+    renderUi(<PageHeader title="Сотрудники" />);
+    expect(screen.queryByText("Только просмотр")).toBeNull();
+  });
 });

@@ -178,7 +178,7 @@ export function OrgPage({ objectId }: { objectId?: string }) {
     <>
       <PageHeader
         title={title}
-        subtitle={editable ? t("modules:admin.org.subtitle") : t("modules:admin.org.readOnly")}
+        readOnly={!editable}
         extra={
           editable ? (
             <Button type="primary" onClick={() => void navigate(inviteHref)}>

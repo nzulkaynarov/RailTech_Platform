@@ -131,7 +131,7 @@ export function BusJournalPage() {
 
   return (
     <div className="pf-bus">
-      <PageHeader title={title} subtitle={t("bus:subtitle")} />
+      <PageHeader title={title} />
       <JournalFilter current="systems" />
       <BusSourcesNote
         sources={journal.data?.sources}

@@ -15,6 +15,7 @@ export function TabsBar({
   items,
   onChange,
   tabBarStyle,
+  stack = false,
   children,
 }: {
   id: string;
@@ -23,6 +24,8 @@ export function TabsBar({
   items: readonly { key: string; label: ReactNode }[];
   onChange: (key: string) => void;
   tabBarStyle?: TabsProps["tabBarStyle"];
+  /** Под вкладками несколько блоков (строка фильтров, затем рамка списка): колонкой с отступом 16 px */
+  stack?: boolean;
   children: ReactNode;
 }) {
   return (
@@ -36,7 +39,12 @@ export function TabsBar({
         tabBarStyle={tabBarStyle}
         items={items.map((item) => ({ key: item.key, label: item.label }))}
       />
-      <div role="tabpanel" id={`${id}-body`} aria-labelledby={`${id}-tab-${activeKey}`}>
+      <div
+        role="tabpanel"
+        id={`${id}-body`}
+        aria-labelledby={`${id}-tab-${activeKey}`}
+        className={stack ? "pf-tabs-panel--stack" : undefined}
+      >
         {children}
       </div>
     </>

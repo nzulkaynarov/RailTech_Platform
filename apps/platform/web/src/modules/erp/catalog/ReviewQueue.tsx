@@ -1,4 +1,4 @@
-import { App, Button, Input, Segmented, Select } from "antd";
+import { App, Button, Input, Select } from "antd";
 import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
@@ -16,6 +16,7 @@ import {
 } from "../../../shared/api/generated/platform-bff";
 import { useFormat } from "../../../shared/lib/useFormat";
 import { DefinitionList } from "../../../shared/ui/DefinitionList";
+import { FilterField } from "../../../shared/ui/FilterBar";
 import { FormField } from "../../../shared/ui/FormParts";
 import { MoneyText } from "../../../shared/ui/MoneyText";
 import { StatusTag } from "../../../shared/ui/StatusTag";
@@ -47,11 +48,16 @@ function useWaitingCount(): number | undefined {
 /** Вид списка позиций: все, очередь проверки партнёров, новые из заявок (ADR-0027). */
 export type QueueView = "all" | "waiting" | "requests";
 
-/** Переключатель «Все позиции / Ждут проверки · N / Новые из заявок · N»: адрес хранит только `?review=…`. */
+/**
+ * Выбор вида «Все позиции / Ждут проверки · N / Новые из заявок · N» (одна строка фильтров, polish pw1): адрес хранит
+ * только `?review=…`. Выбор, а не три сегмента: рядом с поиском и фильтрами всё помещается в одну строку на 1280.
+ */
 export function QueueSwitch({
+  id,
   view,
   onChange,
 }: {
+  id: string;
   view: QueueView;
   onChange: (view: QueueView) => void;
 }) {
@@ -59,27 +65,29 @@ export function QueueSwitch({
   const count = useWaitingCount();
   const requests = useRequestsCount();
   return (
-    <Segmented
-      aria-label={t("queue.view")}
-      value={view}
-      onChange={(value) => {
-        onChange(value as QueueView);
-      }}
-      options={[
-        { value: "all", label: t("queue.all") },
-        {
-          value: "waiting",
-          label: count === undefined ? t("queue.waiting") : t("queue.waitingCount", { count }),
-        },
-        {
-          value: "requests",
-          label:
-            requests === undefined
-              ? t("queue.requests")
-              : t("queue.requestsCount", { count: requests }),
-        },
-      ]}
-    />
+    <FilterField id={id} label={t("queue.view")} width={190}>
+      <Select
+        id={id}
+        value={view}
+        onChange={(value: QueueView) => {
+          onChange(value);
+        }}
+        options={[
+          { value: "all", label: t("queue.all") },
+          {
+            value: "waiting",
+            label: count === undefined ? t("queue.waiting") : t("queue.waitingCount", { count }),
+          },
+          {
+            value: "requests",
+            label:
+              requests === undefined
+                ? t("queue.requests")
+                : t("queue.requestsCount", { count: requests }),
+          },
+        ]}
+      />
+    </FilterField>
   );
 }
 

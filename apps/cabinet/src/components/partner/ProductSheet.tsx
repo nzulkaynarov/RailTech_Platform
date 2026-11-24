@@ -10,6 +10,7 @@ import { DateField } from '@/components/DateField';
 import { FileField } from '@/components/FileField';
 import { DetailSkeleton, ErrorState } from '@/components/QueryStates';
 import { StatusBadge } from '@/components/StatusBadge';
+import { CutText } from '@/components/list/CutText';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -178,7 +179,7 @@ function ProductBody({ product }: { product: PartnerProductDetail }) {
                 <div className="min-w-0 flex-1 pr-2">
                   <div className="flex items-center gap-2">
                     <FileText className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-                    <span className="font-medium truncate">{doc.title}</span>
+                    <CutText lines={1} text={doc.title} className="min-w-0 font-medium" />
                     <span className="rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">{doc.kind_name}</span>
                     {doc.status !== 'approved' ? (
                       <span
