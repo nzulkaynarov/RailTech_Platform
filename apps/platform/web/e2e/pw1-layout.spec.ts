@@ -13,7 +13,7 @@ const REGISTRIES = [
   { name: "catalog-waiting", path: "/erp/catalog?review=waiting" },
   { name: "org", path: "/admin/org" },
   { name: "zones", path: "/admin/zones" },
-  { name: "people", path: "/chats/people" },
+  { name: "people", path: "/chats/contacts" },
   { name: "inbox", path: "/eds/inbox?status=all" },
   { name: "documents", path: "/eds/documents?scope=all" },
   { name: "approvals", path: "/eds/approvals" },
@@ -134,14 +134,58 @@ test.describe("Polish pw1 · раскладка", () => {
   });
 
   test("«Только просмотр» один раз и без пересказа под заголовком", async ({ page }) => {
-    await loginAndWait(page, "manager@demo.example");
-    for (const path of ["/admin/org", "/admin/zones"]) {
+    await loginAndWait(page, "director@demo.example");
+    for (const path of ["/admin/org", "/admin/zones", "/admin/integrations"]) {
       await spaGoto(page, path);
       await expect(page.locator("main h1").first()).toBeVisible();
       await page.waitForLoadState("networkidle");
       const text = await page.locator("main").innerText();
       const count = (text.match(/Только просмотр/g) ?? []).length;
       expect(count, `${path}: «Только просмотр» не больше одного раза`).toBeLessThanOrEqual(1);
+    }
+  });
+
+  test("«Только просмотр» в базе знаний: ровно один раз", async ({ page }) => {
+    await loginAndWait(page, "manager@demo.example");
+    await spaGoto(page, "/crm/kb");
+    await expect(page.getByRole("heading", { level: 1, name: "База знаний" })).toBeVisible();
+    await page.waitForLoadState("networkidle");
+    const text = await page.locator("body").innerText();
+    expect((text.match(/Только просмотр/g) ?? []).length).toBe(1);
+  });
+
+  test("«Только просмотр» один раз и при открытой карточке сотрудника", async ({ page }) => {
+    await loginAndWait(page, "director@demo.example");
+    await spaGoto(page, "/admin/org");
+    await expect(page.locator("main h1").first()).toBeVisible();
+    await page
+      .locator("main table")
+      .getByLabel(/^Открыть карточку/)
+      .first()
+      .click();
+    await page.waitForLoadState("networkidle");
+    const text = await page.locator("body").innerText();
+    expect((text.match(/Только просмотр/g) ?? []).length).toBeLessThanOrEqual(1);
+  });
+
+  test("каталог: одна строка вкладок раздела и одна строка фильтров на 1512 и 1280", async ({
+    page,
+  }) => {
+    await loginAndWait(page, "director@demo.example");
+    await spaGoto(page, "/erp/catalog");
+    await expect(page.locator("main .pf-filter-bar").first()).toBeVisible();
+    await page.waitForLoadState("networkidle");
+    for (const width of LAPTOP_WIDTHS) {
+      await page.setViewportSize({ width, height: 982 });
+      await page.waitForTimeout(150);
+      // одна строка: высота строки фильтров не больше самого высокого её элемента
+      const lines = await page.evaluate<number>(`(() => {
+        const bar = document.querySelector("main .pf-filter-bar");
+        let tallest = 0;
+        for (const el of bar.children) tallest = Math.max(tallest, el.getBoundingClientRect().height);
+        return Math.round(bar.getBoundingClientRect().height / Math.max(tallest, 1));
+      })()`);
+      expect(lines, `catalog · ${String(width)}: фильтры в одну строку`).toBe(1);
     }
   });
 
@@ -154,7 +198,7 @@ test.describe("Polish pw1 · раскладка", () => {
       { name: "leads", path: "/crm/leads" },
       { name: "documents", path: "/eds/documents?scope=all" },
       { name: "stock", path: "/erp/stock" },
-      { name: "people", path: "/chats/people" },
+      { name: "people", path: "/chats/contacts" },
       { name: "project-card", path: "/eds/projects/%D0%9F%D0%A0-2026-104" },
     ]) {
       await spaGoto(page, screen.path);

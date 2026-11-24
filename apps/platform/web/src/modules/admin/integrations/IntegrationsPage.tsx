@@ -26,7 +26,6 @@ import { EmptyState } from "../../../shared/ui/EmptyState";
 import { PageHeader } from "../../../shared/ui/PageHeader";
 import { StatusTag } from "../../../shared/ui/StatusTag";
 import { LinkButton } from "../../../shared/ui/LinkButton";
-import { LockIcon } from "../../../shared/ui/icons";
 import { AttentionGroupRow } from "./AttentionGroup";
 import { mergeSameCause } from "./attention";
 import { attentionTexts } from "./attentionTexts";
@@ -415,14 +414,7 @@ export function IntegrationsPage() {
             // Мастер первого запуска остаётся доступным и после завершения шагов (W15-H4): «Настройка Платформы»;
             // «Обмен между системами» — свой пункт группы «Система» (SET-IA).
             <LinkButton to={WIZARD_PATH}>{t("integrations:setupLink")}</LinkButton>
-          ) : (
-            <StatusTag tone="default">
-              <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
-                <LockIcon size={12} />
-                {t("integrations:viewOnly")}
-              </span>
-            </StatusTag>
-          )
+          ) : null
         }
       />
       {body}

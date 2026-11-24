@@ -30,7 +30,6 @@ import {
 } from "../../../shared/api/generated/platform-bff";
 import { useFormat } from "../../../shared/lib/useFormat";
 import { DefinitionList } from "../../../shared/ui/DefinitionList";
-import { LinkButton } from "../../../shared/ui/LinkButton";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { FormField, QueryState } from "../../../shared/ui/FormParts";
 import { StatusTag } from "../../../shared/ui/StatusTag";
@@ -84,7 +83,6 @@ export function KindTag({ kind }: { kind: CatalogItemKind }) {
 export function ItemsPanel() {
   const { t } = useTranslation("catalog");
   const { date, number } = useFormat();
-  const { me } = useAuth();
   const [params, setParams] = useSearchParams();
   const [text, setText] = useState("");
   const [kind, setKind] = useState<CatalogItemKind | undefined>(undefined);
@@ -99,7 +97,19 @@ export function ItemsPanel() {
   const setPage = (next: number) => {
     setPageAt({ page: next, sort });
   };
-  const [creating, setCreating] = useState(false);
+  // «Добавить позицию» живёт в шапке экрана (одна главная кнопка), форма открывается адресом `?new=item`
+  const creating = params.get("new") === "item";
+  const setCreating = (on: boolean) => {
+    setParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (on) next.set("new", "item");
+        else next.delete("new");
+        return next;
+      },
+      { replace: true },
+    );
+  };
   const q = useDebounced(text.trim());
   const lookups = useGetCatalogLookups();
   // CAT-1: «На одобрении» — позиции с изменениями от поставщиков; фильтр в адресе (на него ведёт отчёт загрузки).
@@ -124,6 +134,7 @@ export function ItemsPanel() {
   const selected = params.get("item");
   const searchId = useId();
   const kindId = useId();
+  const queueId = useId();
   const categoryId = useId();
   const pendingId = useId();
   const open = (id: string | null) => {
@@ -294,27 +305,8 @@ export function ItemsPanel() {
 
   return (
     <div className="pf-cat">
-      <FilterBar
-        tools
-        actions={
-          <>
-            {canEdit(me, "erp.stock") ? (
-              <>
-                <LinkButton to="/erp/catalog?part=import">{t("items.uploadPrice")}</LinkButton>
-                <Button
-                  type="primary"
-                  onClick={() => {
-                    setCreating(true);
-                  }}
-                >
-                  {t("items.add")}
-                </Button>
-              </>
-            ) : null}
-          </>
-        }
-      >
-        <QueueSwitch view={view} onChange={setView} />
+      <FilterBar tools>
+        <QueueSwitch id={queueId} view={view} onChange={setView} />
         <FilterField id={searchId} label={t("items.search")} grow>
           <Input
             id={searchId}
@@ -330,7 +322,7 @@ export function ItemsPanel() {
         </FilterField>
         {view !== "all" ? null : (
           <>
-            <FilterField id={kindId} label={t("items.filterKind")} width={200}>
+            <FilterField id={kindId} label={t("items.filterKind")} width={150}>
               <Select
                 id={kindId}
                 allowClear
@@ -343,7 +335,7 @@ export function ItemsPanel() {
                 options={KINDS.map((k) => ({ value: k, label: t(`kinds.${k}`) }))}
               />
             </FilterField>
-            <FilterField id={categoryId} label={t("items.filterCategory")} width={220}>
+            <FilterField id={categoryId} label={t("items.filterCategory")} width={170}>
               <Select
                 id={categoryId}
                 allowClear
@@ -439,8 +431,16 @@ export function ItemsPanel() {
             setCreating(false);
           }}
           onSaved={(item) => {
-            setCreating(false);
-            open(item.id);
+            // одним обновлением адреса: два подряд затёрли бы друг друга
+            setParams(
+              (prev) => {
+                const next = new URLSearchParams(prev);
+                next.delete("new");
+                next.set("item", item.id);
+                return next;
+              },
+              { replace: true },
+            );
           }}
         />
       ) : null}
