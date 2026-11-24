@@ -65,6 +65,17 @@ ChatsChanged = Callable[[list[int]], Awaitable[None]]
 BackofficeModeProvider = Callable[[], Awaitable[BackofficeMode]]
 Outcome = Literal["won", "lost"]
 _active_escalation = lead_parts.active_escalation
+
+
+def _no_channel_reason(blocked: str | None) -> Reason:
+    """Подкод отказа «отвечать некуда»; `details.blocked` несёт ту же причину для экрана."""
+    return {
+        "no_consent": Reason.NO_CONSENT,
+        "email_undeliverable": Reason.EMAIL_UNDELIVERABLE,
+        "no_email_consent": Reason.NO_EMAIL_CONSENT,
+    }.get(blocked or "", Reason.NO_REPLY_CHANNEL)
+
+
 LANGUAGES: Final[dict[str, Language]] = {"ru": "ru", "uz": "uz", "en": "en"}
 
 
@@ -464,6 +475,24 @@ class LeadService:
     async def reply(
         self, who: Principal, lead_id: int, text: str, *, client_message_id: str | None = None
     ) -> int:
+        message_id, fresh, on_behalf = await self._reply(who, lead_id, text, client_message_id)
+        if fresh:
+            # Аудит — после успешной отправки: отказ канала записью «ответил» не становится.
+            async with self._sessions() as session, session.begin():
+                await audit.record(
+                    session,
+                    who.actor,
+                    "lead.reply",
+                    "lead",
+                    lead_id,
+                    after={"on_behalf_of_user_id": on_behalf} if on_behalf is not None else None,
+                )
+        return message_id
+
+    async def _reply(
+        self, who: Principal, lead_id: int, text: str, client_message_id: str | None
+    ) -> tuple[int, bool, int | None]:
+        """Ответ лиду: (id сообщения, отправлено этим вызовом, за кого ответил заместитель)."""
         body = text.strip()
         if not body or len(body) > 4000:
             raise ValidationFailedError("message must be 1..4000 characters", field="text")
@@ -474,7 +503,7 @@ class LeadService:
             if done is not None and state == "unconfirmed":
                 raise ConflictError("delivery is not confirmed", reason=Reason.DELIVERY_UNCONFIRMED)
             if done is not None and state != "sending":
-                return done.id  # уже доставлен раньше: «лид отвечен» не сдвигаем
+                return done.id, False, None  # уже доставлен раньше: «лид отвечен» не сдвигаем
         async with self._sessions() as session, session.begin():
             lead = await _lead(session, lead_id)
             if lead.owner_mode != OwnerMode.HUMAN:
@@ -487,23 +516,16 @@ class LeadService:
             if channel is None:
                 raise ConflictError(
                     "no channel to reply to the lead",
-                    reason=Reason.NO_CONSENT
-                    if via.blocked == "no_consent"
-                    else Reason.NO_REPLY_CHANNEL,
+                    reason=_no_channel_reason(via.blocked),
                     blocked=via.blocked,
                 )
-            await audit.record(
-                session,
-                who.actor,
-                "lead.reply",
-                "lead",
-                lead_id,
-                after={"on_behalf_of_user_id": on_behalf} if on_behalf is not None else None,
-            )
         if channel == lead_email_reply.EMAIL:
             if self._mail is None:
                 raise ConflictError("mail is not available", reason=Reason.SMTP_NOT_CONFIGURED)
-            return await lead_email_reply.send_reply(
+            # Без почты отказ — до записи в журнал писем: иначе строка `skipped_no_smtp` уйдёт позже
+            # «Отправить пропущенные», а повторы наплодят дублей.
+            await self._mail.ensure_configured()
+            email_id = await lead_email_reply.send_reply(
                 self._sessions,
                 self._mail,
                 lead_id,
@@ -512,6 +534,7 @@ class LeadService:
                 sent_by_user_id=who.user_id,
                 on_behalf_of=on_behalf,
             )
+            return email_id, True, on_behalf
         if channel == cabinet_repo.CABINET:
             cabinet_id, _ = await cabinet_chat.send_reply(
                 self._sessions,
@@ -521,7 +544,7 @@ class LeadService:
                 sent_by_user_id=who.user_id,
                 on_behalf_of=on_behalf,
             )
-            return cabinet_id
+            return cabinet_id, True, on_behalf
         if client_message_id is not None:
             reply = await self._messenger.send_once(
                 lead_id,
@@ -548,7 +571,7 @@ class LeadService:
             async with self._sessions() as session, session.begin():
                 lead = await _lead(session, lead_id)
                 lead.last_human_msg_at = datetime.now(UTC)
-        return message_id
+        return message_id, delivered_now, on_behalf
 
     async def _finish(
         self,

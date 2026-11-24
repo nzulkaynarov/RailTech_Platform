@@ -61,6 +61,10 @@ class Reason(StrEnum):
     NO_CONSENT = "no_consent"
     # Ответить лиду некуда (CH-1): нет Telegram, кабинета и почты; `details.blocked` — причина.
     NO_REPLY_CHANNEL = "no_reply_channel"
+    # Есть адрес почты, но согласия нет, а клиент не писал сам: отметьте «Согласие получено».
+    NO_EMAIL_CONSENT = "no_email_consent"
+    # Адрес не доставляет (отчёт о недоставке): письмо уйдёт в никуда.
+    EMAIL_UNDELIVERABLE = "email_undeliverable"
     # «Вернуть боту» лиду, с которым у бота нет чата Telegram (CH-1).
     NO_BOT_CHANNEL = "no_bot_channel"
     # Ответ с этим ключом повтора ещё отправляется (D1-1): повтор не шлёт сообщение второй раз.

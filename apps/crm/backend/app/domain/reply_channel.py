@@ -9,10 +9,14 @@ from dataclasses import dataclass
 from typing import Final, Literal
 
 ReplyChannel = Literal["telegram", "cabinet", "email"]
-ReplyBlocked = Literal["no_consent", "phone_only", "no_contact"]
+ReplyBlocked = Literal[
+    "no_consent", "no_email_consent", "email_undeliverable", "phone_only", "no_contact"
+]
 
-# Источники, где клиент сам оставил адрес почты и ждёт ответа: согласие на письмо не нужно.
-EMAIL_INITIATED_SOURCES: Final = frozenset({"web", "email"})
+# Источник, где клиент сам оставил адрес и ждёт ответа: согласие на письмо не нужно. «email» —
+# так только при настоящем входящем письме (`ReplyFacts.inbound_mail`): менеджер может
+# выбрать «Почта» и при ручном создании, это не «клиент написал первым».
+EMAIL_INITIATED_SOURCES: Final = frozenset({"web"})
 
 
 @dataclass(frozen=True, slots=True)
@@ -24,6 +28,8 @@ class ReplyFacts:
     has_phone: bool
     source: str
     last_inbound: str | None  # канал последнего сообщения клиента
+    inbound_mail: bool = False  # у лида есть настоящее входящее письмо клиента
+    email_blocked: bool = False  # адрес не доставляет (отчёт о недоставке)
 
 
 @dataclass(frozen=True, slots=True)
@@ -43,10 +49,16 @@ def reply_via(facts: ReplyFacts) -> ReplyVia:
         return ReplyVia("telegram")
     if cabinet:
         return ReplyVia("cabinet")
-    if (facts.email or "").strip() and (
-        facts.source in EMAIL_INITIATED_SOURCES or facts.has_consent
-    ):
-        return ReplyVia("email")
+    if (facts.email or "").strip():
+        if facts.email_blocked:
+            return ReplyVia(None, "email_undeliverable")
+        initiated = facts.source in EMAIL_INITIATED_SOURCES or (
+            facts.source == "email" and facts.inbound_mail
+        )
+        if initiated or facts.has_consent:
+            return ReplyVia("email")
+        if not facts.has_telegram:
+            return ReplyVia(None, "no_email_consent")
     if facts.has_telegram:
         return ReplyVia(None, "no_consent")
     if facts.has_phone:

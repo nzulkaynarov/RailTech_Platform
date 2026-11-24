@@ -97,6 +97,7 @@ export interface Spec {
   clientId?: number;
   interest?: string[];
   origin?: LeadCard["origin"];
+  emailProblem?: LeadCard["email_problem"];
 }
 
 export function lead(base: number, spec: Spec): LeadMockRow {
@@ -131,9 +132,11 @@ export function lead(base: number, spec: Spec): LeadMockRow {
     ? null
     : spec.telegram
       ? "no_consent"
-      : spec.phone
-        ? "phone_only"
-        : "no_contact";
+      : spec.email
+        ? "no_email_consent"
+        : spec.phone
+          ? "phone_only"
+          : "no_contact";
   const card: LeadCard = {
     lead: number,
     name: spec.name,
@@ -169,6 +172,7 @@ export function lead(base: number, spec: Spec): LeadMockRow {
     confirmation: null,
     first_response: { due_at: null, overdue: false },
     invitation: null,
+    email_problem: spec.emailProblem ?? null,
     origin: spec.origin ?? null,
   };
   return { row, card, consent: spec.consent };
@@ -219,6 +223,7 @@ function clientCards(base: number): ClientCard[] {
           telegram: null,
           channels: ["email"],
           preferred_channel: "email",
+          email_problem: { reason: "mailbox_not_found", at: "2026-10-27T09:30:00Z" },
           is_primary: false,
         },
       ],
@@ -438,6 +443,7 @@ function initial(): LeadsMock {
       minutes: 40,
       consent: true,
       email: "shakhnoza@demo.example",
+      emailProblem: { reason: "domain_not_found", at: "2026-10-27T10:15:00Z" },
       company: "ООО Демо-Строй",
       assigned: MANAGER,
       handoff: { state: "taken", taken_by: MANAGER },

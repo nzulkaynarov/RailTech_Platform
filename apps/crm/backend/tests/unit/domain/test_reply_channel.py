@@ -57,12 +57,18 @@ def facts(**kw: object) -> ReplyFacts:
         ({"has_cabinet": True, "last_inbound": "telegram"}, ReplyVia("cabinet")),
         # Web lead with e-mail: letter, no consent needed
         ({"email": "a@b.uz", "source": "web", "has_phone": True}, ReplyVia("email")),
-        # Mail lead
-        ({"email": "a@b.uz", "source": "email"}, ReplyVia("email")),
-        # Manual lead with e-mail and no consent: not allowed
+        # Manual lead with e-mail and no consent: the reason is the missing consent
         (
             {"email": "a@b.uz", "source": "referral", "has_phone": True},
-            ReplyVia(None, "phone_only"),
+            ReplyVia(None, "no_email_consent"),
+        ),
+        # Source «email» chosen by a manager is not «the client wrote first»
+        ({"email": "a@b.uz", "source": "email"}, ReplyVia(None, "no_email_consent")),
+        ({"email": "a@b.uz", "source": "email", "inbound_mail": True}, ReplyVia("email")),
+        # Undeliverable address: blocked even for a web lead
+        (
+            {"email": "a@b.uz", "source": "web", "email_blocked": True},
+            ReplyVia(None, "email_undeliverable"),
         ),
         # Manual lead with e-mail and consent: letter
         ({"email": "a@b.uz", "source": "phone", "has_consent": True}, ReplyVia("email")),

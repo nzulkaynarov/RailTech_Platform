@@ -11,6 +11,7 @@ import { useGetCrmLead } from "../../../shared/api/generated/platform-bff";
 import { useFormat } from "../../../shared/lib/useFormat";
 import { DefinitionList } from "../../../shared/ui/DefinitionList";
 import { DoNotWorkStrip } from "../../../shared/ui/DoNotWorkStrip";
+import { EmailProblem } from "../../../shared/ui/EmailProblem";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { LinkButton } from "../../../shared/ui/LinkButton";
 import { StatusTag } from "../../../shared/ui/StatusTag";
@@ -84,7 +85,7 @@ function Body({ card, sheet, onClose }: { card: LeadCard; sheet: boolean; onClos
     triage && (!card.assigned || Boolean(card.handoff?.reasons.includes("handed_over")));
   // CH-1: отвечать некуда — вместо «Ответить» «Позвонить» (только телефон) или «Открыть переписку».
   const noChannel = card.reply_via === null;
-  const callOnly = noChannel && card.reply_blocked === "phone_only" ? card.contacts.phone : null;
+  const callOnly = noChannel ? card.contacts.phone : null;
   const contacts = [
     {
       label: t("messages:card.telegram"),
@@ -114,6 +115,7 @@ function Body({ card, sheet, onClose }: { card: LeadCard; sheet: boolean; onClos
         ) : (
           <p className="pf-fp-sub">{t("leads:card.none")}</p>
         )}
+        <EmailProblem problem={card.email_problem} />
       </div>
 
       <div className="pf-fp-block">

@@ -66,10 +66,17 @@ function findLead(state: LeadsMock, lead: string | null | undefined): LeadMockRo
 const leadNotFound = () => failure(404, "NOT_FOUND", "Лид не найден.", "crm");
 const clientNotFound = () => failure(404, "NOT_FOUND", "Клиент не найден.", "crm");
 
-function rejected(status: 409 | 422, reason: string, message: string, fields?: string[]) {
+function rejected(
+  status: 409 | 422,
+  reason: string,
+  message: string,
+  fields?: string[],
+  extra: Record<string, unknown> = {},
+) {
   return failure(status, status === 409 ? "CONFLICT" : "VALIDATION_FAILED", message, "crm", {
     reason,
     ...(fields ? { fields } : {}),
+    ...extra,
   });
 }
 
@@ -168,6 +175,12 @@ export const crmLeadsHandlers = [
             ? "phone"
             : null;
     if (missing) return rejected(422, "contact_required", "Укажите телефон или почту.", [missing]);
+    // CRM проверяет почтовый домен (DNS): такого домена нет — 422 по полю «почта».
+    if (email?.endsWith(".invalid")) {
+      return rejected(422, "invalid_email", "Такого почтового домена нет.", ["email"], {
+        domain_missing: true,
+      });
+    }
     const state = readLeads();
     const same = state.leads.find(
       (l) =>

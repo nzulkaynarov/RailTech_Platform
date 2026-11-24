@@ -188,7 +188,9 @@
     "noConsent": "The client has not given consent — you cannot write to them in Telegram",
     "noContact": "No way to reply: no Telegram, cabinet or e-mail",
     "failedCabinet": "Not sent: the client's cabinet is unavailable.",
-    "failedEmail": "Not sent: the e-mail did not go out."
+    "failedEmail": "Not sent: the e-mail did not go out.",
+    "noEmailConsent": "There is an e-mail but no consent — mark «Consent given» to reply by letter",
+    "emailUndeliverable": "Letters to this address do not arrive"
   },
   "card": {
     "title": "Lead card",
@@ -220,6 +222,8 @@
     "lead_taken_unknown": "The lead was already taken by a colleague",
     "no_reply_channel": "Nowhere to reply: the client has no reply channel",
     "smtp_not_configured": "E-mail is not connected — the letter will not reach the client",
+    "no_email_consent": "There is an e-mail but no consent — mark «Consent given» to reply by letter",
+    "email_undeliverable": "Letters to this address do not arrive",
     "no_bot_channel": "The client never wrote to the bot — the lead cannot be returned to it",
     "take_first": "Take the lead first",
     "no_consent": "The client has not consented to data processing — writing is not allowed",

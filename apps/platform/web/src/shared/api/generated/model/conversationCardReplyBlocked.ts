@@ -4,7 +4,7 @@
  */
 
 /**
- * Почему `reply_via = null`: `no_consent` (в Telegram писать нельзя без согласия), `phone_only` (есть только телефон — позвонить), `no_contact` (нет ни одного канала). При `reply_via` не `null` — `null`
+ * Почему `reply_via = null`: `no_consent` (в Telegram писать нельзя без согласия), `no_email_consent` (есть почта, нет согласия и клиент не писал сам), `email_undeliverable` (адрес не доставляет), `phone_only` (есть только телефон — позвонить), `no_contact` (нет ни одного канала). При `reply_via` не `null` — `null`
  * @nullable
  */
 export type ConversationCardReplyBlocked =
@@ -12,6 +12,8 @@ export type ConversationCardReplyBlocked =
 
 export const ConversationCardReplyBlocked = {
   no_consent: "no_consent",
+  no_email_consent: "no_email_consent",
+  email_undeliverable: "email_undeliverable",
   phone_only: "phone_only",
   no_contact: "no_contact",
 } as const;

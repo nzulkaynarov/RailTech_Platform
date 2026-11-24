@@ -103,6 +103,8 @@ def _create_error(response: httpx.Response) -> PlatformError:
     field = details.get("field")
     if isinstance(field, str) and field in ("phone", "email", "name", "company", "need"):
         extra["fields"] = [field]
+    if details.get("domain_missing") is True:  # the address is well-formed, its domain is not
+        extra["domain_missing"] = True
     lead_id = details.get("lead_id")
     if isinstance(lead_id, int) and not isinstance(lead_id, bool):
         extra["lead"] = lead_number(lead_id)

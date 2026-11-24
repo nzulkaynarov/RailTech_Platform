@@ -22,7 +22,7 @@ export interface ConversationCard {
   /** CH-1: куда уйдёт ответ менеджера на деле — решает CRM по открытым беседам, согласию, адресу почты и каналу последнего сообщения клиента: `telegram`, `cabinet` или `email` (письмо с почты компании). `null` — отвечать некуда (причина в `reply_blocked`): поле ответа не показывается, ответ даст 409 `no_reply_channel` */
   reply_via: MessageChannel | null;
   /**
-   * Почему `reply_via = null`: `no_consent` (в Telegram писать нельзя без согласия), `phone_only` (есть только телефон — позвонить), `no_contact` (нет ни одного канала). При `reply_via` не `null` — `null`
+   * Почему `reply_via = null`: `no_consent` (в Telegram писать нельзя без согласия), `no_email_consent` (есть почта, нет согласия и клиент не писал сам), `email_undeliverable` (адрес не доставляет), `phone_only` (есть только телефон — позвонить), `no_contact` (нет ни одного канала). При `reply_via` не `null` — `null`
    * @nullable
    */
   reply_blocked: ConversationCardReplyBlocked;

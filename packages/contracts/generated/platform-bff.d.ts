@@ -10118,6 +10118,8 @@ export interface components {
       /** @description Число вложений (по ссылке на объект хранилища системы-источника) */
       attachments: number;
       attempts: number;
+      /** @description Отчёт о недоставке этого письма — сервер принял его, затем вернул; `null` или нет поля — не возвращали */
+      bounce?: components["schemas"]["EmailProblem"] | null;
       /** Format: date-time */
       created_at: string;
       error: string | null;
@@ -15983,10 +15985,16 @@ export interface components {
       /** @description CH-1: куда уйдёт ответ менеджера на деле — решает CRM по открытым беседам, согласию, адресу почты и каналу последнего сообщения клиента: `telegram`, `cabinet` или `email` (письмо с почты компании). `null` — отвечать некуда (причина в `reply_blocked`): поле ответа не показывается, ответ даст 409 `no_reply_channel` */
       reply_via: components["schemas"]["MessageChannel"] | null;
       /**
-       * @description Почему `reply_via = null`: `no_consent` (в Telegram писать нельзя без согласия), `phone_only` (есть только телефон — позвонить), `no_contact` (нет ни одного канала). При `reply_via` не `null` — `null`
+       * @description Почему `reply_via = null`: `no_consent` (в Telegram писать нельзя без согласия), `no_email_consent` (есть почта, нет согласия и клиент не писал сам), `email_undeliverable` (адрес не доставляет), `phone_only` (есть только телефон — позвонить), `no_contact` (нет ни одного канала). При `reply_via` не `null` — `null`
        * @enum {string|null}
        */
-      reply_blocked: "no_consent" | "phone_only" | "no_contact" | null;
+      reply_blocked:
+        | "no_consent"
+        | "no_email_consent"
+        | "email_undeliverable"
+        | "phone_only"
+        | "no_contact"
+        | null;
       /** @description У лида есть чат Telegram с ботом, «Вернуть боту» возможно; без чата (веб, почта, звонок) CRM откажет 409 `no_bot_channel` */
       can_return_to_bot: boolean;
       owner_mode: components["schemas"]["LeadOwnerMode"];
@@ -17186,6 +17194,16 @@ export interface components {
       /** Format: date-time */
       at: string;
     };
+    /** @description Почтовые серверы возвращают письма на этот адрес (отчёты о недоставке): автоматические письма на него не уходят, пока адрес не исправят. Причина — кодом, текст — у экрана. */
+    EmailProblem: {
+      /** @enum {string} */
+      reason: "domain_not_found" | "mailbox_not_found" | "mailbox_full" | "rejected" | "other";
+      /**
+       * Format: date-time
+       * @description Когда пришёл последний отчёт
+       */
+      at: string;
+    };
     /** @description Сообщение клиенту от системы (подтверждение заявки, приглашение) — канал и итог словами */
     LeadNotice: {
       channel: string | null;
@@ -17225,7 +17243,13 @@ export interface components {
        * @description CH-1, почему `reply_via = null`; при `phone_only` карточка предлагает «Позвонить»
        * @enum {string|null}
        */
-      reply_blocked?: "no_consent" | "phone_only" | "no_contact" | null;
+      reply_blocked?:
+        | "no_consent"
+        | "no_email_consent"
+        | "email_undeliverable"
+        | "phone_only"
+        | "no_contact"
+        | null;
       consent: {
         /** Format: date-time */
         given_at: string | null;
@@ -17250,6 +17274,8 @@ export interface components {
         overdue: boolean;
       };
       invitation: components["schemas"]["ClientInvitation"] | null;
+      /** @description Письма на почту лида не доходят (отчёт о недоставке); `null` или нет поля — всё в порядке */
+      email_problem?: components["schemas"]["EmailProblem"] | null;
       /** @description Откуда пришёл лид кроме канала (LID-5): форма, страница, откуда перешли, кампания. `null` — у лидов других каналов и прежних лидов фактов нет. */
       origin?: components["schemas"]["LeadOrigin"] | null;
     };
@@ -17312,6 +17338,8 @@ export interface components {
       /** @enum {string|null} */
       preferred_channel: "email" | "telegram" | "both" | null;
       is_primary: boolean;
+      /** @description Письма на почту контакта не доходят (отчёт о недоставке); `null` или нет поля — всё в порядке */
+      email_problem?: components["schemas"]["EmailProblem"] | null;
     };
     ClientLeadLink: {
       lead: string;
@@ -19046,7 +19074,7 @@ export interface components {
         "application/json": components["schemas"]["Error"];
       };
     };
-    /** @description 409 `CONFLICT` — состояние лида не позволяет действие; код CRM — в `details.reason` (`lead_taken` с `details.assigned_user_name` — лида ведёт или его передали другому, `take_first`, `no_consent`, `no_reply_channel` (CH-1: отвечать некуда), `no_bot_channel` (CH-1: у лида нет чата Telegram, «Вернуть боту» невозможно), `smtp_not_configured` (письмо клиенту, почта не подключена), `already_with_bot`, `delivery_unconfirmed`, `reply_in_progress` — ответ с этим `client_message_id` ещё отправляется, повтор безопасен, `assist_disabled`, `assist_budget`, `assist_empty`, `assist_no_history`) */
+    /** @description 409 `CONFLICT` — состояние лида не позволяет действие; код CRM — в `details.reason` (`lead_taken` с `details.assigned_user_name` — лида ведёт или его передали другому, `take_first`, `no_consent`, `no_reply_channel` (CH-1: отвечать некуда), `no_email_consent`, `email_undeliverable` (CH-1), `no_bot_channel` (CH-1: у лида нет чата Telegram, «Вернуть боту» невозможно), `smtp_not_configured` (письмо клиенту, почта не подключена), `already_with_bot`, `delivery_unconfirmed`, `reply_in_progress` — ответ с этим `client_message_id` ещё отправляется, повтор безопасен, `assist_disabled`, `assist_budget`, `assist_empty`, `assist_no_history`) */
     MessagesConflict: {
       headers: {
         [name: string]: unknown;

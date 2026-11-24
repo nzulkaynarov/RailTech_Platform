@@ -49,6 +49,7 @@ from app.security import audit
 from app.security.principal import Principal
 from app.services import stages, web_lead_sla
 from app.services.client_notices import ClientNoticeService
+from app.services.mail_domain import DomainVerdict, MailDomainChecker
 from app.services.settings import SettingsService
 
 logger = structlog.get_logger(__name__)
@@ -119,6 +120,7 @@ class LeadIntakeService:
         limiter: SlidingWindowLimiter | None = None,
         notices: ClientNoticeService | None = None,
         on_web_lead: FollowUpHook | None = None,
+        mail_domains: MailDomainChecker | None = None,
     ) -> None:
         self._sessions = sessions
         self._settings = settings
@@ -126,6 +128,22 @@ class LeadIntakeService:
         self._limiter = limiter or SlidingWindowLimiter(limit=1, window_s=_HOUR_S)
         self._notices = notices
         self._on_web_lead = on_web_lead
+        self._mail_domains = mail_domains
+
+    async def _check_mail_domain(self, email: str | None) -> None:
+        """422 `invalid_email` when the domain clearly cannot receive mail (no such domain, no MX
+        and no address). DNS trouble never blocks: the lead is accepted."""
+        if email is None or self._mail_domains is None:
+            return
+        verdict = await self._mail_domains.check(email.rpartition("@")[2])
+        if verdict is DomainVerdict.MISSING:
+            logger.info("lead_email_domain_missing", domain=email.rpartition("@")[2])
+            raise ValidationFailedError(
+                "e-mail domain does not exist",
+                reason=Reason.INVALID_EMAIL,
+                field="email",
+                domain_missing=True,
+            )
 
     async def form_token(self, now: datetime | None = None) -> WebFormToken:
         cfg = (await self._settings.get()).web_form
@@ -170,6 +188,7 @@ class LeadIntakeService:
             raise ValidationFailedError(
                 "phone or email is required", reason=Reason.CONTACT_REQUIRED, field="phone"
             )
+        await self._check_mail_domain(email)
         # The per-IP window is spent only by a request that passed validation: a mistyped phone
         # must not eat one of the few hourly attempts of an office behind a single NAT.
         self._check_rate(cfg, ip, moment)
@@ -234,6 +253,7 @@ class LeadIntakeService:
         source = LeadSource(body.source)
         phone, email = _phone(body.phone), contact_email(body.email)
         _require_contact(source, phone, email)
+        await self._check_mail_domain(email)
         async with self._sessions() as session, session.begin():
             await _reject_duplicates(session, phone, email)
             lead = Lead(

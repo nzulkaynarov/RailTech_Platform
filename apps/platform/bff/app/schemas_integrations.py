@@ -12,6 +12,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, SecretStr
 
+from app.schemas_crm_leads import EmailProblem
+
 CardKey = Literal["erp", "telegram", "mail", "services", "models", "spend", "storage", "system"]
 Level = Literal["ok", "warn", "fail", "unknown", "off"]
 Access = Literal["ok", "forbidden", "unavailable"]
@@ -302,6 +304,7 @@ class SmtpCheck(_Out):
 class MailLogItem(_Out):
     attachments: int
     attempts: int
+    bounce: EmailProblem | None = None
     created_at: datetime
     error: str | None
     id: int

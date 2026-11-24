@@ -21,7 +21,9 @@ Priority = Literal["hot", "warm", "info"]
 HandoffState = Literal["open", "taken", "snoozed"]
 # Тип обращения при «Передать менеджеру» (D17G-1)
 LeadRequestType = Literal["goods", "services", "project", "other"]
-ReplyBlocked = Literal["no_consent", "phone_only", "no_contact"]
+ReplyBlocked = Literal[
+    "no_consent", "no_email_consent", "email_undeliverable", "phone_only", "no_contact"
+]
 Author = Literal["lead", "bot", "manager", "system"]
 Timeline = Literal["<1m", "<3m", "<12m", ">12m"]
 DecisionRole = Literal["decision_maker", "influencer", "researcher"]

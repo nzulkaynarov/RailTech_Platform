@@ -216,6 +216,7 @@ import type {
   EdsTemplate,
   EdsTemplateList,
   EdsTemplatePreview,
+  EmailProblem,
   EmailTemplate,
   EmailTemplateList,
   EmailTemplatePreview,
@@ -14645,12 +14646,29 @@ export const getSendSmtpTestResponseMock = (
   ...overrideResponse,
 });
 
+export const getListMailLogResponseEmailProblemMock = (
+  overrideResponse: Partial<EmailProblem> = {},
+): EmailProblem => ({
+  ...{
+    reason: faker.helpers.arrayElement([
+      "domain_not_found",
+      "mailbox_not_found",
+      "mailbox_full",
+      "rejected",
+      "other",
+    ] as const),
+    at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  },
+  ...overrideResponse,
+});
+
 export const getListMailLogResponseMock = (
   overrideResponse: Partial<Extract<MailLog, object>> = {},
 ): MailLog => ({
   items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
     attachments: faker.number.int(),
     attempts: faker.number.int(),
+    bounce: faker.helpers.arrayElement([{ ...getListMailLogResponseEmailProblemMock() }, null]),
     created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
     error: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
     id: faker.number.int(),
@@ -27642,7 +27660,13 @@ export const getGetCrmConversationResponseMock = (
   ]),
   reply_via: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[a-z][a-z_]{0,15}$"), null]),
   reply_blocked: faker.helpers.arrayElement([
-    faker.helpers.arrayElement(["no_consent", "phone_only", "no_contact"] as const),
+    faker.helpers.arrayElement([
+      "no_consent",
+      "no_email_consent",
+      "email_undeliverable",
+      "phone_only",
+      "no_contact",
+    ] as const),
     null,
   ]),
   can_return_to_bot: faker.datatype.boolean(),
@@ -35057,6 +35081,22 @@ export const getGetCrmLeadResponseClientInvitationMock = (
   ...overrideResponse,
 });
 
+export const getGetCrmLeadResponseEmailProblemMock = (
+  overrideResponse: Partial<EmailProblem> = {},
+): EmailProblem => ({
+  ...{
+    reason: faker.helpers.arrayElement([
+      "domain_not_found",
+      "mailbox_not_found",
+      "mailbox_full",
+      "rejected",
+      "other",
+    ] as const),
+    at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  },
+  ...overrideResponse,
+});
+
 export const getGetCrmLeadResponseLeadOriginMock = (
   overrideResponse: Partial<LeadOrigin> = {},
 ): LeadOrigin => ({
@@ -35110,7 +35150,13 @@ export const getGetCrmLeadResponseMock = (
   },
   reply_via: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[a-z][a-z_]{0,15}$"), null]),
   reply_blocked: faker.helpers.arrayElement([
-    faker.helpers.arrayElement(["no_consent", "phone_only", "no_contact"] as const),
+    faker.helpers.arrayElement([
+      "no_consent",
+      "no_email_consent",
+      "email_undeliverable",
+      "phone_only",
+      "no_contact",
+    ] as const),
     null,
   ]),
   consent: {
@@ -35174,6 +35220,7 @@ export const getGetCrmLeadResponseMock = (
     { ...getGetCrmLeadResponseClientInvitationMock() },
     null,
   ]),
+  email_problem: faker.helpers.arrayElement([{ ...getGetCrmLeadResponseEmailProblemMock() }, null]),
   origin: faker.helpers.arrayElement([{ ...getGetCrmLeadResponseLeadOriginMock() }, null]),
   ...overrideResponse,
 });
@@ -35201,6 +35248,22 @@ export const getListCrmClientsResponseMock = (
       null,
     ]),
   })),
+  ...overrideResponse,
+});
+
+export const getGetCrmClientResponseEmailProblemMock = (
+  overrideResponse: Partial<EmailProblem> = {},
+): EmailProblem => ({
+  ...{
+    reason: faker.helpers.arrayElement([
+      "domain_not_found",
+      "mailbox_not_found",
+      "mailbox_full",
+      "rejected",
+      "other",
+    ] as const),
+    at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  },
   ...overrideResponse,
 });
 
@@ -35291,6 +35354,10 @@ export const getGetCrmClientResponseMock = (
         null,
       ]),
       is_primary: faker.datatype.boolean(),
+      email_problem: faker.helpers.arrayElement([
+        { ...getGetCrmClientResponseEmailProblemMock() },
+        null,
+      ]),
     }),
   ),
   leads: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({

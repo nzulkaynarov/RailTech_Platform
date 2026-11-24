@@ -12,6 +12,8 @@ export type LeadCardReplyBlocked =
 
 export const LeadCardReplyBlocked = {
   no_consent: "no_consent",
+  no_email_consent: "no_email_consent",
+  email_undeliverable: "email_undeliverable",
   phone_only: "phone_only",
   no_contact: "no_contact",
 } as const;

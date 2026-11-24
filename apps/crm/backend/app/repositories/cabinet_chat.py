@@ -12,8 +12,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.reply_channel import ReplyFacts, ReplyVia, reply_via
 from app.models.clients import Client, ClientContact
+from app.models.inbound_mail import InboundMail
 from app.models.leads import Conversation, Lead, Message, TelegramIdentity
 from app.repositories.leads import ERASED_TEXT
+from app.services import bounces
 
 CABINET: Final = "cabinet"
 TELEGRAM: Final = "telegram"
@@ -234,6 +236,18 @@ async def reply_vias(session: AsyncSession, leads: Sequence[Lead]) -> dict[int, 
         else []
     )
     last = await last_inbound_channels(session, ids)
+    mailed = set(
+        (
+            await session.scalars(select(InboundMail.lead_id).where(InboundMail.lead_id.in_(ids)))
+        ).all()
+    ) | set(
+        (
+            await session.scalars(
+                select(InboundMail.matched_lead_id).where(InboundMail.matched_lead_id.in_(ids))
+            )
+        ).all()
+    )
+    blocked = await bounces.states(session, [lead.email for lead in leads])
     return {
         lead.id: reply_via(
             ReplyFacts(
@@ -246,6 +260,8 @@ async def reply_vias(session: AsyncSession, leads: Sequence[Lead]) -> dict[int, 
                 or lead.client_id in clients_with_phone,
                 source=lead.source,
                 last_inbound=last.get(lead.id),
+                inbound_mail=lead.id in mailed,
+                email_blocked=(lead.email or "").strip().lower() in blocked,
             )
         )
         for lead in leads

@@ -6,7 +6,7 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 from app.domain.consent import ConsentMethod
-from app.schemas.notices import InvitationOut
+from app.schemas.notices import EmailUndeliverableOut, InvitationOut
 
 DocType = Literal["contract", "proposal", "letter", "invoice", "act", "other"]
 
@@ -218,6 +218,8 @@ class ContactOut(BaseModel):
     # Предпочитаемый канал связи и приглашения в кабинет (D1-9); null — по тому, что у контакта
     # есть.
     preferred_channel: Literal["telegram", "email", "both"] | None = None
+    # Mail servers return letters to this e-mail (delivery reports); null — nothing known.
+    email_undeliverable: EmailUndeliverableOut | None = None
 
 
 class ContactSuggestion(BaseModel):

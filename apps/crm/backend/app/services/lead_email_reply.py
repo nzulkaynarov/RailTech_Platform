@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.domain.errors import ConflictError, Reason
 from app.models.leads import Conversation, Lead
 from app.repositories import crm as crm_repo
-from app.services import message_log
+from app.services import bounces, message_log
 from app.services.mail import MailService
 from app.services.mail_templates import RenderedEmail
 
@@ -63,6 +63,9 @@ async def send_reply(
         lead = await session.get(Lead, lead_id, with_for_update=True)
         if lead is None or not (lead.email or "").strip():
             raise ConflictError("lead has no e-mail", reason=Reason.NO_REPLY_CHANNEL)
+        if await bounces.is_blocked(session, lead.email):
+            # Адрес мог стать недоставляемым после выбора канала: перепроверка под блокировкой лида.
+            raise ConflictError("address is undeliverable", reason=Reason.EMAIL_UNDELIVERABLE)
         conversation = await _email_conversation(session, lead_id)
         meta: dict[str, Any] = {"mode": "manager", "channel": EMAIL, "delivery": "sent"}
         if key is not None:

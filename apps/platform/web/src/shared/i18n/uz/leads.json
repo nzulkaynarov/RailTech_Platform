@@ -48,7 +48,7 @@
     "createLabel": "{{name}} uchun ariza yaratish",
     "clientLabel": "{{name}} mijoz kartasi",
     "handOver": "Menejerga topshirish",
-    "call": "Qönğiroq qilish",
+    "call": "Qönğiroq qiliş",
     "openChat": "Yozishmani ochish",
     "triage": "Saralash",
     "triageLabel": "{{name}} — «Javob kutmoqda»da saralash"
@@ -144,7 +144,8 @@
       "leadExists": "Bu kontaktli lid allaqachon bor:",
       "clientExists": "Bu telefonli mijoz allaqachon bor.",
       "openClient": "Mijozni ochish",
-      "generic": "Lid yaratilmadi. Qayta urinib ko‘ring."
+      "generic": "Lid yaratilmadi. Qayta urinib ko‘ring.",
+      "emailDomain": "Pochta manzilini tekşiring — bunday pochta domeni yöq"
     }
   },
   "origin": {

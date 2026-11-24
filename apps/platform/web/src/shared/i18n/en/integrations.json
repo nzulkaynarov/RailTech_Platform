@@ -300,7 +300,8 @@
         "eds": "Documents"
       },
       "attachments_one": "{{count}} attachment",
-      "attachments_other": "{{count}} attachments"
+      "attachments_other": "{{count}} attachments",
+      "bounce": "Not delivered: {{reason}}"
     },
     "reason": {
       "smtp_not_configured": "Mail is not configured — Settings · Connections · Mail",

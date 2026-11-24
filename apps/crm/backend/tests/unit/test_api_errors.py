@@ -193,6 +193,8 @@ def test_reason_values_are_a_stable_contract() -> None:
         "deal_owned_by_erp",
         "no_consent",
         "no_reply_channel",
+        "no_email_consent",
+        "email_undeliverable",
         "no_bot_channel",
         "reply_in_progress",
         "delivery_unknown",

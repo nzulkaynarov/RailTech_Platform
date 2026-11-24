@@ -5,6 +5,6 @@
 import type { Error } from "./error";
 
 /**
- * 409 `CONFLICT` — состояние лида не позволяет действие; код CRM — в `details.reason` (`lead_taken` с `details.assigned_user_name` — лида ведёт или его передали другому, `take_first`, `no_consent`, `no_reply_channel` (CH-1: отвечать некуда), `no_bot_channel` (CH-1: у лида нет чата Telegram, «Вернуть боту» невозможно), `smtp_not_configured` (письмо клиенту, почта не подключена), `already_with_bot`, `delivery_unconfirmed`, `reply_in_progress` — ответ с этим `client_message_id` ещё отправляется, повтор безопасен, `assist_disabled`, `assist_budget`, `assist_empty`, `assist_no_history`)
+ * 409 `CONFLICT` — состояние лида не позволяет действие; код CRM — в `details.reason` (`lead_taken` с `details.assigned_user_name` — лида ведёт или его передали другому, `take_first`, `no_consent`, `no_reply_channel` (CH-1: отвечать некуда), `no_email_consent`, `email_undeliverable` (CH-1), `no_bot_channel` (CH-1: у лида нет чата Telegram, «Вернуть боту» невозможно), `smtp_not_configured` (письмо клиенту, почта не подключена), `already_with_bot`, `delivery_unconfirmed`, `reply_in_progress` — ответ с этим `client_message_id` ещё отправляется, повтор безопасен, `assist_disabled`, `assist_budget`, `assist_empty`, `assist_no_history`)
  */
 export type MessagesConflictResponse = Error;

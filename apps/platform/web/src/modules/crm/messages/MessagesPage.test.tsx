@@ -17,6 +17,7 @@ import { ApiError } from "../../../shared/api/errors";
 import { channelLabel, contextLabel, reasonLabels, sendFailure } from "./labels";
 import { canTake, mergeThread } from "./logic";
 import { durationParts, slaState } from "./sla";
+import { ReplyState } from "./ReplyState";
 import { SlaTimer } from "./SlaTimer";
 
 setupBotTests();
@@ -496,6 +497,36 @@ describe("лента: склейка страниц и заметок", () => {
       2,
       3,
     ]);
+  });
+});
+
+describe("CH-1: причина «отвечать некуда»", () => {
+  it("слова по причине CRM; «Позвонить» — если телефон известен, при любой причине", () => {
+    void i18n.changeLanguage("ru");
+    const contacts = { telegram: null, phone: null, email: "a@b.example", company: null };
+    const { rerender } = render(
+      <ReplyState card={{ reply_blocked: "no_email_consent", contacts }} onLogCall={() => {}} />,
+    );
+    expect(
+      screen.getByText(
+        "Есть почта, но нет согласия — отметьте «Согласие получено», чтобы ответить письмом",
+      ),
+    ).toBeVisible();
+    expect(screen.queryByRole("link", { name: "Позвонить" })).toBeNull();
+    rerender(
+      <ReplyState
+        card={{
+          reply_blocked: "email_undeliverable",
+          contacts: { ...contacts, phone: "+998900000001" },
+        }}
+        onLogCall={() => {}}
+      />,
+    );
+    expect(screen.getByText("Письма на этот адрес не доходят")).toBeVisible();
+    expect(screen.getByRole("link", { name: "Позвонить" })).toHaveAttribute(
+      "href",
+      "tel:+998900000001",
+    );
   });
 });
 

@@ -215,6 +215,10 @@ class ClientNoticeService:
         if not lead.email:
             await self._finish(notice_id, "skipped", "no_channel", channel="none")
             return "skipped"
+        if await self._mail.is_undeliverable(lead.email):
+            # The address bounced before: no second auto-reply to a dead mailbox.
+            await self._finish(notice_id, "skipped", "address_undeliverable", channel="email")
+            return "skipped"
         cfg = await self._settings.get()
         username = await self._bot_username()
         start = issue_lead_link(self._key, lead.id, datetime.now(UTC))

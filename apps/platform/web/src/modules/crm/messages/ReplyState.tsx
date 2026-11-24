@@ -3,10 +3,18 @@ import { useTranslation } from "react-i18next";
 
 import type { ConversationCard } from "../../../shared/api/generated/model";
 
+const TEXT = {
+  phone_only: "phoneOnly",
+  no_consent: "noConsent",
+  no_email_consent: "noEmailConsent",
+  email_undeliverable: "emailUndeliverable",
+  no_contact: "noContact",
+} as const;
+
 /**
  * Вместо поля «От себя», когда отвечать клиенту некуда (CH-1): одна строка причины от CRM (`reply_blocked`) и действие,
- * которое можно сделать сразу — «Позвонить» (только телефон) и «Записать звонок» (заметка команде с заготовкой). Поле
- * «Заметка команде» остаётся всегда.
+ * которое можно сделать сразу — «Позвонить» (если известен телефон: из карточки, Telegram или контакта клиента) и «Записать
+ * звонок» (заметка команде с заготовкой). Поле «Заметка команде» остаётся всегда.
  */
 export function ReplyState({
   card,
@@ -20,16 +28,10 @@ export function ReplyState({
   const phone = card.contacts.phone;
   return (
     <div className="pf-msg-reply-state" role="status">
-      <p>
-        {t(
-          `composer.${reason === "phone_only" ? "phoneOnly" : reason === "no_consent" ? "noConsent" : "noContact"}`,
-        )}
-      </p>
-      {reason === "phone_only" ? (
+      <p>{t(`composer.${TEXT[reason]}`)}</p>
+      {phone ? (
         <div className="pf-msg-reply-state-actions">
-          {phone ? (
-            <Button href={`tel:${phone.replace(/[^\d+]/g, "")}`}>{t("composer.call")}</Button>
-          ) : null}
+          <Button href={`tel:${phone.replace(/[^\d+]/g, "")}`}>{t("composer.call")}</Button>
           <Button onClick={onLogCall}>{t("composer.logCall")}</Button>
         </div>
       ) : null}

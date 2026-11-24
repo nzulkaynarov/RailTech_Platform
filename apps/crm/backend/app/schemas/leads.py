@@ -6,7 +6,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
-from app.schemas.notices import InvitationOut, NoticeOut
+from app.schemas.notices import EmailUndeliverableOut, InvitationOut, NoticeOut
 
 
 class EscalationOut(BaseModel):
@@ -86,9 +86,13 @@ class LeadOut(BaseModel):
     reply_channel: str | None = None
     # Куда уйдёт ответ менеджера на самом деле (CH-1, `domain/reply_channel.py`): `telegram` |
     # `cabinet` | `email`; null — отвечать некуда, причина в `reply_blocked`: `no_consent` |
-    # `phone_only` | `no_contact`. Только в `GET /inbox` и карточке лида; у остальных выдач null.
+    # `no_email_consent` | `email_undeliverable` | `phone_only` | `no_contact`. Только в
+    # `GET /inbox` и карточке лида; у остальных выдач null.
     reply_via: Literal["telegram", "cabinet", "email"] | None = None
-    reply_blocked: Literal["no_consent", "phone_only", "no_contact"] | None = None
+    reply_blocked: (
+        Literal["no_consent", "no_email_consent", "email_undeliverable", "phone_only", "no_contact"]
+        | None
+    ) = None
     # «Вернуть боту» имеет смысл, только если у лида есть чат Telegram; null — не считали.
     can_return_to_bot: bool | None = None
 
@@ -142,6 +146,8 @@ class LeadDetail(LeadOut):
     # Приглашение клиента лида в кабинет: итог, каналы контакта, «повторить другим каналом» (null —
     # клиента нет).
     invitation: InvitationOut | None = None
+    # Mail servers return letters to the lead's e-mail (delivery reports); null — nothing known.
+    email_undeliverable: EmailUndeliverableOut | None = None
 
 
 class LeadPage(BaseModel):

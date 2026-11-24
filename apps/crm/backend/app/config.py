@@ -77,6 +77,10 @@ class Settings(BaseSettings):
     docling_api_key: SecretStr = SecretStr("")
     docling_timeout_s: float = Field(default=300.0, gt=0)
 
+    # Lead intake checks that the e-mail domain can receive mail (DNS MX/A, fail-open on DNS
+    # trouble); off only in tests that must not touch the network.
+    mail_domain_check: bool = True
+
     telegram_bot_token: SecretStr = SecretStr("")
     telegram_mode: Literal["polling", "webhook", "disabled"] = "polling"
     telegram_webhook_url: str = ""

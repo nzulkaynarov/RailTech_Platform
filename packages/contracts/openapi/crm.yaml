@@ -1702,6 +1702,10 @@ components:
           - type: string
           - type: 'null'
           title: Email
+        email_undeliverable:
+          anyOf:
+          - $ref: '#/components/schemas/EmailUndeliverableOut'
+          - type: 'null'
         full_name:
           title: Full Name
           type: string
@@ -2910,6 +2914,32 @@ components:
       - candidate
       title: DryRunRowOut
       type: object
+    EmailBounceOut:
+      description: 'A delivery report of this letter in the mail log: why it did not arrive.'
+      properties:
+        at:
+          format: date-time
+          title: At
+          type: string
+        reason:
+          enum:
+          - domain_not_found
+          - mailbox_not_found
+          - mailbox_full
+          - rejected
+          - other
+          title: Reason
+          type: string
+        status:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Status
+      required:
+      - reason
+      - at
+      title: EmailBounceOut
+      type: object
     EmailLogItem:
       description: 'Строка журнала доставки; тела письма (временного пароля, ссылок входа) в журнале нет.
 
@@ -2924,6 +2954,10 @@ components:
         attempts:
           title: Attempts
           type: integer
+        bounce:
+          anyOf:
+          - $ref: '#/components/schemas/EmailBounceOut'
+          - type: 'null'
         created_at:
           format: date-time
           title: Created At
@@ -3024,6 +3058,40 @@ components:
       - to_email
       - status
       title: EmailQueuedOut
+      type: object
+    EmailUndeliverableOut:
+      description: 'Mail servers return letters to this address (delivery reports): the card shows «letters do
+
+        not arrive» with the reason in plain words and the date. Absent — nothing known.'
+      properties:
+        kind:
+          enum:
+          - permanent
+          - soft
+          title: Kind
+          type: string
+        last_at:
+          format: date-time
+          title: Last At
+          type: string
+        reason:
+          enum:
+          - domain_not_found
+          - mailbox_not_found
+          - mailbox_full
+          - rejected
+          - other
+          title: Reason
+          type: string
+        reports:
+          title: Reports
+          type: integer
+      required:
+      - kind
+      - reason
+      - last_at
+      - reports
+      title: EmailUndeliverableOut
       type: object
     EmployeeImpactOut:
       properties:
@@ -5971,6 +6039,10 @@ components:
           - type: string
           - type: 'null'
           title: Email
+        email_undeliverable:
+          anyOf:
+          - $ref: '#/components/schemas/EmailUndeliverableOut'
+          - type: 'null'
         erp_company_id:
           anyOf:
           - type: integer
@@ -6065,6 +6137,8 @@ components:
           anyOf:
           - enum:
             - no_consent
+            - no_email_consent
+            - email_undeliverable
             - phone_only
             - no_contact
             type: string
@@ -6238,6 +6312,8 @@ components:
           anyOf:
           - enum:
             - no_consent
+            - no_email_consent
+            - email_undeliverable
             - phone_only
             - no_contact
             type: string
@@ -8183,6 +8259,8 @@ components:
       - deal_owned_by_erp
       - no_consent
       - no_reply_channel
+      - no_email_consent
+      - email_undeliverable
       - no_bot_channel
       - reply_in_progress
       - delivery_unknown
@@ -16145,7 +16223,9 @@ paths:
 
         `form_token_invalid` | `form_too_fast` | `form_token_expired` | `contact_required` |
 
-        `invalid_phone` | `invalid_email`), 429 `rate_limited` (окно по IP расходуют только запросы,
+        `invalid_phone` | `invalid_email`; у несуществующего почтового домена ещё `domain_missing`,
+
+        при сбое DNS заявка принимается), 429 `rate_limited` (окно по IP расходуют только запросы,
 
         прошедшие проверку контакта). Телефон Узбекистана — `+998` и 9 цифр.
 

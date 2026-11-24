@@ -147,9 +147,15 @@ class ErpEventNotices:
                 continue
             done.append(mail.key)
             if mail.track:
-                skipped = outcome == "skipped"
+                skipped = outcome in ("skipped", "undeliverable")
                 status = "skipped" if skipped else "queued"
-                error = "smtp_not_configured" if skipped else None
+                error = (
+                    "address_undeliverable"
+                    if outcome == "undeliverable"
+                    else "smtp_not_configured"
+                    if skipped
+                    else None
+                )
                 results.append((mail.track, "email", status, error, mail.client_id))
         await self._release(key, done, retry=retry, results=results)
         return len(done)
