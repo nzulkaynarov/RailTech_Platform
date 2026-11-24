@@ -13,7 +13,9 @@ from app.repositories import crm, monitoring
 from app.services import dashboard
 from app.services.llm_usage import DbUsageRecorder
 
-SANDBOX_FILTER = "leads.source != 'sandbox'"
+# Песочницу отсекает либо прямое условие, либо общий предикат lead_visibility.listed (он же скрывает
+# якорь группы Telegram, ADR-0032).
+SANDBOX_FILTERS = ("leads.source != 'sandbox'", "leads.source NOT IN ('sandbox', 'group')")
 PG = postgresql.dialect()  # type: ignore[no-untyped-call]
 
 
@@ -107,7 +109,7 @@ async def test_leads_list_excludes_sandbox() -> None:
     await crm.list_leads(cast(AsyncSession, session), crm.LeadFilter(), 1, 20, 0, "recent")
     queries = _lead_queries(session.sql)
     assert queries
-    assert all(SANDBOX_FILTER in q for q in queries)
+    assert all(any(f in q for f in SANDBOX_FILTERS) for q in queries)
 
 
 async def test_inbox_excludes_sandbox() -> None:
@@ -115,7 +117,7 @@ async def test_inbox_excludes_sandbox() -> None:
     await crm.inbox(cast(AsyncSession, session), 1)
     queries = _lead_queries(session.sql)
     assert len(queries) == 3
-    assert all(SANDBOX_FILTER in q for q in queries)
+    assert all(any(f in q for f in SANDBOX_FILTERS) for q in queries)
 
 
 async def test_dashboard_funnel_excludes_sandbox() -> None:
@@ -123,7 +125,7 @@ async def test_dashboard_funnel_excludes_sandbox() -> None:
     await dashboard.build(cast(AsyncSession, session), 7, date(2026, 10, 12))
     queries = _lead_queries(session.sql)
     assert queries
-    assert all(SANDBOX_FILTER in q for q in queries)
+    assert all(any(f in q for f in SANDBOX_FILTERS) for q in queries)
 
 
 async def test_daily_report_excludes_sandbox() -> None:
@@ -131,7 +133,7 @@ async def test_daily_report_excludes_sandbox() -> None:
     await monitoring.daily_figures(cast(AsyncSession, session), datetime(2026, 10, 11, tzinfo=UTC))
     queries = _lead_queries(session.sql)
     assert queries
-    assert all(SANDBOX_FILTER in q for q in queries)
+    assert all(any(f in q for f in SANDBOX_FILTERS) for q in queries)
 
 
 async def test_kind_scope_marks_usage_as_test() -> None:
