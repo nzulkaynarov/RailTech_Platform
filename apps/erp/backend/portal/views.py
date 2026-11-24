@@ -118,7 +118,7 @@ from rest_framework.views import APIView
 from sales.models import DeliveryLine
 from sales.services.delivery_lines import accept_delivery_line, dispute_delivery_line, sync_company_delivery_lines
 
-from catalog.item_ref import item_ref, main_photos
+from catalog.item_ref import main_photos
 from catalog.published import project, project_many, published_products
 from core.i18n import supported_languages
 from core.models import Country
@@ -1268,14 +1268,8 @@ class CatalogListView(BasePortalView):
         start = (page - 1) * page_size
         products_page = qs[start : start + page_size]
 
-        products_page = list(products_page)
-        # ЕД-4: позиция строки — миниатюра и наш артикул; фото всей страницы одной выборкой
-        photos = main_photos(p.pk for p in products_page)
-        projected = project_many(products_page, mode="client", request=request)
-        for product, row in zip(products_page, projected):
-            row["item"] = item_ref(product, photos)
         resp_data = {
-            "items": projected,
+            "items": project_many(products_page, mode="client", request=request),
             "page": page,
             "page_size": page_size,
             "total": total,
@@ -1294,7 +1288,6 @@ class CatalogDetailView(BasePortalView):
             raise Http404
 
         item_data = project(product, mode="client", request=request, with_documents=True)
-        item_data["item"] = item_ref(product)
         return Response(CatalogItemSerializer(item_data).data)
 
 

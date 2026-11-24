@@ -57139,6 +57139,15 @@
                             "type": "string"
                         }
                     },
+                    "item": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/ItemRef"
+                            }
+                        ],
+                        "nullable": true,
+                        "description": "Позиция строки списка (ЕД-4)"
+                    },
                     "attributes": {
                         "type": "array",
                         "items": {
