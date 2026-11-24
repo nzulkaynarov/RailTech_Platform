@@ -1,18 +1,18 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Download, Loader2, Mail, Search } from 'lucide-react';
+import { Download, Loader2, Mail } from 'lucide-react';
 
 import { apiErrorKey } from '@/api/errors';
 import type { LetterDirection, PortalLetter } from '@/api/portal';
 import { useLetters } from '@/api/queries';
 import { DealLink } from '@/components/Details';
-import { EmptyState } from '@/components/EmptyState';
+import { EmptyState, NoMatchState } from '@/components/EmptyState';
+import { ListToolbar } from '@/components/list/ListToolbar';
 import { PageHeader } from '@/components/PageHeader';
 import { ErrorState, ListSkeleton } from '@/components/QueryStates';
 import { ResponsiveList } from '@/components/ResponsiveList';
 import { ToneBadge } from '@/components/StatusBadge';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { downloadLetter } from '@/lib/download';
 import { formatDate } from '@/lib/format';
 import type { StatusTone } from '@/lib/status';
@@ -69,54 +69,31 @@ export function LettersPage() {
   return (
     <>
       <PageHeader title={t('pages.letters.title')} icon={Mail} />
-      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div role="group" aria-label={t('pages.letters.filter')} className="flex flex-wrap gap-2">
-          {DIRECTIONS.map((option) => (
-            <Button
-              key={option ?? 'all'}
-              type="button"
-              size="sm"
-              variant={option === direction ? 'default' : 'outline'}
-              aria-pressed={option === direction}
-              className="rounded-full"
-              onClick={() => setDirection(option)}
-            >
-              {option ? t(`pages.letters.direction.${option}`) : t('common.all')}
-            </Button>
-          ))}
-        </div>
-        <div className="relative w-full sm:w-64">
-          <Search
-            className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
-            aria-hidden="true"
-          />
-          <Input
-            type="search"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder={t('pages.letters.searchPlaceholder')}
-            aria-label={t('pages.letters.searchLabel')}
-            className="pl-9"
-          />
-        </div>
-      </div>
+      <ListToolbar
+        filterLabel={t('pages.letters.filter')}
+        options={DIRECTIONS.map((option) => ({
+          value: option ?? '',
+          label: option ? t(`pages.letters.direction.${option}`) : t('common.all'),
+        }))}
+        value={direction ?? ''}
+        onChange={(next) => setDirection((next || undefined) as typeof direction)}
+        search={{ value: query, onChange: setQuery, placeholder: t('pages.letters.searchPlaceholder'), label: t('pages.letters.searchLabel') }}
+      />
       {letters.isPending ? (
         <ListSkeleton />
       ) : letters.isError ? (
         <ErrorState error={letters.error} onRetry={() => void letters.refetch()} />
       ) : letters.data.length === 0 ? (
         q || direction ? (
-          <EmptyState icon={Search} title={t('pages.letters.noMatchTitle')} text={t('pages.letters.noMatchText')}>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setQuery('');
-                setDirection(undefined);
-              }}
-            >
-              {t('common.reset')}
-            </Button>
-          </EmptyState>
+          <NoMatchState
+            title={t('pages.letters.noMatchTitle')}
+            text={t('pages.letters.noMatchText')}
+            resetLabel={t('common.reset')}
+            onReset={() => {
+              setQuery('');
+              setDirection(undefined);
+            }}
+          />
         ) : (
           <EmptyState icon={Mail} title={t('pages.letters.emptyTitle')} text={t('pages.letters.emptyText')} />
         )

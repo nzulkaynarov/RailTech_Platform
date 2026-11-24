@@ -6547,6 +6547,11 @@ components:
           items:
             type: string
             format: uri
+        item:
+          description: Позиция для строки списка (ЕД-4) — миниатюра `items/{id}/thumbnail?v=<photo>` и наш артикул
+          oneOf:
+            - $ref: '#/components/schemas/ItemRef'
+            - type: 'null'
         attributes:
           type: array
           items:

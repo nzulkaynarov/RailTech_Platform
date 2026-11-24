@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { AlertTriangle, CheckCircle2, ChevronLeft, ChevronRight, Download, PackageOpen, Search, SearchX, Upload, X } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, ChevronLeft, ChevronRight, Download, PackageOpen, Search, Upload, X } from 'lucide-react';
 
 import { apiErrorKey, rowErrorKey } from '@/api/errors';
 import {
@@ -15,7 +15,8 @@ import { usePartnerProducts, useConfirmPartnerOffers, useSubmitPartnerProducts }
 import { ActionDialog } from '@/components/ActionDialog';
 import { ActionRequiredWidget } from '@/components/ActionRequiredWidget';
 import { ConsequenceCallout } from '@/components/ConsequenceCallout';
-import { EmptyState } from '@/components/EmptyState';
+import { EmptyState, NoMatchState } from '@/components/EmptyState';
+import { ListToolbar } from '@/components/list/ListToolbar';
 import { ItemCell } from '@/components/EntityCell';
 import { OnboardingChecklist } from '@/components/onboarding/OnboardingChecklist';
 import { PageHeader } from '@/components/PageHeader';
@@ -206,24 +207,18 @@ export function MyProductsPage() {
             </Alert>
           ) : null}
 
-          <div role="group" aria-label={t('partner.tabsLabel')} className="mb-4 flex flex-wrap gap-2">
-            {PARTNER_TABS.filter((name) => name !== 'matched' || name === tab || (data?.counts.matched ?? 0) > 0).map((name) => (
-              <Button
-                key={name}
-                type="button"
-                size="sm"
-                variant={name === tab ? 'default' : 'outline'}
-                aria-pressed={name === tab}
-                className="rounded-full"
-                onClick={() => update({ tab: name === 'all' ? null : name, page: null })}
-              >
-                {t(`partner.tabs.${name}`)}
-                <span className="ml-1 tabular-nums opacity-80">{data?.counts[name] ?? 0}</span>
-              </Button>
-            ))}
-          </div>
-
-          <SearchForm key={q} initial={q} onSearch={(value) => update({ q: value || null, page: null })} />
+          <ListToolbar
+            filterLabel={t('partner.tabsLabel')}
+            options={PARTNER_TABS.filter((name) => name !== 'matched' || name === tab || (data?.counts.matched ?? 0) > 0).map((name) => ({
+              value: name,
+              label: `${t(`partner.tabs.${name}`)} ${data?.counts[name] ?? 0}`,
+            }))}
+            value={tab}
+            display="pills"
+            onChange={(name) => update({ tab: name === 'all' ? null : name, page: null })}
+          >
+            <SearchForm key={q} initial={q} onSearch={(value) => update({ q: value || null, page: null })} />
+          </ListToolbar>
 
           <Toolbar
             selectedCount={selected.size}
@@ -244,11 +239,12 @@ export function MyProductsPage() {
 
           {items.length === 0 ? (
             q ? (
-              <EmptyState icon={SearchX} title={t('partner.notFoundTitle')} text={t('partner.notFoundText')}>
-                <Button variant="outline" onClick={() => update({ q: null, page: null })}>
-                  {t('partner.reset')}
-                </Button>
-              </EmptyState>
+              <NoMatchState
+                title={t('partner.notFoundTitle')}
+                text={t('partner.notFoundText')}
+                resetLabel={t('partner.reset')}
+                onReset={() => update({ q: null, page: null })}
+              />
             ) : (
               <EmptyState icon={PackageOpen} title={t('partner.tabs.' + tab)} text={t('partner.emptyTab')} />
             )
@@ -377,7 +373,7 @@ function SearchForm({ initial, onSearch }: { initial: string; onSearch: (value: 
     onSearch(value.trim());
   };
   return (
-    <form role="search" onSubmit={submit} className="mb-4 flex gap-2">
+    <form role="search" onSubmit={submit} className="flex w-full gap-2 sm:ml-auto sm:w-96">
       <div className="flex min-w-0 flex-1 flex-col gap-1.5">
         <Label htmlFor="partner-search" className="sr-only">
           {t('partner.searchLabel')}

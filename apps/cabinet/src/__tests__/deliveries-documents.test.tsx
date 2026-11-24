@@ -58,8 +58,9 @@ describe('Документы', () => {
     const list = await screen.findByRole('list', { name: 'Документы' });
     expect(within(list).getAllByRole('listitem')).toHaveLength(9);
 
-    await user.click(screen.getByRole('button', { name: 'Счета' }));
-    expect(await screen.findByRole('button', { name: 'Счета', pressed: true })).toBeInTheDocument();
+    await user.click(screen.getByRole('combobox', { name: 'Вид документа' }));
+    await user.click(await screen.findByRole('option', { name: 'Счета' }));
+    await vi.waitFor(() => expect(screen.getByRole('combobox', { name: 'Вид документа' })).toHaveTextContent('Счета'));
     expect(await screen.findByText('Счёт № S-2026-0118')).toBeInTheDocument();
     expect(within(screen.getByRole('list', { name: 'Документы' })).getAllByRole('listitem')).toHaveLength(1);
     await vi.waitFor(() => expect(router.state.location.search).toBe('?kind=invoice'));
