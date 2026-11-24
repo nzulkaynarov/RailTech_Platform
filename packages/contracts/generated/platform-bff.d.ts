@@ -7503,6 +7503,46 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/erp/price-requests/{request_id}/partner-links": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Расчёт · Ссылки партнёра на запрос цены
+     * @description ДК-5. ERP `GET /stock/price-requests/{id}/partner-links/`: кому из контактов партнёра ушла личная ссылка на запрос (адрес замаскирован), когда, открывали ли и в каком она состоянии (`active`, `revoked`, `expired`). Нет права отправлять запрос (решает ERP) — список пуст. Раздел `erp.calc` — чтение.
+     */
+    get: operations["getPriceRequestPartnerLinks"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/erp/price-requests/{request_id}/partner-links/revoke": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Расчёт · Отозвать ссылку партнёра на запрос цены
+     * @description ДК-5. ERP `POST /stock/price-requests/{id}/revoke-partner-links/`: гасит живые ссылки ЭТОГО запроса у всех контактов; партнёр по ним увидит «ссылка отозвана». Раздел `erp.stock` — полный, право отправлять запрос решает ERP (403).
+     */
+    post: operations["revokePriceRequestPartnerLinks"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/erp/stock/suppliers": {
     parameters: {
       query?: never;
@@ -7665,6 +7705,46 @@ export interface paths {
      * @description ERP `POST /stock/orders/{id}/cancel/`: из черновика, отправленного и подтверждённого, если по нему ещё ничего не принято (409 `details.reason = order_has_receipts`). Раздел `erp.stock` — полный.
      */
     post: operations["cancelSupplierOrder"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/erp/stock/orders/{order_number}/partner-links": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Склад · Ссылки партнёра на заказ
+     * @description ДК-5. ERP `GET /stock/orders/{id}/partner-links/`: кому из контактов партнёра ушла личная ссылка на заказ (адрес замаскирован), когда, открывали ли и в каком она состоянии. Нет права отправлять заказ — список пуст. Раздел `erp.stock` — чтение.
+     */
+    get: operations["getSupplierOrderPartnerLinks"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/erp/stock/orders/{order_number}/partner-links/revoke": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Склад · Отозвать ссылку партнёра на заказ
+     * @description ДК-5. ERP `POST /stock/orders/{id}/revoke-partner-links/`: гасит живые ссылки ЭТОГО заказа у всех контактов и пишет журнал заказа. Раздел `erp.stock` — полный, право отправлять заказ решает ERP (403).
+     */
+    post: operations["revokeSupplierOrderPartnerLinks"];
     delete?: never;
     options?: never;
     head?: never;
@@ -32906,6 +32986,60 @@ export interface operations {
       503: components["responses"]["BackendUnavailable"];
     };
   };
+  getPriceRequestPartnerLinks: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        request_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Ссылки партнёра */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DocumentClientLinks"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  revokePriceRequestPartnerLinks: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        request_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Обновлённый список ссылок */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DocumentClientLinks"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
   listStockSuppliers: {
     parameters: {
       query?: {
@@ -33232,6 +33366,62 @@ export interface operations {
       404: components["responses"]["NotFound"];
       409: components["responses"]["StockConflict"];
       422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  getSupplierOrderPartnerLinks: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Номер заказа поставщику `ЗП-ГГГГ-NNN` */
+        order_number: components["parameters"]["StockOrderNumberPath"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Ссылки партнёра */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DocumentClientLinks"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  revokeSupplierOrderPartnerLinks: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Номер заказа поставщику `ЗП-ГГГГ-NNN` */
+        order_number: components["parameters"]["StockOrderNumberPath"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Обновлённый список ссылок */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DocumentClientLinks"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
       503: components["responses"]["BackendUnavailable"];
     };
   };

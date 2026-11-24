@@ -101,16 +101,30 @@ def create(
 
 
 def _dispatch(user, request: PriceRequest, supplier, recipient: str, reference: str) -> bool:
-    """Письмо партнёру и колокольчик его кабинета; вернуть True, если письмо не ушло (статус FAILED записан)."""
+    """Письма и колокольчик партнёру; вернуть True, если письмо не ушло (статус FAILED записан).
+
+    ДК-5: партнёру с Кабинетом запрос уходит одним письмом на контакт, который может ответить, — PDF и кнопка на личную
+    ссылку этого контакта (уведомление `partner_rfq_sent`). Прежнее письмо «ответьте на это письмо» нужно только адресу,
+    которого среди этих контактов нет (общая почта поставщика), и партнёру без Кабинета; сотрудник отмечает такой ответ сам.
+    """
+    from portal.models import NoticeChannel
+    from supply.services.orders import partner_confirms_in_cabinet
+
     from notifications.emails import send_templated_email
     from notifications.text_format import text_qty
 
+    in_cabinet = partner_confirms_in_cabinet(supplier)
+    notices = _notify_contacts(request, letters=True) if in_cabinet else []
+    emailed = {n.contact.email.strip().lower() for n in notices if n.channel == NoticeChannel.EMAIL}
+    if in_cabinet and recipient.strip().lower() in emailed:
+        return False  # одно письмо: адрес запроса — контакт, который уже получил письмо со ссылкой
     context = {
         "supplier_name": supplier.name,
         "reference": reference,
         "sender_name": person_name(user),
         "sender_email": getattr(user, "email", "") or "",
         "note": request.note,
+        "answer_in_cabinet": in_cabinet,
         "lines": [
             {"name": line.name, "article": line.article, "quantity": text_qty(line.quantity), "unit": line.unit}
             for line in request.lines.all()
@@ -138,14 +152,26 @@ def _dispatch(user, request: PriceRequest, supplier, recipient: str, reference: 
         request.status = PriceRequestStatus.FAILED
         request.error = error
         request.save(update_fields=["status", "error"])
-    else:
-        try:
-            from portal.services import notice_sources
-
-            notice_sources.partner_rfq_sent(request)
-        except Exception:
-            logger.exception("Не удалось отправить уведомление о запросе цены %s", request.pk)
+    elif not in_cabinet:
+        _notify_contacts(request, letters=False)
     return failed
+
+
+def _notify_contacts(request: PriceRequest, *, letters: bool) -> list:
+    """Колокольчик контактам партнёра; письмо со ссылкой — тем, кто может ответить (право — как в Кабинете), и только если
+    партнёр отвечает в Кабинете (`letters`): иначе запрос уходит прежним письмом и второго письма нет."""
+    try:
+        from parties.models import Contact, active_contact_q
+        from portal.services import notice_sources
+
+        contacts = Contact.objects.filter(active_contact_q(), company=request.supplier)
+        if letters:
+            contacts = contacts.filter(can_act=False)
+        skip = {pk: "no_right" if letters else "no_cabinet" for pk in contacts.values_list("pk", flat=True)}
+        return notice_sources.partner_rfq_notices(request, email_skip=skip)
+    except Exception:
+        logger.exception("Не удалось отправить уведомление о запросе цены %s", request.pk)
+        return []
 
 
 def create_from_order(

@@ -1,0 +1,1 @@
+{% load i18n %}{% if kind == 'supplier_order' %}{% blocktranslate %}Заказ № {{ number }}{% endblocktranslate %}{% else %}{% blocktranslate %}Запрос цены: {{ number }}{% endblocktranslate %}{% endif %}{% if buyer_name %} {% blocktranslate %}от {{ buyer_name }}{% endblocktranslate %}{% endif %}

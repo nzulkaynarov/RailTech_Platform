@@ -18,6 +18,7 @@ import { useMe, useSetSession } from '@/session/useMe';
 import { DocLinkDialog, type DocLinkIntent } from './DocLinkDialog';
 import { DocLinkExtra } from './DocLinkExtra';
 import { DocLinkLines } from './DocLinkLines';
+import { DocLinkPartnerLines } from './DocLinkPartnerLines';
 import { GuestShell } from './GuestShell';
 
 type GoneKind = 'revoked' | 'expired' | 'superseded' | 'notFound';
@@ -97,6 +98,8 @@ function DocLinkBody({ token, doc }: { token: string; doc: DocLinkView }) {
   const member = doc.session === 'member';
   const decideOpen = doc.state === 'open';
   const kind = doc.kind;
+  // ДК-5: запрос цены и заказ поставщику — партнёрская проекция (его позиции и цены), действия — ответить и подтвердить
+  const partner = kind === 'price_request' || kind === 'supplier_order';
 
   const finishOpen = () => navigate('/');
   const run = (next: DocLinkIntent, text: string) => {
@@ -105,7 +108,7 @@ function DocLinkBody({ token, doc }: { token: string; doc: DocLinkView }) {
       return;
     }
     act.mutate(
-      { action: next.action, ...(text ? { text } : {}) },
+      { action: next.action, ...(text ? { text } : {}), ...(next.extra ? { extra: next.extra } : {}) },
       {
         onSuccess: () => {
           toast.success(t(`docLink.done.${next.action}`, { context: kind }));
@@ -162,7 +165,7 @@ function DocLinkBody({ token, doc }: { token: string; doc: DocLinkView }) {
 
   const reasonText = (availability: DocLinkAvailability) =>
     availability.reason && !availability.allowed && availability.reason !== 'no_actions'
-      ? t(`docLink.reason.${availability.reason}`)
+      ? t(`docLink.reason.${availability.reason}`, { context: partner ? 'partner' : undefined })
       : null;
   const blocked = decideOpen ? reasonText(doc.decide) : null;
   const noContact = doc.decide.reason === 'no_contact';
@@ -173,6 +176,8 @@ function DocLinkBody({ token, doc }: { token: string; doc: DocLinkView }) {
   const buttons = (
     [
       { action: 'accept', variant: 'default' },
+      { action: 'answer', variant: 'default' },
+      { action: 'confirm', variant: 'default' },
       { action: 'reject', variant: 'outline' },
       { action: 'question', variant: 'outline' },
     ] as const
@@ -185,7 +190,7 @@ function DocLinkBody({ token, doc }: { token: string; doc: DocLinkView }) {
     <GuestShell title={title} note={t('docLink.header', { email: doc.recipient_hint })}>
       <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
         <div className="flex flex-col gap-3">
-          {doc.lines.length > 0 ? <DocLinkLines doc={doc} /> : <DocLinkExtra doc={doc} />}
+          {partner ? <DocLinkPartnerLines doc={doc} /> : doc.lines.length > 0 ? <DocLinkLines doc={doc} /> : <DocLinkExtra doc={doc} />}
           <div>
             <Button
               type="button"
@@ -209,8 +214,30 @@ function DocLinkBody({ token, doc }: { token: string; doc: DocLinkView }) {
             <dd className="break-words">{doc.from_name}</dd>
             <dt className="text-muted-foreground">{t('docLink.facts.to')}</dt>
             <dd className="break-words">{doc.to_name}</dd>
-            <dt className="text-muted-foreground">{t('docLink.facts.total')}</dt>
-            <dd className="font-medium tabular-nums">{money(doc.total)}</dd>
+            {kind === 'price_request' ? null : (
+              <>
+                <dt className="text-muted-foreground">{t('docLink.facts.total')}</dt>
+                <dd className="font-medium tabular-nums">{money(doc.total)}</dd>
+              </>
+            )}
+            {kind === 'supplier_order' ? (
+              <>
+                <dt className="text-muted-foreground">{t('docLink.facts.expectedDate')}</dt>
+                <dd>{doc.expected_date ? formatDate(doc.expected_date) : '—'}</dd>
+                {doc.confirmed_at ? (
+                  <>
+                    <dt className="text-muted-foreground">{t('docLink.facts.confirmedAt')}</dt>
+                    <dd>{formatDate(doc.confirmed_at)}</dd>
+                  </>
+                ) : null}
+              </>
+            ) : null}
+            {kind === 'price_request' && doc.answered_at ? (
+              <>
+                <dt className="text-muted-foreground">{t('docLink.facts.answeredAt')}</dt>
+                <dd>{formatDate(doc.answered_at)}</dd>
+              </>
+            ) : null}
             {kind === 'quote' ? (
               <>
                 <dt className="text-muted-foreground">{t('docLink.facts.validUntil')}</dt>
@@ -322,15 +349,15 @@ function DocLinkBody({ token, doc }: { token: string; doc: DocLinkView }) {
             setPhase('idle');
             setIntent(null);
           }}
-          onSignedIn={(signedInMe, text) => {
+          onSignedIn={(signedInMe, text, extra) => {
             setSession(signedInMe);
             queryClient.setQueryData<DocLinkView>(keys.docLink(token), { ...doc, session: 'member' });
-            const next = { ...intent, text, verified: true };
+            const next = { ...intent, text, extra, verified: true };
             setIntent(next);
             if (signedInMe.legal_pending) setPhase('legal');
             else run(next, text);
           }}
-          onConfirmed={(text) => run({ ...intent, text }, text)}
+          onConfirmed={(text, extra) => run({ ...intent, text, extra }, text)}
         />
       ) : null}
     </GuestShell>

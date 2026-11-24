@@ -53297,6 +53297,242 @@ export const useAnswerPriceRequest = <
   return useMutation(getAnswerPriceRequestMutationOptions(options), queryClient);
 };
 
+export const getGetPriceRequestPartnerLinksUrl = (requestId: string) => {
+  return `/api/v1/erp/price-requests/${requestId}/partner-links`;
+};
+
+/**
+ * ДК-5. ERP `GET /stock/price-requests/{id}/partner-links/`: кому из контактов партнёра ушла личная ссылка на запрос (адрес замаскирован), когда, открывали ли и в каком она состоянии (`active`, `revoked`, `expired`). Нет права отправлять запрос (решает ERP) — список пуст. Раздел `erp.calc` — чтение.
+ * @summary Расчёт · Ссылки партнёра на запрос цены
+ */
+export const getPriceRequestPartnerLinks = async (
+  requestId: string,
+  options?: Parameters<typeof http>[1],
+): Promise<DocumentClientLinks> => {
+  return http<DocumentClientLinks>(getGetPriceRequestPartnerLinksUrl(requestId), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetPriceRequestPartnerLinksQueryKey = (requestId: string) => {
+  return [`/api/v1/erp/price-requests/${requestId}/partner-links`] as const;
+};
+
+export const getGetPriceRequestPartnerLinksQueryOptions = <
+  TData = Awaited<ReturnType<typeof getPriceRequestPartnerLinks>>,
+  TError = ErrorType<SessionExpiredResponse | NotFoundResponse | BackendUnavailableResponse>,
+>(
+  requestId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getPriceRequestPartnerLinks>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetPriceRequestPartnerLinksQueryKey(requestId);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getPriceRequestPartnerLinks>>> = ({
+    signal,
+  }) => getPriceRequestPartnerLinks(requestId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: requestId !== null && requestId !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof getPriceRequestPartnerLinks>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type GetPriceRequestPartnerLinksQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getPriceRequestPartnerLinks>>
+>;
+export type GetPriceRequestPartnerLinksQueryError = ErrorType<
+  SessionExpiredResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+
+export function useGetPriceRequestPartnerLinks<
+  TData = Awaited<ReturnType<typeof getPriceRequestPartnerLinks>>,
+  TError = ErrorType<SessionExpiredResponse | NotFoundResponse | BackendUnavailableResponse>,
+>(
+  requestId: string,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getPriceRequestPartnerLinks>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getPriceRequestPartnerLinks>>,
+          TError,
+          Awaited<ReturnType<typeof getPriceRequestPartnerLinks>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetPriceRequestPartnerLinks<
+  TData = Awaited<ReturnType<typeof getPriceRequestPartnerLinks>>,
+  TError = ErrorType<SessionExpiredResponse | NotFoundResponse | BackendUnavailableResponse>,
+>(
+  requestId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getPriceRequestPartnerLinks>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getPriceRequestPartnerLinks>>,
+          TError,
+          Awaited<ReturnType<typeof getPriceRequestPartnerLinks>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetPriceRequestPartnerLinks<
+  TData = Awaited<ReturnType<typeof getPriceRequestPartnerLinks>>,
+  TError = ErrorType<SessionExpiredResponse | NotFoundResponse | BackendUnavailableResponse>,
+>(
+  requestId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getPriceRequestPartnerLinks>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Расчёт · Ссылки партнёра на запрос цены
+ */
+
+export function useGetPriceRequestPartnerLinks<
+  TData = Awaited<ReturnType<typeof getPriceRequestPartnerLinks>>,
+  TError = ErrorType<SessionExpiredResponse | NotFoundResponse | BackendUnavailableResponse>,
+>(
+  requestId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getPriceRequestPartnerLinks>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetPriceRequestPartnerLinksQueryOptions(requestId, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getRevokePriceRequestPartnerLinksUrl = (requestId: string) => {
+  return `/api/v1/erp/price-requests/${requestId}/partner-links/revoke`;
+};
+
+/**
+ * ДК-5. ERP `POST /stock/price-requests/{id}/revoke-partner-links/`: гасит живые ссылки ЭТОГО запроса у всех контактов; партнёр по ним увидит «ссылка отозвана». Раздел `erp.stock` — полный, право отправлять запрос решает ERP (403).
+ * @summary Расчёт · Отозвать ссылку партнёра на запрос цены
+ */
+export const revokePriceRequestPartnerLinks = async (
+  requestId: string,
+  options?: Parameters<typeof http>[1],
+): Promise<DocumentClientLinks> => {
+  return http<DocumentClientLinks>(getRevokePriceRequestPartnerLinksUrl(requestId), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getRevokePriceRequestPartnerLinksMutationKey = () =>
+  ["revokePriceRequestPartnerLinks"] as const;
+
+export const getRevokePriceRequestPartnerLinksMutationOptions = <
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof revokePriceRequestPartnerLinks>>,
+    TError,
+    RevokePriceRequestPartnerLinksMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof revokePriceRequestPartnerLinks>>,
+  TError,
+  RevokePriceRequestPartnerLinksMutationVariables,
+  TContext
+> => {
+  const mutationKey = getRevokePriceRequestPartnerLinksMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof revokePriceRequestPartnerLinks>>,
+    RevokePriceRequestPartnerLinksMutationVariables
+  > = (props) => {
+    const { requestId } = props ?? {};
+
+    return revokePriceRequestPartnerLinks(requestId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RevokePriceRequestPartnerLinksMutationResult = NonNullable<
+  Awaited<ReturnType<typeof revokePriceRequestPartnerLinks>>
+>;
+
+export type RevokePriceRequestPartnerLinksMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+export type RevokePriceRequestPartnerLinksMutationVariables = { requestId: string };
+
+/**
+ * @summary Расчёт · Отозвать ссылку партнёра на запрос цены
+ */
+export const useRevokePriceRequestPartnerLinks = <
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof revokePriceRequestPartnerLinks>>,
+      TError,
+      RevokePriceRequestPartnerLinksMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof revokePriceRequestPartnerLinks>>,
+  TError,
+  RevokePriceRequestPartnerLinksMutationVariables,
+  TContext
+> => {
+  return useMutation(getRevokePriceRequestPartnerLinksMutationOptions(options), queryClient);
+};
+
 export const getListStockSuppliersUrl = (params?: ListStockSuppliersParams) => {
   const normalizedParams = new URLSearchParams();
 
@@ -54650,6 +54886,242 @@ export const useCancelSupplierOrder = <
   TContext
 > => {
   return useMutation(getCancelSupplierOrderMutationOptions(options), queryClient);
+};
+
+export const getGetSupplierOrderPartnerLinksUrl = (orderNumber: string) => {
+  return `/api/v1/erp/stock/orders/${orderNumber}/partner-links`;
+};
+
+/**
+ * ДК-5. ERP `GET /stock/orders/{id}/partner-links/`: кому из контактов партнёра ушла личная ссылка на заказ (адрес замаскирован), когда, открывали ли и в каком она состоянии. Нет права отправлять заказ — список пуст. Раздел `erp.stock` — чтение.
+ * @summary Склад · Ссылки партнёра на заказ
+ */
+export const getSupplierOrderPartnerLinks = async (
+  orderNumber: string,
+  options?: Parameters<typeof http>[1],
+): Promise<DocumentClientLinks> => {
+  return http<DocumentClientLinks>(getGetSupplierOrderPartnerLinksUrl(orderNumber), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetSupplierOrderPartnerLinksQueryKey = (orderNumber: string) => {
+  return [`/api/v1/erp/stock/orders/${orderNumber}/partner-links`] as const;
+};
+
+export const getGetSupplierOrderPartnerLinksQueryOptions = <
+  TData = Awaited<ReturnType<typeof getSupplierOrderPartnerLinks>>,
+  TError = ErrorType<SessionExpiredResponse | NotFoundResponse | BackendUnavailableResponse>,
+>(
+  orderNumber: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getSupplierOrderPartnerLinks>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetSupplierOrderPartnerLinksQueryKey(orderNumber);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getSupplierOrderPartnerLinks>>> = ({
+    signal,
+  }) => getSupplierOrderPartnerLinks(orderNumber, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: orderNumber !== null && orderNumber !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof getSupplierOrderPartnerLinks>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type GetSupplierOrderPartnerLinksQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getSupplierOrderPartnerLinks>>
+>;
+export type GetSupplierOrderPartnerLinksQueryError = ErrorType<
+  SessionExpiredResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+
+export function useGetSupplierOrderPartnerLinks<
+  TData = Awaited<ReturnType<typeof getSupplierOrderPartnerLinks>>,
+  TError = ErrorType<SessionExpiredResponse | NotFoundResponse | BackendUnavailableResponse>,
+>(
+  orderNumber: string,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getSupplierOrderPartnerLinks>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getSupplierOrderPartnerLinks>>,
+          TError,
+          Awaited<ReturnType<typeof getSupplierOrderPartnerLinks>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetSupplierOrderPartnerLinks<
+  TData = Awaited<ReturnType<typeof getSupplierOrderPartnerLinks>>,
+  TError = ErrorType<SessionExpiredResponse | NotFoundResponse | BackendUnavailableResponse>,
+>(
+  orderNumber: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getSupplierOrderPartnerLinks>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getSupplierOrderPartnerLinks>>,
+          TError,
+          Awaited<ReturnType<typeof getSupplierOrderPartnerLinks>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetSupplierOrderPartnerLinks<
+  TData = Awaited<ReturnType<typeof getSupplierOrderPartnerLinks>>,
+  TError = ErrorType<SessionExpiredResponse | NotFoundResponse | BackendUnavailableResponse>,
+>(
+  orderNumber: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getSupplierOrderPartnerLinks>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Склад · Ссылки партнёра на заказ
+ */
+
+export function useGetSupplierOrderPartnerLinks<
+  TData = Awaited<ReturnType<typeof getSupplierOrderPartnerLinks>>,
+  TError = ErrorType<SessionExpiredResponse | NotFoundResponse | BackendUnavailableResponse>,
+>(
+  orderNumber: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getSupplierOrderPartnerLinks>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetSupplierOrderPartnerLinksQueryOptions(orderNumber, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getRevokeSupplierOrderPartnerLinksUrl = (orderNumber: string) => {
+  return `/api/v1/erp/stock/orders/${orderNumber}/partner-links/revoke`;
+};
+
+/**
+ * ДК-5. ERP `POST /stock/orders/{id}/revoke-partner-links/`: гасит живые ссылки ЭТОГО заказа у всех контактов и пишет журнал заказа. Раздел `erp.stock` — полный, право отправлять заказ решает ERP (403).
+ * @summary Склад · Отозвать ссылку партнёра на заказ
+ */
+export const revokeSupplierOrderPartnerLinks = async (
+  orderNumber: string,
+  options?: Parameters<typeof http>[1],
+): Promise<DocumentClientLinks> => {
+  return http<DocumentClientLinks>(getRevokeSupplierOrderPartnerLinksUrl(orderNumber), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getRevokeSupplierOrderPartnerLinksMutationKey = () =>
+  ["revokeSupplierOrderPartnerLinks"] as const;
+
+export const getRevokeSupplierOrderPartnerLinksMutationOptions = <
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof revokeSupplierOrderPartnerLinks>>,
+    TError,
+    RevokeSupplierOrderPartnerLinksMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof revokeSupplierOrderPartnerLinks>>,
+  TError,
+  RevokeSupplierOrderPartnerLinksMutationVariables,
+  TContext
+> => {
+  const mutationKey = getRevokeSupplierOrderPartnerLinksMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof revokeSupplierOrderPartnerLinks>>,
+    RevokeSupplierOrderPartnerLinksMutationVariables
+  > = (props) => {
+    const { orderNumber } = props ?? {};
+
+    return revokeSupplierOrderPartnerLinks(orderNumber, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RevokeSupplierOrderPartnerLinksMutationResult = NonNullable<
+  Awaited<ReturnType<typeof revokeSupplierOrderPartnerLinks>>
+>;
+
+export type RevokeSupplierOrderPartnerLinksMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+export type RevokeSupplierOrderPartnerLinksMutationVariables = { orderNumber: string };
+
+/**
+ * @summary Склад · Отозвать ссылку партнёра на заказ
+ */
+export const useRevokeSupplierOrderPartnerLinks = <
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof revokeSupplierOrderPartnerLinks>>,
+      TError,
+      RevokeSupplierOrderPartnerLinksMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof revokeSupplierOrderPartnerLinks>>,
+  TError,
+  RevokeSupplierOrderPartnerLinksMutationVariables,
+  TContext
+> => {
+  return useMutation(getRevokeSupplierOrderPartnerLinksMutationOptions(options), queryClient);
 };
 
 export const getReceiveSupplierOrderUrl = (orderNumber: string) => {

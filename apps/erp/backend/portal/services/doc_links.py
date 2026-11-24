@@ -119,7 +119,7 @@ def mint_document_link(kind: str, doc, email: str, name: str, *, created_by=None
         token_hash=hash_token(raw),
         kind=kind,
         **{kind: doc},
-        contact=deal_recipient_contact(spec.deal(doc), email.strip(), name),
+        contact=spec.recipient_contact(doc, email.strip(), name),
         recipient_email=email.strip().lower(),
         created_by=created_by,
         expires_at=spec.expiry(doc),
@@ -272,7 +272,7 @@ def raise_if_gone(link: DocumentLink) -> None:
 def client_context(link: DocumentLink, session) -> ClientContext:
     if session is None:
         return ClientContext("none")
-    company_id = spec_for(link).deal(link.document).company_id
+    company_id = spec_for(link).company_id(link.document)
     if company_id is not None and session.company_id == company_id:
         return ClientContext("member", session)
     return ClientContext("other_company", session)
@@ -312,7 +312,6 @@ def record_event(link: DocumentLink, event: str, *, ip: str = "", user_agent: st
 
 
 def _timeline(link: DocumentLink, title: str, event_code: str, **params) -> None:
-    from crm.models import ActivityLog
     from crm.services.quotes._shared import _log_quote
 
     if link.kind == "quote":
@@ -326,18 +325,8 @@ def _timeline(link: DocumentLink, title: str, event_code: str, **params) -> None
             event_params={"version": quote.version, "number": quote.number or "—", **params},
         )
         return
-    doc = link.document
-    deal = spec_for(link).deal(doc)
-    ActivityLog.objects.create(
-        action=title,
-        detail=f"{doc.number or '—'}",
-        level="INFO",
-        entity_type=link.kind,
-        entity_id=doc.pk,
-        deal_id=deal.pk,
-        company_id=deal.company_id,
-        event_code=event_code.replace("quote.", f"{link.kind}.", 1),
-        event_params={"number": doc.number or "—", **params},
+    spec_for(link).journal(
+        link.document, action=title, event_code=event_code.replace("quote.", f"{link.kind}.", 1), **params
     )
 
 
@@ -354,7 +343,19 @@ def record_open(link: DocumentLink, *, ip: str = "", user_agent: str = "") -> No
         record_quote_view(link.quote, request_ip=ip)
 
 
-_WORDS = {"quote": "КП", "contract": "договор", "invoice": "счёт", "act": "акт"}
+_WORDS = {
+    "quote": "КП",
+    "contract": "договор",
+    "invoice": "счёт",
+    "act": "акт",
+    "price_request": "запрос цены",
+    "supplier_order": "заказ поставщику",
+}
+
+
+def _side(link: DocumentLink, client: str, partner: str) -> str:
+    """Кто получатель ссылки в журнале: клиент заявки или партнёр-поставщик (ДК-5)."""
+    return partner if spec_for(link).partner else client
 
 
 def mask_email(email: str) -> str:
@@ -420,7 +421,11 @@ def request_code(link: DocumentLink, *, ip: str = "", user_agent: str = "") -> d
             to_telegram = False
         _send_code_email(locked, code)
         record_event(locked, DocumentLinkEvent.Event.CODE_SENT, ip=ip, user_agent=user_agent)
-        _timeline(locked, f"Клиенту отправлен код по ссылке на {_WORDS[locked.kind]}", "quote.link_code_sent")
+        _timeline(
+            locked,
+            f"{_side(locked, 'Клиенту', 'Партнёру')} отправлен код по ссылке на {_WORDS[locked.kind]}",
+            "quote.link_code_sent",
+        )
     return {
         "sent_to": mask_email(contact.email),
         "expires_in": int(CODE_TTL.total_seconds()),
@@ -443,8 +448,8 @@ def _send_code_telegram(link: DocumentLink, code: str, expires_at: datetime) -> 
     документа в нём нет. Ошибка публикации — наружу из savepoint; вызывающий `request_code` её ловит: почта остаётся основным каналом.
     """
     contact = link.contact
-    if not _telegram_ready(contact):
-        return False
+    if spec_for(link).partner or not _telegram_ready(contact):
+        return False  # ДК-5: событие знает только документы клиента (`document_kind`); партнёру — письмо
     from integration.services import events
 
     with transaction.atomic():
@@ -500,8 +505,8 @@ def send_link_telegram(link: DocumentLink, raw_token: str) -> bool:
     задача: письмо уже ушло, повтор задачи послал бы его второй раз.
     """
     contact = link.contact
-    if not _telegram_ready(contact):
-        return False
+    if spec_for(link).partner or not _telegram_ready(contact):
+        return False  # ДК-5: см. `_send_code_telegram`
     if not _telegram_documents_wanted(contact):
         return False
     from integration.services import events
@@ -524,6 +529,10 @@ def _seller_company(link: DocumentLink):
     """Компания-продавец документа для рамки письма (бренд); `None` — нейтральная рамка платформы."""
     if link.kind == "quote":
         return link.quote.seller_company
+    if spec_for(link).partner:
+        from supply.services.partner_documents import buyer_company
+
+        return buyer_company()  # документ партнёра — от нас, «продавца» нет
     from crm.services.billing import _invoice_seller_company
     from crm.services.quotes import _quote_seller_company
 
@@ -546,7 +555,7 @@ def _send_code_email(link: DocumentLink, code: str) -> None:
             "document_link_code",
             {
                 "code": code,
-                "document_number": spec.number(doc) or f"{spec.deal(doc).pk}",
+                "document_number": spec.number(doc) or f"{doc.pk}",
                 "seller_name": spec.seller_name(doc),
                 "expires_minutes": int(CODE_TTL.total_seconds() // 60),
                 **email_brand(seller),
@@ -601,7 +610,11 @@ def verify_code(link: DocumentLink, code: str, *, ip: str = "", user_agent: str 
             if contact.invited_at is None:
                 Contact.objects.filter(pk=contact.pk, invited_at__isnull=True).update(invited_at=now)
             record_event(link, DocumentLinkEvent.Event.CODE_USED, ip=ip, user_agent=user_agent)
-            _timeline(link, f"Клиент подтвердил код по ссылке на {_WORDS[link.kind]}", "quote.link_code_used")
+            _timeline(
+                link,
+                f"{_side(link, 'Клиент', 'Партнёр')} подтвердил код по ссылке на {_WORDS[link.kind]}",
+                "quote.link_code_used",
+            )
     if result is not None:
         cache.delete(_failures_key(link))
         return result
@@ -642,22 +655,10 @@ def revoke_document_links(kind: str, doc, actor) -> int:
 def revoke_document_links_logged(kind: str, doc, actor) -> int:
     """«Отозвать ссылку» из карточки договора, счёта или акта (ДК-3б): отзыв всех живых ссылок документа и событие в
     журнале сделки — кто и когда; повтор без живых ссылок ничего не пишет."""
-    from crm.models import ActivityLog
-
     count = revoke_document_links(kind, doc, actor)
     if count:
-        deal = spec_of(kind).deal(doc)
-        ActivityLog.objects.create(
-            action=f"Ссылка на {_WORDS[kind]} отозвана",
-            detail=f"{doc.number or '—'}",
-            user=actor,
-            level="INFO",
-            entity_type=kind,
-            entity_id=doc.pk,
-            deal_id=deal.pk,
-            company_id=deal.company_id,
-            event_code=f"{kind}.link_revoked",
-            event_params={"number": doc.number or "—", "links": count},
+        spec_of(kind).journal(
+            doc, action=f"Ссылка на {_WORDS[kind]} отозвана", event_code=f"{kind}.link_revoked", user=actor, links=count
         )
     return count
 

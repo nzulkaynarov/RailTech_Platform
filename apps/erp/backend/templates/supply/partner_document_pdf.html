@@ -1,0 +1,43 @@
+{% load i18n %}<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<style>
+  @page { size: A4; margin: 18mm 16mm; }
+  body { font-family: "DejaVu Sans", Arial, sans-serif; font-size: 10pt; color: #111827; }
+  h1 { font-size: 15pt; margin: 0 0 4mm 0; }
+  .meta { margin: 0 0 6mm 0; line-height: 1.5; }
+  table { width: 100%; border-collapse: collapse; margin: 0 0 5mm 0; }
+  th, td { border: 0.3mm solid #9ca3af; padding: 1.5mm 2mm; text-align: left; vertical-align: top; }
+  th { background: #f3f4f6; }
+  td.num, th.num { text-align: right; }
+  .total { text-align: right; font-weight: bold; margin: 0 0 5mm 0; }
+  .note { margin: 0 0 5mm 0; }
+</style>
+</head>
+<body>
+  <h1>{% if kind == 'supplier_order' %}{% blocktranslate %}Заказ поставщику № {{ number }}{% endblocktranslate %}{% else %}{% blocktranslate %}Запрос цены: {{ number }}{% endblocktranslate %}{% endif %}</h1>
+  <p class="meta">
+    {% translate "От кого:" %} {{ buyer }}<br>
+    {% translate "Кому:" %} {{ supplier }}<br>
+    {% translate "Дата:" %} {{ date }}{% if expected_date %}<br>
+    {% translate "Ожидаемая дата поставки:" %} {{ expected_date }}{% endif %}
+  </p>
+  <table>
+    <tr>
+      <th>№</th><th>{% translate "Позиция" %}</th><th>{% translate "Артикул" %}</th><th class="num">{% translate "Количество" %}</th>
+      {% if kind == 'supplier_order' %}<th class="num">{% translate "Цена" %}</th><th class="num">{% translate "Сумма" %}</th>{% endif %}
+    </tr>
+    {% for line in lines %}
+    <tr>
+      <td>{{ forloop.counter }}</td><td>{{ line.name }}</td><td>{{ line.article }}</td>
+      <td class="num">{{ line.quantity }}{% if line.unit %} {{ line.unit }}{% endif %}</td>
+      {% if kind == 'supplier_order' %}<td class="num">{{ line.unit_price_text }}</td><td class="num">{{ line.total_text }}</td>{% endif %}
+    </tr>
+    {% endfor %}
+  </table>
+  {% if kind == 'supplier_order' %}<p class="total">{% translate "Итого:" %} {{ total }}</p>{% endif %}
+  {% if note %}<p class="note">{{ note|linebreaksbr }}</p>{% endif %}
+  {% if kind == 'price_request' %}<p class="note">{% translate "Просим сообщить цену за единицу, срок поставки и условия по каждой позиции." %}</p>{% endif %}
+</body>
+</html>

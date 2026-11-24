@@ -1,4 +1,5 @@
-export type ClientLinkKind = "quote" | "contract" | "invoice" | "act";
+export type ClientLinkKind =
+  "quote" | "contract" | "invoice" | "act" | "price_request" | "supplier_order";
 export type ClientLinkState = "none" | "active" | "revoked" | "expired" | "superseded";
 
 /** Одна ссылка получателя: адрес замаскирован ERP, «открыто» — факт, а не статус. */

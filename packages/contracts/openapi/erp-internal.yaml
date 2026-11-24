@@ -21320,6 +21320,43 @@ paths:
             мало товара, нет цены или ожидаемой даты — `ORDER_INCOMPLETE`)
         '401':
           $ref: '#/components/responses/UnauthorizedResponse'
+  /api/v1/stock/orders/{order_id}/partner-links/:
+    get:
+      operationId: stock_order_partner_links
+      description: 'Каждая личная ссылка, с которой заказ ушёл партнёру: адрес замаскирован, отправлена, открыта, состояние
+        (`active`, `revoked`, `expired`). Ссылки других документов не попадают.'
+      summary: Ссылки партнёра на заказ в Кабинете
+      parameters:
+      - in: path
+        name: order_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Stock
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentClientLinks'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StockError'
+          description: Нет права, не сотрудник или нет права на цены поставщиков
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StockError'
+          description: Заказа, строки, поставщика или заявки нет
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
   /api/v1/stock/orders/{order_id}/price-request/:
     post:
       operationId: stock_order_price_request
@@ -21441,6 +21478,43 @@ paths:
                 $ref: '#/components/schemas/StockError'
           description: Состояние не позволяет (недопустимый переход статуса, нет адреса, письмо не ушло — `EMAIL_FAILED`,
             мало товара, нет цены или ожидаемой даты — `ORDER_INCOMPLETE`)
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+  /api/v1/stock/orders/{order_id}/revoke-partner-links/:
+    post:
+      operationId: stock_order_revoke_partner_links
+      description: Гасит каждую живую ссылку ЭТОГО заказа (у всех контактов); повтор ничего не меняет. Дальнейшее открытие
+        — 410 `DOC_LINK_REVOKED`. В ответе — обновлённый список.
+      summary: Отозвать ссылки партнёра на заказ
+      parameters:
+      - in: path
+        name: order_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Stock
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentClientLinks'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StockError'
+          description: Нет права, не сотрудник или нет права на цены поставщиков
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StockError'
+          description: Заказа, строки, поставщика или заявки нет
         '401':
           $ref: '#/components/responses/UnauthorizedResponse'
   /api/v1/stock/orders/{order_id}/send/:
@@ -21672,6 +21746,80 @@ paths:
                 $ref: '#/components/schemas/StockError'
           description: Состояние не позволяет (недопустимый переход статуса, нет адреса, письмо не ушло — `EMAIL_FAILED`,
             мало товара, нет цены или ожидаемой даты — `ORDER_INCOMPLETE`)
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+  /api/v1/stock/price-requests/{request_id}/partner-links/:
+    get:
+      operationId: stock_price_request_partner_links
+      description: 'Каждая личная ссылка, с которой запрос ушёл партнёру: адрес замаскирован, отправлена, открыта, состояние
+        (`active`, `revoked`, `expired`). Ссылки других документов не попадают.'
+      summary: Ссылки партнёра на запрос цены в Кабинете
+      parameters:
+      - in: path
+        name: request_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Stock
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentClientLinks'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StockError'
+          description: Нет права, не сотрудник или нет права на цены поставщиков
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StockError'
+          description: Заказа, строки, поставщика или заявки нет
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+  /api/v1/stock/price-requests/{request_id}/revoke-partner-links/:
+    post:
+      operationId: stock_price_request_revoke_partner_links
+      description: Гасит каждую живую ссылку ЭТОГО запроса (у всех контактов); повтор ничего не меняет. В ответе — обновлённый
+        список.
+      summary: Отозвать ссылки партнёра на запрос цены
+      parameters:
+      - in: path
+        name: request_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Stock
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentClientLinks'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StockError'
+          description: Нет права, не сотрудник или нет права на цены поставщиков
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StockError'
+          description: Заказа, строки, поставщика или заявки нет
         '401':
           $ref: '#/components/responses/UnauthorizedResponse'
   /api/v1/stock/receipts/:

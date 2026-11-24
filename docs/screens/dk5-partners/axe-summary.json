@@ -1,0 +1,114 @@
+[
+  {
+    "screen": "price-request-guest",
+    "width": 1512,
+    "axe": true,
+    "rulesPassed": 38,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "price-request-answer-dialog",
+    "width": 1512,
+    "axe": true,
+    "rulesPassed": 33,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "price-request-answered",
+    "width": 1512,
+    "axe": true,
+    "rulesPassed": 38,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "supplier-order-guest",
+    "width": 1512,
+    "axe": true,
+    "rulesPassed": 38,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "supplier-order-code-dialog",
+    "width": 1512,
+    "axe": true,
+    "rulesPassed": 33,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "supplier-order-confirmed",
+    "width": 1512,
+    "axe": true,
+    "rulesPassed": 38,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "price-request-no-right",
+    "width": 1512,
+    "axe": true,
+    "rulesPassed": 38,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "price-request-guest",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 38,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "price-request-answer-dialog",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 33,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "price-request-answered",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 38,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "supplier-order-guest",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 38,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "supplier-order-code-dialog",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 33,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "supplier-order-confirmed",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 38,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "price-request-no-right",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 38,
+    "overflowPx": 0,
+    "violations": []
+  }
+]
