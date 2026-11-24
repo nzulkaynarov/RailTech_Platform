@@ -9,6 +9,7 @@ from drf_spectacular.utils import OpenApiResponse, extend_schema, inline_seriali
 from rest_framework import serializers as drf_serializers
 from rest_framework import viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 from rest_framework.throttling import UserRateThrottle
 
@@ -41,7 +42,11 @@ def _state_body(sample_id: str, state: dict) -> dict:
 
 
 class DocumentSampleViewSet(RoleGatedViewMixin, viewsets.ViewSet):
-    """Sample document of the settings screens: queue, state, PDF. Needs the `settings.edit` permission."""
+    """Sample document of the settings screens: queue, state, PDF.
+
+    `settings.edit` is checked explicitly on every action: the role gate lets safe methods (GET) through. A sample is
+    visible only to the user who asked for it.
+    """
 
     required_permissions = {"create": "settings.edit", "retrieve": "settings.edit", "pdf": "settings.edit"}
     lookup_value_regex = "[0-9a-f]{32}"
@@ -52,6 +57,15 @@ class DocumentSampleViewSet(RoleGatedViewMixin, viewsets.ViewSet):
 
     def _company_id(self, request):
         return crm_services.resolve_owner_company_id(request.user)
+
+    def _allowed_company(self, request):
+        """The company of the caller when the caller may edit its settings, else None."""
+        from accounts.services.permissions import member_has_permission
+
+        company_id = self._company_id(request)
+        if company_id and member_has_permission(request.user, company_id, "settings.edit"):
+            return company_id
+        return None
 
     @extend_schema(
         summary="Queue a sample document made by the real generator",
@@ -86,6 +100,8 @@ class DocumentSampleViewSet(RoleGatedViewMixin, viewsets.ViewSet):
         company_id = self._company_id(request)
         if not company_id:
             return Response({"detail": "NO_COMPANY"}, status=400)
+        if self._allowed_company(request) is None:
+            raise PermissionDenied()
         data = request.data
         kind = data.get("kind")
         if kind is None and data.get("template_kind") is not None:
@@ -113,7 +129,7 @@ class DocumentSampleViewSet(RoleGatedViewMixin, viewsets.ViewSet):
                 {
                     "kind": kind,
                     "body_html": body_html,
-                    "draft": draft if isinstance(draft, dict) else None,
+                    "draft": draft,
                     "language": language,
                 },
             )
@@ -127,7 +143,10 @@ class DocumentSampleViewSet(RoleGatedViewMixin, viewsets.ViewSet):
         tags=["CRM"],
     )
     def retrieve(self, request, pk=None):
-        state = sample_service.sample_state(self._company_id(request) or 0, pk)
+        company_id = self._allowed_company(request)
+        if company_id is None:
+            raise PermissionDenied()
+        state = sample_service.sample_state(company_id, request.user.pk, pk)
         if state is None:
             return Response({"detail": "SAMPLE_NOT_FOUND"}, status=404)
         return Response(_state_body(pk, state))
@@ -142,7 +161,10 @@ class DocumentSampleViewSet(RoleGatedViewMixin, viewsets.ViewSet):
     )
     @action(detail=True, methods=["get"], url_path="pdf")
     def pdf(self, request, pk=None):
-        data = sample_service.sample_pdf(self._company_id(request) or 0, pk)
+        company_id = self._allowed_company(request)
+        if company_id is None:
+            raise PermissionDenied()
+        data = sample_service.sample_pdf(company_id, request.user.pk, pk)
         if data is None:
             return Response({"detail": "SAMPLE_NOT_FOUND"}, status=404)
         response = HttpResponse(data, content_type="application/pdf")

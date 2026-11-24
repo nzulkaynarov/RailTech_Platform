@@ -187,6 +187,25 @@ def test_cover_letter_of_the_draft_is_printed_in_the_quote(seller, engine):
     assert "Уважаемый ООО «Образец-Клиент», благодарим." in texts
 
 
+def test_quote_terms_of_the_sample_follow_the_rule_of_the_working_quote(seller, monkeypatch):
+    """«Место отгрузки»: the working КП reads the saved profile (its address wins over the card); the sample must too."""
+    company, user = seller
+    company.legal_address = "Адрес из карточки"
+    company.save()
+    CompanyDocumentProfile.objects.create(company=company, legal_address="Адрес из профиля")
+    seen = {}
+    monkeypatch.setattr(
+        rt_documents, "quote_pdf", lambda quote, **k: seen.update(quote=quote, extras=k["extras"]) or b"%PDF"
+    )
+    sample.render_sample(company, user, kind="KP")
+
+    from crm.services.documents import quote_document_extras
+
+    working = quote_document_extras(seen["quote"], company)
+    assert seen["extras"]["quote_terms"] == working["quote_terms"]
+    assert {"label": "Место отгрузки", "value": "Адрес из профиля"} in seen["extras"]["quote_terms"]
+
+
 # ── the language ─────────────────────────────────────────────────────────────────────────────────────
 
 
@@ -263,8 +282,74 @@ def test_another_company_cannot_read_the_sample(seller, api_cache, engine):
     CompanyMember.objects.get(user=stranger, company=other).company_roles.add(
         ensure_default_company_roles(other)["HEAD"]
     )
-    assert _api(stranger).get(f"/api/v1/crm/document-samples/{sample_id}/").status_code == 404
-    assert _api(stranger).get(f"/api/v1/crm/document-samples/{sample_id}/pdf/").status_code == 404
+    # settings of another company are not his to edit: refused before the cache is asked
+    assert _api(stranger).get(f"/api/v1/crm/document-samples/{sample_id}/").status_code == 403
+    assert _api(stranger).get(f"/api/v1/crm/document-samples/{sample_id}/pdf/").status_code == 403
+
+
+def test_oversize_text_is_refused_before_the_queue_and_the_draft_is_cleaned(seller, api_cache, monkeypatch):
+    company, user = seller
+    from crm import tasks
+    from crm.services.generated_documents import MAX_TEMPLATE_BODY_CHARS
+
+    queued = []
+    monkeypatch.setattr(tasks.render_document_sample, "delay", lambda *args: queued.append(args))
+    api = _api(user)
+    big = api.post(
+        "/api/v1/crm/document-samples/",
+        {"kind": "CT", "body_html": "x" * (MAX_TEMPLATE_BODY_CHARS + 1)},
+        format="json",
+    )
+    assert big.status_code == 400 and big.json() == {"detail": "TEMPLATE_BODY_TOO_LARGE"}
+    assert queued == []
+
+    ok = api.post(
+        "/api/v1/crm/document-samples/",
+        {"kind": "KP", "draft": {"footer_text": "ok", "evil": "y" * 9_000_000, "legal_name": "n" * 9000}},
+        format="json",
+    )
+    assert ok.status_code == 202
+    sent = queued[0][3]["draft"]
+    assert set(sent) == {"footer_text", "legal_name"}
+    assert len(sent["legal_name"]) <= CompanyDocumentProfile._meta.get_field("legal_name").max_length
+
+
+def _member_without_settings(company):
+    from accounts.services.roles import ensure_default_company_roles
+
+    viewer = CustomUser.objects.create_user(email="v@sample.uz", username="v@sample.uz", password="x")
+    CompanyMember.objects.create(
+        user=viewer, company=company, role=WorkspaceRole.objects.get(code="OWNER"), is_active=True, is_primary=True
+    )
+    CompanyMember.objects.get(user=viewer, company=company).company_roles.add(
+        ensure_default_company_roles(company)["VIEWER"]
+    )
+    return viewer
+
+
+def test_without_settings_edit_every_action_is_403(seller, api_cache, engine):
+    company, user = seller
+    sample_id = _api(user).post("/api/v1/crm/document-samples/", {"kind": "INV"}, format="json").json()["id"]
+    viewer = _member_without_settings(company)
+    api = _api(viewer)
+    assert api.post("/api/v1/crm/document-samples/", {"kind": "INV"}, format="json").status_code == 403
+    assert api.get(f"/api/v1/crm/document-samples/{sample_id}/").status_code == 403
+    assert api.get(f"/api/v1/crm/document-samples/{sample_id}/pdf/").status_code == 403
+
+
+def test_a_sample_is_visible_only_to_who_asked_for_it(seller, api_cache, engine):
+    company, user = seller
+    sample_id = _api(user).post("/api/v1/crm/document-samples/", {"kind": "INV"}, format="json").json()["id"]
+    colleague = CustomUser.objects.create_user(email="c@sample.uz", username="c@sample.uz", password="x")
+    CompanyMember.objects.create(
+        user=colleague, company=company, role=WorkspaceRole.objects.get(code="OWNER"), is_active=True, is_primary=True
+    )
+    from accounts.services.roles import ensure_default_company_roles
+
+    CompanyMember.objects.get(user=colleague, company=company).company_roles.add(
+        ensure_default_company_roles(company)["HEAD"]
+    )
+    assert _api(colleague).get(f"/api/v1/crm/document-samples/{sample_id}/").status_code == 404
 
 
 def test_endpoints_refuse_bad_requests_and_anonymous(seller, api_cache):

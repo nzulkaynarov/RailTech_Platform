@@ -51,17 +51,21 @@ export function SamplePdf({
   const key = JSON.stringify({ ...request, language });
 
   useEffect(() => {
+    // Ответ на устаревший запрос (правка успела смениться) не показывается: позже ушедший запрос всегда новее.
+    let stale = false;
     const timer = window.setTimeout(() => {
       requestDocumentSample(JSON.parse(key) as DocumentSampleIn)
         .then((answer) => {
+          if (stale) return;
           setFailed(null);
           setId(answer.id);
         })
         .catch((error: unknown) => {
-          setFailed(companyErrorText(t, error));
+          if (!stale) setFailed(companyErrorText(t, error));
         });
     }, DEBOUNCE_MS);
     return () => {
+      stale = true;
       window.clearTimeout(timer);
     };
   }, [key, t]);

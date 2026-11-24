@@ -17,6 +17,7 @@ from __future__ import annotations
 import datetime
 import logging
 import uuid
+from copy import copy
 from dataclasses import dataclass, field
 from decimal import Decimal
 from types import SimpleNamespace
@@ -199,7 +200,11 @@ def _brand(company, overrides: dict | None) -> tuple[dict, Any]:
                 if isinstance(value, str):
                     value = value.strip().lower() in {"1", "true", "yes", "on"}
                 setattr(row, name, bool(value))
-    return _brand_context_from_row(company, row), row
+    # `_brand_context_from_row` rewrites the row with the company card (the card wins for the letterhead). The КП terms
+    # of a working document read a fresh profile row (the profile wins there), so the sample hands them the row as it
+    # was before the rewrite: same rule, same «Место отгрузки».
+    untouched = copy(row) if row is not None else None
+    return _brand_context_from_row(company, row), untouched
 
 
 def template_body(company, kind_code: str, seed: str) -> str:
@@ -444,8 +449,33 @@ def render_sample(
 # ── Queue: the view asks, the worker renders, the view reads ───────────────────────────────────────────
 
 
-def _key(company_id: int, sample_id: str, part: str) -> str:
-    return f"docsample:{company_id}:{sample_id}:{part}"
+def _key(company_id: int, user_id: int, sample_id: str, part: str) -> str:
+    return f"docsample:{company_id}:{user_id}:{sample_id}:{part}"
+
+
+_DEFAULT_TEXT_CAP = 5000
+
+
+def clean_draft(draft: Any) -> dict | None:
+    """The unsaved blank of the form, reduced to what the blank has: known keys only, texts cut to the model's own
+    limit — nothing else reaches the queue."""
+    from accounts.models import CompanyDocumentProfile
+
+    if not isinstance(draft, dict):
+        return None
+    cleaned: dict[str, Any] = {}
+    for name in _TEXT_OVERRIDES:
+        value = draft.get(name)
+        if isinstance(value, str):
+            limit = CompanyDocumentProfile._meta.get_field(name).max_length or _DEFAULT_TEXT_CAP
+            cleaned[name] = value[:limit]
+    for name in _BOOL_OVERRIDES:
+        value = draft.get(name)
+        if isinstance(value, bool):
+            cleaned[name] = value
+        elif isinstance(value, str):
+            cleaned[name] = value[:8]
+    return cleaned or None
 
 
 def queue_sample(company, user, request: dict) -> str:
@@ -455,19 +485,25 @@ def queue_sample(company, user, request: dict) -> str:
     kind = request.get("kind")
     if kind not in SAMPLE_KINDS:
         raise SampleError("INVALID_SAMPLE_KIND")
+    from crm.services.generated_documents import MAX_TEMPLATE_BODY_CHARS
+
+    body_html = request.get("body_html")
+    if body_html is not None and len(body_html) > MAX_TEMPLATE_BODY_CHARS:
+        raise SampleError("TEMPLATE_BODY_TOO_LARGE")
+    request = {**request, "draft": clean_draft(request.get("draft"))}
     sample_id = uuid.uuid4().hex
-    cache.set(_key(company.pk, sample_id, "state"), {"status": "pending"}, RESULT_TTL_SECONDS)
+    cache.set(_key(company.pk, user.pk, sample_id, "state"), {"status": "pending"}, RESULT_TTL_SECONDS)
     render_document_sample.delay(sample_id, company.pk, user.pk, request)
     return sample_id
 
 
-def sample_state(company_id: int, sample_id: str) -> dict | None:
+def sample_state(company_id: int, user_id: int, sample_id: str) -> dict | None:
     """{"status": "pending" | "ready" | "failed", "warnings": [...], "error": code} or None when unknown/expired."""
-    return cache.get(_key(company_id, sample_id, "state"))
+    return cache.get(_key(company_id, user_id, sample_id, "state"))
 
 
-def sample_pdf(company_id: int, sample_id: str) -> bytes | None:
-    return cache.get(_key(company_id, sample_id, "pdf"))
+def sample_pdf(company_id: int, user_id: int, sample_id: str) -> bytes | None:
+    return cache.get(_key(company_id, user_id, sample_id, "pdf"))
 
 
 def run_sample(sample_id: str, company_id: int, user_id: int, request: dict) -> None:
@@ -486,19 +522,21 @@ def run_sample(sample_id: str, company_id: int, user_id: int, request: dict) -> 
             language=request.get("language"),
         )
     except SampleError as exc:
-        cache.set(_key(company_id, sample_id, "state"), {"status": "failed", "error": exc.code}, RESULT_TTL_SECONDS)
+        cache.set(
+            _key(company_id, user_id, sample_id, "state"), {"status": "failed", "error": exc.code}, RESULT_TTL_SECONDS
+        )
         return
     except Exception:  # noqa: BLE001 — fault barrier: the screen shows a code, the traceback goes to the log
         logger.exception("Sample document %s failed", request.get("kind"))
         cache.set(
-            _key(company_id, sample_id, "state"),
+            _key(company_id, user_id, sample_id, "state"),
             {"status": "failed", "error": "SAMPLE_RENDER_FAILED"},
             RESULT_TTL_SECONDS,
         )
         return
-    cache.set(_key(company_id, sample_id, "pdf"), result.pdf, RESULT_TTL_SECONDS)
+    cache.set(_key(company_id, user_id, sample_id, "pdf"), result.pdf, RESULT_TTL_SECONDS)
     cache.set(
-        _key(company_id, sample_id, "state"),
+        _key(company_id, user_id, sample_id, "state"),
         {"status": "ready", "warnings": result.warnings},
         RESULT_TTL_SECONDS,
     )

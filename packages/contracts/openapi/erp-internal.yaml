@@ -11311,7 +11311,11 @@ paths:
   /api/v1/crm/document-samples/{id}/:
     get:
       operationId: crm_document_samples_retrieve
-      description: 'Sample document of the settings screens: queue, state, PDF. Needs the `settings.edit` permission.'
+      description: |-
+        Sample document of the settings screens: queue, state, PDF.
+
+        `settings.edit` is checked explicitly on every action: the role gate lets safe methods (GET) through. A sample is
+        visible only to the user who asked for it.
       summary: State of a sample document
       parameters:
       - in: path
@@ -11344,7 +11348,11 @@ paths:
   /api/v1/crm/document-samples/{id}/pdf/:
     get:
       operationId: crm_document_samples_pdf_retrieve
-      description: 'Sample document of the settings screens: queue, state, PDF. Needs the `settings.edit` permission.'
+      description: |-
+        Sample document of the settings screens: queue, state, PDF.
+
+        `settings.edit` is checked explicitly on every action: the role gate lets safe methods (GET) through. A sample is
+        visible only to the user who asked for it.
       summary: PDF of a ready sample document
       parameters:
       - in: path
