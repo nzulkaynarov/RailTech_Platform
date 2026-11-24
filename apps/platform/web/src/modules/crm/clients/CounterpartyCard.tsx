@@ -225,7 +225,7 @@ function Loaded({
               <Button
                 key="do-not-work-set"
                 size="small"
-                danger
+                type="text"
                 onClick={() => {
                   setMarking(true);
                 }}
@@ -311,6 +311,8 @@ function Loaded({
         />
       ) : null}
       <Tabs
+        className="pf-cp-tabs"
+        size="small"
         activeKey={part}
         onChange={(key) => {
           setPart(key as Part);

@@ -734,17 +734,8 @@ function DocumentForm({
             </>
           ) : (
             <>
-              <Field
-                id="doc-to"
-                label={t("documents:form.to.label")}
-                hint={t("documents:form.to.hint")}
-              >
-                <Input
-                  id="doc-to"
-                  value={t("documents:form.to.director")}
-                  readOnly
-                  aria-describedby="doc-to-hint"
-                />
+              <Field id="doc-to" label={t("documents:form.to.label")}>
+                <Input id="doc-to" value={t("documents:form.to.director")} readOnly />
               </Field>
               <div className="pf-newdoc-row">
                 <Field
@@ -968,7 +959,6 @@ function DocumentForm({
               </div>
             ))}
           </dl>
-          <p className="pf-hint">{t("documents:form.consequence.draft")}</p>
           <div className="pf-newdoc-actions">
             <StepRemaining
               id="doc-remaining"

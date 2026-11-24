@@ -225,10 +225,7 @@ test.describe("P8b: поручения по входящим", () => {
     await at(page, WIDE);
     await loginAndWait(page, "director@demo.example");
     await spaGoto(page, "/eds/inbox/%D0%92%D0%A5-108%2F26?panel=open&tab=resolution");
-    await chooseOption(
-      await reveal(page.getByLabel("Ответственный")),
-      "Демо Широков · Менеджер-универсал",
-    );
+    await chooseOption(await reveal(page.getByLabel("Ответственный")), "Демо Широков");
     await page.getByRole("button", { name: "Наложить резолюцию" }).click();
     await expect(page.getByText("Резолюция наложена: поручение ушло исполнителям")).toBeVisible();
 
@@ -262,7 +259,7 @@ test.describe("P8b: поручения по входящим", () => {
     const form = page.getByRole("form", { name: "Резолюция директора" });
     await form.getByRole("radio", { name: /Для сведения/ }).check();
     await expect(form.getByLabel("Ответственный")).toHaveCount(0);
-    await chooseOption(await reveal(form.getByLabel("Ознакомить")), "Демо Бухгалтеров · Бухгалтер");
+    await chooseOption(await reveal(form.getByLabel("Ознакомить")), "Демо Бухгалтеров");
     // множественный выбор не закрывает список сам: закрыть, как сотрудник (Escape)
     await form.getByLabel("Ознакомить").press("Escape");
     await page.getByRole("button", { name: "Наложить резолюцию" }).first().click();

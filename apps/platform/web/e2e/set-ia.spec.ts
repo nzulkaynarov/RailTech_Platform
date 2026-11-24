@@ -104,7 +104,7 @@ test.describe("Настройки: порядок и навигация (SET-IA)
           page.getByRole("combobox", { name: /Страницы группы «Правила работы»/ }),
         ).toBeVisible();
       } else {
-        const nav = page.getByRole("navigation", { name: "Страницы группы «Правила работы»" });
+        const nav = page.getByRole("navigation", { name: "Разделы модуля" });
         await expect(nav.getByRole("link", { name: "Время и сроки" })).toHaveAttribute(
           "aria-current",
           "page",
@@ -154,7 +154,12 @@ test.describe("Настройки: порядок и навигация (SET-IA)
     ]) {
       await expect(menu.getByRole("link", { name: item, exact: true })).toBeVisible();
     }
+    // группа открыта (`true`), текущая страница под ней — `page`
     await expect(menu.getByRole("link", { name: "Правила работы", exact: true })).toHaveAttribute(
+      "aria-current",
+      "true",
+    );
+    await expect(menu.getByRole("link", { name: "Время и сроки", exact: true })).toHaveAttribute(
       "aria-current",
       "page",
     );
@@ -165,7 +170,7 @@ test.describe("Настройки: порядок и навигация (SET-IA)
     await spaGoto(page, "/admin/bus");
     await expect(menu.getByRole("link", { name: "Журнал", exact: true })).toHaveAttribute(
       "aria-current",
-      "page",
+      "true",
     );
     await settledScreenshot(page, "menu-bus");
 

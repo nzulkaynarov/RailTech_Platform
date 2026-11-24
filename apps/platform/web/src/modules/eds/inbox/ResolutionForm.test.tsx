@@ -23,7 +23,7 @@ async function openForm(path = LETTER, directoryReady = true) {
   if (directoryReady) {
     await waitFor(() => {
       expect(selectedLabel(within(form).getByLabelText("Сотрудник: Услуги"))).toBe(
-        "Демо Инженеров · Главный инженер",
+        "Демо Инженеров",
       );
     });
   }
@@ -60,9 +60,7 @@ describe("Резолюция: форма", () => {
     expect(accountant).not.toBeChecked();
     // в «товарах» двое — выбор за директором; в «услугах» один — выбран сам
     expect(selectedLabel(within(form).getByLabelText("Сотрудник: Снабжение"))).toBe("");
-    expect(selectedLabel(within(form).getByLabelText("Сотрудник: Услуги"))).toBe(
-      "Демо Инженеров · Главный инженер",
-    );
+    expect(selectedLabel(within(form).getByLabelText("Сотрудник: Услуги"))).toBe("Демо Инженеров");
     expect(within(form).getByLabelText("Срок расчёта")).toHaveValue(
       companyDate(3).split("-").reverse().join("."),
     );
@@ -256,7 +254,7 @@ describe("Резолюция: ошибки и черновик", () => {
       "Посчитать с запасом по складу.",
     );
     expect(selectedLabel(within(form).getByLabelText("Сотрудник: Снабжение"))).toBe(
-      "Демо Снабженцев · Специалист по снабжению",
+      "Демо Снабженцев",
     );
     // поле срока подсвечено словами
     expect(within(form).getByText("Срок расчёта не может быть в прошлом.")).toBeVisible();
@@ -297,7 +295,7 @@ describe("Резолюция: ошибки и черновик", () => {
       "Посчитать с запасом по складу.",
     );
     expect(selectedLabel(within(second.form).getByLabelText("Сотрудник: Снабжение"))).toBe(
-      "Демо Снабженцев · Специалист по снабжению",
+      "Демо Снабженцев",
     );
   });
 

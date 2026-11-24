@@ -276,7 +276,7 @@
     "zone_not_permitted": "Insufficient permissions.",
     "cost_forbidden": "Purchase prices and markup are edited by employees with access to cost.",
     "forbidden": "Your role does not allow this action.",
-    "unavailable": "The “Operations” section did not respond. Try again in a minute.",
+    "unavailable": "Data did not load. Try again later.",
     "other": "Not saved: {{message}}",
     "deal_not_in_calculation": "The request is closed or past costing.",
     "quote_not_rejected_by_client": "A new version and a lost request are available once the client rejects the quote.",
@@ -290,8 +290,8 @@
       "text": "Refresh the page or try again in a minute."
     },
     "unavailable": {
-      "title": "The “Operations” section is not responding",
-      "text": "Costing data is temporarily unavailable. Try again in a minute."
+      "title": "Data did not load",
+      "text": "Try again later."
     },
     "forbidden": {
       "title": "This section is not part of your role",
