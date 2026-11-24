@@ -17,6 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.bus import events as bus_events
 from app.domain.backoffice import BackofficeMode, may_close_locally
 from app.domain.business_hours import add_business_minutes
+from app.domain.contacts import contact_email
 from app.domain.errors import (
     ConflictError,
     ForbiddenError,
@@ -27,6 +28,7 @@ from app.domain.errors import (
 )
 from app.domain.escalation import HANDED_OVER, HANDOFF_FROM
 from app.domain.lead_access import may_acknowledge
+from app.domain.lead_sources import normalize_phone_e164
 from app.domain.stage_machine import stage_before_handoff
 from app.domain.stages import OwnerMode, Stage, TransitionSource
 from app.domain.text import staff_name
@@ -34,14 +36,15 @@ from app.models.leads import Lead
 from app.models.qualification import Escalation
 from app.repositories import cabinet_chat as cabinet_repo
 from app.repositories import crm as crm_repo
-from app.repositories import events
+from app.repositories import events, lead_contacts
 from app.repositories import leads as repo
 from app.repositories import users as users_repo
-from app.schemas.settings import Language
+from app.schemas.settings import AppSettings, Language
 from app.security import audit
 from app.security.principal import Principal
 from app.services import (
     cabinet_chat,
+    cabinet_erasure,
     deals,
     lead_parts,
     lead_snooze,
@@ -62,6 +65,9 @@ LeadAssigned = Callable[[int, int], Awaitable[None]]  # (lead_id, user_id) → �
 ChatsChanged = Callable[[list[int]], Awaitable[None]]
 BackofficeModeProvider = Callable[[], Awaitable[BackofficeMode]]
 Outcome = Literal["won", "lost"]
+DiscardKind = Literal["spam", "test", "duplicate"]
+# Причина отказа в сделке при «Спам», «Тест», «Дубль» (LH-1); код — `leads.discarded_kind`.
+DISCARD_REASONS: Final[dict[str, str]] = {"spam": "Спам", "test": "Тест", "duplicate": "Дубль"}
 _active_escalation = lead_parts.active_escalation
 LANGUAGES: Final[dict[str, Language]] = {"ru": "ru", "uz": "uz", "en": "en"}
 
@@ -136,6 +142,8 @@ class LeadService:
             lead.owner_mode = OwnerMode.HUMAN.value
             lead.assigned_user_id = who.user_id
             lead.snoozed_until = None
+            # Забрав отброшенный лид, сотрудник возвращает его в списки (LH-1).
+            lead.discarded_kind = lead.duplicate_of_lead_id = None
             if escalation is not None:
                 escalation.status = "taken"
                 escalation.taken_by_user_id = who.user_id
@@ -434,6 +442,108 @@ class LeadService:
             )
         await self._notify(changed)
 
+    async def discard(
+        self,
+        who: Principal,
+        lead_id: int,
+        kind: DiscardKind,
+        duplicate_of: int | None = None,
+    ) -> None:
+        """«Спам», «Тест», «Дубль» (LH-1): лид закрыт отказом с системной причиной и скрыт из
+        активных списков. `test` ещё и обезличивается (`erase_lead`); `duplicate` ссылается на
+        оставшийся лид (простая ссылка, без склейки). Клиента и «Сделку» так не закрывают."""
+        cfg = await self._settings.get()
+        async with self._sessions() as session, session.begin():
+            lead = await _lead(session, lead_id)
+            on_behalf = await _require_owner(session, lead, who)
+            if lead.discarded_kind is not None:
+                raise InvalidTransitionError("lead is already discarded")
+            if kind == "duplicate":
+                await _check_duplicate_target(session, lead_id, duplicate_of)
+            elif duplicate_of is not None:
+                raise ValidationFailedError("duplicate_of is for a duplicate only", field="kind")
+            before = lead_parts.snapshot(lead)
+            now = datetime.now(UTC)
+            await _move(session, lead, Stage.LOST, who, f"discarded: {kind}")
+            lead.discarded_kind = kind
+            lead.duplicate_of_lead_id = duplicate_of if kind == "duplicate" else None
+            lead.owner_mode = OwnerMode.BOT.value
+            lead.snoozed_until = None
+            await deals.close_open_deal_lost(session, who, lead, DISCARD_REASONS[kind])
+            escalation = await _active_escalation(session, lead_id)
+            if escalation is not None:
+                escalation.status, escalation.resolved_at = "closed", now
+                escalation.outcome = f"discarded_{kind}"
+            if kind == "test":
+                await self._erase_test_lead(session, who, lead, cfg, now)
+            changed = await self._finish(
+                session,
+                who,
+                lead,
+                f"lead.discard_{kind}",
+                before,
+                escalation,
+                on_behalf_of=on_behalf,
+            )
+        await self._notify(changed)
+
+    @staticmethod
+    async def _erase_test_lead(
+        session: AsyncSession, who: Principal, lead: Lead, cfg: AppSettings, now: datetime
+    ) -> None:
+        """«Тест»: ПДн тестового лида стираются как по /delete; подписчики шины стирают копии."""
+        from app.services.contact_telegram import unlink_erased  # цикл импортов на уровне модуля
+
+        await cabinet_erasure.erase_for_lead(session, lead, cfg)
+        identity_ids = await repo.identity_ids_of_lead(session, lead.id)
+        await repo.close_escalations(session, lead.id, now)
+        await repo.erase_lead(session, lead, now)
+        await unlink_erased(session, identity_ids, now, who.actor)
+        await bus_events.lead_erased(session, lead, who.actor)
+
+    async def update_contacts(
+        self, who: Principal, lead_id: int, fields: dict[str, str | None]
+    ) -> list[lead_contacts.Duplicate]:
+        """Правка имени, телефона, почты и компании (LH-1). Телефон — тем же нормализатором, что и
+        форма сайта; почта — нижний регистр и формат. Дубль — предупреждение в ответе, не отказ."""
+        async with self._sessions() as session, session.begin():
+            lead = await _lead(session, lead_id)
+            on_behalf = await _require_owner(session, lead, who)
+            before = _contacts_view(lead)
+            changed = _apply_contacts(lead, fields)
+            if lead.source != "telegram" and lead.phone_e164 is None and lead.email is None:
+                raise ValidationFailedError(
+                    "phone or email is required", reason=Reason.CONTACT_REQUIRED, field="phone"
+                )
+            duplicates = (
+                await lead_contacts.duplicates(
+                    session,
+                    lead.id,
+                    lead.phone_e164 if "phone" in changed else None,
+                    lead.email if "email" in changed else None,
+                )
+                if changed
+                else []
+            )
+            if changed:
+                after = _contacts_view(lead)
+                if on_behalf is not None:
+                    after = {**after, "on_behalf_of_user_id": on_behalf}
+                await audit.record(
+                    session,
+                    who.actor,
+                    "lead.update_contacts",
+                    "lead",
+                    lead.id,
+                    before=before,
+                    after={**after, "fields": sorted(changed)},
+                )
+                await events.publish(
+                    session, "lead.updated", lead_id=lead.id, owner_mode=lead.owner_mode
+                )
+                await bus_events.lead_updated(session, lead, who.actor, sorted(changed))
+        return duplicates
+
     async def add_note(self, who: Principal, lead_id: int, text: str, visible_to_bot: bool) -> int:
         if not text.strip():
             raise ValidationFailedError("note is empty", field="text")
@@ -579,6 +689,58 @@ async def notify_chats(hook: ChatsChanged | None, chats: list[int]) -> None:
         await hook(chats)
     except Exception as exc:  # noqa: BLE001 — действие уже сохранено
         logger.warning("chat_menu_enqueue_failed", chats=len(chats), error=type(exc).__name__)
+
+
+async def _check_duplicate_target(
+    session: AsyncSession, lead_id: int, duplicate_of: int | None
+) -> None:
+    """Дубль указывает на другой живой лид, который не отброшен сам."""
+    if duplicate_of is None or duplicate_of == lead_id:
+        raise ValidationFailedError("choose the lead this one duplicates", field="duplicate_of")
+    target = await repo.get_lead(session, duplicate_of)
+    if target is None or target.erased_at is not None or target.discarded_kind is not None:
+        raise ValidationFailedError("choose the lead this one duplicates", field="duplicate_of")
+
+
+def _contacts_view(lead: Lead) -> dict[str, Any]:
+    """Контакты для журнала: номер и почта — признаком наличия, как в журнале приёма заявок."""
+    return {
+        "name": lead.display_name,
+        "company_name": lead.company_name,
+        "has_phone": lead.phone_e164 is not None,
+        "has_email": lead.email is not None,
+    }
+
+
+def _apply_contacts(lead: Lead, fields: dict[str, str | None]) -> set[str]:
+    """Нормализует и записывает названные поля; возвращает те, что изменились."""
+    changed: set[str] = set()
+    for name, raw in fields.items():
+        text = (raw or "").strip()
+        if name == "name":
+            if not text:
+                raise ValidationFailedError("name is required", field="name")
+            value: str | None = text[:255]
+            attr = "display_name"
+        elif name == "phone":
+            value = normalize_phone_e164(text) if text else None
+            if text and value is None:
+                raise ValidationFailedError(
+                    "phone must be in international format",
+                    reason=Reason.INVALID_PHONE,
+                    field="phone",
+                )
+            attr = "phone_e164"
+        elif name == "email":
+            value, attr = contact_email(text), "email"
+        elif name == "company":
+            value, attr = (text[:255] or None), "company_name"
+        else:
+            raise ValidationFailedError("unknown field", field=name)
+        if getattr(lead, attr) != value:
+            setattr(lead, attr, value)
+            changed.add(name)
+    return changed
 
 
 async def _lead(session: AsyncSession, lead_id: int) -> Lead:

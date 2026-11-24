@@ -1552,6 +1552,22 @@ components:
           title: Reason
       title: Close
       type: object
+    CloseOptions:
+      description: 'Что нужно окну «Закрыть» (LH-1): причины отказа из «Настроек» и решает ли итог ERP.'
+      properties:
+        lost_reasons:
+          items:
+            type: string
+          title: Lost Reasons
+          type: array
+        won_by_erp:
+          title: Won By Erp
+          type: boolean
+      required:
+      - lost_reasons
+      - won_by_erp
+      title: CloseOptions
+      type: object
     ComponentStatusOut:
       properties:
         checked_at:
@@ -1635,6 +1651,34 @@ components:
       required:
       - console
       title: ConsoleOpenIn
+      type: object
+    ContactDuplicate:
+      description: Другой лид или клиент с тем же номером или почтой — предупреждение, не отказ.
+      properties:
+        field:
+          enum:
+          - phone
+          - email
+          title: Field
+          type: string
+        id:
+          title: Id
+          type: integer
+        kind:
+          enum:
+          - lead
+          - client
+          title: Kind
+          type: string
+        name:
+          title: Name
+          type: string
+      required:
+      - kind
+      - id
+      - name
+      - field
+      title: ContactDuplicate
       type: object
     ContactIn:
       description: Телефон — в любом виде с кодом страны, сервер приводит к E.164; пустая строка — нет.
@@ -1798,6 +1842,25 @@ components:
       - full_name
       - phone_e164
       title: ContactSuggestion
+      type: object
+    ContactsResult:
+      properties:
+        duplicates:
+          items:
+            $ref: '#/components/schemas/ContactDuplicate'
+          title: Duplicates
+          type: array
+        id:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Id
+        ok:
+          const: true
+          default: true
+          title: Ok
+          type: boolean
+      title: ContactsResult
       type: object
     CoveredOut:
       description: За кого заместитель видит очередь сегодня.
@@ -2717,6 +2780,28 @@ components:
       required:
       - codes
       title: DictionaryOrderIn
+      type: object
+    Discard:
+      description: '«Спам», «Тест», «Дубль» (LH-1). Дубль указывает на лид, который остаётся; для остальных
+
+        `duplicate_of` не нужен.'
+      properties:
+        duplicate_of:
+          anyOf:
+          - exclusiveMinimum: 0.0
+            type: integer
+          - type: 'null'
+          title: Duplicate Of
+        kind:
+          enum:
+          - spam
+          - test
+          - duplicate
+          title: Kind
+          type: string
+      required:
+      - kind
+      title: Discard
       type: object
     DoNotWorkOut:
       description: 'Отметка «Не работать» (Х-8): проекция компании ERP, факты как есть.'
@@ -5890,6 +5975,38 @@ components:
       - created_at
       title: LeadBrief
       type: object
+    LeadContactsPatch:
+      additionalProperties: false
+      description: 'Правка контактов лида (LH-1): названные поля меняются, пропущенные не трогаются; пустой
+
+        `phone`, `email` или `company` очищает поле, пустое имя — ошибка.'
+      properties:
+        company:
+          anyOf:
+          - maxLength: 255
+            type: string
+          - type: 'null'
+          title: Company
+        email:
+          anyOf:
+          - maxLength: 255
+            type: string
+          - type: 'null'
+          title: Email
+        name:
+          anyOf:
+          - maxLength: 255
+            type: string
+          - type: 'null'
+          title: Name
+        phone:
+          anyOf:
+          - maxLength: 40
+            type: string
+          - type: 'null'
+          title: Phone
+      title: LeadContactsPatch
+      type: object
     LeadDetail:
       properties:
         assigned_user_id:
@@ -5958,9 +6075,23 @@ components:
           format: date-time
           title: Created At
           type: string
+        discarded_kind:
+          anyOf:
+          - enum:
+            - spam
+            - test
+            - duplicate
+            type: string
+          - type: 'null'
+          title: Discarded Kind
         display_name:
           title: Display Name
           type: string
+        duplicate_of_lead_id:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Duplicate Of Lead Id
         email:
           anyOf:
           - type: string
@@ -16061,6 +16192,28 @@ paths:
       summary: Create Lead
       tags:
       - leads
+  /api/v1/leads/close_options:
+    get:
+      description: Причины отказа и режим итога — для окна «Закрыть» (LH-1); право — как у закрытия.
+      operationId: close_options
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CloseOptions'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: Close Options
+      tags:
+      - leads
   /api/v1/leads/handover_targets:
     get:
       description: 'Кому передать лида (D17G-1): активные сотрудники с работой с клиентом (`crm.leads: full`).'
@@ -16184,6 +16337,44 @@ paths:
       security:
       - HTTPBearer: []
       summary: Get Lead
+      tags:
+      - leads
+    patch:
+      description: 'Правка имени, телефона, почты и компании лида (LH-1). Тот же нормализатор телефона, что у
+
+        формы сайта; почта — нижний регистр и формат. Другой лид или клиент с тем же номером или почтой
+
+        — `duplicates` в ответе, правка сохранена.'
+      operationId: update_contacts
+      parameters:
+      - in: path
+        name: lead_id
+        required: true
+        schema:
+          title: Lead Id
+          type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LeadContactsPatch'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContactsResult'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: Update Contacts
       tags:
       - leads
   /api/v1/leads/{lead_id}/actions/acknowledge:
@@ -16357,6 +16548,43 @@ paths:
       summary: Create Request From Lead
       tags:
       - clients
+  /api/v1/leads/{lead_id}/actions/discard:
+    post:
+      description: '«Спам», «Тест», «Дубль» (LH-1): лид закрыт отказом и скрыт из активных списков; «тест»
+
+        ещё и обезличен, «дубль» ссылается на оставшийся лид (`duplicate_of`).'
+      operationId: discard
+      parameters:
+      - in: path
+        name: lead_id
+        required: true
+        schema:
+          title: Lead Id
+          type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Discard'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActionResult'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: Discard
+      tags:
+      - leads
   /api/v1/leads/{lead_id}/actions/hand_over:
     post:
       description: '«Передать менеджеру» с запиской (D17G-1): лид у ответственного, клиенту ничего не уходит.

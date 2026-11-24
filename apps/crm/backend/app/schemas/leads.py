@@ -4,7 +4,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.schemas.notices import InvitationOut, NoticeOut
 
@@ -130,6 +130,9 @@ class LeadDetail(LeadOut):
     first_response_overdue: bool = False
     # Origin facts of a web-form lead (LID-5); null for other channels and older leads.
     origin: "LeadOriginOut | None" = None
+    # «Спам» | «тест» | «дубль» (LH-1) и лид, на который указывает дубль.
+    discarded_kind: Literal["spam", "test", "duplicate"] | None = None
+    duplicate_of_lead_id: int | None = None
     # Подтверждение запроса клиенту: канал, итог, причина словами (null — не заводилось).
     confirmation: NoticeOut | None = None
     # Приглашение клиента лида в кабинет: итог, каналы контакта, «повторить другим каналом» (null —
@@ -254,3 +257,43 @@ class AssistOut(BaseModel):
 class ActionResult(BaseModel):
     ok: Literal[True] = True
     id: int | None = None
+
+
+class Discard(BaseModel):
+    """«Спам», «Тест», «Дубль» (LH-1). Дубль указывает на лид, который остаётся; для остальных
+    `duplicate_of` не нужен."""
+
+    kind: Literal["spam", "test", "duplicate"]
+    duplicate_of: int | None = Field(default=None, gt=0)
+
+
+class LeadContactsPatch(BaseModel):
+    """Правка контактов лида (LH-1): названные поля меняются, пропущенные не трогаются; пустой
+    `phone`, `email` или `company` очищает поле, пустое имя — ошибка."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    name: str | None = Field(default=None, max_length=255)
+    phone: str | None = Field(default=None, max_length=40)
+    email: str | None = Field(default=None, max_length=255)
+    company: str | None = Field(default=None, max_length=255)
+
+
+class ContactDuplicate(BaseModel):
+    """Другой лид или клиент с тем же номером или почтой — предупреждение, не отказ."""
+
+    kind: Literal["lead", "client"]
+    id: int
+    name: str
+    field: Literal["phone", "email"]
+
+
+class ContactsResult(ActionResult):
+    duplicates: list[ContactDuplicate] = Field(default_factory=list)
+
+
+class CloseOptions(BaseModel):
+    """Что нужно окну «Закрыть» (LH-1): причины отказа из «Настроек» и решает ли итог ERP."""
+
+    lost_reasons: list[str]
+    won_by_erp: bool

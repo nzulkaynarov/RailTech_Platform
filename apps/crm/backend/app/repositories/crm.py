@@ -41,7 +41,10 @@ class LeadFilter:
 
 
 def _filtered(f: LeadFilter, me: int) -> Select[Lead]:
-    stmt = select(Lead).where(Lead.erased_at.is_(None), Lead.source != SANDBOX_SOURCE)
+    # Спам, тест и дубль (LH-1) в активные списки не попадают.
+    stmt = select(Lead).where(
+        Lead.erased_at.is_(None), Lead.discarded_kind.is_(None), Lead.source != SANDBOX_SOURCE
+    )
     if f.stage:
         stmt = stmt.where(Lead.stage.in_(f.stage.split(",")))
     if f.owner == "me":
@@ -127,6 +130,7 @@ async def inbox(session: AsyncSession, me: int) -> tuple[list[Lead], list[Lead],
             .where(
                 Escalation.status.in_(("open", "snoozed")),
                 Lead.erased_at.is_(None),
+                Lead.discarded_kind.is_(None),
                 Lead.source != SANDBOX_SOURCE,
             )
             .order_by(Escalation.created_at)
@@ -139,6 +143,7 @@ async def inbox(session: AsyncSession, me: int) -> tuple[list[Lead], list[Lead],
                 Lead.assigned_user_id == me,
                 Lead.owner_mode == "human",
                 Lead.erased_at.is_(None),
+                Lead.discarded_kind.is_(None),
                 Lead.source != SANDBOX_SOURCE,
             )
             # Сначала те, кто ждёт ответа: лид написал после последнего ответа менеджера.
@@ -153,6 +158,7 @@ async def inbox(session: AsyncSession, me: int) -> tuple[list[Lead], list[Lead],
                 Lead.owner_mode == "paused",
                 Lead.assigned_user_id.is_(None),
                 Lead.erased_at.is_(None),
+                Lead.discarded_kind.is_(None),
                 Lead.source != SANDBOX_SOURCE,
             )
             .order_by(Lead.last_lead_msg_at.desc().nulls_last())

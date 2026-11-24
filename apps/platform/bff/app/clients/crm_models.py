@@ -373,6 +373,12 @@ class DialogPage(BaseModel):
     total: Annotated[int, Field(title="Total")]
 
 
+class DiscardedKind(StrEnum):
+    spam = "spam"
+    test = "test"
+    duplicate = "duplicate"
+
+
 class DryRunResponse(BaseModel):
     by_code_candidate: Annotated[dict[str, int], Field(title="By Code Candidate")]
     by_code_current: Annotated[dict[str, int], Field(title="By Code Current")]
@@ -1367,7 +1373,13 @@ class LeadDetail(BaseModel):
     consent_given_at: Annotated[AwareDatetime | None, Field(title="Consent Given At")]
     consent_method: Annotated[str | None, Field(title="Consent Method")] = None
     created_at: Annotated[AwareDatetime, Field(title="Created At")]
+    discarded_kind: Annotated[DiscardedKind | None, Field(title="Discarded Kind")] = (
+        None
+    )
     display_name: Annotated[str, Field(title="Display Name")]
+    duplicate_of_lead_id: Annotated[int | None, Field(title="Duplicate Of Lead Id")] = (
+        None
+    )
     email: Annotated[str | None, Field(title="Email")] = None
     erp_company_id: Annotated[int | None, Field(title="Erp Company Id")] = None
     erp_deal_id: Annotated[int | None, Field(title="Erp Deal Id")] = None
