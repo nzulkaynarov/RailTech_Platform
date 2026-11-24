@@ -123,16 +123,16 @@ export function DocLinkDialog({
   const title = needsCode
     ? t('docLink.dialog.title')
     : intent.action === 'accept'
-      ? t('docLink.dialog.memberTitle')
-      : t(`docLink.actions.${intent.action}`);
+      ? t('docLink.dialog.memberTitle', { context: doc.kind })
+      : t(`docLink.actions.${intent.action}`, { context: doc.kind });
   const email = doc.recipient_hint;
   const description = needsCode
     ? request.isPending
       ? t('docLink.dialog.sending')
       : t('docLink.dialog.sent', { email: request.data?.sent_to ?? email, minutes: 10 })
     : intent.action === 'accept'
-      ? t('docLink.dialog.memberText', { total: formatMoney(doc.total) })
-      : t('docLink.quoteTitle', { number: doc.number });
+      ? t('docLink.dialog.memberText', { total: formatMoney(doc.total), context: doc.kind })
+      : t('docLink.docTitle', { number: doc.number, context: doc.kind });
 
   return (
     <ActionDialog
@@ -142,7 +142,7 @@ export function DocLinkDialog({
       }}
       title={title}
       description={description}
-      confirmLabel={t(`docLink.actions.${intent.action}`)}
+      confirmLabel={t(`docLink.actions.${intent.action}`, { context: doc.kind })}
       pending={pending || verify.isPending}
       error={verify.error ?? actionError}
       message={message}

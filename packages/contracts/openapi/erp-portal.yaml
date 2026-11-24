@@ -1466,7 +1466,11 @@ paths:
         403 `FORBIDDEN`; без принятых оферты и политики — 403 `LEGAL_ACCEPTANCE_REQUIRED`. `accept` принимает КП (договор
         создаётся, как при приёме в кабинете), `reject` возвращает с замечаниями (`text` — замечания, обязательны),
         `question` пишет вопрос менеджеру (`text`). КП уже решено или срок вышел — 409 `QUOTE_FINALIZED`, `QUOTE_EXPIRED`.
-        Ответ — документ в том же виде, что у `POST /doc-links/open`.
+        ДК-3: у договора, счёта и акта действия свои (`actions` в ответе `open`): договор — `accept` (клиент подписывает),
+        акт — `accept` и `reject` (возврат с замечаниями); у счёта действий нет. Действие вне списка вида — 422
+        `VALIDATION_ERROR`, ссылка одного вида не действует над документом другого. Модуль кабинета — вида документа
+        (`contracts`, `acts`, `quotes`), иначе 403 `MODULE_REQUIRED`. Договор или акт уже решён — 409 `CONTRACT_FINALIZED`,
+        `ACT_FINALIZED`. Ответ — документ в том же виде, что у `POST /doc-links/open`.
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
@@ -1502,7 +1506,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
         '409':
-          description: 'КП уже решено или срок вышел (`QUOTE_FINALIZED`, `QUOTE_EXPIRED`)'
+          description: 'Документ уже решён или срок вышел (`QUOTE_FINALIZED`, `QUOTE_EXPIRED`, `CONTRACT_FINALIZED`, `ACT_FINALIZED`)'
           content:
             application/json:
               schema:
@@ -6054,9 +6058,9 @@ components:
           type: boolean
         reason:
           type: [string, 'null']
-          enum: [accepted, rejected, expired, other_company, no_contact, no_access, no_right, null]
           description: |
-            `accepted`, `rejected`, `expired` — КП уже решено или срок вышел; `other_company` — вошёл контакт другой
+            Значения (список открыт, клиент неизвестное показывает как «нельзя»): `accepted`, `rejected`, `expired`, `paid` — документ уже решён, срок вышел или счёт оплачен; `no_actions` — у этого вида документа
+            нет действий (счёт: реквизиты и справка); `other_company` — вошёл контакт другой
             компании; `no_contact`, `no_access` — у получателя нет контакта или модуля в кабинете; `no_right` — у контакта нет права действовать
     DocLinkCodeSent:
       type: object
@@ -6073,12 +6077,14 @@ components:
           description: Через сколько секунд можно запросить новый
     DocLinkView:
       type: object
-      description: Документ по ссылке — клиентская проекция КП без себестоимости, наценки и внутренних полей
+      description: |
+        Документ по ссылке — клиентская проекция без себестоимости, наценки и внутренних полей. Вид — `kind` (КП, договор,
+        счёт, акт); у договора, счёта и акта `version` равен 1, `lines` пуст, а факты вида — в необязательных полях ниже.
       required: [kind, number, version, from_name, to_name, total, valid_until, state, link_expires_at, recipient_hint, session, decide, ask, lines]
       properties:
         kind:
           type: string
-          enum: [quote]
+          description: 'Вид документа — `quote`, `contract`, `invoice` или `act` (список открыт — новые виды добавляются без смены версии)'
         number:
           type: string
         version:
@@ -6100,8 +6106,9 @@ components:
           format: date
         state:
           type: string
-          enum: [open, accepted, rejected, expired]
-          description: Из фактов КП, а не из ссылки
+          description: |
+            Значения — `open`, `accepted`, `rejected`, `expired`, `paid`. Из фактов документа, а не из ссылки. `open` — ждёт ответа (у счёта — оплаты); `accepted` — принят (договор подписан
+            клиентом, акт принят); `rejected` — возвращён с замечаниями; `paid` — счёт оплачен
         link_expires_at:
           type: string
           format: date-time
@@ -6128,6 +6135,33 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/QuoteLine'
+        actions:
+          type: array
+          description: |
+            Какие действия есть у этого вида документа (ДК-3): КП — принять, вернуть, вопрос; договор — принять (подписать);
+            акт — принять, вернуть; счёт — ни одного. Действие вне списка — 422 `VALIDATION_ERROR`. Нет поля — как у КП
+          items:
+            type: string
+            enum: [accept, reject, question]
+        signed_at:
+          type: [string, 'null']
+          format: date-time
+          description: Договор — когда его подписал клиент
+        issued_at:
+          type: string
+          format: date-time
+          description: Акт — когда выставлен
+        due_date:
+          type: [string, 'null']
+          format: date
+          description: Счёт — срок оплаты
+        paid:
+          $ref: '#/components/schemas/Money'
+        balance_due:
+          $ref: '#/components/schemas/Money'
+        payment_details:
+          type: [string, 'null']
+          description: Счёт — реквизиты для оплаты, как в PDF; «Оплачено?» — справка, нового пути оплаты нет
     QuoteLine:
       type: object
       description: Строка КП для клиента — цена продажи без себестоимости и наценки; `unit_price` и `total` без НДС (Q-FIX21-2)

@@ -1853,6 +1853,46 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/eds/projects/{ref}/documents/{kind}/{doc_id}/client-links": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * EDS · Проект: ссылки клиента на договор, счёт или акт в Кабинете
+     * @description Кому ушла личная ссылка на документ (адрес замаскирован), когда, открывали ли её и в каком она состоянии (`active`, `revoked`, `expired`, `superseded`). Документ обязан быть в карточке этого проекта (иначе 404). Видит тот, кто вправе отправлять этот документ (решает ERP); у остальных список пуст. Раздел `eds.projects` — чтение.
+     */
+    get: operations["getEdsProjectDocumentClientLinks"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/eds/projects/{ref}/documents/{kind}/{doc_id}/revoke-links": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * EDS · Проект: отозвать ссылки клиента на договор, счёт или акт
+     * @description Гасит все живые ссылки ЭТОГО документа у всех получателей (клиент по ним увидит «ссылка отозвана»), пишет событие в журнал сделки; повтор безвреден. Новая отправка документа даст новую ссылку. Право — то же, что на отправку документа (решает ERP; иначе 403). Раздел `eds.projects` — чтение.
+     */
+    post: operations["revokeEdsProjectDocumentClientLinks"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/eds/documents/{id}/pdf": {
     parameters: {
       query?: never;
@@ -13119,6 +13159,25 @@ export interface components {
       kind: "contract" | "invoice" | "act";
       document_id: number;
     };
+    DocumentClientLink: {
+      /** @description Адрес получателя, замаскированный (`a***@domain`) */
+      recipient_hint: string;
+      /** Format: date-time */
+      sent_at: string;
+      /** Format: date-time */
+      first_opened_at: string | null;
+      /** Format: date-time */
+      last_opened_at: string | null;
+      /** Format: date-time */
+      expires_at: string;
+      /** @enum {string} */
+      state: "active" | "revoked" | "expired" | "superseded";
+    };
+    DocumentClientLinks: {
+      links: components["schemas"]["DocumentClientLink"][];
+      /** @description Есть живая ссылка, и у сотрудника есть право отправлять этот документ */
+      can_revoke: boolean;
+    };
     SigningApprovalRow: {
       /** Format: uuid */
       id: string;
@@ -22253,6 +22312,67 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["ProjectFileGenerating"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  getEdsProjectDocumentClientLinks: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Номер проекта `ПР-2026-104` (или заявки `ЗВ-2026-104`) либо id сделки ERP цифрами; год номера сверяется с годом создания сделки */
+        ref: components["parameters"]["ProjectRefPath"];
+        kind: "contract" | "invoice" | "act";
+        doc_id: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Ссылки получателей документа */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DocumentClientLinks"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  revokeEdsProjectDocumentClientLinks: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Номер проекта `ПР-2026-104` (или заявки `ЗВ-2026-104`) либо id сделки ERP цифрами; год номера сверяется с годом создания сделки */
+        ref: components["parameters"]["ProjectRefPath"];
+        kind: "contract" | "invoice" | "act";
+        doc_id: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Обновлённый список ссылок документа */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DocumentClientLinks"];
         };
       };
       401: components["responses"]["SessionExpired"];

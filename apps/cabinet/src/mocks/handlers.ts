@@ -417,12 +417,31 @@ function docLinkGone(token: string): Response | null {
   return null;
 }
 
-function docLinkState(token: string): Schemas['DocLinkView']['state'] {
-  return docLinkStates.get(token) ?? (token.startsWith('done') ? 'accepted' : 'open');
+type DocKind = 'quote' | 'contract' | 'invoice' | 'act';
+
+/** Вид документа мока по началу токена (ДК-3): `contract-…`, `invoice-…`, `act-…`; прочее — КП. */
+function docKind(token: string): DocKind {
+  return (['contract', 'invoice', 'act'] as const).find((kind) => token.startsWith(kind)) ?? 'quote';
+}
+
+/** Что можно сделать по ссылке у вида — как `actions` ответа сервера. */
+const DOC_ACTIONS: Record<DocKind, Array<'accept' | 'reject' | 'question'>> = {
+  quote: ['accept', 'reject', 'question'],
+  contract: ['accept'],
+  invoice: [],
+  act: ['accept', 'reject'],
+};
+
+function docLinkState(token: string): string {
+  const decided = docLinkStates.get(token);
+  if (decided) return decided;
+  if (token.includes('paid')) return 'paid';
+  return token.includes('done') ? 'accepted' : 'open';
 }
 
 function docLinkAvailability(token: string, session: MockSession | null): Schemas['DocLinkAvailability'] {
   const state = docLinkState(token);
+  if (DOC_ACTIONS[docKind(token)].length === 0) return { allowed: false, reason: 'no_actions' };
   if (state !== 'open') return { allowed: false, reason: state };
   if (session && token.includes('foreign')) return { allowed: false, reason: 'other_company' };
   const canAct = session ? contactFor(session.role).can_act : !token.includes('viewer');
@@ -437,22 +456,49 @@ function docLinkView(token: string): Schemas['DocLinkView'] {
   valid.setUTCDate(valid.getUTCDate() + 16);
   const expires = new Date(valid);
   expires.setUTCDate(expires.getUTCDate() + 30);
-  return {
-    kind: 'quote',
-    number: 'QT-0118',
-    version: 1,
+  const kind = docKind(token);
+  const common = {
     from_name: 'ООО «РейлТех»',
     to_name: 'ООО «Восток Транс»',
+    version: 1,
+    valid_until: null,
+    state: docLinkState(token) as Schemas['DocLinkView']['state'],
+    link_expires_at: expires.toISOString(),
+    recipient_hint: 'p***@vostok-trans.uz',
+    session: (!session ? 'none' : token.includes('foreign') ? 'other_company' : 'member') as Schemas['DocLinkView']['session'],
+    decide: availability,
+    ask: availability,
+    actions: DOC_ACTIONS[kind],
+    lines: [],
+  };
+  const total = { amount: '33000000.00', currency: 'UZS' };
+  if (kind === 'contract') {
+    return { ...common, kind, number: 'CT-0042', total, signed_at: common.state === 'accepted' ? valid.toISOString() : null };
+  }
+  if (kind === 'invoice') {
+    const paid = common.state === 'paid';
+    return {
+      ...common,
+      kind,
+      number: 'INV-0077',
+      total,
+      due_date: valid.toISOString().slice(0, 10),
+      paid: paid ? total : { amount: '0.00', currency: 'UZS' },
+      balance_due: paid ? { amount: '0.00', currency: 'UZS' } : total,
+      payment_details: 'Получатель: ООО «РейлТех»\nР/с 2020 8000 1234 5678 9001, МФО 00014\nНазначение: оплата по счёту INV-0077',
+    };
+  }
+  if (kind === 'act') {
+    return { ...common, kind, number: 'ACT-0031', total, issued_at: valid.toISOString() };
+  }
+  return {
+    ...common,
+    kind,
+    number: 'QT-0118',
     total: quote.total,
     subtotal: quote.subtotal,
     vat: quote.vat,
     valid_until: valid.toISOString().slice(0, 10),
-    state: docLinkState(token),
-    link_expires_at: expires.toISOString(),
-    recipient_hint: 'p***@vostok-trans.uz',
-    session: !session ? 'none' : token.includes('foreign') ? 'other_company' : 'member',
-    decide: availability,
-    ask: availability,
     payment_terms: quote.payment_terms,
     delivery_days: quote.delivery_days,
     delivery_note: quote.delivery_note,
@@ -507,6 +553,7 @@ const docLinkHandlers = [
         const gone = docLinkGone(token);
         if (gone) return gone;
         if (token.includes('foreign')) return error(403, 'FORBIDDEN');
+        if (!DOC_ACTIONS[docKind(token)].includes(action as 'accept')) return error(422, 'VALIDATION_ERROR');
         if (docLinkState(token) !== 'open') return error(409, 'QUOTE_FINALIZED');
         if (action !== 'accept' && !text?.trim()) return error(422, action === 'reject' ? 'REASON_REQUIRED' : 'TEXT_REQUIRED');
         if (action === 'accept') docLinkStates.set(token, 'accepted');

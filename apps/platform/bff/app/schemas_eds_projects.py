@@ -56,6 +56,24 @@ FileKind = Literal["contract", "invoice", "act"]
 FileVariant = Literal["pdf", "scan"]
 
 
+class DocumentClientLink(BaseModel):
+    """Ссылка получателя на договор, счёт или акт в Кабинете (ДК-3б): адрес замаскирован ERP."""
+
+    recipient_hint: str
+    sent_at: dt.datetime
+    first_opened_at: dt.datetime | None
+    last_opened_at: dt.datetime | None
+    expires_at: dt.datetime
+    state: Literal["active", "revoked", "expired", "superseded"]
+
+
+class DocumentClientLinks(BaseModel):
+    """Ссылки документа проекта; «Отозвать» — пока есть живая ссылка и право отправлять документ."""
+
+    links: list[DocumentClientLink]
+    can_revoke: bool
+
+
 class ProjectMoney(BaseModel):
     amount: str = Field(pattern=r"^-?\d+\.\d{2}$")
     currency: str = Field(pattern=r"^[A-Z]{3}$")
@@ -389,6 +407,15 @@ class RawRow(_Raw):
 class RawPage(_Raw):
     count: int
     results: list[RawRow]
+
+
+class RawDocumentClientLinks(BaseModel):
+    """Ответ ERP `…/client-links/`: лишнего наружу не отдаём (id ссылки не нужен)."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    links: list[DocumentClientLink] = Field(default_factory=list)
+    can_revoke: bool = False
 
 
 class RawCard(RawRow):

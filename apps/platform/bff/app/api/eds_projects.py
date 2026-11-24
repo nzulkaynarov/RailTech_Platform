@@ -24,6 +24,7 @@ from app.row_logos import attach_client_logos
 from app.schemas_eds_projects import (
     ActActionIn,
     ContractActionIn,
+    DocumentClientLinks,
     FileGenerating,
     FileKind,
     FileVariant,
@@ -194,6 +195,34 @@ async def act_action(ref: Ref, body: ActActionIn, authed: Writer) -> ProjectCard
 async def act_scan(ref: Ref, request: Request, authed: Writer) -> ProjectCard:
     content, content_type = await _scan_body(request)
     return await _erp(authed).act_scan(ref, content, content_type)
+
+
+# --- ссылка клиента на документ в Кабинете (ДК-3б) ----------------------------------------------
+
+
+@router.get(
+    "/projects/{ref}/documents/{kind}/{doc_id}/client-links",
+    response_model=DocumentClientLinks,
+    operation_id="getEdsProjectDocumentClientLinks",
+)
+async def document_client_links(
+    ref: Ref, kind: FileKind, doc_id: Annotated[int, Path(ge=1, le=2**31 - 1)], authed: Reader
+) -> DocumentClientLinks:
+    """Кому ушла ссылка на договор, счёт или акт и открывали ли её. Раздел — чтение; нет права
+    отправлять этот документ (решает ERP) — список пуст, блок на экране скрыт."""
+    return await _erp(authed).document_links(ref, kind, doc_id)
+
+
+@router.post(
+    "/projects/{ref}/documents/{kind}/{doc_id}/revoke-links",
+    response_model=DocumentClientLinks,
+    operation_id="revokeEdsProjectDocumentClientLinks",
+)
+async def revoke_document_client_links(
+    ref: Ref, kind: FileKind, doc_id: Annotated[int, Path(ge=1, le=2**31 - 1)], authed: Reader
+) -> DocumentClientLinks:
+    """«Отозвать ссылку»: раздел — чтение, право отправлять документ и отзыв решает ERP (403)."""
+    return await _erp(authed).revoke_document_links(ref, kind, doc_id)
 
 
 # --- доставка клиенту (L0-1) ---------------------------------------------------------------------

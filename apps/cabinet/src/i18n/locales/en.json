@@ -1884,12 +1884,15 @@
   "docLink": {
     "title": "Document by link",
     "header": "You are viewing one document sent to {{email}}",
-    "quoteTitle": "Quote {{number}}",
     "facts": {
       "from": "From",
       "to": "To",
       "total": "Total",
-      "validUntil": "Valid until"
+      "validUntil": "Valid until",
+      "dueDate": "Pay by",
+      "balance": "Balance due",
+      "signedAt": "Signed by you",
+      "issuedAt": "Issued"
     },
     "withVat": "{{amount}} incl. VAT",
     "lines": {
@@ -1910,7 +1913,9 @@
       "accept": "Accept the quote",
       "reject": "Return with remarks",
       "question": "Ask a question",
-      "open": "Open the cabinet"
+      "open": "Open the cabinet",
+      "accept_contract": "Sign the contract",
+      "accept_act": "Accept the act"
     },
     "codeNote": "Any action needs the code we send to {{email}}. No other documents or sections open by this link.",
     "memberNote": "You are signed in as {{name}} — no code needed.",
@@ -1918,7 +1923,11 @@
     "state": {
       "accepted": "The quote is accepted. The contract will appear in your cabinet.",
       "rejected": "The quote was returned with remarks.",
-      "expired": "The quote has expired. Ask the seller to update it."
+      "expired": "The quote has expired. Ask the seller to update it.",
+      "accepted_contract": "You have signed the contract. The invoice comes next.",
+      "accepted_act": "The act is accepted.",
+      "rejected_act": "The act was returned with remarks.",
+      "paid": "The invoice is paid."
     },
     "reason": {
       "no_right": "Your contact has no right to decide — ask your company administrator.",
@@ -1946,12 +1955,19 @@
       "memberTitle": "Accept the quote?",
       "memberText": "Total {{total}}. The contract will appear in your cabinet.",
       "working": "Working…",
-      "openTitle": "Open the cabinet"
+      "openTitle": "Open the cabinet",
+      "memberTitle_contract": "Sign the contract?",
+      "memberText_contract": "Amount {{total}}. By signing you accept the terms of the contract.",
+      "memberTitle_act": "Accept the act?",
+      "memberText_act": "Amount {{total}}. An accepted act cannot be returned."
     },
     "done": {
       "accept": "Quote accepted",
       "reject": "Remarks sent",
-      "question": "Question sent to the manager"
+      "question": "Question sent to the manager",
+      "accept_contract": "Contract signed",
+      "accept_act": "Act accepted",
+      "reject_act": "Remarks sent"
     },
     "gone": {
       "revoked": {
@@ -1970,6 +1986,26 @@
         "title": "Link not found",
         "text": "Check the address or ask the sender for a new link."
       }
-    }
+    },
+    "docTitle_contract": "Contract {{number}}",
+    "docTitle_invoice": "Invoice {{number}}",
+    "docTitle_act": "Act {{number}}",
+    "downloadNamed_contract": "Download PDF: contract {{number}}",
+    "downloadNamed_invoice": "Download PDF: invoice {{number}}",
+    "downloadNamed_act": "Download PDF: act {{number}}",
+    "pay": {
+      "title": "Payment details",
+      "none": "The details are in the invoice PDF.",
+      "paidQuestion": "Already paid? The payment appears in the invoice once the seller confirms it. You can attach the payment order in the cabinet."
+    },
+    "about": {
+      "title_contract": "About the document",
+      "text_contract": "Contract with {{from}}. Read the PDF and sign when you are ready.",
+      "title_act": "About the document",
+      "text_act": "Act from {{from}}. Check the PDF, then accept the act or return it with remarks.",
+      "title": "About the document",
+      "text": "Document from {{from}}."
+    },
+    "docTitle": "Quote {{number}}"
   }
 }

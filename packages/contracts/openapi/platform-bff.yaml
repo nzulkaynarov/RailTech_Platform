@@ -3641,6 +3641,76 @@ paths:
         '503':
           $ref: '#/components/responses/BackendUnavailable'
 
+  /eds/projects/{ref}/documents/{kind}/{doc_id}/client-links:
+    get:
+      tags: [eds-projects]
+      operationId: getEdsProjectDocumentClientLinks
+      summary: 'EDS · Проект: ссылки клиента на договор, счёт или акт в Кабинете'
+      description: >-
+        Кому ушла личная ссылка на документ (адрес замаскирован), когда, открывали ли её и в каком она состоянии
+        (`active`, `revoked`, `expired`, `superseded`). Документ обязан быть в карточке этого проекта (иначе 404). Видит тот,
+        кто вправе отправлять этот документ (решает ERP); у остальных список пуст. Раздел `eds.projects` — чтение.
+      parameters:
+        - $ref: '#/components/parameters/ProjectRefPath'
+        - name: kind
+          in: path
+          required: true
+          schema: {type: string, enum: [contract, invoice, act]}
+        - name: doc_id
+          in: path
+          required: true
+          schema: {type: integer, minimum: 1}
+      responses:
+        '200':
+          description: Ссылки получателей документа
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentClientLinks'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+  /eds/projects/{ref}/documents/{kind}/{doc_id}/revoke-links:
+    post:
+      tags: [eds-projects]
+      operationId: revokeEdsProjectDocumentClientLinks
+      summary: 'EDS · Проект: отозвать ссылки клиента на договор, счёт или акт'
+      description: >-
+        Гасит все живые ссылки ЭТОГО документа у всех получателей (клиент по ним увидит «ссылка отозвана»), пишет событие в
+        журнал сделки; повтор безвреден. Новая отправка документа даст новую ссылку. Право — то же, что на отправку документа
+        (решает ERP; иначе 403). Раздел `eds.projects` — чтение.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/ProjectRefPath'
+        - name: kind
+          in: path
+          required: true
+          schema: {type: string, enum: [contract, invoice, act]}
+        - name: doc_id
+          in: path
+          required: true
+          schema: {type: integer, minimum: 1}
+      responses:
+        '200':
+          description: Обновлённый список ссылок документа
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentClientLinks'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
   /eds/documents/{id}/pdf:
     post:
       tags: [eds-documents]
@@ -23070,6 +23140,41 @@ components:
           enum: [contract, invoice, act]
         document_id:
           type: integer
+    DocumentClientLink:
+      type: object
+      additionalProperties: false
+      required: [recipient_hint, sent_at, first_opened_at, last_opened_at, expires_at, state]
+      properties:
+        recipient_hint:
+          type: string
+          description: Адрес получателя, замаскированный (`a***@domain`)
+        sent_at:
+          type: string
+          format: date-time
+        first_opened_at:
+          type: [string, 'null']
+          format: date-time
+        last_opened_at:
+          type: [string, 'null']
+          format: date-time
+        expires_at:
+          type: string
+          format: date-time
+        state:
+          type: string
+          enum: [active, revoked, expired, superseded]
+    DocumentClientLinks:
+      type: object
+      additionalProperties: false
+      required: [links, can_revoke]
+      properties:
+        links:
+          type: array
+          items:
+            $ref: '#/components/schemas/DocumentClientLink'
+        can_revoke:
+          type: boolean
+          description: Есть живая ссылка, и у сотрудника есть право отправлять этот документ
     SigningApprovalRow:
       type: object
       additionalProperties: false

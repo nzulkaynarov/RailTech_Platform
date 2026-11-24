@@ -1884,12 +1884,15 @@
   "docLink": {
     "title": "Havola orqali hujjat",
     "header": "Siz {{email}} manziliga yuborilgan bitta hujjatni köryapsiz",
-    "quoteTitle": "{{number}} taklifi",
     "facts": {
       "from": "Kimdan",
       "to": "Kimga",
       "total": "Summa",
-      "validUntil": "Amal qiliş muddati"
+      "validUntil": "Amal qiliş muddati",
+      "dueDate": "Tölov muddati",
+      "balance": "Tölanadigan summa",
+      "signedAt": "Siz imzoladingiz",
+      "issuedAt": "Taqdim etilgan"
     },
     "withVat": "{{amount}} QQS bilan",
     "lines": {
@@ -1910,7 +1913,9 @@
       "accept": "Taklifni qabul qiliş",
       "reject": "Izoh bilan qaytariş",
       "question": "Savol beriş",
-      "open": "Kabinetni oçiş"
+      "open": "Kabinetni oçiş",
+      "accept_contract": "Şartnomani imzolaş",
+      "accept_act": "Dalolatnomani qabul qiliş"
     },
     "codeNote": "Har qanday amal {{email}} manziliga keladigan koddan keyin bajariladi. Bu havola orqali boşqa hujjat va bölimlar oçilmaydi.",
     "memberNote": "Siz {{name}} sifatida kirgansiz — kod kerak emas.",
@@ -1918,7 +1923,11 @@
     "state": {
       "accepted": "Taklif qabul qilindi. Şartnoma kabinetingizda paydo böladi.",
       "rejected": "Taklif izoh bilan qaytarildi.",
-      "expired": "Taklifning amal qiliş muddati tugadi. Sotuvçidan uni yangilaşni sörang."
+      "expired": "Taklifning amal qiliş muddati tugadi. Sotuvçidan uni yangilaşni sörang.",
+      "accepted_contract": "Şartnomani imzoladingiz. Keyingi qadam — hisob.",
+      "accepted_act": "Dalolatnoma qabul qilindi.",
+      "rejected_act": "Dalolatnoma izoh bilan qaytarildi.",
+      "paid": "Hisob tölandi."
     },
     "reason": {
       "no_right": "Kontaktingizda qaror qabul qilişga huquq yöq — kompaniyangiz administratoriga murojaat qiling.",
@@ -1946,12 +1955,19 @@
       "memberTitle": "Taklifni qabul qilasizmi?",
       "memberText": "Summa {{total}}. Şartnoma kabinetingizda paydo böladi.",
       "working": "Bajarilmoqda…",
-      "openTitle": "Kabinetni oçiş"
+      "openTitle": "Kabinetni oçiş",
+      "memberTitle_contract": "Şartnomani imzolaysizmi?",
+      "memberText_contract": "Summa {{total}}. Imzolaş bilan şartnoma şartlarini qabul qilasiz.",
+      "memberTitle_act": "Dalolatnomani qabul qilasizmi?",
+      "memberText_act": "Summa {{total}}. Qabul qilingan dalolatnomani qaytarib bölmaydi."
     },
     "done": {
       "accept": "Taklif qabul qilindi",
       "reject": "Izohlar yuborildi",
-      "question": "Savol menejerga yuborildi"
+      "question": "Savol menejerga yuborildi",
+      "accept_contract": "Şartnoma imzolandi",
+      "accept_act": "Dalolatnoma qabul qilindi",
+      "reject_act": "Izohlar yuborildi"
     },
     "gone": {
       "revoked": {
@@ -1970,6 +1986,26 @@
         "title": "Havola topilmadi",
         "text": "Manzilni tekşiring yoki yuboruvçidan yangi havola sörang."
       }
-    }
+    },
+    "docTitle_contract": "{{number}} şartnomasi",
+    "docTitle_invoice": "{{number}} hisobi",
+    "docTitle_act": "{{number}} dalolatnomasi",
+    "downloadNamed_contract": "PDF yuklab oliş: {{number}} şartnomasi",
+    "downloadNamed_invoice": "PDF yuklab oliş: {{number}} hisobi",
+    "downloadNamed_act": "PDF yuklab oliş: {{number}} dalolatnomasi",
+    "pay": {
+      "title": "Tölov rekvizitlari",
+      "none": "Rekvizitlar hisobning PDF faylida.",
+      "paidQuestion": "Tölab böldingizmi? Tölov sotuvçi tasdiqlagaç hisobda paydo böladi. Tölov topşiriğini Kabinetda ilova qilişingiz mumkin."
+    },
+    "about": {
+      "title_contract": "Hujjat haqida",
+      "text_contract": "{{from}} bilan şartnoma. PDF faylni öqing va tayyor bölganingizda imzolang.",
+      "title_act": "Hujjat haqida",
+      "text_act": "{{from}} dalolatnomasi. PDF faylni tekşiring: dalolatnomani qabul qiling yoki izoh bilan qaytaring.",
+      "title": "Hujjat haqida",
+      "text": "{{from}} hujjati."
+    },
+    "docTitle": "{{number}} taklifi"
   }
 }

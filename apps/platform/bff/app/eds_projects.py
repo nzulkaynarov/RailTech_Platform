@@ -20,11 +20,13 @@ from app.row_logos import attach_client_logos
 from app.schemas_eds_projects import (
     ActActionIn,
     ContractActionIn,
+    DocumentClientLinks,
     ProjectCard,
     ProjectFulfillment,
     ProjectPage,
     ProjectRow,
     RawCard,
+    RawDocumentClientLinks,
     RawPage,
     RawRow,
     parse,
@@ -323,6 +325,44 @@ class ErpProjects:
         # ERP отвечает 201 (запрос создан), в контракте `erp-internal` — 200: принимаем оба.
         await self._json("POST", f"{API}/{slug}/{document_id}/request-signing/", ok=(200, 201))
         return await self.card(ref)
+
+    async def _own_document(self, ref: str, kind: str, document_id: int) -> str:
+        """Путь документа в ERP; документ обязан быть в карточке этого проекта."""
+        card = await self.raw_card(ref)
+        allowed = {
+            "contract": {card.contract.id} if card.contract else set(),
+            "act": {card.act.id} if card.act else set(),
+            "invoice": {item.id for item in card.invoices},
+        }
+        if document_id not in allowed[kind]:
+            raise not_found()
+        slug = {"contract": "contracts", "invoice": "invoices", "act": "acts"}[kind]
+        return f"{API}/{slug}/{document_id}"
+
+    async def document_links(self, ref: str, kind: str, document_id: int) -> DocumentClientLinks:
+        """Ссылки клиента на документ проекта (ДК-3б); 403 ERP (нет права) — пустой список."""
+        path = await self._own_document(ref, kind, document_id)
+        response = await self._call("erp", "GET", f"{path}/client-links/")
+        if response.status_code == 403:
+            return DocumentClientLinks(links=[], can_revoke=False)
+        return self._links(response)
+
+    async def revoke_document_links(
+        self, ref: str, kind: str, document_id: int
+    ) -> DocumentClientLinks:
+        """«Отозвать ссылку»: ERP гасит ссылки этого документа, пишет журнал и решает право."""
+        path = await self._own_document(ref, kind, document_id)
+        return self._links(await self._call("erp", "POST", f"{path}/revoke-client-links/"))
+
+    @staticmethod
+    def _links(response: httpx.Response) -> DocumentClientLinks:
+        if response.status_code != 200:
+            raise project_error(response)
+        try:
+            raw = parse(RawDocumentClientLinks, response.json(), "client_links")
+        except ValueError as exc:
+            raise backend_unavailable("erp", "bad_response") from exc
+        return DocumentClientLinks(links=raw.links, can_revoke=raw.can_revoke)
 
     async def act_action(self, ref: str, body: ActActionIn) -> ProjectCard:
         card = await self.raw_card(ref)

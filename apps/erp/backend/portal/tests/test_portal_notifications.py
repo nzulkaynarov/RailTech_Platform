@@ -206,29 +206,37 @@ def test_invoice_issued_reaches_every_contact_once(
 
 
 def test_company_without_crm_mapping_gets_email_even_with_telegram(
-    contract_world, client_contact, enqueued, django_capture_on_commit_callbacks
+    contract_world, client_contact, readonly_contact, enqueued, django_capture_on_commit_callbacks
 ):
-    """События на шине нет (компания не сопоставлена клиенту CRM) — бот не напишет, поэтому письмо."""
+    """События на шине нет (компания не сопоставлена клиенту CRM) — бот не напишет, поэтому письмо.
+
+    Контакту сделки письмо с актом уже уходит как письмо с документом (ДК-3) — ему второго нет; приглашённому
+    коллеге с Telegram — письмо-уведомление."""
     from integration.services import events
 
+    Contact.objects.filter(pk=readonly_contact.pk).update(invited_at=timezone.now())
     act = contract_world["acts"]["accepted"]
     with django_capture_on_commit_callbacks(execute=True):
         assert events.publish_act_event("act.issued", act) is None
-    row = PortalNotice.objects.get(kind="act_issued", object_id=act.pk, contact=client_contact)
+    row = PortalNotice.objects.get(kind="act_issued", object_id=act.pk, contact=readonly_contact)
     assert row.channel == NoticeChannel.EMAIL and row.action == "awaiting_acceptance"
     assert row.pk in enqueued
+    assert PortalNotice.objects.get(kind="act_issued", object_id=act.pk, contact=client_contact).channel == (
+        NoticeChannel.SOURCE
+    )
 
 
 def test_overdue_payment_is_emailed_to_contacts_with_telegram_too(
-    contract_world, client_contact, crm_mapped, enqueued, django_capture_on_commit_callbacks
+    contract_world, client_contact, readonly_contact, crm_mapped, enqueued, django_capture_on_commit_callbacks
 ):
     from integration.services import events
 
+    Contact.objects.filter(pk=readonly_contact.pk).update(invited_at=timezone.now())
     invoice = contract_world["invoices"]["overdue"]
     PortalNotice.objects.filter(kind="payment_overdue").delete()
     with django_capture_on_commit_callbacks(execute=True):
         events.publish_invoice_event("invoice.overdue", invoice)
-    row = PortalNotice.objects.get(kind="payment_overdue", contact=client_contact)
+    row = PortalNotice.objects.get(kind="payment_overdue", contact=readonly_contact)
     assert row.channel == NoticeChannel.EMAIL, "бот о просрочке не пишет — уведомление не теряется"
     assert row.pk in enqueued
 
@@ -612,8 +620,8 @@ def test_act_reminder_is_a_new_bell_item_and_email(
     by = _by_contact(reminders)
     deal_contact = act.deal.contact_id
     assert (
-        by[deal_contact].channel == NoticeChannel.EMAIL
-    ), "контакту сделки с Telegram — тоже письмо: бот не напоминает"
+        by[deal_contact].channel == NoticeChannel.SOURCE
+    ), "контакту сделки письмо с актом уходит как письмо с документом (ДК-3) — второго нет"
     emailed = [row.pk for row in reminders if row.channel == NoticeChannel.EMAIL]
     assert sorted(enqueued) == sorted(emailed)
     issued = PortalNotice.objects.filter(kind="act_issued", object_id=act.pk, params__reminder="")

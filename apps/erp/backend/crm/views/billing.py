@@ -24,6 +24,7 @@ from crm.serializers import (
 from crm.serializers.projects import ContractFlowSerializer
 from crm.views.billing_filters import ActFilter, ContractFilter, FulfillmentFilter, InvoiceFilter, PaymentFilter
 from crm.views.billing_flow import ActFlowMixin, ContractFlowMixin
+from crm.views.document_links import DocumentLinksMixin
 from crm.views.request_body import invalid_body_response, is_object_body
 
 _PDF_DOC_TYPE = {
@@ -163,7 +164,12 @@ def _signing_status(row) -> dict:
 
 
 class ContractViewSet(
-    RoleGatedViewMixin, OptimisticLockingMixin, ContractFlowMixin, CommercialSigningMixin, viewsets.ModelViewSet
+    RoleGatedViewMixin,
+    OptimisticLockingMixin,
+    ContractFlowMixin,
+    CommercialSigningMixin,
+    DocumentLinksMixin,
+    viewsets.ModelViewSet,
 ):
     """Contracts -- generated from approved quotes, double-signed."""
 
@@ -191,8 +197,11 @@ class ContractViewSet(
         "decide_deviation": "contract.approve_template",
         "request_signing": "contract.manage",
         "signing_status": "contract.manage",
+        # ДК-3б: ссылки клиента на договор — тот, кто его отправляет
+        "revoke_client_links": "contract.manage",
     }
     signing_kind = "contract"
+    document_link_kind = "contract"
 
     serializer_class = ContractSerializer
     permission_classes = [IsAuthenticated, IsCompanyMemberOrPlatformAdmin]
@@ -461,6 +470,7 @@ class InvoiceViewSet(
     RoleGatedViewMixin,
     OptimisticLockingMixin,
     CommercialSigningMixin,
+    DocumentLinksMixin,
     mixins.ListModelMixin,
     mixins.RetrieveModelMixin,
     mixins.UpdateModelMixin,
@@ -489,8 +499,11 @@ class InvoiceViewSet(
         "record_payment": "finance.payment",
         "request_signing": "finance.invoice",
         "signing_status": "finance.view",
+        # ДК-3б: ссылки клиента на счёт — тот, кто его выставляет
+        "revoke_client_links": "finance.invoice",
     }
     signing_kind = "invoice"
+    document_link_kind = "invoice"
 
     serializer_class = InvoiceSerializer
     permission_classes = [IsAuthenticated, IsCompanyMemberOrPlatformAdmin]
@@ -729,7 +742,9 @@ class PaymentViewSet(viewsets.ReadOnlyModelViewSet):
         return _stream_or_render_pdf(self.get_object())
 
 
-class ActViewSet(RoleGatedViewMixin, ActFlowMixin, CommercialSigningMixin, viewsets.ReadOnlyModelViewSet):
+class ActViewSet(
+    RoleGatedViewMixin, ActFlowMixin, CommercialSigningMixin, DocumentLinksMixin, viewsets.ReadOnlyModelViewSet
+):
     """Акты — только чтение плюс сервисные экшены ниже (Rule 8).
 
     Выпуск — через `invoices/{id}/generate-act/` (там же проверяется роутинг
@@ -745,8 +760,11 @@ class ActViewSet(RoleGatedViewMixin, ActFlowMixin, CommercialSigningMixin, views
         "record_return": "fulfillment.act",
         "request_signing": "fulfillment.act",
         "signing_status": "fulfillment.act",
+        # ДК-3б: ссылки клиента на акт — тот, кто его выпускает
+        "revoke_client_links": "fulfillment.act",
     }
     signing_kind = "act"
+    document_link_kind = "act"
 
     serializer_class = ActSerializer
     permission_classes = [IsAuthenticated, IsCompanyMemberOrPlatformAdmin]
