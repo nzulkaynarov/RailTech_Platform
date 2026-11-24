@@ -211,7 +211,7 @@ describe("Центр уведомлений", () => {
     const center = await openBell();
 
     expect(
-      await within(center).findByText("Раздел «Операции» не отвечает, данные неполные"),
+      await within(center).findByText("Данные не загрузились. Повторите позже."),
     ).toBeInTheDocument();
   });
 
@@ -301,7 +301,7 @@ describe("Боковое окно «Сегодня»", () => {
 
     const panel = await screen.findByRole("complementary", { name: "Боковое окно" });
     expect(
-      await within(panel).findByText("Раздел «Операции» не отвечает, данные неполные"),
+      await within(panel).findByText("Данные не загрузились. Повторите позже."),
     ).toBeInTheDocument();
     expect(within(panel).getByText("Событий за день пока нет")).toBeInTheDocument();
   });

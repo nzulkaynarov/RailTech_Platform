@@ -200,14 +200,14 @@ test.describe("КП на одобрение: данные ERP", () => {
     await spaGoto(page, `/eds/drafts/${encodeURIComponent("КП-2026/118")}`);
     await expect(page.getByRole("heading", { level: 1, name: "КП-2026/118" })).toBeVisible();
 
-    await expect(page.getByText("Раздел «Операции» не отвечает, данные неполные")).toBeVisible();
-    await expect(page.getByText(/Состав КП не получен из ERP/)).toBeVisible();
+    await expect(page.getByText("Данные не загрузились. Повторите позже.")).toBeVisible();
+    await expect(page.getByText(/Состав КП не получен/)).toBeVisible();
     await expect(page.getByText("Итог по снимку КП")).toBeVisible();
     const form = quoteForm(page);
     const approve = form.getByRole("button", { name: APPROVE });
     await expect(approve).toBeDisabled();
-    await expect(form.getByText("Нет данных КП из ERP — обновите карточку.")).toBeVisible();
-    await expect(approve).toHaveAccessibleDescription(/Нет данных КП из ERP/);
+    await expect(form.getByText("Нет данных КП — обновите карточку.")).toBeVisible();
+    await expect(approve).toHaveAccessibleDescription(/Нет данных КП/);
     await settledScreenshot(page, "erp-down");
     await expectNoViolations(page, "ERP не ответил: карточка КП");
   });
@@ -221,7 +221,7 @@ test.describe("КП на одобрение: менеджер", () => {
     await spaGoto(page, `/eds/drafts/${encodeURIComponent("КП-2026/115")}`);
     await expect(page.getByRole("heading", { level: 1, name: "КП-2026/115" })).toBeVisible();
     await expect(page.getByText(/^Только просмотр/).first()).toBeVisible();
-    await expect(page.getByText(/Состав КП не получен из ERP/)).toBeVisible();
+    await expect(page.getByText(/Состав КП не получен/)).toBeVisible();
     await expect(page.getByText("Внутренние данные")).toHaveCount(0);
     await expect(page.getByText("Себестоимость")).toHaveCount(0);
     await expect(page.getByText("17.6")).toHaveCount(0);

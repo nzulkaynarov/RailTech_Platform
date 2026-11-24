@@ -156,7 +156,7 @@ function NameLink({
 function Activity({ row }: { row: ClientRow }) {
   const fmt = useFormat();
   return row.last_activity_at ? (
-    <span>{fmt.activity(row.last_activity_at)}</span>
+    <span>{fmt.listDate(row.last_activity_at)}</span>
   ) : (
     <span aria-hidden="true">—</span>
   );

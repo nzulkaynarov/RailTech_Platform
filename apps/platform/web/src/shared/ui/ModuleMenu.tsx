@@ -21,6 +21,8 @@ export interface MenuItem {
   badge?: MenuBadge;
   /** Заголовок группы (Настройки, SET-IA): пункты с одной группой идут подряд под её заголовком */
   group?: string | undefined;
+  /** Страницы пункта (Настройки): показываются под активным пунктом, отдельного меню в рамке страницы нет */
+  children?: readonly { key: string; to: string; label: string; active: boolean }[];
 }
 
 export interface ModuleMenuLabels {
@@ -66,33 +68,54 @@ function MenuLink({
   labels: ModuleMenuLabels;
   onNavigate?: (() => void) | undefined;
 }) {
+  const pages = item.active && item.children && item.children.length > 1 ? item.children : null;
   return (
-    <Link
-      to={item.to}
-      className="pf-menu-item pf-focusable"
-      aria-current={item.active ? "page" : undefined}
-      onClick={onNavigate}
-    >
-      <span>{item.label}</span>
-      {item.badge ? (
-        <>
-          <span
-            className={item.badge.attention ? "pf-badge" : "pf-badge pf-badge--quiet"}
-            title={item.badge.hint}
-            aria-hidden="true"
-          >
-            {item.badge.count}
-          </span>
-          <span className="pf-sr-only">
-            {item.badge.hint
-              ? `${String(item.badge.count)}, ${item.badge.hint}`
-              : item.badge.attention
-                ? `${String(item.badge.count)}, ${labels.needsAction}`
-                : String(item.badge.count)}
-          </span>
-        </>
+    <>
+      <Link
+        to={item.to}
+        className={
+          pages ? "pf-menu-item pf-menu-item--open pf-focusable" : "pf-menu-item pf-focusable"
+        }
+        aria-current={item.active ? (pages ? "true" : "page") : undefined}
+        onClick={onNavigate}
+      >
+        <span>{item.label}</span>
+        {item.badge ? (
+          <>
+            <span
+              className={item.badge.attention ? "pf-badge" : "pf-badge pf-badge--quiet"}
+              title={item.badge.hint}
+              aria-hidden="true"
+            >
+              {item.badge.count}
+            </span>
+            <span className="pf-sr-only">
+              {item.badge.hint
+                ? `${String(item.badge.count)}, ${item.badge.hint}`
+                : item.badge.attention
+                  ? `${String(item.badge.count)}, ${labels.needsAction}`
+                  : String(item.badge.count)}
+            </span>
+          </>
+        ) : null}
+      </Link>
+      {pages ? (
+        <ul className="pf-menu-pages" aria-label={item.label}>
+          {pages.map((page) => (
+            <li key={page.key}>
+              <Link
+                to={page.to}
+                className="pf-menu-item pf-menu-item--page pf-focusable"
+                aria-current={page.active ? "page" : undefined}
+                onClick={onNavigate}
+              >
+                {page.label}
+              </Link>
+            </li>
+          ))}
+        </ul>
       ) : null}
-    </Link>
+    </>
   );
 }
 

@@ -510,7 +510,6 @@
         }
       },
       "listLabel": "Sozlash qadamlari",
-      "onlyAdmin": "Ruxsat yetarli emas.",
       "banner": {
         "label": "Platformani sozlash",
         "title": "Platformani sozlash: tayyor {{done}} / {{total}}",

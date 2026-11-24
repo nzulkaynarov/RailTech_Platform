@@ -404,7 +404,7 @@ describe("единая кнопка «Создать»", () => {
       "/crm/clients?create=1&panel=open&tab=card",
     );
     expect(within(dialog).getByRole("link", { name: /^Внутренний документ/ })).toHaveAccessibleName(
-      /Служебная записка, заявление, отчёт/,
+      /Записка, заявление, отчёт/,
     );
     // кнопок без действия в окне нет: ни «Сообщение», ни «Поручение»
     expect(within(dialog).queryByText("Сообщение")).toBeNull();

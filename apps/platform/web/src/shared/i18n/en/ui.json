@@ -32,11 +32,11 @@
     "empty": "not specified"
   },
   "source": {
-    "erp": "The “Operations” section is not responding, data is incomplete",
-    "crm": "The “Contacts” section is not responding, data is incomplete",
-    "both": "“Contacts” and “Operations” are not responding, data is incomplete",
-    "eds": "Documents are not responding, data is incomplete",
-    "multi": "Some sources are not responding, data is incomplete",
+    "erp": "Data did not load. Try again later.",
+    "crm": "Data did not load. Try again later.",
+    "both": "Data did not load. Try again later.",
+    "eds": "Data did not load. Try again later.",
+    "multi": "Data did not load. Try again later.",
     "retry": "Retry"
   },
   "unsavedGuard": {

@@ -34,3 +34,18 @@
   flex-direction: column;
   gap: 10px;
 }
+
+/* Вкладки карточки — одной строкой в узком боковом окне: без прокрутки и стрелок «ещё» */
+.pf-cp-tabs > .ant-tabs-nav {
+  margin-bottom: 8px;
+}
+.pf-cp-tabs .ant-tabs-nav-list {
+  gap: 16px;
+}
+.pf-cp-tabs .ant-tabs-tab {
+  padding-inline: 0;
+}
+/* Не работать — тихое действие в шапке, а не красная метка; состояние «не работаем» — одна строка ниже */
+.pf-cp-title .ant-btn-text {
+  color: var(--rt-color-text-secondary);
+}

@@ -8,7 +8,7 @@ import { MODULES, matchSection } from "../../modules/registry";
 import { findNavItem, visibleItems, type NavItem } from "../../modules/navigation";
 import { MODULE_SETTINGS } from "../../modules/admin/moduleSettings";
 import { SETTINGS_HOME } from "../../modules/admin/module";
-import { SETTINGS } from "../../modules/admin/settingsRegistry";
+import { SETTINGS, entryAt } from "../../modules/admin/settingsRegistry";
 import type { SectionConfig } from "../../modules/types";
 import { SetupBanner } from "../../features/first-run/SetupBanner";
 import { MaintenanceBanner } from "../../features/maintenance/MaintenanceBanner";
@@ -285,6 +285,14 @@ export function AppShell() {
     };
   });
 
+  const settingsCurrent = entryAt(location.pathname);
+  const settingsPages = (group: string) =>
+    SETTINGS.filter((entry) => entry.group === group && canSee(me, entry.access)).map((entry) => ({
+      key: entry.key,
+      to: entry.path,
+      label: t(`modules:admin.sections.${entry.key}`),
+      active: settingsCurrent?.key === entry.key,
+    }));
   const activeItems = itemsOf(activeModule.code);
   const menuItems: MenuItem[] = activeItems.map(({ item, to }) => ({
     key: `${activeModule.code}.${item.key}`,
@@ -292,6 +300,10 @@ export function AppShell() {
     label: itemLabel(activeModule.code, item),
     active: isActiveItem(activeModule.code, item),
     badge: badgeOfItem([...new Set(refsOf(item))]),
+    // Настройки: страницы активной группы — тем же меню, а не вторым меню в рамке страницы
+    ...(activeModule.code === "admin" && isActiveItem("admin", item)
+      ? { children: settingsPages(item.key) }
+      : {}),
   }));
   const activeResolved = nav
     ? activeItems.find(({ item }) => item.key === nav.item.key)
@@ -363,17 +375,22 @@ export function AppShell() {
     if (match.objectId) crumbs.push({ label: crumbTitle ?? match.objectId });
   }
 
+  // Профиль — не раздел модуля, но путь показываем так же: одна крошка с названием страницы
+  if (!match && location.pathname.startsWith("/me")) crumbs.push({ label: t("avatar.profile") });
+
   const openHelp = () => {
     setHelpOpen(true);
   };
   // On a phone Настройки leave the bottom bar (5 modules at most) and live in the profile menu (NAVIGATION.md, map of 2026-11-10).
   // Same condition as the module in the rail: any visible Настройки section (not only `admin`) keeps the entry
+  const onProfile = !match && location.pathname.startsWith("/me");
   const settingsRail = railItems.find((m) => m.code === SETTINGS_MODULE);
   const profile = (
     <AvatarMenu
       me={me}
       placement={viewport.mobile ? "topRight" : "topLeft"}
       onHelp={openHelp}
+      active={onProfile}
       settings={
         settingsRail && viewport.mobile
           ? { to: settingsRail.to, label: settingsRail.name }

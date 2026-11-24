@@ -176,6 +176,19 @@
   background: var(--rt-color-surface-layout);
   color: var(--rt-color-text-default);
 }
+/* Пункт с открытыми страницами (Настройки): сам не подсвечен, подсвечена текущая страница под ним */
+.pf-menu-item--open {
+  font-weight: 600;
+}
+.pf-menu-pages {
+  list-style: none;
+  margin: 0 0 4px;
+  padding: 0;
+}
+.pf-menu-list--grouped .pf-menu-item--page {
+  padding-left: 24px;
+  font-size: 14px;
+}
 .pf-menu-item[aria-current="page"] {
   background: var(--rt-color-primary-bg);
   color: var(--rt-color-primary-text);
@@ -358,4 +371,14 @@
 /* Форма в боковом окне поверх карточки (стандарт интерфейса §6): пока форма открыта, карточка под ней не показывается. */
 :has(> .pf-panel-host--over) > .pf-panel-host:not(.pf-panel-host--over) {
   display: none;
+}
+
+/* Профиль открыт: аватар в рейле — активный пункт (кольцо, как у выбранного модуля) */
+.pf-avatar-btn {
+  border-radius: 50%;
+}
+.pf-avatar-btn[aria-current="page"] {
+  box-shadow:
+    0 0 0 2px var(--rt-color-surface-background),
+    0 0 0 4px var(--rt-color-primary-default);
 }

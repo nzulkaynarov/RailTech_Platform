@@ -108,14 +108,14 @@ test.describe("UX-2a: поля даты, файла и выбора", () => {
       await form.scrollIntoViewIfNeeded();
       await expect(form).toBeVisible();
       await form.getByLabel("Текст резолюции").fill("Посчитать с запасом по складу.");
-      const employee = form.getByLabel("Сотрудник: Снабженец");
+      const employee = form.getByLabel("Сотрудник: Снабжение");
       await employee.click();
       await expect(
         page.locator(".ant-select-dropdown:not(.ant-select-dropdown-hidden)"),
       ).toBeVisible();
       await settledScreenshot(page, "resolution-select");
       await page.keyboard.press("Escape");
-      await chooseOption(employee, "Демо Снабженцев · Специалист по снабжению");
+      await chooseOption(employee, "Демо Снабженцев");
       await fillDate(form.getByLabel("Срок расчёта"), inDays(5));
       await expectNoNativeFields(form);
       await settledScreenshot(page, "resolution");

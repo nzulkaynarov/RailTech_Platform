@@ -225,9 +225,9 @@ describe("Admin · Компания: доступ и каркас", () => {
   it("администратор видит «Реквизиты и бланк» в меню слева страниц группы «Компания»; ⚙ с `?group=` ведёт на первую страницу группы (ЕВ-2а)", async () => {
     signInAs("admin@demo.example");
     renderApp("/admin?group=company");
-    const nav = await screen.findByRole("navigation", { name: "Страницы группы «Компания»" });
+    const nav = await screen.findByRole("navigation", { name: "Разделы модуля" });
     expect(
-      within(nav)
+      within(await within(nav).findByRole("list", { name: "Компания" }))
         .getAllByRole("link")
         .map((link) => link.textContent),
     ).toEqual([
