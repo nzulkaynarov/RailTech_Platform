@@ -82,8 +82,10 @@ function Bubble({ entry, lead, canCreate }: { entry: Entry; lead: string; canCre
     <li className={`pf-msg-item pf-msg-item--${message.author}`}>
       <div className="pf-msg-item-head">
         <span className="pf-msg-author">{author}</span>
-        {message.channel === "cabinet" ? (
-          <span className="pf-msg-tag-channel">{t("thread.channelCabinet")}</span>
+        {message.channel === "cabinet" || message.channel === "email" ? (
+          <span className="pf-msg-tag-channel">
+            {t(message.channel === "email" ? "thread.channelEmail" : "thread.channelCabinet")}
+          </span>
         ) : null}
         <time dateTime={message.created_at}>{fmt.activity(message.created_at)}</time>
       </div>

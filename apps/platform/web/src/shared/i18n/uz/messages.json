@@ -6,7 +6,7 @@
   "list": {
     "label": "Javob kutayotgan suhbatlar",
     "groups": {
-      "handoff": "Botdan o'tkazilganlar",
+      "handoff": "Ötkazilganlar",
       "mine": "Mening suhbatlarim",
       "unassigned": "Menejersiz"
     },
@@ -105,7 +105,7 @@
   },
   "owner": {
     "bot": "Suhbatni bot olib boryapti",
-    "waiting": "Bot suhbatni o'tkazdi va menejerni kutmoqda",
+    "waiting": "Menejerni kutmoqda",
     "manager": "Suhbatni {{name}} olib boryapti",
     "you": "Suhbatni siz olib boryapsiz"
   },
@@ -150,6 +150,7 @@
     "toRequest": "Arizaga",
     "toRequestLabel": "Arizaga: {{name}} — direktorga xat sifatida",
     "channelCabinet": "Kabinet",
+    "channelEmail": "Poçta",
     "context": {
       "deal": "Bitim {{number}}",
       "quote": "TK {{number}}",
@@ -186,7 +187,18 @@
     "readOnly": "Faqat ko‘rish.",
     "editAfterUnknown": "Matn o'zgardi — u yangi xabar bo'lib ketadi; avvalgisi yetkazilgan bo'lishi mumkin",
     "managerReplies": "Mijozga javobni menejer beradi. Lidni saralang va «Menejerga topshirish» tugmasini bosing — mijozga nima kerakligi haqida izoh bilan.",
-    "selfHintCabinet": "Mijozga kabinetda yuboriladi"
+    "selfHintCabinet": "Mijozga kabinetda yuboriladi",
+    "selfHintEmail": "Kompaniya poçtasidan {{email}} manziliga xat bilan yuboriladi",
+    "phoneOnly": "Javob beriş faqat qönğiroq orqali mumkin",
+    "call": "Qönğiroq qiliş",
+    "logCall": "Qönğiroqni yoziş",
+    "callDraft": "Qönğiroq: ",
+    "noConsent": "Mijoz rozilik bermagan — Telegramda yozib bölmaydi",
+    "noContact": "Javob uçun kanal yöq: Telegram ham, kabinet ham, poçta ham",
+    "failedCabinet": "Yuborilmadi: mijoz kabineti mavjud emas.",
+    "failedEmail": "Yuborilmadi: xat jönatilmadi.",
+    "noEmailConsent": "Poçta bor, lekin rozilik yöq — xat bilan javob berişuçun «Rozilik olindi» belgisini qöying",
+    "emailUndeliverable": "Bu manzilga xatlar yetib bormaydi"
   },
   "card": {
     "title": "Lid kartasi",
@@ -216,6 +228,11 @@
   "errors": {
     "lead_taken": "Lidni {{name}} allaqachon olgan",
     "lead_taken_unknown": "Lidni boshqa xodim allaqachon olgan",
+    "no_reply_channel": "Javob uçun kanal yöq",
+    "smtp_not_configured": "Poçta ulanmagan — xat mijozga bormaydi",
+    "no_email_consent": "Poçta bor, lekin rozilik yöq — «Rozilik olindi» belgisini qöying",
+    "email_undeliverable": "Bu manzilga xatlar yetib bormaydi",
+    "no_bot_channel": "Mijoz botga yozmagan — lidni botga qaytarib bölmaydi",
     "take_first": "Avval lidni oling",
     "no_consent": "Mijoz ma'lumotlarni qayta ishlashga rozilik bermagan — yozish mumkin emas",
     "not_lead_owner": "Suhbatni boshqa xodim olib boryapti",

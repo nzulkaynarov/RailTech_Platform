@@ -118,6 +118,25 @@ export function lead(base: number, spec: Spec): LeadMockRow {
     overdue: spec.overdue ?? false,
     client_id: spec.clientId ?? null,
   };
+  // CH-1: канал ответа, как считает CRM (`domain/reply_channel.py`): Telegram при согласии, письмо веб- и почтовому лиду.
+  const viaEmail = Boolean(spec.email) && (spec.channel === "web" || spec.channel === "email");
+  const via =
+    spec.telegram && spec.consent
+      ? "telegram"
+      : spec.consent && spec.email
+        ? "email"
+        : viaEmail
+          ? "email"
+          : null;
+  const blocked = via
+    ? null
+    : spec.telegram
+      ? "no_consent"
+      : spec.email
+        ? "no_email_consent"
+        : spec.phone
+          ? "phone_only"
+          : "no_contact";
   const card: LeadCard = {
     lead: number,
     name: spec.name,
@@ -131,6 +150,8 @@ export function lead(base: number, spec: Spec): LeadMockRow {
       email: spec.email ?? null,
       company: spec.company ?? null,
     },
+    reply_via: via,
+    reply_blocked: blocked,
     consent: { given_at: spec.consent ? ago(base, 60 * 24) : null, method: null },
     facts: facts({ interest: spec.interest ?? [], company: spec.company ?? null }),
     need: spec.need,

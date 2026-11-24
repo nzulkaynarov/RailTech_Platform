@@ -17,6 +17,7 @@ import { ApiError } from "../../../shared/api/errors";
 import { channelLabel, contextLabel, reasonLabels, sendFailure } from "./labels";
 import { canTake, mergeThread } from "./logic";
 import { durationParts, slaState } from "./sla";
+import { ReplyState } from "./ReplyState";
 import { SlaTimer } from "./SlaTimer";
 
 setupBotTests();
@@ -101,7 +102,7 @@ describe("Клиенты · Ждут ответа: менеджер", () => {
   it("очередь по группам с запиской и таймером; «Забрать» передаёт лида менеджеру", async () => {
     await open("manager@demo.example");
     const nav = await screen.findByRole("navigation", { name: "Диалоги, которые ждут ответа" });
-    expect(within(nav).getByRole("heading", { name: "Передачи от бота · 2" })).toBeVisible();
+    expect(within(nav).getByRole("heading", { name: "Передачи · 3" })).toBeVisible();
     expect(within(nav).getByRole("heading", { name: "Мои диалоги · 2" })).toBeVisible();
     expect(within(nav).getByText("ждёт 12 мин")).toBeVisible();
     expect(within(nav).getByText("ждёт 40 мин · срок прошёл")).toBeVisible();
@@ -117,7 +118,7 @@ describe("Клиенты · Ждут ответа: менеджер", () => {
   it("CHAT-1: беседа из кабинета — значок канала, имя контакта, метка КП и ответ уйдёт в кабинет", async () => {
     await open("manager@demo.example", "?lead=L-2070");
     const nav = await screen.findByRole("navigation", { name: "Диалоги, которые ждут ответа" });
-    expect(within(nav).getByRole("img", { name: "Канал: Кабинет" })).toBeVisible();
+    expect(within(nav).getAllByRole("img", { name: "Канал: Кабинет" })[0]).toBeVisible();
     expect(within(nav).getAllByRole("img", { name: "Канал: Telegram" }).length).toBeGreaterThan(0);
 
     expect(
@@ -135,6 +136,65 @@ describe("Клиенты · Ждут ответа: менеджер", () => {
     expect(labels[0]).toHaveTextContent("КП KP-2026-0042");
     expect(screen.getByText("Уйдёт клиенту в кабинет")).toBeVisible();
     expect(screen.queryByText("Уйдёт клиенту в Telegram")).toBeNull();
+  });
+
+  it("CH-1: лид только с телефоном — поля ответа нет, есть «Позвонить» и «Записать звонок» (заметка с заготовкой)", async () => {
+    await open("manager@demo.example", "?lead=L-2080");
+    expect(await screen.findByRole("heading", { level: 2, name: "Алишер Звонков" })).toBeVisible();
+    expect(screen.getByText("Ответить можно только звонком")).toBeVisible();
+    expect(screen.queryByLabelText("Сообщение клиенту")).toBeNull();
+    expect(screen.queryByText("Уйдёт клиенту в Telegram")).toBeNull();
+    expect(screen.getByRole("link", { name: "Позвонить" })).toHaveAttribute(
+      "href",
+      "tel:+998900000080",
+    );
+    expect(screen.queryByRole("button", { name: "Подсказать ответ" })).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Записать звонок" }));
+    expect(field().value).toBe("Звонок: ");
+    fireEvent.change(field(), { target: { value: "Звонок: договорились о КП" } });
+    fireEvent.click(screen.getByRole("button", { name: "Сохранить заметку" }));
+    expect(
+      await screen.findByText("Звонок: договорились о КП", { selector: ".pf-msg-bubble" }),
+    ).toBeVisible();
+  });
+
+  it("CH-1: лид с почтой — подпись «Уйдёт письмом…», у веб-лида нет «Вернуть боту»", async () => {
+    await open("manager@demo.example", "?lead=L-2081");
+    expect(await screen.findByRole("heading", { level: 2, name: "Дильбар Почтова" })).toBeVisible();
+    fireEvent.click(await screen.findByRole("button", { name: "Забрать: Дильбар Почтова" }));
+    expect(
+      await screen.findByText("Уйдёт письмом на dilbar@example.org с почты компании"),
+    ).toBeVisible();
+    expect(screen.getByRole("button", { name: "Отправить" })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: "Вернуть боту" })).toBeNull();
+  });
+
+  it("CH-1: у лида с чатом Telegram «Вернуть боту» остаётся", async () => {
+    await open("manager@demo.example", "?lead=L-2050");
+    expect(await screen.findByRole("heading", { level: 2, name: "Тимур Образцов" })).toBeVisible();
+    expect(await screen.findByRole("button", { name: "Вернуть боту" })).toBeVisible();
+  });
+
+  it("CH-1: без согласия Telegram — причина словами и только заметка команде", async () => {
+    await open("manager@demo.example", "?lead=L-2060");
+    expect(
+      await screen.findByText(/Клиент не дал согласие — писать ему в Telegram нельзя/),
+    ).toBeVisible();
+    expect(screen.queryByLabelText("Сообщение клиенту")).toBeNull();
+    expect(screen.getByLabelText("Заметка для команды")).toBeVisible();
+  });
+
+  it("CH-1: передача из кабинета, где ответственный — я: «Забрать» видно", async () => {
+    await open("manager@demo.example", "?lead=L-2090");
+    const nav = await screen.findByRole("navigation", { name: "Диалоги, которые ждут ответа" });
+    expect(within(nav).getByRole("button", { name: "Забрать: ООО «Пример-Вагон»" })).toBeVisible();
+    expect(
+      canTake(
+        readMessages().leads.find((l) => l.item.lead === "L-2090")?.item ?? ({} as never),
+        "u-demo-manager",
+      ),
+    ).toBe(true);
   });
 
   it("СЦ-9: ответ заместителя подписан «<заместитель> за <владелец лида>», свой ответ — без «за»", async () => {
@@ -440,6 +500,36 @@ describe("лента: склейка страниц и заметок", () => {
   });
 });
 
+describe("CH-1: причина «отвечать некуда»", () => {
+  it("слова по причине CRM; «Позвонить» — если телефон известен, при любой причине", () => {
+    void i18n.changeLanguage("ru");
+    const contacts = { telegram: null, phone: null, email: "a@b.example", company: null };
+    const { rerender } = render(
+      <ReplyState card={{ reply_blocked: "no_email_consent", contacts }} onLogCall={() => {}} />,
+    );
+    expect(
+      screen.getByText(
+        "Есть почта, но нет согласия — отметьте «Согласие получено», чтобы ответить письмом",
+      ),
+    ).toBeVisible();
+    expect(screen.queryByRole("link", { name: "Позвонить" })).toBeNull();
+    rerender(
+      <ReplyState
+        card={{
+          reply_blocked: "email_undeliverable",
+          contacts: { ...contacts, phone: "+998900000001" },
+        }}
+        onLogCall={() => {}}
+      />,
+    );
+    expect(screen.getByText("Письма на этот адрес не доходят")).toBeVisible();
+    expect(screen.getByRole("link", { name: "Позвонить" })).toHaveAttribute(
+      "href",
+      "tel:+998900000001",
+    );
+  });
+});
+
 describe("итог неудачной отправки", () => {
   const t = i18n.getFixedT("ru");
 
@@ -467,6 +557,25 @@ describe("итог неудачной отправки", () => {
       retry: false,
     });
     expect(sendFailure(t, new TypeError("Failed to fetch")).retry).toBe(true);
+    // CH-1: текст по каналу ответа — без слова «Telegram» у кабинета и письма; письмо не повторяется
+    const refused = new ApiError(502, "INTEGRATION_FAILED", "x", "crm", {
+      reason: "delivery_failed",
+    });
+    expect(sendFailure(t, refused, "cabinet")).toEqual({
+      text: "Не отправлено: кабинет клиента недоступен.",
+      retry: true,
+    });
+    expect(sendFailure(t, refused, "email")).toEqual({
+      text: "Не отправлено: письмо не ушло.",
+      retry: false,
+    });
+    expect(
+      sendFailure(
+        t,
+        new ApiError(409, "CONFLICT", "x", "crm", { reason: "smtp_not_configured" }),
+        "email",
+      ),
+    ).toEqual({ text: "Почта не подключена — письмо клиенту не уйдёт", retry: false });
     const busy = sendFailure(
       t,
       new ApiError(409, "CONFLICT", "x", "crm", { reason: "reply_in_progress" }),

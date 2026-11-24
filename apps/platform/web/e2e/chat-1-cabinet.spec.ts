@@ -25,7 +25,7 @@ test.describe("CHAT-1: беседа из кабинета", () => {
 
       await spaGoto(page, "/crm/messages");
       const list = page.getByRole("navigation", { name: "Диалоги, которые ждут ответа" });
-      await expect(list.getByRole("img", { name: "Канал: Кабинет" })).toBeVisible();
+      await expect(list.getByRole("img", { name: "Канал: Кабинет" }).first()).toBeVisible();
       await expect(list.getByRole("link", { name: /^ООО «Пример-Снаб»/ })).toBeVisible();
       await shot(page, "messages-list");
       await expectNoViolations(page, `список ${String(width)}`);

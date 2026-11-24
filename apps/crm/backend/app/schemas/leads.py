@@ -91,6 +91,17 @@ class LeadOut(BaseModel):
     has_phone: bool = False
     has_email: bool = False
     has_telegram: bool = False
+    # Куда уйдёт ответ менеджера на самом деле (CH-1, `domain/reply_channel.py`): `telegram` |
+    # `cabinet` | `email`; null — отвечать некуда, причина в `reply_blocked`: `no_consent` |
+    # `no_email_consent` | `email_undeliverable` | `phone_only` | `no_contact`. Только в
+    # `GET /inbox` и карточке лида; у остальных выдач null.
+    reply_via: Literal["telegram", "cabinet", "email"] | None = None
+    reply_blocked: (
+        Literal["no_consent", "no_email_consent", "email_undeliverable", "phone_only", "no_contact"]
+        | None
+    ) = None
+    # «Вернуть боту» имеет смысл, только если у лида есть чат Telegram; null — не считали.
+    can_return_to_bot: bool | None = None
 
 
 class LeadOriginOut(BaseModel):

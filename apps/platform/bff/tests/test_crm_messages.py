@@ -225,6 +225,42 @@ async def test_cabinet_channel_is_kept_with_the_reply_channel_and_the_document_l
     assert (second["channel"], second["context"]) == ("cabinet", None)
 
 
+async def test_card_carries_the_reply_channel_that_crm_decided(
+    web: Web, crm: CrmMessagesFake, check: ContractChecker
+) -> None:
+    """CH-1: BFF ничего не придумывает — `reply_via`, `reply_blocked` и «Вернуть боту» идут из CRM;
+    отказ «отвечать некуда» доходит до экрана с `details.reason`."""
+    crm.answer(
+        "GET",
+        "leads/2041",
+        body=lead_detail(
+            2041, reply_via=None, reply_blocked="phone_only", can_return_to_bot=False, source="web"
+        ),
+    )
+    await web.login(["MANAGER"])
+
+    card = check(await web.client.get(f"{BASE}/L-2041"), "/crm/messages/{lead}", "get").json()
+    assert (card["reply_via"], card["reply_blocked"], card["can_return_to_bot"]) == (
+        None,
+        "phone_only",
+        False,
+    )
+
+    crm.answer(
+        "GET", "leads/2041", body=lead_detail(2041, reply_via="email", can_return_to_bot=False)
+    )
+    mail = (await web.client.get(f"{BASE}/L-2041")).json()
+    assert (mail["reply_via"], mail["reply_blocked"]) == ("email", None)
+
+    crm.error("POST", "leads/2041/messages", 409, "conflict", reason="no_reply_channel")
+    refused = await web.send(
+        "POST",
+        f"{BASE}/L-2041/reply",
+        json={"text": "Здравствуйте", "client_message_id": "draft-2041-zzz111"},
+    )
+    assert (refused.status_code, refused.json()["details"]["reason"]) == (409, "no_reply_channel")
+
+
 def test_attachment_link_does_not_depend_on_the_storage_key_and_never_leaks_it() -> None:
     """D1-8: CRM ключа не отдаёт — ссылка по `stored`; ключ старого CRM наружу не идёт."""
     from app.crm_messages_view import attachments

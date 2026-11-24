@@ -6098,6 +6098,11 @@ components:
           default: local
           title: Backoffice Mode
           type: string
+        can_return_to_bot:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Can Return To Bot
         client_handoff_error:
           anyOf:
           - type: string
@@ -6278,11 +6283,31 @@ components:
           additionalProperties: true
           title: Qualification
           type: object
+        reply_blocked:
+          anyOf:
+          - enum:
+            - no_consent
+            - no_email_consent
+            - email_undeliverable
+            - phone_only
+            - no_contact
+            type: string
+          - type: 'null'
+          title: Reply Blocked
         reply_channel:
           anyOf:
           - type: string
           - type: 'null'
           title: Reply Channel
+        reply_via:
+          anyOf:
+          - enum:
+            - telegram
+            - cabinet
+            - email
+            type: string
+          - type: 'null'
+          title: Reply Via
         score:
           title: Score
           type: integer
@@ -6371,6 +6396,11 @@ components:
           - type: string
           - type: 'null'
           title: Assigned User Name
+        can_return_to_bot:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Can Return To Bot
         client_id:
           anyOf:
           - type: integer
@@ -6445,11 +6475,31 @@ components:
             type: string
           title: Product Interest
           type: array
+        reply_blocked:
+          anyOf:
+          - enum:
+            - no_consent
+            - no_email_consent
+            - email_undeliverable
+            - phone_only
+            - no_contact
+            type: string
+          - type: 'null'
+          title: Reply Blocked
         reply_channel:
           anyOf:
           - type: string
           - type: 'null'
           title: Reply Channel
+        reply_via:
+          anyOf:
+          - enum:
+            - telegram
+            - cabinet
+            - email
+            type: string
+          - type: 'null'
+          title: Reply Via
         score:
           title: Score
           type: integer
@@ -8375,6 +8425,10 @@ components:
       - deal_won_final
       - deal_owned_by_erp
       - no_consent
+      - no_reply_channel
+      - no_email_consent
+      - email_undeliverable
+      - no_bot_channel
       - reply_in_progress
       - delivery_unknown
       - delivery_unconfirmed
@@ -11431,7 +11485,7 @@ components:
       type: http
 info:
   title: RailTech CRM API
-  version: 0.32.0
+  version: 0.33.0
 openapi: 3.1.0
 paths:
   /api/v1/admin/ai-spend:
@@ -17137,6 +17191,13 @@ paths:
       tags:
       - leads
     post:
+      description: 'Ответ менеджера: канал выбирает CRM (`reply_via` карточки): Telegram, кабинет или письмо с
+
+        почты компании. Отказы 409 `details.reason`: `no_reply_channel` (отвечать некуда,
+
+        `details.blocked` — причина), `no_consent` (Telegram есть, согласия нет), `smtp_not_configured`
+
+        (письмо, почта не подключена), `take_first`, `delivery_unconfirmed`.'
       operationId: reply
       parameters:
       - in: path

@@ -47507,8 +47507,8 @@ export const getReplyCrmLeadUrl = (lead: string) => {
 };
 
 /**
- * CRM `POST /leads/{id}/messages`. Раздел `crm.leads` полный; отвечает тот, кто забрал лида (или администратор CRM). `client_message_id` — ключ повтора, который экран создаёт на черновик: «Повторить» с тем же ключом не отправит клиенту второе сообщение. Telegram отказал — 502 `INTEGRATION_FAILED` с `details.reason = delivery_failed`, сообщение не записано, текст остаётся у экрана; Telegram не ответил вовремя — 502 `INTEGRATION_FAILED` с `delivery_unknown` (итог неизвестен: «Повторить» тем же ключом не продублирует, пока отправка идёт — 409 `reply_in_progress`); итог прежней отправки с этим ключом так и не узнали — 409 `CONFLICT` `delivery_unconfirmed` (второе сообщение не уходит, «лид отвечен» не ставится). Лид не забран — 409 `CONFLICT` (`take_first`), нет согласия клиента — 409 (`no_consent`), лид у другого — 403 `FORBIDDEN` (`not_lead_owner`).
- * @summary Ответить клиенту «От себя» (уходит в Telegram)
+ * CRM `POST /leads/{id}/messages`. Раздел `crm.leads` полный; отвечает тот, кто забрал лида (или администратор CRM). `client_message_id` — ключ повтора, который экран создаёт на черновик: «Повторить» с тем же ключом не отправит клиенту второе сообщение. Telegram отказал — 502 `INTEGRATION_FAILED` с `details.reason = delivery_failed`, сообщение не записано, текст остаётся у экрана; Telegram не ответил вовремя — 502 `INTEGRATION_FAILED` с `delivery_unknown` (итог неизвестен: «Повторить» тем же ключом не продублирует, пока отправка идёт — 409 `reply_in_progress`); итог прежней отправки с этим ключом так и не узнали — 409 `CONFLICT` `delivery_unconfirmed` (второе сообщение не уходит, «лид отвечен» не ставится). Лид не забран — 409 `CONFLICT` (`take_first`), нет согласия клиента — 409 (`no_consent`), лид у другого — 403 `FORBIDDEN` (`not_lead_owner`). CH-1: канал выбирает CRM (`ConversationCard.reply_via`: Telegram, кабинет или письмо с почты компании); отвечать некуда — 409 `CONFLICT` `no_reply_channel` (`ConversationCard.reply_blocked` — причина), письмо при неподключённой почте — 409 `smtp_not_configured`.
+ * @summary Ответить клиенту «От себя» (в канал `reply_via` карточки)
  */
 export const replyCrmLead = async (
   lead: string,
@@ -47602,7 +47602,7 @@ export type ReplyCrmLeadMutationError = ErrorType<
 export type ReplyCrmLeadMutationVariables = { lead: string; data: ReplyIn };
 
 /**
- * @summary Ответить клиенту «От себя» (уходит в Telegram)
+ * @summary Ответить клиенту «От себя» (в канал `reply_via` карточки)
  */
 export const useReplyCrmLead = <
   TError = ErrorType<

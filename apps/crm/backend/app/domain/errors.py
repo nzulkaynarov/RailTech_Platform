@@ -59,6 +59,14 @@ class Reason(StrEnum):
     # Зеркальная сделка ERP: сумму, валюту, стадию, название и причину отказа ведёт бэк-офис (I-26).
     DEAL_OWNED_BY_ERP = "deal_owned_by_erp"
     NO_CONSENT = "no_consent"
+    # Ответить лиду некуда (CH-1): нет Telegram, кабинета и почты; `details.blocked` — причина.
+    NO_REPLY_CHANNEL = "no_reply_channel"
+    # Есть адрес почты, но согласия нет, а клиент не писал сам: отметьте «Согласие получено».
+    NO_EMAIL_CONSENT = "no_email_consent"
+    # Адрес не доставляет (отчёт о недоставке): письмо уйдёт в никуда.
+    EMAIL_UNDELIVERABLE = "email_undeliverable"
+    # «Вернуть боту» лиду, с которым у бота нет чата Telegram (CH-1).
+    NO_BOT_CHANNEL = "no_bot_channel"
     # Ответ с этим ключом повтора ещё отправляется (D1-1): повтор не шлёт сообщение второй раз.
     REPLY_IN_PROGRESS = "reply_in_progress"
     # Итог отправки ответа неизвестен: Telegram не ответил вовремя (502) или так и не

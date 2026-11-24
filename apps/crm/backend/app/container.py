@@ -353,6 +353,7 @@ class Container:
             backoffice_mode=self.backoffice_mode,
             erase_attachments=self._erase_attachment_files,
             forget_agent=self._forget_agent_state,
+            mail=self.mail_service,
         )
 
     async def _forget_agent_state(self, lead_id: int) -> None:
