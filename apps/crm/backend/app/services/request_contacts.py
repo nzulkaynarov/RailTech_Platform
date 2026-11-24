@@ -46,6 +46,15 @@ def _phone(raw: str | None) -> str | None:
     return value
 
 
+def _email(raw: str | None) -> str | None:
+    try:
+        return contact_email(raw)
+    except ValidationFailedError as exc:
+        raise ValidationFailedError(
+            "invalid email", reason=Reason.INVALID_EMAIL, field="contact.email"
+        ) from exc
+
+
 async def request_contact(
     session: AsyncSession, client: Client, lead: Lead | None, data: RequestContactIn, who: Principal
 ) -> ClientContact:
@@ -71,7 +80,7 @@ async def request_contact(
             full_name=(data.full_name or "").strip(),
             position=(data.position or "").strip() or None,
             phone_e164=phone or (identity.phone_e164 if identity else None),
-            email=contact_email(data.email),
+            email=_email(data.email),
             telegram_identity_id=identity.id if identity else None,
             is_primary=has_primary is None,
         )

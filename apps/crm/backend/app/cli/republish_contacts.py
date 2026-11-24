@@ -30,10 +30,14 @@ async def run(args: argparse.Namespace) -> int:
     if not args.apply:
         sys.stdout.write(
             f"Переданных клиентов: {result.clients}, контактов к переопубликации: "
-            f"{result.contacts} (dry-run, ничего не записано; для записи --apply).\n"
+            f"{result.contacts}; телефонов к приведению к E.164: {result.phones_to_fix}, "
+            f"не приводятся (контакт не публикуется): {result.phones_unparseable} "
+            "(dry-run, ничего не записано; для записи --apply).\n"
         )
     else:
         sys.stdout.write(
-            f"Опубликовано contact.updated: {result.published} (клиентов: {result.clients}).\n"
+            f"Опубликовано contact.updated: {result.published} (клиентов: {result.clients}); "
+            f"телефонов приведено: {result.phones_to_fix}, не приводятся: "
+            f"{result.phones_unparseable}.\n"
         )
     return 0

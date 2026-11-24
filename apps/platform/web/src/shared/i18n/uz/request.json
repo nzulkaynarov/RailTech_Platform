@@ -102,6 +102,8 @@
     "handoff_no_consent": "Mijoz ma’lumotlarga rozilik bermagan — qanday olinganini belgilang",
     "consent_via_bot": "Telegramdagi lid rozilikni botda beradi — undan rozi bo‘lishini so‘rang",
     "contact_channel_required": "Kontaktda Telegram, telefon yoki pochta yo‘q",
+    "invalid_phone": "Telefon xalqaro formatda bo‘lsin, masalan +998 90 123 45 67",
+    "invalid_email": "Pochta manzilini tekshiring",
     "request_not_allowed": "Lid rad etilgan — undan ariza yaratib bo‘lmaydi",
     "request_key_reused": "Shakl eskirgan — «Ariza yaratish»ni qayta oching",
     "erp_not_configured": "Hisobga oliş ulanmagan — administratorga murojaat qiling",

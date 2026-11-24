@@ -17,10 +17,11 @@ older ones, so a repeat only gives a new event id.
 from dataclasses import dataclass
 
 import structlog
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.bus import events as bus_events
+from app.domain.lead_sources import normalize_phone_e164
 from app.models.clients import Client, ClientContact
 from app.security.audit import Actor
 
@@ -34,6 +35,8 @@ class RepublishResult:
     clients: int  # clients in the selection
     published: int  # outbox rows written (0 on dry-run)
     contacts: int = 0  # contacts in the selection (republish_handed_over_contacts)
+    phones_to_fix: int = 0  # stored phones that normalise to another value
+    phones_unparseable: int = 0  # stored phones that cannot be normalised (not republished)
 
 
 async def _client_ids(session: AsyncSession, client_id: int | None) -> list[int]:
@@ -69,12 +72,24 @@ async def republish_clients(
     return RepublishResult(clients=len(ids), published=published)
 
 
-async def republish_contacts_of_client(session: AsyncSession, client_id: int, actor: Actor) -> int:
-    """Publish `contact.updated` for every contact of the client; returns how many were written.
+def _phone_state(raw: str | None) -> tuple[str | None, bool]:
+    """(E.164 form of the stored phone, whether it cannot be normalised); empty is fine."""
+    if raw is None or not raw.strip():
+        return None, False
+    value = normalize_phone_e164(raw)
+    return value, value is None
+
+
+async def republish_contacts_of_client(
+    session: AsyncSession, client_id: int, actor: Actor
+) -> tuple[int, int]:
+    """Publish `contact.updated` for the contacts of the client; returns (published, skipped).
 
     Used right after a hand-over to ERP: ERP skips `contact.created` while the client is not handed
     over, so the position and the Telegram username would never arrive. The contact row is not
     changed (`updated_at` stays): ERP applies the snapshot once and skips an equal one on repeat.
+    A contact whose stored phone cannot be normalised is skipped: the schema takes E.164 or null,
+    and `null` would blank the phone the hand-over gave ERP — a snapshot never sends a worse value.
     """
     ids = list(
         await session.scalars(
@@ -83,11 +98,18 @@ async def republish_contacts_of_client(session: AsyncSession, client_id: int, ac
             .order_by(ClientContact.id)
         )
     )
+    published = skipped = 0
     for contact_id in ids:
         contact = await session.get(ClientContact, contact_id)
-        if contact is not None:
-            await bus_events.contact_updated(session, contact, actor)
-    return len(ids)
+        if contact is None:
+            continue
+        if _phone_state(contact.phone_e164)[1]:
+            skipped += 1
+            logger.warning("contact_republish_skipped_phone", contact_id=contact_id)
+            continue
+        await bus_events.contact_updated(session, contact, actor)
+        published += 1
+    return published, skipped
 
 
 async def republish_handed_over_contacts(
@@ -98,27 +120,56 @@ async def republish_handed_over_contacts(
     batch_size: int = BATCH_SIZE,
 ) -> RepublishResult:
     """One-off: `contact.updated` for contacts of clients already handed over to ERP (G2 of the
-    people audit 2026-11-24). `dry_run` only counts; `clients` is the number of handed-over clients,
-    `published` the number of contact events written."""
+    people audit 2026-11-24). Before publishing, stored phones are normalised to E.164 with the one
+    CRM normaliser (rows with a raw phone like «90 123 45 67» would otherwise go out wrong).
+    `dry_run` only counts: `phones_to_fix` rows would change, `phones_unparseable` cannot be
+    normalised (left as is, their contacts are not republished)."""
     stmt = select(Client.id).where(Client.erp_company_id.is_not(None)).order_by(Client.id)
     if client_id is not None:
         stmt = stmt.where(Client.id == client_id)
     async with sessions() as session:
         ids = list(await session.scalars(stmt))
-        total = (
-            await session.scalar(
-                select(func.count(ClientContact.id)).where(ClientContact.client_id.in_(ids))
-            )
+        rows = (
+            (
+                await session.execute(
+                    select(ClientContact.phone_e164).where(ClientContact.client_id.in_(ids))
+                )
+            ).all()
             if ids
-            else 0
-        ) or 0
+            else []
+        )
+    states = [(row[0], *_phone_state(row[0])) for row in rows]
+    to_fix = sum(1 for raw, value, bad in states if not bad and value != raw and raw is not None)
+    unparseable = sum(1 for _, _, bad in states if bad)
+    result = RepublishResult(
+        clients=len(ids),
+        published=0,
+        contacts=len(rows),
+        phones_to_fix=to_fix,
+        phones_unparseable=unparseable,
+    )
     if dry_run:
-        return RepublishResult(clients=len(ids), published=0, contacts=total)
+        return result
     actor = Actor.system()
     published = 0
     for start in range(0, len(ids), batch_size):
         async with sessions() as session, session.begin():
-            for cid in ids[start : start + batch_size]:
-                published += await republish_contacts_of_client(session, cid, actor)
+            batch = ids[start : start + batch_size]
+            for contact in await session.scalars(
+                select(ClientContact).where(ClientContact.client_id.in_(batch))
+            ):
+                value, bad = _phone_state(contact.phone_e164)
+                if not bad and contact.phone_e164 is not None and value != contact.phone_e164:
+                    contact.phone_e164 = value
+            await session.flush()
+            for cid in batch:
+                done, _ = await republish_contacts_of_client(session, cid, actor)
+                published += done
     logger.info("handed_over_contacts_republished", clients=len(ids), published=published)
-    return RepublishResult(clients=len(ids), published=published, contacts=total)
+    return RepublishResult(
+        clients=len(ids),
+        published=published,
+        contacts=len(rows),
+        phones_to_fix=to_fix,
+        phones_unparseable=unparseable,
+    )

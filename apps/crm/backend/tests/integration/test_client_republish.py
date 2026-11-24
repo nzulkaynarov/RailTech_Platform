@@ -204,3 +204,69 @@ async def test_republish_contacts_publishes_only_handed_over_clients_and_is_repe
     moments = {s["updated_at"] for s in snapshots}
     rows = await _outbox(sessions)
     assert {r["envelope"]["data"]["contact"]["updated_at"] for r in rows} == moments
+
+
+async def _phones_world(sessions: async_sessionmaker[AsyncSession]) -> None:
+    from app.models.clients import ClientContact
+
+    async with sessions() as session, session.begin():
+        done = Client(name="ООО Телефоны", erp_company_id=9)
+        session.add(done)
+        await session.flush()
+        session.add_all(
+            [
+                ClientContact(client_id=done.id, full_name="Сырой", phone_e164="90 123 45 67"),
+                ClientContact(client_id=done.id, full_name="Чистый", phone_e164="+998901112233"),
+                ClientContact(client_id=done.id, full_name="Мусор", phone_e164="abc"),
+                ClientContact(client_id=done.id, full_name="Местный", phone_e164="8 90 123 45 67"),
+                ClientContact(client_id=done.id, full_name="Без", phone_e164=None),
+            ]
+        )
+    await _clear_outbox(sessions)
+
+
+async def test_republish_contacts_dry_run_reports_phones_and_changes_nothing(
+    sessions: async_sessionmaker[AsyncSession], bus: Any
+) -> None:
+    from app.services.client_republish import republish_handed_over_contacts
+
+    await _phones_world(sessions)
+
+    result = await republish_handed_over_contacts(sessions, dry_run=True)
+
+    assert (result.contacts, result.phones_to_fix, result.phones_unparseable) == (5, 1, 2)
+    assert await _outbox(sessions) == []
+    async with sessions() as session:
+        phones = set((await session.scalars(text_select_phones())).all())
+    assert "90 123 45 67" in phones
+
+
+def text_select_phones() -> Any:
+    from sqlalchemy import select
+
+    from app.models.clients import ClientContact
+
+    return select(ClientContact.phone_e164)
+
+
+async def test_republish_contacts_normalises_phones_and_never_blanks_unparseable_ones(
+    sessions: async_sessionmaker[AsyncSession], bus: Any
+) -> None:
+    from app.services.client_republish import republish_handed_over_contacts
+
+    await _phones_world(sessions)
+
+    result = await republish_handed_over_contacts(sessions, dry_run=False)
+
+    assert result.published == 3  # raw (fixed), clean, no phone; the two unparseable are skipped
+    snapshots = {
+        r["envelope"]["data"]["contact"]["full_name"]: r["envelope"]["data"]["contact"]
+        for r in await _outbox(sessions)
+    }
+    assert set(snapshots) == {"Сырой", "Чистый", "Без"}
+    assert snapshots["Сырой"]["phone_e164"] == "+998901234567"
+    assert snapshots["Чистый"]["phone_e164"] == "+998901112233"
+    assert snapshots["Без"]["phone_e164"] is None
+    async with sessions() as session:
+        phones = set((await session.scalars(text_select_phones())).all())
+    assert phones == {"+998901234567", "+998901112233", "abc", "8 90 123 45 67", None}

@@ -244,6 +244,21 @@ async def test_contact_phone_of_the_form_that_is_not_a_number_is_a_field_error(
         assert (await session.scalars(select(Client))).first() is None, "nothing is half-created"
 
 
+async def test_contact_email_of_the_form_that_is_not_an_address_is_a_field_error(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    who = await _manager(sessions)
+    lead_id = await _lead(sessions)
+
+    with pytest.raises(ValidationFailedError) as caught:
+        await _service(sessions).create_from_lead(
+            who, lead_id, _body(contact={"full_name": "Иван", "email": "not-an-address"})
+        )
+
+    assert caught.value.details["reason"] == Reason.INVALID_EMAIL
+    assert caught.value.details["field"] == "contact.email"
+
+
 async def test_lost_lead_cannot_get_a_request(sessions: async_sessionmaker[AsyncSession]) -> None:
     who = await _manager(sessions)
     lead_id = await _lead(sessions, stage="lost")
