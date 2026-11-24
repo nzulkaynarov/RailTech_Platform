@@ -409,7 +409,7 @@ function DocumentForm({
     ? t(returned ? "documents:form.subtitleReturned" : "documents:form.subtitleContinue", {
         number: draft.number ?? "",
       })
-    : t(letter ? "documents:form.subtitleLetterHandover" : "documents:form.subtitle");
+    : undefined;
   const title = t(letter ? "documents:form.title.letter" : "documents:form.title.internal");
   useDocumentTitle(title);
   const head = letterhead.data;

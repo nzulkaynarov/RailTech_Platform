@@ -166,7 +166,7 @@ export function SigningPage() {
   ];
 
   return (
-    <SettingsPage sectionKey="signing" subtitle={t("subtitle")} extra={addButton}>
+    <SettingsPage sectionKey="signing" extra={addButton}>
       <div className="pf-sign">
         {showHint ? (
           <Alert

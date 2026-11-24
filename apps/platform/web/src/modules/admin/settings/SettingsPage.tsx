@@ -5,9 +5,7 @@ import { Link } from "react-router";
 
 import { articleForSection } from "../../../features/help/articles";
 import { useDocumentTitle } from "../../../shared/lib/useDocumentTitle";
-import { LockIcon } from "../../../shared/ui/icons";
-import { PageHeader } from "../../../shared/ui/PageHeader";
-import { StatusTag } from "../../../shared/ui/StatusTag";
+import { PageHeader, ReadOnlyTag } from "../../../shared/ui/PageHeader";
 import { useSettingsEditable } from "./useSettingsEditable";
 
 import "./settings.css";
@@ -63,16 +61,7 @@ export function SettingsPage({
         subtitle={subtitle}
         extra={
           <div className="pf-set-head-extra">
-            {editable ? (
-              extra
-            ) : (
-              <StatusTag tone="default">
-                <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
-                  <LockIcon size={12} />
-                  {t("admin.home.viewOnly")}
-                </span>
-              </StatusTag>
-            )}
+            {editable ? extra : <ReadOnlyTag />}
             {more}
           </div>
         }

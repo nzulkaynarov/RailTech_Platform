@@ -1,6 +1,9 @@
+import { Button } from "antd";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router";
 
+import { canEdit } from "../../../app/access";
+import { useAuth } from "../../../app/auth/useAuth";
 import { useDocumentTitle } from "../../../shared/lib/useDocumentTitle";
 import { LinkButton } from "../../../shared/ui/LinkButton";
 import { PageHeader } from "../../../shared/ui/PageHeader";
@@ -24,6 +27,7 @@ type Part = (typeof PARTS)[number];
 export function CatalogScreen() {
   const { t } = useTranslation(["catalog", "modules"]);
   useDocumentTitle(t("modules:erp.sections.catalog"));
+  const { me } = useAuth();
   const [params, setParams] = useSearchParams();
   const requested = params.get("part");
   // Старый адрес вкладки «Запросы на категории» открывает её в справочниках
@@ -47,7 +51,30 @@ export function CatalogScreen() {
   };
   return (
     <div className="pf-cat">
-      <PageHeader title={t("modules:erp.sections.catalog")} subtitle={t("catalog:subtitle")} />
+      <PageHeader
+        title={t("modules:erp.sections.catalog")}
+        extra={
+          part === "items" && canEdit(me, "erp.stock") ? (
+            <div className="pf-fp-row">
+              <LinkButton to="/erp/catalog?part=import">
+                {t("catalog:items.uploadPrice")}
+              </LinkButton>
+              <Button
+                type="primary"
+                onClick={() => {
+                  setParams((prev) => {
+                    const next = new URLSearchParams(prev);
+                    next.set("new", "item");
+                    return next;
+                  });
+                }}
+              >
+                {t("catalog:items.add")}
+              </Button>
+            </div>
+          ) : null
+        }
+      />
       <SectionTabs
         label={t("catalog:tabs.label")}
         active={part}

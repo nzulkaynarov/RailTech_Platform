@@ -336,7 +336,7 @@ export function LegalPage() {
   }
 
   return (
-    <SettingsPage sectionKey="legal" subtitle={t("subtitle")}>
+    <SettingsPage sectionKey="legal">
       <div role="status" className="pf-hint" style={{ minHeight: 22 }}>
         {notice}
       </div>

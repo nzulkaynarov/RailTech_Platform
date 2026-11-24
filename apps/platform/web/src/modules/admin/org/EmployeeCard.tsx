@@ -70,11 +70,7 @@ export function EmployeeCard({ employee, selfId, canEdit, otherActiveAdmins }: E
           action={canEdit ? <RetryErpSync employee={employee} /> : undefined}
         />
       ) : null}
-      {!canEdit ? (
-        <p className="pf-hint" style={{ margin: 0 }}>
-          {t("admin.org.readOnly")}
-        </p>
-      ) : disabled ? (
+      {!canEdit ? null : disabled ? (
         <>
           <Alert type="info" showIcon message={t("admin.org.card.disabledNote")} />
           <DisableEmployee

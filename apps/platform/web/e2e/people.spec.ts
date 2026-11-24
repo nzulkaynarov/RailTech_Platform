@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 
 import { loginAndWait, settledScreenshot, spaGoto } from "./support/app";
 import { expectNoViolations } from "./support/axe";
+import { expectFitsFrame } from "./support/layout";
 
 const WIDTHS = [1440, 390] as const;
 
@@ -17,6 +18,7 @@ test.describe("Органайзер · Люди", () => {
       await expect(page.locator(".pf-people tbody tr").first()).toBeVisible();
       await expectNoViolations(page, `people ${String(width)}`);
       await settledScreenshot(page, "people");
+      if (width !== 390) await expectFitsFrame(page, "people");
     });
 
     test(`карточка коллеги: контакты скрыты, «Показать контакты» открывает их, ${String(width)}`, async ({

@@ -7,9 +7,7 @@ import { useAuth } from "../../../app/auth/useAuth";
 import { PanelPortal } from "../../../app/shell/PanelSlot";
 import { useDocumentTitle } from "../../../shared/lib/useDocumentTitle";
 import { LinkButton } from "../../../shared/ui/LinkButton";
-import { LockIcon } from "../../../shared/ui/icons";
 import { PageHeader } from "../../../shared/ui/PageHeader";
-import { StatusTag } from "../../../shared/ui/StatusTag";
 import { CreateDocumentPanel } from "./CreateDocumentPanel";
 import { DocumentPanel } from "./DocumentPanel";
 import { DocumentsView } from "./DocumentsView";
@@ -60,7 +58,7 @@ export function KbPage() {
     <div className="pf-kb">
       <PageHeader
         title={title}
-        subtitle={t(editable ? "kb:subtitle" : "kb:readOnlySubtitle")}
+        readOnly={!editable}
         extra={
           editable && view === "docs" ? (
             <div className="pf-fp-row">
@@ -74,14 +72,7 @@ export function KbPage() {
                 {t("kb:documents.manual")}
               </LinkButton>
             </div>
-          ) : editable ? null : (
-            <StatusTag tone="default">
-              <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
-                <LockIcon size={12} />
-                {t("kb:viewOnly")}
-              </span>
-            </StatusTag>
-          )
+          ) : null
         }
       />
       <Segmented
