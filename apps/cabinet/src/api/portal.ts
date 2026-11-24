@@ -291,6 +291,7 @@ export type Act = Schemas['Act'];
 export type DealRef = Schemas['DealRef'];
 export type AcceptanceCodeSent = Schemas['AcceptanceCodeSent'];
 export type CodeDelivery = Schemas['CodeDelivery'];
+export type ItemRef = Schemas['ItemRef'];
 export type DeliveryLine = Schemas['DeliveryLine'];
 export type PortalDocument = Schemas['Document'];
 export type DocumentKind = Schemas['DocumentKind'];

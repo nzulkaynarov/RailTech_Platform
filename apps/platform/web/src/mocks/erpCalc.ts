@@ -191,12 +191,7 @@ function presentLine(line: MockLine, user: Me, editable: boolean): CalcLine {
     item:
       line.productId === null
         ? null
-        : itemRefOf(
-            line.productId,
-            line.name,
-            line.article,
-            kind === "service" ? "service" : "goods",
-          ),
+        : itemRefOf(line.productId, line.name, kind === "service" ? "service" : "goods"),
     kind,
     zone,
     group: GROUP[kind],

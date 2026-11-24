@@ -303,6 +303,17 @@ function photo(id: string, alt: string, isMain: boolean, sample: number): MockIm
   };
 }
 
+/**
+ * Склад, расчёт и КП мока живут своими id позиций вне каталога мока; у части из них есть фото-образец (ЕД-4), чтобы строки
+ * показывали миниатюру, а не только значок типа. id фото — «9» и номер позиции, как у настоящего главного фото.
+ */
+const OUTSIDE_PHOTOS: Record<string, number> = { "31": 0, "32": 1, "33": 2, "34": 0, "41": 1 };
+
+export function outsidePhoto(itemId: string): MockImage | null {
+  const sample = OUTSIDE_PHOTOS[itemId];
+  return sample === undefined ? null : photo(`9${itemId}`, "Образец", true, sample);
+}
+
 function seedItems(): MockItem[] {
   const base = {
     status: "PUBLISHED" as MockItem["status"],

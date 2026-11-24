@@ -8,6 +8,7 @@ import type { CatalogImage, CatalogItemDetail } from "../../../shared/api/genera
 import {
   getGetCatalogItemImageContentUrl,
   getGetCatalogItemQueryKey,
+  getListCatalogItemsQueryKey,
   useDeleteCatalogItemImage,
   useUpdateCatalogItemImage,
   useUploadCatalogItemImage,
@@ -33,8 +34,12 @@ export function ItemPhotos({ card, editable }: { card: CatalogItemDetail; editab
   const [problem, setProblem] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const images = card.images;
+  // Главное фото — миниатюра в списке и в строках документов: список тоже перечитывается (адрес миниатюры с версией фото)
   const refresh = () =>
-    queryClient.invalidateQueries({ queryKey: getGetCatalogItemQueryKey(card.id) });
+    Promise.all([
+      queryClient.invalidateQueries({ queryKey: getGetCatalogItemQueryKey(card.id) }),
+      queryClient.invalidateQueries({ queryKey: getListCatalogItemsQueryKey() }),
+    ]);
   const upload = useUploadCatalogItemImage();
   const update = useUpdateCatalogItemImage({
     mutation: {

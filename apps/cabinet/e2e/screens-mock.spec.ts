@@ -378,7 +378,7 @@ test('счета: полоса разделов — навигация ссыл�
   await page.goto('/documents');
   await heading(page, 'Документы');
   await expect(page.getByRole('navigation', { name: 'Финансовые разделы' })).toHaveCount(0);
-  await expect(page.getByRole('group', { name: 'Вид документа' })).toBeVisible();
+  await expect(page.getByRole('combobox', { name: 'Вид документа' })).toBeVisible();
   await page.goto('/deliveries');
   await heading(page, 'Поставки');
   await expect(page.getByRole('navigation', { name: 'Финансовые разделы' })).toHaveCount(0);

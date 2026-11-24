@@ -80,9 +80,11 @@ describe('«Написать менеджеру» на экранах', () => {
     ['/acts', 'Акты', 'Написать менеджеру об акте A-2026-0090', chat('act', 701, 'A-2026-0090')],
   ])('%s: в строке — метка документа (договор — его проекта)', async (path, title, name, href) => {
     signedIn();
+    const user = userEvent.setup();
     renderApp(path);
     await heading(title);
-    expect(await within(page()).findByRole('link', { name })).toHaveAttribute('href', href);
+    await user.click(await within(page()).findByRole('button', { name: `Действия: ${name.split(' ').pop()}` }));
+    expect(await screen.findByRole('menuitem', { name })).toHaveAttribute('href', href);
     await expectNoAxeViolations();
   });
 
