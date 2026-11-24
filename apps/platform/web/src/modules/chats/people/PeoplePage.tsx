@@ -200,7 +200,7 @@ export function PeoplePage() {
     if (!shown) {
       // Значения скрыты до показа: в карточке — кнопка «Показать контакты», в таблице — пункт меню строки
       if (person.lead && field === "any") return <LeadContactIcons has={person.lead.has} />;
-      if (person.lead && !person.lead.has[field === "telegram" ? "telegram" : field]) return "—";
+      if (person.lead && field !== "any" && !person.lead.has[field]) return "—";
       return "•••";
     }
     const phone = shown.phone ? <a href={`tel:${shown.phone}`}>{shown.phone}</a> : null;
