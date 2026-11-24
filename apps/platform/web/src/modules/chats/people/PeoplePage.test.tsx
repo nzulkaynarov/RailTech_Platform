@@ -125,7 +125,7 @@ describe("Органайзер · Люди", () => {
     const card = await panelEl();
     await within(card).findByRole("heading", { level: 2, name: "Борис Лид" });
     expect(within(card).getByText("Веб-форма")).toBeVisible();
-    expect(within(card).getByText("Özbek")).toBeVisible();
+    expect(within(card).getByText("Özbekça")).toBeVisible();
     expect(within(card).getByText("Рельсы Р65, 40 т")).toBeVisible();
     expect(reveals).toBe(0);
 

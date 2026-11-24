@@ -132,3 +132,18 @@ async def test_no_journal_record_no_contacts(web: Web, be: Any, failure: httpx.R
     )
     assert response.status_code == 503
     assert "+998901112233" not in response.text
+
+
+async def test_unknown_lead_is_404_and_the_journal_is_not_touched(web: Web, be: Any) -> None:
+    """Сначала лид (нет — 404), потом журнал: о несуществующем лиде записи нет."""
+    await web.login(["MANAGER"])
+    router: respx.MockRouter = be.router
+    router.get(f"{LEADS}/999").mock(
+        return_value=httpx.Response(404, json={"code": "NOT_FOUND", "message": "lead not found"})
+    )
+    audit = router.post(AUDIT).mock(return_value=httpx.Response(204))
+    response = await web.client.post(
+        "/api/v1/people/leads/L-0999/reveal", headers={"X-CSRF-Token": web.csrf}
+    )
+    assert response.status_code == 404
+    assert audit.call_count == 0

@@ -308,7 +308,7 @@ export function PeoplePage() {
           options={KINDS.map((value) => ({ value, label: kindLabel(value) }))}
           onChange={setKind}
         />
-        {kind === "all" || kind === "leads" ? (
+        {canSee(me, LEADS_RULE) && (kind === "all" || kind === "leads") ? (
           <label className="pf-people-closed">
             <Switch size="small" checked={closed} onChange={setClosed} />
             <span>{t("modules:chats.people.showClosed")}</span>

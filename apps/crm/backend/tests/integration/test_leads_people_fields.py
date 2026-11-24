@@ -109,6 +109,7 @@ async def test_list_tells_which_contacts_exist_without_values(
     """G1: `has_phone` — и номер из кнопки бота, `has_telegram` — аккаунт, `has_email` — почта;
     значений контактов в списке нет."""
     bare = await escalated_lead(sessions, tg_user_id=6111)
+    nickless = await escalated_lead(sessions, tg_user_id=6113)
     rich = await escalated_lead(sessions, tg_user_id=6112)
     async with sessions() as session, session.begin():
         lead = await session.get(Lead, rich)
@@ -127,6 +128,12 @@ async def test_list_tells_which_contacts_exist_without_values(
             await session.scalars(select(TelegramIdentity).where(TelegramIdentity.lead_id == bare))
         ).one()
         other.phone_e164 = None
+        silent = (
+            await session.scalars(
+                select(TelegramIdentity).where(TelegramIdentity.lead_id == nickless)
+            )
+        ).one()
+        silent.tg_username = None
     manager, password = await make_user(sessions, "people-2@railtech.uz", ["manager"])
     with TestClient(create_app(live_settings)) as http:
         rows = {
@@ -136,6 +143,7 @@ async def test_list_tells_which_contacts_exist_without_values(
             ]
         }
     assert _flags(rows[bare]) == (False, False, True)
+    assert _flags(rows[nickless]) == (False, False, False)  # аккаунт без ника: показывать нечего
     assert _flags(rows[rich]) == (True, True, True)
     assert _flags(rows[manual_id]) == (True, False, False)
     assert {"phone", "email"}.isdisjoint(rows[rich])

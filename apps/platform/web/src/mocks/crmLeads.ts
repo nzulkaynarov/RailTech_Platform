@@ -151,7 +151,9 @@ export const crmLeadsHandlers = [
       lead: found.row.lead,
       phone: found.card.contacts.phone,
       email: found.card.contacts.email,
-      telegram: found.card.contacts.telegram,
+      telegram: found.card.contacts.telegram
+        ? `@${found.card.contacts.telegram.replace(/^@/, "")}`
+        : null,
     };
     return HttpResponse.json(body);
   }),
