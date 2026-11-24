@@ -184,6 +184,14 @@ async def test_slow_cards_do_not_hold_the_queue(
     never = asyncio.Event()  # the card of EDS never answers
     entered = asyncio.Event()
     answered: list[bool] = []
+    waits: list[float | None] = []  # timeouts the queue actually gave to the cards
+    real_wait = asyncio.wait
+
+    async def recording_wait(fs: Any, **kw: Any) -> Any:
+        waits.append(kw.get("timeout"))
+        return await real_wait(fs, **kw)
+
+    monkeypatch.setattr(asyncio, "wait", recording_wait)
 
     async def slow(_request: httpx.Request) -> httpx.Response:
         entered.set()
@@ -202,6 +210,9 @@ async def test_slow_cards_do_not_hold_the_queue(
 
     assert entered.is_set()
     assert answered == []
+    # The budget itself, without a clock: the cards were waited for at most CARDS_BUDGET.
+    assert waits
+    assert all(t is not None and t <= rework_module.CARDS_BUDGET for t in waits)
     (row,) = rework(body)
     assert row["subtitle"].startswith("Возвращён на доработку")
     assert body["sources"]["eds"] == "ok"
