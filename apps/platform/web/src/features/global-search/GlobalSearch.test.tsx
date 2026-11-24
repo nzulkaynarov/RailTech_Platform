@@ -365,7 +365,7 @@ describe("Глобальный поиск", () => {
     const { router } = renderApp("/dashboard/queue");
     const box = await searchBox();
 
-    type(box, "служебка");
+    type(box, "записка");
     const action = await screen.findByRole("option", { name: /Создать · Внутренний документ/ });
     expect(action).not.toHaveTextContent("Пока делается в старой системе");
     fireEvent.click(action);
@@ -419,7 +419,7 @@ describe("Глобальный поиск", () => {
     ).toBeVisible();
   });
 
-  it("ERP не отвечает: показано, что нашла CRM, и плашка «ERP не отвечает»", async () => {
+  it("Раздел «Операции» не отвечает: показано, что нашла CRM, и плашка «Раздел «Операции» не отвечает»", async () => {
     server.use(
       http.get("*/search", () =>
         HttpResponse.json({
@@ -449,9 +449,11 @@ describe("Глобальный поиск", () => {
     type(box, "депо");
 
     expect(await screen.findByRole("option", { name: /ООО «Демо-Депо»/ })).toBeVisible();
-    expect(screen.getAllByRole("status").some((s) => /ERP не отвечает/.test(s.textContent))).toBe(
-      true,
-    );
+    expect(
+      screen
+        .getAllByRole("status")
+        .some((s) => /Раздел «Операции» не отвечает/.test(s.textContent)),
+    ).toBe(true);
   });
 
   it("Escape закрывает список, второй Escape очищает поле", async () => {

@@ -29,7 +29,6 @@
     "report": "Report"
   },
   "list": {
-    "subtitle": "Memos, applications and reports awaiting approval.",
     "caption": "Documents for approval",
     "scroll": "Table of documents for approval",
     "scope": {

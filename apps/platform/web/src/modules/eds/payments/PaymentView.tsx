@@ -7,6 +7,7 @@ import { ApiError } from "../../../shared/api/errors";
 import type { PaymentCard } from "../../../shared/api/generated/model";
 import { listPayments, useGetPayment } from "../../../shared/api/generated/platform-bff";
 import { formatQuantity } from "../../../shared/lib/money";
+import { useCrumbTitle } from "../../../shared/lib/crumbTitle";
 import { useDocumentTitle } from "../../../shared/lib/useDocumentTitle";
 import { useFormat } from "../../../shared/lib/useFormat";
 import { EmptyState } from "../../../shared/ui/EmptyState";
@@ -196,6 +197,7 @@ export function PaymentView({ id }: { id: number }) {
   const query = useGetPayment(id);
   const labels = useStateLabels();
   useDocumentTitle(query.data?.number ?? String(id));
+  useCrumbTitle(query.data?.number);
   const error = query.error;
   if (error instanceof ApiError && error.status === 404) {
     return (

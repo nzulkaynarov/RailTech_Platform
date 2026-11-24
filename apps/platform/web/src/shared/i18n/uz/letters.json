@@ -1,6 +1,5 @@
 {
   "list": {
-    "subtitle": "Mijozlar xatlari va boshqa kiruvchi hujjatlar: ro‘yxatga olish va direktor rezolyutsiyasi",
     "caption": "Kiruvchi xatlar",
     "filter": {
       "label": "Xat holati",
@@ -109,7 +108,7 @@
     "noRequest": "Arizaga bog'lanmagan",
     "noClient": "Mijoz aniqlanmagan",
     "byClient": "STIR {{inn}}",
-    "bySystem": "Tizim tomonidan, CRM arizasi bo'yicha",
+    "bySystem": "Tizim tomonidan, mijoz arizasi böyiça",
     "decision": "Direktor qarori",
     "decisionFields": {
       "text": "Rezolyutsiya matni",
@@ -225,16 +224,16 @@
     },
     "zones": {
       "goods": {
-        "name": "Ta'minotchi",
+        "name": "Taʼminot",
         "hint": "ombor va hamkorlar narxlari"
       },
       "services": {
-        "name": "Bosh muhandis",
+        "name": "Xizmatlar",
         "hint": "xizmatlar, TT, brigada"
       },
       "payment_terms": {
-        "name": "Buxgalter",
-        "hint": "to'lov shartlari"
+        "name": "Tölov şartlari",
+        "hint": "tölov şartlari"
       }
     },
     "directory": {
@@ -318,7 +317,6 @@
   },
   "register": {
     "action": "Kiruvchi hujjatni ro‘yxatga olish",
-    "subtitle": "Soliq, bank, hamkor yoki davlat organi xati — qog‘ozda, soliq to‘lovchi kabinetidan yoki pochtadan. Rezolyutsiyani direktor qo‘yadi.",
     "formLabel": "Kiruvchi hujjatni ro‘yxatga olish",
     "choose": "Tanlang",
     "kind": {
@@ -641,7 +639,6 @@
   "tasks": {
     "onBehalf": "Siz {{name}}ni almaştirasiz",
     "title": "{{number}} xati bo‘yicha topshiriq",
-    "subtitle": "Xat, sizning topshirig‘ingiz va u bo‘yicha amallar",
     "letter": "Xat",
     "openCard": "Xat kartochkasini ochish",
     "mine": "Mening topshirig‘im",
@@ -689,7 +686,6 @@
     "details": "Rekvizitlar"
   },
   "mail": {
-    "subtitle": "Umumiy qutidagi xatlar: har birini ko‘rib chiqing — kiruvchi sifatida ro‘yxatga oling, lid yarating yoki arxivga yuboring",
     "caption": {
       "new": "Ko‘rib chiqishni kutayotgan xatlar",
       "mine": "Mening ishimdagi xatlar",

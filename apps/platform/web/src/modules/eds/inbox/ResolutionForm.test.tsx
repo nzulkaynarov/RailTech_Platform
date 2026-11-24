@@ -22,7 +22,7 @@ async function openForm(path = LETTER, directoryReady = true) {
   // справочник сотрудников загружен: зона «услуги» с одним кандидатом выбрана сама
   if (directoryReady) {
     await waitFor(() => {
-      expect(selectedLabel(within(form).getByLabelText("Сотрудник: Гл. инженер"))).toBe(
+      expect(selectedLabel(within(form).getByLabelText("Сотрудник: Услуги"))).toBe(
         "Демо Инженеров · Главный инженер",
       );
     });
@@ -38,7 +38,7 @@ async function fillValid(form: HTMLElement) {
   fireEvent.change(within(form).getByLabelText("Текст резолюции"), {
     target: { value: "Посчитать с запасом по складу." },
   });
-  await chooseOption(within(form).getByLabelText("Сотрудник: Снабженец"), "Демо Снабженцев");
+  await chooseOption(within(form).getByLabelText("Сотрудник: Снабжение"), "Демо Снабженцев");
 }
 
 describe("Резолюция: форма", () => {
@@ -47,18 +47,20 @@ describe("Резолюция: форма", () => {
 
     expect(within(form).getByLabelText("Текст резолюции")).toBeVisible();
     const supply = within(form).getByRole("checkbox", {
-      name: /Снабженец.*склад и цены партнёров/,
+      name: /Снабжение.*склад и цены партнёров/,
     });
     const engineer = within(form).getByRole("checkbox", {
-      name: /Гл\. инженер.*услуги, ТЗ, бригада/,
+      name: /Услуги.*услуги, ТЗ, бригада/,
     });
-    const accountant = within(form).getByRole("checkbox", { name: /Бухгалтер.*условия оплаты/ });
+    const accountant = within(form).getByRole("checkbox", {
+      name: /Условия оплаты.*условия оплаты/,
+    });
     expect(supply).toBeChecked();
     expect(engineer).toBeChecked();
     expect(accountant).not.toBeChecked();
     // в «товарах» двое — выбор за директором; в «услугах» один — выбран сам
-    expect(selectedLabel(within(form).getByLabelText("Сотрудник: Снабженец"))).toBe("");
-    expect(selectedLabel(within(form).getByLabelText("Сотрудник: Гл. инженер"))).toBe(
+    expect(selectedLabel(within(form).getByLabelText("Сотрудник: Снабжение"))).toBe("");
+    expect(selectedLabel(within(form).getByLabelText("Сотрудник: Услуги"))).toBe(
       "Демо Инженеров · Главный инженер",
     );
     expect(within(form).getByLabelText("Срок расчёта")).toHaveValue(
@@ -253,7 +255,7 @@ describe("Резолюция: ошибки и черновик", () => {
     expect(within(form).getByLabelText("Текст резолюции")).toHaveValue(
       "Посчитать с запасом по складу.",
     );
-    expect(selectedLabel(within(form).getByLabelText("Сотрудник: Снабженец"))).toBe(
+    expect(selectedLabel(within(form).getByLabelText("Сотрудник: Снабжение"))).toBe(
       "Демо Снабженцев · Специалист по снабжению",
     );
     // поле срока подсвечено словами
@@ -294,7 +296,7 @@ describe("Резолюция: ошибки и черновик", () => {
     expect(within(second.form).getByLabelText("Текст резолюции")).toHaveValue(
       "Посчитать с запасом по складу.",
     );
-    expect(selectedLabel(within(second.form).getByLabelText("Сотрудник: Снабженец"))).toBe(
+    expect(selectedLabel(within(second.form).getByLabelText("Сотрудник: Снабжение"))).toBe(
       "Демо Снабженцев · Специалист по снабжению",
     );
   });

@@ -517,12 +517,6 @@
   overflow-wrap: anywhere;
 }
 
-.pf-msg-card-none {
-  margin: 0;
-  color: var(--rt-color-text-secondary);
-  font-size: 12px;
-}
-
 .pf-msg-sheet-foot {
   display: flex;
   gap: 8px;

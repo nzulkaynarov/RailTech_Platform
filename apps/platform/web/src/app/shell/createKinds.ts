@@ -65,6 +65,7 @@ export const CREATE_KINDS: readonly CreateKind[] = [
     resources: ["eds.memo.create"],
     to: "/eds/new?type=memo",
     keywords: [
+      "записка",
       "служебка",
       "служебную записку",
       "записку",

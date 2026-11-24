@@ -164,7 +164,7 @@ describe("Первый запуск до входа", () => {
     expect(screen.getByRole("link", { name: "К входу" })).toHaveAttribute("href", "/login");
   });
 
-  it("CRM не отвечает: «Повторить», а не пустой экран", async () => {
+  it("Раздел «Контакты» не отвечает: «Повторить», а не пустой экран", async () => {
     server.use(http.get("*/setup/state", () => HttpResponse.json({}, { status: 503 })));
     renderApp("/setup");
 

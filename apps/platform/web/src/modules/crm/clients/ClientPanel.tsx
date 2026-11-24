@@ -1,3 +1,4 @@
+import { useCrumbTitle } from "../../../shared/lib/crumbTitle";
 import { Alert, Button, Select, Skeleton } from "antd";
 import type { TFunction } from "i18next";
 import { useState } from "react";
@@ -528,6 +529,8 @@ export function ClientPanel({
   const { t } = useTranslation("clients");
   const { mobile } = useViewport();
   const query = useGetCrmClient(id);
+  // последняя крошка — название клиента, а не номер из адреса
+  useCrumbTitle(embedded ? null : query.data?.name);
   if (query.isPending) return <Skeleton active paragraph={{ rows: 6 }} title={false} />;
   if (query.isError) {
     const status = query.error instanceof ApiError ? query.error.status : 0;

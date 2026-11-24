@@ -102,12 +102,10 @@ test.describe("Проекты: бухгалтер", () => {
     await panel.getByLabel("Кто со стороны клиента").fill("Каримов А., снабженец");
     await panel.getByRole("button", { name: "Отметить: согласован клиентом" }).click();
     await expect(panel.getByText(/Клиент согласовал редакцию/)).toBeVisible(); // «Отмечено сотрудником» — в «Истории»
-    await panel.getByRole("button", { name: "Отметить: выставлен у оператора" }).click();
-    await expect(
-      panel.getByText(/Договор выставлен у оператора\. Когда обе стороны/),
-    ).toBeVisible();
+    await panel.getByRole("button", { name: "Отметить: выставлен в ЭДО" }).click();
+    await expect(panel.getByText(/Договор выставлен в ЭДО\. Когда обе стороны/)).toBeVisible();
     await settledScreenshot(page, "contract-issued");
-    await expectNoViolations(page, "договор: выставлен у оператора");
+    await expectNoViolations(page, "договор: выставлен в ЭДО");
 
     // скан: файл не выбран — кнопка неактивна; чужой тип не принимается; PDF — «Подписан (скан)»
     const submit = panel.getByRole("button", { name: "Прикрепить скан" });

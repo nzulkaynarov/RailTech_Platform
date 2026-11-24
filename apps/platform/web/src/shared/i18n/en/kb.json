@@ -1,6 +1,5 @@
 {
   "subtitle": "The documents the bot answers customers from: the \"What the bot will find\" search, gaps — questions without an answer — and a sandbox for testing the bot.",
-  "readOnlySubtitle": "View only: documents, gaps and the sandbox are managed by the administrator.",
   "viewOnly": "View only",
   "common": {
     "retry": "Retry",
@@ -34,7 +33,7 @@
       "text": "Try again: nothing has been lost."
     },
     "unavailable": {
-      "title": "CRM is not responding",
+      "title": "The “Contacts” section is not responding",
       "text": "Wait a minute and try again: nothing has been lost."
     },
     "forbidden": {
@@ -108,7 +107,7 @@
       "offStep2": "The file and fragments are not deleted — you can enable the document again.",
       "onStep1": "The document takes part in the bot's search again.",
       "onStep2": "The fragments are already built, no re-indexing is needed.",
-      "step3": "The change is written to the CRM audit log: who and when.",
+      "step3": "The change is written to the audit log: who and when.",
       "submitOff": "Disable document",
       "submitOn": "Enable document",
       "doneOff": "Document disabled",
@@ -119,7 +118,7 @@
       "submit": "Re-index the document",
       "step1": "The document joins the indexing queue — status \"Queued\".",
       "step2": "The fragments are rebuilt from the saved file; it takes up to a minute.",
-      "step3": "If the document is being indexed right now, CRM refuses: wait and try again.",
+      "step3": "If the document is being indexed right now, it cannot be changed: wait and try again.",
       "done": "Document queued for re-indexing"
     },
     "chunks": {
@@ -145,7 +144,7 @@
     "step1": "The document joins the indexing queue — status \"Queued\".",
     "step1Gap": "The document joins the indexing queue, and the gap it was created from is closed.",
     "step2": "In a minute the bot starts answering from the new document; check it in \"What the bot will find\".",
-    "step3": "The upload is written to the CRM audit log: who and when.",
+    "step3": "The upload is written to the audit log: who and when.",
     "done": "Document added — indexing takes up to a minute",
     "doneGap": "Document added, gap closed — indexing takes up to a minute",
     "errors": {
@@ -209,7 +208,7 @@
   },
   "gapPanel": {
     "notFound": "The gap is not in this list: it may have been closed already.",
-    "stepAudit": "The change is written to the CRM audit log: who and when.",
+    "stepAudit": "The change is written to the audit log: who and when.",
     "fields": {
       "occurrences": "Asked",
       "language": "Language",
@@ -250,7 +249,7 @@
     "title": "Bot sandbox",
     "intro": "Write to the bot as a customer: the reply goes the same way as in Telegram — knowledge base, texts, handoff rules. Customers and managers do not see this conversation.",
     "paid": "Paid: replies are counted in \"Spend\" as a test.",
-    "handoffNote": "Handoff to a manager is only shown below: it is not sent to the team channel or CRM.",
+    "handoffNote": "Handoff to a manager is only shown below: it is not sent to the team channel.",
     "language": "Customer language",
     "log": "Conversation with the bot",
     "placeholder": "Customer question",
@@ -263,13 +262,13 @@
     "buttons": "Buttons under the message",
     "step1": "The message goes to the bot on behalf of a test customer: the bot answers from the knowledge base, texts and handoff rules.",
     "step2": "The reply is paid: model calls go to \"Spend\" marked \"test\".",
-    "step3": "Handoff to a manager is only shown below; no handoff is created in CRM.",
+    "step3": "Handoff to a manager is only shown below and goes nowhere.",
     "reset": {
       "button": "Start over",
       "submit": "Clear the conversation",
       "step1": "The test conversation is deleted completely — customers and managers do not have it.",
       "step2": "The thread on the screen is cleared and the bot starts from scratch.",
-      "step3": "The action is written to the CRM audit log: who and when."
+      "step3": "The action is written to the audit log: who and when."
     },
     "why": {
       "title": "Why the bot answered this way",
@@ -312,7 +311,7 @@
     "DEFAULT": "The action was not completed. Try again later or contact the administrator.",
     "FORBIDDEN": "This action is not available to your role.",
     "NOT_FOUND": "The object was not found: it may have been changed. Refresh the page.",
-    "BACKEND_UNAVAILABLE": "CRM is not responding. Wait a minute and try again.",
+    "BACKEND_UNAVAILABLE": "The “Contacts” section is not responding. Wait a minute and try again.",
     "INTEGRATION_FAILED": "A service needed for the reply did not respond. Try again later.",
     "TOO_MANY_REQUESTS": "Too many requests. Try again in a minute.",
     "VALIDATION_FAILED": "Check the form fields.",

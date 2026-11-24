@@ -17,7 +17,7 @@ describe("действия поиска: совпадение по началу 
     ["создать заявку", ["request"]],
     ["создать заявку на ремонт", ["request"]],
     ["служе", ["internal"]],
-    ["служебка", ["internal"]],
+    ["записка", ["internal"]],
     ["приглас", ["inviteEmployee"]],
     ["invite", ["inviteEmployee"]],
   ])("«%s»", (query, expected) => {
@@ -38,7 +38,7 @@ describe("действия поиска: совпадение по началу 
   it("только действия, доступные роли (право записи в разделе)", () => {
     expect(keys("пригласить", me({ "crm.clients": "full" }))).toEqual([]);
     expect(keys("создать заявку", me({ "crm.clients": "read" }))).toEqual([]);
-    expect(keys("служебка", me({ "eds.memo.create": "full" }))).toEqual(["internal"]);
+    expect(keys("записка", me({ "eds.memo.create": "full" }))).toEqual(["internal"]);
   });
 });
 

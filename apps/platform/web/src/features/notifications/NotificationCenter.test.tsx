@@ -195,7 +195,7 @@ describe("Центр уведомлений", () => {
     ).toBeInTheDocument();
   });
 
-  it("ERP не отвечает: окно показывает плашку, а не пустоту", async () => {
+  it("Раздел «Операции» не отвечает: окно показывает плашку, а не пустоту", async () => {
     server.use(
       http.get("*/notifications", () =>
         HttpResponse.json({
@@ -210,7 +210,9 @@ describe("Центр уведомлений", () => {
     renderApp("/dashboard/queue");
     const center = await openBell();
 
-    expect(await within(center).findByText("ERP не отвечает, данные неполные")).toBeInTheDocument();
+    expect(
+      await within(center).findByText("Раздел «Операции» не отвечает, данные неполные"),
+    ).toBeInTheDocument();
   });
 
   it("сбой запроса: «Не удалось загрузить» и «Повторить»", async () => {
@@ -288,7 +290,7 @@ describe("Боковое окно «Сегодня»", () => {
     expect(within(feed).queryByText(/BFF/)).not.toBeInTheDocument();
   });
 
-  it("ERP не отвечает: лента пуста, но плашка объясняет почему", async () => {
+  it("Раздел «Операции» не отвечает: лента пуста, но плашка объясняет почему", async () => {
     server.use(
       http.get("*/activity/today", () =>
         HttpResponse.json({ items: [], sources: { crm: "ok", erp: "unavailable" } }),
@@ -298,7 +300,9 @@ describe("Боковое окно «Сегодня»", () => {
     renderApp("/dashboard/queue?panel=open");
 
     const panel = await screen.findByRole("complementary", { name: "Боковое окно" });
-    expect(await within(panel).findByText("ERP не отвечает, данные неполные")).toBeInTheDocument();
+    expect(
+      await within(panel).findByText("Раздел «Операции» не отвечает, данные неполные"),
+    ).toBeInTheDocument();
     expect(within(panel).getByText("Событий за день пока нет")).toBeInTheDocument();
   });
 });

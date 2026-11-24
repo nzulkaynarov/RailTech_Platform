@@ -24,7 +24,6 @@
     }
   },
   "list": {
-    "subtitle": "Quotes waiting for the director's approval. Nothing goes to the client without a decision.",
     "caption": "Quotes for approval",
     "scroll": "Table of quotes for approval",
     "scope": {
@@ -71,7 +70,7 @@
     "approve": "Approve quote",
     "lines": "Quote lines",
     "linesScroll": "Table of quote lines",
-    "noLines": "The quote lines were not received from ERP: no data, no access, or ERP already has another revision of the quote. The snapshot total is shown.",
+    "noLines": "The quote lines were not received: no data, no access, or the quote already has another revision. The snapshot total is shown.",
     "emptyLines": "The quote has no lines.",
     "optional": "optional",
     "days": "{{count}} d.",
@@ -123,7 +122,7 @@
       "services": "services"
     },
     "snapshotTotal": "Total from the quote snapshot",
-    "mismatch": "The total in ERP ({{erp}}) differs from the snapshot total ({{snapshot}}): the quote changed after it was sent for approval. Refresh the card or ask the estimator.",
+    "mismatch": "The total in records ({{erp}}) differs from the snapshot total ({{snapshot}}): the quote changed after it was sent for approval. Refresh the card or ask the estimator.",
     "clientComments": "Client comments",
     "clientCommentsList": "Client comments on the quote",
     "clientCommentsHint": "The client writes them in the cabinet while the quote awaits a decision. Reply in Chats or with a new quote version.",
@@ -148,7 +147,7 @@
       },
       "reason": {
         "no_telegram": "the contact is not connected to the Telegram bot",
-        "client_not_in_crm": "the client was not passed to CRM, the bot does not know them",
+        "client_not_in_crm": "the client was not sent to records, the bot does not know them",
         "no_cabinet": "the client is not in the cabinet yet — invite them from the client card",
         "no_email": "the contact has no e-mail — add it on the client card",
         "mail_not_configured": "email is not set up — Settings · Connections · Email",
@@ -161,7 +160,7 @@
         "no_recipient": "the request has no client contact",
         "send_failed": "sending failed"
       },
-      "error": "ERP stopped the automatic sending: {{reason}}.",
+      "error": "The system stopped the automatic sending: {{reason}}.",
       "line": "{{channel}} — {{status}}",
       "lineReason": "{{channel}} — {{status}}: {{reason}}",
       "send": "Send",
@@ -264,13 +263,13 @@
     "blocked": {
       "checklist": "Cannot approve: {{items}}.",
       "generic": "Approval is not available right now.",
-      "noData": "No quote data from ERP — refresh the card."
+      "noData": "No quote data — refresh the card."
     },
     "channels": {
       "legend": "Send to the client via",
       "hint": "The quote without internal fields goes to the client right after approval through the chosen channels.",
       "contact": "Client contact: {{name}}.",
-      "unknown": "ERP did not answer, channel availability is unknown: ERP checks it on sending and shows an unavailable channel in the quote card report.",
+      "unknown": "Channel availability could not be checked: it is checked again on sending, and an unavailable channel is shown in the quote card report.",
       "telegram": {
         "name": "Telegram bot"
       },
@@ -282,7 +281,7 @@
       },
       "reason": {
         "no_telegram": "Unavailable: the contact is not connected to the Telegram bot.",
-        "client_not_in_crm": "Unavailable: the client was not passed to CRM, the bot does not know them.",
+        "client_not_in_crm": "Unavailable: the client was not sent to records, the bot does not know them.",
         "no_cabinet": "Unavailable: the client is not in the cabinet yet.",
         "no_email": "Unavailable: the contact has no e-mail.",
         "mail_not_configured": "Unavailable: email is not set up — Settings · Connections · Email."

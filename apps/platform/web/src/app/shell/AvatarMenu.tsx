@@ -168,6 +168,7 @@ export function AvatarMenu({
       <button
         type="button"
         className="pf-focusable"
+        title={me.name}
         aria-label={t("avatar.open", { initials: me.initials, name: me.name, role: caption })}
         aria-haspopup="menu"
         style={{
@@ -182,21 +183,8 @@ export function AvatarMenu({
           cursor: "pointer",
         }}
       >
-        <StaffAvatar initials={me.initials} src={me.avatar_url} />{" "}
-        <span
-          aria-hidden="true"
-          style={{
-            fontSize: 10,
-            lineHeight: "12px",
-            color: "var(--rt-color-text-tertiary)",
-            maxWidth: 60,
-            whiteSpace: "nowrap",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-          }}
-        >
-          {caption}
-        </span>
+        {/* Должность под аватаром не показываем (словарь ui-standard §13): человек — это аватар, роль — в меню */}
+        <StaffAvatar initials={me.initials} src={me.avatar_url} />
       </button>
     </Dropdown>
   );

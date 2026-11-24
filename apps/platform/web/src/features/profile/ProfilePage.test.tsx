@@ -404,7 +404,7 @@ describe("«Моя очередь» заместителя", () => {
     renderApp("/dashboard/queue");
 
     const queue = await screen.findByRole("region", { name: "Что ждёт вас" });
-    // у замещающего — ответ лиду и согласование служебки замещаемого (EDS `acting_for`, СЦ-9), обе строки с «за …»
+    // у замещающего — ответ лиду и согласование записки замещаемого (EDS `acting_for`, СЦ-9), обе строки с «за …»
     await within(queue).findAllByText(/вы замещаете Демо Директоров · /);
     const rows = within(queue).getAllByRole("listitem");
     expect(rows.filter((row) => /вы замещаете Демо Директоров/.test(row.textContent))).toHaveLength(

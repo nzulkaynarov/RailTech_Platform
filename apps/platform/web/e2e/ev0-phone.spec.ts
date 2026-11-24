@@ -131,7 +131,7 @@ test.describe("Гигиена телефона @mobile", () => {
     await recordAxe(page, "approval-quote");
   });
 
-  test("@mobile 390: служебка — читать и согласовать без горизонтальной прокрутки", async ({
+  test("@mobile 390: записка — читать и согласовать без горизонтальной прокрутки", async ({
     page,
   }) => {
     await page.setViewportSize({ width: 390, height: 844 });

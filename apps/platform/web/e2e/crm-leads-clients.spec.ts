@@ -98,7 +98,7 @@ test.describe("Лиды → «Создать заявку» → карточка
     await expectNoViolations(page, "форма с письмом из переписки");
   });
 
-  test("карточка клиента 360°: контакты, переписка, заявки, документы, приглашение; «Повторить отправку в ERP»", async ({
+  test("карточка клиента 360°: контакты, переписка, заявки, документы, приглашение; «Повторить отправку»", async ({
     page,
   }) => {
     await loginAndWait(page, "manager@demo.example");
@@ -115,12 +115,10 @@ test.describe("Лиды → «Создать заявку» → карточка
     await expectNoViolations(page, "карточка клиента 360°");
 
     const requests = panel.getByRole("region", { name: "Заявки и проекты" });
-    await expect(requests).toContainText("Не передана в бэк-офис: бэк-офис не ответил");
-    await requests.getByRole("button", { name: /^Повторить отправку в ERP/ }).click();
+    await expect(requests).toContainText("Не передана в учёт: нет ответа");
+    await requests.getByRole("button", { name: /^Повторить отправку/ }).click();
     await expect(requests.getByText("RQ-2026-040")).toBeVisible();
-    await expect(requests.getByRole("button", { name: /^Повторить отправку в ERP/ })).toHaveCount(
-      0,
-    );
+    await expect(requests.getByRole("button", { name: /^Повторить отправку/ })).toHaveCount(0);
   });
 });
 

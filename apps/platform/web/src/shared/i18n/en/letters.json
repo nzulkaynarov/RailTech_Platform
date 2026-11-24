@@ -1,6 +1,5 @@
 {
   "list": {
-    "subtitle": "Client letters and other incoming mail: registration and the director's resolution",
     "caption": "Incoming letters",
     "filter": {
       "label": "Letter status",
@@ -109,7 +108,7 @@
     "noRequest": "Not linked to a request",
     "noClient": "Client not identified",
     "byClient": "Tax ID {{inn}}",
-    "bySystem": "By the system, from a CRM request",
+    "bySystem": "By the system, from a client request",
     "decision": "Director's decision",
     "decisionFields": {
       "text": "Resolution text",
@@ -229,11 +228,11 @@
         "hint": "stock and partner prices"
       },
       "services": {
-        "name": "Chief engineer",
+        "name": "Services",
         "hint": "services, specs, crew"
       },
       "payment_terms": {
-        "name": "Accountant",
+        "name": "Payment terms",
         "hint": "payment terms"
       }
     },
@@ -318,7 +317,6 @@
   },
   "register": {
     "action": "Register incoming",
-    "subtitle": "A letter from the tax authority, a bank, a partner or a government body — on paper, from the taxpayer cabinet or by email. The director adds the resolution.",
     "formLabel": "Register an incoming document",
     "choose": "Select",
     "kind": {
@@ -641,7 +639,6 @@
   "tasks": {
     "onBehalf": "You are covering {{name}}",
     "title": "Instruction on letter {{number}}",
-    "subtitle": "The letter, your instruction and actions on it",
     "letter": "Letter",
     "openCard": "Open the letter card",
     "mine": "My instruction",
@@ -689,7 +686,6 @@
     "details": "Details"
   },
   "mail": {
-    "subtitle": "Shared mailbox letters: handle each — register it as incoming, create a lead or archive it",
     "caption": {
       "new": "Letters waiting to be handled",
       "mine": "My letters in progress",

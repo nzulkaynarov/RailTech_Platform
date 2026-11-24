@@ -106,8 +106,8 @@ describe("Dashboard · Моя очередь", () => {
       within(rowOf("Наложить резолюцию на письмо ВХ-108/26")).queryByText("срок сегодня"),
     ).toBeNull();
     expect(
-      within(rows.find((r) => within(r).queryByText("служебка")) as HTMLElement).getByText(
-        "служебка",
+      within(rows.find((r) => within(r).queryByText("записка")) as HTMLElement).getByText(
+        "записка",
       ),
     ).toBeVisible();
     expect(within(queue).getByText("Одобрить КП-2026/115")).toBeVisible();
@@ -146,7 +146,7 @@ describe("Dashboard · Моя очередь", () => {
       /Прикрепить скан подписанного договора ДОГ-2026\/106/,
       "/eds/projects/%D0%9F%D0%A0-2026-106",
     );
-    // D26G-9: служебка на шаге «Бухгалтер» — держателю права оплаты, на пилоте это менеджер-универсал
+    // D26G-9: записка на шаге «Бухгалтер» — держателю права оплаты, на пилоте это менеджер-универсал
     await expectRow(
       /Принять к оплате СЗ-2026\/015/,
       "/eds/approvals/%D0%A1%D0%97-2026%2F015?panel=open&tab=agree",
@@ -158,9 +158,9 @@ describe("Dashboard · Моя очередь", () => {
     expect(new Set(titles).size).toBe(titles.length);
     // карточки счетов — из той же очереди, а не числа, заданные вручную (U1)
     const cards = within(page).getByRole("region", { name: "Счётчики очереди" });
-    expect(
-      within(cards).getByRole("link", { name: /Платёжки на подтверждение/ }),
-    ).toHaveTextContent("1");
+    expect(within(cards).getByRole("link", { name: /Оплаты на подтверждение/ })).toHaveTextContent(
+      "1",
+    );
     expect(within(cards).getByRole("link", { name: /Счета к выставлению/ })).toHaveTextContent("1");
   });
 
@@ -171,7 +171,7 @@ describe("Dashboard · Моя очередь", () => {
 
     expect(await within(page).findByText("Взять в работу лида L-2041")).toBeVisible();
     expect(within(page).getByText("Ответить лиду L-2050")).toBeVisible();
-    // третья строка — «Доработать» (D1-6b): служебку менеджера вернул директор, она лежит в его документах
+    // третья строка — «Доработать» (D1-6b): записку менеджера вернул директор, она лежит в его документах
     expect(within(page).getByText(/^[^·]+ · 3 решения/)).toBeVisible();
     expect(within(page).queryByRole("status")).toBeNull();
   });
@@ -387,7 +387,7 @@ describe("Dashboard · Моя очередь", () => {
 
   it.each([
     ["engineer@demo.example", "Заданий по услугам нет"],
-    ["accountant@demo.example", "Платёжек на подтверждение и счетов к выставлению нет"],
+    ["accountant@demo.example", "Оплат на подтверждение и счетов к выставлению нет"],
     ["admin@demo.example", "Задач для вас нет"],
   ])("пустая очередь %s: свой текст", async (email, title) => {
     server.use(
@@ -413,9 +413,7 @@ describe("Dashboard · Моя очередь", () => {
 
     expect(await within(page).findByText("Решений от вас пока не требуется")).toBeVisible();
     expect(
-      within(page).getByText(
-        "Новые письма приходят из CRM, черновики КП — из ERP, служебки — от сотрудников.",
-      ),
+      within(page).getByText("Новые письма, черновики КП и записки приходят сюда сами."),
     ).toBeVisible();
     expect(within(page).getByRole("link", { name: "Проекты" })).toBeVisible();
   });
@@ -494,7 +492,7 @@ describe("Dashboard · Моя очередь", () => {
     ).toHaveAttribute("href", "/eds/approvals/%D0%A1%D0%97-2026%2F031?panel=open&tab=agree");
   });
 
-  it("строка директора с родным экраном (письмо, КП) — «Открыть»: у писем primary, у КП обычная кнопка", async () => {
+  it("строка директора с родным экраном (письмо, КП) — «Открыть»: primary только у первой срочной строки", async () => {
     server.use(
       http.get("*/queue", () =>
         HttpResponse.json({
@@ -553,8 +551,9 @@ describe("Dashboard · Моя очередь", () => {
     const second = within(page).getByRole("link", {
       name: "Наложить резолюцию: Наложить резолюцию на письмо ВХ-105/26",
     });
-    expect(first).toHaveClass("ant-btn-primary");
+    // главная кнопка одна — у первой срочной строки (просрочено идёт раньше «сегодня»)
     expect(second).toHaveClass("ant-btn-primary");
+    expect(first).not.toHaveClass("ant-btn-primary");
     expect(
       within(page).getByRole("link", { name: "Одобрить: Одобрить КП-2026/118 (черновик)" }),
     ).not.toHaveClass("ant-btn-primary");
@@ -592,7 +591,7 @@ describe("Dashboard · Моя очередь", () => {
     ).toBeVisible();
   });
 
-  it("ERP не отвечает: данные CRM остаются, сверху плашка с названиями разделов", async () => {
+  it("Раздел «Операции» не отвечает: данные CRM остаются, сверху плашка с названиями разделов", async () => {
     server.use(
       http.get("*/queue", () =>
         HttpResponse.json({
@@ -625,7 +624,7 @@ describe("Dashboard · Моя очередь", () => {
     );
   });
 
-  it("CRM не отвечает: плашка называет «Контакты», данные ERP показаны", async () => {
+  it("Раздел «Контакты» не отвечает: плашка называет «Контакты», данные ERP показаны", async () => {
     server.use(
       http.get("*/queue", () =>
         HttpResponse.json({

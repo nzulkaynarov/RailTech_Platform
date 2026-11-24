@@ -22,7 +22,7 @@ const ITEMS: QueueItem[] = [
   },
   {
     id: "3",
-    badge: { tone: "purple", label: "служебка" },
+    badge: { tone: "purple", label: "записка" },
     title: "Согласовать СЗ-2026/031",
     to: "/eds/approvals",
   },

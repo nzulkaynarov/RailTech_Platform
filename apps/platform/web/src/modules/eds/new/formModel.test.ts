@@ -61,7 +61,7 @@ describe("formModel", () => {
       amount: "0",
       dueDate: "2020-01-01",
     };
-    // текст письма — блоки на бланке, а не поле «Текст» служебки
+    // текст письма — блоки на бланке, а не поле «Текст» записки
     expect(validate(letter, "2026-10-27")).toEqual({ recipient: true, text: true });
     const filled: FormValues = {
       ...letter,
@@ -212,7 +212,7 @@ describe("formModel", () => {
     });
   });
 
-  it("маршрут и «Что произойдёт»: с суммой служебка идёт ещё и бухгалтеру; у заявления и отчёта сумма маршрут не меняет", () => {
+  it("маршрут и «Что произойдёт»: с суммой записка идёт ещё и бухгалтеру; у заявления и отчёта сумма маршрут не меняет", () => {
     expect(routeKind(FILLED)).toBe("plain");
     expect(consequenceKey(FILLED)).toBe("memo");
     expect(routeKind({ ...FILLED, amount: "100" })).toBe("withAmount");

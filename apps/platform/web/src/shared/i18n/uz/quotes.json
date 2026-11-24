@@ -24,7 +24,6 @@
     }
   },
   "list": {
-    "subtitle": "Direktor tasdig'ini kutayotgan TTlar. Qaror bo'lmaguncha mijozga hech narsa yuborilmaydi.",
     "caption": "Tasdiqlash uchun TT",
     "scroll": "Tasdiqlash uchun TT jadvali",
     "scope": {
@@ -71,7 +70,7 @@
     "approve": "TTni tasdiqlash",
     "lines": "TT tarkibi",
     "linesScroll": "TT qatorlari jadvali",
-    "noLines": "TT tarkibi ERPdan olinmadi: ma'lumot yo'q, ruxsat yo'q yoki ERPda TTning boshqa tahriri bor. TT snimkasining jami summasi ko'rsatilgan.",
+    "noLines": "TT tarkibi olinmadi: maʼlumot yöq, ruxsat yöq yoki TTning boşqa tahriri bor. TT snimkasining jami summasi körsatilgan.",
     "emptyLines": "TTda qatorlar yo'q.",
     "optional": "ixtiyoriy",
     "days": "{{count}} kun",
@@ -123,7 +122,7 @@
       "services": "xizmatlar"
     },
     "snapshotTotal": "TT snimkasi bo'yicha jami",
-    "mismatch": "ERPdagi jami ({{erp}}) TT snimkasi jamidan ({{snapshot}}) farq qiladi: TT tasdiqqa topshirilgandan so'ng o'zgargan. Kartani yangilang yoki hisob-kitobchidan so'rang.",
+    "mismatch": "Hisobdagi jami ({{erp}}) TT snimkasi jamidan ({{snapshot}}) farq qiladi: TT tasdiqqa topşirilgandan söng özgargan. Kartani yangilang yoki hisob-kitobçidan sörang.",
     "clientComments": "Mijoz izohlari",
     "clientCommentsList": "Taklif boʻyicha mijoz izohlari",
     "clientCommentsHint": "Mijoz ularni kabinetda, taklif qaror kutayotganda yozadi. «Chatlar»da yoki taklifning yangi versiyasi bilan javob bering.",
@@ -148,7 +147,7 @@
       },
       "reason": {
         "no_telegram": "kontakt Telegram-botga ulanmagan",
-        "client_not_in_crm": "mijoz CRMga uzatilmagan, bot uni bilmaydi",
+        "client_not_in_crm": "mijoz hisobga olinmagan, bot uni bilmaydi",
         "no_cabinet": "mijoz hali kabinetda emas — mijoz kartasidan taklif qiling",
         "no_email": "kontaktda e-mail yo'q — uni mijoz kartasida qo'shing",
         "mail_not_configured": "pochta sozlanmagan — Sozlamalar · Ulanishlar · Pochta",
@@ -161,7 +160,7 @@
         "no_recipient": "arizada mijoz kontakti yo'q",
         "send_failed": "yuborishda nosozlik"
       },
-      "error": "Avtoyuborishni ERP to'xtatdi: {{reason}}.",
+      "error": "Avtoyuborişni tizim töxtatdi: {{reason}}.",
       "line": "{{channel}} — {{status}}",
       "lineReason": "{{channel}} — {{status}}: {{reason}}",
       "send": "Yuborish",
@@ -264,13 +263,13 @@
     "blocked": {
       "checklist": "Tasdiqlab bo'lmaydi: {{items}}.",
       "generic": "Tasdiqlash hozir mavjud emas.",
-      "noData": "ERPdan TT ma'lumotlari yo'q — kartani yangilang."
+      "noData": "TT maʼlumotlari yöq — kartani yangilang."
     },
     "channels": {
       "legend": "Mijozga yuborish kanali",
       "hint": "Ichki maydonlarsiz TT tasdiqlangandan so'ng tanlangan kanallar orqali mijozga darhol yuboriladi.",
       "contact": "Mijoz kontakti: {{name}}.",
-      "unknown": "ERP javob bermadi, kanallar mavjudligi noma'lum: ERP uni yuborishda tekshiradi, mavjud bo'lmagan kanalni TT kartasidagi hisobotda ko'rsatadi.",
+      "unknown": "Kanallar mavjudligini tekşirib bölmadi: yuborişda qayta tekşiriladi, mavjud bölmagan kanal TT kartasidagi hisobotda körsatiladi.",
       "telegram": {
         "name": "Telegram-bot"
       },
@@ -282,7 +281,7 @@
       },
       "reason": {
         "no_telegram": "Mavjud emas: kontakt Telegram-botga ulanmagan.",
-        "client_not_in_crm": "Mavjud emas: mijoz CRMga uzatilmagan, bot uni bilmaydi.",
+        "client_not_in_crm": "Mavjud emas: mijoz hisobga olinmagan, bot uni bilmaydi.",
         "no_cabinet": "Mavjud emas: mijoz hali kabinetda emas.",
         "no_email": "Mavjud emas: kontaktda e-mail yo'q.",
         "mail_not_configured": "Mavjud emas: pochta sozlanmagan — Sozlamalar · Ulanishlar · Pochta."

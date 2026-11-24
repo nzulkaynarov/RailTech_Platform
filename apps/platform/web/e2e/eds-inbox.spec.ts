@@ -84,7 +84,7 @@ test.describe("Входящие письма: директор", () => {
     await expect(page.getByRole("link", { name: "ЗВ-2026-104" })).toBeVisible();
 
     const form = page.locator(CENTER).getByRole("form", { name: "Резолюция директора" });
-    await expect(form.getByRole("checkbox", { name: /Бухгалтер/ })).not.toBeChecked();
+    await expect(form.getByRole("checkbox", { name: /Условия оплаты/ })).not.toBeChecked();
     await expect(form.getByRole("button", { name: "Вернуть менеджеру" })).toBeDisabled();
     await expect(form.getByText(/Кнопки неактивны, пока нет комментария/)).toBeVisible();
     await settledScreenshot(page, "card-panel");
@@ -98,7 +98,7 @@ test.describe("Входящие письма: директор", () => {
     // срок в прошлом отвергает EDS — текст остаётся в черновике
     await form.getByLabel("Текст резолюции").fill("Посчитать с запасом по складу, сроки уточнить.");
     await chooseOption(
-      form.getByLabel("Сотрудник: Снабженец"),
+      form.getByLabel("Сотрудник: Снабжение"),
       "Демо Снабженцев · Специалист по снабжению",
     );
     await fillDate(form.getByLabel("Срок расчёта"), "2020-01-01");
@@ -133,7 +133,7 @@ test.describe("Входящие письма: директор", () => {
 
     await form.getByLabel("Текст резолюции").fill("Расчёт нужен срочно.");
     await chooseOption(
-      form.getByLabel("Сотрудник: Снабженец"),
+      form.getByLabel("Сотрудник: Снабжение"),
       "Демо Снабженцев · Специалист по снабжению",
     );
     // Другой директор уже решил письмо: EDS отвечает «не ждёт резолюции»
@@ -206,7 +206,7 @@ test.describe("Входящие письма: директор", () => {
     await spaGoto(page, "/eds/inbox/ВХ-107/26");
 
     await expect(page.getByRole("heading", { level: 1, name: "Письмо ВХ-107/26" })).toBeVisible();
-    await expect(page.getByText("ERP не отвечает, данные неполные")).toBeVisible();
+    await expect(page.getByText("Раздел «Операции» не отвечает, данные неполные")).toBeVisible();
     await expect(page.getByRole("list", { name: /Путь заявки/ })).toBeVisible();
     await expectNoViolations(page, "частичная карточка");
 
@@ -288,7 +288,7 @@ test.describe("Входящие письма на телефоне @mobile", () 
     // решение с телефона
     await sheet.getByLabel("Текст резолюции").fill("Посчитать в первую очередь.");
     await chooseOption(
-      sheet.getByLabel("Сотрудник: Снабженец"),
+      sheet.getByLabel("Сотрудник: Снабжение"),
       "Демо Снабженцев · Специалист по снабжению",
     );
     await sheet.getByRole("button", { name: SUBMIT }).click();
@@ -312,7 +312,7 @@ test.describe("Входящие письма на телефоне @mobile", () 
     await expect(page.getByRole("dialog")).toHaveCount(0);
     await sheet.getByLabel("Текст резолюции").fill("Нужен расчёт.");
     await chooseOption(
-      sheet.getByLabel("Сотрудник: Снабженец"),
+      sheet.getByLabel("Сотрудник: Снабжение"),
       "Демо Снабженцев · Специалист по снабжению",
     );
     await fillDate(sheet.getByLabel("Срок расчёта"), "2020-01-01");

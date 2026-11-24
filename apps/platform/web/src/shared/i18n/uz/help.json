@@ -159,7 +159,7 @@
       {
         "title": "Shartnoma",
         "who": "buxgalter",
-        "text": "Mijoz tahrirni kelishadi, shartnoma Platformadan tashqarida operatorda rasmiylashtiriladi va imzolanadi; skaner qo‘lda biriktiriladi."
+        "text": "Mijoz tahrirni kelişadi, şartnoma Platformadan taşqarida EHTda rasmiylaştiriladi va imzolanadi; skaner qölda biriktiriladi."
       },
       {
         "title": "To‘lov",
@@ -215,10 +215,10 @@
       },
       {
         "term": "Şartnoma (CT-2026/104)",
-        "text": "Qabul qilingan TTdan shartnoma loyihasi; operatorda imzolanadi, skaner biriktiriladi."
+        "text": "Qabul qilingan TTdan şartnoma loyihasi; EHTda imzolanadi, skaner biriktiriladi."
       },
       {
-        "term": "Hisob (INV-2026/142)",
+        "term": "Hisob (INV-2026-142)",
         "text": "To‘lov uchun hisob: avans, qoldiq yoki bosqich."
       },
       {
@@ -399,7 +399,6 @@
     "sent": "Yuborilgan"
   },
   "admin": {
-    "subtitle": "Hamkasblar administratorga nima yozadi: kirish, bildirishnomalar, shablonlar, xatolar",
     "filtersLabel": "Murojaat filtrlari",
     "status": "Holat",
     "allStatuses": "Barcha holatlar",
@@ -451,7 +450,7 @@
       "readOnly": "Direktor murojaatlarni o‘qiydi; administrator javob beradi va holatni o‘zgartiradi.",
       "replyRequired": "Javob yozing",
       "errors": {
-        "ticket_status_transition": "Holatni bunday o‘zgartirib bo‘lmaydi: sahifani yangilang.",
+        "ticket_status_transition": "Holatni bunday özgartirib bölmaydi: sahifani yangilang.",
         "default": "Saqlab bo‘lmadi. Qayta urinib ko‘ring."
       },
       "saved": "Javob yuborildi",

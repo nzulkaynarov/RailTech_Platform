@@ -10,7 +10,7 @@ import { ResendInvite } from "../../../features/invite-employee/ResendInvite";
 import { erpAttention, erpSyncReason } from "../../../entities/employee/status";
 import type { Employee } from "../../../shared/api/generated/model";
 import { DefinitionList } from "../../../shared/ui/DefinitionList";
-import { CrmTag, EmployeeStatusTag, ErpTag, RoleTags, TelegramText } from "./EmployeeCells";
+import { EmployeeStatusTag, RoleTags, TelegramText } from "./EmployeeCells";
 import { PersonAvatar } from "../../../shared/ui/EntityCell";
 
 export interface EmployeeCardProps {
@@ -47,8 +47,6 @@ export function EmployeeCard({ employee, selfId, canEdit, otherActiveAdmins }: E
           ...(canEdit && !disabled
             ? []
             : [{ label: t("admin.org.card.roles"), value: <RoleTags roles={employee.roles} /> }]),
-          { label: t("admin.org.card.crm"), value: <CrmTag employee={employee} /> },
-          { label: t("admin.org.card.erp"), value: <ErpTag employee={employee} /> },
           {
             label: t("admin.org.card.telegram"),
             value: <TelegramText linked={employee.telegram_linked} />,

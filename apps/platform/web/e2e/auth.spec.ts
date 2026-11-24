@@ -35,7 +35,7 @@ test.describe("вход", () => {
     ["отключённый сотрудник", "disabled@demo.example", "Учётная запись отключена"],
     ["нет роли Платформы", "norole@demo.example", "Вам ещё не выдана роль"],
     ["слишком много попыток", "busy@demo.example", "Слишком много попыток входа"],
-    ["CRM недоступна", "down@demo.example", "Не удаётся связаться с CRM"],
+    ["CRM недоступна", "down@demo.example", "Сервер не отвечает"],
   ];
   for (const [title, email, text] of failures) {
     test(`ошибка входа по Error.code: ${title}`, async ({ page }) => {

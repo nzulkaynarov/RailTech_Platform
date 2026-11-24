@@ -130,7 +130,7 @@ describe("Статьи компании в Помощи (W18A-P5, B-079)", () =>
     server.use(
       http.get("*/help/company-articles", () =>
         HttpResponse.json(
-          { code: "BACKEND_UNAVAILABLE", message: "CRM не отвечает", source: "crm" },
+          { code: "BACKEND_UNAVAILABLE", message: "Раздел «Контакты» не отвечает", source: "crm" },
           { status: 503 },
         ),
       ),

@@ -39,15 +39,16 @@ async function openZone(name: string): Promise<HTMLElement> {
 }
 
 describe("Настройки · Зоны ответственности (ЕВ-З)", () => {
-  it("девять зон из зерна без людей: «Не назначен» и «Нет ответственного» в каждой строке", async () => {
+  it("девять зон из зерна без людей: «Не назначен» в строке, одна сводка над таблицей и ни одной красной метки", async () => {
     signInAs("admin@demo.example");
     renderApp("/admin/zones");
     await heading();
     const finance = await rowOf("Финансы");
     expect(finance).toHaveTextContent("Счета, оплаты, визы бухгалтера, дебиторка.");
     expect(finance).toHaveTextContent("Не назначен");
-    expect(finance).toHaveTextContent("Нет ответственного");
-    expect(screen.getAllByText("Нет ответственного", { selector: ".ant-tag" })).toHaveLength(9);
+    expect(finance).not.toHaveTextContent("Нет ответственного");
+    expect(screen.queryAllByText("Нет ответственного", { selector: ".ant-tag" })).toHaveLength(0);
+    expect(screen.getByText("Зон без ответственного: 9")).toBeVisible();
     for (const name of ["Право", "Продажи", "Первый контакт", "Делопроизводство", "Снабжение"]) {
       expect(await rowOf(name)).toBeInTheDocument();
     }
@@ -75,7 +76,8 @@ describe("Настройки · Зоны ответственности (ЕВ-З
     await waitFor(() => {
       expect(row).toHaveTextContent("Демо Бухгалтеров");
     });
-    expect(row).not.toHaveTextContent("Нет ответственного");
+    // ответственный назначен: «Не назначен» остаётся только у замещающего и куратора
+    expect(within(row).getAllByText("Не назначен")).toHaveLength(2);
     expect(readZones()[0]).toMatchObject({
       responsibleId: "u-demo-accountant",
       basis: "Приказ № 5 от 01.12.2026",
@@ -126,7 +128,7 @@ describe("Настройки · Зоны ответственности (ЕВ-З
       expect(readZones()).toHaveLength(10);
     });
     const row = await rowOf("Качество");
-    expect(row).toHaveTextContent("Нет ответственного");
+    expect(row).toHaveTextContent("Не назначен");
     expect(readZones().at(-1)).toMatchObject({ code: "quality", sections: ["crm.clients"] });
 
     const panel = await openZone("Качество");

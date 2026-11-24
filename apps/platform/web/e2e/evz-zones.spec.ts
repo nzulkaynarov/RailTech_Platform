@@ -48,7 +48,8 @@ test.describe("ЕВ-З · Зоны ответственности", () => {
     ).toBeVisible();
     const finance = page.getByRole("row", { name: /Финансы/ });
     await expect(finance).toContainText("Не назначен");
-    await expect(finance).toContainText("Нет ответственного");
+    await expect(finance).not.toContainText("Нет ответственного");
+    await expect(page.getByText("Зон без ответственного: 9")).toBeVisible();
     await expect(page.getByRole("button", { name: "Новая зона" })).toHaveCount(0);
     await shoot(page, "zones-list");
     await expectFitsFrame(page, "zones-list");
@@ -60,9 +61,6 @@ test.describe("ЕВ-З · Зоны ответственности", () => {
     await shoot(page, "zones-card");
     await panel.getByRole("button", { name: "Сохранить" }).click();
     await expect(page.getByRole("row", { name: /Финансы/ })).toContainText("Демо Бухгалтеров");
-    await expect(page.getByRole("row", { name: /Финансы/ })).not.toContainText(
-      "Нет ответственного",
-    );
     await expect(page.locator(".ant-message-notice")).toHaveCount(0, { timeout: 10_000 });
     await shoot(page, "zones-assigned");
   });
@@ -92,7 +90,7 @@ test.describe("ЕВ-З · Зоны ответственности", () => {
     );
     await shoot(page, "zones-new");
     await form.getByRole("button", { name: "Создать" }).click();
-    await expect(page.getByRole("row", { name: /Качество/ })).toContainText("Нет ответственного");
+    await expect(page.getByRole("row", { name: /Качество/ })).toContainText("Не назначен");
     await expect(page.locator(".ant-message-notice")).toHaveCount(0, { timeout: 10_000 });
     await shoot(page, "zones-created");
   });

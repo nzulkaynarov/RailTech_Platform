@@ -106,14 +106,21 @@ function AttentionLine({ row }: { row: AttentionRow }) {
     consequence = t(`modules:admin.state.row.${row.kind}.ifNot`, params);
   }
   const page = row.page ? t(`modules:admin.sections.${row.page}`) : null;
+  // «Исправляет администратор / директор / бухгалтер» — должности, их на экране нет; называем только внешнюю сторону
+  const external = row.owner === "owner" || row.owner === "hosting" || row.owner === "provider";
   return (
     <li data-severity={row.severity} data-kind={row.kind}>
       <div className="pf-set-state-text">
         <span className="pf-set-state-title">{title}</span>
         {detail ? <span className="pf-set-state-detail">{detail}</span> : null}
         <span className="pf-set-state-detail">
-          {consequence ? `${consequence} · ` : ""}
-          {t("modules:admin.state.fixer", { who: t(`modules:admin.state.owner.${row.owner}`) })}
+          {consequence}
+          {consequence && (external || !row.to) ? " · " : ""}
+          {external
+            ? t("modules:admin.state.fixer", { who: t(`modules:admin.state.owner.${row.owner}`) })
+            : row.to
+              ? null
+              : t("modules:admin.state.handOver")}
         </span>
       </div>
       {row.to ? (

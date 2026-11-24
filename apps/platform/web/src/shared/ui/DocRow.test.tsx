@@ -28,7 +28,7 @@ describe("DocRow и DocList", () => {
     expect(rows).toHaveLength(2);
     expect(rows[0]).toHaveTextContent("СЧ-2026/142");
     expect(rows[0]).toHaveTextContent("Счёт на предоплату 50 %");
-    expect(rows[0]).toHaveTextContent("Платёжка получена");
+    expect(rows[0]).toHaveTextContent("Платёжное поручение получено");
     expect(rows[0]).toHaveTextContent("выставлен 27.10");
     expect(
       within(rows[0] as HTMLElement).getByRole("button", { name: "Подтвердить оплату" }),

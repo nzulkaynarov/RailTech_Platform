@@ -201,7 +201,7 @@ describe("Проект: карточка", () => {
 });
 
 describe("Проект: договор (строка документа)", () => {
-  it("весь путь: формирование проекта → на согласование клиенту → согласован → выставлен у оператора → скан → Подписан", async () => {
+  it("весь путь: формирование проекта → на согласование клиенту → согласован → выставлен в ЭДО → скан → Подписан", async () => {
     // проект договора готов, визы бухгалтера и юриста собраны (Х-1) — его можно отправить клиенту
     const { panel } = await openCard("accountant@demo.example", 111);
 
@@ -219,12 +219,12 @@ describe("Проект: договор (строка документа)", () =>
     fireEvent.change(within(panel).getByLabelText(/Оператор или номер/), {
       target: { value: "Didox, № 77" },
     });
-    fireEvent.click(within(panel).getByRole("button", { name: "Отметить: выставлен у оператора" }));
+    fireEvent.click(within(panel).getByRole("button", { name: "Отметить: выставлен в ЭДО" }));
 
     expect(
-      await within(panel).findByText(/Договор выставлен у оператора\. Когда обе стороны/),
+      await within(panel).findByText(/Договор выставлен в ЭДО\. Когда обе стороны/),
     ).toBeVisible();
-    expect(within(panel).getAllByText("Выставлен у оператора").length).toBeGreaterThan(0);
+    expect(within(panel).getAllByText("Выставлен в ЭДО").length).toBeGreaterThan(0);
 
     // скан: пока файла нет — кнопка неактивна, подпись говорит почему
     const submit = within(panel).getByRole("button", { name: "Прикрепить скан" });
@@ -394,7 +394,7 @@ describe("Проект: договор (строка документа)", () =>
     const { panel } = await openCard("accountant@demo.example", 111);
     await click(panel, "На согласование клиенту");
     await agree(panel);
-    await click(panel, "Отметить: выставлен у оператора");
+    await click(panel, "Отметить: выставлен в ЭДО");
     const input = await within(panel).findByLabelText("Скан подписанного договора");
 
     pick(input, new File(["MZ"], "virus.exe", { type: "application/octet-stream" }));
@@ -413,7 +413,7 @@ describe("Проект: договор (строка документа)", () =>
     expect(within(panel).getByRole("button", { name: "Прикрепить скан" })).toBeEnabled();
     fireEvent.click(within(panel).getByRole("button", { name: "Прикрепить скан" }));
     expect(await within(panel).findByText(/Файл не похож на скан/)).toBeVisible();
-    expect(within(panel).getAllByText("Выставлен у оператора").length).toBeGreaterThan(0);
+    expect(within(panel).getAllByText("Выставлен в ЭДО").length).toBeGreaterThan(0);
   });
 
   it("отклонение клиентом: причина обязательна, потом «Вернуть в проект»", async () => {

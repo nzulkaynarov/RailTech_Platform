@@ -1,6 +1,5 @@
 {
   "subtitle": "Connections, keys and service status. Secrets are not shown after saving.",
-  "readOnlySubtitle": "View mode: connections and keys are managed by the administrator.",
   "setupLink": "Platform setup",
   "viewOnly": "View only",
   "cardsTitle": "Services",

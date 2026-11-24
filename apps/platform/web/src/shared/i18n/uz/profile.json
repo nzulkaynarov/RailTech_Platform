@@ -24,7 +24,7 @@
       "avatar_type_mismatch": "Fayl turi mazmuniga mos kelmaydi. Boshqa rasm tanlang.",
       "avatar_too_large": "Rasm 1 MB dan katta. Kichikroq fayl tanlang.",
       "avatar_empty": "Fayl bo‘sh.",
-      "BACKEND_UNAVAILABLE": "CRM javob bermayapti. Keyinroq takrorlang.",
+      "BACKEND_UNAVAILABLE": "Server javob bermayapti. Keyinroq takrorlang.",
       "default": "Rasmni saqlab bo‘lmadi. Qayta urinib ko‘ring."
     }
   },
@@ -55,7 +55,7 @@
       "phone_invalid": "Raqamni tekshiring: 7 dan 15 gacha raqam, «+» bilan boshlanishi mumkin.",
       "timezone_unknown": "Bunday vaqt mintaqasi yo‘q. Ro‘yxatdan tanlang.",
       "signature_invalid": "Imzo 1000 belgidan oshmasligi kerak.",
-      "BACKEND_UNAVAILABLE": "CRM javob bermayapti. Keyinroq takrorlang.",
+      "BACKEND_UNAVAILABLE": "Server javob bermayapti. Keyinroq takrorlang.",
       "default": "Profilni saqlab bo‘lmadi. Qayta urinib ko‘ring."
     }
   },
@@ -86,7 +86,7 @@
     "errors": {
       "NOT_CONFIGURED": "Bot ulanmagan. Administratordan Sozlamalar · Telegram bo‘limida botni ulashni so‘rang.",
       "CONFLICT": "Bot hozir ishlamayapti. Bir daqiqadan keyin takrorlang yoki administratorga yozing.",
-      "BACKEND_UNAVAILABLE": "CRM javob bermayapti. Keyinroq takrorlang.",
+      "BACKEND_UNAVAILABLE": "Server javob bermayapti. Keyinroq takrorlang.",
       "default": "Amalni bajarib bo‘lmadi. Qayta urinib ko‘ring."
     }
   },
@@ -113,7 +113,7 @@
       "deputy_period_past": "Davr allaqachon tugagan.",
       "deputy_period_too_long": "Davr bir yildan oshmasligi kerak.",
       "deputy_not_colleague": "Bu xodim navbatni yurita olmaydi. Boshqasini tanlang.",
-      "BACKEND_UNAVAILABLE": "CRM javob bermayapti. Keyinroq takrorlang.",
+      "BACKEND_UNAVAILABLE": "Server javob bermayapti. Keyinroq takrorlang.",
       "default": "O‘rinbosarlikni saqlab bo‘lmadi. Qayta urinib ko‘ring."
     }
   },
@@ -130,7 +130,7 @@
     "sent": "Agar bu hisob uchun pochta yoki Telegram ulangan bo‘lsa, havola yuborildi. Bir necha daqiqada hech narsa kelmasa, administratorga murojaat qiling.",
     "errors": {
       "TOO_MANY_REQUESTS": "So‘rovlar juda ko‘p. Bir soatdan keyin takrorlang yoki administratorga murojaat qiling.",
-      "BACKEND_UNAVAILABLE": "CRM bilan bog‘lanib bo‘lmadi. Keyinroq takrorlang.",
+      "BACKEND_UNAVAILABLE": "Server javob bermayapti. Keyinroq takrorlang.",
       "default": "So‘rovni yuborib bo‘lmadi. Qayta urinib ko‘ring."
     }
   },
@@ -151,7 +151,7 @@
       "reset_token_invalid": "Havola işlatilgan yoki muddati tugagan. Yangisini sörang — poçtaga keladi.",
       "weak_password": "Parol juda oddiy: kamida 10 belgi, harflar va raqamlar.",
       "TOO_MANY_REQUESTS": "Urinishlar juda ko‘p. Keyinroq takrorlang.",
-      "BACKEND_UNAVAILABLE": "CRM bilan bog‘lanib bo‘lmadi. Keyinroq takrorlang.",
+      "BACKEND_UNAVAILABLE": "Server javob bermayapti. Keyinroq takrorlang.",
       "default": "Parolni o‘zgartirib bo‘lmadi. Qayta urinib ko‘ring."
     }
   },
