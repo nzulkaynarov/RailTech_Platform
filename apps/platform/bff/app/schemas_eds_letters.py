@@ -94,6 +94,9 @@ class LetterRow(BaseModel):
     number: str
     subject: str
     client_name: str | None
+    #: Компания клиента в ERP и наш путь её логотипа (ЕД-3): строка реестра рисует `CompanyCell`
+    client_id: int | None = None
+    client_logo_url: str | None = None
     request_number: str | None
     received_at: dt.date
     status: LetterStatus
@@ -984,6 +987,7 @@ def to_page(raw: Any) -> LetterPage:
                 number=row.number,
                 subject=row.subject,
                 client_name=row.sender.name,
+                client_id=row.links.erp_company_id,
                 request_number=row.links.deal_number,
                 received_at=row.received_at,
                 status=row.status,

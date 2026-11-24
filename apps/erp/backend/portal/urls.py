@@ -14,6 +14,7 @@ from portal.views import (
     CatalogDetailView,
     CatalogDocumentFileView,
     CatalogListView,
+    CompanyLogoView,
     CompanyPartnerApplicationAgreeView,
     CompanyPartnerApplicationView,
     CompanyPartnerContractPdfView,
@@ -36,6 +37,7 @@ from portal.views import (
     MagicLinkRequestView,
     MagicLinkTokenExchangeView,
     MeView,
+    OperatorLogoView,
     OperatorView,
     PortalSessionsRevokeOthersView,
     PortalSessionsView,
@@ -129,6 +131,8 @@ urlpatterns = [
     # Countries (Справочник стран и метаданных для онбординга, COUNTRY-MASK-1)
     path("operator", OperatorView.as_view(), name="portal-operator"),
     path("operator/", OperatorView.as_view(), name="portal-operator-slash"),
+    path("operator/logo", OperatorLogoView.as_view(), name="portal-operator-logo"),
+    path("operator/logo/", OperatorLogoView.as_view(), name="portal-operator-logo-slash"),
     path("countries", CountriesView.as_view(), name="portal-countries"),
     path("countries/", CountriesView.as_view(), name="portal-countries-slash"),
     # Оферта и политика Кабинета (ДВ-5)
@@ -335,6 +339,8 @@ urlpatterns = [
     # Company (Профиль компании)
     path("company", CompanyView.as_view(), name="portal-company"),
     path("company/", CompanyView.as_view(), name="portal-company-slash"),
+    path("company/logo", CompanyLogoView.as_view(), name="portal-company-logo"),
+    path("company/logo/", CompanyLogoView.as_view(), name="portal-company-logo-slash"),
     path("company/bank-directory/<str:mfo>", BankDirectoryView.as_view(), name="portal-bank-directory"),
     path("company/bank-directory/<str:mfo>/", BankDirectoryView.as_view(), name="portal-bank-directory-slash"),
     path(

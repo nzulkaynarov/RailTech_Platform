@@ -30,6 +30,63 @@ describe('Компания', () => {
     expect(body.current).toEqual({ legal_address: 'г. Ташкент, ул. Новая, 1', language: 'uz' });
   });
 
+  it('логотип (ЕД-5): администратор загружает, адрес с версией; заменяет; убирает; буквы названия — пока нет', async () => {
+    signedIn();
+    const user = userEvent.setup();
+    renderApp('/company');
+    await heading('Компания');
+    const block = await screen.findByTestId('company-logo');
+    expect(block.querySelector('img')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Убрать логотип' })).not.toBeInTheDocument();
+
+    const file = new File([Uint8Array.from([1, 2, 3])], 'logo.png', { type: 'image/png' });
+    await user.upload(screen.getByLabelText('Файл логотипа'), file);
+    await waitFor(() => expect(block.querySelector('img')?.getAttribute('src')).toMatch(/\/company\/logo\?v=v1$/));
+    // ЕД-3: тот же логотип стоит в боковой навигации рядом с названием компании
+    const side = screen.getByRole('complementary');
+    await waitFor(() => expect(side.querySelector('img[src*="/company/logo"]')?.getAttribute('src')).toMatch(/v=v1$/));
+    await user.upload(screen.getByLabelText('Файл логотипа'), file);
+    await waitFor(() => expect(block.querySelector('img')?.getAttribute('src')).toMatch(/\/company\/logo\?v=v2$/));
+    expect(screen.getByRole('button', { name: 'Заменить логотип' })).toBeInTheDocument();
+    await expectNoAxeViolations();
+
+    await user.click(screen.getByRole('button', { name: 'Убрать логотип' }));
+    await waitFor(() => expect(block.querySelector('img')).toBeNull());
+    expect(screen.getByRole('button', { name: 'Загрузить логотип' })).toBeInTheDocument();
+  });
+
+  it('логотип: не картинка и отказ сервера — словами; прежний логотип остаётся', async () => {
+    signedIn();
+    const user = userEvent.setup({ applyAccept: false });
+    portalServer.use(
+      http.put('*/api/portal/v1/company/logo', () => HttpResponse.json({ detail: 'FILE_TOO_LARGE' }, { status: 422 })),
+    );
+    renderApp('/company');
+    await heading('Компания');
+    await user.upload(
+      await screen.findByLabelText('Файл логотипа'),
+      new File(['x'], 'logo.gif', { type: 'image/gif' }),
+    );
+    expect(await screen.findByRole('alert')).toHaveTextContent('Нужна картинка PNG, JPEG или WebP.');
+
+    await user.upload(
+      screen.getByLabelText('Файл логотипа'),
+      new File([Uint8Array.from([1])], 'logo.png', { type: 'image/png' }),
+    );
+    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('Файл больше 2 МБ.'));
+    expect(screen.getByTestId('company-logo').querySelector('img')).toBeNull();
+  });
+
+  it('логотип: участник без права действовать видит логотип, но не меняет его', async () => {
+    signedIn('viewer');
+    window.localStorage.setItem('cabinet.language', 'ru');
+    renderApp('/company');
+    await screen.findByText('305123456');
+    expect(screen.getByTestId('company-logo')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Файл логотипа')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /логотип/i })).not.toBeInTheDocument();
+  });
+
   it('пустое название не уходит; ошибка ERP (422) — текстом в форме', async () => {
     signedIn();
     const user = userEvent.setup();

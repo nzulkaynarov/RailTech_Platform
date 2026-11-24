@@ -569,3 +569,25 @@ describe("Счета и оплаты: порядок по шапке (Х-15б)",
     expect(asked).toEqual([null]);
   });
 });
+
+/** ЕД-3: компания строки — логотип по адресу BFF с версией, а без логотипа — буквы названия, та же ячейка везде. */
+function expectCompanyPictures(scope: HTMLElement) {
+  const logos = Array.from(scope.querySelectorAll<HTMLImageElement>("img"));
+  expect(logos.length).toBeGreaterThan(0);
+  for (const img of logos) {
+    expect(img.getAttribute("src")).toMatch(
+      /^\/api\/v1\/people\/counterparties\/\d+\/logo\?v=\w+$/,
+    );
+  }
+  expect(
+    scope.querySelectorAll('.pf-entity__pic--square[data-photo="false"]').length,
+  ).toBeGreaterThan(0);
+}
+
+describe("Счета и оплаты: логотип клиента в строке (ЕД-3)", () => {
+  it("логотип по адресу с версией или буквы названия — в каждой строке", async () => {
+    signIn("accountant@demo.example");
+    renderAt("/eds/payments?tab=all");
+    expectCompanyPictures(await screen.findByRole("table", { name: "Счета" }));
+  });
+});

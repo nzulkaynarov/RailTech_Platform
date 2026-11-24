@@ -30,6 +30,7 @@ import {
 } from "./fixtures/leads";
 import { buildMe, currentActor, readSession } from "./mockSession";
 import { initialsOf } from "./profileStore";
+import { logoUrlOf } from "./pictures";
 import { markOf } from "./doNotWorkMarks";
 
 /**
@@ -222,7 +223,11 @@ export const crmLeadsHandlers = [
     const q = (new URL(request.url).searchParams.get("q") ?? "").trim().toLowerCase();
     const items = readLeads()
       .clients.filter((c) => !q || c.name.toLowerCase().includes(q) || (c.inn ?? "").includes(q))
-      .map((c) => ({ ...clientRow(c), do_not_work: markOf(String(1000 + c.id)) !== null }));
+      .map((c) => ({
+        ...clientRow(c),
+        do_not_work: markOf(String(1000 + c.id)) !== null,
+        logo_url: c.in_erp ? logoUrlOf(String(1000 + c.id)) : null,
+      }));
     return HttpResponse.json({ items });
   }),
 

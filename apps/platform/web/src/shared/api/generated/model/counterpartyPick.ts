@@ -29,4 +29,9 @@ export interface CounterpartyPick {
    * @nullable
    */
   email: string | null;
+  /**
+   * Логотип компании: адрес на BFF с `?v=<версия>` (ЕД-5); null — буквы названия
+   * @nullable
+   */
+  logo_url?: string | null;
 }

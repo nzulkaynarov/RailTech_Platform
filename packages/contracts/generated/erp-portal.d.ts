@@ -203,6 +203,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/operator/logo": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Логотип компании-оператора до входа (ДВ-3)
+     * @description WebP 96×96 (`size=full` — 256×256) логотипа своей компании: намеренно публичный, как название оператора. Адрес — из `PortalOperator.logo_url` с `?v=<версия>`. Файл закрыт в хранилище, отдаёт его только ERP. Логотипа нет — 404.
+     */
+    get: operations["getOperatorLogo"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/legal": {
     parameters: {
       query?: never;
@@ -1582,6 +1602,34 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/company/logo": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Логотип своей компании (ЕД-5)
+     * @description Логотип WebP 96×96 (`size=full` — 256×256). Читает любой участник компании; логотипа нет — 404. Адрес строит Cabinet из `company.logo_version` с `?v=<версия>`: новая загрузка — новый адрес. Адресов хранилища API не отдаёт.
+     */
+    get: operations["getCompanyLogo"];
+    /**
+     * Загрузить или заменить логотип (ЕД-5)
+     * @description Только администратор компании (иначе 409 `ADMIN_REQUIRED`). Квадрат, уже обрезанный в браузере; JPEG, PNG или WebP до 2 МБ, сервер перекодирует в WebP 256×256. Файл не передан — 400 `FILE_REQUIRED`; не тот тип — 422 `FILE_TYPE_NOT_ALLOWED`, подпись не совпала — 422 `FILE_CONTENT_MISMATCH`, больше 2 МБ — 422 `FILE_TOO_LARGE`.
+     */
+    put: operations["uploadCompanyLogo"];
+    post?: never;
+    /**
+     * Убрать логотип (ЕД-5)
+     * @description Только администратор компании (иначе 409 `ADMIN_REQUIRED`); повтор безопасен. Ответ — компания, у которой `logo_version` равна `null`.
+     */
+    delete: operations["deleteCompanyLogo"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/company/bank-directory/{mfo}": {
     parameters: {
       query?: never;
@@ -2584,7 +2632,7 @@ export interface components {
     PortalOperator: {
       /** @description Название компании-оператора; `null` — не задано */
       name: string | null;
-      /** @description Логотип компании-оператора (ДВ-3): относительный адрес публичного файла `/media/companies/<id>/logo/…` на домене кабинета; `null` — не загружен, кабинет показывает буквы названия */
+      /** @description Логотип компании-оператора (ДВ-3): относительный адрес `/api/portal/v1/operator/logo?v=<версия>` на домене кабинета; `null` — не загружен, кабинет показывает буквы названия */
       logo_url: string | null;
       /** @description Имя Telegram-бота без @ — для входа через Telegram, «Я новый клиент» и ссылок на бота в кабинете. Владелец — CRM (процесс бота узнаёт имя у Telegram), в ERP — проекция из `crm.bot.changed`. `null` — бот ещё не запускался: кабинет не показывает ссылки на бота */
       bot_username: string | null;
@@ -3464,6 +3512,8 @@ export interface components {
       /** @description Последний запрос на смену реквизитов; только в `GET` и `PUT /company`, `null` — запросов не было (FX-4) */
       bank_change_request?: components["schemas"]["BankChangeRequest"] | null;
       language: components["schemas"]["Language"];
+      /** @description Версия логотипа (ЕД-5); логотип — `/company/logo?v=<версия>`, `null` — логотипа нет, показываются буквы названия */
+      logo_version?: string | null;
       relationship_status?: components["schemas"]["PortalRelationshipStatus"];
       /** @description Действующие и архивные отношения компании с нами (роль, статус, договор) */
       relationships?: components["schemas"]["PortalRelationship"][];
@@ -4180,6 +4230,31 @@ export interface operations {
           "application/json": components["schemas"]["PortalOperator"];
         };
       };
+    };
+  };
+  getOperatorLogo: {
+    parameters: {
+      query?: {
+        size?: "row" | "full";
+        /** @description Версия логотипа — только для кэша браузера */
+        v?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Логотип */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "image/webp": string;
+        };
+      };
+      404: components["responses"]["NotFound"];
     };
   };
   getLegal: {
@@ -6863,6 +6938,112 @@ export interface operations {
       };
       422: components["responses"]["ValidationError"];
       429: components["responses"]["TooManyRequests"];
+    };
+  };
+  getCompanyLogo: {
+    parameters: {
+      query?: {
+        size?: "row" | "full";
+        /** @description Версия логотипа — только для кэша браузера */
+        v?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Логотип */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "image/webp": string;
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+    };
+  };
+  uploadCompanyLogo: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "multipart/form-data": {
+          /** Format: binary */
+          file: string;
+        };
+      };
+    };
+    responses: {
+      /** @description Логотип сохранён; в ответе компания с новой `logo_version` */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Company"];
+        };
+      };
+      /** @description Файл не передан (`FILE_REQUIRED`) */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      /** @description Не администратор компании (`ADMIN_REQUIRED`) */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      422: components["responses"]["ValidationError"];
+    };
+  };
+  deleteCompanyLogo: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Логотип убран */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Company"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      /** @description Не администратор компании (`ADMIN_REQUIRED`) */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
     };
   };
   getBankByMfo: {

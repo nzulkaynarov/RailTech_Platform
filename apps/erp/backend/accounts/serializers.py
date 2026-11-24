@@ -271,7 +271,17 @@ class CompanyMemberSerializer(serializers.ModelSerializer):
         ]
 
 
-class CompanySerializer(serializers.ModelSerializer):
+class CompanyLogoPathMixin:
+    """`logo` of a company is our versioned API path (ЕД-5), never a storage address: the file is private."""
+
+    @extend_schema_field({"type": "string", "format": "uri", "nullable": True})  # format kept: contract compatibility
+    def get_logo(self, obj) -> str | None:
+        from parties.pictures import company_logo_path
+
+        return company_logo_path(obj)
+
+
+class CompanySerializer(CompanyLogoPathMixin, serializers.ModelSerializer):
     user_count = serializers.SerializerMethodField()
     company_types = serializers.SerializerMethodField()
     # Тип компании ЗАПИСЫВАЕТСЯ — по коду, а не по идентификатору справочника (Rule 2).
@@ -302,6 +312,8 @@ class CompanySerializer(serializers.ModelSerializer):
     mfo = serializers.CharField(
         required=False, allow_blank=True, max_length=10, help_text="Основной счёт в сумах — МФО"
     )
+
+    logo = serializers.SerializerMethodField()
 
     class Meta:
         model = Company
@@ -418,9 +430,11 @@ class CompanySerializer(serializers.ModelSerializer):
             set_contact_name(company, name, actor=getattr(request, "user", None))
 
 
-class PrimaryCompanyLightSerializer(serializers.ModelSerializer):
+class PrimaryCompanyLightSerializer(CompanyLogoPathMixin, serializers.ModelSerializer):
     """Lightweight company serializer for embedding into UserSerializer.primary_company.
     Avoids nested members/types — saves several SQL queries per request."""
+
+    logo = serializers.SerializerMethodField()
 
     company_types = serializers.SerializerMethodField()
 

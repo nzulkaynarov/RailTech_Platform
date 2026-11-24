@@ -109,6 +109,7 @@ class CompanySerializer(serializers.ModelSerializer):
     registration_number = serializers.CharField(read_only=True)
     relationship_status = serializers.SerializerMethodField()
     relationships = serializers.SerializerMethodField()
+    logo_version = serializers.SerializerMethodField()
 
     class Meta:
         model = Company
@@ -124,7 +125,16 @@ class CompanySerializer(serializers.ModelSerializer):
             "language",
             "relationship_status",
             "relationships",
+            "logo_version",
         ]
+
+    @extend_schema_field(serializers.CharField(allow_null=True))
+    def get_logo_version(self, company):
+        if isinstance(company, dict):
+            return None
+        from parties import pictures
+
+        return pictures.version(company.logo)
 
     @extend_schema_field(BankAccountSerializer(many=True))
     def get_bank_accounts(self, company):

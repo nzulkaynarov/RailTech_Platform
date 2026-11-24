@@ -15,6 +15,7 @@ import type {
   ProjectPerson,
   ProjectRow,
 } from "../../shared/api/generated/model";
+import { clientRefOf } from "../pictures";
 
 /**
  * Вымышленные проекты для MSW (D2-5, BFF 0.26.0): те же формы, что вернёт BFF по `platform-bff.yaml`; поведение переходов
@@ -819,6 +820,7 @@ export function toRow(p: ProjectState): ProjectRow {
     request_number: numberOf(p, "ЗВ"),
     title: p.title,
     client_name: p.client,
+    ...clientRefOf(p.client),
     step: stepOf(p),
     client_status: clientStatusOf(p),
     total: p.total,

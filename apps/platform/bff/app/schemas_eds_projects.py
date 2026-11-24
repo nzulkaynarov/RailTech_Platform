@@ -155,6 +155,9 @@ class ProjectRow(BaseModel):
     documents: ProjectDocuments
     problems: list[ProjectProblem]
     created_at: dt.datetime
+    #: Компания клиента в ERP и наш путь её логотипа (ЕД-3): строка реестра рисует `CompanyCell`
+    client_id: int | None = None
+    client_logo_url: str | None = None
 
 
 class ProjectPage(BaseModel):
@@ -379,6 +382,7 @@ class RawRow(_Raw):
     deal_id: int
     number: str = ""  # `Deal.number` из ERP (erp-internal 1.8.0); BFF номер не составляет
     title: str = ""
+    company_id: int | None = None
     company_name: str = ""
     created_at: dt.datetime
     step: ProjectStage

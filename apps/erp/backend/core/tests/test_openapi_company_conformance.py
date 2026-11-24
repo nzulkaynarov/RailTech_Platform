@@ -168,11 +168,22 @@ PNG_1X1 = bytes.fromhex(
 )
 
 
+def _real_png() -> bytes:
+    """Логотип компании перекодируется (ЕД-5): файл должен читаться Pillow, а не только иметь сигнатуру PNG."""
+    import io
+
+    from PIL import Image
+
+    out = io.BytesIO()
+    Image.new("RGB", (8, 8), (10, 20, 30)).save(out, format="PNG")
+    return out.getvalue()
+
+
 def test_logo_uploads_return_the_documented_objects(admin, company, settings, tmp_path):
     from django.core.files.uploadedfile import SimpleUploadedFile
 
     settings.MEDIA_ROOT = str(tmp_path)
-    logo = SimpleUploadedFile("logo.png", PNG_1X1, content_type="image/png")
+    logo = SimpleUploadedFile("logo.png", _real_png(), content_type="image/png")
     template = f"{API}accounts/companies/{{id}}/upload-logo/"
     response = admin.post(f"{API}accounts/companies/{company.id}/upload-logo/", {"logo": logo}, format="multipart")
     conforms(response, template, "post", status=200)

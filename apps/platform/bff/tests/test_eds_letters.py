@@ -82,6 +82,8 @@ async def test_list_maps_rows_and_passes_filters_with_the_eds_token(
         "number": NUMBER,
         "subject": "Запрос коммерческого предложения на стрелочные приводы",
         "client_name": "ООО «Демо-Рейл»",
+        "client_id": 7,  # ЕД-3: компания письма; у неё нет логотипа — буквы названия
+        "client_logo_url": None,
         "request_number": "ЗВ-2026-104",
         "received_at": "2026-10-24",
         "status": "awaiting_resolution",

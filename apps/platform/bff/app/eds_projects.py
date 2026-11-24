@@ -14,7 +14,9 @@ from typing import Any
 
 import httpx
 
+from app.deps import Authed
 from app.errors import PlatformError, backend_code, backend_unavailable
+from app.row_logos import attach_client_logos
 from app.schemas_eds_projects import (
     ActActionIn,
     ContractActionIn,
@@ -188,8 +190,15 @@ def project_error(response: httpx.Response) -> PlatformError:
 class ErpProjects:
     """Проекты ERP от имени сотрудника (токен ERP из сессии)."""
 
-    def __init__(self, call: Call) -> None:
+    def __init__(self, call: Call, authed: Authed | None = None) -> None:
         self._call = call
+        self._authed = authed
+
+    async def _with_logo(self, card: ProjectCard) -> ProjectCard:
+        """Логотип клиента — в каждой карточке, и после действия: SPA кладёт ответ в кэш."""
+        if self._authed is not None:
+            await attach_client_logos(self._authed, [card])
+        return card
 
     async def _json(self, method: str, path: str, ok: tuple[int, ...] = (200,), **kw: Any) -> Any:
         response = await self._call("erp", method, path, **kw)
@@ -238,7 +247,7 @@ class ErpProjects:
         return raw.results[0].deal_id
 
     async def card(self, ref: str) -> ProjectCard:
-        return present(await self.raw_card(ref))
+        return await self._with_logo(present(await self.raw_card(ref)))
 
     # --- действия: id документа — только из карточки проекта -------------------------------
 
@@ -431,7 +440,7 @@ class ErpProjects:
             content=content,
             content_type=content_type,
         )
-        return present(parse(RawCard, body, "project"))
+        return await self._with_logo(present(parse(RawCard, body, "project")))
 
     async def delivery_proof_path(self, ref: str) -> str:
         """Путь файла подтверждения доставки в ERP: id вложения — из карточки этого проекта."""
@@ -470,6 +479,7 @@ def row(raw: RawRow) -> ProjectRow:
         request_number=project_number(raw),  # заявка и проект — один объект, один номер
         title=raw.title or raw.company_name or project_number(raw),
         client_name=raw.company_name,
+        client_id=raw.company_id,
         step=raw.step,
         client_status=raw.client_status,
         total=raw.total,

@@ -72,7 +72,7 @@ function Shell({ picture, children }: { picture: ReactNode; children: ReactNode 
   );
 }
 
-type Size = 24 | 32 | 40;
+type Size = 24 | 32 | 40 | 56;
 
 /** Человек: сотрудник, контакт контрагента, лид. Круг с фото или инициалами, ФИО, должность или роль. */
 export function PersonCell({
@@ -81,6 +81,7 @@ export function PersonCell({
   photoUrl,
   to,
   title,
+  picture,
   size = 24,
 }: {
   name: string;
@@ -89,11 +90,17 @@ export function PersonCell({
   to?: string | null;
   /** Своя ссылка на название (например, окно карточки модуля) вместо `to`; инициалы — из `name`. */
   title?: ReactNode;
+  /** Своя картинка вместо круга с фото (например, кнопка загрузки фото в карточке контрагента). */
+  picture?: ReactNode;
   size?: Size;
 }) {
   return (
     <Shell
-      picture={<Picture src={photoUrl} fallback={entityInitials(name)} size={size} shape="round" />}
+      picture={
+        picture ?? (
+          <Picture src={photoUrl} fallback={entityInitials(name)} size={size} shape="round" />
+        )
+      }
     >
       {title ?? <Title name={name} to={to} />}
       {caption ? <span className="pf-entity__caption">{caption}</span> : null}
@@ -183,4 +190,17 @@ export function PersonAvatar({
   size?: Size;
 }) {
   return <Picture src={photoUrl} fallback={entityInitials(name)} size={size} shape="round" />;
+}
+
+/** Только картинка компании (квадрат: логотип или буквы названия) — для шапки карточки, где название стоит заголовком. */
+export function CompanyAvatar({
+  name,
+  logoUrl,
+  size = 40,
+}: {
+  name: string;
+  logoUrl?: string | null;
+  size?: Size;
+}) {
+  return <Picture src={logoUrl} fallback={entityInitials(name, true)} size={size} shape="square" />;
 }

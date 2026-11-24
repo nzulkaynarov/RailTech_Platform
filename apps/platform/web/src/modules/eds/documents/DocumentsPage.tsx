@@ -33,6 +33,7 @@ import { StatusTag } from "../../../shared/ui/StatusTag";
 
 import "./documents.css";
 import { FilterBar, FilterField } from "../../../shared/ui/FilterBar";
+import { PersonRefCell } from "../../PersonRefCell";
 
 const PAGE_SIZE = 25;
 
@@ -330,7 +331,15 @@ function DocumentsTable({
             width: widths.responsible,
             cellClassName: "pf-ell",
             cellTitle: (row: EdsDocumentRow) => row.author?.full_name ?? undefined,
-            cell: (row: EdsDocumentRow) => row.author?.full_name ?? "—",
+            cell: (row: EdsDocumentRow) =>
+              row.author ? (
+                <PersonRefCell
+                  person={{ id: String(row.author.crm_user_id), name: row.author.full_name }}
+                  caption={null}
+                />
+              ) : (
+                "—"
+              ),
           },
         ]
       : []),
@@ -401,7 +410,12 @@ function DocumentsList({
                 {t("list.columns.due")}: {date(row.due_date)}
               </span>
             ) : null}
-            {scope === "all" && row.author ? <span>{row.author.full_name}</span> : null}
+            {scope === "all" && row.author ? (
+              <PersonRefCell
+                person={{ id: String(row.author.crm_user_id), name: row.author.full_name }}
+                caption={null}
+              />
+            ) : null}
             <span>{date(row.created_at)}</span>
           </div>
           <div>

@@ -264,6 +264,10 @@ export const useUpdateCompany = () =>
   useInvalidatingMutation(portal.updateCompany, [['me']], (company, client) =>
     client.setQueryData(keys.company, company),
   );
+export const useUploadCompanyLogo = () =>
+  useInvalidatingMutation(portal.uploadCompanyLogo, [['me']], (company, client) => client.setQueryData(keys.company, company));
+export const useDeleteCompanyLogo = () =>
+  useInvalidatingMutation(portal.deleteCompanyLogo, [['me']], (company, client) => client.setQueryData(keys.company, company));
 export const useInviteTeamMember = () => useInvalidatingMutation(portal.inviteTeamMember, [keys.team]);
 export const useUpdateTeamMember = () =>
   useInvalidatingMutation(

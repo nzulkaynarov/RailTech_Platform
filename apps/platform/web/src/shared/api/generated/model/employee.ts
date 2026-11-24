@@ -26,4 +26,6 @@ export interface Employee {
   erp_sync: ErpSyncState;
   /** Текст последней ошибки провижининга ERP (из CRM), если `erp_sync = error` */
   erp_sync_error?: string;
+  /** Фото сотрудника (СУЩ-3) — адрес на BFF `/staff/{id}/avatar?v=<версия>`; нет фото или сотрудник отключён — поля нет, показываются инициалы */
+  avatar_url?: string;
 }

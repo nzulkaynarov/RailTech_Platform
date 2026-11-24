@@ -28,6 +28,11 @@ export interface CounterpartyCard {
    * @nullable
    */
   crm_client_id: number | null;
+  /**
+   * Логотип компании: адрес на BFF с `?v=<версия>` (ЕД-5); null — буквы названия
+   * @nullable
+   */
+  logo_url?: string | null;
   roles: CounterpartyRoles;
   people: CounterpartyCardPerson[];
   bank_accounts: CounterpartyAccount[];
