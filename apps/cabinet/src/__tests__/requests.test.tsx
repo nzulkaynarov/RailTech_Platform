@@ -112,7 +112,7 @@ describe('Заявки', () => {
     // «Что произойдёт» — только настоящий процесс: номер, менеджер, КП в разделе «КП», без сроков.
     const note = screen.getByRole('note');
     expect(note).toHaveTextContent('Что произойдёт');
-    expect(note).toHaveTextContent('Заявка получит номер и уйдёт менеджеру RailTech');
+    expect(note).toHaveTextContent('Заявка получит номер и уйдёт менеджеру');
     expect(note).not.toHaveTextContent(/\d|час|рабоч/i);
     // Выбора «Направление обращения» нет: в контракте такого поля нет.
     expect(screen.queryByText(/Направление обращения/)).not.toBeInTheDocument();

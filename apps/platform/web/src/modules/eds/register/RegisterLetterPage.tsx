@@ -439,7 +439,7 @@ export function RegisterLetterPage() {
 
   return (
     <div className="pf-newdoc">
-      <PageHeader title={title} subtitle={t("letters:register.subtitle")} />
+      <PageHeader title={title} />
       {fromMail.state === "busy" && fromMail.holder ? (
         <Alert
           type="warning"

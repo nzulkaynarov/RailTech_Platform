@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+
+import { useAppName } from '@/i18n/operator';
 import {
   ShieldCheck,
   AlertTriangle,
@@ -29,6 +31,7 @@ import { formatDate, formatDateTime } from '@/lib/format';
 export function VerifyPage() {
   const { code = '' } = useParams<{ code: string }>();
   const { t } = useTranslation();
+  const appName = useAppName();
   usePageTitle(t('verify.pageTitle'));
 
   const query = useVerifyDocument(code);
@@ -85,7 +88,7 @@ export function VerifyPage() {
             RT
           </div>
           <div>
-            <p className="text-sm font-semibold leading-tight">{t('app.name')}</p>
+            <p className="text-sm font-semibold leading-tight">{appName}</p>
             <p className="text-xs text-muted-foreground">{t('verify.pageTitle')}</p>
           </div>
         </div>

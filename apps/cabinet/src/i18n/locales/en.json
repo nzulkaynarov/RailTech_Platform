@@ -446,6 +446,7 @@
   },
   "pages": {
     "requests": {
+      "rowMenu": "Actions for request {{number}}",
       "title": "Requests",
       "new": "New request",
       "filterLabel": "Filter requests by status",
@@ -1416,6 +1417,8 @@
   },
   "widgets": {
     "actionRequired": {
+      "showAll": "Show all ({{count}})",
+      "showLess": "Show less",
       "title": "Action Required",
       "allClear": "All documents processed — no action required right now.",
       "quoteBadge": "Quote",
@@ -1817,6 +1820,8 @@
     }
   },
   "onboarding": {
+    "expand": "Show",
+    "allDoneShort": "All steps done",
     "title": "Getting started",
     "progress": "{{done}} of {{total}} completed",
     "dismiss": "Dismiss",
@@ -1898,7 +1903,7 @@
       "accept": "Accept the quote",
       "reject": "Return with remarks",
       "question": "Ask a question",
-      "open": "Open the Cabinet",
+      "open": "Open the cabinet",
       "accept_contract": "Sign the contract",
       "accept_act": "Accept the act"
     },
@@ -1906,7 +1911,7 @@
     "memberNote": "You are signed in as {{name}} — no code needed.",
     "linkUntil": "The link works until {{date}} — the sender can revoke it.",
     "state": {
-      "accepted": "The quote is accepted. The contract will appear in your Cabinet.",
+      "accepted": "The quote is accepted. The contract will appear in your cabinet.",
       "rejected": "The quote was returned with remarks.",
       "expired": "The quote has expired. Ask the seller to update it.",
       "accepted_contract": "You have signed the contract. The invoice comes next.",
@@ -1916,12 +1921,12 @@
     },
     "reason": {
       "no_right": "Your contact has no right to decide — ask your company administrator.",
-      "no_access": "Your Cabinet access has no «Quotes» section.",
-      "other_company": "You are signed in to another company's Cabinet.",
-      "no_contact": "The recipient address is not connected to the Cabinet — contact the sender."
+      "no_access": "Your cabinet access has no «Quotes» section.",
+      "other_company": "You are signed in to another company's cabinet.",
+      "no_contact": "The recipient address is not connected to the cabinet — contact the sender."
     },
     "otherCompany": {
-      "title": "You are in another Cabinet",
+      "title": "You are in another cabinet",
       "text": "This link is addressed to another company: actions on it are unavailable. Sign out and open the link again.",
       "signOut": "Sign out"
     },
@@ -1938,9 +1943,9 @@
       "codeShort": "Enter the six digits of the code.",
       "legal": "On your first sign-in you accept the terms of use and the personal data policy — without consent the action is not performed.",
       "memberTitle": "Accept the quote?",
-      "memberText": "Total {{total}}. The contract will appear in your Cabinet.",
+      "memberText": "Total {{total}}. The contract will appear in your cabinet.",
       "working": "Working…",
-      "openTitle": "Open the Cabinet",
+      "openTitle": "Open the cabinet",
       "memberTitle_contract": "Sign the contract?",
       "memberText_contract": "Amount {{total}}. By signing you accept the terms of the contract.",
       "memberTitle_act": "Accept the act?",
@@ -1981,7 +1986,7 @@
     "pay": {
       "title": "Payment details",
       "none": "The details are in the invoice PDF.",
-      "paidQuestion": "Already paid? The payment appears in the invoice once the seller confirms it. You can attach the payment order in the Cabinet."
+      "paidQuestion": "Already paid? The payment appears in the invoice once the seller confirms it. You can attach the payment order in the cabinet."
     },
     "about": {
       "title_contract": "About the document",

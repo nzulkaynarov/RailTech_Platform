@@ -5,6 +5,7 @@ import { Bell, BellOff, CheckCheck, FileText, MessagesSquare, PackageCheck, Truc
 
 import type { PortalNotification } from '@/api/portal';
 import { ErrorState, ListSkeleton } from '@/components/QueryStates';
+import { TelegramBanner } from '@/components/TelegramBanner';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetClose, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import {
@@ -103,6 +104,7 @@ function NotificationPanel({ onClose, unread }: { onClose: () => void; unread: n
         </div>
       </SheetHeader>
       <div className="min-h-0 flex-1 overflow-y-auto p-4">
+        <TelegramBanner onNavigate={onClose} />
         {feed.isPending ? (
           <ListSkeleton rows={3} />
         ) : feed.isError ? (

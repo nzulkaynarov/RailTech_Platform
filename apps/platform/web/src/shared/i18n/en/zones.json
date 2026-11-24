@@ -21,14 +21,12 @@
     "responsible": "Responsible",
     "deputy": "Deputy",
     "curator": "Curator",
-    "problems": "Issues",
-    "actions": "Actions"
+    "problems": "Issues"
   },
   "notAssigned": "Not assigned",
   "personInactive": "deactivated",
   "noProblems": "All good",
   "off": "Switched off",
-  "open": "Open",
   "openNamed": "Open zone “{{name}}”",
   "problem": {
     "no_responsible": "No responsible",

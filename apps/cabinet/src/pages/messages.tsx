@@ -186,13 +186,12 @@ function Bubble({
   const { i18n } = useTranslation();
   return (
     <li className={cn('flex max-w-[85%] flex-col gap-1', mine ? 'items-end self-end' : 'items-start self-start')}>
-      <p className="text-xs text-muted-foreground">
-        <span className="font-medium text-foreground">{author}</span>
+      <p className={cn('flex max-w-full flex-wrap items-baseline gap-x-1.5 text-xs text-muted-foreground', mine && 'justify-end')}>
+        <span className="min-w-0 font-medium break-words text-foreground">{author}</span>
         {time ? (
-          <>
-            {' · '}
-            <time dateTime={time}>{formatDateTime(time, i18n.language)}</time>
-          </>
+          <time dateTime={time} className="whitespace-nowrap">
+            {formatDateTime(time, i18n.language)}
+          </time>
         ) : null}
       </p>
       {context ? <ContextLabel context={context} /> : null}

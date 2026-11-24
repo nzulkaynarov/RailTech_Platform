@@ -90,7 +90,7 @@ describe('документ по ссылке: гость', () => {
     await user.type(within(dialog).getByLabelText('Код из письма'), '123456');
     await user.click(within(dialog).getByRole('button', { name: 'Принять предложение' }));
 
-    expect(await screen.findByText('Предложение принято. Договор появится в вашем Кабинете.')).toBeInTheDocument();
+    expect(await screen.findByText('Предложение принято. Договор появится в вашем кабинете.')).toBeInTheDocument();
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     // код → вход → действие: ровно по одному запросу, без второго кода
     expect(calls.filter((path) => path === 'code')).toHaveLength(1);
@@ -143,18 +143,18 @@ describe('документ по ссылке: гость', () => {
     expect(await screen.findByRole('heading', { level: 1, name: 'Условия работы в кабинете' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Принимаю' }));
 
-    expect(await screen.findByText('Предложение принято. Договор появится в вашем Кабинете.')).toBeInTheDocument();
+    expect(await screen.findByText('Предложение принято. Договор появится в вашем кабинете.')).toBeInTheDocument();
   });
 
-  it('«Открыть Кабинет»: тот же диалог кода, после него — свой кабинет', async () => {
+  it('«Открыть кабинет»: тот же диалог кода, после него — свой кабинет', async () => {
     const user = userEvent.setup();
     const { router } = open();
     await quoteHeading();
 
-    await user.click(screen.getByRole('button', { name: 'Открыть Кабинет' }));
+    await user.click(screen.getByRole('button', { name: 'Открыть кабинет' }));
     const dialog = await screen.findByRole('dialog', { name: 'Подтвердите, что это вы' });
     await user.type(await within(dialog).findByLabelText('Код из письма'), '123456');
-    await user.click(within(dialog).getByRole('button', { name: 'Открыть Кабинет' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Открыть кабинет' }));
 
     await waitFor(() => expect(router.state.location.pathname).not.toMatch(/^\/d\//));
   });
@@ -193,7 +193,7 @@ describe('документ по ссылке: вошедший контакт', 
     dialog = await screen.findByRole('dialog', { name: 'Принять предложение?' });
     await user.click(within(dialog).getByRole('button', { name: 'Принять предложение' }));
 
-    expect(await screen.findByText('Предложение принято. Договор появится в вашем Кабинете.')).toBeInTheDocument();
+    expect(await screen.findByText('Предложение принято. Договор появится в вашем кабинете.')).toBeInTheDocument();
     expect(calls).not.toContain('code');
     expect(calls).not.toContain('verify');
   });
@@ -203,8 +203,8 @@ describe('документ по ссылке: вошедший контакт', 
     const user = userEvent.setup();
     open(FOREIGN);
 
-    expect(await screen.findByText('Вы вошли в другой Кабинет')).toBeInTheDocument();
-    for (const name of ['Принять предложение', 'Вернуть с замечаниями', 'Задать вопрос', 'Открыть Кабинет']) {
+    expect(await screen.findByText('Вы вошли в другой кабинет')).toBeInTheDocument();
+    for (const name of ['Принять предложение', 'Вернуть с замечаниями', 'Задать вопрос', 'Открыть кабинет']) {
       expect(screen.getByRole('button', { name })).toBeDisabled();
     }
     expect(screen.getByRole('button', { name: 'Выйти' })).toBeEnabled();

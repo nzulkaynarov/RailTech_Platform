@@ -233,7 +233,7 @@ describe('Онбординг партнёров (PART-ONBOARD-1)', () => {
       await heading('Компания');
 
       expect(await screen.findByText('На рассмотрении')).toBeInTheDocument();
-      expect(screen.getByText('Заявка на получение статуса партнёра подана и находится на согласовании в RailTech.')).toBeInTheDocument();
+      expect(screen.getByText('Заявка на получение статуса партнёра подана и находится на согласовании.')).toBeInTheDocument();
       expect(screen.getByText('Комплектующие для локомотивов и дизелей')).toBeInTheDocument();
     });
 
@@ -300,7 +300,7 @@ describe('Онбординг партнёров (PART-ONBOARD-1)', () => {
 
       // После согласования статус меняется на «Согласован вами»
       expect(await screen.findByText('Согласован вами')).toBeInTheDocument();
-      expect(screen.getByText(/ожидает электронной подписи руководства RailTech/)).toBeInTheDocument();
+      expect(screen.getByText(/ожидает электронной подписи руководства/)).toBeInTheDocument();
     });
 
     it('компания уже имеет активный договор партнёра: карточка со ссылкой на «Мои товары»', async () => {

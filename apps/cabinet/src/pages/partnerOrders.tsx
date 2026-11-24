@@ -57,6 +57,7 @@ import {
 } from '@/components/ui/sheet';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useUrlParams } from '@/hooks/useUrlParams';
 import { pageCount, parsePage } from '@/lib/catalog';
 import { formatDate, formatDateTime, formatDecimal, formatMoney, formatQuantity } from '@/lib/format';
@@ -387,85 +388,67 @@ export function PartnerOrdersPage() {
         icon={ClipboardList}
       />
 
-      {/* Primary View Switcher: Orders vs RFQ */}
-      <div className="mb-6 flex flex-wrap gap-2 border-b border-border pb-3">
+      {/* Раздел — один ряд кнопок; статус — выпадающий список рядом с поиском (не три ряда «пилюль») */}
+      <div className="mb-4 flex flex-wrap gap-2 max-sm:grid max-sm:grid-cols-3 max-sm:[&_svg]:hidden">
         <Button
           type="button"
-          variant={view === 'orders' ? 'default' : 'ghost'}
-          className="rounded-full"
+          size="sm"
+          variant={view === 'orders' ? 'default' : 'outline'}
+          className="rounded-full max-sm:h-auto max-sm:px-2 max-sm:py-1.5 max-sm:leading-tight max-sm:whitespace-normal"
+          aria-pressed={view === 'orders'}
           onClick={() => update({ view: 'orders', tab: null, page: null, q: null })}
         >
-          <ClipboardList className="mr-2 size-4" />
+          <ClipboardList aria-hidden="true" />
           {t('pages.partnerOrders.views.orders')}
           {ordersQuery.data?.counts ? (
-            <span className="ml-1.5 rounded-full bg-primary-foreground/20 px-2 py-0.5 text-xs">
-              {ordersQuery.data.counts.all}
-            </span>
+            <span className="tabular-nums opacity-80 max-sm:hidden">{ordersQuery.data.counts.all}</span>
           ) : null}
         </Button>
         <Button
           type="button"
-          variant={view === 'rfq' ? 'default' : 'ghost'}
-          className="rounded-full"
+          size="sm"
+          variant={view === 'rfq' ? 'default' : 'outline'}
+          className="rounded-full max-sm:h-auto max-sm:px-2 max-sm:py-1.5 max-sm:leading-tight max-sm:whitespace-normal"
+          aria-pressed={view === 'rfq'}
           onClick={() => update({ view: 'rfq', tab: null, page: null, q: null })}
         >
-          <FileText className="mr-2 size-4" />
+          <FileText aria-hidden="true" />
           {t('pages.partnerOrders.views.rfq')}
-          {rfqQuery.data?.counts ? (
-            <span className="ml-1.5 rounded-full bg-primary-foreground/20 px-2 py-0.5 text-xs">
-              {rfqQuery.data.counts.all}
-            </span>
-          ) : null}
+          {rfqQuery.data?.counts ? <span className="tabular-nums opacity-80 max-sm:hidden">{rfqQuery.data.counts.all}</span> : null}
         </Button>
         <Button
           type="button"
-          variant={view === 'finance' ? 'default' : 'ghost'}
-          className="rounded-full"
+          size="sm"
+          variant={view === 'finance' ? 'default' : 'outline'}
+          className="rounded-full max-sm:h-auto max-sm:px-2 max-sm:py-1.5 max-sm:leading-tight max-sm:whitespace-normal"
+          aria-pressed={view === 'finance'}
           onClick={() => update({ view: 'finance', tab: null, page: null, q: null })}
         >
-          <BarChart3 className="mr-2 size-4" />
+          <BarChart3 aria-hidden="true" />
           {t('pages.partnerOrders.views.finance')}
         </Button>
       </div>
 
-      {/* Subtabs and Search */}
       {view !== 'finance' ? (
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div role="group" aria-label={t('pages.partnerOrders.tabsLabel')} className="flex flex-wrap gap-2">
-            {view === 'orders'
-              ? ORDER_TABS.map((statusName) => (
-                  <Button
-                    key={statusName}
-                    type="button"
-                    size="sm"
-                    variant={statusName === tab ? 'default' : 'outline'}
-                    aria-pressed={statusName === tab}
-                    className="rounded-full"
-                    onClick={() => update({ tab: statusName === 'all' ? null : statusName, page: null })}
-                  >
-                    {t(`pages.partnerOrders.orderTabs.${statusName}`)}
-                    <span className="ml-1 tabular-nums opacity-80">
-                      {ordersQuery.data?.counts[statusName] ?? 0}
-                    </span>
-                  </Button>
-                ))
-              : RFQ_TABS.map((statusName) => (
-                  <Button
-                    key={statusName}
-                    type="button"
-                    size="sm"
-                    variant={statusName === tab ? 'default' : 'outline'}
-                    aria-pressed={statusName === tab}
-                    className="rounded-full"
-                    onClick={() => update({ tab: statusName === 'all' ? null : statusName, page: null })}
-                  >
-                    {t(`pages.partnerOrders.rfqTabs.${statusName}`)}
-                    <span className="ml-1 tabular-nums opacity-80">
-                      {rfqQuery.data?.counts[statusName] ?? 0}
-                    </span>
-                  </Button>
-                ))}
-          </div>
+          <Select value={tab} onValueChange={(next) => update({ tab: next === 'all' ? null : next, page: null })}>
+            <SelectTrigger aria-label={t('pages.partnerOrders.tabsLabel')} className="w-full sm:w-56">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {view === 'orders'
+                ? ORDER_TABS.map((statusName) => (
+                    <SelectItem key={statusName} value={statusName}>
+                      {t(`pages.partnerOrders.orderTabs.${statusName}`)} · {ordersQuery.data?.counts[statusName] ?? 0}
+                    </SelectItem>
+                  ))
+                : RFQ_TABS.map((statusName) => (
+                    <SelectItem key={statusName} value={statusName}>
+                      {t(`pages.partnerOrders.rfqTabs.${statusName}`)} · {rfqQuery.data?.counts[statusName] ?? 0}
+                    </SelectItem>
+                  ))}
+            </SelectContent>
+          </Select>
 
           <SearchForm key={q} initial={q} onSearch={(term) => update({ q: term || null, page: null })} />
         </div>

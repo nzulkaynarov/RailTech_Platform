@@ -199,3 +199,11 @@ table.pf-fixed-table > * > tr > :is(th, td):last-child {
 .pf-table-totals dd {
   text-align: right;
 }
+
+/* Панель вкладок с несколькими блоками (`TabsBar stack`): строка фильтров и рамка списка под одной строкой вкладок */
+.pf-tabs-panel--stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}

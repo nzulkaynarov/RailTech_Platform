@@ -68,7 +68,7 @@ describe('счёт по ссылке', () => {
     for (const name of ['Принять предложение', 'Подписать договор', 'Принять акт', 'Вернуть с замечаниями', 'Задать вопрос']) {
       expect(screen.queryByRole('button', { name })).not.toBeInTheDocument();
     }
-    expect(screen.getByRole('button', { name: 'Открыть Кабинет' })).toBeEnabled(); // вход в кабинет — тем же кодом
+    expect(screen.getByRole('button', { name: 'Открыть кабинет' })).toBeEnabled(); // вход в кабинет — тем же кодом
     await expectNoAxeViolations();
   });
 

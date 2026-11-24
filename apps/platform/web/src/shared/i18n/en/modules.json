@@ -333,7 +333,6 @@
     "people": {
       "filter": "Show",
       "search": "Find a person",
-      "show": "Show",
       "phone": "Phone",
       "email": "Email",
       "kinds": {
@@ -349,9 +348,9 @@
         "kind": "Type",
         "owner": "Owner",
         "contacts": "Contacts",
-        "company": "Company"
+        "company": "Company",
+        "actions": "Actions"
       },
-      "showFor": "Show phone and e-mail: {{name}}",
       "revealFailed": "Contacts not shown: the log is unavailable, try again shortly.",
       "empty": {
         "title": "Nobody found",
