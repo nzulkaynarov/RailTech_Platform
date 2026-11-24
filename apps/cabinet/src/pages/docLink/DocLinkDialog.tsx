@@ -129,7 +129,7 @@ export function DocLinkDialog({
     if (rows.some((row) => !PRICE_RE.test(row.price) || Number(row.price) <= 0)) {
       return { problem: t('pages.partnerOrders.dialogs.priceInvalid') };
     }
-    if (rows.some((row) => row.lead !== '' && !/^\d{1,4}$/.test(row.lead))) {
+    if (rows.some((row) => row.lead !== '' && (!/^\d{1,4}$/.test(row.lead) || Number(row.lead) > 3650))) {
       return { problem: t('docLink.dialog.leadInvalid') };
     }
     const code3 = currency.trim().toUpperCase();

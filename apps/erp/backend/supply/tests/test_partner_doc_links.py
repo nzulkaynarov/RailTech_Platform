@@ -486,3 +486,75 @@ def test_the_links_need_the_supply_right(world, path):
     assert api(world["reader"]).get(url).status_code == 403
     assert api(world["outsider"]).get(url).status_code == 403
     assert api(world["supply"]).get(STOCK + "orders/999999/partner-links/").status_code == 404
+
+
+# ── Чужой ввод: ответ и подтверждение не принимают мусор и ничего не пишут ────────────────────────────────────────
+
+
+def _row(line, **extra):
+    return {"id": line.pk, "unit_price": "10.00", **extra}
+
+
+def _yesterday():
+    return (timezone.localdate() - timedelta(days=1)).isoformat()
+
+
+HOSTILE = {
+    "price -1": lambda ln: {"prices": [_row(ln, unit_price="-1")]},
+    "price 0": lambda ln: {"prices": [_row(ln, unit_price="0")]},
+    "price 10^15": lambda ln: {"prices": [_row(ln, unit_price="1" + "0" * 15)]},
+    "price NaN": lambda ln: {"prices": [_row(ln, unit_price="NaN")]},
+    "price Infinity": lambda ln: {"prices": [_row(ln, unit_price="Infinity")]},
+    "price 1.001": lambda ln: {"prices": [_row(ln, unit_price="1.001")]},
+    "lead -1": lambda ln: {"prices": [_row(ln, lead_days=-1)]},
+    "lead 99999": lambda ln: {"prices": [_row(ln, lead_days=99999)]},
+    "lead abc": lambda ln: {"prices": [_row(ln, lead_days="abc")]},
+    "extra key": lambda ln: {"prices": [_row(ln, discount="5")]},
+    "currency XXX": lambda ln: {"prices": [_row(ln)], "currency": "XXX"},
+    "currency lower": lambda ln: {"prices": [_row(ln)], "currency": "uzs"},
+    "currency empty": lambda ln: {"prices": [_row(ln)], "currency": ""},
+    "past valid_until": lambda ln: {"prices": [_row(ln)], "currency": "UZS", "valid_until": _yesterday()},
+    "duplicate line": lambda ln: {"prices": [_row(ln), _row(ln)], "currency": "UZS"},
+}
+
+
+@pytest.mark.parametrize("case", list(HOSTILE))
+def test_hostile_answer_is_refused_and_writes_nothing(world, case):
+    contact = _partner(world)
+    req = _request(world)
+    _link, raw = _mint("price_request", req, contact)
+    client = _verified(raw)
+    line = req.lines.get()
+    # валюта верная, пока случай не про неё: иначе отказ дала бы она, а не проверяемое поле
+    body = {"token": raw, "action": "answer", "text": "x", "currency": "UZS", **HOSTILE[case](line)}
+    response = client.post(f"{BASE}/act", body, format="json")
+    assert response.status_code == 422, response.content
+    req.refresh_from_db()
+    line.refresh_from_db()
+    assert req.answered_at is None and req.answer_note == ""
+    assert line.answer_price is None and line.answer_lead_days is None
+
+
+def test_confirmation_with_a_past_date_is_refused_and_writes_nothing(world):
+    contact = _partner(world)
+    order = _sent_order(world)
+    SupplierOrder.objects.filter(pk=order.pk).update(expected_date=None)
+    _link, raw = _mint("supplier_order", order, contact)
+    client = _verified(raw)
+    body = {"token": raw, "action": "confirm", "expected_date": _yesterday()}
+    assert client.post(f"{BASE}/act", body, format="json").status_code == 422
+    order.refresh_from_db()
+    assert order.status == OrderStatus.SENT and order.confirmed_at is None and order.expected_date is None
+
+
+def test_prices_without_a_currency_are_refused_and_write_nothing(world):
+    contact = _partner(world)
+    req = _request(world)
+    _link, raw = _mint("price_request", req, contact)
+    client = _verified(raw)
+    line = req.lines.get()
+    body = {"token": raw, "action": "answer", "text": "x", "prices": [_row(line)]}
+    assert client.post(f"{BASE}/act", body, format="json").status_code == 422
+    req.refresh_from_db()
+    line.refresh_from_db()
+    assert req.answered_at is None and line.answer_price is None

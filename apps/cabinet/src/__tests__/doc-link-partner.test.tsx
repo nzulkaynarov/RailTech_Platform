@@ -84,6 +84,21 @@ describe('запрос цены по ссылке', () => {
     expect(await within(dialog).findByText(/Цена — положительное число/)).toBeInTheDocument();
   });
 
+  it('срок больше 3650 дней или не число — диалог не уходит на сервер', async () => {
+    const user = userEvent.setup();
+    open(RFQ);
+    await heading('Запрос цены Рельс Р65 и ещё 1 позиция');
+    await user.click(screen.getByRole('button', { name: 'Ответить на запрос' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Подтвердите, что это вы' });
+    await user.type(await within(dialog).findByLabelText('Код из письма'), '123456');
+    await user.type(within(dialog).getByLabelText('Цена за единицу: Накладка двухголовая'), '10');
+    await user.type(within(dialog).getByLabelText('Срок поставки, дней: Накладка двухголовая'), '3651');
+    await user.type(within(dialog).getByLabelText('Коммерческие условия и цены *'), 'x');
+    await user.click(within(dialog).getByRole('button', { name: 'Ответить на запрос' }));
+
+    expect(await within(dialog).findByText('Срок — целое число дней.')).toBeInTheDocument();
+  });
+
   it('ответ уже дан: показан ответ партнёра, кнопки нет', async () => {
     open('rfq-done-0123456789');
     await heading('Запрос цены Рельс Р65 и ещё 1 позиция');

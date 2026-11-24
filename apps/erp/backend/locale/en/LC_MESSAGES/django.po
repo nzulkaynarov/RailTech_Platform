@@ -7077,3 +7077,76 @@ msgstr "Open the document online"
 
 msgid "Открыть документ онлайн:"
 msgstr "Open the document online:"
+
+# ── emails/partner_document_sent.*, supply/partner_document_pdf.html, price_request (ДК-5) ──────────────
+msgid "Заказ поставщику № %(number)s"
+msgstr "Supplier order No. %(number)s"
+
+msgid "Запрос цены: %(number)s"
+msgstr "Price request: %(number)s"
+
+msgid "Заказ № %(number)s"
+msgstr "Order No. %(number)s"
+
+msgid "Заказ поставщику"
+msgstr "Supplier order"
+
+msgid "Запрос цены"
+msgstr "Price request"
+
+msgid "Компания <strong>%(buyer_name)s</strong> направила заказ <strong>№ %(number)s</strong>. Подтвердите его и срок поставки."
+msgstr "<strong>%(buyer_name)s</strong> sent order <strong>No. %(number)s</strong>. Please confirm it and the delivery date."
+
+msgid "Вам направлен заказ <strong>№ %(number)s</strong>. Подтвердите его и срок поставки."
+msgstr "Order <strong>No. %(number)s</strong> was sent to you. Please confirm it and the delivery date."
+
+msgid "Компания <strong>%(buyer_name)s</strong> просит назвать цену и срок поставки: <strong>%(number)s</strong>."
+msgstr "<strong>%(buyer_name)s</strong> asks for the price and delivery time: <strong>%(number)s</strong>."
+
+msgid "Просим назвать цену и срок поставки: <strong>%(number)s</strong>."
+msgstr "Please state the price and delivery time: <strong>%(number)s</strong>."
+
+msgid "Компания %(buyer_name)s направила заказ № %(number)s. Подтвердите его и срок поставки."
+msgstr "%(buyer_name)s sent order No. %(number)s. Please confirm it and the delivery date."
+
+msgid "Вам направлен заказ № %(number)s. Подтвердите его и срок поставки."
+msgstr "Order No. %(number)s was sent to you. Please confirm it and the delivery date."
+
+msgid "Компания %(buyer_name)s просит назвать цену и срок поставки: %(number)s."
+msgstr "%(buyer_name)s asks for the price and delivery time: %(number)s."
+
+msgid "Просим назвать цену и срок поставки: %(number)s."
+msgstr "Please state the price and delivery time: %(number)s."
+
+msgid "Ожидаемая дата поставки:"
+msgstr "Expected delivery date:"
+
+msgid "Открыть заказ"
+msgstr "Open the order"
+
+msgid "Ответить на запрос"
+msgstr "Answer the request"
+
+msgid "Открыть заказ:"
+msgstr "Open the order:"
+
+msgid "Ответить на запрос:"
+msgstr "Answer the request:"
+
+msgid "Ответить на запрос можно в личном кабинете партнёра."
+msgstr "You can answer the request in the partner's personal cabinet."
+
+msgid "От кого:"
+msgstr "From:"
+
+msgid "Кому:"
+msgstr "To:"
+
+msgid "Дата:"
+msgstr "Date:"
+
+msgid "Итого:"
+msgstr "Total:"
+
+msgid "Просим сообщить цену, срок поставки и условия по каждой позиции."
+msgstr "Please state the price, delivery time and terms for each item."
