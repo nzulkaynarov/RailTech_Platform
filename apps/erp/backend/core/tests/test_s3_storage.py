@@ -161,13 +161,13 @@ def test_missing_public_image_is_404(public_bucket):
 # публичном бакете (старые документы товаров после переноса, ошибка ключа).
 PUBLIC_PREFIXES = [
     "users/7/avatar",
-    "companies/7/logo",
     "companies/7/doc-profile/logo",
     "manufacturers/7/logo",
     "products/7/images",
     "categories/7/icon",
 ]
 PRIVATE_PREFIXES = [
+    "companies/7/logo",  # логотип компании закрыт (ЕД-5): наружу только через API
     "products/7/docs",
     "products/7/attachments",
     "companies/7/documents",

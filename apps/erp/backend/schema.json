@@ -967,6 +967,82 @@
                 }
             }
         },
+        "/api/portal/v1/company/logo": {
+            "get": {
+                "operationId": "api_portal_v1_company_logo_retrieve",
+                "description": "GET/PUT/DELETE /company/logo — логотип своей компании (ЕД-5): читает любой участник, меняет администратор компании.",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            },
+            "put": {
+                "operationId": "api_portal_v1_company_logo_update",
+                "description": "GET/PUT/DELETE /company/logo — логотип своей компании (ЕД-5): читает любой участник, меняет администратор компании.",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            },
+            "delete": {
+                "operationId": "api_portal_v1_company_logo_destroy",
+                "description": "GET/PUT/DELETE /company/logo — логотип своей компании (ЕД-5): читает любой участник, меняет администратор компании.",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/company/logo/": {
+            "get": {
+                "operationId": "api_portal_v1_company_logo_retrieve_2",
+                "description": "GET/PUT/DELETE /company/logo — логотип своей компании (ЕД-5): читает любой участник, меняет администратор компании.",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            },
+            "put": {
+                "operationId": "api_portal_v1_company_logo_update_2",
+                "description": "GET/PUT/DELETE /company/logo — логотип своей компании (ЕД-5): читает любой участник, меняет администратор компании.",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            },
+            "delete": {
+                "operationId": "api_portal_v1_company_logo_destroy_2",
+                "description": "GET/PUT/DELETE /company/logo — логотип своей компании (ЕД-5): читает любой участник, меняет администратор компании.",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
         "/api/portal/v1/company/partner-application": {
             "get": {
                 "operationId": "api_portal_v1_company_partner_application_retrieve",
@@ -2254,7 +2330,7 @@
         "/api/portal/v1/operator": {
             "get": {
                 "operationId": "api_portal_v1_operator_retrieve",
-                "description": "GET /operator — название оператора платформы для кабинета до входа (задача «Н3a2»): ведётся в CRM\n(«Настройки · Компания»), проекция в ERP — `SystemSetting.platform_name`. Ещё — адрес логотипа своей компании\n(ДВ-3): публичный путь `/media/companies/<id>/logo/…`, тот же, что кабинет уже отдаёт на своём домене.",
+                "description": "GET /operator — название оператора платформы для кабинета до входа (задача «Н3a2»): ведётся в CRM\n(«Настройки · Компания»), проекция в ERP — `SystemSetting.platform_name`. Ещё — адрес логотипа своей компании\n(ДВ-3): `/operator/logo` с версией; файл закрыт в хранилище.",
                 "tags": [
                     "api"
                 ],
@@ -2268,7 +2344,35 @@
         "/api/portal/v1/operator/": {
             "get": {
                 "operationId": "api_portal_v1_operator_retrieve_2",
-                "description": "GET /operator — название оператора платформы для кабинета до входа (задача «Н3a2»): ведётся в CRM\n(«Настройки · Компания»), проекция в ERP — `SystemSetting.platform_name`. Ещё — адрес логотипа своей компании\n(ДВ-3): публичный путь `/media/companies/<id>/logo/…`, тот же, что кабинет уже отдаёт на своём домене.",
+                "description": "GET /operator — название оператора платформы для кабинета до входа (задача «Н3a2»): ведётся в CRM\n(«Настройки · Компания»), проекция в ERP — `SystemSetting.platform_name`. Ещё — адрес логотипа своей компании\n(ДВ-3): `/operator/logo` с версией; файл закрыт в хранилище.",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/operator/logo": {
+            "get": {
+                "operationId": "api_portal_v1_operator_logo_retrieve",
+                "description": "GET /operator/logo — логотип своей компании до входа (ДВ-3): намеренно публичный, как название оператора.\nФайл закрыт в хранилище, отдаёт его только ERP; чужих компаний здесь нет.",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/operator/logo/": {
+            "get": {
+                "operationId": "api_portal_v1_operator_logo_retrieve_2",
+                "description": "GET /operator/logo — логотип своей компании до входа (ДВ-3): намеренно публичный, как название оператора.\nФайл закрыт в хранилище, отдаёт его только ERP; чужих компаний здесь нет.",
                 "tags": [
                     "api"
                 ],
@@ -32516,6 +32620,211 @@
                 }
             }
         },
+        "/api/v1/parties/organizations/{id}/logo/": {
+            "get": {
+                "operationId": "parties_organizations_logo_get",
+                "description": "Логотип: WebP 96 px (`size=full` — 256 px). Читает любой сотрудник в границах списка контрагентов; логотипа нет — 404.",
+                "summary": "Counterparty logo",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "pattern": "^\\d+$"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "query",
+                        "name": "size",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "full",
+                                "row"
+                            ]
+                        },
+                        "description": "row | full"
+                    }
+                ],
+                "tags": [
+                    "Parties"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string",
+                                    "format": "binary"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "404": {
+                        "description": "Объекта нет.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/ForbiddenResponse"
+                    }
+                }
+            },
+            "put": {
+                "operationId": "parties_organizations_logo_put",
+                "description": "ЕД-5. Квадрат, обрезанный клиентом; JPEG, PNG или WebP до 2 МБ, сервер перекодирует в WebP 256×256. Право `deal.manage` или `supply.manage`. Отказы файла — 400 `FILE_TYPE_NOT_ALLOWED`, `FILE_CONTENT_MISMATCH`, `FILE_TOO_LARGE`. Ответ — карточка контрагента с новой `logo_version`.",
+                "summary": "Upload or replace the counterparty logo",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "pattern": "^\\d+$"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Parties"
+                ],
+                "requestBody": {
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DeskPictureInRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DeskCounterparty"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "description": "Отказ проверки: код в `detail` или ошибки полей.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BadRequest"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`).",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Объекта нет.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    }
+                }
+            },
+            "delete": {
+                "operationId": "parties_organizations_logo_delete",
+                "description": "Убирает логотип и файл; повтор безопасен. Тот же доступ. Ответ — карточка контрагента.",
+                "summary": "Remove the counterparty logo",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "pattern": "^\\d+$"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Parties"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DeskCounterparty"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "403": {
+                        "description": "Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`).",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Объекта нет.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    }
+                }
+            }
+        },
         "/api/v1/parties/organizations/{id}/people/": {
             "get": {
                 "operationId": "parties_organizations_people",
@@ -32671,6 +32980,50 @@
                 }
             }
         },
+        "/api/v1/parties/organizations/logos/": {
+            "get": {
+                "operationId": "parties_organizations_logos",
+                "description": "Версии логотипов компаний `ids` (до 100, через запятую) в границах списка контрагентов: строки реестров, где компания приходит из CRM, получают адрес `…/logo/?v=` одним запросом. Чужие и неизвестные id в ответ не входят.",
+                "summary": "Logo versions of several counterparties",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "ids",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "id компаний через запятую, до 100",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Parties"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DeskCounterpartyLogos"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/ForbiddenResponse"
+                    }
+                }
+            }
+        },
         "/api/v1/parties/people/": {
             "get": {
                 "operationId": "parties_people_list",
@@ -32790,6 +33143,211 @@
                     },
                     "403": {
                         "$ref": "#/components/responses/ForbiddenResponse"
+                    }
+                }
+            }
+        },
+        "/api/v1/parties/people/{id}/photo/": {
+            "get": {
+                "operationId": "parties_people_photo_get",
+                "description": "Фото контакта: WebP 96 px (`size=full` — 256 px). Читает любой сотрудник в границах списка «Люди»; фото нет — 404.",
+                "summary": "Photo of a counterparty person",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "pattern": "^\\d+$"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "query",
+                        "name": "size",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "full",
+                                "row"
+                            ]
+                        },
+                        "description": "row | full"
+                    }
+                ],
+                "tags": [
+                    "Parties"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string",
+                                    "format": "binary"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "404": {
+                        "description": "Объекта нет.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/ForbiddenResponse"
+                    }
+                }
+            },
+            "put": {
+                "operationId": "parties_people_photo_put",
+                "description": "СУЩ-3. Квадратное фото (клиент уже обрезал по кругу), JPEG, PNG или WebP до 2 МБ; сервер перекодирует в WebP 256×256. Право `deal.manage` или `supply.manage`. Не тот тип — 400 `FILE_TYPE_NOT_ALLOWED`, подпись не совпала — 400 `FILE_CONTENT_MISMATCH`, больше 2 МБ — 400 `FILE_TOO_LARGE`. Ответ — `photo_version`.",
+                "summary": "Upload or replace the photo of a counterparty person",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "pattern": "^\\d+$"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Parties"
+                ],
+                "requestBody": {
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DeskPictureInRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DeskPersonPhoto"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "description": "Отказ проверки: код в `detail` или ошибки полей.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BadRequest"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`).",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Объекта нет.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    }
+                }
+            },
+            "delete": {
+                "operationId": "parties_people_photo_delete",
+                "description": "Убирает фото и файл; повтор безопасен. Тот же доступ. Ответ — `photo_version: null`.",
+                "summary": "Remove the photo of a counterparty person",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "pattern": "^\\d+$"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Parties"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DeskPersonPhoto"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "403": {
+                        "description": "Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`).",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Объекта нет.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
                     }
                 }
             }
@@ -40679,6 +41237,7 @@
             },
             "Company": {
                 "type": "object",
+                "description": "`logo` of a company is our versioned API path (ЕД-5), never a storage address: the file is private.",
                 "properties": {
                     "id": {
                         "type": "integer",
@@ -40783,8 +41342,7 @@
                         "type": "string",
                         "format": "uri",
                         "nullable": true,
-                        "title": "Логотип",
-                        "description": "Логотип компании для отображения на платформе"
+                        "readOnly": true
                     },
                     "created_at": {
                         "type": "string",
@@ -40839,6 +41397,7 @@
                     "delete_blocker",
                     "id",
                     "is_active",
+                    "logo",
                     "name",
                     "trust_score",
                     "user_count"
@@ -41202,7 +41761,7 @@
             },
             "CompanyLight": {
                 "type": "object",
-                "description": "Lightweight company serializer for nested use — no extra queries.",
+                "description": "Lightweight company serializer for nested use — no extra queries.\n\n`logo` is our versioned API path (ЕД-5), not a storage address: the file is private and only the API serves it.",
                 "properties": {
                     "id": {
                         "type": "integer",
@@ -41234,18 +41793,18 @@
                         "type": "string",
                         "format": "uri",
                         "nullable": true,
-                        "title": "Логотип",
-                        "description": "Логотип компании для отображения на платформе"
+                        "readOnly": true
                     }
                 },
                 "required": [
                     "id",
+                    "logo",
                     "name"
                 ]
             },
             "CompanyLightRequest": {
                 "type": "object",
-                "description": "Lightweight company serializer for nested use — no extra queries.",
+                "description": "Lightweight company serializer for nested use — no extra queries.\n\n`logo` is our versioned API path (ЕД-5), not a storage address: the file is private and only the API serves it.",
                 "properties": {
                     "name": {
                         "type": "string",
@@ -41269,13 +41828,6 @@
                                 "maxLength": 0
                             }
                         ]
-                    },
-                    "logo": {
-                        "type": "string",
-                        "format": "binary",
-                        "nullable": true,
-                        "title": "Логотип",
-                        "description": "Логотип компании для отображения на платформе"
                     }
                 },
                 "required": [
@@ -41441,6 +41993,7 @@
             },
             "CompanyRequest": {
                 "type": "object",
+                "description": "`logo` of a company is our versioned API path (ЕД-5), never a storage address: the file is private.",
                 "properties": {
                     "name": {
                         "type": "string",
@@ -41531,13 +42084,6 @@
                                 "maxLength": 0
                             }
                         ]
-                    },
-                    "logo": {
-                        "type": "string",
-                        "format": "binary",
-                        "nullable": true,
-                        "title": "Логотип",
-                        "description": "Логотип компании для отображения на платформе"
                     },
                     "types": {
                         "type": "array",
@@ -44194,6 +44740,11 @@
                         "nullable": true,
                         "description": "Клиент CRM, с которым связана компания"
                     },
+                    "logo_version": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "Версия логотипа; `null` — логотипа нет"
+                    },
                     "roles": {
                         "$ref": "#/components/schemas/DeskCounterpartyRoles"
                     },
@@ -44240,6 +44791,7 @@
                     "id",
                     "inn",
                     "legal_address",
+                    "logo_version",
                     "name",
                     "people",
                     "registration_number",
@@ -44290,6 +44842,23 @@
                     "swift"
                 ]
             },
+            "DeskCounterpartyLogos": {
+                "type": "object",
+                "description": "Версии логотипов нескольких компаний одним ответом — для строк списков, где сама компания приходит из CRM.",
+                "properties": {
+                    "results": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "string",
+                            "nullable": true
+                        },
+                        "description": "`{id компании: версия логотипа или null}`"
+                    }
+                },
+                "required": [
+                    "results"
+                ]
+            },
             "DeskCounterpartyPerson": {
                 "type": "object",
                 "properties": {
@@ -44316,6 +44885,11 @@
                     },
                     "has_email": {
                         "type": "boolean"
+                    },
+                    "photo_version": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "Версия фото контакта; `null` — фото нет"
                     }
                 },
                 "required": [
@@ -44325,6 +44899,7 @@
                     "id",
                     "is_primary",
                     "name",
+                    "photo_version",
                     "position"
                 ]
             },
@@ -45846,6 +46421,11 @@
                         "type": "integer",
                         "nullable": true,
                         "description": "Клиент CRM, с которым связана компания"
+                    },
+                    "logo_version": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "Версия логотипа (отпечаток файла); `null` — логотипа нет. Адреса хранилища не отдаются"
                     }
                 },
                 "required": [
@@ -45856,6 +46436,7 @@
                     "id",
                     "inn",
                     "kind",
+                    "logo_version",
                     "name",
                     "roles"
                 ]
@@ -45959,6 +46540,11 @@
                     },
                     "is_primary": {
                         "type": "boolean"
+                    },
+                    "photo_version": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "Версия фото контакта; `null` — фото нет"
                     }
                 },
                 "required": [
@@ -45966,6 +46552,7 @@
                     "id",
                     "is_primary",
                     "name",
+                    "photo_version",
                     "position"
                 ]
             },
@@ -46566,6 +47153,11 @@
                     },
                     "kind": {
                         "$ref": "#/components/schemas/DeskPersonKindEnum"
+                    },
+                    "photo_version": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "Версия фото контакта (отпечаток файла); `null` — фото нет. Адреса хранилища не отдаются"
                     }
                 },
                 "required": [
@@ -46576,6 +47168,7 @@
                     "is_primary",
                     "kind",
                     "name",
+                    "photo_version",
                     "position"
                 ]
             },
@@ -46612,6 +47205,37 @@
                 ],
                 "type": "string",
                 "description": "* `client` - client\n* `partner` - partner"
+            },
+            "DeskPersonPhoto": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "photo_version": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "Новая версия фото; `null` — фото убрано"
+                    }
+                },
+                "required": [
+                    "id",
+                    "photo_version"
+                ]
+            },
+            "DeskPictureInRequest": {
+                "type": "object",
+                "description": "Загрузка логотипа или фото (ЕД-5, СУЩ-3): квадрат, уже обрезанный клиентом.",
+                "properties": {
+                    "file": {
+                        "type": "string",
+                        "format": "binary",
+                        "description": "JPEG, PNG или WebP до 2 МБ; сервер перекодирует в квадрат 256×256 WebP"
+                    }
+                },
+                "required": [
+                    "file"
+                ]
             },
             "DeskProposal": {
                 "type": "object",
@@ -53040,6 +53664,7 @@
             },
             "PatchedCompanyRequest": {
                 "type": "object",
+                "description": "`logo` of a company is our versioned API path (ЕД-5), never a storage address: the file is private.",
                 "properties": {
                     "name": {
                         "type": "string",
@@ -53130,13 +53755,6 @@
                                 "maxLength": 0
                             }
                         ]
-                    },
-                    "logo": {
-                        "type": "string",
-                        "format": "binary",
-                        "nullable": true,
-                        "title": "Логотип",
-                        "description": "Логотип компании для отображения на платформе"
                     },
                     "types": {
                         "type": "array",
@@ -55612,8 +56230,7 @@
                         "type": "string",
                         "format": "uri",
                         "nullable": true,
-                        "title": "Логотип",
-                        "description": "Логотип компании для отображения на платформе"
+                        "readOnly": true
                     },
                     "company_types": {
                         "type": "array",
@@ -55624,6 +56241,7 @@
                 "required": [
                     "company_types",
                     "id",
+                    "logo",
                     "name"
                 ]
             },
@@ -55659,13 +56277,6 @@
                         "nullable": true,
                         "title": "Страна",
                         "description": "Страна регистрации юридического лица"
-                    },
-                    "logo": {
-                        "type": "string",
-                        "format": "binary",
-                        "nullable": true,
-                        "title": "Логотип",
-                        "description": "Логотип компании для отображения на платформе"
                     }
                 },
                 "required": [

@@ -8221,6 +8221,62 @@ export interface paths {
     patch: operations["updateCounterpartyRequisites"];
     trace?: never;
   };
+  "/people/counterparties/{id}/logo": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Карточка контрагента: логотип
+     * @description ERP `GET parties/organizations/{id}/logo/` (ЕД-5): WebP 96 px, `size=full` — 256 px. Раздел `crm.clients` или `erp.stock` — чтение. Адрес в ответах — с `?v=<версия>`, кэш браузера на сутки. Логотипа нет — 404 `NOT_FOUND`, клиент показывает буквы названия. Адресов хранилища наружу нет.
+     */
+    get: operations["getCounterpartyLogo"];
+    /**
+     * Карточка контрагента: загрузить или заменить логотип
+     * @description `multipart/form-data`, поле `file`: квадрат, уже обрезанный клиентом; PNG, JPEG или WebP до 2 МБ. ERP `PUT parties/organizations/{id}/logo/` перекодирует его в WebP 256x256 и проверяет тип и подпись. Раздел `crm.clients` или `erp.stock` — полный; в ERP — право `deal.manage` или `supply.manage`, иначе 403. Не тот тип или подпись — 422 `VALIDATION_FAILED` с `details.reason` (`file_type_not_allowed`, `file_content_mismatch`, `file_too_large`); тело больше предела читается потоком и обрывается — 413 `PAYLOAD_TOO_LARGE`. Ответ — карточка с новой версией в `logo_url`.
+     */
+    put: operations["uploadCounterpartyLogo"];
+    post?: never;
+    /**
+     * Карточка контрагента: убрать логотип
+     * @description ERP `DELETE parties/organizations/{id}/logo/`. Тот же доступ, что у загрузки; повтор безопасен. Ответ — карточка без логотипа.
+     */
+    delete: operations["deleteCounterpartyLogo"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/people/contacts/{id}/photo": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Контакт контрагента: фото
+     * @description ERP `GET parties/people/{id}/photo/` (СУЩ-3): WebP 96 px, `size=full` — 256 px. Раздел `chats.internal`, `crm.clients` или `erp.stock` — чтение. Адрес в ответах — с `?v=<версия>`, кэш браузера на сутки. Фото нет — 404 `NOT_FOUND`, клиент показывает инициалы.
+     */
+    get: operations["getContactPhoto"];
+    /**
+     * Контакт контрагента: загрузить или заменить фото
+     * @description `multipart/form-data`, поле `file`: уже обрезанная по кругу картинка 256x256; PNG, JPEG или WebP до 2 МБ. Доступ и отказы — как у `uploadCounterpartyLogo` (ERP `PUT parties/people/{id}/photo/`). Ответ — `ContactPhoto` с новой версией в адресе.
+     */
+    put: operations["uploadContactPhoto"];
+    post?: never;
+    /**
+     * Контакт контрагента: убрать фото
+     * @description ERP `DELETE parties/people/{id}/photo/`. Тот же доступ, что у загрузки; повтор безопасен.
+     */
+    delete: operations["deleteContactPhoto"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/people/clients/{id}/counterparty": {
     parameters: {
       query?: never;
@@ -10784,6 +10840,8 @@ export interface components {
       erp_sync: components["schemas"]["ErpSyncState"];
       /** @description Текст последней ошибки провижининга ERP (из CRM), если `erp_sync = error` */
       erp_sync_error?: string;
+      /** @description Фото сотрудника (СУЩ-3) — адрес на BFF `/staff/{id}/avatar?v=<версия>`; нет фото или сотрудник отключён — поля нет, показываются инициалы */
+      avatar_url?: string;
     };
     EmployeeList: {
       items: components["schemas"]["Employee"][];
@@ -11088,6 +11146,18 @@ export interface components {
       /** @description Пустая строка очищает */
       email_signature?: string;
     };
+    PictureUpload: {
+      /**
+       * Format: binary
+       * @description Квадрат, уже обрезанный клиентом (логотип — квадрат, фото контакта — круг 256x256); PNG, JPEG или WebP до 2 МБ
+       */
+      file: string;
+    };
+    ContactPhoto: {
+      id: string;
+      /** @description Адрес фото на BFF с новой версией; null — фото убрано */
+      photo_url: string | null;
+    };
     AvatarUpload: {
       /**
        * Format: binary
@@ -11345,6 +11415,10 @@ export interface components {
       /** @description Название проекта (сделки ERP); нет названия — название клиента */
       title: string;
       client_name: string;
+      /** @description Компания клиента в ERP (для логотипа и ссылки); null — у строки её нет */
+      client_id?: number | null;
+      /** @description Логотип компании клиента: наш адрес с `?v=<версия>` (ЕД-3, ЕД-5), только если у сотрудника есть раздел `crm.clients`, `erp.stock`, `eds.projects`, `eds.payments` или `eds.inbox` (те же, что открывают картинку); null — буквы названия */
+      client_logo_url?: string | null;
       /**
        * @description Шаг пути заявки SPEC-v3 §2.3: CONTRACT — договор, PAYMENT — оплата (договор подписан), DONE — выполнено (акт подписан и счета оплачены)
        * @enum {string}
@@ -11593,6 +11667,8 @@ export interface components {
       request_number: string;
       title: string;
       client_name: string;
+      client_id?: number | null;
+      client_logo_url?: string | null;
       /** @enum {string} */
       step: "CONTRACT" | "PAYMENT" | "DONE";
       /** @enum {string} */
@@ -12550,6 +12626,10 @@ export interface components {
       project_number: string;
       deal_id: number;
       client_name: string;
+      /** @description Компания клиента в ERP (для логотипа и ссылки); null — у строки её нет */
+      client_id?: number | null;
+      /** @description Логотип компании клиента: наш адрес с `?v=<версия>` (ЕД-3, ЕД-5), только если у сотрудника есть раздел `crm.clients`, `erp.stock`, `eds.projects`, `eds.payments` или `eds.inbox` (те же, что открывают картинку); null — буквы названия */
+      client_logo_url?: string | null;
       amount: components["schemas"]["PaymentMoney"];
       paid: components["schemas"]["PaymentMoney"];
       balance: components["schemas"]["PaymentMoney"];
@@ -12638,6 +12718,10 @@ export interface components {
       project_number: string;
       deal_id: number;
       client_name: string;
+      /** @description Компания клиента в ERP (для логотипа и ссылки); null — у строки её нет */
+      client_id?: number | null;
+      /** @description Логотип компании клиента: наш адрес с `?v=<версия>` (ЕД-3, ЕД-5), только если у сотрудника есть раздел `crm.clients`, `erp.stock`, `eds.projects`, `eds.payments` или `eds.inbox` (те же, что открывают картинку); null — буквы названия */
+      client_logo_url?: string | null;
       amount: components["schemas"]["PaymentMoney"];
       paid: components["schemas"]["PaymentMoney"];
       balance: components["schemas"]["PaymentMoney"];
@@ -14040,6 +14124,10 @@ export interface components {
       subject: string;
       /** @description Название организации-отправителя */
       client_name: string | null;
+      /** @description Компания письма в ERP (из связей письма); null — письмо с ней не связано */
+      client_id?: number | null;
+      /** @description Логотип компании клиента: наш адрес с `?v=<версия>` (ЕД-3, ЕД-5), только если у сотрудника есть раздел `crm.clients`, `erp.stock`, `eds.projects`, `eds.payments` или `eds.inbox` (те же, что открывают картинку); null — буквы названия */
+      client_logo_url?: string | null;
       /** @description Бизнес-номер заявки ЗВ из связей письма; `null` — письмо ещё не связано с заявкой */
       request_number: string | null;
       /** Format: date */
@@ -17042,6 +17130,8 @@ export interface components {
       handoff_status: "pending" | "done" | "failed" | null;
       /** @description Х-8: у компании действует отметка «Не работать» (фильтр «Не работаем») */
       do_not_work?: boolean;
+      /** @description Логотип компании: адрес на BFF с `?v=<версия>` (ЕД-5); null — буквы названия */
+      logo_url?: string | null;
     };
     ClientList: {
       items: components["schemas"]["ClientRow"][];
@@ -17774,6 +17864,8 @@ export interface components {
       company: components["schemas"]["CounterpartyRef"];
       /** @enum {string} */
       kind: "client" | "partner";
+      /** @description Фото контакта: адрес на BFF с `?v=<версия>` (СУЩ-3); null — инициалы */
+      photo_url?: string | null;
     };
     CounterpartyContacts: {
       id: components["schemas"]["CompanyItemRef"];
@@ -17810,6 +17902,8 @@ export interface components {
       crm_client_id: number | null;
       /** @description Общая почта компании */
       email: string | null;
+      /** @description Логотип компании: адрес на BFF с `?v=<версия>` (ЕД-5); null — буквы названия */
+      logo_url?: string | null;
     };
     CounterpartyPickList: {
       items: components["schemas"]["CounterpartyPick"][];
@@ -17832,6 +17926,8 @@ export interface components {
       position: string | null;
       email: string | null;
       is_primary: boolean;
+      /** @description Фото контакта: адрес на BFF с `?v=<версия>` (СУЩ-3); null — инициалы */
+      photo_url?: string | null;
     };
     CounterpartyPersonPickList: {
       items: components["schemas"]["CounterpartyPersonPick"][];
@@ -17846,6 +17942,8 @@ export interface components {
       has_cabinet: boolean;
       has_phone: boolean;
       has_email: boolean;
+      /** @description Фото контакта: адрес на BFF с `?v=<версия>` (СУЩ-3); null — инициалы */
+      photo_url?: string | null;
     };
     CounterpartyAccount: {
       id: components["schemas"]["CompanyItemRef"];
@@ -17870,6 +17968,8 @@ export interface components {
       legal_address: string | null;
       /** @description Клиент CRM, с которым связана компания */
       crm_client_id: number | null;
+      /** @description Логотип компании: адрес на BFF с `?v=<версия>` (ЕД-5); null — буквы названия */
+      logo_url?: string | null;
       roles: components["schemas"]["CounterpartyRoles"];
       people: components["schemas"]["CounterpartyCardPerson"][];
       bank_accounts: components["schemas"]["CounterpartyAccount"][];
@@ -33735,6 +33835,210 @@ export interface operations {
         };
       };
       422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  getCounterpartyLogo: {
+    parameters: {
+      query?: {
+        size?: "row" | "full";
+        /** @description Версия логотипа — только для кэша браузера */
+        v?: string;
+      };
+      header?: never;
+      path: {
+        id: components["schemas"]["CompanyItemRef"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Логотип */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "image/webp": string;
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  uploadCounterpartyLogo: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        id: components["schemas"]["CompanyItemRef"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "multipart/form-data": components["schemas"]["PictureUpload"];
+      };
+    };
+    responses: {
+      /** @description Логотип сохранён */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CounterpartyCard"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      /** @description `PAYLOAD_TOO_LARGE` — тело больше 2 МБ */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  deleteCounterpartyLogo: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        id: components["schemas"]["CompanyItemRef"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Логотип убран */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CounterpartyCard"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  getContactPhoto: {
+    parameters: {
+      query?: {
+        size?: "row" | "full";
+        /** @description Версия фото — только для кэша браузера */
+        v?: string;
+      };
+      header?: never;
+      path: {
+        id: components["schemas"]["CompanyItemRef"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Фото */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "image/webp": string;
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  uploadContactPhoto: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        id: components["schemas"]["CompanyItemRef"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "multipart/form-data": components["schemas"]["PictureUpload"];
+      };
+    };
+    responses: {
+      /** @description Фото сохранено */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ContactPhoto"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      /** @description `PAYLOAD_TOO_LARGE` — тело больше 2 МБ */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  deleteContactPhoto: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        id: components["schemas"]["CompanyItemRef"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Фото убрано */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ContactPhoto"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
       503: components["responses"]["BackendUnavailable"];
     };
   };

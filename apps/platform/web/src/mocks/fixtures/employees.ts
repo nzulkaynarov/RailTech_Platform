@@ -1,4 +1,5 @@
 import type { Employee } from "../../shared/api/generated/model";
+import { avatarUrlOf } from "../profileStore";
 import { ROLE_ID, readRoles, roleRefOf, rolesOf } from "./roles";
 import { DEMO_USERS } from "./users";
 
@@ -103,7 +104,13 @@ export function resetEmployees(): void {
 /** Сотрудник в форме контракта: роли — ссылки с названиями из хранилища ролей (удалённые пропускаются). */
 export function toEmployee(employee: MockEmployee): Employee {
   const { role_ids: roleIds, ...rest } = employee;
-  return { ...rest, roles: rolesOf(roleIds, readRoles()).map(roleRefOf) };
+  // СУЩ-3: фото, загруженное в «Профиле», видно в списке; отключённому — инициалы, как в BFF
+  const avatar = employee.status === "disabled" ? undefined : avatarUrlOf(employee.id);
+  return {
+    ...rest,
+    roles: rolesOf(roleIds, readRoles()).map(roleRefOf),
+    ...(avatar ? { avatar_url: avatar } : {}),
+  };
 }
 
 /** Id ролей сотрудника с учётом выданного в Оргструктуре; нет записи — роли из `DEMO_USERS`. */

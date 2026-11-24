@@ -23,6 +23,10 @@ export interface ProjectCard {
   request_number: string;
   title: string;
   client_name: string;
+  /** @nullable */
+  client_id?: number | null;
+  /** @nullable */
+  client_logo_url?: string | null;
   step: ProjectCardStep;
   client_status: ProjectCardClientStatus;
   total: ProjectMoney | null;

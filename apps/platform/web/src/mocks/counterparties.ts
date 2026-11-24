@@ -11,6 +11,7 @@ import { failure } from "./adminUsers";
 import { readErpCatalog } from "./fixtures/erpCatalog";
 import { readLeads } from "./fixtures/leads";
 import { buildMe, currentActor, readSession } from "./mockSession";
+import { logoUrlOf, photoUrlOf, pictureHandlers } from "./pictures";
 
 /**
  * Карточка контрагента на моках (ADR-0028, СУЩ-2.5): компания ERP — поставщик каталога (id поставщика) или клиент CRM,
@@ -127,10 +128,19 @@ function guard(write = false) {
 
 function cardOf(id: string): CounterpartyCard | null {
   const card = baseCardOf(id);
-  return card ? { ...card, ...requisites.get(id), do_not_work: markOf(id) } : null;
+  if (!card) return null;
+  return {
+    ...card,
+    ...requisites.get(id),
+    do_not_work: markOf(id),
+    // ЕД-5, СУЩ-3: логотип и фото контактов — те же адреса, что отдаёт BFF (версия в `?v=`)
+    logo_url: logoUrlOf(id),
+    people: card.people.map((person) => ({ ...person, photo_url: photoUrlOf(person.id) })),
+  };
 }
 
 export const counterpartyHandlers = [
+  ...pictureHandlers(cardOf),
   http.patch("*/people/counterparties/:id", async ({ params, request }) => {
     const denied = guard();
     if (denied) return denied;

@@ -8,6 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 
 from app.rbac_generated import RestrictedField
 from app.schemas import AccessFlags, RoleId, RoleRef, initials_of
+from app.schemas_profile import avatar_url
 
 EmployeeStatus = Literal["active", "invited", "disabled"]
 ErpSyncState = Literal["ok", "pending", "error", "not_applicable"]
@@ -36,6 +37,8 @@ class Employee(BaseModel):
     telegram_linked: bool
     erp_sync: ErpSyncState
     erp_sync_error: str | None = None
+    # СУЩ-3: фото сотрудника (адрес на BFF с версией); отключённому не отдаётся — инициалы
+    avatar_url: str | None = None
 
 
 class EmployeeList(BaseModel):
@@ -123,6 +126,7 @@ def to_employee(user: dict[str, Any]) -> Employee:
     position = str(user.get("position") or "").strip() or None
     sync = str(user.get("erp_sync") or "")
     error = user.get("erp_sync_error")
+    version = user.get("avatar_version")
     return Employee(
         id=str(user["id"]),
         name=name,
@@ -136,6 +140,9 @@ def to_employee(user: dict[str, Any]) -> Employee:
         # Статус считает CRM по факту; без поля — «не применимо», а не выдуманное «ок» (СЦ-8).
         erp_sync=cast(ErpSyncState, sync if sync in _ERP_SYNC else "not_applicable"),
         erp_sync_error=str(error) if isinstance(error, str) and error else None,
+        avatar_url=avatar_url(user["id"], version if isinstance(version, int) else None)
+        if user.get("is_active", True)
+        else None,
     )
 
 

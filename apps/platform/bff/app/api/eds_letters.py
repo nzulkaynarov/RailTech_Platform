@@ -39,6 +39,7 @@ from app.errors import PlatformError, backend_unavailable
 from app.feeds.feed import Feed
 from app.rbac import strip_restricted
 from app.rbac_generated import RESOURCE_MODULE
+from app.row_logos import attach_client_logos
 from app.schemas_eds_letters import (
     BODY_TEXT_MAX,
     UUID_RE,
@@ -176,7 +177,9 @@ async def list_letters(
         params["kind"] = kind
     if cursor:
         params["cursor"] = cursor
-    return to_page(await _letters(authed).page(params))
+    page = to_page(await _letters(authed).page(params))
+    await attach_client_logos(authed, page.items)
+    return page
 
 
 @router.post(

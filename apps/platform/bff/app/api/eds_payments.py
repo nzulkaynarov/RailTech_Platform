@@ -24,7 +24,7 @@ from app.eds_documents import API, EdsProxy
 from app.eds_payments import (
     Receivables,
     build_board,
-    card_of,
+    card_out,
     load_memo,
     memo_card,
     memo_page,
@@ -148,7 +148,7 @@ async def list_payments(
 
 @router.get("/payments/{id}", response_model=PaymentCard, operation_id="getPayment")
 async def get_payment(id: InvoiceId, authed: Reader) -> PaymentCard:
-    return card_of(await Receivables(authed).card(id))
+    return await card_out(authed, await Receivables(authed).card(id))
 
 
 @router.post("/payments/{id}/confirm", response_model=PaymentCard, operation_id="confirmPayment")
@@ -161,7 +161,7 @@ async def confirm_payment(
         "reference": body.reference or "",
         "confirmation_id": body.proof_id,
     }
-    return card_of(await Receivables(authed).confirm(id, payload, idempotency_key))
+    return await card_out(authed, await Receivables(authed).confirm(id, payload, idempotency_key))
 
 
 @router.post(
@@ -173,7 +173,7 @@ async def confirm_payment(
 async def attach_proof(id: InvoiceId, request: Request, authed: Writer) -> PaymentCard:
     content_type = _multipart(request)
     body = await _read_limited(request)
-    return card_of(await Receivables(authed).attach_proof(id, body, content_type))
+    return await card_out(authed, await Receivables(authed).attach_proof(id, body, content_type))
 
 
 @router.get(
@@ -201,7 +201,7 @@ async def download_proof(id: InvoiceId, proof_id: ProofId, authed: Reader) -> Re
 
 @router.post("/payments/{id}/issue", response_model=PaymentCard, operation_id="issuePayment")
 async def issue_payment(id: InvoiceId, authed: Writer) -> PaymentCard:
-    return card_of(await Receivables(authed).issue(id))
+    return await card_out(authed, await Receivables(authed).issue(id))
 
 
 @router.post(
@@ -210,4 +210,4 @@ async def issue_payment(id: InvoiceId, authed: Writer) -> PaymentCard:
     operation_id="requestPaymentDoc",
 )
 async def request_payment_doc(id: InvoiceId, authed: Writer) -> PaymentCard:
-    return card_of(await Receivables(authed).request_doc(id))
+    return await card_out(authed, await Receivables(authed).request_doc(id))

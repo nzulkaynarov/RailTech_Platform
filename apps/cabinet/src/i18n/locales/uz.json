@@ -1013,6 +1013,19 @@
           "latin": "Faqat lotin harflari, raqamlar va / - ? : ( ) . , ' +",
           "server": "Qiymat qabul qilinmadi — maydonni tekşiring"
         }
+      },
+      "logo": {
+        "input": "Logotip fayli",
+        "choose": "Logotip yuklaş",
+        "change": "Logotipni almaştiriş",
+        "remove": "Logotipni olib taşlaş",
+        "hint": "PNG, JPEG yoki WebP, 2 MB gaça; logotip markazdan kvadratga kesiladi.",
+        "errors": {
+          "FILE_TYPE_NOT_ALLOWED": "PNG, JPEG yoki WebP rasm kerak.",
+          "FILE_CONTENT_MISMATCH": "Fayl turi mazmuniga mos kelmaydi. Boşqa rasm tanlang.",
+          "FILE_TOO_LARGE": "Fayl 2 MB dan katta. Kiçikroq fayl tanlang.",
+          "ADMIN_REQUIRED": "Logotipni kompaniya administratori özgartiradi."
+        }
       }
     },
     "becomePartner": {

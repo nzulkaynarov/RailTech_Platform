@@ -4,6 +4,8 @@ from django.conf import settings
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
+from core.storage import contact_photo_path, get_private_storage
+
 
 def active_contact_q(prefix: str = "") -> models.Q:
     """«Контакт не в архиве» — единый предикат входа и списков Cabinet (как `active_company_q` для компании)."""
@@ -114,6 +116,14 @@ class Contact(models.Model):
             "Контакт удалён в CRM: запись и связи (сделки, коды акцепта, сопоставление) остаются как след, вход в Cabinet "
             "закрыт, права действовать нет"
         ),
+    )
+    photo = models.ImageField(
+        upload_to=contact_photo_path,
+        storage=get_private_storage,
+        null=True,
+        blank=True,
+        verbose_name=_("Фото"),
+        help_text=_("Фото контакта: квадрат WebP, наружу только через API с версией"),
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

@@ -64,6 +64,7 @@ async def test_people_of_clients_and_partners(web: Web, be: Any, check: Contract
         "is_primary": True,
         "company": {"id": "7", "name": "ООО Клиент Юг"},
         "kind": "client",
+        "photo_url": None,
     }
     assert (second["position"], second["kind"]) == (None, "partner")
     assert dict(route.calls.last.request.url.params) == {"page": "1", "page_size": "100"}

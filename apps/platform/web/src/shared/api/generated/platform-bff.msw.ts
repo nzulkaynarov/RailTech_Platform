@@ -167,6 +167,7 @@ import type {
   CompanyBankAccount,
   CompanyBankAccountList,
   CompanyProfile,
+  ContactPhoto,
   ContractTemplate,
   ContractTemplateList,
   ConversationCard,
@@ -4031,6 +4032,11 @@ export const getListEdsProjectsResponseMock = (
     request_number: faker.string.alpha({ length: { min: 10, max: 20 } }),
     title: faker.string.alpha({ length: { min: 10, max: 20 } }),
     client_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    client_id: faker.helpers.arrayElement([faker.number.int(), null]),
+    client_logo_url: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
     step: faker.helpers.arrayElement(["CONTRACT", "PAYMENT", "DONE"] as const),
     client_status: faker.helpers.arrayElement([
       "contract_review",
@@ -4448,6 +4454,11 @@ export const getGetEdsProjectResponseMock = (
   request_number: faker.string.alpha({ length: { min: 10, max: 20 } }),
   title: faker.string.alpha({ length: { min: 10, max: 20 } }),
   client_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  client_id: faker.helpers.arrayElement([faker.number.int(), null]),
+  client_logo_url: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
   step: faker.helpers.arrayElement(["CONTRACT", "PAYMENT", "DONE"] as const),
   client_status: faker.helpers.arrayElement([
     "contract_review",
@@ -4940,6 +4951,11 @@ export const getCreateEdsProjectContractResponseMock = (
   request_number: faker.string.alpha({ length: { min: 10, max: 20 } }),
   title: faker.string.alpha({ length: { min: 10, max: 20 } }),
   client_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  client_id: faker.helpers.arrayElement([faker.number.int(), null]),
+  client_logo_url: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
   step: faker.helpers.arrayElement(["CONTRACT", "PAYMENT", "DONE"] as const),
   client_status: faker.helpers.arrayElement([
     "contract_review",
@@ -5459,6 +5475,11 @@ export const getActEdsProjectContractResponseMock = (
   request_number: faker.string.alpha({ length: { min: 10, max: 20 } }),
   title: faker.string.alpha({ length: { min: 10, max: 20 } }),
   client_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  client_id: faker.helpers.arrayElement([faker.number.int(), null]),
+  client_logo_url: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
   step: faker.helpers.arrayElement(["CONTRACT", "PAYMENT", "DONE"] as const),
   client_status: faker.helpers.arrayElement([
     "contract_review",
@@ -5975,6 +5996,11 @@ export const getScanEdsProjectContractResponseMock = (
   request_number: faker.string.alpha({ length: { min: 10, max: 20 } }),
   title: faker.string.alpha({ length: { min: 10, max: 20 } }),
   client_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  client_id: faker.helpers.arrayElement([faker.number.int(), null]),
+  client_logo_url: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
   step: faker.helpers.arrayElement(["CONTRACT", "PAYMENT", "DONE"] as const),
   client_status: faker.helpers.arrayElement([
     "contract_review",
@@ -6491,6 +6517,11 @@ export const getRequestEdsProjectSigningResponseMock = (
   request_number: faker.string.alpha({ length: { min: 10, max: 20 } }),
   title: faker.string.alpha({ length: { min: 10, max: 20 } }),
   client_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  client_id: faker.helpers.arrayElement([faker.number.int(), null]),
+  client_logo_url: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
   step: faker.helpers.arrayElement(["CONTRACT", "PAYMENT", "DONE"] as const),
   client_status: faker.helpers.arrayElement([
     "contract_review",
@@ -7027,6 +7058,11 @@ export const getActEdsProjectActResponseMock = (
   request_number: faker.string.alpha({ length: { min: 10, max: 20 } }),
   title: faker.string.alpha({ length: { min: 10, max: 20 } }),
   client_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  client_id: faker.helpers.arrayElement([faker.number.int(), null]),
+  client_logo_url: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
   step: faker.helpers.arrayElement(["CONTRACT", "PAYMENT", "DONE"] as const),
   client_status: faker.helpers.arrayElement([
     "contract_review",
@@ -7534,6 +7570,11 @@ export const getScanEdsProjectActResponseMock = (
   request_number: faker.string.alpha({ length: { min: 10, max: 20 } }),
   title: faker.string.alpha({ length: { min: 10, max: 20 } }),
   client_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  client_id: faker.helpers.arrayElement([faker.number.int(), null]),
+  client_logo_url: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
   step: faker.helpers.arrayElement(["CONTRACT", "PAYMENT", "DONE"] as const),
   client_status: faker.helpers.arrayElement([
     "contract_review",
@@ -8041,6 +8082,11 @@ export const getMarkEdsProjectDeliveryResponseMock = (
   request_number: faker.string.alpha({ length: { min: 10, max: 20 } }),
   title: faker.string.alpha({ length: { min: 10, max: 20 } }),
   client_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  client_id: faker.helpers.arrayElement([faker.number.int(), null]),
+  client_logo_url: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
   step: faker.helpers.arrayElement(["CONTRACT", "PAYMENT", "DONE"] as const),
   client_status: faker.helpers.arrayElement([
     "contract_review",
@@ -13006,6 +13052,11 @@ export const getListPaymentsResponseMock = (
     project_number: faker.string.alpha({ length: { min: 10, max: 20 } }),
     deal_id: faker.number.int(),
     client_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    client_id: faker.helpers.arrayElement([faker.number.int(), null]),
+    client_logo_url: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
     amount: {
       amount: faker.helpers.fromRegExp("^-?\\d+\\.\\d{2}$"),
       currency: faker.helpers.fromRegExp("^[A-Z]{3}$"),
@@ -13397,6 +13448,11 @@ export const getGetPaymentResponseMock = (
   project_number: faker.string.alpha({ length: { min: 10, max: 20 } }),
   deal_id: faker.number.int(),
   client_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  client_id: faker.helpers.arrayElement([faker.number.int(), null]),
+  client_logo_url: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
   amount: {
     amount: faker.helpers.fromRegExp("^-?\\d+\\.\\d{2}$"),
     currency: faker.helpers.fromRegExp("^[A-Z]{3}$"),
@@ -13496,6 +13552,11 @@ export const getConfirmPaymentResponseMock = (
   project_number: faker.string.alpha({ length: { min: 10, max: 20 } }),
   deal_id: faker.number.int(),
   client_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  client_id: faker.helpers.arrayElement([faker.number.int(), null]),
+  client_logo_url: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
   amount: {
     amount: faker.helpers.fromRegExp("^-?\\d+\\.\\d{2}$"),
     currency: faker.helpers.fromRegExp("^[A-Z]{3}$"),
@@ -13595,6 +13656,11 @@ export const getAttachPaymentProofResponseMock = (
   project_number: faker.string.alpha({ length: { min: 10, max: 20 } }),
   deal_id: faker.number.int(),
   client_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  client_id: faker.helpers.arrayElement([faker.number.int(), null]),
+  client_logo_url: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
   amount: {
     amount: faker.helpers.fromRegExp("^-?\\d+\\.\\d{2}$"),
     currency: faker.helpers.fromRegExp("^[A-Z]{3}$"),
@@ -13697,6 +13763,11 @@ export const getRequestPaymentDocResponseMock = (
   project_number: faker.string.alpha({ length: { min: 10, max: 20 } }),
   deal_id: faker.number.int(),
   client_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  client_id: faker.helpers.arrayElement([faker.number.int(), null]),
+  client_logo_url: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
   amount: {
     amount: faker.helpers.fromRegExp("^-?\\d+\\.\\d{2}$"),
     currency: faker.helpers.fromRegExp("^[A-Z]{3}$"),
@@ -13796,6 +13867,11 @@ export const getIssuePaymentResponseMock = (
   project_number: faker.string.alpha({ length: { min: 10, max: 20 } }),
   deal_id: faker.number.int(),
   client_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  client_id: faker.helpers.arrayElement([faker.number.int(), null]),
+  client_logo_url: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
   amount: {
     amount: faker.helpers.fromRegExp("^-?\\d+\\.\\d{2}$"),
     currency: faker.helpers.fromRegExp("^[A-Z]{3}$"),
@@ -16415,6 +16491,10 @@ export const getListEmployeesResponseMock = (
       faker.string.alpha({ length: { min: 10, max: 20 } }),
       undefined,
     ]),
+    avatar_url: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      undefined,
+    ]),
   })),
   ...overrideResponse,
 });
@@ -16447,6 +16527,10 @@ export const getCreateEmployeeResponseMock = (
     telegram_linked: faker.datatype.boolean(),
     erp_sync: faker.helpers.arrayElement(Object.values(ErpSyncState)),
     erp_sync_error: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      undefined,
+    ]),
+    avatar_url: faker.helpers.arrayElement([
       faker.string.alpha({ length: { min: 10, max: 20 } }),
       undefined,
     ]),
@@ -16483,6 +16567,10 @@ export const getInviteEmployeeResponseMock = (
     faker.string.alpha({ length: { min: 10, max: 20 } }),
     undefined,
   ]),
+  avatar_url: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
   ...overrideResponse,
 });
 
@@ -16514,6 +16602,10 @@ export const getResendInviteResponseMock = (
     faker.string.alpha({ length: { min: 10, max: 20 } }),
     undefined,
   ]),
+  avatar_url: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
   ...overrideResponse,
 });
 
@@ -16542,6 +16634,10 @@ export const getRetryEmployeeErpSyncResponseMock = (
   telegram_linked: faker.datatype.boolean(),
   erp_sync: faker.helpers.arrayElement(Object.values(ErpSyncState)),
   erp_sync_error: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
+  avatar_url: faker.helpers.arrayElement([
     faker.string.alpha({ length: { min: 10, max: 20 } }),
     undefined,
   ]),
@@ -16579,6 +16675,10 @@ export const getIssueTemporaryPasswordResponseMock = (
       faker.string.alpha({ length: { min: 10, max: 20 } }),
       undefined,
     ]),
+    avatar_url: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      undefined,
+    ]),
   },
   temporary_password: faker.string.alpha({ length: { min: 1, max: 20 } }),
   ...overrideResponse,
@@ -16612,6 +16712,10 @@ export const getGetEmployeeResponseMock = (
     faker.string.alpha({ length: { min: 10, max: 20 } }),
     undefined,
   ]),
+  avatar_url: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
   ...overrideResponse,
 });
 
@@ -16640,6 +16744,10 @@ export const getUpdateEmployeeResponseMock = (
   telegram_linked: faker.datatype.boolean(),
   erp_sync: faker.helpers.arrayElement(Object.values(ErpSyncState)),
   erp_sync_error: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
+  avatar_url: faker.helpers.arrayElement([
     faker.string.alpha({ length: { min: 10, max: 20 } }),
     undefined,
   ]),
@@ -18846,6 +18954,11 @@ export const getListLettersResponseMock = (
     number: faker.string.alpha({ length: { min: 10, max: 20 } }),
     subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
     client_name: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    client_id: faker.helpers.arrayElement([faker.number.int(), null]),
+    client_logo_url: faker.helpers.arrayElement([
       faker.string.alpha({ length: { min: 10, max: 20 } }),
       null,
     ]),
@@ -34933,6 +35046,10 @@ export const getListCrmClientsResponseMock = (
       null,
     ]),
     do_not_work: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
+    logo_url: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
   })),
   ...overrideResponse,
 });
@@ -37585,6 +37702,10 @@ export const getListCounterpartyPeopleResponseMock = (
       name: faker.string.alpha({ length: { min: 10, max: 20 } }),
     },
     kind: faker.helpers.arrayElement(["client", "partner"] as const),
+    photo_url: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
   })),
   total: faker.number.int({ min: 0 }),
   page: faker.number.int({ min: 1 }),
@@ -37630,6 +37751,10 @@ export const getSearchCounterpartiesResponseMock = (
     },
     crm_client_id: faker.helpers.arrayElement([faker.number.int(), null]),
     email: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    logo_url: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
   })),
   ...overrideResponse,
 });
@@ -37650,6 +37775,10 @@ export const getCreateCounterpartyResponseMock = (
   },
   crm_client_id: faker.helpers.arrayElement([faker.number.int(), null]),
   email: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  logo_url: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
   ...overrideResponse,
 });
 
@@ -37665,6 +37794,10 @@ export const getListCounterpartyPickerPeopleResponseMock = (
     ]),
     email: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
     is_primary: faker.datatype.boolean(),
+    photo_url: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
   })),
   ...overrideResponse,
 });
@@ -37700,6 +37833,10 @@ export const getGetCounterpartyResponseMock = (
     null,
   ]),
   crm_client_id: faker.helpers.arrayElement([faker.number.int(), null]),
+  logo_url: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
   roles: {
     client: faker.datatype.boolean(),
     supplier: faker.datatype.boolean(),
@@ -37719,6 +37856,10 @@ export const getGetCounterpartyResponseMock = (
       has_cabinet: faker.datatype.boolean(),
       has_phone: faker.datatype.boolean(),
       has_email: faker.datatype.boolean(),
+      photo_url: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
     }),
   ),
   bank_accounts: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
@@ -37781,6 +37922,10 @@ export const getUpdateCounterpartyRequisitesResponseMock = (
     null,
   ]),
   crm_client_id: faker.helpers.arrayElement([faker.number.int(), null]),
+  logo_url: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
   roles: {
     client: faker.datatype.boolean(),
     supplier: faker.datatype.boolean(),
@@ -37800,6 +37945,10 @@ export const getUpdateCounterpartyRequisitesResponseMock = (
       has_cabinet: faker.datatype.boolean(),
       has_phone: faker.datatype.boolean(),
       has_email: faker.datatype.boolean(),
+      photo_url: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
     }),
   ),
   bank_accounts: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
@@ -37829,6 +37978,218 @@ export const getUpdateCounterpartyRequisitesResponseMock = (
   ),
   do_not_work: faker.helpers.arrayElement([
     { ...getUpdateCounterpartyRequisitesResponseDoNotWorkMock() },
+    null,
+  ]),
+  ...overrideResponse,
+});
+
+export const getGetCounterpartyLogoResponseMock = (): Blob =>
+  new Blob([new Uint8Array(faker.number.int({ min: 1, max: 64 }))]);
+
+export const getUploadCounterpartyLogoResponseDoNotWorkMock = (
+  overrideResponse: Partial<DoNotWork> = {},
+): DoNotWork => ({
+  ...{
+    reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    set_by: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    set_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  },
+  ...overrideResponse,
+});
+
+export const getUploadCounterpartyLogoResponseMock = (
+  overrideResponse: Partial<Extract<CounterpartyCard, object>> = {},
+): CounterpartyCard => ({
+  id: faker.helpers.fromRegExp("^[0-9]+$"),
+  name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  inn: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  registration_number: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  country: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  legal_address: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  crm_client_id: faker.helpers.arrayElement([faker.number.int(), null]),
+  logo_url: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  roles: {
+    client: faker.datatype.boolean(),
+    supplier: faker.datatype.boolean(),
+    manufacturer: faker.datatype.boolean(),
+    partner: faker.datatype.boolean(),
+    organization: faker.datatype.boolean(),
+  },
+  people: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.helpers.fromRegExp("^[0-9]+$"),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      position: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      is_primary: faker.datatype.boolean(),
+      has_cabinet: faker.datatype.boolean(),
+      has_phone: faker.datatype.boolean(),
+      has_email: faker.datatype.boolean(),
+      photo_url: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+    }),
+  ),
+  bank_accounts: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.helpers.fromRegExp("^[0-9]+$"),
+      currency: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      bank_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      bank_country: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      account: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      mfo: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      swift: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      is_default: faker.datatype.boolean(),
+    }),
+  ),
+  accounts_masked: faker.datatype.boolean(),
+  brands: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.helpers.fromRegExp("^[0-9]+$"),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    }),
+  ),
+  do_not_work: faker.helpers.arrayElement([
+    { ...getUploadCounterpartyLogoResponseDoNotWorkMock() },
+    null,
+  ]),
+  ...overrideResponse,
+});
+
+export const getDeleteCounterpartyLogoResponseDoNotWorkMock = (
+  overrideResponse: Partial<DoNotWork> = {},
+): DoNotWork => ({
+  ...{
+    reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    set_by: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    set_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  },
+  ...overrideResponse,
+});
+
+export const getDeleteCounterpartyLogoResponseMock = (
+  overrideResponse: Partial<Extract<CounterpartyCard, object>> = {},
+): CounterpartyCard => ({
+  id: faker.helpers.fromRegExp("^[0-9]+$"),
+  name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  inn: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  registration_number: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  country: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  legal_address: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  crm_client_id: faker.helpers.arrayElement([faker.number.int(), null]),
+  logo_url: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  roles: {
+    client: faker.datatype.boolean(),
+    supplier: faker.datatype.boolean(),
+    manufacturer: faker.datatype.boolean(),
+    partner: faker.datatype.boolean(),
+    organization: faker.datatype.boolean(),
+  },
+  people: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.helpers.fromRegExp("^[0-9]+$"),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      position: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      is_primary: faker.datatype.boolean(),
+      has_cabinet: faker.datatype.boolean(),
+      has_phone: faker.datatype.boolean(),
+      has_email: faker.datatype.boolean(),
+      photo_url: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+    }),
+  ),
+  bank_accounts: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.helpers.fromRegExp("^[0-9]+$"),
+      currency: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      bank_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      bank_country: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      account: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      mfo: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      swift: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      is_default: faker.datatype.boolean(),
+    }),
+  ),
+  accounts_masked: faker.datatype.boolean(),
+  brands: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.helpers.fromRegExp("^[0-9]+$"),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    }),
+  ),
+  do_not_work: faker.helpers.arrayElement([
+    { ...getDeleteCounterpartyLogoResponseDoNotWorkMock() },
+    null,
+  ]),
+  ...overrideResponse,
+});
+
+export const getGetContactPhotoResponseMock = (): Blob =>
+  new Blob([new Uint8Array(faker.number.int({ min: 1, max: 64 }))]);
+
+export const getUploadContactPhotoResponseMock = (
+  overrideResponse: Partial<Extract<ContactPhoto, object>> = {},
+): ContactPhoto => ({
+  id: faker.helpers.fromRegExp("^[0-9]+$"),
+  photo_url: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  ...overrideResponse,
+});
+
+export const getDeleteContactPhotoResponseMock = (
+  overrideResponse: Partial<Extract<ContactPhoto, object>> = {},
+): ContactPhoto => ({
+  id: faker.helpers.fromRegExp("^[0-9]+$"),
+  photo_url: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
     null,
   ]),
   ...overrideResponse,
@@ -37865,6 +38226,10 @@ export const getGetCounterpartyByClientResponseMock = (
     null,
   ]),
   crm_client_id: faker.helpers.arrayElement([faker.number.int(), null]),
+  logo_url: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
   roles: {
     client: faker.datatype.boolean(),
     supplier: faker.datatype.boolean(),
@@ -37884,6 +38249,10 @@ export const getGetCounterpartyByClientResponseMock = (
       has_cabinet: faker.datatype.boolean(),
       has_phone: faker.datatype.boolean(),
       has_email: faker.datatype.boolean(),
+      photo_url: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
     }),
   ),
   bank_accounts: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
@@ -37949,6 +38318,10 @@ export const getSetCounterpartyDoNotWorkResponseMock = (
     null,
   ]),
   crm_client_id: faker.helpers.arrayElement([faker.number.int(), null]),
+  logo_url: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
   roles: {
     client: faker.datatype.boolean(),
     supplier: faker.datatype.boolean(),
@@ -37968,6 +38341,10 @@ export const getSetCounterpartyDoNotWorkResponseMock = (
       has_cabinet: faker.datatype.boolean(),
       has_phone: faker.datatype.boolean(),
       has_email: faker.datatype.boolean(),
+      photo_url: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
     }),
   ),
   bank_accounts: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
@@ -38033,6 +38410,10 @@ export const getClearCounterpartyDoNotWorkResponseMock = (
     null,
   ]),
   crm_client_id: faker.helpers.arrayElement([faker.number.int(), null]),
+  logo_url: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
   roles: {
     client: faker.datatype.boolean(),
     supplier: faker.datatype.boolean(),
@@ -38052,6 +38433,10 @@ export const getClearCounterpartyDoNotWorkResponseMock = (
       has_cabinet: faker.datatype.boolean(),
       has_phone: faker.datatype.boolean(),
       has_email: faker.datatype.boolean(),
+      photo_url: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
     }),
   ),
   bank_accounts: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
@@ -38117,6 +38502,10 @@ export const getSetCounterpartyRoleResponseMock = (
     null,
   ]),
   crm_client_id: faker.helpers.arrayElement([faker.number.int(), null]),
+  logo_url: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
   roles: {
     client: faker.datatype.boolean(),
     supplier: faker.datatype.boolean(),
@@ -38136,6 +38525,10 @@ export const getSetCounterpartyRoleResponseMock = (
       has_cabinet: faker.datatype.boolean(),
       has_phone: faker.datatype.boolean(),
       has_email: faker.datatype.boolean(),
+      photo_url: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
     }),
   ),
   bank_accounts: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
@@ -51066,6 +51459,148 @@ export const getUpdateCounterpartyRequisitesMockHandler = (
   );
 };
 
+export const getGetCounterpartyLogoMockHandler = (
+  overrideResponse?:
+    Blob | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<Blob> | Blob),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/people/counterparties/:id/logo",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      const binaryBody =
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetCounterpartyLogoResponseMock();
+      return new HttpResponse(binaryBody, {
+        status: 200,
+        headers: { "Content-Type": "image/webp" },
+      });
+    },
+    options,
+  );
+};
+
+export const getUploadCounterpartyLogoMockHandler = (
+  overrideResponse?:
+    | CounterpartyCard
+    | ((
+        info: Parameters<Parameters<typeof http.put>[1]>[0],
+      ) => Promise<CounterpartyCard> | CounterpartyCard),
+  options?: RequestHandlerOptions,
+) => {
+  return http.put(
+    "*/people/counterparties/:id/logo",
+    async (info: Parameters<Parameters<typeof http.put>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getUploadCounterpartyLogoResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getDeleteCounterpartyLogoMockHandler = (
+  overrideResponse?:
+    | CounterpartyCard
+    | ((
+        info: Parameters<Parameters<typeof http.delete>[1]>[0],
+      ) => Promise<CounterpartyCard> | CounterpartyCard),
+  options?: RequestHandlerOptions,
+) => {
+  return http.delete(
+    "*/people/counterparties/:id/logo",
+    async (info: Parameters<Parameters<typeof http.delete>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getDeleteCounterpartyLogoResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getGetContactPhotoMockHandler = (
+  overrideResponse?:
+    Blob | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<Blob> | Blob),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/people/contacts/:id/photo",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      const binaryBody =
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetContactPhotoResponseMock();
+      return new HttpResponse(binaryBody, {
+        status: 200,
+        headers: { "Content-Type": "image/webp" },
+      });
+    },
+    options,
+  );
+};
+
+export const getUploadContactPhotoMockHandler = (
+  overrideResponse?:
+    | ContactPhoto
+    | ((
+        info: Parameters<Parameters<typeof http.put>[1]>[0],
+      ) => Promise<ContactPhoto> | ContactPhoto),
+  options?: RequestHandlerOptions,
+) => {
+  return http.put(
+    "*/people/contacts/:id/photo",
+    async (info: Parameters<Parameters<typeof http.put>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getUploadContactPhotoResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getDeleteContactPhotoMockHandler = (
+  overrideResponse?:
+    | ContactPhoto
+    | ((
+        info: Parameters<Parameters<typeof http.delete>[1]>[0],
+      ) => Promise<ContactPhoto> | ContactPhoto),
+  options?: RequestHandlerOptions,
+) => {
+  return http.delete(
+    "*/people/contacts/:id/photo",
+    async (info: Parameters<Parameters<typeof http.delete>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getDeleteContactPhotoResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
 export const getGetCounterpartyByClientMockHandler = (
   overrideResponse?:
     | CounterpartyCard
@@ -52663,6 +53198,12 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getListCounterpartyPickerPeopleMockHandler(),
   getGetCounterpartyMockHandler(),
   getUpdateCounterpartyRequisitesMockHandler(),
+  getGetCounterpartyLogoMockHandler(),
+  getUploadCounterpartyLogoMockHandler(),
+  getDeleteCounterpartyLogoMockHandler(),
+  getGetContactPhotoMockHandler(),
+  getUploadContactPhotoMockHandler(),
+  getDeleteContactPhotoMockHandler(),
   getGetCounterpartyByClientMockHandler(),
   getSetCounterpartyDoNotWorkMockHandler(),
   getClearCounterpartyDoNotWorkMockHandler(),

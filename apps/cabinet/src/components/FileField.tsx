@@ -110,3 +110,44 @@ export function FileField({
     </div>
   );
 }
+
+/**
+ * Кнопка выбора файла без списка выбранного — для действий «загрузить сразу» (логотип компании): системное поле скрыто,
+ * кнопка открывает диалог, выбранный файл уходит в `onPick` без автозагрузки. Тот же файл можно выбрать ещё раз.
+ */
+export function FilePickerButton({
+  accept,
+  label,
+  inputLabel,
+  disabled,
+  onPick,
+}: {
+  accept?: string;
+  label: string;
+  inputLabel: string;
+  disabled?: boolean;
+  onPick: (file: File) => void;
+}) {
+  const input = useRef<HTMLInputElement>(null);
+  return (
+    <>
+      <input
+        ref={input}
+        type="file"
+        className="sr-only"
+        tabIndex={-1}
+        accept={accept}
+        aria-label={inputLabel}
+        disabled={disabled}
+        onChange={(event) => {
+          const file = event.target.files?.[0];
+          event.target.value = '';
+          if (file) onPick(file);
+        }}
+      />
+      <Button type="button" variant="outline" size="sm" disabled={disabled} onClick={() => input.current?.click()}>
+        {label}
+      </Button>
+    </>
+  );
+}

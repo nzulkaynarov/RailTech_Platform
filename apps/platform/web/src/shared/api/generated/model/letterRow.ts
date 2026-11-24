@@ -17,6 +17,16 @@ export interface LetterRow {
    */
   client_name: string | null;
   /**
+   * Компания письма в ERP (из связей письма); null — письмо с ней не связано
+   * @nullable
+   */
+  client_id?: number | null;
+  /**
+   * Логотип компании клиента: наш адрес с `?v=<версия>` (ЕД-3, ЕД-5), только если у сотрудника есть раздел `crm.clients`, `erp.stock`, `eds.projects`, `eds.payments` или `eds.inbox` (те же, что открывают картинку); null — буквы названия
+   * @nullable
+   */
+  client_logo_url?: string | null;
+  /**
    * Бизнес-номер заявки ЗВ из связей письма; `null` — письмо ещё не связано с заявкой
    * @nullable
    */

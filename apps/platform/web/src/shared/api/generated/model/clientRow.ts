@@ -19,4 +19,9 @@ export interface ClientRow {
   handoff_status: ClientRowHandoffStatus;
   /** Х-8: у компании действует отметка «Не работать» (фильтр «Не работаем») */
   do_not_work?: boolean;
+  /**
+   * Логотип компании: адрес на BFF с `?v=<версия>` (ЕД-5); null — буквы названия
+   * @nullable
+   */
+  logo_url?: string | null;
 }
