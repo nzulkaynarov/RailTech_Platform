@@ -576,3 +576,82 @@ msgstr "Loyiha:"
 
 msgid "Подписано"
 msgstr "Imzolandi"
+
+# ── ДК-5: письмо партнёру, PDF запроса и заказа ──
+msgid "Заказ поставщику № %(number)s"
+msgstr "Buyurtma № %(number)s (yetkazib beruvchiga)"
+
+msgid "Запрос цены: %(number)s"
+msgstr "Narx sörovi: %(number)s"
+
+msgid "Заказ № %(number)s"
+msgstr "Buyurtma № %(number)s"
+
+msgid "от %(buyer_name)s"
+msgstr "%(buyer_name)s tomonidan"
+
+msgid "Заказ поставщику"
+msgstr "Yetkazib beruvchiga buyurtma"
+
+msgid "Запрос цены"
+msgstr "Narx sörovi"
+
+msgid "Компания <strong>%(buyer_name)s</strong> направила заказ <strong>№ %(number)s</strong>. Подтвердите его и срок поставки."
+msgstr "<strong>%(buyer_name)s</strong> kompaniyasi <strong>№ %(number)s</strong> buyurtmani yubordi. Uni va yetkazib beriş muddatini tasdiqlang."
+
+msgid "Вам направлен заказ <strong>№ %(number)s</strong>. Подтвердите его и срок поставки."
+msgstr "Sizga <strong>№ %(number)s</strong> buyurtma yuborildi. Uni va yetkazib beriş muddatini tasdiqlang."
+
+msgid "Компания <strong>%(buyer_name)s</strong> просит назвать цену и срок поставки: <strong>%(number)s</strong>."
+msgstr "<strong>%(buyer_name)s</strong> kompaniyasi narx va yetkazib beriş muddatini sörayapti: <strong>%(number)s</strong>."
+
+msgid "Просим назвать цену и срок поставки: <strong>%(number)s</strong>."
+msgstr "Narx va yetkazib beriş muddatini ayting: <strong>%(number)s</strong>."
+
+msgid "Компания %(buyer_name)s направила заказ № %(number)s. Подтвердите его и срок поставки."
+msgstr "%(buyer_name)s kompaniyasi № %(number)s buyurtmani yubordi. Uni va yetkazib beriş muddatini tasdiqlang."
+
+msgid "Вам направлен заказ № %(number)s. Подтвердите его и срок поставки."
+msgstr "Sizga № %(number)s buyurtma yuborildi. Uni va yetkazib beriş muddatini tasdiqlang."
+
+msgid "Компания %(buyer_name)s просит назвать цену и срок поставки: %(number)s."
+msgstr "%(buyer_name)s kompaniyasi narx va yetkazib beriş muddatini sörayapti: %(number)s."
+
+msgid "Просим назвать цену и срок поставки: %(number)s."
+msgstr "Narx va yetkazib beriş muddatini ayting: %(number)s."
+
+msgid "Ожидаемая дата поставки:"
+msgstr "Kutilayotgan yetkazib beriş sanasi:"
+
+msgid "Открыть заказ"
+msgstr "Buyurtmani oçiş"
+
+msgid "Ответить на запрос"
+msgstr "Sörovga javob beriş"
+
+msgid "Открыть заказ:"
+msgstr "Buyurtmani oçiş:"
+
+msgid "Ответить на запрос:"
+msgstr "Sörovga javob beriş:"
+
+msgid "Ответить на запрос можно в личном кабинете партнёра."
+msgstr "Sörovga hamkorning shaxsiy kabinetida javob berişingiz mumkin."
+
+msgid "От кого:"
+msgstr "Kimdan:"
+
+msgid "Кому:"
+msgstr "Kimga:"
+
+msgid "Дата:"
+msgstr "Sana:"
+
+msgid "Сумма"
+msgstr "Summa"
+
+msgid "Итого:"
+msgstr "Jami:"
+
+msgid "Просим сообщить цену, срок поставки и условия по каждой позиции."
+msgstr "Har bir pozitsiya böyiça narx, yetkazib beriş muddati va şartlarini maʼlum qiling."

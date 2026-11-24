@@ -768,6 +768,11 @@ export interface paths {
      *     `VALIDATION_ERROR`, ссылка одного вида не действует над документом другого. Модуль кабинета — вида документа
      *     (`contracts`, `acts`, `quotes`), иначе 403 `MODULE_REQUIRED`. Договор или акт уже решён — 409 `CONTRACT_FINALIZED`,
      *     `ACT_FINALIZED`. Ответ — документ в том же виде, что у `POST /doc-links/open`.
+     *     ДК-5: у запроса цены партнёра — `answer` (`text` — комментарий, обязателен; `prices` — цена и срок по строкам запроса,
+     *     `currency` — код валюты цен, `valid_until` — срок цены; ответ один — повтор 409 `ALREADY_ANSWERED`), у заказа
+     *     поставщику — `confirm` (`expected_date` — дата поставки партнёра, если в заказе её нет; заказ уже не `sent` — 409
+     *     `TRANSITION_NOT_ALLOWED`). Модуль — `my_products`; право действовать — у контакта, как в кабинете партнёра. «Подтверждён»
+     *     ставит только этот вызов партнёрского контакта, сотрудник за партнёра с кабинетом статус не ставит.
      */
     post: operations["actOnDocLink"];
     delete?: never;
@@ -3018,7 +3023,7 @@ export interface components {
      *     счёт, акт); у договора, счёта и акта `version` равен 1, `lines` пуст, а факты вида — в необязательных полях ниже.
      */
     DocLinkView: {
-      /** @description Вид документа — `quote`, `contract`, `invoice` или `act` (список открыт — новые виды добавляются без смены версии) */
+      /** @description Вид документа — `quote`, `contract`, `invoice`, `act`, `price_request` или `supplier_order` (список открыт — новые виды добавляются без смены версии) */
       kind: string;
       number: string;
       version: number;
@@ -3032,7 +3037,8 @@ export interface components {
       /** Format: date */
       valid_until: string | null;
       /**
-       * @description Значения — `open`, `accepted`, `rejected`, `expired`, `paid`. Из фактов документа, а не из ссылки. `open` — ждёт ответа (у счёта — оплаты); `accepted` — принят (договор подписан
+       * @description Значения — `open`, `accepted`, `rejected`, `expired`, `paid`; у документов партнёра (ДК-5) — `answered` (ответ на запрос цены
+       *     дан), `confirmed` (заказ подтверждён партнёром), `cancelled` (заказ отменён). Из фактов документа, а не из ссылки. `open` — ждёт ответа (у счёта — оплаты); `accepted` — принят (договор подписан
        *     клиентом, акт принят); `rejected` — возвращён с замечаниями; `paid` — счёт оплачен
        */
       state: string;
@@ -3056,7 +3062,31 @@ export interface components {
        * @description Какие действия есть у этого вида документа (ДК-3): КП — принять, вернуть, вопрос; договор — принять (подписать);
        *     акт — принять, вернуть; счёт — ни одного. Действие вне списка — 422 `VALIDATION_ERROR`. Нет поля — как у КП
        */
-      actions?: ("accept" | "reject" | "question")[];
+      actions?: ("accept" | "reject" | "question" | "answer" | "confirm")[];
+      /**
+       * @description ДК-5, запрос цены и заказ поставщику: строки глазами партнёра — его же цены и сроки. Клиента заявки, номера проекта,
+       *     нашей цены продажи и наценки здесь нет; `lines` у таких документов пуст.
+       */
+      partner_lines?: components["schemas"]["DocLinkPartnerLine"][];
+      /** @description ДК-5: комментарий партнёру (заказ) или текст запроса; внутренняя заметка сотрудников сюда не попадает */
+      partner_note?: string | null;
+      /**
+       * Format: date
+       * @description ДК-5, заказ поставщику: ожидаемая дата поставки
+       */
+      expected_date?: string | null;
+      /**
+       * Format: date-time
+       * @description ДК-5, заказ поставщику: когда подтвердил партнёр
+       */
+      confirmed_at?: string | null;
+      /**
+       * Format: date-time
+       * @description ДК-5, запрос цены: когда дан ответ
+       */
+      answered_at?: string | null;
+      /** @description ДК-5, запрос цены: комментарий ответа партнёра (пометку сотрудника «ответ получен» не показываем) */
+      answer_note?: string | null;
       /**
        * Format: date-time
        * @description Договор — когда его подписал клиент
@@ -3076,6 +3106,20 @@ export interface components {
       balance_due?: components["schemas"]["Money"];
       /** @description Счёт — реквизиты для оплаты, как в PDF; «Оплачено?» — справка, нового пути оплаты нет */
       payment_details?: string | null;
+    };
+    /** @description Строка запроса цены или заказа глазами партнёра (ДК-5): его позиция, количество, его цена и срок */
+    DocLinkPartnerLine: {
+      /** @description Строка запроса (для `prices` ответа) или заказа */
+      id: number;
+      position: number;
+      name: string;
+      article: string;
+      unit: string;
+      quantity: string;
+      unit_price?: components["schemas"]["Money"] | null;
+      total?: components["schemas"]["Money"] | null;
+      /** @description Срок поставки по строке, дней, — из ответа партнёра */
+      lead_days?: number | null;
     };
     /** @description Строка КП для клиента — цена продажи без себестоимости и наценки; `unit_price` и `total` без НДС (Q-FIX21-2) */
     QuoteLine: {
@@ -5294,8 +5338,28 @@ export interface operations {
         "application/json": {
           token: string;
           /** @enum {string} */
-          action: "accept" | "reject" | "question";
+          action: "accept" | "reject" | "question" | "answer" | "confirm";
           text?: string;
+          /** @description ДК-5, `answer`: цена и срок поставки по строкам запроса (только строки этого запроса) */
+          prices?: {
+            id: number;
+            /** @description Цена за единицу, десятичное число с точкой, > 0 */
+            unit_price: string;
+            /** @description Срок поставки по строке, дней */
+            lead_days?: number | null;
+          }[];
+          /** @description ДК-5, `answer`: валюта цен; обязательна, если есть `prices` */
+          currency?: string;
+          /**
+           * Format: date
+           * @description ДК-5, `answer`: до какой даты действуют цены
+           */
+          valid_until?: string | null;
+          /**
+           * Format: date
+           * @description ДК-5, `confirm`: дата поставки партнёра; нет — берётся дата заказа
+           */
+          expected_date?: string | null;
         };
       };
     };

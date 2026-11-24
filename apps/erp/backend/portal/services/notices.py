@@ -35,6 +35,7 @@ from parties.models import Contact, active_contact_q
 from core.currency import BASE_CURRENCY
 
 from ..models import NoticeChannel, NoticeEmailState, PortalNotice
+from . import partner_letters
 from .access import company_has_cabinet_access
 
 logger = logging.getLogger(__name__)
@@ -459,14 +460,23 @@ def deliver_email(notice_id: int) -> str:
             notice.save(update_fields=["email_state", "email_reason"])
             logger.info("portal notice #%s: письмо отменено (%s)", notice.pk, reason)
             return "cancelled"
-        log = send_templated_email(
-            "portal_notice",
-            email_context(notice),
-            to=[contact.email],
-            language=contact.language,
-            purpose=f"portal_notice.{notice.kind}",
-            fail_silently=True,  # сбой передачи — попытка строки, а не исключение: сборщик идёт дальше
-        )
+        if notice.kind in partner_letters.KIND_BY_NOTICE:
+            # ДК-5: запрос цены и заказ поставщику — письмо с PDF и личной ссылкой контакта, а не общее «откройте кабинет»
+            log = partner_letters.send_letter(notice)
+            if log is None:
+                notice.email_state = NoticeEmailState.CANCELLED
+                notice.email_reason = "no_document"
+                notice.save(update_fields=["email_state", "email_reason"])
+                return "cancelled"
+        else:
+            log = send_templated_email(
+                "portal_notice",
+                email_context(notice),
+                to=[contact.email],
+                language=contact.language,
+                purpose=f"portal_notice.{notice.kind}",
+                fail_silently=True,  # сбой передачи — попытка строки, а не исключение: сборщик идёт дальше
+            )
         if log is not None and log.status == EmailLog.STATUS_FAILED:
             return _attempt_failed(notice, log.error or "send_failed", now)
         notice.email_state = NoticeEmailState.SENT

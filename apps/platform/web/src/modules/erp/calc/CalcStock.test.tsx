@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import { pickCompany, searchCompany } from "../../../test/fields";
 import { server } from "../../../test/server";
 import { renderAt, setupCalcTests, signIn } from "../../../test/calcKit";
+import { confirmDialog } from "../../../test/confirmDialog";
 
 setupCalcTests();
 
@@ -117,6 +118,37 @@ describe("Расчёт · «Запросить цену у партнёра»", 
       ).not.toBeInTheDocument();
     });
     expect(within(log).getByText("Ответ получен")).toBeVisible();
+  });
+
+  it("ДК-5: под запросом — «Ссылка партнёра в Кабинете»; отзыв гасит её после одного подтверждения", async () => {
+    await openCalc("supply@demo.example");
+    fireEvent.click(screen.getByRole("button", { name: "Запросить цену у партнёра" }));
+    const modal = await screen.findByRole("region", { name: /^Запросить цену у партнёра/ });
+    await pickCompany(
+      within(modal).getByRole("combobox", { name: "Партнёр" }),
+      "Сталь",
+      "ООО «Вымышленная Сталь»",
+    );
+    fireEvent.click(within(modal).getByRole("button", { name: "Отправить запрос" }));
+    const log = await screen.findByRole("list", { name: "Запросы цены у партнёров" });
+
+    const block = (
+      await within(log).findByRole("heading", { name: "Ссылка партнёра в Кабинете" })
+    ).closest<HTMLElement>(".ant-card");
+    if (!block) throw new Error("нет блока ссылки партнёра");
+    expect(within(block).getByText("Получатель — d***@steel.example.")).toBeVisible();
+    expect(within(block).getByText("Партнёр ещё не открывал.")).toBeVisible();
+    expect(screen.queryByText(/Клиент ещё не открывал/)).toBeNull();
+
+    fireEvent.click(within(block).getByRole("button", { name: "Отозвать ссылку" }));
+    expect(
+      await screen.findByRole("dialog", { name: "Отозвать ссылку на запрос цены?" }),
+    ).toBeInTheDocument();
+    await confirmDialog();
+    expect(
+      await within(block).findByText(/Ссылка отозвана: партнёр по ней ничего не откроет/),
+    ).toBeVisible();
+    expect(within(block).queryByRole("button", { name: "Отозвать ссылку" })).toBeNull();
   });
 
   it("у партнёра нет почты: адрес для письма обязателен", async () => {

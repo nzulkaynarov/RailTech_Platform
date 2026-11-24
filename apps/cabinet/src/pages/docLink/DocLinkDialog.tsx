@@ -3,11 +3,12 @@ import { useTranslation } from 'react-i18next';
 import { RotateCw } from 'lucide-react';
 
 import { apiErrorKey } from '@/api/errors';
-import { isPortalApiError, type DocLinkAction, type DocLinkView, type Me } from '@/api/portal';
+import { isPortalApiError, type DocLinkAction, type DocLinkActExtra, type DocLinkView, type Me } from '@/api/portal';
 import { useRequestDocLinkCode, useVerifyDocLinkCode } from '@/api/queries';
 import { ActionDialog } from '@/components/ActionDialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { DateField } from '@/components/DateField';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -16,9 +17,11 @@ import { formatMoney } from '@/lib/format';
 import { codeDigits } from '@/pages/auth/loginCode';
 
 /** `verified` — действие подтверждено кодом (текст уже написан): после оферты оно продолжается без нового диалога. */
-export type DocLinkIntent = { action: DocLinkAction | 'open'; text?: string; verified?: boolean };
+export type DocLinkIntent = { action: DocLinkAction | 'open'; text?: string; extra?: DocLinkActExtra; verified?: boolean };
 
 const TEXT_MAX = 2000;
+const PRICE_RE = /^\d+(\.\d{1,2})?$/;
+const CURRENCY_RE = /^[A-Z]{3}$/;
 
 /** `0:45` — сколько ждать до повторной отправки. */
 function clock(seconds: number): string {
@@ -51,10 +54,10 @@ export function DocLinkDialog({
   pending: boolean;
   actionError: unknown;
   onClose: () => void;
-  /** Код принят: сессия открыта; текст возвращается, чтобы действие продолжилось. */
-  onSignedIn: (me: Me, text: string) => void;
+  /** Код принят: сессия открыта; текст и данные действия возвращаются, чтобы оно продолжилось. */
+  onSignedIn: (me: Me, text: string, extra: DocLinkActExtra) => void;
   /** Вошедший подтвердил действие. */
-  onConfirmed: (text: string) => void;
+  onConfirmed: (text: string, extra: DocLinkActExtra) => void;
 }) {
   const { t } = useTranslation();
   const codeId = useId();
@@ -70,7 +73,13 @@ export function DocLinkDialog({
   const requested = useRef(false);
   // Решается при открытии: код открывает сессию, а диалог не должен на лету превратиться в «подтверждение вошедшего»
   const [needsCode] = useState(() => !signedIn);
-  const needsText = intent.action === 'reject' || intent.action === 'question';
+  const needsText = intent.action === 'reject' || intent.action === 'question' || intent.action === 'answer';
+  // ДК-5: ответ партнёра на запрос цены — цена и срок по строкам; подтверждение заказа без даты в заказе — дата партнёра
+  const [prices, setPrices] = useState<Record<number, string>>({});
+  const [leads, setLeads] = useState<Record<number, string>>({});
+  const [currency, setCurrency] = useState('UZS');
+  const [expected, setExpected] = useState('');
+  const needsDate = intent.action === 'confirm' && !doc.expected_date;
 
   const sendCode = request.mutate;
   useEffect(() => {
@@ -103,26 +112,64 @@ export function DocLinkDialog({
     });
   };
 
+  /** Данные действия или текст ошибки: цены — только заполненные, валюта обязательна с ценами. */
+  const collect = (): { extra: DocLinkActExtra } | { problem: string } => {
+    if (intent.action === 'confirm') {
+      if (needsDate && !expected) return { problem: t('docLink.dialog.dateRequired') };
+      return { extra: needsDate ? { expected_date: expected } : {} };
+    }
+    if (intent.action !== 'answer') return { extra: {} };
+    const rows = (doc.partner_lines ?? [])
+      .map((line) => {
+        const price = (prices[line.id] ?? '').trim().replace(',', '.');
+        const lead = (leads[line.id] ?? '').trim();
+        return { id: line.id, price, lead };
+      })
+      .filter((row) => row.price !== '');
+    if (rows.some((row) => !PRICE_RE.test(row.price) || Number(row.price) <= 0)) {
+      return { problem: t('pages.partnerOrders.dialogs.priceInvalid') };
+    }
+    if (rows.some((row) => row.lead !== '' && (!/^\d{1,4}$/.test(row.lead) || Number(row.lead) > 3650))) {
+      return { problem: t('docLink.dialog.leadInvalid') };
+    }
+    const code3 = currency.trim().toUpperCase();
+    if (rows.length > 0 && !CURRENCY_RE.test(code3)) return { problem: t('pages.partnerOrders.dialogs.currencyInvalid') };
+    return {
+      extra:
+        rows.length > 0
+          ? {
+              currency: code3,
+              prices: rows.map((row) => ({ id: row.id, unit_price: row.price, ...(row.lead !== '' ? { lead_days: Number(row.lead) } : {}) })),
+            }
+          : {},
+    };
+  };
+
   const submit = () => {
     setMessage(null);
     if (needsText && !text.trim()) {
-      setMessage(t('common.reasonRequired'));
+      setMessage(t(intent.action === 'answer' ? 'docLink.dialog.noteRequired' : 'common.reasonRequired'));
+      return;
+    }
+    const collected = collect();
+    if ('problem' in collected) {
+      setMessage(collected.problem);
       return;
     }
     if (!needsCode) {
-      onConfirmed(text.trim());
+      onConfirmed(text.trim(), collected.extra);
       return;
     }
     if (code.length !== 6) {
       setMessage(t('docLink.dialog.codeShort'));
       return;
     }
-    verify.mutate(code, { onSuccess: (me) => onSignedIn(me, text.trim()) });
+    verify.mutate(code, { onSuccess: (me) => onSignedIn(me, text.trim(), collected.extra) });
   };
 
   const title = needsCode
     ? t('docLink.dialog.title')
-    : intent.action === 'accept'
+    : intent.action === 'accept' || intent.action === 'confirm'
       ? t('docLink.dialog.memberTitle', { context: doc.kind })
       : t(`docLink.actions.${intent.action}`, { context: doc.kind });
   const email = doc.recipient_hint;
@@ -132,7 +179,7 @@ export function DocLinkDialog({
     ? request.isPending
       ? t('docLink.dialog.sending')
       : t(viaTelegram ? 'docLink.dialog.sentTelegram' : 'docLink.dialog.sent', { email: request.data?.sent_to ?? email, minutes: 10 })
-    : intent.action === 'accept'
+    : intent.action === 'accept' || intent.action === 'confirm'
       ? t('docLink.dialog.memberText', { total: formatMoney(doc.total), context: doc.kind })
       : t('docLink.docTitle', { number: doc.number, context: doc.kind });
 
@@ -150,9 +197,66 @@ export function DocLinkDialog({
       message={message}
       onSubmit={submit}
     >
+      {intent.action === 'answer' ? (
+        <fieldset className="flex flex-col gap-2">
+          <legend className="text-sm font-medium">{t('pages.partnerOrders.dialogs.pricesLegend')}</legend>
+          <p className="text-xs text-muted-foreground">{t('pages.partnerOrders.dialogs.pricesHint')}</p>
+          {(doc.partner_lines ?? []).map((line) => (
+            <div key={line.id} className="flex flex-col gap-1 border-b pb-2 last:border-b-0">
+              <span className="text-sm break-words">{line.name}</span>
+              <div className="flex items-center gap-2">
+                <Label htmlFor={`${textId}-price-${line.id}`} className="sr-only">
+                  {t('docLink.dialog.priceFor', { name: line.name })}
+                </Label>
+                <Input
+                  id={`${textId}-price-${line.id}`}
+                  inputMode="decimal"
+                  placeholder={t('docLink.dialog.pricePlaceholder')}
+                  className="w-32 tabular-nums"
+                  value={prices[line.id] ?? ''}
+                  onChange={(event) => setPrices((prev) => ({ ...prev, [line.id]: event.target.value }))}
+                />
+                <Label htmlFor={`${textId}-lead-${line.id}`} className="sr-only">
+                  {t('docLink.dialog.leadFor', { name: line.name })}
+                </Label>
+                <Input
+                  id={`${textId}-lead-${line.id}`}
+                  inputMode="numeric"
+                  placeholder={t('docLink.dialog.leadPlaceholder')}
+                  className="w-28 tabular-nums"
+                  value={leads[line.id] ?? ''}
+                  onChange={(event) => setLeads((prev) => ({ ...prev, [line.id]: event.target.value }))}
+                />
+              </div>
+            </div>
+          ))}
+          <div className="flex items-center gap-2">
+            <Label htmlFor={`${textId}-currency`} className="flex-1 text-sm font-normal">
+              {t('pages.partnerOrders.dialogs.currencyLabel')}
+            </Label>
+            <Input
+              id={`${textId}-currency`}
+              maxLength={3}
+              className="w-28 uppercase"
+              value={currency}
+              onChange={(event) => setCurrency(event.target.value)}
+            />
+          </div>
+        </fieldset>
+      ) : null}
+      {needsDate ? (
+        <div className="flex flex-col gap-2">
+          <Label htmlFor={`${textId}-date`}>{t('pages.partnerOrders.dialogs.expectedDateLabel')}</Label>
+          <DateField id={`${textId}-date`} value={expected} onChange={(value) => setExpected(value ?? '')} />
+        </div>
+      ) : null}
       {needsText ? (
         <div className="flex flex-col gap-2">
-          <Label htmlFor={textId}>{t(intent.action === 'reject' ? 'docLink.dialog.remarks' : 'docLink.dialog.question')}</Label>
+          <Label htmlFor={textId}>
+            {intent.action === 'answer'
+              ? `${t('pages.partnerOrders.dialogs.responseNoteLabel')} *`
+              : t(intent.action === 'reject' ? 'docLink.dialog.remarks' : 'docLink.dialog.question')}
+          </Label>
           <Textarea id={textId} rows={4} maxLength={TEXT_MAX} value={text} onChange={(event) => setText(event.target.value)} />
         </div>
       ) : null}

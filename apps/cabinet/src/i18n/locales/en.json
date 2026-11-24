@@ -1887,7 +1887,10 @@
       "dueDate": "Pay by",
       "balance": "Balance due",
       "signedAt": "Agreed by you",
-      "issuedAt": "Issued"
+      "issuedAt": "Issued",
+      "expectedDate": "Delivery date",
+      "confirmedAt": "Confirmed by you",
+      "answeredAt": "Answer sent"
     },
     "withVat": "{{amount}} incl. VAT",
     "lines": {
@@ -1898,7 +1901,9 @@
       "payment": "Payment: {{terms}}",
       "delivery": "Delivery within {{days}} days",
       "note": "Delivery terms: {{note}}",
-      "price": "{{quantity}} × {{price}}"
+      "price": "{{quantity}} × {{price}}",
+      "titlePartner": "Items",
+      "totalPlain": "Total"
     },
     "download": "Download PDF",
     "downloadNamed": "Download PDF: quote {{number}}",
@@ -1910,7 +1915,9 @@
       "question": "Ask a question",
       "open": "Open your account",
       "accept_contract": "Agree the contract",
-      "accept_act": "Accept the act"
+      "accept_act": "Accept the act",
+      "answer": "Answer the request",
+      "confirm": "Confirm the order"
     },
     "codeNote": "Any action needs the code we send to {{email}}. No other documents or sections open by this link.",
     "memberNote": "You are signed in as {{name}} — no code needed.",
@@ -1922,13 +1929,17 @@
       "accepted_contract": "You agreed the contract. We will sign it via e-document exchange and let you know.",
       "accepted_act": "The act is accepted.",
       "rejected_act": "The act was returned with remarks.",
-      "paid": "The invoice is paid."
+      "paid": "The invoice is paid.",
+      "answered": "Answer sent. Thank you!",
+      "confirmed": "You confirmed the order.",
+      "cancelled": "The order was cancelled by the sender."
     },
     "reason": {
       "no_right": "You can't make this decision — ask your company administrator.",
       "no_access": "Your access has no Quotes section.",
       "other_company": "You are signed in to another company's account.",
-      "no_contact": "The recipient address is not connected to an account — contact the sender."
+      "no_contact": "The recipient address is not connected to an account — contact the sender.",
+      "no_access_partner": "Your cabinet access has no “My products” section."
     },
     "otherCompany": {
       "title": "You are in another account",
@@ -1957,7 +1968,16 @@
       "memberTitle_contract": "Agree the contract?",
       "memberText_contract": "Total {{total}}. You confirm that you agree with the contract text.",
       "memberTitle_act": "Accept the act?",
-      "memberText_act": "Amount {{total}}. An accepted act cannot be returned."
+      "memberText_act": "Amount {{total}}. An accepted act cannot be returned.",
+      "noteRequired": "Write a comment for the answer.",
+      "dateRequired": "Enter the delivery date.",
+      "leadInvalid": "Lead time is a whole number of days.",
+      "priceFor": "Unit price: {{name}}",
+      "leadFor": "Lead time, days: {{name}}",
+      "pricePlaceholder": "Price",
+      "leadPlaceholder": "Days",
+      "memberTitle_supplier_order": "Confirm the order?",
+      "memberText_supplier_order": "Total {{total}}. By confirming you accept the order and the delivery date."
     },
     "done": {
       "accept": "Quote accepted",
@@ -1965,7 +1985,9 @@
       "question": "Question sent to the manager",
       "accept_contract": "You agreed the contract",
       "accept_act": "Act accepted",
-      "reject_act": "Remarks sent"
+      "reject_act": "Remarks sent",
+      "answer": "Answer sent",
+      "confirm": "Order confirmed"
     },
     "gone": {
       "revoked": {
@@ -2004,6 +2026,14 @@
       "title": "About the document",
       "text": "Document from {{from}}."
     },
-    "docTitle": "Quote {{number}}"
+    "docTitle": "Quote {{number}}",
+    "docTitle_price_request": "Price request {{number}}",
+    "docTitle_supplier_order": "Order {{number}}",
+    "partner": {
+      "leadDays": "lead time {{days}} d.",
+      "yourAnswer": "Your answer:"
+    },
+    "downloadNamed_price_request": "Download PDF: price request",
+    "downloadNamed_supplier_order": "Download PDF: order {{number}}"
   }
 }

@@ -406,7 +406,7 @@ const endedSessions = (db: Db): Set<number> => {
 // --- Документ по ссылке из письма (ДК-1, ДК-2) --------------------------------------------------------------------
 
 /** Что решено по КП ссылки: токен → `accepted` / `rejected`; нет записи — ждёт ответа (`done…` — уже принято). */
-const docLinkStates = new Map<string, 'accepted' | 'rejected'>();
+const docLinkStates = new Map<string, 'accepted' | 'rejected' | 'answered' | 'confirmed'>();
 const DOC_LINK_MIN = 16;
 
 function docLinkGone(token: string): Response | null {
@@ -417,26 +417,35 @@ function docLinkGone(token: string): Response | null {
   return null;
 }
 
-type DocKind = 'quote' | 'contract' | 'invoice' | 'act';
+type DocKind = 'quote' | 'contract' | 'invoice' | 'act' | 'price_request' | 'supplier_order';
 
-/** Вид документа мока по началу токена (ДК-3): `contract-…`, `invoice-…`, `act-…`; прочее — КП. */
+/** Вид документа мока по началу токена (ДК-3, ДК-5): `contract-…`, `invoice-…`, `act-…`, `rfq-…`, `order-…`; прочее — КП. */
 function docKind(token: string): DocKind {
+  if (token.startsWith('rfq')) return 'price_request';
+  if (token.startsWith('order')) return 'supplier_order';
   return (['contract', 'invoice', 'act'] as const).find((kind) => token.startsWith(kind)) ?? 'quote';
 }
 
 /** Что можно сделать по ссылке у вида — как `actions` ответа сервера. */
-const DOC_ACTIONS: Record<DocKind, Array<'accept' | 'reject' | 'question'>> = {
+const DOC_ACTIONS: Record<DocKind, Array<'accept' | 'reject' | 'question' | 'answer' | 'confirm'>> = {
   quote: ['accept', 'reject', 'question'],
   contract: ['accept'],
   invoice: [],
   act: ['accept', 'reject'],
+  price_request: ['answer'],
+  supplier_order: ['confirm'],
 };
 
 function docLinkState(token: string): string {
   const decided = docLinkStates.get(token);
   if (decided) return decided;
   if (token.includes('paid')) return 'paid';
-  return token.includes('done') ? 'accepted' : 'open';
+  if (token.includes('cancelled')) return 'cancelled';
+  if (token.includes('done')) {
+    const kind = docKind(token);
+    return kind === 'price_request' ? 'answered' : kind === 'supplier_order' ? 'confirmed' : 'accepted';
+  }
+  return 'open';
 }
 
 function docLinkAvailability(token: string, session: MockSession | null): Schemas['DocLinkAvailability'] {
@@ -472,6 +481,7 @@ function docLinkView(token: string): Schemas['DocLinkView'] {
     lines: [],
   };
   const total = { amount: '33000000.00', currency: 'UZS' };
+  if (kind === 'price_request' || kind === 'supplier_order') return partnerDocLinkView(kind, common, total, token.includes('nodate'));
   if (kind === 'contract') {
     return { ...common, kind, number: 'CT-0042', total, signed_at: common.state === 'accepted' ? valid.toISOString() : null };
   }
@@ -503,6 +513,56 @@ function docLinkView(token: string): Schemas['DocLinkView'] {
     delivery_days: quote.delivery_days,
     delivery_note: quote.delivery_note,
     lines: quote.lines,
+  };
+}
+
+/** ДК-5: запрос цены и заказ глазами партнёра — его позиции и цены; клиента заявки и нашей цены продажи в ответе нет. */
+function partnerDocLinkView(
+  kind: 'price_request' | 'supplier_order',
+  common: Omit<Schemas['DocLinkView'], 'kind' | 'number' | 'total'>,
+  total: Schemas['Money'],
+  noDate: boolean,
+): Schemas['DocLinkView'] {
+  const order = kind === 'supplier_order';
+  const answered = common.state === 'answered';
+  const money = (amount: string) => ({ amount, currency: 'UZS' });
+  const lines: Schemas['DocLinkPartnerLine'][] = [
+    {
+      id: 11,
+      position: 1,
+      name: 'Рельс Р65, ГОСТ Р 51685',
+      article: 'Р65-25',
+      unit: 'т',
+      quantity: '12',
+      unit_price: order ? money('2500000.00') : answered ? money('2480000.00') : null,
+      total: order ? money('30000000.00') : null,
+      lead_days: answered ? 14 : null,
+    },
+    {
+      id: 12,
+      position: 2,
+      name: 'Накладка двухголовая',
+      article: 'НД-4',
+      unit: 'шт.',
+      quantity: '40',
+      unit_price: order ? money('75000.00') : answered ? money('74000.00') : null,
+      total: order ? money('3000000.00') : null,
+      lead_days: answered ? 21 : null,
+    },
+  ];
+  return {
+    ...common,
+    kind,
+    number: order ? 'ЗП-2026-031' : 'Рельс Р65 и ещё 1 позиция',
+    from_name: 'ООО «РейлТех»',
+    to_name: 'ООО «Вымышленная Сталь»',
+    total: order ? total : money('0.00'),
+    partner_lines: lines,
+    partner_note: order ? 'Отгрузка на склад в Ташкенте, сертификаты — с первой партией.' : 'Нужны сертификаты соответствия.',
+    expected_date: order && !noDate ? businessToday() : null,
+    confirmed_at: common.state === 'confirmed' ? new Date().toISOString() : null,
+    answered_at: answered ? new Date().toISOString() : null,
+    answer_note: answered ? 'Цена действует до конца месяца.' : null,
   };
 }
 
@@ -548,17 +608,24 @@ const docLinkHandlers = [
     withSession(
       async ({ request }) => {
         const { token, action, text } = await readJson<{ token?: string; action?: string; text?: string }>(request);
-        if (typeof token !== 'string' || !['accept', 'reject', 'question'].includes(action ?? '')) {
+        if (typeof token !== 'string' || !['accept', 'reject', 'question', 'answer', 'confirm'].includes(action ?? '')) {
           return error(422, 'VALIDATION_ERROR');
         }
         const gone = docLinkGone(token);
         if (gone) return gone;
         if (token.includes('foreign')) return error(403, 'FORBIDDEN');
         if (!DOC_ACTIONS[docKind(token)].includes(action as 'accept')) return error(422, 'VALIDATION_ERROR');
-        if (docLinkState(token) !== 'open') return error(409, 'QUOTE_FINALIZED');
-        if (action !== 'accept' && !text?.trim()) return error(422, action === 'reject' ? 'REASON_REQUIRED' : 'TEXT_REQUIRED');
+        if (docLinkState(token) !== 'open') {
+          return error(409, action === 'answer' ? 'ALREADY_ANSWERED' : action === 'confirm' ? 'TRANSITION_NOT_ALLOWED' : 'QUOTE_FINALIZED');
+        }
+        if (action === 'answer' && !text?.trim()) return error(422, 'TEXT_REQUIRED');
+        if (action === 'reject' || action === 'question') {
+          if (!text?.trim()) return error(422, action === 'reject' ? 'REASON_REQUIRED' : 'TEXT_REQUIRED');
+        }
         if (action === 'accept') docLinkStates.set(token, 'accepted');
         if (action === 'reject') docLinkStates.set(token, 'rejected');
+        if (action === 'answer') docLinkStates.set(token, 'answered');
+        if (action === 'confirm') docLinkStates.set(token, 'confirmed');
         return json(docLinkView(token));
       },
       { action: true },

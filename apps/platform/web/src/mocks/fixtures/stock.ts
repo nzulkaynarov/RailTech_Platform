@@ -182,6 +182,14 @@ export interface MockMovement {
   note: string | null;
 }
 
+export interface MockPartnerLink {
+  hint: string;
+  sentAt: string;
+  openedAt: string | null;
+  expiresAt: string;
+  state: "active" | "revoked" | "expired";
+}
+
 export interface MockStock {
   products: MockProduct[];
   reservations: MockReservation[];
@@ -191,6 +199,8 @@ export interface MockStock {
   priceRequests: MockPriceRequest[];
   movements: MockMovement[];
   units?: MockUnit[];
+  /** ДК-5: ссылки партнёра; ключ — `order:<номер>` или `request:<id>`; нет ключа — одна живая ссылка у ушедшего документа */
+  partnerLinks?: Record<string, MockPartnerLink[]>;
   nextId: number;
   orderSeq: number;
   shipSeq: number;

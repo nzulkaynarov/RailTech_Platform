@@ -9,8 +9,10 @@
 from __future__ import annotations
 
 import logging
+from decimal import Decimal
 
-from django.http import Http404
+from django.http import Http404, HttpResponse
+from django.utils.http import content_disposition_header
 from portal import projections
 from portal.authentication import PortalAuthentication
 from portal.client_ip import client_ip
@@ -47,9 +49,25 @@ class VerifySerializer(TokenSerializer):
     code = serializers.RegexField(r"^\d{6}$")
 
 
+class PriceRowSerializer(serializers.Serializer):
+    id = serializers.IntegerField(min_value=1)
+    unit_price = serializers.DecimalField(max_digits=14, decimal_places=2, min_value=Decimal("0.01"))
+    lead_days = serializers.IntegerField(required=False, allow_null=True, min_value=0, max_value=3650)
+
+    def to_internal_value(self, data):
+        if isinstance(data, dict) and set(data) - set(self.fields):
+            raise serializers.ValidationError("VALIDATION_ERROR")
+        return super().to_internal_value(data)
+
+
 class ActSerializer(TokenSerializer):
-    action = serializers.ChoiceField(choices=["accept", "reject", "question"])
+    action = serializers.ChoiceField(choices=["accept", "reject", "question", "answer", "confirm"])
     text = serializers.CharField(required=False, allow_blank=True, max_length=TEXT_MAX_LENGTH, trim_whitespace=True)
+    # ДК-5: ответ партнёра на запрос цены (цены и срок по строкам, валюта, срок цены) и дата подтверждения заказа
+    prices = PriceRowSerializer(many=True, required=False, max_length=100)
+    currency = serializers.RegexField(r"^[A-Z]{3}$", required=False)
+    valid_until = serializers.DateField(required=False, allow_null=True)
+    expected_date = serializers.DateField(required=False, allow_null=True)
 
 
 def _optional_session(request):
@@ -78,7 +96,7 @@ def _document(link, ctx: doc_links.ClientContext, modules=()) -> dict:
     """Тело `DocLinkView`: клиентская проекция КП и то, что кнопки могут (из фактов КП и прав контакта)."""
     spec = spec_for(link)
     doc = link.document
-    company = spec.deal(doc).company
+    company = spec.company(doc)
     code = spec.currency_code(doc)
     decide = doc_links.availability(link, ctx, modules)
     body = {
@@ -181,6 +199,12 @@ class DocLinkPdfView(_PublicDocLinkView):
         link = _live_link(serializer.validated_data["token"])
         doc = link.document
         spec = spec_for(link)
+        built = spec.pdf_bytes(doc)
+        if built is not None:  # ДК-5: PDF партнёрского документа собирается из партнёрской проекции, файла в базе нет
+            response = HttpResponse(built, content_type="application/pdf")
+            response["Content-Disposition"] = content_disposition_header(True, f"{spec.number(doc) or doc.pk}.pdf")
+            response["Cache-Control"] = "private, no-store"
+            return response
         if not spec.pdf_file(doc):
             from crm.tasks import render_document_pdf
 
@@ -224,7 +248,8 @@ class DocLinkVerifyView(_PublicDocLinkView):
 class DocLinkActView(BasePortalView):
     """POST /doc-links/act {token, action, text?} — решение или вопрос; права — контакта сессии, не шире.
 
-    Модуль кабинета зависит от вида документа (КП — «Предложения», договор — «Договоры», акт — «Акты»), поэтому его
+    Модуль кабинета зависит от вида документа (КП — «Предложения», договор — «Договоры», акт — «Акты», запрос цены и заказ
+    поставщику — «Мои товары»), поэтому его
     проверяет сама вьюха после того, как нашла ссылку; действия, которых у этого вида нет, — 422 `VALIDATION_ERROR`:
     ссылка договора не принимает решений по КП и наоборот.
     """
@@ -254,7 +279,10 @@ class DocLinkActView(BasePortalView):
         ip = client_ip(request)
         if action in ("reject", "question") and not text:
             raise PortalValidationError("REASON_REQUIRED" if action == "reject" else "TEXT_REQUIRED")
-        spec.perform(doc, action, contact=contact, text=text, ip=ip)
+        if action == "answer" and not text:
+            raise PortalValidationError("TEXT_REQUIRED")  # как в кабинете: ответ без комментария не принимается
+        payload = {key: data[key] for key in ("prices", "currency", "valid_until", "expected_date") if key in data}
+        spec.perform(doc, action, contact=contact, text=text, ip=ip, payload=payload)
         doc_links.record_event(link, DocumentLinkEvent.Event.ACTION, ip=ip, user_agent=_ua(request), action=action)
         link = doc_links.find_link(data["token"])
         return Response(_document(link, ctx, request.portal_modules))

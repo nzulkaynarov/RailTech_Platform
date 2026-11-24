@@ -772,3 +772,33 @@ describe("Склад · количества с разрядами (СЦ-7)", ()
     expect(await screen.findByText(/отгружено 0,5 из 1\s500/)).toBeVisible();
   });
 });
+
+describe("Склад · ссылка партнёра в Кабинете (ДК-5)", () => {
+  async function openOrder(email: string, order: string) {
+    signIn(email);
+    renderAt(`/erp/stock/${encodeURIComponent(order)}`);
+    expect(
+      await screen.findByRole("heading", { level: 1, name: `Заказ партнёру ${order}` }),
+    ).toBeVisible();
+  }
+
+  it("снабженец видит, кому из партнёра ушла ссылка на отправленный заказ, и отзывает её одним подтверждением", async () => {
+    await openOrder("supply@demo.example", ORDER);
+    const heading = await screen.findByRole("heading", { name: "Ссылка партнёра в Кабинете" });
+    const card = heading.closest<HTMLElement>(".ant-card");
+    if (!card) throw new Error("нет блока ссылки партнёра");
+    expect(within(card).getByText("Получатель — d***@steel.example.")).toBeVisible();
+    expect(within(card).getByText("Партнёр ещё не открывал.")).toBeVisible();
+    expect(screen.queryByText(/Клиент ещё не открывал/)).toBeNull();
+
+    fireEvent.click(within(card).getByRole("button", { name: "Отозвать ссылку" }));
+    expect(
+      await screen.findByRole("dialog", { name: "Отозвать ссылку на заказ?" }),
+    ).toBeInTheDocument();
+    fireEvent.click(await screen.findByRole("button", { name: "Отозвать" }));
+    expect(
+      await within(card).findByText(/Ссылка отозвана: партнёр по ней ничего не откроет/),
+    ).toBeVisible();
+    expect(within(card).queryByRole("button", { name: "Отозвать ссылку" })).toBeNull();
+  });
+});
