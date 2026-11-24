@@ -200,7 +200,7 @@ test.describe("Входящие письма: директор", () => {
     await spaGoto(page, "/eds/inbox/ВХ-107/26");
 
     await expect(page.getByRole("heading", { level: 1, name: "Письмо ВХ-107/26" })).toBeVisible();
-    await expect(page.getByText("Данные не загрузились. Повторите позже.")).toBeVisible();
+    await expect(page.getByText("Часть данных не загрузилась. Повторите позже.")).toBeVisible();
     await expect(page.getByRole("list", { name: /Путь заявки/ })).toBeVisible();
     await expectNoViolations(page, "частичная карточка");
 

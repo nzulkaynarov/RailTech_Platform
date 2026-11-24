@@ -145,6 +145,18 @@ test.describe("Polish pw2 · раскладка на 1512 и 1280", () => {
       "page",
     );
 
+    // меню модуля свёрнуто на 1280 и 1024 — страницы группы доступны выбором над страницей
+    for (const width of [1280, 1024] as const) {
+      await page.setViewportSize({ width, height: 800 });
+      await spaGoto(page, "/admin/timing");
+      await expect(page.locator("main h1").first()).toHaveText("Время и сроки");
+      await expect(
+        page.getByRole("combobox", { name: /Страницы группы «Правила работы»/ }),
+        `страницы группы доступны на ${String(width)}`,
+      ).toBeVisible();
+    }
+    await page.setViewportSize({ width: 1512, height: 982 });
+
     // контрагенты: «вчера» и время без даты в списке нет; в карточке нет красной метки, вкладки в одну строку
     await spaGoto(page, "/crm/clients");
     await expect(page.locator("main h1").first()).toBeVisible();

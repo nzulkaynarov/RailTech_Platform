@@ -11,15 +11,15 @@ import { SOURCE_SETTLE_MS, SourceBanner } from "./SourceBanner";
 describe("SourceBanner", () => {
   it("Раздел «Операции» не отвечает — плашка role=status со словами", () => {
     renderUi(<SourceBanner sources={{ crm: "ok", erp: "unavailable" }} />);
-    expect(screen.getByRole("status")).toHaveTextContent("Данные не загрузились. Повторите позже.");
+    expect(screen.getByRole("status")).toHaveTextContent("Часть данных не загрузилась. Повторите позже.");
   });
 
   it("Раздел «Контакты» не отвечает и оба не отвечают", () => {
     const { unmount } = renderUi(<SourceBanner sources={{ crm: "unavailable", erp: "ok" }} />);
-    expect(screen.getByRole("status")).toHaveTextContent("Данные не загрузились. Повторите позже.");
+    expect(screen.getByRole("status")).toHaveTextContent("Часть данных не загрузилась. Повторите позже.");
     unmount();
     renderUi(<SourceBanner sources={{ crm: "unavailable", erp: "unavailable" }} />);
-    expect(screen.getByRole("status")).toHaveTextContent("Данные не загрузились. Повторите позже.");
+    expect(screen.getByRole("status")).toHaveTextContent("Часть данных не загрузилась. Повторите позже.");
   });
 
   it("всё в порядке или нет доступа к бэкенду — плашки нет", () => {
@@ -77,7 +77,7 @@ describe("SourceBanner", () => {
       act(() => {
         vi.advanceTimersByTime(SOURCE_SETTLE_MS);
       });
-      expect(screen.getByRole("status")).toHaveTextContent("Данные не загрузились");
+      expect(screen.getByRole("status")).toHaveTextContent("Часть данных не загрузилась");
       rerender(undefined);
       act(() => {
         vi.advanceTimersByTime(SOURCE_SETTLE_MS);

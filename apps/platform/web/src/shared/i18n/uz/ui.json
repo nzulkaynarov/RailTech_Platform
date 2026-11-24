@@ -32,11 +32,11 @@
     "empty": "ko‘rsatilmagan"
   },
   "source": {
-    "erp": "Maʼlumotlar yuklanmadi. Keyinroq qayta uriniş.",
-    "crm": "Maʼlumotlar yuklanmadi. Keyinroq qayta uriniş.",
-    "both": "Maʼlumotlar yuklanmadi. Keyinroq qayta uriniş.",
-    "eds": "Maʼlumotlar yuklanmadi. Keyinroq qayta uriniş.",
-    "multi": "Maʼlumotlar yuklanmadi. Keyinroq qayta uriniş.",
+    "erp": "Maʼlumotlarning bir qismi yuklanmadi. Keyinroq qayta uriniş.",
+    "crm": "Maʼlumotlarning bir qismi yuklanmadi. Keyinroq qayta uriniş.",
+    "both": "Maʼlumotlarning bir qismi yuklanmadi. Keyinroq qayta uriniş.",
+    "eds": "Maʼlumotlarning bir qismi yuklanmadi. Keyinroq qayta uriniş.",
+    "multi": "Maʼlumotlarning bir qismi yuklanmadi. Keyinroq qayta uriniş.",
     "retry": "Qayta urinish"
   },
   "unsavedGuard": {

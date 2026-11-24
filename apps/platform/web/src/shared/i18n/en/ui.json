@@ -32,11 +32,11 @@
     "empty": "not specified"
   },
   "source": {
-    "erp": "Data did not load. Try again later.",
-    "crm": "Data did not load. Try again later.",
-    "both": "Data did not load. Try again later.",
-    "eds": "Data did not load. Try again later.",
-    "multi": "Data did not load. Try again later.",
+    "erp": "Some data did not load. Try again later.",
+    "crm": "Some data did not load. Try again later.",
+    "both": "Some data did not load. Try again later.",
+    "eds": "Some data did not load. Try again later.",
+    "multi": "Some data did not load. Try again later.",
     "retry": "Retry"
   },
   "unsavedGuard": {

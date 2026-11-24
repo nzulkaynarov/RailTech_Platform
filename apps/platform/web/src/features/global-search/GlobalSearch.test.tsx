@@ -419,7 +419,7 @@ describe("Глобальный поиск", () => {
     ).toBeVisible();
   });
 
-  it("Раздел «Операции» не отвечает: показано, что нашла CRM, и плашка «Данные не загрузились»", async () => {
+  it("Раздел «Операции» не отвечает: показано, что нашла CRM, и плашка «Часть данных не загрузилась»", async () => {
     server.use(
       http.get("*/search", () =>
         HttpResponse.json({
@@ -450,7 +450,7 @@ describe("Глобальный поиск", () => {
 
     expect(await screen.findByRole("option", { name: /ООО «Демо-Депо»/ })).toBeVisible();
     expect(
-      screen.getAllByRole("status").some((s) => /Данные не загрузились/.test(s.textContent)),
+      screen.getAllByRole("status").some((s) => /Часть данных не загрузилась/.test(s.textContent)),
     ).toBe(true);
   });
 
