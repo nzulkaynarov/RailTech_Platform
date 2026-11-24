@@ -39,14 +39,27 @@ for (const width of WIDTHS) {
       await spaGoto(page, "/admin/company?tab=brand");
       const pages = page.getByRole("img", { name: /Образец: КП/ });
       await expect(pages.first()).toBeVisible();
+      // Каждая правка (цвет, язык, вид) — новый образец после паузы ввода; страницы в просмотрщике заменяются, когда
+      // приходит PDF. Ждём ПОСЛЕДНИЙ образец (договор, EN, цвет) и его файл, а не держим картинку прежнего.
+      const lastRequest = page.waitForResponse(
+        (response) =>
+          response.url().endsWith("/admin/company/document-samples") &&
+          response.request().method() === "POST" &&
+          (response.request().postData() ?? "").includes('"kind":"contract"') &&
+          (response.request().postData() ?? "").includes('"language":"en"') &&
+          (response.request().postData() ?? "").includes("#047857"),
+      );
       await page.getByLabel("Основной цвет", { exact: true }).fill("#047857");
       await page.locator(".ant-segmented-item-label", { hasText: "EN" }).click();
       await page.locator(".ant-segmented-item-label", { hasText: "Договор" }).click();
+      const { id } = (await (await lastRequest).json()) as { id: string };
+      await page.waitForResponse((response) =>
+        response.url().endsWith(`/document-samples/${id}/file`),
+      );
       await expect(page.getByRole("img", { name: /Образец: Договор/ }).first()).toBeVisible();
-      await page
-        .getByRole("img", { name: /Образец: Договор/ })
-        .first()
-        .scrollIntoViewIfNeeded();
+      // прокручивается устойчивый контейнер образца, а не страница, которую просмотрщик может заменить
+      await page.locator(".pf-co-sample").scrollIntoViewIfNeeded();
+      await expect(page.locator(".pf-co-sample [aria-busy='false']")).toBeVisible();
       await page.waitForTimeout(500);
       await screenshot(page, "brand-sample-pdf");
       await expectNoViolations(page, `brand sample ${String(width)}`);
@@ -59,10 +72,8 @@ for (const width of WIDTHS) {
       await expect(
         editor.getByRole("img", { name: /Образец документа по шаблону/ }).first(),
       ).toBeVisible();
-      await editor
-        .getByRole("img", { name: /Образец документа по шаблону/ })
-        .first()
-        .scrollIntoViewIfNeeded();
+      await editor.locator(".pf-co-sample").scrollIntoViewIfNeeded();
+      await expect(editor.locator(".pf-co-sample [aria-busy='false']")).toBeVisible();
       await page.waitForTimeout(500);
       await screenshot(page, "templates-sample-pdf");
       await expectNoViolations(page, `templates sample ${String(width)}`);

@@ -193,7 +193,7 @@ class TestContactInvitation:
         assert resp_ru.status_code == status.HTTP_200_OK
         assert len(mail.outbox) == 1
         email_ru = mail.outbox[0]
-        assert "Приглашение в личный кабинет «Tashkent Metro LLC»" in email_ru.subject
+        assert "Приглашение в кабинет «Tashkent Metro LLC»" in email_ru.subject
 
     def test_invite_contact_missing_email(self, db, client_company, seller_user):
         """Приглашение контакта без email по email-каналу возвращает 400 CONTACT_EMAIL_REQUIRED."""

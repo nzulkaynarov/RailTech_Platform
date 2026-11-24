@@ -19,7 +19,7 @@
 {% block content %}
   {% with ccy=invoice.currency.code|default:"UZS" %}
   <div class="term-box">
-    <span class="k">{% translate "Сделка:" %}</span> #{{ act.deal_id }}
+    {% if act.deal.number %}<span class="k">{% translate "Проект:" %}</span> {{ act.deal.number }}{% endif %}
     {% if act.contract %} &middot; <span class="k">{% translate "Договор:" %}</span> {{ act.contract.number }}{% with issued=act.contract.created_at|date:"d.m.Y" %} {% blocktranslate %}от {{ issued }}{% endblocktranslate %}{% endwith %}{% endif %}
     {% if act.invoice %} &middot; <span class="k">{% translate "Счёт:" %}</span> {{ act.invoice.number }}{% with issued=act.invoice.issued_at|date:"d.m.Y" %} {% blocktranslate %}от {{ issued }}{% endblocktranslate %}{% endwith %}{% endif %}
   </div>

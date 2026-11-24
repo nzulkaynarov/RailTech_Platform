@@ -8,4 +8,4 @@
 —
 {% blocktranslate with company=company_name %}Вы получили это письмо как контакт компании «{{ company }}».{% endblocktranslate %}
 {% translate "Настроить уведомления:" %} {{ settings_url }}
-— {{ platform_name|default:'ERP' }}
+{% if platform_name %}— {{ platform_name }}{% endif %}
