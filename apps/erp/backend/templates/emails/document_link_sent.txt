@@ -1,0 +1,16 @@
+{% load i18n %}{% translate "Здравствуйте" %}{% if recipient_name %}, {{ recipient_name }}{% endif %}!
+
+{% if kind == 'contract' %}{% if seller_name %}{% blocktranslate %}Компания {{ seller_name }} отправила договор № {{ number }} на подписание.{% endblocktranslate %}{% else %}{% blocktranslate %}Вам отправлен договор № {{ number }} на подписание.{% endblocktranslate %}{% endif %}{% elif kind == 'act' %}{% if seller_name %}{% blocktranslate %}Компания {{ seller_name }} выставила акт № {{ number }}. Примите его или верните с замечаниями.{% endblocktranslate %}{% else %}{% blocktranslate %}Вам выставлен акт № {{ number }}. Примите его или верните с замечаниями.{% endblocktranslate %}{% endif %}{% elif reminder %}{% blocktranslate %}Срок оплаты счёта № {{ number }} прошёл.{% endblocktranslate %}{% else %}{% if seller_name %}{% blocktranslate %}Компания {{ seller_name }} выставила счёт № {{ number }} на оплату.{% endblocktranslate %}{% else %}{% blocktranslate %}Вам выставлен счёт № {{ number }} на оплату.{% endblocktranslate %}{% endif %}{% endif %}
+
+{% translate "Сумма:" %} {{ total }}{% if balance_due %}
+{% translate "К оплате:" %} {{ balance_due }}{% endif %}{% if due_date %}
+{% translate "Срок оплаты:" %} {{ due_date }}{% endif %}
+
+{% translate "PDF документа приложен к этому письму." %}
+
+{% translate "Открыть документ онлайн:" %}
+{{ public_link }}
+
+{% translate "С уважением," %}
+{% blocktranslate with platform=platform_name|default:'ERP' %}команда {{ platform }}{% endblocktranslate %}
+{% include "emails/_telegram_footer.txt" %}

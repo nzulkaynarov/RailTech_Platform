@@ -42,35 +42,45 @@ def _render_all(template, context):
     return text, html
 
 
-def test_invoice_issued_and_reminder_mails_show_money_and_dates_like_screens(world, django_capture_on_commit_callbacks):
-    from crm.services.invoice_lifecycle import issue_invoice
-    from crm.tasks import send_payment_reminders
+def _letter_context(kind, doc, email, **kwargs):
+    """Context of the letter `document_letters` hands to the mail service for `doc`."""
+    from crm.services.document_letters import deliver_document_letter
 
-    invoice = _invoice(world, "DRAFT")
+    with patch("notifications.emails.send_templated_email") as send:
+        deliver_document_letter(kind, doc.pk, email, "Контакт", **kwargs)
+    return send.call_args.args[0], send.call_args.args[1]
+
+
+def _deal_contact(world):
+    from parties.models import Contact
+
+    contact = Contact.objects.create(company=world["buyer_co"], name="Deal Contact", email="c@buyer.example")
+    world["deal"].contact = contact
+    world["deal"].save(update_fields=["contact"])
+    return contact
+
+
+def test_invoice_issued_and_reminder_mails_show_money_and_dates_like_screens(world):
+    contact = _deal_contact(world)
+    invoice = _invoice(world, "ISSUED")
     invoice.total_incl_vat = Decimal("1500000")
     invoice.due_date = timezone.localdate() - timedelta(days=10)
     invoice.save()
     due = invoice.due_date.strftime("%d.%m.%Y")
 
-    with patch("notifications.tasks.send_transactional_email") as mail:
-        with django_capture_on_commit_callbacks(execute=True):
-            issue_invoice(invoice, world["seller_user"])
-        invoice.refresh_from_db()
-        invoice.due_date = timezone.localdate() - timedelta(days=10)
-        invoice.save()
-        with django_capture_on_commit_callbacks(execute=True):
-            send_payment_reminders()
-    sent = dict(_captured(mail))
-    assert set(sent) == {"invoice_issued", "payment_reminder"}
-
-    for template, context in sent.items():
+    sent = {
+        "issued": _letter_context("invoice", invoice, contact.email),
+        "reminder": _letter_context("invoice", invoice, contact.email, reminder=True),
+    }
+    for template, context in sent.values():
+        assert template == "document_link_sent"
         text, html = _render_all(template, context)
         assert f"1{NBSP}500{NBSP}000,00{NBSP}UZS" in text and f"1{NBSP}500{NBSP}000,00{NBSP}UZS" in html
-    assert due in _render_all("payment_reminder", sent["payment_reminder"])[0]
+    assert due in _render_all(*sent["reminder"])[0]
 
 
 def test_payment_and_act_mails_show_money_like_screens(world, django_capture_on_commit_callbacks):
-    from crm.services.billing import generate_act, record_payment
+    from crm.services.billing import record_payment
 
     invoice = _invoice(world, "ISSUED")
     invoice.total_incl_vat = Decimal("2500000")
@@ -83,14 +93,15 @@ def test_payment_and_act_mails_show_money_like_screens(world, django_capture_on_
     text, _html = _render_all(template, context)
     assert f"1{NBSP}000{NBSP}000,00{NBSP}UZS" in text and f"2{NBSP}500{NBSP}000,00{NBSP}UZS" in text
 
+    contact = _deal_contact(world)
     paid = _invoice(world, "PAID", paid=Decimal("112"))
-    with patch("notifications.tasks.send_transactional_email") as mail:
-        with django_capture_on_commit_callbacks(execute=True):
-            mark_delivered(paid.deal)
-            act, error = generate_act(paid.id, actor=world["seller_user"])
+    with django_capture_on_commit_callbacks(execute=True):
+        mark_delivered(paid.deal)
+        from crm.services.billing import generate_act
+
+        act, error = generate_act(paid.id, actor=world["seller_user"])
     assert error is None, error
-    ((template, context),) = _captured(mail)
-    assert template == "act_awaiting_acceptance"
+    template, context = _letter_context("act", act, contact.email)
     text, _html = _render_all(template, context)
     assert f"{NBSP}UZS" in text
 

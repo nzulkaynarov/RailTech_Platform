@@ -315,6 +315,23 @@ def render_document_pdf(self, doc_type: str, doc_id: int) -> dict:
 
 @shared_task(
     bind=True,
+    name="crm.send_document_link_email",
+    queue="pdf",
+    time_limit=600,
+    soft_time_limit=540,
+    max_retries=3,
+    autoretry_for=(Exception,),
+    retry_backoff=True,
+)
+def send_document_link_email(self, kind: str, doc_id: int, email: str, name: str = "", reminder: bool = False) -> dict:
+    """ДК-3: письмо с договором, счётом или актом получателю — PDF и личная ссылка в Кабинет (`document_letters`)."""
+    from .services.document_letters import deliver_document_letter
+
+    return deliver_document_letter(kind, doc_id, email, name, reminder)
+
+
+@shared_task(
+    bind=True,
     name="crm.send_quote_email",
     queue="pdf",
     time_limit=600,

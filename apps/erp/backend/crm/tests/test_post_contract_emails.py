@@ -151,21 +151,39 @@ def _sent(mock) -> list:
     return [(call.args[0], call.kwargs.get("to")) for call in mock.delay.call_args_list]
 
 
+def _letters(mock) -> list:
+    """ДК-3: письма с документом по ссылке получателя — `(вид документа, адрес)` из постановки в очередь."""
+    return [(call.args[0], call.args[2]) for call in mock.delay.call_args_list]
+
+
+def _deal_contact(world, email="client@buyer-g3.example"):
+    """Контакт сделки: ему идут письма о счёте, акте и напоминании (ДК-3), а не участникам компании в ERP."""
+    from parties.models import Contact
+
+    contact = Contact.objects.create(company=world["buyer_co"], name="Deal Contact", email=email, can_act=True)
+    world["deal"].contact = contact
+    world["deal"].save(update_fields=["contact"])
+    return contact
+
+
 # ── 1. Счёт выставлен → письмо покупателю ────────────────────────────────────
 
 
-def test_issuing_an_invoice_emails_the_buyer(world, django_capture_on_commit_callbacks):
+def test_issuing_an_invoice_emails_the_deal_contact_not_the_company_members(world, django_capture_on_commit_callbacks):
     from crm.services.invoice_lifecycle import issue_invoice
 
+    contact = _deal_contact(world)
     invoice = _invoice(world, "DRAFT")
-    with patch("notifications.tasks.send_transactional_email") as mail:
+    with (
+        patch("crm.tasks.send_document_link_email") as letter,
+        patch("notifications.tasks.send_transactional_email") as mail,
+    ):
         with django_capture_on_commit_callbacks(execute=True):
             issued, error = issue_invoice(invoice, world["seller_user"])
 
     assert error is None, error
-    sent = _sent(mail)
-    assert [template for template, _ in sent] == ["invoice_issued"]
-    assert sent[0][1] == [world["buyer_user"].email], "письмо ушло не покупателю"
+    assert _letters(letter) == [("invoice", contact.email)], "письмо со ссылкой — контакту сделки"
+    assert _sent(mail) == [], "прежним участникам компании в ERP письмо о счёте не уходит"
     assert issued.status_code == "ISSUED"
 
 
@@ -203,20 +221,23 @@ def test_recording_a_payment_emails_the_seller(world, django_capture_on_commit_c
 # ── 3. Акт выставлен → письмо заказчику ──────────────────────────────────────
 
 
-def test_issuing_an_act_emails_the_buyer(world, django_capture_on_commit_callbacks):
+def test_issuing_an_act_emails_the_deal_contact(world, django_capture_on_commit_callbacks):
     from crm.services.billing import generate_act
 
+    contact = _deal_contact(world)
     invoice = _invoice(world, "PAID", paid=Decimal("112"))
-    with patch("notifications.tasks.send_transactional_email") as mail:
+    with (
+        patch("crm.tasks.send_document_link_email") as letter,
+        patch("notifications.tasks.send_transactional_email") as mail,
+    ):
         with django_capture_on_commit_callbacks(execute=True):
             mark_delivered(invoice.deal)
             act, error = generate_act(invoice.id, actor=world["seller_user"])
 
     assert error is None, error
     assert act is not None
-    sent = _sent(mail)
-    assert [template for template, _ in sent] == ["act_awaiting_acceptance"]
-    assert sent[0][1] == [world["buyer_user"].email]
+    assert _letters(letter) == [("act", contact.email)]
+    assert _sent(mail) == []
 
 
 # ── 4. Напоминание о просрочке ───────────────────────────────────────────────
@@ -225,16 +246,21 @@ def test_issuing_an_act_emails_the_buyer(world, django_capture_on_commit_callbac
 def test_overdue_invoice_gets_one_reminder(world, django_capture_on_commit_callbacks):
     from crm.tasks import send_payment_reminders
 
+    contact = _deal_contact(world)
     invoice = _invoice(world, "ISSUED", due_date=timezone.localdate() - timedelta(days=10))
 
-    with patch("notifications.tasks.send_transactional_email") as mail:
+    with (
+        patch("crm.tasks.send_document_link_email") as letter,
+        patch("notifications.tasks.send_transactional_email") as mail,
+    ):
         with django_capture_on_commit_callbacks(execute=True):
             result = send_payment_reminders()
 
     assert result["reminded"] == 1
-    sent = _sent(mail)
-    assert [template for template, _ in sent] == ["payment_reminder"]
-    assert sent[0][1] == [world["buyer_user"].email]
+    assert [
+        (kind, email, call.args[4]) for (kind, email), call in zip(_letters(letter), letter.delay.call_args_list)
+    ] == [("invoice", contact.email, True)], "напоминание — письмо о счёте с признаком напоминания"
+    assert _sent(mail) == []
     invoice.refresh_from_db()
     assert invoice.payment_reminder_sent_at is not None
 
@@ -356,6 +382,8 @@ def contacts(world):
         can_act=True,
         invited_at=tz.now(),
     )
+    world["deal"].contact = plain  # контакт сделки: получатель писем с документами
+    world["deal"].save(update_fields=["contact"])
     # Не приглашён и не контакт документа: только колокольчик, первым письмом ему придёт приглашение
     Contact.objects.create(company=world["buyer_co"], name="Stranger", email="stranger@buyer-g3.example")
     # Компания сопоставлена клиенту CRM: события доходят до бота, контакт с Telegram получает сообщение бота
@@ -378,27 +406,28 @@ def test_issuing_an_invoice_emails_contacts_without_telegram(world, contacts, dj
 
     invoice = _invoice(world, "DRAFT")
     with (
-        patch("notifications.tasks.send_transactional_email") as users_mail,
+        patch("crm.tasks.send_document_link_email") as letter,
         patch("portal.tasks.send_notice_email") as contact_mail,
     ):
         with django_capture_on_commit_callbacks(execute=True):
             issue_invoice(invoice, world["seller_user"])
 
-    assert _sent(users_mail)[0][1] == [world["buyer_user"].email], "пользователям покупателя — как прежде"
-    assert _contact_mail(contact_mail) == ["plain@buyer-g3.example"], "контакту без Telegram — письмо, с Telegram — бот"
+    assert _letters(letter) == [("invoice", "plain@buyer-g3.example")], "контакту сделки — письмо с документом"
+    assert _contact_mail(contact_mail) == [], "ему же второе письмо-уведомление не нужно, контакту с Telegram пишет бот"
 
 
 def test_issuing_an_act_emails_contacts_without_telegram(world, contacts, django_capture_on_commit_callbacks):
     from crm.services.billing import generate_act
 
     invoice = _invoice(world, "PAID", paid=Decimal("112"))
-    with patch("notifications.tasks.send_transactional_email"), patch("portal.tasks.send_notice_email") as contact_mail:
+    with patch("crm.tasks.send_document_link_email") as letter, patch("portal.tasks.send_notice_email") as contact_mail:
         with django_capture_on_commit_callbacks(execute=True):
             mark_delivered(invoice.deal)
             act, error = generate_act(invoice.id, actor=world["seller_user"])
 
     assert error is None, error
-    assert _contact_mail(contact_mail) == ["plain@buyer-g3.example"]
+    assert _letters(letter) == [("act", "plain@buyer-g3.example")]
+    assert _contact_mail(contact_mail) == []
 
 
 def test_payment_reminder_reaches_every_contact(world, contacts, django_capture_on_commit_callbacks):
@@ -406,17 +435,20 @@ def test_payment_reminder_reaches_every_contact(world, contacts, django_capture_
     from crm.tasks import send_payment_reminders
 
     _invoice(world, "ISSUED", due_date=timezone.localdate() - timedelta(days=10))
-    with patch("notifications.tasks.send_transactional_email"), patch("portal.tasks.send_notice_email") as contact_mail:
+    with patch("crm.tasks.send_document_link_email") as letter, patch("portal.tasks.send_notice_email") as contact_mail:
         with django_capture_on_commit_callbacks(execute=True):
             send_payment_reminders()
 
-    assert _contact_mail(contact_mail) == ["plain@buyer-g3.example", "tg@buyer-g3.example"]
+    assert _letters(letter) == [("invoice", "plain@buyer-g3.example")]
+    assert _contact_mail(contact_mail) == [
+        "tg@buyer-g3.example"
+    ], "контакт с Telegram: бот о просрочке не пишет, письмо идёт"
 
 
-def test_contact_with_the_buyer_user_address_gets_one_invoice_email(
+def test_contact_with_the_deal_contact_address_gets_one_invoice_email(
     world, contacts, django_capture_on_commit_callbacks
 ):
-    """Пользователю ERP покупателя письмо о счёте шлёт `deal_emails`; контакт с тем же адресом второго не получает."""
+    """Контакту сделки письмо о счёте шлёт `document_letters`; другой контакт с тем же адресом второго не получает."""
     from parties.models import Contact
     from portal.models import NoticeChannel, PortalNotice
 
@@ -425,20 +457,19 @@ def test_contact_with_the_buyer_user_address_gets_one_invoice_email(
     same = Contact.objects.create(
         company=world["buyer_co"],
         name="Same Person",
-        email=world["buyer_user"].email.upper(),
+        email="PLAIN@buyer-g3.example",
         invited_at=timezone.now(),
     )
     invoice = _invoice(world, "DRAFT")
     with (
-        patch("notifications.tasks.send_transactional_email") as users_mail,
+        patch("crm.tasks.send_document_link_email") as letter,
         patch("portal.tasks.send_notice_email") as contact_mail,
     ):
         with django_capture_on_commit_callbacks(execute=True):
             issue_invoice(invoice, world["seller_user"])
 
-    assert _sent(users_mail)[0][1] == [world["buyer_user"].email]
+    assert _letters(letter) == [("invoice", "plain@buyer-g3.example")]
     assert PortalNotice.objects.get(contact=same, kind="invoice_issued").channel == NoticeChannel.SOURCE
-    assert world["buyer_user"].email not in _contact_mail(contact_mail)
     assert same.email not in _contact_mail(contact_mail)
 
 
@@ -454,13 +485,13 @@ def test_reminders_are_off_by_default(world, contacts, django_capture_on_commit_
     settings_row.save(update_fields=["remind_overdue_invoices"])
     invoice = _invoice(world, "ISSUED", due_date=timezone.localdate() - timedelta(days=10))
     with (
-        patch("notifications.tasks.send_transactional_email") as users_mail,
+        patch("crm.tasks.send_document_link_email") as letter,
         patch("portal.tasks.send_notice_email") as contact_mail,
     ):
         with django_capture_on_commit_callbacks(execute=True):
             assert send_payment_reminders()["reminded"] == 0
 
-    assert _sent(users_mail) == [] and _contact_mail(contact_mail) == []
+    assert _letters(letter) == [] and _contact_mail(contact_mail) == []
     assert not PortalNotice.objects.filter(kind="payment_overdue").exists()
     invoice.refresh_from_db()
     assert invoice.payment_reminder_sent_at is None, "после включения напоминание уйдёт"
