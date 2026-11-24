@@ -4,7 +4,7 @@
 нет» остаются у `portal.services.notices`; здесь только содержимое. Ссылка выпускается именно этому контакту (адрес и
 документ записаны в ней, из запроса не берутся), живёт до срока документа плюс месяц и отзывается сотрудником в карточке
 запроса или заказа. Письмо, которое не передано почте, гасит свою ссылку: у получателя её нет, повтор выпустит новую.
-Та же ссылка уходит в бот, если у контакта привязан Telegram (ДК-4); сбой бота письмо не отменяет.
+В Telegram партнёру ссылка не уходит: событие шины знает только документы клиента.
 """
 
 from __future__ import annotations
@@ -84,8 +84,4 @@ def send_letter(notice) -> Optional[object]:
         link.revoked_at = timezone.now()  # письмо не ушло: ссылка, которой нет у получателя, живой не остаётся
         link.save(update_fields=["revoked_at"])
         return log
-    try:
-        doc_links.send_link_telegram(link, raw)
-    except Exception:  # noqa: BLE001 — письмо уже передано: сбой бота его не отменяет и не повторяет
-        logger.exception("%s #%s: telegram link event failed", kind, doc.pk)
     return log

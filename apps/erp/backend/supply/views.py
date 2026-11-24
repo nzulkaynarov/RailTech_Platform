@@ -14,7 +14,7 @@ from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from supply.models import PriceRequest
+from supply.models import PriceRequest, SupplierOrder
 from supply.serializers import (
     OrderCancelInSerializer,
     OrderConfirmInSerializer,
@@ -540,7 +540,11 @@ def _load_partner_document(kind: str, pk: int):
     from inventory.access import StockError
 
     if kind == "supplier_order":
-        return orders._order_or_404(pk)
+        # без `orders._order_or_404`: он умеет блокировать строку, а чтение ссылок блокировок не берёт
+        found = SupplierOrder.objects.select_related("supplier", "currency").filter(pk=pk).first()
+        if found is None:
+            raise StockError("ORDER_NOT_FOUND", 404)
+        return found
     found = PriceRequest.objects.select_related("supplier", "deal").filter(pk=pk).first()
     if found is None:
         raise StockError("REQUEST_NOT_FOUND", 404)

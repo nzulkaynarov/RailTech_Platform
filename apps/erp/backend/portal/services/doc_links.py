@@ -448,8 +448,8 @@ def _send_code_telegram(link: DocumentLink, code: str, expires_at: datetime) -> 
     документа в нём нет. Ошибка публикации — наружу из savepoint; вызывающий `request_code` её ловит: почта остаётся основным каналом.
     """
     contact = link.contact
-    if not _telegram_ready(contact):
-        return False
+    if spec_for(link).partner or not _telegram_ready(contact):
+        return False  # ДК-5: событие знает только документы клиента (`document_kind`); партнёру — письмо
     from integration.services import events
 
     with transaction.atomic():
@@ -505,8 +505,8 @@ def send_link_telegram(link: DocumentLink, raw_token: str) -> bool:
     задача: письмо уже ушло, повтор задачи послал бы его второй раз.
     """
     contact = link.contact
-    if not _telegram_ready(contact):
-        return False
+    if spec_for(link).partner or not _telegram_ready(contact):
+        return False  # ДК-5: см. `_send_code_telegram`
     if not _telegram_documents_wanted(contact):
         return False
     from integration.services import events

@@ -416,30 +416,23 @@ def test_a_partner_is_never_made_a_client(world):
     assert not CompanyRelationship.objects.filter(company=vendor, role="client").exists()
 
 
-# ── Telegram: тот же путь ДК-4 ──────────────────────────────────────────────────────────────────────────────────────
+# ── Telegram: событие шины знает только документы клиента ─────────────────────────────────────────────────────────
 
 
-def test_the_link_goes_to_the_linked_telegram_of_the_partner_contact(world):
+def test_partner_link_and_code_never_go_to_telegram(world):
     from integration.models import CrmClientMapping, CrmContactMapping
     from integration.tests import bus_support
 
     bus_support.reset()
     contact = _partner(world)
     Contact.objects.filter(pk=contact.pk).update(telegram_user_id=777)
-    CrmClientMapping.objects.create(
-        company=world["vendor"], crm_client_id=4343
-    )  # партнёр, он же клиент CRM, — тогда бот достаёт
+    CrmClientMapping.objects.create(company=world["vendor"], crm_client_id=4343)
     CrmContactMapping.objects.create(contact=contact, crm_contact_id=58)
     order = _sent_order(world)
     _deliver_all("partner_order_sent")
-    (envelope,) = bus_support.published("document_link.telegram_requested")
-    bus_support.assert_matches_contract(envelope, secret_masked=True)
-    payload = bus_support.real_data(envelope)["payload"]
-    assert (
-        payload["kind"] == "link" and payload["document_kind"] == "supplier_order" and payload["number"] == order.number
-    )
-    raw = _link_of(next(m for m in mail.outbox if m.to == [contact.email]))
-    assert payload["url"] == f"http://cabinet.localhost/d/{raw}", "в бот уходит та же ссылка, что и в письмо"
+    _link, raw = _mint("supplier_order", order, contact)
+    assert _post("code", {"token": raw}).json()["channels"] == ["email"]
+    assert bus_support.published("document_link.telegram_requested") == []
 
 
 # ── Отзыв: список и «Отозвать ссылку» у сотрудника ──────────────────────────────────────────────────────────────────

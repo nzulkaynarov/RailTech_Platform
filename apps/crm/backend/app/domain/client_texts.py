@@ -269,13 +269,6 @@ _DOCUMENT_LINK_KINDS: Final = {
     "contract": {"ru": "Договор", "uz": "Şartnoma", "en": "Contract"},
     "invoice": {"ru": "Счёт", "uz": "Hisob-faktura", "en": "Invoice"},
     "act": {"ru": "Акт", "uz": "Dalolatnoma", "en": "Act"},
-    # ДК-5: документы партнёра-поставщика
-    "price_request": {"ru": "Запрос цены", "uz": "Narx sörovi", "en": "Price request"},
-    "supplier_order": {
-        "ru": "Заказ поставщику",
-        "uz": "Yetkazib beruvchiga buyurtma",
-        "en": "Supplier order",
-    },
 }
 _DOCUMENT_LINK_TEXT: Final = {
     "ru": "Вам отправлен документ: {document}.",
