@@ -51,7 +51,7 @@ class DnsMailDomainChecker:
         if cached is not None and cached[1] > time.monotonic():
             return cached[0]
         try:
-            verdict = await asyncio.wait_for(self._lookup(name), TIMEOUT_S + 1)
+            verdict = await asyncio.wait_for(self._lookup(name), TIMEOUT_S)
         except Exception as exc:  # noqa: BLE001 — any DNS trouble must not block the form
             logger.warning("mail_domain_dns_unavailable", error=type(exc).__name__)
             return DomainVerdict.UNKNOWN

@@ -24,6 +24,7 @@ from app.domain.bounce import Bounce
 from app.models.email import EmailLog, EmailUndeliverable
 from app.schemas.notices import EmailUndeliverableOut
 from app.security import audit
+from app.services.mail_outgoing import CC_KEY, parse_cc
 
 logger = structlog.get_logger(__name__)
 
@@ -79,9 +80,22 @@ async def is_blocked(session: AsyncSession, email: str | None) -> bool:
     return bool(email) and bool(await states(session, [email]))
 
 
-async def _link(session: AsyncSession, bounce: Bounce, now: datetime) -> EmailLog | None:
-    """Our letter the report is about: by Message-ID, then by the report's own references, then by
-    the failed recipient and a recent sent letter."""
+@dataclass(frozen=True, slots=True)
+class Applied:
+    """`linked` — the report is about one of our letters (by id or by address); `marked` — the
+    addresses blocked for it (only a link by OUR Message-ID may mark)."""
+
+    linked: bool
+    marked: tuple[str, ...] = ()
+
+
+async def _link(
+    session: AsyncSession, bounce: Bounce, now: datetime
+) -> tuple[EmailLog | None, bool]:
+    """Our letter the report is about and whether it is proven by our Message-ID. Message-ID of the
+    attached copy, of the text or of the report's references proves it; the failed recipient with
+    a recent sent letter only annotates the log row: anyone can write a «report» for an address
+    we mailed, so it must never mark the address."""
     for message_id in (bounce.original_message_id, *bounce.reply_ids):
         if not message_id:
             continue
@@ -89,7 +103,7 @@ async def _link(session: AsyncSession, bounce: Bounce, now: datetime) -> EmailLo
             select(EmailLog).where(EmailLog.message_id == message_id).limit(1)
         )
         if row is not None:
-            return row
+            return row, True
     since = now - timedelta(days=RECENT_DAYS)
     for address in bounce.recipients:
         row = await session.scalar(
@@ -103,26 +117,39 @@ async def _link(session: AsyncSession, bounce: Bounce, now: datetime) -> EmailLo
             .limit(1)
         )
         if row is not None:
-            return row
-    return None
+            return row, False
+    return None, False
+
+
+def _letter_addresses(row: EmailLog) -> set[str]:
+    cc = parse_cc((row.thread_headers or {}).get(CC_KEY))
+    return {row.to_email, *(a.lower() for a in cc)}
 
 
 async def apply(
     session: AsyncSession, bounce: Bounce, report_id: str, now: datetime | None = None
-) -> list[str]:
-    """Record the report; returns the marked addresses (empty — unknown letter, repeat, nothing)."""
+) -> Applied:
+    """Record the report. Not linked — nothing is written; linked by address — only the log row;
+    linked by our Message-ID — the failed addresses of that very letter are marked too."""
     moment = now or datetime.now(UTC)
-    row = await _link(session, bounce, moment)
+    row, proven = await _link(session, bounce, moment)
     if row is None:
         logger.info("bounce_unlinked", recipients=len(bounce.recipients))
-        return []
+        return Applied(False)
     if row.bounce_message_id == report_id:
-        return []  # the same report read again (a reset mailbox position)
-    addresses = [a for a in bounce.recipients if a == row.to_email] or [row.to_email]
+        return Applied(True)  # the same report read again (a reset mailbox position)
     row.bounced_at, row.bounce_message_id = moment, report_id[:255]
     row.bounce_status = bounce.status
     row.bounce_reason = bounce.reason
-    marked = [await _mark(session, a, bounce, row.id, report_id, moment) for a in addresses]
+    marked: list[str] = []
+    if proven:
+        # A report that names recipients marks those of this letter (the Cc address itself, not
+        # the main one); only a report that names nobody falls back to the main recipient.
+        allowed = _letter_addresses(row)
+        addresses = (
+            [a for a in bounce.recipients if a in allowed] if bounce.recipients else [row.to_email]
+        )
+        marked = [await _mark(session, a, bounce, row.id, report_id, moment) for a in addresses]
     await audit.record(
         session,
         audit.Actor.system(),
@@ -132,7 +159,7 @@ async def apply(
         after={"kind": bounce.severity, "reason": bounce.reason, "status": bounce.status},
     )
     logger.info("bounce_applied", email_log_id=row.id, kind=bounce.severity, reason=bounce.reason)
-    return marked
+    return Applied(True, tuple(marked))
 
 
 async def _mark(

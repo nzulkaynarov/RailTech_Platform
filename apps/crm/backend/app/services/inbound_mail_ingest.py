@@ -226,12 +226,19 @@ class InboundMailIngest:
         parsed = await asyncio.to_thread(parse_message, item.raw)
         # A delivery report of our own letter is not mail for people: it marks the address and
         # stays in the mail log (`email_log`), never in the queue or among leads.
-        report = await asyncio.to_thread(parse_bounce, item.raw)
+        try:
+            report = await asyncio.to_thread(parse_bounce, item.raw)
+        except Exception:  # recognition must never stop the poll: an odd letter is a normal one
+            logger.exception("inbound_mail_bounce_parse_failed", uid=item.uid)
+            report = None
         if report is not None:
             async with self._sessions() as session, session.begin():
-                await bounces.apply(session, report, parsed.message_id)
+                applied = await bounces.apply(session, report, parsed.message_id)
             logger.info("inbound_mail_bounce", severity=report.severity, reason=report.reason)
-            return None
+            # A real report is never a letter for people. A letter only «looking like» one
+            # (mailer-daemon sender, no multipart/report) that is not about our mail stays normal.
+            if applied.linked or report.is_report:
+                return None
         async with self._sessions() as session, session.begin():
             if await repo.exists(session, parsed.message_id):
                 if not folder.spam and await repo.promote_from_spam(

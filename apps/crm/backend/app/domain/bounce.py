@@ -23,10 +23,16 @@ Severity = Literal["permanent", "soft"]
 Reason = Literal["domain_not_found", "mailbox_not_found", "mailbox_full", "rejected", "other"]
 
 _MAX_DIAGNOSTIC: Final = 500
+# Hostile input bounds: header values and text are cut before any regular expression runs.
+_MAX_VALUE: Final = 1000
+_MAX_TEXT: Final = 64 * 1024
+_MAX_GROUPS: Final = 50
+_MAX_PARTS: Final = 200
 _AUTO_SENDERS: Final = ("mailer-daemon", "postmaster")
 _STATUS: Final = re.compile(r"(?<![\d.])([245])\.(\d{1,3})\.(\d{1,3})(?![\d.])")
 _ADDRESS: Final = re.compile(r"[\w.+'-]+@[\w-]+(?:\.[\w-]+)+")
 _ANGLE_ID: Final = re.compile(r"<([^<>\s]+)>")
+_TEXT_ID: Final = re.compile(r"Message-ID:\s*<([^<>\s]+)>", re.IGNORECASE)
 
 _DOMAIN: Final = re.compile(
     r"domain name not found|host not found|no such domain|nxdomain|domain not found|"
@@ -57,8 +63,9 @@ class Bounce:
     reason: Reason
     status: str | None  # enhanced status code "5.1.2"; None — the report has none
     diagnostic: str
-    original_message_id: str | None  # Message-ID of our letter from the attached copy
+    original_message_id: str | None  # Message-ID of our letter from the attached copy or the text
     reply_ids: tuple[str, ...]  # In-Reply-To / References of the report itself
+    is_report: bool = True  # a real multipart/report; False — recognised only by sender and text
 
 
 def _sender_is_auto(message: EmailMessage) -> bool:
@@ -67,18 +74,20 @@ def _sender_is_auto(message: EmailMessage) -> bool:
 
 
 def _walk(message: Message) -> list[Message]:
-    return list(message.walk())
+    return list(message.walk())[:_MAX_PARTS]
 
 
 def _status_groups(report: Message) -> list[Message]:
     """Per-recipient groups of a `message/delivery-status` part (RFC 3464 §2.1)."""
     payload = report.get_payload()
-    return [m for m in payload if isinstance(m, Message)] if isinstance(payload, list) else []
+    if not isinstance(payload, list):
+        return []
+    return [m for m in payload if isinstance(m, Message)][:_MAX_GROUPS]
 
 
 def _recipient(group: Message) -> str | None:
     for name in ("Final-Recipient", "Original-Recipient"):
-        raw = str(group.get(name, "")).strip()
+        raw = str(group.get(name, "")).strip()[:_MAX_VALUE]
         if raw:
             _, _, value = raw.rpartition(";")
             found = _ADDRESS.search(value or raw)
@@ -115,14 +124,30 @@ def _original_id(parts: list[Message]) -> str | None:
     return None
 
 
+def _text_id(text: str) -> str | None:
+    """Exim and some others quote our headers in the text part: «Message-ID: <…>»."""
+    found = _TEXT_ID.search(text)
+    return found.group(1) if found else None
+
+
 def _text_of(parts: list[Message]) -> str:
     chunks: list[str] = []
     for part in parts:
         if part.get_content_type() == "text/plain" and not part.is_multipart():
             payload = part.get_payload(decode=True)
             if isinstance(payload, bytes):
-                chunks.append(payload.decode(part.get_content_charset() or "utf-8", "replace"))
-    return "\n".join(chunks)
+                chunks.append(_decode(payload, part.get_content_charset()))
+            if sum(map(len, chunks)) >= _MAX_TEXT:
+                break
+    return "\n".join(chunks)[:_MAX_TEXT]
+
+
+def _decode(payload: bytes, charset: str | None) -> str:
+    """Unknown or broken charsets (`unknown-8bit`, `x-bogus`) must not break a letter: utf-8."""
+    try:
+        return payload[:_MAX_TEXT].decode(charset or "utf-8", "replace")
+    except (LookupError, UnicodeError):
+        return payload[:_MAX_TEXT].decode("utf-8", "replace")
 
 
 def classify_reason(status: str | None, text: str) -> Reason:
@@ -165,7 +190,7 @@ def parse_bounce(raw: bytes) -> Bounce | None:
     parts = _walk(message)
     report = _is_report(message, parts)
     text = _text_of(parts)
-    failed_header = str(message.get("X-Failed-Recipients", ""))
+    failed_header = str(message.get("X-Failed-Recipients", ""))[: _MAX_VALUE * 2]
     auto = _sender_is_auto(message)
     if not report and not (auto and (failed_header or _first_status(text) or _DOMAIN.search(text))):
         return None
@@ -186,11 +211,10 @@ def parse_bounce(raw: bytes) -> Bounce | None:
             address = _recipient(group)
             if address and address not in recipients:
                 recipients.append(address)
-            code = _first_status(
-                str(group.get("Status", "")), str(group.get("Diagnostic-Code", ""))
-            )
+            diag = str(group.get("Diagnostic-Code", ""))[:_MAX_VALUE]
+            code = _first_status(str(group.get("Status", ""))[:_MAX_VALUE], diag)
             status = status or code
-            diagnostic = diagnostic or _clean_text(str(group.get("Diagnostic-Code", "")))
+            diagnostic = diagnostic or _clean_text(diag)
             if action == "delayed" or (code or "").startswith("4"):
                 severity = severity or "soft"
             elif action == "failed" or (code or "").startswith("5"):
@@ -222,6 +246,7 @@ def parse_bounce(raw: bytes) -> Bounce | None:
         reason=classify_reason(status, f"{diagnostic} {text}"),
         status=status,
         diagnostic=diagnostic,
-        original_message_id=_original_id(parts),
+        original_message_id=_original_id(parts) or _text_id(text),
+        is_report=report,
         reply_ids=reply,
     )
