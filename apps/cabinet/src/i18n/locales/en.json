@@ -1995,7 +1995,9 @@
       "title_contract": "About the document",
       "text_contract": "Contract with {{from}}. Read the PDF and sign when you are ready.",
       "title_act": "About the document",
-      "text_act": "Act from {{from}}. Check the PDF, then accept the act or return it with remarks."
+      "text_act": "Act from {{from}}. Check the PDF, then accept the act or return it with remarks.",
+      "title": "About the document",
+      "text": "Document from {{from}}."
     },
     "docTitle": "Quote {{number}}"
   }

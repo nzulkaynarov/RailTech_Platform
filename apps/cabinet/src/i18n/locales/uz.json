@@ -446,7 +446,7 @@
   },
   "pages": {
     "requests": {
-        "rowMenu": "{{number}} ariza amallari",
+      "rowMenu": "{{number}} ariza amallari",
       "title": "Arizalar",
       "new": "Yangi ariza",
       "filterLabel": "Arizalarni holat boʻyicha filtrlash",
@@ -1417,8 +1417,8 @@
   },
   "widgets": {
     "actionRequired": {
-        "showAll": "Barçasi ({{count}})",
-        "showLess": "Yopiş",
+      "showAll": "Barçasi ({{count}})",
+      "showLess": "Yopiş",
       "title": "Qaroringiz kutilmoqda",
       "allClear": "Barcha hujjatlar koʻrib chiqilgan — hozirda hech qanday harakat talab etilmaydi.",
       "quoteBadge": "TK",
@@ -1995,7 +1995,9 @@
       "title_contract": "Hujjat haqida",
       "text_contract": "{{from}} bilan şartnoma. PDF faylni öqing va tayyor bölganingizda imzolang.",
       "title_act": "Hujjat haqida",
-      "text_act": "{{from}} dalolatnomasi. PDF faylni tekşiring: dalolatnomani qabul qiling yoki izoh bilan qaytaring."
+      "text_act": "{{from}} dalolatnomasi. PDF faylni tekşiring: dalolatnomani qabul qiling yoki izoh bilan qaytaring.",
+      "title": "Hujjat haqida",
+      "text": "{{from}} hujjati."
     },
     "docTitle": "{{number}} taklifi"
   }
