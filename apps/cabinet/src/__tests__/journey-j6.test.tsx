@@ -18,9 +18,9 @@ describe('Wave J6 & B-CABFIX-2: Поиск, фильтры, повтор зап�
       const list = await screen.findByRole('list', { name: 'Заявки' });
       expect(within(list).getAllByRole('listitem')).toHaveLength(6);
 
-      // Кликаем по фильтру «Закрыт»
-      const closedFilter = screen.getByRole('button', { name: 'Закрыта' });
-      await user.click(closedFilter);
+      // Выбираем в списке статусов «Закрыта»
+      await user.click(screen.getByRole('combobox', { name: 'Фильтр заявок по статусу' }));
+      await user.click(await screen.findByRole('option', { name: 'Закрыта' }));
 
       expect(router.state.location.search).toBe('?status=closed');
       await waitFor(() => {
@@ -29,9 +29,9 @@ describe('Wave J6 & B-CABFIX-2: Поиск, фильтры, повтор зап�
         expect(items[0]).toHaveTextContent('ПР-2026-036');
       });
 
-      // Сбрасываем фильтр кнопкой «Все»
-      const allFilter = screen.getByRole('button', { name: 'Все' });
-      await user.click(allFilter);
+      // Сбрасываем фильтр значением «Все»
+      await user.click(screen.getByRole('combobox', { name: 'Фильтр заявок по статусу' }));
+      await user.click(await screen.findByRole('option', { name: 'Все' }));
       expect(router.state.location.search).toBe('');
       await waitFor(() => {
         expect(within(list).getAllByRole('listitem')).toHaveLength(6);
@@ -88,7 +88,7 @@ describe('Wave J6 & B-CABFIX-2: Поиск, фильтры, повтор зап�
 
       // «Повторить заявку» — в меню строки, а не кнопкой в каждой строке
       expect(screen.queryByRole('link', { name: /Повторить заявку/ })).not.toBeInTheDocument();
-      const menus = await screen.findAllByRole('button', { name: /^Действия по заявке/ });
+      const menus = await screen.findAllByRole('button', { name: /^Действия: / });
       expect(menus.length).toBeGreaterThan(0);
       await user.click(menus[0]);
       await user.click(await screen.findByRole('menuitem', { name: 'Повторить заявку' }));

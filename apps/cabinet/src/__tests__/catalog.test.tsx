@@ -5,6 +5,16 @@ import i18n from '@/i18n';
 import { renderApp, signedIn } from '@/test/render';
 import { expectNoAxeViolations, heading } from '@/test/screens';
 
+/** Запросы по роли — внутри `<main>`: по всему документу jsdom считает стили оболочки (меню, шапка) и тратит секунды. */
+function screenMain() {
+  const main = document.querySelector('main');
+  if (!main) throw new Error('нет <main>');
+  return within(main as HTMLElement);
+}
+
+/** Новый поиск перерисовывает до 24 карточек: на раннере CI это дольше секунды по умолчанию у findBy. */
+const SEARCH_WAIT = { timeout: 8000 };
+
 function results() {
   return screen.findByRole('list', { name: 'Позиции каталога' });
 }
@@ -61,17 +71,17 @@ describe('Каталог', () => {
     const { router } = renderApp('/catalog');
     await results();
     // Вставка, а не посимвольный ввод: каждое нажатие перерисовывает 12 карточек, на раннере CI это десятки секунд
-    await user.click(screen.getByRole('searchbox', { name: 'Поиск по каталогу' }));
+    await user.click(screenMain().getByRole('searchbox', { name: 'Поиск по каталогу' }));
     await user.paste('ремень');
-    await user.click(screen.getByRole('button', { name: 'Найти' }));
-    expect(await screen.findByText('Найдено 3 позиции')).toBeInTheDocument();
+    await user.click(screenMain().getByRole('button', { name: 'Найти' }));
+    expect(await screen.findByText('Найдено 3 позиции', {}, SEARCH_WAIT)).toBeInTheDocument();
     expect(router.state.location.search).toBe('?q=%D1%80%D0%B5%D0%BC%D0%B5%D0%BD%D1%8C');
 
-    await user.click(screen.getByRole('button', { name: 'Очистить поиск' }));
-    expect(await screen.findByText('Найдено 24 позиции')).toBeInTheDocument();
-    await user.click(await screen.findByRole('button', { name: 'Услуги' }));
-    expect(await screen.findByText('Найдено 2 позиции')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Услуги' })).toHaveAttribute('aria-pressed', 'true');
+    await user.click(screenMain().getByRole('button', { name: 'Очистить поиск' }));
+    expect(await screen.findByText('Найдено 24 позиции', {}, SEARCH_WAIT)).toBeInTheDocument();
+    await user.click(await screenMain().findByRole('button', { name: 'Услуги' }));
+    expect(await screen.findByText('Найдено 2 позиции', {}, SEARCH_WAIT)).toBeInTheDocument();
+    expect(screenMain().getByRole('button', { name: 'Услуги' })).toHaveAttribute('aria-pressed', 'true');
   });
 
   it('ничего не нашлось — сброс и «описать в запросе»', async () => {
@@ -79,8 +89,8 @@ describe('Каталог', () => {
     const user = userEvent.setup();
     renderApp('/catalog?q=луноход');
     expect(await screen.findByText('Ничего не нашлось')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Описать в заявке' })).toHaveAttribute('href', '/requests/new');
-    await user.click(screen.getByRole('button', { name: 'Сбросить фильтры' }));
+    expect(screenMain().getByRole('link', { name: 'Описать в заявке' })).toHaveAttribute('href', '/requests/new');
+    await user.click(screenMain().getByRole('button', { name: 'Сбросить фильтры' }));
     expect(await screen.findByText('Найдено 24 позиции')).toBeInTheDocument();
   });
 

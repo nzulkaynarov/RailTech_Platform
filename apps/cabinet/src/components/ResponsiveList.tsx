@@ -129,7 +129,7 @@ function DesktopTable<T>({ label, rows, getRowId, title, rowHref, columns, actio
                 ))}
                 {actions ? (
                   <TableCell className="text-right">
-                    <div className="flex flex-wrap justify-end gap-2">{actions.cell(row)}</div>
+                    <div className="flex flex-nowrap items-center justify-end gap-2">{actions.cell(row)}</div>
                   </TableCell>
                 ) : null}
               </TableRow>
