@@ -140,6 +140,9 @@ class LeadCard(BaseModel):
     first_response: LeadFirstResponse
     invitation: ClientInvitation | None
     origin: LeadOrigin | None = None
+    # LH-1: лид отброшен как спам, тест или дубль (и номер оставшегося лида у дубля)
+    discarded: Literal["spam", "test", "duplicate"] | None = None
+    duplicate_of: str | None = None
 
 
 # --- клиенты --------------------------------------------------------------------------------------

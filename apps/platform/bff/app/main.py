@@ -28,6 +28,7 @@ from app.api import (
     contract_templates,
     crm_clients,
     crm_kb,
+    crm_lead_actions,
     crm_leads,
     crm_messages,
     crm_requests,
@@ -148,6 +149,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(admin_bot.router, prefix=API_PREFIX)
     app.include_router(crm_kb.router, prefix=API_PREFIX)
     app.include_router(crm_messages.router, prefix=API_PREFIX)
+    app.include_router(crm_lead_actions.router, prefix=API_PREFIX)
     app.include_router(chats.router, prefix=API_PREFIX)
     app.include_router(crm_leads.router, prefix=API_PREFIX)
     app.include_router(crm_clients.router, prefix=API_PREFIX)
