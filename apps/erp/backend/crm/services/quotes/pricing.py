@@ -8,9 +8,9 @@ the lifecycle / bulk / access submodules.
 
 from decimal import ROUND_HALF_UP, Decimal
 
-from django.db import models, transaction
+from django.db import transaction
 
-from core.currency import BASE_CURRENCY
+from core.currency import BASE_CURRENCY, line_amount
 from crm.models import Quote, QuoteItem, QuoteItemHistory
 
 from ._shared import _quote_owner_company_id
@@ -235,10 +235,10 @@ class QuoteCalculationService:
         # NOTE are presentation rows; optional ITEMs are shown with a price but quoted OUTSIDE the
         # totals (доп. предложение). Same filter drives economics/margin below — optional never
         # distorts the seller's margin governance.
-        totals = quote.items.billable().aggregate(
-            subtotal=models.Sum(models.F("final_price_excl_vat") * models.F("quantity"))
+        # Σ строк, каждая округлена до копейки (core.currency.line_amount) — как строки счёта и акта.
+        subtotal = sum(
+            (line_amount(it.final_price_excl_vat, it.quantity) for it in quote.items.billable()), Decimal("0")
         )
-        subtotal = totals["subtotal"] or Decimal("0")
 
         # Ставка НДС берётся из КП (заморожена из БД), не хардкодится в коде.
         vat_rate = quote.vat_rate / Decimal("100")
