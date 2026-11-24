@@ -145,7 +145,7 @@ async def test_the_link_goes_with_one_button_to_the_personal_link(
     assert outcome == "processed"
     ((chat_id, text, markup),) = bot.sent
     assert chat_id == USER
-    assert text == "Sizga hujjat yuborildi: Hisob-faktura INV-1, ООО Продавец."
+    assert text == "Sizga hujjat yuborildi: Hisob INV-1, ООО Продавец."
     (row,) = markup.inline_keyboard
     (button,) = row
     assert button.url == URL

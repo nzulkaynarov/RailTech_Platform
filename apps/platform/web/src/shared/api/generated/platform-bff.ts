@@ -30,6 +30,7 @@ import type {
   AiModelTest,
   AiSpendReport,
   ApprovalConflictResponse,
+  AssignLeadIn,
   AssistIn,
   AssistSuggestion,
   AuditPage,
@@ -104,6 +105,8 @@ import type {
   ClientCard,
   ClientInvitation,
   ClientList,
+  CloseLeadIn,
+  CloseOptions,
   CoExecutorIn,
   Colleague,
   CompanyArticle,
@@ -144,6 +147,7 @@ import type {
   DictionaryList,
   DictionaryOrderIn,
   DictionarySyncResult,
+  DiscardLeadIn,
   DoNotWorkIn,
   DocflowSettings,
   DocflowSettingsPatch,
@@ -276,6 +280,8 @@ import type {
   KbSearchIn,
   KbSearchResult,
   LeadCard,
+  LeadContactsIn,
+  LeadContactsSaved,
   LeadCreated,
   LeadIn,
   LeadManagerList,
@@ -336,6 +342,7 @@ import type {
   ListPartnerApplicationsParams,
   ListPaymentMemosParams,
   ListPaymentsParams,
+  ListPeopleLeadsParams,
   ListQuoteApprovalsParams,
   ListSentMailParams,
   ListSigningAuthoritiesParams,
@@ -396,6 +403,8 @@ import type {
   PaymentMemoPage,
   PaymentMemoPayIn,
   PaymentProofUpload,
+  PeopleLeadContacts,
+  PeopleLeadPage,
   PictureUpload,
   PlatformSettings,
   PlatformSettingsUpdate,
@@ -507,6 +516,7 @@ import type {
   SmtpCheck,
   SmtpConnector,
   SmtpSettingsIn,
+  SnoozeLeadIn,
   SpendReport,
   StaffDirectory,
   StartPriceImportParams,
@@ -48146,6 +48156,1093 @@ export const useHandOverCrmLead = <
   return useMutation(getHandOverCrmLeadMutationOptions(options), queryClient);
 };
 
+export const getCloseCrmLeadUrl = (lead: string) => {
+  return `/api/v1/crm/messages/${lead}/close`;
+};
+
+/**
+ * CRM `POST /leads/{id}/actions/close_won` и `close_lost` (LH-1). Раздел `crm.leads` полный; закрывает тот, кто ведёт лида (или администратор). `outcome = lost` — `lost_reason` обязательна и берётся из `getCrmCloseOptions`; `reason` — комментарий в заметку команды. Лид не забран — 409 `CONFLICT` (`take_first`), лид у другого — 403 (`not_lead_owner`), с коннектором ERP итог «заключена» решает бэк-офис — 409 (`won_decided_by_erp`). После закрытия бот снова ведёт диалог; у клиента лид остаётся клиентом.
+ * @summary Закрыть лид: «Сделка заключена» или «Отказ» с причиной
+ */
+export const closeCrmLead = async (
+  lead: string,
+  closeLeadIn: CloseLeadIn,
+  options?: Parameters<typeof http>[1],
+): Promise<ActionOk> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<ActionOk>(getCloseCrmLeadUrl(lead), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(closeLeadIn),
+  });
+};
+
+export const getCloseCrmLeadMutationKey = () => ["closeCrmLead"] as const;
+
+export const getCloseCrmLeadMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | MessagesConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof closeCrmLead>>,
+    TError,
+    CloseCrmLeadMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof closeCrmLead>>,
+  TError,
+  CloseCrmLeadMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCloseCrmLeadMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof closeCrmLead>>,
+    CloseCrmLeadMutationVariables
+  > = (props) => {
+    const { lead, data } = props ?? {};
+
+    return closeCrmLead(lead, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CloseCrmLeadMutationResult = NonNullable<Awaited<ReturnType<typeof closeCrmLead>>>;
+export type CloseCrmLeadMutationBody = CloseLeadIn;
+export type CloseCrmLeadMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | MessagesConflictResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type CloseCrmLeadMutationVariables = { lead: string; data: CloseLeadIn };
+
+/**
+ * @summary Закрыть лид: «Сделка заключена» или «Отказ» с причиной
+ */
+export const useCloseCrmLead = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | MessagesConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof closeCrmLead>>,
+      TError,
+      CloseCrmLeadMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof closeCrmLead>>,
+  TError,
+  CloseCrmLeadMutationVariables,
+  TContext
+> => {
+  return useMutation(getCloseCrmLeadMutationOptions(options), queryClient);
+};
+
+export const getAssignCrmLeadUrl = (lead: string) => {
+  return `/api/v1/crm/messages/${lead}/assign`;
+};
+
+/**
+ * CRM `POST /leads/{id}/actions/assign` (LH-1). Раздел `crm.leads` полный; передаёт тот, кто ведёт лида (или администратор). `user_id` — из `listCrmLeadColleagues`. Лид у бота или не забран — 409 `CONFLICT` (`take_first`); коллега не ведёт лидов или неактивен — 422 (`inactive_colleague`). Клиент получает сообщение с именем нового менеджера.
+ * @summary Передать взятого лида коллеге
+ */
+export const assignCrmLead = async (
+  lead: string,
+  assignLeadIn: AssignLeadIn,
+  options?: Parameters<typeof http>[1],
+): Promise<ActionOk> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<ActionOk>(getAssignCrmLeadUrl(lead), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(assignLeadIn),
+  });
+};
+
+export const getAssignCrmLeadMutationKey = () => ["assignCrmLead"] as const;
+
+export const getAssignCrmLeadMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | MessagesConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof assignCrmLead>>,
+    TError,
+    AssignCrmLeadMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof assignCrmLead>>,
+  TError,
+  AssignCrmLeadMutationVariables,
+  TContext
+> => {
+  const mutationKey = getAssignCrmLeadMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof assignCrmLead>>,
+    AssignCrmLeadMutationVariables
+  > = (props) => {
+    const { lead, data } = props ?? {};
+
+    return assignCrmLead(lead, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AssignCrmLeadMutationResult = NonNullable<Awaited<ReturnType<typeof assignCrmLead>>>;
+export type AssignCrmLeadMutationBody = AssignLeadIn;
+export type AssignCrmLeadMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | MessagesConflictResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type AssignCrmLeadMutationVariables = { lead: string; data: AssignLeadIn };
+
+/**
+ * @summary Передать взятого лида коллеге
+ */
+export const useAssignCrmLead = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | MessagesConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof assignCrmLead>>,
+      TError,
+      AssignCrmLeadMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof assignCrmLead>>,
+  TError,
+  AssignCrmLeadMutationVariables,
+  TContext
+> => {
+  return useMutation(getAssignCrmLeadMutationOptions(options), queryClient);
+};
+
+export const getDiscardCrmLeadUrl = (lead: string) => {
+  return `/api/v1/crm/messages/${lead}/discard`;
+};
+
+/**
+ * CRM `POST /leads/{id}/actions/discard` (LH-1). Раздел `crm.leads` полный; лид закрыт отказом с системной причиной и скрыт из активных списков (карточка по номеру открывается). `test` — ещё и обезличен, как по просьбе клиента в боте. `duplicate` — ссылка на оставшийся лид `duplicate_of` (без склейки). Клиента и «Сделку» так не закрывают — 409; лид у другого — 403 (`not_lead_owner`); неверная ссылка дубля — 422 (`fields = [duplicate_of]`). Вернуть лид в списки — `reopenCrmLead`.
+ * @summary Отбросить лид как «Спам», «Тест» или «Дубль»
+ */
+export const discardCrmLead = async (
+  lead: string,
+  discardLeadIn: DiscardLeadIn,
+  options?: Parameters<typeof http>[1],
+): Promise<ActionOk> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<ActionOk>(getDiscardCrmLeadUrl(lead), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(discardLeadIn),
+  });
+};
+
+export const getDiscardCrmLeadMutationKey = () => ["discardCrmLead"] as const;
+
+export const getDiscardCrmLeadMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | MessagesConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof discardCrmLead>>,
+    TError,
+    DiscardCrmLeadMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof discardCrmLead>>,
+  TError,
+  DiscardCrmLeadMutationVariables,
+  TContext
+> => {
+  const mutationKey = getDiscardCrmLeadMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof discardCrmLead>>,
+    DiscardCrmLeadMutationVariables
+  > = (props) => {
+    const { lead, data } = props ?? {};
+
+    return discardCrmLead(lead, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DiscardCrmLeadMutationResult = NonNullable<Awaited<ReturnType<typeof discardCrmLead>>>;
+export type DiscardCrmLeadMutationBody = DiscardLeadIn;
+export type DiscardCrmLeadMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | MessagesConflictResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type DiscardCrmLeadMutationVariables = { lead: string; data: DiscardLeadIn };
+
+/**
+ * @summary Отбросить лид как «Спам», «Тест» или «Дубль»
+ */
+export const useDiscardCrmLead = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | MessagesConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof discardCrmLead>>,
+      TError,
+      DiscardCrmLeadMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof discardCrmLead>>,
+  TError,
+  DiscardCrmLeadMutationVariables,
+  TContext
+> => {
+  return useMutation(getDiscardCrmLeadMutationOptions(options), queryClient);
+};
+
+export const getReopenCrmLeadUrl = (lead: string) => {
+  return `/api/v1/crm/messages/${lead}/reopen`;
+};
+
+/**
+ * CRM `POST /leads/{id}/actions/take` для лида в «Отказе» (в том числе отброшенного) и `actions/new_deal` для клиента (LH-1). Раздел `crm.leads` полный; лид снова в работе у того, кто открыл. Лид не закрыт — 409 `CONFLICT` (`not_closed`).
+ * @summary Открыть закрытый лид заново
+ */
+export const reopenCrmLead = async (
+  lead: string,
+  options?: Parameters<typeof http>[1],
+): Promise<ActionOk> => {
+  return http<ActionOk>(getReopenCrmLeadUrl(lead), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getReopenCrmLeadMutationKey = () => ["reopenCrmLead"] as const;
+
+export const getReopenCrmLeadMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | MessagesConflictResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof reopenCrmLead>>,
+    TError,
+    ReopenCrmLeadMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof reopenCrmLead>>,
+  TError,
+  ReopenCrmLeadMutationVariables,
+  TContext
+> => {
+  const mutationKey = getReopenCrmLeadMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof reopenCrmLead>>,
+    ReopenCrmLeadMutationVariables
+  > = (props) => {
+    const { lead } = props ?? {};
+
+    return reopenCrmLead(lead, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ReopenCrmLeadMutationResult = NonNullable<Awaited<ReturnType<typeof reopenCrmLead>>>;
+
+export type ReopenCrmLeadMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | MessagesConflictResponse
+  | BackendUnavailableResponse
+>;
+export type ReopenCrmLeadMutationVariables = { lead: string };
+
+/**
+ * @summary Открыть закрытый лид заново
+ */
+export const useReopenCrmLead = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | MessagesConflictResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof reopenCrmLead>>,
+      TError,
+      ReopenCrmLeadMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof reopenCrmLead>>,
+  TError,
+  ReopenCrmLeadMutationVariables,
+  TContext
+> => {
+  return useMutation(getReopenCrmLeadMutationOptions(options), queryClient);
+};
+
+export const getAcknowledgeCrmLeadUrl = (lead: string) => {
+  return `/api/v1/crm/messages/${lead}/acknowledge`;
+};
+
+/**
+ * CRM `POST /leads/{id}/actions/acknowledge` (LH-1). Раздел `crm.leads` полный. Только открытая или отложенная передача `priority = info`; иначе 409 `CONFLICT` (`no_open_handoff`). Лид остаётся у бота.
+ * @summary «Принято к сведению»: закрыть информационную передачу
+ */
+export const acknowledgeCrmLead = async (
+  lead: string,
+  options?: Parameters<typeof http>[1],
+): Promise<ActionOk> => {
+  return http<ActionOk>(getAcknowledgeCrmLeadUrl(lead), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getAcknowledgeCrmLeadMutationKey = () => ["acknowledgeCrmLead"] as const;
+
+export const getAcknowledgeCrmLeadMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | MessagesConflictResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof acknowledgeCrmLead>>,
+    TError,
+    AcknowledgeCrmLeadMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof acknowledgeCrmLead>>,
+  TError,
+  AcknowledgeCrmLeadMutationVariables,
+  TContext
+> => {
+  const mutationKey = getAcknowledgeCrmLeadMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof acknowledgeCrmLead>>,
+    AcknowledgeCrmLeadMutationVariables
+  > = (props) => {
+    const { lead } = props ?? {};
+
+    return acknowledgeCrmLead(lead, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AcknowledgeCrmLeadMutationResult = NonNullable<
+  Awaited<ReturnType<typeof acknowledgeCrmLead>>
+>;
+
+export type AcknowledgeCrmLeadMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | MessagesConflictResponse
+  | BackendUnavailableResponse
+>;
+export type AcknowledgeCrmLeadMutationVariables = { lead: string };
+
+/**
+ * @summary «Принято к сведению»: закрыть информационную передачу
+ */
+export const useAcknowledgeCrmLead = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | MessagesConflictResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof acknowledgeCrmLead>>,
+      TError,
+      AcknowledgeCrmLeadMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof acknowledgeCrmLead>>,
+  TError,
+  AcknowledgeCrmLeadMutationVariables,
+  TContext
+> => {
+  return useMutation(getAcknowledgeCrmLeadMutationOptions(options), queryClient);
+};
+
+export const getSnoozeCrmLeadUrl = (lead: string) => {
+  return `/api/v1/crm/messages/${lead}/snooze`;
+};
+
+/**
+ * CRM `POST /leads/{id}/actions/snooze` (LH-1): срок считает BFF от своего времени. Раздел `crm.leads` полный; лид без ответственного — любой, с ответственным — он или администратор (403 `not_lead_owner`). Нет открытой передачи — 409 `CONFLICT` (`no_open_handoff`).
+ * @summary Отложить передачу на час, день или три дня
+ */
+export const snoozeCrmLead = async (
+  lead: string,
+  snoozeLeadIn: SnoozeLeadIn,
+  options?: Parameters<typeof http>[1],
+): Promise<ActionOk> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<ActionOk>(getSnoozeCrmLeadUrl(lead), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(snoozeLeadIn),
+  });
+};
+
+export const getSnoozeCrmLeadMutationKey = () => ["snoozeCrmLead"] as const;
+
+export const getSnoozeCrmLeadMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | MessagesConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof snoozeCrmLead>>,
+    TError,
+    SnoozeCrmLeadMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof snoozeCrmLead>>,
+  TError,
+  SnoozeCrmLeadMutationVariables,
+  TContext
+> => {
+  const mutationKey = getSnoozeCrmLeadMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof snoozeCrmLead>>,
+    SnoozeCrmLeadMutationVariables
+  > = (props) => {
+    const { lead, data } = props ?? {};
+
+    return snoozeCrmLead(lead, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SnoozeCrmLeadMutationResult = NonNullable<Awaited<ReturnType<typeof snoozeCrmLead>>>;
+export type SnoozeCrmLeadMutationBody = SnoozeLeadIn;
+export type SnoozeCrmLeadMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | MessagesConflictResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type SnoozeCrmLeadMutationVariables = { lead: string; data: SnoozeLeadIn };
+
+/**
+ * @summary Отложить передачу на час, день или три дня
+ */
+export const useSnoozeCrmLead = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | MessagesConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof snoozeCrmLead>>,
+      TError,
+      SnoozeCrmLeadMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof snoozeCrmLead>>,
+  TError,
+  SnoozeCrmLeadMutationVariables,
+  TContext
+> => {
+  return useMutation(getSnoozeCrmLeadMutationOptions(options), queryClient);
+};
+
+export const getUnsnoozeCrmLeadUrl = (lead: string) => {
+  return `/api/v1/crm/messages/${lead}/unsnooze`;
+};
+
+/**
+ * CRM `POST /leads/{id}/actions/unsnooze` (LH-1): передача снова открыта, срок реакции — заново. Права — как у «Отложить». Нет отложенной передачи — 409 `CONFLICT` (`no_open_handoff`).
+ * @summary Вернуть передачу из отложенных
+ */
+export const unsnoozeCrmLead = async (
+  lead: string,
+  options?: Parameters<typeof http>[1],
+): Promise<ActionOk> => {
+  return http<ActionOk>(getUnsnoozeCrmLeadUrl(lead), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getUnsnoozeCrmLeadMutationKey = () => ["unsnoozeCrmLead"] as const;
+
+export const getUnsnoozeCrmLeadMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | MessagesConflictResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof unsnoozeCrmLead>>,
+    TError,
+    UnsnoozeCrmLeadMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof unsnoozeCrmLead>>,
+  TError,
+  UnsnoozeCrmLeadMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUnsnoozeCrmLeadMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof unsnoozeCrmLead>>,
+    UnsnoozeCrmLeadMutationVariables
+  > = (props) => {
+    const { lead } = props ?? {};
+
+    return unsnoozeCrmLead(lead, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UnsnoozeCrmLeadMutationResult = NonNullable<
+  Awaited<ReturnType<typeof unsnoozeCrmLead>>
+>;
+
+export type UnsnoozeCrmLeadMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | MessagesConflictResponse
+  | BackendUnavailableResponse
+>;
+export type UnsnoozeCrmLeadMutationVariables = { lead: string };
+
+/**
+ * @summary Вернуть передачу из отложенных
+ */
+export const useUnsnoozeCrmLead = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | MessagesConflictResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof unsnoozeCrmLead>>,
+      TError,
+      UnsnoozeCrmLeadMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof unsnoozeCrmLead>>,
+  TError,
+  UnsnoozeCrmLeadMutationVariables,
+  TContext
+> => {
+  return useMutation(getUnsnoozeCrmLeadMutationOptions(options), queryClient);
+};
+
+export const getGetCrmCloseOptionsUrl = () => {
+  return `/api/v1/crm/lead-close-options`;
+};
+
+/**
+ * CRM `GET /leads/close_options` (LH-1). Раздел `crm.leads` полный. Причины — справочник «Настроек»; `won_by_erp` — подключён бэк-офис ERP, итог «заключена» приходит из него, а не кнопкой.
+ * @summary Окно «Закрыть»: причины отказа и кто решает итог «заключена»
+ */
+export const getCrmCloseOptions = async (
+  options?: Parameters<typeof http>[1],
+): Promise<CloseOptions> => {
+  return http<CloseOptions>(getGetCrmCloseOptionsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetCrmCloseOptionsQueryKey = () => {
+  return [`/api/v1/crm/lead-close-options`] as const;
+};
+
+export const getGetCrmCloseOptionsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCrmCloseOptions>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getCrmCloseOptions>>, TError, TData>>;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetCrmCloseOptionsQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getCrmCloseOptions>>> = ({ signal }) =>
+    getCrmCloseOptions({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getCrmCloseOptions>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetCrmCloseOptionsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getCrmCloseOptions>>
+>;
+export type GetCrmCloseOptionsQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse
+>;
+
+export function useGetCrmCloseOptions<
+  TData = Awaited<ReturnType<typeof getCrmCloseOptions>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getCrmCloseOptions>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getCrmCloseOptions>>,
+          TError,
+          Awaited<ReturnType<typeof getCrmCloseOptions>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetCrmCloseOptions<
+  TData = Awaited<ReturnType<typeof getCrmCloseOptions>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getCrmCloseOptions>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getCrmCloseOptions>>,
+          TError,
+          Awaited<ReturnType<typeof getCrmCloseOptions>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetCrmCloseOptions<
+  TData = Awaited<ReturnType<typeof getCrmCloseOptions>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getCrmCloseOptions>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Окно «Закрыть»: причины отказа и кто решает итог «заключена»
+ */
+
+export function useGetCrmCloseOptions<
+  TData = Awaited<ReturnType<typeof getCrmCloseOptions>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getCrmCloseOptions>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetCrmCloseOptionsQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getListCrmLeadColleaguesUrl = () => {
+  return `/api/v1/crm/lead-colleagues`;
+};
+
+/**
+ * CRM `GET /team` (LH-1). Раздел `crm.leads` полный. Активные менеджеры и администраторы по имени, без почты, телефона и ролей; вызвавший исключён.
+ * @summary Кому передать взятого лида: активные менеджеры
+ */
+export const listCrmLeadColleagues = async (
+  options?: Parameters<typeof http>[1],
+): Promise<LeadManagerList> => {
+  return http<LeadManagerList>(getListCrmLeadColleaguesUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListCrmLeadColleaguesQueryKey = () => {
+  return [`/api/v1/crm/lead-colleagues`] as const;
+};
+
+export const getListCrmLeadColleaguesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listCrmLeadColleagues>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(options?: {
+  query?: Partial<
+    UseQueryOptions<Awaited<ReturnType<typeof listCrmLeadColleagues>>, TError, TData>
+  >;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListCrmLeadColleaguesQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listCrmLeadColleagues>>> = ({ signal }) =>
+    listCrmLeadColleagues({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listCrmLeadColleagues>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListCrmLeadColleaguesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listCrmLeadColleagues>>
+>;
+export type ListCrmLeadColleaguesQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse
+>;
+
+export function useListCrmLeadColleagues<
+  TData = Awaited<ReturnType<typeof listCrmLeadColleagues>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listCrmLeadColleagues>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listCrmLeadColleagues>>,
+          TError,
+          Awaited<ReturnType<typeof listCrmLeadColleagues>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListCrmLeadColleagues<
+  TData = Awaited<ReturnType<typeof listCrmLeadColleagues>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listCrmLeadColleagues>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listCrmLeadColleagues>>,
+          TError,
+          Awaited<ReturnType<typeof listCrmLeadColleagues>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListCrmLeadColleagues<
+  TData = Awaited<ReturnType<typeof listCrmLeadColleagues>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listCrmLeadColleagues>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Кому передать взятого лида: активные менеджеры
+ */
+
+export function useListCrmLeadColleagues<
+  TData = Awaited<ReturnType<typeof listCrmLeadColleagues>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listCrmLeadColleagues>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListCrmLeadColleaguesQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
 export const getListCrmLeadManagersUrl = () => {
   return `/api/v1/crm/lead-managers`;
 };
@@ -54776,6 +55873,133 @@ export function useGetCrmLead<
   return withQueryKey(query, queryOptions.queryKey);
 }
 
+export const getUpdateCrmLeadUrl = (lead: string) => {
+  return `/api/v1/crm/leads/${lead}`;
+};
+
+/**
+ * CRM `PATCH /leads/{id}` (LH-1). Раздел `crm.leads` полный; правит тот, кто ведёт лида, или лид ни у кого (иначе 403 `not_lead_owner`). Названные поля меняются, пропущенные не трогаются; пустые `phone`, `email`, `company` очищают поле, пустое имя — 422. Телефон приводится к международному виду так же, как в форме сайта (`invalid_phone`), почта — к нижнему регистру и проверяется (`invalid_email`); ошибка — 422 с `fields`. Другой лид или клиент с тем же номером или почтой — `duplicates` в ответе: правка сохранена, экран предупреждает.
+ * @summary Правка контактов лида: имя, телефон, почта, компания
+ */
+export const updateCrmLead = async (
+  lead: string,
+  leadContactsIn: LeadContactsIn,
+  options?: Parameters<typeof http>[1],
+): Promise<LeadContactsSaved> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<LeadContactsSaved>(getUpdateCrmLeadUrl(lead), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(leadContactsIn),
+  });
+};
+
+export const getUpdateCrmLeadMutationKey = () => ["updateCrmLead"] as const;
+
+export const getUpdateCrmLeadMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateCrmLead>>,
+    TError,
+    UpdateCrmLeadMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateCrmLead>>,
+  TError,
+  UpdateCrmLeadMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUpdateCrmLeadMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateCrmLead>>,
+    UpdateCrmLeadMutationVariables
+  > = (props) => {
+    const { lead, data } = props ?? {};
+
+    return updateCrmLead(lead, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateCrmLeadMutationResult = NonNullable<Awaited<ReturnType<typeof updateCrmLead>>>;
+export type UpdateCrmLeadMutationBody = LeadContactsIn;
+export type UpdateCrmLeadMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type UpdateCrmLeadMutationVariables = { lead: string; data: LeadContactsIn };
+
+/**
+ * @summary Правка контактов лида: имя, телефон, почта, компания
+ */
+export const useUpdateCrmLead = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof updateCrmLead>>,
+      TError,
+      UpdateCrmLeadMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof updateCrmLead>>,
+  TError,
+  UpdateCrmLeadMutationVariables,
+  TContext
+> => {
+  return useMutation(getUpdateCrmLeadMutationOptions(options), queryClient);
+};
+
 export const getListCrmClientsUrl = (params?: ListCrmClientsParams) => {
   const normalizedParams = new URLSearchParams();
 
@@ -59149,6 +60373,237 @@ export const useRevealStaffContacts = <
   TContext
 > => {
   return useMutation(getRevealStaffContactsMutationOptions(options), queryClient);
+};
+
+export const getListPeopleLeadsUrl = (params?: ListPeopleLeadsParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/people/leads?${stringifiedParams}`
+    : `/api/v1/people/leads`;
+};
+
+/**
+ * Лиды для «Людей» (PL-1): те, кто ещё не стал клиентом — статусы `new`, `dialog`, `wants_quote`, `no_answer`; проигранные (`lost`) — только с `closed=true`. Лиды-«якоря» чата Cabinet и пробные (`cabinet`, `sandbox`) в список не входят, они не люди. Лид, ставший клиентом, строкой «Лиды» не показывается — он в «Клиентах». В строке — компания (колонка или ответ бота), канал, язык, суть запроса и признаки «есть телефон, почта, Telegram»; значения открывает `POST /people/leads/{lead}/reveal`. Раздел `crm.leads` от чтения или первая линия. До 100 лидов.
+ * @summary Органайзер · Люди: лиды
+ */
+export const listPeopleLeads = async (
+  params?: ListPeopleLeadsParams,
+  options?: Parameters<typeof http>[1],
+): Promise<PeopleLeadPage> => {
+  return http<PeopleLeadPage>(getListPeopleLeadsUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListPeopleLeadsQueryKey = (params?: ListPeopleLeadsParams) => {
+  return [`/api/v1/people/leads`, ...(params ? [params] : [])] as const;
+};
+
+export const getListPeopleLeadsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listPeopleLeads>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params?: ListPeopleLeadsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listPeopleLeads>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListPeopleLeadsQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listPeopleLeads>>> = ({ signal }) =>
+    listPeopleLeads(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listPeopleLeads>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListPeopleLeadsQueryResult = NonNullable<Awaited<ReturnType<typeof listPeopleLeads>>>;
+export type ListPeopleLeadsQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse
+>;
+
+export function useListPeopleLeads<
+  TData = Awaited<ReturnType<typeof listPeopleLeads>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params: undefined | ListPeopleLeadsParams,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listPeopleLeads>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listPeopleLeads>>,
+          TError,
+          Awaited<ReturnType<typeof listPeopleLeads>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListPeopleLeads<
+  TData = Awaited<ReturnType<typeof listPeopleLeads>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params?: ListPeopleLeadsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listPeopleLeads>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listPeopleLeads>>,
+          TError,
+          Awaited<ReturnType<typeof listPeopleLeads>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListPeopleLeads<
+  TData = Awaited<ReturnType<typeof listPeopleLeads>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params?: ListPeopleLeadsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listPeopleLeads>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Органайзер · Люди: лиды
+ */
+
+export function useListPeopleLeads<
+  TData = Awaited<ReturnType<typeof listPeopleLeads>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params?: ListPeopleLeadsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listPeopleLeads>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListPeopleLeadsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getRevealLeadContactsUrl = (lead: string) => {
+  return `/api/v1/people/leads/${lead}/reveal`;
+};
+
+/**
+ * Телефон, почта и Telegram лида — по нажатию, как у людей контрагентов. Сначала запись `contact.reveal` в журнал CRM (объект `lead`), потом контакты: журнал недоступен — 503 `BACKEND_UNAVAILABLE`, контактов нет. Выгрузки нет. Раздел `crm.leads` от чтения или первая линия.
+ * @summary Органайзер · Люди: показать контакты лида
+ */
+export const revealLeadContacts = async (
+  lead: string,
+  options?: Parameters<typeof http>[1],
+): Promise<PeopleLeadContacts> => {
+  return http<PeopleLeadContacts>(getRevealLeadContactsUrl(lead), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getRevealLeadContactsMutationKey = () => ["revealLeadContacts"] as const;
+
+export const getRevealLeadContactsMutationOptions = <
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof revealLeadContacts>>,
+    TError,
+    RevealLeadContactsMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof revealLeadContacts>>,
+  TError,
+  RevealLeadContactsMutationVariables,
+  TContext
+> => {
+  const mutationKey = getRevealLeadContactsMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof revealLeadContacts>>,
+    RevealLeadContactsMutationVariables
+  > = (props) => {
+    const { lead } = props ?? {};
+
+    return revealLeadContacts(lead, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RevealLeadContactsMutationResult = NonNullable<
+  Awaited<ReturnType<typeof revealLeadContacts>>
+>;
+
+export type RevealLeadContactsMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+export type RevealLeadContactsMutationVariables = { lead: string };
+
+/**
+ * @summary Органайзер · Люди: показать контакты лида
+ */
+export const useRevealLeadContacts = <
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof revealLeadContacts>>,
+      TError,
+      RevealLeadContactsMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof revealLeadContacts>>,
+  TError,
+  RevealLeadContactsMutationVariables,
+  TContext
+> => {
+  return useMutation(getRevealLeadContactsMutationOptions(options), queryClient);
 };
 
 export const getSearchCounterpartiesUrl = (params?: SearchCounterpartiesParams) => {

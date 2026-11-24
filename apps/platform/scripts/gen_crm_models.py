@@ -100,6 +100,9 @@ ROOTS = (
     # подсказка ответа.
     "InboxResponse",
     "LeadDetail",
+    # LH-1: окно «Закрыть» и правка контактов лида
+    "CloseOptions",
+    "ContactsResult",
     "MessageOut",
     "NoteOut",
     "TeamMember",

@@ -81,8 +81,9 @@ def test_client_email_header_is_white_labeled_with_seller_brand():
     # Seller brand opens the email — name in the header, its accent as the header background.
     assert "ООО «Вагонсервис»" in header
     assert "#7a1f1f" in html
-    # ...but the platform stays named in the FOOTER (Stripe/DocuSign pattern), never erased.
-    assert "платформы" in html
+    # ...and the footer is the plain automatic-mail line, no «platform» wording (owner 2026-11-24, D6).
+    assert "Письмо отправлено автоматически" in html
+    assert "платформ" not in html
 
 
 @pytest.mark.django_db
@@ -97,8 +98,7 @@ def test_client_email_falls_back_to_platform_brand_without_seller():
             "valid_until": "—",
         },
     )
-    header = html.split("padding:24px 32px", 1)[1][:400]
-    assert "ERP" in header  # platform default header when no brand passed
+    assert "ERP" not in html  # no brand and no company name: nothing, never the stock «ERP» word
     assert "#1e3a8a" in html  # platform default accent
 
 

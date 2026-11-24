@@ -285,13 +285,13 @@ describe('меню из /me.modules', () => {
     expect(names).not.toContain('Каталог');
   });
 
-  it('партнёр без разделов (оба модуля выключены): «Доступ открыт…», в меню только «Профиль»', async () => {
+  it('партнёр без разделов (оба модуля выключены): «Разделы ещё не открыты…», в меню только «Профиль»', async () => {
     signedIn('actor', 'demo', PARTNER_NOTHING);
     renderApp('/');
 
-    expect(await screen.findByRole('heading', { level: 1, name: 'Доступ открыт' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Разделы ещё не открыты' })).toBeInTheDocument();
     expect(
-      screen.getByText('Разделы для вашей компании ещё настраиваются — свяжитесь с вашим менеджером.'),
+      screen.getByText('Менеджер откроет их для вашей компании — напишите ему, если ждёте долго.'),
     ).toBeInTheDocument();
     const side = screen.getByRole('navigation', { name: 'Разделы кабинета' });
     expect(
@@ -349,7 +349,7 @@ describe('меню из /me.modules', () => {
 
   it.each([
     ['по умолчанию', PARTNER_DEFAULT, '/requests'],
-    ['без разделов (экран «Доступ открыт»)', PARTNER_NOTHING, '/'],
+    ['без разделов (экран «Разделы ещё не открыты»)', PARTNER_NOTHING, '/'],
   ])('профиль партнёра %s: меню «Профиль», смена языка и выход', async (_name, access, start) => {
     signedIn('actor', 'demo', access);
     const user = userEvent.setup();
@@ -369,10 +369,10 @@ describe('меню из /me.modules', () => {
     await waitFor(() => expect(router.state.location.pathname).toBe('/login'));
   });
 
-  it('axe: экран «Доступ открыт» и меню партнёра без нарушений', async () => {
+  it('axe: экран «Разделы ещё не открыты» и меню партнёра без нарушений', async () => {
     signedIn('actor', 'demo', PARTNER_NOTHING);
     const empty = renderApp('/');
-    await screen.findByRole('heading', { level: 1, name: 'Доступ открыт' });
+    await screen.findByRole('heading', { level: 1, name: 'Разделы ещё не открыты' });
     expect((await axe(empty.container)).violations).toEqual([]);
     empty.unmount();
 

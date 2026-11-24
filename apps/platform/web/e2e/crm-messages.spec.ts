@@ -204,13 +204,13 @@ test(
     await page.getByRole("button", { name: "Карточка лида" }).click();
     const sheet = page.getByRole("dialog", { name: "Карточка лида" });
     await expect(sheet).toContainText("zakupki@example.org");
-    const close = await sheet.getByRole("button", { name: "Закрыть" }).boundingBox();
+    const close = await sheet.getByRole("button", { name: "Назад" }).boundingBox();
     const back = await sheet.getByRole("button", { name: "Вернуть боту" }).boundingBox();
     expect(close?.y ?? 0).toBeGreaterThan((viewport?.height ?? 0) * 0.8);
     expect(back?.y ?? 0).toBeGreaterThan((viewport?.height ?? 0) * 0.8);
     await settledScreenshot(page, "lead-sheet");
     await expectNoViolations(page, "карточка 390");
-    await sheet.getByRole("button", { name: "Закрыть" }).click();
+    await sheet.getByRole("button", { name: "Назад" }).click();
 
     // Ошибка отправки на 390: текст в поле, «Повторить» рядом
     await setFlag(page, TELEGRAM_DOWN, true);

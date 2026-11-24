@@ -358,7 +358,19 @@
       },
       "roles": "Roles",
       "reveal": "Show contacts",
-      "close": "Close"
+      "close": "Close",
+      "showClosed": "Show closed",
+      "closedLead": "closed",
+      "channel": "Channel",
+      "language": "Language",
+      "need": "Need",
+      "telegram": "Telegram",
+      "openLead": "Open lead {{number}}",
+      "languages": {
+        "ru": "Русский",
+        "en": "English",
+        "uz": "Özbekça"
+      }
     }
   },
   "admin": {

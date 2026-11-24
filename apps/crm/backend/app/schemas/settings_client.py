@@ -27,8 +27,10 @@ class ClientBotTexts(CheckedTexts):
         "Удалить переписку", "Yozishmani oʻchirish", "Delete the conversation"
     )
     menu_docs: LocalizedText = _t("Мои документы", "Hujjatlarim", "My documents")
-    menu_request: LocalizedText = _t("Запрос менеджеру", "Menejerga soʻrov", "Request to a manager")
-    menu_status: LocalizedText = _t("Статус запроса", "Soʻrov holati", "Request status")
+    menu_request: LocalizedText = _t(
+        "Обращение менеджеру", "Menejerga murojaat", "Inquiry to a manager"
+    )
+    menu_status: LocalizedText = _t("Мои обращения", "Murojaatlarim", "My inquiries")
     client_only: LocalizedText = _t(
         "Эта команда доступна клиентам компании после заключения договора. Если договор уже есть — нажмите /human, менеджер подключит доступ. Пока я могу ответить на ваши вопросы.",
         "Bu buyruq shartnoma tuzilgandan soʻng kompaniya mijozlari uchun mavjud. Shartnoma boʻlsa — /human tugmasini bosing, menejer kirishni ulab beradi. Hozircha savollaringizga javob berishim mumkin.",
@@ -41,19 +43,19 @@ class ClientBotTexts(CheckedTexts):
         "A manager is handling your question — write here and they will reply. Commands: /lang — change language, /delete — delete the conversation.",
     )
     help_client: LocalizedText = _t(
-        "Я помогаю клиентам {company}. Команды: /docs — ваши документы, /request — запрос менеджеру, /status — статус запроса, /human — связаться с менеджером, /lang — сменить язык, /delete — удалить переписку.",
-        "Men {company} mijozlariga yordam beraman. Buyruqlar: /docs — hujjatlaringiz, /request — menejerga soʻrov, /status — soʻrov holati, /human — menejer bilan bogʻlanish, /lang — tilni oʻzgartirish, /delete — yozishmani oʻchirish.",
-        "I help {company} clients. Commands: /docs — your documents, /request — a request to a manager, /status — request status, /human — talk to a manager, /lang — change language, /delete — delete the conversation.",
+        "Я помогаю клиентам {company}. Команды: /docs — ваши документы, /request — обращение менеджеру, /status — мои обращения, /human — связаться с менеджером, /lang — сменить язык, /delete — удалить переписку.",
+        "Men {company} mijozlariga yordam beraman. Buyruqlar: /docs — hujjatlaringiz, /request — menejerga murojaat, /status — murojaatlarim, /human — menejer bilan bağlanış, /lang — tilni özgartiriş, /delete — yozişmani öçiriş.",
+        "I help {company} clients. Commands: /docs — your documents, /request — an inquiry to a manager, /status — my inquiries, /human — talk to a manager, /lang — change language, /delete — delete the conversation.",
     )
     client_access_granted: LocalizedText = _t(
-        "Теперь вам доступны документы и запросы менеджеру: /docs — ваши документы, /request — новый запрос, /help — все команды.",
-        "Endi sizga hujjatlar va menejerga soʻrovlar ochiq: /docs — hujjatlaringiz, /request — yangi soʻrov, /help — barcha buyruqlar.",
-        "Documents and requests to a manager are now available to you: /docs — your documents, /request — a new request, /help — all commands.",
+        "Теперь вам доступны документы и обращения к менеджеру: /docs — ваши документы, /request — новое обращение, /help — все команды.",
+        "Endi sizga hujjatlar va menejerga murojaatlar ochiq: /docs — hujjatlaringiz, /request — yangi murojaat, /help — barcha buyruqlar.",
+        "Documents and inquiries to a manager are now available to you: /docs — your documents, /request — a new inquiry, /help — all commands.",
     )
     request_text_only: LocalizedText = _t(
-        "Опишите запрос текстом одним сообщением. Файл можно отправить после — менеджер его увидит.",
-        "Soʻrovni bitta matnli xabarda yozing. Faylni keyin yuborishingiz mumkin — menejer uni koʻradi.",
-        "Please describe the request in one text message. You can send the file afterwards and a manager will see it.",
+        "Опишите обращение текстом одним сообщением. Файл можно отправить после — менеджер его увидит.",
+        "Murojaatni bitta matnli xabarda yozing. Faylni keyin yuborishingiz mumkin — menejer uni köradi.",
+        "Please describe the inquiry in one text message. You can send the file afterwards and a manager will see it.",
     )
     # Q-022: первое сообщение — выбор языка (текст на всех трёх языках сразу).
     language_first: LocalizedText = _t(
@@ -77,9 +79,9 @@ class ClientBotTexts(CheckedTexts):
         "A manager can share the contact details. Shall I call one?",
     )
     sla_promise: LocalizedText = _t(
-        "Обычно отвечаем в течение {minutes} минут в рабочее время",
-        "Odatda ish vaqtida {minutes} daqiqa ichida javob beramiz",
-        "We usually reply within {minutes} minutes during working hours",
+        "Менеджер ответит в рабочее время",
+        "Menejer ish vaqtida javob beradi",
+        "A manager will reply during business hours",
     )
     docs_list: LocalizedText = _t(
         "Ваши документы — нажмите, чтобы получить файл:",
@@ -92,30 +94,30 @@ class ClientBotTexts(CheckedTexts):
         "I found several documents — choose the one you need:",
     )
     docs_empty: LocalizedText = _t(
-        "Пока у вас нет документов в системе. Если документ нужен — напишите /request.",
-        "Hozircha tizimda hujjatlaringiz yoʻq. Hujjat kerak boʻlsa — /request yozing.",
+        "Пока у вас нет документов. Если документ нужен — напишите /request.",
+        "Hozircha hujjatlaringiz yöq. Hujjat kerak bölsa — /request yozing.",
         "There are no documents for you yet. If you need one, send /request.",
     )
     request_prompt: LocalizedText = _t(
-        "Опишите ваш запрос одним сообщением — я передам его менеджеру.",
-        "Soʻrovingizni bitta xabarda yozing — uni menejerga yuboraman.",
-        "Describe your request in one message and I'll pass it to a manager.",
+        "Опишите ваше обращение одним сообщением — я передам его менеджеру.",
+        "Murojaatingizni bitta xabarda yozing — uni menejerga yuboraman.",
+        "Describe your inquiry in one message and I'll pass it to a manager.",
     )
-    # {number} — номер запроса в CRM.
+    # {number} — номер обращения.
     request_created: LocalizedText = _t(
-        "Запрос №{number} передан менеджеру. Статус — /status.",
-        "№{number} soʻrov menejerga yuborildi. Holati — /status.",
-        "Request #{number} has been passed to a manager. Check its status: /status.",
+        "Обращение №{number} передано менеджеру. Статус — /status.",
+        "№{number} murojaat menejerga yuborildi. Holati — /status.",
+        "Inquiry #{number} has been passed to a manager. Check its status: /status.",
     )
     request_status_open: LocalizedText = _t(
-        "Запрос №{number} от {date} в работе у менеджера: «{summary}».",
-        "{date} sanadagi №{number} soʻrovingiz koʻrib chiqilmoqda: «{summary}».",
-        "Request #{number} from {date} is being handled by a manager: “{summary}”.",
+        "Обращение №{number} от {date} в работе у менеджера: «{summary}».",
+        "{date} sanadagi №{number} murojaatingiz körib çiqilmoqda: «{summary}».",
+        "Inquiry #{number} from {date} is being handled by a manager: “{summary}”.",
     )
     request_status_none: LocalizedText = _t(
-        "Открытых запросов нет. Новый запрос — /request.",
-        "Ochiq soʻrovlar yoʻq. Yangi soʻrov — /request.",
-        "You have no open requests. New request — /request.",
+        "Открытых обращений нет. Новое обращение — /request.",
+        "Ochiq murojaatlar yöq. Yangi murojaat — /request.",
+        "You have no open inquiries. New inquiry — /request.",
     )
     phone_request: LocalizedText = _t(
         "Чтобы менеджер мог при необходимости позвонить, поделитесь номером телефона кнопкой ниже. Это необязательно.",
@@ -135,9 +137,9 @@ class ClientBotTexts(CheckedTexts):
         "Okay, we'll continue without it.",
     )
     phone_before_manager: LocalizedText = _t(
-        "Чтобы менеджер мог связаться с вами, поделитесь номером телефона кнопкой ниже — сразу после этого передам ваш вопрос. Это также защищает от спама.",
-        "Menejer siz bilan bogʻlana olishi uchun quyidagi tugma orqali telefon raqamingizni yuboring — shundan soʻng savolingizni darhol menejerga beraman. Bu spamdan ham himoya qiladi.",
-        "So a manager can contact you, share your phone number with the button below — I will pass your question on right after that. This also protects against spam.",
+        "Чтобы менеджер мог связаться с вами, поделитесь номером телефона кнопкой ниже — сразу после этого передам ваш вопрос.",
+        "Menejer siz bilan bağlana olishi uchun quyidagi tugma orqali telefon raqamingizni yuboring — şundan söng savolingizni menejerga beraman.",
+        "So a manager can contact you, share your phone number with the button below — I will pass your question on right after that.",
     )
     phone_declined_manager: LocalizedText = _t(
         "Хорошо, продолжу отвечать сам. Менеджера позову, когда поделитесь номером.",
@@ -150,21 +152,21 @@ class ClientBotTexts(CheckedTexts):
         "Only your own number can be saved — use the “Share my number” button.",
     )
 
-    # События ERP клиенту (FIX-34, I-8): бот пишет на языке лида. {deal} — название сделки,
+    # События ERP клиенту (FIX-34, I-8): бот пишет на языке лида. {deal} — название заявки или проекта (клиент слова «сделка» не видит),
     # {number} — номер документа, {amount} {currency} — сумма, {due} — срок оплаты,
     # {summary} — состав поставки, {status} — статус поставки, {eta} — ожидаемая дата.
     erp_quote_sent: LocalizedText = _t(
-        "Вам подготовлено коммерческое предложение по сделке «{deal}».",
-        "Sizga «{deal}» bitimi boʻyicha tijorat taklifi tayyorlandi.",
-        "A commercial proposal for the deal “{deal}” has been prepared for you.",
+        "Готово КП по заявке «{deal}».",
+        "«{deal}» arizasi böyiça tijorat taklifi tayyor.",
+        "A quote for request “{deal}” is ready.",
     )
     # Код акцепта КП в кабинете (FIX-60, Q-FIX22-1): ERP просит бота прислать код контакту в Telegram.
     # {code} — одноразовый код, {minutes} — сколько минут он действует. Код не хранится и не
     # попадает в журнал событий, ленту и логи.
     erp_quote_acceptance_code: LocalizedText = _t(
-        "Код подтверждения КП по сделке «{deal}»: {code}. Действует {minutes} мин. Никому его не сообщайте.",
-        "«{deal}» bitimi boʻyicha tijorat taklifini tasdiqlash kodi: {code}. {minutes} daqiqa amal qiladi. Uni hech kimga aytmang.",
-        "Confirmation code for the quote on the deal “{deal}”: {code}. Valid for {minutes} min. Do not share it with anyone.",
+        "Код для принятия КП по заявке «{deal}»: {code}. Действует {minutes} мин. Никому его не сообщайте.",
+        "«{deal}» arizasi böyiça tijorat taklifini qabul qiliş kodi: {code}. {minutes} daqiqa amal qiladi. Uni heç kimga aytmang.",
+        "Code to accept the quote for request “{deal}”: {code}. Valid for {minutes} min. Do not share it with anyone.",
     )
     erp_invoice_issued: LocalizedText = _t(
         "Выставлен счёт {number} на сумму {amount} {currency}. Срок оплаты: до {due}.",
@@ -177,28 +179,28 @@ class ClientBotTexts(CheckedTexts):
         "Payment of {amount} {currency} for invoice {number} has been received. Thank you!",
     )
     erp_delivery_status: LocalizedText = _t(
-        "Статус доставки по заказу «{deal}» ({summary}): {status}.",
-        "«{deal}» buyurtmasi ({summary}) yetkazib berish holati: {status}.",
-        "Delivery status for the order “{deal}” ({summary}): {status}.",
+        "Поставка по проекту «{deal}» ({summary}): {status}.",
+        "«{deal}» loyihasi böyiça yetkazib beriş ({summary}): {status}.",
+        "Delivery for project “{deal}” ({summary}): {status}.",
     )
     erp_delivery_statuses: LocalizedText = _t(
-        "Собирается|В пути|Готов к отгрузке|Отгружен|Доставлен",
+        "Комплектуем|В пути|Готово к отгрузке|Отгружено|Доставлено",
         "Yigʻilmoqda|Yoʻlda|Joʻnatishga tayyor|Joʻnatildi|Yetkazildi",
         "Being assembled|In transit|Ready to ship|Shipped|Delivered",
     )
     erp_delivery_eta_changed: LocalizedText = _t(
-        "Срок доставки по заказу «{deal}» ({summary}) обновлён: ожидается {eta}.",
-        "«{deal}» buyurtmasi ({summary}) yetkazib berish muddati yangilandi: kutilayotgan sana {eta}.",
-        "The delivery date for the order “{deal}” ({summary}) has been updated: expected {eta}.",
+        "Срок поставки по проекту «{deal}» ({summary}) изменился: ожидается {eta}.",
+        "«{deal}» loyihasi ({summary}) böyiça yetkazib beriş muddati özgardi: kutilayotgan sana {eta}.",
+        "The delivery date for project “{deal}” ({summary}) has changed: expected {eta}.",
     )
     erp_act_issued: LocalizedText = _t(
-        "Акт {number} сформирован и ждёт вашего подтверждения в кабинете.",
-        "{number}-dalolatnoma shakllantirildi va kabinetda tasdiqlashingizni kutmoqda.",
-        "Act {number} has been issued and is waiting for your confirmation in the cabinet.",
+        "Акт {number} ждёт приёмки в кабинете.",
+        "{number}-dalolatnoma kabinetda qabul qilinişini kutmoqda.",
+        "Act {number} awaits your acceptance in your account.",
     )
     erp_btn_quote: LocalizedText = _t("Открыть КП", "Taklifni ochish", "Open the quote")
     erp_btn_invoice: LocalizedText = _t("Открыть счёт", "Hisobni ochish", "Open the invoice")
-    erp_btn_cabinet: LocalizedText = _t("Кабинет", "Kabinet", "Cabinet")
+    erp_btn_cabinet: LocalizedText = _t("Кабинет", "Kabinet", "Account")
 
     # События ERP сотруднику (личное сообщение ответственному). {client} — клиент, {quote} —
     # номер КП, {deal} — сделка, {number} — номер акта, {reason} — замечания клиента.

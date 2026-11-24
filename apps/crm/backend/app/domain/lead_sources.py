@@ -38,7 +38,7 @@ _UZ_LOCAL_LEN: Final = 9
 _INTL_MIN_AFTER_00: Final = 10
 _UZ_FULL_LEN: Final = len(_UZ_COUNTRY) + _UZ_LOCAL_LEN
 _DIGITS: Final = re.compile(r"\D", re.ASCII)
-_PHONE_CHARS: Final = re.compile(r"\+?[\d\s()\-.]+", re.ASCII)
+_PHONE_CHARS: Final = re.compile(r"[(\s]*\+?[\d\s()\-.]+", re.ASCII)
 
 
 def normalize_phone_e164(raw: str | None) -> str | None:
@@ -54,7 +54,7 @@ def normalize_phone_e164(raw: str | None) -> str | None:
     if not _PHONE_CHARS.fullmatch(text):
         return None
     digits = _DIGITS.sub("", text)
-    international = text.startswith("+")
+    international = text.lstrip("( ").startswith("+")
     if not international:
         if digits.startswith("00"):
             # «00» is the international prefix only before a country code and a real number.

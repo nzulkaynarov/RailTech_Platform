@@ -99,7 +99,7 @@ describe('вход по коду из письма', () => {
   it('подсказка о задержке письма и «Спаме», вход через Telegram', async () => {
     const user = userEvent.setup();
     await sendLetter(user);
-    expect(screen.getByText('Письмо может идти несколько минут. Проверьте папку «Спам». Не пришло за 10 минут — свяжитесь с вашим менеджером: возможно, почта компании временно не работает.')).toBeInTheDocument();
+    expect(screen.getByText('Письмо может идти несколько минут. Проверьте папку «Спам». Не пришло за 10 минут — напишите менеджеру.')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Войти через Telegram' })).toHaveAttribute(
       'href',
       expect.stringMatching(/^https:\/\/t\.me\//),

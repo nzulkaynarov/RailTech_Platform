@@ -9,6 +9,7 @@ import type { HandoffFacts } from "./handoffFacts";
 import type { HandoffInfo } from "./handoffInfo";
 import type { Language } from "./language";
 import type { LeadCardConsent } from "./leadCardConsent";
+import type { LeadCardDiscarded } from "./leadCardDiscarded";
 import type { LeadCardFirstResponse } from "./leadCardFirstResponse";
 import type { LeadMessagePreview } from "./leadMessagePreview";
 import type { LeadNotice } from "./leadNotice";
@@ -42,4 +43,8 @@ export interface LeadCard {
   invitation: ClientInvitation | null;
   /** Откуда пришёл лид кроме канала (LID-5): форма, страница, откуда перешли, кампания. `null` — у лидов других каналов и прежних лидов фактов нет. */
   origin?: LeadOrigin | null;
+  /** Лид отброшен как «Спам», «Тест» или «Дубль» (LH-1): в списках его нет, карточка открывается по номеру. */
+  discarded?: LeadCardDiscarded;
+  /** Номер оставшегося лида, если `discarded = duplicate` */
+  duplicate_of?: string | null;
 }

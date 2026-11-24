@@ -94,8 +94,9 @@ def test_new_rfq_seller_template_renders_link_and_buyer():
     for body in (text, html):
         assert "https://erp.example.com/#request-detail/42" in body
         assert "Рельсы Р65" in body
-    # Платформенный бренд (внутреннее письмо продавцу) — white-label здесь не применяется.
-    assert "ERP" in html
+    # Без названия компании в контексте — ни «ERP», ни подписи-заглушки (owner 2026-11-24, D6).
+    assert "ERP" not in html and "ERP" not in text
+    assert "повышает шанс" not in html and "повышает шанс" not in text
 
 
 @pytest.mark.django_db

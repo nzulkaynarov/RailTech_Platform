@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import ContainerDep, require
 from app.api.dialog_access import dialog
+from app.domain.backoffice import may_close_locally
 from app.domain.client_requests import platform_status
 from app.domain.errors import NotFoundError
 from app.models.clients import Client
@@ -35,9 +36,14 @@ from app.schemas.leads import (
     AssistOut,
     AssistRequest,
     Close,
+    CloseOptions,
+    ContactDuplicate,
+    ContactsResult,
+    Discard,
     EscalationOut,
     HandOver,
     InboxResponse,
+    LeadContactsPatch,
     LeadDetail,
     LeadOriginOut,
     LeadOut,
@@ -116,13 +122,23 @@ def _origin_out(lead: Lead) -> LeadOriginOut | None:
     )
 
 
+def company_of(lead: Lead) -> str | None:
+    """Компания лида: колонка, а если пуста — то, что назвал клиент боту (PL-1, G4)."""
+    if lead.company_name:
+        return lead.company_name
+    raw = (lead.qualification or {}).get("company")
+    return raw.strip() or None if isinstance(raw, str) else None
+
+
 def lead_out(
     lead: Lead,
     escalation: Escalation | None,
     names: dict[int, str] | None = None,
     reply_channel: str | None = None,
+    identities: crm.IdentityFlags | None = None,
 ) -> LeadOut:
     owner = lead.assigned_user_id
+    tg = identities or crm.IdentityFlags()
     return LeadOut(
         id=lead.id,
         display_name=lead.display_name,
@@ -142,6 +158,10 @@ def lead_out(
         source=lead.source,
         platform_status=_platform_status(lead, escalation),
         reply_channel=reply_channel,
+        company_name=company_of(lead),
+        has_phone=bool(lead.phone_e164) or tg.phone,
+        has_email=bool(lead.email),
+        has_telegram=tg.telegram,
     )
 
 
@@ -252,7 +272,11 @@ async def list_leads(
         )
         escalations = await crm.active_escalations(session, [r.id for r in rows])
         names = await crm.user_names(session, rows, _handed_by(escalations))
-    return LeadPage(items=[lead_out(r, escalations.get(r.id), names) for r in rows], total=total)
+        flags = await crm.identity_flags(session, [r.id for r in rows])
+    return LeadPage(
+        items=[lead_out(r, escalations.get(r.id), names, None, flags.get(r.id)) for r in rows],
+        total=total,
+    )
 
 
 @router.get("/inbox", response_model=InboxResponse)
@@ -281,12 +305,13 @@ async def inbox(
         )
         notes = await handoff_notes.notes(session, [*escalated, *mine, *unassigned], escalations)
         channels = await cabinet_repo.last_inbound_channels(session, ids)
+        flags = await crm.identity_flags(session, ids)
 
     def out(rows: list[Lead]) -> list[LeadOut]:
         return [
-            lead_out(r, escalations.get(r.id), names, channels.get(r.id)).model_copy(
-                update={"handoff_note": notes.get(r.id)}
-            )
+            lead_out(
+                r, escalations.get(r.id), names, channels.get(r.id), flags.get(r.id)
+            ).model_copy(update={"handoff_note": notes.get(r.id)})
             for r in rows
         ]
 
@@ -304,6 +329,16 @@ async def handover_targets(_: Triager, container: ContainerDep) -> list[TeamMemb
     """Кому передать лида (D17G-1): активные сотрудники с работой с клиентом (`crm.leads: full`)."""
     async with container.session_factory() as session:
         return await team_service.lead_workers(session)
+
+
+@router.get("/leads/close_options", response_model=CloseOptions)
+async def close_options(_: Worker, container: ContainerDep) -> CloseOptions:
+    """Причины отказа и режим итога — для окна «Закрыть» (LH-1); право — как у закрытия."""
+    cfg = (await container.settings_service.get()).deals
+    mode = await container.backoffice_mode()
+    return CloseOptions(
+        lost_reasons=cfg.lost_reasons, won_by_erp=not may_close_locally(mode, "won")
+    )
 
 
 @router.get("/leads/{lead_id}", response_model=LeadDetail)
@@ -331,7 +366,8 @@ async def get_lead(lead_id: int, _: Reader, container: ContainerDep) -> LeadDeta
             else None
         )
         reply_channel = await cabinet_repo.last_inbound_channel(session, lead_id)
-    base = lead_out(lead, escalation, names, reply_channel)
+        flags = await crm.identity_flags(session, [lead_id])
+    base = lead_out(lead, escalation, names, reply_channel, flags.get(lead_id))
     mode = await container.backoffice_mode()
     now = datetime.now(UTC)
     waiting = web_lead_sla.awaiting(lead.first_response_due_at, lead.assigned_user_id)
@@ -343,7 +379,6 @@ async def get_lead(lead_id: int, _: Reader, container: ContainerDep) -> LeadDeta
         tg_username=username,
         phone_e164=lead.phone_e164 or phone,
         email=lead.email,
-        company_name=lead.company_name,
         client_phone_e164=client_phone,
         notes_count=lead.notes_count,
         snoozed_until=lead.snoozed_until,
@@ -360,6 +395,8 @@ async def get_lead(lead_id: int, _: Reader, container: ContainerDep) -> LeadDeta
             lead.first_response_due_at, lead.assigned_user_id, now
         ),
         origin=_origin_out(lead),
+        discarded_kind=lead.discarded_kind,
+        duplicate_of_lead_id=lead.duplicate_of_lead_id,
         confirmation=NoticeOut.model_validate(confirmation, from_attributes=True)
         if confirmation is not None
         else None,
@@ -493,6 +530,33 @@ async def new_deal(lead_id: int, who: Worker, container: ContainerDep) -> Action
 async def assign(lead_id: int, body: Assign, who: Worker, container: ContainerDep) -> ActionResult:
     await container.lead_service.assign(who, lead_id, body.user_id)
     return ActionResult()
+
+
+@router.post("/leads/{lead_id}/actions/discard", response_model=ActionResult)
+async def discard(
+    lead_id: int, body: Discard, who: Worker, container: ContainerDep
+) -> ActionResult:
+    """«Спам», «Тест», «Дубль» (LH-1): лид закрыт отказом и скрыт из активных списков; «тест»
+    ещё и обезличен, «дубль» ссылается на оставшийся лид (`duplicate_of`)."""
+    await container.lead_service.discard(who, lead_id, body.kind, body.duplicate_of)
+    return ActionResult()
+
+
+@router.patch("/leads/{lead_id}", response_model=ContactsResult)
+async def update_contacts(
+    lead_id: int, body: LeadContactsPatch, who: Worker, container: ContainerDep
+) -> ContactsResult:
+    """Правка имени, телефона, почты и компании лида (LH-1). Тот же нормализатор телефона, что у
+    формы сайта; почта — нижний регистр и формат. Другой лид или клиент с тем же номером или почтой
+    — `duplicates` в ответе, правка сохранена."""
+    found = await container.lead_service.update_contacts(
+        who, lead_id, body.model_dump(exclude_unset=True)
+    )
+    return ContactsResult(
+        duplicates=[
+            ContactDuplicate(kind=d.kind, id=d.id, name=d.name, field=d.field) for d in found
+        ]
+    )
 
 
 @router.post("/leads/{lead_id}/actions/note", response_model=ActionResult)

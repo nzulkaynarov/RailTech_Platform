@@ -8,7 +8,7 @@
     {% translate "Здравствуйте" %}{% if contact_name %}, {{ contact_name }}{% endif %}!
   </h1>
   <p style="margin:0 0 16px 0; font-size:15px; line-height:1.5; color:#374151;">
-    {% blocktranslate with company=company_name platform=platform_name|default:'ERP' %}Вас пригласили в личный кабинет компании <strong>«{{ company }}»</strong> на платформе <strong>{{ platform }}</strong>.{% endblocktranslate %}
+    {% blocktranslate with company=company_name %}Вас пригласили в кабинет компании <strong>«{{ company }}»</strong>.{% endblocktranslate %}
     {% if portal_role == "partner" %}{% translate "В кабинете — ваши товары и цены: вы заполняете карточки, мы проверяем и публикуем их." %}{% else %}{% translate "В кабинете — ваши коммерческие предложения, договоры, счета, поставки и документы." %}{% endif %}
   </p>
   <p style="margin:0 0 4px 0; font-size:14px; color:#374151;">{% translate "Код входа:" %}</p>
@@ -27,8 +27,8 @@
   </table>
   {% if telegram_notifications_url %}
   <p style="margin:0 0 16px 0; font-size:14px; color:#374151;">
-    <a href="{{ telegram_notifications_url }}" style="color:#2563eb; font-weight:600;">{% translate "Получать мгновенно в Telegram" %}</a>
-    — {% translate "после входа подключите бот в разделе Профиль → «Уведомления»: счета, акты и ответы менеджера будут приходить сразу." %}
+    <a href="{{ telegram_notifications_url }}" style="color:#2563eb; font-weight:600;">{% translate "Уведомления в Telegram" %}</a>
+    — {% translate "после входа подключите бот в разделе Профиль → «Уведомления»: счета, акты и ответы менеджера придут в Telegram." %}
   </p>
   {% endif %}
   <p style="margin:0; font-size:13px; color:#6b7280; line-height:1.4;">

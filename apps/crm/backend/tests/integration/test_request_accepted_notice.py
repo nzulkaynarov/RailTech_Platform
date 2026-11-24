@@ -1,4 +1,4 @@
-"""«Заявка принята, считаем» по событию ERP `request.created` (D1-9, SPEC-v3 §3.1 шаг 2, §8).
+"""«Заявка принята» по событию ERP `request.created` (D1-9, SPEC-v3 §3.1 шаг 2, §8).
 
 Бот, а клиенту без Telegram — письмо; повторная доставка того же события второго сообщения не
 даёт (inbox шины и ключи в `erp_event_notices`); заявка сотрудника в ERP клиенту не объявляется;
@@ -88,7 +88,7 @@ async def test_client_in_telegram_gets_the_message_with_the_open_cabinet_button(
 
     [(chat, text)] = harness.bot.sent
     assert chat == 777
-    assert text.startswith(f"Заявка D-{ERP_DEAL} принята, считаем")
+    assert text.startswith(f"Заявка D-{ERP_DEAL} принята. Готовим КП")
     button = harness.bot.markups[0].inline_keyboard[0][0]
     assert (button.text, button.url) == ("Открыть кабинет", CABINET)
     assert mail.sent == [], "бот ушёл — письмо не нужно"

@@ -161,6 +161,7 @@ import type {
   ClientInvitation,
   ClientList,
   ClientShort,
+  CloseOptions,
   Colleague,
   CompanyArticle,
   CompanyArticleList,
@@ -264,6 +265,7 @@ import type {
   KbProductList,
   KbSearchResult,
   LeadCard,
+  LeadContactsSaved,
   LeadCreated,
   LeadManagerList,
   LeadNotice,
@@ -316,6 +318,8 @@ import type {
   PaymentMemoPage,
   PaymentMemoPayment,
   PaymentMoney,
+  PeopleLeadContacts,
+  PeopleLeadPage,
   PersonRef,
   PlatformSettings,
   PriceImportJob,
@@ -27801,6 +27805,83 @@ export const getHandOverCrmLeadResponseMock = (
   ...overrideResponse,
 });
 
+export const getCloseCrmLeadResponseMock = (
+  overrideResponse: Partial<Extract<ActionOk, object>> = {},
+): ActionOk => ({
+  id: faker.helpers.arrayElement([faker.number.int(), null]),
+  ok: true,
+  ...overrideResponse,
+});
+
+export const getAssignCrmLeadResponseMock = (
+  overrideResponse: Partial<Extract<ActionOk, object>> = {},
+): ActionOk => ({
+  id: faker.helpers.arrayElement([faker.number.int(), null]),
+  ok: true,
+  ...overrideResponse,
+});
+
+export const getDiscardCrmLeadResponseMock = (
+  overrideResponse: Partial<Extract<ActionOk, object>> = {},
+): ActionOk => ({
+  id: faker.helpers.arrayElement([faker.number.int(), null]),
+  ok: true,
+  ...overrideResponse,
+});
+
+export const getReopenCrmLeadResponseMock = (
+  overrideResponse: Partial<Extract<ActionOk, object>> = {},
+): ActionOk => ({
+  id: faker.helpers.arrayElement([faker.number.int(), null]),
+  ok: true,
+  ...overrideResponse,
+});
+
+export const getAcknowledgeCrmLeadResponseMock = (
+  overrideResponse: Partial<Extract<ActionOk, object>> = {},
+): ActionOk => ({
+  id: faker.helpers.arrayElement([faker.number.int(), null]),
+  ok: true,
+  ...overrideResponse,
+});
+
+export const getSnoozeCrmLeadResponseMock = (
+  overrideResponse: Partial<Extract<ActionOk, object>> = {},
+): ActionOk => ({
+  id: faker.helpers.arrayElement([faker.number.int(), null]),
+  ok: true,
+  ...overrideResponse,
+});
+
+export const getUnsnoozeCrmLeadResponseMock = (
+  overrideResponse: Partial<Extract<ActionOk, object>> = {},
+): ActionOk => ({
+  id: faker.helpers.arrayElement([faker.number.int(), null]),
+  ok: true,
+  ...overrideResponse,
+});
+
+export const getGetCrmCloseOptionsResponseMock = (
+  overrideResponse: Partial<Extract<CloseOptions, object>> = {},
+): CloseOptions => ({
+  lost_reasons: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => faker.string.alpha({ length: { min: 10, max: 20 } }),
+  ),
+  won_by_erp: faker.datatype.boolean(),
+  ...overrideResponse,
+});
+
+export const getListCrmLeadColleaguesResponseMock = (
+  overrideResponse: Partial<Extract<LeadManagerList, object>> = {},
+): LeadManagerList => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+  })),
+  ...overrideResponse,
+});
+
 export const getListCrmLeadManagersResponseMock = (
   overrideResponse: Partial<Extract<LeadManagerList, object>> = {},
 ): LeadManagerList => ({
@@ -35164,6 +35245,26 @@ export const getGetCrmLeadResponseMock = (
     null,
   ]),
   origin: faker.helpers.arrayElement([{ ...getGetCrmLeadResponseLeadOriginMock() }, null]),
+  discarded: faker.helpers.arrayElement([
+    faker.helpers.arrayElement(["spam", "test", "duplicate"] as const),
+    null,
+  ]),
+  duplicate_of: faker.helpers.arrayElement([faker.helpers.fromRegExp("^L-\\d{4,}$"), null]),
+  ...overrideResponse,
+});
+
+export const getUpdateCrmLeadResponseMock = (
+  overrideResponse: Partial<Extract<LeadContactsSaved, object>> = {},
+): LeadContactsSaved => ({
+  duplicates: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      kind: faker.helpers.arrayElement(["lead", "client"] as const),
+      lead: faker.helpers.arrayElement([faker.helpers.fromRegExp("^L-\\d{4,}$"), null]),
+      client_id: faker.helpers.arrayElement([faker.number.int(), null]),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      field: faker.helpers.arrayElement(["phone", "email"] as const),
+    }),
+  ),
   ...overrideResponse,
 });
 
@@ -37871,6 +37972,53 @@ export const getRevealStaffContactsResponseMock = (
   id: faker.helpers.fromRegExp("^[0-9]+$"),
   phone: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
   email: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  ...overrideResponse,
+});
+
+export const getListPeopleLeadsResponsePersonRefMock = (
+  overrideResponse: Partial<PersonRef> = {},
+): PersonRef => ({
+  ...{
+    id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getListPeopleLeadsResponseMock = (
+  overrideResponse: Partial<Extract<PeopleLeadPage, object>> = {},
+): PeopleLeadPage => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    lead: faker.helpers.fromRegExp("^L-\\d{4,}$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    company: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    status: faker.helpers.arrayElement(Object.values(LeadPlatformStatus)),
+    channel: faker.helpers.fromRegExp("^[a-z][a-z_]{0,15}$"),
+    language: faker.helpers.arrayElement(Object.values(Language)),
+    assigned: faker.helpers.arrayElement([{ ...getListPeopleLeadsResponsePersonRefMock() }, null]),
+    need: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    has_phone: faker.datatype.boolean(),
+    has_email: faker.datatype.boolean(),
+    has_telegram: faker.datatype.boolean(),
+  })),
+  total: faker.number.int({ min: 0 }),
+  ...overrideResponse,
+});
+
+export const getRevealLeadContactsResponseMock = (
+  overrideResponse: Partial<Extract<PeopleLeadContacts, object>> = {},
+): PeopleLeadContacts => ({
+  lead: faker.helpers.fromRegExp("^L-\\d{4,}$"),
+  phone: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  email: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  telegram: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
   ...overrideResponse,
 });
 
@@ -49634,6 +49782,208 @@ export const getHandOverCrmLeadMockHandler = (
   );
 };
 
+export const getCloseCrmLeadMockHandler = (
+  overrideResponse?:
+    | ActionOk
+    | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<ActionOk> | ActionOk),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/crm/messages/:lead/close",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getCloseCrmLeadResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getAssignCrmLeadMockHandler = (
+  overrideResponse?:
+    | ActionOk
+    | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<ActionOk> | ActionOk),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/crm/messages/:lead/assign",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getAssignCrmLeadResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getDiscardCrmLeadMockHandler = (
+  overrideResponse?:
+    | ActionOk
+    | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<ActionOk> | ActionOk),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/crm/messages/:lead/discard",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getDiscardCrmLeadResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getReopenCrmLeadMockHandler = (
+  overrideResponse?:
+    | ActionOk
+    | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<ActionOk> | ActionOk),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/crm/messages/:lead/reopen",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getReopenCrmLeadResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getAcknowledgeCrmLeadMockHandler = (
+  overrideResponse?:
+    | ActionOk
+    | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<ActionOk> | ActionOk),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/crm/messages/:lead/acknowledge",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getAcknowledgeCrmLeadResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getSnoozeCrmLeadMockHandler = (
+  overrideResponse?:
+    | ActionOk
+    | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<ActionOk> | ActionOk),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/crm/messages/:lead/snooze",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getSnoozeCrmLeadResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getUnsnoozeCrmLeadMockHandler = (
+  overrideResponse?:
+    | ActionOk
+    | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<ActionOk> | ActionOk),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/crm/messages/:lead/unsnooze",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getUnsnoozeCrmLeadResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getGetCrmCloseOptionsMockHandler = (
+  overrideResponse?:
+    | CloseOptions
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<CloseOptions> | CloseOptions),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/crm/lead-close-options",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetCrmCloseOptionsResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getListCrmLeadColleaguesMockHandler = (
+  overrideResponse?:
+    | LeadManagerList
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<LeadManagerList> | LeadManagerList),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/crm/lead-colleagues",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListCrmLeadColleaguesResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
 export const getListCrmLeadManagersMockHandler = (
   overrideResponse?:
     | LeadManagerList
@@ -50805,6 +51155,30 @@ export const getGetCrmLeadMockHandler = (
   );
 };
 
+export const getUpdateCrmLeadMockHandler = (
+  overrideResponse?:
+    | LeadContactsSaved
+    | ((
+        info: Parameters<Parameters<typeof http.patch>[1]>[0],
+      ) => Promise<LeadContactsSaved> | LeadContactsSaved),
+  options?: RequestHandlerOptions,
+) => {
+  return http.patch(
+    "*/crm/leads/:lead",
+    async (info: Parameters<Parameters<typeof http.patch>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getUpdateCrmLeadResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
 export const getListCrmClientsMockHandler = (
   overrideResponse?:
     | ClientList
@@ -51594,6 +51968,54 @@ export const getRevealStaffContactsMockHandler = (
             ? await overrideResponse(info)
             : overrideResponse
           : getRevealStaffContactsResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getListPeopleLeadsMockHandler = (
+  overrideResponse?:
+    | PeopleLeadPage
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<PeopleLeadPage> | PeopleLeadPage),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/people/leads",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListPeopleLeadsResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getRevealLeadContactsMockHandler = (
+  overrideResponse?:
+    | PeopleLeadContacts
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<PeopleLeadContacts> | PeopleLeadContacts),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/people/leads/:lead/reveal",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getRevealLeadContactsResponseMock(),
         { status: 200 },
       );
     },
@@ -53376,6 +53798,15 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getAssistCrmReplyMockHandler(),
   getReturnCrmLeadToBotMockHandler(),
   getHandOverCrmLeadMockHandler(),
+  getCloseCrmLeadMockHandler(),
+  getAssignCrmLeadMockHandler(),
+  getDiscardCrmLeadMockHandler(),
+  getReopenCrmLeadMockHandler(),
+  getAcknowledgeCrmLeadMockHandler(),
+  getSnoozeCrmLeadMockHandler(),
+  getUnsnoozeCrmLeadMockHandler(),
+  getGetCrmCloseOptionsMockHandler(),
+  getListCrmLeadColleaguesMockHandler(),
   getListCrmLeadManagersMockHandler(),
   getListExternalChatsMockHandler(),
   getListCrmReplyTemplatesMockHandler(),
@@ -53426,6 +53857,7 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getListCrmLeadsMockHandler(),
   getCreateCrmLeadMockHandler(),
   getGetCrmLeadMockHandler(),
+  getUpdateCrmLeadMockHandler(),
   getListCrmClientsMockHandler(),
   getGetCrmClientMockHandler(),
   getConfirmCrmPartnerRequestMockHandler(),
@@ -53460,6 +53892,8 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getListCounterpartyPeopleMockHandler(),
   getRevealCounterpartyContactsMockHandler(),
   getRevealStaffContactsMockHandler(),
+  getListPeopleLeadsMockHandler(),
+  getRevealLeadContactsMockHandler(),
   getSearchCounterpartiesMockHandler(),
   getCreateCounterpartyMockHandler(),
   getListCounterpartyPickerPeopleMockHandler(),

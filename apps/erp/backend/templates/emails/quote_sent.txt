@@ -11,5 +11,5 @@
 {{ public_link }}
 {% endif %}
 {% translate "С уважением," %}
-{% blocktranslate with platform=platform_name|default:'ERP' %}команда {{ platform }}{% endblocktranslate %}
+{{ platform_name }}
 {% include "emails/_telegram_footer.txt" %}

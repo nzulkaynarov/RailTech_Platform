@@ -107,7 +107,7 @@ const DOCUMENTS: Record<number, Schemas['PartnerProductDocument'][]> = {
       id: 7001,
       kind: 'certificate',
       kind_name: 'Сертификат соответствия',
-      title: 'Сертификат соответствия ГОСТ 7798-70',
+      title: 'Сертификат соответствия на насос CM 50-200',
       number: 'ЕАЭС RU С-RU.АЯ46.В.00001/26',
       issued_by: 'Орган по сертификации',
       issued_at: '2026-01-15',
