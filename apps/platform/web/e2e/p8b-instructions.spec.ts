@@ -220,10 +220,7 @@ test.describe("P8b: поручения по входящим", () => {
     await at(page, WIDE);
     await loginAndWait(page, "director@demo.example");
     await spaGoto(page, "/eds/inbox/%D0%92%D0%A5-108%2F26?panel=open&tab=resolution");
-    await chooseOption(
-      await reveal(page.getByLabel("Ответственный")),
-      "Демо Широков",
-    );
+    await chooseOption(await reveal(page.getByLabel("Ответственный")), "Демо Широков");
     await page.getByRole("button", { name: "Наложить резолюцию" }).click();
     await expect(page.getByText("Резолюция наложена: поручение ушло исполнителям")).toBeVisible();
 
