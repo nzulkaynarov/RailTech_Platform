@@ -20,6 +20,7 @@ import { type DataColumn, DataTable } from "../../../shared/ui/DataTable/DataTab
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { PersonCell } from "../../../shared/ui/EntityCell";
 import { PageHeader } from "../../../shared/ui/PageHeader";
+import { ROW_ACTIONS_WIDTH, RowActions } from "../../../shared/ui/RowActions";
 import "./people.css";
 import { FilterBar, FilterField } from "../../../shared/ui/FilterBar";
 import { Sheet } from "../../../shared/ui/Sheet";
@@ -158,24 +159,12 @@ export function PeoplePage() {
         setRevealing(null);
       });
   };
-  const contactsOf = (person: Person, field: "phone" | "email" | "any", inCard = false) => {
+  const contactsOf = (person: Person, field: "phone" | "email" | "any") => {
     if (!person.revealId) return "—";
     const shown = revealed[person.key];
     if (!shown) {
-      // В карточке одна кнопка «Показать контакты» на оба поля; до нажатия значения скрыты
-      if (inCard) return "•••";
-      return (
-        <Button
-          size="small"
-          loading={revealing === person.key}
-          aria-label={t("modules:chats.people.showFor", { name: person.name })}
-          onClick={() => {
-            reveal(person);
-          }}
-        >
-          {t("modules:chats.people.show")}
-        </Button>
-      );
+      // Значения скрыты до показа: в карточке — кнопка «Показать контакты», в таблице — пункт меню строки
+      return "•••";
     }
     const phone = shown.phone ? <a href={`tel:${shown.phone}`}>{shown.phone}</a> : null;
     const email = shown.email ? <a href={`mailto:${shown.email}`}>{shown.email}</a> : null;
@@ -205,12 +194,15 @@ export function PeoplePage() {
       id: "position",
       header: t("modules:chats.people.columns.position"),
       width: COLS.position,
+      priority: 2,
+      truncate: true,
       cell: (row) => row.position ?? "—",
     },
     {
       id: "company",
       header: t("modules:chats.people.columns.company"),
       width: null,
+      truncate: true,
       cell: (row) => row.company ?? "—",
     },
     {
@@ -223,6 +215,8 @@ export function PeoplePage() {
       id: "owner",
       header: t("modules:chats.people.columns.owner"),
       width: COLS.owner,
+      priority: 3,
+      truncate: true,
       cell: (row) => row.owner ?? "—",
     },
     {
@@ -230,6 +224,28 @@ export function PeoplePage() {
       header: t("modules:chats.people.columns.contacts"),
       width: COLS.contacts,
       cell: (person) => contactsOf(person, "any"),
+    },
+    {
+      id: "actions",
+      header: t("modules:chats.people.columns.actions"),
+      headerHidden: true,
+      width: ROW_ACTIONS_WIDTH,
+      cell: (person) =>
+        person.revealId && !revealed[person.key] ? (
+          <RowActions
+            name={person.name}
+            items={[
+              {
+                key: "reveal",
+                label: t("modules:chats.people.reveal"),
+                disabled: revealing === person.key,
+                onClick: () => {
+                  reveal(person);
+                },
+              },
+            ]}
+          />
+        ) : null,
     },
   ];
 
@@ -321,12 +337,12 @@ export function PeoplePage() {
                 {
                   key: "phone",
                   label: t("modules:chats.people.phone"),
-                  children: contactsOf(selected, "phone", true),
+                  children: contactsOf(selected, "phone"),
                 },
                 {
                   key: "email",
                   label: t("modules:chats.people.email"),
-                  children: contactsOf(selected, "email", true),
+                  children: contactsOf(selected, "email"),
                 },
               ]}
             />

@@ -4,7 +4,7 @@ import { http, HttpResponse } from 'msw';
 
 import { portalServer } from '@/mocks/server';
 import { renderApp, signedIn } from '@/test/render';
-import { expectNoAxeViolations, heading } from '@/test/screens';
+import { expectNoAxeViolations, heading, showAllDecisions } from '@/test/screens';
 import { ONBOARDING_DISMISSED_KEY } from '@/onboarding/checklistState';
 
 const PARTNER_ACCESS = {
@@ -23,7 +23,7 @@ describe('чек-лист «Первые шаги» и расширенный в
 
   describe('чек-лист «Первые шаги»', () => {
     it('отображает шаги онбординга для клиента и рассчитывает прогресс по данным портала', async () => {
-      signedIn('actor', 'demo');
+      signedIn('actor', 'empty');
       renderApp('/requests');
       await heading('Заявки');
 
@@ -36,12 +36,34 @@ describe('чек-лист «Первые шаги» и расширенный в
       await expectNoAxeViolations();
     });
 
+    it('почти готово — одна компактная строка, «Показать» раскрывает шаги; в начале пути — полная карточка', async () => {
+      signedIn('actor', 'demo');
+      const user = userEvent.setup();
+      renderApp('/requests');
+      await heading('Заявки');
+
+      // демо: выполнено 3 из 4 — только строка, шагов нет
+      expect(await screen.findByText(/3 из 4 выполнено/)).toBeInTheDocument();
+      expect(screen.queryByText('Реквизиты компании')).not.toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: 'Показать' }));
+      expect(screen.getByText('Реквизиты компании')).toBeInTheDocument();
+    });
+
+    it('в начале пути (выполнено меньше половины) — полная карточка шагов', async () => {
+      signedIn('actor', 'empty');
+      renderApp('/requests');
+      await heading('Заявки');
+      expect(await screen.findByText('Реквизиты компании')).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Показать' })).not.toBeInTheDocument();
+    });
+
     it('позволяет скрыть чек-лист по кнопке закрытия', async () => {
       signedIn('actor', 'demo');
       const user = userEvent.setup();
       renderApp('/requests');
       await heading('Заявки');
 
+      await screen.findByText(/выполнено/); // данные пришли, вид установился
       const dismissBtn = screen.getByRole('button', { name: 'Скрыть' });
       await user.click(dismissBtn);
 
@@ -87,7 +109,7 @@ describe('чек-лист «Первые шаги» и расширенный в
       renderApp('/requests');
       await heading('Заявки');
 
-      const region = await screen.findByRole('region', { name: 'Требует вашего решения' });
+      const region = await showAllDecisions(await screen.findByRole('region', { name: 'Требует вашего решения' }));
       expect(within(region).getByRole('link', { name: 'Редуктор червячный NMRV 063' })).toHaveAttribute(
         'href',
         '/deliveries',
@@ -125,7 +147,7 @@ describe('чек-лист «Первые шаги» и расширенный в
       renderApp('/requests');
       await heading('Заявки');
 
-      const region = await screen.findByRole('region', { name: 'Требует вашего решения' });
+      const region = await showAllDecisions(await screen.findByRole('region', { name: 'Требует вашего решения' }));
       expect(within(region).getByRole('link', { name: 'Проект партнёрского договора' })).toHaveAttribute(
         'href',
         '/company',
@@ -175,7 +197,7 @@ describe('чек-лист «Первые шаги» и расширенный в
       renderApp('/my-products');
       await heading('Мои товары');
 
-      const region = await screen.findByRole('region', { name: 'Требует вашего решения' });
+      const region = await showAllDecisions(await screen.findByRole('region', { name: 'Требует вашего решения' }));
       expect(within(region).getByRole('link', { name: 'Клапан предохранительный 17с28нж' })).toHaveAttribute(
         'href',
         '/my-products?tab=returned',

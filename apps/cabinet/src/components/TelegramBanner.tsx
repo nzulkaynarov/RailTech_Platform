@@ -5,30 +5,35 @@ import { Button } from '@/components/ui/button';
 import { useTelegramStep } from '@/onboarding/telegramStep';
 
 /**
- * Плашка «Подключите Telegram — уведомления мгновенно» — вид шага «Подключить Telegram»: логика и состояния — в
- * `onboarding/telegramStep.ts`, здесь только отображение состояния `todo` (ADR-0023 п. 3; эталон — Slack и Intercom
- * «включите мобильные уведомления»). Не показывается в Telegram Mini App (там Telegram уже есть), если Telegram
- * привязан или подключить его нельзя (`available=false`), на самом Профиле и 14 дней после «Позже».
- * Плашка плавающая (fixed: над нижней навигацией телефона, в правом нижнем углу на компьютере) — она появляется, когда
- * пришёл статус, и не сдвигает уже показанное содержимое (CLS загрузки «Запросов» ≤ 0,01, CAB-FIX-3).
+ * Строка «Подключите Telegram — уведомления мгновенно» — вид шага «Подключить Telegram»: логика и состояния — в
+ * `onboarding/telegramStep.ts`, здесь только отображение состояния `todo` (ADR-0023 п. 3). Живёт один раз, в шторке
+ * уведомлений (колокольчик), сверху ленты, и ничего не перекрывает; чек-лист «Первые шаги» на домашних экранах несёт тот же
+ * шаг. Не показывается в Telegram Mini App (там Telegram уже есть), если Telegram привязан или подключить его нельзя
+ * (`available=false`), и 14 дней после «Позже» (в этом браузере).
  */
-export function TelegramBanner({ onProfile }: { onProfile: boolean }) {
+export function TelegramBanner({ onNavigate }: { onNavigate?: () => void }) {
   const { t } = useTranslation();
-  const step = useTelegramStep({ enabled: !onProfile });
+  const step = useTelegramStep();
 
-  if (onProfile || step.state !== 'todo') return null;
+  if (step.state !== 'todo') return null;
 
   return (
     <section
       aria-label={t('telegramBanner.label')}
-      className="fixed inset-x-3 bottom-[calc(4.25rem+env(safe-area-inset-bottom))] z-30 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-background p-3.5 text-sm shadow-lg md:inset-x-auto md:right-6 md:bottom-6 md:w-96"
+      className="mb-3 flex flex-wrap items-center justify-between gap-x-2 gap-y-1 rounded-lg border border-border bg-accent/60 py-2 pr-1.5 pl-3 text-sm"
     >
-      <div className="flex min-w-0 items-center gap-2.5">
+      <div className="flex min-w-0 basis-48 flex-1 items-center gap-2">
         <BellRing className="size-4 shrink-0 text-primary" aria-hidden="true" />
-        <span className="font-medium text-primary">{t('telegramBanner.text')}</span>
+        <span className="min-w-0 font-medium text-primary">{t('telegramBanner.text')}</span>
       </div>
-      <div className="flex items-center gap-2">
-        <Button size="sm" onClick={step.connect}>
+      <div className="flex shrink-0 items-center gap-1">
+        <Button
+          size="sm"
+          onClick={() => {
+            onNavigate?.();
+            step.connect();
+          }}
+        >
           {t('telegramBanner.connect')}
         </Button>
         <Button size="sm" variant="ghost" onClick={step.snooze}>

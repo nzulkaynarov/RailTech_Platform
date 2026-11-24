@@ -188,7 +188,6 @@ function MailList({ own }: { own: boolean }) {
     <div className="pf-mail">
       <PageHeader
         title={title}
-        subtitle={t("letters:mail.subtitle")}
         extra={
           !own && data ? (
             <MailCheck

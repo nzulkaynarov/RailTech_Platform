@@ -25,6 +25,10 @@ export interface Column<T> {
   width?: number;
   /** Колонка сортируется щелчком по шапке: ключ отправляется серверу (`sort`), порядок — в адресе страницы (Х-15) */
   sortKey?: string;
+  /** Приоритет при нехватке ширины (`DataColumn.priority`): больше — колонка прячется раньше */
+  priority?: number;
+  /** Одна строка с многоточием, полный текст — в подсказке */
+  truncate?: boolean;
 }
 
 /** Ширина колонки таблицы: своя, у чисел 130 px, у прочих — гибкая (`null`). */
@@ -94,6 +98,8 @@ export function DataList<T extends object>({
         ...(column.sortKey ? { sortKey: column.sortKey } : {}),
         width: columnWidth(column),
         numeric: column.num,
+        ...(column.priority ? { priority: column.priority } : {}),
+        ...(column.truncate ? { truncate: true } : {}),
         cellClassName: index === 0 ? "pf-cat-main" : undefined,
         cell: column.render,
       }))}

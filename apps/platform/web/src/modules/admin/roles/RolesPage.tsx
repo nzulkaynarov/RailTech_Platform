@@ -358,9 +358,6 @@ function RolesEditorPage({
     <>
       <PageHeader
         title={title}
-        subtitle={t(
-          readOnly ? "modules:admin.roles.readOnlySubtitle" : "modules:admin.roles.subtitle",
-        )}
         extra={
           <div className="pf-roles-legend" style={{ justifyContent: "flex-end" }}>
             {readOnly ? (

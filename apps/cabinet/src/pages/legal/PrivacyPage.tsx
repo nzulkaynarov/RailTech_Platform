@@ -1,4 +1,6 @@
 import { useTranslation } from 'react-i18next';
+
+import { useAppName } from '@/i18n/operator';
 import { Link } from 'react-router-dom';
 
 import type { LegalLang } from '@/api/portal';
@@ -14,6 +16,7 @@ import { formatDate } from '@/lib/format';
 /** Политика обработки персональных данных до входа (ДВ-5): ссылка с экрана входа. Показывает действующую редакцию. */
 export function PrivacyPage() {
   const { t, i18n } = useTranslation();
+  const appName = useAppName();
   const lang = localeFor(i18n.resolvedLanguage ?? i18n.language).code as LegalLang;
   const query = useLegalPolicy();
   const policy = query.data?.policy ?? null;
@@ -23,7 +26,7 @@ export function PrivacyPage() {
       <header className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
         <div className="flex items-center gap-3">
           <BrandMark />
-          <p className="text-sm font-semibold">{t('app.name')}</p>
+          <p className="text-sm font-semibold">{appName}</p>
         </div>
         <LanguageSwitcher />
       </header>

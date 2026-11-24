@@ -12,6 +12,7 @@ import {
 import { Pagination } from "antd";
 import {
   type HTMLAttributes,
+  type MouseEvent,
   type PointerEvent,
   type ReactNode,
   useCallback,
@@ -40,6 +41,7 @@ import {
   parseSort,
   useSortedRows,
 } from "./sort";
+import { fitHidden } from "./fitColumns";
 import { type TableSettings, tableKey, useTablesStore } from "./tableSettings";
 
 import "./data-table.css";
@@ -61,8 +63,16 @@ export interface DataColumn<Row> {
   /** Число: заголовок и ячейка вправо (`pf-col-num`) */
   numeric?: boolean;
   cellClassName?: string;
+  /**
+   * Приоритет при нехватке ширины: 0 или не задан — столбец нужен всегда; больше число — столбец уходит раньше
+   * (вторичные: «Единица», «НДС»). Таблица сама скрывает такие столбцы, пока остальные не поместятся в рамку; вернуть их
+   * можно в «Столбцах» нельзя только пока места нет.
+   */
+  priority?: number;
+  /** Ячейка в одну строку: длинный текст обрезается многоточием, полный — в подсказке при наведении */
+  truncate?: boolean;
   cell: (row: Row) => ReactNode;
-  /** Подсказка ячейки (полный текст обрезанного) */
+  /** Подсказка ячейки (полный текст обрезанного); у `truncate` без неё — текст ячейки */
   cellTitle?: (row: Row) => string | undefined;
   /** Можно ли скрыть; первый столбец (номер или название) скрыть нельзя никогда */
   hideable?: boolean;
@@ -105,6 +115,8 @@ export interface DataTableProps<Row> {
   sortMode?: "client" | "server";
   /** Имя параметра адреса, если на странице несколько таблиц (по умолчанию `sort`) */
   sortParam?: string;
+  /** Скрывать столбцы с `priority`, когда таблица не помещается в рамку (по умолчанию да; выключить — `false`) */
+  fitColumns?: boolean;
 }
 
 /** Порядок в адресе страницы: сырое значение и способ его записать (`null` — убрать параметр, номер страницы тоже). */
@@ -125,6 +137,13 @@ const DEFAULT_MAX = 640;
 /** Шаг ширины с клавиатуры (стрелки на ручке), px */
 const KEY_STEP = 16;
 const EMPTY: TableSettings = {};
+
+/** Подсказка обрезанной ячейки: полный текст — только если многоточие действительно есть. */
+function showClipped(event: MouseEvent<HTMLElement>) {
+  const cell = event.currentTarget;
+  if (cell.title) return;
+  if (cell.scrollWidth > cell.clientWidth) cell.title = cell.textContent.trim();
+}
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, Math.round(value)));
@@ -183,6 +202,7 @@ function TableView<Row extends RowData>({
   flexMin = 170,
   pageSize,
   toolsTarget: ownTarget,
+  fitColumns = true,
 }: DataTableProps<Row> & { urlSort?: UrlSort }) {
   // Место «Столбцов»: своё (свойство) или объявленное экраном через `RegistryTools`.
   const slotTarget = useToolsTarget();
@@ -210,6 +230,24 @@ function TableView<Row extends RowData>({
     [columns, firstId, flexMin],
   );
 
+  // Ширина рамки: по ней таблица прячет вторичные столбцы (`priority`), чтобы остальные не вылезали за рамку.
+  const rootRef = useRef<HTMLDivElement>(null);
+  const [avail, setAvail] = useState(0);
+  useLayoutEffect(() => {
+    const element = rootRef.current;
+    if (!element) return;
+    const measure = () => {
+      setAvail(Math.floor(element.getBoundingClientRect().width));
+    };
+    measure();
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
+
   // Настройки сотрудника — только для столбцов, которые есть на экране сейчас (другая вкладка может их не иметь).
   const state = useMemo(() => {
     const known = (id: string) => byId.has(id);
@@ -220,13 +258,22 @@ function TableView<Row extends RowData>({
     const sizing = Object.fromEntries(
       Object.entries(saved.sizing ?? {}).filter(([id]) => known(id)),
     );
+    const auto = fitColumns
+      ? fitHidden(
+          fullOrder.filter((id) => !hidden.includes(id)),
+          (id) => saved.sizing?.[id] ?? byId.get(id)?.width ?? flexMin,
+          (id) => byId.get(id)?.priority ?? 0,
+          avail,
+        )
+      : [];
     return {
       columnOrder: fullOrder,
-      columnVisibility: Object.fromEntries(hidden.map((id) => [id, false])),
+      autoHidden: auto,
+      columnVisibility: Object.fromEntries([...hidden, ...auto].map((id) => [id, false])),
       columnPinning: { start: pinned, end: [] },
       columnSizing: sizing,
     };
-  }, [saved, byId, columns, firstId]);
+  }, [saved, byId, columns, firstId, fitColumns, flexMin, avail]);
 
   // Порядок: столбцы с `sortKey` (на клиенте — ещё и с `sortValue`); значение из адреса — только из этого списка.
   const sortable = (column: DataColumn<Row>): boolean =>
@@ -412,7 +459,7 @@ function TableView<Row extends RowData>({
         canHide: column.id !== firstId && column.hideable !== false,
       }))}
       order={state.columnOrder}
-      hidden={Object.keys(state.columnVisibility)}
+      hidden={Object.keys(state.columnVisibility).filter((id) => !state.autoHidden.includes(id))}
       pinned={pinnedIds}
       changed={saved !== EMPTY}
       onOrder={(order) => {
@@ -432,7 +479,7 @@ function TableView<Row extends RowData>({
   );
 
   return (
-    <div className="pf-dt">
+    <div className="pf-dt" ref={rootRef}>
       {toolsTarget ? (
         createPortal(columnsMenu, toolsTarget)
       ) : toolsTarget === undefined ? (
@@ -507,7 +554,11 @@ function TableView<Row extends RowData>({
                     {ordered.map((column) => {
                       const def = byId.get(column.id);
                       if (!def) return null;
-                      const classes = [def.numeric ? "pf-col-num" : "", def.cellClassName ?? ""]
+                      const classes = [
+                        def.numeric ? "pf-col-num" : "",
+                        def.truncate ? "pf-cell-clip" : "",
+                        def.cellClassName ?? "",
+                      ]
                         .filter(Boolean)
                         .join(" ");
                       const Cell = def.rowHeader ? "th" : "td";
@@ -517,6 +568,7 @@ function TableView<Row extends RowData>({
                           scope={def.rowHeader ? "row" : undefined}
                           className={classes || undefined}
                           title={def.cellTitle?.(original)}
+                          onMouseEnter={def.truncate ? showClipped : undefined}
                           data-pinned={column.id === lastPinned ? "last" : undefined}
                           style={stick(column)}
                         >
@@ -529,14 +581,18 @@ function TableView<Row extends RowData>({
               })}
             </tbody>
           </table>
-          {edges.map((edge) => {
+          {edges.map((edge, index) => {
             const def = byId.get(edge.id);
             if (!def) return null;
             return (
               <div
                 key={edge.id}
                 className="pf-dt-resize"
-                style={{ left: edge.left - 4, height: edge.height }}
+                // последняя ручка целиком внутри рамки: иначе её 4 px справа дают таблице лишнюю прокрутку
+                style={{
+                  left: edge.left - (index === edges.length - 1 ? 8 : 4),
+                  height: edge.height,
+                }}
                 // только мышь: с клавиатуры ширину меняют «Уже» и «Шире» в «Столбцах» (подпись разделителя с именем
                 // столбца путалась бы с полями формы и заголовком)
                 aria-hidden="true"

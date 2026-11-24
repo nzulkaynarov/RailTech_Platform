@@ -376,7 +376,8 @@ def _lines(erp_quote: dict[str, Any]) -> list[QuoteLine]:
                 quantity=float(qty),
                 unit=_text(raw.get("unit")) or _text(raw.get("product_uom")),
                 unit_price=_plain(price),
-                amount=_plain(price * qty),
+                # как в ERP/PDF/портале: half-up до копейки (f"{:.2f}" даёт half-even)
+                amount=_plain((price * qty).quantize(Decimal("0.01"), ROUND_HALF_UP)),
                 lead_time_days=lead
                 if isinstance(lead, int) and not isinstance(lead, bool)
                 else None,

@@ -262,7 +262,7 @@ export function PaymentList() {
 
   return (
     <div className="pf-dec-page">
-      <PageHeader title={title} subtitle={t("payments:list.subtitle")} />
+      <PageHeader title={title} />
       {tab === "memos" ? (
         <Segmented
           aria-label={t("payments:memo.scope.label")}

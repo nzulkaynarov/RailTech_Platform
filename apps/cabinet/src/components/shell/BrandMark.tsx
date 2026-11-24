@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import { LayoutGrid } from 'lucide-react';
 
 import { useOperator } from '@/i18n/operator';
 
@@ -13,9 +13,11 @@ import { cn } from '@/lib/utils';
  * (свёрнутый сайдбар, шапка телефона) — `label`.
  */
 export function BrandMark({ label, className }: { label?: string; className?: string }) {
-  const { i18n } = useTranslation();
-  const operator = String(i18n.options.interpolation?.defaultVariables?.operator ?? '');
-  const logo = useOperator().data?.logo_url;
+  const operatorData = useOperator().data;
+  const logo = operatorData?.logo_url;
+  // Название не задано (или ещё не пришло) — нейтральный значок, а не буквы слова-заглушки («ПЛ» от «платформа»).
+  const operatorName = operatorData?.name?.trim() ?? '';
+  const named = operatorName !== '';
   const [broken, setBroken] = useState<string | null>(null);
   const a11y = label ? { alt: label, title: label } : { alt: '', 'aria-hidden': true as const };
   if (logo && broken !== logo) {
@@ -36,7 +38,7 @@ export function BrandMark({ label, className }: { label?: string; className?: st
       )}
       {...(label ? { role: 'img', 'aria-label': label, title: label } : { 'aria-hidden': true })}
     >
-      {initialsOf(operator)}
+      {named ? initialsOf(operatorName) : <LayoutGrid className="size-4" aria-hidden="true" />}
     </span>
   );
 }

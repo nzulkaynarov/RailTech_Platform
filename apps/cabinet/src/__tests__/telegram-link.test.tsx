@@ -21,6 +21,11 @@ async function notificationsCard() {
   return card;
 }
 
+/** Колокольчик: строка «Подключите Telegram» живёт только в шторке уведомлений, не плавает над страницей. */
+async function openBell(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(await screen.findByRole('button', { name: 'Уведомления' }));
+}
+
 /** Запросы к `/me/telegram*` — метод и путь, по порядку. */
 function recordTelegramCalls(): string[] {
   const calls: string[] = [];
@@ -36,7 +41,12 @@ describe('плашка «Подключите Telegram»', () => {
     signedIn();
     const user = userEvent.setup();
     const { router } = renderApp('/requests');
+    await screen.findByRole('heading', { level: 1, name: 'Заявки' });
+    // Ничего не плавает над страницей: до открытия шторки строки нет.
+    expect(screen.queryByRole('region', { name: BANNER })).not.toBeInTheDocument();
+    await openBell(user);
     const banner = await screen.findByRole('region', { name: BANNER });
+    expect(banner.closest('[role="dialog"]')).not.toBeNull();
     expect(within(banner).getByText('Подключите Telegram — уведомления мгновенно')).toBeInTheDocument();
     // axe — только плашки: проверка всей страницы «Запросы» (таблица, карточки, меню) занимала ~3,5 с и под нагрузкой
     // выводила этот первый тест файла за тестовый таймаут; саму страницу проверяют её тесты.
@@ -54,6 +64,7 @@ describe('плашка «Подключите Telegram»', () => {
     signedIn();
     const user = userEvent.setup();
     renderApp('/requests');
+    await openBell(user);
     const banner = await screen.findByRole('region', { name: BANNER });
     await user.click(within(banner).getByRole('button', { name: 'Позже' }));
     expect(screen.queryByRole('region', { name: BANNER })).not.toBeInTheDocument();
@@ -63,17 +74,23 @@ describe('плашка «Подключите Telegram»', () => {
   it('не показывается после «Позже» до истечения срока', async () => {
     window.localStorage.setItem(TELEGRAM_BANNER_SNOOZE_KEY, String(Date.now() + 60_000));
     signedIn();
+    const user = userEvent.setup();
     renderApp('/requests');
     await screen.findByRole('heading', { level: 1, name: 'Заявки' });
+    await openBell(user);
+    await screen.findByRole('heading', { name: 'Уведомления' });
     expect(screen.queryByRole('region', { name: BANNER })).not.toBeInTheDocument();
   });
 
   it('не показывается, если Telegram уже привязан', async () => {
     setMockTelegram({ linked: true });
     signedIn();
+    const user = userEvent.setup();
     const calls = recordTelegramCalls();
     renderApp('/requests');
     await screen.findByRole('heading', { level: 1, name: 'Заявки' });
+    await openBell(user);
+    await screen.findByRole('heading', { name: 'Уведомления' });
     await vi.waitFor(() => expect(calls).toContain('GET /me/telegram'));
     expect(screen.queryByRole('region', { name: BANNER })).not.toBeInTheDocument();
   });
@@ -81,9 +98,12 @@ describe('плашка «Подключите Telegram»', () => {
   it('не показывается, если подключить нельзя (контакт не в CRM)', async () => {
     setMockTelegram({ available: false });
     signedIn();
+    const user = userEvent.setup();
     const calls = recordTelegramCalls();
     renderApp('/requests');
     await screen.findByRole('heading', { level: 1, name: 'Заявки' });
+    await openBell(user);
+    await screen.findByRole('heading', { name: 'Уведомления' });
     await vi.waitFor(() => expect(calls).toContain('GET /me/telegram'));
     expect(screen.queryByRole('region', { name: BANNER })).not.toBeInTheDocument();
   });
@@ -197,9 +217,13 @@ describe('Профиль → «Уведомления»', () => {
   it('«Первые шаги» без шага Telegram, если подключить нельзя', async () => {
     setMockTelegram({ available: false });
     signedIn();
+    const user = userEvent.setup();
+    const calls = recordTelegramCalls();
     renderApp('/requests');
     await screen.findByRole('heading', { level: 1, name: 'Заявки' });
+    await user.click(await screen.findByRole('button', { name: 'Показать' })); // почти готово — строка, раскрываем шаги
     expect(await screen.findByText('Пригласить коллег')).toBeInTheDocument();
+    await vi.waitFor(() => expect(calls).toContain('GET /me/telegram'));
     expect(screen.queryByText('Уведомления в Telegram')).not.toBeInTheDocument();
   });
 

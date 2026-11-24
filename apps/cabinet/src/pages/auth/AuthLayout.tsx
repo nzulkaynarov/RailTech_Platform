@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { useAppName } from '@/i18n/operator';
+
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { BrandMark } from '@/components/shell/BrandMark';
 import { Link } from 'react-router-dom';
@@ -14,6 +16,7 @@ import { usePageTitle } from '@/hooks/usePageTitle';
  */
 export function AuthLayout({ title, children }: { title: string; children: ReactNode }) {
   const { t } = useTranslation();
+  const appName = useAppName();
   usePageTitle(title);
   // ДВ-5: ссылка на действующую политику — пока она не опубликована, ссылки нет
   const policy = useLegalPolicy().data?.policy;
@@ -23,7 +26,7 @@ export function AuthLayout({ title, children }: { title: string; children: React
         <div className="flex items-center gap-3">
           <BrandMark />
           <div>
-            <p className="text-sm font-semibold">{t('app.name')}</p>
+            <p className="text-sm font-semibold">{appName}</p>
             <p className="text-xs text-muted-foreground">{t('app.tagline')}</p>
           </div>
         </div>

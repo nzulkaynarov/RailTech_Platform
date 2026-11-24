@@ -333,7 +333,6 @@
     "people": {
       "filter": "Kimni ko‘rsatish",
       "search": "Odamni topish",
-      "show": "Ko‘rsatish",
       "phone": "Telefon",
       "email": "Pochta",
       "kinds": {
@@ -349,9 +348,9 @@
         "kind": "Kim",
         "owner": "Mas’ul",
         "contacts": "Kontaktlar",
-        "company": "Kompaniya"
+        "company": "Kompaniya",
+        "actions": "Amallar"
       },
-      "showFor": "Telefon va pochtani ko‘rsatish: {{name}}",
       "revealFailed": "Kontaktlar ko‘rsatilmadi: jurnal mavjud emas, birozdan so‘ng qayta urinib ko‘ring.",
       "empty": {
         "title": "Heç kim topilmadi",
