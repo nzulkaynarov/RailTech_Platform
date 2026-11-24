@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom';
 
 import { MESSAGES_MODULE } from '@/app/nav';
 import type { MessageContext } from '@/api/portal';
+import { RowMenuLink } from '@/components/list/RowMenu';
 import { Button } from '@/components/ui/button';
 import { chatLink } from '@/lib/messages';
 import { useHasModule } from '@/session/useMe';
@@ -74,5 +75,16 @@ export function ManagerButton({
         {compact ? null : t('manager.write')}
       </Link>
     </Button>
+  );
+}
+
+/** Пункт меню строки «Написать менеджеру» (`RowMenu`): тот же адрес чата, что у `ManagerButton`; без модуля `messages` пункта нет. */
+export function ManagerMenuItem({ context, label }: { context: MessageContext | null; label?: string }) {
+  const { t } = useTranslation();
+  if (!useHasModule(MESSAGES_MODULE)) return null;
+  return (
+    <RowMenuLink to={chatLink(context)} icon={MessageCircle} ariaLabel={label}>
+      {t('manager.write')}
+    </RowMenuLink>
   );
 }
