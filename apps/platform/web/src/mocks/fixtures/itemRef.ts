@@ -12,12 +12,11 @@ export function thumbnailOf(itemId: string): string | null {
 
 /**
  * Ссылка на позицию в строке документа мока (ЕД-4). Позиция есть в каталоге мока — артикул и фото оттуда; нет (склад,
- * заказ и расчёт мока живут своими номерами) — то, что знает строка.
+ * заказ и расчёт мока живут своими номерами) — наш артикул в формате `RT-00041`, отличный от артикула поставщика строки.
  */
 export function itemRefOf(
   id: string | number,
   name: string,
-  sku = "",
   kind: ItemRef["kind"] = "goods",
 ): ItemRef {
   const key = String(id);
@@ -25,7 +24,7 @@ export function itemRefOf(
   return {
     id: key,
     name: card?.name ?? name,
-    sku: card?.sku ?? sku,
+    sku: card?.sku ?? `RT-${key.padStart(5, "0")}`,
     kind,
     thumbnail: thumbnailOf(key),
   };

@@ -70,6 +70,11 @@ function Pending({
             </div>
             <p className="pf-calc-card-title">
               <ItemRefCell item={line.item} name={line.name} />
+              {line.article && line.article !== line.item?.sku ? (
+                <span className="pf-hint pf-num" style={{ display: "block" }}>
+                  {line.article}
+                </span>
+              ) : null}
             </p>
             <p className="pf-hint">
               {line.supplier} ·{" "}
@@ -114,7 +119,9 @@ function Pending({
       cell: (line) => (
         <>
           <ItemRefCell item={line.item} name={line.name} />
-          {line.item ? null : <div className="pf-hint pf-num">{line.article}</div>}
+          {line.article && line.article !== line.item?.sku ? (
+            <div className="pf-hint pf-num">{line.article}</div>
+          ) : null}
         </>
       ),
     },
