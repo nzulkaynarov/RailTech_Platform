@@ -10840,6 +10840,8 @@ export interface components {
       erp_sync: components["schemas"]["ErpSyncState"];
       /** @description Текст последней ошибки провижининга ERP (из CRM), если `erp_sync = error` */
       erp_sync_error?: string;
+      /** @description Фото сотрудника (СУЩ-3) — адрес на BFF `/staff/{id}/avatar?v=<версия>`; нет фото или сотрудник отключён — поля нет, показываются инициалы */
+      avatar_url?: string;
     };
     EmployeeList: {
       items: components["schemas"]["Employee"][];

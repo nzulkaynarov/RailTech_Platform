@@ -293,6 +293,7 @@ export function ClientsPage({ objectId }: { objectId?: string | undefined }) {
           name={row.name}
           inn={row.inn}
           innLabel={t("clients:columns.inn")}
+          logoUrl={row.logo_url}
           title={<NameLink row={row} params={params} selected={isOpen(row)} />}
         />
       ),
@@ -403,6 +404,7 @@ export function ClientsPage({ objectId }: { objectId?: string | undefined }) {
                         name={row.name}
                         inn={row.inn}
                         innLabel={t("clients:columns.inn")}
+                        logoUrl={row.logo_url}
                         title={<NameLink row={row} params={params} selected={isOpen(row)} />}
                       />
                       <div className="pf-crm-item-meta">

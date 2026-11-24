@@ -1,5 +1,14 @@
 import { Button } from "antd";
-import { type DragEvent, type ReactNode, useId, useRef, useState } from "react";
+import {
+  type DragEvent,
+  type ReactElement,
+  type ReactNode,
+  cloneElement,
+  useCallback,
+  useId,
+  useRef,
+  useState,
+} from "react";
 import { useTranslation } from "react-i18next";
 
 import { acceptLabel, matchesAccept } from "../lib/fileAccept";
@@ -21,6 +30,8 @@ export interface FilePickerProps {
   "aria-describedby"?: string | undefined;
   "aria-invalid"?: boolean | undefined;
   onPick: (files: File[]) => void;
+  /** Своя кнопка вместо стандартной (например, картинка-кнопка загрузки логотипа): ей подставляется `onClick` «открыть выбор файла». */
+  trigger?: ReactElement<{ onClick?: () => void }> | undefined;
 }
 
 /**
@@ -39,13 +50,20 @@ export function FilePicker({
   "aria-describedby": describedBy,
   "aria-invalid": invalid,
   onPick,
+  trigger,
 }: FilePickerProps) {
   const { t } = useTranslation("ui");
   const input = useRef<HTMLInputElement>(null);
+  // Своя кнопка открывает поле через состояние, а не через ref: ref читать при сборке элемента нельзя
+  const [field, setField] = useState<HTMLInputElement | null>(null);
+  const attach = useCallback((node: HTMLInputElement | null) => {
+    input.current = node;
+    setField(node);
+  }, []);
   return (
     <>
       <input
-        ref={input}
+        ref={attach}
         id={id}
         type="file"
         className="pf-sr-only"
@@ -63,17 +81,25 @@ export function FilePicker({
           if (files.length > 0) onPick(files);
         }}
       />
-      <Button
-        className="pf-file-button"
-        disabled={disabled}
-        loading={loading}
-        aria-describedby={describedBy}
-        onClick={() => {
-          input.current?.click();
-        }}
-      >
-        {buttonLabel ?? (multiple ? t("file.chooseMany") : t("file.choose"))}
-      </Button>
+      {trigger ? (
+        cloneElement(trigger, {
+          onClick: () => {
+            field?.click();
+          },
+        })
+      ) : (
+        <Button
+          className="pf-file-button"
+          disabled={disabled}
+          loading={loading}
+          aria-describedby={describedBy}
+          onClick={() => {
+            input.current?.click();
+          }}
+        >
+          {buttonLabel ?? (multiple ? t("file.chooseMany") : t("file.choose"))}
+        </Button>
+      )}
     </>
   );
 }

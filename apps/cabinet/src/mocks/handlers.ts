@@ -1331,6 +1331,43 @@ export const handlers = [
       { action: true },
     ),
   ),
+  // ЕД-5: логотип компании — версия в `company.logo_version`, картинка — SVG по тому же адресу
+  http.get(
+    `${API}/company/logo`,
+    withSession(({ db }) => {
+      if (!db.company.logo_version) return error(404, 'NOT_FOUND');
+      return new HttpResponse(
+        '<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96"><rect width="96" height="96" rx="8" fill="#1d6b8a"/><rect x="20" y="58" width="56" height="8" fill="#fff"/><rect x="42" y="24" width="12" height="42" fill="#fff"/></svg>',
+        { headers: { 'Content-Type': 'image/svg+xml' } },
+      );
+    }),
+  ),
+  http.put(
+    `${API}/company/logo`,
+    withSession(
+      async ({ db, session, request }) => {
+        if (!contactFor(session.role).is_admin) return error(409, 'ADMIN_REQUIRED');
+        const file = (await request.formData()).get('file');
+        if (!file || typeof file === 'string') return error(400, 'FILE_REQUIRED');
+        if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) return error(422, 'FILE_TYPE_NOT_ALLOWED');
+        if (file.size > 2 * 1024 * 1024) return error(422, 'FILE_TOO_LARGE');
+        db.company = { ...db.company, logo_version: `v${(Number(db.company.logo_version?.slice(1)) || 0) + 1}` };
+        return json(companyView(db.company, true));
+      },
+      { action: true },
+    ),
+  ),
+  http.delete(
+    `${API}/company/logo`,
+    withSession(
+      ({ db, session }) => {
+        if (!contactFor(session.role).is_admin) return error(409, 'ADMIN_REQUIRED');
+        db.company = { ...db.company, logo_version: null };
+        return json(companyView(db.company, true));
+      },
+      { action: true },
+    ),
+  ),
   http.get(
     `${API}/company/partner-application`,
     withSession(({ db, session }) => {

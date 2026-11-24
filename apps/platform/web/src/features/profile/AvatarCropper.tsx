@@ -2,7 +2,7 @@ import { Alert, Button, Modal, Slider } from "antd";
 import { type KeyboardEvent, type PointerEvent, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { renderCircle } from "./cropExport";
+import { renderCircle, renderSquare } from "./cropExport";
 import {
   MAX_ZOOM,
   MIN_ZOOM,
@@ -18,18 +18,27 @@ const KEY_STEP = 12;
 
 /**
  * Обрезка фото по кругу на клиенте (W15-H6): файл читается в браузере, сотрудник двигает картинку и выбирает масштаб,
- * в сеть уходит только готовый круг 256×256 (PNG). Исходный файл на сервер не попадает.
+ * в сеть уходит только готовый круг 256×256 (PNG). Исходный файл на сервер не попадает. `shape="square"` — тот же
+ * экран для логотипа компании (ЕД-5): окно без скругления, в сеть уходит квадрат 256×256; тексты — свои (`title`, `hint`).
  */
 export function AvatarCropper({
   file,
   saving,
   error,
+  shape = "circle",
+  title,
+  hint,
+  applyLabel,
   onCancel,
   onSave,
 }: {
   file: File | null;
   saving: boolean;
   error: string | null;
+  shape?: "circle" | "square";
+  title?: string;
+  hint?: string;
+  applyLabel?: string;
   onCancel: () => void;
   onSave: (blob: Blob) => void;
 }) {
@@ -98,7 +107,8 @@ export function AvatarCropper({
   const save = () => {
     const el = image.current;
     if (!el || !size) return;
-    void renderCircle(el, sourceRect(size.w, size.h, VIEW, zoom, offset)).then(onSave, () => {
+    const render = shape === "square" ? renderSquare : renderCircle;
+    void render(el, sourceRect(size.w, size.h, VIEW, zoom, offset)).then(onSave, () => {
       setFailed(true);
     });
   };
@@ -106,7 +116,7 @@ export function AvatarCropper({
   return (
     <Modal
       open={file !== null}
-      title={t("photo.cropTitle")}
+      title={title ?? t("photo.cropTitle")}
       onCancel={onCancel}
       destroyOnHidden
       width={340}
@@ -121,12 +131,12 @@ export function AvatarCropper({
           disabled={!size || failed}
           onClick={save}
         >
-          {t("photo.apply")}
+          {applyLabel ?? t("photo.apply")}
         </Button>,
       ]}
     >
       <p className="pf-hint" style={{ margin: "0 0 12px" }}>
-        {t("photo.cropHint")}
+        {hint ?? t("photo.cropHint")}
       </p>
       {failed || error ? (
         <Alert
@@ -153,7 +163,7 @@ export function AvatarCropper({
           margin: "0 auto",
           position: "relative",
           overflow: "hidden",
-          borderRadius: "50%",
+          borderRadius: shape === "square" ? 4 : "50%",
           background: "var(--rt-color-surface-split)",
           touchAction: "none",
           cursor: "grab",

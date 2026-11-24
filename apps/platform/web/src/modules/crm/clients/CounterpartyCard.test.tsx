@@ -1,17 +1,30 @@
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { HttpResponse, http } from "msw";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { resetMarks } from "../../../mocks/doNotWorkMarks";
 import { resetLeads } from "../../../mocks/fixtures/leads";
+import { resetPictures } from "../../../mocks/pictures";
 import { panelEl, renderAt, setupBotTests, signIn } from "../../../test/botKit";
 import { server } from "../../../test/server";
+
+// В jsdom нет canvas: готовую картинку заменяем маленьким PNG.
+vi.mock("../../../features/profile/cropExport", () => {
+  const png = () =>
+    Promise.resolve(
+      new Blob([Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])], {
+        type: "image/png",
+      }),
+    );
+  return { renderCircle: png, renderSquare: png };
+});
 
 setupBotTests();
 
 beforeEach(() => {
   resetLeads();
   resetMarks();
+  resetPictures();
 });
 
 async function open(email: string, path: string) {
@@ -212,4 +225,160 @@ describe("Карточка контрагента: «Не работать»", (
     expect(within(panel).queryByRole("button", { name: "Не работать" })).toBeNull();
     expect(within(panel).queryByRole("button", { name: "Реквизиты" })).toBeNull();
   });
+});
+
+/** ЕД-5 и СУЩ-3: логотип компании и фото контакта — загрузка в карточке контрагента. */
+describe("Карточка контрагента: логотип и фото контакта", () => {
+  async function pick(dialogName: string, input: HTMLElement, file: File) {
+    fireEvent.change(input, { target: { files: [file] } });
+    const dialog = await screen.findByRole("dialog", { name: dialogName });
+    // jsdom не загружает картинки: сообщаем размеры, как это сделал бы браузер.
+    const img = await waitFor(() => {
+      const found = dialog.querySelector("img");
+      expect(found).not.toBeNull();
+      return found as HTMLImageElement;
+    });
+    Object.defineProperty(img, "naturalWidth", { value: 400 });
+    Object.defineProperty(img, "naturalHeight", { value: 300 });
+    fireEvent.load(img);
+    return dialog;
+  }
+  const PNG = () => new File([Uint8Array.from([1, 2, 3, 4])], "logo.png", { type: "image/png" });
+
+  it("логотип: нажать на буквы → файл → квадрат → сохранить; адрес с версией; «Убрать» возвращает буквы", async () => {
+    const panel = await open("manager@demo.example", "/crm/clients/3?panel=open&tab=card");
+    await within(panel).findByRole("heading", { name: "ООО Рельс-Сервис Демо" });
+    const head = panel.querySelector(".pf-cp-head") as HTMLElement;
+    expect(head.querySelector("img")).toBeNull();
+
+    const dialog = await pick(
+      "Логотип компании",
+      within(head).getByLabelText("Файл логотипа", { selector: "input" }),
+      PNG(),
+    );
+    const apply = within(dialog).getByRole("button", { name: "Сохранить логотип" });
+    await waitFor(() => {
+      expect(apply).toBeEnabled();
+    });
+    fireEvent.click(apply);
+
+    await waitFor(() => {
+      expect(head.querySelector("img")).toHaveAttribute(
+        "src",
+        "/api/v1/people/counterparties/1003/logo?v=v1",
+      );
+    });
+    fireEvent.click(within(head).getByRole("button", { name: "Убрать логотип" }));
+    await waitFor(() => {
+      expect(head.querySelector("img")).toBeNull();
+    });
+    expect(within(head).getByRole("button", { name: "Загрузить логотип" })).toBeVisible();
+  }, 15_000);
+
+  it("не картинка — отказ словами, окно обрезки не открывается", async () => {
+    const panel = await open("manager@demo.example", "/crm/clients/3?panel=open&tab=card");
+    await within(panel).findByRole("heading", { name: "ООО Рельс-Сервис Демо" });
+    const head = panel.querySelector(".pf-cp-head") as HTMLElement;
+    fireEvent.change(within(head).getByLabelText("Файл логотипа", { selector: "input" }), {
+      target: { files: [new File(["x"], "logo.gif", { type: "image/gif" })] },
+    });
+    expect(await within(head).findByRole("alert")).toHaveTextContent(
+      "Нужна картинка PNG, JPEG или WebP.",
+    );
+    expect(screen.queryByRole("dialog", { name: "Логотип компании" })).toBeNull();
+  });
+
+  it("сервер отказал по размеру — причина в окне обрезки, логотип прежний", async () => {
+    server.use(
+      http.put("*/people/counterparties/:id/logo", () =>
+        HttpResponse.json(
+          {
+            code: "VALIDATION_FAILED",
+            message: "Проверьте заполнение полей.",
+            source: "erp",
+            details: { fields: ["file"], reason: "file_too_large" },
+          },
+          { status: 422 },
+        ),
+      ),
+    );
+    const panel = await open("manager@demo.example", "/crm/clients/3?panel=open&tab=card");
+    await within(panel).findByRole("heading", { name: "ООО Рельс-Сервис Демо" });
+    const head = panel.querySelector(".pf-cp-head") as HTMLElement;
+    const dialog = await pick(
+      "Логотип компании",
+      within(head).getByLabelText("Файл логотипа", { selector: "input" }),
+      PNG(),
+    );
+    const apply = within(dialog).getByRole("button", { name: "Сохранить логотип" });
+    await waitFor(() => {
+      expect(apply).toBeEnabled();
+    });
+    fireEvent.click(apply);
+    expect(await within(dialog).findByRole("alert")).toHaveTextContent("Файл больше 2 МБ");
+    expect(head.querySelector("img")).toBeNull();
+  }, 15_000);
+
+  it("только чтение: логотип видно, менять нельзя", async () => {
+    server.use(
+      http.get("*/people/clients/3/counterparty", () =>
+        HttpResponse.json({
+          id: "1003",
+          name: "ООО Рельс-Сервис Демо",
+          inn: "300000003",
+          registration_number: null,
+          country: null,
+          legal_address: null,
+          crm_client_id: 3,
+          logo_url: "/api/v1/people/counterparties/1003/logo?v=abc",
+          roles: {
+            client: true,
+            supplier: false,
+            manufacturer: false,
+            partner: false,
+            organization: false,
+          },
+          people: [],
+          bank_accounts: [],
+          accounts_masked: true,
+          brands: [],
+        }),
+      ),
+    );
+    const panel = await open("accountant@demo.example", "/crm/clients/3?panel=open&tab=card");
+    await within(panel).findByRole("heading", { name: "ООО Рельс-Сервис Демо" });
+    const head = panel.querySelector(".pf-cp-head") as HTMLElement;
+    expect(head.querySelector("img")).toHaveAttribute(
+      "src",
+      "/api/v1/people/counterparties/1003/logo?v=abc",
+    );
+    expect(within(head).queryByLabelText("Файл логотипа", { selector: "input" })).toBeNull();
+    expect(within(head).queryByRole("button", { name: /логотип/i })).toBeNull();
+  });
+
+  it("фото контакта: «Обзор» → файл → круг → сохранить; фото в строке человека", async () => {
+    const panel = await open("manager@demo.example", "/crm/clients/3?panel=open&tab=card");
+    await within(panel).findByRole("heading", { name: "ООО Рельс-Сервис Демо" });
+    fireEvent.click(within(panel).getByRole("tab", { name: "Обзор" }));
+    const people = await within(panel).findByRole("heading", { name: "Люди" });
+    const list = (people.parentElement as HTMLElement).querySelector("ul") as HTMLElement;
+    const first = within(list).getAllByRole("listitem")[0] as HTMLElement;
+    expect(first.querySelector("img")).toBeNull();
+
+    const dialog = await pick(
+      "Фото контакта",
+      within(first).getByLabelText(/^Файл фото: /, { selector: "input" }),
+      PNG(),
+    );
+    const apply = within(dialog).getByRole("button", { name: "Сохранить фото" });
+    await waitFor(() => {
+      expect(apply).toBeEnabled();
+    });
+    fireEvent.click(apply);
+    await waitFor(() => {
+      expect(first.querySelector("img")?.getAttribute("src")).toMatch(
+        /^\/api\/v1\/people\/contacts\/\d+\/photo\?v=v1$/,
+      );
+    });
+  }, 15_000);
 });

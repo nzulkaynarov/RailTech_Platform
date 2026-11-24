@@ -106,6 +106,59 @@ describe("Органайзер · Люди", () => {
     );
   });
 
+  it("фото контакта (СУЩ-3): в строке — круг с фото, без фото — инициалы; адрес на BFF с версией", async () => {
+    server.use(
+      http.get("*/staff", () => HttpResponse.json({ items: [] })),
+      http.get("*/crm/leads", () => HttpResponse.json({ items: [], total: 0 })),
+      http.get("*/people/contacts", () =>
+        HttpResponse.json({
+          items: [
+            {
+              id: "41",
+              name: "Демо Клиентов",
+              position: null,
+              has_email: false,
+              has_phone: false,
+              is_primary: true,
+              company: { id: "7", name: "АО «Демо-Путь»" },
+              kind: "client",
+              photo_url: "/api/v1/people/contacts/41/photo?v=abc",
+            },
+            {
+              id: "42",
+              name: "Демо Партнёров",
+              position: null,
+              has_email: false,
+              has_phone: false,
+              is_primary: false,
+              company: { id: "9", name: "ООО «Поставщик Север»" },
+              kind: "partner",
+              photo_url: null,
+            },
+          ],
+          total: 2,
+          page: 1,
+          page_size: 100,
+        }),
+      ),
+    );
+    signInAs("all@demo.example");
+    renderApp("/chats/contacts");
+
+    const withPhoto = (await screen.findByRole("button", { name: "Демо Клиентов" })).closest(
+      ".pf-entity",
+    ) as HTMLElement;
+    expect(withPhoto.querySelector("img")).toHaveAttribute(
+      "src",
+      "/api/v1/people/contacts/41/photo?v=abc",
+    );
+    const without = screen
+      .getByRole("button", { name: "Демо Партнёров" })
+      .closest(".pf-entity") as HTMLElement;
+    expect(without.querySelector("img")).toBeNull();
+    expect(without).toHaveTextContent("ДП");
+  });
+
   it("список — в общей рамке: карточка, скелетон на загрузке, пустое состояние словами", async () => {
     server.use(
       http.get("*/staff", async () => {

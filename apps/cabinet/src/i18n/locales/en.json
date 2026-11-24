@@ -1011,6 +1011,19 @@
           "latin": "Latin letters, digits and / - ? : ( ) . , ' + only",
           "server": "The value was not accepted — check the field"
         }
+      },
+      "logo": {
+        "input": "Logo file",
+        "choose": "Upload logo",
+        "change": "Replace logo",
+        "remove": "Remove logo",
+        "hint": "PNG, JPEG or WebP up to 2 MB; the logo is cropped to a centered square.",
+        "errors": {
+          "FILE_TYPE_NOT_ALLOWED": "A PNG, JPEG or WebP image is required.",
+          "FILE_CONTENT_MISMATCH": "The file type does not match its content. Choose another image.",
+          "FILE_TOO_LARGE": "The file is larger than 2 MB. Choose a smaller one.",
+          "ADMIN_REQUIRED": "Only the company administrator can change the logo."
+        }
       }
     },
     "becomePartner": {

@@ -100,7 +100,7 @@ export function PeoplePage() {
         revealId: row.has_phone || row.has_email ? row.id : null,
         revealFrom: "counterparty" as const,
         roles: [],
-        photoUrl: null,
+        photoUrl: row.photo_url ?? null,
       })),
       ...(leads.data?.items ?? []).map((row) => ({
         key: `lead-${row.lead}`,
@@ -190,15 +190,22 @@ export function PeoplePage() {
       header: t("modules:chats.people.columns.name"),
       width: null,
       cell: (person) => (
-        <button
-          type="button"
-          className="pf-people-name"
-          onClick={() => {
-            open(person);
-          }}
-        >
-          {person.name}
-        </button>
+        <PersonCell
+          name={person.name}
+          photoUrl={person.photoUrl}
+          size={32}
+          title={
+            <button
+              type="button"
+              className="pf-people-name"
+              onClick={() => {
+                open(person);
+              }}
+            >
+              {person.name}
+            </button>
+          }
+        />
       ),
     },
     {

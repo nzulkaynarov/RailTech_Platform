@@ -1,0 +1,54 @@
+/* Логотип и фото с загрузкой (ЕД-5, СУЩ-3): картинка — кнопка, «убрать» — маленький крестик на её углу. */
+.pf-picture-edit {
+  position: relative;
+  display: inline-flex;
+  flex: 0 0 auto;
+}
+
+.pf-picture-edit__pic {
+  display: inline-flex;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  cursor: pointer;
+}
+
+.pf-picture-edit__pic:hover {
+  opacity: 0.85;
+}
+
+.pf-picture-edit__remove {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 1px solid var(--rt-color-surface-border);
+  border-radius: 50%;
+  background: var(--rt-color-surface-background);
+  color: var(--rt-color-text-secondary);
+  cursor: pointer;
+}
+
+.pf-picture-edit__remove svg {
+  width: 12px;
+  height: 12px;
+}
+
+.pf-picture-edit__remove:hover {
+  color: var(--rt-color-text);
+}
+
+.pf-picture-edit__error {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 1;
+  width: max-content;
+  max-width: 260px;
+}

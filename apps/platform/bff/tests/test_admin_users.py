@@ -241,6 +241,21 @@ async def test_list_maps_crm_users_to_employees(
     assert sent.headers["authorization"].startswith("Bearer crm-access-")
 
 
+async def test_list_carries_the_staff_photo_address_only_for_active_people(
+    web: Web, crm: CrmUsers, check: ContractChecker
+) -> None:
+    """СУЩ-3: фото в «Сотрудниках»: адрес на BFF с версией, отключённому — инициалы."""
+    crm.users[11]["avatar_version"] = 7
+    crm.users[12].update(avatar_version=9, is_active=False)
+    await login_as(web, "ADMIN")
+    response = check(await web.client.get("/api/v1/admin/users"), "/admin/users", "get")
+    rows = {row["id"]: row for row in response.json()["items"]}
+    assert rows["11"]["avatar_url"] == "/api/v1/staff/11/avatar?v=7"
+    assert "avatar_url" not in rows["12"]
+    assert "avatar_url" not in rows[str(ADMIN_ID)]
+    assert "avatar_version" not in response.text
+
+
 async def test_list_never_leaks_crm_internals(web: Web, crm: CrmUsers) -> None:
     await login_as(web, "ADMIN")
 
