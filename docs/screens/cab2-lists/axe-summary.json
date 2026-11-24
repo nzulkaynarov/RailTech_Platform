@@ -96,22 +96,6 @@
     "violations": []
   },
   {
-    "screen": "documents",
-    "width": 1512,
-    "axe": true,
-    "rulesPassed": 45,
-    "overflowPx": 0,
-    "violations": []
-  },
-  {
-    "screen": "documents",
-    "width": 390,
-    "axe": true,
-    "rulesPassed": 41,
-    "overflowPx": 0,
-    "violations": []
-  },
-  {
     "screen": "letters",
     "width": 1512,
     "axe": true,
@@ -216,6 +200,14 @@
     "violations": []
   },
   {
+    "screen": "requests-row-menu",
+    "width": 1512,
+    "axe": false,
+    "rulesPassed": 0,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
     "screen": "invoices-row-menu",
     "width": 390,
     "axe": false,
@@ -225,17 +217,25 @@
   },
   {
     "screen": "requests-row-menu",
-    "width": 1512,
+    "width": 390,
     "axe": false,
     "rulesPassed": 0,
     "overflowPx": 0,
     "violations": []
   },
   {
-    "screen": "requests-row-menu",
+    "screen": "documents",
+    "width": 1512,
+    "axe": true,
+    "rulesPassed": 45,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "documents",
     "width": 390,
-    "axe": false,
-    "rulesPassed": 0,
+    "axe": true,
+    "rulesPassed": 41,
     "overflowPx": 0,
     "violations": []
   },

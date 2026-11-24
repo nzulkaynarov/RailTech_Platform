@@ -72,7 +72,7 @@
     "article": "Artikul",
     "actions": "Amallar",
     "rowMenu": "Amallar: {{name}}",
-    "showAll": "Barçasi ({{count}})",
+    "showAll": "Barçasini körsatiş ({{count}})",
     "showLess": "Yopiş",
     "loadFailed": "Yuklab boʻlmadi",
     "reasonRequired": "Sababini koʻrsating — usiz ijrochi nimani tuzatishni tushunmaydi.",
@@ -458,7 +458,7 @@
       "noMatchText": "«{{query}}» boʻyicha arizalar topilmadi",
       "clearSearch": "Qidiruvni tozalash",
       "emptyTitle": "Hozircha arizalar yoʻq",
-      "emptyText": "Arizalaringiz shu yerda koʻrinadi.",
+      "emptyText": "Arizalaringiz şu yerda körinadi.",
       "columns": {
         "request": "Ariza",
         "status": "Holat",
@@ -528,7 +528,7 @@
     "quotes": {
       "title": "Tijorat takliflari",
       "emptyTitle": "Hozircha takliflar yoʻq",
-      "emptyText": "Menejer takliflari shu yerda koʻrinadi.",
+      "emptyText": "Menejer takliflari şu yerda körinadi.",
       "numberVersion": "{{number}} · {{version}}-versiya",
       "awaiting_one": "{{count}} ta taklif qaroringizni kutmoqda",
       "awaiting_other": "{{count}} ta taklif qaroringizni kutmoqda",
@@ -625,7 +625,7 @@
     "contracts": {
       "title": "Shartnomalar",
       "emptyTitle": "Hozircha shartnomalar yoʻq",
-      "emptyText": "Shartnomalar taklif qabul qilingach shu yerda koʻrinadi.",
+      "emptyText": "Şartnomalar taklif qabul qilingaç şu yerda körinadi.",
       "awaiting_one": "{{count}} ta shartnoma kelishishingizni kutmoqda",
       "awaiting_other": "{{count}} ta shartnoma kelishishingizni kutmoqda",
       "columns": {
@@ -701,7 +701,7 @@
     "acts": {
       "title": "Dalolatnomalar",
       "emptyTitle": "Hozircha dalolatnomalar yoʻq",
-      "emptyText": "Yetkazib berish va xizmatlar boʻyicha dalolatnomalar shu yerda koʻrinadi.",
+      "emptyText": "Yetkazib berişlar va xizmatlar böyiça dalolatnomalar şu yerda körinadi.",
       "awaiting_one": "{{count}} ta dalolatnoma qabulingizni kutmoqda",
       "awaiting_other": "{{count}} ta dalolatnoma qabulingizni kutmoqda",
       "columns": {
@@ -726,7 +726,6 @@
       "returnConfirm": "Dalolatnomani qaytarish",
       "returnedToast": "{{number}} dalolatnomasi ijrochiga qaytarildi",
       "scan": "Skan",
-      "scanNamed": "{{number}} dalolatnomasining imzolangan skani",
       "scanLabel": "Imzolangan dalolatnoma skani (majburiy emas)",
       "scanHint": "PDF yoki rasm, 10 MB gacha. Dalolatnomani skansiz ham qabul qilish mumkin.",
       "scanProblem": {
@@ -737,7 +736,7 @@
     "deliveries": {
       "title": "Yetkazib berish",
       "emptyTitle": "Hozircha yetkazib berish yoʻq",
-      "emptyText": "Loyihalaringiz boʻyicha yetkazib berishlar shu yerda koʻrinadi.",
+      "emptyText": "Loyihalaringiz böyiça yetkazib berişlar şu yerda körinadi.",
       "progress": "{{total}} tadan {{done}} tasi yetkazildi",
       "eta": "Kutilmoqda: {{date}}",
       "etaUnknown": "Sana aniqlanmoqda",
@@ -761,7 +760,7 @@
     "documents": {
       "title": "Hujjatlar",
       "emptyTitle": "Hozircha hujjatlar yoʻq",
-      "emptyText": "Loyihalaringiz hujjatlari shu yerda koʻrinadi.",
+      "emptyText": "Loyihalaringiz hujjatlari şu yerda körinadi.",
       "emptyKindTitle": "Bu turdagi hujjatlar yoʻq",
       "emptyKindText": "Boshqa turni tanlang yoki barcha hujjatlarni koʻrsating.",
       "showAll": "Hammasini koʻrsatish",
@@ -1155,7 +1154,7 @@
       "telegram": "Telegramda yozish",
       "feed": "Menejer bilan yozishma",
       "emptyTitle": "Bu yerda menejer bilan yozishma bo‘ladi",
-      "emptyText": "Savol yozing — menejer shu yerda javob beradi.",
+      "emptyText": "Savol yozing — menejer şu yerda javob beradi.",
       "you": "Siz",
       "manager": "Menejer",
       "managerNamed": "{{name}}, menejer",
@@ -1189,7 +1188,7 @@
     },
     "partnerOrders": {
       "title": "Yetkazib berish buyurtmalari",
-      "viewsLabel": "Boʻlimlar",
+      "viewsLabel": "Bölimlar",
       "posShort": "poz.",
       "tabsLabel": "Buyurtmalar va narx soʻrovlari holati",
       "ordersListLabel": "Yetkazib berish buyurtmalari roʻyxati",

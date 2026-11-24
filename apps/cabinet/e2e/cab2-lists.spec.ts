@@ -67,19 +67,23 @@ for (const [name, path] of SCREENS) {
   });
 }
 
-test('меню строки открывается: счета и заявки', async ({ page }) => {
-  await page.goto('/invoices');
-  await h1(page);
-  await page.getByRole('button', { name: 'Действия: S-2026-0118' }).click();
-  await expect(page.getByRole('menuitem', { name: 'Скачать' })).toBeVisible();
-  await snap(page, 'invoices-row-menu', { widths: WIDTHS, axe: false });
-  await page.keyboard.press('Escape');
-  await page.goto('/requests');
-  await h1(page);
-  await page.getByRole('button', { name: /^Действия: / }).first().click();
-  await expect(page.getByRole('menuitem', { name: 'Повторить заявку' })).toBeVisible();
-  await snap(page, 'requests-row-menu', { widths: WIDTHS, axe: false });
-});
+for (const size of WIDTHS) {
+  test(`меню строки открывается на ${size.width}: счета и заявки`, async ({ page }) => {
+    // ширина — до открытия меню: смена окна закрывает или сдвигает открытое меню
+    await page.setViewportSize(size);
+    await page.goto('/invoices');
+    await h1(page);
+    await page.getByRole('button', { name: 'Действия: S-2026-0118' }).click();
+    await expect(page.getByRole('menuitem', { name: 'Скачать' })).toBeVisible();
+    await snap(page, 'invoices-row-menu', { widths: [size], axe: false });
+    await page.keyboard.press('Escape');
+    await page.goto('/requests');
+    await h1(page);
+    await page.getByRole('button', { name: /^Действия: / }).first().click();
+    await expect(page.getByRole('menuitem', { name: 'Повторить заявку' })).toBeVisible();
+    await snap(page, 'requests-row-menu', { widths: [size], axe: false });
+  });
+}
 
 test('документы: фильтр по виду — выпадающий список в одной панели с поиском', async ({ page }) => {
   await page.goto('/documents');

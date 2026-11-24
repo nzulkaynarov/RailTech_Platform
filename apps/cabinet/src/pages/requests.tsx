@@ -102,7 +102,6 @@ export function RequestsPage() {
           label: option ? t(`status.request.${option}`) : t('pages.requests.filterAll'),
         }))}
         value={status ?? ''}
-        display="pills"
         onChange={(next) => chooseStatus((next || undefined) as RequestFilterStatus)}
         search={{ value: query, onChange: setQuery, placeholder: t('pages.requests.searchPlaceholder') }}
       />

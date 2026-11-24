@@ -726,7 +726,6 @@
       "returnConfirm": "Return act",
       "returnedToast": "Act {{number}} returned to the provider",
       "scan": "Scan",
-      "scanNamed": "Signed scan of act {{number}}",
       "scanLabel": "Scan of the signed act (optional)",
       "scanHint": "PDF or image up to 10 MB. You can also accept the act without a scan.",
       "scanProblem": {

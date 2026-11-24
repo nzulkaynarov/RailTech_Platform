@@ -1,6 +1,7 @@
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
+import { setDownloadWait } from '@/lib/download';
 import { renderApp, signedIn } from '@/test/render';
 import { captureBody, captureText, expectNoAxeViolations, failWith, heading, openRowMenu, requestLog } from '@/test/screens';
 
@@ -12,6 +13,36 @@ function card(listName: string, title: string) {
   if (!item) throw new Error(`нет карточки ${title}`);
   return item;
 }
+
+afterEach(() => setDownloadWait(null));
+
+describe('Скачивание из меню строки', () => {
+  it('202: меню закрыто, но «Документ готовится…» показано один раз, повтор того же файла не уходит, файл сохранён один раз', async () => {
+    signedIn();
+    let release: () => void = () => undefined;
+    let waits = 0;
+    setDownloadWait(() => {
+      waits += 1;
+      return new Promise<void>((resolve) => (release = resolve));
+    });
+    const user = userEvent.setup();
+    renderApp('/contracts');
+    await screen.findByRole('list', { name: 'Договоры' });
+    const row = card('Договоры', 'D-2026-0048');
+    await openRowMenu(user, row, 'D-2026-0048');
+    await user.click(await screen.findByRole('menuitem', { name: 'Скачать' }));
+    expect(await screen.findByText('Документ готовится…')).toBeInTheDocument();
+    // второй клик по тому же документу, пока он готовится
+    await openRowMenu(user, row, 'D-2026-0048');
+    await user.click(await screen.findByRole('menuitem', { name: 'Скачать' }));
+    expect(screen.getAllByText('Документ готовится…')).toHaveLength(1);
+    expect(window.URL.createObjectURL).not.toHaveBeenCalled();
+    release();
+    await vi.waitFor(() => expect(window.URL.createObjectURL).toHaveBeenCalledTimes(1));
+    expect(waits).toBe(1);
+    vi.mocked(window.URL.createObjectURL).mockClear();
+  });
+});
 
 describe('Договоры', () => {
   it('статусы договора; «Согласовать» с подтверждением: клиент согласовал — подписывает не он, а скан у сотрудника (D2-5)', async () => {

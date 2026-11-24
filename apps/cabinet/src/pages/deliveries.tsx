@@ -38,6 +38,11 @@ import { dealContext } from '@/lib/messages';
  * `/dispute {reason}`; кнопки есть только у строки в статусе `delivered` и только пока проект не выполнен: у выполненного
  * проекта (запрос `closed` с исходом `won` — акт принят или скан, счета оплачены) отдельная приёмка строк не нужна.
  */
+/** Строки, ждущие приёмки («доставлено»), — первыми: кнопки приёмки не прячутся за «Показать все». Порядок остальных прежний. */
+function awaitingFirst(lines: DeliveryLine[]): DeliveryLine[] {
+  return [...lines].sort((a, b) => Number(b.status === 'delivered') - Number(a.status === 'delivered'));
+}
+
 /** Строк поставки в карточке проекта до «Показать все». */
 const LINES_LIMIT = 5;
 
@@ -97,7 +102,7 @@ export function DeliveriesPage() {
                   className="divide-y"
                   limit={LINES_LIMIT}
                   label={t(dealLabelKey(group.deal.stage), { number: group.deal.number })}
-                  items={group.lines.map((line) => (
+                  items={awaitingFirst(group.lines).map((line) => (
                     <li key={line.id} className="flex min-w-0 flex-col gap-2 py-3 first:pt-0 last:pb-0 sm:flex-row sm:items-start sm:justify-between">
                       <div className="flex min-w-0 flex-col gap-0.5">
                         {line.item ? (

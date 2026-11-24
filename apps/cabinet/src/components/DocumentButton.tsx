@@ -5,10 +5,10 @@ import { RowMenuAction } from '@/components/list/RowMenu';
 import { Button } from '@/components/ui/button';
 import { useDocumentDownload } from '@/hooks/useDocumentDownload';
 
-/** Пункт меню строки «Скачать» (`RowMenu`): тот же запрос, что у кнопки; «готовится» — в подсказке-тосте. */
+/** Пункт меню строки «Скачать» (`RowMenu`): тот же запрос, что у кнопки; «готовится» — тостом (меню закрыто), повтор того же документа блокируется. */
 export function DocumentMenuItem({ documentId, fileName, text }: { documentId: number; fileName: string; text?: string }) {
   const { t } = useTranslation();
-  const { download, busy } = useDocumentDownload({ documentId, fileName });
+  const { download, busy } = useDocumentDownload({ documentId, fileName, toastOnPending: true });
   return (
     <RowMenuAction icon={Download} disabled={busy} onSelect={() => void download()}>
       {text ?? t('documents.download')}

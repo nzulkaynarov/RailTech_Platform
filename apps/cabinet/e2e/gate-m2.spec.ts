@@ -497,13 +497,14 @@ test.describe('E. Поставка по строкам → акт со скан�
     await open('/acts');
     await expect(client.getByText('1 акт ждёт вашей приёмки')).toBeVisible();
     await snap(client, 'acts-awaiting');
+    const actNumber = ((await client.getByRole('button', { name: /^Принять акт/ }).getAttribute('aria-label')) ?? '').replace(/^Принять акт\s+/, '');
     await client.getByRole('button', { name: /^Принять акт/ }).click();
     const dialog = client.getByRole('dialog');
     await dialog.locator('input[type="file"]').setInputFiles({ name: 'FIX-51b-scan.pdf', mimeType: 'application/pdf', buffer: SCAN_PDF });
     await snap(client, 'act-accept-dialog-with-scan');
     await dialog.getByRole('button', { name: 'Принять акт' }).click();
     await expect(client.getByText(/принят/i).first()).toBeVisible();
-    await client.getByRole('button', { name: /^Действия: / }).first().click();
+    await client.getByRole('button', { name: `Действия: ${actNumber}` }).click();
     await expect(client.getByRole('menuitem', { name: 'Скан' })).toBeVisible();
     await client.keyboard.press('Escape');
     await snap(client, 'acts-accepted-with-scan');
@@ -695,7 +696,8 @@ test.describe('G. Новый запрос из каталога → отказ �
     await issueAct(erp, state.invoiceB);
     save();
     await open('/acts');
-    await client.getByRole('button', { name: /^Действия: / }).first().click();
+    const returnNumber = ((await client.getByRole('button', { name: /^Принять акт/ }).getAttribute('aria-label')) ?? '').replace(/^Принять акт\s+/, '');
+    await client.getByRole('button', { name: `Действия: ${returnNumber}` }).click();
     await client.getByRole('menuitem', { name: 'Вернуть' }).click();
     const returnDialog = client.getByRole('dialog');
     await returnDialog.getByRole('button', { name: 'Вернуть акт' }).click(); // без причины — нельзя
