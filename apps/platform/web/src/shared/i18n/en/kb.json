@@ -33,8 +33,8 @@
       "text": "Try again: nothing has been lost."
     },
     "unavailable": {
-      "title": "The “Contacts” section is not responding",
-      "text": "Wait a minute and try again: nothing has been lost."
+      "title": "Data did not load",
+      "text": "Try again later."
     },
     "forbidden": {
       "title": "Not available to your role",
@@ -311,7 +311,7 @@
     "DEFAULT": "The action was not completed. Try again later or contact the administrator.",
     "FORBIDDEN": "This action is not available to your role.",
     "NOT_FOUND": "The object was not found: it may have been changed. Refresh the page.",
-    "BACKEND_UNAVAILABLE": "The “Contacts” section is not responding. Wait a minute and try again.",
+    "BACKEND_UNAVAILABLE": "Data did not load. Try again later.",
     "INTEGRATION_FAILED": "A service needed for the reply did not respond. Try again later.",
     "TOO_MANY_REQUESTS": "Too many requests. Try again in a minute.",
     "VALIDATION_FAILED": "Check the form fields.",

@@ -33,8 +33,8 @@
       "text": "Qayta urinib ko‘ring: ma’lumotlar yo‘qolmagan."
     },
     "unavailable": {
-      "title": "«Kontaktlar» bölimi javob bermayapti",
-      "text": "Bir daqiqa kutib, qayta urinib ko‘ring: ma’lumotlar yo‘qolmagan."
+      "title": "Maʼlumotlar yuklanmadi",
+      "text": "Keyinroq qayta uriniş."
     },
     "forbidden": {
       "title": "Rolingizga ochiq emas",
@@ -311,7 +311,7 @@
     "DEFAULT": "Amal bajarilmadi. Keyinroq qayta urinib ko‘ring yoki administratorga murojaat qiling.",
     "FORBIDDEN": "Bu amal rolingizga ruxsat etilmagan.",
     "NOT_FOUND": "Obyekt topilmadi: ehtimol, u o‘zgartirilgan. Sahifani yangilang.",
-    "BACKEND_UNAVAILABLE": "«Kontaktlar» bölimi javob bermayapti. Bir daqiqa kutib, qayta urinib köring.",
+    "BACKEND_UNAVAILABLE": "Maʼlumotlar yuklanmadi. Keyinroq qayta uriniş.",
     "INTEGRATION_FAILED": "Javob uchun kerakli xizmat javob bermadi. Keyinroq qayta urinib ko‘ring.",
     "TOO_MANY_REQUESTS": "So‘rovlar juda ko‘p. Bir daqiqadan so‘ng qayta urinib ko‘ring.",
     "VALIDATION_FAILED": "Maydonlarning to‘ldirilishini tekshiring.",

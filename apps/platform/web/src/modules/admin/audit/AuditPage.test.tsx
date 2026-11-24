@@ -50,7 +50,7 @@ describe("Admin · Журнал аудита (экран целиком на MSW
     const menu = screen.getByRole("navigation", { name: "Разделы модуля" });
     expect(within(menu).getByRole("link", { name: "Журнал" })).toHaveAttribute(
       "aria-current",
-      "page",
+      "true",
     );
   });
 

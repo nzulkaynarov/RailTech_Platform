@@ -19,7 +19,8 @@ export interface paths {
          *     Без аутентификации. Нужны телефон или e-mail и `consent: true` (согласие на обработку ПДн,
          *     Q-12). Ошибки: 422 `validation_failed` с `details.reason` (`consent_required` |
          *     `form_token_invalid` | `form_too_fast` | `form_token_expired` | `contact_required` |
-         *     `invalid_phone` | `invalid_email`), 429 `rate_limited`.
+         *     `invalid_phone` | `invalid_email`), 429 `rate_limited` (окно по IP расходуют только запросы,
+         *     прошедшие проверку контакта). Телефон Узбекистана — `+998` и 9 цифр.
          *     Повторный запрос известного контакта дополняет существующую карточку. Необязательные факты
          *     об источнике (`form`, `page`, `referrer`, `utm`, `landing_language`) сохраняются в лиде. Ответ
          *     для экрана «Что дальше»: `request_number` и `first_response_minutes`.
@@ -151,7 +152,7 @@ export interface components {
             email?: string | null;
             /**
              * Form
-             * @description Form key, e.g. `request`.
+             * @description Form key, e.g. `request`, `site`, `site-customer`, `site-partner`.
              */
             form?: string | null;
             /** Form Token */
@@ -230,6 +231,15 @@ export interface operations {
             };
             /** @description Ошибка валидации */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Too many requests from this address (`details.reason=rate_limited`) */
+            429: {
                 headers: {
                     [name: string]: unknown;
                 };

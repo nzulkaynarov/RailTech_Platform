@@ -146,3 +146,19 @@ export function formatActivityTime(
     ? `${formatDate(date, { style: "short" })} ${time}`
     : formatDate(date, { style: "datetime" });
 }
+
+/**
+ * Дата события в строке списка: сегодня — время `10:12`, иначе — дата `24.10.2026` (без «вчера» и времени): в таблице
+ * время без даты не говорит, когда это было.
+ */
+export function formatListDate(
+  value: DateInput,
+  options: { language?: string; now?: Date } = {},
+): string {
+  const { now = new Date() } = options;
+  const date = toDate(value);
+  if (!date) return EM_DASH;
+  return companyDayKey(date) === companyDayKey(now)
+    ? formatDate(date, { style: "time" })
+    : formatDate(date, { style: "date" });
+}

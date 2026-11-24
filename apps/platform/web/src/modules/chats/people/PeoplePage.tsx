@@ -6,7 +6,7 @@ import { useTranslation } from "react-i18next";
 import { useViewport } from "../../../app/shell/useViewport";
 import { canSee } from "../../../app/access";
 import { useAuth } from "../../../app/auth/useAuth";
-import type { CounterpartyContacts } from "../../../shared/api/generated/model";
+import type { CounterpartyContacts, PersonRef } from "../../../shared/api/generated/model";
 import {
   revealCounterpartyContacts,
   revealStaffContacts,
@@ -18,13 +18,14 @@ import { useDocumentTitle } from "../../../shared/lib/useDocumentTitle";
 import { DataBlock, ListSkeleton } from "../../../shared/ui/DataBlock";
 import { type DataColumn, DataTable } from "../../../shared/ui/DataTable/DataTable";
 import { EmptyState } from "../../../shared/ui/EmptyState";
-import { PersonCell } from "../../../shared/ui/EntityCell";
+import { CompanyCell, PersonCell } from "../../../shared/ui/EntityCell";
 import { PageHeader } from "../../../shared/ui/PageHeader";
 import { ROW_ACTIONS_WIDTH, RowActions } from "../../../shared/ui/RowActions";
 import "./people.css";
 import { FilterBar, FilterField } from "../../../shared/ui/FilterBar";
 import { Sheet } from "../../../shared/ui/Sheet";
 import { useParamChanger } from "../../crm/common/params";
+import { PersonRefCell } from "../../PersonRefCell";
 
 /** Ширины по типу столбца (platform-frontend.md §4.2): имя и компания делят остаток, короткие значения — фиксированные. */
 const COLS = { position: 180, kind: 150, owner: 170, contacts: 170 };
@@ -37,9 +38,10 @@ interface Person {
   name: string;
   kind: Exclude<Kind, "all">;
   position: string | null;
-  owner: string | null;
-  /** Компания контрагента (люди клиентов и партнёров) */
-  company: string | null;
+  /** Ответственный за лид: сотрудник со справочником (фото или инициалы) */
+  owner: Pick<PersonRef, "id" | "name"> | null;
+  /** Компания контрагента (люди клиентов и партнёров): название и логотип, ЕД-3 */
+  company: { name: string; logoUrl: string | null } | null;
   /** Сотрудник, у которого есть телефон или почта, либо контакт контрагента: открываются по нажатию с записью в журнал */
   revealId: string | null;
   /** Откуда контакты: профиль сотрудника в CRM или ERP */
@@ -97,7 +99,7 @@ export function PeoplePage() {
         kind: row.kind === "client" ? ("clients" as const) : ("partners" as const),
         position: row.position,
         owner: null,
-        company: row.company.name,
+        company: { name: row.company.name, logoUrl: row.company_logo_url ?? null },
         revealId: row.has_phone || row.has_email ? row.id : null,
         revealFrom: "counterparty" as const,
         roles: [],
@@ -108,7 +110,7 @@ export function PeoplePage() {
         name: row.name,
         kind: "leads" as const,
         position: null,
-        owner: row.assigned?.name ?? null,
+        owner: row.assigned,
         company: null,
         revealId: null,
         revealFrom: null,
@@ -132,7 +134,7 @@ export function PeoplePage() {
       (kind === "all" || person.kind === kind) &&
       (needle === "" ||
         person.name.toLocaleLowerCase().includes(needle) ||
-        (person.company ?? "").toLocaleLowerCase().includes(needle)),
+        (person.company?.name ?? "").toLocaleLowerCase().includes(needle)),
   );
 
   const kindLabel = (value: Kind) => t(`modules:chats.people.kinds.${value}`);
@@ -210,7 +212,8 @@ export function PeoplePage() {
       header: t("modules:chats.people.columns.company"),
       width: null,
       truncate: true,
-      cell: (row) => row.company ?? "—",
+      cell: (row) =>
+        row.company ? <CompanyCell name={row.company.name} logoUrl={row.company.logoUrl} /> : "—",
     },
     {
       id: "kind",
@@ -224,7 +227,7 @@ export function PeoplePage() {
       width: COLS.owner,
       priority: 3,
       truncate: true,
-      cell: (row) => row.owner ?? "—",
+      cell: (row) => (row.owner ? <PersonRefCell person={row.owner} caption={null} /> : "—"),
     },
     {
       id: "contacts",
@@ -333,7 +336,14 @@ export function PeoplePage() {
                       {
                         key: "company",
                         label: t("modules:chats.people.columns.company"),
-                        children: selected.company ?? "—",
+                        children: selected.company ? (
+                          <CompanyCell
+                            name={selected.company.name}
+                            logoUrl={selected.company.logoUrl}
+                          />
+                        ) : (
+                          "—"
+                        ),
                       },
                     ]),
                 {

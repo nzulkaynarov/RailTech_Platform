@@ -266,8 +266,7 @@
     },
     "to": {
       "label": "Kimga",
-      "director": "Direktor",
-      "hint": "Hujjatni kelişiş huquqi bor istalgan xodim oladi."
+      "director": "Direktor"
     },
     "recipient": {
       "label": "Manzil (tashkilot)",
@@ -301,7 +300,7 @@
     "deal": {
       "label": "Loyiha bilan bog‘lash",
       "hint": "Majburiy emas: arizani yoki loyihani raqami, nomi yoki kompaniyasi bo‘yicha toping.",
-      "placeholder": "Masalan, ZV-2026-104 yoki nomi",
+      "placeholder": "Raqam, nomi yoki kompaniya",
       "empty": "Hech narsa topilmadi",
       "searching": "Qidirilmoqda…",
       "unavailable": "Arizalar hozir mavjud emas — bog‘lashni keyinroq qo‘shish mumkin."
@@ -316,29 +315,6 @@
       "watchers": "Nusxa oluvchilar",
       "watchersHint": "Hujjatni ko‘radi, lekin qaror qilmaydi.",
       "choosePeople": "Xodimlarni tanlang"
-    },
-    "consequence": {
-      "memo": [
-        "Hujjatga xizmat yozuvi raqami beriladi va u direktorga kelişiş uçun yuboriladi.",
-        "Direktor kelishadi, qayta ishlashga qaytaradi yoki rad etadi — sizga xabar keladi.",
-        "Kelishilgan hujjat viza va sana bilan «Hujjatlar»da qoladi."
-      ],
-      "memoAmount": [
-        "Hujjatga xizmat yozuvi raqami beriladi va u direktorga kelişiş uçun yuboriladi.",
-        "Direktor kelishgach, hujjat to‘lov uchun buxgalterga topshiriladi.",
-        "Buxgalter to‘lovni tasdiqlaydi: holat «To‘langan» bo‘ladi."
-      ],
-      "application": [
-        "Arizaga raqam beriladi va u direktorga kelişiş uçun yuboriladi.",
-        "Direktor kelishadi, qayta ishlashga qaytaradi yoki rad etadi — sizga xabar keladi.",
-        "Qaror va sana «Hujjatlar»da qoladi."
-      ],
-      "report": [
-        "Hisobotga raqam beriladi va u direktorga kelişiş uçun yuboriladi.",
-        "Direktor kelishadi, qayta ishlashga qaytaradi yoki rad etadi — sizga xabar keladi.",
-        "Qaror va sana «Hujjatlar»da qoladi."
-      ],
-      "draft": "«Qoralamani saqlaş» heç narsa yubormaydi: hujjat «Hujjatlar»da «Davom ettiriş» tugmasi bilan qoladi."
     },
     "submit": {
       "approval": "Kelishishga yuborish",

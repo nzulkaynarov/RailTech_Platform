@@ -54,7 +54,7 @@ describe("Настройки · Процессы · Справочники пи�
     const menu = screen.getByRole("navigation", { name: "Разделы модуля" });
     expect(within(menu).getByRole("link", { name: "Правила работы" })).toHaveAttribute(
       "aria-current",
-      "page",
+      "true",
     );
     // Письмо банка есть у демо-писем — удалить нельзя, только скрыть.
     expect(await rowActionItems("Письмо банка")).not.toContain("Удалить");

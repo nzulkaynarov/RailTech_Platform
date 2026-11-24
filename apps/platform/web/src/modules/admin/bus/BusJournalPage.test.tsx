@@ -210,7 +210,7 @@ describe("Admin · Журнал интеграций: права", () => {
     const menu = await screen.findByRole("navigation", { name: "Разделы модуля" });
     expect(within(menu).getByRole("link", { name: "Журнал" })).toHaveAttribute(
       "aria-current",
-      "page",
+      "true",
     );
   });
 });

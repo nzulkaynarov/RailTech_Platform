@@ -131,7 +131,7 @@ export function OfficeResolutionForm({
 
   const people = (staff.data?.items ?? []).map((p) => ({
     value: p.id,
-    label: p.position ? `${p.name} · ${p.position}` : p.name,
+    label: p.name,
   }));
   const executor = needsExecutor(values.kind);
 

@@ -286,11 +286,11 @@
       "internal": "Internal document"
     },
     "hints": {
-      "lead": "New enquiry: call, email, referral",
-      "request": "A client asks for a quote: pick the client and describe the request",
-      "calc": "From a request, a file or the last similar one",
-      "incoming": "Register a letter received by the company",
-      "letter": "On the company letterhead, with a number and signature",
+      "lead": "New enquiry",
+      "request": "A client's request for a quote",
+      "calc": "Cost for a request",
+      "incoming": "A letter received by the company",
+      "letter": "A letter on the company letterhead",
       "internal": "Memo, application, report"
     }
   },
