@@ -459,6 +459,26 @@ class TestNotificationsForRecipients:
         notice = PortalNotice.objects.get(contact=recipient, kind="delivery_eta_changed")
         assert notice.channel == NoticeChannel.EMAIL and notice.email_reason == ""
 
+    def test_a_revoked_recipient_gets_no_further_letters_or_deal_notifications(self, invoice, deal, client_company):
+        from portal.services import notices
+
+        link, _ = mint("invoice", invoice, email="wrong.person@example.uz", name="Не тот")
+        wrong = link.contact
+        assert "wrong.person@example.uz" in [email for email, _ in doc_links.deal_recipients(deal)]
+        doc_links.revoke_document_links("invoice", invoice, None)
+        assert "wrong.person@example.uz" not in [email for email, _ in doc_links.deal_recipients(deal)]
+        assert wrong.pk not in doc_links.document_contact_ids(deal)
+        notices.notify(
+            "delivery_eta_changed",
+            company=client_company,
+            object_id=deal.pk,
+            link=f"/deals/{deal.pk}",
+            dedup="eta-revoked",
+            bot_reaches=False,
+            document_contact_ids=notice_sources._document_contacts(deal),
+        )
+        assert PortalNotice.objects.get(contact=wrong, kind="delivery_eta_changed").email_reason == "not_invited"
+
     def test_a_contact_who_got_no_document_is_still_not_invited(self, invoice, client_company):
         from parties.models import Contact
 
@@ -488,3 +508,23 @@ class TestContractSendDecision:
         monkeypatch.setattr(contract_flow, "send_blocker", lambda c: None)
         _, error = contract_flow.apply_transition(contract.pk, "send_to_client", None)
         assert error is None and sent == [("contract", contract.pk)]
+
+
+class TestUndeliveredLink:
+    def test_a_letter_that_was_not_handed_to_the_mail_service_leaves_no_live_link(
+        self, invoice, client_contact, monkeypatch
+    ):
+        from types import SimpleNamespace
+
+        import notifications.emails as emails
+        from crm.services.document_letters import deliver_document_letter
+        from crm.services.documents import remember_pdf_state
+        from notifications.models import EmailLog
+
+        remember_pdf_state("invoice", invoice.pk, False)
+        monkeypatch.setattr(
+            emails, "send_templated_email", lambda *a, **k: SimpleNamespace(status=EmailLog.STATUS_FAILED)
+        )
+        result = deliver_document_letter("invoice", invoice.pk, client_contact.email, "x")
+        assert result["status"] == "failed"
+        assert not DocumentLink.objects.filter(kind="invoice", revoked_at__isnull=True).exists()

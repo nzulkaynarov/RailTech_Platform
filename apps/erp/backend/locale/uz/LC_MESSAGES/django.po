@@ -453,7 +453,7 @@ msgid "Срок оплаты:"
 msgstr "Tölov muddati:"
 
 msgid "PDF документа приложен к этому письму."
-msgstr "Hujjatning PDF faylı uşbu xatga ilova qilingan."
+msgstr "Hujjatning PDF fayli uşbu xatga ilova qilingan."
 
 msgid "Открыть документ онлайн"
 msgstr "Hujjatni onlayn oçiş"

@@ -166,8 +166,10 @@ def deal_recipients(deal) -> list[tuple[str, str]]:
 def document_links_of_deal(deal):
     from django.db.models import Q
 
+    # Только не отозванные: отозванная ссылка — «письмо ушло не тому», такой адрес получателем сделки не становится
     return DocumentLink.objects.filter(
-        Q(quote__deal=deal) | Q(contract__deal=deal) | Q(invoice__deal=deal) | Q(act__deal=deal)
+        Q(quote__deal=deal) | Q(contract__deal=deal) | Q(invoice__deal=deal) | Q(act__deal=deal),
+        revoked_at__isnull=True,
     )
 
 

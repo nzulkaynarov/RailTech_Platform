@@ -11,6 +11,7 @@ from __future__ import annotations
 import logging
 
 from django.db import transaction
+from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 
@@ -45,6 +46,7 @@ def deliver_document_letter(kind: str, doc_id: int, email: str, name: str, remin
 
     from crm.templatetags.document_format import money
     from notifications.emails import email_brand, send_templated_email
+    from notifications.models import EmailLog
 
     spec = spec_of(kind)
     doc = _load(kind, doc_id)
@@ -78,7 +80,7 @@ def deliver_document_letter(kind: str, doc_id: int, email: str, name: str, remin
         **_facts(kind, doc, code, money),
         **email_brand(doc_links._seller_company(link)),
     }
-    send_templated_email(
+    log = send_templated_email(
         "document_link_sent",
         context,
         to=[email.strip().lower()],
@@ -87,6 +89,11 @@ def deliver_document_letter(kind: str, doc_id: int, email: str, name: str, remin
         attachments=attachments,
         fail_silently=True,
     )
+    if getattr(log, "status", "") == EmailLog.STATUS_FAILED:
+        # письмо не передано почте: ссылка, которой нет у получателя, не остаётся живой (повторная отправка выпустит новую)
+        link.revoked_at = timezone.now()
+        link.save(update_fields=["revoked_at"])
+        return {"kind": kind, "id": doc_id, "status": "failed", "to": email}
     return {"kind": kind, "id": doc_id, "status": "sent", "to": email}
 
 
