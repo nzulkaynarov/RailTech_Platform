@@ -1,7 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { App, Button, Checkbox, Form, Input, Select } from "antd";
 import { RowActions, ROW_ACTIONS_WIDTH } from "../../../../shared/ui/RowActions";
-import { useEffect, useId, useState } from "react";
+import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import type {
@@ -15,11 +15,11 @@ import {
   useDeleteDocumentTemplate,
   useGetDocumentPlaceholders,
   useListDocumentTemplates,
-  usePreviewDocumentTemplate,
   useUpdateDocumentTemplate,
 } from "../../../../shared/api/generated/platform-bff";
 import { StatusTag } from "../../../../shared/ui/StatusTag";
-import { ConfirmModal, EditorPage, FormModal, ListTable, PreviewFrame, QueryGate } from "../common";
+import { ConfirmModal, EditorPage, FormModal, ListTable, QueryGate } from "../common";
+import { SamplePdf } from "../SamplePdf";
 import { useReadOnly } from "../useReadOnly";
 import { changedFields, isEmptyObject, omit } from "../diff";
 import { errorFields } from "../errors";
@@ -260,20 +260,10 @@ function DocumentEditor({
   const body = Form.useWatch("body_html", form) as string | undefined;
   const kind = (Form.useWatch("kind", form) as DocumentTemplateKind | undefined) ?? initial.kind;
 
-  // Образец на тестовых данных ERP: после паузы ввода, ничего не сохраняется.
-  const preview = usePreviewDocumentTemplate();
-  const { mutate: requestPreview } = preview;
+  // Образец — настоящий PDF генератора на бланке, ничего не сохраняется (ДОК-14).
   const text = body ?? initial.body_html;
-  // Подстановки, которых нет в каталоге: ERP называет их в предупреждениях образца (C2A-G-5).
-  const unknown = preview.data?.warnings ?? [];
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      requestPreview({ data: { body_html: text, kind } });
-    }, 400);
-    return () => {
-      window.clearTimeout(timer);
-    };
-  }, [text, kind, requestPreview]);
+  // Подстановки, которых нет в каталоге: ERP называет их, когда образец готов (C2A-G-5).
+  const [unknown, setUnknown] = useState<string[]>([]);
 
   // Новый шаблон договора, счёта или акта не пустой: подставляется образец платформы этого вида, если текст ещё не трогали.
   const chooseKind = (next: DocumentTemplateKind) => {
@@ -425,11 +415,10 @@ function DocumentEditor({
         </Form>
         <div className="pf-co-panel">
           <h3 className="pf-co-title">{t("templates.documents.previewTitle")}</h3>
-          <PreviewFrame
-            html={preview.data?.html}
+          <SamplePdf
+            request={{ template_kind: kind, body_html: text }}
             title={t("templates.documents.previewFrame")}
-            loading={preview.isPending}
-            error={preview.error}
+            onWarnings={setUnknown}
           />
           {unknown.map((code) => (
             <p key={code} className="pf-co-hint" role="status">

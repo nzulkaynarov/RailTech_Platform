@@ -21,6 +21,7 @@ from crm.views.billing import (  # noqa: F401
     PaymentViewSet,
 )
 from crm.views.deals import DealStageViewSet, DealViewSet  # noqa: F401
+from crm.views.document_samples import DocumentSampleViewSet  # noqa: F401
 from crm.views.documents import DocumentTemplateViewSet, GeneratedDocumentViewSet  # noqa: F401
 from crm.views.documents_public import PublicDocumentView  # noqa: F401
 from crm.views.numbering import NumberingSchemePreviewView, NumberingSchemeView  # noqa: F401
@@ -84,6 +85,7 @@ __all__ = [
     "TimelineView",
     # counterparty book (CRM Phase B)
     # documents ("Документы 2.0")
+    "DocumentSampleViewSet",
     "DocumentTemplateViewSet",
     "WordingVariantViewSet",
     "GeneratedDocumentViewSet",

@@ -180,7 +180,7 @@
     "previewTitle": "Document sample",
     "previewKind": "Document type",
     "previewFrame": "Sample: {{kind}}",
-    "previewHint": "The data in the sample is fictional.",
+    "previewHint": "The data is fictional; the number is the next one of the scheme, the counter is not used.",
     "inheritedEdit": "Edit company details",
     "languages": {
       "title": "Letterhead in Uzbek and English",
@@ -742,5 +742,9 @@
       "template_counterparty_required": "Choose who the template is for.",
       "template_approval_forbidden": "Approved by the holder of the Legal zone."
     }
+  },
+  "sample": {
+    "language": "Document language",
+    "failed": "The sample was not built"
   }
 }

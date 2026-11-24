@@ -432,6 +432,8 @@ class DocumentTemplateViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
 
     @extend_schema(
         summary="Live-preview a template body against sample data (no DB write)",
+        deprecated=True,
+        extensions={"x-sunset": "2027-06-01"},
         tags=["CRM"],
         request=inline_serializer(
             "DocumentTemplatePreviewRequest",
@@ -465,7 +467,8 @@ class DocumentTemplateViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
     )
     @action(detail=False, methods=["post"], url_path="preview", throttle_classes=[DocumentPreviewThrottle])
     def preview(self, request):
-        """Render the editor body on sample data. Auth only — no settings.edit needed."""
+        """Deprecated (ДОК-14): the sample is a PDF of the real generator, see `document_samples.py`. Kept until the
+        sunset date of the contract, then removed together with `document_preview.py` and `documents/preview.py`."""
         from django.core.exceptions import ValidationError as DjangoValidationError
 
         from accounts.models import Company
