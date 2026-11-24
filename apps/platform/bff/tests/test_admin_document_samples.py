@@ -114,7 +114,7 @@ async def test_failed_and_expired_samples(web: Web, erp: respx.MockRouter) -> No
     await web.login(["DIRECTOR"])
     erp.get(f"{SAMPLES}/{ID}/").mock(
         return_value=httpx.Response(
-            200, json={"id": ID, "status": "failed", "error": "SAMPLE_RENDER_FAILED"}
+            200, json={"id": ID, "status": "failed", "failure_code": "SAMPLE_RENDER_FAILED"}
         )
     )
     erp.get(f"{SAMPLES}/{'b' * 32}/pdf/").mock(
@@ -124,7 +124,7 @@ async def test_failed_and_expired_samples(web: Web, erp: respx.MockRouter) -> No
     failed = await web.client.get(f"/api/v1/admin/company/document-samples/{ID}")
     gone = await web.client.get(f"/api/v1/admin/company/document-samples/{'b' * 32}/file")
 
-    assert failed.json()["error"] == "SAMPLE_RENDER_FAILED"
+    assert failed.json()["failure_code"] == "SAMPLE_RENDER_FAILED"
     assert gone.status_code == 404
 
 

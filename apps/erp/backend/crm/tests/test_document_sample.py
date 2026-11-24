@@ -265,7 +265,7 @@ def test_failed_render_is_reported_as_a_code(seller, api_cache, monkeypatch):
     api = _api(user)
     sample_id = api.post("/api/v1/crm/document-samples/", {"kind": "INV"}, format="json").json()["id"]
     state = api.get(f"/api/v1/crm/document-samples/{sample_id}/").json()
-    assert state["status"] == "failed" and state["error"] == "SAMPLE_RENDER_FAILED"
+    assert state["status"] == "failed" and state["failure_code"] == "SAMPLE_RENDER_FAILED"
     assert api.get(f"/api/v1/crm/document-samples/{sample_id}/pdf/").status_code == 404
 
 

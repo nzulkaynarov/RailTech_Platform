@@ -13322,8 +13322,8 @@ export interface components {
       status: "pending" | "ready" | "failed";
       /** @description Коды подстановок текста шаблона, которых нет в каталоге */
       warnings?: string[];
-      /** @description Код ошибки при `failed` (`SAMPLE_RENDER_FAILED`, `TEMPLATE_BODY_TOO_LARGE`, `INVALID_SAMPLE_KIND`) */
-      error?: string;
+      /** @description Код причины при `failed` (`SAMPLE_RENDER_FAILED`, `TEMPLATE_BODY_TOO_LARGE`, `INVALID_SAMPLE_KIND`) */
+      failure_code?: string;
     };
     DocumentPreview: {
       /** @description Готовый HTML образца документа; SPA показывает его в изолированной рамке (`sandbox`), скриптов в нём нет */

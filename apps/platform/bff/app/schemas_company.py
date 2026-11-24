@@ -342,7 +342,7 @@ class DocumentSample(BaseModel):
     id: str
     status: Literal["pending", "ready", "failed"]
     warnings: list[str] | None = None
-    error: str | None = None
+    failure_code: str | None = None
 
 
 def to_brand(raw: Mapping[str, Any]) -> BrandProfile:

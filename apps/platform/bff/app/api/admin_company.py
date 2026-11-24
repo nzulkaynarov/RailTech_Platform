@@ -298,7 +298,7 @@ def _sample_of(raw: Any) -> DocumentSample:
         if raw.get("status") in ("pending", "ready", "failed")
         else "failed",
         warnings=[text(w) for w in raw.get("warnings") or []] or None,
-        error=text(raw.get("error")) or None,
+        failure_code=text(raw.get("failure_code")) or None,
     )
 
 

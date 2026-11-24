@@ -9,6 +9,6 @@ export interface DocumentSample {
   status: DocumentSampleStatus;
   /** Коды подстановок текста шаблона, которых нет в каталоге */
   warnings?: string[];
-  /** Код ошибки при `failed` (`SAMPLE_RENDER_FAILED`, `TEMPLATE_BODY_TOO_LARGE`, `INVALID_SAMPLE_KIND`) */
-  error?: string;
+  /** Код причины при `failed` (`SAMPLE_RENDER_FAILED`, `TEMPLATE_BODY_TOO_LARGE`, `INVALID_SAMPLE_KIND`) */
+  failure_code?: string;
 }

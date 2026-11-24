@@ -23395,9 +23395,9 @@ components:
           items:
             type: string
           description: Коды подстановок текста шаблона, которых нет в каталоге
-        error:
+        failure_code:
           type: string
-          description: Код ошибки при `failed` (`SAMPLE_RENDER_FAILED`, `TEMPLATE_BODY_TOO_LARGE`, `INVALID_SAMPLE_KIND`)
+          description: Код причины при `failed` (`SAMPLE_RENDER_FAILED`, `TEMPLATE_BODY_TOO_LARGE`, `INVALID_SAMPLE_KIND`)
     DocumentPreview:
       type: object
       additionalProperties: false

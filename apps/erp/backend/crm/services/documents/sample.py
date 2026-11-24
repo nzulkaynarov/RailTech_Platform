@@ -498,7 +498,7 @@ def queue_sample(company, user, request: dict) -> str:
 
 
 def sample_state(company_id: int, user_id: int, sample_id: str) -> dict | None:
-    """{"status": "pending" | "ready" | "failed", "warnings": [...], "error": code} or None when unknown/expired."""
+    """{"status": "pending" | "ready" | "failed", "warnings": [...], "failure_code": code} or None when unknown/expired."""
     return cache.get(_key(company_id, user_id, sample_id, "state"))
 
 
@@ -523,14 +523,16 @@ def run_sample(sample_id: str, company_id: int, user_id: int, request: dict) -> 
         )
     except SampleError as exc:
         cache.set(
-            _key(company_id, user_id, sample_id, "state"), {"status": "failed", "error": exc.code}, RESULT_TTL_SECONDS
+            _key(company_id, user_id, sample_id, "state"),
+            {"status": "failed", "failure_code": exc.code},
+            RESULT_TTL_SECONDS,
         )
         return
     except Exception:  # noqa: BLE001 — fault barrier: the screen shows a code, the traceback goes to the log
         logger.exception("Sample document %s failed", request.get("kind"))
         cache.set(
             _key(company_id, user_id, sample_id, "state"),
-            {"status": "failed", "error": "SAMPLE_RENDER_FAILED"},
+            {"status": "failed", "failure_code": "SAMPLE_RENDER_FAILED"},
             RESULT_TTL_SECONDS,
         )
         return

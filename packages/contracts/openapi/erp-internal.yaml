@@ -30435,9 +30435,9 @@ components:
           items:
             type: string
           description: Коды подстановок текста, которых нет
-        error:
+        failure_code:
           type: string
-          description: Код ошибки при status=failed
+          description: Код причины при status=failed
       required:
       - id
       - status

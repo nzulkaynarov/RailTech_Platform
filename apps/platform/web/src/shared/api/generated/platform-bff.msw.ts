@@ -18191,7 +18191,7 @@ export const getRequestDocumentSampleResponseMock = (
     ),
     undefined,
   ]),
-  error: faker.helpers.arrayElement([
+  failure_code: faker.helpers.arrayElement([
     faker.string.alpha({ length: { min: 10, max: 20 } }),
     undefined,
   ]),
@@ -18209,7 +18209,7 @@ export const getGetDocumentSampleResponseMock = (
     ),
     undefined,
   ]),
-  error: faker.helpers.arrayElement([
+  failure_code: faker.helpers.arrayElement([
     faker.string.alpha({ length: { min: 10, max: 20 } }),
     undefined,
   ]),
