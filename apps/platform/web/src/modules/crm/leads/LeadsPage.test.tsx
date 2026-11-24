@@ -2,7 +2,7 @@ import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { resetMarks, setMark } from "../../../mocks/doNotWorkMarks";
-import { resetLeads } from "../../../mocks/fixtures/leads";
+import { LONG_LETTER, resetLeads } from "../../../mocks/fixtures/leads";
 import { resetMessages } from "../../../mocks/fixtures/messages";
 import { panelEl, renderAt, setupBotTests, signIn } from "../../../test/botKit";
 
@@ -162,5 +162,31 @@ describe("Клиенты · Лиды (D1-2b)", () => {
     await screen.findByRole("table", { name: "Лиды" });
     expect(screen.queryByRole("button", { name: /^Забрать/ })).toBeNull();
     expect(screen.queryByRole("link", { name: /^Ответить/ })).toBeNull();
+  });
+});
+
+describe("Лиды · длинный запрос из письма", () => {
+  it("в таблице запрос — две строки (clamp), полный текст в подсказке, а не высокий блок", async () => {
+    await open("manager@demo.example");
+    await screen.findByRole("table", { name: "Лиды" });
+    const row = within(table())
+      .getByRole("link", { name: "Открыть карточку Письмо Демо" })
+      .closest("tr");
+    if (!row) throw new Error("нет строки");
+    const cell = row.querySelector(".pf-crm-need-clamp");
+    if (!cell) throw new Error("запрос не обёрнут в clamp");
+    expect(cell.className).toContain("pf-crm-need-clamp");
+    // переводы строк письма схлопнуты в пробелы, полный текст — в title
+    expect(cell.getAttribute("title")).toBe(LONG_LETTER.replace(/\s+/g, " ").trim());
+    expect(cell.getAttribute("title")).not.toContain("\n");
+    expect(cell.getAttribute("title")).toContain("Отдел снабжения");
+  });
+
+  it("карточка лида показывает письмо целиком", async () => {
+    await open("manager@demo.example", "/crm/leads?lead=L-2090&panel=open&tab=card");
+    const panel = await panelEl();
+    await within(panel).findByRole("heading", { name: "Письмо Демо" });
+    expect(panel.textContent).toContain("Пункт 18");
+    expect(panel.textContent).toContain("Отдел снабжения");
   });
 });

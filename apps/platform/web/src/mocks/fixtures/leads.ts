@@ -78,6 +78,20 @@ function handoff(base: number, over: Partial<HandoffInfo>): HandoffInfo {
   };
 }
 
+/** Письмо целиком (~40 строк): так приходит «need» лида из почты. */
+export const LONG_LETTER = [
+  "Добрый день!",
+  "",
+  ...Array.from(
+    { length: 18 },
+    (_, i) =>
+      `Пункт ${String(i + 1)}: просим выставить коммерческое предложение на поставку колёсных пар.`,
+  ),
+  "",
+  "С уважением,",
+  "Отдел снабжения",
+].join("\n");
+
 export interface Spec {
   id: number;
   name: string;
@@ -527,6 +541,17 @@ function initial(): LeadsMock {
       consent: false,
       phone: "+998900000077",
       company: "ООО Демо-Депо",
+    }),
+    // Лид из письма: в «need» целое письмо с переводами строк (L-0015 на проде) — в таблице две строки
+    lead(base, {
+      id: 2090,
+      name: "Письмо Демо",
+      status: "dialog",
+      channel: "email",
+      need: LONG_LETTER,
+      minutes: 70,
+      consent: false,
+      email: "letter@demo.example",
     }),
   ];
   const client = leads.find((l) => l.row.lead === "L-2033");
