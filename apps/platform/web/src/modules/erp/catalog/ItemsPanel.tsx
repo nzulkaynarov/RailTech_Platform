@@ -183,10 +183,18 @@ export function ItemsPanel() {
   const columns: Column<CatalogItem>[] = [
     nameColumn,
     { key: "kind", title: t("items.columns.kind"), render: (row) => <KindTag kind={row.kind} /> },
-    { key: "unit", title: t("items.columns.unit"), render: (row) => row.unit?.name ?? "—" },
+    {
+      key: "unit",
+      title: t("items.columns.unit"),
+      priority: 4,
+      truncate: true,
+      render: (row) => row.unit?.name ?? "—",
+    },
     {
       key: "vat",
       title: t("items.columns.vat"),
+      priority: 3,
+      truncate: true,
       render: (row) =>
         row.vat_effective === null
           ? "—"
@@ -195,6 +203,8 @@ export function ItemsPanel() {
     {
       key: "category",
       title: t("items.columns.category"),
+      priority: 1,
+      truncate: true,
       render: (row) => row.category?.name ?? "—",
     },
     {
@@ -218,6 +228,7 @@ export function ItemsPanel() {
       key: "docs",
       title: t("items.columns.docs"),
       num: true,
+      priority: 2,
       render: (row) =>
         row.docs_count === 0 ? (
           "—"

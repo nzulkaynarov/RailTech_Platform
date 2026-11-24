@@ -47,7 +47,7 @@ export function CatalogScreen() {
   };
   return (
     <div className="pf-cat">
-      <PageHeader title={t("modules:erp.sections.catalog")} subtitle={t("catalog:subtitle")} />
+      <PageHeader title={t("modules:erp.sections.catalog")} />
       <SectionTabs
         label={t("catalog:tabs.label")}
         active={part}

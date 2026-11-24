@@ -147,3 +147,20 @@
 .pf-col-num .pf-dt-sort {
   flex-direction: row-reverse;
 }
+
+/* Ячейка в одну строку (`truncate`): многоточие, полный текст — в подсказке при наведении (`showClipped`) */
+.pf-dt-table td.pf-cell-clip,
+.pf-dt-table th.pf-cell-clip {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Название строки — кнопка открытия карточки: выглядит ссылкой, без полей кнопки (вместо кнопки «Открыть» в каждой строке) */
+.pf-dt-table .ant-btn.pf-dt-link {
+  height: auto;
+  padding: 0;
+  text-align: left;
+  white-space: normal;
+  overflow-wrap: break-word;
+}

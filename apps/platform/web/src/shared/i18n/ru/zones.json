@@ -21,14 +21,12 @@
     "responsible": "Ответственный",
     "deputy": "Замещающий",
     "curator": "Куратор",
-    "problems": "Что не так",
-    "actions": "Действия"
+    "problems": "Что не так"
   },
   "notAssigned": "Не назначен",
   "personInactive": "отключён",
   "noProblems": "Всё в порядке",
   "off": "Выключена",
-  "open": "Открыть",
   "openNamed": "Открыть зону «{{name}}»",
   "problem": {
     "no_responsible": "Нет ответственного",
