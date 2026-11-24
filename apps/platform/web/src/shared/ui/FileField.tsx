@@ -53,7 +53,7 @@ export function FilePicker({
   trigger,
 }: FilePickerProps) {
   const { t } = useTranslation("ui");
-  const input = useRef<HTMLInputElement>(null);
+  const input = useRef<HTMLInputElement | null>(null);
   // Своя кнопка открывает поле через состояние, а не через ref: ref читать при сборке элемента нельзя
   const [field, setField] = useState<HTMLInputElement | null>(null);
   const attach = useCallback((node: HTMLInputElement | null) => {

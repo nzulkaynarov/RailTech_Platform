@@ -214,9 +214,7 @@ def test_contract_is_mounted_and_readable():
 
 #: GET раздела «Мои товары» партнёра (PART-2): сессия клиента сюда не допущена (403 `MODULE_REQUIRED`), поэтому их
 #: опрашивает `test_partner_contract.py` на мире партнёра, а не этот сторож.
-#: Логотип оператора (ДВ-3) отдаёт картинку без входа и зависит от «своей компании»: его опрашивает `test_pictures.py`.
 PARTNER_GET_PATHS = {
-    "/operator/logo",
     "/partner/products",
     "/partner/products/{id}",
     "/partner/products/{id}/documents",
@@ -231,9 +229,13 @@ PARTNER_GET_PATHS = {
 }
 
 
+#: Логотип оператора (ДВ-3) отдаёт картинку без входа и зависит от «своей компании»: его опрашивает `test_pictures.py`.
+OTHER_TESTS_GET_PATHS = {"/operator/logo"}
+
+
 def test_every_contract_get_is_covered_by_the_guard():
-    missing = contract_get_paths() - set(GET_CASES) - PARTNER_GET_PATHS
-    stale = (set(GET_CASES) | PARTNER_GET_PATHS) - contract_get_paths()
+    missing = contract_get_paths() - set(GET_CASES) - PARTNER_GET_PATHS - OTHER_TESTS_GET_PATHS
+    stale = (set(GET_CASES) | PARTNER_GET_PATHS | OTHER_TESTS_GET_PATHS) - contract_get_paths()
     assert not missing, f"GET-эндпоинты контракта без фикстур сторожа: {sorted(missing)}"
     assert not stale, f"строки сторожа без GET в контракте: {sorted(stale)}"
 
