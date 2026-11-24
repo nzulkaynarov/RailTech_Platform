@@ -8439,6 +8439,46 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/people/leads": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Органайзер · Люди: лиды
+     * @description Лиды для «Людей» (PL-1): те, кто ещё не стал клиентом — статусы `new`, `dialog`, `wants_quote`, `no_answer`; проигранные (`lost`) — только с `closed=true`. Лиды-«якоря» чата Cabinet и пробные (`cabinet`, `sandbox`) в список не входят, они не люди. Лид, ставший клиентом, строкой «Лиды» не показывается — он в «Клиентах». В строке — компания (колонка или ответ бота), канал, язык, суть запроса и признаки «есть телефон, почта, Telegram»; значения открывает `POST /people/leads/{lead}/reveal`. Раздел `crm.leads` от чтения или первая линия. До 100 лидов.
+     */
+    get: operations["listPeopleLeads"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/people/leads/{lead}/reveal": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Органайзер · Люди: показать контакты лида
+     * @description Телефон, почта и Telegram лида — по нажатию, как у людей контрагентов. Сначала запись `contact.reveal` в журнал CRM (объект `lead`), потом контакты: журнал недоступен — 503 `BACKEND_UNAVAILABLE`, контактов нет. Выгрузки нет. Раздел `crm.leads` от чтения или первая линия.
+     */
+    post: operations["revealLeadContacts"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/people/counterparties": {
     parameters: {
       query?: never;
@@ -17397,6 +17437,32 @@ export interface components {
       overdue: boolean;
       /** @description Клиент, если лид уже стал клиентом */
       client_id: number | null;
+    };
+    PeopleLead: {
+      lead: string;
+      name: string;
+      /** @description Колонка «компания» или ответ бота */
+      company: string | null;
+      status: components["schemas"]["LeadPlatformStatus"];
+      channel: components["schemas"]["MessageChannel"];
+      language: components["schemas"]["Language"];
+      assigned: components["schemas"]["PersonRef"] | null;
+      /** @description Суть запроса */
+      need: string | null;
+      has_phone: boolean;
+      has_email: boolean;
+      has_telegram: boolean;
+    };
+    PeopleLeadPage: {
+      items: components["schemas"]["PeopleLead"][];
+      total: number;
+    };
+    PeopleLeadContacts: {
+      lead: string;
+      phone: string | null;
+      email: string | null;
+      /** @description Ник с «@», если есть */
+      telegram: string | null;
     };
     /** @description Новый лид вручную; нужен телефон или почта */
     LeadIn: {
@@ -34565,6 +34631,61 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["CounterpartyContacts"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  listPeopleLeads: {
+    parameters: {
+      query?: {
+        /** @description Показать и проигранные */
+        closed?: boolean;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Лиды */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PeopleLeadPage"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  revealLeadContacts: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        lead: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Контакты лида */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PeopleLeadContacts"];
         };
       };
       401: components["responses"]["SessionExpired"];

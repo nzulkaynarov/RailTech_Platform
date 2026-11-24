@@ -358,7 +358,19 @@
       },
       "roles": "Rollar",
       "reveal": "Kontaktlarni körsatish",
-      "close": "Yopish"
+      "close": "Yopish",
+      "showClosed": "Yopilganlarni körsatish",
+      "closedLead": "yopilgan",
+      "channel": "Kanal",
+      "language": "Til",
+      "need": "Nima kerak",
+      "telegram": "Telegram",
+      "openLead": "Lidni ochish {{number}}",
+      "languages": {
+        "ru": "Rusça",
+        "en": "Inglizça",
+        "uz": "Özbekça"
+      }
     }
   },
   "admin": {

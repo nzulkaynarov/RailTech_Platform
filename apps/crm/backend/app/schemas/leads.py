@@ -84,6 +84,13 @@ class LeadOut(BaseModel):
     # Канал последнего сообщения клиента — туда уйдёт ответ менеджера (CHAT-1): `telegram` |
     # `cabinet`; null — клиент ещё не писал. Только в `GET /inbox` и карточке лида.
     reply_channel: str | None = None
+    # «Люди» (PL-1): компания лида — колонка или, если пуста, ответ бота (`qualification.company`),
+    # и есть ли у лида телефон, почта, Telegram. Значений контактов в списке нет — их открывает
+    # «Показать контакты» с записью в журнал.
+    company_name: str | None = None
+    has_phone: bool = False
+    has_email: bool = False
+    has_telegram: bool = False
     # Куда уйдёт ответ менеджера на самом деле (CH-1, `domain/reply_channel.py`): `telegram` |
     # `cabinet` | `email`; null — отвечать некуда, причина в `reply_blocked`: `no_consent` |
     # `no_email_consent` | `email_undeliverable` | `phone_only` | `no_contact`. Только в
@@ -119,7 +126,6 @@ class LeadDetail(LeadOut):
     phone_e164: str | None = None
     # Контакты лида без Telegram (M3-CRM-05).
     email: str | None = None
-    company_name: str | None = None
     # Телефон основного контакта клиента, если лид привязан к клиенту (Q-011).
     client_phone_e164: str | None = None
     notes_count: int

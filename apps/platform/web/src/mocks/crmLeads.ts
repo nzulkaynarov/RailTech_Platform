@@ -10,6 +10,8 @@ import type {
   LeadCreated,
   LeadIn,
   LeadPage,
+  PeopleLead,
+  PeopleLeadContacts,
   RequestCallNoteIn,
   RequestCreatedView,
   RequestFileFromMessageIn,
@@ -124,6 +126,44 @@ function validateRequest(body: RequestFormIn, lead: LeadMockRow | undefined): Re
 }
 
 export const crmLeadsHandlers = [
+  // «Люди» (PL-1): лиды, ещё не ставшие клиентами; проигранные — только с `closed=true`; значения контактов — по «Показать»
+  http.get("*/api/v1/people/leads", ({ request }) => {
+    const denied = guard("crm.leads", "read");
+    if (denied) return denied;
+    const closed = new URL(request.url).searchParams.get("closed") === "true";
+    const items: PeopleLead[] = readLeads()
+      .leads.filter(({ row }) => row.status !== "client" && (closed || row.status !== "lost"))
+      .filter(({ row }) => row.channel !== "cabinet")
+      .map(({ row, card }) => ({
+        lead: row.lead,
+        name: row.name,
+        company: card.contacts.company,
+        status: row.status,
+        channel: row.channel,
+        language: row.language,
+        assigned: row.assigned,
+        need: row.need,
+        has_phone: card.contacts.phone !== null,
+        has_email: card.contacts.email !== null,
+        has_telegram: card.contacts.telegram !== null,
+      }));
+    return HttpResponse.json({ items, total: items.length });
+  }),
+  http.post("*/api/v1/people/leads/:lead/reveal", ({ params }) => {
+    const denied = guard("crm.leads", "read");
+    if (denied) return denied;
+    const found = findLead(readLeads(), String(params.lead));
+    if (!found) return leadNotFound();
+    const body: PeopleLeadContacts = {
+      lead: found.row.lead,
+      phone: found.card.contacts.phone,
+      email: found.card.contacts.email,
+      telegram: found.card.contacts.telegram
+        ? `@${found.card.contacts.telegram.replace(/^@/, "")}`
+        : null,
+    };
+    return HttpResponse.json(body);
+  }),
   http.get("*/api/v1/crm/leads", ({ request }) => {
     const denied = guard("crm.leads", "read");
     if (denied) return denied;
