@@ -9,7 +9,7 @@ import i18n from '@/i18n';
 /**
  * Название оператора в текстах кабинета (`{{operator}}`) — из настроек компании (CRM «Настройки · Компания» →
  * ERP → `GET /operator`; задача «Н3a2»), а не из кода. Переменная общая для всех строк (`defaultVariables`), поэтому
- * места вызова `t()` её не передают. Не задано или запрос не удался — нейтральное слово языка (`app.operatorFallback`).
+ * места вызова `t()` её не передают. Не задано или запрос не удался — пустая строка (`app.operatorFallback`): своего названия компании в кабинете нет, чужое слово («Платформа», «ERP») не подставляем.
  */
 export function setOperatorName(name: string | null | undefined): void {
   const operator = name?.trim() || i18n.t('app.operatorFallback');
@@ -53,5 +53,7 @@ export function useOperatorName(): void {
 export function useAppName(): string {
   const { t } = useTranslation();
   const name = useOperator().data?.name?.trim();
-  return name ? t('app.name', { operator: name }) : t('app.name');
+  const title = (name ? t('app.name', { operator: name }) : t('app.name')).trim();
+  // без названия компании в en остаётся «account» — с заглавной буквы
+  return title.charAt(0).toUpperCase() + title.slice(1);
 }

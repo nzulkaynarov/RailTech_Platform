@@ -19,7 +19,7 @@ describe('Wave J7 & J2-audit: Статус отношений, архив док
       expect(within(list).getAllByRole('listitem')).toHaveLength(9);
 
       // Кнопка экспорта реестра видна
-      const exportBtn = await screen.findByRole('button', { name: 'Экспорт реестра' });
+      const exportBtn = await screen.findByRole('button', { name: 'Скачать список' });
       expect(exportBtn).toBeInTheDocument();
 
       // Вводим дату "С даты"
@@ -27,7 +27,7 @@ describe('Wave J7 & J2-audit: Статус отношений, архив док
       await user.type(dateFromInput, '01102026'); // 01.10.2026
 
       // Нажимаем экспорт реестра
-      await user.click(await screen.findByRole('button', { name: 'Экспорт реестра' }));
+      await user.click(await screen.findByRole('button', { name: 'Скачать список' }));
       await waitFor(() => {
         expect(window.URL.createObjectURL).toHaveBeenCalled();
       });
@@ -48,8 +48,8 @@ describe('Wave J7 & J2-audit: Статус отношений, архив док
       await heading('Компания');
 
       // Статус отношений в профиле
-      expect(await screen.findByText('Статус отношений')).toBeInTheDocument();
-      expect(screen.getByText('Отношения активны')).toBeInTheDocument();
+      expect(await screen.findByText('Работа с нами')).toBeInTheDocument();
+      expect(screen.getByText('Идёт')).toBeInTheDocument();
 
       // Журнал безопасности компании виден администратору
       expect(await screen.findByText('Журнал безопасности компании')).toBeInTheDocument();
@@ -60,7 +60,7 @@ describe('Wave J7 & J2-audit: Статус отношений, архив док
       await expectNoAxeViolations();
     });
 
-    it('ДВ-6: вход с нового устройства — «Завершить сеанс» в журнале, после — кнопки нет', async () => {
+    it('ДВ-6: вход с нового устройства — «Завершить вход» в журнале, после — кнопки нет', async () => {
       signedIn();
       const user = userEvent.setup();
       renderApp('/company');
@@ -70,10 +70,10 @@ describe('Wave J7 & J2-audit: Статус отношений, архив док
       expect(within(secList).getByText('Это не ваш сотрудник?')).toBeInTheDocument();
       await expectNoAxeViolations();
 
-      await user.click(within(secList).getByRole('button', { name: 'Завершить сеанс' }));
+      await user.click(within(secList).getByRole('button', { name: 'Завершить вход' }));
       expect(await screen.findByText('Сеанс завершён')).toBeInTheDocument();
       await waitFor(() => {
-        expect(within(secList).queryByRole('button', { name: 'Завершить сеанс' })).toBeNull();
+        expect(within(secList).queryByRole('button', { name: 'Завершить вход' })).toBeNull();
       });
     });
 
@@ -102,9 +102,9 @@ describe('Wave J7 & J2-audit: Статус отношений, архив док
       await heading('Компания');
 
       expect(
-        await screen.findByText('Отношения временно приостановлены. Доступ открыт в режиме чтения архива.'),
+        await screen.findByText('Работа приостановлена: документы доступны только для просмотра.'),
       ).toBeInTheDocument();
-      expect(screen.getByText('Приостановлены')).toBeInTheDocument();
+      expect(screen.getByText('Приостановлена')).toBeInTheDocument();
 
       await expectNoAxeViolations();
     });
@@ -134,9 +134,9 @@ describe('Wave J7 & J2-audit: Статус отношений, архив док
       await heading('Компания');
 
       expect(
-        await screen.findByText('Отношения завершены. Архив документов доступен для просмотра и выгрузки.'),
+        await screen.findByText('Работа завершена: архив документов доступен для просмотра и скачивания.'),
       ).toBeInTheDocument();
-      expect(screen.getByText('Завершены')).toBeInTheDocument();
+      expect(screen.getByText('Завершена')).toBeInTheDocument();
 
       await expectNoAxeViolations();
     });

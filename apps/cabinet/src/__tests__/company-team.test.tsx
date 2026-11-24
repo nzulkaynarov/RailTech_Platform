@@ -21,7 +21,7 @@ describe('Компания', () => {
     const address = screen.getByLabelText('Юридический адрес');
     await user.clear(address);
     await user.type(address, 'г. Ташкент, ул. Новая, 1');
-    await user.click(screen.getByRole('button', { name: 'Oʻzbekcha' }));
+    await user.click(screen.getByRole('button', { name: 'Özbekça' }));
     await expectNoAxeViolations();
     await user.click(screen.getByRole('button', { name: 'Сохранить' }));
 
@@ -254,11 +254,11 @@ describe('Команда', () => {
     // Действия над коллегой — в меню карточки «⋯», а не тремя кнопками в каждой
     expect(within(viewer).queryByRole('button', { name: 'Отключить' })).not.toBeInTheDocument();
     await user.click(within(viewer).getByRole('button', { name: 'Действия: Dilnoza Yusupova' }));
-    expect(await screen.findByRole('menuitem', { name: 'Разрешить подпись' })).toBeInTheDocument();
+    expect(await screen.findByRole('menuitem', { name: 'Разрешить подтверждать' })).toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: 'Отключить' })).toBeInTheDocument();
 
     // Назначаем админом
-    await user.click(screen.getByRole('menuitem', { name: 'Назначить админом' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Сделать администратором' }));
     expect(await screen.findByText('Права для Dilnoza Yusupova обновлены')).toBeInTheDocument();
 
     // Отключаем коллегу
@@ -291,11 +291,11 @@ describe('Профиль и сессии (J2)', () => {
     renderApp('/profile');
     await heading('Профиль');
 
-    expect(await screen.findByText('Активные сессии')).toBeInTheDocument();
-    expect(screen.getByText('Текущая сессия')).toBeInTheDocument();
+    expect(await screen.findByText('Где выполнен вход')).toBeInTheDocument();
+    expect(screen.getByText('Это устройство')).toBeInTheDocument();
     expect(screen.getByText('Safari / iPhone')).toBeInTheDocument();
 
-    const revokeBtn = screen.getByRole('button', { name: 'Завершить другие сессии' });
+    const revokeBtn = screen.getByRole('button', { name: 'Выйти на других устройствах' });
     await user.click(revokeBtn);
 
     expect(await screen.findByText(/Завершено других сессий: 1/)).toBeInTheDocument();
