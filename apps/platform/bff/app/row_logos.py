@@ -19,11 +19,19 @@ class WithClient(Protocol):
     client_logo_url: str | None
 
 
+async def company_logos(authed: Authed, company_ids: Iterable[int]) -> dict[int, str]:
+    """Адреса логотипов по id компании ERP одним пакетом; нет права или ERP молчит — пусто."""
+    ids = [i for i in company_ids if i]
+    if not ids or not any(allows(authed.access, res, need) for res, need in LOGO_SECTIONS):
+        return {}
+    return await logo_urls(authed, ids)
+
+
 async def attach_client_logos(authed: Authed, rows: Iterable[WithClient]) -> None:
     """Проставляет `client_logo_url` строкам с `client_id`; ERP — пачками на весь список."""
     batch = [r for r in rows if r.client_id]
-    if not batch or not any(allows(authed.access, res, need) for res, need in LOGO_SECTIONS):
+    if not batch:
         return
-    urls = await logo_urls(authed, [r.client_id for r in batch if r.client_id])
+    urls = await company_logos(authed, [r.client_id for r in batch if r.client_id])
     for r in batch:
         r.client_logo_url = urls.get(r.client_id or 0)

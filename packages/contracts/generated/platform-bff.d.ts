@@ -16512,6 +16512,8 @@ export interface components {
       name: string;
       /** @description Адрес для писем; только в карточке заказа и списке поставщиков */
       email?: string | null;
+      /** @description Логотип поставщика: адрес на BFF с `?v=<версия>`, только в списке заказов, пакетно (ЕД-3); null — буквы названия */
+      logo_url?: string | null;
     };
     StockSupplierList: {
       items: {
@@ -17925,6 +17927,8 @@ export interface components {
       kind: "client" | "partner";
       /** @description Фото контакта: адрес на BFF с `?v=<версия>` (СУЩ-3); null — инициалы */
       photo_url?: string | null;
+      /** @description Логотип компании человека: адрес на BFF с `?v=<версия>`, пакетно на список (ЕД-3); null или нет права на раздел — буквы названия */
+      company_logo_url?: string | null;
     };
     CounterpartyContacts: {
       id: components["schemas"]["CompanyItemRef"];
