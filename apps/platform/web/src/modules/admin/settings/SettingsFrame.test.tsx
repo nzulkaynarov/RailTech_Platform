@@ -24,17 +24,18 @@ afterEach(() => {
   endSession();
 });
 
-const names = (nav: HTMLElement) =>
-  within(nav)
-    .getAllByRole("link")
-    .map((link) => link.textContent);
+/** Страницы группы — вложенный список под активной группой меню модуля (одно меню) */
+const pages = (nav: HTMLElement, group: string) => {
+  const list = within(nav).getByRole("list", { name: group });
+  return within(list).getAllByRole("link");
+};
 
 describe("Настройки · рамка страницы (ЕВ-2а, отчёт §7 п. 20)", () => {
-  it("меню слева — страницы своей группы; текущая отмечена; те же страницы на любой странице группы", async () => {
+  it("страницы своей группы — в меню модуля под активной группой; текущая отмечена", async () => {
     signInAs("admin@demo.example");
     renderApp("/admin/timing");
-    const nav = await screen.findByRole("navigation", { name: "Страницы группы «Правила работы»" });
-    expect(names(nav)).toEqual([
+    const nav = await screen.findByRole("navigation", { name: "Разделы модуля" });
+    expect(pages(nav, "Правила работы").map((link) => link.textContent)).toEqual([
       "Продажи",
       "Время и сроки",
       "Справочники",
@@ -45,14 +46,16 @@ describe("Настройки · рамка страницы (ЕВ-2а, отчё�
       "aria-current",
       "page",
     );
+    // одно меню: колонки страниц группы внутри страницы больше нет
+    expect(screen.queryByRole("navigation", { name: /^Страницы группы/ })).toBeNull();
     expect(await screen.findByRole("heading", { level: 1, name: "Время и сроки" })).toBeVisible();
   });
 
   it("«Обмен между системами» — вид «Истории»: меню группы «Журнал», «История» подсвечена", async () => {
     signInAs("admin@demo.example");
     renderApp("/admin/bus");
-    const nav = await screen.findByRole("navigation", { name: "Страницы группы «Журнал»" });
-    expect(names(nav)).toEqual(["История", "Выгрузки"]);
+    const nav = await screen.findByRole("navigation", { name: "Разделы модуля" });
+    expect(pages(nav, "Журнал").map((link) => link.textContent)).toEqual(["История", "Выгрузки"]);
     expect(within(nav).getByRole("link", { name: "История" })).toHaveAttribute(
       "aria-current",
       "page",
@@ -64,14 +67,14 @@ describe("Настройки · рамка страницы (ЕВ-2а, отчё�
     signInAs("director@demo.example");
     renderApp("/admin/audit");
     await screen.findByRole("heading", { level: 1, name: "История" });
-    expect(screen.queryByRole("navigation", { name: /^Страницы группы/ })).toBeNull();
+    expect(screen.queryByRole("list", { name: "Журнал" })).toBeNull();
   });
 
   it("директор: «Правила работы» — Продажи, Время и сроки, Справочники, Шаблоны, Уведомления; коммерческие правит, остальное читает", async () => {
     signInAs("director@demo.example");
     renderApp("/admin/sales");
-    const nav = await screen.findByRole("navigation", { name: "Страницы группы «Правила работы»" });
-    expect(names(nav)).toEqual([
+    const nav = await screen.findByRole("navigation", { name: "Разделы модуля" });
+    expect(pages(nav, "Правила работы").map((link) => link.textContent)).toEqual([
       "Продажи",
       "Время и сроки",
       "Справочники",

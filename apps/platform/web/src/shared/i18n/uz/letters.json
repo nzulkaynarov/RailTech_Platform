@@ -602,13 +602,13 @@
     "history": "Muddat uzaytirish tarixi",
     "ext": {
       "item": "{{old}} → {{new}}: {{reason}}",
-      "by": "{{name}} so‘radi, {{date}}",
+      "by": "so‘radi, {{date}}",
       "status": {
         "pending": "qaror kutilmoqda",
         "approved": "ma’qullandi",
         "rejected": "rad etildi"
       },
-      "decidedBy": "{{name}} hal qildi, {{date}}"
+      "decidedBy": "hal qildi, {{date}}"
     },
     "decide": {
       "title": "Muddatni uzaytirish: qaroringiz kerak",

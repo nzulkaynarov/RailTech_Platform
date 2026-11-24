@@ -18,8 +18,8 @@
       "text": "Refresh the page or try again later."
     },
     "unavailable": {
-      "title": "The “Operations” section is not responding",
-      "text": "Stock data is unavailable right now. Try again in a minute."
+      "title": "Data did not load",
+      "text": "Try again later."
     },
     "forbidden": {
       "title": "No access",
@@ -28,7 +28,7 @@
   },
   "errors": {
     "forbidden": "Your role is not allowed to do this.",
-    "unavailable": "The “Operations” section is not responding. Try again later.",
+    "unavailable": "Data did not load. Try again later.",
     "other": "Failed: {{message}}",
     "not_enough_stock": "Not enough free stock (free: {{free}}).",
     "below_reserved": "Stock cannot drop below project reservations.",

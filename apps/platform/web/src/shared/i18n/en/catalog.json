@@ -46,8 +46,8 @@
       "text": "Check the connection and retry. Nothing is lost."
     },
     "unavailable": {
-      "title": "The “Operations” section is unavailable",
-      "text": "The section data did not load. Retry in a minute."
+      "title": "Data did not load",
+      "text": "Try again later."
     },
     "forbidden": {
       "title": "This section is not for your role",
@@ -63,7 +63,7 @@
     "VALIDATION_FAILED": "Check the fields.",
     "CONFLICT": "This record already exists. Refresh the list.",
     "NOT_FOUND": "The record is gone. Refresh the list.",
-    "BACKEND_UNAVAILABLE": "The “Operations” section did not answer. Retry in a minute.",
+    "BACKEND_UNAVAILABLE": "Data did not load. Try again later.",
     "reason": {
       "merge_same_product": "Choose another card to merge with.",
       "item_name_required": "Enter the item name.",
@@ -742,7 +742,9 @@
     "inviteAgain": "Invite again",
     "inviteNamed": "{{action}}: {{name}}",
     "inviteSent": "The e-mail with the sign-in code has been sent.",
-    "inviteForm": { "title": "Invite to the cabinet" },
+    "inviteForm": {
+      "title": "Invite to the cabinet"
+    },
     "suspend": "Suspend access",
     "readOnly": "Only staff allowed to manage partners can invite and change rights.",
     "contactForm": {

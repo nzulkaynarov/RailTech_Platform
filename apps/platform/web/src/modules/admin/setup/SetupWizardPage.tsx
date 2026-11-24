@@ -2,7 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Alert, App, Button, Card, Skeleton } from "antd";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate, useSearchParams } from "react-router";
+import { Navigate, useNavigate, useSearchParams } from "react-router";
 
 import { canEdit } from "../../../app/access";
 import { useAuth } from "../../../app/auth/useAuth";
@@ -120,7 +120,14 @@ function BankStatus({ data }: { data: SetupChecklist }) {
  * мастера (`?step=`), после сохранения — следующий шаг; баннер, скрытый до завтра, возвращается кнопкой здесь.
  * Только администратор: директору чек-лист не отдаётся (BFF — 403).
  */
+/** Мастер ведёт только администратор; остальным пустая страница не нужна — их место «Состояние» (там готовность видна). */
 export function SetupWizardPage() {
+  const { me } = useAuth();
+  if (!canEdit(me, "admin")) return <Navigate to="/admin" replace />;
+  return <SetupWizard />;
+}
+
+function SetupWizard() {
   const { t } = useTranslation("modules");
   const { message } = App.useApp();
   const { me } = useAuth();
@@ -204,13 +211,7 @@ export function SetupWizardPage() {
   const rechecking = waitingErp && rechecks < ERP_RECHECK.attempts;
 
   let body: ReactNode;
-  if (!editable) {
-    body = (
-      <Card>
-        <EmptyState title={title} text={t("admin.setup.onlyAdmin")} />
-      </Card>
-    );
-  } else if (checklist.isPending) {
+  if (checklist.isPending) {
     body = <Skeleton active paragraph={{ rows: 8 }} title={false} />;
   } else if (checklist.isError) {
     body = (

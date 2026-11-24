@@ -12,7 +12,9 @@ import { EmptyState } from "../../../shared/ui/EmptyState";
 import { QueryState } from "../../../shared/ui/FormParts";
 import { StatusTag } from "../../../shared/ui/StatusTag";
 import { ItemRefCell } from "../../ItemRefCell";
+import { PersonRefCell } from "../../PersonRefCell";
 import { useStateLabels, withUnit } from "./api";
+import { ReceiptLines } from "./ReceiptLines";
 import { ReceiveModal } from "./OrderModals";
 
 /** Ширины колонок: заказ, поставщик, позиция (гибкая), осталось, ожидается, действие (UX-1c, S9) */
@@ -170,7 +172,7 @@ function Pending({
 /** Вкладка «Приёмка»: строки подтверждённых заказов, которые ждут товара, и последние приёмки. */
 export function ReceiptsTab() {
   const { t } = useTranslation("stock");
-  const { activity, qty } = useFormat();
+  const { activity } = useFormat();
   const labels = useStateLabels();
   const query = useListStockReceipts();
   const [receiving, setReceiving] = useState<StockPendingReceiptLine | null>(null);
@@ -208,24 +210,22 @@ export function ReceiptsTab() {
                 >
                   {data.done.map((r) => (
                     <li key={r.id}>
-                      <span>
+                      <div className="pf-stock-receipt">
                         <Link className="pf-focusable" to={r.order_path}>
                           {r.order_number}
                         </Link>
                         <span className="pf-hint">
                           {" "}
-                          · {r.supplier} ·{" "}
-                          {r.lines
-                            .map(
-                              (l) => `${l.name} ${qty(l.quantity)}${l.cell ? ` (${l.cell})` : ""}`,
-                            )
-                            .join("; ")}
+                          · {r.supplier}
                           {r.supplier_doc ? ` · ${t("receipts.doc", { doc: r.supplier_doc })}` : ""}
                         </span>
-                      </span>
-                      <span className="pf-hint">
-                        {activity(r.received_at)}
-                        {r.received_by ? ` · ${r.received_by.name}` : ""}
+                        <ReceiptLines lines={r.lines} />
+                      </div>
+                      <span className="pf-stock-by">
+                        <span className="pf-hint">{activity(r.received_at)}</span>
+                        {r.received_by ? (
+                          <PersonRefCell person={r.received_by} caption={null} />
+                        ) : null}
                       </span>
                     </li>
                   ))}

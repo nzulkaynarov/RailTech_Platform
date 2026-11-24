@@ -153,3 +153,32 @@
     grid-template-columns: minmax(0, 1fr) 120px 140px auto;
   }
 }
+
+/* ЕД-4: строки принятой поставки — позиция с миниатюрой и количество справа */
+.pf-stock-receipt-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.pf-stock-receipt-lines > li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 12px;
+  padding: 0;
+  border: 0;
+}
+.pf-stock-by {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+}
+.pf-stock-receipt {
+  flex: 1 1 280px;
+  min-width: 0;
+}

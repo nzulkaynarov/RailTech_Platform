@@ -4,6 +4,7 @@ import { Link } from "react-router";
 
 import { canEdit } from "../../../app/access";
 import { useAuth } from "../../../app/auth/useAuth";
+import { PersonRefCell } from "../../PersonRefCell";
 import { ApiError } from "../../../shared/api/errors";
 import type { DictionaryItem, LetterCard } from "../../../shared/api/generated/model";
 import { useGetLetter } from "../../../shared/api/generated/platform-bff";
@@ -278,9 +279,16 @@ function Content({
             { label: t("card.linkFields.manager"), value: letter.manager?.name },
             {
               label: t("card.linkFields.registered"),
-              value: `${date(letter.registered_at, "datetime")} · ${
-                letter.registered_by ? letter.registered_by.name : t("card.bySystem")
-              }`,
+              value: (
+                <span className="pf-instr-people">
+                  <span>{date(letter.registered_at, "datetime")}</span>
+                  {letter.registered_by ? (
+                    <PersonRefCell person={letter.registered_by} caption={null} />
+                  ) : (
+                    <span className="pf-hint">{t("card.bySystem")}</span>
+                  )}
+                </span>
+              ),
             },
           ]}
         />
