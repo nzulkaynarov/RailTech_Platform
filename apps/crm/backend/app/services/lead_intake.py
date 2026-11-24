@@ -31,6 +31,13 @@ from app.bus import events as bus_events
 from app.domain.contacts import contact_email
 from app.domain.errors import ConflictError, RateLimitedError, Reason, ValidationFailedError
 from app.domain.lead_origin import build_origin
+from app.domain.lead_repeat import (
+    DUPLICATES_KEY,
+    REPEAT_KEY,
+    append_fact,
+    compare_contacts,
+    is_customer_form,
+)
 from app.domain.lead_sources import WEB_NOTE_MARK, LeadSource, normalize_phone_e164
 from app.domain.stages import OwnerMode, Stage, TransitionSource
 from app.domain.web_form import (
@@ -195,12 +202,22 @@ class LeadIntakeService:
         text = body.text.strip()[: cfg.max_text_chars]
         async with self._sessions() as session, session.begin():
             existing = await _find_existing(session, phone, email)
+            kind = "repeat"
+            clients: list[tuple[int, str]] = []
+            if existing is None:
+                clients = await repo.clients_by_contact(session, phone=phone, email=email)
+                existing = await _client_open_lead(session, body, clients)
+                kind = "client_contact"
             if existing is not None:
-                lead_id, request_id = await _repeat_request(session, existing, text, ip, moment)
+                lead_id, request_id = await _repeat_request(
+                    session, existing, body, text, ip, moment, kind=kind
+                )
                 notice = await self._plan(session, existing, request_id)
                 follow_up = WebLeadFollowUp(lead_id, notice, None, repeat=True)
             else:
                 lead = await _new_web_lead(session, body, phone, email, text, ip, moment, full_cfg)
+                if clients:
+                    await _note_possible_duplicate(session, lead, body, clients, moment)
                 notice = await self._plan(session, lead, None)
                 follow_up = WebLeadFollowUp(
                     lead.id, notice, lead.first_response_due_at, repeat=False
@@ -386,36 +403,153 @@ async def _reject_duplicates(session: AsyncSession, phone: str | None, email: st
             client_name=client[1],
             field="phone",
         )
+    by_email = await repo.clients_by_contact(session, phone=None, email=email) if email else []
+    if by_email:
+        raise ConflictError(
+            "client with this email already exists",
+            reason=Reason.CLIENT_EXISTS,
+            client_id=by_email[0][0],
+            client_name=by_email[0][1],
+            field="email",
+        )
 
 
 def _consent_view(moment: datetime) -> dict[str, object]:
     return {"consent_given_at": moment.isoformat(), "consent_version": WEB_CONSENT_VERSION}
 
 
+async def _client_open_lead(
+    session: AsyncSession, body: WebLeadIn, clients: list[tuple[int, str]]
+) -> Lead | None:
+    """Open lead of the client the requester belongs to — only for an exact, same-role match.
+
+    Exact: phone and e-mail point to one client. Same role: the form is the buyers' one. Anything
+    else creates a lead (the caller records a possible duplicate).
+    """
+    if len(clients) != 1 or not is_customer_form(body.form):
+        return None
+    return await repo.open_lead_of_client(session, clients[0][0])
+
+
+async def _note_possible_duplicate(
+    session: AsyncSession,
+    lead: Lead,
+    body: WebLeadIn,
+    clients: list[tuple[int, str]],
+    moment: datetime,
+) -> None:
+    """A new lead whose phone/e-mail belongs to a client contact: a suggestion, nothing merged."""
+    if len(clients) != 1:
+        reason = "ambiguous"
+    elif not is_customer_form(body.form):
+        reason = "other_role"
+    else:
+        reason = "no_open_lead"
+    lead.qualification = append_fact(
+        dict(lead.qualification or {}),
+        DUPLICATES_KEY,
+        {"reason": reason, "client_ids": [c[0] for c in clients], "form": body.form},
+        now=moment,
+    )
+    await audit.record(
+        session,
+        audit.Actor.system(),
+        "lead.possible_duplicate",
+        "lead",
+        lead.id,
+        after={"reason": reason, "client_ids": [c[0] for c in clients]},
+    )
+
+
+def _repeat_origin(body: WebLeadIn) -> dict[str, object]:
+    origin = build_origin(
+        form=body.form,
+        page=body.page,
+        referrer=body.referrer,
+        utm=body.utm.model_dump() if body.utm else None,
+        lang=body.landing_language or body.language,
+    )
+    facts: dict[str, object] = {
+        "form": origin.form,
+        "page": origin.page,
+        "referrer": origin.referrer,
+        "utm": origin.utm,
+        "landing_language": origin.lang,
+    }
+    return {k: v for k, v in facts.items() if v}
+
+
 async def _repeat_request(
-    session: AsyncSession, lead: Lead, text: str, ip: str | None, moment: datetime
+    session: AsyncSession,
+    lead: Lead,
+    body: WebLeadIn,
+    text: str,
+    ip: str | None,
+    moment: datetime,
+    *,
+    kind: str = "repeat",
 ) -> tuple[int, int]:
     """Повторный запрос с сайта от известного контакта — заметкой в существующую карточку.
 
-    Согласие карточки не трогаем: у Telegram-лида, ещё не давшего согласие боту, оно открыло бы
-    обработку диалога ИИ (квалификатор). Согласие формы фиксируется в аудите.
+    Пустые почта, телефон и компания карточки заполняются; отличающееся значение не
+    перезаписывается — оно в заметке и в факте `qualification.repeat_requests` (`new_contacts`).
+    Признаки происхождения повтора и версия согласия — туда же и в аудит. Согласие карточки не
+    трогаем: у Telegram-лида, ещё не давшего согласие боту, оно открыло бы обработку диалога ИИ.
     """
-    note = LeadNote(
-        lead_id=lead.id, user_id=None, text=(WEB_NOTE_MARK + text)[:4000], visible_to_bot=True
+    # Lock the card: the qualifier rewrites `qualification` concurrently.
+    await session.refresh(lead, with_for_update=True)
+    incoming = {
+        "email": contact_email(body.email),
+        "phone_e164": _phone(body.phone),
+        "company_name": _clean(body.company, 255),
+    }
+    merge = compare_contacts(
+        {
+            "email": lead.email,
+            "phone_e164": lead.phone_e164,
+            "company_name": lead.company_name,
+        },
+        incoming,
     )
+    for name, value in merge.filled.items():
+        setattr(lead, name, value)
+    mark = WEB_NOTE_MARK + text
+    if merge.differing:
+        listed = "; ".join(f"{k}: {v}" for k, v in merge.differing.items())
+        mark = f"{WEB_NOTE_MARK}[new contacts — {listed}] {text}"
+    note = LeadNote(lead_id=lead.id, user_id=None, text=mark[:4000], visible_to_bot=True)
     session.add(note)
     await session.flush()
     lead.notes_count += 1
     if not lead.need_summary:
         lead.need_summary = text[:_SUMMARY_MAX]
+    fact: dict[str, object] = {
+        "kind": kind,
+        **_repeat_origin(body),
+        "consent_version": WEB_CONSENT_VERSION,
+        "filled": sorted(merge.filled),
+    }
+    if merge.differing:
+        fact["new_contacts"] = merge.differing
+    lead.qualification = append_fact(dict(lead.qualification or {}), REPEAT_KEY, fact, now=moment)
     await audit.record(
         session,
         audit.Actor(None, "system", ip),
         "lead.web_request",
         "lead",
         lead.id,
-        after={"repeat": True, "source": lead.source, **_consent_view(moment)},
+        after={
+            "repeat": True,
+            "kind": kind,
+            "source": lead.source,
+            "filled": merge.filled,
+            "new_contacts": merge.differing,
+            "origin": _repeat_origin(body),
+            **_consent_view(moment),
+        },
     )
+    if merge.filled:
+        await bus_events.lead_updated(session, lead, audit.Actor.system(), merge.filled)
     await events.publish(session, "lead.updated", lead_id=lead.id)
-    logger.info("web_lead_repeat", lead_id=lead.id)
+    logger.info("web_lead_repeat", lead_id=lead.id, kind=kind, filled=sorted(merge.filled))
     return lead.id, note.id

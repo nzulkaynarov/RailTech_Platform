@@ -112,6 +112,14 @@ class LeadFacts:
     phone_e164: str | None = None
     client_id: int | None = None
     has_open_escalation: bool = False
+    # Origin facts (LID-5) and consent version/method; the merge fills the empty ones.
+    source_form: str | None = None
+    source_page: str | None = None
+    source_referrer: str | None = None
+    source_utm: dict[str, str] | None = None
+    source_lang: str | None = None
+    consent_version: str | None = None
+    consent_method: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -139,6 +147,15 @@ class MergePlan:
     client_id: int | None
     # У обоих открытая передача: у поглощённого закрывается (индекс «одна открытая на лида»).
     close_absorbed_escalation: bool
+    source_form: str | None = None
+    source_page: str | None = None
+    source_referrer: str | None = None
+    source_utm: dict[str, str] | None = None
+    source_lang: str | None = None
+    consent_version: str | None = None
+    consent_method: str | None = None
+    # Origin of the absorbed card when it differs from the survivor's: kept as a fact, not lost.
+    absorbed_origin: dict[str, Any] | None = None
 
 
 def _first_nonempty(*values: str | None) -> str | None:
@@ -164,6 +181,17 @@ def _earliest(a: datetime | None, b: datetime | None) -> datetime | None:
     return min(a, b)
 
 
+def _origin(f: LeadFacts) -> dict[str, Any]:
+    facts = {
+        "form": f.source_form,
+        "page": f.source_page,
+        "referrer": f.source_referrer,
+        "utm": f.source_utm,
+        "landing_language": f.source_lang,
+    }
+    return {k: v for k, v in facts.items() if v}
+
+
 def merge_plan(existing: LeadFacts, incoming: LeadFacts) -> MergePlan:
     """Правило склейки двух лидов с одним номером.
 
@@ -177,6 +205,18 @@ def merge_plan(existing: LeadFacts, incoming: LeadFacts) -> MergePlan:
     - Имя, потребность, компания, почта, телефон — у выжившего, если заполнены, иначе у второго.
     """
     first, second = sorted((existing, incoming), key=lambda f: (f.created_at, f.id))
+    origin_donor = first if _origin(first) else second
+    consenting = [f for f in (first, second) if f.consent_given_at is not None]
+    consent_donor = (
+        min(consenting, key=lambda f: f.consent_given_at or first.created_at)
+        if consenting
+        else None
+    )
+    absorbed_origin = (
+        _origin(second)
+        if _origin(first) and _origin(second) and _origin(first) != _origin(second)
+        else None
+    )
     stages = (Stage(first.stage), Stage(second.stage))
     stage = max(stages, key=lambda s: STAGE_RANK[s])
     owner_mode = max((first.owner_mode, second.owner_mode), key=lambda m: _OWNER_RANK.get(m, 0))
@@ -208,4 +248,12 @@ def merge_plan(existing: LeadFacts, incoming: LeadFacts) -> MergePlan:
         phone_e164=_first_nonempty(first.phone_e164, second.phone_e164),
         client_id=first.client_id if first.client_id is not None else second.client_id,
         close_absorbed_escalation=first.has_open_escalation and second.has_open_escalation,
+        source_form=origin_donor.source_form,
+        source_page=origin_donor.source_page,
+        source_referrer=origin_donor.source_referrer,
+        source_utm=origin_donor.source_utm,
+        source_lang=origin_donor.source_lang,
+        consent_version=consent_donor.consent_version if consent_donor else None,
+        consent_method=consent_donor.consent_method if consent_donor else None,
+        absorbed_origin=absorbed_origin,
     )

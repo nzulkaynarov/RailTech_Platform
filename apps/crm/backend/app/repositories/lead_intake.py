@@ -1,6 +1,6 @@
 """Поиск лида/клиента по контактам и перенос истории при склейке (M3-CRM-05)."""
 
-from sqlalchemy import delete, exists, or_, select, update
+from sqlalchemy import delete, exists, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.base import Base
@@ -95,3 +95,43 @@ async def repoint_lead_children(session: AsyncSession, from_id: int, to_id: int)
 async def delete_lead_row(session: AsyncSession, lead_id: int) -> None:
     """Удаление поглощённой карточки ядром SQL (без ORM-каскадов: дети уже перенесены)."""
     await session.execute(delete(Lead).where(Lead.id == lead_id))
+
+
+async def clients_by_contact(
+    session: AsyncSession, *, phone: str | None, email: str | None
+) -> list[tuple[int, str]]:
+    """Active clients that have a contact with this phone or e-mail: [(id, name)], by id.
+
+    Phone is compared as stored (E.164), e-mail case-insensitively. Distinct clients: one client
+    with two matching contacts is one row.
+    """
+    conditions = []
+    if phone:
+        conditions.append(ClientContact.phone_e164 == phone)
+    if email:
+        conditions.append(func.lower(ClientContact.email) == email.lower())
+    if not conditions:
+        return []
+    stmt = (
+        select(Client.id, Client.name)
+        .join(ClientContact, ClientContact.client_id == Client.id)
+        .where(or_(*conditions), Client.is_active.is_(True))
+        .group_by(Client.id, Client.name)
+        .order_by(Client.id)
+    )
+    return [(int(row[0]), str(row[1])) for row in (await session.execute(stmt)).all()]
+
+
+async def open_lead_of_client(session: AsyncSession, client_id: int) -> Lead | None:
+    """The latest living lead of the client that is still in play (not lost / unresponsive)."""
+    stmt = (
+        select(Lead)
+        .where(
+            Lead.client_id == client_id,
+            Lead.erased_at.is_(None),
+            Lead.stage.notin_(("lost", "unresponsive")),
+        )
+        .order_by(Lead.id.desc())
+        .limit(1)
+    )
+    return (await session.scalars(stmt)).first()
