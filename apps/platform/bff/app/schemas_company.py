@@ -323,6 +323,24 @@ class DocumentPreview(BaseModel):
     warnings: list[str] | None = None
 
 
+class DocumentSampleIn(Body):
+    """Образец настоящим генератором (ДОК-14): `kind` — вид бланка («Реквизиты и бланк») либо
+    `template_kind` + `body_html` — текст из редактора шаблонов."""
+
+    kind: DocumentKind | None = None
+    template_kind: TemplateKind | None = None
+    body_html: str | None = None
+    draft: BrandProfileUpdate | None = None
+    language: Literal["ru", "en", "uz"] | None = None
+
+
+class DocumentSample(BaseModel):
+    id: str
+    status: Literal["pending", "ready", "failed"]
+    warnings: list[str] | None = None
+    error: str | None = None
+
+
 def to_brand(raw: Mapping[str, Any]) -> BrandProfile:
     inherited = raw.get("inherited_preview")
     preset = raw.get("layout_preset")
