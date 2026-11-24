@@ -68,3 +68,43 @@ def test_plain_mailer_daemon_without_dsn_part() -> None:
 @pytest.mark.parametrize("name", ["normal_letter", "out_of_office"])
 def test_ordinary_letters_are_not_bounces(name: str) -> None:
     assert parse_bounce(sample(name)) is None
+
+
+def test_unknown_charset_does_not_raise_for_any_letter() -> None:
+    """`unknown-8bit` / `x-bogus` must not break recognition (it runs for every inbound letter)."""
+    for charset in ("unknown-8bit", "x-bogus"):
+        raw = (
+            "From: Petrov <petrov@client.example>\r\nTo: crm@railtech.example\r\n"
+            "Subject: q\r\nMessage-ID: <odd@client.example>\r\n"
+            f"Content-Type: text/plain; charset={charset}\r\n"
+            "Content-Transfer-Encoding: 8bit\r\n\r\nПривет\r\n"
+        ).encode()
+        assert parse_bounce(raw) is None
+
+
+def test_unknown_charset_in_a_real_report_still_parses() -> None:
+    raw = sample("exim_plain_no_dsn").replace(b"charset=utf-8", b"charset=unknown-8bit")
+    bounce = parse_bounce(raw)
+    assert bounce is not None
+    assert bounce.recipients == ("gone@old.example",)
+
+
+def test_huge_recipient_header_is_bounded_in_time() -> None:
+    import time
+
+    junk = "a" * 60_000
+    raw = sample("yandex_domain_not_found").replace(
+        b"Final-Recipient: rfc822; em@tvorog.io", f"Final-Recipient: rfc822; {junk}".encode()
+    )
+    started = time.monotonic()
+    parse_bounce(raw)
+    assert time.monotonic() - started < 1.0
+
+
+def test_exim_text_message_id_links_and_is_not_a_report() -> None:
+    raw = sample("exim_plain_no_dsn") + b"\nMessage-ID: <ours.42@railtech.example>\n"
+    bounce = parse_bounce(raw)
+    assert bounce is not None
+    assert bounce.original_message_id == "ours.42@railtech.example"
+    assert bounce.is_report is False
+    assert parse_bounce(sample("gmail_mailbox_not_found")).is_report is True  # type: ignore[union-attr]

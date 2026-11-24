@@ -223,3 +223,92 @@ async def test_editing_the_address_lifts_the_block(
     async with sessions() as session:
         assert await bounces.is_blocked(session, "Old@Tvorog.io")
         assert not await bounces.is_blocked(session, "new@tvorog.io")
+
+
+async def seed_sent(
+    sessions: async_sessionmaker[AsyncSession],
+    to: str,
+    message_id: str | None,
+    cc: str | None = None,
+) -> int:
+    async with sessions.begin() as session:
+        row = EmailLog(
+            to_email=to,
+            subject="s",
+            template="t",
+            lang="ru",
+            status="sent",
+            sent_at=datetime.now(UTC),
+            message_id=message_id,
+            thread_headers={"Cc": cc} if cc else None,
+        )
+        session.add(row)
+        await session.flush()
+        return row.id
+
+
+async def test_forged_report_without_our_message_id_never_marks_an_address_we_mailed(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    """Anyone can write «a report» for a real customer's address: no Message-ID of ours, no mark."""
+    await seed_sent(sessions, "client@real.example", "ours.1@railtech.test")
+    forged = yandex_for("client@real.example", "not-ours@evil.test")
+    assert await poll(sessions, forged) is None
+    assert await count(sessions, EmailUndeliverable) == 0
+    async with sessions() as session:
+        row = (await session.scalars(select(EmailLog))).one()
+        assert row.bounced_at is not None, "the log row may be annotated by address"
+        assert not await bounces.is_blocked(session, "client@real.example")
+
+
+async def test_three_soft_forgeries_do_not_block_an_address(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    await seed_sent(sessions, "sales@partner.example", None)  # a pre-migration mail: no id at all
+    for n in range(bounces.SOFT_LIMIT + 1):
+        raw = delay_for(f"forged-{n}@evil.test").replace(
+            b"<delay.1@mail.partner.example>", f"<delay-forged-{n}@evil.test>".encode()
+        )
+        await poll(sessions, raw, uid=n + 1)
+    assert await count(sessions, EmailUndeliverable) == 0
+    async with sessions() as session:
+        assert not await bounces.is_blocked(session, "sales@partner.example")
+
+
+async def test_report_for_a_cc_address_marks_the_cc_not_the_main_recipient(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    await seed_sent(sessions, "main@client.example", OUT_ID, cc="copy@client.example")
+    assert await poll(sessions, yandex_for("copy@client.example")) is None
+    async with sessions() as session:
+        marked = {m.email for m in (await session.scalars(select(EmailUndeliverable))).all()}
+    assert marked == {"copy@client.example"}
+
+
+async def test_report_naming_a_stranger_with_our_message_id_marks_nobody(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    await seed_sent(sessions, "main@client.example", OUT_ID)
+    await poll(sessions, yandex_for("someone.else@elsewhere.example"))
+    assert await count(sessions, EmailUndeliverable) == 0
+
+
+async def test_unknown_charset_letter_is_ingested_normally(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    raw = (
+        "From: Petrov <petrov@client.example>\r\nTo: info@company.test\r\n"
+        "Subject: Запрос\r\nMessage-ID: <odd-charset@client.example>\r\n"
+        "Content-Type: text/plain; charset=unknown-8bit\r\n"
+        "Content-Transfer-Encoding: 8bit\r\n\r\nПросим КП\r\n"
+    ).encode()
+    assert await poll(sessions, raw) is not None
+    assert await count(sessions, InboundMail) == 1
+
+
+async def test_mailer_daemon_look_alike_about_nothing_of_ours_is_a_normal_letter(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    raw = (SAMPLES / "exim_plain_no_dsn.eml").read_bytes()
+    assert await poll(sessions, raw) is not None
+    assert await count(sessions, InboundMail) == 1

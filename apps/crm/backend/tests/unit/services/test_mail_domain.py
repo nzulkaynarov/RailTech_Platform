@@ -188,3 +188,22 @@ async def test_manual_lead_with_missing_domain_is_422_too() -> None:
     with pytest.raises(ValidationFailedError) as info:
         await service.create_manual(cast(Any, object()), body)
     assert info.value.details["field"] == "email"
+
+
+async def test_one_overall_budget_for_all_queries() -> None:
+    """MX, A and AAAA share one 2 s budget: slow DNS is `unknown` after ~2 s, not after 3 x 2 s."""
+    import asyncio
+    import time
+
+    class Slow:
+        timeout = 0.0
+        lifetime = 0.0
+
+        async def resolve(self, name: str, kind: str) -> list[Any]:
+            await asyncio.sleep(1.5)
+            raise dns.resolver.NoAnswer()  # type: ignore[no-untyped-call]
+
+    started = time.monotonic()
+    verdict = await DnsMailDomainChecker(cast(Any, Slow())).check("slow.example")
+    assert verdict is DomainVerdict.UNKNOWN
+    assert time.monotonic() - started < 2.6
