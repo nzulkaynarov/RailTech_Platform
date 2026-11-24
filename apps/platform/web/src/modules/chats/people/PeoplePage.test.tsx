@@ -35,7 +35,7 @@ describe("Органайзер · Люди", () => {
           ],
         }),
       ),
-      http.get("*/crm/leads", () =>
+      http.get("*/people/leads", () =>
         HttpResponse.json({
           items: [
             {
@@ -44,13 +44,12 @@ describe("Органайзер · Люди", () => {
               status: "new",
               channel: "telegram",
               language: "ru",
+              company: null,
               assigned: null,
               need: null,
-              last_message_at: null,
-              unread: false,
-              handoff_open: false,
-              overdue: false,
-              client_id: null,
+              has_phone: false,
+              has_email: false,
+              has_telegram: false,
             },
           ],
           total: 1,
@@ -71,14 +70,118 @@ describe("Органайзер · Люди", () => {
     fireEvent.click(screen.getByRole("button", { name: "Борис Лид" }));
     const leadCard = await panelEl();
     await within(leadCard).findByRole("heading", { level: 2, name: "Борис Лид" });
-    // у лида контактов в списке нет — прочерк, а не «скоро»
+    // у лида без контактов «Показать» нет — прочерк, а не «скоро»
     expect(within(leadCard).queryByRole("button", { name: /Показать/ })).toBeNull();
+  });
+
+  it("лид (PL-1): компания, канал, язык и потребность видны; контакты — значки, значения по «Показать»; открыть лид", async () => {
+    let reveals = 0;
+    let asked: string | null = null;
+    server.use(
+      http.get("*/staff", () => HttpResponse.json({ items: [] })),
+      http.get("*/people/contacts", () => HttpResponse.json({ items: [], total: 0 })),
+      http.get("*/people/leads", ({ request }) => {
+        asked = new URL(request.url).searchParams.get("closed");
+        return HttpResponse.json({
+          items: [
+            {
+              lead: "L-0101",
+              name: "Борис Лид",
+              company: "ООО Ромашка",
+              status: asked === "true" ? "lost" : "dialog",
+              channel: "web",
+              language: "uz",
+              assigned: null,
+              need: "Рельсы Р65, 40 т",
+              has_phone: true,
+              has_email: false,
+              has_telegram: true,
+            },
+          ],
+          total: 1,
+        });
+      }),
+      http.post("*/people/leads/L-0101/reveal", () => {
+        reveals += 1;
+        return HttpResponse.json({
+          lead: "L-0101",
+          phone: "+998901112233",
+          email: null,
+          telegram: "@boris",
+        });
+      }),
+    );
+    signInAs("all@demo.example");
+    renderApp("/chats/contacts");
+
+    // в таблице: компания лида и значки «есть телефон» и «есть Telegram», без значений
+    expect(await screen.findByText("ООО Ромашка")).toBeVisible();
+    expect(screen.getByRole("img", { name: "Телефон" })).toBeVisible();
+    expect(screen.getByRole("img", { name: "Telegram" })).toBeVisible();
+    expect(screen.queryByRole("img", { name: "Почта" })).toBeNull();
+    expect(document.body.textContent).not.toContain("+998901112233");
+
+    fireEvent.click(screen.getByRole("button", { name: "Борис Лид" }));
+    const card = await panelEl();
+    await within(card).findByRole("heading", { level: 2, name: "Борис Лид" });
+    expect(within(card).getByText("Веб-форма")).toBeVisible();
+    expect(within(card).getByText("Özbek")).toBeVisible();
+    expect(within(card).getByText("Рельсы Р65, 40 т")).toBeVisible();
+    expect(reveals).toBe(0);
+
+    fireEvent.click(within(card).getByRole("button", { name: "Показать контакты" }));
+    expect(await within(card).findByRole("link", { name: "+998901112233" })).toBeVisible();
+    expect(within(card).getByText("@boris")).toBeVisible();
+    expect(reveals).toBe(1);
+    expect(within(card).getByRole("button", { name: "Открыть лид L-0101" })).toBeVisible();
+  });
+
+  it("закрытые лиды скрыты, пока не включён «Показать закрытые» (PL-1, G7)", async () => {
+    const asked: (string | null)[] = [];
+    server.use(
+      http.get("*/staff", () => HttpResponse.json({ items: [] })),
+      http.get("*/people/contacts", () => HttpResponse.json({ items: [], total: 0 })),
+      http.get("*/people/leads", ({ request }) => {
+        const closed = new URL(request.url).searchParams.get("closed");
+        asked.push(closed);
+        return HttpResponse.json({
+          items:
+            closed === "true"
+              ? [
+                  {
+                    lead: "L-0102",
+                    name: "Спам Закрыт",
+                    company: null,
+                    status: "lost",
+                    channel: "email",
+                    language: "ru",
+                    assigned: null,
+                    need: null,
+                    has_phone: false,
+                    has_email: true,
+                    has_telegram: false,
+                  },
+                ]
+              : [],
+          total: closed === "true" ? 1 : 0,
+        });
+      }),
+    );
+    signInAs("all@demo.example");
+    renderApp("/chats/contacts");
+
+    expect(await screen.findByText("Никого не найдено")).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Спам Закрыт" })).toBeNull();
+    fireEvent.click(screen.getByRole("switch", { name: "Показать закрытые" }));
+    expect(await screen.findByRole("button", { name: "Спам Закрыт" })).toBeVisible();
+    expect(screen.getByText("Лиды · закрыт")).toBeVisible();
+    expect(asked).toContain("true");
   });
 
   it("люди клиентов и партнёров (FR-11): компания и должность; телефон и почта — по нажатию", async () => {
     server.use(
       http.get("*/staff", () => HttpResponse.json({ items: [] })),
-      http.get("*/crm/leads", () => HttpResponse.json({ items: [], total: 0 })),
+      http.get("*/people/leads", () => HttpResponse.json({ items: [], total: 0 })),
     );
     signInAs("all@demo.example");
     renderApp("/chats/contacts");
@@ -109,7 +212,7 @@ describe("Органайзер · Люди", () => {
   it("фото контакта (СУЩ-3): в строке — круг с фото, без фото — инициалы; адрес на BFF с версией", async () => {
     server.use(
       http.get("*/staff", () => HttpResponse.json({ items: [] })),
-      http.get("*/crm/leads", () => HttpResponse.json({ items: [], total: 0 })),
+      http.get("*/people/leads", () => HttpResponse.json({ items: [], total: 0 })),
       http.get("*/people/contacts", () =>
         HttpResponse.json({
           items: [
@@ -162,7 +265,7 @@ describe("Органайзер · Люди", () => {
   it("ЕД-3: компания контакта — логотип или буквы названия; ответственный за лид — ячейка сотрудника без должности", async () => {
     server.use(
       http.get("*/staff", () => HttpResponse.json({ items: [] })),
-      http.get("*/crm/leads", () =>
+      http.get("*/people/leads", () =>
         HttpResponse.json({
           items: [
             {
@@ -171,13 +274,12 @@ describe("Органайзер · Люди", () => {
               status: "new",
               channel: "telegram",
               language: "ru",
+              company: null,
               assigned: { id: "u-demo-manager", name: "Демо Менеджеров", initials: "ДМ" },
               need: null,
-              last_message_at: null,
-              unread: false,
-              handoff_open: false,
-              overdue: false,
-              client_id: null,
+              has_phone: false,
+              has_email: false,
+              has_telegram: false,
             },
           ],
           total: 1,
@@ -241,7 +343,7 @@ describe("Органайзер · Люди", () => {
         await delay(150);
         return HttpResponse.json({ items: [] });
       }),
-      http.get("*/crm/leads", () => HttpResponse.json({ items: [], total: 0 })),
+      http.get("*/people/leads", () => HttpResponse.json({ items: [], total: 0 })),
       http.get("*/people/contacts", () => HttpResponse.json({ items: [], total: 0 })),
     );
     signInAs("all@demo.example");
@@ -295,7 +397,7 @@ describe("Органайзер · Люди", () => {
             ],
           }),
         ),
-        http.get("*/crm/leads", () => HttpResponse.json({ items: [], total: 0 })),
+        http.get("*/people/leads", () => HttpResponse.json({ items: [], total: 0 })),
       );
       signInAs(`${who}@demo.example`);
       renderApp("/chats/contacts");
@@ -329,7 +431,7 @@ describe("Органайзер · Люди", () => {
           ],
         }),
       ),
-      http.get("*/crm/leads", () => HttpResponse.json({ items: [], total: 0 })),
+      http.get("*/people/leads", () => HttpResponse.json({ items: [], total: 0 })),
       http.post("*/people/staff/:id/reveal", ({ params }) => {
         calls += 1;
         return HttpResponse.json({
@@ -374,7 +476,7 @@ describe("Органайзер · Люди", () => {
           ],
         }),
       ),
-      http.get("*/crm/leads", () => HttpResponse.json({ items: [], total: 0 })),
+      http.get("*/people/leads", () => HttpResponse.json({ items: [], total: 0 })),
       http.post("*/people/staff/:id/reveal", () =>
         HttpResponse.json({ code: "BACKEND_UNAVAILABLE", message: "x" }, { status: 503 }),
       ),

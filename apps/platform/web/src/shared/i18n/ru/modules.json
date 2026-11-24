@@ -358,7 +358,19 @@
       },
       "roles": "Роли",
       "reveal": "Показать контакты",
-      "close": "Закрыть"
+      "close": "Закрыть",
+      "showClosed": "Показать закрытые",
+      "closedLead": "закрыт",
+      "channel": "Канал",
+      "language": "Язык",
+      "need": "Что нужно",
+      "telegram": "Telegram",
+      "openLead": "Открыть лид {{number}}",
+      "languages": {
+        "ru": "Русский",
+        "en": "English",
+        "uz": "Özbek"
+      }
     }
   },
   "admin": {
