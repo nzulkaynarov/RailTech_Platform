@@ -108,7 +108,7 @@ test.describe("UX-2a: поля даты, файла и выбора", () => {
       await form.scrollIntoViewIfNeeded();
       await expect(form).toBeVisible();
       await form.getByLabel("Текст резолюции").fill("Посчитать с запасом по складу.");
-      const employee = form.getByLabel("Сотрудник: Снабженец");
+      const employee = form.getByLabel("Сотрудник: Снабжение");
       await employee.click();
       await expect(
         page.locator(".ant-select-dropdown:not(.ant-select-dropdown-hidden)"),
