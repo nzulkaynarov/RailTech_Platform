@@ -697,7 +697,9 @@ class QuoteItem(models.Model):
     @property
     def line_total(self):
         """Line total excl VAT = final_price_excl_vat * quantity."""
-        return self.final_price_excl_vat * self.quantity
+        from core.currency import line_amount
+
+        return line_amount(self.final_price_excl_vat, self.quantity)
 
     def __str__(self):
         return self.imported_raw_name or (self.product.name if self.product else f"Позиция #{self.pk}")

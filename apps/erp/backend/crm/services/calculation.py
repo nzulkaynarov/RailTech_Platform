@@ -40,7 +40,7 @@ from sales.services import deal_numbers
 from accounts.constants import Permission
 from accounts.services.permissions import is_seller, member_has_permission
 from catalog.item_ref import item_ref, main_photos
-from core.currency import BASE_CURRENCY
+from core.currency import BASE_CURRENCY, line_amount
 from core.quantity import as_qty, to_qty
 from crm.services._plural import pluralize_ru
 
@@ -694,7 +694,7 @@ def _sheet(deal: Deal, task: CalcTask, user) -> dict:
     editable = quote is not None and quote_edit_lock_code(quote) is None
     lines = [line_payload(it, ctx, show_cost=show_cost, rights=rights, editable=editable) for it in items]
     purchase = sum((it.landed_cost * it.quantity for it in items), Decimal("0"))
-    client = sum((it.final_price_excl_vat * it.quantity for it in items), Decimal("0"))
+    client = sum((line_amount(it.final_price_excl_vat, it.quantity) for it in items), Decimal("0"))
     groups = _groups(items, ctx)
     missing = sum(1 for line in lines if line["visa"] is None)
     stage = deal.stage.code if deal.stage_id else DealStageCode.DRAFT

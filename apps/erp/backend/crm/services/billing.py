@@ -3,7 +3,7 @@ from typing import Optional, Tuple
 from django.db import IntegrityError, transaction
 
 from accounts.models import CustomUser
-from core.currency import BASE_CURRENCY
+from core.currency import BASE_CURRENCY, line_amount
 from crm.services.pdf_storage import save_rendered_pdf
 
 from ..constants import DEFAULT_INVOICE_DUE_DAYS, ActStatusCode, ContractStatusCode, InvoiceStatusCode
@@ -131,7 +131,7 @@ def generate_invoice_from_contract(
             unit=qi.unit,
             unit_code=qi.unit_code,
             unit_price_excl_vat=qi.final_price_excl_vat,
-            line_total_excl_vat=(qi.final_price_excl_vat * qi.quantity),
+            line_total_excl_vat=line_amount(qi.final_price_excl_vat, qi.quantity),
             source_quote_item=qi,
         )
 
