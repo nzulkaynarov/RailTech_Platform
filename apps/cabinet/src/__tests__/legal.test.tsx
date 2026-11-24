@@ -60,7 +60,7 @@ describe('оферта и политика Кабинета (ДВ-5)', () => {
     expect(within(screen.getByRole('tabpanel')).getByRole('heading', { name: 'Personal data processing policy for the Cabinet' })).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'I accept' }));
-    await waitFor(() => expect(screen.queryByText('Terms for using the cabinet')).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByText('Terms for using the account')).not.toBeInTheDocument());
     expect(sent).toEqual({ edition_ids: [LEGAL_TERMS_ID, LEGAL_PRIVACY_ID], language: 'en' });
     // после принятия человек там, куда шёл
     expect(router.state.location.pathname).toBe('/quotes/57');

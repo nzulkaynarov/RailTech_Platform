@@ -159,7 +159,7 @@ describe('Мои товары: карточка', () => {
     await user.click(within(await card('Тормозная колодка композитная')).getByRole('button', { name: /Открыть карточку/ }));
     const dialog = await screen.findByRole('dialog');
     expect(await within(dialog).findByText('Документы и сертификаты')).toBeInTheDocument();
-    expect(within(dialog).getByText('Сертификат соответствия ГОСТ 7798-70')).toBeInTheDocument();
+    expect(within(dialog).getByText('Сертификат соответствия на насос CM 50-200')).toBeInTheDocument();
     expect(within(dialog).getByText('Сертификат соответствия')).toBeInTheDocument();
     expect(within(dialog).getByText(/ЕАЭС RU С-RU.АЯ46.В.00001\/26/)).toBeInTheDocument();
     expect(within(dialog).getByRole('button', { name: /Добавить документ/ })).toBeInTheDocument();
@@ -173,7 +173,7 @@ describe('Мои товары: карточка', () => {
     const pending = (await within(dialog).findByText('Протокол испытаний колодок')).closest('li') as HTMLElement;
     expect(within(pending).getByTestId('doc-status-pending')).toHaveTextContent('На проверке');
     expect(within(pending).getByRole('button', { name: /Удалить Протокол испытаний колодок/ })).toBeInTheDocument();
-    const approved = within(dialog).getByText('Сертификат соответствия ГОСТ 7798-70').closest('li') as HTMLElement;
+    const approved = within(dialog).getByText('Сертификат соответствия на насос CM 50-200').closest('li') as HTMLElement;
     expect(within(approved).queryByTestId('doc-status-pending')).not.toBeInTheDocument();
     expect(within(approved).queryByRole('button', { name: /Удалить/ })).not.toBeInTheDocument();
   });
@@ -190,7 +190,7 @@ describe('Мои товары: отправка на проверку', () => {
     expect(within(dialog).getByText('Отправляем 1 карточку.')).toBeInTheDocument();
     await user.click(within(dialog).getByRole('button', { name: 'Отправить' }));
     expect(await screen.findByText('Отправлена 1 карточка')).toBeInTheDocument();
-    expect(screen.getByText(/Проверка обычно занимает 1 рабочий день/)).toBeInTheDocument();
+    expect(screen.getByText(/Результат появится в этой вкладке/)).toBeInTheDocument();
     await waitFor(() => expect(within(screen.getByRole('group', { name: 'Статусы карточек' })).getByRole('button', { name: 'На проверке 2' })).toBeInTheDocument());
     expect(log).toContain('POST /partner/products/submit');
     expect(within(await card('Тормозная колодка композитная')).getByText('На проверке')).toBeInTheDocument();

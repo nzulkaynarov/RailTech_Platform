@@ -415,12 +415,19 @@ async def test_handoff_publishes_the_company_mapping_the_request_and_the_primary
         stand.close()
 
     rows = await outbox(sessions)
-    assert types(rows) == ["crm.contact.created.v1", "crm.client.updated.v1", "crm.lead.updated.v1"]
+    assert types(rows) == [
+        "crm.contact.created.v1",
+        "crm.client.updated.v1",
+        "crm.contact.updated.v1",  # full snapshot after the hand-over: ERP skipped the first one
+        "crm.lead.updated.v1",
+    ]
+    created = rows[0]["envelope"]["data"]["contact"]
+    assert rows[2]["envelope"]["data"]["contact"]["crm_contact_id"] == created["crm_contact_id"]
     client_event = rows[1]["envelope"]["data"]
     assert client_event["changed_fields"] == ["erp_company_id"]
     assert client_event["client"]["erp_company_id"] == 202
     assert client_event["actor"] == {"type": "system"}
-    lead_event = rows[2]["envelope"]["data"]
+    lead_event = rows[3]["envelope"]["data"]
     assert lead_event["lead"]["erp_request_id"] == 9001
 
 

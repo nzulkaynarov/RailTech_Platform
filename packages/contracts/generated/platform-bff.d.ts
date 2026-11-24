@@ -6751,6 +6751,186 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/crm/messages/{lead}/close": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Закрыть лид: «Сделка заключена» или «Отказ» с причиной
+     * @description CRM `POST /leads/{id}/actions/close_won` и `close_lost` (LH-1). Раздел `crm.leads` полный; закрывает тот, кто ведёт лида (или администратор). `outcome = lost` — `lost_reason` обязательна и берётся из `getCrmCloseOptions`; `reason` — комментарий в заметку команды. Лид не забран — 409 `CONFLICT` (`take_first`), лид у другого — 403 (`not_lead_owner`), с коннектором ERP итог «заключена» решает бэк-офис — 409 (`won_decided_by_erp`). После закрытия бот снова ведёт диалог; у клиента лид остаётся клиентом.
+     */
+    post: operations["closeCrmLead"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/crm/messages/{lead}/assign": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Передать взятого лида коллеге
+     * @description CRM `POST /leads/{id}/actions/assign` (LH-1). Раздел `crm.leads` полный; передаёт тот, кто ведёт лида (или администратор). `user_id` — из `listCrmLeadColleagues`. Лид у бота или не забран — 409 `CONFLICT` (`take_first`); коллега не ведёт лидов или неактивен — 422 (`inactive_colleague`). Клиент получает сообщение с именем нового менеджера.
+     */
+    post: operations["assignCrmLead"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/crm/messages/{lead}/discard": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Отбросить лид как «Спам», «Тест» или «Дубль»
+     * @description CRM `POST /leads/{id}/actions/discard` (LH-1). Раздел `crm.leads` полный; лид закрыт отказом с системной причиной и скрыт из активных списков (карточка по номеру открывается). `test` — ещё и обезличен, как по просьбе клиента в боте. `duplicate` — ссылка на оставшийся лид `duplicate_of` (без склейки). Клиента и «Сделку» так не закрывают — 409; лид у другого — 403 (`not_lead_owner`); неверная ссылка дубля — 422 (`fields = [duplicate_of]`). Вернуть лид в списки — `reopenCrmLead`.
+     */
+    post: operations["discardCrmLead"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/crm/messages/{lead}/reopen": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Открыть закрытый лид заново
+     * @description CRM `POST /leads/{id}/actions/take` для лида в «Отказе» (в том числе отброшенного) и `actions/new_deal` для клиента (LH-1). Раздел `crm.leads` полный; лид снова в работе у того, кто открыл. Лид не закрыт — 409 `CONFLICT` (`not_closed`).
+     */
+    post: operations["reopenCrmLead"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/crm/messages/{lead}/acknowledge": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * «Принято к сведению»: закрыть информационную передачу
+     * @description CRM `POST /leads/{id}/actions/acknowledge` (LH-1). Раздел `crm.leads` полный. Только открытая или отложенная передача `priority = info`; иначе 409 `CONFLICT` (`no_open_handoff`). Лид остаётся у бота.
+     */
+    post: operations["acknowledgeCrmLead"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/crm/messages/{lead}/snooze": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Отложить передачу на час, день или три дня
+     * @description CRM `POST /leads/{id}/actions/snooze` (LH-1): срок считает BFF от своего времени. Раздел `crm.leads` полный; лид без ответственного — любой, с ответственным — он или администратор (403 `not_lead_owner`). Нет открытой передачи — 409 `CONFLICT` (`no_open_handoff`).
+     */
+    post: operations["snoozeCrmLead"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/crm/messages/{lead}/unsnooze": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Вернуть передачу из отложенных
+     * @description CRM `POST /leads/{id}/actions/unsnooze` (LH-1): передача снова открыта, срок реакции — заново. Права — как у «Отложить». Нет отложенной передачи — 409 `CONFLICT` (`no_open_handoff`).
+     */
+    post: operations["unsnoozeCrmLead"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/crm/lead-close-options": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Окно «Закрыть»: причины отказа и кто решает итог «заключена»
+     * @description CRM `GET /leads/close_options` (LH-1). Раздел `crm.leads` полный. Причины — справочник «Настроек»; `won_by_erp` — подключён бэк-офис ERP, итог «заключена» приходит из него, а не кнопкой.
+     */
+    get: operations["getCrmCloseOptions"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/crm/lead-colleagues": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Кому передать взятого лида: активные менеджеры
+     * @description CRM `GET /team` (LH-1). Раздел `crm.leads` полный. Активные менеджеры и администраторы по имени, без почты, телефона и ролей; вызвавший исключён.
+     */
+    get: operations["listCrmLeadColleagues"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/crm/lead-managers": {
     parameters: {
       query?: never;
@@ -7636,7 +7816,11 @@ export interface paths {
     delete?: never;
     options?: never;
     head?: never;
-    patch?: never;
+    /**
+     * Правка контактов лида: имя, телефон, почта, компания
+     * @description CRM `PATCH /leads/{id}` (LH-1). Раздел `crm.leads` полный; правит тот, кто ведёт лида, или лид ни у кого (иначе 403 `not_lead_owner`). Названные поля меняются, пропущенные не трогаются; пустые `phone`, `email`, `company` очищают поле, пустое имя — 422. Телефон приводится к международному виду так же, как в форме сайта (`invalid_phone`), почта — к нижнему регистру и проверяется (`invalid_email`); ошибка — 422 с `fields`. Другой лид или клиент с тем же номером или почтой — `duplicates` в ответе: правка сохранена, экран предупреждает.
+     */
+    patch: operations["updateCrmLead"];
     trace?: never;
   };
   "/crm/clients": {
@@ -15916,6 +16100,59 @@ export interface components {
       note: string;
       request_type?: components["schemas"]["LeadRequestType"] | null;
     };
+    CloseLeadIn: {
+      /** @enum {string} */
+      outcome: "won" | "lost";
+      /** @description Причина отказа из `getCrmCloseOptions`; для `lost` обязательна */
+      lost_reason?: string | null;
+      /** @description Комментарий — в заметку команды, клиенту не уходит */
+      reason?: string | null;
+    };
+    AssignLeadIn: {
+      /** @description `PersonRef.id` коллеги из `listCrmLeadColleagues` */
+      user_id: string;
+    };
+    DiscardLeadIn: {
+      /** @enum {string} */
+      kind: "spam" | "test" | "duplicate";
+      /** @description Номер оставшегося лида; для `duplicate` обязателен, для остальных не указывается */
+      duplicate_of?: string | null;
+    };
+    SnoozeLeadIn: {
+      /**
+       * @description На час, на сутки или на трое суток от момента запроса
+       * @enum {string}
+       */
+      period: "hour" | "day" | "three_days";
+    };
+    CloseOptions: {
+      /** @description Справочник причин отказа из «Настроек» */
+      lost_reasons: string[];
+      /** @description Итог «заключена» решает бэк-офис ERP — кнопки «Сделка заключена» нет */
+      won_by_erp: boolean;
+    };
+    LeadContactsIn: {
+      name?: string;
+      phone?: string | null;
+      email?: string | null;
+      company?: string | null;
+    };
+    LeadDuplicate: {
+      /** @enum {string} */
+      kind: "lead" | "client";
+      /** @description Номер лида, если `kind = lead` */
+      lead: string | null;
+      /** @description Клиент, если `kind = client` и сотрудник читает клиентов (`crm.clients`) */
+      client_id: number | null;
+      /** @description Имя лида или название клиента; у клиента без права на раздел `crm.clients` пусто */
+      name: string;
+      /** @enum {string} */
+      field: "phone" | "email";
+    };
+    LeadContactsSaved: {
+      /** @description Другие лиды и клиенты с тем же номером или почтой; пусто — дублей нет */
+      duplicates: components["schemas"]["LeadDuplicate"][];
+    };
     LeadManagerList: {
       items: components["schemas"]["PersonRef"][];
     };
@@ -17250,6 +17487,10 @@ export interface components {
       email_problem?: components["schemas"]["EmailProblem"] | null;
       /** @description Откуда пришёл лид кроме канала (LID-5): форма, страница, откуда перешли, кампания. `null` — у лидов других каналов и прежних лидов фактов нет. */
       origin?: components["schemas"]["LeadOrigin"] | null;
+      /** @description Лид отброшен как «Спам», «Тест» или «Дубль» (LH-1): в списках его нет, карточка открывается по номеру. */
+      discarded?: ("spam" | "test" | "duplicate") | null;
+      /** @description Номер оставшегося лида, если `discarded = duplicate` */
+      duplicate_of?: string | null;
     };
     /** @description Факты об источнике лида, сохранённые при приёме заявки с сайта или из Cabinet */
     LeadOrigin: {
@@ -31350,6 +31591,289 @@ export interface operations {
       503: components["responses"]["BackendUnavailable"];
     };
   };
+  closeCrmLead: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Номер лида `L-NNNN` */
+        lead: components["parameters"]["LeadNumber"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CloseLeadIn"];
+      };
+    };
+    responses: {
+      /** @description Готово */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ActionOk"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["MessagesConflict"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  assignCrmLead: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Номер лида `L-NNNN` */
+        lead: components["parameters"]["LeadNumber"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["AssignLeadIn"];
+      };
+    };
+    responses: {
+      /** @description Готово */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ActionOk"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["MessagesConflict"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  discardCrmLead: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Номер лида `L-NNNN` */
+        lead: components["parameters"]["LeadNumber"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DiscardLeadIn"];
+      };
+    };
+    responses: {
+      /** @description Готово */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ActionOk"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["MessagesConflict"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  reopenCrmLead: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Номер лида `L-NNNN` */
+        lead: components["parameters"]["LeadNumber"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Готово */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ActionOk"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["MessagesConflict"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  acknowledgeCrmLead: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Номер лида `L-NNNN` */
+        lead: components["parameters"]["LeadNumber"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Готово */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ActionOk"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["MessagesConflict"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  snoozeCrmLead: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Номер лида `L-NNNN` */
+        lead: components["parameters"]["LeadNumber"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SnoozeLeadIn"];
+      };
+    };
+    responses: {
+      /** @description Готово */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ActionOk"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["MessagesConflict"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  unsnoozeCrmLead: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Номер лида `L-NNNN` */
+        lead: components["parameters"]["LeadNumber"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Готово */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ActionOk"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["MessagesConflict"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  getCrmCloseOptions: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Параметры окна */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CloseOptions"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  listCrmLeadColleagues: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Коллеги */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LeadManagerList"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
   listCrmLeadManagers: {
     parameters: {
       query?: never;
@@ -32902,6 +33426,41 @@ export interface operations {
       401: components["responses"]["SessionExpired"];
       403: components["responses"]["Forbidden"];
       404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  updateCrmLead: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Номер лида `L-NNNN` */
+        lead: components["parameters"]["LeadNumber"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["LeadContactsIn"];
+      };
+    };
+    responses: {
+      /** @description Сохранено */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LeadContactsSaved"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      422: components["responses"]["ValidationFailed"];
       503: components["responses"]["BackendUnavailable"];
     };
   };

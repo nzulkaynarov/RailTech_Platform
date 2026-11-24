@@ -22,7 +22,11 @@ async def lead_by_phone(
     )
     stmt = (
         select(Lead)
-        .where(or_(Lead.phone_e164 == phone, via_identity), Lead.erased_at.is_(None))
+        .where(
+            or_(Lead.phone_e164 == phone, via_identity),
+            Lead.erased_at.is_(None),
+            Lead.discarded_kind.is_(None),
+        )
         .order_by(Lead.created_at, Lead.id)
     )
     if exclude_lead_id is not None:
@@ -33,7 +37,7 @@ async def lead_by_phone(
 async def lead_by_email(session: AsyncSession, email: str) -> Lead | None:
     stmt = (
         select(Lead)
-        .where(Lead.email == email, Lead.erased_at.is_(None))
+        .where(Lead.email == email, Lead.erased_at.is_(None), Lead.discarded_kind.is_(None))
         .order_by(Lead.created_at, Lead.id)
         .limit(1)
     )

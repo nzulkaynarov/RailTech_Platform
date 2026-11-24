@@ -40,7 +40,7 @@ test('список: вкладки с количеством, свои цены,
   await snap(page, 'my-products-list');
 });
 
-test('отправка на проверку: выбор, диалог, «Проверка обычно занимает 1 рабочий день»', async ({ page }) => {
+test('отправка на проверку: выбор, диалог, «Результат появится в этой вкладке»', async ({ page }) => {
   await signIn(page, PARTNER);
   await page.goto('/my-products');
   await h1(page, 'Мои товары');
@@ -48,7 +48,7 @@ test('отправка на проверку: выбор, диалог, «Про
   await page.getByRole('button', { name: 'Отправить на проверку (1)' }).click();
   await snap(page, 'my-products-submit-dialog');
   await page.getByRole('dialog').getByRole('button', { name: 'Отправить' }).click();
-  await expect(page.getByText('Проверка обычно занимает 1 рабочий день', { exact: false })).toBeVisible();
+  await expect(page.getByText('Результат появится в этой вкладке', { exact: false })).toBeVisible();
   await snap(page, 'my-products-submitted');
 });
 

@@ -50,7 +50,8 @@
     "handOver": "Menejerga topshirish",
     "openChat": "Yozishmani ochish",
     "triage": "Saralash",
-    "triageLabel": "{{name}} — «Javob kutmoqda»da saralash"
+    "triageLabel": "{{name}} — «Javob kutmoqda»da saralash",
+    "reopen": "Qayta oçiş"
   },
   "paging": {
     "label": "Lidlar sahifalari",
@@ -71,7 +72,7 @@
   "retry": "Qayta urinish",
   "card": {
     "label": "Lid kartasi",
-    "close": "Yopish",
+    "close": "Orqaga",
     "contacts": "Kontaktlar",
     "about": "Lid haqida",
     "facts": "Bot aniqlagan ma’lumotlar",
@@ -156,5 +157,27 @@
       "request": "«Sörov» shakli"
     },
     "campaign": "kampaniya {{name}}"
+  },
+  "edit": {
+    "open": "Tahrirlaş",
+    "save": "Saqlaş",
+    "cancel": "Bekor qiliş",
+    "nameRequired": "Ismni kiriting",
+    "duplicates": "Bunday raqam yoki poçta allaqaçon bor",
+    "fields": {
+      "name": "Ism",
+      "phone": "Telefon",
+      "email": "Poçta",
+      "company": "Kompaniya"
+    },
+    "duplicateKinds": {
+      "lead": "lid",
+      "client": "mijoz"
+    }
+  },
+  "discarded": {
+    "spam": "Spam",
+    "test": "Test",
+    "duplicate": "Dublikat"
   }
 }

@@ -199,7 +199,7 @@ describe('Заявки', () => {
     await screen.findByRole('list', { name: 'Заявки' });
     expect(screen.queryByRole('link', { name: 'Новая заявка' })).not.toBeInTheDocument();
     await router.navigate('/requests/new');
-    expect(await screen.findByText('Создавать заявки может контакт с правом подтверждать')).toBeInTheDocument();
+    expect(await screen.findByText('Создавать заявки может коллега с правом подтверждать')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Отправить заявку' })).not.toBeInTheDocument();
     // Two screens in one test: ~12 s alone, over 30 s under the full parallel run (as journey-j6).
   }, 60_000);

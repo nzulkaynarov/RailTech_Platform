@@ -58,7 +58,7 @@ describe('Заказы на поставку (PO, ASN) и запросы цен 
     const carrierInput = within(dialog).getByLabelText(/Перевозчик/);
     await user.type(carrierInput, 'Автотранспорт');
 
-    const trackingInput = within(dialog).getByLabelText(/Трек-номер/);
+    const trackingInput = within(dialog).getByLabelText(/Госномер или трек-номер/);
     await user.type(trackingInput, '01 A 777 AA');
 
     await user.click(within(dialog).getByRole('button', { name: 'Отгрузить' }));
@@ -258,16 +258,16 @@ describe('Заказы на поставку (PO, ASN) и запросы цен 
 
     await screen.findByRole('heading', { level: 1, name: 'Заказы на поставку' });
 
-    // Переключаемся на вкладку «Оборот и оценка»
-    await user.click(screen.getByRole('button', { name: /Оборот и оценка/ }));
+    // Переключаемся на вкладку «Оборот и показатели»
+    await user.click(screen.getByRole('button', { name: /Оборот и показатели/ }));
 
     // Проверяем наличие карточек взаиморасчётов и оценки
     expect(await screen.findByText('Оборот по заказам')).toBeInTheDocument();
-    expect(screen.getByText('Оценка эффективности поставщика')).toBeInTheDocument();
+    expect(screen.getByText('Ваши показатели')).toBeInTheDocument();
     expect(screen.getByText('Разбивка по заказам')).toBeInTheDocument();
 
     // Проверяем показатели scorecard
-    expect(screen.getByText(/OTIF/)).toBeInTheDocument();
+    expect(screen.getByText(/Поставлено в срок и полностью/)).toBeInTheDocument();
     expect(screen.getByText('96.5%')).toBeInTheDocument();
     expect(screen.getByText('90%')).toBeInTheDocument();
     expect(screen.getByText('95%')).toBeInTheDocument();
@@ -303,7 +303,7 @@ describe('Заказы на поставку (PO, ASN) и запросы цен 
     renderApp('/partner/orders');
 
     await screen.findByRole('heading', { level: 1, name: 'Заказы на поставку' });
-    await user.click(screen.getByRole('button', { name: /Оборот и оценка/ }));
+    await user.click(screen.getByRole('button', { name: /Оборот и показатели/ }));
 
     expect(await screen.findAllByText('Нет данных')).toHaveLength(3);
     expect(screen.queryByText('Отлично')).not.toBeInTheDocument();

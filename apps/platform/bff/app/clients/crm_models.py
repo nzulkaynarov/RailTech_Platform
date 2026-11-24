@@ -310,6 +310,15 @@ class ClientHandoffStatus(StrEnum):
     failed = "failed"
 
 
+class CloseOptions(BaseModel):
+    """
+    Что нужно окну «Закрыть» (LH-1): причины отказа из «Настроек» и решает ли итог ERP.
+    """
+
+    lost_reasons: Annotated[list[str], Field(title="Lost Reasons")]
+    won_by_erp: Annotated[bool, Field(title="Won By Erp")]
+
+
 class ComponentStatusOut(BaseModel):
     checked_at: Annotated[AwareDatetime | None, Field(title="Checked At")]
     expected_on_stand: Annotated[bool | None, Field(title="Expected On Stand")] = False
@@ -320,6 +329,25 @@ class ComponentStatusOut(BaseModel):
     reason: Annotated[str, Field(title="Reason")]
     status: Annotated[Status, Field(title="Status")]
     title: Annotated[str, Field(title="Title")]
+
+
+class ContactDuplicate(BaseModel):
+    """
+    Другой лид или клиент с тем же номером или почтой — предупреждение, не отказ.
+    """
+
+    field: Annotated[FieldModel, Field(title="Field")]
+    id: Annotated[int, Field(title="Id")]
+    kind: Annotated[Kind, Field(title="Kind")]
+    name: Annotated[str, Field(title="Name")]
+
+
+class ContactsResult(BaseModel):
+    duplicates: Annotated[list[ContactDuplicate] | None, Field(title="Duplicates")] = (
+        None
+    )
+    id: Annotated[int | None, Field(title="Id")] = None
+    ok: Annotated[Literal[True], Field(title="Ok")] = True
 
 
 class Created(BaseModel):
@@ -371,6 +399,12 @@ class DialogOut(BaseModel):
 class DialogPage(BaseModel):
     items: Annotated[list[DialogOut], Field(title="Items")]
     total: Annotated[int, Field(title="Total")]
+
+
+class DiscardedKind(StrEnum):
+    spam = "spam"
+    test = "test"
+    duplicate = "duplicate"
 
 
 class DryRunResponse(BaseModel):
@@ -442,7 +476,7 @@ class EmailUndeliverableOut(BaseModel):
     not arrive» with the reason in plain words and the date. Absent — nothing known.
     """
 
-    kind: Annotated[Kind, Field(title="Kind")]
+    kind: Annotated[Kind1, Field(title="Kind")]
     last_at: Annotated[AwareDatetime, Field(title="Last At")]
     reason: Annotated[Reason, Field(title="Reason")]
     reports: Annotated[int, Field(title="Reports")]
@@ -666,6 +700,11 @@ class ExternalServicesSummary(BaseModel):
     warn: Annotated[int, Field(title="Warn")]
 
 
+class FieldModel(StrEnum):
+    phone = "phone"
+    email = "email"
+
+
 class Frequency(StrEnum):
     minute = "minute"
     quarter = "quarter"
@@ -856,7 +895,7 @@ class InboundMailAssist(BaseModel):
     """
 
     action: Annotated[Action1 | None, Field(title="Action")] = None
-    kind: Annotated[Kind1 | None, Field(title="Kind")] = None
+    kind: Annotated[Kind2 | None, Field(title="Kind")] = None
     status: Annotated[Status6, Field(title="Status")]
     summary: Annotated[str | None, Field(title="Summary")] = None
 
@@ -1351,25 +1390,30 @@ class KeySource(StrEnum):
 
 
 class Kind(StrEnum):
+    lead = "lead"
+    client = "client"
+
+
+class Kind1(StrEnum):
     permanent = "permanent"
     soft = "soft"
 
 
-class Kind1(StrEnum):
+class Kind2(StrEnum):
     buyer = "buyer"
     official = "official"
     supplier_doc = "supplier_doc"
     other = "other"
 
 
-class Kind2(StrEnum):
+class Kind3(StrEnum):
     deal = "deal"
     quote = "quote"
     invoice = "invoice"
     act = "act"
 
 
-class Kind3(StrEnum):
+class Kind4(StrEnum):
     vendor = "vendor"
     langfuse = "langfuse"
     mail = "mail"
@@ -1395,7 +1439,13 @@ class LeadDetail(BaseModel):
     consent_given_at: Annotated[AwareDatetime | None, Field(title="Consent Given At")]
     consent_method: Annotated[str | None, Field(title="Consent Method")] = None
     created_at: Annotated[AwareDatetime, Field(title="Created At")]
+    discarded_kind: Annotated[DiscardedKind | None, Field(title="Discarded Kind")] = (
+        None
+    )
     display_name: Annotated[str, Field(title="Display Name")]
+    duplicate_of_lead_id: Annotated[int | None, Field(title="Duplicate Of Lead Id")] = (
+        None
+    )
     email: Annotated[str | None, Field(title="Email")] = None
     email_undeliverable: EmailUndeliverableOut | None = None
     erp_company_id: Annotated[int | None, Field(title="Erp Company Id")] = None
@@ -1538,7 +1588,7 @@ class MessageContextOut(BaseModel):
     """
 
     erp_id: Annotated[int, Field(title="Erp Id")]
-    kind: Annotated[Kind2, Field(title="Kind")]
+    kind: Annotated[Kind3, Field(title="Kind")]
     number: Annotated[str, Field(title="Number")]
 
 
@@ -1948,7 +1998,7 @@ class ServiceSwitchOut(BaseModel):
     changed_by: Annotated[str | None, Field(title="Changed By")]
     disabled: Annotated[bool, Field(title="Disabled")]
     effect: Annotated[str, Field(title="Effect")]
-    kind: Annotated[Kind3, Field(title="Kind")]
+    kind: Annotated[Kind4, Field(title="Kind")]
     problem: Annotated[str | None, Field(title="Problem")]
     reason: Annotated[str | None, Field(title="Reason")]
 

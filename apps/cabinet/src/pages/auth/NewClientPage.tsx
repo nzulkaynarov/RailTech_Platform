@@ -303,17 +303,10 @@ function LeadForm({
   );
 }
 
-/** «Что дальше» (LID-5): номер заявки и срок первого ответа из настроек «Время и сроки»; без них — общий текст. */
+/** «Что дальше» (LID-5): номер заявки и общий текст. Срок ответа клиенту не называем (решение владельца 2026-11-24): внутренний срок — не обещание. */
 function SentCard({ telegramLink, accepted }: { telegramLink: string | null; accepted: WebLeadAccepted }) {
   const { t } = useTranslation();
-  const minutes = accepted.first_response_minutes ?? null;
   const number = accepted.request_number ?? null;
-  const within =
-    minutes === null
-      ? null
-      : minutes % 60 === 0
-        ? t('newClient.next.withinHours', { count: minutes / 60 })
-        : t('newClient.next.withinMinutes', { count: minutes });
   return (
     <section className="flex flex-col items-center gap-3 rounded-lg border bg-card px-4 py-8 text-center" aria-live="polite">
       <CheckCircle2 className="size-10 text-success" aria-hidden="true" />
@@ -324,7 +317,7 @@ function SentCard({ telegramLink, accepted }: { telegramLink: string | null; acc
         </p>
       ) : null}
       <p className="max-w-md text-sm text-muted-foreground">
-        {within ? t('newClient.next.text', { within }) : t('newClient.sentText')}
+        {t('newClient.sentText')}
       </p>
       {telegramLink ? (
         <TelegramLinkButton href={telegramLink}>

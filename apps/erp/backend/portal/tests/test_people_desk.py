@@ -95,6 +95,24 @@ def test_contacts_of_one_person_within_the_same_bounds(world):
     assert client.get(f"{URL}{stranger.pk}/").status_code == 404
 
 
+def test_archived_contact_is_not_a_person(world):
+    """Контакт, удалённый в CRM, архивируется в ERP (`archive_contact`): в «Люди» его нет — ни в списке, ни по id."""
+    from django.utils import timezone
+
+    client = world["clients"]["supply"]
+    anvar = Contact.objects.get(name="Анвар Клиентов")
+    assert "Анвар Клиентов" in names(client.get(URL).json())
+    assert client.get(f"{URL}{anvar.pk}/").status_code == 200
+
+    anvar.archived_at = timezone.now()
+    anvar.save(update_fields=["archived_at"])
+
+    assert "Анвар Клиентов" not in names(client.get(URL).json())
+    assert "Анвар Клиентов" not in names(client.get(URL, {"q": "Анвар"}).json())
+    assert client.get(f"{URL}{anvar.pk}/").status_code == 404
+    assert client.get(f"{URL}{anvar.pk}/photo/").status_code == 404
+
+
 # --- «Ш»: адресат письма из контрагентов — `/api/v1/parties/organizations/` -------------------------------------------
 
 ORGS = "/api/v1/parties/organizations/"

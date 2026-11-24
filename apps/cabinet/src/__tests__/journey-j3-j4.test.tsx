@@ -20,7 +20,7 @@ describe('Wave J3, J4 & J2-bank Journey Tests', () => {
       // Проверяем наличие всех категорий внутри матрицы
       expect(within(matrix).getByText('Документы')).toBeInTheDocument();
       expect(within(matrix).getByText('Финансы')).toBeInTheDocument();
-      expect(within(matrix).getByText('Доставки')).toBeInTheDocument();
+      expect(within(matrix).getByText('Поставки')).toBeInTheDocument();
       expect(within(matrix).getByText('Сообщения')).toBeInTheDocument();
       expect(within(matrix).getByText('Безопасность')).toBeInTheDocument();
 
@@ -81,7 +81,7 @@ describe('Wave J3, J4 & J2-bank Journey Tests', () => {
 
       // Соответствующая статья для роута /quotes
       expect(
-        within(drawer).getByText(/Как согласовать или отклонить коммерческое предложение/),
+        within(drawer).getByText(/Как принять или отклонить КП/),
       ).toBeInTheDocument();
 
       // Поиск фильтрует статьи
@@ -91,7 +91,7 @@ describe('Wave J3, J4 & J2-bank Journey Tests', () => {
       expect(within(drawer).getByText(/Каналы уведомлений и привязка Telegram/)).toBeInTheDocument();
 
       // Кнопка обращения к менеджеру переходит в /messages
-      const contactBtn = within(drawer).getByRole('button', { name: 'Написать персональному менеджеру' });
+      const contactBtn = within(drawer).getByRole('button', { name: 'Написать менеджеру' });
       await user.click(contactBtn);
 
       await waitFor(() => {

@@ -145,10 +145,10 @@ describe('Счета', () => {
     signedIn();
     renderApp('/invoices');
     await screen.findByRole('list', { name: 'Счета' });
-    const pending = within(card('Счета', 'S-2026-0130')).getByRole('list', { name: 'Платёжки по счёту S-2026-0130' });
+    const pending = within(card('Счета', 'S-2026-0130')).getByRole('list', { name: 'Платёжные поручения по счёту S-2026-0130' });
     expect(within(pending).getByText('На проверке')).toBeInTheDocument();
     expect(within(pending).getByText('Вы указали: 12 500 USD, оплачено 13 окт. 2026 г.')).toBeInTheDocument();
-    const confirmed = within(card('Счета', 'S-2026-0118')).getByRole('list', { name: 'Платёжки по счёту S-2026-0118' });
+    const confirmed = within(card('Счета', 'S-2026-0118')).getByRole('list', { name: 'Платёжные поручения по счёту S-2026-0118' });
     expect(within(confirmed).getByText('Оплата подтверждена')).toBeInTheDocument();
     // оплаченному счёту платёжка не нужна — кнопки нет
     expect(within(card('Счета', 'S-2026-0101')).queryByRole('button', { name: /Я оплатил/ })).not.toBeInTheDocument();
@@ -165,7 +165,7 @@ describe('Счета', () => {
     expect(within(dialog).getByText('Менеджер проверит поступление и подтвердит оплату — статус счёта изменится.')).toBeInTheDocument();
     await expectNoAxeViolations();
 
-    await user.click(within(dialog).getByRole('button', { name: 'Отправить платёжку' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Отправить' }));
     expect(await within(dialog).findByText('Приложите файл платёжного поручения.')).toBeInTheDocument();
     expect(log).not.toContain('POST /uploads');
 
@@ -177,9 +177,9 @@ describe('Счета', () => {
     expect(within(dialog).getByLabelText(/Дата платежа/)).toHaveValue('14.10.2026');
     await user.type(within(dialog).getByLabelText(/Сумма платежа, сум/), '9 800 000');
     await user.type(within(dialog).getByLabelText(/Комментарий/), 'Оплатили одним платежом');
-    await user.click(within(dialog).getByRole('button', { name: 'Отправить платёжку' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Отправить' }));
 
-    expect(await screen.findByText('Платёжка по счёту S-2026-0124 отправлена менеджеру')).toBeInTheDocument();
+    expect(await screen.findByText('Платёжное поручение по счёту S-2026-0124 отправлено менеджеру')).toBeInTheDocument();
     expect(log.filter((entry) => entry === 'POST /uploads' || entry === 'POST /invoices/603/proofs')).toEqual([
       'POST /uploads',
       'POST /invoices/603/proofs',
@@ -190,7 +190,7 @@ describe('Счета', () => {
       amount: '9800000.00',
       comment: 'Оплатили одним платежом',
     });
-    const proofs = await within(card('Счета', 'S-2026-0124')).findByRole('list', { name: 'Платёжки по счёту S-2026-0124' });
+    const proofs = await within(card('Счета', 'S-2026-0124')).findByRole('list', { name: 'Платёжные поручения по счёту S-2026-0124' });
     expect(within(proofs).getByText('На проверке')).toBeInTheDocument();
   });
 
@@ -206,7 +206,7 @@ describe('Счета', () => {
     const dialog = await screen.findByRole('dialog');
     await user.upload(within(dialog).getByLabelText('Платёжное поручение'), new File(['%PDF-1.4'], 'p.pdf', { type: 'application/pdf' }));
     await user.type(within(dialog).getByLabelText(/Сумма платежа/), amount);
-    await user.click(within(dialog).getByRole('button', { name: 'Отправить платёжку' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Отправить' }));
     expect(await within(dialog).findByText(message)).toBeInTheDocument();
     expect(log).not.toContain('POST /uploads');
   });
@@ -226,7 +226,7 @@ describe('Счета', () => {
     expect(within(dialog).getByText('Файл не выбран')).toBeInTheDocument();
     await user.upload(within(dialog).getByLabelText('Платёжное поручение'), new File(['%PDF-1.4'], 'p.pdf', { type: 'application/pdf' }));
     await user.type(within(dialog).getByLabelText(/Дата платежа/), '3102');
-    await user.click(within(dialog).getByRole('button', { name: 'Отправить платёжку' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Отправить' }));
     expect(await within(dialog).findByText('Дата — в формате ДД.ММ.ГГГГ, например 14.10.2026.')).toBeInTheDocument();
     expect(log).not.toContain('POST /uploads');
   });
@@ -239,7 +239,7 @@ describe('Счета', () => {
     await user.click(await screen.findByRole('button', { name: 'Я оплатил: счёт S-2026-0124' }));
     const dialog = await screen.findByRole('dialog');
     await user.upload(within(dialog).getByLabelText('Платёжное поручение'), new File(['%PDF-1.4'], 'p.pdf', { type: 'application/pdf' }));
-    await user.click(within(dialog).getByRole('button', { name: 'Отправить платёжку' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Отправить' }));
     expect(await within(dialog).findByText(/Счёт уже оплачен или отменён/)).toBeInTheDocument();
   });
 
@@ -366,7 +366,7 @@ describe('Акты', () => {
     await expectNoAxeViolations();
     await user.type(within(dialog).getByLabelText('Причина возврата'), 'Нет подписи');
     await user.click(within(dialog).getByRole('button', { name: 'Вернуть акт' }));
-    expect(await screen.findByText('Акт A-2026-0090 возвращён исполнителю')).toBeInTheDocument();
+    expect(await screen.findByText('Акт A-2026-0090 возвращён')).toBeInTheDocument();
     expect(within(card('Акты', 'A-2026-0090')).getByText('Возвращён: Нет подписи')).toBeInTheDocument();
     expect(body.current).toEqual({ reason: 'Нет подписи' });
   });

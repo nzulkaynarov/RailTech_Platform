@@ -11,10 +11,10 @@ describe('смена языка', () => {
     renderApp('/profile');
     await screen.findByRole('heading', { level: 1, name: 'Профиль' });
 
-    await user.click(screen.getByRole('button', { name: 'Oʻzbekcha' }));
+    await user.click(screen.getByRole('button', { name: 'Özbekça' }));
     expect(await screen.findByRole('heading', { level: 1, name: 'Profil' })).toBeInTheDocument();
     expect(screen.getByRole('navigation', { name: 'Asosiy boʻlimlar' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Oʻzbekcha' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Özbekça' })).toHaveAttribute('aria-pressed', 'true');
     expect(window.localStorage.getItem(LANGUAGE_STORAGE_KEY)).toBe('uz');
     expect(document.documentElement.lang).toBe('uz');
 
@@ -27,7 +27,7 @@ describe('смена языка', () => {
     renderApp('/login');
     await screen.findByRole('heading', { level: 1, name: 'Вход в кабинет' });
     await user.click(screen.getByRole('button', { name: 'English' }));
-    expect(await screen.findByRole('heading', { level: 1, name: 'Sign in to the cabinet' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Sign in to your account' })).toBeInTheDocument();
   });
 
   it('язык контакта из /me применяется, если человек не выбирал язык сам', async () => {

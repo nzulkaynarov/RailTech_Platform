@@ -7,7 +7,7 @@ CRM-02, просрочка и открытая передача по эскал�
 
 from collections.abc import Mapping
 from datetime import datetime
-from typing import Any, get_args
+from typing import Any, Literal, get_args
 
 from app.clients import crm_models as crm
 from app.crm_messages_view import Names, channel, facts, handoff, language, person
@@ -204,7 +204,14 @@ def lead_card(
         invitation=invitation(lead.invitation),
         email_problem=email_problem(lead.email_undeliverable),
         origin=origin_of(lead.origin),
+        discarded=_discarded(lead.discarded_kind),
+        duplicate_of=lead_number(lead.duplicate_of_lead_id) if lead.duplicate_of_lead_id else None,
     )
+
+
+def _discarded(kind: Any) -> Literal["spam", "test", "duplicate"] | None:
+    value = _status_value(kind)
+    return value if value in ("spam", "test", "duplicate") else None  # type: ignore[return-value]
 
 
 def origin_of(raw: crm.LeadOriginOut | None) -> LeadOrigin | None:
