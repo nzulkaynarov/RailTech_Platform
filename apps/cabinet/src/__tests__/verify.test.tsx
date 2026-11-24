@@ -11,7 +11,7 @@ describe('публичная проверка документа (/v/:code)', ()
 
     expect(await screen.findByTestId('status-valid')).toBeInTheDocument();
     expect(screen.getByText('Подлинность подтверждена')).toBeInTheDocument();
-    expect(screen.getByText('Официальный документ выпущен и подписан в RailTech')).toBeInTheDocument();
+    expect(screen.getByText('Официальный документ, выпущен и подписан нашей компанией')).toBeInTheDocument();
 
     expect(screen.getByText('ИСХ-042/26')).toBeInTheDocument();
     expect(screen.getByText('OOO «RailTech»')).toBeInTheDocument();
@@ -79,7 +79,7 @@ describe('публичная проверка документа (/v/:code)', ()
 
     const mismatchBox = await screen.findByTestId('hash-result');
     expect(mismatchBox).toBeInTheDocument();
-    expect(screen.getByText('Контрольная сумма НЕ совпадает! Файл повреждён или подвергся модификации.')).toBeInTheDocument();
+    expect(screen.getByText('Файл отличается от подписанного оригинала: его изменили или он повреждён.')).toBeInTheDocument();
     expect(screen.getByText(expectedHash)).toBeInTheDocument();
   });
 

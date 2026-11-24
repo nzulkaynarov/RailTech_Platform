@@ -10,12 +10,12 @@ describe('название оператора в текстах (задача «
     await i18n.changeLanguage('ru');
     setOperatorName('Acme Trade');
     expect(i18n.t('app.name')).toBe('Кабинет Acme Trade');
-    expect(i18n.t('pages.becomePartner.subtitle')).toContain('платформе Acme Trade');
+    expect(i18n.t('verify.verifiedSub')).not.toContain('Acme');
   });
 
-  it('не задано — нейтральное слово языка', async () => {
+  it('не задано — без чужого слова: «Кабинет», не «Кабинет Платформа»', async () => {
     await i18n.changeLanguage('ru');
     setOperatorName(null);
-    expect(i18n.t('app.name')).toBe('Кабинет Платформа');
+    expect(i18n.t('app.name').trim()).toBe('Кабинет');
   });
 });

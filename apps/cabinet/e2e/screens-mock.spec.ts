@@ -431,9 +431,9 @@ test('B-CABFIX-1: «Я оплатил» → платёжка на проверк
   await expect(dialog.getByText('Менеджер проверит поступление и подтвердит оплату — статус счёта изменится.')).toBeVisible();
   await snap(page, 'cabinet-proof-form');
 
-  await dialog.getByRole('button', { name: 'Отправить платёжку' }).click();
+  await dialog.getByRole('button', { name: 'Отправить' }).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
-  await expect(page.getByRole('list', { name: 'Платёжки по счёту S-2026-0124' }).first()).toContainText('На проверке');
+  await expect(page.getByRole('list', { name: 'Платёжные поручения по счёту S-2026-0124' }).first()).toContainText('На проверке');
   await snap(page, 'cabinet-proof-pending');
 
   await page.goto('/quotes/310');
@@ -449,7 +449,7 @@ test('B-CABFIX-1: наблюдатель — платёжки и коммент�
   await signIn(page, 'viewer');
   await page.goto('/invoices');
   await heading(page, 'Счета');
-  await expect(page.getByRole('list', { name: 'Платёжки по счёту S-2026-0130' }).first()).toContainText('На проверке');
+  await expect(page.getByRole('list', { name: 'Платёжные поручения по счёту S-2026-0130' }).first()).toContainText('На проверке');
   await expect(page.getByRole('button', { name: /Я оплатил/ })).toHaveCount(0);
   await snap(page, 'viewer-cabinet-invoices');
   await page.goto('/quotes/300');

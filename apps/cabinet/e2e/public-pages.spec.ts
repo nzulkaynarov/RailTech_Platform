@@ -83,7 +83,7 @@ test.describe('публичные экраны кабинета', () => {
     await page.getByLabel('E-mail').fill('a.karimov@toshlog.example');
     await page.getByRole('button', { name: 'Войти', exact: true }).click();
     await expect(page.getByRole('heading', { level: 1, name: 'Если адрес зарегистрирован, мы отправим письмо' })).toBeVisible();
-    await expect(page.getByText('Письмо может идти несколько минут. Проверьте папку «Спам». Не пришло за 10 минут — свяжитесь с вашим менеджером: возможно, почта компании временно не работает.')).toBeVisible();
+    await expect(page.getByText('Письмо может идти несколько минут. Проверьте папку «Спам». Не пришло за 10 минут — напишите менеджеру.')).toBeVisible();
     await expect(page.getByRole('button', { name: /Отправить ещё раз через \d+ с/ })).toBeDisabled();
     await expect(page.getByRole('link', { name: 'Войти через Telegram' })).toBeVisible();
     await expect(page.getByLabel('Код из письма')).toHaveAttribute('autocomplete', 'one-time-code');
