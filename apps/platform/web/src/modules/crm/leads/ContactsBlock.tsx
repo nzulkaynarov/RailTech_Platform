@@ -1,3 +1,4 @@
+import { EmailProblem } from "../../../shared/ui/EmailProblem";
 import { Alert, Button, Input } from "antd";
 import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -181,6 +182,7 @@ export function ContactsBlock({ card, canEdit }: { card: LeadCard; canEdit: bool
       ) : (
         <p className="pf-fp-sub">{t("leads:card.none")}</p>
       )}
+      {editing ? null : <EmailProblem problem={card.email_problem} />}
       {duplicates.length ? <DuplicateNote duplicates={duplicates} /> : null}
     </div>
   );

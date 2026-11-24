@@ -6,6 +6,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, SecretStr, field_validator
 
 from app.domain.erp_connector import DEFAULT_INTERNAL_ERP_URL
+from app.schemas.notices import EmailBounceOut
 from app.schemas.settings_profile import BotProfileSettings
 
 
@@ -243,6 +244,8 @@ class EmailLogItem(BaseModel):
     source: Literal["crm", "erp", "eds"]
     purpose: str | None
     attachments: int
+    # Delivery report of the letter (the server accepted it, then returned it); null — none.
+    bounce: EmailBounceOut | None = None
 
 
 class EmailQueuedOut(BaseModel):

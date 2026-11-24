@@ -6,7 +6,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.schemas.notices import InvitationOut, NoticeOut
+from app.schemas.notices import EmailUndeliverableOut, InvitationOut, NoticeOut
 
 
 class EscalationOut(BaseModel):
@@ -144,6 +144,8 @@ class LeadDetail(LeadOut):
     # Приглашение клиента лида в кабинет: итог, каналы контакта, «повторить другим каналом» (null —
     # клиента нет).
     invitation: InvitationOut | None = None
+    # Mail servers return letters to the lead's e-mail (delivery reports); null — nothing known.
+    email_undeliverable: EmailUndeliverableOut | None = None
 
 
 class LeadPage(BaseModel):

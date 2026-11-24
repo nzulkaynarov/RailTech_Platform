@@ -41,7 +41,7 @@ from app.integrations.mail_attachments import AttachmentError, AttachmentFetcher
 from app.integrations.smtp import SmtpProbeError, SmtpResolution, SmtpTransport, resolve_smtp
 from app.models.email import EMAIL_STATUSES, EmailLog
 from app.security.secrets_store import SecretCipher, SecretsStore
-from app.services import mail_outgoing, mail_templates
+from app.services import bounces, mail_outgoing, mail_templates
 from app.services.settings import SettingsService
 
 logger = structlog.get_logger(__name__)
@@ -102,6 +102,7 @@ class EmailLogView:
     source: str = "crm"
     purpose: str | None = None
     attachments: int = 0
+    bounce: dict[str, object] | None = None
 
 
 class MailService:
@@ -271,7 +272,7 @@ class MailService:
             return False
         try:
             files = await mail_outgoing.download(self._fetcher, outgoing.refs)
-            await mail_outgoing.send(self._transport, connection, outgoing, files)
+            message_id = await mail_outgoing.send(self._transport, connection, outgoing, files)
         except (SmtpProbeError, AttachmentError) as exc:
             error = mail_outgoing.error_text(exc)
             return await self._failed_attempt(
@@ -280,9 +281,14 @@ class MailService:
         except Exception as exc:  # noqa: BLE001 — непредвиденный сбой отправки — тоже попытка
             error = f"unexpected: {type(exc).__name__}"
             return await self._failed_attempt(email_log_id, attempt, error, last, exc)
-        await self._finish(email_log_id, "sent", None, attempts=attempt)
+        await self._finish(email_log_id, "sent", None, attempts=attempt, message_id=message_id)
         logger.info("email_sent", email_log_id=email_log_id)
         return True
+
+    async def is_undeliverable(self, email: str | None) -> bool:
+        """The address bounced for good: automatic mail to it is skipped until it is edited."""
+        async with self._sessions() as session:
+            return await bounces.is_blocked(session, email)
 
     async def _failed_attempt(
         self, email_log_id: int, attempt: int, error: str, final: bool, exc: Exception
@@ -464,6 +470,7 @@ class MailService:
         *,
         attempts: int | None = None,
         clear_body: bool = False,
+        message_id: str | None = None,
     ) -> None:
         async with self._sessions() as session, session.begin():
             row = await session.get(EmailLog, email_log_id)
@@ -472,6 +479,8 @@ class MailService:
             row.status, row.error = status, error
             if attempts is not None:
                 row.attempts = attempts
+            if message_id:
+                row.message_id = message_id[:255]
             if status == "sent":
                 row.sent_at = datetime.now(UTC)
             if clear_body or (status in ("sent", "failed") and not keeps_body(row)):
@@ -499,4 +508,7 @@ def _view(row: EmailLog) -> EmailLogView:
         source=row.source or "crm",
         purpose=row.purpose,
         attachments=len(row.attachments or []),
+        bounce={"reason": row.bounce_reason, "status": row.bounce_status, "at": row.bounced_at}
+        if row.bounced_at is not None and row.bounce_reason
+        else None,
     )

@@ -18,6 +18,7 @@ from tests.crm_leads_support import (
     CrmLeadsFake,
     client_detail,
     client_item,
+    contact,
     deal,
     invitation_out,
 )
@@ -107,6 +108,7 @@ async def test_card_360_collects_contacts_leads_requests_and_documents(
         "channels": ["telegram", "phone"],
         "preferred_channel": "telegram",
         "is_primary": True,
+        "email_problem": None,
     }
     assert second["channels"] == ["email"]
     assert second["telegram"] is None
@@ -438,3 +440,34 @@ async def test_list_fetches_logos_in_batches_for_every_row(
     assert all(row["logo_url"] for row in items)
     newest = next(row for row in items if row["id"] == 1249)
     assert newest["logo_url"] == "/api/v1/people/counterparties/2249/logo?v=v2249"
+
+
+async def test_card_360_marks_a_contact_whose_letters_do_not_arrive(
+    web: Web, crm: CrmLeadsFake, check: ContractChecker
+) -> None:
+    crm.answer(
+        "GET",
+        "clients/12/contacts",
+        body={
+            "contacts": [
+                contact(
+                    52,
+                    email="gone@old.example",
+                    telegram_identity_id=None,
+                    email_undeliverable={
+                        "kind": "permanent",
+                        "reason": "mailbox_not_found",
+                        "last_at": "2026-11-24T10:15:00Z",
+                        "reports": 1,
+                    },
+                )
+            ],
+            "suggestions": [],
+        },
+    )
+    await web.login(["DIRECTOR"])
+    card = check(await web.client.get(f"{BASE}/12"), "/crm/clients/{id}", "get").json()
+    assert card["contacts"][0]["email_problem"] == {
+        "reason": "mailbox_not_found",
+        "at": "2026-11-24T10:15:00Z",
+    }

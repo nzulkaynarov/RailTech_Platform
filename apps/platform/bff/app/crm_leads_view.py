@@ -16,6 +16,7 @@ from app.schemas_crm_leads import (
     ClientInvitation,
     ClientShort,
     ConsentMethod,
+    EmailProblem,
     InviteChannel,
     LeadCard,
     LeadConsent,
@@ -131,6 +132,13 @@ def notice(raw: crm.NoticeOut | None) -> LeadNotice | None:
     )
 
 
+def email_problem(raw: crm.EmailUndeliverableOut | None) -> EmailProblem | None:
+    """Letters to the address come back (delivery reports): reason code and the last report date."""
+    if raw is None:
+        return None
+    return EmailProblem(reason=raw.reason.value, at=raw.last_at)
+
+
 def invitation(raw: crm.InvitationOut | None) -> ClientInvitation | None:
     return invitation_of(raw) if raw is not None else None
 
@@ -194,6 +202,7 @@ def lead_card(
             due_at=lead.first_response_due_at, overdue=bool(lead.first_response_overdue)
         ),
         invitation=invitation(lead.invitation),
+        email_problem=email_problem(lead.email_undeliverable),
         origin=origin_of(lead.origin),
         discarded=_discarded(lead.discarded_kind),
         duplicate_of=lead_number(lead.duplicate_of_lead_id) if lead.duplicate_of_lead_id else None,

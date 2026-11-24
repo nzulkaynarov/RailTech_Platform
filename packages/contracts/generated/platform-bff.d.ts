@@ -10342,6 +10342,8 @@ export interface components {
       /** @description Число вложений (по ссылке на объект хранилища системы-источника) */
       attachments: number;
       attempts: number;
+      /** @description Отчёт о недоставке этого письма — сервер принял его, затем вернул; `null` или нет поля — не возвращали */
+      bounce?: components["schemas"]["EmailProblem"] | null;
       /** Format: date-time */
       created_at: string;
       error: string | null;
@@ -17480,6 +17482,16 @@ export interface components {
       /** Format: date-time */
       at: string;
     };
+    /** @description Почтовые серверы возвращают письма на этот адрес (отчёты о недоставке): автоматические письма на него не уходят, пока адрес не исправят. Причина — кодом, текст — у экрана. */
+    EmailProblem: {
+      /** @enum {string} */
+      reason: "domain_not_found" | "mailbox_not_found" | "mailbox_full" | "rejected" | "other";
+      /**
+       * Format: date-time
+       * @description Когда пришёл последний отчёт
+       */
+      at: string;
+    };
     /** @description Сообщение клиенту от системы (подтверждение заявки, приглашение) — канал и итог словами */
     LeadNotice: {
       channel: string | null;
@@ -17537,6 +17549,8 @@ export interface components {
         overdue: boolean;
       };
       invitation: components["schemas"]["ClientInvitation"] | null;
+      /** @description Письма на почту лида не доходят (отчёт о недоставке); `null` или нет поля — всё в порядке */
+      email_problem?: components["schemas"]["EmailProblem"] | null;
       /** @description Откуда пришёл лид кроме канала (LID-5): форма, страница, откуда перешли, кампания. `null` — у лидов других каналов и прежних лидов фактов нет. */
       origin?: components["schemas"]["LeadOrigin"] | null;
       /** @description Лид отброшен как «Спам», «Тест» или «Дубль» (LH-1): в списках его нет, карточка открывается по номеру. */
@@ -17603,6 +17617,8 @@ export interface components {
       /** @enum {string|null} */
       preferred_channel: "email" | "telegram" | "both" | null;
       is_primary: boolean;
+      /** @description Письма на почту контакта не доходят (отчёт о недоставке); `null` или нет поля — всё в порядке */
+      email_problem?: components["schemas"]["EmailProblem"] | null;
     };
     ClientLeadLink: {
       lead: string;

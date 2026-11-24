@@ -18,6 +18,7 @@ import {
 } from "../../../shared/api/generated/platform-bff";
 import { useFormat } from "../../../shared/lib/useFormat";
 import { DefinitionList } from "../../../shared/ui/DefinitionList";
+import { bounceReason } from "../../../shared/lib/bounceReason";
 import { StatusTag } from "../../../shared/ui/StatusTag";
 import {
   ActionForm,
@@ -240,6 +241,12 @@ function MailLog() {
                   {row.error ? (
                     <p className="pf-int-sub">
                       {t("mail.log.error", { error: reason(row.error) })}
+                    </p>
+                  ) : null}
+                  {row.bounce ? (
+                    <p className="pf-int-sub">
+                      {t("mail.log.bounce", { reason: bounceReason(t, row.bounce.reason) })} ·{" "}
+                      {date(row.bounce.at, "datetime")}
                     </p>
                   ) : null}
                 </li>

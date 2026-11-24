@@ -246,5 +246,16 @@
     "confirmObject_act": "dalolatnoma havolasini",
     "loadFailed": "Mijoz havolalarini yuklab bölmadi.",
     "retry": "Qayta uriniş"
+  },
+  "emailProblem": {
+    "title": "Bu manzilga xatlar yetib bormayapti",
+    "line": "{{title}}: {{reason}} · {{date}}",
+    "reasons": {
+      "domain_not_found": "bunday pochta domeni yöq",
+      "mailbox_not_found": "bunday pochta qutisi yöq",
+      "mailbox_full": "pochta qutisi tölgan",
+      "rejected": "qabul qiluvchining serveri xatni rad etdi",
+      "other": "pochta serveri xatni qaytardi"
+    }
   }
 }

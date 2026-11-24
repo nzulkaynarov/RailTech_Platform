@@ -74,6 +74,16 @@ class LeadMessagePreview(BaseModel):
     at: datetime
 
 
+BounceReason = Literal["domain_not_found", "mailbox_not_found", "mailbox_full", "rejected", "other"]
+
+
+class EmailProblem(BaseModel):
+    """Mail servers return letters to this address (delivery reports): reason code and date."""
+
+    reason: BounceReason
+    at: datetime
+
+
 class LeadNotice(BaseModel):
     channel: str | None
     status: NoticeStatus
@@ -139,6 +149,7 @@ class LeadCard(BaseModel):
     confirmation: LeadNotice | None
     first_response: LeadFirstResponse
     invitation: ClientInvitation | None
+    email_problem: EmailProblem | None = None
     origin: LeadOrigin | None = None
     # LH-1: лид отброшен как спам, тест или дубль (и номер оставшегося лида у дубля)
     discarded: Literal["spam", "test", "duplicate"] | None = None
@@ -176,6 +187,7 @@ class ClientContactView(BaseModel):
     channels: list[ContactChannel]
     preferred_channel: InviteChannel | None
     is_primary: bool
+    email_problem: EmailProblem | None = None
 
 
 class ClientLeadLink(BaseModel):

@@ -106,7 +106,8 @@ async def send(
     connection: SmtpConnection,
     outgoing: Outgoing,
     files: tuple[MailAttachment, ...],
-) -> None:
+) -> str | None:
+    """Send; the Message-ID of the letter as it went out (None — the transport does not tell)."""
     # Простое письмо — прежний вызов: подмены транспорта в тестах о новых полях не знают.
     extra: dict[str, Any] = {}
     if outgoing.html:
@@ -119,7 +120,8 @@ async def send(
         extra["headers"] = outgoing.headers
     if outgoing.cc:
         extra["cc"] = outgoing.cc
-    await transport.send(connection, outgoing.to, outgoing.subject, outgoing.body, **extra)
+    sent = await transport.send(connection, outgoing.to, outgoing.subject, outgoing.body, **extra)
+    return sent if isinstance(sent, str) else None
 
 
 def error_text(exc: SmtpProbeError | AttachmentError) -> str:

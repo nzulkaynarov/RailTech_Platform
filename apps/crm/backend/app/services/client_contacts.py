@@ -17,6 +17,7 @@ from app.models.leads import TelegramIdentity
 from app.schemas.clients import ClientContacts, ContactIn, ContactOut, ContactSuggestion
 from app.security import audit
 from app.security.principal import Principal
+from app.services import bounces
 
 AUDITED = (
     "full_name",
@@ -46,6 +47,12 @@ def _snapshot(row: ClientContact) -> dict[str, Any]:
     return {k: getattr(row, k) for k in AUDITED}
 
 
+def _contact_out(row: ClientContact, bad: bounces.Undeliverable | None) -> ContactOut:
+    out = ContactOut.model_validate(row, from_attributes=True)
+    out.email_undeliverable = bounces.undeliverable_out(bad)
+    return out
+
+
 class ClientContactService:
     def __init__(self, sessions: async_sessionmaker[AsyncSession]) -> None:
         self._sessions = sessions
@@ -71,6 +78,7 @@ class ClientContactService:
                     .order_by(TelegramIdentity.id)
                 )
             ).all()
+            bad = await bounces.states(session, [r.email for r in rows])
         linked = {r.telegram_identity_id for r in rows}
         phones = {r.phone_e164 for r in rows}
         suggestions = [
@@ -85,7 +93,7 @@ class ClientContactService:
             if i.id not in linked and i.phone_e164 not in phones
         ]
         return ClientContacts(
-            contacts=[ContactOut.model_validate(r, from_attributes=True) for r in rows],
+            contacts=[_contact_out(r, bad.get((r.email or "").lower())) for r in rows],
             suggestions=suggestions,
         )
 

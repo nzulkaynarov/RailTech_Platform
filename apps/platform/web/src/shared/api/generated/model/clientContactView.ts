@@ -4,6 +4,7 @@
  */
 import type { ClientContactChannel } from "./clientContactChannel";
 import type { ClientContactViewPreferredChannel } from "./clientContactViewPreferredChannel";
+import type { EmailProblem } from "./emailProblem";
 
 export interface ClientContactView {
   id: number;
@@ -24,4 +25,6 @@ export interface ClientContactView {
   /** @nullable */
   preferred_channel: ClientContactViewPreferredChannel;
   is_primary: boolean;
+  /** Письма на почту контакта не доходят (отчёт о недоставке); `null` или нет поля — всё в порядке */
+  email_problem?: EmailProblem | null;
 }

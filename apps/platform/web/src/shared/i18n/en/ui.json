@@ -246,5 +246,16 @@
     "confirmObject_act": "the act link",
     "loadFailed": "Could not load the client links.",
     "retry": "Retry"
+  },
+  "emailProblem": {
+    "title": "Emails to this address are not delivered",
+    "line": "{{title}}: {{reason}} · {{date}}",
+    "reasons": {
+      "domain_not_found": "no such mail domain",
+      "mailbox_not_found": "no such mailbox",
+      "mailbox_full": "the mailbox is full",
+      "rejected": "the recipient's server rejected the email",
+      "other": "the mail server returned the email"
+    }
   }
 }
