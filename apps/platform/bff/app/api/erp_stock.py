@@ -18,6 +18,7 @@ from app.api.erp_calc import ErpCalc, Number
 from app.clients.erp_company import erp_error
 from app.deps import Authed, require
 from app.errors import PlatformError
+from app.schemas_eds_projects import DocumentClientLinks, RawDocumentClientLinks
 from app.schemas_erp_calc import CalcSheet, to_sheet
 from app.schemas_erp_stock import (
     PriceRequest,
@@ -677,3 +678,86 @@ async def search_trace(
 ) -> StockTraceList:
     """Прослеживаемость (ADR-0021): поиск по серийному или партии — откуда и куда; решает ERP."""
     return to_trace(await _erp(authed).stock("GET", "trace/", params={"q": q.strip()}))
+
+
+# --- ссылки партнёра на запрос цены и заказ в Кабинете (ДК-5) -------------------------------
+
+
+async def _partner_links(
+    erp: ErpStock, method: str, path: str, *, empty_on_forbidden: bool
+) -> DocumentClientLinks:
+    """Список ссылок или отзыв: ERP решает право (`supply.manage`) и отбирает ссылки документа.
+    Нет права на чтение — пустой список (блок на экране скрыт); на отзыв — 403 как есть."""
+    response = await erp._call("erp", method, f"/api/v1/stock/{path}")
+    if response.status_code == status.HTTP_403_FORBIDDEN and empty_on_forbidden:
+        return DocumentClientLinks(links=[], can_revoke=False)
+    if response.status_code >= 400:
+        raise stock_error(response)
+    raw = RawDocumentClientLinks.model_validate(response.json())
+    return DocumentClientLinks(links=raw.links, can_revoke=raw.can_revoke)
+
+
+@router.get(
+    "/stock/orders/{order_number}/partner-links",
+    response_model=DocumentClientLinks,
+    operation_id="getSupplierOrderPartnerLinks",
+)
+async def order_partner_links(authed: Reader, order_number: OrderNumber) -> DocumentClientLinks:
+    """Кому из контактов партнёра ушла ссылка на заказ и открывали ли её (адрес замаскирован)."""
+    erp = _erp(authed)
+    order_id = await erp.order_id(order_number)
+    return await _partner_links(
+        erp, "GET", f"orders/{order_id}/partner-links/", empty_on_forbidden=True
+    )
+
+
+@router.post(
+    "/stock/orders/{order_number}/partner-links/revoke",
+    response_model=DocumentClientLinks,
+    operation_id="revokeSupplierOrderPartnerLinks",
+)
+async def revoke_order_partner_links(
+    authed: Actor, order_number: OrderNumber
+) -> DocumentClientLinks:
+    """«Отозвать ссылку»: ERP гасит ссылки ЭТОГО заказа у всех контактов и пишет журнал заказа."""
+    erp = _erp(authed)
+    order_id = await erp.order_id(order_number)
+    return await _partner_links(
+        erp, "POST", f"orders/{order_id}/revoke-partner-links/", empty_on_forbidden=False
+    )
+
+
+@router.get(
+    "/price-requests/{request_id}/partner-links",
+    response_model=DocumentClientLinks,
+    operation_id="getPriceRequestPartnerLinks",
+    tags=["calc"],
+)
+async def price_request_partner_links(
+    authed: CalcReader, request_id: RequestId
+) -> DocumentClientLinks:
+    """Кому из контактов партнёра ушла ссылка на запрос цены и открывали ли её."""
+    return await _partner_links(
+        _erp(authed),
+        "GET",
+        f"price-requests/{int(request_id)}/partner-links/",
+        empty_on_forbidden=True,
+    )
+
+
+@router.post(
+    "/price-requests/{request_id}/partner-links/revoke",
+    response_model=DocumentClientLinks,
+    operation_id="revokePriceRequestPartnerLinks",
+    tags=["calc"],
+)
+async def revoke_price_request_partner_links(
+    authed: Actor, request_id: RequestId
+) -> DocumentClientLinks:
+    """«Отозвать ссылку» запроса цены: ссылки только этого запроса."""
+    return await _partner_links(
+        _erp(authed),
+        "POST",
+        f"price-requests/{int(request_id)}/revoke-partner-links/",
+        empty_on_forbidden=False,
+    )

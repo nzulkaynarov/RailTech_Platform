@@ -31931,6 +31931,48 @@ export const getAnswerPriceRequestResponseMock = (
   ...overrideResponse,
 });
 
+export const getGetPriceRequestPartnerLinksResponseMock = (
+  overrideResponse: Partial<Extract<DocumentClientLinks, object>> = {},
+): DocumentClientLinks => ({
+  links: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    recipient_hint: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    sent_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    first_opened_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    last_opened_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    expires_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    state: faker.helpers.arrayElement(["active", "revoked", "expired", "superseded"] as const),
+  })),
+  can_revoke: faker.datatype.boolean(),
+  ...overrideResponse,
+});
+
+export const getRevokePriceRequestPartnerLinksResponseMock = (
+  overrideResponse: Partial<Extract<DocumentClientLinks, object>> = {},
+): DocumentClientLinks => ({
+  links: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    recipient_hint: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    sent_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    first_opened_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    last_opened_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    expires_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    state: faker.helpers.arrayElement(["active", "revoked", "expired", "superseded"] as const),
+  })),
+  can_revoke: faker.datatype.boolean(),
+  ...overrideResponse,
+});
+
 export const getListStockSuppliersResponseMock = (
   overrideResponse: Partial<Extract<StockSupplierList, object>> = {},
 ): StockSupplierList => ({
@@ -33898,6 +33940,48 @@ export const getCancelSupplierOrderResponseMock = (
     ship: faker.datatype.boolean(),
     prices: faker.datatype.boolean(),
   },
+  ...overrideResponse,
+});
+
+export const getGetSupplierOrderPartnerLinksResponseMock = (
+  overrideResponse: Partial<Extract<DocumentClientLinks, object>> = {},
+): DocumentClientLinks => ({
+  links: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    recipient_hint: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    sent_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    first_opened_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    last_opened_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    expires_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    state: faker.helpers.arrayElement(["active", "revoked", "expired", "superseded"] as const),
+  })),
+  can_revoke: faker.datatype.boolean(),
+  ...overrideResponse,
+});
+
+export const getRevokeSupplierOrderPartnerLinksResponseMock = (
+  overrideResponse: Partial<Extract<DocumentClientLinks, object>> = {},
+): DocumentClientLinks => ({
+  links: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    recipient_hint: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    sent_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    first_opened_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    last_opened_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    expires_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    state: faker.helpers.arrayElement(["active", "revoked", "expired", "superseded"] as const),
+  })),
+  can_revoke: faker.datatype.boolean(),
   ...overrideResponse,
 });
 
@@ -49623,6 +49707,54 @@ export const getAnswerPriceRequestMockHandler = (
   );
 };
 
+export const getGetPriceRequestPartnerLinksMockHandler = (
+  overrideResponse?:
+    | DocumentClientLinks
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<DocumentClientLinks> | DocumentClientLinks),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/erp/price-requests/:requestId/partner-links",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetPriceRequestPartnerLinksResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getRevokePriceRequestPartnerLinksMockHandler = (
+  overrideResponse?:
+    | DocumentClientLinks
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<DocumentClientLinks> | DocumentClientLinks),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/erp/price-requests/:requestId/partner-links/revoke",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getRevokePriceRequestPartnerLinksResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
 export const getListStockSuppliersMockHandler = (
   overrideResponse?:
     | StockSupplierList
@@ -49856,6 +49988,54 @@ export const getCancelSupplierOrderMockHandler = (
             ? await overrideResponse(info)
             : overrideResponse
           : getCancelSupplierOrderResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getGetSupplierOrderPartnerLinksMockHandler = (
+  overrideResponse?:
+    | DocumentClientLinks
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<DocumentClientLinks> | DocumentClientLinks),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/erp/stock/orders/:orderNumber/partner-links",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetSupplierOrderPartnerLinksResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getRevokeSupplierOrderPartnerLinksMockHandler = (
+  overrideResponse?:
+    | DocumentClientLinks
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<DocumentClientLinks> | DocumentClientLinks),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/erp/stock/orders/:orderNumber/partner-links/revoke",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getRevokeSupplierOrderPartnerLinksResponseMock(),
         { status: 200 },
       );
     },
@@ -52532,6 +52712,8 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getListCalcPriceRequestsMockHandler(),
   getCreateCalcPriceRequestMockHandler(),
   getAnswerPriceRequestMockHandler(),
+  getGetPriceRequestPartnerLinksMockHandler(),
+  getRevokePriceRequestPartnerLinksMockHandler(),
   getListStockSuppliersMockHandler(),
   getListSupplierOrdersMockHandler(),
   getCreateSupplierOrderMockHandler(),
@@ -52542,6 +52724,8 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getRequestSupplierOrderPriceMockHandler(),
   getConfirmSupplierOrderMockHandler(),
   getCancelSupplierOrderMockHandler(),
+  getGetSupplierOrderPartnerLinksMockHandler(),
+  getRevokeSupplierOrderPartnerLinksMockHandler(),
   getReceiveSupplierOrderMockHandler(),
   getListStockReceiptsMockHandler(),
   getListStockShipmentsMockHandler(),

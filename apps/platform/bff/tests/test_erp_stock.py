@@ -190,6 +190,8 @@ ACTIONS: list[tuple[str, str, Any]] = [
     ("DELETE", f"/erp/calc/{NUMBER}/lines/7/reserve", None),
     ("POST", f"/erp/calc/{NUMBER}/price-requests", {"supplier_id": "5", "line_ids": ["7"]}),
     ("POST", "/erp/price-requests/3/answer", {}),
+    ("POST", "/erp/price-requests/3/partner-links/revoke", None),
+    ("POST", f"/erp/stock/orders/{ORDER}/partner-links/revoke", None),
     (
         "POST",
         "/erp/stock/orders",
@@ -579,6 +581,92 @@ async def test_answer_is_forwarded(web: Web, erp: respx.MockRouter, check: Contr
     assert response.status_code == 200
     check(response, "/erp/price-requests/{request_id}/answer", "post")
     assert json.loads(route.calls.last.request.content) == {"note": "90 млн"}
+
+
+# --- ссылки партнёра на запрос цены и заказ (ДК-5) -----------------------------------------------
+
+
+def partner_links(**extra: Any) -> dict[str, Any]:
+    return {
+        "links": [
+            {
+                "id": 9,
+                "recipient_hint": "d***@vendor.example",
+                "sent_at": "2026-11-24T09:00:00+00:00",
+                "first_opened_at": None,
+                "last_opened_at": None,
+                "expires_at": "2026-12-24T09:00:00+00:00",
+                "state": "active",
+            }
+        ],
+        "can_revoke": True,
+        **extra,
+    }
+
+
+async def test_partner_links_of_an_order_are_listed_and_revoked_by_number(
+    web: Web, erp: respx.MockRouter, check: ContractChecker
+) -> None:
+    await web.login(["SUPPLY"])
+    listed = erp.get(f"{STOCK}/orders/31/partner-links/").mock(
+        return_value=httpx.Response(200, json=partner_links())
+    )
+    revoked = erp.post(f"{STOCK}/orders/31/revoke-partner-links/").mock(
+        return_value=httpx.Response(
+            200,
+            json=partner_links(
+                can_revoke=False, links=[{**partner_links()["links"][0], "state": "revoked"}]
+            ),
+        )
+    )
+    got = await web.client.get(f"/api/v1/erp/stock/orders/{ORDER_ENCODED}/partner-links")
+    assert got.status_code == 200, got.json()
+    check(got, "/erp/stock/orders/{order_number}/partner-links", "get")
+    assert got.json()["links"][0]["recipient_hint"] == "d***@vendor.example"
+    assert "id" not in got.json()["links"][0], "id ссылки наружу не уходит"
+    assert listed.called
+    done = await call(web, "POST", f"/erp/stock/orders/{ORDER_ENCODED}/partner-links/revoke")
+    assert done.status_code == 200
+    check(done, "/erp/stock/orders/{order_number}/partner-links/revoke", "post")
+    assert done.json()["can_revoke"] is False
+    assert done.json()["links"][0]["state"] == "revoked"
+    assert revoked.called
+
+
+async def test_partner_links_of_a_price_request(
+    web: Web, erp: respx.MockRouter, check: ContractChecker
+) -> None:
+    await web.login(["SUPPLY"])
+    erp.get(f"{STOCK}/price-requests/3/partner-links/").mock(
+        return_value=httpx.Response(200, json=partner_links())
+    )
+    route = erp.post(f"{STOCK}/price-requests/3/revoke-partner-links/").mock(
+        return_value=httpx.Response(200, json=partner_links(can_revoke=False, links=[]))
+    )
+    got = await web.client.get("/api/v1/erp/price-requests/3/partner-links")
+    assert got.status_code == 200
+    check(got, "/erp/price-requests/{request_id}/partner-links", "get")
+    done = await call(web, "POST", "/erp/price-requests/3/partner-links/revoke")
+    assert done.status_code == 200
+    assert route.called
+    check(done, "/erp/price-requests/{request_id}/partner-links/revoke", "post")
+
+
+async def test_partner_links_without_the_supply_right_are_hidden_not_failed(
+    web: Web, erp: respx.MockRouter
+) -> None:
+    await web.login(["SUPPLY"])
+    erp.get(f"{STOCK}/price-requests/3/partner-links/").mock(
+        return_value=httpx.Response(403, json={"detail": "ROLE_NOT_PERMITTED"})
+    )
+    erp.post(f"{STOCK}/price-requests/3/revoke-partner-links/").mock(
+        return_value=httpx.Response(403, json={"detail": "ROLE_NOT_PERMITTED"})
+    )
+    got = await web.client.get("/api/v1/erp/price-requests/3/partner-links")
+    assert got.status_code == 200
+    assert got.json() == {"links": [], "can_revoke": False}
+    refused = await call(web, "POST", "/erp/price-requests/3/partner-links/revoke")
+    assert refused.status_code == 403, "отзыв без права — отказ, а не пустой ответ"
 
 
 # --- заказы поставщикам ------------------------------------------------------------------------

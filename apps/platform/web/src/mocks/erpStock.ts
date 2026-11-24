@@ -44,6 +44,7 @@ import {
   type MockOrderLog,
   type MockProduct,
   type MockReservation,
+  type MockPartnerLink,
   type MockStock,
   type MockUnit,
   REQUESTS,
@@ -108,6 +109,43 @@ export function resetStockMock(): void {
 }
 
 const seg = (value: string) => encodeURIComponent(value);
+
+/** Ссылки партнёра документа: ушедший партнёру документ — одна живая ссылка контакту; черновик и не ушедший запрос — пусто. */
+function partnerLinksOf(state: MockStock, key: string, sent: boolean) {
+  const links = (state.partnerLinks ??= {})[key] ?? (sent ? [seedPartnerLink()] : []);
+  return {
+    links: links.map((l) => ({
+      id: 1,
+      recipient_hint: l.hint,
+      sent_at: l.sentAt,
+      first_opened_at: l.openedAt,
+      last_opened_at: l.openedAt,
+      expires_at: l.expiresAt,
+      state: l.state,
+    })),
+    can_revoke: links.some((l) => l.state === "active"),
+  };
+}
+
+function seedPartnerLink(): MockPartnerLink {
+  const now = Date.now();
+  return {
+    hint: "d***@steel.example",
+    sentAt: new Date(now - 86_400_000).toISOString(),
+    openedAt: null,
+    expiresAt: new Date(now + 30 * 86_400_000).toISOString(),
+    state: "active",
+  };
+}
+
+function revokePartnerLinks(state: MockStock, key: string, sent: boolean) {
+  const current = (state.partnerLinks ??= {})[key] ?? (sent ? [seedPartnerLink()] : []);
+  state.partnerLinks[key] = current.map((l) =>
+    l.state === "active" ? { ...l, state: "revoked" } : l,
+  );
+  write(state);
+  return partnerLinksOf(state, key, sent);
+}
 const today = () => new Date().toISOString().slice(0, 10);
 const money = (value: number) => value.toFixed(2);
 
@@ -1036,6 +1074,53 @@ export const erpStockHandlers = [
     entry.answerNote = body.note ?? null;
     write(state);
     return HttpResponse.json<PriceRequest>(presentPriceRequest(entry));
+  }),
+
+  // ДК-5: ссылки партнёра на запрос цены и заказ; ERP отдаёт их тому, кто отправляет документ (`erp.stock`)
+  http.get("*/api/v1/erp/stock/orders/:number/partner-links", ({ params }) => {
+    const held = guard("erp.stock", "read");
+    if ("error" in held) return held.error;
+    const order = read().orders.find(
+      (o) => o.number === decodeURIComponent(String(params["number"])),
+    );
+    if (!order) return orderMissing();
+    return HttpResponse.json(
+      partnerLinksOf(read(), `order:${order.number}`, order.status !== "draft"),
+    );
+  }),
+
+  http.post("*/api/v1/erp/stock/orders/:number/partner-links/revoke", ({ params }) => {
+    const held = guard("erp.stock", "full");
+    if ("error" in held) return held.error;
+    const state = read();
+    const order = state.orders.find(
+      (o) => o.number === decodeURIComponent(String(params["number"])),
+    );
+    if (!order) return orderMissing();
+    return HttpResponse.json(
+      revokePartnerLinks(state, `order:${order.number}`, order.status !== "draft"),
+    );
+  }),
+
+  http.get("*/api/v1/erp/price-requests/:id/partner-links", ({ params }) => {
+    const held = guard("erp.calc", "read");
+    if ("error" in held) return held.error;
+    const entry = read().priceRequests.find((p) => String(p.id) === String(params["id"]));
+    if (!entry) return missing("request_not_found", "Запроса нет.");
+    return HttpResponse.json(
+      partnerLinksOf(read(), `request:${String(entry.id)}`, entry.status === "sent"),
+    );
+  }),
+
+  http.post("*/api/v1/erp/price-requests/:id/partner-links/revoke", ({ params }) => {
+    const held = guard("erp.stock", "full");
+    if ("error" in held) return held.error;
+    const state = read();
+    const entry = state.priceRequests.find((p) => String(p.id) === String(params["id"]));
+    if (!entry) return missing("request_not_found", "Запроса нет.");
+    return HttpResponse.json(
+      revokePartnerLinks(state, `request:${String(entry.id)}`, entry.status === "sent"),
+    );
   }),
 
   http.get("*/api/v1/erp/stock/suppliers", ({ request }) => {

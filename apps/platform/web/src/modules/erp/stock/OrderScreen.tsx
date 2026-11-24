@@ -18,6 +18,7 @@ import { LinkButton } from "../../../shared/ui/LinkButton";
 import { PageHeader } from "../../../shared/ui/PageHeader";
 import { useStateLabels, withUnit } from "./api";
 import { OrderStatusTag } from "./OrdersTab";
+import { OrderPartnerLinks } from "./PartnerLinks";
 import {
   CancelModal,
   ConfirmModal,
@@ -318,6 +319,7 @@ function Content({ order }: { order: SupplierOrderDetail }) {
       >
         <Lines order={order} />
       </Card>
+      {order.status !== "draft" ? <OrderPartnerLinks number={order.number} /> : null}
       <Card
         size="small"
         title={<h2 className="pf-calc-title">{t("order.receiptsTitle")}</h2>}

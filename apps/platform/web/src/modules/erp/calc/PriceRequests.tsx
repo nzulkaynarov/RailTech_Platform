@@ -10,6 +10,7 @@ import { useFormat } from "../../../shared/lib/useFormat";
 import { QueryState } from "../../../shared/ui/FormParts";
 import { StatusTag } from "../../../shared/ui/StatusTag";
 import { useErrorText, useRefreshStock, useStateLabels } from "../stock/api";
+import { PriceRequestPartnerLinks } from "../stock/PartnerLinks";
 import { calcRef } from "./api";
 import { priceRequestLinesText } from "./priceRequestText";
 
@@ -56,6 +57,7 @@ function Entry({ item, canAnswer }: { item: PriceRequest; canAnswer: boolean }) 
       </p>
       <p>{priceRequestLinesText(item.lines, qty)}</p>
       {item.error ? <p className="pf-hint">{item.error}</p> : null}
+      {item.status !== "failed" ? <PriceRequestPartnerLinks requestId={item.id} /> : null}
       {item.answer_note ? (
         <p className="pf-hint">{t("priceRequest.answerNote", { note: item.answer_note })}</p>
       ) : null}

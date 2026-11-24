@@ -223,7 +223,8 @@
       "revoked_quote": "Havola bekor qilindi: mijoz u orqali heç narsani oça olmaydi. TTni qayta yuborsangiz, yangi havola beriladi.",
       "expired": "Havola muddati tugadi.",
       "superseded": "TTning yangiroq versiyasi bor: mijoz bu havola orqali faqat şuni köradi.",
-      "none": "Havola yöq."
+      "none": "Havola yöq.",
+      "revoked_partner": "Havola bekor qilindi: hamkor u orqali heç narsani oça olmaydi. Qayta yuborsangiz, yangi havola beriladi."
     },
     "to": "Qabul qiluvçi — {{to}}.",
     "sent": "Yuborilgan: {{date}}.",
@@ -245,6 +246,13 @@
     "confirmObject_invoice": "hisob havolasini",
     "confirmObject_act": "dalolatnoma havolasini",
     "loadFailed": "Mijoz havolalarini yuklab bölmadi.",
-    "retry": "Qayta uriniş"
+    "retry": "Qayta uriniş",
+    "title_partner": "Hamkorning Kabinetdagi havolasi",
+    "opened_partner": "Hamkor oçgan: {{date}}.",
+    "notOpened_partner": "Hamkor hali oçmagan.",
+    "confirmText_partner": "Hamkor u orqali endi heç narsani köra olmaydi. Qayta yuborsangiz, yangi havola beriladi.",
+    "confirmObject_price_request": "narx sörovi havolasini",
+    "confirmObject_supplier_order": "buyurtma havolasini",
+    "loadFailed_partner": "Hamkor havolalarini yuklab bölmadi."
   }
 }
