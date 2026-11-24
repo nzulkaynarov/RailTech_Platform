@@ -108,7 +108,7 @@
     "noRequest": "Not linked to a request",
     "noClient": "Client not identified",
     "byClient": "Tax ID {{inn}}",
-    "bySystem": "By the system, from a CRM request",
+    "bySystem": "By the system, from a client request",
     "decision": "Director's decision",
     "decisionFields": {
       "text": "Resolution text",
@@ -228,11 +228,11 @@
         "hint": "stock and partner prices"
       },
       "services": {
-        "name": "Chief engineer",
+        "name": "Services",
         "hint": "services, specs, crew"
       },
       "payment_terms": {
-        "name": "Accountant",
+        "name": "Payment terms",
         "hint": "payment terms"
       }
     },

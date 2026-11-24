@@ -59,14 +59,14 @@ describe("Счета и оплаты: список", () => {
     expect(within(row).getByText("просрочен на 8 дн.")).toBeVisible();
   });
 
-  it("«Оплаты на подтверждение»: статус «Подтверждение получено» и действие «Проверить подтверждение»", async () => {
+  it("«Оплаты на подтверждение»: статус «Платёжное поручение получено» и действие «Проверить платёжное поручение»", async () => {
     signIn("accountant@demo.example");
     renderAt("/eds/payments?show=proofs");
 
     const row = await screen.findByRole("row", { name: /СЧ-2026\/145/ });
-    expect(within(row).getByText("Подтверждение получено")).toBeVisible();
+    expect(within(row).getByText("Платёжное поручение получено")).toBeVisible();
     expect(
-      within(row).getByRole("link", { name: "Проверить подтверждение: СЧ-2026/145" }),
+      within(row).getByRole("link", { name: "Проверить платёжное поручение: СЧ-2026/145" }),
     ).toHaveTextContent(/^Проверить$/);
   });
 
@@ -260,11 +260,11 @@ describe("Подтвердить оплату", () => {
   });
 });
 
-describe("Подтверждения оплаты и запрос платёжки", () => {
-  it("«Запросить подтверждение»: шаблон сообщения с номером, суммой и сроком; отметка попадает в журнал", async () => {
+describe("Платёжные поручения и запрос платёжки", () => {
+  it("«Запросить платёжное поручение»: шаблон сообщения с номером, суммой и сроком; отметка попадает в журнал", async () => {
     const { panel } = await openInvoice("СЧ-2026/142");
 
-    fireEvent.click(within(panel).getByRole("button", { name: "Запросить подтверждение" }));
+    fireEvent.click(within(panel).getByRole("button", { name: "Запросить платёжное поручение" }));
 
     const text = within(panel).getByLabelText<HTMLTextAreaElement>("Текст сообщения");
     expect(text.value).toContain("СЧ-2026/142");
@@ -273,29 +273,31 @@ describe("Подтверждения оплаты и запрос платёжк
       within(panel).getByText(/Автоматической отправки клиенту в бот и почту пока нет/),
     ).toBeVisible();
     fireEvent.click(
-      within(panel).getByRole("button", { name: "Отметить: подтверждение запросили" }),
+      within(panel).getByRole("button", { name: "Отметить: платёжное поручение запросили" }),
     );
-    expect(await screen.findByText("Запрос подтверждения отмечен в журнале счёта")).toBeVisible();
-    expect(await within(panel).findByText(/Подтверждение запросили/)).toBeVisible();
+    expect(
+      await screen.findByText("Запрос платёжного поручения отмечен в журнале счёта"),
+    ).toBeVisible();
+    expect(await within(panel).findByText(/Платёжное поручение запросили/)).toBeVisible();
   });
 
-  it("«Приложить подтверждение»: без файла — подсказка, с файлом — платёжка в списке и счёт на вкладке «Платёжки»", async () => {
+  it("«Приложить платёжное поручение»: без файла — подсказка, с файлом — платёжка в списке и счёт на вкладке «Платёжки»", async () => {
     const { panel } = await openInvoice("СЧ-2026/142");
 
-    fireEvent.click(within(panel).getByRole("button", { name: "Приложить подтверждение" }));
-    const form = within(panel).getByRole("form", { name: "Подтверждение от клиента" });
+    fireEvent.click(within(panel).getByRole("button", { name: "Приложить платёжное поручение" }));
+    const form = within(panel).getByRole("form", { name: "Платёжное поручение клиента" });
     fireEvent.click(within(form).getByRole("button", { name: "Приложить" }));
-    expect(await within(form).findByText("Выберите файл подтверждения.")).toBeVisible();
+    expect(await within(form).findByText("Выберите файл платёжного поручения.")).toBeVisible();
 
     const file = new File(["%PDF-1.4"], "pp-142.pdf", { type: "application/pdf" });
-    fireEvent.change(within(form).getByLabelText("Файл подтверждения"), {
+    fireEvent.change(within(form).getByLabelText("Файл платёжного поручения"), {
       target: { files: [file] },
     });
     fireEvent.click(within(form).getByRole("button", { name: "Приложить" }));
 
-    expect(await screen.findByText("Подтверждение приложено")).toBeVisible();
+    expect(await screen.findByText("Платёжное поручение приложено")).toBeVisible();
     expect(
-      await within(panel).findByRole("link", { name: "Скачать подтверждение pp-142.pdf" }),
+      await within(panel).findByRole("link", { name: "Скачать платёжное поручение pp-142.pdf" }),
     ).toBeVisible();
   });
 });
@@ -317,7 +319,9 @@ describe("Записки к оплате", () => {
     expect(within(panel).getByRole("link", { name: "Скачать счёт-аренда.pdf" })).toBeVisible();
 
     const file = new File(["%PDF-1.4"], "pp-015.pdf", { type: "application/pdf" });
-    fireEvent.change(within(form).getByLabelText(/Подтверждение/), { target: { files: [file] } });
+    fireEvent.change(within(form).getByLabelText(/Платёжное поручение/), {
+      target: { files: [file] },
+    });
     fireEvent.click(within(form).getByRole("button", { name: "Оплачено" }));
     await confirmDialog();
 
@@ -435,7 +439,7 @@ describe("Карточка счёта", () => {
       within(await decisionEl()).getByRole("form", { name: "Подтверждение оплаты" }),
     ).toBeVisible();
     expect(within(await panelEl()).queryByRole("tab", { name: "Оплата" })).toBeNull();
-    expect(screen.getAllByRole("list", { name: "Подтверждения оплаты" })).toHaveLength(1);
+    expect(screen.getAllByRole("list", { name: "Платёжные поручения" })).toHaveLength(1);
   });
 
   it("ссылка из очереди с номером и ?panel=open&tab=payment: карточка по id, боковое окно остаётся", async () => {
@@ -509,7 +513,7 @@ describe("Платёжка у оплаченного счёта", () => {
     signIn("accountant@demo.example");
     renderAt("/eds/payments/146");
 
-    const lists = await screen.findAllByRole("list", { name: "Подтверждения оплаты" });
+    const lists = await screen.findAllByRole("list", { name: "Платёжные поручения" });
     expect(lists).toHaveLength(1);
     for (const list of lists) {
       expect(within(list).getByText("Лишняя: счёт уже оплачен")).toBeVisible();

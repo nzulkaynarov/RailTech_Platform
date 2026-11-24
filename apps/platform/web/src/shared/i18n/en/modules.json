@@ -577,12 +577,8 @@
         "disabled": "Disabled"
       },
       "access": {
-        "crm": "Contacts",
-        "erp": "Operations",
-        "crmNo": "Contacts: no",
-        "erpNo": "Operations: no",
-        "erpPending": "Operations: being granted",
-        "erpError": "Operations: error",
+        "erpPending": "Access being granted",
+        "erpError": "Access not granted",
         "telegram": "Telegram",
         "telegramNo": "Telegram: no"
       },
@@ -617,18 +613,16 @@
         "email": "Email",
         "position": "Position",
         "roles": "Roles",
-        "crm": "“Contacts” access",
-        "erp": "“Operations” access",
         "telegram": "Telegram for notifications",
         "status": "Status",
-        "erpPending": "“Operations” access is still being granted.",
+        "erpPending": "Access is still being granted.",
         "erpReason": {
-          "not_connected": "“Operations” access not granted: the section cannot be reached with the saved connection. An administrator checks the address and token in Connections; granting will retry on its own.",
-          "unavailable": "ERP access not granted: The “Operations” section did not respond. Granting will retry on its own.",
-          "queue": "“Operations” access not granted: the granting task was not queued. Press Retry.",
-          "rejected": "“Operations” access not granted: the account was not accepted. Check the employee's email and roles, then press Retry."
+          "not_connected": "Access not granted: the section cannot be reached with the saved connection. An administrator checks the address and token in Connections; granting will retry on its own.",
+          "unavailable": "Access not granted: the section did not respond. Granting will retry on its own.",
+          "queue": "Access not granted: the granting task was not queued. Press Retry.",
+          "rejected": "Access not granted: the account was not accepted. Check the employee's email and roles, then press Retry."
         },
-        "erpNotGranted": "“Operations” access is not granted.",
+        "erpNotGranted": "Access is not granted.",
         "erpRetry": "Retry",
         "disabledNote": "The employee is disabled and cannot sign in. Roles and position are kept."
       },
@@ -651,9 +645,7 @@
         "position": "Position on the card: “{{position}}”.",
         "positionCleared": "The position on the card will be cleared.",
         "self": "You are changing your own roles: the menu updates after saving.",
-        "selfLosesAdmin": "You will lose access to the Settings section.",
-        "erpAdmin": "In “Operations” the employee becomes an administrator (superuser).",
-        "erpSections": "In “Operations” the employee gets rights by the roles' sections; the outcome is in the card (“Operations: being granted”, “Operations: error”)."
+        "selfLosesAdmin": "You will lose access to the Settings section."
       },
       "invite": {
         "title": "Invite employee",
@@ -669,7 +661,7 @@
         "sent": "Invitation sent: {{email}}",
         "notSent": "The employee was added with the status “Invited”, but the email was not sent: mail is not connected or unavailable. Connect it in Settings · Connections and send the invitation again from the employee card.",
         "openCard": "Open card",
-        "notSentUnavailable": "The employee was added with the status “Invited”, but The “Contacts” section did not respond and the email was not sent. Try again later with “Send the invitation again” in the card.",
+        "notSentUnavailable": "The employee was added with the status “Invited”, but the server did not respond and the email was not sent. Try again later with “Send the invitation again” in the card.",
         "resend": "Send the invitation again",
         "resendHint": "A new email with a 72-hour “Set your password” link goes out; the previous link and password stop working.",
         "tooMany": "Too many links for this employee in an hour. Try again later.",
@@ -1037,7 +1029,7 @@
     },
     "contract": {
       "title": "No contract selected",
-      "text": "Open a project to see the contract status and actions here: send to client, issued in e-docs, signed scan."
+      "text": "Open a project to see the contract status and actions here: send to client, issued in EDI, signed scan."
     },
     "act": {
       "title": "No act selected",

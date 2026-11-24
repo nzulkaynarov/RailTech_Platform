@@ -276,7 +276,7 @@
     "zone_not_permitted": "Ruxsat yetarli emas.",
     "cost_forbidden": "Xarid narxi va ustamani tannarxga ruxsati bor xodim o‘zgartiradi.",
     "forbidden": "Bu amal rolingizga ruxsat etilmagan.",
-    "unavailable": "«Amallar» bölimi javob bermadi. Bir daqiqadan keyin qayta urinib ko‘ring.",
+    "unavailable": "«Amallar» bölimi javob bermadi. Bir daqiqadan keyin qayta urinib köring.",
     "other": "Saqlanmadi: {{message}}",
     "deal_not_in_calculation": "Ariza yopilgan yoki hisob-kitobdan keyingi bosqichda.",
     "quote_not_rejected_by_client": "Yangi versiya va voz kechish mijoz TTni rad etgandan keyin mavjud.",
@@ -318,7 +318,7 @@
       "button": "Arizadan voz kechish",
       "title": "{{number}} arizadan voz kechish",
       "reason": "Voz kechish sababi",
-      "hint": "Majburiy. Ariza jurnaliga va CRMga tushadi.",
+      "hint": "Majburiy. Ariza jurnaliga tuşadi.",
       "submit": "Arizani rad bilan yopish",
       "done": "Ariza rad bilan yopildi, zaxira bekor qilindi"
     }

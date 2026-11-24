@@ -47,7 +47,7 @@
     },
     "unavailable": {
       "title": "«Amallar» bölimi hozir mavjud emas",
-      "text": "Bo'lim ma'lumotlari yuklanmadi. Bir daqiqadan so'ng qayta urinib ko'ring."
+      "text": "Bölim maʼlumotlari yuklanmadi. Bir daqiqadan söng qayta urinib köring."
     },
     "forbidden": {
       "title": "Bu bo'lim rolingiz uchun emas",
@@ -57,13 +57,13 @@
   "errors": {
     "DEFAULT": "Amalni bajarib bo'lmadi. Qayta urinib ko'ring.",
     "FORBIDDEN": "Bu amal rolingizga ruxsat etilmagan.",
-    "ERP_FORBIDDEN": "Ruxsat berilmadi: katalogni yoki hamkorlarni yuritish huquqi kerak.",
+    "ERP_FORBIDDEN": "Ruxsat berilmadi: katalogni yoki hamkorlarni yuritiş huquqi kerak.",
     "SUPPLIER_PRICES_REQUIRED": "Hamkor narxlarini faqat ularni ko'ra oladiganlar (ta'minot, direktor) o'zgartiradi.",
     "CREW_RATES_REQUIRED": "Brigada stavkalarini bosh muhandis, ta'minot yoki direktor o'zgartiradi.",
     "VALIDATION_FAILED": "Maydonlarni tekshiring.",
     "CONFLICT": "Bunday yozuv allaqachon bor. Ro'yxatni yangilang.",
     "NOT_FOUND": "Yozuv endi yo'q. Ro'yxatni yangilang.",
-    "BACKEND_UNAVAILABLE": "«Amallar» bölimi javob bermadi. Bir daqiqadan so'ng qayta urinib ko'ring.",
+    "BACKEND_UNAVAILABLE": "«Amallar» bölimi javob bermadi. Bir daqiqadan söng qayta urinib köring.",
     "reason": {
       "merge_same_product": "Birlashtirish uchun boshqa kartochkani tanlang.",
       "item_name_required": "Pozitsiya nomini kiriting.",
@@ -670,7 +670,7 @@
     "contractDateLabel": "Shartnoma sanasi",
     "saveContract": "Shartnoma ma'lumotlarini saqlash",
     "crmClient": {
-      "label": "CRMdagi mijoz",
+      "label": "Mijoz",
       "linked": "Yaratilgan",
       "requested": "Kutilmoqda",
       "pending_confirmation": "Menejer tasdig'i kutilmoqda",
@@ -678,9 +678,9 @@
       "unverified": "Sizning tasdig'ingizni kutmoqda",
       "conflict": "Ziddiyat",
       "open": "Mijozni ochish",
-      "openNamed": "CRM mijozi №{{id}} ni ochish",
+      "openNamed": "Mijozni oçiş №{{id}}",
       "verify": {
-        "found": "CRM mijozi «{{name}}», STIR {{inn}}, STIR mos kelgani uchun bog'langan.",
+        "found": "Mijoz «{{name}}», STIR {{inn}}, STIR mos kelgani uçun boğlangan.",
         "question": "Bu bir xil kompaniyami? Javob berguningizcha hamkor so'rovlari shu yerda saqlanadi va mijozga ketmaydi.",
         "yes": "Ha, bir xil kompaniya",
         "no": "Yo'q, boshqa kompaniya",
@@ -690,9 +690,9 @@
         "linked": "",
         "requested": "",
         "pending_confirmation": "",
-        "held": "Mijoz topshirilgandan keyin ushlab turilgan: hamkor kartochkasida va CRMdagi mijozda STIRni tekshiring va «Qayta taklif qilish» tugmasini bosing. Bog'lanish yaratilmadi, hamkor so'rovlari shu yerda saqlanadi.",
-        "unverified": "Bog'lanishni CRMdan mijoz topshirilishi STIR mos kelgani bo'yicha yaratdi. Bir xil kompaniya ekanini tasdiqlamaguningizcha hamkor so'rovlari shu yerda saqlanadi.",
-        "conflict": "CRMda bunday rekvizitli mijoz bor, lekin u boshqa kompaniyaga bog'langan. Hech narsa o'zgartirilmadi. Hamkor kartochkasida va CRMdagi mijozda STIR yoki ro'yxatdan o'tish raqamini tekshiring, xatosini to'g'rilang va hamkorni qayta taklif qiling."
+        "held": "Mijoz topşirilgandan keyin uşlab turilgan: hamkor kartoçkasida va Mijozda STIRni tekşiring va «Qayta taklif qiliş» tugmasini bosing. Boğlaniş yaratilmadi, hamkor sörovlari şu yerda saqlanadi.",
+        "unverified": "Boğlanişni mijoz topşirilişi STIR mos kelgani böyiça yaratdi. Bir xil kompaniya ekanini tasdiqlamaguningizça hamkor sörovlari şu yerda saqlanadi.",
+        "conflict": "Bunday rekvizitli mijoz bor, lekin u boşqa kompaniyaga boğlangan. Heç narsa özgartirilmadi. Hamkor kartoçkasida va Mijozda STIR yoki röyxatdan ötiş raqamini tekşiring, xatosini töğrilang va hamkorni qayta taklif qiling."
       }
     },
     "rights": "Hamkorga nima ochiladi",
@@ -1087,7 +1087,7 @@
     },
     "inn": "STIR: {{inn}}",
     "matchFound": "Bazadan topildi: {{name}}",
-    "matchHint": "ERP bazasida xuddi shunday STIRga ega tashkilot topildi",
+    "matchHint": "Bazada xuddi şunday STIRga ega taşkilot topildi",
     "matchQuestion": "«{{name}}» tashkiloti topildi. Bu o‘sha kompaniyami?",
     "matchInnTaken": "Bu STIR band. Agar bu boshqa kompaniya bo‘lsa, arizani sabab ko‘rsatib rad eting.",
     "contractNumber": "Shartnoma raqami",
@@ -1129,7 +1129,7 @@
     },
     "approveModal": {
       "title": "Arizani ma'qullash va kabinetni ochish: {{name}}",
-      "hint": "Hamkorlik shartnomasi imzolanganini tasdiqlash. Tasdiqlangandan so'ng kompaniya kabinetga kirish huquqiga ega bo'ladi, aloqachi taklifnoma oladi va CRM bilan bog'lanadi.",
+      "hint": "Hamkorlik şartnomasi imzolanganini tasdiqlaş. Tasdiqlangandan söng kompaniya kabinetga kiriş huquqiga ega böladi, aloqaçi taklifnoma oladi va mijozlar qatorida paydo böladi.",
       "hintOverride": "Nomzod hali shartnomani kelishmagan. Faqat sabab ko‘rsatib tasdiqlash mumkin — u jurnalga yoziladi.",
       "overrideLabel": "Kelishuvsiz tasdiqlash sababi",
       "overridePlaceholder": "Masalan, shartnoma qog‘ozda imzolangan",
@@ -1140,7 +1140,7 @@
         "«Hamkor» munosabati «Mening mahsulotlarim» va «Katalog va buyurtmalar» modullari bilan faollashtiriladi",
         "Shartnoma raqami va sanasi hamkor kartasida qayd etiladi",
         "Aloqachi shaxs kirish kodi bilan taklifnoma oladi",
-        "Kontragent CRM bilan bog'lanadi"
+        "Kontragent mijozlar qatorida paydo böladi"
       ]
     },
     "rejectModal": {

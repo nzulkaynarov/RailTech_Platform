@@ -35,7 +35,7 @@
   "tableScroll": "Leads table",
   "listLabel": "Leads",
   "open": "Open the card of {{name}}",
-  "nobody": "Not taken",
+  "nobody": "Not assigned",
   "overdue": "Reply overdue",
   "unread": "New message",
   "actions": {

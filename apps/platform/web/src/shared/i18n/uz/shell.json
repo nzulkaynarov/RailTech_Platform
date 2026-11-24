@@ -120,7 +120,7 @@
       "USER_DISABLED": "Hisob o‘chirilgan. Administratorga murojaat qiling.",
       "NO_PLATFORM_ROLE": "Sizga Platformada rol berilmagan. Administratordan rol tayinlashni so‘rang.",
       "TOO_MANY_REQUESTS": "Kirish urinishlari juda ko‘p. Bir daqiqa kutib, qayta urinib ko‘ring.",
-      "BACKEND_UNAVAILABLE": "«Kontaktlar» bölimi bilan aloqa o‘rnatib bo‘lmadi. Birozdan keyin qayta kiring.",
+      "BACKEND_UNAVAILABLE": "Server javob bermayapti. Birozdan keyin qayta kiring.",
       "CSRF_FAILED": "Brauzer sessiyasi eskirgan. Sahifani yangilab, qayta kiring.",
       "default": "Kirib bo‘lmadi. Qayta urinib ko‘ring.",
       "SECOND_FACTOR_INVALID": "Kod notöğri. Telefondagi vaqtni tekşirib, qayta urinib köring.",
@@ -190,7 +190,7 @@
     "submit": "Administrator yaratish va kirish",
     "checking": "Tizim holatini tekshirmoqdamiz",
     "stateErrorTitle": "Tizim holatini tekshirib bo'lmadi",
-    "stateErrorText": "«Kontaktlar» bölimi javob bermadi. Server ishlayotganini tekshiring va takrorlang.",
+    "stateErrorText": "Server javob bermayapti. Işlayotganini tekşiring va takrorlang.",
     "retry": "Takrorlash",
     "doneTitle": "Birinchi ishga tushirish allaqachon bajarilgan",
     "doneText": "Administrator yaratilgan. Platformaga pochta va parol bilan kiring.",
@@ -201,7 +201,7 @@
       "SETUP_LOCKED": "Noto'g'ri kodlar juda ko'p. 15 daqiqadan keyin takrorlang.",
       "SETUP_DONE": "Administrator allaqachon yaratilgan. Platformaga kiring.",
       "TOO_MANY_REQUESTS": "Urinishlar juda ko'p. Bir daqiqa kuting va takrorlang.",
-      "BACKEND_UNAVAILABLE": "«Kontaktlar» bölimi bilan aloqa o'rnatib bo'lmadi. Birozdan keyin takrorlang.",
+      "BACKEND_UNAVAILABLE": "Server javob bermayapti. Birozdan keyin takrorlang.",
       "VALIDATION_FAILED": "Maydonlarni tekshiring. Parol kamida 10 ta belgi, harf va raqamlardan iborat bo'lishi, pochtadagi ismni o'z ichiga olmasligi kerak.",
       "default": "Administratorni yaratib bo'lmadi. Urinishni takrorlang."
     }

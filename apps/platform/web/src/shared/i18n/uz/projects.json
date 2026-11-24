@@ -60,7 +60,7 @@
     "contract": {
       "project": "Loyiha",
       "client_agreed": "Mijoz bilan kelishilgan",
-      "issued_at_operator": "EHTda rasmiylashtirilgan",
+      "issued_at_operator": "EHTda rasmiylaştirilgan",
       "signed": "Imzolangan (skan)",
       "rejected": "Mijoz rad etgan",
       "cancelled": "Bekor qilingan"
@@ -212,7 +212,7 @@
       "client_agreed": "Shartnoma matni mijoz bilan kelishildi",
       "rejected": "Shartnomani mijoz rad etdi",
       "revised": "Shartnoma loyihasi ishga qaytarildi",
-      "issued_external": "Shartnoma EHTda rasmiylashtirildi",
+      "issued_external": "Şartnoma EHTda rasmiylaştirildi",
       "scan_attached": "Imzolangan shartnoma skani biriktirildi",
       "signed": "Shartnoma imzolandi",
       "signed_client": "Mijoz shartnomani kelişdi",
@@ -258,8 +258,8 @@
     "state": {
       "project": "Loyiha hali mijozga yuborilmagan.",
       "atClient": "Loyiha mijozda matn kelishuvida.",
-      "client_agreed": "Mijoz matnni kelishdi. Keyin shartnomani EHTda (platformadan tashqarida) rasmiylashtiring.",
-      "issued_at_operator": "Shartnoma EHTda rasmiylashtirilgan. Ikki tomon imzolagach, skanni biriktiring.",
+      "client_agreed": "Mijoz matnni kelişdi. Keyin şartnomani EHTda (platformadan taşqarida) rasmiylaştiring.",
+      "issued_at_operator": "Şartnoma EHTda rasmiylaştirilgan. Ikki tomon imzolagaç, skanni biriktiring.",
       "signed": "Shartnoma ikki tomon tomonidan imzolangan, skan saqlangan.",
       "rejected": "Mijoz shartnomani rad etdi. Loyihani to‘g‘rilab, qaytadan kelishuvga yuboring.",
       "cancelled": "Shartnoma bekor qilingan."
@@ -267,13 +267,13 @@
     "action": {
       "send_to_client": "Mijozga kelishuvga yuborish",
       "client_agreed": "Belgilash: mijoz kelishdi",
-      "mark_issued": "Belgilash: EHTda rasmiylashtirildi",
+      "mark_issued": "Belgilaş: EHTda rasmiylaştirildi",
       "attach_scan": "Imzolangan skanni biriktirish",
       "reject": "Mijoz shartnomani rad etdi…",
       "revise": "Loyihaga qaytarish"
     },
     "note": {
-      "label": "EHT tizimidagi raqam",
+      "label": "EHT tizimidagi operator yoki raqam",
       "hint": "Ixtiyoriy: jurnalga tushadi.",
       "placeholder": "Masalan: Didox, № 77"
     },
@@ -301,7 +301,7 @@
       "create": "Shartnoma loyihasi shakllantirildi.",
       "send_to_client": "Loyiha mijozga yuborildi.",
       "client_agreed": "Belgilandi: mijoz matnni kelishdi.",
-      "mark_issued": "Belgilandi: shartnoma EHTda rasmiylashtirildi.",
+      "mark_issued": "Belgilandi: şartnoma EHTda rasmiylaştirildi.",
       "attach_scan": "Skan biriktirildi, shartnoma imzolandi.",
       "reject": "Rad etish yozildi.",
       "revise": "Loyiha işga qaytarildi.",
@@ -458,7 +458,7 @@
     "scan_required": "Skan faylini tanlang.",
     "no_file_provided": "Skan faylini tanlang.",
     "forbidden": "Bu amal sizning rolingizga ruxsat etilmagan.",
-    "unavailable": "«Amallar» bölimi javob bermayapti. Keyinroq urinib ko‘ring.",
+    "unavailable": "Maʼlumotlar yuklanmadi. Keyinroq qayta urinib köring.",
     "payload": "Fayl 20 MB dan katta.",
     "unknown": "Bajarilmadi. Qayta urinib ko‘ring.",
     "failed": "Bajarilmadi: {{reason}}",
@@ -480,8 +480,8 @@
       "text": "Ulanishni tekshirib, qayta urinib ko‘ring."
     },
     "unavailable": {
-      "title": "«Amallar» bölimi javob bermayapti",
-      "text": "Loyihalar yuklanmadi. Bir daqiqadan keyin qayta urinib ko‘ring."
+      "title": "Maʼlumotlar yuklanmadi",
+      "text": "Keyinroq qayta urinib köring."
     },
     "forbidden": {
       "title": "Ruxsat yo‘q",

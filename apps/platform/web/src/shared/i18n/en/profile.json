@@ -24,7 +24,7 @@
       "avatar_type_mismatch": "The file type does not match its content. Choose another image.",
       "avatar_too_large": "The photo is larger than 1 MB. Choose a smaller file.",
       "avatar_empty": "The file is empty.",
-      "BACKEND_UNAVAILABLE": "The “Contacts” section is not responding. Try again later.",
+      "BACKEND_UNAVAILABLE": "The server is not responding. Try again later.",
       "default": "Could not save the photo. Try again."
     }
   },
@@ -55,7 +55,7 @@
       "phone_invalid": "Check the number: 7 to 15 digits, may start with “+”.",
       "timezone_unknown": "There is no such time zone. Choose one from the list.",
       "signature_invalid": "The signature must be at most 1000 characters.",
-      "BACKEND_UNAVAILABLE": "The “Contacts” section is not responding. Try again later.",
+      "BACKEND_UNAVAILABLE": "The server is not responding. Try again later.",
       "default": "Could not save the profile. Try again."
     }
   },
@@ -86,7 +86,7 @@
     "errors": {
       "NOT_CONFIGURED": "The bot is not connected. Ask an administrator to connect the bot in Settings · Telegram.",
       "CONFLICT": "The bot is not running right now. Try again in a minute or write to an administrator.",
-      "BACKEND_UNAVAILABLE": "The “Contacts” section is not responding. Try again later.",
+      "BACKEND_UNAVAILABLE": "The server is not responding. Try again later.",
       "default": "Could not complete the action. Try again."
     }
   },
@@ -113,7 +113,7 @@
       "deputy_period_past": "The period has already ended.",
       "deputy_period_too_long": "The period cannot be longer than a year.",
       "deputy_not_colleague": "This employee cannot work the queue. Choose another.",
-      "BACKEND_UNAVAILABLE": "The “Contacts” section is not responding. Try again later.",
+      "BACKEND_UNAVAILABLE": "The server is not responding. Try again later.",
       "default": "Could not save the cover. Try again."
     }
   },
@@ -130,7 +130,7 @@
     "sent": "If email or Telegram is set up for this account, the link has been sent. If nothing arrives within a few minutes, ask your administrator.",
     "errors": {
       "TOO_MANY_REQUESTS": "Too many requests. Try again in an hour or ask your administrator.",
-      "BACKEND_UNAVAILABLE": "Cannot reach the “Contacts” section. Try again later.",
+      "BACKEND_UNAVAILABLE": "The server is not responding. Try again later.",
       "default": "Could not send the request. Try again."
     }
   },
@@ -151,7 +151,7 @@
       "reset_token_invalid": "The link has already been used or has expired. Request a new one — it will arrive by email.",
       "weak_password": "The password is too simple: at least 10 characters, letters and digits.",
       "TOO_MANY_REQUESTS": "Too many attempts. Try again later.",
-      "BACKEND_UNAVAILABLE": "Cannot reach the “Contacts” section. Try again later.",
+      "BACKEND_UNAVAILABLE": "The server is not responding. Try again later.",
       "default": "Could not change the password. Try again."
     }
   },

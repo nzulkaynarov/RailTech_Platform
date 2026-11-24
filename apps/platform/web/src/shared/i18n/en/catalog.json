@@ -670,7 +670,7 @@
     "contractDateLabel": "Contract date",
     "saveContract": "Save contract details",
     "crmClient": {
-      "label": "CRM client",
+      "label": "Client",
       "linked": "Created",
       "requested": "Pending",
       "pending_confirmation": "Waiting for a manager's confirmation",
@@ -678,9 +678,9 @@
       "unverified": "Waiting for your confirmation",
       "conflict": "Conflict",
       "open": "Open the client",
-      "openNamed": "Open CRM client #{{id}}",
+      "openNamed": "Open Client #{{id}}",
       "verify": {
-        "found": "CRM client “{{name}}”, TIN {{inn}}, was linked by a matching TIN.",
+        "found": "Client “{{name}}”, TIN {{inn}}, was linked by a matching TIN.",
         "question": "Is it the same company? Until you answer, the partner's requests are kept here and do not go to that client.",
         "yes": "Yes, same company",
         "no": "No, a different company",
@@ -690,9 +690,9 @@
         "linked": "",
         "requested": "",
         "pending_confirmation": "",
-        "held": "Held after a client handoff: check the tax ID in the partner's card and on the CRM client, then press “Invite again”. No link was created, the partner's requests are kept here.",
-        "unverified": "The link was created by a client handoff from CRM by a matching TIN. The partner's requests are kept here until you confirm it is the same company.",
-        "conflict": "CRM already has a client with these details, but it is linked to another company. Nothing was changed. Check the tax ID or registration number in the partner's card and on the CRM client, fix the wrong one and invite the partner again."
+        "held": "Held after a client handoff: check the tax ID in the partner's card and on the Client, then press “Invite again”. No link was created, the partner's requests are kept here.",
+        "unverified": "The link was created by a client handoff by a matching TIN. The partner's requests are kept here until you confirm it is the same company.",
+        "conflict": "A client already exists with these details, but it is linked to another company. Nothing was changed. Check the tax ID or registration number in the partner's card and on the Client, fix the wrong one and invite the partner again."
       }
     },
     "rights": "What the partner will see",
@@ -1087,7 +1087,7 @@
     },
     "inn": "TIN: {{inn}}",
     "matchFound": "Database match: {{name}}",
-    "matchHint": "An organization with the same TIN was found in ERP",
+    "matchHint": "An organization with the same TIN was found",
     "matchQuestion": "Organization “{{name}}” found. Is it the same company?",
     "matchInnTaken": "This tax ID is already taken. If it is a different company, reject the application with a reason.",
     "contractNumber": "Contract number",
@@ -1129,7 +1129,7 @@
     },
     "approveModal": {
       "title": "Approve application and open cabinet: {{name}}",
-      "hint": "Confirm signing of the partner contract. Upon approval, the company gains partner cabinet access, the contact is invited, and the counterparty is linked with CRM.",
+      "hint": "Confirm signing of the partner contract. Upon approval, the company gains partner cabinet access, the contact is invited, and the counterparty appears among the clients.",
       "hintOverride": "The candidate has not agreed the contract yet. You can approve only with a reason, recorded in the log.",
       "overrideLabel": "Reason for approval without agreement",
       "overridePlaceholder": "e.g.: the contract was signed on paper",
@@ -1140,7 +1140,7 @@
         "“Partner” relationship will be activated with “My products” and “Catalog & orders” modules",
         "Contract number and date will be recorded in partner profile",
         "Contact person will receive invitation code",
-        "Counterparty will be synced with CRM"
+        "Counterparty will be added to the clients"
       ]
     },
     "rejectModal": {

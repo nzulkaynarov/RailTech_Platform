@@ -219,7 +219,7 @@ describe("InviteEmployeeForm: приглашение по почте", () => {
     expect(bodies[1]?.role_ids).toEqual([ROLE_ID.SUPPLY]);
   });
 
-  it("Раздел «Контакты» не ответил после создания: текст про CRM, а не про почту", async () => {
+  it("Сервер не ответил после создания: текст про CRM, а не про почту", async () => {
     server.use(
       http.post("*/admin/users/invite", () =>
         HttpResponse.json(
@@ -241,7 +241,7 @@ describe("InviteEmployeeForm: приглашение по почте", () => {
     submit();
 
     const alert = await screen.findByRole("alert");
-    expect(alert).toHaveTextContent(/Раздел «Контакты» не ответил/);
+    expect(alert).toHaveTextContent(/сервер не ответил/);
     expect(alert).not.toHaveTextContent(/почта не подключена/);
     fireEvent.click(screen.getByRole("button", { name: "Открыть карточку" }));
     expect(onOpenCard).toHaveBeenCalledWith("101");

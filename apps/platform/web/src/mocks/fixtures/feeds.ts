@@ -371,7 +371,7 @@ export function notificationSeed(preset: PresetCode | undefined): SeedNotificati
           3,
           "clients",
           "Демо Платёжников (Демо-Метро) нажал «Я оплатил»",
-          "СЧ-2026/142 · подтверждение оплаты приложено · бухгалтеру на подтверждение",
+          "СЧ-2026/142 · платёжное поручение приложено · бухгалтеру на подтверждение",
           HOUR,
           false,
           invoice142,
@@ -438,7 +438,7 @@ export function notificationSeed(preset: PresetCode | undefined): SeedNotificati
         note(
           21,
           "decisions",
-          "Подтверждение оплаты получено: СЧ-2026/142",
+          "Платёжное поручение получено: СЧ-2026/142",
           "ПР-2026-099 · к подтверждению",
           15 * MINUTE,
           false,

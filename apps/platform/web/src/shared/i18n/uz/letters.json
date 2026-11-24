@@ -108,7 +108,7 @@
     "noRequest": "Arizaga bog'lanmagan",
     "noClient": "Mijoz aniqlanmagan",
     "byClient": "STIR {{inn}}",
-    "bySystem": "Tizim tomonidan, CRM arizasi bo'yicha",
+    "bySystem": "Tizim tomonidan, mijoz arizasi böyiça",
     "decision": "Direktor qarori",
     "decisionFields": {
       "text": "Rezolyutsiya matni",
@@ -224,16 +224,16 @@
     },
     "zones": {
       "goods": {
-        "name": "Ta'minotchi",
+        "name": "Taʼminot",
         "hint": "ombor va hamkorlar narxlari"
       },
       "services": {
-        "name": "Bosh muhandis",
+        "name": "Xizmatlar",
         "hint": "xizmatlar, TT, brigada"
       },
       "payment_terms": {
-        "name": "Buxgalter",
-        "hint": "to'lov shartlari"
+        "name": "Tölov şartlari",
+        "hint": "tölov şartlari"
       }
     },
     "directory": {

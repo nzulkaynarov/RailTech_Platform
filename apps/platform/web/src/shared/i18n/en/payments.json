@@ -7,7 +7,7 @@
     },
     "unavailable": {
       "title": "The service is not responding",
-      "text": "The “Operations” section or document flow is temporarily unavailable. Nothing is lost — try again shortly."
+      "text": "The data did not load. Try again later. Nothing is lost."
     },
     "forbidden": {
       "title": "No access",
@@ -441,7 +441,7 @@
       "bank_details_required": "An invoice cannot be issued without the company's bank account and MFO: fill them in “Settings · Details & letterhead”.",
       "forbidden": "Your role may not issue invoices.",
       "not_found": "Invoice not found. Refresh the list.",
-      "unavailable": "The “Operations” section is not responding. Try again shortly.",
+      "unavailable": "The data did not load. Try again later.",
       "unknown": "Could not issue the invoice. Try again."
     }
   },

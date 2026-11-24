@@ -28,7 +28,7 @@ describe("Клиенты · Клиенты (D1-2b)", () => {
     expect(
       within(table).getByRole("link", { name: "Открыть карточку ООО Рельс-Сервис Демо" }),
     ).toBeVisible();
-    expect(within(table).getByText("Не удалось завести")).toBeVisible();
+    expect(within(table).getByText("Не передан в учёт")).toBeVisible();
 
     const search = screen.getByRole("searchbox", { name: "Поиск по названию и ИНН" });
     fireEvent.change(search, { target: { value: "300000003" } });
@@ -81,7 +81,7 @@ describe("Клиенты · Клиенты (D1-2b)", () => {
     await open("manager@demo.example", "/crm/clients/3?panel=open&tab=card");
     const panel = await panelEl();
     const requests = await within(panel).findByRole("region", { name: "Заявки и проекты" });
-    expect(within(requests).getByText(/Заявка не отправлена: бэк-офис не ответил/)).toBeVisible();
+    expect(within(requests).getByText(/Не передана в учёт: нет ответа/)).toBeVisible();
 
     fireEvent.click(
       within(requests).getByRole("button", {

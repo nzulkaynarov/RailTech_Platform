@@ -15,12 +15,12 @@
   "tableScroll": "Clients table",
   "listLabel": "Clients",
   "open": "Open the card of {{name}}",
-  "inErp": "Set up",
-  "notInErp": "Not set up",
+  "inErp": "In records",
+  "notInErp": "Not sent to records",
   "handoff": {
-    "pending": "Setting up",
-    "failed": "Could not set up",
-    "done": "Set up"
+    "pending": "Being sent to records",
+    "failed": "Not sent to records",
+    "done": "In records"
   },
   "empty": {
     "title": "No clients yet",
@@ -37,7 +37,7 @@
     "partner": {
       "title": "A partner from the cabinet is waiting for confirmation",
       "text": "A manufacturer or partner was invited to the cabinet and its details match this client. We never merge them on our own: if it is the same company, confirm and the partner's requests will arrive in this client's card; if not, we will create a new client for the partner.",
-      "erp": "“Operations” company #",
+      "erp": "Records company #",
       "matchedBy": {
         "inn": "tax ID matches",
         "registration_number": "country and registration number match"
@@ -71,8 +71,8 @@
     "urgent": "Urgent",
     "clientSees": "In the client cabinet: “{{text}}”",
     "transfer": {
-      "pending": "The request is being sent",
-      "failed": "The request was not sent: {{reason}}"
+      "pending": "Being sent to records",
+      "failed": "Not sent to records: {{reason}}"
     },
     "retry": "Retry sending",
     "retryLabel": "Retry sending request “{{title}}”",
@@ -119,11 +119,11 @@
     "quote_expired": "Quote has expired"
   },
   "transferErrors": {
-    "erp_unavailable": "the back office did not respond",
+    "erp_unavailable": "no response",
     "erp_request_conflict": "the request data changed after sending — create the request again",
     "handoff_no_consent": "no client consent to data processing",
     "erp_inn_conflict": "this TIN already belongs to another client",
-    "erp_partner_verification": "a cabinet partner has this TIN: the handoff is held. A back-office colleague will check the TIN and invite the partner again, then confirm the link in this card — the handoff will repeat on its own",
+    "erp_partner_verification": "a cabinet partner has this TIN: the handoff is held. The colleague who keeps the records will check the TIN and invite the partner again, then confirm the link in this card — the handoff will repeat on its own",
     "enqueue_failed": "could not queue the transfer",
     "other": "reason unknown",
     "erp_company_do_not_work": "we do not work with this company: the request was not created. Remove the mark in the counterparty card and resend"

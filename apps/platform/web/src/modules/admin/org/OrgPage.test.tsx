@@ -74,19 +74,20 @@ describe("Admin · Оргструктура (экран целиком на MSW)
     renderAt("/admin/org");
 
     const row = await screen.findByRole("row", { name: /Демо Приглашённая/ });
-    expect(within(row).getByText("Операции: выдаётся")).toBeVisible();
+    expect(within(row).getByText("Доступ выдаётся")).toBeVisible();
 
     await waitFor(
       () => {
         const next = screen.getByRole("row", { name: /Демо Приглашённая/ });
-        expect(within(next).queryByText("Операции: выдаётся")).toBeNull();
-        expect(within(next).getByText("Операции")).toBeVisible();
+        expect(within(next).queryByText("Доступ выдаётся")).toBeNull();
+        expect(within(next).queryByText("Доступ выдаётся")).toBeNull();
+        expect(within(next).queryByText("Доступ не выдан")).toBeNull();
       },
       { timeout: 7000 },
     );
   }, 12000);
 
-  it("сбой без текста: «Доступ к «Операциям» не выдан.» и «Повторить», который вызывает маршрут", async () => {
+  it("сбой без текста: «Доступ не выдан.» и «Повторить», который вызывает маршрут", async () => {
     signIn("admin@demo.example");
     writeEmployees(
       readEmployees().map((e) =>
@@ -96,7 +97,7 @@ describe("Admin · Оргструктура (экран целиком на MSW)
     renderAt("/admin/org?employee=u-demo-manager&panel=open");
 
     const panel = await panelEl();
-    expect(await within(panel).findByText("Доступ к «Операциям» не выдан.")).toBeVisible();
+    expect(await within(panel).findByText("Доступ не выдан.")).toBeVisible();
     fireEvent.click(within(panel).getByRole("button", { name: "Повторить" }));
 
     await waitFor(() => {
@@ -144,8 +145,8 @@ describe("Admin · Оргструктура (экран целиком на MSW)
     renderAt("/admin/org");
 
     const row = await screen.findByRole("row", { name: /Демо Отключённый/ });
-    expect(within(row).queryByText("Операции: выдаётся")).toBeNull();
-    expect(within(row).queryByText("Операции")).toBeNull();
+    expect(within(row).queryByText("Доступ выдаётся")).toBeNull();
+    expect(within(row).queryByText("Доступ не выдан")).toBeNull();
   });
 
   it("карточка открывается из адреса и по клику на имя", async () => {

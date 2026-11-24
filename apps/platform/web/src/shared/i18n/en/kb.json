@@ -262,7 +262,7 @@
     "buttons": "Buttons under the message",
     "step1": "The message goes to the bot on behalf of a test customer: the bot answers from the knowledge base, texts and handoff rules.",
     "step2": "The reply is paid: model calls go to \"Spend\" marked \"test\".",
-    "step3": "Handoff to a manager is only shown below; no handoff is created.",
+    "step3": "Handoff to a manager is only shown below and goes nowhere.",
     "reset": {
       "button": "Start over",
       "submit": "Clear the conversation",

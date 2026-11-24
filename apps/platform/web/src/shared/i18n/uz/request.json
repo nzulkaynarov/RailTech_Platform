@@ -78,7 +78,7 @@
   },
   "consequence": {
     "lead": "Lid mijozga aylanadi, siz yozishma uchun mas’ul bo‘lasiz; bot bu mijoz bo‘yicha javob berishda davom etadi.",
-    "request": "Bek-ofisda raqamli ariza paydo böladi.",
+    "request": "Hisobga oliş bölimida raqamli ariza paydo böladi.",
     "letter": "Xat direktorga «Hujjatlar · Kiruvchi xatlar»ga boradi{{urgent}}.",
     "urgentSuffix": " «Shoshilinch» belgisi bilan",
     "chat": "Loyiha chati yaratiladi."
@@ -89,7 +89,7 @@
   "cancel": "Bekor qilish",
   "done": {
     "title": "Ariza yaratildi",
-    "text": "Ariza bek-ofisga uzatilmoqda; ariza raqami mijoz kartasida paydo böladi.",
+    "text": "Ariza hisobga olinmoqda; ariza raqami mijoz kartasida paydo böladi.",
     "repeated": "Bu ariza allaqachon yaratilgan — uni ko‘rsatamiz.",
     "openClient": "Mijoz kartasini ochish"
   },
@@ -104,13 +104,13 @@
     "contact_channel_required": "Kontaktda Telegram, telefon yoki pochta yo‘q",
     "request_not_allowed": "Lid rad etilgan — undan ariza yaratib bo‘lmaydi",
     "request_key_reused": "Shakl eskirgan — «Ariza yaratish»ni qayta oching",
-    "erp_not_configured": "Bek-ofis ulanmagan — administratorga murojaat qiling",
+    "erp_not_configured": "Hisobga oliş ulanmagan — administratorga murojaat qiling",
     "not_lead_owner": "Lidni boshqa xodim olib boryapti",
     "telegram_linked_elsewhere": "Lid Telegrami boshqa mijozga bog‘langan",
     "letter_required": "Mijoz xatini yoki so‘rov faylini biriktiring",
     "letter_call_consent": "«Kontakt» qadamida rozilikni belgilang — yozuv özi tuziladi, yoki fayl biriktiring",
     "letter_failed": "Fayl yuklanmadi — uni qayta yoki boshqasini tanlang",
-    "request_not_failed": "Ariza bek-ofisga uzatilmoqda yoki uzatilgan — kartani yangilang",
+    "request_not_failed": "Ariza hisobga olinmoqda yoki olingan — kartani yangilang",
     "request_not_retryable": "Qayta yuborish yordam bermaydi: yuborilgandan keyin ariza ma’lumotlari o‘zgardi — arizani qayta yarating",
     "enqueue_failed": "Yuborishni navbatga qo‘yib bo‘lmadi — birozdan keyin qayta urinib ko‘ring",
     "generic": "Ariza yaratib bo‘lmadi. Shakl ma’lumotlari saqlandi — qayta urinib ko‘ring",

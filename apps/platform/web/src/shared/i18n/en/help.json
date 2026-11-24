@@ -159,7 +159,7 @@
       {
         "title": "Contract",
         "who": "accountant",
-        "text": "The client agrees the wording, the contract is issued and signed in e-docs outside the Platform; the scan is attached by hand."
+        "text": "The client agrees the wording, the contract is issued and signed in EDI outside the Platform; the scan is attached by hand."
       },
       {
         "title": "Payment",
@@ -215,7 +215,7 @@
       },
       {
         "term": "Contract (CT-2026/104)",
-        "text": "A draft contract from the accepted quote; signed in e-docs, the scan is attached."
+        "text": "A draft contract from the accepted quote; signed in EDI, the scan is attached."
       },
       {
         "term": "Invoice (INV-2026-142)",

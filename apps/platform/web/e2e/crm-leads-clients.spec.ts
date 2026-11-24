@@ -115,12 +115,10 @@ test.describe("Лиды → «Создать заявку» → карточка
     await expectNoViolations(page, "карточка клиента 360°");
 
     const requests = panel.getByRole("region", { name: "Заявки и проекты" });
-    await expect(requests).toContainText("Заявка не отправлена: бэк-офис не ответил");
+    await expect(requests).toContainText("Не передана в учёт: нет ответа");
     await requests.getByRole("button", { name: /^Повторить отправку/ }).click();
     await expect(requests.getByText("RQ-2026-040")).toBeVisible();
-    await expect(requests.getByRole("button", { name: /^Повторить отправку/ })).toHaveCount(
-      0,
-    );
+    await expect(requests.getByRole("button", { name: /^Повторить отправку/ })).toHaveCount(0);
   });
 });
 

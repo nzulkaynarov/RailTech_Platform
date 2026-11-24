@@ -193,7 +193,7 @@
     "consentGiven": "получено {{date}}",
     "consentMissing": "нет — писать клиенту нельзя",
     "consentMissingCabinet": "нет — ответ в кабинет можно, в Telegram нельзя",
-    "client": "Клиент заведён",
+    "client": "Клиент в учёте",
     "clientYes": "да",
     "clientNo": "ещё нет",
     "facts": "Факты квалификации",

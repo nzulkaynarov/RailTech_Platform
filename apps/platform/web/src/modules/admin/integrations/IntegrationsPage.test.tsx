@@ -177,9 +177,7 @@ describe("Admin · Внешние интеграции: обзор", () => {
 
     fireEvent.click(within(tile("ERP")).getByRole("button", { name: "Проверить: ERP" }));
 
-    expect(await within(tile("ERP")).findByRole("alert")).toHaveTextContent(
-      "Раздел «Операции» не отвечает.",
-    );
+    expect(await within(tile("ERP")).findByRole("alert")).toHaveTextContent("ERP не отвечает.");
   });
 
   it("директор: «Сервисы» — страница фундамента, ему «Нет доступа» (ЕВ-2а); BFF на изменение отвечает 403 и без интерфейса", async () => {

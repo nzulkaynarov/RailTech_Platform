@@ -15,12 +15,12 @@
   "tableScroll": "Mijozlar jadvali",
   "listLabel": "Mijozlar",
   "open": "{{name}} kartasini ochish",
-  "inErp": "Kiritilgan",
-  "notInErp": "Kiritilmagan",
+  "inErp": "Hisobga olingan",
+  "notInErp": "Hisobga olinmagan",
   "handoff": {
-    "pending": "Kiritilmoqda",
-    "failed": "Kiritib bölmadi",
-    "done": "Kiritilgan"
+    "pending": "Hisobga olinmoqda",
+    "failed": "Hisobga olinmadi",
+    "done": "Hisobga olingan"
   },
   "empty": {
     "title": "Hozircha mijozlar yo‘q",
@@ -37,7 +37,7 @@
     "partner": {
       "title": "Kabinetdagi hamkor tasdiqlashni kutmoqda",
       "text": "Ishlab chiqaruvchi yoki hamkor kabinetga taklif qilindi va uning rekvizitlari shu mijozga mos keldi. Biz ularni o'zimiz birlashtirmaymiz: agar bu bir kompaniya bo'lsa, tasdiqlang — hamkor so'rovlari shu mijoz kartochkasiga keladi; aks holda hamkor uchun yangi mijoz yaratamiz.",
-      "erp": "«Amallar» kompaniyasi №",
+      "erp": "Hisobdagi kompaniya №",
       "matchedBy": {
         "inn": "STIR mos keldi",
         "registration_number": "davlat va ro'yxatdan o'tish raqami mos keldi"
@@ -50,7 +50,7 @@
     "inn": "STIR",
     "noInn": "STIR ko‘rsatilmagan",
     "segment": "Segment",
-    "erp": "Hisob",
+    "erp": "Hisobga oliş",
     "newRequest": "Mijoz uchun yangi ariza",
     "contacts": "Kontaktlar",
     "noContacts": "Hozircha kontaktlar yo‘q",
@@ -71,11 +71,11 @@
     "urgent": "Shoshilinch",
     "clientSees": "Mijoz kabinetida: «{{text}}»",
     "transfer": {
-      "pending": "Ariza yuborilmoqda",
-      "failed": "Ariza yuborilmadi: {{reason}}"
+      "pending": "Hisobga olinmoqda",
+      "failed": "Hisobga olinmadi: {{reason}}"
     },
-    "retry": "Qayta yuborish",
-    "retryLabel": "«{{title}}» arizasini qayta yuborish",
+    "retry": "Qayta yuboriş",
+    "retryLabel": "«{{title}}» arizasini qayta yuboriş",
     "retried": "Ariza qayta yuborildi",
     "documents": "Hujjatlar",
     "noDocuments": "Hozircha hujjatlar yo‘q",
@@ -119,11 +119,11 @@
     "quote_expired": "Tijorat taklifi muddati tugadi"
   },
   "transferErrors": {
-    "erp_unavailable": "bek-ofis javob bermadi",
+    "erp_unavailable": "javob yöq",
     "erp_request_conflict": "yuborilgandan keyin ariza ma’lumotlari o‘zgardi — arizani qayta yarating",
     "handoff_no_consent": "mijozning ma’lumotlarga roziligi yo‘q",
     "erp_inn_conflict": "bu STIR boshqa mijozga tegishli",
-    "erp_partner_verification": "bu STIRdagi kompaniya kabinet hamkori: topshirish ushlab turildi. Orqa ofis xodimi STIRni tekshirib hamkorni qayta taklif qiladi, so'ng shu kartochkada bog'lanishni tasdiqlang — topshirish o'zi takrorlanadi",
+    "erp_partner_verification": "bu STIRdagi kompaniya kabinet hamkori: topşiriş uşlab turildi. Hisobni yurituvçi xodim STIRni tekşirib hamkorni qayta taklif qiladi, söng şu kartoçkada boğlanişni tasdiqlang — topşiriş özi takrorlanadi",
     "enqueue_failed": "navbatga qo‘yib bo‘lmadi",
     "other": "sababi aniqlanmadi",
     "erp_company_do_not_work": "kompaniya bilan işlamaymiz: ariza yaratilmadi. Kontragent kartasida belgini olib taşlang va qayta yuboring"

@@ -32,9 +32,9 @@
     "empty": "ko‘rsatilmagan"
   },
   "source": {
-    "erp": "«Amallar» bölimi javob bermayapti, ma’lumotlar to‘liq emas",
-    "crm": "«Kontaktlar» bölimi javob bermayapti, ma’lumotlar to‘liq emas",
-    "both": "«Kontaktlar» va «Amallar» javob bermayapti, ma’lumotlar to‘liq emas",
+    "erp": "«Amallar» bölimi javob bermayapti, maʼlumotlar töliq emas",
+    "crm": "«Kontaktlar» bölimi javob bermayapti, maʼlumotlar töliq emas",
+    "both": "«Kontaktlar» va «Amallar» javob bermayapti, maʼlumotlar töliq emas",
     "eds": "Hujjatlar javob bermayapti, ma’lumotlar to‘liq emas",
     "multi": "Ba’zi manbalar javob bermayapti, ma’lumotlar to‘liq emas",
     "retry": "Qayta urinish"

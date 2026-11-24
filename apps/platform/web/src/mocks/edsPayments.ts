@@ -458,7 +458,7 @@ export const edsPaymentsHandlers = [
           {
             at: now,
             code: "payment_doc.attached",
-            text: "Приложено подтверждение оплаты",
+            text: "Приложено платёжное поручение",
             by: ACCOUNTANT_NAME,
           },
           ...current.history,

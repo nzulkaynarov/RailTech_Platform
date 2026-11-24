@@ -30,7 +30,7 @@
       "empty": {
         "director": {
           "title": "Hozircha sizdan qaror talab qilinmaydi",
-          "text": "Yangi xatlar, TT qoralamalari va xizmat xatlari shu yerga özi keladi.",
+          "text": "Yangi xatlar, TT qoralamalari va xizmat xatlari şu yerga özi keladi.",
           "action": "Loyihalar"
         },
         "universal": {
@@ -577,12 +577,8 @@
         "disabled": "O'chirilgan"
       },
       "access": {
-        "crm": "Kontaktlar",
-        "erp": "Amallar",
-        "crmNo": "Kontaktlar: yo'q",
-        "erpNo": "Amallar: yo'q",
-        "erpPending": "Amallar: berilmoqda",
-        "erpError": "Amallar: xato",
+        "erpPending": "Kiriş berilmoqda",
+        "erpError": "Kiriş berilmagan",
         "telegram": "Telegram",
         "telegramNo": "Telegram: yo'q"
       },
@@ -617,18 +613,16 @@
         "email": "Elektron pochta",
         "position": "Lavozim",
         "roles": "Rollar",
-        "crm": "«Kontaktlar» ga kirish",
-        "erp": "«Amallar» ga kirish",
         "telegram": "Bildirishnomalar uchun Telegram",
         "status": "Holat",
-        "erpPending": "«Amallar» ga kirish hali berilmoqda.",
+        "erpPending": "Kiriş hali berilmoqda.",
         "erpReason": {
-          "not_connected": "«Amallar» ga kiriş berilmadi: bölimga ulanib bölmadi. Administrator manzil va tokenni «Ulanishlar» bölimida tekşiradi; berish özi qayta uriniladi.",
-          "unavailable": "ERP ga kiriş berilmadi: «Amallar» bölimi javob bermadi. Berish özi qayta uriniladi.",
-          "queue": "«Amallar» ga kiriş berilmadi: berish vazifasi navbatga qöyilmadi. «Qayta uriniş» tugmasini bosing.",
-          "rejected": "«Amallar» ga kiriş berilmadi: hisob qabul qilinmadi. Xodimning poçtasi va rollarini tekşiring va «Qayta uriniş» tugmasini bosing."
+          "not_connected": "Kiriş berilmadi: bölimga ulanib bölmadi. Administrator manzil va tokenni «Ulanişlar» bölimida tekşiradi; beriş özi qayta uriniladi.",
+          "unavailable": "Kiriş berilmadi: bölim javob bermadi. Beriş özi qayta uriniladi.",
+          "queue": "Kiriş berilmadi: beriş vazifasi navbatga qöyilmadi. «Qayta uriniş» tugmasini bosing.",
+          "rejected": "Kiriş berilmadi: hisob qabul qilinmadi. Xodimning poçtasi va rollarini tekşiring va «Qayta uriniş» tugmasini bosing."
         },
-        "erpNotGranted": "«Amallar» ga kiriş berilmagan.",
+        "erpNotGranted": "Kiriş berilmagan.",
         "erpRetry": "Qayta uriniş",
         "disabledNote": "Xodim o'chirilgan va kira olmaydi. Rollar va lavozim saqlangan."
       },
@@ -651,9 +645,7 @@
         "position": "Kartochkadagi lavozim: «{{position}}».",
         "positionCleared": "Kartochkadagi lavozim tozalanadi.",
         "self": "Siz o'z rollaringizni o'zgartiryapsiz: menyu saqlangandan keyin yangilanadi.",
-        "selfLosesAdmin": "Siz «Sozlamalar» bo‘limiga kirish huquqini yo‘qotasiz.",
-        "erpAdmin": "ERP da xodim administrator (superfoydalanuvchi) bo'ladi.",
-        "erpSections": "ERP da xodim rollar bo'limlari bo'yicha huquq oladi; berish natijasi — kartochkada («ERP: berilmoqda», «ERP: xato»)."
+        "selfLosesAdmin": "Siz «Sozlamalar» bölimiga kiriş huquqini yöqotasiz."
       },
       "invite": {
         "title": "Xodimni taklif qilish",
@@ -669,7 +661,7 @@
         "sent": "Taklif yuborildi: {{email}}",
         "notSent": "Xodim ro'yxatga «Taklif qilingan» holatida qo'shildi, lekin xat yuborilmadi: pochta ulanmagan yoki mavjud emas. Uni Sozlamalar · Ulanishlar bo‘limida ulang va xodim kartochkasidan taklifni qayta yuboring.",
         "openCard": "Kartochkani ochish",
-        "notSentUnavailable": "Xodim ro'yxatga «Taklif qilingan» holatida qo'shildi, lekin «Kontaktlar» bölimi javob bermadi va xat yuborilmadi. Keyinroq kartochkadagi «Taklifni qayta yuborish» tugmasi bilan takrorlang.",
+        "notSentUnavailable": "Xodim röyxatga «Taklif qilingan» holatida qöşildi, lekin server javob bermadi va xat yuborilmadi. Keyinroq kartoçkadagi «Taklifni qayta yuboriş» tugmasi bilan takrorlang.",
         "resend": "Taklifni qayta yuborish",
         "resendHint": "72 soatlik “Parolni örnating” havolasi bilan yangi xat yuboriladi; avvalgi havola va parol amal qilmaydi.",
         "tooMany": "Bu xodim uçun bir soatda havolalar juda köp. Keyinroq takrorlang.",
@@ -863,7 +855,7 @@
       "attention": "E’tibor talab qiladi · {{count}}",
       "none": "Hammasi işlayapti: nosozlik va muddati ötgan sozlama yöq.",
       "fixer": "tuzatadi: {{who}}",
-      "handOver": "sozlamalarni yurituvchiga uzating",
+      "handOver": "sozlamalarni yurituvçiga uzating",
       "open": "«{{page}}»ni oçiş",
       "openPlain": "Oçiş",
       "affected": "ta’sirlanadi: {{list}}",
@@ -1037,7 +1029,7 @@
     },
     "contract": {
       "title": "Shartnoma tanlanmagan",
-      "text": "Loyihani oching — bu yerda shartnoma holati va amallar paydo bo'ladi: mijozga kelishuvga yuborish, EHTda rasmiylashtirildi, imzolangan skan."
+      "text": "Loyihani oçing — bu yerda şartnoma holati va amallar paydo böladi: mijozga kelişuvga yuboriş, EHTda rasmiylaştirildi, imzolangan skan."
     },
     "act": {
       "title": "Dalolatnoma tanlanmagan",
