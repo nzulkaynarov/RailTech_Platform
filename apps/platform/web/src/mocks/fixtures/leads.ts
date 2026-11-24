@@ -423,8 +423,8 @@ function initial(): LeadsMock {
       assigned: MANAGER,
       handoff: { state: "taken", taken_by: MANAGER },
       origin: {
-        form: "cabinet_request",
-        page: "/new-client",
+        form: "site-partner",
+        page: "/contacts/",
         referrer: "t.me/railtech_news",
         campaign: "pos-nov",
         utm_source: "tg",

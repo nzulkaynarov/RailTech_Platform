@@ -11024,7 +11024,7 @@ components:
           - maxLength: 128
             type: string
           - type: 'null'
-          description: Form key, e.g. `request`.
+          description: Form key, e.g. `request`, `site`, `site-customer`, `site-partner`.
           title: Form
         form_token:
           maxLength: 64
@@ -16097,7 +16097,9 @@ paths:
 
         `form_token_invalid` | `form_too_fast` | `form_token_expired` | `contact_required` |
 
-        `invalid_phone` | `invalid_email`), 429 `rate_limited`.
+        `invalid_phone` | `invalid_email`), 429 `rate_limited` (окно по IP расходуют только запросы,
+
+        прошедшие проверку контакта). Телефон Узбекистана — `+998` и 9 цифр.
 
         Повторный запрос известного контакта дополняет существующую карточку. Необязательные факты
 
@@ -16124,6 +16126,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorOut'
           description: Ошибка валидации
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Too many requests from this address (`details.reason=rate_limited`)
       summary: Web Lead
       tags:
       - leads

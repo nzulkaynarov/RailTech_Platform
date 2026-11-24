@@ -35,26 +35,35 @@ MANUAL_SOURCES: Final[frozenset[LeadSource]] = frozenset(
 
 _UZ_COUNTRY: Final = "998"
 _UZ_LOCAL_LEN: Final = 9
+_UZ_FULL_LEN: Final = len(_UZ_COUNTRY) + _UZ_LOCAL_LEN
 _DIGITS: Final = re.compile(r"\D")
+_PHONE_CHARS: Final = re.compile(r"\+?[\d\s()\-.]+")
 
 
 def normalize_phone_e164(raw: str | None) -> str | None:
     """Номер из формы → E.164; узбекские номера без кода страны получают `+998`.
 
     Принимает `+998 90 123-45-67`, `998901234567`, `00998…`, `90 123 45 67` (9 цифр — местный
-    формат Узбекистана) и любой международный номер с кодом. Мусор и слишком короткие → None.
+    формат Узбекистана) и любой международный номер с кодом. Номер Узбекистана — ровно `+998`
+    и 9 цифр; «8 90 123 45 67» (местный префикс 8), короткие и слишком длинные → None.
     """
     if raw is None or not raw.strip():
         return None
     text = raw.strip()
+    if not _PHONE_CHARS.fullmatch(text):
+        return None
     digits = _DIGITS.sub("", text)
-    if text.startswith("+"):
-        return normalize_phone(text)
-    if digits.startswith("00") and len(digits) > 2:
-        digits = digits[2:]
-    if len(digits) == _UZ_LOCAL_LEN:
-        digits = _UZ_COUNTRY + digits
-    return normalize_phone(digits)
+    international = text.startswith("+")
+    if not international:
+        if digits.startswith("00") and len(digits) > 2:
+            digits = digits[2:]
+        elif len(digits) == _UZ_LOCAL_LEN:
+            digits = _UZ_COUNTRY + digits
+        elif digits.startswith("8") and len(digits) == _UZ_LOCAL_LEN + 1:
+            return None
+    if digits.startswith(_UZ_COUNTRY) and len(digits) != _UZ_FULL_LEN:
+        return None
+    return normalize_phone(f"+{digits}")
 
 
 # «Не понижать стадию» при склейке: выше ранг — дальше по воронке.
