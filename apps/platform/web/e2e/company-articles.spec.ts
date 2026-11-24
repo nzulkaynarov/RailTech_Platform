@@ -97,12 +97,10 @@ test.describe("Статьи компании", () => {
       await expect(preview).toBeVisible();
     });
     await page.getByRole("button", { name: "Сохранить и опубликовать" }).click();
-    await expect(
-      page.getByText("Статья опубликована: теперь её видят все сотрудники."),
-    ).toBeVisible();
+    // Состояние экрана, а не тост: тост исчезает сам и на медленном раннере его можно не застать
     await expect(
       page.getByRole("button", { name: "Как оформить командировку", exact: true }),
-    ).toBeVisible();
+    ).toBeVisible({ timeout: 15_000 });
     await signOut(page);
 
     // 3. Сотрудник видит статью в окне «?» и на странице «Помощь», общий поиск находит и её, и статьи Платформы.

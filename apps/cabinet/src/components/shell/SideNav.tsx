@@ -12,11 +12,14 @@ import { useUnreadText } from '@/hooks/useUnread';
 import { cn } from '@/lib/utils';
 import { useCanAct, useMe } from '@/session/useMe';
 import { useNav } from '@/session/useNav';
+import { CompanyCell } from '@/components/EntityCell';
 import { BrandMark } from './BrandMark';
 import { UnreadBadge, UnreadNote } from './MessagesLink';
 
 export interface SideNavProps {
   companyName?: string;
+  /** Логотип компании клиента (`Company.logo_version` → `/company/logo?v=`); нет — буквы названия */
+  companyLogoUrl?: string | null;
   collapsed?: boolean;
   onToggleCollapse?: () => void;
 }
@@ -28,7 +31,7 @@ export interface SideNavProps {
  * в `aria-label` (CAB-FIX-2). Ширина меняется одним шагом, без анимации: анимация ширины пересчитывала холст на каждом
  * кадре (K12).
  */
-export function SideNav({ companyName, collapsed = false, onToggleCollapse }: SideNavProps) {
+export function SideNav({ companyName, companyLogoUrl, collapsed = false, onToggleCollapse }: SideNavProps) {
   const { t } = useTranslation();
   const appName = useAppName();
   const me = useMe().data;
@@ -66,7 +69,11 @@ export function SideNav({ companyName, collapsed = false, onToggleCollapse }: Si
                 <BrandMark />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold text-primary">{appName}</p>
-                  {companyName ? <p className="truncate text-xs text-muted-foreground">{companyName}</p> : null}
+                  {companyName ? (
+                    <div className="mt-0.5 text-xs text-muted-foreground">
+                      <CompanyCell name={companyName} logoUrl={companyLogoUrl ?? null} />
+                    </div>
+                  ) : null}
                 </div>
               </div>
 

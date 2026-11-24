@@ -14,11 +14,13 @@ import { useShownKey } from "../../../shared/lib/useShownKey";
 import { DataTable, type DataColumn } from "../../../shared/ui/DataTable/DataTable";
 import { useSortParam } from "../../../shared/ui/DataTable/sort";
 import { DataBlock, ListSkeleton } from "../../../shared/ui/DataBlock";
+import { CompanyCell } from "../../../shared/ui/EntityCell";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { LinkButton } from "../../../shared/ui/LinkButton";
 import { MoneyText } from "../../../shared/ui/MoneyText";
 import { PageHeader } from "../../../shared/ui/PageHeader";
 import { StatusTag } from "../../../shared/ui/StatusTag";
+import { PersonRefCell } from "../../PersonRefCell";
 import { PAGE_SIZE, type Scope, projectPath, scopeOf } from "./api";
 import { useStateLabels } from "./labels";
 import { ActStatusTag, ProjectStatusTag } from "./status";
@@ -123,12 +125,21 @@ function Rows({ items }: { items: readonly ProjectRow[] }) {
               </Link>
               <StepTag step={row.step} />
             </div>
-            <p className="pf-dec-card-subject">{row.client_name}</p>
+            <p className="pf-dec-card-subject">
+              <CompanyCell name={row.client_name} logoUrl={row.client_logo_url ?? null} />
+            </p>
             <p className="pf-hint">{t(`clientStatus.${row.client_status}`)}</p>
             <Documents row={row} />
             <Problems row={row} />
             <div className="pf-dec-card-foot">
-              <span className="pf-hint">{row.responsible?.name ?? "—"}</span>
+              {row.responsible ? (
+                <PersonRefCell
+                  person={{ id: String(row.responsible.id), name: row.responsible.name }}
+                  caption={null}
+                />
+              ) : (
+                <span className="pf-hint">—</span>
+              )}
               <LinkButton
                 size="small"
                 to={projectPath(row.number)}
@@ -168,7 +179,7 @@ function Rows({ items }: { items: readonly ProjectRow[] }) {
       width: null,
       cell: (row) => (
         <>
-          {row.client_name}
+          <CompanyCell name={row.client_name} logoUrl={row.client_logo_url ?? null} />
           <div className="pf-hint">{row.title}</div>
         </>
       ),
@@ -216,7 +227,15 @@ function Rows({ items }: { items: readonly ProjectRow[] }) {
       width: COLS.responsible,
       cellClassName: "pf-ell",
       cellTitle: (row) => row.responsible?.name ?? undefined,
-      cell: (row) => row.responsible?.name ?? "—",
+      cell: (row) =>
+        row.responsible ? (
+          <PersonRefCell
+            person={{ id: String(row.responsible.id), name: row.responsible.name }}
+            caption={null}
+          />
+        ) : (
+          "—"
+        ),
     },
     {
       id: "action",

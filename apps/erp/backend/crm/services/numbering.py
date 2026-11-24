@@ -223,6 +223,34 @@ def next_document_number(doc_type: str, label: str = "", company=None) -> str:
     return _render_number(scheme, prefix=prefix, label=effective_label, now=now, displayed=displayed)
 
 
+def peek_document_number(doc_type: str, label: str = "", company=None) -> str:
+    """The number the NEXT `next_document_number` call would return, without taking it.
+
+    Same prefix, scheme, period and token mask as minting; reads the counter row (never locks, creates or
+    increments it), so a sample document shows the number a real one would get and the sequence stays gap-free.
+    """
+    from ..models import DocumentSequence
+
+    prefix = _company_prefix(company)
+    scheme_company_id = _scheme_company_id(company, prefix)
+    scheme = _resolve_scheme(scheme_company_id)
+    now = timezone.now()
+    last = (
+        DocumentSequence.objects.filter(
+            company_id=scheme_company_id, doc_type=doc_type, period=_period_key(scheme.reset_period, now)
+        )
+        .values_list("last_value", flat=True)
+        .first()
+    ) or 0
+    return _render_number(
+        scheme,
+        prefix=prefix,
+        label=scheme.label_for(doc_type, label),
+        now=now,
+        displayed=scheme.start_value + last + 1,
+    )
+
+
 # ── Editability API (thin, for the N2 Settings editor) ─────────────────────────────
 
 # The doc kinds shown in the live preview, in order — the editable {type} codes. The label

@@ -326,18 +326,17 @@ def update_template(template, *, name=None, kind_code=None, body_html=None, is_a
 # ── Live preview (editor) ────────────────────────────────────────────────────
 
 
-def _demo_context(company, user) -> PlaceholderContext:
+def demo_placeholder_context(company, user) -> PlaceholderContext:
     """Sample PlaceholderContext for the editor preview: the caller's REAL company
     (so ``company.*`` shows their own data) plus plausible fictional deal / counterparty /
     quote / contract stand-ins. Lightweight SimpleNamespace stubs — nothing is persisted."""
     counterparty = SimpleNamespace(name="ООО Пример", inn="301234567")
     deal = SimpleNamespace(id=1024, title="Демо-сделка", company_id=1, company=counterparty)
     contact = SimpleNamespace(name="ООО Пример", company_id=1, company=counterparty)
-    from .numbering import sample_numbers
+    from .numbering import peek_document_number
 
-    numbers = sample_numbers(company)
-    quote = SimpleNamespace(number=numbers.get("KP", ""), total_incl_vat="12 500 000 UZS")
-    contract = SimpleNamespace(number=numbers.get("CT", ""))
+    quote = SimpleNamespace(number=peek_document_number("KP", company=company), total_incl_vat="12 500 000 UZS")
+    contract = SimpleNamespace(number=peek_document_number("CT", company=company))
     return PlaceholderContext(company=company, deal=deal, contact=contact, quote=quote, contract=contract, user=user)
 
 
@@ -382,7 +381,7 @@ def preview_template(company, user: CustomUser, *, body_html: str, kind_code: st
     if len(body_html or "") > MAX_TEMPLATE_BODY_CHARS:
         raise ValidationError("TEMPLATE_BODY_TOO_LARGE")
     clean_html = sanitize_template_html(body_html)
-    rendered_html, values, warnings = render_template(clean_html, _demo_context(company, user))
+    rendered_html, values, warnings = render_template(clean_html, demo_placeholder_context(company, user))
     # Структурные блоки юридических видов (E1b) собираются только при печати настоящего
     # документа — в превью на месте токена встаёт подписанная заглушка, а не предупреждение.
     from .document_blocks import preview_block_stubs, render_document_body
@@ -700,31 +699,38 @@ def send_document_email(document, user: CustomUser, *, to=None) -> Tuple[Optiona
     return to_email, None
 
 
-def _render_generated_pdf(document) -> None:
-    """Render a GeneratedDocument's snapshot HTML to its pdf_file (WeasyPrint, off-thread)."""
+def generated_pdf_bytes(document, company, brand: dict, *, is_draft: bool) -> bytes:
+    """The PDF bytes of a generated document (letter on the blank): ONE renderer for the stored document and for the
+    sample document of the settings screens (`documents.sample`)."""
     from io import BytesIO
 
-    from django.core.files.base import ContentFile
     from django.template.loader import render_to_string
     from weasyprint import HTML
 
-    from .documents import brand_context_for_pdf, draft_context, generated_is_draft, remember_pdf_state
+    from .documents import brand_context_for_pdf, draft_context
 
-    # SIGN-1: документ-черновик (ещё не выпущен) — проект: «ПРОЕКТ», без номера и даты.
-    is_draft = generated_is_draft(document)
-    # document_render_brand: frozen letterhead snapshot (J-a) for ISSUED, live brand for DRAFT.
     # brand_context_for_pdf: inline the logo as a data: URI (WeasyPrint can't resolve the relative
     # /media/… URL prod storage yields — broken-image box otherwise).
     html_string = render_to_string(
         "crm/generated_document_pdf.html",
-        {
-            "document": document,
-            "company": document.company,
-            **brand_context_for_pdf(document_render_brand(document)),
-            **draft_context(is_draft),
-        },
+        {"document": document, "company": company, **brand_context_for_pdf(brand), **draft_context(is_draft)},
     )
     buffer = BytesIO()
     HTML(string=html_string).write_pdf(buffer)
-    save_rendered_pdf(document, f"Document_{document.number}.pdf", ContentFile(buffer.getvalue()))
+    return buffer.getvalue()
+
+
+def _render_generated_pdf(document) -> None:
+    """Render a GeneratedDocument's snapshot HTML to its pdf_file (WeasyPrint, off-thread)."""
+    from django.core.files.base import ContentFile
+
+    from .documents import generated_is_draft, remember_pdf_state
+
+    # SIGN-1: документ-черновик (ещё не выпущен) — проект: «ПРОЕКТ», без номера и даты.
+    is_draft = generated_is_draft(document)
+    # document_render_brand: frozen letterhead snapshot (J-a) for ISSUED, live brand for DRAFT.
+    pdf_file = ContentFile(
+        generated_pdf_bytes(document, document.company, document_render_brand(document), is_draft=is_draft)
+    )
+    save_rendered_pdf(document, f"Document_{document.number}.pdf", pdf_file)
     remember_pdf_state("generated", document.pk, is_draft)

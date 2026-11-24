@@ -227,7 +227,12 @@ class TestCode:
         link, raw = minted
         response = post("code", {"token": raw})
         assert response.status_code == status.HTTP_202_ACCEPTED, response.content
-        assert response.json() == {"sent_to": "a***@example.uz", "expires_in": 600, "resend_after": 45}
+        assert response.json() == {
+            "sent_to": "a***@example.uz",
+            "expires_in": 600,
+            "resend_after": 45,
+            "channels": ["email"],
+        }
         assert [m.to for m in mail.outbox] == [[client_contact.email]]
         assert "Код" in mail.outbox[-1].subject or "code" in mail.outbox[-1].subject.lower()
 

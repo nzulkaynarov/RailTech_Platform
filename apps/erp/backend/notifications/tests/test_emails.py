@@ -64,22 +64,46 @@ TEMPLATE_CASES = [
         {"quote_number": "КП-2026-00042", "contract_number": "CT-2026-00007", "seller_name": "Alpha LLC"},
     ),
     (
-        "invoice_issued",
+        "document_link_sent",
         {
-            "invoice_number": "INV-2026-00001",
-            "deal_title": "Рельсы Р65",
+            "kind": "invoice",
+            "recipient_name": "Алиса",
             "seller_name": "Alpha LLC",
+            "number": "INV-2026-00001",
             "total": "12 500 000 UZS",
             "due_date": "31.12.2026",
-            "invoice_url": "https://app.example.com/invoices/1",
+            "public_link": "https://cabinet.example.com/d/tok",
         },
     ),
     (
-        "invoice_issued",
+        "document_link_sent",
         {
-            "invoice_number": "INV-2026-00001",
+            "kind": "invoice",
+            "reminder": True,
+            "number": "INV-2026-00001",
             "total": "12 500 000 UZS",
-            "invoice_url": "https://app.example.com/invoices/1",
+            "balance_due": "7 500 000 UZS",
+            "due_date": "31.12.2026",
+            "public_link": "https://cabinet.example.com/d/tok",
+        },
+    ),
+    (
+        "document_link_sent",
+        {
+            "kind": "contract",
+            "seller_name": "Alpha LLC",
+            "number": "CT-2026-00007",
+            "total": "12 500 000 UZS",
+            "public_link": "https://cabinet.example.com/d/tok",
+        },
+    ),
+    (
+        "document_link_sent",
+        {
+            "kind": "act",
+            "number": "ACT-2026-00003",
+            "total": "12 500 000 UZS",
+            "public_link": "https://cabinet.example.com/d/tok",
         },
     ),
     (
@@ -104,27 +128,6 @@ TEMPLATE_CASES = [
             "total": "12 500 000 UZS",
             "is_fully_paid": True,
             "invoice_url": "https://app.example.com/invoices/1",
-        },
-    ),
-    (
-        "payment_reminder",
-        {
-            "invoice_number": "INV-2026-00001",
-            "deal_title": "Рельсы Р65",
-            "seller_name": "Alpha LLC",
-            "total": "12 500 000 UZS",
-            "balance_due": "7 500 000 UZS",
-            "due_date": "31.12.2026",
-            "invoice_url": "https://app.example.com/invoices/1",
-        },
-    ),
-    (
-        "act_awaiting_acceptance",
-        {
-            "act_number": "ACT-2026-00003",
-            "deal_title": "Рельсы Р65",
-            "total": "12 500 000 UZS",
-            "deal_url": "https://app.example.com/deal/1",
         },
     ),
     (

@@ -203,6 +203,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/operator/logo": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Логотип компании-оператора до входа (ДВ-3)
+     * @description WebP 96×96 (`size=full` — 256×256) логотипа своей компании: намеренно публичный, как название оператора. Адрес — из `PortalOperator.logo_url` с `?v=<версия>`. Файл закрыт в хранилище, отдаёт его только ERP. Логотипа нет — 404.
+     */
+    get: operations["getOperatorLogo"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/legal": {
     parameters: {
       query?: never;
@@ -743,7 +763,11 @@ export interface paths {
      *     403 `FORBIDDEN`; без принятых оферты и политики — 403 `LEGAL_ACCEPTANCE_REQUIRED`. `accept` принимает КП (договор
      *     создаётся, как при приёме в кабинете), `reject` возвращает с замечаниями (`text` — замечания, обязательны),
      *     `question` пишет вопрос менеджеру (`text`). КП уже решено или срок вышел — 409 `QUOTE_FINALIZED`, `QUOTE_EXPIRED`.
-     *     Ответ — документ в том же виде, что у `POST /doc-links/open`.
+     *     ДК-3: у договора, счёта и акта действия свои (`actions` в ответе `open`): договор — `accept` (клиент подписывает),
+     *     акт — `accept` и `reject` (возврат с замечаниями); у счёта действий нет. Действие вне списка вида — 422
+     *     `VALIDATION_ERROR`, ссылка одного вида не действует над документом другого. Модуль кабинета — вида документа
+     *     (`contracts`, `acts`, `quotes`), иначе 403 `MODULE_REQUIRED`. Договор или акт уже решён — 409 `CONTRACT_FINALIZED`,
+     *     `ACT_FINALIZED`. Ответ — документ в том же виде, что у `POST /doc-links/open`.
      */
     post: operations["actOnDocLink"];
     delete?: never;
@@ -1568,6 +1592,34 @@ export interface paths {
     put: operations["updateCompany"];
     post?: never;
     delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/company/logo": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Логотип своей компании (ЕД-5)
+     * @description Логотип WebP 96×96 (`size=full` — 256×256). Читает любой участник компании; логотипа нет — 404. Адрес строит Cabinet из `company.logo_version` с `?v=<версия>`: новая загрузка — новый адрес. Адресов хранилища API не отдаёт.
+     */
+    get: operations["getCompanyLogo"];
+    /**
+     * Загрузить или заменить логотип (ЕД-5)
+     * @description Только администратор компании (иначе 409 `ADMIN_REQUIRED`). Квадрат, уже обрезанный в браузере; JPEG, PNG или WebP до 2 МБ, сервер перекодирует в WebP 256×256. Файл не передан — 400 `FILE_REQUIRED`; не тот тип — 422 `FILE_TYPE_NOT_ALLOWED`, подпись не совпала — 422 `FILE_CONTENT_MISMATCH`, больше 2 МБ — 422 `FILE_TOO_LARGE`.
+     */
+    put: operations["uploadCompanyLogo"];
+    post?: never;
+    /**
+     * Убрать логотип (ЕД-5)
+     * @description Только администратор компании (иначе 409 `ADMIN_REQUIRED`); повтор безопасен. Ответ — компания, у которой `logo_version` равна `null`.
+     */
+    delete: operations["deleteCompanyLogo"];
     options?: never;
     head?: never;
     patch?: never;
@@ -2575,7 +2627,7 @@ export interface components {
     PortalOperator: {
       /** @description Название компании-оператора; `null` — не задано */
       name: string | null;
-      /** @description Логотип компании-оператора (ДВ-3): относительный адрес публичного файла `/media/companies/<id>/logo/…` на домене кабинета; `null` — не загружен, кабинет показывает буквы названия */
+      /** @description Логотип компании-оператора (ДВ-3): относительный адрес `/api/portal/v1/operator/logo?v=<версия>` на домене кабинета; `null` — не загружен, кабинет показывает буквы названия */
       logo_url: string | null;
       /** @description Имя Telegram-бота без @ — для входа через Telegram, «Я новый клиент» и ссылок на бота в кабинете. Владелец — CRM (процесс бота узнаёт имя у Telegram), в ERP — проекция из `crm.bot.changed`. `null` — бот ещё не запускался: кабинет не показывает ссылки на бота */
       bot_username: string | null;
@@ -2942,19 +2994,11 @@ export interface components {
     DocLinkAvailability: {
       allowed: boolean;
       /**
-       * @description `accepted`, `rejected`, `expired` — КП уже решено или срок вышел; `other_company` — вошёл контакт другой
+       * @description Значения (список открыт, клиент неизвестное показывает как «нельзя»): `accepted`, `rejected`, `expired`, `paid` — документ уже решён, срок вышел или счёт оплачен; `no_actions` — у этого вида документа
+       *     нет действий (счёт: реквизиты и справка); `other_company` — вошёл контакт другой
        *     компании; `no_contact`, `no_access` — у получателя нет контакта или модуля в кабинете; `no_right` — у контакта нет права действовать
-       * @enum {string|null}
        */
-      reason:
-        | "accepted"
-        | "rejected"
-        | "expired"
-        | "other_company"
-        | "no_contact"
-        | "no_access"
-        | "no_right"
-        | null;
+      reason: string | null;
     };
     DocLinkCodeSent: {
       /** @description Адрес получателя, замаскированный (`i***@example.com`) */
@@ -2963,11 +3007,19 @@ export interface components {
       expires_in: number;
       /** @description Через сколько секунд можно запросить новый */
       resend_after: number;
+      /**
+       * @description Куда ушёл код (ДК-4): всегда `email`; `telegram` — ещё и в бот, если у получателя привязан Telegram. Нет поля —
+       *     только письмо (старый ответ)
+       */
+      channels?: ("email" | "telegram")[];
     };
-    /** @description Документ по ссылке — клиентская проекция КП без себестоимости, наценки и внутренних полей */
+    /**
+     * @description Документ по ссылке — клиентская проекция без себестоимости, наценки и внутренних полей. Вид — `kind` (КП, договор,
+     *     счёт, акт); у договора, счёта и акта `version` равен 1, `lines` пуст, а факты вида — в необязательных полях ниже.
+     */
     DocLinkView: {
-      /** @enum {string} */
-      kind: "quote";
+      /** @description Вид документа — `quote`, `contract`, `invoice` или `act` (список открыт — новые виды добавляются без смены версии) */
+      kind: string;
       number: string;
       version: number;
       /** @description Кто прислал (продавец) */
@@ -2980,10 +3032,10 @@ export interface components {
       /** Format: date */
       valid_until: string | null;
       /**
-       * @description Из фактов КП, а не из ссылки
-       * @enum {string}
+       * @description Значения — `open`, `accepted`, `rejected`, `expired`, `paid`. Из фактов документа, а не из ссылки. `open` — ждёт ответа (у счёта — оплаты); `accepted` — принят (договор подписан
+       *     клиентом, акт принят); `rejected` — возвращён с замечаниями; `paid` — счёт оплачен
        */
-      state: "open" | "accepted" | "rejected" | "expired";
+      state: string;
       /** Format: date-time */
       link_expires_at: string;
       /** @description Адрес получателя, замаскированный; на него уходит код */
@@ -3000,6 +3052,30 @@ export interface components {
       delivery_days?: number | null;
       delivery_note?: string | null;
       lines: components["schemas"]["QuoteLine"][];
+      /**
+       * @description Какие действия есть у этого вида документа (ДК-3): КП — принять, вернуть, вопрос; договор — принять (подписать);
+       *     акт — принять, вернуть; счёт — ни одного. Действие вне списка — 422 `VALIDATION_ERROR`. Нет поля — как у КП
+       */
+      actions?: ("accept" | "reject" | "question")[];
+      /**
+       * Format: date-time
+       * @description Договор — когда его подписал клиент
+       */
+      signed_at?: string | null;
+      /**
+       * Format: date-time
+       * @description Акт — когда выставлен
+       */
+      issued_at?: string;
+      /**
+       * Format: date
+       * @description Счёт — срок оплаты
+       */
+      due_date?: string | null;
+      paid?: components["schemas"]["Money"];
+      balance_due?: components["schemas"]["Money"];
+      /** @description Счёт — реквизиты для оплаты, как в PDF; «Оплачено?» — справка, нового пути оплаты нет */
+      payment_details?: string | null;
     };
     /** @description Строка КП для клиента — цена продажи без себестоимости и наценки; `unit_price` и `total` без НДС (Q-FIX21-2) */
     QuoteLine: {
@@ -3392,6 +3468,8 @@ export interface components {
       /** @description Последний запрос на смену реквизитов; только в `GET` и `PUT /company`, `null` — запросов не было (FX-4) */
       bank_change_request?: components["schemas"]["BankChangeRequest"] | null;
       language: components["schemas"]["Language"];
+      /** @description Версия логотипа (ЕД-5); логотип — `/company/logo?v=<версия>`, `null` — логотипа нет, показываются буквы названия */
+      logo_version?: string | null;
       relationship_status?: components["schemas"]["PortalRelationshipStatus"];
       /** @description Действующие и архивные отношения компании с нами (роль, статус, договор) */
       relationships?: components["schemas"]["PortalRelationship"][];
@@ -4108,6 +4186,31 @@ export interface operations {
           "application/json": components["schemas"]["PortalOperator"];
         };
       };
+    };
+  };
+  getOperatorLogo: {
+    parameters: {
+      query?: {
+        size?: "row" | "full";
+        /** @description Версия логотипа — только для кэша браузера */
+        v?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Логотип */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "image/webp": string;
+        };
+      };
+      404: components["responses"]["NotFound"];
     };
   };
   getLegal: {
@@ -5210,7 +5313,7 @@ export interface operations {
       401: components["responses"]["Unauthorized"];
       403: components["responses"]["Forbidden"];
       404: components["responses"]["NotFound"];
-      /** @description КП уже решено или срок вышел (`QUOTE_FINALIZED`, `QUOTE_EXPIRED`) */
+      /** @description Документ уже решён или срок вышел (`QUOTE_FINALIZED`, `QUOTE_EXPIRED`, `CONTRACT_FINALIZED`, `ACT_FINALIZED`) */
       409: {
         headers: {
           [name: string]: unknown;
@@ -6771,6 +6874,112 @@ export interface operations {
       };
       422: components["responses"]["ValidationError"];
       429: components["responses"]["TooManyRequests"];
+    };
+  };
+  getCompanyLogo: {
+    parameters: {
+      query?: {
+        size?: "row" | "full";
+        /** @description Версия логотипа — только для кэша браузера */
+        v?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Логотип */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "image/webp": string;
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+    };
+  };
+  uploadCompanyLogo: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "multipart/form-data": {
+          /** Format: binary */
+          file: string;
+        };
+      };
+    };
+    responses: {
+      /** @description Логотип сохранён; в ответе компания с новой `logo_version` */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Company"];
+        };
+      };
+      /** @description Файл не передан (`FILE_REQUIRED`) */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      /** @description Не администратор компании (`ADMIN_REQUIRED`) */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      422: components["responses"]["ValidationError"];
+    };
+  };
+  deleteCompanyLogo: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Логотип убран */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Company"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      /** @description Не администратор компании (`ADMIN_REQUIRED`) */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
     };
   };
   getBankByMfo: {

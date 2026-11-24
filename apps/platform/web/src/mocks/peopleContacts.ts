@@ -7,6 +7,7 @@ import type {
 } from "../shared/api/generated/model";
 import { pickedCompanyById, pickedPeople } from "./counterpartyPick";
 import { findUserById } from "./fixtures/users";
+import { photoUrlOf } from "./pictures";
 
 /** Люди клиентов и партнёров (FR-11): контакты контрагентов демо-мира, как их отдаёт ERP `parties/people/`. */
 const PEOPLE: CounterpartyPerson[] = [
@@ -88,7 +89,10 @@ export const peopleContactsHandlers = [
   http.get("*/people/contacts", ({ request }) => {
     const url = new URL(request.url);
     const kind = url.searchParams.get("kind");
-    const items = PEOPLE.filter((person) => !kind || person.kind === kind);
+    const items = PEOPLE.filter((person) => !kind || person.kind === kind).map((person) => ({
+      ...person,
+      photo_url: photoUrlOf(person.id),
+    }));
     const pageSize = Number(url.searchParams.get("page_size") ?? "100");
     return HttpResponse.json({ items, total: items.length, page: 1, page_size: pageSize });
   }),

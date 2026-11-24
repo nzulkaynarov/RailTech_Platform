@@ -7008,3 +7008,72 @@ msgstr "The code is valid for <strong>%(expires_minutes)s minutes</strong> and w
 #, python-format
 msgid "Код действует %(expires_minutes)s минут и срабатывает один раз. Введите его на странице документа."
 msgstr "The code is valid for %(expires_minutes)s minutes and works once. Enter it on the document page."
+
+msgid "Договор № %(number)s на подписание"
+msgstr "Contract No. %(number)s to sign"
+
+msgid "Акт № %(number)s ждёт вашего ответа"
+msgstr "Act No. %(number)s awaits your reply"
+
+msgid "Напоминание: счёт № %(number)s"
+msgstr "Reminder: invoice No. %(number)s"
+
+msgid "Счёт № %(number)s на оплату"
+msgstr "Invoice No. %(number)s for payment"
+
+msgid "Компания <strong>%(seller_name)s</strong> отправила договор <strong>№ %(number)s</strong> на подписание."
+msgstr "<strong>%(seller_name)s</strong> sent you contract <strong>No. %(number)s</strong> to sign."
+
+msgid "Вам отправлен договор <strong>№ %(number)s</strong> на подписание."
+msgstr "Contract <strong>No. %(number)s</strong> has been sent to you to sign."
+
+msgid "Компания <strong>%(seller_name)s</strong> выставила акт <strong>№ %(number)s</strong>. Примите его или верните с замечаниями."
+msgstr "<strong>%(seller_name)s</strong> issued act <strong>No. %(number)s</strong>. Accept it or return it with remarks."
+
+msgid "Вам выставлен акт <strong>№ %(number)s</strong>. Примите его или верните с замечаниями."
+msgstr "Act <strong>No. %(number)s</strong> has been issued to you. Accept it or return it with remarks."
+
+msgid "Срок оплаты счёта <strong>№ %(number)s</strong> прошёл."
+msgstr "The payment due date of invoice <strong>No. %(number)s</strong> has passed."
+
+msgid "Компания <strong>%(seller_name)s</strong> выставила счёт <strong>№ %(number)s</strong> на оплату."
+msgstr "<strong>%(seller_name)s</strong> issued invoice <strong>No. %(number)s</strong> for payment."
+
+msgid "Вам выставлен счёт <strong>№ %(number)s</strong> на оплату."
+msgstr "Invoice <strong>No. %(number)s</strong> has been issued to you for payment."
+
+msgid "Компания %(seller_name)s отправила договор № %(number)s на подписание."
+msgstr "%(seller_name)s sent you contract No. %(number)s to sign."
+
+msgid "Вам отправлен договор № %(number)s на подписание."
+msgstr "Contract No. %(number)s has been sent to you to sign."
+
+msgid "Компания %(seller_name)s выставила акт № %(number)s. Примите его или верните с замечаниями."
+msgstr "%(seller_name)s issued act No. %(number)s. Accept it or return it with remarks."
+
+msgid "Вам выставлен акт № %(number)s. Примите его или верните с замечаниями."
+msgstr "Act No. %(number)s has been issued to you. Accept it or return it with remarks."
+
+msgid "Срок оплаты счёта № %(number)s прошёл."
+msgstr "The payment due date of invoice No. %(number)s has passed."
+
+msgid "Компания %(seller_name)s выставила счёт № %(number)s на оплату."
+msgstr "%(seller_name)s issued invoice No. %(number)s for payment."
+
+msgid "Вам выставлен счёт № %(number)s на оплату."
+msgstr "Invoice No. %(number)s has been issued to you for payment."
+
+msgid "Сумма:"
+msgstr "Amount:"
+
+msgid "К оплате:"
+msgstr "Balance due:"
+
+msgid "Срок оплаты:"
+msgstr "Payment due:"
+
+msgid "Открыть документ онлайн"
+msgstr "Open the document online"
+
+msgid "Открыть документ онлайн:"
+msgstr "Open the document online:"

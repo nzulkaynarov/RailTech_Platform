@@ -213,5 +213,38 @@
     "by": "{{name}} belgilagan, {{date}}",
     "until": "{{date}} gacha",
     "unknown": "xodim körsatilmagan"
+  },
+  "clientLink": {
+    "title": "Mijozning Kabinetdagi havolasi",
+    "state": {
+      "active": "Havola {{date}} gaça amal qiladi.",
+      "activeNoDate": "Havola amal qiladi.",
+      "revoked": "Havola bekor qilindi: mijoz u orqali heç narsani oça olmaydi. Hujjatni qayta yuborsangiz, yangi havola beriladi.",
+      "revoked_quote": "Havola bekor qilindi: mijoz u orqali heç narsani oça olmaydi. TTni qayta yuborsangiz, yangi havola beriladi.",
+      "expired": "Havola muddati tugadi.",
+      "superseded": "TTning yangiroq versiyasi bor: mijoz bu havola orqali faqat şuni köradi.",
+      "none": "Havola yöq."
+    },
+    "to": "Qabul qiluvçi — {{to}}.",
+    "sent": "Yuborilgan: {{date}}.",
+    "opened": "Mijoz oçgan: {{date}}.",
+    "notOpened": "Mijoz hali oçmagan.",
+    "rowState": {
+      "revoked": "Bekor qilingan.",
+      "expired": "Muddati tugagan.",
+      "superseded": "Yangi versiya bilan almaştirilgan."
+    },
+    "revoke": "Havolani bekor qiliş",
+    "confirmText": "Mijoz u orqali endi heç narsani köra olmaydi. Hujjatni qayta yuborsangiz, yangi havola beriladi.",
+    "confirmText_quote": "Mijoz u orqali endi heç narsani köra olmaydi. TTni qayta yuborsangiz, yangi havola beriladi.",
+    "done": "Havola bekor qilindi.",
+    "failed": "Havolani bekor qilib bölmadi.",
+    "confirmAction": "Bekor qiliş",
+    "confirmObject_quote": "TT havolasini",
+    "confirmObject_contract": "şartnoma havolasini",
+    "confirmObject_invoice": "hisob havolasini",
+    "confirmObject_act": "dalolatnoma havolasini",
+    "loadFailed": "Mijoz havolalarini yuklab bölmadi.",
+    "retry": "Qayta uriniş"
   }
 }

@@ -26,7 +26,12 @@ INVITE_TYPE: Final = "uz.railtech.erp.invite.requested.v1"
 TEST_TYPE: Final = "uz.railtech.erp.contact.telegram_test_requested.v1"
 #: Уведомление безопасности контакту (FX-4): inline — `app/services/contact_security_notice.py`.
 SECURITY_NOTICE_TYPE: Final = "uz.railtech.erp.contact.security_notice_requested.v1"
-INLINE_TYPES: Final = frozenset({CODE_TYPE, INVITE_TYPE, TEST_TYPE, SECURITY_NOTICE_TYPE})
+#: Код и личная ссылка документа в бот получателя (ДК-4): inline —
+#: `app/services/document_link_telegram.py`.
+DOCUMENT_LINK_TYPE: Final = "uz.railtech.erp.document_link.telegram_requested.v1"
+INLINE_TYPES: Final = frozenset(
+    {CODE_TYPE, INVITE_TYPE, TEST_TYPE, SECURITY_NOTICE_TYPE, DOCUMENT_LINK_TYPE}
+)
 #: Типы ERP не для CRM: КП на одобрение директором адресовано EDS (EDS-03), в нём
 #: себестоимость и маржа; статусы договора (D2-5) — проекция реестра EDS. CRM на них не подписана
 #: (`packages/contracts/bus/subscriptions.yaml`) и обработчика не регистрирует.

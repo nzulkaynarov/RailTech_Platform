@@ -23,6 +23,7 @@ import { BrandMark } from './BrandMark';
 import { NotificationBell } from './NotificationBell';
 import { HelpDrawer } from './HelpDrawer';
 import { SetCrumbContext, type PageCrumb } from './crumbs';
+import { companyLogoUrl } from '@/api/portal';
 import { SideNav } from './SideNav';
 import { useTelegramBackButton } from './useTelegramBackButton';
 
@@ -151,7 +152,12 @@ export function AppShell() {
           {t('app.skipToContent')}
         </a>
 
-        <SideNav companyName={me?.company.name} collapsed={sidebarCollapsed} onToggleCollapse={toggleSidebar} />
+        <SideNav
+          companyName={me?.company.name}
+          companyLogoUrl={companyLogoUrl(me?.company.logo_version)}
+          collapsed={sidebarCollapsed}
+          onToggleCollapse={toggleSidebar}
+        />
 
         <div className="flex min-w-0 flex-1 flex-col md:p-2.5">
           <div className="flex min-w-0 flex-1 flex-col rounded-none border-0 bg-background shadow-none md:rounded-lg md:border md:border-border md:shadow-xs">

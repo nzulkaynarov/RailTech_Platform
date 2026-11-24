@@ -51,6 +51,7 @@ def test_clients_and_partners_without_own_and_strangers(world):
         "is_primary": False,
         "company": {"id": world["client_company"].pk, "name": "ООО Клиент Юг"},
         "kind": "client",
+        "photo_version": None,
     }
     assert {row["name"]: row["kind"] for row in body["results"]}["Дильшод Поставщиков"] == "partner"
 
@@ -119,6 +120,7 @@ def test_organizations_in_the_same_bounds_with_letter_details(world):
         "roles": {"client": True, "supplier": False, "manufacturer": False, "partner": False, "organization": False},
         "country": None,
         "crm_client_id": None,
+        "logo_version": None,
     }
     assert rows["ООО Изготовитель"]["kind"] == "partner"
     assert rows["ООО Изготовитель"]["email"] is None

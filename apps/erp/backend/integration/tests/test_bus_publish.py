@@ -316,6 +316,11 @@ def test_every_event_type_is_published_by_its_service(deal, buyer, manager, mapp
     # contact.security_notice_requested — уведомление безопасности (FX-4): маршрутизатор пишет контакту в Telegram
     with transaction.atomic():
         notices._request_security_telegram(contact, 58, "bank_requisites_change_requested")
+    # document_link.telegram_requested — личная ссылка документа в бот получателя (ДК-4)
+    with transaction.atomic():
+        events.publish_document_link_telegram(
+            contact, kind="link", document_kind="invoice", number="INV-1", url="http://cabinet.localhost/d/abc"
+        )
     # deal.lost — закрытие сделки без продажи
     lost_deal = Deal.objects.create(
         title="Проиграна", company=company, client=buyer_user, stage=DealStage.objects.get(code="CALCULATING")
@@ -348,7 +353,10 @@ def test_every_event_type_is_published_by_its_service(deal, buyer, manager, mapp
     assert seen == expected, f"не опубликованы: {sorted(expected - seen)}; лишние: {sorted(seen - expected)}"
     for envelope in published:
         bus_support.assert_matches_contract(
-            envelope, secret_masked=envelope["type"].endswith("acceptance_code_requested.v1")
+            envelope,
+            secret_masked=envelope["type"].endswith(
+                ("acceptance_code_requested.v1", "document_link.telegram_requested.v1")
+            ),
         )
         assert envelope["source"] == "rt://erp" and envelope["tenant"] == "railtech"
     assert Quote.objects.filter(deal=deal).exists()

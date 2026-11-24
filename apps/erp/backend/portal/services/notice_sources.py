@@ -23,18 +23,21 @@ def _deal_ref(deal) -> str:
 
 
 def _document_contacts(deal) -> tuple[int, ...]:
-    """Контакт документа — контакт сделки: ему письмо-уведомление и без приглашения в кабинет (решение лида по #402)."""
-    contact_id = getattr(deal, "contact_id", None) if deal is not None else None
-    return (contact_id,) if isinstance(contact_id, int) else ()
+    """Контакты документа сделки: контакт сделки и каждый, кому уходил документ сделки по ссылке (ДК-3, ADR-0030 п. 8) —
+    им письмо-уведомление идёт и без приглашения в кабинет и без входа (решение лида по #402)."""
+    if deal is None:
+        return ()
+    from portal.services.doc_links import document_contact_ids
+
+    return document_contact_ids(deal)
 
 
 def _legacy_buyer_emails(deal) -> set[str]:
-    """Адреса пользователей ERP компании-покупателя, которым письмо о счёте, акте и просрочке уже шлёт `deal_emails`
-    (членство B2B; у клиентов портала его нет) — контакту с тем же адресом второе письмо не нужно."""
-    from crm.services.deal_emails import _emails_for
-    from crm.services.deal_notifications import buyer_team_user_ids
+    """Адреса, которым письмо о счёте, акте и просрочке уже ушло как письмо с документом (`document_letters`): получателям
+    документов сделки второе письмо-уведомление не нужно. Прежних участников компании в ERP здесь нет (ДК-3)."""
+    from portal.services.doc_links import deal_recipients
 
-    return {email for email, _user_id in _emails_for(buyer_team_user_ids(deal))}
+    return {email for email, _name in deal_recipients(deal)}
 
 
 def quote_sent(quote, channels: Optional[list[str]] = None, bot_reaches: Optional[bool] = None) -> None:

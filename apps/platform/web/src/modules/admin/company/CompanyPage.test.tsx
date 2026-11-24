@@ -10,6 +10,7 @@ import {
   resetCompanyMock,
   updateCompanyMock,
 } from "../../../mocks/fixtures/company";
+import { resetSampleMock, sampleRequests } from "../../../mocks/adminCompany";
 import { readEmployees, writeEmployees } from "../../../mocks/fixtures/employees";
 import { readRoles, writeRoles } from "../../../mocks/fixtures/roles";
 import { endSession } from "../../../mocks/mockSession";
@@ -20,9 +21,15 @@ import { renderApp, signInAs } from "../../../test/renderApp";
 import { server } from "../../../test/server";
 import { setViewportWidth } from "../../../test/viewport";
 
+// Просмотрщик PDF в jsdom не рисует: страницу заменяет подпись с названием образца
+vi.mock("../../../shared/ui/PdfViewer", () => ({
+  default: ({ name }: { name: string }) => <div data-testid="pdf-pages">{name}</div>,
+}));
+
 beforeEach(() => {
   window.localStorage.clear();
   resetCompanyMock();
+  resetSampleMock();
   usePanelsStore.setState({ entries: {} });
   setViewportWidth(1440);
   void i18n.changeLanguage("ru");
@@ -309,13 +316,9 @@ describe("Admin · Компания: доступ и каркас", () => {
     // Бланк — на той же странице; поля заблокированы, вид образца переключается
     expect(await screen.findByLabelText("Подписант")).toBeDisabled();
     expect(screen.queryByRole("button", { name: "Сохранить бланк" })).toBeNull();
-    await screen.findByTitle("Образец: КП");
+    expect(await screen.findByText("Образец: КП")).toBeInTheDocument();
     fireEvent.click(screen.getByText("Договор", { selector: ".ant-segmented-item-label" }));
-    await waitFor(() => {
-      expect(screen.getByTitle("Образец: Договор").getAttribute("srcdoc")).toContain(
-        "Договор поставки",
-      );
-    });
+    expect(await screen.findByText("Образец: Договор")).toBeInTheDocument();
 
     // ЕВ-3а: «Шаблоны» — страница группы «Правила работы», в меню «Документов» их нет
     await act(() => app.router.navigate("/admin/templates"));
@@ -325,7 +328,7 @@ describe("Admin · Компания: доступ и каркас", () => {
     const viewer = await screen.findByRole("region", { name: "Шаблон документа" });
     expect(within(viewer).getByLabelText(/^Текст шаблона/)).toBeDisabled();
     expect(within(viewer).queryByRole("button", { name: "Сохранить" })).toBeNull();
-    expect(await within(viewer).findByTitle("Образец документа по шаблону")).toBeInTheDocument();
+    expect(await within(viewer).findByText("Образец документа по шаблону")).toBeInTheDocument();
     fireEvent.click(within(viewer).getByRole("button", { name: "К списку" }));
     expect(screen.getByRole("button", { name: "Создать шаблон" })).toBeDisabled();
     expect(screen.queryByRole("button", { name: /^Изменить:/ })).toBeNull();
@@ -470,25 +473,37 @@ describe("Бланк и бренд", () => {
     ]);
   });
 
-  it("образец документа в изолированной рамке меняется вместе с несохранённой правкой цвета", async () => {
+  it("образец бланка — PDF генератора: несохранённая правка цвета уходит в запрос, ничего не сохраняется", async () => {
     await openTab("brand");
-    const frame = await screen.findByTitle("Образец: КП");
-    expect(frame).toHaveAttribute("sandbox", "");
+    expect(await screen.findByText("Образец: КП")).toBeInTheDocument();
     await waitFor(() => {
-      expect(frame.getAttribute("srcdoc")).toContain("#1668dc");
+      expect(sampleRequests.at(-1)).toMatchObject({ kind: "quote" });
     });
+    expect(sampleRequests.at(-1)?.draft).toBeUndefined();
 
     type("Основной цвет", "#047857");
     await waitFor(() => {
-      expect(screen.getByTitle("Образец: КП").getAttribute("srcdoc")).toContain("#047857");
+      expect(sampleRequests.at(-1)?.draft?.accent_color).toBe("#047857");
     });
     // ничего не сохранено
     expect(readCompanyMock().brand.accent_color).toBe("#1668dc");
   });
 
+  it("язык образца: русский по языку интерфейса, переключение уходит в запрос", async () => {
+    await openTab("brand");
+    await screen.findByText("Образец: КП");
+    await waitFor(() => {
+      expect(sampleRequests.at(-1)?.language).toBe("ru");
+    });
+    fireEvent.click(screen.getByText("EN", { selector: ".ant-segmented-item-label" }));
+    await waitFor(() => {
+      expect(sampleRequests.at(-1)?.language).toBe("en");
+    });
+  });
+
   it("бланк на узбекском и английском (TPL-3): варианты полей сохраняются, пустое печатается по-русски", async () => {
     await openTab("brand");
-    await screen.findByTitle("Образец: КП");
+    await screen.findByText("Образец: КП");
     fireEvent.click(screen.getByRole("button", { name: /Бланк на узбекском и английском/ }));
     const uz = screen.getByRole("group", { name: "O‘zbekcha (UZ)" });
     expect(within(uz).getByLabelText("Должность подписанта")).toHaveValue("Direktor");
@@ -509,12 +524,11 @@ describe("Бланк и бренд", () => {
 
   it("вид документа переключает образец; сохранение уходит с изменённым полем", async () => {
     await openTab("brand");
-    await screen.findByTitle("Образец: КП");
+    await screen.findByText("Образец: КП");
     fireEvent.click(screen.getByText("Договор", { selector: ".ant-segmented-item-label" }));
+    expect(await screen.findByText("Образец: Договор")).toBeInTheDocument();
     await waitFor(() => {
-      expect(screen.getByTitle("Образец: Договор").getAttribute("srcdoc")).toContain(
-        "Договор поставки",
-      );
+      expect(sampleRequests.at(-1)?.kind).toBe("contract");
     });
 
     type("Подписант", "Демо Подписантов");
@@ -798,13 +812,6 @@ describe("Шаблоны документов и писем", () => {
   });
 
   it("образец открывается по названию (только чтение, предпросмотр на каркасе вида), «Скопировать к себе» — в меню строки", async () => {
-    const previews: { kind?: string }[] = [];
-    server.use(
-      http.post("*/admin/company/document-templates/preview", async ({ request }) => {
-        previews.push((await request.json()) as { kind?: string });
-        return HttpResponse.json({ html: "<p>образец</p>" });
-      }),
-    );
     await openTab("templates");
     const view = await screen.findByRole("button", {
       name: "Просмотр: Образец: договор поставки",
@@ -819,7 +826,7 @@ describe("Шаблоны документов и писем", () => {
     expect(within(dialog).queryByRole("button", { name: "Сохранить" })).not.toBeInTheDocument();
     expect(within(dialog).getByRole("button", { name: "К списку" })).toBeInTheDocument();
     await waitFor(() => {
-      expect(previews.at(-1)?.kind).toBe("contract"); // каркас своего вида
+      expect(sampleRequests.at(-1)?.template_kind).toBe("contract"); // генератор своего вида
     });
   });
 
@@ -863,9 +870,9 @@ describe("Шаблоны документов и писем", () => {
     await openTab("templates");
     await pickRowAction("Акт приёмки", "Изменить");
     const dialog = await screen.findByRole("region", { name: "Изменить шаблон документа" });
-    const frame = await within(dialog).findByTitle("Образец документа по шаблону");
+    expect(await within(dialog).findByText("Образец документа по шаблону")).toBeInTheDocument();
     await waitFor(() => {
-      expect(frame.getAttribute("srcdoc")).toContain("[seller_name]");
+      expect(sampleRequests.at(-1)?.body_html).toContain("{{seller_name}}");
     });
 
     fireEvent.change(within(dialog).getByLabelText(/^Текст шаблона/), {

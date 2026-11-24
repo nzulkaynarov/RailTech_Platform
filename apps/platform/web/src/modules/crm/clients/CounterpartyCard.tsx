@@ -19,10 +19,15 @@ import {
   useGetCounterparty,
   useGetCounterpartyByClient,
   useClearCounterpartyDoNotWork,
+  useDeleteContactPhoto,
+  useDeleteCounterpartyLogo,
   useSetCounterpartyDoNotWork,
   useSetCounterpartyRole,
   useUpdateCounterpartyRequisites,
+  useUploadContactPhoto,
+  useUploadCounterpartyLogo,
 } from "../../../shared/api/generated/platform-bff";
+import { PictureEdit } from "../../../features/picture-edit/PictureEdit";
 import { companyToday } from "../../../shared/lib/dates";
 import { DateField } from "../../../shared/ui/DateField";
 import { Dialog } from "../../../shared/ui/Dialog";
@@ -122,6 +127,23 @@ function Loaded({
     void queryClient.invalidateQueries({ queryKey: getListCatalogSuppliersQueryKey() });
   };
   const setRole = useSetCounterpartyRole({ mutation: { onSuccess: store } });
+  // ЕД-5: логотип в шапке; список клиентов перечитывается, чтобы строка получила новый адрес с версией
+  const uploadLogo = useUploadCounterpartyLogo({
+    mutation: {
+      onSuccess: (next) => {
+        store(next);
+        refreshLists();
+      },
+    },
+  });
+  const deleteLogo = useDeleteCounterpartyLogo({
+    mutation: {
+      onSuccess: (next) => {
+        store(next);
+        refreshLists();
+      },
+    },
+  });
   const { message } = App.useApp();
   // Х-8: «Снова работать» — обратимое действие, без вопроса; «Не работать» просит причину
   const clearMark = useClearCounterpartyDoNotWork({
@@ -136,7 +158,11 @@ function Loaded({
   const conflict = setRole.error instanceof ApiError && setRole.error.status === 409;
 
   const items = [
-    { key: "overview", label: t("counterparty.tabs.overview"), children: <Overview card={card} /> },
+    {
+      key: "overview",
+      label: t("counterparty.tabs.overview"),
+      children: <Overview card={card} editable={requisitesEditable} onChanged={store} />,
+    },
     ...(hasClient
       ? [
           {
@@ -160,6 +186,17 @@ function Loaded({
   return (
     <div className="pf-cp">
       <div className="pf-cp-head">
+        <div className="pf-cp-logo">
+          <PictureEdit
+            kind="company"
+            name={card.name}
+            src={card.logo_url}
+            size={56}
+            editable={requisitesEditable}
+            onSave={(file) => uploadLogo.mutateAsync({ id: card.id, data: { file } })}
+            onRemove={() => deleteLogo.mutateAsync({ id: card.id })}
+          />
+        </div>
         <div className="pf-cp-title">
           <h3 className="pf-fp-title">{card.name}</h3>
           {requisitesEditable ? (
@@ -286,8 +323,25 @@ function Loaded({
   );
 }
 
-function Overview({ card }: { card: Card }) {
+function Overview({
+  card,
+  editable,
+  onChanged,
+}: {
+  card: Card;
+  editable: boolean;
+  onChanged: (next: Card) => void;
+}) {
   const { t } = useTranslation("clients");
+  // СУЩ-3: фото контакта — тот же запрос и то же право, что у реквизитов; карточка получает новый адрес с версией
+  const upload = useUploadContactPhoto();
+  const remove = useDeleteContactPhoto();
+  const setPhoto = (personId: string, photoUrl: string | null) => {
+    onChanged({
+      ...card,
+      people: card.people.map((p) => (p.id === personId ? { ...p, photo_url: photoUrl } : p)),
+    });
+  };
   return (
     <div className="pf-fp-stack">
       <section className="pf-fp-block" aria-labelledby={`pf-cp-${card.id}-people`}>
@@ -298,6 +352,29 @@ function Overview({ card }: { card: Card }) {
               <li key={person.id}>
                 <PersonCell
                   name={person.name}
+                  photoUrl={person.photo_url}
+                  size={32}
+                  picture={
+                    editable ? (
+                      <PictureEdit
+                        kind="person"
+                        name={person.name}
+                        src={person.photo_url}
+                        size={32}
+                        editable
+                        onSave={(file) =>
+                          upload.mutateAsync({ id: person.id, data: { file } }).then((next) => {
+                            setPhoto(person.id, next.photo_url);
+                          })
+                        }
+                        onRemove={() =>
+                          remove.mutateAsync({ id: person.id }).then(() => {
+                            setPhoto(person.id, null);
+                          })
+                        }
+                      />
+                    ) : undefined
+                  }
                   caption={[
                     person.position,
                     person.is_primary ? t("counterparty.people.primary") : null,

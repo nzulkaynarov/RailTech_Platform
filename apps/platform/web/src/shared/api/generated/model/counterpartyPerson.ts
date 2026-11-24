@@ -19,4 +19,9 @@ export interface CounterpartyPerson {
   is_primary: boolean;
   company: CounterpartyRef;
   kind: CounterpartyPersonKind;
+  /**
+   * Фото контакта: адрес на BFF с `?v=<версия>` (СУЩ-3); null — инициалы
+   * @nullable
+   */
+  photo_url?: string | null;
 }

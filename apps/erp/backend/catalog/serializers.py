@@ -20,11 +20,21 @@ from .models import (
 
 
 class CompanyLightSerializer(serializers.ModelSerializer):
-    """Lightweight company serializer for nested use — no extra queries."""
+    """Lightweight company serializer for nested use — no extra queries.
+
+    `logo` is our versioned API path (ЕД-5), not a storage address: the file is private and only the API serves it."""
+
+    logo = serializers.SerializerMethodField()
 
     class Meta:
         model = Company
         fields = ["id", "name", "inn", "logo"]
+
+    @extend_schema_field({"type": "string", "format": "uri", "nullable": True})  # format kept: contract compatibility
+    def get_logo(self, obj) -> str | None:
+        from parties.pictures import company_logo_path
+
+        return company_logo_path(obj)
 
 
 class ManufacturerSerializer(serializers.ModelSerializer):

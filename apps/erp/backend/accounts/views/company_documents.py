@@ -66,10 +66,14 @@ class CompanyDocumentsMixin:
         except ValidationError as e:
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
-        if company.logo:
-            company.logo.delete(save=False)
-        company.logo = logo_file
-        company.save(update_fields=["logo"])
+        from parties import pictures
+
+        from catalog.desk.items import ItemError
+
+        try:
+            pictures.replace(company, "logo", logo_file, extra_fields=())
+        except ItemError as error:
+            return Response({"detail": error.code}, status=status.HTTP_400_BAD_REQUEST)
         return Response(CompanySerializer(company, context={"request": request}).data)
 
     @extend_schema(
@@ -81,10 +85,9 @@ class CompanyDocumentsMixin:
     def delete_logo(self, request, pk=None):
         company = self.get_object()
         self._assert_member_or_admin(company)
-        if company.logo:
-            company.logo.delete(save=False)
-            company.logo = None
-            company.save(update_fields=["logo"])
+        from parties import pictures
+
+        pictures.remove(company, "logo", extra_fields=())
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @extend_schema(
@@ -121,12 +124,15 @@ class CompanyDocumentsMixin:
 
     @extend_schema(
         summary="Live preview of a sample document with the company's theme (Document Layout)",
+        deprecated=True,
+        extensions={"x-sunset": "2027-06-01"},
         description="Renders a SAMPLE document of the requested kind (КП / договор / инвойс / "
         "акт / письмо) as HTML using the company's document profile. POST body may carry "
         "{doc_type, draft:{...}} — the draft overlays UNSAVED theme settings in-memory (never "
         "saved), so the editor previews live like the Odoo Document-Layout wizard. GET stays "
         "the legacy saved-profile КП preview. OWNER only. Returns text/html (no WeasyPrint in "
-        "the request thread, ARCH-03).",
+        "the request thread, ARCH-03). Устарело (ДОК-14): образец — PDF настоящего генератора, `POST /crm/document-samples/`; "
+        "путь будет удалён после даты отключения.",
         request=inline_serializer(
             "DocumentProfilePreviewRequest",
             fields={

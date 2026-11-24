@@ -16,7 +16,7 @@ from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 from integration.models import CrmClientMapping
-from parties import do_not_work
+from parties import do_not_work, pictures
 from parties.banking import grouped, masked
 from parties.models import Company, CompanyType
 from parties.models.relationships import CompanyRelationship, RelationshipRole, RelationshipStatus
@@ -104,6 +104,7 @@ def card(company: Company, client_ids: set, user) -> dict:
         "country": company.country.name if company.country_id else None,
         "legal_address": company.legal_address or None,
         "crm_client_id": mapping,
+        "logo_version": pictures.version(company.logo),
         "roles": roles_of(company, client_ids),
         "people": [
             {
@@ -114,6 +115,7 @@ def card(company: Company, client_ids: set, user) -> dict:
                 "has_cabinet": bool(person.can_act or person.is_admin),
                 "has_phone": bool(person.phone),
                 "has_email": bool(person.email),
+                "photo_version": pictures.version(person.photo),
             }
             for person in people
         ],

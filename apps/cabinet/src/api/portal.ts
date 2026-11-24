@@ -46,6 +46,11 @@ export function itemThumbnailUrl(id: number, photo: number | null | undefined): 
   return photo ? portalUrl(`/items/${id}/thumbnail?v=${photo}`) : null;
 }
 
+/** Логотип своей компании (ЕД-5): адрес с версией — новая загрузка, новый адрес; без версии логотипа нет (`null`, буквы названия). */
+export function companyLogoUrl(version: string | null | undefined): string | null {
+  return version ? portalUrl(`/company/logo?v=${encodeURIComponent(version)}`) : null;
+}
+
 function newIdempotencyKey(): string {
   return typeof crypto !== 'undefined' && 'randomUUID' in crypto
     ? crypto.randomUUID()
@@ -491,6 +496,16 @@ export async function uploadPartnerProductDocument(
   });
 }
 
+/** Заменить логотип компании: файл идёт как есть, сервер сам режет его до квадрата 256×256 (только администратор компании). */
+export async function uploadCompanyLogo(file: File): Promise<Company> {
+  const formData = new FormData();
+  formData.append('file', file);
+  const response = await postForm('/company/logo', formData, 'PUT');
+  return (await response.json()) as Company;
+}
+
+export const deleteCompanyLogo = () => portalRequest<Company>('/company/logo', { method: 'DELETE' });
+
 export const deletePartnerProductDocument = (productId: number, docId: number) =>
   portalRequest<void>(`/partner/products/${productId}/documents/${docId}`, { method: 'DELETE' });
 
@@ -561,11 +576,11 @@ export async function getCatalogItemDocumentFile(
 }
 
 /** `POST multipart/form-data` с ключом попытки; ошибка — `PortalApiError` с кодом из `{"detail": CODE}`. */
-async function postForm(path: string, formData: FormData): Promise<Response> {
+async function postForm(path: string, formData: FormData, method: 'POST' | 'PUT' = 'POST'): Promise<Response> {
   let response: Response;
   try {
     response = await fetch(portalUrl(path), {
-      method: 'POST',
+      method,
       headers: { Accept: 'application/json', 'Idempotency-Key': newIdempotencyKey() },
       credentials: 'include',
       body: formData,

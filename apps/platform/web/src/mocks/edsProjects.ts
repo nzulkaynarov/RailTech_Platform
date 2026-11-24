@@ -9,6 +9,7 @@ import type {
   ProjectStage,
 } from "../shared/api/generated/model";
 import {
+  type MockDocLinkKind,
   actDelivered,
   DELIVERY_FROM,
   MOCK_STAFF_ID,
@@ -16,8 +17,11 @@ import {
   findProject,
   isDone,
   numberOf,
+  ownsDocument,
   problemsOf,
+  readDocLinks,
   readProjects,
+  revokeDocLinks,
   sendBlockerOf,
   stepOf,
   templateOf,
@@ -735,6 +739,36 @@ export const edsProjectsHandlers = [
         "X-Content-Type-Options": "nosniff",
       },
     });
+  }),
+
+  // --- ссылка клиента на документ в Кабинете (ДК-3б) -------------------------------------------------------
+
+  // Видит и отзывает тот, кто отправляет документ (в мок-ролях — `eds.projects` полный); остальным список пуст.
+  http.get("*/eds/projects/:ref/documents/:kind/:docId/client-links", ({ request, params }) => {
+    const ok = guard("read");
+    if (ok.error) return ok.error;
+    const p = findProject(refOf(request));
+    const kind = params["kind"] as MockDocLinkKind;
+    const id = Number(params["docId"]);
+    if (!p || !ownsDocument(p, kind, id)) return notFound();
+    if (!ok.writer) return HttpResponse.json({ links: [], can_revoke: false });
+    const links = readDocLinks(kind, id);
+    return HttpResponse.json({ links, can_revoke: links.some((l) => l.state === "active") });
+  }),
+
+  http.post("*/eds/projects/:ref/documents/:kind/:docId/revoke-links", ({ request, params }) => {
+    const ok = guard("read");
+    if (ok.error) return ok.error;
+    const p = findProject(refOf(request));
+    const kind = params["kind"] as MockDocLinkKind;
+    const id = Number(params["docId"]);
+    if (!p || !ownsDocument(p, kind, id)) return notFound();
+    if (!ok.writer) {
+      return failure(403, "FORBIDDEN", "Действие не положено вашей роли.", "erp", {
+        backend_status: 403,
+      });
+    }
+    return HttpResponse.json({ links: revokeDocLinks(kind, id), can_revoke: false });
   }),
 
   // --- файлы ------------------------------------------------------------------------------------------------

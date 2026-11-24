@@ -208,5 +208,33 @@
       "failed": "Saqlab bölmadi. Qayta urinib köring.",
       "newRequestClosed": "Yangi ariza yopiq: kompaniya bilan işlamaymiz."
     }
+  },
+  "picture": {
+    "errors": {
+      "file_type_not_allowed": "PNG, JPEG yoki WebP rasm kerak.",
+      "file_content_mismatch": "Fayl turi mazmuniga mos kelmaydi. Boşqa rasm tanlang.",
+      "file_too_large": "Fayl 2 MB dan katta. Kiçikroq fayl tanlang.",
+      "PAYLOAD_TOO_LARGE": "Fayl 2 MB dan katta. Kiçikroq fayl tanlang.",
+      "FORBIDDEN": "Rasmni rekvizitlarni tahrirlaydigan xodim özgartira oladi.",
+      "default": "Rasmni saqlab bölmadi. Qayta urinib köring."
+    },
+    "company": {
+      "input": "Logotip fayli",
+      "choose": "Logotip yuklaş",
+      "change": "Logotipni almaştiriş",
+      "remove": "Logotipni olib taşlaş",
+      "cropTitle": "Kompaniya logotipi",
+      "cropHint": "Logotipni suring va masştabni tanlang. Ramka içidagini hamkasblar köradi.",
+      "apply": "Logotipni saqlaş"
+    },
+    "person": {
+      "input": "Rasm fayli: {{name}}",
+      "choose": "Rasm yuklaş: {{name}}",
+      "change": "Rasmni almaştiriş: {{name}}",
+      "remove": "Rasmni olib taşlaş: {{name}}",
+      "cropTitle": "Kontakt rasmi",
+      "cropHint": "Rasmni suring va masştabni tanlang. Doira içidagini hamkasblar köradi.",
+      "apply": "Rasmni saqlaş"
+    }
   }
 }

@@ -5,9 +5,17 @@
   gap: 12px;
 }
 .pf-cp-head {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: 12px;
+  row-gap: 4px;
+  align-items: center;
+}
+.pf-cp-logo {
+  grid-row: 1 / span 2;
+}
+.pf-cp-head > :not(.pf-cp-logo) {
+  grid-column: 2;
 }
 .pf-cp-title {
   display: flex;

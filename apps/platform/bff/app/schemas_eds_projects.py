@@ -56,6 +56,24 @@ FileKind = Literal["contract", "invoice", "act"]
 FileVariant = Literal["pdf", "scan"]
 
 
+class DocumentClientLink(BaseModel):
+    """Ссылка получателя на договор, счёт или акт в Кабинете (ДК-3б): адрес замаскирован ERP."""
+
+    recipient_hint: str
+    sent_at: dt.datetime
+    first_opened_at: dt.datetime | None
+    last_opened_at: dt.datetime | None
+    expires_at: dt.datetime
+    state: Literal["active", "revoked", "expired", "superseded"]
+
+
+class DocumentClientLinks(BaseModel):
+    """Ссылки документа проекта; «Отозвать» — пока есть живая ссылка и право отправлять документ."""
+
+    links: list[DocumentClientLink]
+    can_revoke: bool
+
+
 class ProjectMoney(BaseModel):
     amount: str = Field(pattern=r"^-?\d+\.\d{2}$")
     currency: str = Field(pattern=r"^[A-Z]{3}$")
@@ -137,6 +155,9 @@ class ProjectRow(BaseModel):
     documents: ProjectDocuments
     problems: list[ProjectProblem]
     created_at: dt.datetime
+    #: Компания клиента в ERP и наш путь её логотипа (ЕД-3): строка реестра рисует `CompanyCell`
+    client_id: int | None = None
+    client_logo_url: str | None = None
 
 
 class ProjectPage(BaseModel):
@@ -361,6 +382,7 @@ class RawRow(_Raw):
     deal_id: int
     number: str = ""  # `Deal.number` из ERP (erp-internal 1.8.0); BFF номер не составляет
     title: str = ""
+    company_id: int | None = None
     company_name: str = ""
     created_at: dt.datetime
     step: ProjectStage
@@ -385,6 +407,15 @@ class RawRow(_Raw):
 class RawPage(_Raw):
     count: int
     results: list[RawRow]
+
+
+class RawDocumentClientLinks(BaseModel):
+    """Ответ ERP `…/client-links/`: лишнего наружу не отдаём (id ссылки не нужен)."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    links: list[DocumentClientLink] = Field(default_factory=list)
+    can_revoke: bool = False
 
 
 class RawCard(RawRow):

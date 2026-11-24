@@ -208,5 +208,33 @@
       "failed": "Could not save. Try again.",
       "newRequestClosed": "New requests are closed: we do not work with this company."
     }
+  },
+  "picture": {
+    "errors": {
+      "file_type_not_allowed": "A PNG, JPEG or WebP image is required.",
+      "file_content_mismatch": "The file type does not match its content. Choose another image.",
+      "file_too_large": "The file is larger than 2 MB. Choose a smaller one.",
+      "PAYLOAD_TOO_LARGE": "The file is larger than 2 MB. Choose a smaller one.",
+      "FORBIDDEN": "Only those who edit the requisites can change the picture.",
+      "default": "Could not save the picture. Try again."
+    },
+    "company": {
+      "input": "Logo file",
+      "choose": "Upload logo",
+      "change": "Replace logo",
+      "remove": "Remove logo",
+      "cropTitle": "Company logo",
+      "cropHint": "Drag the logo and pick a zoom. What is inside the frame is what colleagues see.",
+      "apply": "Save logo"
+    },
+    "person": {
+      "input": "Photo file: {{name}}",
+      "choose": "Upload photo: {{name}}",
+      "change": "Replace photo: {{name}}",
+      "remove": "Remove photo: {{name}}",
+      "cropTitle": "Contact photo",
+      "cropHint": "Drag the photo and pick a zoom. What is inside the circle is what colleagues see.",
+      "apply": "Save photo"
+    }
   }
 }

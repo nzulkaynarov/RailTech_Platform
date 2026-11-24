@@ -22,3 +22,19 @@ export async function renderCircle(image: CanvasImageSource, rect: SourceRect): 
     }, "image/png");
   });
 }
+
+/** Квадрат для логотипа компании: PNG 256×256 без обрезки углов (логотип может быть и с прозрачным фоном). */
+export async function renderSquare(image: CanvasImageSource, rect: SourceRect): Promise<Blob> {
+  const canvas = document.createElement("canvas");
+  canvas.width = OUTPUT_SIZE;
+  canvas.height = OUTPUT_SIZE;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("canvas недоступен");
+  ctx.drawImage(image, rect.sx, rect.sy, rect.size, rect.size, 0, 0, OUTPUT_SIZE, OUTPUT_SIZE);
+  return new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (blob) resolve(blob);
+      else reject(new Error("не удалось получить картинку"));
+    }, "image/png");
+  });
+}

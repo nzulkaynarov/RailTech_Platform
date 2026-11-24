@@ -291,3 +291,44 @@ describe("Контрагенты: тип отношения", () => {
     ).toBeVisible();
   });
 });
+
+describe("Клиенты · логотип в строке (ЕД-5)", () => {
+  it("загруженный логотип — картинкой с версией в адресе, остальные строки — буквами названия", async () => {
+    server.use(
+      http.get("*/crm/clients", () =>
+        HttpResponse.json({
+          items: [
+            {
+              id: 3,
+              name: "ООО Рельс-Сервис Демо",
+              inn: "300000003",
+              in_erp: true,
+              open_requests: 0,
+              last_activity_at: null,
+              handoff_status: "done",
+              logo_url: "/api/v1/people/counterparties/1003/logo?v=v7",
+            },
+            {
+              id: 4,
+              name: "ООО Без Логотипа",
+              inn: null,
+              in_erp: false,
+              open_requests: 0,
+              last_activity_at: null,
+              handoff_status: null,
+            },
+          ],
+        }),
+      ),
+    );
+    await open("manager@demo.example");
+    const table = await screen.findByRole("table", { name: "Клиенты" });
+    const withLogo = within(table).getByRole("row", { name: /ООО Рельс-Сервис Демо/ });
+    expect(withLogo.querySelector("img")).toHaveAttribute(
+      "src",
+      "/api/v1/people/counterparties/1003/logo?v=v7",
+    );
+    const without = within(table).getByRole("row", { name: /ООО Без Логотипа/ });
+    expect(without.querySelector("img")).toBeNull();
+  });
+});

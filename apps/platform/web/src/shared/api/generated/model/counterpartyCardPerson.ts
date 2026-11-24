@@ -15,4 +15,9 @@ export interface CounterpartyCardPerson {
   has_cabinet: boolean;
   has_phone: boolean;
   has_email: boolean;
+  /**
+   * Фото контакта: адрес на BFF с `?v=<версия>` (СУЩ-3); null — инициалы
+   * @nullable
+   */
+  photo_url?: string | null;
 }

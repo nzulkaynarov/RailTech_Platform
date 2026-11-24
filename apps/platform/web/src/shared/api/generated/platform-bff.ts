@@ -117,6 +117,7 @@ import type {
   CompanyItemRef,
   CompanyProfile,
   CompanyProfileUpdate,
+  ContactPhoto,
   ContractTemplate,
   ContractTemplateConflictResponse,
   ContractTemplateIn,
@@ -146,8 +147,11 @@ import type {
   DoNotWorkIn,
   DocflowSettings,
   DocflowSettingsPatch,
+  DocumentClientLinks,
   DocumentPlaceholders,
   DocumentPreview,
+  DocumentSample,
+  DocumentSampleIn,
   DocumentTemplate,
   DocumentTemplateCopyIn,
   DocumentTemplateIn,
@@ -214,6 +218,8 @@ import type {
   FxRateOverview,
   GetAiSpendReportParams,
   GetCatalogItemThumbnailParams,
+  GetContactPhotoParams,
+  GetCounterpartyLogoParams,
   GetCrmThreadParams,
   GetFxRateParams,
   GetPriceImportParams,
@@ -390,6 +396,7 @@ import type {
   PaymentMemoPage,
   PaymentMemoPayIn,
   PaymentProofUpload,
+  PictureUpload,
   PlatformSettings,
   PlatformSettingsUpdate,
   PriceImportApplyIn,
@@ -12984,6 +12991,291 @@ export function useDownloadEdsProjectFile<
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+export const getGetEdsProjectDocumentClientLinksUrl = (
+  ref: string,
+  kind: "contract" | "invoice" | "act",
+  docId: number,
+) => {
+  return `/api/v1/eds/projects/${ref}/documents/${kind}/${docId}/client-links`;
+};
+
+/**
+ * Кому ушла личная ссылка на документ (адрес замаскирован), когда, открывали ли её и в каком она состоянии (`active`, `revoked`, `expired`, `superseded`). Документ обязан быть в карточке этого проекта (иначе 404). Видит тот, кто вправе отправлять этот документ (решает ERP); у остальных список пуст. Раздел `eds.projects` — чтение.
+ * @summary EDS · Проект: ссылки клиента на договор, счёт или акт в Кабинете
+ */
+export const getEdsProjectDocumentClientLinks = async (
+  ref: string,
+  kind: "contract" | "invoice" | "act",
+  docId: number,
+  options?: Parameters<typeof http>[1],
+): Promise<DocumentClientLinks> => {
+  return http<DocumentClientLinks>(getGetEdsProjectDocumentClientLinksUrl(ref, kind, docId), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetEdsProjectDocumentClientLinksQueryKey = (
+  ref: string,
+  kind: "contract" | "invoice" | "act",
+  docId: number,
+) => {
+  return [`/api/v1/eds/projects/${ref}/documents/${kind}/${docId}/client-links`] as const;
+};
+
+export const getGetEdsProjectDocumentClientLinksQueryOptions = <
+  TData = Awaited<ReturnType<typeof getEdsProjectDocumentClientLinks>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  ref: string,
+  kind: "contract" | "invoice" | "act",
+  docId: number,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getEdsProjectDocumentClientLinks>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetEdsProjectDocumentClientLinksQueryKey(ref, kind, docId);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getEdsProjectDocumentClientLinks>>> = ({
+    signal,
+  }) => getEdsProjectDocumentClientLinks(ref, kind, docId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled:
+      ref !== null &&
+      ref !== undefined &&
+      kind !== null &&
+      kind !== undefined &&
+      docId !== null &&
+      docId !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getEdsProjectDocumentClientLinks>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetEdsProjectDocumentClientLinksQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getEdsProjectDocumentClientLinks>>
+>;
+export type GetEdsProjectDocumentClientLinksQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+
+export function useGetEdsProjectDocumentClientLinks<
+  TData = Awaited<ReturnType<typeof getEdsProjectDocumentClientLinks>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  ref: string,
+  kind: "contract" | "invoice" | "act",
+  docId: number,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getEdsProjectDocumentClientLinks>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getEdsProjectDocumentClientLinks>>,
+          TError,
+          Awaited<ReturnType<typeof getEdsProjectDocumentClientLinks>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetEdsProjectDocumentClientLinks<
+  TData = Awaited<ReturnType<typeof getEdsProjectDocumentClientLinks>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  ref: string,
+  kind: "contract" | "invoice" | "act",
+  docId: number,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getEdsProjectDocumentClientLinks>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getEdsProjectDocumentClientLinks>>,
+          TError,
+          Awaited<ReturnType<typeof getEdsProjectDocumentClientLinks>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetEdsProjectDocumentClientLinks<
+  TData = Awaited<ReturnType<typeof getEdsProjectDocumentClientLinks>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  ref: string,
+  kind: "contract" | "invoice" | "act",
+  docId: number,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getEdsProjectDocumentClientLinks>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary EDS · Проект: ссылки клиента на договор, счёт или акт в Кабинете
+ */
+
+export function useGetEdsProjectDocumentClientLinks<
+  TData = Awaited<ReturnType<typeof getEdsProjectDocumentClientLinks>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  ref: string,
+  kind: "contract" | "invoice" | "act",
+  docId: number,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getEdsProjectDocumentClientLinks>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetEdsProjectDocumentClientLinksQueryOptions(ref, kind, docId, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getRevokeEdsProjectDocumentClientLinksUrl = (
+  ref: string,
+  kind: "contract" | "invoice" | "act",
+  docId: number,
+) => {
+  return `/api/v1/eds/projects/${ref}/documents/${kind}/${docId}/revoke-links`;
+};
+
+/**
+ * Гасит все живые ссылки ЭТОГО документа у всех получателей (клиент по ним увидит «ссылка отозвана»), пишет событие в журнал сделки; повтор безвреден. Новая отправка документа даст новую ссылку. Право — то же, что на отправку документа (решает ERP; иначе 403). Раздел `eds.projects` — чтение.
+ * @summary EDS · Проект: отозвать ссылки клиента на договор, счёт или акт
+ */
+export const revokeEdsProjectDocumentClientLinks = async (
+  ref: string,
+  kind: "contract" | "invoice" | "act",
+  docId: number,
+  options?: Parameters<typeof http>[1],
+): Promise<DocumentClientLinks> => {
+  return http<DocumentClientLinks>(getRevokeEdsProjectDocumentClientLinksUrl(ref, kind, docId), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getRevokeEdsProjectDocumentClientLinksMutationKey = () =>
+  ["revokeEdsProjectDocumentClientLinks"] as const;
+
+export const getRevokeEdsProjectDocumentClientLinksMutationOptions = <
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof revokeEdsProjectDocumentClientLinks>>,
+    TError,
+    RevokeEdsProjectDocumentClientLinksMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof revokeEdsProjectDocumentClientLinks>>,
+  TError,
+  RevokeEdsProjectDocumentClientLinksMutationVariables,
+  TContext
+> => {
+  const mutationKey = getRevokeEdsProjectDocumentClientLinksMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof revokeEdsProjectDocumentClientLinks>>,
+    RevokeEdsProjectDocumentClientLinksMutationVariables
+  > = (props) => {
+    const { ref, kind, docId } = props ?? {};
+
+    return revokeEdsProjectDocumentClientLinks(ref, kind, docId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RevokeEdsProjectDocumentClientLinksMutationResult = NonNullable<
+  Awaited<ReturnType<typeof revokeEdsProjectDocumentClientLinks>>
+>;
+
+export type RevokeEdsProjectDocumentClientLinksMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+export type RevokeEdsProjectDocumentClientLinksMutationVariables = {
+  ref: string;
+  kind: "contract" | "invoice" | "act";
+  docId: number;
+};
+
+/**
+ * @summary EDS · Проект: отозвать ссылки клиента на договор, счёт или акт
+ */
+export const useRevokeEdsProjectDocumentClientLinks = <
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof revokeEdsProjectDocumentClientLinks>>,
+      TError,
+      RevokeEdsProjectDocumentClientLinksMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof revokeEdsProjectDocumentClientLinks>>,
+  TError,
+  RevokeEdsProjectDocumentClientLinksMutationVariables,
+  TContext
+> => {
+  return useMutation(getRevokeEdsProjectDocumentClientLinksMutationOptions(options), queryClient);
+};
 
 export const getRequestEdsDocumentPdfUrl = (id: string) => {
   return `/api/v1/eds/documents/${id}/pdf`;
@@ -31363,7 +31655,8 @@ export const getPreviewBrandDocumentUrl = () => {
 };
 
 /**
- * Образец КП, договора, счёта, акта или письма с несохранёнными правками `draft`; ничего не сохраняется. Раздел `company.settings` — чтение.
+ * Образец КП, договора, счёта, акта или письма с несохранёнными правками `draft`; ничего не сохраняется. Раздел `company.settings` — чтение. Устарело (ДОК-14): образец — PDF настоящего генератора, `requestDocumentSample`.
+ * @deprecated
  * @summary Предпросмотр образца документа на бланке
  */
 export const previewBrandDocument = async (
@@ -31445,6 +31738,7 @@ export type PreviewBrandDocumentMutationError = ErrorType<
 export type PreviewBrandDocumentMutationVariables = { data: BrandPreviewIn };
 
 /**
+ * @deprecated
  * @summary Предпросмотр образца документа на бланке
  */
 export const usePreviewBrandDocument = <
@@ -33423,6 +33717,7 @@ export const getPreviewDocumentTemplateUrl = () => {
 
 /**
  * Ничего не сохраняет. Раздел `company.settings` — чтение.
+ * @deprecated
  * @summary Предпросмотр шаблона на образце данных
  */
 export const previewDocumentTemplate = async (
@@ -33504,6 +33799,7 @@ export type PreviewDocumentTemplateMutationError = ErrorType<
 export type PreviewDocumentTemplateMutationVariables = { data: DocumentTemplatePreviewIn };
 
 /**
+ * @deprecated
  * @summary Предпросмотр шаблона на образце данных
  */
 export const usePreviewDocumentTemplate = <
@@ -33528,6 +33824,386 @@ export const usePreviewDocumentTemplate = <
 > => {
   return useMutation(getPreviewDocumentTemplateMutationOptions(options), queryClient);
 };
+
+export const getRequestDocumentSampleUrl = () => {
+  return `/api/v1/admin/company/document-samples`;
+};
+
+/**
+ * ДОК-14. Образец КП, договора, счёта, акта или письма строит тот же генератор и та же нумерация, что и рабочий документ: бланк компании (или несохранённый `draft`), действующий шаблон (или несохранённый `body_html` из редактора; вид — `template_kind`), следующий номер схемы (счётчик не занимается), язык печати `language`. PDF рендерит воркер ERP: ответ — состояние, дальше `getDocumentSample` и `downloadDocumentSample`. Ничего не сохраняется. Раздел `company.settings` — чтение.
+ * @summary Образец документа настоящим генератором (в очередь)
+ */
+export const requestDocumentSample = async (
+  documentSampleIn: DocumentSampleIn,
+  options?: Parameters<typeof http>[1],
+): Promise<DocumentSample> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<DocumentSample>(getRequestDocumentSampleUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(documentSampleIn),
+  });
+};
+
+export const getRequestDocumentSampleMutationKey = () => ["requestDocumentSample"] as const;
+
+export const getRequestDocumentSampleMutationOptions = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | Error | ValidationFailedResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof requestDocumentSample>>,
+    TError,
+    RequestDocumentSampleMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof requestDocumentSample>>,
+  TError,
+  RequestDocumentSampleMutationVariables,
+  TContext
+> => {
+  const mutationKey = getRequestDocumentSampleMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof requestDocumentSample>>,
+    RequestDocumentSampleMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return requestDocumentSample(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RequestDocumentSampleMutationResult = NonNullable<
+  Awaited<ReturnType<typeof requestDocumentSample>>
+>;
+export type RequestDocumentSampleMutationBody = DocumentSampleIn;
+export type RequestDocumentSampleMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | Error | ValidationFailedResponse
+>;
+export type RequestDocumentSampleMutationVariables = { data: DocumentSampleIn };
+
+/**
+ * @summary Образец документа настоящим генератором (в очередь)
+ */
+export const useRequestDocumentSample = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | Error | ValidationFailedResponse>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof requestDocumentSample>>,
+      TError,
+      RequestDocumentSampleMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof requestDocumentSample>>,
+  TError,
+  RequestDocumentSampleMutationVariables,
+  TContext
+> => {
+  return useMutation(getRequestDocumentSampleMutationOptions(options), queryClient);
+};
+
+export const getGetDocumentSampleUrl = (id: string) => {
+  return `/api/v1/admin/company/document-samples/${id}`;
+};
+
+/**
+ * Раздел `company.settings` — чтение. Образец живёт в ERP несколько минут; позже — 404.
+ * @summary Состояние образца документа
+ */
+export const getDocumentSample = async (
+  id: string,
+  options?: Parameters<typeof http>[1],
+): Promise<DocumentSample> => {
+  return http<DocumentSample>(getGetDocumentSampleUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetDocumentSampleQueryKey = (id: string) => {
+  return [`/api/v1/admin/company/document-samples/${id}`] as const;
+};
+
+export const getGetDocumentSampleQueryOptions = <
+  TData = Awaited<ReturnType<typeof getDocumentSample>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+>(
+  id: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getDocumentSample>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetDocumentSampleQueryKey(id);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getDocumentSample>>> = ({ signal }) =>
+    getDocumentSample(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: id !== null && id !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof getDocumentSample>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type GetDocumentSampleQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getDocumentSample>>
+>;
+export type GetDocumentSampleQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse
+>;
+
+export function useGetDocumentSample<
+  TData = Awaited<ReturnType<typeof getDocumentSample>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+>(
+  id: string,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getDocumentSample>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getDocumentSample>>,
+          TError,
+          Awaited<ReturnType<typeof getDocumentSample>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetDocumentSample<
+  TData = Awaited<ReturnType<typeof getDocumentSample>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+>(
+  id: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getDocumentSample>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getDocumentSample>>,
+          TError,
+          Awaited<ReturnType<typeof getDocumentSample>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetDocumentSample<
+  TData = Awaited<ReturnType<typeof getDocumentSample>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+>(
+  id: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getDocumentSample>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Состояние образца документа
+ */
+
+export function useGetDocumentSample<
+  TData = Awaited<ReturnType<typeof getDocumentSample>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+>(
+  id: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getDocumentSample>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetDocumentSampleQueryOptions(id, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getDownloadDocumentSampleUrl = (id: string) => {
+  return `/api/v1/admin/company/document-samples/${id}/file`;
+};
+
+/**
+ * Готовый PDF (`application/pdf`, `inline`) для просмотра в окне. Не готов — 404. Раздел `company.settings` — чтение.
+ * @summary PDF образца документа
+ */
+export const downloadDocumentSample = async (
+  id: string,
+  options?: Parameters<typeof http>[1],
+): Promise<Blob> => {
+  return http<Blob>(getDownloadDocumentSampleUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getDownloadDocumentSampleQueryKey = (id: string) => {
+  return [`/api/v1/admin/company/document-samples/${id}/file`] as const;
+};
+
+export const getDownloadDocumentSampleQueryOptions = <
+  TData = Awaited<ReturnType<typeof downloadDocumentSample>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+>(
+  id: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof downloadDocumentSample>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getDownloadDocumentSampleQueryKey(id);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof downloadDocumentSample>>> = ({ signal }) =>
+    downloadDocumentSample(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: id !== null && id !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof downloadDocumentSample>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type DownloadDocumentSampleQueryResult = NonNullable<
+  Awaited<ReturnType<typeof downloadDocumentSample>>
+>;
+export type DownloadDocumentSampleQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse
+>;
+
+export function useDownloadDocumentSample<
+  TData = Awaited<ReturnType<typeof downloadDocumentSample>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+>(
+  id: string,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof downloadDocumentSample>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof downloadDocumentSample>>,
+          TError,
+          Awaited<ReturnType<typeof downloadDocumentSample>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useDownloadDocumentSample<
+  TData = Awaited<ReturnType<typeof downloadDocumentSample>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+>(
+  id: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof downloadDocumentSample>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof downloadDocumentSample>>,
+          TError,
+          Awaited<ReturnType<typeof downloadDocumentSample>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useDownloadDocumentSample<
+  TData = Awaited<ReturnType<typeof downloadDocumentSample>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+>(
+  id: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof downloadDocumentSample>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary PDF образца документа
+ */
+
+export function useDownloadDocumentSample<
+  TData = Awaited<ReturnType<typeof downloadDocumentSample>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+>(
+  id: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof downloadDocumentSample>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getDownloadDocumentSampleQueryOptions(id, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
 
 export const getUpdateDocumentTemplateUrl = (id: string) => {
   return `/api/v1/admin/company/document-templates/${id}`;
@@ -59197,6 +59873,754 @@ export const useUpdateCounterpartyRequisites = <
   TContext
 > => {
   return useMutation(getUpdateCounterpartyRequisitesMutationOptions(options), queryClient);
+};
+
+export const getGetCounterpartyLogoUrl = (
+  id: CompanyItemRef,
+  params?: GetCounterpartyLogoParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/people/counterparties/${id}/logo?${stringifiedParams}`
+    : `/api/v1/people/counterparties/${id}/logo`;
+};
+
+/**
+ * ERP `GET parties/organizations/{id}/logo/` (ЕД-5): WebP 96 px, `size=full` — 256 px. Раздел `crm.clients` или `erp.stock` — чтение. Адрес в ответах — с `?v=<версия>`, кэш браузера на сутки. Логотипа нет — 404 `NOT_FOUND`, клиент показывает буквы названия. Адресов хранилища наружу нет.
+ * @summary Карточка контрагента: логотип
+ */
+export const getCounterpartyLogo = async (
+  id: CompanyItemRef,
+  params?: GetCounterpartyLogoParams,
+  options?: Parameters<typeof http>[1],
+): Promise<Blob> => {
+  return http<Blob>(getGetCounterpartyLogoUrl(id, params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetCounterpartyLogoQueryKey = (
+  id: CompanyItemRef,
+  params?: GetCounterpartyLogoParams,
+) => {
+  return [`/api/v1/people/counterparties/${id}/logo`, ...(params ? [params] : [])] as const;
+};
+
+export const getGetCounterpartyLogoQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCounterpartyLogo>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: CompanyItemRef,
+  params?: GetCounterpartyLogoParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getCounterpartyLogo>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetCounterpartyLogoQueryKey(id, params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getCounterpartyLogo>>> = ({ signal }) =>
+    getCounterpartyLogo(id, params, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: id !== null && id !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof getCounterpartyLogo>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type GetCounterpartyLogoQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getCounterpartyLogo>>
+>;
+export type GetCounterpartyLogoQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+
+export function useGetCounterpartyLogo<
+  TData = Awaited<ReturnType<typeof getCounterpartyLogo>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: CompanyItemRef,
+  params: undefined | GetCounterpartyLogoParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getCounterpartyLogo>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getCounterpartyLogo>>,
+          TError,
+          Awaited<ReturnType<typeof getCounterpartyLogo>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetCounterpartyLogo<
+  TData = Awaited<ReturnType<typeof getCounterpartyLogo>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: CompanyItemRef,
+  params?: GetCounterpartyLogoParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getCounterpartyLogo>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getCounterpartyLogo>>,
+          TError,
+          Awaited<ReturnType<typeof getCounterpartyLogo>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetCounterpartyLogo<
+  TData = Awaited<ReturnType<typeof getCounterpartyLogo>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: CompanyItemRef,
+  params?: GetCounterpartyLogoParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getCounterpartyLogo>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Карточка контрагента: логотип
+ */
+
+export function useGetCounterpartyLogo<
+  TData = Awaited<ReturnType<typeof getCounterpartyLogo>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: CompanyItemRef,
+  params?: GetCounterpartyLogoParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getCounterpartyLogo>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetCounterpartyLogoQueryOptions(id, params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getUploadCounterpartyLogoUrl = (id: CompanyItemRef) => {
+  return `/api/v1/people/counterparties/${id}/logo`;
+};
+
+/**
+ * `multipart/form-data`, поле `file`: квадрат, уже обрезанный клиентом; PNG, JPEG или WebP до 2 МБ. ERP `PUT parties/organizations/{id}/logo/` перекодирует его в WebP 256x256 и проверяет тип и подпись. Раздел `crm.clients` или `erp.stock` — полный; в ERP — право `deal.manage` или `supply.manage`, иначе 403. Не тот тип или подпись — 422 `VALIDATION_FAILED` с `details.reason` (`file_type_not_allowed`, `file_content_mismatch`, `file_too_large`); тело больше предела читается потоком и обрывается — 413 `PAYLOAD_TOO_LARGE`. Ответ — карточка с новой версией в `logo_url`.
+ * @summary Карточка контрагента: загрузить или заменить логотип
+ */
+export const uploadCounterpartyLogo = async (
+  id: CompanyItemRef,
+  pictureUpload: PictureUpload,
+  options?: Parameters<typeof http>[1],
+): Promise<CounterpartyCard> => {
+  const formData = new FormData();
+  formData.append(`file`, pictureUpload.file);
+
+  return http<CounterpartyCard>(getUploadCounterpartyLogoUrl(id), {
+    ...options,
+    method: "PUT",
+    body: formData,
+  });
+};
+
+export const getUploadCounterpartyLogoMutationKey = () => ["uploadCounterpartyLogo"] as const;
+
+export const getUploadCounterpartyLogoMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | Error
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof uploadCounterpartyLogo>>,
+    TError,
+    UploadCounterpartyLogoMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof uploadCounterpartyLogo>>,
+  TError,
+  UploadCounterpartyLogoMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUploadCounterpartyLogoMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof uploadCounterpartyLogo>>,
+    UploadCounterpartyLogoMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return uploadCounterpartyLogo(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UploadCounterpartyLogoMutationResult = NonNullable<
+  Awaited<ReturnType<typeof uploadCounterpartyLogo>>
+>;
+export type UploadCounterpartyLogoMutationBody = PictureUpload;
+export type UploadCounterpartyLogoMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | Error
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type UploadCounterpartyLogoMutationVariables = { id: CompanyItemRef; data: PictureUpload };
+
+/**
+ * @summary Карточка контрагента: загрузить или заменить логотип
+ */
+export const useUploadCounterpartyLogo = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | Error
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof uploadCounterpartyLogo>>,
+      TError,
+      UploadCounterpartyLogoMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof uploadCounterpartyLogo>>,
+  TError,
+  UploadCounterpartyLogoMutationVariables,
+  TContext
+> => {
+  return useMutation(getUploadCounterpartyLogoMutationOptions(options), queryClient);
+};
+
+export const getDeleteCounterpartyLogoUrl = (id: CompanyItemRef) => {
+  return `/api/v1/people/counterparties/${id}/logo`;
+};
+
+/**
+ * ERP `DELETE parties/organizations/{id}/logo/`. Тот же доступ, что у загрузки; повтор безопасен. Ответ — карточка без логотипа.
+ * @summary Карточка контрагента: убрать логотип
+ */
+export const deleteCounterpartyLogo = async (
+  id: CompanyItemRef,
+  options?: Parameters<typeof http>[1],
+): Promise<CounterpartyCard> => {
+  return http<CounterpartyCard>(getDeleteCounterpartyLogoUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteCounterpartyLogoMutationKey = () => ["deleteCounterpartyLogo"] as const;
+
+export const getDeleteCounterpartyLogoMutationOptions = <
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteCounterpartyLogo>>,
+    TError,
+    DeleteCounterpartyLogoMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteCounterpartyLogo>>,
+  TError,
+  DeleteCounterpartyLogoMutationVariables,
+  TContext
+> => {
+  const mutationKey = getDeleteCounterpartyLogoMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteCounterpartyLogo>>,
+    DeleteCounterpartyLogoMutationVariables
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return deleteCounterpartyLogo(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteCounterpartyLogoMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteCounterpartyLogo>>
+>;
+
+export type DeleteCounterpartyLogoMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+export type DeleteCounterpartyLogoMutationVariables = { id: CompanyItemRef };
+
+/**
+ * @summary Карточка контрагента: убрать логотип
+ */
+export const useDeleteCounterpartyLogo = <
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof deleteCounterpartyLogo>>,
+      TError,
+      DeleteCounterpartyLogoMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof deleteCounterpartyLogo>>,
+  TError,
+  DeleteCounterpartyLogoMutationVariables,
+  TContext
+> => {
+  return useMutation(getDeleteCounterpartyLogoMutationOptions(options), queryClient);
+};
+
+export const getGetContactPhotoUrl = (id: CompanyItemRef, params?: GetContactPhotoParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/people/contacts/${id}/photo?${stringifiedParams}`
+    : `/api/v1/people/contacts/${id}/photo`;
+};
+
+/**
+ * ERP `GET parties/people/{id}/photo/` (СУЩ-3): WebP 96 px, `size=full` — 256 px. Раздел `chats.internal`, `crm.clients` или `erp.stock` — чтение. Адрес в ответах — с `?v=<версия>`, кэш браузера на сутки. Фото нет — 404 `NOT_FOUND`, клиент показывает инициалы.
+ * @summary Контакт контрагента: фото
+ */
+export const getContactPhoto = async (
+  id: CompanyItemRef,
+  params?: GetContactPhotoParams,
+  options?: Parameters<typeof http>[1],
+): Promise<Blob> => {
+  return http<Blob>(getGetContactPhotoUrl(id, params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetContactPhotoQueryKey = (id: CompanyItemRef, params?: GetContactPhotoParams) => {
+  return [`/api/v1/people/contacts/${id}/photo`, ...(params ? [params] : [])] as const;
+};
+
+export const getGetContactPhotoQueryOptions = <
+  TData = Awaited<ReturnType<typeof getContactPhoto>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: CompanyItemRef,
+  params?: GetContactPhotoParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getContactPhoto>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetContactPhotoQueryKey(id, params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getContactPhoto>>> = ({ signal }) =>
+    getContactPhoto(id, params, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: id !== null && id !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof getContactPhoto>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type GetContactPhotoQueryResult = NonNullable<Awaited<ReturnType<typeof getContactPhoto>>>;
+export type GetContactPhotoQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+
+export function useGetContactPhoto<
+  TData = Awaited<ReturnType<typeof getContactPhoto>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: CompanyItemRef,
+  params: undefined | GetContactPhotoParams,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getContactPhoto>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getContactPhoto>>,
+          TError,
+          Awaited<ReturnType<typeof getContactPhoto>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetContactPhoto<
+  TData = Awaited<ReturnType<typeof getContactPhoto>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: CompanyItemRef,
+  params?: GetContactPhotoParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getContactPhoto>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getContactPhoto>>,
+          TError,
+          Awaited<ReturnType<typeof getContactPhoto>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetContactPhoto<
+  TData = Awaited<ReturnType<typeof getContactPhoto>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: CompanyItemRef,
+  params?: GetContactPhotoParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getContactPhoto>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Контакт контрагента: фото
+ */
+
+export function useGetContactPhoto<
+  TData = Awaited<ReturnType<typeof getContactPhoto>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: CompanyItemRef,
+  params?: GetContactPhotoParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getContactPhoto>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetContactPhotoQueryOptions(id, params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getUploadContactPhotoUrl = (id: CompanyItemRef) => {
+  return `/api/v1/people/contacts/${id}/photo`;
+};
+
+/**
+ * `multipart/form-data`, поле `file`: уже обрезанная по кругу картинка 256x256; PNG, JPEG или WebP до 2 МБ. Доступ и отказы — как у `uploadCounterpartyLogo` (ERP `PUT parties/people/{id}/photo/`). Ответ — `ContactPhoto` с новой версией в адресе.
+ * @summary Контакт контрагента: загрузить или заменить фото
+ */
+export const uploadContactPhoto = async (
+  id: CompanyItemRef,
+  pictureUpload: PictureUpload,
+  options?: Parameters<typeof http>[1],
+): Promise<ContactPhoto> => {
+  const formData = new FormData();
+  formData.append(`file`, pictureUpload.file);
+
+  return http<ContactPhoto>(getUploadContactPhotoUrl(id), {
+    ...options,
+    method: "PUT",
+    body: formData,
+  });
+};
+
+export const getUploadContactPhotoMutationKey = () => ["uploadContactPhoto"] as const;
+
+export const getUploadContactPhotoMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | Error
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof uploadContactPhoto>>,
+    TError,
+    UploadContactPhotoMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof uploadContactPhoto>>,
+  TError,
+  UploadContactPhotoMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUploadContactPhotoMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof uploadContactPhoto>>,
+    UploadContactPhotoMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return uploadContactPhoto(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UploadContactPhotoMutationResult = NonNullable<
+  Awaited<ReturnType<typeof uploadContactPhoto>>
+>;
+export type UploadContactPhotoMutationBody = PictureUpload;
+export type UploadContactPhotoMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | Error
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type UploadContactPhotoMutationVariables = { id: CompanyItemRef; data: PictureUpload };
+
+/**
+ * @summary Контакт контрагента: загрузить или заменить фото
+ */
+export const useUploadContactPhoto = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | Error
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof uploadContactPhoto>>,
+      TError,
+      UploadContactPhotoMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof uploadContactPhoto>>,
+  TError,
+  UploadContactPhotoMutationVariables,
+  TContext
+> => {
+  return useMutation(getUploadContactPhotoMutationOptions(options), queryClient);
+};
+
+export const getDeleteContactPhotoUrl = (id: CompanyItemRef) => {
+  return `/api/v1/people/contacts/${id}/photo`;
+};
+
+/**
+ * ERP `DELETE parties/people/{id}/photo/`. Тот же доступ, что у загрузки; повтор безопасен.
+ * @summary Контакт контрагента: убрать фото
+ */
+export const deleteContactPhoto = async (
+  id: CompanyItemRef,
+  options?: Parameters<typeof http>[1],
+): Promise<ContactPhoto> => {
+  return http<ContactPhoto>(getDeleteContactPhotoUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteContactPhotoMutationKey = () => ["deleteContactPhoto"] as const;
+
+export const getDeleteContactPhotoMutationOptions = <
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteContactPhoto>>,
+    TError,
+    DeleteContactPhotoMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteContactPhoto>>,
+  TError,
+  DeleteContactPhotoMutationVariables,
+  TContext
+> => {
+  const mutationKey = getDeleteContactPhotoMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteContactPhoto>>,
+    DeleteContactPhotoMutationVariables
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return deleteContactPhoto(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteContactPhotoMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteContactPhoto>>
+>;
+
+export type DeleteContactPhotoMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+export type DeleteContactPhotoMutationVariables = { id: CompanyItemRef };
+
+/**
+ * @summary Контакт контрагента: убрать фото
+ */
+export const useDeleteContactPhoto = <
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof deleteContactPhoto>>,
+      TError,
+      DeleteContactPhotoMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof deleteContactPhoto>>,
+  TError,
+  DeleteContactPhotoMutationVariables,
+  TContext
+> => {
+  return useMutation(getDeleteContactPhotoMutationOptions(options), queryClient);
 };
 
 export const getGetCounterpartyByClientUrl = (id: CompanyItemRef) => {

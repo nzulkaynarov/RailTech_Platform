@@ -83,6 +83,7 @@ def publish_event(
     actor: Optional[Dict[str, Any]] = None,
     occurred_at: Optional[Any] = None,
     crm_client_id: Optional[int] = None,
+    extra_muted_telegram_user_ids: Optional[List[int]] = None,
 ) -> Optional[Event]:
     """Публикует событие в outbox текущей транзакции; `event_type` — короткое имя (`quote.sent`).
 
@@ -100,7 +101,7 @@ def publish_event(
     )
     if data is None:
         return None
-    muted = muted_telegram_user_ids(erp_company_id, event_type)
+    muted = sorted({*muted_telegram_user_ids(erp_company_id, event_type), *(extra_muted_telegram_user_ids or [])})
     if muted:
         data["telegram_muted_user_ids"] = muted
     subject = data["deal"]["number"] if "deal" in data else f"company/{int(erp_company_id)}"
@@ -273,7 +274,18 @@ def publish_quote_sent(
     if channels is not None:
         payload["channels"] = list(dict.fromkeys(channels))
 
-    event = publish_event("quote.sent", erp_company_id=company_id, payload=payload, deal=deal, actor=actor)
+    # ДК-4: тому, кто получит личную ссылку на это КП в Telegram, общее «КП готово» не пишем — одно сообщение на документ
+    from portal.services.doc_links import quote_link_telegram_user_id
+
+    personal = quote_link_telegram_user_id(quote, channels)
+    event = publish_event(
+        "quote.sent",
+        erp_company_id=company_id,
+        payload=payload,
+        deal=deal,
+        actor=actor,
+        extra_muted_telegram_user_ids=[personal] if personal else None,
+    )
     notice_sources.quote_sent(quote, channels=channels, bot_reaches=event is not None)
     return event
 
@@ -566,6 +578,57 @@ def publish_invite_requested(contact: Any, actor: Optional[Dict[str, Any]] = Non
     if contact.language in ("ru", "uz", "en"):
         payload["language"] = contact.language
     return publish_event("invite.requested", erp_company_id=contact.company_id, payload=payload, deal=None, actor=actor)
+
+
+def publish_document_link_telegram(
+    contact: Any,
+    *,
+    kind: str,
+    document_kind: str,
+    number: str = "",
+    seller_name: str = "",
+    code: str = "",
+    expires_at: Any = None,
+    url: str = "",
+) -> Optional[Event]:
+    """Событие `document_link.telegram_requested` (ДК-4): код входа или личная ссылка документа — в Telegram получателя.
+
+    Бот CRM пишет на **привязанный** Telegram этого контакта; шлётся только контакту с привязанным `telegram_user_id`,
+    сопоставленному с контактом CRM. Иначе — `None`, и получатель остаётся с письмом. `code` и `url` — секреты: в outbox
+    они маской `***`, значение — в кэше шины (`FailClosedCacheStash`); в логи не пишутся. Событие — в транзакции вызывающего:
+    откат выпуска кода или ссылки — нет события.
+    """
+    if kind not in ("code", "link"):
+        raise ValueError(f"Неизвестный вид сообщения {kind!r}")
+    if not contact.company_id or not contact.telegram_user_id:
+        return None
+    crm_contact_id = CrmContactMapping.objects.filter(contact=contact).values_list("crm_contact_id", flat=True).first()
+    if not crm_contact_id:
+        return None
+    payload: Dict[str, Any] = {
+        "erp_contact_id": contact.id,
+        "crm_contact_id": crm_contact_id,
+        "kind": kind,
+        "document_kind": document_kind,
+    }
+    if contact.language in ("ru", "uz", "en"):
+        payload["language"] = contact.language
+    if kind == "code":
+        payload["code"] = code
+        payload["expires_at"] = expires_at.isoformat()
+    else:
+        payload["url"] = url
+        if number:
+            payload["number"] = number
+        if seller_name:
+            payload["seller_name"] = seller_name[:255]
+    return publish_event(
+        "document_link.telegram_requested",
+        erp_company_id=contact.company_id,
+        payload=payload,
+        deal=None,
+        actor=client_actor(contact),
+    )
 
 
 def publish_contact_telegram_unlink_requested(contact: Any, crm_contact_id: int) -> Optional[Event]:

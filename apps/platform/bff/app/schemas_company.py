@@ -189,7 +189,11 @@ BRAND_LOGO_IMAGE = "/api/v1/admin/company/brand/logo/image"
 def logo_ref(url: Any, endpoint: str) -> str | None:
     """Логотип для `<img>`: адрес BFF (тот же origin), не ERP; `v` сбрасывает кэш при замене."""
     path = media_path(url)
-    return None if path is None else f"{endpoint}?v={hashlib.sha1(path.encode()).hexdigest()[:10]}"  # noqa: S324
+    if path is None:
+        return None
+    # версия — от всего адреса: путь логотипа компании один, новая загрузка меняет только `?v=`
+    digest = hashlib.sha1(str(url).encode()).hexdigest()[:10]  # noqa: S324
+    return f"{endpoint}?v={digest}"
 
 
 def to_company(raw: Mapping[str, Any]) -> CompanyProfile:
@@ -321,6 +325,24 @@ class BrandPreviewIn(BaseModel):
 class DocumentPreview(BaseModel):
     html: str
     warnings: list[str] | None = None
+
+
+class DocumentSampleIn(Body):
+    """Образец настоящим генератором (ДОК-14): `kind` — вид бланка («Реквизиты и бланк») либо
+    `template_kind` + `body_html` — текст из редактора шаблонов."""
+
+    kind: DocumentKind | None = None
+    template_kind: TemplateKind | None = None
+    body_html: str | None = None
+    draft: BrandProfileUpdate | None = None
+    language: Literal["ru", "en", "uz"] | None = None
+
+
+class DocumentSample(BaseModel):
+    id: str
+    status: Literal["pending", "ready", "failed"]
+    warnings: list[str] | None = None
+    failure_code: str | None = None
 
 
 def to_brand(raw: Mapping[str, Any]) -> BrandProfile:
