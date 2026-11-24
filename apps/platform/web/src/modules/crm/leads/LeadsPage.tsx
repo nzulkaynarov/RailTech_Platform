@@ -481,67 +481,74 @@ export function LeadsPage({ objectId }: { objectId?: string | undefined }) {
     );
   }
 
+  const filterBar = (
+    <FilterBar tools>
+      {viewSwitch}
+      {mobile ? (
+        <FilterField id="pf-leads-tab" label={t("leads:tabs.label")}>
+          <Select
+            id="pf-leads-tab"
+            value={tab}
+            options={TABS.map((value) => ({ value, label: t(`leads:tabs.${value}`) }))}
+            onChange={(value) => {
+              change({ status: value === "all" ? null : value, offset: null });
+            }}
+          />
+        </FilterField>
+      ) : null}
+      <FilterField id="pf-leads-channel" label={t("leads:channel.label")}>
+        <Select
+          id="pf-leads-channel"
+          value={channel}
+          options={[
+            { value: "", label: t("leads:channel.any") },
+            ...CHANNELS.map((value) => ({ value, label: channelLabel(t, value) })),
+          ]}
+          onChange={(value) => {
+            change({ channel: value === "" ? null : value, offset: null });
+          }}
+        />
+      </FilterField>
+      <FilterField id="pf-leads-q" label={t("leads:search.label")} grow>
+        <Input.Search
+          id="pf-leads-q"
+          defaultValue={q}
+          allowClear
+          placeholder={t("leads:search.placeholder")}
+          onSearch={(value) => {
+            change({ q: value.trim() ? value.trim() : null, offset: null });
+          }}
+        />
+      </FilterField>
+    </FilterBar>
+  );
+  const listCard = <Card styles={{ body: { padding: 0 } }}>{body}</Card>;
+
   return (
     <div className="pf-crm">
       <PageHeader title={title} />
-      <FilterBar tools>
-        {viewSwitch}
-        {mobile ? (
-          <FilterField id="pf-leads-tab" label={t("leads:tabs.label")}>
-            <Select
-              id="pf-leads-tab"
-              value={tab}
-              options={TABS.map((value) => ({ value, label: t(`leads:tabs.${value}`) }))}
-              onChange={(value) => {
-                change({ status: value === "all" ? null : value, offset: null });
-              }}
-            />
-          </FilterField>
-        ) : null}
-        <FilterField id="pf-leads-channel" label={t("leads:channel.label")}>
-          <Select
-            id="pf-leads-channel"
-            value={channel}
-            options={[
-              { value: "", label: t("leads:channel.any") },
-              ...CHANNELS.map((value) => ({ value, label: channelLabel(t, value) })),
-            ]}
-            onChange={(value) => {
-              change({ channel: value === "" ? null : value, offset: null });
-            }}
-          />
-        </FilterField>
-        <FilterField id="pf-leads-q" label={t("leads:search.label")} grow>
-          <Input.Search
-            id="pf-leads-q"
-            defaultValue={q}
-            allowClear
-            placeholder={t("leads:search.placeholder")}
-            onSearch={(value) => {
-              change({ q: value.trim() ? value.trim() : null, offset: null });
-            }}
-          />
-        </FilterField>
-      </FilterBar>
       <ErrorNote message={actionFailure} />
-      <Card styles={{ body: { padding: 0 } }}>
-        {mobile ? (
-          body
-        ) : (
-          <TabsBar
-            id="pf-leads-tabs"
-            label={t("leads:tabs.label")}
-            activeKey={tab}
-            onChange={(key) => {
-              change({ status: key === "all" ? null : key, offset: null });
-            }}
-            tabBarStyle={{ margin: 0, padding: "0 16px" }}
-            items={TABS.map((key) => ({ key, label: t(`leads:tabs.${key}`) }))}
-          >
-            {body}
-          </TabsBar>
-        )}
-      </Card>
+      {mobile ? (
+        <>
+          {filterBar}
+          {listCard}
+        </>
+      ) : (
+        // Одна строка вкладок статусов, под ней одна строка фильтров и рамка списка
+        <TabsBar
+          id="pf-leads-tabs"
+          label={t("leads:tabs.label")}
+          activeKey={tab}
+          onChange={(key) => {
+            change({ status: key === "all" ? null : key, offset: null });
+          }}
+          items={TABS.map((key) => ({ key, label: t(`leads:tabs.${key}`) }))}
+          stack
+        >
+          {filterBar}
+          {listCard}
+        </TabsBar>
+      )}
       {newLead ? (
         <Sheet
           label={t("leads:newLead.title")}

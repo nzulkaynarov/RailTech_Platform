@@ -60,7 +60,7 @@ export function KbPage() {
     <div className="pf-kb">
       <PageHeader
         title={title}
-        subtitle={t(editable ? "kb:subtitle" : "kb:readOnlySubtitle")}
+        readOnly={!editable}
         extra={
           editable && view === "docs" ? (
             <div className="pf-fp-row">

@@ -409,7 +409,7 @@ export function IntegrationsPage() {
     <div className="pf-int">
       <PageHeader
         title={title}
-        subtitle={t(editable ? "integrations:subtitle" : "integrations:readOnlySubtitle")}
+        readOnly={!editable}
         extra={
           editable ? (
             // Мастер первого запуска остаётся доступным и после завершения шагов (W15-H4): «Настройка Платформы»;

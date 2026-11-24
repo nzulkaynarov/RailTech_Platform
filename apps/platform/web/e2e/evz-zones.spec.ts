@@ -3,6 +3,7 @@ import { type Page, expect, test } from "@playwright/test";
 
 import { loginAndWait, settledScreenshot, spaGoto, waitForMotionEnd } from "./support/app";
 import { chooseOption } from "./support/fields";
+import { expectFitsFrame } from "./support/layout";
 
 // ЕВ-З на MSW: «Настройки · Люди и доступ · Зоны ответственности». Девять зон без людей, директор назначает ответственного
 // и основание, администратор заводит зону, сигнал «зона без ответственного» в «Состоянии» и карточка на Главной.
@@ -50,6 +51,7 @@ test.describe("ЕВ-З · Зоны ответственности", () => {
     await expect(finance).toContainText("Нет ответственного");
     await expect(page.getByRole("button", { name: "Новая зона" })).toHaveCount(0);
     await shoot(page, "zones-list");
+    await expectFitsFrame(page, "zones-list");
 
     await page.getByRole("button", { name: "Открыть зону «Финансы»" }).click();
     const panel = page.getByRole("region", { name: "Зона «Финансы»" });

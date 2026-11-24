@@ -254,10 +254,7 @@ function StateBody() {
 
   return (
     <div className="pf-set-home">
-      <PageHeader
-        title={t("modules:admin.sections.overview")}
-        subtitle={t("modules:admin.state.subtitle")}
-      />
+      <PageHeader title={t("modules:admin.sections.overview")} />
       <section aria-labelledby="pf-set-state-attention">
         <Card styles={{ body: { padding: 0 } }}>
           <h2 className="pf-set-h2 pf-set-state-head" id="pf-set-state-attention">

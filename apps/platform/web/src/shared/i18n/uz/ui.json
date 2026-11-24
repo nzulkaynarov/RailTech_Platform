@@ -149,6 +149,7 @@
     "needed": "Bu qadam tayyor bölişi uçun:",
     "remaining": "Qoldi:"
   },
+  "readOnly": "Faqat ko‘rish",
   "rowActions": {
     "label": "Amallar: {{name}}"
   },
