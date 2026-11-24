@@ -83,6 +83,7 @@ def publish_event(
     actor: Optional[Dict[str, Any]] = None,
     occurred_at: Optional[Any] = None,
     crm_client_id: Optional[int] = None,
+    extra_muted_telegram_user_ids: Optional[List[int]] = None,
 ) -> Optional[Event]:
     """Публикует событие в outbox текущей транзакции; `event_type` — короткое имя (`quote.sent`).
 
@@ -100,7 +101,7 @@ def publish_event(
     )
     if data is None:
         return None
-    muted = muted_telegram_user_ids(erp_company_id, event_type)
+    muted = sorted({*muted_telegram_user_ids(erp_company_id, event_type), *(extra_muted_telegram_user_ids or [])})
     if muted:
         data["telegram_muted_user_ids"] = muted
     subject = data["deal"]["number"] if "deal" in data else f"company/{int(erp_company_id)}"
@@ -273,7 +274,18 @@ def publish_quote_sent(
     if channels is not None:
         payload["channels"] = list(dict.fromkeys(channels))
 
-    event = publish_event("quote.sent", erp_company_id=company_id, payload=payload, deal=deal, actor=actor)
+    # ДК-4: тому, кто получит личную ссылку на это КП в Telegram, общее «КП готово» не пишем — одно сообщение на документ
+    from portal.services.doc_links import quote_link_telegram_user_id
+
+    personal = quote_link_telegram_user_id(quote, channels)
+    event = publish_event(
+        "quote.sent",
+        erp_company_id=company_id,
+        payload=payload,
+        deal=deal,
+        actor=actor,
+        extra_muted_telegram_user_ids=[personal] if personal else None,
+    )
     notice_sources.quote_sent(quote, channels=channels, bot_reaches=event is not None)
     return event
 

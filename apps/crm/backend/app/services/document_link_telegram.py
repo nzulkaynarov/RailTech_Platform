@@ -96,9 +96,11 @@ class DocumentLinkTelegramDelivery:
             TelegramServerError,
             OSError,
             TimeoutError,
-        ):
+        ) as exc:
             logger.warning("document_link_telegram_retry", event_id=event.id)
-            raise
+            # Текст исключения Telegram мог процитировать сообщение (код, ссылку), а шина логирует
+            # его целиком: наружу — только класс.
+            raise RuntimeError(f"telegram delivery failed: {type(exc).__name__}") from None
         except TelegramAPIError as exc:
             logger.warning(
                 "document_link_telegram_failed", event_id=event.id, error=type(exc).__name__

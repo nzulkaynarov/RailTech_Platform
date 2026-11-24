@@ -232,3 +232,58 @@ class TestLink:
         assert payload["kind"] == "link" and payload["document_kind"] == "quote" and payload["number"] == quote.number
         raw = payload["url"].split("/d/")[1]
         assert DocumentLink.objects.get(kind="quote").token_hash == doc_links.hash_token(raw)
+
+
+# ── Почта — основной канал: сбой бота не отменяет код ────────────────────────────────────────────────────────────
+
+
+class TestBotFailure:
+    def test_a_failed_bot_event_still_sends_the_code_by_mail(self, invoice, mapped, monkeypatch):
+        from integration.services import events
+
+        def boom(*args, **kwargs):
+            raise RuntimeError("redis down")
+
+        monkeypatch.setattr(events, "publish_document_link_telegram", boom)
+        link, raw = mint("invoice", invoice)
+        response = request_code(raw)
+        assert response.status_code == status.HTTP_202_ACCEPTED, response.content
+        assert response.json()["channels"] == ["email"]
+        assert not events_of() and len(mail.outbox) == 1
+        assert MagicLinkToken.objects.filter(document_link=link, used_at__isnull=True).count() == 1
+        # код из письма открывает ссылку: он действует
+        verify = post("verify", {"token": raw, "code": sent_code()})
+        assert verify.status_code == status.HTTP_200_OK, verify.content
+
+
+# ── Одно сообщение на документ: «КП готово» не дублирует личную ссылку ───────────────────────────────────────────
+
+
+class TestQuoteSentNotDuplicated:
+    def publish(self, quote, channels=None):
+        from django.db import transaction
+        from integration.services import events
+
+        bus_support.reset()
+        with transaction.atomic():
+            events.publish_quote_sent(quote, channels=channels)
+        return bus_support.only("quote.sent")["data"].get("telegram_muted_user_ids", [])
+
+    def test_the_chat_that_gets_the_personal_link_is_muted_for_the_general_message(self, quote, mapped):
+        assert self.publish(quote) == [mapped.telegram_user_id]
+
+    def test_a_chat_without_a_personal_link_keeps_the_general_message(self, quote, client_contact, client_company):
+        CrmClientMapping.objects.create(company=client_company, crm_client_id=CRM_CLIENT_ID)
+        Contact.objects.filter(pk=client_contact.pk).update(telegram_user_id=None)
+        assert self.publish(quote) == []
+
+    def test_a_telegram_only_send_has_no_letter_and_keeps_the_general_message(self, quote, mapped):
+        assert self.publish(quote, channels=["telegram"]) == []
+
+    def test_a_contact_who_muted_telegram_documents_is_muted_once(self, quote, mapped):
+        Contact.objects.filter(pk=mapped.pk).update(notification_settings={"documents": {"telegram": False}})
+        assert self.publish(quote) == [mapped.telegram_user_id]  # общее «КП готово» отключено настройкой
+
+    def test_another_contact_of_the_company_keeps_the_general_message(self, quote, mapped, client_company):
+        Contact.objects.create(company=client_company, name="Other", email="o@example.uz", telegram_user_id=555)
+        assert self.publish(quote) == [mapped.telegram_user_id]

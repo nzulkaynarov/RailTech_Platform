@@ -11,7 +11,6 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.bus import runtime
 from app.bus.runtime import build_bus
-from app.domain import client_texts
 from app.services.contact_telegram import ContactTelegramService
 from app.services.document_link_telegram import (
     DOCUMENT_LINK_REQUESTED,
@@ -105,7 +104,7 @@ async def test_the_code_goes_to_the_contacts_own_telegram_and_names_no_document(
     assert outcome == "processed"
     ((chat_id, text, markup),) = bot.sent
     assert chat_id == USER and CODE in text and "10" in text and markup is None
-    assert text == client_texts.document_link_code("ru", CODE, 10)
+    assert text == f"Код для входа: {CODE}. Действует 10 мин. Никому его не сообщайте."
     # в сообщении нет ни вида, ни номера, ни продавца, ни ссылки
     assert not any(word in text for word in ("INV-1", "Счёт", "Договор", "ООО", "http"))
 
@@ -142,10 +141,11 @@ async def test_the_link_goes_with_one_button_to_the_personal_link(
     assert outcome == "processed"
     ((chat_id, text, markup),) = bot.sent
     assert chat_id == USER
-    assert text == client_texts.document_link_message("uz", "invoice", "INV-1", "ООО Продавец")
+    assert text == "Sizga hujjat yuborildi: Hisob-faktura INV-1, ООО Продавец."
     (row,) = markup.inline_keyboard
     (button,) = row
-    assert button.url == URL and button.text == client_texts.document_link_button("uz")
+    assert button.url == URL
+    assert button.text == "Hujjatni oçiş"
     assert URL not in text
 
 
@@ -167,7 +167,7 @@ async def test_network_failure_is_raised_for_redelivery_and_a_refusal_is_not(
 ) -> None:
     client_id, contact_id = await linked(sessions, service)
 
-    with pytest.raises(TimeoutError):
+    with pytest.raises(RuntimeError):
         await delivery(sessions, RecordingBot(TimeoutError()))(code_event(client_id, contact_id))
 
 

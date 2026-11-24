@@ -265,7 +265,7 @@ _DOCUMENT_LINK_CODE: Final = {
     "en": "Sign-in code: {code}. Valid for {minutes} min. Do not share it with anyone.",
 }
 _DOCUMENT_LINK_KINDS: Final = {
-    "quote": {"ru": "Коммерческое предложение", "uz": "Tijoriy taklif", "en": "Quote"},
+    "quote": {"ru": "Коммерческое предложение", "uz": "Tijorat taklifi", "en": "Quote"},
     "contract": {"ru": "Договор", "uz": "Şartnoma", "en": "Contract"},
     "invoice": {"ru": "Счёт", "uz": "Hisob-faktura", "en": "Invoice"},
     "act": {"ru": "Акт", "uz": "Dalolatnoma", "en": "Act"},
@@ -277,7 +277,7 @@ _DOCUMENT_LINK_TEXT: Final = {
 }
 _DOCUMENT_LINK_BUTTON: Final = {
     "ru": "Открыть документ",
-    "uz": "Hujjatni açış",
+    "uz": "Hujjatni oçiş",
     "en": "Open document",
 }
 
