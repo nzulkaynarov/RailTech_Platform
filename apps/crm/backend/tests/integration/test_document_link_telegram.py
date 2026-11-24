@@ -2,6 +2,7 @@
 
 import dataclasses
 import uuid
+from collections.abc import Awaitable, Callable, Iterator
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
@@ -17,14 +18,13 @@ from app.services.document_link_telegram import (
     DocumentLinkTelegramDelivery,
 )
 from tests.integration.test_contact_telegram import (
-    BEFORE,
     USER,
     chat,
     contact,
     service,  # noqa: F401 — фикстура
-    token,
     unlink_event,
 )
+from tests.unit.test_contact_link import BEFORE, token
 
 pytestmark = pytest.mark.integration
 # ruff: noqa: F811, PT018, PT011
@@ -34,7 +34,7 @@ URL = "http://cabinet.localhost/d/personal-token-123"
 
 
 @pytest.fixture(autouse=True)
-def _bus(sessions: async_sessionmaker[AsyncSession]):
+def _bus(sessions: async_sessionmaker[AsyncSession]) -> Iterator[None]:
     runtime.set_bus(build_bus(sessions, None))
     yield
     runtime.set_bus(None)
@@ -51,7 +51,9 @@ class RecordingBot:
         self.sent.append((chat_id, text, kwargs.get("reply_markup")))
 
 
-def delivery(sessions: async_sessionmaker[AsyncSession], bot: RecordingBot):
+def delivery(
+    sessions: async_sessionmaker[AsyncSession], bot: RecordingBot
+) -> Callable[[Event], Awaitable[str]]:
     async def provider() -> Any:
         return bot
 
@@ -86,7 +88,9 @@ def link_event(client_id: int, contact_id: int, **payload: Any) -> Event:
     return dataclasses.replace(event, type=DOCUMENT_LINK_REQUESTED, id=str(uuid.uuid4()))
 
 
-async def linked(sessions, service) -> tuple[int, int]:
+async def linked(
+    sessions: async_sessionmaker[AsyncSession], service: ContactTelegramService
+) -> tuple[int, int]:
     await chat(sessions, USER)
     client_id, contact_id = await contact(sessions)
     await service.bind(USER, token(contact=contact_id), BEFORE)
