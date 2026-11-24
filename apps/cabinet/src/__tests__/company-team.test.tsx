@@ -194,16 +194,19 @@ describe('Команда', () => {
 
     // Коллега Dilnoza (id: 102)
     const viewer = within(list).getByRole('heading', { name: /Dilnoza Yusupova/ }).closest('article') as HTMLElement;
-    expect(within(viewer).getByRole('button', { name: 'Разрешить подпись' })).toBeInTheDocument();
-    expect(within(viewer).getByRole('button', { name: 'Назначить админом' })).toBeInTheDocument();
-    expect(within(viewer).getByRole('button', { name: 'Отключить' })).toBeInTheDocument();
+    // Действия над коллегой — в меню карточки «⋯», а не тремя кнопками в каждой
+    expect(within(viewer).queryByRole('button', { name: 'Отключить' })).not.toBeInTheDocument();
+    await user.click(within(viewer).getByRole('button', { name: 'Действия: Dilnoza Yusupova' }));
+    expect(await screen.findByRole('menuitem', { name: 'Разрешить подпись' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Отключить' })).toBeInTheDocument();
 
     // Назначаем админом
-    await user.click(within(viewer).getByRole('button', { name: 'Назначить админом' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Назначить админом' }));
     expect(await screen.findByText('Права для Dilnoza Yusupova обновлены')).toBeInTheDocument();
 
     // Отключаем коллегу
-    await user.click(within(viewer).getByRole('button', { name: 'Отключить' }));
+    await user.click(within(viewer).getByRole('button', { name: 'Действия: Dilnoza Yusupova' }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Отключить' }));
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByText('Отключить коллегу?')).toBeInTheDocument();
     await user.click(within(dialog).getByRole('button', { name: 'Да, отключить' }));
@@ -220,8 +223,7 @@ describe('Команда', () => {
     renderApp('/team');
     await heading('Команда');
     const list = await screen.findByRole('list', { name: 'Команда' });
-    expect(within(list).queryByRole('button', { name: 'Отключить' })).not.toBeInTheDocument();
-    expect(within(list).queryByRole('button', { name: 'Назначить админом' })).not.toBeInTheDocument();
+    expect(within(list).queryByRole('button', { name: /^Действия: / })).not.toBeInTheDocument();
   });
 });
 

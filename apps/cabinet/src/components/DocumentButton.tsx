@@ -1,11 +1,20 @@
-import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Download, Loader2 } from 'lucide-react';
-import { toast } from '@/lib/toast';
 
-import { apiErrorKey } from '@/api/errors';
+import { RowMenuAction } from '@/components/list/RowMenu';
 import { Button } from '@/components/ui/button';
-import { DocumentNotReadyError, downloadCatalogDocument, downloadDocument } from '@/lib/download';
+import { useDocumentDownload } from '@/hooks/useDocumentDownload';
+
+/** Пункт меню строки «Скачать» (`RowMenu`): тот же запрос, что у кнопки; «готовится» — в подсказке-тосте. */
+export function DocumentMenuItem({ documentId, fileName, text }: { documentId: number; fileName: string; text?: string }) {
+  const { t } = useTranslation();
+  const { download, busy } = useDocumentDownload({ documentId, fileName });
+  return (
+    <RowMenuAction icon={Download} disabled={busy} onSelect={() => void download()}>
+      {text ?? t('documents.download')}
+    </RowMenuAction>
+  );
+}
 
 /**
  * «Скачать» документ из ERP: `GET /documents/{id}/file`. Пока PDF рендерится (202), кнопка говорит
@@ -32,22 +41,7 @@ export function DocumentButton({
   catalogItemId?: number;
 }) {
   const { t } = useTranslation();
-  const [state, setState] = useState<'idle' | 'loading' | 'pending'>('idle');
-
-  const download = async () => {
-    setState('loading');
-    try {
-      if (catalogItemId !== undefined) await downloadCatalogDocument(catalogItemId, documentId, fileName);
-      else await downloadDocument(documentId, fileName, { onPending: () => setState('pending') });
-    } catch (error) {
-      if (error instanceof DocumentNotReadyError) toast.info(t('documents.stillPreparing'));
-      else toast.error(t(apiErrorKey(error)));
-    } finally {
-      setState('idle');
-    }
-  };
-
-  const busy = state !== 'idle';
+  const { state, busy, download } = useDocumentDownload({ documentId, fileName, catalogItemId });
   return (
     <>
       <Button

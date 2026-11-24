@@ -71,6 +71,9 @@
     "all": "Hammasi",
     "article": "Artikul",
     "actions": "Amallar",
+    "rowMenu": "Amallar: {{name}}",
+    "showAll": "Barçasi ({{count}})",
+    "showLess": "Yopiş",
     "loadFailed": "Yuklab boʻlmadi",
     "reasonRequired": "Sababini koʻrsating — usiz ijrochi nimani tuzatishni tushunmaydi.",
     "dealNumber": "Loyiha {{number}}",
@@ -446,7 +449,6 @@
   },
   "pages": {
     "requests": {
-        "rowMenu": "{{number}} ariza amallari",
       "title": "Arizalar",
       "new": "Yangi ariza",
       "filterLabel": "Arizalarni holat boʻyicha filtrlash",
@@ -456,7 +458,7 @@
       "noMatchText": "«{{query}}» boʻyicha arizalar topilmadi",
       "clearSearch": "Qidiruvni tozalash",
       "emptyTitle": "Hozircha arizalar yoʻq",
-      "emptyText": "Bu yerda arizalaringiz va ularning holati koʻrinadi: yangi, ishda, taklif bor, yopilgan.",
+      "emptyText": "Arizalaringiz shu yerda koʻrinadi.",
       "columns": {
         "request": "Ariza",
         "status": "Holat",
@@ -526,7 +528,7 @@
     "quotes": {
       "title": "Tijorat takliflari",
       "emptyTitle": "Hozircha takliflar yoʻq",
-      "emptyText": "Menejer taklif yuborishi bilan u shu yerda paydo boʻladi — kabinetdan qabul qilish yoki rad etish mumkin.",
+      "emptyText": "Menejer takliflari shu yerda koʻrinadi.",
       "numberVersion": "{{number}} · {{version}}-versiya",
       "awaiting_one": "{{count}} ta taklif qaroringizni kutmoqda",
       "awaiting_other": "{{count}} ta taklif qaroringizni kutmoqda",
@@ -623,7 +625,7 @@
     "contracts": {
       "title": "Shartnomalar",
       "emptyTitle": "Hozircha shartnomalar yoʻq",
-      "emptyText": "Shartnoma taklif qabul qilingach avtomatik yaratiladi; uni shu yerda kelishib olish mumkin.",
+      "emptyText": "Shartnomalar taklif qabul qilingach shu yerda koʻrinadi.",
       "awaiting_one": "{{count}} ta shartnoma kelishishingizni kutmoqda",
       "awaiting_other": "{{count}} ta shartnoma kelishishingizni kutmoqda",
       "columns": {
@@ -699,7 +701,7 @@
     "acts": {
       "title": "Dalolatnomalar",
       "emptyTitle": "Hozircha dalolatnomalar yoʻq",
-      "emptyText": "Bajarilgan yetkazib berish va xizmatlar boʻyicha dalolatnomalar: qabul qilish yoki sabab bilan qaytarish.",
+      "emptyText": "Yetkazib berish va xizmatlar boʻyicha dalolatnomalar shu yerda koʻrinadi.",
       "awaiting_one": "{{count}} ta dalolatnoma qabulingizni kutmoqda",
       "awaiting_other": "{{count}} ta dalolatnoma qabulingizni kutmoqda",
       "columns": {
@@ -735,7 +737,7 @@
     "deliveries": {
       "title": "Yetkazib berish",
       "emptyTitle": "Hozircha yetkazib berish yoʻq",
-      "emptyText": "Har bir qator boʻyicha holat, kutilayotgan sana va kuzatuv raqami.",
+      "emptyText": "Loyihalaringiz boʻyicha yetkazib berishlar shu yerda koʻrinadi.",
       "progress": "{{total}} tadan {{done}} tasi yetkazildi",
       "eta": "Kutilmoqda: {{date}}",
       "etaUnknown": "Sana aniqlanmoqda",
@@ -759,7 +761,7 @@
     "documents": {
       "title": "Hujjatlar",
       "emptyTitle": "Hozircha hujjatlar yoʻq",
-      "emptyText": "Takliflar, shartnomalar, hisob-fakturalar, dalolatnomalar va yuk xatlari — shu yerdan yuklab olish mumkin.",
+      "emptyText": "Loyihalaringiz hujjatlari shu yerda koʻrinadi.",
       "emptyKindTitle": "Bu turdagi hujjatlar yoʻq",
       "emptyKindText": "Boshqa turni tanlang yoki barcha hujjatlarni koʻrsating.",
       "showAll": "Hammasini koʻrsatish",
@@ -1093,7 +1095,6 @@
       "lastLogin": "Oxirgi kirish",
       "invitedAt": "{{date}} da taklif qilingan, hali kirmagan",
       "neverLoggedIn": "Hali kirmagan",
-      "rightsHint": "Kompaniya administratorlari hamkasblar huquqlarini boshqarishi va xodimlar almashganda kirishni toʻxtatishi mumkin.",
       "inviteTitle": "Hamkasbni taklif qilish",
       "inviteText": "Hamkasb kabinetga taklifnomani tanlangan kanallar orqali oladi.",
       "inviteConfirm": "Taklifnoma yuborish",
@@ -1151,11 +1152,10 @@
     },
     "messages": {
       "title": "Xabarlar",
-      "subtitle": "Kompaniyangizning menejer bilan yozishmasi",
       "telegram": "Telegramda yozish",
       "feed": "Menejer bilan yozishma",
       "emptyTitle": "Bu yerda menejer bilan yozishma bo‘ladi",
-      "emptyText": "Savolingizni yozing — menejer shu yerda javob beradi. TK, hisob yoki dalolatnoma sahifasidan yuborilgan savol hujjat raqami bilan boradi.",
+      "emptyText": "Savol yozing — menejer shu yerda javob beradi.",
       "you": "Siz",
       "manager": "Menejer",
       "managerNamed": "{{name}}, menejer",
@@ -1189,7 +1189,7 @@
     },
     "partnerOrders": {
       "title": "Yetkazib berish buyurtmalari",
-      "description": "Buyurtmalarni tasdiqlash, jönatiş xabarnomalari va narx sörovlariga javoblar",
+      "viewsLabel": "Boʻlimlar",
       "posShort": "poz.",
       "tabsLabel": "Buyurtmalar va narx soʻrovlari holati",
       "ordersListLabel": "Yetkazib berish buyurtmalari roʻyxati",
@@ -1417,8 +1417,6 @@
   },
   "widgets": {
     "actionRequired": {
-        "showAll": "Barçasi ({{count}})",
-        "showLess": "Yopiş",
       "title": "Qaroringiz kutilmoqda",
       "allClear": "Barcha hujjatlar koʻrib chiqilgan — hozirda hech qanday harakat talab etilmaydi.",
       "quoteBadge": "TK",

@@ -71,6 +71,9 @@
     "all": "All",
     "article": "Part number",
     "actions": "Actions",
+    "rowMenu": "Actions: {{name}}",
+    "showAll": "Show all ({{count}})",
+    "showLess": "Show less",
     "loadFailed": "Could not load",
     "reasonRequired": "Give a reason — without it the provider will not know what to fix.",
     "dealNumber": "Project {{number}}",
@@ -446,7 +449,6 @@
   },
   "pages": {
     "requests": {
-        "rowMenu": "Actions for request {{number}}",
       "title": "Requests",
       "new": "New request",
       "filterLabel": "Filter requests by status",
@@ -456,7 +458,7 @@
       "noMatchText": "No requests found for \"{{query}}\"",
       "clearSearch": "Clear search",
       "emptyTitle": "No requests yet",
-      "emptyText": "Your requests and their status will appear here: new, in progress, quoted, closed.",
+      "emptyText": "Your requests will appear here.",
       "columns": {
         "request": "Request",
         "status": "Status",
@@ -526,7 +528,7 @@
     "quotes": {
       "title": "Quotes",
       "emptyTitle": "No quotes yet",
-      "emptyText": "As soon as the manager sends a quote it will appear here — accept or reject it right from the cabinet.",
+      "emptyText": "The manager's quotes will appear here.",
       "numberVersion": "{{number}} · version {{version}}",
       "awaiting_one": "{{count}} quote awaits your decision",
       "awaiting_other": "{{count}} quotes await your decision",
@@ -623,7 +625,7 @@
     "contracts": {
       "title": "Contracts",
       "emptyTitle": "No contracts yet",
-      "emptyText": "A contract is created automatically once a quote is accepted; you can agree it here.",
+      "emptyText": "Contracts will appear here after you accept a quote.",
       "awaiting_one": "{{count}} contract awaits your agreement",
       "awaiting_other": "{{count}} contracts await your agreement",
       "columns": {
@@ -699,7 +701,7 @@
     "acts": {
       "title": "Acts",
       "emptyTitle": "No acts yet",
-      "emptyText": "Acts for completed deliveries and services: accept or return with a reason.",
+      "emptyText": "Acts for deliveries and services will appear here.",
       "awaiting_one": "{{count}} act awaits your acceptance",
       "awaiting_other": "{{count}} acts await your acceptance",
       "columns": {
@@ -735,7 +737,7 @@
     "deliveries": {
       "title": "Deliveries",
       "emptyTitle": "No deliveries yet",
-      "emptyText": "Status per line, expected date and tracking number.",
+      "emptyText": "Deliveries for your projects will appear here.",
       "progress": "{{done}} of {{total}} delivered",
       "eta": "Expected {{date}}",
       "etaUnknown": "Date to be confirmed",
@@ -759,7 +761,7 @@
     "documents": {
       "title": "Documents",
       "emptyTitle": "No documents yet",
-      "emptyText": "Quotes, contracts, invoices, acts and waybills — download them from here.",
+      "emptyText": "Documents for your projects will appear here.",
       "emptyKindTitle": "No documents of this kind",
       "emptyKindText": "Choose another kind or show all documents.",
       "showAll": "Show all",
@@ -1093,7 +1095,6 @@
       "lastLogin": "Last sign-in",
       "invitedAt": "Invited {{date}}, not signed in yet",
       "neverLoggedIn": "Not signed in yet",
-      "rightsHint": "Company administrators can manage team rights and deactivate accounts upon departures.",
       "inviteTitle": "Invite a colleague",
       "inviteText": "Your colleague will get an invitation to the cabinet through the selected channels.",
       "inviteConfirm": "Send invitation",
@@ -1151,11 +1152,10 @@
     },
     "messages": {
       "title": "Messages",
-      "subtitle": "Your company’s conversation with the manager",
       "telegram": "Write in Telegram",
       "feed": "Conversation with the manager",
       "emptyTitle": "Your conversation with the manager will be here",
-      "emptyText": "Ask a question — the manager will reply here. From a quote, invoice or act page the question goes with the document number.",
+      "emptyText": "Write a question — the manager will answer here.",
       "you": "You",
       "manager": "Manager",
       "managerNamed": "{{name}}, manager",
@@ -1189,7 +1189,7 @@
     },
     "partnerOrders": {
       "title": "Purchase orders",
-      "description": "Confirm purchase orders, submit shipping notices, and respond to price requests",
+      "viewsLabel": "Sections",
       "posShort": "items",
       "tabsLabel": "Order and RFQ statuses",
       "ordersListLabel": "Purchase orders list",
@@ -1417,8 +1417,6 @@
   },
   "widgets": {
     "actionRequired": {
-        "showAll": "Show all ({{count}})",
-        "showLess": "Show less",
       "title": "Action Required",
       "allClear": "All documents processed — no action required right now.",
       "quoteBadge": "Quote",

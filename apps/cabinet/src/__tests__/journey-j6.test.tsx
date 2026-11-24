@@ -88,7 +88,7 @@ describe('Wave J6 & B-CABFIX-2: Поиск, фильтры, повтор зап�
 
       // «Повторить заявку» — в меню строки, а не кнопкой в каждой строке
       expect(screen.queryByRole('link', { name: /Повторить заявку/ })).not.toBeInTheDocument();
-      const menus = await screen.findAllByRole('button', { name: /^Действия по заявке/ });
+      const menus = await screen.findAllByRole('button', { name: /^Действия: / });
       expect(menus.length).toBeGreaterThan(0);
       await user.click(menus[0]);
       await user.click(await screen.findByRole('menuitem', { name: 'Повторить заявку' }));

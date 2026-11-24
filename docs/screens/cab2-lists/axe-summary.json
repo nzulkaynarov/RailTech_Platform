@@ -1,0 +1,258 @@
+[
+  {
+    "screen": "requests",
+    "width": 1512,
+    "axe": true,
+    "rulesPassed": 43,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "requests",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 39,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "quotes",
+    "width": 1512,
+    "axe": true,
+    "rulesPassed": 40,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "quotes",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 36,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "contracts",
+    "width": 1512,
+    "axe": true,
+    "rulesPassed": 41,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "contracts",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 37,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "invoices",
+    "width": 1512,
+    "axe": true,
+    "rulesPassed": 41,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "invoices",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 37,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "acts",
+    "width": 1512,
+    "axe": true,
+    "rulesPassed": 41,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "acts",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 37,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "deliveries",
+    "width": 1512,
+    "axe": true,
+    "rulesPassed": 37,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "deliveries",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 37,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "documents",
+    "width": 1512,
+    "axe": true,
+    "rulesPassed": 45,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "documents",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 41,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "letters",
+    "width": 1512,
+    "axe": true,
+    "rulesPassed": 44,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "letters",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 40,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "messages",
+    "width": 1512,
+    "axe": true,
+    "rulesPassed": 40,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "messages",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 40,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "team",
+    "width": 1512,
+    "axe": true,
+    "rulesPassed": 38,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "team",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 38,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "my-products",
+    "width": 1512,
+    "axe": true,
+    "rulesPassed": 44,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "my-products",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 40,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "partner-orders",
+    "width": 1512,
+    "axe": true,
+    "rulesPassed": 43,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "partner-orders",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 39,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "catalog",
+    "width": 1512,
+    "axe": true,
+    "rulesPassed": 40,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "catalog",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 40,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "invoices-row-menu",
+    "width": 1512,
+    "axe": false,
+    "rulesPassed": 0,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "invoices-row-menu",
+    "width": 390,
+    "axe": false,
+    "rulesPassed": 0,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "requests-row-menu",
+    "width": 1512,
+    "axe": false,
+    "rulesPassed": 0,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "requests-row-menu",
+    "width": 390,
+    "axe": false,
+    "rulesPassed": 0,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "documents-filter-open",
+    "width": 1512,
+    "axe": false,
+    "rulesPassed": 0,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "documents-filter-open",
+    "width": 390,
+    "axe": false,
+    "rulesPassed": 0,
+    "overflowPx": 0,
+    "violations": []
+  }
+]
