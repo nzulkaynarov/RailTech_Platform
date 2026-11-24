@@ -12,7 +12,7 @@ const thumbnail = (page: Page) => page.locator('img[src*="/thumbnail?v="]').firs
 test.describe("Позиция в строке документа", () => {
   test.skip(({ isMobile }) => isMobile, "ширины задаёт сам сценарий");
 
-  for (const width of [1440, 390] as const) {
+  for (const width of [1512, 390] as const) {
     test(`${String(width)}: каталог, расчёт, КП, склад и заказ — один вид позиции`, async ({
       page,
     }) => {
@@ -45,6 +45,19 @@ test.describe("Позиция в строке документа", () => {
       await expect(page.locator(".pf-entity").first()).toBeVisible();
       await settledScreenshot(page, "item-order");
       await expectNoViolations(page, `заказ ${String(width)}`);
+
+      // ЕД-4 (волна 24): приёмка, отгрузка и поиск по номеру — та же позиция с миниатюрой
+      await spaGoto(page, "/erp/stock?view=receipts");
+      await expect(page.locator(".pf-entity").first()).toBeVisible();
+      await expect(thumbnail(page)).toBeVisible();
+      await settledScreenshot(page, "item-receipts");
+      await expectNoViolations(page, `приёмка ${String(width)}`);
+
+      await spaGoto(page, "/erp/stock?view=shipments&request=ПР-2026-099");
+      await expect(page.locator(".pf-entity").first()).toBeVisible();
+      await expect(thumbnail(page)).toBeVisible();
+      await settledScreenshot(page, "item-shipments");
+      await expectNoViolations(page, `отгрузка ${String(width)}`);
     });
   }
 });

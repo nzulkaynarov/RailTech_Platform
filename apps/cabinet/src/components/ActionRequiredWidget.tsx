@@ -1,4 +1,4 @@
-import { Children, useState, type ReactElement, type ReactNode } from 'react';
+import { Children, type ReactElement, type ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -16,7 +16,7 @@ import {
 
 import { ErrorState } from '@/components/QueryStates';
 import { ToneBadge } from '@/components/StatusBadge';
-import { Button } from '@/components/ui/button';
+import { CompactList } from '@/components/list/CompactList';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useActionRequired } from '@/hooks/useActionRequired';
 import { formatDecimal, formatMoney, formatQuantity } from '@/lib/format';
@@ -48,7 +48,6 @@ export function ActionRequiredWidget({
   const canAct = useCanAct();
   const actions = useActionRequired();
   const location = useLocation();
-  const [showAll, setShowAll] = useState(false);
 
   const currentScope =
     scope ??
@@ -108,7 +107,7 @@ export function ActionRequiredWidget({
   const title = canAct ? t('widgets.actionRequired.title') : t('widgets.actionRequired.titleViewer');
   const hint = (key: string) => (canAct ? t(`widgets.actionRequired.${key}`) : t('widgets.actionRequired.viewerHint'));
 
-  // Решения — компактным списком: первые COMPACT_LIMIT, остальные по «Показать все» (таблица заявок не уезжает за экран).
+  // Решения — компактным списком (`CompactList`): первые COMPACT_LIMIT, остальные по «Показать все» (таблица заявок не уезжает за экран).
   const content = currentScope === 'partner' ? (
           <>
             {actions.orders.map((order) => (
@@ -269,8 +268,6 @@ export function ActionRequiredWidget({
           </>
         );
   const cards = Children.toArray((content as ReactElement<{ children: ReactNode }>).props.children);
-  const visibleCards = showAll ? cards : cards.slice(0, COMPACT_LIMIT);
-
   return (
     <section role="region" aria-label={title} className="mb-6 flex flex-col gap-3">
       <div className="flex items-center gap-2">
@@ -278,19 +275,7 @@ export function ActionRequiredWidget({
         <ToneBadge tone={canAct ? 'warning' : 'neutral'}>{total}</ToneBadge>
       </div>
 
-      <ul className="flex flex-col divide-y overflow-hidden rounded-lg border bg-card">{visibleCards}</ul>
-      {cards.length > COMPACT_LIMIT ? (
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className="self-start"
-          aria-expanded={showAll}
-          onClick={() => setShowAll((value) => !value)}
-        >
-          {showAll ? t('widgets.actionRequired.showLess') : t('widgets.actionRequired.showAll', { count: cards.length })}
-        </Button>
-      ) : null}
+      <CompactList items={cards} limit={COMPACT_LIMIT} className="divide-y overflow-hidden rounded-lg border bg-card" />
     </section>
   );
 }

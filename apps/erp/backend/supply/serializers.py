@@ -98,6 +98,7 @@ class OrderLineSerializer(serializers.Serializer):
 
 class DoneReceiptLineSerializer(serializers.Serializer):
     name = serializers.CharField()
+    item = ItemRefSerializer(allow_null=True, help_text="Позиция каталога (ЕД-4); null — строка без карточки")
     quantity = QuantityField()
     cell = serializers.CharField(allow_null=True)
     units = serializers.ListField(child=serializers.CharField(), help_text="Принятые серийные или номер партии")
@@ -182,6 +183,7 @@ class PendingReceiptLineSerializer(serializers.Serializer):
     overdue = serializers.BooleanField()
     order_line_id = serializers.IntegerField()
     name = serializers.CharField()
+    item = ItemRefSerializer(allow_null=True, help_text="Позиция каталога (ЕД-4); null — строка без карточки")
     article = serializers.CharField(allow_blank=True)
     unit = serializers.CharField(allow_blank=True)
     quantity = QuantityField()

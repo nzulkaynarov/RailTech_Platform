@@ -334,9 +334,23 @@ function byId<T extends { id: number }>(items: T[], id: string): T | undefined {
   return items.find((item) => String(item.id) === id);
 }
 
+/** ЕД-4: позиция строки каталога — наш артикул и главное фото (id = 1, если у карточки мока есть фото). */
+function withItemRef(item: Schemas['CatalogItem']): Schemas['CatalogItem'] {
+  return {
+    ...item,
+    item: {
+      id: item.id,
+      name: item.name,
+      sku: `RT-0${String(item.id)}`,
+      kind: item.kind,
+      photo: item.images?.[0] ? 1 : null,
+    },
+  };
+}
+
 /** Карточка в списке каталога — без документов (они только в детальной карточке). */
 function listItem(item: Schemas['CatalogItem']): Schemas['CatalogItem'] {
-  const copy = { ...item };
+  const copy = withItemRef(item);
   delete copy.documents;
   return copy;
 }
@@ -1253,7 +1267,7 @@ export const handlers = [
     `${API}/catalog/:id`,
     withSession<IdParams>(({ db, params }) => {
       const item = byId(db.catalog, params.id);
-      return item ? json(item) : error(404, 'NOT_FOUND');
+      return item ? json(withItemRef(item)) : error(404, 'NOT_FOUND');
     }),
   ),
   http.get<IdParams & { docId: string }>(
