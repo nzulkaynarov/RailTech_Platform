@@ -178,3 +178,7 @@
   align-items: center;
   gap: 4px 12px;
 }
+.pf-stock-receipt {
+  flex: 1 1 280px;
+  min-width: 0;
+}

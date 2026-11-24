@@ -210,7 +210,7 @@ export function ReceiptsTab() {
                 >
                   {data.done.map((r) => (
                     <li key={r.id}>
-                      <span>
+                      <div className="pf-stock-receipt">
                         <Link className="pf-focusable" to={r.order_path}>
                           {r.order_number}
                         </Link>
@@ -220,7 +220,7 @@ export function ReceiptsTab() {
                           {r.supplier_doc ? ` · ${t("receipts.doc", { doc: r.supplier_doc })}` : ""}
                         </span>
                         <ReceiptLines lines={r.lines} />
-                      </span>
+                      </div>
                       <span className="pf-stock-by">
                         <span className="pf-hint">{activity(r.received_at)}</span>
                         {r.received_by ? (

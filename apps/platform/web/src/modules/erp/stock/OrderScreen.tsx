@@ -169,7 +169,7 @@ function Receipts({ order }: { order: SupplierOrderDetail }) {
     <ul className="pf-stock-list pf-stock-list--padded" aria-label={t("order.receipts.label")}>
       {order.receipts.map((r) => (
         <li key={r.id}>
-          <span>
+          <div className="pf-stock-receipt">
             <ReceiptLines
               lines={r.lines}
               unitOf={(l) => order.lines.find((x) => x.id === l.order_line_id)?.unit}
@@ -177,7 +177,7 @@ function Receipts({ order }: { order: SupplierOrderDetail }) {
             {r.supplier_doc ? (
               <span className="pf-hint"> · {t("order.receipts.doc", { doc: r.supplier_doc })}</span>
             ) : null}
-          </span>
+          </div>
           <span className="pf-stock-by">
             <span className="pf-hint">{activity(r.received_at)}</span>
             {r.received_by ? <PersonRefCell person={r.received_by} caption={null} /> : null}

@@ -1,9 +1,10 @@
-import { screen, within } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import type { LetterCard } from "../../../shared/api/generated/model";
 import { readLetters, writeLetters } from "../../../mocks/fixtures/letters";
 import { renderAt, setupLetterTests, signIn } from "../../../test/lettersKit";
+import { server } from "../../../test/server";
 
 setupLetterTests();
 
@@ -69,6 +70,10 @@ describe("ЕД-3: люди в резолюции, поручениях и озн
       ],
     };
     writeLetters(readLetters().map((l) => (l.number === "ВХ-108/26" ? { ...l, ...patch } : l)));
+    let positionsRequested = false;
+    server.events.on("response:mocked", ({ request }) => {
+      if (new URL(request.url).pathname.endsWith("/staff")) positionsRequested = true;
+    });
     signIn("director@demo.example");
     renderAt("/eds/inbox/%D0%92%D0%A5-108%2F26?panel=open&tab=resolution");
 
@@ -79,6 +84,11 @@ describe("ЕД-3: люди в резолюции, поручениях и озн
     // исполнитель — ячейка человека, роль в документе второй строкой
     expect(entityOf(instruction, "Демо Широков")).toHaveTextContent("ДШ");
     expect(entityOf(instruction, "Демо Широков")).toHaveTextContent("ответственный");
+    // справочник сотрудников загрузился (иначе проверка «без должностей» ничего не доказывает)
+    await waitFor(() => {
+      expect(positionsRequested).toBe(true);
+    });
+    await new Promise((resolve) => setTimeout(resolve, 100));
     // перенос срока: кто запросил и кто решил — те же ячейки
     const history = within(instruction).getByRole("list");
     expect(history.querySelectorAll(".pf-entity")).toHaveLength(2);
@@ -91,7 +101,13 @@ describe("ЕД-3: люди в резолюции, поручениях и озн
       .closest(".ant-card") as HTMLElement;
     expect(decision.querySelectorAll(".pf-entity").length).toBeGreaterThanOrEqual(3);
     expect(entityOf(decision, "Демо Директоров")).toHaveTextContent("ДД");
-    expect(card).not.toHaveTextContent("Менеджер");
-    expect(card).not.toHaveTextContent("Директор ·");
+    // вторая строка ячейки — только роль в документе, никогда должность из справочника
+    const captions = [
+      ...card.querySelectorAll(".pf-entity__caption"),
+      ...decision.querySelectorAll(".pf-entity__caption"),
+    ].map((el) => el.textContent);
+    for (const position of ["Директор", "Менеджер-универсал", "Бухгалтер"]) {
+      expect(captions).not.toContain(position);
+    }
   });
 });
