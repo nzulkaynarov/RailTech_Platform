@@ -602,13 +602,13 @@
     "history": "Extension history",
     "ext": {
       "item": "{{old}} → {{new}}: {{reason}}",
-      "by": "requested by {{name}}, {{date}}",
+      "by": "requested, {{date}}",
       "status": {
         "pending": "awaiting decision",
         "approved": "approved",
         "rejected": "rejected"
       },
-      "decidedBy": "decided by {{name}}, {{date}}"
+      "decidedBy": "decided, {{date}}"
     },
     "decide": {
       "title": "Deadline extension: your decision is needed",

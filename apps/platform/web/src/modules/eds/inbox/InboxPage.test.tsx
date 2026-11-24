@@ -340,7 +340,7 @@ describe("EDS · Входящие письма: карточка", () => {
     expect(
       await screen.findByRole("heading", { level: 1, name: "Письмо ВХ-107/26" }),
     ).toBeVisible();
-    expect(screen.getByText("Раздел «Операции» не отвечает, данные неполные")).toBeVisible();
+    expect(screen.getByText("Часть данных не загрузилась. Повторите позже.")).toBeVisible();
     expect(screen.getByText("Поставка кабельной продукции")).toBeVisible();
     expect(screen.getByRole("list", { name: /Путь заявки/ })).toBeVisible();
   });

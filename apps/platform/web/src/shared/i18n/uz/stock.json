@@ -18,8 +18,8 @@
       "text": "Sahifani yangilang yoki keyinroq qayta urining."
     },
     "unavailable": {
-      "title": "«Amallar» bölimi javob bermayapti",
-      "text": "Ombor ma’lumotlari hozir mavjud emas. Bir daqiqadan keyin qayta urining."
+      "title": "Maʼlumotlar yuklanmadi",
+      "text": "Keyinroq qayta uriniş."
     },
     "forbidden": {
       "title": "Ruxsat yo‘q",
@@ -28,7 +28,7 @@
   },
   "errors": {
     "forbidden": "Bu amal rolingizga ruxsat etilmagan.",
-    "unavailable": "«Amallar» bölimi hozir javob bermayapti. Keyinroq qayta urining.",
+    "unavailable": "Maʼlumotlar yuklanmadi. Keyinroq qayta uriniş.",
     "other": "Bajarilmadi: {{message}}",
     "not_enough_stock": "Omborda bunchalik bo‘sh tovar yo‘q (bo‘sh: {{free}}).",
     "below_reserved": "Qoldiq loyihalar zaxirasidan kam bo‘lishi mumkin emas.",

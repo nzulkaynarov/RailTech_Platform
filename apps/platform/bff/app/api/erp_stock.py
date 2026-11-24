@@ -18,6 +18,7 @@ from app.api.erp_calc import ErpCalc, Number
 from app.clients.erp_company import erp_error
 from app.deps import Authed, require
 from app.errors import PlatformError
+from app.row_logos import company_logos
 from app.schemas_erp_calc import CalcSheet, to_sheet
 from app.schemas_erp_stock import (
     PriceRequest,
@@ -419,7 +420,11 @@ async def list_orders(
     if overdue:
         params["overdue"] = 1
     data = await _erp(authed).stock("GET", "orders/", params=params or None)
-    return to_order_list(data, _prices(authed))
+    orders = to_order_list(data, _prices(authed))
+    logos = await company_logos(authed, [int(o.supplier.id) for o in orders.items])
+    for order in orders.items:
+        order.supplier.logo_url = logos.get(int(order.supplier.id))
+    return orders
 
 
 @router.get(

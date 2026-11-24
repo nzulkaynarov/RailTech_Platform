@@ -219,7 +219,7 @@
     "assist_unavailable": "The AI model did not respond. Try again",
     "FORBIDDEN": "This action is not allowed for your role",
     "NOT_FOUND": "Lead not found",
-    "BACKEND_UNAVAILABLE": "The “Contacts” section is not responding. Try again",
+    "BACKEND_UNAVAILABLE": "Data did not load. Try again later.",
     "VALIDATION_FAILED": "Check the text: 1 to 4000 characters",
     "generic": "Something went wrong. Try again",
     "reply_in_progress": "The message is still being sent — wait a moment and press Retry",

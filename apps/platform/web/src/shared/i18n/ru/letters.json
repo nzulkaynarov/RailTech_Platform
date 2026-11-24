@@ -602,13 +602,13 @@
     "history": "История переносов",
     "ext": {
       "item": "{{old}} → {{new}}: {{reason}}",
-      "by": "запрос: {{name}}, {{date}}",
+      "by": "запрос, {{date}}",
       "status": {
         "pending": "ждёт решения",
         "approved": "одобрено",
         "rejected": "отклонено"
       },
-      "decidedBy": "решение: {{name}}, {{date}}"
+      "decidedBy": "решение, {{date}}"
     },
     "decide": {
       "title": "Перенос срока: нужно ваше решение",

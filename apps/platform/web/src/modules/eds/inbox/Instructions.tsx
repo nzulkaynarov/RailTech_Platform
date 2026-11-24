@@ -18,6 +18,29 @@ import { useResolutionKindName } from "../dictionaries";
 import { reasonText, useRefreshLetters } from "./api";
 import { Attachments } from "./Parts";
 import { TimeLeft } from "../../../shared/ui/TimeLeft";
+import { PersonRefCell } from "../../PersonRefCell";
+
+/** Сотрудник в строке документа (ЕД-3): фото или инициалы и имя; должность не нужна — роль в документе даёт подпись. */
+function Person({
+  person,
+  caption = null,
+}: {
+  person: { id: string; name: string };
+  caption?: string | null;
+}) {
+  return <PersonRefCell person={person} caption={caption} />;
+}
+
+function People({ people }: { people: readonly { id: string; name: string }[] }) {
+  if (people.length === 0) return null;
+  return (
+    <span className="pf-instr-people">
+      {people.map((p) => (
+        <Person key={p.id} person={p} />
+      ))}
+    </span>
+  );
+}
 
 /** Резолюция пути делопроизводства (P8b): тип, ответственный, соисполнители, «ознакомить», срок, текст, кто и когда. */
 export function OfficeDecision({ letter }: { letter: LetterCard }) {
@@ -26,21 +49,29 @@ export function OfficeDecision({ letter }: { letter: LetterCard }) {
   const kindName = useResolutionKindName();
   const res = letter.office_resolution;
   if (!res) return null;
-  const names = (people: readonly { name: string }[]) =>
-    people.length > 0 ? people.map((p) => p.name).join(", ") : null;
+  const names = (people: readonly { id: string; name: string }[]) =>
+    people.length > 0 ? <People people={people} /> : null;
   return (
     <Card size="small" title={<h2 className="pf-letters-title">{t("instr.resolution")}</h2>}>
       <DefinitionList
         items={[
           { label: t("instr.fields.kind"), value: kindName(res.kind) },
-          { label: t("instr.fields.responsible"), value: res.responsible?.name },
+          {
+            label: t("instr.fields.responsible"),
+            value: res.responsible ? <Person person={res.responsible} /> : null,
+          },
           { label: t("instr.fields.co"), value: names(res.co_executors) },
           { label: t("instr.fields.due"), value: res.due ? date(res.due) : null },
           { label: t("instr.fields.text"), value: res.text },
           { label: t("instr.fields.acquaint"), value: names(res.acquaint) },
           {
             label: t("instr.fields.decidedBy"),
-            value: `${res.decided_by.name} · ${date(res.decided_at, "datetime")}`,
+            value: (
+              <span className="pf-instr-people">
+                <Person person={res.decided_by} />
+                <span className="pf-hint">{date(res.decided_at, "datetime")}</span>
+              </span>
+            ),
           },
         ]}
       />
@@ -65,19 +96,21 @@ function History({ items }: { items: readonly LetterInstructionExtension[] }) {
                 reason: ext.reason,
               })}
             </strong>{" "}
-            <span className="pf-hint">
-              · {t(`instr.ext.status.${ext.status}`)} ·{" "}
-              {t("instr.ext.by", {
-                name: ext.requested_by.name,
-                date: date(ext.requested_at, "datetime"),
-              })}
-              {ext.decided_by && ext.decided_at
-                ? ` · ${t("instr.ext.decidedBy", {
-                    name: ext.decided_by.name,
-                    date: date(ext.decided_at, "datetime"),
-                  })}`
-                : ""}
-            </span>
+            <span className="pf-hint">· {t(`instr.ext.status.${ext.status}`)}</span>
+            <div className="pf-instr-by">
+              <Person person={ext.requested_by} />
+              <span className="pf-hint">
+                {t("instr.ext.by", { date: date(ext.requested_at, "datetime") })}
+              </span>
+            </div>
+            {ext.decided_by && ext.decided_at ? (
+              <div className="pf-instr-by">
+                <Person person={ext.decided_by} />
+                <span className="pf-hint">
+                  {t("instr.ext.decidedBy", { date: date(ext.decided_at, "datetime") })}
+                </span>
+              </div>
+            ) : null}
             {ext.comment ? <p className="pf-letters-note">{ext.comment}</p> : null}
           </li>
         ))}
@@ -199,8 +232,7 @@ function InstructionItem({
   return (
     <li className="pf-instr">
       <div className="pf-instr-head">
-        <strong>{instruction.person.name}</strong>
-        <span className="pf-hint"> · {t(`instr.role.${instruction.role}`)}</span>
+        <Person person={instruction.person} caption={t(`instr.role.${instruction.role}`)} />
         <span className="pf-instr-tags">
           <StatusTag kind="instruction" status={instruction.status}>
             {t(`instr.status.${instruction.status}`)}
@@ -308,9 +340,8 @@ export function InstructionsCard({ letter }: { letter: LetterCard }) {
           <ul className="pf-instr-acq">
             {acquaintances.map((a) => (
               <li key={a.person.id}>
-                {a.person.name}{" "}
+                <Person person={a.person} />
                 <span className="pf-hint">
-                  ·{" "}
                   {a.acknowledged_at
                     ? t("instr.acq.done", { date: date(a.acknowledged_at, "datetime") })
                     : t("instr.acq.waiting")}

@@ -24,6 +24,7 @@ export function AvatarMenu({
   placement,
   onHelp,
   settings,
+  active,
 }: {
   me: Me;
   placement: "topLeft" | "topRight";
@@ -31,6 +32,8 @@ export function AvatarMenu({
   onHelp?: () => void;
   /** Phone: Настройки are not in the bottom bar, the profile menu leads to them */
   settings?: { to: string; label: string } | undefined;
+  /** Открыт профиль (`/me`): аватар отмечен как активный пункт, как модуль в рейле */
+  active?: boolean;
 }) {
   const { t } = useTranslation("shell");
   const navigate = useNavigate();
@@ -167,7 +170,8 @@ export function AvatarMenu({
     >
       <button
         type="button"
-        className="pf-focusable"
+        className="pf-focusable pf-avatar-btn"
+        aria-current={active ? "page" : undefined}
         title={me.name}
         aria-label={t("avatar.open", { initials: me.initials, name: me.name, role: caption })}
         aria-haspopup="menu"

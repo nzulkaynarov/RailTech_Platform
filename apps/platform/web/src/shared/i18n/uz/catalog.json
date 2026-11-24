@@ -46,8 +46,8 @@
       "text": "Ulanishni tekshirib, qayta urinib ko'ring. Ma'lumotlar yo'qolmagan."
     },
     "unavailable": {
-      "title": "«Amallar» bölimi hozir mavjud emas",
-      "text": "Bölim maʼlumotlari yuklanmadi. Bir daqiqadan söng qayta urinib köring."
+      "title": "Maʼlumotlar yuklanmadi",
+      "text": "Keyinroq qayta uriniş."
     },
     "forbidden": {
       "title": "Bu bo'lim rolingiz uchun emas",
@@ -63,7 +63,7 @@
     "VALIDATION_FAILED": "Maydonlarni tekshiring.",
     "CONFLICT": "Bunday yozuv allaqachon bor. Ro'yxatni yangilang.",
     "NOT_FOUND": "Yozuv endi yo'q. Ro'yxatni yangilang.",
-    "BACKEND_UNAVAILABLE": "«Amallar» bölimi javob bermadi. Bir daqiqadan söng qayta urinib köring.",
+    "BACKEND_UNAVAILABLE": "Maʼlumotlar yuklanmadi. Keyinroq qayta uriniş.",
     "reason": {
       "merge_same_product": "Birlashtirish uchun boshqa kartochkani tanlang.",
       "item_name_required": "Pozitsiya nomini kiriting.",
@@ -742,7 +742,9 @@
     "inviteAgain": "Yana taklif qilish",
     "inviteNamed": "{{action}}: {{name}}",
     "inviteSent": "Kirish kodi bilan xat yuborildi.",
-    "inviteForm": { "title": "Kabinetga taklif qilish" },
+    "inviteForm": {
+      "title": "Kabinetga taklif qilish"
+    },
     "suspend": "Kirishni to'xtatish",
     "readOnly": "Taklif qilish va huquqlarni o'zgartirishni hamkorlarni yuritish huquqi bor xodimlar qiladi.",
     "contactForm": {

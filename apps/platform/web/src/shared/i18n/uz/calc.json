@@ -276,7 +276,7 @@
     "zone_not_permitted": "Ruxsat yetarli emas.",
     "cost_forbidden": "Xarid narxi va ustamani tannarxga ruxsati bor xodim o‘zgartiradi.",
     "forbidden": "Bu amal rolingizga ruxsat etilmagan.",
-    "unavailable": "«Amallar» bölimi javob bermadi. Bir daqiqadan keyin qayta urinib köring.",
+    "unavailable": "Maʼlumotlar yuklanmadi. Keyinroq qayta uriniş.",
     "other": "Saqlanmadi: {{message}}",
     "deal_not_in_calculation": "Ariza yopilgan yoki hisob-kitobdan keyingi bosqichda.",
     "quote_not_rejected_by_client": "Yangi versiya va voz kechish mijoz TTni rad etgandan keyin mavjud.",
@@ -290,8 +290,8 @@
       "text": "Sahifani yangilang yoki bir daqiqadan keyin qayta urinib ko‘ring."
     },
     "unavailable": {
-      "title": "«Amallar» bölimi javob bermayapti",
-      "text": "Hisob-kitob ma’lumotlari vaqtincha mavjud emas. Bir daqiqadan keyin qayta urinib ko‘ring."
+      "title": "Maʼlumotlar yuklanmadi",
+      "text": "Keyinroq qayta uriniş."
     },
     "forbidden": {
       "title": "Bo‘lim rolingizga tegishli emas",

@@ -15,6 +15,19 @@ import type { WebFormToken, WebLeadAccepted, WebLeadIn } from '@/api/crm';
  */
 const API = '*/api/v1/leads/web';
 /** У CRM по умолчанию 3 с; в моке — 1 с, чтобы повтор с новым токеном не тянул тесты. */
+/** Same rule as the CRM `normalize_phone_e164`: +998 and exactly 9 digits, other countries 8-15 digits. */
+function validPhone(raw: string): boolean {
+  if (!/^\+?[\d\s().-]+$/.test(raw)) return false;
+  let digits = raw.replace(/\D/g, '');
+  if (!raw.startsWith('+')) {
+    if (digits.startsWith('00') && digits.length > 2) digits = digits.slice(2);
+    else if (digits.length === 9) digits = `998${digits}`;
+    else if (digits.startsWith('8') && digits.length === 10) return false;
+  }
+  if (digits.startsWith('998') && digits.length !== 12) return false;
+  return /^[1-9]\d{7,14}$/.test(digits);
+}
+
 export const MOCK_MIN_FILL_SECONDS = 1;
 
 let state = createState();
@@ -73,7 +86,7 @@ export const crmFormHandlers = [
     if (text.includes('#limit')) return crmError(429, 'rate_limited', 'rate_limited');
     const phone = body.phone?.trim() ?? '';
     if (!phone && !body.email?.trim()) return invalid('contact_required', 'phone');
-    if (phone && phone.replace(/\D/g, '').length < 9) return invalid('invalid_phone', 'phone');
+    if (phone && !validPhone(phone)) return invalid('invalid_phone', 'phone');
     const accepted: WebLeadAccepted = {
       lead_id: state.nextLeadId,
       request_number: `L-${String(state.nextLeadId).padStart(4, '0')}`,

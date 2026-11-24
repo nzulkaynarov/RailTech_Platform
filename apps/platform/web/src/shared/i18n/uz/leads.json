@@ -148,6 +148,9 @@
   },
   "origin": {
     "forms": {
+      "site": "saytdagi shakl",
+      "site-customer": "sayt · buyurtmachi",
+      "site-partner": "sayt · ishlab chiqaruvchi yoki hamkor",
       "cabinet_request": "kabinetdagi ariza",
       "request": "«Sörov» shakli"
     },

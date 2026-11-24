@@ -136,6 +136,8 @@ class StockSupplierRef(BaseModel):
     id: str
     name: str
     email: str | None = None
+    # ЕД-3: логотип поставщика в списке заказов (пакетно); `None` — буквы названия
+    logo_url: str | None = None
 
 
 class StockSupplierItem(BaseModel):

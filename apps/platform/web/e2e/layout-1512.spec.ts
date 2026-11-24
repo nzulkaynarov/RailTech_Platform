@@ -4,7 +4,7 @@ import { loginAndWait, settledScreenshot, spaGoto } from "./support/app";
 import { expectNoViolations } from "./support/axe";
 import { expectFitsFrame } from "./support/layout";
 
-// Polish pw2 · сторож раскладки на ключевых экранах (ноутбук 14″: 1512×982, и узкое окно 1280×800):
+// Polish pw2/pw3 · сторож раскладки на ключевых экранах (ноутбук 14″: 1512×982, и узкое окно 1280×800):
 // страница не ползёт вбок, таблица не шире рамки (`expectFitsFrame`), заголовок страницы, строка фильтров и таблица
 // не налезают друг на друга по рамкам элементов.
 
@@ -22,6 +22,11 @@ const SCREENS = [
   { name: "settings-employees", path: "/admin/org" },
   { name: "settings-zones", path: "/admin/zones" },
   { name: "state", path: "/admin" },
+  // Polish pw3: остальное из аудита 2026-11-24
+  { name: "settings-sales", path: "/admin/sales" },
+  { name: "inbox-card", path: "/eds/inbox/%D0%92%D0%A5-104%2F26" },
+  { name: "new-internal", path: "/eds/new?type=memo" },
+  { name: "profile", path: "/me" },
 ] as const;
 
 const SIZES = [
@@ -113,6 +118,100 @@ test.describe("Polish pw2 · раскладка на 1512 и 1280", () => {
     await spaGoto(page, "/dashboard/queue");
     const rail = await page.getByRole("navigation", { name: "Модули" }).innerText();
     expect(rail).not.toMatch(/Директор|инженер|Бухгалтер/);
+  });
+
+  test("pw3: настройки, карточки и окна — без пустых страниц, без пересказа, одно меню", async ({
+    page,
+  }) => {
+    await loginAndWait(page, "director@demo.example");
+    await page.setViewportSize({ width: 1512, height: 982 });
+
+    // мастер ведёт администратор: директору вместо пустой «Недостаточно прав» — «Состояние»
+    await spaGoto(page, "/admin/setup");
+    await expect(page.locator("main h1").first()).toHaveText("Состояние");
+    await expect(page.locator("main")).not.toContainText("Недостаточно прав");
+
+    // «Продажи»: проценты в языке интерфейса без «.0», страницы группы — в одном меню слева
+    await spaGoto(page, "/admin/sales");
+    await expect(page.locator("main h1").first()).toHaveText("Продажи");
+    const margin = page.getByLabel("Маржа по умолчанию", { exact: false }).first();
+    await expect(margin).toHaveValue(/^\d+(,\d)?$/);
+    await expect(page.getByRole("navigation", { name: /^Страницы группы/ })).toHaveCount(0);
+    const group = page.getByRole("navigation", { name: "Разделы модуля" }).getByRole("list", {
+      name: "Правила работы",
+    });
+    await expect(group.getByRole("link", { name: "Продажи" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+
+    // меню модуля свёрнуто на 1280 и 1024 — страницы группы доступны выбором над страницей
+    for (const width of [1280, 1024] as const) {
+      await page.setViewportSize({ width, height: 800 });
+      await spaGoto(page, "/admin/timing");
+      await expect(page.locator("main h1").first()).toHaveText("Время и сроки");
+      await expect(
+        page.getByRole("combobox", { name: /Страницы группы «Правила работы»/ }),
+        `страницы группы доступны на ${String(width)}`,
+      ).toBeVisible();
+    }
+    // смена ширины окна не пересоздаёт страницу: введённое в форме остаётся
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await spaGoto(page, "/admin/sales");
+    const typed = page.getByLabel("Маржа по умолчанию", { exact: false }).first();
+    await typed.fill("7");
+    await page.setViewportSize({ width: 1512, height: 982 });
+    await expect(typed).toHaveValue("7");
+
+    // контрагенты: «вчера» и время без даты в списке нет; в карточке нет красной метки, вкладки в одну строку
+    await spaGoto(page, "/crm/clients");
+    await expect(page.locator("main h1").first()).toBeVisible();
+    await page.waitForLoadState("networkidle");
+    await expect(page.locator("main")).not.toContainText(/вчера/);
+    await spaGoto(page, "/crm/clients?partner=2&panel=open&tab=card");
+    await expect(page.locator(".pf-cp-tabs > .ant-tabs-nav").first()).toBeVisible();
+    const fits = await page.evaluate<boolean>(`(() => {
+      const el = document.querySelector(".pf-cp-tabs > .ant-tabs-nav");
+      const list = el && el.querySelector(".ant-tabs-nav-list");
+      return el && list ? list.scrollWidth <= el.clientWidth + 1 : true;
+    })()`);
+    expect(fits, "вкладки карточки контрагента в одну строку без прокрутки").toBe(true);
+    await expect(page.locator(".pf-cp-title .ant-btn-dangerous")).toHaveCount(0);
+
+    // входящее письмо: подписи шкалы не режутся, названий систем нет
+    await spaGoto(page, "/eds/inbox/%D0%92%D0%A5-104%2F26");
+    await expect(page.locator("main h1").first()).toBeVisible();
+    const cut = await page.evaluate<
+      string[]
+    >(`Array.from(document.querySelectorAll(".pf-step-label"))
+      .filter((n) => n.scrollWidth > n.clientWidth + 1)
+      .map((n) => n.textContent)`);
+    expect(cut, "подписи шкалы не обрезаны").toEqual([]);
+    await expect(page.locator("main")).not.toContainText(/\bCRM\b/);
+
+    // новый внутренний документ: без пересказа и без выдуманного примера номера
+    await spaGoto(page, "/eds/new?type=memo");
+    await expect(page.locator("main h1").first()).toHaveText("Внутренний документ");
+    await expect(page.locator("main")).not.toContainText(/уйдёт директору|получит любой сотрудник/);
+    await expect(page.locator("main")).not.toContainText("RQ-");
+
+    // профиль: крошка и отмеченный аватар
+    await spaGoto(page, "/me");
+    await expect(page.locator("main h1").first()).toHaveText("Профиль");
+    await expect(
+      page.getByRole("navigation", { name: "Хлебные крошки" }).getByText("Профиль"),
+    ).toBeVisible();
+    await expect(page.locator(".pf-avatar-btn")).toHaveAttribute("aria-current", "page");
+
+    // окно «Создать»: у видов короткие названия без пересказа процесса
+    await spaGoto(page, "/dashboard/queue");
+    await page.getByRole("button", { name: "Создать" }).first().click();
+    const create = page.getByRole("dialog");
+    await expect(create).toBeVisible();
+    await expect(create).not.toContainText(
+      /выберите клиента|как в прошлый раз|с номером и подписью/,
+    );
+    await settledScreenshot(page, "create-window");
   });
 
   test("снимки 1512 и 390 и axe", async ({ page }) => {

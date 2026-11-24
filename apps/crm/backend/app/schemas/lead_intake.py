@@ -55,7 +55,11 @@ class WebLeadIn(BaseModel):
     website: str | None = Field(default=None, max_length=255)
     # Origin facts (LID-5), all optional: which form, the landing page path, the referrer, UTM and
     # the language of the landing page. Stored as facts on the lead and shown in its card.
-    form: str | None = Field(default=None, max_length=128, description="Form key, e.g. `request`.")
+    form: str | None = Field(
+        default=None,
+        max_length=128,
+        description="Form key, e.g. `request`, `site`, `site-customer`, `site-partner`.",
+    )
     page: str | None = Field(default=None, max_length=1024, description="Landing page path.")
     referrer: str | None = Field(default=None, max_length=1024)
     utm: WebLeadUtm | None = None

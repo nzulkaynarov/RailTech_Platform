@@ -115,7 +115,7 @@ test.describe("UX-2a: поля даты, файла и выбора", () => {
       ).toBeVisible();
       await settledScreenshot(page, "resolution-select");
       await page.keyboard.press("Escape");
-      await chooseOption(employee, "Демо Снабженцев · Специалист по снабжению");
+      await chooseOption(employee, "Демо Снабженцев");
       await fillDate(form.getByLabel("Срок расчёта"), inDays(5));
       await expectNoNativeFields(form);
       await settledScreenshot(page, "resolution");
