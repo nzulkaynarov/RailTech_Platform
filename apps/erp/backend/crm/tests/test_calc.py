@@ -799,3 +799,24 @@ def test_copy_from_another_client_is_404(world):
         f"/api/v1/calc/{world['deal'].pk}/copy/", {"from_deal_id": world["deal"].pk}, format="json"
     )
     assert same.status_code == 404
+
+
+def test_sheet_client_total_is_the_sum_of_rounded_lines(world):
+    """Лист «клиенту» = итог КП: три строки 10.01 × 0.500 (5.005 → 5.01) дают 15.03, а не 15.02 от суммы без округления."""
+    from crm.services.quotes import QuoteCalculationService
+
+    goods_id, service_id = _started(world)
+    third = QuoteItem.objects.get(pk=goods_id)
+    third.pk = None
+    third.save()
+    ids = [goods_id, service_id, third.pk]
+    for pk in ids:
+        QuoteItem.objects.filter(pk=pk).update(
+            quantity=Decimal("0.500"), client_price_fixed=Decimal("10.01"), final_price_excl_vat=Decimal("10.01")
+        )
+    quote = QuoteItem.objects.get(pk=goods_id).quote
+    QuoteCalculationService.recalculate_quote(quote.pk)
+    quote.refresh_from_db()
+
+    totals = _sheet(world, world["supply"])["totals"]
+    assert totals["client"] == "15.03" == f"{quote.subtotal_excl_vat}"

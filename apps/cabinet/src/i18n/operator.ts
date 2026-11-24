@@ -2,6 +2,8 @@ import { useQuery } from '@tanstack/react-query';
 import { useEffect } from 'react';
 
 import { getOperator } from '@/api/portal';
+import { useTranslation } from 'react-i18next';
+
 import i18n from '@/i18n';
 
 /**
@@ -20,7 +22,18 @@ export function setOperatorName(name: string | null | undefined): void {
 
 /** Оператор до входа: название, бот, логотип (`GET /operator`) — один запрос на весь кабинет. */
 export function useOperator() {
-  return useQuery({ queryKey: ['operator'], queryFn: getOperator, staleTime: 10 * 60_000, retry: false });
+  return useQuery({
+    queryKey: ['operator'],
+    // название ложится в общие переменные i18n до того, как данные дойдут до компонентов: строки с `{{operator}}`
+    // и шапка с `useAppName` обновляются в одном кадре
+    queryFn: async () => {
+      const operator = await getOperator();
+      setOperatorName(operator.name);
+      return operator;
+    },
+    staleTime: 10 * 60_000,
+    retry: false,
+  });
 }
 
 export function useOperatorName(): void {
@@ -30,4 +43,15 @@ export function useOperatorName(): void {
   useEffect(() => {
     if (name !== undefined || failed) setOperatorName(name ?? null);
   }, [name, failed]);
+}
+
+/**
+ * «Кабинет <оператор>»: название берётся из данных запроса `operator` и передаётся в `t()` явно, поэтому смена
+ * названия перерисовывает шапку и заголовок вкладки без смены языка (`languageChanged` при том же языке не
+ * перерисовывает подписчиков react-i18next). Нет названия — нейтральное слово языка из `defaultVariables`.
+ */
+export function useAppName(): string {
+  const { t } = useTranslation();
+  const name = useOperator().data?.name?.trim();
+  return name ? t('app.name', { operator: name }) : t('app.name');
 }

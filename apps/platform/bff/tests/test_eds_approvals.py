@@ -1680,3 +1680,16 @@ async def test_cards_carry_the_replaced_person_when_the_deputy_decides(
     eds.routes[MEMO_ROUTE] = memo_route()
     own = await web.client.get(MEMO)
     assert own.json()["acting_for"] is None
+
+
+async def test_quote_line_amount_rounds_half_up_like_erp(web: Web, eds: ApprovalsFake) -> None:
+    """10.05 × 0.5 = 5.025: в карточке 5.03, как в ERP, PDF и портале (а не 5.02 от half-even)."""
+    items = erp_quote()["items"]
+    items[1].update(quantity=0.5, final_price_excl_vat="10.05")
+    eds.erp_quote = erp_quote(items=items)
+    await _director(web)
+
+    response = await web.client.get(QUOTE)
+
+    assert response.status_code == 200
+    assert response.json()["lines"][0]["amount"] == "5.03"

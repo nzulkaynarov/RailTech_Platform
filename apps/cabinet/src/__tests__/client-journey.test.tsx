@@ -2,7 +2,7 @@ import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { renderApp, signedIn } from '@/test/render';
-import { expectNoAxeViolations, heading } from '@/test/screens';
+import { expectNoAxeViolations, heading, showAllDecisions } from '@/test/screens';
 
 describe('Путь клиента M2-CAB-04', () => {
   it('виджет «Требует вашего решения» на /requests отображает ожидающие документы', async () => {
@@ -10,7 +10,7 @@ describe('Путь клиента M2-CAB-04', () => {
     renderApp('/requests');
     await heading('Заявки');
 
-    const widget = await screen.findByRole('region', { name: 'Требует вашего решения' });
+    const widget = await showAllDecisions(await screen.findByRole('region', { name: 'Требует вашего решения' }));
     expect(widget).toBeInTheDocument();
     expect(within(widget).getAllByText('Счёт').length).toBeGreaterThan(0);
     expect(within(widget).getAllByText('Договор').length).toBeGreaterThan(0);

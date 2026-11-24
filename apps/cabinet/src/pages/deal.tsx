@@ -104,7 +104,7 @@ export function DealPage() {
         subtitle={subtitle}
         icon={Briefcase}
         actions={
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {dealRequests.length > 0 ? (
               <CanAct>
                 <Button asChild variant="outline">
