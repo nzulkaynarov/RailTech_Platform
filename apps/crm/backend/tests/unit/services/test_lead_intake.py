@@ -103,6 +103,13 @@ async def test_invalid_contact_does_not_spend_rate_limit(
         await svc.create_web(body(), "6.6.6.6", NOW)
 
 
+async def test_bad_token_wins_over_bad_phone() -> None:
+    """Order of checks is token → contact → rate: a bad token is reported even with a bad phone."""
+    with pytest.raises(ValidationFailedError) as info:
+        await service().create_web(body(form_token="garbage", phone="abc"), "1.1.1.1", NOW)
+    assert info.value.details == {"reason": "form_token_invalid", "field": "form_token"}
+
+
 async def test_form_token_response_uses_settings() -> None:
     token = await service(token_ttl_minutes=15, min_fill_seconds=5).form_token(NOW)
     assert token.expires_at == NOW + timedelta(minutes=15)

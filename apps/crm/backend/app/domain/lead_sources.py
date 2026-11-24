@@ -35,9 +35,10 @@ MANUAL_SOURCES: Final[frozenset[LeadSource]] = frozenset(
 
 _UZ_COUNTRY: Final = "998"
 _UZ_LOCAL_LEN: Final = 9
+_INTL_MIN_AFTER_00: Final = 10
 _UZ_FULL_LEN: Final = len(_UZ_COUNTRY) + _UZ_LOCAL_LEN
-_DIGITS: Final = re.compile(r"\D")
-_PHONE_CHARS: Final = re.compile(r"\+?[\d\s()\-.]+")
+_DIGITS: Final = re.compile(r"\D", re.ASCII)
+_PHONE_CHARS: Final = re.compile(r"\+?[\d\s()\-.]+", re.ASCII)
 
 
 def normalize_phone_e164(raw: str | None) -> str | None:
@@ -55,8 +56,11 @@ def normalize_phone_e164(raw: str | None) -> str | None:
     digits = _DIGITS.sub("", text)
     international = text.startswith("+")
     if not international:
-        if digits.startswith("00") and len(digits) > 2:
+        if digits.startswith("00"):
+            # «00» is the international prefix only before a country code and a real number.
             digits = digits[2:]
+            if len(digits) < _INTL_MIN_AFTER_00:
+                return None
         elif len(digits) == _UZ_LOCAL_LEN:
             digits = _UZ_COUNTRY + digits
         elif digits.startswith("8") and len(digits) == _UZ_LOCAL_LEN + 1:
