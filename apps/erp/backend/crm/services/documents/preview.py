@@ -15,33 +15,15 @@ from core.currency import BASE_CURRENCY
 
 from .blank import build_quote_terms, resolve_cover_letter
 from .brand import _brand_context_from_row
+from .sample import _BOOL_OVERRIDES, _TEXT_OVERRIDES
 from .totals import document_totals
 
 # The document kinds the Document-Layout preview can render (mirrors the real PDF set).
 PREVIEW_DOC_TYPES = ("KP", "CT", "INV", "ACT", "DOC")
 
-# Draft-override keys the theme editor may pass for a WYSIWYG preview of UNSAVED settings
-# (applied to an in-memory row only — never saved; hex/choice values are neutralized by the
-# render-time allowlists in _brand_context_from_row).
-_PREVIEW_TEXT_OVERRIDES = (
-    "legal_name",
-    "inn",
-    "legal_address",
-    "bank_details",
-    "signatory_name",
-    "signatory_position",
-    "footer_text",
-    "accent_color",
-    "cover_letter_text",
-)
-_PREVIEW_BOOL_OVERRIDES = (
-    "use_company_defaults",
-    "show_logo",
-    "show_lead_time",
-    "show_fx_note",
-    "show_cover_letter",
-    "show_bank_in_header",
-)
+# Draft-override keys: one list with the sample document (`sample.py`).
+_PREVIEW_TEXT_OVERRIDES = _TEXT_OVERRIDES
+_PREVIEW_BOOL_OVERRIDES = _BOOL_OVERRIDES
 
 # Shared sample counterparty for every preview document.
 _SAMPLE_BUYER = {

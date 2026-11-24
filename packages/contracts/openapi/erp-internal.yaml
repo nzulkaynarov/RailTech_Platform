@@ -697,10 +697,11 @@ paths:
   /api/v1/accounts/companies/{id}/document-profile/preview/:
     get:
       operationId: accounts_companies_document_profile_preview_retrieve
-      description: Renders a SAMPLE document of the requested kind (КП / договор / инвойс / акт / письмо) as HTML using the
-        company's document profile. POST body may carry {doc_type, draft:{...}} — the draft overlays UNSAVED theme settings
+      description: 'Renders a SAMPLE document of the requested kind (КП / договор / инвойс / акт / письмо) as HTML using the
+        company''s document profile. POST body may carry {doc_type, draft:{...}} — the draft overlays UNSAVED theme settings
         in-memory (never saved), so the editor previews live like the Odoo Document-Layout wizard. GET stays the legacy saved-profile
-        КП preview. OWNER only. Returns text/html (no WeasyPrint in the request thread, ARCH-03).
+        КП preview. OWNER only. Returns text/html (no WeasyPrint in the request thread, ARCH-03). Устарело (ДОК-14): образец
+        — PDF настоящего генератора, `POST /crm/document-samples/`; путь будет удалён после даты отключения.'
       summary: Live preview of a sample document with the company's theme (Document Layout)
       parameters:
       - in: path
@@ -713,6 +714,7 @@ paths:
       - Accounts
       security:
       - jwtAuth: []
+      deprecated: true
       responses:
         '200':
           content:
@@ -736,12 +738,14 @@ paths:
           $ref: '#/components/responses/UnauthorizedResponse'
         '404':
           $ref: '#/components/responses/NotFoundResponse'
+      x-sunset: '2027-06-01'
     post:
       operationId: accounts_companies_document_profile_preview_create
-      description: Renders a SAMPLE document of the requested kind (КП / договор / инвойс / акт / письмо) as HTML using the
-        company's document profile. POST body may carry {doc_type, draft:{...}} — the draft overlays UNSAVED theme settings
+      description: 'Renders a SAMPLE document of the requested kind (КП / договор / инвойс / акт / письмо) as HTML using the
+        company''s document profile. POST body may carry {doc_type, draft:{...}} — the draft overlays UNSAVED theme settings
         in-memory (never saved), so the editor previews live like the Odoo Document-Layout wizard. GET stays the legacy saved-profile
-        КП preview. OWNER only. Returns text/html (no WeasyPrint in the request thread, ARCH-03).
+        КП preview. OWNER only. Returns text/html (no WeasyPrint in the request thread, ARCH-03). Устарело (ДОК-14): образец
+        — PDF настоящего генератора, `POST /crm/document-samples/`; путь будет удалён после даты отключения.'
       summary: Live preview of a sample document with the company's theme (Document Layout)
       parameters:
       - in: path
@@ -765,6 +769,7 @@ paths:
               $ref: '#/components/schemas/DocumentProfilePreviewRequestRequest'
       security:
       - jwtAuth: []
+      deprecated: true
       responses:
         '200':
           content:
@@ -788,6 +793,7 @@ paths:
           $ref: '#/components/responses/UnauthorizedResponse'
         '404':
           $ref: '#/components/responses/NotFoundResponse'
+      x-sunset: '2027-06-01'
   /api/v1/accounts/companies/{id}/document-profile/upload-logo/:
     post:
       operationId: accounts_companies_document_profile_upload_logo_create
@@ -11263,6 +11269,107 @@ paths:
                 $ref: '#/components/schemas/ErrorDetail'
         '401':
           $ref: '#/components/responses/UnauthorizedResponse'
+  /api/v1/crm/document-samples/:
+    post:
+      operationId: crm_document_samples_create
+      description: 'Образец документа строит тот же генератор и та же нумерация, что и рабочий документ: бланк компании (или
+        несохранённый черновик `draft`), действующий шаблон (или несохранённый текст `body_html`), номер — тот, что получил
+        бы следующий документ, счётчик не занимается. PDF рендерит воркер.'
+      summary: Queue a sample document made by the real generator
+      tags:
+      - CRM
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DocumentSampleRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DocumentSampleRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DocumentSampleRequestRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '202':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentSampleState'
+          description: ''
+        '400':
+          description: NO_COMPANY / INVALID_SAMPLE_KIND (error code)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+        '403':
+          $ref: '#/components/responses/ForbiddenResponse'
+  /api/v1/crm/document-samples/{id}/:
+    get:
+      operationId: crm_document_samples_retrieve
+      description: 'Sample document of the settings screens: queue, state, PDF. Needs the `settings.edit` permission.'
+      summary: State of a sample document
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^[0-9a-f]{32}$
+        required: true
+      tags:
+      - CRM
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentSampleState'
+          description: ''
+        '404':
+          description: 'SAMPLE_NOT_FOUND: unknown or expired'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+        '403':
+          $ref: '#/components/responses/ForbiddenResponse'
+  /api/v1/crm/document-samples/{id}/pdf/:
+    get:
+      operationId: crm_document_samples_pdf_retrieve
+      description: 'Sample document of the settings screens: queue, state, PDF. Needs the `settings.edit` permission.'
+      summary: PDF of a ready sample document
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^[0-9a-f]{32}$
+        required: true
+      tags:
+      - CRM
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: PDF
+        '404':
+          description: 'SAMPLE_NOT_FOUND: not ready, unknown or expired'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+        '403':
+          $ref: '#/components/responses/ForbiddenResponse'
   /api/v1/crm/document-templates/:
     get:
       operationId: crm_document_templates_list
@@ -11472,7 +11579,9 @@ paths:
   /api/v1/crm/document-templates/preview/:
     post:
       operationId: crm_document_templates_preview_create
-      description: Render the editor body on sample data. Auth only — no settings.edit needed.
+      description: |-
+        Deprecated (ДОК-14): the sample is a PDF of the real generator, see `document_samples.py`. Kept until the
+        sunset date of the contract, then removed together with `document_preview.py` and `documents/preview.py`.
       summary: Live-preview a template body against sample data (no DB write)
       tags:
       - CRM
@@ -11489,6 +11598,7 @@ paths:
               $ref: '#/components/schemas/DocumentTemplatePreviewRequestRequest'
       security:
       - jwtAuth: []
+      deprecated: true
       responses:
         '200':
           content:
@@ -11506,6 +11616,7 @@ paths:
           $ref: '#/components/responses/UnauthorizedResponse'
         '403':
           $ref: '#/components/responses/ForbiddenResponse'
+      x-sunset: '2027-06-01'
   /api/v1/crm/document-templates/{id}/:
     get:
       operationId: crm_document_templates_retrieve
@@ -29706,6 +29817,47 @@ components:
           type: object
           additionalProperties: {}
           description: Unsaved document-profile fields overlaid in memory (never saved)
+    DocumentSampleRequestRequest:
+      type: object
+      properties:
+        kind:
+          type: string
+          minLength: 1
+          description: 'KP, CT, INV, ACT, DOC: КП, договор, счёт, акт, письмо'
+        template_kind:
+          type: string
+          minLength: 1
+          description: 'Код вида шаблона (CONTRACT, INVOICE, ACT; иной — письмо) вместо `kind`: образец текста из редактора
+            шаблонов.'
+        body_html:
+          type: string
+        draft:
+          type: object
+          additionalProperties: {}
+          description: Несохранённые поля бланка
+        language:
+          type: string
+          minLength: 1
+          description: 'ru, en, uz: язык печати; по умолчанию — язык платформы'
+    DocumentSampleState:
+      type: object
+      properties:
+        id:
+          type: string
+        status:
+          type: string
+          description: pending | ready | failed
+        warnings:
+          type: array
+          items:
+            type: string
+          description: Коды подстановок текста, которых нет
+        error:
+          type: string
+          description: Код ошибки при status=failed
+      required:
+      - id
+      - status
     DocumentTemplate:
       type: object
       description: Company template CRUD. `company`/`placeholders_used` are server-derived.

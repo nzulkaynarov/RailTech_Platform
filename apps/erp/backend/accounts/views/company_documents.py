@@ -121,12 +121,15 @@ class CompanyDocumentsMixin:
 
     @extend_schema(
         summary="Live preview of a sample document with the company's theme (Document Layout)",
+        deprecated=True,
+        extensions={"x-sunset": "2027-06-01"},
         description="Renders a SAMPLE document of the requested kind (КП / договор / инвойс / "
         "акт / письмо) as HTML using the company's document profile. POST body may carry "
         "{doc_type, draft:{...}} — the draft overlays UNSAVED theme settings in-memory (never "
         "saved), so the editor previews live like the Odoo Document-Layout wizard. GET stays "
         "the legacy saved-profile КП preview. OWNER only. Returns text/html (no WeasyPrint in "
-        "the request thread, ARCH-03).",
+        "the request thread, ARCH-03). Устарело (ДОК-14): образец — PDF настоящего генератора, `POST /crm/document-samples/`; "
+        "путь будет удалён после даты отключения.",
         request=inline_serializer(
             "DocumentProfilePreviewRequest",
             fields={

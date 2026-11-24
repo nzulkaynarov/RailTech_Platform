@@ -415,6 +415,19 @@ def send_quote_email(self, quote_id: int) -> dict:
     return {"quote_id": quote_id, "status": "sent", "to": to_email}
 
 
+@shared_task(name="crm.render_document_sample", queue="pdf", time_limit=120, soft_time_limit=100)
+def render_document_sample(sample_id: str, company_id: int, user_id: int, request: dict) -> dict:
+    """Render the sample document of the settings screens (ДОК-14) off the request thread.
+
+    The same generator as a working document, on a sample context; the PDF is kept in the cache for the screen. Never
+    retried: the screen asks again after the next edit.
+    """
+    from .services.documents.sample import run_sample
+
+    run_sample(sample_id, company_id, user_id, request)
+    return {"sample_id": sample_id}
+
+
 @shared_task(
     bind=True,
     name="crm.send_document_email",
