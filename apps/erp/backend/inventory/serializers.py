@@ -69,6 +69,7 @@ class StockReservationSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     product_id = serializers.IntegerField()
     product_name = serializers.CharField()
+    item = ItemRefSerializer(help_text="Позиция каталога (ЕД-4)")
     deal = StockDealRefSerializer()
     quote_item_id = serializers.IntegerField(allow_null=True)
     quantity = QuantityField()
@@ -121,6 +122,7 @@ class StockShipmentUnitSerializer(serializers.Serializer):
 
 class StockShipmentLineSerializer(serializers.Serializer):
     product_id = serializers.IntegerField()
+    item = ItemRefSerializer(help_text="Позиция каталога (ЕД-4)")
     name = serializers.CharField()
     quantity = QuantityField()
     cell = serializers.CharField(allow_null=True)
@@ -231,6 +233,7 @@ class StockShipInSerializer(serializers.Serializer):
 
 class StockTraceProductSerializer(serializers.Serializer):
     id = serializers.IntegerField()
+    item = ItemRefSerializer(help_text="Позиция каталога (ЕД-4)")
     name = serializers.CharField()
     article = serializers.CharField(allow_blank=True)
 

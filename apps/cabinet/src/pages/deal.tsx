@@ -3,11 +3,12 @@ import { Link, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Briefcase, Check, FileText, RotateCw } from 'lucide-react';
 
-import type { DealRef } from '@/api/portal';
+import { itemThumbnailUrl, type DealRef, type ItemRef } from '@/api/portal';
 import { useActs, useContracts, useDeliveries, useDocuments, useInvoices, useQuotes, useRequests } from '@/api/queries';
 import { SectionTitle } from '@/components/Details';
 import { DocumentButton } from '@/components/DocumentButton';
 import { EmptyState } from '@/components/EmptyState';
+import { ItemCell } from '@/components/EntityCell';
 import { PageHeader } from '@/components/PageHeader';
 import { ErrorState, ListSkeleton } from '@/components/QueryStates';
 import { QuoteStatusBadge, RequestStatusBadge, StatusBadge } from '@/components/StatusBadge';
@@ -179,7 +180,13 @@ export function DealPage() {
         </DealSection>
         <DealSection title={t('pages.deal.deliveries')} count={dealLines.length}>
           {dealLines.map((line) => (
-            <DealRow key={line.id} to="/deliveries" title={line.title} meta={formatQuantity(line.quantity, line.unit)}>
+            <DealRow
+              key={line.id}
+              to="/deliveries"
+              title={line.title}
+              item={line.item}
+              meta={formatQuantity(line.quantity, line.unit)}
+            >
               <StatusBadge entity="delivery" code={line.status} />
             </DealRow>
           ))}
@@ -212,14 +219,37 @@ function DealSection({ title, count, children }: { title: string; count: number;
   );
 }
 
-function DealRow({ to, title, meta, children }: { to: string; title: string; meta?: string; children: ReactNode }) {
+function DealRow({
+  to,
+  title,
+  item,
+  meta,
+  children,
+}: {
+  to: string;
+  title: string;
+  /** Позиция каталога строки (ЕД-4): миниатюра и наш артикул рядом с названием */
+  item?: ItemRef | null;
+  meta?: string;
+  children: ReactNode;
+}) {
   return (
     <li>
       <Link
         to={to}
         className="flex min-w-0 flex-wrap items-center justify-between gap-2 rounded-lg border bg-card p-3 text-sm outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring"
       >
-        <span className="min-w-0 font-medium break-words">{title}</span>
+        {item ? (
+          <ItemCell
+            name={title}
+            sku={item.sku || null}
+            photoUrl={itemThumbnailUrl(item.id, item.photo)}
+            kind={item.kind}
+            title={<span className="font-medium break-words">{title}</span>}
+          />
+        ) : (
+          <span className="min-w-0 font-medium break-words">{title}</span>
+        )}
         <span className="flex flex-wrap items-center gap-2">
           {meta ? <span className="text-muted-foreground tabular-nums">{meta}</span> : null}
           {children}

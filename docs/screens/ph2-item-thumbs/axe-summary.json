@@ -1,0 +1,50 @@
+[
+  {
+    "screen": "cabinet-quote",
+    "width": 1512,
+    "axe": true,
+    "rulesPassed": 47,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "cabinet-quote",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 43,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "cabinet-catalog",
+    "width": 1512,
+    "axe": true,
+    "rulesPassed": 40,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "cabinet-catalog",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 40,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "cabinet-deal",
+    "width": 1512,
+    "axe": true,
+    "rulesPassed": 37,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "cabinet-deal",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 37,
+    "overflowPx": 0,
+    "violations": []
+  }
+]

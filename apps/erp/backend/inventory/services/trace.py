@@ -21,6 +21,7 @@ from django.db.models import Prefetch, Q
 from django.utils import timezone
 
 from catalog.constants import TrackingClass
+from catalog.item_ref import item_ref, main_photos
 
 from ..access import StockError, require_staff
 from ..models import TraceAllocation, TraceKind, TraceStatus, TraceUnit
@@ -268,6 +269,7 @@ def search(user, query: str) -> list[dict]:
         .order_by("number", "id")[:SEARCH_LIMIT]
     )
     rows = sorted(units, key=lambda u: (u.number.lower() != text.lower(), u.number, u.pk))
+    photos = main_photos(u.product_id for u in rows)
     return [
         {
             **present_unit_short(unit),
@@ -276,6 +278,7 @@ def search(user, query: str) -> list[dict]:
             "status": unit.status,
             "product": {
                 "id": unit.product_id,
+                "item": item_ref(unit.product, photos),
                 "name": unit.product.name,
                 "article": unit.product.manufacturer_part_number or unit.product.sku or "",
             },
