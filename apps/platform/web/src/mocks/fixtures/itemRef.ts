@@ -1,11 +1,12 @@
 import type { ItemRef } from "../../shared/api/generated/model";
-import { readErpCatalog } from "./erpCatalog";
+import { outsidePhoto, readErpCatalog } from "./erpCatalog";
 
 /** Адрес миниатюры главного фото позиции каталога мока (ЕД-4) — как у BFF: с версией фото. */
 export function thumbnailOf(itemId: string): string | null {
-  const main = readErpCatalog()
-    .items.find((item) => item.id === itemId)
-    ?.images.find((image) => image.is_main);
+  const main =
+    readErpCatalog()
+      .items.find((item) => item.id === itemId)
+      ?.images.find((image) => image.is_main) ?? outsidePhoto(itemId);
   return main ? `/api/v1/erp/catalog/items/${itemId}/thumbnail?v=${main.id}` : null;
 }
 
