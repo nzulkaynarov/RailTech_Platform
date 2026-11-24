@@ -372,7 +372,7 @@ export function ProjectList() {
 
   return (
     <div className="pf-dec-page">
-      <PageHeader title={title} subtitle={t("list.subtitle")} />
+      <PageHeader title={title} />
       <FilterBar label={t("list.filters")} tools>
         <Segmented
           aria-label={t("list.scope.label")}

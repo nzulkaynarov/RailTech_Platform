@@ -149,6 +149,8 @@ test.describe("База знаний: администратор", () => {
     await expect(page.getByRole("dialog", { name: "Формат документа базы знаний" })).toBeVisible();
     await page.getByRole("button", { name: "Закрыть" }).click();
 
+    // окно поверх страницы закрывает правый край шапки, где ссылки «Добавить вручную»: сначала скрыть окно
+    await page.getByRole("button", { name: "Скрыть панель", exact: true }).click();
     await page.getByRole("link", { name: "Добавить вручную" }).click();
     const form = side(page).getByRole("form", { name: "Добавить документ вручную" });
     await form.getByLabel("Название").fill("Рассрочка платежа");

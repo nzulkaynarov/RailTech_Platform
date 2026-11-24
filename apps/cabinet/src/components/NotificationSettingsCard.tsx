@@ -113,8 +113,8 @@ export function NotificationSettingsCard() {
 
             <div className="rounded-lg border border-border/60 overflow-hidden">
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm border-collapse">
-                  <thead>
+                <table className="w-full text-left text-sm border-collapse max-sm:block">
+                  <thead className="max-sm:sr-only">
                     <tr className="border-b border-border/60 bg-muted/40 text-xs text-muted-foreground">
                       <th className="p-3 font-medium">
                         {t('profile.notifications.colGroup', 'Категория событий')}
@@ -130,7 +130,7 @@ export function NotificationSettingsCard() {
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-border/40">
+                  <tbody className="divide-y divide-border/40 max-sm:block">
                     {groupKeys.map((group) => {
                       const item = localGroups[group];
                       if (!item) return null;
@@ -138,8 +138,8 @@ export function NotificationSettingsCard() {
                       const isSecurity = group === 'security';
 
                       return (
-                        <tr key={group} className="hover:bg-accent/30 transition-colors">
-                          <td className="p-3">
+                        <tr key={group} className="hover:bg-accent/30 transition-colors max-sm:grid max-sm:grid-cols-3">
+                          <td className="px-2 py-3 max-sm:col-span-3 sm:p-3">
                             <div className="flex flex-col gap-0.5">
                               <div className="font-medium flex items-center gap-1.5">
                                 {isSecurity && <Shield className="size-3.5 text-primary" aria-hidden="true" />}
@@ -157,7 +157,10 @@ export function NotificationSettingsCard() {
                           </td>
 
                           {/* В кабинете — всегда активно */}
-                          <td className="p-3 text-center">
+                          <td className="px-2 py-2 text-center sm:p-3">
+                            <span className="mb-1 block text-xs text-muted-foreground sm:hidden" aria-hidden="true">
+                              {t('profile.notifications.channelInApp', 'В кабинете')}
+                            </span>
                             <div className="flex justify-center">
                               <div className="size-5 rounded-full bg-primary/10 text-primary flex items-center justify-center">
                                 <Check className="size-3.5" aria-hidden="true" />
@@ -166,7 +169,10 @@ export function NotificationSettingsCard() {
                           </td>
 
                           {/* Email */}
-                          <td className="p-3 text-center">
+                          <td className="px-2 py-2 text-center sm:p-3">
+                            <span className="mb-1 block text-xs text-muted-foreground sm:hidden" aria-hidden="true">
+                              {t('profile.notifications.channelEmail', 'E-mail')}
+                            </span>
                             <div className="flex justify-center">
                               <Checkbox
                                 checked={item.email}
@@ -178,7 +184,10 @@ export function NotificationSettingsCard() {
                           </td>
 
                           {/* Telegram */}
-                          <td className="p-3 text-center">
+                          <td className="px-2 py-2 text-center sm:p-3">
+                            <span className="mb-1 block text-xs text-muted-foreground sm:hidden" aria-hidden="true">
+                              {t('profile.notifications.channelTelegram', 'Telegram')}
+                            </span>
                             <div className="flex justify-center">
                               <Checkbox
                                 checked={item.telegram}

@@ -4,7 +4,7 @@ import { http, HttpResponse } from 'msw';
 
 import { portalServer } from '@/mocks/server';
 import { renderApp, signedIn } from '@/test/render';
-import { expectNoAxeViolations, heading } from '@/test/screens';
+import { expectNoAxeViolations, heading, showAllDecisions } from '@/test/screens';
 
 /** Виджет «Требует вашего решения» на главной (`/requests`): C-4 аудита, FIX-24. */
 describe('виджет «Требует вашего решения»', () => {
@@ -12,7 +12,7 @@ describe('виджет «Требует вашего решения»', () => {
     signedIn();
     renderApp('/requests');
     await heading('Заявки');
-    return screen.findByRole('region', { name: 'Требует вашего решения' });
+    return showAllDecisions(await screen.findByRole('region', { name: 'Требует вашего решения' }));
   }
 
   it('КП и в статусе «отправлено», и «просмотрено»; принятые, отклонённые и просроченные не показываются', async () => {
@@ -52,7 +52,7 @@ describe('виджет «Требует вашего решения»', () => {
       ),
     );
     renderApp('/requests');
-    const region = await screen.findByRole('region', { name: 'Требует вашего решения' });
+    const region = await showAllDecisions(await screen.findByRole('region', { name: 'Требует вашего решения' }));
     expect(within(region).getByRole('link', { name: 'S-OVERDUE-1' })).toBeInTheDocument();
   });
 
@@ -105,7 +105,7 @@ describe('виджет «Требует вашего решения»', () => {
     signedIn('viewer');
     window.localStorage.setItem('cabinet.language', 'ru');
     renderApp('/requests');
-    const region = await screen.findByRole('region', { name: 'Ждут решения компании' });
+    const region = await showAllDecisions(await screen.findByRole('region', { name: 'Ждут решения компании' }));
     expect(within(region).queryByText('Оплатить')).not.toBeInTheDocument();
     expect(within(region).queryByText('Посмотреть КП')).not.toBeInTheDocument();
     expect(within(region).getAllByText('Решает контакт с правом подтверждать').length).toBeGreaterThan(0);
@@ -115,10 +115,24 @@ describe('виджет «Требует вашего решения»', () => {
   it('суммы — по правилу Платформы: «сум», пробелы разрядов, без моноширинного шрифта', async () => {
     const region = await widget();
     const link = within(region).getByRole('link', { name: 'KP-2026-0042 · версия 2' });
-    const card = link.closest('[data-slot="card"]') ?? link.parentElement?.parentElement;
+    const card = link.closest('li');
     const amount = within(card as HTMLElement).getByText(/сум$/);
     expect(amount.textContent).toMatch(/^\d{1,3}(\u00a0\d{3})*(,\d{2})?\u00a0сум$/);
     expect(amount).toHaveClass('tabular-nums');
     expect(amount.className).not.toMatch(/font-mono/);
+  });
+
+  it('компактный список: первые 4 решения, остальные — по «Показать все (N)»', async () => {
+    signedIn();
+    const user = userEvent.setup();
+    renderApp('/requests');
+    await heading('Заявки');
+    const region = await screen.findByRole('region', { name: 'Требует вашего решения' });
+    expect(within(region).getAllByRole('listitem')).toHaveLength(4);
+    const more = within(region).getByRole('button', { name: /^Показать все \(\d+\)$/ });
+    await user.click(more);
+    expect(within(region).getAllByRole('listitem').length).toBeGreaterThan(4);
+    await user.click(within(region).getByRole('button', { name: 'Свернуть' }));
+    expect(within(region).getAllByRole('listitem')).toHaveLength(4);
   });
 });

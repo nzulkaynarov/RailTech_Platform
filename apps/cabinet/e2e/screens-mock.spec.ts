@@ -398,6 +398,10 @@ test('вход: демо-блок под своим заголовком, «Во
   await heading(page, 'Вход в кабинет');
   await expect(page.getByRole('button', { name: 'Войти', exact: true })).toHaveCount(1);
   await expect(page.getByRole('heading', { level: 2, name: /демо-вход/i })).toBeVisible();
+  // название оператора из GET /operator доходит до шапки и вкладки без смены языка (в jsdom это не воспроизводилось)
+  await expect(page.locator('header').getByText('Кабинет RailTech', { exact: true })).toBeVisible();
+  await expect(page.locator('header').getByText('RT', { exact: true })).toBeVisible();
+  await expect(page).toHaveTitle('Вход в кабинет · Кабинет RailTech');
   await snap(page, 'login');
 });
 

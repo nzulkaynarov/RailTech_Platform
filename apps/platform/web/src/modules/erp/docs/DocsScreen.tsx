@@ -178,7 +178,7 @@ export function DocsScreen() {
   ];
   return (
     <div className="pf-cat">
-      <PageHeader title={t("modules:erp.sections.docs")} subtitle={t("catalog:docs.subtitle")} />
+      <PageHeader title={t("modules:erp.sections.docs")} />
       <FilterBar
         tools
         actions={

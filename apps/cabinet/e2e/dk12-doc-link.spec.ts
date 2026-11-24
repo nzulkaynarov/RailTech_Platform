@@ -45,7 +45,7 @@ test('«Принять»: диалог кода, верный код — вхо�
 
   await dialog.getByLabel('Код из письма').fill('123456');
   await dialog.getByRole('button', { name: 'Принять предложение' }).click();
-  await expect(page.getByText('Предложение принято. Договор появится в вашем Кабинете.')).toBeVisible();
+  await expect(page.getByText('Предложение принято. Договор появится в вашем кабинете.')).toBeVisible();
   await snap(page, 'accepted');
 });
 
@@ -72,7 +72,7 @@ test('первый вход: после кода — оферта и полит�
   await expect(page.getByRole('heading', { level: 1, name: 'Условия работы в кабинете' })).toBeVisible();
   await snap(page, 'first-entry-legal');
   await page.getByRole('button', { name: 'Принимаю', exact: true }).click();
-  await expect(page.getByText('Предложение принято. Договор появится в вашем Кабинете.')).toBeVisible();
+  await expect(page.getByText('Предложение принято. Договор появится в вашем кабинете.')).toBeVisible();
 });
 
 test('контакт без права решать: кнопки неактивны, причина рядом', async ({ page }) => {

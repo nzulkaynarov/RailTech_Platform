@@ -1,6 +1,8 @@
 import { useId } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+
+import { useAppName } from '@/i18n/operator';
 import { PanelLeftClose, PanelLeft } from 'lucide-react';
 
 import { type NavItem } from '@/app/nav';
@@ -28,6 +30,7 @@ export interface SideNavProps {
  */
 export function SideNav({ companyName, collapsed = false, onToggleCollapse }: SideNavProps) {
   const { t } = useTranslation();
+  const appName = useAppName();
   const me = useMe().data;
   const canAct = useCanAct();
   const { groups } = useNav();
@@ -43,7 +46,7 @@ export function SideNav({ companyName, collapsed = false, onToggleCollapse }: Si
       <div className="border-b border-border/60 p-3">
         {collapsed ? (
           <div className="flex flex-col items-center gap-2">
-            <BrandMark label={companyName ? `${t('app.name')} · ${companyName}` : t('app.name')} />
+            <BrandMark label={companyName ? `${appName} · ${companyName}` : appName} />
             {onToggleCollapse && (
               <Button
                 variant="ghost"
@@ -62,7 +65,7 @@ export function SideNav({ companyName, collapsed = false, onToggleCollapse }: Si
               <div className="flex min-w-0 flex-1 items-center gap-2.5 p-1.5">
                 <BrandMark />
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold text-primary">{t('app.name')}</p>
+                  <p className="truncate text-sm font-semibold text-primary">{appName}</p>
                   {companyName ? <p className="truncate text-xs text-muted-foreground">{companyName}</p> : null}
                 </div>
               </div>

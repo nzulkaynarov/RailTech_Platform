@@ -86,10 +86,12 @@ describe('Wave J6 & B-CABFIX-2: Поиск, фильтры, повтор зап�
       await heading('Заявки');
       await screen.findByRole('list', { name: 'Заявки' });
 
-      // Находим кнопку повтора у первого запроса
-      const reorderBtns = await screen.findAllByRole('link', { name: /Повторить заявку/ });
-      expect(reorderBtns.length).toBeGreaterThan(0);
-      await user.click(reorderBtns[0]);
+      // «Повторить заявку» — в меню строки, а не кнопкой в каждой строке
+      expect(screen.queryByRole('link', { name: /Повторить заявку/ })).not.toBeInTheDocument();
+      const menus = await screen.findAllByRole('button', { name: /^Действия по заявке/ });
+      expect(menus.length).toBeGreaterThan(0);
+      await user.click(menus[0]);
+      await user.click(await screen.findByRole('menuitem', { name: 'Повторить заявку' }));
 
       expect(await heading('Новая заявка')).toBeInTheDocument();
       expect(router.state.location.pathname).toBe('/requests/new');
