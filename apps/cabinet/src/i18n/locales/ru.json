@@ -1923,7 +1923,10 @@
       "dueDate": "Оплатить до",
       "balance": "К оплате",
       "signedAt": "Подписан вами",
-      "issuedAt": "Выставлен"
+      "issuedAt": "Выставлен",
+      "expectedDate": "Дата поставки",
+      "confirmedAt": "Подтверждён вами",
+      "answeredAt": "Ответ отправлен"
     },
     "withVat": "{{amount}} с НДС",
     "lines": {
@@ -1934,7 +1937,9 @@
       "payment": "Оплата: {{terms}}",
       "delivery": "Срок поставки — до {{days}} дн.",
       "note": "Условия поставки: {{note}}",
-      "price": "{{quantity}} × {{price}}"
+      "price": "{{quantity}} × {{price}}",
+      "titlePartner": "Позиции",
+      "totalPlain": "Итого"
     },
     "download": "Скачать PDF",
     "downloadNamed": "Скачать PDF: КП {{number}}",
@@ -1946,7 +1951,9 @@
       "question": "Задать вопрос",
       "open": "Открыть кабинет",
       "accept_contract": "Подписать договор",
-      "accept_act": "Принять акт"
+      "accept_act": "Принять акт",
+      "answer": "Ответить на запрос",
+      "confirm": "Подтвердить заказ"
     },
     "codeNote": "Любое действие — после кода, который придёт на {{email}}. Другие документы и разделы по этой ссылке не открываются.",
     "memberNote": "Вы вошли как {{name}} — код не нужен.",
@@ -1958,13 +1965,17 @@
       "accepted_contract": "Договор подписан вами. Дальше — счёт.",
       "accepted_act": "Акт принят.",
       "rejected_act": "Акт возвращён с замечаниями.",
-      "paid": "Счёт оплачен."
+      "paid": "Счёт оплачен.",
+      "answered": "Ответ отправлен. Спасибо!",
+      "confirmed": "Вы подтвердили заказ.",
+      "cancelled": "Заказ отменён отправителем."
     },
     "reason": {
       "no_right": "У вашего контакта нет права принимать решения — обратитесь к администратору вашей компании.",
       "no_access": "В вашем доступе к кабинету нет раздела «Коммерческие предложения».",
       "other_company": "Вы вошли в кабинет другой компании.",
-      "no_contact": "Адрес получателя не подключён к кабинету — свяжитесь с отправителем."
+      "no_contact": "Адрес получателя не подключён к кабинету — свяжитесь с отправителем.",
+      "no_access_partner": "В вашем доступе к кабинету нет раздела «Мои товары»."
     },
     "otherCompany": {
       "title": "Вы вошли в другой кабинет",
@@ -1993,7 +2004,16 @@
       "memberTitle_contract": "Подписать договор?",
       "memberText_contract": "Сумма {{total}}. Подписывая, вы принимаете условия договора.",
       "memberTitle_act": "Принять акт?",
-      "memberText_act": "Сумма {{total}}. Принятый акт вернуть нельзя."
+      "memberText_act": "Сумма {{total}}. Принятый акт вернуть нельзя.",
+      "noteRequired": "Напишите комментарий к ответу.",
+      "dateRequired": "Укажите дату поставки.",
+      "leadInvalid": "Срок — целое число дней.",
+      "priceFor": "Цена за единицу: {{name}}",
+      "leadFor": "Срок поставки, дней: {{name}}",
+      "pricePlaceholder": "Цена",
+      "leadPlaceholder": "Срок, дн.",
+      "memberTitle_supplier_order": "Подтвердить заказ?",
+      "memberText_supplier_order": "Сумма {{total}}. Подтверждая, вы принимаете заказ и срок поставки."
     },
     "done": {
       "accept": "Предложение принято",
@@ -2001,7 +2021,9 @@
       "question": "Вопрос отправлен менеджеру",
       "accept_contract": "Договор подписан",
       "accept_act": "Акт принят",
-      "reject_act": "Замечания отправлены"
+      "reject_act": "Замечания отправлены",
+      "answer": "Ответ отправлен",
+      "confirm": "Заказ подтверждён"
     },
     "gone": {
       "revoked": {
@@ -2040,6 +2062,14 @@
       "title": "О документе",
       "text": "Документ от {{from}}."
     },
-    "docTitle": "КП {{number}}"
+    "docTitle": "КП {{number}}",
+    "docTitle_price_request": "Запрос цены {{number}}",
+    "docTitle_supplier_order": "Заказ {{number}}",
+    "partner": {
+      "leadDays": "срок — {{days}} дн.",
+      "yourAnswer": "Ваш ответ:"
+    },
+    "downloadNamed_price_request": "Скачать PDF: запрос цены",
+    "downloadNamed_supplier_order": "Скачать PDF: заказ {{number}}"
   }
 }

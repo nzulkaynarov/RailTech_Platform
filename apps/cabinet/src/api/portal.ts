@@ -201,7 +201,9 @@ export const getLegalPolicy = () => portalRequest<Schemas['LegalPolicy']>('/lega
 export type DocLinkView = Schemas['DocLinkView'];
 export type DocLinkCodeSent = Schemas['DocLinkCodeSent'];
 export type DocLinkAvailability = Schemas['DocLinkAvailability'];
-export type DocLinkAction = 'accept' | 'reject' | 'question';
+export type DocLinkAction = 'accept' | 'reject' | 'question' | 'answer' | 'confirm';
+/** Что кроме текста уходит с действием (ДК-5): цены и срок по строкам запроса, валюта, дата поставки заказа. */
+export type DocLinkActExtra = Pick<NonNullable<JsonBody<paths['/doc-links/act']['post']>>, 'prices' | 'currency' | 'valid_until' | 'expected_date'>;
 
 /** Токен — из адреса `/d/<токен>`; в теле запроса, не в пути: журналы серверов и прокси его не видят. */
 export const openDocLink = (token: string) =>
@@ -217,8 +219,8 @@ export const verifyDocLinkCode = (token: string, code: string) => {
   return portalRequest<Me>('/doc-links/verify', { method: 'POST', body });
 };
 
-export const actOnDocLink = (token: string, action: DocLinkAction, text?: string) => {
-  const body: JsonBody<paths['/doc-links/act']['post']> = { token, action, ...(text ? { text } : {}) };
+export const actOnDocLink = (token: string, action: DocLinkAction, text?: string, extra: DocLinkActExtra = {}) => {
+  const body: JsonBody<paths['/doc-links/act']['post']> = { token, action, ...(text ? { text } : {}), ...extra };
   return portalRequest<DocLinkView>('/doc-links/act', { method: 'POST', body });
 };
 

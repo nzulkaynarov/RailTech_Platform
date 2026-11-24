@@ -1882,7 +1882,10 @@
       "dueDate": "Tölov muddati",
       "balance": "Tölanadigan summa",
       "signedAt": "Siz imzoladingiz",
-      "issuedAt": "Taqdim etilgan"
+      "issuedAt": "Taqdim etilgan",
+      "expectedDate": "Yetkazib beriş sanasi",
+      "confirmedAt": "Siz tasdiqlagansiz",
+      "answeredAt": "Javob yuborilgan"
     },
     "withVat": "{{amount}} QQS bilan",
     "lines": {
@@ -1893,7 +1896,9 @@
       "payment": "Tölov: {{terms}}",
       "delivery": "Yetkazib beriş — {{days}} kungaça",
       "note": "Yetkazib beriş şartlari: {{note}}",
-      "price": "{{quantity}} × {{price}}"
+      "price": "{{quantity}} × {{price}}",
+      "titlePartner": "Pozitsiyalar",
+      "totalPlain": "Jami"
     },
     "download": "PDF yuklab oliş",
     "downloadNamed": "PDF yuklab oliş: {{number}} taklifi",
@@ -1905,7 +1910,9 @@
       "question": "Savol beriş",
       "open": "Kabinetni oçiş",
       "accept_contract": "Şartnomani imzolaş",
-      "accept_act": "Dalolatnomani qabul qiliş"
+      "accept_act": "Dalolatnomani qabul qiliş",
+      "answer": "Sörovga javob beriş",
+      "confirm": "Buyurtmani tasdiqlaş"
     },
     "codeNote": "Har qanday amal {{email}} manziliga keladigan koddan keyin bajariladi. Bu havola orqali boşqa hujjat va bölimlar oçilmaydi.",
     "memberNote": "Siz {{name}} sifatida kirgansiz — kod kerak emas.",
@@ -1917,13 +1924,17 @@
       "accepted_contract": "Şartnomani imzoladingiz. Keyingi qadam — hisob.",
       "accepted_act": "Dalolatnoma qabul qilindi.",
       "rejected_act": "Dalolatnoma izoh bilan qaytarildi.",
-      "paid": "Hisob tölandi."
+      "paid": "Hisob tölandi.",
+      "answered": "Javob yuborildi. Rahmat!",
+      "confirmed": "Siz buyurtmani tasdiqladingiz.",
+      "cancelled": "Buyurtma yuboruvçi tomonidan bekor qilindi."
     },
     "reason": {
       "no_right": "Kontaktingizda qaror qabul qilişga huquq yöq — kompaniyangiz administratoriga murojaat qiling.",
       "no_access": "Kabinetga kirişingizda «Tijorat takliflari» bölimi yöq.",
       "other_company": "Siz boşqa kompaniya kabinetiga kirgansiz.",
-      "no_contact": "Qabul qiluvçi manzili kabinetga ulanmagan — yuboruvçi bilan boğlaning."
+      "no_contact": "Qabul qiluvçi manzili kabinetga ulanmagan — yuboruvçi bilan boğlaning.",
+      "no_access_partner": "Kabinetga kirişingizda «Mening tovarlarim» bölimi yöq."
     },
     "otherCompany": {
       "title": "Siz boşqa kabinetdasiz",
@@ -1952,7 +1963,16 @@
       "memberTitle_contract": "Şartnomani imzolaysizmi?",
       "memberText_contract": "Summa {{total}}. Imzolaş bilan şartnoma şartlarini qabul qilasiz.",
       "memberTitle_act": "Dalolatnomani qabul qilasizmi?",
-      "memberText_act": "Summa {{total}}. Qabul qilingan dalolatnomani qaytarib bölmaydi."
+      "memberText_act": "Summa {{total}}. Qabul qilingan dalolatnomani qaytarib bölmaydi.",
+      "noteRequired": "Javobga izoh yozing.",
+      "dateRequired": "Yetkazib beriş sanasini kiriting.",
+      "leadInvalid": "Muddat — kunlarning butun soni.",
+      "priceFor": "Birlik narxi: {{name}}",
+      "leadFor": "Yetkazib beriş muddati, kun: {{name}}",
+      "pricePlaceholder": "Narx",
+      "leadPlaceholder": "Muddat, kun",
+      "memberTitle_supplier_order": "Buyurtmani tasdiqlaysizmi?",
+      "memberText_supplier_order": "Summa {{total}}. Tasdiqlaş bilan buyurtmani va yetkazib beriş sanasini qabul qilasiz."
     },
     "done": {
       "accept": "Taklif qabul qilindi",
@@ -1960,7 +1980,9 @@
       "question": "Savol menejerga yuborildi",
       "accept_contract": "Şartnoma imzolandi",
       "accept_act": "Dalolatnoma qabul qilindi",
-      "reject_act": "Izohlar yuborildi"
+      "reject_act": "Izohlar yuborildi",
+      "answer": "Javob yuborildi",
+      "confirm": "Buyurtma tasdiqlandi"
     },
     "gone": {
       "revoked": {
@@ -1999,6 +2021,14 @@
       "title": "Hujjat haqida",
       "text": "{{from}} hujjati."
     },
-    "docTitle": "{{number}} taklifi"
+    "docTitle": "{{number}} taklifi",
+    "docTitle_price_request": "Narx sörovi {{number}}",
+    "docTitle_supplier_order": "Buyurtma {{number}}",
+    "partner": {
+      "leadDays": "muddat — {{days}} kun",
+      "yourAnswer": "Sizning javobingiz:"
+    },
+    "downloadNamed_price_request": "PDF yuklab oliş: narx sörovi",
+    "downloadNamed_supplier_order": "PDF yuklab oliş: buyurtma {{number}}"
   }
 }

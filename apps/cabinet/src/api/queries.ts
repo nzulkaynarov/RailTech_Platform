@@ -473,9 +473,12 @@ export const useVerifyDocLinkCode = (token: string) =>
 export function useActOnDocLink(token: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ action, text }: { action: portal.DocLinkAction; text?: string }) => portal.actOnDocLink(token, action, text),
+    mutationFn: ({ action, text, extra }: { action: portal.DocLinkAction; text?: string; extra?: portal.DocLinkActExtra }) =>
+      portal.actOnDocLink(token, action, text, extra),
     onSuccess: (view) => {
       queryClient.setQueryData(keys.docLink(token), view);
+      void queryClient.invalidateQueries({ queryKey: keys.partnerOrders });
+      void queryClient.invalidateQueries({ queryKey: keys.partnerPriceRequests });
       void queryClient.invalidateQueries({ queryKey: keys.quotes });
       void queryClient.invalidateQueries({ queryKey: keys.requests });
     },
