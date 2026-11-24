@@ -11417,7 +11417,7 @@ export interface components {
       client_name: string;
       /** @description Компания клиента в ERP (для логотипа и ссылки); null — у строки её нет */
       client_id?: number | null;
-      /** @description Логотип компании клиента: наш адрес с `?v=<версия>` (ЕД-3, ЕД-5), только если у сотрудника есть доступ к карточкам контрагентов; null — буквы названия */
+      /** @description Логотип компании клиента: наш адрес с `?v=<версия>` (ЕД-3, ЕД-5), только если у сотрудника есть раздел `crm.clients`, `erp.stock`, `eds.projects`, `eds.payments` или `eds.inbox` (те же, что открывают картинку); null — буквы названия */
       client_logo_url?: string | null;
       /**
        * @description Шаг пути заявки SPEC-v3 §2.3: CONTRACT — договор, PAYMENT — оплата (договор подписан), DONE — выполнено (акт подписан и счета оплачены)
@@ -12628,7 +12628,7 @@ export interface components {
       client_name: string;
       /** @description Компания клиента в ERP (для логотипа и ссылки); null — у строки её нет */
       client_id?: number | null;
-      /** @description Логотип компании клиента: наш адрес с `?v=<версия>` (ЕД-3, ЕД-5), только если у сотрудника есть доступ к карточкам контрагентов; null — буквы названия */
+      /** @description Логотип компании клиента: наш адрес с `?v=<версия>` (ЕД-3, ЕД-5), только если у сотрудника есть раздел `crm.clients`, `erp.stock`, `eds.projects`, `eds.payments` или `eds.inbox` (те же, что открывают картинку); null — буквы названия */
       client_logo_url?: string | null;
       amount: components["schemas"]["PaymentMoney"];
       paid: components["schemas"]["PaymentMoney"];
@@ -12720,7 +12720,7 @@ export interface components {
       client_name: string;
       /** @description Компания клиента в ERP (для логотипа и ссылки); null — у строки её нет */
       client_id?: number | null;
-      /** @description Логотип компании клиента: наш адрес с `?v=<версия>` (ЕД-3, ЕД-5), только если у сотрудника есть доступ к карточкам контрагентов; null — буквы названия */
+      /** @description Логотип компании клиента: наш адрес с `?v=<версия>` (ЕД-3, ЕД-5), только если у сотрудника есть раздел `crm.clients`, `erp.stock`, `eds.projects`, `eds.payments` или `eds.inbox` (те же, что открывают картинку); null — буквы названия */
       client_logo_url?: string | null;
       amount: components["schemas"]["PaymentMoney"];
       paid: components["schemas"]["PaymentMoney"];
@@ -14126,7 +14126,7 @@ export interface components {
       client_name: string | null;
       /** @description Компания письма в ERP (из связей письма); null — письмо с ней не связано */
       client_id?: number | null;
-      /** @description Логотип компании клиента: наш адрес с `?v=<версия>` (ЕД-3, ЕД-5), только если у сотрудника есть доступ к карточкам контрагентов; null — буквы названия */
+      /** @description Логотип компании клиента: наш адрес с `?v=<версия>` (ЕД-3, ЕД-5), только если у сотрудника есть раздел `crm.clients`, `erp.stock`, `eds.projects`, `eds.payments` или `eds.inbox` (те же, что открывают картинку); null — буквы названия */
       client_logo_url?: string | null;
       /** @description Бизнес-номер заявки ЗВ из связей письма; `null` — письмо ещё не связано с заявкой */
       request_number: string | null;

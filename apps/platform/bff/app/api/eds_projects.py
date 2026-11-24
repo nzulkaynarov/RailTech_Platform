@@ -49,7 +49,7 @@ MAX_BODY_BYTES = MAX_SCAN_BYTES + 64 * 1024
 
 
 def _erp(authed: Authed) -> ErpProjects:
-    return ErpProjects(authed.call)
+    return ErpProjects(authed.call, authed)
 
 
 def _too_large() -> PlatformError:
@@ -133,9 +133,7 @@ async def list_projects(
 
 @router.get("/projects/{ref}", response_model=ProjectCard, operation_id="getEdsProject")
 async def get_project(ref: Ref, authed: Reader) -> ProjectCard:
-    card = await _erp(authed).card(ref)
-    await attach_client_logos(authed, [card])
-    return card
+    return await _erp(authed).card(ref)
 
 
 # --- договор -----------------------------------------------------------------------------------

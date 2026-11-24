@@ -8,13 +8,14 @@ ERP и EDS — на respx. Проверяется то, что делает BFF:
 import httpx
 import pytest
 
+from app.cookies import CSRF_HEADER
 from tests.backends import Backends
 from tests.conftest import ContractChecker, Web
 from tests.consts import ERP_URL
 from tests.eds_letters_support import EdsFake
 from tests.eds_letters_support import row as letter_row
-from tests.eds_payments_support import PaymentsFake, invoice
-from tests.eds_projects_support import ProjectsFake
+from tests.eds_payments_support import TODAY, PaymentsFake, invoice
+from tests.eds_projects_support import ProjectsFake, card
 from tests.eds_projects_support import row as project_row
 from tests.roles import custom
 
@@ -168,3 +169,53 @@ async def test_a_role_without_any_company_section_cannot_fetch_the_picture(
 ) -> None:
     await web.login([NO_COMPANY_SECTION])
     assert (await web.client.get("/api/v1/people/counterparties/7/logo")).status_code == 403
+
+
+async def test_project_card_after_an_action_keeps_the_logo(
+    web: Web, be: Backends, asked: list[list[int]], check: ContractChecker
+) -> None:
+    """Ответ действия SPA кладёт в кэш карточки: логотип не должен превращаться в буквы."""
+    erp = ProjectsFake(be)
+    erp.cards[104] = card(contract=None, can_create_contract=True)
+    await web.login(["ACCOUNTANT"])
+
+    response = await web.send("POST", "/api/v1/eds/projects/ПР-2026-104/contract/draft")
+
+    assert response.status_code == 201
+    assert (
+        check(response, "/eds/projects/{ref}/contract/draft", "post").json()["client_logo_url"]
+        == LOGO_7
+    )
+
+
+async def test_payment_card_after_an_action_keeps_the_logo(
+    web: Web, be: Backends, asked: list[list[int]], check: ContractChecker
+) -> None:
+    PaymentsFake(be)
+    await web.login(["ACCOUNTANT"])
+
+    response = await web.client.post(
+        "/api/v1/eds/payments/142/confirm",
+        json={"amount": "112000000.00", "date": TODAY, "reference": "B-1"},
+        headers={CSRF_HEADER: web.csrf, "Idempotency-Key": "attempt-0002"},
+    )
+
+    assert response.status_code == 200, response.json()
+    assert check(response, "/eds/payments/{id}/confirm", "post").json()["client_logo_url"] == LOGO_7
+
+
+@pytest.mark.parametrize("section", ["eds.inbox", "eds.payments"])
+async def test_a_narrow_role_asking_for_an_arbitrary_company_gets_erp_404_with_its_own_token(
+    web: Web, be: Backends, section: str
+) -> None:
+    """Раздел EDS открывает ручку, не контрагентов: чужую компанию отсекает ERP по токену."""
+    route = be.router.get(f"{ERP_URL}/api/v1/parties/organizations/9999/logo/").mock(
+        return_value=httpx.Response(404, json={"detail": "Not found."})
+    )
+    await web.login([custom(72, "Узкая роль", {section: "read"})])
+
+    response = await web.client.get("/api/v1/people/counterparties/9999/logo")
+
+    assert response.status_code == 404
+    [call] = route.calls
+    assert call.request.headers["authorization"].startswith("Bearer ey")  # токен ERP сотрудника

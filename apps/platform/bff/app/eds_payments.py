@@ -249,6 +249,13 @@ def card_of(raw: dict[str, Any]) -> PaymentCard:
         raise backend_unavailable("erp", "bad_response") from exc
 
 
+async def card_out(authed: Authed, raw: dict[str, Any]) -> PaymentCard:
+    """Карточка счёта с логотипом клиента — и после действия: SPA кладёт ответ в кэш."""
+    card = card_of(raw)
+    await attach_client_logos(authed, [card])
+    return card
+
+
 def _card(raw: dict[str, Any]) -> PaymentCard:
     base = row_of(raw)
     return PaymentCard(
