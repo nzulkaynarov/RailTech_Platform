@@ -30,7 +30,7 @@
       "empty": {
         "director": {
           "title": "Hozircha sizdan qaror talab qilinmaydi",
-          "text": "Yangi xatlar CRMdan, TT qoralamalari ERPdan, xizmat xatlari xodimlardan keladi.",
+          "text": "Yangi xatlar, TT qoralamalari va xizmat xatlari şu yerga özi keladi.",
           "action": "Loyihalar"
         },
         "universal": {
@@ -553,7 +553,6 @@
     },
     "org": {
       "title": "Xodimlar",
-      "subtitle": "Xodimlar, ularning rollari va kirish huquqi — bitta kartochkada.",
       "readOnly": "Faqat ko‘rish.",
       "listLabel": "Xodimlar",
       "count": "Xodimlar soni: {{count}}",
@@ -578,12 +577,8 @@
         "disabled": "O'chirilgan"
       },
       "access": {
-        "crm": "CRM",
-        "erp": "ERP",
-        "crmNo": "CRM: yo'q",
-        "erpNo": "ERP: yo'q",
-        "erpPending": "ERP: berilmoqda",
-        "erpError": "ERP: xato",
+        "erpPending": "Kiriş berilmoqda",
+        "erpError": "Kiriş berilmagan",
         "telegram": "Telegram",
         "telegramNo": "Telegram: yo'q"
       },
@@ -618,18 +613,16 @@
         "email": "Elektron pochta",
         "position": "Lavozim",
         "roles": "Rollar",
-        "crm": "CRM ga kirish",
-        "erp": "ERP ga kirish",
         "telegram": "Bildirishnomalar uchun Telegram",
         "status": "Holat",
-        "erpPending": "ERP ga kirish hali berilmoqda.",
+        "erpPending": "Kiriş hali berilmoqda.",
         "erpReason": {
-          "not_connected": "ERP ga kiriş berilmadi: ERP ga ulanib bölmadi. Administrator manzil va tokenni «Ulanishlar» bölimida tekşiradi; berish özi qayta uriniladi.",
-          "unavailable": "ERP ga kiriş berilmadi: ERP javob bermadi. Berish özi qayta uriniladi.",
-          "queue": "ERP ga kiriş berilmadi: berish vazifasi navbatga qöyilmadi. «Qayta uriniş» tugmasini bosing.",
-          "rejected": "ERP ga kiriş berilmadi: ERP hisobni qabul qilmadi. Xodimning poçtasi va rollarini tekşiring va «Qayta uriniş» tugmasini bosing."
+          "not_connected": "Kiriş berilmadi: bölimga ulanib bölmadi. Administrator manzil va tokenni «Ulanişlar» bölimida tekşiradi; beriş özi qayta uriniladi.",
+          "unavailable": "Kiriş berilmadi: bölim javob bermadi. Beriş özi qayta uriniladi.",
+          "queue": "Kiriş berilmadi: beriş vazifasi navbatga qöyilmadi. «Qayta uriniş» tugmasini bosing.",
+          "rejected": "Kiriş berilmadi: hisob qabul qilinmadi. Xodimning poçtasi va rollarini tekşiring va «Qayta uriniş» tugmasini bosing."
         },
-        "erpNotGranted": "ERP ga kiriş berilmagan.",
+        "erpNotGranted": "Kiriş berilmagan.",
         "erpRetry": "Qayta uriniş",
         "disabledNote": "Xodim o'chirilgan va kira olmaydi. Rollar va lavozim saqlangan."
       },
@@ -652,9 +645,7 @@
         "position": "Kartochkadagi lavozim: «{{position}}».",
         "positionCleared": "Kartochkadagi lavozim tozalanadi.",
         "self": "Siz o'z rollaringizni o'zgartiryapsiz: menyu saqlangandan keyin yangilanadi.",
-        "selfLosesAdmin": "Siz «Sozlamalar» bo‘limiga kirish huquqini yo‘qotasiz.",
-        "erpAdmin": "ERP da xodim administrator (superfoydalanuvchi) bo'ladi.",
-        "erpSections": "ERP da xodim rollar bo'limlari bo'yicha huquq oladi; berish natijasi — kartochkada («ERP: berilmoqda», «ERP: xato»)."
+        "selfLosesAdmin": "Siz «Sozlamalar» bölimiga kiriş huquqini yöqotasiz."
       },
       "invite": {
         "title": "Xodimni taklif qilish",
@@ -670,7 +661,7 @@
         "sent": "Taklif yuborildi: {{email}}",
         "notSent": "Xodim ro'yxatga «Taklif qilingan» holatida qo'shildi, lekin xat yuborilmadi: pochta ulanmagan yoki mavjud emas. Uni Sozlamalar · Ulanishlar bo‘limida ulang va xodim kartochkasidan taklifni qayta yuboring.",
         "openCard": "Kartochkani ochish",
-        "notSentUnavailable": "Xodim ro'yxatga «Taklif qilingan» holatida qo'shildi, lekin CRM javob bermadi va xat yuborilmadi. Keyinroq kartochkadagi «Taklifni qayta yuborish» tugmasi bilan takrorlang.",
+        "notSentUnavailable": "Xodim röyxatga «Taklif qilingan» holatida qöşildi, lekin server javob bermadi va xat yuborilmadi. Keyinroq kartoçkadagi «Taklifni qayta yuboriş» tugmasi bilan takrorlang.",
         "resend": "Taklifni qayta yuborish",
         "resendHint": "72 soatlik “Parolni örnating” havolasi bilan yangi xat yuboriladi; avvalgi havola va parol amal qilmaydi.",
         "tooMany": "Bu xodim uçun bir soatda havolalar juda köp. Keyinroq takrorlang.",
@@ -747,7 +738,6 @@
     },
     "roles": {
       "title": "Rollar va huquqlar",
-      "subtitle": "Har bir rol nimani ko‘radi va qila oladi. Bir kishining rollari qo‘shiladi.",
       "caption": "Rollar matritsasi: modullar bo'yicha bo'limlar va har bir rolning kirish darajasi",
       "sectionColumn": "Modul · bo'lim",
       "system": "tizim roli",
@@ -774,7 +764,6 @@
       "savedToast": "Rol saqlandi",
       "deletedToast": "Rol o'chirildi",
       "viewOnly": "Faqat ko'rish",
-      "readOnlySubtitle": "Har bir rol nimani ko'radi va nima qila oladi. Rollar va kirishni administrator o'zgartiradi.",
       "readOnlyNote": "Faqat ko‘rish.",
       "loadError": {
         "title": "Rollarni yuklab bo'lmadi",
@@ -863,21 +852,18 @@
       "nav": "«{{group}}» sahifalari"
     },
     "state": {
-      "subtitle": "Hozir nimaga e’tibor kerak, kim tuzatadi va qayerga boriş kerak",
       "attention": "E’tibor talab qiladi · {{count}}",
       "none": "Hammasi işlayapti: nosozlik va muddati ötgan sozlama yöq.",
       "fixer": "tuzatadi: {{who}}",
+      "handOver": "sozlamalarni yurituvçiga uzating",
       "open": "«{{page}}»ni oçiş",
       "openPlain": "Oçiş",
       "affected": "ta’sirlanadi: {{list}}",
       "erpDetail": "Hisob-kitoblar bilan aloqa sozlanmagan: arizalar hisobga ketmaydi, TT va ombor mavjud emas.",
       "owner": {
-        "admin": "administrator",
         "owner": "kompaniya egasi",
         "hosting": "xosting",
-        "provider": "provayder",
-        "director": "direktor",
-        "accountant": "buxgalter"
+        "provider": "provayder"
       },
       "row": {
         "signing": {
@@ -1043,7 +1029,7 @@
     },
     "contract": {
       "title": "Shartnoma tanlanmagan",
-      "text": "Loyihani oching — bu yerda shartnoma holati va amallar paydo bo'ladi: mijozga kelishuvga yuborish, operatorda rasmiylashtirildi, imzolangan skan."
+      "text": "Loyihani oçing — bu yerda şartnoma holati va amallar paydo böladi: mijozga kelişuvga yuboriş, EHTda rasmiylaştirildi, imzolangan skan."
     },
     "act": {
       "title": "Dalolatnoma tanlanmagan",

@@ -78,7 +78,7 @@
   },
   "consequence": {
     "lead": "The lead becomes a client and you become responsible for the conversation; the bot keeps answering for this client.",
-    "request": "A request with a number appears in the back office.",
+    "request": "A request with a number appears in records.",
     "letter": "The letter goes to the director in “Documents · Incoming letters”{{urgent}}.",
     "urgentSuffix": " marked “Urgent”",
     "chat": "A project chat is created."
@@ -89,7 +89,7 @@
   "cancel": "Cancel",
   "done": {
     "title": "Request created",
-    "text": "The request is going to the back office; the request number will appear on the client card.",
+    "text": "The request is going to records; the request number will appear on the client card.",
     "repeated": "This request has already been created — showing it.",
     "openClient": "Open client card"
   },
@@ -104,13 +104,13 @@
     "contact_channel_required": "The contact has no Telegram, phone or email",
     "request_not_allowed": "The lead is lost — a request cannot be created from it",
     "request_key_reused": "The form is outdated — open “Create request” again",
-    "erp_not_configured": "The back office is not connected — contact the administrator",
+    "erp_not_configured": "Records are not connected — contact the administrator",
     "not_lead_owner": "Another employee handles this lead",
     "telegram_linked_elsewhere": "The lead's Telegram is already linked to another client",
     "letter_required": "Attach the client's letter or request file",
     "letter_call_consent": "Mark consent on the Contact step to get the basis note, or attach a file",
     "letter_failed": "The file did not upload — pick it again or another one",
-    "request_not_failed": "The request is already being sent or was sent to the back office — refresh the card",
+    "request_not_failed": "The request is already being sent or was sent to records — refresh the card",
     "request_not_retryable": "Retrying will not help: the request data changed after sending — create the request again",
     "enqueue_failed": "Could not queue the sending — try again a bit later",
     "generic": "Could not create the request. The form data is kept — try again",

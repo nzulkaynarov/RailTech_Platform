@@ -32,9 +32,9 @@
     "empty": "not specified"
   },
   "source": {
-    "erp": "ERP is not responding, data is incomplete",
-    "crm": "CRM is not responding, data is incomplete",
-    "both": "CRM and ERP are not responding, data is incomplete",
+    "erp": "The “Operations” section is not responding, data is incomplete",
+    "crm": "The “Contacts” section is not responding, data is incomplete",
+    "both": "“Contacts” and “Operations” are not responding, data is incomplete",
     "eds": "Documents are not responding, data is incomplete",
     "multi": "Some sources are not responding, data is incomplete",
     "retry": "Retry"

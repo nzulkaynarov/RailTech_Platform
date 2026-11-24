@@ -19,32 +19,28 @@ export function RoleTags({ roles }: { roles: Employee["roles"] }) {
   );
 }
 
-export function CrmTag({ employee }: { employee: Employee }) {
-  const { t } = useTranslation("modules");
-  return (
-    <StatusTag kind="access" status={employee.access.crm ? "yes" : "no"}>
-      {t(employee.access.crm ? "admin.org.access.crm" : "admin.org.access.crmNo")}
-    </StatusTag>
-  );
-}
-
-/** ERP: есть — зелёный, нет — серый «ERP: нет»; провижининг идёт — жёлтый, сбой — красный (всегда словом). */
+/**
+ * Доступ к учёту: метка только когда есть что сказать — «Доступ выдаётся» (жёлтая) и «Доступ не выдан» (красная).
+ * Выданный и невыданный по праву доступ молчат: «Контакты» открыты всем сотрудникам, лишняя метка — шум.
+ */
 export function ErpTag({ employee }: { employee: Employee }) {
   const { t } = useTranslation("modules");
   const attention = erpAttention(employee);
-  const [status, key] =
-    attention === "error"
-      ? (["error", "erpError"] as const)
-      : attention === "pending"
-        ? (["pending", "erpPending"] as const)
-        : employee.access.erp && employee.status !== "disabled"
-          ? (["yes", "erp"] as const)
-          : (["no", "erpNo"] as const);
-  return (
-    <StatusTag kind="access" status={status}>
-      {t(`admin.org.access.${key}`)}
-    </StatusTag>
-  );
+  if (attention === "error") {
+    return (
+      <StatusTag kind="access" status="error">
+        {t("admin.org.access.erpError")}
+      </StatusTag>
+    );
+  }
+  if (attention === "pending") {
+    return (
+      <StatusTag kind="access" status="pending">
+        {t("admin.org.access.erpPending")}
+      </StatusTag>
+    );
+  }
+  return null;
 }
 
 /** Telegram для уведомлений сотруднику: привязан — зелёный тег, нет — серый «Telegram: нет». */
@@ -57,11 +53,10 @@ export function TelegramTag({ linked }: { linked: boolean }) {
   );
 }
 
-/** Доступ к CRM и ERP и Telegram для уведомлений словами в строке списка. */
+/** Доступ к учёту (только если выдаётся или не выдан) и Telegram для уведомлений словами в строке списка. */
 export function AccessTags({ employee }: { employee: Employee }) {
   return (
     <span className="pf-org-tags">
-      <CrmTag employee={employee} />
       <ErpTag employee={employee} />
       <TelegramTag linked={employee.telegram_linked} />
     </span>

@@ -34,7 +34,7 @@
     "contract": {
       "draft": "Draft",
       "agreed": "Agreed by client",
-      "issued": "Issued at operator",
+      "issued": "Issued in EDI",
       "signed": "Signed",
       "rejected": "Rejected"
     },

@@ -40,7 +40,7 @@ describe("Расчёт · Заявки в расчёте", () => {
     expect(within(row).getByText("Расчёт")).toBeVisible();
     expect(within(row).getByText("Склад: ждёт визы")).toBeInTheDocument();
     expect(within(row).getByText("Снабжение: ждёт визы")).toBeInTheDocument();
-    expect(within(row).getByText("Гл. инженер: ждёт визы")).toBeInTheDocument();
+    expect(within(row).getByText("Услуги: ждёт визы")).toBeInTheDocument();
     expect(within(row).getByText("Демо Менеджеров")).toBeVisible();
   });
 
@@ -100,7 +100,7 @@ describe("Расчёт по заявке", () => {
     ).toBeVisible();
 
     const mounting = lineRow("Монтаж и пусконаладка стрелочного перевода");
-    expect(within(mounting).getByText("Гл. инженер · ждёт")).toBeVisible();
+    expect(within(mounting).getByText("Услуги · ждёт")).toBeVisible();
     expect(
       within(mounting).getByLabelText(
         "Ставка бригады для «Монтаж и пусконаладка стрелочного перевода»",
@@ -109,9 +109,7 @@ describe("Расчёт по заявке", () => {
 
     const ready = screen.getByRole("button", { name: READY });
     expect(ready).toBeDisabled();
-    expect(
-      screen.getByText(/без визы 3\. Ждут визы: Склад, Снабжение, Гл\. инженер\./),
-    ).toBeVisible();
+    expect(screen.getByText(/без визы 3\. Ждут визы: Склад, Снабжение, Услуги\./)).toBeVisible();
     expect(screen.getByText(/без НДС/)).toBeVisible();
   });
 
@@ -185,7 +183,7 @@ describe("Расчёт по заявке", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: /Подтвердить строку «Привод/ }));
     await waitFor(() => {
-      expect(screen.getByText(/без визы 1\. Ждут визы: Гл\. инженер\./)).toBeVisible();
+      expect(screen.getByText(/без визы 1\. Ждут визы: Услуги\./)).toBeVisible();
     });
   });
 });

@@ -4593,7 +4593,8 @@ export interface paths {
     put?: never;
     /**
      * Предпросмотр образца документа на бланке
-     * @description Образец КП, договора, счёта, акта или письма с несохранёнными правками `draft`; ничего не сохраняется. Раздел `company.settings` — чтение.
+     * @deprecated
+     * @description Образец КП, договора, счёта, акта или письма с несохранёнными правками `draft`; ничего не сохраняется. Раздел `company.settings` — чтение. Устарело (ДОК-14): образец — PDF настоящего генератора, `requestDocumentSample`.
      */
     post: operations["previewBrandDocument"];
     delete?: never;
@@ -4841,9 +4842,70 @@ export interface paths {
     put?: never;
     /**
      * Предпросмотр шаблона на образце данных
+     * @deprecated
      * @description Ничего не сохраняет. Раздел `company.settings` — чтение.
      */
     post: operations["previewDocumentTemplate"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/company/document-samples": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Образец документа настоящим генератором (в очередь)
+     * @description ДОК-14. Образец КП, договора, счёта, акта или письма строит тот же генератор и та же нумерация, что и рабочий документ: бланк компании (или несохранённый `draft`), действующий шаблон (или несохранённый `body_html` из редактора; вид — `template_kind`), следующий номер схемы (счётчик не занимается), язык печати `language`. PDF рендерит воркер ERP: ответ — состояние, дальше `getDocumentSample` и `downloadDocumentSample`. Ничего не сохраняется. Раздел `company.settings` — чтение.
+     */
+    post: operations["requestDocumentSample"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/company/document-samples/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Состояние образца документа
+     * @description Раздел `company.settings` — чтение. Образец живёт в ERP несколько минут; позже — 404.
+     */
+    get: operations["getDocumentSample"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/company/document-samples/{id}/file": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * PDF образца документа
+     * @description Готовый PDF (`application/pdf`, `inline`) для просмотра в окне. Не готов — 404. Раздел `company.settings` — чтение.
+     */
+    get: operations["downloadDocumentSample"];
+    put?: never;
+    post?: never;
     delete?: never;
     options?: never;
     head?: never;
@@ -13320,6 +13382,28 @@ export interface components {
       kind: components["schemas"]["DocumentKind"];
       /** @description Несохранённые правки бланка — предпросмотр накладывает их в памяти, ничего не сохраняя */
       draft?: components["schemas"]["BrandProfileUpdate"];
+    };
+    /** @description Либо `kind` (вид бланка), либо `template_kind` + `body_html` (текст из редактора шаблонов) */
+    DocumentSampleIn: {
+      kind?: components["schemas"]["DocumentKind"];
+      template_kind?: components["schemas"]["DocumentTemplateKind"];
+      body_html?: string;
+      /** @description Несохранённые правки бланка — накладываются в памяти, ничего не сохраняя */
+      draft?: components["schemas"]["BrandProfileUpdate"];
+      /**
+       * @description Язык печати; по умолчанию — язык платформы
+       * @enum {string}
+       */
+      language?: "ru" | "en" | "uz";
+    };
+    DocumentSample: {
+      id: string;
+      /** @enum {string} */
+      status: "pending" | "ready" | "failed";
+      /** @description Коды подстановок текста шаблона, которых нет в каталоге */
+      warnings?: string[];
+      /** @description Код причины при `failed` (`SAMPLE_RENDER_FAILED`, `TEMPLATE_BODY_TOO_LARGE`, `INVALID_SAMPLE_KIND`) */
+      failure_code?: string;
     };
     DocumentPreview: {
       /** @description Готовый HTML образца документа; SPA показывает его в изолированной рамке (`sandbox`), скриптов в нём нет */
@@ -27787,6 +27871,95 @@ export interface operations {
       401: components["responses"]["SessionExpired"];
       403: components["responses"]["Forbidden"];
       422: components["responses"]["ValidationFailed"];
+    };
+  };
+  requestDocumentSample: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DocumentSampleIn"];
+      };
+    };
+    responses: {
+      /** @description Поставлен в очередь */
+      202: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DocumentSample"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      /** @description `COMPANY_NOT_SET` */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      422: components["responses"]["ValidationFailed"];
+    };
+  };
+  getDocumentSample: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Состояние */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DocumentSample"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+    };
+  };
+  downloadDocumentSample: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description PDF */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/pdf": string;
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
     };
   };
   deleteDocumentTemplate: {

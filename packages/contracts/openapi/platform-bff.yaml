@@ -8523,9 +8523,12 @@ paths:
       tags:
         - admin
       operationId: previewBrandDocument
+      deprecated: true
+      x-sunset: '2027-06-01'
       summary: Предпросмотр образца документа на бланке
-      description: Образец КП, договора, счёта, акта или письма с несохранёнными правками `draft`; ничего не сохраняется.
-        Раздел `company.settings` — чтение.
+      description: >-
+        Образец КП, договора, счёта, акта или письма с несохранёнными правками `draft`; ничего не сохраняется.
+        Раздел `company.settings` — чтение. Устарело (ДОК-14): образец — PDF настоящего генератора, `requestDocumentSample`.
       parameters:
         - $ref: '#/components/parameters/CsrfToken'
       requestBody:
@@ -8975,6 +8978,8 @@ paths:
       tags:
         - admin
       operationId: previewDocumentTemplate
+      deprecated: true
+      x-sunset: '2027-06-01'
       summary: Предпросмотр шаблона на образце данных
       description: Ничего не сохраняет. Раздел `company.settings` — чтение.
       parameters:
@@ -8998,6 +9003,90 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '422':
           $ref: '#/components/responses/ValidationFailed'
+  /admin/company/document-samples:
+    post:
+      tags:
+        - admin
+      operationId: requestDocumentSample
+      summary: Образец документа настоящим генератором (в очередь)
+      description: >-
+        ДОК-14. Образец КП, договора, счёта, акта или письма строит тот же генератор и та же нумерация, что и рабочий
+        документ: бланк компании (или несохранённый `draft`), действующий шаблон (или несохранённый `body_html` из
+        редактора; вид — `template_kind`), следующий номер схемы (счётчик не занимается), язык печати `language`. PDF
+        рендерит воркер ERP: ответ — состояние, дальше `getDocumentSample` и `downloadDocumentSample`. Ничего не
+        сохраняется. Раздел `company.settings` — чтение.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DocumentSampleIn'
+      responses:
+        '202':
+          description: Поставлен в очередь
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentSample'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: '`COMPANY_NOT_SET`'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+  /admin/company/document-samples/{id}:
+    get:
+      tags:
+        - admin
+      operationId: getDocumentSample
+      summary: Состояние образца документа
+      description: Раздел `company.settings` — чтение. Образец живёт в ERP несколько минут; позже — 404.
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string, pattern: '^[0-9a-f]{32}$'}}
+      responses:
+        '200':
+          description: Состояние
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentSample'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /admin/company/document-samples/{id}/file:
+    get:
+      tags:
+        - admin
+      operationId: downloadDocumentSample
+      summary: PDF образца документа
+      description: Готовый PDF (`application/pdf`, `inline`) для просмотра в окне. Не готов — 404. Раздел `company.settings` — чтение.
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string, pattern: '^[0-9a-f]{32}$'}}
+      responses:
+        '200':
+          description: PDF
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /admin/company/document-templates/{id}:
     patch:
       tags:
@@ -23351,6 +23440,44 @@ components:
         draft:
           $ref: '#/components/schemas/BrandProfileUpdate'
           description: Несохранённые правки бланка — предпросмотр накладывает их в памяти, ничего не сохраняя
+    DocumentSampleIn:
+      type: object
+      additionalProperties: false
+      description: Либо `kind` (вид бланка), либо `template_kind` + `body_html` (текст из редактора шаблонов)
+      properties:
+        kind:
+          $ref: '#/components/schemas/DocumentKind'
+        template_kind:
+          $ref: '#/components/schemas/DocumentTemplateKind'
+        body_html:
+          type: string
+        draft:
+          $ref: '#/components/schemas/BrandProfileUpdate'
+          description: Несохранённые правки бланка — накладываются в памяти, ничего не сохраняя
+        language:
+          type: string
+          enum: [ru, en, uz]
+          description: Язык печати; по умолчанию — язык платформы
+    DocumentSample:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - status
+      properties:
+        id:
+          type: string
+        status:
+          type: string
+          enum: [pending, ready, failed]
+        warnings:
+          type: array
+          items:
+            type: string
+          description: Коды подстановок текста шаблона, которых нет в каталоге
+        failure_code:
+          type: string
+          description: Код причины при `failed` (`SAMPLE_RENDER_FAILED`, `TEMPLATE_BODY_TOO_LARGE`, `INVALID_SAMPLE_KIND`)
     DocumentPreview:
       type: object
       additionalProperties: false

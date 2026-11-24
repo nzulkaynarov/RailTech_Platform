@@ -28,6 +28,9 @@
   "noProblems": "Hammasi joyida",
   "off": "Öçirilgan",
   "openNamed": "«{{name}}» zonasini oçiş",
+  "summary": {
+    "noResponsible": "Masʼulsiz zonalar: {{count}}"
+  },
   "problem": {
     "no_responsible": "Masʼul yöq",
     "responsible_lacks_permissions": "Zona huquqlari yöq",

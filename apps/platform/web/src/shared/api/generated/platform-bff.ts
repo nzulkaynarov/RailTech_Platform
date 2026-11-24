@@ -150,6 +150,8 @@ import type {
   DocumentClientLinks,
   DocumentPlaceholders,
   DocumentPreview,
+  DocumentSample,
+  DocumentSampleIn,
   DocumentTemplate,
   DocumentTemplateCopyIn,
   DocumentTemplateIn,
@@ -31653,7 +31655,8 @@ export const getPreviewBrandDocumentUrl = () => {
 };
 
 /**
- * Образец КП, договора, счёта, акта или письма с несохранёнными правками `draft`; ничего не сохраняется. Раздел `company.settings` — чтение.
+ * Образец КП, договора, счёта, акта или письма с несохранёнными правками `draft`; ничего не сохраняется. Раздел `company.settings` — чтение. Устарело (ДОК-14): образец — PDF настоящего генератора, `requestDocumentSample`.
+ * @deprecated
  * @summary Предпросмотр образца документа на бланке
  */
 export const previewBrandDocument = async (
@@ -31735,6 +31738,7 @@ export type PreviewBrandDocumentMutationError = ErrorType<
 export type PreviewBrandDocumentMutationVariables = { data: BrandPreviewIn };
 
 /**
+ * @deprecated
  * @summary Предпросмотр образца документа на бланке
  */
 export const usePreviewBrandDocument = <
@@ -33713,6 +33717,7 @@ export const getPreviewDocumentTemplateUrl = () => {
 
 /**
  * Ничего не сохраняет. Раздел `company.settings` — чтение.
+ * @deprecated
  * @summary Предпросмотр шаблона на образце данных
  */
 export const previewDocumentTemplate = async (
@@ -33794,6 +33799,7 @@ export type PreviewDocumentTemplateMutationError = ErrorType<
 export type PreviewDocumentTemplateMutationVariables = { data: DocumentTemplatePreviewIn };
 
 /**
+ * @deprecated
  * @summary Предпросмотр шаблона на образце данных
  */
 export const usePreviewDocumentTemplate = <
@@ -33818,6 +33824,386 @@ export const usePreviewDocumentTemplate = <
 > => {
   return useMutation(getPreviewDocumentTemplateMutationOptions(options), queryClient);
 };
+
+export const getRequestDocumentSampleUrl = () => {
+  return `/api/v1/admin/company/document-samples`;
+};
+
+/**
+ * ДОК-14. Образец КП, договора, счёта, акта или письма строит тот же генератор и та же нумерация, что и рабочий документ: бланк компании (или несохранённый `draft`), действующий шаблон (или несохранённый `body_html` из редактора; вид — `template_kind`), следующий номер схемы (счётчик не занимается), язык печати `language`. PDF рендерит воркер ERP: ответ — состояние, дальше `getDocumentSample` и `downloadDocumentSample`. Ничего не сохраняется. Раздел `company.settings` — чтение.
+ * @summary Образец документа настоящим генератором (в очередь)
+ */
+export const requestDocumentSample = async (
+  documentSampleIn: DocumentSampleIn,
+  options?: Parameters<typeof http>[1],
+): Promise<DocumentSample> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<DocumentSample>(getRequestDocumentSampleUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(documentSampleIn),
+  });
+};
+
+export const getRequestDocumentSampleMutationKey = () => ["requestDocumentSample"] as const;
+
+export const getRequestDocumentSampleMutationOptions = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | Error | ValidationFailedResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof requestDocumentSample>>,
+    TError,
+    RequestDocumentSampleMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof requestDocumentSample>>,
+  TError,
+  RequestDocumentSampleMutationVariables,
+  TContext
+> => {
+  const mutationKey = getRequestDocumentSampleMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof requestDocumentSample>>,
+    RequestDocumentSampleMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return requestDocumentSample(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RequestDocumentSampleMutationResult = NonNullable<
+  Awaited<ReturnType<typeof requestDocumentSample>>
+>;
+export type RequestDocumentSampleMutationBody = DocumentSampleIn;
+export type RequestDocumentSampleMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | Error | ValidationFailedResponse
+>;
+export type RequestDocumentSampleMutationVariables = { data: DocumentSampleIn };
+
+/**
+ * @summary Образец документа настоящим генератором (в очередь)
+ */
+export const useRequestDocumentSample = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | Error | ValidationFailedResponse>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof requestDocumentSample>>,
+      TError,
+      RequestDocumentSampleMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof requestDocumentSample>>,
+  TError,
+  RequestDocumentSampleMutationVariables,
+  TContext
+> => {
+  return useMutation(getRequestDocumentSampleMutationOptions(options), queryClient);
+};
+
+export const getGetDocumentSampleUrl = (id: string) => {
+  return `/api/v1/admin/company/document-samples/${id}`;
+};
+
+/**
+ * Раздел `company.settings` — чтение. Образец живёт в ERP несколько минут; позже — 404.
+ * @summary Состояние образца документа
+ */
+export const getDocumentSample = async (
+  id: string,
+  options?: Parameters<typeof http>[1],
+): Promise<DocumentSample> => {
+  return http<DocumentSample>(getGetDocumentSampleUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetDocumentSampleQueryKey = (id: string) => {
+  return [`/api/v1/admin/company/document-samples/${id}`] as const;
+};
+
+export const getGetDocumentSampleQueryOptions = <
+  TData = Awaited<ReturnType<typeof getDocumentSample>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+>(
+  id: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getDocumentSample>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetDocumentSampleQueryKey(id);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getDocumentSample>>> = ({ signal }) =>
+    getDocumentSample(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: id !== null && id !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof getDocumentSample>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type GetDocumentSampleQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getDocumentSample>>
+>;
+export type GetDocumentSampleQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse
+>;
+
+export function useGetDocumentSample<
+  TData = Awaited<ReturnType<typeof getDocumentSample>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+>(
+  id: string,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getDocumentSample>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getDocumentSample>>,
+          TError,
+          Awaited<ReturnType<typeof getDocumentSample>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetDocumentSample<
+  TData = Awaited<ReturnType<typeof getDocumentSample>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+>(
+  id: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getDocumentSample>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getDocumentSample>>,
+          TError,
+          Awaited<ReturnType<typeof getDocumentSample>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetDocumentSample<
+  TData = Awaited<ReturnType<typeof getDocumentSample>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+>(
+  id: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getDocumentSample>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Состояние образца документа
+ */
+
+export function useGetDocumentSample<
+  TData = Awaited<ReturnType<typeof getDocumentSample>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+>(
+  id: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getDocumentSample>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetDocumentSampleQueryOptions(id, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getDownloadDocumentSampleUrl = (id: string) => {
+  return `/api/v1/admin/company/document-samples/${id}/file`;
+};
+
+/**
+ * Готовый PDF (`application/pdf`, `inline`) для просмотра в окне. Не готов — 404. Раздел `company.settings` — чтение.
+ * @summary PDF образца документа
+ */
+export const downloadDocumentSample = async (
+  id: string,
+  options?: Parameters<typeof http>[1],
+): Promise<Blob> => {
+  return http<Blob>(getDownloadDocumentSampleUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getDownloadDocumentSampleQueryKey = (id: string) => {
+  return [`/api/v1/admin/company/document-samples/${id}/file`] as const;
+};
+
+export const getDownloadDocumentSampleQueryOptions = <
+  TData = Awaited<ReturnType<typeof downloadDocumentSample>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+>(
+  id: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof downloadDocumentSample>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getDownloadDocumentSampleQueryKey(id);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof downloadDocumentSample>>> = ({ signal }) =>
+    downloadDocumentSample(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: id !== null && id !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof downloadDocumentSample>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type DownloadDocumentSampleQueryResult = NonNullable<
+  Awaited<ReturnType<typeof downloadDocumentSample>>
+>;
+export type DownloadDocumentSampleQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse
+>;
+
+export function useDownloadDocumentSample<
+  TData = Awaited<ReturnType<typeof downloadDocumentSample>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+>(
+  id: string,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof downloadDocumentSample>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof downloadDocumentSample>>,
+          TError,
+          Awaited<ReturnType<typeof downloadDocumentSample>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useDownloadDocumentSample<
+  TData = Awaited<ReturnType<typeof downloadDocumentSample>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+>(
+  id: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof downloadDocumentSample>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof downloadDocumentSample>>,
+          TError,
+          Awaited<ReturnType<typeof downloadDocumentSample>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useDownloadDocumentSample<
+  TData = Awaited<ReturnType<typeof downloadDocumentSample>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+>(
+  id: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof downloadDocumentSample>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary PDF образца документа
+ */
+
+export function useDownloadDocumentSample<
+  TData = Awaited<ReturnType<typeof downloadDocumentSample>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+>(
+  id: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof downloadDocumentSample>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getDownloadDocumentSampleQueryOptions(id, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
 
 export const getUpdateDocumentTemplateUrl = (id: string) => {
   return `/api/v1/admin/company/document-templates/${id}`;

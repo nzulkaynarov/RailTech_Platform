@@ -24,7 +24,6 @@ function Rows({ rows }: { rows: { label: string; value: string }[] }) {
 export function LeadCard({ card }: { card: ConversationCard }) {
   const { t } = useTranslation("messages");
   const fmt = useFormat();
-  const none = t("note.none");
   const contacts = [
     {
       label: t("card.telegram"),
@@ -56,12 +55,23 @@ export function LeadCard({ card }: { card: ConversationCard }) {
     <div className="pf-msg-card">
       <h3 className="pf-msg-card-title">{card.name}</h3>
       <p className="pf-msg-card-sub">{card.lead}</p>
-      <h4 className="pf-msg-card-h">{t("card.contacts")}</h4>
-      {contacts.length ? <Rows rows={contacts} /> : <p className="pf-msg-card-none">{none}</p>}
+      {/* пустой блок без действия не показываем: заголовок и «нет данных» только занимают место */}
+      {contacts.length ? (
+        <>
+          <h4 className="pf-msg-card-h">{t("card.contacts")}</h4>
+          <Rows rows={contacts} />
+        </>
+      ) : null}
       <Rows rows={about} />
-      <h4 className="pf-msg-card-h">{t("card.facts")}</h4>
-      {card.request ? <Rows rows={[{ label: t("card.request"), value: card.request }]} /> : null}
-      {facts.length ? <Rows rows={facts} /> : <p className="pf-msg-card-none">{none}</p>}
+      {card.request || facts.length ? (
+        <>
+          <h4 className="pf-msg-card-h">{t("card.facts")}</h4>
+          {card.request ? (
+            <Rows rows={[{ label: t("card.request"), value: card.request }]} />
+          ) : null}
+          {facts.length ? <Rows rows={facts} /> : null}
+        </>
+      ) : null}
     </div>
   );
 }

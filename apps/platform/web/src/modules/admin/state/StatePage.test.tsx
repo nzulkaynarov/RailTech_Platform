@@ -70,7 +70,7 @@ describe("Настройки · «Состояние» (ЕВ-2а, доска 37)
     });
     const row = list.getByText(/Полномочие подписи истекает/).closest("li") as HTMLElement;
     expect(row).toHaveTextContent("после срока документы некому подписать");
-    expect(row).toHaveTextContent("исправляет администратор");
+    expect(row).not.toHaveTextContent("исправляет");
     expect(within(row).getByRole("link", { name: "Открыть «Права подписи»" })).toHaveAttribute(
       "href",
       "/admin/signing",
@@ -89,7 +89,7 @@ describe("Настройки · «Состояние» (ЕВ-2а, доска 37)
     });
   });
 
-  it("курс не обновлялся → строка «исправляет бухгалтер», ведёт в «Налоги и валюты»; курс есть → строки нет", async () => {
+  it("курс не обновлялся → строка ведёт в «Налоги и валюты»; курс есть → строки нет", async () => {
     server.use(
       http.get("*/admin/company/fx-rate", ({ request }) =>
         HttpResponse.json({
@@ -107,7 +107,7 @@ describe("Настройки · «Состояние» (ЕВ-2а, доска 37)
     const row = (await list.findByText(/Курс USD не обновлялся 3 дн\./)).closest(
       "li",
     ) as HTMLElement;
-    expect(row).toHaveTextContent("исправляет бухгалтер");
+    expect(row).not.toHaveTextContent("исправляет");
     expect(within(row).getByRole("link", { name: "Открыть «Налоги и валюты»" })).toHaveAttribute(
       "href",
       "/admin/taxes",
@@ -168,7 +168,9 @@ describe("Настройки · «Состояние» (ЕВ-2а, доска 37)
     await openState("director@demo.example");
     const list = within(await attention());
     const row = (await list.findByText("Telegram")).closest("li") as HTMLElement;
-    expect(row).toHaveTextContent("исправляет администратор");
+    // страница закрыта зрителю: должности не называем, говорим, что делать
+    expect(row).toHaveTextContent("передайте тому, кто ведёт настройки");
+    expect(row).not.toHaveTextContent("исправляет");
     expect(row).not.toHaveTextContent("OpenAI");
     expect(within(row).queryByRole("link")).toBeNull();
     cleanup();

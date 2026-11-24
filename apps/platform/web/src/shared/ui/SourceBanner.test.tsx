@@ -9,17 +9,23 @@ import { renderUi } from "../../test/renderUi";
 import { SOURCE_SETTLE_MS, SourceBanner } from "./SourceBanner";
 
 describe("SourceBanner", () => {
-  it("ERP не отвечает — плашка role=status со словами", () => {
+  it("Раздел «Операции» не отвечает — плашка role=status со словами", () => {
     renderUi(<SourceBanner sources={{ crm: "ok", erp: "unavailable" }} />);
-    expect(screen.getByRole("status")).toHaveTextContent("ERP не отвечает, данные неполные");
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Раздел «Операции» не отвечает, данные неполные",
+    );
   });
 
-  it("CRM не отвечает и оба не отвечают", () => {
+  it("Раздел «Контакты» не отвечает и оба не отвечают", () => {
     const { unmount } = renderUi(<SourceBanner sources={{ crm: "unavailable", erp: "ok" }} />);
-    expect(screen.getByRole("status")).toHaveTextContent("CRM не отвечает, данные неполные");
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Раздел «Контакты» не отвечает, данные неполные",
+    );
     unmount();
     renderUi(<SourceBanner sources={{ crm: "unavailable", erp: "unavailable" }} />);
-    expect(screen.getByRole("status")).toHaveTextContent("CRM и ERP не отвечают, данные неполные");
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "«Контакты» и «Операции» не отвечают, данные неполные",
+    );
   });
 
   it("всё в порядке или нет доступа к бэкенду — плашки нет", () => {
@@ -77,7 +83,7 @@ describe("SourceBanner", () => {
       act(() => {
         vi.advanceTimersByTime(SOURCE_SETTLE_MS);
       });
-      expect(screen.getByRole("status")).toHaveTextContent("ERP не отвечает");
+      expect(screen.getByRole("status")).toHaveTextContent("Раздел «Операции» не отвечает");
       rerender(undefined);
       act(() => {
         vi.advanceTimersByTime(SOURCE_SETTLE_MS);

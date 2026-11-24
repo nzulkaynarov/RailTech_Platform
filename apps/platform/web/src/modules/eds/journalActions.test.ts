@@ -63,7 +63,7 @@ describe("слова для кодов журнала EDS (ru/en/uz)", () => {
     ["ru", ruPayments.memo.journalAction],
     ["en", enPayments.memo.journalAction],
     ["uz", uzPayments.memo.journalAction],
-  ] as const)("журнал служебки к оплате, %s: у каждого кода есть слово", (_lang, words) => {
+  ] as const)("журнал записки к оплате, %s: у каждого кода есть слово", (_lang, words) => {
     const missing = MEMO_ACTIONS.filter((code) => !(words as Record<string, string>)[key(code)]);
     expect(missing).toEqual([]);
   });

@@ -18,7 +18,7 @@
       "text": "Refresh the page or try again later."
     },
     "unavailable": {
-      "title": "ERP is not responding",
+      "title": "The “Operations” section is not responding",
       "text": "Stock data is unavailable right now. Try again in a minute."
     },
     "forbidden": {
@@ -28,7 +28,7 @@
   },
   "errors": {
     "forbidden": "Your role is not allowed to do this.",
-    "unavailable": "ERP is not responding. Try again later.",
+    "unavailable": "The “Operations” section is not responding. Try again later.",
     "other": "Failed: {{message}}",
     "not_enough_stock": "Not enough free stock (free: {{free}}).",
     "below_reserved": "Stock cannot drop below project reservations.",

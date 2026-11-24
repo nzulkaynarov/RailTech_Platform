@@ -7,7 +7,7 @@
     },
     "unavailable": {
       "title": "The service is not responding",
-      "text": "ERP or document flow is temporarily unavailable. Nothing is lost — try again shortly."
+      "text": "The data did not load. Try again later. Nothing is lost."
     },
     "forbidden": {
       "title": "No access",
@@ -33,7 +33,6 @@
     }
   },
   "list": {
-    "subtitle": "Customer invoices, payment orders to confirm and payment requests.",
     "tabsLabel": "Invoice status",
     "tabs": {
       "to_issue": "To issue",
@@ -45,7 +44,7 @@
     },
     "search": {
       "label": "Search by invoice number or customer",
-      "placeholder": "INV-2026/142 or customer"
+      "placeholder": "Invoice number or customer"
     },
     "caption": "Invoices",
     "scroll": "Invoices table",
@@ -128,7 +127,7 @@
     "open": "Open invoice card",
     "readOnly": {
       "title": "View only",
-      "text": "View only."
+      "text": "Payment on an invoice can be confirmed by an employee with that right."
     },
     "closed": {
       "paid": {
@@ -358,7 +357,7 @@
       "receipt": "Payment order",
       "readOnly": {
         "title": "View only",
-        "text": "View only."
+        "text": "A memo can be paid by an employee with that right."
       },
       "notYourStep": {
         "title": "Not your step",
@@ -442,7 +441,7 @@
       "bank_details_required": "An invoice cannot be issued without the company's bank account and MFO: fill them in “Settings · Details & letterhead”.",
       "forbidden": "Your role may not issue invoices.",
       "not_found": "Invoice not found. Refresh the list.",
-      "unavailable": "ERP is not responding. Try again shortly.",
+      "unavailable": "The data did not load. Try again later.",
       "unknown": "Could not issue the invoice. Try again."
     }
   },

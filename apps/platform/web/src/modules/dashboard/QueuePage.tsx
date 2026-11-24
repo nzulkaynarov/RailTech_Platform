@@ -25,7 +25,7 @@ import "../eds/decision/decision.css";
 import { bannerKind } from "../../shared/ui/bannerKind";
 import { SourceBanner } from "../../shared/ui/SourceBanner";
 import { matchSection } from "../registry";
-import { pluralForm, queueEmptyKinds } from "./queue";
+import { isUrgent, pluralForm, queueEmptyKinds } from "./queue";
 import { categoryOf, chipsOf, groupsOf } from "./queueModel";
 import { QueueRow } from "./QueueRow";
 import { WaitingBlock } from "./WaitingBlock";
@@ -118,6 +118,8 @@ export function QueuePage() {
   const activeKind = chips.some((chip) => chip.category === kind) ? kind : "all";
   const visible = activeKind === "all" ? shown : shown.filter((i) => categoryOf(i) === activeKind);
   const blocks = groupsOf(visible);
+  // одна главная кнопка на экран: первая срочная строка (просрочено или сегодня)
+  const primaryId = blocks.flatMap((block) => block.items).find((item) => isUrgent(item))?.id;
 
   const sources = mergeSources(queue.data?.sources, cards.data?.sources);
   const crmDown = sources?.crm === "unavailable";
@@ -246,7 +248,7 @@ export function QueuePage() {
                 </h3>
                 <ul className="pf-list">
                   {block.items.map((item) => (
-                    <QueueRow key={item.id} item={item} />
+                    <QueueRow key={item.id} item={item} primary={item.id === primaryId} />
                   ))}
                 </ul>
               </div>

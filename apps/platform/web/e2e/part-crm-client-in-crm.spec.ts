@@ -17,10 +17,10 @@ for (const width of WIDTHS) {
     await spaGoto(page, "/erp/catalog?part=suppliers&supplier=2");
     let drawer = partnerCard(page, "АО «Южный Металл»");
     let block = drawer.getByRole("region", { name: "Доступ в кабинет" });
-    await expect(block.getByText("Клиент в CRM")).toBeVisible();
+    await expect(block.getByText("Клиент в «Контактах»")).toBeVisible();
     await expect(block.getByText("Заведён", { exact: true })).toBeVisible();
     await expect(block.getByText("В кабинете: Клиент · Партнёр")).toBeVisible();
-    const open = block.getByRole("link", { name: "Открыть клиента CRM №58" });
+    const open = block.getByRole("link", { name: "Открыть клиента №58" });
     await expect(open).toHaveAttribute("href", "/crm/clients/58");
     await expectNoViolations(page, "Партнёр · клиент в CRM заведён");
     await block.scrollIntoViewIfNeeded();
@@ -32,7 +32,7 @@ for (const width of WIDTHS) {
     block = drawer.getByRole("region", { name: "Доступ в кабинет" });
     await expect(block.getByText("Конфликт", { exact: true })).toBeVisible();
     await expect(block.getByText(/Проверьте ИНН/)).toBeVisible();
-    await expect(block.getByRole("link", { name: "Открыть клиента CRM №88" })).toBeVisible();
+    await expect(block.getByRole("link", { name: "Открыть клиента №88" })).toBeVisible();
     await expectNoViolations(page, "Партнёр · клиент в CRM, конфликт");
     await block.scrollIntoViewIfNeeded();
     await settledScreenshot(page, "supplier-crm-client-conflict");
@@ -42,7 +42,7 @@ for (const width of WIDTHS) {
     drawer = partnerCard(page, "ООО «Поставщик Север»");
     block = drawer.getByRole("region", { name: "Доступ в кабинет" });
     await expect(block.getByText("Не открыт")).toBeVisible();
-    await expect(block.getByText("Клиент в CRM")).toBeHidden();
+    await expect(block.getByText("Клиент в «Контактах»")).toBeHidden();
   });
 }
 
@@ -102,9 +102,7 @@ for (const width of WIDTHS) {
 
     await spaGoto(page, "/erp/catalog?part=suppliers&supplier=3");
     block = page.getByRole("region", { name: "Доступ в кабинет" });
-    await expect(
-      block.getByText(/Найден клиент CRM «ООО Чужой Клиент», ИНН 300000999/),
-    ).toBeVisible();
+    await expect(block.getByText(/Найден клиент «ООО Чужой Клиент», ИНН 300000999/)).toBeVisible();
     await expect(block.getByText(/Это та же компания\?/)).toBeVisible();
     await expectNoViolations(page, "Партнёр · непроверенное сопоставление");
     await block.scrollIntoViewIfNeeded();

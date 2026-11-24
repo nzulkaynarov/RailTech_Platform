@@ -1,7 +1,6 @@
 {
   "title": "Projects: contracts and acts",
   "list": {
-    "subtitle": "A project is a request after the client accepted the quote. Here: the contract, invoices, the act and scans of signed documents.",
     "caption": "Projects: number, client, step, documents, due date, owner",
     "scroll": "Projects table, scrolls horizontally",
     "filters": "Project filters",
@@ -61,7 +60,7 @@
     "contract": {
       "project": "Draft",
       "client_agreed": "Agreed by client",
-      "issued_at_operator": "Issued at operator",
+      "issued_at_operator": "Issued in EDI",
       "signed": "Signed (scan)",
       "rejected": "Rejected by client",
       "cancelled": "Cancelled"
@@ -213,7 +212,7 @@
       "client_agreed": "Contract wording agreed by the client",
       "rejected": "Contract rejected by the client",
       "revised": "Contract draft returned to work",
-      "issued_external": "Contract issued at the operator",
+      "issued_external": "Contract issued in EDI",
       "scan_attached": "Scan of the signed contract attached",
       "signed": "Contract signed",
       "signed_client": "Client agreed to the contract",
@@ -259,8 +258,8 @@
     "state": {
       "project": "The draft has not been sent to the client yet.",
       "atClient": "The draft is with the client for wording agreement.",
-      "client_agreed": "The client agreed the wording. Next, issue the contract at the e-document operator (outside the platform).",
-      "issued_at_operator": "The contract is issued at the operator. When both sides have signed, attach the scan.",
+      "client_agreed": "The client agreed the wording. Next, issue the contract in EDI (outside the Platform).",
+      "issued_at_operator": "The contract is issued in EDI. When both sides have signed, attach the scan.",
       "signed": "The contract is signed by both sides, the scan is stored.",
       "rejected": "The client rejected the contract. Fix the draft and send it for agreement again.",
       "cancelled": "The contract is cancelled."
@@ -268,13 +267,13 @@
     "action": {
       "send_to_client": "Send to client for agreement",
       "client_agreed": "Mark: agreed by client",
-      "mark_issued": "Mark: issued at operator",
+      "mark_issued": "Mark: issued in EDI",
       "attach_scan": "Attach signed scan",
       "reject": "Client rejected the contract…",
       "revise": "Return to draft"
     },
     "note": {
-      "label": "Operator or number in the e-document system",
+      "label": "Operator or number in the EDI system",
       "hint": "Optional: goes to the log.",
       "placeholder": "For example: Didox, No. 77"
     },
@@ -302,7 +301,7 @@
       "create": "Contract draft created.",
       "send_to_client": "Draft sent to the client.",
       "client_agreed": "Marked: the client agreed the wording.",
-      "mark_issued": "Marked: contract issued at the operator.",
+      "mark_issued": "Marked: contract issued in EDI.",
       "attach_scan": "Scan attached, contract signed.",
       "reject": "Rejection recorded.",
       "revise": "Draft returned to work.",
@@ -459,7 +458,7 @@
     "scan_required": "Choose a scan file.",
     "no_file_provided": "Choose a scan file.",
     "forbidden": "This action is not allowed for your role.",
-    "unavailable": "ERP is not responding. Try again later.",
+    "unavailable": "The data did not load. Try again later.",
     "payload": "The file is larger than 20 MB.",
     "unknown": "It did not work. Try again.",
     "failed": "It did not work: {{reason}}",
@@ -481,8 +480,8 @@
       "text": "Check the connection and try again."
     },
     "unavailable": {
-      "title": "ERP is not responding",
-      "text": "Projects are stored in ERP. Try again in a minute."
+      "title": "The data did not load",
+      "text": "Try again later."
     },
     "forbidden": {
       "title": "No access",

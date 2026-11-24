@@ -186,17 +186,12 @@ test.describe("Компания: реквизиты, бланк, нумерац�
       "/admin/company?part=details",
     );
     await expect(page.getByLabel("Банковские реквизиты", { exact: true })).toHaveCount(0);
-    const frame = page.frameLocator('iframe[title="Образец: КП"]');
-    await expect(frame.getByText("Коммерческое предложение", { exact: false })).toBeVisible();
+    // Образец — PDF настоящего генератора в общем просмотрщике (ДОК-14): страницы — картинки с названием образца
+    await expect(page.getByRole("img", { name: /Образец: КП/ }).first()).toBeVisible();
 
     await page.getByLabel("Основной цвет", { exact: true }).fill("#047857");
-    await expect(frame.locator("strong")).toHaveCSS("color", "rgb(4, 120, 87)");
     await page.locator(".ant-segmented-item-label", { hasText: "Договор" }).click();
-    await expect(
-      page.frameLocator('iframe[title="Образец: Договор"]').getByText("Договор поставки", {
-        exact: false,
-      }),
-    ).toBeVisible();
+    await expect(page.getByRole("img", { name: /Образец: Договор/ }).first()).toBeVisible();
     await settledScreenshot(page, "company-brand-edited");
 
     await page.getByLabel("Основной цвет", { exact: true }).fill("red");
@@ -310,7 +305,7 @@ test.describe("Компания: статьи расхода, шаблоны, с
     );
     await expect(editor.getByText("Неизвестная подстановка {{mystery}}")).toBeVisible();
     await expect(
-      editor.frameLocator('iframe[title="Образец документа по шаблону"]').getByText("[buyer_name]"),
+      editor.getByRole("img", { name: /Образец документа по шаблону/ }).first(),
     ).toBeVisible();
     await settledScreenshot(page, "company-templates-editor");
     await editor.getByRole("button", { name: "Сохранить" }).click();
@@ -566,7 +561,9 @@ test.describe("Компания: axe и снимки", () => {
         // данные вкладки пришли: форма, список или таблица, а не скелетон
         await expect(page.locator(".ant-skeleton, [data-pf-skeleton]")).toHaveCount(0);
         await expect(page.locator(".pf-co-body").first()).toBeVisible();
-        if (tab === "brand") await expect(page.locator('iframe[title^="Образец"]')).toBeVisible();
+        if (tab === "brand") {
+          await expect(page.getByRole("img", { name: /Образец/ }).first()).toBeVisible();
+        }
         if (tab === "numbering") {
           await expect(
             page.getByRole("list", { name: "Образец номеров" }).getByText(/\/001/).first(),
@@ -606,7 +603,7 @@ test.describe("Компания: axe и снимки", () => {
       await openCompany(page, "templates");
       await pickRowAction(page, "Акт приёмки", "Изменить");
       const editor = page.getByRole("region", { name: "Изменить шаблон документа" });
-      await expect(editor.frameLocator("iframe").getByText("[seller_name]")).toBeVisible();
+      await expect(editor.getByRole("img", { name: /Образец документа/ }).first()).toBeVisible();
       await expectNoViolations(page, `document editor ${String(width)}`);
       await settledScreenshot(page, "company-templates-editor-modal");
       await editor.getByRole("button", { name: "Отмена" }).click();

@@ -40,7 +40,7 @@ async function staleAfter(
 const QUEUE = ["/api/v1/queue", "/api/v1/menu-counters"];
 
 describe("сброс кэша после действия EDS", () => {
-  it("решение по КП и служебке: КП, служебки, реестр, оплата, очередь и счётчики", async () => {
+  it("решение по КП и записке: КП, записки, реестр, оплата, очередь и счётчики", async () => {
     expect(await staleAfter(useRefreshApprovals)).toEqual(
       expect.arrayContaining([
         "/api/v1/eds/quotes",

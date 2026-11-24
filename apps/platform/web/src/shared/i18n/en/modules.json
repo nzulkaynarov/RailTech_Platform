@@ -30,7 +30,7 @@
       "empty": {
         "director": {
           "title": "No decisions needed from you yet",
-          "text": "New letters come from CRM, draft quotes from ERP, memos from employees.",
+          "text": "New letters, draft quotes and memos arrive here on their own.",
           "action": "Projects"
         },
         "universal": {
@@ -553,7 +553,6 @@
     },
     "org": {
       "title": "Employees",
-      "subtitle": "Employees, their roles and access — in one card.",
       "readOnly": "View only.",
       "listLabel": "Employees",
       "count": "Employees: {{count}}",
@@ -578,12 +577,8 @@
         "disabled": "Disabled"
       },
       "access": {
-        "crm": "CRM",
-        "erp": "ERP",
-        "crmNo": "CRM: no",
-        "erpNo": "ERP: no",
-        "erpPending": "ERP: being granted",
-        "erpError": "ERP: error",
+        "erpPending": "Access being granted",
+        "erpError": "Access not granted",
         "telegram": "Telegram",
         "telegramNo": "Telegram: no"
       },
@@ -618,18 +613,16 @@
         "email": "Email",
         "position": "Position",
         "roles": "Roles",
-        "crm": "CRM access",
-        "erp": "ERP access",
         "telegram": "Telegram for notifications",
         "status": "Status",
-        "erpPending": "ERP access is still being granted.",
+        "erpPending": "Access is still being granted.",
         "erpReason": {
-          "not_connected": "ERP access not granted: ERP cannot be reached with the saved connection. An administrator checks the address and token in Connections; granting will retry on its own.",
-          "unavailable": "ERP access not granted: ERP did not respond. Granting will retry on its own.",
-          "queue": "ERP access not granted: the granting task was not queued. Press Retry.",
-          "rejected": "ERP access not granted: ERP did not accept the account. Check the employee's email and roles, then press Retry."
+          "not_connected": "Access not granted: the section cannot be reached with the saved connection. An administrator checks the address and token in Connections; granting will retry on its own.",
+          "unavailable": "Access not granted: the section did not respond. Granting will retry on its own.",
+          "queue": "Access not granted: the granting task was not queued. Press Retry.",
+          "rejected": "Access not granted: the account was not accepted. Check the employee's email and roles, then press Retry."
         },
-        "erpNotGranted": "ERP access is not granted.",
+        "erpNotGranted": "Access is not granted.",
         "erpRetry": "Retry",
         "disabledNote": "The employee is disabled and cannot sign in. Roles and position are kept."
       },
@@ -652,9 +645,7 @@
         "position": "Position on the card: “{{position}}”.",
         "positionCleared": "The position on the card will be cleared.",
         "self": "You are changing your own roles: the menu updates after saving.",
-        "selfLosesAdmin": "You will lose access to the Settings section.",
-        "erpAdmin": "In ERP the employee becomes an administrator (superuser).",
-        "erpSections": "In ERP the employee gets rights by the roles' sections; the outcome is in the card (“ERP: being granted”, “ERP: error”)."
+        "selfLosesAdmin": "You will lose access to the Settings section."
       },
       "invite": {
         "title": "Invite employee",
@@ -670,7 +661,7 @@
         "sent": "Invitation sent: {{email}}",
         "notSent": "The employee was added with the status “Invited”, but the email was not sent: mail is not connected or unavailable. Connect it in Settings · Connections and send the invitation again from the employee card.",
         "openCard": "Open card",
-        "notSentUnavailable": "The employee was added with the status “Invited”, but CRM did not respond and the email was not sent. Try again later with “Send the invitation again” in the card.",
+        "notSentUnavailable": "The employee was added with the status “Invited”, but the server did not respond and the email was not sent. Try again later with “Send the invitation again” in the card.",
         "resend": "Send the invitation again",
         "resendHint": "A new email with a 72-hour “Set your password” link goes out; the previous link and password stop working.",
         "tooMany": "Too many links for this employee in an hour. Try again later.",
@@ -747,7 +738,6 @@
     },
     "roles": {
       "title": "Roles & permissions",
-      "subtitle": "What each role sees and can do. One person's roles add up.",
       "caption": "Role matrix: sections by module and the access level of every role",
       "sectionColumn": "Module · section",
       "system": "system role",
@@ -774,7 +764,6 @@
       "savedToast": "Role saved",
       "deletedToast": "Role deleted",
       "viewOnly": "View only",
-      "readOnlySubtitle": "What each role sees and can do. Roles and access are changed by the administrator.",
       "readOnlyNote": "View only.",
       "loadError": {
         "title": "Could not load roles",
@@ -863,21 +852,18 @@
       "nav": "Pages of “{{group}}”"
     },
     "state": {
-      "subtitle": "What needs attention now, who fixes it and where to go",
       "attention": "Needs attention · {{count}}",
       "none": "Everything works: no failures or overdue settings.",
       "fixer": "fixed by {{who}}",
+      "handOver": "pass it to whoever manages the settings",
       "open": "Open “{{page}}”",
       "openPlain": "Open",
       "affected": "affected: {{list}}",
       "erpDetail": "The link to quotes is not set up: requests will not go to a quote, quote documents and stock are unavailable.",
       "owner": {
-        "admin": "the administrator",
         "owner": "the company owner",
         "hosting": "the hosting",
-        "provider": "the provider",
-        "director": "the director",
-        "accountant": "the accountant"
+        "provider": "the provider"
       },
       "row": {
         "signing": {
@@ -1043,7 +1029,7 @@
     },
     "contract": {
       "title": "No contract selected",
-      "text": "Open a project to see the contract status and actions here: send to client, issued at operator, signed scan."
+      "text": "Open a project to see the contract status and actions here: send to client, issued in EDI, signed scan."
     },
     "act": {
       "title": "No act selected",

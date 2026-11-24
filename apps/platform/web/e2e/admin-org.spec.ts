@@ -186,9 +186,9 @@ test.describe("Оргструктура: приглашение", () => {
     await expect(row).toContainText("Бухгалтер-кассир");
     await expect(row).toContainText("Бухгалтер");
     // Статус «ERP» — из ответа ERP, а не из «очередь пуста»: «выдаётся» само сменяется на «ок», без перезагрузки
-    await expect(row).toContainText("ERP: выдаётся");
-    await expect(row).not.toContainText("ERP: выдаётся", { timeout: 10_000 });
-    await expect(row).toContainText("ERP");
+    await expect(row).toContainText("Доступ выдаётся");
+    await expect(row).not.toContainText("Доступ выдаётся", { timeout: 10_000 });
+    await expect(row).not.toContainText("Доступ не выдан");
   });
 
   test("почта уже есть — ошибка у поля; почта не подключена — сотрудник создан, письмо не ушло", async ({
@@ -260,7 +260,7 @@ test.describe("Оргструктура: axe и скриншоты", () => {
   }
 
   for (const width of WIDTHS) {
-    test(`сбой выдачи доступа в ERP на ${String(width)}: «Доступ в ERP не выдан.» и «Повторить», axe без нарушений`, async ({
+    test(`сбой выдачи доступа в ERP на ${String(width)}: «Доступ не выдан.» и «Повторить», axe без нарушений`, async ({
       page,
     }) => {
       await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
@@ -279,13 +279,13 @@ test.describe("Оргструктура: axe и скриншоты", () => {
       await page.reload();
       await openCard(page, "Демо Менеджеров");
       const panel = page.locator(PANEL);
-      await expect(panel.getByText("Доступ в ERP не выдан.")).toBeVisible();
+      await expect(panel.getByText("Доступ не выдан.")).toBeVisible();
       await expectNoViolations(page, `erp error ${String(width)}`);
       await settledScreenshot(page, "org-card-erp-error");
 
       await panel.getByRole("button", { name: "Повторить" }).click();
-      await expect(panel.getByText("Доступ в ERP ещё выдаётся.")).toBeVisible();
-      await expect(panel.getByText("Доступ в ERP ещё выдаётся.")).toHaveCount(0, {
+      await expect(panel.getByText("Доступ ещё выдаётся.")).toBeVisible();
+      await expect(panel.getByText("Доступ ещё выдаётся.")).toHaveCount(0, {
         timeout: 10_000,
       });
       await settledScreenshot(page, "org-card-erp-granted");
@@ -316,7 +316,7 @@ test.describe("Оргструктура: axe и скриншоты", () => {
       await page.reload();
       await openCard(page, "Демо Менеджеров");
       const panel = page.locator(PANEL);
-      await expect(panel.getByText(/ERP не ответила/)).toBeVisible();
+      await expect(panel.getByText(/раздел не ответил/)).toBeVisible();
       await expect(panel).not.toContainText("erp_unavailable");
       await expect(panel).not.toContainText("erp_provision_user");
       await expectNoViolations(page, `erp error reason ${String(width)}`);

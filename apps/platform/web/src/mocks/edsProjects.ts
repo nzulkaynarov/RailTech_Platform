@@ -157,7 +157,7 @@ const TRANSITIONS: Record<
     from: ["client_agreed"],
     to: "issued_at_operator",
     code: "contract.issued_external",
-    text: "Договор выставлен у оператора",
+    text: "Договор выставлен в ЭДО",
   },
 };
 

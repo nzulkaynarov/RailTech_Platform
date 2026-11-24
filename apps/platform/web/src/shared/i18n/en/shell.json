@@ -120,7 +120,7 @@
       "USER_DISABLED": "This account is disabled. Contact your administrator.",
       "NO_PLATFORM_ROLE": "You have no role in the Platform yet. Ask your administrator to assign one.",
       "TOO_MANY_REQUESTS": "Too many sign-in attempts. Wait a minute and try again.",
-      "BACKEND_UNAVAILABLE": "Cannot reach CRM. Try signing in again in a moment.",
+      "BACKEND_UNAVAILABLE": "The server is not responding. Try signing in again in a moment.",
       "CSRF_FAILED": "The browser session is out of date. Reload the page and sign in again.",
       "default": "Could not sign in. Please try again.",
       "SECOND_FACTOR_INVALID": "Wrong code. Check the time on your phone and try again.",
@@ -190,7 +190,7 @@
     "submit": "Create administrator and sign in",
     "checking": "Checking the system state",
     "stateErrorTitle": "Could not check the system state",
-    "stateErrorText": "CRM did not respond. Make sure the server is running and try again.",
+    "stateErrorText": "The server is not responding. Make sure it is running and try again.",
     "retry": "Retry",
     "doneTitle": "First run is already done",
     "doneText": "The administrator exists. Sign in to the Platform with email and password.",
@@ -201,7 +201,7 @@
       "SETUP_LOCKED": "Too many wrong codes. Try again in 15 minutes.",
       "SETUP_DONE": "The administrator already exists. Sign in to the Platform.",
       "TOO_MANY_REQUESTS": "Too many attempts. Wait a minute and try again.",
-      "BACKEND_UNAVAILABLE": "Cannot reach CRM. Try again in a moment.",
+      "BACKEND_UNAVAILABLE": "The server is not responding. Try again in a moment.",
       "VALIDATION_FAILED": "Check the fields. The password must be at least 10 characters, with letters and digits, without the name from the email.",
       "default": "Could not create the administrator. Try again."
     }

@@ -51,6 +51,8 @@ from app.schemas_company import (
     CompanyProfileUpdate,
     DocumentPlaceholders,
     DocumentPreview,
+    DocumentSample,
+    DocumentSampleIn,
     DocumentTemplate,
     DocumentTemplateCopyIn,
     DocumentTemplateIn,
@@ -270,6 +272,8 @@ async def get_brand_logo_image(authed: Reader) -> Response:
     response_model=DocumentPreview,
     response_model_exclude_none=True,
     operation_id="previewBrandDocument",
+    deprecated=True,
+    openapi_extra={"x-sunset": "2027-06-01"},
 )
 async def preview_brand_document(body: BrandPreviewIn, authed: Reader) -> DocumentPreview:
     erp = _erp(authed)
@@ -280,6 +284,75 @@ async def preview_brand_document(body: BrandPreviewIn, authed: Reader) -> Docume
         "POST", await erp.company_path("document-profile/preview/"), json=payload
     )
     return DocumentPreview(html=await erp.inline_logos(response.text))
+
+
+# --- образец документа настоящим генератором (ДОК-14) -----------------------------------------
+
+SampleId = Annotated[str, Path(pattern=r"^[0-9a-f]{32}$")]
+
+
+def _sample_of(raw: Any) -> DocumentSample:
+    return DocumentSample(
+        id=text(raw.get("id")),
+        status=raw.get("status")
+        if raw.get("status") in ("pending", "ready", "failed")
+        else "failed",
+        warnings=[text(w) for w in raw.get("warnings") or []] or None,
+        failure_code=text(raw.get("failure_code")) or None,
+    )
+
+
+@router.post(
+    "/admin/company/document-samples",
+    response_model=DocumentSample,
+    response_model_exclude_none=True,
+    status_code=status.HTTP_202_ACCEPTED,
+    operation_id="requestDocumentSample",
+)
+async def request_document_sample(body: DocumentSampleIn, authed: Reader) -> DocumentSample:
+    """Образец в очередь ERP: бланк и текст — несохранённые, как на экране; PDF строит воркер."""
+    payload: dict[str, Any] = {}
+    if body.kind is not None:
+        payload["kind"] = KIND_TO_ERP[body.kind]
+    if body.template_kind is not None:
+        payload["template_kind"] = TEMPLATE_KIND_TO_ERP[body.template_kind]
+    if body.body_html is not None:
+        payload["body_html"] = body.body_html
+    if body.draft is not None:
+        payload["draft"] = body.draft.sent()
+    if body.language is not None:
+        payload["language"] = body.language
+    raw = await _erp(authed).data("POST", "crm/document-samples/", json=payload)
+    return _sample_of(raw)
+
+
+@router.get(
+    "/admin/company/document-samples/{id}",
+    response_model=DocumentSample,
+    response_model_exclude_none=True,
+    operation_id="getDocumentSample",
+)
+async def get_document_sample(id: SampleId, authed: Reader) -> DocumentSample:
+    return _sample_of(await _erp(authed).data("GET", f"crm/document-samples/{id}/"))
+
+
+@router.get(
+    "/admin/company/document-samples/{id}/file",
+    response_class=Response,
+    responses={200: {"content": {"application/pdf": {}}}},
+    operation_id="downloadDocumentSample",
+)
+async def download_document_sample(id: SampleId, authed: Reader) -> Response:
+    response = await _erp(authed).request("GET", f"crm/document-samples/{id}/pdf/")
+    return Response(
+        content=response.content,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": "inline",
+            "X-Content-Type-Options": "nosniff",
+            "Cache-Control": "private, no-store",
+        },
+    )
 
 
 # --- нумерация ---------------------------------------------------------------------------------
@@ -602,6 +675,8 @@ async def get_document_placeholders(authed: Reader) -> DocumentPlaceholders:
     response_model=DocumentPreview,
     response_model_exclude_none=True,
     operation_id="previewDocumentTemplate",
+    deprecated=True,
+    openapi_extra={"x-sunset": "2027-06-01"},
 )
 async def preview_document_template(
     body: DocumentTemplatePreviewIn, authed: Reader

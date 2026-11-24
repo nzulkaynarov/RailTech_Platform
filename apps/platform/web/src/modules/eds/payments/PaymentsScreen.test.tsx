@@ -35,9 +35,7 @@ describe("Счета и оплаты: список", () => {
     expect(await screen.findByRole("heading", { level: 1, name: "Финансы" })).toBeVisible();
     expect(await screen.findByRole("radio", { name: "Ждут оплаты · 2" })).toBeChecked();
     expect(screen.getByRole("radio", { name: "К выставлению · 1" })).toBeInTheDocument();
-    expect(
-      screen.getByRole("radio", { name: "Платёжки на подтверждение · 1" }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "Оплаты на подтверждение · 1" })).toBeInTheDocument();
     expect(screen.getByRole("radio", { name: "Просрочены · 1" })).toBeInTheDocument();
 
     const table = await screen.findByRole("table", { name: "Счета" });
@@ -61,14 +59,14 @@ describe("Счета и оплаты: список", () => {
     expect(within(row).getByText("просрочен на 8 дн.")).toBeVisible();
   });
 
-  it("«Платёжки на подтверждение»: статус «Платёжка получена» и действие «Проверить платёжку»", async () => {
+  it("«Оплаты на подтверждение»: статус «Платёжное поручение получено» и действие «Проверить платёжное поручение»", async () => {
     signIn("accountant@demo.example");
     renderAt("/eds/payments?show=proofs");
 
     const row = await screen.findByRole("row", { name: /СЧ-2026\/145/ });
-    expect(within(row).getByText("Платёжка получена")).toBeVisible();
+    expect(within(row).getByText("Платёжное поручение получено")).toBeVisible();
     expect(
-      within(row).getByRole("link", { name: "Проверить платёжку: СЧ-2026/145" }),
+      within(row).getByRole("link", { name: "Проверить платёжное поручение: СЧ-2026/145" }),
     ).toHaveTextContent(/^Проверить$/);
   });
 
@@ -107,7 +105,7 @@ describe("Счета и оплаты: список", () => {
     expect(screen.getByRole("button", { name: "Ждут оплаты" })).toBeVisible();
   });
 
-  it("менеджер и директор (только чтение): счета видны, карточка без формы; служебки к оплате доступны", async () => {
+  it("менеджер и директор (только чтение): счета видны, карточка без формы; записки к оплате доступны", async () => {
     signIn("director@demo.example");
     renderAt("/eds/payments");
 
@@ -124,7 +122,7 @@ describe("Счета и оплаты: список", () => {
     expect(within(panel).queryByRole("form", { name: "Подтверждение оплаты" })).toBeNull();
   });
 
-  it("роль без права ERP на счета (выдана вручную): счета ERP не показываются словами, служебки доступны", async () => {
+  it("роль без права ERP на счета (выдана вручную): счета ERP не показываются словами, записки доступны", async () => {
     server.use(
       http.get("*/eds/payments", () =>
         HttpResponse.json(
@@ -262,11 +260,11 @@ describe("Подтвердить оплату", () => {
   });
 });
 
-describe("Платёжки клиента и запрос платёжки", () => {
-  it("«Запросить платёжку»: шаблон сообщения с номером, суммой и сроком; отметка попадает в журнал", async () => {
+describe("Платёжные поручения и запрос платёжки", () => {
+  it("«Запросить платёжное поручение»: шаблон сообщения с номером, суммой и сроком; отметка попадает в журнал", async () => {
     const { panel } = await openInvoice("СЧ-2026/142");
 
-    fireEvent.click(within(panel).getByRole("button", { name: "Запросить платёжку" }));
+    fireEvent.click(within(panel).getByRole("button", { name: "Запросить платёжное поручение" }));
 
     const text = within(panel).getByLabelText<HTMLTextAreaElement>("Текст сообщения");
     expect(text.value).toContain("СЧ-2026/142");
@@ -274,32 +272,38 @@ describe("Платёжки клиента и запрос платёжки", () 
     expect(
       within(panel).getByText(/Автоматической отправки клиенту в бот и почту пока нет/),
     ).toBeVisible();
-    fireEvent.click(within(panel).getByRole("button", { name: "Отметить: платёжку запросили" }));
-    expect(await screen.findByText("Запрос платёжки отмечен в журнале счёта")).toBeVisible();
-    expect(await within(panel).findByText(/Платёжку запросили/)).toBeVisible();
+    fireEvent.click(
+      within(panel).getByRole("button", { name: "Отметить: платёжное поручение запросили" }),
+    );
+    expect(
+      await screen.findByText("Запрос платёжного поручения отмечен в журнале счёта"),
+    ).toBeVisible();
+    expect(await within(panel).findByText(/Платёжное поручение запросили/)).toBeVisible();
   });
 
-  it("«Приложить платёжку»: без файла — подсказка, с файлом — платёжка в списке и счёт на вкладке «Платёжки»", async () => {
+  it("«Приложить платёжное поручение»: без файла — подсказка, с файлом — платёжка в списке и счёт на вкладке «Платёжки»", async () => {
     const { panel } = await openInvoice("СЧ-2026/142");
 
-    fireEvent.click(within(panel).getByRole("button", { name: "Приложить платёжку" }));
-    const form = within(panel).getByRole("form", { name: "Платёжка клиента" });
+    fireEvent.click(within(panel).getByRole("button", { name: "Приложить платёжное поручение" }));
+    const form = within(panel).getByRole("form", { name: "Платёжное поручение клиента" });
     fireEvent.click(within(form).getByRole("button", { name: "Приложить" }));
-    expect(await within(form).findByText("Выберите файл платёжки.")).toBeVisible();
+    expect(await within(form).findByText("Выберите файл платёжного поручения.")).toBeVisible();
 
     const file = new File(["%PDF-1.4"], "pp-142.pdf", { type: "application/pdf" });
-    fireEvent.change(within(form).getByLabelText("Файл платёжки"), { target: { files: [file] } });
+    fireEvent.change(within(form).getByLabelText("Файл платёжного поручения"), {
+      target: { files: [file] },
+    });
     fireEvent.click(within(form).getByRole("button", { name: "Приложить" }));
 
-    expect(await screen.findByText("Платёжка приложена")).toBeVisible();
+    expect(await screen.findByText("Платёжное поручение приложено")).toBeVisible();
     expect(
-      await within(panel).findByRole("link", { name: "Скачать платёжку pp-142.pdf" }),
+      await within(panel).findByRole("link", { name: "Скачать платёжное поручение pp-142.pdf" }),
     ).toBeVisible();
   });
 });
 
-describe("Служебки к оплате", () => {
-  it("«Оплачено»: дата, сумма и платёжка; служебка уходит из «К оплате» и попадает в оплаченные", async () => {
+describe("Записки к оплате", () => {
+  it("«Оплачено»: дата, сумма и платёжка; записка уходит из «К оплате» и попадает в оплаченные", async () => {
     signIn("accountant@demo.example");
     renderAt("/eds/payments?show=memos");
 
@@ -307,7 +311,7 @@ describe("Служебки к оплате", () => {
     const row = within(table).getByRole("row", { name: /СЗ-2026\/015/ });
     expect(within(row).getByText("Передана бухгалтеру")).toBeVisible();
     fireEvent.click(
-      within(row).getByRole("link", { name: "Показать служебку СЗ-2026/015 в боковом окне" }),
+      within(row).getByRole("link", { name: "Показать записку СЗ-2026/015 в боковом окне" }),
     );
     const panel = await panelEl();
     const form = await within(panel).findByRole("form", { name: "Оплата служебной записки" });
@@ -315,11 +319,13 @@ describe("Служебки к оплате", () => {
     expect(within(panel).getByRole("link", { name: "Скачать счёт-аренда.pdf" })).toBeVisible();
 
     const file = new File(["%PDF-1.4"], "pp-015.pdf", { type: "application/pdf" });
-    fireEvent.change(within(form).getByLabelText(/Платёжка/), { target: { files: [file] } });
+    fireEvent.change(within(form).getByLabelText(/Платёжное поручение/), {
+      target: { files: [file] },
+    });
     fireEvent.click(within(form).getByRole("button", { name: "Оплачено" }));
     await confirmDialog();
 
-    expect(await screen.findByText("Служебка СЗ-2026/015 оплачена")).toBeVisible();
+    expect(await screen.findByText("Записка СЗ-2026/015 оплачена")).toBeVisible();
     await waitFor(() => {
       expect(screen.queryByRole("row", { name: /СЗ-2026\/015/ })).toBeNull();
     });
@@ -343,34 +349,34 @@ describe("Служебки к оплате", () => {
     expect(submit).toHaveAccessibleDescription(/Введите сумму больше нуля/);
   });
 
-  it("«Вернуть автору»: причина обязательна, после возврата служебки в списке к оплате нет", async () => {
+  it("«Вернуть автору»: причина обязательна, после возврата записки в списке к оплате нет", async () => {
     signIn("accountant@demo.example");
     renderAt("/eds/payments?show=memos");
     fireEvent.click(
-      await screen.findByRole("link", { name: "Показать служебку СЗ-2026/015 в боковом окне" }),
+      await screen.findByRole("link", { name: "Показать записку СЗ-2026/015 в боковом окне" }),
     );
     const panel = await panelEl();
     const form = await within(panel).findByRole("form", { name: "Оплата служебной записки" });
 
     fireEvent.click(within(form).getByRole("button", { name: "Вернуть автору" }));
-    const send = within(form).getByRole("button", { name: "Вернуть служебку" });
+    const send = within(form).getByRole("button", { name: "Вернуть записку" });
     expect(send).toBeDisabled();
     fireEvent.change(within(form).getByLabelText("Причина возврата"), {
       target: { value: "Нет реквизитов" },
     });
     fireEvent.click(send);
 
-    expect(await screen.findByText("Служебка возвращена автору")).toBeVisible();
+    expect(await screen.findByText("Записка возвращена автору")).toBeVisible();
     await waitFor(() => {
       expect(screen.queryByRole("row", { name: /СЗ-2026\/015/ })).toBeNull();
     });
   });
 
-  it("менеджер: служебка к оплате открывается только для просмотра, формы «Оплачено» нет", async () => {
+  it("менеджер: записка к оплате открывается только для просмотра, формы «Оплачено» нет", async () => {
     signIn("manager@demo.example");
     renderAt("/eds/payments?show=memos");
     fireEvent.click(
-      await screen.findByRole("link", { name: "Показать служебку СЗ-2026/015 в боковом окне" }),
+      await screen.findByRole("link", { name: "Показать записку СЗ-2026/015 в боковом окне" }),
     );
     const panel = await panelEl();
 
@@ -422,7 +428,8 @@ describe("Карточка счёта", () => {
     renderAt(`/eds/payments/${encodeURIComponent("СЧ-2026/142")}`);
 
     expect(await screen.findByRole("heading", { level: 1, name: "СЧ-2026/142" })).toBeVisible();
-    expect(screen.getAllByText("СЧ-2026/142")).toHaveLength(1);
+    // в рабочей области номер один раз (последняя крошка в шапке страницы называет тот же счёт)
+    expect(within(screen.getByRole("main")).getAllByText("СЧ-2026/142")).toHaveLength(1);
     const facts = await openSideTab("Сведения");
     expect(within(facts).getAllByText("Клиент", { selector: "dt" })).toHaveLength(1);
     expect(screen.getAllByText("ООО «Демо-Рейл»")).toHaveLength(1);
@@ -432,7 +439,7 @@ describe("Карточка счёта", () => {
       within(await decisionEl()).getByRole("form", { name: "Подтверждение оплаты" }),
     ).toBeVisible();
     expect(within(await panelEl()).queryByRole("tab", { name: "Оплата" })).toBeNull();
-    expect(screen.getAllByRole("list", { name: "Платёжки клиента" })).toHaveLength(1);
+    expect(screen.getAllByRole("list", { name: "Платёжные поручения" })).toHaveLength(1);
   });
 
   it("ссылка из очереди с номером и ?panel=open&tab=payment: карточка по id, боковое окно остаётся", async () => {
@@ -451,7 +458,7 @@ describe("Карточка счёта", () => {
     });
   });
 
-  it("служебка к оплате: тема один раз, журнал — «История», форма «Оплачено» — в центре, окно — «Сведения»", async () => {
+  it("записка к оплате: тема один раз, журнал — «История», форма «Оплачено» — в центре, окно — «Сведения»", async () => {
     signIn("accountant@demo.example");
     renderAt("/eds/payments/60000000-0000-4000-8000-000000000015");
 
@@ -506,7 +513,7 @@ describe("Платёжка у оплаченного счёта", () => {
     signIn("accountant@demo.example");
     renderAt("/eds/payments/146");
 
-    const lists = await screen.findAllByRole("list", { name: "Платёжки клиента" });
+    const lists = await screen.findAllByRole("list", { name: "Платёжные поручения" });
     expect(lists).toHaveLength(1);
     for (const list of lists) {
       expect(within(list).getByText("Лишняя: счёт уже оплачен")).toBeVisible();

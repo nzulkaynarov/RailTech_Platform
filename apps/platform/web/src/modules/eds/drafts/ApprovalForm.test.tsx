@@ -265,14 +265,14 @@ describe("Одобрение КП: форма", () => {
     expect(within(form).getByRole("button", { name: "Одобрить КП" })).toBeEnabled();
   });
 
-  it("состав КП из ERP не получен: «Одобрить» неактивна с подписью, виден итог снимка", async () => {
+  it("состав КП не получен: «Одобрить» неактивна с подписью, виден итог снимка", async () => {
     const { form } = await openForm(118);
     const approve = within(form).getByRole("button", { name: APPROVE });
 
     expect(approve).toBeDisabled();
-    expect(approve).toHaveAccessibleDescription("Нет данных КП из ERP — обновите карточку.");
+    expect(approve).toHaveAccessibleDescription("Нет данных КП — обновите карточку.");
     expect(await screen.findByText("Итог по снимку КП")).toBeVisible();
-    expect(screen.getByText(/Состав КП не получен из ERP/)).toBeVisible();
+    expect(screen.getByText(/Состав КП не получен/)).toBeVisible();
     // вернуть на доработку можно и без данных ERP
     fireEvent.change(within(form).getByLabelText("Комментарий"), {
       target: { value: "Обновите расчёт" },

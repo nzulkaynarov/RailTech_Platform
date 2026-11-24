@@ -113,14 +113,17 @@ def quote_pdf_filename(quote) -> str:
     return f"{safe}_v{quote.version}.pdf"
 
 
-def quote_document_extras(quote, seller_company) -> dict:
+def quote_document_extras(quote, seller_company, *, profile_row=None) -> dict:
     """The «фирменный бланк» extras shared by the КП PDF *and* its online twin (D1c): the resolved
     cover letter, the structured «Условия поставки», and the unified 3-line VAT totals. ONE builder
     so the PDF and the public page — the «оригинал» a client reaches by scanning the QR — can never
-    diverge. Read-only (never creates a profile/settings row)."""
+    diverge. Read-only (never creates a profile/settings row). `profile_row` — an in-memory profile with unsaved
+    blank settings (sample document); without it the saved profile is read."""
     from accounts.models import CompanyDocumentProfile, CompanySettings
 
-    doc_profile = CompanyDocumentProfile.objects.filter(company=seller_company).first() if seller_company else None
+    doc_profile = profile_row
+    if doc_profile is None and seller_company:
+        doc_profile = CompanyDocumentProfile.objects.filter(company=seller_company).first()
     seller_settings = CompanySettings.objects.filter(company=seller_company).first() if seller_company else None
     buyer = quote.deal.company
     from crm.services.document_blocks import format_document_date

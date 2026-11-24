@@ -1,7 +1,6 @@
 {
   "admin": {
     "title": "Company articles",
-    "subtitle": "How-we-do-it guides; everyone sees published ones in Help.",
     "listLabel": "Company articles",
     "new": "New article",
     "filtersLabel": "Article filter",
