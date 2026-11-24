@@ -4032,6 +4032,11 @@ export const getListEdsProjectsResponseMock = (
     request_number: faker.string.alpha({ length: { min: 10, max: 20 } }),
     title: faker.string.alpha({ length: { min: 10, max: 20 } }),
     client_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    client_id: faker.helpers.arrayElement([faker.number.int(), null]),
+    client_logo_url: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
     step: faker.helpers.arrayElement(["CONTRACT", "PAYMENT", "DONE"] as const),
     client_status: faker.helpers.arrayElement([
       "contract_review",
@@ -4449,6 +4454,11 @@ export const getGetEdsProjectResponseMock = (
   request_number: faker.string.alpha({ length: { min: 10, max: 20 } }),
   title: faker.string.alpha({ length: { min: 10, max: 20 } }),
   client_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  client_id: faker.helpers.arrayElement([faker.number.int(), null]),
+  client_logo_url: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
   step: faker.helpers.arrayElement(["CONTRACT", "PAYMENT", "DONE"] as const),
   client_status: faker.helpers.arrayElement([
     "contract_review",
@@ -4941,6 +4951,11 @@ export const getCreateEdsProjectContractResponseMock = (
   request_number: faker.string.alpha({ length: { min: 10, max: 20 } }),
   title: faker.string.alpha({ length: { min: 10, max: 20 } }),
   client_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  client_id: faker.helpers.arrayElement([faker.number.int(), null]),
+  client_logo_url: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
   step: faker.helpers.arrayElement(["CONTRACT", "PAYMENT", "DONE"] as const),
   client_status: faker.helpers.arrayElement([
     "contract_review",
@@ -5460,6 +5475,11 @@ export const getActEdsProjectContractResponseMock = (
   request_number: faker.string.alpha({ length: { min: 10, max: 20 } }),
   title: faker.string.alpha({ length: { min: 10, max: 20 } }),
   client_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  client_id: faker.helpers.arrayElement([faker.number.int(), null]),
+  client_logo_url: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
   step: faker.helpers.arrayElement(["CONTRACT", "PAYMENT", "DONE"] as const),
   client_status: faker.helpers.arrayElement([
     "contract_review",
@@ -5976,6 +5996,11 @@ export const getScanEdsProjectContractResponseMock = (
   request_number: faker.string.alpha({ length: { min: 10, max: 20 } }),
   title: faker.string.alpha({ length: { min: 10, max: 20 } }),
   client_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  client_id: faker.helpers.arrayElement([faker.number.int(), null]),
+  client_logo_url: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
   step: faker.helpers.arrayElement(["CONTRACT", "PAYMENT", "DONE"] as const),
   client_status: faker.helpers.arrayElement([
     "contract_review",
@@ -6492,6 +6517,11 @@ export const getRequestEdsProjectSigningResponseMock = (
   request_number: faker.string.alpha({ length: { min: 10, max: 20 } }),
   title: faker.string.alpha({ length: { min: 10, max: 20 } }),
   client_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  client_id: faker.helpers.arrayElement([faker.number.int(), null]),
+  client_logo_url: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
   step: faker.helpers.arrayElement(["CONTRACT", "PAYMENT", "DONE"] as const),
   client_status: faker.helpers.arrayElement([
     "contract_review",
@@ -7028,6 +7058,11 @@ export const getActEdsProjectActResponseMock = (
   request_number: faker.string.alpha({ length: { min: 10, max: 20 } }),
   title: faker.string.alpha({ length: { min: 10, max: 20 } }),
   client_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  client_id: faker.helpers.arrayElement([faker.number.int(), null]),
+  client_logo_url: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
   step: faker.helpers.arrayElement(["CONTRACT", "PAYMENT", "DONE"] as const),
   client_status: faker.helpers.arrayElement([
     "contract_review",
@@ -7535,6 +7570,11 @@ export const getScanEdsProjectActResponseMock = (
   request_number: faker.string.alpha({ length: { min: 10, max: 20 } }),
   title: faker.string.alpha({ length: { min: 10, max: 20 } }),
   client_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  client_id: faker.helpers.arrayElement([faker.number.int(), null]),
+  client_logo_url: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
   step: faker.helpers.arrayElement(["CONTRACT", "PAYMENT", "DONE"] as const),
   client_status: faker.helpers.arrayElement([
     "contract_review",
@@ -8042,6 +8082,11 @@ export const getMarkEdsProjectDeliveryResponseMock = (
   request_number: faker.string.alpha({ length: { min: 10, max: 20 } }),
   title: faker.string.alpha({ length: { min: 10, max: 20 } }),
   client_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  client_id: faker.helpers.arrayElement([faker.number.int(), null]),
+  client_logo_url: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
   step: faker.helpers.arrayElement(["CONTRACT", "PAYMENT", "DONE"] as const),
   client_status: faker.helpers.arrayElement([
     "contract_review",
@@ -13007,6 +13052,11 @@ export const getListPaymentsResponseMock = (
     project_number: faker.string.alpha({ length: { min: 10, max: 20 } }),
     deal_id: faker.number.int(),
     client_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    client_id: faker.helpers.arrayElement([faker.number.int(), null]),
+    client_logo_url: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
     amount: {
       amount: faker.helpers.fromRegExp("^-?\\d+\\.\\d{2}$"),
       currency: faker.helpers.fromRegExp("^[A-Z]{3}$"),
@@ -13398,6 +13448,11 @@ export const getGetPaymentResponseMock = (
   project_number: faker.string.alpha({ length: { min: 10, max: 20 } }),
   deal_id: faker.number.int(),
   client_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  client_id: faker.helpers.arrayElement([faker.number.int(), null]),
+  client_logo_url: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
   amount: {
     amount: faker.helpers.fromRegExp("^-?\\d+\\.\\d{2}$"),
     currency: faker.helpers.fromRegExp("^[A-Z]{3}$"),
@@ -13497,6 +13552,11 @@ export const getConfirmPaymentResponseMock = (
   project_number: faker.string.alpha({ length: { min: 10, max: 20 } }),
   deal_id: faker.number.int(),
   client_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  client_id: faker.helpers.arrayElement([faker.number.int(), null]),
+  client_logo_url: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
   amount: {
     amount: faker.helpers.fromRegExp("^-?\\d+\\.\\d{2}$"),
     currency: faker.helpers.fromRegExp("^[A-Z]{3}$"),
@@ -13596,6 +13656,11 @@ export const getAttachPaymentProofResponseMock = (
   project_number: faker.string.alpha({ length: { min: 10, max: 20 } }),
   deal_id: faker.number.int(),
   client_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  client_id: faker.helpers.arrayElement([faker.number.int(), null]),
+  client_logo_url: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
   amount: {
     amount: faker.helpers.fromRegExp("^-?\\d+\\.\\d{2}$"),
     currency: faker.helpers.fromRegExp("^[A-Z]{3}$"),
@@ -13698,6 +13763,11 @@ export const getRequestPaymentDocResponseMock = (
   project_number: faker.string.alpha({ length: { min: 10, max: 20 } }),
   deal_id: faker.number.int(),
   client_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  client_id: faker.helpers.arrayElement([faker.number.int(), null]),
+  client_logo_url: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
   amount: {
     amount: faker.helpers.fromRegExp("^-?\\d+\\.\\d{2}$"),
     currency: faker.helpers.fromRegExp("^[A-Z]{3}$"),
@@ -13797,6 +13867,11 @@ export const getIssuePaymentResponseMock = (
   project_number: faker.string.alpha({ length: { min: 10, max: 20 } }),
   deal_id: faker.number.int(),
   client_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  client_id: faker.helpers.arrayElement([faker.number.int(), null]),
+  client_logo_url: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
   amount: {
     amount: faker.helpers.fromRegExp("^-?\\d+\\.\\d{2}$"),
     currency: faker.helpers.fromRegExp("^[A-Z]{3}$"),
@@ -18879,6 +18954,11 @@ export const getListLettersResponseMock = (
     number: faker.string.alpha({ length: { min: 10, max: 20 } }),
     subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
     client_name: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    client_id: faker.helpers.arrayElement([faker.number.int(), null]),
+    client_logo_url: faker.helpers.arrayElement([
       faker.string.alpha({ length: { min: 10, max: 20 } }),
       null,
     ]),

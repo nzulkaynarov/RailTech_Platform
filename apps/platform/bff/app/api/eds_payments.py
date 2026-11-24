@@ -31,6 +31,7 @@ from app.eds_payments import (
     payments_error,
 )
 from app.errors import PlatformError
+from app.row_logos import attach_client_logos
 from app.schemas_eds_documents import EdsFile
 from app.schemas_eds_payments import (
     InvoiceTab,
@@ -148,7 +149,9 @@ async def list_payments(
 
 @router.get("/payments/{id}", response_model=PaymentCard, operation_id="getPayment")
 async def get_payment(id: InvoiceId, authed: Reader) -> PaymentCard:
-    return card_of(await Receivables(authed).card(id))
+    card = card_of(await Receivables(authed).card(id))
+    await attach_client_logos(authed, [card])
+    return card
 
 
 @router.post("/payments/{id}/confirm", response_model=PaymentCard, operation_id="confirmPayment")

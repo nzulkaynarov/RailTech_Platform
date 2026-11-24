@@ -20,6 +20,7 @@ from app.deps import Authed, require, require_any
 from app.eds_projects import ErpProjects, project_error
 from app.errors import PlatformError
 from app.rbac import allows
+from app.row_logos import attach_client_logos
 from app.schemas_eds_projects import (
     ActActionIn,
     ContractActionIn,
@@ -125,12 +126,16 @@ async def list_projects(
     text = (q or "").strip()
     if text:
         params["q"] = text  # номер сделки ERP ищет сам — по году и NNN, префикс не важен
-    return await _erp(authed).page(params)
+    page = await _erp(authed).page(params)
+    await attach_client_logos(authed, page.items)
+    return page
 
 
 @router.get("/projects/{ref}", response_model=ProjectCard, operation_id="getEdsProject")
 async def get_project(ref: Ref, authed: Reader) -> ProjectCard:
-    return await _erp(authed).card(ref)
+    card = await _erp(authed).card(ref)
+    await attach_client_logos(authed, [card])
+    return card
 
 
 # --- договор -----------------------------------------------------------------------------------

@@ -20925,6 +20925,12 @@ components:
           type: string
         client_name:
           type: string
+        client_id:
+          description: 'Компания клиента в ERP (для логотипа и ссылки); null — у строки её нет'
+          type: [integer, 'null']
+        client_logo_url:
+          description: 'Логотип компании клиента: наш адрес с `?v=<версия>` (ЕД-3, ЕД-5), только если у сотрудника есть доступ к карточкам контрагентов; null — буквы названия'
+          type: [string, 'null']
         step:
           description: 'Шаг пути заявки SPEC-v3 §2.3: CONTRACT — договор, PAYMENT — оплата (договор подписан), DONE — выполнено (акт подписан и счета оплачены)'
           enum: [CONTRACT, PAYMENT, DONE]
@@ -21322,6 +21328,10 @@ components:
           type: string
         client_name:
           type: string
+        client_id:
+          type: [integer, 'null']
+        client_logo_url:
+          type: [string, 'null']
         step:
           enum: [CONTRACT, PAYMENT, DONE]
           type: string
@@ -22390,6 +22400,8 @@ components:
         project_number: {type: string, examples: [ПР-2026-104]}
         deal_id: {type: integer}
         client_name: {type: string}
+        client_id: {type: [integer, 'null'], description: 'Компания клиента в ERP (для логотипа и ссылки); null — у строки её нет'}
+        client_logo_url: {type: [string, 'null'], description: 'Логотип компании клиента: наш адрес с `?v=<версия>` (ЕД-3, ЕД-5), только если у сотрудника есть доступ к карточкам контрагентов; null — буквы названия'}
         amount: {$ref: '#/components/schemas/PaymentMoney'}
         paid: {$ref: '#/components/schemas/PaymentMoney'}
         balance: {$ref: '#/components/schemas/PaymentMoney'}
@@ -22486,6 +22498,8 @@ components:
         project_number: {type: string}
         deal_id: {type: integer}
         client_name: {type: string}
+        client_id: {type: [integer, 'null'], description: 'Компания клиента в ERP (для логотипа и ссылки); null — у строки её нет'}
+        client_logo_url: {type: [string, 'null'], description: 'Логотип компании клиента: наш адрес с `?v=<версия>` (ЕД-3, ЕД-5), только если у сотрудника есть доступ к карточкам контрагентов; null — буквы названия'}
         amount: {$ref: '#/components/schemas/PaymentMoney'}
         paid: {$ref: '#/components/schemas/PaymentMoney'}
         balance: {$ref: '#/components/schemas/PaymentMoney'}
@@ -24934,6 +24948,8 @@ components:
           examples: [ВХ-104/26]
         subject: {type: string}
         client_name: {type: [string, 'null'], description: Название организации-отправителя}
+        client_id: {type: [integer, 'null'], description: 'Компания письма в ERP (из связей письма); null — письмо с ней не связано'}
+        client_logo_url: {type: [string, 'null'], description: 'Логотип компании клиента: наш адрес с `?v=<версия>` (ЕД-3, ЕД-5), только если у сотрудника есть доступ к карточкам контрагентов; null — буквы названия'}
         request_number:
           type: [string, 'null']
           description: Бизнес-номер заявки ЗВ из связей письма; `null` — письмо ещё не связано с заявкой

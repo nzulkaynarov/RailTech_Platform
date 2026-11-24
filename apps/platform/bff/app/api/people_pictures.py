@@ -14,7 +14,7 @@ from pydantic import BaseModel, ConfigDict
 
 from app.api.people_contacts import CounterpartyCard, RequisitesWriter, to_card
 from app.clients.erp_company import ErpCompany
-from app.deps import Authed, require_any
+from app.deps import Authed, Rule, require_any
 from app.errors import PlatformError
 from app.schemas_pictures import company_logo_url, contact_photo_url
 
@@ -24,7 +24,14 @@ CompanyId = Annotated[str, Path(pattern=r"^[0-9]+$")]
 ContactId = Annotated[str, Path(pattern=r"^[0-9]+$")]
 Size = Annotated[str | None, Query(pattern=r"^(row|full)$")]
 # Логотип видят там, где видна карточка контрагента; фото — ещё и в списке «Люди»
-LogoReader = Annotated[Authed, Depends(require_any(("crm.clients", "read"), ("erp.stock", "read")))]
+LOGO_SECTIONS: tuple[Rule, ...] = (
+    ("crm.clients", "read"),
+    ("erp.stock", "read"),
+    ("eds.projects", "read"),
+    ("eds.payments", "read"),
+    ("eds.inbox", "read"),
+)
+LogoReader = Annotated[Authed, Depends(require_any(*LOGO_SECTIONS))]
 PhotoReader = Annotated[
     Authed,
     Depends(

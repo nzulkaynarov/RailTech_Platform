@@ -67,6 +67,10 @@ class Backends:
         # CRM «думает» (хеширование пароля): окно для второй вкладки
         self.change_password_delay = 0.0
         self.must_change = False
+        # ERP: версии логотипов компаний для строк реестров (ЕД-3); по умолчанию ни у кого нет
+        self.erp_logos = router.get(f"{ERP_URL}/api/v1/parties/organizations/logos/").mock(
+            return_value=httpx.Response(200, json={"results": {}})
+        )
         self.crm_login = router.post(f"{CRM_URL}/api/v1/auth/login").mock(side_effect=self._login)
         self.crm_me = router.get(f"{CRM_URL}/api/v1/me").mock(side_effect=self._me)
         self.crm_refresh = router.post(f"{CRM_URL}/api/v1/auth/refresh").mock(

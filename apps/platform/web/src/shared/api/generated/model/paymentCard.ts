@@ -15,6 +15,16 @@ export interface PaymentCard {
   project_number: string;
   deal_id: number;
   client_name: string;
+  /**
+   * Компания клиента в ERP (для логотипа и ссылки); null — у строки её нет
+   * @nullable
+   */
+  client_id?: number | null;
+  /**
+   * Логотип компании клиента: наш адрес с `?v=<версия>` (ЕД-3, ЕД-5), только если у сотрудника есть доступ к карточкам контрагентов; null — буквы названия
+   * @nullable
+   */
+  client_logo_url?: string | null;
   amount: PaymentMoney;
   paid: PaymentMoney;
   balance: PaymentMoney;

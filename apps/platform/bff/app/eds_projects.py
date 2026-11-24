@@ -430,6 +430,7 @@ def row(raw: RawRow) -> ProjectRow:
         request_number=project_number(raw),  # заявка и проект — один объект, один номер
         title=raw.title or raw.company_name or project_number(raw),
         client_name=raw.company_name,
+        client_id=raw.company_id,
         step=raw.step,
         client_status=raw.client_status,
         total=raw.total,
