@@ -8747,6 +8747,36 @@ paths:
           $ref: '#/components/responses/ForbiddenResponse'
         '404':
           $ref: '#/components/responses/NotFoundResponse'
+  /api/v1/crm/acts/{id}/client-links/:
+    get:
+      operationId: crm_acts_client_links_retrieve
+      description: 'Every personal link the document went out with: masked address, sent, opened, state (`active`, `revoked`,
+        `expired`, `superseded`). Same right as sending the document; links of other documents are never listed.'
+      summary: Recipient links of the document in the Cabinet
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Акт.
+        required: true
+      tags:
+      - CRM
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentClientLinks'
+          description: ''
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+        '403':
+          $ref: '#/components/responses/ForbiddenResponse'
+        '404':
+          $ref: '#/components/responses/NotFoundResponse'
   /api/v1/crm/acts/{id}/download-pdf/:
     get:
       operationId: crm_acts_download_pdf_retrieve
@@ -8996,6 +9026,37 @@ paths:
           description: ''
         '400':
           $ref: '#/components/responses/BadRequestResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+        '403':
+          $ref: '#/components/responses/ForbiddenResponse'
+        '404':
+          $ref: '#/components/responses/NotFoundResponse'
+  /api/v1/crm/acts/{id}/revoke-client-links/:
+    post:
+      operationId: crm_acts_revoke_client_links_create
+      description: Pulls every live link of THIS document (all recipients); idempotent, journal event `<kind>.link_revoked`.
+        Further opens answer 410 `DOC_LINK_REVOKED`. Same right as sending the document. The response carries the refreshed
+        list.
+      summary: Revoke the Cabinet links of the document
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Акт.
+        required: true
+      tags:
+      - CRM
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentClientLinks'
+          description: ''
         '401':
           $ref: '#/components/responses/UnauthorizedResponse'
         '403':
@@ -9851,6 +9912,36 @@ paths:
             отправка договора клиенту до сбора виз — в теле `reason` (причина словами) и `missing` (роли без визы)'
         '401':
           $ref: '#/components/responses/UnauthorizedResponse'
+  /api/v1/crm/contracts/{id}/client-links/:
+    get:
+      operationId: crm_contracts_client_links_retrieve
+      description: 'Every personal link the document went out with: masked address, sent, opened, state (`active`, `revoked`,
+        `expired`, `superseded`). Same right as sending the document; links of other documents are never listed.'
+      summary: Recipient links of the document in the Cabinet
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Контракт.
+        required: true
+      tags:
+      - CRM
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentClientLinks'
+          description: ''
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+        '403':
+          $ref: '#/components/responses/ForbiddenResponse'
+        '404':
+          $ref: '#/components/responses/NotFoundResponse'
   /api/v1/crm/contracts/{id}/decide-deviation/:
     post:
       operationId: crm_contracts_decide_deviation_create
@@ -10269,6 +10360,37 @@ paths:
             отправка договора клиенту до сбора виз — в теле `reason` (причина словами) и `missing` (роли без визы)'
         '401':
           $ref: '#/components/responses/UnauthorizedResponse'
+  /api/v1/crm/contracts/{id}/revoke-client-links/:
+    post:
+      operationId: crm_contracts_revoke_client_links_create
+      description: Pulls every live link of THIS document (all recipients); idempotent, journal event `<kind>.link_revoked`.
+        Further opens answer 410 `DOC_LINK_REVOKED`. Same right as sending the document. The response carries the refreshed
+        list.
+      summary: Revoke the Cabinet links of the document
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Контракт.
+        required: true
+      tags:
+      - CRM
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentClientLinks'
+          description: ''
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+        '403':
+          $ref: '#/components/responses/ForbiddenResponse'
+        '404':
+          $ref: '#/components/responses/NotFoundResponse'
   /api/v1/crm/contracts/{id}/select-wording/:
     post:
       operationId: crm_contracts_select_wording_create
@@ -12718,6 +12840,36 @@ paths:
           $ref: '#/components/responses/ForbiddenResponse'
         '404':
           $ref: '#/components/responses/NotFoundResponse'
+  /api/v1/crm/invoices/{id}/client-links/:
+    get:
+      operationId: crm_invoices_client_links_retrieve
+      description: 'Every personal link the document went out with: masked address, sent, opened, state (`active`, `revoked`,
+        `expired`, `superseded`). Same right as sending the document; links of other documents are never listed.'
+      summary: Recipient links of the document in the Cabinet
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Инвойс.
+        required: true
+      tags:
+      - CRM
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentClientLinks'
+          description: ''
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+        '403':
+          $ref: '#/components/responses/ForbiddenResponse'
+        '404':
+          $ref: '#/components/responses/NotFoundResponse'
   /api/v1/crm/invoices/{id}/download-pdf/:
     get:
       operationId: crm_invoices_download_pdf_retrieve
@@ -12952,6 +13104,37 @@ paths:
           description: ''
         '400':
           $ref: '#/components/responses/BadRequestResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+        '403':
+          $ref: '#/components/responses/ForbiddenResponse'
+        '404':
+          $ref: '#/components/responses/NotFoundResponse'
+  /api/v1/crm/invoices/{id}/revoke-client-links/:
+    post:
+      operationId: crm_invoices_revoke_client_links_create
+      description: Pulls every live link of THIS document (all recipients); idempotent, journal event `<kind>.link_revoked`.
+        Further opens answer 410 `DOC_LINK_REVOKED`. Same right as sending the document. The response carries the refreshed
+        list.
+      summary: Revoke the Cabinet links of the document
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Инвойс.
+        required: true
+      tags:
+      - CRM
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentClientLinks'
+          description: ''
         '401':
           $ref: '#/components/responses/UnauthorizedResponse'
         '403':
@@ -29634,6 +29817,19 @@ components:
       - seller_name
       - signatory_name
       - signatory_position
+    DocumentClientLinks:
+      type: object
+      properties:
+        links:
+          type: array
+          items:
+            $ref: '#/components/schemas/DocumentRecipientLink'
+        can_revoke:
+          type: boolean
+          description: Есть живая ссылка, и у вызывающего есть право отправлять документ
+      required:
+      - can_revoke
+      - links
     DocumentEnum:
       enum:
       - contract
@@ -29706,6 +29902,41 @@ components:
           type: object
           additionalProperties: {}
           description: Unsaved document-profile fields overlaid in memory (never saved)
+    DocumentRecipientLink:
+      type: object
+      description: Одна ссылка получателя; адрес только замаскированный.
+      properties:
+        id:
+          type: integer
+        recipient_hint:
+          type: string
+          description: 'Адрес получателя, замаскированный: `a***@domain`'
+        sent_at:
+          type: string
+          format: date-time
+          description: Когда ссылка выпущена (письмо ушло)
+        first_opened_at:
+          type: string
+          format: date-time
+          nullable: true
+        last_opened_at:
+          type: string
+          format: date-time
+          nullable: true
+        expires_at:
+          type: string
+          format: date-time
+        state:
+          type: string
+          description: '`active`, `revoked`, `expired` или `superseded`'
+      required:
+      - expires_at
+      - first_opened_at
+      - id
+      - last_opened_at
+      - recipient_hint
+      - sent_at
+      - state
     DocumentTemplate:
       type: object
       description: Company template CRUD. `company`/`placeholders_used` are server-derived.

@@ -540,6 +540,52 @@ def revoke_document_links(kind: str, doc, actor) -> int:
     return len(links)
 
 
+def revoke_document_links_logged(kind: str, doc, actor) -> int:
+    """«Отозвать ссылку» из карточки договора, счёта или акта (ДК-3б): отзыв всех живых ссылок документа и событие в
+    журнале сделки — кто и когда; повтор без живых ссылок ничего не пишет."""
+    from crm.models import ActivityLog
+
+    count = revoke_document_links(kind, doc, actor)
+    if count:
+        deal = spec_of(kind).deal(doc)
+        ActivityLog.objects.create(
+            action=f"Ссылка на {_WORDS[kind]} отозвана",
+            detail=f"{doc.number or '—'}",
+            user=actor,
+            level="INFO",
+            entity_type=kind,
+            entity_id=doc.pk,
+            deal_id=deal.pk,
+            company_id=deal.company_id,
+            event_code=f"{kind}.link_revoked",
+            event_params={"number": doc.number or "—", "links": count},
+        )
+    return count
+
+
+def document_link_rows(kind: str, doc) -> list[dict]:
+    """Ссылки получателей документа для карточки в Платформе: адрес только замаскированный, состояние выводится из тех же
+    фактов, по которым ссылка открывается у клиента (`link_gone_reason`): `active`, `revoked`, `expired`, `superseded`.
+    Новые сверху; ссылки других документов не попадают."""
+    links = (
+        DocumentLink.objects.filter(kind=kind, **{kind: doc})
+        .select_related(*select_related_all())
+        .order_by("-created_at", "-pk")
+    )
+    return [
+        {
+            "id": link.pk,
+            "recipient_hint": mask_email(link.recipient_email),
+            "sent_at": link.created_at,
+            "first_opened_at": link.first_opened_at,
+            "last_opened_at": link.last_opened_at,
+            "expires_at": link.expires_at,
+            "state": link_gone_reason(link) or "active",
+        }
+        for link in links
+    ]
+
+
 # ── Что видит отправитель ────────────────────────────────────────────────────────────────────────────────────────
 
 
