@@ -89,6 +89,8 @@ class StockReservation(BaseModel):
     id: str
     product_id: str
     product_name: str
+    #: ЕД-4: позиция с миниатюрой и нашим артикулом; `None` — старая ERP без `item`
+    item: ItemRef | None = None
     request: StockRequestRef
     line_id: str | None
     quantity: float
@@ -208,6 +210,7 @@ class SupplierOrderLine(BaseModel):
 
 class StockDoneReceiptLine(BaseModel):
     name: str
+    item: ItemRef | None = None
     quantity: float
     cell: str | None
     units: list[str]
@@ -286,6 +289,7 @@ class StockPendingReceiptLine(BaseModel):
     overdue: bool
     order_line_id: str
     name: str
+    item: ItemRef | None = None
     article: str
     unit: str
     quantity: float
@@ -320,6 +324,7 @@ class StockShipmentUnit(BaseModel):
 
 class StockShipmentLine(BaseModel):
     product_id: str
+    item: ItemRef | None = None
     name: str
     quantity: float
     cell: str | None
@@ -345,6 +350,7 @@ class StockShipmentList(BaseModel):
 
 class StockTraceProduct(BaseModel):
     id: str
+    item: ItemRef | None = None
     name: str
     article: str
 
@@ -649,6 +655,7 @@ def to_reservation(raw: Mapping[str, Any]) -> StockReservation:
         id=str(raw["id"]),
         product_id=str(raw["product_id"]),
         product_name=raw["product_name"],
+        item=item_ref(raw.get("item")),
         request=_require_ref(raw.get("deal")),
         line_id=_id(raw.get("quote_item_id")),
         quantity=raw["quantity"],
@@ -684,6 +691,7 @@ def _offer(raw: Any) -> SupplierOrderLineOffer | None:
 def _receipt_line(rl: Mapping[str, Any]) -> dict[str, Any]:
     return {
         "name": rl["name"],
+        "item": item_ref(rl.get("item")),
         "quantity": rl["quantity"],
         "cell": rl.get("cell"),
         "units": list(rl.get("units") or []),
@@ -889,6 +897,7 @@ def to_receipts(raw: Mapping[str, Any]) -> StockReceipts:
                 overdue=bool(p.get("overdue")),
                 order_line_id=str(p["order_line_id"]),
                 name=p["name"],
+                item=item_ref(p.get("item")),
                 article=p.get("article") or "",
                 unit=p.get("unit") or "",
                 quantity=p["quantity"],
@@ -930,6 +939,7 @@ def to_shipment(raw: Mapping[str, Any]) -> StockShipment:
         lines=[
             StockShipmentLine(
                 product_id=str(x["product_id"]),
+                item=item_ref(x.get("item")),
                 name=x["name"],
                 quantity=x["quantity"],
                 cell=x.get("cell"),
@@ -959,6 +969,7 @@ def to_trace(raw: Mapping[str, Any]) -> StockTraceList:
                 status=u["status"],
                 product=StockTraceProduct(
                     id=str(u["product"]["id"]),
+                    item=item_ref(u["product"].get("item")),
                     name=u["product"]["name"],
                     article=u["product"].get("article") or "",
                 ),
