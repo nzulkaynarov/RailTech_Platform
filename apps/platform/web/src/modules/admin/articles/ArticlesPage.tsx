@@ -345,7 +345,6 @@ export function ArticlesPage() {
     <>
       <PageHeader
         title={title}
-        subtitle={t("admin.subtitle")}
         extra={
           editable && !editing ? (
             <Button

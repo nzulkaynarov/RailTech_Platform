@@ -134,7 +134,7 @@ export function AuditPage() {
 
   return (
     <>
-      <PageHeader title={title} subtitle={t("audit:page.subtitle")} />
+      <PageHeader title={title} />
       <JournalFilter current="people" />
       <div ref={blockRef}>
         <AuditList

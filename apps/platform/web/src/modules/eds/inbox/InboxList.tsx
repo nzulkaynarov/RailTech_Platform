@@ -411,7 +411,6 @@ export function InboxList() {
     <div className="pf-letters">
       <PageHeader
         title={title}
-        subtitle={t("letters:list.subtitle")}
         extra={
           canRegister ? (
             <LinkButton type="primary" to="/eds/register">

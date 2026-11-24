@@ -1,4 +1,5 @@
-import { screen } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { axe } from 'vitest-axe';
 
@@ -76,4 +77,11 @@ export function captureText(path: string): { current: string | null } {
     }
   });
   return captured;
+}
+
+/** Компактный список «Требует вашего решения» показывает первые строки: «Показать все» раскрывает остальные. */
+export async function showAllDecisions(region: HTMLElement) {
+  const button = within(region).queryByRole('button', { name: /^Показать все/ });
+  if (button) await userEvent.setup().click(button);
+  return region;
 }

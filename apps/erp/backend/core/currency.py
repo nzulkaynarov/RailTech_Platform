@@ -5,4 +5,16 @@
 документа не указана, код берёт `BASE_CURRENCY`, а не строку «UZS».
 """
 
+from decimal import ROUND_HALF_UP, Decimal
+
 BASE_CURRENCY = "UZS"
+
+MONEY_QUANT = Decimal("0.01")
+
+
+def line_amount(unit_price, quantity) -> Decimal:
+    """Сумма строки без НДС — единое правило (UBL LineExtensionAmount): цена × количество, округление до копейки
+    ROUND_HALF_UP. Количество хранится с 3 знаками, цена с 2, поэтому произведение бывает с 5 знаками; сумма документа
+    считается как Σ уже округлённых строк, иначе строки счёта не сходятся с его итогом. Стоимость/маржу этим не считать.
+    """
+    return (Decimal(unit_price) * Decimal(quantity)).quantize(MONEY_QUANT, rounding=ROUND_HALF_UP)

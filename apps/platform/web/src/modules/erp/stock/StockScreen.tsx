@@ -56,7 +56,7 @@ export function StockScreen() {
   }
   return (
     <div className="pf-calc pf-stock">
-      <PageHeader title={t("title")} subtitle={t("subtitle")} />
+      <PageHeader title={t("title")} />
       <TabsBar
         id="pf-stock-tabs"
         label={t("title")}

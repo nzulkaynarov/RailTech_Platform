@@ -149,6 +149,7 @@
     "needed": "To finish this step:",
     "remaining": "Remaining:"
   },
+  "readOnly": "View only",
   "rowActions": {
     "label": "Actions: {{name}}"
   },

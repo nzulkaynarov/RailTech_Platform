@@ -21,14 +21,12 @@
     "responsible": "Masʼul",
     "deputy": "Örinbosar",
     "curator": "Kurator",
-    "problems": "Muammolar",
-    "actions": "Amallar"
+    "problems": "Muammolar"
   },
   "notAssigned": "Tayinlanmagan",
   "personInactive": "öçirilgan",
   "noProblems": "Hammasi joyida",
   "off": "Öçirilgan",
-  "open": "Oçiş",
   "openNamed": "«{{name}}» zonasini oçiş",
   "problem": {
     "no_responsible": "Masʼul yöq",

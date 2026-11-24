@@ -595,17 +595,58 @@ export function DocumentsPage() {
     </QueryState>
   );
 
+  const filterBar = (
+    <FilterBar tools>
+      {canViewAll ? (
+        <Segmented
+          aria-label={t("documents:list.scope.label")}
+          value={scope}
+          options={[
+            { value: "mine", label: t("documents:list.scope.mine") },
+            { value: "all", label: t("documents:list.scope.all") },
+          ]}
+          onChange={(value) => {
+            setFilter({ scope: value, kind: null, status: null, doc: null, panel: null });
+          }}
+        />
+      ) : null}
+      {mobile ? (
+        <FilterField id="pf-docs-kind" label={t("documents:list.tabs.label")}>
+          <Select
+            id="pf-docs-kind"
+            value={tab}
+            options={kindTabs.map((key) => ({
+              value: key,
+              label: t(`documents:list.tabs.${key}`),
+            }))}
+            onChange={(key) => {
+              setFilter({ kind: key === "all" ? null : key });
+            }}
+          />
+        </FilterField>
+      ) : null}
+      <FilterField id="pf-docs-status" label={t("documents:list.status.label")} width={240}>
+        <Select
+          id="pf-docs-status"
+          value={status}
+          options={[
+            { value: "", label: t("documents:list.status.any") },
+            ...statuses.map((value) => ({
+              value,
+              label: t(`documents:status.filter.${value}`),
+            })),
+          ]}
+          onChange={(value) => {
+            setFilter({ status: value === "" ? null : value });
+          }}
+        />
+      </FilterField>
+    </FilterBar>
+  );
   return (
     <div className="pf-docs">
       <PageHeader
         title={title}
-        {...(box
-          ? {}
-          : {
-              subtitle: t(
-                shownScope === "all" ? "documents:list.subtitleAll" : "documents:list.subtitle",
-              ),
-            })}
         {...(canSee(me, { resource: "company.settings" })
           ? {
               // ЕВ-3а: «Шаблоны» ушли из меню «Документов» — вход отсюда и из «Настроек · Компания»
@@ -613,70 +654,27 @@ export function DocumentsPage() {
             }
           : {})}
       />
-      <FilterBar tools>
-        {canViewAll ? (
-          <Segmented
-            aria-label={t("documents:list.scope.label")}
-            value={scope}
-            options={[
-              { value: "mine", label: t("documents:list.scope.mine") },
-              { value: "all", label: t("documents:list.scope.all") },
-            ]}
-            onChange={(value) => {
-              setFilter({ scope: value, kind: null, status: null, doc: null, panel: null });
-            }}
-          />
-        ) : null}
-        {mobile ? (
-          <FilterField id="pf-docs-kind" label={t("documents:list.tabs.label")}>
-            <Select
-              id="pf-docs-kind"
-              value={tab}
-              options={kindTabs.map((key) => ({
-                value: key,
-                label: t(`documents:list.tabs.${key}`),
-              }))}
-              onChange={(key) => {
-                setFilter({ kind: key === "all" ? null : key });
-              }}
-            />
-          </FilterField>
-        ) : null}
-        <FilterField id="pf-docs-status" label={t("documents:list.status.label")} width={240}>
-          <Select
-            id="pf-docs-status"
-            value={status}
-            options={[
-              { value: "", label: t("documents:list.status.any") },
-              ...statuses.map((value) => ({
-                value,
-                label: t(`documents:status.filter.${value}`),
-              })),
-            ]}
-            onChange={(value) => {
-              setFilter({ status: value === "" ? null : value });
-            }}
-          />
-        </FilterField>
-      </FilterBar>
-      <Card styles={{ body: { padding: 0 } }}>
-        {mobile ? (
-          body
-        ) : (
-          <TabsBar
-            id="pf-docs-tabs"
-            label={t("documents:list.tabs.label")}
-            activeKey={tab}
-            onChange={(key) => {
-              setFilter({ kind: key === "all" ? null : key });
-            }}
-            tabBarStyle={{ margin: 0, padding: "0 16px" }}
-            items={kindTabs.map((key) => ({ key, label: t(`documents:list.tabs.${key}`) }))}
-          >
-            {body}
-          </TabsBar>
-        )}
-      </Card>
+      {mobile ? (
+        <>
+          {filterBar}
+          <Card styles={{ body: { padding: 0 } }}>{body}</Card>
+        </>
+      ) : (
+        // Одна строка вкладок видов, под ней одна строка фильтров и рамка списка
+        <TabsBar
+          id="pf-docs-tabs"
+          label={t("documents:list.tabs.label")}
+          activeKey={tab}
+          onChange={(key) => {
+            setFilter({ kind: key === "all" ? null : key });
+          }}
+          items={kindTabs.map((key) => ({ key, label: t(`documents:list.tabs.${key}`) }))}
+          stack
+        >
+          {filterBar}
+          <Card styles={{ body: { padding: 0 } }}>{body}</Card>
+        </TabsBar>
+      )}
       {docId ? <DocumentSheet id={docId} /> : null}
     </div>
   );

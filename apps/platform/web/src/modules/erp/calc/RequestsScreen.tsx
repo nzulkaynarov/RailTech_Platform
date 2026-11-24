@@ -243,7 +243,7 @@ export function RequestsScreen() {
 
   return (
     <div className="pf-calc">
-      <PageHeader title={title} subtitle={t("calc:list.subtitle")} />
+      <PageHeader title={title} />
       <Segmented
         aria-label={t("calc:list.scope.label")}
         value={mine ? "mine" : "all"}

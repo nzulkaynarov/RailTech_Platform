@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { useAppName } from '@/i18n/operator';
 import { Check } from 'lucide-react';
 
 import { apiErrorKey } from '@/api/errors';
@@ -30,6 +32,7 @@ const ORDER: Kind[] = ['terms', 'privacy'];
  */
 export function LegalAcceptancePage() {
   const { t, i18n } = useTranslation();
+  const appName = useAppName();
   const lang = localeFor(i18n.resolvedLanguage ?? i18n.language).code as LegalLang;
   const mode = useAppMode();
   const legal = useLegal();
@@ -74,7 +77,7 @@ export function LegalAcceptancePage() {
       <header className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
         <div className="flex items-center gap-3">
           <BrandMark />
-          <p className="text-sm font-semibold">{t('app.name')}</p>
+          <p className="text-sm font-semibold">{appName}</p>
         </div>
         <LanguageSwitcher />
       </header>

@@ -1,5 +1,6 @@
 import { Button, Drawer, Layout } from "antd";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { Link, Outlet, useLocation } from "react-router";
 
@@ -33,6 +34,7 @@ import {
   PANEL_DEFAULT,
   PANEL_WIDE,
 } from "../../shared/ui/ContextPanel";
+import { PageTabsSlotContext } from "../../shared/ui/pageTabsSlot";
 import { ModuleMenu, ModuleMenuContent, type MenuItem } from "../../shared/ui/ModuleMenu";
 import { useTaskCountTitle } from "../../shared/lib/useTaskCountTitle";
 import { ModuleRail, type RailModule } from "../../shared/ui/ModuleRail";
@@ -89,6 +91,9 @@ export function AppShell() {
   const [menuDrawer, setMenuDrawer] = useState(false);
   const [bellOpen, setBellOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
+  // Вкладки раздела — под заголовком страницы (`PageHeader` объявляет место), без заголовка — над страницей
+  const [tabsSlot, setTabsSlot] = useState<HTMLElement | null>(null);
+  const tabsSlotValue = useMemo(() => ({ target: tabsSlot, register: setTabsSlot }), [tabsSlot]);
   const { fresh: helpFresh } = useWhatsNew();
   const searchRef = useRef<HTMLInputElement>(null);
 
@@ -291,6 +296,21 @@ export function AppShell() {
     : undefined;
   const shellTabs = activeResolved?.tabs ?? [];
   const activeItemLabel = nav ? itemLabel(nav.module, nav.item) : "";
+  const sectionTabs =
+    shellTabs.length > 1 ? (
+      <nav className="pf-shell-tabs" aria-label={activeItemLabel}>
+        {shellTabs.map((tab) => (
+          <Link
+            key={tab.key}
+            to={tab.to}
+            className="pf-shell-tab pf-focusable"
+            aria-current={nav?.tab?.key === tab.key ? "page" : undefined}
+          >
+            {t(tab.label ?? `modules:${activeModule.code}.nav.${tab.key}`)}
+          </Link>
+        ))}
+      </nav>
+    ) : null;
 
   const action = viewport.mobile ? <CreateMenu block /> : undefined;
 
@@ -529,21 +549,10 @@ export function AppShell() {
             }}
           >
             {setupBannerLate ? null : <SetupBanner />}
-            {shellTabs.length > 1 ? (
-              <nav className="pf-shell-tabs" aria-label={activeItemLabel}>
-                {shellTabs.map((tab) => (
-                  <Link
-                    key={tab.key}
-                    to={tab.to}
-                    className="pf-shell-tab pf-focusable"
-                    aria-current={nav?.tab?.key === tab.key ? "page" : undefined}
-                  >
-                    {t(tab.label ?? `modules:${activeModule.code}.nav.${tab.key}`)}
-                  </Link>
-                ))}
-              </nav>
-            ) : null}
-            <Outlet />
+            {sectionTabs && tabsSlot ? createPortal(sectionTabs, tabsSlot) : sectionTabs}
+            <PageTabsSlotContext.Provider value={tabsSlotValue}>
+              <Outlet />
+            </PageTabsSlotContext.Provider>
             {/* Чек-лист ответил после показа экрана — баннер под экраном, готовый экран не сдвигается (UX-2b) */}
             {setupBannerLate ? <SetupBanner /> : null}
           </Layout.Content>

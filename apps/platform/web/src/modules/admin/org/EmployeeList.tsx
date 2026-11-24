@@ -102,7 +102,7 @@ export function EmployeeList({
         {
           id: "employee",
           header: t("admin.org.columns.employee"),
-          width: 286,
+          width: 240,
           cell: (employee) => (
             <PersonCell
               name={employee.name}
@@ -122,26 +122,29 @@ export function EmployeeList({
         {
           id: "position",
           header: t("admin.org.columns.position"),
-          width: 209,
+          width: 150,
+          priority: 1,
+          truncate: true,
           cell: (employee) =>
             employee.position ?? <span className="pf-hint">{t("admin.org.noPosition")}</span>,
         },
         {
           id: "roles",
           header: t("admin.org.columns.roles"),
-          width: 209,
+          width: 150,
           cell: (employee) => <RoleTags roles={employee.roles} />,
         },
         {
           id: "access",
           header: t("admin.org.columns.access"),
-          width: 220,
+          width: 200,
+          priority: 2,
           cell: (employee) => <AccessTags employee={employee} />,
         },
         {
           id: "status",
           header: t("admin.org.columns.status"),
-          width: 176,
+          width: 120,
           cell: (employee) => <EmployeeStatusTag status={employee.status} />,
         },
       ]}

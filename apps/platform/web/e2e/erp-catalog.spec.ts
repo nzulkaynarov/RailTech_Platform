@@ -12,6 +12,7 @@ import {
   partnerCard,
 } from "./support/app";
 import { pickFiles } from "./support/fields";
+import { expectFitsFrame } from "./support/layout";
 
 // Расчёт · Номенклатура и партнёры и Техдокументация на MSW (D2-3). Снабженец: находит позицию, открывает партнёра с ценами
 // и сроком цены, подаёт запрос на категорию; директор (company.settings) одобряет его; гл. инженер: бригады со ставками,
@@ -145,6 +146,7 @@ test.describe("Товары", () => {
     await expect(page.getByRole("button", { name: /Открыть позицию Реле/ })).toHaveCount(0);
     await expectNoViolations(page, "номенклатура");
     await settledScreenshot(page, "catalog-items");
+    await expectFitsFrame(page, "catalog-items");
 
     // карточка позиции: предложения с ценой, квотой и сроком цены
     await open.click();

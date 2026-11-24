@@ -75,24 +75,24 @@ tr > td.pf-col-num {
   min-width: 0;
   flex: 1 1 auto;
 }
+/* Шкала: семь равных колонок, круг сверху, подпись под ним в несколько строк — подпись не обрезается и не пропадает, пока
+   в блоке есть 480 px (одно поведение для всех шкал); уже — подпись только у текущего шага (ниже) */
 .pf-steps {
-  display: flex;
-  align-items: center;
-  gap: 6px;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   margin: 0;
   padding: 0;
   list-style: none;
 }
 .pf-step {
   position: relative;
-  flex: 1 1 0;
   min-width: 0;
   display: flex;
+  flex-direction: column;
   align-items: center;
   gap: 6px;
-}
-.pf-step:last-child {
-  flex: 0 0 auto;
+  padding-inline: 2px;
+  text-align: center;
 }
 .pf-step-num {
   flex: 0 0 24px;
@@ -122,10 +122,10 @@ tr > td.pf-col-num {
 }
 .pf-step-label {
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  max-width: 100%;
+  overflow-wrap: break-word;
   font-size: 12px;
+  line-height: 16px;
   color: var(--rt-color-text-default);
 }
 .pf-step--upcoming .pf-step-label {
@@ -135,9 +135,12 @@ tr > td.pf-col-num {
   color: var(--rt-color-primary-text);
   font-weight: 500;
 }
+/* Соединитель — от края своего круга до края круга следующего шага */
 .pf-step-line {
-  flex: 1 1 8px;
-  min-width: 8px;
+  position: absolute;
+  top: 12px;
+  left: calc(50% + 18px);
+  right: calc(-50% + 18px);
   height: 1px;
   background: var(--rt-color-surface-split);
 }
@@ -149,16 +152,29 @@ tr > td.pf-col-num {
   align-items: center;
   gap: 12px;
 }
-/* Узко (< 640 px): подпись только у текущего шага, остальные — кружки с номером; имена остаются для скринридера */
-@container (max-width: 640px) {
+/* Узко (< 480 px, телефон): подпись только у текущего шага, остальные — кружки с номером; имена остаются для скринридера */
+@container (max-width: 479px) {
   .pf-steps {
+    display: flex;
+    align-items: center;
     gap: 4px;
   }
   .pf-step {
+    flex: 1 1 0;
+    flex-direction: row;
     gap: 4px;
+    padding-inline: 0;
+    text-align: left;
+  }
+  .pf-step:last-child {
+    flex: 0 0 auto;
+  }
+  .pf-step--current {
+    flex: 0 1 auto;
   }
   .pf-step-line {
-    flex-basis: 0;
+    position: static;
+    flex: 1 1 0;
     min-width: 0;
   }
   .pf-step:not(.pf-step--current) .pf-step-label {
@@ -169,9 +185,6 @@ tr > td.pf-col-num {
     padding: 0;
     overflow: hidden;
     clip: rect(0 0 0 0);
-  }
-  .pf-step--current {
-    flex: 0 1 auto;
   }
 }
 
@@ -774,7 +787,7 @@ tr > td.pf-col-num {
   white-space: nowrap;
 }
 .pf-filter-field--grow {
-  flex: 1 1 240px;
+  flex: 1 1 200px;
   width: auto;
   min-width: 200px;
 }

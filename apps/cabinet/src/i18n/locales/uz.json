@@ -446,6 +446,7 @@
   },
   "pages": {
     "requests": {
+        "rowMenu": "{{number}} ariza amallari",
       "title": "Arizalar",
       "new": "Yangi ariza",
       "filterLabel": "Arizalarni holat boʻyicha filtrlash",
@@ -1429,6 +1430,8 @@
   },
   "widgets": {
     "actionRequired": {
+        "showAll": "Barçasi ({{count}})",
+        "showLess": "Yopiş",
       "title": "Qaroringiz kutilmoqda",
       "allClear": "Barcha hujjatlar koʻrib chiqilgan — hozirda hech qanday harakat talab etilmaydi.",
       "quoteBadge": "TK",
@@ -1830,6 +1833,8 @@
     }
   },
   "onboarding": {
+    "expand": "Körsatiş",
+    "allDoneShort": "Barça qadamlar bajarildi",
     "title": "Kabinetdagi dastlabki qadamlar",
     "progress": "{{done}} / {{total}} bajarildi",
     "dismiss": "Yashirish",
@@ -1914,18 +1919,18 @@
     "memberNote": "Siz {{name}} sifatida kirgansiz — kod kerak emas.",
     "linkUntil": "Havola {{date}} gaça amal qiladi — yuboruvçi uni bekor qilişi mumkin.",
     "state": {
-      "accepted": "Taklif qabul qilindi. Şartnoma Kabinetingizda paydo böladi.",
+      "accepted": "Taklif qabul qilindi. Şartnoma kabinetingizda paydo böladi.",
       "rejected": "Taklif izoh bilan qaytarildi.",
       "expired": "Taklifning amal qiliş muddati tugadi. Sotuvçidan uni yangilaşni sörang."
     },
     "reason": {
       "no_right": "Kontaktingizda qaror qabul qilişga huquq yöq — kompaniyangiz administratoriga murojaat qiling.",
       "no_access": "Kabinetga kirişingizda «Tijorat takliflari» bölimi yöq.",
-      "other_company": "Siz boşqa kompaniya Kabinetiga kirgansiz.",
-      "no_contact": "Qabul qiluvçi manzili Kabinetga ulanmagan — yuboruvçi bilan boğlaning."
+      "other_company": "Siz boşqa kompaniya kabinetiga kirgansiz.",
+      "no_contact": "Qabul qiluvçi manzili kabinetga ulanmagan — yuboruvçi bilan boğlaning."
     },
     "otherCompany": {
-      "title": "Siz boşqa Kabinetdasiz",
+      "title": "Siz boşqa kabinetdasiz",
       "text": "Bu havola boşqa kompaniyaga yuborilgan: u böyiça amallar mavjud emas. Çiqing va havolani qayta oçing.",
       "signOut": "Çiqiş"
     },
@@ -1942,7 +1947,7 @@
       "codeShort": "Kodning oltita raqamini kiriting.",
       "legal": "Birinçi kirişda foydalaniş şartlari va şaxsga doir maʼlumotlarga işlov beriş siyosatini qabul qilasiz — rozilik bölmasa, amal bajarilmaydi.",
       "memberTitle": "Taklifni qabul qilasizmi?",
-      "memberText": "Summa {{total}}. Şartnoma Kabinetingizda paydo böladi.",
+      "memberText": "Summa {{total}}. Şartnoma kabinetingizda paydo böladi.",
       "working": "Bajarilmoqda…",
       "openTitle": "Kabinetni oçiş"
     },
