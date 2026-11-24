@@ -10,7 +10,7 @@ test("бланк на узбекском и английском", async ({ page
   await loginAndWait(page, "admin@demo.example");
   await spaGoto(page, "/admin/company?part=brand");
   await page.getByRole("button", { name: /Бланк на узбекском и английском/ }).click();
-  const uz = page.getByRole("group", { name: "O‘zbekcha (UZ)" });
+  const uz = page.getByRole("group", { name: "Özbekça (UZ)" });
   await expect(uz.getByLabel("Должность подписанта")).toHaveValue("Direktor");
   await uz.getByLabel("Название компании").fill("«Demo Temir Yo‘l» MChJ");
   await uz.scrollIntoViewIfNeeded();

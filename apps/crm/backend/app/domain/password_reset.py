@@ -61,8 +61,8 @@ TELEGRAM_TEXT: Final = {
         "(действует час, один раз): {link}\nЕсли вы не просили сброс, ничего не делайте."
     ),
     "uz": (
-        "Platformada parolni tiklash. Havolani oching va yangi parol oʻrnating "
-        "(bir soat, bir marta): {link}\nAgar siz soʻramagan boʻlsangiz, hech narsa qilmang."
+        "Platformada parolni tiklaş. Havolani oçing va yangi parol örnating "
+        "(bir soat, bir marta): {link}\nAgar siz söramagan bölsangiz, heç narsa qilmang."
     ),
     "en": (
         "Password reset in the Platform. Open the link and set a new password "

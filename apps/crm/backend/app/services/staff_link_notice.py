@@ -85,6 +85,6 @@ class StaffLinkNotice:
 
 _BELL = {
     "ru": ("К вашему профилю привязан Telegram", "Если это не вы — отвяжите его в профиле."),
-    "uz": ("Profilingizga Telegram ulandi", "Agar bu siz bo‘lmasangiz — profilda uzib qo‘ying."),
+    "uz": ("Profilingizga Telegram ulandi", "Agar bu siz bölmasangiz — profilda uzib qöying."),
     "en": ("Telegram is linked to your profile", "If this was not you, unlink it in your profile."),
 }

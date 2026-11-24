@@ -82,7 +82,7 @@ test.describe("Мелкие дефекты гейта волны 15", () => {
   }) => {
     await loginAndWait(page, "manager@demo.example");
     await openAvatarMenu(page);
-    await page.getByRole("menuitem", { name: "O‘zbekcha" }).click();
+    await page.getByRole("menuitem", { name: "Özbekça" }).click();
     await expect(page.getByRole("main")).toContainText(
       /\d{1,2}-(yanvar|fevral|mart|aprel|may|iyun|iyul|avgust|sentabr|oktabr|noyabr|dekabr) \d{4}, (yakshanba|dushanba|seshanba|chorshanba|payshanba|juma|shanba)/,
     );

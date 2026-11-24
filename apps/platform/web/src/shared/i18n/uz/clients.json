@@ -1,20 +1,20 @@
 {
-  "subtitle": "Kontaktlar, yozishmalar, arizalar va hujjatlari bilan kompaniyalar.",
+  "subtitle": "Kontaktlar, yozişmalar, arizalar va hujjatlari bilan kompaniyalar.",
   "search": {
-    "label": "Nomi va STIR bo‘yicha qidirish",
+    "label": "Nomi va STIR böyiça qidiriş",
     "placeholder": "Nomi yoki STIR"
   },
   "columns": {
     "name": "Kontragent",
     "inn": "STIR",
-    "requests": "Ochiq arizalar",
+    "requests": "Oçiq arizalar",
     "erp": "Holat",
     "last": "Oxirgi faollik"
   },
   "caption": "Mijozlar",
   "tableScroll": "Mijozlar jadvali",
   "listLabel": "Mijozlar",
-  "open": "{{name}} kartasini ochish",
+  "open": "{{name}} kartasini oçiş",
   "inErp": "Hisobga olingan",
   "notInErp": "Hisobga olinmagan",
   "handoff": {
@@ -23,52 +23,52 @@
     "done": "Hisobga olingan"
   },
   "empty": {
-    "title": "Hozircha mijozlar yo‘q",
-    "text": "Liddan ariza yaratilganda mijoz paydo bo‘ladi.",
-    "filteredTitle": "Hech narsa topilmadi",
-    "filteredText": "Nomi yoki STIRni tekshiring."
+    "title": "Hozirça mijozlar yöq",
+    "text": "Liddan ariza yaratilganda mijoz paydo böladi.",
+    "filteredTitle": "Heç narsa topilmadi",
+    "filteredText": "Nomi yoki STIRni tekşiring."
   },
   "loadError": {
-    "title": "Mijozlarni yuklab bo‘lmadi",
-    "text": "Server javob bermadi. Birozdan keyin qayta urinib ko‘ring."
+    "title": "Mijozlarni yuklab bölmadi",
+    "text": "Server javob bermadi. Birozdan keyin qayta urinib köring."
   },
-  "retry": "Qayta urinish",
+  "retry": "Qayta uriniş",
   "card": {
     "partner": {
-      "title": "Kabinetdagi hamkor tasdiqlashni kutmoqda",
-      "text": "Ishlab chiqaruvchi yoki hamkor kabinetga taklif qilindi va uning rekvizitlari shu mijozga mos keldi. Biz ularni o'zimiz birlashtirmaymiz: agar bu bir kompaniya bo'lsa, tasdiqlang — hamkor so'rovlari shu mijoz kartochkasiga keladi; aks holda hamkor uchun yangi mijoz yaratamiz.",
+      "title": "Kabinetdagi hamkor tasdiqlaşni kutmoqda",
+      "text": "Işlab çiqaruvçi yoki hamkor kabinetga taklif qilindi va uning rekvizitlari şu mijozga mos keldi. Biz ularni özimiz birlaştirmaymiz: agar bu bir kompaniya bölsa, tasdiqlang — hamkor sörovlari şu mijoz kartoçkasiga keladi; aks holda hamkor uçun yangi mijoz yaratamiz.",
       "erp": "Hisobdagi kompaniya №",
       "matchedBy": {
         "inn": "STIR mos keldi",
-        "registration_number": "davlat va ro'yxatdan o'tish raqami mos keldi"
+        "registration_number": "davlat va röyxatdan ötiş raqami mos keldi"
       },
       "confirm": "Bu bir xil kompaniya",
-      "decline": "Yo'q — yangi mijoz yaratish",
-      "readOnly": "Qaror qilish mijozlarni yurituvchi xodimning vazifasi."
+      "decline": "Yöq — yangi mijoz yaratiş",
+      "readOnly": "Qaror qiliş mijozlarni yurituvçi xodimning vazifasi."
     },
-    "close": "Yopish",
+    "close": "Yopiş",
     "inn": "STIR",
-    "noInn": "STIR ko‘rsatilmagan",
+    "noInn": "STIR körsatilmagan",
     "segment": "Segment",
     "erp": "Hisobga oliş",
-    "newRequest": "Mijoz uchun yangi ariza",
+    "newRequest": "Mijoz uçun yangi ariza",
     "contacts": "Kontaktlar",
-    "noContacts": "Hozircha kontaktlar yo‘q",
+    "noContacts": "Hozirça kontaktlar yöq",
     "primary": "asosiy",
     "channels": {
       "telegram": "Telegram",
       "phone": "Telefon",
-      "email": "Pochta"
+      "email": "Poçta"
     },
-    "noChannels": "aloqa kanallari yo‘q",
-    "preferred": "Afzal ko‘radi: {{channel}}",
-    "conversation": "Yozishma",
-    "noLeads": "Yozishma yo‘q",
-    "openConversation": "{{name}} — yozishmani «Javob kutmoqda»da ochish",
+    "noChannels": "aloqa kanallari yöq",
+    "preferred": "Afzal köradi: {{channel}}",
+    "conversation": "Yozişma",
+    "noLeads": "Yozişma yöq",
+    "openConversation": "{{name}} — yozişmani «Javob kutmoqda»da oçiş",
     "requests": "Arizalar va loyihalar",
-    "noRequests": "Hozircha arizalar yo‘q",
+    "noRequests": "Hozirça arizalar yöq",
     "noNumber": "raqam hali berilmagan",
-    "urgent": "Shoshilinch",
+    "urgent": "Şoşilinç",
     "clientSees": "Mijoz kabinetida: «{{text}}»",
     "transfer": {
       "pending": "Hisobga olinmoqda",
@@ -78,27 +78,27 @@
     "retryLabel": "«{{title}}» arizasini qayta yuboriş",
     "retried": "Ariza qayta yuborildi",
     "documents": "Hujjatlar",
-    "noDocuments": "Hozircha hujjatlar yo‘q",
+    "noDocuments": "Hozirça hujjatlar yöq",
     "docTypes": {
-      "contract": "Shartnoma",
+      "contract": "Şartnoma",
       "proposal": "TT",
       "letter": "Xat",
       "invoice": "Hisob",
       "act": "Dalolatnoma",
       "other": "Hujjat"
     },
-    "hiddenFromClient": "mijoz ko‘rmaydi",
+    "hiddenFromClient": "mijoz körmaydi",
     "invitation": "Kabinetga taklif",
     "noInvitation": "Hali taklif yuborilmagan",
-    "resend": "Qayta yuborish",
+    "resend": "Qayta yuboriş",
     "resendChannel": "Kanal",
-    "resendDone": "Taklif yuborishga topshirildi — natija shu yerda chiqadi",
+    "resendDone": "Taklif yuborişga topşirildi — natija şu yerda çiqadi",
     "resendChannels": {
-      "email": "Pochta",
+      "email": "Poçta",
       "telegram": "Telegram",
-      "both": "Pochta va Telegram"
+      "both": "Poçta va Telegram"
     },
-    "partial": "Kartaning bir qismi yuklanmadi: {{parts}}. Birozdan keyin qayta urinib ko‘ring.",
+    "partial": "Kartaning bir qismi yuklanmadi: {{parts}}. Birozdan keyin qayta urinib köring.",
     "parts": {
       "contacts": "kontaktlar",
       "requests": "arizalar",
@@ -106,25 +106,25 @@
     }
   },
   "clientSees": {
-    "in_work": "Ishga qabul qilindi, hisoblayapmiz",
+    "in_work": "Işga qabul qilindi, hisoblayapmiz",
     "awaiting_decision": "Qaroringizni kutmoqda",
-    "contract_review": "Shartnoma matnini kelishib oling",
-    "contract_signing": "Shartnoma imzolanmoqda",
-    "awaiting_payment": "To'lov kutilmoqda",
-    "checking_payment": "To'lovni tekshiryapmiz",
+    "contract_review": "Şartnoma matnini kelişib oling",
+    "contract_signing": "Şartnoma imzolanmoqda",
+    "awaiting_payment": "Tölov kutilmoqda",
+    "checking_payment": "Tölovni tekşiryapmiz",
     "fulfilling": "Bajarilmoqda",
-    "awaiting_acceptance": "Qabul qilishingizni kutmoqda",
+    "awaiting_acceptance": "Qabul qilişingizni kutmoqda",
     "done": "Bajarildi",
     "rejected": "Rad etildi",
     "quote_expired": "Tijorat taklifi muddati tugadi"
   },
   "transferErrors": {
     "erp_unavailable": "javob yöq",
-    "erp_request_conflict": "yuborilgandan keyin ariza ma’lumotlari o‘zgardi — arizani qayta yarating",
-    "handoff_no_consent": "mijozning ma’lumotlarga roziligi yo‘q",
-    "erp_inn_conflict": "bu STIR boshqa mijozga tegishli",
+    "erp_request_conflict": "yuborilgandan keyin ariza maʼlumotlari özgardi — arizani qayta yarating",
+    "handoff_no_consent": "mijozning maʼlumotlarga roziligi yöq",
+    "erp_inn_conflict": "bu STIR boşqa mijozga tegişli",
     "erp_partner_verification": "bu STIRdagi kompaniya kabinet hamkori: topşiriş uşlab turildi. Hisobni yurituvçi xodim STIRni tekşirib hamkorni qayta taklif qiladi, söng şu kartoçkada boğlanişni tasdiqlang — topşiriş özi takrorlanadi",
-    "enqueue_failed": "navbatga qo‘yib bo‘lmadi",
+    "enqueue_failed": "navbatga qöyib bölmadi",
     "other": "sababi aniqlanmadi",
     "erp_company_do_not_work": "kompaniya bilan işlamaymiz: ariza yaratilmadi. Kontragent kartasida belgini olib taşlang va qayta yuboring"
   },
@@ -137,11 +137,11 @@
     "client": "Mijoz",
     "partner": "Hamkor",
     "both": "Mijoz va hamkor",
-    "applications": "Ulanish arizalari",
-    "bank_changes": "Rekvizitlarni oʻzgartirish",
+    "applications": "Ulaniş arizalari",
+    "bank_changes": "Rekvizitlarni özgartiriş",
     "do_not_work": "Işlamaymiz"
   },
-  "addPartner": "Hamkor qo‘shish",
+  "addPartner": "Hamkor qöşiş",
   "counterparty": {
     "label": "Kontragent kartasi",
     "tabs": {
@@ -155,7 +155,7 @@
       "supplier": "Yetkazib beruvçi",
       "manufacturer": "Işlab çiqaruvçi",
       "partner": "Kabinetli hamkor",
-      "organization": "Tashkilot",
+      "organization": "Taşkilot",
       "inUse": "Rol band: kompaniyada takliflar yoki brendlar bor.",
       "failed": "Rolni özgartirib bölmadi. Qayta urinib köring."
     },
@@ -198,7 +198,7 @@
       "title": "Kompaniya bilan işlamaymiz",
       "reason": "Sabab",
       "reasonHint": "Kompaniya bilan işlaydigan hamma köradi.",
-      "until": "Amal qilish muddati (ixtiyoriy)",
+      "until": "Amal qiliş muddati (ixtiyoriy)",
       "submit": "Belgilaş",
       "marked": "Belgi qöyildi",
       "cleared": "Belgi olib taşlandi",

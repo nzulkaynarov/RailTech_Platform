@@ -9,7 +9,7 @@ const EM_DASH = "—";
 export type NumberInput = number | string | null | undefined;
 
 /** Слово валюты по языку интерфейса: «сум» (ru), «so‘m» (uz), код ISO для en. */
-export const CURRENCY: Record<string, string> = { ru: "сум", uz: "so‘m", en: "UZS" };
+export const CURRENCY: Record<string, string> = { ru: "сум", uz: "söm", en: "UZS" };
 
 /** Код валюты компании: суммы в ней подписываются словом языка (`CURRENCY`), а не кодом (UX-2b). */
 export const HOME_CURRENCY = "UZS";

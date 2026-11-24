@@ -135,7 +135,7 @@ test.describe("вход", () => {
     await spaGoto(page, "/dashboard/queue");
 
     await openAvatarMenu(page);
-    await page.getByRole("menuitem", { name: "O‘zbekcha" }).click();
+    await page.getByRole("menuitem", { name: "Özbekça" }).click();
     await expect(page.getByRole("heading", { level: 1, name: "Vazifalar" })).toBeVisible();
     await page.reload();
     await expect(page.getByRole("heading", { level: 1, name: "Vazifalar" })).toBeVisible();

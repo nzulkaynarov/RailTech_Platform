@@ -45,7 +45,7 @@ test.describe("Оферта и политика", () => {
     // чтение на узбекском: тот же текст, реквизиты подставлены
     await page.getByRole("button", { name: "Читать" }).first().click();
     await expect(page.getByText("Так текст увидит контакт")).toBeVisible();
-    await page.getByText("Oʻzbekcha", { exact: true }).click();
+    await page.getByText("Özbekça", { exact: true }).click();
     await expect(page.getByText(/Operator ООО «РейлТех Демо»/).first()).toBeVisible();
     await shoot(page, "legal-reader-uz");
     await page.getByRole("button", { name: "К списку" }).click();

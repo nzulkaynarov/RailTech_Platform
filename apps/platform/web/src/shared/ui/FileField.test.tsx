@@ -120,7 +120,7 @@ describe("FileField", () => {
 
   it("узбекский текст кнопки", () => {
     renderUi(<Controlled multiple />, { language: "uz" });
-    expect(screen.getByRole("button", { name: "Fayllarni tanlash" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Fayllarni tanlaş" })).toBeVisible();
   });
 });
 

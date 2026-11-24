@@ -64,7 +64,7 @@ describe('вход с веба', () => {
 
   it.each([
     ['ru', 'Войти', 'Если адрес зарегистрирован, мы отправим письмо'],
-    ['uz', 'Kirish', 'Agar manzil roʻyxatdan oʻtgan boʻlsa, xat yuboramiz'],
+    ['uz', 'Kiriş', 'Agar manzil röyxatdan ötgan bölsa, xat yuboramiz'],
     ['en', 'Sign in', 'If this address is registered, we will send an email'],
   ])('заголовок после запроса не утверждает, что адрес есть (%s)', async (lang, submit, title) => {
     window.localStorage.setItem('cabinet.language', lang);
@@ -141,7 +141,7 @@ describe('вход с веба', () => {
     window.localStorage.setItem('cabinet.language', 'uz');
     await i18n.changeLanguage('uz');
     const uz = renderApp('/auth/magic#token=forbidden-test-link-xx');
-    expect(await screen.findByText('Kirish yopilgan, menejerga murojaat qiling.')).toBeInTheDocument();
+    expect(await screen.findByText('Kiriş yopilgan, menejerga murojaat qiling.')).toBeInTheDocument();
     uz.unmount();
     await i18n.changeLanguage('en');
     renderApp('/auth/magic#token=throttled-test-link-xx');
@@ -358,7 +358,7 @@ describe('вход с веба', () => {
     });
 
     it.each([
-      ['uz', 'Kod bilan kirish', 'Yangi mijozmisiz? Ariza qoldiring', 'Bot ochiladi, kirish taklifnoma orqali.'],
+      ['uz', 'Kod bilan kiriş', 'Yangi mijozmisiz? Ariza qoldiring', 'Bot oçiladi, kiriş taklifnoma orqali.'],
       ['en', 'Log in with a code', 'New client? Leave a request', 'The bot will open; sign-in is by invitation.'],
     ])('uz и en: заголовок, ссылка нового клиента и подпись Telegram (%s)', async (lang, title, link, hint) => {
       window.localStorage.setItem('cabinet.language', lang);

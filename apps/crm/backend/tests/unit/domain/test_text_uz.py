@@ -1,4 +1,4 @@
-"""Узбекская латиница в ответах модели: oʻ/gʻ и ʼ (аудит 2026-10-12)."""
+"""Узбекская латиница в ответах модели: новый алфавит Ö Ğ Ş Ç и ʼ (владелец 2026-11-17)."""
 
 import pytest
 
@@ -8,10 +8,10 @@ from app.domain.text import normalize_uzbek
 @pytest.mark.parametrize(
     ("raw", "expected"),
     [
-        ("Narxi xizmatga bog'liq", "Narxi xizmatga bogʻliq"),
-        ("O'zbekiston va g'alla", "Oʻzbekiston va gʻalla"),
+        ("Narxi xizmatga bog'liq", "Narxi xizmatga boğliq"),
+        ("O'zbekiston va g'alla", "Özbekiston va ğalla"),
         ("ma'lumot va ta’minot", "maʼlumot va taʼminot"),
-        ("Allaqachon toʻgʻri: oʻ va gʻ", "Allaqachon toʻgʻri: oʻ va gʻ"),
+        ("Allaqachon töğri: ö va ğ", "Allaqaçon töğri: ö va ğ"),
         ("RT-Track 'paket' narxi", "RT-Track 'paket' narxi"),
     ],
 )

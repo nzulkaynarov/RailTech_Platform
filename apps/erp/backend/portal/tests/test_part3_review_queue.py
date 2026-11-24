@@ -469,7 +469,7 @@ class TestPartnerLetter:
         card = self.to_review(desk)
         with django_capture_on_commit_callbacks(execute=True):
             desk["supply_api"].post(f"{ITEMS}{card.pk}/publish/")
-        assert "e'lon qilindi" in mail.outbox[0].subject
+        assert "eʼlon qilindi" in mail.outbox[0].subject
 
     def test_no_letter_when_the_partner_has_no_cabinet_module(self, desk, django_capture_on_commit_callbacks):
         from parties.models import CompanyRelationship

@@ -64,8 +64,8 @@ LINKED: Final = {
         "Если это сделали не вы, отвяжите Telegram в профиле Платформы."
     ),
     "uz": (
-        "Telegram profilingizga ulandi. CRM shaxsiy bildirishnomalari shu yerga keladi. "
-        "Agar buni siz qilmagan boʻlsangiz, Platforma profilida Telegramni uzing."
+        "Telegram profilingizga ulandi. CRM şaxsiy bildirişnomalari şu yerga keladi. "
+        "Agar buni siz qilmagan bölsangiz, Platforma profilida Telegramni uzing."
     ),
     "en": (
         "Telegram is linked to your profile. Personal CRM notifications will arrive here. "
@@ -77,7 +77,7 @@ INVALID: Final = {
         "Ссылка привязки недействительна или устарела. "
         "Откройте профиль в Платформе и привяжите заново."
     ),
-    "uz": "Ulash havolasi yaroqsiz yoki eskirgan. Platformada profilni ochib, qaytadan ulang.",
+    "uz": "Ulaş havolasi yaroqsiz yoki eskirgan. Platformada profilni oçib, qaytadan ulang.",
     "en": "This link is invalid or has expired. Open your profile in the Platform and link again.",
 }
 TAKEN: Final = {
@@ -85,7 +85,7 @@ TAKEN: Final = {
         "Этот Telegram уже привязан к другому сотруднику. "
         "Отвяжите его там или обратитесь к администратору."
     ),
-    "uz": "Bu Telegram boshqa xodimga ulangan. U yerda uzing yoki administratorga murojaat qiling.",
+    "uz": "Bu Telegram boşqa xodimga ulangan. U yerda uzing yoki administratorga murojaat qiling.",
     "en": (
         "This Telegram account is already linked to another employee. "
         "Unlink it there or ask an administrator."

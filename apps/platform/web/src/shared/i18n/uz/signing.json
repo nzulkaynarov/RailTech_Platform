@@ -1,26 +1,26 @@
 {
-  "subtitle": "Kompaniya hujjatlarini kim imzolashi, qaysi asosda va qaysi muddatgacha",
-  "add": "Vakolat berish",
+  "subtitle": "Kompaniya hujjatlarini kim imzolaşi, qaysi asosda va qaysi muddatgaça",
+  "add": "Vakolat beriş",
   "filter": {
-    "label": "Ko‘rsatish",
+    "label": "Körsatiş",
     "active": "Amaldagilar",
     "all": "Hammasi"
   },
   "list": {
     "label": "Imzo vakolatlari"
   },
-  "unavailable": "Imzo huquqlarini yuklab bo‘lmadi. Sahifani yangilang.",
+  "unavailable": "Imzo huquqlarini yuklab bölmadi. Sahifani yangilang.",
   "hint": {
-    "title": "Hozircha hujjatlarni hech kim imzolay olmaydi",
-    "withDirector": "Kompaniya blankasiga ko‘ra hujjatlarni {{name}} imzolaydi. Uni nizom bo‘yicha barcha hujjat turlariga qo‘shaymi?",
-    "noDirector": "Kompaniya nomidan hujjatlarni kim imzolashini ko‘rsating: rahbar — nizom bo‘yicha, qolganlar — buyruq yoki ishonchnoma bo‘yicha.",
-    "addDirector": "Qo‘shish: {{name}}",
-    "other": "Boshqasini tanlash"
+    "title": "Hozirça hujjatlarni heç kim imzolay olmaydi",
+    "withDirector": "Kompaniya blankasiga köra hujjatlarni {{name}} imzolaydi. Uni nizom böyiça barça hujjat turlariga qöşaymi?",
+    "noDirector": "Kompaniya nomidan hujjatlarni kim imzolaşini körsating: rahbar — nizom böyiça, qolganlar — buyruq yoki işonçnoma böyiça.",
+    "addDirector": "Qöşiş: {{name}}",
+    "other": "Boşqasini tanlaş"
   },
   "empty": {
-    "title": "Vakolatlar yo‘q",
-    "text": "Xatlar, shartnomalar, hisoblar va dalolatnomalarni imzolaydiganlarni qo‘shing.",
-    "activeText": "Amaldagi vakolatlar yo‘q. Bekor qilingan va muddati o‘tganlarni ko‘rish uchun «Hammasi»ni tanlang."
+    "title": "Vakolatlar yöq",
+    "text": "Xatlar, şartnomalar, hisoblar va dalolatnomalarni imzolaydiganlarni qöşing.",
+    "activeText": "Amaldagi vakolatlar yöq. Bekor qilingan va muddati ötganlarni köriş uçun «Hammasi»ni tanlang."
   },
   "col": {
     "holder": "Xodim",
@@ -33,7 +33,7 @@
   },
   "limit": {
     "none": "Limitsiz",
-    "upTo": "{{amount}} gacha"
+    "upTo": "{{amount}} gaça"
   },
   "kinds": {
     "more": "yana {{count}} ta",
@@ -42,18 +42,18 @@
   "basis": {
     "charter": "Nizom",
     "order": "Buyruq",
-    "power_of_attorney": "Ishonchnoma",
+    "power_of_attorney": "Işonçnoma",
     "numbered": "{{basis}} № {{number}}, {{date}}",
     "hint": {
-      "charter": "Rahbar ishonchnomasiz harakat qiladi",
+      "charter": "Rahbar işonçnomasiz harakat qiladi",
       "order": "Buyruq raqami va sanasi",
-      "power_of_attorney": "Raqam, sana va muddat majburiy, muddat 3 yildan oshmasin"
+      "power_of_attorney": "Raqam, sana va muddat majburiy, muddat 3 yildan oşmasin"
     }
   },
   "term": {
     "from": "{{date}} dan",
-    "until": "{{date}} gacha",
-    "open": "tugash muddatisiz",
+    "until": "{{date}} gaça",
+    "open": "tugaş muddatisiz",
     "expires_one": "{{count}} kundan keyin tugaydi",
     "expires_few": "{{count}} kundan keyin tugaydi",
     "expires_many": "{{count}} kundan keyin tugaydi",
@@ -63,18 +63,18 @@
   "status": {
     "active": "Amalda",
     "expiring": "Tez orada tugaydi",
-    "scheduled": "Hali boshlanmagan",
-    "expired": "Muddati o‘tgan",
+    "scheduled": "Hali boşlanmagan",
+    "expired": "Muddati ötgan",
     "revoked": "Bekor qilingan"
   },
-  "inactiveHolder": "xodim o‘chirilgan",
-  "open": "Ochish",
-  "openNamed": "Vakolatni ochish: {{name}}",
+  "inactiveHolder": "xodim öçirilgan",
+  "open": "Oçiş",
+  "openNamed": "Vakolatni oçiş: {{name}}",
   "drawer": {
-    "addTitle": "Imzo vakolatini berish",
+    "addTitle": "Imzo vakolatini beriş",
     "editTitle": "Vakolat: {{name}}",
     "revokedTitle": "Bekor qilingan vakolat: {{name}}",
-    "close": "Yopish"
+    "close": "Yopiş"
   },
   "form": {
     "holder": "Xodim",
@@ -86,63 +86,63 @@
     "basisNumber": "Raqam",
     "basisDate": "Berilgan sana",
     "validFrom": "Amal qiladi (dan)",
-    "validTo": "Amal qiladi (gacha)",
-    "validToPower": "{{date}} dan kech emas",
+    "validTo": "Amal qiladi (gaça)",
+    "validToPower": "{{date}} dan keç emas",
     "limit": "Summa limiti",
     "limitAmount": "Summa",
     "limitCurrency": "Valyuta",
-    "limitHint": "Bo‘sh — limitsiz",
+    "limitHint": "Böş — limitsiz",
     "note": "Izoh",
     "file": "Asos fayli",
-    "fileHint": "Skan yoki foto, PDF yoki rasm, 25 MB gacha",
-    "fileChoose": "Fayl tanlash",
-    "fileReplace": "Faylni almashtirish",
+    "fileHint": "Skan yoki foto, PDF yoki rasm, 25 MB gaça",
+    "fileChoose": "Fayl tanlaş",
+    "fileReplace": "Faylni almaştiriş",
     "fileNone": "Fayl biriktirilmagan",
-    "fileDownload": "Yuklab olish: {{name}}",
+    "fileDownload": "Yuklab oliş: {{name}}",
     "fileVersion": "{{version}}-versiya",
-    "required": "Maydonni to‘ldiring",
-    "save": "Saqlash",
-    "cancel": "Bekor qilish",
+    "required": "Maydonni töldiring",
+    "save": "Saqlaş",
+    "cancel": "Bekor qiliş",
     "saved": "Saqlandi",
     "savedFileFailed": "Vakolat saqlandi, lekin fayl biriktirilmadi. Uni qayta tanlang.",
-    "revoke": "Bekor qilish",
+    "revoke": "Bekor qiliş",
     "vakolat": "Vakolat.uz havolasi",
-    "vakolatHint": "Majburiy emas: ishonchnomalar reyestridagi yozuv"
+    "vakolatHint": "Majburiy emas: işonçnomalar reyestridagi yozuv"
   },
   "errors": {
-    "DEFAULT": "Saqlab bo‘lmadi. Qayta urinib ko‘ring.",
-    "revoked": "Vakolat allaqachon bekor qilingan.",
-    "invalid": "Belgilangan maydonlarni tekshiring.",
+    "DEFAULT": "Saqlab bölmadi. Qayta urinib köring.",
+    "revoked": "Vakolat allaqaçon bekor qilingan.",
+    "invalid": "Belgilangan maydonlarni tekşiring.",
     "PAYLOAD_TOO_LARGE": "Fayl 25 MB dan katta.",
     "UNSUPPORTED_MEDIA_TYPE": "PDF yoki rasm kerak.",
     "field": {
-      "crm_user_id": "Xodim topilmadi yoki o‘chirilgan.",
-      "kinds": "Ro‘yxatdan hujjat turlarini tanlang.",
+      "crm_user_id": "Xodim topilmadi yoki öçirilgan.",
+      "kinds": "Röyxatdan hujjat turlarini tanlang.",
       "basis_number": "Asos raqamini kiriting.",
       "basis_date": "Asos sanasini kiriting.",
-      "valid_from": "Boshlanish sanasini tekshiring.",
-      "valid_to": "Muddatni tekshiring: ishonchnoma berilgan kundan 3 yildan oshmasin.",
+      "valid_from": "Boşlaniş sanasini tekşiring.",
+      "valid_to": "Muddatni tekşiring: işonçnoma berilgan kundan 3 yildan oşmasin.",
       "limit_amount": "Limit summasini kiriting.",
       "limit_currency": "Limit valyutasini tanlang.",
-      "vakolat_url": "Havola vakolat.uz ga olib borishi kerak."
+      "vakolat_url": "Havola vakolat.uz ga olib borişi kerak."
     }
   },
   "revoke": {
-    "title": "Vakolatni bekor qilish: {{name}}",
+    "title": "Vakolatni bekor qiliş: {{name}}",
     "reason": "Sabab",
-    "reasonHint": "Uni jurnalda ko‘rishadi",
+    "reasonHint": "Uni jurnalda körişadi",
     "reasonRequired": "Sababni kiriting (kamida 3 belgi)",
-    "ok": "Bekor qilish",
-    "will": "Nima bo‘ladi",
+    "ok": "Bekor qiliş",
+    "will": "Nima böladi",
     "done": "Vakolat bekor qilindi"
   },
   "journal": {
     "title": "Jurnal",
     "issued": "Berildi",
-    "updated": "O‘zgartirildi",
+    "updated": "Özgartirildi",
     "revoked": "Bekor qilindi",
     "file_replaced": "Fayl biriktirildi",
-    "expiry_reminded": "Muddat tugashi haqida eslatma",
+    "expiry_reminded": "Muddat tugaşi haqida eslatma",
     "system": "tizim",
     "change": "{{field}}: {{before}} → {{after}}",
     "empty": "—"
@@ -155,23 +155,23 @@
     "basis_number": "Raqam",
     "basis_date": "Berilgan sana",
     "valid_from": "Amal qiladi (dan)",
-    "valid_to": "Amal qiladi (gacha)",
+    "valid_to": "Amal qiladi (gaça)",
     "vakolat_url": "Vakolat.uz",
     "note": "Izoh"
   },
   "check": {
-    "title": "Kim imzolashi mumkin",
-    "hint": "Qoidalarni tekshiring: hujjat turi, summa va sana — kim imzolashi va nega ekanini ko‘rasiz.",
+    "title": "Kim imzolaşi mumkin",
+    "hint": "Qoidalarni tekşiring: hujjat turi, summa va sana — kim imzolaşi va nega ekanini körasiz.",
     "kind": "Hujjat turi",
     "amount": "Summa",
     "currency": "Valyuta",
     "date": "Sana",
-    "run": "Tekshirish",
+    "run": "Tekşiriş",
     "result": "Imzolaydi",
-    "none": "Imzolovchi yo‘q",
-    "actingFor": "o‘rniga: {{names}}",
-    "why": "Nega shunday",
-    "rejected": "Huquqi yo‘q"
+    "none": "Imzolovçi yöq",
+    "actingFor": "örniga: {{names}}",
+    "why": "Nega şunday",
+    "rejected": "Huquqi yöq"
   },
   "authorRule": {
     "label": "Muallif öz xatini imzolaşi mümkin",

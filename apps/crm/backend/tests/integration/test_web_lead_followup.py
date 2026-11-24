@@ -211,7 +211,7 @@ async def test_web_request_with_email_gets_a_confirmation_letter_visible_in_the_
     await harness.deliver_mail()
     [(to, subject, body)] = harness.transport.sent
     assert to == "a@rail.uz"
-    assert subject == "Soʻrovingizni qabul qildik"  # язык формы — uz
+    assert subject == "Sörovingizni qabul qildik"  # язык формы — uz
     assert "Алишер" in body
     assert "Нужна интеграция POS с 1С" not in body, "письмо не цитирует текст запроса"
     for internal in ("лид", "сделк", "CRM", "crm"):

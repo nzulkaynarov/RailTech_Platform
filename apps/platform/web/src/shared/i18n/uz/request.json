@@ -1,12 +1,12 @@
 {
-  "title": "Ariza yaratish",
+  "title": "Ariza yaratiş",
   "intro": "",
   "from": "{{lead}} lididan",
   "client": {
     "legend": "Mijoz",
     "picked": "Mijoz: {{name}}",
     "name": "Kompaniya nomi",
-    "noInnNote": "Kompaniyada STIR yöq: ariza şu nom bilan mijoz ochadi."
+    "noInnNote": "Kompaniyada STIR yöq: ariza şu nom bilan mijoz oçadi."
   },
   "contact": {
     "legend": "Kontakt",
@@ -15,24 +15,24 @@
     "name": "Ism",
     "position": "Lavozim",
     "phone": "Telefon",
-    "email": "Pochta",
+    "email": "Poçta",
     "telegram": "Lid Telegrami ({{username}})",
-    "channelsHint": "Kamida bitta kanal kerak: Telegram, telefon yoki pochta",
+    "channelsHint": "Kamida bitta kanal kerak: Telegram, telefon yoki poçta",
     "person": "Kompaniya kartasidagi odam"
   },
   "summary": {
-    "label": "So‘rov mazmuni",
+    "label": "Sörov mazmuni",
     "hint": "Mijozga nima kerak: pozitsiyalar, hajm, muddatlar"
   },
   "letter": {
-    "label": "Xat yoki so‘rov fayli",
-    "hint": "PDF, rasm yoki Office hujjati, 25 MB gacha",
+    "label": "Xat yoki sörov fayli",
+    "hint": "PDF, rasm yoki Office hujjati, 25 MB gaça",
     "uploading": "Fayl yuklanmoqda…",
     "uploaded": "Yuklandi: {{name}}",
-    "remove": "Faylni olib tashlash",
+    "remove": "Faylni olib taşlaş",
     "tooLarge": "Fayl 25 MB dan katta",
     "unsupported": "PDF, rasm yoki Office hujjati mos keladi",
-    "failed": "Faylni yuklab bo‘lmadi: {{reason}}",
+    "failed": "Faylni yuklab bölmadi: {{reason}}",
     "callBasis": "Asos — qönğiroq",
     "callBasis_request": "Asos — mijoz sörovi",
     "noteBuilding": "Qönğiroq haqida yozuv tuzilmoqda…",
@@ -49,7 +49,7 @@
     "noteNeedsCaller": "Avval «Kontakt» qadamida kim qönğiroq qilganini kiriting",
     "noteNeedsConsent": "Qönğiroq haqida yozuv «Kontakt» qadamida rozilik belgilangandan keyin tuziladi",
     "noteNeedsConsent_request": "Sörov haqida yozuv «Kontakt» qadamida rozilik belgilangandan keyin tuziladi",
-    "noteNeedsSummary": "Avval «So‘rov mazmuni»ni yozing",
+    "noteNeedsSummary": "Avval «Sörov mazmuni»ni yozing",
     "noteReasons": {
       "generic": "hujjatni tuzib bölmadi",
       "call_note_no_consent": "mijozning roziligi yöq",
@@ -57,74 +57,74 @@
     }
   },
   "urgency": {
-    "legend": "Shoshilinchlik",
+    "legend": "Şoşilinçlik",
     "normal": "Oddiy",
-    "urgent": "Shoshilinch"
+    "urgent": "Şoşilinç"
   },
   "consent": {
-    "legend": "Ma’lumotlarni qayta ishlashga rozilik",
+    "legend": "Maʼlumotlarni qayta işlaşga rozilik",
     "given": "Botda {{date}} berilgan",
     "givenStaff": "Xodim tomonidan {{date}} belgilangan",
     "missing": "Mijoz hali rozilik bermagan.",
-    "viaBot": "Telegramdagi lid rozilikni botda beradi: undan «Roziman»ni bosishini so‘rang.",
+    "viaBot": "Telegramdagi lid rozilikni botda beradi: undan «Roziman»ni bosişini sörang.",
     "mark": "Rozilik olindi",
     "method": "Qanday olingan",
     "methods": {
       "phone": "Telefon orqali",
       "email": "Xat orqali",
-      "paper": "Qog‘ozda"
+      "paper": "Qoğozda"
     },
     "comment": "Izoh"
   },
   "consequence": {
-    "lead": "Lid mijozga aylanadi, siz yozishma uchun mas’ul bo‘lasiz; bot bu mijoz bo‘yicha javob berishda davom etadi.",
+    "lead": "Lid mijozga aylanadi, siz yozişma uçun masʼul bölasiz; bot bu mijoz böyiça javob berişda davom etadi.",
     "request": "Hisobga oliş bölimida raqamli ariza paydo böladi.",
-    "letter": "Xat direktorga «Hujjatlar · Kiruvchi xatlar»ga boradi{{urgent}}.",
-    "urgentSuffix": " «Shoshilinch» belgisi bilan",
-    "chat": "Loyiha chati yaratiladi."
+    "letter": "Xat direktorga «Hujjatlar · Kiruvçi xatlar»ga boradi{{urgent}}.",
+    "urgentSuffix": " «Şoşilinç» belgisi bilan",
+    "chat": "Loyiha çati yaratiladi."
   },
   "clientGets": "Mijoz oladi: «№ … arizasi qabul qilindi, hisoblayapmiz» va «Kabinetni oçiş» tugmasi — Telegramda yoki xat orqali.",
-  "submit": "Ariza yaratish",
+  "submit": "Ariza yaratiş",
   "submitting": "Ariza yaratilmoqda…",
-  "cancel": "Bekor qilish",
+  "cancel": "Bekor qiliş",
   "done": {
     "title": "Ariza yaratildi",
     "text": "Ariza hisobga olinmoqda; ariza raqami mijoz kartasida paydo böladi.",
-    "repeated": "Bu ariza allaqachon yaratilgan — uni ko‘rsatamiz.",
-    "openClient": "Mijoz kartasini ochish"
+    "repeated": "Bu ariza allaqaçon yaratilgan — uni körsatamiz.",
+    "openClient": "Mijoz kartasini oçiş"
   },
   "errors": {
     "company": "Kompaniyani tanlang",
     "contact": "Kontaktni tanlang yoki ismni kiriting",
-    "channel": "Kamida bitta kanal kerak: Telegram, telefon yoki pochta",
-    "summary": "So‘rov mazmunini yozing",
-    "consent": "Mijoz roziligisiz ariza yaratib bo‘lmaydi",
-    "handoff_no_consent": "Mijoz ma’lumotlarga rozilik bermagan — qanday olinganini belgilang",
-    "consent_via_bot": "Telegramdagi lid rozilikni botda beradi — undan rozi bo‘lishini so‘rang",
-    "contact_channel_required": "Kontaktda Telegram, telefon yoki pochta yo‘q",
-    "invalid_phone": "Telefon xalqaro formatda bo‘lsin, masalan +998 90 123 45 67",
-    "invalid_email": "Pochta manzilini tekshiring",
-    "request_not_allowed": "Lid rad etilgan — undan ariza yaratib bo‘lmaydi",
-    "request_key_reused": "Shakl eskirgan — «Ariza yaratish»ni qayta oching",
+    "channel": "Kamida bitta kanal kerak: Telegram, telefon yoki poçta",
+    "summary": "Sörov mazmunini yozing",
+    "consent": "Mijoz roziligisiz ariza yaratib bölmaydi",
+    "handoff_no_consent": "Mijoz maʼlumotlarga rozilik bermagan — qanday olinganini belgilang",
+    "consent_via_bot": "Telegramdagi lid rozilikni botda beradi — undan rozi bölişini sörang",
+    "contact_channel_required": "Kontaktda Telegram, telefon yoki poçta yöq",
+    "invalid_phone": "Telefon xalqaro formatda bölsin, masalan +998 90 123 45 67",
+    "invalid_email": "Poçta manzilini tekşiring",
+    "request_not_allowed": "Lid rad etilgan — undan ariza yaratib bölmaydi",
+    "request_key_reused": "Şakl eskirgan — «Ariza yaratiş»ni qayta oçing",
     "erp_not_configured": "Hisobga oliş ulanmagan — administratorga murojaat qiling",
-    "not_lead_owner": "Lidni boshqa xodim olib boryapti",
-    "telegram_linked_elsewhere": "Lid Telegrami boshqa mijozga bog‘langan",
-    "letter_required": "Mijoz xatini yoki so‘rov faylini biriktiring",
+    "not_lead_owner": "Lidni boşqa xodim olib boryapti",
+    "telegram_linked_elsewhere": "Lid Telegrami boşqa mijozga boğlangan",
+    "letter_required": "Mijoz xatini yoki sörov faylini biriktiring",
     "letter_call_consent": "«Kontakt» qadamida rozilikni belgilang — yozuv özi tuziladi, yoki fayl biriktiring",
-    "letter_failed": "Fayl yuklanmadi — uni qayta yoki boshqasini tanlang",
+    "letter_failed": "Fayl yuklanmadi — uni qayta yoki boşqasini tanlang",
     "request_not_failed": "Ariza hisobga olinmoqda yoki olingan — kartani yangilang",
-    "request_not_retryable": "Qayta yuborish yordam bermaydi: yuborilgandan keyin ariza ma’lumotlari o‘zgardi — arizani qayta yarating",
-    "enqueue_failed": "Yuborishni navbatga qo‘yib bo‘lmadi — birozdan keyin qayta urinib ko‘ring",
-    "generic": "Ariza yaratib bo‘lmadi. Shakl ma’lumotlari saqlandi — qayta urinib ko‘ring",
+    "request_not_retryable": "Qayta yuboriş yordam bermaydi: yuborilgandan keyin ariza maʼlumotlari özgardi — arizani qayta yarating",
+    "enqueue_failed": "Yuborişni navbatga qöyib bölmadi — birozdan keyin qayta urinib köring",
+    "generic": "Ariza yaratib bölmadi. Şakl maʼlumotlari saqlandi — qayta urinib köring",
     "letter_uploading": "Fayl yuklanişini kuting"
   },
   "sections": {
-    "request": "So‘rov",
-    "review": "Tekshirish va yuborish"
+    "request": "Sörov",
+    "review": "Tekşiriş va yuboriş"
   },
   "draft": {
     "found": "Ariza qoralamasi bor: {{time}}",
-    "continue": "Davom etish",
+    "continue": "Davom etiş",
     "restart": "Qaytadan boşlaş"
   }
 }

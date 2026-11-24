@@ -48,7 +48,7 @@ const ACTIONS: readonly [string, string, string, string][] = [
     "Yetkazib beruvchi narxnomasini yuklash",
     "Upload supplier price list or quote",
   ],
-  ["to_accountant", "Передать бухгалтеру", "Buxgalterga topshirish", "Hand over to the accountant"],
+  ["to_accountant", "Передать бухгалтеру", "Buxgalterga topşiriş", "Hand over to the accountant"],
   [
     "archive_mailing",
     "В архив как рассылку",
@@ -127,7 +127,7 @@ function seed(): State {
         "tax_notice",
         names(
           "Требование или уведомление ГНК",
-          "Soliq qo‘mitasi talabnomasi yoki xabarnomasi",
+          "Soliq qömitasi talabnomasi yoki xabarnomasi",
           "Tax authority demand or notice",
         ),
         10,
@@ -138,7 +138,7 @@ function seed(): State {
       kindItem("bank", names("Письмо банка", "Bank xati", "Bank letter"), 20),
       kindItem(
         "supplier",
-        names("Письмо партнёра", "Yetkazib beruvchi xati", "Supplier letter"),
+        names("Письмо партнёра", "Yetkazib beruvçi xati", "Supplier letter"),
         30,
       ),
       kindItem(
@@ -151,20 +151,20 @@ function seed(): State {
         names("Письмо контрагента", "Kontragent xati", "Counterparty letter"),
         50,
       ),
-      kindItem("other", names("Прочее", "Boshqa", "Other"), 60),
+      kindItem("other", names("Прочее", "Boşqa", "Other"), 60),
     ],
     "receipt-methods": [
       methodItem(
         "paper",
-        names("Бумага (принесли лично)", "Qog‘oz (shaxsan olib kelingan)", "Paper (handed in)"),
+        names("Бумага (принесли лично)", "Qoğoz (şaxsan olib kelingan)", "Paper (handed in)"),
         10,
       ),
-      methodItem("post", names("Почта", "Pochta", "Post"), 20),
+      methodItem("post", names("Почта", "Poçta", "Post"), 20),
       methodItem(
         "taxpayer_cabinet",
         names(
           "Кабинет налогоплательщика my.soliq",
-          "Soliq to‘lovchi kabineti my.soliq",
+          "Soliq tölovçi kabineti my.soliq",
           "Taxpayer cabinet my.soliq",
         ),
         30,
@@ -174,9 +174,9 @@ function seed(): State {
     ],
     // Виды документов для подписи (SIGN-2): как засевает миграция EDS.
     "signing-kinds": [
-      methodItem("letter_out", names("Исходящее письмо", "Chiquvchi xat", "Outgoing letter"), 10),
+      methodItem("letter_out", names("Исходящее письмо", "Çiquvçi xat", "Outgoing letter"), 10),
       methodItem("quote", names("Коммерческое предложение", "Tijorat taklifi", "Quotation"), 20),
-      methodItem("contract", names("Договор", "Shartnoma", "Contract"), 30),
+      methodItem("contract", names("Договор", "Şartnoma", "Contract"), 30),
       methodItem("invoice", names("Счёт", "Hisob", "Invoice"), 40),
       methodItem("act", names("Акт", "Dalolatnoma", "Act"), 50),
       methodItem("memo", names("Служебная записка", "Xizmat xati", "Memo"), 60),
@@ -185,7 +185,7 @@ function seed(): State {
     "mail-types": [
       mailType(
         "client_request",
-        names("Запрос клиента", "Mijoz so‘rovi", "Customer request"),
+        names("Запрос клиента", "Mijoz sörovi", "Customer request"),
         10,
         "green",
         "mail",
@@ -201,7 +201,7 @@ function seed(): State {
       ),
       mailType(
         "meeting",
-        names("Приглашение на встречу", "Uchrashuvga taklif", "Meeting invitation"),
+        names("Приглашение на встречу", "Uçraşuvga taklif", "Meeting invitation"),
         30,
         "cyan",
         "calendar",
@@ -211,7 +211,7 @@ function seed(): State {
         "supplier_price",
         names(
           "КП или прайс партнёра",
-          "Yetkazib beruvchi narxnomasi",
+          "Yetkazib beruvçi narxnomasi",
           "Supplier quote or price list",
         ),
         40,
@@ -221,7 +221,7 @@ function seed(): State {
       ),
       mailType(
         "supplier_invoice",
-        names("Счёт партнёра", "Yetkazib beruvchi hisobi", "Supplier invoice"),
+        names("Счёт партнёра", "Yetkazib beruvçi hisobi", "Supplier invoice"),
         50,
         "gold",
         "wallet",
@@ -231,7 +231,7 @@ function seed(): State {
         "supplier_document",
         names(
           "Документ партнёра (договор, акт сверки)",
-          "Yetkazib beruvchi hujjati (shartnoma, solishtirma dalolatnoma)",
+          "Yetkazib beruvçi hujjati (şartnoma, soliştirma dalolatnoma)",
           "Supplier document (contract, reconciliation act)",
         ),
         60,
@@ -265,9 +265,9 @@ function seed(): State {
     ],
     // Виды резолюции — поведение кода (закрытый список): только переименовать и переставить.
     "resolution-kinds": [
-      methodItem("execute", names("К исполнению", "Ijro uchun", "For execution"), 10),
-      methodItem("reply", names("Подготовить ответ", "Javob tayyorlash", "Prepare a reply"), 20),
-      methodItem("info", names("Для сведения", "Ma’lumot uchun", "For information"), 30),
+      methodItem("execute", names("К исполнению", "Ijro uçun", "For execution"), 10),
+      methodItem("reply", names("Подготовить ответ", "Javob tayyorlaş", "Prepare a reply"), 20),
+      methodItem("info", names("Для сведения", "Maʼlumot uçun", "For information"), 30),
     ],
     // Причины «Закрыть без ответа» (решение владельца 2026-11-11): как засевает миграция EDS.
     "close-reasons": [
@@ -290,7 +290,7 @@ function seed(): State {
         attrs: { comment_required: true },
       },
       {
-        ...methodItem("other", names("Другое", "Boshqa", "Other"), 40),
+        ...methodItem("other", names("Другое", "Boşqa", "Other"), 40),
         attrs: { comment_required: true },
       },
     ],
@@ -302,7 +302,7 @@ const CATALOG: Dictionary[] = [
     kind: "mail-types",
     owner: "crm",
     area: "mail",
-    name: names("Типы входящих писем", "Kiruvchi xat turlari", "Incoming mail types"),
+    name: names("Типы входящих писем", "Kiruvçi xat turlari", "Incoming mail types"),
     closed: false,
     attrs: [
       {
@@ -328,7 +328,7 @@ const CATALOG: Dictionary[] = [
         type: "choice",
         name: names(
           "Вид документа при регистрации",
-          "Ro‘yxatga olishdagi hujjat turi",
+          "Röyxatga olişdagi hujjat turi",
           "Document type on registration",
         ),
         options: [],
@@ -340,10 +340,10 @@ const CATALOG: Dictionary[] = [
     kind: "letter-kinds",
     owner: "eds",
     area: "documents",
-    name: names("Виды входящих документов", "Kiruvchi hujjat turlari", "Incoming document types"),
+    name: names("Виды входящих документов", "Kiruvçi hujjat turlari", "Incoming document types"),
     closed: false,
     attrs: [
-      { key: "urgent", type: "boolean", name: names("Срочный", "Shoshilinch", "Urgent") },
+      { key: "urgent", type: "boolean", name: names("Срочный", "Şoşilinç", "Urgent") },
       {
         key: "due_days",
         type: "integer",
@@ -362,7 +362,7 @@ const CATALOG: Dictionary[] = [
     kind: "receipt-methods",
     owner: "eds",
     area: "documents",
-    name: names("Способы получения", "Qabul qilish usullari", "Receipt methods"),
+    name: names("Способы получения", "Qabul qiliş usullari", "Receipt methods"),
     closed: false,
     attrs: [],
   },
@@ -384,7 +384,7 @@ const CATALOG: Dictionary[] = [
     area: "documents",
     name: names(
       "Причины закрытия без ответа",
-      "Javobsiz yopish sabablari",
+      "Javobsiz yopiş sabablari",
       "Reasons to close without reply",
     ),
     closed: false,

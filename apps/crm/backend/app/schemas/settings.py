@@ -81,7 +81,7 @@ class TextsSettings(ClientBotTexts):
     """Тексты бота; меню клиента и запрос номера — в `ClientBotTexts`."""
 
     # Клиенту человек — всегда «менеджер / menejer / manager» (Q-015). Узбекский — официальная
-    # латиница: oʻ/gʻ (U+02BB), тутук-белги ʼ (U+02BC).
+    # новая латиница (Ö Ğ Ş Ç), тутук-белги ʼ (U+02BC).
     consent_version: str = "2026-10-08"
     greeting: LocalizedText = _t(
         "Здравствуйте! Я ассистент {company}. Отвечаю на вопросы о поставках оборудования и запчастей, при необходимости подключу менеджера.",
@@ -90,7 +90,7 @@ class TextsSettings(ClientBotTexts):
     )
     consent: LocalizedText = _t(
         "Чтобы продолжить, подтвердите согласие на обработку персональных данных. Переписка хранится в системе компании и обрабатывается внешними ИИ-сервисами для подготовки ответов. Удалить переписку можно в любой момент командой /delete.",
-        "Davom etish uchun shaxsiy maʼlumotlarni qayta ishlashga roziligingizni tasdiqlang. Yozishmalar kompaniya tizimida saqlanadi va javoblarni tayyorlash uchun tashqi sunʼiy intellekt xizmatlari tomonidan qayta ishlanadi. Yozishmalarni istalgan vaqtda /delete buyrugʻi bilan oʻchirishingiz mumkin.",
+        "Davom etiş uçun şaxsiy maʼlumotlarni qayta işlaşga roziligingizni tasdiqlang. Yozişmalar kompaniya tizimida saqlanadi va javoblarni tayyorlaş uçun taşqi sunʼiy intellekt xizmatlari tomonidan qayta işlanadi. Yozişmalarni istalgan vaqtda /delete buyruği bilan öçirişingiz mumkin.",
         "To continue, please confirm your consent to the processing of personal data. The conversation is stored in the company's system and processed by external AI services to prepare answers. You can delete the conversation at any time with /delete.",
     )
     consent_button: LocalizedText = _t("Даю согласие", "Roziman", "I agree")
@@ -108,8 +108,8 @@ class TextsSettings(ClientBotTexts):
     consent_declined: LocalizedText = _t(
         "Понимаю. Без согласия я не могу отвечать на вопросы. Если передумаете — нажмите"
         " «Даю согласие» выше или напишите /start. Удалить уже отправленные сообщения — /delete.",
-        "Tushunarli. Roziliksiz savollarga javob bera olmayman. Fikringiz oʻzgarsa — yuqoridagi"
-        " «Roziman» tugmasini bosing yoki /start yozing. Yuborilgan xabarlarni oʻchirish — /delete.",
+        "Tuşunarli. Roziliksiz savollarga javob bera olmayman. Fikringiz özgarsa — yuqoridagi"
+        " «Roziman» tugmasini bosing yoki /start yozing. Yuborilgan xabarlarni öçiriş — /delete.",
         "Understood. Without consent I can't answer questions. If you change your mind, tap"
         " “I agree” above or type /start. To delete messages already sent, use /delete.",
     )
@@ -128,12 +128,12 @@ class TextsSettings(ClientBotTexts):
     # {hours} — расписание словами («пн–пт с 9:00 до 18:00 по Ташкенту»).
     off_hours: LocalizedText = _t(
         "Передаю ваш вопрос менеджеру. Сейчас нерабочее время — ответим {next}.",
-        "Savolingizni menejerga yuboraman. Hozir ish vaqti emas — {next} javob beramiz.",
+        "Savolingizni menejerga yuboraman. Hozir iş vaqti emas — {next} javob beramiz.",
         "I'm passing your question to a manager. It's outside working hours now — we'll reply {next}.",
     )
     waiting_for_manager: LocalizedText = _t(
         "Ваше сообщение передано менеджеру. Менеджер ответит в рабочее время.",
-        "Xabaringiz menejerga yuborildi. Menejer ish vaqtida javob beradi.",
+        "Xabaringiz menejerga yuborildi. Menejer iş vaqtida javob beradi.",
         "Your message has been passed to a manager. A manager will reply during business hours.",
     )
     # Честно: ответа нет, вернуться с ним бот не может — предлагаем менеджера (Q-016).
@@ -143,7 +143,7 @@ class TextsSettings(ClientBotTexts):
         "I don't have an exact answer. Shall I pass it to a manager? They'll reply here.",
     )
     handoff_offer_yes: LocalizedText = _t(
-        "Позвать менеджера", "Menejerni chaqirish", "Talk to a manager"
+        "Позвать менеджера", "Menejerni çaqiriş", "Talk to a manager"
     )
     handoff_offer_no: LocalizedText = _t("Не нужно", "Kerak emas", "No, thanks")
     help: LocalizedText = _t(
@@ -153,22 +153,22 @@ class TextsSettings(ClientBotTexts):
     )
     rate_limited: LocalizedText = _t(
         "Получил много сообщений подряд — дайте мне минуту, и продолжим.",
-        "Ketma-ket koʻp xabar keldi — bir daqiqa kuting, keyin davom etamiz.",
+        "Ketma-ket köp xabar keldi — bir daqiqa kuting, keyin davom etamiz.",
         "I've received a lot of messages in a row — give me a minute and we'll continue.",
     )
     erase_confirm: LocalizedText = _t(
         "Удалить всю переписку с нами? Это действие нельзя отменить.",
-        "Biz bilan barcha yozishmalarni oʻchiraymi? Bu amalni qaytarib boʻlmaydi.",
+        "Biz bilan barça yozişmalarni öçiraymi? Bu amalni qaytarib bölmaydi.",
         "Delete your whole conversation with us? This cannot be undone.",
     )
-    erase_button: LocalizedText = _t("Удалить", "Oʻchirish", "Delete")
-    cancel_button: LocalizedText = _t("Отмена", "Bekor qilish", "Cancel")
+    erase_button: LocalizedText = _t("Удалить", "Öçiriş", "Delete")
+    cancel_button: LocalizedText = _t("Отмена", "Bekor qiliş", "Cancel")
     erase_cancelled: LocalizedText = _t(
-        "Хорошо, ничего не удаляю.", "Yaxshi, hech narsa oʻchirilmadi.", "OK, nothing was deleted."
+        "Хорошо, ничего не удаляю.", "Yaxşi, heç narsa öçirilmadi.", "OK, nothing was deleted."
     )
     erased: LocalizedText = _t(
         "Ваша переписка удалена. Если захотите продолжить, просто напишите снова.",
-        "Yozishmangiz oʻchirildi. Davom etmoqchi boʻlsangiz, shunchaki qayta yozing.",
+        "Yozişmangiz öçirildi. Davom etmoqçi bölsangiz, şunçaki qayta yozing.",
         "Your conversation has been deleted. If you want to continue, just write again.",
     )
     document_sent: LocalizedText = _t(
@@ -178,12 +178,12 @@ class TextsSettings(ClientBotTexts):
     )
     document_failed: LocalizedText = _t(
         "Не получилось отправить файл. Попробуйте запросить его ещё раз чуть позже.",
-        "Faylni yuborib boʻlmadi. Birozdan keyin qayta soʻrab koʻring.",
+        "Faylni yuborib bölmadi. Birozdan keyin qayta sörab köring.",
         "I couldn't send the file. Please ask for it again a bit later.",
     )
     manager_joined: LocalizedText = _t(
         "Здравствуйте! Вашим вопросом занимается {manager}, ответ придёт в этот чат.",
-        "Assalomu alaykum! Savolingiz bilan {manager} shugʻullanmoqda, javob shu chatga keladi.",
+        "Assalomu alaykum! Savolingiz bilan {manager} şuğullanmoqda, javob şu çatga keladi.",
         "Hello! {manager} is now handling your request and will reply in this chat.",
     )
     service_request_closed: LocalizedText = _t(
@@ -193,7 +193,7 @@ class TextsSettings(ClientBotTexts):
     )
     returned_to_bot: LocalizedText = _t(
         "Снова на связи ассистент {company}. Если понадобится менеджер, напишите /human.",
-        "Yana {company} yordamchisi aloqada. Menejer kerak boʻlsa, /human deb yozing.",
+        "Yana {company} yordamçisi aloqada. Menejer kerak bölsa, /human deb yozing.",
         "The {company} assistant is back. If you need a manager, type /human.",
     )
     # И для голосовых: бот их не распознаёт, а передаёт менеджеру вложением.
@@ -209,23 +209,23 @@ class TextsSettings(ClientBotTexts):
     )
     unsupported_message: LocalizedText = _t(
         "Я понимаю текст, а файлы и голосовые сообщения передаю менеджеру. Напишите, пожалуйста, ваш вопрос.",
-        "Men matnni tushunaman, fayl va ovozli xabarlarni esa menejerga yuboraman. Savolingizni yozing, iltimos.",
+        "Men matnni tuşunaman, fayl va ovozli xabarlarni esa menejerga yuboraman. Savolingizni yozing, iltimos.",
         "I can read text, and I'll pass files and voice messages to a manager. Please type your question.",
     )
     service_unavailable: LocalizedText = _t(
         "Извините, сейчас не получается ответить. Ваше сообщение сохранено, менеджер его увидит.",
-        "Kechirasiz, hozir javob bera olmayapman. Xabaringiz saqlandi, menejer uni koʻradi.",
+        "Keçirasiz, hozir javob bera olmayapman. Xabaringiz saqlandi, menejer uni köradi.",
         "Sorry, I can't answer right now. Your message has been saved and a manager will see it.",
     )
     language_prompt: LocalizedText = _t(
         "Выберите язык общения:", "Muloqot tilini tanlang:", "Choose your language:"
     )
     language_set: LocalizedText = _t(
-        "Буду отвечать на русском.", "Oʻzbek tilida javob beraman.", "I'll reply in English."
+        "Буду отвечать на русском.", "Özbek tilida javob beraman.", "I'll reply in English."
     )
     smalltalk_ack: LocalizedText = _t(
         "Пожалуйста! Если появятся вопросы — пишите.",
-        "Arzimaydi! Savollar boʻlsa, yozing.",
+        "Arzimaydi! Savollar bölsa, yozing.",
         "You're welcome! Write any time you have a question.",
     )
 

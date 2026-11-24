@@ -15,82 +15,82 @@ msgid "Уведомление платформы"
 msgstr "Platforma xabarnomasi"
 
 msgid "Это автоматическое письмо от платформы %(platform)s — отвечать на него не нужно."
-msgstr "Bu %(platform)s platformasidan kelgan avtomatik xat — unga javob berish shart emas."
+msgstr "Bu %(platform)s platformasidan kelgan avtomatik xat — unga javob beriş şart emas."
 
 msgid "Возникли вопросы? Напишите на"
 msgstr "Savollaringiz bormi? Quyidagi manzilga yozing:"
 
 msgid "Ташкент, Узбекистан"
-msgstr "Toshkent, Oʻzbekiston"
+msgstr "Toşkent, Özbekiston"
 
 # ── emails/portal_invitation.* ───────────────────────────────────────────────────────────────────
 msgid "Приглашение в личный кабинет «%(company)s»"
-msgstr "«%(company)s» shaxsiy kabinetiga taklifnoma"
+msgstr "«%(company)s» şaxsiy kabinetiga taklifnoma"
 
 msgid "Личный кабинет клиента"
-msgstr "Mijozning shaxsiy kabineti"
+msgstr "Mijozning şaxsiy kabineti"
 
 msgid "Здравствуйте"
 msgstr "Assalomu alaykum"
 
 msgid "Вас пригласили в личный кабинет компании <strong>«%(company)s»</strong> на платформе <strong>%(platform)s</strong>."
-msgstr "Sizni %(platform)s platformasidagi <strong>«%(company)s»</strong> kompaniyasining shaxsiy kabinetiga taklif qilishdi."
+msgstr "Sizni %(platform)s platformasidagi <strong>«%(company)s»</strong> kompaniyasining şaxsiy kabinetiga taklif qilişdi."
 
 msgid "Вас пригласили в личный кабинет компании «%(company)s» на платформе %(platform)s."
-msgstr "Sizni %(platform)s platformasidagi «%(company)s» kompaniyasining shaxsiy kabinetiga taklif qilishdi."
+msgstr "Sizni %(platform)s platformasidagi «%(company)s» kompaniyasining şaxsiy kabinetiga taklif qilişdi."
 
 msgid "В личном кабинете вы можете рассматривать и принимать коммерческие предложения, согласовывать договоры, отслеживать поставки и скачивать документы онлайн."
-msgstr "Shaxsiy kabinetda siz tijorat takliflarini koʻrib chiqishingiz va qabul qilishingiz, shartnomalarni kelishishingiz, yetkazib berishlarni kuzatishingiz va hujjatlarni onlayn yuklab olishingiz mumkin."
+msgstr "Şaxsiy kabinetda siz tijorat takliflarini körib çiqişingiz va qabul qilişingiz, şartnomalarni kelişişingiz, yetkazib berişlarni kuzatişingiz va hujjatlarni onlayn yuklab olişingiz mumkin."
 
 msgid "Для входа в личный кабинет перейдите по ссылке:"
-msgstr "Shaxsiy kabinetga kirish uchun havolaga oʻting:"
+msgstr "Şaxsiy kabinetga kiriş uçun havolaga öting:"
 
 msgid "Войти в личный кабинет"
-msgstr "Shaxsiy kabinetga kirish"
+msgstr "Şaxsiy kabinetga kiriş"
 
 msgid "Вы также можете войти через Telegram:"
-msgstr "Shuningdek, Telegram orqali kirishingiz mumkin:"
+msgstr "Şuningdek, Telegram orqali kirişingiz mumkin:"
 
 msgid "Если кнопка не работает, скопируйте ссылку в адресную строку браузера:"
-msgstr "Agar tugma ishlamasa, havolani brauzerning manzil satriga nusxalab qoʻying:"
+msgstr "Agar tugma işlamasa, havolani brauzerning manzil satriga nusxalab qöying:"
 
 msgid "Ссылка действительна в течение 24 часов."
 msgstr "Havola 24 soat davomida amal qiladi."
 
 msgid "Если вы не ожидали это приглашение, просто проигнорируйте письмо."
-msgstr "Agar bu taklifni kutmagan boʻlsangiz, xatga eʼtibor bermang."
+msgstr "Agar bu taklifni kutmagan bölsangiz, xatga eʼtibor bermang."
 
 msgid "Ссылка действительна в течение 24 часов. Если вы не ожидали это приглашение, просто проигнорируйте письмо."
-msgstr "Havola 24 soat davomida amal qiladi. Agar bu taklifni kutmagan boʻlsangiz, xatga eʼtibor bermang."
+msgstr "Havola 24 soat davomida amal qiladi. Agar bu taklifni kutmagan bölsangiz, xatga eʼtibor bermang."
 
 msgid "Команда %(platform)s"
 msgstr "%(platform)s jamoasi"
 
 # ── emails/portal_magic_link.* ───────────────────────────────────────────────────────────────────
 msgid "Вход в личный кабинет"
-msgstr "Shaxsiy kabinetga kirish"
+msgstr "Şaxsiy kabinetga kiriş"
 
 msgid "Для входа в личный кабинет компании <strong>«%(company)s»</strong> нажмите на кнопку."
-msgstr "<strong>«%(company)s»</strong> kompaniyasining shaxsiy kabinetiga kirish uchun tugmani bosing."
+msgstr "<strong>«%(company)s»</strong> kompaniyasining şaxsiy kabinetiga kiriş uçun tugmani bosing."
 
 msgid "Для входа в личный кабинет компании «%(company)s» перейдите по ссылке:"
-msgstr "«%(company)s» kompaniyasining shaxsiy kabinetiga kirish uchun havolaga oʻting:"
+msgstr "«%(company)s» kompaniyasining şaxsiy kabinetiga kiriş uçun havolaga öting:"
 
 msgid "Ссылка действительна в течение 15 минут и может быть использована только один раз."
-msgstr "Havola 15 daqiqa davomida amal qiladi va faqat bir marta ishlatilishi mumkin."
+msgstr "Havola 15 daqiqa davomida amal qiladi va faqat bir marta işlatilişi mumkin."
 
 msgid "Если вы не запрашивали вход, просто проигнорируйте письмо."
-msgstr "Agar kirishni soʻramagan boʻlsangiz, xatga eʼtibor bermang."
+msgstr "Agar kirişni söramagan bölsangiz, xatga eʼtibor bermang."
 
 msgid "Ссылка действительна в течение 15 минут и может быть использована только один раз. Если вы не запрашивали вход, просто проигнорируйте письмо."
-msgstr "Havola 15 daqiqa davomida amal qiladi va faqat bir marta ishlatilishi mumkin. Agar kirishni soʻramagan boʻlsangiz, xatga eʼtibor bermang."
+msgstr "Havola 15 daqiqa davomida amal qiladi va faqat bir marta işlatilişi mumkin. Agar kirişni söramagan bölsangiz, xatga eʼtibor bermang."
 
 # ── Названия документов портала (portal/services/documents.py) ───────────────────────────────────
 msgid "Коммерческое предложение"
 msgstr "Tijorat taklifi"
 
 msgid "Договор"
-msgstr "Shartnoma"
+msgstr "Şartnoma"
 
 msgid "Счёт"
 msgstr "Hisob-faktura"
@@ -105,23 +105,23 @@ msgstr "Yuk xati"
 
 #, python-format
 msgid "Вы запросили вход в личный кабинет компании «%(company)s» на платформе %(platform)s."
-msgstr "Siz %(platform)s platformasida «%(company)s» kompaniyasining shaxsiy kabinetiga kirishni soʻradingiz."
+msgstr "Siz %(platform)s platformasida «%(company)s» kompaniyasining şaxsiy kabinetiga kirişni söradingiz."
 
 msgid "Код входа:"
-msgstr "Kirish kodi:"
+msgstr "Kiriş kodi:"
 
 msgid "Введите код на странице входа или откройте ссылку:"
-msgstr "Kodni kirish sahifasida kiriting yoki havolani oching:"
+msgstr "Kodni kiriş sahifasida kiriting yoki havolani oçing:"
 
 msgid "Введите код на странице входа или нажмите на кнопку."
-msgstr "Kodni kirish sahifasida kiriting yoki tugmani bosing."
+msgstr "Kodni kiriş sahifasida kiriting yoki tugmani bosing."
 
 #, python-format
 msgid "Код и ссылка действуют %(minutes)s минут и срабатывают один раз."
-msgstr "Kod va havola %(minutes)s daqiqa amal qiladi va faqat bir marta ishlaydi."
+msgstr "Kod va havola %(minutes)s daqiqa amal qiladi va faqat bir marta işlaydi."
 
 msgid "В кабинете — ваши коммерческие предложения, договоры, счета, поставки и документы."
-msgstr "Kabinetda — tijorat takliflaringiz, shartnomalar, hisob-fakturalar, yetkazib berishlar va hujjatlar."
+msgstr "Kabinetda — tijorat takliflaringiz, şartnomalar, hisob-fakturalar, yetkazib berişlar va hujjatlar."
 
 msgid "Код и ссылка действуют 24 часа."
 msgstr "Kod va havola 24 soat amal qiladi."
@@ -130,41 +130,41 @@ msgid "Личный кабинет партнёра"
 msgstr "Hamkor kabineti"
 
 msgid "В кабинете — ваши товары и цены: вы заполняете карточки, мы проверяем и публикуем их."
-msgstr "Kabinetda — mahsulotlaringiz va narxlaringiz: kartochkalarni siz to'ldirasiz, biz tekshirib e'lon qilamiz."
+msgstr "Kabinetda — mahsulotlaringiz va narxlaringiz: kartoçkalarni siz töldirasiz, biz tekşirib eʼlon qilamiz."
 
 # ── PART-3: письма партнёру о решении по карточке ──
 msgid "Карточка «%(name)s» опубликована"
-msgstr "Kartochka «%(name)s» e'lon qilindi"
+msgstr "Kartoçka «%(name)s» eʼlon qilindi"
 
 msgid "Карточка «%(name)s» проверена и опубликована в каталоге."
-msgstr "«%(name)s» kartochkasi tekshirildi va katalogda e'lon qilindi."
+msgstr "«%(name)s» kartoçkasi tekşirildi va katalogda eʼlon qilindi."
 
 msgid "Открыть в разделе «Мои товары»:"
-msgstr "«Mening mahsulotlarim» boʻlimida ochish:"
+msgstr "«Mening mahsulotlarim» bölimida oçiş:"
 
 msgid "Открыть в разделе «Мои товары»"
-msgstr "«Mening mahsulotlarim» boʻlimida ochish"
+msgstr "«Mening mahsulotlarim» bölimida oçiş"
 
 msgid "Карточка «%(name)s» возвращена на доработку"
-msgstr "«%(name)s» kartochkasi qayta ishlashga qaytarildi"
+msgstr "«%(name)s» kartoçkasi qayta işlaşga qaytarildi"
 
 msgid "Карточка «%(name)s» возвращена на доработку."
-msgstr "«%(name)s» kartochkasi qayta ishlashga qaytarildi."
+msgstr "«%(name)s» kartoçkasi qayta işlaşga qaytarildi."
 
 msgid "Причина:"
 msgstr "Sabab:"
 
 msgid "Что исправить:"
-msgstr "Nimani tuzatish kerak:"
+msgstr "Nimani tuzatiş kerak:"
 
 msgid "Исправьте карточку и отправьте её на проверку снова:"
-msgstr "Kartochkani tuzating va uni qayta tekshiruvga yuboring:"
+msgstr "Kartoçkani tuzating va uni qayta tekşiruvga yuboring:"
 
 msgid "Исправьте карточку и отправьте её на проверку снова."
-msgstr "Kartochkani tuzating va uni qayta tekshiruvga yuboring."
+msgstr "Kartoçkani tuzating va uni qayta tekşiruvga yuboring."
 
 msgid "Открыть карточку"
-msgstr "Kartochkani ochish"
+msgstr "Kartoçkani oçiş"
 
 msgid "Наименование"
 msgstr "Nomi"
@@ -176,16 +176,16 @@ msgid "Бренд"
 msgstr "Brend"
 
 msgid "Артикул изготовителя"
-msgstr "Ishlab chiqaruvchi artikuli"
+msgstr "Işlab çiqaruvçi artikuli"
 
 msgid "ГОСТ / чертёж"
-msgstr "GOST / chizma"
+msgstr "GOST / çizma"
 
 msgid "Категория"
 msgstr "Kategoriya"
 
 msgid "Единица измерения"
-msgstr "Oʻlchov birligi"
+msgstr "Ölçov birligi"
 
 msgid "Код ТН ВЭД"
 msgstr "TIF TN kodi"
@@ -194,13 +194,13 @@ msgid "Цена"
 msgstr "Narx"
 
 msgid "Цена действует до"
-msgstr "Narx amal qilish muddati"
+msgstr "Narx amal qiliş muddati"
 
 msgid "Другое"
-msgstr "Boshqa"
+msgstr "Boşqa"
 
 msgid "Исправьте поля, отмеченные в карточке."
-msgstr "Kartochkada belgilangan maydonlarni tuzating."
+msgstr "Kartoçkada belgilangan maydonlarni tuzating."
 
 # ── emails/portal_notice.* — уведомления кабинета контакту (NOTIFY-2) ──────────────────────────────────────────
 msgid "Новое коммерческое предложение %(number)s"
@@ -210,64 +210,64 @@ msgid "Выставлен счёт %(number)s"
 msgstr "%(number)s hisob-fakturasi taqdim etildi"
 
 msgid "Срок оплаты счёта %(number)s прошёл"
-msgstr "%(number)s hisob-fakturasini toʻlash muddati oʻtdi"
+msgstr "%(number)s hisob-fakturasini tölaş muddati ötdi"
 
 msgid "Напоминание: акт %(number)s ждёт приёмки"
-msgstr "Eslatma: %(number)s dalolatnomasi qabul qilinishini kutmoqda"
+msgstr "Eslatma: %(number)s dalolatnomasi qabul qilinişini kutmoqda"
 
 msgid "Акт %(number)s ждёт приёмки"
-msgstr "%(number)s dalolatnomasi qabul qilinishini kutmoqda"
+msgstr "%(number)s dalolatnomasi qabul qilinişini kutmoqda"
 
 msgid "Изменился статус поставки по сделке %(deal)s"
-msgstr "%(deal)s bitimi boʻyicha yetkazib berish holati oʻzgardi"
+msgstr "%(deal)s bitimi böyiça yetkazib beriş holati özgardi"
 
 msgid "Изменился срок поставки по сделке %(deal)s"
-msgstr "%(deal)s bitimi boʻyicha yetkazib berish muddati oʻzgardi"
+msgstr "%(deal)s bitimi böyiça yetkazib beriş muddati özgardi"
 
 msgid "Менеджер ответил вам в чате"
-msgstr "Menejer sizga chatda javob berdi"
+msgstr "Menejer sizga çatda javob berdi"
 
 msgid "Карточка товара %(number)s возвращена на доработку"
-msgstr "%(number)s mahsulot kartochkasi qayta ishlashga qaytarildi"
+msgstr "%(number)s mahsulot kartoçkasi qayta işlaşga qaytarildi"
 
 msgid "Новое уведомление в личном кабинете"
-msgstr "Shaxsiy kabinetda yangi bildirishnoma"
+msgstr "Şaxsiy kabinetda yangi bildirişnoma"
 
 msgid "Вам отправлено коммерческое предложение %(number)s. Откройте его в личном кабинете, чтобы принять или отклонить."
-msgstr "Sizga %(number)s tijorat taklifi yuborildi. Uni qabul qilish yoki rad etish uchun shaxsiy kabinetda oching."
+msgstr "Sizga %(number)s tijorat taklifi yuborildi. Uni qabul qiliş yoki rad etiş uçun şaxsiy kabinetda oçing."
 
 msgid "Выставлен счёт %(number)s на сумму %(amount)s."
 msgstr "%(amount)s miqdorida %(number)s hisob-fakturasi taqdim etildi."
 
 msgid "Срок оплаты — до %(due_date)s."
-msgstr "Toʻlov muddati — %(due_date)s gacha."
+msgstr "Tölov muddati — %(due_date)s gaça."
 
 msgid "Срок оплаты счёта %(number)s прошёл. Остаток к оплате — %(amount)s."
-msgstr "%(number)s hisob-fakturasini toʻlash muddati oʻtdi. Toʻlanishi kerak boʻlgan qoldiq — %(amount)s."
+msgstr "%(number)s hisob-fakturasini tölaş muddati ötdi. Tölanişi kerak bölgan qoldiq — %(amount)s."
 
 msgid "Акт %(number)s ждёт вашей приёмки: примите его или верните с причиной."
-msgstr "%(number)s dalolatnomasi qabul qilishingizni kutmoqda: uni qabul qiling yoki sababini koʻrsatib qaytaring."
+msgstr "%(number)s dalolatnomasi qabul qilişingizni kutmoqda: uni qabul qiling yoki sababini körsatib qaytaring."
 
 msgid "Статус поставки по сделке %(deal)s изменился."
-msgstr "%(deal)s bitimi boʻyicha yetkazib berish holati oʻzgardi."
+msgstr "%(deal)s bitimi böyiça yetkazib beriş holati özgardi."
 
 msgid "Ожидаемая дата поставки по сделке %(deal)s — %(eta)s."
-msgstr "%(deal)s bitimi boʻyicha kutilayotgan yetkazib berish sanasi — %(eta)s."
+msgstr "%(deal)s bitimi böyiça kutilayotgan yetkazib beriş sanasi — %(eta)s."
 
 msgid "Прежняя дата — %(previous_eta)s."
 msgstr "Avvalgi sana — %(previous_eta)s."
 
 msgid "Менеджер ответил на ваше сообщение в чате личного кабинета."
-msgstr "Menejer shaxsiy kabinet chatidagi xabaringizga javob berdi."
+msgstr "Menejer şaxsiy kabinet çatidagi xabaringizga javob berdi."
 
 msgid "Карточка товара %(number)s возвращена на доработку."
-msgstr "%(number)s mahsulot kartochkasi qayta ishlashga qaytarildi."
+msgstr "%(number)s mahsulot kartoçkasi qayta işlaşga qaytarildi."
 
 msgid "Причина: %(reason)s"
 msgstr "Sabab: %(reason)s"
 
 msgid "В личном кабинете есть новое уведомление."
-msgstr "Shaxsiy kabinetda yangi bildirishnoma bor."
+msgstr "Şaxsiy kabinetda yangi bildirişnoma bor."
 
 msgid "Здравствуйте, %(name)s!"
 msgstr "Assalomu alaykum, %(name)s!"
@@ -276,68 +276,68 @@ msgid "Здравствуйте!"
 msgstr "Assalomu alaykum!"
 
 msgid "Открыть в личном кабинете:"
-msgstr "Shaxsiy kabinetda ochish:"
+msgstr "Şaxsiy kabinetda oçiş:"
 
 msgid "Вы получили это письмо как контакт компании «%(company)s»."
 msgstr "Siz bu xatni «%(company)s» kompaniyasining kontakti sifatida oldingiz."
 
 msgid "Настроить уведомления:"
-msgstr "Bildirishnomalarni sozlash:"
+msgstr "Bildirişnomalarni sozlaş:"
 
 msgid "Личный кабинет"
-msgstr "Shaxsiy kabinet"
+msgstr "Şaxsiy kabinet"
 
 msgid "Открыть в личном кабинете"
-msgstr "Shaxsiy kabinetda ochish"
+msgstr "Şaxsiy kabinetda oçiş"
 
 msgid "Настроить уведомления"
-msgstr "Bildirishnomalarni sozlash"
+msgstr "Bildirişnomalarni sozlaş"
 
 msgid "Карточка товара %(number)s опубликована"
-msgstr "%(number)s mahsulot kartochkasi eʼlon qilindi"
+msgstr "%(number)s mahsulot kartoçkasi eʼlon qilindi"
 
 msgid "Карточка товара %(number)s опубликована в каталоге — клиенты её видят."
-msgstr "%(number)s mahsulot kartochkasi katalogda eʼlon qilindi — mijozlar uni koʻrmoqda."
+msgstr "%(number)s mahsulot kartoçkasi katalogda eʼlon qilindi — mijozlar uni körmoqda."
 
 msgid "Получать мгновенно в Telegram"
-msgstr "Telegram orqali darhol olish"
+msgstr "Telegram orqali darhol oliş"
 
 msgid "подключается в личном кабинете: Профиль → «Уведомления»."
-msgstr "shaxsiy kabinetda ulanadi: Profil → «Bildirishnomalar»."
+msgstr "şaxsiy kabinetda ulanadi: Profil → «Bildirişnomalar»."
 
 msgid "после входа подключите бот в разделе Профиль → «Уведомления»: счета, акты и ответы менеджера будут приходить сразу."
-msgstr "kirgandan keyin Profil → «Bildirishnomalar» boʻlimida botni ulang: hisob-fakturalar, dalolatnomalar va menejer javoblari darhol keladi."
+msgstr "kirgandan keyin Profil → «Bildirişnomalar» bölimida botni ulang: hisob-fakturalar, dalolatnomalar va menejer javoblari darhol keladi."
 
 msgid "Запрошена смена банковских реквизитов компании"
-msgstr "Kompaniya bank rekvizitlarini oʻzgartirish soʻraldi"
+msgstr "Kompaniya bank rekvizitlarini özgartiriş söraldi"
 
 msgid "Банковские реквизиты компании изменены"
-msgstr "Kompaniya bank rekvizitlari oʻzgartirildi"
+msgstr "Kompaniya bank rekvizitlari özgartirildi"
 
 msgid "Запрос на смену банковских реквизитов отклонён"
-msgstr "Bank rekvizitlarini oʻzgartirish soʻrovi rad etildi"
+msgstr "Bank rekvizitlarini özgartiriş sörovi rad etildi"
 
 msgid "Подан запрос на смену банковских реквизитов компании. Реквизиты изменятся только после проверки сотрудником. Если это были не вы, срочно свяжитесь с менеджером."
-msgstr "Kompaniya bank rekvizitlarini oʻzgartirish soʻrovi yuborildi. Rekvizitlar faqat xodim tekshiruvidan soʻng oʻzgaradi. Agar bu siz boʻlmasangiz, zudlik bilan menejerga murojaat qiling."
+msgstr "Kompaniya bank rekvizitlarini özgartiriş sörovi yuborildi. Rekvizitlar faqat xodim tekşiruvidan söng özgaradi. Agar bu siz bölmasangiz, zudlik bilan menejerga murojaat qiling."
 
 msgid "Сотрудник подтвердил смену банковских реквизитов компании, новые реквизиты действуют."
-msgstr "Xodim kompaniya bank rekvizitlarini oʻzgartirishni tasdiqladi, yangi rekvizitlar amalda."
+msgstr "Xodim kompaniya bank rekvizitlarini özgartirişni tasdiqladi, yangi rekvizitlar amalda."
 
 msgid "Запрос на смену банковских реквизитов компании отклонён, прежние реквизиты действуют."
-msgstr "Kompaniya bank rekvizitlarini oʻzgartirish soʻrovi rad etildi, avvalgi rekvizitlar amalda."
+msgstr "Kompaniya bank rekvizitlarini özgartiriş sörovi rad etildi, avvalgi rekvizitlar amalda."
 
 msgid "Мы не просим пароль и код в письме или по телефону. Не пересылайте этот код."
-msgstr "Biz parol va kodni xatda yoki telefonda söramaymiz. Bu kodni hech kimga yubormang."
+msgstr "Biz parol va kodni xatda yoki telefonda söramaymiz. Bu kodni heç kimga yubormang."
 
 #, python-format
 msgid "%(name)s вошёл в личный кабинет с нового устройства."
-msgstr "%(name)s shaxsiy kabinetga yangi qurilmadan kirdi."
+msgstr "%(name)s şaxsiy kabinetga yangi qurilmadan kirdi."
 
 msgid "Если это не ваш сотрудник, завершите сеанс: «Компания» → «Журнал безопасности»."
 msgstr "Agar bu sizning xodimingiz bölmasa, seansni yakunlang: «Kompaniya» → «Xavfsizlik jurnali»."
 
 msgid "Вход в кабинет с нового устройства"
-msgstr "Kabinetga yangi qurilmadan kirish"
+msgstr "Kabinetga yangi qurilmadan kiriş"
 
 #: templates/emails/quote_accepted_contact.html templates/emails/quote_accepted_contact.txt
 #, python-format
@@ -466,16 +466,16 @@ msgstr "Tugma işlamasa, havolani brauzerga nusxalang:"
 
 # ── cc2: copy cleanup 2026-11-24 ──
 msgid "Изменился статус поставки по проекту %(deal)s"
-msgstr "%(deal)s loyihasi böyiça yetkazib berish holati oʻzgardi"
+msgstr "%(deal)s loyihasi böyiça yetkazib beriş holati özgardi"
 
 msgid "Изменился срок поставки по проекту %(deal)s"
-msgstr "%(deal)s loyihasi böyiça yetkazib berish muddati oʻzgardi"
+msgstr "%(deal)s loyihasi böyiça yetkazib beriş muddati özgardi"
 
 msgid "Статус поставки по проекту %(deal)s изменился."
-msgstr "%(deal)s loyihasi böyiça yetkazib berish holati oʻzgardi."
+msgstr "%(deal)s loyihasi böyiça yetkazib beriş holati özgardi."
 
 msgid "Ожидаемая дата поставки по проекту %(deal)s — %(eta)s."
-msgstr "%(deal)s loyihasi böyiça kutilayotgan yetkazib berish sanasi — %(eta)s."
+msgstr "%(deal)s loyihasi böyiça kutilayotgan yetkazib beriş sanasi — %(eta)s."
 
 msgid "Договор № %(number)s на согласование"
 msgstr "Imzolaş uçun %(number)s-sonli şartnoma"
@@ -517,13 +517,13 @@ msgid "Вы запросили вход в кабинет компании «%(c
 msgstr "Siz «%(company)s» kompaniyasi kabinetiga kirişni söradingiz."
 
 msgid "Для вас открыт доступ"
-msgstr "Sizga kiriş ochildi"
+msgstr "Sizga kiriş oçildi"
 
 msgid "Чтобы войти, задайте пароль — до этого войти нельзя."
 msgstr "Kiriş uçun parol belgilang — parolsiz kirib bölmaydi."
 
 msgid "Для вас открыт доступ. Чтобы войти, задайте пароль по ссылке:"
-msgstr "Sizga kiriş ochildi. Kiriş uçun parolni şu havola orqali belgilang:"
+msgstr "Sizga kiriş oçildi. Kiriş uçun parolni şu havola orqali belgilang:"
 
 msgid "Вас пригласили в команду"
 msgstr "Sizni jamoaga taklif qilişdi"
@@ -551,7 +551,7 @@ msgid "Вы запросили сброс пароля. Чтобы задать 
 msgstr "Siz parolni tiklaşni söradingiz. Yangi parolni belgilaş uçun havolaga öting:"
 
 msgid "Для вас открыт доступ. Чтобы войти, задайте пароль — это займёт меньше минуты."
-msgstr "Sizga kiriş ochildi. Kiriş uçun parol belgilang — bir daqiqadan kam vaqt oladi."
+msgstr "Sizga kiriş oçildi. Kiriş uçun parol belgilang — bir daqiqadan kam vaqt oladi."
 
 msgid "Не ожидали это письмо? Проигнорируйте его — никаких действий не требуется."
 msgstr "Bu xatni kutmagan edingizmi? Uni eʼtiborsiz qoldiring — hiç qanday harakat talab qilinmaydi."
@@ -579,7 +579,7 @@ msgstr "Imzolandi"
 
 # ── ДК-5: письмо партнёру, PDF запроса и заказа ──
 msgid "Заказ поставщику № %(number)s"
-msgstr "Buyurtma № %(number)s (yetkazib beruvchiga)"
+msgstr "Buyurtma № %(number)s (yetkazib beruvçiga)"
 
 msgid "Запрос цены: %(number)s"
 msgstr "Narx sörovi: %(number)s"
@@ -591,7 +591,7 @@ msgid "от %(buyer_name)s"
 msgstr "%(buyer_name)s tomonidan"
 
 msgid "Заказ поставщику"
-msgstr "Yetkazib beruvchiga buyurtma"
+msgstr "Yetkazib beruvçiga buyurtma"
 
 msgid "Запрос цены"
 msgstr "Narx sörovi"
@@ -636,7 +636,7 @@ msgid "Ответить на запрос:"
 msgstr "Sörovga javob beriş:"
 
 msgid "Ответить на запрос можно в личном кабинете партнёра."
-msgstr "Sörovga hamkorning shaxsiy kabinetida javob berişingiz mumkin."
+msgstr "Sörovga hamkorning şaxsiy kabinetida javob berişingiz mumkin."
 
 msgid "От кого:"
 msgstr "Kimdan:"

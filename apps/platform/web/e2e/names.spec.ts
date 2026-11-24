@@ -99,7 +99,7 @@ test.describe("названия модулей: десктоп", () => {
   }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await loginAndWait(page, "director@demo.example");
-    await switchLanguage(page, "O‘zbekcha");
+    await switchLanguage(page, "Özbekça");
     await expect(page.getByRole("heading", { level: 1, name: "Vazifalar" })).toBeVisible();
     const rail = page.getByRole("navigation", { name: "Modullar" }).getByRole("link");
     await expect(rail.filter({ hasNotText: /^RT$/ })).toHaveText([
@@ -112,7 +112,7 @@ test.describe("названия модулей: десктоп", () => {
     ]);
 
     await rail.filter({ hasText: "Kontaktlar" }).click();
-    const menu = page.getByRole("navigation", { name: "Modul bo‘limlari" });
+    const menu = page.getByRole("navigation", { name: "Modul bölimlari" });
     await expect(menu).toContainText("Kontaktlar");
     await expect(menu).toContainText("Lidlar");
     await expect(menu).not.toContainText(SYSTEM_NAMES);
@@ -145,7 +145,7 @@ test.describe("названия модулей: 390 @mobile", () => {
     await page.keyboard.press("Escape");
     await expect(drawerMenu).toBeHidden();
 
-    await switchLanguage(page, "O‘zbekcha");
+    await switchLanguage(page, "Özbekça");
     const barUz = page.getByRole("navigation", { name: "Modullar" });
     await expect(barUz.getByRole("link")).toHaveText([
       "Asosiy",
@@ -155,9 +155,7 @@ test.describe("названия модулей: 390 @mobile", () => {
       "Organayzer",
     ]);
     await page.getByRole("button", { name: "Menyu" }).click();
-    await expect(page.getByRole("navigation", { name: "Modul bo‘limlari" })).toContainText(
-      "Lidlar",
-    );
+    await expect(page.getByRole("navigation", { name: "Modul bölimlari" })).toContainText("Lidlar");
     await settledScreenshot(page, "mobile-menu-uz");
   });
 });

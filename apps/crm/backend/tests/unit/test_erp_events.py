@@ -331,7 +331,7 @@ async def test_quote_sent_prepares_a_client_message_with_the_link_button() -> No
             "uz",
             "tijorat taklifi",
             [
-                ["Taklifni ochish", "https://erp.example.com/q/42"],
+                ["Taklifni oçiş", "https://erp.example.com/q/42"],
                 ["Kabinet", "https://cab.example.com"],
             ],
         ),

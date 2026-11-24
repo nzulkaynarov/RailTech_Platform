@@ -219,7 +219,7 @@ describe("Admin · Ролевая матрица (R-2, ADR-0012)", () => {
     expect(t("ru", "gained", 11)).toBe("11 сотрудников получат: X.");
     expect(t("en", "lost", 1)).toBe("1 employee will lose: X.");
     expect(t("en", "gained", 2)).toBe("2 employees will gain: X.");
-    expect(t("uz", "lost", 2)).toBe("2 xodim yo'qotadi: X.");
+    expect(t("uz", "lost", 2)).toBe("2 xodim yöqotadi: X.");
   });
 
   it("вкладки роли: «Роль», «Сотрудники» и «Журнал» (с W13-A6)", async () => {

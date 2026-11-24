@@ -1,14 +1,14 @@
 {
   "dashboard": {
     "name": "Asosiy",
-    "title": "Bosh sahifa",
+    "title": "Boş sahifa",
     "sections": {
       "queue": "Vazifalar",
       "summary": "Xulosa"
     },
     "queue": {
       "title": "Sizni nima kutmoqda",
-      "cardsLabel": "Navbat hisoblagichlari",
+      "cardsLabel": "Navbat hisoblagiçlari",
       "decisions": {
         "one": "{{count}} qaror",
         "few": "{{count}} qaror",
@@ -16,50 +16,50 @@
         "other": "{{count}} qaror"
       },
       "due": {
-        "overdue": "muddati o‘tgan",
+        "overdue": "muddati ötgan",
         "today": "muddat bugun",
         "tomorrow": "ertaga",
         "memo": "xizmat xati",
         "none": "muddatsiz",
-        "until": "{{date}} gacha"
+        "until": "{{date}} gaça"
       },
       "loading": "Navbat yuklanmoqda…",
-      "loadErrorTitle": "Navbatni yuklab bo‘lmadi",
-      "loadErrorText": "Server javob bermadi. Ulanishni tekshirib, qayta urinib ko‘ring.",
-      "retry": "Qayta urinish",
+      "loadErrorTitle": "Navbatni yuklab bölmadi",
+      "loadErrorText": "Server javob bermadi. Ulanişni tekşirib, qayta urinib köring.",
+      "retry": "Qayta uriniş",
       "empty": {
         "director": {
-          "title": "Hozircha sizdan qaror talab qilinmaydi",
+          "title": "Hozirça sizdan qaror talab qilinmaydi",
           "text": "Yangi xatlar, TT qoralamalari va xizmat xatlari şu yerga özi keladi.",
           "action": "Loyihalar"
         },
         "universal": {
-          "title": "Siz uchun vazifalar yo‘q",
-          "text": "Lidlar, hisob-kitob topshiriqlari, mijozlar to‘lov topshiriqnomalari, chiqariladigan hisoblar, shartnomalar va dalolatnomalar shu yerda va qo‘ng‘iroqchada paydo bo‘ladi."
+          "title": "Siz uçun vazifalar yöq",
+          "text": "Lidlar, hisob-kitob topşiriqlari, mijozlar tölov topşiriqnomalari, çiqariladigan hisoblar, şartnomalar va dalolatnomalar şu yerda va qönğiroqçada paydo böladi."
         },
         "manager": {
           "title": "Mijozlar hozir sizni kutmayapti",
-          "text": "Telegram va pochtadan kelgan yangi xabarlar shu yerda va qo‘ng‘iroqchada paydo bo‘ladi."
+          "text": "Telegram va poçtadan kelgan yangi xabarlar şu yerda va qönğiroqçada paydo böladi."
         },
         "supply": {
-          "title": "Hisob-kitob topshiriqlari yo‘q",
-          "text": "Hozircha bo‘sh."
+          "title": "Hisob-kitob topşiriqlari yöq",
+          "text": "Hozirça böş."
         },
         "engineer": {
-          "title": "Xizmatlar bo‘yicha topshiriqlar yo‘q",
-          "text": "Hozircha bo‘sh."
+          "title": "Xizmatlar böyiça topşiriqlar yöq",
+          "text": "Hozirça böş."
         },
         "accountant": {
-          "title": "Tasdiqlash uchun to‘lov topshiriqnomalari va chiqariladigan hisoblar yo‘q",
-          "text": "Yangilari mijoz «To‘ladim» tugmasini bosganda paydo bo‘ladi."
+          "title": "Tasdiqlaş uçun tölov topşiriqnomalari va çiqariladigan hisoblar yöq",
+          "text": "Yangilari mijoz «Töladim» tugmasini bosganda paydo böladi."
         },
         "admin": {
-          "title": "Sizga vazifalar yo‘q",
-          "text": "Xodimlar murojaatlari va integratsiya nosozliklari shu yerda va qo‘ng‘iroqchada paydo bo‘ladi."
+          "title": "Sizga vazifalar yöq",
+          "text": "Xodimlar murojaatlari va integratsiya nosozliklari şu yerda va qönğiroqçada paydo böladi."
         },
         "default": {
-          "title": "Sizga vazifalar yo‘q",
-          "text": "Yangi vazifalar shu yerda va qo‘ng‘iroqchada paydo bo‘ladi."
+          "title": "Sizga vazifalar yöq",
+          "text": "Yangi vazifalar şu yerda va qönğiroqçada paydo böladi."
         },
         "registrar": {
           "title": "Sizga vazifalar yöq",
@@ -75,15 +75,15 @@
         }
       },
       "partial": {
-        "crm": "Lidlar va mijozlarga javoblar yuklanmadi: «{{crm}}» bo‘limi javob bermadi. Qolgani ko‘rsatilgan.",
-        "erp": "TT, hisob-kitoblar, hisoblar va loyihalar yuklanmadi: «{{erp}}» bo‘limi javob bermadi. Qolgani ko‘rsatilgan.",
-        "both": "Lidlar, TT, hisob-kitoblar, hisoblar va loyihalar yuklanmadi: «{{crm}}» va «{{erp}}» bo‘limlari javob bermadi. Qolgani ko‘rsatilgan.",
-        "eds": "Xatlar va hujjatlar yuklanmadi: «{{eds}}» bo‘limi javob bermadi. Qolgani ko‘rsatilgan.",
-        "multi": "{{names}} bo‘limlaridan ma’lumotlar yuklanmadi. Qolgani ko‘rsatilgan."
+        "crm": "Lidlar va mijozlarga javoblar yuklanmadi: «{{crm}}» bölimi javob bermadi. Qolgani körsatilgan.",
+        "erp": "TT, hisob-kitoblar, hisoblar va loyihalar yuklanmadi: «{{erp}}» bölimi javob bermadi. Qolgani körsatilgan.",
+        "both": "Lidlar, TT, hisob-kitoblar, hisoblar va loyihalar yuklanmadi: «{{crm}}» va «{{erp}}» bölimlari javob bermadi. Qolgani körsatilgan.",
+        "eds": "Xatlar va hujjatlar yuklanmadi: «{{eds}}» bölimi javob bermadi. Qolgani körsatilgan.",
+        "multi": "{{names}} bölimlaridan maʼlumotlar yuklanmadi. Qolgani körsatilgan."
       },
       "partialEmpty": {
-        "title": "Navbat to‘liq yuklanmadi",
-        "text": "Manba javob bermagani uchun vazifalarning bir qismi ko‘rinmayapti. Birozdan keyin qayta urinib ko‘ring."
+        "title": "Navbat töliq yuklanmadi",
+        "text": "Manba javob bermagani uçun vazifalarning bir qismi körinmayapti. Birozdan keyin qayta urinib köring."
       },
       "onBehalf": "{{name}} uçun",
       "covering": {
@@ -93,7 +93,7 @@
         "filterLabel": "Kimning vazifalari"
       },
       "overdueCount": "muddati ötgan: {{count}}",
-      "filterLabel": "Ish turi",
+      "filterLabel": "Iş turi",
       "filterAll": "Hammasi",
       "groups": {
         "overdue": "Muddati ötgan",
@@ -101,14 +101,14 @@
         "later": "Keyinroq"
       },
       "categories": {
-        "sign": "Imzolash",
+        "sign": "Imzolaş",
         "approve": "Kelişiş",
         "resolution": "Rezolyutsiya",
         "instruction": "Topşiriqlar",
         "payment": "Tölov",
         "lead": "Lidlar",
         "mail": "Poçta",
-        "supply": "Ta’minot",
+        "supply": "Taʼminot",
         "project": "Loyihalar",
         "other": "Boşqa"
       },
@@ -165,8 +165,8 @@
           "hours": "{{count}} soat",
           "days": "{{count}} kun"
         },
-        "remind": "Eslatish",
-        "remindLabel": "Eslatish: {{title}}",
+        "remind": "Eslatiş",
+        "remindLabel": "Eslatiş: {{title}}",
         "reminded": "Eslatma yuborildi",
         "again": "Allaqaçon eslatilgan, keyinroq qayta uriniş",
         "failed": "Eslatma yuborilmadi"
@@ -175,37 +175,37 @@
     "activity": {
       "label": "Bugungi voqealar",
       "loading": "Lenta yuklanmoqda…",
-      "loadErrorTitle": "Lentani yuklab bo‘lmadi",
-      "loadErrorText": "Server javob bermadi. Birozdan keyin qayta urinib ko‘ring.",
+      "loadErrorTitle": "Lentani yuklab bölmadi",
+      "loadErrorText": "Server javob bermadi. Birozdan keyin qayta urinib köring.",
       "events": {
         "admin": {
           "company": {
-            "own_created": "O‘z kompaniyasi yaratildi",
-            "archived": "Kompaniya arxivga o‘tkazildi",
+            "own_created": "Öz kompaniyasi yaratildi",
+            "archived": "Kompaniya arxivga ötkazildi",
             "unarchived": "Kompaniya arxivdan qaytarildi"
           },
           "user": {
-            "created": "Xodim qo‘shildi",
-            "deactivated": "Xodim o‘chirildi",
+            "created": "Xodim qöşildi",
+            "deactivated": "Xodim öçirildi",
             "activated": "Xodim yoqildi",
-            "role_changed": "Xodim rollari o‘zgartirildi"
+            "role_changed": "Xodim rollari özgartirildi"
           },
           "email_template": {
-            "created": "Xat shabloni qo‘shildi",
-            "updated": "Xat shabloni o‘zgartirildi",
-            "deleted": "Xat shabloni o‘chirildi"
+            "created": "Xat şabloni qöşildi",
+            "updated": "Xat şabloni özgartirildi",
+            "deleted": "Xat şabloni öçirildi"
           },
           "lookup": {
-            "created": "Ma’lumotnoma to‘ldirildi",
-            "updated": "Ma’lumotnoma o‘zgartirildi",
-            "deleted": "Ma’lumotnoma qatori o‘chirildi"
+            "created": "Maʼlumotnoma töldirildi",
+            "updated": "Maʼlumotnoma özgartirildi",
+            "deleted": "Maʼlumotnoma qatori öçirildi"
           },
           "exchange_rate": {
-            "manual": "Valyuta kursi qo‘lda kiritildi",
-            "auto_skipped": "Markaziy bank kursi qo‘llanmadi: qo‘lda kiritilgan kurs amal qiladi"
+            "manual": "Valyuta kursi qölda kiritildi",
+            "auto_skipped": "Markaziy bank kursi qöllanmadi: qölda kiritilgan kurs amal qiladi"
           },
           "portal_legal": {
-            "published": "Kabinet hujjatining yangi tahriri e’lon qilindi"
+            "published": "Kabinet hujjatining yangi tahriri eʼlon qilindi"
           }
         }
       }
@@ -216,13 +216,13 @@
       "summary": "Xulosa"
     },
     "summary": {
-      "byDue": "Muddat bo‘yicha vazifalar",
-      "stuck": "Muddati o‘tgan",
-      "noStuck": "Muddati o‘tgan vazifalar yo‘q",
-      "loadError": "Xulosani yuklab bo‘lmadi",
-      "retry": "Qayta urinish",
+      "byDue": "Muddat böyiça vazifalar",
+      "stuck": "Muddati ötgan",
+      "noStuck": "Muddati ötgan vazifalar yöq",
+      "loadError": "Xulosani yuklab bölmadi",
+      "retry": "Qayta uriniş",
       "due": {
-        "overdue": "Muddati o‘tgan",
+        "overdue": "Muddati ötgan",
         "today": "Bugun",
         "tomorrow": "Ertaga",
         "later": "Keyinroq"
@@ -237,7 +237,7 @@
       "clients": "Kontragentlar",
       "kb": "Bilimlar bazasi"
     },
-    "action": "Ariza yaratish",
+    "action": "Ariza yaratiş",
     "nav": {
       "leads": "Lidlar",
       "clients": "Kontragentlar",
@@ -248,25 +248,25 @@
     "name": "Hujjatlar",
     "title": "Hujjatlar",
     "sections": {
-      "documents": "Barcha hujjatlar",
-      "inbox": "Kiruvchi",
+      "documents": "Barça hujjatlar",
+      "inbox": "Kiruvçi",
       "projects": "Loyihalar",
-      "drafts": "Tasdiqlash uchun TT",
-      "approvals": "Kelishuvda",
+      "drafts": "Tasdiqlaş uçun TT",
+      "approvals": "Kelişuvda",
       "payments": "Moliya",
       "new": "Yangi hujjat",
-      "register": "Kiruvchi hujjatni ro‘yxatga olish",
-      "tasks": "Topshiriq",
-      "mail": "Pochta",
+      "register": "Kiruvçi hujjatni röyxatga oliş",
+      "tasks": "Topşiriq",
+      "mail": "Poçta",
       "mymail": "Mening poçtam",
       "contracttpl": "Şartnoma şablonlari"
     },
-    "action": "Hujjat yaratish",
+    "action": "Hujjat yaratiş",
     "nav": {
-      "inbox": "Kiruvchi",
-      "mail": "Pochta",
-      "outbox": "Chiquvchi",
-      "internal": "Ichki",
+      "inbox": "Kiruvçi",
+      "mail": "Poçta",
+      "outbox": "Çiquvçi",
+      "internal": "Içki",
       "archive": "Arxiv"
     }
   },
@@ -280,7 +280,7 @@
       "catalog": "Tovarlar",
       "docs": "Hujjatlar"
     },
-    "action": "Ariza yaratish",
+    "action": "Ariza yaratiş",
     "nav": {
       "requests": "Arizalar",
       "sales": "Sotuv",
@@ -291,50 +291,50 @@
       "docs": "Hujjatlar",
       "finance": "Moliya",
       "invoices": "Mijoz hisoblari",
-      "memos": "To‘lov arizalari"
+      "memos": "Tölov arizalari"
     }
   },
   "chats": {
     "name": "Organayzer",
     "title": "Organayzer",
     "sections": {
-      "all": "Chatlar",
+      "all": "Çatlar",
       "contacts": "Odamlar",
       "calendar": "Taqvim"
     },
-    "action": "Chat yaratish",
+    "action": "Çat yaratiş",
     "nav": {
       "calendar": "Taqvim",
       "people": "Odamlar"
     },
     "calendar": {
       "link": "Taqvim havolasi",
-      "filter": "Nimani ko‘rsatish",
+      "filter": "Nimani körsatiş",
       "kinds": {
         "tasks": "Boşqa topşiriqlar",
         "documents": "Hujjatlar",
         "invoices": "Hisoblar",
         "deliveries": "Yetkazmalar"
       },
-      "loadError": "Muddatlarni yuklab bo‘lmadi",
-      "retry": "Qayta urinish",
+      "loadError": "Muddatlarni yuklab bölmadi",
+      "retry": "Qayta uriniş",
       "prev": "Orqaga",
       "next": "Oldinga"
     },
     "inbox": {
-      "search": "Muhokamani topish",
-      "message": "Xabar yozish",
-      "noData": "Ma’lumotlar shu yerda paydo bo‘ladi",
+      "search": "Muhokamani topiş",
+      "message": "Xabar yoziş",
+      "noData": "Maʼlumotlar şu yerda paydo böladi",
       "groups": {
-        "objects": "Obyektlar bo‘yicha muhokamalar",
-        "direct": "Shaxsiy"
+        "objects": "Obyektlar böyiça muhokamalar",
+        "direct": "Şaxsiy"
       }
     },
     "people": {
-      "filter": "Kimni ko‘rsatish",
-      "search": "Odamni topish",
+      "filter": "Kimni körsatiş",
+      "search": "Odamni topiş",
       "phone": "Telefon",
-      "email": "Pochta",
+      "email": "Poçta",
       "kinds": {
         "all": "Hammasi",
         "employees": "Xodimlar",
@@ -346,26 +346,26 @@
         "name": "Ism",
         "position": "Lavozim",
         "kind": "Kim",
-        "owner": "Mas’ul",
+        "owner": "Masʼul",
         "contacts": "Kontaktlar",
         "company": "Kompaniya",
         "actions": "Amallar"
       },
-      "revealFailed": "Kontaktlar ko‘rsatilmadi: jurnal mavjud emas, birozdan so‘ng qayta urinib ko‘ring.",
+      "revealFailed": "Kontaktlar körsatilmadi: jurnal mavjud emas, birozdan söng qayta urinib köring.",
       "empty": {
         "title": "Heç kim topilmadi",
         "text": "Filtrni yoki qidiruvni özgartiring"
       },
       "roles": "Rollar",
-      "reveal": "Kontaktlarni körsatish",
-      "close": "Yopish",
-      "showClosed": "Yopilganlarni körsatish",
+      "reveal": "Kontaktlarni körsatiş",
+      "close": "Yopiş",
+      "showClosed": "Yopilganlarni körsatiş",
       "closedLead": "yopilgan",
       "channel": "Kanal",
       "language": "Til",
       "need": "Nima kerak",
       "telegram": "Telegram",
-      "openLead": "Lidni ochish {{number}}",
+      "openLead": "Lidni oçiş {{number}}",
       "languages": {
         "ru": "Rusça",
         "en": "Inglizça",
@@ -383,25 +383,25 @@
       "zones": "Masʼuliyat zonalari",
       "signing": "Imzo huquqlari",
       "company": "Rekvizitlar va blanka",
-      "numbering": "Raqamlash",
+      "numbering": "Raqamlaş",
       "taxes": "Soliqlar va valyutalar",
       "sales": "Sotuvlar",
       "articles": "Kompaniya maqolalari",
       "legal": "Oferta va siyosat",
       "telegram": "Telegram",
-      "mail": "Pochta",
-      "forms": "Sayt shakllari",
-      "dictionaries": "Ma’lumotnomalar",
-      "resolutions": "Rezolyutsiya shablonlari",
+      "mail": "Poçta",
+      "forms": "Sayt şakllari",
+      "dictionaries": "Maʼlumotnomalar",
+      "resolutions": "Rezolyutsiya şablonlari",
       "templates": "Şablonlar",
       "timing": "Vaqt va muddatlar",
-      "notifications": "Bildirishnomalar",
+      "notifications": "Bildirişnomalar",
       "integrations": "Servislar",
       "spend": "SI",
       "audit": "Tarix",
       "exports": "Eksport",
-      "bus": "Tizimlararo almashinuv",
-      "setup": "Birinchi ishga tushirish",
+      "bus": "Tizimlararo almaşinuv",
+      "setup": "Birinçi işga tuşiriş",
       "tickets": "Xodimlar murojaatlari"
     },
     "groups": {
@@ -412,150 +412,150 @@
       "journal": "Jurnal"
     },
     "home": {
-      "viewOnly": "Faqat ko‘rish",
-      "searchLabel": "Sozlamani topish",
-      "searchPlaceholder": "Sozlamani topish: pochta, kurs, rad sabablari",
+      "viewOnly": "Faqat köriş",
+      "searchLabel": "Sozlamani topiş",
+      "searchPlaceholder": "Sozlamani topiş: poçta, kurs, rad sabablari",
       "found": "Topilgan sozlamalar: {{count}}",
       "results": "Topilgan sozlamalar",
-      "none": "«{{query}}» bo‘yicha sozlama yo‘q.",
-      "clear": "Qidiruvni tozalash",
-      "matchedBy": "«{{word}}» so‘zi bo‘yicha topildi",
-      "setupTitle": "Birinchi ishga tushirish: {{done}} / {{total}} tayyor",
+      "none": "«{{query}}» böyiça sozlama yöq.",
+      "clear": "Qidiruvni tozalaş",
+      "matchedBy": "«{{word}}» sözi böyiça topildi",
+      "setupTitle": "Birinçi işga tuşiriş: {{done}} / {{total}} tayyor",
       "tickets": "Xodimlar murojaatlari — «Vazifalar»da, yangi: {{count}}.",
-      "ticketsLink": "Ochish",
+      "ticketsLink": "Oçiş",
       "more": "Batafsil",
       "moreAria": "«{{title}}» sahifasi haqida Yordamda batafsil",
-      "allGroups": "Barcha sozlamalar guruhlari"
+      "allGroups": "Barça sozlamalar guruhlari"
     },
     "dictionaries": {
-      "nav": "Bo‘limlar bo‘yicha ma’lumotnomalar",
+      "nav": "Bölimlar böyiça maʼlumotnomalar",
       "sales": "Savdo",
       "documents": "Hujjatlar",
       "calc": "Hisob-kitob",
-      "mail": "Pochta",
-      "partial": "Ba’zi ma’lumotnomalar yuklanmadi ({{lists}}) — qolganlari ko‘rsatilgan. Keyinroq qayta urining.",
+      "mail": "Poçta",
+      "partial": "Baʼzi maʼlumotnomalar yuklanmadi ({{lists}}) — qolganlari körsatilgan. Keyinroq qayta urining.",
       "domain": {
         "eds": "hujjatlar",
-        "crm": "pochta",
+        "crm": "poçta",
         "erp": "Hisob-kitob (ERP)"
       }
     },
     "notifications": {
-      "personal": "Shaxsiy bildirishnomalar — Profilda.",
-      "profile": "Profilni ochish"
+      "personal": "Şaxsiy bildirişnomalar — Profilda.",
+      "profile": "Profilni oçiş"
     },
-    "action": "Xodimni taklif qilish",
+    "action": "Xodimni taklif qiliş",
     "setup": {
-      "title": "Birinchi ishga tushirish",
-      "subtitle": "Har qanday qadamni keyinroq bajarish mumkin.",
-      "subtitleCount": "{{total}} tadan {{done}} tasi tayyor; har qanday qadamni keyinroq bajarish mumkin.",
+      "title": "Birinçi işga tuşiriş",
+      "subtitle": "Har qanday qadamni keyinroq bajariş mumkin.",
+      "subtitleCount": "{{total}} tadan {{done}} tasi tayyor; har qanday qadamni keyinroq bajariş mumkin.",
       "adminTitle": "Administrator",
       "adminDone": "Administrator yaratildi: {{name}}.",
       "companyTitle": "Sizning kompaniyangiz",
-      "companyRequired": "O‘z kompaniyangizni yarating: hujjatlar uning nomidan rasmiylashtiriladi.",
-      "companyDone": "O'z kompaniyasi yaratilgan.",
-      "companyUnknown": "Server hozircha javob bermadi: yangi administratorga kirish kechikib beriladi. Bir necha soniyadan keyin takrorlang.",
+      "companyRequired": "Öz kompaniyangizni yarating: hujjatlar uning nomidan rasmiylaştiriladi.",
+      "companyDone": "Öz kompaniyasi yaratilgan.",
+      "companyUnknown": "Server hozirça javob bermadi: yangi administratorga kiriş keçikib beriladi. Bir neça soniyadan keyin takrorlang.",
       "companyNoRights": "Ruxsat yetarli emas.",
-      "companyRetry": "Qayta tekshirish",
-      "companyWaiting": "Kirish berilishini kutmoqdamiz…",
+      "companyRetry": "Qayta tekşiriş",
+      "companyWaiting": "Kiriş berilişini kutmoqdamiz…",
       "companyName": "Kompaniya nomi",
       "companyNameRequired": "Kompaniya nomini kiriting",
       "companyInn": "STIR (ixtiyoriy)",
       "companyAddress": "Yuridik manzil (ixtiyoriy)",
       "companyPhone": "Telefon (ixtiyoriy)",
-      "companyEmail": "Kompaniya pochtasi (ixtiyoriy)",
-      "companyEmailInvalid": "Elektron pochta manzilini tekshiring",
-      "companySubmit": "Kompaniyani yaratish",
+      "companyEmail": "Kompaniya poçtasi (ixtiyoriy)",
+      "companyEmailInvalid": "Elektron poçta manzilini tekşiring",
+      "companySubmit": "Kompaniyani yaratiş",
       "companyConsequence": [
-        "«Sotuvchi» turidagi kompaniyangiz paydo bo‘ladi, siz uning egasi bo‘lasiz.",
-        "Rekvizitlar, blanka va raqamlashni keyinroq Sozlamalar · Kompaniya bo‘limida to‘ldirish mumkin.",
-        "Ustoz kompaniyani bir marta yaratishni taklif qiladi: uni qayta yaratib bo'lmaydi."
+        "«Sotuvçi» turidagi kompaniyangiz paydo böladi, siz uning egasi bölasiz.",
+        "Rekvizitlar, blanka va raqamlaşni keyinroq Sozlamalar · Kompaniya bölimida töldiriş mumkin.",
+        "Ustoz kompaniyani bir marta yaratişni taklif qiladi: uni qayta yaratib bölmaydi."
       ],
       "companyCreated": "«{{name}}» kompaniyasi yaratildi",
       "companyErrors": {
-        "OWN_COMPANY_ALREADY_EXISTS": "O'z kompaniyasi allaqachon yaratilgan.",
+        "OWN_COMPANY_ALREADY_EXISTS": "Öz kompaniyasi allaqaçon yaratilgan.",
         "FORBIDDEN": "Ruxsat yetarli emas.",
-        "BACKEND_UNAVAILABLE": "Server javob bermadi: yangi administratorga kirish kechikib beriladi. Bir necha soniyadan keyin takrorlang.",
-        "VALIDATION_FAILED": "Forma maydonlarini tekshiring.",
-        "default": "Kompaniyani yaratib bo'lmadi. Urinishni takrorlang.",
-        "ERP_NOT_CONNECTED": "ERP ulanmagan. Avval ERP'ni ulang, so'ng kompaniyani yarating.",
-        "REQUEST_TIMEOUT": "Server o'z vaqtida javob bermadi. Kompaniya allaqachon yaratilgan bo'lishi mumkin: holat yangilanmoqda — forma yo'qolsa, kompaniya bor, aks holda takrorlang."
+        "BACKEND_UNAVAILABLE": "Server javob bermadi: yangi administratorga kiriş keçikib beriladi. Bir neça soniyadan keyin takrorlang.",
+        "VALIDATION_FAILED": "Forma maydonlarini tekşiring.",
+        "default": "Kompaniyani yaratib bölmadi. Urinişni takrorlang.",
+        "ERP_NOT_CONNECTED": "ERP ulanmagan. Avval ERP'ni ulang, söng kompaniyani yarating.",
+        "REQUEST_TIMEOUT": "Server öz vaqtida javob bermadi. Kompaniya allaqaçon yaratilgan bölişi mumkin: holat yangilanmoqda — forma yöqolsa, kompaniya bor, aks holda takrorlang."
       },
-      "connectionsTitle": "Qolgan ulanishlar",
-      "connectionsLead": "Har bir ulanish shu yerda, yon oynada ochiladi; saqlagandan so‘ng — keyingisi.",
+      "connectionsTitle": "Qolgan ulanişlar",
+      "connectionsLead": "Har bir ulaniş şu yerda, yon oynada oçiladi; saqlagandan söng — keyingisi.",
       "progress": "Tayyor: {{done}} / {{total}}",
       "allDone": "Hammasi tayyor: Platforma sozlangan.",
-      "loadError": "Sozlash holatini olib bo'lmadi",
+      "loadError": "Sozlaş holatini olib bölmadi",
       "loadErrorText": "Server javob bermadi. Takrorlang.",
-      "retry": "Takrorlash",
+      "retry": "Takrorlaş",
       "state": {
         "done": "Tayyor",
         "todo": "Bajarilmagan",
-        "unknown": "Ma'lumot yo'q",
+        "unknown": "Maʼlumot yöq",
         "waitingErp": "ERP kutilmoqda"
       },
       "steps": {
         "bot": {
           "title": "Telegram-bot",
-          "text": "Bot tokeni va jamoa kanali: mijozlar botga yozadi, xodimlar bildirishnoma oladi.",
-          "action": "Botni ulash"
+          "text": "Bot tokeni va jamoa kanali: mijozlar botga yozadi, xodimlar bildirişnoma oladi.",
+          "action": "Botni ulaş"
         },
         "erp": {
           "title": "ERP",
-          "text": "Hisob-kitob va ombor bilan aloqa: arizalar, TT va hisoblar. Yangi o‘rnatishda kod kerak emas.",
-          "action": "ERP ni ulash"
+          "text": "Hisob-kitob va ombor bilan aloqa: arizalar, TT va hisoblar. Yangi örnatişda kod kerak emas.",
+          "action": "ERP ni ulaş"
         },
         "mail": {
-          "title": "Pochta",
-          "text": "Barcha xatlar uchun bitta SMTP: takliflar, TT va hisoblar.",
-          "action": "Pochtani sozlash"
+          "title": "Poçta",
+          "text": "Barça xatlar uçun bitta SMTP: takliflar, TT va hisoblar.",
+          "action": "Poçtani sozlaş"
         },
         "models": {
           "title": "AI modellari",
-          "text": "Bot va maslahatlar uchun model kalitlari.",
-          "action": "Modellarni ulash"
+          "text": "Bot va maslahatlar uçun model kalitlari.",
+          "action": "Modellarni ulaş"
         },
         "first_employee": {
-          "title": "Birinchi xodim",
-          "text": "Hamkasbni taklif qiling va unga rol bering. Pochta yo'q bo'lsa, vaqtinchalik parol bering.",
-          "action": "Xodimni taklif qilish"
+          "title": "Birinçi xodim",
+          "text": "Hamkasbni taklif qiling va unga rol bering. Poçta yöq bölsa, vaqtinçalik parol bering.",
+          "action": "Xodimni taklif qiliş"
         }
       },
-      "listLabel": "Sozlash qadamlari",
+      "listLabel": "Sozlaş qadamlari",
       "banner": {
-        "label": "Platformani sozlash",
-        "title": "Platformani sozlash: tayyor {{done}} / {{total}}",
-        "company": "Kompaniyangiz ERP'da hali yo'q.",
+        "label": "Platformani sozlaş",
+        "title": "Platformani sozlaş: tayyor {{done}} / {{total}}",
+        "company": "Kompaniyangiz ERP'da hali yöq.",
         "next": "Keyingisi: {{step}}.",
-        "open": "Sozlashni davom ettirish",
-        "hide": "Ertagacha yashirish",
-        "hideLabel": "Ertagacha yashirish: sozlash banneri",
-        "hidden": "Banner ertagacha yashirildi. Uni «Birinchi ishga tushirish» ustozida qaytarish mumkin.",
+        "open": "Sozlaşni davom ettiriş",
+        "hide": "Ertagaça yaşiriş",
+        "hideLabel": "Ertagaça yaşiriş: sozlaş banneri",
+        "hidden": "Banner ertagaça yaşirildi. Uni «Birinçi işga tuşiriş» ustozida qaytariş mumkin.",
         "bank": "Hisob uçun rekvizitlar yöq: STIR, yuridik manzil yoki hisob raqam."
       },
-      "erpTitle": "ERP ulanishi",
-      "erpLead": "Kompaniya ERP'da yaratiladi, shuning uchun ERP birinchi ulanadi: «ERP ni ulash» tugmasi yetarli.",
-      "erpDone": "ERP ulangan. Aloqani qadam shaklida yoki Sozlamalar · Ulanishlarda tekshirish mumkin.",
-      "erpUnknown": "ERP holati noma’lum: server javob bermadi. ERP sozlamalarini oching va aloqani tekshiring.",
-      "erpOpen": "ERP sozlamalarini ochish",
+      "erpTitle": "ERP ulanişi",
+      "erpLead": "Kompaniya ERP'da yaratiladi, şuning uçun ERP birinçi ulanadi: «ERP ni ulaş» tugmasi yetarli.",
+      "erpDone": "ERP ulangan. Aloqani qadam şaklida yoki Sozlamalar · Ulanişlarda tekşiriş mumkin.",
+      "erpUnknown": "ERP holati nomaʼlum: server javob bermadi. ERP sozlamalarini oçing va aloqani tekşiring.",
+      "erpOpen": "ERP sozlamalarini oçiş",
       "companyNeedsErp": "Avval ERP'ni ulang",
-      "companyNeedsErpText": "Kompaniya ERP'da yaratiladi, shuning uchun ulanmagan paytda uni yaratib bo'lmaydi. Ulangandan keyin forma shu yerda paydo bo'ladi.",
-      "companyNeedsErpAction": "ERP ni ulash",
-      "companyAlreadyCreated": "O'z kompaniyasi allaqachon yaratilgan — natija o'sha, qolgan qadamlar bilan davom eting.",
+      "companyNeedsErpText": "Kompaniya ERP'da yaratiladi, şuning uçun ulanmagan paytda uni yaratib bölmaydi. Ulangandan keyin forma şu yerda paydo böladi.",
+      "companyNeedsErpAction": "ERP ni ulaş",
+      "companyAlreadyCreated": "Öz kompaniyasi allaqaçon yaratilgan — natija öşa, qolgan qadamlar bilan davom eting.",
       "stepOf": "{{total}} tadan {{index}}-qadam",
       "stepDone": "Qadam bajarildi.",
       "nextStep": "Keyingisi: {{step}}",
-      "finish": "Yopish",
+      "finish": "Yopiş",
       "stepSaved": "«{{step}}» qadami tayyor.",
-      "bannerHidden": "Sozlash banneri ertagacha yashirilgan.",
-      "bannerReturn": "Bannerni qaytarish",
+      "bannerHidden": "Sozlaş banneri ertagaça yaşirilgan.",
+      "bannerReturn": "Bannerni qaytariş",
       "cabinetTitle": "Mijoz kabineti manzili",
       "bankTitle": "Hisob uçun rekvizitlar",
-      "bankDone": "STIR, yuridik manzil va hisob raqam kiritilgan: mijozga hisob chiqariladi.",
-      "bankTodo": "STIR, yuridik manzil va hisob raqamsiz mijozga hisob chiqarib bölmaydi. Ularni «Sozlamalar · Rekvizitlar va blank»da kiriting.",
+      "bankDone": "STIR, yuridik manzil va hisob raqam kiritilgan: mijozga hisob çiqariladi.",
+      "bankTodo": "STIR, yuridik manzil va hisob raqamsiz mijozga hisob çiqarib bölmaydi. Ularni «Sozlamalar · Rekvizitlar va blank»da kiriting.",
       "bankWaitCompany": "Avval kompaniyangizni yarating: rekvizitlar uning kartasida kiritiladi.",
-      "bankUnknown": "Hali ma’lumot yo‘q — rekvizitlar holati server javob bergach ko‘rinadi.",
-      "bankOpen": "«Rekvizitlar va blanka»ni ochish",
+      "bankUnknown": "Hali maʼlumot yöq — rekvizitlar holati server javob bergaç körinadi.",
+      "bankOpen": "«Rekvizitlar va blanka»ni oçiş",
       "signing": {
         "title": "Imzo huquqi",
         "text": "Kompaniya hujjatlarini kim imzolaşi mumkin",
@@ -564,67 +564,67 @@
     },
     "org": {
       "title": "Xodimlar",
-      "readOnly": "Faqat ko‘rish.",
+      "readOnly": "Faqat köriş.",
       "listLabel": "Xodimlar",
       "count": "Xodimlar soni: {{count}}",
       "search": {
-        "label": "Xodimlarni qidirish",
-        "placeholder": "Ism, pochta yoki lavozim"
+        "label": "Xodimlarni qidiriş",
+        "placeholder": "Ism, poçta yoki lavozim"
       },
       "statusFilter": {
         "label": "Holat",
-        "all": "Barcha holatlar"
+        "all": "Barça holatlar"
       },
       "columns": {
         "employee": "Xodim",
         "position": "Lavozim",
         "roles": "Rollar",
-        "access": "Kirish va Telegram",
+        "access": "Kiriş va Telegram",
         "status": "Holat"
       },
       "status": {
         "active": "Faol",
         "invited": "Taklif qilingan",
-        "disabled": "O'chirilgan"
+        "disabled": "Öçirilgan"
       },
       "access": {
         "erpPending": "Kiriş berilmoqda",
         "erpError": "Kiriş berilmagan",
         "telegram": "Telegram",
-        "telegramNo": "Telegram: yo'q"
+        "telegramNo": "Telegram: yöq"
       },
       "telegram": {
         "linked": "Ulangan",
         "notLinked": "Ulanmagan"
       },
-      "noRoles": "Rollar yo'q",
-      "noPosition": "ko'rsatilmagan",
-      "open": "Kartochkani ochish: {{name}}",
+      "noRoles": "Rollar yöq",
+      "noPosition": "körsatilmagan",
+      "open": "Kartoçkani oçiş: {{name}}",
       "empty": {
-        "title": "Hozircha xodimlar yo'q",
-        "text": "Rollar shu yerda beriladi: ism, lavozim, rollar, kirish, bildirishnomalar uchun Telegram, holat.",
-        "action": "Xodimni taklif qilish"
+        "title": "Hozirça xodimlar yöq",
+        "text": "Rollar şu yerda beriladi: ism, lavozim, rollar, kiriş, bildirişnomalar uçun Telegram, holat.",
+        "action": "Xodimni taklif qiliş"
       },
       "noMatch": {
-        "title": "Hech kim topilmadi",
-        "text": "So'rovni o'zgartiring yoki boshqa holatni tanlang.",
-        "action": "Filtrlarni tozalash"
+        "title": "Heç kim topilmadi",
+        "text": "Sörovni özgartiring yoki boşqa holatni tanlang.",
+        "action": "Filtrlarni tozalaş"
       },
       "loadError": {
-        "title": "Xodimlarni yuklab bo'lmadi",
-        "text": "Ro‘yxat yuklanmadi. Takrorlang; xato qolsa, «Sozlamalar · Ulanishlar»ni tekshiring.",
-        "retry": "Takrorlash"
+        "title": "Xodimlarni yuklab bölmadi",
+        "text": "Röyxat yuklanmadi. Takrorlang; xato qolsa, «Sozlamalar · Ulanişlar»ni tekşiring.",
+        "retry": "Takrorlaş"
       },
       "cardError": {
         "title": "Xodim topilmadi",
-        "text": "Kartochka o'chirilgan yoki havola eskirgan bo'lishi mumkin. Ro'yxatdan xodimni tanlang."
+        "text": "Kartoçka öçirilgan yoki havola eskirgan bölişi mumkin. Röyxatdan xodimni tanlang."
       },
       "card": {
-        "close": "Kartochkani yopish",
-        "email": "Elektron pochta",
+        "close": "Kartoçkani yopiş",
+        "email": "Elektron poçta",
         "position": "Lavozim",
         "roles": "Rollar",
-        "telegram": "Bildirishnomalar uchun Telegram",
+        "telegram": "Bildirişnomalar uçun Telegram",
         "status": "Holat",
         "erpPending": "Kiriş hali berilmoqda.",
         "erpReason": {
@@ -635,102 +635,102 @@
         },
         "erpNotGranted": "Kiriş berilmagan.",
         "erpRetry": "Qayta uriniş",
-        "disabledNote": "Xodim o'chirilgan va kira olmaydi. Rollar va lavozim saqlangan."
+        "disabledNote": "Xodim öçirilgan va kira olmaydi. Rollar va lavozim saqlangan."
       },
       "form": {
         "rolesLegend": "Platforma rollari",
-        "rolesHint": "Bir kishiga bir nechta rol berish mumkin: kirish va navbatlar qo'shiladi.",
+        "rolesHint": "Bir kişiga bir neçta rol beriş mumkin: kiriş va navbatlar qöşiladi.",
         "positionLabel": "Lavozim",
-        "positionHint": "Kartochka va ro'yxatlar uchun matn, huquqlarga ta'sir qilmaydi.",
-        "save": "Rollarni saqlash",
+        "positionHint": "Kartoçka va röyxatlar uçun matn, huquqlarga taʼsir qilmaydi.",
+        "save": "Rollarni saqlaş",
         "saved": "Saqlandi",
-        "needRole": "Kamida bitta rolni tanlang. Kirishni butunlay yopish uchun xodimni o'chiring.",
-        "lastAdmin": "Siz yagona administratorsiz: «Administrator» rolini olib bo'lmaydi. Avval boshqa xodimni administrator qiling.",
-        "unchanged": "O'zgarishlar yo'q.",
-        "rolesError": "Rollarni yuklab bo‘lmadi."
+        "needRole": "Kamida bitta rolni tanlang. Kirişni butunlay yopiş uçun xodimni öçiring.",
+        "lastAdmin": "Siz yagona administratorsiz: «Administrator» rolini olib bölmaydi. Avval boşqa xodimni administrator qiling.",
+        "unchanged": "Özgarişlar yöq.",
+        "rolesError": "Rollarni yuklab bölmadi."
       },
       "consequence": {
-        "modules": "Xodim quyidagi modullarni ko'radi: {{modules}}.",
-        "lost": "Quyidagi modullarni ko'rmaydi: {{modules}}.",
-        "applied": "O‘zgarishlar darhol kuchga kiradi; xodimning menyusi bir daqiqa ichida yoki keyingi kirishda yangilanadi. Jurnalda kim va qachon kiritgani qoladi.",
-        "position": "Kartochkadagi lavozim: «{{position}}».",
-        "positionCleared": "Kartochkadagi lavozim tozalanadi.",
-        "self": "Siz o'z rollaringizni o'zgartiryapsiz: menyu saqlangandan keyin yangilanadi.",
+        "modules": "Xodim quyidagi modullarni köradi: {{modules}}.",
+        "lost": "Quyidagi modullarni körmaydi: {{modules}}.",
+        "applied": "Özgarişlar darhol kuçga kiradi; xodimning menyusi bir daqiqa içida yoki keyingi kirişda yangilanadi. Jurnalda kim va qaçon kiritgani qoladi.",
+        "position": "Kartoçkadagi lavozim: «{{position}}».",
+        "positionCleared": "Kartoçkadagi lavozim tozalanadi.",
+        "self": "Siz öz rollaringizni özgartiryapsiz: menyu saqlangandan keyin yangilanadi.",
         "selfLosesAdmin": "Siz «Sozlamalar» bölimiga kiriş huquqini yöqotasiz."
       },
       "invite": {
-        "title": "Xodimni taklif qilish",
+        "title": "Xodimni taklif qiliş",
         "name": "Ism va familiya",
-        "email": "Elektron pochta",
+        "email": "Elektron poçta",
         "position": "Lavozim (ixtiyoriy)",
-        "submit": "Taklif yuborish",
-        "cancel": "Bekor qilish",
+        "submit": "Taklif yuboriş",
+        "cancel": "Bekor qiliş",
         "nameRequired": "Ism va familiyani kiriting",
-        "emailRequired": "Xodimning pochtasini kiriting",
-        "emailInvalid": "Pochtani name@company.uz ko'rinishida kiriting",
+        "emailRequired": "Xodimning poçtasini kiriting",
+        "emailInvalid": "Poçtani name@company.uz körinişida kiriting",
         "needRole": "Kamida bitta rolni tanlang.",
         "sent": "Taklif yuborildi: {{email}}",
-        "notSent": "Xodim ro'yxatga «Taklif qilingan» holatida qo'shildi, lekin xat yuborilmadi: pochta ulanmagan yoki mavjud emas. Uni Sozlamalar · Ulanishlar bo‘limida ulang va xodim kartochkasidan taklifni qayta yuboring.",
-        "openCard": "Kartochkani ochish",
+        "notSent": "Xodim röyxatga «Taklif qilingan» holatida qöşildi, lekin xat yuborilmadi: poçta ulanmagan yoki mavjud emas. Uni Sozlamalar · Ulanişlar bölimida ulang va xodim kartoçkasidan taklifni qayta yuboring.",
+        "openCard": "Kartoçkani oçiş",
         "notSentUnavailable": "Xodim röyxatga «Taklif qilingan» holatida qöşildi, lekin server javob bermadi va xat yuborilmadi. Keyinroq kartoçkadagi «Taklifni qayta yuboriş» tugmasi bilan takrorlang.",
-        "resend": "Taklifni qayta yuborish",
+        "resend": "Taklifni qayta yuboriş",
         "resendHint": "72 soatlik “Parolni örnating” havolasi bilan yangi xat yuboriladi; avvalgi havola va parol amal qilmaydi.",
         "tooMany": "Bu xodim uçun bir soatda havolalar juda köp. Keyinroq takrorlang.",
-        "resendNotSent": "Xat yuborilmadi: pochta ulanmagan yoki mavjud emas. Uni Sozlamalar · Ulanishlar bo‘limida ulang va takrorlang.",
-        "delivery": "Kirishni qanday berish",
-        "deliveryMail": "Pochtaga xat bilan",
-        "deliveryPassword": "Vaqtinchalik parol bilan, pochtasiz",
-        "submitPassword": "Yaratish va parolni ko'rsatish",
+        "resendNotSent": "Xat yuborilmadi: poçta ulanmagan yoki mavjud emas. Uni Sozlamalar · Ulanişlar bölimida ulang va takrorlang.",
+        "delivery": "Kirişni qanday beriş",
+        "deliveryMail": "Poçtaga xat bilan",
+        "deliveryPassword": "Vaqtinçalik parol bilan, poçtasiz",
+        "submitPassword": "Yaratiş va parolni körsatiş",
         "created": "Xodim yaratildi: {{email}}"
       },
       "password": {
-        "title": "Vaqtinchalik parol",
-        "cardLabel": "Xodimning vaqtinchalik paroli",
+        "title": "Vaqtinçalik parol",
+        "cardLabel": "Xodimning vaqtinçalik paroli",
         "lead": "Xodim: {{name}}, {{email}}",
-        "warning": "Parol bir marta ko'rsatiladi. Bu oynani yopsangiz, uni qayta ko'ra olmaysiz, yangisini berishga to'g'ri keladi.",
-        "label": "Vaqtinchalik parol",
-        "copy": "Nusxalash",
+        "warning": "Parol bir marta körsatiladi. Bu oynani yopsangiz, uni qayta köra olmaysiz, yangisini berişga töğri keladi.",
+        "label": "Vaqtinçalik parol",
+        "copy": "Nusxalaş",
         "copied": "Parol nusxalandi",
-        "copyFailed": "Nusxalab bo'lmadi. Parolni belgilang va qo'lda nusxalang.",
-        "howTo": "Uni xodimga shaxsan yoki himoyalangan chatda bering, pochta orqali emas. Birinchi kirishda xodim parolini o'zinikiga almashtirishi shart.",
+        "copyFailed": "Nusxalab bölmadi. Parolni belgilang va qölda nusxalang.",
+        "howTo": "Uni xodimga şaxsan yoki himoyalangan çatda bering, poçta orqali emas. Birinçi kirişda xodim parolini özinikiga almaştirişi şart.",
         "done": "Tayyor: parol berildi",
         "issue": {
-          "button": "Vaqtinchalik parol berish",
+          "button": "Vaqtinçalik parol beriş",
           "hint": "Xatsiz yangi parol: avvalgisi amal qilmay qoladi.",
-          "confirmTitle": "Vaqtinchalik parol berish",
-          "confirm": "Parol berish",
-          "cancel": "Bekor qilish"
+          "confirmTitle": "Vaqtinçalik parol beriş",
+          "confirm": "Parol beriş",
+          "cancel": "Bekor qiliş"
         }
       },
       "disable": {
-        "button": "Xodimni o'chirish",
-        "title": "Xodimni o'chirasizmi?",
-        "sessions": "Barcha tizimlarga kirish yopiladi.",
-        "terms": "Ochiq seanslar 15 daqiqa ichida tugaydi.",
-        "kept": "Rollar va lavozim saqlanadi: xodimni qayta yoqish mumkin.",
-        "confirm": "O'chirish",
-        "cancel": "Bekor qilish",
-        "enable": "Xodimni yoqish",
+        "button": "Xodimni öçiriş",
+        "title": "Xodimni öçirasizmi?",
+        "sessions": "Barça tizimlarga kiriş yopiladi.",
+        "terms": "Oçiq seanslar 15 daqiqa içida tugaydi.",
+        "kept": "Rollar va lavozim saqlanadi: xodimni qayta yoqiş mumkin.",
+        "confirm": "Öçiriş",
+        "cancel": "Bekor qiliş",
+        "enable": "Xodimni yoqiş",
         "enableTitle": "Xodimni yoqasizmi?",
-        "enableResult": "Kirish yana ochiladi; rollar va lavozim avvalgidek qoladi.",
-        "enableConfirm": "Yoqish"
+        "enableResult": "Kiriş yana oçiladi; rollar va lavozim avvalgidek qoladi.",
+        "enableConfirm": "Yoqiş"
       },
       "errors": {
-        "LAST_ADMIN": "Administrator rolini olib bo'lmaydi va oxirgi administratorni o'chirib bo'lmaydi. Avval boshqa xodimni administrator qiling.",
-        "LAST_DIRECTOR": "Direktor rolini olib bo'lmaydi va oxirgi direktorni o'chirib bo'lmaydi. Avval boshqa xodimni direktor qiling.",
-        "ROLES_REQUIRED": "Kamida bitta rol kerak. Xodimga kirishni yopish uchun uni o'chiring.",
-        "EMAIL_EXISTS": "Bunday pochtali xodim allaqachon bor.",
-        "ACTIVE_LEADS": "Xodimda ishdagi lidlar bor. Ularni topshiradigan hamkasbni tanlang va takrorlang.",
+        "LAST_ADMIN": "Administrator rolini olib bölmaydi va oxirgi administratorni öçirib bölmaydi. Avval boşqa xodimni administrator qiling.",
+        "LAST_DIRECTOR": "Direktor rolini olib bölmaydi va oxirgi direktorni öçirib bölmaydi. Avval boşqa xodimni direktor qiling.",
+        "ROLES_REQUIRED": "Kamida bitta rol kerak. Xodimga kirişni yopiş uçun uni öçiring.",
+        "EMAIL_EXISTS": "Bunday poçtali xodim allaqaçon bor.",
+        "ACTIVE_LEADS": "Xodimda işdagi lidlar bor. Ularni topşiradigan hamkasbni tanlang va takrorlang.",
         "FORBIDDEN": "Ruxsat yetarli emas.",
         "BACKEND_UNAVAILABLE": "Server javob bermayapti. Keyinroq takrorlang.",
-        "VALIDATION_FAILED": "Maydonlarning to'ldirilganini tekshiring.",
-        "DEFAULT": "Amalni bajarib bo'lmadi. Qayta urinib ko'ring.",
-        "OWN_ACCOUNT": "O'z parolingiz profilda almashtiriladi: vaqtinchalik parol boshqa xodimlarga beriladi."
+        "VALIDATION_FAILED": "Maydonlarning töldirilganini tekşiring.",
+        "DEFAULT": "Amalni bajarib bölmadi. Qayta urinib köring.",
+        "OWN_ACCOUNT": "Öz parolingiz profilda almaştiriladi: vaqtinçalik parol boşqa xodimlarga beriladi."
       },
       "transfer": {
-        "label": "Ishdagi lidlarni kimga topshirish",
+        "label": "Işdagi lidlarni kimga topşiriş",
         "placeholder": "Hamkasbni tanlang",
-        "save": "Lidlarni topshirib saqlash"
+        "save": "Lidlarni topşirib saqlaş"
       },
       "resetFactor": {
         "button": "Ikkinci omilni tiklaş",
@@ -749,107 +749,107 @@
     },
     "roles": {
       "title": "Rollar va huquqlar",
-      "caption": "Rollar matritsasi: modullar bo'yicha bo'limlar va har bir rolning kirish darajasi",
-      "sectionColumn": "Modul · bo'lim",
+      "caption": "Rollar matritsasi: modullar böyiça bölimlar va har bir rolning kiriş darajasi",
+      "sectionColumn": "Modul · bölim",
       "system": "tizim roli",
-      "systemNote": "Tizim roli: uning matritsasi Platforma katalogida belgilangan, uni o'zgartirib yoki o'chirib bo'lmaydi. Berish yoki olish — «Xodimlar» bo‘limida.",
+      "systemNote": "Tizim roli: uning matritsasi Platforma katalogida belgilangan, uni özgartirib yoki öçirib bölmaydi. Beriş yoki oliş — «Xodimlar» bölimida.",
       "gives": "Rol nima beradi",
-      "assign": "Xodimga rol berish",
-      "fieldsGroup": "Cheklangan maydonlar",
+      "assign": "Xodimga rol beriş",
+      "fieldsGroup": "Çeklangan maydonlar",
       "cellLabel": "{{section}} — «{{role}}» roli",
-      "fieldLabel": "{{field}} — «{{role}}» roli ko'radi",
+      "fieldLabel": "{{field}} — «{{role}}» roli köradi",
       "level": {
-        "full": "To'liq kirish",
-        "read": "Faqat o'qish",
-        "hidden": "Yashirin"
+        "full": "Töliq kiriş",
+        "read": "Faqat öqiş",
+        "hidden": "Yaşirin"
       },
       "field": {
-        "on": "ko'radi",
-        "off": "ko'rmaydi"
+        "on": "köradi",
+        "off": "körmaydi"
       },
-      "noModules": "Hozircha bo'limlar yo'q",
+      "noModules": "Hozirça bölimlar yöq",
       "adminNote": "",
       "employeesCount": "Xodimlar: {{count}}",
-      "create": "Rol yaratish",
+      "create": "Rol yaratiş",
       "createdToast": "«{{name}}» roli yaratildi",
       "savedToast": "Rol saqlandi",
-      "deletedToast": "Rol o'chirildi",
-      "viewOnly": "Faqat ko'rish",
-      "readOnlyNote": "Faqat ko‘rish.",
+      "deletedToast": "Rol öçirildi",
+      "viewOnly": "Faqat köriş",
+      "readOnlyNote": "Faqat köriş.",
       "loadError": {
-        "title": "Rollarni yuklab bo'lmadi",
-        "text": "Rollar yuklanmadi. Takrorlang; xato qolsa, «Sozlamalar · Ulanishlar»ni tekshiring."
+        "title": "Rollarni yuklab bölmadi",
+        "text": "Rollar yuklanmadi. Takrorlang; xato qolsa, «Sozlamalar · Ulanişlar»ni tekşiring."
       },
       "notFound": {
         "title": "Rol topilmadi",
-        "text": "Rol o'chirilgan yoki havola eskirgan bo'lishi mumkin. Matritsada rolni tanlang."
+        "text": "Rol öçirilgan yoki havola eskirgan bölişi mumkin. Matritsada rolni tanlang."
       },
       "new": {
         "title": "Yangi rol",
-        "from": "Boshlash",
-        "fromHint": "Shablon yangi rol ustuniga o'z bo'limlarini qo'yadi; keyin ularni o'zgartirish mumkin.",
-        "empty": "Noldan — barcha bo'limlar yashirin",
-        "submit": "Rol yaratish",
+        "from": "Boşlaş",
+        "fromHint": "Şablon yangi rol ustuniga öz bölimlarini qöyadi; keyin ularni özgartiriş mumkin.",
+        "empty": "Noldan — barça bölimlar yaşirin",
+        "submit": "Rol yaratiş",
         "unsaved": "Rol hali yaratilmagan",
-        "cancel": "Bekor qilish",
-        "created": "Rol matritsada va «Xodimlar» bo‘limidagi rollar ro'yxatida paydo bo'ladi; hozircha xodimlari yo'q — hech kimning huquqlari o'zgarmaydi.",
-        "assign": "Rolni xodimlarga berish — Sozlamalar · Xodimlar bo‘limida."
+        "cancel": "Bekor qiliş",
+        "created": "Rol matritsada va «Xodimlar» bölimidagi rollar röyxatida paydo böladi; hozirça xodimlari yöq — heç kimning huquqlari özgarmaydi.",
+        "assign": "Rolni xodimlarga beriş — Sozlamalar · Xodimlar bölimida."
       },
       "name": "Nomi",
       "description": "Tavsif (ixtiyoriy)",
-      "matrixHint": "Bo'limlar darajalari va cheklangan maydonlar matritsadagi rol ustunida o'zgartiriladi.",
-      "save": "Rolni saqlash",
-      "reset": "O'zgarishlarni bekor qilish",
-      "renamed": "Rol nomi barcha xodimlari ({{count}}) uchun «{{name}}» bo'ladi; huquqlar o'zgarmaydi.",
-      "descriptionOnly": "Faqat rol tavsifi o'zgaradi; xodimlar huquqlari o'zgarmaydi.",
-      "applied": "Huquqlar saqlangandan so‘ng darhol qayta hisoblanadi; xodimlar menyusi bir daqiqa ichida yangilanadi. Jurnalda rolni kim va qachon o‘zgartirgani qoladi.",
+      "matrixHint": "Bölimlar darajalari va çeklangan maydonlar matritsadagi rol ustunida özgartiriladi.",
+      "save": "Rolni saqlaş",
+      "reset": "Özgarişlarni bekor qiliş",
+      "renamed": "Rol nomi barça xodimlari ({{count}}) uçun «{{name}}» böladi; huquqlar özgarmaydi.",
+      "descriptionOnly": "Faqat rol tavsifi özgaradi; xodimlar huquqlari özgarmaydi.",
+      "applied": "Huquqlar saqlangandan söng darhol qayta hisoblanadi; xodimlar menyusi bir daqiqa içida yangilanadi. Jurnalda rolni kim va qaçon özgartirgani qoladi.",
       "preview": {
         "section": "{{section}} ({{level}})",
-        "nobody": "Rol hech bir xodimga berilmagan: hech kimning huquqlari o'zgarmaydi.",
-        "unchanged": "Ushbu roldagi xodimlar huquqlari o'zgarmaydi: xuddi shu bo'limlarni boshqa rollari beradi.",
+        "nobody": "Rol heç bir xodimga berilmagan: heç kimning huquqlari özgarmaydi.",
+        "unchanged": "Uşbu roldagi xodimlar huquqlari özgarmaydi: xuddi şu bölimlarni boşqa rollari beradi.",
         "gained_one": "{{count}} xodim oladi: {{list}}.",
         "gained_few": "{{count}} xodim oladi: {{list}}.",
         "gained_many": "{{count}} xodim oladi: {{list}}.",
         "gained_other": "{{count}} xodim oladi: {{list}}.",
-        "lost_one": "{{count}} xodim yo'qotadi: {{list}}.",
-        "lost_few": "{{count}} xodim yo'qotadi: {{list}}.",
-        "lost_many": "{{count}} xodim yo'qotadi: {{list}}.",
-        "lost_other": "{{count}} xodim yo'qotadi: {{list}}.",
-        "fieldsGained": "Maydonlar ko'rinadi: {{list}}.",
-        "fieldsLost": "Maydonlar ko'rinmay qoladi: {{list}}.",
-        "loading": "Qaysi xodimlarning huquqlari o'zgarishi hisoblanmoqda…",
-        "failed": "Oqibatlarni hisoblab bo‘lmadi: server javob bermadi. Saqlash baribir natijani ko‘rsatadi."
+        "lost_one": "{{count}} xodim yöqotadi: {{list}}.",
+        "lost_few": "{{count}} xodim yöqotadi: {{list}}.",
+        "lost_many": "{{count}} xodim yöqotadi: {{list}}.",
+        "lost_other": "{{count}} xodim yöqotadi: {{list}}.",
+        "fieldsGained": "Maydonlar körinadi: {{list}}.",
+        "fieldsLost": "Maydonlar körinmay qoladi: {{list}}.",
+        "loading": "Qaysi xodimlarning huquqlari özgarişi hisoblanmoqda…",
+        "failed": "Oqibatlarni hisoblab bölmadi: server javob bermadi. Saqlaş baribir natijani körsatadi."
       },
-      "delete": "Rolni o'chirish",
-      "deleteBlocked": "O'chirib bo'lmaydi: rol xodimlarga berilgan ({{count}}). Avval «Xodimlar» bo‘limida ularga boshqa rollar bering.",
-      "deleteTitle": "Rol o'chirilsinmi?",
-      "deleteResult": "Rol matritsadan va «Xodimlar» bo‘limidagi rollar ro'yxatidan yo'qoladi. U bilan xodimlar yo'q — hech kimning huquqlari o'zgarmaydi.",
-      "deleteConfirm": "O'chirish",
-      "deleteCancel": "Bekor qilish",
+      "delete": "Rolni öçiriş",
+      "deleteBlocked": "Öçirib bölmaydi: rol xodimlarga berilgan ({{count}}). Avval «Xodimlar» bölimida ularga boşqa rollar bering.",
+      "deleteTitle": "Rol öçirilsinmi?",
+      "deleteResult": "Rol matritsadan va «Xodimlar» bölimidagi rollar röyxatidan yöqoladi. U bilan xodimlar yöq — heç kimning huquqlari özgarmaydi.",
+      "deleteConfirm": "Öçiriş",
+      "deleteCancel": "Bekor qiliş",
       "errors": {
-        "ROLE_IN_USE": "Rol xodimlarga berilgan ({{count}}): uni o'chirib bo'lmaydi. Avval «Xodimlar» bo‘limida ularga boshqa rollar bering.",
-        "ROLE_SYSTEM": "Tizim rolini o'zgartirib yoki o'chirib bo'lmaydi.",
-        "NAME_TAKEN": "Bunday nomli rol allaqachon bor. Boshqa nom tanlang.",
-        "LAST_ADMIN": "O'zgarishdan so'ng kompaniyada administrator qolmaydi. «Sozlamalar» bo‘limiga to‘liq kirishni saqlang yoki administrator tayinlang.",
+        "ROLE_IN_USE": "Rol xodimlarga berilgan ({{count}}): uni öçirib bölmaydi. Avval «Xodimlar» bölimida ularga boşqa rollar bering.",
+        "ROLE_SYSTEM": "Tizim rolini özgartirib yoki öçirib bölmaydi.",
+        "NAME_TAKEN": "Bunday nomli rol allaqaçon bor. Boşqa nom tanlang.",
+        "LAST_ADMIN": "Özgarişdan söng kompaniyada administrator qolmaydi. «Sozlamalar» bölimiga töliq kirişni saqlang yoki administrator tayinlang.",
         "FORBIDDEN": "Ruxsat yetarli emas.",
         "BACKEND_UNAVAILABLE": "Server javob bermayapti. Keyinroq takrorlang.",
-        "VALIDATION_FAILED": "Rol nomi, bo'limlari va maydonlarini tekshiring.",
-        "ROLE_VERSION_CONFLICT": "Rolni boshqa foydalanuvchi o'zgartirgan — sahifani yangilang.",
-        "reload": "Yangilash",
-        "DEFAULT": "Amalni bajarib bo'lmadi. Qayta urinib ko'ring."
+        "VALIDATION_FAILED": "Rol nomi, bölimlari va maydonlarini tekşiring.",
+        "ROLE_VERSION_CONFLICT": "Rolni boşqa foydalanuvçi özgartirgan — sahifani yangilang.",
+        "reload": "Yangilaş",
+        "DEFAULT": "Amalni bajarib bölmadi. Qayta urinib köring."
       },
       "employeesTitle": "«{{name}}» roli bilan xodimlar",
-      "employeesEmpty": "Rol hali hech kimga berilmagan. «Xodimlar» bo‘limidagi xodim kartochkasida bering.",
-      "openEmployee": "Rollarni o'zgartirish: {{name}}",
-      "viewEmployee": "Kartochkani ochish: {{name}}",
-      "change": "O'zgartirish",
-      "view": "Ochish",
-      "modules": "Rol modullarni ochadi: {{modules}}."
+      "employeesEmpty": "Rol hali heç kimga berilmagan. «Xodimlar» bölimidagi xodim kartoçkasida bering.",
+      "openEmployee": "Rollarni özgartiriş: {{name}}",
+      "viewEmployee": "Kartoçkani oçiş: {{name}}",
+      "change": "Özgartiriş",
+      "view": "Oçiş",
+      "modules": "Rol modullarni oçadi: {{modules}}."
     },
     "journal": {
-      "filterLabel": "Jurnalda nimani ko‘rsatish",
+      "filterLabel": "Jurnalda nimani körsatiş",
       "people": "Odamlar harakatlari",
-      "systems": "Tizimlararo almashinuv"
+      "systems": "Tizimlararo almaşinuv"
     },
     "nav": {
       "people": "Odamlar va kiriş",
@@ -863,13 +863,13 @@
       "nav": "«{{group}}» sahifalari"
     },
     "state": {
-      "attention": "E’tibor talab qiladi · {{count}}",
+      "attention": "Eʼtibor talab qiladi · {{count}}",
       "none": "Hammasi işlayapti: nosozlik va muddati ötgan sozlama yöq.",
       "fixer": "tuzatadi: {{who}}",
       "handOver": "sozlamalarni yurituvçiga uzating",
       "open": "«{{page}}»ni oçiş",
       "openPlain": "Oçiş",
-      "affected": "ta’sirlanadi: {{list}}",
+      "affected": "taʼsirlanadi: {{list}}",
       "erpDetail": "Hisob-kitoblar bilan aloqa sozlanmagan: arizalar hisobga ketmaydi, TT va ombor mavjud emas.",
       "owner": {
         "owner": "kompaniya egasi",
@@ -900,8 +900,8 @@
           "ifNot": "xodimlar javob kutmoqda"
         },
         "zones": {
-          "title": "Masʼuli yoʻq zonalar: {{count}}",
-          "ifNot": "zona boʻyicha arizalar va vazifalarni olishga hech kim yoʻq"
+          "title": "Masʼuli yöq zonalar: {{count}}",
+          "ifNot": "zona böyiça arizalar va vazifalarni olişga heç kim yöq"
         }
       },
       "services": "Xizmatlar",
@@ -929,122 +929,122 @@
         "filled": "töldirilgan",
         "broken": "işlamayapti",
         "todo": "bajarilmagan",
-        "unknown": "ma’lumot yöq"
+        "unknown": "maʼlumot yöq"
       },
       "extra": {
         "blank": "Kompaniya blankasi",
         "support": "Yordam manzili"
       }
     },
-    "templatesLink": "Hujjat shablonlari"
+    "templatesLink": "Hujjat şablonlari"
   },
   "tabs": {
     "today": "Bugun",
-    "notifications": "Bildirishnomalar",
+    "notifications": "Bildirişnomalar",
     "facts": "Maʼlumotlar",
-    "route": "Marshrut",
+    "route": "Marşrut",
     "history": "Tarix",
-    "card": "Kartochka",
+    "card": "Kartoçka",
     "chat": "Muhokama",
     "documents": "Hujjatlar",
     "resolution": "Rezolyutsiya",
-    "approve": "Tasdiqlash",
-    "agree": "Kelishish",
-    "payment": "To‘lov",
-    "task": "Topshiriq",
-    "about": "Chat haqida",
+    "approve": "Tasdiqlaş",
+    "agree": "Kelişiş",
+    "payment": "Tölov",
+    "task": "Topşiriq",
+    "about": "Çat haqida",
     "files": "Fayllar",
     "role": "Rol",
     "employees": "Xodimlar",
     "journal": "Jurnal",
     "step": "Qadam",
-    "contract": "Shartnoma",
+    "contract": "Şartnoma",
     "act": "Dalolatnoma"
   },
   "panel": {
     "today": {
-      "title": "Bugun hodisalar hali yo‘q",
-      "text": "Bu yerda kompaniya hodisalari lentasi paydo bo‘ladi: kim, nima qildi va qaysi modulda."
+      "title": "Bugun hodisalar hali yöq",
+      "text": "Bu yerda kompaniya hodisalari lentasi paydo böladi: kim, nima qildi va qaysi modulda."
     },
     "notifications": {
-      "title": "Yangi bildirishnoma yo‘q",
-      "text": "Qarorlar, mijoz xabarlari va tizim hodisalari shu yerda ko‘rinadi."
+      "title": "Yangi bildirişnoma yöq",
+      "text": "Qarorlar, mijoz xabarlari va tizim hodisalari şu yerda körinadi."
     },
     "facts": {
       "title": "Maʼlumot yöq",
-      "text": "Tanlangan obyekt maʼlumotlari shu yerda paydo böladi."
+      "text": "Tanlangan obyekt maʼlumotlari şu yerda paydo böladi."
     },
     "route": {
-      "title": "Marshrut yöq",
-      "text": "Obyekt böyicha qadamlar va qarorlar shu yerda paydo böladi."
+      "title": "Marşrut yöq",
+      "text": "Obyekt böyiça qadamlar va qarorlar şu yerda paydo böladi."
     },
     "history": {
       "title": "Tarix yöq",
-      "text": "Obyekt hodisalari shu yerda paydo böladi."
+      "text": "Obyekt hodisalari şu yerda paydo böladi."
     },
     "card": {
       "title": "Obyekt tanlanmagan",
-      "text": "Jadvaldan qatorni tanlang — kartochka o‘tishsiz shu yerda ochiladi."
+      "text": "Jadvaldan qatorni tanlang — kartoçka ötişsiz şu yerda oçiladi."
     },
     "chat": {
-      "title": "Chat ochilmagan",
-      "text": "Loyiha chati ariza bilan birga yaratiladi; loyiha hodisalari unga tizim xabarlari sifatida yoziladi."
+      "title": "Çat oçilmagan",
+      "text": "Loyiha çati ariza bilan birga yaratiladi; loyiha hodisalari unga tizim xabarlari sifatida yoziladi."
     },
     "documents": {
-      "title": "Hujjatlar yo‘q",
-      "text": "Bu yerda tanlangan obyektning hujjatlar zanjiri bo‘ladi."
+      "title": "Hujjatlar yöq",
+      "text": "Bu yerda tanlangan obyektning hujjatlar zanjiri böladi."
     },
     "resolution": {
       "title": "Xat tanlanmagan",
-      "text": "Kiruvchi xatni oching — bu yerda ijrochilar va muddat bilan rezolyutsiya shakli paydo bo‘ladi."
+      "text": "Kiruvçi xatni oçing — bu yerda ijroçilar va muddat bilan rezolyutsiya şakli paydo böladi."
     },
     "approve": {
       "title": "TT tanlanmagan",
-      "text": "TT qoralamasini oching — bu yerda tasdiqlash chek-listi va yuborish kanallarini tanlash paydo bo‘ladi."
+      "text": "TT qoralamasini oçing — bu yerda tasdiqlaş çek-listi va yuboriş kanallarini tanlaş paydo böladi."
     },
     "agree": {
       "title": "Xizmat xati tanlanmagan",
-      "text": "Xizmat xatini oching — bu yerda yo‘nalish va «Kelishish», «Qayta ishlashga qaytarish», «Rad etish» tugmalari paydo bo‘ladi."
+      "text": "Xizmat xatini oçing — bu yerda yönaliş va «Kelişiş», «Qayta işlaşga qaytariş», «Rad etiş» tugmalari paydo böladi."
     },
     "payment": {
       "title": "Hisob tanlanmagan",
-      "text": "Hisobni oching — bu yerda to‘lov topshirig‘i, ko‘chirma bo‘yicha summa va «To‘lovni tasdiqlash» paydo bo‘ladi."
+      "text": "Hisobni oçing — bu yerda tölov topşiriği, köçirma böyiça summa va «Tölovni tasdiqlaş» paydo böladi."
     },
     "task": {
       "title": "Hisob-kitob tanlanmagan",
       "text": ""
     },
     "about": {
-      "title": "Chat tanlanmagan",
-      "text": "Bu yerda chatdagi hujjatlar, ishtirokchilar va qisqa qoida paydo bo‘ladi."
+      "title": "Çat tanlanmagan",
+      "text": "Bu yerda çatdagi hujjatlar, iştirokçilar va qisqa qoida paydo böladi."
     },
     "files": {
-      "title": "Fayllar yo‘q",
-      "text": "Tanlangan chat fayllari."
+      "title": "Fayllar yöq",
+      "text": "Tanlangan çat fayllari."
     },
     "employees": {
-      "title": "Xodimlar yo‘q",
-      "text": "Bu yerda tanlangan roldagi xodimlar va «Xodimga rol tayinlash» tugmasi paydo bo‘ladi."
+      "title": "Xodimlar yöq",
+      "text": "Bu yerda tanlangan roldagi xodimlar va «Xodimga rol tayinlaş» tugmasi paydo böladi."
     },
     "role": {
       "title": "Rol tanlanmagan",
-      "text": "Matritsadagi rol ustunini bosing — bu yerda rol tavsifi va shu roldagi xodimlar paydo bo‘ladi."
+      "text": "Matritsadagi rol ustunini bosing — bu yerda rol tavsifi va şu roldagi xodimlar paydo böladi."
     },
     "journal": {
       "title": "Yozuv tanlanmagan",
-      "text": "Jurnaldan yozuvni tanlang — bu yerda tafsilotlar paydo bo'ladi: kim, qachon va nima o'zgardi."
+      "text": "Jurnaldan yozuvni tanlang — bu yerda tafsilotlar paydo böladi: kim, qaçon va nima özgardi."
     },
     "step": {
       "title": "Qadam tanlanmagan",
-      "text": "Qadam yonidagi tugmani bosing — uning shakli ustozdan chiqmasdan shu yerda ochiladi."
+      "text": "Qadam yonidagi tugmani bosing — uning şakli ustozdan çiqmasdan şu yerda oçiladi."
     },
     "contract": {
-      "title": "Shartnoma tanlanmagan",
+      "title": "Şartnoma tanlanmagan",
       "text": "Loyihani oçing — bu yerda şartnoma holati va amallar paydo böladi: mijozga kelişuvga yuboriş, EHTda rasmiylaştirildi, imzolangan skan."
     },
     "act": {
       "title": "Dalolatnoma tanlanmagan",
-      "text": "Loyihani oching — bu yerda dalolatnoma, uning skani va buyurtmachi tomonidan qaytarilishi paydo bo'ladi."
+      "text": "Loyihani oçing — bu yerda dalolatnoma, uning skani va buyurtmaçi tomonidan qaytarilişi paydo böladi."
     }
   }
 }

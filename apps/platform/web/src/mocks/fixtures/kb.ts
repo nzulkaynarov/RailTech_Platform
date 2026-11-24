@@ -158,7 +158,7 @@ export function initialKb(): KbMock {
         title: "Пришлю КП сегодня",
         text: {
           ru: "{name}, добрый день! Пришлю коммерческое предложение сегодня до конца дня. {manager}",
-          uz: "{name}, hayrli kun! Tijoriy taklifni bugun kun oxirigacha yuboraman. {manager}",
+          uz: "{name}, hayrli kun! Tijoriy taklifni bugun kun oxirigaça yuboraman. {manager}",
           en: "Hello {name}! I will send the quote by the end of today. {manager}",
         },
         updated_at: EARLIER,

@@ -224,7 +224,7 @@ describe('Каталог', () => {
     expect(screen.getByText('18 months')).toBeInTheDocument();
     expect(screen.getByText('No expiry date')).toBeInTheDocument();
     await act(() => i18n.changeLanguage('uz'));
-    expect(await screen.findByRole('heading', { name: 'Ishlab chiqaruvchi' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Işlab çiqaruvçi' })).toBeInTheDocument();
     expect(screen.getByText('Muddatsiz')).toBeInTheDocument();
     expect(screen.getByText('18 oy')).toBeInTheDocument();
   });

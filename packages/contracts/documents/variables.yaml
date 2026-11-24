@@ -13,17 +13,17 @@ kinds:
   report: { label: { ru: Отчёт, uz: Hisobot, en: Report }, layout: internal, domain: eds }
   custom: { label: { ru: Произвольный документ, uz: Erkin hujjat, en: Custom document }, layout: letter, domain: eds }
   quote: { label: { ru: Коммерческое предложение, uz: Tijorat taklifi, en: Quotation }, layout: commercial, domain: erp }
-  contract: { label: { ru: Договор, uz: Shartnoma, en: Contract }, layout: commercial, domain: erp }
-  invoice: { label: { ru: Счёт на оплату, uz: Toʻlov uchun hisob, en: Invoice }, layout: commercial, domain: erp }
+  contract: { label: { ru: Договор, uz: Şartnoma, en: Contract }, layout: commercial, domain: erp }
+  invoice: { label: { ru: Счёт на оплату, uz: Tölov uçun hisob, en: Invoice }, layout: commercial, domain: erp }
   act:
-    label: { ru: Акт выполненных работ, uz: Bajarilgan ishlar dalolatnomasi, en: Certificate of completion }
+    label: { ru: Акт выполненных работ, uz: Bajarilgan işlar dalolatnomasi, en: Certificate of completion }
     layout: commercial
     domain: erp
   receipt: { label: { ru: Квитанция, uz: Kvitansiya, en: Receipt }, layout: commercial, domain: erp }
   delivery_note: { label: { ru: Накладная, uz: Yuk xati, en: Delivery note }, layout: commercial, domain: erp }
   specification: { label: { ru: Спецификация, uz: Spetsifikatsiya, en: Specification }, layout: commercial, domain: erp }
   partner_contract:
-    label: { ru: Партнёрский договор, uz: Hamkorlik shartnomasi, en: Partnership contract }
+    label: { ru: Партнёрский договор, uz: Hamkorlik şartnomasi, en: Partnership contract }
     layout: commercial
     domain: erp
 
@@ -41,40 +41,40 @@ variables:
   - { code: counterparty.name, type: text, label: { ru: Контрагент — название, uz: Kontragent — nomi, en: Counterparty — name } }
   - { code: counterparty.inn, type: text, label: { ru: Контрагент — ИНН, uz: Kontragent — STIR, en: Counterparty — TIN } }
   - { code: counterparty.country, type: text, label: { ru: Контрагент — страна, uz: Kontragent — mamlakat, en: Counterparty — country } }
-  - { code: counterparty.registration_number, type: text, label: { ru: Контрагент — рег. номер, uz: Kontragent — roʻyxat raqami, en: Counterparty — registration number } }
+  - { code: counterparty.registration_number, type: text, label: { ru: Контрагент — рег. номер, uz: Kontragent — röyxat raqami, en: Counterparty — registration number } }
   - { code: counterparty.address, type: text, label: { ru: Контрагент — адрес, uz: Kontragent — manzili, en: Counterparty — address } }
   - { code: counterparty.director, type: text, label: { ru: Контрагент — руководитель, uz: Kontragent — rahbari, en: Counterparty — director } }
   - code: counterparty.director_position
     type: text
     label: { ru: Контрагент — должность руководителя, uz: Kontragent — rahbar lavozimi, en: Counterparty — director's title }
   - { code: counterparty.phone, type: text, label: { ru: Контрагент — телефон, uz: Kontragent — telefon, en: Counterparty — phone } }
-  - { code: counterparty.email, type: text, label: { ru: Контрагент — эл. почта, uz: Kontragent — elektron pochta, en: Counterparty — email } }
+  - { code: counterparty.email, type: text, label: { ru: Контрагент — эл. почта, uz: Kontragent — elektron poçta, en: Counterparty — email } }
   - { code: deal.number, type: text, label: { ru: Номер заявки, uz: Buyurtma raqami, en: Request number } }
   - { code: deal.title, type: text, label: { ru: Название заявки, uz: Buyurtma nomi, en: Request title } }
   - { code: quote.number, type: text, label: { ru: Номер КП, uz: Tijorat taklifi raqami, en: Quotation number }, kinds: [quote, contract, invoice] }
   - { code: quote.total, type: money, label: { ru: Сумма КП, uz: Tijorat taklifi summasi, en: Quotation total }, kinds: [quote, contract, invoice] }
-  - { code: contract.number, type: text, label: { ru: Номер договора, uz: Shartnoma raqami, en: Contract number } }
-  - { code: contract.date, type: date, label: { ru: Дата договора, uz: Shartnoma sanasi, en: Contract date } }
+  - { code: contract.number, type: text, label: { ru: Номер договора, uz: Şartnoma raqami, en: Contract number } }
+  - { code: contract.date, type: date, label: { ru: Дата договора, uz: Şartnoma sanasi, en: Contract date } }
   - { code: document.number, type: text, label: { ru: Номер документа, uz: Hujjat raqami, en: Document number } }
   - { code: document.date, type: date, label: { ru: Дата документа, uz: Hujjat sanasi, en: Document date } }
-  - { code: invoice.total, type: money, label: { ru: Сумма к оплате, uz: Toʻlanadigan summa, en: Amount due }, kinds: [invoice, act] }
-  - { code: invoice.total_words, type: text, label: { ru: Сумма прописью, uz: Summa soʻz bilan, en: Amount in words }, kinds: [invoice, act, contract] }
-  - { code: invoice.due_date, type: date, label: { ru: Срок оплаты, uz: Toʻlov muddati, en: Payment due date }, kinds: [invoice] }
-  - { code: user.full_name, type: text, label: { ru: Автор — ФИО, uz: Muallif — F.I.Sh., en: Author — full name } }
+  - { code: invoice.total, type: money, label: { ru: Сумма к оплате, uz: Tölanadigan summa, en: Amount due }, kinds: [invoice, act] }
+  - { code: invoice.total_words, type: text, label: { ru: Сумма прописью, uz: Summa söz bilan, en: Amount in words }, kinds: [invoice, act, contract] }
+  - { code: invoice.due_date, type: date, label: { ru: Срок оплаты, uz: Tölov muddati, en: Payment due date }, kinds: [invoice] }
+  - { code: user.full_name, type: text, label: { ru: Автор — ФИО, uz: Muallif — F.I.Ş., en: Author — full name } }
   - { code: user.position, type: text, label: { ru: Автор — должность, uz: Muallif — lavozimi, en: Author — position } }
   - { code: user.phone, type: text, label: { ru: Автор — телефон, uz: Muallif — telefoni, en: Author — phone } }
-  - { code: user.email, type: text, label: { ru: Автор — эл. почта, uz: Muallif — elektron pochtasi, en: Author — email } }
+  - { code: user.email, type: text, label: { ru: Автор — эл. почта, uz: Muallif — elektron poçtasi, en: Author — email } }
   - { code: system.today, type: date, label: { ru: Сегодняшняя дата, uz: Bugungi sana, en: Today's date } }
 
 blocks:
-  - { code: doc.refs, label: { ru: "Ссылки на заявку, договор и счёт", uz: "Buyurtma, shartnoma va hisobga havolalar", en: References } }
+  - { code: doc.refs, label: { ru: "Ссылки на заявку, договор и счёт", uz: "Buyurtma, şartnoma va hisobga havolalar", en: References } }
   - { code: doc.items_table, label: { ru: Таблица позиций, uz: Pozitsiyalar jadvali, en: Line items }, required_for: [quote, invoice, act] }
   - code: doc.totals
     label: { ru: Итоги и НДС, uz: Jami va QQS, en: Totals and VAT }
     required_for: [invoice, act, contract]
     keep_with_previous: true
   - { code: doc.signatures, label: { ru: Подписи сторон, uz: Tomonlar imzolari, en: Signatures }, required_for: [act] }
-  - { code: doc.payment_requisites, label: { ru: Платёжные реквизиты, uz: Toʻlov rekvizitlari, en: Payment details }, required_for: [invoice] }
+  - { code: doc.payment_requisites, label: { ru: Платёжные реквизиты, uz: Tölov rekvizitlari, en: Payment details }, required_for: [invoice] }
   - code: doc.spec_table
     label: { ru: Спецификация (Приложение № 1), uz: Spetsifikatsiya (1-ilova), en: Specification (Annex 1) }
     required_for: [contract]
@@ -82,8 +82,8 @@ blocks:
     label: { ru: Реквизиты и подписи сторон, uz: Tomonlar rekvizitlari va imzolari, en: Details and signatures of the parties }
     required_for: [contract]
   - { code: doc.notes, label: { ru: Примечание документа, uz: Hujjat izohi, en: Document notes } }
-  - { code: doc.extra_terms_article, label: { ru: Особые условия, uz: Alohida shartlar, en: Special terms } }
+  - { code: doc.extra_terms_article, label: { ru: Особые условия, uz: Alohida şartlar, en: Special terms } }
   - { code: doc.act_closing, label: { ru: Заключительная формулировка акта, uz: Dalolatnoma yakuniy matni, en: Closing statement } }
-  - { code: doc.contract_acceptance, label: { ru: Порядок приёмки, uz: Qabul qilish tartibi, en: Acceptance procedure } }
+  - { code: doc.contract_acceptance, label: { ru: Порядок приёмки, uz: Qabul qiliş tartibi, en: Acceptance procedure } }
   - { code: doc.contract_liability, label: { ru: Ответственность сторон, uz: Tomonlarning javobgarligi, en: Liability of the parties } }
   - { code: doc.signature_stamp, label: { ru: Отметка об электронной подписи, uz: Elektron imzo belgisi, en: E-signature mark } }

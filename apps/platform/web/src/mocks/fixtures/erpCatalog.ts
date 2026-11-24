@@ -160,7 +160,7 @@ export const DELIVERY_BASES = [
   { code: "DAP", name: "Delivered at Place" },
 ];
 export const COUNTRIES = [
-  { id: "1", name: "Узбекистан", names: { ru: "Узбекистан", uz: "O‘zbekiston", en: "Uzbekistan" } },
+  { id: "1", name: "Узбекистан", names: { ru: "Узбекистан", uz: "Özbekiston", en: "Uzbekistan" } },
   { id: "2", name: "Россия", names: { ru: "Россия", uz: "Rossiya", en: "Russia" } },
   { id: "3", name: "Германия", names: { ru: "Германия", uz: "Germaniya", en: "Germany" } },
 ] satisfies CatalogCountryRef[];

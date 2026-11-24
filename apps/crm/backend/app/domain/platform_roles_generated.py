@@ -455,12 +455,12 @@ ROLE_NAMES: Final[dict[str, dict[str, str]]] = {
     },
     "SUPPLY": {
         "ru": "Снабженец",
-        "uz": "Ta'minotchi",
+        "uz": "Taʼminotçi",
         "en": "Supply specialist",
     },
     "ENGINEER": {
         "ru": "Гл. инженер",
-        "uz": "Bosh muhandis",
+        "uz": "Boş muhandis",
         "en": "Chief engineer",
     },
     "ACCOUNTANT": {
@@ -470,7 +470,7 @@ ROLE_NAMES: Final[dict[str, dict[str, str]]] = {
     },
     "REGISTRAR": {
         "ru": "Делопроизводитель",
-        "uz": "Ish yurituvchi",
+        "uz": "Iş yurituvçi",
         "en": "Office clerk",
     },
     "MANAGER_ALL": {

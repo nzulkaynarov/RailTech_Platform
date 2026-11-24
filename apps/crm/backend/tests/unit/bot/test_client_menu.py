@@ -93,7 +93,7 @@ def sent(bot: AsyncMock) -> list[SendMessage]:
         ("prospect", "ru", "Связаться с менеджером", "Мои документы"),
         ("with_manager", "ru", "Удалить переписку", "Связаться с менеджером"),
         ("client", "ru", "Мои документы", "Начать"),
-        ("client", "uz", "Hujjatlarim", "Boshlash"),
+        ("client", "uz", "Hujjatlarim", "Boşlaş"),
         ("client", "en", "Talk to a manager", "Start"),
     ],
 )

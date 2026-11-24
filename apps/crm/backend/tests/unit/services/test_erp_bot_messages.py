@@ -82,7 +82,7 @@ def test_languages_differ_and_ru_is_russian(event: str) -> None:
     ("language", "quote", "invoice", "cabinet"),
     [
         ("ru", "Открыть КП", "Открыть счёт", "Кабинет"),
-        ("uz", "Taklifni ochish", "Hisobni ochish", "Kabinet"),
+        ("uz", "Taklifni oçiş", "Hisobni oçiş", "Kabinet"),
         ("en", "Open the quote", "Open the invoice", "Account"),
     ],
 )
@@ -405,7 +405,7 @@ def test_request_created_tells_the_client_with_number_and_cabinet_button(
     assert message is not None
     assert "ЗВ-2026-007" in message.text
     assert [url for _, url in message.buttons] == [CABINET]
-    assert message.buttons[0][0] in {"Открыть кабинет", "Kabinetni ochish", "Open account"}
+    assert message.buttons[0][0] in {"Открыть кабинет", "Kabinetni oçiş", "Open account"}
 
 
 def test_request_created_by_staff_in_erp_is_not_announced_to_the_client() -> None:

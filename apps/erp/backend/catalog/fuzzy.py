@@ -2,7 +2,8 @@
 
 Средства PostgreSQL: `pg_trgm` (`word_similarity` — запрос как часть длинного названия). Запрос пробуется как набран и в
 другой письменности: кириллица ↔ латиница (русская и узбекская транслитерация), поэтому «strelochniy» находит
-«Стрелочный перевод», а «g'ildirak» — «Гилдирак» и «Gʻildirak». Порог отсекает случайные совпадения; лучшие — первыми.
+«Стрелочный перевод», а «g'ildirak» — «Гилдирак» и «Gʻildirak». Новый узбекский алфавит и старый — одно и то же:
+ö ↔ oʻ / o', ğ ↔ gʻ / g', ş ↔ sh, ç ↔ ch («özbek» находит «oʻzbek» и наоборот). Порог отсекает случайные совпадения; лучшие — первыми.
 """
 
 from __future__ import annotations
@@ -18,6 +19,10 @@ MIN_SCORE = 0.35
 #: Транслитерация латиница → кириллица: сначала длинные сочетания (узбекская латиница и русская практическая)
 _LAT_TO_CYR: tuple[tuple[str, str], ...] = (
     ("shch", "щ"),
+    ("ö", "ў"),
+    ("ğ", "ғ"),
+    ("ş", "ш"),
+    ("ç", "ч"),
     ("o'", "ў"),
     ("oʻ", "ў"),
     ("o‘", "ў"),
@@ -99,7 +104,10 @@ _CYR_TO_LAT: dict[str, str] = {
     "ю": "yu",
     "я": "ya",
 }
-_LATIN = re.compile(r"[a-z]")
+_LATIN = re.compile(r"[a-zöğşç]")
+#: Новый узбекский алфавит ↔ старый (oʻ gʻ sh ch): поиск считает их одним написанием
+_NEW_TO_OLD: tuple[tuple[str, str], ...] = (("ö", "o'"), ("ğ", "g'"), ("ş", "sh"), ("ç", "ch"))
+_OLD_TO_NEW = re.compile(r"(?P<og>[og])['ʻʼ‘’`]|(?P<sh>sh)|(?P<ch>ch)")
 _CYRILLIC = re.compile(r"[а-яёўқғҳ]")
 
 
@@ -121,14 +129,33 @@ def to_latin(text: str) -> str:
     return "".join(_CYR_TO_LAT.get(ch, ch) for ch in text.lower())
 
 
+def to_old_alphabet(text: str) -> str:
+    """«özbek, şartnoma, çek» → «o'zbek, shartnoma, chek»."""
+    for new, old in _NEW_TO_OLD:
+        text = text.replace(new, old)
+    return text
+
+
+def to_new_alphabet(text: str) -> str:
+    """«oʻzbek, shartnoma, chek» → «özbek, şartnoma, çek» (текст в нижнем регистре)."""
+
+    def repl(m: re.Match[str]) -> str:
+        if m.group("og"):
+            return "ö" if m.group("og") == "o" else "ğ"
+        return "ş" if m.group("sh") else "ç"
+
+    return _OLD_TO_NEW.sub(repl, text)
+
+
 def variants(query: str) -> list[str]:
     """Запрос как набран и в другой письменности — без повторов, в нижнем регистре."""
     base = " ".join(query.lower().split())
     found = [base]
     if _LATIN.search(base):
-        found.append(to_cyrillic(base))
+        found += [to_old_alphabet(base), to_new_alphabet(base), to_cyrillic(base)]
     if _CYRILLIC.search(base):
-        found.append(to_latin(base))
+        latin = to_latin(base)
+        found += [latin, to_new_alphabet(latin)]
     return list(dict.fromkeys(v for v in found if v))
 
 

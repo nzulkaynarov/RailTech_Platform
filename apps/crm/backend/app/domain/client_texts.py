@@ -1,5 +1,5 @@
 """Тексты клиенту — один файл на трёх языках (SPEC-v3 §8, D1-9): подтверждение запроса с сайта, «Заявка принята»,
-приглашение в кабинет и ответы бота на `/start`. Узбекский — латиница (`oʻ`, `gʻ`).
+приглашение в кабинет и ответы бота на `/start`. Узбекский — новая латиница (Ö Ğ Ş Ç).
 
 Без внутренних терминов: клиент не видит «лид», «сделка», «расчёт», коды и номера CRM; срок ответа — без минут: «в рабочее время». Чистые функции:
 возвращают готовый текст
@@ -44,17 +44,17 @@ def _greet(language: str, name: str) -> str:
 
 _CONFIRM_LEAD: Final = {
     "ru": "Мы получили вашу заявку. Менеджер свяжется с вами в рабочее время.",
-    "uz": "Arizangizni qabul qildik. Menejer ish vaqtida siz bilan bağlanadi.",
+    "uz": "Arizangizni qabul qildik. Menejer iş vaqtida siz bilan bağlanadi.",
     "en": "We have received your request. A manager will contact you during business hours.",
 }
 _CONFIRM_SUBJECT: Final = {
     "ru": "Мы получили ваш запрос",
-    "uz": "Soʻrovingizni qabul qildik",
+    "uz": "Sörovingizni qabul qildik",
     "en": "We have received your request",
 }
 _CONFIRM_BOT: Final = {
     "ru": "Удобнее общаться в Telegram? Откройте нашего бота — вся переписка будет в одном месте:",
-    "uz": "Telegramda qulayroqmi? Botimizni oching — barcha yozishmalar bir joyda boʻladi:",
+    "uz": "Telegramda qulayroqmi? Botimizni oçing — barça yozişmalar bir joyda böladi:",
     "en": "Prefer Telegram? Open our bot and keep the whole conversation in one place:",
 }
 
@@ -92,10 +92,10 @@ _ACCEPTED_SUBJECT: Final = {
 }
 _ACCEPTED_MAIL_CABINET: Final = {
     "ru": "Статус заявки и все документы — в личном кабинете:",
-    "uz": "Ariza holati va barcha hujjatlar shaxsiy kabinetda:",
+    "uz": "Ariza holati va barça hujjatlar şaxsiy kabinetda:",
     "en": "The status of your request and all documents are in your account:",
 }
-_OPEN_CABINET: Final = {"ru": "Открыть кабинет", "uz": "Kabinetni ochish", "en": "Open account"}
+_OPEN_CABINET: Final = {"ru": "Открыть кабинет", "uz": "Kabinetni oçiş", "en": "Open account"}
 
 
 def open_cabinet_label(language: str | None) -> str:
@@ -127,8 +127,8 @@ _INVITE_BOT: Final = {
         "в одном месте. Нажмите кнопку ниже, вход — по вашему аккаунту Telegram."
     ),
     "uz": (
-        "{greeting}\n\nSiz «{company}» shaxsiy kabinetiga taklif qilindingiz: arizalar, tijorat takliflari, shartnomalar va "
-        "hisoblar bir joyda. Quyidagi tugmani bosing — kirish Telegram akkauntingiz orqali."
+        "{greeting}\n\nSiz «{company}» şaxsiy kabinetiga taklif qilindingiz: arizalar, tijorat takliflari, şartnomalar va "
+        "hisoblar bir joyda. Quyidagi tugmani bosing — kiriş Telegram akkauntingiz orqali."
     ),
     "en": (
         "{greeting}\n\nYou have been invited to the “{company}” account: requests, quotes, contracts and invoices "
@@ -148,17 +148,17 @@ def invite_bot(language: str | None, name: str, company: str) -> str:
 
 _START_DEAL: Final = {
     "ru": "Вижу вашу заявку{title}. Напишите, что хотите уточнить, — передам менеджеру.",
-    "uz": "Arizangizni koʻrdim{title}. Nimani aniqlashtirmoqchi ekaningizni yozing — menejerga uzataman.",
+    "uz": "Arizangizni kördim{title}. Nimani aniqlaştirmoqçi ekaningizni yozing — menejerga uzataman.",
     "en": "I can see your request{title}. Tell me what you would like to clarify and I will pass it to your manager.",
 }
 _START_LEAD_BOUND: Final = {
     "ru": "Готово: ваш запрос с сайта связан с этим чатом. Менеджер ответит здесь.",
-    "uz": "Tayyor: saytdagi soʻrovingiz shu chat bilan bogʻlandi. Menejer shu yerda javob beradi.",
+    "uz": "Tayyor: saytdagi sörovingiz şu çat bilan boğlandi. Menejer şu yerda javob beradi.",
     "en": "Done: your request from the website is now linked to this chat. Your manager will reply here.",
 }
 _START_LINK_STALE: Final = {
     "ru": "Эта ссылка устарела или уже использована. Просто напишите нам здесь — поможем.",
-    "uz": "Bu havola eskirgan yoki allaqachon ishlatilgan. Shu yerga yozing — yordam beramiz.",
+    "uz": "Bu havola eskirgan yoki allaqaçon işlatilgan. Şu yerga yozing — yordam beramiz.",
     "en": "This link has expired or has already been used. Just write to us here and we will help.",
 }
 
@@ -182,7 +182,7 @@ _CONTACT_LINK_BOUND: Final = {
     "ru": "Готово, Telegram подключён к кабинету «{company}». Уведомления о предложениях, счетах, актах и ответы "
     "менеджера будут приходить сюда. Кабинет открывается кнопкой меню бота.",
     "uz": "Tayyor, Telegram «{company}» kabinetiga ulandi. Takliflar, hisob-fakturalar, dalolatnomalar haqidagi "
-    "bildirishnomalar va menejer javoblari şu yerga keladi. Kabinet bot menyusidagi tugma orqali ochiladi.",
+    "bildirişnomalar va menejer javoblari şu yerga keladi. Kabinet bot menyusidagi tugma orqali oçiladi.",
     "en": "Done, Telegram is connected to the «{company}» account. Notifications about quotes, invoices, acts and your "
     "manager's replies will arrive here. Open the account with the bot's menu button.",
 }
@@ -190,15 +190,15 @@ _CONTACT_LINK_BOUND: Final = {
 _CONTACT_LINK_REFUSED: Final = {
     "ru": "Эта ссылка не подходит: она устарела или уже использована. Откройте в кабинете Профиль → «Уведомления» и "
     "нажмите «Подключить» ещё раз.",
-    "uz": "Bu havola mos emas: u eskirgan yoki allaqachon ishlatilgan. Kabinetda Profil → «Bildirishnomalar» boʻlimini "
-    "oching va «Ulash» tugmasini yana bosing.",
+    "uz": "Bu havola mos emas: u eskirgan yoki allaqaçon işlatilgan. Kabinetda Profil → «Bildirişnomalar» bölimini "
+    "oçing va «Ulaş» tugmasini yana bosing.",
     "en": "This link does not work: it has expired or has already been used. Open Profile → “Notifications” in your "
     "account and press “Connect” again.",
 }
 _CONTACT_LINK_TAKEN: Final = {
     "ru": "Этот Telegram уже подключён к кабинету другого человека, поэтому подключить его здесь нельзя. Напишите менеджеру — "
     "он поможет.",
-    "uz": "Bu Telegram allaqachon boşqa odamning kabinetiga ulangan, şuning uçun uni bu yerda ulab bölmaydi. "
+    "uz": "Bu Telegram allaqaçon boşqa odamning kabinetiga ulangan, şuning uçun uni bu yerda ulab bölmaydi. "
     "Menejerga yozing — yordam beradi.",
     "en": "This Telegram account is already connected to someone else's account, so it cannot be connected here. Write to your "
     "manager and they will help.",
@@ -207,7 +207,7 @@ _CONTACT_LINK_TAKEN: Final = {
 
 _CONTACT_LINK_TEST: Final = {
     "ru": "Проверка связи: уведомления кабинета «{company}» приходят сюда. Всё работает.",
-    "uz": "Aloqa tekshiruvi: «{company}» kabineti bildirishnomalari shu yerga keladi. Hammasi ishlayapti.",
+    "uz": "Aloqa tekşiruvi: «{company}» kabineti bildirişnomalari şu yerga keladi. Hammasi işlayapti.",
     "en": "Connection check: notifications from the «{company}» account arrive here. Everything works.",
 }
 
@@ -221,19 +221,19 @@ _SECURITY_NOTICE: Final = {
     "bank_requisites_change_requested": {
         "ru": "Важно: в кабинете «{company}» подан запрос на смену банковских реквизитов компании. Реквизиты изменятся только "
         "после проверки сотрудником. Если это были не вы — срочно свяжитесь с менеджером.",
-        "uz": "Muhim: «{company}» kabinetida kompaniya bank rekvizitlarini oʻzgartirish soʻrovi yuborildi. Rekvizitlar faqat "
-        "xodim tekshiruvidan soʻng oʻzgaradi. Agar bu siz boʻlmasangiz, zudlik bilan menejerga yozing.",
+        "uz": "Muhim: «{company}» kabinetida kompaniya bank rekvizitlarini özgartiriş sörovi yuborildi. Rekvizitlar faqat "
+        "xodim tekşiruvidan söng özgaradi. Agar bu siz bölmasangiz, zudlik bilan menejerga yozing.",
         "en": "Important: a request to change the bank details of «{company}» has been submitted. The details change only "
         "after a staff check. If this was not you, contact your manager immediately.",
     },
     "bank_requisites_changed": {
         "ru": "Сотрудник подтвердил смену банковских реквизитов компании «{company}». Новые реквизиты действуют.",
-        "uz": "Xodim «{company}» kompaniyasi bank rekvizitlarini oʻzgartirishni tasdiqladi. Yangi rekvizitlar amalda.",
+        "uz": "Xodim «{company}» kompaniyasi bank rekvizitlarini özgartirişni tasdiqladi. Yangi rekvizitlar amalda.",
         "en": "A staff member confirmed the bank details change for «{company}». The new details are now in effect.",
     },
     "bank_requisites_change_rejected": {
         "ru": "Запрос на смену банковских реквизитов компании «{company}» отклонён. Подробности — в кабинете.",
-        "uz": "«{company}» kompaniyasi bank rekvizitlarini oʻzgartirish soʻrovi rad etildi. Tafsilotlar — kabinetda.",
+        "uz": "«{company}» kompaniyasi bank rekvizitlarini özgartiriş sörovi rad etildi. Tafsilotlar — kabinetda.",
         "en": "The request to change the bank details of «{company}» was rejected. See the details in your account.",
     },
 }

@@ -30,7 +30,7 @@ describe("MoneyText", () => {
     expect(container.textContent).toBe(`1,000${NBSP}UZS`);
   });
 
-  it("код UZS из ответа — «сум» / «so‘m», другая валюта — код, ноль и минус", () => {
+  it("код UZS из ответа — «сум» / «söm», другая валюта — код, ноль и минус", () => {
     const { container } = renderUi(
       <>
         <MoneyText value="30000000.00" currency="UZS" />
@@ -44,8 +44,8 @@ describe("MoneyText", () => {
     expect(spans[2]?.textContent).toBe(`0${NBSP}сум`);
   });
 
-  it("узбекский интерфейс — «so‘m» и для кода UZS", () => {
+  it("узбекский интерфейс — «söm» и для кода UZS", () => {
     const { container } = renderUi(<MoneyText value={1000} currency="UZS" />, { language: "uz" });
-    expect(container.textContent).toBe(`1${NBSP}000${NBSP}so‘m`);
+    expect(container.textContent).toBe(`1${NBSP}000${NBSP}söm`);
   });
 });

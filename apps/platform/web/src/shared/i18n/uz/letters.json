@@ -1,12 +1,12 @@
 {
   "list": {
-    "caption": "Kiruvchi xatlar",
+    "caption": "Kiruvçi xatlar",
     "filter": {
       "label": "Xat holati",
       "all": "Hammasi",
       "on_control": "Nazoratda",
-      "overdue": "Muddati o‘tgan",
-      "more": "Boshqa holat"
+      "overdue": "Muddati ötgan",
+      "more": "Boşqa holat"
     },
     "columns": {
       "number": "Raqami",
@@ -16,129 +16,129 @@
       "received": "Qabul qilingan",
       "status": "Holati",
       "action": "Amal",
-      "executor": "Ijrochi",
+      "executor": "Ijroçi",
       "due": "Muddat",
       "correspondent": "Korrespondent"
     },
-    "select": "{{number}} xatni yon oynada ko'rsatish",
-    "open": "Ochish",
-    "openLabel": "{{number}} xat kartochkasini ochish",
-    "more": "Yana ko'rsatish",
-    "urgent": "Shoshilinch",
+    "select": "{{number}} xatni yon oynada körsatiş",
+    "open": "Oçiş",
+    "openLabel": "{{number}} xat kartoçkasini oçiş",
+    "more": "Yana körsatiş",
+    "urgent": "Şoşilinç",
     "scroll": "Xatlar jadvali, gorizontal aylantiriladi",
     "empty": {
       "awaiting": {
-        "title": "Sizdan hozircha qaror talab qilinmaydi",
-        "text": "Hozircha bo‘sh.",
-        "action": "Barcha xatlarni ko'rsatish"
+        "title": "Sizdan hozirça qaror talab qilinmaydi",
+        "text": "Hozirça böş.",
+        "action": "Barça xatlarni körsatiş"
       },
       "other": {
-        "title": "Bunday holatdagi xatlar yo'q",
-        "text": "Boshqa holatni tanlang yoki barcha xatlarni oching.",
-        "action": "Barcha xatlarni ko'rsatish"
+        "title": "Bunday holatdagi xatlar yöq",
+        "text": "Boşqa holatni tanlang yoki barça xatlarni oçing.",
+        "action": "Barça xatlarni körsatiş"
       },
       "all": {
-        "title": "Kiruvchi xatlar hozircha yo'q",
-        "text": "Hozircha bo‘sh.",
-        "action": "Yangilash"
+        "title": "Kiruvçi xatlar hozirça yöq",
+        "text": "Hozirça böş.",
+        "action": "Yangilaş"
       }
     },
-    "overdue": "muddati o‘tgan",
-    "dueOverdue": "{{date}}, muddati o‘tgan"
+    "overdue": "muddati ötgan",
+    "dueOverdue": "{{date}}, muddati ötgan"
   },
   "state": {
     "loadError": {
       "title": "Xatlar yuklanmadi",
-      "text": "Yana urinib ko'ring."
+      "text": "Yana urinib köring."
     },
     "unavailable": {
-      "title": "Hujjat aylanishi javob bermayapti",
-      "text": "Xizmat vaqtincha mavjud emas. Xatlar yo'qolmagan, bir daqiqadan keyin takrorlang."
+      "title": "Hujjat aylanişi javob bermayapti",
+      "text": "Xizmat vaqtinça mavjud emas. Xatlar yöqolmagan, bir daqiqadan keyin takrorlang."
     },
     "forbidden": {
-      "title": "Kiruvchi xatlar sizga ochiq emas",
+      "title": "Kiruvçi xatlar sizga oçiq emas",
       "text": "Ruxsat yetarli emas."
     },
     "notGranted": {
-      "title": "Hujjat aylanishiga ruxsat yo'q",
-      "text": "Hisobingiz hujjat aylanishiga hali kiritilmagan."
+      "title": "Hujjat aylanişiga ruxsat yöq",
+      "text": "Hisobingiz hujjat aylanişiga hali kiritilmagan."
     },
     "notFound": {
       "title": "Xat topilmadi",
-      "text": "Raqamni tekshiring yoki xatni kiruvchilar ro'yxatidan oching.",
-      "action": "Xatlar ro'yxatiga"
+      "text": "Raqamni tekşiring yoki xatni kiruvçilar röyxatidan oçing.",
+      "action": "Xatlar röyxatiga"
     },
-    "retry": "Takrorlash"
+    "retry": "Takrorlaş"
   },
   "card": {
     "title": "{{number}} xat",
-    "back": "Xatlar ro'yxatiga",
-    "steps": "Ariza yo'li",
+    "back": "Xatlar röyxatiga",
+    "steps": "Ariza yöli",
     "details": "Xat rekvizitlari",
     "fields": {
       "client": "Mijoz",
       "inn": "STIR",
-      "senderRef": "Chiquvchi raqam va sana",
+      "senderRef": "Çiquvçi raqam va sana",
       "addressee": "Kimning nomiga",
-      "contact": "Aloqa shaxsi",
+      "contact": "Aloqa şaxsi",
       "received": "Qabul qilingan",
       "previousNumber": "Avvalgi raqam",
-      "urgency": "Shoshilinchlik",
+      "urgency": "Şoşilinçlik",
       "kind": "Hujjat turi",
-      "receiptMethod": "Qabul qilish usuli",
+      "receiptMethod": "Qabul qiliş usuli",
       "signedBy": "Imzolagan",
-      "documentDue": "Hujjat bo‘yicha muddat",
-      "related": "Bog‘liq hujjat",
+      "documentDue": "Hujjat böyiça muddat",
+      "related": "Boğliq hujjat",
       "correspondent": "Korrespondent",
       "correspondentInn": "Korrespondent STIR"
     },
-    "urgent": "Shoshilinch",
+    "urgent": "Şoşilinç",
     "regular": "Oddiy",
     "summary": "Hujjat mazmuni",
     "files": "Ilovalar",
-    "noFiles": "Ilovalar yo'q",
-    "download": "{{name}} faylini yuklab olish",
-    "links": "Bog'lanishlar",
+    "noFiles": "Ilovalar yöq",
+    "download": "{{name}} faylini yuklab oliş",
+    "links": "Boğlanişlar",
     "linkFields": {
       "request": "Ariza",
       "client": "Mijoz",
       "manager": "Menejer",
-      "registered": "Ro'yxatga olingan"
+      "registered": "Röyxatga olingan"
     },
-    "noRequest": "Arizaga bog'lanmagan",
+    "noRequest": "Arizaga boğlanmagan",
     "noClient": "Mijoz aniqlanmagan",
     "byClient": "STIR {{inn}}",
     "bySystem": "Tizim tomonidan, mijoz arizasi böyiça",
     "decision": "Direktor qarori",
     "decisionFields": {
       "text": "Rezolyutsiya matni",
-      "assignees": "Ijrochilar",
+      "assignees": "Ijroçilar",
       "due": "Hisob-kitob muddati",
       "margin": "Marja kamida",
       "decidedBy": "Qaror qildi",
       "comment": "Izoh",
-      "reason": "Rad etish sababi"
+      "reason": "Rad etiş sababi"
     },
     "rejected": "Xat rad etildi",
     "journal": "Tarix",
     "actionUnknown": "Xatdagi amal",
     "journalSystem": "Tizim",
     "actions": {
-      "letter_registered": "Xat ro'yxatga olindi",
-      "letter_resolved": "Rezolyutsiya qo'yildi",
+      "letter_registered": "Xat röyxatga olindi",
+      "letter_resolved": "Rezolyutsiya qöyildi",
       "letter_returned": "Menejerga qaytarildi",
       "letter_rejected": "Rad etildi",
-      "letter_resubmitted": "Rezolyutsiyaga qayta topshirildi",
+      "letter_resubmitted": "Rezolyutsiyaga qayta topşirildi",
       "letter_draft_saved": "Rezolyutsiya loyihasi saqlandi",
-      "instruction_executed": "Topshiriq bajarildi",
-      "instruction_extension_requested": "Muddatni uzaytirish so‘raldi",
-      "instruction_extension_approved": "Muddatni uzaytirish ma’qullandi",
-      "instruction_extension_rejected": "Muddatni uzaytirish rad etildi",
-      "letter_executed": "Barcha topshiriqlar bajarildi",
-      "letter_acknowledged": "Xat bilan tanishdi",
-      "letter_duplicate_forced": "Boshqa kiruvchi xatga mos boʻlsa ham roʻyxatga olindi",
+      "instruction_executed": "Topşiriq bajarildi",
+      "instruction_extension_requested": "Muddatni uzaytiriş söraldi",
+      "instruction_extension_approved": "Muddatni uzaytiriş maʼqullandi",
+      "instruction_extension_rejected": "Muddatni uzaytiriş rad etildi",
+      "letter_executed": "Barça topşiriqlar bajarildi",
+      "letter_acknowledged": "Xat bilan tanişdi",
+      "letter_duplicate_forced": "Boşqa kiruvçi xatga mos bölsa ham röyxatga olindi",
       "letter_marked_duplicate": "Takror deb belgilandi",
-      "letter_work_cancelled": "Topshiriqlar va tanishishlar bekor qilindi",
+      "letter_work_cancelled": "Topşiriqlar va tanişişlar bekor qilindi",
       "letter_duplicate_linked": "Xatning takrori topildi",
       "file_attached": "Fayl biriktirildi",
       "file_version_added": "Faylning yangi versiyasi yuklandi",
@@ -147,36 +147,36 @@
       "letter_reopened": "Işga qaytarildi",
       "letter_returned_to_author": "Rezolyusiya muallifiga qaytarildi"
     },
-    "readOnly": "Faqat ko'rish",
-    "readOnlyHint": "Faqat ko‘rish.",
-    "resolve": "Rezolyutsiya qo'yish",
-    "partial": "Ariza ma'lumotlari mavjud emas: bosqich xatning o'zi bo'yicha ko'rsatilgan.",
+    "readOnly": "Faqat köriş",
+    "readOnlyHint": "Faqat köriş.",
+    "resolve": "Rezolyutsiya qöyiş",
+    "partial": "Ariza maʼlumotlari mavjud emas: bosqiç xatning özi böyiça körsatilgan.",
     "onControl": "Nazoratda",
     "dup": {
       "action": "Takror",
       "title": "{{number}} — takror",
       "original": "Asl xat raqami",
       "comment": "Izoh",
-      "confirm": "Rezolyutsiya qoʻyilgan — topshiriqlarni bekor qilish ({{count}})",
+      "confirm": "Rezolyutsiya qöyilgan — topşiriqlarni bekor qiliş ({{count}})",
       "what": [
         "Xat «Takror» maqomini va aslga havolani oladi",
-        "Undagi topshiriqlar va tanishishlar bekor qilinadi, jurnalga yoziladi",
-        "Kiruvchi raqam boʻshatilmaydi"
+        "Undagi topşiriqlar va tanişişlar bekor qilinadi, jurnalga yoziladi",
+        "Kiruvçi raqam böşatilmaydi"
       ],
-      "submit": "Takror deb belgilash",
-      "cancel": "Bekor qilish",
+      "submit": "Takror deb belgilaş",
+      "cancel": "Bekor qiliş",
       "done": "{{number}} takrori deb belgilandi",
       "banner": "Xat takrori:",
-      "bannerNoLink": "Boshqa xatning takrori",
-      "bannerText": "Xat yopildi: ish asl xat boʻyicha davom etadi.",
+      "bannerNoLink": "Boşqa xatning takrori",
+      "bannerText": "Xat yopildi: iş asl xat böyiça davom etadi.",
       "errors": {
-        "not_found": "Bunday raqamli kiruvchi xat yoʻq",
-        "same_letter": "Bu oʻsha xat — aslini koʻrsating",
-        "original_is_duplicate": "U xatning oʻzi takror — aslini koʻrsating",
-        "resolution_exists": "Rezolyutsiya qoʻyilgan — topshiriqlar bekor qilinishini tasdiqlang",
-        "calc_in_progress": "Xat boʻyicha hisob ketmoqda — uni loyihada yoping",
-        "invalid_state": "Xat allaqachon takror deb belgilangan",
-        "letter_has_duplicates": "Bu xatning takrorlari bor — juftlikdagi boshqa xatni belgilang"
+        "not_found": "Bunday raqamli kiruvçi xat yöq",
+        "same_letter": "Bu öşa xat — aslini körsating",
+        "original_is_duplicate": "U xatning özi takror — aslini körsating",
+        "resolution_exists": "Rezolyutsiya qöyilgan — topşiriqlar bekor qilinişini tasdiqlang",
+        "calc_in_progress": "Xat böyiça hisob ketmoqda — uni loyihada yoping",
+        "invalid_state": "Xat allaqaçon takror deb belgilangan",
+        "letter_has_duplicates": "Bu xatning takrorlari bor — juftlikdagi boşqa xatni belgilang"
       }
     },
     "requestFiles": "{{number}} arizasidan"
@@ -184,13 +184,13 @@
   "panel": {
     "awaitingReadOnly": {
       "title": "Xat direktor rezolyutsiyasini kutmoqda",
-      "text": "Faqat ko‘rish."
+      "text": "Faqat köriş."
     },
     "decided": {
-      "title": "Xat bo'yicha qaror qabul qilindi",
+      "title": "Xat böyiça qaror qabul qilindi",
       "text": ""
     },
-    "briefOpen": "Xat kartochkasini ochish",
+    "briefOpen": "Xat kartoçkasini oçiş",
     "brief": {
       "client": "Mijoz",
       "request": "Ariza",
@@ -200,27 +200,27 @@
       "correspondent": "Korrespondent"
     },
     "sheetTitle": "{{number}} xatga rezolyutsiya",
-    "sheetClose": "Yopish",
+    "sheetClose": "Yopiş",
     "sheetLabel": "Rezolyutsiya",
     "decidedOffice": {
-      "title": "Rezolyutsiya qo‘yildi",
-      "text": "Topshiriqlar, muddatlar va ijro holati — xat kartochkasida, «Topshiriqlar» blokida."
+      "title": "Rezolyutsiya qöyildi",
+      "text": "Topşiriqlar, muddatlar va ijro holati — xat kartoçkasida, «Topşiriqlar» blokida."
     },
-    "openTask": "Topshiriqning ish ekranini ochish"
+    "openTask": "Topşiriqning iş ekranini oçiş"
   },
   "form": {
     "name": "Direktor rezolyutsiyasi",
     "text": {
       "label": "Rezolyutsiya matni",
-      "hint": "Ijrochilar bu matnni topshiriqda oladi."
+      "hint": "Ijroçilar bu matnni topşiriqda oladi."
     },
     "assignees": {
-      "legend": "Ijrochilar",
-      "hint": "Xatni kim hisoblashini belgilang va zona xodimini tanlang.",
+      "legend": "Ijroçilar",
+      "hint": "Xatni kim hisoblaşini belgilang va zona xodimini tanlang.",
       "employee": "Xodim: {{zone}}",
       "choose": "Xodimni tanlang",
-      "none": "Bu zona uchun xodim yo'q",
-      "off": "Hisob-kitobda ishtirok etmaydi"
+      "none": "Bu zona uçun xodim yöq",
+      "off": "Hisob-kitobda iştirok etmaydi"
     },
     "zones": {
       "goods": {
@@ -238,8 +238,8 @@
     },
     "directory": {
       "forbidden": "Ruxsat yetarli emas.",
-      "unavailable": "Xodimlar ro'yxati yuklanmadi. Yana urinib ko'ring.",
-      "retry": "Takrorlash"
+      "unavailable": "Xodimlar röyxati yuklanmadi. Yana urinib köring.",
+      "retry": "Takrorlaş"
     },
     "due": {
       "label": "Hisob-kitob muddati",
@@ -249,31 +249,31 @@
       "label": "Marja kamida, %",
       "hint": ""
     },
-    "submit": "Rezolyutsiyani tasdiqlash",
+    "submit": "Rezolyutsiyani tasdiqlaş",
     "consequence": {
-      "title": "Nima bo'ladi",
-      "step1": "Xat «Rezolyutsiya kutmoqda» holatidan chiqadi va «Rezolyutsiya qo'yildi» holatini oladi.",
-      "step2": "Tanlangan ijrochilarga hisob-kitob topshirig'i yuboriladi: matningiz va {{due}} muddat.",
-      "step2NoDue": "Tanlangan ijrochilarga hisob-kitob topshirig'i yuboriladi: matningiz va hisob-kitob muddati.",
-      "step3": "Ariza «Hisob-kitob» bosqichiga o'tadi. Mijozga hech narsa yuborilmaydi."
+      "title": "Nima böladi",
+      "step1": "Xat «Rezolyutsiya kutmoqda» holatidan çiqadi va «Rezolyutsiya qöyildi» holatini oladi.",
+      "step2": "Tanlangan ijroçilarga hisob-kitob topşiriği yuboriladi: matningiz va {{due}} muddat.",
+      "step2NoDue": "Tanlangan ijroçilarga hisob-kitob topşiriği yuboriladi: matningiz va hisob-kitob muddati.",
+      "step3": "Ariza «Hisob-kitob» bosqiçiga ötadi. Mijozga heç narsa yuborilmaydi."
     },
     "other": {
-      "title": "Rezolyutsiya kerak bo'lmasa",
+      "title": "Rezolyutsiya kerak bölmasa",
       "comment": "Izoh",
       "commentHint": "",
-      "return": "Menejerga qaytarish",
-      "reject": "Rad etish",
-      "disabled": "Izoh yozilmaguncha tugmalar faol emas: nimani to'g'rilash kerakligini yoki nega rad etayotganingizni yozing.",
-      "returnHelp": "Qaytarish: xat izohingiz bilan menejerga qaytadi.",
-      "rejectHelp": "Rad etish: ariza shu sabab bilan «Rad etildi» holatiga o'tadi."
+      "return": "Menejerga qaytariş",
+      "reject": "Rad etiş",
+      "disabled": "Izoh yozilmagunça tugmalar faol emas: nimani töğrilaş kerakligini yoki nega rad etayotganingizni yozing.",
+      "returnHelp": "Qaytariş: xat izohingiz bilan menejerga qaytadi.",
+      "rejectHelp": "Rad etiş: ariza şu sabab bilan «Rad etildi» holatiga ötadi."
     },
     "errors": {
       "text": "Rezolyutsiya matnini yozing.",
-      "assignees": "Kamida bitta ijrochini belgilang.",
+      "assignees": "Kamida bitta ijroçini belgilang.",
       "employee": "Xodimni tanlang.",
       "due": "Hisob-kitob muddatini kiriting.",
-      "duePast": "Hisob-kitob muddati o'tmishda bo'lishi mumkin emas.",
-      "margin": "Marja 0 dan 100 gacha son, o'nlik kasrdan keyin ikkitadan ko'p bo'lmasin.",
+      "duePast": "Hisob-kitob muddati ötmişda bölişi mumkin emas.",
+      "margin": "Marja 0 dan 100 gaça son, önlik kasrdan keyin ikkitadan köp bölmasin.",
       "comment": "Izoh yozing."
     },
     "failed": {
@@ -282,29 +282,29 @@
       "reject": "Xat rad etilmadi: {{reason}}. Izoh qoralamada saqlandi."
     },
     "reasons": {
-      "due_in_past": "hisob-kitob muddati o'tmishda",
-      "not_active_employee": "ijrochi topilmadi yoki o'chirilgan",
-      "duplicate": "bir xodim bir zonada ikki marta ko'rsatilgan",
-      "invalid_state": "xat endi rezolyutsiya kutmayapti, kartochkani yangilang",
-      "eds_not_granted": "hujjat aylanishiga ruxsatingiz yo'q",
+      "due_in_past": "hisob-kitob muddati ötmişda",
+      "not_active_employee": "ijroçi topilmadi yoki öçirilgan",
+      "duplicate": "bir xodim bir zonada ikki marta körsatilgan",
+      "invalid_state": "xat endi rezolyutsiya kutmayapti, kartoçkani yangilang",
+      "eds_not_granted": "hujjat aylanişiga ruxsatingiz yöq",
       "forbidden": "bu amal rolingizga ruxsat etilmagan",
       "forbiddenSection": "«{{section}}» bölimiga kiriş yöq",
-      "unavailable": "hujjat aylanishi javob bermayapti",
-      "validation": "maydonlarni tekshiring",
+      "unavailable": "hujjat aylanişi javob bermayapti",
+      "validation": "maydonlarni tekşiring",
       "unknown": "kutilmagan xato",
-      "track_mismatch": "xatning rezolyutsiya yo‘li boshqa, kartochkani yangilang",
-      "not_allowed_for_info": "«Ma’lumot uchun»da mas’ul va muddat bo‘lmaydi",
-      "urgent_not_extendable": "shoshilinch xatlar uzaytirilmaydi",
-      "extension_pending": "uzaytirish so‘rovi allaqachon qaror kutmoqda",
-      "not_executor": "bu topshiriq sizniki emas",
-      "not_resolution_author": "uzaytirishni rezolyutsiya muallifi hal qiladi",
-      "no_pending_extension": "uzaytirish so‘rovi endi yo‘q, kartochkani yangilang",
-      "report_required": "hisobot, fayl yoki chiquvchi xat raqami kerak",
+      "track_mismatch": "xatning rezolyutsiya yöli boşqa, kartoçkani yangilang",
+      "not_allowed_for_info": "«Maʼlumot uçun»da masʼul va muddat bölmaydi",
+      "urgent_not_extendable": "şoşilinç xatlar uzaytirilmaydi",
+      "extension_pending": "uzaytiriş sörovi allaqaçon qaror kutmoqda",
+      "not_executor": "bu topşiriq sizniki emas",
+      "not_resolution_author": "uzaytirişni rezolyutsiya muallifi hal qiladi",
+      "no_pending_extension": "uzaytiriş sörovi endi yöq, kartoçkani yangilang",
+      "report_required": "hisobot, fayl yoki çiquvçi xat raqami kerak",
       "not_found": "bunday raqamli hujjat topilmadi",
-      "outgoing_linked_elsewhere": "bu CHIQ boshqa kiruvchi xatga javob — shu xatning CHIQ raqamini kiriting yoki hisobot yozing"
+      "outgoing_linked_elsewhere": "bu CHIQ boşqa kiruvçi xatga javob — şu xatning CHIQ raqamini kiriting yoki hisobot yozing"
     },
     "done": {
-      "resolve": "Rezolyutsiya qo'yildi: topshiriq ijrochilarga yuborildi",
+      "resolve": "Rezolyutsiya qöyildi: topşiriq ijroçilarga yuborildi",
       "return": "Xat menejerga qaytarildi",
       "reject": "Xat rad etildi"
     },
@@ -316,136 +316,136 @@
     }
   },
   "register": {
-    "action": "Kiruvchi hujjatni ro‘yxatga olish",
-    "formLabel": "Kiruvchi hujjatni ro‘yxatga olish",
+    "action": "Kiruvçi hujjatni röyxatga oliş",
+    "formLabel": "Kiruvçi hujjatni röyxatga oliş",
     "choose": "Tanlang",
     "kind": {
       "label": "Hujjat turi",
-      "unavailable": "Turlar ro‘yxati yuklanmadi. Sahifani yangilang."
+      "unavailable": "Turlar röyxati yuklanmadi. Sahifani yangilang."
     },
     "method": {
-      "label": "Qabul qilish usuli",
-      "post": "Pochta",
-      "paper": "Qog‘oz (shaxsan olib kelingan)",
-      "taxpayer_cabinet": "Soliq to‘lovchi kabineti my.soliq",
+      "label": "Qabul qiliş usuli",
+      "post": "Poçta",
+      "paper": "Qoğoz (şaxsan olib kelingan)",
+      "taxpayer_cabinet": "Soliq tölovçi kabineti my.soliq",
       "courier": "Kuryer",
       "email": "E-mail",
-      "unavailable": "Usullar ma’lumotnomasi yuklanmadi. Sahifani yangilang."
+      "unavailable": "Usullar maʼlumotnomasi yuklanmadi. Sahifani yangilang."
     },
     "sender": {
-      "label": "Korrespondent (tashkilot)",
-      "hint": "Kontragentlardan tanlang yoki taklifning oxirgi qatoridan tashkilot qöşing."
+      "label": "Korrespondent (taşkilot)",
+      "hint": "Kontragentlardan tanlang yoki taklifning oxirgi qatoridan taşkilot qöşing."
     },
     "refNumber": {
-      "label": "Jo‘natuvchining chiquvchi raqami"
+      "label": "Jönatuvçining çiquvçi raqami"
     },
     "refDate": {
-      "label": "Jo‘natuvchidagi sana"
+      "label": "Jönatuvçidagi sana"
     },
     "signedBy": {
       "label": "Imzolagan"
     },
     "receivedAt": {
-      "label": "Kelib tushgan sana"
+      "label": "Kelib tuşgan sana"
     },
     "subject": {
       "label": "Mavzu"
     },
     "summary": {
       "label": "Qisqa mazmuni",
-      "hint": "Ixtiyoriy. Bo‘sh bo‘lsa, kartochkada mavzu ko‘rsatiladi."
+      "hint": "Ixtiyoriy. Böş bölsa, kartoçkada mavzu körsatiladi."
     },
     "documentDue": {
-      "label": "Hujjat bo‘yicha muddat",
+      "label": "Hujjat böyiça muddat",
       "hint": "Jönatuvçi körsatgan javob yoki ijro muddati",
       "required": "Bu hujjat turi uçun majburiy"
     },
     "addressee": {
       "label": "Adresat",
       "hint": "",
-      "default": "Direktor (sukut bo‘yicha)"
+      "default": "Direktor (sukut böyiça)"
     },
-    "urgent": "Shoshilinch",
+    "urgent": "Şoşilinç",
     "files": {
       "label": "Hujjat fayli",
-      "hint": "Xat skani yoki fayli majburiy. PDF, rasmlar, Office hujjatlari, 25 MB gacha. Pasport va shaxsiy hujjatlarni yuklamang."
+      "hint": "Xat skani yoki fayli majburiy. PDF, rasmlar, Office hujjatlari, 25 MB gaça. Pasport va şaxsiy hujjatlarni yuklamang."
     },
     "deal": {
-      "label": "Ariza yoki loyiha bilan bog‘lash",
+      "label": "Ariza yoki loyiha bilan boğlaş",
       "hint": "Ixtiyoriy: raqam, nom yoki kompaniya"
     },
     "related": {
-      "label": "Bog‘liq hujjat",
+      "label": "Boğliq hujjat",
       "hint": "Ixtiyoriy: oldingi kiruvçi yoki bizning çiquvçi xat raqami"
     },
     "duplicate": {
-      "exactTitle": "Bu xat allaqachon roʻyxatdan oʻtganga oʻxshaydi",
-      "registered": "roʻyxatga olingan {{date}} · {{subject}}",
-      "open": "Ochish",
-      "other": "Bu boshqa xat — roʻyxatga olish",
-      "keep": "Ro‘yxatga olmaslik",
-      "reason": "Nega bu boshqa xat",
-      "reasonRequired": "Sababini yozing — u jurnalga tushadi",
-      "similarTitle": "Oʻxshash xatlar",
+      "exactTitle": "Bu xat allaqaçon röyxatdan ötganga öxşaydi",
+      "registered": "röyxatga olingan {{date}} · {{subject}}",
+      "open": "Oçiş",
+      "other": "Bu boşqa xat — röyxatga oliş",
+      "keep": "Röyxatga olmaslik",
+      "reason": "Nega bu boşqa xat",
+      "reasonRequired": "Sababini yozing — u jurnalga tuşadi",
+      "similarTitle": "Öxşaş xatlar",
       "item": "· {{subject}} · {{date}}",
-      "blocked": "Bu xat allaqachon roʻyxatdan oʻtgan: {{number}}",
+      "blocked": "Bu xat allaqaçon röyxatdan ötgan: {{number}}",
       "match": {
-        "exact": "oʻsha xat",
-        "same_subject": "oʻsha mavzu",
-        "same_ref": "oʻsha chiqish №",
-        "same_file": "oʻsha fayl"
+        "exact": "öşa xat",
+        "same_subject": "öşa mavzu",
+        "same_ref": "öşa çiqiş №",
+        "same_file": "öşa fayl"
       }
     },
-    "submit": "Ro‘yxatga olish",
-    "cancel": "Bekor qilish",
-    "toast": "Ro‘yxatga olindi: {{number}}",
-    "notRegistered": "Ro‘yxatga olinmadi: {{reason}}",
-    "summaryError": "Belgilangan maydonlarni to‘ldiring.",
+    "submit": "Röyxatga oliş",
+    "cancel": "Bekor qiliş",
+    "toast": "Röyxatga olindi: {{number}}",
+    "notRegistered": "Röyxatga olinmadi: {{reason}}",
+    "summaryError": "Belgilangan maydonlarni töldiring.",
     "errors": {
       "kind": "Hujjat turini tanlang.",
       "receipt_method": "Xat qanday kelganini tanlang.",
-      "sender_name": "Korrespondentni kontragentlardan tanlang yoki tashkilot qöşing.",
-      "sender_inn": "STIR — 9 dan 14 gacha raqam.",
-      "received_at": "Kelib tushgan sanani kiriting — bugundan kech emas.",
+      "sender_name": "Korrespondentni kontragentlardan tanlang yoki taşkilot qöşing.",
+      "sender_inn": "STIR — 9 dan 14 gaça raqam.",
+      "received_at": "Kelib tuşgan sanani kiriting — bugundan keç emas.",
       "subject": "Mavzuni kiriting.",
-      "file_ids": "Xat faylini biriktiring va yuklanishini kuting.",
+      "file_ids": "Xat faylini biriktiring va yuklanişini kuting.",
       "document_due": "Bu hujjat turi uçun hujjatdagi muddat kerak — uni xatdan oling.",
       "related_number": "Bunday raqamli hujjat yöq. Kiruvçi yoki çiquvçi raqamni tekşiring.",
-      "forbidden": "kiruvchi hujjatlarni ro‘yxatga olish rolingizga berilmagan",
-      "server": "server ma’lumotni qabul qilmadi, bir daqiqadan so‘ng qayta urining"
+      "forbidden": "kiruvçi hujjatlarni röyxatga oliş rolingizga berilmagan",
+      "server": "server maʼlumotni qabul qilmadi, bir daqiqadan söng qayta urining"
     },
     "draft": {
       "legend": "Rezolyutsiya loyihasi (ixtiyoriy)",
       "hint": "",
       "kind": "Rezolyutsiya turi",
       "none": "Loyihasiz",
-      "acquaint": "Tanishtirish",
+      "acquaint": "Taniştiriş",
       "acquaintHint": "Xat nusxasidagi xodimlar; majburiy emas"
     },
     "ai": {
-      "group": "Fayldan to‘ldirish",
-      "fill": "Fayldan to‘ldirish",
+      "group": "Fayldan töldiriş",
+      "fill": "Fayldan töldiriş",
       "needFile": "Avval xat faylini biriktiring.",
-      "hintText": "Matnli PDF — yordamchi maydonlarni taklif qiladi. Skan va fotolar — qo‘lda.",
-      "hintScans": "Xatning PDF yoki fotosi — yordamchi maydonlarni taklif qiladi, tekshiring.",
+      "hintText": "Matnli PDF — yordamçi maydonlarni taklif qiladi. Skan va fotolar — qölda.",
+      "hintScans": "Xatning PDF yoki fotosi — yordamçi maydonlarni taklif qiladi, tekşiring.",
       "chip": "SI taklifi",
-      "applied_one": "Fayldan to‘ldirildi: {{count}} maydon — «SI taklifi» belgilanganlarini tekshiring.",
-      "applied_few": "Fayldan to‘ldirildi: {{count}} maydon — «SI taklifi» belgilanganlarini tekshiring.",
-      "applied_many": "Fayldan to‘ldirildi: {{count}} maydon — «SI taklifi» belgilanganlarini tekshiring.",
-      "applied_other": "Fayldan to‘ldirildi: {{count}} maydon — «SI taklifi» belgilanganlarini tekshiring.",
-      "revert": "Taklifni olib tashlash",
-      "deal": "Ehtimoliy bog‘lanish: {{label}}",
-      "link": "Bog‘lash",
+      "applied_one": "Fayldan töldirildi: {{count}} maydon — «SI taklifi» belgilanganlarini tekşiring.",
+      "applied_few": "Fayldan töldirildi: {{count}} maydon — «SI taklifi» belgilanganlarini tekşiring.",
+      "applied_many": "Fayldan töldirildi: {{count}} maydon — «SI taklifi» belgilanganlarini tekşiring.",
+      "applied_other": "Fayldan töldirildi: {{count}} maydon — «SI taklifi» belgilanganlarini tekşiring.",
+      "revert": "Taklifni olib taşlaş",
+      "deal": "Ehtimoliy boğlaniş: {{label}}",
+      "link": "Boğlaş",
       "errors": {
-        "scan_recognition_disabled": "Bu skan yoki foto: yordamchi hozir ularni o‘qimaydi. Qo‘lda to‘ldiring.",
-        "file_too_large": "Fayl 5 MB dan katta — yordamchi uni o‘qimaydi. Qo‘lda to‘ldiring.",
-        "ai_unavailable": "Yordamchi hozir javob bermadi. Qo‘lda to‘ldiring yoki keyinroq urinib ko‘ring.",
-        "ai_budget_exceeded": "Yordamchining kunlik limiti tugadi. Qo‘lda to‘ldiring.",
-        "nothing_recognized": "Yordamchi faylda hech narsa topmadi. Qo‘lda to‘ldiring.",
-        "unsupported_file": "PDF yoki xat fotosidan to‘ldirish mumkin.",
-        "DEFAULT": "Fayldan to‘ldirib bo‘lmadi. Qo‘lda to‘ldiring."
+        "scan_recognition_disabled": "Bu skan yoki foto: yordamçi hozir ularni öqimaydi. Qölda töldiring.",
+        "file_too_large": "Fayl 5 MB dan katta — yordamçi uni öqimaydi. Qölda töldiring.",
+        "ai_unavailable": "Yordamçi hozir javob bermadi. Qölda töldiring yoki keyinroq urinib köring.",
+        "ai_budget_exceeded": "Yordamçining kunlik limiti tugadi. Qölda töldiring.",
+        "nothing_recognized": "Yordamçi faylda heç narsa topmadi. Qölda töldiring.",
+        "unsupported_file": "PDF yoki xat fotosidan töldiriş mumkin.",
+        "DEFAULT": "Fayldan töldirib bölmadi. Qölda töldiring."
       },
-      "reading": "Fayl o‘qilmoqda va maydonlar to‘ldirilmoqda — yozishda davom etishingiz mumkin."
+      "reading": "Fayl öqilmoqda va maydonlar töldirilmoqda — yozişda davom etişingiz mumkin."
     },
     "review": {
       "yes": "Ha",
@@ -455,14 +455,14 @@
     },
     "sections": {
       "file": "Xat fayli",
-      "sender": "Yuboruvchi",
+      "sender": "Yuboruvçi",
       "content": "Mavzu va mazmun",
-      "route": "Muddat, qabul qiluvchi va rezolyutsiya",
-      "review": "Tekshirish va ro‘yxatga olish"
+      "route": "Muddat, qabul qiluvçi va rezolyutsiya",
+      "review": "Tekşiriş va röyxatga oliş"
     },
     "person": {
       "label": "Korrespondent şaxsi",
-      "hint": "Majburiy emas: tashkilot kartoçkasidan."
+      "hint": "Majburiy emas: taşkilot kartoçkasidan."
     },
     "saved": {
       "found": "Qoralama {{time}}: {{files}}",
@@ -473,308 +473,308 @@
   "office": {
     "name": "Direktor rezolyutsiyasi",
     "draftName": "Rezolyutsiya loyihasi",
-    "draftIntro": "Loyihani tayyorlang: direktor uni bir bosishda tasdiqlaydi yoki tuzatadi.",
+    "draftIntro": "Loyihani tayyorlang: direktor uni bir bosişda tasdiqlaydi yoki tuzatadi.",
     "kind": {
       "legend": "Rezolyutsiya turi",
-      "execute": "Ijro uchun",
-      "reply": "Javob tayyorlash",
-      "info": "Ma’lumot uchun"
+      "execute": "Ijro uçun",
+      "reply": "Javob tayyorlaş",
+      "info": "Maʼlumot uçun"
     },
     "kindHint": {
-      "execute": "Ijrochi bajaradi va «Vazifalar»da hisobot beradi.",
+      "execute": "Ijroçi bajaradi va «Vazifalar»da hisobot beradi.",
       "reply": "Ijroçi javob tayyorlaydi: «javoban» çiquvçi xat imzolansa, topşiriq yopiladi.",
-      "info": "Topshiriqsiz: xat «Ma’lumot uchun qabul qilindi» holatini oladi."
+      "info": "Topşiriqsiz: xat «Maʼlumot uçun qabul qilindi» holatini oladi."
     },
     "template": {
       "execute": "Bajarib, muddatida xabar bering.",
       "reply": "Muddatida javob tayyorlang.",
-      "info": "Ma’lumot uchun qabul qilinsin."
+      "info": "Maʼlumot uçun qabul qilinsin."
     },
     "responsible": {
-      "label": "Mas’ul ijrochi",
+      "label": "Masʼul ijroçi",
       "hint": "Kompaniyaning istalgan xodimi",
       "choose": "Xodimni tanlang"
     },
     "due": {
       "label": "Ijro muddati",
-      "hint": "Taklif — {{date}}: hujjatdagi muddat va shoshilinchlik bo‘yicha; dam olish kuni dushanbaga ko‘chadi.",
+      "hint": "Taklif — {{date}}: hujjatdagi muddat va şoşilinçlik böyiça; dam oliş kuni duşanbaga köçadi.",
       "hintNone": "Bugundan oldin emas."
     },
     "text": {
       "label": "Rezolyutsiya matni",
-      "hint": "Tur bo‘yicha shablon — tahrirlash mumkin."
+      "hint": "Tur böyiça şablon — tahrirlaş mumkin."
     },
     "co": {
-      "label": "Hamijrochilar",
-      "hint": "Ixtiyoriy: xuddi shu topshiriqni shu muddat bilan oladi."
+      "label": "Hamijroçilar",
+      "hint": "Ixtiyoriy: xuddi şu topşiriqni şu muddat bilan oladi."
     },
     "acquaint": {
-      "label": "Tanishtirish",
-      "hint": "Ixtiyoriy: «Tanishib chiqish» vazifasini oladi."
+      "label": "Taniştiriş",
+      "hint": "Ixtiyoriy: «Tanişib çiqiş» vazifasini oladi."
     },
     "choosePeople": "Xodimlarni tanlang",
     "draftBy": "Loyihani {{name}} tayyorladi, {{date}}.",
-    "approve": "Loyihani tasdiqlash",
-    "submit": "Rezolyutsiya qo‘yish",
-    "saveDraft": "Loyihani saqlash",
+    "approve": "Loyihani tasdiqlaş",
+    "submit": "Rezolyutsiya qöyiş",
+    "saveDraft": "Loyihani saqlaş",
     "staff": {
-      "unavailable": "Xodimlar ro‘yxati yuklanmadi.",
-      "retry": "Qayta urinish"
+      "unavailable": "Xodimlar röyxati yuklanmadi.",
+      "retry": "Qayta uriniş"
     },
     "other": {
-      "title": "Agar rezolyutsiya kerak bo‘lmasa",
+      "title": "Agar rezolyutsiya kerak bölmasa",
       "comment": "Izoh",
       "commentHint": "",
-      "return": "Ish yurituvchiga qaytarish",
-      "reject": "Rad etish",
-      "disabled": "Izoh yozilmaguncha tugmalar faol emas: nimani tuzatish kerakligini yoki rad etish sababini yozing.",
-      "returnHelp": "Qaytarish — xat ish yurituvchiga qaytadi (ro‘yxatga olish xatosi).",
-      "rejectHelp": "Rad etish — xat shu sabab bilan yopiladi."
+      "return": "Iş yurituvçiga qaytariş",
+      "reject": "Rad etiş",
+      "disabled": "Izoh yozilmagunça tugmalar faol emas: nimani tuzatiş kerakligini yoki rad etiş sababini yozing.",
+      "returnHelp": "Qaytariş — xat iş yurituvçiga qaytadi (röyxatga oliş xatosi).",
+      "rejectHelp": "Rad etiş — xat şu sabab bilan yopiladi."
     },
     "errors": {
       "kind": "Rezolyutsiya turini tanlang.",
-      "responsible": "Mas’ul ijrochini tanlang.",
-      "due": "Muddatni ko‘rsating.",
-      "duePast": "Muddat o‘tmishda bo‘lishi mumkin emas.",
+      "responsible": "Masʼul ijroçini tanlang.",
+      "due": "Muddatni körsating.",
+      "duePast": "Muddat ötmişda bölişi mumkin emas.",
       "text": "Rezolyutsiya matnini yozing."
     },
     "done": {
-      "resolve": "Rezolyutsiya qo‘yildi: topshiriq ijrochilarga ketdi",
-      "info": "Xat ma’lumot uchun qabul qilindi",
+      "resolve": "Rezolyutsiya qöyildi: topşiriq ijroçilarga ketdi",
+      "info": "Xat maʼlumot uçun qabul qilindi",
       "draft": "Rezolyutsiya loyihasi saqlandi",
-      "return": "Xat ish yurituvchiga qaytarildi",
+      "return": "Xat iş yurituvçiga qaytarildi",
       "reject": "Xat rad etildi"
     },
     "failed": "Saqlanmadi: {{reason}}.",
     "templates": {
-      "pick": "Shablondan",
-      "placeholder": "Shablonni tanlang",
-      "hint": "Maydonlarni to‘ldiradi — ularni tuzatish mumkin.",
-      "none": "Hozircha shablon yo‘q — rezolyutsiyani shablon sifatida saqlang.",
-      "unavailable": "Shablonlar yuklanmadi — qo‘lda to‘ldiring.",
+      "pick": "Şablondan",
+      "placeholder": "Şablonni tanlang",
+      "hint": "Maydonlarni töldiradi — ularni tuzatiş mumkin.",
+      "none": "Hozirça şablon yöq — rezolyutsiyani şablon sifatida saqlang.",
+      "unavailable": "Şablonlar yuklanmadi — qölda töldiring.",
       "mine": "Meniki",
       "company": "Umumiy",
-      "applied": "«{{name}}» shablonidan to‘ldirildi — maydonlarni tekshiring.",
-      "saveAs": "Shablon sifatida saqlash",
-      "saveTitle": "Shablon sifatida saqlash",
-      "name": "Shablon nomi",
+      "applied": "«{{name}}» şablonidan töldirildi — maydonlarni tekşiring.",
+      "saveAs": "Şablon sifatida saqlaş",
+      "saveTitle": "Şablon sifatida saqlaş",
+      "name": "Şablon nomi",
       "nameHint": "",
       "nameRequired": "Nomini kiriting.",
-      "shared": "Umumiy — rezolyutsiya tayyorlovchilarning barchasi uchun",
-      "save": "Saqlash",
-      "cancel": "Bekor qilish",
-      "saved": "«{{name}}» shabloni saqlandi.",
+      "shared": "Umumiy — rezolyutsiya tayyorlovçilarning barçasi uçun",
+      "save": "Saqlaş",
+      "cancel": "Bekor qiliş",
+      "saved": "«{{name}}» şabloni saqlandi.",
       "errors": {
-        "name_taken": "Bunday nomli shablon bor.",
-        "company_template_admin_only": "Umumiy shablonlarni administrator yuritadi.",
-        "invalid": "Rezolyutsiyadagi xodimlarni tekshiring: kimdir o‘chirilgan.",
-        "DEFAULT": "Shablonni saqlab bo‘lmadi. Qayta urinib ko‘ring."
+        "name_taken": "Bunday nomli şablon bor.",
+        "company_template_admin_only": "Umumiy şablonlarni administrator yuritadi.",
+        "invalid": "Rezolyutsiyadagi xodimlarni tekşiring: kimdir öçirilgan.",
+        "DEFAULT": "Şablonni saqlab bölmadi. Qayta urinib köring."
       }
     }
   },
   "instr": {
-    "title": "Topshiriqlar",
+    "title": "Topşiriqlar",
     "resolution": "Direktor rezolyutsiyasi",
     "fields": {
       "kind": "Tur",
-      "responsible": "Mas’ul ijrochi",
-      "co": "Hamijrochilar",
-      "acquaint": "Tanishtirish",
+      "responsible": "Masʼul ijroçi",
+      "co": "Hamijroçilar",
+      "acquaint": "Taniştiriş",
       "due": "Muddat",
       "text": "Matn",
       "decidedBy": "Qaror qildi"
     },
     "role": {
-      "responsible": "mas’ul",
-      "co_executor": "hamijrochi"
+      "responsible": "masʼul",
+      "co_executor": "hamijroçi"
     },
     "status": {
-      "in_work": "Ishda",
+      "in_work": "Işda",
       "executed": "Bajarildi",
       "cancelled": "Bekor qilindi"
     },
-    "overdue": "Muddati o‘tgan",
+    "overdue": "Muddati ötgan",
     "due": "Muddat {{date}}",
     "report": "Hisobot",
     "files": "Hisobot fayllari",
     "outgoing": "Javob",
     "executedAt": "Bajarildi {{date}}",
-    "history": "Muddat uzaytirish tarixi",
+    "history": "Muddat uzaytiriş tarixi",
     "ext": {
       "item": "{{old}} → {{new}}: {{reason}}",
-      "by": "so‘radi, {{date}}",
+      "by": "söradi, {{date}}",
       "status": {
         "pending": "qaror kutilmoqda",
-        "approved": "ma’qullandi",
+        "approved": "maʼqullandi",
         "rejected": "rad etildi"
       },
       "decidedBy": "hal qildi, {{date}}"
     },
     "decide": {
-      "title": "Muddatni uzaytirish: qaroringiz kerak",
-      "text": "{{name}} muddatni {{old}} dan {{new}} ga ko‘chirishni so‘rayapti.",
+      "title": "Muddatni uzaytiriş: qaroringiz kerak",
+      "text": "{{name}} muddatni {{old}} dan {{new}} ga köçirişni sörayapti.",
       "reason": "Sabab: {{reason}}",
       "comment": "Izoh (ixtiyoriy)",
-      "approve": "Uzaytirishni ma’qullash",
-      "reject": "Uzaytirishni rad etish",
+      "approve": "Uzaytirişni maʼqullaş",
+      "reject": "Uzaytirişni rad etiş",
       "done": {
-        "approve": "Uzaytirish ma’qullandi: yangi muddat {{date}}",
-        "reject": "Uzaytirish rad etildi: muddat o‘zgarmadi"
+        "approve": "Uzaytiriş maʼqullandi: yangi muddat {{date}}",
+        "reject": "Uzaytiriş rad etildi: muddat özgarmadi"
       },
-      "urgent": "Xat shoshilinch: muddat uzaytirilmaydi — uzaytirishni ma’qullab bo‘lmaydi, faqat rad etish mumkin."
+      "urgent": "Xat şoşilinç: muddat uzaytirilmaydi — uzaytirişni maʼqullab bölmaydi, faqat rad etiş mumkin."
     },
     "acq": {
-      "title": "Tanishib chiqish",
+      "title": "Tanişib çiqiş",
       "waiting": "kutilmoqda",
-      "done": "tanishdi {{date}}"
+      "done": "tanişdi {{date}}"
     },
-    "none": "Topshiriqlar yo‘q.",
+    "none": "Topşiriqlar yöq.",
     "handedTo": {
-      "label": "Ishga topshirildi",
+      "label": "Işga topşirildi",
       "client_request": "Mijoz arizasi",
       "memo": "Xizmat xati",
-      "partner_application": "Hamkorni ulash"
+      "partner_application": "Hamkorni ulaş"
     }
   },
   "tasks": {
     "onBehalf": "Siz {{name}}ni almaştirasiz",
-    "title": "{{number}} xati bo‘yicha topshiriq",
+    "title": "{{number}} xati böyiça topşiriq",
     "letter": "Xat",
-    "openCard": "Xat kartochkasini ochish",
-    "mine": "Mening topshirig‘im",
+    "openCard": "Xat kartoçkasini oçiş",
+    "mine": "Mening topşiriğim",
     "noTask": {
-      "title": "Bu xat bo‘yicha sizdan amal kutilmayapti",
-      "text": "Topshiriq bajarilgan yoki boshqa xodimga berilgan. Ijro holati — «Topshiriqlar» blokida."
+      "title": "Bu xat böyiça sizdan amal kutilmayapti",
+      "text": "Topşiriq bajarilgan yoki boşqa xodimga berilgan. Ijro holati — «Topşiriqlar» blokida."
     },
     "complete": {
-      "title": "Ijroni belgilash",
+      "title": "Ijroni belgilaş",
       "report": "Hisobot",
-      "reportHint": "Nima qilindi. Hisobot, fayl yoki chiquvchi xat raqami kerak.",
+      "reportHint": "Nima qilindi. Hisobot, fayl yoki çiquvçi xat raqami kerak.",
       "files": "Hisobot fayllari",
-      "outgoing": "Javob — bizning chiquvchi xat raqami",
+      "outgoing": "Javob — bizning çiquvçi xat raqami",
       "outgoingHint": "Agar xat bilan javob berilgan bölsa: «Hujjatlar»dagi raqam, masalan OUT-014/26.",
       "submit": "Bajarildi",
-      "done": "Topshiriq bajarildi",
-      "error": "Hisobot yozing, fayl biriktiring yoki chiquvchi xat raqamini ko‘rsating."
+      "done": "Topşiriq bajarildi",
+      "error": "Hisobot yozing, fayl biriktiring yoki çiquvçi xat raqamini körsating."
     },
     "reply": {
-      "prepare": "Javob berish",
-      "hint": "Javob roʻyxatdan oʻtkazilsa, topshiriq yopiladi."
+      "prepare": "Javob beriş",
+      "hint": "Javob röyxatdan ötkazilsa, topşiriq yopiladi."
     },
     "ext": {
-      "title": "Ulgurmayapsizmi? Uzaytirishni so‘rang",
+      "title": "Ulgurmayapsizmi? Uzaytirişni sörang",
       "newDue": "Yangi muddat",
       "reason": "Sabab",
-      "submit": "Uzaytirishni so‘rash",
-      "urgent": "Xat shoshilinch: muddat uzaytirilmaydi, direktor so‘rovni faqat rad etishi mumkin.",
-      "pending": "{{date}} ga uzaytirish so‘rovi direktor qarorini kutmoqda.",
-      "errorDue": "Yangi muddat joriydan ({{date}}) keyin bo‘lsin.",
+      "submit": "Uzaytirişni söraş",
+      "urgent": "Xat şoşilinç: muddat uzaytirilmaydi, direktor sörovni faqat rad etişi mumkin.",
+      "pending": "{{date}} ga uzaytiriş sörovi direktor qarorini kutmoqda.",
+      "errorDue": "Yangi muddat joriydan ({{date}}) keyin bölsin.",
       "errorReason": "Sababni yozing.",
-      "done": "Uzaytirish so‘rovi direktorga yuborildi"
+      "done": "Uzaytiriş sörovi direktorga yuborildi"
     },
     "acq": {
-      "title": "Tanishib chiqish",
+      "title": "Tanişib çiqiş",
       "text": "",
-      "submit": "Tanishdim",
-      "done": "Belgilandi: tanishdim"
+      "submit": "Tanişdim",
+      "done": "Belgilandi: tanişdim"
     },
     "failed": "Saqlanmadi: {{reason}}.",
     "body": {
-      "showAll": "Xatni toʻliq koʻrsatish",
-      "collapse": "Yigʻish"
+      "showAll": "Xatni töliq körsatiş",
+      "collapse": "Yiğiş"
     },
     "details": "Rekvizitlar"
   },
   "mail": {
     "caption": {
-      "new": "Ko‘rib chiqishni kutayotgan xatlar",
-      "mine": "Mening ishimdagi xatlar",
-      "in_work": "Ishdagi xatlar",
-      "done": "Ko‘rib chiqilgan xatlar",
-      "spam": "Shubhali xatlar",
-      "all": "Barcha xatlar"
+      "new": "Körib çiqişni kutayotgan xatlar",
+      "mine": "Mening işimdagi xatlar",
+      "in_work": "Işdagi xatlar",
+      "done": "Körib çiqilgan xatlar",
+      "spam": "Şubhali xatlar",
+      "all": "Barça xatlar"
     },
-    "open": "«{{subject}}» xatini ochish",
+    "open": "«{{subject}}» xatini oçiş",
     "noSubject": "(mavzusiz)",
     "view": {
-      "openFull": "Xatni to‘liq ochish",
+      "openFull": "Xatni töliq oçiş",
       "frameTitle": "«{{subject}}» xati",
-      "imagesHidden": "Tashqi rasmlar yuklanmagan",
-      "showImages": "Rasmlarni ko‘rsatish ({{count}})",
-      "quote": "Iqtibos va imzoni ko‘rsatish",
-      "quoteHide": "Iqtibos va imzoni yashirish",
+      "imagesHidden": "Taşqi rasmlar yuklanmagan",
+      "showImages": "Rasmlarni körsatiş ({{count}})",
+      "quote": "Iqtibos va imzoni körsatiş",
+      "quoteHide": "Iqtibos va imzoni yaşiriş",
       "missingImage": "Rasm mavjud emas"
     },
     "attachments": "Ilovalar: {{count}}",
     "off": {
-      "title": "Pochta ulanmagan",
+      "title": "Poçta ulanmagan",
       "text": "",
-      "action": "Ulanishlarni ochish"
+      "action": "Ulanişlarni oçiş"
     },
     "empty": {
-      "title": "Yangi xatlar yo‘q",
-      "text": "Umumiy qutidagi xatlar kelganidan keyin 2 daqiqa ichida shu yerda paydo bo‘ladi.",
+      "title": "Yangi xatlar yöq",
+      "text": "Umumiy qutidagi xatlar kelganidan keyin 2 daqiqa içida şu yerda paydo böladi.",
       "new": {
-        "title": "Yangi xatlar yo‘q",
-        "text": "Umumiy qutidagi xatlar kelganidan keyin 2 daqiqa ichida shu yerda paydo bo‘ladi."
+        "title": "Yangi xatlar yöq",
+        "text": "Umumiy qutidagi xatlar kelganidan keyin 2 daqiqa içida şu yerda paydo böladi."
       },
       "mine": {
-        "title": "Sizning ishingizda xat yo‘q",
-        "text": "«Yangi»dan xatni ishga oling — u shu yerda paydo bo‘ladi."
+        "title": "Sizning işingizda xat yöq",
+        "text": "«Yangi»dan xatni işga oling — u şu yerda paydo böladi."
       },
       "in_work": {
-        "title": "Ishda xat yo‘q",
-        "text": "Ishga olingan xatlar hamma uchun shu yerda ko‘rinadi."
+        "title": "Işda xat yöq",
+        "text": "Işga olingan xatlar hamma uçun şu yerda körinadi."
       },
       "done": {
-        "title": "Ko‘rib chiqilgan xatlar hali yo‘q",
-        "text": "Bu yerda natijali xatlar: kiruvchi raqam, lid, javob yoki arxiv."
+        "title": "Körib çiqilgan xatlar hali yöq",
+        "text": "Bu yerda natijali xatlar: kiruvçi raqam, lid, javob yoki arxiv."
       },
       "all": {
-        "title": "Xat yo‘q",
-        "text": "Umumiy quti xatlari kelgach shu yerda paydo bo‘ladi."
+        "title": "Xat yöq",
+        "text": "Umumiy quti xatlari kelgaç şu yerda paydo böladi."
       },
       "spam": {
-        "title": "Shubhali xatlar yoʻq",
-        "text": "Bu yerga «Spam» jildidan xatlar tushadi, agar u qabul sozlamalarida tanlangan boʻlsa."
+        "title": "Şubhali xatlar yöq",
+        "text": "Bu yerga «Spam» jildidan xatlar tuşadi, agar u qabul sozlamalarida tanlangan bölsa."
       },
       "history": {
-        "title": "Tarixdan xat yo‘q",
-        "text": "Hozircha bo‘sh."
+        "title": "Tarixdan xat yöq",
+        "text": "Hozirça böş."
       },
       "search": {
-        "title": "Hech narsa topilmadi",
-        "text": "So‘rovni o‘zgartiring: jo‘natuvchi va mavzu bo‘yicha qidiramiz."
+        "title": "Heç narsa topilmadi",
+        "text": "Sörovni özgartiring: jönatuvçi va mavzu böyiça qidiramiz."
       }
     },
     "status": {
       "new": "Yangi",
-      "registered": "Ro‘yxatga olingan",
-      "lead": "Lidlarga o‘tkazildi",
+      "registered": "Röyxatga olingan",
+      "lead": "Lidlarga ötkazildi",
       "archived": "Arxivda",
-      "spam": "Shubhali",
+      "spam": "Şubhali",
       "newReply": "Yangi · zanjirda javob",
-      "in_work": "Ishda",
-      "registering": "Ro‘yxatga olinmoqda",
-      "done": "Ko‘rib chiqildi"
+      "in_work": "Işda",
+      "registering": "Röyxatga olinmoqda",
+      "done": "Körib çiqildi"
     },
     "action": {
-      "register_incoming": "Kiruvchi sifatida ro‘yxatga olish",
-      "create_lead": "Lid yaratish",
-      "supplier_price": "Narxnomani yuklash",
-      "to_accountant": "Buxgalterga topshirish",
+      "register_incoming": "Kiruvçi sifatida röyxatga oliş",
+      "create_lead": "Lid yaratiş",
+      "supplier_price": "Narxnomani yuklaş",
+      "to_accountant": "Buxgalterga topşiriş",
       "archive_mailing": "Reklama sifatida arxivga",
-      "reply_template": "Javob berish",
-      "suspicious": "«Shubhali»ga",
-      "more": "Boshqa harakat",
-      "price_handover": "Narxnomani yuklashga topshirish"
+      "reply_template": "Javob beriş",
+      "suspicious": "«Şubhali»ga",
+      "more": "Boşqa harakat",
+      "price_handover": "Narxnomani yuklaşga topşiriş"
     },
     "fields": {
       "from": "Kimdan",
       "to": "Kimga",
       "received": "Olingan",
-      "client": "Ma’lum mijoz",
-      "lead": "Ochiq lid",
+      "client": "Maʼlum mijoz",
+      "lead": "Oçiq lid",
       "inns": "Matndagi STIR",
       "cc": "Nusxa",
       "assignee": "Yuritadi",
@@ -782,174 +782,174 @@
     },
     "text": "Xat matni",
     "files": "Ilovalar",
-    "download": "{{name}} yuklab olish",
+    "download": "{{name}} yuklab oliş",
     "skipped": "Qabul qilinmadi: {{name}} — {{reason}}",
     "skippedReason": {
       "type": "bunday fayl turi qabul qilinmaydi",
       "size": "25 MB dan katta",
-      "count": "20 tadan ko‘p fayl"
+      "count": "20 tadan köp fayl"
     },
-    "tooLarge": "Xat 60 MB dan katta: faqat sarlavhalar saqlandi — uni pochtada oching.",
+    "tooLarge": "Xat 60 MB dan katta: faqat sarlavhalar saqlandi — uni poçtada oçing.",
     "assist": {
-      "title": "Yordamchi taklifi",
-      "button": "Taklif qilish",
-      "intro": "Yordamchi xat turi va harakatni taklif qiladi. Pochta manzillari, telefonlar, STIR, JShShIR, pasport, karta va hisob raqamlari yashiriladi, ilovalar yuborilmaydi. Xatni taklifsiz ham ko‘rib chiqish mumkin.",
-      "note": "Taklif o‘zi hech narsa qilmaydi — harakatni siz tanlaysiz.",
-      "unavailable": "Yordamchi hozir mavjud emas — xatni qo‘lda ko‘rib chiqing yoki keyinroq urinib ko‘ring.",
-      "retry": "Qayta urinish",
-      "suggestsType": "Yordamchi tur taklif qildi — asosiy tugma bilan tasdiqlang yoki turni almashtiring.",
-      "noType": "Yordamchi mos tur topmadi — turni o‘zingiz tanlang."
+      "title": "Yordamçi taklifi",
+      "button": "Taklif qiliş",
+      "intro": "Yordamçi xat turi va harakatni taklif qiladi. Poçta manzillari, telefonlar, STIR, JShShIR, pasport, karta va hisob raqamlari yaşiriladi, ilovalar yuborilmaydi. Xatni taklifsiz ham körib çiqiş mumkin.",
+      "note": "Taklif özi heç narsa qilmaydi — harakatni siz tanlaysiz.",
+      "unavailable": "Yordamçi hozir mavjud emas — xatni qölda körib çiqing yoki keyinroq urinib köring.",
+      "retry": "Qayta uriniş",
+      "suggestsType": "Yordamçi tur taklif qildi — asosiy tugma bilan tasdiqlang yoki turni almaştiring.",
+      "noType": "Yordamçi mos tur topmadi — turni özingiz tanlang."
     },
     "actions": {
-      "title": "Nima qilish kerak",
-      "what": "Nima bo‘ladi",
-      "registerWhat": "«Kiruvchini ro‘yxatga olish» shakli xat ma’lumotlari va ilovalari bilan ochiladi; ro‘yxatga olingach xat navbatdan chiqadi.",
-      "leadWhat": "«Kiruvchi»da menejersiz lid paydo bo‘ladi — uni menejer oladi. Shu manzilli lid bo‘lsa, xat unga izoh sifatida qo‘shiladi. Xat navbatdan chiqadi.",
-      "leadConfirm": "Lid yaratish",
+      "title": "Nima qiliş kerak",
+      "what": "Nima böladi",
+      "registerWhat": "«Kiruvçini röyxatga oliş» şakli xat maʼlumotlari va ilovalari bilan oçiladi; röyxatga olingaç xat navbatdan çiqadi.",
+      "leadWhat": "«Kiruvçi»da menejersiz lid paydo böladi — uni menejer oladi. Şu manzilli lid bölsa, xat unga izoh sifatida qöşiladi. Xat navbatdan çiqadi.",
+      "leadConfirm": "Lid yaratiş",
       "archiveReason": "Sabab",
       "archiveHint": "Masalan: reklama, takror, bizga emas",
-      "archiveWhat": "Xat sabab bilan navbatdan arxivga o‘tadi; pochta qutisida qoladi.",
-      "archiveConfirm": "Arxivga yuborish",
-      "cancel": "Bekor qilish",
+      "archiveWhat": "Xat sabab bilan navbatdan arxivga ötadi; poçta qutisida qoladi.",
+      "archiveConfirm": "Arxivga yuboriş",
+      "cancel": "Bekor qiliş",
       "leadDone": "{{number}} lid yaratildi — uni menejer oladi",
-      "leadNote": "Xat {{number}} lidga qo‘shildi",
+      "leadNote": "Xat {{number}} lidga qöşildi",
       "archived": "Xat arxivda",
-      "failed": "Bo‘lmadi: {{reason}}",
+      "failed": "Bölmadi: {{reason}}",
       "mailingReason": "Reklama xabarnomasi",
-      "priceHow": "Narxnomani yuklash sahifasini oching, xat ilovasini yuklang va bu yerga qayting.",
-      "priceOpen": "Narxnomani yuklashni ochish",
-      "priceWhat": "Narxnoma yuklangach, xat «Narxnoma yuklandi» natijasi bilan navbatdan chiqadi.",
-      "priceConfirm": "Narxnoma yuklandi — navbatdan olib tashlash",
-      "priceDone": "Xat ko‘rib chiqildi: narxnoma yuklandi",
+      "priceHow": "Narxnomani yuklaş sahifasini oçing, xat ilovasini yuklang va bu yerga qayting.",
+      "priceOpen": "Narxnomani yuklaşni oçiş",
+      "priceWhat": "Narxnoma yuklangaç, xat «Narxnoma yuklandi» natijasi bilan navbatdan çiqadi.",
+      "priceConfirm": "Narxnoma yuklandi — navbatdan olib taşlaş",
+      "priceDone": "Xat körib çiqildi: narxnoma yuklandi",
       "handoverTo": "Kimga",
       "handoverPick": "Xodimni tanlang",
-      "handoverNone": "Topshiradigan kishi yo‘q: hech bir xodimda to‘lovni tasdiqlash huquqi yo‘q. Bunday rolni «Sozlamalar · Rollar»da tayinlang.",
-      "handoverWhat": "Xat «Yangi»dan chiqadi va tanlangan xodimning «Vazifalar»ida paydo bo‘ladi.",
-      "handoverConfirm": "Topshirish",
-      "handoverDone": "Xat topshirildi: {{name}}",
-      "suspiciousWhat": "Xat «Shubhali» bo‘limiga o‘tadi — u yerdan qaytarish mumkin («Spam emas»). Pochta qutisida hech narsa o‘zgarmaydi.",
-      "suspiciousConfirm": "«Shubhali»ga",
-      "suspiciousDone": "Xat «Shubhali»da",
-      "priceHandoverNone": "Topshiradigan kishi yo‘q: hech bir xodimda narxnomalarni yuklash va hamkor narxlarini ko‘rish huquqi yo‘q. Bunday rolni «Sozlamalar · Rollar»da tayinlang.",
-      "priceHandoverWhat": "Xat «Yangi»dan chiqadi va tanlangan xodimning «Vazifalar»ida paydo bo‘ladi — u narxnomani yuklaydi.",
-      "priceHandoverConfirm": "Yuklashga topshirish",
-      "priceHandoverDone": "Xat narxnomani yuklashga topshirildi: {{name}}",
-      "completeWhat": "Xat «Bajarildi» natijasi bilan navbatdan chiqadi. Boshqa hech narsa bo‘lmaydi.",
-      "completeConfirm": "Tayyor — navbatdan olib tashlash",
-      "completeDone": "Xat navbatdan olib tashlandi"
+      "handoverNone": "Topşiradigan kişi yöq: heç bir xodimda tölovni tasdiqlaş huquqi yöq. Bunday rolni «Sozlamalar · Rollar»da tayinlang.",
+      "handoverWhat": "Xat «Yangi»dan çiqadi va tanlangan xodimning «Vazifalar»ida paydo böladi.",
+      "handoverConfirm": "Topşiriş",
+      "handoverDone": "Xat topşirildi: {{name}}",
+      "suspiciousWhat": "Xat «Şubhali» bölimiga ötadi — u yerdan qaytariş mumkin («Spam emas»). Poçta qutisida heç narsa özgarmaydi.",
+      "suspiciousConfirm": "«Şubhali»ga",
+      "suspiciousDone": "Xat «Şubhali»da",
+      "priceHandoverNone": "Topşiradigan kişi yöq: heç bir xodimda narxnomalarni yuklaş va hamkor narxlarini köriş huquqi yöq. Bunday rolni «Sozlamalar · Rollar»da tayinlang.",
+      "priceHandoverWhat": "Xat «Yangi»dan çiqadi va tanlangan xodimning «Vazifalar»ida paydo böladi — u narxnomani yuklaydi.",
+      "priceHandoverConfirm": "Yuklaşga topşiriş",
+      "priceHandoverDone": "Xat narxnomani yuklaşga topşirildi: {{name}}",
+      "completeWhat": "Xat «Bajarildi» natijasi bilan navbatdan çiqadi. Boşqa heç narsa bölmaydi.",
+      "completeConfirm": "Tayyor — navbatdan olib taşlaş",
+      "completeDone": "Xat navbatdan olib taşlandi"
     },
     "result": {
       "title": "Natija",
-      "registered": "Ro‘yxatga olindi: {{number}}",
-      "openLetter": "{{number}} ochish",
+      "registered": "Röyxatga olindi: {{number}}",
+      "openLetter": "{{number}} oçiş",
       "lead": "Lid: {{number}}",
-      "openLead": "Lidni ochish",
+      "openLead": "Lidni oçiş",
       "archived": "Arxivda: {{reason}}"
     },
     "reply": {
-      "title": "Javob berish",
+      "title": "Javob beriş",
       "label": "Javob matni",
-      "send": "Javobni yuborish",
-      "what": "Xat kompaniyaning umumiy manzilidan, shu zanjirdagi javob sifatida ketadi.",
-      "sent": "Javob pochta navbatiga qo‘yildi",
+      "send": "Javobni yuboriş",
+      "what": "Xat kompaniyaning umumiy manzilidan, şu zanjirdagi javob sifatida ketadi.",
+      "sent": "Javob poçta navbatiga qöyildi",
       "history": "Javoblar",
       "status": {
         "queued": "navbatda",
         "sent": "yuborildi",
         "failed": "yuborilmadi",
-        "skipped_no_smtp": "pochta sozlanmagan"
+        "skipped_no_smtp": "poçta sozlanmagan"
       },
-      "sendAll": "Hammaga javob berish",
-      "awaiting": "Javob kutamiz — xat ishda qoladi",
+      "sendAll": "Hammaga javob beriş",
+      "awaiting": "Javob kutamiz — xat işda qoladi",
       "copy": "Nusxa boradi: {{list}}",
-      "sentAwaiting": "Javob yuborildi, xat ishda qoladi",
+      "sentAwaiting": "Javob yuborildi, xat işda qoladi",
       "to": "Kimga"
     },
     "fromMail": "«{{subject}}» xatidan, {{sender}}",
-    "fromMailLoading": "Xat ilovalari ko‘chirilmoqda…",
-    "fromMailFailed": "Ilovalarni ko‘chirib bo‘lmadi — fayllarni qo‘lda ilova qiling.",
+    "fromMailLoading": "Xat ilovalari köçirilmoqda…",
+    "fromMailFailed": "Ilovalarni köçirib bölmadi — fayllarni qölda ilova qiling.",
     "tabs": {
       "new": "Yangi",
-      "spam": "Shubhali",
+      "spam": "Şubhali",
       "label": "Xatlar",
-      "mine": "Mening ishimda",
-      "in_work": "Hammasi ishda",
-      "done": "Ko‘rib chiqilgan",
+      "mine": "Mening işimda",
+      "in_work": "Hammasi işda",
+      "done": "Körib çiqilgan",
       "all": "Hammasi",
       "ownAll": "Mening xatlarim",
       "sent": "Yuborilganlar"
     },
     "filter": {
-      "label": "Koʻrsatish",
+      "label": "Körsatiş",
       "all": "Hammasi",
       "history": "Tarixdan"
     },
     "historyTag": "Tarixdan",
-    "spamCaption": "Shubhali xatlar",
-    "spamIntro": "Pochta qutisidagi «Spam» jildidan xatlar. Keraklilarini navbatga qaytaring.",
+    "spamCaption": "Şubhali xatlar",
+    "spamIntro": "Poçta qutisidagi «Spam» jildidan xatlar. Keraklilarini navbatga qaytaring.",
     "spam": {
-      "title": "Shubhali xat",
-      "what": "Pochta qutisining «Spam» jildiga kelgan. Joʻnatuvchi va matnni tekshiring.",
+      "title": "Şubhali xat",
+      "what": "Poçta qutisining «Spam» jildiga kelgan. Jönatuvçi va matnni tekşiring.",
       "notSpam": "Spam emas",
       "notSpamDone": "Xat «Yangi»da",
-      "discard": "Olib tashlash",
+      "discard": "Olib taşlaş",
       "discardDone": "Xat arxivga olindi",
-      "hint": "Bu joʻnatuvchining xatlari Spamga tushmasligi uchun pochtada uni «Spam emas» deb belgilang.",
-      "notSpamWhat": "Xat oddiy xat kabi «Yangi» boʻlimiga tushadi",
-      "discardWhat": "«Olib tashlash» — «Spam» sababi bilan arxivga, hech narsa oʻchirilmaydi"
+      "hint": "Bu jönatuvçining xatlari Spamga tuşmasligi uçun poçtada uni «Spam emas» deb belgilang.",
+      "notSpamWhat": "Xat oddiy xat kabi «Yangi» bölimiga tuşadi",
+      "discardWhat": "«Olib taşlaş» — «Spam» sababi bilan arxivga, heç narsa öçirilmaydi"
     },
     "search": {
-      "label": "Jo‘natuvchi va mavzu bo‘yicha qidirish",
-      "placeholder": "Jo‘natuvchi yoki mavzu"
+      "label": "Jönatuvçi va mavzu böyiça qidiriş",
+      "placeholder": "Jönatuvçi yoki mavzu"
     },
-    "unread": "O‘qilmagan",
-    "select": "«{{subject}}» xatini tanlash",
-    "inWorkBy": "{{name}} ishida, {{time}} dan",
+    "unread": "Öqilmagan",
+    "select": "«{{subject}}» xatini tanlaş",
+    "inWorkBy": "{{name}} işida, {{time}} dan",
     "previous": "Olib borgan: {{name}}",
     "messages": "Xatlar: {{count}}",
     "waiting": "Tasdiq kutilmoqda",
     "outcome": {
-      "registered": "Ro‘yxatga olindi: {{number}}",
+      "registered": "Röyxatga olindi: {{number}}",
       "lead": "Lid {{number}}",
       "replied": "Javob yuborildi",
       "archived": "Arxivga: {{reason}}",
-      "unknown": "Ko‘rib chiqildi",
+      "unknown": "Körib çiqildi",
       "price": "Narxnoma yuklandi",
       "handled": "Bajarildi"
     },
-    "returnToNew": "«Yangi»ga qaytarish",
+    "returnToNew": "«Yangi»ga qaytariş",
     "returned": "Xat «Yangi»ga qaytdi",
-    "release": "«Yangi»ga qaytarish",
-    "releaseOwn": "Devonxonaga qaytarish",
-    "take": "Ishga olish",
-    "takeDone": "Xat sizning ishingizda",
-    "ownHint": "Xatni boshqa xodim yuritadi yoki u faqat ma’lumot uchun: ochib o‘qish mumkin.",
-    "registering": "Kiruvchi raqam yaratilmoqda…",
-    "registeringWaiting": "Tasdiq kutilmoqda: ro‘yxatga olish 10 daqiqada tasdiqlanmadi.",
-    "refresh": "Yangilash",
+    "release": "«Yangi»ga qaytariş",
+    "releaseOwn": "Devonxonaga qaytariş",
+    "take": "Işga oliş",
+    "takeDone": "Xat sizning işingizda",
+    "ownHint": "Xatni boşqa xodim yuritadi yoki u faqat maʼlumot uçun: oçib öqiş mumkin.",
+    "registering": "Kiruvçi raqam yaratilmoqda…",
+    "registeringWaiting": "Tasdiq kutilmoqda: röyxatga oliş 10 daqiqada tasdiqlanmadi.",
+    "refresh": "Yangilaş",
     "busy": {
-      "title": "Xat allaqachon {{name}} ishida, {{time}} dan",
-      "what": "Xat sizga o‘tadi, {{name}}da u «Mening ishimda»dan yo‘qoladi, amal jurnalga yoziladi",
-      "takeOver": "O‘zimga olish"
+      "title": "Xat allaqaçon {{name}} işida, {{time}} dan",
+      "what": "Xat sizga ötadi, {{name}}da u «Mening işimda»dan yöqoladi, amal jurnalga yoziladi",
+      "takeOver": "Özimga oliş"
     },
     "bulk": {
       "label": "Tanlangan xatlar",
-      "all": "Hammasini tanlash",
+      "all": "Hammasini tanlaş",
       "archive": "Arxivga",
       "title": "Arxivga: {{count}}",
       "hint": "Masalan: reklama, xabarnoma",
       "reasonNewsletter": "Reklama",
       "reasonNotice": "Xabarnoma",
-      "what": "Tanlangan xatlar shu sabab bilan arxivga o‘tadi; hamkasb band qilgan va ko‘rib chiqilganlari joyida qoladi.",
-      "confirm": "Arxivga yuborish",
+      "what": "Tanlangan xatlar şu sabab bilan arxivga ötadi; hamkasb band qilgan va körib çiqilganlari joyida qoladi.",
+      "confirm": "Arxivga yuboriş",
       "done": "Arxivga: {{count}}.",
-      "skipped": "O‘tkazib yuborildi: {{count}} — {{reasons}}.",
+      "skipped": "Ötkazib yuborildi: {{count}} — {{reasons}}.",
       "colleague": "hamkasb",
       "skip": {
-        "in_work_by_other": "{{name}} ishida",
-        "handled": "allaqachon ko‘rib chiqilgan",
-        "registering": "kiruvchi raqam yaratilmoqda",
-        "missing": "xat endi yo‘q"
+        "in_work_by_other": "{{name}} işida",
+        "handled": "allaqaçon körib çiqilgan",
+        "registering": "kiruvçi raqam yaratilmoqda",
+        "missing": "xat endi yöq"
       }
     },
     "address": {
@@ -957,103 +957,103 @@
       "mailbox": "{{email}} (umumiy quti)"
     },
     "thread": {
-      "title": "Yozishma",
+      "title": "Yozişma",
       "incoming": "{{sender}}, {{when}}",
       "outgoing": "Javob yuborildi: {{who}}, {{when}} → {{to}}, «{{subject}}»",
-      "newParticipant": "Yozishmada yangi ishtirokchi"
+      "newParticipant": "Yozişmada yangi iştirokçi"
     },
     "journal": {
       "title": "Jurnal",
       "system": "Tizim",
       "actionUnknown": "Xat bilan amal",
       "action": {
-        "take": "ishga oldi",
-        "takeover": "o‘ziga oldi",
+        "take": "işga oldi",
+        "takeover": "öziga oldi",
         "release": "«Yangi»ga qaytardi",
         "reply": "javob berdi",
         "lead": "lid yaratdi",
         "archive": "arxivga yubordi",
-        "register_start": "kiruvchini ro‘yxatga olishni boshladi",
-        "register_cancel": "ro‘yxatga olishni bekor qildi",
+        "register_start": "kiruvçini röyxatga olişni boşladi",
+        "register_cancel": "röyxatga olişni bekor qildi",
         "thread_reply": "mijoz zanjirda javob berdi",
-        "personal": "xat shaxsan yo‘llangan",
-        "not_spam": "shubhalilardan qaytardi",
-        "discard": "arxivga olib tashladi",
-        "type": "turni almashtirdi",
+        "personal": "xat şaxsan yöllangan",
+        "not_spam": "şubhalilardan qaytardi",
+        "discard": "arxivga olib taşladi",
+        "type": "turni almaştirdi",
         "price": "narxnoma yuklandi deb belgiladi",
-        "handover": "xatni topshirdi",
-        "suspicious": "«Shubhali»ga yubordi",
-        "complete": "topshirilgan xatni yopdi"
+        "handover": "xatni topşirdi",
+        "suspicious": "«Şubhali»ga yubordi",
+        "complete": "topşirilgan xatni yopdi"
       }
     },
     "inWorkSince": "{{name}}, {{time}} dan",
     "replyTag": "Zanjirda javob",
     "type": {
       "title": "Xat turi",
-      "none": "Turi yo‘q",
-      "empty": "Tur aniqlanmagan — tanlang yoki «Taklif qilish»ni bosing.",
-      "change": "Turni almashtirish",
-      "changed": "Tur o‘zgartirildi",
-      "removed": "Tur olib tashlandi",
+      "none": "Turi yöq",
+      "empty": "Tur aniqlanmagan — tanlang yoki «Taklif qiliş»ni bosing.",
+      "change": "Turni almaştiriş",
+      "changed": "Tur özgartirildi",
+      "removed": "Tur olib taşlandi",
       "source": {
-        "rule": "jo‘natuvchi qoidasi bo‘yicha",
-        "ai": "yordamchi taklif qildi",
+        "rule": "jönatuvçi qoidasi böyiça",
+        "ai": "yordamçi taklif qildi",
         "manual": "xodim tanladi"
       },
       "filter": {
         "label": "Xat turi",
-        "all": "Barcha turlar"
+        "all": "Barça turlar"
       },
       "rule": {
-        "scope": "Qoida nimaga tegishli",
+        "scope": "Qoida nimaga tegişli",
         "domain": "Butun domen",
-        "address": "Faqat shu manzil",
-        "button": "{{pattern}} xatlarini doim «{{type}}» deb hisoblash",
-        "what": "Undan kelgan yangi xatlar bu turni yordamchidan oldin o‘zi oladi.",
-        "created": "Qoida yaratildi. Yana shuncha xat turga ega bo‘ldi: {{count}}",
-        "exists": "Bunday qoida allaqachon bor.",
-        "publicDomain": "Bu umumiy pochta xizmati — qoida istalgan kishining xatini ushlaydi. Aniq manzilni ko‘rsatgan ma’qul."
+        "address": "Faqat şu manzil",
+        "button": "{{pattern}} xatlarini doim «{{type}}» deb hisoblaş",
+        "what": "Undan kelgan yangi xatlar bu turni yordamçidan oldin özi oladi.",
+        "created": "Qoida yaratildi. Yana şunça xat turga ega böldi: {{count}}",
+        "exists": "Bunday qoida allaqaçon bor.",
+        "publicDomain": "Bu umumiy poçta xizmati — qoida istalgan kişining xatini uşlaydi. Aniq manzilni körsatgan maʼqul."
       },
       "senderCheck": {
-        "unverified": "Jo‘natuvchi tasdiqlanmagan: SPF/DKIM/DMARC tekshiruvi o‘tmadi, manzil soxtalashtirilgan bo‘lishi mumkin. Qoida bo‘yicha tur qo‘yilmadi.",
-        "unknown": "Jo‘natuvchini tekshirib bo‘lmaydi: xatda pochta serveri belgisi yo‘q. Qoida bo‘yicha tur qo‘yilmadi."
+        "unverified": "Jönatuvçi tasdiqlanmagan: SPF/DKIM/DMARC tekşiruvi ötmadi, manzil soxtalaştirilgan bölişi mumkin. Qoida böyiça tur qöyilmadi.",
+        "unknown": "Jönatuvçini tekşirib bölmaydi: xatda poçta serveri belgisi yöq. Qoida böyiça tur qöyilmadi."
       }
     },
     "check": {
-      "button": "Pochtani tekshirish",
-      "busy": "Tekshirilmoqda…",
-      "never": "Hali tekshirilmagan",
-      "justNow": "Hozirgina tekshirildi",
-      "minutes": "{{count}} daqiqa oldin tekshirildi",
-      "hours": "{{count}} soat oldin tekshirildi",
-      "date": "Tekshirilgan sana: {{date}}",
+      "button": "Poçtani tekşiriş",
+      "busy": "Tekşirilmoqda…",
+      "never": "Hali tekşirilmagan",
+      "justNow": "Hozirgina tekşirildi",
+      "minutes": "{{count}} daqiqa oldin tekşirildi",
+      "hours": "{{count}} soat oldin tekşirildi",
+      "date": "Tekşirilgan sana: {{date}}",
       "found": "Yangi xatlar: {{count}}",
-      "none": "Yangi xat yo‘q",
-      "off": "Pochta sozlanmagan —",
-      "settings": "Sozlamalar · Pochta",
-      "checking": "Tekshiruv davom etmoqda — xatlar ro‘yxatda o‘zi paydo bo‘ladi",
-      "tooSoon": "Yana {{count}} soniyadan keyin tekshirish mumkin",
+      "none": "Yangi xat yöq",
+      "off": "Poçta sozlanmagan —",
+      "settings": "Sozlamalar · Poçta",
+      "checking": "Tekşiruv davom etmoqda — xatlar röyxatda özi paydo böladi",
+      "tooSoon": "Yana {{count}} soniyadan keyin tekşiriş mumkin",
       "error": {
-        "default": "Pochta serveriga ulanib bo‘lmadi",
-        "auth_failed": "Pochta serveri login yoki parolni qabul qilmadi",
-        "mailbox_missing": "Pochta serverida bunday papka yo‘q"
+        "default": "Poçta serveriga ulanib bölmadi",
+        "auth_failed": "Poçta serveri login yoki parolni qabul qilmadi",
+        "mailbox_missing": "Poçta serverida bunday papka yöq"
       },
-      "resultLabel": "Pochta tekshiruvi natijasi"
+      "resultLabel": "Poçta tekşiruvi natijasi"
     },
     "sent": {
       "caption": "Yuborilgan xatlar",
-      "scroll": "Yuborilgan xatlar jadvali, aylantirish",
-      "search": "Yuborilganlar bo‘yicha qidiruv",
-      "searchHint": "Qabul qiluvchi yoki mavzu",
-      "statusFilter": "Yetkazish holati",
-      "statusAll": "Barcha holatlar",
-      "emptyTitle": "Xatlar yo‘q",
-      "emptyText": "Sizning so‘rovingiz bilan yuborilgan xatlar shu yerda bo‘ladi.",
-      "emptySearch": "Hech narsa topilmadi — qidiruv yoki holatni o‘zgartiring.",
+      "scroll": "Yuborilgan xatlar jadvali, aylantiriş",
+      "search": "Yuborilganlar böyiça qidiruv",
+      "searchHint": "Qabul qiluvçi yoki mavzu",
+      "statusFilter": "Yetkaziş holati",
+      "statusAll": "Barça holatlar",
+      "emptyTitle": "Xatlar yöq",
+      "emptyText": "Sizning sörovingiz bilan yuborilgan xatlar şu yerda böladi.",
+      "emptySearch": "Heç narsa topilmadi — qidiruv yoki holatni özgartiring.",
       "first": "Yangilariga",
       "more": "Yana",
       "to": "Kimga: {{to}}",
-      "openDocument": "Hujjatni ochish",
+      "openDocument": "Hujjatni oçiş",
       "noText": "Xat matni endi saqlanmaydi.",
       "attachments": "Ilovalar: {{names}}",
       "columns": {
@@ -1067,133 +1067,133 @@
         "sent": "Yetkazildi",
         "queued": "Navbatda",
         "failed": "Yetkazilmadi",
-        "skipped_no_smtp": "Pochta sozlanmagan"
+        "skipped_no_smtp": "Poçta sozlanmagan"
       },
-      "resend": "Qayta yuborish",
-      "resent": "{{to}} uchun xat navbatga qoʻyildi",
+      "resend": "Qayta yuboriş",
+      "resent": "{{to}} uçun xat navbatga qöyildi",
       "resendError": {
-        "mail_not_resendable": "Bu xatni qayta yuborib boʻlmaydi: uning matni saqlanmaydi.",
-        "smtp_not_configured": "Pochta sozlanmagan — Sozlamalar · Ulanishlar · Pochta."
+        "mail_not_resendable": "Bu xatni qayta yuborib bölmaydi: uning matni saqlanmaydi.",
+        "smtp_not_configured": "Poçta sozlanmagan — Sozlamalar · Ulanişlar · Poçta."
       }
     }
   },
   "settings": {
     "dict": {
-      "title": "Ma’lumotnomalar",
-      "hint": "Yangi qiymatlar shaklda darhol paydo bo‘ladi. Ishlatilganini faqat yashirish mumkin.",
-      "kindLabel": "Ma’lumotnoma",
-      "add": "Qiymat qo‘shish",
+      "title": "Maʼlumotnomalar",
+      "hint": "Yangi qiymatlar şaklda darhol paydo böladi. Işlatilganini faqat yaşiriş mumkin.",
+      "kindLabel": "Maʼlumotnoma",
+      "add": "Qiymat qöşiş",
       "name": "Nomi",
-      "nameRu": "Ruscha nomi",
-      "nameUz": "O‘zbekcha nomi",
-      "nameEn": "Inglizcha nomi",
-      "nameHint": "Bo‘sh bo‘lsa — ruscha nomi ko‘rsatiladi.",
+      "nameRu": "Rusça nomi",
+      "nameUz": "Özbekça nomi",
+      "nameEn": "Inglizça nomi",
+      "nameHint": "Böş bölsa — rusça nomi körsatiladi.",
       "order": "Tartib",
       "status": "Holat",
       "active": "Amalda",
-      "hidden": "Yashirilgan",
+      "hidden": "Yaşirilgan",
       "actions": "Amallar",
-      "edit": "O‘zgartirish",
-      "editNamed": "O‘zgartirish: {{name}}",
-      "hide": "Yashirish",
-      "hideNamed": "Yashirish: {{name}}",
-      "show": "Qaytarish",
-      "showNamed": "Qaytarish: {{name}}",
-      "delete": "O‘chirish",
-      "deleteNamed": "O‘chirish: {{name}}",
+      "edit": "Özgartiriş",
+      "editNamed": "Özgartiriş: {{name}}",
+      "hide": "Yaşiriş",
+      "hideNamed": "Yaşiriş: {{name}}",
+      "show": "Qaytariş",
+      "showNamed": "Qaytariş: {{name}}",
+      "delete": "Öçiriş",
+      "deleteNamed": "Öçiriş: {{name}}",
       "up": "Yuqoriga: {{name}}",
       "down": "Pastga: {{name}}",
       "yes": "Ha",
       "no": "—",
-      "generalRule": "umumiy qoida bo‘yicha",
-      "dueHint": "Bo‘sh — shoshilinch 3 kun, oddiy 10 kun.",
+      "generalRule": "umumiy qoida böyiça",
+      "dueHint": "Böş — şoşilinç 3 kun, oddiy 10 kun.",
       "addTitle": "Yangi qiymat",
-      "editTitle": "Qiymatni o‘zgartirish",
-      "save": "Saqlash",
-      "cancel": "Bekor qilish",
+      "editTitle": "Qiymatni özgartiriş",
+      "save": "Saqlaş",
+      "cancel": "Bekor qiliş",
       "saved": "Saqlandi",
-      "hiddenToast": "Yashirildi: shakllarda endi yo‘q",
-      "shownToast": "Qiymat yana shakllarda",
-      "deleted": "O‘chirildi",
+      "hiddenToast": "Yaşirildi: şakllarda endi yöq",
+      "shownToast": "Qiymat yana şakllarda",
+      "deleted": "Öçirildi",
       "required": "Nomini kiriting",
-      "deleteTitle": "«{{name}}» o‘chirilsinmi?",
+      "deleteTitle": "«{{name}}» öçirilsinmi?",
       "empty": {
-        "title": "Qiymatlar yo‘q",
-        "text": "Birinchi qiymatni qo‘shing."
+        "title": "Qiymatlar yöq",
+        "text": "Birinçi qiymatni qöşing."
       },
       "errors": {
-        "name_taken": "Bunday nom ma’lumotnomada bor.",
-        "value_in_use": "Qiymat xatlarda ishlatilgan — uni faqat yashirish mumkin.",
-        "dictionary_closed": "Bu ro‘yxatni faqat qayta nomlash mumkin.",
+        "name_taken": "Bunday nom maʼlumotnomada bor.",
+        "value_in_use": "Qiymat xatlarda işlatilgan — uni faqat yaşiriş mumkin.",
+        "dictionary_closed": "Bu röyxatni faqat qayta nomlaş mumkin.",
         "FORBIDDEN": "Ruxsat yetarli emas.",
-        "DEFAULT": "Saqlab bo‘lmadi. Qayta urinib ko‘ring.",
-        "load": "Ma’lumotnomalar yuklanmadi."
+        "DEFAULT": "Saqlab bölmadi. Qayta urinib köring.",
+        "load": "Maʼlumotnomalar yuklanmadi."
       },
-      "retry": "Qayta urinish",
+      "retry": "Qayta uriniş",
       "choose": "Tanlang",
       "chooseRequired": "Qiymatni tanlang",
       "rules": {
-        "title": "Jo‘natuvchi qoidalari",
-        "hint": "Manzil yoki domendan kelgan xatlar turni yordamchidan oldin o‘zi oladi.",
+        "title": "Jönatuvçi qoidalari",
+        "hint": "Manzil yoki domendan kelgan xatlar turni yordamçidan oldin özi oladi.",
         "pattern": "Manzil yoki domen",
         "patternHint": "Masalan: soliq.uz yoki ivan@firma.uz",
         "type": "Tur",
         "createdBy": "Yaratdi",
-        "add": "Qoida qo‘shish",
-        "delete": "O‘chirish",
-        "deleteNamed": "Qoidani o‘chirish: {{pattern}}",
-        "added": "Qoida qo‘shildi",
-        "deleted": "Qoida o‘chirildi",
+        "add": "Qoida qöşiş",
+        "delete": "Öçiriş",
+        "deleteNamed": "Qoidani öçiriş: {{pattern}}",
+        "added": "Qoida qöşildi",
+        "deleted": "Qoida öçirildi",
         "empty": {
-          "title": "Qoidalar yo‘q",
-          "text": "Qoida qo‘shing yoki xat kartochkasidan yarating."
+          "title": "Qoidalar yöq",
+          "text": "Qoida qöşing yoki xat kartoçkasidan yarating."
         },
         "errors": {
-          "mail_rule_exists": "Bunday qoida allaqachon bor.",
-          "mail_type_inactive": "Bu tur o‘chirilgan — boshqasini tanlang.",
-          "DEFAULT": "Qoidani saqlab bo‘lmadi. Manzil yoki domenni tekshiring.",
+          "mail_rule_exists": "Bunday qoida allaqaçon bor.",
+          "mail_type_inactive": "Bu tur öçirilgan — boşqasini tanlang.",
+          "DEFAULT": "Qoidani saqlab bölmadi. Manzil yoki domenni tekşiring.",
           "load": "Qoidalar yuklanmadi."
         },
-        "publicDomain": "Bu umumiy pochta xizmati — qoida istalgan kishining xatini ushlaydi. Aniq manzilni ko‘rsatgan ma’qul."
+        "publicDomain": "Bu umumiy poçta xizmati — qoida istalgan kişining xatini uşlaydi. Aniq manzilni körsatgan maʼqul."
       },
       "code": "Kod",
-      "codeHint": "Lotin harflari va raqamlar, masalan USD yoki UZ. Saqlangandan keyin kod o‘zgarmaydi.",
-      "search": "Kod yoki nom bo‘yicha qidirish",
-      "noMatch": "Hech narsa topilmadi",
+      "codeHint": "Lotin harflari va raqamlar, masalan USD yoki UZ. Saqlangandan keyin kod özgarmaydi.",
+      "search": "Kod yoki nom böyiça qidiriş",
+      "noMatch": "Heç narsa topilmadi",
       "source": {
         "line": "Manba: {{name}} · {{when}}",
         "never": "hali yangilanmagan",
-        "refresh": "Yangilash",
-        "queued": "Yangilash boshlandi. Ro‘yxat bir daqiqa ichida yangilanadi.",
+        "refresh": "Yangilaş",
+        "queued": "Yangilaş boşlandi. Röyxat bir daqiqa içida yangilanadi.",
         "column": "Manba",
-        "missing": "Manbada yo‘q",
+        "missing": "Manbada yöq",
         "missingSince": "faylda oxirgi marta {{when}}",
-        "manual": "Qo‘lda"
+        "manual": "Qölda"
       },
       "file": {
-        "download": "Yuklab olish",
-        "upload": "Yuklash",
-        "title": "{{name}}: faylni yuklash",
-        "summary": "Qo‘shiladi: {{added}}, o‘zgaradi: {{updated}}, o‘zgarishsiz: {{unchanged}}, xato bilan: {{failed}}",
+        "download": "Yuklab oliş",
+        "upload": "Yuklaş",
+        "title": "{{name}}: faylni yuklaş",
+        "summary": "Qöşiladi: {{added}}, özgaradi: {{updated}}, özgarişsiz: {{unchanged}}, xato bilan: {{failed}}",
         "line": "Qator",
         "action": "Natija",
         "details": "Batafsil",
-        "apply": "Qo‘llash",
-        "cancel": "Bekor qilish",
-        "failed": "Fayl yuklanmadi. Qayta urinib ko‘ring.",
-        "done": "Yuklandi: {{added}} qo‘shildi, {{updated}} o‘zgardi",
+        "apply": "Qöllaş",
+        "cancel": "Bekor qiliş",
+        "failed": "Fayl yuklanmadi. Qayta urinib köring.",
+        "done": "Yuklandi: {{added}} qöşildi, {{updated}} özgardi",
         "actions": {
-          "add": "Qo‘shiladi",
-          "update": "O‘zgaradi",
-          "unchanged": "O‘zgarishsiz",
+          "add": "Qöşiladi",
+          "update": "Özgaradi",
+          "unchanged": "Özgarişsiz",
           "error": "Xato"
         },
         "reasons": {
-          "required": "{{field}}: to‘ldirilmagan",
-          "invalid": "{{field}}: noto‘g‘ri qiymat",
-          "unknown": "bunday kod yo‘q",
+          "required": "{{field}}: töldirilmagan",
+          "invalid": "{{field}}: notöğri qiymat",
+          "unknown": "bunday kod yöq",
           "duplicate": "kod takrorlangan",
-          "closed": "bu ro‘yxatga qo‘shib bo‘lmaydi",
+          "closed": "bu röyxatga qöşib bölmaydi",
           "too_long": "nom 120 belgidan uzun",
           "rejected": "qator qabul qilinmadi"
         },
@@ -1201,7 +1201,7 @@
           "code": "Kod",
           "name": "Nomi",
           "name_ru": "Nomi (rus.)",
-          "name_uz": "Nomi (o‘zb.)",
+          "name_uz": "Nomi (özb.)",
           "name_en": "Nomi (ingl.)",
           "active": "Faol",
           "file": "Fayl"
@@ -1209,131 +1209,131 @@
       }
     },
     "templates": {
-      "title": "Rezolyutsiya shablonlari",
+      "title": "Rezolyutsiya şablonlari",
       "hint": "",
-      "add": "Shablon qo‘shish",
+      "add": "Şablon qöşiş",
       "name": "Nomi",
       "kind": "Turi",
-      "responsible": "Mas’ul",
+      "responsible": "Masʼul",
       "due": "Muddat",
-      "scope": "Kim ko‘radi",
+      "scope": "Kim köradi",
       "company": "Hamma",
       "personal": "Faqat {{name}}",
       "addressee": "Xat adresati",
-      "chooseLater": "Rezolyutsiyada tanlash",
+      "chooseLater": "Rezolyutsiyada tanlaş",
       "days_one": "{{count}} kun",
       "days_few": "{{count}} kun",
       "days_many": "{{count}} kun",
       "days_other": "{{count}} kun",
       "dueDays": "Muddat, kun",
-      "dueHint": "Bo‘sh — xat muddati maslahati.",
-      "addTitle": "Yangi rezolyutsiya shabloni",
-      "editTitle": "Shablonni o‘zgartirish",
-      "required": "Maydonni to‘ldiring",
-      "deleted": "Shablon o‘chirildi",
-      "deleteTitle": "«{{name}}» shabloni o‘chirilsinmi?",
+      "dueHint": "Böş — xat muddati maslahati.",
+      "addTitle": "Yangi rezolyutsiya şabloni",
+      "editTitle": "Şablonni özgartiriş",
+      "required": "Maydonni töldiring",
+      "deleted": "Şablon öçirildi",
+      "deleteTitle": "«{{name}}» şabloni öçirilsinmi?",
       "empty": {
-        "title": "Shablonlar yo‘q",
-        "text": "Odatiy xatlar uchun umumiy shablon qo‘shing."
+        "title": "Şablonlar yöq",
+        "text": "Odatiy xatlar uçun umumiy şablon qöşing."
       }
     },
     "ai": {
-      "title": "Fayldan to‘ldirish",
-      "hint": "Kiruvchi xatlarni ro‘yxatga olish yordamchisi: tugma bilan, maydonlarni taklif qiladi, inson hal qiladi.",
-      "text": "Matnli PDFni yordamchi doim o‘qiydi: tanlangan himoya siyosati bo‘yicha ma’lumotlar modelga yuborishdan oldin yashiriladi.",
-      "off": "Yordamchi sozlanmagan: modellar shlyuzi kaliti yo‘q. Shakl qo‘lda to‘ldiriladi.",
+      "title": "Fayldan töldiriş",
+      "hint": "Kiruvçi xatlarni röyxatga oliş yordamçisi: tugma bilan, maydonlarni taklif qiladi, inson hal qiladi.",
+      "text": "Matnli PDFni yordamçi doim öqiydi: tanlangan himoya siyosati böyiça maʼlumotlar modelga yuborişdan oldin yaşiriladi.",
+      "off": "Yordamçi sozlanmagan: modellar şlyuzi kaliti yöq. Şakl qölda töldiriladi.",
       "scans": {
-        "label": "Xatlarning skan va fotolarini o‘qish",
-        "hint": "Pasport va shaxsiy hujjatlarni yuklamang.",
-        "on": "Tashkilotlar xatlarining skan va fotolarini yordamchi o‘qiydi.",
-        "off": "Skan va fotolarni yordamchi o‘qimaydi: ular qo‘lda to‘ldiriladi.",
-        "strict": "«Qat’iy» siyosatda skan va fotolar modelga yuborilmaydi.",
+        "label": "Xatlarning skan va fotolarini öqiş",
+        "hint": "Pasport va şaxsiy hujjatlarni yuklamang.",
+        "on": "Taşkilotlar xatlarining skan va fotolarini yordamçi öqiydi.",
+        "off": "Skan va fotolarni yordamçi öqimaydi: ular qölda töldiriladi.",
+        "strict": "«Qatʼiy» siyosatda skan va fotolar modelga yuborilmaydi.",
         "saved": "Sozlama saqlandi",
-        "error": "Saqlab bo‘lmadi. Qayta urinib ko‘ring."
+        "error": "Saqlab bölmadi. Qayta urinib köring."
       },
       "policy": {
-        "title": "SI uchun ma’lumotlar himoyasi",
-        "hint": "Modelga ketadigan matnda nima yashiriladi: pochta yordamchisi va «Fayldan to‘ldirish». Jurnallarda doim hammasi yashirin. SI taklif qiladi, inson tasdiqlaydi.",
-        "legend": "Ma’lumotlar himoyasi siyosati",
-        "business": "Ishbilarmon (tavsiya etiladi)",
-        "businessText": "Pasport, JSHSHIR, karta raqamlari va tug‘ilgan sanalar yashiriladi. Kompaniya rekvizitlari, telefonlar, pochta va ismlar qoladi.",
-        "strict": "Qat’iy",
-        "strictText": "Telefonlar, pochta, STIR va hisob raqamlari ham yashiriladi. Skan va fotolar modelga yuborilmaydi.",
-        "readOnly": "Faqat ko‘rish.",
+        "title": "SI uçun maʼlumotlar himoyasi",
+        "hint": "Modelga ketadigan matnda nima yaşiriladi: poçta yordamçisi va «Fayldan töldiriş». Jurnallarda doim hammasi yaşirin. SI taklif qiladi, inson tasdiqlaydi.",
+        "legend": "Maʼlumotlar himoyasi siyosati",
+        "business": "Işbilarmon (tavsiya etiladi)",
+        "businessText": "Pasport, JSHSHIR, karta raqamlari va tuğilgan sanalar yaşiriladi. Kompaniya rekvizitlari, telefonlar, poçta va ismlar qoladi.",
+        "strict": "Qatʼiy",
+        "strictText": "Telefonlar, poçta, STIR va hisob raqamlari ham yaşiriladi. Skan va fotolar modelga yuborilmaydi.",
+        "readOnly": "Faqat köriş.",
         "saved": "Siyosat saqlandi: «{{name}}»",
-        "pending": "Hujjat aylanishi «{{name}}» siyosatini hali qo‘llamadi va hozircha «{{current}}» bo‘yicha ishlayapti. Odatda bu bir necha soniya oladi; o‘tmasa — sahifani yangilang yoki tizim administratoriga xabar bering."
+        "pending": "Hujjat aylanişi «{{name}}» siyosatini hali qöllamadi va hozirça «{{current}}» böyiça işlayapti. Odatda bu bir neça soniya oladi; ötmasa — sahifani yangilang yoki tizim administratoriga xabar bering."
       }
     }
   },
   "listKind": {
     "label": "Hujjat turi",
-    "all": "Barcha turlar"
+    "all": "Barça turlar"
   },
   "reply": {
     "title": "Xatga javob",
     "draft": "Javob qoralamasi — hali imzoga topşirilmagan.",
     "handed": "Qoralama imzoga topşirildi.",
     "registered": "{{number}} imzolandi.",
-    "noMail": "Tizimdan tashqarida yuborilgan yoki pochta orqali yuborilmagan.",
+    "noMail": "Tizimdan taşqarida yuborilgan yoki poçta orqali yuborilmagan.",
     "sending": "{{number}} imzolandi, xat manzilga yuborilmoqda.",
     "sent": "{{number}} manzilga yuborildi.",
     "failedTag": "Yuborilmadi",
     "failed": "{{number}} manzilga yetib bormadi: {{reason}}.",
     "failedNoReason": "{{number}} manzilga yetib bormadi.",
     "failedHint": "",
-    "open": "Ochish",
-    "prefilled": "{{number}} dan to‘ldirildi: muxbir, pochta va mavzuni tekshiring.",
-    "continue": "Javobni davom ettirish"
+    "open": "Oçiş",
+    "prefilled": "{{number}} dan töldirildi: muxbir, poçta va mavzuni tekşiring.",
+    "continue": "Javobni davom ettiriş"
   },
   "outcome": {
     "more": "Yana",
-    "cancel": "Bekor qilish",
-    "failed": "Bajarilmadi. Qayta urinib ko‘ring.",
+    "cancel": "Bekor qiliş",
+    "failed": "Bajarilmadi. Qayta urinib köring.",
     "hand": {
-      "action": "Ishga topshirish",
-      "title": "{{number}}: ishga topshirish",
-      "what": "Nima yaratish",
+      "action": "Işga topşiriş",
+      "title": "{{number}}: işga topşiriş",
+      "what": "Nima yaratiş",
       "request": "Mijoz arizasi",
       "memo": "Xizmat xati",
-      "next": "Davom etish",
-      "done": "{{number}} xati ishga topshirildi",
-      "partner": "Hamkorni ulash",
-      "partnerTitle": "{{number}}: hamkorni ulash",
+      "next": "Davom etiş",
+      "done": "{{number}} xati işga topşirildi",
+      "partner": "Hamkorni ulaş",
+      "partnerTitle": "{{number}}: hamkorni ulaş",
       "company": "Kompaniya",
       "inn": "STIR",
-      "contact": "Aloqa shaxsi",
-      "email": "Pochta",
+      "contact": "Aloqa şaxsi",
+      "email": "Poçta",
       "offer": "Nima taklif qiladi",
-      "partnerSubmit": "Ariza yaratish"
+      "partnerSubmit": "Ariza yaratiş"
     },
     "co": {
-      "action": "Hamijrochini jalb qilish",
-      "title": "{{number}}: hamijrochi",
+      "action": "Hamijroçini jalb qiliş",
+      "title": "{{number}}: hamijroçi",
       "person": "Xodim",
-      "text": "Nima qilish kerak",
-      "due": "Muddat — sizdan kech emas",
-      "submit": "Jalb qilish",
-      "done": "Hamijrochi jalb qilindi: {{number}}"
+      "text": "Nima qiliş kerak",
+      "due": "Muddat — sizdan keç emas",
+      "submit": "Jalb qiliş",
+      "done": "Hamijroçi jalb qilindi: {{number}}"
     },
     "close": {
-      "action": "Javobsiz yopish",
-      "title": "{{number}}: javobsiz yopish",
+      "action": "Javobsiz yopiş",
+      "title": "{{number}}: javobsiz yopiş",
       "reason": "Sabab",
       "comment": "Izoh",
       "commentRequired": "Izoh (majburiy)",
-      "submit": "Yopish",
+      "submit": "Yopiş",
       "done": "{{number}} javobsiz yopildi"
     },
     "return": {
-      "action": "Rezolyutsiya muallifiga qaytarish",
-      "title": "{{number}}: rezolyutsiya muallifiga qaytarish",
+      "action": "Rezolyutsiya muallifiga qaytariş",
+      "title": "{{number}}: rezolyutsiya muallifiga qaytariş",
       "reason": "Sabab",
-      "submit": "Qaytarish",
+      "submit": "Qaytariş",
       "done": "{{number}} rezolyutsiya muallifiga qaytarildi"
     },
     "reopen": {
-      "action": "Ishga qaytarish",
-      "done": "{{number}} yana ishda"
+      "action": "Işga qaytariş",
+      "done": "{{number}} yana işda"
     },
     "closedBanner": "Javobsiz yopildi: {{reason}}"
   }

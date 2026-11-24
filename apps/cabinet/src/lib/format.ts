@@ -30,9 +30,9 @@ const MINUS = '−';
 
 /** Подпись валюты компании по языку (правило Платформы, `apps/platform/web/src/shared/lib/money.ts`). */
 const HOME_CURRENCY = 'UZS';
-const CURRENCY_WORD: Record<string, string> = { ru: 'сум', uz: 'so‘m', en: 'UZS' };
+const CURRENCY_WORD: Record<string, string> = { ru: 'сум', uz: 'söm', en: 'UZS' };
 
-/** `UZS` — слово языка («сум», «so‘m», «UZS» в en), другая валюта — её код ISO как есть (`USD`). */
+/** `UZS` — слово языка («сум», «söm», «UZS» в en), другая валюта — её код ISO как есть (`USD`). */
 export function currencyLabel(code: string, language?: string): string {
   const upper = code.trim().toUpperCase();
   if (upper === '' || upper === HOME_CURRENCY) return CURRENCY_WORD[localeFor(language ?? i18n.resolvedLanguage ?? i18n.language).code] ?? 'сум';

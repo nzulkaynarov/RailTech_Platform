@@ -35,7 +35,7 @@ describe('formatMoney — одна функция сумм кабинета, п�
     ['ru', { amount: '-500.00', currency: 'UZS' }, '−500 сум'],
     ['ru', { amount: '0.00', currency: 'UZS' }, '0 сум'],
     ['ru', { amount: '-0.00', currency: 'UZS' }, '0 сум'],
-    ['uz', { amount: '48600000.00', currency: 'UZS' }, '48 600 000 so‘m'],
+    ['uz', { amount: '48600000.00', currency: 'UZS' }, '48 600 000 söm'],
     ['uz', { amount: '12500.00', currency: 'USD' }, '12 500 USD'],
     ['en', { amount: '48600000.00', currency: 'UZS' }, '48,600,000 UZS'],
     ['en', { amount: '1234.50', currency: 'USD' }, '1,234.50 USD'],

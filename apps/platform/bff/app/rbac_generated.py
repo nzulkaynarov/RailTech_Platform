@@ -496,7 +496,7 @@ TEMPLATES: Final[dict[str, CatalogRole]] = {
     "SUPPLY": {
         "name": {
             "ru": "Снабженец",
-            "uz": "Ta'minotchi",
+            "uz": "Taʼminotçi",
             "en": "Supply specialist",
         },
         "access": {
@@ -516,7 +516,7 @@ TEMPLATES: Final[dict[str, CatalogRole]] = {
     "ENGINEER": {
         "name": {
             "ru": "Гл. инженер",
-            "uz": "Bosh muhandis",
+            "uz": "Boş muhandis",
             "en": "Chief engineer",
         },
         "access": {
@@ -556,7 +556,7 @@ TEMPLATES: Final[dict[str, CatalogRole]] = {
     "REGISTRAR": {
         "name": {
             "ru": "Делопроизводитель",
-            "uz": "Ish yurituvchi",
+            "uz": "Iş yurituvçi",
             "en": "Office clerk",
         },
         "access": {

@@ -1,17 +1,17 @@
 {
-  "subtitle": "CRM, ERP va EDS o'rtasidagi hodisalar shinasi: kim kimga hodisa yetkazadi, nima tiqilib qolgan va nimani takrorlash kerak.",
+  "subtitle": "CRM, ERP va EDS örtasidagi hodisalar şinasi: kim kimga hodisa yetkazadi, nima tiqilib qolgan va nimani takrorlaş kerak.",
   "views": {
-    "label": "Jurnal bo'limlari",
-    "subscribers": "Obunachilar",
-    "deliveries": "Yetkazishlar",
+    "label": "Jurnal bölimlari",
+    "subscribers": "Obunaçilar",
+    "deliveries": "Yetkazişlar",
     "dlq": "Yetkazilmaganlar (DLQ)",
-    "inbox": "Xatoli kiruvchilar"
+    "inbox": "Xatoli kiruvçilar"
   },
   "counters": {
     "dlq": "Yetkazilmagan (DLQ)",
-    "pending": "Yuborishni kutmoqda",
-    "paused": "Pauzadagi obunachilar",
-    "inboxFailed": "Qayta ishlash xatolari",
+    "pending": "Yuborişni kutmoqda",
+    "paused": "Pauzadagi obunaçilar",
+    "inboxFailed": "Qayta işlaş xatolari",
     "source": "CRM, ERP va EDS"
   },
   "domains": {
@@ -26,21 +26,21 @@
     "platform-bff": "Platforma"
   },
   "sources": {
-    "unavailable": "{{domain}} javob bermayapti — jurnal ma'lumotlari to'liq emas.",
+    "unavailable": "{{domain}} javob bermayapti — jurnal maʼlumotlari töliq emas.",
     "forbidden": "{{domain}} jurnalga ruxsat bermadi: huquqlar hali yetib bormagan yoki bekor qilingan.",
-    "not_applicable": "Sizda {{domain}} ga ruxsat yo'q — uning jurnali ko'rsatilmaydi.",
-    "retry": "Yangilash"
+    "not_applicable": "Sizda {{domain}} ga ruxsat yöq — uning jurnali körsatilmaydi.",
+    "retry": "Yangilaş"
   },
   "state": {
-    "ok": "Ishlayapti",
+    "ok": "Işlayapti",
     "failing": "Ketma-ket xatolar",
     "paused": "Pauza",
     "dead_letters": "Yetkazilmaganlar bor",
-    "disabled": "O'chirilgan",
-    "removed": "Obunalardan olib tashlangan"
+    "disabled": "Öçirilgan",
+    "removed": "Obunalardan olib taşlangan"
   },
   "delivery": {
-    "pending": "Yuborishni kutmoqda",
+    "pending": "Yuborişni kutmoqda",
     "retrying": "Takrorni kutmoqda",
     "in_flight": "Yuborilmoqda",
     "delivered": "Yetkazildi",
@@ -49,145 +49,145 @@
   "inbox": {
     "received": "Qabul qilindi",
     "retrying": "Takrorni kutmoqda",
-    "processed": "Qayta ishlandi",
-    "failed": "Qayta ishlash xatosi",
-    "skipped": "O'tkazib yuborildi"
+    "processed": "Qayta işlandi",
+    "failed": "Qayta işlaş xatosi",
+    "skipped": "Ötkazib yuborildi"
   },
   "subscribers": {
     "title": "{{domain}} yuboradi",
-    "caption": "{{domain}} obunachilari: holat, navbat va yetkazilmaganlar",
-    "empty": "{{domain}} da hali obunachilar yo'q — uning hodisalari hech kimga yetkazilmaydi.",
+    "caption": "{{domain}} obunaçilari: holat, navbat va yetkazilmaganlar",
+    "empty": "{{domain}} da hali obunaçilar yöq — uning hodisalari heç kimga yetkazilmaydi.",
     "columns": {
-      "subscriber": "Obunachi",
+      "subscriber": "Obunaçi",
       "state": "Holat",
       "queue": "Kutmoqda",
       "dead": "DLQ",
       "oldest": "Eng eskisi",
       "lastError": "Oxirgi xato"
     },
-    "pausedUntil": "{{time}} gacha",
+    "pausedUntil": "{{time}} gaça",
     "noEndpoint": "manzil berilmagan",
-    "retryDead": "Barcha dead ni takrorlash",
-    "retryDeadAria": "Barcha dead ni takrorlash: {{subscriber}} ({{domain}})",
-    "noErrors": "yo'q",
+    "retryDead": "Barça dead ni takrorlaş",
+    "retryDeadAria": "Barça dead ni takrorlaş: {{subscriber}} ({{domain}})",
+    "noErrors": "yöq",
     "inARow": "ketma-ket {{n}}",
-    "inFlight": "yo'lda: {{n}}",
+    "inFlight": "yölda: {{n}}",
     "summary": "Kutmoqda {{pending}} · DLQ {{dead}} · eng eskisi {{oldest}}",
-    "retry": "Takrorlash"
+    "retry": "Takrorlaş"
   },
   "filters": {
     "label": "Jurnal filtrlari",
     "domain": "Domen",
-    "allDomains": "Barcha domenlar",
+    "allDomains": "Barça domenlar",
     "status": "Holat",
-    "allStatuses": "Barcha holatlar",
-    "subscriber": "Obunachi",
-    "allSubscribers": "Barcha obunachilar",
-    "type": "Hodisa turi o'z ichiga oladi",
+    "allStatuses": "Barça holatlar",
+    "subscriber": "Obunaçi",
+    "allSubscribers": "Barça obunaçilar",
+    "type": "Hodisa turi öz içiga oladi",
     "typePlaceholder": "quote., client.updated",
     "period": "Davr",
     "from": "Dan",
-    "to": "Gacha",
-    "reset": "Filtrlarni tozalash"
+    "to": "Gaça",
+    "reset": "Filtrlarni tozalaş"
   },
   "deliveries": {
-    "caption": "Hodisalarni obunachilarga yetkazish",
+    "caption": "Hodisalarni obunaçilarga yetkaziş",
     "dlqCaption": "Yetkazilmagan hodisalar (DLQ)",
-    "dlqHint": "Shina endi o'zi takrorlamaydigan yetkazishlar: obunachi rad etdi (404, 410, 422) yoki 7 urinish tugadi. Sababni tuzating va takrorlang — bittalab yoki «Obunachilar» bo'limida obunachining hammasini.",
+    "dlqHint": "Şina endi özi takrorlamaydigan yetkazişlar: obunaçi rad etdi (404, 410, 422) yoki 7 uriniş tugadi. Sababni tuzating va takrorlang — bittalab yoki «Obunaçilar» bölimida obunaçining hammasini.",
     "columns": {
       "time": "Yaratilgan",
       "domain": "Domen",
       "event": "Hodisa",
-      "subscriber": "Obunachi",
+      "subscriber": "Obunaçi",
       "status": "Holat",
-      "attempts": "Urinishlar",
+      "attempts": "Urinişlar",
       "answer": "Javob"
     },
     "open": "Batafsil: {{event}} → {{subscriber}}",
     "empty": {
-      "title": "Yetkazishlar topilmadi",
-      "text": "Bu yerda CRM, ERP va EDS hodisalari har bir obunachi bo'yicha ko'rinadi. Filtrlarni yoki davrni o'zgartiring."
+      "title": "Yetkazişlar topilmadi",
+      "text": "Bu yerda CRM, ERP va EDS hodisalari har bir obunaçi böyiça körinadi. Filtrlarni yoki davrni özgartiring."
     },
     "dlqEmpty": {
-      "title": "Yetkazilmaganlar yo'q",
-      "text": "Barcha hodisalar obunachilarga yetib bordi yoki shina jadvali bo'yicha hali takrorlanmoqda."
+      "title": "Yetkazilmaganlar yöq",
+      "text": "Barça hodisalar obunaçilarga yetib bordi yoki şina jadvali böyiça hali takrorlanmoqda."
     },
-    "more": "Yana ko'rsatish",
-    "line": "{{time}} · {{domain}} → {{subscriber}} · urinishlar {{attempts}}"
+    "more": "Yana körsatiş",
+    "line": "{{time}} · {{domain}} → {{subscriber}} · urinişlar {{attempts}}"
   },
   "inboxView": {
-    "caption": "Qayta ishlash xato bilan tugagan qabul qilingan hodisalar",
-    "hint": "Domen qabul qilgan, lekin qo'llay olmagan hodisalar: qayta ishlash o'zi takrorlanadi (30 s, 2 daq, 10 daq), keyin xato bilan qoladi. Tuzatgandan so'ng — «Qayta ishlashni takrorlash».",
+    "caption": "Qayta işlaş xato bilan tugagan qabul qilingan hodisalar",
+    "hint": "Domen qabul qilgan, lekin qöllay olmagan hodisalar: qayta işlaş özi takrorlanadi (30 s, 2 daq, 10 daq), keyin xato bilan qoladi. Tuzatgandan söng — «Qayta işlaşni takrorlaş».",
     "columns": {
       "time": "Qabul qilingan",
-      "domain": "Qabul qiluvchi",
+      "domain": "Qabul qiluvçi",
       "event": "Hodisa",
       "publisher": "Kimdan",
       "status": "Holat",
-      "attempts": "Urinishlar",
+      "attempts": "Urinişlar",
       "error": "Xato"
     },
     "open": "Batafsil: {{event}}, {{domain}}",
     "empty": {
-      "title": "Qayta ishlash xatolari yo'q",
-      "text": "CRM, ERP va EDS qabul qilgan barcha hodisalar qayta ishlangan. Ishlov beruvchi xato qilsa, hodisa shu yerda paydo bo'ladi."
+      "title": "Qayta işlaş xatolari yöq",
+      "text": "CRM, ERP va EDS qabul qilgan barça hodisalar qayta işlangan. Işlov beruvçi xato qilsa, hodisa şu yerda paydo böladi."
     },
-    "line": "{{time}} · {{publisher}} dan {{domain}} ga · urinishlar {{attempts}}"
+    "line": "{{time}} · {{publisher}} dan {{domain}} ga · urinişlar {{attempts}}"
   },
   "panel": {
-    "deliveryTitle": "Yetkazish {{id}} · {{domain}}",
+    "deliveryTitle": "Yetkaziş {{id}} · {{domain}}",
     "inboxTitle": "Qabul qilingan hodisa · {{domain}}",
     "fields": {
-      "domain": "Nashr etuvchi",
-      "receiver": "Qabul qiluvchi",
+      "domain": "Naşr etuvçi",
+      "receiver": "Qabul qiluvçi",
       "event": "Hodisa turi",
       "eventId": "Hodisa ID",
       "subject": "Obyekt",
       "correlation": "Korrelyatsiya",
-      "subscriber": "Obunachi",
+      "subscriber": "Obunaçi",
       "publisher": "Kimdan",
       "status": "Holat",
-      "attempts": "Urinishlar",
-      "lastAttempt": "Oxirgi urinish",
-      "nextAttempt": "Keyingi urinish",
+      "attempts": "Urinişlar",
+      "lastAttempt": "Oxirgi uriniş",
+      "nextAttempt": "Keyingi uriniş",
       "code": "Javob kodi",
       "error": "Xato",
       "created": "Yaratilgan",
       "delivered": "Yetkazilgan",
       "received": "Qabul qilingan",
-      "processed": "Qayta ishlangan"
+      "processed": "Qayta işlangan"
     },
-    "noBody": "Hodisa tanasi jurnalda ko'rsatilmaydi: unda mijozlar ma'lumotlari bo'lishi mumkin. Tur, obyekt va hodisa ID yetarli.",
-    "retryDelivery": "Yetkazishni takrorlash",
-    "retryDeliveryAria": "Yetkazishni takrorlash {{id}}",
-    "retryInbox": "Qayta ishlashni takrorlash",
-    "notRetriable": "Takrorlash shart emas: yetkazish allaqachon ketgan yoki yuborilmoqda.",
-    "inboxNotRetriable": "Takrorlash shart emas: hodisa qayta ishlangan yoki avtomatik takrorni kutmoqda.",
+    "noBody": "Hodisa tanasi jurnalda körsatilmaydi: unda mijozlar maʼlumotlari bölişi mumkin. Tur, obyekt va hodisa ID yetarli.",
+    "retryDelivery": "Yetkazişni takrorlaş",
+    "retryDeliveryAria": "Yetkazişni takrorlaş {{id}}",
+    "retryInbox": "Qayta işlaşni takrorlaş",
+    "notRetriable": "Takrorlaş şart emas: yetkaziş allaqaçon ketgan yoki yuborilmoqda.",
+    "inboxNotRetriable": "Takrorlaş şart emas: hodisa qayta işlangan yoki avtomatik takrorni kutmoqda.",
     "consequence": {
-      "now": "Yetkazish hozir yuboriladi, urinishlar hisoblagichi noldan boshlanadi.",
-      "probe": "Obunachi pauzada bo'lsa, darhol sinov yetkazishini oladi.",
-      "safe": "Takrorlash xavfsiz: qabul qiluvchi dublikatlarni hodisa ID bo'yicha tashlaydi. Domen jurnalida kim va qachon takrorlagani qoladi.",
-      "inboxNow": "Hodisa {{domain}} da yana qayta ishlashga ketadi.",
-      "inboxFix": "Xato sababi tuzatilmagan bo'lsa, hodisa o'sha xato bilan qaytadi.",
-      "inboxSafe": "Takrorlash xavfsiz: ishlov beruvchilar suratlarni o'zgarish vaqti bo'yicha qo'llaydi. Domen jurnalida kim va qachon takrorlagani qoladi."
+      "now": "Yetkaziş hozir yuboriladi, urinişlar hisoblagiçi noldan boşlanadi.",
+      "probe": "Obunaçi pauzada bölsa, darhol sinov yetkazişini oladi.",
+      "safe": "Takrorlaş xavfsiz: qabul qiluvçi dublikatlarni hodisa ID böyiça taşlaydi. Domen jurnalida kim va qaçon takrorlagani qoladi.",
+      "inboxNow": "Hodisa {{domain}} da yana qayta işlaşga ketadi.",
+      "inboxFix": "Xato sababi tuzatilmagan bölsa, hodisa öşa xato bilan qaytadi.",
+      "inboxSafe": "Takrorlaş xavfsiz: işlov beruvçilar suratlarni özgariş vaqti böyiça qöllaydi. Domen jurnalida kim va qaçon takrorlagani qoladi."
     },
-    "retried": "Takrorlashga qo'yildi. Jurnal bir necha soniyada yangilanadi.",
-    "nothing": "Takrorlash shart emas: yozuv ketgan, ishlanmoqda yoki mavjud emas.",
-    "deadTitle": "Barcha yetkazilmaganlarni takrorlash · {{subscriber}}",
-    "deadIntro": "Nashr etuvchi — {{domain}}. {{subscriber}} obunachisining DLQ sida: {{count}}.",
-    "deadSubmit": "{{count}} tasini takrorlash",
+    "retried": "Takrorlaşga qöyildi. Jurnal bir neça soniyada yangilanadi.",
+    "nothing": "Takrorlaş şart emas: yozuv ketgan, işlanmoqda yoki mavjud emas.",
+    "deadTitle": "Barça yetkazilmaganlarni takrorlaş · {{subscriber}}",
+    "deadIntro": "Naşr etuvçi — {{domain}}. {{subscriber}} obunaçisining DLQ sida: {{count}}.",
+    "deadSubmit": "{{count}} tasini takrorlaş",
     "deadConsequence": {
-      "now": "Ushbu obunachining DLQ dagi barcha yetkazishlari ({{count}}) hozir yuboriladi, urinishlar noldan.",
-      "fix": "Avval sababni tuzating: qabul qiluvchi manzili, juftlik siri yoki qabul qiluvchining o'zi — aks holda yetkazishlar DLQ ga qaytadi.",
-      "probe": "Obunachi pauzada bo'lsa, darhol sinov yetkazishini oladi.",
-      "safe": "Takrorlash xavfsiz: qabul qiluvchi dublikatlarni hodisa ID bo'yicha tashlaydi. {{domain}} jurnalida kim va qachon takrorlagani qoladi."
+      "now": "Uşbu obunaçining DLQ dagi barça yetkazişlari ({{count}}) hozir yuboriladi, urinişlar noldan.",
+      "fix": "Avval sababni tuzating: qabul qiluvçi manzili, juftlik siri yoki qabul qiluvçining özi — aks holda yetkazişlar DLQ ga qaytadi.",
+      "probe": "Obunaçi pauzada bölsa, darhol sinov yetkazişini oladi.",
+      "safe": "Takrorlaş xavfsiz: qabul qiluvçi dublikatlarni hodisa ID böyiça taşlaydi. {{domain}} jurnalida kim va qaçon takrorlagani qoladi."
     },
-    "deadDone_one": "{{count}} ta yetkazish takrorlashga qo'yildi.",
-    "deadDone_few": "{{count}} ta yetkazish takrorlashga qo'yildi.",
-    "deadDone_many": "{{count}} ta yetkazish takrorlashga qo'yildi.",
-    "deadDone_other": "{{count}} ta yetkazish takrorlashga qo'yildi.",
-    "deadNone": "Obunachida yetkazilmaganlar endi yo'q.",
-    "close": "Yopish"
+    "deadDone_one": "{{count}} ta yetkaziş takrorlaşga qöyildi.",
+    "deadDone_few": "{{count}} ta yetkaziş takrorlaşga qöyildi.",
+    "deadDone_many": "{{count}} ta yetkaziş takrorlaşga qöyildi.",
+    "deadDone_other": "{{count}} ta yetkaziş takrorlaşga qöyildi.",
+    "deadNone": "Obunaçida yetkazilmaganlar endi yöq.",
+    "close": "Yopiş"
   },
   "age": {
     "seconds": "{{count}} s",
@@ -196,15 +196,15 @@
     "days": "{{count}} kun"
   },
   "loadError": {
-    "title": "Jurnalni yuklab bo'lmadi",
-    "text": "Jurnal CRM, ERP va EDS dan yig'iladi. So'rovni takrorlang; xato qolsa, Sozlamalar · Ulanishlarni tekshiring.",
-    "retry": "Takrorlash"
+    "title": "Jurnalni yuklab bölmadi",
+    "text": "Jurnal CRM, ERP va EDS dan yiğiladi. Sörovni takrorlang; xato qolsa, Sozlamalar · Ulanişlarni tekşiring.",
+    "retry": "Takrorlaş"
   },
   "tableScroll": "{{name}}: jadval gorizontal aylantiriladi",
   "errors": {
     "FORBIDDEN": "Ruxsat yetarli emas.",
     "BACKEND_UNAVAILABLE": "Domen javob bermayapti. Keyinroq takrorlang.",
-    "VALIDATION_FAILED": "Filtrlarni tekshiring.",
-    "DEFAULT": "Amalni bajarib bo'lmadi. Qaytadan urinib ko'ring."
+    "VALIDATION_FAILED": "Filtrlarni tekşiring.",
+    "DEFAULT": "Amalni bajarib bölmadi. Qaytadan urinib köring."
   }
 }

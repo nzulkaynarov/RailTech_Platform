@@ -108,7 +108,7 @@ test.describe("T1 · ширина столбцов", () => {
     await loginAndWait(page, "all@demo.example");
     for (const [language, item] of [
       ["ru", null],
-      ["uz", "O‘zbekcha"],
+      ["uz", "Özbekça"],
       ["en", "English"],
     ] as const) {
       if (item) {

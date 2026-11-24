@@ -61,7 +61,7 @@ EXPECTED = {
         [
             "Assalomu alaykum, Azamat!",
             "Sizni «Acme Trading» kompaniyasi kabinetiga taklif qilişdi",
-            "Kirish kodi: 042917",
+            "Kiriş kodi: 042917",
             "24 soat",
         ],
     ),
@@ -84,11 +84,11 @@ EXPECTED = {
         ],
     ),
     ("portal_magic_link", "uz"): (
-        "Shaxsiy kabinetga kirish",
+        "Şaxsiy kabinetga kiriş",
         [
             "Assalomu alaykum, Azamat!",
             "Siz «Acme Trading» kompaniyasi kabinetiga kirişni söradingiz",
-            "Kirish kodi: 042917",
+            "Kiriş kodi: 042917",
             "60 daqiqa",
         ],
     ),
@@ -203,7 +203,7 @@ def test_invitation_through_the_api_goes_out_in_the_invited_language(locmem, por
 
 @pytest.mark.parametrize(
     ("language", "subject"),
-    [("ru", "Вход в личный кабинет"), ("uz", "Shaxsiy kabinetga kirish"), ("en", "Log in to your client portal")],
+    [("ru", "Вход в личный кабинет"), ("uz", "Şaxsiy kabinetga kiriş"), ("en", "Log in to your client portal")],
 )
 def test_login_link_goes_out_in_the_language_of_the_contact(
     locmem, inline_magic_link_task, anon_portal_client, client_contact, language, subject

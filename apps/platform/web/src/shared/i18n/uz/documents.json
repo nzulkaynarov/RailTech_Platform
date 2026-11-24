@@ -4,34 +4,34 @@
     "application": "Ariza",
     "report": "Hisobot",
     "letter_out": "Xat",
-    "letter_in": "Kiruvchi xat",
+    "letter_in": "Kiruvçi xat",
     "quote": "TT",
-    "contract": "Shartnoma",
+    "contract": "Şartnoma",
     "invoice": "Hisob",
     "act": "Dalolatnoma"
   },
   "status": {
     "draft": "Qoralama",
     "signing": "Imzoda",
-    "sent": "Ro‘yxatdan o‘tgan",
+    "sent": "Röyxatdan ötgan",
     "quote": {
-      "open": "Tasdiqlashda",
+      "open": "Tasdiqlaşda",
       "approved": "Tasdiqlangan",
-      "returned": "Qayta ishlashda",
+      "returned": "Qayta işlaşda",
       "rejected": "Rad etilgan"
     },
     "filter": {
       "draft": "Qoralama",
-      "on_approval": "Kelishuvda",
-      "returned": "Qayta ishlashga qaytarilgan",
-      "approved": "Kelishilgan",
+      "on_approval": "Kelişuvda",
+      "returned": "Qayta işlaşga qaytarilgan",
+      "approved": "Kelişilgan",
       "rejected": "Rad etilgan",
-      "to_accountant": "Buxgalterga topshirilgan",
-      "paid": "To‘langan",
-      "sent": "Ro‘yxatdan o‘tgan",
+      "to_accountant": "Buxgalterga topşirilgan",
+      "paid": "Tölangan",
+      "sent": "Röyxatdan ötgan",
       "awaiting_resolution": "Rezolyutsiya kutilmoqda",
-      "resolved": "Rezolyutsiya qo‘yilgan",
-      "open": "Tasdiqlashdagi TT"
+      "resolved": "Rezolyutsiya qöyilgan",
+      "open": "Tasdiqlaşdagi TT"
     }
   },
   "list": {
@@ -42,13 +42,13 @@
     },
     "tabs": {
       "label": "Hujjat turi",
-      "all": "Barcha turlar",
+      "all": "Barça turlar",
       "memo": "Xizmat xatlari",
       "application": "Arizalar",
       "report": "Hisobotlar",
       "letters": "Xatlar",
       "quote": "TT",
-      "contract": "Shartnomalar",
+      "contract": "Şartnomalar",
       "invoice": "Hisoblar",
       "act": "Dalolatnomalar"
     },
@@ -64,27 +64,27 @@
       "amount": "Summa",
       "due": "Muddat",
       "author": "Muallif",
-      "responsible": "Mas’ul",
+      "responsible": "Masʼul",
       "created": "Yaratilgan",
       "action": "Amal"
     },
-    "noNumber": "raqam ro‘yxatga olishda beriladi",
+    "noNumber": "raqam röyxatga olişda beriladi",
     "noNumberSigning": "raqam imzolaşda beriladi",
-    "open": "Hujjatni ochish: {{subject}}",
-    "continue": "Davom ettirish",
-    "continueLabel": "Hujjatni davom ettirish: {{subject}}",
-    "openLetter": "Xatni ochish",
-    "openLetterLabel": "Xatni ochish: {{subject}}",
+    "open": "Hujjatni oçiş: {{subject}}",
+    "continue": "Davom ettiriş",
+    "continueLabel": "Hujjatni davom ettiriş: {{subject}}",
+    "openLetter": "Xatni oçiş",
+    "openLetterLabel": "Xatni oçiş: {{subject}}",
     "empty": {
-      "mineTitle": "O‘z hujjatlaringiz hozircha yo‘q",
-      "mineText": "Xizmat xati, ariza, hisobot va xat «Hujjat yaratish» tugmasi bilan yaratiladi. Qoralamalar shu yerda saqlanadi.",
-      "allTitle": "Reestr hozircha bo‘sh",
-      "allText": "Xatlar, TTlar va xodimlar hujjatlari ro‘yxatdan o‘tishi bilan shu yerda paydo bo‘ladi.",
-      "filteredTitle": "Bu shartlar bo‘yicha hech narsa yo‘q",
-      "filteredText": "Turi yoki holatini o‘zgartiring — yoki yangi hujjat yarating."
+      "mineTitle": "Öz hujjatlaringiz hozirça yöq",
+      "mineText": "Xizmat xati, ariza, hisobot va xat «Hujjat yaratiş» tugmasi bilan yaratiladi. Qoralamalar şu yerda saqlanadi.",
+      "allTitle": "Reestr hozirça böş",
+      "allText": "Xatlar, TTlar va xodimlar hujjatlari röyxatdan ötişi bilan şu yerda paydo böladi.",
+      "filteredTitle": "Bu şartlar böyiça heç narsa yöq",
+      "filteredText": "Turi yoki holatini özgartiring — yoki yangi hujjat yarating."
     },
     "paging": {
-      "label": "Ro‘yxat sahifalari",
+      "label": "Röyxat sahifalari",
       "prev": "Orqaga",
       "next": "Keyingi",
       "page": "{{page}}-sahifa"
@@ -92,23 +92,23 @@
     "caption": "Hujjatlar: raqam, mavzu, tur, holat, summa va muddat",
     "tableScroll": "Hujjatlar jadvali, gorizontal aylantiriladi",
     "listLabel": "Hujjatlar",
-    "retry": "Qayta urinish",
+    "retry": "Qayta uriniş",
     "loadError": {
-      "title": "Hujjatlarni yuklab bo‘lmadi",
-      "text": "Server javob bermadi. Ulanishni tekshirib, qayta urinib ko‘ring."
+      "title": "Hujjatlarni yuklab bölmadi",
+      "text": "Server javob bermadi. Ulanişni tekşirib, qayta urinib köring."
     },
     "unavailable": {
       "title": "Hujjatlar mavjud emas",
-      "text": "Hujjatlar xizmati javob bermayapti. Birozdan so‘ng qayta urinib ko‘ring."
+      "text": "Hujjatlar xizmati javob bermayapti. Birozdan söng qayta urinib köring."
     },
     "forbidden": {
-      "title": "Hujjatlar sizga ochilmagan",
+      "title": "Hujjatlar sizga oçilmagan",
       "text": "Ruxsat yetarli emas."
     },
     "inProject": "Loyihada",
-    "inProjectLabel": "Loyihada ochish: {{subject}}",
-    "openQuote": "Taklifni ochish",
-    "openQuoteLabel": "Taklifni ochish: {{subject}}",
+    "inProjectLabel": "Loyihada oçiş: {{subject}}",
+    "openQuote": "Taklifni oçiş",
+    "openQuoteLabel": "Taklifni oçiş: {{subject}}",
     "onSigningAt": "{{name}} da"
   },
   "panel": {
@@ -123,7 +123,7 @@
       "due": "Muddat",
       "deal": "Loyiha",
       "created": "Yaratilgan",
-      "updated": "O‘zgartirilgan",
+      "updated": "Özgartirilgan",
       "version": "Tahrir",
       "watchers": "Nusxa"
     },
@@ -131,96 +131,96 @@
     "text": "Matn",
     "bodyTable": "Xat matnidagi jadval",
     "files": "Ilovalar",
-    "noFiles": "Ilovalar yo‘q.",
-    "download": "Yuklab olish: {{name}}",
-    "downloadFailed": "Faylni yuklab bo‘lmadi: {{reason}}",
-    "route": "Yo‘nalish",
+    "noFiles": "Ilovalar yöq.",
+    "download": "Yuklab oliş: {{name}}",
+    "downloadFailed": "Faylni yuklab bölmadi: {{reason}}",
+    "route": "Yönaliş",
     "routeAuthor": "Muallif · {{name}}",
     "routeAuthorMeta": "yaratilgan {{date}}",
     "routeStep": {
-      "approved": "{{label}} — kelishdi",
-      "returned": "{{label}} — qayta ishlashga qaytardi",
+      "approved": "{{label}} — kelişdi",
+      "returned": "{{label}} — qayta işlaşga qaytardi",
       "rejected": "{{label}} — rad etdi",
       "current": "{{label}} — qaror kutilmoqda",
-      "pending": "{{label}} — yo‘nalishda keyingi",
-      "skipped": "{{label}} — o‘tkazib yuborilgan"
+      "pending": "{{label}} — yönalişda keyingi",
+      "skipped": "{{label}} — ötkazib yuborilgan"
     },
-    "routePreview": "Yo‘nalish yuborilgandan so‘ng ochiladi: siz → direktor{{accountant}}.",
+    "routePreview": "Yönaliş yuborilgandan söng oçiladi: siz → direktor{{accountant}}.",
     "routePreviewAccountant": " → buxgalter",
     "decisions": "Qarorlar",
     "decision": {
-      "approve": "Kelishilgan",
-      "return": "Qayta ishlashga qaytarilgan",
+      "approve": "Kelişilgan",
+      "return": "Qayta işlaşga qaytarilgan",
       "reject": "Rad etilgan"
     },
     "decisionMeta": "{{date}} · {{name}} · {{round}}-davra",
-    "noDecisions": "Qarorlar hozircha yo‘q.",
-    "continue": "Davom ettirish",
-    "close": "Yopish",
-    "closeLabel": "Hujjatni yopish",
-    "retry": "Qayta urinish",
+    "noDecisions": "Qarorlar hozirça yöq.",
+    "continue": "Davom ettiriş",
+    "close": "Yopiş",
+    "closeLabel": "Hujjatni yopiş",
+    "retry": "Qayta uriniş",
     "loadError": {
-      "title": "Hujjatni ochib bo‘lmadi",
-      "text": "Server javob bermadi. Birozdan so‘ng qayta urinib ko‘ring."
+      "title": "Hujjatni oçib bölmadi",
+      "text": "Server javob bermadi. Birozdan söng qayta urinib köring."
     },
     "notFound": {
       "title": "Hujjat topilmadi",
-      "text": "U yo‘q yoki sizga ko‘rinmaydi."
+      "text": "U yöq yoki sizga körinmaydi."
     },
     "forbidden": {
-      "title": "Hujjat sizga ochilmagan",
+      "title": "Hujjat sizga oçilmagan",
       "text": "U rolingizga berilmagan."
     },
     "letter": {
       "title": "Blankdagi xat",
       "attention": "Kimga",
-      "email": "Manzil e-pochtasi",
-      "signatory": "Imzolovchi",
-      "signatoryDefault": "blank bo‘yicha (direktor)",
-      "mailings": "Yuborish jurnali",
+      "email": "Manzil e-poçtasi",
+      "signatory": "Imzolovçi",
+      "signatoryDefault": "blank böyiça (direktor)",
+      "mailings": "Yuboriş jurnali",
       "noMailings": "Manzilga hali yuborilmagan.",
       "mailing": {
         "awaiting_pdf": "PDF kutilmoqda",
-        "requested": "Pochta xizmatiga topshirildi",
+        "requested": "Poçta xizmatiga topşirildi",
         "sent": "Yuborildi",
         "failed": "Yuborilmadi: {{reason}}",
         "failedNoReason": "Yuborilmadi"
       },
       "mailingMeta": "{{to}} · {{date}}",
-      "sendAgain": "Manzilga yana yuborish",
-      "sendRequested": "Yuborish so‘raldi",
+      "sendAgain": "Manzilga yana yuboriş",
+      "sendRequested": "Yuboriş söraldi",
       "handedOver": "Imzoga topşirildi: {{name}}, {{date}}",
-      "register": "Ro‘yxatga olish va yuborish",
-      "registerOnly": "Ro‘yxatga olish",
-      "registered": "Xat ro‘yxatga olindi: {{number}}",
+      "register": "Röyxatga oliş va yuboriş",
+      "registerOnly": "Röyxatga oliş",
+      "registered": "Xat röyxatga olindi: {{number}}",
       "handover": "Imzoga topşiriş",
       "handoverDone": "Imzoga topşirildi.",
-      "sign": "Imzolash",
+      "sign": "Imzolaş",
       "signer": "Imzolaydi: {{name}}",
       "noSigner": "Imzolovçi yöq — vakolatni administrator beradi",
       "noSignerLink": "Sozlamalar · Imzo huquqlari",
       "signed": "Xat imzolandi: {{number}}",
-      "signModalTitle": "Chiquvchi xatni imzolash",
-      "signModalDesc": "Xat chiquvchi raqamini oladi va imzo asosi qayd etilgan holda rasman ro‘yxatga olinadi.",
-      "dispatchMethod": "Yuborish usuli",
+      "signModalTitle": "Çiquvçi xatni imzolaş",
+      "signModalDesc": "Xat çiquvçi raqamini oladi va imzo asosi qayd etilgan holda rasman röyxatga olinadi.",
+      "dispatchMethod": "Yuboriş usuli",
       "dispatchMethods": {
-        "email": "Elektron pochta orqali",
-        "paper": "Qog‘ozda qo‘lma-qo‘l",
+        "email": "Elektron poçta orqali",
+        "paper": "Qoğozda qölma-qöl",
         "courier": "Kuryerlik xizmati orqali",
         "edo": "EHM/EDO tizimi orqali",
-        "other": "Boshqa usul"
+        "other": "Boşqa usul"
       },
-      "dispatchMethodLabel": "Yuborish usuli",
-      "sendImmediately": "Imzolangandan so‘ng manzil pochtasiga darhol yuborish",
-      "noEmailWarning": "Manzil e-pochtasi ko‘rsatilmagan — avtomatik yuborish imkonsiz.",
-      "confirmSign": "Xatni imzolash",
-      "cancel": "Bekor qilish",
+      "dispatchMethodLabel": "Yuboriş usuli",
+      "sendImmediately": "Imzolangandan söng manzil poçtasiga darhol yuboriş",
+      "noEmailWarning": "Manzil e-poçtasi körsatilmagan — avtomatik yuboriş imkonsiz.",
+      "confirmSign": "Xatni imzolaş",
+      "cancel": "Bekor qiliş",
       "signedBy": "Imzoladi",
       "signedAt": "Imzolangan sana",
-      "actingFor": "{{name}} nomidan ishonchnoma bo‘yicha",
+      "actingFor": "{{name}} nomidan işonçnoma böyiça",
       "signatoryBasis": "Imzo asosi",
-      "verificationCode": "Tekshirish kodi",
-      "verificationUrl": "Haqiqiyligini tekshirish",
+      "verificationCode": "Tekşiriş kodi",
+      "verificationUrl": "Haqiqiyligini tekşiriş",
       "actionFailed": "Bajarilmadi: {{reason}}",
       "unmatched": "Manzil matn bilan yozilgan. «Davom ettiriş»ni bosing va taşkilotni kontragentlardan tanlang — ungaça xatni imzolab bölmaydi.",
       "onSigning": "Imzoda: {{who}}, {{date}} dan beri",
@@ -251,9 +251,9 @@
     }
   },
   "form": {
-    "subtitle": "Hujjat direktorga kelishish uchun yuboriladi. Qoralamani saqlab, keyinroq «Hujjatlar»da davom ettirish mumkin.",
-    "subtitleContinue": "{{number}} qoralamasi: o‘zgarishlar saqlanadi, istalgan payt yuborish mumkin.",
-    "subtitleReturned": "{{number}} qayta ishlashga qaytarilgan: tuzatib, qayta yuboring.",
+    "subtitle": "Hujjat direktorga kelişiş uçun yuboriladi. Qoralamani saqlab, keyinroq «Hujjatlar»da davom ettiriş mumkin.",
+    "subtitleContinue": "{{number}} qoralamasi: özgarişlar saqlanadi, istalgan payt yuboriş mumkin.",
+    "subtitleReturned": "{{number}} qayta işlaşga qaytarilgan: tuzatib, qayta yuboring.",
     "formLabel": "Yangi hujjat",
     "type": {
       "label": "Hujjat turi",
@@ -262,23 +262,23 @@
     },
     "subject": {
       "label": "Mavzu",
-      "hint": "Qisqa, sarlavha kabi: 300 belgigacha."
+      "hint": "Qisqa, sarlavha kabi: 300 belgigaça."
     },
     "to": {
       "label": "Kimga",
       "director": "Direktor"
     },
     "recipient": {
-      "label": "Manzil (tashkilot)",
+      "label": "Manzil (taşkilot)",
       "innShort": "STIR {{inn}}",
-      "pickHint": "Kontragentlardan tanlang yoki taklifning oxirgi qatoridan tashkilot qöşing."
+      "pickHint": "Kontragentlardan tanlang yoki taklifning oxirgi qatoridan taşkilot qöşing."
     },
     "text": {
       "label": "Matn",
-      "hint": "Oddiy matn, 20 000 belgigacha."
+      "hint": "Oddiy matn, 20 000 belgigaça."
     },
     "amount": {
-      "label": "Summa, so‘m",
+      "label": "Summa, söm",
       "hint": ""
     },
     "due": {
@@ -287,39 +287,39 @@
     },
     "files": {
       "label": "Ilovalar",
-      "hint": "PDF, rasmlar va Office hujjatlari, har biri 25 MBgacha.",
+      "hint": "PDF, rasmlar va Office hujjatlari, har biri 25 MBgaça.",
       "list": "Biriktirilgan fayllar",
       "uploading": "yuklanmoqda…",
       "uploaded": "yuklandi",
-      "attached": "hujjatda allaqachon bor",
-      "remove": "{{name}} faylini olib tashlash",
+      "attached": "hujjatda allaqaçon bor",
+      "remove": "{{name}} faylini olib taşlaş",
       "tooLarge": "Fayl 25 MBdan katta.",
       "unsupported": "PDF, rasmlar va Office hujjatlari qabul qilinadi.",
       "failed": "Yuklanmadi: {{reason}}"
     },
     "deal": {
-      "label": "Loyiha bilan bog‘lash",
-      "hint": "Majburiy emas: arizani yoki loyihani raqami, nomi yoki kompaniyasi bo‘yicha toping.",
+      "label": "Loyiha bilan boğlaş",
+      "hint": "Majburiy emas: arizani yoki loyihani raqami, nomi yoki kompaniyasi böyiça toping.",
       "placeholder": "Raqam, nomi yoki kompaniya",
-      "empty": "Hech narsa topilmadi",
+      "empty": "Heç narsa topilmadi",
       "searching": "Qidirilmoqda…",
-      "unavailable": "Arizalar hozir mavjud emas — bog‘lashni keyinroq qo‘shish mumkin."
+      "unavailable": "Arizalar hozir mavjud emas — boğlaşni keyinroq qöşiş mumkin."
     },
     "route": {
-      "label": "Kelishish yo‘nalishi",
+      "label": "Kelişiş yönalişi",
       "plain": "Siz → Direktor",
       "withAmount": "Siz → Direktor → Buxgalter (summa bor)",
       "letterHandover": "Siz → imzolovçi: imzolaydi, xat raqam oladi va adresatga ketadi",
-      "approvers": "Kelishuvchilar",
-      "approversHint": "Marshrut bosqichlaridan oldin, tanlangan tartibda kelishadi.",
-      "watchers": "Nusxa oluvchilar",
-      "watchersHint": "Hujjatni ko‘radi, lekin qaror qilmaydi.",
+      "approvers": "Kelişuvçilar",
+      "approversHint": "Marşrut bosqiçlaridan oldin, tanlangan tartibda kelişadi.",
+      "watchers": "Nusxa oluvçilar",
+      "watchersHint": "Hujjatni köradi, lekin qaror qilmaydi.",
       "choosePeople": "Xodimlarni tanlang"
     },
     "submit": {
-      "approval": "Kelishishga yuborish",
-      "draft": "Qoralamani saqlash",
-      "uploadWait": "Fayllar yuklanishini kuting",
+      "approval": "Kelişişga yuboriş",
+      "draft": "Qoralamani saqlaş",
+      "uploadWait": "Fayllar yuklanişini kuting",
       "handover": "Imzoga topşiriş",
       "sign": "Imzolaş"
     },
@@ -327,44 +327,44 @@
       "summary": "Belgilangan maydonlarni tuzating.",
       "subject": "Mavzuni kiriting.",
       "text": "Hujjat matnini yozing.",
-      "amount": "Summa noldan katta bo‘lishi kerak, masalan 1 500 000.",
-      "due": "«Muddat» o‘tmishda bo‘lishi mumkin emas.",
-      "recipient": "Tashkilotni röyxatdan tanlang yoki yangisini qöşing.",
-      "deal": "Loyiha topilmadi — boshqasini tanlang yoki bog‘lashni olib tashlang.",
+      "amount": "Summa noldan katta bölişi kerak, masalan 1 500 000.",
+      "due": "«Muddat» ötmişda bölişi mumkin emas.",
+      "recipient": "Taşkilotni röyxatdan tanlang yoki yangisini qöşing.",
+      "deal": "Loyiha topilmadi — boşqasini tanlang yoki boğlaşni olib taşlang.",
       "replyTo": "Bunday raqamli kiruvçi xat yöq. Kiruvçi xat raqamini tekşiring.",
-      "recipientEmail": "Manzil e-pochtasini tekshiring, masalan office@example.uz.",
+      "recipientEmail": "Manzil e-poçtasini tekşiring, masalan office@example.uz.",
       "signer": "Imzolovçini röyxatdan tanlang: tanlanganda imzo huquqi yöq.",
       "uploading": "Fayllar yuklanişini kuting."
     },
     "toast": {
       "draft": "Qoralama saqlandi",
-      "sent": "Kelishishga yuborildi: {{number}}",
+      "sent": "Kelişişga yuborildi: {{number}}",
       "handover": "Imzoga topşirildi.",
       "signReady": "Qoralama saqlandi — xatni kartoçkada imzolang."
     },
     "error": {
       "send": "Yuborilmadi: {{reason}}",
       "save": "Saqlanmadi: {{reason}}",
-      "savedNote": "Qoralama saqlandi, kiritilganlar yo‘qolmadi. Tuzatib, qayta yuboring.",
+      "savedNote": "Qoralama saqlandi, kiritilganlar yöqolmadi. Tuzatib, qayta yuboring.",
       "reasons": {
         "FORBIDDEN": "bu amal rolingizga berilmagan",
         "FORBIDDEN_SECTION": "«{{section}}» bölimiga kiriş yöq",
-        "eds_not_granted": "hujjatlar xizmatida huquqingiz yo‘q",
+        "eds_not_granted": "hujjatlar xizmatida huquqingiz yöq",
         "not_author": "hujjatni faqat muallifi tahrirlay oladi",
         "NOT_FOUND": "hujjat topilmadi",
-        "CONFLICT": "hujjat o‘zgargan, sahifani yangilang",
-        "invalid_state": "hujjat allaqachon yuborilgan yoki yopilgan, sahifani yangilang",
-        "VALIDATION_FAILED": "maydonlarni tekshiring",
-        "BACKEND_UNAVAILABLE": "hujjatlar xizmati javob bermayapti, birozdan so‘ng qayta urining",
+        "CONFLICT": "hujjat özgargan, sahifani yangilang",
+        "invalid_state": "hujjat allaqaçon yuborilgan yoki yopilgan, sahifani yangilang",
+        "VALIDATION_FAILED": "maydonlarni tekşiring",
+        "BACKEND_UNAVAILABLE": "hujjatlar xizmati javob bermayapti, birozdan söng qayta urining",
         "PAYLOAD_TOO_LARGE": "fayl 25 MBdan katta",
         "UNSUPPORTED_MEDIA_TYPE": "PDF, rasmlar va Office hujjatlari qabul qilinadi",
-        "REQUEST_TIMEOUT": "server o‘z vaqtida javob bermadi",
+        "REQUEST_TIMEOUT": "server öz vaqtida javob bermadi",
         "DEFAULT": "server xato qaytardi, qayta urining",
         "letterhead_missing": "kompaniya blanki berilmagan — administrator «Sozlamalar · Rekvizitlar va blanka»ni saqlaydi",
-        "no_body": "xatning blankdagi matni yo‘q",
+        "no_body": "xatning blankdagi matni yöq",
         "pdf_not_ready": "PDF hali tayyorlanmoqda",
-        "mail_in_progress": "yuborish davom etmoqda, natijani kuting",
-        "no_authority": "imzo vakolati hech kimga berilmagan",
+        "mail_in_progress": "yuboriş davom etmoqda, natijani kuting",
+        "no_authority": "imzo vakolati heç kimga berilmagan",
         "signature_required": "xat raqamni faqat imzolanganda oladi — uni imzoga topşiring",
         "no_signing_authority": "imzolovçida amaldagi imzo vakolati yöq",
         "author_cannot_sign": "muallif öz xatini imzolamaydi",
@@ -385,89 +385,89 @@
     },
     "loadDraft": "Qoralama yuklanmoqda…",
     "draftLoadError": {
-      "title": "Qoralamani ochib bo‘lmadi",
-      "text": "U yo‘q, sizga ko‘rinmaydi yoki server javob bermadi."
+      "title": "Qoralamani oçib bölmadi",
+      "text": "U yöq, sizga körinmaydi yoki server javob bermadi."
     },
     "notEditable": {
-      "title": "Bu hujjatni tahrirlab bo‘lmaydi",
-      "text": "Qoralamani va qayta ishlashga qaytarilgan hujjatni tahrirlash mumkin. Yuborilgan hujjat qarorni kutmoqda."
+      "title": "Bu hujjatni tahrirlab bölmaydi",
+      "text": "Qoralamani va qayta işlaşga qaytarilgan hujjatni tahrirlaş mumkin. Yuborilgan hujjat qarorni kutmoqda."
     },
     "toDocuments": "Hujjatlarga",
-    "forbiddenTitle": "Hujjat yaratib bo‘lmaydi",
+    "forbiddenTitle": "Hujjat yaratib bölmaydi",
     "replyTo": {
-      "label": "Kiruvchi xatga javoban",
+      "label": "Kiruvçi xatga javoban",
       "hint": "Kiruvçi xat raqami, masalan IN-112/26: xat imzolansa, «Javob tayyorlaş» topşiriği yopiladi."
     },
     "attention": {
       "label": "Adresat qatori",
-      "hint": "Şaxs tanlanganda töldiriladi; töğrilash mümkin"
+      "hint": "Şaxs tanlanganda töldiriladi; töğrilaş mümkin"
     },
     "email": {
-      "label": "Manzil e-pochtasi",
+      "label": "Manzil e-poçtasi",
       "hint": "Ixtiyoriy. E-poçta bölsa, xat imzolangaç blankdagi PDF bilan darhol yuboriladi.",
       "notConnected": "Hujjat aylanişi poçtasi ulanmagan: xat imzolanadi, lekin adresatga yuborilmaydi. Administratorga xabar bering."
     },
     "body": {
       "label": "Matn",
-      "hint": "Xatboshilar, ro‘yxatlar va jadvallar. Rekvizitlar, raqam, sana va imzoni kompaniya blanki qo‘shadi."
+      "hint": "Xatboşilar, röyxatlar va jadvallar. Rekvizitlar, raqam, sana va imzoni kompaniya blanki qöşadi."
     },
     "signatory": {
-      "name": "Imzolovchi",
-      "position": "Imzolovchining lavozimi",
-      "positionHint": "Maʼlumotnomadan; v. b. uchun özingiznikini yozing",
+      "name": "Imzolovçi",
+      "position": "Imzolovçining lavozimi",
+      "positionHint": "Maʼlumotnomadan; v. b. uçun özingiznikini yozing",
       "none": "Imzo huquqi bor xodim yöq",
-      "hint": "Bo‘sh — blankdagi imzolovchi: {{name}}, {{position}}.",
+      "hint": "Böş — blankdagi imzolovçi: {{name}}, {{position}}.",
       "hintNone": ""
     },
     "letterhead": {
-      "missing": "Kompaniya blanki berilmagan — xat PDF ini qurib bo‘lmaydi. Administrator «Sozlamalar · Rekvizitlar va blanka»ni saqlaydi.",
-      "open": "«Rekvizitlar va blanka»ni ochish"
+      "missing": "Kompaniya blanki berilmagan — xat PDF ini qurib bölmaydi. Administrator «Sozlamalar · Rekvizitlar va blanka»ni saqlaydi.",
+      "open": "«Rekvizitlar va blanka»ni oçiş"
     },
     "replySubject": "№ {{number}} ({{date}}) ga javob",
     "replySubjectNoDate": "№ {{number}} ga javob",
     "replySubjectOurs": "{{number}} ({{date}}) ga javob",
-    "replyPrefilled": "{{number}} dan to‘ldirildi: muxbir, pochta va mavzuni tekshiring.",
+    "replyPrefilled": "{{number}} dan töldirildi: muxbir, poçta va mavzuni tekşiring.",
     "title": {
-      "letter": "Chiquvchi xat",
-      "internal": "Ichki hujjat"
+      "letter": "Çiquvçi xat",
+      "internal": "Içki hujjat"
     },
     "steps": {
-      "aboutLetter": "Mavzu va qabul qiluvchi",
+      "aboutLetter": "Mavzu va qabul qiluvçi",
       "aboutInternal": "Mavzu",
       "body": "Matn va ilovalar",
-      "routeLetter": "Kelishish va imzo",
-      "routeInternal": "Kelishish",
-      "check": "Tekshirish va yuborish",
+      "routeLetter": "Kelişiş va imzo",
+      "routeInternal": "Kelişiş",
+      "check": "Tekşiriş va yuboriş",
       "replyTo": "{{number}} ga javob",
-      "currency": "so‘m",
+      "currency": "söm",
       "textFilled": "Matn yozilgan",
-      "textEmpty": "Matn hali yo‘q",
+      "textEmpty": "Matn hali yöq",
       "files_one": "{{count}} ta ilova",
       "files_few": "{{count}} ta ilova",
       "files_many": "{{count}} ta ilova",
       "files_other": "{{count}} ta ilova"
     },
     "handover": {
-      "from": "{{number}} xatini ishga topshirish: xat yuborilgach topshiriq yopiladi",
-      "done": "Xizmat xati {{number}} yuborildi, {{letter}} xati ishga topshirildi",
-      "failed": "Xat yuborildi, lekin topshiriq yopilmadi: {{reason}}"
+      "from": "{{number}} xatini işga topşiriş: xat yuborilgaç topşiriq yopiladi",
+      "done": "Xizmat xati {{number}} yuborildi, {{letter}} xati işga topşirildi",
+      "failed": "Xat yuborildi, lekin topşiriq yopilmadi: {{reason}}"
     },
     "assist": {
-      "draft": "Matnni tayyorlash",
-      "translate": "Ingliz tiliga tarjima qilish",
-      "draftTitle": "Xat matnini tayyorlash",
+      "draft": "Matnni tayyorlaş",
+      "translate": "Ingliz tiliga tarjima qiliş",
+      "draftTitle": "Xat matnini tayyorlaş",
       "brief": "Xat nima haqida",
-      "briefHint": "Masalan: shartnoma bo‘yicha yetkazib berish muddatini tasdiqlashni so‘rash",
-      "draftRun": "Tayyorlash",
-      "replaces": "Muharrirdagi matn almashtiriladi — keyin uni tuzatish mumkin",
+      "briefHint": "Masalan: şartnoma böyiça yetkazib beriş muddatini tasdiqlaşni söraş",
+      "draftRun": "Tayyorlaş",
+      "replaces": "Muharrirdagi matn almaştiriladi — keyin uni tuzatiş mumkin",
       "translateTitle": "Ingliz tiliga tarjima",
       "translation": "Tarjima",
-      "back": "Teskari tarjima — mazmunni tekshiring",
-      "insert": "Tarjimani qo‘yish",
-      "cancel": "Bekor qilish",
+      "back": "Teskari tarjima — mazmunni tekşiring",
+      "insert": "Tarjimani qöyiş",
+      "cancel": "Bekor qiliş",
       "pending": "Tarjima tayyorlanmoqda…",
-      "inserted": "Matn qo‘yildi — tekshiring",
-      "failed": "Yordamchi javob bermadi — matnni o‘zingiz yozing"
+      "inserted": "Matn qöyildi — tekşiring",
+      "failed": "Yordamçi javob bermadi — matnni özingiz yozing"
     },
     "person": {
       "label": "Kimga — şaxs",
@@ -477,21 +477,21 @@
   },
   "preview": {
     "title": "Blankdagi PDF",
-    "show": "PDF ni ko‘rsatish",
-    "refresh": "PDF ni yangilash",
-    "hint": "PDF ni server kompaniya blankida quradi — manzil aynan shu faylni oladi.",
-    "empty": "«PDF ni ko‘rsatish»ni bosing: xat qoralama sifatida saqlanadi va blankda paydo bo‘ladi.",
+    "show": "PDF ni körsatiş",
+    "refresh": "PDF ni yangilaş",
+    "hint": "PDF ni server kompaniya blankida quradi — manzil aynan şu faylni oladi.",
+    "empty": "«PDF ni körsatiş»ni bosing: xat qoralama sifatida saqlanadi va blankda paydo böladi.",
     "pending": "PDF tayyorlanmoqda…",
     "ready": "PDF tayyor · {{pages}} bet",
     "readyFinal": "Çiquvçi raqamli PDF tayyor · {{pages}} bet",
     "failed": "Xato: {{error}}",
     "failedNoReason": "Xato: PDF qurilmadi",
-    "retry": "Qayta urinish",
-    "download": "PDF ni yuklab olish",
+    "retry": "Qayta uriniş",
+    "download": "PDF ni yuklab oliş",
     "name": "«{{subject}}» xati",
-    "requestFailed": "PDF so‘ralmadi: {{reason}}",
-    "loadFailed": "PDF ni yuklab bo‘lmadi. Qayta urining.",
+    "requestFailed": "PDF söralmadi: {{reason}}",
+    "loadFailed": "PDF ni yuklab bölmadi. Qayta urining.",
     "updating": "Yangilanmoqda…",
-    "emptyAuto": "Mavzu, qabul qiluvchi va matnni to‘ldiring — xat qoralama sifatida saqlanadi va blankda paydo bo‘ladi."
+    "emptyAuto": "Mavzu, qabul qiluvçi va matnni töldiring — xat qoralama sifatida saqlanadi va blankda paydo böladi."
   }
 }

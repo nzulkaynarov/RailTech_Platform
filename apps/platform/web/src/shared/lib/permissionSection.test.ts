@@ -12,7 +12,7 @@ describe("missingSectionName", () => {
     const error = forbidden({ permission: "letters.resolve" });
     expect(missingSectionName(error, "ru")).toBe("Документы · Входящие · резолюция");
     expect(missingSectionName(error, "en")).toBe("Documents · Incoming · resolution");
-    expect(missingSectionName(error, "uz")).toBe("Hujjatlar · Kiruvchi · rezolyutsiya");
+    expect(missingSectionName(error, "uz")).toBe("Hujjatlar · Kiruvçi · rezolyutsiya");
   });
 
   it("нет кода, неизвестный код или не 403 — раздела нет, код не показывается", () => {

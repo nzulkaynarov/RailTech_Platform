@@ -26,7 +26,7 @@ STACKED: dict[Lang, dict[str, str]] = {
 }
 COLUMNS: dict[Lang, dict[str, str]] = {
     "ru": {"no": "№", "name": "Наименование", "unit": "Ед.", "qty": "Кол-во", "price": "Цена", "amount": "Сумма"},
-    "uz": {"no": "№", "name": "Nomi", "unit": "Oʻlch.", "qty": "Miqdori", "price": "Narxi", "amount": "Summasi"},
+    "uz": {"no": "№", "name": "Nomi", "unit": "Ölç.", "qty": "Miqdori", "price": "Narxi", "amount": "Summasi"},
     "en": {"no": "No.", "name": "Description", "unit": "Unit", "qty": "Qty", "price": "Price", "amount": "Amount"},
 }
 TOTALS: dict[Lang, dict[str, str]] = {
@@ -41,10 +41,10 @@ TOTALS: dict[Lang, dict[str, str]] = {
     "uz": {
         "subtotal": "QQSsiz summa",
         "vat": "QQS",
-        "total": "Toʻlovga jami",
-        "paid": "Toʻlangan",
-        "balance": "Toʻlov qoldigʻi",
-        "words": "Summa soʻz bilan",
+        "total": "Tölovga jami",
+        "paid": "Tölangan",
+        "balance": "Tölov qoldiği",
+        "words": "Summa söz bilan",
     },
     "en": {
         "subtotal": "Subtotal excl. VAT",
@@ -57,7 +57,7 @@ TOTALS: dict[Lang, dict[str, str]] = {
 }
 PAYMENT: dict[Lang, dict[str, str]] = {
     "ru": {"title": "Платёжные реквизиты", "recipient": "Получатель", "inn": "ИНН", "purpose": "Назначение платежа"},
-    "uz": {"title": "Toʻlov rekvizitlari", "recipient": "Qabul qiluvchi", "inn": "STIR", "purpose": "Toʻlov maqsadi"},
+    "uz": {"title": "Tölov rekvizitlari", "recipient": "Qabul qiluvçi", "inn": "STIR", "purpose": "Tölov maqsadi"},
     "en": {"title": "Payment details", "recipient": "Beneficiary", "inn": "TIN", "purpose": "Payment reference"},
 }
 

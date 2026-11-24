@@ -13,7 +13,7 @@ describe('смена языка', () => {
 
     await user.click(screen.getByRole('button', { name: 'Özbekça' }));
     expect(await screen.findByRole('heading', { level: 1, name: 'Profil' })).toBeInTheDocument();
-    expect(screen.getByRole('navigation', { name: 'Asosiy boʻlimlar' })).toBeInTheDocument();
+    expect(screen.getByRole('navigation', { name: 'Asosiy bölimlar' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Özbekça' })).toHaveAttribute('aria-pressed', 'true');
     expect(window.localStorage.getItem(LANGUAGE_STORAGE_KEY)).toBe('uz');
     expect(document.documentElement.lang).toBe('uz');

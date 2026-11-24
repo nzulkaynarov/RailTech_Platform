@@ -4,7 +4,7 @@
     "terms": "Foydalaniş şartlari (oferta)",
     "privacy": "Şaxsga doir maʼlumotlarga işlov beriş siyosati"
   },
-  "noneYet": "Hozircha hech narsa eʼlon qilinmagan — kabinet qabul qilmasdan ochiq. Eʼlon qilingandan keyin har bir kontakt kirişda matnni qabul qiladi.",
+  "noneYet": "Hozirça heç narsa eʼlon qilinmagan — kabinet qabul qilmasdan oçiq. Eʼlon qilingandan keyin har bir kontakt kirişda matnni qabul qiladi.",
   "loadError": "Tahrirlarni yuklab bölmadi",
   "loadErrorText": "Ulanişni tekşirib, qayta urinib köring.",
   "retry": "Qayta urinib köriş",
@@ -31,7 +31,7 @@
   },
   "languages": {
     "ru": "Русский",
-    "uz": "Oʻzbekcha",
+    "uz": "Özbekça",
     "en": "English"
   },
   "editions": {
@@ -117,7 +117,7 @@
       "document": "Hujjat",
       "language": "Til"
     },
-    "empty": "Hozircha qabullar yöq",
+    "empty": "Hozirça qabullar yöq",
     "emptyText": "Eʼlon qilingandan keyin kontaktlar kabinetga kirişni boşlaganda paydo böladi.",
     "noMatch": "Heç narsa topilmadi",
     "noMatchText": "Tahrir yoki qidiruvni özgartiring."

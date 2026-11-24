@@ -1,31 +1,31 @@
 {
   "page": {
     "title": "Harakatlar tarixi",
-    "subtitle": "Kim, nimani va qachon o‘zgartirgan. Yozuvlar faqat o‘qiladi."
+    "subtitle": "Kim, nimani va qaçon özgartirgan. Yozuvlar faqat öqiladi."
   },
   "filters": {
     "label": "Jurnal filtrlari",
     "actor": "Muallif",
-    "allActors": "Barcha mualliflar",
+    "allActors": "Barça mualliflar",
     "action": "Amal",
-    "allActions": "Barcha amallar",
+    "allActions": "Barça amallar",
     "entity": "Obyekt",
-    "allEntities": "Barcha obyektlar",
+    "allEntities": "Barça obyektlar",
     "from": "Sanadan",
-    "to": "Sanagacha",
-    "logins": "Tizimga kirishlarni ko'rsatish",
-    "reset": "Filtrlarni tozalash"
+    "to": "Sanagaça",
+    "logins": "Tizimga kirişlarni körsatiş",
+    "reset": "Filtrlarni tozalaş"
   },
   "count": "Yozuvlar: {{count}}",
   "columns": {
-    "when": "Qachon",
+    "when": "Qaçon",
     "actor": "Kim",
     "action": "Nima qilingan",
     "entity": "Nima ustida"
   },
   "listLabel": "Audit jurnali yozuvlari",
   "pager": "Jurnal sahifalari",
-  "open": "Yozuvni ochish: {{action}}, {{when}}",
+  "open": "Yozuvni oçiş: {{action}}, {{when}}",
   "actorKind": {
     "system": "Tizim",
     "bot": "Bot",
@@ -36,139 +36,139 @@
     "withName": "{{type}}: {{name}}"
   },
   "empty": {
-    "title": "Hozircha yozuvlar yo'q",
-    "text": "Bu yerda har bir o'zgarish paydo bo'ladi: kim rol bergan, parolni tiklagan, sozlama yoki ulanishni o'zgartirgan — sana va vaqt bilan."
+    "title": "Hozirça yozuvlar yöq",
+    "text": "Bu yerda har bir özgariş paydo böladi: kim rol bergan, parolni tiklagan, sozlama yoki ulanişni özgartirgan — sana va vaqt bilan."
   },
   "noMatch": {
-    "title": "Bu filtrlar bo'yicha yozuvlar yo'q",
-    "text": "Muallif, amal yoki davrni o'zgartiring yoki filtrlarni tozalang.",
-    "action": "Filtrlarni tozalash"
+    "title": "Bu filtrlar böyiça yozuvlar yöq",
+    "text": "Muallif, amal yoki davrni özgartiring yoki filtrlarni tozalang.",
+    "action": "Filtrlarni tozalaş"
   },
   "loadError": {
-    "title": "Jurnalni yuklab bo'lmadi",
-    "text": "Jurnalni CRM saqlaydi. So'rovni takrorlang; xato davom etsa, Sozlamalar · Ulanishlar bo‘limida CRM ni tekshiring.",
-    "retry": "Takrorlash"
+    "title": "Jurnalni yuklab bölmadi",
+    "text": "Jurnalni CRM saqlaydi. Sörovni takrorlang; xato davom etsa, Sozlamalar · Ulanişlar bölimida CRM ni tekşiring.",
+    "retry": "Takrorlaş"
   },
   "card": {
     "title": "Jurnal yozuvi",
-    "hint": "Jurnaldan yozuvni tanlang — bu yerda tafsilotlar paydo bo'ladi: kim, qachon, aynan nima o'zgardi.",
+    "hint": "Jurnaldan yozuvni tanlang — bu yerda tafsilotlar paydo böladi: kim, qaçon, aynan nima özgardi.",
     "hintTitle": "Yozuv tanlanmagan",
     "notFound": "Bu sahifada yozuv topilmadi",
-    "when": "Qachon",
+    "when": "Qaçon",
     "actor": "Kim",
     "action": "Nima qilingan",
     "entity": "Nima ustida",
-    "ip": "Kirish manzili",
-    "changes": "Nima o'zgardi",
-    "noChanges": "Bu amal uchun «oldin» va «keyin» qiymatlari yozilmaydi.",
+    "ip": "Kiriş manzili",
+    "changes": "Nima özgardi",
+    "noChanges": "Bu amal uçun «oldin» va «keyin» qiymatlari yozilmaydi.",
     "from": "oldin",
     "to": "keyin",
-    "open": "Ochish: {{name}}"
+    "open": "Oçiş: {{name}}"
   },
   "values": {
     "yes": "Ha",
-    "no": "Yo'q",
-    "none": "ko'rsatilmagan"
+    "no": "Yöq",
+    "none": "körsatilmagan"
   },
   "role": {
     "created": "«{{name}}» roli yaratildi",
-    "updated": "Rol o'zgartirildi",
-    "deleted": "Rol o'chirildi",
+    "updated": "Rol özgartirildi",
+    "deleted": "Rol öçirildi",
     "renamed": "Nomi: «{{from}}» → «{{to}}»",
-    "descriptionChanged": "Tavsif o'zgartirildi",
+    "descriptionChanged": "Tavsif özgartirildi",
     "section": "{{section}}: {{from}} → {{to}}",
     "sectionNew": "{{section}}: {{to}}",
-    "fieldShown": "«{{field}}» maydoni: ko'rinadigan bo'ladi",
-    "fieldHidden": "«{{field}}» maydoni: yashirilgan",
-    "nothing": "Rol mazmuni o'zgarmadi.",
+    "fieldShown": "«{{field}}» maydoni: körinadigan böladi",
+    "fieldHidden": "«{{field}}» maydoni: yaşirilgan",
+    "nothing": "Rol mazmuni özgarmadi.",
     "level": {
-      "hidden": "Yashirin",
-      "read": "Faqat o'qish",
-      "full": "To'liq ruxsat"
+      "hidden": "Yaşirin",
+      "read": "Faqat öqiş",
+      "full": "Töliq ruxsat"
     },
-    "noSections": "Bo'limlar yo'q"
+    "noSections": "Bölimlar yöq"
   },
   "roleJournal": {
     "title": "«{{name}}» roli jurnali",
-    "label": "Rol o'zgarishlari",
-    "hint": "Rolda kim, qachon va nimani o'zgartirgan. Yozuvlar faqat o'qiladi.",
+    "label": "Rol özgarişlari",
+    "hint": "Rolda kim, qaçon va nimani özgartirgan. Yozuvlar faqat öqiladi.",
     "by": "{{when}} · {{who}}",
     "unknownAuthor": "muallif yozilmagan",
-    "empty": "Hozircha o'zgarishlar bo'lmagan",
-    "emptyText": "Tizim rollarini Platforma katalogi belgilaydi, ular o'zgarmaydi. Administrator yaratgan rolda bu yerda yaratilishi va har bir saqlash paydo bo'ladi.",
-    "error": "Rol jurnalini yuklab bo'lmadi",
-    "errorText": "Jurnalni CRM saqlaydi. So'rovni takrorlang.",
-    "retry": "Takrorlash",
-    "more": "Yana ko'rsatish",
+    "empty": "Hozirça özgarişlar bölmagan",
+    "emptyText": "Tizim rollarini Platforma katalogi belgilaydi, ular özgarmaydi. Administrator yaratgan rolda bu yerda yaratilişi va har bir saqlaş paydo böladi.",
+    "error": "Rol jurnalini yuklab bölmadi",
+    "errorText": "Jurnalni CRM saqlaydi. Sörovni takrorlang.",
+    "retry": "Takrorlaş",
+    "more": "Yana körsatiş",
     "all": "Butun jurnal"
   },
   "resetPassword": {
-    "button": "Parolni tiklash",
-    "title": "Parolni tiklash",
-    "method": "Yangi parolni qanday yetkazish",
-    "byEmail": "Pochta orqali",
-    "byTemporary": "Vaqtinchalik parol bilan",
-    "whatHappens": "Nima bo'ladi",
+    "button": "Parolni tiklaş",
+    "title": "Parolni tiklaş",
+    "method": "Yangi parolni qanday yetkaziş",
+    "byEmail": "Poçta orqali",
+    "byTemporary": "Vaqtinçalik parol bilan",
+    "whatHappens": "Nima böladi",
     "step1": "Xodim {{email}} manziliga bir soatlik “Parolni örnating” havolasi bilan xat oladi; xatda parol yöq, avvalgi parol amal qilmaydi.",
-    "step2": "Uning Platforma, CRM va ERP dagi barcha seanslari tugaydi.",
+    "step2": "Uning Platforma, CRM va ERP dagi barça seanslari tugaydi.",
     "step3": "U havola orqali yangi parol örnatmagunça holati — «Taklif qilingan».",
-    "confirm": "Tiklash va xat yuborish",
-    "cancel": "Bekor qilish",
-    "self": "O'z parolingizni bu yerda tiklab bo'lmaydi: avatar menyusidagi «Parolni almashtirish» ni tanlang.",
+    "confirm": "Tiklaş va xat yuboriş",
+    "cancel": "Bekor qiliş",
+    "self": "Öz parolingizni bu yerda tiklab bölmaydi: avatar menyusidagi «Parolni almaştiriş» ni tanlang.",
     "sent": "Havolali xat {{email}} manziliga yuborildi",
     "errors": {
-      "NOT_CONFIGURED": "Pochta ulanmagan, parol o'zgarmadi. Sozlamalar · Ulanishlar bo‘limida pochtani ulang va takrorlang.",
-      "SECRETS_KEY_MISSING": "Serverda sirlarni shifrlash kaliti yo'q: xat yuborib bo'lmaydi. Uni server sozlamalarida belgilang.",
+      "NOT_CONFIGURED": "Poçta ulanmagan, parol özgarmadi. Sozlamalar · Ulanişlar bölimida poçtani ulang va takrorlang.",
+      "SECRETS_KEY_MISSING": "Serverda sirlarni şifrlaş kaliti yöq: xat yuborib bölmaydi. Uni server sozlamalarida belgilang.",
       "TOO_MANY_REQUESTS": "Bu xodim uçun bir soatda havolalar juda köp. Keyinroq takrorlang.",
-      "SELF_RESET": "O'z parolingizni bu yerda tiklab bo'lmaydi: avatar menyusidagi «Parolni almashtirish» ni tanlang.",
+      "SELF_RESET": "Öz parolingizni bu yerda tiklab bölmaydi: avatar menyusidagi «Parolni almaştiriş» ni tanlang.",
       "FORBIDDEN": "Huquq yetarli emas: parolni administrator tiklaydi.",
-      "NOT_FOUND": "Xodim topilmadi. Ro'yxatni yangilang.",
-      "BACKEND_UNAVAILABLE": "CRM javob bermayapti. Parol o'zgarmadi, keyinroq takrorlang.",
-      "DEFAULT": "Parolni tiklab bo'lmadi. Qayta urinib ko'ring."
+      "NOT_FOUND": "Xodim topilmadi. Röyxatni yangilang.",
+      "BACKEND_UNAVAILABLE": "CRM javob bermayapti. Parol özgarmadi, keyinroq takrorlang.",
+      "DEFAULT": "Parolni tiklab bölmadi. Qayta urinib köring."
     },
-    "integrations": "Sozlamalar · Ulanishlarni ochish",
-    "temporaryHint": "Xatsiz: yangi parolni bir marta ko'rasiz va xodimga shaxsan yetkazasiz; avvalgisi amal qilmaydi.",
-    "confirmTemporary": "Parol berish"
+    "integrations": "Sozlamalar · Ulanişlarni oçiş",
+    "temporaryHint": "Xatsiz: yangi parolni bir marta körasiz va xodimga şaxsan yetkazasiz; avvalgisi amal qilmaydi.",
+    "confirmTemporary": "Parol beriş"
   },
   "profile": {
-    "notifications": "Bildirishnomalar",
-    "intro": "Telegramdagi bot shaxsiy xabarlari: nima va qayerga keladi.",
-    "loadError": "Bildirishnoma sozlamalarini yuklab bo'lmadi. Keyinroq takrorlang.",
-    "retry": "Takrorlash",
-    "linkHint": "Telegramni yuqoridagi «Bildirishnomalar uchun Telegram» blokida ulang. Ulanmaguncha obunalar ishlamaydi.",
-    "failed": "Botning oxirgi xabari yetib bormadi ({{time}}). Telegramda botni oching, «Start» ni bosing va sinov bildirishnomasini yuboring.",
+    "notifications": "Bildirişnomalar",
+    "intro": "Telegramdagi bot şaxsiy xabarlari: nima va qayerga keladi.",
+    "loadError": "Bildirişnoma sozlamalarini yuklab bölmadi. Keyinroq takrorlang.",
+    "retry": "Takrorlaş",
+    "linkHint": "Telegramni yuqoridagi «Bildirişnomalar uçun Telegram» blokida ulang. Ulanmagunça obunalar işlamaydi.",
+    "failed": "Botning oxirgi xabari yetib bormadi ({{time}}). Telegramda botni oçing, «Start» ni bosing va sinov bildirişnomasini yuboring.",
     "leads": "Meni kutayotgan lidlar",
-    "leadsHint": "Lid menejerga topshirilganda yoki mijoz javob berganda bot yozadi.",
+    "leadsHint": "Lid menejerga topşirilganda yoki mijoz javob berganda bot yozadi.",
     "decisions": "Qarorlar: imzolaş, kelişiş, rezolyutsiya, tölov, viza",
     "decisionsHint": "Bunday vazifa sizga kelganda bot yozadi. Qönğiroqçada u doim bor.",
     "tasks": "Başqa vazifalar: topşiriqlar, tanişiş, natijalar",
     "tasksHint": "Odatda öçiq: bunday vazifalar baş sahifada va qönğiroqçada körinadi.",
-    "system": "Tizim ogohlantirishlari",
+    "system": "Tizim ogohlantirişlari",
     "systemHint": "Ulanişlardagi nosozliklar — sozlamalarni yurituvçi uçun.",
     "saved": "Saqlandi",
-    "test": "Sinov bildirishnomasi",
-    "testHint": "Bot sizga Telegramga sinov xabarini yuboradi — shu bilan yetkazib berish ishlayotganiga ishonch hosil qilasiz.",
+    "test": "Sinov bildirişnomasi",
+    "testHint": "Bot sizga Telegramga sinov xabarini yuboradi — şu bilan yetkazib beriş işlayotganiga işonç hosil qilasiz.",
     "testSent": "Sinov xabari Telegramga yuborildi",
     "errors": {
-      "NOT_LINKED": "Telegram ulanmagan: uni yuqoridagi «Bildirishnomalar uchun Telegram» blokida ulang.",
-      "REFUSED": "Telegram xabarni qabul qilmadi. Botni oching, «Start» ni bosing va bloklanmaganiga ishonch hosil qiling.",
-      "NOT_CONFIGURED": "Bot ulanmagan. Administrator uni Sozlamalar · Ulanishlar bo‘limida ulaydi.",
+      "NOT_LINKED": "Telegram ulanmagan: uni yuqoridagi «Bildirişnomalar uçun Telegram» blokida ulang.",
+      "REFUSED": "Telegram xabarni qabul qilmadi. Botni oçing, «Start» ni bosing va bloklanmaganiga işonç hosil qiling.",
+      "NOT_CONFIGURED": "Bot ulanmagan. Administrator uni Sozlamalar · Ulanişlar bölimida ulaydi.",
       "BACKEND_UNAVAILABLE": "CRM javob bermayapti. Keyinroq takrorlang.",
-      "DEFAULT": "Amalni bajarib bo'lmadi. Qayta urinib ko'ring."
+      "DEFAULT": "Amalni bajarib bölmadi. Qayta urinib köring."
     }
   },
   "actions": {
     "auth": {
-      "login": "Kirish",
-      "login_failed": "Kirish muvaffaqiyatsiz"
+      "login": "Kiriş",
+      "login_failed": "Kiriş muvaffaqiyatsiz"
     },
     "sso": {
-      "exchange": "SSO orqali kirish (ERP dan)"
+      "exchange": "SSO orqali kiriş (ERP dan)"
     },
     "lead": {
       "take": "Lidni oldi",
       "reply": "Lidga javob berdi",
-      "note": "Eslatma qo'shdi",
+      "note": "Eslatma qöşdi",
       "snooze": "Lidni keyinga qoldirdi",
       "unsnooze": "Lidni qaytardi",
       "return_to_bot": "Lidni botga qaytardi",
@@ -176,49 +176,49 @@
       "close_lost": "Lidni rad bilan yopdi",
       "make_customer": "Lidni mijozga aylantirdi",
       "consent_recorded": "Lid roziligini qayd etdi",
-      "new_deal": "Yangi bitim ochdi",
-      "assign": "Lidni hamkasbiga topshirdi",
-      "acknowledge": "Lidni ma'lumot uchun qabul qildi",
-      "assist": "Javob uchun AI yordami",
-      "create": "Lidni qo'lda yaratdi",
-      "create_web": "Saytdan so'rov",
-      "web_request": "Saytdan takroriy so'rov",
-      "merge": "Lid kartochkalarini birlashtirdi",
-      "updated": "Lidni o'zgartirdi",
-      "hand_over": "Lidni izoh bilan menejerga topshirdi"
+      "new_deal": "Yangi bitim oçdi",
+      "assign": "Lidni hamkasbiga topşirdi",
+      "acknowledge": "Lidni maʼlumot uçun qabul qildi",
+      "assist": "Javob uçun AI yordami",
+      "create": "Lidni qölda yaratdi",
+      "create_web": "Saytdan sörov",
+      "web_request": "Saytdan takroriy sörov",
+      "merge": "Lid kartoçkalarini birlaştirdi",
+      "updated": "Lidni özgartirdi",
+      "hand_over": "Lidni izoh bilan menejerga topşirdi"
     },
     "deal": {
       "create": "Bitim yaratdi",
-      "update": "Bitimni o'zgartirdi",
-      "open": "Bitimni ochdi",
+      "update": "Bitimni özgartirdi",
+      "open": "Bitimni oçdi",
       "won": "Bitim yutildi",
       "lost": "Bitim yutqazildi"
     },
     "user": {
       "create": "Xodim yaratdi",
-      "update": "Xodimni o'zgartirdi",
+      "update": "Xodimni özgartirdi",
       "reset_password": "Parolni tikladi",
       "reset_password_email": "Parolni tikladi va havolani poçta orqali yubordi",
-      "change_password": "Parolni almashtirdi",
-      "notify": "Bildirishnomalarni o'zgartirdi",
-      "bootstrap_admin": "Birinchi administrator",
+      "change_password": "Parolni almaştirdi",
+      "notify": "Bildirişnomalarni özgartirdi",
+      "bootstrap_admin": "Birinçi administrator",
       "invite": "Taklif havolasini poçta orqali yubordi",
-      "hand_over": "Lid va mijozlarni topshirdi",
-      "password_reset_link": "Xatdagi havola orqali yangi parol oʻrnatdi",
-      "profile_update": "Oʻz profilini oʻzgartirdi",
+      "hand_over": "Lid va mijozlarni topşirdi",
+      "password_reset_link": "Xatdagi havola orqali yangi parol örnatdi",
+      "profile_update": "Öz profilini özgartirdi",
       "avatar_set": "Profil rasmini yukladi",
-      "avatar_removed": "Profil rasmini oʻchirdi",
+      "avatar_removed": "Profil rasmini öçirdi",
       "telegram_linked": "Telegramni ulagan",
       "telegram_unlinked": "Telegramni uzdi",
-      "deputy_set": "Yoʻqlik vaqtiga oʻrinbosar tayinladi",
-      "deputy_cleared": "Oʻrinbosarlikni olib tashladi",
-      "onboarding_done": "Platformadagi xush kelibsiz oynasini yopdi"
+      "deputy_set": "Yöqlik vaqtiga örinbosar tayinladi",
+      "deputy_cleared": "Örinbosarlikni olib taşladi",
+      "onboarding_done": "Platformadagi xuş kelibsiz oynasini yopdi"
     },
     "setup": {
-      "admin_created": "Birinchi administrator (sozlash ustasi)"
+      "admin_created": "Birinçi administrator (sozlaş ustasi)"
     },
     "system": {
-      "backup_requested": "Zaxira nusxasini so'radi"
+      "backup_requested": "Zaxira nusxasini söradi"
     },
     "platform_access": {
       "granted": "ERP ga ruxsat berdi",
@@ -226,55 +226,55 @@
     },
     "platform_role": {
       "create": "Platforma rolini yaratdi",
-      "update": "Platforma rolini o'zgartirdi",
-      "delete": "Platforma rolini o'chirdi"
+      "update": "Platforma rolini özgartirdi",
+      "delete": "Platforma rolini öçirdi"
     },
     "client": {
       "create": "Mijoz yaratdi",
-      "update": "Mijozni o'zgartirdi",
-      "link_telegram": "Mijoz Telegramini bog'ladi",
+      "update": "Mijozni özgartirdi",
+      "link_telegram": "Mijoz Telegramini boğladi",
       "unlink_telegram": "Mijoz Telegramini uzdi",
-      "contact_telegram_self_link": "Kontakt kabinetdan Telegramni oʻzi ulagan",
-      "contact_telegram_self_unlink": "Kontakt kabinetda Telegramni oʻzi uzgan",
-      "erp_handoff": "Mijozni ERP ga qayta uzatishni so'radi",
+      "contact_telegram_self_link": "Kontakt kabinetdan Telegramni özi ulagan",
+      "contact_telegram_self_unlink": "Kontakt kabinetda Telegramni özi uzgan",
+      "erp_handoff": "Mijozni ERP ga qayta uzatişni söradi",
       "erp_handoff_done": "Mijoz ERP ga uzatildi",
-      "erp_handoff_failed": "Mijozni ERP ga uzatish muvaffaqiyatsiz",
-      "partner_linked": "Hamkor mijozga aylandi (ERP kompaniyasi bilan bog'landi)",
-      "partner_conflict": "Hamkor mijozi: ERP bilan bog'lash ziddiyati",
-      "partner_pending": "ERP hamkori mijozga mos keldi: menejer tasdig'i kutilmoqda",
-      "partner_released": "Mijozning hamkor ERP kompaniyasiga bog'lanishi olib tashlandi",
-      "partner_request_closed": "Hamkor so'rovi yopildi: ERP kompaniyasi allaqachon mijoz bilan bog'langan",
-      "close_request": "Xizmat so'rovini yopdi",
-      "contact_create": "Mijoz kontaktini qo'shdi",
-      "contact_update": "Mijoz kontaktini o'zgartirdi",
-      "contact_delete": "Mijoz kontaktini o'chirdi"
+      "erp_handoff_failed": "Mijozni ERP ga uzatiş muvaffaqiyatsiz",
+      "partner_linked": "Hamkor mijozga aylandi (ERP kompaniyasi bilan boğlandi)",
+      "partner_conflict": "Hamkor mijozi: ERP bilan boğlaş ziddiyati",
+      "partner_pending": "ERP hamkori mijozga mos keldi: menejer tasdiği kutilmoqda",
+      "partner_released": "Mijozning hamkor ERP kompaniyasiga boğlanişi olib taşlandi",
+      "partner_request_closed": "Hamkor sörovi yopildi: ERP kompaniyasi allaqaçon mijoz bilan boğlangan",
+      "close_request": "Xizmat sörovini yopdi",
+      "contact_create": "Mijoz kontaktini qöşdi",
+      "contact_update": "Mijoz kontaktini özgartirdi",
+      "contact_delete": "Mijoz kontaktini öçirdi"
     },
     "document": {
       "upload": "Hujjat yukladi",
-      "update": "Hujjatni o'zgartirdi"
+      "update": "Hujjatni özgartirdi"
     },
     "kb": {
       "upload": "Bilimlar bazasiga yukladi",
-      "update": "Bilimlar bazasi hujjatini o'zgartirdi",
+      "update": "Bilimlar bazasi hujjatini özgartirdi",
       "reingest": "Bilimlar bazasini qayta indeksladi",
-      "product": "Mahsulotni o'zgartirdi",
-      "gap_resolve": "Bilim bo'shlig'ini yopdi",
-      "gap_ignore": "Bilim bo'shlig'ini e'tiborsiz qoldirdi",
-      "gap_reopen": "Bilim bo'shlig'ini qayta ochdi"
+      "product": "Mahsulotni özgartirdi",
+      "gap_resolve": "Bilim böşliğini yopdi",
+      "gap_ignore": "Bilim böşliğini eʼtiborsiz qoldirdi",
+      "gap_reopen": "Bilim böşliğini qayta oçdi"
     },
     "settings": {
-      "update": "Sozlamalarni o'zgartirdi"
+      "update": "Sozlamalarni özgartirdi"
     },
     "model": {
-      "test": "AI modelini tekshirdi",
-      "update": "AI modelini almashtirdi",
+      "test": "AI modelini tekşirdi",
+      "update": "AI modelini almaştirdi",
       "reset": "AI modelini standartga qaytardi",
-      "provider_key": "AI provayderi kalitini almashtirdi"
+      "provider_key": "AI provayderi kalitini almaştirdi"
     },
     "reply_template": {
-      "create": "Javob shablonini yaratdi",
-      "update": "Javob shablonini o'zgartirdi",
-      "delete": "Javob shablonini o'chirdi"
+      "create": "Javob şablonini yaratdi",
+      "update": "Javob şablonini özgartirdi",
+      "delete": "Javob şablonini öçirdi"
     },
     "sandbox": {
       "message": "Sandboxda botga yozdi",
@@ -283,9 +283,9 @@
     "integrations": {
       "telegram_token": "Telegram botini uladi",
       "erp": "ERP konnektorini sozladi",
-      "smtp": "«Pochta» konnektorini sozladi",
-      "erp_pair": "ERP bilan juftlashtirdi",
-      "erp_rotate": "ERP juftlash kalitlarini almashtirdi"
+      "smtp": "«Poçta» konnektorini sozladi",
+      "erp_pair": "ERP bilan juftlaştirdi",
+      "erp_rotate": "ERP juftlaş kalitlarini almaştirdi"
     },
     "export": {
       "leads": "Lidlarni CSV ga yukladi",
@@ -293,23 +293,23 @@
       "deals": "Bitimlarni CSV ga yukladi"
     },
     "external_service": {
-      "disable": "Tashqi xizmatni o'chirdi",
-      "enable": "Tashqi xizmatni yoqdi"
+      "disable": "Taşqi xizmatni öçirdi",
+      "enable": "Taşqi xizmatni yoqdi"
     },
     "staff_ticket": {
       "create": "Administratorga yozdi",
       "reply": "Xodim murojaatiga javob berdi",
-      "status": "Xodim murojaati holatini oʻzgartirdi"
+      "status": "Xodim murojaati holatini özgartirdi"
     },
     "company_article": {
       "create": "Kompaniya maqolasini yaratdi",
-      "update": "Kompaniya maqolasini oʻzgartirdi",
+      "update": "Kompaniya maqolasini özgartirdi",
       "publish": "Kompaniya maqolasini eʼlon qildi",
       "unpublish": "Kompaniya maqolasini eʼlondan oldi",
-      "delete": "Kompaniya maqolasini oʻchirdi"
+      "delete": "Kompaniya maqolasini öçirdi"
     },
     "console": {
-      "open": "Xizmat konsolini ochdi"
+      "open": "Xizmat konsolini oçdi"
     },
     "responsibility_zone": {
       "create": "Masʼuliyat zonasini yaratdi",
@@ -324,20 +324,20 @@
     "client": "Mijoz",
     "document": "Mijoz hujjati",
     "kb_document": "Bilimlar bazasi hujjati",
-    "kb_gap": "Bilim bo'shlig'i",
+    "kb_gap": "Bilim böşliği",
     "settings": "Sozlamalar",
     "product": "Mahsulot",
-    "service_request": "Xizmat so'rovi",
+    "service_request": "Xizmat sörovi",
     "system": "Tizim",
     "model": "AI modeli",
     "provider": "AI provayderi",
     "deal": "Bitim",
-    "reply_template": "Javob shabloni",
+    "reply_template": "Javob şabloni",
     "sandbox": "Bot sandboxi",
-    "export": "Yuklab olish",
-    "integration_secret": "Ulanish kaliti",
-    "integration": "Ulanish",
-    "external_service": "Tashqi xizmat",
+    "export": "Yuklab oliş",
+    "integration_secret": "Ulaniş kaliti",
+    "integration": "Ulaniş",
+    "external_service": "Taşqi xizmat",
     "platform_role": "Platforma roli",
     "staff_ticket": "Xodim murojaati",
     "company_article": "Kompaniya maqolasi",
@@ -345,7 +345,7 @@
     "responsibility_zone": "Masʼuliyat zonasi"
   },
   "fields": {
-    "email": "Elektron pochta",
+    "email": "Elektron poçta",
     "full_name": "Ism",
     "name": "Nomi",
     "description": "Tavsif",
@@ -357,13 +357,13 @@
     "tg_user_id": "Telegram",
     "position": "Lavozim",
     "language": "Til",
-    "access": "Bo'limlar bo'yicha huquqlar",
-    "restricted_fields": "Cheklangan maydonlar",
-    "stage": "Bosqich",
-    "assigned_user_id": "Mas'ul",
+    "access": "Bölimlar böyiça huquqlar",
+    "restricted_fields": "Çeklangan maydonlar",
+    "stage": "Bosqiç",
+    "assigned_user_id": "Masʼul",
     "owner_user_id": "Egasi",
     "host": "Server",
-    "from_email": "Jo'natuvchi manzili",
+    "from_email": "Jönatuvçi manzili",
     "base_url": "Manzil",
     "alias": "Model vazifasi",
     "model": "Model",
@@ -373,6 +373,6 @@
     "title": "Sarlavha",
     "status": "Holati",
     "body_length": "Matn uzunligi",
-    "pii_policy": "SI uchun ma’lumotlar himoyasi siyosati"
+    "pii_policy": "SI uçun maʼlumotlar himoyasi siyosati"
   }
 }

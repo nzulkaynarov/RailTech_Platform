@@ -1,29 +1,29 @@
 {
-  "subtitle": "Ulanishlar, kalitlar va xizmatlar holati. Sirlar saqlangandan keyin ko‘rsatilmaydi.",
-  "setupLink": "Platformani sozlash",
-  "viewOnly": "Faqat ko‘rish",
+  "subtitle": "Ulanişlar, kalitlar va xizmatlar holati. Sirlar saqlangandan keyin körsatilmaydi.",
+  "setupLink": "Platformani sozlaş",
+  "viewOnly": "Faqat köriş",
   "cardsTitle": "Xizmatlar",
-  "open": "Ochish",
-  "openAria": "Ochish: {{title}}",
-  "checkAria": "Tekshirish: {{title}}",
-  "refreshAria": "Yangilash: {{title}}",
-  "lastActivity": "Oxirgi tekshiruv: {{date}}",
+  "open": "Oçiş",
+  "openAria": "Oçiş: {{title}}",
+  "checkAria": "Tekşiriş: {{title}}",
+  "refreshAria": "Yangilaş: {{title}}",
+  "lastActivity": "Oxirgi tekşiruv: {{date}}",
   "spendToday": "Bugungi xarajat: {{amount}}",
-  "noActivity": "Hali tekshirilmagan",
+  "noActivity": "Hali tekşirilmagan",
   "loadError": {
-    "title": "Integratsiyalarni yuklab bo‘lmadi",
-    "text": "Server javob bermadi. Bir daqiqa kutib, qayta urinib ko‘ring — ma’lumotlar yo‘qolmagan."
+    "title": "Integratsiyalarni yuklab bölmadi",
+    "text": "Server javob bermadi. Bir daqiqa kutib, qayta urinib köring — maʼlumotlar yöqolmagan."
   },
   "status": {
-    "ok": "Ishlayapti",
+    "ok": "Işlayapti",
     "warn": "Diqqat",
     "fail": "Nosozlik",
-    "unknown": "Ma’lumot yo‘q",
+    "unknown": "Maʼlumot yöq",
     "off": "Ulanmagan"
   },
   "access": {
     "forbidden": "Ruxsat yetarli emas.",
-    "unavailable": "Server javob bermadi: karta ma’lumotlari hozir mavjud emas."
+    "unavailable": "Server javob bermadi: karta maʼlumotlari hozir mavjud emas."
   },
   "cards": {
     "erp": {
@@ -35,83 +35,83 @@
       "purpose": "Mijozlar boti, jamoa kanali va bot profili."
     },
     "mail": {
-      "title": "Pochta",
-      "purpose": "Xodim va mijozlarga xatlar uchun bitta jo‘natuvchi."
+      "title": "Poçta",
+      "purpose": "Xodim va mijozlarga xatlar uçun bitta jönatuvçi."
     },
     "services": {
-      "title": "Tashqi xizmatlar",
-      "purpose": "Barcha tashqi xizmatlar: holat, tekshiruv, o‘chirgich."
+      "title": "Taşqi xizmatlar",
+      "purpose": "Barça taşqi xizmatlar: holat, tekşiruv, öçirgiç."
     },
     "models": {
       "title": "AI modellari",
-      "purpose": "Modellar va kalitlar: muloqot, qidiruv, sifat tekshiruvi."
+      "purpose": "Modellar va kalitlar: muloqot, qidiruv, sifat tekşiruvi."
     },
     "spend": {
       "title": "Xarajatlar",
       "purpose": "AI modellari xarajati va byudjetlar."
     },
     "storage": {
-      "title": "Saqlash va zaxira nusxalar",
+      "title": "Saqlaş va zaxira nusxalar",
       "purpose": "Mijoz fayllari va bazalarning zaxira nusxalari."
     },
     "system": {
       "title": "Tizim holati",
-      "purpose": "Baza, navbatlar, bot va modellar: hammasi ishlayaptimi."
+      "purpose": "Baza, navbatlar, bot va modellar: hammasi işlayaptimi."
     }
   },
   "notes": {
     "all_ok": "Hammasi joyida",
     "problems": "Diqqat talab qiladi: {{count}}",
     "not_configured": "Hali ulanmagan",
-    "paused": "Qo‘lda o‘chirilgan",
-    "rotation_pending": "Yangi kalitlarga o‘tish davom etmoqda",
+    "paused": "Qölda öçirilgan",
+    "rotation_pending": "Yangi kalitlarga ötiş davom etmoqda",
     "backup_stale": "Oxirgi nusxa eskirgan",
-    "no_backups": "Hali nusxalar yo‘q",
-    "bot_not_running": "Bot ishga tushirilmagan",
+    "no_backups": "Hali nusxalar yöq",
+    "bot_not_running": "Bot işga tuşirilmagan",
     "budget_near": "Xarajat limitga yaqin",
-    "budget_over": "Xarajat limiti oshib ketdi",
-    "no_data": "Ma’lumot yo‘q"
+    "budget_over": "Xarajat limiti oşib ketdi",
+    "no_data": "Maʼlumot yöq"
   },
   "check": {
-    "result": "Tekshirildi: {{status}}",
-    "refreshed": "Ma’lumotlar yangilandi"
+    "result": "Tekşirildi: {{status}}",
+    "refreshed": "Maʼlumotlar yangilandi"
   },
   "attention": {
     "title": "Diqqat talab qiladi",
-    "empty": "Hammasi joyida: nosozliklar va ulanmagan xizmatlar yo‘q.",
-    "openAria": "Ochish: {{subject}}",
+    "empty": "Hammasi joyida: nosozliklar va ulanmagan xizmatlar yöq.",
+    "openAria": "Oçiş: {{subject}}",
     "severity": {
       "fail": "Nosozlik",
       "warn": "Diqqat",
       "setup": "Ulanmagan"
     },
     "notConfigured": {
-      "erp": "ERP ulanmagan: arizalar hisob-kitobga tushmaydi, TT va ombor mavjud emas.",
+      "erp": "ERP ulanmagan: arizalar hisob-kitobga tuşmaydi, TT va ombor mavjud emas.",
       "telegram": "Bot tokeni kiritilmagan: mijozlar Telegramda yoza olmaydi.",
-      "mail": "Pochta sozlanmagan: taklifnomalar va parolni tiklash xatlari yuborilmaydi.",
+      "mail": "Poçta sozlanmagan: taklifnomalar va parolni tiklaş xatlari yuborilmaydi.",
       "services": "Xizmat ulanmagan.",
       "models": "Model sozlanmagan.",
-      "spend": "Xarajatlar haqida ma’lumot yo‘q.",
-      "storage": "Saqlash sozlanmagan.",
-      "system": "Holat haqida ma’lumot yo‘q."
+      "spend": "Xarajatlar haqida maʼlumot yöq.",
+      "storage": "Saqlaş sozlanmagan.",
+      "system": "Holat haqida maʼlumot yöq."
     },
-    "backupStale": "Zaxira nusxa eskirgan yoki mavjud emas: zaxira xizmatini tekshiring.",
-    "rotationPending": "Yangi kalitlarga o‘tish davom etmoqda: eskilari hali ishlaydi, keyin o‘chadi.",
-    "botNotRunning": "Bot ishga tushirilmagan.",
-    "paused": "Xizmat qo‘lda o‘chirilgan.",
-    "budget_over": "Limit oshib ketdi:",
+    "backupStale": "Zaxira nusxa eskirgan yoki mavjud emas: zaxira xizmatini tekşiring.",
+    "rotationPending": "Yangi kalitlarga ötiş davom etmoqda: eskilari hali işlaydi, keyin öçadi.",
+    "botNotRunning": "Bot işga tuşirilmagan.",
+    "paused": "Xizmat qölda öçirilgan.",
+    "budget_over": "Limit oşib ketdi:",
     "budget_near": "Limitga yaqin:"
   },
   "common": {
-    "check": "Tekshirish",
-    "refresh": "Yangilash",
-    "cancel": "Bekor qilish",
-    "close": "Yopish",
-    "retry": "Qayta urinish",
+    "check": "Tekşiriş",
+    "refresh": "Yangilaş",
+    "cancel": "Bekor qiliş",
+    "close": "Yopiş",
+    "retry": "Qayta uriniş",
     "password": "Administrator parolingiz",
-    "passwordHint": "Tasdiqlash uchun kerak; hech qayerda saqlanmaydi.",
-    "readOnly": "Faqat ko‘rish.",
-    "secretsOff": "Serverda sirlarni shifrlash kaliti kiritilmagan: kalit va parollarni saqlab bo‘lmaydi. Uni server sozlamalarida kiriting.",
+    "passwordHint": "Tasdiqlaş uçun kerak; heç qayerda saqlanmaydi.",
+    "readOnly": "Faqat köriş.",
+    "secretsOff": "Serverda sirlarni şifrlaş kaliti kiritilmagan: kalit va parollarni saqlab bölmaydi. Uni server sozlamalarida kiriting.",
     "notSet": "kiritilmagan",
     "set": "kiritilgan",
     "tableScroll": "{{name}}: jadval, gorizontal aylantiriladi",
@@ -119,103 +119,103 @@
   },
   "panel": {
     "forbidden": {
-      "title": "Rolingizga ochiq emas",
+      "title": "Rolingizga oçiq emas",
       "text": "Ruxsat yetarli emas."
     },
     "loadError": {
-      "title": "Yuklab bo‘lmadi",
-      "text": "So‘rov rad etildi. Sahifani yangilang yoki keyinroq urinib ko‘ring."
+      "title": "Yuklab bölmadi",
+      "text": "Sörov rad etildi. Sahifani yangilang yoki keyinroq urinib köring."
     },
     "unavailable": {
       "title": "Server javob bermayapti",
-      "text": "Ma’lumotlar vaqtincha mavjud emas. Bir daqiqadan keyin qayta urinib ko‘ring."
+      "text": "Maʼlumotlar vaqtinça mavjud emas. Bir daqiqadan keyin qayta urinib köring."
     }
   },
   "erp": {
     "state": "Holat",
     "stateValue": {
       "paired": "Juftlangan",
-      "configured": "Sozlangan, juftlash tasdiqlanmagan",
+      "configured": "Sozlangan, juftlaş tasdiqlanmagan",
       "none": "Ulanmagan"
     },
     "url": "Manzil",
     "token": "CRM → ERP tokeni",
     "webhook": "Hodisalar siri",
     "updated": "Kalitlar yangilangan",
-    "rotationUntil": "Eski kalitlar quyidagi vaqtgacha ishlaydi",
-    "rotationNow": "o‘tish davri davom etmoqda",
+    "rotationUntil": "Eski kalitlar quyidagi vaqtgaça işlaydi",
+    "rotationNow": "ötiş davri davom etmoqda",
     "check": {
-      "button": "Aloqani tekshirish",
+      "button": "Aloqani tekşiriş",
       "ok": "ERP javob beryapti",
-      "degraded": "ERP ogohlantirishlar bilan javob beryapti",
-      "rateLimited": "ERP {{seconds}} soniya kutib, qayta urinishni so‘rayapti",
+      "degraded": "ERP ogohlantirişlar bilan javob beryapti",
+      "rateLimited": "ERP {{seconds}} soniya kutib, qayta urinişni sörayapti",
       "version": "versiya {{version}}",
       "latency": "{{ms}} ms",
-      "migrations": "migratsiyalar qo‘llanmagan",
+      "migrations": "migratsiyalar qöllanmagan",
       "queue": "vazifalar navbati javob bermayapti"
     },
     "pair": {
-      "button": "ERPni ulash",
-      "reconnect": "Qayta ulash",
-      "title": "ERPni ulash",
+      "button": "ERPni ulaş",
+      "reconnect": "Qayta ulaş",
+      "title": "ERPni ulaş",
       "url": "ERP manzili",
-      "urlHint": "Masalan, shu serverdagi ichki manzil.",
-      "submit": "ERPni ulash",
-      "step1": "Tizim ikkala yo‘nalish uchun almashinuv kalitlarini o‘zi yaratadi va ERPga uzatadi.",
-      "step2": "Kalitlar shifrlangan holda saqlanadi; ularni ko‘rmaysiz — faqat oxirgi 4 belgi.",
-      "step3": "Shundan so‘ng aloqa darhol tekshiriladi, natija shu yerda chiqadi.",
-      "done": "Juftlash bajarildi."
+      "urlHint": "Masalan, şu serverdagi içki manzil.",
+      "submit": "ERPni ulaş",
+      "step1": "Tizim ikkala yönaliş uçun almaşinuv kalitlarini özi yaratadi va ERPga uzatadi.",
+      "step2": "Kalitlar şifrlangan holda saqlanadi; ularni körmaysiz — faqat oxirgi 4 belgi.",
+      "step3": "Şundan söng aloqa darhol tekşiriladi, natija şu yerda çiqadi.",
+      "done": "Juftlaş bajarildi."
     },
     "rotate": {
-      "button": "Kalitni almashtirish",
-      "title": "ERP kalitlarini almashtirish",
-      "submit": "Kalitlarni yangilash",
+      "button": "Kalitni almaştiriş",
+      "title": "ERP kalitlarini almaştiriş",
+      "submit": "Kalitlarni yangilaş",
       "step1": "Tizim yangi kalitlarni yaratadi va ERPga uzatadi.",
-      "step2": "Eski kalitlar o‘tish davrida ishlashda davom etadi, keyin o‘zi o‘chadi — almashinuv uzilmaydi.",
-      "step3": "Aloqa darhol tekshiriladi; ERP kalitlarni qabul qilmasa, eskilari kuchda qoladi.",
+      "step2": "Eski kalitlar ötiş davrida işlaşda davom etadi, keyin özi öçadi — almaşinuv uzilmaydi.",
+      "step3": "Aloqa darhol tekşiriladi; ERP kalitlarni qabul qilmasa, eskilari kuçda qoladi.",
       "done": "Kalitlar yangilandi."
     }
   },
   "telegram": {
-    "configureBot": "Botni sozlash",
-    "viewBot": "Bot sozlamalarini ochish",
+    "configureBot": "Botni sozlaş",
+    "viewBot": "Bot sozlamalarini oçiş",
     "bot": "Bot",
     "running": "Bot holati",
     "runningValue": {
-      "yes": "ishlayapti",
-      "no": "ishlamayapti — bot jarayoni ishga tushirilmagan",
-      "none": "ishlamayapti — token kiritilmagan"
+      "yes": "işlayapti",
+      "no": "işlamayapti — bot jarayoni işga tuşirilmagan",
+      "none": "işlamayapti — token kiritilmagan"
     },
     "updated": "Token yangilangan",
     "lastError": "Oxirgi xato",
     "lastErrorCode": {
-      "bot_process_never_started": "Bot jarayoni serverda hali ishga tushirilmagan.",
+      "bot_process_never_started": "Bot jarayoni serverda hali işga tuşirilmagan.",
       "bot_process_down": "Serverdagi bot jarayoni javob bermayapti."
     },
     "token": {
       "current": "Token",
-      "set": "Tokenni kiritish",
-      "change": "Tokenni almashtirish",
+      "set": "Tokenni kiritiş",
+      "change": "Tokenni almaştiriş",
       "title": "Bot tokeni",
       "label": "Bot tokeni",
-      "hint": "BotFather beradi. Saqlangandan keyin token ko‘rsatilmaydi.",
-      "submit": "Tokenni saqlash",
-      "step1": "Token Telegramda tekshiriladi.",
-      "step2": "Token shifrlangan holda saqlanadi; ekranda oxirgi 4 belgi qoladi.",
-      "step3": "Bot bir necha soniyaga qayta ishga tushadi: mijozlar xabarlari yo‘qolmaydi.",
+      "hint": "BotFather beradi. Saqlangandan keyin token körsatilmaydi.",
+      "submit": "Tokenni saqlaş",
+      "step1": "Token Telegramda tekşiriladi.",
+      "step2": "Token şifrlangan holda saqlanadi; ekranda oxirgi 4 belgi qoladi.",
+      "step3": "Bot bir neça soniyaga qayta işga tuşadi: mijozlar xabarlari yöqolmaydi.",
       "saved": "Token saqlandi"
     },
     "channel": {
       "title": "Jamoa kanali",
       "current": "Ulangan: {{title}}",
       "none": "Kanal ulanmagan.",
-      "empty": "Bot hozircha hech qanday chatni ko‘rmayapti. Uni jamoa chatiga qo‘shing va u yerga istalgan xabar yozing.",
-      "candidates": "Bot bor chatlar",
+      "empty": "Bot hozirça heç qanday çatni körmayapti. Uni jamoa çatiga qöşing va u yerga istalgan xabar yozing.",
+      "candidates": "Bot bor çatlar",
       "isCurrent": "Ulangan",
-      "connect": "Ulash",
-      "connectAria": "Kanalni ulash: {{title}}",
+      "connect": "Ulaş",
+      "connectAria": "Kanalni ulaş: {{title}}",
       "connected": "Kanal ulandi",
-      "detected": "Ko‘rilgan: {{date}}",
+      "detected": "Körilgan: {{date}}",
       "test": "Sinov xabari",
       "testSent": "Sinov xabari kanalga yuborildi"
     },
@@ -223,7 +223,7 @@
       "title": "Bot profili",
       "lang": {
         "ru": "Rus tili",
-        "uz": "O‘zbek tili",
+        "uz": "Özbek tili",
         "en": "Ingliz tili"
       },
       "fields": {
@@ -233,13 +233,13 @@
       },
       "counter": "{{count}} / {{max}} belgi",
       "tooLong": "Matn ruxsat etilganidan uzun: belgilangan maydonlarni qisqartiring.",
-      "submit": "Saqlash va e’lon qilish",
+      "submit": "Saqlaş va eʼlon qiliş",
       "saved": "Bot profili saqlandi",
-      "publishedOk": "Telegramda e’lon qilindi: {{date}}",
+      "publishedOk": "Telegramda eʼlon qilindi: {{date}}",
       "publishError": {
-        "rate_limited": "Telegram {{seconds}} soniya kutishni so‘radi va profilni qabul qilmadi.",
-        "telegram_error": "Telegram profilni qabul qilmadi. Keyinroq urinib ko‘ring.",
-        "bot_not_running": "Bot ishga tushirilmagan: profil saqlandi, lekin e’lon qilinmadi."
+        "rate_limited": "Telegram {{seconds}} soniya kutişni söradi va profilni qabul qilmadi.",
+        "telegram_error": "Telegram profilni qabul qilmadi. Keyinroq urinib köring.",
+        "bot_not_running": "Bot işga tuşirilmagan: profil saqlandi, lekin eʼlon qilinmadi."
       }
     }
   },
@@ -251,196 +251,196 @@
     },
     "server": "Server",
     "check": {
-      "button": "Aloqani tekshirish",
-      "ok": "Server ulanish va kirishni qabul qildi",
-      "noAuth": "Ulanish bor, lekin kirish bajarilmadi",
+      "button": "Aloqani tekşiriş",
+      "ok": "Server ulaniş va kirişni qabul qildi",
+      "noAuth": "Ulaniş bor, lekin kiriş bajarilmadi",
       "details": "{{server}} · {{ms}} ms"
     },
     "test": {
-      "button": "Yuborishni tekshirish",
-      "waiting": "{{email}} manziliga xat navbatda — pochta serveri javobini kutyapmiz…",
-      "late": "{{email}} manziliga xat hali navbatda. Natija quyidagi jurnalda chiqadi.",
-      "sent": "{{email}} manziliga xat yuborildi: pochta serveri uni qabul qildi.",
+      "button": "Yuborişni tekşiriş",
+      "waiting": "{{email}} manziliga xat navbatda — poçta serveri javobini kutyapmiz…",
+      "late": "{{email}} manziliga xat hali navbatda. Natija quyidagi jurnalda çiqadi.",
+      "sent": "{{email}} manziliga xat yuborildi: poçta serveri uni qabul qildi.",
       "failed": "{{email}} manziliga xat yuborilmadi."
     },
     "settings": {
-      "button": "SMTPni sozlash",
+      "button": "SMTPni sozlaş",
       "title": "SMTP sozlamalari",
       "host": "Server (host)",
       "port": "Port",
-      "security": "Shifrlash",
+      "security": "Şifrlaş",
       "securityValue": {
         "starttls": "STARTTLS",
         "ssl": "SSL/TLS",
-        "none": "Shifrlashsiz"
+        "none": "Şifrlaşsiz"
       },
-      "fromEmail": "Jo‘natuvchi manzili",
-      "fromName": "Jo‘natuvchi nomi",
+      "fromEmail": "Jönatuvçi manzili",
+      "fromName": "Jönatuvçi nomi",
       "username": "Login",
       "smtpPassword": "SMTP paroli",
-      "smtpPasswordHint": "Avvalgisini o‘zgartirmaslik uchun bo‘sh qoldiring.",
-      "submit": "Sozlamalarni saqlash",
-      "saved": "Pochta sozlamalari saqlandi"
+      "smtpPasswordHint": "Avvalgisini özgartirmaslik uçun böş qoldiring.",
+      "submit": "Sozlamalarni saqlaş",
+      "saved": "Poçta sozlamalari saqlandi"
     },
     "log": {
-      "title": "Yetkazish jurnali",
-      "filter": "Ko‘rsatish",
-      "all": "Barcha xatlar",
+      "title": "Yetkaziş jurnali",
+      "filter": "Körsatiş",
+      "all": "Barça xatlar",
       "status": {
         "queued": "Navbatda",
         "sent": "Yuborilgan",
         "failed": "Xato",
-        "skipped_no_smtp": "O‘tkazib yuborilgan: pochta sozlanmagan"
+        "skipped_no_smtp": "Ötkazib yuborilgan: poçta sozlanmagan"
       },
-      "empty": "Jurnalda hozircha xatlar yo‘q.",
+      "empty": "Jurnalda hozirça xatlar yöq.",
       "error": "Sabab: {{error}}",
       "source": {
         "crm": "CRM",
         "erp": "ERP",
-        "eds": "Hujjat aylanishi"
+        "eds": "Hujjat aylanişi"
       },
       "attachments_one": "ilova: {{count}}",
       "attachments_other": "ilovalar: {{count}}",
       "bounce": "Yetib bormadi: {{reason}}"
     },
     "reason": {
-      "smtp_not_configured": "Pochta sozlanmagan — Sozlamalar · Ulanishlar · Pochta",
-      "secrets_key_missing": "Sirlarni shifrlash kaliti berilmagan",
-      "secrets_key_changed": "Sirlarni shifrlash kaliti o‘zgargan — xatni o‘qib bo‘lmaydi",
-      "rejected": "Pochta serveri xatni rad etdi",
-      "unavailable": "Pochta serveri mavjud emas",
-      "auth_failed": "Pochta serveriga kirib bo‘lmadi",
-      "tls_failed": "Himoyalangan ulanish o‘rnatilmadi",
-      "invalid_host": "Pochta serveri manzili noto‘g‘ri",
+      "smtp_not_configured": "Poçta sozlanmagan — Sozlamalar · Ulanişlar · Poçta",
+      "secrets_key_missing": "Sirlarni şifrlaş kaliti berilmagan",
+      "secrets_key_changed": "Sirlarni şifrlaş kaliti özgargan — xatni öqib bölmaydi",
+      "rejected": "Poçta serveri xatni rad etdi",
+      "unavailable": "Poçta serveri mavjud emas",
+      "auth_failed": "Poçta serveriga kirib bölmadi",
+      "tls_failed": "Himoyalangan ulaniş örnatilmadi",
+      "invalid_host": "Poçta serveri manzili notöğri",
       "attachment_unavailable": "Ilova mavjud emas",
       "attachment_mismatch": "Ilova yuborilgani bilan mos kelmadi",
       "attachment_too_large": "Ilova juda katta",
       "attachment_foreign_host": "Ilova havolasi platforma omboriga olib bormaydi",
-      "content_unreadable": "Xat matni shifrdan ochilmadi (tizimlar aloqa kaliti)",
-      "body_expired": "Xat matni allaqachon o‘chirilgan",
-      "queue": "Xatni navbatga qo‘yib bo‘lmadi"
+      "content_unreadable": "Xat matni şifrdan oçilmadi (tizimlar aloqa kaliti)",
+      "body_expired": "Xat matni allaqaçon öçirilgan",
+      "queue": "Xatni navbatga qöyib bölmadi"
     },
     "purpose": {
       "quote_sent": "Mijozga TK",
       "generated_document": "Mijozga hujjat",
-      "portal_magic_link": "Kabinetga kirish havolasi",
+      "portal_magic_link": "Kabinetga kiriş havolasi",
       "portal_invitation": "Kabinetga taklif",
       "invite_member": "Kabinet jamoasiga taklif",
-      "setup_password": "Parol o‘rnatish",
-      "reset_password": "Parolni tiklash",
-      "invoice_issued": "Hisob-faktura chiqarildi",
-      "payment_received": "To‘lov qabul qilindi",
-      "payment_reminder": "To‘lov eslatmasi",
-      "act_awaiting_acceptance": "Imzolash uchun dalolatnoma",
-      "quote_acceptance_code": "TK tasdiqlash kodi",
+      "setup_password": "Parol örnatiş",
+      "reset_password": "Parolni tiklaş",
+      "invoice_issued": "Hisob-faktura çiqarildi",
+      "payment_received": "Tölov qabul qilindi",
+      "payment_reminder": "Tölov eslatmasi",
+      "act_awaiting_acceptance": "Imzolaş uçun dalolatnoma",
+      "quote_acceptance_code": "TK tasdiqlaş kodi",
       "quote_accepted_contact": "TK qabul qilindi",
       "account_created_by_operator": "Hisob yaratildi",
       "invite": "Xodimga taklif",
-      "password_reset": "Vaqtinchalik parol",
-      "password_reset_link": "Parolni tiklash havolasi",
+      "password_reset": "Vaqtinçalik parol",
+      "password_reset_link": "Parolni tiklaş havolasi",
       "service_alert": "Nosozlik haqida xabar",
-      "telegram_linked": "Telegram bog‘landi",
-      "test": "Yuborishni tekshirish",
-      "outgoing_letter": "Chiquvchi xat",
+      "telegram_linked": "Telegram boğlandi",
+      "test": "Yuborişni tekşiriş",
+      "outgoing_letter": "Çiquvçi xat",
       "erp_mail": "ERP xati"
     },
     "inbound": {
-      "title": "Qabul: umumiy pochta qutisi (IMAP)",
-      "intro": "Har 2 daqiqada quti xatlari «Kiruvchi pochta»ga tushadi; serverda ular o‘zgarmaydi.",
+      "title": "Qabul: umumiy poçta qutisi (IMAP)",
+      "intro": "Har 2 daqiqada quti xatlari «Kiruvçi poçta»ga tuşadi; serverda ular özgarmaydi.",
       "on": "Ulangan",
       "off": "Ulanmagan",
       "mailbox": "Papka",
       "username": "Login (quti manzili)",
       "appPassword": "Ilova paroli",
-      "appPasswordHint": "Pochta sozlamalaridagi ilova paroli, quti paroli emas. Bo‘sh — avvalgisi.",
+      "appPasswordHint": "Poçta sozlamalaridagi ilova paroli, quti paroli emas. Böş — avvalgisi.",
       "host": "IMAP server",
-      "hostHint": "Masalan, imap.yandex.ru; bo‘sh — qabul o‘chirilgan",
+      "hostHint": "Masalan, imap.yandex.ru; böş — qabul öçirilgan",
       "securityValue": {
         "ssl": "SSL (port 993)",
         "starttls": "STARTTLS (port 143)"
       },
-      "assist": "Devonxona yordamchisi: xat turi va mazmuni tugma bilan, shaxsiy ma’lumotlarsiz",
-      "assistLabel": "Devonxona yordamchisi",
-      "assistOn": "Yoqilgan — «Taklif qilish» tugmasi bilan",
-      "assistOff": "O‘chirilgan",
-      "lastPoll": "Oxirgi so‘rov",
+      "assist": "Devonxona yordamçisi: xat turi va mazmuni tugma bilan, şaxsiy maʼlumotlarsiz",
+      "assistLabel": "Devonxona yordamçisi",
+      "assistOn": "Yoqilgan — «Taklif qiliş» tugmasi bilan",
+      "assistOff": "Öçirilgan",
+      "lastPoll": "Oxirgi sörov",
       "lastOk": "Muvaffaqiyatli, {{at}}",
       "lastError": "Xato: {{reason}}",
-      "check": "Qabulni tekshirish",
-      "checkOk": "Quti ochiladi: papkada {{count}} ta xat",
-      "button": "Qabulni sozlash",
-      "settings": "Pochta qabuli",
+      "check": "Qabulni tekşiriş",
+      "checkOk": "Quti oçiladi: papkada {{count}} ta xat",
+      "button": "Qabulni sozlaş",
+      "settings": "Poçta qabuli",
       "saved": "Qabul sozlamalari saqlandi",
       "reason": {
         "not_configured": "Qabul sozlanmagan: server, login va ilova parolini kiriting",
         "auth_failed": "Server login yoki ilova parolini qabul qilmadi — qayta kiriting",
-        "mailbox_missing": "Bunday papka yo‘q — odatda INBOX",
-        "invalid_host": "Server manzili noto‘g‘ri (masalan, imap.yandex.ru)",
-        "tls_failed": "Himoyalangan ulanib bo‘lmadi — port va shifrlashni tekshiring",
-        "unavailable": "IMAP server javob bermayapti — manzil va portni tekshiring"
+        "mailbox_missing": "Bunday papka yöq — odatda INBOX",
+        "invalid_host": "Server manzili notöğri (masalan, imap.yandex.ru)",
+        "tls_failed": "Himoyalangan ulanib bölmadi — port va şifrlaşni tekşiring",
+        "unavailable": "IMAP server javob bermayapti — manzil va portni tekşiring"
       },
       "folders": "Jildlar",
-      "foldersHint": "Odatda «Kiruvchi»; xatlar yoʻqolmasligi uchun «Spam» jildini belgilang",
-      "find": "Jildlarni topish",
+      "foldersHint": "Odatda «Kiruvçi»; xatlar yöqolmasligi uçun «Spam» jildini belgilang",
+      "find": "Jildlarni topiş",
       "findOk": "Topilgan jildlar: {{count}}",
       "spamFolder": "«Spam» jildi",
-      "spamNone": "Soʻralmasin",
+      "spamNone": "Söralmasin",
       "spamMark": "spam",
       "history": {
-        "title": "Davr uchun xatlarni yuklash",
+        "title": "Davr uçun xatlarni yuklaş",
         "period": "Davr",
         "days": "{{count}} kun",
-        "button": "Yuklash",
-        "hint": "3 kundan eski xatlar roʻyxatda «tarixdan» belgisi bilan boʻladi",
+        "button": "Yuklaş",
+        "hint": "3 kundan eski xatlar röyxatda «tarixdan» belgisi bilan böladi",
         "running": "Yuklanmoqda: {{found}} dan {{processed}}",
-        "searching": "Pochta qutisidan xatlar qidirilmoqda…",
+        "searching": "Poçta qutisidan xatlar qidirilmoqda…",
         "done": "Yangi xatlar yuklandi: {{found}} dan {{created}}",
         "limited": "Davrda 2000 dan ortiq xat bor — oxirgi 2000 tasi yuklandi. Qisqaroq davrni tanlang.",
-        "error": "Yuklash toʻxtadi: {{reason}}",
-        "again": "Qayta yuklash xavfsiz: yuklangan xatlar takrorlanmaydi."
+        "error": "Yuklaş töxtadi: {{reason}}",
+        "again": "Qayta yuklaş xavfsiz: yuklangan xatlar takrorlanmaydi."
       },
       "personal": "«Kimga»da xodim, quti nusxada — xat darhol unga",
       "personalLabel": "Bunday xat belgisi",
-      "personalLabelHint": "Ro‘yxat va kartochkada ko‘rinadi, 80 belgigacha",
-      "personalState": "«Shaxsan» xatlar",
+      "personalLabelHint": "Röyxat va kartoçkada körinadi, 80 belgigaça",
+      "personalState": "«Şaxsan» xatlar",
       "personalOn": "Darhol xodimga — «{{label}}» belgisi",
-      "personalOff": "O‘chirilgan — hammasi «Yangi»ga",
-      "trusted": "Ishonchli pochta serverlari",
-      "trustedHint": "Har qatorda bittadan (masalan, yandex.ru). Bo‘sh — IMAP manzili bo‘yicha pochta provayderi serverlariga ishonamiz (Yandex, Google, Microsoft 365, Mail.ru, Zoho). Kiritilgan ro‘yxat buni almashtiradi. Jo‘natuvchini tasdiqlangan deb faqat shunday server belgilaydi: xatdagi soxta sarlavha hisobga olinmaydi.",
-      "trustedNone": "Yo‘q — IMAP manzili ma’lum provayderniki emas, jo‘natuvchi qoidalari qo‘llanmaydi",
-      "trustedDerived": "IMAP manzili bo‘yicha: {{list}}",
-      "trustedExplicit": "Qo‘lda kiritilgan: {{list}}"
+      "personalOff": "Öçirilgan — hammasi «Yangi»ga",
+      "trusted": "Işonçli poçta serverlari",
+      "trustedHint": "Har qatorda bittadan (masalan, yandex.ru). Böş — IMAP manzili böyiça poçta provayderi serverlariga işonamiz (Yandex, Google, Microsoft 365, Mail.ru, Zoho). Kiritilgan röyxat buni almaştiradi. Jönatuvçini tasdiqlangan deb faqat şunday server belgilaydi: xatdagi soxta sarlavha hisobga olinmaydi.",
+      "trustedNone": "Yöq — IMAP manzili maʼlum provayderniki emas, jönatuvçi qoidalari qöllanmaydi",
+      "trustedDerived": "IMAP manzili böyiça: {{list}}",
+      "trustedExplicit": "Qölda kiritilgan: {{list}}"
     },
-    "missed": "Pochta sozlanmaganida ketmagan: {{count}}",
+    "missed": "Poçta sozlanmaganida ketmagan: {{count}}",
     "missedSend": "Yuboriş",
     "missedQueued": "Navbatga yuborildi: {{count}}"
   },
   "services": {
-    "summary": "Ishlayapti: {{ok}} · diqqat: {{warn}} · nosozlik: {{fail}} · ma’lumot yo‘q: {{unknown}} · ulanmagan: {{off}}",
-    "hint": "Nima qilish kerak: {{hint}}",
-    "checkedAt": "Tekshirildi: {{date}}",
-    "neverChecked": "Hali tekshirilmagan",
+    "summary": "Işlayapti: {{ok}} · diqqat: {{warn}} · nosozlik: {{fail}} · maʼlumot yöq: {{unknown}} · ulanmagan: {{off}}",
+    "hint": "Nima qiliş kerak: {{hint}}",
+    "checkedAt": "Tekşirildi: {{date}}",
+    "neverChecked": "Hali tekşirilmagan",
     "uptime": "sutkalik mavjudlik {{value}}",
-    "pausedTag": "qo‘lda o‘chirilgan",
+    "pausedTag": "qölda öçirilgan",
     "pausedReason": "Sabab: {{reason}}",
-    "checkAria": "Xizmatni tekshirish: {{title}}",
+    "checkAria": "Xizmatni tekşiriş: {{title}}",
     "disable": {
-      "button": "O‘chirish",
-      "aria": "Xizmatni o‘chirish: {{title}}",
-      "title": "Xizmatni o‘chirish: {{title}}",
-      "submit": "Xizmatni o‘chirish",
-      "reason": "Sabab (jurnalga tushadi)",
-      "step1": "Xizmatga chaqiruvlar butun tizimda to‘xtaydi.",
-      "step2": "Amal jurnalga yoziladi: kim va qachon.",
-      "step3": "Uni shu yerda, xuddi shu parol bilan qayta yoqish mumkin."
+      "button": "Öçiriş",
+      "aria": "Xizmatni öçiriş: {{title}}",
+      "title": "Xizmatni öçiriş: {{title}}",
+      "submit": "Xizmatni öçiriş",
+      "reason": "Sabab (jurnalga tuşadi)",
+      "step1": "Xizmatga çaqiruvlar butun tizimda töxtaydi.",
+      "step2": "Amal jurnalga yoziladi: kim va qaçon.",
+      "step3": "Uni şu yerda, xuddi şu parol bilan qayta yoqiş mumkin."
     },
     "enable": {
-      "button": "Yoqish",
-      "aria": "Xizmatni yoqish: {{title}}",
-      "title": "Xizmatni yoqish: {{title}}",
-      "submit": "Xizmatni yoqish",
-      "step1": "Xizmat yana chaqiruvlarni qabul qila boshlaydi; yig‘ilib qolganlar (masalan, xatlar) yuboriladi.",
-      "step2": "Amal jurnalga yoziladi: kim va qachon."
+      "button": "Yoqiş",
+      "aria": "Xizmatni yoqiş: {{title}}",
+      "title": "Xizmatni yoqiş: {{title}}",
+      "submit": "Xizmatni yoqiş",
+      "step1": "Xizmat yana çaqiruvlarni qabul qila boşlaydi; yiğilib qolganlar (masalan, xatlar) yuboriladi.",
+      "step2": "Amal jurnalga yoziladi: kim va qaçon."
     }
   },
   "models": {
@@ -449,16 +449,16 @@
       "qualifier-model": "Lid kvalifikatori",
       "fallback-model": "Zaxira model",
       "embed-model": "Bilimlar bazasidan qidiruv",
-      "judge-model": "Sifat tekshiruvi",
-      "intake-model": "Hisob-kitob: so‘rovni tahlil qilish",
-      "match-model": "Hisob-kitob: katalog bilan moslashtirish",
+      "judge-model": "Sifat tekşiruvi",
+      "intake-model": "Hisob-kitob: sörovni tahlil qiliş",
+      "match-model": "Hisob-kitob: katalog bilan moslaştiriş",
       "draft-model": "Hisob-kitob: taklif qoralamasi",
-      "enrich-model": "Hisob-kitob: kartani boyitish"
+      "enrich-model": "Hisob-kitob: kartani boyitiş"
     },
     "health": {
-      "ok": "Ishlayapti",
+      "ok": "Işlayapti",
       "problem": "Nosozlik",
-      "unknown": "Ma’lumot yo‘q"
+      "unknown": "Maʼlumot yöq"
     },
     "provider": {
       "anthropic": "Anthropic (Claude)",
@@ -469,62 +469,62 @@
       "label": "Kalit:",
       "crm": "Platformada kiritilgan",
       "env": "server sozlamalaridan",
-      "unknown": "Platformadan o‘zgartirilmagan"
+      "unknown": "Platformadan özgartirilmagan"
     },
     "keySource": {
-      "crm": "Kalit Platformada kiritilgan va shifrlangan holda saqlanadi.",
+      "crm": "Kalit Platformada kiritilgan va şifrlangan holda saqlanadi.",
       "env": "Server sozlamalaridagi kalitdan foydalaniladi."
     },
     "empty": "Modellar hali sozlanmagan.",
     "notSet": "kiritilmagan",
     "today": "bugun {{amount}}",
-    "checkedAt": "Tekshirildi: {{date}}",
-    "neverChecked": "Hali tekshirilmagan",
+    "checkedAt": "Tekşirildi: {{date}}",
+    "neverChecked": "Hali tekşirilmagan",
     "test": {
       "confirm": {
-        "title": "«{{alias}}» modelini tekshirish",
-        "step1": "Modelga bitta qisqa pullik so‘rov yuboriladi: shunda kalit va model javob berayotgani ko‘rinadi.",
-        "step2": "Narxi (sentning ulushi) bugungi xarajatlarga qo‘shiladi.",
-        "submit": "Modelni tekshirish"
+        "title": "«{{alias}}» modelini tekşiriş",
+        "step1": "Modelga bitta qisqa pullik sörov yuboriladi: şunda kalit va model javob berayotgani körinadi.",
+        "step2": "Narxi (sentning uluşi) bugungi xarajatlarga qöşiladi.",
+        "submit": "Modelni tekşiriş"
       },
-      "aria": "Modelni tekshirish: {{alias}}",
+      "aria": "Modelni tekşiriş: {{alias}}",
       "ok": "«{{alias}}» modeli javob beryapti",
       "fail": "«{{alias}}» modeli javob bermadi",
       "latency": "{{ms}} ms",
-      "cost": "tekshiruv narxi {{amount}}"
+      "cost": "tekşiruv narxi {{amount}}"
     },
     "change": {
-      "button": "Almashtirish",
-      "aria": "Modelni almashtirish: {{alias}}",
-      "title": "Modelni almashtirish: {{alias}}",
+      "button": "Almaştiriş",
+      "aria": "Modelni almaştiriş: {{alias}}",
+      "title": "Modelni almaştiriş: {{alias}}",
       "provider": "Provayder",
       "model": "Model",
-      "modelHint": "Provayderdagi model nomi, masalan {{example}}. «{{provider}}/» old qo'shimchasini kiritish shart emas.",
+      "modelHint": "Provayderdagi model nomi, masalan {{example}}. «{{provider}}/» old qöşimçasini kiritiş şart emas.",
       "example": {
         "anthropic": "claude-sonnet-5-5, claude-haiku-5-5",
         "gemini": "gemini-3.8-flash, gemini-embedding-2",
         "openai": "OpenAI konsolidagi identifikator"
       },
       "key": "Provayder kaliti",
-      "keyHint": "Bo‘sh — server sozlamalaridagi kalit. Kiritilgan kalit ko‘rsatilmaydi.",
+      "keyHint": "Böş — server sozlamalaridagi kalit. Kiritilgan kalit körsatilmaydi.",
       "base": "API manzili (ixtiyoriy)",
-      "baseHint": "Provayderning o‘z shlyuzi uchun kerak.",
-      "submit": "Modelni almashtirish",
-      "step1": "Modellar shlyuzi almashtirishni qayta ishga tushirmasdan qo‘llaydi; hozir davom etayotgan muloqotlar eski modelda tugaydi.",
-      "step2Key": "Kalit shifrlangan holda saqlanadi va boshqa ko‘rsatilmaydi.",
+      "baseHint": "Provayderning öz şlyuzi uçun kerak.",
+      "submit": "Modelni almaştiriş",
+      "step1": "Modellar şlyuzi almaştirişni qayta işga tuşirmasdan qöllaydi; hozir davom etayotgan muloqotlar eski modelda tugaydi.",
+      "step2Key": "Kalit şifrlangan holda saqlanadi va boşqa körsatilmaydi.",
       "step2Env": "Kalit kiritilmagan — server sozlamalaridagi provayder kalitidan foydalaniladi.",
       "step3": "Amal jurnalga kalitsiz yoziladi.",
-      "done": "Model almashtirildi: {{model}}",
-      "reindex": "Bilimlar bazasidan qidiruv uchun hujjatlarni qayta indekslash kerak.",
-      "quality": "Javoblar sifatini bir necha misolda tekshiring."
+      "done": "Model almaştirildi: {{model}}",
+      "reindex": "Bilimlar bazasidan qidiruv uçun hujjatlarni qayta indekslaş kerak.",
+      "quality": "Javoblar sifatini bir neça misolda tekşiring."
     },
     "reset": {
-      "button": "Tiklash",
-      "aria": "Modelni tiklash: {{alias}}",
-      "title": "Modelni tiklash: {{alias}}",
-      "submit": "Standart qiymatga qaytarish",
+      "button": "Tiklaş",
+      "aria": "Modelni tiklaş: {{alias}}",
+      "title": "Modelni tiklaş: {{alias}}",
+      "submit": "Standart qiymatga qaytariş",
       "step1": "Rol server konfiguratsiyasidagi modelga qaytadi.",
-      "step2": "Avval kiritilgan kalit ishlatilmay qo‘yadi — server sozlamalaridagi kalit olinadi.",
+      "step2": "Avval kiritilgan kalit işlatilmay qöyadi — server sozlamalaridagi kalit olinadi.",
       "step3": "Amal jurnalga yoziladi."
     }
   },
@@ -533,12 +533,12 @@
     "days": "{{count}} kun",
     "bot": {
       "title": "Bot xarajatlari",
-      "text": "Davr uchun bot muloqotlari va tekshiruvlari, AQSH dollarida."
+      "text": "Davr uçun bot muloqotlari va tekşiruvlari, AQSH dollarida."
     },
     "tiles": {
       "today": "Bugun",
       "budget": "Kunlik byudjet",
-      "total": "Davr uchun",
+      "total": "Davr uçun",
       "leads": "Lidlar",
       "perLead": "Bitta lidga"
     },
@@ -551,21 +551,21 @@
       "noLimit": "limitsiz"
     },
     "series": {
-      "title": "Kunlar bo‘yicha xarajat",
+      "title": "Kunlar böyiça xarajat",
       "day": "Kun",
-      "work": "Ish",
-      "test": "Tekshiruvlar"
+      "work": "Iş",
+      "test": "Tekşiruvlar"
     },
     "purpose": {
-      "title": "Vazifasi bo‘yicha",
+      "title": "Vazifasi böyiça",
       "key": "Vazifa",
-      "calls": "Chaqiruvlar",
+      "calls": "Çaqiruvlar",
       "cost": "Narx"
     },
     "ensemble": {
       "title": "Butun tizim",
-      "text": "Barcha model chaqiruvlari shlyuz jurnali bo‘yicha.",
-      "groupBy": "Guruhlash",
+      "text": "Barça model çaqiruvlari şlyuz jurnali böyiça.",
+      "groupBy": "Guruhlaş",
       "group": {
         "day": "Kun",
         "system": "Tizim",
@@ -573,31 +573,31 @@
         "model": "Model"
       },
       "range": "Davr: {{from}} — {{to}} ({{zone}})",
-      "calls": "Chaqiruvlar",
+      "calls": "Çaqiruvlar",
       "failed": "Muvaffaqiyatsiz",
       "fallback": "Zaxira model orqali",
       "cost": "Narx",
       "tokens": "Tokenlar",
-      "truncated": "Shlyuz jurnali barcha qatorlarni bermadi: raqamlar to‘liq bo‘lmasligi mumkin.",
-      "systems": "Tizimlar bo‘yicha byudjetlar",
+      "truncated": "Şlyuz jurnali barça qatorlarni bermadi: raqamlar töliq bölmasligi mumkin.",
+      "systems": "Tizimlar böyiça byudjetlar",
       "system": "Tizim",
       "budget": "Kunlik byudjet",
       "today": "Bugun",
       "state": "Holat",
-      "notConnected": "chaqiruvlar yo‘q",
-      "daysOver": "byudjetdan oshgan kunlar: {{count}}",
-      "rows": "Guruhlar bo‘yicha xarajat",
-      "overruns": "Byudjetdan oshish",
-      "overrun": "{{system}}, {{day}}: byudjet {{limit}} bo‘lganda {{cost}}"
+      "notConnected": "çaqiruvlar yöq",
+      "daysOver": "byudjetdan oşgan kunlar: {{count}}",
+      "rows": "Guruhlar böyiça xarajat",
+      "overruns": "Byudjetdan oşiş",
+      "overrun": "{{system}}, {{day}}: byudjet {{limit}} bölganda {{cost}}"
     }
   },
   "storage": {
     "offsite": {
-      "title": "Zaxira nusxalarning tashqi nusxasi",
-      "purpose": "Kuniga bir marta baza arxivi kompaniyaning Yandex Disk'iga (yoki Google Workspace umumiy diskiga) nusxalanadi — ikkala server yo'qolsa ham tiklash mumkin. Hammasi shu yerda sozlanadi, serverga kirish shart emas.",
-      "gdriveWarning": "Google Workspace umumiy diski kerak. Shaxsiy Google Drive mos kelmaydi.",
+      "title": "Zaxira nusxalarning taşqi nusxasi",
+      "purpose": "Kuniga bir marta baza arxivi kompaniyaning Yandex Disk'iga (yoki Google Workspace umumiy diskiga) nusxalanadi — ikkala server yöqolsa ham tiklaş mumkin. Hammasi şu yerda sozlanadi, serverga kiriş şart emas.",
+      "gdriveWarning": "Google Workspace umumiy diski kerak. Şaxsiy Google Drive mos kelmaydi.",
       "provider": {
-        "label": "Qayerga nusxalash",
+        "label": "Qayerga nusxalaş",
         "yandex": "Yandex Disk (tavsiya etiladi)",
         "gdrive": "Google Drive (Workspace umumiy diski)"
       },
@@ -608,90 +608,90 @@
         "steps": {
           "title": "Yandex'da tayyorgarlik (bir marta, ≈ 3 daqiqa)",
           "account": "Nusxalar Disk'ida saqlanadigan Yandex 360 hisobining Yandex ID'siga kiring.",
-          "passwords": "Xavfsizlik → Ilova parollari bo'limini oching.",
+          "passwords": "Xavfsizlik → Ilova parollari bölimini oçing.",
           "passwordsLink": "Ilova parollari",
-          "files": "«Fayllar» turidagi ilova parolini yarating (Disk'ga WebDAV orqali kirish), masalan «RailTech zaxira» deb nomlang.",
-          "paste": "Parolni nusxalang (u bir marta ko'rsatiladi) va quyida shu hisobning pochta manzili bilan birga kiriting."
+          "files": "«Fayllar» turidagi ilova parolini yarating (Disk'ga WebDAV orqali kiriş), masalan «RailTech zaxira» deb nomlang.",
+          "paste": "Parolni nusxalang (u bir marta körsatiladi) va quyida şu hisobning poçta manzili bilan birga kiriting."
         },
         "form": {
-          "login": "Yandex 360 pochta manzili",
-          "loginHint": "Nusxalar Disk'iga boradigan hisob pochtasi, masalan backup@kompaniyangiz.uz.",
+          "login": "Yandex 360 poçta manzili",
+          "loginHint": "Nusxalar Disk'iga boradigan hisob poçtasi, masalan backup@kompaniyangiz.uz.",
           "folder": "Yandex Disk'dagi papka",
-          "folderHint": "Disk ildizidan yo'l; bo'lmasa — papka o'zi yaratiladi. Standart: {{folder}}.",
+          "folderHint": "Disk ildizidan yöl; bölmasa — papka özi yaratiladi. Standart: {{folder}}.",
           "password": "«Fayllar» ilova paroli",
-          "passwordHint": "Yandex ID → Xavfsizlik → Ilova parollari'dagi parol. Shifrlangan holda saqlanadi va ko'rsatilmaydi.",
-          "passwordKeepHint": "Avvalgi parolni saqlash uchun bo'sh qoldiring."
+          "passwordHint": "Yandex ID → Xavfsizlik → Ilova parollari'dagi parol. Şifrlangan holda saqlanadi va körsatilmaydi.",
+          "passwordKeepHint": "Avvalgi parolni saqlaş uçun böş qoldiring."
         }
       },
       "copyState": "Nusxa holati",
       "folder": "Umumiy disk papkasi (ID)",
       "account": "Xizmat hisobi",
       "key": "Kalit",
-      "delivered": "Nusxalash xizmatiga uzatildi",
-      "notDelivered": "hali yo'q",
-      "checkedAt": "Tekshirildi: {{date}}",
-      "check": "Tekshirish",
-      "setup": "Sozlash",
-      "change": "Ulanishni o'zgartirish",
+      "delivered": "Nusxalaş xizmatiga uzatildi",
+      "notDelivered": "hali yöq",
+      "checkedAt": "Tekşirildi: {{date}}",
+      "check": "Tekşiriş",
+      "setup": "Sozlaş",
+      "change": "Ulanişni özgartiriş",
       "reason": {
-        "ok": "Kirish bor: «{{folder}}» papkasi umumiy diskda, fayl qo'shish mumkin.",
-        "key_rejected": "Google kalitni qabul qilmadi: u bekor qilingan yoki o'chirilgan, yoki xizmat hisobi o'chirilgan. Yangi kalit yarating (3-qadam) va yuklang.",
-        "drive_api_disabled": "Google Cloud loyihasida Google Drive API yoqilmagan — yoqing (2-qadam) va qayta tekshiring.",
-        "folder_not_found": "Papka topilmadi: ID noto'g'ri yoki xizmat hisobiga kirish berilmagan (4-qadam).",
+        "ok": "Kiriş bor: «{{folder}}» papkasi umumiy diskda, fayl qöşiş mumkin.",
+        "key_rejected": "Google kalitni qabul qilmadi: u bekor qilingan yoki öçirilgan, yoki xizmat hisobi öçirilgan. Yangi kalit yarating (3-qadam) va yuklang.",
+        "drive_api_disabled": "Google Cloud loyihasida Google Drive API yoqilmagan — yoqing (2-qadam) va qayta tekşiring.",
+        "folder_not_found": "Papka topilmadi: ID notöğri yoki xizmat hisobiga kiriş berilmagan (4-qadam).",
         "not_folder": "Bu ID papka emas — papka manzilidagi ID ni kiriting.",
-        "not_shared_drive": "«{{folder}}» papkasi «Mening diskim»da, umumiy diskdagi papka kerak: xizmat hisobining o'z joyi yo'q (1-qadam).",
-        "read_only": "Xizmat hisobi «{{folder}}» papkasiga fayl qo'sha olmaydi: unga «Kontent menejeri» rolini bering (4-qadam).",
-        "network": "Google javob bermadi: server aloqasi muammosi. Keyinroq takrorlang; o'tmasa — xostingga xabar bering.",
-        "auth_failed": "Yandex login yoki ilova parolini qabul qilmadi: pochta manzilini va parol «Fayllar» uchun yaratilgani hamda o'chirilmaganini tekshiring. Yangi parol yarating (3-qadam) va saqlang.",
-        "not_app_password": "Hisobning oddiy paroli kiritilganga o'xshaydi, «Fayllar» turidagi ilova paroli (16 lotin harfi) kerak: uni yarating (2–3-qadamlar).",
+        "not_shared_drive": "«{{folder}}» papkasi «Mening diskim»da, umumiy diskdagi papka kerak: xizmat hisobining öz joyi yöq (1-qadam).",
+        "read_only": "Xizmat hisobi «{{folder}}» papkasiga fayl qöşa olmaydi: unga «Kontent menejeri» rolini bering (4-qadam).",
+        "network": "Google javob bermadi: server aloqasi muammosi. Keyinroq takrorlang; ötmasa — xostingga xabar bering.",
+        "auth_failed": "Yandex login yoki ilova parolini qabul qilmadi: poçta manzilini va parol «Fayllar» uçun yaratilgani hamda öçirilmaganini tekşiring. Yangi parol yarating (3-qadam) va saqlang.",
+        "not_app_password": "Hisobning oddiy paroli kiritilganga öxşaydi, «Fayllar» turidagi ilova paroli (16 lotin harfi) kerak: uni yarating (2–3-qadamlar).",
         "webdav_forbidden": "Ruxsat yetarli emas.",
-        "no_space": "Yandex Disk'da joy yo'q: joy bo'shating (va Disk Savatini tozalang) yoki tarifni kengaytiring.",
-        "ok_yandex": "Kirish bor: Yandex Disk'dagi «{{folder}}» papkasi, fayllar yoziladi va o'chiriladi.",
-        "not_folder_yandex": "Diskdagi «{{folder}}» yo'lida papka emas, fayl bor: boshqa yo'l kiriting.",
-        "network_yandex": "Yandex Disk javob bermadi: server aloqasi muammosi yoki so'rovlar cheklovi. Keyinroq takrorlang; o'tmasa — xostingga xabar bering."
+        "no_space": "Yandex Disk'da joy yöq: joy böşating (va Disk Savatini tozalang) yoki tarifni kengaytiring.",
+        "ok_yandex": "Kiriş bor: Yandex Disk'dagi «{{folder}}» papkasi, fayllar yoziladi va öçiriladi.",
+        "not_folder_yandex": "Diskdagi «{{folder}}» yölida papka emas, fayl bor: boşqa yöl kiriting.",
+        "network_yandex": "Yandex Disk javob bermadi: server aloqasi muammosi yoki sörovlar çeklovi. Keyinroq takrorlang; ötmasa — xostingga xabar bering."
       },
       "steps": {
-        "title": "Google'da tayyorlash (bir marta, ≈ 15 daqiqa)",
-        "drive": "Umumiy disk va unda nusxalar uchun papka yarating.",
+        "title": "Google'da tayyorlaş (bir marta, ≈ 15 daqiqa)",
+        "drive": "Umumiy disk va unda nusxalar uçun papka yarating.",
         "driveLink": "Umumiy disklar",
         "api": "Google Cloud'da loyiha tanlang yoki yarating va Google Drive API ni yoqing.",
         "apiLink": "Google Drive API",
         "account": "Xizmat hisobini yarating (loyiha rollari kerak emas) va uning JSON kalitini yuklab oling: Keys → Add key → JSON.",
         "accountLink": "Xizmat hisoblari",
-        "share": "Papkada xizmat hisobi manziliga «Kontent menejeri» roli bilan kirish bering, bildirishnomani o'chiring."
+        "share": "Papkada xizmat hisobi manziliga «Kontent menejeri» roli bilan kiriş bering, bildirişnomani öçiring."
       },
       "form": {
-        "title": "Tashqi nusxani ulash",
-        "submit": "Saqlash va tekshirish",
+        "title": "Taşqi nusxani ulaş",
+        "submit": "Saqlaş va tekşiriş",
         "key": "Xizmat hisobi kaliti (JSON fayl)",
-        "keyHint": "3-qadamda yuklab olingan fayl. Shifrlangan holda saqlanadi va ko'rsatilmaydi.",
-        "keyKeepHint": "Avvalgi kalitni qoldirish uchun fayl tanlamang.",
+        "keyHint": "3-qadamda yuklab olingan fayl. Şifrlangan holda saqlanadi va körsatilmaydi.",
+        "keyKeepHint": "Avvalgi kalitni qoldiriş uçun fayl tanlamang.",
         "keyChosen": "{{name}} tanlandi: xizmat hisobi {{email}}.",
-        "keyTooBig": "Fayl xizmat hisobi kaliti uchun juda katta.",
-        "keyNotServiceAccount": "Bu Google xizmat hisobi kaliti emas: \"type\": \"service_account\" bo'lgan JSON kerak.",
-        "keyForeignTokenUri": "Kalitda begona token manzili (token_uri) ko'rsatilgan — bunday kalit qabul qilinmaydi. Kalitni Google Cloud'dan qayta yuklab oling.",
+        "keyTooBig": "Fayl xizmat hisobi kaliti uçun juda katta.",
+        "keyNotServiceAccount": "Bu Google xizmat hisobi kaliti emas: \"type\": \"service_account\" bölgan JSON kerak.",
+        "keyForeignTokenUri": "Kalitda begona token manzili (token_uri) körsatilgan — bunday kalit qabul qilinmaydi. Kalitni Google Cloud'dan qayta yuklab oling.",
         "folder": "Umumiy disk papkasi ID si",
-        "folderHint": "Papka manzilining /folders/ dan keyingi qismi — yoki manzilni to'liq qo'ying."
+        "folderHint": "Papka manzilining /folders/ dan keyingi qismi — yoki manzilni töliq qöying."
       }
     },
     "files": {
-      "title": "Fayllar saqlanishi",
-      "none": "Fayllar saqlanishi xizmatlar reyestrida topilmadi."
+      "title": "Fayllar saqlanişi",
+      "none": "Fayllar saqlanişi xizmatlar reyestrida topilmadi."
     },
     "backups": {
       "title": "Zaxira nusxalar",
       "source": "Nusxalar qayerda saqlanadi",
       "sourceValue": {
         "volume": "server tomi",
-        "rustfs": "RustFS saqlanishi"
+        "rustfs": "RustFS saqlanişi"
       },
       "last": "Oxirgi nusxa",
-      "none": "yo‘q",
+      "none": "yöq",
       "state": "Yangilik",
       "stateValue": {
         "fresh": "yangi",
         "stale": "eskirgan (26 soatdan eski)",
-        "empty": "hali nusxalar yo‘q",
+        "empty": "hali nusxalar yöq",
         "unavailable": "mavjud emas"
       },
       "daemon": "Zaxira xizmati",
@@ -701,141 +701,141 @@
       },
       "error": {
         "bucket_missing": "Zaxira nusxalar bakeri topilmadi.",
-        "access_denied": "Zaxira nusxalar saqlanishiga ruxsat yo‘q.",
-        "unreachable": "Zaxira nusxalar saqlanishi javob bermayapti."
+        "access_denied": "Zaxira nusxalar saqlanişiga ruxsat yöq.",
+        "unreachable": "Zaxira nusxalar saqlanişi javob bermayapti."
       },
-      "requested": "So‘rov bo‘yicha nusxa {{date}} dan beri zaxira xizmatini kutmoqda.",
-      "stuck": "{{date}} dagi so‘rovni xizmat olmadi: qaytarish mumkin.",
-      "databases": "Bazalar bo‘yicha nusxalar",
+      "requested": "Sörov böyiça nusxa {{date}} dan beri zaxira xizmatini kutmoqda.",
+      "stuck": "{{date}} dagi sörovni xizmat olmadi: qaytariş mumkin.",
+      "databases": "Bazalar böyiça nusxalar",
       "items": "Oxirgi nusxalar",
-      "noItems": "Nusxa fayllari hozircha yo‘q.",
+      "noItems": "Nusxa fayllari hozirça yöq.",
       "size": "{{mb}} MB"
     },
     "request": {
-      "button": "Hozir nusxa olish",
-      "title": "Jadvaldan tashqari nusxa",
-      "submit": "Nusxa so‘rash",
-      "step1": "Zaxira xizmati taxminan 30 soniya ichida nusxani boshlaydi.",
-      "step2": "Bazaga yuklama qisqa muddat oshadi; tizim ishlashda davom etadi.",
-      "step3": "Tayyor nusxa quyidagi ro‘yxatda paydo bo‘ladi.",
-      "sent": "Nusxa so‘rovi yuborildi",
-      "unavailable": "Jadvaldan tashqari nusxani bu yerdan olib bo‘lmaydi: u baza serverida ishga tushiriladi."
+      "button": "Hozir nusxa oliş",
+      "title": "Jadvaldan taşqari nusxa",
+      "submit": "Nusxa söraş",
+      "step1": "Zaxira xizmati taxminan 30 soniya içida nusxani boşlaydi.",
+      "step2": "Bazaga yuklama qisqa muddat oşadi; tizim işlaşda davom etadi.",
+      "step3": "Tayyor nusxa quyidagi röyxatda paydo böladi.",
+      "sent": "Nusxa sörovi yuborildi",
+      "unavailable": "Jadvaldan taşqari nusxani bu yerdan olib bölmaydi: u baza serverida işga tuşiriladi."
     }
   },
   "system": {
     "overall": "Natija:",
-    "checkedAt": "Tekshirildi: {{date}}",
+    "checkedAt": "Tekşirildi: {{date}}",
     "versions": "Versiya va xizmatlar"
   },
   "errors": {
-    "DEFAULT": "Amalni bajarib bo‘lmadi. Keyinroq urinib ko‘ring.",
-    "WRONG_PASSWORD": "Parol noto‘g‘ri kiritilgan.",
-    "ACCOUNT_LOCKED": "Noto‘g‘ri parollardan keyin hisob vaqtincha bloklandi. Keyinroq urinib ko‘ring.",
-    "NOT_CONFIGURED": "Ulanish hali sozlanmagan: avval uning sozlamalarini kiriting.",
-    "SECRETS_KEY_MISSING": "Serverda sirlarni shifrlash kaliti kiritilmagan: kalit va parollarni saqlab bo‘lmaydi.",
-    "SERVICE_NOT_SWITCHABLE": "Bu xizmatda o‘chirgich yo‘q.",
-    "INTEGRATION_FAILED": "Tekshiruv o‘tmadi: xizmat javob bermadi yoki rad etdi.",
-    "FORBIDDEN": "Bu amal rolingizga ochiq emas.",
-    "BACKEND_UNAVAILABLE": "Server javob bermayapti. Bir daqiqadan keyin qayta urinib ko‘ring.",
-    "TOO_MANY_REQUESTS": "So‘rovlar juda ko‘p. Keyinroq urinib ko‘ring.",
-    "VALIDATION_FAILED": "Maydonlarni tekshiring.",
-    "CONFLICT": "Holat o‘zgargan. Sahifani yangilab, qayta urinib ko‘ring.",
+    "DEFAULT": "Amalni bajarib bölmadi. Keyinroq urinib köring.",
+    "WRONG_PASSWORD": "Parol notöğri kiritilgan.",
+    "ACCOUNT_LOCKED": "Notöğri parollardan keyin hisob vaqtinça bloklandi. Keyinroq urinib köring.",
+    "NOT_CONFIGURED": "Ulaniş hali sozlanmagan: avval uning sozlamalarini kiriting.",
+    "SECRETS_KEY_MISSING": "Serverda sirlarni şifrlaş kaliti kiritilmagan: kalit va parollarni saqlab bölmaydi.",
+    "SERVICE_NOT_SWITCHABLE": "Bu xizmatda öçirgiç yöq.",
+    "INTEGRATION_FAILED": "Tekşiruv ötmadi: xizmat javob bermadi yoki rad etdi.",
+    "FORBIDDEN": "Bu amal rolingizga oçiq emas.",
+    "BACKEND_UNAVAILABLE": "Server javob bermayapti. Bir daqiqadan keyin qayta urinib köring.",
+    "TOO_MANY_REQUESTS": "Sörovlar juda köp. Keyinroq urinib köring.",
+    "VALIDATION_FAILED": "Maydonlarni tekşiring.",
+    "CONFLICT": "Holat özgargan. Sahifani yangilab, qayta urinib köring.",
     "SESSION_EXPIRED": "Seans tugadi. Qaytadan kiring.",
     "fields": {
-      "model": "Model nomi qabul qilinmadi. Provayderdagi model nomini probelsiz kiriting, masalan claude-haiku-5-5. «provayder/» old qo'shimchasini qoldirish mumkin, lekin faqat tanlangan provayderniki.",
-      "api_key": "Kalit qabul qilinmadi: uning uzunligi 8 dan 512 gacha belgi bo'lishi kerak.",
-      "api_base": "API manzili noto'g'ri: u http:// yoki https:// bilan boshlanib, probelsiz bo'lishi kerak."
+      "model": "Model nomi qabul qilinmadi. Provayderdagi model nomini probelsiz kiriting, masalan claude-haiku-5-5. «provayder/» old qöşimçasini qoldiriş mumkin, lekin faqat tanlangan provayderniki.",
+      "api_key": "Kalit qabul qilinmadi: uning uzunligi 8 dan 512 gaça belgi bölişi kerak.",
+      "api_base": "API manzili notöğri: u http:// yoki https:// bilan boşlanib, probelsiz bölişi kerak."
     },
     "reasons": {
       "offsite_key_invalid": "Fayl Google xizmat hisobi kaliti emas. JSON kalitni qayta yuklab oling (3-qadam).",
-      "offsite_folder_invalid": "Papka noto'g'ri: Google uchun — manzilning /folders/ dan keyingi ID qismi, Yandex uchun — RailTech-backups/prod ko'rinishidagi yo'l (harflar, raqamlar, bo'shliq, «-», «_», «.»).",
-      "offsite_delivery_failed": "Kalitni nusxalash xizmatiga uzatib bo'lmadi (ombor javob bermadi). Hech narsa saqlanmadi — keyinroq takrorlang.",
-      "offsite_not_configured": "Tashqi nusxa hali sozlanmagan: Yandex Disk yoki Google Drive'ni tanlang va kirishni saqlang.",
-      "offsite_login_invalid": "Login — Yandex 360 pochta manzili, masalan backup@kompaniyangiz.uz.",
-      "offsite_app_password_invalid": "«Fayllar» ilova parolini kiriting: avvalgi parol yo'q.",
+      "offsite_folder_invalid": "Papka notöğri: Google uçun — manzilning /folders/ dan keyingi ID qismi, Yandex uçun — RailTech-backups/prod körinişidagi yöl (harflar, raqamlar, böşliq, «-», «_», «.»).",
+      "offsite_delivery_failed": "Kalitni nusxalaş xizmatiga uzatib bölmadi (ombor javob bermadi). Heç narsa saqlanmadi — keyinroq takrorlang.",
+      "offsite_not_configured": "Taşqi nusxa hali sozlanmagan: Yandex Disk yoki Google Drive'ni tanlang va kirişni saqlang.",
+      "offsite_login_invalid": "Login — Yandex 360 poçta manzili, masalan backup@kompaniyangiz.uz.",
+      "offsite_app_password_invalid": "«Fayllar» ilova parolini kiriting: avvalgi parol yöq.",
       "erp_not_configured": "ERP hali ulanmagan.",
-      "erp_invalid_url": "ERP manzili noto‘g‘ri kiritilgan.",
-      "erp_https_required": "Ish muhitida ERP manzili https bilan boshlanishi kerak.",
-      "erp_unauthorized": "ERP CRM kalitini qabul qilmadi: juftlashni qaytadan bajaring.",
+      "erp_invalid_url": "ERP manzili notöğri kiritilgan.",
+      "erp_https_required": "Iş muhitida ERP manzili https bilan boşlanişi kerak.",
+      "erp_unauthorized": "ERP CRM kalitini qabul qilmadi: juftlaşni qaytadan bajaring.",
       "erp_unavailable": "ERP javob bermayapti.",
-      "erp_bad_response": "ERP tushunarsiz javob berdi: ERP versiyasini tekshiring.",
-      "erp_rate_limited": "ERP kutib, qayta urinishni so‘rayapti.",
-      "erp_pairing_code_invalid": "ERP juftlash kodini qabul qilmadi. Ulanishni qaytaring.",
-      "erp_pairing_code_expired": "Juftlash kodining muddati tugadi. Ulanishni qaytaring.",
-      "erp_pairing_code_used": "Juftlash kodi allaqachon ishlatilgan. Ulanishni qaytaring.",
-      "erp_pairing_unsupported": "ERPning bu versiyasi kod orqali juftlashni qo‘llamaydi.",
-      "erp_bootstrap_rejected": "ERP ulanishni qabul qilmadi. ERPda administrator huquqingiz borligini tekshiring, qayta kiring va takrorlang.",
-      "erp_bootstrap_closed": "ERP avval ulangan: qayta ulash uchun ERPda administrator huquqi kerak. Huquqni tekshiring, qayta kiring va takrorlang.",
-      "erp_bootstrap_unavailable": "ERPni ulab bo‘lmadi: ERPda administrator huquqi kerak. Huquqni tekshiring, qayta kiring va takrorlang.",
-      "smtp_not_configured": "Pochta hali sozlanmagan.",
-      "smtp_invalid_host": "Pochta serveri noto‘g‘ri kiritilgan.",
-      "smtp_unavailable": "Pochta serveri javob bermayapti.",
-      "smtp_tls_failed": "Himoyalangan ulanishni o‘rnatib bo‘lmadi: shifrlash va portni tekshiring.",
-      "smtp_auth_failed": "Pochta serveri login yoki parolni qabul qilmadi.",
-      "smtp_rejected": "Pochta serveri xatni rad etdi.",
-      "invalid_email": "Manzil noto‘g‘ri kiritilgan.",
-      "invalid_bot_token": "Telegram tokenni qabul qilmadi: u to‘liq nusxalanganini tekshiring.",
+      "erp_bad_response": "ERP tuşunarsiz javob berdi: ERP versiyasini tekşiring.",
+      "erp_rate_limited": "ERP kutib, qayta urinişni sörayapti.",
+      "erp_pairing_code_invalid": "ERP juftlaş kodini qabul qilmadi. Ulanişni qaytaring.",
+      "erp_pairing_code_expired": "Juftlaş kodining muddati tugadi. Ulanişni qaytaring.",
+      "erp_pairing_code_used": "Juftlaş kodi allaqaçon işlatilgan. Ulanişni qaytaring.",
+      "erp_pairing_unsupported": "ERPning bu versiyasi kod orqali juftlaşni qöllamaydi.",
+      "erp_bootstrap_rejected": "ERP ulanişni qabul qilmadi. ERPda administrator huquqingiz borligini tekşiring, qayta kiring va takrorlang.",
+      "erp_bootstrap_closed": "ERP avval ulangan: qayta ulaş uçun ERPda administrator huquqi kerak. Huquqni tekşiring, qayta kiring va takrorlang.",
+      "erp_bootstrap_unavailable": "ERPni ulab bölmadi: ERPda administrator huquqi kerak. Huquqni tekşiring, qayta kiring va takrorlang.",
+      "smtp_not_configured": "Poçta hali sozlanmagan.",
+      "smtp_invalid_host": "Poçta serveri notöğri kiritilgan.",
+      "smtp_unavailable": "Poçta serveri javob bermayapti.",
+      "smtp_tls_failed": "Himoyalangan ulanişni örnatib bölmadi: şifrlaş va portni tekşiring.",
+      "smtp_auth_failed": "Poçta serveri login yoki parolni qabul qilmadi.",
+      "smtp_rejected": "Poçta serveri xatni rad etdi.",
+      "invalid_email": "Manzil notöğri kiritilgan.",
+      "invalid_bot_token": "Telegram tokenni qabul qilmadi: u töliq nusxalanganini tekşiring.",
       "telegram_unavailable": "Telegram javob bermayapti.",
       "bot_not_configured": "Bot tokeni hali kiritilmagan.",
-      "bot_not_running": "Bot ishga tushirilmagan.",
+      "bot_not_running": "Bot işga tuşirilmagan.",
       "channel_not_configured": "Jamoa kanali ulanmagan.",
-      "channel_send_failed": "Xabar kanalga yetkazilmadi: bot chatda ekanini tekshiring.",
-      "litellm_unavailable": "Modellar shlyuzi javob bermayapti.",
-      "model_key_required": "Bu provayder uchun kalit kerak.",
+      "channel_send_failed": "Xabar kanalga yetkazilmadi: bot çatda ekanini tekşiring.",
+      "litellm_unavailable": "Modellar şlyuzi javob bermayapti.",
+      "model_key_required": "Bu provayder uçun kalit kerak.",
       "model_in_config": "Bu rol server konfiguratsiyasi bilan belgilangan.",
-      "ai_spend_period": "Xarajatlar davri 90 kundan oshmasligi va kelajakda bo‘lmasligi kerak.",
-      "service_not_switchable": "Bu xizmatda o‘chirgich yo‘q.",
-      "secrets_key_missing": "Serverda sirlarni shifrlash kaliti kiritilmagan.",
-      "backup_unavailable": "Jadvaldan tashqari nusxani bu yerdan olib bo‘lmaydi.",
-      "wrong_password": "Parol noto‘g‘ri kiritilgan."
+      "ai_spend_period": "Xarajatlar davri 90 kundan oşmasligi va kelajakda bölmasligi kerak.",
+      "service_not_switchable": "Bu xizmatda öçirgiç yöq.",
+      "secrets_key_missing": "Serverda sirlarni şifrlaş kaliti kiritilmagan.",
+      "backup_unavailable": "Jadvaldan taşqari nusxani bu yerdan olib bölmaydi.",
+      "wrong_password": "Parol notöğri kiritilgan."
     }
   },
   "health": {
-    "copyFailed": "Nusxalab bo‘lmadi: matnni belgilab, qo‘lda nusxalang.",
+    "copyFailed": "Nusxalab bölmadi: matnni belgilab, qölda nusxalang.",
     "state": {
-      "ok": "Ishlayapti",
+      "ok": "Işlayapti",
       "broken": "Buzilgan",
       "unstable": "Beqaror",
-      "degraded": "Uzilishlar bilan ishlayapti",
+      "degraded": "Uzilişlar bilan işlayapti",
       "not_configured": "Sozlanmagan",
-      "disabled": "Ataylab o‘chirilgan",
+      "disabled": "Ataylab öçirilgan",
       "expected": "Sinov stendida kutilgan holat",
-      "not_checked": "Tekshirilmagan"
+      "not_checked": "Tekşirilmagan"
     },
-    "notChecked": "Tekshirilmagan — «Tekshirish» tugmasini bosing",
+    "notChecked": "Tekşirilmagan — «Tekşiriş» tugmasini bosing",
     "since": "{{date}} dan",
     "recoveredAt": "{{date}} da tiklandi",
     "flaps": "Sutkada nosozliklar: {{count}}",
     "ownerLabel": "Kim tuzatadi",
     "owner": {
-      "ownerKey": "Siz (administrator) kalitni kiritasiz; kalit va to‘lov — kompaniya egasida",
+      "ownerKey": "Siz (administrator) kalitni kiritasiz; kalit va tölov — kompaniya egasida",
       "admin": "Siz (administrator)",
-      "owner": "Kompaniya egasi — provayder kaliti va to‘lovi",
+      "owner": "Kompaniya egasi — provayder kaliti va tölovi",
       "hosting": "Xosting — server",
       "provider": "Provayder — ularning tomonidagi nosozlik, kutamiz"
     },
     "affected": {
-      "broken": "ishlamayapti: {{list}}",
-      "degraded": "ta’sirlangan: {{list}}",
-      "other": "ta’sirlangan: {{list}}"
+      "broken": "işlamayapti: {{list}}",
+      "degraded": "taʼsirlangan: {{list}}",
+      "other": "taʼsirlangan: {{list}}"
     },
-    "expectedNote": "Sinov stendi: bu yerda bu kutilgan holat, ogohlantirishlar yuborilmaydi.",
+    "expectedNote": "Sinov stendi: bu yerda bu kutilgan holat, ogohlantirişlar yuborilmaydi.",
     "action": {
-      "enter_key": "Yangi kalit kiritish",
-      "enter_token": "Yangi token kiritish",
-      "recheck": "Qayta tekshirish",
-      "reconnect": "Qayta ulash",
-      "open_settings": "Sozlamalarni ochish",
-      "write_owner": "Egasiga yozish",
-      "write_hosting": "Xostingga yuborish",
-      "disable_provider": "Provayderni o‘chirish",
-      "open_bus": "Almashinuv jurnalini ochish"
+      "enter_key": "Yangi kalit kiritiş",
+      "enter_token": "Yangi token kiritiş",
+      "recheck": "Qayta tekşiriş",
+      "reconnect": "Qayta ulaş",
+      "open_settings": "Sozlamalarni oçiş",
+      "write_owner": "Egasiga yoziş",
+      "write_hosting": "Xostingga yuboriş",
+      "disable_provider": "Provayderni öçiriş",
+      "open_bus": "Almaşinuv jurnalini oçiş"
     },
     "actionAria": "{{action}}: {{subject}}",
     "recheck": {
       "fixed": "Tiklandi: {{subject}}",
-      "still": "Hali ishlamayapti. Tekshiruv o‘zi takrorlanadi: bir daqiqadan keyin, so‘ng siyrakroq.",
-      "error": "Tekshirib bo‘lmadi: {{subject}}"
+      "still": "Hali işlamayapti. Tekşiruv özi takrorlanadi: bir daqiqadan keyin, söng siyrakroq.",
+      "error": "Tekşirib bölmadi: {{subject}}"
     },
     "write": {
       "title": "Tayyor matn: {{who}}",
@@ -844,74 +844,74 @@
         "hosting": "xostingga"
       },
       "label": "Xabar matni",
-      "copy": "Nusxalash",
+      "copy": "Nusxalaş",
       "copied": "Matn nusxalandi",
-      "mail": "Pochtada ochish",
-      "telegram": "Telegramda ochish",
+      "mail": "Poçtada oçiş",
+      "telegram": "Telegramda oçiş",
       "mailSubject": "Platforma: {{headline}}",
-      "note": "Platforma hech narsa yubormaydi: matnni nusxalang yoki o‘z ilovangizni oching — xabarni o‘zingiz yuborasiz."
+      "note": "Platforma heç narsa yubormaydi: matnni nusxalang yoki öz ilovangizni oçing — xabarni özingiz yuborasiz."
     },
     "technical": {
       "summary": "Texnik tafsilotlar",
-      "copy": "Yordam xizmati uchun nusxalash",
-      "copied": "Yordam xizmati uchun nusxalandi",
+      "copy": "Yordam xizmati uçun nusxalaş",
+      "copied": "Yordam xizmati uçun nusxalandi",
       "support": "Servis: {{services}}\nHolat: {{state}}\nSana: {{since}}\nTafsilotlar:\n{{details}}"
     },
     "key": {
-      "title": "{{vendor}} uchun yangi kalit",
+      "title": "{{vendor}} uçun yangi kalit",
       "label": "Yangi kalit",
-      "hint": "Kalit provayderning barcha rollariga qo‘llanadi: {{roles}}.",
-      "submit": "Kalitni qo‘llash",
-      "step1": "Kalit shifrlangan holda saqlanadi va qayta ko‘rsatilmaydi.",
-      "step2": "Modellar shlyuzi uni qayta ishga tushirmasdan qo‘llaydi; so‘ng provayder darhol tekshiriladi.",
+      "hint": "Kalit provayderning barça rollariga qöllanadi: {{roles}}.",
+      "submit": "Kalitni qöllaş",
+      "step1": "Kalit şifrlangan holda saqlanadi va qayta körsatilmaydi.",
+      "step2": "Modellar şlyuzi uni qayta işga tuşirmasdan qöllaydi; söng provayder darhol tekşiriladi.",
       "step3": "Amal kalitsiz jurnalga yoziladi.",
-      "done": "Kalit qabul qilindi, rollar: {{roles}}. Provayder tekshirilmoqda.",
-      "noRoles": "Bu provayderda kalit qo‘llanadigan rollar yo‘q.",
-      "failed": "«{{alias}}» roli uchun kalitni qo‘llab bo‘lmadi."
+      "done": "Kalit qabul qilindi, rollar: {{roles}}. Provayder tekşirilmoqda.",
+      "noRoles": "Bu provayderda kalit qöllanadigan rollar yöq.",
+      "failed": "«{{alias}}» roli uçun kalitni qöllab bölmadi."
     },
     "model": {
-      "problem": "«{{alias}}» roli javob bermayapti: provayderdagi kalit va balansni tekshiring."
+      "problem": "«{{alias}}» roli javob bermayapti: provayderdagi kalit va balansni tekşiring."
     },
-    "setupUnchecked": "Tekshirilmagan — «Tekshirish» tugmasini bosing"
+    "setupUnchecked": "Tekşirilmagan — «Tekşiriş» tugmasini bosing"
   },
   "cabinet": {
     "title": "Mijoz kabineti manzili",
-    "lead": "Mijozlar kabinetni shu manzil orqali ochadi: bot xabarlaridagi «Kabinetni ochish» tugmasi va kabinetga taklifnomalar. Manzilsiz taklifnomalar mijozga yuborilmaydi.",
+    "lead": "Mijozlar kabinetni şu manzil orqali oçadi: bot xabarlaridagi «Kabinetni oçiş» tugmasi va kabinetga taklifnomalar. Manzilsiz taklifnomalar mijozga yuborilmaydi.",
     "current": {
-      "saved": "Hozir: {{url}} (shu yerda berilgan).",
+      "saved": "Hozir: {{url}} (şu yerda berilgan).",
       "env": "Hozir: {{url}} (server sozlamalaridan).",
-      "none": "Manzil berilmagan — kabinetga taklifnomalar va «Kabinetni ochish» tugmasi mijozga yuborilmaydi."
+      "none": "Manzil berilmagan — kabinetga taklifnomalar va «Kabinetni oçiş» tugmasi mijozga yuborilmaydi."
     },
     "label": "Kabinet manzili",
-    "hint": "Masalan, https://cabinet.railtech.uz. Bo‘sh — server sozlamalaridagi manzil.",
-    "check": "Ochilishini tekshirish",
-    "save": "Manzilni saqlash",
+    "hint": "Masalan, https://cabinet.railtech.uz. Böş — server sozlamalaridagi manzil.",
+    "check": "Oçilişini tekşiriş",
+    "save": "Manzilni saqlaş",
     "saved": "Kabinet manzili saqlandi",
-    "invalid": "https://cabinet.example.com ko'rinishidagi manzil kerak.",
+    "invalid": "https://cabinet.example.com körinişidagi manzil kerak.",
     "failed": "Saqlanmadi: xizmat javob bermadi. Keyinroq takrorlang.",
     "result": {
-      "ok": "Kabinet ochilmoqda: {{url}}.",
-      "not_set": "Manzil berilmagan — tekshiradigan narsa yo'q.",
-      "unreachable": "Manzil serverdan ochilmadi: manzil, DNS va sertifikatni tekshiring.",
-      "bad_status": "Kabinet {{code}} kodi bilan javob berdi — manzilni tekshiring.",
-      "not_cabinet": "Manzilda mijoz kabineti emas, boshqa narsa javob bermoqda — manzilni tekshiring."
+      "ok": "Kabinet oçilmoqda: {{url}}.",
+      "not_set": "Manzil berilmagan — tekşiradigan narsa yöq.",
+      "unreachable": "Manzil serverdan oçilmadi: manzil, DNS va sertifikatni tekşiring.",
+      "bad_status": "Kabinet {{code}} kodi bilan javob berdi — manzilni tekşiring.",
+      "not_cabinet": "Manzilda mijoz kabineti emas, boşqa narsa javob bermoqda — manzilni tekşiring."
     }
   },
   "links": {
     "groupAria": "Xizmat kabinetlari",
-    "newTabAria": "{{name}} — yangi oynada ochiladi",
+    "newTabAria": "{{name}} — yangi oynada oçiladi",
     "mail": {
       "yandex": {
-        "admin": "Yandex 360 boshqaruvi",
-        "mail": "Yandex Pochta"
+        "admin": "Yandex 360 boşqaruvi",
+        "mail": "Yandex Poçta"
       },
       "google": {
-        "admin": "Google Workspace boshqaruvi",
+        "admin": "Google Workspace boşqaruvi",
         "mail": "Gmail"
       },
       "mailru": {
-        "admin": "Mail.ru biznes uchun",
-        "mail": "Mail.ru pochta"
+        "admin": "Mail.ru biznes uçun",
+        "mail": "Mail.ru poçta"
       }
     },
     "models": {
@@ -933,9 +933,9 @@
     }
   },
   "consoles": {
-    "open": "Konsolni ochish: {{name}}",
-    "openAria": "«{{name}}» konsolini yangi oynada ochish",
-    "ownLogin": "Kirish — xizmatning o‘z kaliti yoki paroli bilan.",
+    "open": "Konsolni oçiş: {{name}}",
+    "openAria": "«{{name}}» konsolini yangi oynada oçiş",
+    "ownLogin": "Kiriş — xizmatning öz kaliti yoki paroli bilan.",
     "erp": {
       "name": "baza paneli"
     }
