@@ -11,7 +11,7 @@
 from datetime import UTC, datetime
 
 import pytest
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.domain.backoffice import BackofficeMode
@@ -714,3 +714,78 @@ async def test_closing_won_is_forbidden_in_erp_mode_on_the_backend(
         lead = await session.get(Lead, lead_id)
         assert lead is not None
         assert lead.stage == expected
+
+
+CONTACT_UPDATED = "uz.railtech.crm.contact.updated.v1"
+
+
+async def _contact_events(sessions: async_sessionmaker[AsyncSession]) -> list[dict[str, object]]:
+    async with sessions() as session:
+        rows = (
+            await session.execute(
+                text("SELECT envelope FROM rt_bus_outbox WHERE type = :t ORDER BY created_at, id"),
+                {"t": CONTACT_UPDATED},
+            )
+        ).all()
+    return [row[0]["data"]["contact"] for row in rows]
+
+
+async def test_handoff_republishes_every_contact_with_position_and_telegram_username(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    """ERP skips `contact.created` before the hand-over and the hand-over body has no position or
+    username: after `_complete` each contact goes out again as `contact.updated` (G2)."""
+    from app.bus import runtime
+    from app.bus.runtime import build_bus
+
+    runtime.set_bus(build_bus(sessions, None))
+    try:
+        who, lead_id = await _manager(sessions, "manager-g2@example.com")
+        client_id = await _service(sessions, Queue(sessions)).make_customer(
+            who, lead_id, None, "ООО Логистик Плюс"
+        )
+        async with sessions() as session, session.begin():
+            identity = await session.scalar(
+                select(TelegramIdentity).where(TelegramIdentity.lead_id == lead_id)
+            )
+            assert identity is not None
+            session.add(
+                ClientContact(
+                    client_id=client_id,
+                    full_name="ООО Логистик Плюс",
+                    position="Директор",
+                    telegram_identity_id=identity.id,
+                    is_primary=True,
+                )
+            )
+            session.add(
+                ClientContact(client_id=client_id, full_name="Второй", position="Снабженец")
+            )
+            await session.execute(text("DELETE FROM rt_bus_outbox"))
+
+        assert (
+            await ErpHandoffService(sessions, FakeErpClient(company_id=55)).run(
+                client_id, lead_id, who.user_id
+            )
+            == "done"
+        )
+
+        events = await _contact_events(sessions)
+        assert sorted((e["full_name"], e["position"]) for e in events) == [
+            ("Второй", "Снабженец"),
+            ("ООО Логистик Плюс", "Директор"),
+        ]
+        by_name = {e["full_name"]: e for e in events}
+        assert by_name["ООО Логистик Плюс"]["telegram_username"] == "alisher_log"
+        assert {e["crm_client_id"] for e in events} == {client_id}
+
+        # A repeat of the finished hand-over writes nothing more.
+        assert (
+            await ErpHandoffService(sessions, FakeErpClient(company_id=55)).run(
+                client_id, lead_id, who.user_id
+            )
+            == "skipped"
+        )
+        assert len(await _contact_events(sessions)) == 2
+    finally:
+        runtime.set_bus(None)

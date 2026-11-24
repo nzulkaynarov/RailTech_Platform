@@ -19,7 +19,7 @@ import structlog
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.domain.bot_menu import normalize_phone
+from app.domain.lead_sources import normalize_phone_e164
 from app.domain.platform_roles import (
     PUBLISHED_SECTION_PREFIXES,
     RoleGrant,
@@ -77,7 +77,7 @@ def clean_phone(value: str | None) -> str | None:
     raw = (value or "").strip()
     if not raw:
         return None
-    phone = raw if _PHONE.fullmatch(raw) else normalize_phone(raw)
+    phone = normalize_phone_e164(raw)
     if phone is None or not _PHONE.fullmatch(phone):
         logger.warning("bus_snapshot_phone_dropped", length=len(raw))
         return None

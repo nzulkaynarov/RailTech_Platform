@@ -51,6 +51,7 @@ from app.models.leads import Lead, TelegramIdentity
 from app.security import audit
 from app.services import deals as deals_service
 from app.services import partner_clients, portal_invites
+from app.services.client_republish import republish_contacts_of_client
 
 logger = structlog.get_logger(__name__)
 
@@ -152,6 +153,9 @@ class ErpHandoffService:
                 )
                 # Компания получила клиента этим путём: ждущие заявки партнёра по ней закрываются.
                 await partner_clients.close_pending(session, result.erp_company_id, client_id)
+                # ERP skips `contact.created` while the client is not handed over, and the hand-over
+                # body has no position or Telegram username: send the full snapshots now (G2).
+                await republish_contacts_of_client(session, client_id, audit.Actor.system())
             erp_deal_id = None
             if create_request and result.erp_request_id and lead is not None:
                 await _mirror_request(session, client, lead, result.erp_request_id)
