@@ -80,6 +80,15 @@
 .pf-co-preview-empty {
   padding: 24px;
 }
+.pf-co-sample {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-start;
+}
+.pf-co-sample > div {
+  width: 100%;
+}
 .pf-co-frame {
   display: block;
   width: 100%;

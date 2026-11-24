@@ -192,6 +192,7 @@ import type {
   DocumentClientLinks,
   DocumentPlaceholders,
   DocumentPreview,
+  DocumentSample,
   DocumentTemplate,
   DocumentTemplateList,
   EdsAddressee,
@@ -18178,6 +18179,45 @@ export const getPreviewDocumentTemplateResponseMock = (
   ]),
   ...overrideResponse,
 });
+
+export const getRequestDocumentSampleResponseMock = (
+  overrideResponse: Partial<Extract<DocumentSample, object>> = {},
+): DocumentSample => ({
+  id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  status: faker.helpers.arrayElement(["pending", "ready", "failed"] as const),
+  warnings: faker.helpers.arrayElement([
+    Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() =>
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+    ),
+    undefined,
+  ]),
+  failure_code: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
+  ...overrideResponse,
+});
+
+export const getGetDocumentSampleResponseMock = (
+  overrideResponse: Partial<Extract<DocumentSample, object>> = {},
+): DocumentSample => ({
+  id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  status: faker.helpers.arrayElement(["pending", "ready", "failed"] as const),
+  warnings: faker.helpers.arrayElement([
+    Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() =>
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+    ),
+    undefined,
+  ]),
+  failure_code: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
+  ...overrideResponse,
+});
+
+export const getDownloadDocumentSampleResponseMock = (): Blob =>
+  new Blob([new Uint8Array(faker.number.int({ min: 1, max: 64 }))]);
 
 export const getUpdateDocumentTemplateResponseMock = (
   overrideResponse: Partial<Extract<DocumentTemplate, object>> = {},
@@ -46931,6 +46971,77 @@ export const getPreviewDocumentTemplateMockHandler = (
   );
 };
 
+export const getRequestDocumentSampleMockHandler = (
+  overrideResponse?:
+    | DocumentSample
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<DocumentSample> | DocumentSample),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/admin/company/document-samples",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getRequestDocumentSampleResponseMock(),
+        { status: 202 },
+      );
+    },
+    options,
+  );
+};
+
+export const getGetDocumentSampleMockHandler = (
+  overrideResponse?:
+    | DocumentSample
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<DocumentSample> | DocumentSample),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/admin/company/document-samples/:id",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetDocumentSampleResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getDownloadDocumentSampleMockHandler = (
+  overrideResponse?:
+    Blob | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<Blob> | Blob),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/admin/company/document-samples/:id/file",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      const binaryBody =
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getDownloadDocumentSampleResponseMock();
+      return new HttpResponse(binaryBody, {
+        status: 200,
+        headers: { "Content-Type": "application/pdf" },
+      });
+    },
+    options,
+  );
+};
+
 export const getUpdateDocumentTemplateMockHandler = (
   overrideResponse?:
     | DocumentTemplate
@@ -53091,6 +53202,9 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getCreateDocumentTemplateMockHandler(),
   getGetDocumentPlaceholdersMockHandler(),
   getPreviewDocumentTemplateMockHandler(),
+  getRequestDocumentSampleMockHandler(),
+  getGetDocumentSampleMockHandler(),
+  getDownloadDocumentSampleMockHandler(),
   getUpdateDocumentTemplateMockHandler(),
   getDeleteDocumentTemplateMockHandler(),
   getCopyDocumentTemplateMockHandler(),
