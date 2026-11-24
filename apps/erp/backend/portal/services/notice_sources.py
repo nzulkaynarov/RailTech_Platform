@@ -276,16 +276,24 @@ def partner_order_sent(order, *, contact_ids=None) -> list:
     return rows
 
 
-def partner_rfq_sent(price_request) -> int:
-    """Запрос цены направлен поставщику — ждёт ответа (колокольчик и письмо контактам партнёра)."""
+def partner_rfq_sent(price_request, *, email_skip=None) -> int:
+    """Число строк ленты, созданных `partner_rfq_notices`."""
+    return len(partner_rfq_notices(price_request, email_skip=email_skip))
+
+
+def partner_rfq_notices(price_request, *, email_skip=None) -> list:
+    """Запрос цены направлен поставщику — ждёт ответа (колокольчик и письмо контактам партнёра).
+
+    Возвращает созданные уведомления (ДК-5: по каналу видно, кому ушло письмо со ссылкой). `email_skip` — контакты, которым
+    письмо не нужно (нет права отвечать): колокольчик у них остаётся."""
     from .access import company_access
 
     company = getattr(price_request, "supplier", None)
     if company is None:
-        return 0
+        return []
     _roles, modules = company_access(company.pk)
     if "my_products" not in modules:
-        return 0
+        return []
     # Что запрашиваем — часть темы после «—» (СЦ-10: без номера нашего проекта); длинное — с многоточием.
     ref = (price_request.subject or "").rsplit(" — ", 1)[-1].strip() or f"RFQ-{price_request.pk}"
     if len(ref) > 100:
@@ -299,8 +307,9 @@ def partner_rfq_sent(price_request) -> int:
         link=f"/partner/orders?view=rfq&rfqId={price_request.pk}",
         dedup=f"{price_request.pk}:sent",
         bot_reaches=False,
+        email_skip=email_skip,
     )
-    return len(rows)
+    return rows
 
 
 def partner_goods_received(receipt) -> int:

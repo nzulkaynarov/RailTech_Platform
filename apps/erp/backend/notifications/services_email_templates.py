@@ -66,6 +66,15 @@ SAMPLE_CONTEXTS: dict[str, dict] = {
         "due_date": "08.12.2026",
         "public_link": "https://cabinet.example.com/d/sample-token",
     },
+    "partner_document_sent": {
+        "kind": "supplier_order",
+        "recipient_name": "Дилшод",
+        "buyer_name": "ООО «Покупатель»",
+        "number": "ЗП-2026-031",
+        "total": "12 500 000,00 UZS",
+        "expected_date": "30.11.2026",
+        "public_link": "https://cabinet.example.com/d/sample-token",
+    },
     "document_link_code": {
         "code": "123456",
         "document_number": "QT-0118",

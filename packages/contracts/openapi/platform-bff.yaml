@@ -13339,6 +13339,46 @@ paths:
         '422': {$ref: '#/components/responses/ValidationFailed'}
         '503': {$ref: '#/components/responses/BackendUnavailable'}
 
+  /erp/price-requests/{request_id}/partner-links:
+    get:
+      tags: [calc]
+      operationId: getPriceRequestPartnerLinks
+      summary: 'Расчёт · Ссылки партнёра на запрос цены'
+      description: >-
+        ДК-5. ERP `GET /stock/price-requests/{id}/partner-links/`: кому из контактов партнёра ушла личная ссылка на запрос (адрес замаскирован), когда, открывали ли и в каком она состоянии (`active`, `revoked`, `expired`). Нет права отправлять запрос (решает ERP) — список пуст. Раздел `erp.calc` — чтение.
+      parameters:
+        - {name: request_id, in: path, required: true, schema: {type: string, pattern: '^[0-9]+$', maxLength: 12}}
+      responses:
+        '200':
+          description: 'Ссылки партнёра'
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/DocumentClientLinks'}
+        '401': {$ref: '#/components/responses/SessionExpired'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '503': {$ref: '#/components/responses/BackendUnavailable'}
+
+  /erp/price-requests/{request_id}/partner-links/revoke:
+    post:
+      tags: [calc]
+      operationId: revokePriceRequestPartnerLinks
+      summary: 'Расчёт · Отозвать ссылку партнёра на запрос цены'
+      description: >-
+        ДК-5. ERP `POST /stock/price-requests/{id}/revoke-partner-links/`: гасит живые ссылки ЭТОГО запроса у всех контактов; партнёр по ним увидит «ссылка отозвана». Раздел `erp.stock` — полный, право отправлять запрос решает ERP (403).
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - {name: request_id, in: path, required: true, schema: {type: string, pattern: '^[0-9]+$', maxLength: 12}}
+      responses:
+        '200':
+          description: 'Обновлённый список ссылок'
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/DocumentClientLinks'}
+        '401': {$ref: '#/components/responses/SessionExpired'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '503': {$ref: '#/components/responses/BackendUnavailable'}
+
   /erp/stock/suppliers:
     get:
       tags: [stock]
@@ -13592,6 +13632,46 @@ paths:
         '404': {$ref: '#/components/responses/NotFound'}
         '409': {$ref: '#/components/responses/StockConflict'}
         '422': {$ref: '#/components/responses/ValidationFailed'}
+        '503': {$ref: '#/components/responses/BackendUnavailable'}
+
+  /erp/stock/orders/{order_number}/partner-links:
+    get:
+      tags: [stock]
+      operationId: getSupplierOrderPartnerLinks
+      summary: 'Склад · Ссылки партнёра на заказ'
+      description: >-
+        ДК-5. ERP `GET /stock/orders/{id}/partner-links/`: кому из контактов партнёра ушла личная ссылка на заказ (адрес замаскирован), когда, открывали ли и в каком она состоянии. Нет права отправлять заказ — список пуст. Раздел `erp.stock` — чтение.
+      parameters:
+        - {$ref: '#/components/parameters/StockOrderNumberPath'}
+      responses:
+        '200':
+          description: 'Ссылки партнёра'
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/DocumentClientLinks'}
+        '401': {$ref: '#/components/responses/SessionExpired'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '503': {$ref: '#/components/responses/BackendUnavailable'}
+
+  /erp/stock/orders/{order_number}/partner-links/revoke:
+    post:
+      tags: [stock]
+      operationId: revokeSupplierOrderPartnerLinks
+      summary: 'Склад · Отозвать ссылку партнёра на заказ'
+      description: >-
+        ДК-5. ERP `POST /stock/orders/{id}/revoke-partner-links/`: гасит живые ссылки ЭТОГО заказа у всех контактов и пишет журнал заказа. Раздел `erp.stock` — полный, право отправлять заказ решает ERP (403).
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - {$ref: '#/components/parameters/StockOrderNumberPath'}
+      responses:
+        '200':
+          description: 'Обновлённый список ссылок'
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/DocumentClientLinks'}
+        '401': {$ref: '#/components/responses/SessionExpired'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
         '503': {$ref: '#/components/responses/BackendUnavailable'}
 
   /erp/stock/orders/{order_number}/receipts:

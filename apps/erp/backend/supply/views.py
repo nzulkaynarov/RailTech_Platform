@@ -37,6 +37,7 @@ from supply.serializers import (
 from supply.services import orders, price_requests, tasks
 
 from core.permissions import RoleGatedViewMixin
+from crm.serializers.document_links import DocumentClientLinksSerializer
 
 TAGS = ["Stock"]
 ERRORS = {
@@ -523,3 +524,133 @@ class PriceRequestAnswerView(RoleGatedViewMixin, APIView):
             return Response(price_requests.present(answered))
         except StockError as exc:
             return fail(exc)
+
+
+# ── ДК-5: ссылки партнёра на запрос цены и заказ — список и «Отозвать ссылку» ─────────────────────────────────────────
+
+
+def _partner_links(kind: str, doc) -> dict:
+    from portal.services.doc_links import document_link_rows
+
+    links = document_link_rows(kind, doc)
+    return {"links": links, "can_revoke": any(row["state"] == "active" for row in links)}
+
+
+def _load_partner_document(kind: str, pk: int):
+    from inventory.access import StockError
+
+    if kind == "supplier_order":
+        return orders._order_or_404(pk)
+    found = PriceRequest.objects.select_related("supplier", "deal").filter(pk=pk).first()
+    if found is None:
+        raise StockError("REQUEST_NOT_FOUND", 404)
+    return found
+
+
+class _PartnerLinksView(RoleGatedViewMixin, APIView):
+    """Ссылки партнёра на документ; право — то же, что на его отправку (`supply.manage`), в том числе на чтение списка."""
+
+    permission_classes = [IsAuthenticated]
+    required_permissions = {"POST": "supply.manage"}
+    document_kind: str
+    id_kwarg: str
+
+    def _document(self, request, **kwargs):
+        from inventory.access import require_supply
+
+        require_supply(request.user)
+        return _load_partner_document(self.document_kind, kwargs[self.id_kwarg])
+
+
+class OrderPartnerLinksView(_PartnerLinksView):
+    """GET /api/v1/stock/orders/<id>/partner-links/ — ссылки партнёра на заказ: кому, когда, открыта ли, состояние."""
+
+    document_kind = "supplier_order"
+    id_kwarg = "order_id"
+
+    @extend_schema(
+        operation_id="stock_order_partner_links",
+        summary="Ссылки партнёра на заказ в Кабинете",
+        description="Каждая личная ссылка, с которой заказ ушёл партнёру: адрес замаскирован, отправлена, открыта, "
+        "состояние (`active`, `revoked`, `expired`). Ссылки других документов не попадают.",
+        tags=TAGS,
+        responses={200: DocumentClientLinksSerializer, **READ_ERRORS},
+    )
+    def get(self, request, order_id: int):
+        try:
+            return Response(_partner_links(self.document_kind, self._document(request, order_id=order_id)))
+        except StockError as exc:
+            return fail(exc)
+
+
+class OrderRevokePartnerLinksView(_PartnerLinksView):
+    """POST /api/v1/stock/orders/<id>/revoke-partner-links/ — отозвать все живые ссылки заказа."""
+
+    document_kind = "supplier_order"
+    id_kwarg = "order_id"
+
+    @extend_schema(
+        operation_id="stock_order_revoke_partner_links",
+        summary="Отозвать ссылки партнёра на заказ",
+        description="Гасит каждую живую ссылку ЭТОГО заказа (у всех контактов); повтор ничего не меняет. Дальнейшее "
+        "открытие — 410 `DOC_LINK_REVOKED`. В ответе — обновлённый список.",
+        tags=TAGS,
+        request=None,
+        responses={200: DocumentClientLinksSerializer, **READ_ERRORS},
+    )
+    def post(self, request, order_id: int):
+        from portal.services.doc_links import revoke_document_links_logged
+
+        try:
+            doc = self._document(request, order_id=order_id)
+        except StockError as exc:
+            return fail(exc)
+        revoke_document_links_logged(self.document_kind, doc, request.user)
+        return Response(_partner_links(self.document_kind, doc))
+
+
+class PriceRequestPartnerLinksView(_PartnerLinksView):
+    """GET /api/v1/stock/price-requests/<id>/partner-links/ — ссылки партнёра на запрос цены."""
+
+    document_kind = "price_request"
+    id_kwarg = "request_id"
+
+    @extend_schema(
+        operation_id="stock_price_request_partner_links",
+        summary="Ссылки партнёра на запрос цены в Кабинете",
+        description="Каждая личная ссылка, с которой запрос ушёл партнёру: адрес замаскирован, отправлена, открыта, "
+        "состояние (`active`, `revoked`, `expired`). Ссылки других документов не попадают.",
+        tags=TAGS,
+        responses={200: DocumentClientLinksSerializer, **READ_ERRORS},
+    )
+    def get(self, request, request_id: int):
+        try:
+            return Response(_partner_links(self.document_kind, self._document(request, request_id=request_id)))
+        except StockError as exc:
+            return fail(exc)
+
+
+class PriceRequestRevokePartnerLinksView(_PartnerLinksView):
+    """POST /api/v1/stock/price-requests/<id>/revoke-partner-links/ — отозвать все живые ссылки запроса."""
+
+    document_kind = "price_request"
+    id_kwarg = "request_id"
+
+    @extend_schema(
+        operation_id="stock_price_request_revoke_partner_links",
+        summary="Отозвать ссылки партнёра на запрос цены",
+        description="Гасит каждую живую ссылку ЭТОГО запроса (у всех контактов); повтор ничего не меняет. В ответе — "
+        "обновлённый список.",
+        tags=TAGS,
+        request=None,
+        responses={200: DocumentClientLinksSerializer, **READ_ERRORS},
+    )
+    def post(self, request, request_id: int):
+        from portal.services.doc_links import revoke_document_links_logged
+
+        try:
+            doc = self._document(request, request_id=request_id)
+        except StockError as exc:
+            return fail(exc)
+        revoke_document_links_logged(self.document_kind, doc, request.user)
+        return Response(_partner_links(self.document_kind, doc))

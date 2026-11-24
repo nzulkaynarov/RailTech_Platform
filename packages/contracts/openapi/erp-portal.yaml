@@ -1448,6 +1448,11 @@ paths:
         `VALIDATION_ERROR`, ссылка одного вида не действует над документом другого. Модуль кабинета — вида документа
         (`contracts`, `acts`, `quotes`), иначе 403 `MODULE_REQUIRED`. Договор или акт уже решён — 409 `CONTRACT_FINALIZED`,
         `ACT_FINALIZED`. Ответ — документ в том же виде, что у `POST /doc-links/open`.
+        ДК-5: у запроса цены партнёра — `answer` (`text` — комментарий, обязателен; `prices` — цена и срок по строкам запроса,
+        `currency` — код валюты цен, `valid_until` — срок цены; ответ один — повтор 409 `ALREADY_ANSWERED`), у заказа
+        поставщику — `confirm` (`expected_date` — дата поставки партнёра, если в заказе её нет; заказ уже не `sent` — 409
+        `TRANSITION_NOT_ALLOWED`). Модуль — `my_products`; право действовать — у контакта, как в кабинете партнёра. «Подтверждён»
+        ставит только этот вызов партнёрского контакта, сотрудник за партнёра с кабинетом статус не ставит.
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
@@ -1464,10 +1469,42 @@ paths:
                   maxLength: 200
                 action:
                   type: string
-                  enum: [accept, reject, question]
+                  enum: [accept, reject, question, answer, confirm]
                 text:
                   type: string
                   maxLength: 2000
+                prices:
+                  type: array
+                  maxItems: 100
+                  description: 'ДК-5, `answer`: цена и срок поставки по строкам запроса (только строки этого запроса)'
+                  items:
+                    type: object
+                    required: [id, unit_price]
+                    properties:
+                      id:
+                        type: integer
+                        minimum: 1
+                      unit_price:
+                        type: string
+                        description: 'Цена за единицу, десятичное число с точкой, > 0'
+                      lead_days:
+                        type: [integer, 'null']
+                        minimum: 0
+                        maximum: 3650
+                        description: 'Срок поставки по строке, дней'
+                    additionalProperties: false
+                currency:
+                  type: string
+                  pattern: '^[A-Z]{3}$'
+                  description: 'ДК-5, `answer`: валюта цен; обязательна, если есть `prices`'
+                valid_until:
+                  type: [string, 'null']
+                  format: date
+                  description: 'ДК-5, `answer`: до какой даты действуют цены'
+                expected_date:
+                  type: [string, 'null']
+                  format: date
+                  description: 'ДК-5, `confirm`: дата поставки партнёра; нет — берётся дата заказа'
               additionalProperties: false
       responses:
         '200':
@@ -5977,7 +6014,7 @@ components:
       properties:
         kind:
           type: string
-          description: 'Вид документа — `quote`, `contract`, `invoice` или `act` (список открыт — новые виды добавляются без смены версии)'
+          description: 'Вид документа — `quote`, `contract`, `invoice`, `act`, `price_request` или `supplier_order` (список открыт — новые виды добавляются без смены версии)'
         number:
           type: string
         version:
@@ -6000,7 +6037,8 @@ components:
         state:
           type: string
           description: |
-            Значения — `open`, `accepted`, `rejected`, `expired`, `paid`. Из фактов документа, а не из ссылки. `open` — ждёт ответа (у счёта — оплаты); `accepted` — принят (договор подписан
+            Значения — `open`, `accepted`, `rejected`, `expired`, `paid`; у документов партнёра (ДК-5) — `answered` (ответ на запрос цены
+            дан), `confirmed` (заказ подтверждён партнёром), `cancelled` (заказ отменён). Из фактов документа, а не из ссылки. `open` — ждёт ответа (у счёта — оплаты); `accepted` — принят (договор подписан
             клиентом, акт принят); `rejected` — возвращён с замечаниями; `paid` — счёт оплачен
         link_expires_at:
           type: string
@@ -6035,7 +6073,32 @@ components:
             акт — принять, вернуть; счёт — ни одного. Действие вне списка — 422 `VALIDATION_ERROR`. Нет поля — как у КП
           items:
             type: string
-            enum: [accept, reject, question]
+            enum: [accept, reject, question, answer, confirm]
+        partner_lines:
+          type: array
+          description: |
+            ДК-5, запрос цены и заказ поставщику: строки глазами партнёра — его же цены и сроки. Клиента заявки, номера проекта,
+            нашей цены продажи и наценки здесь нет; `lines` у таких документов пуст.
+          items:
+            $ref: '#/components/schemas/DocLinkPartnerLine'
+        partner_note:
+          type: [string, 'null']
+          description: 'ДК-5: комментарий партнёру (заказ) или текст запроса; внутренняя заметка сотрудников сюда не попадает'
+        expected_date:
+          type: [string, 'null']
+          format: date
+          description: 'ДК-5, заказ поставщику: ожидаемая дата поставки'
+        confirmed_at:
+          type: [string, 'null']
+          format: date-time
+          description: 'ДК-5, заказ поставщику: когда подтвердил партнёр'
+        answered_at:
+          type: [string, 'null']
+          format: date-time
+          description: 'ДК-5, запрос цены: когда дан ответ'
+        answer_note:
+          type: [string, 'null']
+          description: 'ДК-5, запрос цены: комментарий ответа партнёра (пометку сотрудника «ответ получен» не показываем)'
         signed_at:
           type: [string, 'null']
           format: date-time
@@ -6055,6 +6118,35 @@ components:
         payment_details:
           type: [string, 'null']
           description: Счёт — реквизиты для оплаты, как в PDF; «Оплачено?» — справка, нового пути оплаты нет
+    DocLinkPartnerLine:
+      type: object
+      description: 'Строка запроса цены или заказа глазами партнёра (ДК-5): его позиция, количество, его цена и срок'
+      required: [id, position, name, article, unit, quantity]
+      properties:
+        id:
+          type: integer
+          description: 'Строка запроса (для `prices` ответа) или заказа'
+        position:
+          type: integer
+        name:
+          type: string
+        article:
+          type: string
+        unit:
+          type: string
+        quantity:
+          type: string
+        unit_price:
+          oneOf:
+            - $ref: '#/components/schemas/Money'
+            - type: 'null'
+        total:
+          oneOf:
+            - $ref: '#/components/schemas/Money'
+            - type: 'null'
+        lead_days:
+          type: [integer, 'null']
+          description: 'Срок поставки по строке, дней, — из ответа партнёра'
     QuoteLine:
       type: object
       description: Строка КП для клиента — цена продажи без себестоимости и наценки; `unit_price` и `total` без НДС (Q-FIX21-2)

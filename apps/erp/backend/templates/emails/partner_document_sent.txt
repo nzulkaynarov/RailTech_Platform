@@ -1,0 +1,15 @@
+{% load i18n %}{% translate "Здравствуйте" %}{% if recipient_name %}, {{ recipient_name }}{% endif %}!
+
+{% if kind == 'supplier_order' %}{% if buyer_name %}{% blocktranslate %}Компания {{ buyer_name }} направила заказ № {{ number }}. Подтвердите его и срок поставки.{% endblocktranslate %}{% else %}{% blocktranslate %}Вам направлен заказ № {{ number }}. Подтвердите его и срок поставки.{% endblocktranslate %}{% endif %}{% else %}{% if buyer_name %}{% blocktranslate %}Компания {{ buyer_name }} просит назвать цену и срок поставки: {{ number }}.{% endblocktranslate %}{% else %}{% blocktranslate %}Просим назвать цену и срок поставки: {{ number }}.{% endblocktranslate %}{% endif %}{% endif %}
+{% if total %}
+{% translate "Сумма:" %} {{ total }}{% endif %}{% if expected_date %}
+{% translate "Ожидаемая дата поставки:" %} {{ expected_date }}{% endif %}
+
+{% translate "PDF документа приложен к этому письму." %}
+
+{% if kind == 'supplier_order' %}{% translate "Открыть заказ:" %}{% else %}{% translate "Ответить на запрос:" %}{% endif %}
+{{ public_link }}
+
+{% translate "С уважением," %}
+{% blocktranslate with platform=platform_name|default:'ERP' %}команда {{ platform }}{% endblocktranslate %}
+{% include "emails/_telegram_footer.txt" %}

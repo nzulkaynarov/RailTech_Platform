@@ -614,7 +614,8 @@ def _apply_prices(company, user, req: PriceRequest, prices: list[dict], currency
     for row in prices:
         line = lines[row["id"]]
         line.answer_price = row["unit_price"]
-        line.save(update_fields=["answer_price"])
+        line.answer_lead_days = row.get("lead_days")  # ДК-5: срок по строке — из ответа по личной ссылке
+        line.save(update_fields=["answer_price", "answer_lead_days"])
         product_id = line.product_id or (line.quote_item.product_id if line.quote_item_id else None)
         if product_id:
             _update_supplier_price(company, user, product_id, row["unit_price"], currency, valid_until)

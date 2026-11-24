@@ -1382,7 +1382,7 @@
         "/api/portal/v1/doc-links/act": {
             "post": {
                 "operationId": "api_portal_v1_doc_links_act_create",
-                "description": "POST /doc-links/act {token, action, text?} — решение или вопрос; права — контакта сессии, не шире.\n\nМодуль кабинета зависит от вида документа (КП — «Предложения», договор — «Договоры», акт — «Акты»), поэтому его\nпроверяет сама вьюха после того, как нашла ссылку; действия, которых у этого вида нет, — 422 `VALIDATION_ERROR`:\nссылка договора не принимает решений по КП и наоборот.",
+                "description": "POST /doc-links/act {token, action, text?} — решение или вопрос; права — контакта сессии, не шире.\n\nМодуль кабинета зависит от вида документа (КП — «Предложения», договор — «Договоры», акт — «Акты», запрос цены и заказ\nпоставщику — «Мои товары»), поэтому его\nпроверяет сама вьюха после того, как нашла ссылку; действия, которых у этого вида нет, — 422 `VALIDATION_ERROR`:\nссылка договора не принимает решений по КП и наоборот.",
                 "tags": [
                     "api"
                 ],
@@ -1396,7 +1396,7 @@
         "/api/portal/v1/doc-links/act/": {
             "post": {
                 "operationId": "api_portal_v1_doc_links_act_create_2",
-                "description": "POST /doc-links/act {token, action, text?} — решение или вопрос; права — контакта сессии, не шире.\n\nМодуль кабинета зависит от вида документа (КП — «Предложения», договор — «Договоры», акт — «Акты»), поэтому его\nпроверяет сама вьюха после того, как нашла ссылку; действия, которых у этого вида нет, — 422 `VALIDATION_ERROR`:\nссылка договора не принимает решений по КП и наоборот.",
+                "description": "POST /doc-links/act {token, action, text?} — решение или вопрос; права — контакта сессии, не шире.\n\nМодуль кабинета зависит от вида документа (КП — «Предложения», договор — «Договоры», акт — «Акты», запрос цены и заказ\nпоставщику — «Мои товары»), поэтому его\nпроверяет сама вьюха после того, как нашла ссылку; действия, которых у этого вида нет, — 422 `VALIDATION_ERROR`:\nссылка договора не принимает решений по КП и наоборот.",
                 "tags": [
                     "api"
                 ],
@@ -36348,6 +36348,66 @@
                 }
             }
         },
+        "/api/v1/stock/orders/{order_id}/partner-links/": {
+            "get": {
+                "operationId": "stock_order_partner_links",
+                "description": "Каждая личная ссылка, с которой заказ ушёл партнёру: адрес замаскирован, отправлена, открыта, состояние (`active`, `revoked`, `expired`). Ссылки других документов не попадают.",
+                "summary": "Ссылки партнёра на заказ в Кабинете",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "order_id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Stock"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DocumentClientLinks"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "403": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StockError"
+                                }
+                            }
+                        },
+                        "description": "Нет права, не сотрудник или нет права на цены поставщиков"
+                    },
+                    "404": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StockError"
+                                }
+                            }
+                        },
+                        "description": "Заказа, строки, поставщика или заявки нет"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    }
+                }
+            }
+        },
         "/api/v1/stock/orders/{order_id}/price-request/": {
             "post": {
                 "operationId": "stock_order_price_request",
@@ -36540,6 +36600,66 @@
                             }
                         },
                         "description": "Состояние не позволяет (недопустимый переход статуса, нет адреса, письмо не ушло — `EMAIL_FAILED`, мало товара, нет цены или ожидаемой даты — `ORDER_INCOMPLETE`)"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    }
+                }
+            }
+        },
+        "/api/v1/stock/orders/{order_id}/revoke-partner-links/": {
+            "post": {
+                "operationId": "stock_order_revoke_partner_links",
+                "description": "Гасит каждую живую ссылку ЭТОГО заказа (у всех контактов); повтор ничего не меняет. Дальнейшее открытие — 410 `DOC_LINK_REVOKED`. В ответе — обновлённый список.",
+                "summary": "Отозвать ссылки партнёра на заказ",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "order_id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Stock"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DocumentClientLinks"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "403": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StockError"
+                                }
+                            }
+                        },
+                        "description": "Нет права, не сотрудник или нет права на цены поставщиков"
+                    },
+                    "404": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StockError"
+                                }
+                            }
+                        },
+                        "description": "Заказа, строки, поставщика или заявки нет"
                     },
                     "401": {
                         "$ref": "#/components/responses/UnauthorizedResponse"
@@ -37012,6 +37132,126 @@
                             }
                         },
                         "description": "Состояние не позволяет (недопустимый переход статуса, нет адреса, письмо не ушло — `EMAIL_FAILED`, мало товара, нет цены или ожидаемой даты — `ORDER_INCOMPLETE`)"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    }
+                }
+            }
+        },
+        "/api/v1/stock/price-requests/{request_id}/partner-links/": {
+            "get": {
+                "operationId": "stock_price_request_partner_links",
+                "description": "Каждая личная ссылка, с которой запрос ушёл партнёру: адрес замаскирован, отправлена, открыта, состояние (`active`, `revoked`, `expired`). Ссылки других документов не попадают.",
+                "summary": "Ссылки партнёра на запрос цены в Кабинете",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "request_id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Stock"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DocumentClientLinks"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "403": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StockError"
+                                }
+                            }
+                        },
+                        "description": "Нет права, не сотрудник или нет права на цены поставщиков"
+                    },
+                    "404": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StockError"
+                                }
+                            }
+                        },
+                        "description": "Заказа, строки, поставщика или заявки нет"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    }
+                }
+            }
+        },
+        "/api/v1/stock/price-requests/{request_id}/revoke-partner-links/": {
+            "post": {
+                "operationId": "stock_price_request_revoke_partner_links",
+                "description": "Гасит каждую живую ссылку ЭТОГО запроса (у всех контактов); повтор ничего не меняет. В ответе — обновлённый список.",
+                "summary": "Отозвать ссылки партнёра на запрос цены",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "request_id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Stock"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DocumentClientLinks"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "403": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StockError"
+                                }
+                            }
+                        },
+                        "description": "Нет права, не сотрудник или нет права на цены поставщиков"
+                    },
+                    "404": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StockError"
+                                }
+                            }
+                        },
+                        "description": "Заказа, строки, поставщика или заявки нет"
                     },
                     "401": {
                         "$ref": "#/components/responses/UnauthorizedResponse"

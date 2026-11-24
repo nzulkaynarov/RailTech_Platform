@@ -22,7 +22,7 @@
         {% endfor %}
       </table>
       {% if note %}<p style="margin:0 0 16px 0;">{{ note|linebreaksbr }}</p>{% endif %}
-      <p style="margin:0 0 16px 0;">{% translate "Ответьте, пожалуйста, на это письмо: цена за единицу, валюта, условия поставки, срок действия цены." %}</p>
+      <p style="margin:0 0 16px 0;">{% if answer_in_cabinet %}{% translate "Ответить на запрос можно в личном кабинете партнёра." %}{% else %}{% translate "Ответьте, пожалуйста, на это письмо: цена за единицу, валюта, условия поставки, срок действия цены." %}{% endif %}</p>
       <p style="margin:0;">{{ sender_name }}{% if sender_email %}<br>{{ sender_email }}{% endif %}</p>
     </td></tr>
   </table>

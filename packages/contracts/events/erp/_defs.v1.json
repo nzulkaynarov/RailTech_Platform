@@ -750,8 +750,8 @@
         },
         "document_kind": {
           "type": "string",
-          "enum": ["quote", "contract", "invoice", "act"],
-          "description": "Вид документа по ссылке"
+          "enum": ["quote", "contract", "invoice", "act", "price_request", "supplier_order"],
+          "description": "Вид документа по ссылке; `price_request` и `supplier_order` — документы партнёра-поставщика (ДК-5)"
         },
         "number": {
           "type": "string",

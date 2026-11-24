@@ -1,0 +1,29 @@
+{% extends "emails/base.html" %}
+{% load i18n %}
+{% block subject %}{% if kind == 'supplier_order' %}{% blocktranslate %}Заказ № {{ number }}{% endblocktranslate %}{% else %}{% blocktranslate %}Запрос цены: {{ number }}{% endblocktranslate %}{% endif %}{% if buyer_name %} {% blocktranslate %}от {{ buyer_name }}{% endblocktranslate %}{% endif %}{% endblock %}
+{% block header_hint %}{% if kind == 'supplier_order' %}{% translate "Заказ поставщику" %}{% else %}{% translate "Запрос цены" %}{% endif %}{% endblock %}
+{% block content %}
+  <h1 style="margin:0 0 16px 0; font-size:22px; line-height:1.3; color:#111827;">
+    {% translate "Здравствуйте" %}{% if recipient_name %}, {{ recipient_name }}{% endif %}!
+  </h1>
+  <p style="margin:0 0 16px 0;">
+    {% if kind == 'supplier_order' %}{% if buyer_name %}{% blocktranslate %}Компания <strong>{{ buyer_name }}</strong> направила заказ <strong>№ {{ number }}</strong>. Подтвердите его и срок поставки.{% endblocktranslate %}{% else %}{% blocktranslate %}Вам направлен заказ <strong>№ {{ number }}</strong>. Подтвердите его и срок поставки.{% endblocktranslate %}{% endif %}
+    {% else %}{% if buyer_name %}{% blocktranslate %}Компания <strong>{{ buyer_name }}</strong> просит назвать цену и срок поставки: <strong>{{ number }}</strong>.{% endblocktranslate %}{% else %}{% blocktranslate %}Просим назвать цену и срок поставки: <strong>{{ number }}</strong>.{% endblocktranslate %}{% endif %}{% endif %}
+  </p>
+  {% if total or expected_date %}
+  <table role="presentation" cellpadding="0" cellspacing="0" style="margin:16px 0; font-size:15px; color:#111827;">
+    {% if total %}<tr><td style="padding:4px 0;">{% translate "Сумма:" %}</td><td style="padding:4px 0 4px 16px;"><strong>{{ total }}</strong></td></tr>{% endif %}
+    {% if expected_date %}<tr><td style="padding:4px 0;">{% translate "Ожидаемая дата поставки:" %}</td><td style="padding:4px 0 4px 16px;"><strong>{{ expected_date }}</strong></td></tr>{% endif %}
+  </table>
+  {% endif %}
+  <p style="margin:0 0 16px 0;">{% translate "PDF документа приложен к этому письму." %}</p>
+  <table role="presentation" cellpadding="0" cellspacing="0" style="margin:24px 0;">
+    <tr><td style="border-radius:8px; background-color:#2563eb;">
+      <a href="{{ public_link }}" style="display:inline-block; padding:12px 24px; font-size:15px; font-weight:600; color:#ffffff; text-decoration:none; border-radius:8px;">{% if kind == 'supplier_order' %}{% translate "Открыть заказ" %}{% else %}{% translate "Ответить на запрос" %}{% endif %}</a>
+    </td></tr>
+  </table>
+  <p style="margin:16px 0 0 0; font-size:13px; color:#6b7280;">
+    {% translate "Если кнопка не работает, скопируйте ссылку в браузер:" %}<br>
+    <a href="{{ public_link }}" style="color:#2563eb; word-break:break-all;">{{ public_link }}</a>
+  </p>
+{% endblock %}

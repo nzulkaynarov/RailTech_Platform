@@ -296,6 +296,8 @@ class PriceRequestLine(models.Model):
     quantity = models.DecimalField(max_digits=14, decimal_places=3)
     unit = models.CharField(max_length=32, blank=True, default="")
     answer_price = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True)
+    # ДК-5: срок поставки по строке в днях — партнёр называет его в ответе по личной ссылке.
+    answer_lead_days = models.PositiveIntegerField(null=True, blank=True, verbose_name=_("Срок поставки, дней"))
 
     class Meta:
         ordering = ["request_id", "id"]

@@ -15,6 +15,28 @@ class DocumentLinkKind(models.TextChoices):
     CONTRACT = "contract", _("Договор")
     INVOICE = "invoice", _("Счёт")
     ACT = "act", _("Акт")
+    # ДК-5: документы партнёра-поставщика — запрос цены и заказ поставщику; получатель — контакт компании-партнёра.
+    PRICE_REQUEST = "price_request", _("Запрос цены")
+    SUPPLIER_ORDER = "supplier_order", _("Заказ поставщику")
+
+
+#: Поле-документ ссылки по её `kind`; у каждого вида заполнено ровно оно.
+DOCUMENT_FIELDS = ("quote", "contract", "invoice", "act", "price_request", "supplier_order")
+
+
+def _one_document_condition() -> models.Q:
+    """`kind` называет единственное заполненное поле-документ (CHECK `portal_doclink_one_document`)."""
+    branches = []
+    for field in DOCUMENT_FIELDS:
+        branch = models.Q(kind=field, **{f"{field}__isnull": False})
+        for other in DOCUMENT_FIELDS:
+            if other != field:
+                branch &= models.Q(**{f"{other}__isnull": True})
+        branches.append(branch)
+    condition = branches[0]
+    for branch in branches[1:]:
+        condition |= branch
+    return condition
 
 
 class DocumentLink(models.Model):
@@ -33,7 +55,7 @@ class DocumentLink(models.Model):
         related_name="document_links",
         verbose_name=_("КП"),
     )
-    # ДК-3: договор, счёт и акт идут по той же схеме; заполнено ровно одно из четырёх полей — по `kind`.
+    # ДК-3: договор, счёт и акт идут по той же схеме; заполнено ровно одно из шести полей — по `kind`.
     contract = models.ForeignKey(
         "sales.Contract",
         on_delete=models.CASCADE,
@@ -57,6 +79,23 @@ class DocumentLink(models.Model):
         blank=True,
         related_name="document_links",
         verbose_name=_("Акт"),
+    )
+    # ДК-5: запрос цены и заказ поставщику — та же схема; компания ссылки — поставщик, а не клиент заявки.
+    price_request = models.ForeignKey(
+        "supply.PriceRequest",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="document_links",
+        verbose_name=_("Запрос цены"),
+    )
+    supplier_order = models.ForeignKey(
+        "supply.SupplierOrder",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="document_links",
+        verbose_name=_("Заказ поставщику"),
     )
     contact = models.ForeignKey(
         "parties.Contact",
@@ -91,31 +130,7 @@ class DocumentLink(models.Model):
         verbose_name_plural = _("Ссылки документов")
         ordering = ["-created_at"]
         constraints = [
-            models.CheckConstraint(
-                name="portal_doclink_one_document",
-                condition=(
-                    models.Q(
-                        kind="quote", quote__isnull=False, contract__isnull=True, invoice__isnull=True, act__isnull=True
-                    )
-                    | models.Q(
-                        kind="contract",
-                        contract__isnull=False,
-                        quote__isnull=True,
-                        invoice__isnull=True,
-                        act__isnull=True,
-                    )
-                    | models.Q(
-                        kind="invoice",
-                        invoice__isnull=False,
-                        quote__isnull=True,
-                        contract__isnull=True,
-                        act__isnull=True,
-                    )
-                    | models.Q(
-                        kind="act", act__isnull=False, quote__isnull=True, contract__isnull=True, invoice__isnull=True
-                    )
-                ),
-            )
+            models.CheckConstraint(name="portal_doclink_one_document", condition=_one_document_condition()),
         ]
 
     @property

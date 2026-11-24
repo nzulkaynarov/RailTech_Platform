@@ -35,6 +35,44 @@ class KindSpec:
     def deal(self, doc):
         return doc.deal
 
+    #: ДК-5: документ партнёра-поставщика. Компания ссылки — поставщик, проекция — партнёрская (без клиента и нашей цены).
+    partner = False
+
+    def company(self, doc):
+        """Компания, чьи контакты ссылка открывает: клиент заявки; у документов партнёра — поставщик."""
+        return self.deal(doc).company
+
+    def company_id(self, doc):
+        return self.deal(doc).company_id
+
+    def recipient_contact(self, doc, email: str, name: str):
+        """Контакт кабинета для адреса получателя (`doc_links.deal_recipient_contact`)."""
+        from portal.services.doc_links import deal_recipient_contact
+
+        return deal_recipient_contact(self.deal(doc), email, name)
+
+    def journal(self, doc, *, action: str, event_code: str, user=None, **params) -> None:
+        """Событие ссылки в журнал сделки документа: кто, когда, что (код входа, отзыв)."""
+        from crm.models import ActivityLog
+
+        deal = self.deal(doc)
+        ActivityLog.objects.create(
+            action=action,
+            detail=f"{doc.number or '—'}",
+            user=user,
+            level="INFO",
+            entity_type=self.kind,
+            entity_id=doc.pk,
+            deal_id=deal.pk,
+            company_id=deal.company_id,
+            event_code=event_code,
+            event_params={"number": doc.number or "—", **params},
+        )
+
+    def pdf_bytes(self, doc) -> Optional[bytes]:
+        """PDF, который собирается на лету (у документа партнёра файла нет); `None` — у вида есть файл (`pdf_file`)."""
+        return None
+
     def number(self, doc) -> str:
         return doc.number or ""
 
@@ -66,7 +104,7 @@ class KindSpec:
     def assert_actionable(self, doc) -> None:
         """409, если документ уже решён."""
 
-    def perform(self, doc, action: str, *, contact, text: str, ip: str) -> None:
+    def perform(self, doc, action: str, *, contact, text: str, ip: str, payload: Optional[dict] = None) -> None:
         raise NotImplementedError
 
     # PDF и состав --------------------------------------------------------------------------------------------------
@@ -126,7 +164,7 @@ class QuoteSpec(KindSpec):
 
         _assert_quote_awaits_decision(doc)
 
-    def perform(self, doc, action, *, contact, text, ip) -> None:
+    def perform(self, doc, action, *, contact, text, ip, payload=None) -> None:
         from portal.services.client_feedback import add_quote_comment
         from portal.views_doclinks import accept_quote, reject_quote
 
@@ -169,7 +207,7 @@ class ContractSpec(KindSpec):
         if self.state(doc) != "open":
             raise PortalConflict("CONTRACT_FINALIZED")
 
-    def perform(self, doc, action, *, contact, text, ip) -> None:
+    def perform(self, doc, action, *, contact, text, ip, payload=None) -> None:
         from rest_framework.exceptions import PermissionDenied
 
         from crm.services.contracts import sign_contract_by_client
@@ -273,7 +311,7 @@ class ActSpec(KindSpec):
         if self.state(doc) != "open":
             raise PortalConflict("ACT_FINALIZED")
 
-    def perform(self, doc, action, *, contact, text, ip) -> None:
+    def perform(self, doc, action, *, contact, text, ip, payload=None) -> None:
         from rest_framework.exceptions import PermissionDenied
 
         from crm.services.billing import reject_act, sign_act
@@ -297,7 +335,224 @@ class ActSpec(KindSpec):
         return {"issued_at": issued.isoformat()}
 
 
-SPECS: dict[str, KindSpec] = {spec.kind: spec for spec in (QuoteSpec(), ContractSpec(), InvoiceSpec(), ActSpec())}
+class _PartnerSpec(KindSpec):
+    """Общее у запроса цены и заказа поставщику (ДК-5): модуль «Мои товары», контакты поставщика, проекция без клиента."""
+
+    partner = True
+    module = "my_products"
+
+    def deal(self, doc):
+        return None  # заявки клиента у партнёрского документа в ссылке нет: клиент партнёру не показывается
+
+    def company(self, doc):
+        return doc.supplier
+
+    def company_id(self, doc):
+        return doc.supplier_id
+
+    def seller_name(self, doc) -> str:
+        from supply.services.partner_documents import buyer_name
+
+        return buyer_name()
+
+    def recipient_contact(self, doc, email: str, name: str):
+        """Получатель — действующий контакт поставщика по адресу; нет такого — контакта не заводим: ссылка без действий."""
+        from parties.models import Contact, active_contact_q
+
+        return (
+            Contact.objects.filter(active_contact_q(), company_id=doc.supplier_id, email__iexact=email.strip())
+            .order_by("-is_primary", "pk")
+            .first()
+        )
+
+    def number(self, doc) -> str:
+        return doc.number or ""
+
+    def pdf_file(self, doc):
+        return None
+
+
+class PriceRequestSpec(_PartnerSpec):
+    kind = "price_request"
+    actions = ("answer",)
+    select_related = ("price_request__supplier",)
+
+    def number(self, doc) -> str:
+        from supply.services.partner_documents import request_reference
+
+        return request_reference(doc)
+
+    def currency_code(self, doc) -> str:
+        return projections.currency_code(doc.answer_currency)
+
+    def total(self, doc):
+        return 0
+
+    def visible(self, doc) -> bool:
+        from supply.models import PriceRequestStatus
+
+        return doc.status == PriceRequestStatus.SENT  # не ушедший запрос партнёру не показывается
+
+    def state(self, doc) -> str:
+        return "answered" if doc.answered_at else "open"
+
+    def assert_actionable(self, doc) -> None:
+        if doc.answered_at is not None:
+            raise PortalConflict("ALREADY_ANSWERED")
+
+    def perform(self, doc, action, *, contact, text, ip, payload=None) -> None:
+        from portal.services import partner_orders
+
+        payload = payload or {}
+        done = partner_orders.respond_partner_price_request(
+            contact.company,
+            contact,
+            doc.pk,
+            text,
+            prices=payload.get("prices") or [],
+            currency_code=payload.get("currency"),
+            valid_until=payload.get("valid_until"),
+        )
+        if done is None:
+            raise PortalConflict("ALREADY_ANSWERED")
+
+    def pdf_bytes(self, doc) -> Optional[bytes]:
+        from supply.services.partner_documents import price_request_pdf
+
+        return price_request_pdf(doc)
+
+    def journal(self, doc, *, action: str, event_code: str, user=None, **params) -> None:
+        if doc.deal_id is None:
+            return  # запрос из черновика заказа без заявки: журналить некуда
+        from crm.models import ActivityLog
+
+        ActivityLog.objects.create(
+            action=action,
+            detail=self.number(doc),
+            user=user,
+            level="INFO",
+            entity_type="price_request",
+            entity_id=doc.pk,
+            deal_id=doc.deal_id,
+            company_id=doc.deal.company_id,
+            event_code=event_code,
+            event_params={"number": self.number(doc), "supplier": doc.supplier.name, **params},
+        )
+
+    def extra(self, doc) -> dict:
+        from supply.services.partner_documents import request_lines
+
+        code = doc.answer_currency.code if doc.answer_currency_id else None
+        lines = [
+            {
+                "id": row["id"],
+                "position": row["position"],
+                "name": row["name"],
+                "article": row["article"],
+                "unit": row["unit"],
+                "quantity": row["quantity"],
+                "unit_price": projections.money(row["unit_price"], code) if row["unit_price"] is not None else None,
+                "total": None,
+                "lead_days": row["lead_days"],
+            }
+            for row in request_lines(doc)
+        ]
+        return {
+            "partner_lines": lines,
+            "partner_note": doc.note or None,
+            "answered_at": doc.answered_at.isoformat() if doc.answered_at else None,
+            # «Ответ получен» отметил сотрудник — его пометка внутренняя и партнёру не показывается как его ответ
+            "answer_note": (doc.answer_note or None) if doc.answered_by_id is None else None,
+        }
+
+
+class SupplierOrderSpec(_PartnerSpec):
+    kind = "supplier_order"
+    actions = ("confirm",)
+    select_related = ("supplier_order__supplier", "supplier_order__currency")
+
+    def currency_code(self, doc) -> str:
+        return projections.currency_code(doc.currency)
+
+    def total(self, doc):
+        from supply.services.partner_documents import order_total
+
+        return order_total(doc)
+
+    def visible(self, doc) -> bool:
+        from supply.models import OrderStatus
+
+        return doc.status != OrderStatus.DRAFT  # черновик — наша внутренняя работа
+
+    def state(self, doc) -> str:
+        from supply.models import OrderStatus
+
+        if doc.status == OrderStatus.SENT:
+            return "open"
+        return "cancelled" if doc.status == OrderStatus.CANCELLED else "confirmed"
+
+    def expiry(self, doc) -> datetime:
+        if doc.expected_date:
+            return timezone.make_aware(datetime.combine(doc.expected_date + timedelta(days=GRACE_DAYS), time.max))
+        return super().expiry(doc)
+
+    def assert_actionable(self, doc) -> None:
+        from supply.models import OrderStatus
+
+        if doc.status != OrderStatus.SENT:
+            raise PortalConflict("TRANSITION_NOT_ALLOWED")
+
+    def perform(self, doc, action, *, contact, text, ip, payload=None) -> None:
+        from portal.exceptions import PortalValidationError
+        from portal.services import partner_orders
+
+        expected = (payload or {}).get("expected_date") or doc.expected_date
+        if expected is None:
+            raise PortalValidationError("VALIDATION_ERROR")
+        # Подтверждает партнёр — его контакт, как в кабинете (`confirm_partner_order`): сотрудник за него статус не ставит.
+        if partner_orders.confirm_partner_order(contact.company, contact, doc.pk, expected) is None:
+            raise PortalConflict("TRANSITION_NOT_ALLOWED")
+
+    def pdf_bytes(self, doc) -> Optional[bytes]:
+        from supply.services.partner_documents import order_pdf
+
+        return order_pdf(doc)
+
+    def journal(self, doc, *, action: str, event_code: str, user=None, **params) -> None:
+        from supply.models import OrderLogKind, SupplierOrderLog
+
+        SupplierOrderLog.objects.create(order=doc, kind=OrderLogKind.EDITED, user=user, detail=action[:500])
+
+    def extra(self, doc) -> dict:
+        from supply.services.partner_documents import order_lines
+
+        code = self.currency_code(doc)
+        lines = [
+            {
+                "id": row["id"],
+                "position": row["position"],
+                "name": row["name"],
+                "article": row["article"],
+                "unit": row["unit"],
+                "quantity": row["quantity"],
+                "unit_price": projections.money(row["unit_price"], code) if row["unit_price"] is not None else None,
+                "total": projections.money(row["total"], code) if row["total"] is not None else None,
+                "lead_days": None,
+            }
+            for row in order_lines(doc)
+        ]
+        return {
+            "partner_lines": lines,
+            "partner_note": doc.partner_note or None,
+            "expected_date": doc.expected_date.isoformat() if doc.expected_date else None,
+            "confirmed_at": doc.confirmed_at.isoformat() if doc.confirmed_at else None,
+        }
+
+
+SPECS: dict[str, KindSpec] = {
+    spec.kind: spec
+    for spec in (QuoteSpec(), ContractSpec(), InvoiceSpec(), ActSpec(), PriceRequestSpec(), SupplierOrderSpec())
+}
 
 
 def spec_of(kind: str) -> KindSpec:
@@ -313,4 +568,4 @@ def select_related_all() -> list[str]:
 
 
 def document_company_id(link) -> Optional[int]:
-    return spec_for(link).deal(link.document).company_id
+    return spec_for(link).company_id(link.document)

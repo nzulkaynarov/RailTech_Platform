@@ -107,6 +107,26 @@ TEMPLATE_CASES = [
         },
     ),
     (
+        "partner_document_sent",
+        {
+            "kind": "supplier_order",
+            "recipient_name": "Дилшод",
+            "buyer_name": "Alpha LLC",
+            "number": "ЗП-2026-031",
+            "total": "12 500 000 UZS",
+            "expected_date": "30.11.2026",
+            "public_link": "https://cabinet.example.com/d/tok",
+        },
+    ),
+    (
+        "partner_document_sent",
+        {
+            "kind": "price_request",
+            "number": "Рельс Р65 и ещё 2 позиции",
+            "public_link": "https://cabinet.example.com/d/tok",
+        },
+    ),
+    (
         "payment_received",
         {
             "invoice_number": "INV-2026-00001",

@@ -787,13 +787,15 @@ class DocumentCreatedV1(BaseModel):
 
 class DocumentKind(StrEnum):
     """
-    Вид документа по ссылке
+    Вид документа по ссылке; `price_request` и `supplier_order` — документы партнёра-поставщика (ДК-5)
     """
 
     quote = "quote"
     contract = "contract"
     invoice = "invoice"
     act = "act"
+    price_request = "price_request"
+    supplier_order = "supplier_order"
 
 
 class DocumentLinkTelegramRequested(BaseModel):
@@ -822,7 +824,7 @@ class DocumentLinkTelegramRequested(BaseModel):
     """
     document_kind: DocumentKind
     """
-    Вид документа по ссылке
+    Вид документа по ссылке; `price_request` и `supplier_order` — документы партнёра-поставщика (ДК-5)
     """
     number: str | None = None
     """
