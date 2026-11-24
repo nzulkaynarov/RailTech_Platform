@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { Children, useState, type ReactElement, type ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -16,7 +16,7 @@ import {
 
 import { ErrorState } from '@/components/QueryStates';
 import { ToneBadge } from '@/components/StatusBadge';
-import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useActionRequired } from '@/hooks/useActionRequired';
 import { formatDecimal, formatMoney, formatQuantity } from '@/lib/format';
@@ -34,6 +34,9 @@ import { useCanAct, useHasModule } from '@/session/useMe';
  * Ошибка загрузки любого из четырёх списков — видимое состояние с повтором: тихое «ничего не требуется» было бы ложью.
  * Наблюдателю (без права действовать) виджет не призывает к действию: «Ждут решения компании» и кто решает.
  */
+/** Сколько решений показывает компактный список, пока не нажато «Показать все». */
+const COMPACT_LIMIT = 4;
+
 export function ActionRequiredWidget({
   holdSkeleton = false,
   scope,
@@ -45,6 +48,7 @@ export function ActionRequiredWidget({
   const canAct = useCanAct();
   const actions = useActionRequired();
   const location = useLocation();
+  const [showAll, setShowAll] = useState(false);
 
   const currentScope =
     scope ??
@@ -104,15 +108,8 @@ export function ActionRequiredWidget({
   const title = canAct ? t('widgets.actionRequired.title') : t('widgets.actionRequired.titleViewer');
   const hint = (key: string) => (canAct ? t(`widgets.actionRequired.${key}`) : t('widgets.actionRequired.viewerHint'));
 
-  return (
-    <section role="region" aria-label={title} className="mb-6 flex flex-col gap-3">
-      <div className="flex items-center gap-2">
-        <h2 className="text-sm font-semibold tracking-tight text-primary">{title}</h2>
-        <ToneBadge tone={canAct ? 'warning' : 'neutral'}>{total}</ToneBadge>
-      </div>
-
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {currentScope === 'partner' ? (
+  // Решения — компактным списком: первые COMPACT_LIMIT, остальные по «Показать все» (таблица заявок не уезжает за экран).
+  const content = currentScope === 'partner' ? (
           <>
             {actions.orders.map((order) => (
               <ActionCard
@@ -214,7 +211,7 @@ export function ActionRequiredWidget({
                   to="/invoices"
                   label={invoice.number}
                 >
-                  <span className="flex flex-wrap items-center gap-1.5">
+                  <span className="inline-flex flex-wrap items-center gap-1.5">
                     {hint('payInvoice')}
                     <ToneBadge tone="danger">
                       {t('pages.invoices.overdueDays', { count: view?.overdueDays ?? 1 })}
@@ -270,8 +267,30 @@ export function ActionRequiredWidget({
               </ActionCard>
             ) : null}
           </>
-        )}
+        );
+  const cards = Children.toArray((content as ReactElement<{ children: ReactNode }>).props.children);
+  const visibleCards = showAll ? cards : cards.slice(0, COMPACT_LIMIT);
+
+  return (
+    <section role="region" aria-label={title} className="mb-6 flex flex-col gap-3">
+      <div className="flex items-center gap-2">
+        <h2 className="text-sm font-semibold tracking-tight text-primary">{title}</h2>
+        <ToneBadge tone={canAct ? 'warning' : 'neutral'}>{total}</ToneBadge>
       </div>
+
+      <ul className="flex flex-col divide-y overflow-hidden rounded-lg border bg-card">{visibleCards}</ul>
+      {cards.length > COMPACT_LIMIT ? (
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="self-start"
+          aria-expanded={showAll}
+          onClick={() => setShowAll((value) => !value)}
+        >
+          {showAll ? t('widgets.actionRequired.showLess') : t('widgets.actionRequired.showAll', { count: cards.length })}
+        </Button>
+      ) : null}
     </section>
   );
 }
@@ -300,32 +319,30 @@ function ActionCard({
 }) {
   const color = tone === 'warning' ? 'text-warning' : 'text-primary';
   return (
-    <Card className="portal-card group relative border-border hover:border-ring/40">
-      <CardContent className="flex flex-col gap-1.5 p-3.5">
-        <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
-          <span className={cn('flex items-center gap-1 font-medium', color)}>
-            <Icon className={cn('size-3.5', color)} aria-hidden="true" />
-            {badge}
-          </span>
-          {aside}
-        </div>
+    <li className="group relative flex items-center gap-3 px-3.5 py-2.5 transition-colors hover:bg-accent/40">
+      <Icon className={cn('size-4 shrink-0', color)} aria-hidden="true" />
+      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         <p className="text-sm font-medium text-foreground">
           <Link
             to={to}
-            className="rounded-sm outline-none after:absolute after:inset-0 hover:underline focus-visible:after:ring-2 focus-visible:after:ring-ring"
+            className="rounded-sm break-words outline-none after:absolute after:inset-0 hover:underline focus-visible:after:ring-2 focus-visible:after:ring-ring"
           >
             {label}
           </Link>
         </p>
-        <span className="text-xs text-muted-foreground">{children}</span>
-      </CardContent>
-    </Card>
+        <span className="text-xs text-muted-foreground">
+          <span className={cn('font-medium', color)}>{badge}</span>
+          <span aria-hidden="true"> · </span>
+          <span>{children}</span>
+        </span>
+      </div>
+      <div className="flex shrink-0 items-center text-xs text-muted-foreground">{aside}</div>
+    </li>
   );
 }
 
 /**
- * Место виджета, пока списки грузятся: заголовок и строка карточек той же высоты (на телефоне — одна, на десктопе — до
- * четырёх). Экран «Запросы» показывает свой список одновременно с виджетом, поэтому готовый список не сдвигается.
+ * Место виджета, пока списки грузятся: заголовок и три строки списка. Экран «Запросы» показывает свой список одновременно с виджетом, поэтому готовый список не сдвигается.
  */
 function ActionRequiredSkeleton() {
   const { t } = useTranslation();
@@ -333,12 +350,9 @@ function ActionRequiredSkeleton() {
     <div role="status" aria-busy="true" className="mb-6 flex flex-col gap-3" data-testid="action-required-loading">
       <span className="sr-only">{t('common.loading')}</span>
       <Skeleton className="h-5 w-48" />
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {[0, 1, 2, 3].map((index) => (
-          <Skeleton
-            key={index}
-            className={cn('h-[5.75rem] rounded-lg', index > 0 && 'hidden sm:block', index > 1 && 'sm:hidden lg:block')}
-          />
+      <div className="flex flex-col gap-2">
+        {[0, 1, 2].map((index) => (
+          <Skeleton key={index} className="h-[3.25rem] rounded-lg" />
         ))}
       </div>
     </div>

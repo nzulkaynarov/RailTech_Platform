@@ -1,7 +1,7 @@
 import { useEffect, useId, useState, type FormEvent } from 'react';
 import { Link, Navigate, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { BookOpen, FilePlus2, Inbox, Loader2, Lock, Paperclip, Plus, RotateCw, Search, SearchX, Trash2, Upload } from 'lucide-react';
+import { BookOpen, FilePlus2, Inbox, Loader2, Lock, MoreHorizontal, Paperclip, Plus, RotateCw, Search, SearchX, Trash2, Upload } from 'lucide-react';
 import { toast } from '@/lib/toast';
 
 import { apiErrorKey } from '@/api/errors';
@@ -22,6 +22,7 @@ import { ConsequenceCallout } from '@/components/ConsequenceCallout';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -173,21 +174,32 @@ export function RequestsPage() {
             header: t('common.actions'),
             cell: (row) => (
               <CanAct>
-                <Button asChild variant="ghost" size="sm" className="h-8 gap-1 px-2 text-xs">
-                  <Link
-                    to="/requests/new"
-                    state={{
-                      summary: t('pages.requestDetail.reorderSummary', { number: row.number, summary: row.summary }),
-                      lines: row.lines?.map((l) => ({ text: l.text, quantity: l.quantity ?? '', unit: l.unit })),
-                    }}
-                    title={t('pages.requestDetail.reorder')}
-                    aria-label={t('pages.requestDetail.reorder')}
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <RotateCw className="size-3.5" aria-hidden="true" />
-                    <span className="hidden md:inline">{t('pages.requestDetail.reorder')}</span>
-                  </Link>
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label={t('pages.requests.rowMenu', { number: row.number })}
+                      title={t('common.actions')}
+                    >
+                      <MoreHorizontal aria-hidden="true" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem asChild>
+                      <Link
+                        to="/requests/new"
+                        state={{
+                          summary: t('pages.requestDetail.reorderSummary', { number: row.number, summary: row.summary }),
+                          lines: row.lines?.map((l) => ({ text: l.text, quantity: l.quantity ?? '', unit: l.unit })),
+                        }}
+                      >
+                        <RotateCw aria-hidden="true" />
+                        {t('pages.requestDetail.reorder')}
+                      </Link>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </CanAct>
             ),
           }}
@@ -231,7 +243,7 @@ export function RequestDetailPage() {
         title={t('pages.requestDetail.title', { number: request.number })}
         crumb={request.number}
         actions={
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <CanAct>
               <Button asChild variant="outline">
                 <Link

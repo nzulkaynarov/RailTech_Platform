@@ -5,7 +5,6 @@ import { ChevronRight, Copy, Eye, PanelLeft, PanelLeftClose, UserRound } from 'l
 import { toast } from '@/lib/toast';
 
 import { MaintenanceBanner } from '@/components/MaintenanceBanner';
-import { TelegramBanner } from '@/components/TelegramBanner';
 import { Button } from '@/components/ui/button';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { isSidebarToggle, shortcutLabel } from '@/lib/keyboard';
@@ -276,7 +275,6 @@ export function AppShell() {
           </div>
         </div>
 
-        {me ? <TelegramBanner onProfile={location.pathname === '/profile'} /> : null}
         <BottomNav />
       </div>
     </SetCrumbContext.Provider>

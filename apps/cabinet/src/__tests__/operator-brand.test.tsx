@@ -27,6 +27,21 @@ describe('бренд оператора на входе', () => {
     renderApp('/login');
 
     expect(await screen.findByText('RT')).toBeInTheDocument();
+    expect(await screen.findByText('Кабинет RailTech')).toBeInTheDocument();
     expect(document.querySelector('img[src^="/media/"]')).toBeNull();
+  });
+
+  it('название оператора не задано — нейтральный значок, а не буквы слова-заглушки («ПЛ»)', async () => {
+    portalServer.use(
+      http.get('*/api/portal/v1/operator', () =>
+        HttpResponse.json({ name: null, bot_username: null, logo_url: null }),
+      ),
+    );
+    renderApp('/login');
+
+    expect(await screen.findByText('Вход в кабинет')).toBeInTheDocument();
+    await vi.waitFor(() => expect(document.querySelector('header svg.lucide-layout-grid, svg.lucide-layout-grid')).not.toBeNull());
+    expect(screen.queryByText('ПЛ')).not.toBeInTheDocument();
+    expect(screen.queryByText('RT')).not.toBeInTheDocument();
   });
 });
