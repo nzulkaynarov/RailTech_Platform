@@ -60,7 +60,12 @@ class RateLimitMiddleware(BaseMiddleware):
         self._warned: dict[int, float] = {}
 
     async def __call__(self, handler: Handler, event: TelegramObject, data: dict[str, Any]) -> Any:
-        if not isinstance(event, Message) or event.from_user is None:
+        # Лимит и «не так быстро» — только личный чат: в группе бот молчит (ADR-0032).
+        if (
+            not isinstance(event, Message)
+            or event.from_user is None
+            or event.chat.type != "private"
+        ):
             return await handler(event, data)
         user_id = event.from_user.id
         now = self._clock()

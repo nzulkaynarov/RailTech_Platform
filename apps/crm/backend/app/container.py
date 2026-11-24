@@ -101,6 +101,7 @@ if TYPE_CHECKING:
     from app.services.staff_profile import StaffProfileService
     from app.services.staff_telegram_link import StaffTelegramLinkService
     from app.services.staff_tickets import StaffTicketService
+    from app.services.telegram_groups import TelegramGroupService
     from app.services.user_invites import UserInviteService
     from app.services.users import UserService
 
@@ -911,6 +912,13 @@ class Container:
         return DocumentLinkTelegramDelivery(
             self.session_factory, self.telegram_bot, dry_run=self.settings.telegram_dry_run
         )
+
+    @cached_property
+    def telegram_groups(self) -> "TelegramGroupService":
+        """Группы с секретарём (ADR-0032): привязка к клиенту и запись переписки."""
+        from app.services.telegram_groups import TelegramGroupService
+
+        return TelegramGroupService(self.session_factory, self.settings_service, self.telegram_bot)
 
     @cached_property
     def staff_telegram_link(self) -> "StaffTelegramLinkService":

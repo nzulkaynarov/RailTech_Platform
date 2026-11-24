@@ -145,7 +145,8 @@ class TelegramLinkNonce(Base):
 
 
 class Conversation(TimestampMixin, Base):
-    """Беседа лида в канале: `telegram` (чат бота) или `cabinet` (чат кабинета, CHAT-1, ADR-0023).
+    """Беседа лида в канале: `telegram` (чат бота), `group` (группа с секретарём, ADR-0032)
+    или `cabinet` (чат кабинета, CHAT-1, ADR-0023).
 
     Беседа кабинета — одна на клиента и на компанию ERP (частичные уникальные индексы); лид беседы —
     якорь очереди «Сообщения» (`services/cabinet_chat.py`), чата Telegram у неё нет."""
@@ -159,6 +160,13 @@ class Conversation(TimestampMixin, Base):
             "client_id",
             unique=True,
             postgresql_where=sql("channel = 'cabinet' AND client_id IS NOT NULL"),
+        ),
+        # Беседа группы Telegram (ADR-0032): одна на группу.
+        Index(
+            "uq_conversations_group_chat",
+            "tg_chat_id",
+            unique=True,
+            postgresql_where=sql("channel = 'group'"),
         ),
         Index(
             "uq_conversations_cabinet_company",

@@ -16,7 +16,7 @@ from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.bot import channel, chat_member, client_handlers, commands, handlers
+from app.bot import channel, chat_member, client_handlers, commands, groups, handlers
 from app.bot.errors import ErrorReplier
 from app.bot.maintenance import MaintenanceMiddleware, Paused
 from app.bot.middlewares import IdempotencyMiddleware, RateLimitMiddleware
@@ -35,6 +35,7 @@ from app.services.leads import LeadService
 from app.services.settings import SettingsService
 from app.services.staff_telegram_link import StaffTelegramLinkService
 from app.services.start_links import StartLinkService
+from app.services.telegram_groups import TelegramGroupService
 
 logger = structlog.get_logger(__name__)
 
@@ -51,6 +52,7 @@ def build_dispatcher(
     telegram_paused: Paused | None = None,
     start_links: StartLinkService | None = None,
     staff_link: StaffTelegramLinkService | None = None,
+    client_groups: TelegramGroupService | None = None,
 ) -> Dispatcher:
     dispatcher = Dispatcher(
         conversation=conversation,
@@ -63,6 +65,7 @@ def build_dispatcher(
         client_bot=client_bot or ClientBotService(sessions, settings),
         start_links=start_links,
         staff_link=staff_link,
+        groups=client_groups,
     )
     dispatcher.update.outer_middleware(IdempotencyMiddleware(sessions))
     dispatcher.message.outer_middleware(RateLimitMiddleware(settings.get))
@@ -80,6 +83,7 @@ def build_dispatcher(
     dispatcher.include_router(staff_link_router)
     dispatcher.include_router(client_handlers.router)
     dispatcher.include_router(chat_member.router)
+    dispatcher.include_router(groups.router)
     dispatcher.include_router(handlers.router)
     # Сбой обработчика: лог и одно «не получается ответить» на чат, а не тишина (аудит).
     dispatcher.errors.register(ErrorReplier().handle)

@@ -10443,6 +10443,138 @@ components:
       - initials
       title: TeamMember
       type: object
+    TelegramGroupBindIn:
+      additionalProperties: false
+      properties:
+        client_id:
+          exclusiveMinimum: 0.0
+          title: Client Id
+          type: integer
+        code:
+          maxLength: 16
+          minLength: 4
+          title: Code
+          type: string
+        language:
+          anyOf:
+          - enum:
+            - ru
+            - uz
+            - en
+            type: string
+          - type: 'null'
+          title: Language
+      required:
+      - code
+      - client_id
+      title: TelegramGroupBindIn
+      type: object
+    TelegramGroupOut:
+      properties:
+        access:
+          enum:
+          - ok
+          - admin_required
+          title: Access
+          type: string
+        bound_at:
+          anyOf:
+          - format: date-time
+            type: string
+          - type: 'null'
+          title: Bound At
+        chat_id:
+          title: Chat Id
+          type: integer
+        chat_type:
+          title: Chat Type
+          type: string
+        client_id:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Client Id
+        client_name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Client Name
+        code_active:
+          title: Code Active
+          type: boolean
+        detected_at:
+          format: date-time
+          title: Detected At
+          type: string
+        language:
+          anyOf:
+          - enum:
+            - ru
+            - uz
+            - en
+            type: string
+          - type: 'null'
+          title: Language
+        lead_id:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Lead Id
+        status:
+          enum:
+          - pending
+          - bound
+          - unbound
+          - removed
+          title: Status
+          type: string
+        title:
+          title: Title
+          type: string
+        topic_mode:
+          enum:
+          - none
+          - request
+          title: Topic Mode
+          type: string
+      required:
+      - chat_id
+      - title
+      - chat_type
+      - status
+      - access
+      - client_id
+      - client_name
+      - lead_id
+      - topic_mode
+      - language
+      - code_active
+      - bound_at
+      - detected_at
+      title: TelegramGroupOut
+      type: object
+    TelegramGroupSettingsIn:
+      additionalProperties: false
+      properties:
+        language:
+          anyOf:
+          - enum:
+            - ru
+            - uz
+            - en
+            type: string
+          - type: 'null'
+          title: Language
+        topic_mode:
+          anyOf:
+          - enum:
+            - none
+            - request
+            type: string
+          - type: 'null'
+          title: Topic Mode
+      title: TelegramGroupSettingsIn
+      type: object
     TelegramLinkOut:
       description: 'Одноразовая ссылка привязки Telegram: открыть в Telegram или отсканировать QR.'
       properties:
@@ -19671,6 +19803,122 @@ paths:
       summary: Team
       tags:
       - leads
+  /api/v1/telegram-groups:
+    get:
+      description: 'Группы, где бот администратор: ждущие код (первыми), привязанные, отключённые.'
+      operationId: list_groups
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/TelegramGroupOut'
+                title: Response List Groups
+                type: array
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: List Groups
+      tags:
+      - telegram-groups
+  /api/v1/telegram-groups/bind:
+    post:
+      description: Привязать группу к клиенту по коду из группы; секретарь пишет и закрепляет уведомление.
+      operationId: bind_group
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TelegramGroupBindIn'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TelegramGroupOut'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: Bind Group
+      tags:
+      - telegram-groups
+  /api/v1/telegram-groups/{chat_id}:
+    patch:
+      operationId: update_group
+      parameters:
+      - in: path
+        name: chat_id
+        required: true
+        schema:
+          title: Chat Id
+          type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TelegramGroupSettingsIn'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TelegramGroupOut'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: Update Group
+      tags:
+      - telegram-groups
+  /api/v1/telegram-groups/{chat_id}/unbind:
+    post:
+      description: 'Отключить группу: запись прекращается, прежняя переписка остаётся у клиента.'
+      operationId: unbind_group
+      parameters:
+      - in: path
+        name: chat_id
+        required: true
+        schema:
+          title: Chat Id
+          type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActionResult'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: Unbind Group
+      tags:
+      - telegram-groups
   /api/v1/users:
     get:
       operationId: list_users
