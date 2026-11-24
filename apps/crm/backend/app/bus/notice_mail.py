@@ -69,9 +69,13 @@ def rendered(item: dict[str, Any]) -> RenderedEmail:
 
 async def send(mail: MailService | None, template: str, to: str, content: RenderedEmail) -> str:
     """`queued` — письмо в очереди; `skipped` — слать нечем (почта не настроена, постоянно);
-    `error` — сбой, который стоит повторить."""
+    `undeliverable` — адрес вернул отчёт о недоставке, письмо не ставится; `error` — сбой, который
+    стоит повторить."""
     if mail is None:
         return "skipped"
+    if await mail.is_undeliverable(to):
+        logger.info("erp_event_mail_undeliverable", template=template)
+        return "undeliverable"
     try:
         await mail.send_rendered(template, to, content)
     except ConflictError:

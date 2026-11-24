@@ -318,3 +318,54 @@ async def test_card_shows_origin_facts_of_a_web_lead(
     crm.answer("GET", "leads/2041", body=lead_detail(2041, source="phone"))
     plain = check(await web.client.get(f"{BASE}/L-2041"), "/crm/leads/{lead}", "get").json()
     assert plain["origin"] is None
+
+
+async def test_card_tells_that_letters_to_the_lead_do_not_arrive(
+    web: Web, crm: CrmLeadsFake, check: ContractChecker
+) -> None:
+    """Delivery reports: the card gets the reason code and the date; no reports mean null."""
+    crm.answer(
+        "GET",
+        "leads/2041",
+        body=lead_detail(
+            2041,
+            email_undeliverable={
+                "kind": "permanent",
+                "reason": "domain_not_found",
+                "last_at": "2026-11-24T10:15:00Z",
+                "reports": 1,
+            },
+        ),
+    )
+    await web.login(["MANAGER"])
+    card = check(await web.client.get(f"{BASE}/L-2041"), "/crm/leads/{lead}", "get").json()
+    assert card["email_problem"] == {"reason": "domain_not_found", "at": "2026-11-24T10:15:00Z"}
+
+    crm.answer("GET", "leads/2041", body=lead_detail(2041))
+    plain = check(await web.client.get(f"{BASE}/L-2041"), "/crm/leads/{lead}", "get").json()
+    assert plain["email_problem"] is None
+
+
+async def test_create_lead_with_a_missing_mail_domain_marks_the_email_field(
+    web: Web, crm: CrmLeadsFake
+) -> None:
+    await web.login(["MANAGER"])
+    crm.error(
+        "POST",
+        "leads",
+        422,
+        "validation_failed",
+        reason="invalid_email",
+        field="email",
+        domain_missing=True,
+    )
+    response = await web.send(
+        "POST", BASE, json={"source": "email", "name": "A", "email": "a@x.io"}
+    )
+    assert response.status_code == 422
+    details = response.json()["details"]
+    assert (details["reason"], details["fields"], details["domain_missing"]) == (
+        "invalid_email",
+        ["email"],
+        True,
+    )

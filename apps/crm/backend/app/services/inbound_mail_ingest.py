@@ -30,6 +30,7 @@ import structlog
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.domain.bounce import parse_bounce
 from app.domain.inbound_folders import FolderSetting, is_history
 from app.domain.inbound_mail import ParsedMail, find_inns, parse_message
 from app.domain.inbound_mail_flow import (
@@ -56,6 +57,7 @@ from app.repositories import lead_intake as leads_repo
 from app.repositories import mail_types as types_repo
 from app.security import audit
 from app.security.secrets_store import SecretsStore
+from app.services import bounces
 from app.services.settings import SettingsService
 
 logger = structlog.get_logger(__name__)
@@ -222,6 +224,14 @@ class InboundMailIngest:
         общего ящика (логин приёма) для правила «адресовано лично»."""
         # Разбор (очистка HTML, цитаты) — CPU: вне цикла событий, тяжёлое письмо не вешает воркер.
         parsed = await asyncio.to_thread(parse_message, item.raw)
+        # A delivery report of our own letter is not mail for people: it marks the address and
+        # stays in the mail log (`email_log`), never in the queue or among leads.
+        report = await asyncio.to_thread(parse_bounce, item.raw)
+        if report is not None:
+            async with self._sessions() as session, session.begin():
+                await bounces.apply(session, report, parsed.message_id)
+            logger.info("inbound_mail_bounce", severity=report.severity, reason=report.reason)
+            return None
         async with self._sessions() as session, session.begin():
             if await repo.exists(session, parsed.message_id):
                 if not folder.spam and await repo.promote_from_spam(

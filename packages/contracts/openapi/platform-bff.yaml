@@ -18770,6 +18770,11 @@ components:
           description: Число вложений (по ссылке на объект хранилища системы-источника)
           type: integer
         attempts: {type: integer}
+        bounce:
+          description: Отчёт о недоставке этого письма — сервер принял его, затем вернул; `null` или нет поля — не возвращали
+          oneOf:
+            - $ref: '#/components/schemas/EmailProblem'
+            - type: 'null'
         created_at: {format: date-time, type: string}
         error: {type: [string, 'null']}
         id: {type: integer}
@@ -29153,6 +29158,17 @@ components:
         text: {type: string}
         at: {type: string, format: date-time}
 
+    EmailProblem:
+      type: object
+      additionalProperties: false
+      required: [reason, at]
+      description: >-
+        Почтовые серверы возвращают письма на этот адрес (отчёты о недоставке): автоматические письма на него не
+        уходят, пока адрес не исправят. Причина — кодом, текст — у экрана.
+      properties:
+        reason: {type: string, enum: [domain_not_found, mailbox_not_found, mailbox_full, rejected, other]}
+        at: {type: string, format: date-time, description: Когда пришёл последний отчёт}
+
     LeadNotice:
       type: object
       additionalProperties: false
@@ -29236,6 +29252,11 @@ components:
           oneOf:
             - $ref: '#/components/schemas/ClientInvitation'
             - type: 'null'
+        email_problem:
+          description: Письма на почту лида не доходят (отчёт о недоставке); `null` или нет поля — всё в порядке
+          oneOf:
+            - $ref: '#/components/schemas/EmailProblem'
+            - type: 'null'
         origin:
           description: >-
             Откуда пришёл лид кроме канала (LID-5): форма, страница, откуда перешли, кампания. `null` — у лидов
@@ -29317,6 +29338,11 @@ components:
           description: Каналы, по которым можно связаться (Telegram привязан, телефон, e-mail)
         preferred_channel: {type: [string, 'null'], enum: [email, telegram, both, null]}
         is_primary: {type: boolean}
+        email_problem:
+          description: Письма на почту контакта не доходят (отчёт о недоставке); `null` или нет поля — всё в порядке
+          oneOf:
+            - $ref: '#/components/schemas/EmailProblem'
+            - type: 'null'
 
     ClientLeadLink:
       type: object

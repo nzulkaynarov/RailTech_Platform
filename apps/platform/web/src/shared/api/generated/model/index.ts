@@ -418,6 +418,8 @@ export * from "./edsTemplateVariantsPropertyEn";
 export * from "./edsTemplateVariantsPropertyRu";
 export * from "./edsTemplateVariantsPropertyUz";
 export * from "./edsUnsupportedMediaResponse";
+export * from "./emailProblem";
+export * from "./emailProblemReason";
 export * from "./emailTemplate";
 export * from "./emailTemplateIn";
 export * from "./emailTemplateList";

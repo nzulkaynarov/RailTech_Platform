@@ -190,7 +190,11 @@ def _drain_wakeups_of_own_loop_only() -> Iterator[None]:
 @pytest.fixture(scope="session")
 def live_settings() -> Settings:
     return Settings(
-        _env_file=None, app_env="test", agent_context_key=AGENT_KEY, jwt_secret=FAKE_KEY
+        _env_file=None,
+        app_env="test",
+        agent_context_key=AGENT_KEY,
+        jwt_secret=FAKE_KEY,
+        mail_domain_check=False,
     )
 
 

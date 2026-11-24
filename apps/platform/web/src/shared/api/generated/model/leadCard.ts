@@ -5,6 +5,7 @@
 import type { ClientInvitation } from "./clientInvitation";
 import type { ClientShort } from "./clientShort";
 import type { ConversationContacts } from "./conversationContacts";
+import type { EmailProblem } from "./emailProblem";
 import type { HandoffFacts } from "./handoffFacts";
 import type { HandoffInfo } from "./handoffInfo";
 import type { Language } from "./language";
@@ -40,6 +41,8 @@ export interface LeadCard {
   /** Срок первого ответа на запрос с сайта (D1-9) */
   first_response: LeadCardFirstResponse;
   invitation: ClientInvitation | null;
+  /** Письма на почту лида не доходят (отчёт о недоставке); `null` или нет поля — всё в порядке */
+  email_problem?: EmailProblem | null;
   /** Откуда пришёл лид кроме канала (LID-5): форма, страница, откуда перешли, кампания. `null` — у лидов других каналов и прежних лидов фактов нет. */
   origin?: LeadOrigin | null;
 }

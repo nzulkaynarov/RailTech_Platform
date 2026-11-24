@@ -79,6 +79,7 @@ if TYPE_CHECKING:
     from app.services.leads import LeadService
     from app.services.llm_usage import DbUsageRecorder
     from app.services.mail import MailService
+    from app.services.mail_domain import DnsMailDomainChecker
     from app.services.mail_requests import MailRequestService
     from app.services.mail_types import MailTypesService
     from app.services.offsite_connector import OffsiteConnectorService
@@ -370,7 +371,17 @@ class Container:
             self.settings.jwt_secret.get_secret_value().encode("utf-8"),
             notices=self.client_notice_service,
             on_web_lead=_enqueue_web_lead,
+            mail_domains=self.mail_domain_checker,
         )
+
+    @cached_property
+    def mail_domain_checker(self) -> "DnsMailDomainChecker | None":
+        """DNS-проверка почтового домена при приёме лида; одна на процесс (кэш по домену)."""
+        if not self.settings.mail_domain_check:
+            return None
+        from app.services.mail_domain import DnsMailDomainChecker
+
+        return DnsMailDomainChecker()
 
     @cached_property
     def client_notice_service(self) -> "ClientNoticeService":

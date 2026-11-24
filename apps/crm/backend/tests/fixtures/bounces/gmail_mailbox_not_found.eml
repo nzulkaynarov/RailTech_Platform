@@ -1,0 +1,57 @@
+Return-Path: <>
+From: Mail Delivery Subsystem <mailer-daemon@googlemail.com>
+To: crm@railtech.example
+Subject: Delivery Status Notification (Failure)
+Date: Tue, 24 Nov 2026 11:00:10 -0800 (PST)
+Message-ID: <5fbd0a9a.1c69fb81.4a3b4.0e7e.GMR@mx.google.com>
+References: <20261124110000.1.2@railtech.example>
+In-Reply-To: <20261124110000.1.2@railtech.example>
+X-Failed-Recipients: nobody.here@gmail.com
+Auto-Submitted: auto-replied
+MIME-Version: 1.0
+Content-Type: multipart/report; boundary="0000gmailbound"; report-type=delivery-status
+
+--0000gmailbound
+Content-Type: multipart/related; boundary="0000gmailinner"
+
+--0000gmailinner
+Content-Type: multipart/alternative; boundary="0000gmailalt"
+
+--0000gmailalt
+Content-Type: text/plain; charset="UTF-8"
+
+** Address not found **
+
+Your message wasn't delivered to nobody.here@gmail.com because the address couldn't be found, or is unable to receive mail.
+
+The response from the remote server was:
+550 5.1.1 The email account that you tried to reach does not exist.
+
+--0000gmailalt--
+--0000gmailinner--
+--0000gmailbound
+Content-Type: message/delivery-status
+
+Reporting-MTA: dns; googlemail.com
+Received-From-MTA: dns; railtech.example
+Arrival-Date: Tue, 24 Nov 2026 11:00:09 -0800 (PST)
+X-Original-Message-ID: <20261124110000.1.2@railtech.example>
+
+Final-Recipient: rfc822; nobody.here@gmail.com
+Action: failed
+Status: 5.1.1
+Remote-MTA: dns; gmail-smtp-in.l.google.com. (142.250.150.27, the server for the domain gmail.com.)
+Diagnostic-Code: smtp; 550-5.1.1 The email account that you tried to reach does not exist.
+Last-Attempt-Date: Tue, 24 Nov 2026 11:00:10 -0800 (PST)
+
+--0000gmailbound
+Content-Type: text/rfc822-headers
+
+Received: by railtech.example (Postfix)
+From: RailTech <crm@railtech.example>
+To: nobody.here@gmail.com
+Subject: We received your request
+Message-ID: <20261124110000.1.2@railtech.example>
+Date: Tue, 24 Nov 2026 11:00:00 +0500
+
+--0000gmailbound--

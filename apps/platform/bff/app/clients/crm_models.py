@@ -390,6 +390,16 @@ class DryRunRowOut(BaseModel):
     run_id: Annotated[int, Field(title="Run Id")]
 
 
+class EmailBounceOut(BaseModel):
+    """
+    A delivery report of this letter in the mail log: why it did not arrive.
+    """
+
+    at: Annotated[AwareDatetime, Field(title="At")]
+    reason: Annotated[Reason, Field(title="Reason")]
+    status: Annotated[str | None, Field(title="Status")] = None
+
+
 class EmailLogItem(BaseModel):
     """
     Строка журнала доставки; тела письма (временного пароля, ссылок входа) в журнале нет.
@@ -400,6 +410,7 @@ class EmailLogItem(BaseModel):
 
     attachments: Annotated[int, Field(title="Attachments")]
     attempts: Annotated[int, Field(title="Attempts")]
+    bounce: EmailBounceOut | None = None
     created_at: Annotated[AwareDatetime, Field(title="Created At")]
     error: Annotated[str | None, Field(title="Error")]
     id: Annotated[int, Field(title="Id")]
@@ -423,6 +434,18 @@ class EmailQueuedOut(BaseModel):
     email_log_id: Annotated[int, Field(title="Email Log Id")]
     status: Annotated[Status1, Field(title="Status")]
     to_email: Annotated[str, Field(title="To Email")]
+
+
+class EmailUndeliverableOut(BaseModel):
+    """
+    Mail servers return letters to this address (delivery reports): the card shows «letters do
+    not arrive» with the reason in plain words and the date. Absent — nothing known.
+    """
+
+    kind: Annotated[Kind, Field(title="Kind")]
+    last_at: Annotated[AwareDatetime, Field(title="Last At")]
+    reason: Annotated[Reason, Field(title="Reason")]
+    reports: Annotated[int, Field(title="Reports")]
 
 
 class ErpCheckOut(BaseModel):
@@ -833,7 +856,7 @@ class InboundMailAssist(BaseModel):
     """
 
     action: Annotated[Action1 | None, Field(title="Action")] = None
-    kind: Annotated[Kind | None, Field(title="Kind")] = None
+    kind: Annotated[Kind1 | None, Field(title="Kind")] = None
     status: Annotated[Status6, Field(title="Status")]
     summary: Annotated[str | None, Field(title="Summary")] = None
 
@@ -1177,7 +1200,7 @@ class InboundMailSkipped(BaseModel):
 class InboundMailSkippedItem(BaseModel):
     assignee: InboundMailPerson | None = None
     id: Annotated[int, Field(title="Id")]
-    reason: Annotated[Reason, Field(title="Reason")]
+    reason: Annotated[Reason2, Field(title="Reason")]
 
 
 class InboundMailType(BaseModel):
@@ -1328,20 +1351,25 @@ class KeySource(StrEnum):
 
 
 class Kind(StrEnum):
+    permanent = "permanent"
+    soft = "soft"
+
+
+class Kind1(StrEnum):
     buyer = "buyer"
     official = "official"
     supplier_doc = "supplier_doc"
     other = "other"
 
 
-class Kind1(StrEnum):
+class Kind2(StrEnum):
     deal = "deal"
     quote = "quote"
     invoice = "invoice"
     act = "act"
 
 
-class Kind2(StrEnum):
+class Kind3(StrEnum):
     vendor = "vendor"
     langfuse = "langfuse"
     mail = "mail"
@@ -1369,6 +1397,7 @@ class LeadDetail(BaseModel):
     created_at: Annotated[AwareDatetime, Field(title="Created At")]
     display_name: Annotated[str, Field(title="Display Name")]
     email: Annotated[str | None, Field(title="Email")] = None
+    email_undeliverable: EmailUndeliverableOut | None = None
     erp_company_id: Annotated[int | None, Field(title="Erp Company Id")] = None
     erp_deal_id: Annotated[int | None, Field(title="Erp Deal Id")] = None
     escalation: EscalationOut | None = None
@@ -1509,7 +1538,7 @@ class MessageContextOut(BaseModel):
     """
 
     erp_id: Annotated[int, Field(title="Erp Id")]
-    kind: Annotated[Kind1, Field(title="Kind")]
+    kind: Annotated[Kind2, Field(title="Kind")]
     number: Annotated[str, Field(title="Number")]
 
 
@@ -1751,6 +1780,14 @@ class ProviderToday(BaseModel):
 
 
 class Reason(StrEnum):
+    domain_not_found = "domain_not_found"
+    mailbox_not_found = "mailbox_not_found"
+    mailbox_full = "mailbox_full"
+    rejected = "rejected"
+    other = "other"
+
+
+class Reason2(StrEnum):
     in_work_by_other = "in_work_by_other"
     handled = "handled"
     registering = "registering"
@@ -1911,7 +1948,7 @@ class ServiceSwitchOut(BaseModel):
     changed_by: Annotated[str | None, Field(title="Changed By")]
     disabled: Annotated[bool, Field(title="Disabled")]
     effect: Annotated[str, Field(title="Effect")]
-    kind: Annotated[Kind2, Field(title="Kind")]
+    kind: Annotated[Kind3, Field(title="Kind")]
     problem: Annotated[str | None, Field(title="Problem")]
     reason: Annotated[str | None, Field(title="Reason")]
 

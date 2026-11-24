@@ -53,8 +53,9 @@ from app.schemas.leads import (
 )
 from app.schemas.notices import NoticeOut
 from app.security.principal import Principal
-from app.services import handoff_notes, web_lead_sla
+from app.services import bounces, handoff_notes, web_lead_sla
 from app.services import team as team_service
+from app.services.bounces import undeliverable_out
 
 router = APIRouter(prefix="/api/v1", tags=["leads"])
 
@@ -331,6 +332,9 @@ async def get_lead(lead_id: int, _: Reader, container: ContainerDep) -> LeadDeta
             else None
         )
         reply_channel = await cabinet_repo.last_inbound_channel(session, lead_id)
+        undeliverable = undeliverable_out(
+            (await bounces.states(session, [lead.email])).get((lead.email or "").lower())
+        )
     base = lead_out(lead, escalation, names, reply_channel)
     mode = await container.backoffice_mode()
     now = datetime.now(UTC)
@@ -364,6 +368,7 @@ async def get_lead(lead_id: int, _: Reader, container: ContainerDep) -> LeadDeta
         if confirmation is not None
         else None,
         invitation=invitation,
+        email_undeliverable=undeliverable,
     )
 
 
