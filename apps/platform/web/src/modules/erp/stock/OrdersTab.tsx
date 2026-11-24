@@ -7,6 +7,7 @@ import { useViewport } from "../../../app/shell/useViewport";
 import type { SupplierOrderRow, SupplierOrderStatus } from "../../../shared/api/generated/model";
 import { useListSupplierOrders } from "../../../shared/api/generated/platform-bff";
 import { useFormat } from "../../../shared/lib/useFormat";
+import { CompanyCell } from "../../../shared/ui/EntityCell";
 import { DataTable, type DataColumn } from "../../../shared/ui/DataTable/DataTable";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { FilterBar, FilterField } from "../../../shared/ui/FilterBar";
@@ -88,7 +89,9 @@ function Rows({ items, prices }: { items: readonly SupplierOrderRow[]; prices: b
               </Link>
               <OrderStatusTag status={row.status} />
             </div>
-            <p className="pf-calc-card-title">{row.supplier.name}</p>
+            <p className="pf-calc-card-title">
+              <CompanyCell name={row.supplier.name} logoUrl={row.supplier.logo_url ?? null} />
+            </p>
             <p className="pf-hint">
               <Expected row={row} />
             </p>
@@ -126,7 +129,9 @@ function Rows({ items, prices }: { items: readonly SupplierOrderRow[]; prices: b
       width: null,
       cellClassName: "pf-ell",
       cellTitle: (row) => row.supplier.name,
-      cell: (row) => row.supplier.name,
+      cell: (row) => (
+        <CompanyCell name={row.supplier.name} logoUrl={row.supplier.logo_url ?? null} />
+      ),
     },
     {
       id: "requests",

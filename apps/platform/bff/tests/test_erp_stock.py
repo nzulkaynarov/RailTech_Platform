@@ -588,13 +588,20 @@ async def test_orders_list_and_card_found_by_number(
     web: Web, erp: respx.MockRouter, check: ContractChecker
 ) -> None:
     await web.login(["SUPPLY"])
+    logos = erp.get(f"{ERP_URL}/api/v1/parties/organizations/logos/").mock(
+        return_value=httpx.Response(200, json={"results": {"5": "v5"}})
+    )
     listing = await web.client.get(
         "/api/v1/erp/stock/orders", params={"status": "confirmed", "overdue": "true"}
     )
     assert listing.status_code == 200, listing.json()
     check(listing, "/erp/stock/orders", "get")
-    assert dict(erp.calls.last.request.url.params) == {"status": "confirmed", "overdue": "1"}
+    (asked,) = (c for c in stock_calls(erp) if c.request.url.path.endswith("/orders/"))
+    assert dict(asked.request.url.params) == {"status": "confirmed", "overdue": "1"}
     (row,) = listing.json()["items"]
+    # ЕД-3: логотип поставщика — одним пакетным запросом на список, адрес наш, не хранилища
+    assert row["supplier"]["logo_url"] == "/api/v1/people/counterparties/5/logo?v=v5"
+    assert logos.call_count == 1
     assert row["number"] == ORDER
     assert row["path"] == f"/erp/stock/{ORDER_ENCODED}"
     assert row["requests"][0]["number"] == NUMBER

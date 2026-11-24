@@ -7,7 +7,7 @@ import type {
 } from "../shared/api/generated/model";
 import { pickedCompanyById, pickedPeople } from "./counterpartyPick";
 import { findUserById } from "./fixtures/users";
-import { photoUrlOf } from "./pictures";
+import { clientRefOf, photoUrlOf } from "./pictures";
 
 /** Люди клиентов и партнёров (FR-11): контакты контрагентов демо-мира, как их отдаёт ERP `parties/people/`. */
 const PEOPLE: CounterpartyPerson[] = [
@@ -92,6 +92,7 @@ export const peopleContactsHandlers = [
     const items = PEOPLE.filter((person) => !kind || person.kind === kind).map((person) => ({
       ...person,
       photo_url: photoUrlOf(person.id),
+      company_logo_url: clientRefOf(person.company.name).client_logo_url,
     }));
     const pageSize = Number(url.searchParams.get("page_size") ?? "100");
     return HttpResponse.json({ items, total: items.length, page: 1, page_size: pageSize });

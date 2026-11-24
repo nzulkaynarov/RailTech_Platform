@@ -141,7 +141,6 @@ test.describe("P8b: поручения по входящим", () => {
     });
     await page.getByRole("button", { name: "Утвердить проект" }).click();
     await expect(page.getByText("Резолюция наложена: поручение ушло исполнителям")).toBeVisible();
-
     // Журнал: «На контроле» — исполнитель и срок.
     await spaGoto(page, "/eds/inbox?status=on_control");
     const journalRow = page.getByRole("row").filter({
@@ -150,6 +149,12 @@ test.describe("P8b: поручения по входящим", () => {
     await expect(journalRow).toContainText("Демо Широков");
     await expect(journalRow).toContainText(ru(due));
     await both(page, "journal-on-control");
+
+    // ЕД-3: резолюция и поручение — люди общей ячейкой (фото или инициалы, имя, роль в документе), без должностей
+    await both(page, "instructions-people", {
+      wide: `/eds/inbox/${ID}?panel=open&tab=resolution`,
+      narrow: `/eds/inbox/${ID}?sheet=resolution&tab=resolution`,
+    });
 
     // 3. Исполнитель: поручение в «Моих задачах» со сроком → рабочий экран → «Запросить перенос».
     await switchTo(page, "universal@demo.example");
