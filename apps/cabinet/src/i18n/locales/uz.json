@@ -7,7 +7,7 @@
     "mainNav": "Asosiy boʻlimlar",
     "sideNav": "Kabinet boʻlimlari",
     "breadcrumbs": "Sahifaga yoʻl",
-    "operatorFallback": "Platforma"
+    "operatorFallback": ""
   },
   "help": {
     "trigger": "Yordam va koʻrsatmalar",
@@ -16,7 +16,7 @@
     "relevantSection": "Ushbu boʻlim uchun maslahatlar",
     "noResults": "Soʻrovingiz boʻyicha hech narsa topilmadi.",
     "footerHint": "Savolingizga javob topmadingizmi?",
-    "contactManager": "Shaxsiy menejerga yozish"
+    "contactManager": "Menejerga yoziş"
   },
   "nav": {
     "requests": "Arizalar",
@@ -63,7 +63,7 @@
     "error": "Xatolik yuz berdi",
     "notFoundTitle": "Sahifa topilmadi",
     "notFoundText": "Bunday sahifa yoʻq yoki u boshqa kompaniyaga tegishli.",
-    "viewOnly": "Faqat koʻrish: amallar tasdiqlash huquqiga ega kontaktga ochiq",
+    "viewOnly": "Faqat körish: amallar tasdiqlaş huquqi bor hamkasbga oçiq",
     "close": "Yopish",
     "cancel": "Bekor qilish",
     "save": "Saqlash",
@@ -75,7 +75,7 @@
     "showAll": "Barçasini körsatiş ({{count}})",
     "showLess": "Yopiş",
     "loadFailed": "Yuklab boʻlmadi",
-    "reasonRequired": "Sababini koʻrsating — usiz ijrochi nimani tuzatishni tushunmaydi.",
+    "reasonRequired": "Sababini yozing — şunda nimani tuzatişni tuşunamiz.",
     "dealNumber": "Loyiha {{number}}",
     "noDeal": "Hali loyihasiz",
     "crashTitle": "Nimadir xato ketdi",
@@ -105,8 +105,8 @@
   },
   "access": {
     "noSections": {
-      "title": "Kirish ochiq",
-      "text": "Kompaniyangiz uchun bo'limlar hali sozlanmoqda — menejeringiz bilan bog'laning."
+      "title": "Bölimlar hali oçilmagan",
+      "text": "Menejer ularni kompaniyangiz uçun oçadi — uzoq kutsangiz, unga yozing."
     },
     "canAct": "Vakolat tasdiqlangan",
     "viewOnly": "Faqat koʻrish"
@@ -203,7 +203,7 @@
   "languages": {
     "label": "Til",
     "ru": "Русский",
-    "uz": "Oʻzbekcha",
+    "uz": "Özbekça",
     "en": "English"
   },
   "auth": {
@@ -219,7 +219,7 @@
       "newClient": "Men yangi mijozman",
       "newClientHint": "Biz bilan hali ishlamaganmisiz? Ariza qoldiring — menejer siz bilan bogʻlanadi.",
       "partnerOnboarding": "Yetkazib beruvchilar va ishlab chiqaruvchilarga",
-      "partnerOnboardingHint": "{{operator}} orqali mahsulot yetkazib bering va assortimentni kabinetda boshqaring.",
+      "partnerOnboardingHint": "Prays yuklang va narx sörovlarimizga kabinetda javob bering.",
       "becomePartner": "Hamkor bo‘lish",
       "telegram": "Telegram orqali kirish",
       "telegramHint": "Bot ochiladi, kirish taklifnoma orqali.",
@@ -235,7 +235,7 @@
       "back": "Boshqa manzil kiritish",
       "mockLink": "Xatdagi havolani ochish (mok)",
       "newClientLink": "Yangi mijozmisiz? Ariza qoldiring",
-      "hint": "Xat bir necha daqiqa kelishi mumkin. «Spam» jildini tekshiring. 10 daqiqada kelmasa — menejeringizga murojaat qiling: kompaniya pochtasi vaqtincha ishlamayotgan boʻlishi mumkin.",
+      "hint": "Xat bir neça daqiqa kelişi mumkin. «Spam» jildini tekşiring. 10 daqiqada kelmasa — menejerga yozing.",
       "resend": "Qayta yuborish",
       "resendIn": "{{seconds}} soniyadan keyin qayta yuborish",
       "resent": "Agar manzil roʻyxatdan oʻtgan boʻlsa, yangi xat yuboramiz. Oldingi xatdagi kod endi ishlamaydi."
@@ -298,7 +298,7 @@
     "unavailableTitle": "Ariza shakli mavjud emas",
     "unavailableText": "Bizga Telegramda yozing — menejer javob beradi va sizni kabinetga taklif qiladi.",
     "sentTitle": "Rahmat! Ariza yuborildi",
-    "sentText": "Menejer ish vaqtida siz bilan telefon yoki e-mail orqali bogʻlanadi. Yozishmalar qulayroq boʻlsa — bizga Telegramda yozing.",
+    "sentText": "Menejer iş vaqtida javob beradi. Yozişma qulayroq bölsa — bizga Telegramda yozing.",
     "form": {
       "name": "Sizga qanday murojaat qilaylik",
       "company": "Kompaniya (ixtiyoriy)",
@@ -309,7 +309,7 @@
       "email": "E-mail",
       "emailPlaceholder": "name@company.uz",
       "text": "Nima kerak",
-      "textPlaceholder": "Masalan: 5 ta nuqta uchun POSni 1C bilan integratsiya qilish, muddat — oy oxirigacha",
+      "textPlaceholder": "Masalan: 10 ta 7,5 kVt chastota özgartirgiçi, mart oyigaça Toşkentga yetkazib beriş",
       "website": "Bu maydonni toʻldirmang",
       "consent": "Ushbu ariza boʻyicha men bilan bogʻlanishlari uchun shaxsiy maʼlumotlarimni qayta ishlashga roziman",
       "submit": "Arizani yuborish",
@@ -332,12 +332,7 @@
       "tokenUnavailable": "Shakl hozir mavjud emas. Qayta urinib koʻring yoki bizga Telegramda yozing."
     },
     "next": {
-      "number": "Ariza raqami",
-      "withinMinutes_one": "{{count}} daqiqa",
-      "withinMinutes_other": "{{count}} daqiqa",
-      "withinHours_one": "{{count}} soat",
-      "withinHours_other": "{{count}} soat",
-      "text": "Menejer iş vaqtida {{within}} içida telefon yoki e-mail orqali javob beradi. Yozişmalar qulayroq bölsa — bizga Telegramda yozing."
+      "number": "Ariza raqami"
     }
   },
   "manager": {
@@ -368,10 +363,10 @@
     "logout": "Kabinetdan chiqish",
     "name": "Ism",
     "sessions": {
-      "title": "Faol sessiyalar",
+      "title": "Kiriş bajarilgan qurilmalar",
       "desc": "Hisobingiz orqali kabinetga kirish imkoniyatiga ega qurilmalar va brauzerlar",
-      "current": "Joriy sessiya",
-      "revokeOthers": "Boshqa sessiyalarni yakunlash",
+      "current": "Bu qurilma",
+      "revokeOthers": "Boşqa qurilmalardan çiqiş",
       "revoked": "Yakunlangan boshqa sessiyalar soni: {{count}}",
       "noOther": "Boshqa faol sessiyalar yoʻq",
       "device": "Qurilma",
@@ -382,9 +377,9 @@
     "notifications": {
       "title": "Bildirishnomalar",
       "linked": "Telegram ulangan",
-      "linkedText": "Tijorat takliflari, hisoblar, dalolatnomalar va menejer javoblari haqidagi bildirishnomalar darhol Telegramga keladi. Kabinet xatsiz, toʻgʻridan-toʻgʻri botda ochiladi.",
+      "linkedText": "TT, hisoblar, dalolatnomalar va menejer javoblari haqida bildirişnomalar Telegramga keladi. Kabinet bevosita botda oçiladi.",
       "notLinked": "Telegram ulanmagan",
-      "notLinkedText": "Telegramni ulang — bildirishnomalar darhol keladi, kabinet esa toʻgʻridan-toʻgʻri botda ochiladi. Hozircha bildirishnomalar xat orqali keladi.",
+      "notLinkedText": "Telegramni ulang — bildirişnomalar botga keladi, kabinet esa unda oçiladi. Hozirça bildirişnomalar xat orqali keladi.",
       "connect": "Telegramni ulash",
       "preparing": "Havola tayyorlanmoqda…",
       "scanQr": "QR-kodni telefon kamerasi bilan skanerlang yoki tugmani bosing — bot ochiladi. Botda «Start» tugmasini bosing.",
@@ -396,7 +391,7 @@
       "expired": "Havola muddati tugadi.",
       "newLink": "Yangi havola olish",
       "done": "Tayyor, Telegram ulandi",
-      "unavailable": "Telegramni menejer sizni tizimga qoʻshgandan keyin ulash mumkin — unga yozing.",
+      "unavailable": "Telegramni menejer sizga ruxsat bergandan keyin ulaş mumkin — unga yozing.",
       "confirmTitle": "Telegram uzilsinmi?",
       "consequence": "Bildirishnomalar Telegramga kelmay qoʻyadi — xatlar va kabinet qoladi. Telegramdan kabinetga kirish yopiladi. Qayta ulash shu yerda mumkin.",
       "confirm": "Telegramni uzish",
@@ -415,7 +410,7 @@
       "channelInApp": "Kabinetda",
       "channelEmail": "E-mail",
       "channelTelegram": "Telegram",
-      "telegramNotConnected": "Telegram ulanmagan. Xabarlarni messenjerda olish uchun yuqorida botni ulang.",
+      "telegramNotConnected": "Telegram ulanmagan. Bildirişnomalarni olış uçun yuqorida botni ulang.",
       "alwaysOn": "Majburiy",
       "saved": "Bildirishnoma sozlamalari yangilandi",
       "groups": {
@@ -428,7 +423,7 @@
           "desc": "Chiqarilgan hisob-fakturalar va to‘lov tasdiqlari"
         },
         "deliveries": {
-          "title": "Yetkazib berish",
+          "title": "Yetkazib beriş",
           "desc": "Yuk jo‘natish holati va omborga kelib tushishi"
         },
         "messages": {
@@ -444,7 +439,7 @@
           "desc": "Yangi qurilmadan kirish, seanslarni yakunlash, bank rekvizitlarining o‘zgarishi"
         }
       },
-      "telegramUnavailable": "Bildirishnomalar xat orqali keladi. Menejer sizni tizimga qo‘shgach, Telegram ulanadi — unga yozing."
+      "telegramUnavailable": "Bildirişnomalar xat orqali keladi. Telegramni menejer sizga ruxsat bergandan keyin ulaş mumkin — unga yozing."
     }
   },
   "pages": {
@@ -475,13 +470,13 @@
       "draftOffer": "Sizda {{date}} dagi qoralama bor",
       "draftResume": "Davom etiş",
       "draftRestart": "Qaytadan boşlaş",
-      "lines": "Pozitsiyalar yoki bosqichlar",
-      "linesHint": "Pozitsiyalar yoki ishlarni erkin matnda sanab oʻting — aniq artikul shart emas. Boʻsh qatorlar yuborilmaydi.",
+      "lines": "Pozitsiyalar",
+      "linesHint": "Buyumlar yoki işlarni (masalan, nasoslarni taʼmirlaş) erkin yozing — aniq belgilar şart emas. Boş qatorlar yuborilmaydi.",
       "lineText": "{{n}}-qator",
-      "lineTextPlaceholder": "Masalan: 6205-2RS podshipnik",
+      "lineTextPlaceholder": "Masalan: VVGng 3×2,5 kabeli",
       "quantity": "Miqdor",
       "unit": "Birlik",
-      "unitPlaceholder": "dona, m, soat…",
+      "unitPlaceholder": "dona, komplekt, t…",
       "quantityInvalid": "Miqdor — musbat son, masalan 12 yoki 2,5.",
       "addLine": "Qator qoʻshish",
       "removeLine": "{{n}}-qatorni oʻchirish",
@@ -493,7 +488,7 @@
       "pickFromCatalog": "Katalogdan tanlash",
       "submit": "Arizani yuborish",
       "sent": "{{number}} arizasi yuborildi",
-      "viewOnlyTitle": "Arizani tasdiqlash huquqiga ega kontakt yarata oladi",
+      "viewOnlyTitle": "Ariza yaratişni tasdiqlaş huquqi bor hamkasb bajaradi",
       "viewOnlyText": "Bu huquqqa ega hamkasbingiz yoki menejerdan ariza yuborishni soʻrang.",
       "consequence": "Arizaga raqam beriladi va u {{operator}} menejeriga yuboriladi. Menejer tijorat taklifini tayyorlaydi — u «Takliflar» boʻlimida paydo boʻladi, biz esa sizga Telegram yoki elektron pochta orqali xabar beramiz."
     },
@@ -508,14 +503,14 @@
       "attachmentsTitle": "Biriktirilgan fayllar",
       "noAttachments": "Fayllar biriktirilmagan",
       "columns": {
-        "title": "Pozitsiya / bosqich",
+        "title": "Pozitsiya",
         "quantity": "Miqdor"
       },
       "reorder": "Arizani takrorlash",
       "reorderSummary": "{{number}}-sonli ariza takrori: {{summary}}",
       "backToList": "Arizalar roʻyxatiga",
       "sources": {
-        "cabinet": "Siz — kabinetda",
+        "cabinet": "Kabinetdan",
         "manager": "Menejer orqali"
       },
       "next": {
@@ -559,7 +554,7 @@
       "vat": "QQS",
       "totals": "Jami tarkibi",
       "columns": {
-        "title": "Pozitsiya / bosqich",
+        "title": "Pozitsiya",
         "quantity": "Miqdor",
         "price": "Narx",
         "total": "Summa",
@@ -568,7 +563,7 @@
       "accept": "Qabul qilish",
       "reject": "Rad etish",
       "acceptTitle": "{{number}} taklifini qabul qilish",
-      "acceptText": "Summa {{total}}. Xabardagi tasdiqlash kodini kiriting. Qabul qilingach shartnoma avtomatik tuziladi.",
+      "acceptText": "Summa {{total}}. Xabardagi tasdiqlaş kodini kiriting. Qabul qilingaç şartnomani tayyorlaymiz — u «Şartnomalar» bölimida paydo böladi.",
       "code": "Tasdiqlash kodi",
       "codeHint": "Xabardagi kodni kiriting. Kelmasa, kodni qayta yuboring.",
       "codeTooShort": "Kod kamida {{min}} belgidan iborat.",
@@ -590,7 +585,7 @@
       "expiredTitle": "Taklifning amal qilish muddati tugagan",
       "expiredText": "Uni endi qabul qilib boʻlmaydi. Menejerdan taklifni yangilashni soʻrang.",
       "backToList": "Takliflar roʻyxatiga",
-      "requestCodeText": "Summa {{total}}. «Kod olish» tugmasini bosing — tasdiqlash kodini Telegram yoki e-mail orqali yuboramiz. Qabul qilingach shartnoma avtomatik tuziladi.",
+      "requestCodeText": "Summa {{total}}. «Kod olış» tugmasini bosing — tasdiqlaş kodini Telegram yoki e-mail orqali yuboramiz. Qabul qilingaç şartnomani tayyorlaymiz — u «Şartnomalar» bölimida paydo böladi.",
       "requestCode": "Kod olish",
       "codeSent": {
         "telegram": "Kod Telegramga yuborildi. {{minutes}} daqiqa amal qiladi.",
@@ -611,13 +606,13 @@
       "commentConsequence": "Izohni menejeringiz oladi. Taklif oʻzgarmaydi — izohdan keyin ham uni qabul qilish yoki rad etish mumkin.",
       "commentRequired": "Izoh matnini yozing.",
       "codeDelivery": {
-        "sending": "Kod {{to}} manziliga yuborilmoqda — xat kompaniya pochtasi orqali ketadi.",
+        "sending": "Kod {{to}} manziliga yuborilmoqda…",
         "queuedLong": "Kodli xat hali navbatda. Bir-ikki daqiqadan so‘ng pochtangizni tekshiring yoki kodni qayta so‘rang.",
-        "notSent": "Kod yuborilmadi: {{reason}}. Menejeringizga murojaat qiling — u TKni siz uchun qabul qiladi yoki pochta bilan yordam beradi.",
+        "notSent": "Kod yuborilmadi. Menejerga yozing — u yordam beradi.",
         "reasons": {
-          "smtp_not_configured": "kompaniya pochtasi sozlanmagan",
-          "rejected": "pochta serveri xatni rad etdi",
-          "unavailable": "pochta serveri mavjud emas",
+          "smtp_not_configured": "xat ketmadi",
+          "rejected": "xat ketmadi",
+          "unavailable": "xat ketmadi",
           "other": "xat ketmadi"
         }
       }
@@ -632,14 +627,14 @@
         "contract": "Shartnoma",
         "status": "Holat",
         "client": "Sizning kelishuvingiz",
-        "company": "Ijrochi imzosi",
+        "company": "Bizning imzo",
         "deal": "Loyiha"
       },
       "notSigned": "Hali yoʻq",
       "sign": "Kelishish",
       "signNamed": "{{number}} shartnomasini kelishish",
       "signTitle": "{{number}} shartnomasini kelishish",
-      "signText": "Kompaniya nomidan shartnoma matni bilan rozi ekaningizni tasdiqlaysiz. Imzolash — alohida qadam: shartnomani EHT operatori chiqaradi, imzolanganda xabar beramiz.",
+      "signText": "Kompaniya nomidan şartnoma matni bilan rozi ekaningizni tasdiqlaysiz. Imzolaş — alohida qadam: şartnoma sizga EHTda keladi, imzolanganda xabar beramiz.",
       "signConfirm": "Shartnomani kelishish",
       "signedClient": "Siz {{number}} shartnomasini kelishdingiz. Imzolanishi kutilmoqda.",
       "signedBoth": "{{number}} shartnomasi ikki tomon tomonidan imzolandi."
@@ -667,7 +662,7 @@
       },
       "payButton": "Toʻladim",
       "payNamed": "Toʻladim: {{number}} hisob-faktura",
-      "proofsLabel": "{{number}} hisob-faktura boʻyicha toʻlov topshiriqnomalari",
+      "proofsLabel": "{{number}} hisob böyiça tölov topşiriqnomalari",
       "proofLine": "{{name}} toʻlov topshiriqnomasi, {{date}}",
       "proofClaimed": "Siz koʻrsatdingiz: {{amount}}",
       "proofClaimedDate": "Siz koʻrsatdingiz: {{amount}}, toʻlangan sana {{date}}",
@@ -685,8 +680,8 @@
         "commentPlaceholder": "Masalan: qismlab toʻlaymiz, ikkinchi qismi oy oxirigacha",
         "optional": "ixtiyoriy",
         "consequence": "Menejer pul tushganini tekshirib, toʻlovni tasdiqlaydi — shunda hisob-faktura holati oʻzgaradi.",
-        "confirm": "Topshiriqnomani yuborish",
-        "sent": "{{number}} hisob-faktura boʻyicha toʻlov topshiriqnomasi menejerga yuborildi",
+        "confirm": "Yuborish",
+        "sent": "{{number}} hisob böyiça tölov topşiriqnomasi menejerga yuborildi",
         "problem": {
           "fileMissing": "Toʻlov topshiriqnomasi faylini biriktiring.",
           "tooLarge": "Fayl 10 MB dan katta.",
@@ -720,11 +715,11 @@
       "return": "Qaytarish",
       "returnNamed": "{{number}} dalolatnomasini qaytarish",
       "returnTitle": "{{number}} dalolatnomasini qaytarish",
-      "returnText": "Dalolatnoma tuzatish uchun ijrochiga qaytadi. Nima notoʻgʻri ekanini yozing.",
+      "returnText": "Dalolatnoma tuzatiş uçun bizga qaytadi. Nima notöğri ekanini yozing.",
       "returnReason": "Qaytarish sababi",
       "returnPlaceholder": "Masalan: seriya raqami koʻrsatilmagan",
       "returnConfirm": "Dalolatnomani qaytarish",
-      "returnedToast": "{{number}} dalolatnomasi ijrochiga qaytarildi",
+      "returnedToast": "{{number}} dalolatnomasi qaytarildi",
       "scan": "Skan",
       "scanLabel": "Imzolangan dalolatnoma skani (majburiy emas)",
       "scanHint": "PDF yoki rasm, 10 MB gacha. Dalolatnomani skansiz ham qabul qilish mumkin.",
@@ -767,15 +762,15 @@
       "filter": "Hujjat turi",
       "dateFrom": "Boshlanish sanasi",
       "dateTo": "Tugash sanasi",
-      "exportRegistry": "Reestrni eksport qilish",
-      "exportSuccess": "Hujjatlar reestri muvaffaqiyatli yuklab olindi",
+      "exportRegistry": "Röyxatni yuklab oliş",
+      "exportSuccess": "Hujjatlar röyxati yuklab olindi",
       "csv": {
         "number": "№",
         "kind": "Turi",
         "title": "Hujjat nomi",
         "docNumber": "Hujjat raqami",
         "date": "Sana",
-        "deal": "Bitim",
+        "deal": "Loyiha",
         "size": "Hajmi (bayt)"
       },
       "searchPlaceholder": "Raqam, nom, loyiha…",
@@ -822,7 +817,7 @@
     "catalog": {
       "title": "Katalog",
       "emptyTitle": "Katalog boʻsh",
-      "emptyText": "Narxi va mavjudligi bilan eʼlon qilingan tovarlar va xizmatlar.",
+      "emptyText": "Kerakli narsani arizada yozing — menejer tanlab beradi.",
       "search": "Katalog boʻyicha qidiruv",
       "searchPlaceholder": "Nomi, toifa…",
       "searchSubmit": "Topish",
@@ -895,16 +890,16 @@
         "bankAdminOnlyBadge": "Faqat administrator",
         "bankDetailsAdminOnly": "Bank rekvizitlarini faqat kompaniya administratori o‘zgartirishi mumkin.",
         "bankDetailsAdminNotice": "Rekvizitlar o‘zgarganda kompaniyaning barcha administratorlariga xavfsizlik ogohlantirishi yuboriladi.",
-        "relationshipStatus": "Munosabatlar holati",
+        "relationshipStatus": "Biz bilan iş",
         "language": "Hujjatlar va xatlar tili"
       },
       "relationship": {
-        "active": "Munosabatlar faol",
-        "suspended": "To'xtatilgan",
-        "terminated": "Yakunlangan",
+        "active": "Davom etmoqda",
+        "suspended": "Töxtatilgan",
+        "terminated": "Tugagan",
         "invited": "Taklif etilgan",
-        "suspendedAlert": "Munosabatlar vaqtincha to'xtatilgan. Kirish arxivni o'qish rejimida taqdim etiladi.",
-        "terminatedAlert": "Munosabatlar yakunlandi. Hujjatlar arxivi ko'rish va yuklab olish uchun ochiq."
+        "suspendedAlert": "Iş töxtatilgan: hujjatlar faqat körish uçun oçiq.",
+        "terminatedAlert": "Iş tugagan: hujjatlar arxivi körish va yuklab oliş uçun oçiq."
       },
       "securityLog": {
         "title": "Kompaniya xavfsizlik jurnali",
@@ -912,13 +907,13 @@
         "empty": "Hozircha xavfsizlik hodisalari qayd etilmagan",
         "error": "Xavfsizlik jurnalini yuklab bo'lmadi",
         "notUs": "Bu sizning xodimingiz emasmi?",
-        "endSession": "Seansni yakunlash",
+        "endSession": "Kirişni tugatiş",
         "ended": "Seans yakunlandi",
         "endFailed": "Seans allaqachon yakunlangan yoki muddati tugagan",
         "events": {
           "login": "Kirish",
           "logout": "Chiqish",
-          "revoke_sessions": "Sessiyalarni bekor qilish",
+          "revoke_sessions": "Boşqa qurilmalardan çiqiş",
           "role_change": "Huquqlarni o'zgartirish",
           "member_deactivated": "O'chirish",
           "member_invited": "Taklif etish",
@@ -930,14 +925,14 @@
       },
       "closeEdit": "Yopish",
       "partner": {
-        "cardTitle": "Hamkorlik dasturi",
+        "cardTitle": "Hamkorlik şartnomasi",
         "alreadyPartnerTitle": "Hamkorlik shartnomasi faol",
-        "alreadyPartnerDesc": "Kompaniyangiz vakolatli hamkor hisoblanadi. Katalogingizni boshqarish uchun «Mening mahsulotlarim» boʻlimi mavjud.",
+        "alreadyPartnerDesc": "Hamkorlik şartnomasi amalda. Tovarlar va narxlar — «Mening tovarlarim» bölimida.",
         "toMyProducts": "«Mening mahsulotlarim»ga oʻtish",
         "applicationPendingDesc": "Hamkor maqomini olish uchun ariza topshirilgan va {{operator}} tomonidan koʻrib chiqilmoqda.",
         "contractValue": "№ {{number}}, {{date}}",
         "contractSentDesc": "Hamkorlik shartnomasi tayyorlandi va kompaniyangizga kelishish uchun yuborildi.",
-        "contractAgreedDesc": "Shartnoma loyihasi siz tomoningizdan ma’qullandi va {{operator}} rahbariyati imzolashini kutmoqda.",
+        "contractAgreedDesc": "Şartnoma loyihasini kelişdingiz. Bizning imzomizni kutmoqda.",
         "status": {
           "submitted": "Ko‘rib chiqilmoqda",
           "contract_sent": "Shartnoma yuborildi",
@@ -950,14 +945,14 @@
         "downloadDraftPdf": "Shartnoma loyihasini yuklab olish (PDF)",
         "agreeContractBtn": "Shartnoma loyihasini ma’qullash",
         "agreeDialogTitle": "Shartnoma loyihasini ma’qullash",
-        "agreeDialogDesc": "Kelishuvni tasdiqlash orqali siz hamkorlik shartnomasi va {{operator}} platformasi qoidalariga rozilik bildirasiz.",
+        "agreeDialogDesc": "Tasdiqlab, hamkorlik şartnomasi şartlariga rozilik bildirasiz.",
         "agreeNotesLabel": "Kelishuvga izoh yoki fikr (ixtiyoriy)",
         "agreeSubmit": "Rozilikni tasdiqlash",
-        "agreeSuccess": "Shartnoma loyihasi muvaffaqiyatli ma’qullandi! Ariza tasdiqlash uchun rahbariyatga yuborildi.",
+        "agreeSuccess": "Şartnoma loyihasi kelişildi. Şartnoma imzolangaç xabar beramiz.",
         "steps": {
           "application": "Ariza",
           "draft": "Shartnoma loyihasi",
-          "director": "Tasdiqlash",
+          "director": "Imzolaş",
           "active": "Hamkorlik"
         },
         "notPartnerDesc": "{{operator}} orqali mahsulot yetkazib berishni xohlaysizmi? Hamkorlik shartnomasini tuzish uchun ariza yuboring.",
@@ -1030,7 +1025,7 @@
     },
     "becomePartner": {
       "title": "Hamkorlikka ariza",
-      "subtitle": "Yetkazib beruvchi yoki ishlab chiqaruvchi sifatida {{operator}} platformasiga qo‘shiling",
+      "subtitle": "Uskuna yoki ehtiyot qismlar yetkazib berasizmi? Kompaniya haqida yozing — hamkorlik şartnomasini tayyorlaymiz.",
       "backToLogin": "Kirish sahifasiga qaytish",
       "errors": {
         "companyNameRequired": "Kompaniya nomini koʻrsating.",
@@ -1041,22 +1036,22 @@
       "fields": {
         "country": "Roʻyxatdan oʻtgan mamlakat",
         "companyName": "Kompaniya nomi",
-        "companyNamePlaceholder": "MChJ «Temiryo‘l Texnologiyalari»",
+        "companyNamePlaceholder": "MChJ «Kompaniya nomi»",
         "inn": "STIR (mavjud bo‘lsa)",
         "innPlaceholder": "123456789",
         "registrationNumber": "Roʻyxat raqami yoki soliq raqami",
         "registrationNumberPlaceholder": "Tijorat reyestridagi raqam yoki soliq raqami",
         "kind": "Hamkor turi",
         "kinds": {
-          "supplier": "Yetkazib beruvchi / Distribyutor",
-          "manufacturer": "Ishlab chiqaruvchi",
-          "principal": "Bosh pudratchi / Prinsipal",
+          "supplier": "Yetkazib beruvçi",
+          "manufacturer": "Işlab çiqaruvçi",
+          "principal": "Pudratçi (taʼmirlaş, montaj)",
           "other": "Boshqa"
         },
         "categoriesDescription": "Yetkazib beriladigan mahsulotlar va toifalar",
-        "categoriesDescriptionPlaceholder": "Mahsulot toifalari, nomenklatura, brendlar yoki ishlab chiqarish quvvatlarini tavsiflang...",
+        "categoriesDescriptionPlaceholder": "Masalan: podşipniklar va nasos uskunalari, Xitoyda öz zavodimiz",
         "contactName": "Aloqa qiluvchi shaxs",
-        "contactNamePlaceholder": "Ivan Smirnov",
+        "contactNamePlaceholder": "Ism va familiya",
         "email": "Ishchi e-mail",
         "emailPlaceholder": "partner@example.uz",
         "phone": "Telefon",
@@ -1067,14 +1062,14 @@
       "submit": "Arizani yuborish",
       "submitting": "Ariza yuborilmoqda…",
       "successTitle": "Ariza qabul qilindi",
-      "successSubtitle": "{{operator}} bilan hamkorlikka qiziqish bildirganingiz uchun rahmat!",
+      "successSubtitle": "Rahmat!",
       "nextStepsTitle": "Keyin nima bo‘ladi?",
       "step1Title": "Maʼlumotlarni tekshirish",
-      "step1Desc": "Bizning taʼminot va komplayens bo‘limimiz kompaniya rekvizitlari va mahsulot nomenklaturasini tekshiradi.",
+      "step1Desc": "Kompaniya rekvizitlari va mahsulotlar röyxatini tekşiramiz.",
       "step2Title": "Hamkorlik shartnomasini imzolash",
       "step2Desc": "Biz hamkorlik shartnomasini tayyorlab, kelishish va imzolash uchun yuboramiz.",
       "step3Title": "Hamkor kabinetiga kirish",
-      "step3Desc": "Shartnoma faollashtirilgach, «Mening mahsulotlarim» bo‘limiga va prays-listlarni yuklashga ruxsat ochiladi."
+      "step3Desc": "Şartnoma imzolangaç, prays yuklaş uçun «Mening tovarlarim» bölimi oçiladi."
     },
     "team": {
       "title": "Jamoa",
@@ -1094,10 +1089,10 @@
       "admin": "Administrator",
       "canActBadge": "Tasdiqlay oladi",
       "viewOnlyBadge": "Faqat koʻrish",
-      "grantAdmin": "Admin etib tayinlash",
-      "revokeAdmin": "Admin huquqini olish",
-      "grantCanAct": "Imzolashga ruxsat",
-      "revokeCanAct": "Imzoni bekor qilish",
+      "grantAdmin": "Administrator qiliş",
+      "revokeAdmin": "Administrator huquqini oliş",
+      "grantCanAct": "Tasdiqlaşga ruxsat beriş",
+      "revokeCanAct": "Tasdiqlaş huquqini oliş",
       "deactivate": "Oʻchirish",
       "deactivateTitle": "Hamkasbni oʻchirib qoʻyilsinmi?",
       "deactivateDesc": "{{name}} kompaniya kabinetiga kirish huquqini yoʻqotadi va uning barcha faol sessiyalari darhol yakunlanadi.",
@@ -1188,11 +1183,11 @@
       "placeholder": "Savolingiz yoki aniqlik kiritish",
       "hintWeb": "Enter — yuborish, Shift+Enter — yangi qator",
       "hint": "Menejer shu yerda javob beradi",
-      "viewOnly": "Menejerga tasdiqlash huquqi bor kontakt yoza oladi — sizda faqat ko‘rish",
+      "viewOnly": "Menejerga tasdiqlaş huquqi bor hamkasb yoza oladi — sizda faqat körish",
       "send": "Yuborish",
       "infoLabel": "Yozishma haqida",
       "responder": "{{name}}, menejeringiz javob beradi",
-      "responderTeam": "{{operator}} jamoasi javob beradi",
+      "responderTeam": "Bizning jamoa javob beradi",
       "visibleToCompany": "Yozishmani kompaniyangizning kabinetdagi barcha xodimlari ko‘radi",
       "attachHint": "Hozircha chatga fayl biriktirilmaydi — uni arizaga biriktiring.",
       "attachLink": "Arizalarga oʻtish",
@@ -1228,7 +1223,7 @@
       "views": {
         "orders": "Buyurtmalar",
         "rfq": "Narx soʻrovlari",
-        "finance": "Aylanma va baholash"
+        "finance": "Aylanma va körsatkiçlar"
       },
       "finance": {
         "balancesTitle": "Valyutalar bo'yicha buyurtmalar aylanmasi",
@@ -1238,14 +1233,14 @@
         "receivedTotal": "Ombor qabul qilgan",
         "inTransitTotal": "Jo'natilgan, qabul qilinmagan",
         "receiptsCount": "Qabul qilishlar",
-        "scorecardTitle": "Yetkazib beruvchi samaradorligi ko'rsatkichlari",
-        "otifRate": "OTIF (o'z vaqtida va to'liq hajmda)",
+        "scorecardTitle": "Körsatkiçlaringiz",
+        "otifRate": "Öz vaqtida va töliq yetkazilgan",
         "rfqRate": "Narx soʻrovlariga javoblar",
         "freshnessRate": "Katalogdagi narxlar dolzarbligi",
         "otifOrdersCount": "Hisobdagi buyurtmalar: {{count}}",
         "avgResponse": "O'rtacha javob: {{hours}} soat",
         "noData": "Ma'lumot yo'q",
-        "totalRfqsCount": "Yetkazilgan so'rovlar: {{count}}",
+        "totalRfqsCount": "Qabul qilingan narx sörovlari: {{count}}",
         "activeOffersCount": "Faol pozitsiyalar: {{count}}",
         "excellent": "A'lo",
         "target": "Maqsaddan past",
@@ -1313,11 +1308,11 @@
         "expectedDateLabel": "Rejalashtirilgan yetkazib berish sanasi",
         "shipTitle": "Jönatiş xabarnomasi",
         "shipDescription": "Omborni qabul qilishga tayyorlash uchun yuk hujjati rekvizitlari va tashuvchi maʼlumotlarini koʻrsating.",
-        "supplierDocLabel": "Yetkazib beruvchi yuk xati / hisob-faktura raqami",
+        "supplierDocLabel": "Yuk xati yoki hisob-faktura raqami",
         "supplierDocPlaceholder": "Masalan: YX-402, 08.11.2026",
-        "carrierLabel": "Tashuvchi / Logistika kompaniyasi",
-        "carrierPlaceholder": "Masalan: Avtotransport / DHL",
-        "trackingNumberLabel": "Trek-raqam / Avtotransport raqami",
+        "carrierLabel": "Tashuvçi",
+        "carrierPlaceholder": "Masalan: temir yöl yoki avtotransport",
+        "trackingNumberLabel": "Davlat raqami yoki trek-raqam",
         "trackingNumberPlaceholder": "Masalan: 01 A 777 AA yoki trek-kod",
         "noteLabel": "Joʻnatishga izoh",
         "notePlaceholder": "Joylar soni, tushirish xususiyatlari…",
@@ -1380,11 +1375,11 @@
     "CONFLICT": "Maʼlumotlar allaqachon oʻzgargan — sahifani yangilab, qayta urinib koʻring.",
     "IDEMPOTENCY_KEY_REQUIRED": "Soʻrov server tomonidan rad etildi. Sahifani yangilab, qayta urinib koʻring.",
     "UNSUPPORTED_MEDIA_TYPE": "Soʻrov server tomonidan rad etildi. Sahifani yangilab, qayta urinib koʻring.",
-    "INVOICE_NOT_OPEN": "Hisob-faktura allaqachon toʻlangan yoki bekor qilingan — toʻlov topshiriqnomasi kerak emas. Sahifani yangilang.",
+    "INVOICE_NOT_OPEN": "Hisob allaqaçon tölangan yoki bekor qilingan. Sahifani yangilang.",
     "TEXT_REQUIRED": "Izoh matnini yozing.",
     "LOGIN_CODE_INVALID": "Kod notoʻgʻri yoki eskirgan. Xatni tekshiring yoki yangi kod yuboring.",
     "LOGIN_CODE_LOCKED": "Ketma-ket beshta notoʻgʻri kod — bu kod endi ishlamaydi. Yangisini olish uchun «Qayta yuborish»ni bosing.",
-    "CONTACT_NOT_IN_CRM": "Telegramni hozircha ulab boʻlmaydi: menejer sizni tizimga hali qoʻshmagan. Unga yozing.",
+    "CONTACT_NOT_IN_CRM": "Telegramni menejer sizga ruxsat bergandan keyin ulaş mumkin — unga yozing.",
     "TELEGRAM_LINK_UNAVAILABLE": "Telegramni ulash hozir mavjud emas. Keyinroq urinib koʻring.",
     "TELEGRAM_NOT_LINKED": "Telegram ulanmagan. Uni qaytadan ulang.",
     "TELEGRAM_ALREADY_LINKED": "Bu Telegram allaqachon ulangan. Boshqasini ulash uchun avval buni uzing.",
@@ -1395,11 +1390,11 @@
     "OFFER_EXPIRED": "Narx muddati tugagan — uni tasdiqlab boʻlmaydi. Yangi prays-list yuklang.",
     "IMPORT_FAILED": "Faylni qabul qilib boʻlmadi. Birozdan soʻng qayta urinib koʻring.",
     "CONSENT_REQUIRED": "Shaxsiy maʼlumotlarni qayta ishlashga rozilik talab qilinadi.",
-    "HONEYPOT_DETECTED": "Shubhali shakl faoliyati aniqlandi.",
+    "HONEYPOT_DETECTED": "Forma yuborilmadi. Sahifani yangilang va qayta yuboring.",
     "ALREADY_PARTNER": "Kompaniyangizda hamkorlik shartnomasi allaqachon tuzilgan va faol.",
     "APPLICATION_EXISTS": "Hamkor maqomini olish uchun ariza allaqachon koʻrib chiqilmoqda.",
     "PARTNER_APPLICATION_NOT_FOUND": "Hamkor maqomini olish uchun ariza topilmadi.",
-    "LAST_ADMIN_CANNOT_BE_REMOVED": "Kompaniyaning yagona administratoridan admin maqomini olib tashlash mumkin emas.",
+    "LAST_ADMIN_CANNOT_BE_REMOVED": "Kompaniyaning yagona administratoridan huquqni oliş mumkin emas.",
     "CANNOT_DEACTIVATE_SELF": "Oʻz akkauntingizni oʻchirib boʻlmaydi.",
     "CANNOT_ELEVATE_RIGHTS": "Oʻz huquqlaringizdan yuqori huquqlar berish mumkin emas.",
     "ADMIN_REQUIRED": "Bu amal faqat kompaniya administratori uchun mavjud.",
@@ -1440,7 +1435,7 @@
       "actBadge": "Dalolatnoma",
       "acceptAct": "Dalolatnomani qabul qilish",
       "titleViewer": "Kompaniya qarorini kutmoqda",
-      "viewerHint": "Tasdiqlash huquqiga ega kontakt hal qiladi",
+      "viewerHint": "Tasdiqlaş huquqi bor hamkasb hal qiladi",
       "deliveryBadge": "Yetkazib berish",
       "acceptDelivery": "Qabul qilishni tasdiqlash",
       "partnerContractBadge": "Shartnoma",
@@ -1453,7 +1448,7 @@
       "productRemarkBadge": "Mahsulot",
       "fixProductRemarks": "Mulohazalarni toʻgʻrilash",
       "remarks": "Mulohazalar",
-      "messagesBadge": "Chat",
+      "messagesBadge": "Xabarlar",
       "unreadMessages": "Oʻqilmagan xabarlar: {{count}}",
       "replyManager": "Menejerga javob berish"
     }
@@ -1476,7 +1471,7 @@
   },
   "telegramBanner": {
     "label": "Telegramdagi bildirishnomalar",
-    "text": "Telegramni ulang — bildirishnomalar darhol keladi",
+    "text": "Bildirişnomalarni botda oliş uçun Telegramni ulang",
     "connect": "Ulash",
     "later": "Keyinroq"
   },
@@ -1539,7 +1534,7 @@
     "reset": "Qidiruvni tozalash",
     "attention": {
       "title": "Narxlarga eʼtibor kerak",
-      "text": "Eskirgan: {{stale}}. Muddati tugagan: {{expired}}. Tez orada tugaydi: {{expiring}}. Narxlar amalda ekanini tasdiqlang — bu bir bosish.",
+      "text": "Eskirgan: {{stale}}. Muddati tugagan: {{expired}}. Tez orada tugaydi: {{expiring}}. Narxlar amalda ekanini tasdiqlang.",
       "expiredHint": "Muddati tugagan narxlarni tasdiqlab boʻlmaydi — yangi prays-list yuklang."
     },
     "empty": {
@@ -1565,7 +1560,7 @@
     "submitted": {
       "title_one": "{{count}} ta kartochka yuborildi",
       "title_other": "{{count}} ta kartochka yuborildi",
-      "sla": "Tekshiruv odatda 1 ish kunini oladi. Natija shu boʻlimda paydo boʻladi: “Eʼlon qilingan” yoki sabab bilan “Qaytarilgan”.",
+      "sla": "Natija şu yerda çiqadi: «Eʼlon qilingan» yoki sababi bilan «Qaytarilgan».",
       "failed": "Yuborilmadi: {{count}}",
       "code": {
         "NOT_FOUND": "kartochka topilmadi",
@@ -1630,7 +1625,7 @@
           "other": "Boshqa hujjat"
         },
         "docTitle": "Hujjat nomi",
-        "docTitlePlaceholder": "Masalan: GOST 7798-70 muvofiqlik sertifikati",
+        "docTitlePlaceholder": "Masalan: CM 50-200 nasosi uçun muvofiqlik sertifikati",
         "number": "Hujjat raqami",
         "numberPlaceholder": "Masalan: EAES RU S-RU.AYa46.V.00001/26",
         "issuedBy": "Bergan organ / tashkilot",
@@ -1771,7 +1766,7 @@
       "act_issued_reminder": "Eslatma: {{number}} dalolatnomasi qabul qilinishini kutmoqda",
       "delivery_status_changed": "{{deal}} loyihasi boʻyicha yetkazib berish: {{status}}",
       "delivery_eta_changed": "{{deal}} loyihasi boʻyicha yetkazib berish muddati oʻzgardi: endi {{eta}}",
-      "manager_replied": "Menejer sizga chatda javob berdi",
+      "manager_replied": "Menejer sizga «Xabarlar»da javob berdi",
       "partner_card_returned": "«{{number}}» kartochkasi qayta ishlashga qaytarildi",
       "partner_order_sent": "{{number}}-sonli yangi yetkazib berish buyurtmasi yuborildi",
       "partner_rfq_sent": "Narx sörovi kelib tuşdi: {{number}}",
@@ -1788,7 +1783,7 @@
   "verify": {
     "pageTitle": "Hujjat haqiqiyligini tekshirish",
     "verifiedBadge": "Haqiqiyligi tasdiqlandi",
-    "verifiedSub": "Rasmiy hujjat {{operator}} tizimida chiqarilgan va imzolangan",
+    "verifiedSub": "Rasmiy hujjat, kompaniyamiz tomonidan chiqarilgan va imzolangan",
     "revokedBadge": "Hujjat bekor qilingan",
     "revokedSub": "Ushbu hujjat bekor qilingan va oʻz kuchini yoʻqotgan",
     "revokedReason": "Bekor qilish sababi",
@@ -1809,8 +1804,8 @@
     "fileVerifyTitle": "Fayl butunligini tekshirish",
     "fileVerifyDesc": "Hujjat imzolangandan soʻng oʻzgartirilmaganligini tekshirish uchun faylni (PDF) yuklang.",
     "dropzonePrompt": "PDF faylni bu yerga torting yoki tanlash uchun bosing",
-    "hashMatch": "Nazorat summasi mos keldi. Fayl haqiqiy va oʻzgartirilmagan.",
-    "hashMismatch": "Nazorat summasi MOS KELMADI! Fayl buzilgan yoki oʻzgartirilgan.",
+    "hashMatch": "Fayl imzolangan asl nusxa bilan mos keladi.",
+    "hashMismatch": "Fayl imzolangan asl nusxadan farq qiladi: u özgartirilgan yoki buzilgan.",
     "calculatingHash": "Nazorat summasi hisoblanmoqda…",
     "fileHashLabel": "Yuklangan fayl heshi",
     "expectedHashLabel": "Asl nusxaning kutilgan heshi",
@@ -1839,9 +1834,9 @@
     "companyRequisites": "Kompaniya rekvizitlari",
     "companyRequisitesDesc": "STIR/roʻyxat raqami, telefon va bankni tekshiring",
     "telegramNotif": "Telegram bildirishnomalari",
-    "telegramNotifDesc": "Hujjatlar va hisoblar haqida tezkor xabarlar",
+    "telegramNotifDesc": "Hujjatlar va hisoblar haqida bildirişnomalar botda",
     "firstRequest": "Birinchi arizani yaratish",
-    "firstRequestDesc": "Hisoblash uchun ariza yuboring",
+    "firstRequestDesc": "Nima kerakligini yozing — tijorat taklifini yuboramiz",
     "uploadPriceList": "Narxlar roʻyxatini yuklash",
     "uploadPriceListDesc": "Excel andozasini yuklab, tovarlaringizni kiriting",
     "partnerContract": "Shartnoma loyihasi",
@@ -1891,7 +1886,7 @@
       "validUntil": "Amal qiliş muddati",
       "dueDate": "Tölov muddati",
       "balance": "Tölanadigan summa",
-      "signedAt": "Siz imzoladingiz",
+      "signedAt": "Siz kelişdingiz",
       "issuedAt": "Taqdim etilgan"
     },
     "withVat": "{{amount}} QQS bilan",
@@ -1914,7 +1909,7 @@
       "reject": "Izoh bilan qaytariş",
       "question": "Savol beriş",
       "open": "Kabinetni oçiş",
-      "accept_contract": "Şartnomani imzolaş",
+      "accept_contract": "Şartnomani kelişiş",
       "accept_act": "Dalolatnomani qabul qiliş"
     },
     "codeNote": "Har qanday amal {{email}} manziliga keladigan koddan keyin bajariladi. Bu havola orqali boşqa hujjat va bölimlar oçilmaydi.",
@@ -1923,15 +1918,15 @@
     "state": {
       "accepted": "Taklif qabul qilindi. Şartnoma kabinetingizda paydo böladi.",
       "rejected": "Taklif izoh bilan qaytarildi.",
-      "expired": "Taklifning amal qiliş muddati tugadi. Sotuvçidan uni yangilaşni sörang.",
-      "accepted_contract": "Şartnomani imzoladingiz. Keyingi qadam — hisob.",
+      "expired": "Taklifning amal qiliş muddati tugadi. Menejerdan uni yangilaşni sörang.",
+      "accepted_contract": "Şartnomani kelişdingiz. Uni EHTda imzolaymiz va xabar beramiz.",
       "accepted_act": "Dalolatnoma qabul qilindi.",
       "rejected_act": "Dalolatnoma izoh bilan qaytarildi.",
       "paid": "Hisob tölandi."
     },
     "reason": {
-      "no_right": "Kontaktingizda qaror qabul qilişga huquq yöq — kompaniyangiz administratoriga murojaat qiling.",
-      "no_access": "Kabinetga kirişingizda «Tijorat takliflari» bölimi yöq.",
+      "no_right": "Sizda qaror qabul qiliş huquqi yöq — kompaniyangiz administratoriga murojaat qiling.",
+      "no_access": "Sizning kirişingizda «TT» bölimi yöq.",
       "other_company": "Siz boşqa kompaniya kabinetiga kirgansiz.",
       "no_contact": "Qabul qiluvçi manzili kabinetga ulanmagan — yuboruvçi bilan boğlaning."
     },
@@ -1959,8 +1954,8 @@
       "memberText": "Summa {{total}}. Şartnoma kabinetingizda paydo böladi.",
       "working": "Bajarilmoqda…",
       "openTitle": "Kabinetni oçiş",
-      "memberTitle_contract": "Şartnomani imzolaysizmi?",
-      "memberText_contract": "Summa {{total}}. Imzolaş bilan şartnoma şartlarini qabul qilasiz.",
+      "memberTitle_contract": "Şartnomani kelişasizmi?",
+      "memberText_contract": "Summa {{total}}. Şartnoma matni bilan rozi ekaningizni tasdiqlaysiz.",
       "memberTitle_act": "Dalolatnomani qabul qilasizmi?",
       "memberText_act": "Summa {{total}}. Qabul qilingan dalolatnomani qaytarib bölmaydi."
     },
@@ -1968,7 +1963,7 @@
       "accept": "Taklif qabul qilindi",
       "reject": "Izohlar yuborildi",
       "question": "Savol menejerga yuborildi",
-      "accept_contract": "Şartnoma imzolandi",
+      "accept_contract": "Şartnomani kelişdingiz",
       "accept_act": "Dalolatnoma qabul qilindi",
       "reject_act": "Izohlar yuborildi"
     },
@@ -1999,7 +1994,7 @@
     "pay": {
       "title": "Tölov rekvizitlari",
       "none": "Rekvizitlar hisobning PDF faylida.",
-      "paidQuestion": "Tölab böldingizmi? Tölov sotuvçi tasdiqlagaç hisobda paydo böladi. Tölov topşiriğini Kabinetda ilova qilişingiz mumkin."
+      "paidQuestion": "Töladingizmi? Tölov biz tasdiqlagaç hisobda paydo böladi. Tölov topşiriqnomasini kabinetda ilova qiliş mumkin."
     },
     "about": {
       "title_contract": "Hujjat haqida",

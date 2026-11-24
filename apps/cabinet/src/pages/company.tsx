@@ -175,7 +175,7 @@ export function CompanyPage() {
               <AlertDescription>
                 {t(
                   'pages.company.relationship.suspendedAlert',
-                  'Отношения временно приостановлены. Доступ открыт в режиме чтения архива.',
+                  'Работа приостановлена: документы доступны только для просмотра.',
                 )}
               </AlertDescription>
             </Alert>
@@ -186,7 +186,7 @@ export function CompanyPage() {
               <AlertDescription>
                 {t(
                   'pages.company.relationship.terminatedAlert',
-                  'Отношения завершены. Архив документов доступен для просмотра и выгрузки.',
+                  'Работа завершена: архив документов доступен для просмотра и скачивания.',
                 )}
               </AlertDescription>
             </Alert>
@@ -199,7 +199,7 @@ export function CompanyPage() {
                 items={[
                   { label: t('pages.company.fields.name'), value: company.data.name },
                   {
-                    label: t('pages.company.fields.relationshipStatus', 'Статус отношений'),
+                    label: t('pages.company.fields.relationshipStatus', 'Работа с нами'),
                     value: (
                       <div className="flex flex-wrap items-center gap-2">
                         <ToneBadge

@@ -206,7 +206,7 @@ describe("КП", () => {
     );
   });
 
-  it("0.10 (FR-12): почта компании не настроена — «Код не отправлен» с причиной, а не «отправлен»", async () => {
+  it("0.10 (FR-12): письмо не ушло — «Код не отправлен» с понятным действием, а не «отправлен»", async () => {
     signedIn();
     portalServer.use(
       http.post("*/api/portal/v1/quotes/301/request-code", () =>
@@ -234,9 +234,11 @@ describe("КП", () => {
     );
     expect(
       await within(dialog).findByText(
-        /^Код не отправлен: почта компании не настроена\. Свяжитесь с менеджером/,
+        'Код не отправлен. Напишите менеджеру — он поможет.',
       ),
     ).toBeInTheDocument();
+    // устройство нашей почты клиенту не показываем
+    expect(within(dialog).queryByText(/smtp|почтов|почта компании/i)).toBeNull();
     expect(within(dialog).queryByText(/Код отправлен на/)).toBeNull();
   });
 
