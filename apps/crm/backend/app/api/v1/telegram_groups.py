@@ -6,7 +6,7 @@
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 
 from app.api.deps import ContainerDep, require
 from app.schemas.leads import ActionResult
@@ -29,9 +29,14 @@ def _out(view: GroupView) -> TelegramGroupOut:
 
 
 @router.get("", response_model=list[TelegramGroupOut])
-async def list_groups(_: Reader, container: ContainerDep) -> list[TelegramGroupOut]:
-    """Группы, где бот администратор: ждущие код (первыми), привязанные, отключённые."""
-    return [_out(view) for view in await container.telegram_groups.groups()]
+async def list_groups(
+    _: Reader,
+    container: ContainerDep,
+    limit: Annotated[int, Query(ge=1, le=200)] = 100,
+    offset: Annotated[int, Query(ge=0)] = 0,
+) -> list[TelegramGroupOut]:
+    """Группы, где бот администратор: ждущие код первыми, с просроченным кодом — последними."""
+    return [_out(view) for view in await container.telegram_groups.groups(limit, offset)]
 
 
 @router.post("/bind", response_model=TelegramGroupOut)

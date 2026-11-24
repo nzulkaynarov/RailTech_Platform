@@ -37,7 +37,7 @@ from app.repositories import telegram_chats
 from app.security.principal import Principal
 from app.services.settings import SettingsService
 from app.services.telegram_groups import GroupMessage, TelegramGroupService
-from tests.integration.crm_helpers import login, make_user
+from tests.integration.crm_helpers import escalated_lead, login, make_user
 
 pytestmark = pytest.mark.integration
 
@@ -794,3 +794,163 @@ async def test_api_bind_list_unbind_and_rights(
     assert client.post(f"{url}/{GROUP}/unbind", headers=writer).status_code == 200
     assert client.get(url, headers=writer).json()[0]["status"] == "unbound"
     assert client.post(f"{url}/{GROUP}/unbind", headers=writer).status_code == 409
+
+
+# --- после ревью: канал команды в обе стороны, источник в событии, якорь не лид ---------
+
+
+async def test_bound_client_group_cannot_be_chosen_as_team_channel(
+    sessions: async_sessionmaker[AsyncSession], groups: TelegramGroupService, client: TestClient
+) -> None:
+    await bound(sessions, groups)
+    admin, password = await make_user(sessions, "admin@railtech.uz", ["admin"])
+    auth = login(client, admin.email, password)
+    async with sessions() as session, session.begin():
+        await telegram_chats.upsert(session, GROUP, "Клиент", "supergroup")
+    url = f"/api/v1/integrations/telegram/channels/{GROUP}/connect"
+    refused = client.post(url, headers=auth)
+    assert (refused.status_code, refused.json()["details"]["reason"]) == (
+        409,
+        "group_is_client_group",
+    )
+    await groups.unbind(principal(), GROUP)
+    still = client.post(url, headers=auth)  # отключённая группа — обычный чат
+    assert still.status_code == 200
+
+
+async def test_pending_group_cannot_be_chosen_as_team_channel(
+    sessions: async_sessionmaker[AsyncSession], groups: TelegramGroupService, client: TestClient
+) -> None:
+    await pending_code(groups)
+    admin, password = await make_user(sessions, "admin@railtech.uz", ["admin"])
+    auth = login(client, admin.email, password)
+    async with sessions() as session, session.begin():
+        await telegram_chats.upsert(session, GROUP, "Клиент", "supergroup")
+    url = f"/api/v1/integrations/telegram/channels/{GROUP}/connect"
+    assert client.post(url, headers=auth).status_code == 409
+
+
+async def test_capture_and_edit_skip_the_team_channel(
+    sessions: async_sessionmaker[AsyncSession], groups: TelegramGroupService
+) -> None:
+    await bound(sessions, groups)
+    await groups.capture(GroupMessage(GROUP, 1, 55, "Азиз", None, "до"))
+    settings = SettingsService(sessions, ttl_s=0)
+    current = (await settings.raw())["notifications"]
+    await settings.update("notifications", {**current, "channel_id": GROUP}, None)
+    assert await groups.capture(GroupMessage(GROUP, 2, 55, "Азиз", None, "после")) is False
+    assert await groups.edit(GROUP, 1, "правка") is False
+    assert [m.text for m in await messages(sessions)] == ["до"]
+
+
+async def test_group_anchor_event_carries_source_detail(
+    sessions: async_sessionmaker[AsyncSession], groups: TelegramGroupService
+) -> None:
+    from app.bus import snapshots
+
+    await bound(sessions, groups)
+    async with sessions() as session:
+        lead = (await session.scalars(select(Lead).where(Lead.source == "group"))).one()
+        snapshot = await snapshots.lead_snapshot(session, lead)
+    assert (snapshot["source"], snapshot["source_detail"]) == ("telegram", "group")
+
+
+async def test_group_anchor_is_not_a_lead_anywhere(
+    sessions: async_sessionmaker[AsyncSession], groups: TelegramGroupService, client: TestClient
+) -> None:
+    from app.repositories import monitoring
+    from app.services import dashboard
+
+    ordinary = await escalated_lead(sessions)
+    await bound(sessions, groups)
+    await groups.capture(GroupMessage(GROUP, 1, 55, "Азиз", None, "вопрос"))
+    admin, password = await make_user(sessions, "admin@railtech.uz", ["admin"])
+    auth = login(client, admin.email, password)
+    listed = client.get("/api/v1/leads", headers=auth).json()
+    assert [item["id"] for item in listed["items"]] == [ordinary]
+    assert listed["total"] == 1
+    chats = client.get("/api/v1/chats", headers=auth).json()
+    assert [item["lead_id"] for item in chats["items"]] == [ordinary]
+    inbox = client.get("/api/v1/inbox", headers=auth).json()
+    queued = [item["id"] for part in inbox.values() for item in part]
+    assert queued
+    assert all(lead_id == ordinary for lead_id in queued)
+    async with sessions() as session:
+        figures = await monitoring.daily_figures(session, datetime.now(UTC) - timedelta(days=1))
+        funnel = await dashboard._funnel(session)
+    assert figures.leads == 1
+    assert sum(funnel.values()) == 1
+    # Переписка группы читается по lead_id из списка групп — у сотрудника с правом на диалоги.
+    [group] = client.get("/api/v1/telegram-groups", headers=auth).json()
+    feed = client.get(f"/api/v1/leads/{group['lead_id']}/messages", headers=auth).json()
+    assert [m["text"] for m in feed] == ["вопрос"]
+
+
+async def test_failed_bind_attempts_are_audited(
+    sessions: async_sessionmaker[AsyncSession], groups: TelegramGroupService
+) -> None:
+    client_id = await make_client(sessions)
+    await pending_code(groups)
+    with pytest.raises(NotFoundError):
+        await groups.bind(principal(), "ZZZZZZ", client_id)
+    async with sessions() as session:
+        entry = (
+            await session.scalars(
+                select(AuditLog).where(AuditLog.action == "telegram_group.bind_failed")
+            )
+        ).one()
+    assert entry.after is not None
+    assert entry.after["reason"] == rules.GROUP_CODE_INVALID
+
+
+async def test_expired_pending_goes_last_and_list_is_paged(
+    sessions: async_sessionmaker[AsyncSession], groups: TelegramGroupService
+) -> None:
+    await groups.bot_membership(-1, "Старая", "supergroup", status="administrator", can_pin=True)
+    async with sessions() as session, session.begin():
+        await session.execute(
+            update(TelegramGroup).values(code_expires_at=datetime.now(UTC) - timedelta(hours=1))
+        )
+    await groups.bot_membership(-2, "Свежая", "supergroup", status="administrator", can_pin=True)
+    assert [g.title for g in await groups.groups()] == ["Свежая", "Старая"]
+    assert [g.title for g in await groups.groups(limit=1, offset=1)] == ["Старая"]
+
+
+async def test_notice_is_retried_on_first_message_when_bot_was_down(
+    sessions: async_sessionmaker[AsyncSession], groups: TelegramGroupService, bot: FakeBot
+) -> None:
+    down = TelegramGroupService(sessions, SettingsService(sessions, ttl_s=0), None)
+    client_id = await make_client(sessions)
+    code = await pending_code(groups)
+    bot.calls.clear()
+    view = await down.bind(principal(), code, client_id)
+    assert view.access == "ok"  # бот не запущен: права не «потеряны»
+    assert bot.sent() == []
+    await groups.capture(GroupMessage(GROUP, 1, 55, "Азиз", None, "привет"))
+    assert bot.sent() == [rules.NOTICE["ru"]]
+    async with sessions() as session:
+        group = await session.get(TelegramGroup, GROUP)
+    assert group is not None
+    assert group.notice_pinned_at is not None
+
+
+async def test_storage_failure_keeps_the_message_with_a_reference(
+    sessions: async_sessionmaker[AsyncSession],
+    groups: TelegramGroupService,
+    bot: FakeBot,
+    spy: Spy,
+    storage: Storage,
+) -> None:
+    await bound(sessions, groups)
+
+    async def broken(*_: Any) -> None:
+        raise OSError("storage is down")
+
+    storage.put = broken  # type: ignore[method-assign,assignment]
+    dp = dispatcher(sessions, groups, spy, storage)
+    doc = {"file_id": "F5", "file_unique_id": "u5", "file_name": "a.pdf", "file_size": 100}
+    await feed(dp, bot, message=group_message(None, document=doc, caption="смотрите"))
+    [message] = await messages(sessions)
+    assert message.text == "смотрите"
+    assert message.attachments[0]["stored"] is False
+    assert message.attachments[0]["note"] == "файл не сохранён — откройте в группе"

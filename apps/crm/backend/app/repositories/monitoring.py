@@ -7,12 +7,12 @@ from typing import Any
 from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.domain.sandbox import SANDBOX_SOURCE
 from app.models.auth import User
 from app.models.kb import KbGap
 from app.models.leads import Lead
 from app.models.qualification import Escalation
 from app.models.system import SystemAlert
+from app.repositories import lead_visibility
 
 # Расход за сутки — из единого учёта вызовов моделей (работа и тесты расходуют одни сутки).
 SPENT_SINCE = text("SELECT coalesce(sum(cost_usd), 0) FROM llm_usage WHERE at >= :since")
@@ -97,7 +97,7 @@ async def daily_figures(session: AsyncSession, since: datetime) -> DailyFigures:
         leads=await count(
             select(func.count())
             .select_from(Lead)
-            .where(Lead.created_at >= since, Lead.source != SANDBOX_SOURCE)
+            .where(Lead.created_at >= since, lead_visibility.listed())
         ),
         escalations=await count(
             select(func.count()).select_from(Escalation).where(Escalation.created_at >= since)

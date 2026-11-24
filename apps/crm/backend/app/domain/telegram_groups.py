@@ -12,6 +12,7 @@ DEFAULT_LANGUAGE: Final = "ru"
 GROUP_CHAT_TYPES: Final = frozenset({"group", "supergroup"})
 # Бот скачивает файл только до этого размера (Bot API); больше — пометка со ссылкой на группу.
 NOTE_TOO_LARGE: Final = "файл больше 20 МБ — откройте в группе"
+NOTE_NOT_STORED: Final = "файл не сохранён — откройте в группе"
 # Сколько прежних текстов правки хранится в сообщении.
 MAX_PREVIOUS_TEXTS: Final = 10
 
@@ -43,7 +44,7 @@ CODE_MESSAGE: Final = {
     ),
     "uz": (
         "Guruhni mijozga ulaş uçun Platformada kodni kiriting: {code}. "
-        "Kod 48 soat amal qiladi. Yangi kod — /connect buyruq."
+        "Kod 48 soat amal qiladi. Yangi kod — /connect buyruği."
     ),
     "en": (
         "To connect this group to a client, enter the code in the Platform: {code}. "

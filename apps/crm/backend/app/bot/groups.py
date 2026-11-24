@@ -49,12 +49,14 @@ async def _attachments(
         return []
     try:
         stored = await store_attachment(message, bot, storage, bucket)
-    except TelegramAPIError as exc:
-        logger.warning("group_file_download_failed", chat_id=message.chat.id, error=str(exc)[:80])
+    except Exception as exc:  # noqa: BLE001 — Telegram или хранилище: сообщение не теряем
+        logger.warning("group_file_store_failed", chat_id=message.chat.id, error=type(exc).__name__)
         stored = None
     meta = stored or attachment_meta(media) | {"stored": False}
-    if meta.get("too_large") or not meta.get("stored"):
+    if meta.get("too_large"):
         meta = {**meta, "note": rules.NOTE_TOO_LARGE}
+    elif not meta.get("stored"):
+        meta = {**meta, "note": rules.NOTE_NOT_STORED}
     return [meta]
 
 

@@ -10,11 +10,11 @@ from zoneinfo import ZoneInfo
 from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.domain.sandbox import SANDBOX_SOURCE
 from app.models.kb import KbGap
 from app.models.leads import Lead
 from app.models.qualification import Escalation
 from app.repositories import dashboard as repo
+from app.repositories import lead_visibility
 from app.schemas.admin import DailyStat, Dashboard, ManagerStat, SlaStat
 
 VIEWS = ("mv_daily_stats", "mv_escalation_reasons")
@@ -82,7 +82,7 @@ async def _reasons(session: AsyncSession, since: date) -> dict[str, int]:
 async def _funnel(session: AsyncSession) -> dict[str, int]:
     stmt = (
         select(Lead.stage, func.count())
-        .where(Lead.erased_at.is_(None), Lead.source != SANDBOX_SOURCE)
+        .where(Lead.erased_at.is_(None), lead_visibility.listed())
         .group_by(Lead.stage)
     )
     return {stage: int(n) for stage, n in (await session.execute(stmt)).all()}

@@ -57,7 +57,7 @@ _LEAD_SOURCES: Final = frozenset({"telegram", "web", "phone", "email", "referral
 #: Источники CRM вне перечня `LeadSource` v1 (ADR-0016: новое значение — только `lead.*.v2`):
 #: в `source` — ближайший канал перечня, точный источник — в `source_detail` (CHAT-1: лид-якорь
 #: чата кабинета — веб-канал `web`).
-_LEAD_SOURCE_DETAIL: Final = {"cabinet": "web"}
+_LEAD_SOURCE_DETAIL: Final = {"cabinet": "web", "group": "telegram"}
 _TEMPLATE_PREFIX: Final = "tpl:"
 
 

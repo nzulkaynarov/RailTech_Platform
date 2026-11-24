@@ -365,7 +365,7 @@ class Lead(BaseModel):
     updated_at: AwareDatetime
     source_detail: Annotated[str | None, Field(pattern="^[a-z][a-z_]{0,15}$")] = None
     """
-    Точный источник лида в CRM, если его нет в перечне LeadSource v1 (CHAT-1: cabinet — лид-якорь беседы чата кабинета; в source тогда web — веб-канал). Перечень source расширяется только в lead.*.v2 (ADR-0016)
+    Точный источник лида в CRM, если его нет в перечне LeadSource v1 (CHAT-1: cabinet — лид-якорь беседы чата кабинета, в source тогда web — веб-канал; group — лид-якорь беседы группы Telegram, в source тогда telegram). Перечень source расширяется только в lead.*.v2 (ADR-0016)
     """
 
 

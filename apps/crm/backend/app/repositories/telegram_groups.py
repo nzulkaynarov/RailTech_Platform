@@ -1,11 +1,13 @@
 """Группы Telegram с секретарём и их беседы (ADR-0032, `services/telegram_groups.py`)."""
 
 from collections.abc import Sequence
+from datetime import datetime
 
-from sqlalchemy import select
+from sqlalchemy import and_, case, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.auth import User
+from app.models.clients import Client
 from app.models.integrations import TelegramGroup
 from app.models.leads import Conversation, Lead, Message
 
@@ -24,11 +26,46 @@ async def by_code(session: AsyncSession, code: str) -> TelegramGroup | None:
     return found
 
 
-async def list_all(session: AsyncSession) -> Sequence[TelegramGroup]:
-    stmt = select(TelegramGroup).order_by(
-        (TelegramGroup.status == "pending").desc(), TelegramGroup.updated_at.desc()
+async def list_all(
+    session: AsyncSession, now: datetime, limit: int, offset: int
+) -> Sequence[TelegramGroup]:
+    """Ждущие живого кода — первыми; затем остальные; ждущие с просроченным кодом — последними."""
+    waiting = and_(
+        TelegramGroup.status == "pending",
+        TelegramGroup.code_expires_at.is_not(None),
+        TelegramGroup.code_expires_at > now,
+    )
+    stale = and_(TelegramGroup.status == "pending", ~waiting)
+    stmt = (
+        select(TelegramGroup)
+        .order_by(
+            case((waiting, 0), (stale, 2), else_=1),
+            TelegramGroup.updated_at.desc(),
+            TelegramGroup.chat_id,
+        )
+        .limit(limit)
+        .offset(offset)
     )
     return (await session.scalars(stmt)).all()
+
+
+async def client_names(session: AsyncSession, client_ids: Sequence[int]) -> dict[int, str]:
+    if not client_ids:
+        return {}
+    rows = await session.execute(select(Client.id, Client.name).where(Client.id.in_(client_ids)))
+    return dict(rows.all())
+
+
+async def lead_ids(session: AsyncSession, chat_ids: Sequence[int]) -> dict[int, int]:
+    """Якорный лид беседы по каждой группе."""
+    if not chat_ids:
+        return {}
+    rows = await session.execute(
+        select(Conversation.tg_chat_id, Conversation.lead_id).where(
+            Conversation.channel == GROUP, Conversation.tg_chat_id.in_(chat_ids)
+        )
+    )
+    return {chat: lead for chat, lead in rows.all() if chat is not None}
 
 
 async def conversation_of(

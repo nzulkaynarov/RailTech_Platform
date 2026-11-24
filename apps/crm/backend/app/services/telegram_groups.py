@@ -8,7 +8,7 @@
 группы, и при привязке.
 """
 
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any, Protocol
@@ -172,13 +172,32 @@ class TelegramGroupService:
 
     # --- Платформа ----------------------------------------------------------------------------
 
-    async def groups(self) -> list[GroupView]:
+    async def groups(self, limit: int = 100, offset: int = 0) -> list[GroupView]:
         async with self._sessions() as session:
-            rows = await repo.list_all(session)
-            return [await self._view(session, row) for row in rows]
+            rows = await repo.list_all(session, self._clock(), limit, offset)
+            return await self._views(session, rows)
 
     async def bind(
         self, who: Principal, code: str, client_id: int, language: str | None = None
+    ) -> GroupView:
+        try:
+            return await self._bind(who, code, client_id, language)
+        except (NotFoundError, ConflictError) as exc:
+            # Неверный и просроченный код — след в журнале (виден перебор). Отдельная транзакция:
+            # в той, что откатилась, записи бы не осталось.
+            async with self._sessions() as session, session.begin():
+                await audit.record(
+                    session,
+                    Actor(who.user_id, "user", who.ip),
+                    "telegram_group.bind_failed",
+                    "telegram_group",
+                    None,
+                    after={"reason": exc.details.get("reason"), "client_id": client_id},
+                )
+            raise
+
+    async def _bind(
+        self, who: Principal, code: str, client_id: int, language: str | None
     ) -> GroupView:
         now = self._clock()
         async with self._sessions() as session, session.begin():
@@ -217,7 +236,7 @@ class TelegramGroupService:
         async with self._sessions() as session:
             fresh = await repo.get(session, chat_id)
             assert fresh is not None  # noqa: S101 — только что привязали
-            view = await self._view(session, fresh)
+            [view] = await self._views(session, [fresh])
         return view
 
     async def _attach_conversation(
@@ -261,17 +280,18 @@ class TelegramGroupService:
         """Уведомление в группу и закреп; нет прав — состояние «нужны права администратора»."""
         provider = self._bot
         bot = await provider() if provider is not None else None
+        if bot is None:
+            return  # бот не запущен: прав не знаем, состояние не меняем
         language = await self.language_of(chat_id)
         message_id: int | None = None
         pinned = False
-        if bot is not None:
-            try:
-                sent = await bot.send_message(chat_id, rules.text(rules.NOTICE, language))
-                message_id = int(sent.message_id)
-                await bot.pin_chat_message(chat_id, message_id, disable_notification=True)
-                pinned = True
-            except TelegramAPIError as exc:
-                logger.warning("group_notice_failed", chat_id=chat_id, error=type(exc).__name__)
+        try:
+            sent = await bot.send_message(chat_id, rules.text(rules.NOTICE, language))
+            message_id = int(sent.message_id)
+            await bot.pin_chat_message(chat_id, message_id, disable_notification=True)
+            pinned = True
+        except TelegramAPIError as exc:
+            logger.warning("group_notice_failed", chat_id=chat_id, error=type(exc).__name__)
         async with self._sessions() as session, session.begin():
             group = await repo.get(session, chat_id, for_update=True)
             if group is None:
@@ -327,42 +347,49 @@ class TelegramGroupService:
                 after={"topic_mode": group.topic_mode, "language": group.language},
             )
             await session.flush()
-            return await self._view(session, group)
+            [view] = await self._views(session, [group])
+            return view
 
-    async def _view(self, session: AsyncSession, group: TelegramGroup) -> GroupView:
-        name = None
-        lead_id = None
-        if group.client_id is not None:
-            client = await session.get(Client, group.client_id)
-            name = client.name if client is not None else None
-        conversation = await repo.conversation_of(session, group.chat_id)
-        if conversation is not None and group.status == "bound":
-            lead_id = conversation.lead_id
-        return GroupView(
-            chat_id=group.chat_id,
-            title=group.title,
-            chat_type=group.chat_type,
-            status=group.status,
-            access=rules.access_of(bot_is_admin=group.bot_is_admin, can_pin=group.can_pin),
-            client_id=group.client_id,
-            client_name=name,
-            lead_id=lead_id,
-            topic_mode=group.topic_mode,
-            language=group.language,
-            code_active=group.status == "pending" and self._code_alive(group, self._clock()),
-            bound_at=group.bound_at,
-            detected_at=group.created_at,
-        )
+    async def _views(self, session: AsyncSession, rows: Sequence[TelegramGroup]) -> list[GroupView]:
+        """Представления пакетом: имена клиентов и якорные лиды — двумя запросами на страницу."""
+        names = await repo.client_names(session, [r.client_id for r in rows if r.client_id])
+        leads = await repo.lead_ids(session, [r.chat_id for r in rows if r.status == "bound"])
+        now = self._clock()
+        return [
+            GroupView(
+                chat_id=g.chat_id,
+                title=g.title,
+                chat_type=g.chat_type,
+                status=g.status,
+                access=rules.access_of(bot_is_admin=g.bot_is_admin, can_pin=g.can_pin),
+                client_id=g.client_id,
+                client_name=names.get(g.client_id) if g.client_id is not None else None,
+                lead_id=leads.get(g.chat_id),
+                topic_mode=g.topic_mode,
+                language=g.language,
+                code_active=g.status == "pending" and self._code_alive(g, now),
+                bound_at=g.bound_at,
+                detected_at=g.created_at,
+            )
+            for g in rows
+        ]
 
     # --- запись переписки ---------------------------------------------------------------------
 
+    async def _is_team_channel(self, chat_id: int) -> bool:
+        return (await self._settings.get()).notifications.channel_id == chat_id
+
     async def is_bound(self, chat_id: int) -> bool:
+        if await self._is_team_channel(chat_id):
+            return False
         async with self._sessions() as session:
             group = await repo.get(session, chat_id)
         return group is not None and group.status == "bound"
 
     async def capture(self, incoming: GroupMessage) -> bool:
         """Сообщение привязанной группы — в беседу клиента. Не привязана — ничего не пишем."""
+        if await self._is_team_channel(incoming.chat_id):
+            return False  # канал команды клиентской группой не бывает, даже если запись осталась
         async with self._sessions() as session, session.begin():
             group = await repo.get(session, incoming.chat_id)
             if group is None or group.status != "bound":
@@ -389,6 +416,7 @@ class TelegramGroupService:
                 meta |= {"mode": "manager", "delivery": "sent"}
             if incoming.reply_to_message_id is not None:
                 meta["reply_to_tg_message_id"] = incoming.reply_to_message_id
+            needs_notice = group.notice_message_id is None
             await message_log.add(
                 session,
                 conversation,
@@ -399,10 +427,15 @@ class TelegramGroupService:
                 attachments=incoming.attachments,
                 meta=meta,
             )
-            return True
+        if needs_notice:
+            # Уведомление при привязке не вышло (бот был недоступен): повтор на сообщении группы.
+            await self._announce(incoming.chat_id)
+        return True
 
     async def edit(self, chat_id: int, message_id: int, new_text: str) -> bool:
         """Правка сообщения: текст обновляется, прежний остаётся в `previous_texts`."""
+        if await self._is_team_channel(chat_id):
+            return False
         async with self._sessions() as session, session.begin():
             group = await repo.get(session, chat_id)
             if group is None or group.status != "bound":

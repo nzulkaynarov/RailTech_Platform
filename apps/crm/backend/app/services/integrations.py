@@ -29,6 +29,7 @@ from app.integrations.telegram import (
     TelegramUnavailableError,
     TokenSource,
 )
+from app.models.integrations import TelegramGroup
 from app.repositories import telegram_chats
 from app.repositories import users as users_repo
 from app.schemas.settings_profile import BotProfileSettings
@@ -214,6 +215,11 @@ class TelegramIntegrationService:
             row = await telegram_chats.get(session, chat_id)
         if row is None:
             raise NotFoundError("chat was not detected")
+        async with self._sessions() as session:
+            group = await session.get(TelegramGroup, chat_id)
+        if group is not None and group.status in {"pending", "bound"}:
+            # Клиентская группа (ADR-0032) каналом команды не бывает: ни привязанная, ни ждущая.
+            raise ConflictError("chat is a client group", reason="group_is_client_group")
         current = (await self._settings.raw())["notifications"]
         await self._settings.update(
             "notifications", {**current, "channel_id": chat_id}, who.user_id, who.actor
