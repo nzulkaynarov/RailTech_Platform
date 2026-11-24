@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+
+import { useAppName } from '@/i18n/operator';
 import { ChevronRight, Copy, Eye, PanelLeft, PanelLeftClose, UserRound } from 'lucide-react';
 import { toast } from '@/lib/toast';
 
@@ -34,6 +36,7 @@ const SIDEBAR_STORAGE_KEY = 'rt-cab-sidebar-collapsed-v1';
  */
 export function AppShell() {
   const { t } = useTranslation();
+  const appName = useAppName();
   const mode = useAppMode();
   const me = useMe().data;
   const canAct = useCanAct();
@@ -125,7 +128,7 @@ export function AppShell() {
     } else if (path.startsWith('/profile')) {
       segments.push({ label: t('nav.profile') });
     } else {
-      segments.push({ label: t('app.name') });
+      segments.push({ label: appName });
     }
     return segments;
   };
@@ -178,11 +181,11 @@ export function AppShell() {
                   {/* Телефон: сайдбара нет — марка RailTech в шапке */}
                   <Link
                     to="/"
-                    title={t('app.name')}
+                    title={appName}
                     className="shrink-0 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-ring md:hidden"
                   >
                     <BrandMark className="size-8" />
-                    <span className="sr-only">{t('app.name')}</span>
+                    <span className="sr-only">{appName}</span>
                   </Link>
 
                   <div className="min-w-0">
@@ -193,9 +196,9 @@ export function AppShell() {
                       <Link
                         to="/company"
                         className="truncate font-medium text-foreground hover:text-primary hover:underline transition-colors"
-                        title={me?.company.name || t('app.name')}
+                        title={me?.company.name || appName}
                       >
-                        {me?.company.name || t('app.name')}
+                        {me?.company.name || appName}
                       </Link>
                       {breadcrumbs.map((segment, index) => {
                         const isLast = index === breadcrumbs.length - 1;

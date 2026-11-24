@@ -1417,8 +1417,8 @@
   },
   "widgets": {
     "actionRequired": {
-        "showAll": "Barchasi ({{count}})",
-        "showLess": "Yopish",
+        "showAll": "Barçasi ({{count}})",
+        "showLess": "Yopiş",
       "title": "Qaroringiz kutilmoqda",
       "allClear": "Barcha hujjatlar koʻrib chiqilgan — hozirda hech qanday harakat talab etilmaydi.",
       "quoteBadge": "TK",
@@ -1820,8 +1820,8 @@
     }
   },
   "onboarding": {
-    "expand": "Göster",
-    "allDoneShort": "Barcha qadamlar bajarildi",
+    "expand": "Körsatiş",
+    "allDoneShort": "Barça qadamlar bajarildi",
     "title": "Kabinetdagi dastlabki qadamlar",
     "progress": "{{done}} / {{total}} bajarildi",
     "dismiss": "Yashirish",

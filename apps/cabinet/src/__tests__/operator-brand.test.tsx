@@ -31,6 +31,19 @@ describe('бренд оператора на входе', () => {
     expect(document.querySelector('img[src^="/media/"]')).toBeNull();
   });
 
+  it('название приходит из данных запроса, а не из общей переменной i18n: шапка и заголовок вкладки', async () => {
+    portalServer.use(
+      http.get('*/api/portal/v1/operator', () =>
+        HttpResponse.json({ name: 'Acme Trade', bot_username: null, logo_url: null }),
+      ),
+    );
+    renderApp('/login');
+
+    expect(await screen.findByText('Кабинет Acme Trade')).toBeInTheDocument();
+    expect(screen.getByText('AT')).toBeInTheDocument();
+    await vi.waitFor(() => expect(document.title).toBe('Вход в кабинет · Кабинет Acme Trade'));
+  });
+
   it('название оператора не задано — нейтральный значок, а не буквы слова-заглушки («ПЛ»)', async () => {
     portalServer.use(
       http.get('*/api/portal/v1/operator', () =>
