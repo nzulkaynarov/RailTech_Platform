@@ -1,7 +1,7 @@
 """DTO настроек, «сухого прогона», дашборда и аудита (PLAN Фаза 5)."""
 
 from datetime import date, datetime
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -107,5 +107,9 @@ class ConsoleOpenIn(BaseModel):
 class ContactRevealIn(BaseModel):
     """Показ телефона и почты человека контрагента в «Органайзер · Люди» (FR-11): кто чей."""
 
-    contact: str = Field(pattern=r"^[0-9]{1,18}$", description="Id контакта ERP строкой")
+    contact: str = Field(
+        pattern=r"^[0-9]{1,18}$", description="Id контакта ERP или номер лида строкой"
+    )
+    # Чьи контакты показаны: контакт ERP (по умолчанию) или лид CRM («Люди», PL-1).
+    kind: Literal["erp_contact", "lead"] = "erp_contact"
     name: str = Field(min_length=1, max_length=255, description="Имя человека — для строки журнала")

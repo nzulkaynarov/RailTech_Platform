@@ -1756,9 +1756,16 @@ components:
       description: 'Показ телефона и почты человека контрагента в «Органайзер · Люди» (FR-11): кто чей.'
       properties:
         contact:
-          description: Id контакта ERP строкой
+          description: Id контакта ERP или номер лида строкой
           pattern: ^[0-9]{1,18}$
           title: Contact
+          type: string
+        kind:
+          default: erp_contact
+          enum:
+          - erp_contact
+          - lead
+          title: Kind
           type: string
         name:
           description: Имя человека — для строки журнала
@@ -5994,6 +6001,18 @@ components:
           anyOf:
           - $ref: '#/components/schemas/HandoffNote'
           - type: 'null'
+        has_email:
+          default: false
+          title: Has Email
+          type: boolean
+        has_phone:
+          default: false
+          title: Has Phone
+          type: boolean
+        has_telegram:
+          default: false
+          title: Has Telegram
+          type: boolean
         id:
           title: Id
           type: integer
@@ -6154,6 +6173,11 @@ components:
           - type: integer
           - type: 'null'
           title: Client Id
+        company_name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Company Name
         created_at:
           format: date-time
           title: Created At
@@ -6169,6 +6193,18 @@ components:
           anyOf:
           - $ref: '#/components/schemas/HandoffNote'
           - type: 'null'
+        has_email:
+          default: false
+          title: Has Email
+          type: boolean
+        has_phone:
+          default: false
+          title: Has Phone
+          type: boolean
+        has_telegram:
+          default: false
+          title: Has Telegram
+          type: boolean
         id:
           title: Id
           type: integer
