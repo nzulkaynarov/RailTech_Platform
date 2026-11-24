@@ -15333,6 +15333,53 @@ paths:
           $ref: '#/components/responses/NotFound'
         '503':
           $ref: '#/components/responses/BackendUnavailable'
+  /people/leads:
+    get:
+      tags: [chats]
+      operationId: listPeopleLeads
+      summary: 'Органайзер · Люди: лиды'
+      description: >-
+        Лиды для «Людей» (PL-1): те, кто ещё не стал клиентом — статусы `new`, `dialog`, `wants_quote`, `no_answer`; проигранные
+        (`lost`) — только с `closed=true`. Лиды-«якоря» чата Cabinet и пробные (`cabinet`, `sandbox`) в список не входят, они не
+        люди. Лид, ставший клиентом, строкой «Лиды» не показывается — он в «Клиентах». В строке — компания (колонка или ответ
+        бота), канал, язык, суть запроса и признаки «есть телефон, почта, Telegram»; значения открывает `POST
+        /people/leads/{lead}/reveal`. Раздел `crm.leads` от чтения или первая линия. До 100 лидов.
+      parameters:
+        - name: closed
+          in: query
+          description: 'Показать и проигранные'
+          schema: {type: boolean, default: false}
+      responses:
+        '200':
+          description: Лиды
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/PeopleLeadPage'}
+        '401': {$ref: '#/components/responses/SessionExpired'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '503': {$ref: '#/components/responses/BackendUnavailable'}
+  /people/leads/{lead}/reveal:
+    post:
+      tags: [chats]
+      operationId: revealLeadContacts
+      summary: 'Органайзер · Люди: показать контакты лида'
+      description: >-
+        Телефон, почта и Telegram лида — по нажатию, как у людей контрагентов. Сначала запись `contact.reveal` в журнал CRM
+        (объект `lead`), потом контакты: журнал недоступен — 503 `BACKEND_UNAVAILABLE`, контактов нет. Выгрузки нет. Раздел
+        `crm.leads` от чтения или первая линия.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - {name: lead, in: path, required: true, schema: {type: string, pattern: '^[Ll]-?\d{1,9}$'}}
+      responses:
+        '200':
+          description: Контакты лида
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/PeopleLeadContacts'}
+        '401': {$ref: '#/components/responses/SessionExpired'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '503': {$ref: '#/components/responses/BackendUnavailable'}
   /people/counterparties:
     get:
       tags: [chats]
@@ -29535,6 +29582,44 @@ components:
         handoff_open: {type: boolean, description: 'Открытая передача от бота ждёт «Забрать»'}
         overdue: {type: boolean, description: 'Истёк срок ответа по передаче'}
         client_id: {type: [integer, 'null'], description: 'Клиент, если лид уже стал клиентом'}
+
+    PeopleLead:
+      type: object
+      additionalProperties: false
+      required: [lead, name, company, status, channel, language, assigned, need, has_phone, has_email, has_telegram]
+      properties:
+        lead: {type: string, pattern: '^L-\d{4,}$'}
+        name: {type: string}
+        company: {type: [string, 'null'], description: 'Колонка «компания» или ответ бота'}
+        status: {$ref: '#/components/schemas/LeadPlatformStatus'}
+        channel: {$ref: '#/components/schemas/MessageChannel'}
+        language: {$ref: '#/components/schemas/Language'}
+        assigned:
+          oneOf:
+            - $ref: '#/components/schemas/PersonRef'
+            - type: 'null'
+        need: {type: [string, 'null'], description: 'Суть запроса'}
+        has_phone: {type: boolean}
+        has_email: {type: boolean}
+        has_telegram: {type: boolean}
+    PeopleLeadPage:
+      type: object
+      additionalProperties: false
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          items: {$ref: '#/components/schemas/PeopleLead'}
+        total: {type: integer, minimum: 0}
+    PeopleLeadContacts:
+      type: object
+      additionalProperties: false
+      required: [lead, phone, email, telegram]
+      properties:
+        lead: {type: string, pattern: '^L-\d{4,}$'}
+        phone: {type: [string, 'null']}
+        email: {type: [string, 'null']}
+        telegram: {type: [string, 'null'], description: 'Ник с «@», если есть'}
 
     LeadIn:
       type: object

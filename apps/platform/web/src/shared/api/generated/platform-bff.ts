@@ -342,6 +342,7 @@ import type {
   ListPartnerApplicationsParams,
   ListPaymentMemosParams,
   ListPaymentsParams,
+  ListPeopleLeadsParams,
   ListQuoteApprovalsParams,
   ListSentMailParams,
   ListSigningAuthoritiesParams,
@@ -402,6 +403,8 @@ import type {
   PaymentMemoPage,
   PaymentMemoPayIn,
   PaymentProofUpload,
+  PeopleLeadContacts,
+  PeopleLeadPage,
   PictureUpload,
   PlatformSettings,
   PlatformSettingsUpdate,
@@ -60370,6 +60373,237 @@ export const useRevealStaffContacts = <
   TContext
 > => {
   return useMutation(getRevealStaffContactsMutationOptions(options), queryClient);
+};
+
+export const getListPeopleLeadsUrl = (params?: ListPeopleLeadsParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/people/leads?${stringifiedParams}`
+    : `/api/v1/people/leads`;
+};
+
+/**
+ * Лиды для «Людей» (PL-1): те, кто ещё не стал клиентом — статусы `new`, `dialog`, `wants_quote`, `no_answer`; проигранные (`lost`) — только с `closed=true`. Лиды-«якоря» чата Cabinet и пробные (`cabinet`, `sandbox`) в список не входят, они не люди. Лид, ставший клиентом, строкой «Лиды» не показывается — он в «Клиентах». В строке — компания (колонка или ответ бота), канал, язык, суть запроса и признаки «есть телефон, почта, Telegram»; значения открывает `POST /people/leads/{lead}/reveal`. Раздел `crm.leads` от чтения или первая линия. До 100 лидов.
+ * @summary Органайзер · Люди: лиды
+ */
+export const listPeopleLeads = async (
+  params?: ListPeopleLeadsParams,
+  options?: Parameters<typeof http>[1],
+): Promise<PeopleLeadPage> => {
+  return http<PeopleLeadPage>(getListPeopleLeadsUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListPeopleLeadsQueryKey = (params?: ListPeopleLeadsParams) => {
+  return [`/api/v1/people/leads`, ...(params ? [params] : [])] as const;
+};
+
+export const getListPeopleLeadsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listPeopleLeads>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params?: ListPeopleLeadsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listPeopleLeads>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListPeopleLeadsQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listPeopleLeads>>> = ({ signal }) =>
+    listPeopleLeads(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listPeopleLeads>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListPeopleLeadsQueryResult = NonNullable<Awaited<ReturnType<typeof listPeopleLeads>>>;
+export type ListPeopleLeadsQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse
+>;
+
+export function useListPeopleLeads<
+  TData = Awaited<ReturnType<typeof listPeopleLeads>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params: undefined | ListPeopleLeadsParams,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listPeopleLeads>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listPeopleLeads>>,
+          TError,
+          Awaited<ReturnType<typeof listPeopleLeads>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListPeopleLeads<
+  TData = Awaited<ReturnType<typeof listPeopleLeads>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params?: ListPeopleLeadsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listPeopleLeads>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listPeopleLeads>>,
+          TError,
+          Awaited<ReturnType<typeof listPeopleLeads>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListPeopleLeads<
+  TData = Awaited<ReturnType<typeof listPeopleLeads>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params?: ListPeopleLeadsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listPeopleLeads>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Органайзер · Люди: лиды
+ */
+
+export function useListPeopleLeads<
+  TData = Awaited<ReturnType<typeof listPeopleLeads>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params?: ListPeopleLeadsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listPeopleLeads>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListPeopleLeadsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getRevealLeadContactsUrl = (lead: string) => {
+  return `/api/v1/people/leads/${lead}/reveal`;
+};
+
+/**
+ * Телефон, почта и Telegram лида — по нажатию, как у людей контрагентов. Сначала запись `contact.reveal` в журнал CRM (объект `lead`), потом контакты: журнал недоступен — 503 `BACKEND_UNAVAILABLE`, контактов нет. Выгрузки нет. Раздел `crm.leads` от чтения или первая линия.
+ * @summary Органайзер · Люди: показать контакты лида
+ */
+export const revealLeadContacts = async (
+  lead: string,
+  options?: Parameters<typeof http>[1],
+): Promise<PeopleLeadContacts> => {
+  return http<PeopleLeadContacts>(getRevealLeadContactsUrl(lead), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getRevealLeadContactsMutationKey = () => ["revealLeadContacts"] as const;
+
+export const getRevealLeadContactsMutationOptions = <
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof revealLeadContacts>>,
+    TError,
+    RevealLeadContactsMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof revealLeadContacts>>,
+  TError,
+  RevealLeadContactsMutationVariables,
+  TContext
+> => {
+  const mutationKey = getRevealLeadContactsMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof revealLeadContacts>>,
+    RevealLeadContactsMutationVariables
+  > = (props) => {
+    const { lead } = props ?? {};
+
+    return revealLeadContacts(lead, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RevealLeadContactsMutationResult = NonNullable<
+  Awaited<ReturnType<typeof revealLeadContacts>>
+>;
+
+export type RevealLeadContactsMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+export type RevealLeadContactsMutationVariables = { lead: string };
+
+/**
+ * @summary Органайзер · Люди: показать контакты лида
+ */
+export const useRevealLeadContacts = <
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof revealLeadContacts>>,
+      TError,
+      RevealLeadContactsMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof revealLeadContacts>>,
+  TError,
+  RevealLeadContactsMutationVariables,
+  TContext
+> => {
+  return useMutation(getRevealLeadContactsMutationOptions(options), queryClient);
 };
 
 export const getSearchCounterpartiesUrl = (params?: SearchCounterpartiesParams) => {

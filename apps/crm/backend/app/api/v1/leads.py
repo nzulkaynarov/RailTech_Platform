@@ -123,13 +123,23 @@ def _origin_out(lead: Lead) -> LeadOriginOut | None:
     )
 
 
+def company_of(lead: Lead) -> str | None:
+    """Компания лида: колонка, а если пуста — то, что назвал клиент боту (PL-1, G4)."""
+    if lead.company_name:
+        return lead.company_name
+    raw = (lead.qualification or {}).get("company")
+    return raw.strip() or None if isinstance(raw, str) else None
+
+
 def lead_out(
     lead: Lead,
     escalation: Escalation | None,
     names: dict[int, str] | None = None,
     reply_channel: str | None = None,
+    identities: crm.IdentityFlags | None = None,
 ) -> LeadOut:
     owner = lead.assigned_user_id
+    tg = identities or crm.IdentityFlags()
     return LeadOut(
         id=lead.id,
         display_name=lead.display_name,
@@ -149,6 +159,10 @@ def lead_out(
         source=lead.source,
         platform_status=_platform_status(lead, escalation),
         reply_channel=reply_channel,
+        company_name=company_of(lead),
+        has_phone=bool(lead.phone_e164) or tg.phone,
+        has_email=bool(lead.email),
+        has_telegram=tg.telegram,
     )
 
 
@@ -259,7 +273,11 @@ async def list_leads(
         )
         escalations = await crm.active_escalations(session, [r.id for r in rows])
         names = await crm.user_names(session, rows, _handed_by(escalations))
-    return LeadPage(items=[lead_out(r, escalations.get(r.id), names) for r in rows], total=total)
+        flags = await crm.identity_flags(session, [r.id for r in rows])
+    return LeadPage(
+        items=[lead_out(r, escalations.get(r.id), names, None, flags.get(r.id)) for r in rows],
+        total=total,
+    )
 
 
 @router.get("/inbox", response_model=InboxResponse)
@@ -288,12 +306,13 @@ async def inbox(
         )
         notes = await handoff_notes.notes(session, [*escalated, *mine, *unassigned], escalations)
         channels = await cabinet_repo.last_inbound_channels(session, ids)
+        flags = await crm.identity_flags(session, ids)
 
     def out(rows: list[Lead]) -> list[LeadOut]:
         return [
-            lead_out(r, escalations.get(r.id), names, channels.get(r.id)).model_copy(
-                update={"handoff_note": notes.get(r.id)}
-            )
+            lead_out(
+                r, escalations.get(r.id), names, channels.get(r.id), flags.get(r.id)
+            ).model_copy(update={"handoff_note": notes.get(r.id)})
             for r in rows
         ]
 
@@ -351,7 +370,8 @@ async def get_lead(lead_id: int, _: Reader, container: ContainerDep) -> LeadDeta
         undeliverable = undeliverable_out(
             (await bounces.states(session, [lead.email])).get((lead.email or "").lower())
         )
-    base = lead_out(lead, escalation, names, reply_channel)
+        flags = await crm.identity_flags(session, [lead_id])
+    base = lead_out(lead, escalation, names, reply_channel, flags.get(lead_id))
     mode = await container.backoffice_mode()
     now = datetime.now(UTC)
     waiting = web_lead_sla.awaiting(lead.first_response_due_at, lead.assigned_user_id)
@@ -363,7 +383,6 @@ async def get_lead(lead_id: int, _: Reader, container: ContainerDep) -> LeadDeta
         tg_username=username,
         phone_e164=lead.phone_e164 or phone,
         email=lead.email,
-        company_name=lead.company_name,
         client_phone_e164=client_phone,
         notes_count=lead.notes_count,
         snoozed_until=lead.snoozed_until,
