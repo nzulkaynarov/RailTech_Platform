@@ -2,6 +2,7 @@ import { HttpResponse, http } from "msw";
 
 import type {
   BrandPreviewIn,
+  DocumentSampleIn,
   BrandProfileUpdate,
   CatalogCategoryIn,
   CatalogCategoryUpdate,
@@ -36,7 +37,16 @@ import {
   readCompanyMock,
   updateCompanyMock,
 } from "./fixtures/company";
+import letterSampleUrl from "./fixtures/letter-sample.pdf?url";
 import { buildMe, readSession } from "./mockSession";
+
+/** Запросы образцов (ДОК-14): тесты читают, что ушло в генератор — вид, текст, несохранённый бланк, язык. */
+export const sampleRequests: DocumentSampleIn[] = [];
+const sampleWarnings = new Map<string, string[]>();
+export function resetSampleMock(): void {
+  sampleRequests.length = 0;
+  sampleWarnings.clear();
+}
 
 type Source = "bff" | "erp";
 
@@ -380,6 +390,40 @@ export const adminCompanyHandlers = [
         return s.brand;
       }),
     );
+  }),
+  // --- образец документа настоящим генератором (ДОК-14): запрос -> «готов» -> PDF
+  http.post("*/admin/company/document-samples", async ({ request }) => {
+    const caller = guard("read");
+    if (isResponse(caller)) return caller;
+    const body = (await request.json()) as DocumentSampleIn;
+    if (body.kind === undefined && body.template_kind === undefined) return validation(["kind"]);
+    sampleRequests.push(body);
+    const id = sampleRequests.length.toString(16).padStart(32, "0");
+    const known = PLACEHOLDER_GROUPS.flatMap((g) => g.items.map((i) => i.code));
+    const used = [...(body.body_html ?? "").matchAll(/\{\{(\w+)\}\}/g)].map((m) => m[1] ?? "");
+    sampleWarnings.set(
+      id,
+      used.filter((code) => !known.includes(code)),
+    );
+    return HttpResponse.json({ id, status: "pending" }, { status: 202 });
+  }),
+  http.get("*/admin/company/document-samples/:id", ({ params }) => {
+    const id = String(params.id);
+    const warnings = sampleWarnings.get(id) ?? [];
+    return HttpResponse.json({
+      id,
+      status: "ready",
+      ...(warnings.length > 0 ? { warnings } : {}),
+    });
+  }),
+  http.get("*/admin/company/document-samples/:id/file", async () => {
+    let pdf: ArrayBuffer;
+    try {
+      pdf = await (await fetch(letterSampleUrl)).arrayBuffer();
+    } catch {
+      pdf = new TextEncoder().encode("%PDF-1.7\n%%EOF\n").buffer;
+    }
+    return new HttpResponse(pdf, { headers: { "content-type": "application/pdf" } });
   }),
   http.post("*/admin/company/brand/preview", async ({ request }) => {
     const caller = guard("read");

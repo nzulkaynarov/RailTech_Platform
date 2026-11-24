@@ -180,7 +180,7 @@
     "previewTitle": "Hujjat namunasi",
     "previewKind": "Hujjat turi",
     "previewFrame": "Namuna: {{kind}}",
-    "previewHint": "Namunadagi ma'lumotlar xayoliy.",
+    "previewHint": "Ma'lumotlar xayoliy; raqam sxemadagi keyingisi, hisoblagich o‘zgarmaydi.",
     "inheritedEdit": "Rekvizitlarni o‘zgartirish",
     "languages": {
       "title": "O‘zbek va ingliz tilidagi blank",
@@ -742,5 +742,9 @@
       "template_counterparty_required": "Şablon kim uçun ekanini belgilang.",
       "template_approval_forbidden": "«Huquq» zonasi egasi tasdiqlaydi."
     }
+  },
+  "sample": {
+    "language": "Hujjat tili",
+    "failed": "Namuna tuzilmadi"
   }
 }

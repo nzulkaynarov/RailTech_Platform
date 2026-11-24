@@ -1,24 +1,20 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { App, Checkbox, Collapse, Form, Input, Segmented } from "antd";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
-import type {
-  BrandProfile,
-  BrandProfileUpdate,
-  DocumentKind,
-} from "../../../../shared/api/generated/model";
+import type { BrandProfile, DocumentKind } from "../../../../shared/api/generated/model";
 import {
   getGetBrandProfileQueryKey,
   useGetBrandProfile,
-  usePreviewBrandDocument,
   useUpdateBrandProfile,
   useUploadBrandLogo,
 } from "../../../../shared/api/generated/platform-bff";
 import { DefinitionList } from "../../../../shared/ui/DefinitionList";
-import { LogoField, PreviewFrame, QueryGate, ReadOnlyFence, SaveBlock, TabHeader } from "../common";
+import { LogoField, QueryGate, ReadOnlyFence, SaveBlock, TabHeader } from "../common";
 import { changedFields, isEmptyObject, omit } from "../diff";
+import { SamplePdf } from "../SamplePdf";
 import { errorFields } from "../errors";
 
 /** ДОК-13: «Оформление», «Шрифт» и «Второй цвет» не показываются и не уходят — в договоре они устарели. */
@@ -129,20 +125,6 @@ function BrandForm({ brand }: { brand: BrandProfile }) {
       },
     },
   });
-
-  // Образец: БЕЗ сохранения — несохранённые правки уходят в `draft`; один запрос после паузы ввода.
-  const preview = usePreviewBrandDocument();
-  const { mutate: requestPreview } = preview;
-  const draftKey = JSON.stringify(changed);
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      const draft = JSON.parse(draftKey) as BrandProfileUpdate;
-      requestPreview({ data: { kind, ...(isEmptyObject(draft) ? {} : { draft }) } });
-    }, 350);
-    return () => {
-      window.clearTimeout(timer);
-    };
-  }, [kind, draftKey, requestPreview]);
 
   const submit = () => {
     update.mutate(
@@ -280,11 +262,9 @@ function BrandForm({ brand }: { brand: BrandProfile }) {
             options={KINDS.map((value) => ({ value, label: t(`kinds.${value}`) }))}
           />
         </div>
-        <PreviewFrame
-          html={preview.data?.html}
+        <SamplePdf
+          request={{ kind, ...(isEmptyObject(changed) ? {} : { draft: changed }) }}
           title={t("brand.previewFrame", { kind: t(`kinds.${kind}`) })}
-          loading={preview.isPending}
-          error={preview.error}
         />
         <p className="pf-co-hint">{t("brand.previewHint")}</p>
       </div>
