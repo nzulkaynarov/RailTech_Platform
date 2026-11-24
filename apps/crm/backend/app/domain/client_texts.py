@@ -1,7 +1,7 @@
 """Тексты клиенту — один файл на трёх языках (SPEC-v3 §8, D1-9): подтверждение запроса с сайта, «Заявка принята»,
 приглашение в кабинет и ответы бота на `/start`. Узбекский — латиница (`oʻ`, `gʻ`).
 
-Без внутренних терминов: клиент не видит «лид», «сделка», коды и номера CRM. Чистые функции:
+Без внутренних терминов: клиент не видит «лид», «сделка», «расчёт», коды и номера CRM; срок ответа — без минут: «в рабочее время». Чистые функции:
 возвращают готовый текст
 (бот) или тему и тело (письмо); получатель, канал и повторы — в `services/client_notices.py`.
 Подписи кнопок — отсюда же.
@@ -43,9 +43,9 @@ def _greet(language: str, name: str) -> str:
 # ── Подтверждение запроса с сайта ────────────────────────────────────────────────────────────────
 
 _CONFIRM_LEAD: Final = {
-    "ru": "Мы получили ваш запрос и скоро свяжемся с вами. Обычно отвечаем в течение рабочего дня.",
-    "uz": "Soʻrovingizni qabul qildik va tez orada siz bilan bogʻlanamiz. Odatda ish kuni davomida javob beramiz.",
-    "en": "We have received your request and will get back to you shortly. We usually reply within a business day.",
+    "ru": "Мы получили вашу заявку. Менеджер свяжется с вами в рабочее время.",
+    "uz": "Arizangizni qabul qildik. Menejer ish vaqtida siz bilan bağlanadi.",
+    "en": "We have received your request. A manager will contact you during business hours.",
 }
 _CONFIRM_SUBJECT: Final = {
     "ru": "Мы получили ваш запрос",
@@ -81,9 +81,9 @@ def web_confirmation_mail(
 # ── «Заявка принята, считаем» ────────────────────────────────────────────────────────────────────
 
 _ACCEPTED_BOT: Final = {
-    "ru": "Заявка{n} принята, считаем. Как только расчёт будет готов, напишем сюда.",
-    "uz": "Ariza{n} qabul qilindi, hisoblaymiz. Hisob-kitob tayyor boʻlishi bilan shu yerga yozamiz.",
-    "en": "Request{n} is accepted and we are working on it. We will write here as soon as the quote is ready.",
+    "ru": "Заявка{n} принята. Готовим КП — пришлём его сюда.",
+    "uz": "Ariza{n} qabul qilindi. Tijorat taklifini tayyorlayapmiz — şu yerga yuboramiz.",
+    "en": "Request{n} accepted. We're preparing a quote and will send it here.",
 }
 _ACCEPTED_SUBJECT: Final = {
     "ru": "Заявка{n} принята",
@@ -93,7 +93,7 @@ _ACCEPTED_SUBJECT: Final = {
 _ACCEPTED_MAIL_CABINET: Final = {
     "ru": "Статус заявки и все документы — в личном кабинете:",
     "uz": "Ariza holati va barcha hujjatlar shaxsiy kabinetda:",
-    "en": "The status of your request and all documents are in your personal account:",
+    "en": "The status of your request and all documents are in your account:",
 }
 _OPEN_CABINET: Final = {"ru": "Открыть кабинет", "uz": "Kabinetni ochish", "en": "Open account"}
 
@@ -127,11 +127,11 @@ _INVITE_BOT: Final = {
         "в одном месте. Нажмите кнопку ниже, вход — по вашему аккаунту Telegram."
     ),
     "uz": (
-        "{greeting}\n\nSiz «{company}» shaxsiy kabinetiga taklif qilindingiz: arizalar, tijoriy takliflar, shartnomalar va "
-        "hisob-fakturalar bir joyda. Quyidagi tugmani bosing — kirish Telegram akkauntingiz orqali."
+        "{greeting}\n\nSiz «{company}» shaxsiy kabinetiga taklif qilindingiz: arizalar, tijorat takliflari, shartnomalar va "
+        "hisoblar bir joyda. Quyidagi tugmani bosing — kirish Telegram akkauntingiz orqali."
     ),
     "en": (
-        "{greeting}\n\nYou have been invited to the “{company}” personal account: requests, quotes, contracts and invoices "
+        "{greeting}\n\nYou have been invited to the “{company}” account: requests, quotes, contracts and invoices "
         "in one place. Tap the button below — you sign in with your Telegram account."
     ),
 }
@@ -180,11 +180,11 @@ def start_link_stale(language: str | None) -> str:
 
 _CONTACT_LINK_BOUND: Final = {
     "ru": "Готово, Telegram подключён к кабинету «{company}». Уведомления о предложениях, счетах, актах и ответы "
-    "менеджера будут приходить сюда сразу. Кабинет открывается кнопкой меню бота.",
+    "менеджера будут приходить сюда. Кабинет открывается кнопкой меню бота.",
     "uz": "Tayyor, Telegram «{company}» kabinetiga ulandi. Takliflar, hisob-fakturalar, dalolatnomalar haqidagi "
-    "bildirishnomalar va menejer javoblari shu yerga darhol keladi. Kabinet bot menyusidagi tugma orqali ochiladi.",
+    "bildirishnomalar va menejer javoblari şu yerga keladi. Kabinet bot menyusidagi tugma orqali ochiladi.",
     "en": "Done, Telegram is connected to the «{company}» account. Notifications about quotes, invoices, acts and your "
-    "manager's replies will arrive here right away. Open the account with the bot's menu button.",
+    "manager's replies will arrive here. Open the account with the bot's menu button.",
 }
 #: Один нейтральный отказ на любой непригодный токен: повтор, чужой, подделанный, просроченный, несуществующий контакт.
 _CONTACT_LINK_REFUSED: Final = {
@@ -196,11 +196,11 @@ _CONTACT_LINK_REFUSED: Final = {
     "account and press “Connect” again.",
 }
 _CONTACT_LINK_TAKEN: Final = {
-    "ru": "Этот Telegram уже связан с другим контактом, поэтому подключить его здесь нельзя. Напишите менеджеру — он "
-    "поможет.",
-    "uz": "Bu Telegram allaqachon boshqa kontakt bilan bogʻlangan, shuning uchun uni bu yerda ulab boʻlmaydi. "
+    "ru": "Этот Telegram уже подключён к кабинету другого человека, поэтому подключить его здесь нельзя. Напишите менеджеру — "
+    "он поможет.",
+    "uz": "Bu Telegram allaqachon boşqa odamning kabinetiga ulangan, şuning uçun uni bu yerda ulab bölmaydi. "
     "Menejerga yozing — yordam beradi.",
-    "en": "This Telegram account is already linked to another contact, so it cannot be connected here. Write to your "
+    "en": "This Telegram account is already connected to someone else's account, so it cannot be connected here. Write to your "
     "manager and they will help.",
 }
 
@@ -267,7 +267,7 @@ _DOCUMENT_LINK_CODE: Final = {
 _DOCUMENT_LINK_KINDS: Final = {
     "quote": {"ru": "Коммерческое предложение", "uz": "Tijorat taklifi", "en": "Quote"},
     "contract": {"ru": "Договор", "uz": "Şartnoma", "en": "Contract"},
-    "invoice": {"ru": "Счёт", "uz": "Hisob-faktura", "en": "Invoice"},
+    "invoice": {"ru": "Счёт", "uz": "Hisob", "en": "Invoice"},
     "act": {"ru": "Акт", "uz": "Dalolatnoma", "en": "Act"},
 }
 _DOCUMENT_LINK_TEXT: Final = {

@@ -39,28 +39,28 @@ MAGIC_LINK = {
 #: (язык, тема, фразы, которые обязаны быть в тексте письма).
 EXPECTED = {
     ("portal_invitation", "ru"): (
-        "Приглашение в личный кабинет «Acme Trading»",
+        "Приглашение в кабинет «Acme Trading»",
         [
             "Здравствуйте, Azamat!",
-            "Вас пригласили в личный кабинет компании «Acme Trading»",
+            "Вас пригласили в кабинет компании «Acme Trading»",
             "Код входа: 042917",
             "24 часа",
         ],
     ),
     ("portal_invitation", "en"): (
-        "Invitation to «Acme Trading» client portal",
+        "Invitation to the «Acme Trading» account",
         [
             "Hello, Azamat!",
-            "You have been invited to the client portal of «Acme Trading»",
+            "You have been invited to the account of «Acme Trading»",
             "Login code: 042917",
             "valid for 24 hours",
         ],
     ),
     ("portal_invitation", "uz"): (
-        "«Acme Trading» shaxsiy kabinetiga taklifnoma",
+        "«Acme Trading» kabinetiga taklifnoma",
         [
             "Assalomu alaykum, Azamat!",
-            "«Acme Trading» kompaniyasining shaxsiy kabinetiga taklif qilishdi",
+            "Sizni «Acme Trading» kompaniyasi kabinetiga taklif qilişdi",
             "Kirish kodi: 042917",
             "24 soat",
         ],
@@ -69,7 +69,7 @@ EXPECTED = {
         "Вход в личный кабинет",
         [
             "Здравствуйте, Azamat!",
-            "Вы запросили вход в личный кабинет компании «Acme Trading»",
+            "Вы запросили вход в кабинет компании «Acme Trading»",
             "Код входа: 042917",
             "60 минут",
         ],
@@ -78,7 +78,7 @@ EXPECTED = {
         "Log in to your client portal",
         [
             "Hello, Azamat!",
-            "You requested to log in to the client portal of «Acme Trading»",
+            "You requested to sign in to the account of «Acme Trading»",
             "Login code: 042917",
             "valid for 60 minutes",
         ],
@@ -87,7 +87,7 @@ EXPECTED = {
         "Shaxsiy kabinetga kirish",
         [
             "Assalomu alaykum, Azamat!",
-            "«Acme Trading» kompaniyasining shaxsiy kabinetiga kirishni",
+            "Siz «Acme Trading» kompaniyasi kabinetiga kirişni söradingiz",
             "Kirish kodi: 042917",
             "60 daqiqa",
         ],
@@ -153,11 +153,11 @@ def test_unknown_language_falls_back_to_russian(template, language):
 
 @override_settings(EMAIL_BACKEND=LOCMEM_BACKEND)
 def test_telegram_block_is_translated_in_every_locale():
-    # NOTIFY-1: вместо голой ссылки на бот — «Получать мгновенно в Telegram» со ссылкой на Профиль → «Уведомления».
+    # NOTIFY-1: вместо голой ссылки на бот — «Уведомления в Telegram» со ссылкой на Профиль → «Уведомления».
     expected = {
-        "ru": "Получать мгновенно в Telegram",
-        "en": "Get it instantly in Telegram",
-        "uz": "Telegram orqali darhol olish",
+        "ru": "Уведомления в Telegram",
+        "en": "Telegram notifications",
+        "uz": "Telegramdagi bildirişnomalar",
     }
     for language, phrase in expected.items():
         assert phrase in send("portal_invitation", language).body

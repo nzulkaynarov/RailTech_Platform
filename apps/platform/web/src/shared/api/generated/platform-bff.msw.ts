@@ -319,6 +319,8 @@ import type {
   PaymentMemoPage,
   PaymentMemoPayment,
   PaymentMoney,
+  PeopleLeadContacts,
+  PeopleLeadPage,
   PersonRef,
   PlatformSettings,
   PriceImportJob,
@@ -38028,6 +38030,53 @@ export const getRevealStaffContactsResponseMock = (
   ...overrideResponse,
 });
 
+export const getListPeopleLeadsResponsePersonRefMock = (
+  overrideResponse: Partial<PersonRef> = {},
+): PersonRef => ({
+  ...{
+    id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getListPeopleLeadsResponseMock = (
+  overrideResponse: Partial<Extract<PeopleLeadPage, object>> = {},
+): PeopleLeadPage => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    lead: faker.helpers.fromRegExp("^L-\\d{4,}$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    company: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    status: faker.helpers.arrayElement(Object.values(LeadPlatformStatus)),
+    channel: faker.helpers.fromRegExp("^[a-z][a-z_]{0,15}$"),
+    language: faker.helpers.arrayElement(Object.values(Language)),
+    assigned: faker.helpers.arrayElement([{ ...getListPeopleLeadsResponsePersonRefMock() }, null]),
+    need: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    has_phone: faker.datatype.boolean(),
+    has_email: faker.datatype.boolean(),
+    has_telegram: faker.datatype.boolean(),
+  })),
+  total: faker.number.int({ min: 0 }),
+  ...overrideResponse,
+});
+
+export const getRevealLeadContactsResponseMock = (
+  overrideResponse: Partial<Extract<PeopleLeadContacts, object>> = {},
+): PeopleLeadContacts => ({
+  lead: faker.helpers.fromRegExp("^L-\\d{4,}$"),
+  phone: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  email: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  telegram: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  ...overrideResponse,
+});
+
 export const getSearchCounterpartiesResponseMock = (
   overrideResponse: Partial<Extract<CounterpartyPickList, object>> = {},
 ): CounterpartyPickList => ({
@@ -51981,6 +52030,54 @@ export const getRevealStaffContactsMockHandler = (
   );
 };
 
+export const getListPeopleLeadsMockHandler = (
+  overrideResponse?:
+    | PeopleLeadPage
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<PeopleLeadPage> | PeopleLeadPage),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/people/leads",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListPeopleLeadsResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getRevealLeadContactsMockHandler = (
+  overrideResponse?:
+    | PeopleLeadContacts
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<PeopleLeadContacts> | PeopleLeadContacts),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/people/leads/:lead/reveal",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getRevealLeadContactsResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
 export const getSearchCounterpartiesMockHandler = (
   overrideResponse?:
     | CounterpartyPickList
@@ -53850,6 +53947,8 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getListCounterpartyPeopleMockHandler(),
   getRevealCounterpartyContactsMockHandler(),
   getRevealStaffContactsMockHandler(),
+  getListPeopleLeadsMockHandler(),
+  getRevealLeadContactsMockHandler(),
   getSearchCounterpartiesMockHandler(),
   getCreateCounterpartyMockHandler(),
   getListCounterpartyPickerPeopleMockHandler(),

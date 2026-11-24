@@ -7,7 +7,7 @@
     {% translate "По вашему счёту поступила оплата" %}
   </h1>
   <p style="margin:0 0 16px 0;">
-    {% blocktranslate %}По счёту <strong>{{ invoice_number }}</strong>{% endblocktranslate %}{% if deal_title %} {% blocktranslate %}(сделка «{{ deal_title }}»){% endblocktranslate %}{% endif %}
+    {% blocktranslate %}По счёту <strong>{{ invoice_number }}</strong>{% endblocktranslate %}{% if deal_title %} {% blocktranslate %}(проект «{{ deal_title }}»){% endblocktranslate %}{% endif %}
     {% if buyer_name %}{% blocktranslate %}от компании <strong>{{ buyer_name }}</strong>{% endblocktranslate %}{% endif %}
     {% blocktranslate %}записана оплата на сумму <strong>{{ amount }}</strong>.{% endblocktranslate %}
   </p>

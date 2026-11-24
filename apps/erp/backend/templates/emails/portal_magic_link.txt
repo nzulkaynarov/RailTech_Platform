@@ -1,6 +1,6 @@
 {% load i18n %}{% translate "Здравствуйте" %}{% if contact_name %}, {{ contact_name }}{% endif %}!
 
-{% blocktranslate with company=company_name platform=platform_name|default:'ERP' %}Вы запросили вход в личный кабинет компании «{{ company }}» на платформе {{ platform }}.{% endblocktranslate %}
+{% blocktranslate with company=company_name %}Вы запросили вход в кабинет компании «{{ company }}».{% endblocktranslate %}
 
 {% translate "Код входа:" %} {{ login_code }}
 
@@ -11,4 +11,4 @@
 {% translate "Если вы не запрашивали вход, просто проигнорируйте письмо." %}
 {% translate "Мы не просим пароль и код в письме или по телефону. Не пересылайте этот код." %}
 
-— {% blocktranslate with platform=platform_name|default:'ERP' %}Команда {{ platform }}{% endblocktranslate %}
+{% if platform_name %}— {{ platform_name }}{% endif %}

@@ -10,4 +10,4 @@
 {% translate "Мы не просим пароль и код в письме или по телефону. Не пересылайте этот код." %}
 
 {% translate "С уважением," %}
-{% blocktranslate with platform=platform_name|default:'ERP' %}команда {{ platform }}{% endblocktranslate %}
+{{ platform_name }}

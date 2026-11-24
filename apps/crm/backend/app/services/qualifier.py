@@ -181,12 +181,18 @@ async def _apply_decision(
     stored.update(decision.qualification.model_dump(exclude_none=True))
     stored["signals"] = decision.signals.model_dump()
     lead.qualification = stored
+    changed = ["score"] if lead.score != decision.score else []
+    # PL-1 (G4): компания, названная боту, заполняет пустое поле карточки; названную вручную
+    # или формой не трогаем.
+    named = stored.get("company")
+    if not lead.company_name and isinstance(named, str) and named.strip():
+        lead.company_name = named.strip()[:255]
+        changed.append("company_name")
     lead.need_summary = decision.need_summary
     lead.product_interest = list(decision.product_interest)
-    score_changed = lead.score != decision.score
     lead.score = decision.score
-    if score_changed:
-        await bus_events.lead_updated(session, lead, Actor(None, "bot"), ["score"])
+    if changed:
+        await bus_events.lead_updated(session, lead, Actor(None, "bot"), changed)
     lead.bot_turns_without_progress = decision.bot_turns_without_progress
 
 

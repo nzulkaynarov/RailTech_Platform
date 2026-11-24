@@ -23,6 +23,8 @@ from tests.unit.agents.fakes import ReplayModel, reply
 pytestmark = pytest.mark.integration
 __all__ = ["service"]
 
+HANDED_OFF = "Ваше сообщение передано менеджеру. Менеджер ответит в рабочее время."
+
 
 async def escalated_prospect(
     sessions: async_sessionmaker[AsyncSession], svc: ConversationService
@@ -186,14 +188,18 @@ async def test_waiting_lead_is_acknowledged_without_model_once_per_interval(
     first = await svc.handle_message(msg("Ау, есть кто?"))
     second = await svc.handle_message(msg("Жду ответа"))
 
-    assert [o.text for o in first] == ["Ваше сообщение передано менеджеру, он скоро ответит."]
+    assert [o.text for o in first] == [
+        "Ваше сообщение передано менеджеру. Менеджер ответит в рабочее время."
+    ]
     assert second == []
     assert model.requests == []
     # явная просьба позвать человека подтверждается всегда, даже внутри интервала
     pressed = await svc.handle_message(
         Incoming(tg_user_id=USER, chat_id=USER, text="Позвать менеджера", human_requested=True)
     )
-    assert [o.text for o in pressed] == ["Ваше сообщение передано менеджеру, он скоро ответит."]
+    assert [o.text for o in pressed] == [
+        "Ваше сообщение передано менеджеру. Менеджер ответит в рабочее время."
+    ]
 
 
 async def test_human_request_while_waiting_raises_priority(

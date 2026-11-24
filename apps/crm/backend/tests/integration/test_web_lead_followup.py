@@ -327,7 +327,7 @@ async def test_known_telegram_lead_gets_the_confirmation_in_the_bot(
     assert await harness.notices.deliver(notice.id) == "sent"
     [(chat, text)] = harness.bot.sent
     assert chat == 7700
-    assert "Мы получили ваш запрос" in text
+    assert "Мы получили вашу заявку" in text
     assert harness.queued_mail == [], "бот ушёл — письмо не нужно"
     async with sessions() as session:
         said = (

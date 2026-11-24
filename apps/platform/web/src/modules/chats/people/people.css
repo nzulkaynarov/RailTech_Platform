@@ -41,3 +41,16 @@
     min-height: 44px;
   }
 }
+
+.pf-people-closed {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.pf-people-has {
+  display: inline-flex;
+  gap: 8px;
+  color: var(--rt-color-text-secondary);
+}

@@ -273,6 +273,36 @@ async def tg_username(session: AsyncSession, lead_id: int) -> str | None:
     return value
 
 
+@dataclass(frozen=True, slots=True)
+class IdentityFlags:
+    """Что есть у лида в Telegram-идентичностях: номер из кнопки «Поделиться» и ник (без ника
+    показывать нечего: `reveal` отдаёт именно ник)."""
+
+    phone: bool = False
+    telegram: bool = False
+
+
+async def identity_flags(
+    session: AsyncSession, lead_ids: Sequence[int]
+) -> dict[int, IdentityFlags]:
+    """Одним запросом на страницу: у лида есть ник Telegram и/или номер из бота (PL-1)."""
+    if not lead_ids:
+        return {}
+    stmt = (
+        select(
+            TelegramIdentity.lead_id,
+            func.bool_or(TelegramIdentity.phone_e164.is_not(None)),
+            func.bool_or(TelegramIdentity.tg_username.is_not(None)),
+        )
+        .where(TelegramIdentity.lead_id.in_(lead_ids))
+        .group_by(TelegramIdentity.lead_id)
+    )
+    return {
+        lead_id: IdentityFlags(phone=bool(has_phone), telegram=bool(has_nick))
+        for lead_id, has_phone, has_nick in (await session.execute(stmt)).all()
+    }
+
+
 async def tg_phone(session: AsyncSession, lead_id: int) -> str | None:
     """Номер, которым лид поделился кнопкой в боте (Q-020), E.164."""
     stmt = select(TelegramIdentity.phone_e164).where(TelegramIdentity.lead_id == lead_id)
