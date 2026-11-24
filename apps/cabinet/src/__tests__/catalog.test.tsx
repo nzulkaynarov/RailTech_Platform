@@ -27,6 +27,19 @@ describe('Каталог', () => {
     await expectNoAxeViolations();
   });
 
+  it('ЕД-4: карточка списка — миниатюра с версией фото и наш артикул; без фото — значок типа', async () => {
+    signedIn();
+    renderApp('/catalog');
+    await heading('Каталог');
+    const list = await results();
+    const bearing = within(list).getByRole('link', { name: 'Подшипник 6205-2RS' }).closest('article') as HTMLElement;
+    expect(within(bearing).getByText('RT-01001')).toBeInTheDocument();
+    expect(bearing.querySelector('img[src*="/api/portal/v1/items/1001/thumbnail?v=1"]')).not.toBeNull();
+    const service = within(list).getByRole('link', { name: 'Пусконаладка насосного оборудования' }).closest('article') as HTMLElement;
+    expect(service.querySelector('img')).toBeNull();
+    expect(service.querySelector('[data-photo="false"]')).not.toBeNull();
+  });
+
   // D-5 (FIX-51): «В наличии» и «срок 0 дней» рядом читается странно — при нулевом сроке срок не показывается.
   it('срок 0 дней не показывается: «В наличии» без срока; положительный срок — как был', async () => {
     signedIn();
