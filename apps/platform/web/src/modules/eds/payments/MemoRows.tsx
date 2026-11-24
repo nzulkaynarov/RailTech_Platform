@@ -8,6 +8,7 @@ import { DataTable, type DataColumn } from "../../../shared/ui/DataTable/DataTab
 import { LinkButton } from "../../../shared/ui/LinkButton";
 import { MoneyText } from "../../../shared/ui/MoneyText";
 import { StatusTag } from "../../../shared/ui/StatusTag";
+import { PersonRefCell } from "../../PersonRefCell";
 import { withParams } from "../inbox/api";
 import { memoPath, moneyProps } from "./model";
 
@@ -143,7 +144,12 @@ export function MemoRows({
       width: COLS.author,
       cellClassName: "pf-ell",
       cellTitle: (row) => row.author.full_name,
-      cell: (row) => row.author.full_name,
+      cell: (row) => (
+        <PersonRefCell
+          person={{ id: String(row.author.crm_user_id), name: row.author.full_name }}
+          caption={null}
+        />
+      ),
     },
     {
       id: "amount",

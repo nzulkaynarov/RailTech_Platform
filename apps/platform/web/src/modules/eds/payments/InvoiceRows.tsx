@@ -6,6 +6,7 @@ import { useViewport } from "../../../app/shell/useViewport";
 import type { PaymentRow } from "../../../shared/api/generated/model";
 import { useFormat } from "../../../shared/lib/useFormat";
 import { DataTable, type DataColumn } from "../../../shared/ui/DataTable/DataTable";
+import { CompanyCell } from "../../../shared/ui/EntityCell";
 import { LinkButton } from "../../../shared/ui/LinkButton";
 import { MoneyText } from "../../../shared/ui/MoneyText";
 import { withParams } from "../inbox/api";
@@ -122,7 +123,9 @@ export function InvoiceRows({
               </Link>
               <InvoiceStatus status={row.status} />
             </div>
-            <p className="pf-dec-card-subject">{row.client_name}</p>
+            <p className="pf-dec-card-subject">
+              <CompanyCell name={row.client_name} logoUrl={row.client_logo_url ?? null} />
+            </p>
             <p className="pf-hint">
               {row.project_number} · <Amount row={row} />
             </p>
@@ -167,7 +170,7 @@ export function InvoiceRows({
       width: null,
       cellClassName: "pf-ell",
       cellTitle: (row) => row.client_name,
-      cell: (row) => row.client_name,
+      cell: (row) => <CompanyCell name={row.client_name} logoUrl={row.client_logo_url ?? null} />,
     },
     {
       id: "amount",

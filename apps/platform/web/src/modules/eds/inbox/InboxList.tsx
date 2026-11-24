@@ -27,7 +27,9 @@ import { localName, useLetterDictionary } from "../dictionaries";
 import { useStateLabels } from "./labels";
 import { ResolutionSlot } from "./ResolutionPanel";
 import { RowOpenLink } from "../../../shared/ui/RowOpenLink";
+import { CompanyCell } from "../../../shared/ui/EntityCell";
 import { NameCode } from "../../../shared/ui/NameCode";
+import { PersonRefCell } from "../../PersonRefCell";
 import { FilterBar, FilterField } from "../../../shared/ui/FilterBar";
 import { TimeLeft } from "../../../shared/ui/TimeLeft";
 
@@ -132,12 +134,15 @@ function Rows({ items, selected }: { items: readonly LetterRow[]; selected: stri
               <StatusTag kind="incoming" status={row.status} />
             </div>
             <p className="pf-letters-card-subject">{row.subject}</p>
-            <p className="pf-hint">
-              {[row.client_name, row.request_number].filter(Boolean).join(" · ")}
-            </p>
-            {row.executor || row.due ? (
+            {row.client_name ? (
+              <p className="pf-letters-card-subject">
+                <CompanyCell name={row.client_name} logoUrl={row.client_logo_url ?? null} />
+              </p>
+            ) : null}
+            {row.request_number ? <p className="pf-hint">{row.request_number}</p> : null}
+            {row.executor ? <PersonRefCell person={row.executor} caption={null} /> : null}
+            {row.due ? (
               <p className="pf-hint">
-                {row.executor ? `${row.executor.name} · ` : ""}
                 <Due row={row} />
               </p>
             ) : null}
@@ -200,7 +205,13 @@ function Rows({ items, selected }: { items: readonly LetterRow[]; selected: stri
       width: COLS.correspondent,
       cell: (row) => (
         <NameCode
-          name={row.client_name ?? "—"}
+          name={
+            row.client_name ? (
+              <CompanyCell name={row.client_name} logoUrl={row.client_logo_url ?? null} />
+            ) : (
+              "—"
+            )
+          }
           code={row.request_number}
           codeLabel={t("list.columns.request")}
         />
@@ -212,7 +223,7 @@ function Rows({ items, selected }: { items: readonly LetterRow[]; selected: stri
       width: COLS.executor,
       cellClassName: "pf-ell",
       cellTitle: (row) => row.executor?.name ?? undefined,
-      cell: (row) => row.executor?.name ?? "—",
+      cell: (row) => (row.executor ? <PersonRefCell person={row.executor} caption={null} /> : "—"),
     },
     {
       id: "due",

@@ -25,6 +25,23 @@ export function photoUrlOf(contactId: string): string | null {
   return version ? `/api/v1/people/contacts/${contactId}/photo?v=${version}` : null;
 }
 
+/**
+ * Компания клиента строки реестра (проект, счёт, письмо): id ERP и адрес логотипа, как их отдаёт BFF (ЕД-3). Логотип — у
+ * двух компаний из трёх (по названию), остальные остаются с буквами: строка показывает обе картинки рядом.
+ */
+export function clientRefOf(name: string | null | undefined): {
+  client_id: number | null;
+  client_logo_url: string | null;
+} {
+  if (!name) return { client_id: null, client_logo_url: null };
+  let hash = 0;
+  for (const ch of name) hash = (hash * 31 + ch.charCodeAt(0)) % 100000;
+  const id = 9000 + (hash % 900);
+  if (hash % 3 === 0) return { client_id: id, client_logo_url: null };
+  logos.set(String(id), "d1");
+  return { client_id: id, client_logo_url: logoUrlOf(String(id)) };
+}
+
 /** Сброс между тестами и сценариями. */
 export function resetPictures(): void {
   logos.clear();

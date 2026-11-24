@@ -7,6 +7,7 @@ import type { PaymentCard } from "../../../shared/api/generated/model";
 import { useGetPayment } from "../../../shared/api/generated/platform-bff";
 import { useFormat } from "../../../shared/lib/useFormat";
 import { DefinitionList } from "../../../shared/ui/DefinitionList";
+import { CompanyCell } from "../../../shared/ui/EntityCell";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { QueryState } from "../../../shared/ui/FormParts";
 import { MoneyText } from "../../../shared/ui/MoneyText";
@@ -25,7 +26,10 @@ export function InvoiceFacts({ card, amount = false }: { card: PaymentCard; amou
   return (
     <DefinitionList
       items={[
-        { label: t("brief.client"), value: card.client_name },
+        {
+          label: t("brief.client"),
+          value: <CompanyCell name={card.client_name} logoUrl={card.client_logo_url ?? null} />,
+        },
         { label: t("brief.project"), value: card.project_number },
         ...(amount
           ? [{ label: t("brief.amount"), value: <MoneyText {...moneyProps(card.amount)} /> }]

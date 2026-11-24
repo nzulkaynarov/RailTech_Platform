@@ -38,6 +38,7 @@ import {
   trackOf,
   withOffice,
 } from "./edsInstructions";
+import { clientRefOf } from "./pictures";
 
 /**
  * Моки EDS · Входящие письма и резолюция (D1-3, BFF 0.16.0). Права — как в BFF: список, карточка и вложения — `eds.inbox` не ниже
@@ -125,6 +126,7 @@ function row(letter: LetterCard): LetterRow {
     number: letter.number,
     subject: letter.subject,
     client_name: letter.sender.name,
+    ...clientRefOf(letter.sender.name),
     request_number: letter.request?.number ?? null,
     received_at: letter.received_at,
     status: letter.status,

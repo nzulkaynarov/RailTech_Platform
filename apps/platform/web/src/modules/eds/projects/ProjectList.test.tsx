@@ -152,3 +152,60 @@ describe("Проекты: список", () => {
     expect(screen.queryByRole("table")).toBeNull();
   });
 });
+
+/** ЕД-3: компания строки — логотип по адресу BFF с версией, а без логотипа — буквы названия, та же ячейка везде. */
+function expectCompanyPictures(scope: HTMLElement) {
+  const logos = Array.from(scope.querySelectorAll<HTMLImageElement>("img"));
+  expect(logos.length).toBeGreaterThan(0);
+  for (const img of logos) {
+    expect(img.getAttribute("src")).toMatch(
+      /^\/api\/v1\/people\/counterparties\/\d+\/logo\?v=\w+$/,
+    );
+  }
+  expect(
+    scope.querySelectorAll('.pf-entity__pic--square[data-photo="false"]').length,
+  ).toBeGreaterThan(0);
+}
+
+describe("Проекты: логотип клиента в строке (ЕД-3)", () => {
+  it("логотип по адресу с версией или буквы названия — в каждой строке", async () => {
+    signIn("director@demo.example");
+    renderAt("/eds/projects");
+    expectCompanyPictures(await table());
+  });
+});
+
+describe("Проекты: фото ответственного в строке (ЕД-3)", () => {
+  it("ответственный — общая ячейка человека: фото из справочника по id, иначе инициалы", async () => {
+    server.use(
+      http.get("*/staff", () =>
+        HttpResponse.json({
+          items: [
+            {
+              id: "7",
+              name: "Демо Помощников",
+              position: null,
+              avatar_url: "/api/v1/staff/7/avatar?v=3",
+              active: true,
+              roles: [],
+            },
+          ],
+        }),
+      ),
+    );
+    signIn("director@demo.example");
+    renderAt("/eds/projects");
+
+    const body = await table();
+    await waitFor(() => {
+      const photos = Array.from(body.querySelectorAll<HTMLImageElement>("img")).map((img) =>
+        img.getAttribute("src"),
+      );
+      expect(photos).toContain("/api/v1/staff/7/avatar?v=3");
+    });
+    // менеджер без фото в справочнике остаётся с инициалами
+    expect(
+      body.querySelectorAll('.pf-entity__pic--round[data-photo="false"]').length,
+    ).toBeGreaterThan(0);
+  });
+});

@@ -10,6 +10,7 @@ import type {
   PaymentRecord,
   PaymentRow,
 } from "../../shared/api/generated/model";
+import { clientRefOf } from "../pictures";
 
 /**
  * Вымышленные счета и платёжки для MSW (D2-4, BFF 0.26.0): те же формы, что вернёт BFF по `platform-bff.yaml`. Названия
@@ -190,6 +191,7 @@ function build(seed: Seed): PaymentCard {
     project_number: `ПР-2026-${String(seed.deal).padStart(3, "0")}`,
     deal_id: seed.deal,
     client_name: seed.client,
+    ...clientRefOf(seed.client),
     amount: money(fromCents(total)),
     paid: money(fromCents(paid)),
     balance: money(fromCents(total - paid)),
@@ -277,6 +279,8 @@ export function rowOf(card: PaymentCard): PaymentRow {
     project_number: card.project_number,
     deal_id: card.deal_id,
     client_name: card.client_name,
+    client_id: card.client_id ?? null,
+    client_logo_url: card.client_logo_url ?? null,
     amount: card.amount,
     paid: card.paid,
     balance: card.balance,
