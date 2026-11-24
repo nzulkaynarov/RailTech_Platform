@@ -155,7 +155,13 @@ test.describe("Polish pw2 · раскладка на 1512 и 1280", () => {
         `страницы группы доступны на ${String(width)}`,
       ).toBeVisible();
     }
+    // смена ширины окна не пересоздаёт страницу: введённое в форме остаётся
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await spaGoto(page, "/admin/sales");
+    const typed = page.getByLabel("Маржа по умолчанию", { exact: false }).first();
+    await typed.fill("7");
     await page.setViewportSize({ width: 1512, height: 982 });
+    await expect(typed).toHaveValue("7");
 
     // контрагенты: «вчера» и время без даты в списке нет; в карточке нет красной метки, вкладки в одну строку
     await spaGoto(page, "/crm/clients");

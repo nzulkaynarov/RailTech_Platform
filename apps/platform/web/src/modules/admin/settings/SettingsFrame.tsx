@@ -35,23 +35,26 @@ export function SettingsFrame({ children }: { children: ReactNode }) {
   const label = t("admin.frame.nav", { group: t(`admin.groups.${current.group}`) });
   // Страницы группы — в меню модуля под активной группой (одно меню, не два); выбор над страницей — только когда
   // меню не видно: телефон или свёрнутое меню на ноутбуке.
-  if (!mobile && menuOpen) return <>{children}</>;
+  // Одно и то же дерево при любой ширине: меняется только выбор страницы, страница под ним не пересоздаётся (форма не теряет ввод).
+  const showPicker = mobile || !menuOpen;
   return (
     <div className="pf-set-frame" style={{ gridTemplateColumns: "minmax(0, 1fr)" }}>
-      <FormField id="pf-set-frame-nav" label={label}>
-        <Select
-          id="pf-set-frame-nav"
-          value={current.key}
-          options={entries.map((entry) => ({
-            value: entry.key,
-            label: t(`admin.sections.${entry.key}`),
-          }))}
-          onChange={(key: string) => {
-            const next = entries.find((entry) => entry.key === key);
-            if (next) void navigate(next.path);
-          }}
-        />
-      </FormField>
+      {showPicker ? (
+        <FormField id="pf-set-frame-nav" label={label}>
+          <Select
+            id="pf-set-frame-nav"
+            value={current.key}
+            options={entries.map((entry) => ({
+              value: entry.key,
+              label: t(`admin.sections.${entry.key}`),
+            }))}
+            onChange={(key: string) => {
+              const next = entries.find((entry) => entry.key === key);
+              if (next) void navigate(next.path);
+            }}
+          />
+        </FormField>
+      ) : null}
       <div className="pf-set-frame-body">{children}</div>
     </div>
   );
