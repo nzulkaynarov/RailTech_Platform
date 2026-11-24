@@ -1,13 +1,15 @@
 """Чтение данных для CRM: список лидов с фильтрами, карточка, переписка, входящие."""
 
+import re
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import ColumnElement, Select, func, or_, select
+from sqlalchemy import ColumnElement, Select, exists, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.domain.lead_sources import normalize_phone_e164
 from app.domain.sandbox import SANDBOX_SOURCE
 from app.models.auth import User
 from app.models.clients import ClientContact
@@ -40,6 +42,29 @@ class LeadFilter:
     source: str | None = None
 
 
+_LEAD_NUMBER = re.compile(r"^[Ll]-?(\d{1,9})$")
+
+
+def _search(q: str) -> ColumnElement[bool]:
+    """Имя и запрос по подстроке; плюс номер лида (`L-2041`) и телефон в любом виде (LH-1: выбор
+    «Дубля» ищет так, как человек помнит лида)."""
+    pattern = f"%{q}%"
+    clauses: list[ColumnElement[bool]] = [
+        Lead.display_name.ilike(pattern),
+        Lead.need_summary.ilike(pattern),
+    ]
+    number = _LEAD_NUMBER.match(q)
+    if number:
+        clauses.append(Lead.id == int(number.group(1)))
+    phone = normalize_phone_e164(q)
+    if phone:
+        via_identity = exists().where(
+            TelegramIdentity.lead_id == Lead.id, TelegramIdentity.phone_e164 == phone
+        )
+        clauses.append(or_(Lead.phone_e164 == phone, via_identity))
+    return or_(*clauses)
+
+
 def _filtered(f: LeadFilter, me: int) -> Select[Lead]:
     # Спам, тест и дубль (LH-1) в активные списки не попадают.
     stmt = select(Lead).where(
@@ -58,8 +83,7 @@ def _filtered(f: LeadFilter, me: int) -> Select[Lead]:
     if f.language:
         stmt = stmt.where(Lead.language == f.language)
     if f.q:
-        pattern = f"%{f.q.strip()}%"
-        stmt = stmt.where(or_(Lead.display_name.ilike(pattern), Lead.need_summary.ilike(pattern)))
+        stmt = stmt.where(_search(f.q.strip()))
     if f.created_from:
         stmt = stmt.where(Lead.created_at >= f.created_from)
     if f.created_to:

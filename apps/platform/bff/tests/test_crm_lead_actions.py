@@ -326,3 +326,27 @@ async def test_card_shows_the_discard_mark(
     await web.login(["MANAGER"])
     card = check(await web.client.get(f"{LEAD}/L-2041"), "/crm/leads/{lead}", "get")
     assert (card.json()["discarded"], card.json()["duplicate_of"]) == ("duplicate", "L-2050")
+
+
+async def test_duplicate_client_is_named_only_for_those_who_read_clients(
+    web: Web, crm: CrmMessagesFake, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    crm.answer(
+        "PATCH",
+        "leads/2041",
+        body={
+            "id": None,
+            "ok": True,
+            "duplicates": [{"kind": "client", "id": 12, "name": "ООО Ромашка", "field": "email"}],
+        },
+    )
+    await web.login(["MANAGER"])
+    seen = await web.send("PATCH", f"{LEAD}/L-2041", json={"email": "a@example.com"})
+    assert seen.json()["duplicates"][0]["name"] == "ООО Ромашка"
+    assert seen.json()["duplicates"][0]["client_id"] == 12
+    # сотрудник без раздела клиентов: только вид дубля, без названия и ссылки на карточку
+    monkeypatch.setattr("app.api.crm_lead_actions.allows", lambda *_args, **_kw: False)
+    hidden = await web.send("PATCH", f"{LEAD}/L-2041", json={"email": "a@example.com"})
+    assert hidden.json()["duplicates"] == [
+        {"kind": "client", "lead": None, "client_id": None, "name": "", "field": "email"}
+    ]

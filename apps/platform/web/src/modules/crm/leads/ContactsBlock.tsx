@@ -47,14 +47,18 @@ function DuplicateNote({ duplicates }: { duplicates: LeadDuplicate[] }) {
         <ul className="pf-crm-duplicates">
           {duplicates.map((d) => (
             <li key={`${d.kind}-${d.lead ?? String(d.client_id ?? "")}-${d.field}`}>
-              <LinkButton
-                type="link"
-                size="small"
-                style={{ padding: 0 }}
-                to={d.lead ? `/crm/leads?lead=${d.lead}&panel=open` : clientPath(d.client_id ?? 0)}
-              >
-                {d.name || d.lead}
-              </LinkButton>{" "}
+              {d.lead || d.client_id ? (
+                <LinkButton
+                  type="link"
+                  size="small"
+                  style={{ padding: 0 }}
+                  to={
+                    d.lead ? `/crm/leads?lead=${d.lead}&panel=open` : clientPath(d.client_id ?? 0)
+                  }
+                >
+                  {d.name || d.lead}
+                </LinkButton>
+              ) : null}{" "}
               <span className="pf-hint">
                 {t(`edit.duplicateKinds.${d.kind}`)} · {t(`edit.fields.${d.field}`)}
               </span>

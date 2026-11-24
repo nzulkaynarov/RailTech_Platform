@@ -6,6 +6,7 @@ from typing import Literal
 from sqlalchemy import exists, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.domain.sandbox import SANDBOX_SOURCE
 from app.models.clients import Client, ClientContact
 from app.models.leads import Lead, TelegramIdentity
 
@@ -29,6 +30,7 @@ async def lead_with_phone(session: AsyncSession, phone: str, exclude_lead_id: in
             or_(Lead.phone_e164 == phone, via_identity),
             Lead.erased_at.is_(None),
             Lead.discarded_kind.is_(None),
+            Lead.source != SANDBOX_SOURCE,
             Lead.id != exclude_lead_id,
         )
         .order_by(Lead.created_at, Lead.id)
@@ -44,6 +46,7 @@ async def lead_with_email(session: AsyncSession, email: str, exclude_lead_id: in
             Lead.email == email,
             Lead.erased_at.is_(None),
             Lead.discarded_kind.is_(None),
+            Lead.source != SANDBOX_SOURCE,
             Lead.id != exclude_lead_id,
         )
         .order_by(Lead.created_at, Lead.id)

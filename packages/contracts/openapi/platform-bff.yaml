@@ -27786,8 +27786,8 @@ components:
           type: [string, 'null']
           pattern: '^L-\d{4,}$'
           description: Номер лида, если `kind = lead`
-        client_id: {type: [integer, 'null'], description: 'Клиент, если `kind = client`'}
-        name: {type: string}
+        client_id: {type: [integer, 'null'], description: 'Клиент, если `kind = client` и сотрудник читает клиентов (`crm.clients`)'}
+        name: {type: string, description: 'Имя лида или название клиента; у клиента без права на раздел `crm.clients` пусто'}
         field: {type: string, enum: [phone, email]}
 
     LeadContactsSaved:

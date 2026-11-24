@@ -16140,8 +16140,9 @@ export interface components {
       kind: "lead" | "client";
       /** @description Номер лида, если `kind = lead` */
       lead: string | null;
-      /** @description Клиент, если `kind = client` */
+      /** @description Клиент, если `kind = client` и сотрудник читает клиентов (`crm.clients`) */
       client_id: number | null;
+      /** @description Имя лида или название клиента; у клиента без права на раздел `crm.clients` пусто */
       name: string;
       /** @enum {string} */
       field: "phone" | "email";

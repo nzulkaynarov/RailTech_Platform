@@ -19,6 +19,7 @@ from app.crm_messages_view import person
 from app.deps import Authed, require
 from app.errors import PlatformError
 from app.feeds.numbers import lead_id_of, lead_number
+from app.rbac import allows
 from app.schemas_crm_lead_actions import (
     AssignLeadIn,
     CloseLeadIn,
@@ -151,13 +152,15 @@ async def update_lead(lead: LeadParam, body: LeadContactsIn, authed: Editor) -> 
         "PATCH", f"{API}/leads/{_lead_id(lead)}", body=body.model_dump(exclude_unset=True)
     )
     result = crm.ContactsResult.model_validate(raw)
+    sees_clients = allows(authed.access, "crm.clients", "read")
     return LeadContactsSaved(
         duplicates=[
             LeadDuplicate(
                 kind=d.kind.value,
                 lead=lead_number(d.id) if d.kind.value == "lead" else None,
-                client_id=d.id if d.kind.value == "client" else None,
-                name=d.name,
+                # название и карточка клиента — тем, кто читает клиентов; остальные видят только вид
+                client_id=d.id if d.kind.value == "client" and sees_clients else None,
+                name=d.name if d.kind.value == "lead" or sees_clients else "",
                 field=d.field.value,
             )
             for d in result.duplicates or []

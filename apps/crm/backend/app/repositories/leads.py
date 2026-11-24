@@ -188,6 +188,9 @@ async def erase_lead(session: AsyncSession, lead: Lead, now: datetime) -> int:
     )
     await _erase_related(session, lead, now)
     lead.display_name = ""
+    # Контакты и откуда пришёл лид тоже ПДн (LH-1): без них карточка не находится по номеру и почте.
+    lead.phone_e164 = lead.email = lead.company_name = None
+    lead.source_page = lead.source_referrer = lead.source_utm = None
     lead.snoozed_until = None
     lead.need_summary = None
     lead.qualification = {}

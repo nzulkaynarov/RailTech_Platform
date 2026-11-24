@@ -8,6 +8,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.bus import events as bus_events
 from app.config import Settings
 from app.main import create_app
 from app.models.auth import AuditLog
@@ -129,10 +130,19 @@ async def test_discard_test_anonymises_lead(
     lead_id = await escalated_lead(sessions)
     manager, password = await make_user(sessions, "erase@railtech.uz", ["manager"])
     headers = login(client, manager.email, password)
+    async with sessions() as session, session.begin():
+        row = await session.get(Lead, lead_id)
+        assert row is not None
+        row.phone_e164, row.email, row.company_name = "+998901230001", "t@example.com", "ООО Т"
+        row.source_page, row.source_referrer = "/contacts/", "t.me/x"
+        row.source_utm = {"utm_source": "tg"}
     assert client.post(url(lead_id, "actions/discard"), json={"kind": "test"}, headers=headers)
     lead = await lead_row(sessions, lead_id)
     assert lead.erased_at is not None
     assert lead.display_name == ""
+    # contacts and origin facts are personal data too: the card is no longer found by them
+    assert (lead.phone_e164, lead.email, lead.company_name) == (None, None, None)
+    assert (lead.source_page, lead.source_referrer, lead.source_utm) == (None, None, None)
     async with sessions() as session:
         texts = (await session.scalars(select(Message.text))).all()
         notes = (await session.scalars(select(LeadNote.text))).all()
@@ -229,8 +239,16 @@ def patch(client: TestClient, lead_id: int, headers: dict[str, str], body: dict[
 
 
 async def test_update_contacts_normalises_and_audits(
-    client: TestClient, sessions: async_sessionmaker[AsyncSession]
+    client: TestClient,
+    sessions: async_sessionmaker[AsyncSession],
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    sent_fields: list[list[str]] = []
+
+    async def spy(session: Any, lead: Any, actor: Any, changed: Any = ()) -> None:
+        sent_fields.append(list(changed))
+
+    monkeypatch.setattr(bus_events, "lead_updated", spy)
     lead_id = await escalated_lead(sessions)
     manager, password = await make_user(sessions, "edit@railtech.uz", ["manager"])
     headers = login(client, manager.email, password)
@@ -258,6 +276,7 @@ async def test_update_contacts_normalises_and_audits(
     assert len(journal) == 1
     assert journal[0].after is not None
     assert journal[0].after["fields"] == ["company", "email", "name", "phone"]
+    assert sent_fields == [["company_name", "display_name", "email", "phone"]]
     cleared = patch(client, lead_id, headers, {"company": ""})
     assert cleared.status_code == 200
     assert (await lead_row(sessions, lead_id)).company_name is None
@@ -324,3 +343,22 @@ async def test_update_contacts_of_a_foreign_lead_is_forbidden(
     answer = patch(client, lead_id, login(client, other.email, password), {"company": "Чужая"})
     assert answer.status_code == 403
     assert (await lead_row(sessions, lead_id)).company_name is None
+
+
+async def test_lead_search_finds_by_number_and_phone_in_any_form(
+    client: TestClient, sessions: async_sessionmaker[AsyncSession]
+) -> None:
+    first = await escalated_lead(sessions, 5001)
+    await escalated_lead(sessions, 5002)
+    manager, password = await make_user(sessions, "search@railtech.uz", ["manager"])
+    headers = login(client, manager.email, password)
+    assert patch(client, first, headers, {"phone": "+998901234567"}).status_code == 200
+
+    def found(q: str) -> list[int]:
+        body = client.get("/api/v1/leads", params={"q": q}, headers=headers).json()
+        return [item["id"] for item in body["items"]]
+
+    assert found(f"L-{first}") == [first]
+    assert found(f"l{first}") == [first]
+    assert found("90 123-45-67") == [first]
+    assert found("+998901234567") == [first]

@@ -14,10 +14,11 @@ export interface LeadDuplicate {
    */
   lead: string | null;
   /**
-   * Клиент, если `kind = client`
+   * Клиент, если `kind = client` и сотрудник читает клиентов (`crm.clients`)
    * @nullable
    */
   client_id: number | null;
+  /** Имя лида или название клиента; у клиента без права на раздел `crm.clients` пусто */
   name: string;
   field: LeadDuplicateField;
 }

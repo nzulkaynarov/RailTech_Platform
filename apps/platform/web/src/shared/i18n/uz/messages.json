@@ -232,7 +232,7 @@
     "generic": "Bo'lmadi. Qayta urinib ko'ring",
     "reply_in_progress": "Xabar hali yuborilmoqda — biroz kuting va «Qayta urinish»ni bosing",
     "delivery_unknown": "Yetkazilgani tasdiqlanmadi: Telegram o'z vaqtida javob bermadi. «Qayta urinish» ikkinchi xabar yubormaydi",
-    "inactive_colleague": "Bu xodim lidlarni yuritmaydi — boshqasini tanlang",
+    "inactive_colleague": "Bu xodim lidlarni yuritmaydi — boşqasini tanlang",
     "not_closed": "Lid yopilmagan",
     "won_decided_by_erp": "«Tuzildi» natijasi hisob tizimidan keladi",
     "no_open_handoff": "Topşiriş allaqaçon yopilgan yoki keçiktirilmagan",
@@ -298,7 +298,7 @@
       "pick": "Qoladigan lid",
       "placeholder": "Ism, telefon yoki raqam",
       "hint": "Kamida ikki belgi kiriting",
-      "none": "Hech narsa topilmadi",
+      "none": "Heç narsa topilmadi",
       "required": "Lidni tanlang"
     }
   },

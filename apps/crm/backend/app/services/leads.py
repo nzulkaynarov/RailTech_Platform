@@ -39,12 +39,11 @@ from app.repositories import crm as crm_repo
 from app.repositories import events, lead_contacts
 from app.repositories import leads as repo
 from app.repositories import users as users_repo
-from app.schemas.settings import AppSettings, Language
+from app.schemas.settings import Language
 from app.security import audit
 from app.security.principal import Principal
 from app.services import (
     cabinet_chat,
-    cabinet_erasure,
     deals,
     lead_parts,
     lead_snooze,
@@ -54,6 +53,7 @@ from app.services import (
 )
 from app.services import team as team_service
 from app.services.escalation import OPEN_STATUSES, open_escalation
+from app.services.lead_erase import LeadErasure, erase_in_session, forget_after_commit
 from app.services.lead_messenger import DeliveryError, LeadMessenger
 from app.services.settings import SettingsService
 
@@ -65,8 +65,11 @@ LeadAssigned = Callable[[int, int], Awaitable[None]]  # (lead_id, user_id) → �
 ChatsChanged = Callable[[list[int]], Awaitable[None]]
 BackofficeModeProvider = Callable[[], Awaitable[BackofficeMode]]
 Outcome = Literal["won", "lost"]
+# Правка контактов в `changed_fields` события `lead.updated`: имена полей снимка лида; номер и
+# почта в снимок не входят — остаются признаками.
+_SNAPSHOT_FIELDS: Final[dict[str, str]] = {"name": "display_name", "company": "company_name"}
 DiscardKind = Literal["spam", "test", "duplicate"]
-# Причина отказа в сделке при «Спам», «Тест», «Дубль» (LH-1); код — `leads.discarded_kind`.
+# Причина отказа в сделке при «Спам», «Тест», «Дубль» (LH-1); код — `discarded_kind`.
 DISCARD_REASONS: Final[dict[str, str]] = {"spam": "Спам", "test": "Тест", "duplicate": "Дубль"}
 _active_escalation = lead_parts.active_escalation
 LANGUAGES: Final[dict[str, Language]] = {"ru": "ru", "uz": "uz", "en": "en"}
@@ -89,6 +92,8 @@ class LeadService:
         on_escalation_reopened: EscalationChanged | None = None,
         on_chats_changed: ChatsChanged | None = None,
         backoffice_mode: BackofficeModeProvider | None = None,
+        erase_attachments: Callable[[list[str]], Awaitable[None]] | None = None,
+        forget_agent: Callable[[int], Awaitable[None]] | None = None,
     ) -> None:
         self._sessions = sessions
         # Режим жизненного цикла (ADR-0022): без провайдера — `local`, как до ансамбля.
@@ -99,6 +104,9 @@ class LeadService:
         self._on_assigned = on_assigned
         self._on_escalation_reopened = on_escalation_reopened or on_escalation_changed
         self._on_chats_changed = on_chats_changed
+        # «Тест» (LH-1): вложения и состояние агента бота стираются после коммита, как в `/delete`.
+        self._erase_attachments = erase_attachments
+        self._forget_agent = forget_agent
 
     async def take(self, who: Principal, lead_id: int) -> None:
         cfg = await self._settings.get()
@@ -471,11 +479,13 @@ class LeadService:
             lead.snoozed_until = None
             await deals.close_open_deal_lost(session, who, lead, DISCARD_REASONS[kind])
             escalation = await _active_escalation(session, lead_id)
+            erased: LeadErasure | None = None
+            if kind == "test":
+                # Как `/delete` в боте: кабинет, передачи, контакты, Telegram, `lead.erased`.
+                erased = await erase_in_session(session, lead, cfg, who.actor, now)
             if escalation is not None:
                 escalation.status, escalation.resolved_at = "closed", now
                 escalation.outcome = f"discarded_{kind}"
-            if kind == "test":
-                await self._erase_test_lead(session, who, lead, cfg, now)
             changed = await self._finish(
                 session,
                 who,
@@ -486,20 +496,12 @@ class LeadService:
                 on_behalf_of=on_behalf,
             )
         await self._notify(changed)
-
-    @staticmethod
-    async def _erase_test_lead(
-        session: AsyncSession, who: Principal, lead: Lead, cfg: AppSettings, now: datetime
-    ) -> None:
-        """«Тест»: ПДн тестового лида стираются как по /delete; подписчики шины стирают копии."""
-        from app.services.contact_telegram import unlink_erased  # цикл импортов на уровне модуля
-
-        await cabinet_erasure.erase_for_lead(session, lead, cfg)
-        identity_ids = await repo.identity_ids_of_lead(session, lead.id)
-        await repo.close_escalations(session, lead.id, now)
-        await repo.erase_lead(session, lead, now)
-        await unlink_erased(session, identity_ids, now, who.actor)
-        await bus_events.lead_erased(session, lead, who.actor)
+        if erased is not None:
+            await forget_after_commit(
+                lead_id, erased.keys, self._forget_agent, self._erase_attachments
+            )
+            for escalation_id, _ in erased.moved:  # перенесённая передача — пост и SLA у якоря
+                await self._notify(_Changed(escalation_id), reopened=True)
 
     async def update_contacts(
         self, who: Principal, lead_id: int, fields: dict[str, str | None]
@@ -541,7 +543,9 @@ class LeadService:
                 await events.publish(
                     session, "lead.updated", lead_id=lead.id, owner_mode=lead.owner_mode
                 )
-                await bus_events.lead_updated(session, lead, who.actor, sorted(changed))
+                await bus_events.lead_updated(
+                    session, lead, who.actor, sorted(_SNAPSHOT_FIELDS.get(f, f) for f in changed)
+                )
         return duplicates
 
     async def add_note(self, who: Principal, lead_id: int, text: str, visible_to_bot: bool) -> int:
