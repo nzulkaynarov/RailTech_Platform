@@ -1,5 +1,8 @@
 import type { LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
+import { Search } from 'lucide-react';
+
+import { Button } from '@/components/ui/button';
 
 /** Пустое состояние экрана: иконка (декоративная), заголовок, пояснение, действие. */
 export function EmptyState({
@@ -22,5 +25,29 @@ export function EmptyState({
       <p className="max-w-md text-sm text-muted-foreground">{text}</p>
       {children}
     </section>
+  );
+}
+
+/**
+ * «Ничего не найдено» для отфильтрованного списка: то же пустое состояние с кнопкой сброса фильтра и поиска.
+ * Один вид на все списки кабинета (пустой список без фильтра — обычный `EmptyState` со своим значком).
+ */
+export function NoMatchState({
+  title,
+  text,
+  resetLabel,
+  onReset,
+}: {
+  title: string;
+  text: string;
+  resetLabel: string;
+  onReset: () => void;
+}) {
+  return (
+    <EmptyState icon={Search} title={title} text={text}>
+      <Button variant="outline" onClick={onReset}>
+        {resetLabel}
+      </Button>
+    </EmptyState>
   );
 }

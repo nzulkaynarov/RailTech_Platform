@@ -85,3 +85,8 @@ export async function showAllDecisions(region: HTMLElement) {
   if (button) await userEvent.setup().click(button);
   return region;
 }
+
+/** Открыть меню строки «⋯» (`RowMenu`) в блоке `scope` (карточка или таблица): кнопка «Действия: <номер>». */
+export async function openRowMenu(user: ReturnType<typeof userEvent.setup>, scope: HTMLElement, number: string) {
+  await user.click(within(scope).getByRole('button', { name: `Действия: ${number}` }));
+}
