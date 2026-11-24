@@ -171,7 +171,7 @@ describe("Клиенты · Ждут ответа: менеджер", () => {
     expect(channelLabel(t, "cabinet")).toBe("Кабинет");
     expect(contextLabel(t, { kind: "invoice", number: "S-2026-0124" })).toBe("Счёт S-2026-0124");
     expect(contextLabel(t, { kind: "act", number: "A-2026-0090" })).toBe("Акт A-2026-0090");
-    expect(contextLabel(t, { kind: "deal", number: "D-35" })).toBe("Сделка D-35");
+    expect(contextLabel(t, { kind: "deal", number: "D-35" })).toBe("Заявка D-35");
   });
 
   it("диалог: записка передачи, лента с вложением, подпись «Уйдёт клиенту в Telegram» и заметка команде", async () => {

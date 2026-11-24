@@ -58,7 +58,7 @@
         "title": "Manager",
         "steps": [
           "“Awaiting reply”: bot handovers and client messages — answer or take into work.",
-          "Create a request from a lead: the client and the request number, e.g. RQ-2026-104, appear.",
+          "Create a request from a lead: the client and the request number appear.",
           "Follow the request step on its card: resolution, costing, quote.",
           "Need to buy something for work — file a memo."
         ]
@@ -186,7 +186,7 @@
         "text": "A company with contacts. Appears when the manager creates a request from a lead."
       },
       {
-        "term": "Request (RQ-2026-104)",
+        "term": "Request",
         "text": "A client's need: text, lines, attachments, a letter. Goes through seven steps."
       },
       {
@@ -351,7 +351,7 @@
     "subject": "Subject",
     "subjectPlaceholder": "Choose a subject",
     "body": "What happened",
-    "bodyPlaceholder": "For example: I need access to “Costing” to see the supply tasks",
+    "bodyPlaceholder": "For example: I need access to “Costing” to see the purchasing tasks",
     "bodyHint": "Up to 4000 characters.",
     "auto": "Attached automatically: page {{page}}, role {{role}}, Platform version.",
     "autoNoPage": "Attached automatically: role {{role}}, Platform version.",

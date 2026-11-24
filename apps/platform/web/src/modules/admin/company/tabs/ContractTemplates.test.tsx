@@ -31,7 +31,7 @@ function openMenu(row: HTMLElement, name: string): void {
 }
 
 describe("Документы · Шаблоны · Договоры (ДОК-10)", () => {
-  it("список: статус, редакция, кто утвердил, и пометка, что неутверждённый в сделке не предлагается", async () => {
+  it("список: статус, редакция, кто утвердил, и пометка, что неутверждённый в проекте не предлагается", async () => {
     signInAs("admin@demo.example");
     renderApp("/admin/templates?tab=contracts");
     const approved = await rowOf("Договор с клиентом · поставка");
@@ -41,7 +41,7 @@ describe("Документы · Шаблоны · Договоры (ДОК-10)",
     expect(await rowOf("Договор с клиентом · услуги")).toHaveTextContent("На утверждении");
     const draft = await rowOf("Договор с партнёром · услуги");
     expect(draft).toHaveTextContent("Черновик");
-    expect(draft).toHaveTextContent("в сделке не предлагается");
+    expect(draft).toHaveTextContent("в проекте не предлагается");
   });
 
   it("«Утвердить» — у держателя «Право» (администратор): шаблон становится утверждённым", async () => {

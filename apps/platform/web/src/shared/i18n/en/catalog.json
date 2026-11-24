@@ -712,7 +712,7 @@
       "none": "Not set",
       "manufacturer": "Manufacturer",
       "supplier": "Partner",
-      "principal": "Principal",
+      "principal": "Customer",
       "other": "Other"
     },
     "contacts": "Company contacts",
@@ -1147,7 +1147,7 @@
       "title": "Reject application: {{name}}",
       "hint": "Specify the rejection reason. It will be recorded in audit logs and sent to the applicant.",
       "reasonLabel": "Rejection reason",
-      "reasonPlaceholder": "e.g.: irrelevant product categories / missing required documents",
+      "reasonPlaceholder": "e.g.: we do not supply this kind of product / no certificates",
       "ok": "Reject application"
     }
   },

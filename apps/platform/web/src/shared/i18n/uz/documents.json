@@ -279,7 +279,7 @@
       "hint": "Oddiy matn, 20 000 belgigacha."
     },
     "amount": {
-      "label": "Summa, so‘m",
+      "label": "Summa, söm",
       "hint": ""
     },
     "due": {
@@ -301,7 +301,7 @@
     "deal": {
       "label": "Loyiha bilan bog‘lash",
       "hint": "Majburiy emas: arizani yoki loyihani raqami, nomi yoki kompaniyasi bo‘yicha toping.",
-      "placeholder": "Masalan, ZV-2026-104 yoki nomi",
+      "placeholder": "Ariza raqami yoki nomi",
       "empty": "Hech narsa topilmadi",
       "searching": "Qidirilmoqda…",
       "unavailable": "Arizalar hozir mavjud emas — bog‘lashni keyinroq qo‘shish mumkin."
@@ -463,7 +463,7 @@
       "routeInternal": "Kelishish",
       "check": "Tekshirish va yuborish",
       "replyTo": "{{number}} ga javob",
-      "currency": "so‘m",
+      "currency": "söm",
       "textFilled": "Matn yozilgan",
       "textEmpty": "Matn hali yo‘q",
       "files_one": "{{count}} ta ilova",

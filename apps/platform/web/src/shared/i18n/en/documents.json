@@ -301,7 +301,7 @@
     "deal": {
       "label": "Link to a project",
       "hint": "Optional: find a request or project by number, title or company.",
-      "placeholder": "For example, ZV-2026-104 or a title",
+      "placeholder": "Request number or title",
       "empty": "Nothing found",
       "searching": "Searching…",
       "unavailable": "Requests are unavailable right now — you can add the link later."

@@ -92,7 +92,7 @@
       "stock": "Ombor",
       "supplier": "Hamkor · muddat",
       "purchase": "Xarid",
-      "client": "Mijozga, so‘m",
+      "client": "Mijozga, söm",
       "markup": "Ustama, %",
       "visa": "Viza",
       "action": "Amal"
@@ -112,7 +112,7 @@
     "offerPrice": "Hamkor narxi: {{price}}",
     "noSupplier": "Hamkor tanlanmagan",
     "service": "Brigada",
-    "crewRate": "Brigada stavkasi, so‘m/kun",
+    "crewRate": "Brigada stavkasi, söm/kun",
     "crewDays": "Kun",
     "crewLabel": "«{{name}}» uchun brigada stavkasi",
     "daysLabel": "«{{name}}» uchun brigada ish kunlari",
@@ -281,7 +281,7 @@
     "deal_not_in_calculation": "Ariza yopilgan yoki hisob-kitobdan keyingi bosqichda.",
     "quote_not_rejected_by_client": "Yangi versiya va voz kechish mijoz TTni rad etgandan keyin mavjud.",
     "reason_required": "Sababni kiriting.",
-    "amount_too_large": "Kurs bo‘yicha qator summasi juda katta. Xarid valyutasini tekshiring: so‘mdagi summa boshqa valyutadagi qatorda turibdi."
+    "amount_too_large": "Kurs bo‘yicha qator summasi juda katta. Xarid valyutasini tekshiring: sömdagi summa boshqa valyutadagi qatorda turibdi."
   },
   "load": {
     "retry": "Qayta urinish",

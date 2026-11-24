@@ -143,7 +143,7 @@
     "toRequestLabel": "В заявку: {{name}} — письмом директору",
     "channelCabinet": "Кабинет",
     "context": {
-      "deal": "Сделка {{number}}",
+      "deal": "Заявка {{number}}",
       "quote": "КП {{number}}",
       "invoice": "Счёт {{number}}",
       "act": "Акт {{number}}"

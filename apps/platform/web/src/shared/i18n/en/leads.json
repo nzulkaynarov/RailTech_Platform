@@ -111,7 +111,7 @@
       "skipped": "not sent",
       "channel": "channel: {{channel}}"
     },
-    "none": "no data"
+    "none": "—"
   },
   "newLead": {
     "title": "New lead",

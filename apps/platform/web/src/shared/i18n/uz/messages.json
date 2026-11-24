@@ -143,7 +143,7 @@
     "toRequestLabel": "Arizaga: {{name}} — direktorga xat sifatida",
     "channelCabinet": "Kabinet",
     "context": {
-      "deal": "Bitim {{number}}",
+      "deal": "Ariza {{number}}",
       "quote": "TK {{number}}",
       "invoice": "Hisob {{number}}",
       "act": "Dalolatnoma {{number}}"

@@ -426,7 +426,7 @@ function initial(): LeadsMock {
         form: "cabinet_request",
         page: "/new-client",
         referrer: "t.me/railtech_news",
-        campaign: "pos-nov",
+        campaign: "depo-nov",
         utm_source: "tg",
         utm_medium: "post",
         language: "ru",
