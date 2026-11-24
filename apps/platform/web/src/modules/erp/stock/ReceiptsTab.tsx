@@ -11,6 +11,7 @@ import { DataTable, type DataColumn } from "../../../shared/ui/DataTable/DataTab
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { QueryState } from "../../../shared/ui/FormParts";
 import { StatusTag } from "../../../shared/ui/StatusTag";
+import { ItemRefCell } from "../../ItemRefCell";
 import { useStateLabels, withUnit } from "./api";
 import { ReceiveModal } from "./OrderModals";
 
@@ -67,7 +68,14 @@ function Pending({
               </Link>
               {when(line)}
             </div>
-            <p className="pf-calc-card-title">{line.name}</p>
+            <p className="pf-calc-card-title">
+              <ItemRefCell item={line.item} name={line.name} />
+              {line.article && line.article !== line.item?.sku ? (
+                <span className="pf-hint pf-num" style={{ display: "block" }}>
+                  {line.article}
+                </span>
+              ) : null}
+            </p>
             <p className="pf-hint">
               {line.supplier} ·{" "}
               {t("receipts.left", {
@@ -110,8 +118,10 @@ function Pending({
       width: null,
       cell: (line) => (
         <>
-          <div>{line.name}</div>
-          <div className="pf-hint pf-num">{line.article}</div>
+          <ItemRefCell item={line.item} name={line.name} />
+          {line.article && line.article !== line.item?.sku ? (
+            <div className="pf-hint pf-num">{line.article}</div>
+          ) : null}
         </>
       ),
     },

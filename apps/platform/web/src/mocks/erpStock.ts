@@ -208,7 +208,7 @@ function rowOf(state: MockStock, product: MockProduct): StockRow {
   const incoming = incomingOf(state, product.id);
   return {
     product_id: String(product.id),
-    item: itemRefOf(product.id, product.name, product.article),
+    item: itemRefOf(product.id, product.name),
     name: product.name,
     article: product.article,
     unit: product.unit,
@@ -229,6 +229,7 @@ function presentReservation(state: MockStock, r: MockReservation): StockReservat
     id: String(r.id),
     product_id: String(r.productId),
     product_name: product?.name ?? "Товар",
+    item: itemRefOf(r.productId, product?.name ?? "Товар"),
     request: refOf(r.request),
     line_id: r.lineId === null ? null : String(r.lineId),
     quantity: r.quantity,
@@ -526,7 +527,7 @@ function presentOrder(state: MockStock, order: MockOrder, user: Me): SupplierOrd
       id: String(l.id),
       position: index + 1,
       product_id: String(l.productId),
-      item: itemRefOf(l.productId, l.name, l.article),
+      item: itemRefOf(l.productId, l.name),
       name: l.name,
       article: l.article,
       unit: l.unit,
@@ -564,6 +565,7 @@ function presentOrder(state: MockStock, order: MockOrder, user: Me): SupplierOrd
 function receiptLine(l: MockReceiptLine) {
   return {
     name: l.name,
+    item: null,
     quantity: l.quantity,
     cell: l.cell,
     units: l.units ?? [],
@@ -1394,6 +1396,7 @@ export const erpStockHandlers = [
             overdue: overdueDays(o) !== null,
             order_line_id: String(l.id),
             name: l.name,
+            item: itemRefOf(l.productId, l.name),
             article: l.article,
             unit: l.unit,
             quantity: l.quantity,
@@ -1578,6 +1581,7 @@ export const erpStockHandlers = [
         status: availableOf(u) > 0 ? ("in_stock" as const) : ("shipped" as const),
         product: {
           id: String(u.productId),
+          item: itemRefOf(u.productId, product?.name ?? "Товар"),
           name: product?.name ?? "Товар",
           article: product?.article ?? "",
         },
@@ -1645,6 +1649,7 @@ function presentShipment(s: ReturnType<typeof read>["shipments"][number]): Stock
     shipped_by: staffRef(s.shippedBy),
     lines: s.lines.map((l) => ({
       product_id: String(l.productId),
+      item: itemRefOf(l.productId, l.name),
       name: l.name,
       quantity: l.quantity,
       cell: l.cell,

@@ -39,6 +39,15 @@ describe('Сделка (deep-link бота)', () => {
     await expectNoAxeViolations();
   });
 
+  it('ЕД-4: строка поставки в сделке — миниатюра и наш артикул позиции', async () => {
+    signedIn();
+    renderApp('/deals/35');
+    await heading('Проект ПР-2026-035');
+    const delivery = await screen.findByRole('region', { name: 'Поставка' });
+    expect(within(delivery).getByText('RT-01005')).toBeInTheDocument();
+    expect(delivery.querySelector('img[src*="/api/portal/v1/items/1005/thumbnail?v=1"]')).not.toBeNull();
+  });
+
   it('сделка собирается по deal.id: в сделке 29 нет объектов сделки 35', async () => {
     signedIn();
     renderApp('/deals/29');

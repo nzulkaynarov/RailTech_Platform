@@ -228,7 +228,7 @@ def test_project_many_reads_policies_in_one_query(world, django_assert_max_num_q
         _priced(world, name=f"Карточка {index}")
     from catalog.published import published_products
 
-    with django_assert_max_num_queries(6):
+    with django_assert_max_num_queries(7):  # +1: главные фото пачки одной выборкой (ЕД-4)
         items = project_many(published_products(), mode=MODE_CLIENT)
     assert len(items) == 5 and all(item["price"] for item in items)
 

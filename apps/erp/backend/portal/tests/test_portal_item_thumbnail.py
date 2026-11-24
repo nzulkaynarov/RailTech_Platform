@@ -94,3 +94,17 @@ def test_partner_sees_own_photo_but_not_a_matched_foreign_draft(partner_world): 
     assert _thumb(world["client_a"], own).status_code == 200
     assert _thumb(world["client_a"], foreign).status_code == 404
     assert _thumb(world["client_b"], own).status_code == 404, "черновик А партнёру Б не виден"
+
+
+def test_catalog_list_and_card_carry_the_item_and_its_thumbnail_is_readable(contract_world, portal_client):
+    product = contract_world["product"]
+    image_id = _photo(product)
+    expected = {"id": product.pk, "name": product.name, "sku": product.sku, "kind": "goods", "photo": image_id}
+
+    listed = portal_client.get(f"{API}/catalog").json()["items"]
+    card = portal_client.get(f"{API}/catalog/{product.pk}").json()
+
+    assert {row["id"]: row["item"] for row in listed}[product.pk] == expected
+    assert card["item"] == expected
+    assert _thumb(portal_client, product).status_code == 200, "витрина видит миниатюру опубликованной позиции"
+    assert set(card["item"]) == {"id", "name", "sku", "kind", "photo"}, "в строке только id фото, адреса хранилища нет"

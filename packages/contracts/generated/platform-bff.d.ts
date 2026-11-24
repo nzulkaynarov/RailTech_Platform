@@ -16357,6 +16357,8 @@ export interface components {
       id: string;
       product_id: string;
       product_name: string;
+      /** @description Позиция каталога строки (ЕД-4): миниатюра `thumbnail` через BFF и наш артикул; `null` — строка без карточки */
+      item: components["schemas"]["ItemRef"] | null;
       request: components["schemas"]["StockRequestRef"];
       /** @description Строка расчёта */
       line_id: string | null;
@@ -16551,6 +16553,8 @@ export interface components {
     SupplierOrderReceiptLine: {
       order_line_id: string;
       name: string;
+      /** @description Позиция каталога строки (ЕД-4) — миниатюра через BFF и наш артикул; `null` — строка без карточки */
+      item: components["schemas"]["ItemRef"] | null;
       quantity: number;
       cell: string | null;
       /** @description Серийные номера или номер партии */
@@ -16775,6 +16779,8 @@ export interface components {
       overdue: boolean;
       order_line_id: string;
       name: string;
+      /** @description Позиция каталога строки (ЕД-4) — миниатюра через BFF и наш артикул; `null` — строка без карточки */
+      item: components["schemas"]["ItemRef"] | null;
       article: string;
       unit: string;
       quantity: number;
@@ -16797,6 +16803,8 @@ export interface components {
       quantity: number;
       lines: {
         name: string;
+        /** @description Позиция каталога строки (ЕД-4) — миниатюра через BFF и наш артикул; `null` — строка без карточки */
+        item: components["schemas"]["ItemRef"] | null;
         quantity: number;
         cell: string | null;
         /** @description Серийные номера или номер партии */
@@ -16816,6 +16824,8 @@ export interface components {
     };
     StockShipmentLine: {
       product_id: string;
+      /** @description Позиция каталога строки (ЕД-4) — миниатюра через BFF и наш артикул; `null` — строка без карточки */
+      item: components["schemas"]["ItemRef"] | null;
       name: string;
       quantity: number;
       cell: string | null;
@@ -16882,6 +16892,8 @@ export interface components {
       status: "in_stock" | "shipped";
       product: {
         id: string;
+        /** @description Позиция каталога строки (ЕД-4) — миниатюра через BFF и наш артикул; `null` — строка без карточки */
+        item: components["schemas"]["ItemRef"] | null;
         name: string;
         article: string;
       };
