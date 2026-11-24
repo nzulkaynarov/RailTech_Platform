@@ -182,6 +182,8 @@ def lead_card(
             email=lead.email,
             company=lead.company_name,
         ),
+        reply_via=channel(lead.reply_via) if lead.reply_via else None,
+        reply_blocked=lead.reply_blocked,
         consent=LeadConsent(given_at=lead.consent_given_at, method=method),
         facts=facts(lead.qualification, interest),
         need=lead.need_summary,

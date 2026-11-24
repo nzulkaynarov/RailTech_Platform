@@ -1353,6 +1353,7 @@ class LeadDetail(BaseModel):
     assigned_user_id: Annotated[int | None, Field(title="Assigned User Id")]
     assigned_user_name: Annotated[str | None, Field(title="Assigned User Name")] = None
     backoffice_mode: Annotated[str | None, Field(title="Backoffice Mode")] = "local"
+    can_return_to_bot: Annotated[bool | None, Field(title="Can Return To Bot")] = None
     client_handoff_error: Annotated[str | None, Field(title="Client Handoff Error")] = (
         None
     )
@@ -1396,7 +1397,9 @@ class LeadDetail(BaseModel):
     ] = None
     product_interest: Annotated[list[str], Field(title="Product Interest")]
     qualification: Annotated[dict[str, Any], Field(title="Qualification")]
+    reply_blocked: Annotated[ReplyBlocked | None, Field(title="Reply Blocked")] = None
     reply_channel: Annotated[str | None, Field(title="Reply Channel")] = None
+    reply_via: Annotated[ReplyVia | None, Field(title="Reply Via")] = None
     score: Annotated[int, Field(title="Score")]
     snoozed_until: Annotated[AwareDatetime | None, Field(title="Snoozed Until")]
     source: Annotated[str | None, Field(title="Source")] = "telegram"
@@ -1420,6 +1423,7 @@ class LeadOriginOut(BaseModel):
 class LeadOut(BaseModel):
     assigned_user_id: Annotated[int | None, Field(title="Assigned User Id")]
     assigned_user_name: Annotated[str | None, Field(title="Assigned User Name")] = None
+    can_return_to_bot: Annotated[bool | None, Field(title="Can Return To Bot")] = None
     client_id: Annotated[int | None, Field(title="Client Id")] = None
     created_at: Annotated[AwareDatetime, Field(title="Created At")]
     display_name: Annotated[str, Field(title="Display Name")]
@@ -1434,7 +1438,9 @@ class LeadOut(BaseModel):
         PlatformStatus | None, Field(title="Platform Status")
     ] = None
     product_interest: Annotated[list[str], Field(title="Product Interest")]
+    reply_blocked: Annotated[ReplyBlocked | None, Field(title="Reply Blocked")] = None
     reply_channel: Annotated[str | None, Field(title="Reply Channel")] = None
+    reply_via: Annotated[ReplyVia | None, Field(title="Reply Via")] = None
     score: Annotated[int, Field(title="Score")]
     source: Annotated[str | None, Field(title="Source")] = "telegram"
     stage: Annotated[str, Field(title="Stage")]
@@ -1757,6 +1763,12 @@ class Reason(StrEnum):
     missing = "missing"
 
 
+class ReplyBlocked(StrEnum):
+    no_consent = "no_consent"
+    phone_only = "phone_only"
+    no_contact = "no_contact"
+
+
 class ReplyTemplateOut(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
@@ -1765,6 +1777,12 @@ class ReplyTemplateOut(BaseModel):
     text: LocalizedText
     title: Annotated[str, Field(max_length=120, min_length=1, title="Title")]
     updated_at: Annotated[AwareDatetime, Field(title="Updated At")]
+
+
+class ReplyVia(StrEnum):
+    telegram = "telegram"
+    cabinet = "cabinet"
+    email = "email"
 
 
 class Result(StrEnum):

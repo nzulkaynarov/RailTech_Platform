@@ -21,6 +21,7 @@ Priority = Literal["hot", "warm", "info"]
 HandoffState = Literal["open", "taken", "snoozed"]
 # Тип обращения при «Передать менеджеру» (D17G-1)
 LeadRequestType = Literal["goods", "services", "project", "other"]
+ReplyBlocked = Literal["no_consent", "phone_only", "no_contact"]
 Author = Literal["lead", "bot", "manager", "system"]
 Timeline = Literal["<1m", "<3m", "<12m", ">12m"]
 DecisionRole = Literal["decision_maker", "influencer", "researcher"]
@@ -90,6 +91,11 @@ class ConversationCard(BaseModel):
     channel: str
     # Куда уйдёт ответ — канал последнего сообщения клиента (CHAT-1); `None` — клиент не писал
     reply_channel: str | None
+    # Куда уйдёт ответ на деле (CH-1): считает CRM; `None` — отвечать некуда (`reply_blocked`)
+    reply_via: str | None
+    reply_blocked: ReplyBlocked | None
+    # «Вернуть боту» имеет смысл, только если у лида есть чат Telegram
+    can_return_to_bot: bool
     owner_mode: OwnerMode
     assigned: PersonRef | None
     consent_given_at: datetime | None

@@ -6661,8 +6661,8 @@ export interface paths {
     get?: never;
     put?: never;
     /**
-     * Ответить клиенту «От себя» (уходит в Telegram)
-     * @description CRM `POST /leads/{id}/messages`. Раздел `crm.leads` полный; отвечает тот, кто забрал лида (или администратор CRM). `client_message_id` — ключ повтора, который экран создаёт на черновик: «Повторить» с тем же ключом не отправит клиенту второе сообщение. Telegram отказал — 502 `INTEGRATION_FAILED` с `details.reason = delivery_failed`, сообщение не записано, текст остаётся у экрана; Telegram не ответил вовремя — 502 `INTEGRATION_FAILED` с `delivery_unknown` (итог неизвестен: «Повторить» тем же ключом не продублирует, пока отправка идёт — 409 `reply_in_progress`); итог прежней отправки с этим ключом так и не узнали — 409 `CONFLICT` `delivery_unconfirmed` (второе сообщение не уходит, «лид отвечен» не ставится). Лид не забран — 409 `CONFLICT` (`take_first`), нет согласия клиента — 409 (`no_consent`), лид у другого — 403 `FORBIDDEN` (`not_lead_owner`).
+     * Ответить клиенту «От себя» (в канал `reply_via` карточки)
+     * @description CRM `POST /leads/{id}/messages`. Раздел `crm.leads` полный; отвечает тот, кто забрал лида (или администратор CRM). `client_message_id` — ключ повтора, который экран создаёт на черновик: «Повторить» с тем же ключом не отправит клиенту второе сообщение. Telegram отказал — 502 `INTEGRATION_FAILED` с `details.reason = delivery_failed`, сообщение не записано, текст остаётся у экрана; Telegram не ответил вовремя — 502 `INTEGRATION_FAILED` с `delivery_unknown` (итог неизвестен: «Повторить» тем же ключом не продублирует, пока отправка идёт — 409 `reply_in_progress`); итог прежней отправки с этим ключом так и не узнали — 409 `CONFLICT` `delivery_unconfirmed` (второе сообщение не уходит, «лид отвечен» не ставится). Лид не забран — 409 `CONFLICT` (`take_first`), нет согласия клиента — 409 (`no_consent`), лид у другого — 403 `FORBIDDEN` (`not_lead_owner`). CH-1: канал выбирает CRM (`ConversationCard.reply_via`: Telegram, кабинет или письмо с почты компании); отвечать некуда — 409 `CONFLICT` `no_reply_channel` (`ConversationCard.reply_blocked` — причина), письмо при неподключённой почте — 409 `smtp_not_configured`.
      */
     post: operations["replyCrmLead"];
     delete?: never;
@@ -15980,6 +15980,15 @@ export interface components {
       channel: components["schemas"]["MessageChannel"];
       /** @description Куда уйдёт ответ менеджера — канал последнего сообщения клиента (`telegram` или `cabinet`, CHAT-1); `null` — клиент ещё не писал */
       reply_channel: components["schemas"]["MessageChannel"] | null;
+      /** @description CH-1: куда уйдёт ответ менеджера на деле — решает CRM по открытым беседам, согласию, адресу почты и каналу последнего сообщения клиента: `telegram`, `cabinet` или `email` (письмо с почты компании). `null` — отвечать некуда (причина в `reply_blocked`): поле ответа не показывается, ответ даст 409 `no_reply_channel` */
+      reply_via: components["schemas"]["MessageChannel"] | null;
+      /**
+       * @description Почему `reply_via = null`: `no_consent` (в Telegram писать нельзя без согласия), `phone_only` (есть только телефон — позвонить), `no_contact` (нет ни одного канала). При `reply_via` не `null` — `null`
+       * @enum {string|null}
+       */
+      reply_blocked: "no_consent" | "phone_only" | "no_contact" | null;
+      /** @description У лида есть чат Telegram с ботом, «Вернуть боту» возможно; без чата (веб, почта, звонок) CRM откажет 409 `no_bot_channel` */
+      can_return_to_bot: boolean;
       owner_mode: components["schemas"]["LeadOwnerMode"];
       assigned: components["schemas"]["PersonRef"] | null;
       /**
@@ -17210,6 +17219,13 @@ export interface components {
       language: components["schemas"]["Language"];
       assigned: components["schemas"]["PersonRef"] | null;
       contacts: components["schemas"]["ConversationContacts"];
+      /** @description CH-1, канал ответа лиду (как в `ConversationCard.reply_via`); `null` — отвечать некуда, причина в `reply_blocked` */
+      reply_via?: components["schemas"]["MessageChannel"] | null;
+      /**
+       * @description CH-1, почему `reply_via = null`; при `phone_only` карточка предлагает «Позвонить»
+       * @enum {string|null}
+       */
+      reply_blocked?: "no_consent" | "phone_only" | "no_contact" | null;
       consent: {
         /** Format: date-time */
         given_at: string | null;
@@ -19030,7 +19046,7 @@ export interface components {
         "application/json": components["schemas"]["Error"];
       };
     };
-    /** @description 409 `CONFLICT` — состояние лида не позволяет действие; код CRM — в `details.reason` (`lead_taken` с `details.assigned_user_name` — лида ведёт или его передали другому, `take_first`, `no_consent`, `already_with_bot`, `delivery_unconfirmed`, `reply_in_progress` — ответ с этим `client_message_id` ещё отправляется, повтор безопасен, `assist_disabled`, `assist_budget`, `assist_empty`, `assist_no_history`) */
+    /** @description 409 `CONFLICT` — состояние лида не позволяет действие; код CRM — в `details.reason` (`lead_taken` с `details.assigned_user_name` — лида ведёт или его передали другому, `take_first`, `no_consent`, `no_reply_channel` (CH-1: отвечать некуда), `no_bot_channel` (CH-1: у лида нет чата Telegram, «Вернуть боту» невозможно), `smtp_not_configured` (письмо клиенту, почта не подключена), `already_with_bot`, `delivery_unconfirmed`, `reply_in_progress` — ответ с этим `client_message_id` ещё отправляется, повтор безопасен, `assist_disabled`, `assist_budget`, `assist_empty`, `assist_no_history`) */
     MessagesConflict: {
       headers: {
         [name: string]: unknown;
