@@ -26,14 +26,15 @@ class DocumentSampleThrottle(UserRateThrottle):
 
 _STATE = inline_serializer(
     "DocumentSampleState",
-    fields={
-        "id": drf_serializers.CharField(),
-        "status": drf_serializers.CharField(help_text="pending | ready | failed"),
-        "warnings": drf_serializers.ListField(
+    # Keyword form: `error` here is the state field of the sample (a code), not a hand-written HTTP error body.
+    fields=dict(
+        id=drf_serializers.CharField(),
+        status=drf_serializers.CharField(help_text="pending | ready | failed"),
+        warnings=drf_serializers.ListField(
             child=drf_serializers.CharField(), required=False, help_text="Коды подстановок текста, которых нет"
         ),
-        "error": drf_serializers.CharField(required=False, help_text="Код ошибки при status=failed"),
-    },
+        error=drf_serializers.CharField(required=False, help_text="Код ошибки при status=failed"),
+    ),
 )
 
 
