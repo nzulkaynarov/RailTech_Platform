@@ -127,3 +127,41 @@ async def test_a_role_without_the_projects_section_is_refused_before_erp(
     )
     assert response.status_code == 403
     assert erp.calls == []
+
+
+@pytest.mark.parametrize("erp_status", [500, 502])
+async def test_an_erp_failure_on_read_is_503_not_an_empty_list(
+    web: Web, erp: ProjectsFake, erp_status: int
+) -> None:
+    await _as(web)
+    erp.answer("GET", r"contracts/\d+/client-links/", erp_error(erp_status, "BOOM"))
+    response = await web.client.get(
+        f"{BASE}/{NUMBER}/documents/contract/{CONTRACT_ID}/client-links"
+    )
+    assert response.status_code == 503
+
+
+@pytest.mark.parametrize(
+    ("kind", "other_id"),
+    [("contract", INVOICE_ID), ("invoice", ACT_ID), ("act", CONTRACT_ID)],
+)
+async def test_an_id_of_another_kind_in_the_same_project_is_404_without_erp(
+    web: Web, erp: ProjectsFake, kind: str, other_id: int
+) -> None:
+    await _as(web)
+    before = len(erp.calls)
+    got = await web.client.get(f"{BASE}/{NUMBER}/documents/{kind}/{other_id}/client-links")
+    sent = await web.send("POST", f"{BASE}/{NUMBER}/documents/{kind}/{other_id}/revoke-links")
+    assert (got.status_code, sent.status_code) == (404, 404)
+    assert all("client-links" not in c.url.path for c in erp.calls[before:])
+
+
+async def test_only_a_403_hides_the_list_other_erp_refusals_pass_through(
+    web: Web, erp: ProjectsFake
+) -> None:
+    await _as(web)
+    erp.answer("GET", r"contracts/\d+/client-links/", erp_error(404, "NOT_FOUND"))
+    response = await web.client.get(
+        f"{BASE}/{NUMBER}/documents/contract/{CONTRACT_ID}/client-links"
+    )
+    assert response.status_code == 404

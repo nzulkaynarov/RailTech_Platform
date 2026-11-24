@@ -531,13 +531,14 @@ def revoke_quote_links(quote, actor) -> int:
 def revoke_document_links(kind: str, doc, actor) -> int:
     """Отозвать ВСЕ живые ссылки документа — у каждого получателя; ссылки других документов не трогаются (ДК-3)."""
     now = timezone.now()
-    links = list(DocumentLink.objects.filter(kind=kind, revoked_at__isnull=True, **{kind: doc}))
-    for link in links:
-        link.revoked_at = now
-        link.revoked_by = actor
-        link.save(update_fields=["revoked_at", "revoked_by"])
-        record_event(link, DocumentLinkEvent.Event.REVOKED)
-    return len(links)
+    ids = DocumentLink.objects.filter(kind=kind, revoked_at__isnull=True, **{kind: doc}).values_list("pk", flat=True)
+    revoked = 0
+    for pk in list(ids):
+        # Условное обновление: параллельный отзыв той же ссылки не считается и не пишется в журнал второй раз
+        if DocumentLink.objects.filter(pk=pk, revoked_at__isnull=True).update(revoked_at=now, revoked_by=actor):
+            record_event(DocumentLink(pk=pk), DocumentLinkEvent.Event.REVOKED)
+            revoked += 1
+    return revoked
 
 
 def revoke_document_links_logged(kind: str, doc, actor) -> int:

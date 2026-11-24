@@ -243,6 +243,8 @@
     "confirmObject_quote": "ссылку на КП",
     "confirmObject_contract": "ссылку на договор",
     "confirmObject_invoice": "ссылку на счёт",
-    "confirmObject_act": "ссылку на акт"
+    "confirmObject_act": "ссылку на акт",
+    "loadFailed": "Не удалось загрузить ссылки клиента.",
+    "retry": "Повторить"
   }
 }

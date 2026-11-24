@@ -7,6 +7,7 @@ import {
 } from "../../../shared/api/generated/platform-bff";
 import { ClientLinkBlock } from "../../../shared/ui/ClientLinkBlock";
 import { summarizeLinks, type ClientLinkRow } from "../../../shared/ui/clientLinkState";
+import { ClientLinkLoadError } from "../../../shared/ui/ClientLinkBlock";
 import { projectRef } from "./api";
 
 type Kind = "contract" | "invoice" | "act";
@@ -29,6 +30,13 @@ export function DocumentClientLink({
   const query = useGetEdsProjectDocumentClientLinks(ref, kind, documentId);
   const revoke = useRevokeEdsProjectDocumentClientLinks();
   const data = query.data;
+  if (query.isError) {
+    return (
+      <li className="pf-doc pf-doc--detail">
+        <ClientLinkLoadError onRetry={() => void query.refetch()} />
+      </li>
+    );
+  }
   if (!data || data.links.length === 0) return null;
 
   const rows: ClientLinkRow[] = data.links.map((link) => ({

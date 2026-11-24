@@ -241,8 +241,10 @@
     "failed": "Havolani bekor qilib bölmadi.",
     "confirmAction": "Bekor qiliş",
     "confirmObject_quote": "TT havolasini",
-    "confirmObject_contract": "shartnoma havolasini",
+    "confirmObject_contract": "şartnoma havolasini",
     "confirmObject_invoice": "hisob havolasini",
-    "confirmObject_act": "dalolatnoma havolasini"
+    "confirmObject_act": "dalolatnoma havolasini",
+    "loadFailed": "Mijoz havolalarini yuklab bölmadi.",
+    "retry": "Qayta uriniş"
   }
 }

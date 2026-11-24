@@ -13020,7 +13020,9 @@ export const getGetEdsProjectDocumentClientLinksQueryKey = (
 
 export const getGetEdsProjectDocumentClientLinksQueryOptions = <
   TData = Awaited<ReturnType<typeof getEdsProjectDocumentClientLinks>>,
-  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
 >(
   ref: string,
   kind: "contract" | "invoice" | "act",
@@ -13063,12 +13065,14 @@ export type GetEdsProjectDocumentClientLinksQueryResult = NonNullable<
   Awaited<ReturnType<typeof getEdsProjectDocumentClientLinks>>
 >;
 export type GetEdsProjectDocumentClientLinksQueryError = ErrorType<
-  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
 >;
 
 export function useGetEdsProjectDocumentClientLinks<
   TData = Awaited<ReturnType<typeof getEdsProjectDocumentClientLinks>>,
-  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
 >(
   ref: string,
   kind: "contract" | "invoice" | "act",
@@ -13091,7 +13095,9 @@ export function useGetEdsProjectDocumentClientLinks<
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useGetEdsProjectDocumentClientLinks<
   TData = Awaited<ReturnType<typeof getEdsProjectDocumentClientLinks>>,
-  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
 >(
   ref: string,
   kind: "contract" | "invoice" | "act",
@@ -13114,7 +13120,9 @@ export function useGetEdsProjectDocumentClientLinks<
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useGetEdsProjectDocumentClientLinks<
   TData = Awaited<ReturnType<typeof getEdsProjectDocumentClientLinks>>,
-  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
 >(
   ref: string,
   kind: "contract" | "invoice" | "act",
@@ -13133,7 +13141,9 @@ export function useGetEdsProjectDocumentClientLinks<
 
 export function useGetEdsProjectDocumentClientLinks<
   TData = Awaited<ReturnType<typeof getEdsProjectDocumentClientLinks>>,
-  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
 >(
   ref: string,
   kind: "contract" | "invoice" | "act",
@@ -13183,7 +13193,9 @@ export const getRevokeEdsProjectDocumentClientLinksMutationKey = () =>
   ["revokeEdsProjectDocumentClientLinks"] as const;
 
 export const getRevokeEdsProjectDocumentClientLinksMutationOptions = <
-  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
@@ -13223,7 +13235,7 @@ export type RevokeEdsProjectDocumentClientLinksMutationResult = NonNullable<
 >;
 
 export type RevokeEdsProjectDocumentClientLinksMutationError = ErrorType<
-  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
 >;
 export type RevokeEdsProjectDocumentClientLinksMutationVariables = {
   ref: string;
@@ -13235,7 +13247,9 @@ export type RevokeEdsProjectDocumentClientLinksMutationVariables = {
  * @summary EDS · Проект: отозвать ссылки клиента на договор, счёт или акт
  */
 export const useRevokeEdsProjectDocumentClientLinks = <
-  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
   TContext = unknown,
 >(
   options?: {

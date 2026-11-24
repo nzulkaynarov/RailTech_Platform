@@ -94,3 +94,18 @@ export function ClientLinkBlock({ kind, state, expiresAt, rows, canRevoke, onRev
     </Card>
   );
 }
+
+/** Список ссылок не загрузился: блок не пропадает молча — сотрудник должен знать, что ссылки могли уйти. */
+export function ClientLinkLoadError({ onRetry }: { onRetry: () => void }) {
+  const { t } = useTranslation("ui");
+  return (
+    <Card size="small" title={<h2 className="pf-dec-title">{t("clientLink.title")}</h2>}>
+      <p className="pf-dec-note" role="alert">
+        {t("clientLink.loadFailed")}
+      </p>
+      <div className="pf-dec-row">
+        <Button onClick={onRetry}>{t("clientLink.retry")}</Button>
+      </div>
+    </Card>
+  );
+}

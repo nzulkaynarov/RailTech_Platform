@@ -243,6 +243,8 @@
     "confirmObject_quote": "the quote link",
     "confirmObject_contract": "the contract link",
     "confirmObject_invoice": "the invoice link",
-    "confirmObject_act": "the act link"
+    "confirmObject_act": "the act link",
+    "loadFailed": "Could not load the client links.",
+    "retry": "Retry"
   }
 }

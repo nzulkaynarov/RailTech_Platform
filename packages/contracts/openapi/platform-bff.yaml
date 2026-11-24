@@ -3673,6 +3673,8 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
   /eds/projects/{ref}/documents/{kind}/{doc_id}/revoke-links:
     post:
       tags: [eds-projects]
@@ -3706,6 +3708,8 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
 
   /eds/documents/{id}/pdf:
     post:

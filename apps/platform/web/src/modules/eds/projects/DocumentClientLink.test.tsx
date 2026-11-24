@@ -109,4 +109,23 @@ describe("Ссылка клиента на договор, счёт и акт", 
     expect(within(contract).getByText("Срок ссылки вышел.")).toBeVisible();
     expect(within(contract).queryByRole("button")).toBeNull();
   });
+
+  it("сбой загрузки не прячет блок: строка ошибки и «Повторить»", async () => {
+    let fail = true;
+    server.use(
+      http.get("*/eds/projects/:ref/documents/contract/:docId/client-links", () =>
+        fail
+          ? HttpResponse.json({ code: "BACKEND_UNAVAILABLE", message: "x" }, { status: 503 })
+          : HttpResponse.json({ links: [], can_revoke: false }),
+      ),
+    );
+    await open("accountant@demo.example");
+    const alert = await screen.findByText("Не удалось загрузить ссылки клиента.");
+    expect(alert).toBeVisible();
+    fail = false;
+    fireEvent.click(screen.getByRole("button", { name: "Повторить" }));
+    await waitFor(() => {
+      expect(screen.queryByText("Не удалось загрузить ссылки клиента.")).toBeNull();
+    });
+  });
 });

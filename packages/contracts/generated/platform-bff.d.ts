@@ -22234,6 +22234,7 @@ export interface operations {
       401: components["responses"]["SessionExpired"];
       403: components["responses"]["Forbidden"];
       404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
     };
   };
   revokeEdsProjectDocumentClientLinks: {
@@ -22265,6 +22266,7 @@ export interface operations {
       401: components["responses"]["SessionExpired"];
       403: components["responses"]["Forbidden"];
       404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
     };
   };
   getEdsDocumentPdf: {
