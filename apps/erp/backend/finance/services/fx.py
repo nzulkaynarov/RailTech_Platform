@@ -27,7 +27,7 @@ from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 
-from core.currency import BASE_CURRENCY  # noqa: E402,F401 — валюта учёта (задача «Н3b»)
+from core.currency import BASE_CURRENCY, MONEY_QUANT  # noqa: E402,F401 — валюта учёта (задача «Н3b»)
 
 CBU_URL = "https://cbu.uz/ru/arkhiv-kursov-valyut/json/"
 
@@ -50,7 +50,6 @@ def is_tracked(currency_code) -> bool:
 
 
 # Деньги — копейки, курс — 6 знаков (как `ExchangeRate.rate_to_uzs`), округление — к ближайшему, 0.5 вверх.
-MONEY_QUANT = Decimal("0.01")
 RATE_QUANT = Decimal("0.000001")
 
 
