@@ -4,19 +4,15 @@ from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
 import structlog
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.bus import events as bus_events
 from app.domain.language import Language
 from app.domain.triggers import TriggerSignals
-from app.models.leads import TelegramIdentity
 from app.repositories import leads as repo
 from app.security.audit import Actor
-from app.services import cabinet_erasure
-from app.services.contact_telegram import unlink_erased
 from app.services.conversation_support import current_lead, lang_of, report_failure
 from app.services.conversation_types import AttachmentsEraser, Outgoing
+from app.services.lead_erase import erase_in_session
 from app.services.settings import SettingsService
 
 if TYPE_CHECKING:
@@ -64,31 +60,11 @@ class ErasureMixin:
             lead_id = lead.id if lead else None
             if lead is not None:
                 now = datetime.now(UTC)
-                keys = await repo.attachment_keys(session, lead.id)
-                # Кабинет (CHAT-1, CHAT-1b): только сообщения этого человека; беседа и неотвеченная
-                # передача `cabinet_message` переходят на новый якорь — до закрытия передач лида.
-                cabinet = await cabinet_erasure.erase_for_lead(session, lead, cfg)
-                moved = cabinet.moved_escalations
-                closed = await repo.close_escalations(session, lead.id, now)
-                # Контакты клиента ищутся по `telegram_identity_id` — стираем кабинет и берём
-                # идентичности до `erase_lead` и отвязки.
-                identity_ids = list(
-                    (
-                        await session.scalars(
-                            select(TelegramIdentity.id).where(TelegramIdentity.lead_id == lead.id)
-                        )
-                    ).all()
+                erased = await erase_in_session(session, lead, cfg, Actor(None, "bot"), now)
+                keys, moved, closed = erased.keys, erased.moved, erased.closed
+                logger.info(
+                    "lead_erased", lead_id=lead.id, messages=erased.messages, files=len(keys)
                 )
-                count = await repo.erase_lead(session, lead, now)
-                # Telegram отвязывается от контактов (решение архитектора 2026-11-04, NOTIFY-1): ERP
-                # получает контакт без Telegram и имён, Mini App закрывается.
-                await unlink_erased(session, identity_ids, now, Actor(None, "bot"))
-                # Подписчики обязаны стереть у себя копии ПДн лида: событие без данных, только id
-                # и — для ленты кабинета — чьи сообщения стереть.
-                await bus_events.lead_erased(
-                    session, lead, Actor(None, "bot"), cabinet=cabinet.event
-                )
-                logger.info("lead_erased", lead_id=lead.id, messages=count, files=len(keys))
         if lead_id is not None:
             await self._forget(lead_id, keys, closed)
         for escalation_id, anchor_id in moved:  # перенесённая передача — пост и SLA у нового якоря

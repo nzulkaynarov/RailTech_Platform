@@ -5,4 +5,4 @@
 {% translate "Открыть в разделе «Мои товары»:" %}
 {{ card_url }}
 
-— {% blocktranslate with platform=platform_name|default:'ERP' %}Команда {{ platform }}{% endblocktranslate %}
+{% if platform_name %}— {{ platform_name }}{% endif %}

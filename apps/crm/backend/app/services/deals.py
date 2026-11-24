@@ -161,6 +161,23 @@ async def apply_lead_outcome(
     return deal
 
 
+async def close_open_deal_lost(
+    session: AsyncSession, who: Principal, lead: Lead, reason: str
+) -> Deal | None:
+    """Открытая сделка лида закрывается отказом с причиной; сделки нет — новой не заводим
+    (спам, тест и дубль не должны попадать в аналитику отказов, LH-1)."""
+    deal = await open_deal(session, lead.id)
+    if deal is None:
+        return None
+    before = snapshot(deal)
+    _set_stage(deal, DealStage.LOST, reason, datetime.now(UTC))
+    await session.flush()
+    await audit.record(
+        session, who.actor, "deal.lost", "deal", deal.id, before=before, after=snapshot(deal)
+    )
+    return deal
+
+
 async def create(
     session: AsyncSession, who: Principal, body: DealCreate, cfg: DealsSettings
 ) -> int:

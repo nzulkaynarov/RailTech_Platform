@@ -1,22 +1,22 @@
 {
   "app": {
-    "name": "{{operator}} Cabinet",
-    "tagline": "Client cabinet",
+    "name": "{{operator}} account",
+    "tagline": "Client account",
     "skipToContent": "Skip to content",
     "loading": "Loading…",
     "mainNav": "Main sections",
-    "sideNav": "Cabinet sections",
+    "sideNav": "Account sections",
     "breadcrumbs": "Page path",
-    "operatorFallback": "Platform"
+    "operatorFallback": ""
   },
   "help": {
     "trigger": "Help & tips",
-    "drawerTitle": "Cabinet Knowledge Base",
+    "drawerTitle": "Account help",
     "searchPlaceholder": "Search articles and guides…",
     "relevantSection": "Tips for this section",
     "noResults": "No results found for your query.",
     "footerHint": "Didn't find what you were looking for?",
-    "contactManager": "Message account manager"
+    "contactManager": "Message your manager"
   },
   "nav": {
     "requests": "Requests",
@@ -63,7 +63,7 @@
     "error": "Something went wrong",
     "notFoundTitle": "Page not found",
     "notFoundText": "There is no such page, or it belongs to another company.",
-    "viewOnly": "View only: actions are available to a contact with approval rights",
+    "viewOnly": "View only: a colleague with approval rights can act",
     "close": "Close",
     "cancel": "Cancel",
     "save": "Save",
@@ -75,7 +75,7 @@
     "showAll": "Show all ({{count}})",
     "showLess": "Show less",
     "loadFailed": "Could not load",
-    "reasonRequired": "Give a reason — without it the provider will not know what to fix.",
+    "reasonRequired": "Give a reason so we know what to fix.",
     "dealNumber": "Project {{number}}",
     "noDeal": "No project yet",
     "crashTitle": "Something went wrong",
@@ -105,8 +105,8 @@
   },
   "access": {
     "noSections": {
-      "title": "Access is open",
-      "text": "The sections for your company are still being set up — please contact your manager."
+      "title": "Sections are not open yet",
+      "text": "Your manager will open them for your company — write to them if it takes long."
     },
     "canAct": "Authorized to approve",
     "viewOnly": "View only"
@@ -203,14 +203,14 @@
   "languages": {
     "label": "Language",
     "ru": "Русский",
-    "uz": "Oʻzbekcha",
+    "uz": "Özbekça",
     "en": "English"
   },
   "auth": {
     "antiPhishing": "We never ask for your password or code by email or phone.",
     "login": {
-      "title": "Sign in to the cabinet",
-      "subtitle": "The cabinet opens by invitation. Enter the e-mail the invitation was sent to and we will send a sign-in link.",
+      "title": "Sign in to your account",
+      "subtitle": "Your account opens by invitation. Enter the e-mail the invitation was sent to and we will send a sign-in link.",
       "email": "E-mail",
       "emailPlaceholder": "name@company.uz",
       "submit": "Sign in",
@@ -219,7 +219,7 @@
       "newClient": "I am a new client",
       "newClientHint": "Haven't worked with us yet? Leave a request and a manager will get in touch.",
       "partnerOnboarding": "For Suppliers & Manufacturers",
-      "partnerOnboardingHint": "Supply products through {{operator}} and manage your assortment in the cabinet.",
+      "partnerOnboardingHint": "Upload your price list and answer our price requests in your account.",
       "becomePartner": "Become a Partner",
       "telegram": "Sign in with Telegram",
       "telegramHint": "The bot will open; sign-in is by invitation.",
@@ -235,7 +235,7 @@
       "back": "Use another address",
       "mockLink": "Open the link from the email (mock)",
       "newClientLink": "New client? Leave a request",
-      "hint": "The email can take a few minutes. Check your Spam folder. Nothing after 10 minutes — contact your manager: the company mail may be temporarily down.",
+      "hint": "The e-mail may take a few minutes. Check Spam. Nothing after 10 minutes — write to your manager.",
       "resend": "Send again",
       "resendIn": "Send again in {{seconds}} s",
       "resent": "If this address is registered, we will send a new email. The code from the previous one no longer works."
@@ -247,14 +247,14 @@
       "requestAgain": "Request a new link",
       "closedTitle": "Access closed",
       "alreadyTitle": "You are already signed in",
-      "alreadyText": "This link has already been used, but your session is active — carry on in the cabinet.",
-      "toCabinet": "Go to the cabinet",
+      "alreadyText": "This link has already been used, but your session is active — carry on in your account.",
+      "toCabinet": "Go to your account",
       "failedTitle": "Could not sign in"
     },
     "telegram": {
       "signingIn": "Signing in with Telegram…",
       "failedTitle": "Could not sign in",
-      "failedText": "If you are not our client yet, message the bot and a manager will invite you to the cabinet.",
+      "failedText": "If you are not our client yet, message the bot and a manager will invite you to your account.",
       "openBot": "Open the bot",
       "retry": "Try again"
     },
@@ -291,14 +291,14 @@
   },
   "newClient": {
     "title": "I am a new client",
-    "intro": "Tell us what you need and a manager will get in touch and invite you to the cabinet.",
+    "intro": "Tell us what you need and a manager will get in touch and invite you to your account.",
     "writeTelegram": "Message us in Telegram",
     "orTelegram": "Prefer chatting? Message us in Telegram.",
     "backToLogin": "I already have access",
     "unavailableTitle": "The request form is unavailable",
-    "unavailableText": "Message us in Telegram and a manager will reply and invite you to the cabinet.",
+    "unavailableText": "Message us in Telegram and a manager will reply and invite you to your account.",
     "sentTitle": "Thank you! Your request has been sent",
-    "sentText": "A manager will contact you by phone or e-mail during business hours. If you prefer chatting, message us in Telegram.",
+    "sentText": "A manager will reply during business hours. If you prefer chatting, message us in Telegram.",
     "form": {
       "name": "Your name",
       "company": "Company (optional)",
@@ -309,7 +309,7 @@
       "email": "E-mail",
       "emailPlaceholder": "name@company.uz",
       "text": "What do you need",
-      "textPlaceholder": "For example: POS integration with 1C for 5 stores, by the end of the month",
+      "textPlaceholder": "For example: 10 frequency converters 7.5 kW, delivery to Tashkent by March",
       "website": "Do not fill in this field",
       "consent": "I agree to the processing of my personal data so that you can contact me about this request",
       "submit": "Send request",
@@ -332,12 +332,7 @@
       "tokenUnavailable": "The form is unavailable right now. Try again or message us in Telegram."
     },
     "next": {
-      "number": "Request number",
-      "withinMinutes_one": "{{count}} minute",
-      "withinMinutes_other": "{{count}} minutes",
-      "withinHours_one": "{{count}} hour",
-      "withinHours_other": "{{count}} hours",
-      "text": "A manager will reply by phone or e-mail within {{within}} during business hours. If you prefer chatting, message us in Telegram."
+      "number": "Request number"
     }
   },
   "manager": {
@@ -364,14 +359,14 @@
     "canAct": "Can approve: accept quotes, agree contracts, accept acts",
     "viewOnly": "View only",
     "admin": "Company administrator",
-    "language": "Cabinet language",
-    "logout": "Sign out of the cabinet",
+    "language": "Account language",
+    "logout": "Sign out of your account",
     "name": "Name",
     "sessions": {
-      "title": "Active sessions",
-      "desc": "Devices and browsers signed in to the cabinet under your account",
-      "current": "Current session",
-      "revokeOthers": "Sign out of all other sessions",
+      "title": "Where you’re signed in",
+      "desc": "Devices and browsers signed in under your account",
+      "current": "This device",
+      "revokeOthers": "Sign out other devices",
       "revoked": "Signed out of other sessions: {{count}}",
       "noOther": "No other active sessions",
       "device": "Device",
@@ -382,9 +377,9 @@
     "notifications": {
       "title": "Notifications",
       "linked": "Telegram connected",
-      "linkedText": "Notifications about quotes, invoices, acts and manager replies arrive in Telegram right away. The account opens right in the bot, no email needed.",
+      "linkedText": "Notifications about quotes, invoices, acts and manager replies arrive in Telegram. Your account opens right in the bot.",
       "notLinked": "Telegram not connected",
-      "notLinkedText": "Connect Telegram to get notifications instantly and open the account right in the bot. Until then, notifications arrive by email.",
+      "notLinkedText": "Connect Telegram to get notifications in the bot and open your account there. Until then, notifications come by e-mail.",
       "connect": "Connect Telegram",
       "preparing": "Preparing the link…",
       "scanQr": "Scan the QR code with your phone camera or press the button — the bot will open. Press “Start” in the bot.",
@@ -396,9 +391,9 @@
       "expired": "The link has expired.",
       "newLink": "Get a new link",
       "done": "Done, Telegram is connected",
-      "unavailable": "You can connect Telegram once your manager adds you to the system — please write to them.",
+      "unavailable": "You can connect Telegram once your manager gives you access — write to them.",
       "confirmTitle": "Disconnect Telegram?",
-      "consequence": "Notifications will stop arriving in Telegram — email and the account remain. Signing in to the account from Telegram will be closed. You can connect again right here.",
+      "consequence": "Notifications will stop arriving in Telegram — email and the account remain. Signing in to your account from Telegram will be closed. You can connect again right here.",
       "confirm": "Disconnect Telegram",
       "disconnecting": "Disconnecting…",
       "disconnected": "Telegram disconnected",
@@ -412,10 +407,10 @@
       "matrixTitle": "Notification Channels",
       "matrixDesc": "Choose events and channels where you wish to receive alerts",
       "colGroup": "Event Category",
-      "channelInApp": "In Cabinet",
+      "channelInApp": "In your account",
       "channelEmail": "E-mail",
       "channelTelegram": "Telegram",
-      "telegramNotConnected": "Telegram is not connected. Connect the bot above to receive instant messenger notifications.",
+      "telegramNotConnected": "Telegram is not connected. Connect the bot above to get notifications there.",
       "alwaysOn": "Mandatory",
       "saved": "Notification settings updated",
       "groups": {
@@ -444,7 +439,7 @@
           "desc": "New device logins, session revocations, and banking detail changes"
         }
       },
-      "telegramUnavailable": "Notifications arrive by email. Telegram becomes available once your manager adds you to the system — message them."
+      "telegramUnavailable": "Notifications arrive by e-mail. You can connect Telegram once your manager gives you access — write to them."
     }
   },
   "pages": {
@@ -475,13 +470,13 @@
       "draftOffer": "You have a draft from {{date}}",
       "draftResume": "Continue",
       "draftRestart": "Start over",
-      "lines": "Items or stages",
-      "linesHint": "List items or work in free text — exact part numbers are not required. Empty lines are not sent.",
+      "lines": "Items",
+      "linesHint": "List items or work (e.g. pump repair) in free text — exact designations are optional. Empty lines are not sent.",
       "lineText": "Line {{n}}",
-      "lineTextPlaceholder": "For example: bearing 6205-2RS",
+      "lineTextPlaceholder": "For example: VVGng 3×2.5 cable",
       "quantity": "Quantity",
       "unit": "Unit",
-      "unitPlaceholder": "pcs, m, h…",
+      "unitPlaceholder": "pcs, set, t…",
       "quantityInvalid": "Quantity must be a positive number, e.g. 12 or 2.5.",
       "addLine": "Add line",
       "removeLine": "Remove line {{n}}",
@@ -493,7 +488,7 @@
       "pickFromCatalog": "Pick from catalog",
       "submit": "Send request",
       "sent": "Request {{number}} sent",
-      "viewOnlyTitle": "Requests can be created by a contact with approval rights",
+      "viewOnlyTitle": "Requests can be created by a colleague with approval rights",
       "viewOnlyText": "Ask a colleague with this right or your manager to send the request.",
       "consequence": "Your request gets a number and goes to a {{operator}} manager. They will prepare a quote — it will appear under “Quotes”, and we will notify you in Telegram or by email."
     },
@@ -508,14 +503,14 @@
       "attachmentsTitle": "Attachments",
       "noAttachments": "No attachments",
       "columns": {
-        "title": "Item / stage",
+        "title": "Item",
         "quantity": "Qty"
       },
       "reorder": "Repeat request",
       "reorderSummary": "Reorder of request {{number}}: {{summary}}",
       "backToList": "Back to requests",
       "sources": {
-        "cabinet": "You, in the cabinet",
+        "cabinet": "From your account",
         "manager": "Via your manager"
       },
       "next": {
@@ -559,7 +554,7 @@
       "vat": "VAT",
       "totals": "Totals",
       "columns": {
-        "title": "Item / stage",
+        "title": "Item",
         "quantity": "Qty",
         "price": "Price",
         "total": "Amount",
@@ -568,7 +563,7 @@
       "accept": "Accept",
       "reject": "Reject",
       "acceptTitle": "Accept quote {{number}}",
-      "acceptText": "Total {{total}}. Enter the confirmation code from the message. The contract is created automatically after acceptance.",
+      "acceptText": "Total {{total}}. Enter the confirmation code from the message. Once you accept, we prepare the contract — it will appear under Contracts.",
       "code": "Confirmation code",
       "codeHint": "Enter the code from the message. If it did not arrive, send it again.",
       "codeTooShort": "The code is at least {{min}} characters long.",
@@ -590,7 +585,7 @@
       "expiredTitle": "The quote has expired",
       "expiredText": "It can no longer be accepted. Ask your manager to update the offer.",
       "backToList": "Back to quotes",
-      "requestCodeText": "Total {{total}}. Press “Get code” — we will send a confirmation code to your Telegram or e-mail. The contract is created automatically after acceptance.",
+      "requestCodeText": "Total {{total}}. Press “Get code” — we will send a confirmation code to your Telegram or e-mail. Once you accept, we prepare the contract — it will appear under Contracts.",
       "requestCode": "Get code",
       "codeSent": {
         "telegram": "The code was sent to Telegram. Valid for {{minutes}} min.",
@@ -611,14 +606,14 @@
       "commentConsequence": "Your manager receives the comment. The quote does not change — you can still accept or decline it afterwards.",
       "commentRequired": "Write the comment text.",
       "codeDelivery": {
-        "sending": "Sending the code to {{to}} — the e-mail goes through the company mail.",
+        "sending": "Sending the code to {{to}}…",
         "queuedLong": "The e-mail with the code is still queued. Check your mail in a couple of minutes or request the code again.",
-        "notSent": "The code was not sent: {{reason}}. Contact your manager — they can accept the quote for you or help with the mail.",
+        "notSent": "The code was not sent. Write to your manager — they will help.",
         "reasons": {
-          "smtp_not_configured": "the company mail is not set up",
-          "rejected": "the mail server rejected the e-mail",
-          "unavailable": "the mail server is unavailable",
-          "other": "the e-mail did not go out"
+          "smtp_not_configured": "the e-mail was not sent",
+          "rejected": "the e-mail was not sent",
+          "unavailable": "the e-mail was not sent",
+          "other": "the e-mail was not sent"
         }
       }
     },
@@ -632,14 +627,14 @@
         "contract": "Contract",
         "status": "Status",
         "client": "Your agreement",
-        "company": "Provider signature",
+        "company": "Our signature",
         "deal": "Project"
       },
       "notSigned": "Not yet",
       "sign": "Agree",
       "signNamed": "Agree contract {{number}}",
       "signTitle": "Agree contract {{number}}",
-      "signText": "You confirm, on behalf of your company, that you agree with the contract wording. Signing is a separate step: the e-document operator issues the contract and we will tell you when it is signed.",
+      "signText": "You confirm, on behalf of your company, that you agree with the contract text. Signing is a separate step: the contract comes to you via e-document exchange, and we will tell you when it is signed.",
       "signConfirm": "Agree contract",
       "signedClient": "You agreed contract {{number}}. Awaiting signing.",
       "signedBoth": "Contract {{number}} is signed by both parties."
@@ -685,7 +680,7 @@
         "commentPlaceholder": "For example: paying in instalments, the second part by the end of the month",
         "optional": "optional",
         "consequence": "Your manager will check the incoming payment and confirm it — then the invoice status changes.",
-        "confirm": "Send payment order",
+        "confirm": "Send",
         "sent": "Payment order for invoice {{number}} sent to your manager",
         "problem": {
           "fileMissing": "Attach the payment order file.",
@@ -720,11 +715,11 @@
       "return": "Return",
       "returnNamed": "Return act {{number}}",
       "returnTitle": "Return act {{number}}",
-      "returnText": "The act goes back to the provider for correction. Describe what is wrong.",
+      "returnText": "The act comes back to us for correction. Describe what is wrong.",
       "returnReason": "Reason for return",
       "returnPlaceholder": "For example: the serial number is missing",
       "returnConfirm": "Return act",
-      "returnedToast": "Act {{number}} returned to the provider",
+      "returnedToast": "Act {{number}} returned",
       "scan": "Scan",
       "scanLabel": "Scan of the signed act (optional)",
       "scanHint": "PDF or image up to 10 MB. You can also accept the act without a scan.",
@@ -767,15 +762,15 @@
       "filter": "Document kind",
       "dateFrom": "From date",
       "dateTo": "To date",
-      "exportRegistry": "Export registry",
-      "exportSuccess": "Document registry successfully exported",
+      "exportRegistry": "Download list",
+      "exportSuccess": "Document list downloaded",
       "csv": {
         "number": "No.",
         "kind": "Type",
         "title": "Document title",
         "docNumber": "Document number",
         "date": "Date",
-        "deal": "Deal",
+        "deal": "Project",
         "size": "Size (bytes)"
       },
       "searchPlaceholder": "Number, title, project…",
@@ -822,7 +817,7 @@
     "catalog": {
       "title": "Catalog",
       "emptyTitle": "The catalog is empty",
-      "emptyText": "Published goods and services with price and availability.",
+      "emptyText": "Describe what you need in a request — your manager will find it.",
       "search": "Search the catalog",
       "searchPlaceholder": "Name, category…",
       "searchSubmit": "Search",
@@ -895,16 +890,16 @@
         "bankAdminOnlyBadge": "Admin only",
         "bankDetailsAdminOnly": "Editing bank details is restricted to company administrators.",
         "bankDetailsAdminNotice": "When updated, all company administrators will receive an immediate security alert.",
-        "relationshipStatus": "Relationship status",
+        "relationshipStatus": "Working with us",
         "language": "Language of documents and e-mails"
       },
       "relationship": {
-        "active": "Active relationship",
-        "suspended": "Suspended",
-        "terminated": "Terminated",
+        "active": "Active",
+        "suspended": "Paused",
+        "terminated": "Ended",
         "invited": "Invited",
-        "suspendedAlert": "Relationship is temporarily suspended. Access is granted in archive read-only mode.",
-        "terminatedAlert": "Relationship has been terminated. The document archive is available for viewing and export."
+        "suspendedAlert": "Work is paused: documents are view-only.",
+        "terminatedAlert": "Work has ended: the document archive is available to view and download."
       },
       "securityLog": {
         "title": "Company Security Log",
@@ -912,13 +907,13 @@
         "empty": "No security events recorded yet",
         "error": "Failed to load security log",
         "notUs": "Not your colleague?",
-        "endSession": "End session",
+        "endSession": "End sign-in",
         "ended": "Session ended",
         "endFailed": "The session has already ended or expired",
         "events": {
           "login": "Login",
           "logout": "Logout",
-          "revoke_sessions": "Revoke sessions",
+          "revoke_sessions": "Signed out on other devices",
           "role_change": "Role change",
           "member_deactivated": "Deactivation",
           "member_invited": "Invite",
@@ -930,14 +925,14 @@
       },
       "closeEdit": "Close",
       "partner": {
-        "cardTitle": "Partner Program",
+        "cardTitle": "Partner contract",
         "alreadyPartnerTitle": "Partner Agreement Active",
-        "alreadyPartnerDesc": "Your company is an authorized partner. You have access to “My Products” to manage your catalog.",
+        "alreadyPartnerDesc": "Your partner contract is active. Products and prices are under My Products.",
         "toMyProducts": "Go to “My Products”",
         "applicationPendingDesc": "The application for partner status has been submitted and is under review by {{operator}}.",
         "contractValue": "No. {{number}} dated {{date}}",
         "contractSentDesc": "The partner agreement has been prepared and sent to your company for review and signing.",
-        "contractAgreedDesc": "The draft contract has been agreed by you and is awaiting digital signature by {{operator}} management.",
+        "contractAgreedDesc": "You agreed the draft contract. It now awaits our signature.",
         "status": {
           "submitted": "Under review",
           "contract_sent": "Contract sent",
@@ -950,14 +945,14 @@
         "downloadDraftPdf": "Download draft contract (PDF)",
         "agreeContractBtn": "Agree to draft contract",
         "agreeDialogTitle": "Draft contract agreement",
-        "agreeDialogDesc": "By confirming, you agree to the terms of the partnership contract and {{operator}} platform rules.",
+        "agreeDialogDesc": "By confirming, you accept the partner contract terms.",
         "agreeNotesLabel": "Notes or comments for agreement (optional)",
         "agreeSubmit": "Confirm agreement",
-        "agreeSuccess": "Draft contract successfully agreed! Application submitted for director approval.",
+        "agreeSuccess": "Draft contract agreed. We will tell you when the contract is signed.",
         "steps": {
           "application": "Application",
           "draft": "Draft contract",
-          "director": "Approval",
+          "director": "Signing",
           "active": "Partnership"
         },
         "notPartnerDesc": "Interested in supplying products through {{operator}}? Apply for a partnership agreement.",
@@ -1030,7 +1025,7 @@
     },
     "becomePartner": {
       "title": "Partner Application",
-      "subtitle": "Join the {{operator}} platform as a supplier or manufacturer",
+      "subtitle": "Do you supply equipment or spare parts? Tell us about your company and we will prepare a partner contract.",
       "backToLogin": "Back to login",
       "errors": {
         "companyNameRequired": "Please enter company name.",
@@ -1041,22 +1036,22 @@
       "fields": {
         "country": "Country of registration",
         "companyName": "Company name",
-        "companyNamePlaceholder": "{{operator}} Technologies LLC",
+        "companyNamePlaceholder": "LLC “Company name”",
         "inn": "Tax ID / INN (if applicable)",
         "innPlaceholder": "123456789",
         "registrationNumber": "Registration / Tax number",
         "registrationNumberPlaceholder": "Commercial registry or tax number",
         "kind": "Partner kind",
         "kinds": {
-          "supplier": "Supplier / Distributor",
+          "supplier": "Supplier",
           "manufacturer": "Manufacturer",
-          "principal": "General contractor / Principal",
+          "principal": "Contractor (repair, installation)",
           "other": "Other"
         },
         "categoriesDescription": "Supplied products and categories",
-        "categoriesDescriptionPlaceholder": "Describe product categories, assortment, brands or manufacturing facilities...",
+        "categoriesDescriptionPlaceholder": "For example: bearings and pump equipment, own plant in China",
         "contactName": "Contact person",
-        "contactNamePlaceholder": "John Doe",
+        "contactNamePlaceholder": "Full name",
         "email": "Work e-mail",
         "emailPlaceholder": "partner@example.uz",
         "phone": "Phone",
@@ -1067,14 +1062,14 @@
       "submit": "Submit Application",
       "submitting": "Submitting application…",
       "successTitle": "Application Received",
-      "successSubtitle": "Thank you for your interest in partnering with {{operator}}!",
+      "successSubtitle": "Thank you!",
       "nextStepsTitle": "What happens next?",
       "step1Title": "Data verification",
-      "step1Desc": "Our procurement and compliance team verifies company details and product assortment.",
+      "step1Desc": "We check your company details and product list.",
       "step2Title": "Partner agreement signing",
       "step2Desc": "We will prepare and send the partner agreement for review and signing.",
-      "step3Title": "Partner cabinet access",
-      "step3Desc": "Once the contract is active, access to “My Products” and price list uploads will be enabled."
+      "step3Title": "Partner account access",
+      "step3Desc": "Once the contract is signed, My Products opens for price-list uploads."
     },
     "team": {
       "title": "Team",
@@ -1094,13 +1089,13 @@
       "admin": "Administrator",
       "canActBadge": "Can approve",
       "viewOnlyBadge": "View only",
-      "grantAdmin": "Make admin",
-      "revokeAdmin": "Remove admin",
+      "grantAdmin": "Make administrator",
+      "revokeAdmin": "Remove administrator",
       "grantCanAct": "Allow approvals",
       "revokeCanAct": "Revoke approvals",
       "deactivate": "Deactivate",
       "deactivateTitle": "Deactivate colleague?",
-      "deactivateDesc": "{{name}} will immediately lose access to the company cabinet, and all their active sessions will be terminated.",
+      "deactivateDesc": "{{name}} will immediately lose access to your company account, and all their active sessions will be terminated.",
       "deactivateConfirm": "Yes, deactivate",
       "deactivated": "Colleague {{name}} deactivated",
       "updated": "Rights updated for {{name}}",
@@ -1108,7 +1103,7 @@
       "invitedAt": "Invited {{date}}, not signed in yet",
       "neverLoggedIn": "Not signed in yet",
       "inviteTitle": "Invite a colleague",
-      "inviteText": "Your colleague will get an invitation to the cabinet through the selected channels.",
+      "inviteText": "Your colleague will get an invitation to your account through the selected channels.",
       "inviteConfirm": "Send invitation",
       "invited": "Invitation for {{name}} sent",
       "fields": {
@@ -1188,12 +1183,12 @@
       "placeholder": "Your question or clarification",
       "hintWeb": "Enter to send, Shift+Enter for a new line",
       "hint": "The manager will reply here",
-      "viewOnly": "Only a contact who can confirm may write to the manager — you can only view",
+      "viewOnly": "Only a colleague with approval rights can write to the manager — you can only view",
       "send": "Send",
       "infoLabel": "About this conversation",
       "responder": "{{name}}, your manager, replies here",
-      "responderTeam": "The {{operator}} team replies here",
-      "visibleToCompany": "Everyone from your company in the cabinet can see this conversation",
+      "responderTeam": "Our team replies here",
+      "visibleToCompany": "Everyone from your company in your account can see this conversation",
       "attachHint": "Files can’t be attached to chat yet — attach them to a request.",
       "attachLink": "Go to requests",
       "deletedUser": "Deleted user",
@@ -1228,7 +1223,7 @@
       "views": {
         "orders": "Orders",
         "rfq": "Price Requests",
-        "finance": "Turnover & Scorecard"
+        "finance": "Turnover and performance"
       },
       "finance": {
         "balancesTitle": "Order turnover by currency",
@@ -1238,14 +1233,14 @@
         "receivedTotal": "Received",
         "inTransitTotal": "Shipped, not received",
         "receiptsCount": "Receipts",
-        "scorecardTitle": "Supplier Performance Scorecard",
-        "otifRate": "OTIF (On-Time In-Full)",
+        "scorecardTitle": "Your performance",
+        "otifRate": "Delivered on time and in full",
         "rfqRate": "Price request response rate",
         "freshnessRate": "Price Freshness in Catalog",
         "otifOrdersCount": "Orders measured: {{count}}",
         "avgResponse": "Average reply: {{hours}} h",
         "noData": "No data",
-        "totalRfqsCount": "Delivered requests: {{count}}",
+        "totalRfqsCount": "Price requests received: {{count}}",
         "activeOffersCount": "Active offers: {{count}}",
         "excellent": "Excellent",
         "target": "Below target",
@@ -1313,11 +1308,11 @@
         "expectedDateLabel": "Expected delivery date",
         "shipTitle": "Shipping notice",
         "shipDescription": "Provide shipping document details and carrier information so our warehouse can prepare for receiving.",
-        "supplierDocLabel": "Supplier waybill / invoice number",
+        "supplierDocLabel": "Waybill or tax invoice number",
         "supplierDocPlaceholder": "e.g. WB-402 dated 08.11.2026",
-        "carrierLabel": "Carrier / Logistics company",
-        "carrierPlaceholder": "e.g. Road freight / DHL",
-        "trackingNumberLabel": "Tracking / Vehicle plate number",
+        "carrierLabel": "Carrier",
+        "carrierPlaceholder": "For example: rail or road carrier",
+        "trackingNumberLabel": "Plate or tracking number",
         "trackingNumberPlaceholder": "e.g. 01 A 777 AA or tracking code",
         "noteLabel": "Shipping note",
         "notePlaceholder": "Number of pallets, unloading instructions…",
@@ -1356,8 +1351,8 @@
     "FORBIDDEN": "You do not have the right to do this.",
     "NOT_FOUND": "Not found.",
     "VALIDATION_ERROR": "Check the fields you filled in.",
-    "INVALID_INIT_DATA": "Telegram did not confirm the sign-in. Open the cabinet from the bot again.",
-    "CONTACT_NOT_FOUND": "Contact not found. Ask your manager to invite you to the cabinet.",
+    "INVALID_INIT_DATA": "Telegram did not confirm the sign-in. Open your account from the bot again.",
+    "CONTACT_NOT_FOUND": "Contact not found. Ask your manager to invite you to your account.",
     "MAGIC_LINK_EXPIRED": "The sign-in link has expired or was already used.",
     "QUOTE_FINALIZED": "The quote was already accepted or rejected — refresh the page.",
     "ACT_FINALIZED": "The act was already accepted or returned — refresh the page.",
@@ -1380,11 +1375,11 @@
     "CONFLICT": "The data has changed — reload the page and try again.",
     "IDEMPOTENCY_KEY_REQUIRED": "The server rejected the request. Reload the page and try again.",
     "UNSUPPORTED_MEDIA_TYPE": "The server rejected the request. Reload the page and try again.",
-    "INVOICE_NOT_OPEN": "The invoice is already paid or cancelled — no payment order needed. Refresh the page.",
+    "INVOICE_NOT_OPEN": "The invoice is already paid or cancelled. Refresh the page.",
     "TEXT_REQUIRED": "Write the comment text.",
     "LOGIN_CODE_INVALID": "The code is wrong or expired. Check the email or send a new code.",
     "LOGIN_CODE_LOCKED": "Five wrong codes in a row — this code no longer works. Press “Send again” to get a new one.",
-    "CONTACT_NOT_IN_CRM": "Telegram cannot be connected yet: your manager has not added you to the system. Please write to them.",
+    "CONTACT_NOT_IN_CRM": "You can connect Telegram once your manager gives you access — write to them.",
     "TELEGRAM_LINK_UNAVAILABLE": "Connecting Telegram is not available right now. Please try again later.",
     "TELEGRAM_NOT_LINKED": "Telegram is not linked. Please connect it again.",
     "TELEGRAM_ALREADY_LINKED": "Telegram is already connected. To connect another account, unlink this one first.",
@@ -1395,11 +1390,11 @@
     "OFFER_EXPIRED": "The price has expired and cannot be confirmed. Upload a new price list.",
     "IMPORT_FAILED": "The file could not be accepted. Please try again in a moment.",
     "CONSENT_REQUIRED": "Consent to personal data processing is required.",
-    "HONEYPOT_DETECTED": "Suspicious form activity detected.",
+    "HONEYPOT_DETECTED": "The form was not sent. Refresh the page and try again.",
     "ALREADY_PARTNER": "Your company already has an active partner agreement.",
     "APPLICATION_EXISTS": "An application for partner status is already under review.",
     "PARTNER_APPLICATION_NOT_FOUND": "Partner application not found.",
-    "LAST_ADMIN_CANNOT_BE_REMOVED": "Cannot remove administrator role from the company’s only administrator.",
+    "LAST_ADMIN_CANNOT_BE_REMOVED": "Cannot remove administrator rights from the company’s only administrator.",
     "CANNOT_DEACTIVATE_SELF": "Cannot deactivate your own account.",
     "CANNOT_ELEVATE_RIGHTS": "Cannot grant rights higher than your own.",
     "ADMIN_REQUIRED": "This action requires company administrator rights.",
@@ -1440,7 +1435,7 @@
       "actBadge": "Act",
       "acceptAct": "Accept act",
       "titleViewer": "Awaiting your company’s decision",
-      "viewerHint": "A contact with approval rights decides",
+      "viewerHint": "A colleague with approval rights decides",
       "deliveryBadge": "Delivery",
       "acceptDelivery": "Confirm delivery",
       "partnerContractBadge": "Agreement",
@@ -1453,7 +1448,7 @@
       "productRemarkBadge": "Product",
       "fixProductRemarks": "Address supply remarks",
       "remarks": "Remarks",
-      "messagesBadge": "Chat",
+      "messagesBadge": "Messages",
       "unreadMessages": "Unread messages: {{count}}",
       "replyManager": "Reply to manager"
     }
@@ -1476,7 +1471,7 @@
   },
   "telegramBanner": {
     "label": "Telegram notifications",
-    "text": "Connect Telegram to get notifications instantly",
+    "text": "Connect Telegram to get notifications in the bot",
     "connect": "Connect",
     "later": "Later"
   },
@@ -1539,7 +1534,7 @@
     "reset": "Clear search",
     "attention": {
       "title": "Prices need attention",
-      "text": "Outdated: {{stale}}. Expired: {{expired}}. Expiring soon: {{expiring}}. Confirm that your prices are current — it takes one click.",
+      "text": "Outdated: {{stale}}. Expired: {{expired}}. Expiring soon: {{expiring}}. Confirm that your prices are current.",
       "expiredHint": "Expired prices cannot be confirmed — upload a new price list."
     },
     "empty": {
@@ -1565,7 +1560,7 @@
     "submitted": {
       "title_one": "{{count}} card submitted",
       "title_other": "{{count}} cards submitted",
-      "sla": "Review usually takes 1 business day. The result appears in this tab: “Published” or “Returned” with a reason.",
+      "sla": "The result appears in this tab: Published, or Returned with a reason.",
       "failed": "Not submitted: {{count}}",
       "code": {
         "NOT_FOUND": "card not found",
@@ -1630,7 +1625,7 @@
           "other": "Other Document"
         },
         "docTitle": "Document Title",
-        "docTitlePlaceholder": "e.g. GOST 7798-70 Certificate of Conformity",
+        "docTitlePlaceholder": "e.g. Certificate of conformity for pump CM 50-200",
         "number": "Document Number",
         "numberPlaceholder": "e.g. EAEU RU C-RU.AY46.V.00001/26",
         "issuedBy": "Issuing Body",
@@ -1771,7 +1766,7 @@
       "act_issued_reminder": "Reminder: act {{number}} is awaiting acceptance",
       "delivery_status_changed": "Delivery for project {{deal}}: {{status}}",
       "delivery_eta_changed": "Delivery date for project {{deal}} changed: now {{eta}}",
-      "manager_replied": "Your manager replied in the chat",
+      "manager_replied": "Your manager replied in Messages",
       "partner_card_returned": "Product card «{{number}}» was returned for revision",
       "partner_order_sent": "New purchase order #{{number}} has been sent",
       "partner_rfq_sent": "New price request: {{number}}",
@@ -1788,7 +1783,7 @@
   "verify": {
     "pageTitle": "Document Verification",
     "verifiedBadge": "Authenticity Confirmed",
-    "verifiedSub": "Official document issued and signed in {{operator}}",
+    "verifiedSub": "Official document, issued and signed by our company",
     "revokedBadge": "Document Revoked",
     "revokedSub": "This document has been revoked and is no longer legally valid",
     "revokedReason": "Revocation reason",
@@ -1809,8 +1804,8 @@
     "fileVerifyTitle": "File Integrity Verification",
     "fileVerifyDesc": "Upload the document file (PDF) to verify it has not been modified since signing.",
     "dropzonePrompt": "Drop PDF here or click to select",
-    "hashMatch": "Checksum matches. The file is authentic and has not been altered.",
-    "hashMismatch": "Checksum DOES NOT match! The file has been modified or corrupted.",
+    "hashMatch": "This file matches the signed original.",
+    "hashMismatch": "This file differs from the signed original: it was changed or damaged.",
     "calculatingHash": "Calculating checksum…",
     "fileHashLabel": "Uploaded file hash",
     "expectedHashLabel": "Expected original hash",
@@ -1839,9 +1834,9 @@
     "companyRequisites": "Company details",
     "companyRequisitesDesc": "Verify Tax ID/Reg number, phone and bank",
     "telegramNotif": "Telegram notifications",
-    "telegramNotifDesc": "Instant alerts about documents and invoices",
+    "telegramNotifDesc": "Document and invoice notifications in the bot",
     "firstRequest": "Create first request",
-    "firstRequestDesc": "Submit a request for quotation",
+    "firstRequestDesc": "Describe what you need — we’ll send a quote",
     "uploadPriceList": "Upload price list",
     "uploadPriceListDesc": "Download Excel template and upload products",
     "partnerContract": "Partner contract draft",
@@ -1850,8 +1845,8 @@
     "inviteTeamDesc": "Add team members for collaboration"
   },
   "maintenance": {
-    "soon": "Cabinet update at {{time}} — work will be interrupted for {{duration}}. Save your changes.",
-    "soonUrgent": "Urgent Cabinet fix at {{time}} — work will be interrupted for {{duration}}. Save your changes.",
+    "soon": "Update at {{time}} — work will be interrupted for {{duration}}. Save your changes.",
+    "soonUrgent": "Urgent fix at {{time}} — work will be interrupted for {{duration}}. Save your changes.",
     "running": "Update in progress — the page will refresh by itself in a couple of minutes.",
     "runningUrgent": "Urgent fix in progress — the page will refresh by itself in a couple of minutes.",
     "minutes_one": "{{range}} minute",
@@ -1859,8 +1854,8 @@
     "hide": "Hide"
   },
   "legal": {
-    "title": "Terms for using the cabinet",
-    "intro": "To continue, read and accept the personal data processing policy and the terms of use of the cabinet (the offer). You do this once — we ask again only when a new edition is published.",
+    "title": "Terms for using the account",
+    "intro": "To continue, read and accept the personal data processing policy and the terms of use of the account (the offer). You do this once — we ask again only when a new edition is published.",
     "documents": "Documents",
     "tabs": {
       "terms": "Terms of use",
@@ -1872,10 +1867,10 @@
     "accepting": "Saving…",
     "decline": "I do not accept",
     "declined": {
-      "title": "The cabinet stays closed until you accept",
-      "text": "We cannot open the cabinet until the terms and the policy are accepted. When you are ready, sign in again and accept them; you can ask your manager any questions.",
+      "title": "Your account stays closed until you accept",
+      "text": "We cannot open your account until the terms and the policy are accepted. When you are ready, sign in again and accept them; you can ask your manager any questions.",
       "back": "Back to the text",
-      "loginNotice": "You did not accept the terms and the policy, so you have been signed out. To work in the cabinet, sign in again and accept them."
+      "loginNotice": "You did not accept the terms and the policy, so you have been signed out. To work in your account, sign in again and accept them."
     },
     "policyLink": "Personal data processing policy",
     "notPublished": "The policy has not been published yet.",
@@ -1891,7 +1886,7 @@
       "validUntil": "Valid until",
       "dueDate": "Pay by",
       "balance": "Balance due",
-      "signedAt": "Signed by you",
+      "signedAt": "Agreed by you",
       "issuedAt": "Issued",
       "expectedDate": "Delivery date",
       "confirmedAt": "Confirmed by you",
@@ -1918,8 +1913,8 @@
       "accept": "Accept the quote",
       "reject": "Return with remarks",
       "question": "Ask a question",
-      "open": "Open the cabinet",
-      "accept_contract": "Sign the contract",
+      "open": "Open your account",
+      "accept_contract": "Agree the contract",
       "accept_act": "Accept the act",
       "answer": "Answer the request",
       "confirm": "Confirm the order"
@@ -1928,10 +1923,10 @@
     "memberNote": "You are signed in as {{name}} — no code needed.",
     "linkUntil": "The link works until {{date}} — the sender can revoke it.",
     "state": {
-      "accepted": "The quote is accepted. The contract will appear in your cabinet.",
+      "accepted": "The quote is accepted. The contract will appear in your account.",
       "rejected": "The quote was returned with remarks.",
-      "expired": "The quote has expired. Ask the seller to update it.",
-      "accepted_contract": "You have signed the contract. The invoice comes next.",
+      "expired": "The quote has expired. Ask your manager to update it.",
+      "accepted_contract": "You agreed the contract. We will sign it via e-document exchange and let you know.",
       "accepted_act": "The act is accepted.",
       "rejected_act": "The act was returned with remarks.",
       "paid": "The invoice is paid.",
@@ -1940,14 +1935,14 @@
       "cancelled": "The order was cancelled by the sender."
     },
     "reason": {
-      "no_right": "Your contact has no right to decide — ask your company administrator.",
-      "no_access": "Your cabinet access has no «Quotes» section.",
-      "other_company": "You are signed in to another company's cabinet.",
-      "no_contact": "The recipient address is not connected to the cabinet — contact the sender.",
+      "no_right": "You can't make this decision — ask your company administrator.",
+      "no_access": "Your access has no Quotes section.",
+      "other_company": "You are signed in to another company's account.",
+      "no_contact": "The recipient address is not connected to an account — contact the sender.",
       "no_access_partner": "Your cabinet access has no “My products” section."
     },
     "otherCompany": {
-      "title": "You are in another cabinet",
+      "title": "You are in another account",
       "text": "This link is addressed to another company: actions on it are unavailable. Sign out and open the link again.",
       "signOut": "Sign out"
     },
@@ -1967,11 +1962,11 @@
       "codeShort": "Enter the six digits of the code.",
       "legal": "On your first sign-in you accept the terms of use and the personal data policy — without consent the action is not performed.",
       "memberTitle": "Accept the quote?",
-      "memberText": "Total {{total}}. The contract will appear in your cabinet.",
+      "memberText": "Total {{total}}. The contract will appear in your account.",
       "working": "Working…",
-      "openTitle": "Open the cabinet",
-      "memberTitle_contract": "Sign the contract?",
-      "memberText_contract": "Amount {{total}}. By signing you accept the terms of the contract.",
+      "openTitle": "Open your account",
+      "memberTitle_contract": "Agree the contract?",
+      "memberText_contract": "Total {{total}}. You confirm that you agree with the contract text.",
       "memberTitle_act": "Accept the act?",
       "memberText_act": "Amount {{total}}. An accepted act cannot be returned.",
       "noteRequired": "Write a comment for the answer.",
@@ -1988,7 +1983,7 @@
       "accept": "Quote accepted",
       "reject": "Remarks sent",
       "question": "Question sent to the manager",
-      "accept_contract": "Contract signed",
+      "accept_contract": "You agreed the contract",
       "accept_act": "Act accepted",
       "reject_act": "Remarks sent",
       "answer": "Answer sent",
@@ -2021,7 +2016,7 @@
     "pay": {
       "title": "Payment details",
       "none": "The details are in the invoice PDF.",
-      "paidQuestion": "Already paid? The payment appears in the invoice once the seller confirms it. You can attach the payment order in the cabinet."
+      "paidQuestion": "Already paid? It appears in the invoice once we confirm it. You can attach the payment order in your account."
     },
     "about": {
       "title_contract": "About the document",

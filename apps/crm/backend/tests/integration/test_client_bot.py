@@ -74,7 +74,7 @@ async def test_client_documents_request_and_status(
     assert "нет" in (await bot.request_status(USER) or "").lower()
     created = await bot.create_request(USER, "Нужен акт сверки за сентябрь")
     assert created is not None
-    assert "передан менеджеру" in created
+    assert "передано менеджеру" in created
     async with sessions() as session:
         request = (await session.scalars(select(ServiceRequest))).one()
         escalation = (await session.scalars(select(Escalation))).one()

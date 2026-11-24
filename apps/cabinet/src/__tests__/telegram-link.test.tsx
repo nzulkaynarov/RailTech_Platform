@@ -47,7 +47,7 @@ describe('плашка «Подключите Telegram»', () => {
     await openBell(user);
     const banner = await screen.findByRole('region', { name: BANNER });
     expect(banner.closest('[role="dialog"]')).not.toBeNull();
-    expect(within(banner).getByText('Подключите Telegram — уведомления мгновенно')).toBeInTheDocument();
+    expect(within(banner).getByText('Подключите Telegram, чтобы получать уведомления в боте')).toBeInTheDocument();
     // axe — только плашки: проверка всей страницы «Запросы» (таблица, карточки, меню) занимала ~3,5 с и под нагрузкой
     // выводила этот первый тест файла за тестовый таймаут; саму страницу проверяют её тесты.
     expect((await axe(banner)).violations).toEqual([]);
@@ -206,11 +206,10 @@ describe('Профиль → «Уведомления»', () => {
     signedIn();
     renderApp('/profile');
     const card = await notificationsCard();
-    expect(await within(card).findByText(/после того, как менеджер добавит вас в систему/)).toBeInTheDocument();
+    expect((await within(card).findAllByText(/когда менеджер откроет вам доступ/)).length).toBeGreaterThan(0);
     expect(within(card).queryByRole('button', { name: 'Подключить Telegram' })).not.toBeInTheDocument();
     // Не тупик: ручка — написать менеджеру; ниже не зовут «подключить бот выше».
     expect(within(card).getByRole('link', { name: 'Написать менеджеру' })).toHaveAttribute('href', expect.stringContaining('/messages'));
-    expect(await screen.findByText(/Telegram подключится, когда менеджер добавит вас в систему/)).toBeInTheDocument();
     expect(screen.queryByText(/Подключите бот выше/)).not.toBeInTheDocument();
   });
 

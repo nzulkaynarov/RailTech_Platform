@@ -238,7 +238,7 @@ describe('документ по ссылке: вошедший контакт', 
     signedIn('viewer');
     open(VIEWER);
 
-    expect(await screen.findByText(/qaror qabul qilişga huquq yöq/)).toBeInTheDocument();
+    expect(await screen.findByText(/qaror qabul qiliş huquqi yöq/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Taklifni qabul qiliş' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Savol beriş' })).toBeDisabled();
   });

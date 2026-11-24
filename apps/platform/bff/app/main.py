@@ -28,6 +28,7 @@ from app.api import (
     contract_templates,
     crm_clients,
     crm_kb,
+    crm_lead_actions,
     crm_leads,
     crm_messages,
     crm_requests,
@@ -62,6 +63,7 @@ from app.api import (
     me_second_factor,
     notifications,
     people_contacts,
+    people_leads,
     people_pictures,
     search,
     setup,
@@ -148,6 +150,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(admin_bot.router, prefix=API_PREFIX)
     app.include_router(crm_kb.router, prefix=API_PREFIX)
     app.include_router(crm_messages.router, prefix=API_PREFIX)
+    app.include_router(crm_lead_actions.router, prefix=API_PREFIX)
     app.include_router(chats.router, prefix=API_PREFIX)
     app.include_router(crm_leads.router, prefix=API_PREFIX)
     app.include_router(crm_clients.router, prefix=API_PREFIX)
@@ -168,6 +171,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(erp_partner_applications.router, prefix=API_PREFIX)
     app.include_router(erp_supplier_access.router, prefix=API_PREFIX)
     app.include_router(people_contacts.router, prefix=API_PREFIX)
+    app.include_router(people_leads.router, prefix=API_PREFIX)
     app.include_router(people_pictures.router, prefix=API_PREFIX)
     app.include_router(erp_docs.router, prefix=API_PREFIX)
     app.include_router(erp_images.router, prefix=API_PREFIX)

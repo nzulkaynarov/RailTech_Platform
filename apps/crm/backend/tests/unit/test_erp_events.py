@@ -310,7 +310,7 @@ async def test_quote_sent_prepares_a_client_message_with_the_link_button() -> No
     (item,) = notices.items
     assert item["kind"] == "client"
     assert item["client_id"] == 101
-    assert "коммерческое предложение" in item["text"]
+    assert "КП по заявке" in item["text"]
     assert item["buttons"], "кнопка со ссылкой на КП"
     assert notices.added[0][0] == event.id, "ключ сообщений — id события шины"
 
@@ -321,7 +321,7 @@ async def test_quote_sent_prepares_a_client_message_with_the_link_button() -> No
     [
         (
             "ru",
-            "коммерческое предложение",
+            "КП по заявке",
             [
                 ["Открыть КП", "https://erp.example.com/q/42"],
                 ["Кабинет", "https://cab.example.com"],
@@ -337,10 +337,10 @@ async def test_quote_sent_prepares_a_client_message_with_the_link_button() -> No
         ),
         (
             "en",
-            "commercial proposal",
+            "quote for request",
             [
                 ["Open the quote", "https://erp.example.com/q/42"],
-                ["Cabinet", "https://cab.example.com"],
+                ["Account", "https://cab.example.com"],
             ],
         ),
     ],

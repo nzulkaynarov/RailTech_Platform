@@ -311,7 +311,7 @@ def test_client_mails_point_to_profile_notifications_and_carry_no_token(settings
     for message in (invitation, quote):
         html = message.alternatives[0][0]
         assert target in message.body and target in html
-        assert "Получать мгновенно в Telegram" in message.body and "Получать мгновенно в Telegram" in html
+        assert "Уведомления в Telegram" in message.body and "Уведомления в Telegram" in html
         assert "start=" not in message.body and "start=" not in html, "токен привязки в письмо не кладётся"
     assert invitation.alternatives[0][0].count(target) == 1, "в приглашении — в тексте письма, без повтора в подвале"
     assert target not in staff.body and target not in staff.alternatives[0][0], "письма сотрудникам — без строки"
@@ -324,7 +324,7 @@ def test_client_mails_point_to_profile_notifications_and_carry_no_token(settings
         language="ru",
     )
     stranger = mail.outbox[-1]
-    assert "Получать мгновенно в Telegram" not in stranger.body
+    assert "Уведомления в Telegram" not in stranger.body
     assert target not in stranger.alternatives[0][0]
 
 

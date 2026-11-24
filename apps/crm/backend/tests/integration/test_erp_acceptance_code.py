@@ -181,7 +181,7 @@ async def test_an_unlinked_primary_contact_gets_the_code_on_the_client_telegram(
 
 @pytest.mark.parametrize(
     ("language", "needle"),
-    [("ru", "Код подтверждения"), ("uz", "tasdiqlash kodi"), ("en", "Confirmation code")],
+    [("ru", "Код для принятия"), ("uz", "qabul qiliş kodi"), ("en", "Code to accept")],
 )
 async def test_the_text_is_in_the_language_of_the_lead(
     harness: Harness, language: str, needle: str

@@ -1,13 +1,13 @@
 {% extends "emails/base.html" %}
 {% load i18n %}
-{% block subject %}{% if kind == 'contract' %}{% blocktranslate %}Договор № {{ number }} на подписание{% endblocktranslate %}{% elif kind == 'act' %}{% blocktranslate %}Акт № {{ number }} ждёт вашего ответа{% endblocktranslate %}{% elif reminder %}{% blocktranslate %}Напоминание: счёт № {{ number }}{% endblocktranslate %}{% else %}{% blocktranslate %}Счёт № {{ number }} на оплату{% endblocktranslate %}{% endif %}{% endblock %}
+{% block subject %}{% if kind == 'contract' %}{% blocktranslate %}Договор № {{ number }} на согласование{% endblocktranslate %}{% elif kind == 'act' %}{% blocktranslate %}Акт № {{ number }} ждёт вашего ответа{% endblocktranslate %}{% elif reminder %}{% blocktranslate %}Напоминание: счёт № {{ number }}{% endblocktranslate %}{% else %}{% blocktranslate %}Счёт № {{ number }} на оплату{% endblocktranslate %}{% endif %}{% endblock %}
 {% block header_hint %}{% if kind == 'contract' %}{% translate "Договор" %}{% elif kind == 'act' %}{% translate "Акт" %}{% else %}{% translate "Счёт к оплате" %}{% endif %}{% endblock %}
 {% block content %}
   <h1 style="margin:0 0 16px 0; font-size:22px; line-height:1.3; color:#111827;">
     {% translate "Здравствуйте" %}{% if recipient_name %}, {{ recipient_name }}{% endif %}!
   </h1>
   <p style="margin:0 0 16px 0;">
-    {% if kind == 'contract' %}{% if seller_name %}{% blocktranslate %}Компания <strong>{{ seller_name }}</strong> отправила договор <strong>№ {{ number }}</strong> на подписание.{% endblocktranslate %}{% else %}{% blocktranslate %}Вам отправлен договор <strong>№ {{ number }}</strong> на подписание.{% endblocktranslate %}{% endif %}
+    {% if kind == 'contract' %}{% if seller_name %}{% blocktranslate %}Компания <strong>{{ seller_name }}</strong> отправила договор <strong>№ {{ number }}</strong> на согласование.{% endblocktranslate %}{% else %}{% blocktranslate %}Вам отправлен договор <strong>№ {{ number }}</strong> на согласование.{% endblocktranslate %}{% endif %}
     {% elif kind == 'act' %}{% if seller_name %}{% blocktranslate %}Компания <strong>{{ seller_name }}</strong> выставила акт <strong>№ {{ number }}</strong>. Примите его или верните с замечаниями.{% endblocktranslate %}{% else %}{% blocktranslate %}Вам выставлен акт <strong>№ {{ number }}</strong>. Примите его или верните с замечаниями.{% endblocktranslate %}{% endif %}
     {% elif reminder %}{% blocktranslate %}Срок оплаты счёта <strong>№ {{ number }}</strong> прошёл.{% endblocktranslate %}
     {% else %}{% if seller_name %}{% blocktranslate %}Компания <strong>{{ seller_name }}</strong> выставила счёт <strong>№ {{ number }}</strong> на оплату.{% endblocktranslate %}{% else %}{% blocktranslate %}Вам выставлен счёт <strong>№ {{ number }}</strong> на оплату.{% endblocktranslate %}{% endif %}{% endif %}

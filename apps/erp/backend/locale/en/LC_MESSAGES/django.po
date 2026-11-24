@@ -7078,7 +7078,120 @@ msgstr "Open the document online"
 msgid "Открыть документ онлайн:"
 msgstr "Open the document online:"
 
-# ── emails/partner_document_sent.*, supply/partner_document_pdf.html, price_request (ДК-5) ──────────────
+# ── cc2: copy cleanup 2026-11-24 ──
+msgid "(проект «%(deal_title)s»)"
+msgstr "(project «%(deal_title)s»)"
+
+msgid "Изменился статус поставки по проекту %(deal)s"
+msgstr "Delivery status changed for project %(deal)s"
+
+msgid "Изменился срок поставки по проекту %(deal)s"
+msgstr "Delivery date changed for project %(deal)s"
+
+msgid "Статус поставки по проекту %(deal)s изменился."
+msgstr "The delivery status for project %(deal)s has changed."
+
+msgid "Ожидаемая дата поставки по проекту %(deal)s — %(eta)s."
+msgstr "The expected delivery date for project %(deal)s is %(eta)s."
+
+msgid "Договор № %(number)s на согласование"
+msgstr "Contract No. %(number)s for approval"
+
+msgid "Компания <strong>%(seller_name)s</strong> отправила договор <strong>№ %(number)s</strong> на согласование."
+msgstr "<strong>%(seller_name)s</strong> sent you contract <strong>No. %(number)s</strong> for approval."
+
+msgid "Вам отправлен договор <strong>№ %(number)s</strong> на согласование."
+msgstr "Contract <strong>No. %(number)s</strong> has been sent to you for approval."
+
+msgid "Компания %(seller_name)s отправила договор № %(number)s на согласование."
+msgstr "%(seller_name)s sent you contract No. %(number)s for approval."
+
+msgid "Вам отправлен договор № %(number)s на согласование."
+msgstr "Contract No. %(number)s has been sent to you for approval."
+
+msgid "Письмо отправлено автоматически. Ответить можно в кабинете или вашему менеджеру."
+msgstr "This e-mail was sent automatically. You can reply in your account or to your manager."
+
+msgid "Уведомления в Telegram"
+msgstr "Telegram notifications"
+
+msgid "подключите бот в кабинете: Профиль → «Уведомления»."
+msgstr "connect the bot in your account: Profile → «Notifications»."
+
+msgid "Вас пригласили в кабинет компании <strong>«%(company)s»</strong>."
+msgstr "You have been invited to the account of <strong>«%(company)s»</strong>."
+
+msgid "Вас пригласили в кабинет компании «%(company)s»."
+msgstr "You have been invited to the account of «%(company)s»."
+
+msgid "после входа подключите бот в разделе Профиль → «Уведомления»: счета, акты и ответы менеджера придут в Telegram."
+msgstr "after signing in, connect the bot in Profile → «Notifications»: invoices, acts and manager replies will arrive in Telegram."
+
+msgid "Приглашение в кабинет «%(company)s»"
+msgstr "Invitation to the «%(company)s» account"
+
+msgid "Вы запросили вход в кабинет компании «%(company)s»."
+msgstr "You requested to sign in to the account of «%(company)s»."
+
+msgid "Для вас открыт доступ"
+msgstr "Access has been set up for you"
+
+msgid "Чтобы войти, задайте пароль — до этого войти нельзя."
+msgstr "To sign in, set a password — you cannot sign in before that."
+
+msgid "Для вас открыт доступ. Чтобы войти, задайте пароль по ссылке:"
+msgstr "Access has been set up for you. To sign in, set a password using the link:"
+
+msgid "Вас пригласили в команду"
+msgstr "You have been invited to the team"
+
+msgid "Компания <strong>%(company_name)s</strong> приглашает вас в свою команду. Чтобы принять приглашение, задайте пароль для своего аккаунта."
+msgstr "<strong>%(company_name)s</strong> invites you to its team. To accept, set a password for your account."
+
+msgid ""
+"Вас пригласили в команду компании «%(company_name)s».\n"
+"Чтобы принять приглашение, задайте пароль по ссылке:"
+msgstr ""
+"You have been invited to the team of «%(company_name)s».\n"
+"To accept the invitation, set a password using the link:"
+
+msgid "Сброс пароля"
+msgstr "Password reset"
+
+msgid "Вы запросили сброс пароля. Задайте новый пароль по ссылке ниже — она действительна в течение суток."
+msgstr "You requested a password reset. Set a new password using the link below — it is valid for 24 hours."
+
+msgid "Вы запросили сброс пароля. Чтобы задать новый пароль, перейдите по ссылке:"
+msgstr "You requested a password reset. To set a new password, follow the link:"
+
+msgid "Для вас открыт доступ. Чтобы войти, задайте пароль — это займёт меньше минуты."
+msgstr "Access has been set up for you. To sign in, set a password — it takes under a minute."
+
+msgid "Не ожидали это письмо? Проигнорируйте его — никаких действий не требуется."
+msgstr "Not expecting this e-mail? Ignore it — no action is needed."
+
+msgid "Если вы не ожидали это письмо, просто проигнорируйте его."
+msgstr "If you were not expecting this e-mail, just ignore it."
+
+msgid "Готовим договор <strong>%(contract_number)s</strong> — он появится в кабинете для согласования."
+msgstr "We are preparing contract <strong>%(contract_number)s</strong> — it will appear in your account for approval."
+
+msgid "Готовим договор %(contract_number)s — он появится в кабинете для согласования."
+msgstr "We are preparing contract %(contract_number)s — it will appear in your account for approval."
+
+msgid "Принятие КП — ещё не подпись договора: договор подписывается отдельно."
+msgstr "Accepting the quote is not yet signing the contract: the contract is signed separately."
+
+msgid "Предложение %(quote_number)s принято — готовим договор"
+msgstr "Quote %(quote_number)s accepted — we are preparing the contract"
+
+msgid "Проект:"
+msgstr "Project:"
+
+msgid "Подписано"
+msgstr "Signed"
+
+# ── ДК-5: письмо партнёру, PDF запроса и заказа ──
 msgid "Заказ поставщику № %(number)s"
 msgstr "Supplier order No. %(number)s"
 

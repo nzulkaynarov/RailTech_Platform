@@ -84,9 +84,9 @@ class TextsSettings(ClientBotTexts):
     # латиница: oʻ/gʻ (U+02BB), тутук-белги ʼ (U+02BC).
     consent_version: str = "2026-10-08"
     greeting: LocalizedText = _t(
-        "Здравствуйте! Я ассистент компании {company}. Отвечаю на вопросы о наших продуктах и услугах и, если нужно, подключу менеджера.",
-        "Assalomu alaykum! Men {company} kompaniyasining yordamchisiman. Mahsulot va xizmatlarimiz haqidagi savollarga javob beraman, kerak boʻlsa, menejerni ulayman.",
-        "Hello! I'm the {company} assistant. I answer questions about our products and services and can connect you with a manager when needed.",
+        "Здравствуйте! Я ассистент {company}. Отвечаю на вопросы о поставках оборудования и запчастей, при необходимости подключу менеджера.",
+        "Assalomu alaykum! Men {company} yordamçisiman. Uskuna va ehtiyot qismlar yetkazib beriş haqidagi savollarga javob beraman, kerak bölsa menejerni ulayman.",
+        "Hello! I'm the {company} assistant. I answer questions about equipment and spare-parts supply and can bring in a manager.",
     )
     consent: LocalizedText = _t(
         "Чтобы продолжить, подтвердите согласие на обработку персональных данных. Переписка хранится в системе компании и обрабатывается внешними ИИ-сервисами для подготовки ответов. Удалить переписку можно в любой момент командой /delete.",
@@ -118,38 +118,38 @@ class TextsSettings(ClientBotTexts):
         "Iltimos, avval quyidagi tugma orqali roziligingizni tasdiqlang.",
         "Please confirm your consent with the button below first.",
     )
-    # {sla} — «Обычно отвечаем в течение N минут…» (`sla_promise`, N — SLA эскалации).
+    # {sla} — «Менеджер ответит в рабочее время» (`sla_promise`): без минут, внутренний SLA клиенту не обещаем.
     handoff: LocalizedText = _t(
-        "Передаю ваш запрос менеджеру — он ответит здесь. {sla}.",
-        "Soʻrovingizni menejerga yuboraman — u shu yerda javob beradi. {sla}.",
-        "I'm passing your request to a manager, who will reply here. {sla}.",
+        "Передаю ваш вопрос менеджеру. {sla}.",
+        "Savolingizni menejerga yuboraman. {sla}.",
+        "I'm passing your question to a manager. {sla}.",
     )
     # {next} — ближайшее рабочее время с учётом праздников («завтра с 9:00»);
     # {hours} — расписание словами («пн–пт с 9:00 до 18:00 по Ташкенту»).
     off_hours: LocalizedText = _t(
-        "Передаю ваш запрос менеджеру. Сейчас нерабочее время — ответим {next}.",
-        "Soʻrovingizni menejerga yuboraman. Hozir ish vaqti emas — {next} javob beramiz.",
-        "I'm passing your request to a manager. It's outside working hours now — we'll reply {next}.",
+        "Передаю ваш вопрос менеджеру. Сейчас нерабочее время — ответим {next}.",
+        "Savolingizni menejerga yuboraman. Hozir ish vaqti emas — {next} javob beramiz.",
+        "I'm passing your question to a manager. It's outside working hours now — we'll reply {next}.",
     )
     waiting_for_manager: LocalizedText = _t(
-        "Ваше сообщение передано менеджеру, он скоро ответит.",
-        "Xabaringiz menejerga yuborildi, u tez orada javob beradi.",
-        "Your message has been passed to a manager, who will reply soon.",
+        "Ваше сообщение передано менеджеру. Менеджер ответит в рабочее время.",
+        "Xabaringiz menejerga yuborildi. Menejer ish vaqtida javob beradi.",
+        "Your message has been passed to a manager. A manager will reply during business hours.",
     )
     # Честно: ответа нет, вернуться с ним бот не может — предлагаем менеджера (Q-016).
     fallback: LocalizedText = _t(
-        "В моих материалах нет точного ответа на этот вопрос. Передать его менеджеру? Он ответит здесь же.",
-        "Materiallarimda bu savolga aniq javob yoʻq. Savolni menejerga yuboraymi? U shu yerda javob beradi.",
-        "I don't have a reliable answer to that in my materials. Shall I pass it to a manager? They'll reply right here.",
+        "Точного ответа у меня нет. Передать вопрос менеджеру? Он ответит здесь же.",
+        "Aniq javobim yöq. Savolni menejerga yuboraymi? U şu yerda javob beradi.",
+        "I don't have an exact answer. Shall I pass it to a manager? They'll reply here.",
     )
     handoff_offer_yes: LocalizedText = _t(
         "Позвать менеджера", "Menejerni chaqirish", "Talk to a manager"
     )
     handoff_offer_no: LocalizedText = _t("Не нужно", "Kerak emas", "No, thanks")
     help: LocalizedText = _t(
-        "Я отвечаю на вопросы о продуктах {company}. Команды: /lang — сменить язык, /human — связаться с менеджером, /delete — удалить переписку.",
-        "Men {company} mahsulotlari haqidagi savollarga javob beraman. Buyruqlar: /lang — tilni oʻzgartirish, /human — menejer bilan bogʻlanish, /delete — yozishmani oʻchirish.",
-        "I answer questions about {company} products. Commands: /lang — change language, /human — talk to a manager, /delete — delete the conversation.",
+        "Я отвечаю на вопросы о поставках {company}. Команды: /lang — сменить язык, /human — связаться с менеджером, /delete — удалить переписку.",
+        "Men {company} yetkazib beriş haqidagi savollarga javob beraman. Buyruqlar: /lang — tilni özgartiriş, /human — menejer bilan bağlanış, /delete — yozişmani öçiriş.",
+        "I answer questions about {company} supply. Commands: /lang — change language, /human — talk to a manager, /delete — delete the conversation.",
     )
     rate_limited: LocalizedText = _t(
         "Получил много сообщений подряд — дайте мне минуту, и продолжим.",
@@ -187,9 +187,9 @@ class TextsSettings(ClientBotTexts):
         "Hello! {manager} is now handling your request and will reply in this chat.",
     )
     service_request_closed: LocalizedText = _t(
-        "По вашему запросу №{number} «{summary}»: {resolution}",
-        "№{number} «{summary}» soʻrovingiz boʻyicha: {resolution}",
-        "Regarding your request #{number} “{summary}”: {resolution}",
+        "По вашему обращению №{number} «{summary}»: {resolution}",
+        "№{number} «{summary}» murojaatingiz böyiça: {resolution}",
+        "Regarding your inquiry #{number} “{summary}”: {resolution}",
     )
     returned_to_bot: LocalizedText = _t(
         "Снова на связи ассистент {company}. Если понадобится менеджер, напишите /human.",

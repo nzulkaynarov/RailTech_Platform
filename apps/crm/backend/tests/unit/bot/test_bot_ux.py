@@ -149,8 +149,9 @@ def test_off_hours_names_the_next_working_time(
 def test_handoff_in_working_time_promises_the_sla() -> None:
     now = datetime(2026, 10, 12, 6, 0, tzinfo=UTC)  # пн 11:00 по Ташкенту
     text = CFG.handoff_notice("ru", now)
-    assert text.startswith("Передаю ваш запрос менеджеру")
-    assert f"в течение {CFG.escalation.sla_minutes} минут в рабочее время" in text
+    assert text.startswith("Передаю ваш вопрос менеджеру")
+    assert "Менеджер ответит в рабочее время" in text
+    assert not re.search(r"\d+ мин", text)  # внутренний SLA клиенту числом не обещаем
 
 
 @pytest.mark.parametrize("variant", ["prospect", "with_manager", "client"])

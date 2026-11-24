@@ -249,6 +249,14 @@
   gap: 2px;
 }
 
+.pf-msg-note-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
 .pf-msg-note-row {
   display: grid;
   grid-template-columns: 150px minmax(0, 1fr);

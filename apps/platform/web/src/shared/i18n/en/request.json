@@ -102,6 +102,8 @@
     "handoff_no_consent": "The client has not given data consent — record how it was received",
     "consent_via_bot": "A Telegram lead gives consent in the bot — ask them to agree",
     "contact_channel_required": "The contact has no Telegram, phone or email",
+    "invalid_phone": "Phone must be in international format, e.g. +998 90 123 45 67",
+    "invalid_email": "Check the e-mail address",
     "request_not_allowed": "The lead is lost — a request cannot be created from it",
     "request_key_reused": "The form is outdated — open “Create request” again",
     "erp_not_configured": "Records are not connected — contact the administrator",

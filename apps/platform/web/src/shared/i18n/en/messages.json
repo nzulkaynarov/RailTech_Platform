@@ -93,7 +93,15 @@
     "region": "Region",
     "lastMessage": "Last message",
     "handedBy": "Handed over by",
-    "requestType": "Request type"
+    "requestType": "Request type",
+    "acknowledge": "Noted",
+    "snooze": "Snooze",
+    "unsnooze": "Bring back",
+    "snoozePeriods": {
+      "hour": "For an hour",
+      "day": "For a day",
+      "three_days": "For three days"
+    }
   },
   "owner": {
     "bot": "The bot handles the conversation",
@@ -109,7 +117,7 @@
     "returned": "The lead is back with the bot",
     "card": "Lead card",
     "back": "All conversations",
-    "close": "Close",
+    "close": "Back",
     "handOver": "Hand over to a manager",
     "handedOver": "Lead handed over to {{name}}. Nothing was sent to the client."
   },
@@ -224,7 +232,15 @@
     "generic": "Something went wrong. Try again",
     "reply_in_progress": "The message is still being sent — wait a moment and press Retry",
     "delivery_unknown": "Delivery not confirmed: Telegram did not respond in time. Retry will not send a second message",
-    "inactive_colleague": "This employee does not work leads — choose another one"
+    "inactive_colleague": "This employee does not work leads — choose another one",
+    "not_closed": "The lead is not closed",
+    "won_decided_by_erp": "The won outcome comes from the accounting system",
+    "no_open_handoff": "The hand-over is already closed or not snoozed",
+    "invalid_phone": "Use the international format, for example +998 90 123 45 67",
+    "invalid_email": "Check the e-mail address",
+    "contact_required": "A phone or an e-mail is required",
+    "field_duplicate_of": "Choose another lead: this one does not fit",
+    "field_name": "Enter a name"
   },
   "triageOnly": "Triage and hand over",
   "requestTypes": {
@@ -248,5 +264,47 @@
     "hint": "",
     "noManagers": "Nobody works leads yet.",
     "managersFailed": "Could not load managers. Try again"
+  },
+  "close": {
+    "menu": "Close",
+    "won": "Won",
+    "lost": "Lost",
+    "wonTitle": "Won",
+    "wonSubmit": "Close lead",
+    "lostTitle": "Lost",
+    "lostSubmit": "Close lead",
+    "reason": "Reason",
+    "reasonPlaceholder": "Choose a reason",
+    "reasonRequired": "Choose why the lead was lost",
+    "comment": "Comment (optional)",
+    "wonByErp": "The won outcome comes from the accounting system and cannot be set by a button.",
+    "optionsFailed": "The reasons did not load. Try again"
+  },
+  "discard": {
+    "spam": {
+      "title": "Spam",
+      "text": "The lead leaves the lists. You can still find it by number.",
+      "submit": "Mark as spam"
+    },
+    "test": {
+      "title": "Test",
+      "text": "The conversation and the lead's data will be erased for good.",
+      "submit": "Erase"
+    },
+    "duplicate": {
+      "title": "Duplicate",
+      "text": "The lead leaves the lists and points to the one that stays.",
+      "submit": "It is a duplicate",
+      "pick": "The lead that stays",
+      "placeholder": "Name, phone or number",
+      "hint": "Type at least two characters",
+      "none": "Nothing found",
+      "required": "Choose a lead"
+    }
+  },
+  "reassign": {
+    "open": "Hand to a colleague",
+    "title": "Hand to a colleague",
+    "submit": "Hand over"
   }
 }

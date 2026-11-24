@@ -464,7 +464,120 @@ msgstr "Hujjatni onlayn oçiş:"
 msgid "Если кнопка не работает, скопируйте ссылку в браузер:"
 msgstr "Tugma işlamasa, havolani brauzerga nusxalang:"
 
-# ── emails/partner_document_sent.*, supply/partner_document_pdf.html, price_request (ДК-5) ──────────────
+# ── cc2: copy cleanup 2026-11-24 ──
+msgid "Изменился статус поставки по проекту %(deal)s"
+msgstr "%(deal)s loyihasi böyiça yetkazib berish holati oʻzgardi"
+
+msgid "Изменился срок поставки по проекту %(deal)s"
+msgstr "%(deal)s loyihasi böyiça yetkazib berish muddati oʻzgardi"
+
+msgid "Статус поставки по проекту %(deal)s изменился."
+msgstr "%(deal)s loyihasi böyiça yetkazib berish holati oʻzgardi."
+
+msgid "Ожидаемая дата поставки по проекту %(deal)s — %(eta)s."
+msgstr "%(deal)s loyihasi böyiça kutilayotgan yetkazib berish sanasi — %(eta)s."
+
+msgid "Договор № %(number)s на согласование"
+msgstr "Imzolaş uçun %(number)s-sonli şartnoma"
+
+msgid "Компания <strong>%(seller_name)s</strong> отправила договор <strong>№ %(number)s</strong> на согласование."
+msgstr "<strong>%(seller_name)s</strong> sizga kelişiş uçun <strong>%(number)s-sonli</strong> şartnomani yubordi."
+
+msgid "Вам отправлен договор <strong>№ %(number)s</strong> на согласование."
+msgstr "Sizga kelişiş uçun <strong>%(number)s-sonli</strong> şartnoma yuborildi."
+
+msgid "Компания %(seller_name)s отправила договор № %(number)s на согласование."
+msgstr "%(seller_name)s sizga kelişiş uçun %(number)s-sonli şartnomani yubordi."
+
+msgid "Вам отправлен договор № %(number)s на согласование."
+msgstr "Sizga kelişiş uçun %(number)s-sonli şartnoma yuborildi."
+
+msgid "Письмо отправлено автоматически. Ответить можно в кабинете или вашему менеджеру."
+msgstr "Xat avtomatik yuborilgan. Javobni kabinetda yoki menejeringizga yozişingiz mumkin."
+
+msgid "Уведомления в Telegram"
+msgstr "Telegramdagi bildirişnomalar"
+
+msgid "подключите бот в кабинете: Профиль → «Уведомления»."
+msgstr "botni kabinetda ulang: Profil → «Bildirişnomalar»."
+
+msgid "Вас пригласили в кабинет компании <strong>«%(company)s»</strong>."
+msgstr "Sizni <strong>«%(company)s»</strong> kompaniyasi kabinetiga taklif qilişdi."
+
+msgid "Вас пригласили в кабинет компании «%(company)s»."
+msgstr "Sizni «%(company)s» kompaniyasi kabinetiga taklif qilişdi."
+
+msgid "после входа подключите бот в разделе Профиль → «Уведомления»: счета, акты и ответы менеджера придут в Telegram."
+msgstr "kirgandan söng botni Profil → «Bildirişnomalar» bölimida ulang: hisoblar, dalolatnomalar va menejer javoblari Telegramga keladi."
+
+msgid "Приглашение в кабинет «%(company)s»"
+msgstr "«%(company)s» kabinetiga taklifnoma"
+
+msgid "Вы запросили вход в кабинет компании «%(company)s»."
+msgstr "Siz «%(company)s» kompaniyasi kabinetiga kirişni söradingiz."
+
+msgid "Для вас открыт доступ"
+msgstr "Sizga kiriş ochildi"
+
+msgid "Чтобы войти, задайте пароль — до этого войти нельзя."
+msgstr "Kiriş uçun parol belgilang — parolsiz kirib bölmaydi."
+
+msgid "Для вас открыт доступ. Чтобы войти, задайте пароль по ссылке:"
+msgstr "Sizga kiriş ochildi. Kiriş uçun parolni şu havola orqali belgilang:"
+
+msgid "Вас пригласили в команду"
+msgstr "Sizni jamoaga taklif qilişdi"
+
+msgid "Компания <strong>%(company_name)s</strong> приглашает вас в свою команду. Чтобы принять приглашение, задайте пароль для своего аккаунта."
+msgstr "<strong>%(company_name)s</strong> kompaniyasi sizni öz jamoasiga taklif qiladi. Taklifni qabul qiliş uçun akkauntingiz parolini belgilang."
+
+msgid ""
+"Вас пригласили в команду компании «%(company_name)s».\n"
+"Чтобы принять приглашение, задайте пароль по ссылке:"
+msgstr ""
+"Sizni «%(company_name)s» kompaniyasi jamoasiga taklif qilişdi.\n"
+"Taklifni qabul qiliş uçun parolni şu havola orqali belgilang:"
+
+msgid "Приглашение в команду %(company_name)s"
+msgstr "%(company_name)s jamoasiga taklifnoma"
+
+msgid "Сброс пароля"
+msgstr "Parolni tiklaş"
+
+msgid "Вы запросили сброс пароля. Задайте новый пароль по ссылке ниже — она действительна в течение суток."
+msgstr "Siz parolni tiklaşni söradingiz. Yangi parolni quyidagi havola orqali belgilang — u bir sutka amal qiladi."
+
+msgid "Вы запросили сброс пароля. Чтобы задать новый пароль, перейдите по ссылке:"
+msgstr "Siz parolni tiklaşni söradingiz. Yangi parolni belgilaş uçun havolaga öting:"
+
+msgid "Для вас открыт доступ. Чтобы войти, задайте пароль — это займёт меньше минуты."
+msgstr "Sizga kiriş ochildi. Kiriş uçun parol belgilang — bir daqiqadan kam vaqt oladi."
+
+msgid "Не ожидали это письмо? Проигнорируйте его — никаких действий не требуется."
+msgstr "Bu xatni kutmagan edingizmi? Uni eʼtiborsiz qoldiring — hiç qanday harakat talab qilinmaydi."
+
+msgid "Если вы не ожидали это письмо, просто проигнорируйте его."
+msgstr "Agar bu xatni kutmagan bölsangiz, uni oddiygina eʼtiborsiz qoldiring."
+
+msgid "Готовим договор <strong>%(contract_number)s</strong> — он появится в кабинете для согласования."
+msgstr "<strong>%(contract_number)s</strong> şartnomasini tayyorlayapmiz — u kelişiş uçun kabinetda paydo böladi."
+
+msgid "Готовим договор %(contract_number)s — он появится в кабинете для согласования."
+msgstr "%(contract_number)s şartnomasini tayyorlayapmiz — u kelişiş uçun kabinetda paydo böladi."
+
+msgid "Принятие КП — ещё не подпись договора: договор подписывается отдельно."
+msgstr "Tijorat taklifini qabul qiliş — hali şartnomaga imzo emas: şartnoma alohida imzolanadi."
+
+msgid "Предложение %(quote_number)s принято — готовим договор"
+msgstr "%(quote_number)s taklif qabul qilindi — şartnomani tayyorlayapmiz"
+
+msgid "Проект:"
+msgstr "Loyiha:"
+
+msgid "Подписано"
+msgstr "Imzolandi"
+
+# ── ДК-5: письмо партнёру, PDF запроса и заказа ──
 msgid "Заказ поставщику № %(number)s"
 msgstr "Buyurtma № %(number)s (yetkazib beruvchiga)"
 
