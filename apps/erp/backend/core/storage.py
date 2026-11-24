@@ -152,6 +152,12 @@ def company_logo_path(instance, filename):
     return f"companies/{instance.pk}/logo/{name}"
 
 
+def contact_photo_path(instance, filename):
+    """contacts/{contact_id}/photo/{uuid}.{ext} — фото контакта контрагента (СУЩ-3), закрытый бакет."""
+    name = _uuid_filename(instance, filename)
+    return f"contacts/{instance.pk}/photo/{name}"
+
+
 def company_document_profile_logo_path(instance, filename):
     """companies/{company_id}/doc-profile/logo/{uuid}.{ext} — the branded logo the seller
     company puts on its own КП / contract documents (public bucket, like the avatar/logo)."""

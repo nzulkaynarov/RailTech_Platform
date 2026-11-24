@@ -18,6 +18,7 @@ from app.deps import Authed, require, require_any
 from app.errors import PlatformError, from_backend
 from app.schemas_do_not_work import DoNotWork
 from app.schemas_erp_catalog import page_meta, rows_of
+from app.schemas_pictures import company_logo_url, contact_photo_url
 
 router = APIRouter(tags=["chats"])
 
@@ -41,6 +42,8 @@ class CounterpartyPerson(BaseModel):
     is_primary: bool
     company: CounterpartyRef
     kind: Kind
+    # СУЩ-3: фото контакта только через BFF, `?v=` — версия; `None` — инициалы
+    photo_url: str | None = None
 
 
 class CounterpartyContacts(BaseModel):
@@ -74,6 +77,7 @@ def to_person(row: dict[str, Any]) -> CounterpartyPerson:
         is_primary=bool(row.get("is_primary")),
         company=CounterpartyRef(id=str(company.get("id", "")), name=str(company.get("name") or "")),
         kind="client" if row.get("kind") == "client" else "partner",
+        photo_url=contact_photo_url(row.get("id"), row.get("photo_version")),
     )
 
 
@@ -175,6 +179,7 @@ class CounterpartyCardPerson(BaseModel):
     has_cabinet: bool
     has_phone: bool
     has_email: bool
+    photo_url: str | None = None
 
 
 class CounterpartyAccount(BaseModel):
@@ -204,6 +209,8 @@ class CounterpartyCard(BaseModel):
     accounts_masked: bool
     brands: list[CounterpartyRef]
     do_not_work: DoNotWork | None = None
+    # ЕД-5: логотип только через BFF, `?v=` — версия; `None` — буквы названия
+    logo_url: str | None = None
 
 
 class CounterpartyRoleIn(BaseModel):
@@ -232,6 +239,7 @@ def to_card(raw: Any) -> CounterpartyCard:
         country=_text(row.get("country")),
         legal_address=_text(row.get("legal_address")),
         crm_client_id=client if isinstance(client, int) else None,
+        logo_url=company_logo_url(row.get("id"), row.get("logo_version")),
         roles=CounterpartyRoles(
             client=bool(roles.get("client")),
             supplier=bool(roles.get("supplier")),
@@ -248,6 +256,7 @@ def to_card(raw: Any) -> CounterpartyCard:
                 has_cabinet=bool(person.get("has_cabinet")),
                 has_phone=bool(person.get("has_phone")),
                 has_email=bool(person.get("has_email")),
+                photo_url=contact_photo_url(person.get("id"), person.get("photo_version")),
             )
             for person in _rows(row.get("people"))
         ],
@@ -530,6 +539,7 @@ class CounterpartyPick(BaseModel):
     roles: CounterpartyRoles
     crm_client_id: int | None
     email: str | None
+    logo_url: str | None = None
 
 
 class CounterpartyPickList(BaseModel):
@@ -553,6 +563,7 @@ class CounterpartyPersonPick(BaseModel):
     position: str | None
     email: str | None
     is_primary: bool
+    photo_url: str | None = None
 
 
 class CounterpartyPersonPickList(BaseModel):
@@ -581,6 +592,7 @@ def to_pick(row: dict[str, Any]) -> CounterpartyPick:
         roles=_roles(row.get("roles")),
         crm_client_id=client if isinstance(client, int) else None,
         email=_text(row.get("email")),
+        logo_url=company_logo_url(row.get("id"), row.get("logo_version")),
     )
 
 
@@ -661,6 +673,7 @@ async def counterparty_picker_people(
                 position=_text(row.get("position")),
                 email=_text(row.get("email")),
                 is_primary=bool(row.get("is_primary")),
+                photo_url=contact_photo_url(row.get("id"), row.get("photo_version")),
             )
             for row in rows_of(data)
             if "id" in row

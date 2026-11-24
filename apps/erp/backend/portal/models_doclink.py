@@ -12,6 +12,9 @@ from django.utils.translation import gettext_lazy as _
 
 class DocumentLinkKind(models.TextChoices):
     QUOTE = "quote", _("Коммерческое предложение")
+    CONTRACT = "contract", _("Договор")
+    INVOICE = "invoice", _("Счёт")
+    ACT = "act", _("Акт")
 
 
 class DocumentLink(models.Model):
@@ -29,6 +32,31 @@ class DocumentLink(models.Model):
         blank=True,
         related_name="document_links",
         verbose_name=_("КП"),
+    )
+    # ДК-3: договор, счёт и акт идут по той же схеме; заполнено ровно одно из четырёх полей — по `kind`.
+    contract = models.ForeignKey(
+        "sales.Contract",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="document_links",
+        verbose_name=_("Договор"),
+    )
+    invoice = models.ForeignKey(
+        "finance.Invoice",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="document_links",
+        verbose_name=_("Счёт"),
+    )
+    act = models.ForeignKey(
+        "finance.Act",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="document_links",
+        verbose_name=_("Акт"),
     )
     contact = models.ForeignKey(
         "parties.Contact",
@@ -62,6 +90,38 @@ class DocumentLink(models.Model):
         verbose_name = _("Ссылка документа")
         verbose_name_plural = _("Ссылки документов")
         ordering = ["-created_at"]
+        constraints = [
+            models.CheckConstraint(
+                name="portal_doclink_one_document",
+                condition=(
+                    models.Q(
+                        kind="quote", quote__isnull=False, contract__isnull=True, invoice__isnull=True, act__isnull=True
+                    )
+                    | models.Q(
+                        kind="contract",
+                        contract__isnull=False,
+                        quote__isnull=True,
+                        invoice__isnull=True,
+                        act__isnull=True,
+                    )
+                    | models.Q(
+                        kind="invoice",
+                        invoice__isnull=False,
+                        quote__isnull=True,
+                        contract__isnull=True,
+                        act__isnull=True,
+                    )
+                    | models.Q(
+                        kind="act", act__isnull=False, quote__isnull=True, contract__isnull=True, invoice__isnull=True
+                    )
+                ),
+            )
+        ]
+
+    @property
+    def document(self):
+        """Документ, на который выдана ссылка (по `kind`)."""
+        return getattr(self, self.kind, None)
 
 
 class DocumentLinkEvent(models.Model):

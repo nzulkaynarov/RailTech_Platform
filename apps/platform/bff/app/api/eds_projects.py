@@ -20,9 +20,11 @@ from app.deps import Authed, require, require_any
 from app.eds_projects import ErpProjects, project_error
 from app.errors import PlatformError
 from app.rbac import allows
+from app.row_logos import attach_client_logos
 from app.schemas_eds_projects import (
     ActActionIn,
     ContractActionIn,
+    DocumentClientLinks,
     FileGenerating,
     FileKind,
     FileVariant,
@@ -48,7 +50,7 @@ MAX_BODY_BYTES = MAX_SCAN_BYTES + 64 * 1024
 
 
 def _erp(authed: Authed) -> ErpProjects:
-    return ErpProjects(authed.call)
+    return ErpProjects(authed.call, authed)
 
 
 def _too_large() -> PlatformError:
@@ -125,7 +127,9 @@ async def list_projects(
     text = (q or "").strip()
     if text:
         params["q"] = text  # номер сделки ERP ищет сам — по году и NNN, префикс не важен
-    return await _erp(authed).page(params)
+    page = await _erp(authed).page(params)
+    await attach_client_logos(authed, page.items)
+    return page
 
 
 @router.get("/projects/{ref}", response_model=ProjectCard, operation_id="getEdsProject")
@@ -191,6 +195,34 @@ async def act_action(ref: Ref, body: ActActionIn, authed: Writer) -> ProjectCard
 async def act_scan(ref: Ref, request: Request, authed: Writer) -> ProjectCard:
     content, content_type = await _scan_body(request)
     return await _erp(authed).act_scan(ref, content, content_type)
+
+
+# --- ссылка клиента на документ в Кабинете (ДК-3б) ----------------------------------------------
+
+
+@router.get(
+    "/projects/{ref}/documents/{kind}/{doc_id}/client-links",
+    response_model=DocumentClientLinks,
+    operation_id="getEdsProjectDocumentClientLinks",
+)
+async def document_client_links(
+    ref: Ref, kind: FileKind, doc_id: Annotated[int, Path(ge=1, le=2**31 - 1)], authed: Reader
+) -> DocumentClientLinks:
+    """Кому ушла ссылка на договор, счёт или акт и открывали ли её. Раздел — чтение; нет права
+    отправлять этот документ (решает ERP) — список пуст, блок на экране скрыт."""
+    return await _erp(authed).document_links(ref, kind, doc_id)
+
+
+@router.post(
+    "/projects/{ref}/documents/{kind}/{doc_id}/revoke-links",
+    response_model=DocumentClientLinks,
+    operation_id="revokeEdsProjectDocumentClientLinks",
+)
+async def revoke_document_client_links(
+    ref: Ref, kind: FileKind, doc_id: Annotated[int, Path(ge=1, le=2**31 - 1)], authed: Reader
+) -> DocumentClientLinks:
+    """«Отозвать ссылку»: раздел — чтение, право отправлять документ и отзыв решает ERP (403)."""
+    return await _erp(authed).revoke_document_links(ref, kind, doc_id)
 
 
 # --- доставка клиенту (L0-1) ---------------------------------------------------------------------

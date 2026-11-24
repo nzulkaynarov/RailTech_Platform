@@ -24,6 +24,7 @@ from rt_contracts.events.erp import QuoteSentV1
 from app.bus import handlers  # noqa: F401 — регистрирует обработчики
 from app.bus.erp_event import (
     CODE_TYPE,
+    DOCUMENT_LINK_TYPE,
     INLINE_TYPES,
     INVITE_TYPE,
     NOT_FOR_CRM,
@@ -49,8 +50,8 @@ def event_of(event_type: str, **changes: Any) -> Event:
     return Event.from_dict({**example_envelope(event_type), **changes})
 
 
-def test_the_contract_has_twenty_five_erp_types_for_the_crm_with_one_example_each() -> None:
-    assert len(ALL_TYPES) == 25  # + contact.telegram_test_requested (NOTIFY-1, inline), FX-4
+def test_the_contract_has_twenty_six_erp_types_for_the_crm_with_one_example_each() -> None:
+    assert len(ALL_TYPES) == 26  # + contact.telegram_test_requested (NOTIFY-1, inline), FX-4, ДК-4
     examples = set(example_types("erp"))
     assert examples == set(event_types("erp")), "на каждое событие контракта — один пример"
 
@@ -106,6 +107,7 @@ def test_the_crm_listens_to_exactly_the_erp_events_of_the_contract_except_the_co
         INVITE_TYPE,
         TEST_TYPE,
         SECURITY_NOTICE_TYPE,
+        DOCUMENT_LINK_TYPE,
     }
     assert len(erp_types()) == 21
     for event_type in ALL_TYPES:

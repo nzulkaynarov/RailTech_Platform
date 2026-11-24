@@ -511,3 +511,47 @@ def test_a_deviation_awaiting_the_decision_has_its_own_reason_before_the_visas(p
 
     ref = project_card._contract_ref(contract)
     assert ref["send_blocker_code"] == "CONTRACT_DEVIATION_PENDING"
+
+
+# ── ДК-3: письмо с договором уходит по тому же решению `send_blocker` ─────────────────────────────────────────────
+
+
+def _deal_contact(pw):  # noqa: F811
+    from parties.models import Contact
+
+    deal = pw.quote.deal
+    contact = Contact.objects.create(company=deal.company, name="Контакт", email="client@dk3.example", can_act=True)
+    deal.contact = contact
+    deal.save(update_fields=["contact"])
+    return contact
+
+
+def test_the_auto_sent_contract_is_mailed_to_the_deal_contact_with_a_personal_link(
+    pw, django_capture_on_commit_callbacks  # noqa: F811
+):
+    from unittest.mock import patch
+
+    rules(pw, contract_auto_send=True, contract_sign_before_send=False)
+    make_template(pw)
+    contact = _deal_contact(pw)
+    with patch("crm.tasks.send_document_link_email") as letter:
+        with django_capture_on_commit_callbacks(execute=True):
+            contract, error = generate(pw)
+    assert error is None and contract.status.code == S.PENDING_CLIENT
+    assert [(c.args[0], c.args[1], c.args[2]) for c in letter.delay.call_args_list] == [
+        ("contract", contract.pk, contact.email)
+    ]
+
+
+def test_a_contract_held_by_send_blocker_is_not_mailed(pw, django_capture_on_commit_callbacks):  # noqa: F811
+    from unittest.mock import patch
+
+    rules(
+        pw, contract_auto_send=True, contract_sign_before_send=True
+    )  # нужна наша подпись — отправку держит блокировка
+    make_template(pw)
+    _deal_contact(pw)
+    with patch("crm.tasks.send_document_link_email") as letter:
+        with django_capture_on_commit_callbacks(execute=True):
+            contract, _ = generate(pw)
+    assert contract.status.code == S.DRAFT and letter.delay.call_count == 0

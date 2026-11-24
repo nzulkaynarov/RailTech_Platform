@@ -60,7 +60,7 @@ def deal_stages():
     return {key: DealStage.objects.get_or_create(code=code, defaults={"name": code})[0] for key, code in codes.items()}
 
 
-def test_the_30_types_of_the_erp_are_the_files_of_the_contract():
+def test_the_32_types_of_the_erp_are_the_files_of_the_contract():
     import json
     import os
     from pathlib import Path
@@ -75,7 +75,7 @@ def test_the_30_types_of_the_erp_are_the_files_of_the_contract():
     # SIGN-4: signing.requested — запрос подписания документа в EDS, публикует crm.services.signing_outbound.
     excluded = {"mail.requested", "letterhead.updated", "cabinet.message_posted", "signing.requested"}
     # СУЩ-2.7: company.updated — снимок реквизитов компании-контрагента для CRM (`parties/company_events.py`).
-    assert names - excluded == VALID_EVENT_TYPES and len(VALID_EVENT_TYPES) == 31
+    assert names - excluded == VALID_EVENT_TYPES and len(VALID_EVENT_TYPES) == 32
     for short in VALID_EVENT_TYPES:
         assert event_type_name(short) == f"uz.railtech.erp.{short}.v1"
         assert json.loads((events_dir / f"{short}.v1.json").read_text(encoding="utf-8"))["type"] == "object"

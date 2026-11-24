@@ -71,6 +71,9 @@
     "all": "All",
     "article": "Part number",
     "actions": "Actions",
+    "rowMenu": "Actions: {{name}}",
+    "showAll": "Show all ({{count}})",
+    "showLess": "Show less",
     "loadFailed": "Could not load",
     "reasonRequired": "Give a reason — without it the provider will not know what to fix.",
     "dealNumber": "Project {{number}}",
@@ -446,7 +449,6 @@
   },
   "pages": {
     "requests": {
-        "rowMenu": "Actions for request {{number}}",
       "title": "Requests",
       "new": "New request",
       "filterLabel": "Filter requests by status",
@@ -456,7 +458,7 @@
       "noMatchText": "No requests found for \"{{query}}\"",
       "clearSearch": "Clear search",
       "emptyTitle": "No requests yet",
-      "emptyText": "Your requests and their status will appear here: new, in progress, quoted, closed.",
+      "emptyText": "Your requests will appear here.",
       "columns": {
         "request": "Request",
         "status": "Status",
@@ -526,7 +528,7 @@
     "quotes": {
       "title": "Quotes",
       "emptyTitle": "No quotes yet",
-      "emptyText": "As soon as the manager sends a quote it will appear here — accept or reject it right from the cabinet.",
+      "emptyText": "The manager's quotes will appear here.",
       "numberVersion": "{{number}} · version {{version}}",
       "awaiting_one": "{{count}} quote awaits your decision",
       "awaiting_other": "{{count}} quotes await your decision",
@@ -623,7 +625,7 @@
     "contracts": {
       "title": "Contracts",
       "emptyTitle": "No contracts yet",
-      "emptyText": "A contract is created automatically once a quote is accepted; you can agree it here.",
+      "emptyText": "Contracts will appear here after you accept a quote.",
       "awaiting_one": "{{count}} contract awaits your agreement",
       "awaiting_other": "{{count}} contracts await your agreement",
       "columns": {
@@ -699,7 +701,7 @@
     "acts": {
       "title": "Acts",
       "emptyTitle": "No acts yet",
-      "emptyText": "Acts for completed deliveries and services: accept or return with a reason.",
+      "emptyText": "Acts for deliveries and services will appear here.",
       "awaiting_one": "{{count}} act awaits your acceptance",
       "awaiting_other": "{{count}} acts await your acceptance",
       "columns": {
@@ -724,7 +726,6 @@
       "returnConfirm": "Return act",
       "returnedToast": "Act {{number}} returned to the provider",
       "scan": "Scan",
-      "scanNamed": "Signed scan of act {{number}}",
       "scanLabel": "Scan of the signed act (optional)",
       "scanHint": "PDF or image up to 10 MB. You can also accept the act without a scan.",
       "scanProblem": {
@@ -735,7 +736,7 @@
     "deliveries": {
       "title": "Deliveries",
       "emptyTitle": "No deliveries yet",
-      "emptyText": "Status per line, expected date and tracking number.",
+      "emptyText": "Deliveries for your projects will appear here.",
       "progress": "{{done}} of {{total}} delivered",
       "eta": "Expected {{date}}",
       "etaUnknown": "Date to be confirmed",
@@ -759,7 +760,7 @@
     "documents": {
       "title": "Documents",
       "emptyTitle": "No documents yet",
-      "emptyText": "Quotes, contracts, invoices, acts and waybills — download them from here.",
+      "emptyText": "Documents for your projects will appear here.",
       "emptyKindTitle": "No documents of this kind",
       "emptyKindText": "Choose another kind or show all documents.",
       "showAll": "Show all",
@@ -1012,6 +1013,19 @@
           "latin": "Latin letters, digits and / - ? : ( ) . , ' + only",
           "server": "The value was not accepted — check the field"
         }
+      },
+      "logo": {
+        "input": "Logo file",
+        "choose": "Upload logo",
+        "change": "Replace logo",
+        "remove": "Remove logo",
+        "hint": "PNG, JPEG or WebP up to 2 MB; the logo is cropped to a centered square.",
+        "errors": {
+          "FILE_TYPE_NOT_ALLOWED": "A PNG, JPEG or WebP image is required.",
+          "FILE_CONTENT_MISMATCH": "The file type does not match its content. Choose another image.",
+          "FILE_TOO_LARGE": "The file is larger than 2 MB. Choose a smaller one.",
+          "ADMIN_REQUIRED": "Only the company administrator can change the logo."
+        }
       }
     },
     "becomePartner": {
@@ -1093,7 +1107,6 @@
       "lastLogin": "Last sign-in",
       "invitedAt": "Invited {{date}}, not signed in yet",
       "neverLoggedIn": "Not signed in yet",
-      "rightsHint": "Company administrators can manage team rights and deactivate accounts upon departures.",
       "inviteTitle": "Invite a colleague",
       "inviteText": "Your colleague will get an invitation to the cabinet through the selected channels.",
       "inviteConfirm": "Send invitation",
@@ -1151,11 +1164,10 @@
     },
     "messages": {
       "title": "Messages",
-      "subtitle": "Your company’s conversation with the manager",
       "telegram": "Write in Telegram",
       "feed": "Conversation with the manager",
       "emptyTitle": "Your conversation with the manager will be here",
-      "emptyText": "Ask a question — the manager will reply here. From a quote, invoice or act page the question goes with the document number.",
+      "emptyText": "Write a question — the manager will answer here.",
       "you": "You",
       "manager": "Manager",
       "managerNamed": "{{name}}, manager",
@@ -1189,7 +1201,7 @@
     },
     "partnerOrders": {
       "title": "Purchase orders",
-      "description": "Confirm purchase orders, submit shipping notices, and respond to price requests",
+      "viewsLabel": "Sections",
       "posShort": "items",
       "tabsLabel": "Order and RFQ statuses",
       "ordersListLabel": "Purchase orders list",
@@ -1417,8 +1429,6 @@
   },
   "widgets": {
     "actionRequired": {
-        "showAll": "Show all ({{count}})",
-        "showLess": "Show less",
       "title": "Action Required",
       "allClear": "All documents processed — no action required right now.",
       "quoteBadge": "Quote",
@@ -1874,12 +1884,15 @@
   "docLink": {
     "title": "Document by link",
     "header": "You are viewing one document sent to {{email}}",
-    "quoteTitle": "Quote {{number}}",
     "facts": {
       "from": "From",
       "to": "To",
       "total": "Total",
-      "validUntil": "Valid until"
+      "validUntil": "Valid until",
+      "dueDate": "Pay by",
+      "balance": "Balance due",
+      "signedAt": "Signed by you",
+      "issuedAt": "Issued"
     },
     "withVat": "{{amount}} incl. VAT",
     "lines": {
@@ -1900,7 +1913,9 @@
       "accept": "Accept the quote",
       "reject": "Return with remarks",
       "question": "Ask a question",
-      "open": "Open the cabinet"
+      "open": "Open the cabinet",
+      "accept_contract": "Sign the contract",
+      "accept_act": "Accept the act"
     },
     "codeNote": "Any action needs the code we send to {{email}}. No other documents or sections open by this link.",
     "memberNote": "You are signed in as {{name}} — no code needed.",
@@ -1908,7 +1923,11 @@
     "state": {
       "accepted": "The quote is accepted. The contract will appear in your cabinet.",
       "rejected": "The quote was returned with remarks.",
-      "expired": "The quote has expired. Ask the seller to update it."
+      "expired": "The quote has expired. Ask the seller to update it.",
+      "accepted_contract": "You have signed the contract. The invoice comes next.",
+      "accepted_act": "The act is accepted.",
+      "rejected_act": "The act was returned with remarks.",
+      "paid": "The invoice is paid."
     },
     "reason": {
       "no_right": "Your contact has no right to decide — ask your company administrator.",
@@ -1927,6 +1946,9 @@
       "sending": "Sending the code…",
       "label": "Code from the e-mail",
       "spam": "Not there? Check «Spam».",
+      "sentTelegram": "We sent a code to {{email}} and to Telegram. It is valid for {{minutes}} minutes.",
+      "labelTelegram": "Code from the e-mail or Telegram",
+      "notInMail": "Not in the mail? The code is in Telegram too.",
       "resend": "Send again",
       "resendIn": "Send again in {{time}}",
       "remarks": "What needs to be fixed?",
@@ -1936,12 +1958,19 @@
       "memberTitle": "Accept the quote?",
       "memberText": "Total {{total}}. The contract will appear in your cabinet.",
       "working": "Working…",
-      "openTitle": "Open the cabinet"
+      "openTitle": "Open the cabinet",
+      "memberTitle_contract": "Sign the contract?",
+      "memberText_contract": "Amount {{total}}. By signing you accept the terms of the contract.",
+      "memberTitle_act": "Accept the act?",
+      "memberText_act": "Amount {{total}}. An accepted act cannot be returned."
     },
     "done": {
       "accept": "Quote accepted",
       "reject": "Remarks sent",
-      "question": "Question sent to the manager"
+      "question": "Question sent to the manager",
+      "accept_contract": "Contract signed",
+      "accept_act": "Act accepted",
+      "reject_act": "Remarks sent"
     },
     "gone": {
       "revoked": {
@@ -1960,6 +1989,26 @@
         "title": "Link not found",
         "text": "Check the address or ask the sender for a new link."
       }
-    }
+    },
+    "docTitle_contract": "Contract {{number}}",
+    "docTitle_invoice": "Invoice {{number}}",
+    "docTitle_act": "Act {{number}}",
+    "downloadNamed_contract": "Download PDF: contract {{number}}",
+    "downloadNamed_invoice": "Download PDF: invoice {{number}}",
+    "downloadNamed_act": "Download PDF: act {{number}}",
+    "pay": {
+      "title": "Payment details",
+      "none": "The details are in the invoice PDF.",
+      "paidQuestion": "Already paid? The payment appears in the invoice once the seller confirms it. You can attach the payment order in the cabinet."
+    },
+    "about": {
+      "title_contract": "About the document",
+      "text_contract": "Contract with {{from}}. Read the PDF and sign when you are ready.",
+      "title_act": "About the document",
+      "text_act": "Act from {{from}}. Check the PDF, then accept the act or return it with remarks.",
+      "title": "About the document",
+      "text": "Document from {{from}}."
+    },
+    "docTitle": "Quote {{number}}"
   }
 }

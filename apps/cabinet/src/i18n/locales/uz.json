@@ -71,6 +71,9 @@
     "all": "Hammasi",
     "article": "Artikul",
     "actions": "Amallar",
+    "rowMenu": "Amallar: {{name}}",
+    "showAll": "Barçasini körsatiş ({{count}})",
+    "showLess": "Yopiş",
     "loadFailed": "Yuklab boʻlmadi",
     "reasonRequired": "Sababini koʻrsating — usiz ijrochi nimani tuzatishni tushunmaydi.",
     "dealNumber": "Loyiha {{number}}",
@@ -446,7 +449,6 @@
   },
   "pages": {
     "requests": {
-        "rowMenu": "{{number}} ariza amallari",
       "title": "Arizalar",
       "new": "Yangi ariza",
       "filterLabel": "Arizalarni holat boʻyicha filtrlash",
@@ -456,7 +458,7 @@
       "noMatchText": "«{{query}}» boʻyicha arizalar topilmadi",
       "clearSearch": "Qidiruvni tozalash",
       "emptyTitle": "Hozircha arizalar yoʻq",
-      "emptyText": "Bu yerda arizalaringiz va ularning holati koʻrinadi: yangi, ishda, taklif bor, yopilgan.",
+      "emptyText": "Arizalaringiz şu yerda körinadi.",
       "columns": {
         "request": "Ariza",
         "status": "Holat",
@@ -526,7 +528,7 @@
     "quotes": {
       "title": "Tijorat takliflari",
       "emptyTitle": "Hozircha takliflar yoʻq",
-      "emptyText": "Menejer taklif yuborishi bilan u shu yerda paydo boʻladi — kabinetdan qabul qilish yoki rad etish mumkin.",
+      "emptyText": "Menejer takliflari şu yerda körinadi.",
       "numberVersion": "{{number}} · {{version}}-versiya",
       "awaiting_one": "{{count}} ta taklif qaroringizni kutmoqda",
       "awaiting_other": "{{count}} ta taklif qaroringizni kutmoqda",
@@ -623,7 +625,7 @@
     "contracts": {
       "title": "Shartnomalar",
       "emptyTitle": "Hozircha shartnomalar yoʻq",
-      "emptyText": "Shartnoma taklif qabul qilingach avtomatik yaratiladi; uni shu yerda kelishib olish mumkin.",
+      "emptyText": "Şartnomalar taklif qabul qilingaç şu yerda körinadi.",
       "awaiting_one": "{{count}} ta shartnoma kelishishingizni kutmoqda",
       "awaiting_other": "{{count}} ta shartnoma kelishishingizni kutmoqda",
       "columns": {
@@ -699,7 +701,7 @@
     "acts": {
       "title": "Dalolatnomalar",
       "emptyTitle": "Hozircha dalolatnomalar yoʻq",
-      "emptyText": "Bajarilgan yetkazib berish va xizmatlar boʻyicha dalolatnomalar: qabul qilish yoki sabab bilan qaytarish.",
+      "emptyText": "Yetkazib berişlar va xizmatlar böyiça dalolatnomalar şu yerda körinadi.",
       "awaiting_one": "{{count}} ta dalolatnoma qabulingizni kutmoqda",
       "awaiting_other": "{{count}} ta dalolatnoma qabulingizni kutmoqda",
       "columns": {
@@ -724,7 +726,6 @@
       "returnConfirm": "Dalolatnomani qaytarish",
       "returnedToast": "{{number}} dalolatnomasi ijrochiga qaytarildi",
       "scan": "Skan",
-      "scanNamed": "{{number}} dalolatnomasining imzolangan skani",
       "scanLabel": "Imzolangan dalolatnoma skani (majburiy emas)",
       "scanHint": "PDF yoki rasm, 10 MB gacha. Dalolatnomani skansiz ham qabul qilish mumkin.",
       "scanProblem": {
@@ -735,7 +736,7 @@
     "deliveries": {
       "title": "Yetkazib berish",
       "emptyTitle": "Hozircha yetkazib berish yoʻq",
-      "emptyText": "Har bir qator boʻyicha holat, kutilayotgan sana va kuzatuv raqami.",
+      "emptyText": "Loyihalaringiz böyiça yetkazib berişlar şu yerda körinadi.",
       "progress": "{{total}} tadan {{done}} tasi yetkazildi",
       "eta": "Kutilmoqda: {{date}}",
       "etaUnknown": "Sana aniqlanmoqda",
@@ -759,7 +760,7 @@
     "documents": {
       "title": "Hujjatlar",
       "emptyTitle": "Hozircha hujjatlar yoʻq",
-      "emptyText": "Takliflar, shartnomalar, hisob-fakturalar, dalolatnomalar va yuk xatlari — shu yerdan yuklab olish mumkin.",
+      "emptyText": "Loyihalaringiz hujjatlari şu yerda körinadi.",
       "emptyKindTitle": "Bu turdagi hujjatlar yoʻq",
       "emptyKindText": "Boshqa turni tanlang yoki barcha hujjatlarni koʻrsating.",
       "showAll": "Hammasini koʻrsatish",
@@ -1012,6 +1013,19 @@
           "latin": "Faqat lotin harflari, raqamlar va / - ? : ( ) . , ' +",
           "server": "Qiymat qabul qilinmadi — maydonni tekşiring"
         }
+      },
+      "logo": {
+        "input": "Logotip fayli",
+        "choose": "Logotip yuklaş",
+        "change": "Logotipni almaştiriş",
+        "remove": "Logotipni olib taşlaş",
+        "hint": "PNG, JPEG yoki WebP, 2 MB gaça; logotip markazdan kvadratga kesiladi.",
+        "errors": {
+          "FILE_TYPE_NOT_ALLOWED": "PNG, JPEG yoki WebP rasm kerak.",
+          "FILE_CONTENT_MISMATCH": "Fayl turi mazmuniga mos kelmaydi. Boşqa rasm tanlang.",
+          "FILE_TOO_LARGE": "Fayl 2 MB dan katta. Kiçikroq fayl tanlang.",
+          "ADMIN_REQUIRED": "Logotipni kompaniya administratori özgartiradi."
+        }
       }
     },
     "becomePartner": {
@@ -1093,7 +1107,6 @@
       "lastLogin": "Oxirgi kirish",
       "invitedAt": "{{date}} da taklif qilingan, hali kirmagan",
       "neverLoggedIn": "Hali kirmagan",
-      "rightsHint": "Kompaniya administratorlari hamkasblar huquqlarini boshqarishi va xodimlar almashganda kirishni toʻxtatishi mumkin.",
       "inviteTitle": "Hamkasbni taklif qilish",
       "inviteText": "Hamkasb kabinetga taklifnomani tanlangan kanallar orqali oladi.",
       "inviteConfirm": "Taklifnoma yuborish",
@@ -1151,11 +1164,10 @@
     },
     "messages": {
       "title": "Xabarlar",
-      "subtitle": "Kompaniyangizning menejer bilan yozishmasi",
       "telegram": "Telegramda yozish",
       "feed": "Menejer bilan yozishma",
       "emptyTitle": "Bu yerda menejer bilan yozishma bo‘ladi",
-      "emptyText": "Savolingizni yozing — menejer shu yerda javob beradi. TK, hisob yoki dalolatnoma sahifasidan yuborilgan savol hujjat raqami bilan boradi.",
+      "emptyText": "Savol yozing — menejer şu yerda javob beradi.",
       "you": "Siz",
       "manager": "Menejer",
       "managerNamed": "{{name}}, menejer",
@@ -1189,7 +1201,7 @@
     },
     "partnerOrders": {
       "title": "Yetkazib berish buyurtmalari",
-      "description": "Buyurtmalarni tasdiqlash, jönatiş xabarnomalari va narx sörovlariga javoblar",
+      "viewsLabel": "Bölimlar",
       "posShort": "poz.",
       "tabsLabel": "Buyurtmalar va narx soʻrovlari holati",
       "ordersListLabel": "Yetkazib berish buyurtmalari roʻyxati",
@@ -1417,8 +1429,6 @@
   },
   "widgets": {
     "actionRequired": {
-        "showAll": "Barçasi ({{count}})",
-        "showLess": "Yopiş",
       "title": "Qaroringiz kutilmoqda",
       "allClear": "Barcha hujjatlar koʻrib chiqilgan — hozirda hech qanday harakat talab etilmaydi.",
       "quoteBadge": "TK",
@@ -1874,12 +1884,15 @@
   "docLink": {
     "title": "Havola orqali hujjat",
     "header": "Siz {{email}} manziliga yuborilgan bitta hujjatni köryapsiz",
-    "quoteTitle": "{{number}} taklifi",
     "facts": {
       "from": "Kimdan",
       "to": "Kimga",
       "total": "Summa",
-      "validUntil": "Amal qiliş muddati"
+      "validUntil": "Amal qiliş muddati",
+      "dueDate": "Tölov muddati",
+      "balance": "Tölanadigan summa",
+      "signedAt": "Siz imzoladingiz",
+      "issuedAt": "Taqdim etilgan"
     },
     "withVat": "{{amount}} QQS bilan",
     "lines": {
@@ -1900,7 +1913,9 @@
       "accept": "Taklifni qabul qiliş",
       "reject": "Izoh bilan qaytariş",
       "question": "Savol beriş",
-      "open": "Kabinetni oçiş"
+      "open": "Kabinetni oçiş",
+      "accept_contract": "Şartnomani imzolaş",
+      "accept_act": "Dalolatnomani qabul qiliş"
     },
     "codeNote": "Har qanday amal {{email}} manziliga keladigan koddan keyin bajariladi. Bu havola orqali boşqa hujjat va bölimlar oçilmaydi.",
     "memberNote": "Siz {{name}} sifatida kirgansiz — kod kerak emas.",
@@ -1908,7 +1923,11 @@
     "state": {
       "accepted": "Taklif qabul qilindi. Şartnoma kabinetingizda paydo böladi.",
       "rejected": "Taklif izoh bilan qaytarildi.",
-      "expired": "Taklifning amal qiliş muddati tugadi. Sotuvçidan uni yangilaşni sörang."
+      "expired": "Taklifning amal qiliş muddati tugadi. Sotuvçidan uni yangilaşni sörang.",
+      "accepted_contract": "Şartnomani imzoladingiz. Keyingi qadam — hisob.",
+      "accepted_act": "Dalolatnoma qabul qilindi.",
+      "rejected_act": "Dalolatnoma izoh bilan qaytarildi.",
+      "paid": "Hisob tölandi."
     },
     "reason": {
       "no_right": "Kontaktingizda qaror qabul qilişga huquq yöq — kompaniyangiz administratoriga murojaat qiling.",
@@ -1927,6 +1946,9 @@
       "sending": "Kod yuborilmoqda…",
       "label": "Xatdagi kod",
       "spam": "Kelmadimi? «Spam» jildini tekşiring.",
+      "sentTelegram": "Kodni {{email}} manziliga va Telegramga yubordik. U {{minutes}} daqiqa amal qiladi.",
+      "labelTelegram": "Xat yoki Telegramdagi kod",
+      "notInMail": "Pochtaga kelmadimi? Kod Telegramda ham bor.",
       "resend": "Qayta yuboriş",
       "resendIn": "{{time}} dan keyin qayta yuboriş",
       "remarks": "Nimani tuzatiş kerak?",
@@ -1936,12 +1958,19 @@
       "memberTitle": "Taklifni qabul qilasizmi?",
       "memberText": "Summa {{total}}. Şartnoma kabinetingizda paydo böladi.",
       "working": "Bajarilmoqda…",
-      "openTitle": "Kabinetni oçiş"
+      "openTitle": "Kabinetni oçiş",
+      "memberTitle_contract": "Şartnomani imzolaysizmi?",
+      "memberText_contract": "Summa {{total}}. Imzolaş bilan şartnoma şartlarini qabul qilasiz.",
+      "memberTitle_act": "Dalolatnomani qabul qilasizmi?",
+      "memberText_act": "Summa {{total}}. Qabul qilingan dalolatnomani qaytarib bölmaydi."
     },
     "done": {
       "accept": "Taklif qabul qilindi",
       "reject": "Izohlar yuborildi",
-      "question": "Savol menejerga yuborildi"
+      "question": "Savol menejerga yuborildi",
+      "accept_contract": "Şartnoma imzolandi",
+      "accept_act": "Dalolatnoma qabul qilindi",
+      "reject_act": "Izohlar yuborildi"
     },
     "gone": {
       "revoked": {
@@ -1960,6 +1989,26 @@
         "title": "Havola topilmadi",
         "text": "Manzilni tekşiring yoki yuboruvçidan yangi havola sörang."
       }
-    }
+    },
+    "docTitle_contract": "{{number}} şartnomasi",
+    "docTitle_invoice": "{{number}} hisobi",
+    "docTitle_act": "{{number}} dalolatnomasi",
+    "downloadNamed_contract": "PDF yuklab oliş: {{number}} şartnomasi",
+    "downloadNamed_invoice": "PDF yuklab oliş: {{number}} hisobi",
+    "downloadNamed_act": "PDF yuklab oliş: {{number}} dalolatnomasi",
+    "pay": {
+      "title": "Tölov rekvizitlari",
+      "none": "Rekvizitlar hisobning PDF faylida.",
+      "paidQuestion": "Tölab böldingizmi? Tölov sotuvçi tasdiqlagaç hisobda paydo böladi. Tölov topşiriğini Kabinetda ilova qilişingiz mumkin."
+    },
+    "about": {
+      "title_contract": "Hujjat haqida",
+      "text_contract": "{{from}} bilan şartnoma. PDF faylni öqing va tayyor bölganingizda imzolang.",
+      "title_act": "Hujjat haqida",
+      "text_act": "{{from}} dalolatnomasi. PDF faylni tekşiring: dalolatnomani qabul qiling yoki izoh bilan qaytaring.",
+      "title": "Hujjat haqida",
+      "text": "{{from}} hujjati."
+    },
+    "docTitle": "{{number}} taklifi"
   }
 }

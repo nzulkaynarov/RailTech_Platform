@@ -23,6 +23,7 @@ from app.deps import Authed
 from app.eds_documents import API as EDS_API
 from app.eds_documents import EdsProxy
 from app.errors import PlatformError, backend_unavailable, from_backend
+from app.row_logos import attach_client_logos
 from app.schemas_eds_documents import EdsDealRef, EdsFile, EdsPerson
 from app.schemas_eds_payments import (
     InvoiceTab,
@@ -200,6 +201,7 @@ class Receivable(BaseModel):
     number: str
     deal_id: int
     deal_number: str = ""
+    client_id: int | None = None
     client_name: str
     currency: str | None
     total_incl_vat: str
@@ -227,6 +229,7 @@ def row_of(raw: dict[str, Any]) -> PaymentRow:
         project_number=project_number(item.deal_id, item.deal_number),
         deal_id=item.deal_id,
         client_name=item.client_name,
+        client_id=item.client_id,
         amount=_money(item.total_incl_vat, item.currency),
         paid=_money(item.amount_paid, item.currency),
         balance=_money(item.balance_due, item.currency),
@@ -244,6 +247,13 @@ def card_of(raw: dict[str, Any]) -> PaymentCard:
         return _card(raw)
     except (ValidationError, KeyError, TypeError, ValueError) as exc:
         raise backend_unavailable("erp", "bad_response") from exc
+
+
+async def card_out(authed: Authed, raw: dict[str, Any]) -> PaymentCard:
+    """Карточка счёта с логотипом клиента — и после действия: SPA кладёт ответ в кэш."""
+    card = card_of(raw)
+    await attach_client_logos(authed, [card])
+    return card
 
 
 def _card(raw: dict[str, Any]) -> PaymentCard:
@@ -614,6 +624,7 @@ async def build_board(
         Receivables(authed).board(params), memos_to_pay_count(EdsProxy(authed.call))
     )
     items, count, counts = parse_board(erp_raw, tab)
+    await attach_client_logos(authed, items)
     return PaymentBoard(
         tab=tab,
         count=count,

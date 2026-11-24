@@ -57,6 +57,15 @@ SAMPLE_CONTEXTS: dict[str, dict] = {
         "login_code": "123456",
         "telegram_notifications_url": "https://cabinet.example.com/profile#notifications",
     },
+    "document_link_sent": {
+        "kind": "invoice",
+        "recipient_name": "Алиса",
+        "seller_name": "ООО «Поставщик»",
+        "number": "INV-0042",
+        "total": "20 608 000,00 UZS",
+        "due_date": "08.12.2026",
+        "public_link": "https://cabinet.example.com/d/sample-token",
+    },
     "document_link_code": {
         "code": "123456",
         "document_number": "QT-0118",

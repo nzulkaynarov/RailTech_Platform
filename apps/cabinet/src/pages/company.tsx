@@ -5,6 +5,7 @@ import { AlertTriangle, Building2, CheckCircle2, FileText, Handshake, Pencil, Sh
 import { toast } from '@/lib/toast';
 
 import { apiErrorKey } from '@/api/errors';
+import { companyLogoUrl, isPortalApiError } from '@/api/portal';
 import type { Company, PartnerKind, Schemas, TeamInvite, TeamMember } from '@/api/portal';
 import { getPartnerContractPdfUrl } from '@/api/portal';
 import {
@@ -12,6 +13,8 @@ import {
   useCompany,
   useCompanyPartnerApplication,
   useCompanySecurityLog,
+  useDeleteCompanyLogo,
+  useUploadCompanyLogo,
   useEndSecurityEventSession,
   useDeactivateTeamMember,
   useInviteTeamMember,
@@ -22,7 +25,10 @@ import {
 } from '@/api/queries';
 import { ActionDialog } from '@/components/ActionDialog';
 import { DetailList } from '@/components/Details';
+import { CompanyCell } from '@/components/EntityCell';
 import { EmptyState } from '@/components/EmptyState';
+import { FilePickerButton } from '@/components/FileField';
+import { RowMenu, RowMenuAction } from '@/components/list/RowMenu';
 import { PageHeader } from '@/components/PageHeader';
 import { UnsavedChangesBar } from '@/components/UnsavedChangesBar';
 import { DetailSkeleton, ErrorState, ListSkeleton } from '@/components/QueryStates';
@@ -47,11 +53,73 @@ import {
   type BankErrors,
 } from '@/lib/bankAccount';
 import { BankAccountFields } from '@/components/BankAccountFields';
-import { isPortalApiError } from '@/api/portal';
 import { formatDate, formatDateTime } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { CanAct } from '@/session/CanAct';
 import { useMe } from '@/session/useMe';
+import i18n from '@/i18n';
+
+const LOGO_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
+
+/**
+ * Логотип компании (ЕД-5): виден всем участникам, заменяет и убирает администратор компании. Файл уходит как есть,
+ * сервер сам режет его до квадрата 256×256 по центру; адрес — с версией, новая загрузка меняет картинку сразу.
+ */
+function CompanyLogo({ company, canEdit }: { company: Company; canEdit: boolean }) {
+  const { t } = useTranslation();
+  const upload = useUploadCompanyLogo();
+  const remove = useDeleteCompanyLogo();
+  const [problem, setProblem] = useState<string | null>(null);
+  const logoUrl = companyLogoUrl(company.logo_version);
+  const failed = (error: unknown) => {
+    const code = isPortalApiError(error) ? error.code : '';
+    const own = `pages.company.logo.errors.${code}`;
+    setProblem(i18n.exists(own) ? t(own) : t(apiErrorKey(error)));
+  };
+
+  return (
+    <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-2" data-testid="company-logo">
+      <CompanyCell name={company.name} logoUrl={logoUrl} size={40} />
+      {canEdit ? (
+        <div className="flex flex-wrap items-center gap-2">
+          <FilePickerButton
+            accept={LOGO_TYPES.join(',')}
+            label={logoUrl ? t('pages.company.logo.change') : t('pages.company.logo.choose')}
+            inputLabel={t('pages.company.logo.input')}
+            disabled={upload.isPending}
+            onPick={(file) => {
+              if (!LOGO_TYPES.includes(file.type)) {
+                setProblem(t('pages.company.logo.errors.FILE_TYPE_NOT_ALLOWED'));
+                return;
+              }
+              setProblem(null);
+              upload.mutate(file, { onError: failed });
+            }}
+          />
+          {logoUrl ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={remove.isPending}
+              onClick={() => {
+                setProblem(null);
+                remove.mutate(undefined, { onError: failed });
+              }}
+            >
+              {t('pages.company.logo.remove')}
+            </Button>
+          ) : null}
+          <span className="text-xs text-muted-foreground">{t('pages.company.logo.hint')}</span>
+        </div>
+      ) : null}
+      {problem ? (
+        <Alert variant="destructive" className="w-full" role="alert">
+          <AlertDescription>{problem}</AlertDescription>
+        </Alert>
+      ) : null}
+    </div>
+  );
+}
 
 /**
  * Компания и команда клиента (B2B `SettingsPage`: разделы «профиль» и «команда»). Правка реквизитов и
@@ -125,6 +193,7 @@ export function CompanyPage() {
           )}
           <Card>
             <CardContent>
+              <CompanyLogo company={company.data} canEdit={isAdmin} />
               <DetailList
                 className="sm:grid-cols-1"
                 items={[
@@ -673,7 +742,6 @@ export function TeamPage() {
           ))}
         </ul>
       )}
-      <p className="mt-4 text-xs text-muted-foreground">{t('pages.team.rightsHint')}</p>
       <InviteDialog open={inviting} onOpenChange={setInviting} isMeAdmin={isMeAdmin} />
 
       <ActionDialog
@@ -715,6 +783,21 @@ function MemberCard({
         {isMe ? <ToneBadge tone="info">{t('pages.team.you')}</ToneBadge> : null}
         {member.is_primary ? <ToneBadge tone="neutral">{t('pages.team.primary')}</ToneBadge> : null}
         {member.is_admin ? <ToneBadge tone="warning">{t('pages.team.admin')}</ToneBadge> : null}
+        {isMeAdmin && !isMe && !member.is_primary ? (
+          <div className="ml-auto">
+            <RowMenu name={member.name}>
+              <RowMenuAction disabled={isPending} onSelect={() => onToggleCanAct(member)}>
+                {member.can_act ? t('pages.team.revokeCanAct') : t('pages.team.grantCanAct')}
+              </RowMenuAction>
+              <RowMenuAction disabled={isPending} onSelect={() => onToggleAdmin(member)}>
+                {member.is_admin ? t('pages.team.revokeAdmin') : t('pages.team.grantAdmin')}
+              </RowMenuAction>
+              <RowMenuAction destructive icon={UserMinus} disabled={isPending} onSelect={() => onDeactivate(member)}>
+                {t('pages.team.deactivate')}
+              </RowMenuAction>
+            </RowMenu>
+          </div>
+        ) : null}
       </div>
       <DetailList
         items={[
@@ -732,35 +815,6 @@ function MemberCard({
           },
         ]}
       />
-      {isMeAdmin && !isMe && !member.is_primary ? (
-        <div className="mt-auto flex flex-wrap gap-2 border-t border-border pt-3">
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={isPending}
-            onClick={() => onToggleCanAct(member)}
-          >
-            {member.can_act ? t('pages.team.revokeCanAct') : t('pages.team.grantCanAct')}
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={isPending}
-            onClick={() => onToggleAdmin(member)}
-          >
-            {member.is_admin ? t('pages.team.revokeAdmin') : t('pages.team.grantAdmin')}
-          </Button>
-          <Button
-            size="sm"
-            variant="destructive"
-            disabled={isPending}
-            onClick={() => onDeactivate(member)}
-          >
-            <UserMinus className="size-4 mr-1" aria-hidden="true" />
-            {t('pages.team.deactivate')}
-          </Button>
-        </div>
-      ) : null}
     </article>
   );
 }

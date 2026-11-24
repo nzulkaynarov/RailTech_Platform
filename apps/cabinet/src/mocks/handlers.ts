@@ -334,9 +334,23 @@ function byId<T extends { id: number }>(items: T[], id: string): T | undefined {
   return items.find((item) => String(item.id) === id);
 }
 
+/** ЕД-4: позиция строки каталога — наш артикул и главное фото (id = 1, если у карточки мока есть фото). */
+function withItemRef(item: Schemas['CatalogItem']): Schemas['CatalogItem'] {
+  return {
+    ...item,
+    item: {
+      id: item.id,
+      name: item.name,
+      sku: `RT-0${String(item.id)}`,
+      kind: item.kind,
+      photo: item.images?.[0] ? 1 : null,
+    },
+  };
+}
+
 /** Карточка в списке каталога — без документов (они только в детальной карточке). */
 function listItem(item: Schemas['CatalogItem']): Schemas['CatalogItem'] {
-  const copy = { ...item };
+  const copy = withItemRef(item);
   delete copy.documents;
   return copy;
 }
@@ -403,12 +417,31 @@ function docLinkGone(token: string): Response | null {
   return null;
 }
 
-function docLinkState(token: string): Schemas['DocLinkView']['state'] {
-  return docLinkStates.get(token) ?? (token.startsWith('done') ? 'accepted' : 'open');
+type DocKind = 'quote' | 'contract' | 'invoice' | 'act';
+
+/** Вид документа мока по началу токена (ДК-3): `contract-…`, `invoice-…`, `act-…`; прочее — КП. */
+function docKind(token: string): DocKind {
+  return (['contract', 'invoice', 'act'] as const).find((kind) => token.startsWith(kind)) ?? 'quote';
+}
+
+/** Что можно сделать по ссылке у вида — как `actions` ответа сервера. */
+const DOC_ACTIONS: Record<DocKind, Array<'accept' | 'reject' | 'question'>> = {
+  quote: ['accept', 'reject', 'question'],
+  contract: ['accept'],
+  invoice: [],
+  act: ['accept', 'reject'],
+};
+
+function docLinkState(token: string): string {
+  const decided = docLinkStates.get(token);
+  if (decided) return decided;
+  if (token.includes('paid')) return 'paid';
+  return token.includes('done') ? 'accepted' : 'open';
 }
 
 function docLinkAvailability(token: string, session: MockSession | null): Schemas['DocLinkAvailability'] {
   const state = docLinkState(token);
+  if (DOC_ACTIONS[docKind(token)].length === 0) return { allowed: false, reason: 'no_actions' };
   if (state !== 'open') return { allowed: false, reason: state };
   if (session && token.includes('foreign')) return { allowed: false, reason: 'other_company' };
   const canAct = session ? contactFor(session.role).can_act : !token.includes('viewer');
@@ -423,22 +456,49 @@ function docLinkView(token: string): Schemas['DocLinkView'] {
   valid.setUTCDate(valid.getUTCDate() + 16);
   const expires = new Date(valid);
   expires.setUTCDate(expires.getUTCDate() + 30);
-  return {
-    kind: 'quote',
-    number: 'QT-0118',
-    version: 1,
+  const kind = docKind(token);
+  const common = {
     from_name: 'ООО «РейлТех»',
     to_name: 'ООО «Восток Транс»',
+    version: 1,
+    valid_until: null,
+    state: docLinkState(token) as Schemas['DocLinkView']['state'],
+    link_expires_at: expires.toISOString(),
+    recipient_hint: 'p***@vostok-trans.uz',
+    session: (!session ? 'none' : token.includes('foreign') ? 'other_company' : 'member') as Schemas['DocLinkView']['session'],
+    decide: availability,
+    ask: availability,
+    actions: DOC_ACTIONS[kind],
+    lines: [],
+  };
+  const total = { amount: '33000000.00', currency: 'UZS' };
+  if (kind === 'contract') {
+    return { ...common, kind, number: 'CT-0042', total, signed_at: common.state === 'accepted' ? valid.toISOString() : null };
+  }
+  if (kind === 'invoice') {
+    const paid = common.state === 'paid';
+    return {
+      ...common,
+      kind,
+      number: 'INV-0077',
+      total,
+      due_date: valid.toISOString().slice(0, 10),
+      paid: paid ? total : { amount: '0.00', currency: 'UZS' },
+      balance_due: paid ? { amount: '0.00', currency: 'UZS' } : total,
+      payment_details: 'Получатель: ООО «РейлТех»\nР/с 2020 8000 1234 5678 9001, МФО 00014\nНазначение: оплата по счёту INV-0077',
+    };
+  }
+  if (kind === 'act') {
+    return { ...common, kind, number: 'ACT-0031', total, issued_at: valid.toISOString() };
+  }
+  return {
+    ...common,
+    kind,
+    number: 'QT-0118',
     total: quote.total,
     subtotal: quote.subtotal,
     vat: quote.vat,
     valid_until: valid.toISOString().slice(0, 10),
-    state: docLinkState(token),
-    link_expires_at: expires.toISOString(),
-    recipient_hint: 'p***@vostok-trans.uz',
-    session: !session ? 'none' : token.includes('foreign') ? 'other_company' : 'member',
-    decide: availability,
-    ask: availability,
     payment_terms: quote.payment_terms,
     delivery_days: quote.delivery_days,
     delivery_note: quote.delivery_note,
@@ -469,7 +529,8 @@ const docLinkHandlers = [
     if (token.startsWith('toosoon')) {
       return HttpResponse.json({ detail: 'CODE_RESEND_TOO_SOON' }, { status: 429, headers: { 'Retry-After': '30' } });
     }
-    return json({ sent_to: 'p***@vostok-trans.uz', expires_in: 600, resend_after: 45 } satisfies Schemas['DocLinkCodeSent'], 202);
+    const channels: Schemas['DocLinkCodeSent']['channels'] = token.startsWith('tg') ? ['email', 'telegram'] : ['email'];
+    return json({ sent_to: 'p***@vostok-trans.uz', expires_in: 600, resend_after: 45, channels } satisfies Schemas['DocLinkCodeSent'], 202);
   }),
   http.post(`${API}/doc-links/verify`, async ({ request }) => {
     const { token, code } = await readJson<{ token?: string; code?: string }>(request);
@@ -493,6 +554,7 @@ const docLinkHandlers = [
         const gone = docLinkGone(token);
         if (gone) return gone;
         if (token.includes('foreign')) return error(403, 'FORBIDDEN');
+        if (!DOC_ACTIONS[docKind(token)].includes(action as 'accept')) return error(422, 'VALIDATION_ERROR');
         if (docLinkState(token) !== 'open') return error(409, 'QUOTE_FINALIZED');
         if (action !== 'accept' && !text?.trim()) return error(422, action === 'reject' ? 'REASON_REQUIRED' : 'TEXT_REQUIRED');
         if (action === 'accept') docLinkStates.set(token, 'accepted');
@@ -1206,7 +1268,7 @@ export const handlers = [
     `${API}/catalog/:id`,
     withSession<IdParams>(({ db, params }) => {
       const item = byId(db.catalog, params.id);
-      return item ? json(item) : error(404, 'NOT_FOUND');
+      return item ? json(withItemRef(item)) : error(404, 'NOT_FOUND');
     }),
   ),
   http.get<IdParams & { docId: string }>(
@@ -1327,6 +1389,43 @@ export const handlers = [
           : db.company.country;
         db.company = { ...db.company, ...profile, country };
         return json(companyView(db.company, contactFor(session.role).is_admin));
+      },
+      { action: true },
+    ),
+  ),
+  // ЕД-5: логотип компании — версия в `company.logo_version`, картинка — SVG по тому же адресу
+  http.get(
+    `${API}/company/logo`,
+    withSession(({ db }) => {
+      if (!db.company.logo_version) return error(404, 'NOT_FOUND');
+      return new HttpResponse(
+        '<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96"><rect width="96" height="96" rx="8" fill="#1d6b8a"/><rect x="20" y="58" width="56" height="8" fill="#fff"/><rect x="42" y="24" width="12" height="42" fill="#fff"/></svg>',
+        { headers: { 'Content-Type': 'image/svg+xml' } },
+      );
+    }),
+  ),
+  http.put(
+    `${API}/company/logo`,
+    withSession(
+      async ({ db, session, request }) => {
+        if (!contactFor(session.role).is_admin) return error(409, 'ADMIN_REQUIRED');
+        const file = (await request.formData()).get('file');
+        if (!file || typeof file === 'string') return error(400, 'FILE_REQUIRED');
+        if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) return error(422, 'FILE_TYPE_NOT_ALLOWED');
+        if (file.size > 2 * 1024 * 1024) return error(422, 'FILE_TOO_LARGE');
+        db.company = { ...db.company, logo_version: `v${(Number(db.company.logo_version?.slice(1)) || 0) + 1}` };
+        return json(companyView(db.company, true));
+      },
+      { action: true },
+    ),
+  ),
+  http.delete(
+    `${API}/company/logo`,
+    withSession(
+      ({ db, session }) => {
+        if (!contactFor(session.role).is_admin) return error(409, 'ADMIN_REQUIRED');
+        db.company = { ...db.company, logo_version: null };
+        return json(companyView(db.company, true));
       },
       { action: true },
     ),

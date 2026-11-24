@@ -99,6 +99,28 @@ describe('документ по ссылке: гость', () => {
     expect(screen.getByText(/Вы вошли как/)).toBeInTheDocument();
   });
 
+  it('Telegram привязан: диалог говорит «на почту и в Telegram» и не отсылает к «Спаму»; без него — как прежде', async () => {
+    const user = userEvent.setup();
+    open('tg-token-0123456789');
+    await user.click(await screen.findByRole('button', { name: 'Принять предложение' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Подтвердите, что это вы' });
+    expect(await within(dialog).findByText(/Отправили код на p\*\*\*@vostok-trans\.uz и в Telegram\. Он действует 10 минут\./)).toBeInTheDocument();
+    expect(within(dialog).getByLabelText('Код из письма или Telegram')).toBeInTheDocument();
+    expect(within(dialog).getByText('Не пришло на почту? Код есть и в Telegram.')).toBeInTheDocument();
+    expect(within(dialog).queryByText(/Спам/)).not.toBeInTheDocument();
+    await expectNoAxeViolations();
+  });
+
+  it('Telegram не привязан: код только на почту, подсказка про «Спам» остаётся', async () => {
+    const user = userEvent.setup();
+    open();
+    await user.click(await screen.findByRole('button', { name: 'Принять предложение' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Подтвердите, что это вы' });
+    expect(await within(dialog).findByText(/Отправили код на p\*\*\*@vostok-trans\.uz\. Он действует/)).toBeInTheDocument();
+    expect(within(dialog).queryByText(/Telegram/)).not.toBeInTheDocument();
+    expect(within(dialog).getByText('Не пришло? Проверьте «Спам».')).toBeInTheDocument();
+  });
+
   it('пять неверных кодов подряд: код больше не действует, нужен новый', async () => {
     const user = userEvent.setup();
     open();

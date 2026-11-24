@@ -9,8 +9,10 @@
 """
 
 from django.db.models import Case, IntegerField, Q, When
+from django.http import HttpResponse
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from integration.models import CrmClientMapping
+from parties import pictures
 from parties.models import Company, Contact
 from parties.models.contacts import active_contact_q
 from parties.models.relationships import RelationshipRole, RelationshipStatus
@@ -18,6 +20,7 @@ from parties.people import contact_names
 from portal.desk import service_counterparty as counterparty
 from portal.desk.serializers import (
     DeskCounterparty,
+    DeskCounterpartyLogos,
     DeskCounterpartyRequisitesIn,
     DeskCounterpartyRoleIn,
     DeskDoNotWorkIn,
@@ -26,10 +29,13 @@ from portal.desk.serializers import (
     DeskOrganizationPeople,
     DeskPeoplePage,
     DeskPersonContacts,
+    DeskPersonPhoto,
+    DeskPictureIn,
 )
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.exceptions import NotFound
+from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
 
 from accounts.services.clients import seller_clients
@@ -71,13 +77,39 @@ def person_row(contact: Contact, client_ids: set) -> dict:
         "is_primary": contact.is_primary,
         "company": {"id": contact.company_id, "name": contact.company.name},
         "kind": "client" if contact.company_id in client_ids else "partner",
+        "photo_version": pictures.version(contact.photo),
     }
+
+
+#: Кто правит логотип и фото контакта: те же, кто правит реквизиты контрагента (новых прав нет)
+PICTURE_EDITORS = ("deal.manage", "supply.manage")
+PICTURE_RESPONSES = {200: {"type": "string", "format": "binary"}, 404: NOT_FOUND}
+
+
+def picture_response(field, request) -> HttpResponse:
+    """Картинка по запросу: 404, пока её нет или файла нет в хранилище; кэш браузера держит адрес с `?v=` (версия)."""
+    if not field:
+        raise NotFound()
+    try:
+        data = pictures.render(field, request.query_params.get("size", "row"))
+    except (OSError, ValueError):
+        pictures.logger.warning("picture %s is unreadable", field.name)
+        raise NotFound() from None
+    return HttpResponse(data, content_type="image/webp", headers={"Cache-Control": "private, max-age=300"})
+
+
+def picture_upload(request):
+    """Файл из формы или отказ 400 `FILE_REQUIRED`."""
+    body = DeskPictureIn(data=request.data)
+    body.is_valid(raise_exception=True)
+    return body.validated_data["file"]
 
 
 class PeopleDeskViewSet(DeskViewSet):
     lookup_value_regex = r"\d+"
     queryset = Contact.objects.none()
     serializer_class = DeskPeoplePage
+    required_permissions = {"photo": PICTURE_EDITORS}
 
     @extend_schema(
         operation_id="parties_people_list",
@@ -119,6 +151,55 @@ class PeopleDeskViewSet(DeskViewSet):
             {"id": contact.pk, "name": contact.name, "phone": contact.phone or None, "email": contact.email or None}
         )
 
+    @extend_schema(
+        methods=["GET"],
+        operation_id="parties_people_photo_get",
+        summary="Photo of a counterparty person",
+        description="Фото контакта: WebP 96 px (`size=full` — 256 px). Читает любой сотрудник в границах списка «Люди»; фото нет — 404.",
+        parameters=[
+            OpenApiParameter("size", str, required=False, enum=sorted(pictures.SIZES), description="row | full")
+        ],
+        responses=PICTURE_RESPONSES,
+        tags=["Parties"],
+    )
+    @extend_schema(
+        methods=["PUT"],
+        operation_id="parties_people_photo_put",
+        summary="Upload or replace the photo of a counterparty person",
+        description=(
+            "СУЩ-3. Квадратное фото (клиент уже обрезал по кругу), JPEG, PNG или WebP до 2 МБ; сервер перекодирует в WebP "
+            "256×256. Право `deal.manage` или `supply.manage`. Не тот тип — 400 `FILE_TYPE_NOT_ALLOWED`, подпись не совпала — "
+            "400 `FILE_CONTENT_MISMATCH`, больше 2 МБ — 400 `FILE_TOO_LARGE`. Ответ — `photo_version`."
+        ),
+        request={"multipart/form-data": DeskPictureIn},
+        responses={200: DeskPersonPhoto, 400: REFUSED, 403: FORBIDDEN, 404: NOT_FOUND},
+        tags=["Parties"],
+    )
+    @extend_schema(
+        methods=["DELETE"],
+        operation_id="parties_people_photo_delete",
+        summary="Remove the photo of a counterparty person",
+        description="Убирает фото и файл; повтор безопасен. Тот же доступ. Ответ — `photo_version: null`.",
+        responses={200: DeskPersonPhoto, 403: FORBIDDEN, 404: NOT_FOUND},
+        tags=["Parties"],
+    )
+    @action(detail=True, methods=["get", "put", "delete"], url_path="photo", parser_classes=[MultiPartParser])
+    def photo(self, request, pk=None):
+        queryset, _ = people_queryset(request.user, None, "")
+        contact = queryset.filter(pk=pk).first()
+        if contact is None:
+            raise NotFound()
+        if request.method == "GET":
+            return picture_response(contact.photo, request)
+        if request.method == "DELETE":
+            pictures.remove(contact, "photo")
+        else:
+            try:
+                pictures.replace(contact, "photo", picture_upload(request))
+            except ItemError as error:
+                return refuse(error)
+        return Response({"id": contact.pk, "photo_version": pictures.version(contact.photo)})
+
 
 def organization_row(company: Company, client_ids: set, names: dict, roles: dict, crm_ids: dict) -> dict:
     return {
@@ -131,6 +212,7 @@ def organization_row(company: Company, client_ids: set, names: dict, roles: dict
         "roles": roles[company.pk],
         "country": company.country.name if company.country_id else None,
         "crm_client_id": crm_ids.get(company.pk),
+        "logo_version": pictures.version(company.logo),
     }
 
 
@@ -245,6 +327,8 @@ class OrganizationsDeskViewSet(DeskViewSet):
         "create": SELF_SERVICE,
         # СУЩ-2.7: реквизиты контрагента правит менеджер или снабжение — их ведёт ERP
         "partial_update": ("deal.manage", "supply.manage"),
+        # ЕД-5: логотип правит тот же, кто правит реквизиты
+        "logo": PICTURE_EDITORS,
         # Х-8: «Не работать» ставит и снимает тот же, кто правит реквизиты контрагента
         "do_not_work": ("deal.manage", "supply.manage"),
     }
@@ -328,6 +412,77 @@ class OrganizationsDeskViewSet(DeskViewSet):
         return Response(counterparty.card(company, client_ids, request.user))
 
     @extend_schema(
+        methods=["GET"],
+        operation_id="parties_organizations_logo_get",
+        summary="Counterparty logo",
+        description="Логотип: WebP 96 px (`size=full` — 256 px). Читает любой сотрудник в границах списка контрагентов; логотипа нет — 404.",
+        parameters=[
+            OpenApiParameter("size", str, required=False, enum=sorted(pictures.SIZES), description="row | full")
+        ],
+        responses=PICTURE_RESPONSES,
+        tags=["Parties"],
+    )
+    @extend_schema(
+        methods=["PUT"],
+        operation_id="parties_organizations_logo_put",
+        summary="Upload or replace the counterparty logo",
+        description=(
+            "ЕД-5. Квадрат, обрезанный клиентом; JPEG, PNG или WebP до 2 МБ, сервер перекодирует в WebP 256×256. Право "
+            "`deal.manage` или `supply.manage`. Отказы файла — 400 `FILE_TYPE_NOT_ALLOWED`, `FILE_CONTENT_MISMATCH`, "
+            "`FILE_TOO_LARGE`. Ответ — карточка контрагента с новой `logo_version`."
+        ),
+        request={"multipart/form-data": DeskPictureIn},
+        responses={200: DeskCounterparty, 400: REFUSED, 403: FORBIDDEN, 404: NOT_FOUND},
+        tags=["Parties"],
+    )
+    @extend_schema(
+        methods=["DELETE"],
+        operation_id="parties_organizations_logo_delete",
+        summary="Remove the counterparty logo",
+        description="Убирает логотип и файл; повтор безопасен. Тот же доступ. Ответ — карточка контрагента.",
+        responses={200: DeskCounterparty, 403: FORBIDDEN, 404: NOT_FOUND},
+        tags=["Parties"],
+    )
+    @action(detail=True, methods=["get", "put", "delete"], url_path="logo", parser_classes=[MultiPartParser])
+    def logo(self, request, pk=None):
+        if request.method == "GET":
+            # своя компания не контрагент, но её логотип показывают «Компания» и бланки: читать его можно
+            from core.tenant import own_company
+
+            own = own_company()
+            if own is not None and str(own.pk) == str(pk):
+                return picture_response(own.logo, request)
+        company, client_ids = self._company(request, pk)
+        if request.method == "GET":
+            return picture_response(company.logo, request)
+        if request.method == "DELETE":
+            pictures.remove(company, "logo")
+        else:
+            try:
+                pictures.replace(company, "logo", picture_upload(request))
+            except ItemError as error:
+                return refuse(error)
+        return Response(counterparty.card(company, client_ids, request.user))
+
+    @extend_schema(
+        operation_id="parties_organizations_logos",
+        summary="Logo versions of several counterparties",
+        description=(
+            "Версии логотипов компаний `ids` (до 100, через запятую) в границах списка контрагентов: строки реестров, где "
+            "компания приходит из CRM, получают адрес `…/logo/?v=` одним запросом. Чужие и неизвестные id в ответ не входят."
+        ),
+        parameters=[OpenApiParameter("ids", str, required=True, description="id компаний через запятую, до 100")],
+        responses={200: DeskCounterpartyLogos},
+        tags=["Parties"],
+    )
+    @action(detail=False, methods=["get"], url_path="logos")
+    def logos(self, request):
+        wanted = [int(x) for x in (request.query_params.get("ids") or "").split(",") if x.strip().isdigit()][:100]
+        client_ids, partner_ids = counterparty_ids(request.user)
+        rows = Company.objects.filter(pk__in=set(wanted) & (client_ids | partner_ids)).only("id", "logo")
+        return Response({"results": {str(c.pk): pictures.version(c.logo) for c in rows}})
+
+    @extend_schema(
         operation_id="parties_organizations_people",
         summary="People of a counterparty for a picker",
         description=(
@@ -350,6 +505,7 @@ class OrganizationsDeskViewSet(DeskViewSet):
                         "position": c.position or None,
                         "email": c.email or None,
                         "is_primary": c.is_primary,
+                        "photo_version": pictures.version(c.photo),
                     }
                     for c in contacts
                 ]

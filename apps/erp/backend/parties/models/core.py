@@ -8,7 +8,7 @@ from django.utils.translation import gettext_lazy as _
 
 from accounts.constants import SELLER_COMPANY_TYPES
 from core.models import Country
-from core.storage import company_logo_path, get_public_storage
+from core.storage import company_logo_path, get_private_storage
 
 
 def seller_company_q(prefix: str = "") -> models.Q:
@@ -208,7 +208,7 @@ class Company(models.Model):
     )
     logo = models.ImageField(
         upload_to=company_logo_path,
-        storage=get_public_storage,
+        storage=get_private_storage,
         null=True,
         blank=True,
         verbose_name=_("Логотип"),

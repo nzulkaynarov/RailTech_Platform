@@ -1,4 +1,5 @@
 import type {
+  DocumentClientLink,
   ProjectAct,
   ProjectActActionsItem,
   ProjectCard,
@@ -14,6 +15,7 @@ import type {
   ProjectPerson,
   ProjectRow,
 } from "../../shared/api/generated/model";
+import { clientRefOf } from "../pictures";
 
 /**
  * Вымышленные проекты для MSW (D2-5, BFF 0.26.0): те же формы, что вернёт BFF по `platform-bff.yaml`; поведение переходов
@@ -540,8 +542,67 @@ function seed(): ProjectState[] {
 
 let projects: ProjectState[] = seed();
 export const readProjects = (): ProjectState[] => projects;
+
+/** Ссылки клиента на документы проектов в Кабинете (ДК-3б): адрес замаскирован, как отдаёт ERP. */
+export type MockDocLinkKind = "contract" | "invoice" | "act";
+export type MockDocLink = DocumentClientLink;
+
+const docLinkKey = (kind: MockDocLinkKind, id: number) => `${kind}:${String(id)}`;
+
+function seedDocLinks(): Map<string, MockDocLink[]> {
+  const link = (
+    hint: string,
+    sent: string,
+    opened: string | null,
+    state: MockDocLink["state"] = "active",
+  ): MockDocLink => ({
+    recipient_hint: hint,
+    sent_at: sent,
+    first_opened_at: opened,
+    last_opened_at: opened,
+    expires_at: "2026-12-30T23:59:59+05:00",
+    state,
+  });
+  return new Map<string, MockDocLink[]>([
+    [
+      docLinkKey("contract", 301),
+      [
+        link("d***@demo-signal.example", "2026-10-14T10:05:00+05:00", "2026-10-15T09:40:00+05:00"),
+        link("b***@demo-signal.example", "2026-10-14T10:05:00+05:00", null),
+      ],
+    ],
+    [
+      docLinkKey("invoice", 4401),
+      [link("b***@demo-signal.example", "2026-10-19T09:00:00+05:00", null)],
+    ],
+    [
+      docLinkKey("act", 510),
+      [link("d***@demo-signal.example", "2026-10-26T09:05:00+05:00", "2026-10-26T14:20:00+05:00")],
+    ],
+  ]);
+}
+
+let docLinks = seedDocLinks();
+export const readDocLinks = (kind: MockDocLinkKind, id: number): MockDocLink[] =>
+  docLinks.get(docLinkKey(kind, id)) ?? [];
+/** Отзыв как в ERP: гасит все живые ссылки документа; повтор ничего не меняет. */
+export function revokeDocLinks(kind: MockDocLinkKind, id: number): MockDocLink[] {
+  const next = readDocLinks(kind, id).map((l) =>
+    l.state === "active" ? { ...l, state: "revoked" as const } : l,
+  );
+  docLinks.set(docLinkKey(kind, id), next);
+  return next;
+}
+/** Документ в карточке проекта — иначе 404, как у BFF. */
+export function ownsDocument(p: ProjectState, kind: MockDocLinkKind, id: number): boolean {
+  if (kind === "contract") return p.contract?.id === id;
+  if (kind === "act") return p.act?.id === id;
+  return p.invoices.some((i) => i.id === id);
+}
+
 export function resetProjects(): void {
   projects = seed();
+  docLinks = seedDocLinks();
 }
 export function writeProject(next: ProjectState): void {
   projects = projects.map((p) => (p.id === next.id ? next : p));
@@ -759,6 +820,7 @@ export function toRow(p: ProjectState): ProjectRow {
     request_number: numberOf(p, "ЗВ"),
     title: p.title,
     client_name: p.client,
+    ...clientRefOf(p.client),
     step: stepOf(p),
     client_status: clientStatusOf(p),
     total: p.total,

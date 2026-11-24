@@ -1,8 +1,9 @@
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
+import { setDownloadWait } from '@/lib/download';
 import { renderApp, signedIn } from '@/test/render';
-import { captureBody, captureText, expectNoAxeViolations, failWith, heading, requestLog } from '@/test/screens';
+import { captureBody, captureText, expectNoAxeViolations, failWith, heading, openRowMenu, requestLog } from '@/test/screens';
 
 function card(listName: string, title: string) {
   const list = screen.getByRole('list', { name: listName });
@@ -12,6 +13,36 @@ function card(listName: string, title: string) {
   if (!item) throw new Error(`нет карточки ${title}`);
   return item;
 }
+
+afterEach(() => setDownloadWait(null));
+
+describe('Скачивание из меню строки', () => {
+  it('202: меню закрыто, но «Документ готовится…» показано один раз, повтор того же файла не уходит, файл сохранён один раз', async () => {
+    signedIn();
+    let release: () => void = () => undefined;
+    let waits = 0;
+    setDownloadWait(() => {
+      waits += 1;
+      return new Promise<void>((resolve) => (release = resolve));
+    });
+    const user = userEvent.setup();
+    renderApp('/contracts');
+    await screen.findByRole('list', { name: 'Договоры' });
+    const row = card('Договоры', 'D-2026-0048');
+    await openRowMenu(user, row, 'D-2026-0048');
+    await user.click(await screen.findByRole('menuitem', { name: 'Скачать' }));
+    expect(await screen.findByText('Документ готовится…')).toBeInTheDocument();
+    // второй клик по тому же документу, пока он готовится
+    await openRowMenu(user, row, 'D-2026-0048');
+    await user.click(await screen.findByRole('menuitem', { name: 'Скачать' }));
+    expect(screen.getAllByText('Документ готовится…')).toHaveLength(1);
+    expect(window.URL.createObjectURL).not.toHaveBeenCalled();
+    release();
+    await vi.waitFor(() => expect(window.URL.createObjectURL).toHaveBeenCalledTimes(1));
+    expect(waits).toBe(1);
+    vi.mocked(window.URL.createObjectURL).mockClear();
+  });
+});
 
 describe('Договоры', () => {
   it('статусы договора; «Согласовать» с подтверждением: клиент согласовал — подписывает не он, а скан у сотрудника (D2-5)', async () => {
@@ -28,7 +59,9 @@ describe('Договоры', () => {
 
     const pending = card('Договоры', 'D-2026-0029');
     expect(within(pending).getByText('Ждёт вашего согласования')).toBeInTheDocument();
-    expect(within(pending).getByText('Файл ещё не выпущен')).toBeInTheDocument();
+    await openRowMenu(user, pending, 'D-2026-0029');
+    expect(await screen.findByRole('menuitem', { name: 'Файл ещё не выпущен' })).toHaveAttribute('aria-disabled', 'true');
+    await user.keyboard('{Escape}');
     await user.click(within(pending).getByRole('button', { name: 'Согласовать договор D-2026-0029' }));
     const dialog = await screen.findByRole('dialog', { name: 'Согласовать договор D-2026-0029' });
     expect(within(dialog).getByText(/Подписание — отдельный шаг/)).toBeInTheDocument();
@@ -56,13 +89,15 @@ describe('Договоры', () => {
     expect(await within(dialog).findByText('Договор уже согласован, подписан или отменён — обновите страницу.')).toBeInTheDocument();
   });
 
-  it('can_act=false — подписать нельзя, скачать можно', async () => {
+  it('can_act=false — подписать нельзя, скачать можно (в меню строки)', async () => {
     signedIn('viewer');
     window.localStorage.setItem('cabinet.language', 'ru');
+    const user = userEvent.setup();
     renderApp('/contracts');
     await screen.findByRole('list', { name: 'Договоры' });
     expect(screen.queryByRole('button', { name: /Согласовать/ })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Скачать: D-2026-0048' })).toBeInTheDocument();
+    await openRowMenu(user, card('Договоры', 'D-2026-0048'), 'D-2026-0048');
+    expect(await screen.findByRole('menuitem', { name: 'Скачать' })).toBeInTheDocument();
   });
 
   it('пусто', async () => {
@@ -75,6 +110,7 @@ describe('Договоры', () => {
 describe('Счета', () => {
   it('сумма, оплачено, остаток, срок; просрочка вычислена из due_date', async () => {
     signedIn();
+    const user = userEvent.setup();
     renderApp('/invoices');
     await heading('Счета');
     await screen.findByRole('list', { name: 'Счета' });
@@ -88,7 +124,9 @@ describe('Счета', () => {
     expect(within(partial).getByText('Оплачен частично')).toBeInTheDocument();
     expect(within(partial).getByText('27 500 000 сум')).toBeInTheDocument();
     expect(within(partial).getAllByText('13 750 000 сум')).toHaveLength(2);
-    expect(within(partial).getByRole('button', { name: 'Скачать: S-2026-0118' })).toBeInTheDocument();
+    await openRowMenu(user, partial, 'S-2026-0118');
+    expect(await screen.findByRole('menuitem', { name: 'Скачать' })).toBeInTheDocument();
+    await user.keyboard('{Escape}');
 
     expect(screen.getByText('1 счёт просрочен')).toBeInTheDocument();
     // К оплате — по валютам, без смешивания сумов и долларов.
@@ -246,7 +284,8 @@ describe('Акты', () => {
     expect(raw.current).toBe('');
     expect(log).not.toContain('POST /uploads');
     expect(log).toContain('POST /acts/701/accept');
-    expect(within(card('Акты', 'A-2026-0090')).queryByRole('button', { name: /Скан/ })).not.toBeInTheDocument();
+    await openRowMenu(user, card('Акты', 'A-2026-0090'), 'A-2026-0090');
+    expect(screen.queryByRole('menuitem', { name: /Скан/ })).not.toBeInTheDocument();
   });
 
   it('принять со сканом: POST /uploads → POST /acts/{id}/accept {upload_id} → ссылка на скан', async () => {
@@ -271,7 +310,8 @@ describe('Акты', () => {
     expect(body.current).toEqual({ upload_id: expect.stringMatching(/^upl_/) });
     const row = card('Акты', 'A-2026-0090');
     expect(within(row).getByText('Принят')).toBeInTheDocument();
-    expect(await within(row).findByRole('button', { name: 'Скачать: Скан подписанного акта A-2026-0090' })).toBeInTheDocument();
+    await openRowMenu(user, row, 'A-2026-0090');
+    expect(await screen.findByRole('menuitem', { name: 'Скан' })).toBeInTheDocument();
   });
 
   it.each([
@@ -317,7 +357,9 @@ describe('Акты', () => {
     const user = userEvent.setup();
     const body = captureBody('/acts/701/return');
     renderApp('/acts');
-    await user.click(await screen.findByRole('button', { name: 'Вернуть акт A-2026-0090' }));
+    await screen.findByRole('list', { name: 'Акты' });
+    await openRowMenu(user, card('Акты', 'A-2026-0090'), 'A-2026-0090');
+    await user.click(await screen.findByRole('menuitem', { name: 'Вернуть' }));
     const dialog = await screen.findByRole('dialog', { name: 'Вернуть акт A-2026-0090' });
     await user.click(within(dialog).getByRole('button', { name: 'Вернуть акт' }));
     expect(within(dialog).getByText(/Укажите причину/)).toBeInTheDocument();

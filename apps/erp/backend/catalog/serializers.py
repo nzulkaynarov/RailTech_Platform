@@ -5,6 +5,7 @@ from rest_framework.reverse import reverse
 from accounts.models import Company
 from master_data.models import Currency, DeliveryBasis, UnitOfMeasure
 
+from .item_ref import ItemRefSerializer
 from .models import (
     Category,
     DomainType,
@@ -19,11 +20,21 @@ from .models import (
 
 
 class CompanyLightSerializer(serializers.ModelSerializer):
-    """Lightweight company serializer for nested use — no extra queries."""
+    """Lightweight company serializer for nested use — no extra queries.
+
+    `logo` is our versioned API path (ЕД-5), not a storage address: the file is private and only the API serves it."""
+
+    logo = serializers.SerializerMethodField()
 
     class Meta:
         model = Company
         fields = ["id", "name", "inn", "logo"]
+
+    @extend_schema_field({"type": "string", "format": "uri", "nullable": True})  # format kept: contract compatibility
+    def get_logo(self, obj) -> str | None:
+        from parties.pictures import company_logo_path
+
+        return company_logo_path(obj)
 
 
 class ManufacturerSerializer(serializers.ModelSerializer):
@@ -247,6 +258,7 @@ class PublishedCatalogItemSerializer(serializers.Serializer):
     availability = serializers.ChoiceField(choices=["in_stock", "on_order", "expected"], required=False)
     lead_time_days = serializers.IntegerField(allow_null=True, required=False)
     images = serializers.ListField(child=serializers.CharField())
+    item = ItemRefSerializer(allow_null=True, required=False, help_text="Позиция строки списка (ЕД-4)")
     attributes = _AttributeSerializer(many=True)
     manufacturer = _ManufacturerSerializer(allow_null=True)
     manufacturer_part_number = serializers.CharField(allow_null=True)

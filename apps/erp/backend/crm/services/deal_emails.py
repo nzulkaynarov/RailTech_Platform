@@ -22,13 +22,9 @@ import logging
 from django.conf import settings
 from django.db import transaction
 
-from notifications.text_format import text_date, text_money
+from notifications.text_format import text_money
 
 logger = logging.getLogger(__name__)
-
-
-def _deal_url(deal) -> str:
-    return f"{settings.FRONTEND_URL}/#request-detail/{deal.pk}"
 
 
 def _invoice_url(invoice) -> str:
@@ -68,22 +64,14 @@ def send_deal_email(template: str, context: dict, user_ids) -> int:
 
 
 def email_invoice_issued(invoice) -> int:
-    """Покупателю: счёт выставлен и его ждут к оплате.
+    """Контактам сделки: счёт выставлен и его ждут к оплате (ДК-3).
 
-    Обязательный минимум у всех эталонов. Черновик письма НЕ порождает — только выставление.
+    Письмо с PDF и личной ссылкой получателя в Кабинет (`document_letters`), а не прежним участникам компании в ERP.
+    Черновик письма НЕ порождает — только выставление.
     """
-    from .deal_notifications import buyer_team_user_ids
+    from .document_letters import email_document
 
-    deal = invoice.deal
-    context = {
-        "invoice_number": invoice.number,
-        "deal_title": deal.title or "",
-        "seller_name": _seller_name(invoice),
-        "total": text_money(invoice.total_incl_vat, _currency_code(invoice)),
-        "due_date": text_date(invoice.due_date),
-        "invoice_url": _invoice_url(invoice),
-    }
-    return send_deal_email("invoice_issued", context, buyer_team_user_ids(deal))
+    return email_document("invoice", invoice)
 
 
 def email_payment_received(payment) -> int:
@@ -107,55 +95,23 @@ def email_payment_received(payment) -> int:
 
 
 def email_payment_reminder(invoice) -> int:
-    """Покупателю: срок оплаты прошёл.
+    """Контактам сделки: срок оплаты прошёл (ДК-3).
 
     Единственное событие отрезка, где эталоны шлют не одно письмо, а серию (Odoo +15/+30/+40,
     Xero +7/+14/+21). Начинаем с ОДНОГО напоминания — эскалацию добавлять, только если она
-    понадобится: лишние письма дороже молчания.
+    понадобится: лишние письма дороже молчания. Ссылка в письме — новая, на того же получателя.
     """
-    from .deal_notifications import buyer_team_user_ids
+    from .document_letters import email_document
 
-    deal = invoice.deal
-    context = {
-        "invoice_number": invoice.number,
-        "deal_title": deal.title or "",
-        "seller_name": _seller_name(invoice),
-        "total": text_money(invoice.total_incl_vat, _currency_code(invoice)),
-        "balance_due": text_money(invoice.balance_due, _currency_code(invoice)),
-        "due_date": text_date(invoice.due_date),
-        "invoice_url": _invoice_url(invoice),
-    }
-    return send_deal_email("payment_reminder", context, buyer_team_user_ids(deal))
+    return email_document("invoice", invoice, reminder=True)
 
 
 def email_act_awaiting_acceptance(act) -> int:
-    """Заказчику: акт выставлен и ждёт его ответа — принять или вернуть с причиной.
+    """Контактам сделки: акт выставлен и ждёт ответа — принять или вернуть с причиной (ДК-3).
 
-    Аналог «invitation to sign» у PandaDoc/DocuSign. Реестр актов покупателю закрыт, поэтому
-    ведём на карточку сделки, где акт виден в блоке цепочки.
+    Аналог «invitation to sign» у PandaDoc/DocuSign: письмо с PDF и личной ссылкой получателя; решение — в Кабинете
+    по коду из письма.
     """
-    from .deal_notifications import buyer_team_user_ids
+    from .document_letters import email_document
 
-    deal = act.deal
-    context = {
-        "act_number": act.number,
-        "deal_title": deal.title or "",
-        "total": text_money(act.total_amount, _act_currency(act)),
-        "deal_url": _deal_url(deal),
-    }
-    return send_deal_email("act_awaiting_acceptance", context, buyer_team_user_ids(deal))
-
-
-def _seller_name(invoice) -> str:
-    """Имя продавца для письма — то же, что печатается в самом счёте (Rule 1/2: никогда не
-    подставляем платформу вместо реального поставщика)."""
-    from .billing import _invoice_seller_company
-
-    supplier = _invoice_seller_company(invoice)
-    return supplier.name if supplier else ""
-
-
-def _act_currency(act) -> str:
-    """Валюта акта — валюта его счёта (у акта своей валюты нет)."""
-    invoice = getattr(act, "invoice", None)
-    return _currency_code(invoice) if invoice is not None else ""
+    return email_document("act", act)

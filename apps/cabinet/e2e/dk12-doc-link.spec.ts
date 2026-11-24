@@ -49,6 +49,16 @@ test('«Принять»: диалог кода, верный код — вхо�
   await snap(page, 'accepted');
 });
 
+test('ДК-4: код ушёл и в Telegram — диалог говорит, куда', async ({ page }) => {
+  await language(page, 'ru');
+  await page.goto('/d/tg-token-0123456789');
+  await page.getByRole('button', { name: 'Принять предложение' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Подтвердите, что это вы' });
+  await expect(dialog.getByText(/Отправили код на p\*\*\*@vostok-trans\.uz и в Telegram/)).toBeVisible();
+  await expect(dialog.getByText('Не пришло на почту? Код есть и в Telegram.')).toBeVisible();
+  await snap(page, 'code-dialog-telegram');
+});
+
 test('«Вернуть с замечаниями»: текст и код в одном диалоге', async ({ page }) => {
   await language(page, 'ru');
   await page.goto(LIVE);

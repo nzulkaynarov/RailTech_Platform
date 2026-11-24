@@ -3641,6 +3641,76 @@ paths:
         '503':
           $ref: '#/components/responses/BackendUnavailable'
 
+  /eds/projects/{ref}/documents/{kind}/{doc_id}/client-links:
+    get:
+      tags: [eds-projects]
+      operationId: getEdsProjectDocumentClientLinks
+      summary: 'EDS · Проект: ссылки клиента на договор, счёт или акт в Кабинете'
+      description: >-
+        Кому ушла личная ссылка на документ (адрес замаскирован), когда, открывали ли её и в каком она состоянии
+        (`active`, `revoked`, `expired`, `superseded`). Документ обязан быть в карточке этого проекта (иначе 404). Видит тот,
+        кто вправе отправлять этот документ (решает ERP); у остальных список пуст. Раздел `eds.projects` — чтение.
+      parameters:
+        - $ref: '#/components/parameters/ProjectRefPath'
+        - name: kind
+          in: path
+          required: true
+          schema: {type: string, enum: [contract, invoice, act]}
+        - name: doc_id
+          in: path
+          required: true
+          schema: {type: integer, minimum: 1}
+      responses:
+        '200':
+          description: Ссылки получателей документа
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentClientLinks'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+  /eds/projects/{ref}/documents/{kind}/{doc_id}/revoke-links:
+    post:
+      tags: [eds-projects]
+      operationId: revokeEdsProjectDocumentClientLinks
+      summary: 'EDS · Проект: отозвать ссылки клиента на договор, счёт или акт'
+      description: >-
+        Гасит все живые ссылки ЭТОГО документа у всех получателей (клиент по ним увидит «ссылка отозвана»), пишет событие в
+        журнал сделки; повтор безвреден. Новая отправка документа даст новую ссылку. Право — то же, что на отправку документа
+        (решает ERP; иначе 403). Раздел `eds.projects` — чтение.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/ProjectRefPath'
+        - name: kind
+          in: path
+          required: true
+          schema: {type: string, enum: [contract, invoice, act]}
+        - name: doc_id
+          in: path
+          required: true
+          schema: {type: integer, minimum: 1}
+      responses:
+        '200':
+          description: Обновлённый список ссылок документа
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentClientLinks'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
   /eds/documents/{id}/pdf:
     post:
       tags: [eds-documents]
@@ -15108,6 +15178,178 @@ paths:
           $ref: '#/components/responses/ValidationFailed'
         '503':
           $ref: '#/components/responses/BackendUnavailable'
+  /people/counterparties/{id}/logo:
+    get:
+      tags: [chats]
+      operationId: getCounterpartyLogo
+      summary: 'Карточка контрагента: логотип'
+      description: >-
+        ERP `GET parties/organizations/{id}/logo/` (ЕД-5): WebP 96 px, `size=full` — 256 px. Раздел `crm.clients` или `erp.stock` — чтение. Адрес в ответах — с `?v=<версия>`, кэш браузера на сутки. Логотипа нет — 404 `NOT_FOUND`, клиент показывает буквы названия. Адресов хранилища наружу нет.
+      parameters:
+        - {name: id, in: path, required: true, schema: {$ref: '#/components/schemas/CompanyItemRef'}}
+        - {name: size, in: query, required: false, schema: {type: string, enum: [row, full]}}
+        - {name: v, in: query, required: false, schema: {type: string}, description: Версия логотипа — только для кэша браузера}
+      responses:
+        '200':
+          description: Логотип
+          content:
+            image/webp:
+              schema: {type: string, format: binary}
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+    put:
+      tags: [chats]
+      operationId: uploadCounterpartyLogo
+      summary: 'Карточка контрагента: загрузить или заменить логотип'
+      description: >-
+        `multipart/form-data`, поле `file`: квадрат, уже обрезанный клиентом; PNG, JPEG или WebP до 2 МБ. ERP `PUT parties/organizations/{id}/logo/` перекодирует его в WebP 256x256 и проверяет тип и подпись. Раздел `crm.clients` или `erp.stock` — полный; в ERP — право `deal.manage` или `supply.manage`, иначе 403. Не тот тип или подпись — 422 `VALIDATION_FAILED` с `details.reason` (`file_type_not_allowed`, `file_content_mismatch`, `file_too_large`); тело больше предела читается потоком и обрывается — 413 `PAYLOAD_TOO_LARGE`. Ответ — карточка с новой версией в `logo_url`.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - {name: id, in: path, required: true, schema: {$ref: '#/components/schemas/CompanyItemRef'}}
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PictureUpload'
+      responses:
+        '200':
+          description: Логотип сохранён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CounterpartyCard'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '413':
+          description: '`PAYLOAD_TOO_LARGE` — тело больше 2 МБ'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+    delete:
+      tags: [chats]
+      operationId: deleteCounterpartyLogo
+      summary: 'Карточка контрагента: убрать логотип'
+      description: ERP `DELETE parties/organizations/{id}/logo/`. Тот же доступ, что у загрузки; повтор безопасен. Ответ — карточка без логотипа.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - {name: id, in: path, required: true, schema: {$ref: '#/components/schemas/CompanyItemRef'}}
+      responses:
+        '200':
+          description: Логотип убран
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CounterpartyCard'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+  /people/contacts/{id}/photo:
+    get:
+      tags: [chats]
+      operationId: getContactPhoto
+      summary: 'Контакт контрагента: фото'
+      description: >-
+        ERP `GET parties/people/{id}/photo/` (СУЩ-3): WebP 96 px, `size=full` — 256 px. Раздел `chats.internal`, `crm.clients` или `erp.stock` — чтение. Адрес в ответах — с `?v=<версия>`, кэш браузера на сутки. Фото нет — 404 `NOT_FOUND`, клиент показывает инициалы.
+      parameters:
+        - {name: id, in: path, required: true, schema: {$ref: '#/components/schemas/CompanyItemRef'}}
+        - {name: size, in: query, required: false, schema: {type: string, enum: [row, full]}}
+        - {name: v, in: query, required: false, schema: {type: string}, description: Версия фото — только для кэша браузера}
+      responses:
+        '200':
+          description: Фото
+          content:
+            image/webp:
+              schema: {type: string, format: binary}
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+    put:
+      tags: [chats]
+      operationId: uploadContactPhoto
+      summary: 'Контакт контрагента: загрузить или заменить фото'
+      description: >-
+        `multipart/form-data`, поле `file`: уже обрезанная по кругу картинка 256x256; PNG, JPEG или WebP до 2 МБ. Доступ и отказы — как у `uploadCounterpartyLogo` (ERP `PUT parties/people/{id}/photo/`). Ответ — `ContactPhoto` с новой версией в адресе.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - {name: id, in: path, required: true, schema: {$ref: '#/components/schemas/CompanyItemRef'}}
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PictureUpload'
+      responses:
+        '200':
+          description: Фото сохранено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContactPhoto'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '413':
+          description: '`PAYLOAD_TOO_LARGE` — тело больше 2 МБ'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+    delete:
+      tags: [chats]
+      operationId: deleteContactPhoto
+      summary: 'Контакт контрагента: убрать фото'
+      description: ERP `DELETE parties/people/{id}/photo/`. Тот же доступ, что у загрузки; повтор безопасен.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - {name: id, in: path, required: true, schema: {$ref: '#/components/schemas/CompanyItemRef'}}
+      responses:
+        '200':
+          description: Фото убрано
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContactPhoto'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
   /people/clients/{id}/counterparty:
     get:
       tags: [chats]
@@ -19758,6 +20000,9 @@ components:
         erp_sync_error:
           type: string
           description: Текст последней ошибки провижининга ERP (из CRM), если `erp_sync = error`
+        avatar_url:
+          type: string
+          description: 'Фото сотрудника (СУЩ-3) — адрес на BFF `/staff/{id}/avatar?v=<версия>`; нет фото или сотрудник отключён — поля нет, показываются инициалы'
 
     EmployeeList:
       type: object
@@ -20344,6 +20589,21 @@ components:
           maxLength: 1000
           description: Пустая строка очищает
 
+    PictureUpload:
+      type: object
+      required: [file]
+      properties:
+        file:
+          type: string
+          format: binary
+          description: Квадрат, уже обрезанный клиентом (логотип — квадрат, фото контакта — круг 256x256); PNG, JPEG или WebP до 2 МБ
+    ContactPhoto:
+      type: object
+      additionalProperties: false
+      required: [id, photo_url]
+      properties:
+        id: {type: string, pattern: '^[0-9]+$'}
+        photo_url: {type: [string, 'null'], description: 'Адрес фото на BFF с новой версией; null — фото убрано'}
     AvatarUpload:
       type: object
       required: [avatar]
@@ -20824,6 +21084,12 @@ components:
           type: string
         client_name:
           type: string
+        client_id:
+          description: 'Компания клиента в ERP (для логотипа и ссылки); null — у строки её нет'
+          type: [integer, 'null']
+        client_logo_url:
+          description: 'Логотип компании клиента: наш адрес с `?v=<версия>` (ЕД-3, ЕД-5), только если у сотрудника есть раздел `crm.clients`, `erp.stock`, `eds.projects`, `eds.payments` или `eds.inbox` (те же, что открывают картинку); null — буквы названия'
+          type: [string, 'null']
         step:
           description: 'Шаг пути заявки SPEC-v3 §2.3: CONTRACT — договор, PAYMENT — оплата (договор подписан), DONE — выполнено (акт подписан и счета оплачены)'
           enum: [CONTRACT, PAYMENT, DONE]
@@ -21221,6 +21487,10 @@ components:
           type: string
         client_name:
           type: string
+        client_id:
+          type: [integer, 'null']
+        client_logo_url:
+          type: [string, 'null']
         step:
           enum: [CONTRACT, PAYMENT, DONE]
           type: string
@@ -22289,6 +22559,8 @@ components:
         project_number: {type: string, examples: [ПР-2026-104]}
         deal_id: {type: integer}
         client_name: {type: string}
+        client_id: {type: [integer, 'null'], description: 'Компания клиента в ERP (для логотипа и ссылки); null — у строки её нет'}
+        client_logo_url: {type: [string, 'null'], description: 'Логотип компании клиента: наш адрес с `?v=<версия>` (ЕД-3, ЕД-5), только если у сотрудника есть раздел `crm.clients`, `erp.stock`, `eds.projects`, `eds.payments` или `eds.inbox` (те же, что открывают картинку); null — буквы названия'}
         amount: {$ref: '#/components/schemas/PaymentMoney'}
         paid: {$ref: '#/components/schemas/PaymentMoney'}
         balance: {$ref: '#/components/schemas/PaymentMoney'}
@@ -22385,6 +22657,8 @@ components:
         project_number: {type: string}
         deal_id: {type: integer}
         client_name: {type: string}
+        client_id: {type: [integer, 'null'], description: 'Компания клиента в ERP (для логотипа и ссылки); null — у строки её нет'}
+        client_logo_url: {type: [string, 'null'], description: 'Логотип компании клиента: наш адрес с `?v=<версия>` (ЕД-3, ЕД-5), только если у сотрудника есть раздел `crm.clients`, `erp.stock`, `eds.projects`, `eds.payments` или `eds.inbox` (те же, что открывают картинку); null — буквы названия'}
         amount: {$ref: '#/components/schemas/PaymentMoney'}
         paid: {$ref: '#/components/schemas/PaymentMoney'}
         balance: {$ref: '#/components/schemas/PaymentMoney'}
@@ -22955,6 +23229,41 @@ components:
           enum: [contract, invoice, act]
         document_id:
           type: integer
+    DocumentClientLink:
+      type: object
+      additionalProperties: false
+      required: [recipient_hint, sent_at, first_opened_at, last_opened_at, expires_at, state]
+      properties:
+        recipient_hint:
+          type: string
+          description: Адрес получателя, замаскированный (`a***@domain`)
+        sent_at:
+          type: string
+          format: date-time
+        first_opened_at:
+          type: [string, 'null']
+          format: date-time
+        last_opened_at:
+          type: [string, 'null']
+          format: date-time
+        expires_at:
+          type: string
+          format: date-time
+        state:
+          type: string
+          enum: [active, revoked, expired, superseded]
+    DocumentClientLinks:
+      type: object
+      additionalProperties: false
+      required: [links, can_revoke]
+      properties:
+        links:
+          type: array
+          items:
+            $ref: '#/components/schemas/DocumentClientLink'
+        can_revoke:
+          type: boolean
+          description: Есть живая ссылка, и у сотрудника есть право отправлять этот документ
     SigningApprovalRow:
       type: object
       additionalProperties: false
@@ -24871,6 +25180,8 @@ components:
           examples: [ВХ-104/26]
         subject: {type: string}
         client_name: {type: [string, 'null'], description: Название организации-отправителя}
+        client_id: {type: [integer, 'null'], description: 'Компания письма в ERP (из связей письма); null — письмо с ней не связано'}
+        client_logo_url: {type: [string, 'null'], description: 'Логотип компании клиента: наш адрес с `?v=<версия>` (ЕД-3, ЕД-5), только если у сотрудника есть раздел `crm.clients`, `erp.stock`, `eds.projects`, `eds.payments` или `eds.inbox` (те же, что открывают картинку); null — буквы названия'}
         request_number:
           type: [string, 'null']
           description: Бизнес-номер заявки ЗВ из связей письма; `null` — письмо ещё не связано с заявкой
@@ -27973,11 +28284,14 @@ components:
     StockReservation:
       type: object
       additionalProperties: false
-      required: [id, product_id, product_name, request, line_id, quantity, shipped_quantity, remaining, status, created_at, created_by, tracking, units]
+      required: [id, product_id, product_name, item, request, line_id, quantity, shipped_quantity, remaining, status, created_at, created_by, tracking, units]
       properties:
         id: {type: string, pattern: '^[0-9]+$'}
         product_id: {type: string, pattern: '^[0-9]+$'}
         product_name: {type: string}
+        item:
+          oneOf: [{$ref: '#/components/schemas/ItemRef'}, {type: 'null'}]
+          description: 'Позиция каталога строки (ЕД-4): миниатюра `thumbnail` через BFF и наш артикул; `null` — строка без карточки'
         request: {$ref: '#/components/schemas/StockRequestRef'}
         line_id: {type: [string, 'null'], pattern: '^[0-9]+$', description: 'Строка расчёта'}
         quantity: {type: number, exclusiveMinimum: 0}
@@ -28223,10 +28537,13 @@ components:
     SupplierOrderReceiptLine:
       type: object
       additionalProperties: false
-      required: [order_line_id, name, quantity, cell, units, expiry_date, doc_number, doc_valid_until]
+      required: [order_line_id, name, item, quantity, cell, units, expiry_date, doc_number, doc_valid_until]
       properties:
         order_line_id: {type: string, pattern: '^[0-9]+$'}
         name: {type: string}
+        item:
+          oneOf: [{$ref: '#/components/schemas/ItemRef'}, {type: 'null'}]
+          description: Позиция каталога строки (ЕД-4) — миниатюра через BFF и наш артикул; `null` — строка без карточки
         quantity: {type: number, exclusiveMinimum: 0}
         cell: {type: [string, 'null']}
         units: {type: array, items: {type: string}, description: 'Серийные номера или номер партии'}
@@ -28482,7 +28799,7 @@ components:
     StockPendingReceiptLine:
       type: object
       additionalProperties: false
-      required: [order_number, order_path, supplier, expected_date, overdue, order_line_id, name, article, unit, quantity, received_quantity, request, tracking, requires_doc]
+      required: [order_number, order_path, supplier, expected_date, overdue, order_line_id, name, item, article, unit, quantity, received_quantity, request, tracking, requires_doc]
       properties:
         order_number: {type: string}
         order_path: {type: string}
@@ -28491,6 +28808,9 @@ components:
         overdue: {type: boolean}
         order_line_id: {type: string, pattern: '^[0-9]+$'}
         name: {type: string}
+        item:
+          oneOf: [{$ref: '#/components/schemas/ItemRef'}, {type: 'null'}]
+          description: Позиция каталога строки (ЕД-4) — миниатюра через BFF и наш артикул; `null` — строка без карточки
         article: {type: string}
         unit: {type: string}
         quantity: {type: number, exclusiveMinimum: 0}
@@ -28522,9 +28842,12 @@ components:
           items:
             type: object
             additionalProperties: false
-            required: [name, quantity, cell, units, expiry_date, doc_number, doc_valid_until]
+            required: [name, item, quantity, cell, units, expiry_date, doc_number, doc_valid_until]
             properties:
               name: {type: string}
+              item:
+                oneOf: [{$ref: '#/components/schemas/ItemRef'}, {type: 'null'}]
+                description: Позиция каталога строки (ЕД-4) — миниатюра через BFF и наш артикул; `null` — строка без карточки
               quantity: {type: number, exclusiveMinimum: 0}
               cell: {type: [string, 'null']}
               units: {type: array, items: {type: string}, description: 'Серийные номера или номер партии'}
@@ -28549,9 +28872,12 @@ components:
     StockShipmentLine:
       type: object
       additionalProperties: false
-      required: [product_id, name, quantity, cell, units]
+      required: [product_id, item, name, quantity, cell, units]
       properties:
         product_id: {type: string, pattern: '^[0-9]+$'}
+        item:
+          oneOf: [{$ref: '#/components/schemas/ItemRef'}, {type: 'null'}]
+          description: Позиция каталога строки (ЕД-4) — миниатюра через BFF и наш артикул; `null` — строка без карточки
         name: {type: string}
         quantity: {type: number, exclusiveMinimum: 0}
         cell: {type: [string, 'null']}
@@ -28653,9 +28979,12 @@ components:
         product:
           type: object
           additionalProperties: false
-          required: [id, name, article]
+          required: [id, item, name, article]
           properties:
             id: {type: string, pattern: '^[0-9]+$'}
+            item:
+              oneOf: [{$ref: '#/components/schemas/ItemRef'}, {type: 'null'}]
+              description: Позиция каталога строки (ЕД-4) — миниатюра через BFF и наш артикул; `null` — строка без карточки
             name: {type: string}
             article: {type: string}
         origin:
@@ -28955,6 +29284,7 @@ components:
         last_activity_at: {type: [string, 'null'], format: date-time}
         handoff_status: {type: [string, 'null'], enum: [pending, done, failed, null]}
         do_not_work: {type: boolean, description: 'Х-8: у компании действует отметка «Не работать» (фильтр «Не работаем»)'}
+        logo_url: {type: [string, 'null'], description: 'Логотип компании: адрес на BFF с `?v=<версия>` (ЕД-5); null — буквы названия'}
 
     ClientList:
       type: object
@@ -29747,6 +30077,7 @@ components:
         is_primary: {type: boolean}
         company: {$ref: '#/components/schemas/CounterpartyRef'}
         kind: {type: string, enum: [client, partner]}
+        photo_url: {type: [string, 'null'], description: 'Фото контакта: адрес на BFF с `?v=<версия>` (СУЩ-3); null — инициалы'}
     CounterpartyContacts:
       type: object
       additionalProperties: false
@@ -29788,6 +30119,7 @@ components:
         roles: {$ref: '#/components/schemas/CounterpartyRoles'}
         crm_client_id: {type: [integer, 'null'], description: 'Клиент CRM, с которым связана компания'}
         email: {type: [string, 'null'], description: Общая почта компании}
+        logo_url: {type: [string, 'null'], description: 'Логотип компании: адрес на BFF с `?v=<версия>` (ЕД-5); null — буквы названия'}
     CounterpartyPickList:
       type: object
       additionalProperties: false
@@ -29814,6 +30146,7 @@ components:
         position: {type: [string, 'null']}
         email: {type: [string, 'null']}
         is_primary: {type: boolean}
+        photo_url: {type: [string, 'null'], description: 'Фото контакта: адрес на BFF с `?v=<версия>` (СУЩ-3); null — инициалы'}
     CounterpartyPersonPickList:
       type: object
       additionalProperties: false
@@ -29832,6 +30165,7 @@ components:
         has_cabinet: {type: boolean, description: 'Входит в кабинет'}
         has_phone: {type: boolean}
         has_email: {type: boolean}
+        photo_url: {type: [string, 'null'], description: 'Фото контакта: адрес на BFF с `?v=<версия>` (СУЩ-3); null — инициалы'}
     CounterpartyAccount:
       type: object
       additionalProperties: false
@@ -29858,6 +30192,7 @@ components:
         country: {type: [string, 'null']}
         legal_address: {type: [string, 'null']}
         crm_client_id: {type: [integer, 'null'], description: 'Клиент CRM, с которым связана компания'}
+        logo_url: {type: [string, 'null'], description: 'Логотип компании: адрес на BFF с `?v=<версия>` (ЕД-5); null — буквы названия'}
         roles: {$ref: '#/components/schemas/CounterpartyRoles'}
         people: {type: array, items: {$ref: '#/components/schemas/CounterpartyCardPerson'}}
         bank_accounts: {type: array, items: {$ref: '#/components/schemas/CounterpartyAccount'}}

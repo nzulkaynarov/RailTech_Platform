@@ -75,6 +75,7 @@ async def test_search_passes_filters_and_maps_rows(
         "roles": ROLES,
         "crm_client_id": 42,
         "email": "office@yug.example.uz",
+        "logo_url": None,
     }
     assert (second["inn"], second["country"], second["email"], second["crm_client_id"]) == (
         None,
@@ -203,6 +204,7 @@ async def test_duplicate_inn_carries_the_existing_company_as_a_picker_row(
         "roles": OTHER["roles"],
         "crm_client_id": None,
         "email": None,
+        "logo_url": None,
     }
     assert not card.called
 
@@ -267,13 +269,21 @@ async def test_people_with_email_and_position(web: Web, be: Any, check: Contract
     assert response.status_code == 200, response.text
     check(response, "/people/counterparties/{id}/people", "get")
     assert response.json()["items"] == [
-        {"id": "2", "name": "Бекзод", "position": None, "email": None, "is_primary": True},
+        {
+            "id": "2",
+            "name": "Бекзод",
+            "position": None,
+            "email": None,
+            "is_primary": True,
+            "photo_url": None,
+        },
         {
             "id": "1",
             "name": "Анвар",
             "position": "Инженер",
             "email": "a@yug.example.uz",
             "is_primary": False,
+            "photo_url": None,
         },
     ]
     assert (await web.client.get("/api/v1/people/counterparties/x/people")).status_code == 422

@@ -912,11 +912,12 @@ def present_order(order: SupplierOrder, user, *, detail: bool = False) -> dict:
                     "supplier_doc": receipt.supplier_doc or None,
                     "note": receipt.note or None,
                     "lines": [
-                        {"order_line_id": rl.order_line_id, **present_receipt_line(rl)} for rl in receipt.lines.all()
+                        {"order_line_id": rl.order_line_id, **present_receipt_line(rl, photos)}
+                        for rl in receipt.lines.all()
                     ],
                 }
                 for receipt in order.receipts.select_related("received_by__crm_user_mapping").prefetch_related(
-                    "lines__order_line", "lines__trace_units"
+                    "lines__order_line__product", "lines__trace_units"
                 )
             ],
             "log": [

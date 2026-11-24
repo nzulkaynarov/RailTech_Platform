@@ -12,4 +12,9 @@ export interface CounterpartyPersonPick {
   /** @nullable */
   email: string | null;
   is_primary: boolean;
+  /**
+   * Фото контакта: адрес на BFF с `?v=<версия>` (СУЩ-3); null — инициалы
+   * @nullable
+   */
+  photo_url?: string | null;
 }

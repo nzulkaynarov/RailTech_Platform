@@ -300,6 +300,10 @@ class DeskPerson(serializers.Serializer):
     is_primary = serializers.BooleanField()
     company = DeskRef()
     kind = serializers.ChoiceField(choices=["client", "partner"])
+    photo_version = serializers.CharField(
+        allow_null=True,
+        help_text="Версия фото контакта (отпечаток файла); `null` — фото нет. Адреса хранилища не отдаются",
+    )
 
 
 class DeskPeoplePage(serializers.Serializer):
@@ -329,6 +333,10 @@ class DeskOrganization(serializers.Serializer):
     roles = DeskCounterpartyRoles(help_text="Роли компании — отметки, как в карточке контрагента")
     country = serializers.CharField(allow_null=True, help_text="Название страны компании")
     crm_client_id = serializers.IntegerField(allow_null=True, help_text="Клиент CRM, с которым связана компания")
+    logo_version = serializers.CharField(
+        allow_null=True,
+        help_text="Версия логотипа (отпечаток файла); `null` — логотипа нет. Адреса хранилища не отдаются",
+    )
 
 
 class DeskOrganizationPage(serializers.Serializer):
@@ -346,6 +354,7 @@ class DeskCounterpartyPerson(serializers.Serializer):
     has_cabinet = serializers.BooleanField(help_text="Входит в кабинет")
     has_phone = serializers.BooleanField()
     has_email = serializers.BooleanField()
+    photo_version = serializers.CharField(allow_null=True, help_text="Версия фото контакта; `null` — фото нет")
 
 
 class DeskCounterpartyAccount(serializers.Serializer):
@@ -376,6 +385,7 @@ class DeskCounterparty(serializers.Serializer):
     country = serializers.CharField(allow_null=True)
     legal_address = serializers.CharField(allow_null=True)
     crm_client_id = serializers.IntegerField(allow_null=True, help_text="Клиент CRM, с которым связана компания")
+    logo_version = serializers.CharField(allow_null=True, help_text="Версия логотипа; `null` — логотипа нет")
     roles = DeskCounterpartyRoles()
     people = DeskCounterpartyPerson(many=True)
     bank_accounts = DeskCounterpartyAccount(many=True)
@@ -428,6 +438,7 @@ class DeskOrganizationPerson(serializers.Serializer):
     position = serializers.CharField(allow_null=True)
     email = serializers.CharField(allow_null=True)
     is_primary = serializers.BooleanField()
+    photo_version = serializers.CharField(allow_null=True, help_text="Версия фото контакта; `null` — фото нет")
 
 
 class DeskOrganizationPeople(serializers.Serializer):
@@ -441,3 +452,22 @@ class DeskPersonContacts(serializers.Serializer):
     name = serializers.CharField()
     phone = serializers.CharField(allow_null=True)
     email = serializers.CharField(allow_null=True)
+
+
+class DeskPictureIn(serializers.Serializer):
+    """Загрузка логотипа или фото (ЕД-5, СУЩ-3): квадрат, уже обрезанный клиентом."""
+
+    file = serializers.FileField(help_text="JPEG, PNG или WebP до 2 МБ; сервер перекодирует в квадрат 256×256 WebP")
+
+
+class DeskCounterpartyLogos(serializers.Serializer):
+    """Версии логотипов нескольких компаний одним ответом — для строк списков, где сама компания приходит из CRM."""
+
+    results = serializers.DictField(
+        child=serializers.CharField(allow_null=True), help_text="`{id компании: версия логотипа или null}`"
+    )
+
+
+class DeskPersonPhoto(serializers.Serializer):
+    id = serializers.IntegerField()
+    photo_version = serializers.CharField(allow_null=True, help_text="Новая версия фото; `null` — фото убрано")

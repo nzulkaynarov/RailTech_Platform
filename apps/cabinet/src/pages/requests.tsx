@@ -1,7 +1,7 @@
 import { useEffect, useId, useState, type FormEvent } from 'react';
 import { Link, Navigate, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { BookOpen, FilePlus2, Inbox, Loader2, Lock, MoreHorizontal, Paperclip, Plus, RotateCw, Search, SearchX, Trash2, Upload } from 'lucide-react';
+import { BookOpen, FilePlus2, Inbox, Loader2, Lock, Paperclip, Plus, RotateCw, SearchX, Trash2, Upload } from 'lucide-react';
 import { toast } from '@/lib/toast';
 
 import { apiErrorKey } from '@/api/errors';
@@ -11,7 +11,7 @@ import { ActionRequiredWidget } from '@/components/ActionRequiredWidget';
 import { OnboardingChecklist } from '@/components/onboarding/OnboardingChecklist';
 import { useActionRequired } from '@/hooks/useActionRequired';
 import { DealLink, DetailList, SectionTitle } from '@/components/Details';
-import { EmptyState } from '@/components/EmptyState';
+import { EmptyState, NoMatchState } from '@/components/EmptyState';
 import { PageHeader } from '@/components/PageHeader';
 import { ErrorState, ListSkeleton } from '@/components/QueryStates';
 import { ResponsiveList } from '@/components/ResponsiveList';
@@ -22,7 +22,9 @@ import { ConsequenceCallout } from '@/components/ConsequenceCallout';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { CutText } from '@/components/list/CutText';
+import { ListToolbar } from '@/components/list/ListToolbar';
+import { RowMenu, RowMenuLink } from '@/components/list/RowMenu';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -93,34 +95,16 @@ export function RequestsPage() {
       <OnboardingChecklist />
       <ActionRequiredWidget holdSkeleton={requests.isPending} />
 
-      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div role="group" aria-label={t('pages.requests.filterLabel')} className="flex flex-wrap gap-2">
-          {FILTER_STATUSES.map((option) => (
-            <Button
-              key={option ?? 'all'}
-              type="button"
-              size="sm"
-              variant={option === status ? 'default' : 'outline'}
-              aria-pressed={option === status}
-              className="rounded-full"
-              onClick={() => chooseStatus(option)}
-            >
-              {option ? t(`status.request.${option}`) : t('pages.requests.filterAll')}
-            </Button>
-          ))}
-        </div>
-        <div className="relative w-full sm:w-72">
-          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
-          <Input
-            type="search"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder={t('pages.requests.searchPlaceholder')}
-            aria-label={t('pages.requests.searchPlaceholder')}
-            className="pl-9"
-          />
-        </div>
-      </div>
+      <ListToolbar
+        filterLabel={t('pages.requests.filterLabel')}
+        options={FILTER_STATUSES.map((option) => ({
+          value: option ?? '',
+          label: option ? t(`status.request.${option}`) : t('pages.requests.filterAll'),
+        }))}
+        value={status ?? ''}
+        onChange={(next) => chooseStatus((next || undefined) as RequestFilterStatus)}
+        search={{ value: query, onChange: setQuery, placeholder: t('pages.requests.searchPlaceholder') }}
+      />
 
       {requests.isPending || actionsPending ? (
         <ListSkeleton />
@@ -128,21 +112,15 @@ export function RequestsPage() {
         <ErrorState error={requests.error} onRetry={() => void requests.refetch()} />
       ) : requests.data.length === 0 ? (
         hasFilter ? (
-          <EmptyState
-            icon={Search}
+          <NoMatchState
             title={t('pages.requests.noMatchTitle')}
             text={t('pages.requests.noMatchText', { query: query.trim() || t(`status.request.${status}`) })}
-          >
-            <Button
-              variant="outline"
-              onClick={() => {
-                setQuery('');
-                chooseStatus(undefined);
-              }}
-            >
-              {t('pages.requests.clearSearch')}
-            </Button>
-          </EmptyState>
+            resetLabel={t('pages.requests.clearSearch')}
+            onReset={() => {
+              setQuery('');
+              chooseStatus(undefined);
+            }}
+          />
         ) : (
           <EmptyState icon={Inbox} title={t('pages.requests.emptyTitle')} text={t('pages.requests.emptyText')} />
         )
@@ -157,7 +135,7 @@ export function RequestsPage() {
             cell: (row) => (
               <span className="flex flex-col gap-0.5">
                 <span className="font-semibold text-primary">{row.number}</span>
-                <span className="line-clamp-2 font-normal text-muted-foreground">{row.summary}</span>
+                <CutText text={row.summary} className="font-normal text-muted-foreground" />
               </span>
             ),
           }}
@@ -174,32 +152,18 @@ export function RequestsPage() {
             header: t('common.actions'),
             cell: (row) => (
               <CanAct>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      aria-label={t('pages.requests.rowMenu', { number: row.number })}
-                      title={t('common.actions')}
-                    >
-                      <MoreHorizontal aria-hidden="true" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem asChild>
-                      <Link
-                        to="/requests/new"
-                        state={{
-                          summary: t('pages.requestDetail.reorderSummary', { number: row.number, summary: row.summary }),
-                          lines: row.lines?.map((l) => ({ text: l.text, quantity: l.quantity ?? '', unit: l.unit })),
-                        }}
-                      >
-                        <RotateCw aria-hidden="true" />
-                        {t('pages.requestDetail.reorder')}
-                      </Link>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                <RowMenu name={row.number}>
+                  <RowMenuLink
+                    to="/requests/new"
+                    icon={RotateCw}
+                    state={{
+                      summary: t('pages.requestDetail.reorderSummary', { number: row.number, summary: row.summary }),
+                      lines: row.lines?.map((l) => ({ text: l.text, quantity: l.quantity ?? '', unit: l.unit })),
+                    }}
+                  >
+                    {t('pages.requestDetail.reorder')}
+                  </RowMenuLink>
+                </RowMenu>
               </CanAct>
             ),
           }}

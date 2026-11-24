@@ -61,6 +61,9 @@ class PaymentRow(BaseModel):
     project_number: str
     deal_id: int
     client_name: str
+    #: Компания клиента в ERP и наш путь её логотипа (ЕД-3): строка реестра рисует `CompanyCell`
+    client_id: int | None = None
+    client_logo_url: str | None = None
     amount: PaymentMoney
     paid: PaymentMoney
     balance: PaymentMoney

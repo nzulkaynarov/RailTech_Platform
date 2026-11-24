@@ -79,6 +79,21 @@ describe("Карточка товара: фото", () => {
     expect(within(drawer).getByRole("button", { name: "Поднять фото 1" })).toBeDisabled();
   });
 
+  it("ЕД-4: новое главное фото — миниатюра в списке за карточкой меняется (адрес с версией фото)", async () => {
+    const drawer = await openCable("supply@demo.example");
+    await photos(drawer);
+    const listThumb = async (version: string) =>
+      waitFor(() => {
+        expect(
+          document.querySelector(`img[src$="/items/1/thumbnail?v=${version}"]`),
+        ).not.toBeNull();
+      });
+    await listThumb("101");
+
+    fireEvent.click(within(drawer).getByRole("button", { name: "Сделать главным фото 3" }));
+    await listThumb("103");
+  });
+
   it("удаление главного — с подтверждением; главным становится следующее", async () => {
     const drawer = await openCable("supply@demo.example");
     await photos(drawer);

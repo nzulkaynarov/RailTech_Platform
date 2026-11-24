@@ -35,6 +35,7 @@ import {
   Wrench,
   Users,
   Wallet,
+  X,
   type LucideIcon,
   type LucideProps,
 } from "lucide-react";
@@ -101,3 +102,4 @@ export const CalendarIcon = make(Calendar);
 export const BankIcon = make(Landmark);
 export const PackageIcon = make(Package);
 export const WrenchIcon = make(Wrench);
+export const CloseIcon = make(X);

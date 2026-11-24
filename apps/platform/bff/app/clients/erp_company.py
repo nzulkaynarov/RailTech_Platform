@@ -213,7 +213,9 @@ _CODE = re.compile(r"^[A-Z][A-Z0-9_]*(:.*)?$")
 
 # Публичные логотипы компании и бланка в хранилище ERP (core/urls.py: `public-media`);
 # других путей BFF не запрашивает.
-_MEDIA_PATH = re.compile(r"^/media/companies/\d+/(?:logo|doc-profile/logo)/[^/]+$")
+_MEDIA_PATH = re.compile(
+    r"^(?:/media/companies/\d+/doc-profile/logo/[^/]+|/api/v1/parties/organizations/\d+/logo/)$"
+)
 # Фото товаров в публичном бакете ERP (core/urls.py: `public-media`, `products/<id>/images`) —
 # только они, и только растр.
 _PRODUCT_IMAGE_PATH = re.compile(r"^/media/products/(\d+)/images/[^/]+$")
@@ -470,7 +472,9 @@ class ErpCompany:
             return None
         # Только файлы своей компании: чужой `companies/<id>/...` BFF не запрашивает.
         own = await self.company_id()
-        if not path.startswith(f"/media/companies/{own}/"):
+        if not path.startswith(
+            (f"/media/companies/{own}/", f"/api/v1/parties/organizations/{own}/logo/")
+        ):
             return None
         response = await self._call("erp", "GET", path)
         if response.status_code != 200 or len(response.content) > MAX_LOGO_FILE_BYTES:

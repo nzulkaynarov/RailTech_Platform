@@ -1,5 +1,5 @@
 import { Card, Skeleton } from "antd";
-import type { ReactNode } from "react";
+import { Fragment, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
 
@@ -27,6 +27,7 @@ import { useStateLabels } from "./labels";
 import { ActStatusTag, ProjectStatusTag, QuoteAcceptedTag } from "./status";
 import { ActIssueButton, ActPanel } from "./ActPanel";
 import { ContractCreateButton, ContractPanel } from "./ContractPanel";
+import { DocumentClientLink } from "./DocumentClientLink";
 import { ProjectFactsTab, ProjectHistoryTab } from "./Slots";
 
 import "../decision/decision.css";
@@ -78,18 +79,20 @@ function InvoiceRows({ card, objectId }: { card: ProjectCard; objectId: string }
   return (
     <>
       {card.invoices.map((invoice) => (
-        <DocRow
-          key={invoice.id}
-          number={invoice.number}
-          type={t("card.documents.invoiceType")}
-          status={<ProjectStatusTag kind="invoice" status={invoice.status} />}
-          note={
-            invoice.due_date && invoice.status !== "paid"
-              ? t("card.documents.invoiceDue", { date: date(invoice.due_date) })
-              : undefined
-          }
-          action={action(invoice)}
-        />
+        <Fragment key={invoice.id}>
+          <DocRow
+            number={invoice.number}
+            type={t("card.documents.invoiceType")}
+            status={<ProjectStatusTag kind="invoice" status={invoice.status} />}
+            note={
+              invoice.due_date && invoice.status !== "paid"
+                ? t("card.documents.invoiceDue", { date: date(invoice.due_date) })
+                : undefined
+            }
+            action={action(invoice)}
+          />
+          <DocumentClientLink objectId={objectId} kind="invoice" documentId={invoice.id} />
+        </Fragment>
       ))}
       {linkable ? null : (
         <li className="pf-doc pf-doc--note">
@@ -153,6 +156,7 @@ function Documents({ card, objectId }: { card: ProjectCard; objectId: string }) 
           <li className="pf-doc pf-doc--detail">
             <ContractPanel card={card} objectId={objectId} />
           </li>
+          <DocumentClientLink objectId={objectId} kind="contract" documentId={contract.id} />
         </>
       ) : (
         <DocRow
@@ -175,6 +179,7 @@ function Documents({ card, objectId }: { card: ProjectCard; objectId: string }) 
           <li className="pf-doc pf-doc--detail">
             <ActPanel card={card} objectId={objectId} />
           </li>
+          <DocumentClientLink objectId={objectId} kind="act" documentId={act.id} />
         </>
       ) : (
         <DocRow

@@ -64,7 +64,7 @@ export function EmployeeList({
           key={employee.id}
           className={`pf-org-row${employee.id === selectedId ? " pf-org-row-selected" : ""}`}
         >
-          <PersonAvatar name={employee.name} size={32} />
+          <PersonAvatar name={employee.name} photoUrl={employee.avatar_url} size={32} />
           <div className="pf-org-row-body">
             <div className="pf-org-row-head">
               <NameLink
@@ -107,6 +107,7 @@ export function EmployeeList({
             <PersonCell
               name={employee.name}
               caption={employee.email}
+              photoUrl={employee.avatar_url}
               size={32}
               title={
                 <NameLink

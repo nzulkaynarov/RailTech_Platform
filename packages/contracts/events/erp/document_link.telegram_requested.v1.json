@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://railtech.uz/contracts/events/erp/document_link.telegram_requested.v1.json",
+  "title": "Код или ссылка документа контакту в Telegram",
+  "description": "Тип uz.railtech.erp.document_link.telegram_requested.v1, источник rt://erp. Поле data конверта (envelope.v1.json). ERP в Telegram не пишет (бот принадлежит CRM): код входа по личной ссылке документа и сама ссылка (КП, договор, счёт, акт; ДК-4) уходят не только письмом, но и в бот, если у получателя привязан Telegram. Бот CRM пишет на привязанный Telegram контакта (`telegram_identity_id`) одно короткое сообщение на его языке: для `kind=code` — только код и срок, без данных документа; для `kind=link` — вид, номер, продавец и кнопка со ссылкой. payload.code и payload.url — секреты: подписчик не пишет их в ленту, журнал, inbox-лог и логи. Публикуется только контакту с привязанным Telegram и сопоставлением с CRM; итог доставки не возвращается.",
+  "type": "object",
+  "required": [
+    "erp_company_id",
+    "crm_client_id",
+    "actor",
+    "payload"
+  ],
+  "properties": {
+    "erp_company_id": {
+      "type": "integer",
+      "description": "Компания контакта в ERP"
+    },
+    "crm_client_id": {
+      "type": "integer",
+      "description": "Клиент в CRM; CRM сверяет, что контакт принадлежит этому клиенту"
+    },
+    "actor": {
+      "$ref": "_defs.v1.json#/$defs/Actor"
+    },
+    "payload": {
+      "$ref": "_defs.v1.json#/$defs/DocumentLinkTelegramRequested"
+    }
+  },
+  "additionalProperties": false
+}

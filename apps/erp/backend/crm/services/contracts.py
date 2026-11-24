@@ -248,6 +248,12 @@ def _notify_contract_pending(contract) -> None:
             event_params={"number": contract.number, "deal_ref": deal_name},
         )
         push_notification_ws(notif)
+    # ДК-3: клиенту — письмо с PDF и личной ссылкой в Кабинет, как у КП. Договор по утверждённому шаблону без отступления
+    # уходит сам после принятия КП (`try_auto_send` → `send_blocker`), остальные — после виз; здесь — единственная точка
+    # отправки договора клиенту: сюда приходят оба пути.
+    from .document_letters import email_document
+
+    email_document("contract", contract)
 
 
 def _render_contract_pdf(contract) -> None:

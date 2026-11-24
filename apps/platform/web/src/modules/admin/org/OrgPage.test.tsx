@@ -9,6 +9,7 @@ import { routes } from "../../../app/router";
 import { usePanelsStore } from "../../../app/shell/panelsStore";
 import { readEmployees, writeEmployees } from "../../../mocks/fixtures/employees";
 import { findUser } from "../../../mocks/fixtures/users";
+import { patchProfile } from "../../../mocks/profileStore";
 import { buildMe, endSession, readSession, startSession } from "../../../mocks/mockSession";
 import i18n from "../../../shared/i18n";
 import { server } from "../../../test/server";
@@ -67,6 +68,22 @@ describe("Admin · Оргструктура (экран целиком на MSW)
       within(screen.getByRole("row", { name: /Демо Отключённый/ })).getByText("Отключён"),
     ).toBeVisible();
     expect(await within(await panelEl()).findByText("Объект не выбран")).toBeVisible();
+  });
+
+  it("фото сотрудников (СУЩ-3): в таблице круг с фото из профиля, у отключённого и без фото — инициалы", async () => {
+    // фото загружено в «Профиле»: и у действующего, и у отключённого — отключённому BFF его не отдаёт
+    patchProfile("u-demo-manager", { avatar: "x", avatarVersion: 3 });
+    patchProfile("u-demo-disabled", { avatar: "x", avatarVersion: 4 });
+    signIn("admin@demo.example");
+    renderAt("/admin/org");
+
+    const row = await screen.findByRole("row", { name: /Демо Менеджеров/ });
+    expect(row.querySelector("img")).toHaveAttribute(
+      "src",
+      "/api/v1/staff/u-demo-manager/avatar?v=3",
+    );
+    expect(screen.getByRole("row", { name: /Демо Отключённый/ }).querySelector("img")).toBeNull();
+    expect(screen.getByRole("row", { name: /Демо Новичков/ }).querySelector("img")).toBeNull();
   });
 
   it("«выдаётся» сменяется на «ок» без перезагрузки: список перечитывается, пока ERP не ответила (СЦ-8)", async () => {

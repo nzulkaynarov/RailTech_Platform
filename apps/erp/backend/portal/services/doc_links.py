@@ -31,6 +31,7 @@ from portal.exceptions import PortalDeliveryFailed, PortalGone, PortalTooManyReq
 from portal.models import DocumentLink, DocumentLinkEvent, DocumentLinkKind, MagicLinkToken
 from portal.services import projections_link
 from portal.services.access import company_has_cabinet_access
+from portal.services.doc_link_kinds import GRACE_DAYS, select_related_all, spec_for, spec_of
 from portal.services.login_code import generate_login_code, hash_login_code
 from portal.services.tokens import generate_token, hash_token, issue_portal_session
 from rest_framework.exceptions import PermissionDenied
@@ -38,7 +39,7 @@ from rest_framework.exceptions import PermissionDenied
 logger = logging.getLogger(__name__)
 
 #: Ссылка живёт столько дней после срока документа (ADR-0030 п. 6).
-LINK_GRACE_DAYS = 30
+LINK_GRACE_DAYS = GRACE_DAYS
 #: Срок ссылки у документа без срока действия.
 LINK_FALLBACK_DAYS = 90
 CODE_TTL = timedelta(minutes=10)
@@ -46,6 +47,7 @@ CODE_RESEND_SECONDS = 45
 CODE_MAX_ATTEMPTS = 5
 CODE_MAX_PER_HOUR = 6
 #: Что можно сделать по ссылке; `open` — «открыть остальной кабинет» (только код, без действия над документом).
+#: Какие из них доступны у вида документа — `doc_link_kinds.KindSpec.actions`.
 ACTIONS = ("accept", "reject", "question", "open")
 
 #: Причина, по которой ссылка ничего не показывает (код `detail` ответа 410).
@@ -78,20 +80,19 @@ def build_url(raw_token: str) -> str:
 
 
 def _link_expiry(quote) -> datetime:
-    now = timezone.now()
-    if quote.valid_until:
-        last_day = quote.valid_until + timedelta(days=LINK_GRACE_DAYS)
-        return timezone.make_aware(datetime.combine(last_day, time.max))
-    return now + timedelta(days=LINK_FALLBACK_DAYS)
+    return spec_of("quote").expiry(quote)
 
 
 def _recipient_contact(quote, email: str, name: str) -> Optional[Contact]:
+    return deal_recipient_contact(quote.deal, email, name)
+
+
+def deal_recipient_contact(deal, email: str, name: str) -> Optional[Contact]:
     """Контакт кабинета для адреса получателя: назначенный в заявке, найденный в компании по адресу, иначе новый.
 
     Новый контакт заводится без права действовать и без прав администратора (ADR-0030 п. 7): права ему задаёт сотрудник.
     Заявка без компании — контакта нет, ссылка показывает документ, действий нет.
     """
-    deal = quote.deal
     chosen = getattr(deal, "contact", None)
     if chosen is not None and (chosen.email or "").strip().lower() == email.lower():
         return chosen
@@ -105,6 +106,79 @@ def _recipient_contact(quote, email: str, name: str) -> Optional[Contact]:
     if found is not None:
         return found
     return Contact.objects.create(company_id=deal.company_id, name=(name or email)[:255], email=email, can_act=False)
+
+
+def mint_document_link(kind: str, doc, email: str, name: str, *, created_by=None) -> tuple[DocumentLink, str]:
+    """Новая ссылка на договор, счёт или акт для получателя `email`; `(запись, сырой токен)` (ДК-3).
+
+    Получатель — контакт компании сделки по адресу; нет такого — заводится без прав (как у КП).
+    """
+    spec = spec_of(kind)
+    raw = generate_token()
+    link = DocumentLink.objects.create(
+        token_hash=hash_token(raw),
+        kind=kind,
+        **{kind: doc},
+        contact=deal_recipient_contact(spec.deal(doc), email.strip(), name),
+        recipient_email=email.strip().lower(),
+        created_by=created_by,
+        expires_at=spec.expiry(doc),
+    )
+    return link, raw
+
+
+def deal_recipients(deal) -> list[tuple[str, str]]:
+    """Кому уходят документы и письма сделки: `(адрес, имя)` без повторов (ДК-3, ADR-0030 п. 8).
+
+    Контакт сделки и каждый, кому уже уходил документ сделки (получатель КП, договора, счёта, акта); если таких нет —
+    основной контакт компании, затем зарегистрированный покупатель. Прежние участники компании в ERP письма о документах
+    не получают.
+    """
+    found: dict[str, str] = {}
+
+    def add(email, name):
+        key = (email or "").strip().lower()
+        if key and key not in found:
+            found[key] = name or key
+
+    contact = getattr(deal, "contact", None)
+    if contact is not None and not contact.is_archived:
+        add(contact.email, contact.name)
+    for link in document_links_of_deal(deal).select_related("contact"):
+        if link.contact is not None and link.contact.is_archived:
+            continue
+        add(link.recipient_email, link.contact.name if link.contact is not None else "")
+    if not found and deal.company_id is not None:
+        primary = (
+            Contact.objects.filter(active_contact_q(), company_id=deal.company_id)
+            .exclude(email="")
+            .order_by("-is_primary", "pk")
+            .first()
+        )
+        if primary is not None:
+            add(primary.email, primary.name)
+    client = getattr(deal, "client", None)
+    if not found and client is not None and client.email:
+        add(client.email, client.get_full_name() or client.email)
+    return list(found.items())
+
+
+def document_links_of_deal(deal):
+    from django.db.models import Q
+
+    # Только не отозванные: отозванная ссылка — «письмо ушло не тому», такой адрес получателем сделки не становится
+    return DocumentLink.objects.filter(
+        Q(quote__deal=deal) | Q(contract__deal=deal) | Q(invoice__deal=deal) | Q(act__deal=deal),
+        revoked_at__isnull=True,
+    )
+
+
+def document_contact_ids(deal) -> tuple[int, ...]:
+    """Контакты сделки, которым письма-уведомления идут и без приглашения в кабинет: контакт сделки и получатели
+    её документов (ADR-0030 п. 8)."""
+    ids = {pk for pk in [getattr(deal, "contact_id", None)] if isinstance(pk, int)}
+    ids.update(document_links_of_deal(deal).exclude(contact__isnull=True).values_list("contact_id", flat=True))
+    return tuple(sorted(ids))
 
 
 def mint_quote_link(quote, *, created_by=None) -> tuple[DocumentLink, str]:
@@ -167,27 +241,24 @@ def legacy_redirect_url(quote) -> Optional[str]:
 def find_link(raw_token: str) -> Optional[DocumentLink]:
     if not raw_token or len(raw_token) > 200:
         return None
-    return (
-        DocumentLink.objects.filter(token_hash=hash_token(raw_token))
-        .select_related(
-            "quote__deal__company", "quote__status", "quote__seller_company", "contact", "quote__quote_currency"
-        )
-        .first()
-    )
+    return DocumentLink.objects.filter(token_hash=hash_token(raw_token)).select_related(*select_related_all()).first()
 
 
 def link_gone_reason(link: DocumentLink) -> Optional[str]:
     """`revoked`, `expired`, `superseded` или `None` (живая). Порядок: отзыв сильнее срока."""
-    quote = link.quote
+    doc = link.document
     # Отзыв — на самой ссылке: флаг старой страницы КП (`public_token_revoked`) новые ссылки не гасит — после отзыва
     # отправитель может послать КП заново и получатель получит свежую ссылку.
-    if link.revoked_at is not None or quote is None:
+    if link.revoked_at is not None or doc is None:
         return "revoked"
     if link.expires_at < timezone.now():
         return "expired"
-    if quote.frozen_at is None:
-        return "revoked"  # КП вернули в черновик: клиенту оно больше не показывается
-    if projections_link.newer_sent_version(quote) is not None:
+    spec = spec_for(link)
+    if not spec.visible(doc):
+        return (
+            "revoked"  # КП вернули в черновик, договор отозван, счёт отменён: клиенту документ больше не показывается
+        )
+    if spec.superseded(doc):
         return "superseded"
     return None
 
@@ -201,7 +272,7 @@ def raise_if_gone(link: DocumentLink) -> None:
 def client_context(link: DocumentLink, session) -> ClientContext:
     if session is None:
         return ClientContext("none")
-    company_id = link.quote.deal.company_id
+    company_id = spec_for(link).deal(link.document).company_id
     if company_id is not None and session.company_id == company_id:
         return ClientContext("member", session)
     return ClientContext("other_company", session)
@@ -213,8 +284,10 @@ def availability(link: DocumentLink, ctx: ClientContext, modules=()) -> dict:
     Решение (принять, вернуть, вопрос) — только пока КП ждёт ответа, и только тому, у кого есть право действовать:
     у вошедшего это его контакт, у гостя — контакт-получатель, которым он станет после кода.
     """
-    quote = link.quote
-    state = projections_link.document_state(quote)
+    spec = spec_for(link)
+    if not spec.actions:
+        return {"allowed": False, "reason": "no_actions"}  # счёт: реквизиты и справка, действий нет
+    state = spec.state(link.document)
     if state != "open":
         return {"allowed": False, "reason": state}  # accepted / rejected / expired
     if ctx.relation == "other_company":
@@ -222,7 +295,7 @@ def availability(link: DocumentLink, ctx: ClientContext, modules=()) -> dict:
     contact = ctx.session.contact if ctx.relation == "member" else link.contact
     if contact is None:
         return {"allowed": False, "reason": "no_contact"}
-    if ctx.relation == "member" and "quotes" not in set(modules):
+    if ctx.relation == "member" and spec.module not in set(modules):
         return {"allowed": False, "reason": "no_access"}
     if not contact.can_act:
         return {"allowed": False, "reason": "no_right"}
@@ -239,16 +312,32 @@ def record_event(link: DocumentLink, event: str, *, ip: str = "", user_agent: st
 
 
 def _timeline(link: DocumentLink, title: str, event_code: str, **params) -> None:
+    from crm.models import ActivityLog
     from crm.services.quotes._shared import _log_quote
 
-    quote = link.quote
-    _log_quote(
-        quote,
-        None,
-        title,
-        f"КП v{quote.version} ({quote.number or '—'})",
-        event_code=event_code,
-        event_params={"version": quote.version, "number": quote.number or "—", **params},
+    if link.kind == "quote":
+        quote = link.quote
+        _log_quote(
+            quote,
+            None,
+            title,
+            f"КП v{quote.version} ({quote.number or '—'})",
+            event_code=event_code,
+            event_params={"version": quote.version, "number": quote.number or "—", **params},
+        )
+        return
+    doc = link.document
+    deal = spec_for(link).deal(doc)
+    ActivityLog.objects.create(
+        action=title,
+        detail=f"{doc.number or '—'}",
+        level="INFO",
+        entity_type=link.kind,
+        entity_id=doc.pk,
+        deal_id=deal.pk,
+        company_id=deal.company_id,
+        event_code=event_code.replace("quote.", f"{link.kind}.", 1),
+        event_params={"number": doc.number or "—", **params},
     )
 
 
@@ -259,9 +348,13 @@ def record_open(link: DocumentLink, *, ip: str = "", user_agent: str = "") -> No
         open_count=F("open_count") + 1, last_opened_at=now, first_opened_at=link.first_opened_at or now
     )
     record_event(link, DocumentLinkEvent.Event.OPENED, ip=ip, user_agent=user_agent)
-    from crm.services.public_page import record_quote_view
+    if link.kind == "quote":
+        from crm.services.public_page import record_quote_view
 
-    record_quote_view(link.quote, request_ip=ip)
+        record_quote_view(link.quote, request_ip=ip)
+
+
+_WORDS = {"quote": "КП", "contract": "договор", "invoice": "счёт", "act": "акт"}
 
 
 def mask_email(email: str) -> str:
@@ -319,30 +412,144 @@ def request_code(link: DocumentLink, *, ip: str = "", user_agent: str = "") -> d
             expires_at=now + CODE_TTL,
         )
         cache.delete(_failures_key(locked))
+        # Бот — раньше письма: ошибка письма откатывает и событие; сбой самого бота (savepoint) код не отменяет
+        try:
+            to_telegram = _send_code_telegram(locked, code, now + CODE_TTL)
+        except Exception:  # noqa: BLE001 — почта основной канал: сбой бота (кэш секрета, шина) не отменяет код
+            logger.exception("Document link code telegram event failed (link %s)", locked.pk)
+            to_telegram = False
         _send_code_email(locked, code)
         record_event(locked, DocumentLinkEvent.Event.CODE_SENT, ip=ip, user_agent=user_agent)
-        _timeline(locked, "Клиенту отправлен код по ссылке на КП", "quote.link_code_sent")
+        _timeline(locked, f"Клиенту отправлен код по ссылке на {_WORDS[locked.kind]}", "quote.link_code_sent")
     return {
         "sent_to": mask_email(contact.email),
         "expires_in": int(CODE_TTL.total_seconds()),
         "resend_after": CODE_RESEND_SECONDS,
+        "channels": ["email", "telegram"] if to_telegram else ["email"],
     }
+
+
+def _telegram_ready(contact: Optional[Contact]) -> bool:
+    """У получателя привязан Telegram и контакт с компанией сопоставлены с CRM — бот может ему написать (ДК-4)."""
+    from portal.services.acceptance import _telegram_deliverable
+
+    return contact is not None and _telegram_deliverable(contact)
+
+
+def _send_code_telegram(link: DocumentLink, code: str, expires_at: datetime) -> bool:
+    """Тот же код — ещё и в бот получателя, если у него привязан Telegram (ДК-4); `True` — событие выпущено.
+
+    Код, его срок, повтор и попытки — те же, что у письма: здесь только второй канал. Сообщение несёт код и срок, данных
+    документа в нём нет. Ошибка публикации — наружу из savepoint; вызывающий `request_code` её ловит: почта остаётся основным каналом.
+    """
+    contact = link.contact
+    if not _telegram_ready(contact):
+        return False
+    from integration.services import events
+
+    with transaction.atomic():
+        event = events.publish_document_link_telegram(
+            contact,
+            kind="code",
+            document_kind=link.kind,
+            code=code,
+            expires_at=expires_at,
+        )
+    return event is not None
+
+
+def _telegram_documents_wanted(contact: Contact) -> bool:
+    """Контакт не отключил в кабинете Telegram-уведомления о документах."""
+    return ((contact.notification_settings or {}).get("documents") or {}).get("telegram") is not False
+
+
+def quote_link_telegram_user_id(quote, channels=None) -> Optional[int]:
+    """Telegram, в который уйдёт личная ссылка этого КП (ДК-4), — чтобы старое «КП готово» туда не дублировалось.
+
+    Тот же отбор, что у `send_link_telegram`: письмо с КП уходит (`channels` без `email` — нет), получатель — контакт
+    заявки или найденный в компании по адресу (нового здесь не заводим), у него привязан Telegram и он не отключил
+    уведомления о документах. Иначе `None`: бот шлёт прежнее сообщение.
+    """
+    from crm.services.quotes._shared import resolve_quote_recipient
+
+    if channels is not None and "email" not in channels:
+        return None
+    recipient = resolve_quote_recipient(quote)
+    deal = quote.deal
+    if recipient is None or deal.company_id is None:
+        return None
+    email = recipient[0].strip()
+    chosen = getattr(deal, "contact", None)
+    contact = chosen if chosen is not None and (chosen.email or "").strip().lower() == email.lower() else None
+    if contact is None:
+        contact = (
+            Contact.objects.filter(active_contact_q(), company_id=deal.company_id, email__iexact=email)
+            .order_by("-is_primary", "pk")
+            .first()
+        )
+    if contact is None or not _telegram_ready(contact) or not _telegram_documents_wanted(contact):
+        return None
+    return contact.telegram_user_id
+
+
+def send_link_telegram(link: DocumentLink, raw_token: str) -> bool:
+    """Личная ссылка документа — ещё и в бот получателя, если у него привязан Telegram (ДК-4); `True` — событие выпущено.
+
+    Одно короткое сообщение: вид документа, номер, продавец и кнопка на `/d/<токен>`. Контакт, отключивший в кабинете
+    Telegram-уведомления о документах, ссылку в бот не получает (письмо остаётся). Ошибку публикации ловит вызывающая
+    задача: письмо уже ушло, повтор задачи послал бы его второй раз.
+    """
+    contact = link.contact
+    if not _telegram_ready(contact):
+        return False
+    if not _telegram_documents_wanted(contact):
+        return False
+    from integration.services import events
+
+    spec = spec_for(link)
+    doc = link.document
+    with transaction.atomic():
+        event = events.publish_document_link_telegram(
+            contact,
+            kind="link",
+            document_kind=link.kind,
+            number=spec.number(doc) or "",
+            seller_name=spec.seller_name(doc) or "",
+            url=build_url(raw_token),
+        )
+    return event is not None
+
+
+def _seller_company(link: DocumentLink):
+    """Компания-продавец документа для рамки письма (бренд); `None` — нейтральная рамка платформы."""
+    if link.kind == "quote":
+        return link.quote.seller_company
+    from crm.services.billing import _invoice_seller_company
+    from crm.services.quotes import _quote_seller_company
+
+    doc = link.document
+    if link.kind == "contract":
+        return _quote_seller_company(doc.quote) if doc.quote_id else None
+    invoice = doc if link.kind == "invoice" else doc.invoice
+    return _invoice_seller_company(invoice) if invoice is not None else None
 
 
 def _send_code_email(link: DocumentLink, code: str) -> None:
     from notifications.emails import email_brand, send_templated_email
 
-    quote = link.quote
+    spec = spec_for(link)
+    doc = link.document
     contact = link.contact
+    seller = _seller_company(link)
     try:
         send_templated_email(
             "document_link_code",
             {
                 "code": code,
-                "document_number": quote.number or f"{quote.deal_id}-{quote.version}",
-                "seller_name": getattr(quote.seller_company, "name", None) or "",
+                "document_number": spec.number(doc) or f"{spec.deal(doc).pk}",
+                "seller_name": spec.seller_name(doc),
                 "expires_minutes": int(CODE_TTL.total_seconds() // 60),
-                **email_brand(quote.seller_company),
+                **email_brand(seller),
             },
             to=[contact.email.strip().lower()],
             channel="transactional",
@@ -394,7 +601,7 @@ def verify_code(link: DocumentLink, code: str, *, ip: str = "", user_agent: str 
             if contact.invited_at is None:
                 Contact.objects.filter(pk=contact.pk, invited_at__isnull=True).update(invited_at=now)
             record_event(link, DocumentLinkEvent.Event.CODE_USED, ip=ip, user_agent=user_agent)
-            _timeline(link, "Клиент подтвердил код по ссылке на КП", "quote.link_code_used")
+            _timeline(link, f"Клиент подтвердил код по ссылке на {_WORDS[link.kind]}", "quote.link_code_used")
     if result is not None:
         cache.delete(_failures_key(link))
         return result
@@ -416,14 +623,66 @@ def verify_code(link: DocumentLink, code: str, *, ip: str = "", user_agent: str 
 
 def revoke_quote_links(quote, actor) -> int:
     """Отозвать все живые ссылки КП (и страницу ERP); возвращает, сколько записей отозвано. Повтор — ноль."""
+    return revoke_document_links("quote", quote, actor)
+
+
+def revoke_document_links(kind: str, doc, actor) -> int:
+    """Отозвать ВСЕ живые ссылки документа — у каждого получателя; ссылки других документов не трогаются (ДК-3)."""
     now = timezone.now()
-    links = list(DocumentLink.objects.filter(quote=quote, revoked_at__isnull=True))
-    for link in links:
-        link.revoked_at = now
-        link.revoked_by = actor
-        link.save(update_fields=["revoked_at", "revoked_by"])
-        record_event(link, DocumentLinkEvent.Event.REVOKED)
-    return len(links)
+    ids = DocumentLink.objects.filter(kind=kind, revoked_at__isnull=True, **{kind: doc}).values_list("pk", flat=True)
+    revoked = 0
+    for pk in list(ids):
+        # Условное обновление: параллельный отзыв той же ссылки не считается и не пишется в журнал второй раз
+        if DocumentLink.objects.filter(pk=pk, revoked_at__isnull=True).update(revoked_at=now, revoked_by=actor):
+            record_event(DocumentLink(pk=pk), DocumentLinkEvent.Event.REVOKED)
+            revoked += 1
+    return revoked
+
+
+def revoke_document_links_logged(kind: str, doc, actor) -> int:
+    """«Отозвать ссылку» из карточки договора, счёта или акта (ДК-3б): отзыв всех живых ссылок документа и событие в
+    журнале сделки — кто и когда; повтор без живых ссылок ничего не пишет."""
+    from crm.models import ActivityLog
+
+    count = revoke_document_links(kind, doc, actor)
+    if count:
+        deal = spec_of(kind).deal(doc)
+        ActivityLog.objects.create(
+            action=f"Ссылка на {_WORDS[kind]} отозвана",
+            detail=f"{doc.number or '—'}",
+            user=actor,
+            level="INFO",
+            entity_type=kind,
+            entity_id=doc.pk,
+            deal_id=deal.pk,
+            company_id=deal.company_id,
+            event_code=f"{kind}.link_revoked",
+            event_params={"number": doc.number or "—", "links": count},
+        )
+    return count
+
+
+def document_link_rows(kind: str, doc) -> list[dict]:
+    """Ссылки получателей документа для карточки в Платформе: адрес только замаскированный, состояние выводится из тех же
+    фактов, по которым ссылка открывается у клиента (`link_gone_reason`): `active`, `revoked`, `expired`, `superseded`.
+    Новые сверху; ссылки других документов не попадают."""
+    links = (
+        DocumentLink.objects.filter(kind=kind, **{kind: doc})
+        .select_related(*select_related_all())
+        .order_by("-created_at", "-pk")
+    )
+    return [
+        {
+            "id": link.pk,
+            "recipient_hint": mask_email(link.recipient_email),
+            "sent_at": link.created_at,
+            "first_opened_at": link.first_opened_at,
+            "last_opened_at": link.last_opened_at,
+            "expires_at": link.expires_at,
+            "state": link_gone_reason(link) or "active",
+        }
+        for link in links
+    ]
 
 
 # ── Что видит отправитель ────────────────────────────────────────────────────────────────────────────────────────

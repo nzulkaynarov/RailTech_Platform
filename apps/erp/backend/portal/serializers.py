@@ -109,6 +109,7 @@ class CompanySerializer(serializers.ModelSerializer):
     registration_number = serializers.CharField(read_only=True)
     relationship_status = serializers.SerializerMethodField()
     relationships = serializers.SerializerMethodField()
+    logo_version = serializers.SerializerMethodField()
 
     class Meta:
         model = Company
@@ -124,7 +125,16 @@ class CompanySerializer(serializers.ModelSerializer):
             "language",
             "relationship_status",
             "relationships",
+            "logo_version",
         ]
+
+    @extend_schema_field(serializers.CharField(allow_null=True))
+    def get_logo_version(self, company):
+        if isinstance(company, dict):
+            return None
+        from parties import pictures
+
+        return pictures.version(company.logo)
 
     @extend_schema_field(BankAccountSerializer(many=True))
     def get_bank_accounts(self, company):
@@ -909,6 +919,9 @@ class CatalogItemSerializer(serializers.Serializer):
     availability = serializers.ChoiceField(choices=["in_stock", "on_order", "expected"])
     lead_time_days = serializers.IntegerField(allow_null=True)
     images = serializers.ListField(child=serializers.CharField(), default=list)
+    item = ItemRefSerializer(
+        allow_null=True, required=False, help_text="Позиция для строки списка (ЕД-4): миниатюра и артикул"
+    )
     attributes = AttributeItemSerializer(many=True, default=list)
     manufacturer = CatalogManufacturerSerializer(allow_null=True, required=False)
     manufacturer_part_number = serializers.CharField(allow_null=True, required=False)

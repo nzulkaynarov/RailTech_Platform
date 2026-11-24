@@ -278,7 +278,7 @@ class ContactSecurityNoticeRequested(BaseModel):
     """
     Язык контакта в ERP
     """
-    kind: Kind1
+    kind: Kind2
     """
     Подан запрос на смену реквизитов, смена подтверждена сотрудником или отклонена
     """
@@ -320,7 +320,7 @@ class ContactTelegramTestRequested(BaseModel):
     """
     Контакт в CRM (CrmContactMapping): его привязанный Telegram получит сообщение
     """
-    language: Language2 | None = None
+    language: Language3 | None = None
     """
     Язык контакта в ERP; на нём бот пишет сообщение
     """
@@ -410,7 +410,7 @@ class Context(BaseModel):
     model_config = ConfigDict(
         extra="ignore",
     )
-    kind: Kind2
+    kind: Kind3
     erp_id: int
     number: Annotated[str, Field(max_length=64)]
 
@@ -785,6 +785,87 @@ class DocumentCreatedV1(BaseModel):
     payload: DocumentCreated
 
 
+class DocumentKind(StrEnum):
+    """
+    Вид документа по ссылке
+    """
+
+    quote = "quote"
+    contract = "contract"
+    invoice = "invoice"
+    act = "act"
+
+
+class DocumentLinkTelegramRequested(BaseModel):
+    """
+    Что прислать контакту в его привязанный Telegram по личной ссылке документа (ДК-4, ADR-0030): код входа по ссылке (`kind=code`) или саму ссылку (`kind=link`). ERP шлёт событие только контакту с привязанным Telegram и сопоставлением с CRM; иначе — только письмо. Код и ссылка — секреты: в outbox и inbox лежит маска `***`, значение — в кэше и в теле доставки inline-обработчика
+    """
+
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    erp_contact_id: int
+    """
+    Контакт-получатель в ERP
+    """
+    crm_contact_id: int
+    """
+    Контакт в CRM (CrmContactMapping): его привязанный Telegram получит сообщение
+    """
+    language: Language1 | None = None
+    """
+    Язык контакта в ERP
+    """
+    kind: Kind1
+    """
+    `code` — шесть цифр входа по ссылке (в сообщении нет данных документа); `link` — личная ссылка получателя на документ, одной короткой строкой с кнопкой
+    """
+    document_kind: DocumentKind
+    """
+    Вид документа по ссылке
+    """
+    number: str | None = None
+    """
+    Номер документа — только для `kind=link`
+    """
+    seller_name: str | None = None
+    """
+    Название компании-продавца — только для `kind=link`
+    """
+    code: Annotated[str | None, Field(pattern="^[0-9]{4,12}$")] = None
+    """
+    Только `kind=code`. Одноразовый код — секрет: не хранить и не логировать в CRM
+    """
+    expires_at: AwareDatetime | None = None
+    """
+    Только `kind=code`: когда код перестаёт действовать
+    """
+    url: str | None = None
+    """
+    Только `kind=link`. Личная ссылка получателя (`/d/<токен>`) — секрет: токен знает только получатель
+    """
+
+
+class DocumentLinkTelegramRequestedV1(BaseModel):
+    """
+    Тип uz.railtech.erp.document_link.telegram_requested.v1, источник rt://erp. Поле data конверта (envelope.v1.json). ERP в Telegram не пишет (бот принадлежит CRM): код входа по личной ссылке документа и сама ссылка (КП, договор, счёт, акт; ДК-4) уходят не только письмом, но и в бот, если у получателя привязан Telegram. Бот CRM пишет на привязанный Telegram контакта (`telegram_identity_id`) одно короткое сообщение на его языке: для `kind=code` — только код и срок, без данных документа; для `kind=link` — вид, номер, продавец и кнопка со ссылкой. payload.code и payload.url — секреты: подписчик не пишет их в ленту, журнал, inbox-лог и логи. Публикуется только контакту с привязанным Telegram и сопоставлением с CRM; итог доставки не возвращается.
+    """
+
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    erp_company_id: int
+    """
+    Компания контакта в ERP
+    """
+    crm_client_id: int
+    """
+    Клиент в CRM; CRM сверяет, что контакт принадлежит этому клиенту
+    """
+    actor: Actor
+    payload: DocumentLinkTelegramRequested
+
+
 class En(BaseModel):
     model_config = ConfigDict(
         extra="ignore",
@@ -966,6 +1047,15 @@ class Kind(StrEnum):
 
 class Kind1(StrEnum):
     """
+    `code` — шесть цифр входа по ссылке (в сообщении нет данных документа); `link` — личная ссылка получателя на документ, одной короткой строкой с кнопкой
+    """
+
+    code = "code"
+    link = "link"
+
+
+class Kind2(StrEnum):
+    """
     Подан запрос на смену реквизитов, смена подтверждена сотрудником или отклонена
     """
 
@@ -974,14 +1064,14 @@ class Kind1(StrEnum):
     bank_requisites_change_rejected = "bank_requisites_change_rejected"
 
 
-class Kind2(StrEnum):
+class Kind3(StrEnum):
     deal = "deal"
     quote = "quote"
     invoice = "invoice"
     act = "act"
 
 
-class Kind3(StrEnum):
+class Kind4(StrEnum):
     """
     Вид коммерческого документа
     """
@@ -1012,7 +1102,7 @@ class Language1(StrEnum):
     en = "en"
 
 
-class Language2(StrEnum):
+class Language3(StrEnum):
     """
     Язык контакта в ERP; на нём бот пишет сообщение
     """
@@ -1022,7 +1112,7 @@ class Language2(StrEnum):
     en = "en"
 
 
-class Language3(StrEnum):
+class Language4(StrEnum):
     """
     Язык документов компании в ERP
     """
@@ -1032,7 +1122,7 @@ class Language3(StrEnum):
     en = "en"
 
 
-class Language4(StrEnum):
+class Language5(StrEnum):
     ru = "ru"
     uz = "uz"
     en = "en"
@@ -1179,7 +1269,7 @@ class Object(BaseModel):
     model_config = ConfigDict(
         extra="ignore",
     )
-    kind: Kind3
+    kind: Kind4
     """
     Вид коммерческого документа
     """
@@ -1290,7 +1380,7 @@ class PartnerClientRequestedV1PartnerCompany(BaseModel):
     """
     address: Annotated[str | None, Field(max_length=1000)]
     website: Annotated[str | None, Field(max_length=255)]
-    language: Language3
+    language: Language4
     """
     Язык документов компании в ERP
     """
@@ -1304,7 +1394,7 @@ class PartnerClientRequestedV1PartnerContact(BaseModel):
     full_name: Annotated[str, Field(max_length=255, min_length=1)]
     email: Annotated[EmailStr, Field(max_length=255)]
     phone: Annotated[str | None, Field(max_length=50)]
-    language: Language4
+    language: Language5
 
 
 class Payload(BaseModel):

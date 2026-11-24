@@ -17,6 +17,16 @@ export interface ProjectRow {
   /** Название проекта (сделки ERP); нет названия — название клиента */
   title: string;
   client_name: string;
+  /**
+   * Компания клиента в ERP (для логотипа и ссылки); null — у строки её нет
+   * @nullable
+   */
+  client_id?: number | null;
+  /**
+   * Логотип компании клиента: наш адрес с `?v=<версия>` (ЕД-3, ЕД-5), только если у сотрудника есть раздел `crm.clients`, `erp.stock`, `eds.projects`, `eds.payments` или `eds.inbox` (те же, что открывают картинку); null — буквы названия
+   * @nullable
+   */
+  client_logo_url?: string | null;
   /** Шаг пути заявки SPEC-v3 §2.3: CONTRACT — договор, PAYMENT — оплата (договор подписан), DONE — выполнено (акт подписан и счета оплачены) */
   step: ProjectRowStep;
   /** Статус для клиента — ключ packages/contracts/client-statuses.yaml (SPEC-v3 §2.5); слово собирает SPA по ключу */

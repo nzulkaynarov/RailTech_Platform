@@ -45,6 +45,8 @@ def seller_logo_url(seller_profile) -> Optional[str]:
     """The seller's logo URL, or None when unset / the storage backend can't resolve it."""
     if not seller_profile or not seller_profile.logo:
         return None
+    if getattr(seller_profile, "_logo_private", False):
+        return None  # логотип компании закрыт: наружу не отдаётся, в PDF встраивается из хранилища
     try:
         return seller_profile.logo.url
     except (ValueError, OSError):  # storage backend unavailable / missing key
@@ -68,7 +70,10 @@ def brand_context_for_pdf(brand: dict) -> dict:
     from django.conf import settings
 
     logo_url = brand.get("seller_logo_url")
-    if not logo_url or logo_url.startswith("data:"):
+    private_logo = (
+        getattr(getattr(brand.get("seller_profile"), "logo", None), "name", "") if brand.get("show_logo", True) else ""
+    )
+    if (not logo_url and not private_logo) or (logo_url and logo_url.startswith("data:")):
         return brand
 
     data = None
@@ -86,7 +91,7 @@ def brand_context_for_pdf(brand: dict) -> dict:
             name = logo_field.name or ""
         except (OSError, ValueError, FileNotFoundError):
             data = None
-    if data is None and logo_url.startswith(settings.MEDIA_URL):
+    if data is None and logo_url and logo_url.startswith(settings.MEDIA_URL):
         from core.storage import get_public_storage
 
         name = logo_url[len(settings.MEDIA_URL) :]
@@ -130,6 +135,9 @@ def _apply_company_defaults(seller_company, row) -> None:
     row.legal_address = seller_company.legal_address or row.legal_address
     if seller_company.logo:
         row.logo = seller_company.logo
+        # the company logo is private: keep ITS storage on the in-memory copy (PDF reads it from there)
+        row.logo.storage = seller_company.logo.storage
+        row._logo_private = True
     from accounts.services.bank_accounts import bank_details_text
 
     # Основной счёт в сумах из списка счетов компании (ADR-0028 п. 3, ADR-0029). Генератор документов (`rt_documents`)
