@@ -12,6 +12,9 @@ function screenMain() {
   return within(main as HTMLElement);
 }
 
+/** Новый поиск перерисовывает до 24 карточек: на раннере CI это дольше секунды по умолчанию у findBy. */
+const SEARCH_WAIT = { timeout: 8000 };
+
 function results() {
   return screen.findByRole('list', { name: 'Позиции каталога' });
 }
@@ -71,13 +74,13 @@ describe('Каталог', () => {
     await user.click(screenMain().getByRole('searchbox', { name: 'Поиск по каталогу' }));
     await user.paste('ремень');
     await user.click(screenMain().getByRole('button', { name: 'Найти' }));
-    expect(await screen.findByText('Найдено 3 позиции')).toBeInTheDocument();
+    expect(await screen.findByText('Найдено 3 позиции', {}, SEARCH_WAIT)).toBeInTheDocument();
     expect(router.state.location.search).toBe('?q=%D1%80%D0%B5%D0%BC%D0%B5%D0%BD%D1%8C');
 
     await user.click(screenMain().getByRole('button', { name: 'Очистить поиск' }));
-    expect(await screen.findByText('Найдено 24 позиции')).toBeInTheDocument();
+    expect(await screen.findByText('Найдено 24 позиции', {}, SEARCH_WAIT)).toBeInTheDocument();
     await user.click(await screenMain().findByRole('button', { name: 'Услуги' }));
-    expect(await screen.findByText('Найдено 2 позиции')).toBeInTheDocument();
+    expect(await screen.findByText('Найдено 2 позиции', {}, SEARCH_WAIT)).toBeInTheDocument();
     expect(screenMain().getByRole('button', { name: 'Услуги' })).toHaveAttribute('aria-pressed', 'true');
   });
 
