@@ -300,3 +300,47 @@ def test_operator_logo_is_public_through_the_api_only(client_company, anon_porta
         assert info["logo_url"] == f"/api/portal/v1/operator/logo?v={pictures_version(client_company)}"
         served = anon_portal_client.get("/api/portal/v1/operator/logo")
     assert served.status_code == 200 and served["Content-Type"] == "image/webp"
+
+
+# --- миграция 0036: логотип уезжает из публичного бакета в закрытый ---------------------------------------------
+
+
+def test_migration_moves_company_logo_from_public_to_private_storage(
+    tmp_path, client_company, anon_portal_client, settings
+):
+    """Прод: у компании-оператора логотип лежит в публичном бакете; после 0035 его должен найти закрытый."""
+    import importlib
+    from unittest import mock
+
+    from django.apps import apps
+    from django.core.files.storage import FileSystemStorage
+
+    migration = importlib.import_module("parties.migrations.0036_move_company_logos_to_private")
+    public = FileSystemStorage(location=str(tmp_path / "public"))
+    private = FileSystemStorage(location=str(tmp_path / "private"))
+    out = io.BytesIO()
+    Image.new("RGB", (30, 30), (5, 6, 7)).save(out, format="WEBP")
+    name = f"companies/{client_company.pk}/logo/old.webp"
+    public.save(name, io.BytesIO(out.getvalue()))
+    Company.objects.filter(pk=client_company.pk).update(logo=name)
+    settings.OWN_COMPANY_ID = client_company.pk
+
+    def serve():
+        company = Company.objects.get(pk=client_company.pk)
+        with mock.patch.object(company._meta.get_field("logo"), "storage", private):
+            company.logo.storage = private
+            with mock.patch("core.tenant.own_company", return_value=company):
+                return anon_portal_client.get("/api/portal/v1/operator/logo")
+
+    assert serve().status_code == 404  # до шага данных закрытое хранилище файла не знает
+
+    with mock.patch.object(migration, "_storages", return_value=(public, private)):
+        migration.forward(apps, None)
+        assert private.exists(name) and not public.exists(name)
+        migration.forward(apps, None)  # повтор безопасен
+        assert private.exists(name)
+    assert serve().status_code == 200
+
+    with mock.patch.object(migration, "_storages", return_value=(public, private)):
+        migration.backward(apps, None)
+    assert public.exists(name) and not private.exists(name)
