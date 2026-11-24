@@ -706,6 +706,7 @@ export const deliveries: Schemas["DeliveryLine"][] = [
     ...dealOf(35),
     line_no: 1,
     title: "Редуктор червячный NMRV 063",
+    item: { id: 1005, name: "Редуктор червячный NMRV 063", sku: "RT-01005", kind: "goods", photo: 1 },
     quantity: "6",
     unit: "шт",
     status: "delivered",

@@ -127,12 +127,13 @@ def balances(user, *, q: str = "", only: str = "") -> dict:
     }
 
 
-def present_reservation(r: Reservation, units: Optional[list] = None) -> dict:
+def present_reservation(r: Reservation, units: Optional[list] = None, photos: Optional[dict[int, int]] = None) -> dict:
     """Резерв; `units` — свободные серийные или партии товара (для выбора при отгрузке S/L, ADR-0021)."""
     return {
         "id": r.pk,
         "product_id": r.product_id,
         "product_name": r.product.name,
+        "item": item_ref(r.product, photos),
         "deal": _deal_ref(r.deal),
         "quote_item_id": r.quote_item_id,
         "quantity": r.quantity,
@@ -164,7 +165,8 @@ def reservations(
         qs = qs.filter(product_id=product_id)
     rows = list(qs.select_related("product__category").order_by("deal_id", "id")[:MAX_ROWS])
     free = trace.free_units({r.product_id for r in rows if trace.tracking_of(r.product) != "none"})
-    return [present_reservation(r, free.get(r.product_id)) for r in rows]
+    photos = main_photos(r.product_id for r in rows)
+    return [present_reservation(r, free.get(r.product_id), photos) for r in rows]
 
 
 def product_detail(user, product_id: int) -> dict:
@@ -215,7 +217,9 @@ def product_detail(user, product_id: int) -> dict:
     }
 
 
-def present_shipment(shipment: Shipment) -> dict:
+def present_shipment(shipment: Shipment, photos: Optional[dict[int, int]] = None) -> dict:
+    if photos is None:
+        photos = main_photos(line.product_id for line in shipment.lines.all())
     return {
         "id": shipment.pk,
         "number": shipment.number,
@@ -229,6 +233,7 @@ def present_shipment(shipment: Shipment) -> dict:
         "lines": [
             {
                 "product_id": line.product_id,
+                "item": item_ref(line.product, photos),
                 "name": line.product.name,
                 "quantity": line.quantity,
                 "cell": line.cell or None,
@@ -246,13 +251,17 @@ def shipments(user, *, deal_id: Optional[int] = None) -> dict:
     ).prefetch_related("lines__product", "lines__trace_allocations__unit")
     if deal_id:
         qs = qs.filter(deal_id=deal_id)
-    return {"results": [present_shipment(s) for s in qs[:MAX_ROWS]], "rights": rights(user)}
+    rows = list(qs[:MAX_ROWS])
+    photos = main_photos(line.product_id for s in rows for line in s.lines.all())
+    return {"results": [present_shipment(s, photos) for s in rows], "rights": rights(user)}
 
 
-def present_receipt_line(rl) -> dict:
+def present_receipt_line(rl, photos: Optional[dict[int, int]] = None) -> dict:
     """Строка приёмки: количество, ячейка, принятые серийные или партия и документ соответствия (ADR-0021)."""
+    product = rl.order_line.product
     return {
         "name": rl.order_line.name,
+        "item": item_ref(product, photos) if product is not None else None,
         "quantity": rl.quantity,
         "cell": rl.cell or None,
         "units": [u.number for u in rl.trace_units.all()],
@@ -274,8 +283,14 @@ def pending_receipts(user) -> dict:
         .order_by("order__expected_date", "order_id", "position")[:MAX_ROWS]
     )
     receipts = GoodsReceipt.objects.select_related("order__supplier", "received_by").prefetch_related(
-        "lines__order_line", "lines__trace_units"
+        "lines__order_line__product", "lines__trace_units"
     )[:50]
+    lines = list(lines)
+    receipts = list(receipts)
+    photos = main_photos(
+        [line.product_id for line in lines]
+        + [rl.order_line.product_id for receipt in receipts for rl in receipt.lines.all()]
+    )
     return {
         "pending": [
             {
@@ -286,6 +301,7 @@ def pending_receipts(user) -> dict:
                 "overdue": is_overdue(line.order),
                 "order_line_id": line.pk,
                 "name": line.name,
+                "item": item_ref(line.product, photos) if line.product_id else None,
                 "article": line.article,
                 "unit": line.unit,
                 "quantity": line.quantity,
@@ -308,7 +324,7 @@ def pending_receipts(user) -> dict:
                 "received_by": person_ref(receipt.received_by) if receipt.received_by_id else None,
                 "supplier_doc": receipt.supplier_doc or None,
                 "quantity": sum(rl.quantity for rl in receipt.lines.all()),
-                "lines": [present_receipt_line(rl) for rl in receipt.lines.all()],
+                "lines": [present_receipt_line(rl, photos) for rl in receipt.lines.all()],
             }
             for receipt in receipts
         ],

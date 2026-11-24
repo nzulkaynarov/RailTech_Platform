@@ -10,6 +10,7 @@ import { DefinitionList } from "../../../shared/ui/DefinitionList";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { QueryState } from "../../../shared/ui/FormParts";
 import { StatusTag } from "../../../shared/ui/StatusTag";
+import { ItemRefCell } from "../../ItemRefCell";
 import { useStateLabels } from "./api";
 
 /**
@@ -94,7 +95,7 @@ function UnitCard({ unit }: { unit: StockTraceUnit }) {
       }
     >
       <p>
-        {unit.product.name}
+        <ItemRefCell item={unit.product.item} name={unit.product.name} />
         {unit.product.article ? (
           <span className="pf-hint pf-num"> · {unit.product.article}</span>
         ) : null}
