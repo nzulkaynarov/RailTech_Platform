@@ -1,12 +1,12 @@
 {
-  "title": "Loyihalar: shartnomalar va dalolatnomalar",
+  "title": "Loyihalar: şartnomalar va dalolatnomalar",
   "list": {
-    "caption": "Loyihalar: raqam, mijoz, qadam, hujjatlar, muddat, mas’ul",
+    "caption": "Loyihalar: raqam, mijoz, qadam, hujjatlar, muddat, masʼul",
     "scroll": "Loyihalar jadvali, gorizontal aylanadi",
     "filters": "Loyiha filtrlari",
     "scope": {
-      "label": "Ko‘rsatish",
-      "all": "Barcha loyihalar",
+      "label": "Körsatiş",
+      "all": "Barça loyihalar",
       "mine": "Meniki"
     },
     "problems": "Muammolilar",
@@ -16,41 +16,41 @@
     },
     "search": {
       "label": "Qidiruv",
-      "placeholder": "Loyiha raqami, mijoz, shartnoma, hisob"
+      "placeholder": "Loyiha raqami, mijoz, şartnoma, hisob"
     },
     "columns": {
       "number": "Loyiha",
       "client": "Mijoz",
       "step": "Qadam",
-      "status": "Mijozga ko‘rinadi",
+      "status": "Mijozga körinadi",
       "documents": "Hujjatlar",
       "due": "Muddat",
-      "responsible": "Mas’ul",
+      "responsible": "Masʼul",
       "action": "Amal"
     },
-    "open": "Ochish",
-    "openLabel": "{{number}} loyihasini ochish",
-    "more": "Yana ko‘rsatish",
+    "open": "Oçiş",
+    "openLabel": "{{number}} loyihasini oçiş",
+    "more": "Yana körsatiş",
     "total": "Loyihalar: {{count}}",
-    "noDocuments": "Hujjatlar hali yo‘q",
+    "noDocuments": "Hujjatlar hali yöq",
     "empty": {
       "all": {
-        "title": "Hozircha loyihalar yo‘q",
-        "text": "Mijoz tijorat taklifini qabul qilganda loyiha paydo bo‘ladi: shartnoma, hisoblar va dalolatnoma ochiladi. Qabul qilingan takliflar hali yo‘q."
+        "title": "Hozirça loyihalar yöq",
+        "text": "Mijoz tijorat taklifini qabul qilganda loyiha paydo böladi: şartnoma, hisoblar va dalolatnoma oçiladi. Qabul qilingan takliflar hali yöq."
       },
       "filtered": {
-        "title": "Filtrlar bo‘yicha loyiha yo‘q",
-        "text": "Filtrlarning bir qismini olib tashlang yoki so‘rovni o‘zgartiring.",
-        "action": "Filtrlarni tozalash"
+        "title": "Filtrlar böyiça loyiha yöq",
+        "text": "Filtrlarning bir qismini olib taşlang yoki sörovni özgartiring.",
+        "action": "Filtrlarni tozalaş"
       }
     }
   },
   "clientStatus": {
-    "contract_review": "Shartnoma matnini kelishib oling",
-    "contract_signing": "Shartnoma imzolanmoqda",
-    "awaiting_payment": "To‘lov kutilmoqda",
+    "contract_review": "Şartnoma matnini kelişib oling",
+    "contract_signing": "Şartnoma imzolanmoqda",
+    "awaiting_payment": "Tölov kutilmoqda",
     "fulfilling": "Bajarilmoqda",
-    "awaiting_acceptance": "Dalolatnomani qabul qilish kutilmoqda",
+    "awaiting_acceptance": "Dalolatnomani qabul qiliş kutilmoqda",
     "done": "Bajarildi"
   },
   "status": {
@@ -59,102 +59,102 @@
     },
     "contract": {
       "project": "Loyiha",
-      "client_agreed": "Mijoz bilan kelishilgan",
+      "client_agreed": "Mijoz bilan kelişilgan",
       "issued_at_operator": "EHTda rasmiylaştirilgan",
       "signed": "Imzolangan (skan)",
       "rejected": "Mijoz rad etgan",
       "cancelled": "Bekor qilingan"
     },
     "invoice": {
-      "to_issue": "Rasmiylashtirilishi kerak",
-      "issued": "Rasmiylashtirilgan",
-      "partial": "Qisman to‘langan",
-      "paid": "To‘langan",
-      "overdue": "Muddati o‘tgan",
+      "to_issue": "Rasmiylaştirilişi kerak",
+      "issued": "Rasmiylaştirilgan",
+      "partial": "Qisman tölangan",
+      "paid": "Tölangan",
+      "overdue": "Muddati ötgan",
       "cancelled": "Bekor qilingan"
     },
     "act": {
       "project": "Loyiha",
       "returned": "Sabab bilan qaytarilgan",
-      "issued": "Chiqarilgan",
+      "issued": "Çiqarilgan",
       "signed": "Imzolangan (skan)",
       "accepted": "Mijoz qabul qilgan",
       "cancelled": "Bekor qilingan"
     }
   },
   "problem": {
-    "no_contract": "Shartnoma loyihasi yo‘q",
-    "contract_rejected": "Shartnomani mijoz rad etgan",
+    "no_contract": "Şartnoma loyihasi yöq",
+    "contract_rejected": "Şartnomani mijoz rad etgan",
     "act_returned": "Dalolatnoma qaytarilgan",
-    "invoice_overdue": "Hisob muddati o‘tgan"
+    "invoice_overdue": "Hisob muddati ötgan"
   },
   "card": {
     "title": "{{number}} loyihasi",
-    "back": "Barcha loyihalar",
-    "steps": "Ariza yo‘li",
-    "doneNote": "Loyiha bajarildi: dalolatnoma qabul qilingan, barcha hisoblar tölangan.",
-    "doneRule": "Dalolatnoma qabul qilinib, barcha hisoblar tölanganda loyiha «Bajarildi» böladi.",
+    "back": "Barça loyihalar",
+    "steps": "Ariza yöli",
+    "doneNote": "Loyiha bajarildi: dalolatnoma qabul qilingan, barça hisoblar tölangan.",
+    "doneRule": "Dalolatnoma qabul qilinib, barça hisoblar tölanganda loyiha «Bajarildi» böladi.",
     "fields": {
       "client": "Mijoz",
       "total": "QQS bilan summa",
       "manager": "Menejer",
       "responsible": "Yuritadi",
-      "opened": "Ochilgan",
+      "opened": "Oçilgan",
       "due": "Muddat"
     },
-    "readOnly": "Faqat o‘qish",
-    "readOnlyHint": "Faqat ko‘rish.",
+    "readOnly": "Faqat öqiş",
+    "readOnlyHint": "Faqat köriş.",
     "documents": {
       "title": "Loyiha hujjatlari",
       "quote": "TT",
-      "contract": "Shartnoma",
+      "contract": "Şartnoma",
       "invoice": "Hisob",
       "act": "Dalolatnoma",
       "quoteType": "Tijorat taklifi, {{version}}-versiya",
-      "contractType": "Yetkazib berish shartnomasi",
-      "invoiceType": "To‘lov hisobi",
-      "actType": "Bajarilgan ish yoki yetkazib berish dalolatnomasi",
+      "contractType": "Yetkazib beriş şartnomasi",
+      "invoiceType": "Tölov hisobi",
+      "actType": "Bajarilgan iş yoki yetkazib beriş dalolatnomasi",
       "none": "—",
-      "contractMissing": "Shartnoma loyihasi hali yo‘q: uni buxgalter qabul qilingan TT dan shakllantiradi.",
-      "invoiceMissing": "Hisob shartnoma imzolangandan keyin paydo böladi: qoralama avtomatik yaratiladi.",
-      "invoiceMissingSigned": "Shartnoma imzolangan, hisob hali yöq: uni «Moliya» bölimida chiqaring.",
-      "actMissing": "Dalolatnoma rasmiylashtirilgan hisob bo‘yicha chiqariladi.",
+      "contractMissing": "Şartnoma loyihasi hali yöq: uni buxgalter qabul qilingan TT dan şakllantiradi.",
+      "invoiceMissing": "Hisob şartnoma imzolangandan keyin paydo böladi: qoralama avtomatik yaratiladi.",
+      "invoiceMissingSigned": "Şartnoma imzolangan, hisob hali yöq: uni «Moliya» bölimida çiqaring.",
+      "actMissing": "Dalolatnoma rasmiylaştirilgan hisob böyiça çiqariladi.",
       "actAfterDelivery": "Dalolatnoma — yetkazilgandan keyin",
       "invoiceDue": "muddat {{date}}",
       "invoiceCount": "hisoblar: {{count}}",
-      "openContract": "Shartnoma",
+      "openContract": "Şartnoma",
       "openAct": "Dalolatnoma",
-      "openContractLabel": "{{number}} shartnomasini ochish",
-      "openActLabel": "{{number}} dalolatnomasini ochish",
-      "createContract": "Shakllantirish",
-      "createContractLabel": "TT bo‘yicha shartnoma loyihasini shakllantirish",
-      "issueAct": "Chiqarish",
-      "issueActLabel": "Loyiha bo‘yicha dalolatnoma chiqarish",
+      "openContractLabel": "{{number}} şartnomasini oçiş",
+      "openActLabel": "{{number}} dalolatnomasini oçiş",
+      "createContract": "Şakllantiriş",
+      "createContractLabel": "TT böyiça şartnoma loyihasini şakllantiriş",
+      "issueAct": "Çiqariş",
+      "issueActLabel": "Loyiha böyiça dalolatnoma çiqariş",
       "file": "PDF",
-      "fileLabel": "{{number}} PDF ni yuklab olish",
+      "fileLabel": "{{number}} PDF ni yuklab oliş",
       "scan": "Skan",
-      "scanLabel": "{{number}} skanini yuklab olish",
-      "openQuote": "Ochish",
-      "openQuoteLabel": "{{number}} TT sini ochish",
+      "scanLabel": "{{number}} skanini yuklab oliş",
+      "openQuote": "Oçiş",
+      "openQuoteLabel": "{{number}} TT sini oçiş",
       "payments": "Moliya",
-      "paymentsLater": "Hisob chiqarish va to‘lov «Moliya» bo‘limida (bo‘lim alohida ulanadi)",
-      "invoiceHint": "Hisob chiqarish va to‘lovni tasdiqlash — «Moliya» bo‘limida."
+      "paymentsLater": "Hisob çiqariş va tölov «Moliya» bölimida (bölim alohida ulanadi)",
+      "invoiceHint": "Hisob çiqariş va tölovni tasdiqlaş — «Moliya» bölimida."
     },
     "execution": {
-      "title": "Bajarilishi",
-      "hint": "Ombordan jo‘natish — «Ombor · Jo‘natmalar»da. Bu yerda tovar yo‘lda va yetkazilgani belgilanadi.",
-      "shipment": "Jo‘natma",
-      "none": "Jo‘natma hali yo‘q: u shartnoma imzolangandan keyin yaratiladi.",
-      "awaitingShipment": "Yetkazib berish belgilari tovar ombordan jo‘natilgach paydo bo‘ladi.",
+      "title": "Bajarilişi",
+      "hint": "Ombordan jönatiş — «Ombor · Jönatmalar»da. Bu yerda tovar yölda va yetkazilgani belgilanadi.",
+      "shipment": "Jönatma",
+      "none": "Jönatma hali yöq: u şartnoma imzolangandan keyin yaratiladi.",
+      "awaitingShipment": "Yetkazib beriş belgilari tovar ombordan jönatilgaç paydo böladi.",
       "status": "Holat",
       "expected": "Kutilayotgan sana",
-      "shipped": "Jo‘natilgan",
+      "shipped": "Jönatilgan",
       "delivered": "Yetkazilgan",
       "accepted": "Mijoz qabul qilgan",
-      "carrier": "Tashuvchi",
-      "tracking": "Tashuvchi yuk xati",
-      "lines": "Yetkazib berish qatorlari",
-      "linesNone": "Yetkazib berish qatorlari hali yo‘q.",
+      "carrier": "Taşuvçi",
+      "tracking": "Taşuvçi yuk xati",
+      "lines": "Yetkazib beriş qatorlari",
+      "linesNone": "Yetkazib beriş qatorlari hali yöq.",
       "line": {
         "title": "Pozitsiya",
         "quantity": "Soni",
@@ -163,147 +163,147 @@
       },
       "lineStatus": {
         "assembling": "Komplektlanmoqda",
-        "in_transit": "Yo‘lda",
-        "ready_to_ship": "Jo‘natishga tayyor",
-        "shipped": "Jo‘natilgan",
+        "in_transit": "Yölda",
+        "ready_to_ship": "Jönatişga tayyor",
+        "shipped": "Jönatilgan",
         "delivered": "Yetkazilgan",
         "accepted": "Mijoz qabul qilgan",
-        "disputed": "Mijoz e’tiroz bildirgan"
+        "disputed": "Mijoz eʼtiroz bildirgan"
       },
-      "proof": "Yetkazib berish tasdig‘i",
+      "proof": "Yetkazib beriş tasdiği",
       "proofFile": "Fayl"
     },
     "journal": {
       "title": "Loyiha tarixi"
     },
     "delivery": {
-      "in_transit": "Jo‘natildi, yo‘lda",
+      "in_transit": "Jönatildi, yölda",
       "delivered": "Yetkazildi",
       "done": {
-        "in_transit": "Belgilandi: yo‘lda",
+        "in_transit": "Belgilandi: yölda",
         "delivered": "Belgilandi: yetkazildi"
       },
-      "failed": "Belgini saqlab bo‘lmadi. Qaytadan urinib ko‘ring.",
+      "failed": "Belgini saqlab bölmadi. Qaytadan urinib köring.",
       "dialog": {
-        "in_transit": "Mijozga jo‘natildi, yo‘lda",
+        "in_transit": "Mijozga jönatildi, yölda",
         "delivered": "Mijozga yetkazildi",
         "date": {
-          "in_transit": "Jo‘natish sanasi",
-          "delivered": "Yetkazish sanasi"
+          "in_transit": "Jönatiş sanasi",
+          "delivered": "Yetkaziş sanasi"
         },
-        "dateInvalid": "Sana bugundan kech va jo‘natishdan oldin bo‘lmasin",
-        "waybill": "Tashuvchi yuk xati yoki trek raqami",
+        "dateInvalid": "Sana bugundan keç va jönatişdan oldin bölmasin",
+        "waybill": "Taşuvçi yuk xati yoki trek raqami",
         "waybillHint": "Majburiy emas",
-        "file": "Yetkazib berish tasdig‘i",
-        "fileHint": "Imzolangan yuk xati yoki rasm, 20 MB gacha. Majburiy emas",
+        "file": "Yetkazib beriş tasdiği",
+        "fileHint": "Imzolangan yuk xati yoki rasm, 20 MB gaça. Majburiy emas",
         "consequence": {
-          "in_transit": "Mijoz kabinetda yetkazib berish yo‘lda ekanini ko‘radi.",
-          "delivered": "Mijoz «Yetkazildi»ni ko‘radi va qabul qilishi yoki e’tiroz yozishi mumkin."
+          "in_transit": "Mijoz kabinetda yetkazib beriş yölda ekanini köradi.",
+          "delivered": "Mijoz «Yetkazildi»ni köradi va qabul qilişi yoki eʼtiroz yozişi mumkin."
         },
-        "cancel": "Bekor qilish",
-        "submit": "Saqlash"
+        "cancel": "Bekor qiliş",
+        "submit": "Saqlaş"
       }
     }
   },
   "journal": {
     "contract": {
-      "created": "Shartnoma loyihasi yaratildi",
-      "sent_to_client": "Shartnoma loyihasi mijozga kelishuv uchun yuborildi",
-      "client_agreed": "Shartnoma matni mijoz bilan kelishildi",
-      "rejected": "Shartnomani mijoz rad etdi",
-      "revised": "Shartnoma loyihasi ishga qaytarildi",
+      "created": "Şartnoma loyihasi yaratildi",
+      "sent_to_client": "Şartnoma loyihasi mijozga kelişuv uçun yuborildi",
+      "client_agreed": "Şartnoma matni mijoz bilan kelişildi",
+      "rejected": "Şartnomani mijoz rad etdi",
+      "revised": "Şartnoma loyihasi işga qaytarildi",
       "issued_external": "Şartnoma EHTda rasmiylaştirildi",
-      "scan_attached": "Imzolangan shartnoma skani biriktirildi",
-      "signed": "Shartnoma imzolandi",
-      "signed_client": "Mijoz shartnomani kelişdi",
-      "signed_manager": "Shartnomani kompaniya imzoladi",
-      "cancelled": "Shartnoma bekor qilindi"
+      "scan_attached": "Imzolangan şartnoma skani biriktirildi",
+      "signed": "Şartnoma imzolandi",
+      "signed_client": "Mijoz şartnomani kelişdi",
+      "signed_manager": "Şartnomani kompaniya imzoladi",
+      "cancelled": "Şartnoma bekor qilindi"
     },
     "act": {
-      "issued": "Dalolatnoma chiqarildi",
-      "rejected": "Dalolatnomani buyurtmachi qaytardi",
+      "issued": "Dalolatnoma çiqarildi",
+      "rejected": "Dalolatnomani buyurtmaçi qaytardi",
       "scan_attached": "Imzolangan dalolatnoma skani biriktirildi",
-      "signed": "Dalolatnomani buyurtmachi qabul qildi",
-      "reissued": "Dalolatnoma qaytadan chiqarildi",
+      "signed": "Dalolatnomani buyurtmaçi qabul qildi",
+      "reissued": "Dalolatnoma qaytadan çiqarildi",
       "cancelled": "Dalolatnoma bekor qilindi"
     },
     "project": {
       "done": "Loyiha bajarildi",
-      "delivery_in_transit": "Mijozga jo‘natildi, yo‘lda",
+      "delivery_in_transit": "Mijozga jönatildi, yölda",
       "delivery_delivered": "Mijozga yetkazildi"
     },
     "by": "{{date}} · {{name}}",
     "reason": "Izoh: {{reason}}"
   },
   "panel": {
-    "sheetClose": "Yopish"
+    "sheetClose": "Yopiş"
   },
   "contract": {
-    "number": "{{number}} shartnomasi",
+    "number": "{{number}} şartnomasi",
     "next": "Keyingi qadam",
     "none": {
-      "title": "Shartnoma hali yo‘q",
+      "title": "Şartnoma hali yöq",
       "text": "",
-      "create": "Shartnoma loyihasini shakllantirish"
+      "create": "Şartnoma loyihasini şakllantiriş"
     },
     "fields": {
       "total": "Summa",
       "created": "Yaratilgan",
-      "agreed": "Mijoz bilan kelishilgan",
+      "agreed": "Mijoz bilan kelişilgan",
       "signed": "Imzolangan",
       "toClient": "Mijozda"
     },
-    "toClientYes": "matn kelishuvda",
+    "toClientYes": "matn kelişuvda",
     "toClientNo": "yuborilmagan",
     "state": {
       "project": "Loyiha hali mijozga yuborilmagan.",
-      "atClient": "Loyiha mijozda matn kelishuvida.",
+      "atClient": "Loyiha mijozda matn kelişuvida.",
       "client_agreed": "Mijoz matnni kelişdi. Keyin şartnomani EHTda (platformadan taşqarida) rasmiylaştiring.",
       "issued_at_operator": "Şartnoma EHTda rasmiylaştirilgan. Ikki tomon imzolagaç, skanni biriktiring.",
-      "signed": "Shartnoma ikki tomon tomonidan imzolangan, skan saqlangan.",
-      "rejected": "Mijoz shartnomani rad etdi. Loyihani to‘g‘rilab, qaytadan kelishuvga yuboring.",
-      "cancelled": "Shartnoma bekor qilingan."
+      "signed": "Şartnoma ikki tomon tomonidan imzolangan, skan saqlangan.",
+      "rejected": "Mijoz şartnomani rad etdi. Loyihani töğrilab, qaytadan kelişuvga yuboring.",
+      "cancelled": "Şartnoma bekor qilingan."
     },
     "action": {
-      "send_to_client": "Mijozga kelishuvga yuborish",
-      "client_agreed": "Belgilash: mijoz kelishdi",
+      "send_to_client": "Mijozga kelişuvga yuboriş",
+      "client_agreed": "Belgilaş: mijoz kelişdi",
       "mark_issued": "Belgilaş: EHTda rasmiylaştirildi",
-      "attach_scan": "Imzolangan skanni biriktirish",
-      "reject": "Mijoz shartnomani rad etdi…",
-      "revise": "Loyihaga qaytarish"
+      "attach_scan": "Imzolangan skanni biriktiriş",
+      "reject": "Mijoz şartnomani rad etdi…",
+      "revise": "Loyihaga qaytariş"
     },
     "note": {
       "label": "EHT tizimidagi operator yoki raqam",
-      "hint": "Ixtiyoriy: jurnalga tushadi.",
+      "hint": "Ixtiyoriy: jurnalga tuşadi.",
       "placeholder": "Masalan: EHT, № 77"
     },
     "reject": {
-      "title": "Mijoz shartnomani rad etdi",
+      "title": "Mijoz şartnomani rad etdi",
       "reason": {
-        "label": "Rad etish sababi",
-        "hint": "Majburiy: mijoz so‘zlariga ko‘ra, jurnalga tushadi."
+        "label": "Rad etiş sababi",
+        "hint": "Majburiy: mijoz sözlariga köra, jurnalga tuşadi."
       },
-      "submit": "Rad etishni yozish",
-      "cancel": "Bekor qilish",
-      "disabled": "Sabab yozganingizda tugma faollashadi."
+      "submit": "Rad etişni yoziş",
+      "cancel": "Bekor qiliş",
+      "disabled": "Sabab yozganingizda tugma faollaşadi."
     },
     "scan": {
-      "label": "Imzolangan shartnoma skani",
-      "hint": "PDF, JPG, PNG yoki WEBP, 20 MB gacha.",
-      "submit": "Skanni biriktirish",
-      "choose": "Skan faylini tanlang — tugma faollashadi."
+      "label": "Imzolangan şartnoma skani",
+      "hint": "PDF, JPG, PNG yoki WEBP, 20 MB gaça.",
+      "submit": "Skanni biriktiriş",
+      "choose": "Skan faylini tanlang — tugma faollaşadi."
     },
     "files": {
-      "pdf": "Shartnoma PDF",
+      "pdf": "Şartnoma PDF",
       "scan": "Imzolangan skan"
     },
     "done": {
-      "create": "Shartnoma loyihasi shakllantirildi.",
+      "create": "Şartnoma loyihasi şakllantirildi.",
       "send_to_client": "Loyiha mijozga yuborildi.",
-      "client_agreed": "Belgilandi: mijoz matnni kelishdi.",
+      "client_agreed": "Belgilandi: mijoz matnni kelişdi.",
       "mark_issued": "Belgilandi: şartnoma EHTda rasmiylaştirildi.",
-      "attach_scan": "Skan biriktirildi, shartnoma imzolandi.",
-      "reject": "Rad etish yozildi.",
+      "attach_scan": "Skan biriktirildi, şartnoma imzolandi.",
+      "reject": "Rad etiş yozildi.",
       "revise": "Loyiha işga qaytarildi.",
       "sign_ours": "Şartnoma kompaniya nomidan imzolandi.",
       "request_deviation": "Ariza «Huquq» egasiga yuborildi.",
@@ -334,7 +334,7 @@
       "deviation": {
         "none": "Çetlanişsiz",
         "requested": "Çetlaniş söraldi",
-        "approved": "Çetlaniş ma’qullandi",
+        "approved": "Çetlaniş maʼqullandi",
         "rejected": "Çetlaniş rad etildi"
       },
       "blocker": {
@@ -344,7 +344,7 @@
       "action": {
         "sign_ours": "Kompaniya nomidan imzolaş",
         "request_deviation": "Çetlaniş söraş",
-        "approve": "Çetlanişni ma’qullaş",
+        "approve": "Çetlanişni maʼqullaş",
         "reject": "Rad etiş"
       },
       "ask": {
@@ -369,7 +369,7 @@
       "remark": "Izoh: {{text}}",
       "settings": "Xodimlar",
       "collecting": "Vizalar yiğilmoqda.",
-      "askAdmin": "Administratordan rolni tayinlashni sörang: {{roles}}.",
+      "askAdmin": "Administratordan rolni tayinlaşni sörang: {{roles}}.",
       "role": {
         "visa_finance": "buxgalter",
         "visa_legal": "yurist"
@@ -379,88 +379,88 @@
   "act": {
     "number": "{{number}} dalolatnomasi",
     "none": {
-      "title": "Dalolatnoma hali yo‘q",
-      "noInvoice": "Dalolatnoma rasmiylashtirilgan hisob bo‘yicha chiqariladi. Hisob hali rasmiylashtirilmagan — uni «Moliya» bo‘limida rasmiylashtiring.",
-      "notDelivered": "Dalolatnoma yetkazib berilgandan keyin: tovar mijozga yetkazilgach chiqariladi.",
+      "title": "Dalolatnoma hali yöq",
+      "noInvoice": "Dalolatnoma rasmiylaştirilgan hisob böyiça çiqariladi. Hisob hali rasmiylaştirilmagan — uni «Moliya» bölimida rasmiylaştiring.",
+      "notDelivered": "Dalolatnoma yetkazib berilgandan keyin: tovar mijozga yetkazilgaç çiqariladi.",
       "forbidden": "Ruxsat yetarli emas.",
-      "ready": "Hisob rasmiylashtirilgan: dalolatnoma chiqarish mumkin.",
-      "issue": "Dalolatnoma chiqarish"
+      "ready": "Hisob rasmiylaştirilgan: dalolatnoma çiqariş mumkin.",
+      "issue": "Dalolatnoma çiqariş"
     },
     "fields": {
       "total": "Summa",
-      "issued": "Chiqarilgan",
+      "issued": "Çiqarilgan",
       "signed": "Imzolangan",
       "accepted": "Qabul qilingan"
     },
     "state": {
       "project": "Dalolatnoma loyiha holatida.",
-      "issued": "Dalolatnoma mijozda qabul qilinmoqda. U imzolagach, skanni biriktiring.",
+      "issued": "Dalolatnoma mijozda qabul qilinmoqda. U imzolagaç, skanni biriktiring.",
       "signed": "Dalolatnoma imzolangan, skan saqlangan.",
       "accepted": "Mijoz dalolatnomani kabinetda qabul qildi. Skan yöq.",
-      "returned": "Mijoz dalolatnomani sabab bilan qaytardi. To‘g‘rilab, qaytadan chiqaring.",
+      "returned": "Mijoz dalolatnomani sabab bilan qaytardi. Töğrilab, qaytadan çiqaring.",
       "cancelled": "Dalolatnoma bekor qilingan."
     },
     "action": {
-      "attach_scan": "Imzolangan skanni biriktirish",
-      "return": "Buyurtmachi dalolatnomani qaytardi…",
-      "reissue": "Qaytadan chiqarish"
+      "attach_scan": "Imzolangan skanni biriktiriş",
+      "return": "Buyurtmaçi dalolatnomani qaytardi…",
+      "reissue": "Qaytadan çiqariş"
     },
     "return": {
-      "title": "Buyurtmachi dalolatnomani qaytardi",
+      "title": "Buyurtmaçi dalolatnomani qaytardi",
       "reason": {
-        "label": "Qaytarish sababi",
-        "hint": "Majburiy: buyurtmachi so‘zlariga ko‘ra, jurnalga va ijrochiga tushadi."
+        "label": "Qaytariş sababi",
+        "hint": "Majburiy: buyurtmaçi sözlariga köra, jurnalga va ijroçiga tuşadi."
       },
-      "submit": "Qaytarishni yozish",
-      "cancel": "Bekor qilish",
-      "disabled": "Sabab yozganingizda tugma faollashadi."
+      "submit": "Qaytarişni yoziş",
+      "cancel": "Bekor qiliş",
+      "disabled": "Sabab yozganingizda tugma faollaşadi."
     },
     "scan": {
       "label": "Imzolangan dalolatnoma skani",
-      "hint": "PDF, JPG, PNG yoki WEBP, 20 MB gacha.",
-      "submit": "Skanni biriktirish",
-      "choose": "Skan faylini tanlang — tugma faollashadi."
+      "hint": "PDF, JPG, PNG yoki WEBP, 20 MB gaça.",
+      "submit": "Skanni biriktiriş",
+      "choose": "Skan faylini tanlang — tugma faollaşadi."
     },
     "history": "Dalolatnoma tarixi",
     "files": {
       "pdf": "Dalolatnoma PDF",
       "scan": "Imzolangan skan"
     },
-    "returnedReason": "Qaytarish sababi: {{reason}}",
+    "returnedReason": "Qaytariş sababi: {{reason}}",
     "done": {
-      "issue": "Dalolatnoma chiqarildi.",
+      "issue": "Dalolatnoma çiqarildi.",
       "attach_scan": "Skan biriktirildi, dalolatnoma imzolandi.",
-      "return": "Qaytarish yozildi.",
-      "reissue": "Dalolatnoma qaytadan chiqarildi."
+      "return": "Qaytariş yozildi.",
+      "reissue": "Dalolatnoma qaytadan çiqarildi."
     },
-    "readOnly": "Faqat ko‘rish."
+    "readOnly": "Faqat köriş."
   },
   "files": {
-    "choose": "Fayl tanlash",
+    "choose": "Fayl tanlaş",
     "selected": "Tanlangan fayl: {{name}}, {{size}}",
     "tooLarge": "Fayl 20 MB dan katta.",
     "wrongType": "PDF yoki rasm kerak: JPG, PNG, WEBP.",
-    "generating": "Fayl hali tayyorlanmoqda. Bir necha soniyadan keyin qayta urinib ko‘ring.",
-    "remove": "Faylni olib tashlash"
+    "generating": "Fayl hali tayyorlanmoqda. Bir neça soniyadan keyin qayta urinib köring.",
+    "remove": "Faylni olib taşlaş"
   },
   "errors": {
-    "contract_transition_not_allowed": "Shartnoma allaqachon boshqa holatda. Sahifani yangilang.",
-    "act_sign_not_allowed": "Dalolatnoma allaqachon boshqa holatda. Sahifani yangilang.",
-    "act_already_exists": "Loyihada dalolatnoma allaqachon bor.",
-    "not_delivered": "Dalolatnoma yetkazib berilgandan keyin chiqariladi: tovar hali yetkazilmagan.",
-    "goods_not_shipped": "Tovar ombordan hali jo‘natilmagan: yetkazib berish belgilari jo‘natilgandan keyin mavjud.",
-    "no_invoice": "Dalolatnoma rasmiylashtirilgan hisob bo‘yicha chiqariladi: hisob hali yo‘q.",
-    "contract_exists": "Shartnoma loyihasi allaqachon shakllantirilgan.",
+    "contract_transition_not_allowed": "Şartnoma allaqaçon boşqa holatda. Sahifani yangilang.",
+    "act_sign_not_allowed": "Dalolatnoma allaqaçon boşqa holatda. Sahifani yangilang.",
+    "act_already_exists": "Loyihada dalolatnoma allaqaçon bor.",
+    "not_delivered": "Dalolatnoma yetkazib berilgandan keyin çiqariladi: tovar hali yetkazilmagan.",
+    "goods_not_shipped": "Tovar ombordan hali jönatilmagan: yetkazib beriş belgilari jönatilgandan keyin mavjud.",
+    "no_invoice": "Dalolatnoma rasmiylaştirilgan hisob böyiça çiqariladi: hisob hali yöq.",
+    "contract_exists": "Şartnoma loyihasi allaqaçon şakllantirilgan.",
     "contract_create_not_allowed": "Ruxsat yetarli emas.",
     "act_issue_not_allowed": "Ruxsat yetarli emas.",
     "reason_required": "Sababni yozing.",
-    "scan_invalid": "Fayl skanga o‘xshamaydi: 20 MB gacha PDF yoki rasm kerak.",
+    "scan_invalid": "Fayl skanga öxşamaydi: 20 MB gaça PDF yoki rasm kerak.",
     "scan_required": "Skan faylini tanlang.",
     "no_file_provided": "Skan faylini tanlang.",
     "forbidden": "Bu amal sizning rolingizga ruxsat etilmagan.",
     "unavailable": "Maʼlumotlar yuklanmadi. Keyinroq qayta urinib köring.",
     "payload": "Fayl 20 MB dan katta.",
-    "unknown": "Bajarilmadi. Qayta urinib ko‘ring.",
+    "unknown": "Bajarilmadi. Qayta urinib köring.",
     "failed": "Bajarilmadi: {{reason}}",
     "contract_deviation_pending": "Çetlaniş «Huquq» qarorini kutmoqda.",
     "contract_needs_our_signature": "Avval şartnomani kompaniya nomidan imzolang.",
@@ -474,23 +474,23 @@
     "contract_visas_required": "Avval vizalar kerak. Sahifani yangilang."
   },
   "state": {
-    "retry": "Qayta urinish",
+    "retry": "Qayta uriniş",
     "loadError": {
-      "title": "Yuklab bo‘lmadi",
-      "text": "Ulanishni tekshirib, qayta urinib ko‘ring."
+      "title": "Yuklab bölmadi",
+      "text": "Ulanişni tekşirib, qayta urinib köring."
     },
     "unavailable": {
       "title": "Maʼlumotlar yuklanmadi",
       "text": "Keyinroq qayta urinib köring."
     },
     "forbidden": {
-      "title": "Ruxsat yo‘q",
+      "title": "Ruxsat yöq",
       "text": "Ruxsat yetarli emas."
     },
     "notFound": {
       "title": "Loyiha topilmadi",
-      "text": "Bunday loyiha yo‘q yoki u hali ochilmagan: loyiha mijoz TT ni qabul qilganda paydo bo‘ladi.",
-      "action": "Loyihalar ro‘yxatiga"
+      "text": "Bunday loyiha yöq yoki u hali oçilmagan: loyiha mijoz TT ni qabul qilganda paydo böladi.",
+      "action": "Loyihalar röyxatiga"
     }
   },
   "signing": {
