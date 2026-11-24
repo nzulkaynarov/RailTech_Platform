@@ -116,17 +116,28 @@ test.describe("Polish pw1 · раскладка", () => {
     // лиды и документы: вкладки над строкой фильтров, а не между фильтрами и списком
     for (const path of ["/crm/leads", "/eds/documents?scope=all"]) {
       await spaGoto(page, path);
+      // spaGoto не ждёт смены экрана: без ожидания адреса и раскладки боксы брались у прошлого экрана посреди перехода
+      await expect(page).toHaveURL(new RegExp(path.split("?")[0].replace(/\//g, "\\/")));
       await expect(page.locator("main .pf-filter-bar").first()).toBeVisible();
       await expect(page.locator("main table").first()).toBeVisible();
       await expect(page.locator("main .ant-tabs-nav").first()).toBeVisible();
       await page.waitForLoadState("networkidle");
-      const [tabs, filters, table] = await Promise.all([
-        page.locator("main .ant-tabs-nav").first().boundingBox(),
-        page.locator("main .pf-filter-bar").first().boundingBox(),
-        page.locator("main table").first().boundingBox(),
-      ]);
-      expect(tabs?.y ?? 0, `${path}: вкладки выше фильтров`).toBeLessThan(filters?.y ?? 0);
-      expect(filters?.y ?? 0, `${path}: фильтры выше списка`).toBeLessThan(table?.y ?? 0);
+      await expect
+        .poll(
+          async () => {
+            const [tabs, filters, table] = await Promise.all([
+              page.locator("main .ant-tabs-nav").first().boundingBox(),
+              page.locator("main .pf-filter-bar").first().boundingBox(),
+              page.locator("main table").first().boundingBox(),
+            ]);
+            const order: string[] = [];
+            if ((tabs?.y ?? 0) >= (filters?.y ?? 0)) order.push("вкладки выше фильтров");
+            if ((filters?.y ?? 0) >= (table?.y ?? 0)) order.push("фильтры выше списка");
+            return order;
+          },
+          { message: `${path}: порядок вкладок, фильтров и списка`, timeout: 10_000 },
+        )
+        .toEqual([]);
       expect(await page.locator("main .ant-tabs-nav").count(), `${path}: одна строка вкладок`).toBe(
         1,
       );
