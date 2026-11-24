@@ -306,6 +306,14 @@ exports[`карты статусов > снимок карты: изменени
     "received": "green",
     "sent": "blue",
   },
+  "tgGroup": {
+    "code_expired": "red",
+    "connected": "green",
+    "disconnected": "default",
+    "needs_admin": "gold",
+    "removed": "default",
+    "waiting_code": "gold",
+  },
   "ticket": {
     "in_progress": "blue",
     "new": "blue",

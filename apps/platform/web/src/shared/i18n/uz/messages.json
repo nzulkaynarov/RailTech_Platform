@@ -158,7 +158,8 @@
       "act": "Dalolatnoma {{number}}"
     },
     "contextLabel": "Hujjat sahifasidan yozdi: {{label}}",
-    "authorFor": "{{name}}, {{owner}} uçun"
+    "authorFor": "{{name}}, {{owner}} uçun",
+    "ours": "Bizning xodim"
   },
   "composer": {
     "mode": "Kimga yozamiz",

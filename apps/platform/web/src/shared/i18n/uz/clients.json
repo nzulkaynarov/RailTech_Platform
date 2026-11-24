@@ -236,5 +236,60 @@
       "cropHint": "Rasmni suring va masştabni tanlang. Doira içidagini hamkasblar köradi.",
       "apply": "Rasmni saqlaş"
     }
+  },
+  "tgGroups": {
+    "title": "Mijozlar guruhlari",
+    "connectTitle": "Guruhni ulaş",
+    "steps": {
+      "add": "Botni mijoz guruhiga qöşing va administrator qiling.",
+      "code": "Bot guruhga kod yozadi.",
+      "enter": "Kodni kiriting va mijozni tanlang."
+    },
+    "code": "Guruhdagi kod",
+    "client": "Mijoz",
+    "clientPlaceholder": "Nomi yoki STIR",
+    "noClients": "Mijoz topilmadi",
+    "connect": "Ulaş",
+    "connected": "Guruh ulandi",
+    "disconnected": "Guruh ajratildi",
+    "pickClient": "Mijozni tanlang",
+    "since": "Ulangan: {{date}}",
+    "states": {
+      "waiting_code": "Kod kutilmoqda",
+      "code_expired": "Kod muddati tugadi",
+      "connected": "Ulangan",
+      "needs_admin": "Administrator huquqi kerak",
+      "disconnected": "Ajratilgan",
+      "removed": "Bot olib taşlangan"
+    },
+    "expiredHint": "Yangi kod — guruhda /connect.",
+    "needsAdminHint": "Administrator huquqisiz bot hammasini körmaydi.",
+    "disconnect": "Ajratiş",
+    "disconnectLabel": "{{name}} guruhini ajratiş",
+    "confirmTitle": "Guruh ajratilsinmi?",
+    "confirmText": "«{{name}}» guruhi yozuvi töxtaydi. Avvalgi yozişma mijoz kartasida qoladi.",
+    "emptyTitle": "Hozircha guruh yöq",
+    "emptyText": "Botni mijoz guruhiga qöşing — guruh şu yerda paydo böladi.",
+    "errors": {
+      "wrongCode": "Kod mos kelmadi. Guruhdagi kodni tekşiring.",
+      "expiredCode": "Kod muddati tugagan yoki işlatilgan. Yangi kod — guruhda /connect.",
+      "forbidden": "Guruh ulaş huquqi yoq.",
+      "generic": "Bajarilmadi. Qayta uriniş.",
+      "load": "Guruhlarni yuklab bölmadi. Sahifani yangilang."
+    },
+    "card": {
+      "title": "Mijoz bilan guruh",
+      "name": "Guruh",
+      "since": "Ulangan sana",
+      "state": "Holati",
+      "open": "Guruh yozişmasi",
+      "close": "Yozişmani yaşiriş",
+      "replyInGroup": "Javob guruhning özida yoziladi.",
+      "feedLabel": "Guruh yozişmasi"
+    },
+    "noAccess": {
+      "title": "Mijozlar bölimiga ruxsat kerak",
+      "text": "Mijozlar guruhlarini «Mijozlar» bölimiga ruxsati bor xodimlar köradi va ulaydi."
+    }
   }
 }

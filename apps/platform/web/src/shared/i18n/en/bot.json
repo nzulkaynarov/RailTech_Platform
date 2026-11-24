@@ -705,6 +705,7 @@
   "parts": {
     "label": "Telegram bot sections",
     "connection": "Connection",
+    "groups": "Client groups",
     "texts": "Texts",
     "behavior": "Behaviour",
     "kb": "Knowledge base",

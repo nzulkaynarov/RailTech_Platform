@@ -161,6 +161,7 @@ import type {
   ClientInvitation,
   ClientList,
   ClientShort,
+  ClientTelegramGroup,
   CloseOptions,
   Colleague,
   CompanyArticle,
@@ -428,6 +429,8 @@ import type {
   TechDocPage,
   TelegramChannelList,
   TelegramConnector,
+  TelegramGroup,
+  TelegramGroupList,
   TelegramLink,
   TemplateCatalog,
   Ticket,
@@ -27768,6 +27771,10 @@ export const getGetCrmThreadResponseMock = (
           faker.string.alpha({ length: { min: 10, max: 20 } }),
           null,
         ]),
+        note: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
       }),
     ),
     delivery: faker.helpers.arrayElement([
@@ -35665,6 +35672,106 @@ export const getResendCrmClientInvitationResponseMock = (
     null,
   ]),
   can_resend: faker.datatype.boolean(),
+  ...overrideResponse,
+});
+
+export const getListCrmTelegramGroupsResponseMock = (
+  overrideResponse: Partial<Extract<TelegramGroupList, object>> = {},
+): TelegramGroupList => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    chat_id: faker.number.int(),
+    title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    state: faker.helpers.arrayElement([
+      "waiting_code",
+      "code_expired",
+      "connected",
+      "needs_admin",
+      "disconnected",
+      "removed",
+    ] as const),
+    client_id: faker.helpers.arrayElement([faker.number.int(), null]),
+    client_name: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    lead: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    bound_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    detected_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  })),
+  ...overrideResponse,
+});
+
+export const getBindCrmTelegramGroupResponseMock = (
+  overrideResponse: Partial<Extract<TelegramGroup, object>> = {},
+): TelegramGroup => ({
+  chat_id: faker.number.int(),
+  title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  state: faker.helpers.arrayElement([
+    "waiting_code",
+    "code_expired",
+    "connected",
+    "needs_admin",
+    "disconnected",
+    "removed",
+  ] as const),
+  client_id: faker.helpers.arrayElement([faker.number.int(), null]),
+  client_name: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  lead: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  bound_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
+  detected_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  ...overrideResponse,
+});
+
+export const getUnbindCrmTelegramGroupResponseMock = (
+  overrideResponse: Partial<Extract<ActionOk, object>> = {},
+): ActionOk => ({
+  id: faker.helpers.arrayElement([faker.number.int(), null]),
+  ok: true,
+  ...overrideResponse,
+});
+
+export const getGetCrmClientTelegramGroupResponseTelegramGroupMock = (
+  overrideResponse: Partial<TelegramGroup> = {},
+): TelegramGroup => ({
+  ...{
+    chat_id: faker.number.int(),
+    title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    state: faker.helpers.arrayElement([
+      "waiting_code",
+      "code_expired",
+      "connected",
+      "needs_admin",
+      "disconnected",
+      "removed",
+    ] as const),
+    client_id: faker.helpers.arrayElement([faker.number.int(), null]),
+    client_name: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    lead: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    bound_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    detected_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  },
+  ...overrideResponse,
+});
+
+export const getGetCrmClientTelegramGroupResponseMock = (
+  overrideResponse: Partial<Extract<ClientTelegramGroup, object>> = {},
+): ClientTelegramGroup => ({
+  group: faker.helpers.arrayElement([
+    { ...getGetCrmClientTelegramGroupResponseTelegramGroupMock() },
+    null,
+  ]),
   ...overrideResponse,
 });
 
@@ -51553,6 +51660,100 @@ export const getResendCrmClientInvitationMockHandler = (
   );
 };
 
+export const getListCrmTelegramGroupsMockHandler = (
+  overrideResponse?:
+    | TelegramGroupList
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<TelegramGroupList> | TelegramGroupList),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/crm/telegram-groups",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListCrmTelegramGroupsResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getBindCrmTelegramGroupMockHandler = (
+  overrideResponse?:
+    | TelegramGroup
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<TelegramGroup> | TelegramGroup),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/crm/telegram-groups/bind",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getBindCrmTelegramGroupResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getUnbindCrmTelegramGroupMockHandler = (
+  overrideResponse?:
+    | ActionOk
+    | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<ActionOk> | ActionOk),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/crm/telegram-groups/:chatId/unbind",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getUnbindCrmTelegramGroupResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getGetCrmClientTelegramGroupMockHandler = (
+  overrideResponse?:
+    | ClientTelegramGroup
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<ClientTelegramGroup> | ClientTelegramGroup),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/crm/clients/:id/telegram-group",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetCrmClientTelegramGroupResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
 export const getCreateCrmRequestMockHandler = (
   overrideResponse?:
     | RequestCreatedView
@@ -54125,6 +54326,10 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getConfirmCrmPartnerRequestMockHandler(),
   getDeclineCrmPartnerRequestMockHandler(),
   getResendCrmClientInvitationMockHandler(),
+  getListCrmTelegramGroupsMockHandler(),
+  getBindCrmTelegramGroupMockHandler(),
+  getUnbindCrmTelegramGroupMockHandler(),
+  getGetCrmClientTelegramGroupMockHandler(),
   getCreateCrmRequestMockHandler(),
   getRetryCrmRequestMockHandler(),
   getUploadCrmRequestFileMockHandler(),

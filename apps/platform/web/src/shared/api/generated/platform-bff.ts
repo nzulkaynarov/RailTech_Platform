@@ -105,6 +105,7 @@ import type {
   ClientCard,
   ClientInvitation,
   ClientList,
+  ClientTelegramGroup,
   CloseLeadIn,
   CloseOptions,
   CoExecutorIn,
@@ -566,6 +567,9 @@ import type {
   TechDocUpload,
   TelegramChannelList,
   TelegramConnector,
+  TelegramGroup,
+  TelegramGroupBindIn,
+  TelegramGroupList,
   TelegramLink,
   TelegramTokenIn,
   TemplateCatalog,
@@ -57080,6 +57084,512 @@ export const useResendCrmClientInvitation = <
 > => {
   return useMutation(getResendCrmClientInvitationMutationOptions(options), queryClient);
 };
+
+export const getListCrmTelegramGroupsUrl = () => {
+  return `/api/v1/crm/telegram-groups`;
+};
+
+/**
+ * CRM `GET /telegram-groups` (ТГ-1б, ADR-0032). Раздел `crm.clients` от чтения (в CRM — `clients:read`). Ждущие код — первыми, с просроченным кодом — последними. `state` считает BFF из `status`, `access` и `code_active` CRM. Кода привязки в ответе нет — он только в группе.
+ * @summary Настройки · Telegram · Группы с клиентами: группы, где бот администратор
+ */
+export const listCrmTelegramGroups = async (
+  options?: Parameters<typeof http>[1],
+): Promise<TelegramGroupList> => {
+  return http<TelegramGroupList>(getListCrmTelegramGroupsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListCrmTelegramGroupsQueryKey = () => {
+  return [`/api/v1/crm/telegram-groups`] as const;
+};
+
+export const getListCrmTelegramGroupsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listCrmTelegramGroups>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(options?: {
+  query?: Partial<
+    UseQueryOptions<Awaited<ReturnType<typeof listCrmTelegramGroups>>, TError, TData>
+  >;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListCrmTelegramGroupsQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listCrmTelegramGroups>>> = ({ signal }) =>
+    listCrmTelegramGroups({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listCrmTelegramGroups>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListCrmTelegramGroupsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listCrmTelegramGroups>>
+>;
+export type ListCrmTelegramGroupsQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse
+>;
+
+export function useListCrmTelegramGroups<
+  TData = Awaited<ReturnType<typeof listCrmTelegramGroups>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listCrmTelegramGroups>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listCrmTelegramGroups>>,
+          TError,
+          Awaited<ReturnType<typeof listCrmTelegramGroups>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListCrmTelegramGroups<
+  TData = Awaited<ReturnType<typeof listCrmTelegramGroups>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listCrmTelegramGroups>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listCrmTelegramGroups>>,
+          TError,
+          Awaited<ReturnType<typeof listCrmTelegramGroups>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListCrmTelegramGroups<
+  TData = Awaited<ReturnType<typeof listCrmTelegramGroups>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listCrmTelegramGroups>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Настройки · Telegram · Группы с клиентами: группы, где бот администратор
+ */
+
+export function useListCrmTelegramGroups<
+  TData = Awaited<ReturnType<typeof listCrmTelegramGroups>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listCrmTelegramGroups>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListCrmTelegramGroupsQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getBindCrmTelegramGroupUrl = () => {
+  return `/api/v1/crm/telegram-groups/bind`;
+};
+
+/**
+ * CRM `POST /telegram-groups/bind`. Раздел `crm.clients` полный (в CRM — `clients:write`). Неверный код — 404, просроченный или уже использованный — 409 (`details.reason` CRM). После привязки секретарь пишет и закрепляет уведомление в группе.
+ * @summary Привязать группу к клиенту по коду из группы
+ */
+export const bindCrmTelegramGroup = async (
+  telegramGroupBindIn: TelegramGroupBindIn,
+  options?: Parameters<typeof http>[1],
+): Promise<TelegramGroup> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<TelegramGroup>(getBindCrmTelegramGroupUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(telegramGroupBindIn),
+  });
+};
+
+export const getBindCrmTelegramGroupMutationKey = () => ["bindCrmTelegramGroup"] as const;
+
+export const getBindCrmTelegramGroupMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | RequestConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof bindCrmTelegramGroup>>,
+    TError,
+    BindCrmTelegramGroupMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof bindCrmTelegramGroup>>,
+  TError,
+  BindCrmTelegramGroupMutationVariables,
+  TContext
+> => {
+  const mutationKey = getBindCrmTelegramGroupMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof bindCrmTelegramGroup>>,
+    BindCrmTelegramGroupMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return bindCrmTelegramGroup(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type BindCrmTelegramGroupMutationResult = NonNullable<
+  Awaited<ReturnType<typeof bindCrmTelegramGroup>>
+>;
+export type BindCrmTelegramGroupMutationBody = TelegramGroupBindIn;
+export type BindCrmTelegramGroupMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | RequestConflictResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type BindCrmTelegramGroupMutationVariables = { data: TelegramGroupBindIn };
+
+/**
+ * @summary Привязать группу к клиенту по коду из группы
+ */
+export const useBindCrmTelegramGroup = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | RequestConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof bindCrmTelegramGroup>>,
+      TError,
+      BindCrmTelegramGroupMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof bindCrmTelegramGroup>>,
+  TError,
+  BindCrmTelegramGroupMutationVariables,
+  TContext
+> => {
+  return useMutation(getBindCrmTelegramGroupMutationOptions(options), queryClient);
+};
+
+export const getUnbindCrmTelegramGroupUrl = (chatId: number) => {
+  return `/api/v1/crm/telegram-groups/${chatId}/unbind`;
+};
+
+/**
+ * CRM `POST /telegram-groups/{chat_id}/unbind`. Раздел `crm.clients` полный.
+ * @summary Отключить группу: запись прекращается, прежняя переписка остаётся у клиента
+ */
+export const unbindCrmTelegramGroup = async (
+  chatId: number,
+  options?: Parameters<typeof http>[1],
+): Promise<ActionOk> => {
+  return http<ActionOk>(getUnbindCrmTelegramGroupUrl(chatId), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getUnbindCrmTelegramGroupMutationKey = () => ["unbindCrmTelegramGroup"] as const;
+
+export const getUnbindCrmTelegramGroupMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | RequestConflictResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof unbindCrmTelegramGroup>>,
+    TError,
+    UnbindCrmTelegramGroupMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof unbindCrmTelegramGroup>>,
+  TError,
+  UnbindCrmTelegramGroupMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUnbindCrmTelegramGroupMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof unbindCrmTelegramGroup>>,
+    UnbindCrmTelegramGroupMutationVariables
+  > = (props) => {
+    const { chatId } = props ?? {};
+
+    return unbindCrmTelegramGroup(chatId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UnbindCrmTelegramGroupMutationResult = NonNullable<
+  Awaited<ReturnType<typeof unbindCrmTelegramGroup>>
+>;
+
+export type UnbindCrmTelegramGroupMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | RequestConflictResponse
+  | BackendUnavailableResponse
+>;
+export type UnbindCrmTelegramGroupMutationVariables = { chatId: number };
+
+/**
+ * @summary Отключить группу: запись прекращается, прежняя переписка остаётся у клиента
+ */
+export const useUnbindCrmTelegramGroup = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | RequestConflictResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof unbindCrmTelegramGroup>>,
+      TError,
+      UnbindCrmTelegramGroupMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof unbindCrmTelegramGroup>>,
+  TError,
+  UnbindCrmTelegramGroupMutationVariables,
+  TContext
+> => {
+  return useMutation(getUnbindCrmTelegramGroupMutationOptions(options), queryClient);
+};
+
+export const getGetCrmClientTelegramGroupUrl = (id: number) => {
+  return `/api/v1/crm/clients/${id}/telegram-group`;
+};
+
+/**
+ * CRM `GET /telegram-groups`, отбор по клиенту и состоянию «привязана». Раздел `crm.clients` от чтения. Нет группы — `group: null`, раздел в карточке не показывается. Переписка группы — лента лида `GET /crm/messages/{lead}/thread` по номеру `group.lead`, только чтение (ответ из Платформы — ТГ-2).
+ * @summary Привязанная группа клиента для раздела «Группа с клиентом» в его карточке
+ */
+export const getCrmClientTelegramGroup = async (
+  id: number,
+  options?: Parameters<typeof http>[1],
+): Promise<ClientTelegramGroup> => {
+  return http<ClientTelegramGroup>(getGetCrmClientTelegramGroupUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetCrmClientTelegramGroupQueryKey = (id: number) => {
+  return [`/api/v1/crm/clients/${id}/telegram-group`] as const;
+};
+
+export const getGetCrmClientTelegramGroupQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCrmClientTelegramGroup>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  id: number,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getCrmClientTelegramGroup>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetCrmClientTelegramGroupQueryKey(id);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getCrmClientTelegramGroup>>> = ({
+    signal,
+  }) => getCrmClientTelegramGroup(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: id !== null && id !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof getCrmClientTelegramGroup>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type GetCrmClientTelegramGroupQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getCrmClientTelegramGroup>>
+>;
+export type GetCrmClientTelegramGroupQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse
+>;
+
+export function useGetCrmClientTelegramGroup<
+  TData = Awaited<ReturnType<typeof getCrmClientTelegramGroup>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  id: number,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getCrmClientTelegramGroup>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getCrmClientTelegramGroup>>,
+          TError,
+          Awaited<ReturnType<typeof getCrmClientTelegramGroup>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetCrmClientTelegramGroup<
+  TData = Awaited<ReturnType<typeof getCrmClientTelegramGroup>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  id: number,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getCrmClientTelegramGroup>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getCrmClientTelegramGroup>>,
+          TError,
+          Awaited<ReturnType<typeof getCrmClientTelegramGroup>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetCrmClientTelegramGroup<
+  TData = Awaited<ReturnType<typeof getCrmClientTelegramGroup>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  id: number,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getCrmClientTelegramGroup>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Привязанная группа клиента для раздела «Группа с клиентом» в его карточке
+ */
+
+export function useGetCrmClientTelegramGroup<
+  TData = Awaited<ReturnType<typeof getCrmClientTelegramGroup>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  id: number,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getCrmClientTelegramGroup>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetCrmClientTelegramGroupQueryOptions(id, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
 
 export const getCreateCrmRequestUrl = () => {
   return `/api/v1/crm/requests`;

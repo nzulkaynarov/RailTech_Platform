@@ -705,6 +705,7 @@
   "parts": {
     "label": "Telegram-bot bölimlari",
     "connection": "Ulaniş",
+    "groups": "Mijozlar guruhlari",
     "texts": "Matnlar",
     "behavior": "Xulq-atvor",
     "kb": "Bilimlar bazasi",

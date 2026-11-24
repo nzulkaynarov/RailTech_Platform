@@ -158,7 +158,8 @@
       "act": "Акт {{number}}"
     },
     "contextLabel": "Написал со страницы документа: {{label}}",
-    "authorFor": "{{name}} за {{owner}}"
+    "authorFor": "{{name}} за {{owner}}",
+    "ours": "Наш сотрудник"
   },
   "composer": {
     "mode": "Кому пишем",

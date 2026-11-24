@@ -32,6 +32,7 @@ import { companyArticlesHandlers } from "./companyArticlesHandlers";
 import { legalHandlers } from "./legalHandlers";
 import { callNoteHandlers, crmLeadsHandlers } from "./crmLeads";
 import { crmLeadActionsHandlers } from "./crmLeadActions";
+import { telegramGroupsHandlers } from "./telegramGroups";
 import { crmMessagesHandlers } from "./crmMessages";
 import { maintenanceHandlers } from "./maintenance";
 import { edsApprovalsHandlers } from "./edsApprovals";
@@ -257,6 +258,7 @@ export const handlers = [
   ...adminBusHandlers,
   ...setupHandlers,
   ...botKbHandlers,
+  ...telegramGroupsHandlers, // ТГ-1б: лента группы раньше общей переписки
   ...crmMessagesHandlers,
   ...crmLeadsHandlers,
   ...crmLeadActionsHandlers,

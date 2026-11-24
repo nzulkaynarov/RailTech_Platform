@@ -15,4 +15,9 @@ export interface ThreadAttachment {
    * @nullable
    */
   url: string | null;
+  /**
+   * Почему файл не сохранён, словами CRM («файл больше 20 МБ — откройте в группе»); у сохранённого — `null`
+   * @nullable
+   */
+  note?: string | null;
 }
