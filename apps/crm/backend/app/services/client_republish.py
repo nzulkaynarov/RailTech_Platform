@@ -17,11 +17,11 @@ older ones, so a repeat only gives a new event id.
 from dataclasses import dataclass
 
 import structlog
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.bus import events as bus_events
-from app.models.clients import Client
+from app.models.clients import Client, ClientContact
 from app.security.audit import Actor
 
 logger = structlog.get_logger(__name__)
@@ -33,6 +33,7 @@ BATCH_SIZE = 50
 class RepublishResult:
     clients: int  # clients in the selection
     published: int  # outbox rows written (0 on dry-run)
+    contacts: int = 0  # contacts in the selection (republish_handed_over_contacts)
 
 
 async def _client_ids(session: AsyncSession, client_id: int | None) -> list[int]:
@@ -66,3 +67,58 @@ async def republish_clients(
                 published += 1
     logger.info("clients_republished", clients=len(ids), published=published)
     return RepublishResult(clients=len(ids), published=published)
+
+
+async def republish_contacts_of_client(session: AsyncSession, client_id: int, actor: Actor) -> int:
+    """Publish `contact.updated` for every contact of the client; returns how many were written.
+
+    Used right after a hand-over to ERP: ERP skips `contact.created` while the client is not handed
+    over, so the position and the Telegram username would never arrive. The contact row is not
+    changed (`updated_at` stays): ERP applies the snapshot once and skips an equal one on repeat.
+    """
+    ids = list(
+        await session.scalars(
+            select(ClientContact.id)
+            .where(ClientContact.client_id == client_id)
+            .order_by(ClientContact.id)
+        )
+    )
+    for contact_id in ids:
+        contact = await session.get(ClientContact, contact_id)
+        if contact is not None:
+            await bus_events.contact_updated(session, contact, actor)
+    return len(ids)
+
+
+async def republish_handed_over_contacts(
+    sessions: async_sessionmaker[AsyncSession],
+    *,
+    client_id: int | None = None,
+    dry_run: bool = True,
+    batch_size: int = BATCH_SIZE,
+) -> RepublishResult:
+    """One-off: `contact.updated` for contacts of clients already handed over to ERP (G2 of the
+    people audit 2026-11-24). `dry_run` only counts; `clients` is the number of handed-over clients,
+    `published` the number of contact events written."""
+    stmt = select(Client.id).where(Client.erp_company_id.is_not(None)).order_by(Client.id)
+    if client_id is not None:
+        stmt = stmt.where(Client.id == client_id)
+    async with sessions() as session:
+        ids = list(await session.scalars(stmt))
+        total = (
+            await session.scalar(
+                select(func.count(ClientContact.id)).where(ClientContact.client_id.in_(ids))
+            )
+            if ids
+            else 0
+        ) or 0
+    if dry_run:
+        return RepublishResult(clients=len(ids), published=0, contacts=total)
+    actor = Actor.system()
+    published = 0
+    for start in range(0, len(ids), batch_size):
+        async with sessions() as session, session.begin():
+            for cid in ids[start : start + batch_size]:
+                published += await republish_contacts_of_client(session, cid, actor)
+    logger.info("handed_over_contacts_republished", clients=len(ids), published=published)
+    return RepublishResult(clients=len(ids), published=published, contacts=total)

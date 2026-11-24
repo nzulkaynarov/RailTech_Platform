@@ -131,6 +131,15 @@ SELECT event_id, created_at, notified_at FROM erp_event_notices WHERE notified_a
    при передаче в ERP, события клиента публикуются без условий, поэтому команда публикует всех клиентов. Строки клиентов не
    меняются: снимок того же момента ERP применяет для полей, которых раньше не хранила (ответственный за клиента, #763), а более
    старый пропускает. Повтор безопасен.
+
+   Контакты переданных клиентов (должность и ник Telegram, G2 аудита «Люди» 2026-11-24): с этой версии CRM сама шлёт `contact.updated`
+   всех контактов сразу после передачи клиента в ERP. Уже переданным клиентам — разово (по умолчанию команда только считает):
+   ```bash
+   $C exec crm-api python -m app republish-contacts              # счёт: переданных клиентов и контактов, ничего не пишет
+   $C exec crm-api python -m app republish-contacts --apply      # contact.updated каждого контакта переданных клиентов
+   $C exec crm-api python -m app republish-contacts --client-id 12 --apply
+   ```
+   Строки контактов не меняются (`updated_at` прежний): ERP применяет снимок один раз, равный повтор пропускает. Повтор безопасен.
    Проверка: в логе ERP `rt_bus_projection client.updated #N: applied`, а не `skipped_duplicate`; у переданных клиентов заполнен
    `CrmClientMapping.owner_crm_user_id`. У клиентов, которых нет в ERP, будет WARNING `skipped_unknown_client` — это нормально.
 6. Сообщения Telegram, не ушедшие из-за выключенного бота, уйдут сами, когда бот появится (не позже суток).
