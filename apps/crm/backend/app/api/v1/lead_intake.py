@@ -10,6 +10,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Request, status
 
 from app.api.deps import ContainerDep, client_ip, require
+from app.schemas.errors import ErrorOut
 from app.schemas.kb_admin import Created
 from app.schemas.lead_intake import ManualLeadIn, WebFormToken, WebLeadAccepted, WebLeadIn
 from app.security.principal import Principal
@@ -28,14 +29,25 @@ async def web_lead_token(container: ContainerDep) -> WebFormToken:
     return await container.lead_intake.form_token()
 
 
-@router.post("/leads/web", response_model=WebLeadAccepted, status_code=status.HTTP_202_ACCEPTED)
+@router.post(
+    "/leads/web",
+    response_model=WebLeadAccepted,
+    status_code=status.HTTP_202_ACCEPTED,
+    responses={
+        429: {
+            "model": ErrorOut,
+            "description": "Too many requests from this address (`details.reason=rate_limited`)",
+        }
+    },
+)
 async def web_lead(body: WebLeadIn, request: Request, container: ContainerDep) -> WebLeadAccepted:
     """Форма «Запрос» со страницы входа Cabinet → лид CRM с источником `web` (ARCHITECTURE §17).
 
     Без аутентификации. Нужны телефон или e-mail и `consent: true` (согласие на обработку ПДн,
     Q-12). Ошибки: 422 `validation_failed` с `details.reason` (`consent_required` |
     `form_token_invalid` | `form_too_fast` | `form_token_expired` | `contact_required` |
-    `invalid_phone` | `invalid_email`), 429 `rate_limited`.
+    `invalid_phone` | `invalid_email`), 429 `rate_limited` (окно по IP расходуют только запросы,
+    прошедшие проверку контакта). Телефон Узбекистана — `+998` и 9 цифр.
     Повторный запрос известного контакта дополняет существующую карточку. Необязательные факты
     об источнике (`form`, `page`, `referrer`, `utm`, `landing_language`) сохраняются в лиде. Ответ
     для экрана «Что дальше»: `request_number` и `first_response_minutes`.

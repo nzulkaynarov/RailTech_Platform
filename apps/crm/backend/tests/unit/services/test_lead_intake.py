@@ -24,7 +24,7 @@ class _Settings:
 
 
 class _NoDb:
-    """Сессии не должны понадобиться: антиспам срабатывает раньше."""
+    """Сессии не должны понадобиться: до них доходит только прошедший проверки запрос."""
 
     def __call__(self) -> Any:
         raise AssertionError("database must not be touched")
@@ -69,16 +69,45 @@ async def test_bad_tokens_are_422_with_reason(token: str, reason: str) -> None:
 async def test_rate_limit_per_ip_from_settings() -> None:
     limiter = SlidingWindowLimiter(limit=100, window_s=3600)
     svc = service(limiter, rate_limit_per_hour=2)
-    # Два прохода антиспама «съедают» окно (БД не трогается: контакт не задан → 422 позже).
+    # Два валидных запроса «съедают» окно и доходят до БД (здесь она запрещена — AssertionError).
     for _ in range(2):
-        with pytest.raises(ValidationFailedError) as info:
-            await svc.create_web(body(phone=None, email=None), "9.9.9.9", NOW)
-        assert info.value.details["reason"] == "contact_required"
+        with pytest.raises(AssertionError, match="database"):
+            await svc.create_web(body(), "9.9.9.9", NOW)
     with pytest.raises(RateLimitedError):
         await svc.create_web(body(), "9.9.9.9", NOW + timedelta(seconds=1))
     # Другой адрес — своё окно.
-    with pytest.raises(ValidationFailedError):
-        await svc.create_web(body(phone=None), "8.8.8.8", NOW + timedelta(seconds=1))
+    with pytest.raises(AssertionError, match="database"):
+        await svc.create_web(body(), "8.8.8.8", NOW + timedelta(seconds=1))
+
+
+@pytest.mark.parametrize(
+    ("patch", "reason"),
+    [
+        ({"phone": "abc"}, "invalid_phone"),
+        ({"phone": "+998 90 118 90 0"}, "invalid_phone"),
+        ({"phone": None, "email": None}, "contact_required"),
+        ({"phone": None, "email": "not-an-email"}, "invalid_email"),
+    ],
+)
+async def test_invalid_contact_does_not_spend_rate_limit(
+    patch: dict[str, Any], reason: str
+) -> None:
+    """Опечатка в номере не съедает окно по IP: после трёх ошибок валидный запрос проходит."""
+    limiter = SlidingWindowLimiter(limit=100, window_s=3600)
+    svc = service(limiter, rate_limit_per_hour=1)
+    for _ in range(3):
+        with pytest.raises(ValidationFailedError) as info:
+            await svc.create_web(body(**patch), "6.6.6.6", NOW)
+        assert info.value.details["reason"] == reason
+    with pytest.raises(AssertionError, match="database"):
+        await svc.create_web(body(), "6.6.6.6", NOW)
+
+
+async def test_bad_token_wins_over_bad_phone() -> None:
+    """Order of checks is token → contact → rate: a bad token is reported even with a bad phone."""
+    with pytest.raises(ValidationFailedError) as info:
+        await service().create_web(body(form_token="garbage", phone="abc"), "1.1.1.1", NOW)
+    assert info.value.details == {"reason": "form_token_invalid", "field": "form_token"}
 
 
 async def test_form_token_response_uses_settings() -> None:
@@ -105,10 +134,9 @@ async def test_consent_is_required_before_antispam(patch: dict[str, Any]) -> Non
     with pytest.raises(ValidationFailedError) as info:
         await svc.create_web(WebLeadIn(**payload), "7.7.7.7", NOW)
     assert info.value.details == {"reason": "consent_required", "field": "consent"}
-    # Галочка забыта — лимит адреса цел: следующая попытка доходит до проверки контакта.
-    with pytest.raises(ValidationFailedError) as again:
-        await svc.create_web(body(phone=None), "7.7.7.7", NOW)
-    assert again.value.details["reason"] == "contact_required"
+    # Галочка забыта — лимит адреса цел: валидный запрос доходит до БД.
+    with pytest.raises(AssertionError, match="database"):
+        await svc.create_web(body(), "7.7.7.7", NOW)
 
 
 async def test_honeypot_wins_over_missing_consent() -> None:
