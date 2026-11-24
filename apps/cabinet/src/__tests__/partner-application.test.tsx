@@ -72,8 +72,8 @@ describe('Онбординг партнёров (PART-ONBOARD-1)', () => {
 
       await user.type(screen.getByLabelText('Название компании'), 'ООО «ПромРельс»');
       await user.type(screen.getByLabelText(/ИНН/), '123456789');
-      // Переключаем тип на «Производитель»
-      await user.click(screen.getByRole('button', { name: 'Производитель' }));
+      // Переключаем тип на «Изготовитель»
+      await user.click(screen.getByRole('button', { name: 'Изготовитель' }));
       await user.type(
         screen.getByLabelText('Поставляемая продукция и категории'),
         'Высоковольтные изоляторы для контактной сети',
@@ -167,7 +167,7 @@ describe('Онбординг партнёров (PART-ONBOARD-1)', () => {
       await user.click(screen.getByRole('checkbox', { name: /Я даю согласие/ }));
 
       await user.click(screen.getByRole('button', { name: 'Отправить заявку' }));
-      expect(await screen.findByText('Обнаружена подозрительная активность формы.')).toBeInTheDocument();
+      expect(await screen.findByText('Форма не отправилась. Обновите страницу и отправьте ещё раз.')).toBeInTheDocument();
     });
   });
 
@@ -180,8 +180,8 @@ describe('Онбординг партнёров (PART-ONBOARD-1)', () => {
       renderApp('/company');
       await heading('Компания');
 
-      // Блок «Партнёрская программа»
-      expect(await screen.findByText('Партнёрская программа')).toBeInTheDocument();
+      // Блок «Партнёрский договор»
+      expect(await screen.findByText('Партнёрский договор')).toBeInTheDocument();
       const applyBtn = screen.getByRole('button', { name: 'Подать заявку в партнёры' });
       expect(applyBtn).toBeInTheDocument();
 
@@ -191,8 +191,8 @@ describe('Онбординг партнёров (PART-ONBOARD-1)', () => {
       const dialog = await screen.findByRole('dialog');
       expect(within(dialog).getByText('Заявка на статус партнёра')).toBeInTheDocument();
 
-      // Переключаем тип на «Производитель» и вводим категории
-      await user.click(within(dialog).getByRole('button', { name: 'Производитель' }));
+      // Переключаем тип на «Изготовитель» и вводим категории
+      await user.click(within(dialog).getByRole('button', { name: 'Изготовитель' }));
       await user.type(
         within(dialog).getByLabelText('Поставляемая продукция и категории'),
         'Производство тормозных колодок для грузовых вагонов',
@@ -300,7 +300,7 @@ describe('Онбординг партнёров (PART-ONBOARD-1)', () => {
 
       // После согласования статус меняется на «Согласован вами»
       expect(await screen.findByText('Согласован вами')).toBeInTheDocument();
-      expect(screen.getByText(/ожидает электронной подписи руководства/)).toBeInTheDocument();
+      expect(screen.getByText(/Ждёт нашей подписи/)).toBeInTheDocument();
     });
 
     it('компания уже имеет активный договор партнёра: карточка со ссылкой на «Мои товары»', async () => {
@@ -323,7 +323,7 @@ describe('Онбординг партнёров (PART-ONBOARD-1)', () => {
       renderApp('/company');
       await heading('Компания');
 
-      expect(await screen.findByText('Партнёрская программа')).toBeInTheDocument();
+      expect(await screen.findByText('Партнёрский договор')).toBeInTheDocument();
       expect(screen.getByText('Подать заявку может только представитель с правом подтверждать действия.')).toBeInTheDocument();
       expect(screen.queryByRole('button', { name: 'Подать заявку в партнёры' })).not.toBeInTheDocument();
     });

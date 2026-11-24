@@ -161,6 +161,12 @@ async def close_escalations(session: AsyncSession, lead_id: int, now: datetime) 
     return list(result.all())
 
 
+async def identity_ids_of_lead(session: AsyncSession, lead_id: int) -> list[int]:
+    """Telegram-идентичности лида — берутся до `erase_lead`, который их отвязывает."""
+    stmt = select(TelegramIdentity.id).where(TelegramIdentity.lead_id == lead_id)
+    return list((await session.scalars(stmt)).all())
+
+
 async def erase_lead(session: AsyncSession, lead: Lead, now: datetime) -> int:
     """Обезличивание по запросу (/delete, SPEC §6.4). Возвращает число сообщений."""
     conversation_ids = select(Conversation.id).where(Conversation.lead_id == lead.id)
@@ -182,6 +188,9 @@ async def erase_lead(session: AsyncSession, lead: Lead, now: datetime) -> int:
     )
     await _erase_related(session, lead, now)
     lead.display_name = ""
+    # Контакты и откуда пришёл лид тоже ПДн (LH-1): без них карточка не находится по номеру и почте.
+    lead.phone_e164 = lead.email = lead.company_name = None
+    lead.source_page = lead.source_referrer = lead.source_utm = None
     lead.snoozed_until = None
     lead.need_summary = None
     lead.qualification = {}

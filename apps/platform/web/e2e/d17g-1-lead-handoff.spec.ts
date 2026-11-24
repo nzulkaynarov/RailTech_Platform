@@ -115,8 +115,8 @@ test.describe("D17G-1: передача лида делопроизводите�
       if (mobile) await page.getByRole("button", { name: "Карточка лида" }).click();
       await page.getByRole("button", { name: "Забрать" }).last().click();
       await expect(page.getByText("Лид у вас. Бот молчит, пока вы в диалоге.")).toBeVisible();
-      if (mobile && (await page.getByRole("button", { name: "Закрыть" }).count()) > 0) {
-        await page.getByRole("button", { name: "Закрыть" }).last().click();
+      if (mobile && (await page.getByRole("button", { name: "Назад" }).count()) > 0) {
+        await page.getByRole("button", { name: "Назад" }).last().click();
       }
       await expect(page.getByLabel("Сообщение клиенту")).toBeVisible();
       await shot(page, "manager-taken");

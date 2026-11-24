@@ -194,7 +194,7 @@ describe('«Сообщения»', () => {
     await within(page()).findByRole('list', { name: 'Menejer bilan yozishma' });
     expect(within(page()).getByLabelText('Menejerga xabar')).toBeDisabled();
     expect(within(page()).getByRole('button', { name: 'Yuborish' })).toBeDisabled();
-    expect(within(page()).getByText(/sizda faqat ko‘rish/)).toBeInTheDocument();
+    expect(within(page()).getByText(/sizda faqat körish/)).toBeInTheDocument();
   });
 
   it('шапка: отвечает менеджер из последнего ответа, переписку видит вся компания, файл — к запросу', async () => {
@@ -261,7 +261,7 @@ describe('«Сообщения»', () => {
     renderApp('/messages');
     await heading('Сообщения');
     const info = await within(page()).findByRole('region', { name: 'О переписке' });
-    expect(info).toHaveTextContent('Отвечает команда RailTech');
+    expect(info).toHaveTextContent('Отвечает наша команда');
     expect(within(page()).getByText(/Файлы в чат пока не прикладываются/)).toBeInTheDocument();
     expect(within(page()).queryByRole('link', { name: 'Перейти к заявкам' })).toBeNull();
   });

@@ -21,7 +21,7 @@ export interface LocaleDefinition {
 
 export const LOCALES: LocaleDefinition[] = [
   { code: 'ru', nativeName: 'Русский', shortLabel: 'РУ', translation: ruTranslation, formatLocale: 'ru-UZ' },
-  { code: 'uz', nativeName: 'Oʻzbekcha', shortLabel: 'UZ', translation: uzTranslation, formatLocale: 'uz-Latn-UZ' },
+  { code: 'uz', nativeName: 'Özbekça', shortLabel: 'UZ', translation: uzTranslation, formatLocale: 'uz-Latn-UZ' },
   { code: 'en', nativeName: 'English', shortLabel: 'EN', translation: enTranslation, formatLocale: 'en-US' },
 ];
 

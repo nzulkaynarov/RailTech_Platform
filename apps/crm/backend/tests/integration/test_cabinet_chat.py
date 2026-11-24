@@ -574,3 +574,43 @@ async def test_bot_history_is_telegram_only_and_assist_sees_both(
 async def cabinet_repo_channel(sessions: async_sessionmaker[AsyncSession], lead_id: int) -> Any:
     async with sessions() as session:
         return await cabinet_repo.last_inbound_channel(session, lead_id)
+
+
+async def test_discard_as_test_erases_like_delete_for_the_cabinet(
+    sessions: async_sessionmaker[AsyncSession], bus: Any
+) -> None:
+    """LH-1: «Тест» идёт тем же шагом, что `/delete`: стирается сообщение человека, беседа уходит
+    на новый якорь, ERP получает, чьё стереть, контакты лида очищены."""
+    sender = Sender()
+    client_id, lead_id, _, _ = await person_with_colleague(sessions, 7311)
+    async with sessions() as session, session.begin():
+        lead = await session.get(Lead, lead_id)
+        assert lead is not None
+        lead.phone_e164, lead.email, lead.company_name = "+998901230000", "t@example.com", "ООО Т"
+    account, _ = await make_user(sessions, "discard-test@railtech.example", ["manager"])
+    who = Principal(user_id=account.id, full_name="Илья Смирнов", roles=("manager",))
+    leads = LeadService(sessions, SettingsService(sessions), LeadMessenger(sessions, sender))
+
+    await leads.discard(who, lead_id, "test")
+
+    texts = await cabinet_texts(sessions)
+    assert texts["key-person-01"] == leads_repo.ERASED_TEXT
+    assert texts["key-colleague"] == "Пишет Дилноза"
+    (conversation,) = await cabinet_conversations(sessions)
+    assert conversation.is_open
+    assert conversation.client_id == client_id
+    assert conversation.lead_id != lead_id
+    async with sessions() as session:
+        erased = await session.get(Lead, lead_id)
+        envelope = await session.scalar(
+            text("SELECT envelope FROM rt_bus_outbox WHERE type = :t"),
+            {"t": bus_events.LEAD_ERASED},
+        )
+    assert erased is not None
+    assert erased.erased_at is not None
+    assert (erased.phone_e164, erased.email, erased.company_name) == (None, None, None)
+    assert envelope["data"]["cabinet"] == {
+        "erp_company_id": COMPANY,
+        "scope": "authors",
+        "erp_contact_ids": [310],
+    }

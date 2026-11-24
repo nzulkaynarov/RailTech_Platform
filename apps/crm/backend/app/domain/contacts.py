@@ -3,18 +3,18 @@
 import re
 from typing import Final
 
-from app.domain.bot_menu import normalize_phone
 from app.domain.errors import Reason, ValidationFailedError
+from app.domain.lead_sources import normalize_phone_e164
 
 _EMAIL: Final = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 EMAIL_MAX: Final = 255
 
 
 def contact_phone(raw: str | None) -> str | None:
-    """Телефон из формы → E.164 тем же нормализатором, что и номер из Telegram; пусто → None."""
+    """Телефон из формы → E.164 единым нормализатором CRM (normalize_phone_e164); пусто → None."""
     if raw is None or not raw.strip():
         return None
-    value = normalize_phone(raw)
+    value = normalize_phone_e164(raw)
     if value is None:
         raise ValidationFailedError(
             "phone must be in international format", reason=Reason.INVALID_PHONE, field="phone"

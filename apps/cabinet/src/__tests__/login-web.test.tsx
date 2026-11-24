@@ -334,7 +334,7 @@ describe('вход с веба', () => {
         ),
       ).toBeInTheDocument();
       expect(screen.queryByText(/есть в кабинете/)).not.toBeInTheDocument();
-      expect(screen.getByText('Письмо может идти несколько минут. Проверьте папку «Спам». Не пришло за 10 минут — свяжитесь с вашим менеджером: возможно, почта компании временно не работает.')).toBeInTheDocument();
+      expect(screen.getByText('Письмо может идти несколько минут. Проверьте папку «Спам». Не пришло за 10 минут — напишите менеджеру.')).toBeInTheDocument();
       expect(screen.getByRole('link', { name: 'Вы новый клиент? Оставьте заявку' })).toHaveAttribute(
         'href',
         '/new-client?email=neznakomets%40example.com',

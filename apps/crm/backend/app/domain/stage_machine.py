@@ -27,6 +27,12 @@ _ALLOWED: Final[dict[tuple[Stage, Stage], frozenset[TransitionSource]]] = {
     (S.HANDOFF, S.QUALIFIED): frozenset({Src.USER}),
     (S.IN_PROGRESS, S.WON): frozenset({Src.USER}),
     (S.IN_PROGRESS, S.LOST): frozenset({Src.USER}),
+    # «Спам», «Тест», «Дубль» (LH-1): лид не в работе закрывается отказом без «Забрать». Клиент и
+    # «Сделка» так не закрываются.
+    **{
+        (s, S.LOST): frozenset({Src.USER})
+        for s in (S.NEW, S.ENGAGED, S.QUALIFIED, S.HANDOFF, S.UNRESPONSIVE)
+    },
     (S.IN_PROGRESS, S.ENGAGED): frozenset({Src.USER}),
     (S.IN_PROGRESS, S.QUALIFIED): frozenset({Src.USER}),
     (S.WON, S.CUSTOMER): frozenset({Src.USER, Src.SYSTEM}),

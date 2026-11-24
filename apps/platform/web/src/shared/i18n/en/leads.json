@@ -50,7 +50,8 @@
     "handOver": "Hand over to a manager",
     "openChat": "Open the conversation",
     "triage": "Triage",
-    "triageLabel": "Triage {{name}} in “Awaiting reply”"
+    "triageLabel": "Triage {{name}} in “Awaiting reply”",
+    "reopen": "Reopen"
   },
   "paging": {
     "label": "Lead pages",
@@ -71,7 +72,7 @@
   "retry": "Retry",
   "card": {
     "label": "Lead card",
-    "close": "Close",
+    "close": "Back",
     "contacts": "Contacts",
     "about": "About the lead",
     "facts": "What the bot learned",
@@ -156,5 +157,27 @@
       "request": "Request form"
     },
     "campaign": "campaign {{name}}"
+  },
+  "edit": {
+    "open": "Edit",
+    "save": "Save",
+    "cancel": "Cancel",
+    "nameRequired": "Enter a name",
+    "duplicates": "This phone or e-mail already exists",
+    "fields": {
+      "name": "Name",
+      "phone": "Phone",
+      "email": "E-mail",
+      "company": "Company"
+    },
+    "duplicateKinds": {
+      "lead": "lead",
+      "client": "client"
+    }
+  },
+  "discarded": {
+    "spam": "Spam",
+    "test": "Test",
+    "duplicate": "Duplicate"
   }
 }

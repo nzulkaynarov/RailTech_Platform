@@ -110,7 +110,7 @@ describe('«Копировать ссылку» (CAB-FIX-3, K15)', () => {
     window.localStorage.setItem('cabinet.language', 'ru');
     renderApp('/');
     await heading('Заявки');
-    expect(screen.getByText('Только просмотр: действия доступны контакту с правом подтверждать')).toBeInTheDocument();
+    expect(screen.getByText('Только просмотр: действия доступны коллеге с правом подтверждать')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Копировать ссылку' })).not.toBeInTheDocument();
   });
 });

@@ -133,6 +133,19 @@ SELECT event_id, created_at, notified_at FROM erp_event_notices WHERE notified_a
    старый пропускает. Повтор безопасен.
    Проверка: в логе ERP `rt_bus_projection client.updated #N: applied`, а не `skipped_duplicate`; у переданных клиентов заполнен
    `CrmClientMapping.owner_crm_user_id`. У клиентов, которых нет в ERP, будет WARNING `skipped_unknown_client` — это нормально.
+
+   Контакты переданных клиентов (должность и ник Telegram, G2 аудита «Люди» 2026-11-24): с этой версии CRM сама шлёт `contact.updated`
+   всех контактов сразу после передачи клиента в ERP. Уже переданным клиентам — разово (по умолчанию команда только считает):
+   ```bash
+   $C exec crm-api python -m app republish-contacts              # счёт: переданных клиентов и контактов, ничего не пишет
+   $C exec crm-api python -m app republish-contacts --apply      # contact.updated каждого контакта переданных клиентов
+   $C exec crm-api python -m app republish-contacts --client-id 12 --apply
+   ```
+   Перед публикацией команда приводит `client_contacts.phone_e164` переданных клиентов к E.164 единым нормализатором CRM (сырые «90 123 45 67»
+   станут `+998901234567`); телефон, который не приводится, не меняется, а контакт не публикуется (ERP не стирает телефон). Dry-run печатает,
+   сколько телефонов будет приведено и сколько не приводятся. ERP применяет снимок один раз, равный повтор пропускает. Повтор безопасен.
+   Проверка: в логе ERP `rt_bus_projection contact.updated #N: applied`, у контакта в «Люди» появились должность и ник Telegram; у контактов
+   клиентов, которых нет в ERP, WARNING `skipped_unknown_client` — это нормально.
 6. Сообщения Telegram, не ушедшие из-за выключенного бота, уйдут сами, когда бот появится (не позже суток).
 
 ## Проверка

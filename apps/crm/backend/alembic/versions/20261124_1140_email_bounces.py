@@ -3,7 +3,7 @@
 One additive migration: nullable columns and a new table. Downgrade drops them.
 
 Revision ID: 51e8c6eed04d
-Revises: 5a8e2c1f7b30
+Revises: b7579292dbee
 Create Date: 2026-11-24 11:40:38.247215+00:00
 """
 
@@ -13,7 +13,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision: str = "51e8c6eed04d"
-down_revision: str | Sequence[str] | None = "5a8e2c1f7b30"
+down_revision: str | Sequence[str] | None = "b7579292dbee"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
