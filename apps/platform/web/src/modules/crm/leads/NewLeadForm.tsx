@@ -30,6 +30,11 @@ function duplicateOf(error: unknown): Duplicate | null {
   return null;
 }
 
+/** CRM проверила почтовый домен (DNS): адрес записан верно, но такого домена нет. */
+function domainMissing(error: unknown): boolean {
+  return error instanceof ApiError && error.details["domain_missing"] === true;
+}
+
 function fieldsOf(error: unknown): Field[] {
   if (!(error instanceof ApiError)) return [];
   const fields = error.details["fields"];
@@ -69,6 +74,8 @@ export function NewLeadForm({ onCancel }: { onCancel: () => void }) {
   const badFields = duplicate ? [] : fieldsOf(create.error);
   const fieldError = (field: Field): string | undefined => {
     if (field === "name" && nameMissing) return t("newLead.errors.name");
+    if (field === "email" && badFields.includes(field) && domainMissing(create.error))
+      return t("newLead.errors.emailDomain");
     if (badFields.includes(field))
       return t(`newLead.errors.${field === "email" ? "email" : "phone"}`);
     return undefined;

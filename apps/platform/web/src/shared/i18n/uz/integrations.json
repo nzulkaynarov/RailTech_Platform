@@ -300,7 +300,8 @@
         "eds": "Hujjat aylanishi"
       },
       "attachments_one": "ilova: {{count}}",
-      "attachments_other": "ilovalar: {{count}}"
+      "attachments_other": "ilovalar: {{count}}",
+      "bounce": "Yetib bormadi: {{reason}}"
     },
     "reason": {
       "smtp_not_configured": "Pochta sozlanmagan — Sozlamalar · Ulanishlar · Pochta",

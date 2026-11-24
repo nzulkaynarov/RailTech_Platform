@@ -143,7 +143,8 @@
       "leadExists": "A lead with this contact already exists:",
       "clientExists": "A client with this phone already exists.",
       "openClient": "Open the client",
-      "generic": "The lead was not created. Try again."
+      "generic": "The lead was not created. Try again.",
+      "emailDomain": "Check the e-mail address — there is no such mail domain"
     }
   },
   "origin": {
