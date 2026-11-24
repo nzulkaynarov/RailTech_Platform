@@ -83,7 +83,7 @@ def test_languages_differ_and_ru_is_russian(event: str) -> None:
     [
         ("ru", "Открыть КП", "Открыть счёт", "Кабинет"),
         ("uz", "Taklifni ochish", "Hisobni ochish", "Kabinet"),
-        ("en", "Open the quote", "Open the invoice", "Cabinet"),
+        ("en", "Open the quote", "Open the invoice", "Account"),
     ],
 )
 def test_buttons_are_localized(language: Language, quote: str, invoice: str, cabinet: str) -> None:
