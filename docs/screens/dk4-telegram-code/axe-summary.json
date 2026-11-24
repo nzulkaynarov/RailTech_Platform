@@ -1,0 +1,18 @@
+[
+  {
+    "screen": "code-dialog-telegram",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 33,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "code-dialog-telegram",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 33,
+    "overflowPx": 0,
+    "violations": []
+  }
+]

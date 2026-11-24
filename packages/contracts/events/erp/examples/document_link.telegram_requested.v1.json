@@ -1,0 +1,29 @@
+{
+  "specversion": "1.0",
+  "id": "3c9a5e71-6b2d-5f48-8a1e-7d4c2b9f0e11",
+  "source": "rt://erp",
+  "type": "uz.railtech.erp.document_link.telegram_requested.v1",
+  "time": "2026-11-04T07:15:00Z",
+  "datacontenttype": "application/json",
+  "dataschema": "rt://contracts/events/erp/document_link.telegram_requested/v1",
+  "tenant": "railtech",
+  "correlationid": "6d1f8a2c-9e47-5b30-8c15-2a7e4f9b1d03",
+  "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01",
+  "data": {
+    "erp_company_id": 118,
+    "crm_client_id": 42,
+    "actor": {
+      "type": "client",
+      "name": "Иван Петров"
+    },
+    "payload": {
+      "erp_contact_id": 310,
+      "crm_contact_id": 58,
+      "language": "ru",
+      "kind": "code",
+      "document_kind": "contract",
+      "code": "000000",
+      "expires_at": "2026-11-24T10:33:00+05:00"
+    }
+  }
+}

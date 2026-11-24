@@ -720,6 +720,64 @@
       "additionalProperties": false,
       "description": "Чей Telegram отвязать (NOTIFY-1, ADR-0023 п. 3)"
     },
+    "DocumentLinkTelegramRequested": {
+      "type": "object",
+      "description": "Что прислать контакту в его привязанный Telegram по личной ссылке документа (ДК-4, ADR-0030): код входа по ссылке (`kind=code`) или саму ссылку (`kind=link`). ERP шлёт событие только контакту с привязанным Telegram и сопоставлением с CRM; иначе — только письмо. Код и ссылка — секреты: в outbox и inbox лежит маска `***`, значение — в кэше и в теле доставки inline-обработчика",
+      "required": [
+        "erp_contact_id",
+        "crm_contact_id",
+        "kind",
+        "document_kind"
+      ],
+      "properties": {
+        "erp_contact_id": {
+          "type": "integer",
+          "description": "Контакт-получатель в ERP"
+        },
+        "crm_contact_id": {
+          "type": "integer",
+          "description": "Контакт в CRM (CrmContactMapping): его привязанный Telegram получит сообщение"
+        },
+        "language": {
+          "type": "string",
+          "enum": ["ru", "uz", "en"],
+          "description": "Язык контакта в ERP"
+        },
+        "kind": {
+          "type": "string",
+          "enum": ["code", "link"],
+          "description": "`code` — шесть цифр входа по ссылке (в сообщении нет данных документа); `link` — личная ссылка получателя на документ, одной короткой строкой с кнопкой"
+        },
+        "document_kind": {
+          "type": "string",
+          "enum": ["quote", "contract", "invoice", "act"],
+          "description": "Вид документа по ссылке"
+        },
+        "number": {
+          "type": "string",
+          "description": "Номер документа — только для `kind=link`"
+        },
+        "seller_name": {
+          "type": "string",
+          "description": "Название компании-продавца — только для `kind=link`"
+        },
+        "code": {
+          "type": "string",
+          "pattern": "^[0-9]{4,12}$",
+          "description": "Только `kind=code`. Одноразовый код — секрет: не хранить и не логировать в CRM"
+        },
+        "expires_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Только `kind=code`: когда код перестаёт действовать"
+        },
+        "url": {
+          "type": "string",
+          "description": "Только `kind=link`. Личная ссылка получателя (`/d/<токен>`) — секрет: токен знает только получатель"
+        }
+      },
+      "additionalProperties": false
+    },
     "ContactSecurityNoticeRequested": {
       "type": "object",
       "description": "Кому и о чём прислать уведомление безопасности (FX-4)",

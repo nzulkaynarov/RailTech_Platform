@@ -2959,6 +2959,11 @@ export interface components {
       expires_in: number;
       /** @description Через сколько секунд можно запросить новый */
       resend_after: number;
+      /**
+       * @description Куда ушёл код (ДК-4): всегда `email`; `telegram` — ещё и в бот, если у получателя привязан Telegram. Нет поля —
+       *     только письмо (старый ответ)
+       */
+      channels?: ("email" | "telegram")[];
     };
     /**
      * @description Документ по ссылке — клиентская проекция без себестоимости, наценки и внутренних полей. Вид — `kind` (КП, договор,

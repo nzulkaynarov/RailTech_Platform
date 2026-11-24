@@ -49,6 +49,7 @@ if TYPE_CHECKING:
     from app.services.contact_security_notice import SecurityNoticeDelivery
     from app.services.contact_telegram import ContactTelegramService
     from app.services.contact_telegram_test import TelegramTestDelivery
+    from app.services.document_link_telegram import DocumentLinkTelegramDelivery
     from app.services.documents import DocumentService
     from app.services.eds_notices import EdsNoticeService
     from app.services.erp_access import ErpAccessService
@@ -873,6 +874,15 @@ class Container:
         from app.services.contact_security_notice import SecurityNoticeDelivery
 
         return SecurityNoticeDelivery(
+            self.session_factory, self.telegram_bot, dry_run=self.settings.telegram_dry_run
+        )
+
+    @cached_property
+    def document_link_telegram(self) -> "DocumentLinkTelegramDelivery":
+        """Код и личная ссылка документа получателю в Telegram по запросу ERP (ДК-4), inline."""
+        from app.services.document_link_telegram import DocumentLinkTelegramDelivery
+
+        return DocumentLinkTelegramDelivery(
             self.session_factory, self.telegram_bot, dry_run=self.settings.telegram_dry_run
         )
 

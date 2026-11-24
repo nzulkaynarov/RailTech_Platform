@@ -412,6 +412,8 @@ def request_code(link: DocumentLink, *, ip: str = "", user_agent: str = "") -> d
             expires_at=now + CODE_TTL,
         )
         cache.delete(_failures_key(locked))
+        # Бот — раньше письма: ошибка публикации откатывает выпуск кода, и ничего не уходит; ошибка письма откатывает событие
+        to_telegram = _send_code_telegram(locked, code, now + CODE_TTL)
         _send_code_email(locked, code)
         record_event(locked, DocumentLinkEvent.Event.CODE_SENT, ip=ip, user_agent=user_agent)
         _timeline(locked, f"Клиенту отправлен код по ссылке на {_WORDS[locked.kind]}", "quote.link_code_sent")
@@ -419,7 +421,65 @@ def request_code(link: DocumentLink, *, ip: str = "", user_agent: str = "") -> d
         "sent_to": mask_email(contact.email),
         "expires_in": int(CODE_TTL.total_seconds()),
         "resend_after": CODE_RESEND_SECONDS,
+        "channels": ["email", "telegram"] if to_telegram else ["email"],
     }
+
+
+def _telegram_ready(contact: Optional[Contact]) -> bool:
+    """У получателя привязан Telegram и контакт с компанией сопоставлены с CRM — бот может ему написать (ДК-4)."""
+    from portal.services.acceptance import _telegram_deliverable
+
+    return contact is not None and _telegram_deliverable(contact)
+
+
+def _send_code_telegram(link: DocumentLink, code: str, expires_at: datetime) -> bool:
+    """Тот же код — ещё и в бот получателя, если у него привязан Telegram (ДК-4); `True` — событие выпущено.
+
+    Код, его срок, повтор и попытки — те же, что у письма: здесь только второй канал. Сообщение несёт код и срок, данных
+    документа в нём нет. Ошибка публикации — наружу: выпуск кода откатывается целиком (правило шины ERP).
+    """
+    contact = link.contact
+    if not _telegram_ready(contact):
+        return False
+    from integration.services import events
+
+    with transaction.atomic():
+        event = events.publish_document_link_telegram(
+            contact,
+            kind="code",
+            document_kind=link.kind,
+            code=code,
+            expires_at=expires_at,
+        )
+    return event is not None
+
+
+def send_link_telegram(link: DocumentLink, raw_token: str) -> bool:
+    """Личная ссылка документа — ещё и в бот получателя, если у него привязан Telegram (ДК-4); `True` — событие выпущено.
+
+    Одно короткое сообщение: вид документа, номер, продавец и кнопка на `/d/<токен>`. Контакт, отключивший в кабинете
+    Telegram-уведомления о документах, ссылку в бот не получает (письмо остаётся). Ошибку публикации ловит вызывающая
+    задача: письмо уже ушло, повтор задачи послал бы его второй раз.
+    """
+    contact = link.contact
+    if not _telegram_ready(contact):
+        return False
+    if ((contact.notification_settings or {}).get("documents") or {}).get("telegram") is False:
+        return False
+    from integration.services import events
+
+    spec = spec_for(link)
+    doc = link.document
+    with transaction.atomic():
+        event = events.publish_document_link_telegram(
+            contact,
+            kind="link",
+            document_kind=link.kind,
+            number=spec.number(doc) or "",
+            seller_name=spec.seller_name(doc) or "",
+            url=build_url(raw_token),
+        )
+    return event is not None
 
 
 def _seller_company(link: DocumentLink):

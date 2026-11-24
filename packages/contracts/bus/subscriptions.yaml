@@ -21,6 +21,8 @@ subscribers:
       - uz.railtech.erp.contact.telegram_test_requested.v1
       # FX-4: уведомление безопасности (смена банковских реквизитов) — бот CRM пишет контакту.
       - uz.railtech.erp.contact.security_notice_requested.v1
+      # ДК-4: код и ссылка документа по личной ссылке — бот CRM пишет получателю с привязанным Telegram.
+      - uz.railtech.erp.document_link.telegram_requested.v1
       # D2-5: contract.status_changed адресован EDS (проекция реестра) — CRM его не получает (NOT_FOR_CRM).
       - uz.railtech.erp.contract.signed.v1
       - uz.railtech.erp.deal.*.v1

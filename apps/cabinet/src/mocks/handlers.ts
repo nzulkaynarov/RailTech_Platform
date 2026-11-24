@@ -515,7 +515,8 @@ const docLinkHandlers = [
     if (token.startsWith('toosoon')) {
       return HttpResponse.json({ detail: 'CODE_RESEND_TOO_SOON' }, { status: 429, headers: { 'Retry-After': '30' } });
     }
-    return json({ sent_to: 'p***@vostok-trans.uz', expires_in: 600, resend_after: 45 } satisfies Schemas['DocLinkCodeSent'], 202);
+    const channels: Schemas['DocLinkCodeSent']['channels'] = token.startsWith('tg') ? ['email', 'telegram'] : ['email'];
+    return json({ sent_to: 'p***@vostok-trans.uz', expires_in: 600, resend_after: 45, channels } satisfies Schemas['DocLinkCodeSent'], 202);
   }),
   http.post(`${API}/doc-links/verify`, async ({ request }) => {
     const { token, code } = await readJson<{ token?: string; code?: string }>(request);

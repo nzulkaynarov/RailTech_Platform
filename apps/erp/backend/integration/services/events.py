@@ -568,6 +568,57 @@ def publish_invite_requested(contact: Any, actor: Optional[Dict[str, Any]] = Non
     return publish_event("invite.requested", erp_company_id=contact.company_id, payload=payload, deal=None, actor=actor)
 
 
+def publish_document_link_telegram(
+    contact: Any,
+    *,
+    kind: str,
+    document_kind: str,
+    number: str = "",
+    seller_name: str = "",
+    code: str = "",
+    expires_at: Any = None,
+    url: str = "",
+) -> Optional[Event]:
+    """Событие `document_link.telegram_requested` (ДК-4): код входа или личная ссылка документа — в Telegram получателя.
+
+    Бот CRM пишет на **привязанный** Telegram этого контакта; шлётся только контакту с привязанным `telegram_user_id`,
+    сопоставленному с контактом CRM. Иначе — `None`, и получатель остаётся с письмом. `code` и `url` — секреты: в outbox
+    они маской `***`, значение — в кэше шины (`FailClosedCacheStash`); в логи не пишутся. Событие — в транзакции вызывающего:
+    откат выпуска кода или ссылки — нет события.
+    """
+    if kind not in ("code", "link"):
+        raise ValueError(f"Неизвестный вид сообщения {kind!r}")
+    if not contact.company_id or not contact.telegram_user_id:
+        return None
+    crm_contact_id = CrmContactMapping.objects.filter(contact=contact).values_list("crm_contact_id", flat=True).first()
+    if not crm_contact_id:
+        return None
+    payload: Dict[str, Any] = {
+        "erp_contact_id": contact.id,
+        "crm_contact_id": crm_contact_id,
+        "kind": kind,
+        "document_kind": document_kind,
+    }
+    if contact.language in ("ru", "uz", "en"):
+        payload["language"] = contact.language
+    if kind == "code":
+        payload["code"] = code
+        payload["expires_at"] = expires_at.isoformat()
+    else:
+        payload["url"] = url
+        if number:
+            payload["number"] = number
+        if seller_name:
+            payload["seller_name"] = seller_name[:255]
+    return publish_event(
+        "document_link.telegram_requested",
+        erp_company_id=contact.company_id,
+        payload=payload,
+        deal=None,
+        actor=client_actor(contact),
+    )
+
+
 def publish_contact_telegram_unlink_requested(contact: Any, crm_contact_id: int) -> Optional[Event]:
     """Событие `contact.telegram_unlink_requested` (NOTIFY-1, ADR-0023 п. 3): контакт отключил Telegram в кабинете.
 

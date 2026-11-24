@@ -5960,6 +5960,14 @@ components:
         resend_after:
           type: integer
           description: Через сколько секунд можно запросить новый
+        channels:
+          type: array
+          items:
+            type: string
+            enum: [email, telegram]
+          description: |
+            Куда ушёл код (ДК-4): всегда `email`; `telegram` — ещё и в бот, если у получателя привязан Telegram. Нет поля —
+            только письмо (старый ответ)
     DocLinkView:
       type: object
       description: |

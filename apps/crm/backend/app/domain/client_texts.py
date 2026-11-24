@@ -255,3 +255,48 @@ def contact_link_refused(language: str | None) -> str:
 
 def contact_link_taken(language: str | None) -> str:
     return _pick(_CONTACT_LINK_TAKEN, language)
+
+
+# ДК-4: код входа по личной ссылке документа и сама ссылка — в бот получателя. Новые строки узбекского — новым латинским
+# алфавитом (Ö Ğ Ş Ç вместо Oʻ Gʻ Sh Ch).
+_DOCUMENT_LINK_CODE: Final = {
+    "ru": "Код для входа: {code}. Действует {minutes} мин. Никому его не сообщайте.",
+    "uz": "Kiriş kodi: {code}. {minutes} daqiqa amal qiladi. Uni heç kimga aytmang.",
+    "en": "Sign-in code: {code}. Valid for {minutes} min. Do not share it with anyone.",
+}
+_DOCUMENT_LINK_KINDS: Final = {
+    "quote": {"ru": "Коммерческое предложение", "uz": "Tijoriy taklif", "en": "Quote"},
+    "contract": {"ru": "Договор", "uz": "Şartnoma", "en": "Contract"},
+    "invoice": {"ru": "Счёт", "uz": "Hisob-faktura", "en": "Invoice"},
+    "act": {"ru": "Акт", "uz": "Dalolatnoma", "en": "Act"},
+}
+_DOCUMENT_LINK_TEXT: Final = {
+    "ru": "Вам отправлен документ: {document}.",
+    "uz": "Sizga hujjat yuborildi: {document}.",
+    "en": "A document was sent to you: {document}.",
+}
+_DOCUMENT_LINK_BUTTON: Final = {
+    "ru": "Открыть документ",
+    "uz": "Hujjatni açış",
+    "en": "Open document",
+}
+
+
+def document_link_code(language: str | None, code: str, minutes: int) -> str:
+    """Только код и срок: ни вида, ни номера, ни продавца документа в сообщении нет."""
+    return _pick(_DOCUMENT_LINK_CODE, language).format(code=code, minutes=minutes)
+
+
+def document_link_message(
+    language: str | None, kind: str, number: str | None, seller: str | None
+) -> str:
+    title = _DOCUMENT_LINK_KINDS[kind][lang(language)]
+    document = " ".join(f"{title} {number or ''}".split())
+    clean_seller = " ".join((seller or "").split())
+    if clean_seller:
+        document = f"{document}, {clean_seller}"
+    return _pick(_DOCUMENT_LINK_TEXT, language).format(document=document)
+
+
+def document_link_button(language: str | None) -> str:
+    return _pick(_DOCUMENT_LINK_BUTTON, language)

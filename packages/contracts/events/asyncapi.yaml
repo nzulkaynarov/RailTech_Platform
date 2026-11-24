@@ -258,6 +258,12 @@ channels:
     messages:
       uz.railtech.erp.contact.security_notice_requested.v1:
         $ref: '#/components/messages/uz.railtech.erp.contact.security_notice_requested.v1'
+  uz.railtech.erp.document_link.telegram_requested.v1:
+    address: uz.railtech.erp.document_link.telegram_requested.v1
+    title: Код или ссылка документа контакту в Telegram
+    messages:
+      uz.railtech.erp.document_link.telegram_requested.v1:
+        $ref: '#/components/messages/uz.railtech.erp.document_link.telegram_requested.v1'
   uz.railtech.erp.contract.signed.v1:
     address: uz.railtech.erp.contract.signed.v1
     title: Договор подписан
@@ -854,6 +860,15 @@ operations:
       $ref: '#/channels/uz.railtech.erp.contact.security_notice_requested.v1'
     messages:
       - $ref: '#/channels/uz.railtech.erp.contact.security_notice_requested.v1/messages/uz.railtech.erp.contact.security_notice_requested.v1'
+    bindings:
+      $ref: '#/components/operationBindings/delivery'
+  publish.uz.railtech.erp.document_link.telegram_requested.v1:
+    action: send
+    summary: rt://erp публикует uz.railtech.erp.document_link.telegram_requested.v1
+    channel:
+      $ref: '#/channels/uz.railtech.erp.document_link.telegram_requested.v1'
+    messages:
+      - $ref: '#/channels/uz.railtech.erp.document_link.telegram_requested.v1/messages/uz.railtech.erp.document_link.telegram_requested.v1'
     bindings:
       $ref: '#/components/operationBindings/delivery'
   publish.uz.railtech.erp.contract.signed.v1:
@@ -2201,6 +2216,31 @@ components:
                   const: rt://contracts/events/erp/contact.security_notice_requested/v1
                 data:
                   $ref: './erp/contact.security_notice_requested.v1.json'
+    uz.railtech.erp.document_link.telegram_requested.v1:
+      name: uz.railtech.erp.document_link.telegram_requested.v1
+      title: Код или ссылка документа контакту в Telegram
+      contentType: application/cloudevents+json
+      correlationId:
+        location: '$message.payload#/correlationid'
+      headers:
+        $ref: '#/components/schemas/DeliveryHeaders'
+      bindings:
+        $ref: '#/components/messageBindings/delivery'
+      payload:
+        schemaFormat: application/schema+json;version=draft-07
+        schema:
+          allOf:
+            - $ref: './envelope.v1.json'
+            - type: object
+              properties:
+                source:
+                  const: rt://erp
+                type:
+                  const: uz.railtech.erp.document_link.telegram_requested.v1
+                dataschema:
+                  const: rt://contracts/events/erp/document_link.telegram_requested/v1
+                data:
+                  $ref: './erp/document_link.telegram_requested.v1.json'
     uz.railtech.erp.contract.signed.v1:
       name: uz.railtech.erp.contract.signed.v1
       title: Договор подписан
