@@ -12,6 +12,13 @@ import { resetSessionBootstrap } from '@/session/session';
 // экрана с несколькими запросами к моку не успевает; 5 с — с запасом, тестовый таймаут — 20 с (vitest.config).
 configure({ asyncUtilTimeout: 5_000 });
 
+// sonner при загрузке вставляет в <head> таблицу стилей (~100 правил): jsdom сверяет с ней каждый элемент в getComputedStyle,
+// и один `getByRole` по странице каталога тратит 3–4 с (проверка доступности элемента) — сценарии упираются в таймаут на раннере CI.
+// Правила касаются только вида тостов; тесты читают их текст, не вид, поэтому таблицу убираем.
+document.head.querySelectorAll('style').forEach((style) => {
+  if (style.textContent?.includes('data-sonner-toaster')) style.remove();
+});
+
 /**
  * Тесты идут с настоящим ru.json и моком портального API на границе HTTP (msw/node, те же
  * обработчики, что и dev-мок). Хранилища — в памяти: у jsdom и Node ≥ 23 их может не быть.
