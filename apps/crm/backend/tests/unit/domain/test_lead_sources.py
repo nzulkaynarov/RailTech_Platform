@@ -255,3 +255,43 @@ def test_merge_plan(existing: LeadFacts, incoming: LeadFacts, expected: dict[str
     plan = merge_plan(existing, incoming)
     for key, value in expected.items():
         assert getattr(plan, key) == value, key
+
+
+def test_merge_plan_carries_origin_and_consent_facts_of_absorbed() -> None:
+    first = facts(id=1, source="phone", phone_e164="+998901234567")
+    second = facts(
+        id=2,
+        created_at=T1,
+        source="telegram",
+        source_form="bot-start",
+        source_utm={"utm_source": "tg"},
+        consent_given_at=T1,
+        consent_version="v3",
+        consent_method="phone",
+    )
+    plan = merge_plan(first, second)
+    assert (plan.survivor_id, plan.source_form, plan.source_utm) == (
+        1,
+        "bot-start",
+        {"utm_source": "tg"},
+    )
+    assert (plan.consent_version, plan.consent_method) == ("v3", "phone")
+    assert plan.absorbed_origin is None
+
+
+def test_merge_plan_keeps_both_origins_when_they_differ() -> None:
+    first = facts(
+        id=1,
+        source_form="request",
+        source_page="/a",
+        consent_given_at=T0,
+        consent_version="web-form",
+    )
+    second = facts(
+        id=2, created_at=T1, source_form="bot-start", consent_given_at=T1, consent_version="v3"
+    )
+    plan = merge_plan(first, second)
+    assert (plan.source_form, plan.source_page) == ("request", "/a")
+    assert plan.absorbed_origin == {"form": "bot-start"}
+    # The version follows the earliest consent, not the survivor by accident.
+    assert plan.consent_version == "web-form"

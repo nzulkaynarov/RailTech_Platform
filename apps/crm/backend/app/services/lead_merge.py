@@ -15,6 +15,7 @@ from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.bus import events as bus_events
+from app.domain.lead_repeat import REPEAT_KEY, append_fact
 from app.domain.lead_sources import LeadFacts, MergePlan, merge_plan
 from app.domain.stages import TransitionSource
 from app.models.leads import Lead, TelegramIdentity
@@ -43,6 +44,13 @@ MERGE_FIELDS = (
     "email",
     "phone_e164",
     "client_id",
+    "source_form",
+    "source_page",
+    "source_referrer",
+    "source_utm",
+    "source_lang",
+    "consent_version",
+    "consent_method",
 )
 
 
@@ -84,6 +92,13 @@ async def _facts(session: AsyncSession, lead: Lead) -> LeadFacts:
         phone_e164=lead.phone_e164,
         client_id=lead.client_id,
         has_open_escalation=await repo.has_open_escalation(session, lead.id),
+        source_form=lead.source_form,
+        source_page=lead.source_page,
+        source_referrer=lead.source_referrer,
+        source_utm=lead.source_utm,
+        source_lang=lead.source_lang,
+        consent_version=lead.consent_version,
+        consent_method=lead.consent_method,
     )
 
 
@@ -103,6 +118,13 @@ def _apply(lead: Lead, plan: MergePlan) -> None:
     lead.email = plan.email
     lead.phone_e164 = plan.phone_e164
     lead.client_id = plan.client_id
+    lead.source_form = plan.source_form
+    lead.source_page = plan.source_page
+    lead.source_referrer = plan.source_referrer
+    lead.source_utm = plan.source_utm
+    lead.source_lang = plan.source_lang
+    lead.consent_version = plan.consent_version
+    lead.consent_method = plan.consent_method
 
 
 async def merge_by_phone(
@@ -153,6 +175,13 @@ async def merge_leads(session: AsyncSession, mine: Lead, other: Lead) -> MergeOu
             .values(status="closed", resolved_at=now, outcome="merged")
         )
     _apply(survivor, plan)
+    if plan.absorbed_origin:
+        survivor.qualification = append_fact(
+            dict(survivor.qualification or {}),
+            REPEAT_KEY,
+            {"kind": "merged", "absorbed_lead_id": absorbed.id, **plan.absorbed_origin},
+            now=now,
+        )
     # Срок первого ответа на запрос с сайта (D1-9) не теряется, если выжила другая карточка.
     for field in ("first_response_due_at", "first_response_notified_at"):
         if getattr(survivor, field) is None:
