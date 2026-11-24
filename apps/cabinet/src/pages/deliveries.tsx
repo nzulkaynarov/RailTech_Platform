@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { AlertTriangle, CheckCircle2, Download, FolderOpen, Loader2, Search, Truck } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Download, FolderOpen, Loader2, Truck } from 'lucide-react';
 import { toast } from '@/lib/toast';
 
 import { apiErrorKey } from '@/api/errors';
@@ -11,7 +11,9 @@ import { DateField } from '@/components/DateField';
 import { DealLink } from '@/components/Details';
 import { DocumentButton } from '@/components/DocumentButton';
 import { ItemCell } from '@/components/EntityCell';
-import { EmptyState } from '@/components/EmptyState';
+import { EmptyState, NoMatchState } from '@/components/EmptyState';
+import { CompactList } from '@/components/list/CompactList';
+import { ListToolbar } from '@/components/list/ListToolbar';
 import { PageHeader } from '@/components/PageHeader';
 import { ErrorState, ListSkeleton } from '@/components/QueryStates';
 import { ReasonDialog } from '@/components/ReasonDialog';
@@ -20,13 +22,11 @@ import { StatusBadge } from '@/components/StatusBadge';
 import { ManagerButton } from '@/components/TelegramLinkButton';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import { doneDealIdsOf, groupDeliveries } from '@/lib/deliveries';
 import { aboutDealKey, dealLabelKey } from '@/lib/dealStage';
 import { DOCUMENT_KINDS, isDocumentKind } from '@/lib/documents';
 import { saveBlob } from '@/lib/download';
 import { formatDate, formatDateTime, formatFileSize, formatQuantity } from '@/lib/format';
-import { cn } from '@/lib/utils';
 import { CanAct } from '@/session/CanAct';
 import { dealContext } from '@/lib/messages';
 
@@ -38,6 +38,14 @@ import { dealContext } from '@/lib/messages';
  * `/dispute {reason}`; кнопки есть только у строки в статусе `delivered` и только пока проект не выполнен: у выполненного
  * проекта (запрос `closed` с исходом `won` — акт принят или скан, счета оплачены) отдельная приёмка строк не нужна.
  */
+/** Строки, ждущие приёмки («доставлено»), — первыми: кнопки приёмки не прячутся за «Показать все». Порядок остальных прежний. */
+function awaitingFirst(lines: DeliveryLine[]): DeliveryLine[] {
+  return [...lines].sort((a, b) => Number(b.status === 'delivered') - Number(a.status === 'delivered'));
+}
+
+/** Строк поставки в карточке проекта до «Показать все». */
+const LINES_LIMIT = 5;
+
 export function DeliveriesPage() {
   const { t } = useTranslation();
   const deliveries = useDeliveries();
@@ -90,8 +98,11 @@ export function DeliveriesPage() {
                 />
               </CardHeader>
               <CardContent className="px-4">
-                <ul className="flex flex-col divide-y" aria-label={t(dealLabelKey(group.deal.stage), { number: group.deal.number })}>
-                  {group.lines.map((line) => (
+                <CompactList
+                  className="divide-y"
+                  limit={LINES_LIMIT}
+                  label={t(dealLabelKey(group.deal.stage), { number: group.deal.number })}
+                  items={awaitingFirst(group.lines).map((line) => (
                     <li key={line.id} className="flex min-w-0 flex-col gap-2 py-3 first:pt-0 last:pb-0 sm:flex-row sm:items-start sm:justify-between">
                       <div className="flex min-w-0 flex-col gap-0.5">
                         {line.item ? (
@@ -168,7 +179,7 @@ export function DeliveriesPage() {
                       </div>
                     </li>
                   ))}
-                </ul>
+                />
               </CardContent>
             </Card>
           ))}
@@ -281,35 +292,16 @@ export function DocumentsPage() {
           ) : null
         }
       />
-      <div className="mb-4 flex flex-col gap-3">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div role="group" aria-label={t('pages.documents.filter')} className="flex flex-wrap gap-2">
-            {[undefined, ...DOCUMENT_KINDS].map((option) => (
-              <Button
-                key={option ?? 'all'}
-                type="button"
-                size="sm"
-                variant={option === kind ? 'default' : 'outline'}
-                aria-pressed={option === kind}
-                className={cn('rounded-full')}
-                onClick={() => choose(option)}
-              >
-                {option ? t(`documents.kinds.${option}`) : t('common.all')}
-              </Button>
-            ))}
-          </div>
-          <div className="relative w-full sm:w-64">
-            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
-            <Input
-              type="search"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder={t('pages.documents.searchPlaceholder')}
-              aria-label={t('pages.documents.searchLabel')}
-              className="pl-9"
-            />
-          </div>
-        </div>
+      <ListToolbar
+        filterLabel={t('pages.documents.filter')}
+        options={[undefined, ...DOCUMENT_KINDS].map((option) => ({
+          value: option ?? '',
+          label: option ? t(`documents.kinds.${option}`) : t('common.all'),
+        }))}
+        value={kind ?? ''}
+        onChange={(next) => choose((next || undefined) as DocumentKind | undefined)}
+        search={{ value: query, onChange: setQuery, placeholder: t('pages.documents.searchPlaceholder'), label: t('pages.documents.searchLabel') }}
+      >
         <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
           <div className="flex items-center gap-1.5">
             <label htmlFor="docs-date-from">{t('pages.documents.dateFrom', 'С даты')}:</label>
@@ -344,7 +336,7 @@ export function DocumentsPage() {
             </Button>
           )}
         </div>
-      </div>
+      </ListToolbar>
       {documents.isPending ? (
         <ListSkeleton />
       ) : documents.isError ? (
@@ -362,11 +354,12 @@ export function DocumentsPage() {
           ) : null}
         </EmptyState>
       ) : filtered.length === 0 ? (
-        <EmptyState icon={Search} title={t('pages.documents.noMatchTitle')} text={t('pages.documents.noMatchText', { query: query.trim() })}>
-          <Button variant="outline" onClick={() => setQuery('')}>
-            {t('pages.documents.clearSearch')}
-          </Button>
-        </EmptyState>
+        <NoMatchState
+          title={t('pages.documents.noMatchTitle')}
+          text={t('pages.documents.noMatchText', { query: query.trim() })}
+          resetLabel={t('pages.documents.clearSearch')}
+          onReset={() => setQuery('')}
+        />
       ) : (
         <ResponsiveList<PortalDocument>
           label={t('pages.documents.title')}

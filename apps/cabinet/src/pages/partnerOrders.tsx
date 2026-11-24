@@ -2,13 +2,11 @@ import { useState, type FormEvent } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
-  BarChart3,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
   ClipboardList,
   Coins,
-  FileText,
   Scale,
   Search,
   SearchX,
@@ -40,6 +38,7 @@ import {
 import { ActionDialog } from '@/components/ActionDialog';
 import { DateField } from '@/components/DateField';
 import { EmptyState } from '@/components/EmptyState';
+import { ListToolbar } from '@/components/list/ListToolbar';
 import { PageHeader } from '@/components/PageHeader';
 import { ErrorState, ListSkeleton } from '@/components/QueryStates';
 import { ResponsiveList, type ListColumn } from '@/components/ResponsiveList';
@@ -384,75 +383,44 @@ export function PartnerOrdersPage() {
     <div className="container mx-auto max-w-7xl px-4 py-6">
       <PageHeader
         title={t('pages.partnerOrders.title')}
-        subtitle={t('pages.partnerOrders.description')}
         icon={ClipboardList}
       />
 
-      {/* Раздел — один ряд кнопок; статус — выпадающий список рядом с поиском (не три ряда «пилюль») */}
-      <div className="mb-4 flex flex-wrap gap-2 max-sm:grid max-sm:grid-cols-3 max-sm:[&_svg]:hidden">
-        <Button
-          type="button"
-          size="sm"
-          variant={view === 'orders' ? 'default' : 'outline'}
-          className="rounded-full max-sm:h-auto max-sm:px-2 max-sm:py-1.5 max-sm:leading-tight max-sm:whitespace-normal"
-          aria-pressed={view === 'orders'}
-          onClick={() => update({ view: 'orders', tab: null, page: null, q: null })}
-        >
-          <ClipboardList aria-hidden="true" />
-          {t('pages.partnerOrders.views.orders')}
-          {ordersQuery.data?.counts ? (
-            <span className="tabular-nums opacity-80 max-sm:hidden">{ordersQuery.data.counts.all}</span>
-          ) : null}
-        </Button>
-        <Button
-          type="button"
-          size="sm"
-          variant={view === 'rfq' ? 'default' : 'outline'}
-          className="rounded-full max-sm:h-auto max-sm:px-2 max-sm:py-1.5 max-sm:leading-tight max-sm:whitespace-normal"
-          aria-pressed={view === 'rfq'}
-          onClick={() => update({ view: 'rfq', tab: null, page: null, q: null })}
-        >
-          <FileText aria-hidden="true" />
-          {t('pages.partnerOrders.views.rfq')}
-          {rfqQuery.data?.counts ? <span className="tabular-nums opacity-80 max-sm:hidden">{rfqQuery.data.counts.all}</span> : null}
-        </Button>
-        <Button
-          type="button"
-          size="sm"
-          variant={view === 'finance' ? 'default' : 'outline'}
-          className="rounded-full max-sm:h-auto max-sm:px-2 max-sm:py-1.5 max-sm:leading-tight max-sm:whitespace-normal"
-          aria-pressed={view === 'finance'}
-          onClick={() => update({ view: 'finance', tab: null, page: null, q: null })}
-        >
-          <BarChart3 aria-hidden="true" />
-          {t('pages.partnerOrders.views.finance')}
-        </Button>
-      </div>
-
-      {view !== 'finance' ? (
-        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <Select value={tab} onValueChange={(next) => update({ tab: next === 'all' ? null : next, page: null })}>
-            <SelectTrigger aria-label={t('pages.partnerOrders.tabsLabel')} className="w-full sm:w-56">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {view === 'orders'
-                ? ORDER_TABS.map((statusName) => (
-                    <SelectItem key={statusName} value={statusName}>
-                      {t(`pages.partnerOrders.orderTabs.${statusName}`)} · {ordersQuery.data?.counts[statusName] ?? 0}
-                    </SelectItem>
-                  ))
-                : RFQ_TABS.map((statusName) => (
-                    <SelectItem key={statusName} value={statusName}>
-                      {t(`pages.partnerOrders.rfqTabs.${statusName}`)} · {rfqQuery.data?.counts[statusName] ?? 0}
-                    </SelectItem>
-                  ))}
-            </SelectContent>
-          </Select>
-
-          <SearchForm key={q} initial={q} onSearch={(term) => update({ q: term || null, page: null })} />
-        </div>
-      ) : null}
+      {/* Раздел, статус и поиск — один ряд (`ListToolbar`): не три слоя «пилюль» */}
+      <ListToolbar
+        filterLabel={t('pages.partnerOrders.viewsLabel')}
+        display="pills"
+        options={(['orders', 'rfq', 'finance'] as const).map((name) => {
+          const count = name === 'orders' ? ordersQuery.data?.counts?.all : name === 'rfq' ? rfqQuery.data?.counts?.all : undefined;
+          return { value: name, label: count === undefined ? t(`pages.partnerOrders.views.${name}`) : `${t(`pages.partnerOrders.views.${name}`)} ${count}` };
+        })}
+        value={view}
+        onChange={(next) => update({ view: next, tab: null, page: null, q: null })}
+      >
+        {view !== 'finance' ? (
+          <>
+            <Select value={tab} onValueChange={(next) => update({ tab: next === 'all' ? null : next, page: null })}>
+              <SelectTrigger aria-label={t('pages.partnerOrders.tabsLabel')} className="w-full sm:w-56">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {view === 'orders'
+                  ? ORDER_TABS.map((statusName) => (
+                      <SelectItem key={statusName} value={statusName}>
+                        {t(`pages.partnerOrders.orderTabs.${statusName}`)} · {ordersQuery.data?.counts[statusName] ?? 0}
+                      </SelectItem>
+                    ))
+                  : RFQ_TABS.map((statusName) => (
+                      <SelectItem key={statusName} value={statusName}>
+                        {t(`pages.partnerOrders.rfqTabs.${statusName}`)} · {rfqQuery.data?.counts[statusName] ?? 0}
+                      </SelectItem>
+                    ))}
+              </SelectContent>
+            </Select>
+            <SearchForm key={q} initial={q} onSearch={(term) => update({ q: term || null, page: null })} />
+          </>
+        ) : null}
+      </ListToolbar>
 
       {/* Main Content Area */}
       {view === 'finance' ? (
@@ -1139,7 +1107,7 @@ function SearchForm({ initial, onSearch }: { initial: string; onSearch: (val: st
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex w-full gap-2 sm:w-auto">
+    <form onSubmit={handleSubmit} className="flex w-full gap-2 sm:ml-auto sm:w-auto">
       <div className="relative min-w-0 flex-1">
         <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
         <Input

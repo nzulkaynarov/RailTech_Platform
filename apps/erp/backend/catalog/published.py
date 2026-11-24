@@ -27,6 +27,7 @@ from django.db.models import Prefetch
 from django.utils import timezone
 
 from .constants import MODE_CLIENT, MODE_LEAD, PROJECTION_MODES, PriceVisibility
+from .item_ref import item_ref, main_photos
 from .policy import CatalogPolicy, effective_price_visibility, load_partner_price_visibility, load_policies, policy_for
 
 #: Наличие как статус (контракт портала `Availability`).
@@ -55,11 +56,13 @@ CATALOG_ITEM_KEYS = frozenset(
         "country_of_origin",
         "warranty",
         "documents",
+        "item",
     }
 )
 #: Ключи, которых нет в проекции без `with_documents=True` (список каталога, интеграция, MCP, превью сотрудника).
 DETAIL_ONLY_KEYS = frozenset({"documents"})
-CLIENT_ONLY_KEYS = frozenset({"price", "availability", "lead_time_days"})
+#: `item` — позиция строки списка (ЕД-4: миниатюра и наш артикул); лиду и боту вне кабинета артикул не отдаётся.
+CLIENT_ONLY_KEYS = frozenset({"price", "availability", "lead_time_days", "item"})
 
 
 def published_products():
@@ -246,6 +249,7 @@ def project(
     with_documents: bool = False,
     warranty_default=_UNSET,
     partners: dict[int, str] | None = None,
+    photos: dict[int, int] | None = None,
 ) -> dict:
     """Карточка в опубликованном слое — `CatalogItem` контракта портала.
 
@@ -255,6 +259,7 @@ def project(
 
     `with_documents=True` добавляет `documents` — только детальная карточка портала. `warranty_default` — срок компании,
     уже прочитанный вызывающим (пачка читает его один раз); не задан — читается здесь.
+    `photos` — главные фото пачки (`catalog.item_ref.main_photos`), для `item` в режиме клиента.
     """
     if mode not in PROJECTION_MODES:
         raise ValueError(f"unknown projection mode: {mode!r}")
@@ -281,6 +286,7 @@ def project(
         item["price"] = _price(product, policy, partners)
         item["availability"] = status
         item["lead_time_days"] = lead_time_days
+        item["item"] = item_ref(product, photos)
     return item
 
 
@@ -292,6 +298,7 @@ def project_many(products, *, mode: str, request=None) -> list[dict]:
         load_partner_price_visibility(product.source_supplier_id for product in products) if mode != MODE_LEAD else {}
     )
     warranty_default = company_warranty_months()
+    photos = main_photos(product.pk for product in products) if mode == MODE_CLIENT else None
     return [
         project(
             product,
@@ -300,6 +307,7 @@ def project_many(products, *, mode: str, request=None) -> list[dict]:
             request=request,
             warranty_default=warranty_default,
             partners=partners,
+            photos=photos,
         )
         for product in products
     ]

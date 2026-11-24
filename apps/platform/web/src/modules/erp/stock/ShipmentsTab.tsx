@@ -16,6 +16,7 @@ import { EmptyState } from "../../../shared/ui/EmptyState";
 import { ErrorNote, QueryState } from "../../../shared/ui/FormParts";
 import { clean, useErrorText, useRefreshStock, useStateLabels } from "./api";
 import { ShipUnits } from "./Tracking";
+import { ItemRefCell } from "../../ItemRefCell";
 import { PersonRefCell } from "../../PersonRefCell";
 
 /** Серийные или партии строки отгрузки: « · SN-1, SN-2» или « · L-7 ×3». */
@@ -110,7 +111,7 @@ function NewShipment({ manage }: { manage: boolean }) {
                     {rows.map((r) => (
                       <li key={r.id}>
                         <div>
-                          <strong>{r.product_name}</strong>
+                          <ItemRefCell item={r.item} name={r.product_name} />
                           <div className="pf-hint">
                             {t("shipments.reserved", {
                               remaining: qty(r.remaining),
@@ -270,7 +271,8 @@ function Rows({ items }: { items: readonly StockShipment[] }) {
         <>
           {s.lines.map((l, index) => (
             <div key={index}>
-              {l.name} · <span className="pf-num">{qty(l.quantity)}</span>
+              <ItemRefCell item={l.item} name={l.name} /> ·{" "}
+              <span className="pf-num">{qty(l.quantity)}</span>
               {l.cell ? <span className="pf-hint"> ({l.cell})</span> : null}
               {l.units.length > 0 ? (
                 <div className="pf-hint pf-num">{unitsText(l.units).slice(3)}</div>
