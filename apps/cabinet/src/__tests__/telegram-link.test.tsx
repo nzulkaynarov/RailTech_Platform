@@ -8,6 +8,7 @@ import { MOCK_TELEGRAM_START, TELEGRAM_LINK_TTL_MS } from '@/mocks/fixtures';
 import { setMockTelegram } from '@/mocks/handlers';
 import { portalServer } from '@/mocks/server';
 import { asMiniApp, renderApp, signedIn } from '@/test/render';
+import { expectNoAxeViolations } from '@/test/screens';
 
 /** Привязка Telegram самим контактом (ADR-0023 п. 3, NOTIFY-1): плашка после входа и Профиль → «Уведомления». */
 
@@ -101,7 +102,7 @@ describe('Профиль → «Уведомления»', () => {
   it('«Подключить»: QR и кнопка на бот, срок ссылки; опрос переводит в «подключён»', async () => {
     signedIn();
     const user = userEvent.setup();
-    const { container } = renderApp('/profile#notifications');
+    renderApp('/profile#notifications');
     const card = await notificationsCard();
     expect(await within(card).findByText('Telegram не подключён')).toBeInTheDocument();
     // Плашки на самом Профиле нет — здесь та же кнопка
@@ -113,7 +114,7 @@ describe('Профиль → «Уведомления»', () => {
     expect(open).toHaveAttribute('href', `https://t.me/example_bot?start=${MOCK_TELEGRAM_START}`);
     expect(open).toHaveAttribute('target', '_blank');
     expect(within(card).getByText(/Ссылка действует до 12:15/)).toBeInTheDocument();
-    expect((await axe(container)).violations).toEqual([]);
+    await expectNoAxeViolations();
 
     setMockTelegram({ linked: true }); // бот привязал Telegram, проекция пришла в ERP
     expect(await within(card).findByText('Telegram подключён')).toBeInTheDocument();
@@ -152,14 +153,14 @@ describe('Профиль → «Уведомления»', () => {
     signedIn();
     const user = userEvent.setup();
     const calls = recordTelegramCalls();
-    const { container } = renderApp('/profile');
+    renderApp('/profile');
     const card = await notificationsCard();
     await user.click(await within(card).findByRole('button', { name: 'Отвязать' }));
 
     const confirm = within(card).getByRole('region', { name: 'Отключить Telegram?' });
     expect(within(confirm).getByRole('note')).toHaveTextContent('Вход в кабинет из Telegram закроется');
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    expect((await axe(container)).violations).toEqual([]);
+    await expectNoAxeViolations();
     expect(calls).not.toContain('DELETE /me/telegram');
 
     await user.click(within(confirm).getByRole('button', { name: 'Отключить Telegram' }));
@@ -238,14 +239,14 @@ describe('проверочное сообщение в Telegram', () => {
     signedIn();
     const user = userEvent.setup();
     const calls = recordTelegramCalls();
-    const { container } = renderApp('/profile');
+    renderApp('/profile');
     const card = await notificationsCard();
     // Какой аккаунт привязан — защита от пересланной ссылки.
     expect(await within(card).findByText('Telegram привязан: @azamat_example')).toBeInTheDocument();
     await user.click(within(card).getByRole('button', { name: 'Отправить проверочное сообщение' }));
     expect(await screen.findByText('Сообщение отправлено — проверьте Telegram')).toBeInTheDocument();
     expect(calls).toContain('POST /me/telegram/test');
-    expect((await axe(container)).violations).toEqual([]);
+    await expectNoAxeViolations();
   });
 
   it('без имени аккаунта — строка «Telegram привязан» без имени', async () => {
