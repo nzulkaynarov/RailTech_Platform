@@ -6,7 +6,7 @@
   "list": {
     "label": "Javob kutayotgan suhbatlar",
     "groups": {
-      "handoff": "Botdan o'tkazilganlar",
+      "handoff": "Ötkazilganlar",
       "mine": "Mening suhbatlarim",
       "unassigned": "Menejersiz"
     },
@@ -97,7 +97,7 @@
   },
   "owner": {
     "bot": "Suhbatni bot olib boryapti",
-    "waiting": "Bot suhbatni o'tkazdi va menejerni kutmoqda",
+    "waiting": "Menejerni kutmoqda",
     "manager": "Suhbatni {{name}} olib boryapti",
     "you": "Suhbatni siz olib boryapsiz"
   },
@@ -142,6 +142,7 @@
     "toRequest": "Arizaga",
     "toRequestLabel": "Arizaga: {{name}} — direktorga xat sifatida",
     "channelCabinet": "Kabinet",
+    "channelEmail": "Pochta",
     "context": {
       "deal": "Bitim {{number}}",
       "quote": "TK {{number}}",
@@ -178,7 +179,16 @@
     "readOnly": "Faqat ko‘rish.",
     "editAfterUnknown": "Matn o'zgardi — u yangi xabar bo'lib ketadi; avvalgisi yetkazilgan bo'lishi mumkin",
     "managerReplies": "Mijozga javobni menejer beradi. Lidni saralang va «Menejerga topshirish» tugmasini bosing — mijozga nima kerakligi haqida izoh bilan.",
-    "selfHintCabinet": "Mijozga kabinetda yuboriladi"
+    "selfHintCabinet": "Mijozga kabinetda yuboriladi",
+    "selfHintEmail": "Kompaniya pochtasidan {{email}} manziliga xat bilan yuboriladi",
+    "phoneOnly": "Javob berish faqat qönğiroq orqali mumkin",
+    "call": "Qönğiroq qilish",
+    "logCall": "Qönğiroqni yozish",
+    "callDraft": "Qönğiroq: ",
+    "noConsent": "Mijoz rozilik bermagan — Telegramda yozib bölmaydi",
+    "noContact": "Javob uchun kanal yöq: Telegram ham, kabinet ham, pochta ham",
+    "failedCabinet": "Yuborilmadi: mijoz kabineti mavjud emas.",
+    "failedEmail": "Yuborilmadi: xat jönatilmadi."
   },
   "card": {
     "title": "Lid kartasi",
@@ -208,6 +218,9 @@
   "errors": {
     "lead_taken": "Lidni {{name}} allaqachon olgan",
     "lead_taken_unknown": "Lidni boshqa xodim allaqachon olgan",
+    "no_reply_channel": "Javob berish uchun kanal yöq",
+    "smtp_not_configured": "Pochta ulanmagan — xat mijozga bormaydi",
+    "no_bot_channel": "Mijoz botga yozmagan — lidni botga qaytarib bölmaydi",
     "take_first": "Avval lidni oling",
     "no_consent": "Mijoz ma'lumotlarni qayta ishlashga rozilik bermagan — yozish mumkin emas",
     "not_lead_owner": "Suhbatni boshqa xodim olib boryapti",

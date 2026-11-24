@@ -1,4 +1,5 @@
 import type {
+  ConversationCard,
   ConversationThread,
   Language,
   MessageInboxItem,
@@ -51,9 +52,18 @@ export function canTake(
 ): boolean {
   if (item.handoff) {
     if (item.handoff.state === "taken") return false;
-    return !item.assigned || (handedOver(item) && item.assigned.id === me);
+    // Ответственный уже есть (передача первой линии, кабинет клиента с владельцем): забирает он сам.
+    return !item.assigned || item.assigned.id === me;
   }
   return item.group === "unassigned";
+}
+
+/** «Забрать» в диалоге, открытом без очереди (из реестра или карточки): лид ещё не у сотрудника (бот, ждёт менеджера). */
+export function canTakeCard(
+  card: Pick<ConversationCard, "owner_mode" | "assigned">,
+  me?: string,
+): boolean {
+  return card.owner_mode !== "manager" && (!card.assigned || card.assigned.id === me);
 }
 
 /** «Передать менеджеру» (первая линия): лида ещё не ведёт сотрудник — бот, ждёт менеджера или передан, но не забран. */

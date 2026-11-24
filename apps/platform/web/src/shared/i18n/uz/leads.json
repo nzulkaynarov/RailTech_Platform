@@ -48,6 +48,7 @@
     "createLabel": "{{name}} uchun ariza yaratish",
     "clientLabel": "{{name}} mijoz kartasi",
     "handOver": "Menejerga topshirish",
+    "call": "Qönğiroq qilish",
     "openChat": "Yozishmani ochish",
     "triage": "Saralash",
     "triageLabel": "{{name}} — «Javob kutmoqda»da saralash"

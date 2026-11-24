@@ -131,6 +131,9 @@ function initial(): MessagesMock {
       language: "ru",
       channel: "telegram",
       reply_channel: "telegram",
+      reply_via: "telegram",
+      reply_blocked: null,
+      can_return_to_bot: true,
       owner_mode: "waiting",
       assigned: null,
       consent_given_at: ago(base, 60),
@@ -213,6 +216,9 @@ function initial(): MessagesMock {
       language: "uz",
       channel: "telegram",
       reply_channel: "telegram",
+      reply_via: "telegram",
+      reply_blocked: null,
+      can_return_to_bot: true,
       owner_mode: "waiting",
       assigned: null,
       consent_given_at: ago(base, 90),
@@ -270,6 +276,9 @@ function initial(): MessagesMock {
       language: "ru",
       channel: "telegram",
       reply_channel: "telegram",
+      reply_via: "telegram",
+      reply_blocked: null,
+      can_return_to_bot: true,
       owner_mode: "manager",
       assigned: MANAGER,
       consent_given_at: ago(base, 300),
@@ -339,6 +348,9 @@ function initial(): MessagesMock {
       language: "en",
       channel: "telegram",
       reply_channel: "telegram",
+      reply_via: null,
+      reply_blocked: "no_consent",
+      can_return_to_bot: true,
       owner_mode: "waiting",
       assigned: null,
       consent_given_at: null,
@@ -374,7 +386,7 @@ function initial(): MessagesMock {
   // CHAT-1: клиент написал из кабинета со страницы КП — канал «Кабинет», ответ уйдёт туда же.
   const cabinet = cabinetLead(base);
   return {
-    leads: [rails, overdue, mine, cabinet, free],
+    leads: [rails, overdue, mine, cabinet, free, ...channelLeads(base)],
     nextId: 900_000,
     sent: { "draft-demo-unconfirmed": 2_050_900 },
   };
@@ -432,6 +444,9 @@ function cabinetLead(base: number): LeadMock {
       language: "ru",
       channel: "cabinet",
       reply_channel: "cabinet",
+      reply_via: "cabinet",
+      reply_blocked: null,
+      can_return_to_bot: false,
       owner_mode: "manager",
       assigned: MANAGER,
       consent_given_at: null,
@@ -462,6 +477,147 @@ function cabinetLead(base: number): LeadMock {
     ],
     notes: [],
   };
+}
+
+const NO_FACTS = {
+  interest: [],
+  timeline: null,
+  decision_role: null,
+  budget_hint: null,
+  company: null,
+  company_size: null,
+  region: null,
+};
+
+/**
+ * CH-1: лиды, у которых канал ответа не Telegram. Веб-форма только с телефоном — отвечать некуда, «Позвонить»; веб-форма с
+ * почтой — ответ письмом; передача из кабинета клиента, у которого есть владелец (я): «Забрать» видно именно ему.
+ */
+function channelLeads(base: number): LeadMock[] {
+  const row = (
+    lead: string,
+    name: string,
+    group: MessageInboxItem["group"],
+    over: Partial<ConversationCard>,
+    request: string,
+    handoffInfo: HandoffInfo | null = null,
+  ): LeadMock => {
+    const channel = over.channel ?? "web";
+    return {
+      item: {
+        lead,
+        name,
+        group,
+        language: "ru",
+        channel,
+        unread: true,
+        last_message_at: ago(base, 25),
+        assigned: over.assigned ?? null,
+        handoff: handoffInfo,
+        note: {
+          request,
+          facts: { ...NO_FACTS, company: over.contacts?.company ?? null },
+          last_message: null,
+        },
+      },
+      card: {
+        lead,
+        name,
+        language: "ru",
+        channel,
+        reply_channel: null,
+        reply_via: null,
+        reply_blocked: "no_contact",
+        can_return_to_bot: false,
+        owner_mode: "waiting",
+        assigned: null,
+        consent_given_at: ago(base, 25),
+        contacts: { telegram: null, phone: null, email: null, company: null },
+        facts: { ...NO_FACTS, company: over.contacts?.company ?? null },
+        request,
+        handoff: handoffInfo,
+        client_in_erp: false,
+        ...over,
+      },
+      messages: [],
+      notes: [],
+    };
+  };
+  const leads = [
+    row(
+      "L-2080",
+      "Алишер Звонков",
+      "unassigned",
+      {
+        reply_blocked: "phone_only",
+        contacts: {
+          telegram: null,
+          phone: "+998900000080",
+          email: null,
+          company: "ООО «Демо-Депо»",
+        },
+      },
+      "Нужны тормозные колодки, 200 шт",
+    ),
+    row(
+      "L-2081",
+      "Дильбар Почтова",
+      "unassigned",
+      {
+        reply_via: "email",
+        reply_blocked: null,
+        contacts: {
+          telegram: null,
+          phone: "+998900000081",
+          email: "dilbar@example.org",
+          company: null,
+        },
+      },
+      "Нужен прайс на шпалы",
+    ),
+    row(
+      "L-2090",
+      "ООО «Пример-Вагон»",
+      "handoff",
+      {
+        channel: "cabinet",
+        reply_channel: "cabinet",
+        reply_via: "cabinet",
+        reply_blocked: null,
+        assigned: MANAGER,
+        contacts: {
+          telegram: null,
+          phone: null,
+          email: "vagon@example.org",
+          company: "ООО «Пример-Вагон»",
+        },
+      },
+      "Вопрос по графику поставки",
+      handoff(base, {
+        reasons: ["cabinet_message"],
+        priority: "warm",
+        created_at: ago(base, 7),
+        sla_due_at: ago(base, -8),
+      }),
+    ),
+  ];
+  const wagon = leads[2];
+  if (wagon) {
+    wagon.messages = [
+      {
+        id: 2_090_001,
+        author: "lead",
+        author_name: "Руслан Вагонов",
+        text: "Подскажите, когда придёт вторая партия?",
+        created_at: ago(base, 8),
+        attachments: [],
+        delivery: null,
+        channel: "cabinet",
+        context: null,
+      },
+    ];
+  }
+  return leads;
 }
 
 let memory: MessagesMock | null = null;

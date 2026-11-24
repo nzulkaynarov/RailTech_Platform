@@ -85,7 +85,7 @@ export function mockClientWrites(lead: string, text: string): void {
     created_at: now,
     attachments: [],
     delivery: null,
-    channel: row.card.reply_channel ?? "telegram",
+    channel: row.card.reply_via ?? row.card.reply_channel ?? "telegram",
     context: null,
   });
   row.item.unread = true;
@@ -161,6 +161,7 @@ export const crmMessagesHandlers = [
       });
     }
     row.item.assigned = taker;
+    if (row.item.group === "unassigned") row.item.group = "mine"; // как CRM: забранный лид — в «Моих диалогах»
     row.card.assigned = taker;
     row.card.owner_mode = "manager";
     if (row.item.handoff)
@@ -203,7 +204,7 @@ export const crmMessagesHandlers = [
         created_at: new Date().toISOString(),
         attachments: [],
         delivery: "sending",
-        channel: row.card.reply_channel ?? "telegram",
+        channel: row.card.reply_via ?? row.card.reply_channel ?? "telegram",
         context: null,
       });
       state.sent[body.client_message_id] = state.nextId;
@@ -227,7 +228,7 @@ export const crmMessagesHandlers = [
       text: body.text,
       created_at: new Date().toISOString(),
       attachments: [],
-      channel: row.card.reply_channel ?? "telegram",
+      channel: row.card.reply_via ?? row.card.reply_channel ?? "telegram",
       context: null,
       delivery: null,
     });

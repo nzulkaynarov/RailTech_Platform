@@ -145,6 +145,18 @@ describe("Клиенты · Лиды (D1-2b)", () => {
     expect(within(panel).getByText("нет — отметьте при создании заявки")).toBeVisible();
   });
 
+  it("CH-1: лид только с телефоном — в карточке «Позвонить» и «Открыть переписку» вместо «Ответить»", async () => {
+    await open("manager@demo.example", "/crm/leads?lead=L-2077&panel=open&tab=card");
+    const panel = await panelEl();
+    expect(await within(panel).findByRole("heading", { name: "Звонок Демо" })).toBeVisible();
+    expect(within(panel).getByRole("link", { name: "Позвонить" })).toHaveAttribute(
+      "href",
+      "tel:+998900000077",
+    );
+    expect(within(panel).getByRole("link", { name: "Открыть переписку" })).toBeVisible();
+    expect(within(panel).queryByRole("link", { name: "Ответить" })).toBeNull();
+  });
+
   it("директор (лиды — чтение): ни «Забрать», ни «Ответить»", async () => {
     await open("director@demo.example");
     await screen.findByRole("table", { name: "Лиды" });

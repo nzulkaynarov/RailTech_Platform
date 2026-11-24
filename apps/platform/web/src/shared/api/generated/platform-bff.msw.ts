@@ -27640,6 +27640,12 @@ export const getGetCrmConversationResponseMock = (
     faker.helpers.fromRegExp("^[a-z][a-z_]{0,15}$"),
     null,
   ]),
+  reply_via: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[a-z][a-z_]{0,15}$"), null]),
+  reply_blocked: faker.helpers.arrayElement([
+    faker.helpers.arrayElement(["no_consent", "phone_only", "no_contact"] as const),
+    null,
+  ]),
+  can_return_to_bot: faker.datatype.boolean(),
   owner_mode: faker.helpers.arrayElement(Object.values(LeadOwnerMode)),
   assigned: faker.helpers.arrayElement([{ ...getGetCrmConversationResponsePersonRefMock() }, null]),
   consent_given_at: faker.helpers.arrayElement([
@@ -35102,6 +35108,11 @@ export const getGetCrmLeadResponseMock = (
       null,
     ]),
   },
+  reply_via: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[a-z][a-z_]{0,15}$"), null]),
+  reply_blocked: faker.helpers.arrayElement([
+    faker.helpers.arrayElement(["no_consent", "phone_only", "no_contact"] as const),
+    null,
+  ]),
   consent: {
     given_at: faker.helpers.arrayElement([
       faker.date.past().toISOString().slice(0, 19) + "Z",

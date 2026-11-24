@@ -10,6 +10,7 @@ import type { HandoffInfo } from "./handoffInfo";
 import type { Language } from "./language";
 import type { LeadCardConsent } from "./leadCardConsent";
 import type { LeadCardFirstResponse } from "./leadCardFirstResponse";
+import type { LeadCardReplyBlocked } from "./leadCardReplyBlocked";
 import type { LeadMessagePreview } from "./leadMessagePreview";
 import type { LeadNotice } from "./leadNotice";
 import type { LeadOrigin } from "./leadOrigin";
@@ -26,6 +27,13 @@ export interface LeadCard {
   language: Language;
   assigned: PersonRef | null;
   contacts: ConversationContacts;
+  /** CH-1, канал ответа лиду (как в `ConversationCard.reply_via`); `null` — отвечать некуда, причина в `reply_blocked` */
+  reply_via?: MessageChannel | null;
+  /**
+   * CH-1, почему `reply_via = null`; при `phone_only` карточка предлагает «Позвонить»
+   * @nullable
+   */
+  reply_blocked?: LeadCardReplyBlocked;
   consent: LeadCardConsent;
   facts: HandoffFacts;
   /** @nullable */

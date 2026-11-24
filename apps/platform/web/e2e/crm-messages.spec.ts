@@ -53,7 +53,7 @@ test.describe("Ждут ответа: менеджер", () => {
     await openMessages(page);
 
     const list = inbox(page);
-    await expect(list.getByRole("heading", { name: "Передачи от бота · 2" })).toBeVisible();
+    await expect(list.getByRole("heading", { name: "Передачи · 3" })).toBeVisible();
     await expect(list.getByText("ждёт 12 мин")).toBeVisible();
     await expect(list.getByText("ждёт 40 мин · срок прошёл")).toBeVisible();
     await expect(list.getByText("Срочно")).toBeVisible();
@@ -226,6 +226,58 @@ test(
     await expect(inbox(page)).toBeVisible();
   },
 );
+
+async function phoneOnlyLead(page: Page, context: string): Promise<void> {
+  await loginAndWait(page, "manager@demo.example");
+  await openMessages(page, "?lead=L-2080");
+  await expect(page.getByRole("heading", { level: 2, name: "Алишер Звонков" })).toBeVisible();
+  await expect(page.getByText("Ответить можно только звонком")).toBeVisible();
+  await expect(page.getByLabel("Сообщение клиенту")).toHaveCount(0);
+  await expect(page.getByText("Уйдёт клиенту в Telegram")).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Позвонить" })).toHaveAttribute(
+    "href",
+    "tel:+998900000080",
+  );
+  await settledScreenshot(page, "phone-only");
+  await expectNoViolations(page, context);
+  await page.getByRole("button", { name: "Записать звонок" }).click();
+  await expect(composerField(page)).toHaveValue("Звонок: ");
+  await expect(composerField(page)).toBeFocused();
+}
+
+// CH-1: поле ответа по каналу. Веб-лид только с телефоном — вместо поля «Позвонить» и «Записать звонок»; лид с почтой — после
+// «Забрать» ответ уходит письмом, «Вернуть боту» у него нет.
+test.describe("Ждут ответа: канал ответа (CH-1)", () => {
+  test("веб-лид только с телефоном — «Позвонить» вместо поля", async ({ page, isMobile }) => {
+    test.skip(isMobile, "390 — отдельный сценарий @mobile");
+    await phoneOnlyLead(page, "только телефон");
+  });
+
+  test("390: веб-лид только с телефоном", { tag: "@mobile" }, async ({ page, isMobile }) => {
+    test.skip(!isMobile, "узкий экран — проект mobile");
+    await phoneOnlyLead(page, "только телефон 390");
+  });
+
+  test("лид с почтой — «Забрать» и ответ письмом, «Вернуть боту» нет", async ({
+    page,
+    isMobile,
+  }) => {
+    test.skip(isMobile, "сценарий на десктопе");
+    await loginAndWait(page, "manager@demo.example");
+    await openMessages(page, "?lead=L-2081");
+    await expect(page.getByRole("heading", { level: 2, name: "Дильбар Почтова" })).toBeVisible();
+    await inbox(page).getByRole("button", { name: "Забрать: Дильбар Почтова" }).click();
+    await expect(
+      page.getByText("Уйдёт письмом на dilbar@example.org с почты компании"),
+    ).toBeVisible();
+    await expect(page.getByRole("button", { name: "Вернуть боту" })).toHaveCount(0);
+    await composerField(page).fill("Добрый день! Прайс пришлём сегодня.");
+    await page.getByRole("button", { name: "Отправить" }).click();
+    await expect(page.getByText("Добрый день! Прайс пришлём сегодня.").last()).toBeVisible();
+    await settledScreenshot(page, "email");
+    await expectNoViolations(page, "письмо");
+  });
+});
 
 test("390: пустая очередь", { tag: "@mobile" }, async ({ page, isMobile }) => {
   test.skip(!isMobile, "узкий экран — проект mobile");

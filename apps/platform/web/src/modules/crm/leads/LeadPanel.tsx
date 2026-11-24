@@ -82,6 +82,9 @@ function Body({ card, sheet, onClose }: { card: LeadCard; sheet: boolean; onClos
   const triage = !canEdit(me, "crm.leads") && canEdit(me, "crm.leads.triage");
   const handable =
     triage && (!card.assigned || Boolean(card.handoff?.reasons.includes("handed_over")));
+  // CH-1: отвечать некуда — вместо «Ответить» «Позвонить» (только телефон) или «Открыть переписку».
+  const noChannel = card.reply_via === null;
+  const callOnly = noChannel && card.reply_blocked === "phone_only" ? card.contacts.phone : null;
   const contacts = [
     {
       label: t("messages:card.telegram"),
@@ -206,8 +209,11 @@ function Body({ card, sheet, onClose }: { card: LeadCard; sheet: boolean; onClos
           </LinkButton>
         ) : null}
         {handable ? <HandOverButton lead={card.lead} name={card.name} /> : null}
+        {callOnly ? (
+          <Button href={`tel:${callOnly.replace(/[^\d+]/g, "")}`}>{t("leads:actions.call")}</Button>
+        ) : null}
         <LinkButton to={`/crm/leads?scope=waiting&lead=${card.lead}`}>
-          {t(triage ? "leads:actions.openChat" : "leads:actions.reply")}
+          {t(triage || noChannel || callOnly ? "leads:actions.openChat" : "leads:actions.reply")}
         </LinkButton>
         {sheet ? <Button onClick={onClose}>{t("leads:card.close")}</Button> : null}
       </div>

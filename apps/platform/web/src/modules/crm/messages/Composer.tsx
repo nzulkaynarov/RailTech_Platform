@@ -1,5 +1,6 @@
 import { Alert, App, Button, Input, Segmented, Select } from "antd";
-import { useId, useState } from "react";
+import { useId, useRef, useState } from "react";
+import type { TextAreaRef } from "antd/es/input/TextArea";
 import { useTranslation } from "react-i18next";
 
 import { useAuth } from "../../../app/auth/useAuth";
@@ -13,6 +14,7 @@ import {
 import { useRefreshMessages } from "./actions";
 import { type SendFailure, actionError, sendFailure } from "./labels";
 import { fillTemplate } from "./logic";
+import { ReplyState } from "./ReplyState";
 import { newMessageKey } from "./sla";
 
 export type ComposerMode = "self" | "note";
@@ -31,7 +33,11 @@ export function Composer({ card }: { card: ConversationCard }) {
   const refresh = useRefreshMessages();
   const fieldId = useId();
   const hintId = useId();
-  const [mode, setMode] = useState<ComposerMode>("self");
+  const [chosen, setMode] = useState<ComposerMode>("self");
+  const area = useRef<TextAreaRef>(null);
+  // CH-1: канал ответа решает CRM; отвечать некуда — поля «От себя» нет, остаётся «Заметка команде».
+  const via = card.reply_via ?? null;
+  const mode: ComposerMode = via ? chosen : "note";
   const [text, setText] = useState("");
   const [key, setKey] = useState(newMessageKey);
   const [failed, setFailed] = useState<SendFailure | null>(null);
@@ -61,7 +67,7 @@ export function Composer({ card }: { card: ConversationCard }) {
         done(t("composer.sent"));
       },
       onError: (error) => {
-        setFailed(sendFailure(t, error));
+        setFailed(sendFailure(t, error, via));
       },
     },
   });
@@ -109,19 +115,30 @@ export function Composer({ card }: { card: ConversationCard }) {
         send();
       }}
     >
-      <div className="pf-msg-composer-bar">
-        <Segmented<ComposerMode>
-          aria-label={t("composer.mode")}
-          value={mode}
-          onChange={(value) => {
-            setMode(value);
-            setFailed(null);
+      {via ? null : (
+        <ReplyState
+          card={card}
+          onLogCall={() => {
+            if (!text.trim()) setText(t("composer.callDraft"));
+            area.current?.focus();
           }}
-          options={[
-            { value: "self", label: t("composer.self") },
-            { value: "note", label: t("composer.note") },
-          ]}
         />
+      )}
+      <div className="pf-msg-composer-bar">
+        {via ? (
+          <Segmented<ComposerMode>
+            aria-label={t("composer.mode")}
+            value={mode}
+            onChange={(value) => {
+              setMode(value);
+              setFailed(null);
+            }}
+            options={[
+              { value: "self", label: t("composer.self") },
+              { value: "note", label: t("composer.note") },
+            ]}
+          />
+        ) : null}
         {mode === "self" && mine ? (
           <div className="pf-msg-composer-tools">
             <Select
@@ -162,6 +179,7 @@ export function Composer({ card }: { card: ConversationCard }) {
       </label>
       <Input.TextArea
         id={fieldId}
+        ref={area}
         value={text}
         autoSize={{ minRows: 2, maxRows: 6 }}
         maxLength={4000}
@@ -182,11 +200,9 @@ export function Composer({ card }: { card: ConversationCard }) {
           {blocked
             ? t("composer.takeFirst")
             : mode === "self"
-              ? t(
-                  card.reply_channel === "cabinet"
-                    ? "composer.selfHintCabinet"
-                    : "composer.selfHint",
-                )
+              ? via === "email"
+                ? t("composer.selfHintEmail", { email: card.contacts.email ?? "" })
+                : t(via === "cabinet" ? "composer.selfHintCabinet" : "composer.selfHint")
               : t("composer.noteHint")}
         </span>
         <Button type="primary" htmlType="submit" loading={busy} disabled={blocked || !text.trim()}>
