@@ -42,6 +42,9 @@ describe('Компания', () => {
     const file = new File([Uint8Array.from([1, 2, 3])], 'logo.png', { type: 'image/png' });
     await user.upload(screen.getByLabelText('Файл логотипа'), file);
     await waitFor(() => expect(block.querySelector('img')?.getAttribute('src')).toMatch(/\/company\/logo\?v=v1$/));
+    // ЕД-3: тот же логотип стоит в боковой навигации рядом с названием компании
+    const side = screen.getByRole('complementary');
+    await waitFor(() => expect(side.querySelector('img[src*="/company/logo"]')?.getAttribute('src')).toMatch(/v=v1$/));
     await user.upload(screen.getByLabelText('Файл логотипа'), file);
     await waitFor(() => expect(block.querySelector('img')?.getAttribute('src')).toMatch(/\/company\/logo\?v=v2$/));
     expect(screen.getByRole('button', { name: 'Заменить логотип' })).toBeInTheDocument();
