@@ -350,6 +350,7 @@ class Container:
             on_escalation_reopened=_escalation_reopened,
             on_chats_changed=_chats_changed,
             backoffice_mode=self.backoffice_mode,
+            mail=self.mail_service,
         )
 
     @cached_property

@@ -84,6 +84,13 @@ class LeadOut(BaseModel):
     # Канал последнего сообщения клиента — туда уйдёт ответ менеджера (CHAT-1): `telegram` |
     # `cabinet`; null — клиент ещё не писал. Только в `GET /inbox` и карточке лида.
     reply_channel: str | None = None
+    # Куда уйдёт ответ менеджера на самом деле (CH-1, `domain/reply_channel.py`): `telegram` |
+    # `cabinet` | `email`; null — отвечать некуда, причина в `reply_blocked`: `no_consent` |
+    # `phone_only` | `no_contact`. Только в `GET /inbox` и карточке лида; у остальных выдач null.
+    reply_via: Literal["telegram", "cabinet", "email"] | None = None
+    reply_blocked: Literal["no_consent", "phone_only", "no_contact"] | None = None
+    # «Вернуть боту» имеет смысл, только если у лида есть чат Telegram; null — не считали.
+    can_return_to_bot: bool | None = None
 
 
 class LeadOriginOut(BaseModel):

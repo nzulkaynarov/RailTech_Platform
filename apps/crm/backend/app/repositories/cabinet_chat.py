@@ -10,6 +10,7 @@ from typing import Final
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.domain.reply_channel import ReplyFacts, ReplyVia, reply_via
 from app.models.clients import Client, ClientContact
 from app.models.leads import Conversation, Lead, Message, TelegramIdentity
 from app.repositories.leads import ERASED_TEXT
@@ -192,3 +193,72 @@ async def open_cabinet_conversation(session: AsyncSession, lead_id: int) -> Conv
     )
     found: Conversation | None = (await session.scalars(stmt)).first()
     return found
+
+
+async def reply_vias(session: AsyncSession, leads: Sequence[Lead]) -> dict[int, ReplyVia]:
+    """Канал ответа менеджера по каждому лиду (CH-1, `domain/reply_channel.py`): факты одним пакетом
+    запросов — открытые беседы, телефон, канал последнего входящего."""
+    if not leads:
+        return {}
+    ids = [lead.id for lead in leads]
+    rows = (
+        await session.execute(
+            select(Conversation.lead_id, Conversation.channel, Conversation.tg_chat_id)
+            .where(Conversation.lead_id.in_(ids), Conversation.is_open)
+            .add_columns(Conversation.erp_company_id)
+        )
+    ).all()
+    telegram = {r.lead_id for r in rows if r.channel == TELEGRAM and r.tg_chat_id is not None}
+    cabinet = {r.lead_id for r in rows if r.channel == CABINET and r.erp_company_id is not None}
+    with_phone = set(
+        (
+            await session.scalars(
+                select(TelegramIdentity.lead_id).where(
+                    TelegramIdentity.lead_id.in_(ids), TelegramIdentity.phone_e164.is_not(None)
+                )
+            )
+        ).all()
+    )
+    client_ids = {lead.client_id for lead in leads if lead.client_id is not None}
+    clients_with_phone = set(
+        (
+            await session.scalars(
+                select(ClientContact.client_id).where(
+                    ClientContact.client_id.in_(client_ids),
+                    ClientContact.is_primary.is_(True),
+                    ClientContact.phone_e164.is_not(None),
+                )
+            )
+        ).all()
+        if client_ids
+        else []
+    )
+    last = await last_inbound_channels(session, ids)
+    return {
+        lead.id: reply_via(
+            ReplyFacts(
+                has_telegram=lead.id in telegram,
+                has_cabinet=lead.id in cabinet,
+                has_consent=lead.consent_given_at is not None,
+                email=lead.email,
+                has_phone=bool(lead.phone_e164)
+                or lead.id in with_phone
+                or lead.client_id in clients_with_phone,
+                source=lead.source,
+                last_inbound=last.get(lead.id),
+            )
+        )
+        for lead in leads
+    }
+
+
+async def bot_channel_leads(session: AsyncSession, lead_ids: Sequence[int]) -> set[int]:
+    """Лиды с чатом Telegram (в любом состоянии): только им можно «Вернуть боту»."""
+    if not lead_ids:
+        return set()
+    stmt = select(Conversation.lead_id).where(
+        Conversation.lead_id.in_(set(lead_ids)),
+        Conversation.channel == TELEGRAM,
+        Conversation.tg_chat_id.is_not(None),
+    )
+    return set((await session.scalars(stmt)).all())

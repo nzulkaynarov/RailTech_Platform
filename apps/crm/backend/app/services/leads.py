@@ -43,6 +43,7 @@ from app.security.principal import Principal
 from app.services import (
     cabinet_chat,
     deals,
+    lead_email_reply,
     lead_parts,
     lead_snooze,
     staff_deputy,
@@ -52,6 +53,7 @@ from app.services import (
 from app.services import team as team_service
 from app.services.escalation import OPEN_STATUSES, open_escalation
 from app.services.lead_messenger import DeliveryError, LeadMessenger
+from app.services.mail import MailService
 from app.services.settings import SettingsService
 
 logger = structlog.get_logger(__name__)
@@ -83,8 +85,10 @@ class LeadService:
         on_escalation_reopened: EscalationChanged | None = None,
         on_chats_changed: ChatsChanged | None = None,
         backoffice_mode: BackofficeModeProvider | None = None,
+        mail: MailService | None = None,
     ) -> None:
         self._sessions = sessions
+        self._mail = mail  # ответ лиду письмом (CH-1)
         # Режим жизненного цикла (ADR-0022): без провайдера — `local`, как до ансамбля.
         self._backoffice_mode = backoffice_mode
         self._settings = settings
@@ -155,6 +159,11 @@ class LeadService:
             if lead.owner_mode == OwnerMode.BOT:
                 raise ConflictError(
                     "lead is already handled by the bot", reason=Reason.ALREADY_WITH_BOT
+                )
+            if lead_id not in await cabinet_repo.bot_channel_leads(session, [lead_id]):
+                # Лид без Telegram (веб, почта, звонок): бот ему не пишет, из очереди он пропал бы.
+                raise ConflictError(
+                    "the bot has no chat with the lead", reason=Reason.NO_BOT_CHANNEL
                 )
             before = lead_parts.snapshot(lead)
             if lead.stage in (Stage.HANDOFF, Stage.IN_PROGRESS):
@@ -471,12 +480,18 @@ class LeadService:
             if lead.owner_mode != OwnerMode.HUMAN:
                 raise ConflictError("take the lead before replying", reason=Reason.TAKE_FIRST)
             on_behalf = await _require_owner(session, lead, who)
-            # Ответ — в канал последнего сообщения клиента (CHAT-1): кабинет или Telegram.
-            channel = await cabinet_repo.last_inbound_channel(session, lead_id)
-            if lead.consent_given_at is None and channel != cabinet_repo.CABINET:
-                # Без согласия на обработку данных писать лиду в Telegram нельзя (аудит P2); в
-                # кабинет компания написала сама, по договору — ответ в её же канал.
-                raise ConflictError("lead has not given consent", reason=Reason.NO_CONSENT)
+            # Канал ответа решает правило CRM (CH-1): последний входящий, иначе любой доступный,
+            # иначе почта; без канала — отказ с причиной, а не «Telegram не ответил».
+            via = (await cabinet_repo.reply_vias(session, [lead]))[lead_id]
+            channel = via.channel
+            if channel is None:
+                raise ConflictError(
+                    "no channel to reply to the lead",
+                    reason=Reason.NO_CONSENT
+                    if via.blocked == "no_consent"
+                    else Reason.NO_REPLY_CHANNEL,
+                    blocked=via.blocked,
+                )
             await audit.record(
                 session,
                 who.actor,
@@ -484,6 +499,18 @@ class LeadService:
                 "lead",
                 lead_id,
                 after={"on_behalf_of_user_id": on_behalf} if on_behalf is not None else None,
+            )
+        if channel == lead_email_reply.EMAIL:
+            if self._mail is None:
+                raise ConflictError("mail is not available", reason=Reason.SMTP_NOT_CONFIGURED)
+            return await lead_email_reply.send_reply(
+                self._sessions,
+                self._mail,
+                lead_id,
+                body,
+                client_message_id,
+                sent_by_user_id=who.user_id,
+                on_behalf_of=on_behalf,
             )
         if channel == cabinet_repo.CABINET:
             cabinet_id, _ = await cabinet_chat.send_reply(

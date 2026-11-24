@@ -16,6 +16,7 @@ from app.api.deps import ContainerDep, require
 from app.api.dialog_access import dialog
 from app.domain.client_requests import platform_status
 from app.domain.errors import NotFoundError
+from app.domain.reply_channel import ReplyVia
 from app.models.clients import Client
 from app.models.leads import Lead, Message
 from app.models.qualification import Escalation
@@ -121,6 +122,8 @@ def lead_out(
     escalation: Escalation | None,
     names: dict[int, str] | None = None,
     reply_channel: str | None = None,
+    via: ReplyVia | None = None,
+    bot_channel: bool | None = None,
 ) -> LeadOut:
     owner = lead.assigned_user_id
     return LeadOut(
@@ -142,6 +145,9 @@ def lead_out(
         source=lead.source,
         platform_status=_platform_status(lead, escalation),
         reply_channel=reply_channel,
+        reply_via=via.channel if via is not None else None,
+        reply_blocked=via.blocked if via is not None else None,
+        can_return_to_bot=bot_channel,
     )
 
 
@@ -281,12 +287,19 @@ async def inbox(
         )
         notes = await handoff_notes.notes(session, [*escalated, *mine, *unassigned], escalations)
         channels = await cabinet_repo.last_inbound_channels(session, ids)
+        vias = await cabinet_repo.reply_vias(session, [*escalated, *mine, *unassigned])
+        bot_leads = await cabinet_repo.bot_channel_leads(session, ids)
 
     def out(rows: list[Lead]) -> list[LeadOut]:
         return [
-            lead_out(r, escalations.get(r.id), names, channels.get(r.id)).model_copy(
-                update={"handoff_note": notes.get(r.id)}
-            )
+            lead_out(
+                r,
+                escalations.get(r.id),
+                names,
+                channels.get(r.id),
+                vias.get(r.id),
+                r.id in bot_leads,
+            ).model_copy(update={"handoff_note": notes.get(r.id)})
             for r in rows
         ]
 
@@ -331,7 +344,9 @@ async def get_lead(lead_id: int, _: Reader, container: ContainerDep) -> LeadDeta
             else None
         )
         reply_channel = await cabinet_repo.last_inbound_channel(session, lead_id)
-    base = lead_out(lead, escalation, names, reply_channel)
+        via = (await cabinet_repo.reply_vias(session, [lead]))[lead_id]
+        bot_channel = lead_id in await cabinet_repo.bot_channel_leads(session, [lead_id])
+    base = lead_out(lead, escalation, names, reply_channel, via, bot_channel)
     mode = await container.backoffice_mode()
     now = datetime.now(UTC)
     waiting = web_lead_sla.awaiting(lead.first_response_due_at, lead.assigned_user_id)
@@ -385,6 +400,10 @@ async def lead_messages(
 async def reply(
     lead_id: int, body: Reply, who: DialogReplier, container: ContainerDep
 ) -> ActionResult:
+    """Ответ менеджера: канал выбирает CRM (`reply_via` карточки): Telegram, кабинет или письмо с
+    почты компании. Отказы 409 `details.reason`: `no_reply_channel` (отвечать некуда,
+    `details.blocked` — причина), `no_consent` (Telegram есть, согласия нет), `smtp_not_configured`
+    (письмо, почта не подключена), `take_first`, `delivery_unconfirmed`."""
     message_id = await container.lead_service.reply(
         who, lead_id, body.text, client_message_id=body.client_message_id
     )
