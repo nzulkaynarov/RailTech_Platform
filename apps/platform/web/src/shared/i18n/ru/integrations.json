@@ -300,7 +300,8 @@
         "eds": "Документооборот"
       },
       "attachments_one": "вложение: {{count}}",
-      "attachments_other": "вложений: {{count}}"
+      "attachments_other": "вложений: {{count}}",
+      "bounce": "Не дошло: {{reason}}"
     },
     "reason": {
       "smtp_not_configured": "Почта не настроена — Настройки · Подключения · Почта",

@@ -12,7 +12,7 @@ from typing import Any, Literal, get_args
 from pydantic import BaseModel, ConfigDict
 
 from app.clients import crm_models as crm
-from app.crm_leads_view import invitation, status_of
+from app.crm_leads_view import email_problem, invitation, status_of
 from app.feeds.models import SourceState, StepCode
 from app.feeds.numbers import lead_number
 from app.schemas_crm_leads import (
@@ -96,6 +96,7 @@ class CrmContact(_Crm):
     telegram_identity_id: int | None = None
     is_primary: bool = False
     preferred_channel: Literal["email", "telegram", "both"] | None = None
+    email_undeliverable: crm.EmailUndeliverableOut | None = None
 
 
 class CrmSuggestion(_Crm):
@@ -270,6 +271,7 @@ def contact_view(contact: CrmContact, telegram: dict[int, str | None]) -> Client
         channels=channels,
         preferred_channel=contact.preferred_channel,
         is_primary=contact.is_primary,
+        email_problem=email_problem(contact.email_undeliverable),
     )
 
 

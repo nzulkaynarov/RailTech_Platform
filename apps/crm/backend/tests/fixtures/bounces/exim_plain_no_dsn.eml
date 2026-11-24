@@ -1,0 +1,16 @@
+From: Mail Delivery System <Mailer-Daemon@old.example>
+To: crm@railtech.example
+Subject: Mail delivery failed: returning message to sender
+Message-ID: <exim-1@old.example>
+X-Failed-Recipients: gone@old.example
+Auto-Submitted: auto-replied
+Content-Type: text/plain; charset=utf-8
+
+This message was created automatically by mail delivery software.
+
+A message that you sent could not be delivered to one or more of its recipients.
+
+  gone@old.example
+    host mx.old.example [10.0.0.1]
+    SMTP error from remote mail server after RCPT TO:<gone@old.example>:
+    550 5.1.1 <gone@old.example>: Recipient address rejected: User unknown in virtual mailbox table

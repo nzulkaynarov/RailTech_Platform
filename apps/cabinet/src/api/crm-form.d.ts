@@ -19,7 +19,8 @@ export interface paths {
          *     Без аутентификации. Нужны телефон или e-mail и `consent: true` (согласие на обработку ПДн,
          *     Q-12). Ошибки: 422 `validation_failed` с `details.reason` (`consent_required` |
          *     `form_token_invalid` | `form_too_fast` | `form_token_expired` | `contact_required` |
-         *     `invalid_phone` | `invalid_email`), 429 `rate_limited` (окно по IP расходуют только запросы,
+         *     `invalid_phone` | `invalid_email`; у несуществующего почтового домена ещё `domain_missing`,
+         *     при сбое DNS заявка принимается), 429 `rate_limited` (окно по IP расходуют только запросы,
          *     прошедшие проверку контакта). Телефон Узбекистана — `+998` и 9 цифр.
          *     Повторный запрос известного контакта дополняет существующую карточку. Необязательные факты
          *     об источнике (`form`, `page`, `referrer`, `utm`, `landing_language`) сохраняются в лиде. Ответ

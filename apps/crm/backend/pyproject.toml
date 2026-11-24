@@ -10,6 +10,7 @@ dependencies = [
     "argon2-cffi>=25.1.0",
     "asgi-correlation-id>=5.0.1",
     "casbin-async-sqlalchemy-adapter>=1.17.0",
+    "dnspython>=2.7",
     "docling-core[chunking-openai]>=2.101.0",
     "fastapi>=0.143.0",
     "httpx>=0.28.1",

@@ -35,6 +35,9 @@ class FakeMail:
         self.sent: list[tuple[str, str, RenderedEmail]] = []
         self.error: Exception | None = None
 
+    async def is_undeliverable(self, email: str | None) -> bool:
+        return False
+
     async def send_rendered(self, template: str, to: str, rendered: RenderedEmail, **_: Any) -> Any:
         if self.error is not None:
             raise self.error

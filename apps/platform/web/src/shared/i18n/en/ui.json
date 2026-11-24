@@ -254,5 +254,16 @@
     "confirmObject_price_request": "the price request link",
     "confirmObject_supplier_order": "the order link",
     "loadFailed_partner": "Could not load the partner links."
+  },
+  "emailProblem": {
+    "title": "Emails to this address are not delivered",
+    "line": "{{title}}: {{reason}} · {{date}}",
+    "reasons": {
+      "domain_not_found": "no such mail domain",
+      "mailbox_not_found": "no such mailbox",
+      "mailbox_full": "the mailbox is full",
+      "rejected": "the recipient's server rejected the email",
+      "other": "the mail server returned the email"
+    }
   }
 }

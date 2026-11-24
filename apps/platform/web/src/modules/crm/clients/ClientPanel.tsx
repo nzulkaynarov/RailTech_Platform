@@ -29,6 +29,7 @@ import { useFormat } from "../../../shared/lib/useFormat";
 import { DefinitionList } from "../../../shared/ui/DefinitionList";
 import { DoNotWorkStrip } from "../../../shared/ui/DoNotWorkStrip";
 import { DocNumber } from "../../../shared/ui/DocNumber";
+import { EmailProblem } from "../../../shared/ui/EmailProblem";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { ErrorNote } from "../../../shared/ui/FormParts";
 import { LinkButton } from "../../../shared/ui/LinkButton";
@@ -63,6 +64,7 @@ function Contact({ contact }: { contact: ClientContactView }) {
       ) : (
         <span className="pf-req-error">{t("card.noChannels")}</span>
       )}
+      <EmailProblem problem={contact.email_problem} />
       {contact.preferred_channel ? (
         <span className="pf-hint">
           {t("card.preferred", { channel: t(`card.resendChannels.${contact.preferred_channel}`) })}

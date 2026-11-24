@@ -46,3 +46,24 @@ class InvitationOut(NoticeOut):
 class InviteRequest(BaseModel):
     channel: InviteChannel
     contact_id: int | None = None
+
+
+BounceReason = Literal["domain_not_found", "mailbox_not_found", "mailbox_full", "rejected", "other"]
+
+
+class EmailUndeliverableOut(BaseModel):
+    """Mail servers return letters to this address (delivery reports): the card shows «letters do
+    not arrive» with the reason in plain words and the date. Absent — nothing known."""
+
+    kind: Literal["permanent", "soft"]
+    reason: BounceReason
+    last_at: datetime
+    reports: int
+
+
+class EmailBounceOut(BaseModel):
+    """A delivery report of this letter in the mail log: why it did not arrive."""
+
+    reason: BounceReason
+    status: str | None = None
+    at: datetime

@@ -30,6 +30,7 @@ import structlog
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.domain.bounce import parse_bounce
 from app.domain.inbound_folders import FolderSetting, is_history
 from app.domain.inbound_mail import ParsedMail, find_inns, parse_message
 from app.domain.inbound_mail_flow import (
@@ -56,6 +57,7 @@ from app.repositories import lead_intake as leads_repo
 from app.repositories import mail_types as types_repo
 from app.security import audit
 from app.security.secrets_store import SecretsStore
+from app.services import bounces
 from app.services.settings import SettingsService
 
 logger = structlog.get_logger(__name__)
@@ -222,6 +224,21 @@ class InboundMailIngest:
         общего ящика (логин приёма) для правила «адресовано лично»."""
         # Разбор (очистка HTML, цитаты) — CPU: вне цикла событий, тяжёлое письмо не вешает воркер.
         parsed = await asyncio.to_thread(parse_message, item.raw)
+        # A delivery report of our own letter is not mail for people: it marks the address and
+        # stays in the mail log (`email_log`), never in the queue or among leads.
+        try:
+            report = await asyncio.to_thread(parse_bounce, item.raw)
+        except Exception:  # recognition must never stop the poll: an odd letter is a normal one
+            logger.exception("inbound_mail_bounce_parse_failed", uid=item.uid)
+            report = None
+        if report is not None:
+            async with self._sessions() as session, session.begin():
+                applied = await bounces.apply(session, report, parsed.message_id)
+            logger.info("inbound_mail_bounce", severity=report.severity, reason=report.reason)
+            # A real report is never a letter for people. A letter only «looking like» one
+            # (mailer-daemon sender, no multipart/report) that is not about our mail stays normal.
+            if applied.linked or report.is_report:
+                return None
         async with self._sessions() as session, session.begin():
             if await repo.exists(session, parsed.message_id):
                 if not folder.spam and await repo.promote_from_spam(

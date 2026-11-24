@@ -322,6 +322,13 @@ function seedMailLog(): MailLogItem[] {
       created_at: "2026-10-26T08:55:00Z",
       sent_at: "2026-10-26T08:55:04Z",
     }),
+    row(8, "sent", "Мы получили ваш запрос", "em@tvorog-demo.example", {
+      template: "web_confirmation",
+      purpose: null,
+      created_at: "2026-10-26T09:10:00Z",
+      sent_at: "2026-10-26T09:10:03Z",
+      bounce: { reason: "domain_not_found", at: "2026-10-26T09:10:40Z" },
+    }),
     row(6, "failed", "Вход в кабинет", "old-address@demo.example", {
       template: "portal_magic_link",
       purpose: "portal_magic_link",

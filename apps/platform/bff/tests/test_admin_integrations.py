@@ -19,6 +19,7 @@ from tests.integrations_support import (
     EARLIER,
     CrmIntegrationsFake,
     fresh_secret,
+    mail_row,
     offsite_status,
     service,
     services_out,
@@ -541,6 +542,7 @@ async def test_mail_log_filters_and_hides_internal_fields(
     assert set(row) == {
         "attachments",
         "attempts",
+        "bounce",
         "created_at",
         "error",
         "id",
@@ -555,6 +557,32 @@ async def test_mail_log_filters_and_hides_internal_fields(
     assert (row["source"], row["purpose"], row["attachments"]) == ("crm", "invite", 0)
     bad = await web.client.get(f"{BASE}/smtp/log", params={"status": "bounced"})
     assert bad.status_code == 422
+
+
+async def test_mail_log_shows_the_delivery_report_of_a_letter(
+    web: Web, crm: CrmIntegrationsFake, check: ContractChecker
+) -> None:
+    crm.answer(
+        "GET",
+        "integrations/smtp/log",
+        body=[
+            mail_row(
+                3,
+                bounce={
+                    "reason": "domain_not_found",
+                    "status": "5.4.4",
+                    "at": "2026-11-24T10:15:00Z",
+                },
+            ),
+            mail_row(2),
+        ],
+    )
+    await web.login(["ADMIN"])
+    response = await web.client.get(f"{BASE}/smtp/log")
+    check(response, "/admin/integrations/smtp/log", "get")
+    first, second = response.json()["items"]
+    assert first["bounce"] == {"reason": "domain_not_found", "at": "2026-11-24T10:15:00Z"}
+    assert second["bounce"] is None
 
 
 async def test_smtp_test_send_is_queued(web: Web, crm: CrmIntegrationsFake) -> None:

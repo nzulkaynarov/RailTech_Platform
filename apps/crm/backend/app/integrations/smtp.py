@@ -167,8 +167,11 @@ class SmtpCheck:
 class SmtpTransport(Protocol):
     async def check(self, connection: SmtpConnection) -> SmtpCheck: ...
 
-    async def send(self, connection: SmtpConnection, to: str, subject: str, body: str) -> None:
-        """Простое письмо: `to` — адрес или несколько через запятую.
+    async def send(
+        self, connection: SmtpConnection, to: str, subject: str, body: str
+    ) -> str | None:
+        """Простое письмо: `to` — адрес или несколько через запятую; ответ — Message-ID письма без
+        угловых скобок (по нему находится отчёт о недоставке), подмена в тестах может вернуть None.
 
         Письмо с HTML, ответом на другой адрес или вложениями (запросы ERP и EDS, W18A-P1) —
         тот же метод с ключевыми `html`, `reply_to`, `attachments`, ответ в цепочку (W18A-P2) —
@@ -242,7 +245,7 @@ class SmtplibTransport:
         attachments: tuple[MailAttachment, ...] = (),
         headers: tuple[tuple[str, str], ...] = (),
         cc: tuple[str, ...] = (),
-    ) -> None:
+    ) -> str | None:
         message = build_message(
             connection,
             to,
@@ -255,6 +258,7 @@ class SmtplibTransport:
             cc=cc,
         )
         await asyncio.to_thread(self._send, connection, message)
+        return str(message["Message-ID"]).strip("<>")
 
     def _check(self, connection: SmtpConnection) -> SmtpCheck:
         started = time.monotonic()

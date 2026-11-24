@@ -254,5 +254,16 @@
     "confirmObject_price_request": "narx sörovi havolasini",
     "confirmObject_supplier_order": "buyurtma havolasini",
     "loadFailed_partner": "Hamkor havolalarini yuklab bölmadi."
+  },
+  "emailProblem": {
+    "title": "Bu manzilga xatlar yetib bormayapti",
+    "line": "{{title}}: {{reason}} · {{date}}",
+    "reasons": {
+      "domain_not_found": "bunday pochta domeni yöq",
+      "mailbox_not_found": "bunday pochta qutisi yöq",
+      "mailbox_full": "pochta qutisi tölgan",
+      "rejected": "qabul qiluvchining serveri xatni rad etdi",
+      "other": "pochta serveri xatni qaytardi"
+    }
   }
 }

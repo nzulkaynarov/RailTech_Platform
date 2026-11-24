@@ -254,5 +254,16 @@
     "confirmObject_price_request": "ссылку на запрос цены",
     "confirmObject_supplier_order": "ссылку на заказ",
     "loadFailed_partner": "Не удалось загрузить ссылки партнёра."
+  },
+  "emailProblem": {
+    "title": "Письма на этот адрес не доходят",
+    "line": "{{title}}: {{reason}} · {{date}}",
+    "reasons": {
+      "domain_not_found": "такого почтового домена нет",
+      "mailbox_not_found": "такого ящика нет",
+      "mailbox_full": "ящик переполнен",
+      "rejected": "сервер получателя отклонил письмо",
+      "other": "почтовый сервер вернул письмо"
+    }
   }
 }
