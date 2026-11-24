@@ -7,10 +7,12 @@ CRM — на respx (`crm_leads_support`), ответы BFF сверяются с
 уходит в браузер (заметки клиента, примечание контакта), 404 клиента.
 """
 
+import httpx
 import pytest
 
 from tests.backends import Backends
 from tests.conftest import ContractChecker, Web
+from tests.consts import ERP_URL
 from tests.crm_leads_support import (
     LETTER_ID,
     CrmLeadsFake,
@@ -21,6 +23,17 @@ from tests.crm_leads_support import (
 )
 
 BASE = "/api/v1/crm/clients"
+
+
+LOGOS = f"{ERP_URL}/api/v1/parties/organizations/logos/"
+
+
+@pytest.fixture(autouse=True)
+def erp_logos(be: Backends) -> None:
+    """ERP отдаёт версию логотипа только компании 501 (ЕД-5): остальные строки — без логотипа."""
+    be.router.get(LOGOS).mock(
+        return_value=httpx.Response(200, json={"results": {"501": "a1b2c3d4e5"}})
+    )
 
 
 @pytest.fixture
@@ -61,8 +74,10 @@ async def test_list_puts_recently_active_first(
         "last_activity_at": "2026-10-27T08:48:00Z",
         "handoff_status": "done",
         "do_not_work": False,
+        "logo_url": "/api/v1/people/counterparties/501/logo?v=a1b2c3d4e5",
     }
     assert items[2]["in_erp"] is False
+    assert items[2]["logo_url"] is None
     assert crm.params("GET", "clients") == {"q": "Демо"}
     assert "внутренняя заметка" not in response.text
 
@@ -381,3 +396,23 @@ async def test_card_without_the_mark_has_none(
     await web.login(["DIRECTOR"])
     card = check(await web.client.get(f"{BASE}/12"), "/crm/clients/{id}", "get").json()
     assert card["do_not_work"] is None
+
+
+async def test_list_still_works_without_logos_when_erp_refuses(
+    web: Web, be: Backends, crm: CrmLeadsFake, check: ContractChecker
+) -> None:
+    be.router.get(LOGOS).mock(return_value=httpx.Response(503, json={"detail": "down"}))
+    await web.login(["DIRECTOR"])
+    items = check(await web.client.get(BASE), "/crm/clients", "get").json()["items"]
+    assert items
+    assert all(row["logo_url"] is None for row in items)
+
+
+async def test_list_asks_erp_for_the_companies_of_the_rows_only(
+    web: Web, be: Backends, crm: CrmLeadsFake
+) -> None:
+    await web.login(["DIRECTOR"])
+    await web.client.get(BASE)
+    calls = [c for r in be.router.routes for c in r.calls if str(c.request.url).startswith(LOGOS)]
+    assert calls
+    assert dict(calls[-1].request.url.params) == {"ids": "501"}

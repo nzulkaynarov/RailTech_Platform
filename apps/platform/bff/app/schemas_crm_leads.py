@@ -155,6 +155,8 @@ class ClientRow(BaseModel):
     handoff_status: Transfer | None
     # Х-8: с компанией не работаем (действующая отметка «Не работать»)
     do_not_work: bool = False
+    # ЕД-5: логотип компании ERP (адрес на BFF с версией); `None` — буквы названия
+    logo_url: str | None = None
 
 
 class ClientList(BaseModel):

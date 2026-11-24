@@ -13,6 +13,7 @@ from typing import Annotated, Any
 from fastapi import APIRouter, Depends, Path, Query
 from pydantic import TypeAdapter, ValidationError
 
+from app.api.people_pictures import logo_urls
 from app.clients import crm_models as crm
 from app.clients.crm_proxy import CrmProxy
 from app.crm_clients_view import (
@@ -50,7 +51,12 @@ async def list_clients(
 ) -> ClientList:
     params = {"q": q.strip()} if q and q.strip() else None
     rows = await CrmProxy(authed.call).get_list(CrmClientItem, f"{API}/clients", params=params)
-    return ClientList(items=recent_first([client_row(r) for r in rows]))
+    logos = await logo_urls(authed, [r.erp_company_id for r in rows if r.erp_company_id])
+    items = [
+        client_row(r).model_copy(update={"logo_url": logos.get(r.erp_company_id or 0)})
+        for r in rows
+    ]
+    return ClientList(items=recent_first(items))
 
 
 async def _part[T](proxy: CrmProxy, adapter: TypeAdapter[T], path: str, **params: Any) -> T | None:
