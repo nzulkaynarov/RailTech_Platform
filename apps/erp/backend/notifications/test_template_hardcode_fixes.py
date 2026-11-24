@@ -98,7 +98,6 @@ def test_client_email_falls_back_to_platform_brand_without_seller():
             "valid_until": "—",
         },
     )
-    header = html.split("padding:24px 32px", 1)[1][:400]
     assert "ERP" not in html  # no brand and no company name: nothing, never the stock «ERP» word
     assert "#1e3a8a" in html  # platform default accent
 
