@@ -38,7 +38,7 @@ LETTERHEAD = Letterhead(
     logo=Logo(png(), "image/png"),
 )
 
-UZ_TEXT = "Oʻzbekiston Respublikasi, gʻalla, qoʻshimcha shartnoma; кириллица: ўқғҳ ЎҚҒҲ"
+UZ_TEXT = "Özbekiston Respublikasi, ğalla, qöşimça şartnoma; кириллица: ўқғҳ ЎҚҒҲ"
 
 SENTENCES = (
     "Сообщаем, что поставка оборудования по заявке будет выполнена в согласованный срок силами нашей бригады.",
@@ -154,7 +154,7 @@ def letter_uz() -> dict[str, Any]:
             para(
                 "Sizning xatingizni olganimizni va ",
                 var("deal.number"),
-                " buyurtmasi boʻyicha yetkazib berishga tayyorligimizni tasdiqlaymiz.",
+                " buyurtmasi böyiça yetkazib berişga tayyorligimizni tasdiqlaymiz.",
             ),
             para(UZ_TEXT),
             para("Hurmat bilan,"),

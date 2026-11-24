@@ -146,7 +146,7 @@ describe('FX-4: смена банковских реквизитов', () => {
     signedIn('viewer');
     renderApp('/company');
 
-    expect(await screen.findAllByRole('status', { name: /Запрос на смену банковских реквизитов|so.rovi/i })).toBeTruthy();
+    expect(await screen.findAllByRole('status', { name: /Запрос на смену банковских реквизитов|sörovi/i })).toBeTruthy();
     expect(screen.queryByText(NEW_ACCOUNT)).not.toBeInTheDocument();
   });
 });
