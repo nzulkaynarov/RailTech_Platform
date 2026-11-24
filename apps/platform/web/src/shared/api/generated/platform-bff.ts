@@ -146,6 +146,7 @@ import type {
   DoNotWorkIn,
   DocflowSettings,
   DocflowSettingsPatch,
+  DocumentClientLinks,
   DocumentPlaceholders,
   DocumentPreview,
   DocumentTemplate,
@@ -12984,6 +12985,277 @@ export function useDownloadEdsProjectFile<
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+export const getGetEdsProjectDocumentClientLinksUrl = (
+  ref: string,
+  kind: "contract" | "invoice" | "act",
+  docId: number,
+) => {
+  return `/api/v1/eds/projects/${ref}/documents/${kind}/${docId}/client-links`;
+};
+
+/**
+ * Кому ушла личная ссылка на документ (адрес замаскирован), когда, открывали ли её и в каком она состоянии (`active`, `revoked`, `expired`, `superseded`). Документ обязан быть в карточке этого проекта (иначе 404). Видит тот, кто вправе отправлять этот документ (решает ERP); у остальных список пуст. Раздел `eds.projects` — чтение.
+ * @summary EDS · Проект: ссылки клиента на договор, счёт или акт в Кабинете
+ */
+export const getEdsProjectDocumentClientLinks = async (
+  ref: string,
+  kind: "contract" | "invoice" | "act",
+  docId: number,
+  options?: Parameters<typeof http>[1],
+): Promise<DocumentClientLinks> => {
+  return http<DocumentClientLinks>(getGetEdsProjectDocumentClientLinksUrl(ref, kind, docId), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetEdsProjectDocumentClientLinksQueryKey = (
+  ref: string,
+  kind: "contract" | "invoice" | "act",
+  docId: number,
+) => {
+  return [`/api/v1/eds/projects/${ref}/documents/${kind}/${docId}/client-links`] as const;
+};
+
+export const getGetEdsProjectDocumentClientLinksQueryOptions = <
+  TData = Awaited<ReturnType<typeof getEdsProjectDocumentClientLinks>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+>(
+  ref: string,
+  kind: "contract" | "invoice" | "act",
+  docId: number,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getEdsProjectDocumentClientLinks>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetEdsProjectDocumentClientLinksQueryKey(ref, kind, docId);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getEdsProjectDocumentClientLinks>>> = ({
+    signal,
+  }) => getEdsProjectDocumentClientLinks(ref, kind, docId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled:
+      ref !== null &&
+      ref !== undefined &&
+      kind !== null &&
+      kind !== undefined &&
+      docId !== null &&
+      docId !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getEdsProjectDocumentClientLinks>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetEdsProjectDocumentClientLinksQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getEdsProjectDocumentClientLinks>>
+>;
+export type GetEdsProjectDocumentClientLinksQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse
+>;
+
+export function useGetEdsProjectDocumentClientLinks<
+  TData = Awaited<ReturnType<typeof getEdsProjectDocumentClientLinks>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+>(
+  ref: string,
+  kind: "contract" | "invoice" | "act",
+  docId: number,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getEdsProjectDocumentClientLinks>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getEdsProjectDocumentClientLinks>>,
+          TError,
+          Awaited<ReturnType<typeof getEdsProjectDocumentClientLinks>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetEdsProjectDocumentClientLinks<
+  TData = Awaited<ReturnType<typeof getEdsProjectDocumentClientLinks>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+>(
+  ref: string,
+  kind: "contract" | "invoice" | "act",
+  docId: number,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getEdsProjectDocumentClientLinks>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getEdsProjectDocumentClientLinks>>,
+          TError,
+          Awaited<ReturnType<typeof getEdsProjectDocumentClientLinks>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetEdsProjectDocumentClientLinks<
+  TData = Awaited<ReturnType<typeof getEdsProjectDocumentClientLinks>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+>(
+  ref: string,
+  kind: "contract" | "invoice" | "act",
+  docId: number,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getEdsProjectDocumentClientLinks>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary EDS · Проект: ссылки клиента на договор, счёт или акт в Кабинете
+ */
+
+export function useGetEdsProjectDocumentClientLinks<
+  TData = Awaited<ReturnType<typeof getEdsProjectDocumentClientLinks>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+>(
+  ref: string,
+  kind: "contract" | "invoice" | "act",
+  docId: number,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getEdsProjectDocumentClientLinks>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetEdsProjectDocumentClientLinksQueryOptions(ref, kind, docId, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getRevokeEdsProjectDocumentClientLinksUrl = (
+  ref: string,
+  kind: "contract" | "invoice" | "act",
+  docId: number,
+) => {
+  return `/api/v1/eds/projects/${ref}/documents/${kind}/${docId}/revoke-links`;
+};
+
+/**
+ * Гасит все живые ссылки ЭТОГО документа у всех получателей (клиент по ним увидит «ссылка отозвана»), пишет событие в журнал сделки; повтор безвреден. Новая отправка документа даст новую ссылку. Право — то же, что на отправку документа (решает ERP; иначе 403). Раздел `eds.projects` — чтение.
+ * @summary EDS · Проект: отозвать ссылки клиента на договор, счёт или акт
+ */
+export const revokeEdsProjectDocumentClientLinks = async (
+  ref: string,
+  kind: "contract" | "invoice" | "act",
+  docId: number,
+  options?: Parameters<typeof http>[1],
+): Promise<DocumentClientLinks> => {
+  return http<DocumentClientLinks>(getRevokeEdsProjectDocumentClientLinksUrl(ref, kind, docId), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getRevokeEdsProjectDocumentClientLinksMutationKey = () =>
+  ["revokeEdsProjectDocumentClientLinks"] as const;
+
+export const getRevokeEdsProjectDocumentClientLinksMutationOptions = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof revokeEdsProjectDocumentClientLinks>>,
+    TError,
+    RevokeEdsProjectDocumentClientLinksMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof revokeEdsProjectDocumentClientLinks>>,
+  TError,
+  RevokeEdsProjectDocumentClientLinksMutationVariables,
+  TContext
+> => {
+  const mutationKey = getRevokeEdsProjectDocumentClientLinksMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof revokeEdsProjectDocumentClientLinks>>,
+    RevokeEdsProjectDocumentClientLinksMutationVariables
+  > = (props) => {
+    const { ref, kind, docId } = props ?? {};
+
+    return revokeEdsProjectDocumentClientLinks(ref, kind, docId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RevokeEdsProjectDocumentClientLinksMutationResult = NonNullable<
+  Awaited<ReturnType<typeof revokeEdsProjectDocumentClientLinks>>
+>;
+
+export type RevokeEdsProjectDocumentClientLinksMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse
+>;
+export type RevokeEdsProjectDocumentClientLinksMutationVariables = {
+  ref: string;
+  kind: "contract" | "invoice" | "act";
+  docId: number;
+};
+
+/**
+ * @summary EDS · Проект: отозвать ссылки клиента на договор, счёт или акт
+ */
+export const useRevokeEdsProjectDocumentClientLinks = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof revokeEdsProjectDocumentClientLinks>>,
+      TError,
+      RevokeEdsProjectDocumentClientLinksMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof revokeEdsProjectDocumentClientLinks>>,
+  TError,
+  RevokeEdsProjectDocumentClientLinksMutationVariables,
+  TContext
+> => {
+  return useMutation(getRevokeEdsProjectDocumentClientLinksMutationOptions(options), queryClient);
+};
 
 export const getRequestEdsDocumentPdfUrl = (id: string) => {
   return `/api/v1/eds/documents/${id}/pdf`;

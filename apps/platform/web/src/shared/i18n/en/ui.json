@@ -213,5 +213,36 @@
     "by": "Marked by {{name}}, {{date}}",
     "until": "until {{date}}",
     "unknown": "unknown employee"
+  },
+  "clientLink": {
+    "title": "Client link in the Cabinet",
+    "state": {
+      "active": "The link works until {{date}}.",
+      "activeNoDate": "The link works.",
+      "revoked": "The link is revoked: the client can open nothing with it. Sending the document again gives a new link.",
+      "revoked_quote": "The link is revoked: the client can open nothing with it. Sending the quote again gives a new link.",
+      "expired": "The link has expired.",
+      "superseded": "A newer version of the quote exists: the client will see only that with this link.",
+      "none": "There is no link."
+    },
+    "to": "Recipient: {{to}}.",
+    "sent": "Sent: {{date}}.",
+    "opened": "The client opened it: {{date}}.",
+    "notOpened": "The client has not opened it yet.",
+    "rowState": {
+      "revoked": "Revoked.",
+      "expired": "Expired.",
+      "superseded": "Replaced by a newer version."
+    },
+    "revoke": "Revoke the link",
+    "confirmText": "The client will see nothing with it any more. Sending the document again gives a new link.",
+    "confirmText_quote": "The client will see nothing with it any more. Sending the quote again gives a new link.",
+    "done": "The link is revoked.",
+    "failed": "Could not revoke the link.",
+    "confirmAction": "Revoke",
+    "confirmObject_quote": "the quote link",
+    "confirmObject_contract": "the contract link",
+    "confirmObject_invoice": "the invoice link",
+    "confirmObject_act": "the act link"
   }
 }

@@ -188,6 +188,7 @@ import type {
   DictionarySyncResult,
   DoNotWork,
   DocflowSettings,
+  DocumentClientLinks,
   DocumentPlaceholders,
   DocumentPreview,
   DocumentTemplate,
@@ -8193,6 +8194,48 @@ export const getDownloadEdsProjectFileResponseMock = (
     new Blob([new Uint8Array(faker.number.int({ min: 1, max: 64 }))]),
     { detail: "GENERATING", retry_after: faker.number.int(), ...overrideResponse },
   ]);
+
+export const getGetEdsProjectDocumentClientLinksResponseMock = (
+  overrideResponse: Partial<Extract<DocumentClientLinks, object>> = {},
+): DocumentClientLinks => ({
+  links: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    recipient_hint: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    sent_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    first_opened_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    last_opened_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    expires_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    state: faker.helpers.arrayElement(["active", "revoked", "expired", "superseded"] as const),
+  })),
+  can_revoke: faker.datatype.boolean(),
+  ...overrideResponse,
+});
+
+export const getRevokeEdsProjectDocumentClientLinksResponseMock = (
+  overrideResponse: Partial<Extract<DocumentClientLinks, object>> = {},
+): DocumentClientLinks => ({
+  links: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    recipient_hint: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    sent_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    first_opened_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    last_opened_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    expires_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    state: faker.helpers.arrayElement(["active", "revoked", "expired", "superseded"] as const),
+  })),
+  can_revoke: faker.datatype.boolean(),
+  ...overrideResponse,
+});
 
 export const getRequestEdsDocumentPdfResponseMock = (
   overrideResponse: Partial<Extract<EdsDocumentPdf, object>> = {},
@@ -42408,6 +42451,54 @@ export const getDownloadEdsProjectFileMockHandler = (
   );
 };
 
+export const getGetEdsProjectDocumentClientLinksMockHandler = (
+  overrideResponse?:
+    | DocumentClientLinks
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<DocumentClientLinks> | DocumentClientLinks),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/eds/projects/:ref/documents/:kind/:docId/client-links",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetEdsProjectDocumentClientLinksResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getRevokeEdsProjectDocumentClientLinksMockHandler = (
+  overrideResponse?:
+    | DocumentClientLinks
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<DocumentClientLinks> | DocumentClientLinks),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/eds/projects/:ref/documents/:kind/:docId/revoke-links",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getRevokeEdsProjectDocumentClientLinksResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
 export const getRequestEdsDocumentPdfMockHandler = (
   overrideResponse?:
     | EdsDocumentPdf
@@ -52127,6 +52218,8 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getMarkEdsProjectDeliveryMockHandler(),
   getDownloadEdsProjectDeliveryProofMockHandler(),
   getDownloadEdsProjectFileMockHandler(),
+  getGetEdsProjectDocumentClientLinksMockHandler(),
+  getRevokeEdsProjectDocumentClientLinksMockHandler(),
   getRequestEdsDocumentPdfMockHandler(),
   getGetEdsDocumentPdfMockHandler(),
   getListEdsTemplatesMockHandler(),

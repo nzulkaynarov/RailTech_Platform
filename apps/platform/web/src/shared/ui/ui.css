@@ -871,3 +871,13 @@ tr > td.pf-col-num {
 .pf-overlay-aware {
   padding-inline-end: max(0px, calc(var(--pf-overlay-inset, 0px) - 24px + 16px));
 }
+
+/* Ссылка клиента в Кабинете (ДК-3б): несколько получателей — каждый отдельной группой строк */
+.pf-doc-link-row {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--rt-color-border-secondary, var(--ant-color-split));
+}
+.pf-doc-link-row > .pf-hint {
+  margin: 0 0 2px;
+}
