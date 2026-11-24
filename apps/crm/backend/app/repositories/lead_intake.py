@@ -135,3 +135,27 @@ async def open_lead_of_client(session: AsyncSession, client_id: int) -> Lead | N
         .limit(1)
     )
     return (await session.scalars(stmt)).first()
+
+
+async def exact_client_of_contact(
+    session: AsyncSession, *, phone: str | None, email: str | None
+) -> int | None:
+    """Client id when ALL given contacts belong to ONE contact of ONE client, else None.
+
+    Both phone and e-mail given → the same client contact row must carry both; one given → it
+    must point to one client.
+    """
+    if not phone and not email:
+        return None
+    stmt = (
+        select(Client.id)
+        .join(ClientContact, ClientContact.client_id == Client.id)
+        .where(Client.is_active.is_(True))
+        .distinct()
+    )
+    if phone:
+        stmt = stmt.where(ClientContact.phone_e164 == phone)
+    if email:
+        stmt = stmt.where(func.lower(ClientContact.email) == email.lower())
+    ids = list((await session.scalars(stmt.limit(2))).all())
+    return int(ids[0]) if len(ids) == 1 else None

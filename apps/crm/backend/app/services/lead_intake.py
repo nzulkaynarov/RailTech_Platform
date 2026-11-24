@@ -3,7 +3,10 @@
 Веб-лид: без аутентификации, антиспам по `domain/web_form.py` (honeypot, подписанный токен,
 окно по IP — пороги из `settings.web_form`), источник `web`, попадает во «Входящие» в «Без
 ответственного» (`owner_mode=paused`, бот ему написать не может — Telegram-идентичности нет).
-Повторный запрос с тем же номером/почтой не плодит карточек: текст уходит заметкой в существующую.
+Повторный запрос с тем же номером/почтой не плодит карточек: текст уходит заметкой в существующую;
+почта и телефон карточки анонимным запросом не пишутся (второй канал не проверен — он в факте
+`new_contacts`). Запрос от контакта клиента (точное совпадение всех контактов, роль покупателя)
+уходит заметкой в открытый лид клиента, ответ 202 при этом нейтральный (`lead_id=null`).
 После приёма (D1-9) в той же транзакции заводятся подтверждение клиенту (`client_notices`: письмо
 или Telegram, SPEC-v3
 §8) и срок первого ответа (`first_response_due_at`, `settings.web_form.first_response_sla_minutes`);
@@ -206,7 +209,7 @@ class LeadIntakeService:
             clients: list[tuple[int, str]] = []
             if existing is None:
                 clients = await repo.clients_by_contact(session, phone=phone, email=email)
-                existing = await _client_open_lead(session, body, clients)
+                existing = await _client_open_lead(session, body, phone, email)
                 kind = "client_contact"
             if existing is not None:
                 lead_id, request_id = await _repeat_request(
@@ -214,6 +217,10 @@ class LeadIntakeService:
                 )
                 notice = await self._plan(session, existing, request_id)
                 follow_up = WebLeadFollowUp(lead_id, notice, None, repeat=True)
+                if kind == "client_contact":
+                    # The anonymous answer must not reveal the client's lead: neutral receipt.
+                    await self._follow_up(follow_up)
+                    return None
             else:
                 lead = await _new_web_lead(session, body, phone, email, text, ip, moment, full_cfg)
                 if clients:
@@ -419,16 +426,18 @@ def _consent_view(moment: datetime) -> dict[str, object]:
 
 
 async def _client_open_lead(
-    session: AsyncSession, body: WebLeadIn, clients: list[tuple[int, str]]
+    session: AsyncSession, body: WebLeadIn, phone: str | None, email: str | None
 ) -> Lead | None:
-    """Open lead of the client the requester belongs to — only for an exact, same-role match.
+    """Open lead of the client the requester is — only for an exact, same-role match.
 
-    Exact: phone and e-mail point to one client. Same role: the form is the buyers' one. Anything
-    else creates a lead (the caller records a possible duplicate).
+    Exact: ALL given contacts (phone and e-mail) belong to one contact of one client; one given
+    contact must point to one client. Same role: the form is the buyers' one. Anything else
+    creates a lead (the caller records a possible duplicate). Attaching writes no contacts.
     """
-    if len(clients) != 1 or not is_customer_form(body.form):
+    if not is_customer_form(body.form):
         return None
-    return await repo.open_lead_of_client(session, clients[0][0])
+    client_id = await repo.exact_client_of_contact(session, phone=phone, email=email)
+    return await repo.open_lead_of_client(session, client_id) if client_id is not None else None
 
 
 async def _note_possible_duplicate(
@@ -491,8 +500,10 @@ async def _repeat_request(
 ) -> tuple[int, int]:
     """Повторный запрос с сайта от известного контакта — заметкой в существующую карточку.
 
-    Пустые почта, телефон и компания карточки заполняются; отличающееся значение не
-    перезаписывается — оно в заметке и в факте `qualification.repeat_requests` (`new_contacts`).
+    Анонимная форма не доказывает владение второй почтой или телефоном: почта и телефон карточки
+    НЕ пишутся никогда (совпал один канал — он уже записан, другой не проверен). Пустая компания
+    заполняется; новые почта/телефон и отличающиеся значения — в заметке и в факте
+    `qualification.repeat_requests` (`new_contacts`, `unverified`) для менеджера.
     Признаки происхождения повтора и версия согласия — туда же и в аудит. Согласие карточки не
     трогаем: у Telegram-лида, ещё не давшего согласие боту, оно открыло бы обработку диалога ИИ.
     """
@@ -517,11 +528,16 @@ async def _repeat_request(
     if merge.differing:
         listed = "; ".join(f"{k}: {v}" for k, v in merge.differing.items())
         mark = f"{WEB_NOTE_MARK}[new contacts — {listed}] {text}"
-    note = LeadNote(lead_id=lead.id, user_id=None, text=mark[:4000], visible_to_bot=True)
+    note = LeadNote(
+        lead_id=lead.id,
+        user_id=None,
+        text=mark[:4000],
+        visible_to_bot=kind == "repeat" and not merge.differing,
+    )
     session.add(note)
     await session.flush()
     lead.notes_count += 1
-    if not lead.need_summary:
+    if kind == "repeat" and not lead.need_summary:
         lead.need_summary = text[:_SUMMARY_MAX]
     fact: dict[str, object] = {
         "kind": kind,
@@ -531,6 +547,7 @@ async def _repeat_request(
     }
     if merge.differing:
         fact["new_contacts"] = merge.differing
+        fact["unverified"] = True
     lead.qualification = append_fact(dict(lead.qualification or {}), REPEAT_KEY, fact, now=moment)
     await audit.record(
         session,
