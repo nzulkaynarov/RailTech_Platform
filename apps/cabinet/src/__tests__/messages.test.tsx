@@ -191,10 +191,10 @@ describe('«Сообщения»', () => {
     signedIn('viewer');
     renderApp('/messages');
     await heading('Xabarlar');
-    await within(page()).findByRole('list', { name: 'Menejer bilan yozishma' });
+    await within(page()).findByRole('list', { name: 'Menejer bilan yozişma' });
     expect(within(page()).getByLabelText('Menejerga xabar')).toBeDisabled();
-    expect(within(page()).getByRole('button', { name: 'Yuborish' })).toBeDisabled();
-    expect(within(page()).getByText(/sizda faqat körish/)).toBeInTheDocument();
+    expect(within(page()).getByRole('button', { name: 'Yuboriş' })).toBeDisabled();
+    expect(within(page()).getByText(/sizda faqat köriş/)).toBeInTheDocument();
   });
 
   it('шапка: отвечает менеджер из последнего ответа, переписку видит вся компания, файл — к запросу', async () => {

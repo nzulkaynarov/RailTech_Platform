@@ -31,7 +31,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
     },
     summary: {
       ru: 'Порядок подтверждения КП одноразовым кодом из письма (или из Telegram, если он подключён).',
-      uz: 'Bir martalik kod orqali tijorat taklifini tasdiqlash tartibi.',
+      uz: 'Bir martalik kod orqali tijorat taklifini tasdiqlaş tartibi.',
       en: 'Procedure for confirming a quote via one-time code.',
     },
     content: {
@@ -42,9 +42,9 @@ export const HELP_ARTICLES: HelpArticle[] = [
         'После кода КП принято — договор появится в «Договорах».',
       ],
       uz: [
-        '«TT» bo‘limida kerakli tijorat taklifi kartochkasini oching.',
+        '«TT» bölimida kerakli tijorat taklifi kartoçkasini oçing.',
         'Agar sizda tasdiqlaş huquqi bö‘lsa, TTda «Qabul qiliş» va «Rad etiş» tugmalari bö‘ladi.',
-        '«TTni qabul qilish» tugmasi bosilganda Telegram yoki pochtangizga 6 xonali tasdiqlash kodi yuboriladi.',
+        '«TTni qabul qiliş» tugmasi bosilganda Telegram yoki poçtangizga 6 xonali tasdiqlaş kodi yuboriladi.',
         'Kod kiritilgaç TT qabul qilinadi — şartnoma «Şartnomalar» bölimida paydo bö‘ladi.',
       ],
       en: [
@@ -151,7 +151,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
       uz: [
         'Hisoblar «Hisoblar» bölimida: rekvizitli PDF «Yuklab oliş» tugmasi bilan yuklanadi. PDFdagi QR-kod hisobning asl ekanini tekşiriş uçun.',
         'Töladingiz — «Töladim» tugmasini bosing va tölov topşiriqnomasini biriktiring.',
-        'Tushumni tasdiqlaganimizda hisob «Tölangan» bölib, bildirişnoma keladi.',
+        'Tuşumni tasdiqlaganimizda hisob «Tölangan» bölib, bildirişnoma keladi.',
       ],
       en: [
         'Invoices are under “Invoices”: download the PDF with payment details with “Download”. The QR code in the PDF is for checking that the invoice is genuine.',
@@ -166,12 +166,12 @@ export const HELP_ARTICLES: HelpArticle[] = [
     routePatterns: ['/deliveries'],
     title: {
       ru: 'Отслеживание доставки и отгрузок',
-      uz: 'Yetkazib berish va jo‘natmalarni kuzatish',
+      uz: 'Yetkazib beriş va jönatmalarni kuzatiş',
       en: 'Shipment and delivery tracking',
     },
     summary: {
       ru: 'Контроль этапов комплектации, отправки и поступления на склад.',
-      uz: 'Yetkazib berish bosqichlari va omborga kelib tushish nazorati.',
+      uz: 'Yetkazib beriş bosqiçlari va omborga kelib tuşiş nazorati.',
       en: 'Monitoring fulfillment, transit, and warehouse delivery.',
     },
     content: {
@@ -181,9 +181,9 @@ export const HELP_ARTICLES: HelpArticle[] = [
         'При изменении статуса доставки (отправлено, прибыло) вам поступит уведомление в выбранные каналы связи.',
       ],
       uz: [
-        '«Yetkazib berish» bo‘limida barcha jo‘natmalar bo‘yicha to‘liq ma‘lumot mavjud.',
-        'Har bir yetkazib berish uchun joriy holat, yetib kelish sanasi va tovarlar ro‘yxati ko‘rsatiladi.',
-        'Holat o‘zgarganda (jo‘natildi, yetib keldi) belgilangan aloqa kanallariga xabar yuboriladi.',
+        '«Yetkazib beriş» bölimida barça jönatmalar böyiça töliq maʼlumot mavjud.',
+        'Har bir yetkazib beriş uçun joriy holat, yetib keliş sanasi va tovarlar röyxati körsatiladi.',
+        'Holat özgarganda (jönatildi, yetib keldi) belgilangan aloqa kanallariga xabar yuboriladi.',
       ],
       en: [
         'The "Deliveries" section displays all shipments associated with your projects.',
@@ -198,12 +198,12 @@ export const HELP_ARTICLES: HelpArticle[] = [
     routePatterns: ['/company', '/team'],
     title: {
       ru: 'Управление командой и защита банковских реквизитов',
-      uz: 'Jamoani boshqarish va bank rekvizitlari xavfsizligi',
+      uz: 'Jamoani boşqariş va bank rekvizitlari xavfsizligi',
       en: 'Team management and bank requisites protection',
     },
     summary: {
       ru: 'Приглашение сотрудников, роли и ограничение изменения реквизитов.',
-      uz: 'Xodimlarni taklif qilish va rekvizitlar o‘zgarishini cheklash.',
+      uz: 'Xodimlarni taklif qiliş va rekvizitlar özgarişini çeklaş.',
       en: 'Inviting colleagues, roles, and requisites change restrictions.',
     },
     content: {
@@ -214,10 +214,10 @@ export const HELP_ARTICLES: HelpArticle[] = [
         'Логотип компании на странице «Компания» видят все участники; администратор загружает его кнопкой «Загрузить логотип» (PNG, JPEG или WebP до 2 МБ, по центру обрезается до квадрата), заменяет или убирает. Пока логотипа нет, показаны буквы названия.',
       ],
       uz: [
-        'Kompaniya administratori «Jamoa» bo‘limida xodimlarni taklif qilishi mumkin.',
-        'Huquqlar: faqat körish, «Tasdiqlaş mumkin» va «Kompaniya administratori».',
-        'Muhim: bank rekvizitlarini o‘zgartirish so‘rovini faqat administrator yuboradi, o‘zgarish xodim tasdig‘idan keyin qo‘llanadi; shu vaqtgacha eski rekvizitlar amalda. Barcha administratorlar va asosiy kontakt barcha kanallarda bildirishnoma oladi.',
-        'Kompaniya logotipini «Kompaniya» sahifasida barcha iştirokçilar köradi; administrator uni «Logotip yuklaş» tugmasi bilan yuklaydi (PNG, JPEG yoki WebP, 2 MB gaça, markazdan kvadratga kesiladi), almaştiradi yoki olib taşlaydi. Logotip bölmaganda kompaniya nomining harflari körsatiladi.',
+        'Kompaniya administratori «Jamoa» bölimida xodimlarni taklif qilişi mumkin.',
+        'Huquqlar: faqat köriş, «Tasdiqlaş mumkin» va «Kompaniya administratori».',
+        'Muhim: bank rekvizitlarini özgartiriş sörovini faqat administrator yuboradi, özgariş xodim tasdiğidan keyin qöllanadi; şu vaqtgaça eski rekvizitlar amalda. Barça administratorlar va asosiy kontakt barça kanallarda bildirişnoma oladi.',
+        'Kompaniya logotipini «Kompaniya» sahifasida barça iştirokçilar köradi; administrator uni «Logotip yuklaş» tugmasi bilan yuklaydi (PNG, JPEG yoki WebP, 2 MB gaça, markazdan kvadratga kesiladi), almaştiradi yoki olib taşlaydi. Logotip bölmaganda kompaniya nomining harflari körsatiladi.',
       ],
       en: [
         'Company administrators can invite colleagues in the "Team" section.',
@@ -233,12 +233,12 @@ export const HELP_ARTICLES: HelpArticle[] = [
     routePatterns: ['/profile'],
     title: {
       ru: 'Каналы уведомлений и привязка Telegram',
-      uz: 'Xabarnomalar kanallari va Telegramni ulash',
+      uz: 'Xabarnomalar kanallari va Telegramni ulaş',
       en: 'Notification channels and Telegram binding',
     },
     summary: {
       ru: 'Настройка уведомлений в Telegram, на e-mail и в кабинете.',
-      uz: 'Telegram, E-mail va kabinetda bildirishnomalarni sozlash.',
+      uz: 'Telegram, E-mail va kabinetda bildirişnomalarni sozlaş.',
       en: 'Configuring Telegram, e-mail and in-account notifications.',
     },
     content: {
@@ -249,8 +249,8 @@ export const HELP_ARTICLES: HelpArticle[] = [
       ],
       uz: [
         '«Profil» bölimida bildirişnomalar botga kelişi va kabinet unda oçilişi uçun Telegram botni ulang.',
-        '«Xabarnoma kanallari» jadvalida qaysi voqealar (hujjatlar, moliya, yetkazib berish) qaysi kanalga borishini tanlang.',
-        'Xavfsizlik ogohlantirishlari barcha ulangan kanallarga majburiy yuboriladi.',
+        '«Xabarnoma kanallari» jadvalida qaysi voqealar (hujjatlar, moliya, yetkazib beriş) qaysi kanalga borişini tanlang.',
+        'Xavfsizlik ogohlantirişlari barça ulangan kanallarga majburiy yuboriladi.',
       ],
       en: [
         'In "Profile", connect our Telegram bot: notifications arrive in it and your account opens right in the bot.',
@@ -270,7 +270,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
     },
     summary: {
       ru: 'Загрузка прайса, проверка карточек и контроль цен.',
-      uz: 'Prays yuklaş, kartochkalarni tekşiriş va narxlarni nazorat qiliş.',
+      uz: 'Prays yuklaş, kartoçkalarni tekşiriş va narxlarni nazorat qiliş.',
       en: 'Price-list upload, card review and price control.',
     },
     content: {
@@ -280,9 +280,9 @@ export const HELP_ARTICLES: HelpArticle[] = [
         'Документы к своей карточке (сертификат, паспорт) сначала проверяет сотрудник: пока документ «На проверке», клиенты его не видят. Удалить можно только присланный вами документ.',
       ],
       uz: [
-        'Prays şablon bö‘yiça yuklang — kartochkalar qoralama bölib çiqadi.',
+        'Prays şablon bö‘yiça yuklang — kartoçkalar qoralama bölib çiqadi.',
         'Ularni tekşiruvga yuboring: tekşiruvdan keyin katalogda eʼlon qilamiz.',
-        'Kartochkaga yuklangan hujjatlarni (sertifikat, pasport) avval xodim tekshiradi: «Tekshiruvda» holatida mijozlar ularni koʻrmaydi. Faqat oʻzingiz yuborgan hujjatni oʻchirish mumkin.',
+        'Kartoçkaga yuklangan hujjatlarni (sertifikat, pasport) avval xodim tekşiradi: «Tekşiruvda» holatida mijozlar ularni körmaydi. Faqat özingiz yuborgan hujjatni öçiriş mumkin.',
       ],
       en: [
         'Upload your price list using the template — the cards appear as drafts.',
@@ -313,7 +313,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
       ],
       uz: [
         '«Xabarlar» bölimida kompaniyangizni yurituvçi menejerga yozişingiz mumkin.',
-        'Arizalar, yetkazib beriş va hujjatlar haqida so‘rang. Fayllarni arizaga biriktiring.',
+        'Arizalar, yetkazib beriş va hujjatlar haqida sörang. Fayllarni arizaga biriktiring.',
         'Yangi javoblar haqida «Profil»da tanlagan kanallaringizga bildirişnoma keladi.',
       ],
       en: [
@@ -337,14 +337,26 @@ export function getArticlesForRoute(pathname: string): HelpArticle[] {
   return HELP_ARTICLES.slice(0, 3);
 }
 
+/**
+ * Uzbek search key: the new alphabet and the old one are one spelling (owner 2026-11-17),
+ * so ö = oʻ / o', ğ = gʻ / g', ş = sh, ç = ch — a query in either finds the other.
+ */
+export function foldUz(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/([og])['\u02bb\u02bc\u2018\u2019`]/g, (_m, letter: string) => (letter === 'o' ? 'ö' : 'ğ'))
+    .replace(/sh/g, 'ş')
+    .replace(/ch/g, 'ç');
+}
+
 export function searchHelpArticles(query: string, lang: 'ru' | 'uz' | 'en'): HelpArticle[] {
-  const q = query.trim().toLowerCase();
+  const q = foldUz(query.trim());
   if (!q) return HELP_ARTICLES;
 
   return HELP_ARTICLES.filter((article) => {
-    const title = article.title[lang].toLowerCase();
-    const summary = article.summary[lang].toLowerCase();
-    const content = article.content[lang].join(' ').toLowerCase();
+    const title = foldUz(article.title[lang]);
+    const summary = foldUz(article.summary[lang]);
+    const content = foldUz(article.content[lang].join(' '));
     return title.includes(q) || summary.includes(q) || content.includes(q);
   });
 }

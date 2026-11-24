@@ -65,7 +65,7 @@ test.describe('публичные экраны кабинета', () => {
   test('uz и en: «Мы отправили письмо» и ссылка нового клиента переведены', async ({ page }) => {
     await page.addInitScript(() => window.localStorage.setItem('cabinet.language', 'uz'));
     await page.goto('/login/code');
-    await expect(page.getByRole('heading', { level: 1, name: 'Kod bilan kirish' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'Kod bilan kiriş' })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Yangi mijozmisiz? Ariza qoldiring' })).toHaveAttribute('href', '/new-client');
     await snap(page, '06-login-sent-uz');
 
@@ -115,7 +115,7 @@ test.describe('публичные экраны кабинета', () => {
     await snap(page, 'mail1-04-code-entry');
     await page.addInitScript(() => window.localStorage.setItem('cabinet.language', 'uz'));
     await page.goto('/login/code');
-    await expect(page.getByRole('heading', { level: 1, name: 'Kod bilan kirish' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'Kod bilan kiriş' })).toBeVisible();
     await snap(page, 'mail1-05-code-entry-uz');
     await page.addInitScript(() => window.localStorage.setItem('cabinet.language', 'en'));
     await page.goto('/login/code');

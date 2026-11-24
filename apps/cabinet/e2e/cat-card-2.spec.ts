@@ -53,6 +53,6 @@ test('карточка с одним фото и без документов: п
 test('карточка на узбекском и английском', async ({ page }) => {
   await signIn(page, 'uz');
   await page.goto('/catalog/1001');
-  await expect(page.getByRole('heading', { name: 'Ishlab chiqaruvchi' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Işlab çiqaruvçi' })).toBeVisible();
   await snap(page, 'catalog-item-uz', { screenshot: true });
 });

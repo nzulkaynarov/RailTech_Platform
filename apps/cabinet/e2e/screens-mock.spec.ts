@@ -388,7 +388,7 @@ test('uz: «Loyiha» вместо «Bitim» — проект клиента', as
   await signIn(page, 'actor', { language: 'uz' });
   await page.goto('/deals/48');
   await expect(page.getByRole('heading', { level: 1, name: 'Loyiha D-48' })).toBeVisible();
-  await expect(page.getByRole('region', { name: 'Loyiha bosqichlari' })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Loyiha bosqiçlari' })).toBeVisible();
   await snap(page, 'uz-project');
 });
 
