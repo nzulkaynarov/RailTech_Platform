@@ -61,7 +61,7 @@ def counterparty_ids(user) -> tuple[set, set]:
 def people_queryset(user, kind: str | None, q: str):
     client_ids, partner_ids = counterparty_ids(user)
     wanted = {"client": client_ids, "partner": partner_ids}.get(kind or "", client_ids | partner_ids)
-    queryset = Contact.objects.select_related("company").filter(company_id__in=wanted)
+    queryset = Contact.objects.select_related("company").filter(active_contact_q(), company_id__in=wanted)
     if q:
         queryset = queryset.filter(Q(name__icontains=q) | Q(company__name__icontains=q) | Q(position__icontains=q))
     return queryset.order_by("name", "pk"), client_ids

@@ -49,7 +49,7 @@ function guard(need: Level) {
 }
 
 /** Кому передать лида: держатели «работы с клиентом» (`crm.leads: full`) — менеджер, менеджер-универсал. */
-function leadManagers() {
+export function leadManagers() {
   return allUsers()
     .filter((u) => u.roles.some((r) => r === "MANAGER" || r === "MANAGER_ALL"))
     .filter((u) => !u.email.startsWith("disabled@"))
@@ -107,7 +107,11 @@ export const crmMessagesHandlers = [
   http.get("*/api/v1/crm/messages", () => {
     const denied = guard("read");
     if (denied) return denied;
-    const items = mockFlag(MOCK_INBOX_EMPTY_KEY) ? [] : readMessages().leads.map((l) => l.item);
+    const items = mockFlag(MOCK_INBOX_EMPTY_KEY)
+      ? []
+      : readMessages()
+          .leads.filter((l) => !l.hidden)
+          .map((l) => l.item);
     return HttpResponse.json({ items });
   }),
 

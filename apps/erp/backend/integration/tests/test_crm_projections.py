@@ -157,6 +157,34 @@ def test_contact_of_an_unknown_client_is_skipped(caplog):
     assert "skipped_unknown_client" in caplog.text
 
 
+def test_contact_republished_after_the_handoff_brings_position_and_username_once():
+    """CRM sends `contact.created` before the hand-over (skipped: unknown client), the hand-over body has neither
+    position nor Telegram username; after it CRM re-publishes `contact.updated` of the same moment (people audit G2)."""
+    first = projections.apply_contact_snapshot(
+        contact_data(position="Директор", telegram_username="ivan_p"), "contact.created"
+    )
+    assert first.status == projections.SKIPPED_UNKNOWN_CLIENT
+    assert not CrmProjectionState.objects.filter(crm_id=58).exists(), "a skipped snapshot is not remembered"
+
+    # The hand-over: company with the client mapping and the contact it created (no position, no username).
+    company = make_company(name="ООО Клиент", crm_client_id=42, inn="123456789")
+    contact = Contact.objects.create(company=company, name="Иван Петров", email="ivan.petrov@example.com")
+    CrmContactMapping.objects.create(crm_contact_id=58, contact=contact)
+
+    second = projections.apply_contact_snapshot(
+        contact_data(position="Директор", telegram_username="ivan_p"), "contact.updated"
+    )
+    contact.refresh_from_db()
+    assert second.applied
+    assert (contact.position, contact.telegram_username) == ("Директор", "ivan_p")
+
+    again = projections.apply_contact_snapshot(
+        contact_data(position="Директор", telegram_username="ivan_p"), "contact.updated"
+    )
+    assert again.status == projections.SKIPPED_NO_CHANGE, "a repeated delivery has no second effect"
+    assert CrmContactMapping.objects.filter(crm_contact_id=58).count() == 1
+
+
 def test_the_primary_contact_is_one_per_company(company):
     first = Contact.objects.filter(company=company).get()
     assert first.is_primary

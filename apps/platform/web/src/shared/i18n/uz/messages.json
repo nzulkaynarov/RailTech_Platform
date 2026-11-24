@@ -93,7 +93,15 @@
     "region": "Hudud",
     "lastMessage": "Oxirgi xabar",
     "handedBy": "Topshirdi",
-    "requestType": "Murojaat turi"
+    "requestType": "Murojaat turi",
+    "acknowledge": "Maʼlumot uçun qabul qilindi",
+    "snooze": "Keçiktiriş",
+    "unsnooze": "Keçiktirilgandan qaytariş",
+    "snoozePeriods": {
+      "hour": "Bir soatga",
+      "day": "Bir kunga",
+      "three_days": "Uç kunga"
+    }
   },
   "owner": {
     "bot": "Suhbatni bot olib boryapti",
@@ -109,7 +117,7 @@
     "returned": "Lid yana botda",
     "card": "Lid kartasi",
     "back": "Barcha suhbatlar",
-    "close": "Yopish",
+    "close": "Orqaga",
     "handOver": "Menejerga topshirish",
     "handedOver": "Lid topshirildi: {{name}}. Mijozga hech narsa yuborilmadi."
   },
@@ -241,7 +249,15 @@
     "generic": "Bo'lmadi. Qayta urinib ko'ring",
     "reply_in_progress": "Xabar hali yuborilmoqda — biroz kuting va «Qayta urinish»ni bosing",
     "delivery_unknown": "Yetkazilgani tasdiqlanmadi: Telegram o'z vaqtida javob bermadi. «Qayta urinish» ikkinchi xabar yubormaydi",
-    "inactive_colleague": "Bu xodim lidlarni yuritmaydi — boshqasini tanlang"
+    "inactive_colleague": "Bu xodim lidlarni yuritmaydi — boşqasini tanlang",
+    "not_closed": "Lid yopilmagan",
+    "won_decided_by_erp": "«Tuzildi» natijasi hisob tizimidan keladi",
+    "no_open_handoff": "Topşiriş allaqaçon yopilgan yoki keçiktirilmagan",
+    "invalid_phone": "Raqamni xalqaro körinişda yozing, masalan +998 90 123 45 67",
+    "invalid_email": "Poçta manzilini tekşiring",
+    "contact_required": "Telefon yoki poçta kerak",
+    "field_duplicate_of": "Boşqa lidni tanlang: bu mos emas",
+    "field_name": "Ismni kiriting"
   },
   "triageOnly": "Saralash va topshirish",
   "requestTypes": {
@@ -265,5 +281,47 @@
     "hint": "",
     "noManagers": "Lidlarni yurituvchi xodimlar yo'q.",
     "managersFailed": "Menejerlar ro'yxatini yuklab bo'lmadi. Qayta urinib ko'ring"
+  },
+  "close": {
+    "menu": "Yopiş",
+    "won": "Tuzildi",
+    "lost": "Rad etiş",
+    "wonTitle": "Tuzildi",
+    "wonSubmit": "Lidni yopiş",
+    "lostTitle": "Rad etiş",
+    "lostSubmit": "Lidni yopiş",
+    "reason": "Sabab",
+    "reasonPlaceholder": "Sababni tanlang",
+    "reasonRequired": "Rad etiş sababini tanlang",
+    "comment": "Izoh (ixtiyoriy)",
+    "wonByErp": "«Tuzildi» natijasi hisob tizimidan keladi — uni tugma bilan qöyib bölmaydi.",
+    "optionsFailed": "Sabablar yuklanmadi. Qayta uriniş"
+  },
+  "discard": {
+    "spam": {
+      "title": "Spam",
+      "text": "Lid röyxatlardan çiqadi. Uni raqami böyiça topiş mumkin.",
+      "submit": "Spamga"
+    },
+    "test": {
+      "title": "Test",
+      "text": "Lidning yozişmasi va maʼlumotlari qaytarib bölmaydigan tarzda öçiriladi.",
+      "submit": "Öçiriş"
+    },
+    "duplicate": {
+      "title": "Dublikat",
+      "text": "Lid röyxatlardan çiqadi va qoladigan lidga havola qilinadi.",
+      "submit": "Bu dublikat",
+      "pick": "Qoladigan lid",
+      "placeholder": "Ism, telefon yoki raqam",
+      "hint": "Kamida ikki belgi kiriting",
+      "none": "Heç narsa topilmadi",
+      "required": "Lidni tanlang"
+    }
+  },
+  "reassign": {
+    "open": "Hamkasbga topşiriş",
+    "title": "Hamkasbga topşiriş",
+    "submit": "Topşiriş"
   }
 }

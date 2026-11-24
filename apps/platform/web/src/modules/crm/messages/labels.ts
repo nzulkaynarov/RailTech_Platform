@@ -72,6 +72,11 @@ export function actionError(t: TFunction, error: unknown): string {
     const text = t(key, { defaultValue: "" });
     if (text) return text;
   }
+  // Поле формы, на которое указал отказ (`details.fields`): «Выберите другой лид», «Укажите имя».
+  const fields = error.details["fields"];
+  const field = Array.isArray(fields) && typeof fields[0] === "string" ? fields[0] : null;
+  const byField = field ? t(`messages:errors.field_${field}`, { defaultValue: "" }) : "";
+  if (byField) return byField;
   const byCode = t(`messages:errors.${error.code}`, { defaultValue: "" });
   return byCode || t("messages:errors.generic");
 }

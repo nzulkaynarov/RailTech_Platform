@@ -351,8 +351,22 @@ class Container:
             on_escalation_reopened=_escalation_reopened,
             on_chats_changed=_chats_changed,
             backoffice_mode=self.backoffice_mode,
+            erase_attachments=self._erase_attachment_files,
+            forget_agent=self._forget_agent_state,
             mail=self.mail_service,
         )
+
+    async def _forget_agent_state(self, lead_id: int) -> None:
+        """Состояние графа бота хранит тексты: «Тест» стирает его, как `/delete` (LH-1)."""
+        from app.agents.dialog.graph import _thread_id
+        from app.bot.setup import checkpointer
+
+        async with checkpointer(self) as saver:
+            await saver.adelete_thread(_thread_id(lead_id))
+
+    async def _erase_attachment_files(self, keys: list[str]) -> None:
+        for key in keys:
+            await self.storage.delete(self.settings.s3_bucket_attachments, key)
 
     @cached_property
     def lead_consent_service(self) -> "LeadConsentService":

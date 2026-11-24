@@ -8,10 +8,12 @@ import { PanelPortal } from "../../../app/shell/PanelSlot";
 import type { ConversationCard, MessageInboxItem } from "../../../shared/api/generated/model";
 import { useGetCrmConversation } from "../../../shared/api/generated/platform-bff";
 import { canCreateFromLead } from "../common/access";
+import { dialogActionRules } from "../common/leadActions";
 import { withParams } from "../kb/refresh";
 import { useLeadActions } from "./actions";
 import { Composer } from "./Composer";
-import { HandOverButton } from "./HandOver";
+import { CloseMenu } from "./CloseMenu";
+import { HandOverButton, ReassignButton } from "./HandOver";
 import { HandoffNoteBox } from "./HandoffNoteBox";
 import { channelLabel } from "./labels";
 import { LeadCard } from "./LeadCard";
@@ -53,6 +55,7 @@ function Actions({
   }
   const takeable = item ? canTake(item, me.id) : canTakeCard(card, me.id);
   const mine = card.owner_mode === "manager" && card.assigned?.id === me.id;
+  const rules = dialogActionRules(me, card.owner_mode, card.assigned);
   return (
     <>
       {takeable ? (
@@ -65,6 +68,8 @@ function Actions({
           {t("actions.returnToBot")}
         </Button>
       ) : null}
+      {rules.reassign ? <ReassignButton lead={card.lead} name={card.name} /> : null}
+      <CloseMenu lead={card.lead} name={card.name} close={rules.close} discard={rules.discard} />
     </>
   );
 }
@@ -140,7 +145,14 @@ export function Dialog({
         </div>
       </header>
       {takeable && !mobile ? null : null}
-      {item ? <HandoffNoteBox note={item.note} handoff={item.handoff} /> : null}
+      {item ? (
+        <HandoffNoteBox
+          note={item.note}
+          handoff={item.handoff}
+          lead={card.lead}
+          canAct={canReply && (!card.assigned || card.assigned.id === me.id)}
+        />
+      ) : null}
       <Thread lead={lead} name={card.name} canCreate={canCreateFromLead(me, card.assigned)} />
       {canReply ? (
         <Composer card={card} />

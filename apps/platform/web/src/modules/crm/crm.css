@@ -166,3 +166,9 @@
 .pf-crm-actions[data-sheet="true"] > * {
   flex: 1 1 0;
 }
+
+/* Предупреждение о дубле под контактами лида (LH-1) */
+.pf-crm-duplicates {
+  margin: 0;
+  padding-left: 16px;
+}

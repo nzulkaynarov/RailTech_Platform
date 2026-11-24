@@ -34,6 +34,10 @@ class Lead(TimestampMixin, Base):
         CheckConstraint("owner_mode IN ('bot', 'human', 'paused')", name="owner_mode"),
         CheckConstraint("language IN ('ru', 'uz', 'en')", name="language"),
         CheckConstraint("score BETWEEN 0 AND 100", name="score"),
+        CheckConstraint(
+            "discarded_kind IS NULL OR discarded_kind IN ('spam', 'test', 'duplicate')",
+            name="discarded_kind",
+        ),
         Index("ix_leads_stage", "stage"),
         Index("ix_leads_last_lead_msg_at", "last_lead_msg_at"),
         Index("ix_leads_phone_e164", "phone_e164"),
@@ -90,6 +94,10 @@ class Lead(TimestampMixin, Base):
     source_utm: Mapped[dict[str, str] | None] = mapped_column(JSONB)
     source_lang: Mapped[str | None] = mapped_column(String(8))
     notes_count: Mapped[int] = mapped_column(Integer, server_default=sql("0"))
+    # «Спам» | «тест» | «дубль» (LH-1): лид закрыт отказом и скрыт из активных списков; у дубля —
+    # лид, на который он указывает (простая ссылка, без склейки).
+    discarded_kind: Mapped[str | None] = mapped_column(String(16))
+    duplicate_of_lead_id: Mapped[int | None] = mapped_column(BigInteger)
     # Контакты лида без Telegram (сайт, звонок, почта, рекомендация — M3-CRM-05); номер из
     # Telegram остаётся в `telegram_identities.phone_e164`, склейка — по обоим (`lead_sources`).
     phone_e164: Mapped[str | None] = mapped_column(String(20))
