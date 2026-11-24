@@ -129,7 +129,7 @@ describe("поиск по настройкам", () => {
 
   it("на любом из трёх языков и без «ё»; каждое слово запроса обязательно", () => {
     expect(keys("mail")).toContain("mail");
-    expect(keys("pochta")).toContain("mail");
+    expect(keys("poçta")).toContain("mail");
     expect(keys("расчетный")).toContain("company");
     expect(keys("почта курс")).toEqual([]);
   });

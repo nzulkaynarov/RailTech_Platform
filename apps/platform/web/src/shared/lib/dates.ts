@@ -121,7 +121,7 @@ function longDate(date: Date, language: string, timeZone: string): string {
     .replace(/\s*г\.$/, "");
 }
 
-const YESTERDAY: Record<string, string> = { ru: "вчера", uz: "kecha", en: "yesterday" };
+const YESTERDAY: Record<string, string> = { ru: "вчера", uz: "keça", en: "yesterday" };
 
 /**
  * Время события в ленте и уведомлениях: сегодня — `10:12`, вчера — `вчера 09:24`, раньше — `24.10 11:50`, в прошлом

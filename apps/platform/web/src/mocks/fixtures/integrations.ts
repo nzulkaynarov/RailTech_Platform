@@ -459,15 +459,15 @@ export function seedIntegrations(): IntegrationsMock {
       },
     ],
     profile: {
-      name: text("RailTech Помощник", "RailTech Yordamchi", "RailTech Assistant"),
+      name: text("RailTech Помощник", "RailTech Yordamçi", "RailTech Assistant"),
       short_description: text(
         "Отвечает на вопросы о поставках",
-        "Yetkazib berish haqidagi savollarga javob beradi",
+        "Yetkazib beriş haqidagi savollarga javob beradi",
         "Answers questions about supplies",
       ),
       description: text(
         "Помогу узнать статус заявки, найти документы и связаться с менеджером.",
-        "Ariza holatini bilishga, hujjatlarni topishga va menejer bilan bog‘lanishga yordam beraman.",
+        "Ariza holatini bilişga, hujjatlarni topişga va menejer bilan boğlanişga yordam beraman.",
         "I can check the status of a request, find documents and contact a manager.",
       ),
     },

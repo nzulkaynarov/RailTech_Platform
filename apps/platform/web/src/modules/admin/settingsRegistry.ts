@@ -57,12 +57,12 @@ export const SETTINGS: readonly SettingEntry[] = [
     name: { ru: "Сотрудники", uz: "Xodimlar", en: "Employees" },
     description: {
       ru: "Приглашения, роли сотрудника, вход и Telegram",
-      uz: "Taklif, xodim rollari, kirish va Telegram",
+      uz: "Taklif, xodim rollari, kiriş va Telegram",
       en: "Invites, employee roles, sign-in and Telegram",
     },
     keywords: {
       ru: ["пригласить", "приглашение", "пароль", "отключить", "пользователи", "люди"],
-      uz: ["taklif", "parol", "foydalanuvchilar"],
+      uz: ["taklif", "parol", "foydalanuvçilar"],
       en: ["invite", "password", "users", "deactivate", "people"],
     },
   },
@@ -74,12 +74,12 @@ export const SETTINGS: readonly SettingEntry[] = [
     name: { ru: "Роли и права", uz: "Rollar va huquqlar", en: "Roles & permissions" },
     description: {
       ru: "Что видит и что может каждая роль",
-      uz: "Har bir rol nimani ko‘radi va qila oladi",
+      uz: "Har bir rol nimani köradi va qila oladi",
       en: "What each role can see and do",
     },
     keywords: {
       ru: ["доступ", "матрица", "права", "роль"],
-      uz: ["kirish", "huquq", "rol"],
+      uz: ["kiriş", "huquq", "rol"],
       en: ["access", "matrix", "permission", "role"],
     },
   },
@@ -132,7 +132,7 @@ export const SETTINGS: readonly SettingEntry[] = [
         "директор",
         "лимит",
       ],
-      uz: ["imzo", "imzolovchi", "ishonchnoma", "buyruq", "nizom", "vakolat", "o‘rinbosar"],
+      uz: ["imzo", "imzolovçi", "işonçnoma", "buyruq", "nizom", "vakolat", "örinbosar"],
       en: [
         "signature",
         "signatory",
@@ -152,7 +152,7 @@ export const SETTINGS: readonly SettingEntry[] = [
     name: { ru: "Реквизиты и бланк", uz: "Rekvizitlar va blanka", en: "Details & letterhead" },
     description: {
       ru: "Данные и контакты компании, логотип и вид документов",
-      uz: "Kompaniya ma’lumotlari, kontaktlar, logotip va blanka",
+      uz: "Kompaniya maʼlumotlari, kontaktlar, logotip va blanka",
       en: "Company details, contacts, logo and document look",
     },
     keywords: {
@@ -178,10 +178,10 @@ export const SETTINGS: readonly SettingEntry[] = [
     group: "company",
     path: "/admin/numbering",
     access: COMPANY,
-    name: { ru: "Нумерация", uz: "Raqamlash", en: "Numbering" },
+    name: { ru: "Нумерация", uz: "Raqamlaş", en: "Numbering" },
     description: {
       ru: "Номера КП, договоров, счетов и актов",
-      uz: "TT, shartnoma, hisob va dalolatnoma raqamlari",
+      uz: "TT, şartnoma, hisob va dalolatnoma raqamlari",
       en: "Numbers of quotes, contracts, invoices and acts",
     },
     keywords: {
@@ -215,12 +215,12 @@ export const SETTINGS: readonly SettingEntry[] = [
     name: { ru: "Статьи компании", uz: "Kompaniya maqolalari", en: "Company articles" },
     description: {
       ru: "Инструкции «как у нас принято» для сотрудников",
-      uz: "Xodimlar uchun ichki yo‘riqnomalar",
+      uz: "Xodimlar uçun içki yöriqnomalar",
       en: "In-house how-to articles for employees",
     },
     keywords: {
       ru: ["инструкция", "регламент", "помощь", "статья"],
-      uz: ["yo‘riqnoma", "yordam", "maqola"],
+      uz: ["yöriqnoma", "yordam", "maqola"],
       en: ["instruction", "policy", "help", "article"],
     },
   },
@@ -326,7 +326,7 @@ export const SETTINGS: readonly SettingEntry[] = [
         "срок первого ответа",
         "напоминание менеджеру",
       ],
-      uz: ["sla", "ish soatlari", "bayramlar", "javob muddati", "birinçi javob"],
+      uz: ["sla", "iş soatlari", "bayramlar", "javob muddati", "birinçi javob"],
       en: ["sla", "working hours", "holidays", "reply time", "first reply", "manager reminder"],
     },
   },
@@ -336,7 +336,7 @@ export const SETTINGS: readonly SettingEntry[] = [
     path: "/admin/dictionaries",
     // Списки продаж и документов — `admin`, списки расчёта — `company.settings`: страница открыта, если есть любой.
     access: { anyOf: ["admin", "company.settings"] },
-    name: { ru: "Справочники", uz: "Ma’lumotnomalar", en: "Lists" },
+    name: { ru: "Справочники", uz: "Maʼlumotnomalar", en: "Lists" },
     description: {
       ru: "Причины отказа, виды писем, валюты, категории",
       uz: "Rad sabablari, xat turlari, valyutalar, toifalar",
@@ -387,7 +387,7 @@ export const SETTINGS: readonly SettingEntry[] = [
     },
     keywords: {
       ru: ["шаблон", "письма", "бланк", "резолюция", "поручение", "входящие"],
-      uz: ["shablon", "xatlar", "blank", "rezolyutsiya", "topshiriq"],
+      uz: ["şablon", "xatlar", "blank", "rezolyutsiya", "topşiriq"],
       en: ["template", "letters", "letterhead", "resolution", "instruction", "incoming"],
     },
   },
@@ -396,7 +396,7 @@ export const SETTINGS: readonly SettingEntry[] = [
     group: "rules",
     path: "/admin/notifications",
     access: ADMIN,
-    name: { ru: "Уведомления", uz: "Bildirishnomalar", en: "Notifications" },
+    name: { ru: "Уведомления", uz: "Bildirişnomalar", en: "Notifications" },
     description: {
       ru: "Напоминания и оповещения о сбоях",
       uz: "Eslatmalar va nosozlik haqida xabarlar",
@@ -415,9 +415,9 @@ export const SETTINGS: readonly SettingEntry[] = [
       ],
       uz: [
         "jamoa kanali",
-        "ogohlantirish",
+        "ogohlantiriş",
         "nosozlik",
-        "muddati o‘tgan",
+        "muddati ötgan",
         "hisob eslatmasi",
         "dalolatnoma",
       ],
@@ -458,7 +458,7 @@ export const SETTINGS: readonly SettingEntry[] = [
         "передача менеджеру",
         "порог передачи",
       ],
-      uz: ["bot", "token", "javob shablonlari", "bilimlar bazasi", "jamoa kanali", "topşiriş"],
+      uz: ["bot", "token", "javob şablonlari", "bilimlar bazasi", "jamoa kanali", "topşiriş"],
       en: [
         "bot",
         "token",
@@ -477,7 +477,7 @@ export const SETTINGS: readonly SettingEntry[] = [
     group: "channels",
     path: "/admin/mail",
     access: SYSTEM,
-    name: { ru: "Почта", uz: "Pochta", en: "Mail" },
+    name: { ru: "Почта", uz: "Poçta", en: "Mail" },
     description: {
       ru: "Отправка, общий ящик, виды писем и отправители",
       uz: "Yuboriş, umumiy quti, xat turlari va jönatuvçilar",
@@ -504,7 +504,7 @@ export const SETTINGS: readonly SettingEntry[] = [
     group: "channels",
     path: "/admin/web-forms",
     access: SYSTEM,
-    name: { ru: "Формы сайта", uz: "Sayt shakllari", en: "Website forms" },
+    name: { ru: "Формы сайта", uz: "Sayt şakllari", en: "Website forms" },
     description: {
       ru: "Заявка с сайта и защита от спама",
       uz: "Saytdan ariza va spamdan himoya",
@@ -512,7 +512,7 @@ export const SETTINGS: readonly SettingEntry[] = [
     },
     keywords: {
       ru: ["сайт", "форма", "заявка", "антиспам"],
-      uz: ["sayt", "shakl", "ariza"],
+      uz: ["sayt", "şakl", "ariza"],
       en: ["website", "form", "request", "anti-spam"],
     },
   },
@@ -550,7 +550,7 @@ export const SETTINGS: readonly SettingEntry[] = [
     name: { ru: "ИИ", uz: "SI", en: "AI" },
     description: {
       ru: "Расходы, дневной лимит и защита данных для ИИ",
-      uz: "Xarajatlar, kunlik limit va SI uchun ma’lumotlar himoyasi",
+      uz: "Xarajatlar, kunlik limit va SI uçun maʼlumotlar himoyasi",
       en: "Costs, daily limit and data protection for AI",
     },
     keywords: {
@@ -568,7 +568,7 @@ export const SETTINGS: readonly SettingEntry[] = [
         "деловая",
         "строгая",
       ],
-      uz: ["byudjet", "limit", "narx", "ma’lumotlar himoyasi", "pasport", "siyosat", "skan"],
+      uz: ["byudjet", "limit", "narx", "maʼlumotlar himoyasi", "pasport", "siyosat", "skan"],
       en: [
         "budget",
         "limit",
@@ -595,7 +595,7 @@ export const SETTINGS: readonly SettingEntry[] = [
     },
     keywords: {
       ru: ["аудит", "лог", "история", "изменения", "шина", "события", "доставка", "повторить"],
-      uz: ["audit", "tarix", "özgarişlar", "hodisalar", "yetkazish"],
+      uz: ["audit", "tarix", "özgarişlar", "hodisalar", "yetkaziş"],
       en: ["audit", "log", "history", "changes", "bus", "events", "delivery", "retry"],
     },
   },

@@ -100,7 +100,7 @@ const FORMAT_FAIL = {
   rule: "front_matter_missing",
   messages: {
     ru: "В начале файла нет front matter: добавьте блок между строками --- с полями title, language, source, updated",
-    uz: "Fayl boshida front matter yo‘q: --- qatorlari orasiga title, language, source, updated maydonlarini qo‘shing",
+    uz: "Fayl boşida front matter yöq: --- qatorlari orasiga title, language, source, updated maydonlarini qöşing",
     en: "The file has no front matter: add a block between --- lines with the fields title, language, source, updated",
   },
 };

@@ -1,27 +1,27 @@
 {
-  "open": "Ochish",
-  "openItem": "Ochish: {{title}}",
+  "open": "Oçiş",
+  "openItem": "Oçiş: {{title}}",
   "steps": {
-    "label": "Ariza yo‘li",
-    "labelNumber": "Ariza yo‘li {{number}}",
-    "done": "o‘tilgan",
+    "label": "Ariza yöli",
+    "labelNumber": "Ariza yöli {{number}}",
+    "done": "ötilgan",
     "current": "joriy qadam",
     "upcoming": "oldinda",
-    "lostAt": "{{step}}-qadamda to‘xtatilgan"
+    "lostAt": "{{step}}-qadamda töxtatilgan"
   },
   "consequence": {
-    "title": "Nima bo‘ladi"
+    "title": "Nima böladi"
   },
   "recordHistory": {
     "system": "Tizim",
-    "filter": "Yozuvlarni körsatish",
+    "filter": "Yozuvlarni körsatiş",
     "all": "Hammasi"
   },
   "history": {
     "done": "Bajarilgan",
     "failed": "Bajarilmadi",
     "waiting": "Kutilmoqda",
-    "todo": "Boshlanmagan"
+    "todo": "Boşlanmagan"
   },
   "checklist": {
     "ok": "Bajarilgan",
@@ -29,7 +29,7 @@
     "pending": "Kutilmoqda"
   },
   "definition": {
-    "empty": "ko‘rsatilmagan"
+    "empty": "körsatilmagan"
   },
   "source": {
     "erp": "Maʼlumotlarning bir qismi yuklanmadi. Keyinroq qayta uriniş.",
@@ -37,25 +37,25 @@
     "both": "Maʼlumotlarning bir qismi yuklanmadi. Keyinroq qayta uriniş.",
     "eds": "Maʼlumotlarning bir qismi yuklanmadi. Keyinroq qayta uriniş.",
     "multi": "Maʼlumotlarning bir qismi yuklanmadi. Keyinroq qayta uriniş.",
-    "retry": "Qayta urinish"
+    "retry": "Qayta uriniş"
   },
   "unsavedGuard": {
-    "title": "Saqlamasdan chiqasizmi?",
-    "text": "Formada saqlanmagan o‘zgarishlar bor — ular yo‘qoladi.",
-    "leave": "Saqlamasdan chiqish",
-    "stay": "Qolish"
+    "title": "Saqlamasdan çiqasizmi?",
+    "text": "Formada saqlanmagan özgarişlar bor — ular yöqoladi.",
+    "leave": "Saqlamasdan çiqiş",
+    "stay": "Qoliş"
   },
   "saveBar": {
-    "label": "Saqlanmagan o‘zgarishlar",
-    "message": "Saqlanmagan o‘zgarishlar bor",
-    "save": "O‘zgarishlarni saqlash",
-    "discard": "Bekor qilish"
+    "label": "Saqlanmagan özgarişlar",
+    "message": "Saqlanmagan özgarişlar bor",
+    "save": "Özgarişlarni saqlaş",
+    "discard": "Bekor qiliş"
   },
   "docNumber": {
-    "copy": "Raqamni nusxalash",
-    "copyNumber": "{{number}} raqamini nusxalash",
+    "copy": "Raqamni nusxalaş",
+    "copyNumber": "{{number}} raqamini nusxalaş",
     "copied": "Raqam nusxalandi",
-    "copyFailed": "Nusxalab bo‘lmadi: brauzer almashish buferiga ruxsat bermadi"
+    "copyFailed": "Nusxalab bölmadi: brauzer almaşiş buferiga ruxsat bermadi"
   },
   "fileSize": {
     "b": "{{value}} B",
@@ -66,41 +66,41 @@
   "date": {
     "placeholder": "KK.OO.YYYY",
     "from": "Dan",
-    "to": "Gacha"
+    "to": "Gaça"
   },
   "file": {
-    "choose": "Faylni tanlash",
-    "chooseMany": "Fayllarni tanlash",
-    "replace": "Boshqa faylni tanlash",
+    "choose": "Faylni tanlaş",
+    "chooseMany": "Fayllarni tanlaş",
+    "replace": "Boşqa faylni tanlaş",
     "list": "Tanlangan fayllar",
-    "remove": "Olib tashlash",
-    "removeItem": "{{name}} faylini olib tashlash",
-    "drop": "yoki shu yerga torting",
-    "tooLarge": "«{{name}}» fayli {{max}} dan katta — kichikroq fayl tanlang",
+    "remove": "Olib taşlaş",
+    "removeItem": "{{name}} faylini olib taşlaş",
+    "drop": "yoki şu yerga torting",
+    "tooLarge": "«{{name}}» fayli {{max}} dan katta — kiçikroq fayl tanlang",
     "wrongType": "«{{name}}» fayli mos emas: {{accept}} mumkin"
   },
   "pdfViewer": {
     "region": "«{{name}}» fayli sahifalari",
     "page": "«{{name}}», {{page}}-sahifa, jami {{total}}",
-    "error": "Faylni ko'rish uchun ochib bo'lmadi. Uni yuklab oling.",
-    "truncated": "{{total}} sahifadan {{shown}} tasi ko'rsatilgan. Qolgani yuklab olingan faylda."
+    "error": "Faylni köriş uçun oçib bölmadi. Uni yuklab oling.",
+    "truncated": "{{total}} sahifadan {{shown}} tasi körsatilgan. Qolgani yuklab olingan faylda."
   },
   "bodyEditor": {
     "addRow": "+ qator",
     "addColumn": "+ ustun",
     "removeRow": "− qator",
     "removeColumn": "− ustun",
-    "tableHint": "Birinchi qator — sarlavha: u PDF ning har bir sahifasida takrorlanadi.",
-    "toolbar": "Matnni bezash",
+    "tableHint": "Birinçi qator — sarlavha: u PDF ning har bir sahifasida takrorlanadi.",
+    "toolbar": "Matnni bezaş",
     "tableActions": "Jadval",
-    "removeTable": "Jadvalni o‘chirish",
+    "removeTable": "Jadvalni öçiriş",
     "tools": {
       "heading": "Sarlavha",
       "bold": "Qalin",
       "italic": "Kursiv",
-      "underline": "Tagi chizilgan",
-      "bullet": "Ro‘yxat",
-      "ordered": "Raqamli ro‘yxat",
+      "underline": "Tagi çizilgan",
+      "bullet": "Röyxat",
+      "ordered": "Raqamli röyxat",
       "table": "Jadval",
       "link": "Havola"
     },
@@ -114,52 +114,52 @@
     "staff": "{{name}} belgiladi",
     "person": "tasdiqladi: {{person}}",
     "channel": {
-      "email": "pochta",
+      "email": "poçta",
       "messenger": "messenjer",
       "phone": "telefon",
-      "in_person": "shaxsan",
-      "paper": "qog'oz"
+      "in_person": "şaxsan",
+      "paper": "qoğoz"
     },
     "channelLabel": "Mijoz qanday xabar berdi",
     "channelPlaceholder": "Kanalni tanlang",
-    "channelRequired": "Mijoz qanday xabar berganini ko'rsating",
+    "channelRequired": "Mijoz qanday xabar berganini körsating",
     "personLabel": "Mijoz tomonidan kim",
-    "personPlaceholder": "F.I.Sh. va lavozimi",
-    "personRequired": "Kim tasdiqlaganini ko'rsating"
+    "personPlaceholder": "F.I.Ş. va lavozimi",
+    "personRequired": "Kim tasdiqlaganini körsating"
   },
   "confirm": {
-    "cancel": "Bekor qilish"
+    "cancel": "Bekor qiliş"
   },
   "table": {
     "columns": "Ustunlar",
-    "reset": "Tiklash",
-    "pin": "Chapga mahkamlash: {{name}}",
-    "unpin": "Mahkamlashni olib tashlash: {{name}}",
+    "reset": "Tiklaş",
+    "pin": "Çapga mahkamlaş: {{name}}",
+    "unpin": "Mahkamlaşni olib taşlaş: {{name}}",
     "moveUp": "Yuqoriga: {{name}}",
     "moveDown": "Pastga: {{name}}",
-    "resize": "«{{name}}» ustuni kengligi: torting, ikki marta bosish — mazmunga moslash",
+    "resize": "«{{name}}» ustuni kengligi: torting, ikki marta bosiş — mazmunga moslaş",
     "narrower": "Torroq: {{name}}",
     "wider": "Kengroq: {{name}}",
     "pages": "Sahifalar: {{name}}"
   },
   "formSteps": {
     "next": "Keyingi: {{title}}",
-    "edit": "O‘zgartirish",
-    "invalid": "Tuzatish kerak",
+    "edit": "Özgartiriş",
+    "invalid": "Tuzatiş kerak",
     "needed": "Bu qadam tayyor bölişi uçun:",
     "remaining": "Qoldi:"
   },
-  "readOnly": "Faqat körish",
+  "readOnly": "Faqat köriş",
   "rowActions": {
     "label": "Amallar: {{name}}"
   },
   "formSheet": {
-    "cancel": "Bekor qilish",
-    "close": "Yopish"
+    "cancel": "Bekor qiliş",
+    "close": "Yopiş"
   },
   "selection": {
     "count": "Tanlandi: {{count}}",
-    "clear": "Tanlovni bekor qilish"
+    "clear": "Tanlovni bekor qiliş"
   },
   "timeLeft": {
     "today": "bugun oxirgi kun",
@@ -177,7 +177,7 @@
       "noInn": "STIR körsatilmagan",
       "roles": {
         "client": "mijoz",
-        "supplier": "yetkazib beruvchi",
+        "supplier": "yetkazib beruvçi",
         "manufacturer": "işlab çiqaruvçi",
         "partner": "hamkor",
         "organization": "taşkilot"
@@ -196,7 +196,7 @@
       },
       "roleFailed": {
         "denied": {
-          "supplier": "Kompaniyani yetkazib beruvchi deb belgilab bölmadi: ruxsat yöq. Boşqasini tanlang yoki administratorga murojaat qiling.",
+          "supplier": "Kompaniyani yetkazib beruvçi deb belgilab bölmadi: ruxsat yöq. Boşqasini tanlang yoki administratorga murojaat qiling.",
           "manufacturer": "Kompaniyani işlab çiqaruvçi deb belgilab bölmadi: ruxsat yöq. Boşqasini tanlang yoki administratorga murojaat qiling."
         },
         "notListed": "Kompaniya kontragentlar röyxatida yöq, unga rol berib bölmaydi. Boşqasini tanlang.",
@@ -211,7 +211,7 @@
   "doNotWork": {
     "title": "Kompaniya bilan işlamaymiz",
     "by": "{{name}} belgilagan, {{date}}",
-    "until": "{{date}} gacha",
+    "until": "{{date}} gaça",
     "unknown": "xodim körsatilmagan"
   },
   "clientLink": {
@@ -259,11 +259,11 @@
     "title": "Bu manzilga xatlar yetib bormayapti",
     "line": "{{title}}: {{reason}} · {{date}}",
     "reasons": {
-      "domain_not_found": "bunday pochta domeni yöq",
-      "mailbox_not_found": "bunday pochta qutisi yöq",
-      "mailbox_full": "pochta qutisi tölgan",
-      "rejected": "qabul qiluvchining serveri xatni rad etdi",
-      "other": "pochta serveri xatni qaytardi"
+      "domain_not_found": "bunday poçta domeni yöq",
+      "mailbox_not_found": "bunday poçta qutisi yöq",
+      "mailbox_full": "poçta qutisi tölgan",
+      "rejected": "qabul qiluvçining serveri xatni rad etdi",
+      "other": "poçta serveri xatni qaytardi"
     }
   }
 }

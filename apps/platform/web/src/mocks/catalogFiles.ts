@@ -77,7 +77,7 @@ const ROWS: Record<string, DictionaryItem[]> = {
     },
     {
       code: "2",
-      name: names("Подшипники", "Podshipniklar", "Bearings"),
+      name: names("Подшипники", "Podşipniklar", "Bearings"),
       attrs: { parent: "1", tracking: "lot", requires_conformity_doc: true },
       active: true,
       position: 20,

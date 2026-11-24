@@ -10,7 +10,7 @@ statuses:
     from: "Заявка, Резолюция, Расчёт"
     text:
       ru: "Принято в работу, считаем"
-      uz: "Ishga qabul qilindi, hisoblayapmiz"
+      uz: "Işga qabul qilindi, hisoblayapmiz"
       en: "Accepted, we are calculating"
   awaiting_decision:
     from: "КП отправлено"
@@ -23,25 +23,25 @@ statuses:
     from: "Договор: проект"
     text:
       ru: "Согласуйте редакцию договора"
-      uz: "Shartnoma matnini kelishib oling"
+      uz: "Şartnoma matnini kelişib oling"
       en: "Please agree the contract wording"
   contract_signing:
     from: "Договор: выставлен у оператора"
     text:
       ru: "Договор на подписании"
-      uz: "Shartnoma imzolanmoqda"
+      uz: "Şartnoma imzolanmoqda"
       en: "Contract is being signed"
   awaiting_payment:
     from: "Оплата: счёт выставлен"
     text:
       ru: "Ожидает оплаты"
-      uz: "To'lov kutilmoqda"
+      uz: "Tölov kutilmoqda"
       en: "Awaiting payment"
   checking_payment:
     from: "Оплата: платёжка получена"
     text:
       ru: "Проверяем оплату"
-      uz: "To'lovni tekshiryapmiz"
+      uz: "Tölovni tekşiryapmiz"
       en: "Checking your payment"
   fulfilling:
     from: "Исполнение"
@@ -54,7 +54,7 @@ statuses:
     from: "Акт выпущен"
     text:
       ru: "Ждёт вашей приёмки"
-      uz: "Qabul qilishingizni kutmoqda"
+      uz: "Qabul qilişingizni kutmoqda"
       en: "Awaiting your acceptance"
   done:
     from: "Выполнено"

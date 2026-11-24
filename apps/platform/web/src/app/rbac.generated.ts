@@ -57,7 +57,7 @@ export const RESOURCES = {
     backends: ["crm"],
     label: {
       ru: "Контакты · Лиды; Документы · Почта · разбор и передача менеджеру",
-      uz: "Kontaktlar · Lidlar; Hujjatlar · Pochta · saralash va menejerga topşiriş",
+      uz: "Kontaktlar · Lidlar; Hujjatlar · Poçta · saralaş va menejerga topşiriş",
       en: "Contacts · Leads; Documents · Mail · triage and hand over to a manager",
     },
   },
@@ -67,7 +67,7 @@ export const RESOURCES = {
     backends: ["crm"],
     label: {
       ru: "Документы · Почта · вся очередь, чтение",
-      uz: "Hujjatlar · Pochta · butun navbat, öqish",
+      uz: "Hujjatlar · Poçta · butun navbat, öqiş",
       en: "Documents · Mail · whole queue, read",
     },
   },
@@ -77,7 +77,7 @@ export const RESOURCES = {
     backends: ["crm", "erp"],
     label: {
       ru: "Контакты · Контрагенты, создать заявку",
-      uz: "Kontaktlar · Kontragentlar, ariza yaratish",
+      uz: "Kontaktlar · Kontragentlar, ariza yaratiş",
       en: "Contacts · Counterparties, new request",
     },
   },
@@ -87,7 +87,7 @@ export const RESOURCES = {
     backends: ["erp"],
     label: {
       ru: "Документы · Входящие · резолюция",
-      uz: "Hujjatlar · Kiruvchi · rezolyutsiya",
+      uz: "Hujjatlar · Kiruvçi · rezolyutsiya",
       en: "Documents · Incoming · resolution",
     },
   },
@@ -97,7 +97,7 @@ export const RESOURCES = {
     backends: [],
     label: {
       ru: "Документы · Входящие · регистрация",
-      uz: "Hujjatlar · Kiruvchi · ro‘yxatga olish",
+      uz: "Hujjatlar · Kiruvçi · röyxatga oliş",
       en: "Documents · Incoming · registration",
     },
   },
@@ -107,7 +107,7 @@ export const RESOURCES = {
     backends: ["erp"],
     label: {
       ru: "Документы · Исходящие · одобрение и отправка КП",
-      uz: "Hujjatlar · Chiquvchi · TTni tasdiqlash va yuborish",
+      uz: "Hujjatlar · Çiquvçi · TTni tasdiqlaş va yuboriş",
       en: "Documents · Outgoing · quote approval and sending",
     },
   },
@@ -117,7 +117,7 @@ export const RESOURCES = {
     backends: ["erp"],
     label: {
       ru: "Главная · Проекты: договор, счёт, акт, сканы",
-      uz: "Asosiy · Loyihalar: shartnoma, hisob, dalolatnoma, skanlar",
+      uz: "Asosiy · Loyihalar: şartnoma, hisob, dalolatnoma, skanlar",
       en: "Home · Projects: contract, invoice, act, scans",
     },
   },
@@ -127,7 +127,7 @@ export const RESOURCES = {
     backends: ["crm", "erp"],
     label: {
       ru: "Операции · Финансы · подтвердить оплату, запросить платёжку",
-      uz: "Amallar · Moliya · to‘lovni tasdiqlash, to‘lov topshiriqnomasini so‘rash",
+      uz: "Amallar · Moliya · tölovni tasdiqlaş, tölov topşiriqnomasini söraş",
       en: "Operations · Finance · confirm payment, request a payment order",
     },
   },
@@ -137,7 +137,7 @@ export const RESOURCES = {
     backends: [],
     label: {
       ru: "Документы · Внутренние · создать",
-      uz: "Hujjatlar · Ichki · yaratish",
+      uz: "Hujjatlar · Içki · yaratiş",
       en: "Documents · Internal · create",
     },
   },
@@ -147,7 +147,7 @@ export const RESOURCES = {
     backends: [],
     label: {
       ru: "Документы · Внутренние · согласовать",
-      uz: "Hujjatlar · Ichki · kelishish",
+      uz: "Hujjatlar · Içki · kelişiş",
       en: "Documents · Internal · approve",
     },
   },
@@ -167,7 +167,7 @@ export const RESOURCES = {
     backends: [],
     label: {
       ru: "Документы · Виза бухгалтера: договор, счёт, акт",
-      uz: "Hujjatlar · Buxgalter vizasi: shartnoma, hisob, dalolatnoma",
+      uz: "Hujjatlar · Buxgalter vizasi: şartnoma, hisob, dalolatnoma",
       en: "Documents · Accountant visa: contract, invoice, act",
     },
   },
@@ -177,7 +177,7 @@ export const RESOURCES = {
     backends: ["erp"],
     label: {
       ru: "Документы · Виза юриста: договор",
-      uz: "Hujjatlar · Yurist vizasi: shartnoma",
+      uz: "Hujjatlar · Yurist vizasi: şartnoma",
       en: "Documents · Lawyer visa: contract",
     },
   },
@@ -227,7 +227,7 @@ export const RESOURCES = {
     backends: [],
     label: {
       ru: "Органайзер · Чаты и Люди",
-      uz: "Organayzer · Chatlar va odamlar",
+      uz: "Organayzer · Çatlar va odamlar",
       en: "Organizer · Chats and people",
     },
   },
@@ -237,7 +237,7 @@ export const RESOURCES = {
     backends: ["crm"],
     label: {
       ru: "Контакты · Переписка с клиентами",
-      uz: "Kontaktlar · Mijozlar bilan yozishma",
+      uz: "Kontaktlar · Mijozlar bilan yozişma",
       en: "Contacts · Client conversations",
     },
   },
@@ -247,7 +247,7 @@ export const RESOURCES = {
     backends: ["crm", "erp"],
     label: {
       ru: "Настройки · Сотрудники, Подключения, Журнал, Статьи компании, Обращения сотрудников",
-      uz: "Sozlamalar · Xodimlar, ulanishlar, jurnal, kompaniya maqolalari, xodimlar murojaatlari",
+      uz: "Sozlamalar · Xodimlar, ulanişlar, jurnal, kompaniya maqolalari, xodimlar murojaatlari",
       en: "Settings · Employees, connections, log, company articles, staff requests",
     },
   },
@@ -257,7 +257,7 @@ export const RESOURCES = {
     backends: [],
     label: {
       ru: "Настройки · Каналы, подключения, ИИ, выгрузки",
-      uz: "Sozlamalar · Kanallar, ulanishlar, SI, eksport",
+      uz: "Sozlamalar · Kanallar, ulanişlar, SI, eksport",
       en: "Settings · Channels, connections, AI, exports",
     },
   },
@@ -605,7 +605,7 @@ export const TEMPLATES = {
   SUPPLY: {
     name: {
       ru: "Снабженец",
-      uz: "Ta'minotchi",
+      uz: "Taʼminotçi",
       en: "Supply specialist",
     },
     access: {
@@ -622,7 +622,7 @@ export const TEMPLATES = {
   ENGINEER: {
     name: {
       ru: "Гл. инженер",
-      uz: "Bosh muhandis",
+      uz: "Boş muhandis",
       en: "Chief engineer",
     },
     access: {
@@ -662,7 +662,7 @@ export const TEMPLATES = {
   REGISTRAR: {
     name: {
       ru: "Делопроизводитель",
-      uz: "Ish yurituvchi",
+      uz: "Iş yurituvçi",
       en: "Office clerk",
     },
     access: {

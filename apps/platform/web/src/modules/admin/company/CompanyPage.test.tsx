@@ -505,7 +505,7 @@ describe("Бланк и бренд", () => {
     await openTab("brand");
     await screen.findByText("Образец: КП");
     fireEvent.click(screen.getByRole("button", { name: /Бланк на узбекском и английском/ }));
-    const uz = screen.getByRole("group", { name: "O‘zbekcha (UZ)" });
+    const uz = screen.getByRole("group", { name: "Özbekça (UZ)" });
     expect(within(uz).getByLabelText("Должность подписанта")).toHaveValue("Direktor");
     fireEvent.change(within(uz).getByLabelText("Название компании"), {
       target: { value: "«Demo Temir Yo‘l» MChJ" },
@@ -1367,12 +1367,12 @@ describe("Курс USD → UZS: ручной ввод", () => {
 });
 
 describe("Admin · Компания: страна на языке интерфейса (план справочников, PR 6)", () => {
-  it("страна регистрации — на языке интерфейса: «Узбекистан», «O‘zbekiston», «Uzbekistan»", async () => {
+  it("страна регистрации — на языке интерфейса: «Узбекистан», «Özbekiston», «Uzbekistan»", async () => {
     signInAs("admin@demo.example");
     renderApp("/admin/company?tab=details");
     expect(await screen.findByText("Узбекистан")).toBeVisible();
     await act(() => i18n.changeLanguage("uz"));
-    expect(await screen.findByText("O‘zbekiston")).toBeVisible();
+    expect(await screen.findByText("Özbekiston")).toBeVisible();
     await act(() => i18n.changeLanguage("en"));
     expect(await screen.findByText("Uzbekistan")).toBeVisible();
     expect(screen.queryByText("Узбекистан")).not.toBeInTheDocument();

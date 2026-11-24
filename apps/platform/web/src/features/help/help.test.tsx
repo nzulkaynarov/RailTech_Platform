@@ -134,6 +134,6 @@ describe("Раздел /help", () => {
     cleanup();
     updateSession({ language: "uz" });
     renderApp("/help/articles/queue");
-    expect(await screen.findByRole("link", { name: "Nimadan boshlash" })).toBeInTheDocument();
+    expect(await screen.findByRole("link", { name: "Nimadan boşlaş" })).toBeInTheDocument();
   });
 });

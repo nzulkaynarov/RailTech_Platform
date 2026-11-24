@@ -1,20 +1,20 @@
 {
   "title": "Ombor",
-  "subtitle": "Qoldiqlar va zaxiralar, qabul qilish, jo‘natmalar va kuzatuv",
+  "subtitle": "Qoldiqlar va zaxiralar, qabul qiliş, jönatmalar va kuzatuv",
   "common": {
-    "cancel": "Bekor qilish"
+    "cancel": "Bekor qiliş"
   },
   "tabs": {
     "balances": "Qoldiq va zaxiralar",
     "orders": "Hamkorlarga buyurtmalar",
-    "receipts": "Qabul qilish",
-    "shipments": "Jo‘natmalar",
+    "receipts": "Qabul qiliş",
+    "shipments": "Jönatmalar",
     "trace": "Kuzatuv"
   },
   "load": {
-    "retry": "Qayta urinish",
+    "retry": "Qayta uriniş",
     "loadError": {
-      "title": "Yuklab bo‘lmadi",
+      "title": "Yuklab bölmadi",
       "text": "Sahifani yangilang yoki keyinroq qayta urining."
     },
     "unavailable": {
@@ -22,7 +22,7 @@
       "text": "Keyinroq qayta uriniş."
     },
     "forbidden": {
-      "title": "Ruxsat yo‘q",
+      "title": "Ruxsat yöq",
       "text": "Ruxsat yetarli emas."
     }
   },
@@ -30,106 +30,106 @@
     "forbidden": "Bu amal rolingizga ruxsat etilmagan.",
     "unavailable": "Maʼlumotlar yuklanmadi. Keyinroq qayta uriniş.",
     "other": "Bajarilmadi: {{message}}",
-    "not_enough_stock": "Omborda bunchalik bo‘sh tovar yo‘q (bo‘sh: {{free}}).",
-    "below_reserved": "Qoldiq loyihalar zaxirasidan kam bo‘lishi mumkin emas.",
-    "below_shipped": "Zaxira allaqachon jo‘natilganidan kam bo‘lishi mumkin emas.",
-    "transition_not_allowed": "Buyurtma allaqachon boshqa holatda: ekranni yangilang.",
-    "order_not_draft": "Tarkib, hamkor va hamkorga izohni faqat qoralamada özgartirish mumkin.",
+    "not_enough_stock": "Omborda bunçalik böş tovar yöq (böş: {{free}}).",
+    "below_reserved": "Qoldiq loyihalar zaxirasidan kam bölişi mumkin emas.",
+    "below_shipped": "Zaxira allaqaçon jönatilganidan kam bölişi mumkin emas.",
+    "transition_not_allowed": "Buyurtma allaqaçon boşqa holatda: ekranni yangilang.",
+    "order_not_draft": "Tarkib, hamkor va hamkorga izohni faqat qoralamada özgartiriş mumkin.",
     "order_closed": "Buyurtma yopilgan: uni özgartirib bölmaydi.",
-    "order_not_confirmed": "Tovarni tasdiqlangan buyurtma bo‘yicha qabul qilish mumkin.",
-    "order_has_receipts": "Buyurtma bo‘yicha qabul bor: uni bekor qilib bo‘lmaydi.",
-    "expected_date_required": "Kutilayotgan yetkazib berish sanasini kiriting.",
-    "supplier_email_required": "Hamkorda pochta yo‘q: xat uchun manzil kiriting.",
-    "email_failed": "Hamkorga xat ketmadi, buyurtma holati o‘zgarmadi. Keyinroq qayta urining.",
-    "fulfillment_not_ready": "Loyiha hali imzolanmagan: jo‘natish shartnoma imzolanganidan keyin mumkin.",
-    "product_required": "Avval qatorni katalog kartochkasiga moslang.",
-    "no_shortage": "Taqchillik yo‘q: hammasi zaxirada yoki allaqachon buyurtma qilingan.",
+    "order_not_confirmed": "Tovarni tasdiqlangan buyurtma böyiça qabul qiliş mumkin.",
+    "order_has_receipts": "Buyurtma böyiça qabul bor: uni bekor qilib bölmaydi.",
+    "expected_date_required": "Kutilayotgan yetkazib beriş sanasini kiriting.",
+    "supplier_email_required": "Hamkorda poçta yöq: xat uçun manzil kiriting.",
+    "email_failed": "Hamkorga xat ketmadi, buyurtma holati özgarmadi. Keyinroq qayta urining.",
+    "fulfillment_not_ready": "Loyiha hali imzolanmagan: jönatiş şartnoma imzolanganidan keyin mumkin.",
+    "product_required": "Avval qatorni katalog kartoçkasiga moslang.",
+    "no_shortage": "Taqçillik yöq: hammasi zaxirada yoki allaqaçon buyurtma qilingan.",
     "deal_closed": "Ariza yopilgan: zaxira olinmaydi.",
-    "line_not_actual": "Qator KPning avvalgi versiyasiga tegishli.",
-    "line_not_goods": "Xizmat tovar hamkorsidan so‘ralmaydi.",
-    "reservation_not_active": "Zaxira allaqachon olib tashlangan yoki jo‘natilgan.",
-    "reservation_not_found": "Zaxira yo‘q.",
-    "already_answered": "Hamkorning javobi allaqachon belgilangan.",
-    "request_not_sent": "Xat ketmagan: belgilash uchun javob yo‘q.",
+    "line_not_actual": "Qator KPning avvalgi versiyasiga tegişli.",
+    "line_not_goods": "Xizmat tovar hamkorsidan söralmaydi.",
+    "reservation_not_active": "Zaxira allaqaçon olib taşlangan yoki jönatilgan.",
+    "reservation_not_found": "Zaxira yöq.",
+    "already_answered": "Hamkorning javobi allaqaçon belgilangan.",
+    "request_not_sent": "Xat ketmagan: belgilaş uçun javob yöq.",
     "service_not_stocked": "Xizmatlar omborga qabul qilinmaydi.",
-    "calc_not_started": "Hisob-kitob hali boshlanmagan.",
-    "quantity_out_of_range": "Miqdor ruxsat etilganidan tashqarida: {{max}} dan oshmasin.",
-    "prices_forbidden": "Hamkor narxlarini ularga kirish huquqi bor xodim kiritadi.",
-    "calc_task_not_found": "Hisob-kitob topshirig‘i bor arizalar orasida bunday raqamli ariza yo‘q.",
-    "order_not_found": "Bunday raqamli buyurtma yo‘q.",
-    "line_not_found": "Bunday qator yo‘q.",
-    "request_and_line_together": "Ariza va hisob-kitob qatori birga ko‘rsatiladi.",
-    "nothing_to_change": "O‘zgartirish uchun hech narsa yo‘q.",
+    "calc_not_started": "Hisob-kitob hali boşlanmagan.",
+    "quantity_out_of_range": "Miqdor ruxsat etilganidan taşqarida: {{max}} dan oşmasin.",
+    "prices_forbidden": "Hamkor narxlarini ularga kiriş huquqi bor xodim kiritadi.",
+    "calc_task_not_found": "Hisob-kitob topşiriği bor arizalar orasida bunday raqamli ariza yöq.",
+    "order_not_found": "Bunday raqamli buyurtma yöq.",
+    "line_not_found": "Bunday qator yöq.",
+    "request_and_line_together": "Ariza va hisob-kitob qatori birga körsatiladi.",
+    "nothing_to_change": "Özgartiriş uçun heç narsa yöq.",
     "role_not_permitted": "Bu amal rolingizga ruxsat etilmagan.",
-    "supplier_not_found": "Bunday hamkor yo‘q.",
-    "product_not_found": "Bunday tovar yo‘q.",
+    "supplier_not_found": "Bunday hamkor yöq.",
+    "product_not_found": "Bunday tovar yöq.",
     "order_incomplete": "Narx yoki kutilgan sana yöq: «Özgartiriş»da kiriting.",
     "nothing_to_price": "Barça qatorlarda narx bor."
   },
   "balances": {
-    "search": "Tovarni nomi yoki artikuli bo‘yicha toping",
+    "search": "Tovarni nomi yoki artikuli böyiça toping",
     "only": "Faqat zaxirasi borlar",
-    "caption": "Nomenklatura bo‘yicha qoldiq va zaxiralar",
+    "caption": "Nomenklatura böyiça qoldiq va zaxiralar",
     "scroll": "Qoldiq va zaxiralar jadvali",
     "columns": {
       "product": "Tovar",
       "onHand": "Omborda",
       "reserved": "Zaxira",
-      "free": "Bo‘sh",
+      "free": "Böş",
       "incoming": "Kutilmoqda",
-      "cells": "Katakchalar"
+      "cells": "Katakçalar"
     },
-    "open": "«{{name}}» tovarini ochish",
-    "free": "Bo‘sh · {{count}}",
-    "noFree": "Bo‘sh yo‘q",
-    "until": "{{date}} gacha",
+    "open": "«{{name}}» tovarini oçiş",
+    "free": "Böş · {{count}}",
+    "noFree": "Böş yöq",
+    "until": "{{date}} gaça",
     "cellLine": "{{cell}}: {{qty}}",
     "card": "Omborda {{onHand}} · zaxirada {{reserved}}",
     "empty": {
-      "title": "Ombor hozircha bo‘sh",
-      "text": "Qoldiq hamkordan qabul qilingandan yoki qo‘lda kiritilgandan keyin paydo bo‘ladi: tovarni qidiruv bilan toping va kirim qilish uchun oching."
+      "title": "Ombor hozirça böş",
+      "text": "Qoldiq hamkordan qabul qilingandan yoki qölda kiritilgandan keyin paydo böladi: tovarni qidiruv bilan toping va kirim qiliş uçun oçing."
     },
     "emptySearch": {
-      "title": "Hech narsa topilmadi",
-      "text": "Nom yoki artikuldan boshqa so‘zni sinab ko‘ring."
+      "title": "Heç narsa topilmadi",
+      "text": "Nom yoki artikuldan boşqa sözni sinab köring."
     }
   },
   "product": {
-    "adjust": "Kirim yoki chiqim qilish",
-    "cells": "Katakchalar",
-    "noCells": "Tovar omborda yo‘q.",
-    "noCell": "Katakchasiz",
+    "adjust": "Kirim yoki çiqim qiliş",
+    "cells": "Katakçalar",
+    "noCells": "Tovar omborda yöq.",
+    "noCell": "Katakçasiz",
     "reservations": "Loyihalar zaxirasi",
-    "noReservations": "Zaxira yo‘q.",
-    "release": "Olib tashlash",
-    "releaseLabel": "{{number}} zaxirasini olib tashlash",
-    "releaseConfirm": "{{number}} zaxirasi olib tashlansinmi? Tovar bo‘sh qoldiqqa qaytadi.",
-    "released": "Zaxira olib tashlandi",
+    "noReservations": "Zaxira yöq.",
+    "release": "Olib taşlaş",
+    "releaseLabel": "{{number}} zaxirasini olib taşlaş",
+    "releaseConfirm": "{{number}} zaxirasi olib taşlansinmi? Tovar böş qoldiqqa qaytadi.",
+    "released": "Zaxira olib taşlandi",
     "incoming": "Hamkorlardan kutilmoqda",
-    "noIncoming": "Yo‘ldagi buyurtmalar yo‘q.",
-    "movements": "So‘nggi harakatlar",
-    "noMovements": "Harakatlar hali yo‘q.",
+    "noIncoming": "Yöldagi buyurtmalar yöq.",
+    "movements": "Sönggi harakatlar",
+    "noMovements": "Harakatlar hali yöq.",
     "kind": {
       "receipt": "Qabul",
-      "shipment": "Jo‘natma",
-      "adjustment": "Tuzatish"
+      "shipment": "Jönatma",
+      "adjustment": "Tuzatiş"
     }
   },
   "adjust": {
-    "title": "Kirim yoki chiqim · {{name}}",
+    "title": "Kirim yoki çiqim · {{name}}",
     "quantity": "Miqdor",
-    "quantityHint": "Plyus — kirim, minus — chiqim. Qoldiq noldan va zaxiralardan pastga tushmaydi.",
-    "quantityRequired": "Nolga teng bo‘lmagan miqdorni kiriting",
-    "cell": "Katakcha",
+    "quantityHint": "Plyus — kirim, minus — çiqim. Qoldiq noldan va zaxiralardan pastga tuşmaydi.",
+    "quantityRequired": "Nolga teng bölmagan miqdorni kiriting",
+    "cell": "Katakça",
     "note": "Asos",
-    "submit": "Yozish",
-    "done": "Qoldiq o‘zgardi"
+    "submit": "Yoziş",
+    "done": "Qoldiq özgardi"
   },
   "orders": {
     "search": "Buyurtmani toping: raqam, hamkor, pozitsiya",
     "statusFilter": "Holat",
-    "overdueOnly": "Faqat muddati o‘tganlar",
-    "create": "Buyurtma yaratish",
+    "overdueOnly": "Faqat muddati ötganlar",
+    "create": "Buyurtma yaratiş",
     "caption": "Hamkorlarga buyurtmalar",
     "scroll": "Buyurtmalar jadvali",
     "columns": {
@@ -152,15 +152,15 @@
     "receipt": {
       "none": "Qabul qilinmagan",
       "partial": "qisman",
-      "full": "To‘liq qabul qilingan"
+      "full": "Töliq qabul qilingan"
     },
     "receivedOf": "{{total}} dan {{received}}",
-    "overdueDays": "Muddati o‘tgan · {{count}} kun",
-    "open": "Ochish",
-    "openLabel": "{{number}} buyurtmasini ochish",
+    "overdueDays": "Muddati ötgan · {{count}} kun",
+    "open": "Oçiş",
+    "openLabel": "{{number}} buyurtmasini oçiş",
     "empty": {
-      "title": "Hamkorlarga buyurtmalar yo‘q",
-      "text": "Buyurtma arizadagi taqchillik uchun yoki qo‘lda yaratiladi: qoralama, so‘ng hamkorga xat bilan yuboriladi."
+      "title": "Hamkorlarga buyurtmalar yöq",
+      "text": "Buyurtma arizadagi taqçillik uçun yoki qölda yaratiladi: qoralama, söng hamkorga xat bilan yuboriladi."
     }
   },
   "create": {
@@ -168,10 +168,10 @@
     "supplier": "Hamkor",
     "supplierRequired": "Hamkorni tanlang",
     "mode": "Tarkib",
-    "modeManual": "Qo‘lda",
-    "modeShortage": "Ariza taqchilligi uchun",
+    "modeManual": "Qölda",
+    "modeShortage": "Ariza taqçilligi uçun",
     "request": "Ariza yoki loyiha raqami",
-    "requestHint": "Buyurtmaga KP tovar qatorlaridagi yetishmayotgani kiradi: miqdor minus zaxira minus allaqachon buyurtma qilingan.",
+    "requestHint": "Buyurtmaga KP tovar qatorlaridagi yetişmayotgani kiradi: miqdor minus zaxira minus allaqaçon buyurtma qilingan.",
     "requestRequired": "Ariza raqamini kiriting",
     "expected": "Kutilayotgan sana",
     "note": "Içki izoh",
@@ -186,13 +186,13 @@
     "quantityRequired": "Miqdorni kiriting",
     "price": "Narx",
     "priceLabel": "Hamkorning birlik narxi, {{n}}-qator",
-    "addLine": "Qator qo‘shish",
-    "removeLine": "{{n}}-qatorni olib tashlash",
-    "submit": "Qoralama yaratish",
+    "addLine": "Qator qöşiş",
+    "removeLine": "{{n}}-qatorni olib taşlaş",
+    "submit": "Qoralama yaratiş",
     "done": "{{number}} qoralamasi yaratildi",
     "productHint": "Nom yoki artikuldan kamida ikkita harf kiriting",
     "productSearching": "Qidirilmoqda…",
-    "productNone": "Hech narsa topilmadi",
+    "productNone": "Heç narsa topilmadi",
     "sections": {
       "supplier": "Hamkor va usul",
       "lines": "Qatorlar"
@@ -203,17 +203,17 @@
     "title": "Hamkorga buyurtma {{number}}",
     "back": "Buyurtmalarga",
     "action": {
-      "send": "Hamkorga yuborish",
+      "send": "Hamkorga yuboriş",
       "confirm": "Hamkor tasdiqladi",
-      "receive": "Tovarni qabul qilish",
+      "receive": "Tovarni qabul qiliş",
       "edit": "Özgartiriş",
-      "cancel": "Buyurtmani bekor qilish",
+      "cancel": "Buyurtmani bekor qiliş",
       "price": "Narx söraş"
     },
-    "overdueBanner": "{{date}} gacha kutilgan, tovar olinmagan — {{count}} kun kechikish. Hamkor bilan bog‘laning va kutilayotgan sanani yangilang.",
+    "overdueBanner": "{{date}} gaça kutilgan, tovar olinmagan — {{count}} kun keçikiş. Hamkor bilan boğlaning va kutilayotgan sanani yangilang.",
     "cancelledBanner": "Buyurtma bekor qilingan. Sabab: {{reason}}",
     "supplier": "Hamkor",
-    "email": "Hamkor pochtasi",
+    "email": "Hamkor poçtasi",
     "expected": "Kutilayotgan sana",
     "sent": "Yuborilgan",
     "confirmed": "Tasdiqlangan",
@@ -222,17 +222,17 @@
     "note": "Içki izoh",
     "partnerNote": "Hamkorga izoh",
     "linesTitle": "Buyurtma tarkibi",
-    "receiptsTitle": "Qabul qilishlar",
+    "receiptsTitle": "Qabul qilişlar",
     "notFound": {
-      "title": "Buyurtma yo‘q",
-      "text": "Bunday raqamli buyurtma yo‘q yoki rolingizga ochiq emas.",
+      "title": "Buyurtma yöq",
+      "text": "Bunday raqamli buyurtma yöq yoki rolingizga oçiq emas.",
       "action": "Buyurtmalarga"
     },
     "lines": {
       "scroll": "Buyurtma tarkibi jadvali",
       "caption": "{{number}} buyurtmasi tarkibi",
       "position": "Pozitsiya",
-      "request": "Ariza uchun",
+      "request": "Ariza uçun",
       "quantity": "Buyurtma qilingan",
       "received": "Qabul qilingan",
       "price": "Narx",
@@ -240,48 +240,48 @@
       "totals": "Jami"
     },
     "receipts": {
-      "empty": "Qabul hali bo‘lmagan.",
-      "label": "Buyurtma bo‘yicha qabullar",
+      "empty": "Qabul hali bölmagan.",
+      "label": "Buyurtma böyiça qabullar",
       "doc": "yuk xati {{doc}}"
     },
     "log": {
       "label": "Buyurtma jurnali",
       "created": "Buyurtma yaratildi",
-      "edited": "Buyurtma o‘zgartirildi",
+      "edited": "Buyurtma özgartirildi",
       "sent": "Hamkorga yuborildi",
       "confirmed": "Hamkor tasdiqladi",
       "receipt": "Tovar qabul qilindi",
-      "received": "Buyurtma to‘liq qabul qilindi",
+      "received": "Buyurtma töliq qabul qilindi",
       "cancelled": "Buyurtma bekor qilindi",
-      "overdue": "Buyurtma muddati o‘tdi"
+      "overdue": "Buyurtma muddati ötdi"
     },
     "send": {
-      "title": "{{number}} buyurtmasini hamkorga yuborish",
+      "title": "{{number}} buyurtmasini hamkorga yuboriş",
       "email": "Xat manzili",
-      "emailKnown": "Manzil hamkor kartochkasidan; boshqasini kiritish mumkin.",
-      "emailMissing": "Hamkorda pochta yo‘q: xat uchun manzil kiriting.",
-      "submit": "Xatni yuborish"
+      "emailKnown": "Manzil hamkor kartoçkasidan; boşqasini kiritiş mumkin.",
+      "emailMissing": "Hamkorda poçta yöq: xat uçun manzil kiriting.",
+      "submit": "Xatni yuboriş"
     },
     "confirm": {
       "title": "Hamkor {{number}} buyurtmasini tasdiqladi",
-      "date": "Tasdiqlangan yetkazib berish sanasi",
-      "dateHint": "Kechikishni kuzatish uchun kutilayotgan sana kerak.",
-      "submit": "Tasdiqlash"
+      "date": "Tasdiqlangan yetkazib beriş sanasi",
+      "dateHint": "Keçikişni kuzatiş uçun kutilayotgan sana kerak.",
+      "submit": "Tasdiqlaş"
     },
     "cancel": {
-      "title": "{{number}} buyurtmasini bekor qilish",
+      "title": "{{number}} buyurtmasini bekor qiliş",
       "reason": "Sabab",
-      "submit": "Buyurtmani bekor qilish"
+      "submit": "Buyurtmani bekor qiliş"
     },
     "receive": {
-      "title": "{{number}} buyurtmasi bo‘yicha tovarni qabul qilish",
-      "hint": "Har bir qator bo‘yicha qancha kelganini kiriting: bir qismini qabul qilib, qolganini keyinroq qabul qilish mumkin.",
+      "title": "{{number}} buyurtmasi böyiça tovarni qabul qiliş",
+      "hint": "Har bir qator böyiça qança kelganini kiriting: bir qismini qabul qilib, qolganini keyinroq qabul qiliş mumkin.",
       "left": "{{total}} dan {{left}} qoldi",
-      "quantityLabel": "Qabul qilish, «{{name}}»",
-      "cell": "Katakcha",
-      "cellLabel": "«{{name}}» uchun katakcha",
+      "quantityLabel": "Qabul qiliş, «{{name}}»",
+      "cell": "Katakça",
+      "cellLabel": "«{{name}}» uçun katakça",
       "doc": "Hamkorning yuk xati",
-      "submit": "Qabul qilish"
+      "submit": "Qabul qiliş"
     },
     "edit": {
       "title": "{{number}} buyurtmasini özgartiriş",
@@ -289,14 +289,14 @@
       "note": "Içki izoh",
       "partnerNote": "Hamkorga izoh",
       "quantityLabel": "Miqdor, «{{name}}»",
-      "remove": "Olib tashlash",
-      "removeLabel": "«{{name}}» qatorini olib tashlash",
-      "submit": "Saqlash",
+      "remove": "Olib taşlaş",
+      "removeLabel": "«{{name}}» qatorini olib taşlaş",
+      "submit": "Saqlaş",
       "price": "Narx",
       "priceLabel": "Narx, «{{name}}»"
     },
     "notice": {
-      "sent": "Buyurtma rasmiylashtirildi. Hamkorga xat pochta navbatida, natija — buyurtma kartasida.",
+      "sent": "Buyurtma rasmiylaştirildi. Hamkorga xat poçta navbatida, natija — buyurtma kartasida.",
       "confirmed": "Buyurtma tasdiqlandi",
       "received": "Tovar qabul qilindi",
       "cancelled": "Buyurtma bekor qilindi",
@@ -306,12 +306,12 @@
     "offer": {
       "label": "Hamkor narxi: {{text}}",
       "incoterms": "bazis {{code}}",
-      "validUntil": "{{date}} gacha amal qiladi",
+      "validUntil": "{{date}} gaça amal qiladi",
       "expired": "{{date}} da tugagan"
     },
     "mail": {
       "label": "Hamkorga xat",
-      "queued": "pochta navbatida — natija shu yerda chiqadi",
+      "queued": "poçta navbatida — natija şu yerda çiqadi",
       "sent": "yuborildi",
       "failed": "yuborilmadi: {{reason}}",
       "failedUnknown": "yuborilmadi"
@@ -343,71 +343,71 @@
     "pendingTitle": "Tovar kutilmoqda",
     "pendingCaption": "Tovar kutayotgan tasdiqlangan buyurtma qatorlari",
     "pendingScroll": "Qabul kutayotgan qatorlar jadvali",
-    "doneTitle": "So‘nggi qabullar",
-    "doneEmpty": "Qabul hali bo‘lmagan.",
+    "doneTitle": "Sönggi qabullar",
+    "doneEmpty": "Qabul hali bölmagan.",
     "doc": "yuk xati {{doc}}",
     "columns": {
       "order": "Buyurtma",
       "supplier": "Hamkor",
       "position": "Pozitsiya",
-      "left": "Qabul qilish qoldi",
+      "left": "Qabul qiliş qoldi",
       "expected": "Kutilmoqda",
       "action": "Amal"
     },
     "left": "{{total}} dan {{left}}",
-    "overdue": "Muddati o‘tgan",
-    "receive": "Qabul qilish",
-    "receiveLabel": "{{number}} buyurtmasi bo‘yicha «{{name}}» ni qabul qilish",
+    "overdue": "Muddati ötgan",
+    "receive": "Qabul qiliş",
+    "receiveLabel": "{{number}} buyurtmasi böyiça «{{name}}» ni qabul qiliş",
     "empty": {
-      "title": "Hech narsa kutilmayapti",
-      "text": "Bu yerda tovari to‘liq qabul qilinmagan tasdiqlangan buyurtmalar qatorlari ko‘rinadi."
+      "title": "Heç narsa kutilmayapti",
+      "text": "Bu yerda tovari töliq qabul qilinmagan tasdiqlangan buyurtmalar qatorlari körinadi."
     }
   },
   "shipments": {
-    "newTitle": "Loyiha bo‘yicha yangi jo‘natma",
+    "newTitle": "Loyiha böyiça yangi jönatma",
     "request": "Loyiha raqami",
     "requestPlaceholder": "LH-2026-099",
-    "find": "Zaxiralarni topish",
-    "hint": "Loyiha raqamini kiriting: jo‘natish mumkin bo‘lgan zaxiralarni ko‘rsatamiz.",
+    "find": "Zaxiralarni topiş",
+    "hint": "Loyiha raqamini kiriting: jönatiş mumkin bölgan zaxiralarni körsatamiz.",
     "noReservations": {
-      "title": "Zaxira yo‘q",
-      "text": "{{request}} bo‘yicha ombordan jo‘natadigan narsa yo‘q: zaxira yo‘q yoki hammasi jo‘natilgan."
+      "title": "Zaxira yöq",
+      "text": "{{request}} böyiça ombordan jönatadigan narsa yöq: zaxira yöq yoki hammasi jönatilgan."
     },
     "reserved": "zaxirada {{total}} dan {{remaining}}",
-    "quantityLabel": "Jo‘natish, «{{name}}»",
+    "quantityLabel": "Jönatiş, «{{name}}»",
     "tracking": "Trek raqami",
-    "carrier": "Tashuvchi",
-    "submit": "Jo‘natish",
-    "done": "Jo‘natildi, yuk xati {{number}}",
-    "readOnly": "Jo‘natmani ombor huquqi bor xodim rasmiylashtiradi.",
-    "listTitle": "Jo‘natmalar",
-    "caption": "Loyihalar bo‘yicha jo‘natmalar",
-    "scroll": "Jo‘natmalar jadvali",
+    "carrier": "Taşuvçi",
+    "submit": "Jönatiş",
+    "done": "Jönatildi, yuk xati {{number}}",
+    "readOnly": "Jönatmani ombor huquqi bor xodim rasmiylaştiradi.",
+    "listTitle": "Jönatmalar",
+    "caption": "Loyihalar böyiça jönatmalar",
+    "scroll": "Jönatmalar jadvali",
     "columns": {
       "number": "Yuk xati",
       "request": "Loyiha",
       "lines": "Qatorlar",
       "tracking": "Trek",
-      "when": "Qachon"
+      "when": "Qaçon"
     },
     "empty": {
-      "title": "Jo‘natmalar hali bo‘lmagan",
-      "text": "Jo‘natma shartnoma imzolangandan keyin loyiha zaxiralari bo‘yicha rasmiylashtiriladi."
+      "title": "Jönatmalar hali bölmagan",
+      "text": "Jönatma şartnoma imzolangandan keyin loyiha zaxiralari böyiça rasmiylaştiriladi."
     }
   },
   "priceRequest": {
-    "title": "Hamkordan narx so‘rash · {{number}}",
+    "title": "Hamkordan narx söraş · {{number}}",
     "supplier": "Hamkor",
     "email": "Xat manzili",
-    "emailHint": "Hamkorda pochta yo‘q: xat yuboriladigan manzilni kiriting.",
-    "lines": "So‘rov qatorlari",
-    "noGoods": "Hisob-kitobda narx so‘rash mumkin bo‘lgan tovar yo‘q.",
+    "emailHint": "Hamkorda poçta yöq: xat yuboriladigan manzilni kiriting.",
+    "lines": "Sörov qatorlari",
+    "noGoods": "Hisob-kitobda narx söraş mumkin bölgan tovar yöq.",
     "note": "Hamkorga izoh",
-    "submit": "So‘rovni yuborish",
-    "sent": "So‘rov {{email}} manziliga yuborildi",
-    "failed": "«{{name}}» ga xat ketmadi: so‘rov jurnalda «yuborilmagan» holatida qoldi.",
-    "logTitle": "Hamkorlardan narx so‘rovlari",
-    "logEmpty": "So‘rovlar hali bo‘lmagan.",
+    "submit": "Sörovni yuboriş",
+    "sent": "Sörov {{email}} manziliga yuborildi",
+    "failed": "«{{name}}» ga xat ketmadi: sörov jurnalda «yuborilmagan» holatida qoldi.",
+    "logTitle": "Hamkorlardan narx sörovlari",
+    "logEmpty": "Sörovlar hali bölmagan.",
     "status": {
       "sent": "Javob kutilmoqda",
       "answered": "Javob olindi",
@@ -422,11 +422,11 @@
     "title": "Kuzatuv: qayerdan va qayerga",
     "search": "Seriya raqami yoki partiya",
     "searchPlaceholder": "Seriya raqami yoki partiya raqami",
-    "find": "Topish",
-    "hint": "Kamida 2 belgi kiriting: qabul, hamkor va hujjat, shuningdek jo‘natmalar va mijozlar ko‘rsatiladi.",
+    "find": "Topiş",
+    "hint": "Kamida 2 belgi kiriting: qabul, hamkor va hujjat, şuningdek jönatmalar va mijozlar körsatiladi.",
     "results": "Topilgan birliklar",
     "empty": {
-      "title": "Hech narsa topilmadi",
+      "title": "Heç narsa topilmadi",
       "text": "«{{query}}» raqamli seriya yoki partiya qabul qilinmagan."
     },
     "kind": {
@@ -435,41 +435,41 @@
     },
     "status": {
       "in_stock": "Omborda",
-      "shipped": "Jo‘natilgan"
+      "shipped": "Jönatilgan"
     },
-    "lotShipped": "{{total}} dan {{shipped}} jo‘natilgan",
+    "lotShipped": "{{total}} dan {{shipped}} jönatilgan",
     "from": "Qayerdan",
     "to": "Qayerga",
-    "manufacturer": "Ishlab chiqaruvchi",
+    "manufacturer": "Işlab çiqaruvçi",
     "supplier": "Hamkor",
     "order": "Hamkorga buyurtma",
     "received": "Qabul qilingan",
     "document": "Muvofiqlik hujjati",
-    "until": "{{date}} gacha",
+    "until": "{{date}} gaça",
     "expiryLabel": "Yaroqlilik muddati",
     "orderedFor": "Kimga buyurtma qilingan",
-    "notShipped": "Hali omborda — jo‘natilmagan.",
+    "notShipped": "Hali omborda — jönatilmagan.",
     "fieldsFor": "Raqamlar va hujjat: «{{name}}»",
     "serials": "Seriya raqamlari — har qatorda bittadan",
-    "serialsPlaceholder": "Qadoqlash varaqasidan ustunni qo‘yish mumkin",
+    "serialsPlaceholder": "Qadoqlaş varaqasidan ustunni qöyiş mumkin",
     "serialsCount": "{{total}} dan {{count}} kiritildi",
     "lot": "Partiya raqami",
     "expiry": "Yaroqlilik muddati",
     "docNumber": "Sertifikat yoki deklaratsiya №",
     "docValidUntil": "Amal qiladi",
-    "noUnits": "Bu tovarning qabul qilingan seriya yoki partiyalari omborda yo‘q — jo‘natib bo‘lmaydi.",
+    "noUnits": "Bu tovarning qabul qilingan seriya yoki partiyalari omborda yöq — jönatib bölmaydi.",
     "pickSerials": "«{{name}}» seriya raqamlari: {{total}} dan {{count}} tanlandi",
     "pickLots": "«{{name}}» partiyalari: {{total}} dan {{count}} tanlandi",
     "lotAvailable": "omborda {{count}}",
-    "expiryShort": "{{date}} gacha yaroqli",
-    "lotQuantity": "{{number}} partiyadan qancha",
+    "expiryShort": "{{date}} gaça yaroqli",
+    "lotQuantity": "{{number}} partiyadan qança",
     "problem": {
-      "serials": "«{{name}}»: seriya raqamlari qabul qilinayotgan miqdorga teng bo‘lsin.",
+      "serials": "«{{name}}»: seriya raqamlari qabul qilinayotgan miqdorga teng bölsin.",
       "serialsRepeat": "«{{name}}»: seriya raqamlari takrorlanadi.",
       "lot": "«{{name}}»: partiya raqamini kiriting.",
       "doc": "«{{name}}»: sertifikat yoki deklaratsiya № va muddatini kiriting.",
       "docExpired": "«{{name}}»: hujjat muddati tugagan.",
-      "units": "«{{name}}»: butun miqdor uchun seriya yoki partiyalarni tanlang."
+      "units": "«{{name}}»: butun miqdor uçun seriya yoki partiyalarni tanlang."
     }
   }
 }

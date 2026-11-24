@@ -185,7 +185,7 @@
     "languages": {
       "title": "Letterhead in Uzbek and English",
       "hint": "A letter is printed on the letterhead of its text language. An empty field is printed in Russian. Uzbek is in Latin script.",
-      "uz": "O‘zbekcha (UZ)",
+      "uz": "Özbekça (UZ)",
       "en": "English (EN)",
       "fields": {
         "legal_name": "Company name",

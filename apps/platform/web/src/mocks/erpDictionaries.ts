@@ -90,7 +90,7 @@ export const ERP_CATALOG: Dictionary[] = [
     area: "calc",
     codes: "given",
     closed: false,
-    name: names("Единицы измерения", "O‘lchov birliklari", "Units"),
+    name: names("Единицы измерения", "Ölçov birliklari", "Units"),
     attrs: [],
   },
   {
@@ -99,7 +99,7 @@ export const ERP_CATALOG: Dictionary[] = [
     area: "calc",
     codes: "given",
     closed: false,
-    name: names("Базисы поставки", "Yetkazib berish bazislari", "Delivery terms"),
+    name: names("Базисы поставки", "Yetkazib beriş bazislari", "Delivery terms"),
     attrs: [
       {
         key: "description",

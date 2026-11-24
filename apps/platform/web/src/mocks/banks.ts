@@ -50,7 +50,7 @@ const banks = (): DictionaryItem[] => [
     code: "99001",
     name: {
       ru: "Банк, добавленный вручную",
-      uz: "Qo‘lda qo‘shilgan bank",
+      uz: "Qölda qöşilgan bank",
       en: "Manually added bank",
     },
     attrs: { swift: "" },

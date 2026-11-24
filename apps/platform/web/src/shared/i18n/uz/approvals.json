@@ -1,26 +1,26 @@
 {
   "state": {
-    "retry": "Qayta urinish",
+    "retry": "Qayta uriniş",
     "loadError": {
       "title": "Hujjatlar yuklanmadi",
-      "text": "Ma'lumotni olib bo'lmadi. Yana urinib ko'ring."
+      "text": "Maʼlumotni olib bölmadi. Yana urinib köring."
     },
     "unavailable": {
-      "title": "Hujjat aylanishi javob bermayapti",
-      "text": "Hujjatlar xizmati vaqtincha mavjud emas. Hech narsa yo'qolmadi — birozdan so'ng takrorlang."
+      "title": "Hujjat aylanişi javob bermayapti",
+      "text": "Hujjatlar xizmati vaqtinça mavjud emas. Heç narsa yöqolmadi — birozdan söng takrorlang."
     },
     "forbidden": {
-      "title": "Ruxsat yo'q",
-      "text": "«Kelishuvda» bo'limi rolingizga berilmagan."
+      "title": "Ruxsat yöq",
+      "text": "«Kelişuvda» bölimi rolingizga berilmagan."
     },
     "notGranted": {
-      "title": "Hujjat aylanishiga ruxsat yo'q",
-      "text": "Hisobingiz hujjat aylanishiga hali kiritilmagan."
+      "title": "Hujjat aylanişiga ruxsat yöq",
+      "text": "Hisobingiz hujjat aylanişiga hali kiritilmagan."
     },
     "notFound": {
       "title": "Hujjat topilmadi",
-      "text": "Bunday hujjat yo'q, kelishuvga yuborilmagan yoki rolingizga ko'rinmaydi.",
-      "action": "Kelishuvlar ro'yxatiga"
+      "text": "Bunday hujjat yöq, kelişuvga yuborilmagan yoki rolingizga körinmaydi.",
+      "action": "Kelişuvlar röyxatiga"
     }
   },
   "kinds": {
@@ -29,70 +29,70 @@
     "report": "Hisobot"
   },
   "list": {
-    "caption": "Kelishuvdagi hujjatlar",
-    "scroll": "Kelishuvdagi hujjatlar jadvali",
+    "caption": "Kelişuvdagi hujjatlar",
+    "scroll": "Kelişuvdagi hujjatlar jadvali",
     "scope": {
-      "label": "Qaysi hujjatlarni ko'rsatish",
-      "mine": "Mening bosqichimda",
-      "all": "Mening barcha kelishuvlarim"
+      "label": "Qaysi hujjatlarni körsatiş",
+      "mine": "Mening bosqiçimda",
+      "all": "Mening barça kelişuvlarim"
     },
     "columns": {
       "number": "Raqam",
       "subject": "Mavzu",
       "author": "Kimdan",
       "amount": "Summa",
-      "due": "Qachongacha kerak",
+      "due": "Qaçongaça kerak",
       "received": "Kelgan",
       "status": "Holat",
       "action": "Amal"
     },
-    "select": "{{number}} hujjatni yon oynada ko'rsatish",
-    "open": "Ochish",
-    "openLabel": "{{number}} hujjat kartasini ochish",
-    "more": "Yana ko'rsatish",
-    "waiting": "Kelishuvda · {{label}}",
+    "select": "{{number}} hujjatni yon oynada körsatiş",
+    "open": "Oçiş",
+    "openLabel": "{{number}} hujjat kartasini oçiş",
+    "more": "Yana körsatiş",
+    "waiting": "Kelişuvda · {{label}}",
     "status": {
-      "open": "Kelishuvda",
-      "approved": "Kelishilgan",
-      "returned": "Qayta ishlashga qaytarilgan",
+      "open": "Kelişuvda",
+      "approved": "Kelişilgan",
+      "returned": "Qayta işlaşga qaytarilgan",
       "rejected": "Rad etilgan"
     },
     "empty": {
       "mine": {
-        "title": "Bosqichingizda hech narsa yo'q",
-        "text": "Kelishuv marshrutiga ega xizmat yozuvlari va boshqa hujjatlar shu yerda paydo bo'ladi.",
-        "action": "Barcha kelishuvlarni ko'rsatish"
+        "title": "Bosqiçingizda heç narsa yöq",
+        "text": "Kelişuv marşrutiga ega xizmat yozuvlari va boşqa hujjatlar şu yerda paydo böladi.",
+        "action": "Barça kelişuvlarni körsatiş"
       },
       "all": {
-        "title": "Hozircha kelishuvlar yo'q",
-        "text": "Siz yuborgan yoki kelishadigan hujjatlar shu yerda paydo bo'ladi.",
-        "action": "Yangilash"
+        "title": "Hozirça kelişuvlar yöq",
+        "text": "Siz yuborgan yoki kelişadigan hujjatlar şu yerda paydo böladi.",
+        "action": "Yangilaş"
       }
     }
   },
   "card": {
     "title": "{{number}}",
-    "readOnly": "Faqat ko'rish",
-    "readOnlyHint": "Qarorni kelishuvchi qabul qiladi. Siz hujjatni faqat o'qish rejimida ko'rasiz.",
-    "agree": "Kelishuvni ochish",
+    "readOnly": "Faqat köriş",
+    "readOnlyHint": "Qarorni kelişuvçi qabul qiladi. Siz hujjatni faqat öqiş rejimida körasiz.",
+    "agree": "Kelişuvni oçiş",
     "text": "Matn",
     "files": "Ilovalar",
-    "noFiles": "Ilovalar yo'q.",
-    "download": "{{name}} faylini yuklab olish",
-    "route": "Kelishuv marshruti",
+    "noFiles": "Ilovalar yöq.",
+    "download": "{{name}} faylini yuklab oliş",
+    "route": "Kelişuv marşruti",
     "routeAuthor": "Muallif: {{name}}",
     "routeStep": {
       "pending": "{{label}}: navbat hali kelmagan",
       "current": "{{label}}: qaror kutmoqda",
-      "approved": "{{label}}: kelishildi",
-      "returned": "{{label}}: qayta ishlashga qaytarildi",
+      "approved": "{{label}}: kelişildi",
+      "returned": "{{label}}: qayta işlaşga qaytarildi",
       "rejected": "{{label}}: rad etildi",
-      "skipped": "{{label}}: o'tkazib yuborildi"
+      "skipped": "{{label}}: ötkazib yuborildi"
     },
     "decisions": "Qarorlar",
     "decision": {
-      "approve": "Kelishildi",
-      "return": "Qayta ishlashga qaytarildi",
+      "approve": "Kelişildi",
+      "return": "Qayta işlaşga qaytarildi",
       "reject": "Rad etildi"
     },
     "requisites": "Rekvizitlar",
@@ -102,35 +102,35 @@
       "to": "Kimga",
       "date": "Sana",
       "amount": "Summa",
-      "due": "Qachongacha kerak",
+      "due": "Qaçongaça kerak",
       "deal": "Loyiha"
     },
     "toDirector": "Direktor"
   },
   "panel": {
-    "sheetTitle": "{{number}} kelishuvi",
-    "sheetLabel": "Hujjat kelishuvi",
-    "sheetClose": "Yopish",
-    "briefOpen": "Hujjat kartasini ochish",
+    "sheetTitle": "{{number}} kelişuvi",
+    "sheetLabel": "Hujjat kelişuvi",
+    "sheetClose": "Yopiş",
+    "briefOpen": "Hujjat kartasini oçiş",
     "brief": {
       "from": "Kimdan",
       "amount": "Summa",
-      "due": "Qachongacha kerak",
+      "due": "Qaçongaça kerak",
       "text": "Matn"
     },
     "readOnly": {
-      "title": "Hujjat kelishuvda",
-      "text": "Qarorni kelishuvchi qabul qiladi. Siz hujjatni faqat o'qish rejimida ko'rasiz.",
-      "notYourStep": "Hozirgi bosqich: {{label}}.",
-      "decidedStep": "Siz {{date}} kelişdingiz. Hozirgi bosqich: {{label}}."
+      "title": "Hujjat kelişuvda",
+      "text": "Qarorni kelişuvçi qabul qiladi. Siz hujjatni faqat öqiş rejimida körasiz.",
+      "notYourStep": "Hozirgi bosqiç: {{label}}.",
+      "decidedStep": "Siz {{date}} kelişdingiz. Hozirgi bosqiç: {{label}}."
     },
     "decided": {
       "approved": {
-        "title": "Hujjat kelishildi",
+        "title": "Hujjat kelişildi",
         "text": "Qaror qabul qilindi. Muallif xabar oldi; hujjat reyestrda vizangiz va sanangiz bilan qoladi."
       },
       "returned": {
-        "title": "Hujjat qayta ishlashga qaytarildi",
+        "title": "Hujjat qayta işlaşga qaytarildi",
         "text": "Muallif tuzatib, hujjatni qayta yuboradi."
       },
       "rejected": {
@@ -140,27 +140,27 @@
     }
   },
   "form": {
-    "name": "Hujjatni kelishish",
+    "name": "Hujjatni kelişiş",
     "draft": "Izoh qoralamadan tiklandi.",
     "comment": {
       "label": "Izoh",
-      "hint": "Qayta ishlashga qaytarish yoki rad etish uchun majburiy; kelishish uchun — ixtiyoriy."
+      "hint": "Qayta işlaşga qaytariş yoki rad etiş uçun majburiy; kelişiş uçun — ixtiyoriy."
     },
     "consequence": {
-      "title": "Nima bo'ladi",
-      "step1": "Hujjat «Kelishilgan» holatini oladi.",
+      "title": "Nima böladi",
+      "step1": "Hujjat «Kelişilgan» holatini oladi.",
       "step2": "Muallif izohingiz bilan xabar oladi.",
       "step2Next": "Keyin hujjatni oladi: {{label}}.",
       "step3": "Hujjat reyestrda vizangiz, sanangiz va izohingiz bilan qoladi."
     },
-    "submit": "Kelishish",
+    "submit": "Kelişiş",
     "submitFor": "{{name}} uçun kelişiş",
-    "return": "Qayta ishlashga qaytarish",
-    "reject": "Rad etish",
-    "disabled": "Qaytarish va rad etish faqat izoh bilan mumkin: izoh bo'sh bo'lsa tugmalar faol emas.",
+    "return": "Qayta işlaşga qaytariş",
+    "reject": "Rad etiş",
+    "disabled": "Qaytariş va rad etiş faqat izoh bilan mumkin: izoh böş bölsa tugmalar faol emas.",
     "done": {
-      "approve": "Hujjat kelishildi",
-      "return": "Hujjat qayta ishlashga qaytarildi",
+      "approve": "Hujjat kelişildi",
+      "return": "Hujjat qayta işlaşga qaytarildi",
       "reject": "Hujjat rad etildi"
     },
     "failed": {
@@ -169,22 +169,22 @@
       "reject": "Saqlanmadi: {{reason}}"
     },
     "reasons": {
-      "route_closed": "hujjatni boshqa kelishuvchi hal qilgan, karta yangilandi",
-      "checklist_not_green": "kelishuv shartlari bajarilmagan, karta yangilandi",
-      "checklist_not_green_plain": "kelishuv shartlari bajarilmagan, karta yangilandi",
-      "not_your_step": "hozir sizning bosqichingiz emas",
-      "eds_not_granted": "siz hujjat aylanishiga kiritilmagansiz",
+      "route_closed": "hujjatni boşqa kelişuvçi hal qilgan, karta yangilandi",
+      "checklist_not_green": "kelişuv şartlari bajarilmagan, karta yangilandi",
+      "checklist_not_green_plain": "kelişuv şartlari bajarilmagan, karta yangilandi",
+      "not_your_step": "hozir sizning bosqiçingiz emas",
+      "eds_not_granted": "siz hujjat aylanişiga kiritilmagansiz",
       "forbidden": "amal rolingizga berilmagan",
-      "unavailable": "hujjatlar xizmati javob bermayapti, izoh shaklda qoldi",
-      "validation": "izohni tekshiring",
-      "unknown": "nimadir xato ketdi, izoh shaklda qoldi"
+      "unavailable": "hujjatlar xizmati javob bermayapti, izoh şaklda qoldi",
+      "validation": "izohni tekşiring",
+      "unknown": "nimadir xato ketdi, izoh şaklda qoldi"
     }
   },
   "accountant": {
-    "submit": "«Moliya»da to‘lash",
-    "return": "Qaytarish",
+    "submit": "«Moliya»da tölaş",
+    "return": "Qaytariş",
     "done": {
-      "approve": "Hujjat to'lovga qabul qilindi",
+      "approve": "Hujjat tölovga qabul qilindi",
       "return": "Hujjat qaytarildi",
       "reject": "Hujjat rad etildi"
     },
@@ -192,15 +192,15 @@
   },
   "signing": {
     "title": "Vizalar va imzolar",
-    "sign": "Imzolash",
-    "approve": "Kelishish",
-    "reject": "Rad etish",
-    "return": "Izoh bilan qaytarish",
-    "rejectTitle": "Rad etish sababi",
+    "sign": "Imzolaş",
+    "approve": "Kelişiş",
+    "reject": "Rad etiş",
+    "return": "Izoh bilan qaytariş",
+    "rejectTitle": "Rad etiş sababi",
     "returnTitle": "Izoh",
-    "reason": "Sabab, muallif ko'radi",
+    "reason": "Sabab, muallif köradi",
     "done": "Qaror saqlandi",
-    "failed": "Qarorni saqlab bo'lmadi",
+    "failed": "Qarorni saqlab bölmadi",
     "failedReason": "Saqlanmadi: {{reason}}"
   }
 }

@@ -314,14 +314,14 @@ function seed(): CompanyMock {
     reference: {
       countries: [
         item(1, "UZ", "Узбекистан", {
-          ...localized("O‘zbekiston", "Uzbekistan"),
+          ...localized("Özbekiston", "Uzbekistan"),
           alpha2: "UZ",
           alpha3: "UZB",
           iso_numeric: "860",
           vat_rate: "12.00",
         }),
         item(2, "KZ", "Казахстан", {
-          ...localized("Qozog‘iston", "Kazakhstan"),
+          ...localized("Qozoğiston", "Kazakhstan"),
           alpha2: "KZ",
           alpha3: "KAZ",
           iso_numeric: "398",

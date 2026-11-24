@@ -634,15 +634,15 @@ test.describe("Компания: axe и снимки", () => {
 
 test.describe("Страна на языке интерфейса (план справочников, PR 6)", () => {
   for (const width of [1440, 390] as const) {
-    test(`${String(width)}: на узбекском страна регистрации — «O‘zbekiston»`, async ({ page }) => {
+    test(`${String(width)}: на узбекском страна регистрации — «Özbekiston»`, async ({ page }) => {
       await page.setViewportSize({ width, height: 900 });
       await loginAndWait(page, "admin@demo.example");
       await openCompany(page, "details");
       await expect(page.getByText("Узбекистан", { exact: true })).toBeVisible();
       await openAvatarMenu(page);
-      await page.getByRole("menuitem", { name: "O‘zbekcha" }).click();
+      await page.getByRole("menuitem", { name: "Özbekça" }).click();
       await expect(page.locator("html")).toHaveAttribute("lang", "uz");
-      await expect(page.getByText("O‘zbekiston", { exact: true })).toBeVisible();
+      await expect(page.getByText("Özbekiston", { exact: true })).toBeVisible();
       await expectNoViolations(page, `country uz ${String(width)}`);
       await settledScreenshot(page, "company-country-uz");
     });

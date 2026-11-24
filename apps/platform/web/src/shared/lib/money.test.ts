@@ -43,7 +43,7 @@ describe("formatMoney", () => {
   it("без валюты, со своей валютой и по языкам", () => {
     expect(formatMoney(61000000, { currency: false })).toBe(`61${NBSP}000${NBSP}000`);
     expect(formatMoney(100, { currency: "USD" })).toBe(`100${NBSP}USD`);
-    expect(formatMoney(1234, { language: "uz" })).toBe(`1${NBSP}234${NBSP}so‘m`);
+    expect(formatMoney(1234, { language: "uz" })).toBe(`1${NBSP}234${NBSP}söm`);
     expect(formatMoney(1234.5, { language: "en" })).toBe(`1,234.50${NBSP}UZS`);
     expect(formatMoney(1234, { language: "ru-RU" })).toBe(`1${NBSP}234${NBSP}сум`);
   });
@@ -51,7 +51,7 @@ describe("formatMoney", () => {
   it("код UZS из ответа — слово языка, а не код (UX-2b)", () => {
     expect(formatMoney(112000000, { currency: "UZS" })).toBe(`112${NBSP}000${NBSP}000${NBSP}сум`);
     expect(formatMoney(30000000, { currency: "uzs" })).toBe(`30${NBSP}000${NBSP}000${NBSP}сум`);
-    expect(formatMoney(1234, { currency: "UZS", language: "uz" })).toBe(`1${NBSP}234${NBSP}so‘m`);
+    expect(formatMoney(1234, { currency: "UZS", language: "uz" })).toBe(`1${NBSP}234${NBSP}söm`);
     expect(formatMoney(1234, { currency: "UZS", language: "en" })).toBe(`1,234${NBSP}UZS`);
     expect(formatMoney(1234, { currency: null })).toBe(`1${NBSP}234${NBSP}сум`);
     expect(formatMoney(1234, { currency: "" })).toBe(`1${NBSP}234${NBSP}сум`);
@@ -63,7 +63,7 @@ describe("formatMoney", () => {
     expect(formatMoney(0, { currency: "UZS" })).toBe(`0${NBSP}сум`);
     expect(formatMoney("0.00", { currency: "USD" })).toBe(`0${NBSP}USD`);
     expect(formatMoney(-450000, { currency: "UZS", language: "uz" })).toBe(
-      `${MINUS}450${NBSP}000${NBSP}so‘m`,
+      `${MINUS}450${NBSP}000${NBSP}söm`,
     );
   });
 
@@ -77,7 +77,7 @@ describe("formatMoney", () => {
 describe("currencyLabel", () => {
   it("UZS и пусто — слово языка, другая валюта — код", () => {
     expect(currencyLabel("UZS")).toBe("сум");
-    expect(currencyLabel(undefined, "uz")).toBe("so‘m");
+    expect(currencyLabel(undefined, "uz")).toBe("söm");
     expect(currencyLabel("UZS", "en")).toBe("UZS");
     expect(currencyLabel("USD", "ru")).toBe("USD");
     expect(currencyLabel(" rub ")).toBe("RUB");
