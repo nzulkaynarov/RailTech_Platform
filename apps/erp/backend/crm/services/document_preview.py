@@ -15,7 +15,7 @@ from types import SimpleNamespace
 from django.template.loader import render_to_string
 from django.utils import timezone
 
-from core.currency import BASE_CURRENCY
+from core.currency import BASE_CURRENCY, line_amount
 
 #: Виды с собственным каркасом и образцами блоков: код вида -> шаблон каркаса.
 FRAMES = {
@@ -52,8 +52,8 @@ def _demo_items() -> list:
             unit=None,
             unit_price_excl_vat=price,
             final_price_excl_vat=price,
-            line_total_excl_vat=qty * price,
-            line_total=qty * price,
+            line_total_excl_vat=line_amount(price, qty),
+            line_total=line_amount(price, qty),
         )
         for name, qty, price in rows
     ]
