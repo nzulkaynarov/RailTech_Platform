@@ -81,6 +81,7 @@ export interface MockReceipt {
 
 export interface MockReceiptLine {
   orderLineId: number;
+  productId?: number;
   name: string;
   quantity: number;
   cell: string | null;

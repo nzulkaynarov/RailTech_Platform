@@ -266,8 +266,7 @@
     },
     "to": {
       "label": "To",
-      "director": "Director",
-      "hint": "Any employee with approval rights receives the document."
+      "director": "Director"
     },
     "recipient": {
       "label": "Addressee (organization)",
@@ -301,7 +300,7 @@
     "deal": {
       "label": "Link to a project",
       "hint": "Optional: find a request or project by number, title or company.",
-      "placeholder": "For example, ZV-2026-104 or a title",
+      "placeholder": "Number, title or company",
       "empty": "Nothing found",
       "searching": "Searching…",
       "unavailable": "Requests are unavailable right now — you can add the link later."
@@ -316,29 +315,6 @@
       "watchers": "Copy to",
       "watchersHint": "See the document but do not decide.",
       "choosePeople": "Choose employees"
-    },
-    "consequence": {
-      "memo": [
-        "The document gets a memo number and goes to the director for approval.",
-        "The director approves, returns it for rework or rejects it — you get a notification.",
-        "An approved document stays in “Documents” with the visa and date."
-      ],
-      "memoAmount": [
-        "The document gets a memo number and goes to the director for approval.",
-        "After the director approves, the document is passed to the accountant for payment.",
-        "The accountant confirms payment: the status becomes “Paid”."
-      ],
-      "application": [
-        "The application gets a number and goes to the director for approval.",
-        "The director approves, returns it for rework or rejects it — you get a notification.",
-        "The decision and its date stay in “Documents”."
-      ],
-      "report": [
-        "The report gets a number and goes to the director for approval.",
-        "The director approves, returns it for rework or rejects it — you get a notification.",
-        "The decision and its date stay in “Documents”."
-      ],
-      "draft": "“Save draft” sends nothing: the document stays in “Documents” with a “Continue” button."
     },
     "submit": {
       "approval": "Send for approval",

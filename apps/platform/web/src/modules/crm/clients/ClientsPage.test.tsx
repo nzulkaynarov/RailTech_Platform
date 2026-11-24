@@ -182,6 +182,35 @@ const partnerRow = {
   nearest_valid_until: null,
 };
 
+describe("Контрагенты: последняя активность", () => {
+  it("сегодня — время, раньше — дата (время без даты ничего не говорит)", async () => {
+    const day = 24 * 60 * 60 * 1000;
+    const row = (id: number, at: string) => ({
+      id,
+      name: `Клиент ${String(id)}`,
+      inn: `10000000${String(id)}`,
+      in_erp: true,
+      open_requests: 0,
+      last_activity_at: at,
+      handoff_status: null,
+    });
+    server.use(
+      http.get("*/crm/clients", () =>
+        HttpResponse.json({
+          items: [
+            row(1, new Date(Date.now() - day).toISOString()),
+            row(2, new Date(Date.now() - 5 * day).toISOString()),
+          ],
+        }),
+      ),
+    );
+    await open("manager@demo.example");
+    const table = await screen.findByRole("table", { name: "Клиенты" });
+    expect(within(table).queryByText(/вчера/)).toBeNull();
+    expect(within(table).getAllByText(/^\d{2}\.\d{2}\.\d{4}$/)).toHaveLength(2);
+  });
+});
+
 describe("Контрагенты: тип отношения", () => {
   it("партнёр в общем списке, совпадение по ИНН — «Клиент и партнёр», фильтр сужает", async () => {
     server.use(

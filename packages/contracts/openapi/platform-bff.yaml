@@ -28489,6 +28489,7 @@ components:
         id: {type: string, pattern: '^[0-9]+$'}
         name: {type: string}
         email: {type: [string, 'null'], description: 'Адрес для писем; только в карточке заказа и списке поставщиков'}
+        logo_url: {type: [string, 'null'], description: 'Логотип поставщика: адрес на BFF с `?v=<версия>`, только в списке заказов, пакетно (ЕД-3); null — буквы названия'}
 
     StockSupplierList:
       type: object
@@ -30158,6 +30159,7 @@ components:
         company: {$ref: '#/components/schemas/CounterpartyRef'}
         kind: {type: string, enum: [client, partner]}
         photo_url: {type: [string, 'null'], description: 'Фото контакта: адрес на BFF с `?v=<версия>` (СУЩ-3); null — инициалы'}
+        company_logo_url: {type: [string, 'null'], description: 'Логотип компании человека: адрес на BFF с `?v=<версия>`, пакетно на список (ЕД-3); null или нет права на раздел — буквы названия'}
     CounterpartyContacts:
       type: object
       additionalProperties: false

@@ -52,6 +52,7 @@ import {
   seedStock,
 } from "./fixtures/stock";
 import { itemRefOf } from "./fixtures/itemRef";
+import { clientRefOf } from "./pictures";
 import { staffRef } from "./fixtures/personRef";
 import {
   calcLineIds,
@@ -519,7 +520,12 @@ function orderRow(order: MockOrder, user: Me): SupplierOrderRow {
   return {
     number: order.number,
     status: order.status,
-    supplier: { id: String(order.supplierId), name: supplier?.name ?? "Партнёр", email: null },
+    supplier: {
+      id: String(order.supplierId),
+      name: supplier?.name ?? "Партнёр",
+      email: null,
+      logo_url: clientRefOf(supplier?.name).client_logo_url,
+    },
     expected_date: order.expectedDate,
     overdue: days !== null,
     days_overdue: days,
@@ -603,7 +609,7 @@ function presentOrder(state: MockStock, order: MockOrder, user: Me): SupplierOrd
 function receiptLine(l: MockReceiptLine) {
   return {
     name: l.name,
-    item: null,
+    item: l.productId === undefined ? null : itemRefOf(l.productId, l.name),
     quantity: l.quantity,
     cell: l.cell,
     units: l.units ?? [],
@@ -1415,6 +1421,7 @@ export const erpStockHandlers = [
       );
       receipt.lines.push({
         orderLineId: line.id,
+        productId: line.productId,
         name: line.name,
         quantity: item.quantity,
         cell,

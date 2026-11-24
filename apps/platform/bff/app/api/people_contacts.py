@@ -44,6 +44,8 @@ class CounterpartyPerson(BaseModel):
     kind: Kind
     # СУЩ-3: фото контакта только через BFF, `?v=` — версия; `None` — инициалы
     photo_url: str | None = None
+    # ЕД-3: логотип компании человека (пакетно, как в реестрах); `None` — буквы названия
+    company_logo_url: str | None = None
 
 
 class CounterpartyContacts(BaseModel):
@@ -97,6 +99,15 @@ async def list_people(
     params = {k: v for k, v in wanted.items() if v not in (None, "")}
     data = await ErpCompany(authed.call).data("GET", "parties/people/", params=params)
     items = [to_person(row) for row in rows_of(data) if "id" in row]
+    # Импорт здесь: `row_logos` тянет `people_pictures`, а тот — этот модуль
+    from app.row_logos import company_logos
+
+    logos = await company_logos(
+        authed, [int(p.company.id) for p in items if p.company.id.isdigit()]
+    )
+    for person in items:
+        if person.company.id.isdigit():
+            person.company_logo_url = logos.get(int(person.company.id))
     return CounterpartyPersonPage(items=items, **page_meta(data, page, page_size))
 
 

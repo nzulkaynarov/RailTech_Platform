@@ -510,7 +510,6 @@
         }
       },
       "listLabel": "Setup steps",
-      "onlyAdmin": "Insufficient permissions.",
       "banner": {
         "label": "Platform setup",
         "title": "Platform setup: {{done}} of {{total}} done",

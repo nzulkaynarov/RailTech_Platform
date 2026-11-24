@@ -1,7 +1,13 @@
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
-import { type DateInput, type DateStyle, formatActivityTime, formatDate } from "./dates";
+import {
+  type DateInput,
+  type DateStyle,
+  formatActivityTime,
+  formatDate,
+  formatListDate,
+} from "./dates";
 import {
   type MoneyFormatOptions,
   type NumberFormatOptions,
@@ -32,6 +38,8 @@ export function useFormat() {
         formatPercent(value, { language, ...options }),
       date: (value: DateInput, style: DateStyle = "date") => formatDate(value, { language, style }),
       activity: (value: DateInput, now?: Date) => formatActivityTime(value, { language, now }),
+      /** Дата в строке списка: сегодня — время, иначе — дата. */
+      listDate: (value: DateInput, now?: Date) => formatListDate(value, { language, now }),
     }),
     [language],
   );

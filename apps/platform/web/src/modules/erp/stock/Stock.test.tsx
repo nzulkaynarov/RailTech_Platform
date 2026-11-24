@@ -153,6 +153,10 @@ describe("Склад · заказы партнёрам", () => {
     const table = within(await screen.findByRole("table", { name: "Заказы партнёрам" }));
     const row = within(await rowOf(ORDER));
     expect(row.getByText("ООО «Вымышленная Сталь»")).toBeVisible();
+    // ЕД-3: партнёр — общая ячейка компании (логотип или буквы названия)
+    expect(
+      row.getByText("ООО «Вымышленная Сталь»").closest(".pf-entity__text")?.previousElementSibling,
+    ).toHaveClass("pf-entity__pic--square");
     expect(row.getByText("Подтверждён")).toBeVisible();
     expect(row.getByText("Просрочен · 3 дн.")).toBeVisible();
     expect(row.getByText("0 из 30")).toBeVisible();
@@ -193,7 +197,7 @@ describe("Склад · заказы партнёрам", () => {
     expect((await within(side).findAllByText(/накладная НП-77/)).length).toBeGreaterThan(0);
     // СЦ-10: количество — в единице строки заказа, в журнале и в списке приёмок.
     expect((await screen.findAllByText(/10\sкомпл\. · накладная НП-77/)).length).toBeGreaterThan(0);
-    expect(screen.getByText(/· 10 компл\. \(C-02-1\)/)).toBeVisible();
+    expect(screen.getByText(/^10 компл\. \(C-02-1\)$/)).toBeVisible();
     expect(screen.getAllByText("Подтверждён").length).toBeGreaterThan(0);
 
     fireEvent.click(screen.getByRole("button", { name: "Принять товар" }));
@@ -386,6 +390,57 @@ describe("Склад · приёмка и отгрузки", () => {
     );
     const modal = await screen.findByRole("dialog");
     expect(await within(modal).findByText("осталось 30 из 30 компл.")).toBeInTheDocument();
+  });
+
+  it("ЕД-4: журнал принятого — строки позицией (миниатюра, название, наш артикул), а не текстом через «;»", async () => {
+    const line = (name: string, sku: string, id: string, quantity: number) => ({
+      name,
+      item: {
+        id,
+        name,
+        sku,
+        kind: "goods" as const,
+        thumbnail: `/api/v1/erp/catalog/items/${id}/thumbnail?v=1`,
+      },
+      quantity,
+      cell: "A-01-1",
+      units: [],
+      expiry_date: null,
+      doc_number: null,
+      doc_valid_until: null,
+    });
+    server.use(
+      http.get("*/api/v1/erp/stock/receipts", () =>
+        HttpResponse.json({
+          pending: [],
+          done: [
+            {
+              id: "7",
+              order_number: ORDER,
+              order_path: ORDER_PATH,
+              supplier: "Вымышленная Сталь",
+              received_at: "2026-11-20T08:00:00Z",
+              received_by: { id: "u-demo-supply", name: "Демо Снабженцев", initials: "ДС" },
+              supplier_doc: "НКЛ-12",
+              quantity: 5,
+              lines: [
+                line("Рельс Р65", "RT-00031", "31", 3),
+                line("Скрепление КБ-65", "RT-00042", "42", 2),
+              ],
+            },
+          ],
+          rights: { manage: true, ship: false },
+        }),
+      ),
+    );
+    await openStock("supply@demo.example", "receipts");
+    const journal = await screen.findByRole("list", { name: "Последние приёмки" });
+    const entities = journal.querySelectorAll(".pf-stock-receipt-lines .pf-entity");
+    expect(entities).toHaveLength(2);
+    expect(within(journal).getByText("RT-00031")).toBeVisible();
+    expect(within(journal).getByText("RT-00042")).toBeVisible();
+    expect(journal.querySelectorAll('img[src*="/thumbnail?v="]')).toHaveLength(2);
+    expect(journal.textContent).not.toContain("; ");
   });
 
   it("отгрузка по проекту: резервы проекта → накладная ОТГ, резерв и остаток уменьшаются", async () => {

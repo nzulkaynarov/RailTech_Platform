@@ -24,4 +24,9 @@ export interface CounterpartyPerson {
    * @nullable
    */
   photo_url?: string | null;
+  /**
+   * Логотип компании человека: адрес на BFF с `?v=<версия>`, пакетно на список (ЕД-3); null или нет права на раздел — буквы названия
+   * @nullable
+   */
+  company_logo_url?: string | null;
 }

@@ -164,12 +164,15 @@ class LeadIntakeService:
                 reason=Reason.CONSENT_REQUIRED,
                 field="consent",
             )
-        self._check_spam(body, cfg, ip, moment)
+        self._check_token(body, cfg, ip, moment)
         phone, email = _phone(body.phone), contact_email(body.email)
         if phone is None and email is None:
             raise ValidationFailedError(
                 "phone or email is required", reason=Reason.CONTACT_REQUIRED, field="phone"
             )
+        # The per-IP window is spent only by a request that passed validation: a mistyped phone
+        # must not eat one of the few hourly attempts of an office behind a single NAT.
+        self._check_rate(cfg, ip, moment)
         text = body.text.strip()[: cfg.max_text_chars]
         async with self._sessions() as session, session.begin():
             existing = await _find_existing(session, phone, email)
@@ -203,7 +206,7 @@ class LeadIntakeService:
             # клиенту.
             logger.exception("web_lead_follow_up_failed", lead_id=follow_up.lead_id)
 
-    def _check_spam(
+    def _check_token(
         self, body: WebLeadIn, cfg: WebFormSettings, ip: str | None, now: datetime
     ) -> None:
         verdict = check_form_token(
@@ -218,6 +221,8 @@ class LeadIntakeService:
             raise ValidationFailedError(
                 "form token rejected", reason=_TOKEN_REASONS[verdict], field="form_token"
             )
+
+    def _check_rate(self, cfg: WebFormSettings, ip: str | None, now: datetime) -> None:
         if not self._limiter.allow(ip or "unknown", now, limit=cfg.rate_limit_per_hour):
             logger.info("web_lead_rate_limited", ip=ip)
             raise RateLimitedError(

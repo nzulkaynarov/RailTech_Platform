@@ -159,6 +159,82 @@ describe("Органайзер · Люди", () => {
     expect(without).toHaveTextContent("ДП");
   });
 
+  it("ЕД-3: компания контакта — логотип или буквы названия; ответственный за лид — ячейка сотрудника без должности", async () => {
+    server.use(
+      http.get("*/staff", () => HttpResponse.json({ items: [] })),
+      http.get("*/crm/leads", () =>
+        HttpResponse.json({
+          items: [
+            {
+              lead: "L-1001",
+              name: "Борис Лид",
+              status: "new",
+              channel: "telegram",
+              language: "ru",
+              assigned: { id: "u-demo-manager", name: "Демо Менеджеров", initials: "ДМ" },
+              need: null,
+              last_message_at: null,
+              unread: false,
+              handoff_open: false,
+              overdue: false,
+              client_id: null,
+            },
+          ],
+          total: 1,
+        }),
+      ),
+      http.get("*/people/contacts", () =>
+        HttpResponse.json({
+          items: [
+            {
+              id: "41",
+              name: "Демо Клиентов",
+              position: null,
+              has_email: false,
+              has_phone: false,
+              is_primary: true,
+              company: { id: "7", name: "АО «Демо-Путь»" },
+              kind: "client",
+              photo_url: null,
+              company_logo_url: "/api/v1/people/counterparties/7/logo?v=v7",
+            },
+            {
+              id: "42",
+              name: "Демо Партнёров",
+              position: null,
+              has_email: false,
+              has_phone: false,
+              is_primary: false,
+              company: { id: "9", name: "ООО «Поставщик Север»" },
+              kind: "partner",
+              photo_url: null,
+              company_logo_url: null,
+            },
+          ],
+          total: 2,
+          page: 1,
+          page_size: 100,
+        }),
+      ),
+    );
+    signInAs("all@demo.example");
+    renderApp("/chats/contacts");
+
+    const withLogo = (await screen.findByText("АО «Демо-Путь»")).closest(
+      ".pf-entity",
+    ) as HTMLElement;
+    expect(withLogo.querySelector("img")).toHaveAttribute(
+      "src",
+      "/api/v1/people/counterparties/7/logo?v=v7",
+    );
+    const letters = screen.getByText("ООО «Поставщик Север»").closest(".pf-entity") as HTMLElement;
+    expect(letters.querySelector("img")).toBeNull();
+    expect(letters.querySelector(".pf-entity__pic--square")).not.toBeNull();
+    const owner = screen.getByText("Демо Менеджеров").closest(".pf-entity") as HTMLElement;
+    expect(owner).toHaveTextContent("ДМ");
+    expect(owner.querySelector(".pf-entity__caption")).toBeNull();
+  });
+
   it("список — в общей рамке: карточка, скелетон на загрузке, пустое состояние словами", async () => {
     server.use(
       http.get("*/staff", async () => {
