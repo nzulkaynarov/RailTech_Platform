@@ -3,11 +3,12 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next';
 import { Check, ChevronLeft, ChevronRight, FilePlus2, Package, Plus, Search, SearchX, X } from 'lucide-react';
 
-import { isPortalApiError, type CatalogItem } from '@/api/portal';
+import { isPortalApiError, itemThumbnailUrl, type CatalogItem } from '@/api/portal';
 import { useCatalog, useCatalogCategories, useCatalogItem } from '@/api/queries';
 import { SectionTitle } from '@/components/Details';
 import { DocumentsBlock, ManufacturerBlock, ProductGallery, WarrantyBlock } from '@/components/CatalogProduct';
 import { EmptyState } from '@/components/EmptyState';
+import { ItemCell } from '@/components/EntityCell';
 import { PageHeader } from '@/components/PageHeader';
 import { DetailSkeleton, ErrorState, ListSkeleton } from '@/components/QueryStates';
 import { StatusBadge, ToneBadge } from '@/components/StatusBadge';
@@ -300,14 +301,24 @@ function CatalogCard({
           </CanAct>
         ) : null}
       </div>
-      <h2 className="text-sm font-medium wrap-break-word">
-        <Link
-          to={`/catalog/${item.id}`}
-          className="rounded-sm underline-offset-4 outline-none after:absolute after:inset-0 after:rounded-lg hover:underline focus-visible:after:ring-2 focus-visible:after:ring-ring"
-        >
-          {item.name}
-        </Link>
-      </h2>
+      {/* ЕД-4: позиция — миниатюра или значок типа, название-ссылка на всю карточку и наш артикул */}
+      <ItemCell
+        name={item.name}
+        sku={item.item?.sku || null}
+        photoUrl={item.item ? itemThumbnailUrl(item.item.id, item.item.photo) : null}
+        kind={item.kind}
+        size={40}
+        title={
+          <h2 className="text-sm font-medium wrap-break-word">
+            <Link
+              to={`/catalog/${item.id}`}
+              className="rounded-sm underline-offset-4 outline-none after:absolute after:inset-0 after:rounded-lg hover:underline focus-visible:after:ring-2 focus-visible:after:ring-ring"
+            >
+              {item.name}
+            </Link>
+          </h2>
+        }
+      />
       <div className="mt-auto flex flex-col gap-2 pt-1">
         <PriceText item={item} />
         <AvailabilityText item={item} />

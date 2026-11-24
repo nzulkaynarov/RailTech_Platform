@@ -909,6 +909,9 @@ class CatalogItemSerializer(serializers.Serializer):
     availability = serializers.ChoiceField(choices=["in_stock", "on_order", "expected"])
     lead_time_days = serializers.IntegerField(allow_null=True)
     images = serializers.ListField(child=serializers.CharField(), default=list)
+    item = ItemRefSerializer(
+        allow_null=True, required=False, help_text="Позиция для строки списка (ЕД-4): миниатюра и артикул"
+    )
     attributes = AttributeItemSerializer(many=True, default=list)
     manufacturer = CatalogManufacturerSerializer(allow_null=True, required=False)
     manufacturer_part_number = serializers.CharField(allow_null=True, required=False)

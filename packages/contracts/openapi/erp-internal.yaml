@@ -30400,6 +30400,11 @@ components:
       properties:
         name:
           type: string
+        item:
+          allOf:
+          - $ref: '#/components/schemas/ItemRef'
+          nullable: true
+          description: Позиция каталога (ЕД-4); null — строка без карточки
         quantity:
           type: number
           description: Количество, до трёх знаков после запятой (ADR-0027 п. 9)
@@ -30427,6 +30432,7 @@ components:
       - doc_number
       - doc_valid_until
       - expiry_date
+      - item
       - name
       - quantity
       - units
@@ -35703,6 +35709,11 @@ components:
           type: integer
         name:
           type: string
+        item:
+          allOf:
+          - $ref: '#/components/schemas/ItemRef'
+          nullable: true
+          description: Позиция каталога (ЕД-4); null — строка без карточки
         article:
           type: string
         unit:
@@ -35725,6 +35736,7 @@ components:
       - article
       - deal
       - expected_date
+      - item
       - name
       - order_id
       - order_line_id
@@ -37113,6 +37125,11 @@ components:
           type: array
           items:
             type: string
+        item:
+          allOf:
+          - $ref: '#/components/schemas/ItemRef'
+          nullable: true
+          description: Позиция строки списка (ЕД-4)
         attributes:
           type: array
           items:
@@ -38448,6 +38465,11 @@ components:
       properties:
         name:
           type: string
+        item:
+          allOf:
+          - $ref: '#/components/schemas/ItemRef'
+          nullable: true
+          description: Позиция каталога (ЕД-4); null — строка без карточки
         quantity:
           type: number
           description: Количество, до трёх знаков после запятой (ADR-0027 п. 9)
@@ -38477,6 +38499,7 @@ components:
       - doc_number
       - doc_valid_until
       - expiry_date
+      - item
       - name
       - order_line_id
       - quantity
@@ -39617,6 +39640,10 @@ components:
           type: integer
         product_name:
           type: string
+        item:
+          allOf:
+          - $ref: '#/components/schemas/ItemRef'
+          description: Позиция каталога (ЕД-4)
         deal:
           $ref: '#/components/schemas/StockDealRef'
         quote_item_id:
@@ -39663,6 +39690,7 @@ components:
       - created_by_name
       - deal
       - id
+      - item
       - product_id
       - product_name
       - quantity
@@ -39873,6 +39901,10 @@ components:
       properties:
         product_id:
           type: integer
+        item:
+          allOf:
+          - $ref: '#/components/schemas/ItemRef'
+          description: Позиция каталога (ЕД-4)
         name:
           type: string
         quantity:
@@ -39888,6 +39920,7 @@ components:
           description: Серийные или партии, ушедшие этой строкой
       required:
       - cell
+      - item
       - name
       - product_id
       - quantity
@@ -40042,6 +40075,10 @@ components:
       properties:
         id:
           type: integer
+        item:
+          allOf:
+          - $ref: '#/components/schemas/ItemRef'
+          description: Позиция каталога (ЕД-4)
         name:
           type: string
         article:
@@ -40049,6 +40086,7 @@ components:
       required:
       - article
       - id
+      - item
       - name
     StockTraceUnit:
       type: object

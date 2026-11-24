@@ -23,6 +23,7 @@ import {
 import { ActionDialog } from '@/components/ActionDialog';
 import { DetailList } from '@/components/Details';
 import { EmptyState } from '@/components/EmptyState';
+import { RowMenu, RowMenuAction } from '@/components/list/RowMenu';
 import { PageHeader } from '@/components/PageHeader';
 import { UnsavedChangesBar } from '@/components/UnsavedChangesBar';
 import { DetailSkeleton, ErrorState, ListSkeleton } from '@/components/QueryStates';
@@ -673,7 +674,6 @@ export function TeamPage() {
           ))}
         </ul>
       )}
-      <p className="mt-4 text-xs text-muted-foreground">{t('pages.team.rightsHint')}</p>
       <InviteDialog open={inviting} onOpenChange={setInviting} isMeAdmin={isMeAdmin} />
 
       <ActionDialog
@@ -715,6 +715,21 @@ function MemberCard({
         {isMe ? <ToneBadge tone="info">{t('pages.team.you')}</ToneBadge> : null}
         {member.is_primary ? <ToneBadge tone="neutral">{t('pages.team.primary')}</ToneBadge> : null}
         {member.is_admin ? <ToneBadge tone="warning">{t('pages.team.admin')}</ToneBadge> : null}
+        {isMeAdmin && !isMe && !member.is_primary ? (
+          <div className="ml-auto">
+            <RowMenu name={member.name}>
+              <RowMenuAction disabled={isPending} onSelect={() => onToggleCanAct(member)}>
+                {member.can_act ? t('pages.team.revokeCanAct') : t('pages.team.grantCanAct')}
+              </RowMenuAction>
+              <RowMenuAction disabled={isPending} onSelect={() => onToggleAdmin(member)}>
+                {member.is_admin ? t('pages.team.revokeAdmin') : t('pages.team.grantAdmin')}
+              </RowMenuAction>
+              <RowMenuAction destructive icon={UserMinus} disabled={isPending} onSelect={() => onDeactivate(member)}>
+                {t('pages.team.deactivate')}
+              </RowMenuAction>
+            </RowMenu>
+          </div>
+        ) : null}
       </div>
       <DetailList
         items={[
@@ -732,35 +747,6 @@ function MemberCard({
           },
         ]}
       />
-      {isMeAdmin && !isMe && !member.is_primary ? (
-        <div className="mt-auto flex flex-wrap gap-2 border-t border-border pt-3">
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={isPending}
-            onClick={() => onToggleCanAct(member)}
-          >
-            {member.can_act ? t('pages.team.revokeCanAct') : t('pages.team.grantCanAct')}
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={isPending}
-            onClick={() => onToggleAdmin(member)}
-          >
-            {member.is_admin ? t('pages.team.revokeAdmin') : t('pages.team.grantAdmin')}
-          </Button>
-          <Button
-            size="sm"
-            variant="destructive"
-            disabled={isPending}
-            onClick={() => onDeactivate(member)}
-          >
-            <UserMinus className="size-4 mr-1" aria-hidden="true" />
-            {t('pages.team.deactivate')}
-          </Button>
-        </div>
-      ) : null}
     </article>
   );
 }

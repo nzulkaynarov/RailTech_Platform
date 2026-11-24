@@ -3278,6 +3278,8 @@ export interface components {
             lead_time_days?: number | null;
             /** @description Ссылки на фото; главное фото — первым (CAT-CARD-2) */
             images?: string[];
+            /** @description Позиция для строки списка (ЕД-4) — миниатюра `items/{id}/thumbnail?v=<photo>` и наш артикул */
+            item?: components["schemas"]["ItemRef"] | null;
             attributes?: {
                 name: string;
                 value: string;

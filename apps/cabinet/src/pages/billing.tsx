@@ -1,6 +1,6 @@
 import { useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { AlertTriangle, CheckCircle2, ClipboardCheck, FileSignature, PenLine, Receipt, Undo2, Upload, Wallet } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, ClipboardCheck, Download, FileSignature, PenLine, Receipt, Undo2, Upload, Wallet } from 'lucide-react';
 import { toast } from '@/lib/toast';
 
 import type { Act, Contract, Invoice, PaymentProof } from '@/api/portal';
@@ -10,7 +10,7 @@ import { BillingNavTabs } from '@/components/BillingNavTabs';
 import { ConsequenceCallout } from '@/components/ConsequenceCallout';
 import { DateField } from '@/components/DateField';
 import { DealLink, SummaryNote } from '@/components/Details';
-import { DocumentButton } from '@/components/DocumentButton';
+import { DocumentMenuItem } from '@/components/DocumentButton';
 import { EmptyState } from '@/components/EmptyState';
 import { FileField } from '@/components/FileField';
 import { PageHeader } from '@/components/PageHeader';
@@ -19,7 +19,9 @@ import { ReasonDialog } from '@/components/ReasonDialog';
 import { ResponsiveList } from '@/components/ResponsiveList';
 import { StatusBadge, ToneBadge } from '@/components/StatusBadge';
 import { TimeLeft } from '@/components/TimeLeft';
-import { ManagerButton } from '@/components/TelegramLinkButton';
+import { ManagerMenuItem } from '@/components/TelegramLinkButton';
+import { CompactList } from '@/components/list/CompactList';
+import { RowMenu, RowMenuAction } from '@/components/list/RowMenu';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -39,13 +41,17 @@ import { CanAct } from '@/session/CanAct';
  * просрочку счёта, принять акт или вернуть его с причиной. Действия — только при `can_act`.
  */
 
-/** Документ строки или пометка «файл готовится», если ERP ещё не выпустил PDF. */
-function RowDocument({ documentId, number }: { documentId: number | null | undefined; number: string }) {
+/** Пункт меню строки: скачать документ или пометка «файл готовится», если ERP ещё не выпустил PDF. */
+function RowDocumentItem({ documentId, number }: { documentId: number | null | undefined; number: string }) {
   const { t } = useTranslation();
   if (documentId === null || documentId === undefined) {
-    return <span className="max-w-32 text-xs whitespace-normal text-muted-foreground">{t('documents.notIssued')}</span>;
+    return (
+      <RowMenuAction icon={Download} disabled onSelect={() => undefined}>
+        {t('documents.notIssued')}
+      </RowMenuAction>
+    );
   }
-  return <DocumentButton documentId={documentId} fileName={`${number}.pdf`} label={number} variant="ghost" />;
+  return <DocumentMenuItem documentId={documentId} fileName={`${number}.pdf`} />;
 }
 
 // --- договоры ------------------------------------------------------------------------------------
@@ -98,8 +104,6 @@ export function ContractsPage() {
               header: t('common.actions'),
               cell: (row) => (
                 <>
-                  <RowDocument documentId={row.document_id} number={row.number} />
-                  <ManagerButton compact context={dealContext(row.deal)} label={t('manager.aboutContract', { number: row.number })} />
                   {contractAwaitsClient(row.status) ? (
                     <CanAct>
                       <Button size="sm" onClick={() => setTarget(row)} aria-label={t('pages.contracts.signNamed', { number: row.number })}>
@@ -108,6 +112,10 @@ export function ContractsPage() {
                       </Button>
                     </CanAct>
                   ) : null}
+                  <RowMenu name={row.number}>
+                    <RowDocumentItem documentId={row.document_id} number={row.number} />
+                    <ManagerMenuItem context={dealContext(row.deal)} label={t('manager.aboutContract', { number: row.number })} />
+                  </RowMenu>
                 </>
               ),
             }}
@@ -246,12 +254,6 @@ export function InvoicesPage() {
               header: t('common.actions'),
               cell: (row) => (
                 <>
-                  <RowDocument documentId={row.document_id} number={row.number} />
-                  <ManagerButton
-                    compact
-                    context={{ kind: 'invoice', id: row.id, number: row.number }}
-                    label={t('manager.aboutInvoice', { number: row.number })}
-                  />
                   {invoiceOpen(row) ? (
                     <CanAct>
                       <Button size="sm" variant="outline" onClick={() => setPaying(row)} aria-label={t('pages.invoices.payNamed', { number: row.number })}>
@@ -260,6 +262,10 @@ export function InvoicesPage() {
                       </Button>
                     </CanAct>
                   ) : null}
+                  <RowMenu name={row.number}>
+                    <RowDocumentItem documentId={row.document_id} number={row.number} />
+                    <ManagerMenuItem context={{ kind: 'invoice', id: row.id, number: row.number }} label={t('manager.aboutInvoice', { number: row.number })} />
+                  </RowMenu>
                 </>
               ),
             }}
@@ -276,22 +282,27 @@ function ProofList({ invoice }: { invoice: Invoice }) {
   const { t } = useTranslation();
   if (!invoice.proofs.length) return null;
   return (
-    <ul className="flex flex-col gap-1.5 text-xs font-normal" aria-label={t('pages.invoices.proofsLabel', { number: invoice.number })}>
-      {invoice.proofs.map((proof) => (
-        <li key={proof.id} className="flex min-w-0 flex-col gap-0.5">
-          <span className="flex flex-wrap items-center gap-1.5">
-            <StatusBadge entity="proof" code={proof.status} />
-            <span className="break-all text-muted-foreground">
-              {t('pages.invoices.proofLine', { name: proof.file_name, date: formatDateTime(proof.submitted_at) })}
+    <div className="flex flex-col gap-1.5 text-xs font-normal">
+      <CompactList
+        className="gap-1.5"
+        limit={2}
+        label={t('pages.invoices.proofsLabel', { number: invoice.number })}
+        items={invoice.proofs.map((proof) => (
+          <li key={proof.id} className="flex min-w-0 flex-col gap-0.5">
+            <span className="flex flex-wrap items-center gap-1.5">
+              <StatusBadge entity="proof" code={proof.status} />
+              <span className="break-all text-muted-foreground">
+                {t('pages.invoices.proofLine', { name: proof.file_name, date: formatDateTime(proof.submitted_at) })}
+              </span>
             </span>
-          </span>
-          <ProofClaim proof={proof} />
-          {proof.status === 'rejected' && proof.reject_reason ? (
-            <span className="text-muted-foreground">{t('pages.invoices.proofRejected', { reason: proof.reject_reason })}</span>
-          ) : null}
-        </li>
-      ))}
-    </ul>
+            <ProofClaim proof={proof} />
+            {proof.status === 'rejected' && proof.reject_reason ? (
+              <span className="text-muted-foreground">{t('pages.invoices.proofRejected', { reason: proof.reject_reason })}</span>
+            ) : null}
+          </li>
+        ))}
+      />
+    </div>
   );
 }
 
@@ -510,38 +521,32 @@ export function ActsPage() {
               header: t('common.actions'),
               cell: (row) => (
                 <>
-                  <RowDocument documentId={row.document_id} number={row.number} />
-                  {row.scan_document_id !== null && row.scan_document_id !== undefined ? (
-                    <DocumentButton
-                      documentId={row.scan_document_id}
-                      fileName={`${row.number}-scan.pdf`}
-                      label={t('pages.acts.scanNamed', { number: row.number })}
-                      variant="ghost"
-                      text={t('pages.acts.scan')}
-                    />
-                  ) : null}
-                  <ManagerButton
-                    compact
-                    context={{ kind: 'act', id: row.id, number: row.number }}
-                    label={t('manager.aboutAct', { number: row.number })}
-                  />
                   {row.status === 'issued' ? (
                     <CanAct>
                       <Button size="sm" onClick={() => setTarget({ act: row, action: 'accept' })} aria-label={t('pages.acts.acceptNamed', { number: row.number })}>
                         <CheckCircle2 aria-hidden="true" />
                         {t('pages.acts.accept')}
                       </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setTarget({ act: row, action: 'return' })}
-                        aria-label={t('pages.acts.returnNamed', { number: row.number })}
-                      >
-                        <Undo2 aria-hidden="true" />
-                        {t('pages.acts.return')}
-                      </Button>
                     </CanAct>
                   ) : null}
+                  <RowMenu name={row.number}>
+                    <RowDocumentItem documentId={row.document_id} number={row.number} />
+                    {row.scan_document_id !== null && row.scan_document_id !== undefined ? (
+                      <DocumentMenuItem
+                        documentId={row.scan_document_id}
+                        fileName={`${row.number}-scan.pdf`}
+                        text={t('pages.acts.scan')}
+                      />
+                    ) : null}
+                    <ManagerMenuItem context={{ kind: 'act', id: row.id, number: row.number }} label={t('manager.aboutAct', { number: row.number })} />
+                    {row.status === 'issued' ? (
+                      <CanAct>
+                        <RowMenuAction icon={Undo2} onSelect={() => setTarget({ act: row, action: 'return' })}>
+                          {t('pages.acts.return')}
+                        </RowMenuAction>
+                      </CanAct>
+                    ) : null}
+                  </RowMenu>
                 </>
               ),
             }}

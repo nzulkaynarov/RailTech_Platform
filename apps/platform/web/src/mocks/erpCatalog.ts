@@ -56,6 +56,7 @@ import {
   productRef,
   readErpCatalog,
   validityOf,
+  outsidePhoto,
 } from "./fixtures/erpCatalog";
 import { pickedCompanyById } from "./counterpartyPick";
 import { readCompanyMock, updateCompanyMock } from "./fixtures/company";
@@ -971,9 +972,10 @@ export const erpCatalogHandlers = [
   }),
   // ЕД-4: миниатюра — главное фото как есть (BFF отдаёт 96×96 WebP; мок картинку не пережимает)
   http.get("*/erp/catalog/items/:id/thumbnail", ({ params }) => {
-    const main = readErpCatalog()
-      .items.find((i) => i.id === params["id"])
-      ?.images.find((i) => i.is_main);
+    const main =
+      readErpCatalog()
+        .items.find((i) => i.id === params["id"])
+        ?.images.find((i) => i.is_main) ?? outsidePhoto(String(params["id"]));
     if (!main) return notFound();
     return new HttpResponse(main.bytes, {
       headers: { "Content-Type": main.type, "Cache-Control": "private, max-age=86400" },

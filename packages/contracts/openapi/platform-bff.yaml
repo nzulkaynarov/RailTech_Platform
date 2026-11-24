@@ -28031,11 +28031,14 @@ components:
     StockReservation:
       type: object
       additionalProperties: false
-      required: [id, product_id, product_name, request, line_id, quantity, shipped_quantity, remaining, status, created_at, created_by, tracking, units]
+      required: [id, product_id, product_name, item, request, line_id, quantity, shipped_quantity, remaining, status, created_at, created_by, tracking, units]
       properties:
         id: {type: string, pattern: '^[0-9]+$'}
         product_id: {type: string, pattern: '^[0-9]+$'}
         product_name: {type: string}
+        item:
+          oneOf: [{$ref: '#/components/schemas/ItemRef'}, {type: 'null'}]
+          description: 'Позиция каталога строки (ЕД-4): миниатюра `thumbnail` через BFF и наш артикул; `null` — строка без карточки'
         request: {$ref: '#/components/schemas/StockRequestRef'}
         line_id: {type: [string, 'null'], pattern: '^[0-9]+$', description: 'Строка расчёта'}
         quantity: {type: number, exclusiveMinimum: 0}
@@ -28281,10 +28284,13 @@ components:
     SupplierOrderReceiptLine:
       type: object
       additionalProperties: false
-      required: [order_line_id, name, quantity, cell, units, expiry_date, doc_number, doc_valid_until]
+      required: [order_line_id, name, item, quantity, cell, units, expiry_date, doc_number, doc_valid_until]
       properties:
         order_line_id: {type: string, pattern: '^[0-9]+$'}
         name: {type: string}
+        item:
+          oneOf: [{$ref: '#/components/schemas/ItemRef'}, {type: 'null'}]
+          description: Позиция каталога строки (ЕД-4) — миниатюра через BFF и наш артикул; `null` — строка без карточки
         quantity: {type: number, exclusiveMinimum: 0}
         cell: {type: [string, 'null']}
         units: {type: array, items: {type: string}, description: 'Серийные номера или номер партии'}
@@ -28540,7 +28546,7 @@ components:
     StockPendingReceiptLine:
       type: object
       additionalProperties: false
-      required: [order_number, order_path, supplier, expected_date, overdue, order_line_id, name, article, unit, quantity, received_quantity, request, tracking, requires_doc]
+      required: [order_number, order_path, supplier, expected_date, overdue, order_line_id, name, item, article, unit, quantity, received_quantity, request, tracking, requires_doc]
       properties:
         order_number: {type: string}
         order_path: {type: string}
@@ -28549,6 +28555,9 @@ components:
         overdue: {type: boolean}
         order_line_id: {type: string, pattern: '^[0-9]+$'}
         name: {type: string}
+        item:
+          oneOf: [{$ref: '#/components/schemas/ItemRef'}, {type: 'null'}]
+          description: Позиция каталога строки (ЕД-4) — миниатюра через BFF и наш артикул; `null` — строка без карточки
         article: {type: string}
         unit: {type: string}
         quantity: {type: number, exclusiveMinimum: 0}
@@ -28580,9 +28589,12 @@ components:
           items:
             type: object
             additionalProperties: false
-            required: [name, quantity, cell, units, expiry_date, doc_number, doc_valid_until]
+            required: [name, item, quantity, cell, units, expiry_date, doc_number, doc_valid_until]
             properties:
               name: {type: string}
+              item:
+                oneOf: [{$ref: '#/components/schemas/ItemRef'}, {type: 'null'}]
+                description: Позиция каталога строки (ЕД-4) — миниатюра через BFF и наш артикул; `null` — строка без карточки
               quantity: {type: number, exclusiveMinimum: 0}
               cell: {type: [string, 'null']}
               units: {type: array, items: {type: string}, description: 'Серийные номера или номер партии'}
@@ -28607,9 +28619,12 @@ components:
     StockShipmentLine:
       type: object
       additionalProperties: false
-      required: [product_id, name, quantity, cell, units]
+      required: [product_id, item, name, quantity, cell, units]
       properties:
         product_id: {type: string, pattern: '^[0-9]+$'}
+        item:
+          oneOf: [{$ref: '#/components/schemas/ItemRef'}, {type: 'null'}]
+          description: Позиция каталога строки (ЕД-4) — миниатюра через BFF и наш артикул; `null` — строка без карточки
         name: {type: string}
         quantity: {type: number, exclusiveMinimum: 0}
         cell: {type: [string, 'null']}
@@ -28711,9 +28726,12 @@ components:
         product:
           type: object
           additionalProperties: false
-          required: [id, name, article]
+          required: [id, item, name, article]
           properties:
             id: {type: string, pattern: '^[0-9]+$'}
+            item:
+              oneOf: [{$ref: '#/components/schemas/ItemRef'}, {type: 'null'}]
+              description: Позиция каталога строки (ЕД-4) — миниатюра через BFF и наш артикул; `null` — строка без карточки
             name: {type: string}
             article: {type: string}
         origin:

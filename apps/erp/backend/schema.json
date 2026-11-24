@@ -48992,6 +48992,15 @@
                     "name": {
                         "type": "string"
                     },
+                    "item": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/ItemRef"
+                            }
+                        ],
+                        "nullable": true,
+                        "description": "Позиция каталога (ЕД-4); null — строка без карточки"
+                    },
                     "quantity": {
                         "type": "number",
                         "description": "Количество, до трёх знаков после запятой (ADR-0027 п. 9)"
@@ -49027,6 +49036,7 @@
                     "doc_number",
                     "doc_valid_until",
                     "expiry_date",
+                    "item",
                     "name",
                     "quantity",
                     "units"
@@ -55800,6 +55810,15 @@
                     "name": {
                         "type": "string"
                     },
+                    "item": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/ItemRef"
+                            }
+                        ],
+                        "nullable": true,
+                        "description": "Позиция каталога (ЕД-4); null — строка без карточки"
+                    },
                     "article": {
                         "type": "string"
                     },
@@ -55833,6 +55852,7 @@
                     "article",
                     "deal",
                     "expected_date",
+                    "item",
                     "name",
                     "order_id",
                     "order_line_id",
@@ -57705,6 +57725,15 @@
                             "type": "string"
                         }
                     },
+                    "item": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/ItemRef"
+                            }
+                        ],
+                        "nullable": true,
+                        "description": "Позиция строки списка (ЕД-4)"
+                    },
                     "attributes": {
                         "type": "array",
                         "items": {
@@ -59340,6 +59369,15 @@
                     "name": {
                         "type": "string"
                     },
+                    "item": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/ItemRef"
+                            }
+                        ],
+                        "nullable": true,
+                        "description": "Позиция каталога (ЕД-4); null — строка без карточки"
+                    },
                     "quantity": {
                         "type": "number",
                         "description": "Количество, до трёх знаков после запятой (ADR-0027 п. 9)"
@@ -59378,6 +59416,7 @@
                     "doc_number",
                     "doc_valid_until",
                     "expiry_date",
+                    "item",
                     "name",
                     "order_line_id",
                     "quantity",
@@ -60882,6 +60921,14 @@
                     "product_name": {
                         "type": "string"
                     },
+                    "item": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/ItemRef"
+                            }
+                        ],
+                        "description": "Позиция каталога (ЕД-4)"
+                    },
                     "deal": {
                         "$ref": "#/components/schemas/StockDealRef"
                     },
@@ -60942,6 +60989,7 @@
                     "created_by_name",
                     "deal",
                     "id",
+                    "item",
                     "product_id",
                     "product_name",
                     "quantity",
@@ -61226,6 +61274,14 @@
                     "product_id": {
                         "type": "integer"
                     },
+                    "item": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/ItemRef"
+                            }
+                        ],
+                        "description": "Позиция каталога (ЕД-4)"
+                    },
                     "name": {
                         "type": "string"
                     },
@@ -61247,6 +61303,7 @@
                 },
                 "required": [
                     "cell",
+                    "item",
                     "name",
                     "product_id",
                     "quantity",
@@ -61462,6 +61519,14 @@
                     "id": {
                         "type": "integer"
                     },
+                    "item": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/ItemRef"
+                            }
+                        ],
+                        "description": "Позиция каталога (ЕД-4)"
+                    },
                     "name": {
                         "type": "string"
                     },
@@ -61472,6 +61537,7 @@
                 "required": [
                     "article",
                     "id",
+                    "item",
                     "name"
                 ]
             },
