@@ -323,10 +323,10 @@ function letterFields(doc: MockDocument, me: string): Partial<EdsDocument> {
   const letter = doc.letter;
   const draft = doc.status === "draft";
   // Как EDS: «подписать можно» и «кто подпишет» приходят из его проверки полномочий
-  // Демо: подписывает директор и держатель полномочия, но не автор письма (EDS: автор ≠ подписант)
+  // Демо: подписывает директор (и своё письмо тоже, Б-8) и держатель полномочия, но не автор-держатель (EDS: автор ≠ подписант)
   const can =
     doc.can_sign ??
-    ((me === "u-demo-director" || Boolean(doc.signing_authority_id)) && doc.ownerId !== me);
+    (me === "u-demo-director" || (Boolean(doc.signing_authority_id) && doc.ownerId !== me));
   const signing = doc.signing ?? {
     can_sign: can,
     reason: can ? null : "no_authority",

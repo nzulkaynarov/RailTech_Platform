@@ -232,8 +232,10 @@ test.describe("Создать документ: сотрудник", () => {
 
     await page.getByLabel("Сумма, сум").fill("1 000");
     await page.getByRole("button", { name: "Сохранить черновик" }).click();
-    await expect(side(page).getByText("Черновик")).toBeVisible();
-    await expect(side(page).getByRole("link", { name: "Продолжить" })).toBeVisible();
+    // Б-8: форма остаётся на месте, черновик лежит в «Документах · Внутренние»
+    await expect(page.getByText("Черновик сохранён")).toBeVisible();
+    await expect(page).toHaveURL(/\/eds\/new/);
+    await expect(page.getByLabel("Тема")).toHaveValue("Тема");
   });
 
   test("вложение: слишком большой файл и неподходящий тип отклоняются словами", async ({

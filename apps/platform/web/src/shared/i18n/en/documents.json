@@ -321,7 +321,8 @@
       "draft": "Save draft",
       "uploadWait": "Wait for the files to upload",
       "handover": "Hand over for signing",
-      "sign": "Sign"
+      "sign": "Sign",
+      "signSend": "Sign and send"
     },
     "validation": {
       "summary": "Fix the marked fields.",
@@ -339,8 +340,7 @@
     "toast": {
       "draft": "Draft saved",
       "sent": "Sent for approval: {{number}}",
-      "handover": "Handed over for signing.",
-      "signReady": "Draft saved — sign the letter on its card."
+      "handover": "Handed over for signing."
     },
     "error": {
       "send": "Not sent: {{reason}}",
