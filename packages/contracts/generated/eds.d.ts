@@ -2689,7 +2689,7 @@ export interface components {
       file_id: components["schemas"]["Uuid"];
       /**
        * Format: date
-       * @description Дата поступления письма: от неё считается срок «в течение N дней»; нет — от дня регистрации
+       * @description Дата поступления письма: от неё считается срок «в течение N дней»; нет — от дня регистрации. Позже сегодняшнего дня (дня компании) или старше года — 422 `received_at` (`in_future`, `too_old`)
        */
       received_at?: string;
     };
@@ -2744,6 +2744,8 @@ export interface components {
        */
       alias: string;
       prompt_version: string;
+      /** @description Поля, которые посчитал код, а не модель (срок по обороту «в течение N дней», ИНН); экран метит их «Из текста письма». Для `alias: rules` — все предложенные поля */
+      by_code?: ("sender_inn" | "document_due")[];
     };
     AiDecisionIn: {
       /** @enum {string} */

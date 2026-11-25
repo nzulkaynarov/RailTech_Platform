@@ -37,6 +37,8 @@ class LetterIntakeSuggestion(BaseModel):
     fields: LetterIntakeFields
     alias: str
     prompt_version: str
+    # поля, которые посчитал код, а не модель (срок по обороту «в течение N дней», ИНН): экран метит их отдельно
+    by_code: list[str] = Field(default_factory=list)
 
 
 class LetterAssistIn(Strict):

@@ -26129,7 +26129,10 @@ components:
         fields: {$ref: '#/components/schemas/LetterIntakeFields'}
         alias: {type: string}
         prompt_version: {type: string}
-
+        by_code:
+          type: array
+          items: {type: string, enum: [sender_inn, document_due]}
+          description: Поля, которые посчитал код, а не модель (срок «в течение N дней», ИНН); экран метит их «Из текста письма»
     AiDecisionIn:
       type: object
       additionalProperties: false

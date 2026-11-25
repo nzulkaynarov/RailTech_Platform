@@ -57,7 +57,13 @@ import { useLeftSteps } from "../../../shared/ui/StepSections/useLeftSteps";
 import { AiFillBar } from "./AiFillBar";
 import { DuplicateNotice } from "./DuplicateCheck";
 import { type ForceState, duplicateFromError, useDuplicateCheck } from "./duplicates";
-import { type AiField, applySuggestion, decisionOf, revertSuggestion } from "./aiFill";
+import {
+  type AiField,
+  applySuggestion,
+  byCodeFields,
+  decisionOf,
+  revertSuggestion,
+} from "./aiFill";
 import {
   clearRegisterDraft,
   DRAFT_FILE_KEY,
@@ -71,9 +77,9 @@ import "../new/new.css";
 import "./register.css";
 
 /** Поля, заполненные «Заполнить из файла» и ещё не исправленные человеком (id поля формы). */
-const SuggestedFields = createContext<{ ids: ReadonlySet<string>; rules: boolean }>({
+const SuggestedFields = createContext<{ ids: ReadonlySet<string>; byCode: ReadonlySet<string> }>({
   ids: new Set(),
-  rules: false,
+  byCode: new Set(),
 });
 
 const AI_FIELD_IDS: Readonly<Record<AiField, string>> = {
@@ -108,7 +114,7 @@ function Field({
       <label htmlFor={id}>{label}</label>
       {suggested ? (
         <span className="pf-reg-ai-chip">
-          {t(marks.rules ? "register.ai.chipRules" : "register.ai.chip")}
+          {t(marks.byCode.has(id) ? "register.ai.chipRules" : "register.ai.chip")}
         </span>
       ) : null}
       {children}
@@ -248,7 +254,8 @@ export function RegisterLetterPage() {
     id: string;
     filled: AiField[];
     left: Set<AiField>;
-    rules?: boolean;
+    byCode: Set<AiField>;
+    receivedUsed: string;
   } | null>(null);
   useEffect(() => {
     // Пока на плашке не выбрано «Продолжить» или «Начать заново», прежний черновик не трогаем.
@@ -256,7 +263,15 @@ export function RegisterLetterPage() {
     writeRegisterDraft(userId, today, {
       values,
       active,
-      ai: ai ? { id: ai.id, filled: ai.filled, left: [...ai.left] } : null,
+      ai: ai
+        ? {
+            id: ai.id,
+            filled: ai.filled,
+            left: [...ai.left],
+            byCode: [...ai.byCode],
+            receivedUsed: ai.receivedUsed,
+          }
+        : null,
     });
   }, [userId, mailId, offer, values, active, ai, today]);
   const touch = (key: keyof RegisterValues) => {
@@ -510,7 +525,13 @@ export function RegisterLetterPage() {
                   setValues({ ...offer.values, sourceMailId: null });
                   setAi(
                     offer.ai
-                      ? { id: offer.ai.id, filled: offer.ai.filled, left: new Set(offer.ai.left) }
+                      ? {
+                          id: offer.ai.id,
+                          filled: offer.ai.filled,
+                          left: new Set(offer.ai.left),
+                          byCode: new Set(offer.ai.byCode ?? []),
+                          receivedUsed: offer.ai.receivedUsed ?? "",
+                        }
                       : null,
                   );
                   markLeft(
@@ -545,7 +566,7 @@ export function RegisterLetterPage() {
       <SuggestedFields.Provider
         value={{
           ids: new Set(ai ? [...ai.left].map((key) => AI_FIELD_IDS[key]) : []),
-          rules: ai?.rules === true,
+          byCode: new Set([...(ai?.byCode ?? [])].map((key) => AI_FIELD_IDS[key])),
         }}
       >
         <form
@@ -599,8 +620,23 @@ export function RegisterLetterPage() {
                         noAutoFor={restoredFileId}
                         attachments={values.attachments}
                         applied={ai?.left.size ?? 0}
-                        rules={ai?.rules === true}
+                        rules={
+                          ai !== null &&
+                          ai.left.size > 0 &&
+                          [...ai.left].every((k) => ai.byCode.has(k))
+                        }
+                        staleDue={
+                          ai !== null &&
+                          ai.left.has("documentDue") &&
+                          ai.byCode.has("documentDue") &&
+                          ai.receivedUsed !== values.receivedAt
+                        }
+                        onRecompute={(due, used) => {
+                          setValues((prev) => ({ ...prev, documentDue: due }));
+                          setAi((prev) => (prev ? { ...prev, receivedUsed: used } : prev));
+                        }}
                         receivedAt={values.receivedAt}
+                        today={today}
                         linkQuery={
                           canLink && !values.deal && ai
                             ? { inn: values.senderInn.trim(), name: values.senderName.trim() }
@@ -618,7 +654,10 @@ export function RegisterLetterPage() {
                             id: suggestion.suggestion_id,
                             filled: result.filled,
                             left: new Set(result.filled),
-                            rules: suggestion.alias === "rules",
+                            byCode: new Set(
+                              byCodeFields(suggestion).filter((k) => result.filled.includes(k)),
+                            ),
+                            receivedUsed: latest.current.receivedAt,
                           });
                         }}
                         onRevert={() => {

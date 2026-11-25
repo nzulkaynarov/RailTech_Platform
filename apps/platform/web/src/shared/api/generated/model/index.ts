@@ -685,6 +685,7 @@ export * from "./letterInstructionStatus";
 export * from "./letterIntakeFields";
 export * from "./letterIntakeIn";
 export * from "./letterIntakeSuggestion";
+export * from "./letterIntakeSuggestionByCodeItem";
 export * from "./letterIntakeSuggestionSource";
 export * from "./letterJournalEntry";
 export * from "./letterKind";

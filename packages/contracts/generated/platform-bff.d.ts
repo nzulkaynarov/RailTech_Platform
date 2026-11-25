@@ -14912,6 +14912,8 @@ export interface components {
       fields: components["schemas"]["LetterIntakeFields"];
       alias: string;
       prompt_version: string;
+      /** @description Поля, которые посчитал код, а не модель (срок «в течение N дней», ИНН); экран метит их «Из текста письма» */
+      by_code?: ("sender_inn" | "document_due")[];
     };
     AiDecisionIn: {
       /** @enum {string} */

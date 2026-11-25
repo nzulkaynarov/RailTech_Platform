@@ -35,6 +35,7 @@ class LetterIntakeSuggestion(BaseModel):
     fields: LetterIntakeFields
     alias: str
     prompt_version: str
+    by_code: list[Literal["sender_inn", "document_due"]] = Field(default_factory=list)
 
 
 class AiDecisionIn(_In):

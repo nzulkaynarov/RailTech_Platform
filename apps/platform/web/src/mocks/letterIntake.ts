@@ -1,6 +1,7 @@
 import { HttpResponse, http } from "msw";
 
 import { allows } from "../app/rbac.generated";
+import { todayInCompanyZone } from "../modules/eds/new/formModel";
 import type {
   AiDecisionIn,
   DocflowSettings,
@@ -75,6 +76,17 @@ const fail = (status: number, code: string, message: string, details?: Record<st
   HttpResponse.json({ code, message, source: "eds", ...(details ? { details } : {}) }, { status });
 
 /** Вымышленное письмо налоговой — ответ «помощника» на PDF с текстом. */
+const EMPTY_FIELDS: LetterIntakeSuggestion["fields"] = {
+  sender_name: null,
+  sender_inn: null,
+  sender_ref_number: null,
+  sender_ref_date: null,
+  subject: null,
+  summary: null,
+  kind: null,
+  document_due: null,
+};
+
 export const DEMO_SUGGESTION: Omit<LetterIntakeSuggestion, "suggestion_id" | "source"> = {
   fields: {
     sender_name: "ГНИ Демо-района",
@@ -151,32 +163,41 @@ export const letterIntakeHandlers = [
       });
     }
     const settings = readDocflowSettings();
+    const base = new Date(`${receivedAt ?? todayInCompanyZone()}T00:00:00Z`);
+    base.setUTCDate(base.getUTCDate() + 7);
+    const dueByCode = base.toISOString().slice(0, 10);
+    if (file.name.startsWith("rules-") || !settings.ai_available) {
+      // модели нет или она молчит: срок «в течение 7 календарных дней» посчитал код — от даты поступления формы
+      if (!file.name.startsWith("rules-")) {
+        return fail(409, "CONFLICT", "Помощник не настроен — заполните вручную.", {
+          reason: "ai_unavailable",
+        });
+      }
+      const byRules: LetterIntakeSuggestion = {
+        suggestion_id: crypto.randomUUID(),
+        source: "text",
+        fields: { ...EMPTY_FIELDS, document_due: dueByCode },
+        alias: "rules",
+        prompt_version: "rules-1",
+        by_code: ["document_due"],
+      };
+      return HttpResponse.json(byRules);
+    }
     if (image && (!settings.recognize_scans || settings.pii_policy === "strict")) {
       return fail(409, "CONFLICT", "Распознавание сканов выключено — заполните вручную.", {
         reason: "scan_recognition_disabled",
       });
     }
-    if (file.name.startsWith("rules-")) {
-      // модель выключена: срок «в течение 7 календарных дней» посчитал код — от даты поступления формы
-      const base = new Date(`${receivedAt ?? new Date().toISOString().slice(0, 10)}T00:00:00Z`);
-      base.setUTCDate(base.getUTCDate() + 7);
-      const byRules: LetterIntakeSuggestion = {
+    if (file.name.startsWith("mixed-")) {
+      // модель ответила, а срок «в течение 7 дней» посчитал код: у срока другая метка, чем у темы
+      const mixed: LetterIntakeSuggestion = {
+        ...DEMO_SUGGESTION,
         suggestion_id: crypto.randomUUID(),
         source: "text",
-        fields: {
-          sender_name: null,
-          sender_inn: null,
-          sender_ref_number: null,
-          sender_ref_date: null,
-          subject: null,
-          summary: null,
-          kind: null,
-          document_due: base.toISOString().slice(0, 10),
-        },
-        alias: "rules",
-        prompt_version: "rules-1",
+        fields: { ...DEMO_SUGGESTION.fields, document_due: dueByCode },
+        by_code: ["sender_inn", "document_due"],
       };
-      return HttpResponse.json(byRules);
+      return HttpResponse.json(mixed);
     }
     const suggestion: LetterIntakeSuggestion = {
       ...DEMO_SUGGESTION,

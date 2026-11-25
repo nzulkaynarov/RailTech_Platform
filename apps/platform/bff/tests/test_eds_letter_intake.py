@@ -66,6 +66,25 @@ async def test_registrar_gets_suggestion_and_records_decision(
     ).status_code == 422
 
 
+async def test_received_at_is_forwarded_and_omitted_when_absent(web: Web, eds: EdsFake) -> None:
+    """СЦ-11: дата поступления идёт в EDS как есть; без неё поля в теле нет (EDS считает срок от дня регистрации)."""
+    eds.answer(
+        "POST",
+        "letter-intake",
+        httpx.Response(200, json={**SUGGESTION, "alias": "rules", "by_code": ["document_due"]}),
+    )
+    assert (await web.login(["REGISTRAR"])).status_code == 200
+    with_date = await web.send(
+        "POST", f"{BASE}/letter-intake", json={"file_id": FILE_ID, "received_at": "2026-11-20"}
+    )
+    assert with_date.status_code == 200
+    assert with_date.json()["by_code"] == ["document_due"]
+    await web.send("POST", f"{BASE}/letter-intake", json={"file_id": FILE_ID})
+    first, second = eds.made("POST", "letter-intake")
+    assert json.loads(first.read()) == {"file_id": FILE_ID, "received_at": "2026-11-20"}
+    assert json.loads(second.read()) == {"file_id": FILE_ID}
+
+
 async def test_eds_refusal_keeps_reason_and_text(web: Web, eds: EdsFake) -> None:
     eds.answer(
         "POST",

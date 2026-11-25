@@ -5,7 +5,7 @@
 (`httpx.MockTransport`), платных вызовов нет."""
 
 import json
-from datetime import date
+from datetime import date, timedelta
 from typing import Any
 
 import httpx
@@ -78,9 +78,17 @@ class FakeModel:
         self.bodies: list[dict[str, Any]] = []
         self.answer: dict[str, Any] = ANSWER
         self.status = 200
+        self.failure: str | None = None  # "500" · "timeout" · "junk" — настоящие сбои модели (не лимит)
 
     def __call__(self, request: httpx.Request) -> httpx.Response:
         self.bodies.append(json.loads(request.content))
+        if self.failure == "timeout":
+            raise httpx.ReadTimeout("model is silent", request=request)
+        if self.failure == "500":
+            return httpx.Response(500, text="upstream exploded")
+        if self.failure == "junk":
+            junk = {"choices": [{"message": {"content": "not json at all"}, "finish_reason": "stop"}]}
+            return httpx.Response(200, json=junk)
         if self.status != 200:
             return httpx.Response(self.status, json={"error": {"type": "budget_exceeded"}})
         return httpx.Response(
@@ -525,24 +533,49 @@ async def test_due_from_the_text_is_suggested_without_the_model(
     assert_error(plain, 409, "CONFLICT", reason="ai_budget_exceeded")
 
 
-@pytest.mark.parametrize(
-    ("text", "expected"),
-    [
-        ("в течение пяти рабочих дней", date(2026, 11, 27)),
-        ("В течение десяти календарных дней с даты получения", date(2026, 11, 30)),
-        ("в течение тридцати календарных дней", date(2026, 12, 20)),
-        ("в течение одного дня", date(2026, 11, 21)),
-        ("в течение двух рабочих дней", date(2026, 11, 24)),
-        ("в течение трёх дней", date(2026, 11, 23)),
-        ("в течение двадцати рабочих дней", date(2026, 12, 18)),
-        ("в течение пятнадцать дней", date(2026, 12, 5)),
-        ("в течение 5 (пяти) рабочих дней", date(2026, 11, 27)),
-        ("в течение сорока дней", None),  # вне таблицы 1–30 — подсказки нет, человек введёт сам
-    ],
-)
-def test_due_numerals_in_words_are_counted_by_code(text: str, expected: date | None) -> None:
-    """СЦ-11: «пяти», «десяти», «тридцати» и «рабочих/календарных» — как цифрами (от пятницы 2026-11-20)."""
-    assert letter_intake.due_from_text(text, date(2026, 11, 20)) == expected
+_WORDS = [
+    "один", "два", "три", "четыре", "пять", "шесть", "семь", "восемь", "девять", "десять", "одиннадцать",
+    "двенадцать", "тринадцать", "четырнадцать", "пятнадцать", "шестнадцать", "семнадцать", "восемнадцать",
+    "девятнадцать", "двадцать", "двадцать один", "двадцать два", "двадцать три", "двадцать четыре",
+    "двадцать пять", "двадцать шесть", "двадцать семь", "двадцать восемь", "двадцать девять", "тридцать",
+]  # fmt: skip
+_GENITIVE = [
+    "одного", "двух", "трёх", "четырёх", "пяти", "шести", "семи", "восьми", "девяти", "десяти", "одиннадцати",
+    "двенадцати", "тринадцати", "четырнадцати", "пятнадцати", "шестнадцати", "семнадцати", "восемнадцати",
+    "девятнадцати", "двадцати", "двадцати одного", "двадцати двух", "двадцати трёх", "двадцати четырёх",
+    "двадцати пяти", "двадцати шести", "двадцати семи", "двадцати восьми", "двадцати девяти", "тридцати",
+]  # fmt: skip
+FRIDAY = date(2026, 11, 20)
+
+
+def _after(days: int, *, working: bool = False) -> date:
+    """Ожидание независимо от кода: рабочие дни идут по одному, календарный срок с выходного — на понедельник."""
+    day = FRIDAY
+    if working:
+        while days:
+            day += timedelta(days=1)
+            days -= day.weekday() < 5
+        return day
+    day += timedelta(days=days)
+    return day + timedelta(days=(7 - day.weekday()) % 7 if day.weekday() >= 5 else 0)
+
+
+@pytest.mark.parametrize("n", range(1, 31))
+@pytest.mark.parametrize("kind", ["календарных", "рабочих"])
+def test_due_numerals_1_to_30_in_every_form(n: int, kind: str) -> None:
+    """СЦ-11: числа 1–30 цифрами, «5-ти», словом в именительном и родительном падеже, «(…)» после цифры."""
+    working = kind == "рабочих"
+    expected = _after(n, working=working)
+    forms = [f"{n}", f"{n}-ти", f"{_WORDS[n - 1]}", f"{_GENITIVE[n - 1]}", f"{n} ({_GENITIVE[n - 1]})"]
+    for form in forms:
+        text = f"Просим ответить в течение {form} {kind} дней с даты получения."
+        assert letter_intake.due_from_text(text, FRIDAY) == expected, text
+
+
+def test_due_numerals_outside_the_table_give_no_suggestion() -> None:
+    assert letter_intake.due_from_text("в течение сорока дней", FRIDAY) is None
+    assert letter_intake.due_from_text("в течение пять пять дней", FRIDAY) is None  # не число
+    assert letter_intake.due_from_text("в течение 95 дней", FRIDAY) is None
 
 
 def test_due_is_counted_from_the_receipt_date_when_there_is_one() -> None:
@@ -556,3 +589,49 @@ def test_due_is_counted_from_the_receipt_date_when_there_is_one() -> None:
     assert without.document_due == date(2026, 12, 2)
     cleaned = letter_intake.clean({}, masked=None, kinds=set(), raw=raw, today=today, base=received)
     assert cleaned.document_due == date(2026, 11, 27)
+
+
+@pytest.mark.parametrize("failure", ["500", "timeout", "junk"])
+async def test_real_model_failure_still_gives_the_due_date_by_rules(
+    client: httpx.AsyncClient, staff: dict[str, Person], model: FakeModel, failure: str
+) -> None:
+    """СЦ-11: сбой модели (500 без лимита, тишина, не-JSON) — не «заполните вручную», а срок по тексту от кода."""
+    model.failure = failure
+    lines = ["Tax Committee of Demo District", "Explanations are due 5 ish kuni ichida from receipt of this notice."]
+    response = await intake(client, staff["registrar"], make_pdf(lines))
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["alias"] == "rules" and body["by_code"] == ["document_due"]
+    assert model.bodies  # модель звали, она не ответила
+
+
+async def test_by_code_marks_what_the_code_computed_next_to_the_model_answer(
+    client: httpx.AsyncClient, staff: dict[str, Person], model: FakeModel
+) -> None:
+    """СЦ-11: модель срок не назвала датой — срок и ИНН помечены `by_code`, остальное остаётся за моделью."""
+    model.answer = {**ANSWER, "document_due": None}
+    lines = ["Tax Committee of Demo District", "To: Demo Rail LLC, INN 301234567", "Reply 5 ish kuni ichida please"]
+    mixed = await intake(client, staff["registrar"], make_pdf(lines))
+    body = mixed.json()
+    assert body["alias"] == "intake-model"
+    assert body["fields"]["subject"] and body["fields"]["document_due"]
+    assert sorted(body["by_code"]) == ["document_due", "sender_inn"]
+    model.answer = ANSWER  # модель сама назвала дату срока — срок её, ИНН по-прежнему кода
+    named = await intake(client, staff["registrar"], make_pdf(lines))
+    assert named.json()["by_code"] == ["sender_inn"]
+
+
+@pytest.mark.parametrize("received", ["2999-01-01", "9999-12-31", "2001-01-01"])
+async def test_receipt_date_out_of_range_is_rejected(
+    client: httpx.AsyncClient, staff: dict[str, Person], model: FakeModel, received: str
+) -> None:
+    """СЦ-11: дата поступления из будущего, у предела календаря (раньше — 500) или старше года — 422, а не расчёт."""
+    lines = ["Tax Committee", "Reply 5 ish kuni ichida please"]
+    response = await intake(client, staff["registrar"], make_pdf(lines), received_at=received)
+    assert_error(response, 422, "VALIDATION_FAILED")
+    assert "received_at" in json.dumps(response.json()["details"])
+    assert model.bodies == []
+
+
+def test_due_at_the_calendar_edge_is_no_suggestion_not_a_crash() -> None:
+    assert letter_intake.due_from_text("в течение 5 дней", date(9999, 12, 31)) is None

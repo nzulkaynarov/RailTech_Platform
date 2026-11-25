@@ -39,7 +39,7 @@ from app.errors import conflict, invalid_fields, not_found
 from app.models import AiSuggestion, Employee, Letterhead
 from app.schemas.ai import AiDecision, IntakeSource, LetterIntakeFields, LetterIntakeSuggestion
 from app.security.pii import Masked, mask_numbered
-from app.services import dictionaries, docflow_settings, files
+from app.services import dictionaries, docflow_settings, files, instructions
 from app.services.storage import ObjectStorage
 
 log = structlog.get_logger(__name__)
@@ -62,43 +62,40 @@ MAX_TOKENS = 1200
 _INN: Final = re.compile(r"(?i)(?:\bИНН|\bSTIR|\bINN|\bTIN)\b\D{0,12}?(\d{9})(?!\d)")
 
 # «в течение 5 рабочих дней», «в течение десяти календарных дней», «5 kun ichida», «5 ish kuni ichida».
+# Числительные 1–30 и десятки: именительный и родительный падеж («в течение пяти дней», «двадцати пяти дней»).
+_UNITS: Final[tuple[str, ...]] = (
+    "один одного одну",
+    "два двух",
+    "три трёх трех",
+    "четыре четырёх четырех",
+    "пять пяти",
+    "шесть шести",
+    "семь семи",
+    "восемь восьми",
+    "девять девяти",
+    "десять десяти",
+    "одиннадцать одиннадцати",
+    "двенадцать двенадцати",
+    "тринадцать тринадцати",
+    "четырнадцать четырнадцати",
+    "пятнадцать пятнадцати",
+    "шестнадцать шестнадцати",
+    "семнадцать семнадцати",
+    "восемнадцать восемнадцати",
+    "девятнадцать девятнадцати",
+    "двадцать двадцати",
+    "тридцать тридцати",
+)
 _NUM_WORDS: Final[dict[str, int]] = {
-    # именительный и родительный падеж числительных 1–30 («в течение пяти дней», «тридцати календарных дней»)
-    **{
-        w: n
-        for n, ws in enumerate(
-            (
-                "один одного одну",
-                "два двух",
-                "три трёх трех",
-                "четыре четырёх четырех",
-                "пять пяти",
-                "шесть шести",
-                "семь семи",
-                "восемь восьми",
-                "девять девяти",
-                "десять десяти",
-                "одиннадцать одиннадцати",
-                "двенадцать двенадцати",
-                "тринадцать тринадцати",
-                "четырнадцать четырнадцати",
-                "пятнадцать пятнадцати",
-                "шестнадцать шестнадцати",
-                "семнадцать семнадцати",
-                "восемнадцать восемнадцати",
-                "девятнадцать девятнадцати",
-                "двадцать двадцати",
-            ),
-            start=1,
-        )
-        for w in ws.split()
-    },
-    "тридцать": 30,
-    "тридцати": 30,
+    word: number
+    for number, words in [(n, w) for n, w in enumerate(_UNITS[:20], start=1)] + [(30, _UNITS[20])]
+    for word in words.split()
 }
 _WORDS_RE = "|".join(sorted(_NUM_WORDS, key=len, reverse=True))
+# «в течение 5 / 5-ти / пяти / двадцати пяти (рабочих|календарных) дней»
 _DUE_RU: Final = re.compile(
-    rf"(?i)в\s+течение\s+(?:(\d{{1,3}})|({_WORDS_RE}))\s*(?:\([^)]{{1,30}}\)\s*)?(рабоч\w*|календарн\w*)?\s*дн"
+    rf"(?i)в\s+течение\s+(?:(\d{{1,3}})(?:-[а-я]{{1,3}})?|((?:{_WORDS_RE})(?:\s+(?:{_WORDS_RE}))?))"
+    r"\s*(?:\([^)]{1,30}\)\s*)?(рабоч\w*|календарн\w*)?\s*дн"
 )
 _DUE_UZ: Final = re.compile(r"(?i)\b(\d{1,3})\s*(ish\s+)?kun(?:i)?\s+ichida")
 _MAX_DUE_DAYS = 90
@@ -174,7 +171,23 @@ def _text(value: Any, masked: Masked | None, limit: int) -> str | None:
     return cleaned[:limit] or None
 
 
+def _words_to_days(words: str) -> int:
+    """«пять» → 5, «двадцать пять» → 25; два числа подряд, кроме «десяток + единица», дают 0 (подсказки нет)."""
+    parts = [_NUM_WORDS[word] for word in words.lower().split()]
+    if len(parts) == 1:
+        return parts[0]
+    tens, unit = parts
+    return tens + unit if tens in (20, 30) and 1 <= unit <= 9 else 0
+
+
 def due_from_text(raw: str, today: date) -> date | None:
+    try:
+        return _due_from_text(raw, today)
+    except OverflowError:  # дата у предела календаря: подсказки нет, а не 500
+        return None
+
+
+def _due_from_text(raw: str, today: date) -> date | None:
     """Срок «в течение N (рабочих|календарных) дней» (N цифрами или словом, «пяти дней») из текста письма: код
     считает от даты `today` (даты поступления, а без неё — дня регистрации), а не модель.
 
@@ -186,7 +199,7 @@ def due_from_text(raw: str, today: date) -> date | None:
     found = _DUE_RU.search(raw)
     working = False
     if found:
-        days = int(found.group(1)) if found.group(1) else _NUM_WORDS[found.group(2).lower()]
+        days = int(found.group(1)) if found.group(1) else _words_to_days(found.group(2))
         working = (found.group(3) or "").lower().startswith("рабоч")
     elif (found := _DUE_UZ.search(raw)) is not None:
         days = int(found.group(1))
@@ -196,7 +209,8 @@ def due_from_text(raw: str, today: date) -> date | None:
     if not 1 <= days <= _MAX_DUE_DAYS:
         return None
     if not working:
-        return today + timedelta(days=days)
+        # календарный срок, выпавший на выходной, переходит на ближайший рабочий день (одно правило с резолюцией)
+        return instructions.next_workday(today + timedelta(days=days))
     day = today
     while days:
         day += timedelta(days=1)
@@ -230,6 +244,27 @@ def clean(
         kind=kind if isinstance(kind, str) and kind in kinds else None,
         document_due=due if due and today - DUE_PAST <= due <= today + DUE_AHEAD else None,
     )
+
+
+def by_code_fields(data: dict[str, Any] | None, fields: LetterIntakeFields) -> list[str]:
+    """Какие из предложенных полей посчитал код, а не модель: ИНН всегда находит код; срок — если модель его не назвала
+    датой (оборот «в течение N дней» посчитан кодом). Экран метит такие поля «Из текста письма», не «Предложено ИИ»."""
+    out: list[str] = []
+    if fields.sender_inn:
+        out.append("sender_inn")
+    if fields.document_due and _date((data or {}).get("document_due")) is None:
+        out.append("document_due")
+    return out
+
+
+def check_received_at(received_at: date | None, today: date) -> None:
+    """Дата поступления из формы — точка отсчёта срока: не из будущего и не старше года (иначе 422)."""
+    if received_at is None:
+        return
+    if received_at > today:
+        raise invalid_fields("Дата поступления не может быть в будущем.", received_at="in_future")
+    if received_at < today - DUE_PAST:
+        raise invalid_fields("Дата поступления старше года.", received_at="too_old")
 
 
 def rules_fields(
@@ -268,6 +303,7 @@ async def _rules_suggestion(
         fields=fields,
         alias=RULES_ALIAS,
         prompt_version=RULES_VERSION,
+        by_code=[name for name, value in fields.model_dump().items() if value],
     )
 
 
@@ -302,6 +338,8 @@ async def suggest(
     received_at: date | None = None,
 ) -> LetterIntakeSuggestion:
     """Предложить поля карточки по файлу письма. Вызов модели — вне транзакции, журнал — своей транзакцией."""
+    today = clock.company_date(clock.now())
+    check_received_at(received_at, today)
     async with session.begin():
         await files.load_visible(session, employee, file_id)
         version = await files.get_version(session, file_id, None)
@@ -332,7 +370,6 @@ async def suggest(
             "file_too_large", f"В файле больше {MAX_PDF_PAGES} страниц — это не письмо. Заполните вручную."
         ) from exc
     source = IntakeSource.TEXT if len(raw) >= MIN_TEXT else IntakeSource.IMAGE
-    today = clock.company_date(clock.now())
     by_rules = rules_fields(raw, today, own_inn, received_at) if source is IntakeSource.TEXT else None
     if blocked is not None:
         if by_rules is None:
@@ -416,6 +453,7 @@ async def suggest(
         fields=fields,
         alias=gateway.FUNCTION_ALIASES[FUNCTION],
         prompt_version=prompt.version,
+        by_code=by_code_fields(result.data, fields),
     )
 
 

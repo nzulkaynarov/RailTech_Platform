@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { ApiError } from "../../../shared/api/errors";
+import { usableReceivedAt } from "./aiFill";
 import type { LetterIntakeSuggestion } from "../../../shared/api/generated/model";
 import {
   suggestLetterFromFile,
@@ -85,6 +86,9 @@ export function AiFillBar({
   applied,
   rules = false,
   receivedAt = "",
+  today = "",
+  staleDue = false,
+  onRecompute,
   linkQuery,
   onSuggestion,
   onRevert,
@@ -98,6 +102,10 @@ export function AiFillBar({
   rules?: boolean;
   /** Дата поступления формы (ГГГГ-ММ-ДД): от неё считается срок «в течение N дней» */
   receivedAt?: string;
+  today?: string;
+  /** Срок посчитан кодом от другой даты поступления и не правился руками: предложить пересчёт */
+  staleDue?: boolean;
+  onRecompute?: (due: string, receivedUsed: string) => void;
   /** ИНН и название корреспондента для поиска связи с проектом; `null` — не искать */
   linkQuery: { inn: string; name: string } | null;
   onSuggestion: (suggestion: LetterIntakeSuggestion) => void;
@@ -113,17 +121,34 @@ export function AiFillBar({
   const file = attachments.find((item) => item.status === "done" && item.id);
   const available = Boolean(settings.data?.ai_available);
 
+  const usable = usableReceivedAt(receivedAt, today);
+  const call = async () =>
+    suggestLetterFromFile({
+      file_id: file?.id ?? "",
+      ...(usable ? { received_at: receivedAt } : {}),
+    });
+
+  // модель не настроена — это не ошибка, а «срок по тексту, если он там есть»; молчим, если в файле его нет
   const fill = async () => {
     if (!file?.id) return;
     setPending(true);
     setFailure(null);
     try {
-      onSuggestion(
-        await suggestLetterFromFile({
-          file_id: file.id,
-          ...(/^\d{4}-\d{2}-\d{2}$/.test(receivedAt) ? { received_at: receivedAt } : {}),
-        }),
-      );
+      onSuggestion(await call());
+    } catch (error) {
+      if (available) setFailure(t(`register.ai.errors.${errorKey(error)}`));
+    } finally {
+      setPending(false);
+    }
+  };
+
+  const recompute = async () => {
+    if (!file?.id) return;
+    setPending(true);
+    setFailure(null);
+    try {
+      const next = await call();
+      if (next.fields.document_due) onRecompute?.(next.fields.document_due, receivedAt);
     } catch (error) {
       setFailure(t(`register.ai.errors.${errorKey(error)}`));
     } finally {
@@ -135,15 +160,24 @@ export function AiFillBar({
   const tried = useRef<string | null>(null);
   const fileId = file?.id ?? null;
   useEffect(() => {
-    if (!available || !fileId || applied > 0 || tried.current === fileId || fileId === noAutoFor)
+    if (
+      !settings.data ||
+      !fileId ||
+      applied > 0 ||
+      tried.current === fileId ||
+      fileId === noAutoFor
+    )
       return;
+    // без модели код читает только PDF с текстовым слоем: срок «в течение N дней»
+    if (!available && !/\.pdf$/i.test(file?.name ?? "")) return;
     tried.current = fileId;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void fill();
     // fill — свежая функция на каждой отрисовке; запуск — по новому файлу
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [available, fileId]);
+  }, [available, fileId, settings.data]);
 
-  if (!available || !settings.data) return null;
+  if (!settings.data) return null;
 
   return (
     <div className="pf-reg-ai" role="group" aria-label={t("register.ai.group")}>
@@ -161,9 +195,11 @@ export function AiFillBar({
         <span className="pf-hint" id="reg-ai-hint">
           {!file
             ? t("register.ai.needFile")
-            : settings.data.recognize_scans && settings.data.pii_policy === "business"
-              ? t("register.ai.hintScans")
-              : t("register.ai.hintText")}
+            : !available
+              ? t("register.ai.hintRules")
+              : settings.data.recognize_scans && settings.data.pii_policy === "business"
+                ? t("register.ai.hintScans")
+                : t("register.ai.hintText")}
         </span>
       </div>
       {pending ? (
@@ -183,6 +219,25 @@ export function AiFillBar({
           action={
             <Button size="small" onClick={onRevert}>
               {t("register.ai.revert")}
+            </Button>
+          }
+        />
+      ) : null}
+      {staleDue ? (
+        <Alert
+          type="info"
+          showIcon
+          role="status"
+          message={t("register.ai.staleDue")}
+          action={
+            <Button
+              size="small"
+              loading={pending}
+              onClick={() => {
+                void recompute();
+              }}
+            >
+              {t("register.ai.recompute")}
             </Button>
           }
         />
