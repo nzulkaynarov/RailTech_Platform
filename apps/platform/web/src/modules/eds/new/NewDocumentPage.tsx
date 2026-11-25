@@ -15,6 +15,7 @@ import {
   useGetEdsDocument,
   useGetEdsLetterhead,
   useGetLetter,
+  useGetDocflowSettings,
   useListEdsSigners,
   useListEdsStaff,
   useUpdateEdsDocument,
@@ -182,7 +183,14 @@ function DocumentForm({
   // Автор — держатель права подписи: главная кнопка письма называет то, что произойдёт, — подписать и отправить (Б-8)
   // Факт документа (`can_sign` сохранённого черновика) сильнее списка держателей права.
   const [savedCanSign, setSavedCanSign] = useState<boolean | null>(null);
-  const meSigns = savedCanSign ?? draft?.can_sign ?? allSigners.some((p) => p.id === me.id);
+  // До сохранения — по списку держателей права и правилу «автор подписывает своё письмо» (настройка компании): нет
+  // права читать правило или оно выключено — остаётся «Передать на подпись».
+  const docflow = useGetDocflowSettings({
+    query: { enabled: isLetter(values.kind), staleTime: 60_000, retry: false },
+  });
+  const authorMaySign = docflow.data?.author_may_sign_own_letter === true;
+  const meSigns =
+    savedCanSign ?? draft?.can_sign ?? (authorMaySign && allSigners.some((p) => p.id === me.id));
   const listed = allSigners.length > 1 ? allSigners.filter((p) => p.id !== me.id) : allSigners;
   // The saved choice may have lost the signing right and left the list: keep showing the name, never the raw id.
   const signers =
