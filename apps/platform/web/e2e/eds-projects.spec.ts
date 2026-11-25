@@ -150,7 +150,12 @@ test.describe("Проекты: бухгалтер", () => {
     await openProject(page, 104);
     await expect(page.getByText("Проекта договора нет", { exact: true })).toHaveCount(1);
     await expect(page.getByText("Согласуйте редакцию договора")).toHaveCount(0);
-    await settledScreenshot(page, "sc8-project-card-one-status");
+    await expect(page.getByText("бухгалтер", { exact: false })).toHaveCount(0);
+    await expect(page.getByText("Склад · Отгрузки")).toHaveCount(0);
+    for (const width of [1512, 1440, 390]) {
+      await page.setViewportSize({ width, height: 900 });
+      await settledScreenshot(page, `sc8-project-card-${String(width)}`);
+    }
     await expectNoViolations(page, "карточка проекта: один статус в шапке");
   });
 

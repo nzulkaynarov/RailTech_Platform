@@ -215,9 +215,6 @@ function Execution({ card, objectId }: { card: ProjectCard; objectId: string }) 
   const f = card.fulfillment;
   return (
     <Card size="small" title={<h2 className="pf-dec-title">{t("card.execution.title")}</h2>}>
-      <p className="pf-hint" style={{ marginTop: 0 }}>
-        {t("card.execution.hint")}
-      </p>
       <div className="pf-proj-exec">
         <section aria-label={t("card.execution.shipment")}>
           <h3 className="pf-dec-subhead">{t("card.execution.shipment")}</h3>

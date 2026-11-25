@@ -292,7 +292,7 @@ function ProofList({ invoice }: { invoice: Invoice }) {
           <li key={proof.id} className="flex min-w-0 flex-col gap-0.5">
             <span className="flex flex-wrap items-center gap-1.5">
               <StatusBadge entity="proof" code={proof.status} />
-              <span className="break-all text-muted-foreground">
+              <span className="min-w-0 break-words text-muted-foreground" title={proof.file_name}>
                 {t('pages.invoices.proofLine', { name: proof.file_name, date: formatDateTime(proof.submitted_at) })}
               </span>
             </span>

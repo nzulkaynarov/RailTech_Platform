@@ -90,7 +90,7 @@ describe("Проект: карточка", () => {
     const execution = screen.getByRole("heading", { name: "Исполнение" }).closest(".ant-card");
     expect(execution).toHaveTextContent("Отгружено");
     expect(execution).toHaveTextContent("TRK-4471");
-    expect(execution).toHaveTextContent("Здесь отмечают, что товар в пути и доставлен");
+    expect(execution).not.toHaveTextContent("Склад · Отгрузки"); // без пересказа процесса (СЦ-8)
     // у бухгалтера раздел «Склад» только для чтения — отметок доставки нет (L0-1)
     expect(
       within(execution as HTMLElement).queryByRole("button", { name: "Доставлено" }),
