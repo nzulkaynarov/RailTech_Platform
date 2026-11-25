@@ -17076,6 +17076,8 @@ export interface components {
       send: boolean;
       /** @description В черновике есть строки без цены — «Запросить цену» у партнёра (СЦ-10) */
       request_price: boolean;
+      /** @description Заказ отправлен, но письмо партнёру не ушло: «Отправить ещё раз» — тот же POST …/send (Б-5); только в карточке заказа */
+      resend?: boolean;
       confirm: boolean;
       receive: boolean;
       cancel: boolean;

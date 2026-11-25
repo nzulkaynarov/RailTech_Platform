@@ -208,7 +208,8 @@
       "receive": "Receive goods",
       "edit": "Edit",
       "cancel": "Cancel order",
-      "price": "Request a price"
+      "price": "Request a price",
+      "resend": "Send again"
     },
     "overdueBanner": "Expected by {{date}}, goods not received — {{count}} d. overdue. Contact the partner and update the expected date.",
     "cancelledBanner": "The order is cancelled. Reason: {{reason}}",

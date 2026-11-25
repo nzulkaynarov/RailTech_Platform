@@ -324,6 +324,41 @@ def test_order_card_shows_the_real_mail_result_not_sent_in_advance(world):
     assert detail["mail"] == {"state": "sent", "reason": None}
 
 
+def test_resend_is_offered_only_when_the_partner_mail_failed(world):
+    """Б-5: «Отправить ещё раз» — действие отправленного заказа с письмом, которое не ушло; иначе повтор запрещён."""
+    from notifications import mail_bus
+
+    order = _create(world, [_line(world["rail"], 1)], expected_date=_tomorrow()).json()
+    sent = _act(world, order["id"], "send").json()
+    assert sent["actions"]["resend"] is False, "письмо в очереди или ушло — повтор не предлагается"
+    again = _act(world, order["id"], "send")
+    assert again.status_code == 409 and again.json()["detail"] == "TRANSITION_NOT_ALLOWED"
+
+    log = EmailLog.objects.get(template="supplier_order")
+    mail_bus.apply_mail_result(
+        mail_bus.MAIL_FAILED,
+        {
+            "requester": "erp",
+            "request_key": f"erp:email_log:{log.pk}",
+            "purpose": "erp_mail",
+            "ref": {"kind": "supplier_order", "id": str(order["id"])},
+            "reason": "smtp_not_configured",
+            "detail": "",
+            "attempts": 0,
+        },
+    )
+    detail = api(world["supply"]).get(f"{STOCK}orders/{order['id']}/").json()
+    assert detail["mail"]["state"] == "failed" and detail["actions"]["resend"] is True
+
+    resent = _act(world, order["id"], "send")
+    assert resent.status_code == 200
+    body = resent.json()
+    assert body["status"] == "sent", "статус не меняется: заказ уже отправлен"
+    assert body["mail"] == {"state": "queued", "reason": None}, "новое письмо в очереди"
+    assert body["actions"]["resend"] is False
+    assert EmailLog.objects.filter(template="supplier_order").count() == 2
+
+
 def test_send_needs_an_address_and_a_failed_mail_leaves_the_order_a_draft(world, monkeypatch):
     silent = _create(world, supplier="silent").json()
     refused = _act(world, silent["id"], "send")

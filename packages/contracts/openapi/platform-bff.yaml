@@ -29131,6 +29131,7 @@ components:
         edit: {type: boolean}
         send: {type: boolean, description: 'Черновик полный: у всех строк цена и есть ожидаемая дата (СЦ-10)'}
         request_price: {type: boolean, description: 'В черновике есть строки без цены — «Запросить цену» у партнёра (СЦ-10)'}
+        resend: {type: boolean, description: 'Заказ отправлен, но письмо партнёру не ушло: «Отправить ещё раз» — тот же POST …/send (Б-5); только в карточке заказа'}
         confirm: {type: boolean}
         receive: {type: boolean}
         cancel: {type: boolean}

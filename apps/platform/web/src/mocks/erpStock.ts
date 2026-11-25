@@ -109,6 +109,14 @@ export function resetStockMock(): void {
   }
 }
 
+/** Для тестов и снимков: поправить заказ мока (например, письмо партнёру не ушло). */
+export function patchOrderMock(number: string, patch: Partial<MockOrder>): void {
+  const state = read();
+  const order = state.orders.find((o) => o.number === number);
+  if (order) Object.assign(order, patch);
+  write(state);
+}
+
 const seg = (value: string) => encodeURIComponent(value);
 
 /** Ссылки партнёра документа: ушедший партнёру документ — одна живая ссылка контакту; черновик и не ушедший запрос — пусто. */
@@ -501,6 +509,8 @@ function actionsOf(order: MockOrder, user: Me) {
     send:
       manage && order.status === "draft" && sendGaps(order).prices === 0 && !sendGaps(order).date,
     request_price: manage && order.status === "draft" && sendGaps(order).prices > 0,
+    // письмо партнёру отправленного заказа не ушло — «Отправить ещё раз» (Б-5)
+    resend: manage && order.status === "sent" && order.mail?.state === "failed",
     confirm: manage && order.status === "sent",
     receive: manage && order.status === "confirmed",
     cancel: manage && live && !touched,
@@ -1285,9 +1295,10 @@ export const erpStockHandlers = [
     const state = read();
     const order = findOrder(state, String(params["number"]));
     if (!order) return orderMissing();
-    if (order.status !== "draft") return transitionError(order);
+    const resend = order.status === "sent" && order.mail?.state === "failed";
+    if (order.status !== "draft" && !resend) return transitionError(order);
     const gaps = sendGaps(order);
-    if (gaps.prices > 0 || gaps.date) {
+    if (!resend && (gaps.prices > 0 || gaps.date)) {
       return HttpResponse.json(
         {
           code: "CONFLICT",
