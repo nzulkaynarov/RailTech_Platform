@@ -1035,6 +1035,8 @@ class PartnerApplicationSerializer(serializers.ModelSerializer):
     candidate_agreed_at = serializers.DateTimeField(allow_null=True, required=False)
     candidate_notes = serializers.CharField(allow_null=True, required=False)
     has_contract_pdf = serializers.SerializerMethodField()
+    contract_file_kind = serializers.SerializerMethodField()
+    has_signed_scan = serializers.SerializerMethodField()
     rejected_reason = serializers.CharField(allow_null=True, required=False)
 
     class Meta:
@@ -1059,13 +1061,37 @@ class PartnerApplicationSerializer(serializers.ModelSerializer):
             "candidate_agreed_at",
             "candidate_notes",
             "has_contract_pdf",
+            "contract_file_kind",
+            "candidate_returned_at",
+            "has_signed_scan",
+            "signed_scan_at",
             "rejected_reason",
             "created_at",
             "updated_at",
         ]
 
     def get_has_contract_pdf(self, obj) -> bool:
-        return bool(getattr(obj, "contract_pdf", None))
+        # Договор виден кандидату только после отправки: подготовленный файл для него ещё не существует
+        from parties.models import PartnerApplicationStatus
+
+        sent = obj.status in (
+            PartnerApplicationStatus.CONTRACT_SENT,
+            PartnerApplicationStatus.CANDIDATE_AGREED,
+            PartnerApplicationStatus.APPROVED,
+        )
+        return bool(sent and (getattr(obj, "contract_file", None) or getattr(obj, "contract_pdf", None)))
+
+    def get_has_signed_scan(self, obj) -> bool:
+        return bool(getattr(obj, "signed_scan", None))
+
+    def get_contract_file_kind(self, obj) -> str | None:
+        """`pdf` или `docx` — по чему кандидат читает договор (расширение файла)."""
+        import os
+
+        field = getattr(obj, "contract_file", None) or getattr(obj, "contract_pdf", None)
+        if not field:
+            return None
+        return "docx" if os.path.splitext(field.name)[1].lower() == ".docx" else "pdf"
 
     def to_representation(self, instance):
         ret = super().to_representation(instance)

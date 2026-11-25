@@ -33,6 +33,23 @@ APPLICATION_RAW = {
     "matching_company_name": "ООО Поставщик Север",
     "company_match_pending": "inn",
     "invite_delivery": None,
+    "contract_source": "",
+    "contract_template_id": None,
+    "contract_template_name": None,
+    "contract_template_edition": None,
+    "contract_language": "",
+    "contract_deviation_text": "",
+    "contract_approval": "",
+    "contract_approval_requested_by": None,
+    "contract_approval_decided_by": None,
+    "contract_approval_note": "",
+    "contract_blocker": "CONTRACT_NOT_PREPARED",
+    "contract_approvers": [],
+    "can_decide_contract": False,
+    "candidate_notes": "",
+    "candidate_returned_at": None,
+    "has_signed_scan": False,
+    "signed_scan_at": None,
 }
 
 LIST_RAW = {
@@ -247,3 +264,126 @@ async def test_create_from_letter(web: Web, be: Any, check: ContractChecker) -> 
     assert bad.status_code == 422
     await web.login(["MANAGER"])
     assert (await call(web, "POST", BASE, body)).status_code == 403
+
+
+# --- ПД-1: договор партнёра без тупика ---------------------------------------------------------------------------
+
+
+async def test_contract_options(web: Web, be: Any, check: ContractChecker) -> None:
+    await web.login(["SUPPLY"])
+    mock(be).get(f"{API}/catalog/partner-applications/contract-options/").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "templates": [
+                    {"id": 4, "name": "Договор с партнёром", "edition": 2, "languages": ["ru", "en"], "is_default": True}
+                ],
+                "default_template_id": 4,
+                "deviations_allowed": True,
+                "approvers": ["Анвар Юристов"],
+                "can_decide": False,
+            },
+        )
+    )
+    response = await call(web, "GET", f"{BASE}/contract-options")
+    assert response.status_code == 200, response.text
+    check(response, "/erp/catalog/partner-applications/contract-options", "get")
+    data = response.json()
+    assert data["templates"][0]["id"] == "4" and data["default_template_id"] == "4"
+    assert data["approvers"] == ["Анвар Юристов"]
+
+
+async def test_prepare_contract_passes_template_as_int(web: Web, be: Any, check: ContractChecker) -> None:
+    await web.login(["SUPPLY"])
+    prepared = {**APPLICATION_RAW, "contract_source": "template", "contract_template_id": 4, "contract_blocker": None}
+    route = (
+        mock(be)
+        .post(f"{API}/catalog/partner-applications/15/prepare-contract/")
+        .mock(return_value=httpx.Response(200, json=prepared))
+    )
+    response = await call(web, "POST", f"{BASE}/15/prepare-contract", {"template_id": "4", "language": "en"})
+    assert response.status_code == 200, response.text
+    check(response, "/erp/catalog/partner-applications/{id}/prepare-contract", "post")
+    assert json.loads(route.calls.last.request.content) == {"template_id": 4, "language": "en"}
+    assert response.json()["contract_source"] == "template" and response.json()["contract_blocker"] is None
+
+
+async def test_no_template_refusal_reaches_the_screen(web: Web, be: Any) -> None:
+    await web.login(["SUPPLY"])
+    mock(be).post(f"{API}/catalog/partner-applications/15/prepare-contract/").mock(
+        return_value=httpx.Response(400, json={"detail": "NO_APPROVED_PARTNER_TEMPLATE"})
+    )
+    response = await call(web, "POST", f"{BASE}/15/prepare-contract", {})
+    assert response.status_code == 422
+    assert response.json()["details"]["reason"] == "no_approved_partner_template"
+
+
+async def test_own_file_goes_to_erp_as_is(web: Web, be: Any, check: ContractChecker) -> None:
+    await web.login(["SUPPLY"])
+    waiting = {**APPLICATION_RAW, "contract_source": "upload", "contract_approval": "requested"}
+    route = (
+        mock(be)
+        .post(f"{API}/catalog/partner-applications/15/prepare-contract/")
+        .mock(return_value=httpx.Response(200, json=waiting))
+    )
+    response = await web.client.post(
+        f"/api/v1{BASE}/15/prepare-contract-file",
+        files={"file": ("our.pdf", b"%PDF-1.4 ours", "application/pdf")},
+        headers={"X-CSRF-Token": web.csrf},
+    )
+    assert response.status_code == 200, response.text
+    check(response, "/erp/catalog/partner-applications/{id}/prepare-contract-file", "post")
+    assert b"%PDF-1.4 ours" in route.calls.last.request.content
+    assert response.json()["contract_approval"] == "requested"
+    # не multipart — отказ без обращения в ERP
+    bad = await call(web, "POST", f"{BASE}/15/prepare-contract-file", {})
+    assert bad.status_code == 422
+
+
+async def test_contract_decision_passes_through_and_refusal_is_visible(
+    web: Web, be: Any, check: ContractChecker
+) -> None:
+    await web.login(["SUPPLY"])
+    route = (
+        mock(be)
+        .post(f"{API}/catalog/partner-applications/15/contract-decision/")
+        .mock(return_value=httpx.Response(200, json={**APPLICATION_RAW, "contract_approval": "returned"}))
+    )
+    response = await call(web, "POST", f"{BASE}/15/contract-decision", {"decision": "return", "note": "Нет ответственности"})
+    assert response.status_code == 200, response.text
+    check(response, "/erp/catalog/partner-applications/{id}/contract-decision", "post")
+    assert json.loads(route.calls.last.request.content) == {"decision": "return", "note": "Нет ответственности"}
+    mock(be).post(f"{API}/catalog/partner-applications/15/contract-decision/").mock(
+        return_value=httpx.Response(403, json={"detail": "CONTRACT_DECISION_FORBIDDEN"})
+    )
+    forbidden = await call(web, "POST", f"{BASE}/15/contract-decision", {"decision": "approve"})
+    assert forbidden.status_code == 403
+
+
+async def test_send_blocker_reaches_the_screen(web: Web, be: Any) -> None:
+    await web.login(["SUPPLY"])
+    mock(be).post(f"{API}/catalog/partner-applications/15/send-contract/").mock(
+        return_value=httpx.Response(400, json={"detail": "CONTRACT_NOT_PREPARED"})
+    )
+    response = await call(web, "POST", f"{BASE}/15/send-contract", {})
+    assert response.status_code == 422
+    assert response.json()["details"]["reason"] == "contract_not_prepared"
+
+
+async def test_document_is_streamed_as_an_attachment(web: Web, be: Any) -> None:
+    await web.login(["SUPPLY"])
+    route = (
+        mock(be)
+        .get(f"{API}/catalog/partner-applications/15/document/")
+        .mock(
+            return_value=httpx.Response(
+                200, content=b"%PDF-1.4 scan", headers={"content-type": "application/pdf"}
+            )
+        )
+    )
+    response = await web.client.get(f"/api/v1{BASE}/15/document", params={"which": "scan"})
+    assert response.status_code == 200
+    assert response.content == b"%PDF-1.4 scan"
+    assert "attachment" in response.headers["content-disposition"]
+    assert response.headers["content-disposition"].endswith('-15.pdf"')
+    assert dict(route.calls.last.request.url.params) == {"which": "scan"}

@@ -4,7 +4,7 @@
  */
 
 /**
- * Откуда заявка — внешний вход, кабинет клиента или входящее письмо (сотрудник, план 1.9)
+ * Откуда заявка — внешний вход, кабинет клиента, входящее письмо (сотрудник, план 1.9) или лид CRM (ЛП-1)
  */
 export type PartnerApplicationSource =
   (typeof PartnerApplicationSource)[keyof typeof PartnerApplicationSource];
@@ -13,4 +13,5 @@ export const PartnerApplicationSource = {
   public: "public",
   client_cabinet: "client_cabinet",
   letter: "letter",
+  lead: "lead",
 } as const;

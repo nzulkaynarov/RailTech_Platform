@@ -1,0 +1,16 @@
+{% extends "crm/_document_base.html" %}
+{% comment %}
+  Партнёрский договор по утверждённому шаблону библиотеки (ПД-1). Тело уже собрано сервером: санитайзинг при
+  сохранении шаблона, экранирование при подстановке. Подписи и реквизиты Сторон — блок внутри тела.
+{% endcomment %}
+{% block extra_head %}
+  .doc-body h2 { font-size: 9.2pt; font-weight: 700; color: var(--ink); margin: 9pt 0 3pt 0; text-transform: none; }
+  .doc-body p { margin: 2pt 0; font-size: 8.8pt; color: var(--ink-soft); orphans: 3; widows: 3; }
+  .doc-body > p:first-of-type { margin: 0 0 12pt 0; font-size: 9pt; }
+  .doc-body > p:first-of-type span { float: right; }
+  .doc-body td { vertical-align: top; width: 50%; font-size: 8.8pt; }
+{% endblock %}
+{% block doc_meta %}<div class="doc-no">{{ doc_number_line }}</div><div>{{ doc_date_line }}</div>{% endblock %}
+{% block doc_title %}{{ doc_title }}{% endblock %}
+{% block parties %}{% endblock %}
+{% block content %}<div class="doc-body">{{ body_html|safe }}</div>{% endblock %}

@@ -18,6 +18,7 @@ from parties.models import (
     RelationshipStatus,
 )
 from portal.tests.conftest import LOCMEM_BACKEND
+from portal.tests.partner_contract_helpers import prepare, with_scan
 
 from catalog.tests.desk_world import build_world
 
@@ -50,7 +51,10 @@ def _make_app(**kwargs) -> PartnerApplication:
         "status": PartnerApplicationStatus.SUBMITTED,
     }
     defaults.update(kwargs)
-    return PartnerApplication.objects.create(**defaults)
+    app = prepare(PartnerApplication.objects.create(**defaults))  # ПД-1: договор подготовлен
+    if app.status == PartnerApplicationStatus.CANDIDATE_AGREED:
+        with_scan(app)
+    return app
 
 
 class TestPartnerApplicationsRead:
@@ -121,13 +125,9 @@ class TestPartnerApplicationsAccessControl:
 
 class TestSendContract:
     def test_supply_can_send_contract(self, world):
-        app = _make_app()
+        app = _make_app(contract_number="DOG-2026-001", contract_date="2026-11-06")  # номер и дата — при подготовке
         client = world["clients"]["supply"]
-        resp = client.post(
-            f"/api/v1/catalog/partner-applications/{app.pk}/send-contract/",
-            {"contract_number": "DOG-2026-001", "contract_date": "2026-11-06"},
-            format="json",
-        )
+        resp = client.post(f"/api/v1/catalog/partner-applications/{app.pk}/send-contract/", {}, format="json")
         assert resp.status_code == 200
         data = resp.json()
         assert data["status"] == "contract_sent"
@@ -140,7 +140,7 @@ class TestSendContract:
         app.refresh_from_db()
         assert app.status == PartnerApplicationStatus.CONTRACT_SENT
         assert app.contract_number == "DOG-2026-001"
-        assert app.contract_pdf
+        assert app.contract_file
         assert app.contract_draft_sent_at is not None
 
 
@@ -196,7 +196,7 @@ class TestApproveApplicationClientCabinet:
 
         app.refresh_from_db()
         assert app.status == PartnerApplicationStatus.APPROVED
-        assert app.contract_pdf
+        assert app.contract_file
 
         rel = CompanyRelationship.objects.get(company=client_company, role=RelationshipRole.PARTNER)
         assert rel.status == RelationshipStatus.ACTIVE
@@ -232,7 +232,7 @@ class TestApproveApplicationPublic:
 
         app.refresh_from_db()
         assert app.status == PartnerApplicationStatus.APPROVED
-        assert app.contract_pdf
+        assert app.contract_file
         assert app.company is not None
         assert app.company.name == "Новый Завод Стрелка"
         assert app.company.inn == "5001234567"

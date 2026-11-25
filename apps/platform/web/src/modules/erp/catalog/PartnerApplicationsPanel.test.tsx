@@ -29,7 +29,7 @@ describe("Очередь заявок кандидатов в партнёры (
     expect(screen.getByText("Совпадение в базе: АО «Южный Металл»")).toBeVisible();
     expect(screen.getByText("Сергей Кузнецов")).toBeVisible();
     expect(screen.getByText("kuznetsov@stal-trans.example")).toBeVisible();
-    expect(screen.getByText("Подана")).toBeVisible();
+    expect(screen.getAllByText("Подана")[0]).toBeVisible();
 
     // Вторая заявка
     const vostokRow = screen.getByText("ООО «Восток Снаб»").closest("tr");
@@ -48,14 +48,14 @@ describe("Очередь заявок кандидатов в партнёры (
     expect(screen.getByText("ООО «Восток Снаб»")).toBeVisible();
   });
 
-  it("снабжение может отправить проект договора кандидату", async () => {
+  it("снабжение отправляет подготовленный договор кандидату", async () => {
     await openApplications("supply@demo.example");
 
     fireEvent.click(screen.getByRole("button", { name: "Отправить договор" }));
-    const modal = await findModal(/Отправка проекта договора/);
+    const modal = await findModal(/Отправка договора/);
 
     // FX-1: совпадение по ИНН — вопрос сотруднику, без ответа договор не уходит
-    const okBtn = within(modal).getByRole("button", { name: "Отметить договор отправленным" });
+    const okBtn = within(modal).getByRole("button", { name: "Отправить договор" });
     expect(within(modal).getByText(/Это та же компания\?/)).toBeInTheDocument();
     expect(within(modal).queryByRole("radio", { name: /Создать новую/ })).toBeNull();
     expect(okBtn).toBeDisabled();
@@ -65,18 +65,13 @@ describe("Очередь заявок кандидатов в партнёры (
       }),
     );
     expect(okBtn).not.toBeDisabled();
-
-    fireEvent.change(within(modal).getByLabelText("Номер договора"), {
-      target: { value: "ПД-2026/777" },
-    });
-    fireEvent.change(within(modal).getByLabelText("Дата договора"), {
-      target: { value: "2026-11-06" },
-    });
+    // ПД-1: номер и дата заданы при подготовке договора, здесь их не вводят
+    expect(within(modal).queryByLabelText("Номер договора")).toBeNull();
 
     fireEvent.click(okBtn);
-    await modalClosed(/Отправка проекта договора/);
+    await modalClosed(/Отправка договора/);
 
-    expect(await screen.findByText("№ ПД-2026/777")).toBeVisible();
+    expect(await screen.findAllByText("Ждём ответа кандидата")).not.toHaveLength(0);
   });
 
   it("согласованную кандидатом заявку одобряют без причины", async () => {

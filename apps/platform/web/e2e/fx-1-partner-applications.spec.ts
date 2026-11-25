@@ -26,12 +26,12 @@ for (const width of WIDTHS) {
 
     // Совпадение ИНН: без ответа сотрудника договор не уходит
     await list.getByRole("button", { name: "Отправить договор", exact: true }).first().click();
-    const send = page.getByRole("dialog", { name: /Отправка проекта договора: ООО «Сталь-Транс»/ });
+    const send = page.getByRole("dialog", { name: /Отправка договора: ООО «Сталь-Транс»/ });
     await expect(
       send.getByText("Найдена организация «АО «Южный Металл»». Это та же компания?"),
     ).toBeVisible();
     await expect(send.getByText("Такой ИНН уже занят", { exact: false })).toBeVisible();
-    const sendOk = send.getByRole("button", { name: "Отметить договор отправленным" });
+    const sendOk = send.getByRole("button", { name: "Отправить договор" });
     await expect(sendOk).toBeDisabled();
     await expectNoViolations(page, "заявки партнёров · совпадение ИНН");
     await settledScreenshot(page, "fx-1-match");

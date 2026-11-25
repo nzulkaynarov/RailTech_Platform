@@ -4,6 +4,9 @@
  */
 import type { CompanyItemRef } from "./companyItemRef";
 import type { PartnerApplicationItemCompanyMatchPending } from "./partnerApplicationItemCompanyMatchPending";
+import type { PartnerApplicationItemContractApproval } from "./partnerApplicationItemContractApproval";
+import type { PartnerApplicationItemContractBlocker } from "./partnerApplicationItemContractBlocker";
+import type { PartnerApplicationItemContractSource } from "./partnerApplicationItemContractSource";
 import type { PartnerApplicationItemInviteDelivery } from "./partnerApplicationItemInviteDelivery";
 import type { PartnerApplicationItemLanguage } from "./partnerApplicationItemLanguage";
 import type { PartnerApplicationKind } from "./partnerApplicationKind";
@@ -45,4 +48,43 @@ export interface PartnerApplicationItem {
    * @nullable
    */
   invite_delivery: PartnerApplicationItemInviteDelivery;
+  /** Откуда договор: шаблон библиотеки или свой файл; пусто — не подготовлен (ПД-1) */
+  contract_source: PartnerApplicationItemContractSource;
+  /** @nullable */
+  contract_template_id: string | null;
+  /** @nullable */
+  contract_template_name: string | null;
+  /** @nullable */
+  contract_template_edition: number | null;
+  /** ru, en или uz; пусто — не подготовлен */
+  contract_language: string;
+  /** Чем договор отличается от шаблона; пусто — без отступлений */
+  contract_deviation_text: string;
+  /** Решение держателя «Право»; пусто — согласование не нужно (шаблон без отступлений) */
+  contract_approval: PartnerApplicationItemContractApproval;
+  /** @nullable */
+  contract_approval_requested_by: string | null;
+  /** @nullable */
+  contract_approval_decided_by: string | null;
+  contract_approval_note: string;
+  /**
+   * Что мешает отправить договор (пока заявка подана); null — можно отправлять
+   * @nullable
+   */
+  contract_blocker: PartnerApplicationItemContractBlocker;
+  /** Кто решает, пока согласование ждёт решения */
+  contract_approvers: string[];
+  /** Зритель — держатель права утверждать договоры */
+  can_decide_contract: boolean;
+  /** Замечание кандидата к договору */
+  candidate_notes: string;
+  /**
+   * Когда кандидат вернул договор с замечанием
+   * @nullable
+   */
+  candidate_returned_at: string | null;
+  /** Кандидат загрузил скан подписанного договора */
+  has_signed_scan: boolean;
+  /** @nullable */
+  signed_scan_at: string | null;
 }

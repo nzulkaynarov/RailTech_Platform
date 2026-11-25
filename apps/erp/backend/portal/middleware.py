@@ -29,6 +29,8 @@ UPLOADS_PATHS = frozenset(
         "/api/portal/v1/uploads/",
         "/api/portal/v1/partner/price-list",  # PART-2: прайс партнёра (.xlsx)
         "/api/portal/v1/partner/price-list/",
+        "/api/portal/v1/company/partner-application/signed-scan",  # ПД-1: скан подписанного договора кандидата
+        "/api/portal/v1/company/partner-application/signed-scan/",
     }
 )
 PARTNER_PRODUCT_DOCUMENTS_RE = re.compile(r"^/api/portal/v1/partner/products/\d+/documents/?$")

@@ -1112,7 +1112,7 @@
         "/api/portal/v1/company/partner-application/agree": {
             "post": {
                 "operationId": "api_portal_v1_company_partner_application_agree_create",
-                "description": "POST /company/partner-application/agree — Согласование проекта договора кандидатом компании сессии.",
+                "description": "POST /company/partner-application/agree — согласование договора кандидатом компании сессии.",
                 "tags": [
                     "api"
                 ],
@@ -1126,7 +1126,7 @@
         "/api/portal/v1/company/partner-application/agree/": {
             "post": {
                 "operationId": "api_portal_v1_company_partner_application_agree_create_2",
-                "description": "POST /company/partner-application/agree — Согласование проекта договора кандидатом компании сессии.",
+                "description": "POST /company/partner-application/agree — согласование договора кандидатом компании сессии.",
                 "tags": [
                     "api"
                 ],
@@ -1140,7 +1140,7 @@
         "/api/portal/v1/company/partner-application/contract-pdf": {
             "get": {
                 "operationId": "api_portal_v1_company_partner_application_contract_pdf_retrieve",
-                "description": "GET /company/partner-application/contract-pdf — Проект или подписанный договор заявки компании сессии.",
+                "description": "GET /company/partner-application/contract-pdf — договор заявки компании сессии (ПД-1: файл из статуса «отправлен»).\n\nКандидат видит только то, что ему отправили: до отправки файла для него нет (404).",
                 "tags": [
                     "api"
                 ],
@@ -1154,7 +1154,63 @@
         "/api/portal/v1/company/partner-application/contract-pdf/": {
             "get": {
                 "operationId": "api_portal_v1_company_partner_application_contract_pdf_retrieve_2",
-                "description": "GET /company/partner-application/contract-pdf — Проект или подписанный договор заявки компании сессии.",
+                "description": "GET /company/partner-application/contract-pdf — договор заявки компании сессии (ПД-1: файл из статуса «отправлен»).\n\nКандидат видит только то, что ему отправили: до отправки файла для него нет (404).",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/company/partner-application/return": {
+            "post": {
+                "operationId": "api_portal_v1_company_partner_application_return_create",
+                "description": "POST /company/partner-application/return — кандидат вернул договор с замечанием (ПД-1).",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/company/partner-application/return/": {
+            "post": {
+                "operationId": "api_portal_v1_company_partner_application_return_create_2",
+                "description": "POST /company/partner-application/return — кандидат вернул договор с замечанием (ПД-1).",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/company/partner-application/signed-scan": {
+            "post": {
+                "operationId": "api_portal_v1_company_partner_application_signed_scan_create",
+                "description": "POST /company/partner-application/signed-scan — скан подписанного договора после согласия кандидата (ПД-1).",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/company/partner-application/signed-scan/": {
+            "post": {
+                "operationId": "api_portal_v1_company_partner_application_signed_scan_create_2",
+                "description": "POST /company/partner-application/signed-scan — скан подписанного договора после согласия кандидата (ПД-1).",
                 "tags": [
                     "api"
                 ],
@@ -13665,6 +13721,249 @@
                 }
             }
         },
+        "/api/v1/catalog/partner-applications/{id}/contract-decision/": {
+            "post": {
+                "operationId": "catalog_partner_applications_contract_decision",
+                "description": "Решение держателя права утверждать договоры: `approve` или `return` (замечание обязательно).",
+                "summary": "Decide on the partner contract",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "pattern": "^\\d+$"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DeskPartnerContractDecisionInRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DeskPartnerContractDecisionInRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DeskPartnerContractDecisionInRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DeskPartnerApplicationDetail"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "description": "Отказ проверки: код в `detail` или ошибки полей.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BadRequest"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`).",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Объекта нет.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    }
+                }
+            }
+        },
+        "/api/v1/catalog/partner-applications/{id}/document/": {
+            "get": {
+                "operationId": "catalog_partner_applications_document",
+                "description": "`which=contract` — договор, который видит кандидат; `which=scan` — скан подписанного.",
+                "summary": "Download the contract or the signed scan",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "pattern": "^\\d+$"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "query",
+                        "name": "which",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "contract",
+                                "scan"
+                            ]
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Catalog"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/octet-stream": {
+                                "schema": {
+                                    "type": "string",
+                                    "format": "binary"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "404": {
+                        "description": "Объекта нет.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/ForbiddenResponse"
+                    }
+                }
+            }
+        },
+        "/api/v1/catalog/partner-applications/{id}/prepare-contract/": {
+            "post": {
+                "operationId": "catalog_partner_applications_prepare_contract",
+                "description": "Договор из утверждённого шаблона либо свой файл (multipart, `file`). Шаблон без отступлений готов к отправке; свой файл или текст отступления уходят на решение держателя «Право».",
+                "summary": "Prepare the partner contract",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "pattern": "^\\d+$"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DeskPartnerContractPrepareInRequest"
+                            }
+                        },
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DeskPartnerContractPrepareInRequest"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DeskPartnerApplicationDetail"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "description": "Отказ проверки: код в `detail` или ошибки полей.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BadRequest"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`).",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Объекта нет.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    }
+                }
+            }
+        },
         "/api/v1/catalog/partner-applications/{id}/reject/": {
             "post": {
                 "operationId": "catalog_partner_applications_reject",
@@ -13842,6 +14141,39 @@
                     },
                     "401": {
                         "$ref": "#/components/responses/UnauthorizedResponse"
+                    }
+                }
+            }
+        },
+        "/api/v1/catalog/partner-applications/contract-options/": {
+            "get": {
+                "operationId": "catalog_partner_applications_contract_options",
+                "description": "Утверждённые шаблоны вида «партнёр» из библиотеки (по умолчанию — из настроек компании), языки каждого, правило отступлений и кто решает. Пустой список — договор можно подготовить только своим файлом.",
+                "summary": "Templates to prepare the partner contract from",
+                "tags": [
+                    "Catalog"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DeskPartnerContractOptions"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/ForbiddenResponse"
                     }
                 }
             }
@@ -43561,6 +43893,24 @@
                     "wording_selections"
                 ]
             },
+            "ContractApprovalEnum": {
+                "enum": [
+                    "requested",
+                    "approved",
+                    "returned"
+                ],
+                "type": "string",
+                "description": "* `` - \n* `requested` - requested\n* `approved` - approved\n* `returned` - returned"
+            },
+            "ContractBlockerEnum": {
+                "enum": [
+                    "CONTRACT_NOT_PREPARED",
+                    "CONTRACT_APPROVAL_PENDING",
+                    "CONTRACT_APPROVAL_RETURNED"
+                ],
+                "type": "string",
+                "description": "* `CONTRACT_NOT_PREPARED` - CONTRACT_NOT_PREPARED\n* `CONTRACT_APPROVAL_PENDING` - CONTRACT_APPROVAL_PENDING\n* `CONTRACT_APPROVAL_RETURNED` - CONTRACT_APPROVAL_RETURNED"
+            },
             "ContractCard": {
                 "type": "object",
                 "properties": {
@@ -44006,6 +44356,14 @@
                     "remark",
                     "settings_link"
                 ]
+            },
+            "ContractSourceEnum": {
+                "enum": [
+                    "template",
+                    "upload"
+                ],
+                "type": "string",
+                "description": "* `` - \n* `template` - template\n* `upload` - upload"
             },
             "ContractTemplateCard": {
                 "type": "object",
@@ -47438,7 +47796,95 @@
             },
             "DeskPartnerApplicationDetail": {
                 "type": "object",
+                "description": "ПД-1: договорная часть карточки заявки — всё выведено из фактов заявки.",
                 "properties": {
+                    "contract_source": {
+                        "description": "Откуда договор: шаблон библиотеки или свой файл; пусто — не подготовлен.\n\n* `` - \n* `template` - template\n* `upload` - upload",
+                        "oneOf": [
+                            {
+                                "$ref": "#/components/schemas/ContractSourceEnum"
+                            },
+                            {
+                                "$ref": "#/components/schemas/BlankEnum"
+                            }
+                        ]
+                    },
+                    "contract_template_id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "contract_template_name": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "contract_template_edition": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "contract_language": {
+                        "type": "string"
+                    },
+                    "contract_deviation_text": {
+                        "type": "string"
+                    },
+                    "contract_approval": {
+                        "description": "Согласование держателем «Право»: пусто — не требуется (шаблон без отступлений).\n\n* `` - \n* `requested` - requested\n* `approved` - approved\n* `returned` - returned",
+                        "oneOf": [
+                            {
+                                "$ref": "#/components/schemas/ContractApprovalEnum"
+                            },
+                            {
+                                "$ref": "#/components/schemas/BlankEnum"
+                            }
+                        ]
+                    },
+                    "contract_approval_requested_by": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "contract_approval_decided_by": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "contract_approval_note": {
+                        "type": "string"
+                    },
+                    "contract_blocker": {
+                        "nullable": true,
+                        "description": "Что мешает отправить договор (только пока заявка в статусе submitted); null — можно отправлять.\n\n* `CONTRACT_NOT_PREPARED` - CONTRACT_NOT_PREPARED\n* `CONTRACT_APPROVAL_PENDING` - CONTRACT_APPROVAL_PENDING\n* `CONTRACT_APPROVAL_RETURNED` - CONTRACT_APPROVAL_RETURNED",
+                        "oneOf": [
+                            {
+                                "$ref": "#/components/schemas/ContractBlockerEnum"
+                            },
+                            {
+                                "$ref": "#/components/schemas/NullEnum"
+                            }
+                        ]
+                    },
+                    "candidate_returned_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "has_signed_scan": {
+                        "type": "boolean"
+                    },
+                    "signed_scan_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "can_decide_contract": {
+                        "type": "boolean",
+                        "description": "Зритель — держатель права утверждать договоры."
+                    },
+                    "contract_approvers": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "description": "Кто решает, пока согласование ждёт решения."
+                    },
                     "id": {
                         "type": "integer"
                     },
@@ -47575,15 +48021,30 @@
                 },
                 "required": [
                     "applicant_contact_id",
+                    "can_decide_contract",
+                    "candidate_returned_at",
                     "categories_description",
                     "company_id",
                     "company_match_pending",
                     "company_name",
                     "contact_name",
+                    "contract_approval",
+                    "contract_approval_decided_by",
+                    "contract_approval_note",
+                    "contract_approval_requested_by",
+                    "contract_approvers",
+                    "contract_blocker",
                     "contract_date",
+                    "contract_deviation_text",
+                    "contract_language",
                     "contract_number",
+                    "contract_source",
+                    "contract_template_edition",
+                    "contract_template_id",
+                    "contract_template_name",
                     "created_at",
                     "email",
+                    "has_signed_scan",
                     "id",
                     "inn",
                     "invite_delivery",
@@ -47595,13 +48056,102 @@
                     "rejected_reason",
                     "reviewed_at",
                     "reviewed_by",
+                    "signed_scan_at",
                     "source",
                     "status"
                 ]
             },
             "DeskPartnerApplicationListItem": {
                 "type": "object",
+                "description": "ПД-1: договорная часть карточки заявки — всё выведено из фактов заявки.",
                 "properties": {
+                    "contract_source": {
+                        "description": "Откуда договор: шаблон библиотеки или свой файл; пусто — не подготовлен.\n\n* `` - \n* `template` - template\n* `upload` - upload",
+                        "oneOf": [
+                            {
+                                "$ref": "#/components/schemas/ContractSourceEnum"
+                            },
+                            {
+                                "$ref": "#/components/schemas/BlankEnum"
+                            }
+                        ]
+                    },
+                    "contract_template_id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "contract_template_name": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "contract_template_edition": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "contract_language": {
+                        "type": "string"
+                    },
+                    "contract_deviation_text": {
+                        "type": "string"
+                    },
+                    "contract_approval": {
+                        "description": "Согласование держателем «Право»: пусто — не требуется (шаблон без отступлений).\n\n* `` - \n* `requested` - requested\n* `approved` - approved\n* `returned` - returned",
+                        "oneOf": [
+                            {
+                                "$ref": "#/components/schemas/ContractApprovalEnum"
+                            },
+                            {
+                                "$ref": "#/components/schemas/BlankEnum"
+                            }
+                        ]
+                    },
+                    "contract_approval_requested_by": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "contract_approval_decided_by": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "contract_approval_note": {
+                        "type": "string"
+                    },
+                    "contract_blocker": {
+                        "nullable": true,
+                        "description": "Что мешает отправить договор (только пока заявка в статусе submitted); null — можно отправлять.\n\n* `CONTRACT_NOT_PREPARED` - CONTRACT_NOT_PREPARED\n* `CONTRACT_APPROVAL_PENDING` - CONTRACT_APPROVAL_PENDING\n* `CONTRACT_APPROVAL_RETURNED` - CONTRACT_APPROVAL_RETURNED",
+                        "oneOf": [
+                            {
+                                "$ref": "#/components/schemas/ContractBlockerEnum"
+                            },
+                            {
+                                "$ref": "#/components/schemas/NullEnum"
+                            }
+                        ]
+                    },
+                    "candidate_returned_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "has_signed_scan": {
+                        "type": "boolean"
+                    },
+                    "signed_scan_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "can_decide_contract": {
+                        "type": "boolean",
+                        "description": "Зритель — держатель права утверждать договоры."
+                    },
+                    "contract_approvers": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "description": "Кто решает, пока согласование ждёт решения."
+                    },
                     "id": {
                         "type": "integer"
                     },
@@ -47721,14 +48271,29 @@
                     }
                 },
                 "required": [
+                    "can_decide_contract",
+                    "candidate_returned_at",
                     "categories_description",
                     "company_match_pending",
                     "company_name",
                     "contact_name",
+                    "contract_approval",
+                    "contract_approval_decided_by",
+                    "contract_approval_note",
+                    "contract_approval_requested_by",
+                    "contract_approvers",
+                    "contract_blocker",
                     "contract_date",
+                    "contract_deviation_text",
+                    "contract_language",
                     "contract_number",
+                    "contract_source",
+                    "contract_template_edition",
+                    "contract_template_id",
+                    "contract_template_name",
                     "created_at",
                     "email",
+                    "has_signed_scan",
                     "id",
                     "inn",
                     "invite_delivery",
@@ -47739,6 +48304,7 @@
                     "phone",
                     "rejected_reason",
                     "reviewed_at",
+                    "signed_scan_at",
                     "source",
                     "status"
                 ]
@@ -47778,15 +48344,18 @@
             },
             "DeskPartnerApplicationSendContractInRequest": {
                 "type": "object",
+                "description": "Отправка подготовленного договора (ПД-1): номер и дата заданы при подготовке и здесь не меняются.",
                 "properties": {
                     "contract_number": {
                         "type": "string",
+                        "description": "Не используется: номер задаётся при подготовке договора.",
                         "maxLength": 64
                     },
                     "contract_date": {
                         "type": "string",
                         "format": "date",
-                        "nullable": true
+                        "nullable": true,
+                        "description": "Не используется: дата задаётся при подготовке договора."
                     },
                     "company_id": {
                         "type": "integer",
@@ -47799,6 +48368,126 @@
                         "description": "Сотрудник подтвердил: найденная компания — другая, завести новую."
                     }
                 }
+            },
+            "DeskPartnerContractDecisionInDecisionEnum": {
+                "enum": [
+                    "approve",
+                    "return"
+                ],
+                "type": "string",
+                "description": "* `approve` - approve\n* `return` - return"
+            },
+            "DeskPartnerContractDecisionInRequest": {
+                "type": "object",
+                "properties": {
+                    "decision": {
+                        "$ref": "#/components/schemas/DeskPartnerContractDecisionInDecisionEnum"
+                    },
+                    "note": {
+                        "type": "string",
+                        "maxLength": 1000
+                    }
+                },
+                "required": [
+                    "decision"
+                ]
+            },
+            "DeskPartnerContractOptions": {
+                "type": "object",
+                "description": "Что выбрать при «Подготовить договор»: утверждённые партнёрские шаблоны библиотеки и правила компании.",
+                "properties": {
+                    "templates": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/DeskPartnerTemplateOption"
+                        }
+                    },
+                    "default_template_id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "deviations_allowed": {
+                        "type": "boolean"
+                    },
+                    "approvers": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "description": "Держатели зоны «Право» по имени."
+                    },
+                    "can_decide": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "approvers",
+                    "can_decide",
+                    "default_template_id",
+                    "deviations_allowed",
+                    "templates"
+                ]
+            },
+            "DeskPartnerContractPrepareInRequest": {
+                "type": "object",
+                "description": "Договор из шаблона (`template_id` или умолчание настроек) либо свой файл (`file`: PDF или DOCX, multipart).",
+                "properties": {
+                    "template_id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "language": {
+                        "$ref": "#/components/schemas/LanguageEnum"
+                    },
+                    "deviation_text": {
+                        "type": "string",
+                        "maxLength": 4000
+                    },
+                    "contract_number": {
+                        "type": "string",
+                        "maxLength": 64
+                    },
+                    "contract_date": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "file": {
+                        "type": "string",
+                        "format": "binary",
+                        "description": "Свой файл договора: PDF или DOCX, до 20 МБ."
+                    }
+                }
+            },
+            "DeskPartnerTemplateOption": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "edition": {
+                        "type": "integer"
+                    },
+                    "languages": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/LanguageEnum"
+                        }
+                    },
+                    "is_default": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "edition",
+                    "id",
+                    "is_default",
+                    "languages",
+                    "name"
+                ]
             },
             "DeskPeoplePage": {
                 "type": "object",

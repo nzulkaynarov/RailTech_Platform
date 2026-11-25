@@ -16682,6 +16682,150 @@ paths:
           $ref: '#/components/responses/NotFound'
         '503':
           $ref: '#/components/responses/BackendUnavailable'
+  /erp/catalog/partner-applications/contract-options:
+    get:
+      tags: [erp-catalog]
+      operationId: getPartnerContractOptions
+      summary: 'Расчёт · Заявка в партнёры: из чего готовить договор'
+      description: ERP `GET catalog/partner-applications/contract-options/`. Утверждённые партнёрские шаблоны библиотеки (по умолчанию — из настроек компании), языки каждого, правило отступлений и кто решает (держатели зоны «Право»). Пустой список шаблонов — договор готовится только своим файлом, а ссылка на библиотеку названа в интерфейсе.
+      responses:
+        '200':
+          description: Параметры подготовки договора
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnerContractOptions'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+  /erp/catalog/partner-applications/{id}/prepare-contract:
+    post:
+      tags: [erp-catalog]
+      operationId: preparePartnerContract
+      summary: 'Расчёт · Заявка в партнёры: подготовить договор из шаблона'
+      description: ERP `POST catalog/partner-applications/{id}/prepare-contract/` — право `supply.manage`. Договор по утверждённому шаблону библиотеки (`template_id` или умолчание настроек) на языке договора. Без отступлений — готов к отправке; с текстом отступления — запрос держателю «Право». Нет утверждённых шаблонов — 422 `no_approved_partner_template`, встроенного образца нет.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - {name: id, in: path, required: true, description: Id заявки, schema: {$ref: '#/components/schemas/CompanyItemRef'}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PartnerContractPrepareRequest'
+      responses:
+        '200':
+          description: Договор подготовлен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnerApplicationItem'
+        '400':
+          $ref: '#/components/responses/ValidationFailed'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+  /erp/catalog/partner-applications/{id}/prepare-contract-file:
+    post:
+      tags: [erp-catalog]
+      operationId: uploadPartnerContractFile
+      summary: 'Расчёт · Заявка в партнёры: загрузить свой файл договора'
+      description: ERP `POST catalog/partner-applications/{id}/prepare-contract/` (multipart) — право `supply.manage`. BFF читает тело до 21 МБ и передаёт ERP как есть; файл — PDF или DOCX до 20 МБ, содержимое сверяется с расширением. Свой файл всегда идёт на решение держателя «Право».
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - {name: id, in: path, required: true, description: Id заявки, schema: {$ref: '#/components/schemas/CompanyItemRef'}}
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PartnerContractFileUpload'
+      responses:
+        '200':
+          description: Файл принят, договор ждёт решения
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnerApplicationItem'
+        '400':
+          $ref: '#/components/responses/ValidationFailed'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '413':
+          description: '`PAYLOAD_TOO_LARGE` — файл больше 20 МБ'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+  /erp/catalog/partner-applications/{id}/contract-decision:
+    post:
+      tags: [erp-catalog]
+      operationId: decidePartnerContract
+      summary: 'Расчёт · Заявка в партнёры: решение по договору (зона «Право»)'
+      description: ERP `POST catalog/partner-applications/{id}/contract-decision/` — решает держатель права `contract.approve_template`, иначе 403. `approve` — договор можно отправлять (одобренное отступление входит в текст), `return` — на доработку, замечание обязательно.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - {name: id, in: path, required: true, description: Id заявки, schema: {$ref: '#/components/schemas/CompanyItemRef'}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PartnerContractDecisionRequest'
+      responses:
+        '200':
+          description: Решение записано
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnerApplicationItem'
+        '400':
+          $ref: '#/components/responses/ValidationFailed'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+  /erp/catalog/partner-applications/{id}/document:
+    get:
+      tags: [erp-catalog]
+      operationId: downloadPartnerApplicationDocument
+      summary: 'Расчёт · Заявка в партнёры: договор или скан подписанного'
+      description: ERP `GET catalog/partner-applications/{id}/document/`. `which=contract` — файл, который видит кандидат; `which=scan` — скан подписанного. Вложением, с `nosniff`; файл в памяти BFF не копится.
+      parameters:
+        - {name: id, in: path, required: true, description: Id заявки, schema: {$ref: '#/components/schemas/CompanyItemRef'}}
+        - {name: which, in: query, required: false, schema: {type: string, enum: [contract, scan], default: contract}}
+      responses:
+        '200':
+          description: Файл
+          content:
+            application/octet-stream:
+              schema: {type: string, format: binary}
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
   /erp/catalog/suppliers/{id}/offers/{offer_id}:
     patch:
       tags: [erp-catalog]
@@ -31363,8 +31507,8 @@ components:
         can_act: {type: boolean, description: 'Контакт может подтверждать заказы («Может подтверждать» в Платформе и в Кабинете); не указано — право контакта не меняется'}
     PartnerApplicationSource:
       type: string
-      enum: [public, client_cabinet, letter]
-      description: Откуда заявка — внешний вход, кабинет клиента или входящее письмо (сотрудник, план 1.9)
+      enum: [public, client_cabinet, letter, lead]
+      description: Откуда заявка — внешний вход, кабинет клиента, входящее письмо (сотрудник, план 1.9) или лид CRM (ЛП-1)
     PartnerApplicationStatus:
       type: string
       enum: [submitted, contract_sent, candidate_agreed, approved, rejected]
@@ -31374,7 +31518,7 @@ components:
     PartnerApplicationItem:
       type: object
       additionalProperties: false
-      required: [id, source, status, kind, company_name, inn, contact_name, email, phone, language, categories_description, contract_number, contract_date, rejected_reason, created_at, reviewed_at, matching_company_id, matching_company_name, company_match_pending, invite_delivery]
+      required: [id, source, status, kind, company_name, inn, contact_name, email, phone, language, categories_description, contract_number, contract_date, rejected_reason, created_at, reviewed_at, matching_company_id, matching_company_name, company_match_pending, invite_delivery, contract_source, contract_template_id, contract_template_name, contract_template_edition, contract_language, contract_deviation_text, contract_approval, contract_approval_requested_by, contract_approval_decided_by, contract_approval_note, contract_blocker, contract_approvers, can_decide_contract, candidate_notes, candidate_returned_at, has_signed_scan, signed_scan_at]
       properties:
         id: {$ref: '#/components/schemas/CompanyItemRef'}
         source: {$ref: '#/components/schemas/PartnerApplicationSource'}
@@ -31403,6 +31547,73 @@ components:
           type: [string, 'null']
           enum: [queued, sent, failed, null]
           description: 'Итог последнего письма-приглашения кандидату; null — приглашения ещё не было (FX-1)'
+        contract_source: {type: string, enum: ['', template, upload], description: 'Откуда договор: шаблон библиотеки или свой файл; пусто — не подготовлен (ПД-1)'}
+        contract_template_id: {type: [string, 'null']}
+        contract_template_name: {type: [string, 'null']}
+        contract_template_edition: {type: [integer, 'null']}
+        contract_language: {type: string, description: 'ru, en или uz; пусто — не подготовлен'}
+        contract_deviation_text: {type: string, description: 'Чем договор отличается от шаблона; пусто — без отступлений'}
+        contract_approval: {type: string, enum: ['', requested, approved, returned], description: 'Решение держателя «Право»; пусто — согласование не нужно (шаблон без отступлений)'}
+        contract_approval_requested_by: {type: [string, 'null']}
+        contract_approval_decided_by: {type: [string, 'null']}
+        contract_approval_note: {type: string}
+        contract_blocker:
+          type: [string, 'null']
+          enum: [CONTRACT_NOT_PREPARED, CONTRACT_APPROVAL_PENDING, CONTRACT_APPROVAL_RETURNED, null]
+          description: 'Что мешает отправить договор (пока заявка подана); null — можно отправлять'
+        contract_approvers: {type: array, items: {type: string}, description: 'Кто решает, пока согласование ждёт решения'}
+        can_decide_contract: {type: boolean, description: 'Зритель — держатель права утверждать договоры'}
+        candidate_notes: {type: string, description: 'Замечание кандидата к договору'}
+        candidate_returned_at: {type: [string, 'null'], format: date-time, description: 'Когда кандидат вернул договор с замечанием'}
+        has_signed_scan: {type: boolean, description: 'Кандидат загрузил скан подписанного договора'}
+        signed_scan_at: {type: [string, 'null'], format: date-time}
+    PartnerContractPrepareRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        template_id: {type: [string, 'null'], description: 'Шаблон библиотеки; пусто — умолчание из настроек компании'}
+        language: {type: string, enum: [ru, uz, en], description: 'Язык договора; пусто — язык кандидата'}
+        deviation_text: {type: [string, 'null'], maxLength: 4000, description: 'Чем договор отличается от шаблона; текст идёт на решение «Право» и после одобрения входит в договор'}
+        contract_number: {type: [string, 'null'], maxLength: 64}
+        contract_date: {type: [string, 'null'], format: date}
+    PartnerContractFileUpload:
+      type: object
+      required: [file]
+      properties:
+        file: {type: string, format: binary, description: 'До 20 МБ: PDF или DOCX'}
+        language: {type: string, enum: [ru, uz, en]}
+        deviation_text: {type: string, maxLength: 4000}
+        contract_number: {type: string, maxLength: 64}
+        contract_date: {type: string, format: date}
+    PartnerContractDecisionRequest:
+      type: object
+      additionalProperties: false
+      required: [decision]
+      properties:
+        decision: {type: string, enum: [approve, return]}
+        note: {type: [string, 'null'], maxLength: 1000, description: 'Замечание; при `return` обязательно'}
+    PartnerContractOptions:
+      type: object
+      additionalProperties: false
+      required: [templates, default_template_id, deviations_allowed, approvers, can_decide]
+      properties:
+        templates:
+          type: array
+          items: {$ref: '#/components/schemas/PartnerContractTemplateOption'}
+        default_template_id: {type: [string, 'null']}
+        deviations_allowed: {type: boolean, description: 'Правило компании: свой файл и отступления допустимы'}
+        approvers: {type: array, items: {type: string}, description: 'Держатели зоны «Право» по имени'}
+        can_decide: {type: boolean}
+    PartnerContractTemplateOption:
+      type: object
+      additionalProperties: false
+      required: [id, name, edition, languages, is_default]
+      properties:
+        id: {type: string}
+        name: {type: string}
+        edition: {type: integer}
+        languages: {type: array, items: {type: string, enum: [ru, uz, en]}, description: 'Языки, на которых у шаблона есть текст; русский есть всегда'}
+        is_default: {type: boolean}
     PartnerApplicationListResponse:
       type: object
       additionalProperties: false
