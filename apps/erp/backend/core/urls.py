@@ -174,6 +174,7 @@ from crm.views.calc import (
     CalcStartView,
     CalcTaskListView,
     CalcTermsView,
+    RequestIntakeView,
 )
 from master_data.dictionary_views import (
     DictionaryCatalogView,
@@ -363,6 +364,7 @@ urlpatterns = (
         path("api/v1/sourcing/ai-status/<str:task_id>/", AIJobStatusView.as_view(), name="ai-status"),
         # D2-1 — «Расчёт по заявке» Платформы (crm.views.calc).
         path("api/v1/calc/tasks/", CalcTaskListView.as_view(), name="calc-tasks"),
+        path("api/v1/calc/request-intake/", RequestIntakeView.as_view(), name="calc-request-intake"),
         path("api/v1/calc/catalog/", CalcCatalogView.as_view(), name="calc-catalog"),
         path("api/v1/calc/deals/", CalcDealRefsView.as_view(), name="calc-deals"),
         path("api/v1/calc/<int:deal_id>/", CalcSheetView.as_view(), name="calc-sheet"),

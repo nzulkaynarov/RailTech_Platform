@@ -68,6 +68,35 @@ describe("Расчёт · Заявки в расчёте", () => {
   });
 });
 
+describe("Расчёт · без резолюции (РЕЗ-1)", () => {
+  it("заголовок без письма, в задании нет блока резолюции директора, срок виден", async () => {
+    window.localStorage.setItem("rt-pf-mock-no-resolution", "1");
+    signIn("supply@demo.example");
+    renderAt("/erp/requests");
+    fireEvent.click(
+      await screen.findByRole("link", {
+        name: `Показать задание по заявке ${NUMBER} в боковом окне`,
+      }),
+    );
+    const panel = await panelEl();
+    expect(
+      await within(panel).findByText(
+        "Резолюция не требовалась — расчёт поставлен ответственному сразу.",
+      ),
+    ).toBeVisible();
+    expect(within(panel).queryByText(/Посчитать переводы со склада и под заказ/)).toBeNull();
+    expect(within(panel).queryByText(/Письмо /)).toBeNull();
+    expect(within(panel).getByText("Срок расчёта")).toBeVisible();
+    expect(within(panel).getByText("Файл заявки загружается…")).toBeVisible();
+    expect(within(panel).queryByText("Резолюция директора")).toBeNull();
+    expect(within(panel).queryByText(/назначен\(а\) резолюцией/)).toBeNull();
+    fireEvent.click(within(panel).getByRole("link", { name: "Открыть расчёт" }));
+    expect(await screen.findByText(/срок расчёта 30\.10\.2026/)).toBeVisible();
+    expect(screen.queryByText(/письмо ВХ/)).toBeNull();
+    window.localStorage.removeItem("rt-pf-mock-no-resolution");
+  });
+});
+
 describe("Расчёт по заявке", () => {
   it("снабженец: себестоимость видна, подтверждает только товары, «Расчёт готов» неактивна с подписью почему", async () => {
     await openCalc("supply@demo.example");

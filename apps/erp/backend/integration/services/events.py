@@ -154,7 +154,18 @@ def publish_request_created(
     if crm_request_id:
         payload["crm_request_id"] = int(crm_request_id)
 
-    return publish_event(
+    # РЕЗ-1: резолюция перед расчётом — настройка компании: у каждой заявки (по умолчанию) или не нужна; не нужна и есть
+    # кому считать — расчёт сразу, без письма в EDS. Решает только настройка, не канал и не экран.
+    direct_to: Optional[int] = None
+    if not isinstance(deal, dict):
+        from crm.services import request_resolution
+
+        if not request_resolution.required():
+            direct_to = request_resolution.responsible_crm_user_id(deal, payload.get("manager_crm_user_id"))
+            if direct_to is not None:
+                payload["resolution_required"] = False
+
+    event = publish_event(
         "request.created",
         erp_company_id=company_id,
         payload=payload,
@@ -162,6 +173,19 @@ def publish_request_created(
         actor=actor,
         crm_client_id=crm_client_id,
     )
+    if direct_to is not None and event is not None:
+        # Файл письма клиента берёт задача после коммита: сеть не держит транзакцию заявки; пока файла нет — расчёт
+        # показывает «файл заявки загружается»
+        wants_file = bool(letter_file_id)
+        request_resolution.start_direct_calculation(deal, direct_to, file_pending=wants_file)
+        if wants_file:
+            from django.db import transaction as _tx
+
+            from crm.tasks import enqueue_request_letter_file
+
+            args = (deal.pk, str(letter_file_id), direct_to)
+            _tx.on_commit(lambda: enqueue_request_letter_file(*args), robust=True)
+    return event
 
 
 def _held_for_verification(company_id: int) -> bool:

@@ -8,11 +8,13 @@ import type {
   ClientContactView,
   LeadCard,
   RequestCreatedView,
+  RequestResolutionView,
 } from "../../../shared/api/generated/model";
 import {
   useCopyCrmMessageAttachmentToRequest,
   useCreateCrmRequest,
   useGetCrmClient,
+  useGetCrmRequestResolution,
 } from "../../../shared/api/generated/platform-bff";
 import { useFormat } from "../../../shared/lib/useFormat";
 import { ErrorNote, FormField } from "../../../shared/ui/FormParts";
@@ -242,6 +244,15 @@ export function RequestForm({
   const [serverError, setServerError] = useState<string | null>(null);
   const [done, setDone] = useState<RequestCreatedView | null>(null);
   const create = useCreateCrmRequest();
+  const resolution = useGetCrmRequestResolution();
+  /** Что будет с заявкой после отправки — по настройке компании; «сразу в расчёт» не обещаем, если выйдет резолюция */
+  const routingText = (info: RequestResolutionView) => {
+    const urgent = state.urgency === "urgent" ? t("request:routing.urgent") : "";
+    if (info.mode !== "never") return t("request:routing.letter", { urgent });
+    if (!info.ready)
+      return t(`request:routing.fallback.${info.reason ?? "no_crm_mapping"}`, { urgent });
+    return t("request:routing.calc");
+  };
   const refresh = useRefreshCrm();
   const fixedClient = clientId !== null || lead?.client != null;
   // Название из переписки лида: стоит в поле выбора серым и открывает поиск по нему
@@ -830,6 +841,9 @@ export function RequestForm({
             title: t("request:sections.review"),
             content: (
               <div className="pf-fp-stack">
+                {resolution.data ? (
+                  <p className="pf-fp-sub">{routingText(resolution.data)}</p>
+                ) : null}
                 <p className="pf-fp-sub">{t("request:clientGets")}</p>
                 <StepRemaining
                   id={id("remaining")}

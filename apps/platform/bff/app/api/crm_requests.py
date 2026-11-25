@@ -43,6 +43,7 @@ from app.schemas_crm_leads import (
     RequestCreatedView,
     RequestFileFromMessageIn,
     RequestFormIn,
+    RequestResolutionView,
     RequestRetriedView,
 )
 from app.schemas_eds_documents import EdsFile
@@ -98,6 +99,22 @@ async def create_request(
         created=out.created and upstream.status_code == 201,
         transfer=out.erp_request_status,
     )
+
+
+@router.get(
+    "/crm/requests/resolution",
+    response_model=RequestResolutionView,
+    operation_id="getCrmRequestResolution",
+)
+async def request_resolution(authed: Writer) -> RequestResolutionView:
+    """Режим резолюции и готовность расчёта встать на сотрудника; прав на настройки не нужно."""
+    upstream = await authed.call("erp", "GET", "/api/v1/calc/request-intake/")
+    if upstream.status_code != 200:
+        raise backend_unavailable("erp", f"http_{upstream.status_code}")
+    try:
+        return RequestResolutionView.model_validate(upstream.json())
+    except ValueError as exc:
+        raise backend_unavailable("erp", "bad_response") from exc
 
 
 @router.post(

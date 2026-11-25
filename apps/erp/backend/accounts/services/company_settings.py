@@ -172,6 +172,12 @@ def update_company_settings(
                 setattr(settings_row, field, found)
             changed.append(field)
 
+    # РЕЗ-1: резолюция директора перед расчётом — always | never.
+    if "request_resolution" in data:
+        if data.get("request_resolution") not in ("always", "never"):
+            return None, "BAD_REQUEST_RESOLUTION"
+        settings_row.request_resolution = data["request_resolution"]
+        changed.append("request_resolution")
     # ДС-1: срок договора — правило, продление, дни, граница декабря, что делать после окончания.
     for field, choices in (
         ("contract_term_rule", ContractTermRule.values),

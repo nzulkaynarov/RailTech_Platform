@@ -24,10 +24,13 @@ function VisaRow({
   group,
   data,
   assigned,
+  direct = false,
 }: {
   group: (typeof GROUPS)[number];
   data: CalcVisaGroup;
   assigned: string[];
+  /** Расчёт поставлен без резолюции (РЕЗ-1): исполнителя назначила не резолюция */
+  direct?: boolean;
 }) {
   const { t } = useTranslation("calc");
   return (
@@ -44,7 +47,7 @@ function VisaRow({
       ) : null}
       <p className="pf-hint">
         {assigned.length
-          ? t("task.assigned", { names: assigned.join(", ") })
+          ? t(direct ? "task.assignedDirect" : "task.assigned", { names: assigned.join(", ") })
           : t("task.nobodyAssigned")}
       </p>
     </li>
@@ -75,31 +78,41 @@ export function TaskBody({ sheet, brief = false }: { sheet: CalcSheet; brief?: b
           </div>
         </div>
       ) : null}
-      <section aria-labelledby="pf-calc-task-resolution">
-        <h3 id="pf-calc-task-resolution" className="pf-calc-task-title">
-          {t("task.resolution")}
-        </h3>
-        <blockquote className="pf-calc-quote">{task.resolution_text}</blockquote>
-        <p className="pf-hint">
-          {t("task.decided", {
-            name: task.decided_by ?? "—",
-            date: date(task.decided_at, "datetime"),
-          })}
-        </p>
-        <DefinitionList
-          items={[
-            {
-              label: t("task.letter", { number: task.letter_number }),
-              value: task.letter_subject || "—",
-            },
-            { label: t("task.due"), value: date(task.due) },
-            ...(task.min_margin_pct !== undefined && task.min_margin_pct !== null
-              ? [{ label: t("task.margin"), value: `${task.min_margin_pct} %` }]
-              : []),
-          ]}
-        />
-      </section>
-      {sheet.request.files?.length ? (
+      {task.letter_number ? (
+        <section aria-labelledby="pf-calc-task-resolution">
+          <h3 id="pf-calc-task-resolution" className="pf-calc-task-title">
+            {t("task.resolution")}
+          </h3>
+          <blockquote className="pf-calc-quote">{task.resolution_text}</blockquote>
+          <p className="pf-hint">
+            {t("task.decided", {
+              name: task.decided_by ?? "—",
+              date: date(task.decided_at, "datetime"),
+            })}
+          </p>
+          <DefinitionList
+            items={[
+              {
+                label: t("task.letter", { number: task.letter_number }),
+                value: task.letter_subject || "—",
+              },
+              { label: t("task.due"), value: date(task.due) },
+              ...(task.min_margin_pct !== undefined && task.min_margin_pct !== null
+                ? [{ label: t("task.margin"), value: `${task.min_margin_pct} %` }]
+                : []),
+            ]}
+          />
+        </section>
+      ) : (
+        <section aria-labelledby="pf-calc-task-resolution">
+          <h3 id="pf-calc-task-resolution" className="pf-calc-task-title">
+            {t("task.calcHeading")}
+          </h3>
+          <p className="pf-hint">{t("task.noResolution")}</p>
+          <DefinitionList items={[{ label: t("task.due"), value: date(task.due) }]} />
+        </section>
+      )}
+      {sheet.request.files?.length || sheet.request.files_pending ? (
         <section aria-labelledby="pf-calc-task-files">
           <h3 id="pf-calc-task-files" className="pf-calc-task-title">
             {t("task.requestFiles")}
@@ -118,6 +131,7 @@ export function TaskBody({ sheet, brief = false }: { sheet: CalcSheet; brief?: b
               group={group}
               data={sheet.visas[group]}
               assigned={assignedFor(group)}
+              direct={!task.letter_number}
             />
           ))}
         </ul>

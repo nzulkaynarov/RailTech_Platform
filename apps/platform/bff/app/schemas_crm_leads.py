@@ -366,6 +366,14 @@ class RequestCreatedView(BaseModel):
     transfer: Transfer
 
 
+class RequestResolutionView(BaseModel):
+    """РЕЗ-1: что будет с заявкой этого сотрудника: форма обещает то, что случится."""
+
+    mode: Literal["always", "never"]
+    ready: bool
+    reason: Literal["no_crm_mapping", "inactive"] | None = None
+
+
 class RequestRetriedView(BaseModel):
     deal: int
     client_id: int

@@ -10933,6 +10933,46 @@
                 }
             }
         },
+        "/api/v1/calc/request-intake/": {
+            "get": {
+                "operationId": "calc_request_intake",
+                "description": "GET /api/v1/calc/request-intake/ — режим «Резолюция перед расчётом» для формы «Создать заявку» (РЕЗ-1).\n\nЧитает любой сотрудник-продавец: настройки компании ему недоступны, а форма должна честно сказать, что будет дальше.",
+                "summary": "Что будет с заявкой сотрудника: резолюция или сразу расчёт",
+                "tags": [
+                    "Calc"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RequestIntake"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "403": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CalcError"
+                                }
+                            }
+                        },
+                        "description": "Нет права (зона строки, роль) или не сотрудник"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    }
+                }
+            }
+        },
         "/api/v1/calc/tasks/": {
             "get": {
                 "operationId": "calc_tasks_list",
@@ -41822,10 +41862,15 @@
                             "$ref": "#/components/schemas/RequestFile"
                         },
                         "description": "Файлы заявки клиента (СЦ-10)"
+                    },
+                    "files_pending": {
+                        "type": "boolean",
+                        "description": "РЕЗ-1: файл письма клиента ещё загружается (расчёт без резолюции)"
                     }
                 },
                 "required": [
                     "files",
+                    "files_pending",
                     "lines",
                     "text"
                 ]
@@ -42022,7 +42067,8 @@
                 "type": "object",
                 "properties": {
                     "letter_number": {
-                        "type": "string"
+                        "type": "string",
+                        "description": "Номер письма с резолюцией; пусто — расчёт без резолюции (РЕЗ-1)"
                     },
                     "letter_subject": {
                         "type": "string"
@@ -42087,7 +42133,8 @@
                         "$ref": "#/components/schemas/CalcDeal"
                     },
                     "letter_number": {
-                        "type": "string"
+                        "type": "string",
+                        "description": "Номер письма с резолюцией; пусто — расчёт без резолюции (РЕЗ-1)"
                     },
                     "due": {
                         "type": "string",
@@ -44115,6 +44162,15 @@
                         "type": "boolean",
                         "title": "Отступления от шаблона по заявке",
                         "description": "Выключено — «Запросить отступление» недоступно."
+                    },
+                    "request_resolution": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/RequestResolutionEnum"
+                            }
+                        ],
+                        "title": "Резолюция перед расчётом",
+                        "description": "always — у каждой заявки; never — не нужна, заявка сразу в расчёт ответственному.\n\n* `always` - always\n* `never` - never"
                     },
                     "contract_four_eyes": {
                         "type": "boolean",
@@ -56561,6 +56617,15 @@
                         "title": "Отступления от шаблона по заявке",
                         "description": "Выключено — «Запросить отступление» недоступно."
                     },
+                    "request_resolution": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/RequestResolutionEnum"
+                            }
+                        ],
+                        "title": "Резолюция перед расчётом",
+                        "description": "always — у каждой заявки; never — не нужна, заявка сразу в расчёт ответственному.\n\n* `always` - always\n* `never` - never"
+                    },
                     "contract_four_eyes": {
                         "type": "boolean",
                         "title": "Решение по своему договору — другим держателем «Права»",
@@ -62137,14 +62202,6 @@
                     "name"
                 ]
             },
-            "ReasonEnum": {
-                "enum": [
-                    "template_does_not_exist",
-                    "template_syntax_error"
-                ],
-                "type": "string",
-                "description": "* `template_does_not_exist` - template_does_not_exist\n* `template_syntax_error` - template_syntax_error"
-            },
             "ReassignProductRequest": {
                 "type": "object",
                 "properties": {
@@ -62996,6 +63053,57 @@
                     "name",
                     "uploaded_at"
                 ]
+            },
+            "RequestIntake": {
+                "type": "object",
+                "description": "РЕЗ-1: что будет с заявкой сотрудника — его форма «Создать заявку» говорит по этому.",
+                "properties": {
+                    "mode": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/RequestResolutionEnum"
+                            }
+                        ],
+                        "description": "Резолюция перед расчётом\n\n* `always` - always\n* `never` - never"
+                    },
+                    "ready": {
+                        "type": "boolean",
+                        "description": "Расчёт может встать на самого сотрудника (иначе заявка идёт на резолюцию)"
+                    },
+                    "reason": {
+                        "nullable": true,
+                        "description": "Почему расчёт на сотрудника не встанет\n\n* `no_crm_mapping` - no_crm_mapping\n* `inactive` - inactive",
+                        "oneOf": [
+                            {
+                                "$ref": "#/components/schemas/RequestIntakeReasonEnum"
+                            },
+                            {
+                                "$ref": "#/components/schemas/NullEnum"
+                            }
+                        ]
+                    }
+                },
+                "required": [
+                    "mode",
+                    "ready",
+                    "reason"
+                ]
+            },
+            "RequestIntakeReasonEnum": {
+                "enum": [
+                    "no_crm_mapping",
+                    "inactive"
+                ],
+                "type": "string",
+                "description": "* `no_crm_mapping` - no_crm_mapping\n* `inactive` - inactive"
+            },
+            "RequestResolutionEnum": {
+                "enum": [
+                    "always",
+                    "never"
+                ],
+                "type": "string",
+                "description": "* `always` - always\n* `never` - never"
             },
             "ResetPasswordRequest": {
                 "type": "object",
@@ -65620,7 +65728,7 @@
                 "type": "object",
                 "properties": {
                     "reason": {
-                        "$ref": "#/components/schemas/ReasonEnum"
+                        "$ref": "#/components/schemas/_RenderFailureDetailsReasonEnum"
                     },
                     "message": {
                         "type": "string",
@@ -65631,6 +65739,14 @@
                     "message",
                     "reason"
                 ]
+            },
+            "_RenderFailureDetailsReasonEnum": {
+                "enum": [
+                    "template_does_not_exist",
+                    "template_syntax_error"
+                ],
+                "type": "string",
+                "description": "* `template_does_not_exist` - template_does_not_exist\n* `template_syntax_error` - template_syntax_error"
             },
             "_TrackedCurrency": {
                 "type": "object",

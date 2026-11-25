@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — BFF API (Платформа → CRM и ERP)
-  version: 0.125.0
+  version: 0.126.0
   summary: Пространство `/api/v1/` BFF Платформы — вызывает SPA `apps/platform/web` от имени сотрудника.
   description: |
     Контракт по ADR-0011 и `docs/architecture/platform-bff.md`. Версия 0.1.0 (INF-P0-1) покрывает фазу P1:
@@ -14704,11 +14704,12 @@ paths:
     post:
       tags: [requests]
       operationId: createCrmRequest
-      summary: '«+ Создать заявку» из лида или клиента → в ERP, письмо директору во Входящие'
+      summary: '«+ Создать заявку» из лида или клиента → в ERP, дальше резолюция или сразу расчёт'
       description: >-
         CRM `POST /leads/{id}/actions/create_request` (есть `lead`) или `POST /clients/{id}/actions/create_request` (только
         `client_id`), W16-D1-2b. Раздел `crm.clients` полный. Лид становится клиентом, заявка уходит в ERP задачей CRM; ERP
-        регистрирует письмо ВХ директору в EDS. `request_key` — ключ формы (UUID на открытие формы): повтор с тем же ключом —
+        регистрирует письмо ВХ директору в EDS — если по настройке «Резолюция перед расчётом» она нужна
+        (`GET /crm/requests/resolution`), иначе заявка сразу идёт в расчёт ответственному. `request_key` — ключ формы (UUID на открытие формы): повтор с тем же ключом —
         200 `created: false` с той же заявкой, без второй; новая — 201. Файл письма загружается заранее `POST
         /crm/request-files`. Отказы CRM — `details.reason`: `handoff_no_consent` (нет согласия), `consent_via_bot`,
         `contact_channel_required`, `request_not_allowed` (лид в отказе), `request_key_reused`, `erp_not_configured`,
@@ -14746,6 +14747,25 @@ paths:
           $ref: '#/components/responses/ValidationFailed'
         '503':
           $ref: '#/components/responses/BackendUnavailable'
+
+  /crm/requests/resolution:
+    get:
+      tags: [requests]
+      operationId: getCrmRequestResolution
+      summary: 'Резолюция перед расчётом: что будет с заявкой дальше (РЕЗ-1)'
+      description: >-
+        Режим настройки компании «Правила работы · Продажи → Резолюция перед расчётом»: `always` — письмо на резолюцию у
+        каждой заявки, `never` — не нужна, заявка из любого канала сразу идёт в расчёт ответственному. Плюс `ready`: расчёт
+        может встать на самого сотрудника (иначе заявка идёт на резолюцию, причина — `reason`). Читает любой сотрудник с
+        разделом `crm.clients` полный, права на настройки компании не нужны. Форма «Создать заявку» говорит по этому, что
+        случится после отправки.
+      responses:
+        '200':
+          description: Режим и готовность
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RequestResolutionView'
 
   /crm/leads/{lead}/partner:
     post:
@@ -24602,6 +24622,10 @@ components:
         contract_deviations_allowed:
           type: boolean
           description: 'ДОК-10: «Запросить отступление» от шаблона доступно (по умолчанию да)'
+        request_resolution:
+          type: string
+          enum: [always, never]
+          description: 'РЕЗ-1: резолюция перед расчётом — у каждой заявки (always, по умолчанию) или не нужна (never): тогда заявка из любого канала сразу идёт в расчёт ответственному'
         contract_four_eyes:
           type: boolean
           description: 'ПД-1: по своему договору партнёра решает другой держатель «Права»; единственный держатель решает с подтверждением (по умолчанию да)'
@@ -24760,6 +24784,10 @@ components:
         contract_deviations_allowed:
           type: boolean
           description: 'ДОК-10: «Запросить отступление» от шаблона доступно (по умолчанию да)'
+        request_resolution:
+          type: string
+          enum: [always, never]
+          description: 'РЕЗ-1: резолюция перед расчётом — у каждой заявки (always, по умолчанию) или не нужна (never): тогда заявка из любого канала сразу идёт в расчёт ответственному'
         contract_four_eyes:
           type: boolean
           description: 'ПД-1: по своему договору партнёра решает другой держатель «Права»; единственный держатель решает с подтверждением (по умолчанию да)'
@@ -28915,6 +28943,10 @@ components:
           type: array
           description: Файлы заявки клиента (СЦ-10); скачивание — `downloadCalcRequestFile`
           items: {$ref: '#/components/schemas/RequestFile'}
+        files_pending:
+          type: boolean
+          default: false
+          description: 'РЕЗ-1: расчёт без резолюции ждёт файл письма клиента — на экране «файл заявки загружается»'
 
     CalcQuote:
       type: object
@@ -30924,6 +30956,17 @@ components:
         lead: {type: [string, 'null'], pattern: '^L-\d{4,}$'}
         created: {type: boolean, description: '`false` — повтор формы с тем же ключом: заявка уже была создана'}
         transfer: {type: string, enum: [pending, done, failed]}
+
+    RequestResolutionView:
+      type: object
+      additionalProperties: false
+      required: [mode, ready]
+      properties:
+        mode: {type: string, enum: [always, never]}
+        ready:
+          type: boolean
+          description: Расчёт может встать на самого сотрудника; нет — заявка пойдёт на резолюцию, причина в `reason`
+        reason: {type: [string, 'null'], enum: [no_crm_mapping, inactive, null]}
 
     RequestRetriedView:
       type: object

@@ -179,6 +179,7 @@ function seed(): CompanyMock {
       contract_auto_send: true,
       contract_sign_before_send: true,
       contract_deviations_allowed: true,
+      request_resolution: "always",
       contract_four_eyes: true,
       default_client_contract_template: 1,
       default_partner_contract_template: null,

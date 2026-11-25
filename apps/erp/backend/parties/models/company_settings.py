@@ -133,6 +133,14 @@ class CompanySettings(models.Model):
         verbose_name=_("Отступления от шаблона по заявке"),
         help_text=_("Выключено — «Запросить отступление» недоступно."),
     )
+    # РЕЗ-1 (owner 2026-11-25): резолюция директора перед расчётом — настройка, а не зашитый шаг.
+    request_resolution = models.CharField(
+        max_length=16,
+        choices=[("always", "always"), ("never", "never")],
+        default="always",
+        verbose_name=_("Резолюция перед расчётом"),
+        help_text=_("always — у каждой заявки; never — не нужна, заявка сразу в расчёт ответственному."),
+    )
     contract_four_eyes = models.BooleanField(
         default=True,
         verbose_name=_("Решение по своему договору — другим держателем «Права»"),

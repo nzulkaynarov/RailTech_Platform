@@ -300,6 +300,12 @@
         "hint": "How many days a partner price counts as confirmed and how many days ahead to warn about expiry.",
         "note": "Applies to purchasing at once.",
         "save": "Save terms"
+      },
+      "requests": {
+        "title": "Requests",
+        "hint": "What happens to a request before calculation.",
+        "note": "The rule applies to new requests.",
+        "save": "Save rule"
       }
     },
     "contract_auto_send": "A contract from an approved template goes to the Cabinet by itself after the quote is accepted",
@@ -310,6 +316,12 @@
     "contract_four_eyes": "Decision on own contract — by another Legal holder",
     "contract_four_eyesHint": "Whoever prepared a partner contract does not decide on it. The only holder decides after a confirmation, and it is journaled.",
     "contract_deviations_allowedHint": "A contract with a deviation follows the visa route and does not go to the client before it.",
+    "request_resolution": "Resolution before calculation",
+    "request_resolutionHint": "If a resolution is not needed, a request from any channel goes straight to the responsible person for calculation. The resolution is given by holders of the «Resolution» permission (Roles & permissions).",
+    "resolution": {
+      "always": "Every request",
+      "never": "Not needed"
+    },
     "defaultClientTemplate": "Default template: client",
     "defaultPartnerTemplate": "Default template: partner",
     "edition": "ed. {{n}}",

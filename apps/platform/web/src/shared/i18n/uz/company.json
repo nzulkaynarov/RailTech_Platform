@@ -300,6 +300,12 @@
         "hint": "Hamkor narxi neça kun tasdiqlangan hisoblanadi va tugaşidan neça kun oldin ogohlantiriş.",
         "note": "Xaridga darhol qöllanadi.",
         "save": "Muddatlarni saqlaş"
+      },
+      "requests": {
+        "title": "Arizalar",
+        "hint": "Ariza hisob-kitobgaça nima boʼladi.",
+        "note": "Qoida yangi arizalarga amal qiladi.",
+        "save": "Qoidani saqlash"
       }
     },
     "contract_auto_send": "Tasdiqlangan şablon böyiça şartnoma TT qabul qilingaç özi Kabinetga ketadi",
@@ -310,6 +316,12 @@
     "contract_four_eyes": "Öz şartnomasi böyiça qaror — «Huquq»ning boşqa egasi tomonidan",
     "contract_four_eyesHint": "Hamkor şartnomasini tayyorlagan kişi u böyiça özi qaror qilmaydi. Yagona ega tasdiqlaş bilan qaror qiladi, yozuv jurnalga tuşadi.",
     "contract_deviations_allowedHint": "Çetlanişli şartnoma viza yönalişidan ötadi va vizalargaça mijozga ketmaydi.",
+    "request_resolution": "Hisob-kitobdan oldin rezolyusiya",
+    "request_resolutionHint": "Rezolyusiya kerak boʼlmasa, istalgan kanaldan kelgan ariza darhol masʼul xodimga hisob-kitobga ketadi. Rezolyusiyani «Rezolyusiya» huquqi egalari beradi (Rollar va huquqlar).",
+    "resolution": {
+      "always": "Har bir arizada",
+      "never": "Kerak emas"
+    },
     "defaultClientTemplate": "Standart şablon: mijoz",
     "defaultPartnerTemplate": "Standart şablon: hamkor",
     "edition": "{{n}}-tahrir",

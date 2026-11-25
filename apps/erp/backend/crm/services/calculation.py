@@ -724,6 +724,7 @@ def _sheet(deal: Deal, task: CalcTask, user) -> dict:
             "text": deal_request_text(deal),
             "lines": deal_request_lines_count(deal),
             "files": deal_request_files(deal),
+            "files_pending": bool(task.request_file_pending),
         },
         "quote": (
             None
@@ -787,7 +788,7 @@ def start(deal_id: int, user) -> dict:
                     )
                 ActivityLog.objects.create(
                     action="Расчёт начат",
-                    detail=f"Черновик КП расчёта по {task.letter_number}",
+                    detail=f"Черновик КП расчёта по {task.label}",
                     user=user,
                     level="INFO",
                     entity_type="deal",
@@ -795,7 +796,7 @@ def start(deal_id: int, user) -> dict:
                     deal=deal,
                     company_id=deal.company_id,
                     event_code="calc.started",
-                    event_params={"letter_number": task.letter_number},
+                    event_params={"letter_number": task.label},
                 )
                 _link_catalog(calc_quote(deal))
     return _sheet(deal, task, user)
@@ -1032,9 +1033,9 @@ def add_lines(deal_id: int, user, rows: list[LineInput]) -> dict:
         deal,
         user,
         "Строки добавлены в расчёт",
-        f"{len(created)} {pluralize_ru(len(created), 'строка', 'строки', 'строк')} в расчёт по {task.letter_number}",
+        f"{len(created)} {pluralize_ru(len(created), 'строка', 'строки', 'строк')} в расчёт по {task.label}",
         "calc.lines_added",
-        {"count": len(created), "letter_number": task.letter_number},
+        {"count": len(created), "letter_number": task.label},
     )
     return {"created": created, **_sheet(deal, task, user)}
 
@@ -1487,10 +1488,10 @@ def _notify_all_signed(deal: Deal, task: CalcTask, actor) -> None:
             user_id=user_id,
             type=ntype,
             title="Все строки расчёта подтверждены",
-            message=f"Расчёт по {task.letter_number}: все визы собраны, можно нажать «Расчёт готов».",
+            message=f"Расчёт по {task.label}: все визы собраны, можно нажать «Расчёт готов».",
             link=f"#deal/{deal.id}",
             event_code="calc.all_signed",
-            event_params={"deal_id": deal.id, "letter_number": task.letter_number},
+            event_params={"deal_id": deal.id, "letter_number": task.label},
         )
         push_notification_ws(notification)
 
@@ -1558,9 +1559,9 @@ def mark_ready(deal_id: int, user) -> dict:
         deal,
         user,
         "Расчёт готов: черновик КП у директора",
-        f"{quote.number or 'КП'} по {task.letter_number}: все визы собраны",
+        f"{quote.number or 'КП'} по {task.label}: все визы собраны",
         "calc.ready",
-        {"letter_number": task.letter_number, "number": quote.number, "lines": len(items)},
+        {"letter_number": task.label, "number": quote.number, "lines": len(items)},
     )
     return _sheet(deal, task, user)
 
@@ -1622,9 +1623,9 @@ def new_version(deal_id: int, user) -> dict:
         deal,
         user,
         "Новая версия КП после отказа клиента",
-        f"КП v{copy.version} по {task.letter_number}: расчёт снова открыт",
+        f"КП v{copy.version} по {task.label}: расчёт снова открыт",
         "calc.new_version",
-        {"letter_number": task.letter_number, "version": copy.version, "previous_version": source.version},
+        {"letter_number": task.label, "version": copy.version, "previous_version": source.version},
     )
     return _sheet(deal, task, user)
 
@@ -1657,9 +1658,9 @@ def lose(deal_id: int, user, reason: str) -> dict:
         deal,
         user,
         "Отказ по заявке",
-        f"{task.letter_number}: {reason}",
+        f"{task.label}: {reason}",
         "calc.lost",
-        {"letter_number": task.letter_number, "reason": reason, "version": quote.version},
+        {"letter_number": task.label, "reason": reason, "version": quote.version},
     )
     deal.refresh_from_db()
     return _sheet(deal, task, user)
@@ -1736,6 +1737,7 @@ def _request_card(deal: Deal, task: Optional[CalcTask], user) -> dict:
             "text": deal_request_text(deal),
             "lines": deal_request_lines_count(deal),
             "files": deal_request_files(deal),
+            "files_pending": bool(task.request_file_pending) if task is not None else False,
         },
         "close": close_state(deal, user),
     }

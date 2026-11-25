@@ -2,6 +2,7 @@ import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/re
 import { HttpResponse, http } from "msw";
 import { beforeEach, describe, expect, it } from "vitest";
 
+import { resetCompanyMock, updateCompanyMock } from "../../../mocks/fixtures/company";
 import { resetMarks, setMark } from "../../../mocks/doNotWorkMarks";
 import { readLeads, resetLeads, writeLeads } from "../../../mocks/fixtures/leads";
 import { MOCK_ERP_DOWN_KEY } from "../../../mocks/feedHandlers";
@@ -237,6 +238,31 @@ describe("«Создать заявку» из лида и из клиента (
       "href",
       `/crm/clients/${String(created?.id)}?panel=open&tab=card`,
     );
+  });
+
+  it("на проверке сказано, что будет дальше: по настройке, «сразу в расчёт» без ложных обещаний (РЕЗ-1)", async () => {
+    const LEAD = "/crm/leads?lead=L-2041&create=1&panel=open&tab=card";
+    const says = async (text: string | RegExp) => {
+      const panel = await openForm(LEAD);
+      open(panel, "Проверка");
+      expect(await within(panel).findByText(text)).toBeVisible();
+      cleanup();
+    };
+    await says("Заявка уйдёт на резолюцию, затем в расчёт.");
+
+    updateCompanyMock((state) => {
+      state.quote.request_resolution = "never";
+    });
+    await says("Заявка сразу уйдёт в расчёт ответственному.");
+
+    // расчёт не может встать на сотрудника — причина вслух, обещания нет
+    updateCompanyMock((state) => {
+      state.quote.request_resolution = "never";
+    });
+    window.localStorage.setItem("rt-pf-mock-intake-not-ready", "1");
+    await says(/Сразу в расчёт нельзя: вы не подключены к расчёту/);
+    window.localStorage.removeItem("rt-pf-mock-intake-not-ready");
+    resetCompanyMock();
   });
 
   it("учёт недоступен: номера нет, вместо «Ждёт резолюции» — «Не передана в учёт» (Б-7)", async () => {

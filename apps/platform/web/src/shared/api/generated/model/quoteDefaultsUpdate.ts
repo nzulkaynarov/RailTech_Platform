@@ -7,6 +7,7 @@ import type { QuoteDefaultsUpdateCatalogPriceVisibility } from "./quoteDefaultsU
 import type { QuoteDefaultsUpdateContractExpiredAction } from "./quoteDefaultsUpdateContractExpiredAction";
 import type { QuoteDefaultsUpdateContractGatingKindsItem } from "./quoteDefaultsUpdateContractGatingKindsItem";
 import type { QuoteDefaultsUpdateContractTermRule } from "./quoteDefaultsUpdateContractTermRule";
+import type { QuoteDefaultsUpdateRequestResolution } from "./quoteDefaultsUpdateRequestResolution";
 
 /**
  * Поля маржи без права на `cost_margin` — 403 `FORBIDDEN` (`details.fields`).
@@ -94,6 +95,8 @@ export interface QuoteDefaultsUpdate {
   contract_sign_before_send?: boolean;
   /** ДОК-10: «Запросить отступление» от шаблона доступно (по умолчанию да) */
   contract_deviations_allowed?: boolean;
+  /** РЕЗ-1: резолюция перед расчётом — у каждой заявки (always, по умолчанию) или не нужна (never): тогда заявка из любого канала сразу идёт в расчёт ответственному */
+  request_resolution?: QuoteDefaultsUpdateRequestResolution;
   /** ПД-1: по своему договору партнёра решает другой держатель «Права»; единственный держатель решает с подтверждением (по умолчанию да) */
   contract_four_eyes?: boolean;
   /**

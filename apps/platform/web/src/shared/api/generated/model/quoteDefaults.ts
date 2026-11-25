@@ -7,6 +7,7 @@ import type { QuoteDefaultsCatalogPriceVisibility } from "./quoteDefaultsCatalog
 import type { QuoteDefaultsContractExpiredAction } from "./quoteDefaultsContractExpiredAction";
 import type { QuoteDefaultsContractGatingKindsItem } from "./quoteDefaultsContractGatingKindsItem";
 import type { QuoteDefaultsContractTermRule } from "./quoteDefaultsContractTermRule";
+import type { QuoteDefaultsRequestResolution } from "./quoteDefaultsRequestResolution";
 
 /**
  * Условия КП по умолчанию (ERP `companies/{id}/settings`). Поля маржи вырезаются без права на `cost_margin`.
@@ -94,6 +95,8 @@ export interface QuoteDefaults {
   contract_sign_before_send?: boolean;
   /** ДОК-10: «Запросить отступление» от шаблона доступно (по умолчанию да) */
   contract_deviations_allowed?: boolean;
+  /** РЕЗ-1: резолюция перед расчётом — у каждой заявки (always, по умолчанию) или не нужна (never): тогда заявка из любого канала сразу идёт в расчёт ответственному */
+  request_resolution?: QuoteDefaultsRequestResolution;
   /** ПД-1: по своему договору партнёра решает другой держатель «Права»; единственный держатель решает с подтверждением (по умолчанию да) */
   contract_four_eyes?: boolean;
   /**

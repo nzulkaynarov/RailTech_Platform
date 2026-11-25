@@ -79,8 +79,6 @@
   "consequence": {
     "lead": "Lid mijozga aylanadi, siz yozişma uçun masʼul bölasiz; bot bu mijoz böyiça javob berişda davom etadi.",
     "request": "Hisobga oliş bölimida raqamli ariza paydo böladi.",
-    "letter": "Xat direktorga «Hujjatlar · Kiruvçi xatlar»ga boradi{{urgent}}.",
-    "urgentSuffix": " «Şoşilinç» belgisi bilan",
     "chat": "Loyiha çati yaratiladi."
   },
   "clientGets": "Mijoz oladi: «№ … arizasi qabul qilindi, hisoblayapmiz» va «Kabinetni oçiş» tugmasi — Telegramda yoki xat orqali.",
@@ -129,6 +127,15 @@
     "found": "Ariza qoralamasi bor: {{time}}",
     "continue": "Davom etiş",
     "restart": "Qaytadan boşlaş"
+  },
+  "routing": {
+    "letter": "Ariza rezolyusiyaga ketadi{{urgent}}, keyin hisob-kitobga.",
+    "calc": "Ariza darhol masʼul xodimga hisob-kitobga ketadi.",
+    "urgent": " (shoşilinç)",
+    "fallback": {
+      "no_crm_mapping": "Darhol hisob-kitobga boʼlmaydi: siz hisob-kitobga ulanmagansiz. Ariza rezolyusiyaga ketadi{{urgent}}.",
+      "inactive": "Darhol hisob-kitobga boʼlmaydi: hisobingiz oʼchirilgan. Ariza rezolyusiyaga ketadi{{urgent}}."
+    }
   },
   "who": {
     "legend": "Bu kim?",

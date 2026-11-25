@@ -46,7 +46,9 @@ class CalcVisaStatesSerializer(serializers.Serializer):
 
 class CalcTaskRowSerializer(serializers.Serializer):
     deal = CalcDealSerializer()
-    letter_number = serializers.CharField()
+    letter_number = serializers.CharField(
+        allow_blank=True, help_text="Номер письма с резолюцией; пусто — расчёт без резолюции (РЕЗ-1)"
+    )
     due = serializers.DateField()
     state = serializers.ChoiceField(choices=CALC_STATES)
     rejected_by = serializers.ChoiceField(
@@ -76,7 +78,9 @@ class CalcDealRefListSerializer(serializers.Serializer):
 
 
 class CalcTaskBriefSerializer(serializers.Serializer):
-    letter_number = serializers.CharField()
+    letter_number = serializers.CharField(
+        allow_blank=True, help_text="Номер письма с резолюцией; пусто — расчёт без резолюции (РЕЗ-1)"
+    )
     letter_subject = serializers.CharField(allow_blank=True)
     resolution_text = serializers.CharField(allow_blank=True)
     decided_at = serializers.DateTimeField()
@@ -86,10 +90,25 @@ class CalcTaskBriefSerializer(serializers.Serializer):
     assignees = CalcAssigneeSerializer(many=True)
 
 
+class RequestIntakeSerializer(serializers.Serializer):
+    """РЕЗ-1: что будет с заявкой сотрудника — его форма «Создать заявку» говорит по этому."""
+
+    mode = serializers.ChoiceField(choices=["always", "never"], help_text="Резолюция перед расчётом")
+    ready = serializers.BooleanField(
+        help_text="Расчёт может встать на самого сотрудника (иначе заявка идёт на резолюцию)"
+    )
+    reason = serializers.ChoiceField(
+        choices=["no_crm_mapping", "inactive"], allow_null=True, help_text="Почему расчёт на сотрудника не встанет"
+    )
+
+
 class CalcRequestSerializer(serializers.Serializer):
     text = serializers.CharField(allow_blank=True)
     lines = serializers.IntegerField()
     files = RequestFileSerializer(many=True, help_text="Файлы заявки клиента (СЦ-10)")
+    files_pending = serializers.BooleanField(
+        help_text="РЕЗ-1: файл письма клиента ещё загружается (расчёт без резолюции)"
+    )
 
 
 class CalcTermsSerializer(serializers.Serializer):

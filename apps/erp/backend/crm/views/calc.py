@@ -32,6 +32,7 @@ from ..serializers.calc import (
     CalcSheetSerializer,
     CalcTaskListSerializer,
     CalcTermsPatchSerializer,
+    RequestIntakeSerializer,
 )
 from ..services import calculation as calc
 from ..services.calculation import CalcError, LineInput
@@ -80,6 +81,30 @@ class CalcTaskListView(APIView):
         except CalcError as exc:
             return _fail(exc)
         return Response({"results": rows})
+
+
+class RequestIntakeView(APIView):
+    """GET /api/v1/calc/request-intake/ — режим «Резолюция перед расчётом» для формы «Создать заявку» (РЕЗ-1).
+
+    Читает любой сотрудник-продавец: настройки компании ему недоступны, а форма должна честно сказать, что будет дальше.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        operation_id="calc_request_intake",
+        summary="Что будет с заявкой сотрудника: резолюция или сразу расчёт",
+        tags=TAGS,
+        responses={200: RequestIntakeSerializer, 403: ERRORS[403]},
+    )
+    def get(self, request):
+        from ..services import request_resolution
+
+        try:
+            calc._require_staff(request.user)
+        except CalcError as exc:
+            return _fail(exc)
+        return Response(request_resolution.intake_info(request.user))
 
 
 class CalcDealRefsView(APIView):

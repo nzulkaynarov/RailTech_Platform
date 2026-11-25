@@ -1163,6 +1163,78 @@ async def test_quote_defaults_patch_sends_codes_and_returns_masked_result(
     assert "min_margin_percent" not in response.json()
 
 
+async def test_quote_defaults_request_resolution_default_and_patch(
+    web: Web, erp: respx.MockRouter, check: ContractChecker
+) -> None:
+    """РЕЗ-1: «Резолюция перед расчётом» — по умолчанию у каждой заявки; выбор уходит в ERP."""
+    await web.login(["ADMIN"])
+    erp.get(f"{COMPANY}/settings/").mock(return_value=httpx.Response(200, json=settings_json()))
+    assert (await web.client.get("/api/v1/admin/company/quote-defaults")).json()[
+        "request_resolution"
+    ] == "always"
+    route = erp.patch(f"{COMPANY}/settings/").mock(
+        return_value=httpx.Response(200, json=settings_json(request_resolution="never"))
+    )
+
+    response = await web.send(
+        "PATCH", "/api/v1/admin/company/quote-defaults", json={"request_resolution": "never"}
+    )
+
+    assert response.status_code == 200
+    check(response, "/admin/company/quote-defaults", "patch")
+    assert sent(route) == {"request_resolution": "never"}
+    assert response.json()["request_resolution"] == "never"
+    bad = await web.send(
+        "PATCH", "/api/v1/admin/company/quote-defaults", json={"request_resolution": "sometimes"}
+    )
+    assert bad.status_code == 422
+
+
+async def test_request_form_reads_the_resolution_mode_without_settings_rights(
+    web: Web, erp: respx.MockRouter, check: ContractChecker
+) -> None:
+    """РЕЗ-1: настройки компании менеджеру недоступны (403 ERP), а форме режим нужен."""
+    from tests.roles import custom
+
+    await web.login([custom(40, "Только клиенты", {"crm.clients": "full"})])
+    erp.get(f"{COMPANY}/settings/").mock(
+        return_value=httpx.Response(403, json={"detail": "FORBIDDEN"})
+    )
+    intake = erp.get(f"{API}/calc/request-intake/").mock(
+        return_value=httpx.Response(200, json={"mode": "always", "ready": True, "reason": None})
+    )
+
+    response = await web.client.get("/api/v1/crm/requests/resolution")
+
+    assert response.status_code == 200
+    assert response.json() == {"mode": "always", "ready": True, "reason": None}
+    check(response, "/crm/requests/resolution", "get")
+    assert intake.called
+    intake.mock(
+        return_value=httpx.Response(
+            200, json={"mode": "never", "ready": False, "reason": "no_crm_mapping"}
+        )
+    )
+    assert (await web.client.get("/api/v1/crm/requests/resolution")).json() == {
+        "mode": "never",
+        "ready": False,
+        "reason": "no_crm_mapping",
+    }
+
+
+async def test_quote_defaults_old_resolution_value_reads_as_always(
+    web: Web, erp: respx.MockRouter
+) -> None:
+    """Значение снятого варианта в ERP не даёт 500: читается как «у каждой заявки»."""
+    await web.login(["ADMIN"])
+    erp.get(f"{COMPANY}/settings/").mock(
+        return_value=httpx.Response(200, json=settings_json(request_resolution="client_own"))
+    )
+    response = await web.client.get("/api/v1/admin/company/quote-defaults")
+    assert response.status_code == 200
+    assert response.json()["request_resolution"] == "always"
+
+
 async def test_quote_defaults_overdue_reminders_switch(
     web: Web, erp: respx.MockRouter, check: ContractChecker
 ) -> None:

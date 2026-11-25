@@ -1455,6 +1455,30 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/service/files/{file_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Файл письма по заявке — для ERP, когда резолюция не нужна (РЕЗ-1)
+     * @description Сервисный путь, не сотрудника: зовёт только ERP по `Authorization: Bearer <SERVICE_TOKEN_ERP_TO_EDS>`. Отдаёт последнюю
+     *     версию файла: либо ещё ни к чему не привязанного и загруженного сотрудником `created_by` (менеджером заявки), либо
+     *     файла входящего письма, которое `created_by` ведёт (читает письма по правилам EDS или участвует в его поручениях);
+     *     файл документа, поручения и чужого письма не отдаётся. Иначе 404 без подробностей; токен не задан или неверный — 401. ERP кладёт файл в
+     *     исходники заявки, чтобы расчёт видел письмо клиента, когда EDS письма по заявке не заводит.
+     */
+    get: operations["downloadRequestFileForErp"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/documents/{document_id}/registration-request": {
     parameters: {
       query?: never;
@@ -6243,6 +6267,33 @@ export interface operations {
         };
         content: {
           "application/pdf": string;
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      404: components["responses"]["NotFound"];
+    };
+  };
+  downloadRequestFileForErp: {
+    parameters: {
+      query: {
+        /** @description crm_user_id загрузившего файл сотрудника */
+        created_by: number;
+      };
+      header?: never;
+      path: {
+        file_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Содержимое файла */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/octet-stream": string;
         };
       };
       401: components["responses"]["Unauthorized"];

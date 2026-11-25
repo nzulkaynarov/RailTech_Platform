@@ -369,6 +369,7 @@ import type {
   Reminded,
   ReplyTemplateList,
   RequestCreatedView,
+  RequestResolutionView,
   RequestRetriedView,
   ResolutionAssignees,
   ResolutionTemplate,
@@ -18389,6 +18390,10 @@ export const getGetQuoteDefaultsResponseMock = (
   contract_auto_send: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
   contract_sign_before_send: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
   contract_deviations_allowed: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
+  request_resolution: faker.helpers.arrayElement([
+    faker.helpers.arrayElement(["always", "never"] as const),
+    undefined,
+  ]),
   contract_four_eyes: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
   default_client_contract_template: faker.helpers.arrayElement([faker.number.int(), null]),
   default_partner_contract_template: faker.helpers.arrayElement([faker.number.int(), null]),
@@ -18472,6 +18477,10 @@ export const getUpdateQuoteDefaultsResponseMock = (
   contract_auto_send: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
   contract_sign_before_send: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
   contract_deviations_allowed: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
+  request_resolution: faker.helpers.arrayElement([
+    faker.helpers.arrayElement(["always", "never"] as const),
+    undefined,
+  ]),
   contract_four_eyes: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
   default_client_contract_template: faker.helpers.arrayElement([faker.number.int(), null]),
   default_partner_contract_template: faker.helpers.arrayElement([faker.number.int(), null]),
@@ -28726,6 +28735,7 @@ export const getGetCalcSheetResponseMock = (
       })),
       undefined,
     ]),
+    files_pending: faker.datatype.boolean(),
   },
   quote: faker.helpers.arrayElement([{ ...getGetCalcSheetResponseCalcQuoteMock() }, null]),
   lines: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
@@ -29017,6 +29027,7 @@ export const getStartCalcResponseMock = (
       })),
       undefined,
     ]),
+    files_pending: faker.datatype.boolean(),
   },
   quote: faker.helpers.arrayElement([{ ...getStartCalcResponseCalcQuoteMock() }, null]),
   lines: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
@@ -29305,6 +29316,7 @@ export const getAddCalcLinesResponseMock = (
       })),
       undefined,
     ]),
+    files_pending: faker.datatype.boolean(),
   },
   quote: faker.helpers.arrayElement([{ ...getAddCalcLinesResponseCalcQuoteMock() }, null]),
   lines: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
@@ -29593,6 +29605,7 @@ export const getUpdateCalcLineResponseMock = (
       })),
       undefined,
     ]),
+    files_pending: faker.datatype.boolean(),
   },
   quote: faker.helpers.arrayElement([{ ...getUpdateCalcLineResponseCalcQuoteMock() }, null]),
   lines: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
@@ -29884,6 +29897,7 @@ export const getDeleteCalcLineResponseMock = (
       })),
       undefined,
     ]),
+    files_pending: faker.datatype.boolean(),
   },
   quote: faker.helpers.arrayElement([{ ...getDeleteCalcLineResponseCalcQuoteMock() }, null]),
   lines: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
@@ -30175,6 +30189,7 @@ export const getSignCalcLineResponseMock = (
       })),
       undefined,
     ]),
+    files_pending: faker.datatype.boolean(),
   },
   quote: faker.helpers.arrayElement([{ ...getSignCalcLineResponseCalcQuoteMock() }, null]),
   lines: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
@@ -30463,6 +30478,7 @@ export const getUpdateCalcTermsResponseMock = (
       })),
       undefined,
     ]),
+    files_pending: faker.datatype.boolean(),
   },
   quote: faker.helpers.arrayElement([{ ...getUpdateCalcTermsResponseCalcQuoteMock() }, null]),
   lines: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
@@ -30754,6 +30770,7 @@ export const getMarkCalcReadyResponseMock = (
       })),
       undefined,
     ]),
+    files_pending: faker.datatype.boolean(),
   },
   quote: faker.helpers.arrayElement([{ ...getMarkCalcReadyResponseCalcQuoteMock() }, null]),
   lines: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
@@ -31042,6 +31059,7 @@ export const getNewCalcQuoteVersionResponseMock = (
       })),
       undefined,
     ]),
+    files_pending: faker.datatype.boolean(),
   },
   quote: faker.helpers.arrayElement([{ ...getNewCalcQuoteVersionResponseCalcQuoteMock() }, null]),
   lines: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
@@ -31336,6 +31354,7 @@ export const getLoseCalcRequestResponseMock = (
       })),
       undefined,
     ]),
+    files_pending: faker.datatype.boolean(),
   },
   quote: faker.helpers.arrayElement([{ ...getLoseCalcRequestResponseCalcQuoteMock() }, null]),
   lines: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
@@ -31515,6 +31534,7 @@ export const getGetCalcRequestCardResponseMock = (
       })),
       undefined,
     ]),
+    files_pending: faker.datatype.boolean(),
   },
   close: {
     allowed: faker.datatype.boolean(),
@@ -31551,6 +31571,7 @@ export const getCloseCalcRequestResponseMock = (
       })),
       undefined,
     ]),
+    files_pending: faker.datatype.boolean(),
   },
   close: {
     allowed: faker.datatype.boolean(),
@@ -31749,6 +31770,7 @@ export const getCopyCalcLinesResponseMock = (
         })),
         undefined,
       ]),
+      files_pending: faker.datatype.boolean(),
     },
     quote: faker.helpers.arrayElement([{ ...getCopyCalcLinesResponseCalcQuoteMock() }, null]),
     lines: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
@@ -32460,6 +32482,7 @@ export const getReserveCalcLineResponseMock = (
       })),
       undefined,
     ]),
+    files_pending: faker.datatype.boolean(),
   },
   quote: faker.helpers.arrayElement([{ ...getReserveCalcLineResponseCalcQuoteMock() }, null]),
   lines: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
@@ -32751,6 +32774,7 @@ export const getReleaseCalcLineReservationResponseMock = (
       })),
       undefined,
     ]),
+    files_pending: faker.datatype.boolean(),
   },
   quote: faker.helpers.arrayElement([
     { ...getReleaseCalcLineReservationResponseCalcQuoteMock() },
@@ -36639,6 +36663,18 @@ export const getCreateCrmRequestResponseMock = (
       ...overrideResponse,
     },
   ]);
+
+export const getGetCrmRequestResolutionResponseMock = (
+  overrideResponse: Partial<Extract<RequestResolutionView, object>> = {},
+): RequestResolutionView => ({
+  mode: faker.helpers.arrayElement(["always", "never"] as const),
+  ready: faker.datatype.boolean(),
+  reason: faker.helpers.arrayElement([
+    faker.helpers.arrayElement(["no_crm_mapping", "inactive"] as const),
+    null,
+  ]),
+  ...overrideResponse,
+});
 
 export const getHandOverCrmLeadAsPartnerResponseMock = (
   overrideResponse: Partial<Extract<PartnerHandoffView, object>> = {},
@@ -53446,6 +53482,30 @@ export const getCreateCrmRequestMockHandler = (
   );
 };
 
+export const getGetCrmRequestResolutionMockHandler = (
+  overrideResponse?:
+    | RequestResolutionView
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<RequestResolutionView> | RequestResolutionView),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/crm/requests/resolution",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetCrmRequestResolutionResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
 export const getHandOverCrmLeadAsPartnerMockHandler = (
   overrideResponse?:
     | PartnerHandoffView
@@ -56146,6 +56206,7 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getUnbindCrmTelegramGroupMockHandler(),
   getGetCrmClientTelegramGroupMockHandler(),
   getCreateCrmRequestMockHandler(),
+  getGetCrmRequestResolutionMockHandler(),
   getHandOverCrmLeadAsPartnerMockHandler(),
   getRetryCrmRequestMockHandler(),
   getUploadCrmRequestFileMockHandler(),
