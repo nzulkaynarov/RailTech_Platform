@@ -36,6 +36,19 @@ test.describe("СЦ-7: тексты и числа", () => {
       await shot(page, "lead-panel-email");
       await toggle.first().click();
       await expect(panel.getByRole("button", { name: "Свернуть" }).first()).toBeVisible();
+      // «Закрыть» раскрывается в потоке: пункты не накрывают последнее сообщение
+      await panel.getByRole("button", { name: /^Закрыть: / }).click();
+      const spam = page.getByRole("menuitem", { name: "Спам" });
+      await expect(spam).toBeVisible();
+      const lastMessage = panel.locator(".pf-crm-message").last();
+      await lastMessage.scrollIntoViewIfNeeded();
+      const [menuBox, messageBox] = await Promise.all([
+        spam.boundingBox(),
+        lastMessage.boundingBox(),
+      ]);
+      expect(menuBox && messageBox && menuBox.y >= messageBox.y + messageBox.height - 1).toBe(true);
+      await expect(lastMessage).toBeVisible();
+      await shot(page, "lead-panel-close-menu");
       await expectNoViolations(page, `карточка лида ${String(width)}`);
     });
 

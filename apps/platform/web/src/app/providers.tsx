@@ -24,7 +24,7 @@ function useRefetchQueueOnLanguage(language: string) {
     if (previous.current === language) return;
     previous.current = language;
     void client.invalidateQueries({
-      predicate: (query) => String(query.queryKey[0]).startsWith("/api/v1/queue"),
+      predicate: (query) => /^\/api\/v1\/(queue|activity)/.test(String(query.queryKey[0])),
     });
   }, [client, language]);
 }

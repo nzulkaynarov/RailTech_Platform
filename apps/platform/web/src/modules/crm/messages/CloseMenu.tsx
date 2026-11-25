@@ -1,4 +1,4 @@
-import { Button, Dropdown } from "antd";
+import { Button, Dropdown, Menu } from "antd";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -15,14 +15,18 @@ export function CloseMenu({
   name,
   close,
   discard,
+  inline = false,
 }: {
   lead: string;
   name: string;
   close: boolean;
   discard: boolean;
+  /** Пункты раскрываются в потоке под кнопкой, а не поверх содержимого (карточка лида: меню не закрывает сообщения). */
+  inline?: boolean;
 }) {
   const { t } = useTranslation("messages");
   const [open, setOpen] = useState<CloseKind | null>(null);
+  const [expanded, setExpanded] = useState(false);
   const items = [
     ...(close
       ? [
@@ -40,6 +44,42 @@ export function CloseMenu({
       : []),
   ];
   if (!close && !discard) return null;
+  const dialog = open ? (
+    <CloseDialog
+      lead={lead}
+      kind={open}
+      onClose={() => {
+        setOpen(null);
+      }}
+    />
+  ) : null;
+  if (inline) {
+    return (
+      <>
+        <Button
+          aria-label={`${t("close.menu")}: ${name}`}
+          aria-expanded={expanded}
+          onClick={() => {
+            setExpanded((value) => !value);
+          }}
+        >
+          {t("close.menu")} <ChevronDownIcon />
+        </Button>
+        {expanded ? (
+          <Menu
+            className="pf-crm-close-inline"
+            selectable={false}
+            items={items}
+            onClick={({ key }) => {
+              setExpanded(false);
+              setOpen(key as CloseKind);
+            }}
+          />
+        ) : null}
+        {dialog}
+      </>
+    );
+  }
   return (
     <>
       <Dropdown
@@ -55,15 +95,7 @@ export function CloseMenu({
           {t("close.menu")} <ChevronDownIcon />
         </Button>
       </Dropdown>
-      {open ? (
-        <CloseDialog
-          lead={lead}
-          kind={open}
-          onClose={() => {
-            setOpen(null);
-          }}
-        />
-      ) : null}
+      {dialog}
     </>
   );
 }

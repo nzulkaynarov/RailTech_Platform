@@ -1378,3 +1378,22 @@ async def test_request_hits_need_the_costing_section_where_the_request_opens(
 
     kinds = [h["object"]["kind"] for g in response.json()["groups"] for h in g["items"]]
     assert "request" not in kinds
+
+
+def test_activity_event_texts_exist_in_every_language() -> None:
+    """СЦ-7: у каждого кода ленты есть строка на uz и en; язык — из запроса, иначе русский."""
+    from app.feeds.events import EVENT_TEXTS, event_text
+    from app.feeds.events_i18n import EVENT_TEXTS_EN, EVENT_TEXTS_UZ
+    from app.feeds.lang import lang_var
+
+    assert set(EVENT_TEXTS) == set(EVENT_TEXTS_UZ) == set(EVENT_TEXTS_EN)
+    token = lang_var.set("uz")
+    try:
+        assert event_text("invoice.issued", "") == "Hisob çiqarildi"
+        assert event_text("zzz.unknown", "") == "ERPdagi harakat"
+        lang_var.set("en")
+        assert event_text("invoice.issued", "") == "Invoice issued"
+        assert event_text("admin.zzz", "") == "Administrative action in Operations"
+    finally:
+        lang_var.reset(token)
+    assert event_text("invoice.issued", "") == "Счёт выставлен"

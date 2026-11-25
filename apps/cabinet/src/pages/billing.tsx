@@ -215,10 +215,14 @@ export function InvoicesPage() {
               cell: (row) => (
                 <span className="flex min-w-0 flex-col gap-1">
                   <span className="font-medium whitespace-nowrap">{row.number}</span>
+                  {/* проект — под номером, а не отдельной колонкой: таблица помещается на 1280 без прокрутки (СЦ-7, N9) */}
+                  <span className="text-xs font-normal">
+                    <DealLink deal={row.deal} />
+                  </span>
                   <ProofList invoice={row} />
                 </span>
               ),
-              className: 'min-w-0 max-w-44',
+              className: 'min-w-0 max-w-52',
             }}
             columns={[
               {
@@ -248,8 +252,7 @@ export function InvoicesPage() {
                   );
                 },
               },
-              { id: 'deal', header: t('pages.invoices.columns.deal'), cell: (row) => <DealLink deal={row.deal} />, className: 'whitespace-nowrap' },
-            ]}
+                          ]}
             actions={{
               header: t('common.actions'),
               cell: (row) => (

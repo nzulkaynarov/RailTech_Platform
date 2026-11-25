@@ -261,7 +261,13 @@ function Body({ card, sheet, onClose }: { card: LeadCard; sheet: boolean; onClos
             {t("leads:actions.reopen")}
           </Button>
         ) : null}
-        <CloseMenu lead={card.lead} name={card.name} close={rules.close} discard={rules.discard} />
+        <CloseMenu
+          lead={card.lead}
+          name={card.name}
+          close={rules.close}
+          discard={rules.discard}
+          inline
+        />
         {sheet ? <Button onClick={onClose}>{t("leads:card.close")}</Button> : null}
       </div>
       <ErrorNote message={reopenFailure} />
