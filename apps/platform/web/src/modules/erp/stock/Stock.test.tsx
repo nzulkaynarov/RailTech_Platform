@@ -268,6 +268,12 @@ describe("Склад · заказы партнёрам", () => {
     const submit = within(confirm).getByRole("button", { name: "Подтвердить" });
     // Ожидаемая дата заказа (без неё он не ушёл бы, СЦ-10) подставлена — партнёр подтвердил её или новую.
     expect(submit).toBeEnabled();
+    // Б-2: без даты «Подтвердить» неактивна и говорит почему
+    fillDate(within(confirm).getByLabelText("Подтверждённая дата поставки"), "");
+    await waitFor(() => {
+      expect(submit).toBeDisabled();
+    });
+    expect(submit).toHaveAccessibleDescription("Укажите подтверждённую дату поставки.");
     fillDate(within(confirm).getByLabelText("Подтверждённая дата поставки"), "2099-01-15");
     fireEvent.click(submit);
     expect(await screen.findByText("Заказ подтверждён")).toBeVisible();

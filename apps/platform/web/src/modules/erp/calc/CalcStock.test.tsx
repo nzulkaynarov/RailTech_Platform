@@ -122,6 +122,23 @@ describe("Расчёт · «Запросить цену у партнёра»", 
     expect(within(log).getByText("Ответ получен")).toBeVisible();
   });
 
+  it("ни одна строка не отмечена: «Отправить запрос» неактивна, причина названа (Б-2)", async () => {
+    await openCalc("supply@demo.example");
+    fireEvent.click(screen.getByRole("button", { name: "Запросить цену у партнёра" }));
+    const modal = await screen.findByRole("region", { name: /^Запросить цену у партнёра/ });
+    await pickCompany(
+      within(modal).getByRole("combobox", { name: "Партнёр" }),
+      "Сталь",
+      "ООО «Вымышленная Сталь»",
+    );
+    for (const box of within(modal).getAllByRole("checkbox")) {
+      if ((box as HTMLInputElement).checked) fireEvent.click(box);
+    }
+    const submit = within(modal).getByRole("button", { name: "Отправить запрос" });
+    expect(submit).toBeDisabled();
+    expect(submit).toHaveAccessibleDescription("Отметьте хотя бы одну строку.");
+  });
+
   it("ДК-5: под запросом — «Ссылка партнёра в Кабинете»; отзыв гасит её после одного подтверждения", async () => {
     await openCalc("supply@demo.example");
     fireEvent.click(screen.getByRole("button", { name: "Запросить цену у партнёра" }));
