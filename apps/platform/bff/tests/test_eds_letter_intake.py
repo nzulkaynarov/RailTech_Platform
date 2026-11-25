@@ -67,7 +67,7 @@ async def test_registrar_gets_suggestion_and_records_decision(
 
 
 async def test_received_at_is_forwarded_and_omitted_when_absent(web: Web, eds: EdsFake) -> None:
-    """СЦ-11: дата поступления идёт в EDS как есть; без неё поля в теле нет (EDS считает срок от дня регистрации)."""
+    """СЦ-11: дата поступления идёт в EDS как есть; без неё поля в теле нет."""
     eds.answer(
         "POST",
         "letter-intake",
