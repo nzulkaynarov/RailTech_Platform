@@ -78,10 +78,6 @@ test.describe("Лиды → «Создать заявку» → карточка
     // Б-7: номер, что дальше и «Открыть заявку»
     await expect(panel.getByText("RQ-2026-040")).toBeVisible();
     await expect(panel.getByText("Ждёт резолюции.")).toBeVisible();
-    await settledScreenshot(page, "request-done");
-    await page.setViewportSize({ width: 1512, height: 900 });
-    await settledScreenshot(page, "request-done");
-    await page.setViewportSize({ width: 1440, height: 900 });
     await panel.getByRole("link", { name: "Открыть заявку" }).click();
 
     // Карточка клиента: заявка ЗВ с шкалой и тем, что видит клиент — ровно одна
@@ -167,6 +163,7 @@ test(
     await expect(sheet.getByText("Заявка создана")).toBeVisible();
     await expect(sheet.getByText("Ждёт резолюции.")).toBeVisible();
     await settledScreenshot(page, "request-done");
+    await expectNoViolations(page, "заявка создана 390");
     await sheet.getByRole("link", { name: "Открыть заявку" }).click();
     const card = page.getByRole("dialog", { name: "Карточка контрагента" });
     await expect(card.getByRole("heading", { name: "ООО Демо-Логистик" })).toBeVisible();

@@ -140,10 +140,21 @@ function Created({
   onClose: () => void;
 }) {
   const { t } = useTranslation(["request", "clients"]);
-  const card = useGetCrmClient(done.client_id);
+  // Номер выдаёт учёт чуть позже ответа CRM: карточку клиента перечитываем раз в 2 с, не дольше 30 с и только пока
+  // передача идёт (номера нет, сбоя нет).
+  const startedAt = useRef(Date.now());
+  const card = useGetCrmClient(done.client_id, {
+    query: {
+      refetchInterval: (query) => {
+        const found = query.state.data?.requests.find((request) => request.deal === done.deal);
+        const settled = Boolean(found?.number) || found?.transfer === "failed";
+        return settled || Date.now() - startedAt.current > 30_000 ? false : 2000;
+      },
+    },
+  });
   const row = card.data?.requests.find((request) => request.deal === done.deal);
-  const waits =
-    done.transfer !== "failed" && (row?.step === "REQUEST" || row?.step === "RESOLUTION");
+  const transfer = row?.transfer ?? done.transfer;
+  const waits = transfer === "done" && Boolean(row?.number);
   return (
     <div className="pf-fp-stack" role="status">
       <h3 className="pf-fp-title">{t("request:done.title")}</h3>
@@ -152,14 +163,12 @@ function Created({
           <DocNumber number={row.number} />
         </p>
       ) : null}
-      {done.transfer === "failed" || !done.created || !row?.number ? (
-        <p className="pf-fp-sub">
-          {done.transfer === "failed"
-            ? t("request:done.failed")
-            : !done.created
-              ? t("request:done.repeated")
-              : t("request:done.text")}
-        </p>
+      {transfer === "failed" ? (
+        <p className="pf-fp-sub">{t("request:done.failed")}</p>
+      ) : !done.created ? (
+        <p className="pf-fp-sub">{t("request:done.repeated")}</p>
+      ) : !row?.number ? (
+        <p className="pf-fp-sub">{t("request:done.text")}</p>
       ) : null}
       {waits ? <p className="pf-fp-sub">{t("request:done.waits")}</p> : null}
       <div className="pf-crm-actions" data-sheet={mobile}>
