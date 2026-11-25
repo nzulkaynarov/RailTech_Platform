@@ -123,6 +123,8 @@ subscribers:
       - uz.railtech.identity.user.*.v1
       - uz.railtech.erp.request.created.v1
       - uz.railtech.erp.quote.ready_for_approval.v1
+      # ЛХ-2: заявка закрыта в ERP — открытый круг одобрения КП по ней снимается.
+      - uz.railtech.erp.deal.lost.v1
       # SIGN-4 (ADR-0024 п. 7): запрос на подпись коммерческого документа по реестру SigningAuthority.
       - uz.railtech.erp.signing.requested.v1
       # D2-5: договоры, счета и акты проектов — проекция реестра «Все документы» (без общих таблиц).

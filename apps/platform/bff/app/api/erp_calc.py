@@ -22,6 +22,9 @@ from app.feeds.numbers import deal_number
 from app.schemas_erp_calc import (
     CalcCatalogItem,
     CalcCatalogPage,
+    CalcCloseIn,
+    CalcCloseReason,
+    CalcCloseReasonList,
     CalcCopyIn,
     CalcCopyResult,
     CalcLinePatch,
@@ -33,9 +36,11 @@ from app.schemas_erp_calc import (
     CalcPrevious,
     CalcPreviousPage,
     CalcProposalLine,
+    CalcRequestCard,
     CalcRequestList,
     CalcSheet,
     CalcTermsPatch,
+    to_request_card,
     to_row,
     to_sheet,
     zones_of,
@@ -63,6 +68,8 @@ _FIELD_OF = {
     "CLIENT_PRICE_BELOW_COST": "client_price",
     "MARKUP_OUT_OF_RANGE": "client_price",
     "REASON_REQUIRED": "reason",
+    "REASON_UNKNOWN": "reason",
+    "COMMENT_REQUIRED": "comment",
     "SERVICE_COST_FROM_CREW": "purchase_price",
     "GOODS_HAVE_NO_CREW": "crew_rate",
     "NAME_REQUIRED": "name",
@@ -94,6 +101,10 @@ _MESSAGES = {
     "QUOTE_NOT_REJECTED_BY_CLIENT": (
         "Новая версия КП и отказ по заявке доступны, когда клиент отклонил КП и заявка в расчёте."
     ),
+    "REQUEST_NOT_CLOSABLE": (
+        "Заявку уже нельзя закрыть: она закрыта или стала проектом. Обновите экран."
+    ),
+    "REASON_NOT_ALLOWED_AFTER_QUOTE": "КП уже у клиента: выберите другую причину.",
     "AI_DISABLED": "ИИ-разбор выключен в настройках моделей. Добавьте строки вручную.",
     "REQUEST_TEXT_EMPTY": "В заявке нет текста для разбора. Вставьте текст в поле.",
 }
@@ -102,14 +113,20 @@ _MESSAGES = {
 class ErpCalc(ErpCompany):
     """Вызовы `/api/v1/calc/*` от имени сотрудника и поиск заявки по номеру ЗВ."""
 
-    async def deal_id(self, number: str) -> int:
+    async def deal_id(self, number: str, *, any_request: bool = False) -> int:
         """Заявка по номеру: лёгкий справочник ERP `GET /calc/deals/?number=` (id, номер, создана,
         стадия — без строк и виз). Номер уходит как набран, ERP сам находит сделку (год и порядковый
         номер, обозначение не важно): после принятия КП заявка — проект, и старая ссылка на номер
         заявки, и новая на номер проекта открывают одну сделку. BFF обозначение не разбирает."""
         wanted = number.strip()
         data = (
-            await self.data("GET", "calc/deals/", params={"number": wanted}) if wanted else None
+            await self.data(
+                "GET",
+                "calc/deals/",
+                params={"number": wanted, **({"any": 1} if any_request else {})},
+            )
+            if wanted
+            else None
         )  # an empty filter would list every deal: never ask ERP with it
         for deal in data.get("results", []) if isinstance(data, dict) else []:
             if isinstance(deal, dict) and deal.get("id") is not None:
@@ -287,7 +304,8 @@ async def download_request_file(
     authed: Reader, number: Number, file_id: Annotated[int, Path(ge=1, le=2**31 - 1)]
 ) -> StreamingResponse:
     """Файл заявки клиента (СЦ-10) потоком, всегда как вложение; права на файл — у ERP."""
-    return await stream_request_file(authed, await _erp(authed).deal_id(number), file_id)
+    deal_id = await _erp(authed).deal_id(number, any_request=True)  # и файл черновика без расчёта
+    return await stream_request_file(authed, deal_id, file_id)
 
 
 @router.post(
@@ -524,6 +542,52 @@ async def lose(authed: Builder, number: Number, body: Annotated[CalcLostIn, Body
             details={"reason": "reason_required", "fields": ["reason"]},
         )
     return await _sheet(authed, number, "POST", "lost/", {"reason": reason})
+
+
+@router.get(
+    "/calc-close-reasons",
+    response_model=CalcCloseReasonList,
+    operation_id="listCalcCloseReasons",
+)
+async def list_close_reasons(authed: Reader) -> CalcCloseReasonList:
+    """Причины «Закрыть заявку»: справочник ERP `request-close-reasons` как есть."""
+    data = await _erp(authed).call_calc("GET", "close-reasons/")
+    return CalcCloseReasonList(
+        items=[CalcCloseReason.model_validate(row) for row in data.get("results", [])]
+    )
+
+
+@router.get(
+    "/calc-request/{number}",
+    response_model=CalcRequestCard,
+    response_model_exclude_unset=True,
+    operation_id="getCalcRequestCard",
+)
+async def request_card(authed: Reader, number: Number) -> CalcRequestCard:
+    """Карточка заявки с заданием расчёта и без: текст, файлы и «Закрыть заявку» (ЛХ-2)."""
+    erp = _erp(authed)
+    deal_id = await erp.deal_id(number, any_request=True)
+    return to_request_card(await erp.call_calc("GET", f"{deal_id}/request/"))
+
+
+@router.post(
+    "/calc/{number}/close",
+    response_model=CalcRequestCard,
+    response_model_exclude_unset=True,
+    operation_id="closeCalcRequest",
+)
+async def close_request(
+    authed: Builder, number: Number, body: Annotated[CalcCloseIn, Body()]
+) -> CalcRequestCard:
+    """«Закрыть заявку» на любом шаге до проекта (ЛХ-2): причину, право и правила решает ERP."""
+    erp = _erp(authed)
+    deal_id = await erp.deal_id(number, any_request=True)
+    raw = await erp.call_calc(
+        "POST",
+        f"{deal_id}/close/",
+        json={"reason": body.reason.strip(), "comment": body.comment.strip()},
+    )
+    return to_request_card(raw)
 
 
 @router.post(

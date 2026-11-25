@@ -9,7 +9,7 @@ import type { ProjectContractActionInAction } from "./projectContractActionInAct
  * Действие по договору. `reason` обязательна для `reject`, `channel` и `counterparty_person` — для `client_agreed`: пустые BFF отклоняет (422).
  */
 export interface ProjectContractActionIn {
-  /** `sign_ours`, `request_deviation`, `decide_deviation` — договор по утверждённому шаблону (ДОК-10): наша подпись до отправки, заявка на отступление, решение держателя «Право» */
+  /** `sign_ours`, `request_deviation`, `decide_deviation` — договор по утверждённому шаблону (ДОК-10): наша подпись до отправки, заявка на отступление, решение держателя «Право»; `decline_renewal`, `renew`, `send_new_edition` — срок договора (ДС-1): отказ от продления, продление соглашением, новая редакция шаблона на подпись */
   action: ProjectContractActionInAction;
   /**
    * @maxLength 1000
@@ -40,4 +40,10 @@ export interface ProjectContractActionIn {
    * @nullable
    */
   approve?: boolean | null;
+  /**
+   * Только `renew`: номер дополнительного соглашения, если есть
+   * @maxLength 64
+   * @nullable
+   */
+  agreement_number?: string | null;
 }

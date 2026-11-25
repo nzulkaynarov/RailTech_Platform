@@ -8,12 +8,13 @@ import type { CalcSheet, CalcVisaGroup } from "../../../shared/api/generated/mod
 import { useGetCalcSheet } from "../../../shared/api/generated/platform-bff";
 import { useFormat } from "../../../shared/lib/useFormat";
 import { DefinitionList } from "../../../shared/ui/DefinitionList";
-import { EmptyState } from "../../../shared/ui/EmptyState";
 import { RequestFiles } from "./RequestFiles";
 import { QueryState } from "../../../shared/ui/FormParts";
 import { LinkButton } from "../../../shared/ui/LinkButton";
 import { StatusTag } from "../../../shared/ui/StatusTag";
 import { calcPath, calcRef, useStateLabels } from "./api";
+import { CloseRequestButton } from "./CloseRequest";
+import { RequestCard } from "./RequestCard";
 
 const GROUPS = ["stock", "supply", "engineer"] as const;
 /** Зона резолюции, исполнители которой визируют группу строк: склад и снабжение — товары, гл. инженер — услуги. */
@@ -66,9 +67,12 @@ export function TaskBody({ sheet, brief = false }: { sheet: CalcSheet; brief?: b
         <div className="pf-calc-task-brief">
           <h3 className="pf-calc-task-title">{sheet.number}</h3>
           <p className="pf-hint">{[sheet.client, sheet.title].filter(Boolean).join(" · ")}</p>
-          <LinkButton type="primary" to={calcPath(sheet.number)}>
-            {t("task.open")}
-          </LinkButton>
+          <div className="pf-calc-row">
+            <LinkButton type="primary" to={calcPath(sheet.number)}>
+              {t("task.open")}
+            </LinkButton>
+            <CloseRequestButton target={sheet} />
+          </div>
         </div>
       ) : null}
       <section aria-labelledby="pf-calc-task-resolution">
@@ -131,19 +135,12 @@ export function TaskBody({ sheet, brief = false }: { sheet: CalcSheet; brief?: b
 }
 
 function TaskPanel({ number, brief }: { number: string; brief: boolean }) {
-  const { t } = useTranslation("calc");
   const query = useGetCalcSheet(calcRef(number));
   const labels = useStateLabels();
   // Номер ЗВ ведёт сюда отовсюду (B-UIA-1): у заявки без резолюции задания ещё нет — говорим это, а не «не загрузился»
   if (query.error instanceof ApiError && query.error.status === 404) {
-    return (
-      <EmptyState
-        level={3}
-        compact
-        title={t("load.notFound.title")}
-        text={t("load.notFound.text")}
-      />
-    );
+    // Задания расчёта нет (черновик из передачи лида): карточка заявки с «Закрыть заявку» или «заявки нет вовсе»
+    return <RequestCard number={number} compact />;
   }
   return (
     <QueryState query={query} labels={labels} level={3} compact>

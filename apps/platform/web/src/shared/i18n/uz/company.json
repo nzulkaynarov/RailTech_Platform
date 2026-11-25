@@ -316,7 +316,35 @@
     "requireMxik": "Eʼlon qilişda MXIK majburiy",
     "requireMxikHint": "MXIK (IKPU) kodsiz kartani eʼlon qilib bölmaydi. Eʼlon qilinganlar qoladi; tekşiriş — keyingi eʼlonda.",
     "requireHs": "Olib kirilgan tovar uçun TIF TN majburiy",
-    "requireHsHint": "Çiqiş mamlakati Özbekiston emas yoki körsatilmagan — TIF TN kodisiz eʼlon qilib bölmaydi."
+    "requireHsHint": "Çiqiş mamlakati Özbekiston emas yoki körsatilmagan — TIF TN kodisiz eʼlon qilib bölmaydi.",
+    "contract_term_rule": "Şartnomaning odatdagi muddati",
+    "termRule": {
+      "calendar_year": "Imzolangan yilning 31 dekabrigaça",
+      "twelve_months": "Imzolangandan 12 oy",
+      "open": "Muddatsiz"
+    },
+    "contract_auto_renew": "Şartnoma özi uzayadi",
+    "contract_auto_renewHint": "Keyingi muddatga, agar kimdir öz vaqtida boş tortmasa. Çet ellik kontragent kelişuv bilan uzaytiriladi.",
+    "contract_notice_days": "Uzaytirişdan boş tortiş uçun necça kun",
+    "contract_next_year_from_day": "Dekabrning qaysi kunidan birinçi muddat keyingi yil oxirigaça",
+    "contract_remind_first_days": "Masʼulga birinçi eslatma, boş tortişning oxirgi kunigaça necça kun",
+    "contract_remind_last_days": "Ikkinçi eslatma, boş tortişning oxirgi kunigaça necça kun",
+    "contract_foreign_remind_days": "Çet ellik kontragent: kelişuv haqida eslatma, muddat tugaşigaça necça kun",
+    "contract_expired_action": "Şartnoma muddati tugagaç",
+    "contract_expired_actionHint": "Faqat yangi TTlarga taalluqli. Boşlangan bitimlar, tölovlar, aktlar va daʼvolar heç qaçon bloklanmaydi.",
+    "expiredAction": {
+      "block": "Şartnoma uzaytirilmaguça yangi TT yaratilmaydi",
+      "warn": "Faqat ogohlantiriş"
+    },
+    "contract_foreign_by_agreement": "Norezident kelişuv bilan uzaytiriladi",
+    "contract_foreign_by_agreementHint": "Kontragent mamlakati kompaniya mamlakatidan farq qiladi: özi uzayişi örniga eslatma va qöşimça kelişuv.",
+    "contract_gating_kinds": "Muddat tugagaç qaysi şartnomalar yangi bitimlarni çeklaydi",
+    "contract_gating_kindsHint": "Odatda heç qaysi: qaytgan mijoz yangi TT va yangi şartnoma oladi. Muddati yangi TTlarni töxtatadigan turlarni tanlang.",
+    "gatingKind": {
+      "partner": "Hamkorlik (ramka)",
+      "supply": "Yetkazib beriş",
+      "services": "Xizmatlar"
+    }
   },
   "charges": {
     "title": "TT xarajat moddalari",

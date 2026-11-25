@@ -34,7 +34,7 @@ import * as partner from './partnerMock';
  * `POST /me/telegram/test` — 202, чаще раза в минуту — 429 с `Retry-After`, без привязки — 409 `TELEGRAM_NOT_LINKED`.
  * Документ по ссылке из письма (ДК-1, ДК-2): токен `/d/<токен>` — `revoked…` → 410 `DOC_LINK_REVOKED`, `expired…` →
  * 410 `DOC_LINK_EXPIRED`, `superseded…` → 410 `DOC_LINK_SUPERSEDED`, `unknown…` или короче 16 знаков → 404; `viewer…` —
- * получатель без права действовать; `foreign…` — ссылка другой компании (сессия видит гостевой вид); `done…` — КП уже принято;
+ * получатель без права действовать; `foreign…` — ссылка другой компании (сессия видит гостевой вид); `done…` — КП уже принято; `closed…` — КП закрыто вместе с заявкой (ЛХ-2);
  * `toosoon…` — повтор кода раньше срока (429). Код: `000000` — неверный, `111111` — пять неверных подряд, иной — вход.
  * Чат кабинета (CHAT-1): лента компании `GET /messages[?after_id]`, `POST /messages` (повтор того же `client_message_id`
  * — прежнее сообщение, 200; текст `fail` — 503 для сценария «Не отправлено»), `POST /messages/read` — отметка не назад,
@@ -441,6 +441,7 @@ function docLinkState(token: string): string {
   if (decided) return decided;
   if (token.includes('paid')) return 'paid';
   if (token.includes('cancelled')) return 'cancelled';
+  if (token.includes('closed')) return 'closed';
   if (token.includes('done')) {
     const kind = docKind(token);
     return kind === 'price_request' ? 'answered' : kind === 'supplier_order' ? 'confirmed' : 'accepted';
@@ -1065,6 +1066,33 @@ export const handlers = [
         // D2-5: согласие клиента не подписывает договор: «Подписан» ставит скан у сотрудника, клиенту — «Вы согласовали, ждём подписания».
         contract.status = 'signed_by_client';
         contract.signed_by_client_at = new Date().toISOString();
+        return json(contract);
+      },
+      { action: true },
+    ),
+  ),
+  http.post<IdParams>(
+    `${API}/contracts/:id/decline-renewal`,
+    withSession<IdParams>(
+      ({ db, params }) => {
+        const contract = byId(db.contracts, params.id);
+        if (!contract) return error(404, 'NOT_FOUND');
+        if (!contract.term) return error(409, 'TERM_NOT_AVAILABLE');
+        if (contract.term.declined_by) return error(409, 'TERM_ALREADY_DECLINED');
+        contract.term = { ...contract.term, state: 'ends', declined_by: 'client', can_decline: false, can_restore: true };
+        return json(contract);
+      },
+      { action: true },
+    ),
+  ),
+  http.post<IdParams>(
+    `${API}/contracts/:id/restore-renewal`,
+    withSession<IdParams>(
+      ({ db, params }) => {
+        const contract = byId(db.contracts, params.id);
+        if (!contract) return error(404, 'NOT_FOUND');
+        if (contract.term?.declined_by !== 'client') return error(409, 'TERM_NOT_DECLINED');
+        contract.term = { ...contract.term, state: 'renews', declined_by: null, can_decline: true, can_restore: false };
         return json(contract);
       },
       { action: true },

@@ -10,6 +10,8 @@ import logging
 from decimal import Decimal, InvalidOperation
 from typing import Optional, Tuple
 
+from core.contract_term import ContractExpiredAction, ContractTermRule
+
 from ..models import Company, CompanySettings, CustomUser
 from .document_profile import is_company_owner
 
@@ -168,6 +170,42 @@ def update_company_settings(
                 if found is None:
                     return None, "BAD_CONTRACT_TEMPLATE"
                 setattr(settings_row, field, found)
+            changed.append(field)
+
+    # ДС-1: срок договора — правило, продление, дни, граница декабря, что делать после окончания.
+    for field, choices in (
+        ("contract_term_rule", ContractTermRule.values),
+        ("contract_expired_action", ContractExpiredAction.values),
+    ):
+        if field in data:
+            if data.get(field) not in choices:
+                return None, "BAD_CHOICE"
+            setattr(settings_row, field, data[field])
+            changed.append(field)
+    for flag in ("contract_auto_renew", "contract_foreign_by_agreement"):
+        if flag in data:
+            if not isinstance(data.get(flag), bool):
+                return None, "BAD_BOOLEAN"
+            setattr(settings_row, flag, data[flag])
+            changed.append(flag)
+    if "contract_gating_kinds" in data:
+        kinds = data.get("contract_gating_kinds")
+        if not isinstance(kinds, list) or any(k not in ("partner", "supply", "services") for k in kinds):
+            return None, "BAD_CHOICE"
+        settings_row.contract_gating_kinds = sorted(set(kinds))
+        changed.append("contract_gating_kinds")
+    for field, low, high in (
+        ("contract_notice_days", 0, 365),
+        ("contract_next_year_from_day", 1, 31),
+        ("contract_remind_first_days", 1, 365),
+        ("contract_remind_last_days", 1, 365),
+        ("contract_foreign_remind_days", 1, 365),
+    ):
+        if field in data:
+            value = data.get(field)
+            if isinstance(value, bool) or not isinstance(value, int) or not low <= value <= high:
+                return None, "BAD_NUMBER"
+            setattr(settings_row, field, value)
             changed.append(field)
 
     # Политики каталога (M1-ERP-07): видимость цен по умолчанию и порог публикации.

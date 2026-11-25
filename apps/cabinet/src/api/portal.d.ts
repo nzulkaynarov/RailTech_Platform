@@ -818,6 +818,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/contracts/{id}/decline-renewal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Отказаться от продления договора
+         * @description Договор доживёт до конца срока и закончится; начатые сделки, оплаты и претензии не затрагиваются. Можно до `term.last_notice_date`; позже — 409 `TERM_NOTICE_PASSED`, повтор — 409 `TERM_ALREADY_DECLINED`, у договора без автопродления отказывать не от чего — 409 `TERM_NOT_AVAILABLE`.
+         */
+        post: operations["declineContractRenewal"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/contracts/{id}/restore-renewal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Вернуть продление договора
+         * @description Снимает отказ клиента от продления в любой день до `term.last_notice_date`; позже — 409 `TERM_NOTICE_PASSED`, отказа нет или его сделала компания — 409 `TERM_NOT_DECLINED`.
+         */
+        post: operations["restoreContractRenewal"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/invoices": {
         parameters: {
             query?: never;
@@ -2790,18 +2830,19 @@ export interface components {
          *     банковских реквизитов, `bank_requisites_changed` — смену подтвердил сотрудник, `bank_requisites_change_rejected` —
          *     сотрудник отклонил смену (FX-4; группа `security`, отключить нельзя), `new_device_login` — контакт компании вошёл
          *     с нового устройства (ДВ-6; группа `security`, администраторам и основному контакту; `object.id` — событие журнала
-         *     безопасности, `params`: `name`, `device`, `ip`).
+         *     безопасности, `params`: `name`, `device`, `ip`), `contract_renewed` — срок договора продлён (ДС-1; `params`:
+         *     `number`, `until`, `count`, `note`), `contract_renewal_declined` — компания отказалась от продления (`number`, `until`).
          *     Незнакомый вид Cabinet показывает общим текстом.
          * @enum {string}
          */
-        NotificationKind: "quote_sent" | "invoice_issued" | "payment_overdue" | "act_issued" | "delivery_status_changed" | "delivery_eta_changed" | "manager_replied" | "partner_card_returned" | "partner_card_published" | "bank_requisites_changed" | "partner_order_sent" | "partner_rfq_sent" | "partner_goods_received" | "bank_requisites_change_requested" | "bank_requisites_change_rejected" | "new_device_login";
+        NotificationKind: "quote_sent" | "invoice_issued" | "payment_overdue" | "act_issued" | "delivery_status_changed" | "delivery_eta_changed" | "manager_replied" | "partner_card_returned" | "partner_card_published" | "bank_requisites_changed" | "partner_order_sent" | "partner_rfq_sent" | "partner_goods_received" | "bank_requisites_change_requested" | "bank_requisites_change_rejected" | "new_device_login" | "contract_renewed" | "contract_renewal_declined";
         /**
          * @description Группа событий — основа настройки «группа × канал» в профиле контакта (J3)
          * @enum {string}
          */
         NotificationGroup: "documents" | "money" | "deliveries" | "messages" | "partner_products" | "security";
         /** @enum {string} */
-        NotificationObjectType: "quote" | "invoice" | "act" | "delivery" | "chat" | "partner_product" | "partner_order" | "partner_rfq" | "bank_change" | "security_event";
+        NotificationObjectType: "quote" | "invoice" | "act" | "delivery" | "chat" | "partner_product" | "partner_order" | "partner_rfq" | "bank_change" | "security_event" | "contract";
         /**
          * @description Что произошло с объектом или чего ждут от контакта
          * @enum {string}
@@ -2935,8 +2976,11 @@ export interface components {
             lines?: components["schemas"]["RequestLineIn"][];
             attachments?: components["schemas"]["AttachmentRef"][];
         };
-        /** @enum {string} */
-        QuoteStatus: "sent" | "viewed" | "accepted" | "rejected" | "expired";
+        /**
+         * @description `closed` — КП закрыто вместе с заявкой (сотрудник закрыл заявку, ЛХ-2); клиенту это не отказ
+         * @enum {string}
+         */
+        QuoteStatus: "sent" | "viewed" | "accepted" | "rejected" | "expired" | "closed";
         QuoteListItem: {
             /** Format: int64 */
             id: number;
@@ -3009,7 +3053,7 @@ export interface components {
             /** Format: date */
             valid_until: string | null;
             /**
-             * @description Значения — `open`, `accepted`, `rejected`, `expired`, `paid`; у документов партнёра (ДК-5) — `answered` (ответ на запрос цены
+             * @description Значения — `open`, `accepted`, `rejected`, `expired`, `paid`, `closed` (КП закрыто вместе с заявкой — клиенту «Запрос закрыт», не отказ); у документов партнёра (ДК-5) — `answered` (ответ на запрос цены
              *     дан), `confirmed` (заказ подтверждён партнёром), `cancelled` (заказ отменён). Из фактов документа, а не из ссылки. `open` — ждёт ответа (у счёта — оплаты); `accepted` — принят (договор подписан
              *     клиентом, акт принят); `rejected` — возвращён с замечаниями; `paid` — счёт оплачен
              */
@@ -3163,6 +3207,32 @@ export interface components {
             signed_by_company_at?: string | null;
             /** Format: int64 */
             document_id?: number | null;
+            /** @description Срок подписанного договора (ДС-1); `null` — договор ещё не подписан или подписан до введения срока */
+            term?: components["schemas"]["ContractTerm"] | null;
+        };
+        /**
+         * @description Срок договора считается при подписании из правила компании и шаблона. `state`: `open` — без срока, `renews` —
+         *     продлится сам, `ends` — закончится (отказ одной из сторон или продление только соглашением), `expired` — срок
+         *     вышел. Отказаться от продления можно до `last_notice_date` (`can_decline`).
+         */
+        ContractTerm: {
+            /** @enum {string} */
+            state: "open" | "renews" | "ends" | "expired";
+            /** Format: date */
+            valid_from: string;
+            /** Format: date */
+            valid_until: string | null;
+            /** Format: date */
+            last_notice_date: string | null;
+            /**
+             * @description Кто отказался от продления; `null` — никто
+             * @enum {string|null}
+             */
+            declined_by: "company" | "client" | null;
+            /** @description Контакт может отказаться от продления сейчас (есть `can_act`, срок отказа не вышел) */
+            can_decline: boolean;
+            /** @description Отказ клиента можно снять (до `last_notice_date`, есть `can_act`) */
+            can_restore: boolean;
         };
         /** @enum {string} */
         InvoiceStatus: "issued" | "partially_paid" | "paid" | "overdue" | "cancelled";
@@ -5403,6 +5473,92 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             /** @description Договор уже подписан или отменён */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    declineContractRenewal: {
+        parameters: {
+            query?: never;
+            header: {
+                /**
+                 * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
+                 *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
+                 *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
+                 */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Отказ записан */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Contract"];
+                };
+            };
+            400: components["responses"]["IdempotencyKeyRequired"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Срок отказа вышел, отказ уже записан или продления нет */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    restoreContractRenewal: {
+        parameters: {
+            query?: never;
+            header: {
+                /**
+                 * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
+                 *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
+                 *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
+                 */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Отказ снят */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Contract"];
+                };
+            };
+            400: components["responses"]["IdempotencyKeyRequired"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Срок отказа вышел или снимать нечего */
             409: {
                 headers: {
                     [name: string]: unknown;

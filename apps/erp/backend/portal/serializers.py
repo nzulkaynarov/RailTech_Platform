@@ -4,6 +4,7 @@ import re
 from decimal import Decimal
 from typing import Optional
 
+from django.utils import timezone
 from drf_spectacular.utils import extend_schema_field
 from parties.models import Company, CompanyRelationship, Contact, RelationshipStatus
 from portal import projections
@@ -656,6 +657,37 @@ class ContractSerializer(DealLinkedSerializer):
     signed_by_client_at = serializers.DateTimeField(source="client_signed_at", read_only=True, allow_null=True)
     signed_by_company_at = serializers.DateTimeField(source="manager_signed_at", read_only=True, allow_null=True)
     document_id = serializers.SerializerMethodField()
+    term = serializers.SerializerMethodField()
+
+    def get_term(self, contract) -> Optional[dict]:
+        """ДС-1: срок подписанного договора без внутренних полей (правило, шаблон, счётчики продлений)."""
+        from crm.services import contract_term
+
+        card = contract_term.term_card(contract)
+        if card is None:
+            return None
+        today = timezone.localdate()
+        can_decline = (
+            card["renewal"] == "auto"
+            and card["declined_by"] is None
+            and card["last_notice_date"] is not None
+            and today <= card["last_notice_date"]
+            and self.context.get("can_act", True)
+        )
+        return {
+            "state": card["state"],
+            "valid_from": card["valid_from"].isoformat(),
+            "valid_until": card["valid_until"].isoformat() if card["valid_until"] else None,
+            "last_notice_date": card["last_notice_date"].isoformat() if card["last_notice_date"] else None,
+            "declined_by": card["declined_by"],
+            "can_decline": bool(can_decline),
+            "can_restore": bool(
+                card["declined_by"] == "client"
+                and card["last_notice_date"] is not None
+                and today <= card["last_notice_date"]
+                and self.context.get("can_act", True)
+            ),
+        }
 
     def get_status(self, contract) -> str:
         return projections.contract_status(contract)

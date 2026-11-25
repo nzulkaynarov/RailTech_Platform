@@ -29,6 +29,7 @@ import { reasonText } from "./errors";
 import { FileLinks } from "./FileLinks";
 import { NoteField, ReasonForm, ScanForm } from "./forms";
 import { ContractTemplateBlock } from "./ContractTemplateBlock";
+import { ContractTermBlock } from "./ContractTermBlock";
 import { contractStateKey } from "./model";
 import { SigningButton } from "./SigningButton";
 import { useApplyCard } from "./useProjectMutations";
@@ -170,6 +171,7 @@ function ContractBody({
       counterparty_person?: string;
       text?: string;
       approve?: boolean;
+      agreement_number?: string;
     } = {},
   ) => {
     setError(null);
@@ -325,6 +327,9 @@ function ContractBody({
           pending={pending}
           send={send}
         />
+      ) : null}
+      {contract.term ? (
+        <ContractTermBlock term={contract.term} busy={busy} pending={pending} send={send} />
       ) : null}
       {contract.send_blocker && !contract.sent_to_client ? (
         <SendBlocker blocker={contract.send_blocker} />

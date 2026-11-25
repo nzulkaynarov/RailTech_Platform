@@ -26,6 +26,7 @@ from django.utils import timezone
 from documents.models.documents import ContractSubject, CounterpartyKind, DocumentTemplate, TemplateApproval
 
 from accounts.models import CustomUser
+from core.contract_term import ContractExpiredAction, ContractTermRule
 
 from ..models import ActivityLog
 
@@ -72,6 +73,17 @@ def contract_rules(company) -> dict:
         "deviations_allowed": True if row is None else row.contract_deviations_allowed,
         "default_client": None if row is None else row.default_client_contract_template_id,
         "default_partner": None if row is None else row.default_partner_contract_template_id,
+        # ДС-1: срок договора — правила компании; шаблон переопределяет часть (`contract_term.term_rules`)
+        "term_rule": ContractTermRule.CALENDAR_YEAR if row is None else row.contract_term_rule,
+        "auto_renew": True if row is None else row.contract_auto_renew,
+        "notice_days": 30 if row is None else row.contract_notice_days,
+        "next_year_from_day": 1 if row is None else row.contract_next_year_from_day,
+        "remind_first_days": 30 if row is None else row.contract_remind_first_days,
+        "remind_last_days": 7 if row is None else row.contract_remind_last_days,
+        "foreign_remind_days": 45 if row is None else row.contract_foreign_remind_days,
+        "expired_action": ContractExpiredAction.BLOCK if row is None else row.contract_expired_action,
+        "foreign_by_agreement": True if row is None else row.contract_foreign_by_agreement,
+        "gating_kinds": [] if row is None else list(row.contract_gating_kinds or []),
     }
 
 
@@ -177,6 +189,12 @@ def new_edition(template, user) -> Tuple[Optional[DocumentTemplate], Optional[st
         previous_edition=template,
         counterparty_kind=template.counterparty_kind,
         subject=template.subject,
+        term_rule=template.term_rule,
+        renewal_mode=template.renewal_mode,
+        notice_days=template.notice_days,
+        confidentiality_years=template.confidentiality_years,
+        trade_secret_indefinite=template.trade_secret_indefinite,
+        renewal_notice=dict(template.renewal_notice or {}),
     )
     _journal(copy, user, "contract_template.new_edition", "Новая редакция шаблона договора")
     return copy, None

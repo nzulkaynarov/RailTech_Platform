@@ -46,6 +46,17 @@ const GROUPS: Record<QuoteGroup, readonly (keyof QuoteDefaults)[]> = {
     "contract_four_eyes",
     "default_client_contract_template",
     "default_partner_contract_template",
+    // ДС-1: срок договора — правило, продление, напоминания и что делать после окончания
+    "contract_term_rule",
+    "contract_auto_renew",
+    "contract_notice_days",
+    "contract_next_year_from_day",
+    "contract_remind_first_days",
+    "contract_remind_last_days",
+    "contract_foreign_remind_days",
+    "contract_expired_action",
+    "contract_foreign_by_agreement",
+    "contract_gating_kinds",
   ],
   catalog: [
     "catalog_price_visibility",
@@ -274,6 +285,84 @@ function QuoteForm({ defaults, group }: { defaults: QuoteDefaults; group: QuoteG
               allowClear
               loading={contractTemplates.isPending}
               options={templateOptions("partner")}
+            />
+          </Form.Item>
+        ) : null}
+        {shows("contract_term_rule") ? (
+          <Form.Item name="contract_term_rule" label={t("quote.contract_term_rule")}>
+            <Select
+              options={(["calendar_year", "twelve_months", "open"] as const).map((value) => ({
+                value,
+                label: t(`quote.termRule.${value}`),
+              }))}
+            />
+          </Form.Item>
+        ) : null}
+        {shows("contract_auto_renew") ? (
+          <Form.Item
+            name="contract_auto_renew"
+            label={t("quote.contract_auto_renew")}
+            extra={t("quote.contract_auto_renewHint")}
+            valuePropName="checked"
+            className="pf-co-wide"
+          >
+            <Switch />
+          </Form.Item>
+        ) : null}
+        {(
+          [
+            ["contract_notice_days", 0, 365],
+            ["contract_next_year_from_day", 1, 31],
+            ["contract_remind_first_days", 1, 365],
+            ["contract_remind_last_days", 1, 365],
+            ["contract_foreign_remind_days", 1, 365],
+          ] as const
+        ).map(([name, min, max]) =>
+          shows(name) ? (
+            <Form.Item key={name} name={name} label={t(`quote.${name}`)}>
+              <InputNumber min={min} max={max} precision={0} {...NUMBER} />
+            </Form.Item>
+          ) : null,
+        )}
+        {shows("contract_foreign_by_agreement") ? (
+          <Form.Item
+            name="contract_foreign_by_agreement"
+            label={t("quote.contract_foreign_by_agreement")}
+            extra={t("quote.contract_foreign_by_agreementHint")}
+            valuePropName="checked"
+            className="pf-co-wide"
+          >
+            <Switch />
+          </Form.Item>
+        ) : null}
+        {shows("contract_gating_kinds") ? (
+          <Form.Item
+            name="contract_gating_kinds"
+            label={t("quote.contract_gating_kinds")}
+            extra={t("quote.contract_gating_kindsHint")}
+            className="pf-co-wide"
+          >
+            <Select
+              mode="multiple"
+              options={(["partner", "supply", "services"] as const).map((value) => ({
+                value,
+                label: t(`quote.gatingKind.${value}`),
+              }))}
+            />
+          </Form.Item>
+        ) : null}
+        {shows("contract_expired_action") ? (
+          <Form.Item
+            name="contract_expired_action"
+            label={t("quote.contract_expired_action")}
+            extra={t("quote.contract_expired_actionHint")}
+            className="pf-co-wide"
+          >
+            <Select
+              options={(["block", "warn"] as const).map((value) => ({
+                value,
+                label: t(`quote.expiredAction.${value}`),
+              }))}
             />
           </Form.Item>
         ) : null}

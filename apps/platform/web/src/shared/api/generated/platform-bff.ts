@@ -57,6 +57,8 @@ import type {
   BusRetryDeadIn,
   BusRetryResult,
   CalcCatalogPage,
+  CalcCloseIn,
+  CalcCloseReasonList,
   CalcConflictResponse,
   CalcCopyIn,
   CalcCopyResult,
@@ -68,6 +70,7 @@ import type {
   CalcParseJob,
   CalcParseResult,
   CalcPreviousPage,
+  CalcRequestCard,
   CalcRequestList,
   CalcSheet,
   CalcTermsPatch,
@@ -51457,6 +51460,405 @@ export const useLoseCalcRequest = <
   TContext
 > => {
   return useMutation(getLoseCalcRequestMutationOptions(options), queryClient);
+};
+
+export const getListCalcCloseReasonsUrl = () => {
+  return `/api/v1/erp/calc-close-reasons`;
+};
+
+/**
+ * ERP `GET /calc/close-reasons/`: действующие причины из справочника `request-close-reasons` (данные, правятся в «Настройки · Справочники») с правилами — нужен ли комментарий и допустима ли причина, когда КП уже у клиента. Раздел `erp.calc` — чтение.
+ * @summary Расчёт · Причины «Закрыть заявку» (справочник)
+ */
+export const listCalcCloseReasons = async (
+  options?: Parameters<typeof http>[1],
+): Promise<CalcCloseReasonList> => {
+  return http<CalcCloseReasonList>(getListCalcCloseReasonsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListCalcCloseReasonsQueryKey = () => {
+  return [`/api/v1/erp/calc-close-reasons`] as const;
+};
+
+export const getListCalcCloseReasonsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listCalcCloseReasons>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listCalcCloseReasons>>, TError, TData>>;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListCalcCloseReasonsQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listCalcCloseReasons>>> = ({ signal }) =>
+    listCalcCloseReasons({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listCalcCloseReasons>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListCalcCloseReasonsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listCalcCloseReasons>>
+>;
+export type ListCalcCloseReasonsQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse
+>;
+
+export function useListCalcCloseReasons<
+  TData = Awaited<ReturnType<typeof listCalcCloseReasons>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listCalcCloseReasons>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listCalcCloseReasons>>,
+          TError,
+          Awaited<ReturnType<typeof listCalcCloseReasons>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListCalcCloseReasons<
+  TData = Awaited<ReturnType<typeof listCalcCloseReasons>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listCalcCloseReasons>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listCalcCloseReasons>>,
+          TError,
+          Awaited<ReturnType<typeof listCalcCloseReasons>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListCalcCloseReasons<
+  TData = Awaited<ReturnType<typeof listCalcCloseReasons>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listCalcCloseReasons>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Расчёт · Причины «Закрыть заявку» (справочник)
+ */
+
+export function useListCalcCloseReasons<
+  TData = Awaited<ReturnType<typeof listCalcCloseReasons>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listCalcCloseReasons>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListCalcCloseReasonsQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getGetCalcRequestCardUrl = (number: string) => {
+  return `/api/v1/erp/calc-request/${number}`;
+};
+
+/**
+ * ERP `GET /calc/{deal_id}/request/` (ЛХ-2). Заявка ищется по номеру ЗВ среди всех заявок, не только с заданием расчёта: черновик из передачи лида открывается карточкой (номер, клиент, текст и файлы заявки, `close`). Раздел `erp.calc` — чтение. Нет такой заявки — 404.
+ * @summary Расчёт · Карточка заявки (с заданием расчёта и без) для «Закрыть заявку»
+ */
+export const getCalcRequestCard = async (
+  number: string,
+  options?: Parameters<typeof http>[1],
+): Promise<CalcRequestCard> => {
+  return http<CalcRequestCard>(getGetCalcRequestCardUrl(number), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetCalcRequestCardQueryKey = (number: string) => {
+  return [`/api/v1/erp/calc-request/${number}`] as const;
+};
+
+export const getGetCalcRequestCardQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCalcRequestCard>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  number: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getCalcRequestCard>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetCalcRequestCardQueryKey(number);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getCalcRequestCard>>> = ({ signal }) =>
+    getCalcRequestCard(number, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: number !== null && number !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof getCalcRequestCard>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type GetCalcRequestCardQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getCalcRequestCard>>
+>;
+export type GetCalcRequestCardQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+
+export function useGetCalcRequestCard<
+  TData = Awaited<ReturnType<typeof getCalcRequestCard>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  number: string,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getCalcRequestCard>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getCalcRequestCard>>,
+          TError,
+          Awaited<ReturnType<typeof getCalcRequestCard>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetCalcRequestCard<
+  TData = Awaited<ReturnType<typeof getCalcRequestCard>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  number: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getCalcRequestCard>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getCalcRequestCard>>,
+          TError,
+          Awaited<ReturnType<typeof getCalcRequestCard>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetCalcRequestCard<
+  TData = Awaited<ReturnType<typeof getCalcRequestCard>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  number: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getCalcRequestCard>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Расчёт · Карточка заявки (с заданием расчёта и без) для «Закрыть заявку»
+ */
+
+export function useGetCalcRequestCard<
+  TData = Awaited<ReturnType<typeof getCalcRequestCard>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  number: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getCalcRequestCard>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetCalcRequestCardQueryOptions(number, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getCloseCalcRequestUrl = (number: string) => {
+  return `/api/v1/erp/calc/${number}/close`;
+};
+
+/**
+ * ERP `POST /calc/{deal_id}/close/` (ЛХ-2). Причина — код из `GET /erp/calc-close-reasons`, комментарий обязателен у причины с `requires_comment`. Заявка — стадия «Отказ» (CLOSED_LOST), событие `deal.lost` с причиной, резервы снимаются, из очередей «Заявки в расчёте» заявка уходит. «Оформлена по ошибке» и «Тест» без отправленных клиенту документов скрывают заявку из списков по умолчанию (записи и журнал остаются, удаления нет). КП уже у клиента — только причины, допустимые после отправки (иначе 409 `reason_not_allowed_after_quote`); отправленное КП закрывается. Право — ответственный заявки или держатель зоны продаж (`deal.manage`), иначе 403. Проект (после принятия КП) и уже закрытая заявка — 409 `request_not_closable`. Раздел `erp.calc` — полный.
+ * @summary Расчёт · «Закрыть заявку» на любом шаге до проекта
+ */
+export const closeCalcRequest = async (
+  number: string,
+  calcCloseIn: CalcCloseIn,
+  options?: Parameters<typeof http>[1],
+): Promise<CalcRequestCard> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<CalcRequestCard>(getCloseCalcRequestUrl(number), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(calcCloseIn),
+  });
+};
+
+export const getCloseCalcRequestMutationKey = () => ["closeCalcRequest"] as const;
+
+export const getCloseCalcRequestMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | CalcConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof closeCalcRequest>>,
+    TError,
+    CloseCalcRequestMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof closeCalcRequest>>,
+  TError,
+  CloseCalcRequestMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCloseCalcRequestMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof closeCalcRequest>>,
+    CloseCalcRequestMutationVariables
+  > = (props) => {
+    const { number, data } = props ?? {};
+
+    return closeCalcRequest(number, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CloseCalcRequestMutationResult = NonNullable<
+  Awaited<ReturnType<typeof closeCalcRequest>>
+>;
+export type CloseCalcRequestMutationBody = CalcCloseIn;
+export type CloseCalcRequestMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | CalcConflictResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type CloseCalcRequestMutationVariables = { number: string; data: CalcCloseIn };
+
+/**
+ * @summary Расчёт · «Закрыть заявку» на любом шаге до проекта
+ */
+export const useCloseCalcRequest = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | CalcConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof closeCalcRequest>>,
+      TError,
+      CloseCalcRequestMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof closeCalcRequest>>,
+  TError,
+  CloseCalcRequestMutationVariables,
+  TContext
+> => {
+  return useMutation(getCloseCalcRequestMutationOptions(options), queryClient);
 };
 
 export const getParseCalcTextUrl = (number: string) => {

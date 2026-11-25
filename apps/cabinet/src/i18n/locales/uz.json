@@ -126,7 +126,8 @@
       "viewed": "Körilgan",
       "accepted": "Qabul qilingan",
       "rejected": "Rad etilgan",
-      "expired": "Muddati tugagan"
+      "expired": "Muddati tugagan",
+      "closed": "Sörov yopildi"
     },
     "contract": {
       "sent": "Kelişişingiz kutilmoqda",
@@ -639,7 +640,24 @@
       "signText": "Kompaniya nomidan şartnoma matni bilan rozi ekaningizni tasdiqlaysiz. Şartnomani imzolaşga qöyamiz va imzolanganda xabar beramiz.",
       "signConfirm": "Şartnomani kelişiş",
       "signedClient": "{{number}} şartnomasi kelişildi. U imzolaşga qöyiladi.",
-      "signedBoth": "{{number}} şartnomasi ikki tomon tomonidan imzolandi."
+      "signedBoth": "{{number}} şartnomasi ikki tomon tomonidan imzolandi.",
+      "term": {
+        "none": "—",
+        "until": "{{date}}gaça",
+        "open": "muddatsiz",
+        "state": {
+          "open": "muddatsiz",
+          "renews": "özi uzayadi",
+          "ends": "muddatida tugaydi",
+          "expired": "muddat tugadi"
+        },
+        "decline": "Uzaytirişdan boş tortiş",
+        "declineTitle": "{{number}} şartnomasini uzaytirişdan boş tortiş",
+        "declineText": "Şartnoma {{until}}gaça amal qiladi va undan keyin tugaydi. Boşlangan yetkazib beriş, tölov va daʼvolar tegilmaydi. Boş tortiş {{notice}}gaça mümkin.",
+        "declined": "Siz {{number}} şartnomasini uzaytirişdan boş tortdingiz.",
+        "restore": "Uzaytirişni qaytariş",
+        "restored": "{{number}} şartnomasi uzaytirişi qaytarildi."
+      }
     },
     "invoices": {
       "title": "Hisob-fakturalar",
@@ -1375,6 +1393,10 @@
     "QUOTE_FINALIZED": "Taklif allaqaçon qabul qilingan yoki rad etilgan — sahifani yangilang.",
     "ACT_FINALIZED": "Dalolatnoma allaqaçon qabul qilingan yoki qaytarilgan — sahifani yangilang.",
     "CONTRACT_FINALIZED": "Şartnoma allaqaçon kelişilgan, imzolangan yoki bekor qilingan — sahifani yangilang.",
+    "TERM_NOTICE_PASSED": "Uzaytirişdan boş tortiş muddati ötdi.",
+    "TERM_ALREADY_DECLINED": "Uzaytirişdan allaqaçon boş tortilgan.",
+    "TERM_NOT_AVAILABLE": "Bu şartnoma özi uzaymaydi.",
+    "TERM_NOT_DECLINED": "Uzaytirişdan boş tortiş yöq yoki uni boşqa tomon qilgan.",
     "QUOTE_CODE_INVALID": "Kod notöğri yoki söralmagan. Xabardagi kodni tekşiring yoki yangisini sörang.",
     "QUOTE_EXPIRED": "Taklifning amal qiliş muddati tugagan — uni endi qabul qilib bölmaydi. Menejerdan taklifni yangilaşni sörang.",
     "REASON_REQUIRED": "Sababini körsating.",
@@ -1798,7 +1820,9 @@
       "bank_requisites_change_requested": "{{actor}} kompaniya bank rekvizitlarini özgartirişni söradi",
       "bank_requisites_changed": "Kompaniya bank rekvizitlari özgartirildi",
       "bank_requisites_change_rejected": "Bank rekvizitlarini özgartiriş sörovi rad etildi: {{reason}}",
-      "new_device_login": "{{name}} kabinetga yangi qurilmadan kirdi"
+      "new_device_login": "{{name}} kabinetga yangi qurilmadan kirdi",
+      "contract_renewed": "{{number}} şartnomasi {{until}}gaça uzaytirildi",
+      "contract_renewal_declined": "Biz {{number}} şartnomasini uzaytirişdan boş tortdik: u {{until}}da tugaydi"
     }
   },
   "verify": {
@@ -1954,7 +1978,8 @@
       "paid": "Hisob tölandi.",
       "answered": "Javob yuborildi. Rahmat!",
       "confirmed": "Siz buyurtmani tasdiqladingiz.",
-      "cancelled": "Buyurtma tomonimizdan bekor qilindi."
+      "cancelled": "Buyurtma tomonimizdan bekor qilindi.",
+      "closed": "Sörov yopildi. Masala hali dolzarb bölsa, bizga yozing."
     },
     "reason": {
       "no_right": "Sizda qaror qabul qiliş huquqi yöq — kompaniyangiz administratoriga murojaat qiling.",

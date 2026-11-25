@@ -25,6 +25,7 @@ import {
   sendBlockerOf,
   stepOf,
   templateOf,
+  termOf,
   toCard,
   toRow,
   writeProject,
@@ -125,7 +126,13 @@ function logged(
 const TRANSITIONS: Record<
   Exclude<
     ProjectContractActionIn["action"],
-    "sign_ours" | "request_deviation" | "decide_deviation"
+    | "sign_ours"
+    | "request_deviation"
+    | "decide_deviation"
+    | "decline_renewal"
+    | "restore_renewal"
+    | "renew"
+    | "send_new_edition"
   >,
   { from: string[]; to: string; code: string; text: string }
 > = {
@@ -160,6 +167,43 @@ const TRANSITIONS: Record<
     text: "Договор выставлен в ЭДО",
   },
 };
+
+/** ДС-1: отказ от продления и продление соглашением — по факту подписанного договора. */
+function termAction(
+  p: ProjectState,
+  action: "decline_renewal" | "restore_renewal" | "renew",
+): Response {
+  const c = p.contract;
+  if (!c || termOf(c, true) === null) return conflict("term_not_set", "У договора ещё нет срока.");
+  const contract: typeof c =
+    action === "decline_renewal"
+      ? { ...c, term_declined_by: "company" }
+      : action === "restore_renewal"
+        ? { ...c, term_declined_by: undefined }
+        : {
+            ...c,
+            term_declined_by: undefined,
+            term_until: `${String(Number((c.signed_at ?? "").slice(0, 4)) + 1)}-12-31`,
+          };
+  const next = logged(
+    { ...p, contract },
+    action === "decline_renewal"
+      ? "contract.renewal_declined"
+      : action === "restore_renewal"
+        ? "contract.renewal_restored"
+        : "contract.term_renewed_by_agreement",
+    "contract",
+    c.number,
+    action === "decline_renewal"
+      ? "Отказ от продления договора"
+      : action === "restore_renewal"
+        ? "Отказ от продления снят"
+        : "Договор продлён по соглашению",
+    "",
+  );
+  writeProject(next);
+  return HttpResponse.json(toCard(next, true, true, false));
+}
 
 /** Наша подпись, заявка на отступление и решение «Право»; после подписи без помех договор уходит в Кабинет сам. */
 function templateAction(
@@ -454,6 +498,16 @@ export const edsProjectsHandlers = [
       body.action === "decide_deviation"
     ) {
       return templateAction(p, body, ok);
+    }
+    if (
+      body.action === "decline_renewal" ||
+      body.action === "restore_renewal" ||
+      body.action === "renew"
+    ) {
+      return termAction(p, body.action);
+    }
+    if (body.action === "send_new_edition") {
+      return conflict("term_no_new_edition", "Новой утверждённой редакции шаблона нет.");
     }
     const rule = TRANSITIONS[body.action];
     // Одна проверка ERP (`contract_flow.send_blocker`): правила шаблона (ДОК-10) отвечают своим кодом, визы (Х-1) — 409

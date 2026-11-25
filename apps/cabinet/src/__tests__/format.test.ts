@@ -222,12 +222,18 @@ describe('просрочка счёта вычисляется из due_date', (
 });
 
 describe('КП: срок действия и код акцепта', () => {
+  it('КП, закрытое вместе с заявкой, клиенту «Заявка закрыта», а не «Отклонено»', () => {
+    expect(i18n.t('status.quote.closed', { lng: 'ru' })).toBe('Заявка закрыта');
+    expect(i18n.t('status.quote.closed', { lng: 'ru' })).not.toBe(i18n.t('status.quote.rejected', { lng: 'ru' }));
+  });
+
   it.each([
     [{ status: 'sent', valid_until: '2026-10-25' }, false, true],
     [{ status: 'viewed', valid_until: '2026-10-14' }, false, true],
     [{ status: 'sent', valid_until: '2026-10-13' }, true, false],
     [{ status: 'expired', valid_until: '2026-10-25' }, true, false],
     [{ status: 'accepted', valid_until: '2026-10-01' }, false, false],
+    [{ status: 'closed', valid_until: '2026-10-25' }, false, false],
     [{ status: 'sent', valid_until: null }, false, true],
   ] as const)('%j → истекло %s, ждёт решения %s', (quote, expired, awaiting) => {
     expect(quoteExpired(quote, NOW)).toBe(expired);

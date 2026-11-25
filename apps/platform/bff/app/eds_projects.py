@@ -60,6 +60,16 @@ _ERP_REASONS: dict[str, str] = {
     "DEVIATION_DECISION_FORBIDDEN": "Решает держатель «Право».",
     "CONTRACT_TEMPLATE_UNFILLED": "В договоре остались незаполненные места шаблона.",
     "CONTRACT_TEMPLATE_NOT_OFFERED": "Этот шаблон не утверждён для такого контрагента.",
+    # ДС-1: срок договора
+    "TERM_NOT_SET": "У договора ещё нет срока: он появляется при подписании.",
+    "TERM_ALREADY_DECLINED": "От продления уже отказались.",
+    "TERM_NOT_AUTO_RENEWING": "Договор не продлевается сам: отказываться не от чего.",
+    "TERM_NOTICE_PASSED": "Срок отказа от продления вышел: договор продлится.",
+    "TERM_NOT_DECLINED": "Отказа от продления нет или его сделала другая сторона.",
+    "TERM_ALREADY_RENEWED": "Срок уже продлён: повторно продлить можно ближе к концу.",
+    "TERM_NO_NEW_EDITION": "Новой утверждённой редакции шаблона нет.",
+    "TERM_NEW_EDITION_ALREADY_SENT": "Новая редакция уже отправлена на подпись.",
+    "COUNTERPARTY_CONTRACT_EXPIRED": "Срок договора вышел: продлите его, затем готовьте КП.",
     # Х-1: до виз договор клиенту не уходит; слова с названием виз ERP присылает в `reason`.
     "CONTRACT_VISAS_REQUIRED": "Договор нельзя отправить клиенту: сначала нужны визы.",
     # A1, A2 волны 18a: решение клиента по КП и согласие с договором записывает сотрудник.
@@ -291,6 +301,7 @@ class ErpProjects:
                 ("channel", body.channel),
                 ("counterparty_person", body.counterparty_person),
                 ("text", body.text),
+                ("agreement_number", body.agreement_number),
             )
             if v and v.strip()
         }

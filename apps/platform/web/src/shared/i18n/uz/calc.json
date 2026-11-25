@@ -237,7 +237,7 @@
       "no_lines": "Kamida bitta qator qöşing.",
       "not_started": "Avval hisob-kitobni boşlang.",
       "not_draft": "Hisob-kitob allaqaçon direktorga topşirilgan.",
-      "rejected_client": "Mijoz TTni rad etdi — yuqorida tanlang: TTning yangi versiyasi yoki arizadan voz keçiş."
+      "rejected_client": "Mijoz TTni rad etdi — yuqorida tanlang: TTning yangi versiyasi yoki «Arizani yopiş»."
     },
     "missingGroups": "Viza kutmoqda: {{groups}}.",
     "done": "TK qoralamasi direktorda",
@@ -284,7 +284,11 @@
     "deal_not_in_calculation": "Ariza yopilgan yoki hisob-kitobdan keyingi bosqiçda.",
     "quote_not_rejected_by_client": "Yangi versiya va voz keçiş mijoz TTni rad etgandan keyin mavjud.",
     "reason_required": "Sababni kiriting.",
-    "amount_too_large": "Kurs böyiça qator summasi juda katta. Xarid valyutasini tekşiring: sömdagi summa boşqa valyutadagi qatorda turibdi."
+    "amount_too_large": "Kurs böyiça qator summasi juda katta. Xarid valyutasini tekşiring: sömdagi summa boşqa valyutadagi qatorda turibdi.",
+    "reason_unknown": "Röyxatdan sababni tanlang.",
+    "comment_required": "Izoh kiriting.",
+    "request_not_closable": "Arizani endi yopib bölmaydi: u yopilgan yoki loyihaga aylangan.",
+    "reason_not_allowed_after_quote": "TT mijozda: boşqa sabab tanlang."
   },
   "load": {
     "retry": "Qayta uriniş",
@@ -312,19 +316,9 @@
     "choose": "Ariza hisob-kitobga qaytdi. Keyingi qadamni tanlang: qayta hisoblab, mijozga TTning yangi versiyasini yuboriş yoki arizani rad bilan yopiş.",
     "closed": "Ariza rad bilan yopildi. Uning zaxirasi bekor qilindi.",
     "noRights": "Ruxsat yetarli emas.",
-    "cancel": "Bekor qiliş",
     "newVersion": {
       "button": "TTning yangi versiyasi",
       "done": "Hisob-kitob qayta oçildi: TT qoralamasi, versiya {{version}}"
-    },
-    "lost": {
-      "button": "Arizadan voz keçiş",
-      "title": "{{number}} arizadan voz keçiş",
-      "reason": "Voz keçiş sababi",
-      "hint": "Majburiy. Ariza jurnaliga tuşadi.",
-      "submit": "Arizani rad bilan yopiş",
-      "done": "Ariza rad bilan yopildi, zaxira bekor qilindi",
-      "needReason": "Sababni yozing — usiz arizani yopib bölmaydi."
     }
   },
   "terms": {
@@ -339,5 +333,25 @@
     "days": "{{count}} kun",
     "save": "Saqlaş",
     "validUntilPast": "Sana ötgan kun bölişi mumkin emas."
+  },
+  "close": {
+    "button": "Arizani yopiş",
+    "title": "{{number}} arizasini yopiş",
+    "text": "Ariza navbatlardan çiqadi, tarix jurnalda qoladi.",
+    "reason": "Sabab",
+    "comment": "Izoh",
+    "commentRequired": "Bu sabab uçun izoh majburiy.",
+    "quoteSent": "TT mijozda: faqat mijoz qaroriga oid sabablar mumkin.",
+    "reasonsError": "Sabablar yuklanmadi. Keyinroq qayta uriniş.",
+    "submit": "Arizani yopiş",
+    "cancel": "Bekor qiliş",
+    "done": "Ariza yopildi",
+    "closed": "Ariza yopildi: {{reason}}",
+    "closedNext": "U navbatlardan çiqdi, mijozga yopilgan deb körsatiladi.",
+    "draftTitle": "{{number}} arizasi",
+    "draftHint": "Ariza böyiça hisob-kitob hali yöq: uni şu yerda yopiş mumkin.",
+    "client": "Mijoz",
+    "stage": "Qadam",
+    "textRequest": "Mijoz arizasi"
   }
 }

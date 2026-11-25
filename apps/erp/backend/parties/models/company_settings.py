@@ -10,6 +10,7 @@ from catalog.constants import (
     DEFAULT_PUBLISH_THRESHOLD,
     PriceVisibility,
 )
+from core.contract_term import ContractExpiredAction, ContractTermRule
 
 
 class CompanySettings(models.Model):
@@ -155,6 +156,67 @@ class CompanySettings(models.Model):
         blank=True,
         related_name="+",
         verbose_name=_("Шаблон договора по умолчанию: партнёр"),
+    )
+
+    # ── Срок договора (ДС-1, решение владельца 2026-11-25): правило — данные, не код ───────────────────────────────
+    contract_term_rule = models.CharField(
+        max_length=16,
+        choices=ContractTermRule.choices,
+        default=ContractTermRule.CALENDAR_YEAR,
+        verbose_name=_("Срок договора по умолчанию"),
+        help_text=_("До 31 декабря года подписания, 12 месяцев с подписания или без срока. Шаблон может задать своё."),
+    )
+    contract_auto_renew = models.BooleanField(
+        default=True,
+        verbose_name=_("Договор продлевается сам"),
+        help_text=_("На следующий срок, если ни одна сторона не отказалась до последнего дня уведомления."),
+    )
+    contract_notice_days = models.PositiveSmallIntegerField(
+        default=30,
+        validators=[MinValueValidator(0), MaxValueValidator(365)],
+        verbose_name=_("За сколько дней отказаться от продления"),
+    )
+    contract_next_year_from_day = models.PositiveSmallIntegerField(
+        default=1,
+        validators=[MinValueValidator(1), MaxValueValidator(31)],
+        verbose_name=_("С какого числа декабря первый срок — до конца следующего года"),
+    )
+    contract_remind_first_days = models.PositiveSmallIntegerField(
+        default=30,
+        validators=[MinValueValidator(1), MaxValueValidator(365)],
+        verbose_name=_("Первое напоминание: за сколько дней до последнего дня уведомления"),
+    )
+    contract_remind_last_days = models.PositiveSmallIntegerField(
+        default=7,
+        validators=[MinValueValidator(1), MaxValueValidator(365)],
+        verbose_name=_("Второе напоминание: за сколько дней до последнего дня уведомления"),
+    )
+    contract_foreign_remind_days = models.PositiveSmallIntegerField(
+        default=45,
+        validators=[MinValueValidator(1), MaxValueValidator(365)],
+        verbose_name=_("Иностранный контрагент: напомнить о доп. соглашении за дней до конца срока"),
+    )
+    contract_foreign_by_agreement = models.BooleanField(
+        default=True,
+        verbose_name=_("Нерезидент продлевается соглашением"),
+        help_text=_(
+            "Страна контрагента отличается от страны компании: вместо автопродления — напоминание и соглашение."
+        ),
+    )
+    contract_gating_kinds = models.JSONField(
+        default=list,
+        blank=True,
+        verbose_name=_("Какие договоры ограничивают новые сделки"),
+        help_text=_(
+            "Подмножество `partner`, `supply`, `services`. По умолчанию пусто: срок договора по сделке новое КП не закрывает."
+        ),
+    )
+    contract_expired_action = models.CharField(
+        max_length=8,
+        choices=ContractExpiredAction.choices,
+        default=ContractExpiredAction.BLOCK,
+        verbose_name=_("Что делать после окончания срока"),
+        help_text=_("Касается только новых КП и сделок; начатая работа, оплаты и претензии не блокируются никогда."),
     )
 
     # ── Политики каталога (M1-ERP-07, ARCHITECTURE §7) ────────────────────────

@@ -45,8 +45,5 @@
  "L|cabinet|apps/cabinet/src/i18n/locales/uz.json|pages.invoices.proofDialog.consequence|uz|terms|hisob-faktura",
  "L|cabinet|apps/cabinet/src/i18n/locales/uz.json|pages.invoices.proofDialog.title|uz|terms|hisob-faktura",
  "L|cabinet|apps/cabinet/src/i18n/locales/uz.json|pages.partnerOrders.dialogs.supplierDocLabel|uz|terms|hisob-faktura",
- "L|cabinet|apps/cabinet/src/lib/helpArticles.ts|helpArticles.ts:168|ru|terms|доставки",
- "L|cabinet|apps/cabinet/src/lib/helpArticles.ts|helpArticles.ts:181|ru|terms|доставки",
- "L|cabinet|apps/cabinet/src/lib/helpArticles.ts|helpArticles.ts:247|ru|terms|доставка",
  "L|cabinet|apps/cabinet/src/pages/deliveries.tsx|deliveries.tsx:278|ru|honesty|успешно"
 ]

@@ -18,6 +18,7 @@ from django.conf import settings
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
+from core.contract_term import ContractRenewalMode, ContractTermRule
 from core.storage import generated_document_pdf_path, get_private_storage
 
 from .lookups import DocumentTemplateKind, GeneratedDocumentStatus
@@ -119,6 +120,46 @@ class DocumentTemplate(models.Model):
     )
     subject = models.CharField(
         max_length=16, choices=ContractSubject.choices, blank=True, default="", verbose_name=_("Предмет")
+    )
+    # ДС-1: срок договора по шаблону; пусто — правило компании (`CompanySettings.contract_*`).
+    term_rule = models.CharField(
+        max_length=16,
+        choices=ContractTermRule.choices,
+        blank=True,
+        default="",
+        verbose_name=_("Срок договора"),
+        help_text=_("Пусто — как у компании."),
+    )
+    renewal_mode = models.CharField(
+        max_length=16,
+        choices=ContractRenewalMode.choices,
+        blank=True,
+        default="",
+        verbose_name=_("Продление"),
+        help_text=_("Пусто — как у компании."),
+    )
+    notice_days = models.PositiveSmallIntegerField(
+        null=True,
+        blank=True,
+        verbose_name=_("За сколько дней отказаться от продления"),
+        help_text=_("Пусто — как у компании."),
+    )
+    confidentiality_years = models.PositiveSmallIntegerField(
+        null=True,
+        blank=True,
+        verbose_name=_("Тайна после окончания договора (лет)"),
+        help_text=_("Для NDA: справка в карточке договора; срок договора она не меняет."),
+    )
+    trade_secret_indefinite = models.BooleanField(
+        default=False,
+        verbose_name=_("Коммерческая тайна — без срока"),
+        help_text=_("Для NDA: справка в карточке договора."),
+    )
+    renewal_notice = models.JSONField(
+        default=dict,
+        blank=True,
+        verbose_name=_("Текст уведомления о продлении"),
+        help_text=_("{ru, uz, en}: строка к уведомлению контрагента в Кабинете; пусто — стандартный текст."),
     )
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,

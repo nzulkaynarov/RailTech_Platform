@@ -7,7 +7,7 @@ import { FileLinks } from "../../../shared/ui/FileLinks";
 import { calcRef } from "./api";
 
 /** Файлы, которые клиент приложил к заявке (СЦ-10); нет файлов — ничего. */
-export function RequestFiles({ sheet }: { sheet: CalcSheet }) {
+export function RequestFiles({ sheet }: { sheet: Pick<CalcSheet, "number" | "request"> }) {
   const { t } = useTranslation("calc");
   const { date } = useFormat();
   const files = sheet.request.files ?? [];

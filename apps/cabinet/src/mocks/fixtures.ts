@@ -525,6 +525,15 @@ export const contracts: Schemas["Contract"][] = [
     signed_by_client_at: "2026-08-20T10:00:00+05:00",
     signed_by_company_at: "2026-08-20T15:30:00+05:00",
     document_id: 902,
+    term: {
+      state: "renews",
+      valid_from: "2026-08-20",
+      valid_until: "2026-12-31",
+      last_notice_date: "2026-12-01",
+      declined_by: null,
+      can_decline: true,
+      can_restore: false,
+    },
   },
 ];
 

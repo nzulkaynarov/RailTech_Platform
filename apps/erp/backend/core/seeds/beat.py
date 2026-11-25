@@ -83,6 +83,7 @@ def seed_beat_tasks(apps=None, schema_editor=None):
     # настройкой компании-продавца «Напоминать клиентам о просроченных счетах» (по умолчанию выключено).
     seed_payment_reminders_task(apps)
     seed_bank_codes_task(apps)
+    seed_contract_terms_task(apps)
 
 
 #: Имя задачи Beat ежемесячной загрузки кодов банков (Х-12) — его же создаёт миграция `core/0012` в существующих базах.
@@ -134,5 +135,34 @@ def seed_payment_reminders_task(apps) -> None:
             "task": "crm.send_payment_reminders",
             "enabled": True,
             "description": "Одно напоминание по каждому просроченному счёту контактам клиента (если включено в настройках компании)",
+        },
+    )
+
+
+#: Имя задачи Beat срока договоров (ДС-1) — его же создаёт миграция `parties/0037` в существующих базах.
+CONTRACT_TERMS_TASK = "crm.run_contract_terms (daily 06:00 Tashkent)"
+
+
+def seed_contract_terms_task(apps) -> None:
+    try:
+        CrontabSchedule = apps.get_model("django_celery_beat", "CrontabSchedule")
+        PeriodicTask = apps.get_model("django_celery_beat", "PeriodicTask")
+    except LookupError:
+        return
+    schedule, _ = CrontabSchedule.objects.get_or_create(
+        minute="0",
+        hour="6",
+        day_of_week="*",
+        day_of_month="*",
+        month_of_year="*",
+        timezone="Asia/Tashkent",
+    )
+    PeriodicTask.objects.update_or_create(
+        name=CONTRACT_TERMS_TASK,
+        defaults={
+            "crontab": schedule,
+            "task": "crm.run_contract_terms",
+            "enabled": True,
+            "description": "Срок договоров: продление, напоминания до последнего дня отказа, иностранные — за 45 дней",
         },
     )

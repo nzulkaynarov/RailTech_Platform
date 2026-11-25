@@ -161,6 +161,8 @@ SPECTACULAR_SETTINGS = {
     # Одни и те же словари каталога у карточки и у настроек компании (M1-ERP-07) — одно имя enum.
     "ENUM_NAME_OVERRIDES": {
         "PriceVisibilityEnum": "catalog.constants.PriceVisibility",
+        # ДС-1: правило срока договора — у настройки компании и у шаблона один набор значений.
+        "ContractTermRuleEnum": "core.contract_term.ContractTermRule",
         "FulfillmentPolicyEnum": "catalog.constants.FulfillmentPolicy",
         # PART-3: цены партнёра в каталоге — «как у компании» (пусто) / показывать / по запросу.
         "PartnerPriceVisibilityEnum": ["", "cabinet", "on_request"],

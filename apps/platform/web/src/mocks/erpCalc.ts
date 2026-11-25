@@ -271,6 +271,113 @@ function groups(calc: MockCalc) {
 const canRevise = (calc: MockCalc) =>
   calc.state === "rejected" && calc.rejectedBy === "client" && calc.stage === "CALCULATION";
 
+/** Справочник причин «Закрыть заявку» (ERP `request-close-reasons`, ЛХ-2). */
+const CLOSE_REASONS = [
+  {
+    code: "ERROR",
+    ru: "Оформлена по ошибке",
+    uz: "Xato rasmiylaştirilgan",
+    en: "Created by mistake",
+    comment: false,
+    afterQuote: false,
+    preselect: false,
+  },
+  {
+    code: "DUPLICATE",
+    ru: "Дубль",
+    uz: "Dublikat",
+    en: "Duplicate",
+    comment: false,
+    afterQuote: false,
+    preselect: false,
+  },
+  {
+    code: "TEST",
+    ru: "Тест",
+    uz: "Test",
+    en: "Test",
+    comment: false,
+    afterQuote: false,
+    preselect: false,
+  },
+  {
+    code: "CHANGED_MIND",
+    ru: "Клиент передумал",
+    uz: "Mijoz fikrini özgartirdi",
+    en: "Client changed their mind",
+    comment: false,
+    afterQuote: true,
+    preselect: true,
+  },
+  {
+    code: "NO_REPLY",
+    ru: "Клиент не отвечает",
+    uz: "Mijoz javob bermayapti",
+    en: "Client does not reply",
+    comment: false,
+    afterQuote: true,
+    preselect: false,
+  },
+  {
+    code: "OTHER",
+    ru: "Другое — комментарий",
+    uz: "Boşqa — izoh",
+    en: "Other — comment",
+    comment: true,
+    afterQuote: true,
+    preselect: false,
+  },
+] as const;
+
+/** Черновик заявки без задания расчёта — как после передачи лида (ЛХ-2): карточка и «Закрыть заявку». */
+const DRAFT = {
+  number: "ЗВ-2026-120",
+  title: "Передача из CRM: щебень для ремонта пути",
+  client: "ООО «Демо-Рейл»",
+  text: "Клиент просит цену на 40 т щебня и срок поставки на станцию.",
+};
+let draftClosed: { reason: string; comment: string } | null = null;
+
+type MockCard = ReturnType<typeof cardOfCalc>;
+
+function cardOfCalc(calc: MockCalc, user: Me) {
+  const sheet = present(calc, user);
+  return {
+    number: sheet.number,
+    title: sheet.title,
+    client: sheet.client,
+    step: sheet.step,
+    path: sheet.path,
+    has_task: true,
+    request: sheet.request,
+    close: sheet.close,
+  };
+}
+
+function cardOfDraft(user: Me): MockCard {
+  return {
+    number: DRAFT.number,
+    title: DRAFT.title,
+    client: DRAFT.client,
+    step: draftClosed ? "LOST" : "REQUEST",
+    path: `/erp/calc/${encodeURIComponent(DRAFT.number)}`,
+    has_task: false,
+    request: { text: DRAFT.text, lines: 0, files: [] },
+    close: {
+      allowed: !draftClosed && level(user, "erp.calc") === "full",
+      quote_sent: false,
+      reason: draftClosed?.reason ?? null,
+      comment: draftClosed?.comment ?? null,
+    },
+  };
+}
+
+const isDraft = (number: string) => decodeURIComponent(number) === DRAFT.number;
+
+/** КП уже было у клиента (как ERP `quote_sent_to_client`): шаг «КП» или отклонено клиентом. */
+const quoteSent = (calc: MockCalc) =>
+  calc.stage === "QUOTE" || (calc.state === "rejected" && calc.rejectedBy === "client");
+
 const editableOf = (calc: MockCalc) =>
   calc.started && (calc.state === "in_progress" || calc.state === "returned");
 
@@ -345,6 +452,12 @@ function present(calc: MockCalc, user: Me): CalcSheet {
     },
     visas: groups(calc),
     ready: { allowed: blocker === null, blocker, missing },
+    close: {
+      allowed: calc.stage !== "LOST" && level(user, "erp.calc") === "full",
+      quote_sent: quoteSent(calc),
+      reason: calc.closeReason ?? null,
+      comment: calc.closeComment ?? null,
+    },
     rights: {
       goods: canZone(user, "goods"),
       services: canZone(user, "services"),
@@ -878,6 +991,72 @@ export const erpCalcHandlers = [
     calc.stage = "LOST";
     write(calcs);
     return HttpResponse.json<CalcSheet>(present(calc, held.user));
+  }),
+
+  http.get("*/api/v1/erp/calc-close-reasons", () => {
+    const held = guard("erp.calc", "read");
+    if ("error" in held) return held.error;
+    return HttpResponse.json({
+      items: CLOSE_REASONS.map((row) => ({
+        code: row.code,
+        name: { ru: row.ru, uz: row.uz, en: row.en },
+        requires_comment: row.comment,
+        allowed_after_quote_sent: row.afterQuote,
+        preselect_after_client_rejection: row.preselect,
+      })),
+    });
+  }),
+
+  // ЛХ-2: карточка заявки — с заданием расчёта и без него (черновик из передачи лида)
+  http.get("*/api/v1/erp/calc-request/:number", ({ params }) => {
+    const held = guard("erp.calc", "read");
+    if ("error" in held) return held.error;
+    if (isDraft(String(params["number"]))) return HttpResponse.json(cardOfDraft(held.user));
+    const calc = find(read(), String(params["number"]));
+    return calc ? HttpResponse.json(cardOfCalc(calc, held.user)) : notFound();
+  }),
+
+  // ЛХ-2: «Закрыть заявку» на любом шаге до проекта, причина из справочника
+  http.post("*/api/v1/erp/calc/:number/close", async ({ params, request }) => {
+    const held = guard("erp.calc", "full");
+    if ("error" in held) return held.error;
+    const body = (await request.json()) as { reason?: string; comment?: string };
+    const reason = CLOSE_REASONS.find((row) => row.code === body.reason);
+    if (!reason) {
+      return failure(422, "VALIDATION_FAILED", "Проверьте заполнение полей.", {
+        reason: "reason_unknown",
+        fields: ["reason"],
+      });
+    }
+    const comment = (body.comment ?? "").trim();
+    if (reason.comment && !comment) {
+      return failure(422, "VALIDATION_FAILED", "Проверьте заполнение полей.", {
+        reason: "comment_required",
+        fields: ["comment"],
+      });
+    }
+    if (isDraft(String(params["number"]))) {
+      if (draftClosed) return conflict("request_not_closable", "Заявку уже нельзя закрыть.");
+      draftClosed = { reason: reason.code, comment };
+      return HttpResponse.json(cardOfDraft(held.user));
+    }
+    const calcs = read();
+    const calc = find(calcs, String(params["number"]));
+    if (!calc) return notFound();
+    if (calc.stage === "LOST") {
+      return conflict("request_not_closable", "Заявку уже нельзя закрыть.");
+    }
+    if (quoteSent(calc) && !reason.afterQuote) {
+      return conflict(
+        "reason_not_allowed_after_quote",
+        "КП уже у клиента: выберите другую причину.",
+      );
+    }
+    calc.stage = "LOST";
+    calc.closeReason = reason.code;
+    calc.closeComment = comment;
+    write(calcs);
+    return HttpResponse.json(cardOfCalc(calc, held.user));
   }),
 
   // План 1.1: файл заявки — тот же разбор, предложение строк из PARSE_PROPOSAL

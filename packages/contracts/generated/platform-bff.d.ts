@@ -7255,6 +7255,66 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/erp/calc-close-reasons": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Расчёт · Причины «Закрыть заявку» (справочник)
+     * @description ERP `GET /calc/close-reasons/`: действующие причины из справочника `request-close-reasons` (данные, правятся в «Настройки · Справочники») с правилами — нужен ли комментарий и допустима ли причина, когда КП уже у клиента. Раздел `erp.calc` — чтение.
+     */
+    get: operations["listCalcCloseReasons"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/erp/calc-request/{number}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Расчёт · Карточка заявки (с заданием расчёта и без) для «Закрыть заявку»
+     * @description ERP `GET /calc/{deal_id}/request/` (ЛХ-2). Заявка ищется по номеру ЗВ среди всех заявок, не только с заданием расчёта: черновик из передачи лида открывается карточкой (номер, клиент, текст и файлы заявки, `close`). Раздел `erp.calc` — чтение. Нет такой заявки — 404.
+     */
+    get: operations["getCalcRequestCard"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/erp/calc/{number}/close": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Расчёт · «Закрыть заявку» на любом шаге до проекта
+     * @description ERP `POST /calc/{deal_id}/close/` (ЛХ-2). Причина — код из `GET /erp/calc-close-reasons`, комментарий обязателен у причины с `requires_comment`. Заявка — стадия «Отказ» (CLOSED_LOST), событие `deal.lost` с причиной, резервы снимаются, из очередей «Заявки в расчёте» заявка уходит. «Оформлена по ошибке» и «Тест» без отправленных клиенту документов скрывают заявку из списков по умолчанию (записи и журнал остаются, удаления нет). КП уже у клиента — только причины, допустимые после отправки (иначе 409 `reason_not_allowed_after_quote`); отправленное КП закрывается. Право — ответственный заявки или держатель зоны продаж (`deal.manage`), иначе 403. Проект (после принятия КП) и уже закрытая заявка — 409 `request_not_closable`. Раздел `erp.calc` — полный.
+     */
+    post: operations["closeCalcRequest"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/erp/calc/{number}/parse": {
     parameters: {
       query?: never;
@@ -12191,9 +12251,49 @@ export interface components {
       )[];
       /** @description ДОК-10: договор собран из утверждённого шаблона — название и редакция, отступление, путь по фактам; null — договор прежним путём */
       template?: components["schemas"]["ProjectContractTemplate"] | null;
+      /** @description ДС-1: срок подписанного договора (считает ERP при подписании); null — договор ещё не подписан или подписан до введения срока */
+      term?: components["schemas"]["ProjectContractTerm"] | null;
       /** @description Х-1: пока проект договора не ушёл клиенту — что мешает его отправить (визы маршрута подписи не собраны); null — ничего, действие send_to_client в actions. Считает ERP */
       send_blocker?: components["schemas"]["ProjectContractSendBlocker"] | null;
       history: components["schemas"]["ProjectJournalEntry"][];
+    };
+    /** @description Срок подписанного договора (ДС-1): правило компании и шаблона, считает ERP; вручную не вводится */
+    ProjectContractTerm: {
+      /**
+       * @description open — без срока; renews — продлится сам; ends — закончится (отказ или продление соглашением); expired — срок вышел
+       * @enum {string}
+       */
+      state: "open" | "renews" | "ends" | "expired";
+      /** @description calendar_year / twelve_months / open */
+      rule: string;
+      /** @description auto / by_agreement / none */
+      renewal: string;
+      /** Format: date */
+      valid_from: string;
+      /** Format: date */
+      valid_until: string | null;
+      /**
+       * Format: date
+       * @description Последний день отказа от продления
+       */
+      last_notice_date: string | null;
+      notice_days: number;
+      renewals_count: number;
+      /** @description Иностранный контрагент: продление соглашением, не автоматом */
+      foreign: boolean;
+      /** @enum {string|null} */
+      declined_by: "company" | "client" | null;
+      /** Format: date-time */
+      declined_at: string | null;
+      /** @description Редакция шаблона, на которой подписан договор */
+      template_edition: number | null;
+      /** @description Есть более новая утверждённая редакция шаблона */
+      newer_edition: number | null;
+      /** @description NDA: лет тайны после окончания договора (справка) */
+      confidentiality_years: number | null;
+      /** @description NDA: коммерческая тайна без срока (справка) */
+      trade_secret_indefinite: boolean;
+      actions: ("decline_renewal" | "restore_renewal" | "renew" | "send_new_edition")[];
     };
     ProjectContractTemplate: {
       id: number | null;
@@ -12352,7 +12452,7 @@ export interface components {
     /** @description Действие по договору. `reason` обязательна для `reject`, `channel` и `counterparty_person` — для `client_agreed`: пустые BFF отклоняет (422). */
     ProjectContractActionIn: {
       /**
-       * @description `sign_ours`, `request_deviation`, `decide_deviation` — договор по утверждённому шаблону (ДОК-10): наша подпись до отправки, заявка на отступление, решение держателя «Право»
+       * @description `sign_ours`, `request_deviation`, `decide_deviation` — договор по утверждённому шаблону (ДОК-10): наша подпись до отправки, заявка на отступление, решение держателя «Право»; `decline_renewal`, `renew`, `send_new_edition` — срок договора (ДС-1): отказ от продления, продление соглашением, новая редакция шаблона на подпись
        * @enum {string}
        */
       action:
@@ -12363,7 +12463,11 @@ export interface components {
         | "mark_issued"
         | "sign_ours"
         | "request_deviation"
-        | "decide_deviation";
+        | "decide_deviation"
+        | "decline_renewal"
+        | "restore_renewal"
+        | "renew"
+        | "send_new_edition";
       reason?: string | null;
       note?: string | null;
       /** @description Только `client_agreed`, обязательно: как клиент сообщил согласие (A2 волны 18a) */
@@ -12374,6 +12478,8 @@ export interface components {
       text?: string | null;
       /** @description Только `decide_deviation`, обязательно: одобрить или отклонить */
       approve?: boolean | null;
+      /** @description Только `renew`: номер дополнительного соглашения, если есть */
+      agreement_number?: string | null;
     };
     OnBehalfNote: {
       channel: components["schemas"]["OnBehalfChannel"];
@@ -13998,6 +14104,32 @@ export interface components {
       default_client_contract_template?: number | null;
       /** @description ДОК-10: шаблон договора по умолчанию для партнёра — только утверждённый */
       default_partner_contract_template?: number | null;
+      /**
+       * @description ДС-1: срок договора по умолчанию — до 31 декабря, 12 месяцев или без срока; шаблон может задать своё
+       * @enum {string}
+       */
+      contract_term_rule?: "calendar_year" | "twelve_months" | "open";
+      /** @description ДС-1: договор продлевается сам, если никто не отказался до последнего дня уведомления */
+      contract_auto_renew?: boolean;
+      /** @description ДС-1: за сколько дней до конца срока можно отказаться от продления */
+      contract_notice_days?: number;
+      /** @description ДС-1: с какого числа декабря первый срок идёт до конца следующего года */
+      contract_next_year_from_day?: number;
+      /** @description ДС-1: первое напоминание — за столько дней до последнего дня уведомления */
+      contract_remind_first_days?: number;
+      /** @description ДС-1: второе напоминание — за столько дней до последнего дня уведомления */
+      contract_remind_last_days?: number;
+      /** @description ДС-1: иностранный контрагент — напомнить о дополнительном соглашении за столько дней до конца срока */
+      contract_foreign_remind_days?: number;
+      /** @description ДС-1: нерезидент (страна контрагента отличается от страны компании) продлевается соглашением, а не сам (по умолчанию да) */
+      contract_foreign_by_agreement?: boolean;
+      /** @description ДС-1: какие виды договоров после окончания срока ограничивают новые сделки; по умолчанию пусто — срок договора по сделке новое КП не закрывает */
+      contract_gating_kinds?: ("partner" | "supply" | "services")[];
+      /**
+       * @description ДС-1: после окончания срока — не создавать новые КП и сделки или только предупреждать; начатая работа не блокируется никогда
+       * @enum {string}
+       */
+      contract_expired_action?: "block" | "warn";
     };
     /** @description Поля маржи без права на `cost_margin` — 403 `FORBIDDEN` (`details.fields`). */
     QuoteDefaultsUpdate: {
@@ -14054,6 +14186,32 @@ export interface components {
       default_client_contract_template?: number | null;
       /** @description ДОК-10: шаблон договора по умолчанию для партнёра — только утверждённый */
       default_partner_contract_template?: number | null;
+      /**
+       * @description ДС-1: срок договора по умолчанию — до 31 декабря, 12 месяцев или без срока; шаблон может задать своё
+       * @enum {string}
+       */
+      contract_term_rule?: "calendar_year" | "twelve_months" | "open";
+      /** @description ДС-1: договор продлевается сам, если никто не отказался до последнего дня уведомления */
+      contract_auto_renew?: boolean;
+      /** @description ДС-1: за сколько дней до конца срока можно отказаться от продления */
+      contract_notice_days?: number;
+      /** @description ДС-1: с какого числа декабря первый срок идёт до конца следующего года */
+      contract_next_year_from_day?: number;
+      /** @description ДС-1: первое напоминание — за столько дней до последнего дня уведомления */
+      contract_remind_first_days?: number;
+      /** @description ДС-1: второе напоминание — за столько дней до последнего дня уведомления */
+      contract_remind_last_days?: number;
+      /** @description ДС-1: иностранный контрагент — напомнить о дополнительном соглашении за столько дней до конца срока */
+      contract_foreign_remind_days?: number;
+      /** @description ДС-1: нерезидент (страна контрагента отличается от страны компании) продлевается соглашением, а не сам (по умолчанию да) */
+      contract_foreign_by_agreement?: boolean;
+      /** @description ДС-1: какие виды договоров после окончания срока ограничивают новые сделки; по умолчанию пусто — срок договора по сделке новое КП не закрывает */
+      contract_gating_kinds?: ("partner" | "supply" | "services")[];
+      /**
+       * @description ДС-1: после окончания срока — не создавать новые КП и сделки или только предупреждать; начатая работа не блокируется никогда
+       * @enum {string}
+       */
+      contract_expired_action?: "block" | "warn";
     };
     /** @description Шаблон договора с утверждением (ДОК-10) */
     ContractTemplate: {
@@ -16964,6 +17122,50 @@ export interface components {
       /** @description Резерв строки и «Запросить цену у поставщика» (D2-2: `erp.stock` полный) */
       stock?: boolean;
     };
+    /** @description «Закрыть заявку» (ЛХ-2) — что можно и чем заявка закрыта */
+    CalcClose: {
+      /** @description Заявка до проекта, не закрыта, и сотрудник — ответственный или держатель зоны продаж */
+      allowed: boolean;
+      /** @description КП уже было у клиента: допустимы только причины с `allowed_after_quote_sent` */
+      quote_sent: boolean;
+      /** @description Код причины, если заявка закрыта через «Закрыть заявку» */
+      reason: string | null;
+      comment: string | null;
+    };
+    /** @description Карточка заявки для «Закрыть заявку» (ЛХ-2): с заданием расчёта и без него */
+    CalcRequestCard: {
+      /** @example ЗВ-2026-104 */
+      number: string;
+      title: string;
+      client: string | null;
+      step: components["schemas"]["StepCode"];
+      path: string;
+      /** @description У заявки есть задание расчёта; нет — черновик из передачи лида */
+      has_task: boolean;
+      request: components["schemas"]["CalcRequestText"];
+      close: components["schemas"]["CalcClose"];
+    };
+    CalcCloseIn: {
+      /** @description Код причины из `GET /erp/calc-close-reasons` */
+      reason: string;
+      /** @description Комментарий; обязателен у причины с `requires_comment` */
+      comment?: string;
+    };
+    CalcCloseReason: {
+      code: string;
+      name: {
+        ru: string;
+        uz: string;
+        en: string;
+      };
+      requires_comment: boolean;
+      allowed_after_quote_sent: boolean;
+      /** @description Выбрана заранее в «Закрыть заявку» после отказа клиента от КП (флаг справочника) */
+      preselect_after_client_rejection: boolean;
+    };
+    CalcCloseReasonList: {
+      items: components["schemas"]["CalcCloseReason"][];
+    };
     CalcSheet: {
       /** @example ЗВ-2026-104 */
       number: string;
@@ -16978,6 +17180,7 @@ export interface components {
       totals: components["schemas"]["CalcTotals"];
       visas: components["schemas"]["CalcVisaGroups"];
       ready: components["schemas"]["CalcReady"];
+      close?: components["schemas"]["CalcClose"];
       rights: components["schemas"]["CalcRights"];
     };
     CalcLineIn: {
@@ -18921,6 +19124,21 @@ export interface components {
       brands: components["schemas"]["CounterpartyRef"][];
       /** @description Х-8: отметка «Не работать» — причина, кто и когда поставил, срок; нет — работаем */
       do_not_work?: components["schemas"]["DoNotWork"] | null;
+      /** @description ДС-1: срок действующего или последнего подписанного договора; null — подписанных договоров со сроком нет */
+      contract_term?: components["schemas"]["CounterpartyContractTerm"] | null;
+    };
+    CounterpartyContractTerm: {
+      contract_id: number;
+      number: string;
+      /** @enum {string} */
+      state: "open" | "renews" | "ends" | "expired";
+      /** Format: date */
+      valid_until: string | null;
+      /** Format: date */
+      last_notice_date: string | null;
+      foreign: boolean;
+      /** @description Срок вышел и правило компании не даёт начинать новые КП */
+      blocks_new_work: boolean;
     };
     /** @description Отметка «Не работать» у контрагента (Х-8) — факты, а не флаг */
     DoNotWork: {
@@ -19941,7 +20159,7 @@ export interface components {
         "application/json": components["schemas"]["Error"];
       };
     };
-    /** @description 409 `CONFLICT` — расчёт не в том состоянии для действия: `details.reason` — код ERP в нижнем регистре (`visas_missing` и `details.missing`, `deal_not_in_calculation`, `quote_not_draft`, `calc_not_started`, `line_incomplete`, `purchase_required`, `no_lines`, `quote_below_cost`, `fx_rate_missing`, `quote_client_required`, `request_text_empty`, `ai_disabled`) */
+    /** @description 409 `CONFLICT` — расчёт не в том состоянии для действия: `details.reason` — код ERP в нижнем регистре (`visas_missing` и `details.missing`, `deal_not_in_calculation`, `quote_not_draft`, `calc_not_started`, `line_incomplete`, `purchase_required`, `no_lines`, `quote_below_cost`, `fx_rate_missing`, `request_not_closable`, `reason_not_allowed_after_quote`, `quote_client_required`, `request_text_empty`, `ai_disabled`) */
     CalcConflict: {
       headers: {
         [name: string]: unknown;
@@ -33014,6 +33232,92 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["CalcSheet"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["CalcConflict"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  listCalcCloseReasons: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Причины по порядку справочника */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CalcCloseReasonList"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  getCalcRequestCard: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Номер заявки `ЗВ-ГГГГ-NNN` (как в списке «Заявки в расчёте») */
+        number: components["parameters"]["CalcNumberPath"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Карточка заявки */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CalcRequestCard"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  closeCalcRequest: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Номер заявки `ЗВ-ГГГГ-NNN` (как в списке «Заявки в расчёте») */
+        number: components["parameters"]["CalcNumberPath"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CalcCloseIn"];
+      };
+    };
+    responses: {
+      /** @description Заявка закрыта */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CalcRequestCard"];
         };
       };
       401: components["responses"]["SessionExpired"];

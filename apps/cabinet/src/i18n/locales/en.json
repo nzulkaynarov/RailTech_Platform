@@ -126,7 +126,8 @@
       "viewed": "Viewed",
       "accepted": "Accepted",
       "rejected": "Rejected",
-      "expired": "Expired"
+      "expired": "Expired",
+      "closed": "Request closed"
     },
     "contract": {
       "sent": "Awaiting your agreement",
@@ -639,7 +640,24 @@
       "signText": "You confirm, on behalf of your company, that you agree with the contract text. We will send the contract for signing and tell you when it is signed.",
       "signConfirm": "Agree contract",
       "signedClient": "Contract {{number}} is agreed. It will be sent for signing.",
-      "signedBoth": "Contract {{number}} is signed by both parties."
+      "signedBoth": "Contract {{number}} is signed by both parties.",
+      "term": {
+        "none": "—",
+        "until": "until {{date}}",
+        "open": "no end date",
+        "state": {
+          "open": "no end date",
+          "renews": "renews itself",
+          "ends": "ends on time",
+          "expired": "term over"
+        },
+        "decline": "Decline renewal",
+        "declineTitle": "Decline renewal of contract {{number}}",
+        "declineText": "The contract is valid until {{until}} and ends after that. Started deliveries, payments and claims are not affected. You can decline until {{notice}}.",
+        "declined": "You declined the renewal of contract {{number}}.",
+        "restore": "Restore renewal",
+        "restored": "Renewal of contract {{number}} restored."
+      }
     },
     "invoices": {
       "title": "Invoices",
@@ -974,7 +992,7 @@
         "returnSubmit": "Return contract",
         "returnSuccess": "Remark sent. We will prepare a new version of the contract.",
         "scanNeeded": "Sign the contract and upload the signed scan.",
-        "scanReceived": "Scan received. We will confirm the contract and open the partner cabinet.",
+        "scanReceived": "Scan received. We will confirm the contract and open the partner account.",
         "scanUpload": "Upload scan",
         "scanReplace": "Replace scan",
         "scanInput": "Scan of the signed contract",
@@ -1375,6 +1393,10 @@
     "QUOTE_FINALIZED": "The quote was already accepted or rejected — refresh the page.",
     "ACT_FINALIZED": "The act was already accepted or returned — refresh the page.",
     "CONTRACT_FINALIZED": "The contract was already agreed, signed or cancelled — refresh the page.",
+    "TERM_NOTICE_PASSED": "The deadline to decline the renewal has passed.",
+    "TERM_ALREADY_DECLINED": "The renewal was already declined.",
+    "TERM_NOT_AVAILABLE": "This contract does not renew automatically.",
+    "TERM_NOT_DECLINED": "There is no renewal refusal to restore, or the other side made it.",
     "QUOTE_CODE_INVALID": "The code is wrong or was not requested. Check the code in the message or request a new one.",
     "QUOTE_EXPIRED": "The quote has expired and can no longer be accepted. Ask your manager to update the offer.",
     "REASON_REQUIRED": "Give a reason.",
@@ -1798,7 +1820,9 @@
       "bank_requisites_change_requested": "{{actor}} requested a change to the company bank details",
       "bank_requisites_changed": "Company bank details have been changed",
       "bank_requisites_change_rejected": "Bank details change request rejected: {{reason}}",
-      "new_device_login": "{{name}} signed in from a new device"
+      "new_device_login": "{{name}} signed in from a new device",
+      "contract_renewed": "Contract {{number}} renewed until {{until}}",
+      "contract_renewal_declined": "We declined the renewal of contract {{number}}: it ends on {{until}}"
     }
   },
   "verify": {
@@ -1954,7 +1978,8 @@
       "paid": "The invoice is paid.",
       "answered": "Answer sent. Thank you!",
       "confirmed": "You confirmed the order.",
-      "cancelled": "The order was cancelled by us."
+      "cancelled": "The order was cancelled by us.",
+      "closed": "The request is closed. If the matter is still relevant, write to us."
     },
     "reason": {
       "no_right": "You can't make this decision — ask your company administrator.",
