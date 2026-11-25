@@ -975,7 +975,7 @@
         "returnSubmit": "Return contract",
         "returnSuccess": "Remark sent. We will prepare a new version of the contract.",
         "scanNeeded": "Sign the contract and upload the signed scan.",
-        "scanReceived": "Scan received. We will confirm the contract and open the partner cabinet.",
+        "scanReceived": "Scan received. We will confirm the contract and open the partner account.",
         "scanUpload": "Upload scan",
         "scanReplace": "Replace scan",
         "scanInput": "Scan of the signed contract",
