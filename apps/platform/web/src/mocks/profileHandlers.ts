@@ -194,7 +194,7 @@ export const profileHandlers = [
     if (!userId) return expired();
     const body = (await request.json()) as ProfileUpdate;
     if (body.phone !== undefined && !validPhone(body.phone)) {
-      return invalid("phone", "phone_invalid", "Телефон: от 7 до 15 цифр, можно с «+».");
+      return invalid("phone", "phone_invalid", "Телефон: укажите код страны, например +998 90 123-45-67.");
     }
     if (body.timezone !== undefined && !validZone(body.timezone)) {
       return invalid("timezone", "timezone_unknown", "Такого часового пояса нет.");

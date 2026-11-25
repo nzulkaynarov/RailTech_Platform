@@ -16,6 +16,8 @@ from app.domain.lead_sources import normalize_phone_e164
 DEFAULT_TIMEZONE: Final = "Asia/Tashkent"
 PHONE_MIN_DIGITS: Final = 7
 PHONE_MAX_DIGITS: Final = 15
+_UZ_COUNTRY: Final = "998"
+_UZ_LOCAL_LEN: Final = 9
 SIGNATURE_MAX_LEN: Final = 1000
 AVATAR_MAX_BYTES: Final = 1024 * 1024
 AVATAR_PREFIX: Final = "staff-avatars"
@@ -58,6 +60,12 @@ def normalize_staff_phone(raw: str) -> str | None:
     """
     if not raw.strip():
         return None
+    text = raw.strip()
+    digits = re.sub(r"\D", "", text)
+    explicit = text.lstrip("( ").startswith("+") or digits.startswith("00")
+    uzbek_like = len(digits) == _UZ_LOCAL_LEN or digits.startswith(_UZ_COUNTRY)
+    if not explicit and not uzbek_like:
+        raise ProfileValueError("phone_invalid", "phone")  # no country code: ask for it
     phone = normalize_phone_e164(raw)
     if phone is None:
         raise ProfileValueError("phone_invalid", "phone")

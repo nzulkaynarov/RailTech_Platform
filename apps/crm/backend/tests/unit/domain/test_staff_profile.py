@@ -62,7 +62,18 @@ def test_normalize_staff_phone(raw: str, expected: str | None) -> None:
 
 
 @pytest.mark.parametrize(
-    "raw", ["abc", "12", "+998 90 123", "8 90 123 45 67", "+" + "1" * 16, "1234567"]
+    "raw",
+    [
+        "abc",
+        "12",
+        "+998 90 123",
+        "8 90 123 45 67",
+        "8 495 123-45-67",  # was +8495…
+        "212 555 0100",  # was +2125550100
+        "12345678",  # was +12345678
+        "+" + "1" * 16,
+        "1234567",
+    ],
 )
 def test_staff_phone_rejects_what_the_single_normaliser_rejects(raw: str) -> None:
     with pytest.raises(ProfileValueError) as exc:
