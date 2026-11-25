@@ -16,7 +16,7 @@ const LIVE = 'live-token-0123456789';
 const VIEWER = 'viewer-token-0123456789';
 const FOREIGN = 'foreign-token-0123456789';
 const open = (token = LIVE) => renderApp(`/d/${token}`);
-const quoteHeading = () => screen.findByRole('heading', { level: 1, name: 'КП QT-0118' });
+const quoteHeading = () => screen.findByRole('heading', { level: 1, name: 'Коммерческое предложение QT-0118' });
 
 describe('документ по ссылке: гость', () => {
   it('видит один документ — состав, факты, «Скачать PDF» — и ни одного раздела кабинета', async () => {
@@ -29,7 +29,7 @@ describe('документ по ссылке: гость', () => {
     expect(screen.getByText('ООО «Восток Транс»')).toBeInTheDocument();
     expect(screen.getAllByText(/с НДС/).length).toBeGreaterThan(0);
     expect(screen.getByText(/Вы смотрите один документ, присланный на p\*\*\*@vostok-trans\.uz/)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Скачать PDF: КП QT-0118' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Скачать PDF: предложение QT-0118' })).toBeEnabled();
     expect(screen.getByText(/Любое действие — после кода, который придёт на p\*\*\*@vostok-trans\.uz/)).toBeInTheDocument();
     expect(screen.queryByRole('navigation', { name: 'Разделы кабинета' })).not.toBeInTheDocument();
     expect(seen.some((path) => /\/(me|quotes|requests|company|contracts)$/.test(path))).toBe(false);
@@ -46,7 +46,7 @@ describe('документ по ссылке: гость', () => {
     open();
     await quoteHeading();
 
-    await user.click(screen.getByRole('button', { name: 'Скачать PDF: КП QT-0118' }));
+    await user.click(screen.getByRole('button', { name: 'Скачать PDF: предложение QT-0118' }));
 
     await waitFor(() => expect(window.URL.createObjectURL).toHaveBeenCalledTimes(1));
     expect(bodies).toEqual([{ token: LIVE }]);
@@ -148,7 +148,7 @@ describe('документ по ссылке: гость', () => {
     await user.type(within(dialog).getByLabelText('Что нужно исправить?'), 'Срок поставки велик');
     await user.click(within(dialog).getByRole('button', { name: 'Вернуть с замечаниями' }));
 
-    expect(await screen.findByText('Предложение возвращено с замечаниями.')).toBeInTheDocument();
+    expect(await screen.findByText('Предложение отклонено с замечаниями.')).toBeInTheDocument();
   });
 
   it('при первом входе между кодом и действием — оферта и политика; после «Принимаю» действие выполняется само', async () => {

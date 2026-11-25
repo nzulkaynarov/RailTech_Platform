@@ -129,7 +129,7 @@ describe('Компания', () => {
     renderApp('/company');
     await heading('Компания');
     expect(await screen.findByText('Казахстан')).toBeInTheDocument();
-    expect(screen.getByText('Регистрационный номер / Tax ID')).toBeInTheDocument();
+    expect(screen.getByText('Регистрационный или налоговый номер')).toBeInTheDocument();
     expect(screen.getByText('120540012345')).toBeInTheDocument();
     expect(screen.queryByText('ИНН')).not.toBeInTheDocument();
   });

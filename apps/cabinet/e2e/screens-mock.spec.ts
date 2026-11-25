@@ -95,9 +95,9 @@ const heading = (page: Page, name: string | RegExp) => expect(page.getByRole('he
 const SCREENS: Array<{ id: string; path: string; h1: string | RegExp; actorOnly?: boolean }> = [
   { id: 'requests', path: '/requests', h1: 'Заявки' },
   { id: 'request-new', path: '/requests/new', h1: 'Новая заявка', actorOnly: true },
-  { id: 'request-detail', path: '/requests/501', h1: 'Заявка Z-2026-0042' },
+  { id: 'request-detail', path: '/requests/501', h1: 'Заявка ЗВ-2026-042' },
   { id: 'quotes', path: '/quotes', h1: 'Коммерческие предложения' },
-  { id: 'quote-detail', path: '/quotes/301', h1: 'КП KP-2026-0042' },
+  { id: 'quote-detail', path: '/quotes/301', h1: 'Коммерческое предложение KP-2026-0042' },
   { id: 'contracts', path: '/contracts', h1: 'Договоры' },
   { id: 'invoices', path: '/invoices', h1: 'Счета' },
   { id: 'acts', path: '/acts', h1: 'Акты' },
@@ -107,13 +107,13 @@ const SCREENS: Array<{ id: string; path: string; h1: string | RegExp; actorOnly?
   { id: 'catalog-item', path: '/catalog/101', h1: /.+/ },
   { id: 'company', path: '/company', h1: 'Компания' },
   { id: 'team', path: '/team', h1: 'Команда' },
-  { id: 'deal', path: '/deals/48', h1: 'Проект D-48' },
+  { id: 'deal', path: '/deals/48', h1: 'Проект ПР-2026-048' },
   { id: 'messages', path: '/messages', h1: 'Сообщения' },
   { id: 'profile', path: '/profile', h1: 'Профиль' },
 ];
 
 /** Ключевые экраны — со снимками в E2E_SCREENS_DIR; остальные — только axe и прокрутка. */
-const WITH_SCREENSHOT = new Set(['requests', 'quote-detail', 'deal']);
+const WITH_SCREENSHOT = new Set(['requests', 'quotes', 'quote-detail', 'contracts', 'deliveries', 'deal']);
 /** Таблицы проверяются и на 1280 (холст уже из-за сайдбара): без горизонтальной прокрутки. */
 const WITH_1280 = new Set(['requests', 'deal', 'invoices', 'quotes', 'contracts', 'acts', 'documents']);
 const WIDTHS_1280 = [
@@ -158,8 +158,8 @@ test('CHAT-1: «Сообщения» — бейдж в меню, лента, п�
   await heading(page, 'Заявки');
   await snap(page, 'cabinet-badge-requests');
   await page.goto('/quotes/301');
-  await heading(page, 'КП KP-2026-0042');
-  await page.getByRole('link', { name: 'Написать менеджеру о КП KP-2026-0042' }).click();
+  await heading(page, 'Коммерческое предложение KP-2026-0042');
+  await page.getByRole('link', { name: 'Написать менеджеру о предложении KP-2026-0042' }).click();
   await expect(page).toHaveURL(/\/messages\?about=quote&id=301&number=KP-2026-0042$/);
   await heading(page, 'Сообщения');
   await expect(page.getByRole('group', { name: 'Документ, о котором вопрос' })).toBeVisible();
@@ -194,7 +194,7 @@ test('хлебные крошки: номер документа, «Проект
   await signIn(page, 'actor');
   const crumbs = page.getByRole('navigation', { name: 'Путь к странице' });
   await page.goto('/quotes/301');
-  await heading(page, 'КП KP-2026-0042');
+  await heading(page, 'Коммерческое предложение KP-2026-0042');
   await expect(crumbs).toContainText('KP-2026-0042');
   await page.goto('/deals/48');
   await heading(page, 'Проект D-48');
@@ -437,11 +437,11 @@ test('B-CABFIX-1: «Я оплатил» → платёжка на проверк
   await snap(page, 'cabinet-proof-pending');
 
   await page.goto('/quotes/310');
-  await heading(page, 'КП KP-2026-0057');
+  await heading(page, 'Коммерческое предложение KP-2026-0057');
   const comments = page.getByRole('region', { name: 'Комментарии' });
   await comments.getByLabel('Ваш комментарий').fill('Можно оплату в два этапа: 50 % до отгрузки и 50 % после приёмки?');
   await comments.getByRole('button', { name: 'Отправить комментарий' }).click();
-  await expect(comments.getByRole('list', { name: 'Комментарии к КП KP-2026-0057' })).toContainText('Можно оплату в два этапа');
+  await expect(comments.getByRole('list', { name: 'Комментарии к предложению KP-2026-0057' })).toContainText('Можно оплату в два этапа');
   await snap(page, 'cabinet-quote-comment');
 });
 

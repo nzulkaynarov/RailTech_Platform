@@ -87,7 +87,18 @@ export function ContractsPage() {
             getRowId={(row) => row.id}
             title={{ header: t('pages.contracts.columns.contract'), cell: (row) => <span className="font-medium whitespace-nowrap">{row.number}</span> }}
             columns={[
-              { id: 'status', header: t('pages.contracts.columns.status'), cell: (row) => <StatusBadge entity="contract" code={row.status} /> },
+              {
+                id: 'status',
+                header: t('pages.contracts.columns.status'),
+                cell: (row) => (
+                  <div className="flex flex-col items-start gap-1">
+                    <StatusBadge entity="contract" code={row.status} />
+                    {row.status === 'signed_by_client' ? (
+                      <span className="text-xs text-muted-foreground">{t('pages.contracts.willBeSent')}</span>
+                    ) : null}
+                  </div>
+                ),
+              },
               {
                 id: 'client',
                 header: t('pages.contracts.columns.client'),

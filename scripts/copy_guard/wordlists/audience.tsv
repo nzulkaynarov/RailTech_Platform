@@ -1,0 +1,19 @@
+# class: audience — internal sales words in texts for clients and partners (Cabinet, e-mail, bot, PDF).
+# applies only to audiences client/partner/any.
+\bлид(а|у|ом|е|ы|ов|ам|ами|ах)?\b	H	ru	client,partner,any	заявка / запрос	внутреннее слово воронки
+\b(lead|leads)\b(?! time)	H	en	client,partner,any	request
+\bсделк\w*	H	ru	client,partner,any	проект ПР-… / номер документа	D5
+\b(deal|deals)\b	H	en	client,partner,any	project	D5
+\bbitim\w*	H	uz	client,partner,any	loyiha	D5
+(?-i:\bКП\b)	M	ru	client,partner,any	коммерческое предложение (в заголовке, письме, боте); в таблице кабинета — «Предложение»	владелец 2026-11-25: аббревиатура клиенту непонятна; §13 — уточнить
+(?-i:\bTT\b)	M	uz	client,partner,any	tijorat taklifi
+\bконтакт(у|ом|а)?\s+(с правом|клиента)|ваш(его|ему)? контакт\w*	M	ru	client,partner,any	коллега / вы	слово CRM
+\b(воронк\w*|квалифицирова\w*|эскалац\w*|передач\w* менеджеру)	M	ru	client,partner,any	(убрать)
+\b(партнёр(ский|ского)? договор с Платформ\w*|оператор платформы|Платформ(а|ы|е|ой|у)\b)	H	ru	client,partner,any	(убрать) — «мы» / название компании	D6, D10 (юридические тексты не трогать)
+\bplatform operator\b|\bthe Platform\b	H	en	client,partner,any	(remove) — «we» / company name	D6
+\b(cabinet)\b	M	en	client,partner,any	account	D12
+\b(персональн\w+ менеджер\w*)	M	ru	client,partner,any	менеджер	D-24.11 help.contactManager
+\b(генподрядчик\w*|принципал\w*|авторизованн\w+ партн\w*|оценк\w+ эффективности)	H	ru	partner	(убрать)	D8
+(?-i:\b(ЭДО|ЭЦП)\b)	H	ru	client,partner,any	«выставлен на подписание» / (убрать)	решение владельца 2026-11-25: клиенту не показываем «ЭДО», как подписываем — организационный вопрос
+(?-i:\bEHT\w*)|e-?document exchange	H	en,uz	client,partner,any	sent for signing / imzolaşga qöyiladi	решение владельца 2026-11-25
+(?-i:\bTK\b)	M	uz	client,partner,any	taklif	аббревиатура клиенту непонятна

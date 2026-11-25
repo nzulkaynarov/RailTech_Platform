@@ -16,7 +16,7 @@ describe('оболочка кабинета', () => {
     await waitFor(() => expect(document.title).toBe('Заявки · Кабинет RailTech'));
 
     const bottom = screen.getByRole('navigation', { name: 'Основные разделы' });
-    for (const name of ['Заявки', 'КП', 'Каталог', 'Все документы', 'Ещё']) {
+    for (const name of ['Заявки', 'Предложения', 'Каталог', 'Все документы', 'Ещё']) {
       expect(within(bottom).getByText(name)).toBeInTheDocument();
     }
     const side = screen.getByRole('navigation', { name: 'Разделы кабинета' });
@@ -63,7 +63,7 @@ describe('оболочка кабинета', () => {
       '/company': 'Компания',
       '/team': 'Команда',
       '/requests/new': 'Новая заявка',
-      '/quotes/301': 'КП KP-2026-0042',
+      '/quotes/301': 'Коммерческое предложение KP-2026-0042',
       '/catalog/1001': 'Подшипник 6205-2RS',
       '/deals/42': 'Заявка ЗВ-2026-042',
     };

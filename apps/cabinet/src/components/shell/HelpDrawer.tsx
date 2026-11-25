@@ -172,7 +172,7 @@ export function HelpDrawer() {
               className="w-full gap-2 text-sm"
             >
               <MessageSquare className="size-4 text-primary" aria-hidden="true" />
-              {t('help.contactManager', 'Написать персональному менеджеру')}
+              {t('help.contactManager', 'Написать менеджеру')}
             </Button>
           </div>
         </SheetFooter>
