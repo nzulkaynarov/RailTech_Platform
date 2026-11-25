@@ -17859,6 +17859,7 @@ export interface components {
     ClientSees:
       | "in_work"
       | "awaiting_decision"
+      | "contract_preparing"
       | "contract_review"
       | "contract_signing"
       | "awaiting_payment"

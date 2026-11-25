@@ -30146,7 +30146,7 @@ components:
 
     ClientSees:
       type: string
-      enum: [in_work, awaiting_decision, contract_review, contract_signing, awaiting_payment, checking_payment, fulfilling, awaiting_acceptance, done, rejected, quote_expired]
+      enum: [in_work, awaiting_decision, contract_preparing, contract_review, contract_signing, awaiting_payment, checking_payment, fulfilling, awaiting_acceptance, done, rejected, quote_expired]
       description: Ключ статуса для клиента (`packages/contracts/client-statuses.yaml`, SPEC-v3 §2.5); текст — у экрана
 
     ClientRequestRow:

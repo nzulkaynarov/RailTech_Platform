@@ -140,6 +140,14 @@ describe("Проект: карточка", () => {
     expect(screen.getAllByText(ruProjects.clientStatus.contract_review)).toHaveLength(1);
   });
 
+  it("СЦ-8: у проекта без договора в строке «Акт» — «Акта ещё нет.», без просьбы выставить счёт", async () => {
+    signIn("director@demo.example");
+    renderAt(PR(104));
+    const docs = await screen.findByRole("region", { name: "Документы проекта" });
+    expect(within(docs).getByText("Акта ещё нет.")).toBeVisible();
+    expect(docs).not.toHaveTextContent("выставьте его");
+  });
+
   it("«История»: журнал проекта один, договор/акт — фильтры; пустые вкладки не показываются", async () => {
     signIn("accountant@demo.example");
     renderAt(PR(97));

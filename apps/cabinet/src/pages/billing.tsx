@@ -224,7 +224,7 @@ export function InvoicesPage() {
               {
                 id: 'status',
                 header: t('pages.invoices.columns.status'),
-                cell: (row) => <StatusBadge entity="invoice" code={views.get(row.id)?.displayStatus ?? row.status} />,
+                cell: (row) => <StatusBadge entity="invoice" code={views.get(row.id)?.displayStatus ?? row.status} nowrap />,
                 className: 'whitespace-nowrap',
               },
               { id: 'total', header: t('pages.invoices.columns.total'), cell: (row) => formatMoney(row.total), className: 'text-right tabular-nums whitespace-nowrap' },
@@ -249,7 +249,7 @@ export function InvoicesPage() {
                   );
                 },
               },
-              { id: 'deal', header: t('pages.invoices.columns.deal'), cell: (row) => <DealLink deal={row.deal} /> },
+              { id: 'deal', header: t('pages.invoices.columns.deal'), cell: (row) => <DealLink deal={row.deal} />, className: 'max-w-36 whitespace-normal' },
             ]}
             actions={{
               header: t('common.actions'),
@@ -291,7 +291,7 @@ function ProofList({ invoice }: { invoice: Invoice }) {
         items={invoice.proofs.map((proof) => (
           <li key={proof.id} className="flex min-w-0 flex-col gap-0.5">
             <span className="flex flex-wrap items-center gap-1.5">
-              <StatusBadge entity="proof" code={proof.status} />
+              <StatusBadge entity="proof" code={proof.status} nowrap />
               <span className="min-w-0 break-words text-muted-foreground" title={proof.file_name}>
                 {t('pages.invoices.proofLine', { name: proof.file_name, date: formatDateTime(proof.submitted_at) })}
               </span>

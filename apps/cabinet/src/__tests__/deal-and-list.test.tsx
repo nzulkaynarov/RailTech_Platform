@@ -76,6 +76,34 @@ describe('Сделка (deep-link бота)', () => {
     expect(within(screen.getByRole('region', { name: 'Счета' })).queryByText('Я оплатил')).toBeNull();
   });
 
+  it('СЦ-8: КП, ждущее решения, — «Ответить»; истёкшее — без кнопки', async () => {
+    signedIn();
+    renderApp('/deals/57');
+    await heading(/ПР-2026-057/);
+    expect(within(await screen.findByRole('region', { name: 'КП' })).getByText('Ответить')).toBeInTheDocument();
+  });
+
+  it('СЦ-8: истёкшее КП — без кнопки «Ответить»', async () => {
+    signedIn();
+    renderApp('/deals/33');
+    await heading(/ПР-2026-033/);
+    const quotes = await screen.findByRole('region', { name: 'КП' });
+    expect(within(quotes).getByText('KP-2026-0033', { exact: false })).toBeInTheDocument();
+    expect(within(quotes).queryByText('Ответить')).toBeNull();
+  });
+
+  it('СЦ-8: контакт без права действовать видит статус, но не кнопки действий', async () => {
+    signedIn('viewer');
+    const { unmount } = renderApp('/deals/29');
+    await screen.findByText('D-2026-0029');
+    expect(await screen.findByText('S-2026-0124')).toBeInTheDocument();
+    expect(screen.queryByText('Kelişiş')).toBeNull(); // «Согласовать» (uz — язык контакта-зрителя)
+    expect(screen.queryByText('Töladim')).toBeNull(); // «Я оплатил»
+    expect(screen.queryByText('Согласовать')).toBeNull();
+    expect(screen.queryByText('Я оплатил')).toBeNull();
+    unmount(); // сырые суммы моков сессии зрителя (не СЦ-8) не должны ловиться охраной текста
+  });
+
   it('чужая сделка — «не найдено»', async () => {
     signedIn();
     renderApp('/deals/999');

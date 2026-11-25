@@ -185,7 +185,9 @@ function Documents({ card, objectId }: { card: ProjectCard; objectId: string }) 
         <DocRow
           number="—"
           type={t("card.documents.act")}
-          status={<span className="pf-hint">{actHint(card.act_blocker, t)}</span>}
+          status={
+            <span className="pf-hint">{actHint(card.act_blocker, t, contract !== null)}</span>
+          }
           action={canIssueAct ? <ActIssueButton objectId={objectId} /> : null}
         />
       )}
@@ -194,10 +196,15 @@ function Documents({ card, objectId }: { card: ProjectCard; objectId: string }) 
 }
 
 /** Статус строки «Акт» из факта `act_blocker` (почему акт нельзя выпустить), а не общая фраза. */
-function actHint(blocker: ProjectCard["act_blocker"], t: TFunction<"projects">): string {
+function actHint(
+  blocker: ProjectCard["act_blocker"],
+  t: TFunction<"projects">,
+  hasContract: boolean,
+): string {
   switch (blocker) {
     case "no_invoice":
-      return t("act.none.noInvoice");
+      // До договора счёта не будет и просить его выставить нельзя (ui-standard §14.2)
+      return hasContract ? t("act.none.noInvoice") : t("card.documents.actMissing");
     case "forbidden":
       return t("act.none.forbidden");
     case "not_delivered":
