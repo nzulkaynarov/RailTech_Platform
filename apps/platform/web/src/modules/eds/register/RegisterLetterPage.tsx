@@ -71,7 +71,10 @@ import "../new/new.css";
 import "./register.css";
 
 /** Поля, заполненные «Заполнить из файла» и ещё не исправленные человеком (id поля формы). */
-const SuggestedFields = createContext<ReadonlySet<string>>(new Set());
+const SuggestedFields = createContext<{ ids: ReadonlySet<string>; rules: boolean }>({
+  ids: new Set(),
+  rules: false,
+});
 
 const AI_FIELD_IDS: Readonly<Record<AiField, string>> = {
   senderName: registerFieldId("sender_name"),
@@ -98,11 +101,16 @@ function Field({
   children: ReactNode;
 }) {
   const { t } = useTranslation("letters");
-  const suggested = useContext(SuggestedFields).has(id);
+  const marks = useContext(SuggestedFields);
+  const suggested = marks.ids.has(id);
   return (
     <div className="pf-fp-field">
       <label htmlFor={id}>{label}</label>
-      {suggested ? <span className="pf-reg-ai-chip">{t("register.ai.chip")}</span> : null}
+      {suggested ? (
+        <span className="pf-reg-ai-chip">
+          {t(marks.rules ? "register.ai.chipRules" : "register.ai.chip")}
+        </span>
+      ) : null}
       {children}
       {error ? (
         <span className="pf-field-error" id={`${id}-error`} role="alert">
@@ -236,7 +244,12 @@ export function RegisterLetterPage() {
   useEffect(() => {
     latest.current = values;
   }, [values]);
-  const [ai, setAi] = useState<{ id: string; filled: AiField[]; left: Set<AiField> } | null>(null);
+  const [ai, setAi] = useState<{
+    id: string;
+    filled: AiField[];
+    left: Set<AiField>;
+    rules?: boolean;
+  } | null>(null);
   useEffect(() => {
     // Пока на плашке не выбрано «Продолжить» или «Начать заново», прежний черновик не трогаем.
     if (!userId || mailId !== null || offer) return;
@@ -530,7 +543,10 @@ export function RegisterLetterPage() {
         />
       ) : null}
       <SuggestedFields.Provider
-        value={new Set(ai ? [...ai.left].map((key) => AI_FIELD_IDS[key]) : [])}
+        value={{
+          ids: new Set(ai ? [...ai.left].map((key) => AI_FIELD_IDS[key]) : []),
+          rules: ai?.rules === true,
+        }}
       >
         <form
           aria-label={t("letters:register.formLabel")}
@@ -583,6 +599,8 @@ export function RegisterLetterPage() {
                         noAutoFor={restoredFileId}
                         attachments={values.attachments}
                         applied={ai?.left.size ?? 0}
+                        rules={ai?.rules === true}
+                        receivedAt={values.receivedAt}
                         linkQuery={
                           canLink && !values.deal && ai
                             ? { inn: values.senderInn.trim(), name: values.senderName.trim() }
@@ -600,6 +618,7 @@ export function RegisterLetterPage() {
                             id: suggestion.suggestion_id,
                             filled: result.filled,
                             left: new Set(result.filled),
+                            rules: suggestion.alias === "rules",
                           });
                         }}
                         onRevert={() => {

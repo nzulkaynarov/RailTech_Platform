@@ -71,7 +71,10 @@ async def suggest_letter_from_file(
         "POST",
         "/letter-intake",
         200,
-        json={"file_id": str(body.file_id)},
+        json={
+            "file_id": str(body.file_id),
+            **({"received_at": body.received_at.isoformat()} if body.received_at else {}),
+        },
         wait_seconds=INTAKE_WAIT_SECONDS,
     )
     return _parse(LetterIntakeSuggestion, raw)

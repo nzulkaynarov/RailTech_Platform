@@ -12,6 +12,7 @@ from app.schemas.common import Strict
 
 class LetterIntakeIn(Strict):
     file_id: uuid.UUID
+    received_at: dt.date | None = None  # дата поступления: от неё код считает срок «в течение N дней»
 
 
 class IntakeSource(StrEnum):

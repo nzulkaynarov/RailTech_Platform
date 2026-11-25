@@ -15,6 +15,7 @@ class _In(BaseModel):
 
 class LetterIntakeIn(_In):
     file_id: uuid.UUID
+    received_at: dt.date | None = None
 
 
 class LetterIntakeFields(BaseModel):

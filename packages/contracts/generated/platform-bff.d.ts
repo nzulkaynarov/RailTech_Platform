@@ -14865,6 +14865,8 @@ export interface components {
     LetterIntakeIn: {
       /** Format: uuid */
       file_id: string;
+      /** @description Дата поступления письма — от неё считается срок «в течение N дней» */
+      received_at?: string | null;
     };
     /** @description Предложенные поля; `null` — не найдено. ИНН найден кодом в тексте файла */
     LetterIntakeFields: {

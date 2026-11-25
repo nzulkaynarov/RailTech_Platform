@@ -4964,6 +4964,7 @@ components:
       required: [file_id]
       properties:
         file_id: { $ref: '#/components/schemas/Uuid' }
+        received_at: { type: string, format: date, description: 'Дата поступления письма: от неё считается срок «в течение N дней»; нет — от дня регистрации' }
     LetterIntakeFields:
       type: object
       additionalProperties: false

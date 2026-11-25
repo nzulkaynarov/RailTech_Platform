@@ -83,6 +83,8 @@ function DealSuggestion({
 export function AiFillBar({
   attachments,
   applied,
+  rules = false,
+  receivedAt = "",
   linkQuery,
   onSuggestion,
   onRevert,
@@ -92,6 +94,10 @@ export function AiFillBar({
   attachments: readonly Attachment[];
   /** Сколько полей заполнено из файла; 0 — предложения нет */
   applied: number;
+  /** Предложение посчитал код по тексту письма, модель не использовалась */
+  rules?: boolean;
+  /** Дата поступления формы (ГГГГ-ММ-ДД): от неё считается срок «в течение N дней» */
+  receivedAt?: string;
   /** ИНН и название корреспондента для поиска связи с проектом; `null` — не искать */
   linkQuery: { inn: string; name: string } | null;
   onSuggestion: (suggestion: LetterIntakeSuggestion) => void;
@@ -112,7 +118,12 @@ export function AiFillBar({
     setPending(true);
     setFailure(null);
     try {
-      onSuggestion(await suggestLetterFromFile({ file_id: file.id }));
+      onSuggestion(
+        await suggestLetterFromFile({
+          file_id: file.id,
+          ...(/^\d{4}-\d{2}-\d{2}$/.test(receivedAt) ? { received_at: receivedAt } : {}),
+        }),
+      );
     } catch (error) {
       setFailure(t(`register.ai.errors.${errorKey(error)}`));
     } finally {
@@ -166,7 +177,9 @@ export function AiFillBar({
           type="info"
           showIcon
           role="status"
-          message={t("register.ai.applied", { count: applied })}
+          message={
+            rules ? t("register.ai.appliedRules") : t("register.ai.applied", { count: applied })
+          }
           action={
             <Button size="small" onClick={onRevert}>
               {t("register.ai.revert")}

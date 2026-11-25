@@ -5,6 +5,7 @@
 (`httpx.MockTransport`), платных вызовов нет."""
 
 import json
+from datetime import date
 from typing import Any
 
 import httpx
@@ -100,10 +101,13 @@ def model(settings: Settings, monkeypatch: pytest.MonkeyPatch) -> FakeModel:
     return fake
 
 
-async def intake(client: httpx.AsyncClient, who: Person, content: bytes, **kw: Any) -> httpx.Response:
+async def intake(
+    client: httpx.AsyncClient, who: Person, content: bytes, received_at: str | None = None, **kw: Any
+) -> httpx.Response:
     uploaded = await upload(client, who, content, **kw)
     assert uploaded.status_code == 201, uploaded.text
-    return await client.post("/api/v1/letter-intake", json={"file_id": uploaded.json()["id"]}, headers=who.headers)
+    body = {"file_id": uploaded.json()["id"], **({"received_at": received_at} if received_at else {})}
+    return await client.post("/api/v1/letter-intake", json=body, headers=who.headers)
 
 
 async def deliver_policy(
@@ -513,6 +517,42 @@ async def test_due_from_the_text_is_suggested_without_the_model(
     down = await intake(client, staff["registrar"], make_pdf(lines))
     assert down.status_code == 200, down.text
     assert down.json()["alias"] == "rules" and down.json()["fields"]["document_due"] == body["fields"]["document_due"]
+    # дата поступления из формы — точка отсчёта срока (5 рабочих дней от субботы 2026-01-10 — пятница 16-го)
+    dated = await intake(client, staff["registrar"], make_pdf(lines), received_at="2026-01-10")
+    assert dated.status_code == 200 and dated.json()["fields"]["document_due"] == "2026-01-16"
     # текст без срока по-прежнему отправляет заполнять вручную
     plain = await intake(client, staff["registrar"], make_pdf(LETTER_LINES))
     assert_error(plain, 409, "CONFLICT", reason="ai_budget_exceeded")
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("в течение пяти рабочих дней", date(2026, 11, 27)),
+        ("В течение десяти календарных дней с даты получения", date(2026, 11, 30)),
+        ("в течение тридцати календарных дней", date(2026, 12, 20)),
+        ("в течение одного дня", date(2026, 11, 21)),
+        ("в течение двух рабочих дней", date(2026, 11, 24)),
+        ("в течение трёх дней", date(2026, 11, 23)),
+        ("в течение двадцати рабочих дней", date(2026, 12, 18)),
+        ("в течение пятнадцать дней", date(2026, 12, 5)),
+        ("в течение 5 (пяти) рабочих дней", date(2026, 11, 27)),
+        ("в течение сорока дней", None),  # вне таблицы 1–30 — подсказки нет, человек введёт сам
+    ],
+)
+def test_due_numerals_in_words_are_counted_by_code(text: str, expected: date | None) -> None:
+    """СЦ-11: «пяти», «десяти», «тридцати» и «рабочих/календарных» — как цифрами (от пятницы 2026-11-20)."""
+    assert letter_intake.due_from_text(text, date(2026, 11, 20)) == expected
+
+
+def test_due_is_counted_from_the_receipt_date_when_there_is_one() -> None:
+    """СЦ-11: срок отсчитывается от даты поступления письма, а без неё — от дня регистрации."""
+    today, received = date(2026, 11, 25), date(2026, 11, 20)  # письмо пришло в пятницу, регистрируют в среду
+    raw = "в течение 5 рабочих дней"
+    with_received = letter_intake.rules_fields(raw, today, base=received)
+    without = letter_intake.rules_fields(raw, today)
+    assert with_received is not None and without is not None
+    assert with_received.document_due == date(2026, 11, 27)
+    assert without.document_due == date(2026, 12, 2)
+    cleaned = letter_intake.clean({}, masked=None, kinds=set(), raw=raw, today=today, base=received)
+    assert cleaned.document_due == date(2026, 11, 27)

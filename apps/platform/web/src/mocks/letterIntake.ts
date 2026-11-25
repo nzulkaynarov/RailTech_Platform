@@ -140,7 +140,7 @@ export const letterIntakeHandlers = [
     if (!allows(held, "eds.inbox.register", "full")) {
       return fail(403, "FORBIDDEN", "Раздел или действие не положены вашей роли.");
     }
-    const { file_id: fileId } = (await request.json()) as LetterIntakeIn;
+    const { file_id: fileId, received_at: receivedAt } = (await request.json()) as LetterIntakeIn;
     const file = readEds().files[fileId];
     if (!file) return fail(404, "NOT_FOUND", "Файл не найден.");
     const image = file.content_type.startsWith("image/") || /скан|scan/i.test(file.name);
@@ -155,6 +155,28 @@ export const letterIntakeHandlers = [
       return fail(409, "CONFLICT", "Распознавание сканов выключено — заполните вручную.", {
         reason: "scan_recognition_disabled",
       });
+    }
+    if (file.name.startsWith("rules-")) {
+      // модель выключена: срок «в течение 7 календарных дней» посчитал код — от даты поступления формы
+      const base = new Date(`${receivedAt ?? new Date().toISOString().slice(0, 10)}T00:00:00Z`);
+      base.setUTCDate(base.getUTCDate() + 7);
+      const byRules: LetterIntakeSuggestion = {
+        suggestion_id: crypto.randomUUID(),
+        source: "text",
+        fields: {
+          sender_name: null,
+          sender_inn: null,
+          sender_ref_number: null,
+          sender_ref_date: null,
+          subject: null,
+          summary: null,
+          kind: null,
+          document_due: base.toISOString().slice(0, 10),
+        },
+        alias: "rules",
+        prompt_version: "rules-1",
+      };
+      return HttpResponse.json(byRules);
     }
     const suggestion: LetterIntakeSuggestion = {
       ...DEMO_SUGGESTION,

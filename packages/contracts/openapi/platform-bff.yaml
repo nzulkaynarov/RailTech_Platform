@@ -26075,6 +26075,11 @@ components:
       required: [file_id]
       properties:
         file_id: {type: string, format: uuid}
+        received_at:
+          anyOf:
+          - {type: string, format: date}
+          - {type: 'null'}
+          description: Дата поступления письма — от неё считается срок «в течение N дней»
 
     LetterIntakeFields:
       type: object

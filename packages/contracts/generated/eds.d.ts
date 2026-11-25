@@ -2687,6 +2687,11 @@ export interface components {
     ResolutionKind: "execute" | "reply" | "info";
     LetterIntakeIn: {
       file_id: components["schemas"]["Uuid"];
+      /**
+       * Format: date
+       * @description Дата поступления письма: от неё считается срок «в течение N дней»; нет — от дня регистрации
+       */
+      received_at?: string;
     };
     /** @description Предложенные поля карточки; `null` — не найдено. ИНН — найден кодом в тексте файла, не моделью */
     LetterIntakeFields: {

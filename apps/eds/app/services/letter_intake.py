@@ -62,7 +62,44 @@ MAX_TOKENS = 1200
 _INN: Final = re.compile(r"(?i)(?:\bИНН|\bSTIR|\bINN|\bTIN)\b\D{0,12}?(\d{9})(?!\d)")
 
 # «в течение 5 рабочих дней», «в течение десяти календарных дней», «5 kun ichida», «5 ish kuni ichida».
-_DUE_RU: Final = re.compile(r"(?i)в\s+течение\s+(\d{1,3})\s*(?:\([^)]{1,30}\)\s*)?(рабоч\w*|календарн\w*)?\s*дн")
+_NUM_WORDS: Final[dict[str, int]] = {
+    # именительный и родительный падеж числительных 1–30 («в течение пяти дней», «тридцати календарных дней»)
+    **{
+        w: n
+        for n, ws in enumerate(
+            (
+                "один одного одну",
+                "два двух",
+                "три трёх трех",
+                "четыре четырёх четырех",
+                "пять пяти",
+                "шесть шести",
+                "семь семи",
+                "восемь восьми",
+                "девять девяти",
+                "десять десяти",
+                "одиннадцать одиннадцати",
+                "двенадцать двенадцати",
+                "тринадцать тринадцати",
+                "четырнадцать четырнадцати",
+                "пятнадцать пятнадцати",
+                "шестнадцать шестнадцати",
+                "семнадцать семнадцати",
+                "восемнадцать восемнадцати",
+                "девятнадцать девятнадцати",
+                "двадцать двадцати",
+            ),
+            start=1,
+        )
+        for w in ws.split()
+    },
+    "тридцать": 30,
+    "тридцати": 30,
+}
+_WORDS_RE = "|".join(sorted(_NUM_WORDS, key=len, reverse=True))
+_DUE_RU: Final = re.compile(
+    rf"(?i)в\s+течение\s+(?:(\d{{1,3}})|({_WORDS_RE}))\s*(?:\([^)]{{1,30}}\)\s*)?(рабоч\w*|календарн\w*)?\s*дн"
+)
 _DUE_UZ: Final = re.compile(r"(?i)\b(\d{1,3})\s*(ish\s+)?kun(?:i)?\s+ichida")
 _MAX_DUE_DAYS = 90
 
@@ -138,8 +175,8 @@ def _text(value: Any, masked: Masked | None, limit: int) -> str | None:
 
 
 def due_from_text(raw: str, today: date) -> date | None:
-    """Срок «в течение N (рабочих|календарных) дней» из текста письма: код считает
-    от даты `today` (дня регистрации), а не модель.
+    """Срок «в течение N (рабочих|календарных) дней» (N цифрами или словом, «пяти дней») из текста письма: код
+    считает от даты `today` (даты поступления, а без неё — дня регистрации), а не модель.
 
     Рабочие дни — пн–пт (как в подсказке срока резолюции); без слова «рабочих» — календарные. Нет оборота или N вне
     разумного — `None`. Это подсказка: срок человек подтверждает в карточке (в письме отсчёт
@@ -149,8 +186,8 @@ def due_from_text(raw: str, today: date) -> date | None:
     found = _DUE_RU.search(raw)
     working = False
     if found:
-        days = int(found.group(1))
-        working = (found.group(2) or "").lower().startswith("рабоч")
+        days = int(found.group(1)) if found.group(1) else _NUM_WORDS[found.group(2).lower()]
+        working = (found.group(3) or "").lower().startswith("рабоч")
     elif (found := _DUE_UZ.search(raw)) is not None:
         days = int(found.group(1))
         working = bool(found.group(2))
@@ -169,12 +206,19 @@ def due_from_text(raw: str, today: date) -> date | None:
 
 
 def clean(
-    data: dict[str, Any], *, masked: Masked | None, kinds: set[str], raw: str, today: date, own_inn: str | None = None
+    data: dict[str, Any],
+    *,
+    masked: Masked | None,
+    kinds: set[str],
+    raw: str,
+    today: date,
+    own_inn: str | None = None,
+    base: date | None = None,
 ) -> LetterIntakeFields:
     """Ответ модели → поля карточки: код решает, что принять (вид — из справочника, даты — разобранные и в разумных
     пределах, ИНН — найденный кодом, не свой)."""
     ref_date = _date(data.get("sender_ref_date"))
-    due = _date(data.get("document_due")) or due_from_text(raw, today)
+    due = _date(data.get("document_due")) or due_from_text(raw, base or today)
     kind = data.get("kind")
     return LetterIntakeFields(
         sender_name=_text(data.get("sender_name"), masked, LIMITS["sender_name"]),
@@ -188,10 +232,12 @@ def clean(
     )
 
 
-def rules_fields(raw: str, today: date, own_inn: str | None = None) -> LetterIntakeFields | None:
+def rules_fields(
+    raw: str, today: date, own_inn: str | None = None, base: date | None = None
+) -> LetterIntakeFields | None:
     """Поля, которые код берёт из текста письма без модели: срок «в течение N дней» и ИНН отправителя.
     Нет срока в тексте — `None`: одного ИНН для предложения мало."""
-    due = due_from_text(raw, today)
+    due = due_from_text(raw, base or today)
     if due is None or not today - DUE_PAST <= due <= today + DUE_AHEAD:
         return None
     return LetterIntakeFields(document_due=due, sender_inn=find_inn(raw, own_inn))
@@ -248,7 +294,12 @@ async def _read(storage: ObjectStorage, key: str) -> bytes:
 
 
 async def suggest(
-    session: AsyncSession, settings: Settings, storage: ObjectStorage, employee: Employee, file_id: uuid.UUID
+    session: AsyncSession,
+    settings: Settings,
+    storage: ObjectStorage,
+    employee: Employee,
+    file_id: uuid.UUID,
+    received_at: date | None = None,
 ) -> LetterIntakeSuggestion:
     """Предложить поля карточки по файлу письма. Вызов модели — вне транзакции, журнал — своей транзакцией."""
     async with session.begin():
@@ -282,7 +333,7 @@ async def suggest(
         ) from exc
     source = IntakeSource.TEXT if len(raw) >= MIN_TEXT else IntakeSource.IMAGE
     today = clock.company_date(clock.now())
-    by_rules = rules_fields(raw, today, own_inn) if source is IntakeSource.TEXT else None
+    by_rules = rules_fields(raw, today, own_inn, received_at) if source is IntakeSource.TEXT else None
     if blocked is not None:
         if by_rules is None:
             raise conflict(*blocked)
@@ -326,6 +377,7 @@ async def suggest(
             raw=raw,
             today=today,
             own_inn=own_inn,
+            base=received_at,
         )
         if result.status == "ok" and result.data is not None
         else None

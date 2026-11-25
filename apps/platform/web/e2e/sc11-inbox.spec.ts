@@ -107,6 +107,27 @@ test.describe("СЦ-11 · Входящее: регистрация и ответ
     }
   });
 
+  test("срок, посчитанный кодом по тексту письма, помечен «Из текста письма», а не «Предложено ИИ»", async ({
+    page,
+  }) => {
+    await signInAt(page, "registrar@demo.example", 1440);
+    await spaGoto(page, "/eds/register");
+    await pickFiles(await reveal(page.getByLabel("Файл документа")), {
+      name: "rules-trebovanie.pdf",
+      mimeType: "application/pdf",
+      buffer: Buffer.from("%PDF-1.4 demo"),
+    });
+    await expect(page.getByText("загружен")).toBeVisible();
+    await expect(
+      page.getByRole("status").filter({ hasText: "Подставлено из текста письма" }),
+    ).toBeVisible();
+    await openStep(page, "Срок, адресат и резолюция");
+    await expect(page.getByLabel("Срок по документу")).not.toHaveValue("");
+    await expect(page.getByText("Из текста письма", { exact: true })).toBeVisible();
+    await expect(page.getByText("Предложено ИИ", { exact: true })).toHaveCount(0);
+    await expectNoViolations(page, "срок по тексту письма");
+  });
+
   test("карточка письма не по сделке без полей заявки и клиента; ответ «На № …» отправителя", async ({
     page,
   }) => {
