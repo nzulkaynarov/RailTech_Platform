@@ -15,6 +15,7 @@ import {
   toCreateBody,
   toUpdateBody,
   validate,
+  validateDraft,
 } from "./formModel";
 import { paragraphOf } from "../../../shared/ui/BodyEditor/bodyModel";
 
@@ -50,8 +51,40 @@ describe("formModel", () => {
     });
     expect(validate({ ...FILLED, dueDate: "2026-10-27" }, "2026-10-27")).toEqual({});
     expect(
-      validate({ ...FILLED, amount: "1 500 000", dueDate: "2026-11-05" }, "2026-10-27"),
+      validate(
+        { ...FILLED, amount: "1 500 000", dueDate: "2026-11-05", invoiceLater: true },
+        "2026-10-27",
+      ),
     ).toEqual({});
+  });
+
+  it("служебка с суммой: нужен счёт партнёра — файл или отметка «придёт позже» (Б-9)", () => {
+    const withAmount: FormValues = { ...FILLED, amount: "1 500 000" };
+    expect(validate(withAmount, "2026-10-27")).toEqual({ invoice: true });
+    expect(validate({ ...withAmount, invoiceLater: true }, "2026-10-27")).toEqual({});
+    expect(
+      validate(
+        {
+          ...withAmount,
+          attachments: [{ key: "a", name: "schet.pdf", size: 1, status: "done", id: "f-1" }],
+        },
+        "2026-10-27",
+      ),
+    ).toEqual({});
+    // файл ещё грузится или не загрузился — счёта нет
+    expect(
+      validate(
+        {
+          ...withAmount,
+          attachments: [{ key: "a", name: "schet.pdf", size: 1, status: "error", error: "x" }],
+        },
+        "2026-10-27",
+      ),
+    ).toEqual({ invoice: true });
+    // без суммы, заявление и отчёт — счёта не требуем; для черновика он не нужен
+    expect(validate(FILLED, "2026-10-27")).toEqual({});
+    expect(validate({ ...withAmount, kind: "application" }, "2026-10-27")).toEqual({});
+    expect(validateDraft(withAmount, "2026-10-27")).toEqual({});
   });
 
   it("у письма обязательны адресат и тело на бланке, почта — похожая на адрес; сумма и срок не проверяются", () => {

@@ -1,4 +1,4 @@
-import { Alert, App, Button, Card, Input, Select, Skeleton } from "antd";
+import { Alert, App, Button, Card, Checkbox, Input, Select, Skeleton } from "antd";
 import { type ReactNode, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate, useSearchParams } from "react-router";
@@ -60,6 +60,7 @@ import {
   fieldElementId,
   fromDocument,
   isLetter,
+  parseAmount,
   kindFromParam,
   replyPrefill,
   replyRef,
@@ -124,7 +125,7 @@ function describedBy(id: string, hasHint: boolean, hasError: boolean): string | 
 
 /** Поле → шаг формы: текст — на шаге «Текст», остальное — на шаге «О документе». */
 function sectionOf(field: string): SectionKey {
-  return field === "text" ? "body" : "about";
+  return field === "text" || field === "invoice" ? "body" : "about";
 }
 
 function focusField(field: FieldKey): void {
@@ -399,7 +400,14 @@ function DocumentForm({
     deal: fieldElementId("erp_deal_id"),
     replyTo: fieldElementId("in_reply_to_number"),
     files: "doc-files",
+    invoice: fieldElementId("invoice"),
   };
+  // «Счёт придёт позже» — только у служебки с суммой и пока счёт не приложен (Б-9)
+  const invoiceLaterShown =
+    values.kind === "memo" &&
+    parseAmount(values.amount).ok &&
+    values.amount.trim() !== "" &&
+    !values.attachments.some((a) => a.status === "done");
   const route = routeKind(values);
   const routeText = t(
     handover ? "documents:form.route.letterHandover" : `documents:form.route.${route}`,
@@ -821,9 +829,21 @@ function DocumentForm({
             id={ids.files}
             label={t("documents:form.files.label")}
             hint={t("documents:form.files.hint")}
+            error={errors.invoice ? fieldText(t, "invoice") : undefined}
           >
             <AttachmentsField id={ids.files} value={values.attachments} onChange={setAttachments} />
           </Field>
+          {invoiceLaterShown ? (
+            <Checkbox
+              id={ids.invoice}
+              checked={values.invoiceLater}
+              onChange={(event) => {
+                set("invoiceLater", event.target.checked);
+              }}
+            >
+              {t("documents:form.files.invoiceLater")}
+            </Checkbox>
+          ) : null}
         </div>
       ),
     },

@@ -97,6 +97,13 @@ async function press(name: string) {
   fireEvent.click(await screen.findByRole("button", { name: new RegExp(`${name}$`) }));
 }
 
+/** Служебка с суммой без счёта: «Счёт партнёра придёт позже» (Б-9). */
+function invoiceLater() {
+  const head = screen.queryByRole("button", { name: /Текст и вложения/, expanded: false });
+  if (head) fireEvent.click(head);
+  fireEvent.click(screen.getByRole("checkbox", { name: "Счёт партнёра придёт позже" }));
+}
+
 function fillMemo(subject = "Закупка канцтоваров", text = "Прошу согласовать закупку.") {
   type("Тема", subject);
   type("Текст", text);
@@ -477,6 +484,23 @@ describe("EDS · Создать документ: форма", () => {
     expect(within(route).getByText("Вы → Директор → Бухгалтер (есть сумма)")).toBeVisible();
   });
 
+  it("служебка с суммой без счёта партнёра не уходит: в «Осталось» названо, что приложить; отметка «придёт позже» снимает требование (Б-9)", async () => {
+    await openForm("manager@demo.example");
+    fillMemo("Оплата рельсов", "Прошу оплатить поставку.");
+    type("Сумма, сум", "1 500 000");
+
+    step(/Проверка и отправка/);
+    const send = screen.getByRole("button", { name: /Отправить на согласование$/ });
+    expect(send).toBeDisabled();
+    expect(
+      screen.getAllByText(/Приложите счёт партнёра или отметьте, что он придёт позже\./).length,
+    ).toBeGreaterThan(0);
+
+    invoiceLater();
+    step(/Проверка и отправка/);
+    expect(screen.getByRole("button", { name: /Отправить на согласование$/ })).toBeEnabled();
+  });
+
   it("согласующие и получатели копии (пункт 1.6): выбор в шаге «Согласование», после отправки — в маршруте", async () => {
     await openForm("manager@demo.example");
     type("Тема", "Закупка с согласованием");
@@ -609,6 +633,7 @@ describe("EDS · Создать документ: форма", () => {
     const { router } = await openForm("manager@demo.example");
     fillMemo("Закупка мебели для переговорной", "Прошу согласовать закупку трёх столов.");
     type("Сумма, сум", "3 600 000");
+    invoiceLater();
 
     await press("Отправить на согласование");
 
@@ -630,6 +655,7 @@ describe("EDS · Создать документ: форма", () => {
     const { router } = await openForm("manager@demo.example");
     fillMemo("Командировка", "Нужна командировка. [сбой]");
     type("Сумма, сум", "500 000");
+    invoiceLater();
 
     await press("Отправить на согласование");
 
