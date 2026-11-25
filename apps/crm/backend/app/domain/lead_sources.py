@@ -63,8 +63,8 @@ def normalize_phone_e164(raw: str | None) -> str | None:
                 return None
         elif len(digits) == _UZ_LOCAL_LEN:
             digits = _UZ_COUNTRY + digits
-        elif digits.startswith("8") and len(digits) == _UZ_LOCAL_LEN + 1:
-            return None
+        elif digits.startswith("8") and len(digits) in (_UZ_LOCAL_LEN + 1, _UZ_LOCAL_LEN + 2):
+            return None  # local trunk prefix «8» (Uzbek or Russian style): the country is unknown
     if digits.startswith(_UZ_COUNTRY) and len(digits) != _UZ_FULL_LEN:
         return None
     return normalize_phone(f"+{digits}")
