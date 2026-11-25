@@ -201,6 +201,7 @@ class ErpEventsService:
             language=pick_language(lead.language if lead else None),
             cabinet_url=cfg.company.cabinet_url,
             deal_number=env_deal.number if env_deal else "",
+            erp_deal_id=env_deal.erp_deal_id if env_deal else None,
         )
         if note_text is None:
             # Приёмка и замечания по строкам поставки: текст ленты — из настроек (FIX-37).

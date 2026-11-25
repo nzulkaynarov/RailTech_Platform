@@ -17,7 +17,7 @@ from inventory.models import Reservation, StockBalance, StockMovement
 from inventory.tests.support import api, complete_order, make_deal
 from supply.models import SupplierOrder, SupplierOrderLine
 
-from notifications.models import EmailLog
+from notifications.models import EmailLog, Notification
 
 pytestmark = pytest.mark.django_db
 
@@ -318,6 +318,13 @@ def test_order_card_shows_the_real_mail_result_not_sent_in_advance(world):
     )
     detail = api(world["supply"]).get(f"{STOCK}orders/{order['id']}/").json()
     assert detail["mail"] == {"state": "failed", "reason": "smtp_not_configured"}
+    # тому, кто отправил заказ, — строка в колокольчике; повтор того же итога второй не добавляет
+    mail_bus.apply_mail_result(
+        mail_bus.MAIL_FAILED, result("failed", reason="smtp_not_configured", detail="", attempts=0)
+    )
+    rows = Notification.objects.filter(event_code="supplier_order.email_failed")
+    assert [n.user_id for n in rows] == [SupplierOrder.objects.get(pk=order["id"]).sent_by_id]
+    assert rows.get().link.startswith("/erp/stock/")
     # повторная отправка тем же письмом после настройки почты — «отправлено»
     mail_bus.apply_mail_result(mail_bus.MAIL_SENT, result("sent"))
     detail = api(world["supply"]).get(f"{STOCK}orders/{order['id']}/").json()

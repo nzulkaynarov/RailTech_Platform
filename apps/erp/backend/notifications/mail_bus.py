@@ -239,9 +239,20 @@ def _apply_mail_result(event_type: str, data: dict[str, Any]) -> None:
             elif log.status != EmailLog.STATUS_FAILED:
                 log.status, log.error = EmailLog.STATUS_FAILED, _failure_text(data)
                 log.save(update_fields=["status", "error"])
+                _tell_sender(data, log)  # только при первом отказе: повтор итога второй строки не даёт
     ref = data.get("ref") or {}
     if ref.get("kind") == "quote" and str(ref.get("id", "")).isdigit():
         _apply_quote_result(int(ref["id"]), sent, data)
+
+
+def _tell_sender(data: dict[str, Any], log) -> None:
+    """Договор, счёт, акт, приглашение, заказ поставщику: отказ почты — отправителю в колокольчик (а не молчание)."""
+    from . import mail_failure
+
+    ref = data.get("ref") or {}
+    kind, ref_id = str(ref.get("kind") or ""), str(ref.get("id") or "")
+    if kind in mail_failure.EVENT_BY_KIND and ref_id:
+        mail_failure.notify_sender(kind, ref_id, list(log.to_emails or []), _failure_text(data))
 
 
 def _failure_text(data: dict[str, Any]) -> str:

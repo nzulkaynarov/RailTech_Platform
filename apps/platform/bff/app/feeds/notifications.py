@@ -52,6 +52,13 @@ _DECISIONS = frozenset(
         "fulfillment.accept_failed",
         "delivery.line_event_failed",
         "supplier_order.overdue",
+        # УВ-2: почта не приняла письмо (договор, счёт, акт, приглашение, заказ поставщику) —
+        # отправителю нужно проверить адрес и отправить снова.
+        "contract.email_failed",
+        "invoice.email_failed",
+        "act.email_failed",
+        "invitation.email_failed",
+        "supplier_order.email_failed",
     }
 )
 # Клиенты: что произошло с клиентом, его заявкой и документами.
