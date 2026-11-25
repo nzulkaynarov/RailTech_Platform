@@ -16,6 +16,7 @@ from app.domain.sandbox import SANDBOX_SOURCE
 from app.models.clients import Client
 from app.models.deals import Deal
 from app.models.leads import Conversation, Lead, Message
+from app.repositories import lead_visibility
 
 
 def _deal_of_lead() -> ColumnElement[bool]:
@@ -80,7 +81,7 @@ async def list_dialogs(
     zone = has_invoice if scope.invoiced_zone else false()
     visible = true() if scope.registry else or_(is_participant, zone)
     stmt = select(Lead, is_participant.label("participant"), has_invoice.label("invoiced")).where(
-        Lead.erased_at.is_(None), Lead.source != SANDBOX_SOURCE, visible
+        Lead.erased_at.is_(None), lead_visibility.listed(), visible
     )
     if client_id is not None:
         stmt = stmt.where(Lead.client_id == client_id)

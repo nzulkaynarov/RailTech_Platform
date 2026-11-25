@@ -48,6 +48,7 @@ from app.api.v1 import (
     system,
     system_status,
     team,
+    telegram_groups,
     users,
 )
 from app.api.v1 import settings as settings_api
@@ -186,6 +187,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         external_services,
         models_admin,
         integrations,
+        telegram_groups,
         mail_sent,
         mail_types,  # раньше inbound_mail: `/inbound-mail/handover-targets` не `{mail_id}`
         inbound_mail,

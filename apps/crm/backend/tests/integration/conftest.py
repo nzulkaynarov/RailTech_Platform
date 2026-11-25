@@ -59,6 +59,7 @@ TABLES = (
     "system_alerts",
     "integration_secrets",
     "telegram_chat_candidates",
+    "telegram_groups",
     "llm_usage",
     "email_log",
     "client_notices",
