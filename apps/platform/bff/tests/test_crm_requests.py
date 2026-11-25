@@ -197,6 +197,23 @@ async def test_partner_answer_without_full_clients_does_not_reach_crm(
     assert crm.calls == []
 
 
+async def test_partner_without_email_is_422_before_crm(web: Web, crm: CrmLeadsFake) -> None:
+    """Phone-only candidates cannot be invited to the contract: the e-mail is required."""
+    await web.login(["MANAGER"])
+    bad = {k: v for k, v in PARTNER_FORM.items() if k != "email"}
+    response = await web.send("POST", "/api/v1/crm/leads/L-2041/partner", json=bad)
+    assert response.status_code == 422
+    assert crm.calls == []
+
+
+async def test_partner_invalid_email_of_crm_is_a_field_error(web: Web, crm: CrmLeadsFake) -> None:
+    crm.error("POST", PARTNER, 422, "validation_failed", reason="invalid_email", field="email")
+    await web.login(["MANAGER"])
+    response = await web.send("POST", "/api/v1/crm/leads/L-2041/partner", json=PARTNER_FORM)
+    assert response.status_code == 422
+    assert response.json()["details"]["reason"] == "invalid_email"
+
+
 async def test_partner_refusal_of_crm_keeps_its_reason(web: Web, crm: CrmLeadsFake) -> None:
     crm.error("POST", PARTNER, 503, "upstream_unavailable", reason="erp_unavailable")
     await web.login(["MANAGER"])

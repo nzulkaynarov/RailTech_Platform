@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 
 import { canEdit } from "../../../app/access";
 import { useAuth } from "../../../app/auth/useAuth";
+import { ApiError } from "../../../shared/api/errors";
 import { useViewport } from "../../../app/shell/useViewport";
 import type { LeadCard, PartnerHandoffView } from "../../../shared/api/generated/model";
 import { useHandOverCrmLeadAsPartner } from "../../../shared/api/generated/platform-bff";
@@ -18,14 +19,23 @@ import "../crm.css";
 const COUNTRIES = ["UZ", "KZ", "KG", "TJ", "RU", "BY", "CN", "TR", "DE", "AE", "IN", "KR"] as const;
 const EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
-type Field = "company" | "contact" | "offer" | "channel" | "email";
+type Field = "company" | "contact" | "offer" | "email";
 
 /**
  * «Кто это?» → «Партнёр» (ЛП-1): заявка кандидата в партнёры из карточки лида — компания, страна, ИНН, контакт и что
  * предлагает; заполнено из лида. Повторное нажатие (двойной клик, вторая вкладка) CRM отдаёт ту же заявку. Ошибка оставляет
  * введённое.
  */
-export function PartnerHandoff({ lead, onCancel }: { lead: LeadCard; onCancel: () => void }) {
+export function PartnerHandoff({
+  lead,
+  onCancel,
+  onDone,
+}: {
+  lead: LeadCard;
+  onCancel: () => void;
+  /** Заявка заведена: вызывающий убирает вопрос «Кто это?» */
+  onDone?: () => void;
+}) {
   const { t, i18n } = useTranslation(["request", "clients"]);
   const { me } = useAuth();
   const { mobile } = useViewport();
@@ -45,6 +55,8 @@ export function PartnerHandoff({ lead, onCancel }: { lead: LeadCard; onCancel: (
   const [tried, setTried] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
   const [done, setDone] = useState<PartnerHandoffView | null>(null);
+  // Адрес, который CRM не приняла: ошибка стоит у поля, пока адрес не изменён
+  const [rejectedEmail, setRejectedEmail] = useState<string | null>(null);
   const set = (change: Partial<typeof values>) => {
     setValues((prev) => ({ ...prev, ...change }));
   };
@@ -53,8 +65,10 @@ export function PartnerHandoff({ lead, onCancel }: { lead: LeadCard; onCancel: (
   if (!values.company.trim()) errors.company = "company";
   if (!values.contact.trim()) errors.contact = "contact";
   if (!values.offer.trim()) errors.offer = "offer";
-  if (!values.email.trim() && !values.phone.trim()) errors.channel = "channel";
-  else if (values.email.trim() && !EMAIL.test(values.email.trim())) errors.email = "email";
+  // Почта обязательна: по ней партнёру приходит договор; CRM проверяет формат так же, как ERP.
+  if (!values.email.trim()) errors.email = "email";
+  else if (!EMAIL.test(values.email.trim())) errors.email = "invalid_email";
+  if (rejectedEmail === values.email.trim() && values.email.trim()) errors.email = "invalid_email";
   const shown = (field: Field) => (tried && errors[field] ? errors[field] : undefined);
   const text = (field: Field) => {
     const key = shown(field);
@@ -102,8 +116,15 @@ export function PartnerHandoff({ lead, onCancel }: { lead: LeadCard; onCancel: (
         onSuccess: (result) => {
           refresh();
           setDone(result);
+          onDone?.();
         },
         onError: (error) => {
+          const reason = error instanceof ApiError ? error.details["reason"] : null;
+          if (reason === "invalid_email") {
+            setRejectedEmail(values.email.trim());
+            setTried(true);
+            return;
+          }
           setServerError(reasonError(t, "request:partner.errors", error));
         },
       },
@@ -184,13 +205,13 @@ export function PartnerHandoff({ lead, onCancel }: { lead: LeadCard; onCancel: (
           type="email"
           value={values.email}
           maxLength={254}
-          aria-invalid={invalid("channel") ?? invalid("email")}
-          aria-describedby={`${id("email")}-hint`}
+          aria-invalid={invalid("email")}
+          aria-describedby={`${id("email")}-hint ${id("email")}-error`}
           onChange={(event) => {
             set({ email: event.target.value });
           }}
         />
-        <PartnerError id={id("email-error")} text={text("email") ?? text("channel")} />
+        <PartnerError id={id("email-error")} text={text("email")} />
       </FormField>
       <FormField id={id("phone")} label={t("request:partner.phone")}>
         <Input
@@ -198,7 +219,6 @@ export function PartnerHandoff({ lead, onCancel }: { lead: LeadCard; onCancel: (
           type="tel"
           value={values.phone}
           maxLength={32}
-          aria-invalid={invalid("channel")}
           onChange={(event) => {
             set({ phone: event.target.value });
           }}

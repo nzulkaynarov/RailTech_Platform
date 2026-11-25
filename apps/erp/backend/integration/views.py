@@ -124,23 +124,9 @@ class PartnerApplicationView(BaseIntegrationView):
         if not serializer.is_valid():
             raise IntegrationValidationError("VALIDATION_ERROR")
         data = dict(serializer.validated_data)
-        email = data.get("email", "")
-        if email and not _valid_email(email):
-            raise IntegrationValidationError("VALIDATION_ERROR")
         app, created = create_from_lead({**data, "source_ref": data["lead_number"]})
         out = PartnerApplicationOutSerializer({"erp_application_id": app.pk, "status": app.status, "created": created})
         return Response(data=out.data, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
-
-
-def _valid_email(value: str) -> bool:
-    from django.core.exceptions import ValidationError
-    from django.core.validators import validate_email
-
-    try:
-        validate_email(value)
-    except ValidationError:
-        return False
-    return True
 
 
 class InviteClientContactView(BaseIntegrationView):

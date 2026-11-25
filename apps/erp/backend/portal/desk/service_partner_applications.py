@@ -122,7 +122,12 @@ def _create_company(app: PartnerApplication, kind: str) -> Company:
 def _applicant_contact(app: PartnerApplication, company: Company, user) -> Contact:
     if app.applicant_contact and app.applicant_contact.company_id == company.pk:
         return app.applicant_contact
-    contact = Contact.objects.filter(active_contact_q(), company=company, email__iexact=app.email).first()
+    # Пустая почта не сопоставляет контакт: иначе заявка без почты «нашла» бы любой контакт без адреса
+    contact = (
+        Contact.objects.filter(active_contact_q(), company=company, email__iexact=app.email).first()
+        if app.email.strip()
+        else None
+    )
     if contact is None:
         contact = Contact.objects.create(
             company=company,
@@ -142,9 +147,7 @@ def _applicant_contact(app: PartnerApplication, company: Company, user) -> Conta
 
 def _invite_deliveries(apps) -> dict[str, str]:
     """Итог последнего письма-приглашения по адресам заявок: `queued`, `sent`, `failed` (одним запросом)."""
-    emails = {
-        app.email.lower() for app in apps if app.source != PartnerApplicationSource.CLIENT_CABINET and app.email
-    }
+    emails = {app.email.lower() for app in apps if app.source != PartnerApplicationSource.CLIENT_CABINET and app.email}
     if not emails:
         return {}
     wanted = Q()
@@ -171,7 +174,9 @@ def _app_dict(app: PartnerApplication, deliveries: dict[str, str], viewer=None) 
 
     return {
         "id": app.pk,
-        "source": app.source,
+        # Перечень `source` в контракте ERP не растёт (ломающее после 1.0): лид отдаётся как письмо с признаком
+        "source": PartnerApplicationSource.LETTER if app.source == PartnerApplicationSource.LEAD else app.source,
+        "from_lead": app.source == PartnerApplicationSource.LEAD,
         "status": app.status,
         "source_ref": app.source_ref,
         "kind": app.kind,

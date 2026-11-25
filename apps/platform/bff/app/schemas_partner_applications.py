@@ -154,6 +154,8 @@ def to_partner_application(raw: Mapping[str, Any]) -> PartnerApplicationItem:
     source: PartnerApplicationSource = (
         raw_source if raw_source in ("public", "client_cabinet", "letter", "lead") else "public"
     )
+    if raw.get("from_lead") is True:  # ERP отдаёт заявку из лида как письмо с признаком (ЛП-1)
+        source = "lead"
     raw_kind = raw.get("kind")
     allowed_kinds = ("", "manufacturer", "supplier", "principal", "other")
     kind: PartnerApplicationKind = raw_kind if raw_kind in allowed_kinds else ""

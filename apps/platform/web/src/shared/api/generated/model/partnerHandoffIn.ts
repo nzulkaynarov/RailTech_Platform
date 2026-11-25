@@ -4,7 +4,7 @@
  */
 
 /**
- * Нужен e-mail или телефон
+ * Почта обязательна — по ней ERP приглашает кандидата согласовать договор; формат проверяет CRM (`details.reason = invalid_email`, поле `email`)
  */
 export interface PartnerHandoffIn {
   /**
@@ -30,8 +30,11 @@ export interface PartnerHandoffIn {
    * @maxLength 255
    */
   contact_name: string;
-  /** @maxLength 254 */
-  email?: string;
+  /**
+   * @minLength 3
+   * @maxLength 254
+   */
+  email: string;
   /** @maxLength 32 */
   phone?: string;
 }

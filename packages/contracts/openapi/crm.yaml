@@ -7767,11 +7767,9 @@ components:
       title: OffsiteStatusOut
       type: object
     PartnerHandoffIn:
-      description: 'Форма «Партнёр»: компания, страна, ИНН, контакт и что предлагает кандидат. Нужен хотя бы
+      description: 'Форма «Партнёр»: компания, страна, ИНН, контакт и что предлагает кандидат. Почта обязательна:
 
-        один канал — e-mail
-
-        или телефон.'
+        договорный шлюз ERP приглашает кандидата по ней; формат проверяет сервис (`invalid_email`).'
       properties:
         company_name:
           maxLength: 255
@@ -7790,8 +7788,8 @@ components:
           title: Country
           type: string
         email:
-          default: ''
           maxLength: 254
+          minLength: 3
           title: Email
           type: string
         inn:
@@ -7822,6 +7820,7 @@ components:
       - company_name
       - offer
       - contact_name
+      - email
       title: PartnerHandoffIn
       type: object
     PartnerHandoffOut:

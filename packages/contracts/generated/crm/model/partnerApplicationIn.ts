@@ -40,8 +40,11 @@ export interface PartnerApplicationIn {
    * @maxLength 255
    */
   contact_name: string;
-  /** @maxLength 254 */
-  email?: string;
+  /**
+   * Почта кандидата — по ней договорный шлюз ERP приглашает его согласовать договор; обязательна
+   * @maxLength 254
+   */
+  email: string;
   /** @maxLength 32 */
   phone?: string;
   language?: PartnerApplicationInLanguage;

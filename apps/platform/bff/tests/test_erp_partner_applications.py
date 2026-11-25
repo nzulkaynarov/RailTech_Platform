@@ -239,6 +239,26 @@ async def test_access_control(web: Web) -> None:
     assert resp.json()["details"]["resource"] == "erp.stock"
 
 
+async def test_list_shows_the_lead_source(web: Web, be: Any, check: ContractChecker) -> None:
+    """ЛП-1: заявка из карточки лида приходит с источником `lead`, а не «внешним входом»."""
+    await web.login(["SUPPLY"])
+    raw = {
+        **APPLICATION_RAW,
+        "id": 17,
+        "source": "letter",
+        "from_lead": True,
+        "source_ref": "L-2041",
+    }
+    mock(be).get(f"{API}/catalog/partner-applications/").mock(
+        return_value=httpx.Response(200, json={"items": [raw], "pending_count": 1})
+    )
+    response = await call(web, "GET", BASE)
+    assert response.status_code == 200, response.text
+    check(response, "/erp/catalog/partner-applications", "get")
+    item = response.json()["items"][0]
+    assert (item["source"], item["source_ref"]) == ("lead", "L-2041")
+
+
 async def test_create_from_letter(web: Web, be: Any, check: ContractChecker) -> None:
     """План 1.9: снабжение заводит заявку кандидата по входящему письму."""
     await web.login(["SUPPLY"])

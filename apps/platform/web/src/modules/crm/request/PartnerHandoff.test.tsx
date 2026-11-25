@@ -78,6 +78,41 @@ describe("«Кто это?» в шаге «Создать заявку» (ЛП-1
     expect(calls).toBe(0);
   });
 
+  it("почта обязательна: лид с одним телефоном не уходит без неё, адрес без точки в домене — ошибка у поля", async () => {
+    let calls = 0;
+    server.use(
+      http.post("*/api/v1/crm/leads/:lead/partner", () => {
+        calls += 1;
+        return HttpResponse.json({ lead: "L-2077", application: 1, created: true });
+      }),
+    );
+    const panel = await openLead("L-2077");
+    fireEvent.click(await within(panel).findByRole("radio", { name: "Партнёр" }));
+    const form = await within(panel).findByRole("form", { name: "Партнёр" });
+    fireEvent.click(within(form).getByRole("button", { name: "Передать как партнёра" }));
+    expect(await within(form).findByText("Укажите почту")).toBeInTheDocument();
+    fireEvent.change(within(form).getByLabelText("Почта"), { target: { value: "a@b" } });
+    fireEvent.click(within(form).getByRole("button", { name: "Передать как партнёра" }));
+    expect(await within(form).findByText("Проверьте адрес почты")).toBeInTheDocument();
+    expect(calls).toBe(0);
+  });
+
+  it("CRM не приняла адрес: ошибка у поля почты, а не «повторите»", async () => {
+    server.use(
+      http.post("*/api/v1/crm/leads/:lead/partner", () =>
+        HttpResponse.json(
+          { code: "VALIDATION_FAILED", message: "x", details: { reason: "invalid_email" } },
+          { status: 422 },
+        ),
+      ),
+    );
+    const panel = await openLead("L-2044");
+    const form = await within(panel).findByRole("form", { name: "Партнёр" });
+    fireEvent.click(within(form).getByRole("button", { name: "Передать как партнёра" }));
+    expect(await within(form).findByText("Проверьте адрес почты")).toBeInTheDocument();
+    expect(within(form).queryByText(/Не удалось передать/)).toBeNull();
+  });
+
   it("закрытие лида: в моке он уходит из «клиентов» и несёт номер заявки", async () => {
     const panel = await openLead("L-2044");
     const form = await within(panel).findByRole("form", { name: "Партнёр" });

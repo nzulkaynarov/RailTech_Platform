@@ -32,6 +32,32 @@ def contact_email(raw: str | None) -> str | None:
     return value
 
 
+_DJANGO_USER: Final = re.compile(
+    r"(^[-!#$%&'*+/=?^_`{}|~0-9A-Z]+(\.[-!#$%&'*+/=?^_`{}|~0-9A-Z]+)*\Z"
+    r'|^"([\001-\010\013\014\016-\037!#-\[\]-\177]|\\[\001-\011\013\014\016-\177])*"\Z)',
+    re.IGNORECASE,
+)
+_DJANGO_DOMAIN: Final = re.compile(
+    r"((?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+)(?:[A-Z0-9-]{2,63}(?<!-))\Z", re.IGNORECASE
+)
+
+
+def partner_email(raw: str) -> str:
+    """Почта кандидата в партнёры: правила ERP (`django.core.validators.validate_email`),
+    чтобы CRM не принимала адрес, который ERP потом отвергнет; ошибка — у поля `email`."""
+    value = raw.strip()
+    user, at, domain = value.rpartition("@")
+    ok = bool(at) and len(value) <= 254 and bool(_DJANGO_USER.match(user))
+    if ok and not _DJANGO_DOMAIN.match(domain):
+        try:
+            ok = bool(_DJANGO_DOMAIN.match(domain.encode("idna").decode("ascii")))
+        except UnicodeError:
+            ok = False
+    if not ok:
+        raise ValidationFailedError("invalid email", reason=Reason.INVALID_EMAIL, field="email")
+    return value.lower()
+
+
 def suggested_name(first_name: str | None, username: str | None, phone: str) -> str:
     """Имя для контакта из Telegram: имя из профиля, иначе @username, иначе номер."""
     if first_name and first_name.strip():

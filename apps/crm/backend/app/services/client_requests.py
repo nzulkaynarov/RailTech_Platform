@@ -14,6 +14,7 @@ import uuid
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from typing import Final
 
 import structlog
 from sqlalchemy import select
@@ -290,7 +291,8 @@ async def _client_for(
     if body.company is None:
         raise ValidationFailedError("choose a client or enter the company", field="company")
     # One company is one card (ЛП-1): look up by INN, then by normalised name and country first.
-    found = await find_client(session, body.company.name, body.company.inn, body.company.country)
+    country = body.company.country or country_of_phone(lead.phone_e164)
+    found = await find_client(session, body.company.name, body.company.inn, country)
     if found is not None:
         client = await session.get(Client, found.id, with_for_update=True)
         if client is not None:
@@ -298,13 +300,36 @@ async def _client_for(
     client = Client(
         name=body.company.name.strip(),
         inn=(body.company.inn or "").strip() or None,
-        country=body.company.country,
+        country=country,
         owner_user_id=who.user_id,
     )
     session.add(client)
     await session.flush()
     await bus_events.client_created(session, client, who.actor)
     return client
+
+
+# Dial codes that point to one country; `+7` is shared by RU and KZ, so it gives no hint.
+_DIAL_COUNTRY: Final = (
+    ("+998", "UZ"),
+    ("+996", "KG"),
+    ("+992", "TJ"),
+    ("+375", "BY"),
+    ("+971", "AE"),
+    ("+86", "CN"),
+    ("+90", "TR"),
+    ("+49", "DE"),
+    ("+91", "IN"),
+    ("+82", "KR"),
+)
+
+
+def country_of_phone(phone_e164: str | None) -> str | None:
+    """Country hint of a lead from its phone's dial code (the form has no country for a client)."""
+    for prefix, code in _DIAL_COUNTRY:
+        if phone_e164 and phone_e164.startswith(prefix):
+            return code
+    return None
 
 
 def normalize_name(name: str) -> str:
@@ -335,6 +360,9 @@ async def find_client(
     )
     for candidate in candidates:
         if normalize_name(candidate.name) != wanted:
+            continue
+        # The same name with another INN is another company: never merge on the name alone.
+        if digits and candidate.inn and candidate.inn.strip() != digits:
             continue
         if country and candidate.country and candidate.country.upper() != country.upper():
             continue

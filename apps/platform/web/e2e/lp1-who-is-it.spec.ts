@@ -52,13 +52,16 @@ for (const width of WIDTHS) {
       await form.getByRole("button", { name: "Передать как партнёра" }).click();
 
       await expect(page.getByRole("status").getByText("Лид передан как партнёр")).toBeVisible();
+      // ответ дан — вопрос «Кто это?» убран, остался результат
+      await expect(who).toBeHidden();
       await shot(page, "partner-done", width);
       await expectNoViolations(page, `партнёр, готово ${String(width)}`);
       await page.getByRole("status").getByRole("button", { name: "Закрыть" }).click();
 
-      // лид закрыт исходом «передан как партнёр»: не «клиент», не «отказ»; повторный адрес — та же заявка, формы нет
+      // лид закрыт исходом «передан как партнёр»: не «клиент», не «отказ», из списка ушёл; повторный адрес — та же заявка
       await spaGoto(page, "/crm/leads?lead=L-2041&panel=open&tab=card");
       await expect(page.getByText("Передан как партнёр").first()).toBeVisible();
+      await expect(page.getByRole("table").getByText("L-2041")).toHaveCount(0);
       await expect(page.getByText("Заявка партнёра")).toBeVisible();
       await shot(page, "partner-lead-card", width);
       await expectNoViolations(page, `карточка лида после передачи ${String(width)}`);
@@ -78,6 +81,20 @@ for (const width of WIDTHS) {
       await expectNoViolations(page, `по умолчанию партнёр ${String(width)}`);
       await who.getByRole("radio", { name: "Клиент" }).check();
       await expect(page.getByRole("form", { name: "Создать заявку" })).toBeVisible();
+    });
+
+    test("лид только с телефоном: без почты не уйдёт, ошибка у поля", async ({ page }) => {
+      await open(page, width, "L-2077");
+      await page.getByRole("radio", { name: "Партнёр" }).check();
+      const form = page.getByRole("form", { name: "Партнёр" });
+      await expect(form.getByLabel("Телефон")).not.toHaveValue("");
+      await form.getByRole("button", { name: "Передать как партнёра" }).click();
+      await expect(form.getByText("Укажите почту")).toBeVisible();
+      await form.getByLabel("Почта").fill("нет-собаки");
+      await form.getByRole("button", { name: "Передать как партнёра" }).click();
+      await expect(form.getByText("Проверьте адрес почты")).toBeVisible();
+      await shot(page, "partner-phone-only", width);
+      await expectNoViolations(page, `только телефон ${String(width)}`);
     });
 
     test("учёт не отвечает: ответ словами, введённое на месте, лид не тронут", async ({ page }) => {

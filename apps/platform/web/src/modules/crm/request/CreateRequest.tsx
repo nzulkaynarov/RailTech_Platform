@@ -89,6 +89,8 @@ function LeadStep({
     partnerForm: card.origin?.form === "site-partner",
   }));
   const [chosen, setChosen] = useState<Who | null>(null);
+  // Заявка заведена — вопрос «Кто это?» убираем: ответ уже дан, остаётся экран результата
+  const [finished, setFinished] = useState(false);
   // Лид уже передан как партнёр (повторный адрес, вторая вкладка): заявка есть, второй формы нет.
   if (opened.handed) {
     return (
@@ -106,26 +108,43 @@ function LeadStep({
     : (chosen ?? (opened.partnerForm ? "partner" : "client"));
   const form =
     who === "partner" ? (
-      <PartnerHandoff lead={card} onCancel={onCancel} />
+      <PartnerHandoff
+        lead={card}
+        onCancel={onCancel}
+        onDone={() => {
+          setFinished(true);
+        }}
+      />
     ) : (
-      <RequestForm lead={card} clientId={clientId} letterFrom={letterFrom} onCancel={onCancel} />
+      <RequestForm
+        lead={card}
+        clientId={clientId}
+        letterFrom={letterFrom}
+        onCreated={() => {
+          setFinished(true);
+        }}
+        onCancel={onCancel}
+      />
     );
   if (!opened.asks) return form;
   return (
     <div className="pf-fp-stack">
-      <fieldset className="pf-req-group">
-        <legend>{t("who.legend")}</legend>
-        <Radio.Group
-          value={who}
-          onChange={(event) => {
-            setChosen(event.target.value as Who);
-          }}
-          options={[
-            { value: "client", label: t("who.client") },
-            { value: "partner", label: t("who.partner") },
-          ]}
-        />
-      </fieldset>
+      {/* Обёртка и форма остаются на месте и после ответа: иначе форма пересоздалась бы и потеряла экран «готово» */}
+      {finished ? null : (
+        <fieldset className="pf-req-group">
+          <legend>{t("who.legend")}</legend>
+          <Radio.Group
+            value={who}
+            onChange={(event) => {
+              setChosen(event.target.value as Who);
+            }}
+            options={[
+              { value: "client", label: t("who.client") },
+              { value: "partner", label: t("who.partner") },
+            ]}
+          />
+        </fieldset>
+      )}
       {form}
     </div>
   );
