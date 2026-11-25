@@ -321,3 +321,70 @@ def test_preview_works_before_the_company_is_marked_as_a_partner(world):
     body = {"deal_id": deal.pk, "supplier_id": stranger.pk, "line_ids": [items[0].pk]}
     assert api(world["supply"]).post(f"{URL}preview/", body, format="json").status_code == 200
     assert api(world["supply"]).post(URL, body, format="json").status_code == 404
+
+
+def _auto_card(product, deal=None):
+    """Карточка, которую расчёт завёл из слов клиента: черновик со сделкой-источником и артикулом клиента."""
+    from sales.models import Deal
+
+    from catalog.models import ProductStatus
+
+    draft, _ = ProductStatus.objects.get_or_create(code="DRAFT", defaults={"name": "Черновик"})
+    deal = deal or Deal.objects.first()
+    type(product).objects.filter(pk=product.pk).update(
+        status=draft, source_deal=deal, name=CLIENT_WORDS, manufacturer_part_number="МС-КОД-77"
+    )
+
+
+def test_an_unconfirmed_card_blocks_the_order_to_the_partner_and_the_price_request_from_it(world):
+    deal, _q, _items = make_deal(world, [(world["rail"], 2)])
+    _auto_card(world["rail"], deal)
+    draft = _draft(world, [{"product_id": world["rail"].pk, "quantity": 2}])
+    from inventory.tests.support import complete_order
+
+    asked = api(world["supply"]).post(f"{STOCK}orders/{draft['id']}/price-request/", {}, format="json")
+    assert asked.status_code == 409 and asked.json()["detail"] == "PARTNER_NAME_REQUIRED"
+    assert not PriceRequest.objects.exists()
+    # заказ с названием «из слов клиента» партнёру не уходит
+    complete_order(draft["id"])
+    sent = api(world["supply"]).post(f"{STOCK}orders/{draft['id']}/send/", {}, format="json")
+    assert sent.status_code == 409 and sent.json()["detail"] == "PARTNER_NAME_REQUIRED"
+    assert not mail.outbox
+    # карточку подтвердили (опубликована) — заказ уходит
+    from catalog.models import ProductStatus
+
+    published, _ = ProductStatus.objects.get_or_create(code="PUBLISHED", defaults={"name": "Опубликован"})
+    type(world["rail"]).objects.filter(pk=world["rail"].pk).update(status=published, name="Перевод стрелочный Р65")
+    ok = api(world["supply"]).post(f"{STOCK}orders/{draft['id']}/send/", {}, format="json")
+    assert ok.status_code == 200, ok.json()
+
+
+def test_the_order_line_article_does_not_carry_the_client_code_of_an_unconfirmed_card(world):
+    from supply.models import SupplierOrderLine
+
+    deal, _q, _items = make_deal(world, [(world["rail"], 2)])
+    _auto_card(world["rail"], deal)
+    draft = _draft(world, [{"product_id": world["rail"].pk, "quantity": 2}])
+    line = SupplierOrderLine.objects.get(order_id=draft["id"])
+    assert "МС-КОД-77" not in line.article
+
+
+def test_client_codes_in_mpn_and_drawing_never_reach_the_partner_article(world):
+    deal, _q, items = make_deal(world, [(world["rail"], 2)])
+    QuoteItem.objects.filter(pk=items[0].pk).update(mpn="МС-КОД-77", gost_drawing="ЧЕРТ-МС-1234")
+    response = _ask(world, deal, items)
+    assert response.status_code == 201, response.json()
+    assert response.json()["lines"][0]["article"] == world["rail"].sku
+    seen = _everything_partner_sees(response.json()["id"])
+    assert "МС-КОД-77" not in seen and "ЧЕРТ-МС-1234" not in seen
+
+
+def test_an_unconfirmed_auto_card_needs_a_staff_name_in_the_price_request(world):
+    deal, _q, items = make_deal(world, [(world["rail"], 2)])
+    _auto_card(world["rail"], deal)
+    refused = _ask(world, deal, items)
+    assert refused.status_code == 409 and refused.json()["detail"] == "PARTNER_NAME_REQUIRED"
+    named = _ask(world, deal, items, partner_names=[{"line_id": items[0].pk, "name": "Перевод стрелочный"}])
+    assert named.status_code == 201, named.json()
+    seen = _everything_partner_sees(named.json()["id"])
+    assert "Чиланзар" not in seen and "МетроСтрой" not in seen and "МС-КОД-77" not in seen

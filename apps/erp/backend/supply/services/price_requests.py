@@ -18,6 +18,7 @@ from inventory.access import StockError, person_name, require_staff, require_sup
 from supply.models import PriceRequest, PriceRequestLine, PriceRequestStatus
 from supply.services.orders import get_supplier, supplier_email
 
+from catalog.candidates import is_unconfirmed_card
 from core.person_ref import person_ref
 
 logger = logging.getLogger(__name__)
@@ -38,7 +39,12 @@ def _deal_and_items(deal_id: int, item_ids: list[int]):
     if quote is None:
         raise StockError("CALC_NOT_STARTED", 409)
     ids = list(dict.fromkeys(item_ids))
-    items = {i.pk: i for i in quote.items.billable().select_related("product__domain_type", "calc").filter(pk__in=ids)}
+    items = {
+        i.pk: i
+        for i in quote.items.billable()
+        .select_related("product__domain_type", "product__status", "calc")
+        .filter(pk__in=ids)
+    }
     # Объектная проверка: строки должны быть строками расчёта этой заявки.
     if len(items) != len(ids):
         raise StockError("LINE_NOT_FOUND", 404)
@@ -188,7 +194,7 @@ def create_from_order(
     order = orders._order_or_404(order_id, lock=True)
     if order.status != OrderStatus.DRAFT:
         raise StockError("ORDER_NOT_DRAFT", 409)
-    lines = list(order.lines.select_related("product", "deal"))
+    lines = list(order.lines.select_related("product__status", "deal"))
     if line_ids:
         by_id = {line.pk: line for line in lines}
         if any(pk not in by_id for pk in line_ids):
@@ -200,6 +206,10 @@ def create_from_order(
         raise StockError("NOTHING_TO_PRICE", 409)
     if len(chosen) > MAX_LINES:
         raise StockError("TOO_MANY_LINES", 400)
+    from supply.services.orders import unconfirmed_lines
+
+    if unconfirmed_lines(chosen):
+        raise StockError("PARTNER_NAME_REQUIRED", 409)  # название строки — слова клиента, карточку не подтвердили
     recipient = (to_email or "").strip() or supplier_email(order.supplier)
     if not recipient:
         raise StockError("SUPPLIER_EMAIL_REQUIRED", 409)
@@ -268,13 +278,16 @@ def partner_lines(items, partner_names: Optional[dict[int, dict]] = None) -> lis
         confirmed = given.get(item.pk) or {}
         staff_name = " ".join((confirmed.get("name") or "").split())
         product = item.product if item.product_id else None
+        # карточка-черновик заведена расчётом из слов клиента и человеком не подтверждена: как её нет
+        trusted = product if product is not None and not is_unconfirmed_card(product) else None
         if staff_name:
             source, name = "staff", staff_name
-        elif product is not None:
-            source, name = "card", product.name
+        elif trusted is not None:
+            source, name = "card", trusted.name
         else:
             source, name = "missing", None
-        article = " ".join((confirmed.get("article") or "").split()) or (product.sku if product is not None else "")
+        # артикул — только наш (`sku` подтверждённой карточки); mpn и чертёж из заявки клиента партнёру не уходят
+        article = " ".join((confirmed.get("article") or "").split()) or (trusted.sku if trusted is not None else "")
         rows.append(
             {
                 "item": item,

@@ -51,6 +51,7 @@ from supply.models import (
 )
 from supply.services import shortage
 
+from catalog.candidates import is_unconfirmed_card
 from catalog.item_ref import item_ref, main_photos
 from catalog.models import Product
 from core.person_ref import person_ref
@@ -100,6 +101,16 @@ def supplier_email(company) -> str:
         return company.email
     contact = company.contacts.exclude(email="").order_by("-is_primary", "id").first()
     return contact.email if contact is not None else ""
+
+
+def unconfirmed_lines(lines) -> list:
+    """Строки заказа, чьё название — слова клиента: карточка заведена расчётом (`DRAFT`), человек её не подтвердил и название
+    строки не менял. Такой заказ партнёру не уходит, пока карточку не опубликуют (В-2)."""
+    return [
+        line
+        for line in lines
+        if line.product_id and is_unconfirmed_card(line.product) and (line.name or "") == line.product.name
+    ]
 
 
 def get_supplier(supplier_id: int):
@@ -174,7 +185,7 @@ def _resolve_lines(lines: list[LineInput]) -> list[dict]:
         raise StockError("TOO_MANY_LINES", 400)
     products = {
         p.pk: p
-        for p in Product.objects.select_related("uom", "domain_type").filter(
+        for p in Product.objects.select_related("uom", "domain_type", "status").filter(
             pk__in=[row.product_id for row in lines if row.product_id]
         )
     }
@@ -213,7 +224,13 @@ def _resolve_lines(lines: list[LineInput]) -> list[dict]:
                 "id": line.id,
                 "product": product,
                 "name": (line.name or product.name)[:500],
-                "article": (line.article or product.manufacturer_part_number or product.sku or "")[:120],
+                # артикул изготовителя карточки-черновика — из заявки клиента: партнёру он не уходит, пока карточку не подтвердили
+                "article": (
+                    line.article
+                    or ("" if is_unconfirmed_card(product) else product.manufacturer_part_number)
+                    or product.sku
+                    or ""
+                )[:120],
                 # Plan 0.6 (FR-15): the unit the calculation line carries («компл.»), not the card default («шт.»).
                 "unit": (
                     line.unit
@@ -540,9 +557,11 @@ def send_order(user, order_id: int, *, to_email: str = "") -> SupplierOrder:
     require_supply(user)
     order = _order_or_404(order_id, lock=True)
     _transition(order, OrderStatus.SENT)
-    lines = list(order.lines.select_related("product"))
+    lines = list(order.lines.select_related("product__status"))
     if not lines:
         raise StockError("LINES_REQUIRED", 409)
+    if unconfirmed_lines(lines):
+        raise StockError("PARTNER_NAME_REQUIRED", 409)
     # СЦ-10: без цены и даты это запрос цены, а не заказ — партнёру не уходит.
     missing_prices, missing_date = send_gaps(order, lines)
     if missing_prices or missing_date:

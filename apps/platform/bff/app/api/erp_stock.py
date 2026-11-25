@@ -104,7 +104,10 @@ _CONFLICTS = {
     "REQUEST_NOT_SENT": "Письмо не ушло: ответ отмечать нечего.",
     "SERVICE_NOT_STOCKED": "Услуги на склад не принимаются.",
     "CALC_NOT_STARTED": "Расчёт ещё не начат.",
-    "PARTNER_NAME_REQUIRED": "У строки нет карточки каталога: укажите, как назвать её партнёру.",
+    "PARTNER_NAME_REQUIRED": (
+        "Название строки взято из слов клиента: опубликуйте карточку в каталоге "
+        "или укажите, как назвать её партнёру."
+    ),
 }
 _FIELDS = {"PRICES_FORBIDDEN": "unit_price", "BAD_CURRENCY": "currency"}
 
