@@ -218,7 +218,7 @@ export function InvoicesPage() {
                   <ProofList invoice={row} />
                 </span>
               ),
-              className: 'min-w-0',
+              className: 'min-w-0 max-w-36',
             }}
             columns={[
               {
@@ -249,7 +249,7 @@ export function InvoicesPage() {
                   );
                 },
               },
-              { id: 'deal', header: t('pages.invoices.columns.deal'), cell: (row) => <DealLink deal={row.deal} />, className: 'max-w-36 whitespace-normal' },
+              { id: 'deal', header: t('pages.invoices.columns.deal'), cell: (row) => <DealLink deal={row.deal} keepNumber />, className: 'max-w-28 whitespace-normal' },
             ]}
             actions={{
               header: t('common.actions'),

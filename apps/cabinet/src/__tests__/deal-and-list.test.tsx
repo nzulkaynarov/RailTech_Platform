@@ -94,14 +94,12 @@ describe('Сделка (deep-link бота)', () => {
 
   it('СЦ-8: контакт без права действовать видит статус, но не кнопки действий', async () => {
     signedIn('viewer');
-    const { unmount } = renderApp('/deals/29');
+    window.localStorage.setItem('cabinet.language', 'ru');
+    renderApp('/deals/29');
     await screen.findByText('D-2026-0029');
     expect(await screen.findByText('S-2026-0124')).toBeInTheDocument();
-    expect(screen.queryByText('Kelişiş')).toBeNull(); // «Согласовать» (uz — язык контакта-зрителя)
-    expect(screen.queryByText('Töladim')).toBeNull(); // «Я оплатил»
     expect(screen.queryByText('Согласовать')).toBeNull();
     expect(screen.queryByText('Я оплатил')).toBeNull();
-    unmount(); // сырые суммы моков сессии зрителя (не СЦ-8) не должны ловиться охраной текста
   });
 
   it('чужая сделка — «не найдено»', async () => {
