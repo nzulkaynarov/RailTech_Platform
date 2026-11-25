@@ -146,7 +146,7 @@ describe('Этапы на странице проекта', () => {
     const items = within(stages).getAllByRole('listitem');
     expect(items.map((item) => item.textContent)).toEqual([
       'Заявка, выполнено',
-      'КП, выполнено',
+      'Предложение, выполнено',
       '3.Договор, текущий этап',
       '4.Оплата, начато',
       '5.Поставка и акт, начато',
@@ -165,13 +165,13 @@ describe('Этапы на странице проекта', () => {
     expect(within(stages).queryByText(/текущий этап|начато/)).not.toBeInTheDocument();
   });
 
-  it('КП с прошедшим сроком в списке проекта — «Срок истёк», а не «Ждёт решения»', async () => {
+  it('КП с прошедшим сроком в списке проекта — «Срок истёк», а не «Ждёт вашего решения»', async () => {
     signedIn();
     const lapsed = { ...fixtures.quotes[0], id: 399, ...fixtures.dealOf(48), number: 'KP-LAPSED', status: 'sent' as const, valid_until: '2026-10-01' };
     portalServer.use(http.get('*/api/portal/v1/quotes', () => HttpResponse.json([lapsed])));
     renderApp('/deals/48');
     await heading('Проект ПР-2026-048');
-    const quotes = await screen.findByRole('region', { name: 'КП' });
+    const quotes = await screen.findByRole('region', { name: 'Предложения' });
     expect(within(quotes).getByText('Срок истёк')).toBeInTheDocument();
     expect(within(quotes).queryByText(/Ждёт/)).not.toBeInTheDocument();
   });

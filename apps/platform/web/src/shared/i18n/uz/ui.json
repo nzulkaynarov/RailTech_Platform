@@ -1,4 +1,8 @@
 {
+  "longText": {
+    "more": "Töliq körsatiş",
+    "less": "Yiğiş"
+  },
   "open": "Oçiş",
   "openItem": "Oçiş: {{title}}",
   "steps": {

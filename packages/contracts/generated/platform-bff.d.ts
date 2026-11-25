@@ -7543,6 +7543,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/erp/calc/{number}/price-requests/preview": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Расчёт · Предпросмотр запроса цены партнёру
+     * @description ERP `POST /stock/price-requests/preview/`: что увидит партнёр — тема, строки нашими словами (название и артикул карточки каталога; слова клиента партнёру не уходят), заметка ровно как уйдёт, адрес. Ничего не отправляет. У строки без карточки `name = null`, `source = missing`: отправить можно после «как назвать партнёру» (`partner_names`). Раздел `erp.stock` — полный.
+     */
+    post: operations["previewCalcPriceRequest"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/erp/price-requests/{request_id}/answer": {
     parameters: {
       query?: never;
@@ -17739,6 +17759,38 @@ export interface components {
        * @description Адрес письма, если у поставщика почты нет или нужен другой
        */
       to_email?: string;
+      /** @description Подтверждённые сотрудником названия для партнёра. Строка без карточки каталога без названия не уходит (409 `PARTNER_NAME_REQUIRED`); слова клиента сами партнёру не попадают. */
+      partner_names?: components["schemas"]["PartnerNameIn"][];
+    };
+    PartnerNameIn: {
+      line_id: string;
+      name: string;
+      article?: string;
+    };
+    PriceRequestPreviewLine: {
+      line_id: string;
+      /** @description Как увидит партнёр; null — не названа, отправить нельзя */
+      name: string | null;
+      article: string;
+      /**
+       * @description card — карточка каталога; staff — подтверждено сотрудником; missing — названия нет
+       * @enum {string}
+       */
+      source: "card" | "staff" | "missing";
+      /** @description Слова клиента из заявки — только сотруднику, партнёру не уходят */
+      client_name: string;
+      quantity: number;
+      unit: string;
+    };
+    PriceRequestPreview: {
+      subject: string;
+      supplier: components["schemas"]["StockSupplierRef"];
+      to_email: string;
+      /** @description Заметка партнёру ровно так, как уйдёт */
+      note: string | null;
+      /** @description У каждой строки есть название для партнёра */
+      ready: boolean;
+      lines: components["schemas"]["PriceRequestPreviewLine"][];
     };
     PriceRequestAnswerIn: {
       /** @description Что ответил поставщик (цена и срок вносятся в строку расчёта) */
@@ -33368,6 +33420,42 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["PriceRequest"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["StockConflict"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  previewCalcPriceRequest: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Номер заявки `ЗВ-ГГГГ-NNN` (как в списке «Заявки в расчёте») */
+        number: components["parameters"]["CalcNumberPath"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PriceRequestIn"];
+      };
+    };
+    responses: {
+      /** @description Расчёт · Предпросмотр запроса цены партнёру */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PriceRequestPreview"];
         };
       };
       401: components["responses"]["SessionExpired"];

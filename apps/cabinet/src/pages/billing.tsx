@@ -87,7 +87,18 @@ export function ContractsPage() {
             getRowId={(row) => row.id}
             title={{ header: t('pages.contracts.columns.contract'), cell: (row) => <span className="font-medium whitespace-nowrap">{row.number}</span> }}
             columns={[
-              { id: 'status', header: t('pages.contracts.columns.status'), cell: (row) => <StatusBadge entity="contract" code={row.status} /> },
+              {
+                id: 'status',
+                header: t('pages.contracts.columns.status'),
+                cell: (row) => (
+                  <div className="flex flex-col items-start gap-1">
+                    <StatusBadge entity="contract" code={row.status} />
+                    {row.status === 'signed_by_client' ? (
+                      <span className="max-w-48 text-xs whitespace-normal text-muted-foreground">{t('pages.contracts.willBeSent')}</span>
+                    ) : null}
+                  </div>
+                ),
+              },
               {
                 id: 'client',
                 header: t('pages.contracts.columns.client'),
@@ -215,10 +226,14 @@ export function InvoicesPage() {
               cell: (row) => (
                 <span className="flex min-w-0 flex-col gap-1">
                   <span className="font-medium whitespace-nowrap">{row.number}</span>
+                  {/* проект — под номером, а не отдельной колонкой: таблица помещается на 1280 без прокрутки (СЦ-7, N9) */}
+                  <span className="text-xs font-normal">
+                    <DealLink deal={row.deal} />
+                  </span>
                   <ProofList invoice={row} />
                 </span>
               ),
-              className: 'min-w-0 max-w-36',
+              className: 'min-w-0 max-w-52',
             }}
             columns={[
               {
@@ -249,7 +264,6 @@ export function InvoicesPage() {
                   );
                 },
               },
-              { id: 'deal', header: t('pages.invoices.columns.deal'), cell: (row) => <DealLink deal={row.deal} keepNumber />, className: 'max-w-28 whitespace-normal' },
             ]}
             actions={{
               header: t('common.actions'),
@@ -292,9 +306,11 @@ function ProofList({ invoice }: { invoice: Invoice }) {
           <li key={proof.id} className="flex min-w-0 flex-col gap-0.5">
             <span className="flex flex-wrap items-center gap-1.5">
               <StatusBadge entity="proof" code={proof.status} nowrap />
-              <span className="min-w-0 break-words text-muted-foreground" title={proof.file_name}>
-                {t('pages.invoices.proofLine', { name: proof.file_name, date: formatDateTime(proof.submitted_at) })}
-              </span>
+              <span className="text-muted-foreground">{t('pages.invoices.proofLine', { date: formatDateTime(proof.submitted_at) })}</span>
+            </span>
+            {/* имя файла отдельной строкой: слова подписи не рвутся посреди слова, длинное имя обрезается (СЦ-7, N9) */}
+            <span className="block max-w-full truncate text-muted-foreground" title={proof.file_name}>
+              {proof.file_name}
             </span>
             <ProofClaim proof={proof} />
             {proof.status === 'rejected' && proof.reject_reason ? (

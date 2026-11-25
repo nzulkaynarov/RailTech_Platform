@@ -39,7 +39,7 @@ test.describe('публичные экраны кабинета', () => {
     await page.getByLabel('Телефон').fill('+998 90 123 45 67');
     await page.getByLabel('E-mail').fill('alisher@example.com');
     await page.getByLabel('Что нужно').fill('Нужен расчёт поставки рельсов Р65, 50 тонн');
-    await page.getByRole('checkbox', { name: /Согласен/ }).check();
+    await page.getByRole('checkbox', { name: /Даю согласие/ }).check();
     await snap(page, '04-new-client-filled');
 
     await page.getByRole('button', { name: 'Отправить заявку' }).click();

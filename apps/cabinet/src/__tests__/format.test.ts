@@ -222,8 +222,8 @@ describe('просрочка счёта вычисляется из due_date', (
 });
 
 describe('КП: срок действия и код акцепта', () => {
-  it('КП, закрытое вместе с заявкой, клиенту «Запрос закрыт», а не «Отклонено»', () => {
-    expect(i18n.t('status.quote.closed', { lng: 'ru' })).toBe('Запрос закрыт');
+  it('КП, закрытое вместе с заявкой, клиенту «Заявка закрыта», а не «Отклонено»', () => {
+    expect(i18n.t('status.quote.closed', { lng: 'ru' })).toBe('Заявка закрыта');
     expect(i18n.t('status.quote.closed', { lng: 'ru' })).not.toBe(i18n.t('status.quote.rejected', { lng: 'ru' }));
   });
 

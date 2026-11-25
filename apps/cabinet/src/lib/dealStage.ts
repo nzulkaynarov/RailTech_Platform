@@ -27,7 +27,7 @@ import type { Act, ClientRequest, Contract, DeliveryLine, Invoice, QuoteListItem
  * **Закрытый запрос** (`closed`): ERP отдаёт `closed` + `won` только когда проект выполнен (акт принят или скан, счета
  * оплачены; СЦ-8), а подписанный договор — это `in_progress`. Закрывается и проигранная сделка (`cancelled`); если исход не пришёл,
  * догадки нет: показываются только выполненные этапы (запрос — всегда), ни один не «в работе»,
- * и экран пишет «Запрос закрыт»; текущего этапа нет.
+ * и экран пишет «Заявка закрыта»; текущего этапа нет.
  */
 export type DealStageId = 'request' | 'quote' | 'contract' | 'payment' | 'delivery';
 export type DealStageState = 'done' | 'active' | 'upcoming';

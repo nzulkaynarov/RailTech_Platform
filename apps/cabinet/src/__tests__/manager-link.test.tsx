@@ -70,7 +70,7 @@ describe('«Написать менеджеру» на экранах', () => {
     signedIn();
     renderApp('/quotes/301');
     await heading(/KP-2026-0042/);
-    const link = within(page()).getByRole('link', { name: 'Написать менеджеру о КП KP-2026-0042' });
+    const link = within(page()).getByRole('link', { name: 'Написать менеджеру о предложении KP-2026-0042' });
     expect(link).toHaveAttribute('href', chat('quote', 301, 'KP-2026-0042'));
   });
 
@@ -106,11 +106,11 @@ describe('«Написать менеджеру» на экранах', () => {
     const user = userEvent.setup();
     const { router } = renderApp('/quotes/301');
     await heading(/KP-2026-0042/);
-    await user.click(within(page()).getByRole('link', { name: 'Написать менеджеру о КП KP-2026-0042' }));
+    await user.click(within(page()).getByRole('link', { name: 'Написать менеджеру о предложении KP-2026-0042' }));
     await heading('Сообщения');
     expect(router.state.location.search).toBe('?about=quote&id=301&number=KP-2026-0042');
     expect(within(page()).getByRole('group', { name: 'Документ, о котором вопрос' })).toHaveTextContent(
-      'О документе: КП KP-2026-0042',
+      'О документе: Предложение KP-2026-0042',
     );
   });
 

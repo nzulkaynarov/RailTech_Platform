@@ -209,7 +209,7 @@ async def test_manager_all_morning_has_costing_payment_invoice_and_contract_rows
             "in_progress",
             {"stock": "done", "supply": "none", "engineer": "done"},
             "SUPPLY",
-            "Отправить директору расчёт по заявке",
+            "Отправить на утверждение расчёт по заявке",
         ),
         (
             "returned",
@@ -381,7 +381,7 @@ async def test_menu_badge_of_my_costings_counts_the_queue_rows(web: Web, fb: Fee
         (
             project(104, client_status="contract_signing", contract=contract("client_agreed")),
             "issue_contract",
-            "Выставить у оператора договор ДОГ-2027/106 по ПР-2027-104",
+            "Выставить в ЭДО договор ДОГ-2027/106 по ПР-2027-104",
         ),
         (
             project(104, contract=contract("rejected"), problems=["contract_rejected"]),

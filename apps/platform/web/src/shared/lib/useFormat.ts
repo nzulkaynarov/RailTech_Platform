@@ -7,6 +7,7 @@ import {
   formatActivityTime,
   formatDate,
   formatListDate,
+  formatRowTime,
 } from "./dates";
 import {
   type MoneyFormatOptions,
@@ -38,7 +39,9 @@ export function useFormat() {
         formatPercent(value, { language, ...options }),
       date: (value: DateInput, style: DateStyle = "date") => formatDate(value, { language, style }),
       activity: (value: DateInput, now?: Date) => formatActivityTime(value, { language, now }),
-      /** Дата в строке списка: сегодня — время, иначе — дата. */
+      /** Время в колонке таблицы: «сегодня 10:12», «вчера 09:24», «24.10.2026 11:50». */
+      rowTime: (value: DateInput, now?: Date) => formatRowTime(value, { language, now }),
+      /** Дата в строке списка без времени: «сегодня», «вчера» или «24.10.2026». */
       listDate: (value: DateInput, now?: Date) => formatListDate(value, { language, now }),
     }),
     [language],

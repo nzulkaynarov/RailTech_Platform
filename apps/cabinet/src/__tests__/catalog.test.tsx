@@ -235,7 +235,7 @@ describe('Каталог', () => {
     renderApp('/catalog/1003');
     await heading('Пусконаладка насосного оборудования');
     expect(screen.getByText('Цена по запросу')).toBeInTheDocument();
-    expect(screen.getByText(/менеджер пришлёт КП с ценой/)).toBeInTheDocument();
+    expect(screen.getByText(/менеджер пришлёт предложение с ценой/)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Запросить' })).not.toBeInTheDocument();
   });
 

@@ -244,7 +244,7 @@ export function TicketsPage({ objectId }: { objectId?: string | undefined }) {
               id: "updated",
               header: t("admin.columns.updated"),
               width: 198,
-              cell: (row) => format.activity(row.updated_at),
+              cell: (row) => format.rowTime(row.updated_at),
             },
           ]}
         />

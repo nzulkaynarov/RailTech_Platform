@@ -31,7 +31,7 @@ async function fill(
   if (phone) await user.type(screen.getByLabelText('Телефон'), phone);
   if (email) await user.type(screen.getByLabelText('E-mail'), email);
   if (text) await user.type(screen.getByLabelText('Что нужно'), text);
-  if (consent) await user.click(screen.getByRole('checkbox', { name: /Согласен/ }));
+  if (consent) await user.click(screen.getByRole('checkbox', { name: /Даю согласие/ }));
 }
 
 function crmFails(reason: string, status = 422, field: string | null = null) {
@@ -93,7 +93,7 @@ describe('«Я новый клиент»: форма запроса → лид C
     expect(
       await screen.findByText('Без согласия на обработку персональных данных мы не сможем ответить на заявку.'),
     ).toBeInTheDocument();
-    const checkbox = screen.getByRole('checkbox', { name: /Согласен/ });
+    const checkbox = screen.getByRole('checkbox', { name: /Даю согласие/ });
     expect(checkbox).toHaveAttribute('aria-invalid', 'true');
     expect(checkbox).toHaveFocus();
     expect(mockCrmForm().submissions).toEqual([]);

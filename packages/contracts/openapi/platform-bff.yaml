@@ -13769,6 +13769,34 @@ paths:
         '422': {$ref: '#/components/responses/ValidationFailed'}
         '503': {$ref: '#/components/responses/BackendUnavailable'}
 
+  /erp/calc/{number}/price-requests/preview:
+    post:
+      tags: [calc]
+      operationId: previewCalcPriceRequest
+      summary: 'Расчёт · Предпросмотр запроса цены партнёру'
+      description: >-
+        ERP `POST /stock/price-requests/preview/`: что увидит партнёр — тема, строки нашими словами (название и артикул карточки каталога; слова клиента партнёру не уходят), заметка ровно как уйдёт, адрес. Ничего не отправляет. У строки без карточки `name = null`, `source = missing`: отправить можно после «как назвать партнёру» (`partner_names`). Раздел `erp.stock` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - {$ref: '#/components/parameters/CalcNumberPath'}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/PriceRequestIn'}
+      responses:
+        '200':
+          description: 'Расчёт · Предпросмотр запроса цены партнёру'
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/PriceRequestPreview'}
+        '401': {$ref: '#/components/responses/SessionExpired'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/StockConflict'}
+        '422': {$ref: '#/components/responses/ValidationFailed'}
+        '503': {$ref: '#/components/responses/BackendUnavailable'}
+
   /erp/price-requests/{request_id}/answer:
     post:
       tags: [calc]
@@ -29995,6 +30023,49 @@ components:
           description: Строки-товары расчёта
         note: {type: string, maxLength: 1000}
         to_email: {type: string, format: email, description: 'Адрес письма, если у поставщика почты нет или нужен другой'}
+        partner_names:
+          type: array
+          maxItems: 100
+          items: {$ref: '#/components/schemas/PartnerNameIn'}
+          description: >-
+            Подтверждённые сотрудником названия для партнёра. Строка без карточки каталога без названия не уходит
+            (409 `PARTNER_NAME_REQUIRED`); слова клиента сами партнёру не попадают.
+
+    PartnerNameIn:
+      type: object
+      additionalProperties: false
+      required: [line_id, name]
+      properties:
+        line_id: {type: string, pattern: '^[0-9]+$', maxLength: 12}
+        name: {type: string, minLength: 1, maxLength: 500}
+        article: {type: string, maxLength: 120}
+
+    PriceRequestPreviewLine:
+      type: object
+      additionalProperties: false
+      required: [line_id, name, article, source, client_name, quantity, unit]
+      properties:
+        line_id: {type: string, pattern: '^[0-9]+$'}
+        name: {type: [string, 'null'], description: 'Как увидит партнёр; null — не названа, отправить нельзя'}
+        article: {type: string}
+        source: {type: string, enum: [card, staff, missing], description: 'card — карточка каталога; staff — подтверждено сотрудником; missing — названия нет'}
+        client_name: {type: string, description: 'Слова клиента из заявки — только сотруднику, партнёру не уходят'}
+        quantity: {type: number}
+        unit: {type: string}
+
+    PriceRequestPreview:
+      type: object
+      additionalProperties: false
+      required: [subject, supplier, to_email, note, ready, lines]
+      properties:
+        subject: {type: string}
+        supplier: {$ref: '#/components/schemas/StockSupplierRef'}
+        to_email: {type: string}
+        note: {type: [string, 'null'], description: 'Заметка партнёру ровно так, как уйдёт'}
+        ready: {type: boolean, description: 'У каждой строки есть название для партнёра'}
+        lines:
+          type: array
+          items: {$ref: '#/components/schemas/PriceRequestPreviewLine'}
 
     PriceRequestAnswerIn:
       type: object

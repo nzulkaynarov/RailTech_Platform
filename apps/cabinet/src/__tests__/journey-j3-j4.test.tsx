@@ -81,7 +81,7 @@ describe('Wave J3, J4 & J2-bank Journey Tests', () => {
 
       // Соответствующая статья для роута /quotes
       expect(
-        within(drawer).getByText(/Как принять или отклонить КП/),
+        within(drawer).getByText(/Как принять или отклонить предложение/),
       ).toBeInTheDocument();
 
       // Поиск фильтрует статьи

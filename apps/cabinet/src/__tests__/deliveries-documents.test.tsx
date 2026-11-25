@@ -17,7 +17,7 @@ describe('Поставки по строкам', () => {
     expect(within(deal29).getAllByRole('listitem')).toHaveLength(3);
     expect(screen.getByRole('link', { name: 'Проект ПР-2026-029' })).toHaveAttribute('href', '/deals/29');
     expect(screen.getByText(/Насос, задвижки и манометры/)).toBeInTheDocument();
-    expect(within(deal29).getByText('Комплектуем')).toBeInTheDocument();
+    expect(within(deal29).getByText('Комплектуется')).toBeInTheDocument();
     expect(within(deal29).getByText('Ожидается 24 окт. 2026 г.')).toBeInTheDocument();
     expect(within(deal29).getByText('Готово к отгрузке')).toBeInTheDocument();
     expect(within(deal29).getByText('UZP-77815230')).toBeInTheDocument();
