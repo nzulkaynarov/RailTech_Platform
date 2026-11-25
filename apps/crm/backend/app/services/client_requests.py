@@ -342,8 +342,6 @@ async def _request_row(
     deal.request_summary = body.summary.strip()
     deal.request_urgency = body.urgency
     deal.request_letter_file_id = body.letter_file_id
-    deal.request_initiated_by = body.initiated_by
-    deal.request_letter_number = body.letter_number or None
     deal.request_contact_id = contact.id
     deal.erp_request_status, deal.erp_request_error = PENDING, None
     await session.flush()

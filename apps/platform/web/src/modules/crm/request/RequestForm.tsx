@@ -122,8 +122,6 @@ export interface RequestFormProps {
   letterFrom?: LetterSource | null;
   /** Файл письма уже в EDS («Передать в работу» из входящего, план 1.9): форма получает готовое письмо */
   letterFile?: { id: string; name: string } | null;
-  /** Номер входящего письма, из которого создаётся заявка (РЕЗ-1): расчёт без резолюции берёт файл этого письма */
-  letterNumber?: string | null;
   /** Заявка создана — вызывающий связывает её со своим объектом (поручение по ВХ) */
   onCreated?: (result: RequestCreatedView) => void;
   onCancel: () => void;
@@ -140,7 +138,6 @@ export function RequestForm({
   clientId,
   letterFrom = null,
   letterFile = null,
-  letterNumber = null,
   onCreated,
   onCancel,
 }: RequestFormProps) {
@@ -191,11 +188,10 @@ export function RequestForm({
   const [done, setDone] = useState<RequestCreatedView | null>(null);
   const create = useCreateCrmRequest();
   const resolution = useGetCrmRequestResolution();
-  /** Что будет с заявкой после отправки — по настройке и каналу; «сразу в расчёт» не обещаем, если выйдет резолюция */
-  const routingText = (info: RequestResolutionView, by: "client" | "staff" | undefined) => {
+  /** Что будет с заявкой после отправки — по настройке компании; «сразу в расчёт» не обещаем, если выйдет резолюция */
+  const routingText = (info: RequestResolutionView) => {
     const urgent = state.urgency === "urgent" ? t("request:routing.urgent") : "";
-    const skips = info.mode === "never" || (info.mode === "client_own" && by === "staff");
-    if (!skips) return t("request:routing.letter", { urgent });
+    if (info.mode !== "never") return t("request:routing.letter", { urgent });
     if (!info.ready)
       return t(`request:routing.fallback.${info.reason ?? "no_crm_mapping"}`, { urgent });
     return t("request:routing.calc");
@@ -253,10 +249,6 @@ export function RequestForm({
     leadTelegram: lead?.channel === "telegram" ? (lead.contacts.telegram ?? null) : null,
     consentGiven: lead === null || lead.consent.given_at !== null,
     contacts,
-    // Канал заявки (РЕЗ-1): письмо клиента, входящее и лид не со звонка — клиент сам; запись звонка — сотрудник
-    initiatedBy:
-      !incomingLetter && (lead === null || lead.channel === "phone") ? "staff" : "client",
-    letterNumber: letterFile ? letterNumber : null,
   };
   // Основание по звонку (СЦ-6): лид со звонка — записка собирается сама при входе на шаг «Запрос», когда согласие уже есть
   // (дано в CRM или отмечено на «Контакте»); без лида (повторный звонок клиента) — по кнопке «Основание — звонок».
@@ -802,7 +794,7 @@ export function RequestForm({
             content: (
               <div className="pf-fp-stack">
                 {resolution.data ? (
-                  <p className="pf-fp-sub">{routingText(resolution.data, ctx.initiatedBy)}</p>
+                  <p className="pf-fp-sub">{routingText(resolution.data)}</p>
                 ) : null}
                 <p className="pf-fp-sub">{t("request:clientGets")}</p>
                 <StepRemaining

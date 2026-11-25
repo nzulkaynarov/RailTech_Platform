@@ -192,7 +192,6 @@ describe("форма «Создать заявку»: правила до отп
       summary: "Колодки",
       urgency: "urgent",
       letter_file_id: "f-1",
-      initiated_by: "client",
       consent: { method: "paper", comment: null },
     });
   });
@@ -230,7 +229,7 @@ describe("«Создать заявку» из лида и из клиента (
     );
   });
 
-  it("на проверке сказано, что будет дальше: по настройке и каналу, «сразу в расчёт» без ложных обещаний (РЕЗ-1)", async () => {
+  it("на проверке сказано, что будет дальше: по настройке, «сразу в расчёт» без ложных обещаний (РЕЗ-1)", async () => {
     const LEAD = "/crm/leads?lead=L-2041&create=1&panel=open&tab=card";
     const says = async (text: string | RegExp) => {
       const panel = await openForm(LEAD);
@@ -245,12 +244,6 @@ describe("«Создать заявку» из лида и из клиента (
     });
     await says("Заявка сразу уйдёт в расчёт ответственному.");
 
-    // лид из Telegram — клиент написал сам: «только заявки клиента» оставляет резолюцию
-    updateCompanyMock((state) => {
-      state.quote.request_resolution = "client_own";
-    });
-    await says("Заявка уйдёт на резолюцию, затем в расчёт.");
-
     // расчёт не может встать на сотрудника — причина вслух, обещания нет
     updateCompanyMock((state) => {
       state.quote.request_resolution = "never";
@@ -259,25 +252,6 @@ describe("«Создать заявку» из лида и из клиента (
     await says(/Сразу в расчёт нельзя: вы не подключены к расчёту/);
     window.localStorage.removeItem("rt-pf-mock-intake-not-ready");
     resetCompanyMock();
-  });
-
-  it("тело заявки называет канал: по умолчанию клиент, запись звонка — staff; номер входящего письма — как есть (РЕЗ-1)", () => {
-    const ctx: RequestContext = {
-      lead: null,
-      leadChannel: null,
-      leadTelegram: null,
-      consentGiven: true,
-      contacts: [],
-    };
-    const state = emptyRequestForm();
-    expect(toRequestPayload(state, ctx, "k").initiated_by).toBe("client");
-    expect(toRequestPayload(state, { ...ctx, initiatedBy: "staff" }, "k").initiated_by).toBe(
-      "staff",
-    );
-    expect(toRequestPayload(state, { ...ctx, letterNumber: "ВХ-12/26" }, "k").letter_number).toBe(
-      "ВХ-12/26",
-    );
-    expect(toRequestPayload(state, ctx, "k").letter_number).toBeUndefined();
   });
 
   it("сбой сервера оставляет введённое; повтор с тем же ключом создаёт одну заявку", async () => {

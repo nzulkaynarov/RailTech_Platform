@@ -315,10 +315,9 @@
     "contract_deviations_allowed": "Şablondan çetlaniş — «Huquq» egasiga ariza bilan",
     "contract_deviations_allowedHint": "Çetlanişli şartnoma viza yönalişidan ötadi va vizalargaça mijozga ketmaydi.",
     "request_resolution": "Hisob-kitobdan oldin rezolyusiya",
-    "request_resolutionHint": "Rezolyusiya kerak boʼlmasa, ariza darhol masʼul xodimga hisob-kitobga ketadi. Rezolyusiyani «Rezolyusiya» huquqi egalari beradi (Rollar va huquqlar).",
+    "request_resolutionHint": "Rezolyusiya kerak boʼlmasa, istalgan kanaldan kelgan ariza darhol masʼul xodimga hisob-kitobga ketadi. Rezolyusiyani «Rezolyusiya» huquqi egalari beradi (Rollar va huquqlar).",
     "resolution": {
       "always": "Har bir arizada",
-      "client_own": "Faqat mijoz özi bergan arizalarda",
       "never": "Kerak emas"
     },
     "defaultClientTemplate": "Standart şablon: mijoz",

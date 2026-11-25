@@ -17945,7 +17945,7 @@ export const getGetQuoteDefaultsResponseMock = (
   contract_sign_before_send: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
   contract_deviations_allowed: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
   request_resolution: faker.helpers.arrayElement([
-    faker.helpers.arrayElement(["always", "client_own", "never"] as const),
+    faker.helpers.arrayElement(["always", "never"] as const),
     undefined,
   ]),
   default_client_contract_template: faker.helpers.arrayElement([faker.number.int(), null]),
@@ -17997,7 +17997,7 @@ export const getUpdateQuoteDefaultsResponseMock = (
   contract_sign_before_send: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
   contract_deviations_allowed: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
   request_resolution: faker.helpers.arrayElement([
-    faker.helpers.arrayElement(["always", "client_own", "never"] as const),
+    faker.helpers.arrayElement(["always", "never"] as const),
     undefined,
   ]),
   default_client_contract_template: faker.helpers.arrayElement([faker.number.int(), null]),
@@ -35822,7 +35822,7 @@ export const getCreateCrmRequestResponseMock = (
 export const getGetCrmRequestResolutionResponseMock = (
   overrideResponse: Partial<Extract<RequestResolutionView, object>> = {},
 ): RequestResolutionView => ({
-  mode: faker.helpers.arrayElement(["always", "client_own", "never"] as const),
+  mode: faker.helpers.arrayElement(["always", "never"] as const),
   ready: faker.datatype.boolean(),
   reason: faker.helpers.arrayElement([
     faker.helpers.arrayElement(["no_crm_mapping", "inactive"] as const),

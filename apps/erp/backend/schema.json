@@ -43091,7 +43091,7 @@
                             }
                         ],
                         "title": "Резолюция перед расчётом",
-                        "description": "always — у каждой заявки; client_own — только у заявок, которые клиент подал сам (Кабинет, бот, письмо); never — не нужна, заявка сразу в расчёт ответственному.\n\n* `always` - always\n* `client_own` - client_own\n* `never` - never"
+                        "description": "always — у каждой заявки; never — не нужна, заявка сразу в расчёт ответственному.\n\n* `always` - always\n* `never` - never"
                     },
                     "default_client_contract_template": {
                         "type": "integer",
@@ -51645,6 +51645,15 @@
                     "label"
                 ]
             },
+            "ModeEnum": {
+                "enum": [
+                    "always",
+                    "client_own",
+                    "never"
+                ],
+                "type": "string",
+                "description": "* `always` - always\n* `client_own` - client_own\n* `never` - never"
+            },
             "Money": {
                 "type": "object",
                 "properties": {
@@ -54805,7 +54814,7 @@
                             }
                         ],
                         "title": "Резолюция перед расчётом",
-                        "description": "always — у каждой заявки; client_own — только у заявок, которые клиент подал сам (Кабинет, бот, письмо); never — не нужна, заявка сразу в расчёт ответственному.\n\n* `always` - always\n* `client_own` - client_own\n* `never` - never"
+                        "description": "always — у каждой заявки; never — не нужна, заявка сразу в расчёт ответственному.\n\n* `always` - always\n* `never` - never"
                     },
                     "default_client_contract_template": {
                         "type": "integer",
@@ -61069,7 +61078,7 @@
                     "mode": {
                         "allOf": [
                             {
-                                "$ref": "#/components/schemas/RequestResolutionEnum"
+                                "$ref": "#/components/schemas/ModeEnum"
                             }
                         ],
                         "description": "Резолюция перед расчётом\n\n* `always` - always\n* `client_own` - client_own\n* `never` - never"
@@ -61108,11 +61117,10 @@
             "RequestResolutionEnum": {
                 "enum": [
                     "always",
-                    "client_own",
                     "never"
                 ],
                 "type": "string",
-                "description": "* `always` - always\n* `client_own` - client_own\n* `never` - never"
+                "description": "* `always` - always\n* `never` - never"
             },
             "ResetPasswordRequest": {
                 "type": "object",

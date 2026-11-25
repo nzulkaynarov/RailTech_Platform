@@ -596,14 +596,6 @@ export interface components {
        * @enum {string}
        */
       process: "v3";
-      /**
-       * @description РЕЗ-1: кто начал заявку. `client` — клиент сам (письмо, Кабинет, бот, сайт, зарегистрированное входящее письмо); `staff` — запись звонка, ввод сотрудником. Вместе с настройкой компании «Резолюция перед расчётом» решает, нужно ли письмо на резолюцию; нет поля — `client`
-       * @default client
-       * @enum {string}
-       */
-      initiated_by: "client" | "staff";
-      /** @description РЕЗ-1: номер зарегистрированного входящего письма, из которого создана заявка; при заявке без резолюции ERP берёт файл этого письма (`letter_file_id`) из EDS */
-      letter_number?: string | null;
     };
     ClientRequestOut: {
       /** Format: int64 */

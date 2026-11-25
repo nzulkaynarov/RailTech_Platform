@@ -25700,10 +25700,9 @@ components:
           - $ref: '#/components/schemas/RequestResolutionEnum'
           title: Резолюция перед расчётом
           description: |-
-            always — у каждой заявки; client_own — только у заявок, которые клиент подал сам (Кабинет, бот, письмо); never — не нужна, заявка сразу в расчёт ответственному.
+            always — у каждой заявки; never — не нужна, заявка сразу в расчёт ответственному.
 
             * `always` - always
-            * `client_own` - client_own
             * `never` - never
         default_client_contract_template:
           type: integer
@@ -32349,6 +32348,16 @@ components:
       required:
       - code
       - label
+    ModeEnum:
+      enum:
+      - always
+      - client_own
+      - never
+      type: string
+      description: |-
+        * `always` - always
+        * `client_own` - client_own
+        * `never` - never
     Money:
       type: object
       properties:
@@ -34766,10 +34775,9 @@ components:
           - $ref: '#/components/schemas/RequestResolutionEnum'
           title: Резолюция перед расчётом
           description: |-
-            always — у каждой заявки; client_own — только у заявок, которые клиент подал сам (Кабинет, бот, письмо); never — не нужна, заявка сразу в расчёт ответственному.
+            always — у каждой заявки; never — не нужна, заявка сразу в расчёт ответственному.
 
             * `always` - always
-            * `client_own` - client_own
             * `never` - never
         default_client_contract_template:
           type: integer
@@ -39620,7 +39628,7 @@ components:
       properties:
         mode:
           allOf:
-          - $ref: '#/components/schemas/RequestResolutionEnum'
+          - $ref: '#/components/schemas/ModeEnum'
           description: |-
             Резолюция перед расчётом
 
@@ -39655,12 +39663,10 @@ components:
     RequestResolutionEnum:
       enum:
       - always
-      - client_own
       - never
       type: string
       description: |-
         * `always` - always
-        * `client_own` - client_own
         * `never` - never
     ResetPasswordRequest:
       type: object

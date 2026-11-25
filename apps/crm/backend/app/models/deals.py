@@ -73,9 +73,6 @@ class Deal(TimestampMixin, Base):
     request_summary: Mapped[str | None] = mapped_column(Text)
     request_urgency: Mapped[str | None] = mapped_column(String(8))
     request_letter_file_id: Mapped[uuid.UUID | None] = mapped_column(Uuid)
-    # РЕЗ-1: кто начал заявку (`client` | `staff`) и номер входящего письма, из которого она создана
-    request_initiated_by: Mapped[str | None] = mapped_column(String(8))
-    request_letter_number: Mapped[str | None] = mapped_column(String(32))
     request_contact_id: Mapped[int | None] = mapped_column(
         ForeignKey("client_contacts.id", ondelete="SET NULL")
     )

@@ -48,8 +48,6 @@ class ClientRequestPayload:
     contact: HandoffContactPayload | None = None
     product_interest: tuple[str, ...] = ()
     letter_file_id: uuid.UUID | None = None
-    initiated_by: str = "client"
-    letter_number: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -81,8 +79,6 @@ def payload_to_dict(p: ClientRequestPayload) -> dict[str, Any]:
         "urgency": p.urgency,
         "letter_file_id": str(p.letter_file_id) if p.letter_file_id else None,
         "process": "v3",
-        "initiated_by": p.initiated_by,
-        "letter_number": p.letter_number,
     }
 
 

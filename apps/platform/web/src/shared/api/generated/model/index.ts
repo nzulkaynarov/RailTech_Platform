@@ -1034,7 +1034,6 @@ export * from "./requestFormIn";
 export * from "./requestFormInCompany";
 export * from "./requestFormInConsent";
 export * from "./requestFormInConsentMethod";
-export * from "./requestFormInInitiatedBy";
 export * from "./requestFormInUrgency";
 export * from "./requestResolutionView";
 export * from "./requestResolutionViewMode";

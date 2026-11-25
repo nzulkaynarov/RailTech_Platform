@@ -126,8 +126,6 @@ def publish_request_created(
     manager_crm_user_id: Optional[int] = None,
     letter_file_id: Optional[str] = None,
     crm_request_id: Optional[int] = None,
-    initiated_by: Optional[str] = None,
-    source_letter_number: Optional[str] = None,
 ) -> Optional[Event]:
     """Событие `request.created`: заявка (сделка) создана. Источник решает создатель: портал — `cabinet`, передача из CRM — `crm`.
 
@@ -156,15 +154,13 @@ def publish_request_created(
     if crm_request_id:
         payload["crm_request_id"] = int(crm_request_id)
 
-    # РЕЗ-1: резолюция директора — настройка компании; не нужна и есть кому считать — расчёт сразу, без письма в EDS.
-    # Решает канал: кто начал заявку (`initiated_by`: client — Кабинет, бот, сайт, письмо клиента; staff — звонок, ввод
-    # сотрудником). Не задан — по источнику: заявка сотрудника в ERP — staff, остальное — client.
-    initiated_by = initiated_by or ("staff" if source == "erp" else "client")
+    # РЕЗ-1: резолюция перед расчётом — настройка компании: у каждой заявки (по умолчанию) или не нужна; не нужна и есть
+    # кому считать — расчёт сразу, без письма в EDS. Решает только настройка, не канал и не экран.
     direct_to: Optional[int] = None
     if not isinstance(deal, dict):
         from crm.services import request_resolution
 
-        if not request_resolution.required(initiated_by):
+        if not request_resolution.required():
             direct_to = request_resolution.responsible_crm_user_id(deal, payload.get("manager_crm_user_id"))
             if direct_to is not None:
                 payload["resolution_required"] = False
@@ -184,10 +180,10 @@ def publish_request_created(
         request_resolution.start_direct_calculation(deal, direct_to, file_pending=wants_file)
         if wants_file:
             from django.db import transaction as _tx
-            from integration.tasks import fetch_request_letter_file
+            from integration.tasks import enqueue_request_letter_file
 
-            args = (deal.pk, str(letter_file_id), direct_to, source_letter_number or "")
-            _tx.on_commit(lambda: fetch_request_letter_file.delay(*args), robust=True)
+            args = (deal.pk, str(letter_file_id), direct_to)
+            _tx.on_commit(lambda: enqueue_request_letter_file(*args), robust=True)
     return event
 
 

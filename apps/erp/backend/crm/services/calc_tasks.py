@@ -294,8 +294,7 @@ def apply_resolution(
 def apply_without_resolution(deal: Deal, *, crm_user_id: int, due: date, file_pending: bool = False) -> CalcTask:
     """РЕЗ-1: настройка компании «резолюция не нужна» — задание расчёта ответственному без письма директору.
 
-    Одно такое задание на сделку (повтор возвращает его); ответственный — исполнитель обеих зон виз; сотрудник CRM без
-    пользователя ERP — строка без пользователя и предупреждение в журнале, как у резолюции."""
+    Одно такое задание на сделку (повтор возвращает его); ответственный — исполнитель обеих зон виз."""
     deal = Deal.objects.select_for_update(of=("self",)).select_related("stage").get(pk=deal.pk)
     existing = CalcTask.objects.filter(deal=deal, eds_letter_id__isnull=True).first()
     if existing is not None:
@@ -311,11 +310,11 @@ def apply_without_resolution(deal: Deal, *, crm_user_id: int, due: date, file_pe
         decided_at=timezone.now(),
         request_file_pending=file_pending,
     )
-    user_id = _users_by_crm_id({crm_user_id}).get(crm_user_id)
+    # Ответственный — сотрудник CRM с действующим пользователем ERP (`responsible_crm_user_id`): без него сюда не попасть
+    user_id = _users_by_crm_id({crm_user_id})[crm_user_id]
     for zone in (Zone.GOODS, Zone.SERVICES):
         CalcTaskAssignee.objects.create(task=task, crm_user_id=crm_user_id, zone=zone, user_id=user_id)
-    if user_id:
-        _notify_assignee(user_id, deal, task, resolution=False)
+    _notify_assignee(user_id, deal, task, resolution=False)
     deal_log(
         deal,
         "Расчёт без резолюции: задание ответственному",
@@ -323,15 +322,6 @@ def apply_without_resolution(deal: Deal, *, crm_user_id: int, due: date, file_pe
         event_code="deal.calc_task_direct",
         event_params={"due": due.isoformat(), "crm_user_id": crm_user_id},
     )
-    if user_id is None:
-        deal_log(
-            deal,
-            "Исполнитель расчёта не найден в ERP",
-            f"Сотрудник CRM #{crm_user_id} не заведён в ERP: задание без пользователя, назначьте исполнителя",
-            event_code="deal.calc_assignee_unknown",
-            event_params={"letter_number": number, "crm_user_id": crm_user_id},
-            level="WARNING",
-        )
     _move_to_calculation(deal, number, reason=f"Расчёт без резолюции {number}")
     return task
 

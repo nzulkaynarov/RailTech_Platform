@@ -8,6 +8,5 @@ export type RequestResolutionViewMode =
 
 export const RequestResolutionViewMode = {
   always: "always",
-  client_own: "client_own",
   never: "never",
 } as const;

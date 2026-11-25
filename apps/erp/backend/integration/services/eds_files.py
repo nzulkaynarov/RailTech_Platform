@@ -1,6 +1,7 @@
 """Файл письма клиента из EDS для заявки без резолюции (РЕЗ-1): сервисный путь `GET /api/v1/service/files/{id}`.
 
-Зовётся из задачи после коммита, не из транзакции заявки. `None` — EDS файла не отдаёт (404: чужой, уже привязанный к
+EDS отдаёт файл, если он ещё ни к чему не привязан и загружен этим сотрудником, либо принадлежит входящему письму,
+которое сотрудник ведёт. Зовётся из задачи после коммита, не из транзакции заявки. `None` — EDS файла не отдаёт (404: чужой, уже привязанный к
 другому объекту, нет такого) — повторять незачем; сбой сети или 5xx — исключение `EdsFileUnavailable`, задача повторит.
 """
 
@@ -19,13 +20,11 @@ class EdsFileUnavailable(Exception):
     """Сеть или EDS временно недоступны."""
 
 
-def fetch_request_file(file_id: str, created_by: int, letter_number: str = "") -> Optional[tuple[str, bytes]]:
+def fetch_request_file(file_id: str, created_by: int) -> Optional[tuple[str, bytes]]:
     token = settings.SERVICE_TOKEN_ERP_TO_EDS
     if not token:
         raise EdsFileUnavailable("SERVICE_TOKEN_ERP_TO_EDS is not set")
-    params: dict[str, object] = {"created_by": int(created_by)}
-    if letter_number:
-        params["letter_number"] = letter_number
+    params = {"created_by": int(created_by)}
     try:
         response = httpx.get(
             f"{settings.EDS_INTERNAL_URL}/api/v1/service/files/{file_id}",

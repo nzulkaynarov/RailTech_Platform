@@ -9,9 +9,9 @@ class Migration(migrations.Migration):
             model_name="companysettings",
             name="request_resolution",
             field=models.CharField(
-                choices=[("always", "always"), ("client_own", "client_own"), ("never", "never")],
+                choices=[("always", "always"), ("never", "never")],
                 default="always",
-                help_text="always — у каждой заявки; client_own — только у заявок, которые клиент подал сам (Кабинет, бот, письмо); never — не нужна, заявка сразу в расчёт ответственному.",
+                help_text="always — у каждой заявки; never — не нужна, заявка сразу в расчёт ответственному.",
                 max_length=16,
                 verbose_name="Резолюция перед расчётом",
             ),

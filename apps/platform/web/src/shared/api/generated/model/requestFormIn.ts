@@ -5,7 +5,6 @@
 import type { RequestContactFormIn } from "./requestContactFormIn";
 import type { RequestFormInCompany } from "./requestFormInCompany";
 import type { RequestFormInConsent } from "./requestFormInConsent";
-import type { RequestFormInInitiatedBy } from "./requestFormInInitiatedBy";
 import type { RequestFormInUrgency } from "./requestFormInUrgency";
 
 export interface RequestFormIn {
@@ -32,13 +31,5 @@ export interface RequestFormIn {
   urgency: RequestFormInUrgency;
   /** Основание заявки — письмо или файл запроса, загруженный в EDS (`POST /files`); без него заявка не создаётся (план 0.4) */
   letter_file_id: string;
-  /** РЕЗ-1: кто начал заявку — клиент сам (письмо, Кабинет, бот, сайт, входящее письмо) или сотрудник (запись звонка, ввод); вместе с настройкой компании решает, нужна ли резолюция */
-  initiated_by?: RequestFormInInitiatedBy;
-  /**
-   * РЕЗ-1: номер зарегистрированного входящего письма, из которого создана заявка
-   * @maxLength 32
-   * @nullable
-   */
-  letter_number?: string | null;
   consent?: RequestFormInConsent;
 }

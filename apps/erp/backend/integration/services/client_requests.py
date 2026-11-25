@@ -93,8 +93,6 @@ def create_client_request(crm_client_id: int, data: Dict[str, Any]) -> Tuple[Dic
             manager_crm_user_id=owner.get("crm_user_id"),
             letter_file_id=str(letter_file_id) if letter_file_id else None,
             crm_request_id=data["crm_request_id"],
-            initiated_by=data.get("initiated_by") or "client",
-            source_letter_number=data.get("letter_number") or None,
         )
         logger.info("CRM request #%s → deal #%s %s", data["crm_request_id"], deal.id, deal.number)
         return _response(deal), True

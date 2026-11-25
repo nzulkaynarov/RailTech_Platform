@@ -135,13 +135,10 @@ class CompanySettings(models.Model):
     # РЕЗ-1 (owner 2026-11-25): резолюция директора перед расчётом — настройка, а не зашитый шаг.
     request_resolution = models.CharField(
         max_length=16,
-        choices=[("always", "always"), ("client_own", "client_own"), ("never", "never")],
+        choices=[("always", "always"), ("never", "never")],
         default="always",
         verbose_name=_("Резолюция перед расчётом"),
-        help_text=_(
-            "always — у каждой заявки; client_own — только у заявок, которые клиент подал сам (Кабинет, бот, письмо); never — не нужна, "
-            "заявка сразу в расчёт ответственному."
-        ),
+        help_text=_("always — у каждой заявки; never — не нужна, заявка сразу в расчёт ответственному."),
     )
     default_client_contract_template = models.ForeignKey(
         "documents.DocumentTemplate",

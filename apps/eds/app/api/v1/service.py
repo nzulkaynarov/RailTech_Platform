@@ -19,8 +19,8 @@ from sqlalchemy import select
 
 from app.api.deps import get_container, get_storage
 from app.errors import not_found, unauthorized
-from app.models import Document, DocumentRender, FileVersion, Letter, StoredFile
-from app.services import renders
+from app.models import Document, DocumentRender, Employee, FileVersion, StoredFile
+from app.services import files, renders
 from app.services.storage import ObjectStorage
 
 router = APIRouter(prefix="/api/v1/service", tags=["documents"])
@@ -83,21 +83,25 @@ async def download_request_file(
     created_by: Annotated[int, Query(ge=1)],
     request: Request,
     storage: Annotated[ObjectStorage, Depends(get_storage)],
-    letter_number: Annotated[str | None, Query(max_length=32)] = None,
 ) -> StreamingResponse:
     """Файл письма по заявке для ERP без резолюции (РЕЗ-1): непривязанный файл, загруженный `created_by`, либо файл
-    зарегистрированного входящего письма с номером `letter_number` (заявка создана из него). Остальное — 404."""
+    входящего письма, которое `created_by` ведёт (видит файл по правилам EDS: чтение писем или участник поручений).
+    Файл документа, поручения и чужого письма — 404."""
     async with get_container(request).session_factory() as session:
         stored = await session.get(StoredFile, file_id)
         if stored is None:
             raise not_found("Файл не найден.")
-        free = not (stored.letter_id or stored.document_id or stored.instruction_id)
-        allowed = free and stored.created_by == created_by
-        if not allowed and letter_number and stored.letter_id and not (stored.document_id or stored.instruction_id):
-            number = (
-                await session.execute(select(Letter.number).where(Letter.id == stored.letter_id))
+        if not (stored.letter_id or stored.document_id or stored.instruction_id):
+            allowed = stored.created_by == created_by
+        elif stored.letter_id and not (stored.document_id or stored.instruction_id):
+            employee = (
+                await session.execute(
+                    select(Employee).where(Employee.crm_user_id == created_by, Employee.is_active.is_(True))
+                )
             ).scalar_one_or_none()
-            allowed = number == letter_number
+            allowed = employee is not None and await files.can_view_file(session, employee, stored)
+        else:
+            allowed = False
         if not allowed:
             raise not_found("Файл не найден.")
         found = (

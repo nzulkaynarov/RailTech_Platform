@@ -1,14 +1,11 @@
 """РЕЗ-1: резолюция директора перед расчётом — настройка компании, а не зашитый шаг (owner 2026-11-25).
 
-`CompanySettings.request_resolution` своей компании («Правила работы · Продажи»):
+`CompanySettings.request_resolution` своей компании («Правила работы · Продажи»), два значения:
 
 * `always` (по умолчанию) — письмо директору у каждой заявки, как раньше;
-* `client_own` — «только заявки, которые клиент подал сам»: решает `initiated_by`, кто начал заявку (канал, а не экран):
-  `client` — Кабинет, бот, форма сайта, письмо клиента (в том числе зарегистрированное входящее); `staff` — запись
-  звонка, ввод сотрудником. Заявка сотрудника идёт сразу в расчёт;
-* `never` — резолюция не нужна нигде.
+* `never` — резолюция не нужна: путь один для любого канала (сайт, бот, почта, письмо, телефон, Кабинет, ввод сотрудником).
 
-Нужна ли резолюция, решает `required(initiated_by)`. Когда не нужна, `start_direct_calculation` ставит задание расчёта
+Нужна ли резолюция, решает `required()`. Когда не нужна, `start_direct_calculation` ставит задание расчёта
 ответственному (его же в обеих зонах виз), переводит сделку в «Расчёт», а в `request.created` уходит
 `resolution_required=false` — EDS письма не заводит. Нет ответственного — заявка идёт прежним путём, не повисает.
 Файл письма клиента (основание заявки) забирается из EDS после коммита задачей `integration.fetch_request_letter_file`;
@@ -23,7 +20,7 @@ from typing import Optional
 
 from django.utils import timezone
 
-MODES = ("always", "client_own", "never")
+MODES = ("always", "never")
 DEFAULT_MODE = "always"
 #: Срок расчёта без резолюции: резолюция задавала его вручную; здесь — календарные дни от заведения заявки.
 DIRECT_DUE_DAYS = 3
@@ -41,17 +38,9 @@ def mode() -> str:
     return value if value in MODES else DEFAULT_MODE
 
 
-INITIATED_BY = ("client", "staff")
-
-
-def required(initiated_by: str = "client") -> bool:
-    """Нужна ли резолюция по заявке, которую начал `initiated_by` (`client` | `staff`)."""
-    current = mode()
-    if current == "never":
-        return False
-    if current == "client_own":
-        return initiated_by != "staff"
-    return True
+def required() -> bool:
+    """Нужна ли резолюция перед расчётом: настройка компании, одна для всех каналов (владелец 2026-11-25)."""
+    return mode() != "never"
 
 
 def start_direct_calculation(deal, crm_user_id: int, *, file_pending: bool = False):

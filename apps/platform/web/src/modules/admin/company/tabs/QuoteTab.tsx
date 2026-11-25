@@ -303,7 +303,7 @@ function QuoteForm({ defaults, group }: { defaults: QuoteDefaults; group: QuoteG
             className="pf-co-wide"
           >
             <Select
-              options={(["always", "client_own", "never"] as const).map((value) => ({
+              options={(["always", "never"] as const).map((value) => ({
                 value,
                 label: t(`quote.resolution.${value}`),
               }))}

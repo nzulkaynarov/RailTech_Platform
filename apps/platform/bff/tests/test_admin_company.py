@@ -1201,13 +1201,13 @@ async def test_request_form_reads_the_resolution_mode_without_settings_rights(
         return_value=httpx.Response(403, json={"detail": "FORBIDDEN"})
     )
     intake = erp.get(f"{API}/calc/request-intake/").mock(
-        return_value=httpx.Response(200, json={"mode": "client_own", "ready": True, "reason": None})
+        return_value=httpx.Response(200, json={"mode": "always", "ready": True, "reason": None})
     )
 
     response = await web.client.get("/api/v1/crm/requests/resolution")
 
     assert response.status_code == 200
-    assert response.json() == {"mode": "client_own", "ready": True, "reason": None}
+    assert response.json() == {"mode": "always", "ready": True, "reason": None}
     check(response, "/crm/requests/resolution", "get")
     assert intake.called
     intake.mock(

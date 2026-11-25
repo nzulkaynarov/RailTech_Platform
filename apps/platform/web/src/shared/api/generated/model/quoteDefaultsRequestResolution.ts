@@ -4,13 +4,12 @@
  */
 
 /**
- * РЕЗ-1: резолюция перед расчётом — у каждой заявки (always, по умолчанию), только у заявок, которые клиент подал сам: письмо, Кабинет, бот, сайт, входящее письмо (client_own), или не нужна (never); заявка сотрудника в режиме client_own и любая в режиме never идёт сразу в расчёт ответственному
+ * РЕЗ-1: резолюция перед расчётом — у каждой заявки (always, по умолчанию) или не нужна (never): тогда заявка из любого канала сразу идёт в расчёт ответственному
  */
 export type QuoteDefaultsRequestResolution =
   (typeof QuoteDefaultsRequestResolution)[keyof typeof QuoteDefaultsRequestResolution];
 
 export const QuoteDefaultsRequestResolution = {
   always: "always",
-  client_own: "client_own",
   never: "never",
 } as const;

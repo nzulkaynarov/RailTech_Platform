@@ -223,7 +223,6 @@ def _create_request(company: Company, contact: Optional[Contact], data: Dict[str
         actor=events.build_actor(actor_type="staff", name=(data.get("owner") or {}).get("name")),
         crm_client_id=crm_client_id,
         manager_crm_user_id=(data.get("owner") or {}).get("crm_user_id"),
-        initiated_by="client",  # передача из лида: клиент сам обратился (бот, сайт, письмо)
     )
     return deal
 

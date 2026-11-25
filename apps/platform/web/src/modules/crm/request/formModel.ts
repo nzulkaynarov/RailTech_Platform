@@ -51,10 +51,6 @@ export interface RequestContext {
   consentGiven: boolean;
   /** Контакты выбранного клиента */
   contacts: readonly ClientContactView[];
-  /** РЕЗ-1: кто начал заявку — клиент сам (письмо, входящее, бот, сайт) или сотрудник (запись звонка); по умолчанию клиент */
-  initiatedBy?: "client" | "staff";
-  /** РЕЗ-1: номер зарегистрированного входящего письма, из которого создаётся заявка */
-  letterNumber?: string | null;
 }
 
 export type RequestField = "company" | "contact" | "channel" | "summary" | "letter" | "consent";
@@ -152,8 +148,6 @@ export function toRequestPayload(
     urgency: state.urgency,
     letter_file_id: state.letter?.status === "done" && state.letter.id ? state.letter.id : "",
   };
-  payload.initiated_by = ctx.initiatedBy ?? "client";
-  if (ctx.letterNumber) payload.letter_number = ctx.letterNumber;
   if (ctx.lead) payload.lead = ctx.lead;
   if (state.clientId !== null) payload.client_id = state.clientId;
   else if (state.company) payload.company = { name: state.company.name, inn: state.company.inn };

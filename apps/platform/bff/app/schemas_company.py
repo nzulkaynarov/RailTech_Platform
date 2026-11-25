@@ -522,7 +522,7 @@ class QuoteDefaults(BaseModel):
     contract_auto_send: bool = True
     contract_sign_before_send: bool = True
     contract_deviations_allowed: bool = True
-    request_resolution: Literal["always", "client_own", "never"] = "always"
+    request_resolution: Literal["always", "never"] = "always"
     default_client_contract_template: int | None = None
     default_partner_contract_template: int | None = None
 
@@ -564,7 +564,7 @@ class QuoteDefaultsUpdate(Patch):
     contract_auto_send: bool | None = None
     contract_sign_before_send: bool | None = None
     contract_deviations_allowed: bool | None = None
-    request_resolution: Literal["always", "client_own", "never"] | None = None
+    request_resolution: Literal["always", "never"] | None = None
     default_client_contract_template: int | None = None
     default_partner_contract_template: int | None = None
 

@@ -166,7 +166,7 @@ SPECTACULAR_SETTINGS = {
         "PartnerPriceVisibilityEnum": ["", "cabinet", "on_request"],
         "CatalogPriceSourceEnum": ["item", "partner", "company"],
         # РЕЗ-1: резолюция перед расчётом — настройка компании и режим в «request-intake» формы заявки: одно перечисление.
-        "RequestResolutionEnum": ["always", "client_own", "never"],
+        "RequestResolutionEnum": ["always", "never"],
         # Итог письма почтового сервиса — в очереди, отправлено, не отправлено: приглашение партнёра (`invite_delivery`) и
         # письмо партнёру по заказу (0.10, FR-12) — одно перечисление под прежним именем (переименование ломало бы схему).
         "InviteDeliveryEnum": ["queued", "sent", "failed"],
