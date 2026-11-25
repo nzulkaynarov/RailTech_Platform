@@ -323,7 +323,8 @@
     },
     "submitNoChannels": "Approve without sending",
     "submitFor": "Approve quote for {{name}}",
-    "confirmVerb": "Approve"
+    "confirmVerb": "Approve",
+    "submitForNoChannels": "Approve without sending for {{name}}"
   },
   "superseded": "Superseded by version {{version}}"
 }

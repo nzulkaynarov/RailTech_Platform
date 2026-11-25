@@ -323,7 +323,8 @@
     },
     "submitNoChannels": "Одобрить без отправки",
     "submitFor": "Одобрить КП за {{name}}",
-    "confirmVerb": "Одобрить"
+    "confirmVerb": "Одобрить",
+    "submitForNoChannels": "Одобрить без отправки за {{name}}"
   },
   "superseded": "Заменена версией {{version}}"
 }
