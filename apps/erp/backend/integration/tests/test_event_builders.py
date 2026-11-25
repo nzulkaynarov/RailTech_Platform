@@ -220,10 +220,10 @@ def test_all_22_event_types_payload_builders(mapped_company, deal_stages):
     publish_quote_outcome("quote.viewed", quote)
     publish_quote_outcome("quote.accepted", quote)
     assert "number" not in bus_support.only("quote.accepted")["data"]["payload"]  # КП без номера
-    quote.number = "КП-2026/115"
+    quote.number = "QT-2026-115"
     publish_quote_outcome("quote.accepted", quote)
     # сотруднику в уведомлении — номер КП, а не id из базы
-    assert bus_support.published("quote.accepted")[-1]["data"]["payload"]["number"] == "КП-2026/115"
+    assert bus_support.published("quote.accepted")[-1]["data"]["payload"]["number"] == "QT-2026-115"
     publish_quote_outcome("quote.rejected", quote, reason="Не подошли сроки")
     assert bus_support.only("quote.rejected")["data"]["payload"]["reason"] == "Не подошли сроки"
     with pytest.raises(ValueError):

@@ -6,6 +6,7 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.models.leads import Lead, TelegramIdentity
+from app.services.settings import SettingsService
 from tests.integration.bus_harness import T0, Harness, data_for, event_type_of
 
 pytestmark = pytest.mark.integration
@@ -59,6 +60,12 @@ async def test_each_contact_gets_the_text_in_the_language_of_their_own_lead(
     harness: Harness, sessions: async_sessionmaker[AsyncSession]
 ) -> None:
     """Бот пишет контакту на его языке, а не на языке лида компании, написавшего последним."""
+    await SettingsService(sessions, ttl_s=0).update(
+        "company",
+        {"name": "RailTech", "crm_base_url": "http://x", "cabinet_url": "https://cabinet.example"},
+        None,
+        None,
+    )
     client_id, _ = await harness.seed_client(tg_user_id=777)  # лид компании — русский
     async with sessions() as session, session.begin():
         own = Lead(display_name="B", stage="customer", owner_mode="bot", language="uz")
@@ -73,3 +80,10 @@ async def test_each_contact_gets_the_text_in_the_language_of_their_own_lead(
     texts = dict(harness.bot.sent)
     assert set(texts) == {777, 888}
     assert texts[777] != texts[888]  # узбекский контакт не получает русский текст
+    # кнопки — тоже на языке контакта, адрес — кабинет (точные страницы объектов — УВ-2)
+    buttons = {
+        chat: [(b.text, b.url) for row in markup.inline_keyboard for b in row]
+        for (chat, _), markup in zip(harness.bot.sent, harness.bot.markups, strict=True)
+    }
+    assert buttons[777][-1] == ("Кабинет", "https://cabinet.example")
+    assert buttons[888][-1] == ("Kabinet", "https://cabinet.example")

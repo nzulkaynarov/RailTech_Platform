@@ -6,7 +6,7 @@ import pytest
 
 from app.feeds.notifications import map_crm, map_erp
 from tests.conftest import ContractChecker, Web
-from tests.feeds_support import FeedBackends, Moments, notification
+from tests.feeds_support import FeedBackends, Moments, deal, notification
 
 
 @pytest.fixture
@@ -42,7 +42,7 @@ def test_informational_quote_notifications_open_the_card_not_the_approve_tab() -
     assert note.object.path.endswith("?panel=open&tab=card")
 
 
-def test_platform_link_from_erp_is_followed() -> None:
+def test_bank_change_opens_the_clients_queue_with_bank_changes() -> None:
     row = erp_row(
         "portal.bank_change_requested",
         "Запрос на смену банковских реквизитов: ООО Альфа",
@@ -52,8 +52,60 @@ def test_platform_link_from_erp_is_followed() -> None:
     note = map_erp(row, {})
     assert note is not None
     assert note.object is not None
-    assert note.object.path == "/eds/payments?show=bank_changes"
+    assert note.object.path == "/crm/clients?kind=bank_changes"
     assert note.object.number == "ООО Альфа"
+
+
+@pytest.mark.parametrize(
+    ("link", "opens"),
+    [
+        ("/eds/projects/D-1", True),
+        ("/erp/stock/PO-1", True),
+        ("/crm/leads?lead=L-1", True),
+        ("/crm/clients?kind=all", True),
+        ("/crm/kb", True),
+        ("/crm/deals/5", False),
+        ("/crm/deals", False),
+        ("/crm/quotes", False),
+        ("/crm/documents", False),
+        ("/crm/leads/12", False),
+        ("/crm/clientsx", False),
+        ("/admin/anything", False),
+    ],
+)
+def test_only_routes_the_platform_opens_are_taken_from_the_erp_link(link: str, opens: bool) -> None:
+    note = map_erp(erp_row("deal.created", "Сделка", link=link), {})
+    assert note is not None
+    assert (note.object is not None) is opens
+    if opens:
+        assert note.object is not None
+        assert note.object.path == link
+
+
+@pytest.mark.parametrize("link", ["/crm/deals/5", "/crm/deals", "/crm/quotes", "/crm/documents"])
+def test_old_erp_link_with_a_deal_falls_back_to_the_deal_card(link: str) -> None:
+    row = notification(1, "deal.assigned", "Назначена сделка", deal_id=5)
+    row["link"] = link
+    deals = {5: deal(5, "QUOTE_SENT", title="Приводы")}
+    note = map_erp(row, deals)
+    assert note is not None
+    assert note.object is not None
+    assert note.object.path.startswith("/erp/requests?request=")
+
+
+def test_calc_visa_holder_without_drafts_gets_the_request_not_the_forbidden_quote() -> None:
+    row = erp_row(
+        "quote.approval_your_turn", "Требуется согласование КП", link="#deal-quote/5", number="КП-1"
+    )
+    deals = {5: deal(5, "QUOTE_SENT", title="Приводы")}
+    with_drafts = map_erp(row, deals, "ru", True)
+    without = map_erp(row, deals, "ru", False)
+    assert with_drafts is not None
+    assert with_drafts.object is not None
+    assert with_drafts.object.path.startswith("/eds/drafts/")
+    assert without is not None
+    assert without.object is not None
+    assert without.object.path.startswith("/erp/requests?request=")
 
 
 def test_legacy_link_without_deal_gives_no_object() -> None:
@@ -70,7 +122,7 @@ def test_title_follows_the_staff_language_and_falls_back_to_erp_title() -> None:
     assert uz is not None
     assert ru is not None
     assert en.title == "Quote approval needed"
-    assert uz.title == "Tijorat taklifini kelishish kerak"
+    assert uz.title == "Tijorat taklifini kelişiş kerak"
     assert ru.title == "Требуется согласование КП"
     unknown = map_erp(erp_row("deal.created", "Создана сделка"), {}, "en")
     assert unknown is not None

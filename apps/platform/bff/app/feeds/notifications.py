@@ -31,6 +31,7 @@ from app.feeds.numbers import (
 )
 from app.feeds.snapshot import Snapshot
 from app.feeds.text import join, parse_dt, short
+from app.rbac import allows
 
 ERP_PAGE = 200
 NOTIFICATIONS_PATH = "/api/v1/notifications/"
@@ -84,12 +85,17 @@ def tab_of(event_code: str) -> NotificationTab:
 _QUOTE_CARD_EVENTS = frozenset({"quote.auto_send_failed"})
 
 
-# Платформенные адреса, которые ERP кладёт в `link` (`/eds/...`, `/crm/...`): ведут туда же.
-_PLATFORM_LINK = re.compile(r"^/(eds|crm|erp|dashboard|admin|help)(/|\?|$)")
+# Адреса, которые Платформа действительно открывает: EDS и ERP целиком, из CRM — только точные
+# разделы «Лиды», «Клиенты», «База знаний». Остальные старые ссылки ERP (`/crm/deals/<pk>`,
+# `/crm/quotes`, `/crm/documents`) Платформа не знает — уведомление открывает заявку или проект.
+_PLATFORM_LINK = re.compile(r"^/(?:(?:eds|erp)(?:/|\?|$)|crm/(?:leads|clients|kb)(?:\?|$))")
 # Шаг согласования КП ждёт решения сотрудника: открываем вкладку «Одобрение» с кнопками решения.
 _QUOTE_APPROVAL_EVENTS = frozenset(
     {"quote.approval_your_turn", "quote.submitted_for_review", "quote.sent_below_floor"}
 )
+# Смена банковских реквизитов контрагента — очередь в «Клиенты · Смена реквизитов».
+_BANK_CHANGE_EVENT = "portal.bank_change_requested"
+_BANK_CHANGES_PATH = "/crm/clients?kind=bank_changes"
 _LINK_KINDS: tuple[tuple[str, ObjectKind], ...] = (
     ("/eds/payments", "invoice"),
     ("/eds/projects", "project"),
@@ -99,17 +105,22 @@ _LINK_KINDS: tuple[tuple[str, ObjectKind], ...] = (
 )
 
 
-def _link_object(row: dict[str, Any]) -> ObjectRef | None:
-    """Объект по полю `link` уведомления ERP: готовый адрес Платформы или переход к КП по номеру.
+def _link_object(row: dict[str, Any], *, can_drafts: bool) -> ObjectRef | None:
+    """Объект по полю `link` уведомления ERP: известный Платформе адрес или переход к КП по номеру.
 
-    Старые адреса (`#deal-quote/12`, `/deals/5`) не годятся — их по-прежнему разбирает карточка
-    сделки (ниже); здесь только то, что Платформа открывает само.
+    `can_drafts` — у сотрудника есть раздел «Черновики и КП» EDS. У исполнителя расчёта (визы КП)
+    его нет: он открывает заявку (экран расчёта), а не КП — иначе «Запрещено».
     """
     link = row.get("link")
     params = row.get("event_params")
     number = params.get("number") if isinstance(params, dict) else None
     code = str(row.get("event_code") or "")
+    label = str(params.get("company") or "") if isinstance(params, dict) else ""
+    if code == _BANK_CHANGE_EVENT:
+        return ObjectRef(kind="client", number=label or "Реквизиты", path=_BANK_CHANGES_PATH)
     if code.startswith("quote.") and isinstance(number, str) and number:
+        if not can_drafts:
+            return None
         tab = "approve" if code in _QUOTE_APPROVAL_EVENTS else "card"
         return ObjectRef(
             kind="quote",
@@ -118,12 +129,22 @@ def _link_object(row: dict[str, Any]) -> ObjectRef | None:
         )
     if isinstance(link, str) and _PLATFORM_LINK.match(link):
         kind = next((k for prefix, k in _LINK_KINDS if link.startswith(prefix)), "integration")
-        label = str(params.get("company") or "") if isinstance(params, dict) else ""
         return ObjectRef(kind=kind, number=label or short(row.get("title"), 60) or "—", path=link)
     return None
 
 
-def _object(row: dict[str, Any], deals: dict[int, dict[str, Any]]) -> ObjectRef | None:
+_LEGACY_DEAL_LINK = re.compile(r"^#deal(?:-quote)?/(\d+)$")
+
+
+def _legacy_deal_id(row: dict[str, Any]) -> int | None:
+    """Шаги согласования КП пишут сделку только в ссылке старого фронта (`#deal-quote/<id>`)."""
+    match = _LEGACY_DEAL_LINK.match(str(row.get("link") or ""))
+    return int(match.group(1)) if match else None
+
+
+def _object(
+    row: dict[str, Any], deals: dict[int, dict[str, Any]], can_drafts: bool = True
+) -> ObjectRef | None:
     params = row.get("event_params")
     if (
         row.get("event_code") in _QUOTE_CARD_EVENTS
@@ -141,10 +162,11 @@ def _object(row: dict[str, Any], deals: dict[int, dict[str, Any]]) -> ObjectRef 
         # Заказ поставщику (D2-2): заявки у уведомления нет, ведёт на карточку ЗП.
         supplier = params.get("supplier")
         return supplier_order_ref(params["number"], supplier if isinstance(supplier, str) else None)
-    linked = _link_object(row)
+    linked = _link_object(row, can_drafts=can_drafts)
     if linked is not None:
         return linked
-    deal = deals.get(row["deal"]) if isinstance(row.get("deal"), int) else None
+    deal_id = row.get("deal") if isinstance(row.get("deal"), int) else _legacy_deal_id(row)
+    deal = deals.get(deal_id) if deal_id is not None else None
     if deal is None:
         return None
     return deal_ref(deal)
@@ -160,12 +182,15 @@ def _subtitle(row: dict[str, Any], deals: dict[int, dict[str, Any]]) -> str | No
 
 
 def map_erp(
-    row: dict[str, Any], deals: dict[int, dict[str, Any]], language: str = "ru"
+    row: dict[str, Any],
+    deals: dict[int, dict[str, Any]],
+    language: str = "ru",
+    can_drafts: bool = True,
 ) -> Notification | None:
     created = parse_dt(row.get("created_at"))
     if not isinstance(row.get("id"), int) or created is None:
         return None
-    obj = _object(row, deals)
+    obj = _object(row, deals, can_drafts)
     return Notification(
         id=f"erp:{row['id']}",
         tab=tab_of(str(row.get("event_code") or "")),
@@ -300,7 +325,10 @@ async def list_notifications(
     )
     deals = snap.deal_index
     language = feed.authed.data.language
-    mapped = [n for row in rows(payload) if (n := map_erp(row, deals, language)) is not None]
+    can_drafts = allows(feed.authed.access, "eds.drafts", "read")
+    mapped = [
+        n for row in rows(payload) if (n := map_erp(row, deals, language, can_drafts)) is not None
+    ]
     crm_items, crm_unread = await _crm_part(feed)
     mapped = [*mapped, *crm_items]
     mapped.sort(key=lambda n: n.created_at, reverse=True)

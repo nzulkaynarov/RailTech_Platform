@@ -15,19 +15,19 @@ _PLACEHOLDER = re.compile(r"\{(\w+)\}")
 CATALOG: dict[str, dict[str, str]] = {
     "quote.approval_your_turn": {
         "en": "Quote approval needed",
-        "uz": "Tijorat taklifini kelishish kerak",
+        "uz": "Tijorat taklifini kelişiş kerak",
     },
     "quote.approval_returned": {
         "en": "Quote returned for rework",
-        "uz": "Tijorat taklifi qayta ishlashga qaytarildi",
+        "uz": "Tijorat taklifi qayta işlaşga qaytarildi",
     },
     "quote.director_approved": {
-        "en": "Quote approved by the director",
-        "uz": "Tijorat taklifi direktor tomonidan maʼqullandi",
+        "en": "Quote approved",
+        "uz": "Tijorat taklifi maʼqullandi",
     },
     "quote.director_rejected": {
-        "en": "Quote rejected by the director",
-        "uz": "Tijorat taklifi direktor tomonidan rad etildi",
+        "en": "Quote rejected",
+        "uz": "Tijorat taklifi rad etildi",
     },
     "quote.visas_complete": {
         "en": "Approvals collected",
@@ -35,28 +35,28 @@ CATALOG: dict[str, dict[str, str]] = {
     },
     "quote.visas_complete_informed": {
         "en": "Quote — for information",
-        "uz": "Tijorat taklifi — maʼlumot uchun",
+        "uz": "Tijorat taklifi — maʼlumot uçun",
     },
     "portal.bank_change_requested": {
         "en": "Bank details change request: {company}",
-        "uz": "Bank rekvizitlarini özgartirish sörovi: {company}",
+        "uz": "Bank rekvizitlarini özgartiriş sörovi: {company}",
     },
     "contract.deviation_requested": {
         "en": "Contract template deviation request",
-        "uz": "Shartnoma shablonidan chetga chiqish sörovi",
+        "uz": "Şartnoma şablonidan çetga çiqiş sörovi",
     },
     "partner.crm_conflict": {
         "en": "Partner “{company}”: the CRM client already belongs to another company",
-        "uz": "Hamkor «{company}»: CRMdagi mijoz boshqa kompaniyaga biriktirilgan",
+        "uz": "Hamkor «{company}»: CRMdagi mijoz boşqa kompaniyaga biriktirilgan",
     },
     "partner.crm_unverified": {
         "en": "Partner “{company}”: client handover from CRM is held until checked",
-        "uz": "Hamkor «{company}»: CRMdan mijozni topshirish tekshiruvgacha toxtatilgan",
+        "uz": "Hamkor «{company}»: CRMdan mijozni topşiriş tekşiruvgaça töxtatilgan",
     },
     "contract.signed_client": {
         "ru": "Клиент согласовал договор {number}",
         "en": "The client agreed to contract {number}",
-        "uz": "Mijoz {number} shartnomasini kelishdi",
+        "uz": "Mijoz {number} şartnomasini kelişdi",
     },
 }
 

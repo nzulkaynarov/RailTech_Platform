@@ -810,16 +810,15 @@ async def _lead(session: AsyncSession, lead_id: int) -> Lead:
 
 # Колокольчик получателя передачи — на его языке интерфейса и с именем того, кто передал.
 _HANDED_OVER_TITLE: Final[dict[str, str]] = {
-    "ru": "{who} передал(а) вам лид {number}",
-    "en": "{who} handed lead {number} over to you",
-    "uz": "{who} sizga {number} lidini topshirdi",
+    "ru": "Вам передан лид {number}",
+    "en": "Lead {number} was handed over to you",
+    "uz": "Sizga {number} lidi topşirildi",
 }
 
 
 def handed_over_title(language: str, handed_by: str | None, number: str) -> str:
-    who = handed_by or {"ru": "Сотрудник", "en": "A colleague", "uz": "Hamkasb"}.get(language, "")
-    template = _HANDED_OVER_TITLE.get(language, _HANDED_OVER_TITLE["ru"])
-    return template.format(who=who, number=number)
+    title = _HANDED_OVER_TITLE.get(language, _HANDED_OVER_TITLE["ru"]).format(number=number)
+    return f"{title} · {handed_by}" if handed_by else title
 
 
 def _handed_to_other(lead: Lead, escalation: Escalation | None, who: Principal) -> bool:
