@@ -142,13 +142,13 @@ function Created({
   const { t } = useTranslation(["request", "clients"]);
   // Номер выдаёт учёт чуть позже ответа CRM: карточку клиента перечитываем раз в 2 с, не дольше 30 с и только пока
   // передача идёт (номера нет, сбоя нет).
-  const startedAt = useRef(Date.now());
+  const [startedAt] = useState(() => Date.now());
   const card = useGetCrmClient(done.client_id, {
     query: {
       refetchInterval: (query) => {
         const found = query.state.data?.requests.find((request) => request.deal === done.deal);
         const settled = Boolean(found?.number) || found?.transfer === "failed";
-        return settled || Date.now() - startedAt.current > 30_000 ? false : 2000;
+        return settled || Date.now() - startedAt > 30_000 ? false : 2000;
       },
     },
   });
