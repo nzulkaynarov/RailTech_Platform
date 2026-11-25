@@ -197,7 +197,8 @@
       "supplier": "Partner and method",
       "lines": "Lines"
     },
-    "linesSummary": "Lines: {{count}}"
+    "linesSummary": "Lines: {{count}}",
+    "expectedHint": "Without a date and prices the order will not go to the partner: add them later in “Edit”."
   },
   "order": {
     "title": "Partner order {{number}}",
@@ -209,6 +210,7 @@
       "edit": "Edit",
       "cancel": "Cancel order",
       "price": "Request a price",
+      "setDate": "Set date",
       "resend": "Send again"
     },
     "overdueBanner": "Expected by {{date}}, goods not received — {{count}} d. overdue. Contact the partner and update the expected date.",
@@ -323,7 +325,8 @@
       "prices_many": "No price: {{count}} lines",
       "prices_other": "No price: {{count}} lines",
       "date": "No expected date",
-      "hint": "Add them in “Edit” — the order is not sent to the partner without prices and a date."
+      "hint": "Add them in “Edit” — the order is not sent to the partner without prices and a date.",
+      "hintDate": "Set the date — the order will not go to the partner without it."
     },
     "price": {
       "title": "Request a price · {{number}}",
