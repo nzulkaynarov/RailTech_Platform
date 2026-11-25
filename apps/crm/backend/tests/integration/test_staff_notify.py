@@ -86,3 +86,17 @@ async def test_handover_dm_links_to_the_platform(
         f"platform.example.com/crm/leads?lead=L-{lead_id:04d}&amp;panel=open&amp;tab=card" in text
     )
     assert "crm.example.com" not in text
+
+
+async def test_handover_dm_respects_notify_leads(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    manager, _ = await make_user(sessions, "hq@x.uz", ["manager"])
+    await link(sessions, manager.id, 7004)
+    async with sessions() as session, session.begin():
+        await session.execute(update(User).where(User.id == manager.id).values(notify_leads=False))
+    lead_id = await escalated_lead(sessions)
+    bot = FakeSender()
+    links = LinkBase(platform="https://platform.example.com", crm="https://crm.example.com")
+    assert not await StaffNotifier(sessions, bot).handed_over(lead_id, manager.id, links)
+    assert bot.sent == []

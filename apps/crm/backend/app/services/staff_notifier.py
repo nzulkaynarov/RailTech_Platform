@@ -115,6 +115,9 @@ class StaffNotifier:
             lead = await session.get(Lead, lead_id)
         if user is None or lead is None or not user.is_active or user.tg_user_id is None:
             return False
+        # Личные сообщения о лидах отключены в профиле — остаётся колокольчик.
+        if not user.notify_leads:
+            return False
         url = escape(links.lead(lead_id), quote=True)
         body = tx.HANDOVER_DM.format(
             lead_id=lead_id,
