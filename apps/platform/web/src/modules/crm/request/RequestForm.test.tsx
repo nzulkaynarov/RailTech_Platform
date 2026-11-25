@@ -2,6 +2,7 @@ import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/re
 import { HttpResponse, http } from "msw";
 import { beforeEach, describe, expect, it } from "vitest";
 
+import { resetMarks, setMark } from "../../../mocks/doNotWorkMarks";
 import { readLeads, resetLeads, writeLeads } from "../../../mocks/fixtures/leads";
 import { MOCK_ERP_DOWN_KEY } from "../../../mocks/feedHandlers";
 import { resetMessages } from "../../../mocks/fixtures/messages";
@@ -41,6 +42,11 @@ async function openForm(path: string, pick = true): Promise<HTMLElement> {
   signIn("manager@demo.example");
   renderAt(path);
   const panel = await panelEl();
+  // Лид с партнёрской формы сайта (L-2044) начинает с «Партнёр» (ЛП-1): здесь нужна заявка клиента.
+  const client = await within(panel)
+    .findByRole("radio", { name: "Клиент" })
+    .catch(() => null);
+  if (client && !(client as HTMLInputElement).checked) fireEvent.click(client);
   await within(panel).findByRole("form", { name: "Создать заявку" });
   const field = within(panel).queryByLabelText("Название компании");
   const suggested = panel.querySelector(".ant-select-selection-placeholder")?.textContent.trim();
@@ -412,6 +418,64 @@ describe("«Создать заявку» из лида и из клиента (
     fireEvent.click(submitButton(panel));
     expect(await within(panel).findByText("Заявка создана")).toBeVisible();
     expect(requestsOf("ООО Рельс-Сервис Демо")).toBe(before + 1);
+  });
+});
+
+describe("«Создать · Заявка» второй раз (Б-6)", () => {
+  it("при открытой форме метка `fresh` начинает форму заново, а смена адреса окном — нет", async () => {
+    signIn("manager@demo.example");
+    const { router } = renderAt("/crm/clients?create=1&panel=open&tab=card");
+    const panel = await panelEl();
+    await within(panel).findByRole("form", { name: "Создать заявку" });
+    open(panel, "Запрос");
+    fireEvent.change(within(panel).getByLabelText("Суть запроса"), {
+      target: { value: "Накладки рельсовые" },
+    });
+    await router.navigate("/crm/clients?create=1&panel=open&tab=card", { replace: true });
+    expect(within(panel).getByLabelText("Суть запроса")).toHaveValue("Накладки рельсовые");
+    await router.navigate("/crm/clients?create=1&panel=open&tab=card", { state: { fresh: 1 } });
+    await waitFor(() => {
+      expect(within(panel).queryByDisplayValue("Накладки рельсовые")).toBeNull();
+    });
+  });
+});
+
+describe("компания с отметкой «Не работать» (Х-8, Б-6)", () => {
+  const ctx: RequestContext = {
+    lead: null,
+    leadChannel: null,
+    leadTelegram: null,
+    consentGiven: true,
+    contacts: [],
+    doNotWork: true,
+  };
+
+  it("валидатор: отметка закрывает заявку даже у выбранного клиента", () => {
+    const state = { ...emptyRequestForm(), clientId: 3 };
+    expect(validateRequest(state, ctx).company).toBe("do_not_work");
+    expect(validateRequest(state, { ...ctx, doNotWork: false }).company).toBeUndefined();
+  });
+
+  it("форма: полоса «С компанией не работаем», «Создать заявку» недоступна, в «Осталось» названа причина", async () => {
+    resetMarks();
+    setMark("1003", "ООО Рельс-Сервис Демо", {
+      reason: "Спор по оплате",
+      set_by: "Менеджер Демо",
+      set_at: "2026-11-23T09:30:00Z",
+      until: null,
+    });
+    const panel = await openForm("/crm/clients?client=3&create=1&panel=open&tab=card");
+    expect(
+      await within(panel).findByText(/С компанией не работаем: Спор по оплате/),
+    ).toBeInTheDocument();
+    open(panel, "Проверка и отправка");
+    await waitFor(() => {
+      expect(remainingList(panel)).toHaveTextContent(
+        "С компанией не работаем: заявку создать нельзя",
+      );
+    });
+    expect(within(panel).getByRole("button", { name: /Создать заявку/ })).toBeDisabled();
+    resetMarks();
   });
 });
 

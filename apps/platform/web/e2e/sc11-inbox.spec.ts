@@ -107,6 +107,99 @@ test.describe("СЦ-11 · Входящее: регистрация и ответ
     }
   });
 
+  for (const width of [1512, 1440, 390] as const) {
+    test(`модель выключена: срок по тексту письма считает код и метит «Из текста письма» (${String(width)})`, async ({
+      page,
+    }) => {
+      await signInAt(page, "registrar@demo.example", width);
+      await spaGoto(page, "/eds/register");
+      await page.evaluate(
+        `window.localStorage.setItem("rt-pf-mock-docflow-settings", JSON.stringify({recognize_scans: true, pii_policy: "business", ai_available: false, author_may_sign_own_letter: true}))`,
+      );
+      await spaGoto(page, "/eds/register");
+      // панель «Заполнить из файла» видна и без модели: код читает срок из текста PDF
+      await expect(page.getByRole("button", { name: "Заполнить из файла" })).toBeVisible();
+      await pickFiles(await reveal(page.getByLabel("Файл документа")), {
+        name: "rules-trebovanie.pdf",
+        mimeType: "application/pdf",
+        buffer: Buffer.from("%PDF-1.4 demo"),
+      });
+      await expect(page.getByText("загружен")).toBeVisible();
+      await expect(
+        page.getByRole("status").filter({ hasText: "Подставлено из текста письма" }),
+      ).toBeVisible();
+      await shot(page, "rules-banner");
+      await openStep(page, "Срок, адресат и резолюция");
+      await expect(page.locator("button[aria-expanded]", { hasText: "Файл письма" })).toContainText(
+        "Подставлено из текста письма",
+      );
+      await expect(page.getByLabel("Срок по документу")).not.toHaveValue("");
+      await expect(page.getByText("Из текста письма", { exact: true })).toBeVisible();
+      await expect(page.getByText("Предложено ИИ", { exact: true })).toHaveCount(0);
+      await shot(page, "rules-label");
+      await expectNoViolations(page, `срок по тексту письма ${String(width)}`);
+    });
+  }
+
+  test("модель ответила, срок посчитал код: у срока своя метка, у остальных «Предложено ИИ»", async ({
+    page,
+  }) => {
+    await signInAt(page, "registrar@demo.example", 1440);
+    await spaGoto(page, "/eds/register");
+    await pickFiles(await reveal(page.getByLabel("Файл документа")), {
+      name: "mixed-trebovanie.pdf",
+      mimeType: "application/pdf",
+      buffer: Buffer.from("%PDF-1.4 demo"),
+    });
+    await expect(page.getByText("загружен")).toBeVisible();
+    await openStep(page, "Срок, адресат и резолюция");
+    await expect(page.getByLabel("Срок по документу")).not.toHaveValue("");
+    // срок посчитал код, остальные шесть полей предложила модель (у ИНН своей метки на экране нет)
+    await expect(page.getByText("Из текста письма", { exact: true })).toHaveCount(1);
+    await expect(page.getByText("Предложено ИИ", { exact: true })).toHaveCount(6);
+    await expect(page.locator("button[aria-expanded]", { hasText: "Файл письма" })).toContainText(
+      "проверьте отмеченные поля",
+    );
+    await expect(
+      page.locator("button[aria-expanded]", { hasText: "Файл письма" }),
+    ).not.toContainText("Предложено ИИ");
+    await shot(page, "mixed-labels");
+    await expectNoViolations(page, "смешанный ответ");
+  });
+
+  test("дата поступления изменилась — срок от кода предлагают пересчитать (без модели), правленый руками не трогают", async ({
+    page,
+  }) => {
+    await signInAt(page, "registrar@demo.example", 1440);
+    await spaGoto(page, "/eds/register");
+    await pickFiles(await reveal(page.getByLabel("Файл документа")), {
+      name: "rules-trebovanie.pdf",
+      mimeType: "application/pdf",
+      buffer: Buffer.from("%PDF-1.4 demo"),
+    });
+    await expect(page.getByText("загружен")).toBeVisible();
+    const day = (offset: number) => {
+      const d = new Date(Date.now() + offset * 86_400_000);
+      return d.toISOString().slice(0, 10);
+    };
+    await fillDate(await reveal(page.getByLabel("Дата поступления")), day(-3));
+    await openStep(page, "Файл письма");
+    const recompute = page.getByRole("button", { name: "Пересчитать срок" });
+    await expect(recompute).toBeVisible();
+    await recompute.click();
+    await expect(recompute).toHaveCount(0);
+    await openStep(page, "Срок, адресат и резолюция");
+    const [y, m, d] = day(4).split("-");
+    await expect(page.getByLabel("Срок по документу")).toHaveValue(`${d}.${m}.${y}`);
+    // срок поправили руками — смена даты поступления его больше не трогает и пересчёт не предлагает
+    await expect(async () => {
+      await fillDate(page.getByLabel("Срок по документу"), day(20));
+    }).toPass();
+    await fillDate(await reveal(page.getByLabel("Дата поступления")), day(-2));
+    await openStep(page, "Файл письма");
+    await expect(page.getByRole("button", { name: "Пересчитать срок" })).toHaveCount(0);
+  });
+
   test("карточка письма не по сделке без полей заявки и клиента; ответ «На № …» отправителя", async ({
     page,
   }) => {

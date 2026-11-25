@@ -11,9 +11,13 @@ from functools import lru_cache
 from typing import Final
 from zoneinfo import ZoneInfo, available_timezones
 
+from app.domain.lead_sources import normalize_phone_e164
+
 DEFAULT_TIMEZONE: Final = "Asia/Tashkent"
 PHONE_MIN_DIGITS: Final = 7
 PHONE_MAX_DIGITS: Final = 15
+_UZ_COUNTRY: Final = "998"
+_UZ_LOCAL_LEN: Final = 9
 SIGNATURE_MAX_LEN: Final = 1000
 AVATAR_MAX_BYTES: Final = 1024 * 1024
 AVATAR_PREFIX: Final = "staff-avatars"
@@ -46,6 +50,26 @@ def normalize_phone(raw: str) -> str | None:
     if not PHONE_MIN_DIGITS <= len(digits) <= PHONE_MAX_DIGITS:
         raise ProfileValueError("phone_invalid", "phone")
     return ("+" if text.startswith("+") else "") + digits
+
+
+def normalize_staff_phone(raw: str) -> str | None:
+    """Staff phone → E.164 through the single CRM normaliser; empty — cleared (None).
+
+    Local Uzbek numbers without a country code get `+998`; anything the normaliser rejects is
+    `phone_invalid` (the old «+ and 7–15 digits» rule no longer applies to staff).
+    """
+    if not raw.strip():
+        return None
+    text = raw.strip()
+    digits = re.sub(r"\D", "", text)
+    explicit = text.lstrip("( ").startswith("+") or digits.startswith("00")
+    uzbek_like = len(digits) == _UZ_LOCAL_LEN or digits.startswith(_UZ_COUNTRY)
+    if not explicit and not uzbek_like:
+        raise ProfileValueError("phone_invalid", "phone")  # no country code: ask for it
+    phone = normalize_phone_e164(raw)
+    if phone is None:
+        raise ProfileValueError("phone_invalid", "phone")
+    return phone
 
 
 @lru_cache(maxsize=1)

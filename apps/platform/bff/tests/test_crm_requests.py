@@ -146,6 +146,81 @@ async def test_bad_form_is_422_before_crm(web: Web, crm: CrmLeadsFake) -> None:
     assert crm.calls == []
 
 
+PARTNER_FORM = {
+    "company_name": "Контур Партнёр",
+    "country": "uz",
+    "inn": "301234567",
+    "offer": "Поставляем крепёж",
+    "contact_name": "Иван Партнёров",
+    "email": "ivan@partner.example",
+    "phone": "",
+}
+PARTNER = "leads/2041/actions/hand_over_partner"
+
+
+async def test_partner_answer_goes_to_the_partner_action_of_crm(
+    web: Web, crm: CrmLeadsFake, check: ContractChecker
+) -> None:
+    crm.answer("POST", PARTNER, 201, {"lead_id": 2041, "application_id": 7001, "created": True})
+    await web.login(["MANAGER"])
+    response = check(
+        await web.send("POST", "/api/v1/crm/leads/L-2041/partner", json=PARTNER_FORM),
+        "/crm/leads/{lead}/partner",
+        "post",
+    )
+
+    assert response.status_code == 201
+    assert response.json() == {"lead": "L-2041", "application": 7001, "created": True}
+    assert crm.body("POST", PARTNER)["company_name"] == "Контур Партнёр"
+
+
+async def test_second_partner_answer_is_200_with_the_first_application(
+    web: Web, crm: CrmLeadsFake, check: ContractChecker
+) -> None:
+    crm.answer("POST", PARTNER, 200, {"lead_id": 2041, "application_id": 7001, "created": False})
+    await web.login(["MANAGER"])
+    response = check(
+        await web.send("POST", "/api/v1/crm/leads/L-2041/partner", json=PARTNER_FORM),
+        "/crm/leads/{lead}/partner",
+        "post",
+    )
+    assert response.status_code == 200
+    assert response.json() == {"lead": "L-2041", "application": 7001, "created": False}
+
+
+async def test_partner_answer_without_full_clients_does_not_reach_crm(
+    web: Web, crm: CrmLeadsFake
+) -> None:
+    await web.login(["SUPPLY"])
+    response = await web.send("POST", "/api/v1/crm/leads/L-2041/partner", json=PARTNER_FORM)
+    assert response.status_code == 403
+    assert crm.calls == []
+
+
+async def test_partner_without_email_is_422_before_crm(web: Web, crm: CrmLeadsFake) -> None:
+    """Phone-only candidates cannot be invited to the contract: the e-mail is required."""
+    await web.login(["MANAGER"])
+    bad = {k: v for k, v in PARTNER_FORM.items() if k != "email"}
+    response = await web.send("POST", "/api/v1/crm/leads/L-2041/partner", json=bad)
+    assert response.status_code == 422
+    assert crm.calls == []
+
+
+async def test_partner_invalid_email_of_crm_is_a_field_error(web: Web, crm: CrmLeadsFake) -> None:
+    crm.error("POST", PARTNER, 422, "validation_failed", reason="invalid_email", field="email")
+    await web.login(["MANAGER"])
+    response = await web.send("POST", "/api/v1/crm/leads/L-2041/partner", json=PARTNER_FORM)
+    assert response.status_code == 422
+    assert response.json()["details"]["reason"] == "invalid_email"
+
+
+async def test_partner_refusal_of_crm_keeps_its_reason(web: Web, crm: CrmLeadsFake) -> None:
+    crm.error("POST", PARTNER, 503, "upstream_unavailable", reason="erp_unavailable")
+    await web.login(["MANAGER"])
+    response = await web.send("POST", "/api/v1/crm/leads/L-2041/partner", json=PARTNER_FORM)
+    assert response.status_code == 503
+
+
 async def test_repeat_of_the_form_is_200_with_the_same_request(
     web: Web, crm: CrmLeadsFake, check: ContractChecker
 ) -> None:

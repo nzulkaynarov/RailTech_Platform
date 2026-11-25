@@ -45,3 +45,16 @@
 .pf-reg-summary {
   margin-bottom: var(--pf-space-4, 16px);
 }
+
+/* Узкий экран: кнопка плашки под текстом, а не справа (текст не рвётся посреди слова) */
+@media (max-width: 480px) {
+  .pf-reg-ai .ant-alert {
+    flex-wrap: wrap;
+  }
+  .pf-reg-ai .ant-alert-content {
+    flex: 1 1 calc(100% - 32px);
+  }
+  .pf-reg-ai .ant-alert-action {
+    margin-inline-start: 24px;
+  }
+}

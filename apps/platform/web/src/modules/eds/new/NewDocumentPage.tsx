@@ -1,4 +1,4 @@
-import { Alert, App, Button, Card, Input, Select, Skeleton } from "antd";
+import { Alert, App, Button, Card, Checkbox, Input, Select, Skeleton } from "antd";
 import { type ReactNode, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate, useSearchParams } from "react-router";
@@ -15,6 +15,7 @@ import {
   useGetEdsDocument,
   useGetEdsLetterhead,
   useGetLetter,
+  useGetDocflowSettings,
   useListEdsSigners,
   useListEdsStaff,
   useUpdateEdsDocument,
@@ -60,6 +61,7 @@ import {
   fieldElementId,
   fromDocument,
   isLetter,
+  parseAmount,
   kindFromParam,
   replyPrefill,
   replyRef,
@@ -124,7 +126,7 @@ function describedBy(id: string, hasHint: boolean, hasError: boolean): string | 
 
 /** Поле → шаг формы: текст — на шаге «Текст», остальное — на шаге «О документе». */
 function sectionOf(field: string): SectionKey {
-  return field === "text" ? "body" : "about";
+  return field === "text" || field === "invoice" ? "body" : "about";
 }
 
 function focusField(field: FieldKey): void {
@@ -179,6 +181,17 @@ function DocumentForm({
   // ЕД-6: подписант письма — из держателей права подписи (без автора, если есть другие), не вписывается текстом.
   const signersQuery = useListEdsSigners({ query: { staleTime: 60_000 } });
   const allSigners = signersQuery.data?.items ?? [];
+  // Автор — держатель права подписи: главная кнопка письма называет то, что произойдёт, — подписать и отправить (Б-8)
+  // Факт документа (`can_sign` сохранённого черновика) сильнее списка держателей права.
+  const [savedCanSign, setSavedCanSign] = useState<boolean | null>(null);
+  // До сохранения — по списку держателей права и правилу «автор подписывает своё письмо» (настройка компании): нет
+  // права читать правило или оно выключено — остаётся «Передать на подпись».
+  const docflow = useGetDocflowSettings({
+    query: { enabled: isLetter(values.kind), staleTime: 60_000, retry: false },
+  });
+  const authorMaySign = docflow.data?.author_may_sign_own_letter === true;
+  const meSigns =
+    savedCanSign ?? draft?.can_sign ?? (authorMaySign && allSigners.some((p) => p.id === me.id));
   const listed = allSigners.length > 1 ? allSigners.filter((p) => p.id !== me.id) : allSigners;
   // The saved choice may have lost the signing right and left the list: keep showing the name, never the raw id.
   const signers =
@@ -258,6 +271,7 @@ function DocumentForm({
     const current = savedRef.current;
     if (current) {
       const doc = await update.mutateAsync({ id: current, data: toUpdateBody(values, mode, lang) });
+      setSavedCanSign(doc.can_sign === true);
       return doc;
     }
     const body = toCreateBody(values, mode, lang);
@@ -270,6 +284,7 @@ function DocumentForm({
       });
       savedRef.current = doc.id;
       setSavedId(doc.id);
+      setSavedCanSign(doc.can_sign === true);
       return doc;
     } finally {
       setCreating(false);
@@ -348,15 +363,18 @@ function DocumentForm({
       refresh();
       const toast = handed
         ? t("documents:form.handover.done", { number: doc.number ?? "", letter: handOver?.letter })
-        : action === "draft"
+        : action === "draft" || signHere
           ? t("documents:form.toast.draft")
           : action === "handover"
-            ? t(signHere ? "documents:form.toast.signReady" : "documents:form.toast.handover")
+            ? t("documents:form.toast.handover")
             : t("documents:form.toast.sent", { number: doc.number ?? "" });
       void message.success(toast);
+      // «Сохранить черновик» не уводит из формы: письмо можно дописать, PDF и «Показать PDF» работают с тем же документом
+      if (action === "draft") return;
+      // Автор с правом подписи: карточка письма открывается сразу с окном «Способ отправки» (Б-8)
       void navigate({
         pathname: "/eds/documents",
-        search: `?box=${letter ? "outgoing" : "internal"}&scope=mine&doc=${doc.id}${mobile ? "" : "&panel=open"}`,
+        search: `?box=${letter ? "outgoing" : "internal"}&scope=mine&doc=${doc.id}${mobile ? "" : "&panel=open"}${signHere ? "&sign=1" : ""}`,
       });
     } catch (error) {
       fail(error, submit);
@@ -399,7 +417,14 @@ function DocumentForm({
     deal: fieldElementId("erp_deal_id"),
     replyTo: fieldElementId("in_reply_to_number"),
     files: "doc-files",
+    invoice: fieldElementId("invoice"),
   };
+  // «Счёт придёт позже» — только у служебки с суммой и пока счёт не приложен (Б-9)
+  const invoiceLaterShown =
+    values.kind === "memo" &&
+    parseAmount(values.amount).ok &&
+    values.amount.trim() !== "" &&
+    !values.attachments.some((a) => a.status === "done");
   const route = routeKind(values);
   const routeText = t(
     handover ? "documents:form.route.letterHandover" : `documents:form.route.${route}`,
@@ -422,7 +447,7 @@ function DocumentForm({
       : t("documents:form.signatory.hintNone");
   const primaryLabel = !letter
     ? t("documents:form.submit.approval")
-    : t(draft?.can_sign ? "documents:form.submit.sign" : "documents:form.submit.handover");
+    : t(meSigns ? "documents:form.submit.signSend" : "documents:form.submit.handover");
 
   const textField = letter ? (
     <Field
@@ -821,9 +846,21 @@ function DocumentForm({
             id={ids.files}
             label={t("documents:form.files.label")}
             hint={t("documents:form.files.hint")}
+            error={errors.invoice ? fieldText(t, "invoice") : undefined}
           >
             <AttachmentsField id={ids.files} value={values.attachments} onChange={setAttachments} />
           </Field>
+          {invoiceLaterShown ? (
+            <Checkbox
+              id={ids.invoice}
+              checked={values.invoiceLater}
+              onChange={(event) => {
+                set("invoiceLater", event.target.checked);
+              }}
+            >
+              {t("documents:form.files.invoiceLater")}
+            </Checkbox>
+          ) : null}
         </div>
       ),
     },

@@ -17,6 +17,7 @@ const created: Employee = {
   access: { crm: true, erp: true },
   status: "invited",
   telegram_linked: false,
+  telegram: "not_linked",
   erp_sync: "ok",
 };
 

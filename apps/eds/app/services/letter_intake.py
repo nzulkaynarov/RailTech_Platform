@@ -39,12 +39,14 @@ from app.errors import conflict, invalid_fields, not_found
 from app.models import AiSuggestion, Employee, Letterhead
 from app.schemas.ai import AiDecision, IntakeSource, LetterIntakeFields, LetterIntakeSuggestion
 from app.security.pii import Masked, mask_numbered
-from app.services import dictionaries, docflow_settings, files
+from app.services import dictionaries, docflow_settings, files, instructions
 from app.services.storage import ObjectStorage
 
 log = structlog.get_logger(__name__)
 
 FUNCTION: Final = "letter_intake"
+RULES_ALIAS: Final = "rules"  # предложение по правилам кода, без модели (СЦ-11)
+RULES_VERSION: Final = "rules-1"
 PDF: Final = "application/pdf"
 IMAGES: Final = frozenset({"image/jpeg", "image/png", "image/webp", "image/gif"})
 MIN_TEXT = 40  # меньше знаков в текстовом слое — считаем сканом
@@ -60,7 +62,41 @@ MAX_TOKENS = 1200
 _INN: Final = re.compile(r"(?i)(?:\bИНН|\bSTIR|\bINN|\bTIN)\b\D{0,12}?(\d{9})(?!\d)")
 
 # «в течение 5 рабочих дней», «в течение десяти календарных дней», «5 kun ichida», «5 ish kuni ichida».
-_DUE_RU: Final = re.compile(r"(?i)в\s+течение\s+(\d{1,3})\s*(?:\([^)]{1,30}\)\s*)?(рабоч\w*|календарн\w*)?\s*дн")
+# Числительные 1–30 и десятки: именительный и родительный падеж («в течение пяти дней», «двадцати пяти дней»).
+_UNITS: Final[tuple[str, ...]] = (
+    "один одного одну",
+    "два двух",
+    "три трёх трех",
+    "четыре четырёх четырех",
+    "пять пяти",
+    "шесть шести",
+    "семь семи",
+    "восемь восьми",
+    "девять девяти",
+    "десять десяти",
+    "одиннадцать одиннадцати",
+    "двенадцать двенадцати",
+    "тринадцать тринадцати",
+    "четырнадцать четырнадцати",
+    "пятнадцать пятнадцати",
+    "шестнадцать шестнадцати",
+    "семнадцать семнадцати",
+    "восемнадцать восемнадцати",
+    "девятнадцать девятнадцати",
+    "двадцать двадцати",
+    "тридцать тридцати",
+)
+_NUM_WORDS: Final[dict[str, int]] = {
+    word: number
+    for number, words in [(n, w) for n, w in enumerate(_UNITS[:20], start=1)] + [(30, _UNITS[20])]
+    for word in words.split()
+}
+_WORDS_RE = "|".join(sorted(_NUM_WORDS, key=len, reverse=True))
+# «в течение 5 / 5-ти / пяти / двадцати пяти (рабочих|календарных) дней»
+_DUE_RU: Final = re.compile(
+    rf"(?i)в\s+течение\s+(?:(\d{{1,3}})(?:-[а-я]{{1,3}})?|((?:{_WORDS_RE})(?:\s+(?:{_WORDS_RE}))?))"
+    r"\s*(?:\([^)]{1,30}\)\s*)?(рабоч\w*|календарн\w*)?\s*дн"
+)
 _DUE_UZ: Final = re.compile(r"(?i)\b(\d{1,3})\s*(ish\s+)?kun(?:i)?\s+ichida")
 _MAX_DUE_DAYS = 90
 
@@ -135,9 +171,25 @@ def _text(value: Any, masked: Masked | None, limit: int) -> str | None:
     return cleaned[:limit] or None
 
 
+def _words_to_days(words: str) -> int:
+    """«пять» → 5, «двадцать пять» → 25; два числа подряд, кроме «десяток + единица», дают 0 (подсказки нет)."""
+    parts = [_NUM_WORDS[word] for word in words.lower().split()]
+    if len(parts) == 1:
+        return parts[0]
+    tens, unit = parts
+    return tens + unit if tens in (20, 30) and 1 <= unit <= 9 else 0
+
+
 def due_from_text(raw: str, today: date) -> date | None:
-    """Срок «в течение N (рабочих|календарных) дней» из текста письма: код считает
-    от даты `today` (дня регистрации), а не модель.
+    try:
+        return _due_from_text(raw, today)
+    except OverflowError:  # дата у предела календаря: подсказки нет, а не 500
+        return None
+
+
+def _due_from_text(raw: str, today: date) -> date | None:
+    """Срок «в течение N (рабочих|календарных) дней» (N цифрами или словом, «пяти дней») из текста письма: код
+    считает от даты `today` (даты поступления, а без неё — дня регистрации), а не модель.
 
     Рабочие дни — пн–пт (как в подсказке срока резолюции); без слова «рабочих» — календарные. Нет оборота или N вне
     разумного — `None`. Это подсказка: срок человек подтверждает в карточке (в письме отсчёт
@@ -147,8 +199,8 @@ def due_from_text(raw: str, today: date) -> date | None:
     found = _DUE_RU.search(raw)
     working = False
     if found:
-        days = int(found.group(1))
-        working = (found.group(2) or "").lower().startswith("рабоч")
+        days = int(found.group(1)) if found.group(1) else _words_to_days(found.group(2))
+        working = (found.group(3) or "").lower().startswith("рабоч")
     elif (found := _DUE_UZ.search(raw)) is not None:
         days = int(found.group(1))
         working = bool(found.group(2))
@@ -157,7 +209,8 @@ def due_from_text(raw: str, today: date) -> date | None:
     if not 1 <= days <= _MAX_DUE_DAYS:
         return None
     if not working:
-        return today + timedelta(days=days)
+        # календарный срок, выпавший на выходной, переходит на ближайший рабочий день (одно правило с резолюцией)
+        return instructions.next_workday(today + timedelta(days=days))
     day = today
     while days:
         day += timedelta(days=1)
@@ -167,12 +220,19 @@ def due_from_text(raw: str, today: date) -> date | None:
 
 
 def clean(
-    data: dict[str, Any], *, masked: Masked | None, kinds: set[str], raw: str, today: date, own_inn: str | None = None
+    data: dict[str, Any],
+    *,
+    masked: Masked | None,
+    kinds: set[str],
+    raw: str,
+    today: date,
+    own_inn: str | None = None,
+    base: date | None = None,
 ) -> LetterIntakeFields:
     """Ответ модели → поля карточки: код решает, что принять (вид — из справочника, даты — разобранные и в разумных
     пределах, ИНН — найденный кодом, не свой)."""
     ref_date = _date(data.get("sender_ref_date"))
-    due = _date(data.get("document_due")) or due_from_text(raw, today)
+    due = _date(data.get("document_due")) or due_from_text(raw, base or today)
     kind = data.get("kind")
     return LetterIntakeFields(
         sender_name=_text(data.get("sender_name"), masked, LIMITS["sender_name"]),
@@ -183,6 +243,67 @@ def clean(
         summary=_text(data.get("summary"), masked, LIMITS["summary"]),
         kind=kind if isinstance(kind, str) and kind in kinds else None,
         document_due=due if due and today - DUE_PAST <= due <= today + DUE_AHEAD else None,
+    )
+
+
+def by_code_fields(data: dict[str, Any] | None, fields: LetterIntakeFields) -> list[str]:
+    """Какие из предложенных полей посчитал код, а не модель: ИНН всегда находит код; срок — если модель его не назвала
+    датой (оборот «в течение N дней» посчитан кодом). Экран метит такие поля «Из текста письма», не «Предложено ИИ»."""
+    out: list[str] = []
+    if fields.sender_inn:
+        out.append("sender_inn")
+    if fields.document_due and _date((data or {}).get("document_due")) is None:
+        out.append("document_due")
+    return out
+
+
+def check_received_at(received_at: date | None, today: date) -> None:
+    """Дата поступления из формы — точка отсчёта срока: не из будущего и не старше года (иначе 422)."""
+    if received_at is None:
+        return
+    if received_at > today:
+        raise invalid_fields("Дата поступления не может быть в будущем.", received_at="in_future")
+    if received_at < today - DUE_PAST:
+        raise invalid_fields("Дата поступления старше года.", received_at="too_old")
+
+
+def rules_fields(
+    raw: str, today: date, own_inn: str | None = None, base: date | None = None
+) -> LetterIntakeFields | None:
+    """Поля, которые код берёт из текста письма без модели: срок «в течение N дней» и ИНН отправителя.
+    Нет срока в тексте — `None`: одного ИНН для предложения мало."""
+    due = due_from_text(raw, base or today)
+    if due is None or not today - DUE_PAST <= due <= today + DUE_AHEAD:
+        return None
+    return LetterIntakeFields(document_due=due, sender_inn=find_inn(raw, own_inn))
+
+
+async def _rules_suggestion(
+    session: AsyncSession, employee: Employee, fields: LetterIntakeFields
+) -> LetterIntakeSuggestion:
+    """Предложение по правилам кода: в журнале — алиас `rules`, без токенов и стоимости (платного вызова нет)."""
+    suggestion_id = uuid.uuid4()
+    async with session.begin():
+        session.add(
+            AiSuggestion(
+                id=suggestion_id,
+                function=FUNCTION,
+                alias=RULES_ALIAS,
+                prompt_version=RULES_VERSION,
+                source=IntakeSource.TEXT.value,
+                status="ok",
+                crm_user_id=employee.crm_user_id,
+                created_at=clock.now(),
+            )
+        )
+    log.info("ai.letter_intake", suggestion_id=str(suggestion_id), status="ok", source="rules")
+    return LetterIntakeSuggestion(
+        suggestion_id=suggestion_id,
+        source=IntakeSource.TEXT,
+        fields=fields,
+        alias=RULES_ALIAS,
+        prompt_version=RULES_VERSION,
+        by_code=[name for name, value in fields.model_dump().items() if value],
     )
 
 
@@ -209,9 +330,18 @@ async def _read(storage: ObjectStorage, key: str) -> bytes:
 
 
 async def suggest(
-    session: AsyncSession, settings: Settings, storage: ObjectStorage, employee: Employee, file_id: uuid.UUID
+    session: AsyncSession,
+    settings: Settings,
+    storage: ObjectStorage,
+    employee: Employee,
+    file_id: uuid.UUID,
+    received_at: date | None = None,
+    *,
+    rules_only: bool = False,
 ) -> LetterIntakeSuggestion:
     """Предложить поля карточки по файлу письма. Вызов модели — вне транзакции, журнал — своей транзакцией."""
+    today = clock.company_date(clock.now())
+    check_received_at(received_at, today)
     async with session.begin():
         await files.load_visible(session, employee, file_id)
         version = await files.get_version(session, file_id, None)
@@ -227,11 +357,15 @@ async def suggest(
     limit = MAX_PDF_BYTES if version.content_type == PDF else MAX_IMAGE_BYTES
     if version.size > limit:
         raise conflict("file_too_large", _too_large(limit))
-    if not gateway.available(settings):
-        raise conflict("ai_unavailable", "Помощник не настроен — заполните вручную.")
+    # Модель недоступна или лимит исчерпан — не отказ: правила кода (срок по тексту) работают без модели (СЦ-11).
+    blocked: tuple[str, str] | None = None
     budget = Decimal(str(settings.ai_daily_budget_usd))
-    if budget > 0 and spent >= budget:  # 0 — без лимита (как у ERP)
-        raise conflict("ai_budget_exceeded", "Дневной лимит помощника исчерпан — заполните вручную.")
+    if rules_only:  # «Пересчитать срок»: модель не зовём совсем
+        blocked = ("nothing_recognized", "В тексте письма срока не нашлось — введите его сами.")
+    elif not gateway.available(settings):
+        blocked = ("ai_unavailable", "Помощник не настроен — заполните вручную.")
+    elif budget > 0 and spent >= budget:  # 0 — без лимита (как у ERP)
+        blocked = ("ai_budget_exceeded", "Дневной лимит помощника исчерпан — заполните вручную.")
     data = await _read(storage, version.s3_key)
     try:
         raw = await asyncio.to_thread(pdf_text, data) if version.content_type == PDF else ""
@@ -240,6 +374,11 @@ async def suggest(
             "file_too_large", f"В файле больше {MAX_PDF_PAGES} страниц — это не письмо. Заполните вручную."
         ) from exc
     source = IntakeSource.TEXT if len(raw) >= MIN_TEXT else IntakeSource.IMAGE
+    by_rules = rules_fields(raw, today, own_inn, received_at) if source is IntakeSource.TEXT else None
+    if blocked is not None:
+        if by_rules is None:
+            raise conflict(*blocked)
+        return await _rules_suggestion(session, employee, by_rules)
     if source is IntakeSource.IMAGE and not scans_on:
         why = (
             "при строгой политике защиты данных помощник сканы и фото не читает"
@@ -277,8 +416,9 @@ async def suggest(
             masked=masked,
             kinds={c for c, _ in kinds},
             raw=raw,
-            today=clock.company_date(clock.now()),
+            today=today,
             own_inn=own_inn,
+            base=received_at,
         )
         if result.status == "ok" and result.data is not None
         else None
@@ -303,6 +443,8 @@ async def suggest(
             )
         )
     log.info("ai.letter_intake", suggestion_id=str(suggestion_id), status=status, source=source.value)
+    if (result.status == "budget" or fields is None or empty) and by_rules is not None:
+        return await _rules_suggestion(session, employee, by_rules)
     if result.status == "budget":
         raise conflict("ai_budget_exceeded", "Дневной лимит помощника исчерпан — заполните вручную.")
     if fields is None:
@@ -315,6 +457,7 @@ async def suggest(
         fields=fields,
         alias=gateway.FUNCTION_ALIASES[FUNCTION],
         prompt_version=prompt.version,
+        by_code=by_code_fields(result.data, fields),
     )
 
 

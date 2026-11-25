@@ -340,6 +340,22 @@ class UserUpdate(BaseModel):
     # Должность (SPEC-v3 §4.3): пустая строка очищает.
     position: str | None = Field(default=None, max_length=POSITION_MAX_LEN)
     language: Language | None = None
+    # Замещение (СОТР-1): администратор ставит или снимает его за сотрудника, который не может сам.
+    # Правила те же, что у `PUT /me/deputy` (`services/staff_deputy`): три поля вместе, себя нельзя.
+    deputy_user_id: int | None = Field(default=None, gt=0)
+    deputy_from: date | None = None
+    deputy_to: date | None = None
+    clear_deputy: bool = False
+
+    @model_validator(mode="after")
+    def _deputy_is_whole(self) -> "UserUpdate":
+        period = (self.deputy_user_id, self.deputy_from, self.deputy_to)
+        given = [value is not None for value in period]
+        if any(given) and not all(given):
+            raise ValueError("deputy_user_id, deputy_from and deputy_to go together")
+        if self.clear_deputy and any(given):
+            raise ValueError("clear_deputy excludes a new deputy")
+        return self
 
 
 class PasswordReset(BaseModel):

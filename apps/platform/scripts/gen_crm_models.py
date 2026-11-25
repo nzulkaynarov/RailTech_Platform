@@ -32,6 +32,8 @@ SCHEMA_REF = "#/components/schemas/"
 
 # Ответы CRM, которые BFF разбирает моделью: вход/обновление (CrmClient.tokens) и SSO-токен для ERP (AuthService).
 ROOTS = (
+    # ЛП-1: «Кто это?» → «Партнёр» в карточке лида
+    "PartnerHandoffOut",
     "TokenResponse",
     "SsoTokenResponse",
     # PART-CRM: партнёр ERP в карточке клиента, ждущий подтверждения менеджера

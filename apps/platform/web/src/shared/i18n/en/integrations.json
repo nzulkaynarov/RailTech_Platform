@@ -212,6 +212,7 @@
       "empty": "The bot does not see any chats yet. Add it to the team chat and write any message there.",
       "candidates": "Chats with the bot",
       "isCurrent": "Connected",
+      "needsInvite": "The bot needs the “Invite users” right in the channel.",
       "connect": "Connect",
       "connectAria": "Connect channel: {{title}}",
       "connected": "Channel connected",

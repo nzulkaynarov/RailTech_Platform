@@ -25,6 +25,7 @@ class PartnerApplicationSource(models.TextChoices):
     PUBLIC = "public", _("Внешний вход")
     CLIENT_CABINET = "client_cabinet", _("Кабинет клиента")
     LETTER = "letter", _("Входящее письмо")
+    LEAD = "lead", _("Лид CRM")
 
 
 class PartnerApplicationStatus(models.TextChoices):
@@ -137,8 +138,11 @@ class PartnerApplication(models.Model):
         max_length=32,
         blank=True,
         default="",
-        verbose_name=_("Номер входящего письма"),
-        help_text=_("План 1.9: заявку завёл сотрудник по входящему письму — «Передать в работу»"),
+        verbose_name=_("Номер входящего письма или лида"),
+        help_text=_(
+            "План 1.9: заявку завёл сотрудник по входящему письму — «Передать в работу»; "
+            "ЛП-1: номер лида CRM, если заявка из его карточки"
+        ),
     )
     contract_number = models.CharField(
         max_length=64,

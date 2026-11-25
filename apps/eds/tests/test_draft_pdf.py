@@ -139,7 +139,7 @@ async def test_draft_pdf_is_open_only_to_author_and_registrar_of_handed_over(
         assert_error(await client.get(file_url, headers=staff[who].headers), 404, "NOT_FOUND")
 
 
-async def test_may_open_pdf_rule() -> None:
+async def test_may_open_pdf_rule(container: Container) -> None:
     """Правило открытия PDF проекта само по себе (не только через видимость документа): автор и делопроизводитель."""
 
     def employee(user: int, *permissions: str) -> Employee:
@@ -147,17 +147,23 @@ async def test_may_open_pdf_rule() -> None:
 
     def letter(status: str = "draft", handed: bool = False) -> Document:
         return Document(
+            kind="letter_out",
             author_crm_user_id=5,
             status=status,
             registration_requested_at=datetime(2026, 11, 2, tzinfo=UTC) if handed else None,
         )
 
     wide = ("letters.read", "registry.read")
-    assert may_open_pdf(employee(5), letter())  # автор
-    assert not may_open_pdf(employee(7, *wide), letter())  # чужой с широкими правами на чтение
-    assert not may_open_pdf(employee(4, *wide, "letters.register"), letter())  # делопроизводитель до передачи
-    assert may_open_pdf(employee(4, *wide, "letters.register"), letter(handed=True))
-    assert not may_open_pdf(employee(7, *wide), letter(handed=True))  # передан, но без `letters.register`
+    async with container.session_factory() as session:
+        assert await may_open_pdf(session, employee(5), letter())  # автор
+        assert not await may_open_pdf(session, employee(7, *wide), letter())  # чужой с широкими правами на чтение
+        assert not await may_open_pdf(
+            session, employee(4, *wide, "letters.register"), letter()
+        )  # делопроизводитель до передачи
+        assert await may_open_pdf(session, employee(4, *wide, "letters.register"), letter(handed=True))
+        assert not await may_open_pdf(
+            session, employee(7, *wide), letter(handed=True)
+        )  # передан, но без `letters.register`
 
 
 async def test_pdf_built_before_the_mark_is_not_served(

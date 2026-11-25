@@ -19,8 +19,14 @@ statuses:
       ru: "Ждёт вашего решения"
       uz: "Qaroringizni kutmoqda"
       en: "Awaiting your decision"
+  contract_preparing:
+    from: "Договор: проекта нет, не отправлен клиенту или отклонён"
+    text:
+      ru: "Готовим договор"
+      uz: "Şartnomani tayyorlayapmiz"
+      en: "We are preparing the contract"
   contract_review:
-    from: "Договор: проект"
+    from: "Договор: отправлен клиенту на согласование"
     text:
       ru: "Согласуйте редакцию договора"
       uz: "Şartnoma matnini kelişib oling"

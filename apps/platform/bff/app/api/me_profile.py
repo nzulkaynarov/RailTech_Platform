@@ -37,7 +37,7 @@ _AVATAR_PART = re.compile(
 )
 _PART_HEADERS_WINDOW = 4096
 _MESSAGES = {
-    "phone_invalid": "Телефон: от 7 до 15 цифр, можно с «+».",
+    "phone_invalid": "Телефон: укажите код страны, например +998 90 123-45-67.",
     "timezone_unknown": "Такого часового пояса нет.",
     "signature_invalid": "Подпись: не длиннее 1000 символов.",
     "avatar_empty": "Файл пустой.",

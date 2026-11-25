@@ -23,6 +23,8 @@ export interface EdsDocumentUpdateIn {
   amount?: EdsMoney | null;
   /** @nullable */
   due_date?: string | null;
+  /** Служебка с суммой без счёта партнёра: автор отметил, что счёт придёт позже (Б-9) */
+  invoice_later?: boolean;
   /** @maxItems 50 */
   file_ids?: string[];
   /** @nullable */

@@ -15,7 +15,13 @@ from app.domain.telegram_webhook import PROBLEM_TEXT, webhook_url_problem
 from app.integrations.telegram import resolve_token
 
 # = dispatcher.resolve_used_update_types()
-ALLOWED_UPDATES = ["message", "edited_message", "callback_query", "my_chat_member"]
+ALLOWED_UPDATES = [
+    "message",
+    "edited_message",
+    "callback_query",
+    "my_chat_member",
+    "chat_join_request",
+]
 
 
 async def run(args: argparse.Namespace) -> int:

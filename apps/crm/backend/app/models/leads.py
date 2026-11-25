@@ -35,7 +35,7 @@ class Lead(TimestampMixin, Base):
         CheckConstraint("language IN ('ru', 'uz', 'en')", name="language"),
         CheckConstraint("score BETWEEN 0 AND 100", name="score"),
         CheckConstraint(
-            "discarded_kind IS NULL OR discarded_kind IN ('spam', 'test', 'duplicate')",
+            "discarded_kind IS NULL OR discarded_kind IN ('spam', 'test', 'duplicate', 'partner')",
             name="discarded_kind",
         ),
         Index("ix_leads_stage", "stage"),
@@ -98,6 +98,8 @@ class Lead(TimestampMixin, Base):
     # лид, на который он указывает (простая ссылка, без склейки).
     discarded_kind: Mapped[str | None] = mapped_column(String(16))
     duplicate_of_lead_id: Mapped[int | None] = mapped_column(BigInteger)
+    # «Передан как партнёр» (ЛП-1, `discarded_kind = 'partner'`): заявка кандидата в партнёры в ERP.
+    partner_application_id: Mapped[int | None] = mapped_column(BigInteger)
     # Контакты лида без Telegram (сайт, звонок, почта, рекомендация — M3-CRM-05); номер из
     # Telegram остаётся в `telegram_identities.phone_e164`, склейка — по обоим (`lead_sources`).
     phone_e164: Mapped[str | None] = mapped_column(String(20))

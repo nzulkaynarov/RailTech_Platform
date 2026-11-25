@@ -8,17 +8,17 @@ import { findArticle } from "./articles";
 import { CHANGELOG, entryDate } from "./changelog";
 import { InlineMarkdown } from "./Markdown";
 import { useWhatsNew } from "./whatsNew";
-import { START_KINDS, type StartKind, rolesText, startKindsOf, useStartSteps } from "./startKinds";
+import { START_KINDS, type StartKind, startKindsOf, useStartSteps } from "./startKinds";
 
 import "./help.css";
 
-function KindBlock({ kind, role }: { kind: StartKind; role?: string }) {
+function KindBlock({ kind }: { kind: StartKind }) {
   const { t } = useTranslation("help");
   const steps = useStartSteps(kind);
   return (
     <section aria-labelledby={`start-${kind}`} className="pf-help-block">
       <h2 id={`start-${kind}`} style={{ margin: 0, fontSize: 16, lineHeight: "24px" }}>
-        {role ? t("start.yours", { role }) : t(`start.kinds.${kind}.title`)}
+        {t(`start.kinds.${kind}.title`)}
       </h2>
       <ol style={{ margin: 0, paddingLeft: 20 }}>
         {steps.map((step) => (
@@ -36,13 +36,12 @@ export function StartGuide() {
   const { t } = useTranslation("help");
   const { me } = useAuth();
   const mine = startKindsOf(me);
-  const role = rolesText(me);
   const others = START_KINDS.filter((kind) => !mine.includes(kind));
   return (
     <div className="pf-help-block" style={{ gap: 24 }}>
       <p style={{ margin: 0 }}>{t("start.intro")}</p>
-      {mine.map((kind, index) => (
-        <KindBlock key={kind} kind={kind} {...(index === 0 ? { role } : {})} />
+      {mine.map((kind) => (
+        <KindBlock key={kind} kind={kind} />
       ))}
       {others.length > 0 ? (
         <div className="pf-help-block">
