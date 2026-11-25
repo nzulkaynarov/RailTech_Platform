@@ -104,12 +104,13 @@ def supplier_email(company) -> str:
 
 
 def unconfirmed_lines(lines) -> list:
-    """Строки заказа, чьё название — слова клиента: карточка заведена расчётом (`DRAFT`), человек её не подтвердил и название
-    строки не менял. Такой заказ партнёру не уходит, пока карточку не опубликуют (В-2)."""
+    """Строки заказа, чьё название — слова клиента: карточка заведена расчётом и не подтверждена (`is_unconfirmed_card`),
+    а название строки не задавал сотрудник. Такой заказ партнёру не уходит, пока карточку не опубликуют или строку не
+    назовут (В-2): переименование карточки в каталоге без публикации ничего не подтверждает."""
     return [
         line
         for line in lines
-        if line.product_id and is_unconfirmed_card(line.product) and (line.name or "") == line.product.name
+        if line.product_id and is_unconfirmed_card(line.product) and not getattr(line, "name_by_staff", False)
     ]
 
 
@@ -224,6 +225,7 @@ def _resolve_lines(lines: list[LineInput]) -> list[dict]:
                 "id": line.id,
                 "product": product,
                 "name": (line.name or product.name)[:500],
+                "name_by_staff": bool((line.name or "").strip()),
                 # артикул изготовителя карточки-черновика — из заявки клиента: партнёру он не уходит, пока карточку не подтвердили
                 "article": (
                     line.article
@@ -279,6 +281,7 @@ def _write_lines(order: SupplierOrder, rows: list[dict], user) -> None:
             position=position,
             product=row["product"],
             name=row["name"],
+            name_by_staff=row["name_by_staff"],
             article=row["article"],
             unit=row["unit"],
             quantity=row["quantity"],

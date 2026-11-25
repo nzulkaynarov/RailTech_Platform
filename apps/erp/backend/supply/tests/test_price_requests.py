@@ -388,3 +388,30 @@ def test_an_unconfirmed_auto_card_needs_a_staff_name_in_the_price_request(world)
     assert named.status_code == 201, named.json()
     seen = _everything_partner_sees(named.json()["id"])
     assert "Чиланзар" not in seen and "МетроСтрой" not in seen and "МС-КОД-77" not in seen
+
+
+def test_renaming_an_unpublished_card_does_not_confirm_the_order_line(world):
+    """Карточку переименовали в каталоге без публикации — в строке заказа остались слова клиента: заказ не уходит."""
+    deal, _q, _items = make_deal(world, [(world["rail"], 2)])
+    _auto_card(world["rail"], deal)
+    draft = _draft(world, [{"product_id": world["rail"].pk, "quantity": 2}])
+    type(world["rail"]).objects.filter(pk=world["rail"].pk).update(name="Перевод стрелочный Р65")
+    from inventory.tests.support import complete_order
+
+    complete_order(draft["id"])
+    sent = api(world["supply"]).post(f"{STOCK}orders/{draft['id']}/send/", {}, format="json")
+    assert sent.status_code == 409 and sent.json()["detail"] == "PARTNER_NAME_REQUIRED"
+    assert not mail.outbox  # письма с названием из слов клиента нет
+
+
+def test_a_name_written_by_staff_confirms_the_order_line(world):
+    deal, _q, _items = make_deal(world, [(world["rail"], 2)])
+    _auto_card(world["rail"], deal)
+    draft = _draft(world, [{"product_id": world["rail"].pk, "quantity": 2, "name": "Перевод стрелочный Р65"}])
+    from inventory.tests.support import complete_order
+
+    complete_order(draft["id"])
+    sent = api(world["supply"]).post(f"{STOCK}orders/{draft['id']}/send/", {}, format="json")
+    assert sent.status_code == 200, sent.json()
+    body = "\n".join(m.body for m in mail.outbox)
+    assert "Перевод стрелочный Р65" in body and "Чиланзар" not in body and "МетроСтрой" not in body

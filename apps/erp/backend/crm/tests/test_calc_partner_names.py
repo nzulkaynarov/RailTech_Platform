@@ -65,3 +65,20 @@ def test_client_codes_never_become_the_partner_article(world):  # noqa: F811
     row = _preview(world, item)["lines"][0]
     assert row["source"] == "card" and row["name"] == "Перевод стрелочный Р65 1/11"
     assert CLIENT_MPN not in row["article"] and CLIENT_DRAWING not in row["article"]
+
+
+def test_an_archived_calc_card_is_still_unconfirmed(world):  # noqa: F811
+    """Архив карточки из слов клиента её не подтверждает: подтверждает только публикация."""
+    item = _client_line(world)
+    archived, _ = ProductStatus.objects.get_or_create(code="ARCHIVED", defaults={"name": "Архив"})
+    item.product.status = archived
+    item.product.save()
+    row = _preview(world, item)["lines"][0]
+    assert row["source"] == "missing" and row["name"] is None
+
+
+def test_a_card_made_by_a_human_without_a_deal_is_confirmed_in_any_status(world):  # noqa: F811
+    item = _client_line(world)
+    type(item.product).objects.filter(pk=item.product.pk).update(source_deal=None, name="Наша карточка")
+    row = _preview(world, item)["lines"][0]
+    assert row["source"] == "card" and row["name"] == "Наша карточка"
