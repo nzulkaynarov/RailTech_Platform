@@ -11279,10 +11279,32 @@ components:
       type: object
     UserUpdate:
       properties:
+        clear_deputy:
+          default: false
+          title: Clear Deputy
+          type: boolean
         clear_tg_user_id:
           default: false
           title: Clear Tg User Id
           type: boolean
+        deputy_from:
+          anyOf:
+          - format: date
+            type: string
+          - type: 'null'
+          title: Deputy From
+        deputy_to:
+          anyOf:
+          - format: date
+            type: string
+          - type: 'null'
+          title: Deputy To
+        deputy_user_id:
+          anyOf:
+          - exclusiveMinimum: 0.0
+            type: integer
+          - type: 'null'
+          title: Deputy User Id
         erp_role_codes:
           anyOf:
           - items:

@@ -439,6 +439,7 @@ export * from "./employeeCredentials";
 export * from "./employeeInvite";
 export * from "./employeeList";
 export * from "./employeeStatus";
+export * from "./employeeTelegram";
 export * from "./employeeUpdate";
 export * from "./enrolledSession";
 export * from "./enrollIn";
