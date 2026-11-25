@@ -28,7 +28,6 @@ from parties.models import (
 )
 from portal.services.access import activate_on_first_login, company_has_cabinet_access
 from portal.tests.conftest import LOCMEM_BACKEND, PortalAPIClient, break_mail_handoff, make_portal_session
-
 from portal.tests.partner_contract_helpers import prepare, with_scan
 
 from catalog.tests.desk_world import build_world

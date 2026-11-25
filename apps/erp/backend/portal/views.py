@@ -28,13 +28,7 @@ from parties.models import (
 from portal import projections
 from portal.authentication import PortalAuthentication
 from portal.client_ip import client_ip as _client_ip
-from portal.exceptions import (
-    PortalBadRequest,
-    PortalConflict,
-    PortalUnavailable,
-    PortalValidationError,
-    portal_exception_handler,
-)
+from portal.exceptions import PortalBadRequest, PortalConflict, PortalValidationError, portal_exception_handler
 from portal.models import (
     PortalDocumentVerification,
     PortalSecurityEvent,

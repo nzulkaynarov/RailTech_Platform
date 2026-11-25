@@ -16,11 +16,7 @@ from django.conf import settings
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
-from core.storage import (
-    get_private_storage,
-    partner_application_contract_path,
-    partner_application_scan_path,
-)
+from core.storage import get_private_storage, partner_application_contract_path, partner_application_scan_path
 
 from .relationships import PartnerKind
 

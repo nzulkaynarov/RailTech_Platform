@@ -75,7 +75,7 @@ class PartnerApplicationListResponse(Out):
 
 
 class PartnerApplicationSendContractRequest(Body):
-    """Отправка подготовленного договора: номер и дата заданы при подготовке (ПД-1), здесь игнорируются."""
+    """Отправка подготовленного договора: номер и дата заданы при подготовке (ПД-1)."""
 
     contract_number: str | None = Field(default=None, max_length=64)
     contract_date: str | None = None
@@ -188,13 +188,17 @@ def to_partner_application(raw: Mapping[str, Any]) -> PartnerApplicationItem:
         invite_delivery=_one_of(raw.get("invite_delivery"), ("queued", "sent", "failed")),
         contract_source=_one_of(raw.get("contract_source"), ("template", "upload")) or "",
         contract_template_id=(
-            str(raw["contract_template_id"]) if raw.get("contract_template_id") is not None else None
+            str(raw["contract_template_id"])
+            if raw.get("contract_template_id") is not None
+            else None
         ),
         contract_template_name=raw.get("contract_template_name") or None,
         contract_template_edition=raw.get("contract_template_edition"),
         contract_language=text(raw.get("contract_language")),
         contract_deviation_text=text(raw.get("contract_deviation_text")),
-        contract_approval=_one_of(raw.get("contract_approval"), ("requested", "approved", "returned"))
+        contract_approval=_one_of(
+            raw.get("contract_approval"), ("requested", "approved", "returned")
+        )
         or "",
         contract_approval_requested_by=raw.get("contract_approval_requested_by") or None,
         contract_approval_decided_by=raw.get("contract_approval_decided_by") or None,

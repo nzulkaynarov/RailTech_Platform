@@ -354,11 +354,13 @@ class TestLeadApplicationFullPath:
         listed = supply.get("/api/v1/catalog/partner-applications/").json()["items"][0]
         # перечень `source` в контракте не растёт: лид — «письмо» с признаком, номер лида — в `source_ref`
         assert (listed["source"], listed["from_lead"], listed["source_ref"]) == ("letter", True, "L-0041")
-        sent = supply.post(
-            f"/api/v1/catalog/partner-applications/{app.pk}/send-contract/",
-            {"contract_number": "DOG-LEAD-1", "contract_date": "2026-11-25"},
-            format="json",
-        )
+        # ПД-1: без подготовленного договора отправлять нечего
+        blocked = supply.post(f"/api/v1/catalog/partner-applications/{app.pk}/send-contract/", {}, format="json")
+        assert blocked.json()["detail"] == "CONTRACT_NOT_PREPARED"
+        prepare(app)
+        app.contract_number, app.contract_date = "DOG-LEAD-1", "2026-11-25"
+        app.save()
+        sent = supply.post(f"/api/v1/catalog/partner-applications/{app.pk}/send-contract/", {}, format="json")
         assert sent.status_code == 200, sent.content
         app.refresh_from_db()
         # кандидат приглашён по почте и может прочитать договор: контакт заведён, отношение — «приглашён»
@@ -372,6 +374,7 @@ class TestLeadApplicationFullPath:
         app.status = PartnerApplicationStatus.CANDIDATE_AGREED
         app.candidate_agreed_at = timezone.now()
         app.save()
+        with_scan(app)
         approved = supply.post(
             f"/api/v1/catalog/partner-applications/{app.pk}/approve/",
             {"contract_number": "DOG-LEAD-1", "contract_date": "2026-11-25"},

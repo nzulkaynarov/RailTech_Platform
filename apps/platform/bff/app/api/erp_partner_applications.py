@@ -205,7 +205,7 @@ async def download_document(
     authed: Reader,
     which: Annotated[str, Query(pattern=r"^(contract|scan)$")] = "contract",
 ) -> Response:
-    """Договор, который видит кандидат, или скан подписанного — вложением, файл в памяти BFF не копится."""
+    """Договор, который видит кандидат, или скан подписанного — вложением."""
     response = await authed.call(
         "erp",
         "GET",

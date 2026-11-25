@@ -15,9 +15,9 @@ import io
 import logging
 from typing import Any
 
+from django.template.defaultfilters import linebreaks
 from django.template.loader import render_to_string
 from django.utils import timezone
-from django.template.defaultfilters import linebreaks
 from django.utils.html import escape
 from django.utils.safestring import mark_safe
 from documents.models.documents import CounterpartyKind, DocumentTemplate

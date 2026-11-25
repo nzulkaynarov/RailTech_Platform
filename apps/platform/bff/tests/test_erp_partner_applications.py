@@ -286,7 +286,7 @@ async def test_create_from_letter(web: Web, be: Any, check: ContractChecker) -> 
     assert (await call(web, "POST", BASE, body)).status_code == 403
 
 
-# --- ПД-1: договор партнёра без тупика ---------------------------------------------------------------------------
+# --- ПД-1: договор партнёра без тупика ---------------------------------------------------
 
 
 async def test_contract_options(web: Web, be: Any, check: ContractChecker) -> None:
@@ -296,7 +296,13 @@ async def test_contract_options(web: Web, be: Any, check: ContractChecker) -> No
             200,
             json={
                 "templates": [
-                    {"id": 4, "name": "Договор с партнёром", "edition": 2, "languages": ["ru", "en"], "is_default": True}
+                    {
+                        "id": 4,
+                        "name": "Договор с партнёром",
+                        "edition": 2,
+                        "languages": ["ru", "en"],
+                        "is_default": True,
+                    }
                 ],
                 "default_template_id": 4,
                 "deviations_allowed": True,
@@ -309,23 +315,34 @@ async def test_contract_options(web: Web, be: Any, check: ContractChecker) -> No
     assert response.status_code == 200, response.text
     check(response, "/erp/catalog/partner-applications/contract-options", "get")
     data = response.json()
-    assert data["templates"][0]["id"] == "4" and data["default_template_id"] == "4"
+    assert data["templates"][0]["id"] == "4"
+    assert data["default_template_id"] == "4"
     assert data["approvers"] == ["Анвар Юристов"]
 
 
-async def test_prepare_contract_passes_template_as_int(web: Web, be: Any, check: ContractChecker) -> None:
+async def test_prepare_contract_passes_template_as_int(
+    web: Web, be: Any, check: ContractChecker
+) -> None:
     await web.login(["SUPPLY"])
-    prepared = {**APPLICATION_RAW, "contract_source": "template", "contract_template_id": 4, "contract_blocker": None}
+    prepared = {
+        **APPLICATION_RAW,
+        "contract_source": "template",
+        "contract_template_id": 4,
+        "contract_blocker": None,
+    }
     route = (
         mock(be)
         .post(f"{API}/catalog/partner-applications/15/prepare-contract/")
         .mock(return_value=httpx.Response(200, json=prepared))
     )
-    response = await call(web, "POST", f"{BASE}/15/prepare-contract", {"template_id": "4", "language": "en"})
+    response = await call(
+        web, "POST", f"{BASE}/15/prepare-contract", {"template_id": "4", "language": "en"}
+    )
     assert response.status_code == 200, response.text
     check(response, "/erp/catalog/partner-applications/{id}/prepare-contract", "post")
     assert json.loads(route.calls.last.request.content) == {"template_id": 4, "language": "en"}
-    assert response.json()["contract_source"] == "template" and response.json()["contract_blocker"] is None
+    assert response.json()["contract_source"] == "template"
+    assert response.json()["contract_blocker"] is None
 
 
 async def test_no_template_refusal_reaches_the_screen(web: Web, be: Any) -> None:
@@ -367,12 +384,24 @@ async def test_contract_decision_passes_through_and_refusal_is_visible(
     route = (
         mock(be)
         .post(f"{API}/catalog/partner-applications/15/contract-decision/")
-        .mock(return_value=httpx.Response(200, json={**APPLICATION_RAW, "contract_approval": "returned"}))
+        .mock(
+            return_value=httpx.Response(
+                200, json={**APPLICATION_RAW, "contract_approval": "returned"}
+            )
+        )
     )
-    response = await call(web, "POST", f"{BASE}/15/contract-decision", {"decision": "return", "note": "Нет ответственности"})
+    response = await call(
+        web,
+        "POST",
+        f"{BASE}/15/contract-decision",
+        {"decision": "return", "note": "Нет ответственности"},
+    )
     assert response.status_code == 200, response.text
     check(response, "/erp/catalog/partner-applications/{id}/contract-decision", "post")
-    assert json.loads(route.calls.last.request.content) == {"decision": "return", "note": "Нет ответственности"}
+    assert json.loads(route.calls.last.request.content) == {
+        "decision": "return",
+        "note": "Нет ответственности",
+    }
     mock(be).post(f"{API}/catalog/partner-applications/15/contract-decision/").mock(
         return_value=httpx.Response(403, json={"detail": "CONTRACT_DECISION_FORBIDDEN"})
     )

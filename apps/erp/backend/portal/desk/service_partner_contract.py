@@ -19,12 +19,7 @@ from django.core.files.base import ContentFile
 from django.db import transaction
 from django.utils import timezone
 from documents.models.documents import DocumentTemplate
-from parties.models import (
-    PartnerApplication,
-    PartnerApplicationStatus,
-    PartnerContractApproval,
-    PartnerContractSource,
-)
+from parties.models import PartnerApplication, PartnerApplicationStatus, PartnerContractApproval, PartnerContractSource
 from portal.desk.service import AccessError
 from portal.services import partner_contract as contract_service
 
@@ -85,9 +80,8 @@ def read_file(field) -> tuple[bytes, str, str]:
 
 def approver_names() -> list[str]:
     """Кто решает: держатели права утверждать договоры (зона «Право») своей компании — именами."""
-    from crm.services.contract_templates import _holders_to_notify
-
     from core.tenant import own_company_id
+    from crm.services.contract_templates import _holders_to_notify
 
     names = []
     for holder in _holders_to_notify(own_company_id()):
@@ -142,9 +136,7 @@ def contract_facts(app: PartnerApplication, *, viewer=None) -> dict:
         "has_signed_scan": bool(app.signed_scan),
         "signed_scan_at": app.signed_scan_at,
         "can_decide_contract": bool(viewer is not None and is_approver(viewer)),
-        "contract_approvers": approver_names()
-        if app.contract_approval == PartnerContractApproval.REQUESTED
-        else [],
+        "contract_approvers": approver_names() if app.contract_approval == PartnerContractApproval.REQUESTED else [],
     }
 
 
@@ -275,11 +267,10 @@ def _chosen_template(template_id) -> DocumentTemplate:
 
 
 def _notify_holders(app: PartnerApplication) -> None:
+    from core.tenant import own_company_id
     from crm.services.contract_templates import _holders_to_notify
     from notifications.models import Notification, NotificationType
     from notifications.services import push_notification_ws
-
-    from core.tenant import own_company_id
 
     info = NotificationType.objects.filter(code="INFO").first()
     what = "Свой файл договора" if app.contract_source == PartnerContractSource.UPLOAD else "Отступление от шаблона"

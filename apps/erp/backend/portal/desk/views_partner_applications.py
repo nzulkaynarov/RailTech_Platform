@@ -4,10 +4,10 @@
 отклонение) — `supply.manage`.
 """
 
+from django.http import HttpResponse
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from parties.models import PartnerApplication
 from portal.desk import service_partner_applications as service
-from django.http import HttpResponse
 from portal.desk import service_partner_contract as contract_step
 from portal.desk.serializers import (
     DeskPartnerApplicationApproveIn,
@@ -15,10 +15,10 @@ from portal.desk.serializers import (
     DeskPartnerApplicationDetail,
     DeskPartnerApplicationListResponse,
     DeskPartnerApplicationRejectIn,
+    DeskPartnerApplicationSendContractIn,
     DeskPartnerContractDecisionIn,
     DeskPartnerContractOptions,
     DeskPartnerContractPrepareIn,
-    DeskPartnerApplicationSendContractIn,
 )
 from portal.desk.service import AccessError
 from rest_framework.decorators import action

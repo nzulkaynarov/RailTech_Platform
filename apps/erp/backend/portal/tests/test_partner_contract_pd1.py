@@ -65,7 +65,9 @@ def director(world):
     return world["clients"]["director"]
 
 
-def template(world, *, status=TemplateApproval.APPROVED, kind="partner", body=BODY, name="Договор с партнёром", **extra):
+def template(
+    world, *, status=TemplateApproval.APPROVED, kind="partner", body=BODY, name="Договор с партнёром", **extra
+):
     return DocumentTemplate.objects.create(
         company=world["own"] if "own" in world else world["users"]["director"].memberships.first().company,
         name=name,
@@ -200,8 +202,12 @@ class TestPrepareFromTemplate:
         app = make_app()
         brand = svc.document_brand_context(None)
 
-        ru = svc.render_partner_contract_body(app, tpl, "ru", brand, number="PA-1", date=__import__("datetime").date(2026, 11, 25))
-        en = svc.render_partner_contract_body(app, tpl, "en", brand, number="PA-1", date=__import__("datetime").date(2026, 11, 25))
+        ru = svc.render_partner_contract_body(
+            app, tpl, "ru", brand, number="PA-1", date=__import__("datetime").date(2026, 11, 25)
+        )
+        en = svc.render_partner_contract_body(
+            app, tpl, "en", brand, number="PA-1", date=__import__("datetime").date(2026, 11, 25)
+        )
 
         assert "Nanjing Jichuang Co." in ru and "91320000MA1" in ru and "PA-1" in ru and "Предмет" in ru
         assert "Partner Nanjing Jichuang Co., agreement PA-1." in en and "Предмет" not in en
@@ -245,7 +251,15 @@ class TestApproval:
         app = make_app()
 
         response = supply.post(
-            f"{DESK}/{app.pk}/prepare-contract/", {"file": upload("our.docx", b"PK\x03\x04docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document")}, format="multipart"
+            f"{DESK}/{app.pk}/prepare-contract/",
+            {
+                "file": upload(
+                    "our.docx",
+                    b"PK\x03\x04docx",
+                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                )
+            },
+            format="multipart",
         )
 
         assert response.status_code == 200, response.content
@@ -260,11 +274,15 @@ class TestApproval:
 
     def test_wrong_file_type_is_refused(self, world, supply):
         response = supply.post(
-            f"{DESK}/{make_app().pk}/prepare-contract/", {"file": upload("virus.exe", b"MZ", "application/octet-stream")}, format="multipart"
+            f"{DESK}/{make_app().pk}/prepare-contract/",
+            {"file": upload("virus.exe", b"MZ", "application/octet-stream")},
+            format="multipart",
         )
         assert response.status_code == 400 and response.json()["detail"] == "CONTRACT_FILE_INVALID"
 
-    def test_deviation_text_requests_approval_and_approval_prints_it_into_the_contract(self, world, supply, director, monkeypatch):
+    def test_deviation_text_requests_approval_and_approval_prints_it_into_the_contract(
+        self, world, supply, director, monkeypatch
+    ):
         from portal.services import partner_contract as svc
 
         tpl = template(world)
@@ -303,8 +321,13 @@ class TestApproval:
         app = make_app()
         supply.post(f"{DESK}/{app.pk}/prepare-contract/", {"file": upload()}, format="multipart")
 
-        assert post(director, app, "contract-decision", {"decision": "return"}).json()["detail"] == "CONTRACT_RETURN_NOTE_REQUIRED"
-        returned = post(director, app, "contract-decision", {"decision": "return", "note": "Нет пункта об ответственности"})
+        assert (
+            post(director, app, "contract-decision", {"decision": "return"}).json()["detail"]
+            == "CONTRACT_RETURN_NOTE_REQUIRED"
+        )
+        returned = post(
+            director, app, "contract-decision", {"decision": "return", "note": "Нет пункта об ответственности"}
+        )
         assert returned.json()["contract_approval"] == "returned"
         assert returned.json()["contract_approval_note"] == "Нет пункта об ответственности"
         assert returned.json()["contract_blocker"] == "CONTRACT_APPROVAL_RETURNED"
@@ -409,7 +432,9 @@ class TestWholePath:
         assert early.status_code == 400 and early.json()["detail"] == "SCAN_NOT_EXPECTED"
 
         assert candidate.post(f"{PORTAL}/agree", {"notes": "ok"}, format="json").status_code == 200
-        bad = candidate.post(f"{PORTAL}/signed-scan", {"file": upload("s.exe", b"MZ", "application/octet-stream")}, format="multipart")
+        bad = candidate.post(
+            f"{PORTAL}/signed-scan", {"file": upload("s.exe", b"MZ", "application/octet-stream")}, format="multipart"
+        )
         assert bad.json()["detail"] == "SCAN_INVALID"
 
         # без скана подтвердить нельзя
@@ -440,7 +465,9 @@ class TestWholePath:
         app, candidate = self._sent(world, supply)
         candidate.post(f"{PORTAL}/agree", {"notes": ""}, format="json")
 
-        response = post(supply, app, "approve", {"contract_number": app.contract_number, "override_reason": "Оригинал по почте"})
+        response = post(
+            supply, app, "approve", {"contract_number": app.contract_number, "override_reason": "Оригинал по почте"}
+        )
 
         assert response.status_code == 200
         entry = ActivityLog.objects.filter(event_code="admin.partner_application.approved").latest("id")

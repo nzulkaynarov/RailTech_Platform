@@ -152,7 +152,8 @@ class DeskPartnerContractFacts(serializers.Serializer):
     """ПД-1: договорная часть карточки заявки — всё выведено из фактов заявки."""
 
     contract_source = serializers.ChoiceField(
-        choices=["", "template", "upload"], help_text="Откуда договор: шаблон библиотеки или свой файл; пусто — не подготовлен."
+        choices=["", "template", "upload"],
+        help_text="Откуда договор: шаблон библиотеки или свой файл; пусто — не подготовлен.",
     )
     contract_template_id = serializers.IntegerField(allow_null=True)
     contract_template_name = serializers.CharField(allow_null=True)
@@ -261,7 +262,10 @@ class DeskPartnerApplicationSendContractIn(serializers.Serializer):
     """Отправка подготовленного договора (ПД-1): номер и дата заданы при подготовке и здесь не меняются."""
 
     contract_number = serializers.CharField(
-        required=False, allow_blank=True, max_length=64, help_text="Не используется: номер задаётся при подготовке договора."
+        required=False,
+        allow_blank=True,
+        max_length=64,
+        help_text="Не используется: номер задаётся при подготовке договора.",
     )
     contract_date = serializers.DateField(
         required=False, allow_null=True, help_text="Не используется: дата задаётся при подготовке договора."

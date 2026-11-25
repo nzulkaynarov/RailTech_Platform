@@ -49,9 +49,7 @@ for (const width of WIDTHS) {
   });
 
   test(`решение «Право» по своему файлу, ${String(width)} px`, async ({ page }) => {
-    await page.addInitScript(() => {
-      window.localStorage.setItem("rt-pf-mock-legal-holder", "1");
-    });
+    await page.addInitScript(`window.localStorage.setItem("rt-pf-mock-legal-holder", "1");`);
     const list = await openQueue(page, width);
 
     await list.getByRole("button", { name: "Решить по договору" }).click();
@@ -71,9 +69,7 @@ for (const width of WIDTHS) {
   });
 
   test(`нет утверждённого шаблона, ${String(width)} px`, async ({ page }) => {
-    await page.addInitScript(() => {
-      window.localStorage.setItem("rt-pf-mock-no-partner-template", "1");
-    });
+    await page.addInitScript(`window.localStorage.setItem("rt-pf-mock-no-partner-template", "1");`);
     const list = await openQueue(page, width);
 
     const nanjing = list
