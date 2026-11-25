@@ -8,6 +8,7 @@ import {
   useLoseCalcRequest,
   useNewCalcQuoteVersion,
 } from "../../../shared/api/generated/platform-bff";
+import { DisabledReason } from "../../../shared/ui/DisabledReason";
 import { ErrorNote, FormField } from "../../../shared/ui/FormParts";
 import { calcRef, useApplySheet, useErrorText } from "./api";
 
@@ -47,6 +48,7 @@ function LostModal({ sheet, onClose }: { sheet: CalcSheet; onClose: () => void }
           type="primary"
           danger
           loading={lose.isPending}
+          aria-describedby={text ? undefined : `${reasonId}-why`}
           disabled={!text}
           onClick={() => {
             setError(null);
@@ -71,6 +73,9 @@ function LostModal({ sheet, onClose }: { sheet: CalcSheet; onClose: () => void }
             }}
           />
         </FormField>
+        <DisabledReason id={`${reasonId}-why`}>
+          {text ? null : t("rejection.lost.needReason")}
+        </DisabledReason>
         <ErrorNote message={error} />
       </div>
     </Dialog>

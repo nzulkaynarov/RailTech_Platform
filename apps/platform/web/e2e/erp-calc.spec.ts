@@ -306,3 +306,24 @@ test.describe("Расчёт на телефоне @mobile", () => {
     await expect(sheet).toBeHidden();
   });
 });
+
+test.describe("Неактивная кнопка называет причину (Б-2)", () => {
+  test("«Отправить запрос»: пока не выбран партнёр — причина под формой, на 1512, 1440 и 390", async ({
+    page,
+  }) => {
+    await loginAndWait(page, "supply@demo.example");
+    for (const width of [1512, 1440, 390]) {
+      await page.setViewportSize({ width, height: 900 });
+      await openCalc(page);
+      await page.reload();
+      await expect(
+        page.getByRole("heading", { level: 1, name: `Расчёт по заявке ${NUMBER}` }),
+      ).toBeVisible();
+      await page.getByRole("button", { name: "Запросить цену у партнёра" }).click();
+      await expect(page.getByText("Выберите партнёра.")).toBeVisible();
+      await expect(page.getByRole("button", { name: "Отправить запрос" })).toBeDisabled();
+      await settledScreenshot(page, "price-request-reason");
+      await expectNoViolations(page, `запрос цены с причиной, ${String(width)}`);
+    }
+  });
+});

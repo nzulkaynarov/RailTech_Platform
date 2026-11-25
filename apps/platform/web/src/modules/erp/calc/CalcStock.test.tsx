@@ -92,6 +92,8 @@ describe("Расчёт · «Запросить цену у партнёра»", 
     const modal = await screen.findByRole("region", { name: /^Запросить цену у партнёра/ });
     const submit = within(modal).getByRole("button", { name: "Отправить запрос" });
     expect(submit).toBeDisabled();
+    // Б-2: у неактивной кнопки названа причина
+    expect(submit).toHaveAccessibleDescription("Выберите партнёра.");
     await pickCompany(
       within(modal).getByRole("combobox", { name: "Партнёр" }),
       "Сталь",
@@ -163,6 +165,9 @@ describe("Расчёт · «Запросить цену у партнёра»", 
     );
     const submit = within(modal).getByRole("button", { name: "Отправить запрос" });
     expect(submit).toBeDisabled();
+    await waitFor(() => {
+      expect(submit).toHaveAccessibleDescription("Укажите адрес партнёра для письма.");
+    });
     fireEvent.change(await within(modal).findByLabelText("Адрес для письма"), {
       target: { value: "orders@lumber.example" },
     });
@@ -327,5 +332,16 @@ describe("Расчёт · похожая позиция каталога (СЦ-1
       expect(screen.queryByText(`Похоже: ${DRIVE}`)).toBeNull();
     });
     expect(within(lineRow("Привод СП-6М")).getByText("Черновик")).toBeVisible();
+  });
+});
+
+describe("Расчёт · «Запросить цену у партнёра» только пока расчёт открыт (Б-2)", () => {
+  it("у КП на одобрении кнопки запроса цены нет", async () => {
+    signIn("supply@demo.example");
+    renderAt(`/erp/calc/${encodeURIComponent("ЗВ-2026-101")}`);
+    expect(
+      await screen.findByRole("heading", { level: 1, name: "Расчёт по заявке ЗВ-2026-101" }),
+    ).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Запросить цену у партнёра" })).toBeNull();
   });
 });

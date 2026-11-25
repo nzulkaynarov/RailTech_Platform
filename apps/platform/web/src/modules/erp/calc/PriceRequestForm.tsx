@@ -7,6 +7,7 @@ import {
   useCreateCalcPriceRequest,
   useListCounterpartyPickerPeople,
 } from "../../../shared/api/generated/platform-bff";
+import { DisabledReason } from "../../../shared/ui/DisabledReason";
 import { ErrorNote, FormField } from "../../../shared/ui/FormParts";
 import { CompanyPicker, useApplyCompanyRole, type PickedCompany } from "../../../shared/ui/pickers";
 import { clean, useErrorText, useRefreshStock } from "../stock/api";
@@ -42,6 +43,14 @@ export function PriceRequestForm({ sheet, onClose }: { sheet: CalcSheet; onClose
   const contactEmail = (people.data?.items ?? []).find((person) => person.email)?.email ?? null;
   const needsEmail =
     supplier !== null && !supplier.email && !people.isFetching && contactEmail === null;
+  const reasonId = useId();
+  const reason = !supplier
+    ? t("priceRequest.reason.supplier")
+    : lines.length === 0
+      ? t("priceRequest.reason.lines")
+      : needsEmail && clean(email) === undefined
+        ? t("priceRequest.reason.email")
+        : null;
   const create = useCreateCalcPriceRequest({
     mutation: {
       onSuccess: (request) => {
@@ -124,10 +133,12 @@ export function PriceRequestForm({ sheet, onClose }: { sheet: CalcSheet; onClose
           />
         </FormField>
         <ErrorNote message={error} />
+        <DisabledReason id={reasonId}>{reason}</DisabledReason>
         <div className="pf-calc-panel-actions">
           <Button
             type="primary"
             loading={create.isPending}
+            aria-describedby={reason ? reasonId : undefined}
             disabled={
               !supplier ||
               lines.length === 0 ||

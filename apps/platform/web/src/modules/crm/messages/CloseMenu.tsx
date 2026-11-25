@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { ChevronDownIcon } from "../../../shared/ui/lucide";
+import { useGetCrmCloseOptions } from "../../../shared/api/generated/platform-bff";
 import { CloseDialog, type CloseKind } from "./CloseDialogs";
 
 /**
@@ -23,10 +24,12 @@ export function CloseMenu({
 }) {
   const { t } = useTranslation("messages");
   const [open, setOpen] = useState<CloseKind | null>(null);
+  // Итог из учёта: «Заключено» ставит сам учёт (сделка в ERP), пункта в меню нет — иначе окно открывалось с мёртвой кнопкой
+  const wonByErp = useGetCrmCloseOptions().data?.won_by_erp === true;
   const items = [
     ...(close
       ? [
-          { key: "won", label: t("close.won") },
+          ...(wonByErp ? [] : [{ key: "won", label: t("close.won") }]),
           { key: "lost", label: t("close.lost") },
         ]
       : []),

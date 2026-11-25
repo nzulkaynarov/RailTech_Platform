@@ -369,7 +369,11 @@ describe("Склад · заказы партнёрам", () => {
     await screen.findByRole("button", { name: "Отправить партнёру" });
     fireEvent.click(screen.getByRole("button", { name: "Отправить партнёру" }));
     const send = await screen.findByRole("dialog");
-    expect(within(send).getByRole("button", { name: "Отправить письмо" })).toBeDisabled();
+    const sendSubmit = within(send).getByRole("button", { name: "Отправить письмо" });
+    expect(sendSubmit).toBeDisabled();
+    expect(sendSubmit).toHaveAccessibleDescription(
+      "Укажите адрес партнёра — без него письмо не уйдёт.",
+    );
     fireEvent.change(within(send).getByLabelText("Адрес для письма"), {
       target: { value: "orders@lumber.example" },
     });
@@ -453,6 +457,11 @@ describe("Склад · приёмка и отгрузки", () => {
       name: "Отгрузить, «Скрепление рельсовое КБ-65»",
     });
     expect(input).toHaveValue("20");
+    // Б-2: без количества кнопка неактивна, причина названа
+    fireEvent.change(input, { target: { value: "0" } });
+    expect(screen.getByRole("button", { name: "Отгрузить" })).toHaveAccessibleDescription(
+      "Укажите количество хотя бы по одной позиции.",
+    );
     fireEvent.change(input, { target: { value: "8" } });
     fireEvent.change(screen.getByLabelText("Трек-номер"), { target: { value: "TRK-100" } });
     fireEvent.click(screen.getByRole("button", { name: "Отгрузить" }));

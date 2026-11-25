@@ -320,7 +320,8 @@
       "reason": "Voz keçiş sababi",
       "hint": "Majburiy. Ariza jurnaliga tuşadi.",
       "submit": "Arizani rad bilan yopiş",
-      "done": "Ariza rad bilan yopildi, zaxira bekor qilindi"
+      "done": "Ariza rad bilan yopildi, zaxira bekor qilindi",
+      "needReason": "Sababni yozing — usiz arizani yopib bölmaydi."
     }
   },
   "terms": {

@@ -320,7 +320,8 @@
       "reason": "Reason",
       "hint": "Required. Goes to the request log.",
       "submit": "Close as lost",
-      "done": "Request closed as lost, reservation released"
+      "done": "Request closed as lost, reservation released",
+      "needReason": "Write a reason — the request cannot be closed without one."
     }
   },
   "terms": {
