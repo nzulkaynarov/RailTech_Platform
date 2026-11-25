@@ -84,6 +84,7 @@ if TYPE_CHECKING:
     from app.services.mail_types import MailTypesService
     from app.services.offsite_connector import OffsiteConnectorService
     from app.services.partner_clients import PartnerClientService
+    from app.services.partner_handoff import PartnerHandoffService
     from app.services.password_reset import PasswordResetService
     from app.services.platform_roles import PlatformRoleService
     from app.services.portal_invites import PortalInviteService
@@ -508,6 +509,20 @@ class Container:
             backoffice_mode=self.backoffice_mode,
             enqueue=_enqueue_erp_request,
             on_chats_changed=_chats_changed,
+        )
+
+    @cached_property
+    def partner_handoff_service(self) -> "PartnerHandoffService":
+        """«Партнёр» из карточки лида (ЛП-1): заявка кандидата в ERP, лид — «передан как
+        партнёр»."""
+        from app.integrations.erp_partner import HttpxErpPartnerClient
+        from app.services.partner_handoff import PartnerHandoffService
+
+        client = HttpxErpPartnerClient(
+            self.secrets_store, self.settings, self.settings_service, http=self.erp_http
+        )
+        return PartnerHandoffService(
+            self.session_factory, client, backoffice_mode=self.backoffice_mode
         )
 
     @cached_property

@@ -6257,6 +6257,11 @@ components:
         owner_mode:
           title: Owner Mode
           type: string
+        partner_application_id:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Partner Application Id
         phone_e164:
           anyOf:
           - type: string
@@ -7761,6 +7766,83 @@ components:
       - secrets_enabled
       title: OffsiteStatusOut
       type: object
+    PartnerHandoffIn:
+      description: 'Форма «Партнёр»: компания, страна, ИНН, контакт и что предлагает кандидат. Почта обязательна:
+
+        договорный шлюз ERP приглашает кандидата по ней; формат проверяет сервис (`invalid_email`).'
+      properties:
+        company_name:
+          maxLength: 255
+          minLength: 1
+          title: Company Name
+          type: string
+        contact_name:
+          maxLength: 255
+          minLength: 1
+          title: Contact Name
+          type: string
+        country:
+          default: UZ
+          maxLength: 2
+          minLength: 2
+          title: Country
+          type: string
+        email:
+          maxLength: 254
+          minLength: 3
+          title: Email
+          type: string
+        inn:
+          default: ''
+          maxLength: 32
+          title: Inn
+          type: string
+        kind:
+          default: supplier
+          enum:
+          - manufacturer
+          - supplier
+          - principal
+          - other
+          title: Kind
+          type: string
+        offer:
+          maxLength: 4000
+          minLength: 1
+          title: Offer
+          type: string
+        phone:
+          default: ''
+          maxLength: 32
+          title: Phone
+          type: string
+      required:
+      - company_name
+      - offer
+      - contact_name
+      - email
+      title: PartnerHandoffIn
+      type: object
+    PartnerHandoffOut:
+      description: '`created = false` — лид уже был передан как партнёр: возвращена первая заявка, второй не
+
+        заведено.'
+      properties:
+        application_id:
+          title: Application Id
+          type: integer
+        created:
+          default: true
+          title: Created
+          type: boolean
+        lead_id:
+          title: Lead Id
+          type: integer
+      required:
+      - lead_id
+      - application_id
+      title: PartnerHandoffOut
+      type: object
     PartnerRequestContact:
       properties:
         email:
@@ -8614,6 +8696,13 @@ components:
     RequestCompanyIn:
       description: 'Новый клиент — компания с ИНН (ИНН необязателен: найдётся позже по реквизитам).'
       properties:
+        country:
+          anyOf:
+          - maxLength: 2
+            minLength: 2
+            type: string
+          - type: 'null'
+          title: Country
         inn:
           anyOf:
           - maxLength: 32
@@ -16945,6 +17034,51 @@ paths:
       summary: Hand Over
       tags:
       - leads
+  /api/v1/leads/{lead_id}/actions/hand_over_partner:
+    post:
+      description: '«Партнёр» (ЛП-1): лид — кандидат в партнёры, а не клиент. Заявка кандидата уходит в ERP
+
+        («Заявки
+
+        партнёров»), лид закрывается исходом «передан как партнёр» и клиентом не становится. Повтор
+
+        (двойной
+
+        клик, параллельно) — 200 с первой заявкой, второй не заводится. ERP недоступна — 503, лид не
+
+        тронут.'
+      operationId: hand_over_partner
+      parameters:
+      - in: path
+        name: lead_id
+        required: true
+        schema:
+          title: Lead Id
+          type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PartnerHandoffIn'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnerHandoffOut'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: Hand Over Partner
+      tags:
+      - clients
   /api/v1/leads/{lead_id}/actions/make_customer:
     post:
       description: '«Сделать клиентом» / «Передать в бэк-офис» (ADR-0022).

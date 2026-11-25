@@ -313,6 +313,20 @@
                 }
             }
         },
+        "/api/integration/v1/partner-applications": {
+            "post": {
+                "operationId": "api_integration_v1_partner_applications_create",
+                "description": "POST /api/integration/v1/partner-applications — «Партнёр» из карточки лида CRM (ЛП-1).",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
         "/api/integration/v1/users/{crm_user_id}/sessions": {
             "delete": {
                 "operationId": "api_integration_v1_users_sessions_destroy",
@@ -47429,7 +47443,17 @@
                         "type": "integer"
                     },
                     "source": {
-                        "$ref": "#/components/schemas/PartnerApplicationSourceEnum"
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/PartnerApplicationSourceEnum"
+                            }
+                        ],
+                        "description": "Заявка из карточки лида CRM отдаётся как `letter` с `from_lead = true` (перечень не растёт: ERP SPA и BFF читают его строго).\n\n* `public` - public\n* `client_cabinet` - client_cabinet\n* `letter` - letter"
+                    },
+                    "from_lead": {
+                        "type": "boolean",
+                        "default": false,
+                        "description": "Заявка заведена из карточки лида CRM (ЛП-1): `source_ref` — номер лида"
                     },
                     "source_ref": {
                         "type": "string",
@@ -47592,7 +47616,17 @@
                         "type": "integer"
                     },
                     "source": {
-                        "$ref": "#/components/schemas/PartnerApplicationSourceEnum"
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/PartnerApplicationSourceEnum"
+                            }
+                        ],
+                        "description": "Заявка из карточки лида CRM отдаётся как `letter` с `from_lead = true` (перечень не растёт: ERP SPA и BFF читают его строго).\n\n* `public` - public\n* `client_cabinet` - client_cabinet\n* `letter` - letter"
+                    },
+                    "from_lead": {
+                        "type": "boolean",
+                        "default": false,
+                        "description": "Заявка заведена из карточки лида CRM (ЛП-1): `source_ref` — номер лида"
                     },
                     "source_ref": {
                         "type": "string",

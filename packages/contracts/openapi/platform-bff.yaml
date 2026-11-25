@@ -8,6 +8,10 @@ info:
     сессия, профиль, счётчики меню, «Моя очередь», лента «Сегодня», уведомления, поиск. Экраны фаз P2–P4 добавляются
     в этот файл до кода (`docs/architecture/integration-map.md` §1).
 
+    **0.125.0 (ЛП-1) — ломающее по oasdiff (до 1.0 допустимо): новое значение `PartnerApplicationSource.lead`** (заявка
+    партнёра заведена из карточки лида; очередь «Заявки партнёров» показывает источник «Лид»). Остальное в ЛП-1 аддитивно:
+    `POST /crm/leads/{lead}/partner`, `LeadCard.partner_application`.
+
     **0.122.0 (СЦ-9, подпись — задача подписанта; замещение) — ломающее по oasdiff (до 1.0 допустимо): новое значение
     `QueueItemKind.sign_document`.** Строка «Подписать» в «Моих задачах»: исходящее письмо, переданное на подпись (подписанта
     вычисляет EDS по реестру полномочий), и договор, счёт, акт, КП на моём шаге подписи. Строка `register_reply` больше не
@@ -14627,6 +14631,57 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/RequestCreatedView'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/RequestConflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /crm/leads/{lead}/partner:
+    post:
+      tags: [requests]
+      operationId: handOverCrmLeadAsPartner
+      summary: '«Кто это?» → «Партнёр»: заявка кандидата в партнёры из карточки лида (ЛП-1)'
+      description: >-
+        CRM `POST /leads/{id}/actions/hand_over_partner`. Раздел `crm.clients` полный. Вместо «Создать заявку» (лид — клиент):
+        CRM заводит заявку кандидата в ERP (очередь «Заявки партнёров», источник «лид», ссылка — номер лида) и закрывает лид
+        исходом «передан как партнёр» — в клиенты он не попадает, `LeadCard.partner_application` несёт номер заявки.
+        Идемпотентно по лиду: повтор (двойной клик, вторая вкладка, параллельно) — 200 `created: false` с первой заявкой,
+        второй не заводится; новая — 201. ERP недоступна — 503, лид не тронут, действие можно повторить. Отказы CRM —
+        `details.reason`: `request_not_allowed` (лид уже закрыт), `erp_not_configured`, `not_lead_owner`.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - name: lead
+          in: path
+          required: true
+          description: Номер лида
+          schema: {type: string, pattern: '^[Ll]-?\d{1,9}$'}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PartnerHandoffIn'
+      responses:
+        '200':
+          description: Лид уже передан как партнёр — та же заявка
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnerHandoffView'
+        '201':
+          description: Заявка кандидата заведена в ERP, лид закрыт исходом «передан как партнёр»
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnerHandoffView'
         '401':
           $ref: '#/components/responses/SessionExpired'
         '403':
@@ -30043,6 +30098,13 @@ components:
             - type: string
               pattern: '^L-\d{4,}$'
             - type: 'null'
+        partner_application:
+          description: >-
+            Лид передан как партнёр (ЛП-1): номер заявки кандидата в ERP («Заявки партнёров»); иначе `null`. Лид закрыт, в
+            списках его нет, карточка открывается по номеру.
+          oneOf:
+            - type: integer
+            - type: 'null'
 
     LeadOrigin:
       type: object
@@ -30325,6 +30387,7 @@ components:
               properties:
                 name: {type: string, minLength: 1, maxLength: 255}
                 inn: {type: [string, 'null'], maxLength: 32}
+                country: {type: [string, 'null'], pattern: '^[A-Za-z]{2}$', description: 'Страна — вместе с названием ищет уже заведённую компанию (ЛП-1)'}
             - type: 'null'
         contact: {$ref: '#/components/schemas/RequestContactFormIn'}
         summary: {type: string, minLength: 1, maxLength: 5000}
@@ -30339,6 +30402,29 @@ components:
                 method: {type: string, enum: [phone, email, paper]}
                 comment: {type: [string, 'null'], maxLength: 500}
             - type: 'null'
+
+    PartnerHandoffIn:
+      type: object
+      additionalProperties: false
+      required: [company_name, offer, contact_name, email]
+      description: Почта обязательна — по ней ERP приглашает кандидата согласовать договор; формат проверяет CRM (`details.reason = invalid_email`, поле `email`)
+      properties:
+        company_name: {type: string, minLength: 1, maxLength: 255}
+        country: {type: string, pattern: '^[A-Za-z]{2}$', default: UZ, description: ISO 3166-1 alpha-2}
+        inn: {type: string, maxLength: 32, default: ''}
+        offer: {type: string, minLength: 1, maxLength: 4000, description: Что предлагает кандидат (из запроса лида)}
+        contact_name: {type: string, minLength: 1, maxLength: 255}
+        email: {type: string, minLength: 3, maxLength: 254}
+        phone: {type: string, maxLength: 32, default: ''}
+
+    PartnerHandoffView:
+      type: object
+      additionalProperties: false
+      required: [lead, application, created]
+      properties:
+        lead: {type: string, pattern: '^L-\d{4,}$'}
+        application: {type: integer, description: Заявка кандидата в ERP}
+        created: {type: boolean, description: '`false` — лид уже был передан как партнёр: возвращена первая заявка'}
 
     RequestCreatedView:
       type: object
@@ -31314,8 +31400,8 @@ components:
         can_act: {type: boolean, description: 'Контакт может подтверждать заказы («Может подтверждать» в Платформе и в Кабинете); не указано — право контакта не меняется'}
     PartnerApplicationSource:
       type: string
-      enum: [public, client_cabinet, letter]
-      description: Откуда заявка — внешний вход, кабинет клиента или входящее письмо (сотрудник, план 1.9)
+      enum: [public, client_cabinet, letter, lead]
+      description: Откуда заявка — внешний вход, кабинет клиента, входящее письмо (сотрудник, план 1.9) или лид CRM (ЛП-1)
     PartnerApplicationStatus:
       type: string
       enum: [submitted, contract_sent, candidate_agreed, approved, rejected]

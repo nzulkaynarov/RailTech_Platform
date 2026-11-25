@@ -41,6 +41,11 @@ async function openForm(path: string, pick = true): Promise<HTMLElement> {
   signIn("manager@demo.example");
   renderAt(path);
   const panel = await panelEl();
+  // Лид с партнёрской формы сайта (L-2044) начинает с «Партнёр» (ЛП-1): здесь нужна заявка клиента.
+  const client = await within(panel)
+    .findByRole("radio", { name: "Клиент" })
+    .catch(() => null);
+  if (client && !(client as HTMLInputElement).checked) fireEvent.click(client);
   await within(panel).findByRole("form", { name: "Создать заявку" });
   const field = within(panel).queryByLabelText("Название компании");
   const suggested = panel.querySelector(".ant-select-selection-placeholder")?.textContent.trim();

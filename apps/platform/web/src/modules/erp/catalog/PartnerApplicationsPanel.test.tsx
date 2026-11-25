@@ -1,4 +1,5 @@
 import { fireEvent, screen, within } from "@testing-library/react";
+import { HttpResponse, http } from "msw";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -8,6 +9,7 @@ import {
   setupCatalogTests,
   signIn,
 } from "../../../test/catalogKit";
+import { server } from "../../../test/server";
 
 setupCatalogTests();
 
@@ -20,6 +22,46 @@ async function openApplications(email: string) {
 }
 
 describe("Очередь заявок кандидатов в партнёры (PART-ONBOARD-2)", () => {
+  it("заявка из карточки лида подписана источником «Лид» и номером лида (ЛП-1)", async () => {
+    server.use(
+      http.get("*/erp/catalog/partner-applications", () =>
+        HttpResponse.json({
+          pending_count: 1,
+          items: [
+            {
+              id: "301",
+              source: "lead",
+              source_ref: "L-2041",
+              status: "submitted",
+              kind: "supplier",
+              company_name: "ООО «Лид-Партнёр»",
+              inn: "",
+              contact_name: "Олим Лидов",
+              email: "olim@lead-partner.example",
+              phone: "",
+              language: "ru",
+              categories_description: "Крепёж",
+              contract_number: "",
+              contract_date: null,
+              rejected_reason: "",
+              created_at: "2026-11-25T09:30:00+05:00",
+              reviewed_at: null,
+              matching_company_id: null,
+              matching_company_name: null,
+              company_match_pending: null,
+              invite_delivery: null,
+            },
+          ],
+        }),
+      ),
+    );
+    signIn("supply@demo.example");
+    renderAt("/crm/clients?kind=applications");
+    const row = (await screen.findByText("ООО «Лид-Партнёр»")).closest("tr");
+    if (!row) throw new Error("Row not found");
+    expect(within(row).getByText("Лид")).toBeVisible();
+  });
+
   it("отображает заявки со статусами, совпадением по ИНН и фильтрами", async () => {
     await openApplications("supply@demo.example");
 

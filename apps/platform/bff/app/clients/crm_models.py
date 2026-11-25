@@ -1484,6 +1484,9 @@ class LeadDetail(BaseModel):
     ] = None
     origin: LeadOriginOut | None = None
     owner_mode: Annotated[str, Field(title="Owner Mode")]
+    partner_application_id: Annotated[
+        int | None, Field(title="Partner Application Id")
+    ] = None
     phone_e164: Annotated[str | None, Field(title="Phone E164")] = None
     platform_status: Annotated[
         PlatformStatus | None, Field(title="Platform Status")
@@ -1772,6 +1775,17 @@ class Owner1(StrEnum):
     owner = "owner"
     hosting = "hosting"
     provider = "provider"
+
+
+class PartnerHandoffOut(BaseModel):
+    """
+    `created = false` — лид уже был передан как партнёр: возвращена первая заявка, второй не
+    заведено.
+    """
+
+    application_id: Annotated[int, Field(title="Application Id")]
+    created: Annotated[bool | None, Field(title="Created")] = True
+    lead_id: Annotated[int, Field(title="Lead Id")]
 
 
 class PartnerRequestContact(BaseModel):
