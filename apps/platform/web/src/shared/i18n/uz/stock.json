@@ -197,7 +197,8 @@
       "supplier": "Hamkor va usul",
       "lines": "Qatorlar"
     },
-    "linesSummary": "Qatorlar: {{count}}"
+    "linesSummary": "Qatorlar: {{count}}",
+    "expectedHint": "Sana va narxsiz buyurtma hamkorga ketmaydi: ularni keyinroq «Özgartiriş»da kiritish mümkin."
   },
   "order": {
     "title": "Hamkorga buyurtma {{number}}",
@@ -208,7 +209,8 @@
       "receive": "Tovarni qabul qiliş",
       "edit": "Özgartiriş",
       "cancel": "Buyurtmani bekor qiliş",
-      "price": "Narx söraş"
+      "price": "Narx söraş",
+      "setDate": "Sanani kiritiş"
     },
     "overdueBanner": "{{date}} gaça kutilgan, tovar olinmagan — {{count}} kun keçikiş. Hamkor bilan boğlaning va kutilayotgan sanani yangilang.",
     "cancelledBanner": "Buyurtma bekor qilingan. Sabab: {{reason}}",

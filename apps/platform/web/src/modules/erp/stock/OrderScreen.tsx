@@ -219,7 +219,10 @@ function Content({ order }: { order: SupplierOrderDetail }) {
         ? ("confirm" as const)
         : a.receive
           ? ("receive" as const)
-          : null;
+          : // Черновик с ценами, но без даты: главное действие — указать дату (Б-4), а не искать «Изменить»
+            a.edit && order.send_missing?.date
+            ? ("setDate" as const)
+            : null;
   return (
     <div className="pf-calc pf-stock pf-overlay-aware">
       <PageHeader
@@ -234,13 +237,13 @@ function Content({ order }: { order: SupplierOrderDetail }) {
               <Button
                 type="primary"
                 onClick={() => {
-                  setDialog(primary);
+                  setDialog(primary === "setDate" ? "edit" : primary);
                 }}
               >
                 {t(`order.action.${primary}`)}
               </Button>
             ) : null}
-            {a.edit ? (
+            {a.edit && primary !== "setDate" ? (
               <Button
                 onClick={() => {
                   setDialog("edit");
