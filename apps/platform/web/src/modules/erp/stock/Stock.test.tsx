@@ -706,6 +706,8 @@ describe("Склад · заказ без цены и даты не уходит
       await screen.findByRole("heading", { level: 1, name: `Заказ партнёру ЗП-${year}-030` }),
     ).toBeVisible();
     expect(screen.getByText("Нет ожидаемой даты")).toBeVisible();
+    expect(screen.getByText(/Укажите дату — без неё заказ партнёру не уходит/)).toBeVisible();
+    expect(screen.queryByText(/Внесите в «Изменить»/)).toBeNull();
     expect(screen.queryByRole("button", { name: "Отправить партнёру" })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Указать дату" }));
     const edit = await screen.findByRole("dialog");

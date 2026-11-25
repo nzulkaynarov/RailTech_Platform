@@ -301,7 +301,9 @@ function Content({ order }: { order: SupplierOrderDetail }) {
                       date: activity(order.price_request.requested_at),
                     })
               : null,
-            order.actions.edit ? t("order.missing.hint") : null,
+            order.actions.edit
+              ? t(primary === "setDate" ? "order.missing.hintDate" : "order.missing.hint")
+              : null,
           ]
             .filter(Boolean)
             .join(" ")}
