@@ -380,7 +380,7 @@ async def test_own_file_goes_to_erp_as_is(web: Web, be: Any, check: ContractChec
 async def test_contract_decision_passes_through_and_refusal_is_visible(
     web: Web, be: Any, check: ContractChecker
 ) -> None:
-    await web.login(["SUPPLY"])
+    await web.login(["LAWYER"])
     route = (
         mock(be)
         .post(f"{API}/catalog/partner-applications/15/contract-decision/")
@@ -436,3 +436,44 @@ async def test_document_is_streamed_as_an_attachment(web: Web, be: Any) -> None:
     assert "attachment" in response.headers["content-disposition"]
     assert response.headers["content-disposition"].endswith('-15.pdf"')
     assert dict(route.calls.last.request.url.params) == {"which": "scan"}
+
+
+async def test_legal_holder_reads_and_decides_but_does_not_run_the_queue(
+    web: Web, be: Any, check: ContractChecker
+) -> None:
+    """Держатель «Право» (LAWYER, без `erp.stock`) видит заявки и решает по договору."""
+    await web.login(["LAWYER"])
+    mock(be).get(f"{API}/catalog/partner-applications/").mock(
+        return_value=httpx.Response(200, json=LIST_RAW)
+    )
+    mock(be).get(f"{API}/catalog/partner-applications/15/document/").mock(
+        return_value=httpx.Response(
+            200, content=b"%PDF-1.4", headers={"content-type": "application/pdf"}
+        )
+    )
+    route = (
+        mock(be)
+        .post(f"{API}/catalog/partner-applications/15/contract-decision/")
+        .mock(
+            return_value=httpx.Response(
+                200, json={**APPLICATION_RAW, "contract_approval": "approved"}
+            )
+        )
+    )
+    assert (await call(web, "GET", BASE)).status_code == 200
+    assert (await web.client.get(f"/api/v1{BASE}/15/document")).status_code == 200
+    decided = await call(web, "POST", f"{BASE}/15/contract-decision", {"decision": "approve"})
+    assert decided.status_code == 200, decided.text
+    assert json.loads(route.calls.last.request.content) == {"decision": "approve"}
+    # действия снабжения закрыты
+    assert (await call(web, "POST", f"{BASE}/15/send-contract", {})).status_code == 403
+    assert (await call(web, "POST", f"{BASE}/15/prepare-contract", {})).status_code == 403
+    assert (
+        await call(web, "POST", f"{BASE}/15/approve", {"contract_number": "D-1"})
+    ).status_code == 403
+
+
+async def test_supply_without_legal_zone_cannot_decide(web: Web) -> None:
+    await web.login(["SUPPLY"])
+    response = await call(web, "POST", f"{BASE}/15/contract-decision", {"decision": "approve"})
+    assert response.status_code == 403

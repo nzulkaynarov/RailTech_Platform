@@ -66701,7 +66701,7 @@ export const getDecidePartnerContractUrl = (id: CompanyItemRef) => {
 };
 
 /**
- * ERP `POST catalog/partner-applications/{id}/contract-decision/` — решает держатель права `contract.approve_template`, иначе 403. `approve` — договор можно отправлять (одобренное отступление входит в текст), `return` — на доработку, замечание обязательно.
+ * ERP `POST catalog/partner-applications/{id}/contract-decision/` — решает держатель зоны «Право» (`eds.visa.legal` полный; право `contract.approve_template` проверяет ERP), иначе 403; подготовивший договор сам не решает (`SELF_APPROVAL_NOT_ALLOWED`). `approve` — договор можно отправлять (одобренное отступление входит в текст), `return` — на доработку, замечание обязательно.
  * @summary Расчёт · Заявка в партнёры: решение по договору (зона «Право»)
  */
 export const decidePartnerContract = async (
@@ -66848,7 +66848,7 @@ export const getDownloadPartnerApplicationDocumentUrl = (
 };
 
 /**
- * ERP `GET catalog/partner-applications/{id}/document/`. `which=contract` — файл, который видит кандидат; `which=scan` — скан подписанного. Вложением, с `nosniff`; файл в памяти BFF не копится.
+ * Читает и держатель зоны «Право» (`eds.visa.legal`). ERP `GET catalog/partner-applications/{id}/document/`. `which=contract` — файл, который видит кандидат; `which=scan` — скан подписанного. Вложением, с `nosniff`; файл в памяти BFF не копится.
  * @summary Расчёт · Заявка в партнёры: договор или скан подписанного
  */
 export const downloadPartnerApplicationDocument = async (

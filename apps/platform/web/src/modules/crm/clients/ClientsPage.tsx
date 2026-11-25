@@ -180,6 +180,8 @@ export function ClientsPage({ objectId }: { objectId?: string | undefined }) {
   const seesPartners = canSee(me, { resource: "erp.stock" });
   // 0.3 (FR-13): снабженец без `crm.clients` — только партнёры каталога; клиентов CRM не запрашиваем.
   const seesClients = canSee(me, { resource: "crm.clients" });
+  // Заявки партнёров читает и держатель зоны «Право»: договор на его решении
+  const seesApplications = seesPartners || canSee(me, { resource: "eds.visa.legal" });
   const seesBankChanges = canSee(me, { resource: "eds.payments" });
   const list = useListCrmClients(q ? { q } : {}, { query: { enabled: seesClients } });
   const suppliers = useListCatalogSuppliers(
@@ -198,14 +200,15 @@ export function ClientsPage({ objectId }: { objectId?: string | undefined }) {
   const termsOf = new Map((suppliers.data?.items ?? []).map((row) => [row.id, row]));
   const applications = useListPartnerApplications(
     { status: "submitted" },
-    { query: { enabled: seesPartners } },
+    { query: { enabled: seesApplications } },
   );
   const bankChanges = useListBankChangeRequests(
     { status: "pending" },
     { query: { enabled: seesBankChanges } },
   );
   const shownKinds = KINDS.filter((value) => {
-    if (value === "partners" || value === "applications") return seesPartners;
+    if (value === "partners") return seesPartners;
+    if (value === "applications") return seesApplications;
     if (value === "do_not_work") return seesClients || seesPartners; // Х-8: «Не работаем» — отметка видна тем, кто видит компании
     if (value === "bank_changes") return seesBankChanges;
     return seesClients; // «Все» и «Клиенты» — только тем, кто видит клиентов

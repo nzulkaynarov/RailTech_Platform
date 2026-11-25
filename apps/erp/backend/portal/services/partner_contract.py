@@ -126,18 +126,18 @@ _WORDS = {
         "notes": "Additional terms",
     },
     "uz": {
-        "title": "Shartnoma",
-        "number": "Shartnoma № {number}",
+        "title": "Şartnoma",
+        "number": "Şartnoma № {number}",
         "from": "{date} sanasida",
         "parties": "Tomonlarning rekvizitlari va imzolari",
         "ours": "1-tomon",
         "theirs": "2-tomon",
         "inn": "STIR",
-        "reg": "Ro‘yxatdan o‘tish raqami",
+        "reg": "Röyxatdan ötiş raqami",
         "country": "Davlat",
         "contact": "Aloqa",
         "sign": "Imzo / sana",
-        "notes": "Qo‘shimcha shartlar",
+        "notes": "Qöşimça şartlar",
     },
 }
 
@@ -194,7 +194,7 @@ def render_partner_contract_body(
 ) -> str:
     """Тело шаблона с подставленными данными заявки. Незнакомые и пустые места — `PartnerContractUnfilled`."""
     from crm.services.document_blocks import _wording_html, format_document_date, render_document_body
-    from crm.services.document_placeholders import PLACEHOLDER_RE
+    from crm.services.document_placeholders import extract_placeholders
 
     words = _WORDS[language]
     profile = brand.get("seller_profile")
@@ -231,14 +231,14 @@ def render_partner_contract_body(
         "user.full_name": "",
         "user.email": "",
     }
-    body = render_document_body(_body_for(template, language), blocks=blocks, scalars=scalars)
-    leftover = []
-    for match in PLACEHOLDER_RE.finditer(body):
-        code = match.group(1).strip()
-        if code not in leftover:
-            leftover.append(code)
-    if leftover:
-        raise PartnerContractUnfilled(leftover)
+    source = _body_for(template, language)
+    # Незнакомые места проверяются по ТЕКСТУ ШАБЛОНА до подстановки: значения кандидата (в том числе с «{{…}}») места не создают
+    known = set(blocks) | set(scalars)
+    unknown = [code for code in extract_placeholders(source) if code not in known]
+    if unknown:
+        raise PartnerContractUnfilled(unknown)
+    # Значения скаляров экранируются при подстановке, блоки собраны здесь из экранированных частей
+    body = render_document_body(source, blocks=blocks, scalars=scalars)
     return body
 
 

@@ -137,4 +137,13 @@ describe("Договор кандидата в партнёры (ПД-1)", () =>
     const modal = await findModal(/Одобрение заявки/);
     expect(within(modal).getByLabelText(/Причина одобрения без согласия/)).toBeVisible();
   });
+
+  it("держатель «Право» без раздела снабжения видит заявки и решает, но не готовит договор", async () => {
+    window.localStorage.setItem("rt-pf-mock-legal-holder", "1");
+    await openApplications("lawyer@demo.example");
+    const row = rowOf("Zhengzhou Rail Parts");
+    expect(within(row).getByRole("button", { name: "Решить по договору" })).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Подготовить договор" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Отклонить" })).toBeNull();
+  });
 });

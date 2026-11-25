@@ -12,7 +12,7 @@ from fastapi.responses import StreamingResponse
 from app.api.eds_documents import FileStream
 from app.api.erp_docs import _read_limited
 from app.clients.erp_company import ErpCompany, erp_error
-from app.deps import Authed, require
+from app.deps import Authed, require, require_any
 from app.errors import PlatformError
 from app.schemas_partner_applications import (
     PartnerApplicationApproveRequest,
@@ -31,8 +31,11 @@ from app.schemas_partner_applications import (
 
 router = APIRouter(tags=["erp-catalog"])
 
-Reader = Annotated[Authed, Depends(require("erp.stock", "read"))]
+# Читает снабжение и держатель зоны «Право» (ему нужен договор для решения); действия — снабжение
+Reader = Annotated[Authed, Depends(require_any(("erp.stock", "read"), ("eds.visa.legal", "read")))]
 Writer = Annotated[Authed, Depends(require("erp.stock", "full"))]
+# Решение по договору — держатель зоны «Право» (как утверждение шаблонов); само право проверяет ERP
+Decider = Annotated[Authed, Depends(require_any(("eds.visa.legal", "full"), ("admin", "full")))]
 ApplicationId = Annotated[str, Path(pattern=r"^[0-9]+$")]
 
 
@@ -187,7 +190,7 @@ async def upload_contract_file(
     operation_id="decidePartnerContract",
 )
 async def decide_contract(
-    id: ApplicationId, body: PartnerContractDecisionRequest, authed: Writer
+    id: ApplicationId, body: PartnerContractDecisionRequest, authed: Decider
 ) -> PartnerApplicationItem:
     """Решение держателя зоны «Право»; право проверяет ERP (`contract.approve_template`)."""
     raw = await _erp(authed).data("POST", _path(id, "contract-decision/"), json=body.sent())

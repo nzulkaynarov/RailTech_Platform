@@ -202,6 +202,8 @@ def prepare_contract(pk: int, data: dict, upload, user) -> PartnerApplication:
         app.contract_file.save(upload.name, upload, save=False)
     else:
         template = _chosen_template(data.get("template_id"))
+        if language not in contract_service.template_languages(template):
+            raise AccessError("CONTRACT_LANGUAGE_INVALID")  # на этом языке у шаблона нет текста
         if deviation and not contract_service.deviations_allowed():
             raise AccessError("CONTRACT_DEVIATIONS_DISABLED")
         source, deviation_text = PartnerContractSource.TEMPLATE, deviation
@@ -299,6 +301,13 @@ def decide_contract(pk: int, data: dict, user) -> PartnerApplication:
         raise AccessError("NOT_FOUND", 404)
     if app.contract_approval != PartnerContractApproval.REQUESTED:
         raise AccessError("CONTRACT_APPROVAL_NOT_REQUESTED")
+    # Решает не тот, кто подготовил (как в согласовании КП); суперпользователь — только «от имени», с записью в журнале
+    self_approval = (
+        app.contract_approval_requested_by_id is not None
+        and app.contract_approval_requested_by_id == getattr(user, "pk", None)
+    )
+    if self_approval and not getattr(user, "is_superuser", False):
+        raise AccessError("SELF_APPROVAL_NOT_ALLOWED", 403)
     decision = data.get("decision")
     note = (data.get("note") or "").strip()
     if decision not in ("approve", "return"):
@@ -329,7 +338,12 @@ def decide_contract(pk: int, data: dict, user) -> PartnerApplication:
         event="contract_approved" if approved else "contract_returned",
         action="Договор кандидата согласован" if approved else "Договор кандидата возвращён на доработку",
         before=None,
-        after={"approval": app.contract_approval, "note": app.contract_approval_note},
+        after={
+            "approval": app.contract_approval,
+            "note": app.contract_approval_note,
+            **({"on_behalf": "решение от имени: подготовивший и решающий — одно лицо"} if self_approval else {}),
+        },
+        level="WARNING" if self_approval else "INFO",
         detail=app.company_name,
     )
     return app

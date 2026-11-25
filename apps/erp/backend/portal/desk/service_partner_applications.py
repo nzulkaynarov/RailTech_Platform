@@ -524,13 +524,17 @@ def approve_application(pk: int, data: dict, user) -> dict:
             after = {"status": app.status, "company": company.pk, "contract_number": contract_number}
             if scan_bypassed:
                 after["scan_bypassed"] = override_reason
-            if bypassed_agreement:
+            if bypassed_agreement or scan_bypassed:
                 record(
                     user,
                     entity="partner_application",
                     instance=app,
-                    event="approved_without_agreement",
-                    action="Заявка кандидата в партнёры одобрена без согласия кандидата",
+                    event="approved_without_agreement" if bypassed_agreement else "approved_without_scan",
+                    action=(
+                        "Заявка кандидата в партнёры одобрена без согласия кандидата"
+                        if bypassed_agreement
+                        else "Заявка кандидата в партнёры одобрена без скана подписанного договора"
+                    ),
                     before=None,
                     after={**after, "override_reason": override_reason},
                     detail=app.company_name,

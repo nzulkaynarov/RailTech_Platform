@@ -57,6 +57,7 @@ for (const width of WIDTHS) {
       name: /Решение по договору: Zhengzhou Rail Parts/,
     });
     await expect(decision.getByText("Сотрудник загрузил свой файл договора.")).toBeVisible();
+    await expect(decision.getByRole("button", { name: "Договор", exact: true })).toBeVisible();
     await expectNoViolations(page, "заявки партнёров · решение по договору");
     await settledScreenshot(page, "pd1-decision");
     await decision.getByText("Вернуть", { exact: true }).click();

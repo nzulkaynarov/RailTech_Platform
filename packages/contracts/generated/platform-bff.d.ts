@@ -9250,7 +9250,7 @@ export interface paths {
     put?: never;
     /**
      * Расчёт · Заявка в партнёры: решение по договору (зона «Право»)
-     * @description ERP `POST catalog/partner-applications/{id}/contract-decision/` — решает держатель права `contract.approve_template`, иначе 403. `approve` — договор можно отправлять (одобренное отступление входит в текст), `return` — на доработку, замечание обязательно.
+     * @description ERP `POST catalog/partner-applications/{id}/contract-decision/` — решает держатель зоны «Право» (`eds.visa.legal` полный; право `contract.approve_template` проверяет ERP), иначе 403; подготовивший договор сам не решает (`SELF_APPROVAL_NOT_ALLOWED`). `approve` — договор можно отправлять (одобренное отступление входит в текст), `return` — на доработку, замечание обязательно.
      */
     post: operations["decidePartnerContract"];
     delete?: never;
@@ -9268,7 +9268,7 @@ export interface paths {
     };
     /**
      * Расчёт · Заявка в партнёры: договор или скан подписанного
-     * @description ERP `GET catalog/partner-applications/{id}/document/`. `which=contract` — файл, который видит кандидат; `which=scan` — скан подписанного. Вложением, с `nosniff`; файл в памяти BFF не копится.
+     * @description Читает и держатель зоны «Право» (`eds.visa.legal`). ERP `GET catalog/partner-applications/{id}/document/`. `which=contract` — файл, который видит кандидат; `which=scan` — скан подписанного. Вложением, с `nosniff`; файл в памяти BFF не копится.
      */
     get: operations["downloadPartnerApplicationDocument"];
     put?: never;

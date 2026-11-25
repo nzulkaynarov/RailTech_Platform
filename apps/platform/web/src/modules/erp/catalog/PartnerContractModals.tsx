@@ -1,10 +1,12 @@
-import { Alert, Input, Segmented, Select } from "antd";
+import { Alert, Button, Input, Segmented, Select } from "antd";
 import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
 import type { PartnerApplicationItem } from "../../../shared/api/generated/model";
+import { downloadFile } from "../../../shared/api/download";
 import {
+  getDownloadPartnerApplicationDocumentUrl,
   useDecidePartnerContract,
   useGetPartnerContractOptions,
   usePreparePartnerContract,
@@ -309,6 +311,17 @@ export function ContractDecisionModal({
           ? t("partnerApplications.decisionModal.hintFile")
           : t("partnerApplications.decisionModal.hintDeviation")}
       </p>
+      <Button
+        type="link"
+        onClick={() => {
+          void downloadFile(
+            getDownloadPartnerApplicationDocumentUrl(item.id, { which: "contract" }),
+            `contract-${item.id}`,
+          ).catch(() => undefined);
+        }}
+      >
+        {t("partnerApplications.contractLine.openContract")}
+      </Button>
       {item.contract_deviation_text ? (
         <blockquote className="pf-hint">{item.contract_deviation_text}</blockquote>
       ) : null}

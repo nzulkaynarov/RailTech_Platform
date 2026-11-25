@@ -97,7 +97,7 @@ def make_app(**kwargs) -> PartnerApplication:
         "registration_number": "91320000MA1",
         "contact_name": "Li Wei",
         "email": "li@jichuang.example",
-        "language": "en",
+        "language": "ru",
         "kind": PartnerKind.SUPPLIER,
         "categories_description": "Rail fasteners",
         "status": PartnerApplicationStatus.SUBMITTED,
@@ -368,7 +368,7 @@ class TestSendInvitesCandidateForAnySource:
         "source", [PartnerApplicationSource.PUBLIC, PartnerApplicationSource.LETTER, PartnerApplicationSource.LEAD]
     )
     def test_candidate_gets_cabinet_invitation_in_his_language(self, world, supply, source):
-        tpl = template(world)
+        tpl = template(world, body_html_uz=BODY)
         set_default(world, tpl)
         app = make_app(source=source, language="uz")
         assert post(supply, app, "prepare-contract", {"language": "uz"}).status_code == 200
@@ -405,7 +405,7 @@ class TestWholePath:
         tpl = template(world)
         set_default(world, tpl)
         app = make_app(**extra)
-        post(supply, app, "prepare-contract", {"language": "en"})
+        post(supply, app, "prepare-contract", {"language": "ru"})
         assert post(supply, app, "send-contract").status_code == 200
         app.refresh_from_db()
         return app, session_client(app.applicant_contact, app.company)
@@ -470,7 +470,8 @@ class TestWholePath:
         )
 
         assert response.status_code == 200
-        entry = ActivityLog.objects.filter(event_code="admin.partner_application.approved").latest("id")
+        entry = ActivityLog.objects.filter(event_code="admin.partner_application.approved_without_scan").latest("id")
+        assert entry.level == "WARNING"
         assert entry.after_data["scan_bypassed"] == "Оригинал по почте"
 
     def test_other_company_cannot_read_the_candidates_contract(self, world, supply):
@@ -495,3 +496,91 @@ class TestWholePath:
         assert data["status"] == "submitted" and data["candidate_returned_at"] is None
         # пока не отправлено — кандидат прежнего файла не видит
         assert candidate.get(f"{PORTAL}/contract-pdf").status_code == 404
+
+
+# ── Ревью: самосогласование, безопасность текста, чужая компания, язык ───────────────────────────────────────────
+
+
+class TestReviewFixes:
+    def test_the_one_who_prepared_cannot_decide_own_contract(self, world, director):
+        app = make_app()
+        director.post(f"{DESK}/{app.pk}/prepare-contract/", {"file": upload()}, format="multipart")
+
+        response = post(director, app, "contract-decision", {"decision": "approve"})
+
+        assert response.status_code == 403 and response.json()["detail"] == "SELF_APPROVAL_NOT_ALLOWED"
+        app.refresh_from_db()
+        assert app.contract_approval == "requested"
+
+    def test_superuser_may_decide_own_request_but_it_is_journaled_on_behalf(self, world):
+        from rest_framework.test import APIClient
+        from rest_framework_simplejwt.tokens import RefreshToken
+
+        from accounts.models import CompanyMember, CustomUser
+
+        root = CustomUser.objects.create_user(
+            email="root@pd1.test", username="root-pd1", password="pw", is_superuser=True, is_staff=True
+        )
+        director_member = CompanyMember.objects.filter(user=world["users"]["director"]).first()
+        CompanyMember.objects.create(
+            user=root, company=director_member.company, role=director_member.role, is_active=True
+        )
+        client = APIClient()
+        client.credentials(HTTP_AUTHORIZATION=f"Bearer {RefreshToken.for_user(root).access_token}")
+        app = make_app()
+        client.post(f"{DESK}/{app.pk}/prepare-contract/", {"file": upload()}, format="multipart")
+
+        response = post(client, app, "contract-decision", {"decision": "approve"})
+
+        assert response.status_code == 200, response.content
+        entry = ActivityLog.objects.filter(event_code="admin.partner_application.contract_approved").latest("id")
+        assert entry.level == "WARNING" and "on_behalf" in entry.after_data
+
+    def test_hostile_candidate_fields_are_escaped_and_do_not_block(self, world, supply):
+        import datetime
+
+        from portal.services import partner_contract as svc
+
+        tpl = template(world)
+        app = make_app(
+            company_name='<img src="file:///etc/passwd"> {{doc.number}}',
+            contact_name="<b>Li</b>",
+            email="x@y.example",
+        )
+        brand = svc.document_brand_context(None)
+
+        body = svc.render_partner_contract_body(app, tpl, "ru", brand, number="PA-1", date=datetime.date(2026, 11, 25))
+
+        assert "<img" not in body and "<b>" not in body
+        assert "&lt;img src=&quot;file:///etc/passwd&quot;&gt; {{doc.number}}" in body
+        # и через сервис: «{{…}}» в имени кандидата договор не блокирует
+        assert post(supply, app, "prepare-contract", {"template_id": tpl.id}).status_code == 200
+
+    def test_language_without_template_text_is_refused(self, world, supply):
+        tpl = template(world)  # только русский текст
+        response = post(supply, make_app(), "prepare-contract", {"template_id": tpl.id, "language": "uz"})
+        assert response.status_code == 400 and response.json()["detail"] == "CONTRACT_LANGUAGE_INVALID"
+
+    def test_other_company_cannot_return_or_upload_scan_for_foreign_application(self, world, supply):
+        tpl = template(world)
+        set_default(world, tpl)
+        app = make_app()
+        post(supply, app, "prepare-contract", {})
+        post(supply, app, "send-contract")
+        app.refresh_from_db()
+        candidate = session_client(app.applicant_contact, app.company)
+        candidate.post(f"{PORTAL}/agree", {"notes": ""}, format="json")
+        # у чужой компании своя заявка (в той же стадии): её действия не трогают заявку кандидата A
+        other_company = Company.objects.create(name="Чужая B", inn="9999999991", is_active=True)
+        stranger = Contact.objects.create(company=other_company, name="B", email="b@b.example", can_act=True)
+        CompanyRelationship.objects.create(
+            company=other_company, role=RelationshipRole.PARTNER, status=RelationshipStatus.INVITED, modules=[]
+        )
+        foreign = session_client(stranger, other_company)
+
+        returned = foreign.post(f"{PORTAL}/return", {"notes": "чужое замечание"}, format="json")
+        scan = foreign.post(f"{PORTAL}/signed-scan", {"file": upload("s.pdf")}, format="multipart")
+
+        assert returned.status_code in (400, 404) and scan.status_code in (400, 404)
+        app.refresh_from_db()
+        assert app.candidate_returned_at is None and not app.signed_scan and app.candidate_notes in ("", "ok")
