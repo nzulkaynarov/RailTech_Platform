@@ -22,7 +22,7 @@ describe('документ по ссылке: адрес не контакт к�
   it('гость видит документ и PDF; действий, «Открыть кабинет» и строки про код нет — одна нейтральная строка', async () => {
     open('nocontact-token-0123456789');
     await quoteHeading();
-    expect(screen.getByRole('button', { name: 'Скачать PDF: КП QT-0118' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Скачать PDF: предложение QT-0118' })).toBeEnabled();
     expect(screen.getByText('Чтобы ответить по документу — напишите отправителю')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Принять|Вернуть|Задать вопрос|Открыть кабинет/ })).not.toBeInTheDocument();
     expect(screen.queryByText(/Любое действие — после кода/)).not.toBeInTheDocument();
