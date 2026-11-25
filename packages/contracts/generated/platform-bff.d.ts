@@ -11326,11 +11326,11 @@ export interface components {
       /** @description Привязан Telegram для уведомлений сотруднику (есть привязка; дойдут ли сообщения — `telegram`) */
       telegram_linked: boolean;
       /**
-       * @description 0.125.0. `linked` — привязан и бот может писать; `not_linked` — не привязан; `blocked` — привязан, но сообщения не доходят (CRM отметила отказ Telegram: «Старт» не нажат или бот заблокирован) — сотруднику нужно привязать заново
+       * @description `linked` — привязан и бот может писать; `not_linked` — не привязан; `blocked` — привязан, но сообщения не доходят (CRM отметила отказ Telegram: «Старт» не нажат или бот заблокирован) — сотруднику нужно привязать заново
        * @enum {string}
        */
       telegram: "linked" | "not_linked" | "blocked";
-      /** @description Замещение на период (0.125.0): поставил сам сотрудник в профиле или администратор в карточке; нет — поля нет */
+      /** @description Замещение на период (СОТР-1): поставил сам сотрудник в профиле или администратор в карточке; нет — поля нет */
       deputy?: components["schemas"]["DeputyPeriod"];
       erp_sync: components["schemas"]["ErpSyncState"];
       /** @description Текст последней ошибки провижининга ERP (из CRM), если `erp_sync = error` */
@@ -11454,7 +11454,7 @@ export interface components {
       is_active?: boolean;
       /** @description Кому передать лиды в работе (`crm_user_id` коллеги), если отключение или новые роли отнимают у сотрудника работу с лидами; без поля при таких лидах — 409 `CONFLICT` (`details.reason = user_has_active_leads`) */
       transfer_to_user_id?: string;
-      /** @description 0.125.0. Замещение за сотрудника (администратор, раздел `admin` на запись): тот же период и правила, что у `setDeputy` (себя нельзя — 422 `deputy_is_self`, период не в прошлом и не длиннее года); явный `null` снимает замещение. Попадает в журнал как `user.deputy_set` / `user.deputy_cleared` от имени администратора. */
+      /** @description Замещение за сотрудника (СОТР-1) (администратор, раздел `admin` на запись): тот же период и правила, что у `setDeputy` (себя нельзя — 422 `deputy_is_self`, период не в прошлом и не длиннее года); явный `null` снимает замещение. Попадает в журнал как `user.deputy_set` / `user.deputy_cleared` от имени администратора. Только отдельным запросом: вместе с другими полями — 422. */
       deputy?: components["schemas"]["DeputyUpdate"] | null;
     };
     MeUpdate: {

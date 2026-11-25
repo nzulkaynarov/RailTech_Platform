@@ -691,6 +691,7 @@ async def test_crm_validation_error_lists_fields(
         {"is_active": None},
         {"transfer_to_user_id": "x"},
         {"full_name": "Другое Имя"},
+        {"deputy": None, "position": "Новая"},  # замещение — только отдельным запросом
     ],
 )
 async def test_update_body_is_validated(web: Web, crm: CrmUsers, payload: dict[str, Any]) -> None:
