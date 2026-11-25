@@ -136,6 +136,7 @@ export * from "./calcQuote";
 export * from "./calcQuoteRejectedBy";
 export * from "./calcReady";
 export * from "./calcReadyBlocker";
+export * from "./calcRequestCard";
 export * from "./calcRequestList";
 export * from "./calcRequestRow";
 export * from "./calcRequestText";

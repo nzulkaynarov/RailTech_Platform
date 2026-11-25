@@ -28,6 +28,7 @@ from ..serializers.calc import (
     CalcLostInSerializer,
     CalcParseInSerializer,
     CalcPreviousListSerializer,
+    CalcRequestCardSerializer,
     CalcSheetSerializer,
     CalcTaskListSerializer,
     CalcTermsPatchSerializer,
@@ -96,13 +97,16 @@ class CalcDealRefsView(APIView):
                 str,
                 required=False,
                 description="Отбор по номеру ЗВ/ПР (`ЗВ-2026-104`, `zv 2026 104`): один NNN года, префикс не важен",
-            )
+            ),
+            OpenApiParameter("any", bool, required=False, description="Не только заявки с заданием расчёта"),
         ],
         responses={200: CalcDealRefListSerializer, 403: ERRORS[403]},
     )
     def get(self, request):
         try:
-            return Response({"results": calc.deal_refs(request.user, request.query_params.get("number", ""))})
+            any_request = str(request.query_params.get("any", "")).lower() in ("1", "true", "yes")
+            rows = calc.deal_refs(request.user, request.query_params.get("number", ""), any_request=any_request)
+            return Response({"results": rows})
         except CalcError as exc:
             return _fail(exc)
 
@@ -364,7 +368,7 @@ class CalcCloseView(APIView):
         summary="Закрыть заявку с причиной из справочника (ЛХ-2)",
         tags=TAGS,
         request=CalcCloseInSerializer,
-        responses={200: CalcSheetSerializer, **ERRORS},
+        responses={200: CalcRequestCardSerializer, **ERRORS},
     )
     def post(self, request, deal_id: int):
         serializer = CalcCloseInSerializer(data=request.data)
@@ -373,6 +377,24 @@ class CalcCloseView(APIView):
         try:
             data = serializer.validated_data
             return Response(calc.close_request(deal_id, request.user, data["reason"], data["comment"]))
+        except CalcError as exc:
+            return _fail(exc)
+
+
+class CalcRequestCardView(APIView):
+    """GET /api/v1/calc/<deal_id>/request/ — карточка заявки (с заданием расчёта и без) для «Закрыть заявку»."""
+
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        operation_id="calc_request_card",
+        summary="Карточка заявки: текст, файлы, можно ли закрыть",
+        tags=TAGS,
+        responses={200: CalcRequestCardSerializer, **READ_ERRORS},
+    )
+    def get(self, request, deal_id: int):
+        try:
+            return Response(calc.request_card(deal_id, request.user))
         except CalcError as exc:
             return _fail(exc)
 

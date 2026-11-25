@@ -321,3 +321,43 @@ async def test_outgoing_numbers_of_approved_quotes_are_sequential(
         )
         numbers.append(done.json()["outgoing_number"])
     assert numbers == ["OUT-001/26", "OUT-002/26"]
+
+
+async def test_deal_lost_withdraws_the_open_quote_route_without_a_decision(
+    client: httpx.AsyncClient, container: Container, staff: dict[str, Person]
+) -> None:
+    """ЛХ-2: заявка закрыта в ERP (`deal.lost`) — круг КП снят, решения директора нет."""
+    assert await ready(client, container) == "processed"
+    route = await only_route(client, staff["director"])
+    lost = erp_event("erp/deal.lost.v1")
+    lost["data"]["deal"]["erp_deal_id"] = route["object"]["erp_deal_id"]
+    assert await deliver_erp(client, container, lost) == "processed"
+
+    closed = (await client.get(f"/api/v1/approvals/{route['id']}", headers=staff["director"].headers)).json()
+    assert (closed["status"], closed["can_decide"]) == ("returned", False)
+    assert [s["status"] for s in closed["steps"]] == ["skipped"]
+    assert await outbox(container, "approval.decided") == []
+    assert_error(
+        await client.post(
+            f"/api/v1/approvals/{route['id']}/decision",
+            json={"decision": "approve"},
+            headers=staff["director"].headers,
+        ),
+        409,
+        "CONFLICT",
+        reason="route_closed",
+    )
+    async with container.session_factory() as session:
+        rows = (await session.execute(text("SELECT comment FROM journal WHERE action = 'approval.withdrawn'"))).all()
+    assert [r[0] for r in rows] == ["заявка закрыта"]
+
+
+async def test_deal_lost_of_another_deal_leaves_the_quote_route_open(
+    client: httpx.AsyncClient, container: Container, staff: dict[str, Person]
+) -> None:
+    assert await ready(client, container) == "processed"
+    lost = erp_event("erp/deal.lost.v1")
+    lost["data"]["deal"]["erp_deal_id"] = 424242
+    assert await deliver_erp(client, container, lost) == "processed"
+    route = await only_route(client, staff["director"])
+    assert route["status"] == "open" and route["can_decide"] is True

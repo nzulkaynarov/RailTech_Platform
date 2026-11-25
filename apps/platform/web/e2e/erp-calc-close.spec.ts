@@ -8,6 +8,7 @@ import { expectNoViolations } from "./support/axe";
 // (`E2E_SCREENSHOT_DIR=docs/screens/lh2`).
 const WIDTHS = [1512, 1440, 390] as const;
 const OPEN = "ЗВ-2026-101"; // КП клиенту не уходило
+const DRAFT = "ЗВ-2026-120"; // черновик из передачи лида: задания расчёта нет
 const SENT = "ЗВ-2026-109"; // КП отклонено клиентом: уже было у клиента
 
 async function shot(page: Page, name: string, width: number): Promise<void> {
@@ -78,4 +79,43 @@ for (const width of WIDTHS) {
       page.getByText("Заявка закрыта: Клиент не отвечает", { exact: true }),
     ).toBeVisible();
   });
+
+  test(`черновик без расчёта: карточка заявки и «Закрыть заявку», ${String(width)} px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
+    await loginAndWait(page, "universal@demo.example");
+    await spaGoto(page, `/erp/calc/${encodeURIComponent(DRAFT)}`);
+    await expect(page.getByText(/Клиент просит цену на 40 т щебня/)).toBeVisible();
+    await expect(page.getByText(/Расчёта по заявке пока нет/)).toBeVisible();
+    await shot(page, "draft-card", width);
+    await expectNoViolations(page, "карточка черновика заявки");
+    await page.getByRole("button", { name: "Закрыть заявку" }).click();
+    const dialog = page.getByRole("dialog", { name: `Закрыть заявку ${DRAFT}` });
+    await dialog.getByRole("radio", { name: "Оформлена по ошибке" }).check();
+    await shot(page, "draft-dialog", width);
+    await dialog.getByRole("button", { name: "Закрыть заявку" }).click();
+    await expect(page.getByText("Заявка закрыта: Оформлена по ошибке")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Закрыть заявку" })).toHaveCount(0);
+    await shot(page, "draft-closed", width);
+    await expectNoViolations(page, "черновик закрыт");
+  });
 }
+
+test("окно «Задание» списка заявок: «Закрыть заявку» и у заявки с расчётом, и у черновика", async ({
+  page,
+  isMobile,
+}) => {
+  test.skip(isMobile, "боковое окно списка — на десктопе");
+  await loginAndWait(page, "universal@demo.example");
+  const panel = page.locator("#pf-context-panel");
+
+  await spaGoto(page, `/erp/requests?request=${encodeURIComponent(OPEN)}&panel=open&tab=task`);
+  await expect(panel.getByRole("heading", { name: OPEN })).toBeVisible();
+  await expect(panel.getByRole("button", { name: "Закрыть заявку" })).toBeVisible();
+
+  await spaGoto(page, `/erp/requests?request=${encodeURIComponent(DRAFT)}&panel=open&tab=task`);
+  await expect(panel.getByText(/Клиент просит цену на 40 т щебня/)).toBeVisible();
+  await expect(panel.getByRole("button", { name: "Закрыть заявку" })).toBeVisible();
+  await expectNoViolations(page, "окно «Задание» черновика");
+});

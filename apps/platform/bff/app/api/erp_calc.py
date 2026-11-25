@@ -36,9 +36,11 @@ from app.schemas_erp_calc import (
     CalcPrevious,
     CalcPreviousPage,
     CalcProposalLine,
+    CalcRequestCard,
     CalcRequestList,
     CalcSheet,
     CalcTermsPatch,
+    to_request_card,
     to_row,
     to_sheet,
     zones_of,
@@ -111,14 +113,20 @@ _MESSAGES = {
 class ErpCalc(ErpCompany):
     """Вызовы `/api/v1/calc/*` от имени сотрудника и поиск заявки по номеру ЗВ."""
 
-    async def deal_id(self, number: str) -> int:
+    async def deal_id(self, number: str, *, any_request: bool = False) -> int:
         """Заявка по номеру: лёгкий справочник ERP `GET /calc/deals/?number=` (id, номер, создана,
         стадия — без строк и виз). Номер уходит как набран, ERP сам находит сделку (год и порядковый
         номер, обозначение не важно): после принятия КП заявка — проект, и старая ссылка на номер
         заявки, и новая на номер проекта открывают одну сделку. BFF обозначение не разбирает."""
         wanted = number.strip()
         data = (
-            await self.data("GET", "calc/deals/", params={"number": wanted}) if wanted else None
+            await self.data(
+                "GET",
+                "calc/deals/",
+                params={"number": wanted, **({"any": 1} if any_request else {})},
+            )
+            if wanted
+            else None
         )  # an empty filter would list every deal: never ask ERP with it
         for deal in data.get("results", []) if isinstance(data, dict) else []:
             if isinstance(deal, dict) and deal.get("id") is not None:
@@ -548,23 +556,37 @@ async def list_close_reasons(authed: Reader) -> CalcCloseReasonList:
     )
 
 
+@router.get(
+    "/calc-request/{number}",
+    response_model=CalcRequestCard,
+    response_model_exclude_unset=True,
+    operation_id="getCalcRequestCard",
+)
+async def request_card(authed: Reader, number: Number) -> CalcRequestCard:
+    """Карточка заявки с заданием расчёта и без: текст, файлы и «Закрыть заявку» (ЛХ-2)."""
+    erp = _erp(authed)
+    deal_id = await erp.deal_id(number, any_request=True)
+    return to_request_card(await erp.call_calc("GET", f"{deal_id}/request/"))
+
+
 @router.post(
     "/calc/{number}/close",
-    response_model=CalcSheet,
+    response_model=CalcRequestCard,
     response_model_exclude_unset=True,
     operation_id="closeCalcRequest",
 )
 async def close_request(
     authed: Builder, number: Number, body: Annotated[CalcCloseIn, Body()]
-) -> CalcSheet:
+) -> CalcRequestCard:
     """«Закрыть заявку» на любом шаге до проекта (ЛХ-2): причину, право и правила решает ERP."""
-    return await _sheet(
-        authed,
-        number,
+    erp = _erp(authed)
+    deal_id = await erp.deal_id(number, any_request=True)
+    raw = await erp.call_calc(
         "POST",
-        "close/",
-        {"reason": body.reason.strip(), "comment": body.comment.strip()},
+        f"{deal_id}/close/",
+        json={"reason": body.reason.strip(), "comment": body.comment.strip()},
     )
+    return to_request_card(raw)
 
 
 @router.post(

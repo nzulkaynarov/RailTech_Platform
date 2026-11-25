@@ -13384,6 +13384,28 @@ paths:
         '403': {$ref: '#/components/responses/Forbidden'}
         '503': {$ref: '#/components/responses/BackendUnavailable'}
 
+  /erp/calc-request/{number}:
+    get:
+      tags: [calc]
+      operationId: getCalcRequestCard
+      summary: 'Расчёт · Карточка заявки (с заданием расчёта и без) для «Закрыть заявку»'
+      description: >-
+        ERP `GET /calc/{deal_id}/request/` (ЛХ-2). Заявка ищется по номеру ЗВ среди всех заявок, не только с заданием расчёта:
+        черновик из передачи лида открывается карточкой (номер, клиент, текст и файлы заявки, `close`). Раздел `erp.calc` —
+        чтение. Нет такой заявки — 404.
+      parameters:
+        - $ref: '#/components/parameters/CalcNumberPath'
+      responses:
+        '200':
+          description: Карточка заявки
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/CalcRequestCard'}
+        '401': {$ref: '#/components/responses/SessionExpired'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '503': {$ref: '#/components/responses/BackendUnavailable'}
+
   /erp/calc/{number}/close:
     post:
       tags: [calc]
@@ -13410,7 +13432,7 @@ paths:
           description: Заявка закрыта
           content:
             application/json:
-              schema: {$ref: '#/components/schemas/CalcSheet'}
+              schema: {$ref: '#/components/schemas/CalcRequestCard'}
         '401': {$ref: '#/components/responses/SessionExpired'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
@@ -28773,6 +28795,21 @@ components:
         quote_sent: {type: boolean, description: 'КП уже было у клиента: допустимы только причины с `allowed_after_quote_sent`'}
         reason: {type: [string, 'null'], description: 'Код причины, если заявка закрыта через «Закрыть заявку»'}
         comment: {type: [string, 'null']}
+
+    CalcRequestCard:
+      type: object
+      additionalProperties: false
+      required: [number, title, client, step, path, has_task, request, close]
+      description: 'Карточка заявки для «Закрыть заявку» (ЛХ-2): с заданием расчёта и без него'
+      properties:
+        number: {type: string, examples: [ЗВ-2026-104]}
+        title: {type: string}
+        client: {type: [string, 'null']}
+        step: {$ref: '#/components/schemas/StepCode'}
+        path: {type: string}
+        has_task: {type: boolean, description: 'У заявки есть задание расчёта; нет — черновик из передачи лида'}
+        request: {$ref: '#/components/schemas/CalcRequestText'}
+        close: {$ref: '#/components/schemas/CalcClose'}
 
     CalcCloseIn:
       type: object

@@ -308,6 +308,51 @@ const CLOSE_REASONS = [
   },
 ] as const;
 
+/** Черновик заявки без задания расчёта — как после передачи лида (ЛХ-2): карточка и «Закрыть заявку». */
+const DRAFT = {
+  number: "ЗВ-2026-120",
+  title: "Передача из CRM: щебень для ремонта пути",
+  client: "ООО «Демо-Рейл»",
+  text: "Клиент просит цену на 40 т щебня и срок поставки на станцию.",
+};
+let draftClosed: { reason: string; comment: string } | null = null;
+
+type MockCard = ReturnType<typeof cardOfCalc>;
+
+function cardOfCalc(calc: MockCalc, user: Me) {
+  const sheet = present(calc, user);
+  return {
+    number: sheet.number,
+    title: sheet.title,
+    client: sheet.client,
+    step: sheet.step,
+    path: sheet.path,
+    has_task: true,
+    request: sheet.request,
+    close: sheet.close,
+  };
+}
+
+function cardOfDraft(user: Me): MockCard {
+  return {
+    number: DRAFT.number,
+    title: DRAFT.title,
+    client: DRAFT.client,
+    step: draftClosed ? "LOST" : "REQUEST",
+    path: `/erp/calc/${encodeURIComponent(DRAFT.number)}`,
+    has_task: false,
+    request: { text: DRAFT.text, lines: 0, files: [] },
+    close: {
+      allowed: !draftClosed && level(user, "erp.calc") === "full",
+      quote_sent: false,
+      reason: draftClosed?.reason ?? null,
+      comment: draftClosed?.comment ?? null,
+    },
+  };
+}
+
+const isDraft = (number: string) => decodeURIComponent(number) === DRAFT.number;
+
 /** КП уже было у клиента (как ERP `quote_sent_to_client`): шаг «КП» или отклонено клиентом. */
 const quoteSent = (calc: MockCalc) =>
   calc.stage === "QUOTE" || (calc.state === "rejected" && calc.rejectedBy === "client");
@@ -938,6 +983,15 @@ export const erpCalcHandlers = [
     });
   }),
 
+  // ЛХ-2: карточка заявки — с заданием расчёта и без него (черновик из передачи лида)
+  http.get("*/api/v1/erp/calc-request/:number", ({ params }) => {
+    const held = guard("erp.calc", "read");
+    if ("error" in held) return held.error;
+    if (isDraft(String(params["number"]))) return HttpResponse.json(cardOfDraft(held.user));
+    const calc = find(read(), String(params["number"]));
+    return calc ? HttpResponse.json(cardOfCalc(calc, held.user)) : notFound();
+  }),
+
   // ЛХ-2: «Закрыть заявку» на любом шаге до проекта, причина из справочника
   http.post("*/api/v1/erp/calc/:number/close", async ({ params, request }) => {
     const held = guard("erp.calc", "full");
@@ -957,6 +1011,11 @@ export const erpCalcHandlers = [
         fields: ["comment"],
       });
     }
+    if (isDraft(String(params["number"]))) {
+      if (draftClosed) return conflict("request_not_closable", "Заявку уже нельзя закрыть.");
+      draftClosed = { reason: reason.code, comment };
+      return HttpResponse.json(cardOfDraft(held.user));
+    }
     const calcs = read();
     const calc = find(calcs, String(params["number"]));
     if (!calc) return notFound();
@@ -973,7 +1032,7 @@ export const erpCalcHandlers = [
     calc.closeReason = reason.code;
     calc.closeComment = comment;
     write(calcs);
-    return HttpResponse.json<CalcSheet>(present(calc, held.user));
+    return HttpResponse.json(cardOfCalc(calc, held.user));
   }),
 
   // План 1.1: файл заявки — тот же разбор, предложение строк из PARSE_PROPOSAL

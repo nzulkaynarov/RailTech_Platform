@@ -13,9 +13,7 @@ import {
 } from "../../../shared/api/generated/platform-bff";
 import { useDocumentTitle } from "../../../shared/lib/useDocumentTitle";
 import { useFormat } from "../../../shared/lib/useFormat";
-import { EmptyState } from "../../../shared/ui/EmptyState";
 import { QueryState } from "../../../shared/ui/FormParts";
-import { LinkButton } from "../../../shared/ui/LinkButton";
 import { PageHeader } from "../../../shared/ui/PageHeader";
 import { Sheet } from "../../../shared/ui/Sheet";
 import { RequestSteps } from "../../../shared/ui/RequestSteps";
@@ -27,6 +25,7 @@ import { ParseModal } from "./ParseModal";
 import { PreviousModal } from "./PreviousModal";
 import { PriceRequestForm } from "./PriceRequestForm";
 import { PriceRequests } from "./PriceRequests";
+import { RequestCard } from "./RequestCard";
 import { RequestFiles } from "./RequestFiles";
 import { ClientRejection } from "./Rejection";
 import { CloseRequestButton, ClosedNote } from "./CloseRequest";
@@ -263,7 +262,7 @@ function Content({ sheet }: { sheet: CalcSheet }) {
                 {t("sheet.requestPrice")}
               </Button>
             ) : null}
-            <CloseRequestButton sheet={sheet} />
+            {sheet.quote?.can_revise ? null : <CloseRequestButton target={sheet} />}
             {mobile ? (
               <Button
                 onClick={() => {
@@ -287,7 +286,7 @@ function Content({ sheet }: { sheet: CalcSheet }) {
       <section className="pf-card pf-calc-steps" aria-label={t("sheet.steps")}>
         <RequestSteps stage={sheet.step} number={sheet.number} />
       </section>
-      <ClosedNote sheet={sheet} />
+      <ClosedNote close={sheet.close} />
       <Banner sheet={sheet} />
       {sheet.quote === null ? (
         <NotStarted sheet={sheet} />
@@ -407,12 +406,12 @@ export function CalcScreen({ number }: { number: string }) {
 
   const error = query.error;
   if (error instanceof ApiError && error.status === 404) {
+    // Задания расчёта нет: карточка заявки (с «Закрыть заявку») или «заявки нет среди заданий»
     return (
-      <EmptyState
-        title={t("load.notFound.title")}
-        text={t("load.notFound.text")}
-        action={<LinkButton to="/erp/requests">{t("load.notFound.action")}</LinkButton>}
-      />
+      <div className="pf-calc">
+        <PageHeader title={t("close.draftTitle", { number })} />
+        <RequestCard number={number} />
+      </div>
     );
   }
   if (query.isPending) {

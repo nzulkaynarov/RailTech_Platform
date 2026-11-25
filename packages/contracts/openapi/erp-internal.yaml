@@ -3517,6 +3517,11 @@ paths:
       summary: 'Заявки с заданием расчёта: id, номер, дата создания, стадия'
       parameters:
       - in: query
+        name: any
+        schema:
+          type: boolean
+        description: Не только заявки с заданием расчёта
+      - in: query
         name: number
         schema:
           type: string
@@ -3646,7 +3651,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CalcSheet'
+                $ref: '#/components/schemas/CalcRequestCard'
           description: ''
         '400':
           content:
@@ -4239,6 +4244,42 @@ paths:
               schema:
                 $ref: '#/components/schemas/CalcError'
           description: Состояние не позволяет (КП не черновик, нет виз, ИИ выключен)
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+  /api/v1/calc/{deal_id}/request/:
+    get:
+      operationId: calc_request_card
+      description: GET /api/v1/calc/<deal_id>/request/ — карточка заявки (с заданием расчёта и без) для «Закрыть заявку».
+      summary: 'Карточка заявки: текст, файлы, можно ли закрыть'
+      parameters:
+      - in: path
+        name: deal_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Calc
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalcRequestCard'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalcError'
+          description: Нет права (зона строки, роль) или не сотрудник
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalcError'
+          description: Заявки, задания расчёта или строки нет
         '401':
           $ref: '#/components/responses/UnauthorizedResponse'
   /api/v1/calc/{deal_id}/start/:
@@ -24105,6 +24146,23 @@ components:
       - files
       - lines
       - text
+    CalcRequestCard:
+      type: object
+      properties:
+        deal:
+          $ref: '#/components/schemas/CalcDeal'
+        has_task:
+          type: boolean
+          description: У заявки есть задание расчёта (иначе — черновик из передачи лида)
+        request:
+          $ref: '#/components/schemas/CalcRequest'
+        close:
+          $ref: '#/components/schemas/CalcCloseState'
+      required:
+      - close
+      - deal
+      - has_task
+      - request
     CalcRights:
       type: object
       properties:

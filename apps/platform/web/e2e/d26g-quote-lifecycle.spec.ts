@@ -5,7 +5,7 @@ import { confirmDialog, loginAndWait, spaGoto, waitForMotionEnd } from "./suppor
 
 // Находки гейта D2-6 на MSW (SPEC-v3 §3.3): D26G-2 — версия 1 КП, возвращённая на доработку, в истории «Заменена версией 2»,
 // версия 2 показывает состав и одобряется; D26G-3 — клиент отклонил КП: у менеджера строка с причиной, на расчёте — «Клиент
-// отклонил КП», «Новая версия КП» и «Отказ по заявке»; D26G-5 — наценка даёт цену до сума. Обе ширины, axe — 0 нарушений.
+// отклонил КП», «Новая версия КП» и «Закрыть заявку»; D26G-5 — наценка даёт цену до сума. Обе ширины, axe — 0 нарушений.
 const WIDTHS = [1440, 390] as const;
 const UNIVERSAL = "universal@demo.example";
 const DIRECTOR = "director@demo.example";
@@ -78,19 +78,20 @@ test.describe("D26G: жизненный цикл КП — доработка, о
       await shot(page, "calc-new-version-ready");
     });
 
-    test(`отказ по заявке с причиной закрывает заявку, ${String(width)}`, async ({ page }) => {
+    test(`закрыть заявку с заранее выбранной причиной, ${String(width)}`, async ({ page }) => {
       await signInAt(page, UNIVERSAL, width);
       await spaGoto(page, `/erp/calc/${encodeURIComponent(REJECTED)}`);
-      await page.getByRole("button", { name: "Отказ по заявке" }).click();
-      const dialog = page.getByRole("dialog", { name: `Отказ по заявке ${REJECTED}` });
+      // Один путь: «Закрыть заявку» с заранее выбранной причиной «Клиент передумал» (ЛХ-2)
+      await expect(page.getByRole("button", { name: "Отказ по заявке" })).toHaveCount(0);
+      await page.getByRole("button", { name: "Закрыть заявку" }).click();
+      const dialog = page.getByRole("dialog", { name: `Закрыть заявку ${REJECTED}` });
       await expect(dialog).toBeVisible();
-      const submit = dialog.getByRole("button", { name: "Закрыть заявку отказом" });
-      await expect(submit).toBeDisabled();
-      await dialog.getByLabel("Причина отказа").fill("Клиент купил у конкурента");
+      await expect(dialog.getByRole("radio", { name: "Клиент передумал" })).toBeChecked();
+      await expect(dialog.getByRole("radio", { name: "Дубль" })).toBeDisabled();
       await shot(page, "calc-lost-dialog");
-      await expectNoViolations(page, `диалог отказа ${String(width)}`);
-      await submit.click();
-      await expect(page.getByText("Заявка закрыта с отказом. Резерв по ней снят.")).toBeVisible();
+      await expectNoViolations(page, `диалог закрытия ${String(width)}`);
+      await dialog.getByRole("button", { name: "Закрыть заявку" }).click();
+      await expect(page.getByText("Заявка закрыта: Клиент передумал")).toBeVisible();
       await expect(page.getByRole("button", { name: "Новая версия КП" })).toHaveCount(0);
       await shot(page, "calc-lost");
     });

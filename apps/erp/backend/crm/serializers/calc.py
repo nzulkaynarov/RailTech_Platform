@@ -242,6 +242,13 @@ class CalcCloseStateSerializer(serializers.Serializer):
     comment = serializers.CharField(allow_null=True)
 
 
+class CalcRequestCardSerializer(serializers.Serializer):
+    deal = CalcDealSerializer()
+    has_task = serializers.BooleanField(help_text="У заявки есть задание расчёта (иначе — черновик из передачи лида)")
+    request = CalcRequestSerializer()
+    close = CalcCloseStateSerializer()
+
+
 class CalcCloseInSerializer(serializers.Serializer):
     reason = serializers.CharField(max_length=50, help_text="Код причины из справочника `request-close-reasons`")
     comment = serializers.CharField(max_length=2000, allow_blank=True, required=False, default="")

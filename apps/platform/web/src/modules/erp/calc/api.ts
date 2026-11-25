@@ -41,6 +41,19 @@ export function useApplySheet(): (sheet: CalcSheet) => void {
   );
 }
 
+/** Закрытие заявки меняет и расчёт, и карточку, и списки: перезапрашиваются все запросы расчёта. */
+export function useRefreshCalc(): () => void {
+  const client = useQueryClient();
+  return useCallback(() => {
+    void client.invalidateQueries({
+      predicate: (query) => {
+        const head = query.queryKey[0];
+        return typeof head === "string" && CALC_KEYS.some((key) => head.startsWith(key));
+      },
+    });
+  }, [client]);
+}
+
 const KNOWN = new Set([
   "amount_too_large",
   "visas_missing",

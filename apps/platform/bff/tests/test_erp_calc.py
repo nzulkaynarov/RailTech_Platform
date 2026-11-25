@@ -8,6 +8,7 @@ ERP — на respx; ответы BFF сверяются со схемами plat
 
 import json
 from typing import Any
+from urllib.parse import quote
 
 import httpx
 import pytest
@@ -583,10 +584,12 @@ async def test_close_reasons_and_close_request_are_proxied_with_erp_refusals(
     check(listed, "/erp/calc-close-reasons", "get")
     assert listed.json()["items"][0]["code"] == "OTHER"
 
-    closed = sheet(
-        deal={**deal(), "stage_code": "CLOSED_LOST"},
-        close={"allowed": False, "quote_sent": False, "reason": "OTHER", "comment": "Передали"},
-    )
+    closed = {
+        "deal": {**deal(), "stage_code": "CLOSED_LOST"},
+        "has_task": True,
+        "request": {"text": "Нужны 2 стрелочных перевода", "lines": 0},
+        "close": {"allowed": False, "quote_sent": False, "reason": "OTHER", "comment": "Передали"},
+    }
     route = erp.post(f"{CALC}/104/close/").mock(
         side_effect=[
             httpx.Response(200, json=closed),
@@ -602,6 +605,7 @@ async def test_close_reasons_and_close_request_are_proxied_with_erp_refusals(
     check(ok, "/erp/calc/{number}/close", "post")
     assert ok.json()["step"] == "LOST"
     assert ok.json()["close"]["reason"] == "OTHER"
+    assert route.calls[0].request.url.path.endswith("/104/close/")
     assert json.loads(route.calls[0].request.content) == {"reason": "OTHER", "comment": "Передали"}
 
     conflict = await call(web, "POST", f"/erp/calc/{ENCODED}/close", {"reason": "TEST"})
@@ -1155,3 +1159,44 @@ async def test_sign_before_the_catalog_decision_is_409(
     body = response.json()
     assert body["details"]["reason"] == "catalog_match_pending"
     assert body["message"] == "Сначала выберите позицию каталога или «Новая позиция»."
+
+
+async def test_a_draft_request_without_a_calc_task_opens_a_card_and_is_closed(
+    web: Web, be: Backends, check: ContractChecker
+) -> None:
+    """ЛХ-2: черновик без задания расчёта ищется среди всех заявок (`any=1`) и закрывается."""
+    await web.login(["MANAGER_ALL"])
+    draft = deal(id=777, number="ЗВ-2026-120", stage_code="DRAFT")
+    refs_route = be.router.get(f"{CALC}/deals/").mock(
+        return_value=httpx.Response(200, json=refs(draft))
+    )
+    card = {
+        "deal": draft,
+        "has_task": False,
+        "request": {"text": "Передача из CRM", "lines": 0},
+        "close": {"allowed": True, "quote_sent": False, "reason": None, "comment": None},
+    }
+    be.router.get(f"{CALC}/777/request/").mock(return_value=httpx.Response(200, json=card))
+    shut = be.router.post(f"{CALC}/777/close/").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                **card,
+                "deal": {**draft, "stage_code": "CLOSED_LOST"},
+                "close": {"allowed": False, "quote_sent": False, "reason": "TEST", "comment": None},
+            },
+        )
+    )
+    number = "ЗВ-2026-120"
+    got = await web.client.get(f"/api/v1/erp/calc-request/{quote(number, safe='')}")
+    assert got.status_code == 200
+    check(got, "/erp/calc-request/{number}", "get")
+    assert got.json()["has_task"] is False
+    assert got.json()["close"]["allowed"] is True
+    assert refs_route.calls.last.request.url.params["any"] == "1"
+
+    done = await call(web, "POST", f"/erp/calc/{quote(number, safe='')}/close", {"reason": "TEST"})
+    assert done.status_code == 200
+    check(done, "/erp/calc/{number}/close", "post")
+    assert done.json()["step"] == "LOST"
+    assert shut.called

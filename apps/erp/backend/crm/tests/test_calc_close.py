@@ -150,4 +150,45 @@ def test_close_conforms_to_the_v1_schema(world):  # noqa: F811
     sends(f"{base}close/", "post", {"reason": "TEST", "comment": ""})
     conforms(_api(world["supply"]).get(_url(world)), base, "get", status=200)
     conforms(_api(world["supply"]).get("/api/v1/calc/close-reasons/"), "/api/v1/calc/close-reasons/", "get", status=200)
+    conforms(_api(world["supply"]).get(_url(world, "request/")), f"{base}request/", "get", status=200)
     conforms(_close(world, world["supply"], "TEST"), f"{base}close/", "post", status=200)
+
+
+def _draft(world):  # noqa: F811
+    """Черновик заявки без задания расчёта — как после передачи лида (резолюции директора ещё нет)."""
+    from crm.models import DealStage
+
+    return Deal.objects.create(
+        title="Передача из CRM",
+        company=world["deal"].company,
+        manager=world["supply"],
+        stage=DealStage.objects.get(code="DRAFT"),
+    )
+
+
+def test_a_draft_request_without_a_calc_task_has_a_card_and_can_be_closed(world):  # noqa: F811
+    draft = _draft(world)
+    CrmClientMapping.objects.create(company=draft.company, crm_client_id=78)
+    bus_support.reset()
+    assert _api(world["supply"]).get(f"/api/v1/calc/{draft.pk}/").status_code == 404, "расчёта у черновика нет"
+    card = _api(world["supply"]).get(f"/api/v1/calc/{draft.pk}/request/")
+    assert card.status_code == 200, card.json()
+    assert card.json()["has_task"] is False and card.json()["close"]["allowed"] is True
+    assert _api(world["accountant"]).get(f"/api/v1/calc/{draft.pk}/request/").json()["close"]["allowed"] is False
+    refused = _api(world["accountant"]).post(f"/api/v1/calc/{draft.pk}/close/", {"reason": "TEST"}, format="json")
+    assert refused.status_code == 403
+    closed = _api(world["supply"]).post(f"/api/v1/calc/{draft.pk}/close/", {"reason": "TEST"}, format="json")
+    assert closed.status_code == 200, closed.json()
+    assert closed.json()["deal"]["stage_code"] == "CLOSED_LOST" and closed.json()["close"]["reason"] == "TEST"
+    draft.refresh_from_db()
+    assert draft.hidden_in_lists is True and draft.close_reason.code == "TEST"
+    assert len(bus_support.published("deal.lost")) == 1
+
+
+def test_deal_refs_find_a_draft_only_when_any_request_is_asked(world):  # noqa: F811
+    draft = _draft(world)
+    api = _api(world["supply"])
+    number = draft.number
+    assert api.get("/api/v1/calc/deals/", {"number": number}).json()["results"] == []
+    found = api.get("/api/v1/calc/deals/", {"number": number, "any": "1"}).json()["results"]
+    assert [row["id"] for row in found] == [draft.pk]

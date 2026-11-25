@@ -313,18 +313,9 @@
     "choose": "The request is back in costing. Decide what is next: recalculate and send a new quote version, or close the request as lost.",
     "closed": "The request is closed as lost. Its reservation is released.",
     "noRights": "Insufficient permissions.",
-    "cancel": "Cancel",
     "newVersion": {
       "button": "New quote version",
       "done": "Costing reopened: draft quote version {{version}}"
-    },
-    "lost": {
-      "button": "Lost request",
-      "title": "Lost request {{number}}",
-      "reason": "Reason",
-      "hint": "Required. Goes to the request log.",
-      "submit": "Close as lost",
-      "done": "Request closed as lost, reservation released"
     }
   },
   "terms": {
@@ -353,6 +344,11 @@
     "cancel": "Cancel",
     "done": "Request closed",
     "closed": "Request closed: {{reason}}",
-    "closedNext": "It left the queues and shows to the client as closed."
+    "closedNext": "It left the queues and shows to the client as closed.",
+    "draftTitle": "Request {{number}}",
+    "draftHint": "There is no calculation for this request yet: you can close it here.",
+    "client": "Client",
+    "stage": "Step",
+    "textRequest": "Client request"
   }
 }

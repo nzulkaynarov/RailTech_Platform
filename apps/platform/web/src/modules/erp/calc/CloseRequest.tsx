@@ -2,14 +2,20 @@ import { Alert, App, Button, Input, Radio } from "antd";
 import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import type { CalcCloseReason, CalcSheet } from "../../../shared/api/generated/model";
+import type { CalcClose, CalcCloseReason } from "../../../shared/api/generated/model";
 import {
   useCloseCalcRequest,
   useListCalcCloseReasons,
 } from "../../../shared/api/generated/platform-bff";
 import { Dialog } from "../../../shared/ui/Dialog";
 import { ErrorNote, FormField } from "../../../shared/ui/FormParts";
-import { calcRef, useApplySheet, useErrorText } from "./api";
+import { calcRef, useErrorText, useRefreshCalc } from "./api";
+
+/** Что нужно «Закрыть заявку» от экрана: номер заявки и `close` из расчёта или карточки заявки. */
+export interface Closable {
+  number: string;
+  close?: CalcClose;
+}
 
 /** Название причины на языке интерфейса; нет перевода — русское. */
 function useReasonName(): (reason: CalcCloseReason) => string {
@@ -19,22 +25,30 @@ function useReasonName(): (reason: CalcCloseReason) => string {
 }
 
 /** Окно «Закрыть заявку» (ЛХ-2): причина из справочника, комментарий — когда нужен; закрыть можно на любом шаге до проекта. */
-function CloseModal({ sheet, onClose }: { sheet: CalcSheet; onClose: () => void }) {
+function CloseModal({
+  target,
+  preselect,
+  onClose,
+}: {
+  target: Closable;
+  preselect?: string;
+  onClose: () => void;
+}) {
   const { t } = useTranslation("calc");
   const { message } = App.useApp();
-  const apply = useApplySheet();
+  const refresh = useRefreshCalc();
   const errorText = useErrorText();
   const nameOf = useReasonName();
   const commentId = useId();
   const reasons = useListCalcCloseReasons();
-  const [code, setCode] = useState<string | null>(null);
+  const [code, setCode] = useState<string | null>(preselect ?? null);
   const [comment, setComment] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const quoteSent = sheet.close?.quote_sent === true;
+  const quoteSent = target.close?.quote_sent === true;
   const close = useCloseCalcRequest({
     mutation: {
-      onSuccess: (next) => {
-        apply(next);
+      onSuccess: () => {
+        refresh();
         void message.success(t("close.done"));
         onClose();
       },
@@ -50,7 +64,7 @@ function CloseModal({ sheet, onClose }: { sheet: CalcSheet; onClose: () => void 
   return (
     <Dialog
       open
-      title={t("close.title", { number: sheet.number })}
+      title={t("close.title", { number: target.number })}
       onCancel={onClose}
       cancelLabel={t("close.cancel")}
       okLabel={t("close.submit")}
@@ -61,7 +75,7 @@ function CloseModal({ sheet, onClose }: { sheet: CalcSheet; onClose: () => void 
         if (!chosen) return;
         setError(null);
         close.mutate({
-          number: calcRef(sheet.number),
+          number: calcRef(target.number),
           data: { reason: chosen.code, ...(text ? { comment: text } : {}) },
         });
       }}
@@ -114,15 +128,28 @@ function CloseModal({ sheet, onClose }: { sheet: CalcSheet; onClose: () => void 
   );
 }
 
-/** «Закрыть заявку» в шапке карточки: только когда заявка до проекта, не закрыта и сотрудник вправе (`close.allowed`). */
-export function CloseRequestButton({ sheet }: { sheet: CalcSheet }) {
+/**
+ * «Закрыть заявку» — одно действие везде, где открыта заявка до проекта: шапка расчёта, окно «Задание», карточка заявки без
+ * расчёта. Видна только когда `close.allowed` (заявка до проекта, не закрыта, сотрудник — ответственный или держатель зоны
+ * продаж). `preselect` — причина, выбранная заранее (после отказа клиента от КП — «Клиент передумал»).
+ */
+export function CloseRequestButton({
+  target,
+  preselect,
+  size,
+}: {
+  target: Closable;
+  preselect?: string;
+  size?: "small";
+}) {
   const { t } = useTranslation("calc");
   const [open, setOpen] = useState(false);
-  if (sheet.close?.allowed !== true) return null;
+  if (target.close?.allowed !== true) return null;
   return (
     <>
       <Button
         danger
+        size={size}
         onClick={() => {
           setOpen(true);
         }}
@@ -131,7 +158,8 @@ export function CloseRequestButton({ sheet }: { sheet: CalcSheet }) {
       </Button>
       {open ? (
         <CloseModal
-          sheet={sheet}
+          target={target}
+          preselect={preselect}
           onClose={() => {
             setOpen(false);
           }}
@@ -142,20 +170,19 @@ export function CloseRequestButton({ sheet }: { sheet: CalcSheet }) {
 }
 
 /** Заявка закрыта через «Закрыть заявку»: причина и комментарий словами, что дальше. */
-export function ClosedNote({ sheet }: { sheet: CalcSheet }) {
+export function ClosedNote({ close }: { close?: CalcClose }) {
   const { t } = useTranslation("calc");
   const nameOf = useReasonName();
   const reasons = useListCalcCloseReasons();
-  const code = sheet.close?.reason;
+  const code = close?.reason;
   if (!code) return null;
   const row = reasons.data?.items.find((item) => item.code === code);
-  const comment = sheet.close?.comment;
   return (
     <Alert
       type="info"
       showIcon
       message={t("close.closed", { reason: row ? nameOf(row) : code })}
-      description={comment ? comment : t("close.closedNext")}
+      description={close.comment ? close.comment : t("close.closedNext")}
     />
   );
 }

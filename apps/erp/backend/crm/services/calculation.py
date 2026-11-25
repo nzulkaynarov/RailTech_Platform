@@ -639,13 +639,14 @@ def list_tasks(user, *, mine: bool = False, scope: str = "open") -> list[dict]:
 MAX_REFS = 5000
 
 
-def deal_refs(user, number: str = "") -> list[dict]:
+def deal_refs(user, number: str = "", *, any_request: bool = False) -> list[dict]:
     """Лёгкий справочник заявок с заданием расчёта (без КП, строк и виз): id, номер ЗВ/ПР (`Deal.number`, ERP-09),
     дата создания, стадия — для поиска заявки по номеру в BFF. `number` — отбор по номеру (`ЗВ-2026-104`, `ПР-2026-104`,
     `zv 2026 104` — один NNN года, префикс не важен: после принятия КП заявка становится проектом с тем же NNN); не номер —
     пусто. С новых заявок."""
     _require_staff(user)
-    rows = Deal.objects.filter(calc_tasks__isnull=False)
+    # `any_request` — и заявка без задания расчёта (черновик из передачи лида): у неё есть карточка «Закрыть заявку»
+    rows = Deal.objects.all() if any_request else Deal.objects.filter(calc_tasks__isnull=False)
     if number:
         parsed = deal_numbers.parse_query(number)
         if parsed is None:
@@ -1692,21 +1693,23 @@ def quote_sent_to_client(deal: Deal) -> bool:
     return False
 
 
-def _is_request_owner(deal: Deal, task: CalcTask, user) -> bool:
+def _is_request_owner(deal: Deal, task: Optional[CalcTask], user) -> bool:
     if user.pk in (deal.manager_id, deal.assigned_to_id):
         return True
+    if task is None:
+        return False
     crm_ids = _mapped_crm_ids(user)
     return task.assignees.filter(Q(user=user) | Q(crm_user_id__in=crm_ids)).exists()
 
 
-def can_close_request(deal: Deal, task: CalcTask, user) -> bool:
+def can_close_request(deal: Deal, task: Optional[CalcTask], user) -> bool:
     """Закрыть заявку может её ответственный и держатель зоны продаж (`deal.manage`); администратор — всегда."""
     if not (getattr(user, "is_superuser", False) or is_seller(user)):
         return False
     return has_perm(user, Permission.DEAL_MANAGE.value) or _is_request_owner(deal, task, user)
 
 
-def close_state(deal: Deal, task: CalcTask, user) -> dict:
+def close_state(deal: Deal, task: Optional[CalcTask], user) -> dict:
     stage = deal.stage.code if deal.stage_id else DealStageCode.DRAFT
     reason = deal.close_reason if deal.close_reason_id else None
     return {
@@ -1715,6 +1718,28 @@ def close_state(deal: Deal, task: CalcTask, user) -> dict:
         "reason": reason.code if reason else None,
         "comment": deal.close_comment or None,
     }
+
+
+def _request_card(deal: Deal, task: Optional[CalcTask], user) -> dict:
+    """Карточка заявки для «Закрыть заявку»: заявка, её текст и файлы, что можно и чем закрыта — с заданием расчёта и без."""
+    from .draft_quote import deal_request_files, deal_request_lines_count, deal_request_text
+
+    return {
+        "deal": _deal_brief(deal),
+        "has_task": task is not None,
+        "request": {
+            "text": deal_request_text(deal),
+            "lines": deal_request_lines_count(deal),
+            "files": deal_request_files(deal),
+        },
+        "close": close_state(deal, task, user),
+    }
+
+
+def request_card(deal_id: int, user) -> dict:
+    _require_staff(user)
+    deal = _deal_or_404(deal_id)
+    return _request_card(deal, latest_task(deal.id), user)
 
 
 def close_reasons(user) -> list[dict]:
@@ -1745,7 +1770,7 @@ def close_request(deal_id: int, user, reason_code: str, comment: str = "") -> di
 
     _require_staff(user)
     deal = _locked_deal_or_404(deal_id)
-    task = _task_or_404(deal)
+    task = latest_task(deal.id)  # заявка без задания расчёта (черновик из передачи) закрывается так же
     if not can_close_request(deal, task, user):
         raise CalcError("ROLE_NOT_PERMITTED", 403)
     stage = deal.stage.code if deal.stage_id else DealStageCode.DRAFT
@@ -1791,12 +1816,17 @@ def close_request(deal_id: int, user, reason_code: str, comment: str = "") -> di
         deal,
         user,
         "Заявка закрыта",
-        f"{task.letter_number}: {lost_reason}",
+        f"{task.letter_number if task else deal.number}: {lost_reason}",
         "calc.closed",
-        {"letter_number": task.letter_number, "reason_code": reason.code, "reason": reason.name, "comment": comment},
+        {
+            "letter_number": task.letter_number if task else None,
+            "reason_code": reason.code,
+            "reason": reason.name,
+            "comment": comment,
+        },
     )
     deal.refresh_from_db()
-    return _sheet(deal, task, user)
+    return _request_card(deal, task, user)
 
 
 def line_visas(quote: Quote) -> list[tuple[str, Any, Any]]:

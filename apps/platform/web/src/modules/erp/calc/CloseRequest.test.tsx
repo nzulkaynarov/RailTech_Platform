@@ -36,7 +36,7 @@ describe("Расчёт · «Закрыть заявку» (ЛХ-2)", () => {
 
   it("после отправки КП причины «Ошибка», «Дубль», «Тест» недоступны", async () => {
     await openCalc("universal@demo.example", "ЗВ-2026-109");
-    fireEvent.click(screen.getAllByRole("button", { name: "Закрыть заявку" })[0]);
+    fireEvent.click(screen.getAllByRole("button", { name: "Закрыть заявку" })[0] as HTMLElement);
     const dialog = await screen.findByRole("dialog", { name: "Закрыть заявку ЗВ-2026-109" });
     expect(await within(dialog).findByRole("radio", { name: "Дубль" })).toBeDisabled();
     expect(within(dialog).getByRole("radio", { name: "Клиент передумал" })).toBeEnabled();
@@ -44,6 +44,21 @@ describe("Расчёт · «Закрыть заявку» (ЛХ-2)", () => {
 
   it("без права на расчёт кнопки нет", async () => {
     await openCalc("accountant@demo.example", "ЗВ-2026-101");
+    expect(screen.queryByRole("button", { name: "Закрыть заявку" })).toBeNull();
+  });
+
+  it("черновик без задания расчёта: карточка заявки и «Закрыть заявку»", async () => {
+    signIn("universal@demo.example");
+    renderAt(`/erp/calc/${encodeURIComponent("ЗВ-2026-120")}`);
+    expect(await screen.findByText(/Клиент просит цену на 40 т щебня/)).toBeVisible();
+    expect(screen.getByText(/Расчёта по заявке пока нет/)).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Закрыть заявку" }));
+    const dialog = await screen.findByRole("dialog", { name: "Закрыть заявку ЗВ-2026-120" });
+    fireEvent.click(await within(dialog).findByRole("radio", { name: "Тест" }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "Закрыть заявку" }));
+    await waitFor(() => {
+      expect(screen.getByText("Заявка закрыта: Тест")).toBeVisible();
+    });
     expect(screen.queryByRole("button", { name: "Закрыть заявку" })).toBeNull();
   });
 });

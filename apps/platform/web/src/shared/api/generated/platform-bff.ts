@@ -70,6 +70,7 @@ import type {
   CalcParseJob,
   CalcParseResult,
   CalcPreviousPage,
+  CalcRequestCard,
   CalcRequestList,
   CalcSheet,
   CalcTermsPatch,
@@ -51579,6 +51580,147 @@ export function useListCalcCloseReasons<
   return withQueryKey(query, queryOptions.queryKey);
 }
 
+export const getGetCalcRequestCardUrl = (number: string) => {
+  return `/api/v1/erp/calc-request/${number}`;
+};
+
+/**
+ * ERP `GET /calc/{deal_id}/request/` (ЛХ-2). Заявка ищется по номеру ЗВ среди всех заявок, не только с заданием расчёта: черновик из передачи лида открывается карточкой (номер, клиент, текст и файлы заявки, `close`). Раздел `erp.calc` — чтение. Нет такой заявки — 404.
+ * @summary Расчёт · Карточка заявки (с заданием расчёта и без) для «Закрыть заявку»
+ */
+export const getCalcRequestCard = async (
+  number: string,
+  options?: Parameters<typeof http>[1],
+): Promise<CalcRequestCard> => {
+  return http<CalcRequestCard>(getGetCalcRequestCardUrl(number), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetCalcRequestCardQueryKey = (number: string) => {
+  return [`/api/v1/erp/calc-request/${number}`] as const;
+};
+
+export const getGetCalcRequestCardQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCalcRequestCard>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  number: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getCalcRequestCard>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetCalcRequestCardQueryKey(number);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getCalcRequestCard>>> = ({ signal }) =>
+    getCalcRequestCard(number, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: number !== null && number !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof getCalcRequestCard>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type GetCalcRequestCardQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getCalcRequestCard>>
+>;
+export type GetCalcRequestCardQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+
+export function useGetCalcRequestCard<
+  TData = Awaited<ReturnType<typeof getCalcRequestCard>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  number: string,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getCalcRequestCard>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getCalcRequestCard>>,
+          TError,
+          Awaited<ReturnType<typeof getCalcRequestCard>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetCalcRequestCard<
+  TData = Awaited<ReturnType<typeof getCalcRequestCard>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  number: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getCalcRequestCard>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getCalcRequestCard>>,
+          TError,
+          Awaited<ReturnType<typeof getCalcRequestCard>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetCalcRequestCard<
+  TData = Awaited<ReturnType<typeof getCalcRequestCard>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  number: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getCalcRequestCard>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Расчёт · Карточка заявки (с заданием расчёта и без) для «Закрыть заявку»
+ */
+
+export function useGetCalcRequestCard<
+  TData = Awaited<ReturnType<typeof getCalcRequestCard>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  number: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getCalcRequestCard>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetCalcRequestCardQueryOptions(number, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
 export const getCloseCalcRequestUrl = (number: string) => {
   return `/api/v1/erp/calc/${number}/close`;
 };
@@ -51591,7 +51733,7 @@ export const closeCalcRequest = async (
   number: string,
   calcCloseIn: CalcCloseIn,
   options?: Parameters<typeof http>[1],
-): Promise<CalcSheet> => {
+): Promise<CalcRequestCard> => {
   const getHeaders = (
     h?: NonNullable<RequestInit["headers"]>,
   ): Record<string, string | readonly string[]> => {
@@ -51611,7 +51753,7 @@ export const closeCalcRequest = async (
     }
     return headers;
   };
-  return http<CalcSheet>(getCloseCalcRequestUrl(number), {
+  return http<CalcRequestCard>(getCloseCalcRequestUrl(number), {
     ...options,
     method: "POST",
     headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },

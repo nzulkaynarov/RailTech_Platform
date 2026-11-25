@@ -499,6 +499,8 @@ def test_eds_subscription_c1() -> None:
         "uz.railtech.identity.user.deactivated.v1",
         "uz.railtech.erp.request.created.v1",
         "uz.railtech.erp.quote.ready_for_approval.v1",
+        # ЛХ-2: заявка закрыта в ERP — открытый круг одобрения КП по ней снимается.
+        "uz.railtech.erp.deal.lost.v1",
         # SIGN-4: запрос на подписание коммерческого документа ERP (КП, договор, счёт, акт).
         "uz.railtech.erp.signing.requested.v1",
         # D2-5: проекция документов проектов (договор, счёт, акт) в реестре «Все документы».

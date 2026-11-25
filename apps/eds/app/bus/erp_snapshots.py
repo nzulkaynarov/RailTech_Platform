@@ -132,3 +132,9 @@ class SigningRequestedEvent(_Tolerant):
     requested_by: SigningPerson
     requested_signer: SigningPerson | None = None
     actor: dict[str, Any] = Field(default_factory=dict)
+
+
+class DealLost(_Tolerant):
+    """`data` события `uz.railtech.erp.deal.lost.v1`: EDS читает только сделку (ЛХ-2: круг КП снимается)."""
+
+    deal: DealRef

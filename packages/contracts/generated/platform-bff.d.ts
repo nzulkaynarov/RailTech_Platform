@@ -7275,6 +7275,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/erp/calc-request/{number}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Расчёт · Карточка заявки (с заданием расчёта и без) для «Закрыть заявку»
+     * @description ERP `GET /calc/{deal_id}/request/` (ЛХ-2). Заявка ищется по номеру ЗВ среди всех заявок, не только с заданием расчёта: черновик из передачи лида открывается карточкой (номер, клиент, текст и файлы заявки, `close`). Раздел `erp.calc` — чтение. Нет такой заявки — 404.
+     */
+    get: operations["getCalcRequestCard"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/erp/calc/{number}/close": {
     parameters: {
       query?: never;
@@ -16827,6 +16847,19 @@ export interface components {
       /** @description Код причины, если заявка закрыта через «Закрыть заявку» */
       reason: string | null;
       comment: string | null;
+    };
+    /** @description Карточка заявки для «Закрыть заявку» (ЛХ-2): с заданием расчёта и без него */
+    CalcRequestCard: {
+      /** @example ЗВ-2026-104 */
+      number: string;
+      title: string;
+      client: string | null;
+      step: components["schemas"]["StepCode"];
+      path: string;
+      /** @description У заявки есть задание расчёта; нет — черновик из передачи лида */
+      has_task: boolean;
+      request: components["schemas"]["CalcRequestText"];
+      close: components["schemas"]["CalcClose"];
     };
     CalcCloseIn: {
       /** @description Код причины из `GET /erp/calc-close-reasons` */
@@ -32770,6 +32803,33 @@ export interface operations {
       503: components["responses"]["BackendUnavailable"];
     };
   };
+  getCalcRequestCard: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Номер заявки `ЗВ-ГГГГ-NNN` (как в списке «Заявки в расчёте») */
+        number: components["parameters"]["CalcNumberPath"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Карточка заявки */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CalcRequestCard"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
   closeCalcRequest: {
     parameters: {
       query?: never;
@@ -32795,7 +32855,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["CalcSheet"];
+          "application/json": components["schemas"]["CalcRequestCard"];
         };
       };
       401: components["responses"]["SessionExpired"];

@@ -92,3 +92,41 @@ async def open_for_quote(session: AsyncSession, bus: AsyncBus, data: QuoteReady)
         round_no=int(rounds) + 1,
         fields=fields,
     )
+
+
+async def close_for_lost_deal(session: AsyncSession, erp_deal_id: int) -> int:
+    """Заявка закрыта в ERP (`erp.deal.lost`, ЛХ-2): открытые круги КП по ней снимаются — директору решать нечего.
+
+    Не решение директора: события нет, одна строка журнала на круг; статус `returned`, шаг — `skipped`, как у круга,
+    замещённого новой версией. Возвращает число снятых кругов; повтор события ничего не меняет.
+    """
+    open_routes = (
+        (
+            await session.execute(
+                select(ApprovalRoute)
+                .where(
+                    ApprovalRoute.template == ApprovalTemplate.QUOTE.value,
+                    ApprovalRoute.erp_deal_id == erp_deal_id,
+                    ApprovalRoute.status == RouteStatus.OPEN.value,
+                )
+                .with_for_update()
+            )
+        )
+        .scalars()
+        .all()
+    )
+    for route in open_routes:
+        for step in await approvals.load_steps(session, route.id):
+            if step.status in ("current", "pending"):
+                step.status = "skipped"
+        route.status, route.current_step, route.closed_at = RouteStatus.RETURNED.value, None, clock.now()
+        await journal.record(
+            session,
+            "approval.withdrawn",
+            by=None,
+            approval_id=route.id,
+            comment="заявка закрыта",
+            version=route.round,
+        )
+        log.info("quote_route_withdrawn", quote=route.quote_number, version=route.quote_version, deal=erp_deal_id)
+    return len(open_routes)
