@@ -172,7 +172,7 @@ function PrepareForm({
             { value: "file", label: t("partnerApplications.prepareModal.ownFile") },
           ]}
           onChange={(value) => {
-            setMode(value);
+            setMode(value as Mode);
           }}
         />
       ) : null}
@@ -321,7 +321,7 @@ export function ContractDecisionModal({
           { value: "return", label: t("partnerApplications.decisionModal.return") },
         ]}
         onChange={(value) => {
-          setDecision(value);
+          setDecision(value as "approve" | "return");
         }}
       />
       <FormField id={noteId} label={t("partnerApplications.decisionModal.note")}>

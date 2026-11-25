@@ -80,8 +80,6 @@ const SEED_APPLICATIONS: PartnerApplicationItem[] = [
     phone: "+998 90 123 45 67",
     language: "ru",
     categories_description: "Стрелочные переводы, рельсовые скрепления, накладки",
-    contract_number: "",
-    contract_date: null,
     rejected_reason: "",
     created_at: "2026-11-06T09:30:00+05:00",
     reviewed_at: null,
