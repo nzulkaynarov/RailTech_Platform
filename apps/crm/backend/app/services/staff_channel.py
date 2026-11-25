@@ -39,6 +39,8 @@ logger = structlog.get_logger(__name__)
 INVITE_TTL = timedelta(days=7)
 INVITE_NAME = "staff"
 CHECKED = "user.telegram_chats_checked"
+UNBAN_PENDING = "team_channel.unban_pending"  # our ban whose unban has not finished
+UNBAN_DONE = "team_channel.unban_done"
 RECHECK_AFTER = timedelta(days=14)
 PACE_S = 0.2  # between people in the daily job
 MAX_PAUSE_S = 30.0  # longest honoured retry_after
@@ -172,13 +174,39 @@ class StaffChannelService:
                 return False
             raise
         if member.status == "kicked":
-            await bot.unban_chat_member(chat_id, tg_user_id, only_if_banned=True)
+            # Lift only our own unfinished ban; a ban placed by a group admin stays.
+            if await self._unban_pending(chat_id, tg_user_id):
+                await bot.unban_chat_member(chat_id, tg_user_id, only_if_banned=True)
+                await self._mark(UNBAN_DONE, chat_id, tg_user_id)
             return False
         if member.status in _OUTSIDE:
             return False
         await bot.ban_chat_member(chat_id, tg_user_id)
+        await self._mark(UNBAN_PENDING, chat_id, tg_user_id)  # before the unban can fail
         await bot.unban_chat_member(chat_id, tg_user_id, only_if_banned=True)
+        await self._mark(UNBAN_DONE, chat_id, tg_user_id)
         return True
+
+    async def _mark(self, action: str, chat_id: int, tg_user_id: int) -> None:
+        async with self._sessions() as session, session.begin():
+            await audit.record(
+                session, Actor.system(), action, "telegram_chat", f"{chat_id}:{tg_user_id}"
+            )
+
+    async def _unban_pending(self, chat_id: int, tg_user_id: int) -> bool:
+        """Is the latest mark for this (chat, person) «awaiting unban» — i.e. the ban is ours."""
+        async with self._sessions() as session:
+            latest = await session.scalar(
+                select(AuditLog.action)
+                .where(
+                    AuditLog.action.in_((UNBAN_PENDING, UNBAN_DONE)),
+                    AuditLog.entity_type == "telegram_chat",
+                    AuditLog.entity_id == f"{chat_id}:{tg_user_id}",
+                )
+                .order_by(AuditLog.id.desc())
+                .limit(1)
+            )
+        return latest == UNBAN_PENDING
 
     async def _recently_clean(self) -> set[int]:
         """Users whose last check or removal in the past 14 days left no failed chat."""

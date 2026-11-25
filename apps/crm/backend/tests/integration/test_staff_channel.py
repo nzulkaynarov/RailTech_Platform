@@ -444,3 +444,13 @@ async def test_status_probe_does_not_hang_and_is_cached(
     n = len(bot.calls)
     assert await service.can_invite() is True
     assert len(bot.calls) == n  # cached: no new Bot API calls
+
+
+async def test_foreign_ban_is_not_lifted_by_reconcile(
+    sessions: async_sessionmaker[AsyncSession], service: StaffChannelService, bot: FakeBot
+) -> None:
+    """A `kicked` status without our own unfinished ban (a group admin banned him) stays."""
+    await two_deactivated(sessions)
+    bot.members[(GROUP, TG)] = "kicked"
+    await service.reconcile()
+    assert [d for n, d in bot.calls if n in {"BanChatMember", "UnbanChatMember"}] == []
