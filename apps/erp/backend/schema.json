@@ -47443,7 +47443,17 @@
                         "type": "integer"
                     },
                     "source": {
-                        "$ref": "#/components/schemas/PartnerApplicationSourceEnum"
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/PartnerApplicationSourceEnum"
+                            }
+                        ],
+                        "description": "Заявка из карточки лида CRM отдаётся как `letter` с `from_lead = true` (перечень не растёт: ERP SPA и BFF читают его строго).\n\n* `public` - public\n* `client_cabinet` - client_cabinet\n* `letter` - letter"
+                    },
+                    "from_lead": {
+                        "type": "boolean",
+                        "default": false,
+                        "description": "Заявка заведена из карточки лида CRM (ЛП-1): `source_ref` — номер лида"
                     },
                     "source_ref": {
                         "type": "string",
@@ -47606,7 +47616,17 @@
                         "type": "integer"
                     },
                     "source": {
-                        "$ref": "#/components/schemas/PartnerApplicationSourceEnum"
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/PartnerApplicationSourceEnum"
+                            }
+                        ],
+                        "description": "Заявка из карточки лида CRM отдаётся как `letter` с `from_lead = true` (перечень не растёт: ERP SPA и BFF читают его строго).\n\n* `public` - public\n* `client_cabinet` - client_cabinet\n* `letter` - letter"
+                    },
+                    "from_lead": {
+                        "type": "boolean",
+                        "default": false,
+                        "description": "Заявка заведена из карточки лида CRM (ЛП-1): `source_ref` — номер лида"
                     },
                     "source_ref": {
                         "type": "string",
@@ -54042,11 +54062,10 @@
                 "enum": [
                     "public",
                     "client_cabinet",
-                    "letter",
-                    "lead"
+                    "letter"
                 ],
                 "type": "string",
-                "description": "* `public` - public\n* `client_cabinet` - client_cabinet\n* `letter` - letter\n* `lead` - lead"
+                "description": "* `public` - public\n* `client_cabinet` - client_cabinet\n* `letter` - letter"
             },
             "PartnerApplicationStatusEnum": {
                 "enum": [

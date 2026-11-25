@@ -7,15 +7,26 @@
 
 import asyncio
 import uuid
+from collections.abc import Iterator
 from datetime import UTC, datetime
 
 import pytest
-from sqlalchemy import func, select
+from fastapi.testclient import TestClient
+from sqlalchemy import func, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.bus.reasons import reason_code
+from app.config import Settings
 from app.domain.backoffice import BackofficeMode
-from app.domain.errors import InvalidTransitionError, UpstreamUnavailableError
+from app.domain.errors import (
+    InvalidTransitionError,
+    Reason,
+    UpstreamUnavailableError,
+    ValidationFailedError,
+)
+from app.domain.stages import Stage
 from app.integrations.erp_partner import PartnerApplicationPayload, PartnerApplicationResult
+from app.main import create_app
 from app.models.clients import Client
 from app.models.deals import Deal
 from app.models.leads import Lead
@@ -23,9 +34,12 @@ from app.models.qualification import Escalation
 from app.schemas.client_requests import RequestCreate
 from app.schemas.partner_handoff import PartnerHandoffIn
 from app.security.principal import Principal
+from app.services import dashboard
+from app.services import deals as deals_service
 from app.services.client_requests import ClientRequestService
+from app.services.leads import _move
 from app.services.partner_handoff import PartnerHandoffService
-from tests.integration.crm_helpers import make_user
+from tests.integration.crm_helpers import login, make_user
 from tests.integration.roles_helpers import audit_rows
 
 pytestmark = pytest.mark.integration
@@ -217,9 +231,174 @@ async def test_every_lead_channel_takes_the_same_partner_path(
     assert result.created
 
 
-def test_partner_form_needs_a_channel() -> None:
-    with pytest.raises(ValueError, match="e-mail or phone"):
-        _partner_body(email="", phone="")
+@pytest.mark.parametrize("email", ["a@b", "no-at.example", "a b@c.example", "a@-bad.example"])
+async def test_partner_email_is_validated_like_erp_before_erp_is_called(
+    sessions: async_sessionmaker[AsyncSession], email: str
+) -> None:
+    who, lead_id, erp = await _manager(sessions), await _lead(sessions), FakeErpPartners()
+    with pytest.raises(ValidationFailedError) as caught:
+        await _service(sessions, erp).hand_over(who, lead_id, _partner_body(email=email))
+    assert caught.value.details["reason"] == Reason.INVALID_EMAIL
+    assert caught.value.details["field"] == "email"
+    assert erp.calls == []
+
+
+def test_partner_form_needs_an_email() -> None:
+    with pytest.raises(ValueError, match="email"):
+        _partner_body(email="")
+
+
+@pytest.mark.parametrize("stage", ["customer", "won"])
+async def test_client_lead_is_refused_before_erp_is_called(
+    sessions: async_sessionmaker[AsyncSession], stage: str
+) -> None:
+    """The stage machine cannot close a client: refusing after ERP would leave a stray row."""
+    who, lead_id, erp = await _manager(sessions), await _lead(sessions), FakeErpPartners()
+    async with sessions() as session, session.begin():
+        lead = await session.get(Lead, lead_id)
+        assert lead is not None
+        lead.stage = stage
+    with pytest.raises(InvalidTransitionError):
+        await _service(sessions, erp).hand_over(who, lead_id, _partner_body())
+    assert erp.calls == []
+
+
+async def test_lead_with_a_client_is_refused_before_erp_is_called(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    who, lead_id, erp = await _manager(sessions), await _lead(sessions), FakeErpPartners()
+    async with sessions() as session, session.begin():
+        client = Client(name="Уже клиент")
+        session.add(client)
+        await session.flush()
+        lead = await session.get(Lead, lead_id)
+        assert lead is not None
+        lead.client_id = client.id
+    with pytest.raises(InvalidTransitionError):
+        await _service(sessions, erp).hand_over(who, lead_id, _partner_body())
+    assert erp.calls == []
+
+
+async def test_lead_closed_while_erp_was_called_is_not_reopened(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    """The second transaction re-checks: a lead discarded as spam meanwhile stays spam."""
+    who, lead_id = await _manager(sessions), await _lead(sessions)
+
+    class SpamWhileCalling(FakeErpPartners):
+        async def create_partner_application(
+            self, payload: PartnerApplicationPayload
+        ) -> PartnerApplicationResult:
+            async with sessions() as session, session.begin():
+                lead = await session.get(Lead, lead_id)
+                assert lead is not None
+                lead.stage, lead.discarded_kind = "lost", "spam"
+            return await super().create_partner_application(payload)
+
+    with pytest.raises(InvalidTransitionError):
+        await _service(sessions, SpamWhileCalling()).hand_over(who, lead_id, _partner_body())
+    async with sessions() as session:
+        lead = await session.get(Lead, lead_id)
+        assert lead is not None
+        assert (lead.discarded_kind, lead.partner_application_id) == ("spam", None)
+
+
+async def test_partner_handover_is_not_a_lost_sale(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    """The open deal stays open (not lost); sales summaries and the dashboard skip the lead."""
+    who, erp = await _manager(sessions), FakeErpPartners()
+    partner_lead, other_lead = await _lead(sessions), await _lead(sessions)
+    async with sessions() as session, session.begin():
+        for lead_id in (partner_lead, other_lead):
+            lead = await session.get(Lead, lead_id)
+            assert lead is not None
+            await deals_service.ensure_open_deal(session, lead)
+    await _service(sessions, erp).hand_over(who, partner_lead, _partner_body())
+
+    async with sessions() as session:
+        stages = {d.lead_id: d.stage for d in (await session.scalars(select(Deal))).all()}
+    assert stages[partner_lead] == "open", "the deal is not closed as lost"
+    # a lost deal of the partner lead (e.g. closed earlier) and of another lead, both closed now
+    async with sessions() as session, session.begin():
+        now = datetime.now(UTC)
+        await session.execute(
+            update(Deal).where(Deal.lead_id == other_lead).values(stage="lost", closed_at=now)
+        )
+        session.add(Deal(title="old", stage="lost", closed_at=now, lead_id=partner_lead))
+    async with sessions() as session:
+        report = await deals_service.summary(session, 30, datetime.now(UTC))
+    assert report.lost_count == 1, "only the other lead's deal is a lost sale"
+    assert report.open_count == 0, "the partner lead's open deal is not pipeline"
+    assert sum(d.lost for d in report.daily) == 1
+
+
+async def test_dashboard_view_does_not_count_the_handover_as_lost(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    who, erp = await _manager(sessions), FakeErpPartners()
+    partner_lead, spam_lead = await _lead(sessions), await _lead(sessions)
+    await _service(sessions, erp).hand_over(who, partner_lead, _partner_body())
+    async with sessions() as session, session.begin():
+        spam = await session.get(Lead, spam_lead)
+        assert spam is not None
+        await _move(session, spam, Stage.LOST, who, "discarded: spam")
+        await dashboard.refresh(session)
+    async with sessions() as session:
+        lost = await session.scalar(text("SELECT coalesce(sum(lost), 0) FROM mv_daily_stats"))
+    assert lost == 1, "the spam discard is a lost transition, the partner hand-over is not"
+
+
+def test_reason_of_the_handover_has_a_bus_code() -> None:
+    assert reason_code("user", "handed over as a partner") == "handed_over_partner"
+
+
+# ── HTTP: права и владелец ────────────────────────────────────────────────────────────
+
+
+@pytest.fixture
+def http(live_settings: Settings) -> Iterator[TestClient]:
+    with TestClient(create_app(live_settings)) as test_client:
+        yield test_client
+
+
+_PARTNER_JSON = {
+    "company_name": "Контур Партнёр",
+    "country": "UZ",
+    "offer": "Поставляем крепёж",
+    "contact_name": "Иван Партнёров",
+    "email": "ivan@partner.example",
+}
+
+
+async def test_http_viewer_cannot_hand_over(
+    http: TestClient, sessions: async_sessionmaker[AsyncSession]
+) -> None:
+    lead_id = await _lead(sessions)
+    viewer, password = await make_user(sessions, "lp1-viewer@example.com", ["viewer"])
+    auth = login(http, viewer.email, password)
+    response = http.post(
+        f"/api/v1/leads/{lead_id}/actions/hand_over_partner", json=_PARTNER_JSON, headers=auth
+    )
+    assert response.status_code == 403
+
+
+async def test_http_someone_elses_lead_is_not_lead_owner(
+    http: TestClient, sessions: async_sessionmaker[AsyncSession]
+) -> None:
+    lead_id = await _lead(sessions)
+    owner, _ = await make_user(sessions, "lp1-owner@example.com", ["manager"])
+    async with sessions() as session, session.begin():
+        lead = await session.get(Lead, lead_id)
+        assert lead is not None
+        lead.owner_mode, lead.assigned_user_id = "human", owner.id
+    other, password = await make_user(sessions, "lp1-other@example.com", ["manager"])
+    auth = login(http, other.email, password)
+    response = http.post(
+        f"/api/v1/leads/{lead_id}/actions/hand_over_partner", json=_PARTNER_JSON, headers=auth
+    )
+    assert response.status_code == 403
+    assert response.json()["details"]["reason"] == Reason.NOT_LEAD_OWNER
 
 
 # ── Клиент: одна компания — одна карточка ─────────────────────────────────────────────
@@ -340,3 +519,42 @@ async def test_a_different_text_from_the_same_lead_is_a_new_request_of_the_same_
     assert second.deal_id != first.deal_id
     assert second.client_id == first.client_id
     assert await _clients(sessions) == 1
+
+
+async def test_same_name_with_another_inn_is_another_company(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    who, queue = await _manager(sessions), Queue()
+    service = _client_service(sessions, queue)
+    first = await service.create_from_lead(
+        who, await _lead(sessions), _request(company={"name": "Рельс Трейд", "inn": "301111111"})
+    )
+    other = await service.create_from_lead(
+        who, await _lead(sessions), _request(company={"name": "Рельс Трейд", "inn": "302222222"})
+    )
+    assert other.client_id != first.client_id
+    assert await _clients(sessions) == 2
+
+
+async def test_country_of_the_lead_phone_separates_same_names(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    """The form has no country for a client: the dial code of the lead's phone is the hint."""
+    who, queue = await _manager(sessions), Queue()
+    service = _client_service(sessions, queue)
+    async with sessions() as session, session.begin():
+        kz = Client(name="Рельс Трейд", country="KZ")
+        session.add(kz)
+    async with sessions() as session, session.begin():
+        lead = await session.get(Lead, await _lead(sessions))
+        assert lead is not None
+        lead.phone_e164 = "+998901234567"
+        lead_id = lead.id
+    made = await service.create_from_lead(
+        who, lead_id, _request(company={"name": "Рельс Трейд", "inn": None})
+    )
+    async with sessions() as session:
+        client = await session.get(Client, made.client_id)
+        assert client is not None
+        assert (client.country, client.id) == ("UZ", client.id)
+        assert client.id != kz.id

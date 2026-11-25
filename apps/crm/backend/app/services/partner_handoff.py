@@ -19,22 +19,22 @@ import structlog
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.domain.backoffice import BackofficeMode
+from app.domain.contacts import partner_email
 from app.domain.errors import ConflictError, InvalidTransitionError, Reason
-from app.domain.stages import OwnerMode, Stage
+from app.domain.stage_machine import decide
+from app.domain.stages import OwnerMode, Stage, TransitionSource
 from app.integrations.erp_partner import ErpPartnerClient, PartnerApplicationPayload
 from app.models.leads import Lead
 from app.repositories import events
 from app.schemas.partner_handoff import PartnerHandoffIn, PartnerHandoffOut
 from app.security import audit
 from app.security.principal import Principal
-from app.services import deals, lead_parts
+from app.services import lead_parts
 from app.services.leads import _lead, _move, _require_owner
 
 logger = structlog.get_logger(__name__)
 
 BackofficeModeProvider = Callable[[], Awaitable[BackofficeMode]]
-
-PARTNER_DEAL_REASON = "Передан как партнёр"
 
 
 def lead_number(lead_id: int) -> str:
@@ -56,15 +56,18 @@ class PartnerHandoffService:
     async def hand_over(
         self, who: Principal, lead_id: int, body: PartnerHandoffIn
     ) -> PartnerHandoffOut:
+        email = partner_email(body.email)
         async with self._sessions() as session:
             lead = await _lead(session, lead_id)
             await _require_owner(session, lead, who)
             done = _already(lead)
+            if done is None:
+                # Everything that could refuse is checked BEFORE the ERP call: after it the lead
+                # must be closable, or an application without a closed lead is left behind.
+                _require_closable(lead)
             language = lead.language
         if done is not None:
             return done
-        if lead.discarded_kind is not None or lead.stage == Stage.LOST:
-            raise InvalidTransitionError("the lead is closed", reason=Reason.REQUEST_NOT_ALLOWED)
         if await self._mode() != BackofficeMode.ERP:
             raise ConflictError("erp connector is not configured", reason=Reason.ERP_NOT_CONFIGURED)
         result = await self._client.create_partner_application(
@@ -77,7 +80,7 @@ class PartnerHandoffService:
                 country=body.country,
                 inn=body.inn.strip(),
                 kind=body.kind,
-                email=body.email.strip(),
+                email=email,
                 phone=body.phone.strip(),
                 language=language,
             )
@@ -87,13 +90,14 @@ class PartnerHandoffService:
             done = _already(lead)
             if done is not None:  # a parallel request closed the lead first
                 return done
+            _require_closable(lead)  # spam, a client or another outcome appeared meanwhile
             before = lead_parts.snapshot(lead)
             await _move(session, lead, Stage.LOST, who, "handed over as a partner")
             lead.discarded_kind = "partner"
             lead.partner_application_id = result.erp_application_id
             lead.owner_mode = OwnerMode.BOT.value
             lead.snoozed_until = None
-            await deals.close_open_deal_lost(session, who, lead, PARTNER_DEAL_REASON)
+            # An open deal stays: a partner hand-over is not a lost sale (summaries skip it).
             escalation = await lead_parts.active_escalation(session, lead_id)
             if escalation is not None:
                 escalation.status, escalation.resolved_at = "closed", datetime.now(UTC)
@@ -119,6 +123,21 @@ class PartnerHandoffService:
         return PartnerHandoffOut(
             lead_id=lead_id, application_id=result.erp_application_id, created=result.created
         )
+
+
+def _require_closable(lead: Lead) -> None:
+    """A client lead, a lead the stage machine cannot close or one already closed for another
+    reason is not handed over as a partner."""
+    if lead.client_id is not None or lead.discarded_kind is not None:
+        raise InvalidTransitionError(
+            "the lead is a client or closed", reason=Reason.REQUEST_NOT_ALLOWED
+        )
+    if not decide(Stage(lead.stage), Stage.LOST, TransitionSource.USER).allowed:
+        raise InvalidTransitionError(
+            f"a lead in stage {lead.stage} cannot be handed over", reason=Reason.REQUEST_NOT_ALLOWED
+        )
+    if lead.stage == Stage.LOST:
+        raise InvalidTransitionError("the lead is closed", reason=Reason.REQUEST_NOT_ALLOWED)
 
 
 def _already(lead: Lead) -> PartnerHandoffOut | None:

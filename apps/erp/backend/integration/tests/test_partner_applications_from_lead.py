@@ -87,10 +87,13 @@ def test_rejected_application_does_not_block_a_new_one():
 
 
 @pytest.mark.django_db
-def test_email_is_optional_but_must_be_valid_when_given():
+def test_email_is_required_and_must_be_valid():
+    """Кандидата приглашают по почте: без неё (или с адресом, который отвергает Django) заявка не заводится."""
     api = _api()
-    assert _post(api, _body(lead=78, email="")).status_code == 201
+    assert _post(api, _body(lead=78, email="")).status_code == 422
     assert _post(api, _body(lead=79, email="not-an-email")).status_code == 422
+    assert _post(api, _body(lead=80, email="a@b")).status_code == 422
+    assert PartnerApplication.objects.count() == 0
 
 
 @pytest.mark.django_db(transaction=True)

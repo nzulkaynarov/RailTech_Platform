@@ -142,7 +142,7 @@
     "email": "Poçta",
     "phone": "Telefon",
     "offer": "Nima taklif qiladi",
-    "channelsHint": "Poçta yoki telefon kerak",
+    "channelsHint": "Poçta kerak: şartnoma şu manzilga keladi",
     "submit": "Hamkor sifatida topşiriş",
     "submitting": "Topşirilmoqda…",
     "cancel": "Bekor qiliş",
@@ -157,13 +157,14 @@
       "company": "Kompaniyani kiriting",
       "contact": "Aloqa şaxsini kiriting",
       "offer": "Hamkor nima taklif qilişini yozing",
-      "channel": "Poçta yoki telefon kerak",
-      "email": "Poçta manzilini tekşiring",
+      "email": "Poçtani kiriting",
       "request_not_allowed": "Lid allaqaçon yopilgan",
       "erp_not_configured": "Hisob ulanmagan",
       "not_lead_owner": "Bu lidni boşqa xodim yuritadi",
       "erp_unavailable": "Hisob javob bermayapti — maʼlumotlar saqlandi, birozdan keyin qayta urinib köring",
-      "generic": "Topşirib bölmadi. Maʼlumotlar saqlandi — qayta urinib köring"
+      "generic": "Topşirib bölmadi. Maʼlumotlar saqlandi — qayta urinib köring",
+      "invalid_email": "Poçta manzilini tekşiring",
+      "VALIDATION_FAILED": "Kiritilganni tekşiring"
     }
   }
 }

@@ -18022,7 +18022,7 @@ export interface components {
         comment?: string | null;
       } | null;
     };
-    /** @description Нужен e-mail или телефон */
+    /** @description Почта обязательна — по ней ERP приглашает кандидата согласовать договор; формат проверяет CRM (`details.reason = invalid_email`, поле `email`) */
     PartnerHandoffIn: {
       company_name: string;
       /**
@@ -18035,7 +18035,6 @@ export interface components {
       /** @description Что предлагает кандидат (из запроса лида) */
       offer: string;
       contact_name: string;
-      /** @default  */
       email: string;
       /** @default  */
       phone: string;
@@ -18979,10 +18978,10 @@ export interface components {
       can_act?: boolean;
     };
     /**
-     * @description Откуда заявка — внешний вход, кабинет клиента или входящее письмо (сотрудник, план 1.9)
+     * @description Откуда заявка — внешний вход, кабинет клиента, входящее письмо (сотрудник, план 1.9) или лид CRM (ЛП-1)
      * @enum {string}
      */
-    PartnerApplicationSource: "public" | "client_cabinet" | "letter";
+    PartnerApplicationSource: "public" | "client_cabinet" | "letter" | "lead";
     /** @enum {string} */
     PartnerApplicationStatus:
       | "submitted"

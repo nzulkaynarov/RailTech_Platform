@@ -228,7 +228,7 @@ SPECTACULAR_SETTINGS = {
         "TraceKindEnum": "inventory.serializers.TRACE_KINDS",
         "TraceStatusEnum": "inventory.serializers.TRACE_STATUSES",
         # PART-ONBOARD-2: заявки кандидатов в партнёры
-        "PartnerApplicationSourceEnum": ["public", "client_cabinet", "letter", "lead"],
+        "PartnerApplicationSourceEnum": ["public", "client_cabinet", "letter"],
         "PartnerApplicationStatusEnum": ["submitted", "contract_sent", "candidate_agreed", "approved", "rejected"],
     },
     "TAGS": [

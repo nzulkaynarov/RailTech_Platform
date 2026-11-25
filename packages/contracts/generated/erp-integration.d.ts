@@ -186,7 +186,7 @@ export interface paths {
      *     очередь «Заявки партнёров» (`source = lead`, `source_ref` = номер лида `lead_number`). Согласия кандидата ещё нет —
      *     дальше обычный договорный шлюз; компания создаётся при одобрении, а не здесь. Идемпотентно по `lead_number`:
      *     повтор и параллельный повтор (с любым `Idempotency-Key`) — 200 с той же заявкой, без второй строки в очереди;
-     *     отклонённая заявка повтор не блокирует. E-mail не обязателен (лид мог прийти по телефону).
+     *     отклонённая заявка повтор не блокирует. Почта обязательна.
      */
     post: operations["createPartnerApplication"];
     delete?: never;
@@ -606,7 +606,10 @@ export interface components {
       /** @description Что предлагает кандидат (из запроса лида) */
       categories_description: string;
       contact_name: string;
-      /** @default  */
+      /**
+       * Format: email
+       * @description Почта кандидата — по ней договорный шлюз ERP приглашает его согласовать договор; обязательна
+       */
       email: string;
       /** @default  */
       phone: string;

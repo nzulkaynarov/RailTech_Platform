@@ -150,7 +150,15 @@ class DeskSupplierAccessRelationshipPatch(serializers.Serializer):
 
 class DeskPartnerApplicationListItem(serializers.Serializer):
     id = serializers.IntegerField()
-    source = serializers.ChoiceField(choices=["public", "client_cabinet", "letter", "lead"])
+    source = serializers.ChoiceField(
+        choices=["public", "client_cabinet", "letter"],
+        help_text="Заявка из карточки лида CRM отдаётся как `letter` с `from_lead = true` (перечень не растёт: ERP SPA и BFF читают его строго).",
+    )
+    from_lead = serializers.BooleanField(
+        required=False,
+        default=False,
+        help_text="Заявка заведена из карточки лида CRM (ЛП-1): `source_ref` — номер лида",
+    )
     source_ref = serializers.CharField(
         allow_blank=True, required=False, help_text="Номер ВХ, если заявку завёл сотрудник по письму (план 1.9)"
     )

@@ -178,7 +178,7 @@ export const crmLeadsHandlers = [
     const limit = Number(url.searchParams.get("limit") ?? "50");
     const me = currentActor()?.id;
     const rows = readLeads()
-      .leads.filter((l) => !l.card.discarded)
+      .leads.filter((l) => !l.card.discarded && l.card.partner_application == null)
       .map((l) => l.row)
       .filter((row) => tab === "all" || row.status === tab)
       .filter((row) => scope !== "mine" || (me !== undefined && row.assigned?.id === me))
@@ -514,8 +514,9 @@ export const crmLeadsHandlers = [
         reason: "erp_unavailable",
       });
     }
-    if (!body.email && !body.phone) {
-      return rejected(422, "contact_channel_required", "Нужна почта или телефон.", ["email"]);
+    // Почта обязательна и проверяется как в ERP (Django): без неё и с чужим форматом заявка не уходит
+    if (!/^[^@\s]+@[^@\s]+\.[a-z0-9-]{2,}$/i.test(body.email)) {
+      return rejected(422, "invalid_email", "Проверьте адрес почты.", ["email"]);
     }
     const application =
       7000 + Object.keys(state.keys).filter((k) => k.startsWith("partner:")).length + 1;
