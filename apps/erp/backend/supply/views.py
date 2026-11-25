@@ -29,6 +29,7 @@ from supply.serializers import (
     PriceRequestAnswerInSerializer,
     PriceRequestInSerializer,
     PriceRequestListSerializer,
+    PriceRequestPreviewSerializer,
     PriceRequestSerializer,
     ReceiptInSerializer,
     ReceiptsSerializer,
@@ -443,6 +444,47 @@ class SupplyTaskListView(APIView):
             return fail(exc)
 
 
+def _partner_names(data) -> dict:
+    return {
+        row["line_id"]: {"name": row["name"], "article": row.get("article", "")}
+        for row in data.get("partner_names", [])
+    }
+
+
+class PriceRequestPreviewView(RoleGatedViewMixin, APIView):
+    """POST /api/v1/stock/price-requests/preview/ — что увидит партнёр: тема, строки нашими словами, заметка, адрес."""
+
+    permission_classes = [IsAuthenticated]
+    required_permissions = {"POST": "supply.manage"}
+
+    @extend_schema(
+        operation_id="stock_price_request_preview",
+        summary="Предпросмотр запроса цены партнёру (ничего не отправляет)",
+        tags=TAGS,
+        request=PriceRequestInSerializer,
+        responses={200: PriceRequestPreviewSerializer, **ERRORS},
+    )
+    def post(self, request):
+        serializer = PriceRequestInSerializer(data=request.data)
+        if not serializer.is_valid():
+            return invalid(serializer)
+        data = serializer.validated_data
+        try:
+            return Response(
+                price_requests.preview(
+                    request.user,
+                    data["deal_id"],
+                    data["supplier_id"],
+                    data["line_ids"],
+                    note=data["note"],
+                    to_email=data["to_email"],
+                    partner_names=_partner_names(data),
+                )
+            )
+        except StockError as exc:
+            return fail(exc)
+
+
 class PriceRequestListView(RoleGatedViewMixin, APIView):
     """GET/POST /api/v1/stock/price-requests/ — журнал запросов цены; POST — запросить цену у поставщика письмом."""
 
@@ -490,6 +532,7 @@ class PriceRequestListView(RoleGatedViewMixin, APIView):
                 data["line_ids"],
                 note=data["note"],
                 to_email=data["to_email"],
+                partner_names=_partner_names(data),
             )
             created = PriceRequest.objects.select_related("supplier", "deal", "requested_by", "answered_by").get(
                 pk=created.pk

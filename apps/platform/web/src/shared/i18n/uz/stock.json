@@ -407,6 +407,15 @@
     "submit": "Sörovni yuboriş",
     "sent": "Sörov {{email}} manziliga yuborildi",
     "failed": "«{{name}}» ga xat ketmadi: sörov jurnalda «yuborilmagan» holatida qoldi.",
+    "preview": {
+      "title": "Hamkor nimani köradi",
+      "subject": "Mavzu",
+      "to": "Kimga",
+      "note": "Hamkorga izoh",
+      "partnerName": "Hamkorga qanday ataş, {{n}}-qator",
+      "clientWords": "Sörovda: «{{name}}». Bu sözlar hamkorga yuborilmaydi.",
+      "missing": "Nomni kiriting: qatorda katalog kartasi yöq."
+    },
     "logTitle": "Hamkorlardan narx sörovlari",
     "logEmpty": "Sörovlar hali bölmagan.",
     "status": {

@@ -667,7 +667,7 @@
       "payButton": "Töladim",
       "payNamed": "Töladim: {{number}} hisob-faktura",
       "proofsLabel": "{{number}} hisob böyiça tölov topşiriqnomalari",
-      "proofLine": "{{name}} tölov topşiriqnomasi, {{date}}",
+      "proofLine": "Tölov topşiriqnomasi, {{date}}",
       "proofClaimed": "Siz körsatdingiz: {{amount}}",
       "proofClaimedDate": "Siz körsatdingiz: {{amount}}, tölangan sana {{date}}",
       "proofPaidOn": "Tölangan sana {{date}}",

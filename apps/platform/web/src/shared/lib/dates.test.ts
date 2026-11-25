@@ -6,6 +6,7 @@ import {
   formatActivityTime,
   formatDate,
   formatListDate,
+  formatRowTime,
 } from "./dates";
 
 describe("formatDate (часовой пояс компании — Asia/Tashkent, UTC+5)", () => {
@@ -48,13 +49,13 @@ describe("formatDate (часовой пояс компании — Asia/Tashkent
 describe("formatActivityTime", () => {
   const now = new Date("2026-10-25T05:00:00Z"); // 25.10, 10:00 в Ташкенте
 
-  it("сегодня — время, вчера — со словом, раньше — день и месяц, в прошлом году — с годом", () => {
+  it("сегодня — время, вчера — со словом, раньше — всегда с годом", () => {
     expect(formatActivityTime("2026-10-25T01:00:00Z", { now })).toBe("06:00");
     expect(formatActivityTime("2026-10-24T04:24:00Z", { now })).toBe("вчера 09:24");
     expect(formatActivityTime("2026-10-24T04:24:00Z", { now, language: "en" })).toBe(
       "yesterday 09:24",
     );
-    expect(formatActivityTime("2026-10-20T06:50:00Z", { now })).toBe("20.10 11:50");
+    expect(formatActivityTime("2026-10-20T06:50:00Z", { now })).toBe("20.10.2026 11:50");
     expect(formatActivityTime("2025-12-31T06:50:00Z", { now })).toBe("31.12.2025 11:50");
   });
 
@@ -75,13 +76,23 @@ describe("formatActivityTime", () => {
   });
 });
 
-describe("formatListDate (строка списка: сегодня — время, иначе — дата)", () => {
+describe("formatRowTime (колонка таблицы: всегда день и час)", () => {
   const now = new Date("2026-10-24T06:50:00Z");
-  it("сегодня — время", () => {
-    expect(formatListDate("2026-10-24T05:12:00Z", { now })).toBe("10:12");
+  it("сегодня, вчера и раньше — одной формой", () => {
+    expect(formatRowTime("2026-10-24T05:12:00Z", { now })).toBe("сегодня 10:12");
+    expect(formatRowTime("2026-10-23T16:08:00Z", { now, language: "en" })).toBe("yesterday 21:08");
+    expect(formatRowTime("2026-10-20T18:00:00Z", { now })).toBe("20.10.2026 23:00");
+    expect(formatRowTime(null, { now })).toBe("—");
   });
-  it("вчера и раньше — дата без времени", () => {
-    expect(formatListDate("2026-10-23T16:08:00Z", { now })).toBe("23.10.2026");
+});
+
+describe("formatListDate (строка списка: слово или дата, без времени)", () => {
+  const now = new Date("2026-10-24T06:50:00Z");
+  it("сегодня и вчера — словом", () => {
+    expect(formatListDate("2026-10-24T05:12:00Z", { now })).toBe("сегодня");
+    expect(formatListDate("2026-10-23T16:08:00Z", { now })).toBe("вчера");
+  });
+  it("раньше — дата с годом", () => {
     expect(formatListDate("2026-09-01T10:00:00Z", { now })).toBe("01.09.2026");
   });
   it("пусто — тире", () => {
