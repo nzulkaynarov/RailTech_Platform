@@ -88,7 +88,8 @@ describe("Раздел /help", () => {
     signInAs("accountant@demo.example");
     renderApp("/help");
     expect(await screen.findByRole("heading", { level: 1, name: "Помощь" })).toBeInTheDocument();
-    expect(await screen.findByText(/Ваша роль: Бухгалтер/)).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Бухгалтер" })).toBeInTheDocument();
+    expect(screen.queryByText(/Ваша роль/)).toBeNull();
     expect(screen.getByText(/Подтвердите оплату по выписке/)).toBeInTheDocument();
     expect(screen.getByText("Для других ролей")).toBeInTheDocument();
     expect(document.title).toContain("Помощь");
