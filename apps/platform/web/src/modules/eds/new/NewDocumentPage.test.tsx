@@ -364,6 +364,32 @@ describe("EDS · Создать документ: форма", () => {
     expect(saved?.letter?.registration_requested).not.toBeNull();
   });
 
+  it("автор с правом подписи: главная кнопка «Подписать и отправить» открывает карточку с окном подписания (Б-8)", async () => {
+    const { router } = await openForm("director@demo.example", "?type=letter");
+    type("Тема", "Ответ в банк");
+    await pickAddressee();
+    type("Текст", "Направляем реквизиты.");
+    // право подписи у документа появляется вместе с черновиком: форма сама сохраняет его при сборке PDF
+    step(/Проверка и отправка/);
+    const primary = await screen.findByRole("button", { name: /Подписать и отправить$/ });
+    await waitFor(() => {
+      expect(primary).toBeEnabled();
+    });
+    fireEvent.click(primary);
+
+    await waitFor(
+      () => {
+        expect(router.state.location.pathname).toBe("/eds/documents");
+      },
+      { timeout: 5000 },
+    );
+    expect(router.state.location.search).toContain("sign=1");
+    expect(
+      await screen.findByRole("dialog", { name: "Подписание исходящего письма" }),
+    ).toBeInTheDocument();
+    expect(readEds().documents.find((d) => d.subject === "Ответ в банк")?.status).toBe("draft");
+  });
+
   it("«Подготовить ответ»: форма заполнена из входящего — корреспондент, ИНН, почта, тема; можно поправить (EDS-REPLY-1)", async () => {
     const letter = readLetters().find((l) => l.number === "ВХ-108/26");
     if (!letter) throw new Error("нет письма в моках");
@@ -662,22 +688,23 @@ describe("EDS · Создать документ: форма", () => {
     second.router.dispose();
   });
 
-  it("сохранение черновика: ничего не отправляется, документ остаётся «Черновиком» и открывается карточкой", async () => {
+  it("сохранение черновика: ничего не отправляется, форма остаётся открытой, второе нажатие обновляет тот же черновик (Б-8)", async () => {
     const { router } = await openForm("manager@demo.example");
     fillMemo("Черновик заявки на ноутбук", "Нужен ноутбук для нового сотрудника.");
 
     fireEvent.click(screen.getByRole("button", { name: "Сохранить черновик" }));
 
+    expect(await screen.findByText("Черновик сохранён")).toBeVisible();
+    expect(router.state.location.pathname).toBe("/eds/new");
+    expect(screen.getByLabelText("Тема")).toHaveValue("Черновик заявки на ноутбук");
+    // дописали и сохранили ещё раз — форма по-прежнему на месте
+    type("Тема", "Черновик заявки на ноутбук Lenovo");
+    fireEvent.click(screen.getByRole("button", { name: "Сохранить черновик" }));
     await waitFor(() => {
-      expect(router.state.location.pathname).toBe("/eds/documents");
+      expect(screen.getAllByText("Черновик сохранён").length).toBeGreaterThan(0);
     });
-    const heading = await screen.findByRole("heading", {
-      level: 3,
-      name: "Черновик заявки на ноутбук",
-    });
-    const panel = heading.closest("#pf-context-panel") as HTMLElement;
-    expect(within(panel).getByText("Черновик")).toBeVisible();
-    expect(within(panel).getByRole("link", { name: "Продолжить" })).toBeVisible();
+    expect(router.state.location.pathname).toBe("/eds/new");
+    expect(screen.getByLabelText("Тема")).toHaveValue("Черновик заявки на ноутбук Lenovo");
   });
 
   it("вложение: файл загружается сразу, его можно убрать; слишком большой не отправляется", async () => {

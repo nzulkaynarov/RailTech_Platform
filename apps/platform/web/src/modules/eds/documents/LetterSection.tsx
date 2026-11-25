@@ -2,7 +2,7 @@ import { Alert, App, Button, Checkbox, Radio, Space } from "antd";
 import { Dialog } from "../../../shared/ui/Dialog";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link } from "react-router";
+import { Link, useSearchParams } from "react-router";
 
 import { canEdit } from "../../../app/access";
 import { useAuth } from "../../../app/auth/useAuth";
@@ -162,7 +162,11 @@ export function LetterSection({ doc }: { doc: EdsDocument }) {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickedSigner, setPickedSigner] = useState<string | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
-  const [signModalOpen, setSignModalOpen] = useState(false);
+  // «Подписать и отправить» из формы письма открывает карточку с `?sign=1`: окно «Способ отправки» уже на экране (Б-8)
+  const [params, setParams] = useSearchParams();
+  const [signModalOpen, setSignModalOpen] = useState(
+    () => params.get("sign") === "1" && doc.can_sign === true,
+  );
   const [dispatchMethod, setDispatchMethod] = useState<EdsDocumentSignInDispatchMethod>(
     doc.letter?.recipient_email ? "email" : "paper",
   );
@@ -177,6 +181,20 @@ export function LetterSection({ doc }: { doc: EdsDocument }) {
   const canBuild =
     doc.can_edit || doc.can_register === true || (doc.status === "sent" && canRegisterRole);
 
+  const closeSign = () => {
+    setSignModalOpen(false);
+    if (params.has("sign")) {
+      setParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          next.delete("sign");
+          return next;
+        },
+        { replace: true },
+      );
+    }
+  };
+
   const handleSign = async () => {
     setError(null);
     setBusy("sign");
@@ -186,7 +204,7 @@ export function LetterSection({ doc }: { doc: EdsDocument }) {
         send: dispatchMethod === "email" ? sendEmail : false,
       });
       void message.success(t("panel.letter.signed", { number: result.number ?? "" }));
-      setSignModalOpen(false);
+      closeSign();
       refresh();
     } catch (failure) {
       setError(t("panel.letter.actionFailed", { reason: reasonText(t, failure) }));
@@ -460,7 +478,7 @@ export function LetterSection({ doc }: { doc: EdsDocument }) {
       <Dialog
         open={signModalOpen}
         onCancel={() => {
-          if (busy !== "sign") setSignModalOpen(false);
+          if (busy !== "sign") closeSign();
         }}
         title={t("panel.letter.signModalTitle")}
         footer={[
@@ -468,7 +486,7 @@ export function LetterSection({ doc }: { doc: EdsDocument }) {
             key="cancel"
             disabled={busy === "sign"}
             onClick={() => {
-              setSignModalOpen(false);
+              closeSign();
             }}
           >
             {t("panel.letter.cancel")}

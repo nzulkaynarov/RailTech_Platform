@@ -232,8 +232,10 @@ test.describe("Создать документ: сотрудник", () => {
 
     await page.getByLabel("Сумма, сум").fill("1 000");
     await page.getByRole("button", { name: "Сохранить черновик" }).click();
-    await expect(side(page).getByText("Черновик")).toBeVisible();
-    await expect(side(page).getByRole("link", { name: "Продолжить" })).toBeVisible();
+    // Б-8: форма остаётся на месте, черновик лежит в «Документах · Внутренние»
+    await expect(page.getByText("Черновик сохранён")).toBeVisible();
+    await expect(page).toHaveURL(/\/eds\/new/);
+    await expect(page.getByLabel("Тема")).toHaveValue("Тема");
   });
 
   test("вложение: слишком большой файл и неподходящий тип отклоняются словами", async ({
@@ -281,7 +283,7 @@ test.describe("Создать документ: директор и реестр
     await expect(page.getByText("Заказ спецодежды для бригады")).toHaveCount(0);
   });
 
-  test("письмо: у директора есть адресат вместо «Кому», последний шаг — «Передать на подпись», номера до подписи нет", async ({
+  test("письмо: у директора есть адресат вместо «Кому», последний шаг — «Подписать и отправить», номера до подписи нет", async ({
     page,
   }) => {
     await loginAndWait(page, "director@demo.example");
@@ -296,15 +298,11 @@ test.describe("Создать документ: директор и реестр
     await openStep(page, CHECK);
     await settledScreenshot(page, "letter-form");
     await expect(page.getByRole("button", { name: /Зарегистрировать/ })).toHaveCount(0);
-    await send(page, "Передать на подпись");
-
-    const panel = side(page);
-    await expect(
-      panel.getByRole("heading", { level: 3, name: "Ответ на запрос цен" }),
-    ).toBeVisible();
-    await expect(panel.getByText(/Передано на подпись/)).toBeVisible();
-    await expect(panel.getByText(/OUT-\d{3}\/26/)).toHaveCount(0);
-    await expect(panel.getByText("АО «Демо-Путь»")).toBeVisible();
+    // право подписи у директора: кнопка называет то, что будет (Б-8); окно подписания — сразу в карточке
+    await send(page, "Подписать и отправить");
+    await expect(page).toHaveURL(/sign=1/);
+    await expect(page.getByRole("dialog", { name: "Подписание исходящего письма" })).toBeVisible();
+    await expect(page.getByText(/OUT-\d{3}\/26/)).toHaveCount(0);
   });
 
   test("менеджер готовит письмо и передаёт на подпись (P4, СЦ-9)", async ({ page }) => {

@@ -321,7 +321,8 @@
       "draft": "Qoralamani saqlaş",
       "uploadWait": "Fayllar yuklanişini kuting",
       "handover": "Imzoga topşiriş",
-      "sign": "Imzolaş"
+      "sign": "Imzolaş",
+      "signSend": "Imzolab yuboriş"
     },
     "validation": {
       "summary": "Belgilangan maydonlarni tuzating.",
@@ -339,8 +340,7 @@
     "toast": {
       "draft": "Qoralama saqlandi",
       "sent": "Kelişişga yuborildi: {{number}}",
-      "handover": "Imzoga topşirildi.",
-      "signReady": "Qoralama saqlandi — xatni kartoçkada imzolang."
+      "handover": "Imzoga topşirildi."
     },
     "error": {
       "send": "Yuborilmadi: {{reason}}",
