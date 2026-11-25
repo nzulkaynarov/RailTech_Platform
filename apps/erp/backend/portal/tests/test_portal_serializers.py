@@ -345,6 +345,7 @@ def test_contract_fields_and_signature_dates(contract_world):
         "signed_by_client_at",
         "signed_by_company_at",
         "document_id",
+        "term",
     }
     assert data["signed_by_client_at"] is not None and data["signed_by_company_at"] is not None
     pending = ContractSerializer(contract_world["contracts"]["sent"]).data

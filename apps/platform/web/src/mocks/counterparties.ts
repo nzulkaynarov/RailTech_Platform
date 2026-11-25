@@ -111,6 +111,27 @@ function baseCardOf(id: string): CounterpartyCard | null {
     bank_accounts: [],
     accounts_masked: masked,
     brands: [],
+    // ДС-1: у клиентов с чётным номером договор продлится сам, у остальных срок вышел и новые КП не создаются
+    contract_term:
+      client.id % 2 === 0
+        ? {
+            contract_id: 900 + client.id,
+            number: `ДОГ-2026/${String(client.id).padStart(3, "0")}`,
+            state: "renews",
+            valid_until: "2026-12-31",
+            last_notice_date: "2026-12-01",
+            foreign: false,
+            blocks_new_work: false,
+          }
+        : {
+            contract_id: 900 + client.id,
+            number: `ДОГ-2025/${String(client.id).padStart(3, "0")}`,
+            state: "expired",
+            valid_until: "2025-12-31",
+            last_notice_date: "2025-12-01",
+            foreign: false,
+            blocks_new_work: true,
+          },
   };
 }
 

@@ -12039,9 +12039,49 @@ export interface components {
       )[];
       /** @description ДОК-10: договор собран из утверждённого шаблона — название и редакция, отступление, путь по фактам; null — договор прежним путём */
       template?: components["schemas"]["ProjectContractTemplate"] | null;
+      /** @description ДС-1: срок подписанного договора (считает ERP при подписании); null — договор ещё не подписан или подписан до введения срока */
+      term?: components["schemas"]["ProjectContractTerm"] | null;
       /** @description Х-1: пока проект договора не ушёл клиенту — что мешает его отправить (визы маршрута подписи не собраны); null — ничего, действие send_to_client в actions. Считает ERP */
       send_blocker?: components["schemas"]["ProjectContractSendBlocker"] | null;
       history: components["schemas"]["ProjectJournalEntry"][];
+    };
+    /** @description Срок подписанного договора (ДС-1): правило компании и шаблона, считает ERP; вручную не вводится */
+    ProjectContractTerm: {
+      /**
+       * @description open — без срока; renews — продлится сам; ends — закончится (отказ или продление соглашением); expired — срок вышел
+       * @enum {string}
+       */
+      state: "open" | "renews" | "ends" | "expired";
+      /** @description calendar_year / twelve_months / open */
+      rule: string;
+      /** @description auto / by_agreement / none */
+      renewal: string;
+      /** Format: date */
+      valid_from: string;
+      /** Format: date */
+      valid_until: string | null;
+      /**
+       * Format: date
+       * @description Последний день отказа от продления
+       */
+      last_notice_date: string | null;
+      notice_days: number;
+      renewals_count: number;
+      /** @description Иностранный контрагент: продление соглашением, не автоматом */
+      foreign: boolean;
+      /** @enum {string|null} */
+      declined_by: "company" | "client" | null;
+      /** Format: date-time */
+      declined_at: string | null;
+      /** @description Редакция шаблона, на которой подписан договор */
+      template_edition: number | null;
+      /** @description Есть более новая утверждённая редакция шаблона */
+      newer_edition: number | null;
+      /** @description NDA: лет тайны после окончания договора (справка) */
+      confidentiality_years: number | null;
+      /** @description NDA: коммерческая тайна без срока (справка) */
+      trade_secret_indefinite: boolean;
+      actions: ("decline_renewal" | "renew" | "send_new_edition")[];
     };
     ProjectContractTemplate: {
       id: number | null;
@@ -12199,7 +12239,7 @@ export interface components {
     /** @description Действие по договору. `reason` обязательна для `reject`, `channel` и `counterparty_person` — для `client_agreed`: пустые BFF отклоняет (422). */
     ProjectContractActionIn: {
       /**
-       * @description `sign_ours`, `request_deviation`, `decide_deviation` — договор по утверждённому шаблону (ДОК-10): наша подпись до отправки, заявка на отступление, решение держателя «Право»
+       * @description `sign_ours`, `request_deviation`, `decide_deviation` — договор по утверждённому шаблону (ДОК-10): наша подпись до отправки, заявка на отступление, решение держателя «Право»; `decline_renewal`, `renew`, `send_new_edition` — срок договора (ДС-1): отказ от продления, продление соглашением, новая редакция шаблона на подпись
        * @enum {string}
        */
       action:
@@ -12210,7 +12250,10 @@ export interface components {
         | "mark_issued"
         | "sign_ours"
         | "request_deviation"
-        | "decide_deviation";
+        | "decide_deviation"
+        | "decline_renewal"
+        | "renew"
+        | "send_new_edition";
       reason?: string | null;
       note?: string | null;
       /** @description Только `client_agreed`, обязательно: как клиент сообщил согласие (A2 волны 18a) */
@@ -12221,6 +12264,8 @@ export interface components {
       text?: string | null;
       /** @description Только `decide_deviation`, обязательно: одобрить или отклонить */
       approve?: boolean | null;
+      /** @description Только `renew`: номер дополнительного соглашения, если есть */
+      agreement_number?: string | null;
     };
     OnBehalfNote: {
       channel: components["schemas"]["OnBehalfChannel"];
@@ -13823,6 +13868,28 @@ export interface components {
       default_client_contract_template?: number | null;
       /** @description ДОК-10: шаблон договора по умолчанию для партнёра — только утверждённый */
       default_partner_contract_template?: number | null;
+      /**
+       * @description ДС-1: срок договора по умолчанию — до 31 декабря, 12 месяцев или без срока; шаблон может задать своё
+       * @enum {string}
+       */
+      contract_term_rule?: "calendar_year" | "twelve_months" | "open";
+      /** @description ДС-1: договор продлевается сам, если никто не отказался до последнего дня уведомления */
+      contract_auto_renew?: boolean;
+      /** @description ДС-1: за сколько дней до конца срока можно отказаться от продления */
+      contract_notice_days?: number;
+      /** @description ДС-1: с какого числа декабря первый срок идёт до конца следующего года */
+      contract_next_year_from_day?: number;
+      /** @description ДС-1: первое напоминание — за столько дней до последнего дня уведомления */
+      contract_remind_first_days?: number;
+      /** @description ДС-1: второе напоминание — за столько дней до последнего дня уведомления */
+      contract_remind_last_days?: number;
+      /** @description ДС-1: иностранный контрагент — напомнить о дополнительном соглашении за столько дней до конца срока */
+      contract_foreign_remind_days?: number;
+      /**
+       * @description ДС-1: после окончания срока — не создавать новые КП и сделки или только предупреждать; начатая работа не блокируется никогда
+       * @enum {string}
+       */
+      contract_expired_action?: "block" | "warn";
     };
     /** @description Поля маржи без права на `cost_margin` — 403 `FORBIDDEN` (`details.fields`). */
     QuoteDefaultsUpdate: {
@@ -13877,6 +13944,28 @@ export interface components {
       default_client_contract_template?: number | null;
       /** @description ДОК-10: шаблон договора по умолчанию для партнёра — только утверждённый */
       default_partner_contract_template?: number | null;
+      /**
+       * @description ДС-1: срок договора по умолчанию — до 31 декабря, 12 месяцев или без срока; шаблон может задать своё
+       * @enum {string}
+       */
+      contract_term_rule?: "calendar_year" | "twelve_months" | "open";
+      /** @description ДС-1: договор продлевается сам, если никто не отказался до последнего дня уведомления */
+      contract_auto_renew?: boolean;
+      /** @description ДС-1: за сколько дней до конца срока можно отказаться от продления */
+      contract_notice_days?: number;
+      /** @description ДС-1: с какого числа декабря первый срок идёт до конца следующего года */
+      contract_next_year_from_day?: number;
+      /** @description ДС-1: первое напоминание — за столько дней до последнего дня уведомления */
+      contract_remind_first_days?: number;
+      /** @description ДС-1: второе напоминание — за столько дней до последнего дня уведомления */
+      contract_remind_last_days?: number;
+      /** @description ДС-1: иностранный контрагент — напомнить о дополнительном соглашении за столько дней до конца срока */
+      contract_foreign_remind_days?: number;
+      /**
+       * @description ДС-1: после окончания срока — не создавать новые КП и сделки или только предупреждать; начатая работа не блокируется никогда
+       * @enum {string}
+       */
+      contract_expired_action?: "block" | "warn";
     };
     /** @description Шаблон договора с утверждением (ДОК-10) */
     ContractTemplate: {
@@ -18672,6 +18761,21 @@ export interface components {
       brands: components["schemas"]["CounterpartyRef"][];
       /** @description Х-8: отметка «Не работать» — причина, кто и когда поставил, срок; нет — работаем */
       do_not_work?: components["schemas"]["DoNotWork"] | null;
+      /** @description ДС-1: срок действующего или последнего подписанного договора; null — подписанных договоров со сроком нет */
+      contract_term?: components["schemas"]["CounterpartyContractTerm"] | null;
+    };
+    CounterpartyContractTerm: {
+      contract_id: number;
+      number: string;
+      /** @enum {string} */
+      state: "open" | "renews" | "ends" | "expired";
+      /** Format: date */
+      valid_until: string | null;
+      /** Format: date */
+      last_notice_date: string | null;
+      foreign: boolean;
+      /** @description Срок вышел и правило компании не даёт начинать новые КП */
+      blocks_new_work: boolean;
     };
     /** @description Отметка «Не работать» у контрагента (Х-8) — факты, а не флаг */
     DoNotWork: {

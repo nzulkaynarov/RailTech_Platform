@@ -1029,7 +1029,7 @@ paths:
           description: ''
         '400':
           description: BAD_CURRENCY / BAD_DELIVERY_BASIS / BAD_NUMBER / BAD_PRICE_VISIBILITY / BAD_PUBLISH_THRESHOLD / BAD_FX_RATE_MAX_AGE_DAYS
-            / BAD_BOOLEAN / DOC_PREFIX_TAKEN
+            / BAD_BOOLEAN / BAD_CHOICE / DOC_PREFIX_TAKEN
           content:
             application/json:
               schema:
@@ -1083,7 +1083,7 @@ paths:
           description: ''
         '400':
           description: BAD_CURRENCY / BAD_DELIVERY_BASIS / BAD_NUMBER / BAD_PRICE_VISIBILITY / BAD_PUBLISH_THRESHOLD / BAD_FX_RATE_MAX_AGE_DAYS
-            / BAD_BOOLEAN / DOC_PREFIX_TAKEN
+            / BAD_BOOLEAN / BAD_CHOICE / DOC_PREFIX_TAKEN
           content:
             application/json:
               schema:
@@ -9991,6 +9991,35 @@ paths:
           $ref: '#/components/responses/ForbiddenResponse'
         '404':
           $ref: '#/components/responses/NotFoundResponse'
+  /api/v1/crm/contracts/{id}/decline-renewal/:
+    post:
+      operationId: crm_contracts_decline_renewal_create
+      description: Contracts -- generated from approved quotes, double-signed.
+      summary: Decline the automatic renewal of a signed contract (ДС-1)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Контракт.
+        required: true
+      tags:
+      - CRM
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContractFlow'
+          description: ''
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+        '403':
+          $ref: '#/components/responses/ForbiddenResponse'
+        '404':
+          $ref: '#/components/responses/NotFoundResponse'
   /api/v1/crm/contracts/{id}/download-pdf/:
     get:
       operationId: crm_contracts_download_pdf_retrieve
@@ -10219,6 +10248,48 @@ paths:
             отправка договора клиенту до сбора виз — в теле `reason` (причина словами) и `missing` (роли без визы)'
         '401':
           $ref: '#/components/responses/UnauthorizedResponse'
+  /api/v1/crm/contracts/{id}/renew/:
+    post:
+      operationId: crm_contracts_renew_create
+      description: Contracts -- generated from approved quotes, double-signed.
+      summary: Renew the contract by agreement of the parties (foreign counterparty, expired term; ДС-1)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Контракт.
+        required: true
+      tags:
+      - CRM
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContractRenewByAgreementRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ContractRenewByAgreementRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ContractRenewByAgreementRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContractFlow'
+          description: ''
+        '400':
+          $ref: '#/components/responses/BadRequestResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+        '403':
+          $ref: '#/components/responses/ForbiddenResponse'
+        '404':
+          $ref: '#/components/responses/NotFoundResponse'
   /api/v1/crm/contracts/{id}/request-deviation/:
     post:
       operationId: crm_contracts_request_deviation_create
@@ -10434,6 +10505,35 @@ paths:
           description: ''
         '400':
           $ref: '#/components/responses/BadRequestResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+        '403':
+          $ref: '#/components/responses/ForbiddenResponse'
+        '404':
+          $ref: '#/components/responses/NotFoundResponse'
+  /api/v1/crm/contracts/{id}/send-new-edition/:
+    post:
+      operationId: crm_contracts_send_new_edition_create
+      description: Contracts -- generated from approved quotes, double-signed.
+      summary: Send the new edition of the template to the counterparty for signature (ДС-1)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Контракт.
+        required: true
+      tags:
+      - CRM
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContractFlow'
+          description: ''
         '401':
           $ref: '#/components/responses/UnauthorizedResponse'
         '403':
@@ -25670,6 +25770,54 @@ components:
           type: integer
           nullable: true
           title: 'Шаблон договора по умолчанию: партнёр'
+        contract_term_rule:
+          allOf:
+          - $ref: '#/components/schemas/ContractTermRuleEnum'
+          title: Срок договора по умолчанию
+          description: |-
+            До 31 декабря года подписания, 12 месяцев с подписания или без срока. Шаблон может задать своё.
+
+            * `calendar_year` - До 31 декабря
+            * `twelve_months` - 12 месяцев с подписания
+            * `open` - Без срока
+        contract_auto_renew:
+          type: boolean
+          title: Договор продлевается сам
+          description: На следующий срок, если ни одна сторона не отказалась до последнего дня уведомления.
+        contract_notice_days:
+          type: integer
+          maximum: 365
+          minimum: 0
+          title: За сколько дней отказаться от продления
+        contract_next_year_from_day:
+          type: integer
+          maximum: 31
+          minimum: 1
+          title: С какого числа декабря первый срок — до конца следующего года
+        contract_remind_first_days:
+          type: integer
+          maximum: 365
+          minimum: 1
+          title: 'Первое напоминание: за сколько дней до последнего дня уведомления'
+        contract_remind_last_days:
+          type: integer
+          maximum: 365
+          minimum: 1
+          title: 'Второе напоминание: за сколько дней до последнего дня уведомления'
+        contract_foreign_remind_days:
+          type: integer
+          maximum: 365
+          minimum: 1
+          title: 'Иностранный контрагент: напомнить о доп. соглашении за дней до конца срока'
+        contract_expired_action:
+          allOf:
+          - $ref: '#/components/schemas/ContractExpiredActionEnum'
+          title: Что делать после окончания срока
+          description: |-
+            Касается только новых КП и сделок; начатая работа, оплаты и претензии не блокируются никогда.
+
+            * `block` - Не создавать новые КП и сделки
+            * `warn` - Только предупреждать
         doc_number_prefix:
           type: string
           title: Префикс нумерации документов
@@ -26085,6 +26233,11 @@ components:
           allOf:
           - $ref: '#/components/schemas/ContractTemplateCard'
           nullable: true
+        term:
+          allOf:
+          - $ref: '#/components/schemas/ContractTermCard'
+          nullable: true
+          description: 'Срок: только у подписанного договора'
         total:
           allOf:
           - $ref: '#/components/schemas/ProjectMoney'
@@ -26182,6 +26335,14 @@ components:
           minLength: 1
       required:
       - text
+    ContractExpiredActionEnum:
+      enum:
+      - block
+      - warn
+      type: string
+      description: |-
+        * `block` - Не создавать новые КП и сделки
+        * `warn` - Только предупреждать
     ContractFlow:
       type: object
       description: |-
@@ -26339,6 +26500,12 @@ components:
       - number
       - sent_to_client
       - status
+    ContractRenewByAgreementRequest:
+      type: object
+      properties:
+        agreement_number:
+          type: string
+          minLength: 1
     ContractRequest:
       type: object
       properties:
@@ -26495,6 +26662,105 @@ components:
       description: |-
         * `supply` - supply
         * `services` - services
+    ContractTermCard:
+      type: object
+      description: 'Срок подписанного договора (ДС-1): считается при подписании из правила компании и шаблона; вручную не
+        вводится.'
+      properties:
+        state:
+          type: string
+          description: open — без срока; renews — продлится сам; ends — закончится (отказ или продление соглашением); expired
+            — срок вышел
+        rule:
+          type: string
+          description: calendar_year / twelve_months / open
+        renewal:
+          type: string
+          description: auto / by_agreement / none
+        valid_from:
+          type: string
+          format: date
+        valid_until:
+          type: string
+          format: date
+          nullable: true
+        last_notice_date:
+          type: string
+          format: date
+          nullable: true
+          description: Последний день отказа от продления
+        notice_days:
+          type: integer
+        renewals_count:
+          type: integer
+        foreign:
+          type: boolean
+          description: 'Иностранный контрагент: продление — соглашением, не автоматом'
+        declined_by:
+          type: string
+          nullable: true
+          description: company / client; null — отказа нет
+        declined_at:
+          type: string
+          format: date-time
+          nullable: true
+        template_edition:
+          type: integer
+          nullable: true
+          description: Редакция шаблона, на которой подписан договор
+        newer_edition:
+          type: integer
+          nullable: true
+          description: Есть более новая утверждённая редакция шаблона
+        confidentiality_years:
+          type: integer
+          nullable: true
+          description: 'NDA: лет тайны после окончания (справка)'
+        trade_secret_indefinite:
+          type: boolean
+          description: 'NDA: коммерческая тайна — без срока (справка)'
+        actions:
+          type: array
+          items:
+            $ref: '#/components/schemas/ContractTermCardActionsEnum'
+          description: Что можно сделать СЕЙЧАС этому сотруднику со сроком договора
+      required:
+      - actions
+      - confidentiality_years
+      - declined_at
+      - declined_by
+      - foreign
+      - last_notice_date
+      - newer_edition
+      - notice_days
+      - renewal
+      - renewals_count
+      - rule
+      - state
+      - template_edition
+      - trade_secret_indefinite
+      - valid_from
+      - valid_until
+    ContractTermCardActionsEnum:
+      enum:
+      - decline_renewal
+      - renew
+      - send_new_edition
+      type: string
+      description: |-
+        * `decline_renewal` - decline_renewal
+        * `renew` - renew
+        * `send_new_edition` - send_new_edition
+    ContractTermRuleEnum:
+      enum:
+      - calendar_year
+      - twelve_months
+      - open
+      type: string
+      description: |-
+        * `calendar_year` - До 31 декабря
+        * `twelve_months` - 12 месяцев с подписания
+        * `open` - Без срока
     ContractTransitionInRequest:
       type: object
       properties:
@@ -27531,6 +27797,42 @@ components:
       - price
       - source
       - visibility
+    DeskContractTerm:
+      type: object
+      description: 'Срок договора с контрагентом (ДС-1): последний или действующий подписанный договор.'
+      properties:
+        contract_id:
+          type: integer
+        deal_id:
+          type: integer
+          description: 'Сделка договора: карточка проекта открывается по ней'
+        number:
+          type: string
+        state:
+          type: string
+          description: open / renews / ends / expired
+        valid_until:
+          type: string
+          format: date
+          nullable: true
+        last_notice_date:
+          type: string
+          format: date
+          nullable: true
+        foreign:
+          type: boolean
+        blocks_new_work:
+          type: boolean
+          description: Срок вышел и правило компании не даёт начинать новые КП
+      required:
+      - blocks_new_work
+      - contract_id
+      - deal_id
+      - foreign
+      - last_notice_date
+      - number
+      - state
+      - valid_until
     DeskCounterparty:
       type: object
       description: Карточка контрагента — одна компания во всех ролях (ADR-0028, СУЩ-2.5).
@@ -27582,6 +27884,11 @@ components:
           - $ref: '#/components/schemas/DoNotWorkFacts'
           nullable: true
           description: 'Отметка «Не работать» (Х-8): причина, кто и когда поставил, срок; `null` — с компанией работаем'
+        contract_term:
+          allOf:
+          - $ref: '#/components/schemas/DeskContractTerm'
+          nullable: true
+          description: Срок договора (ДС-1); `null` — подписанных договоров со сроком нет
       required:
       - accounts_masked
       - bank_accounts
@@ -30665,6 +30972,37 @@ components:
           oneOf:
           - $ref: '#/components/schemas/DocumentTemplateSubjectEnum'
           - $ref: '#/components/schemas/BlankEnum'
+        term_rule:
+          readOnly: true
+          oneOf:
+          - $ref: '#/components/schemas/ContractTermRuleEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+        renewal_mode:
+          readOnly: true
+          oneOf:
+          - $ref: '#/components/schemas/RenewalModeEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+        notice_days:
+          type: integer
+          readOnly: true
+          nullable: true
+          title: За сколько дней отказаться от продления
+          description: Пусто — как у компании.
+        confidentiality_years:
+          type: integer
+          readOnly: true
+          nullable: true
+          title: Тайна после окончания договора (лет)
+          description: 'Для NDA: справка в карточке договора; срок договора она не меняет.'
+        trade_secret_indefinite:
+          type: boolean
+          readOnly: true
+          title: Коммерческая тайна — без срока
+          description: 'Для NDA: справка в карточке договора.'
+        renewal_notice:
+          readOnly: true
+          title: Текст уведомления о продлении
+          description: '{ru, uz, en}: строка к уведомлению контрагента в Кабинете; пусто — стандартный текст.'
         is_locked:
           type: boolean
           readOnly: true
@@ -30687,6 +31025,7 @@ components:
       - approval_status
       - approved_at
       - approved_by_name
+      - confidentiality_years
       - counterparty_kind
       - created_at
       - edition
@@ -30699,9 +31038,14 @@ components:
       - kind_name
       - languages
       - name
+      - notice_days
       - placeholders_used
+      - renewal_mode
+      - renewal_notice
       - subject
       - submitted_at
+      - term_rule
+      - trade_secret_indefinite
       - updated_at
     DocumentTemplateCopyRequest:
       type: object
@@ -34726,6 +35070,54 @@ components:
           type: integer
           nullable: true
           title: 'Шаблон договора по умолчанию: партнёр'
+        contract_term_rule:
+          allOf:
+          - $ref: '#/components/schemas/ContractTermRuleEnum'
+          title: Срок договора по умолчанию
+          description: |-
+            До 31 декабря года подписания, 12 месяцев с подписания или без срока. Шаблон может задать своё.
+
+            * `calendar_year` - До 31 декабря
+            * `twelve_months` - 12 месяцев с подписания
+            * `open` - Без срока
+        contract_auto_renew:
+          type: boolean
+          title: Договор продлевается сам
+          description: На следующий срок, если ни одна сторона не отказалась до последнего дня уведомления.
+        contract_notice_days:
+          type: integer
+          maximum: 365
+          minimum: 0
+          title: За сколько дней отказаться от продления
+        contract_next_year_from_day:
+          type: integer
+          maximum: 31
+          minimum: 1
+          title: С какого числа декабря первый срок — до конца следующего года
+        contract_remind_first_days:
+          type: integer
+          maximum: 365
+          minimum: 1
+          title: 'Первое напоминание: за сколько дней до последнего дня уведомления'
+        contract_remind_last_days:
+          type: integer
+          maximum: 365
+          minimum: 1
+          title: 'Второе напоминание: за сколько дней до последнего дня уведомления'
+        contract_foreign_remind_days:
+          type: integer
+          maximum: 365
+          minimum: 1
+          title: 'Иностранный контрагент: напомнить о доп. соглашении за дней до конца срока'
+        contract_expired_action:
+          allOf:
+          - $ref: '#/components/schemas/ContractExpiredActionEnum'
+          title: Что делать после окончания срока
+          description: |-
+            Касается только новых КП и сделок; начатая работа, оплаты и претензии не блокируются никогда.
+
+            * `block` - Не создавать новые КП и сделки
+            * `warn` - Только предупреждать
         doc_number_prefix:
           type: string
           title: Префикс нумерации документов
@@ -39554,6 +39946,16 @@ components:
           type: integer
       required:
       - member_id
+    RenewalModeEnum:
+      enum:
+      - auto
+      - by_agreement
+      - none
+      type: string
+      description: |-
+        * `auto` - Продлевается сам
+        * `by_agreement` - Продлевается соглашением
+        * `none` - Не продлевается
     RequestFile:
       type: object
       properties:

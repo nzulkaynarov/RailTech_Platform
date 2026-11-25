@@ -35,6 +35,15 @@ from crm.serializers import (
     GeneratedDocumentSerializer,
 )
 
+_TERM_KEYS = (
+    "term_rule",
+    "renewal_mode",
+    "notice_days",
+    "confidentiality_years",
+    "trade_secret_indefinite",
+    "renewal_notice",
+)
+
 
 class DocumentSendEmailThrottle(UserRateThrottle):
     """Per-user rate cap on document email dispatch — the platform must not become an open
@@ -229,6 +238,7 @@ class DocumentTemplateViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
                 kind_code=request.data.get("kind"),
                 body_html=request.data.get("body_html"),
                 is_active=_as_flag(request.data.get("is_active"), default=None),
+                term={k: request.data[k] for k in _TERM_KEYS if k in request.data},
             )
         except DjangoValidationError as exc:
             return _template_error(exc)

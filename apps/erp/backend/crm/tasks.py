@@ -611,3 +611,19 @@ def _remind_overdue_invoice(invoice) -> None:
         invoice.save(update_fields=["payment_reminder_sent_at", "updated_at"])
         events.publish_invoice_event("invoice.overdue", invoice)
         transaction.on_commit(lambda: email_payment_reminder(invoice), robust=True)
+
+
+@shared_task(
+    bind=True,
+    name="crm.run_contract_terms",
+    time_limit=600,
+    soft_time_limit=540,
+    max_retries=3,
+    autoretry_for=(Exception,),
+    retry_backoff=True,
+)
+def run_contract_terms(self) -> dict:
+    """ДС-1: ежедневно — продлить договоры «сам», напомнить о последнем дне отказа; повтор в тот же день ничего не меняет."""
+    from .services import contract_term
+
+    return contract_term.run_daily()

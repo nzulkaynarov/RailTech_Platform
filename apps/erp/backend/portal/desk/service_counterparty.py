@@ -11,6 +11,7 @@
 from __future__ import annotations
 
 import re
+from typing import Optional
 
 from django.conf import settings
 from django.db import transaction
@@ -126,7 +127,15 @@ def card(company: Company, client_ids: set, user) -> dict:
             for brand in Manufacturer.objects.filter(company=company).order_by("name")
         ],
         "do_not_work": do_not_work.facts(company),
+        "contract_term": _contract_term(company),
     }
+
+
+def _contract_term(company) -> Optional[dict]:
+    """ДС-1: срок действующего (или последнего) договора с компанией; `None` — подписанных договоров со сроком нет."""
+    from crm.services import contract_term
+
+    return contract_term.counterparty_term(company)
 
 
 @transaction.atomic

@@ -169,6 +169,38 @@ class ContractTemplateCardSerializer(serializers.Serializer):
     )
 
 
+class ContractTermCardSerializer(serializers.Serializer):
+    """Срок подписанного договора (ДС-1): считается при подписании из правила компании и шаблона; вручную не вводится."""
+
+    state = serializers.CharField(
+        help_text="open — без срока; renews — продлится сам; ends — закончится (отказ или продление соглашением); expired — срок вышел",
+    )
+    rule = serializers.CharField(help_text="calendar_year / twelve_months / open")
+    renewal = serializers.CharField(help_text="auto / by_agreement / none")
+    valid_from = serializers.DateField()
+    valid_until = serializers.DateField(allow_null=True)
+    last_notice_date = serializers.DateField(allow_null=True, help_text="Последний день отказа от продления")
+    notice_days = serializers.IntegerField()
+    renewals_count = serializers.IntegerField()
+    foreign = serializers.BooleanField(help_text="Иностранный контрагент: продление — соглашением, не автоматом")
+    declined_by = serializers.CharField(allow_null=True, help_text="company / client; null — отказа нет")
+    declined_at = serializers.DateTimeField(allow_null=True)
+    template_edition = serializers.IntegerField(
+        allow_null=True, help_text="Редакция шаблона, на которой подписан договор"
+    )
+    newer_edition = serializers.IntegerField(
+        allow_null=True, help_text="Есть более новая утверждённая редакция шаблона"
+    )
+    confidentiality_years = serializers.IntegerField(
+        allow_null=True, help_text="NDA: лет тайны после окончания (справка)"
+    )
+    trade_secret_indefinite = serializers.BooleanField(help_text="NDA: коммерческая тайна — без срока (справка)")
+    actions = serializers.ListField(
+        child=serializers.ChoiceField(choices=["decline_renewal", "renew", "send_new_edition"]),
+        help_text="Что можно сделать СЕЙЧАС этому сотруднику со сроком договора",
+    )
+
+
 class ContractSendBlockerSerializer(serializers.Serializer):
     """Почему проект договора нельзя отправить клиенту: визы Х-1 (ADR-0025), отступление или наша подпись (ДОК-10)."""
 
@@ -210,6 +242,7 @@ class ContractConflictSerializer(serializers.Serializer):
 
 class ContractCardSerializer(ContractRefSerializer):
     template = ContractTemplateCardSerializer(allow_null=True)
+    term = ContractTermCardSerializer(allow_null=True, required=False, help_text="Срок: только у подписанного договора")
     total = ProjectMoneySerializer(allow_null=True)
     created_at = serializers.DateTimeField()
     client_agreed_at = serializers.DateTimeField(allow_null=True)

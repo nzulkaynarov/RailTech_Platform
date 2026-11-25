@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform ERP — Portal API (Cabinet → ERP)
-  version: 0.22.0
+  version: 0.23.0
   summary: Пространство `/api/portal/v1/` — вызывает Cabinet SPA от имени клиента.
   description: |
     Контракт по `docs/architecture/CONTRACTS.md` §4 и ADR-0004 (Cabinet без бэкенда). Версия 0 (M0-INF-02):
@@ -1617,6 +1617,42 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           description: Договор уже подписан или отменён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '400':
+          $ref: '#/components/responses/IdempotencyKeyRequired'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /contracts/{id}/decline-renewal:
+    post:
+      tags: [contracts]
+      operationId: declineContractRenewal
+      summary: Отказаться от продления договора
+      description: >-
+        Договор доживёт до конца срока и закончится; начатые сделки, оплаты и претензии не затрагиваются. Можно до
+        `term.last_notice_date`; позже — 409 `TERM_NOTICE_PASSED`, повтор — 409 `TERM_ALREADY_DECLINED`, у договора без
+        автопродления отказывать не от чего — 409 `TERM_NOT_AVAILABLE`.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: Отказ записан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Contract'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Срок отказа вышел, отказ уже записан или продления нет
           content:
             application/json:
               schema:
@@ -3903,6 +3939,9 @@ components:
         - QUOTE_EXPIRED
         - QUOTE_CODE_INVALID
         - CONTRACT_FINALIZED
+        - TERM_NOTICE_PASSED
+        - TERM_ALREADY_DECLINED
+        - TERM_NOT_AVAILABLE
         - ACT_FINALIZED
         - DELIVERY_LINE_NOT_ACCEPTABLE
         - DOCUMENT_PENDING
@@ -5728,7 +5767,8 @@ components:
         банковских реквизитов, `bank_requisites_changed` — смену подтвердил сотрудник, `bank_requisites_change_rejected` —
         сотрудник отклонил смену (FX-4; группа `security`, отключить нельзя), `new_device_login` — контакт компании вошёл
         с нового устройства (ДВ-6; группа `security`, администраторам и основному контакту; `object.id` — событие журнала
-        безопасности, `params`: `name`, `device`, `ip`).
+        безопасности, `params`: `name`, `device`, `ip`), `contract_renewed` — срок договора продлён (ДС-1; `params`:
+        `number`, `until`, `count`, `note`), `contract_renewal_declined` — компания отказалась от продления (`number`, `until`).
         Незнакомый вид Cabinet показывает общим текстом.
       enum:
         - quote_sent
@@ -5747,6 +5787,8 @@ components:
         - bank_requisites_change_requested
         - bank_requisites_change_rejected
         - new_device_login
+        - contract_renewed
+        - contract_renewal_declined
 
     NotificationGroup:
       type: string
@@ -5755,7 +5797,7 @@ components:
 
     NotificationObjectType:
       type: string
-      enum: [quote, invoice, act, delivery, chat, partner_product, partner_order, partner_rfq, bank_change, security_event]
+      enum: [quote, invoice, act, delivery, chat, partner_product, partner_order, partner_rfq, bank_change, security_event, contract]
 
     NotificationAction:
       type: string
@@ -6398,6 +6440,39 @@ components:
         document_id:
           type: [integer, 'null']
           format: int64
+        term:
+          description: Срок подписанного договора (ДС-1); `null` — договор ещё не подписан или подписан до введения срока
+          oneOf:
+            - $ref: '#/components/schemas/ContractTerm'
+            - type: 'null'
+
+    ContractTerm:
+      type: object
+      description: |
+        Срок договора считается при подписании из правила компании и шаблона. `state`: `open` — без срока, `renews` —
+        продлится сам, `ends` — закончится (отказ одной из сторон или продление только соглашением), `expired` — срок
+        вышел. Отказаться от продления можно до `last_notice_date` (`can_decline`).
+      required: [state, valid_from, valid_until, last_notice_date, declined_by, can_decline]
+      properties:
+        state:
+          type: string
+          enum: [open, renews, ends, expired]
+        valid_from:
+          type: string
+          format: date
+        valid_until:
+          type: [string, 'null']
+          format: date
+        last_notice_date:
+          type: [string, 'null']
+          format: date
+        declined_by:
+          description: Кто отказался от продления; `null` — никто
+          type: [string, 'null']
+          enum: [company, client, null]
+        can_decline:
+          type: boolean
+          description: Контакт может отказаться от продления сейчас (есть `can_act`, срок отказа не вышел)
 
     InvoiceStatus:
       type: string

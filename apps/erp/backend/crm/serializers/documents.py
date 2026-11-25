@@ -8,6 +8,7 @@ a couple of write fields the ViewSet hands to the services.
 from documents.models.documents import ContractSubject, CounterpartyKind
 from rest_framework import serializers
 
+from core.contract_term import ContractRenewalMode, ContractTermRule
 from crm.models import CompanyWordingVariant, DocumentTemplate, GeneratedDocument
 
 
@@ -25,6 +26,9 @@ class DocumentTemplateSerializer(serializers.ModelSerializer):
     # Только у шаблонов договора; у остальных видов пусто — схема обязана это допускать.
     counterparty_kind = serializers.ChoiceField(choices=CounterpartyKind.choices, allow_blank=True, read_only=True)
     subject = serializers.ChoiceField(choices=ContractSubject.choices, allow_blank=True, read_only=True)
+    # ДС-1: срок договора по шаблону; пусто — как у компании. Правится `PATCH` как поля шаблона договора в черновике.
+    term_rule = serializers.ChoiceField(choices=ContractTermRule.choices, allow_blank=True, read_only=True)
+    renewal_mode = serializers.ChoiceField(choices=ContractRenewalMode.choices, allow_blank=True, read_only=True)
 
     class Meta:
         model = DocumentTemplate
@@ -46,6 +50,12 @@ class DocumentTemplateSerializer(serializers.ModelSerializer):
             "submitted_at",
             "counterparty_kind",
             "subject",
+            "term_rule",
+            "renewal_mode",
+            "notice_days",
+            "confidentiality_years",
+            "trade_secret_indefinite",
+            "renewal_notice",
             "is_locked",
             "languages",
             "created_at",
@@ -60,6 +70,12 @@ class DocumentTemplateSerializer(serializers.ModelSerializer):
             "submitted_at",
             "counterparty_kind",
             "subject",
+            "term_rule",
+            "renewal_mode",
+            "notice_days",
+            "confidentiality_years",
+            "trade_secret_indefinite",
+            "renewal_notice",
             "created_at",
             "updated_at",
         ]

@@ -307,7 +307,10 @@
       "revise": "Draft returned to work.",
       "sign_ours": "The contract is signed for the company.",
       "request_deviation": "The request went to the Legal holder.",
-      "decide_deviation": "Decision recorded."
+      "decide_deviation": "Decision recorded.",
+      "decline_renewal": "Renewal declined.",
+      "renew": "Contract renewed.",
+      "send_new_edition": "New edition sent for signature."
     },
     "readOnly": "View only.",
     "template": {
@@ -373,6 +376,36 @@
       "role": {
         "visa_finance": "accountant",
         "visa_legal": "lawyer"
+      }
+    },
+    "term": {
+      "title": "Contract term",
+      "line": "Valid from {{from}} to {{until}}",
+      "lineOpen": "Valid from {{from}}, no end date",
+      "state": {
+        "open": "No end date",
+        "renews": "Renews itself",
+        "ends": "Ends on time",
+        "expired": "Term over"
+      },
+      "renewsHint": "You can decline the renewal until {{notice}}.",
+      "declined": {
+        "company": "We declined the renewal: the contract ends on time.",
+        "client": "The counterparty declined the renewal: the contract ends on time."
+      },
+      "foreign": "Foreign counterparty: renewed by a supplementary agreement.",
+      "renewals": "Renewals: {{count}}",
+      "edition": "Signed on template edition {{edition}}.",
+      "editionNewer": "Signed on edition {{edition}}; edition {{newer}} is available. Until the counterparty signs it, renewal stays on the old one.",
+      "nda": "Confidentiality after the contract ends: {{years}} years.",
+      "ndaIndefinite": "Trade secrets: no time limit.",
+      "agreement": "Agreement number",
+      "declineConfirm": "The contract ends on {{until}} and will not renew. This cannot be undone on the card.",
+      "cancel": "Cancel",
+      "action": {
+        "decline_renewal": "Decline renewal",
+        "renew": "Renew",
+        "send_new_edition": "Send new edition for signature"
       }
     }
   },

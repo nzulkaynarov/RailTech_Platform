@@ -21,6 +21,7 @@ from portal.views import (
     CompanySecurityEventEndSessionView,
     CompanySecurityLogView,
     CompanyView,
+    ContractDeclineRenewalView,
     ContractListView,
     ContractSignView,
     CountriesView,
@@ -189,6 +190,16 @@ urlpatterns = [
     path("contracts/", ContractListView.as_view(), name="portal-contracts-slash"),
     path("contracts/<int:pk>/sign", ContractSignView.as_view(), name="portal-contract-sign"),
     path("contracts/<int:pk>/sign/", ContractSignView.as_view(), name="portal-contract-sign-slash"),
+    path(
+        "contracts/<int:pk>/decline-renewal",
+        ContractDeclineRenewalView.as_view(),
+        name="portal-contract-decline-renewal",
+    ),
+    path(
+        "contracts/<int:pk>/decline-renewal/",
+        ContractDeclineRenewalView.as_view(),
+        name="portal-contract-decline-renewal-slash",
+    ),
     # Invoices (Счета на оплату)
     path("invoices", InvoiceListView.as_view(), name="portal-invoices"),
     path("invoices/", InvoiceListView.as_view(), name="portal-invoices-slash"),

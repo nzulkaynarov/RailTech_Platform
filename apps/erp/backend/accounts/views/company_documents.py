@@ -214,7 +214,7 @@ class CompanyDocumentsMixin:
             200: CompanySettingsSerializer,
             400: OpenApiResponse(
                 description="BAD_CURRENCY / BAD_DELIVERY_BASIS / BAD_NUMBER / BAD_PRICE_VISIBILITY / "
-                "BAD_PUBLISH_THRESHOLD / BAD_FX_RATE_MAX_AGE_DAYS / BAD_BOOLEAN / DOC_PREFIX_TAKEN"
+                "BAD_PUBLISH_THRESHOLD / BAD_FX_RATE_MAX_AGE_DAYS / BAD_BOOLEAN / BAD_CHOICE / DOC_PREFIX_TAKEN"
             ),
             403: OpenApiResponse(description="NOT_COMPANY_OWNER: only the company OWNER may read/update the settings"),
         },

@@ -307,7 +307,10 @@
       "revise": "Loyiha işga qaytarildi.",
       "sign_ours": "Şartnoma kompaniya nomidan imzolandi.",
       "request_deviation": "Ariza «Huquq» egasiga yuborildi.",
-      "decide_deviation": "Qaror yozildi."
+      "decide_deviation": "Qaror yozildi.",
+      "decline_renewal": "Uzaytirişdan bas tartiş yozildi.",
+      "renew": "Şartnoma uzaytirildi.",
+      "send_new_edition": "Yangi tahrir imzoga yuborildi."
     },
     "readOnly": "Faqat köriş.",
     "template": {
@@ -373,6 +376,36 @@
       "role": {
         "visa_finance": "buxgalter",
         "visa_legal": "yurist"
+      }
+    },
+    "term": {
+      "title": "Şartnoma muddati",
+      "line": "{{from}} dan {{until}} gaça amal qiladi",
+      "lineOpen": "{{from}} dan amal qiladi, muddatsiz",
+      "state": {
+        "open": "Muddatsiz",
+        "renews": "Özi uzayadi",
+        "ends": "Muddatida tugaydi",
+        "expired": "Muddat tugadi"
+      },
+      "renewsHint": "Uzaytirişdan {{notice}} gaça bas tartiş mümkin.",
+      "declined": {
+        "company": "Biz uzaytirişdan bas tortdik: şartnoma muddatida tugaydi.",
+        "client": "Kontragent uzaytirişdan bas tortdi: şartnoma muddatida tugaydi."
+      },
+      "foreign": "Çet ellik kontragent: qöşimça kelişuv bilan uzaytiriladi.",
+      "renewals": "Uzaytirişlar: {{count}}",
+      "edition": "Şablonning {{edition}}-tahririda imzolangan.",
+      "editionNewer": "{{edition}}-tahrirda imzolangan; yangi {{newer}}-tahrir bor. Kontragent imzolamaguça uzaytiriş eski tahrirda ketadi.",
+      "nda": "Şartnoma tugagaç sir saqlaş: {{years}} yil.",
+      "ndaIndefinite": "Tijorat siri — muddatsiz.",
+      "agreement": "Kelişuv raqami",
+      "declineConfirm": "Şartnoma {{until}} da tugaydi va uzaytirilmaydi. Kartada bekor qilib bölmaydi.",
+      "cancel": "Kerak emas",
+      "action": {
+        "decline_renewal": "Uzaytirişdan bas tartiş",
+        "renew": "Uzaytiriş",
+        "send_new_edition": "Yangi tahrirni imzoga yuboriş"
       }
     }
   },

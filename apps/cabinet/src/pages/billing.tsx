@@ -1,10 +1,10 @@
 import { useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { AlertTriangle, CheckCircle2, ClipboardCheck, Download, FileSignature, PenLine, Receipt, Undo2, Upload, Wallet } from 'lucide-react';
+import { AlertTriangle, CalendarX2, CheckCircle2, ClipboardCheck, Download, FileSignature, PenLine, Receipt, Undo2, Upload, Wallet } from 'lucide-react';
 import { toast } from '@/lib/toast';
 
 import type { Act, Contract, Invoice, PaymentProof } from '@/api/portal';
-import { useAcceptAct, useActs, useContracts, useInvoices, useReturnAct, useSignContract, useSubmitPaymentProof } from '@/api/queries';
+import { useAcceptAct, useActs, useContracts, useDeclineContractRenewal, useInvoices, useReturnAct, useSignContract, useSubmitPaymentProof } from '@/api/queries';
 import { ActionDialog } from '@/components/ActionDialog';
 import { BillingNavTabs } from '@/components/BillingNavTabs';
 import { ConsequenceCallout } from '@/components/ConsequenceCallout';
@@ -56,11 +56,26 @@ function RowDocumentItem({ documentId, number }: { documentId: number | null | u
 
 // --- договоры ------------------------------------------------------------------------------------
 
+/** Срок договора (ДС-1): «до 31.12.2026 · продлится сам»; без срока — прочерк. Считает ERP, Cabinet только показывает. */
+function ContractTermCell({ term }: { term: Contract['term'] }) {
+  const { t } = useTranslation();
+  if (!term) return <span className="text-muted-foreground">{t('pages.contracts.term.none')}</span>;
+  return (
+    <span>
+      {term.valid_until ? t('pages.contracts.term.until', { date: formatDate(term.valid_until) }) : t('pages.contracts.term.open')}
+      {' · '}
+      {t(`pages.contracts.term.state.${term.state}`)}
+    </span>
+  );
+}
+
 export function ContractsPage() {
   const { t } = useTranslation();
   const contracts = useContracts();
   const sign = useSignContract();
+  const decline = useDeclineContractRenewal();
   const [target, setTarget] = useState<Contract | null>(null);
+  const [declining, setDeclining] = useState<Contract | null>(null);
   const awaiting = (contracts.data ?? []).filter((item) => contractAwaitsClient(item.status)).length;
 
   const close = () => {
@@ -98,6 +113,11 @@ export function ContractsPage() {
                 header: t('pages.contracts.columns.company'),
                 cell: (row) => (row.signed_by_company_at ? formatDateTime(row.signed_by_company_at) : t('pages.contracts.notSigned')),
               },
+              {
+                id: 'term',
+                header: t('pages.contracts.columns.term'),
+                cell: (row) => <ContractTermCell term={row.term} />,
+              },
               { id: 'deal', header: t('pages.contracts.columns.deal'), cell: (row) => <DealLink deal={row.deal} /> },
             ]}
             actions={{
@@ -114,6 +134,13 @@ export function ContractsPage() {
                   ) : null}
                   <RowMenu name={row.number}>
                     <RowDocumentItem documentId={row.document_id} number={row.number} />
+                    {row.term?.can_decline ? (
+                      <CanAct>
+                        <RowMenuAction icon={CalendarX2} onSelect={() => setDeclining(row)}>
+                          {t('pages.contracts.term.decline')}
+                        </RowMenuAction>
+                      </CanAct>
+                    ) : null}
                     <ManagerMenuItem context={dealContext(row.deal)} label={t('manager.aboutContract', { number: row.number })} />
                   </RowMenu>
                 </>
@@ -122,6 +149,31 @@ export function ContractsPage() {
           />
         </>
       )}
+      <ActionDialog
+        open={declining !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDeclining(null);
+            decline.reset();
+          }
+        }}
+        title={t('pages.contracts.term.declineTitle', { number: declining?.number ?? '' })}
+        description={t('pages.contracts.term.declineText', {
+          until: declining?.term?.valid_until ? formatDate(declining.term.valid_until) : '',
+        })}
+        confirmLabel={t('pages.contracts.term.decline')}
+        pending={decline.isPending}
+        error={decline.error}
+        onSubmit={() =>
+          declining &&
+          decline.mutate(declining.id, {
+            onSuccess: (next) => {
+              toast.success(t('pages.contracts.term.declined', { number: next.number }));
+              setDeclining(null);
+            },
+          })
+        }
+      />
       <ActionDialog
         open={target !== null}
         onOpenChange={(open) => !open && close()}

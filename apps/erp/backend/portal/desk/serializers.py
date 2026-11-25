@@ -375,6 +375,19 @@ class DeskDoNotWorkIn(serializers.Serializer):
     until = serializers.DateField(required=False, allow_null=True, help_text="Необязательная дата окончания")
 
 
+class DeskContractTerm(serializers.Serializer):
+    """Срок договора с контрагентом (ДС-1): последний или действующий подписанный договор."""
+
+    contract_id = serializers.IntegerField()
+    deal_id = serializers.IntegerField(help_text="Сделка договора: карточка проекта открывается по ней")
+    number = serializers.CharField()
+    state = serializers.CharField(help_text="open / renews / ends / expired")
+    valid_until = serializers.DateField(allow_null=True)
+    last_notice_date = serializers.DateField(allow_null=True)
+    foreign = serializers.BooleanField()
+    blocks_new_work = serializers.BooleanField(help_text="Срок вышел и правило компании не даёт начинать новые КП")
+
+
 class DeskCounterparty(serializers.Serializer):
     """Карточка контрагента — одна компания во всех ролях (ADR-0028, СУЩ-2.5)."""
 
@@ -394,6 +407,9 @@ class DeskCounterparty(serializers.Serializer):
     do_not_work = DoNotWorkFacts(
         allow_null=True,
         help_text="Отметка «Не работать» (Х-8): причина, кто и когда поставил, срок; `null` — с компанией работаем",
+    )
+    contract_term = DeskContractTerm(
+        allow_null=True, required=False, help_text="Срок договора (ДС-1); `null` — подписанных договоров со сроком нет"
     )
 
 

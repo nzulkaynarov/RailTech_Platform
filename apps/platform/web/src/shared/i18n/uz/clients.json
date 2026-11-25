@@ -207,6 +207,18 @@
       "forbidden": "Belgini menejer yoki taʼminot qöyadi va olib taşlaydi.",
       "failed": "Saqlab bölmadi. Qayta urinib köring.",
       "newRequestClosed": "Yangi ariza yopiq: kompaniya bilan işlamaymiz."
+    },
+    "term": {
+      "title": "Şartnoma",
+      "state": {
+        "open": "Muddatsiz",
+        "renews": "Özi uzayadi",
+        "ends": "Muddatida tugaydi",
+        "expired": "Muddat tugadi"
+      },
+      "until": "{{number}} · {{until}} gaça",
+      "open": "{{number}} · muddatsiz",
+      "blocks": "Şartnoma uzaytirilmaguça yangi TT yaratilmaydi. Boşlangan bitimlar va tölovlar tegilmaydi."
     }
   },
   "picture": {

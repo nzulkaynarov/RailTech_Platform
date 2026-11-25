@@ -195,6 +195,10 @@ class ContractViewSet(
         "sign_ours": "contract.sign",
         "request_deviation": "contract.manage",
         "decide_deviation": "contract.approve_template",
+        # ДС-1: срок договора — отказ от продления, продление соглашением, новая редакция шаблона
+        "decline_renewal": "contract.manage",
+        "renew": "contract.manage",
+        "send_new_edition": "contract.manage",
         "request_signing": "contract.manage",
         "signing_status": "contract.manage",
         # ДК-3б: ссылки клиента на договор — тот, кто его отправляет
@@ -335,6 +339,55 @@ class ContractViewSet(
         return self._template_flow(
             contract_templates.decide_deviation, self.get_object().pk, request.user, approve_it=approve
         )
+
+    def _term_flow(self, result):
+        contract, err = result
+        if err:
+            code = 403 if err == "MEMBER_REQUIRED_FOR_ACTION" else 404 if err == "CONTRACT_NOT_FOUND" else 409
+            return Response({"detail": err}, status=code)
+        return Response(ContractFlowSerializer(contract).data)
+
+    @extend_schema(
+        summary="Decline the automatic renewal of a signed contract (ДС-1)",
+        tags=["CRM"],
+        request=None,
+        responses={200: ContractFlowSerializer},
+    )
+    @action(detail=True, methods=["post"], url_path="decline-renewal")
+    def decline_renewal(self, request, pk=None):
+        from crm.services import contract_term
+
+        return self._term_flow(contract_term.decline_renewal(self.get_object().pk, "company", actor=request.user))
+
+    @extend_schema(
+        summary="Renew the contract by agreement of the parties (foreign counterparty, expired term; ДС-1)",
+        tags=["CRM"],
+        request=inline_serializer(
+            "ContractRenewByAgreement", fields={"agreement_number": drf_serializers.CharField(required=False)}
+        ),
+        responses={200: ContractFlowSerializer},
+    )
+    @action(detail=True, methods=["post"], url_path="renew")
+    def renew(self, request, pk=None):
+        from crm.services import contract_term
+
+        return self._term_flow(
+            contract_term.renew_by_agreement(
+                self.get_object().pk, request.user, agreement_number=str(request.data.get("agreement_number") or "")
+            )
+        )
+
+    @extend_schema(
+        summary="Send the new edition of the template to the counterparty for signature (ДС-1)",
+        tags=["CRM"],
+        request=None,
+        responses={200: ContractFlowSerializer},
+    )
+    @action(detail=True, methods=["post"], url_path="send-new-edition")
+    def send_new_edition(self, request, pk=None):
+        from crm.services import contract_term
+
+        return self._term_flow(contract_term.send_new_edition(self.get_object().pk, request.user))
 
     @extend_schema(
         summary="Select an approved wording variant for THIS contract (E4 playbook)",

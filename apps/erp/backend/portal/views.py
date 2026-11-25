@@ -901,7 +901,9 @@ class ContractListView(BasePortalView):
 
     def get(self, request):
         contracts = _client_contracts(request.portal_company).order_by("-created_at")
-        return Response(ContractSerializer(contracts, many=True).data)
+        return Response(
+            ContractSerializer(contracts, many=True, context={"can_act": request.portal_contact.can_act}).data
+        )
 
 
 class ContractSignView(BasePortalView):
@@ -921,6 +923,30 @@ class ContractSignView(BasePortalView):
         if error:
             raise exceptions.PermissionDenied("FORBIDDEN")
         return Response(ContractSerializer(_client_contracts(request.portal_company).get(pk=pk)).data)
+
+
+class ContractDeclineRenewalView(BasePortalView):
+    """POST /contracts/{id}/decline-renewal — отказ клиента от продления (ДС-1, `contract_term.decline_renewal`)."""
+
+    required_module = "contracts"
+
+    def post(self, request, pk):
+        from crm.services import contract_term
+
+        contract = _client_contracts(request.portal_company).filter(pk=pk).first()
+        if not contract:
+            raise Http404
+        _, error = contract_term.decline_renewal(contract.pk, "client", contact=request.portal_contact, actor=None)
+        if error in ("TERM_NOTICE_PASSED", "TERM_ALREADY_DECLINED"):
+            raise PortalConflict(error)
+        if error:  # договор не подписан или продлевается не сам: отказывать не от чего
+            raise PortalConflict("TERM_NOT_AVAILABLE")
+        return Response(
+            ContractSerializer(
+                _client_contracts(request.portal_company).get(pk=pk),
+                context={"can_act": request.portal_contact.can_act},
+            ).data
+        )
 
 
 # ── 6. Invoices ─────────────────────────────────────────────────────────────

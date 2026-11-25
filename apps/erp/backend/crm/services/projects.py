@@ -27,7 +27,7 @@ from core.currency import BASE_CURRENCY
 
 from ..constants import ActStatusCode, ContractStatusCode, DealStageCode, InvoiceStatusCode, QuoteStatusCode
 from ..models import ActivityLog, Deal
-from . import act_flow, billing, contract_flow
+from . import act_flow, billing, contract_flow, contract_term
 from .numbering import number_search_q
 
 #: Сделки-проекты: КП принято клиентом (FSM `CONTRACT_SIGNED`) и дальше. Проигранные в срез не входят.
@@ -501,6 +501,7 @@ def _contract_card(contract, user, journal: list) -> Optional[dict]:
         "has_scan": bool(contract.signed_file),
         "actions": contract_flow.allowed_actions(contract, user),
         "template": _contract_template_card(contract, user),
+        "term": contract_term.term_card(contract, user),
         # Х-1: пока проект не ушёл клиенту — что мешает его отправить (визы словами); `null` — ничего.
         "send_blocker": contract_flow.send_blocker(contract) if _awaits_send(contract) else None,
         "history": _history_for(journal, "contract", contract.number),

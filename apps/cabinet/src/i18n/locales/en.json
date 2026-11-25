@@ -628,7 +628,8 @@
         "status": "Status",
         "client": "Your agreement",
         "company": "Our signature",
-        "deal": "Project"
+        "deal": "Project",
+        "term": "Term"
       },
       "notSigned": "Not yet",
       "sign": "Agree",
@@ -637,7 +638,22 @@
       "signText": "You confirm, on behalf of your company, that you agree with the contract text. Signing is a separate step: the contract comes to you via e-document exchange, and we will tell you when it is signed.",
       "signConfirm": "Agree contract",
       "signedClient": "You agreed contract {{number}}. Awaiting signing.",
-      "signedBoth": "Contract {{number}} is signed by both parties."
+      "signedBoth": "Contract {{number}} is signed by both parties.",
+      "term": {
+        "none": "—",
+        "until": "until {{date}}",
+        "open": "no end date",
+        "state": {
+          "open": "no end date",
+          "renews": "renews itself",
+          "ends": "ends on time",
+          "expired": "term over"
+        },
+        "decline": "Decline renewal",
+        "declineTitle": "Decline renewal of contract {{number}}",
+        "declineText": "The contract is valid until {{until}} and ends after that. Started deliveries, payments and claims are not affected. The renewal cannot be restored in the cabinet.",
+        "declined": "You declined the renewal of contract {{number}}."
+      }
     },
     "invoices": {
       "title": "Invoices",
@@ -1357,6 +1373,9 @@
     "QUOTE_FINALIZED": "The quote was already accepted or rejected — refresh the page.",
     "ACT_FINALIZED": "The act was already accepted or returned — refresh the page.",
     "CONTRACT_FINALIZED": "The contract was already agreed, signed or cancelled — refresh the page.",
+    "TERM_NOTICE_PASSED": "The deadline to decline the renewal has passed.",
+    "TERM_ALREADY_DECLINED": "The renewal was already declined.",
+    "TERM_NOT_AVAILABLE": "This contract does not renew automatically.",
     "QUOTE_CODE_INVALID": "The code is wrong or was not requested. Check the code in the message or request a new one.",
     "QUOTE_EXPIRED": "The quote has expired and can no longer be accepted. Ask your manager to update the offer.",
     "REASON_REQUIRED": "Give a reason.",
@@ -1777,7 +1796,9 @@
       "bank_requisites_change_requested": "{{actor}} requested a change to the company bank details",
       "bank_requisites_changed": "Company bank details have been changed",
       "bank_requisites_change_rejected": "Bank details change request rejected: {{reason}}",
-      "new_device_login": "{{name}} signed in from a new device"
+      "new_device_login": "{{name}} signed in from a new device",
+      "contract_renewed": "Contract {{number}} renewed until {{until}}",
+      "contract_renewal_declined": "We declined the renewal of contract {{number}}: it ends on {{until}}"
     }
   },
   "verify": {

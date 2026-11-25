@@ -1069,6 +1069,20 @@ export const handlers = [
       { action: true },
     ),
   ),
+  http.post<IdParams>(
+    `${API}/contracts/:id/decline-renewal`,
+    withSession<IdParams>(
+      ({ db, params }) => {
+        const contract = byId(db.contracts, params.id);
+        if (!contract) return error(404, 'NOT_FOUND');
+        if (!contract.term) return error(409, 'TERM_NOT_AVAILABLE');
+        if (contract.term.declined_by) return error(409, 'TERM_ALREADY_DECLINED');
+        contract.term = { ...contract.term, state: 'ends', declined_by: 'client', can_decline: false };
+        return json(contract);
+      },
+      { action: true },
+    ),
+  ),
   http.get(`${API}/invoices`, withSession(({ db }) => json(db.invoices))),
   http.post<IdParams>(
     `${API}/invoices/:id/proofs`,

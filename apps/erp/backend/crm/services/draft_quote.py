@@ -276,6 +276,13 @@ def _run_draft_quote_gates(deal_id: int, actor: CustomUser):
         return None, None, None, "DEAL_NOT_FOUND"
     if not (getattr(actor, "is_superuser", False) or is_seller(actor)):
         return None, None, None, "MEMBER_REQUIRED_FOR_ACTION"
+    from .contract_term import new_work_error
+
+    expired = (
+        None if deal.quotes.exists() else new_work_error(deal.company)
+    )  # ДС-1: срок договора вышел — новое КП не начинаем (начатое не трогаем)
+    if expired:
+        return deal, [], None, expired
     request_items = _request_items(deal)
     if not request_items:
         return deal, [], None, "NO_REQUEST_LINES"

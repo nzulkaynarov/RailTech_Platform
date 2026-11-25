@@ -524,6 +524,15 @@ class QuoteDefaults(BaseModel):
     contract_deviations_allowed: bool = True
     default_client_contract_template: int | None = None
     default_partner_contract_template: int | None = None
+    # ДС-1: срок договора («Правила работы · Продажи»)
+    contract_term_rule: Literal["calendar_year", "twelve_months", "open"] = "calendar_year"
+    contract_auto_renew: bool = True
+    contract_notice_days: int = 30
+    contract_next_year_from_day: int = 1
+    contract_remind_first_days: int = 30
+    contract_remind_last_days: int = 7
+    contract_foreign_remind_days: int = 45
+    contract_expired_action: Literal["block", "warn"] = "block"
 
 
 class QuoteDefaultsUpdate(Patch):
@@ -565,6 +574,18 @@ class QuoteDefaultsUpdate(Patch):
     contract_deviations_allowed: bool | None = None
     default_client_contract_template: int | None = None
     default_partner_contract_template: int | None = None
+    contract_term_rule: Literal["calendar_year", "twelve_months", "open"] | None = None
+    contract_auto_renew: bool | None = None
+    contract_notice_days: int | None = Field(default=None, ge=0, le=365)
+    contract_next_year_from_day: int | None = Field(default=None, ge=1, le=31)
+    contract_remind_first_days: int | None = Field(default=None, ge=1, le=365)
+    contract_remind_last_days: int | None = Field(default=None, ge=1, le=365)
+    contract_foreign_remind_days: int | None = Field(default=None, ge=1, le=365)
+    contract_expired_action: Literal["block", "warn"] | None = None
+
+
+def _pick(value: Any, allowed: tuple[str, ...], default: str) -> str:
+    return value if isinstance(value, str) and value in allowed else default
 
 
 def to_quote_defaults(raw: Mapping[str, Any], visible_groups: Collection[str]) -> QuoteDefaults:
@@ -593,6 +614,20 @@ def to_quote_defaults(raw: Mapping[str, Any], visible_groups: Collection[str]) -
         "default_client_contract_template": maybe_int(raw.get("default_client_contract_template")),
         "default_partner_contract_template": maybe_int(
             raw.get("default_partner_contract_template")
+        ),
+        "contract_term_rule": _pick(
+            raw.get("contract_term_rule"),
+            ("calendar_year", "twelve_months", "open"),
+            "calendar_year",
+        ),
+        "contract_auto_renew": raw.get("contract_auto_renew") is not False,
+        "contract_notice_days": whole(raw.get("contract_notice_days"), 30),
+        "contract_next_year_from_day": whole(raw.get("contract_next_year_from_day"), 1),
+        "contract_remind_first_days": whole(raw.get("contract_remind_first_days"), 30),
+        "contract_remind_last_days": whole(raw.get("contract_remind_last_days"), 7),
+        "contract_foreign_remind_days": whole(raw.get("contract_foreign_remind_days"), 45),
+        "contract_expired_action": _pick(
+            raw.get("contract_expired_action"), ("block", "warn"), "block"
         ),
     }
     if COST_MARGIN_GROUP in visible_groups:

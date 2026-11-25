@@ -360,6 +360,9 @@ export function rejectQuote(id: number, reason: string): Promise<Quote> {
 
 export const listContracts = () => portalRequest<Contract[]>('/contracts');
 export const signContract = (id: number) => portalRequest<Contract>(`/contracts/${id}/sign`, { method: 'POST' });
+/** ДС-1: отказ от автопродления договора (до `term.last_notice_date`). */
+export const declineContractRenewal = (id: number) =>
+  portalRequest<Contract>(`/contracts/${id}/decline-renewal`, { method: 'POST' });
 
 export const listInvoices = () => portalRequest<Invoice[]>('/invoices');
 /** «Я оплатил»: платёжное поручение (`upload_id` из `POST /uploads`) к счёту; ответ — платёжка `pending`. */

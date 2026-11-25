@@ -389,6 +389,9 @@ def apply_transition(
     if action == "send_to_client" and not was_sent:
         _notify_sent(contract)
     if action == "attach_scan":
+        from .contract_term import apply_at_signing
+
+        apply_at_signing(contract)  # ДС-1: срок и последний день отказа из правила, до события «подписан»
         events.publish_contract_signed(contract, by="both", actor=events.build_actor(actor) if actor else None)
         _after_signed(contract)
     return contract, None
@@ -410,6 +413,8 @@ def _after_signed(contract) -> None:
     """Скан прикреплён: сделка → `CLOSED_WON` (запускает счёт на предоплату), уведомление сторонам, PDF не перерисовывается."""
     from .contracts import _finalize_if_signed
 
+    if contract.supersedes_id:
+        return  # новая редакция договора по уже выигранной сделке: стадию и счёт не повторяем
     _finalize_if_signed(contract)
 
 

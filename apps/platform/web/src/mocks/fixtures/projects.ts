@@ -6,6 +6,7 @@ import type {
   ProjectContract,
   ProjectContractActionsItem,
   ProjectContractTemplate,
+  ProjectContractTerm,
   ProjectContractSendBlocker,
   ProjectDeliveryAction,
   ProjectFulfillment,
@@ -53,6 +54,10 @@ interface MutableContract {
   template?: MutableContractTemplate;
   /** Х-1: визы маршрута подписи до отправки клиенту; нет поля — собраны (все прежние проекты уже у клиента). */
   visas?: "none" | "pending" | "returned" | "no_holder" | "collected" | "collecting";
+  /** ДС-1: отказ от продления записан (срок считает `termOf` из факта подписи; нет поля — не отказывались). */
+  term_declined_by?: "company" | "client";
+  /** ДС-1: продлён соглашением — новый срок до этой даты. */
+  term_until?: string;
 }
 
 export interface MutableContractTemplate {
@@ -799,6 +804,37 @@ export function templateOf(
   };
 }
 
+/**
+ * ДС-1: срок подписанного договора — как ERP (`contract_term.term_card`): до 31 декабря года подписания, продлится сам,
+ * отказаться можно за 30 дней до конца; отказ или продление соглашением меняют `term_declined_by` и `term_until`.
+ */
+export function termOf(c: MutableContract, writer: boolean): ProjectContractTerm | null {
+  if (c.status !== "signed" || !c.signed_at) return null;
+  const from = c.signed_at.slice(0, 10);
+  const until = c.term_until ?? `${from.slice(0, 4)}-12-31`;
+  const notice = new Date(`${until}T00:00:00Z`);
+  notice.setUTCDate(notice.getUTCDate() - 30);
+  const declined = c.term_declined_by ?? null;
+  return {
+    state: declined ? "ends" : "renews",
+    rule: "calendar_year",
+    renewal: "auto",
+    valid_from: from,
+    valid_until: until,
+    last_notice_date: notice.toISOString().slice(0, 10),
+    notice_days: 30,
+    renewals_count: c.term_until ? 1 : 0,
+    foreign: false,
+    declined_by: declined,
+    declined_at: declined ? c.signed_at : null,
+    template_edition: c.template?.edition ?? null,
+    newer_edition: null,
+    confidentiality_years: null,
+    trade_secret_indefinite: false,
+    actions: writer ? (declined ? ["renew"] : ["decline_renewal"]) : [],
+  };
+}
+
 export function actActions(a: MutableAct, writer: boolean): ProjectActActionsItem[] {
   if (!writer) return [];
   if (a.status === "issued") return ["attach_scan", "return"];
@@ -895,6 +931,7 @@ export function toCard(
           has_scan: c.has_scan,
           actions: contractActions(c, writer),
           template: templateOf(c, writer, approver),
+          term: termOf(c, writer),
           send_blocker: sendBlockerOf(c),
           history: historyOf(p, "contract"),
         }

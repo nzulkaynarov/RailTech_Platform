@@ -39,7 +39,13 @@ ContractAction = Literal[
     "sign_ours",
     "request_deviation",
     "decide_deviation",
+    # ДС-1: срок договора
+    "decline_renewal",
+    "renew",
+    "send_new_edition",
 ]
+TermActionCode = Literal["decline_renewal", "renew", "send_new_edition"]
+TermState = Literal["open", "renews", "ends", "expired"]
 TemplateActionCode = Literal["sign_ours", "request_deviation", "decide_deviation"]
 DeviationState = Literal["none", "requested", "approved", "rejected"]
 ContractPathStepKey = Literal["assembled", "our_signature", "in_cabinet", "signed_both"]
@@ -212,6 +218,27 @@ class ProjectContractTemplate(BaseModel):
     actions: list[TemplateActionCode]
 
 
+class ProjectContractTerm(BaseModel):
+    """Срок подписанного договора (ДС-1): считает ERP при подписании; вручную не вводится."""
+
+    state: TermState
+    rule: str
+    renewal: str
+    valid_from: dt.date
+    valid_until: dt.date | None
+    last_notice_date: dt.date | None
+    notice_days: int
+    renewals_count: int
+    foreign: bool
+    declined_by: Literal["company", "client"] | None
+    declined_at: dt.datetime | None
+    template_edition: int | None
+    newer_edition: int | None
+    confidentiality_years: int | None
+    trade_secret_indefinite: bool
+    actions: list[TermActionCode]
+
+
 class ProjectContractSendBlocker(BaseModel):
     """Х-1: почему проект договора нельзя отправить клиенту (визы не собраны); считает ERP."""
 
@@ -226,6 +253,7 @@ class ProjectContractSendBlocker(BaseModel):
 
 class ProjectContract(ProjectContractRef):
     template: ProjectContractTemplate | None = None
+    term: ProjectContractTerm | None = None
     total: ProjectMoney | None
     created_at: dt.datetime
     client_agreed_at: dt.datetime | None
@@ -334,6 +362,9 @@ class ContractActionIn(BaseModel):
     counterparty_person: str | None = Field(default=None, max_length=200)
     text: str | None = Field(default=None, max_length=4000, description="Отступление от шаблона")
     approve: bool | None = Field(default=None, description="Решение по отступлению")
+    agreement_number: str | None = Field(
+        default=None, max_length=64, description="Номер доп. соглашения (renew)"
+    )
 
     @model_validator(mode="after")
     def _reason_for_reject(self) -> "ContractActionIn":
