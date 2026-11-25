@@ -466,3 +466,32 @@ async def test_bounce_after_sent_tells_the_requesting_system_once(stand: Stand) 
     assert failed["reason"] == "mailbox_not_found"
     assert failed["ref"] == {"kind": "contact", "id": "310"}
     assert "buyer@example.com" not in str(failed)
+
+
+async def test_delayed_report_after_sent_makes_no_failed_event(stand: Stand) -> None:
+    """Отсрочка (4.x.x, письмо ещё пытаются доставить) — не итог: отправителю ничего не уходит."""
+    from sqlalchemy import update
+
+    from app.domain.bounce import Bounce
+    from app.services import bounces
+
+    await stand.request()
+    (row,) = await stand.rows()
+    assert await stand.mail.deliver(row.id) is True
+    async with stand.sessions() as session, session.begin():
+        await session.execute(
+            update(EmailLog).where(EmailLog.id == row.id).values(message_id="out-2@railtech.test")
+        )
+    delayed = Bounce(
+        recipients=("buyer@example.com",),
+        severity="soft",
+        reason="mailbox_full",
+        status="4.2.2",
+        diagnostic="452 4.2.2 mailbox full",
+        original_message_id="out-2@railtech.test",
+        reply_ids=(),
+    )
+    async with stand.sessions() as session, session.begin():
+        await bounces.apply(session, delayed, "delay-1@mail.test")
+
+    assert [t for t, _ in await stand.outbox()] == ["uz.railtech.crm.mail.sent.v1"]

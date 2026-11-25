@@ -142,9 +142,6 @@ async def apply(
     row.bounced_at, row.bounce_message_id = moment, report_id[:255]
     row.bounce_status = bounce.status
     row.bounce_reason = bounce.reason
-    # Письмо другой системы (ERP, EDS) с просьбой об итоге: почта приняла, адресат не получил —
-    # отправитель узнаёт событием `crm.mail.failed` с причиной отчёта (УВ-2).
-    await bus_events.mail_result(session, row, bounce_reason=bounce.reason)
     marked: list[str] = []
     if proven:
         # A report that names recipients marks those of this letter (the Cc address itself, not
@@ -154,6 +151,10 @@ async def apply(
             [a for a in bounce.recipients if a in allowed] if bounce.recipients else [row.to_email]
         )
         marked = [await _mark(session, a, bounce, row.id, report_id, moment) for a in addresses]
+    if await _is_final(session, bounce, marked):
+        # Письмо другой системы (ERP, EDS) с просьбой об итоге: адресат не получит его — отправитель
+        # узнаёт событием `crm.mail.failed` с причиной отчёта (УВ-2). Отсрочка (4.x.x) — не итог.
+        await bus_events.mail_result(session, row, bounce_reason=bounce.reason)
     await audit.record(
         session,
         audit.Actor.system(),
@@ -164,6 +165,20 @@ async def apply(
     )
     logger.info("bounce_applied", email_log_id=row.id, kind=bounce.severity, reason=bounce.reason)
     return Applied(True, tuple(marked))
+
+
+async def _is_final(session: AsyncSession, bounce: Bounce, marked: list[str]) -> bool:
+    """Окончательный отказ: постоянный (5.x.x) или мягкий, набравший `SOFT_LIMIT` отчётов."""
+    if bounce.severity == "permanent":
+        return True
+    if not marked:
+        return False
+    reached = await session.scalar(
+        select(EmailUndeliverable.id)
+        .where(EmailUndeliverable.email.in_(marked), EmailUndeliverable.reports == SOFT_LIMIT)
+        .limit(1)
+    )
+    return reached is not None
 
 
 async def _mark(
