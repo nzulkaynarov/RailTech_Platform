@@ -229,6 +229,7 @@ FILE = "3f2c1a7e-5b9d-4c8e-9a1f-0d2e3c4b5a69"
 def eds_file(monkeypatch):
     """EDS отдаёт файл письма клиента; сервисный вызов подменён, задача идёт сразу после коммита."""
     from integration.services import eds_files
+
     from crm.tasks import fetch_request_letter_file
 
     calls = []
@@ -288,6 +289,7 @@ def _gave_up(deal, reason):
 
 def test_missing_letter_file_stops_waiting_and_leaves_a_journal_note(api, own, monkeypatch):  # noqa: F811
     from integration.services import eds_files
+
     from crm.tasks import fetch_request_letter_file
 
     monkeypatch.setattr(eds_files, "fetch_request_file", lambda *a: None)
@@ -299,6 +301,7 @@ def test_missing_letter_file_stops_waiting_and_leaves_a_journal_note(api, own, m
 
 def test_eds_down_retries_then_gives_up_without_waiting_forever(api, own, monkeypatch):  # noqa: F811
     from integration.services import eds_files
+
     from crm.tasks import LETTER_FILE_MAX_RETRIES, fetch_request_letter_file
 
     def down(*args):
@@ -332,7 +335,6 @@ def test_broker_down_clears_the_wait_and_leaves_a_journal_note(
 
 def test_storage_error_clears_the_wait_and_leaves_a_journal_note(api, own, eds_file, monkeypatch):  # noqa: F811
     from crm.tasks import fetch_request_letter_file
-
     from sourcing.models import Attachment
 
     deal = _pending_deal(api, own)
@@ -356,6 +358,7 @@ def test_deal_gone_before_the_file_arrives_ends_quietly(api, own, eds_file):  # 
 def test_soft_time_limit_clears_the_wait(api, own, monkeypatch):  # noqa: F811
     from celery.exceptions import SoftTimeLimitExceeded
     from integration.services import eds_files
+
     from crm.tasks import LETTER_FILE_SOFT_TIME_LIMIT, LETTER_FILE_TIME_LIMIT, fetch_request_letter_file
 
     def slow(*args):

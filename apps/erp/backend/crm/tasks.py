@@ -682,11 +682,10 @@ def fetch_request_letter_file(self, deal_id: int, file_id: str, created_by: int)
 
     Любой окончательный сбой — EDS не отдаёт файл, хранилище не приняло, заявка исчезла, вышло время — снимает «файл
     загружается» и пишет в журнал заявки; расчёт не остаётся в ожидании."""
+    from integration.services import eds_files
     from sales.models import Deal
 
     from sourcing.models import Attachment, AttachmentKind
-
-    from integration.services import eds_files
 
     try:
         if not Deal.objects.filter(pk=deal_id).exists():
