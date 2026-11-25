@@ -1933,7 +1933,8 @@
       "paid": "The invoice is paid.",
       "answered": "Answer sent. Thank you!",
       "confirmed": "You confirmed the order.",
-      "cancelled": "The order was cancelled by the sender."
+      "cancelled": "The order was cancelled by the sender.",
+      "closed": "The request is closed. If the matter is still relevant, write to us."
     },
     "reason": {
       "no_right": "You can't make this decision — ask your company administrator.",

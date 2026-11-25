@@ -193,6 +193,18 @@ describe('документ по ссылке: гость', () => {
   });
 });
 
+describe('документ по ссылке: КП закрыто вместе с заявкой (ЛХ-2)', () => {
+  it('клиент читает «Запрос закрыт» словами, а не ключ перевода; кнопок решения нет', async () => {
+    open('closed-token-0123456789');
+    await quoteHeading();
+
+    expect(await screen.findByText('Запрос закрыт. Если вопрос актуален — напишите нам.')).toBeInTheDocument();
+    expect(screen.queryByText(/docLink\.state/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Принять|Вернуть/ })).not.toBeInTheDocument();
+    await expectNoAxeViolations();
+  });
+});
+
 describe('документ по ссылке: вошедший контакт', () => {
   it('код не нужен: вопрос уходит текстом, принять — после подтверждения', async () => {
     signedIn();

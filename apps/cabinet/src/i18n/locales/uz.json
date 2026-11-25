@@ -1933,7 +1933,8 @@
       "paid": "Hisob tölandi.",
       "answered": "Javob yuborildi. Rahmat!",
       "confirmed": "Siz buyurtmani tasdiqladingiz.",
-      "cancelled": "Buyurtma yuboruvçi tomonidan bekor qilindi."
+      "cancelled": "Buyurtma yuboruvçi tomonidan bekor qilindi.",
+      "closed": "Sörov yopildi. Masala hali dolzarb bölsa, bizga yozing."
     },
     "reason": {
       "no_right": "Sizda qaror qabul qiliş huquqi yöq — kompaniyangiz administratoriga murojaat qiling.",

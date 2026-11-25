@@ -34,7 +34,7 @@ import * as partner from './partnerMock';
  * `POST /me/telegram/test` — 202, чаще раза в минуту — 429 с `Retry-After`, без привязки — 409 `TELEGRAM_NOT_LINKED`.
  * Документ по ссылке из письма (ДК-1, ДК-2): токен `/d/<токен>` — `revoked…` → 410 `DOC_LINK_REVOKED`, `expired…` →
  * 410 `DOC_LINK_EXPIRED`, `superseded…` → 410 `DOC_LINK_SUPERSEDED`, `unknown…` или короче 16 знаков → 404; `viewer…` —
- * получатель без права действовать; `foreign…` — ссылка другой компании (сессия видит гостевой вид); `done…` — КП уже принято;
+ * получатель без права действовать; `foreign…` — ссылка другой компании (сессия видит гостевой вид); `done…` — КП уже принято; `closed…` — КП закрыто вместе с заявкой (ЛХ-2);
  * `toosoon…` — повтор кода раньше срока (429). Код: `000000` — неверный, `111111` — пять неверных подряд, иной — вход.
  * Чат кабинета (CHAT-1): лента компании `GET /messages[?after_id]`, `POST /messages` (повтор того же `client_message_id`
  * — прежнее сообщение, 200; текст `fail` — 503 для сценария «Не отправлено»), `POST /messages/read` — отметка не назад,
@@ -441,6 +441,7 @@ function docLinkState(token: string): string {
   if (decided) return decided;
   if (token.includes('paid')) return 'paid';
   if (token.includes('cancelled')) return 'cancelled';
+  if (token.includes('closed')) return 'closed';
   if (token.includes('done')) {
     const kind = docKind(token);
     return kind === 'price_request' ? 'answered' : kind === 'supplier_order' ? 'confirmed' : 'accepted';

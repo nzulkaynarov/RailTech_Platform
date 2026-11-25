@@ -3040,7 +3040,7 @@ export interface components {
       /** Format: date */
       valid_until: string | null;
       /**
-       * @description Значения — `open`, `accepted`, `rejected`, `expired`, `paid`; у документов партнёра (ДК-5) — `answered` (ответ на запрос цены
+       * @description Значения — `open`, `accepted`, `rejected`, `expired`, `paid`, `closed` (КП закрыто вместе с заявкой — клиенту «Запрос закрыт», не отказ); у документов партнёра (ДК-5) — `answered` (ответ на запрос цены
        *     дан), `confirmed` (заказ подтверждён партнёром), `cancelled` (заказ отменён). Из фактов документа, а не из ссылки. `open` — ждёт ответа (у счёта — оплаты); `accepted` — принят (договор подписан
        *     клиентом, акт принят); `rejected` — возвращён с замечаниями; `paid` — счёт оплачен
        */

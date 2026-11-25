@@ -10,6 +10,7 @@ from __future__ import annotations
 import pytest
 from integration.models import CrmClientMapping
 from integration.tests import bus_support
+from rest_framework.test import APIClient
 
 from crm.models import ActivityLog, Deal, DealCloseReason, Quote
 from crm.services.quotes._shared import _set_quote_status
@@ -261,3 +262,19 @@ def test_the_migration_rolls_back_with_a_closed_request_and_forward_again(world)
         )
         assert [row[0] for row in cursor.fetchall()] == ["REJECTED"]
     migrate(("sales", "0023_close_request"))
+
+
+def test_the_old_public_quote_page_says_request_closed_for_a_closed_quote(world):  # noqa: F811
+    """ЛХ-2: ссылка на КП, закрытое вместе с заявкой, читается «Запрос закрыт», а не «Действие недоступно»."""
+    from django.utils import timezone
+
+    _ready(world)
+    quote = Quote.objects.get(deal=world["deal"])
+    assert _decide(quote, "approve", quote.version) == "applied"
+    _set_quote_status(quote, "SENT")
+    Quote.objects.filter(pk=quote.pk).update(public_access_token="closed-quote-token-0123", frozen_at=timezone.now())
+    assert _close(world, world["supply"], "NO_REPLY").status_code == 200
+    page = APIClient().get("/api/v1/public/quotes/closed-quote-token-0123/", HTTP_ACCEPT="text/html")
+    assert page.status_code == 200, page.content[:300]
+    body = page.content.decode()
+    assert "Запрос закрыт" in body and "Действие недоступно" not in body
