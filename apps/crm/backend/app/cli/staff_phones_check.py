@@ -13,7 +13,7 @@ from collections.abc import Iterable
 from sqlalchemy import select
 
 from app.container import get_container
-from app.domain.lead_sources import normalize_phone_e164
+from app.domain.staff_profile import ProfileValueError, normalize_staff_phone
 from app.models.auth import User
 
 
@@ -24,10 +24,12 @@ def classify(rows: Iterable[tuple[int, str | None]]) -> tuple[int, int, list[int
     for user_id, phone in rows:
         if not phone or not phone.strip():
             continue
-        normal = normalize_phone_e164(phone)
-        if normal is None:
+        try:  # the same rule as saving the profile
+            normal = normalize_staff_phone(phone)
+        except ProfileValueError:
             failed.append(user_id)
-        elif normal == phone:
+            continue
+        if normal == phone:
             same += 1
         else:
             changed += 1

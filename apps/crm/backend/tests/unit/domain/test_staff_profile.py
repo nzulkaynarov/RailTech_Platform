@@ -212,5 +212,12 @@ def test_profile_save_path_stores_e164() -> None:
 def test_staff_phones_check_classifies() -> None:
     from app.cli.staff_phones_check import classify
 
-    rows = [(1, "+998901234567"), (2, "90 123 45 67"), (3, "abc"), (4, None), (5, "1234567")]
-    assert classify(rows) == (1, 1, [3, 5])
+    rows = [
+        (1, "+998901234567"),
+        (2, "90 123 45 67"),
+        (3, "abc"),
+        (4, None),
+        (5, "1234567"),
+        (6, "212 555 0100"),  # no country code: saving would refuse it
+    ]
+    assert classify(rows) == (1, 1, [3, 5, 6])
