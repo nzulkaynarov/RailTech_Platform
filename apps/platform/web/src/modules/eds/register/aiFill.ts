@@ -1,4 +1,8 @@
-import type { LetterIntakeFields, LetterKind } from "../../../shared/api/generated/model";
+import type {
+  LetterIntakeFields,
+  LetterIntakeSuggestion,
+  LetterKind,
+} from "../../../shared/api/generated/model";
 import type { RegisterValues } from "./registerModel";
 
 /**
@@ -64,4 +68,28 @@ export function decisionOf(
   left: ReadonlySet<AiField>,
 ): "accepted" | "edited" {
   return filled.every((key) => left.has(key)) ? "accepted" : "edited";
+}
+
+/** Поля, которые посчитал код, а не модель (`by_code` ответа): помечаются «Из текста письма», не «Предложено ИИ». */
+export function byCodeFields(suggestion: LetterIntakeSuggestion): AiField[] {
+  const names: Record<string, AiField> = { sender_inn: "senderInn", document_due: "documentDue" };
+  return (suggestion.by_code ?? []).flatMap((name) => (names[name] ? [names[name]] : []));
+}
+
+/** Дата поступления годится для отсчёта срока на сервере: не из будущего и не старше года (иначе 422). */
+export function usableReceivedAt(value: string, today: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value) || value > today) return false;
+  const floor = new Date(`${today}T00:00:00Z`);
+  floor.setUTCFullYear(floor.getUTCFullYear() - 1);
+  return value >= floor.toISOString().slice(0, 10);
+}
+
+/** Какой текст у плашки «Заполнено из файла»: всё посчитал код, смесь с ответом модели или всё предложила модель. */
+export function bannerKind(
+  left: ReadonlySet<AiField>,
+  byCode: ReadonlySet<AiField>,
+): "ai" | "rules" | "mixed" {
+  const code = [...left].filter((key) => byCode.has(key)).length;
+  if (code === 0) return "ai";
+  return code === left.size ? "rules" : "mixed";
 }

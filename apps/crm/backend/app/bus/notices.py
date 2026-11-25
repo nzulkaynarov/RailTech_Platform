@@ -287,6 +287,8 @@ class ErpEventNotices:
         mails: list[_Mail] = []
         for index, item in enumerate(row.items):
             chats: list[int] = []
+            variants: dict[str, Any] = {}
+            languages: dict[int, str] = {}
             markup: InlineKeyboardMarkup | None = None
             kind = item.get("kind")
             if kind == "client":
@@ -296,6 +298,8 @@ class ErpEventNotices:
                 )
                 muted = set(item.get("muted_chats") or [])
                 chats = [chat_id for chat_id in chats if chat_id not in muted]
+                variants = item.get("variants") or {}
+                languages = await notice_mail.chat_languages(session, chats) if variants else {}
             elif kind == "staff":
                 tg_user_id = await session.scalar(
                     select(User.tg_user_id).where(
@@ -306,12 +310,16 @@ class ErpEventNotices:
             for chat_id in chats:
                 key = f"{index}:{chat_id}"
                 if key not in already:
+                    text, chat_markup = item["text"], markup
+                    variant = variants.get(languages.get(chat_id, "")) if kind == "client" else None
+                    if variant:  # текст на языке самого контакта; нет его лида — общий
+                        text, chat_markup = variant["text"], _markup(variant.get("buttons") or [])
                     sends.append(
                         _Send(
                             key,
                             chat_id,
-                            item["text"],
-                            markup,
+                            text,
+                            chat_markup,
                             item.get("track"),
                             item.get("client_id", 0),
                         )

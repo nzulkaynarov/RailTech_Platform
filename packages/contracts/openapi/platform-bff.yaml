@@ -19389,6 +19389,7 @@ components:
     TelegramConnector:
       description: 'Telegram-бот и канал команды. Значение токена не попадает сюда никогда — только `configured` и `last4`.'
       properties:
+        channel_can_invite: {description: 'Бот может приглашать в канал команды (право «приглашать пользователей»); `false` — нужно право, `null` — неизвестно.', type: [boolean, 'null']}
         channel_id: {type: [integer, 'null']}
         channel_title: {type: [string, 'null']}
         configured: {type: boolean}
@@ -20734,7 +20735,7 @@ components:
     Employee:
       type: object
       additionalProperties: false
-      required: [id, name, initials, email, roles, access, status, telegram_linked, erp_sync]
+      required: [id, name, initials, email, roles, access, status, telegram_linked, telegram, erp_sync]
       properties:
         id:
           type: string
@@ -20767,7 +20768,16 @@ components:
           $ref: '#/components/schemas/EmployeeStatus'
         telegram_linked:
           type: boolean
-          description: Привязан Telegram для уведомлений сотруднику
+          description: Привязан Telegram для уведомлений сотруднику (есть привязка; дойдут ли сообщения — `telegram`)
+        telegram:
+          type: string
+          enum: [linked, not_linked, blocked]
+          description: >-
+            `linked` — привязан и бот может писать; `not_linked` — не привязан; `blocked` — привязан, но сообщения не
+            доходят (CRM отметила отказ Telegram: «Старт» не нажат или бот заблокирован) — сотруднику нужно привязать заново
+        deputy:
+          $ref: '#/components/schemas/DeputyPeriod'
+          description: 'Замещение на период (СОТР-1): поставил сам сотрудник в профиле или администратор в карточке; нет — поля нет'
         erp_sync:
           $ref: '#/components/schemas/ErpSyncState'
         erp_sync_error:
@@ -21025,6 +21035,15 @@ components:
           description: >-
             Кому передать лиды в работе (`crm_user_id` коллеги), если отключение или новые роли отнимают у сотрудника работу
             с лидами; без поля при таких лидах — 409 `CONFLICT` (`details.reason = user_has_active_leads`)
+        deputy:
+          description: >-
+            Замещение за сотрудника (СОТР-1) (администратор, раздел `admin` на запись): тот же период и правила, что у
+            `setDeputy` (себя нельзя — 422 `deputy_is_self`, период не в прошлом и не длиннее года); явный `null` снимает
+            замещение. Попадает в журнал как `user.deputy_set` / `user.deputy_cleared` от имени администратора.
+            Только отдельным запросом: вместе с другими полями — 422.
+          oneOf:
+            - $ref: '#/components/schemas/DeputyUpdate'
+            - type: 'null'
 
     MeUpdate:
       type: object
@@ -21869,7 +21888,7 @@ components:
           type: string
         client_status:
           description: 'Статус для клиента — ключ packages/contracts/client-statuses.yaml (SPEC-v3 §2.5); слово собирает SPA по ключу'
-          enum: [contract_review, contract_signing, awaiting_payment, fulfilling, awaiting_acceptance, done]
+          enum: [contract_preparing, contract_review, contract_signing, awaiting_payment, fulfilling, awaiting_acceptance, done]
           type: string
         total:
           description: 'Сумма с НДС последнего КП, видимого клиенту; null — КП клиенту не отправлялось'
@@ -22268,7 +22287,7 @@ components:
           enum: [CONTRACT, PAYMENT, DONE]
           type: string
         client_status:
-          enum: [contract_review, contract_signing, awaiting_payment, fulfilling, awaiting_acceptance, done]
+          enum: [contract_preparing, contract_review, contract_signing, awaiting_payment, fulfilling, awaiting_acceptance, done]
           type: string
         total:
           oneOf:
@@ -22549,6 +22568,7 @@ components:
           description: 'Получатели копии (пункт 1.6); не решают'
         amount: {oneOf: [{$ref: '#/components/schemas/EdsMoney'}, {type: 'null'}]}
         due_date: {type: [string, 'null'], format: date}
+        invoice_later: {type: boolean, default: false, description: 'Служебка с суммой без счёта партнёра: автор отметил, что счёт придёт позже (Б-9)'}
         files:
           type: array
           items: {$ref: '#/components/schemas/EdsFile'}
@@ -22848,6 +22868,7 @@ components:
         text: {type: string, minLength: 1, maxLength: 20000}
         amount: {oneOf: [{$ref: '#/components/schemas/EdsMoney'}, {type: 'null'}], description: 'Сумма: служебная записка с суммой после директора идёт бухгалтеру'}
         due_date: {type: [string, 'null'], format: date, description: '«Нужно до» — не в прошлом'}
+        invoice_later: {type: boolean, default: false, description: 'Служебка с суммой без счёта партнёра: автор отметил, что счёт придёт позже (Б-9)'}
         file_ids:
           type: array
           maxItems: 50
@@ -22889,6 +22910,7 @@ components:
         text: {type: string, minLength: 1, maxLength: 20000}
         amount: {oneOf: [{$ref: '#/components/schemas/EdsMoney'}, {type: 'null'}]}
         due_date: {type: [string, 'null'], format: date}
+        invoice_later: {type: boolean, default: false, description: 'Служебка с суммой без счёта партнёра: автор отметил, что счёт придёт позже (Б-9)'}
         file_ids:
           type: array
           maxItems: 50
@@ -23549,6 +23571,7 @@ components:
         author: {$ref: '#/components/schemas/EdsPerson'}
         amount: {oneOf: [{$ref: '#/components/schemas/PaymentMoney'}, {type: 'null'}]}
         due_date: {type: [string, 'null'], format: date}
+        invoice_later: {type: boolean, default: false, description: 'Служебка с суммой без счёта партнёра: автор отметил, что счёт придёт позже (Б-9)'}
         deal: {oneOf: [{$ref: '#/components/schemas/EdsDealRef'}, {type: 'null'}]}
         files:
           type: array
@@ -26280,6 +26303,12 @@ components:
       required: [file_id]
       properties:
         file_id: {type: string, format: uuid}
+        received_at:
+          anyOf:
+          - {type: string, format: date}
+          - {type: 'null'}
+          description: Дата поступления письма — от неё считается срок «в течение N дней»
+        rules_only: {type: boolean, default: false, description: 'Только правила кода, без модели (пересчёт срока)'}
 
     LetterIntakeFields:
       type: object
@@ -26329,7 +26358,10 @@ components:
         fields: {$ref: '#/components/schemas/LetterIntakeFields'}
         alias: {type: string}
         prompt_version: {type: string}
-
+        by_code:
+          type: array
+          items: {type: string, enum: [sender_inn, document_due]}
+          description: Поля, которые посчитал код, а не модель (срок «в течение N дней», ИНН); экран метит их «Из текста письма»
     AiDecisionIn:
       type: object
       additionalProperties: false
@@ -29336,6 +29368,7 @@ components:
         edit: {type: boolean}
         send: {type: boolean, description: 'Черновик полный: у всех строк цена и есть ожидаемая дата (СЦ-10)'}
         request_price: {type: boolean, description: 'В черновике есть строки без цены — «Запросить цену» у партнёра (СЦ-10)'}
+        resend: {type: boolean, description: 'Заказ отправлен, но письмо партнёру не ушло: «Отправить ещё раз» — тот же POST …/send (Б-5); только в карточке заказа'}
         confirm: {type: boolean}
         receive: {type: boolean}
         cancel: {type: boolean}
@@ -30358,7 +30391,7 @@ components:
 
     ClientSees:
       type: string
-      enum: [in_work, awaiting_decision, contract_review, contract_signing, awaiting_payment, checking_payment, fulfilling, awaiting_acceptance, done, rejected, quote_expired]
+      enum: [in_work, awaiting_decision, contract_preparing, contract_review, contract_signing, awaiting_payment, checking_payment, fulfilling, awaiting_acceptance, done, rejected, quote_expired]
       description: Ключ статуса для клиента (`packages/contracts/client-statuses.yaml`, SPEC-v3 §2.5); текст — у экрана
 
     ClientRequestRow:

@@ -7,13 +7,14 @@
 import uuid
 from dataclasses import dataclass
 from datetime import date
+from typing import Any
 
-from sqlalchemy import ColumnElement, and_, any_, exists, literal, not_, or_, select, true
+from sqlalchemy import ColumnElement, SQLColumnExpression, and_, any_, exists, literal, not_, or_, select, true
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 
 from app import clock
-from app.models import ApprovalRoute, ApprovalStep, Document, Employee
+from app.models import ApprovalRoute, ApprovalStep, Document, Employee, SigningAuthority
 from app.security.permissions import EdsPermission, known_permissions
 
 # --- замещение (СЦ-9 P11, решение владельца 2026-11-21 (2)) -----------------------------------------------------------
@@ -166,6 +167,48 @@ def participates_in(employee: Employee) -> ColumnElement[bool]:
     return or_(step_is_mine(employee), ApprovalStep.decided_by == employee.crm_user_id)
 
 
+def holds_letter_authority(
+    crm_user_id: SQLColumnExpression[int] | int,
+    on_date: date | None = None,
+    *,
+    amount: SQLColumnExpression[Any] | None = None,
+    currency: SQLColumnExpression[Any] | None = None,
+) -> ColumnElement[bool]:
+    """Действующее на `on_date` (день компании, не БД) полномочие подписи «исходящее письмо» — то же условие, что у
+    `signing_resolve._problem`: не отозвано, началось, не кончилось, сумма документа не выше лимита в той же валюте
+    (документ без суммы лимит не проверяет). `amount`/`currency` — колонки документа; без них лимит не учитывается."""
+    day = on_date or deputy_today()
+    conditions: list[ColumnElement[bool]] = [
+        SigningAuthority.crm_user_id == crm_user_id,
+        SigningAuthority.revoked_at.is_(None),
+        SigningAuthority.valid_from <= day,
+        or_(SigningAuthority.valid_to.is_(None), SigningAuthority.valid_to >= day),
+        literal("letter_out") == any_(SigningAuthority.kinds),
+    ]
+    if amount is not None and currency is not None:
+        conditions.append(
+            or_(
+                SigningAuthority.limit_amount.is_(None),
+                amount.is_(None),
+                and_(SigningAuthority.limit_currency == currency, amount <= SigningAuthority.limit_amount),
+            )
+        )
+    return exists(select(1).where(*conditions))
+
+
+def signer_handed_draft(employee: Employee, on_date: date | None = None) -> ColumnElement[bool]:
+    """Письмо, переданное на подпись, видит тот, кому его поручают: действующий для ЭТОГО документа держатель
+    полномочия на «исходящее письмо» (включая выбранного подписанта, пока он им остаётся) — даже без `letters.register`
+    и `letters.read`. Круг тот же, что у подбора подписанта (`signing_resolve`): отозванное, не начавшееся, истёкшее
+    полномочие и сумма выше лимита доступа не дают. Чужие черновики и не переданные на подпись закрыты."""
+    return and_(
+        Document.kind == "letter_out",
+        Document.registration_requested_at.is_not(None),
+        Document.status.in_(("draft", "returned")),
+        holds_letter_authority(employee.crm_user_id, on_date, amount=Document.amount, currency=Document.currency),
+    )
+
+
 def document_visible(employee: Employee) -> ColumnElement[bool]:
     """Условие видимости для запроса по `Document` — один предикат для реестра, `/documents`, карточки и файлов (D1-10).
 
@@ -185,8 +228,9 @@ def document_visible(employee: Employee) -> ColumnElement[bool]:
     # Своё письмо автор видит и без `letters.read` (исполнитель готовит ответ, P4).
     letters_ok = true() if can_read_letters(employee) else or_(Document.kind != "letter_out", mine)
     base = and_(not_foreign_draft, letters_ok)
+    signer = signer_handed_draft(employee)
     if has(employee, EdsPermission.REGISTRY_READ):
-        return base
+        return or_(base, signer)
     in_route = exists(
         select(1)
         .select_from(ApprovalStep)
@@ -195,7 +239,7 @@ def document_visible(employee: Employee) -> ColumnElement[bool]:
     )
     # Пункт 1.6: получатель копии видит документ (не решает).
     watching = Document.watchers.contains([employee.crm_user_id])
-    return and_(base, or_(mine, in_route, handed_over, watching))
+    return or_(and_(base, or_(mine, in_route, handed_over, watching)), signer)
 
 
 def route_visible(employee: Employee) -> ColumnElement[bool]:

@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { Alert, App, Button, DatePicker } from "antd";
+import { Alert, App, Button } from "antd";
 import dayjs, { type Dayjs } from "dayjs";
 import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -13,12 +13,9 @@ import {
 } from "../../shared/api/generated/platform-bff";
 import { useFormat } from "../../shared/lib/useFormat";
 import { ContextualSaveBar } from "../../shared/ui/ContextualSaveBar";
-import { EmployeePicker } from "../../shared/ui/EmployeePicker";
+import { DEPUTY_ISO as ISO, DeputyFields } from "./DeputyFields";
 import { profileErrorText } from "./errors";
 import { Section } from "./Section";
-
-const DATE_FORMAT = "DD.MM.YYYY";
-const ISO = "YYYY-MM-DD";
 
 /**
  * «Замещение»: «На время отсутствия мои задачи видит {сотрудник} с {дата} по {дата}». Данные — в CRM; заместитель видит
@@ -69,7 +66,6 @@ export function DeputySection({ profile }: { profile: Profile }) {
       data: { deputy_id: who, date_from: from.format(ISO), date_to: to.format(ISO) },
     });
   };
-  const today = dayjs().startOf("day");
   const isDirty =
     who !== deputy?.user_id ||
     (from ? from.format(ISO) : null) !== (deputy?.date_from ?? null) ||
@@ -96,48 +92,17 @@ export function DeputySection({ profile }: { profile: Profile }) {
       {error ? (
         <Alert type="error" showIcon role="alert" message={error} style={{ marginBottom: 12 }} />
       ) : null}
-      <div className="pf-profile-deputy-row">
-        <div>
-          <label htmlFor={`${base}-who`}>{t("deputy.who")}</label>
-          <EmployeePicker
-            id={`${base}-who`}
-            value={who}
-            options={candidates.data ?? []}
-            onChange={setWho}
-            loading={candidates.isPending}
-            placeholder={t("deputy.whoPlaceholder")}
-            emptyText={t("deputy.noCandidates")}
-            allowClear={false}
-          />
-        </div>
-        <div>
-          <label htmlFor={`${base}-from`}>{t("deputy.from")}</label>
-          <DatePicker
-            id={`${base}-from`}
-            style={{ width: "100%" }}
-            format={DATE_FORMAT}
-            value={from}
-            allowClear={false}
-            disabledDate={(day) => day.isBefore(today)}
-            onChange={(day) => {
-              setFrom(day);
-              if (to?.isBefore(day)) setTo(null);
-            }}
-          />
-        </div>
-        <div>
-          <label htmlFor={`${base}-to`}>{t("deputy.to")}</label>
-          <DatePicker
-            id={`${base}-to`}
-            style={{ width: "100%" }}
-            format={DATE_FORMAT}
-            value={to}
-            allowClear={false}
-            disabledDate={(day) => day.isBefore(from ?? today)}
-            onChange={setTo}
-          />
-        </div>
-      </div>
+      <DeputyFields
+        base={base}
+        who={who}
+        from={from}
+        to={to}
+        options={candidates.data ?? []}
+        loading={candidates.isPending}
+        onWho={setWho}
+        onFrom={setFrom}
+        onTo={setTo}
+      />
       <ContextualSaveBar
         className="pf-profile-save-dock"
         visible={isDirty}

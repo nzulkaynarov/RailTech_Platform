@@ -116,7 +116,8 @@
     "request_not_retryable": "Retrying will not help: the request data changed after sending — create the request again",
     "enqueue_failed": "Could not queue the sending — try again a bit later",
     "generic": "Could not create the request. The form data is kept — try again",
-    "letter_uploading": "Wait for the file to upload"
+    "letter_uploading": "Wait for the file to upload",
+    "do_not_work": "We do not work with this company: a request cannot be created"
   },
   "sections": {
     "request": "Request",

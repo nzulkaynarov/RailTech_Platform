@@ -68,7 +68,7 @@ async def test_employee_edits_own_profile_fields(
         headers=headers,
         json={
             "full_name": "Дильшод Т.",
-            "phone": "+998 90 123-45-67",
+            "phone": "90 123 45 67",
             "timezone": "Asia/Samarkand",
             "email_signature": "С уважением,\nДильшод",
         },
@@ -99,6 +99,7 @@ async def test_employee_edits_own_profile_fields(
     ("payload", "field", "reason"),
     [
         ({"phone": "abc"}, "phone", "phone_invalid"),
+        ({"phone": "1234567"}, "phone", "phone_invalid"),  # old «7–15 digits» rule let it through
         ({"timezone": "Mars/Base"}, "timezone", "timezone_unknown"),
         ({"email_signature": "a\u0000b"}, "email_signature", "signature_invalid"),
     ],

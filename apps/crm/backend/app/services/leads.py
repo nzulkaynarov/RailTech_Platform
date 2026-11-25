@@ -296,12 +296,16 @@ class LeadService:
             lead_parts.add_note(session, lead, who, text, visible_to_bot=False)
             await session.flush()
             number = f"L-{lead_id:04d}"
+            recipient = await users_repo.get(session, user_id)
+            handed_by = await lead_parts.user_name(session, who.user_id)
             staff_notifications.add_in(
                 session,
                 [user_id],
                 kind="lead_handed_over",
                 tab="decisions",
-                title=f"Новый лид от делопроизводителя {number}",
+                title=handed_over_title(
+                    recipient.language if recipient is not None else "ru", handed_by, number
+                ),
                 subtitle=text,
                 object_kind="lead",
                 object_id=str(lead_id),
@@ -802,6 +806,19 @@ async def _lead(session: AsyncSession, lead_id: int) -> Lead:
     if lead is None or lead.erased_at is not None:
         raise NotFoundError("lead not found")
     return lead
+
+
+# Колокольчик получателя передачи — на его языке интерфейса и с именем того, кто передал.
+_HANDED_OVER_TITLE: Final[dict[str, str]] = {
+    "ru": "Вам передан лид {number}",
+    "en": "Lead {number} was handed over to you",
+    "uz": "Sizga {number} lidi topşirildi",
+}
+
+
+def handed_over_title(language: str, handed_by: str | None, number: str) -> str:
+    title = _HANDED_OVER_TITLE.get(language, _HANDED_OVER_TITLE["ru"]).format(number=number)
+    return f"{title} · {handed_by}" if handed_by else title
 
 
 def _handed_to_other(lead: Lead, escalation: Escalation | None, who: Principal) -> bool:

@@ -452,6 +452,7 @@ function docLinkAvailability(token: string, session: MockSession | null): Schema
   const state = docLinkState(token);
   if (DOC_ACTIONS[docKind(token)].length === 0) return { allowed: false, reason: 'no_actions' };
   if (state !== 'open') return { allowed: false, reason: state };
+  if (token.includes('nocontact')) return { allowed: false, reason: 'no_contact' }; // адрес не контакт компании: гость
   if (session && token.includes('foreign')) return { allowed: false, reason: 'other_company' };
   const canAct = session ? contactFor(session.role).can_act : !token.includes('viewer');
   return canAct ? { allowed: true, reason: null } : { allowed: false, reason: 'no_right' };

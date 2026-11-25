@@ -95,6 +95,7 @@ if TYPE_CHECKING:
     from app.services.setup import SetupService
     from app.services.smtp_connector import SmtpConnectorService
     from app.services.sso import SsoService
+    from app.services.staff_channel import StaffChannelService
     from app.services.staff_deputy import StaffDeputyService
     from app.services.staff_link_notice import StaffLinkNotice
     from app.services.staff_notifications import StaffNotificationService
@@ -279,11 +280,13 @@ class Container:
     def user_service(self) -> "UserService":
         from app.security.reauth import LockoutPolicy
         from app.services.users import UserService
+        from app.tasks.staff_chat import enqueue_staff_chat_removal
 
         return UserService(
             self.session_factory,
             LockoutPolicy(self.settings.login_max_failures, self.settings.login_lockout_minutes),
             erp_sync=_enqueue_erp_sync,
+            on_telegram_released=enqueue_staff_chat_removal,
         )
 
     @cached_property
@@ -936,11 +939,22 @@ class Container:
         return TelegramGroupService(self.session_factory, self.settings_service, self.telegram_bot)
 
     @cached_property
+    def staff_channel(self) -> "StaffChannelService":
+        """Team channel and client groups as staff membership: invite, approve, remove."""
+        from app.services.staff_channel import StaffChannelService
+
+        return StaffChannelService(self.session_factory, self.settings_service, self.telegram_bot)
+
+    @cached_property
     def staff_telegram_link(self) -> "StaffTelegramLinkService":
         from app.services.staff_telegram_link import StaffTelegramLinkService
+        from app.tasks.staff_chat import enqueue_staff_chat_removal
 
         return StaffTelegramLinkService(
-            self.session_factory, self.bot_state, on_linked=self.staff_link_notice.linked
+            self.session_factory,
+            self.bot_state,
+            on_linked=self.staff_link_notice.linked,
+            on_released=enqueue_staff_chat_removal,
         )
 
     @cached_property

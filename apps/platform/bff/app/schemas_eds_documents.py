@@ -254,6 +254,7 @@ class EdsDocument(BaseModel):
     watchers: list[EdsPerson] = Field(default_factory=list)
     amount: EdsMoney | None
     due_date: date | None
+    invoice_later: bool = False
     files: list[EdsFile]
     deal: EdsDealRef | None
     recipient: EdsRecipient | None
@@ -311,6 +312,8 @@ class _Form(BaseModel):
     text: str = Field(min_length=1, max_length=20000)
     amount: EdsMoney | None = None
     due_date: date | None = None
+    # Б-9: служебка с суммой без счёта партнёра — «счёт придёт позже»
+    invoice_later: bool = False
     file_ids: list[str] = Field(default_factory=list, max_length=50)
     erp_deal_id: int | None = None
     recipient: EdsRecipientIn | None = None

@@ -1501,6 +1501,10 @@ class QuoteOutcome(BaseModel):
     )
     erp_quote_id: int
     version: Annotated[int, Field(ge=1)]
+    number: Annotated[str | None, Field(max_length=64, min_length=1)] = None
+    """
+    Номер КП (QT-ГГГГ-NNN), как его видит сотрудник; нет — КП без номера (старые события): CRM пишет id
+    """
     reason: str | None = None
     erp_contact_id: int | None = None
     """

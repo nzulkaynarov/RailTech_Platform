@@ -131,6 +131,16 @@ async def update_user(
     )
     if await container.user_service.adds_roles(user_id, patch):
         await container.second_factor_service.require_step_up(who.user_id, x_step_up_token)
+    # Замещение — те же правила и журнал (`user.deputy_set` / `user.deputy_cleared`), что у профиля,
+    # но от имени администратора: сотрудник болен или не вошёл, а его задачи стоят.
+    if body.clear_deputy:
+        await container.staff_deputy.clear(who.actor, user_id)
+    elif body.deputy_user_id is not None and body.deputy_from and body.deputy_to:
+        await container.staff_deputy.set(
+            who.actor, user_id, body.deputy_user_id, body.deputy_from, body.deputy_to
+        )
+    if patch == UserPatch():
+        return to_out(await container.user_service.get(user_id))
     return to_out(await container.user_service.update(who.actor, user_id, patch))
 
 

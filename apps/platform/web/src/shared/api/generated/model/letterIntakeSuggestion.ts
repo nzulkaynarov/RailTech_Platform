@@ -3,6 +3,7 @@
  * RailTech Platform — BFF API (Платформа → CRM и ERP)
  */
 import type { LetterIntakeFields } from "./letterIntakeFields";
+import type { LetterIntakeSuggestionByCodeItem } from "./letterIntakeSuggestionByCodeItem";
 import type { LetterIntakeSuggestionSource } from "./letterIntakeSuggestionSource";
 
 export interface LetterIntakeSuggestion {
@@ -11,4 +12,6 @@ export interface LetterIntakeSuggestion {
   fields: LetterIntakeFields;
   alias: string;
   prompt_version: string;
+  /** Поля, которые посчитал код, а не модель (срок «в течение N дней», ИНН); экран метит их «Из текста письма» */
+  by_code?: LetterIntakeSuggestionByCodeItem[];
 }

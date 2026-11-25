@@ -116,7 +116,8 @@
     "request_not_retryable": "Qayta yuboriş yordam bermaydi: yuborilgandan keyin ariza maʼlumotlari özgardi — arizani qayta yarating",
     "enqueue_failed": "Yuborişni navbatga qöyib bölmadi — birozdan keyin qayta urinib köring",
     "generic": "Ariza yaratib bölmadi. Şakl maʼlumotlari saqlandi — qayta urinib köring",
-    "letter_uploading": "Fayl yuklanişini kuting"
+    "letter_uploading": "Fayl yuklanişini kuting",
+    "do_not_work": "Bu kompaniya bilan işlamaymiz: ariza yaratib bölmaydi"
   },
   "sections": {
     "request": "Sörov",

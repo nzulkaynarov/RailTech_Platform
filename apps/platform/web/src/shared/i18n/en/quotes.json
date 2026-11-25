@@ -321,9 +321,10 @@
       "validation": "check the comment",
       "unknown": "something went wrong, what you typed stays in the form"
     },
-    "submitNoChannels": "Approve quote",
+    "submitNoChannels": "Approve without sending",
     "submitFor": "Approve quote for {{name}}",
-    "confirmVerb": "Approve"
+    "confirmVerb": "Approve",
+    "submitForNoChannels": "Approve without sending for {{name}}"
   },
   "superseded": "Superseded by version {{version}}"
 }

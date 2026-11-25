@@ -7,6 +7,7 @@ from typing import Any
 
 from sqlalchemy import (
     BigInteger,
+    Boolean,
     CheckConstraint,
     Date,
     DateTime,
@@ -65,6 +66,8 @@ class Document(Base):
     amount: Mapped[Decimal | None] = mapped_column(Numeric(18, 2))
     currency: Mapped[str | None] = mapped_column(String(3))
     due_date: Mapped[date | None] = mapped_column(Date)
+    # Б-9: служебка с суммой без счёта партнёра — автор отметил «счёт придёт позже»
+    invoice_later: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     source_message_id: Mapped[str | None] = mapped_column(String(128))
     erp_deal_id: Mapped[int | None] = mapped_column(BigInteger)
     deal_number: Mapped[str | None] = mapped_column(String(64))

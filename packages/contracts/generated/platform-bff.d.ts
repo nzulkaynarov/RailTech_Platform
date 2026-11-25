@@ -10478,6 +10478,8 @@ export interface components {
     };
     /** @description Telegram-бот и канал команды. Значение токена не попадает сюда никогда — только `configured` и `last4`. */
     TelegramConnector: {
+      /** @description Бот может приглашать в канал команды (право «приглашать пользователей»); `false` — нужно право, `null` — неизвестно. */
+      channel_can_invite?: boolean | null;
       channel_id: number | null;
       channel_title: string | null;
       configured: boolean;
@@ -11443,8 +11445,15 @@ export interface components {
         erp: boolean;
       };
       status: components["schemas"]["EmployeeStatus"];
-      /** @description Привязан Telegram для уведомлений сотруднику */
+      /** @description Привязан Telegram для уведомлений сотруднику (есть привязка; дойдут ли сообщения — `telegram`) */
       telegram_linked: boolean;
+      /**
+       * @description `linked` — привязан и бот может писать; `not_linked` — не привязан; `blocked` — привязан, но сообщения не доходят (CRM отметила отказ Telegram: «Старт» не нажат или бот заблокирован) — сотруднику нужно привязать заново
+       * @enum {string}
+       */
+      telegram: "linked" | "not_linked" | "blocked";
+      /** @description Замещение на период (СОТР-1): поставил сам сотрудник в профиле или администратор в карточке; нет — поля нет */
+      deputy?: components["schemas"]["DeputyPeriod"];
       erp_sync: components["schemas"]["ErpSyncState"];
       /** @description Текст последней ошибки провижининга ERP (из CRM), если `erp_sync = error` */
       erp_sync_error?: string;
@@ -11567,6 +11576,8 @@ export interface components {
       is_active?: boolean;
       /** @description Кому передать лиды в работе (`crm_user_id` коллеги), если отключение или новые роли отнимают у сотрудника работу с лидами; без поля при таких лидах — 409 `CONFLICT` (`details.reason = user_has_active_leads`) */
       transfer_to_user_id?: string;
+      /** @description Замещение за сотрудника (СОТР-1) (администратор, раздел `admin` на запись): тот же период и правила, что у `setDeputy` (себя нельзя — 422 `deputy_is_self`, период не в прошлом и не длиннее года); явный `null` снимает замещение. Попадает в журнал как `user.deputy_set` / `user.deputy_cleared` от имени администратора. Только отдельным запросом: вместе с другими полями — 422. */
+      deputy?: components["schemas"]["DeputyUpdate"] | null;
     };
     MeUpdate: {
       language?: components["schemas"]["Language"];
@@ -12037,6 +12048,7 @@ export interface components {
        * @enum {string}
        */
       client_status:
+        | "contract_preparing"
         | "contract_review"
         | "contract_signing"
         | "awaiting_payment"
@@ -12281,6 +12293,7 @@ export interface components {
       step: "CONTRACT" | "PAYMENT" | "DONE";
       /** @enum {string} */
       client_status:
+        | "contract_preparing"
         | "contract_review"
         | "contract_signing"
         | "awaiting_payment"
@@ -12508,6 +12521,11 @@ export interface components {
       amount: components["schemas"]["EdsMoney"] | null;
       /** Format: date */
       due_date: string | null;
+      /**
+       * @description Служебка с суммой без счёта партнёра: автор отметил, что счёт придёт позже (Б-9)
+       * @default false
+       */
+      invoice_later: boolean;
       files: components["schemas"]["EdsFile"][];
       /** @description Связь с проектом */
       deal: components["schemas"]["EdsDealRef"] | null;
@@ -12777,6 +12795,11 @@ export interface components {
        * @description «Нужно до» — не в прошлом
        */
       due_date?: string | null;
+      /**
+       * @description Служебка с суммой без счёта партнёра: автор отметил, что счёт придёт позже (Б-9)
+       * @default false
+       */
+      invoice_later: boolean;
       file_ids?: string[];
       /** @description Связь с проектом (`GET /eds/deal-options`) */
       erp_deal_id?: number | null;
@@ -12811,6 +12834,11 @@ export interface components {
       amount?: components["schemas"]["EdsMoney"] | null;
       /** Format: date */
       due_date?: string | null;
+      /**
+       * @description Служебка с суммой без счёта партнёра: автор отметил, что счёт придёт позже (Б-9)
+       * @default false
+       */
+      invoice_later: boolean;
       file_ids?: string[];
       erp_deal_id?: number | null;
       /** @description Только `letter_out`; не передан — прежний */
@@ -13446,6 +13474,11 @@ export interface components {
       amount: components["schemas"]["PaymentMoney"] | null;
       /** Format: date */
       due_date: string | null;
+      /**
+       * @description Служебка с суммой без счёта партнёра: автор отметил, что счёт придёт позже (Б-9)
+       * @default false
+       */
+      invoice_later: boolean;
       deal: components["schemas"]["EdsDealRef"] | null;
       files: components["schemas"]["EdsFile"][];
       document_status: string;
@@ -14989,6 +15022,13 @@ export interface components {
     LetterIntakeIn: {
       /** Format: uuid */
       file_id: string;
+      /** @description Дата поступления письма — от неё считается срок «в течение N дней» */
+      received_at?: string | null;
+      /**
+       * @description Только правила кода, без модели (пересчёт срока)
+       * @default false
+       */
+      rules_only: boolean;
     };
     /** @description Предложенные поля; `null` — не найдено. ИНН найден кодом в тексте файла */
     LetterIntakeFields: {
@@ -15034,6 +15074,8 @@ export interface components {
       fields: components["schemas"]["LetterIntakeFields"];
       alias: string;
       prompt_version: string;
+      /** @description Поля, которые посчитал код, а не модель (срок «в течение N дней», ИНН); экран метит их «Из текста письма» */
+      by_code?: ("sender_inn" | "document_due")[];
     };
     AiDecisionIn: {
       /** @enum {string} */
@@ -17200,6 +17242,8 @@ export interface components {
       send: boolean;
       /** @description В черновике есть строки без цены — «Запросить цену» у партнёра (СЦ-10) */
       request_price: boolean;
+      /** @description Заказ отправлен, но письмо партнёру не ушло: «Отправить ещё раз» — тот же POST …/send (Б-5); только в карточке заказа */
+      resend?: boolean;
       confirm: boolean;
       receive: boolean;
       cancel: boolean;
@@ -17983,6 +18027,7 @@ export interface components {
     ClientSees:
       | "in_work"
       | "awaiting_decision"
+      | "contract_preparing"
       | "contract_review"
       | "contract_signing"
       | "awaiting_payment"

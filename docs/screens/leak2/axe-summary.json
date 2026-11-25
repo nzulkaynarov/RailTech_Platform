@@ -1,0 +1,26 @@
+[
+  {
+    "screen": "leak2-guest-no-contact",
+    "width": 1512,
+    "axe": true,
+    "rulesPassed": 38,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "leak2-guest-no-contact",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 38,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "leak2-guest-no-contact",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 38,
+    "overflowPx": 0,
+    "violations": []
+  }
+]

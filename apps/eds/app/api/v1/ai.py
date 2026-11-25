@@ -39,7 +39,9 @@ Box = Annotated[Container, Depends(get_container)]
 async def suggest_letter_from_file(
     body: LetterIntakeIn, employee: Registrar, session: Session, storage: Storage, box: Box
 ) -> LetterIntakeSuggestion:
-    return await letter_intake.suggest(session, box.settings, storage, employee, body.file_id)
+    return await letter_intake.suggest(
+        session, box.settings, storage, employee, body.file_id, body.received_at, rules_only=body.rules_only
+    )
 
 
 @router.post("/letter-assist", response_model=LetterAssistSuggestion, operation_id="assistLetterText")

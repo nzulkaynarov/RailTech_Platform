@@ -35,15 +35,25 @@ export function DealLink({
   deal,
   showTitle = false,
   stackTitle = false,
+  keepNumber = false,
 }: {
   deal: DealRef | null | undefined;
   showTitle?: boolean;
   stackTitle?: boolean;
+  /** Номер проекта не рвётся по дефису: в узкой ячейке переносится только слово перед ним. */
+  keepNumber?: boolean;
 }) {
   const { t } = useTranslation();
   // Страница проекта собирает КП, договоры, счета и акты: без модуля `quotes` (партнёр) номер — просто текст
   const canOpen = useHasModule('quotes');
   if (!deal) return <>{t('common.noDeal')}</>;
+  const label = keepNumber ? (
+    t(dealLabelKey(deal.stage), { number: '\u0001' })
+      .split('\u0001')
+      .flatMap((part, index) => (index === 0 ? [part] : [<span key="n" className="whitespace-nowrap">{deal.number}</span>, part]))
+  ) : (
+    t(dealLabelKey(deal.stage), { number: deal.number })
+  );
   return (
     <>
       {canOpen ? (
@@ -51,10 +61,10 @@ export function DealLink({
           to={`/deals/${deal.id}`}
           className="relative z-10 rounded-sm text-primary underline underline-offset-4 outline-none hover:no-underline focus-visible:ring-2 focus-visible:ring-ring"
         >
-          {t(dealLabelKey(deal.stage), { number: deal.number })}
+          {label}
         </Link>
       ) : (
-        <span>{t(dealLabelKey(deal.stage), { number: deal.number })}</span>
+        <span>{label}</span>
       )}
       {showTitle && deal.title ? (
         stackTitle ? (
