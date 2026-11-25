@@ -46,6 +46,7 @@
     }
   },
   "clientStatus": {
+    "contract_preparing": "Şartnomani tayyorlayapmiz",
     "contract_review": "Şartnoma matnini kelişib oling",
     "contract_signing": "Şartnoma imzolanmoqda",
     "awaiting_payment": "Tölov kutilmoqda",

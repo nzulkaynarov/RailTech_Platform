@@ -46,6 +46,7 @@
     }
   },
   "clientStatus": {
+    "contract_preparing": "We are preparing the contract",
     "contract_review": "Please agree the contract wording",
     "contract_signing": "Contract is being signed",
     "awaiting_payment": "Awaiting payment",

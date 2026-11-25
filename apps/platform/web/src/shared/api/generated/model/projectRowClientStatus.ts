@@ -10,6 +10,7 @@ export type ProjectRowClientStatus =
   (typeof ProjectRowClientStatus)[keyof typeof ProjectRowClientStatus];
 
 export const ProjectRowClientStatus = {
+  contract_preparing: "contract_preparing",
   contract_review: "contract_review",
   contract_signing: "contract_signing",
   awaiting_payment: "awaiting_payment",

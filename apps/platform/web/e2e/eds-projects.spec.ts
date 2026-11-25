@@ -143,6 +143,17 @@ test.describe("Проекты: бухгалтер", () => {
     await expectNoInvoiceWord(page);
   });
 
+  test("СЦ-8: в шапке один статус — «Проекта договора нет», слова «Согласуйте редакцию» нет", async ({
+    page,
+  }) => {
+    await loginAndWait(page, "director@demo.example");
+    await openProject(page, 104);
+    await expect(page.getByText("Проекта договора нет", { exact: true })).toHaveCount(1);
+    await expect(page.getByText("Согласуйте редакцию договора")).toHaveCount(0);
+    await settledScreenshot(page, "sc8-project-card-one-status");
+    await expectNoViolations(page, "карточка проекта: один статус в шапке");
+  });
+
   test("ЕД-7: «Сведения» и «История» в окне, документы и действия — в центре", async ({ page }) => {
     await loginAndWait(page, "accountant@demo.example");
     await openProject(page, 97);

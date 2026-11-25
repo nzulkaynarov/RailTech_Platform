@@ -4049,6 +4049,7 @@ export const getListEdsProjectsResponseMock = (
     ]),
     step: faker.helpers.arrayElement(["CONTRACT", "PAYMENT", "DONE"] as const),
     client_status: faker.helpers.arrayElement([
+      "contract_preparing",
       "contract_review",
       "contract_signing",
       "awaiting_payment",
@@ -4471,6 +4472,7 @@ export const getGetEdsProjectResponseMock = (
   ]),
   step: faker.helpers.arrayElement(["CONTRACT", "PAYMENT", "DONE"] as const),
   client_status: faker.helpers.arrayElement([
+    "contract_preparing",
     "contract_review",
     "contract_signing",
     "awaiting_payment",
@@ -4968,6 +4970,7 @@ export const getCreateEdsProjectContractResponseMock = (
   ]),
   step: faker.helpers.arrayElement(["CONTRACT", "PAYMENT", "DONE"] as const),
   client_status: faker.helpers.arrayElement([
+    "contract_preparing",
     "contract_review",
     "contract_signing",
     "awaiting_payment",
@@ -5492,6 +5495,7 @@ export const getActEdsProjectContractResponseMock = (
   ]),
   step: faker.helpers.arrayElement(["CONTRACT", "PAYMENT", "DONE"] as const),
   client_status: faker.helpers.arrayElement([
+    "contract_preparing",
     "contract_review",
     "contract_signing",
     "awaiting_payment",
@@ -6013,6 +6017,7 @@ export const getScanEdsProjectContractResponseMock = (
   ]),
   step: faker.helpers.arrayElement(["CONTRACT", "PAYMENT", "DONE"] as const),
   client_status: faker.helpers.arrayElement([
+    "contract_preparing",
     "contract_review",
     "contract_signing",
     "awaiting_payment",
@@ -6534,6 +6539,7 @@ export const getRequestEdsProjectSigningResponseMock = (
   ]),
   step: faker.helpers.arrayElement(["CONTRACT", "PAYMENT", "DONE"] as const),
   client_status: faker.helpers.arrayElement([
+    "contract_preparing",
     "contract_review",
     "contract_signing",
     "awaiting_payment",
@@ -7075,6 +7081,7 @@ export const getActEdsProjectActResponseMock = (
   ]),
   step: faker.helpers.arrayElement(["CONTRACT", "PAYMENT", "DONE"] as const),
   client_status: faker.helpers.arrayElement([
+    "contract_preparing",
     "contract_review",
     "contract_signing",
     "awaiting_payment",
@@ -7587,6 +7594,7 @@ export const getScanEdsProjectActResponseMock = (
   ]),
   step: faker.helpers.arrayElement(["CONTRACT", "PAYMENT", "DONE"] as const),
   client_status: faker.helpers.arrayElement([
+    "contract_preparing",
     "contract_review",
     "contract_signing",
     "awaiting_payment",
@@ -8099,6 +8107,7 @@ export const getMarkEdsProjectDeliveryResponseMock = (
   ]),
   step: faker.helpers.arrayElement(["CONTRACT", "PAYMENT", "DONE"] as const),
   client_status: faker.helpers.arrayElement([
+    "contract_preparing",
     "contract_review",
     "contract_signing",
     "awaiting_payment",

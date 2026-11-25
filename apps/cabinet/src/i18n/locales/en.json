@@ -651,6 +651,8 @@
       "overdueCount_other": "{{count}} invoices overdue",
       "overdueDays_one": "{{count}} day overdue",
       "overdueDays_other": "{{count}} days overdue",
+      "lateDays_one": "{{count}} day",
+      "lateDays_other": "{{count}} days",
       "columns": {
         "invoice": "Invoice",
         "status": "Status",
@@ -1139,6 +1141,7 @@
       "toRequests": "Go to requests",
       "titleFallback": "Project",
       "reorder": "Repeat project",
+      "decide": "Reply",
       "stages": {
         "title": "Project stages",
         "request": "Request",

@@ -17,7 +17,7 @@ import { PageHeader } from '@/components/PageHeader';
 import { ErrorState, ListSkeleton } from '@/components/QueryStates';
 import { ReasonDialog } from '@/components/ReasonDialog';
 import { ResponsiveList } from '@/components/ResponsiveList';
-import { StatusBadge, ToneBadge } from '@/components/StatusBadge';
+import { StatusBadge } from '@/components/StatusBadge';
 import { TimeLeft } from '@/components/TimeLeft';
 import { ManagerMenuItem } from '@/components/TelegramLinkButton';
 import { CompactList } from '@/components/list/CompactList';
@@ -225,6 +225,7 @@ export function InvoicesPage() {
                 id: 'status',
                 header: t('pages.invoices.columns.status'),
                 cell: (row) => <StatusBadge entity="invoice" code={views.get(row.id)?.displayStatus ?? row.status} />,
+                className: 'whitespace-nowrap',
               },
               { id: 'total', header: t('pages.invoices.columns.total'), cell: (row) => formatMoney(row.total), className: 'text-right tabular-nums whitespace-nowrap' },
               { id: 'paid', header: t('pages.invoices.columns.paid'), cell: (row) => formatMoney(row.paid), className: 'text-right tabular-nums whitespace-nowrap' },
@@ -242,7 +243,7 @@ export function InvoicesPage() {
                   return (
                     <span className="inline-flex flex-wrap items-center justify-end gap-1">
                       {formatDate(row.due_date)}
-                      {days ? <ToneBadge tone="danger">{t('pages.invoices.overdueDays', { count: days })}</ToneBadge> : null}
+                      {days ? <span className="text-xs font-medium text-destructive">{t('pages.invoices.lateDays', { count: days })}</span> : null}
                       {!days && invoiceOpen(row) ? <TimeLeft date={row.due_date} now={now} /> : null}
                     </span>
                   );

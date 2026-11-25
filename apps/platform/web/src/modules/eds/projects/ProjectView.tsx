@@ -306,14 +306,14 @@ function Content({ card, objectId }: { card: ProjectCard; objectId: string }) {
         subtitle={card.title}
         extra={
           <div className="pf-dec-row">
-            <StatusTag kind="stage" status={card.step}>
-              {t(`clientStatus.${card.client_status}`)}
-            </StatusTag>
-            {problems.map((p) => (
-              <StatusTag key={p} tone="red">
-                {t(`problem.${p}`)}
+            {problems.length > 0 ? (
+              // Один статус в шапке (СЦ-8): проблема важнее слова для клиента; где проект по пути — показывает шкала.
+              <StatusTag tone="red">{problems.map((p) => t(`problem.${p}`)).join(" · ")}</StatusTag>
+            ) : (
+              <StatusTag kind="stage" status={card.step}>
+                {t(`clientStatus.${card.client_status}`)}
               </StatusTag>
-            ))}
+            )}
             {writer ? null : <StatusTag tone="default">{t("card.readOnly")}</StatusTag>}
           </div>
         }

@@ -123,6 +123,23 @@ describe("Проект: карточка", () => {
     expect(document.querySelector(".pf-dec-side")).toBeNull();
   });
 
+  it("СЦ-8: в шапке один статус — проблема, если она есть; без договора клиенту не предлагают его согласовать", async () => {
+    signIn("director@demo.example");
+    renderAt(PR(104));
+    await screen.findByRole("region", { name: "Документы проекта" });
+    // проекта договора нет: слово для клиента — «Готовим договор», но при проблеме в шапке только она
+    expect(screen.getAllByText("Проекта договора нет")).toHaveLength(1);
+    expect(screen.queryByText(ruProjects.clientStatus.contract_preparing)).toBeNull();
+    expect(screen.queryByText(ruProjects.clientStatus.contract_review)).toBeNull();
+  });
+
+  it("СЦ-8: без проблем в шапке — слово для клиента по факту: договор отправлен — «Согласуйте редакцию»", async () => {
+    signIn("director@demo.example");
+    renderAt(PR(105));
+    await screen.findByRole("region", { name: "Документы проекта" });
+    expect(screen.getAllByText(ruProjects.clientStatus.contract_review)).toHaveLength(1);
+  });
+
   it("«История»: журнал проекта один, договор/акт — фильтры; пустые вкладки не показываются", async () => {
     signIn("accountant@demo.example");
     renderAt(PR(97));

@@ -11917,6 +11917,7 @@ export interface components {
        * @enum {string}
        */
       client_status:
+        | "contract_preparing"
         | "contract_review"
         | "contract_signing"
         | "awaiting_payment"
@@ -12161,6 +12162,7 @@ export interface components {
       step: "CONTRACT" | "PAYMENT" | "DONE";
       /** @enum {string} */
       client_status:
+        | "contract_preparing"
         | "contract_review"
         | "contract_signing"
         | "awaiting_payment"

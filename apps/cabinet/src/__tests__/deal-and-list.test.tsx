@@ -57,6 +57,25 @@ describe('Сделка (deep-link бота)', () => {
     expect(within(screen.getByRole('region', { name: 'Счета' })).queryByText('S-2026-0118')).not.toBeInTheDocument();
   });
 
+  it('СЦ-8: договор «Ждёт вашего согласования» и просроченный счёт — с кнопкой действия; зрителю и закрытым — без', async () => {
+    signedIn();
+    renderApp('/deals/29');
+    await heading('Проект ПР-2026-029');
+    const contracts = await screen.findByRole('region', { name: 'Договор' });
+    expect(within(contracts).getByText('Ждёт вашего согласования')).toBeInTheDocument();
+    expect(within(contracts).getByText('Согласовать')).toBeInTheDocument();
+    const invoices = screen.getByRole('region', { name: 'Счета' });
+    expect(within(invoices).getByText('Я оплатил')).toBeInTheDocument();
+  });
+
+  it('СЦ-8: подписанный договор и оплаченный счёт — без кнопки действия', async () => {
+    signedIn();
+    renderApp('/deals/35');
+    await heading('Проект ПР-2026-035');
+    expect(within(await screen.findByRole('region', { name: 'Договор' })).queryByText('Согласовать')).toBeNull();
+    expect(within(screen.getByRole('region', { name: 'Счета' })).queryByText('Я оплатил')).toBeNull();
+  });
+
   it('чужая сделка — «не найдено»', async () => {
     signedIn();
     renderApp('/deals/999');

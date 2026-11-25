@@ -663,6 +663,10 @@
       "overdueDays_few": "просрочен на {{count}} дня",
       "overdueDays_many": "просрочен на {{count}} дней",
       "overdueDays_other": "просрочен на {{count}} дня",
+      "lateDays_one": "{{count}} день",
+      "lateDays_few": "{{count}} дня",
+      "lateDays_many": "{{count}} дней",
+      "lateDays_other": "{{count}} дня",
       "columns": {
         "invoice": "Счёт",
         "status": "Статус",
@@ -1158,6 +1162,7 @@
       "toRequests": "К заявкам",
       "titleFallback": "Проект",
       "reorder": "Повторить проект",
+      "decide": "Ответить",
       "stages": {
         "title": "Этапы проекта",
         "request": "Заявка",
