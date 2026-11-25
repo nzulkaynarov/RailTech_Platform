@@ -78,7 +78,9 @@ describe("Карточка сотрудника · Telegram", () => {
       within(screen.getByRole("row", { name: /Демо Снабженцев/ })).getByText("Telegram: нет"),
     ).toBeVisible();
     expect(
-      within(screen.getByRole("row", { name: /Демо Бухгалтеров/ })).getByText("Telegram: не доходит"),
+      within(screen.getByRole("row", { name: /Демо Бухгалтеров/ })).getByText(
+        "Telegram: не доходит",
+      ),
     ).toBeVisible();
   });
 
