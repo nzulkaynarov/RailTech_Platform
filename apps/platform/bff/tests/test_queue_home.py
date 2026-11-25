@@ -152,7 +152,7 @@ async def test_every_row_says_why_it_is_yours_from_its_own_fact(web: Web, fb: Fe
     assert items["acquaint:" + str(LETTER["id"])]["action_label"] == "Ознакомлен"
     letter_sign = items[f"sign_document:{DOC}"]
     assert letter_sign["reason"] == (
-        "вы подписант по реестру полномочий · передал(а) Иван Исполнитель · ждёт 2 ч"
+        "вы подписант по реестру полномочий · передано: Иван Исполнитель · ждёт 2 ч"
     )
     contract = items[f"sign_document:{SIGN_ROUTE}"]
     assert contract["reason"] == "вы подписант по реестру полномочий · ждёт 1 д"
@@ -385,3 +385,43 @@ async def test_deputy_lead_row_names_the_colleague_not_your_client(
     (row,) = [i for i in items.values() if "on_behalf_of" in i]
     assert row["reason"].startswith("вы замещаете Мадина Р.")
     assert "ваш клиент" not in row["reason"]
+
+
+async def test_queue_rows_and_cards_follow_the_interface_language(
+    web: Web, fb: FeedBackends
+) -> None:
+    """СЦ-7 (N1): строки и карточки «Главной» — на языке `Accept-Language`, по умолчанию русский."""
+    fb.state["inbox"] = {
+        "escalations": [
+            lead(1, "Демо-Рейл", escalation=escalation(reason="клиент просит звонок")),
+        ],
+        "mine": [lead(2, "Тест-Сервис", unread=True, last_msg=fb.m.ago(minutes=40))],
+        "unassigned": [],
+    }
+    await web.login(["MANAGER"])
+
+    async def queue(language: str | None) -> dict[str, dict[str, Any]]:
+        headers = {"Accept-Language": language} if language else {}
+        response = await web.client.get("/api/v1/queue", headers=headers)
+        assert response.status_code == 200, response.text
+        return {i["id"]: i for i in response.json()["items"]}
+
+    ru = await queue(None)
+    assert ru["lead:2:answer_lead"]["reason"] == "ваш клиент ждёт ответа"
+    assert "мин назад" in ru["lead:2:answer_lead"]["subtitle"]
+
+    uz = await queue("uz-UZ,uz;q=0.9,ru;q=0.5")
+    assert uz["lead:2:answer_lead"]["title"].startswith("Lidga javob beriş")
+    assert uz["lead:2:answer_lead"]["reason"] == "sizning mijozingiz javob kutmoqda"
+    assert uz["lead:2:answer_lead"]["action_label"] == "Javob beriş"
+    assert "daq. oldin" in uz["lead:2:answer_lead"]["subtitle"]
+    assert uz["lead:1:take_lead"]["reason"].startswith("menejersiz lid")
+
+    en = await queue("en")
+    assert en["lead:2:answer_lead"]["reason"] == "your client is waiting for a reply"
+    assert "min ago" in en["lead:2:answer_lead"]["subtitle"]
+
+    cards = await web.client.get("/api/v1/queue/cards", headers={"Accept-Language": "uz"})
+    labels = {c["label"] for c in cards.json()["cards"]}
+    assert "Menejersiz lidlar" in labels
+    assert not any("Лиды" in label for label in labels)

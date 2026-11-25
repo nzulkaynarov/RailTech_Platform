@@ -21,7 +21,7 @@ describe("relativeTime", () => {
 
   it("старше суток — «вчера» с временем или дата в поясе компании", () => {
     expect(relativeTime("2026-10-21T04:24:00Z", NOW, labels, "ru")).toBe("вчера 09:24");
-    expect(relativeTime("2026-10-18T06:50:00Z", NOW, labels, "ru")).toBe("18.10 11:50");
+    expect(relativeTime("2026-10-18T06:50:00Z", NOW, labels, "ru")).toBe("18.10.2026 11:50");
   });
 
   it("мусор вместо времени — пустая строка", () => {

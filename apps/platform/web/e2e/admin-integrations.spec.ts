@@ -204,7 +204,7 @@ test.describe("Внешние интеграции: администратор",
     await expect(log.getByText("Тестовое письмо")).toBeVisible();
     await expect(log.getByText("ERP · КП клиенту · вложение: 1")).toBeVisible();
     await expect(
-      log.getByText("Причина: Почтовый сервер отклонил письмо (SMTP 550)"),
+      log.getByText("Причина: Почтовый сервер отклонил письмо (ответ сервера 550)"),
     ).toBeVisible();
     for (const width of WIDTHS) {
       await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });

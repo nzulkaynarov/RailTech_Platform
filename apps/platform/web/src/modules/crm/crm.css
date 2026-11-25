@@ -180,3 +180,13 @@
   margin: 0;
   padding-left: 16px;
 }
+
+/* «Закрыть» в карточке лида раскрывается в потоке: сообщения выше остаются видны (СЦ-7, N5) */
+.pf-crm-close-inline {
+  flex: 1 1 100%;
+  border: 1px solid var(--rt-color-surface-split);
+  border-radius: 8px;
+}
+.pf-crm-actions[data-sheet="true"] > .pf-crm-close-inline {
+  flex: 1 1 100%;
+}

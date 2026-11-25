@@ -99,6 +99,14 @@ class SupplierOrderLine(models.Model):
         "catalog.Product", null=True, blank=True, on_delete=models.SET_NULL, related_name="supplier_order_lines"
     )
     name = models.CharField(max_length=500)
+    name_by_staff = models.BooleanField(
+        default=False,
+        verbose_name=_("Название задал сотрудник"),
+        help_text=_(
+            "Название строки написал человек (а не взято из карточки, заведённой расчётом из слов клиента): "
+            "только такое название уходит партнёру при неподтверждённой карточке"
+        ),
+    )
     article = models.CharField(max_length=120, blank=True, default="")
     unit = models.CharField(max_length=32, blank=True, default="")
     quantity = models.DecimalField(max_digits=14, decimal_places=3)

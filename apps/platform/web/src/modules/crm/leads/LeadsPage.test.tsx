@@ -131,7 +131,8 @@ describe("Клиенты · Лиды (D1-2b)", () => {
     expect(await within(panel).findByRole("heading", { name: "Азиз Демо" })).toBeVisible();
     expect(within(panel).getByText("@aziz_demo")).toBeVisible();
     expect(within(panel).getByText(/дано в боте/)).toBeVisible();
-    expect(within(panel).getAllByText("Рельсы Р65, 40 т").length).toBeGreaterThan(0);
+    // СЦ-7 (N5): запрос — тот же текст, что в сообщении лида; второй раз не печатается
+    expect(within(panel).getAllByText("Рельсы Р65, 40 т")).toHaveLength(1);
     expect(within(panel).getByRole("list", { name: "Последние сообщения" })).toBeVisible();
     expect(within(panel).getByRole("link", { name: "Создать заявку" })).toHaveAttribute(
       "href",

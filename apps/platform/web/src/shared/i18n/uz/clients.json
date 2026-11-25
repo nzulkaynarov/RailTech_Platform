@@ -269,7 +269,7 @@
     "disconnectLabel": "{{name}} guruhini ajratiş",
     "confirmTitle": "Guruh ajratilsinmi?",
     "confirmText": "«{{name}}» guruhi yozuvi töxtaydi. Avvalgi yozişma mijoz kartasida qoladi.",
-    "emptyTitle": "Hozircha guruh yöq",
+    "emptyTitle": "Hozirça guruh yöq",
     "emptyText": "Botni mijoz guruhiga qöşing — guruh şu yerda paydo böladi.",
     "errors": {
       "wrongCode": "Kod mos kelmadi. Guruhdagi kodni tekşiring.",
@@ -277,7 +277,7 @@
       "generic": "Bajarilmadi. Qayta uriniş.",
       "load": "Guruhlarni yuklab bölmadi. Sahifani yangilang.",
       "expired": "Kod muddati tugagan yoki işlatilgan. Yangi kod — guruhda /connect.",
-      "alreadyBound": "Bu guruh allaqachon ulangan.",
+      "alreadyBound": "Bu guruh allaqaçon ulangan.",
       "teamChannel": "Bu jamoa kanali, uni mijoz guruhi qilib bölmaydi."
     },
     "card": {

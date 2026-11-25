@@ -77,6 +77,7 @@ from app.clients import CrmClient, EdsClient, ErpClient
 from app.clients.base import TIMEOUT_SECONDS
 from app.config import Settings, get_settings
 from app.errors import install_error_handlers
+from app.feeds.lang import LanguageMiddleware
 from app.hub import EventHub
 from app.logging import configure_logging
 from app.request_id import RequestIdMiddleware
@@ -125,6 +126,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
     app.add_middleware(consoles.NoStoreConsoleAuth)
     app.add_middleware(RequestIdMiddleware)
+    app.add_middleware(LanguageMiddleware)
     app.add_middleware(ClientIpMiddleware, networks=cfg.trusted_proxy_networks)
     install_error_handlers(app)
     app.include_router(health.router, prefix=API_PREFIX)

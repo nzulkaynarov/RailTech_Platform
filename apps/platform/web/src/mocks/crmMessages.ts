@@ -399,7 +399,7 @@ export function handOverQueueItems(
         subtitle: [
           item.name,
           item.handoff?.reason_text,
-          `передал(а) ${item.handoff?.handed_by?.name ?? ""}`,
+          `передано: ${item.handoff?.handed_by?.name ?? ""}`,
         ]
           .filter(Boolean)
           .join(" · "),
