@@ -23,7 +23,7 @@ from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
 
-from sqlalchemy import any_, literal, select
+from sqlalchemy import any_, literal, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Document, Employee, SigningAuthority
@@ -40,7 +40,7 @@ from app.schemas.signing import (
     SigningResolution,
 )
 from app.security.permissions import EdsPermission as P
-from app.services import docflow_settings
+from app.services import access, docflow_settings
 
 MAX_DEPUTY_CHAIN = 5
 _RANK = {BASIS_CHARTER: 0, BASIS_ORDER: 1, BASIS_POWER_OF_ATTORNEY: 2}
@@ -387,16 +387,20 @@ async def resolve(
     )
 
 
-async def draft_openers(session: AsyncSession, ids: Collection[int]) -> set[int]:
-    """Кто из `ids` видит и вправе подписать переданный черновик ИСХ: активный держатель `letters.register`
-    (без него черновик недоступен — `access.document_visible`)."""
+async def draft_openers(session: AsyncSession, ids: Collection[int], on_date: date | None = None) -> set[int]:
+    """Кто из `ids` видит и вправе подписать переданный черновик ИСХ: активный держатель `letters.register` или
+    держатель полномочия подписи на «исходящее письмо» (`access.signer_handed_draft`: черновик, переданный на подпись,
+    доступен тому, кому его поручают, — раздел регистрации для этого не нужен)."""
     if not ids:
         return set()
     rows = await session.execute(
         select(Employee.crm_user_id).where(
             Employee.crm_user_id.in_(ids),
             Employee.is_active.is_(True),
-            literal(P.LETTERS_REGISTER.value) == any_(Employee.permissions_eds),
+            or_(
+                literal(P.LETTERS_REGISTER.value) == any_(Employee.permissions_eds),
+                access.holds_letter_authority(Employee.crm_user_id, on_date),
+            ),
         )
     )
     return {int(uid) for uid in rows.scalars()}
@@ -452,7 +456,7 @@ async def letter_signer(session: AsyncSession, document: Document, today: date) 
     result = await resolve(
         session, kind=document.kind, amount=document.amount, currency=document.currency, on_date=today
     )
-    openers = await draft_openers(session, {c.signer.crm_user_id for c in result.candidates})
+    openers = await draft_openers(session, {c.signer.crm_user_id for c in result.candidates}, today)
     return pick_letter_signer(
         result,
         document.author_crm_user_id,
@@ -470,7 +474,7 @@ async def letter_signers(
     if not documents:
         return {}
     grants, people = await load_registry(session, DocumentKind.LETTER_OUT.value)
-    openers = await draft_openers(session, set(people))
+    openers = await draft_openers(session, set(people), today)
     may_sign_own = await docflow_settings.author_may_sign_own_letter(session)
     resolutions: dict[tuple[str, Decimal | None, str | None], SigningResolution] = {}
     picked: dict[uuid.UUID, SignerCandidate | None] = {}
@@ -509,7 +513,7 @@ async def letter_signer_options(session: AsyncSession, today: date) -> list[Sign
     result = await resolve(session, kind=DocumentKind.LETTER_OUT.value, amount=None, currency=None, on_date=today)
     holders = {c.signer.crm_user_id for c in result.candidates}  # полномочие у каждого своё
     holders |= {r.signer.crm_user_id for r in result.rejected if r.reason == "absent"}
-    holders &= await draft_openers(session, holders)
+    holders &= await draft_openers(session, holders, today)
     people = await load_holders(session, holders)
     options = [SignerOption(uid, people[uid].full_name, people[uid].position) for uid in holders if uid in people]
     return sorted(options, key=lambda o: (o.full_name.casefold(), o.crm_user_id))

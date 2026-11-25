@@ -24,6 +24,8 @@ class TelegramStatusOut(BaseModel):
     secrets_enabled: bool
     channel_id: int | None
     channel_title: str | None
+    # The bot may lack the «invite users» right in the team channel: join-request links then fail.
+    channel_can_invite: bool | None = None
 
 
 class TelegramTokenIn(BaseModel):

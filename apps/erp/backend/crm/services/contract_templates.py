@@ -306,7 +306,9 @@ def unfilled_variables(contract, body_html: str) -> list:
     totals = document_totals(
         ccy=ccy, vat_rate=contract.quote.vat_rate if contract.quote_id else None, total=contract.total_amount
     )
-    items = contract.quote.items.billable().select_related("product", "frozen_currency")
+    from .documents.projection import client_billable_lines
+
+    items = client_billable_lines(contract.quote)
     rendered = render_contract_body(
         contract,
         items,

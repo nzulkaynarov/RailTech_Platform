@@ -665,6 +665,10 @@
       "overdueDays_few": "просрочен на {{count}} дня",
       "overdueDays_many": "просрочен на {{count}} дней",
       "overdueDays_other": "просрочен на {{count}} дня",
+      "lateDays_one": "{{count}} день",
+      "lateDays_few": "{{count}} дня",
+      "lateDays_many": "{{count}} дней",
+      "lateDays_other": "{{count}} дня",
       "columns": {
         "invoice": "Счёт",
         "status": "Статус",
@@ -1160,6 +1164,7 @@
       "toRequests": "К заявкам",
       "titleFallback": "Проект",
       "reorder": "Повторить проект",
+      "decide": "Ответить",
       "stages": {
         "title": "Этапы проекта",
         "request": "Заявка",
@@ -1958,6 +1963,7 @@
       "answer": "Ответить на запрос",
       "confirm": "Подтвердить заказ"
     },
+    "guestNote": "Чтобы ответить по документу — напишите отправителю",
     "codeNote": "Любое действие — после кода, который придёт на {{email}}. Другие документы и разделы по этой ссылке не открываются.",
     "memberNote": "Вы вошли как {{name}} — код не нужен.",
     "linkUntil": "Ссылка действует до {{date}} — отправитель может её отозвать.",

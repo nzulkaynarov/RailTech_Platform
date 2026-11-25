@@ -102,6 +102,30 @@ class ClientRequestInSerializer(serializers.Serializer):
     process = serializers.ChoiceField(choices=["v3"])
 
 
+class PartnerApplicationInSerializer(serializers.Serializer):
+    """`PartnerApplicationIn`: «Партнёр» из карточки лида CRM (ЛП-1) — заявка кандидата в очередь снабжения."""
+
+    crm_lead_id = serializers.IntegerField(min_value=1)
+    lead_number = serializers.CharField(max_length=32)
+    company_name = serializers.CharField(max_length=255)
+    country = serializers.CharField(max_length=2, required=False, default="UZ")
+    inn = serializers.CharField(max_length=32, allow_blank=True, required=False, default="")
+    kind = serializers.ChoiceField(
+        choices=["manufacturer", "supplier", "principal", "other"], required=False, default="supplier"
+    )
+    categories_description = serializers.CharField(max_length=4000)
+    contact_name = serializers.CharField(max_length=255)
+    email = serializers.EmailField(max_length=254)
+    phone = serializers.CharField(max_length=32, allow_blank=True, required=False, default="")
+    language = serializers.ChoiceField(choices=["ru", "uz", "en"], required=False, default="ru")
+
+
+class PartnerApplicationOutSerializer(serializers.Serializer):
+    erp_application_id = serializers.IntegerField()
+    status = serializers.CharField()
+    created = serializers.BooleanField()
+
+
 class ClientRequestOutSerializer(serializers.Serializer):
     erp_company_id = serializers.IntegerField()
     erp_request_id = serializers.IntegerField()

@@ -591,11 +591,13 @@
         "erpPending": "Kiriş berilmoqda",
         "erpError": "Kiriş berilmagan",
         "telegram": "Telegram",
-        "telegramNo": "Telegram: yöq"
+        "telegramNo": "Telegram: yöq",
+        "telegramBlocked": "Telegram: yetib bormaydi"
       },
       "telegram": {
         "linked": "Ulangan",
-        "notLinked": "Ulanmagan"
+        "notLinked": "Ulanmagan",
+        "blocked": "Ulangan, lekin xabarlar yetib bormaydi: xodim botda «Start» tugmasini bosishi yoki botni blokdan çiqarişi kerak"
       },
       "noRoles": "Rollar yöq",
       "noPosition": "körsatilmagan",
@@ -725,7 +727,18 @@
         "BACKEND_UNAVAILABLE": "Server javob bermayapti. Keyinroq takrorlang.",
         "VALIDATION_FAILED": "Maydonlarning töldirilganini tekşiring.",
         "DEFAULT": "Amalni bajarib bölmadi. Qayta urinib köring.",
-        "OWN_ACCOUNT": "Öz parolingiz profilda almaştiriladi: vaqtinçalik parol boşqa xodimlarga beriladi."
+        "OWN_ACCOUNT": "Öz parolingiz profilda almaştiriladi: vaqtinçalik parol boşqa xodimlarga beriladi.",
+        "deputy_is_self": "Xodimning özini almaştiruvçi qilib bölmaydi.",
+        "deputy_period_reversed": "Tugaş sanasi boşlaniş sanasidan oldin.",
+        "deputy_period_past": "Davr allaqaçon tugagan.",
+        "deputy_period_too_long": "Davr bir yildan uzun bölmasligi kerak.",
+        "deputy_not_colleague": "Bu xodim navbatni yurita olmaydi. Boşqasini tanlang."
+      },
+      "deputy": {
+        "title": "Almaştiriş",
+        "none": "Almaştiruvçi tayinlanmagan.",
+        "sentence": "Yöqligi vaqtida vazifalar, vizalar va rezolyutsiyalarni {{name}} köradi: {{from}} dan {{to}} gaça.",
+        "line": "{{name}}: {{from}} dan {{to}} gaça"
       },
       "transfer": {
         "label": "Işdagi lidlarni kimga topşiriş",

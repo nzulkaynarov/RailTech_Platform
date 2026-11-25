@@ -185,7 +185,8 @@
       "web_request": "Repeated request from the website",
       "merge": "Merged lead cards",
       "updated": "Updated a lead",
-      "hand_over": "Handed a lead to a manager with a note"
+      "hand_over": "Handed a lead to a manager with a note",
+      "hand_over_partner": "Handed the lead over as a partner"
     },
     "deal": {
       "create": "Created a deal",

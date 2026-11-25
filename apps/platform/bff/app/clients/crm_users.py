@@ -101,6 +101,9 @@ def crm_error(response: httpx.Response) -> PlatformError:
     if status == 422 and code == "roles_required":
         fields = ["role_ids"]
         return _replace(base, "ROLES_REQUIRED", ROLES_REQUIRED_MESSAGE, reason=code, fields=fields)
+    if status == 422 and reason is not None and reason.startswith("deputy_"):
+        # Замещение (СОТР-1): `deputy_is_self`, `deputy_period_past`… — причина словами на экране
+        base.body.details = {**(base.body.details or {}), "reason": reason}
     if status == 422 and (fields := _fields(response)):
         base.body.details = {**(base.body.details or {}), "fields": fields}
     return base

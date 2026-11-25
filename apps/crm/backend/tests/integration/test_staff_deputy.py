@@ -6,7 +6,7 @@ from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import delete, text, update
+from sqlalchemy import delete, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.bus import runtime, snapshots
@@ -14,7 +14,7 @@ from app.bus.runtime import build_bus
 from app.config import Settings
 from app.domain.errors import ForbiddenError, ValidationFailedError
 from app.main import create_app
-from app.models.auth import User
+from app.models.auth import AuditLog, User
 from app.models.leads import Lead
 from app.security.audit import Actor
 from app.services.staff_deputy import StaffDeputyService
@@ -342,3 +342,87 @@ async def test_failed_publication_rolls_the_deputy_back(
         saved = await session.get(User, me.id)
     assert saved is not None
     assert (saved.deputy_user_id, saved.deputy_from, saved.deputy_to) == (None, None, None)
+
+
+async def test_admin_sets_and_clears_the_deputy_of_an_absent_employee(
+    client: TestClient, sessions: async_sessionmaker[AsyncSession]
+) -> None:
+    """СОТР-1: сотрудник болен и не вошёл — замещение ставит администратор, правила те же."""
+    boss, boss_password = await make_user(sessions, "boss@railtech.uz", ["admin"])
+    absent, _ = await make_user(sessions, "absent@railtech.uz", ["manager"])
+    deputy, _ = await make_user(sessions, "deputy@railtech.uz", ["manager"])
+    headers = login(client, boss.email, boss_password)
+    start = datetime.now(UTC).date() + timedelta(days=1)
+    period = {
+        "deputy_user_id": deputy.id,
+        "deputy_from": start.isoformat(),
+        "deputy_to": (start + timedelta(days=5)).isoformat(),
+    }
+
+    saved = client.patch(f"/api/v1/users/{absent.id}", headers=headers, json=period)
+    assert saved.status_code == 200, saved.text
+    assert saved.json()["deputy_user_id"] == deputy.id
+    assert saved.json()["deputy_to"] == period["deputy_to"]
+    async with sessions() as session:
+        entries = list(
+            await session.scalars(select(AuditLog).where(AuditLog.action == "user.deputy_set"))
+        )
+    assert [(e.actor_user_id, e.entity_id) for e in entries] == [(boss.id, str(absent.id))]
+
+    cleared = client.patch(
+        f"/api/v1/users/{absent.id}", headers=headers, json={"clear_deputy": True}
+    )
+    assert cleared.status_code == 200, cleared.text
+    assert cleared.json()["deputy_user_id"] is None
+    async with sessions() as session:
+        cleared_entries = list(
+            await session.scalars(select(AuditLog).where(AuditLog.action == "user.deputy_cleared"))
+        )
+    assert [(e.actor_user_id, e.entity_id) for e in cleared_entries] == [(boss.id, str(absent.id))]
+
+
+async def test_admin_cannot_make_an_employee_their_own_deputy_or_send_half_a_period(
+    client: TestClient, sessions: async_sessionmaker[AsyncSession]
+) -> None:
+    boss, boss_password = await make_user(sessions, "boss@railtech.uz", ["admin"])
+    absent, _ = await make_user(sessions, "absent@railtech.uz", ["manager"])
+    headers = login(client, boss.email, boss_password)
+    start = datetime.now(UTC).date() + timedelta(days=1)
+    full = {
+        "deputy_user_id": absent.id,
+        "deputy_from": start.isoformat(),
+        "deputy_to": (start + timedelta(days=2)).isoformat(),
+    }
+    own = client.patch(f"/api/v1/users/{absent.id}", headers=headers, json=full)
+    assert own.status_code == 422
+    assert own.json()["details"]["reason"] == "deputy_is_self"
+    half = client.patch(
+        f"/api/v1/users/{absent.id}", headers=headers, json={"deputy_user_id": boss.id}
+    )
+    assert half.status_code == 422
+    async with sessions() as session:
+        user = await session.get(User, absent.id)
+    assert user is not None
+    assert user.deputy_user_id is None
+
+
+async def test_only_an_administrator_can_set_somebody_elses_deputy(
+    client: TestClient, sessions: async_sessionmaker[AsyncSession]
+) -> None:
+    peer, peer_password = await make_user(sessions, "peer@railtech.uz", ["manager"])
+    absent, _ = await make_user(sessions, "absent@railtech.uz", ["manager"])
+    start = datetime.now(UTC).date() + timedelta(days=1)
+    refused = client.patch(
+        f"/api/v1/users/{absent.id}",
+        headers=login(client, peer.email, peer_password),
+        json={
+            "deputy_user_id": peer.id,
+            "deputy_from": start.isoformat(),
+            "deputy_to": (start + timedelta(days=2)).isoformat(),
+        },
+    )
+    assert refused.status_code == 403
+    async with sessions() as session:
+        user = await session.get(User, absent.id)
+    assert user is not None
+    assert user.deputy_user_id is None

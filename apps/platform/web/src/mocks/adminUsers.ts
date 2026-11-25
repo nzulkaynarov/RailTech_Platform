@@ -16,6 +16,8 @@ import { buildMe, currentActor, readSession } from "./mockSession";
 import { rememberTemporaryPassword, registerUser, updateExtraUser } from "./fixtures/users";
 import { stepUpRefusal } from "./secondFactor";
 import { markStepDone } from "./setupState";
+import { deputyRefusal } from "./profileHandlers";
+import { patchProfile } from "./profileStore";
 
 export function failure(
   status: number,
@@ -135,6 +137,7 @@ export const adminUsersHandlers = [
       access: accessFor(body.role_ids),
       status: "invited",
       telegram_linked: false,
+      telegram: "not_linked",
       erp_sync: "pending",
     };
     writeEmployees([...items, employee]);
@@ -223,6 +226,7 @@ export const adminUsersHandlers = [
       access: accessFor(body.role_ids),
       status: "invited",
       telegram_linked: false,
+      telegram: "not_linked",
       erp_sync: "pending",
     };
     writeEmployees([...items, employee]);
@@ -277,6 +281,33 @@ export const adminUsersHandlers = [
     if (body.role_ids?.some((id) => !current.role_ids.includes(id))) {
       const refusal = stepUpRefusal(request);
       if (refusal) return refusal;
+    }
+    // СОТР-1: замещение за сотрудника — те же правила и журнал, что у «Профиля»; `null` снимает
+    if (body.deputy !== undefined) {
+      if (body.deputy !== null) {
+        const refusal = deputyRefusal(current.id, body.deputy);
+        if (refusal) return refusal;
+        patchProfile(current.id, {
+          deputy: {
+            id: body.deputy.deputy_id,
+            date_from: body.deputy.date_from,
+            date_to: body.deputy.date_to,
+          },
+        });
+        recordAudit(currentActor(), {
+          action: "user.deputy_set",
+          entityType: "user",
+          entityId: current.id,
+        });
+      } else {
+        patchProfile(current.id, { deputy: undefined });
+        recordAudit(currentActor(), {
+          action: "user.deputy_cleared",
+          entityType: "user",
+          entityId: current.id,
+        });
+      }
+      if (Object.keys(body).length === 1) return HttpResponse.json(toEmployee(current));
     }
     // Как BFF 0.6.0: пустой набор ролей в CRM не уходит (закрыть доступ — «Отключить сотрудника»).
     if (body.role_ids !== undefined && body.role_ids.length === 0) {

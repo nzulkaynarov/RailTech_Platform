@@ -19,6 +19,7 @@ from fastapi import APIRouter, Depends, Response, status
 
 from app.api.deps import ContainerDep, require
 from app.schemas.client_requests import RequestCreate, RequestCreated, RequestRetried
+from app.schemas.partner_handoff import PartnerHandoffIn, PartnerHandoffOut
 from app.security.principal import Principal
 
 router = APIRouter(prefix="/api/v1", tags=["clients"])
@@ -42,6 +43,26 @@ async def create_request_from_lead(
     директору в EDS)."""
     created = await container.client_request_service.create_from_lead(who, lead_id, body)
     return _answer(created, response)
+
+
+@router.post("/leads/{lead_id}/actions/hand_over_partner", response_model=PartnerHandoffOut)
+async def hand_over_partner(
+    lead_id: int,
+    body: PartnerHandoffIn,
+    who: ClientWriter,
+    container: ContainerDep,
+    response: Response,
+) -> PartnerHandoffOut:
+    """«Партнёр» (ЛП-1): лид — кандидат в партнёры, а не клиент. Заявка кандидата уходит в ERP
+    («Заявки
+    партнёров»), лид закрывается исходом «передан как партнёр» и клиентом не становится. Повтор
+    (двойной
+    клик, параллельно) — 200 с первой заявкой, второй не заводится. ERP недоступна — 503, лид не
+    тронут."""
+    result = await container.partner_handoff_service.hand_over(who, lead_id, body)
+    if not result.created:
+        response.status_code = status.HTTP_200_OK
+    return result
 
 
 @router.post(

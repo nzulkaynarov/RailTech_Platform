@@ -4,6 +4,7 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 
+from app.domain.platform_roles import RoleGrant, handles_leads
 from app.domain.staff_notify import (
     PREVIEW_CHARS,
     Staff,
@@ -118,22 +119,32 @@ def test_lead_dm_text_attachment_only() -> None:
 
 
 def _staff(
-    user_id: int, roles: tuple[str, ...], tg: int | None, *, active: bool = True, leads: bool = True
+    user_id: int,
+    roles: tuple[str, ...],
+    tg: int | None,
+    *,
+    active: bool = True,
+    leads: bool = True,
+    handles: bool | None = None,
 ) -> Staff:
-    return Staff(user_id, roles, active, tg, True, leads)
+    handles = "manager" in roles if handles is None else handles
+    return Staff(user_id, roles, active, tg, True, leads, handles_leads=handles)
 
 
-def test_new_lead_recipients_are_subscribed_active_managers_and_admins_with_telegram() -> None:
+def test_new_lead_recipients_are_lead_handlers_with_telegram_not_admins_by_role() -> None:
     staff = [
         _staff(1, ("manager",), 101),
-        _staff(2, ("admin",), 102),
+        _staff(2, ("admin",), 102),  # администратор только по базовой роли — лиды не его
+        _staff(
+            8, ("admin",), 108, handles=True
+        ),  # лиды поручены правом `crm.leads: full` — получает
         _staff(3, ("manager",), None),  # Telegram не привязан
         _staff(4, ("manager",), 104, leads=False),  # отписан от лидов
         _staff(5, ("manager",), 105, active=False),
         _staff(6, ("viewer",), 106),
         _staff(7, ("manager",), 101),  # тот же Telegram — без дубля
     ]
-    assert new_lead_recipients(staff) == [101, 102]
+    assert new_lead_recipients(staff) == [101, 108]
 
 
 def test_web_lead_text_escapes_the_form_input_and_links_to_the_card() -> None:
@@ -161,3 +172,15 @@ def test_web_lead_text_without_name_and_need() -> None:
         "{who}|{need}", name="", company=None, need=None, minutes=5, lead_url="https://c", lead_id=9
     )
     assert text == "#9|без описания"
+
+
+def test_handles_leads_follows_the_role_matrices_not_the_base_role() -> None:
+    admin = RoleGrant({"admin": "full", "company.settings": "full"})
+    manager = RoleGrant({"crm.leads": "full", "crm.clients": "full"})
+    director = RoleGrant({"crm.leads": "read", "admin": "read"})
+    assert handles_leads([admin]) is False
+    assert handles_leads([director]) is False
+    assert handles_leads([manager]) is True
+    assert (
+        handles_leads([admin, manager]) is True
+    )  # старшая базовая роль — admin, но лиды ему поручены

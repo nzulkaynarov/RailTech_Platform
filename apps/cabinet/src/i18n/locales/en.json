@@ -653,6 +653,8 @@
       "overdueCount_other": "{{count}} invoices overdue",
       "overdueDays_one": "{{count}} day overdue",
       "overdueDays_other": "{{count}} days overdue",
+      "lateDays_one": "{{count}} day",
+      "lateDays_other": "{{count}} days",
       "columns": {
         "invoice": "Invoice",
         "status": "Status",
@@ -1141,6 +1143,7 @@
       "toRequests": "Go to requests",
       "titleFallback": "Project",
       "reorder": "Repeat project",
+      "decide": "Reply",
       "stages": {
         "title": "Project stages",
         "request": "Request",
@@ -1921,6 +1924,7 @@
       "answer": "Answer the request",
       "confirm": "Confirm the order"
     },
+    "guestNote": "To respond to this document, write to the sender",
     "codeNote": "Any action needs the code we send to {{email}}. No other documents or sections open by this link.",
     "memberNote": "You are signed in as {{name}} — no code needed.",
     "linkUntil": "The link works until {{date}} — the sender can revoke it.",

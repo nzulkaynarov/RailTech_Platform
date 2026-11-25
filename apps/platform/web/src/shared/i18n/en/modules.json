@@ -591,11 +591,13 @@
         "erpPending": "Access being granted",
         "erpError": "Access not granted",
         "telegram": "Telegram",
-        "telegramNo": "Telegram: no"
+        "telegramNo": "Telegram: no",
+        "telegramBlocked": "Telegram: not delivered"
       },
       "telegram": {
         "linked": "Linked",
-        "notLinked": "Not linked"
+        "notLinked": "Not linked",
+        "blocked": "Linked, but messages do not arrive: the employee needs to press «Start» in the bot or unblock it"
       },
       "noRoles": "No roles",
       "noPosition": "not specified",
@@ -725,7 +727,18 @@
         "BACKEND_UNAVAILABLE": "The server is not responding. Try again later.",
         "VALIDATION_FAILED": "Check the fields.",
         "DEFAULT": "The action failed. Try again.",
-        "OWN_ACCOUNT": "Your own password is changed in the profile: temporary passwords are issued to other employees."
+        "OWN_ACCOUNT": "Your own password is changed in the profile: temporary passwords are issued to other employees.",
+        "deputy_is_self": "An employee cannot be their own deputy.",
+        "deputy_period_reversed": "The end date is before the start date.",
+        "deputy_period_past": "The period is already over.",
+        "deputy_period_too_long": "The period cannot be longer than a year.",
+        "deputy_not_colleague": "This employee cannot take the queue. Choose another."
+      },
+      "deputy": {
+        "title": "Deputy",
+        "none": "No deputy assigned.",
+        "sentence": "While away, tasks, approvals and resolutions are handled by {{name}} from {{from}} to {{to}}.",
+        "line": "{{name}} from {{from}} to {{to}}"
       },
       "transfer": {
         "label": "Who takes over the leads in progress",

@@ -119,7 +119,9 @@ describe('Счета', () => {
     const overdue = card('Счета', 'S-2026-0124');
     // Статус ERP — issued, но срок 7 октября прошёл: клиент видит «Просрочен».
     expect(within(overdue).getByText('Просрочен')).toBeInTheDocument();
-    expect(within(overdue).getByText('просрочен на 7 дней')).toBeInTheDocument();
+    // Одно слово о просрочке — статус; во сроке только счёт дней, без второго «просрочен».
+    expect(within(overdue).queryByText(/просрочен на/)).toBeNull();
+    expect(within(overdue).getByText('7 дней')).toBeInTheDocument();
 
     const partial = card('Счета', 'S-2026-0118');
     expect(within(partial).getByText('Оплачен частично')).toBeInTheDocument();

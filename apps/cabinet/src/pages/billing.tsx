@@ -17,7 +17,7 @@ import { PageHeader } from '@/components/PageHeader';
 import { ErrorState, ListSkeleton } from '@/components/QueryStates';
 import { ReasonDialog } from '@/components/ReasonDialog';
 import { ResponsiveList } from '@/components/ResponsiveList';
-import { StatusBadge, ToneBadge } from '@/components/StatusBadge';
+import { StatusBadge } from '@/components/StatusBadge';
 import { TimeLeft } from '@/components/TimeLeft';
 import { ManagerMenuItem } from '@/components/TelegramLinkButton';
 import { CompactList } from '@/components/list/CompactList';
@@ -229,13 +229,14 @@ export function InvoicesPage() {
                   <ProofList invoice={row} />
                 </span>
               ),
-              className: 'min-w-0',
+              className: 'min-w-0 max-w-36',
             }}
             columns={[
               {
                 id: 'status',
                 header: t('pages.invoices.columns.status'),
-                cell: (row) => <StatusBadge entity="invoice" code={views.get(row.id)?.displayStatus ?? row.status} />,
+                cell: (row) => <StatusBadge entity="invoice" code={views.get(row.id)?.displayStatus ?? row.status} nowrap />,
+                className: 'whitespace-nowrap',
               },
               { id: 'total', header: t('pages.invoices.columns.total'), cell: (row) => formatMoney(row.total), className: 'text-right tabular-nums whitespace-nowrap' },
               { id: 'paid', header: t('pages.invoices.columns.paid'), cell: (row) => formatMoney(row.paid), className: 'text-right tabular-nums whitespace-nowrap' },
@@ -253,13 +254,13 @@ export function InvoicesPage() {
                   return (
                     <span className="inline-flex flex-wrap items-center justify-end gap-1">
                       {formatDate(row.due_date)}
-                      {days ? <ToneBadge tone="danger">{t('pages.invoices.overdueDays', { count: days })}</ToneBadge> : null}
+                      {days ? <span className="text-xs font-medium text-destructive">{t('pages.invoices.lateDays', { count: days })}</span> : null}
                       {!days && invoiceOpen(row) ? <TimeLeft date={row.due_date} now={now} /> : null}
                     </span>
                   );
                 },
               },
-              { id: 'deal', header: t('pages.invoices.columns.deal'), cell: (row) => <DealLink deal={row.deal} /> },
+              { id: 'deal', header: t('pages.invoices.columns.deal'), cell: (row) => <DealLink deal={row.deal} keepNumber />, className: 'max-w-28 whitespace-normal' },
             ]}
             actions={{
               header: t('common.actions'),
@@ -301,8 +302,8 @@ function ProofList({ invoice }: { invoice: Invoice }) {
         items={invoice.proofs.map((proof) => (
           <li key={proof.id} className="flex min-w-0 flex-col gap-0.5">
             <span className="flex flex-wrap items-center gap-1.5">
-              <StatusBadge entity="proof" code={proof.status} />
-              <span className="break-all text-muted-foreground">
+              <StatusBadge entity="proof" code={proof.status} nowrap />
+              <span className="min-w-0 break-words text-muted-foreground" title={proof.file_name}>
                 {t('pages.invoices.proofLine', { name: proof.file_name, date: formatDateTime(proof.submitted_at) })}
               </span>
             </span>

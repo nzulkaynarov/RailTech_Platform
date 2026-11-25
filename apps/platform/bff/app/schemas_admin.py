@@ -1,6 +1,7 @@
 """Модели Admin · Оргструктура и Ролевая матрица — схемы `Employee*` и `Role*` из
 packages/contracts/openapi/platform-bff.yaml (0.3.0) и перевод пользователя и роли CRM в них."""
 
+from collections.abc import Mapping
 from datetime import datetime
 from typing import Any, Literal, cast
 
@@ -8,10 +9,13 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 
 from app.rbac_generated import RestrictedField
 from app.schemas import AccessFlags, RoleId, RoleRef, initials_of
-from app.schemas_profile import avatar_url
+from app.schemas_profile import DeputyPeriod, DeputyUpdate, avatar_url
 
 EmployeeStatus = Literal["active", "invited", "disabled"]
 ErpSyncState = Literal["ok", "pending", "error", "not_applicable"]
+# Telegram сотрудника: привязан и бот может писать / не привязан / привязан, но сообщения не доходят
+# («Старт» не нажат или бот заблокирован — CRM отметила `tg_dm_failed_at`).
+TelegramLinkState = Literal["linked", "not_linked", "blocked"]
 AccessLevel = Literal["full", "read"]
 
 _EMAIL = r"^[^@\s]+@[^@\s]+$"
@@ -35,6 +39,10 @@ class Employee(BaseModel):
     access: AccessFlags
     status: EmployeeStatus
     telegram_linked: bool
+    # СОТР-1: три состояния вместо одного «есть / нет»; `telegram_linked` остаётся (есть привязка).
+    telegram: TelegramLinkState
+    # СОТР-1: замещение, которое поставил сам сотрудник или администратор (имя — как в профиле)
+    deputy: DeputyPeriod | None = None
     erp_sync: ErpSyncState
     erp_sync_error: str | None = None
     # СУЩ-3: фото сотрудника (адрес на BFF с версией); отключённому не отдаётся — инициалы
@@ -73,6 +81,8 @@ class EmployeeUpdate(BaseModel):
     position: str | None = Field(default=None, max_length=_MAX_TEXT)
     is_active: bool | None = None
     transfer_to_user_id: str | None = Field(default=None, pattern=r"^[1-9][0-9]*$")
+    # СОТР-1: замещение за сотрудника (тот же период, что в профиле); явный `null` снимает его
+    deputy: DeputyUpdate | None = None
 
     @field_validator("role_ids")
     @classmethod
@@ -82,7 +92,11 @@ class EmployeeUpdate(BaseModel):
     @model_validator(mode="after")
     def _not_empty(self) -> "EmployeeUpdate":
         if not self.model_fields_set:
-            raise ValueError("укажите role_ids, position, is_active или transfer_to_user_id")
+            raise ValueError(
+                "укажите role_ids, position, is_active, transfer_to_user_id или deputy"
+            )
+        if "deputy" in self.model_fields_set and len(self.model_fields_set) > 1:
+            raise ValueError("замещение ставится отдельным запросом, без других полей")
         for name in ("role_ids", "position", "is_active", "transfer_to_user_id"):
             if name in self.model_fields_set and getattr(self, name) is None:
                 raise ValueError(f"{name} не может быть null")
@@ -115,7 +129,27 @@ def role_refs(user: dict[str, Any]) -> list[RoleRef]:
     return refs
 
 
-def to_employee(user: dict[str, Any]) -> Employee:
+def telegram_state(user: dict[str, Any]) -> TelegramLinkState:
+    """Привязка и доставка по полям CRM: привязан, отказа нет — `linked`; отказ — `blocked`."""
+    if user.get("tg_user_id") is None:
+        return "not_linked"
+    return "blocked" if user.get("tg_dm_failed_at") else "linked"
+
+
+def deputy_of(user: dict[str, Any], names: Mapping[str, str] | None = None) -> DeputyPeriod | None:
+    """Замещение из полей CRM; имя — из `names` (id -> имя), иначе пусто."""
+    who, start, end = user.get("deputy_user_id"), user.get("deputy_from"), user.get("deputy_to")
+    if not (who and start and end):
+        return None
+    return DeputyPeriod(
+        user_id=str(who),
+        name=str((names or {}).get(str(who)) or user.get("deputy_name") or ""),
+        date_from=str(start),
+        date_to=str(end),
+    )
+
+
+def to_employee(user: dict[str, Any], names: Mapping[str, str] | None = None) -> Employee:
     """Пользователь CRM -> сотрудник Платформы. Решений здесь нет: только перевод полей.
 
     `erp_sync` и `erp_sync_error` — итог провижининга ERP из CRM (R-1, Q-PLT-15-1 п. 2).
@@ -137,6 +171,8 @@ def to_employee(user: dict[str, Any]) -> Employee:
         access=AccessFlags(crm="crm" in access, erp="erp" in access),
         status=status_of(user),
         telegram_linked=user.get("tg_user_id") is not None,
+        telegram=telegram_state(user),
+        deputy=deputy_of(user, names),
         # Статус считает CRM по факту; без поля — «не применимо», а не выдуманное «ок» (СЦ-8).
         erp_sync=cast(ErpSyncState, sync if sync in _ERP_SYNC else "not_applicable"),
         erp_sync_error=str(error) if isinstance(error, str) and error else None,

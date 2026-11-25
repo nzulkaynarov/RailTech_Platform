@@ -566,6 +566,7 @@ async def test_memo_list_and_card(web: Web, fake: PaymentsFake, check: ContractC
     assert body["can_return"] is True
     assert body["status"] == "to_pay"
     assert body["approval_id"] == PAY_ROUTE
+    assert body["invoice_later"] is False
     assert body["payment"] is None
     assert body["files"][0]["name"] == "счёт-аренда.pdf"
 

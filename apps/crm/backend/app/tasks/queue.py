@@ -21,6 +21,7 @@ TASK_MODULES = (
     "app.tasks.external_services",
     "app.tasks.bus",
     "app.tasks.erp_users",
+    "app.tasks.staff_chat",
     "app.tasks.erp_handoff",
     "app.tasks.erp_requests",
     "app.tasks.inbound_mail",

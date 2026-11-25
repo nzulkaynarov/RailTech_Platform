@@ -202,7 +202,7 @@ describe("«Заполнить из файла» (EDS-REG)", () => {
     });
   });
 
-  it("помощник не настроен — кнопки нет", async () => {
+  it("помощник не настроен — панель есть, подсказка про срок по тексту, отказ сервера не ошибка", async () => {
     writeDocflowSettings({
       recognize_scans: false,
       pii_policy: "business",
@@ -211,7 +211,16 @@ describe("«Заполнить из файла» (EDS-REG)", () => {
     });
     await openForm();
     await attach();
-    expect(screen.queryByRole("button", { name: "Заполнить из файла" })).toBeNull();
+    openStep("Файл письма");
+    expect(await screen.findByRole("button", { name: /Заполнить из файла/ })).toBeVisible();
+    expect(
+      await screen.findByText(/Срок «в течение N дней» из текста PDF подставится сам/),
+    ).toBeVisible();
+    // PDF без срока в тексте: сервер отвечает 409 — человек не видит предупреждения
+    await waitFor(() => {
+      expect(screen.queryByText(/Помощник не настроен/)).toBeNull();
+    });
+    expect(screen.queryByRole("alert")).toBeNull();
   });
 });
 

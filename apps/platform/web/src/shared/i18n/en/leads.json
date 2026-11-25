@@ -113,7 +113,9 @@
       "skipped": "not sent",
       "channel": "channel: {{channel}}"
     },
-    "none": "—"
+    "none": "—",
+    "partner": "Handed over as partner",
+    "partnerOpen": "Partner application"
   },
   "newLead": {
     "title": "New lead",
