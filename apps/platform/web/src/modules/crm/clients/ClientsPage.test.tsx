@@ -183,7 +183,7 @@ const partnerRow = {
 };
 
 describe("Контрагенты: последняя активность", () => {
-  it("сегодня — время, раньше — дата (время без даты ничего не говорит)", async () => {
+  it("вчера — словом, раньше — дата с годом (время без даты ничего не говорит)", async () => {
     const day = 24 * 60 * 60 * 1000;
     const row = (id: number, at: string) => ({
       id,
@@ -206,8 +206,9 @@ describe("Контрагенты: последняя активность", () =
     );
     await open("manager@demo.example");
     const table = await screen.findByRole("table", { name: "Клиенты" });
-    expect(within(table).queryByText(/вчера/)).toBeNull();
-    expect(within(table).getAllByText(/^\d{2}\.\d{2}\.\d{4}$/)).toHaveLength(2);
+    expect(within(table).getByText("вчера")).toBeVisible();
+    expect(within(table).getAllByText(/^\d{2}\.\d{2}\.\d{4}$/)).toHaveLength(1);
+    expect(within(table).queryByText(/^\d{2}:\d{2}$/)).toBeNull();
   });
 });
 

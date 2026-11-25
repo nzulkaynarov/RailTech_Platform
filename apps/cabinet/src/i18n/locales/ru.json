@@ -679,7 +679,7 @@
       "payButton": "Я оплатил",
       "payNamed": "Я оплатил: счёт {{number}}",
       "proofsLabel": "Платёжные поручения по счёту {{number}}",
-      "proofLine": "Платёжное поручение {{name}} от {{date}}",
+      "proofLine": "Платёжное поручение от {{date}}",
       "proofClaimed": "Вы указали: {{amount}}",
       "proofClaimedDate": "Вы указали: {{amount}}, оплачено {{date}}",
       "proofPaidOn": "Оплачено {{date}}",

@@ -122,10 +122,15 @@ function longDate(date: Date, language: string, timeZone: string): string {
 }
 
 const YESTERDAY: Record<string, string> = { ru: "вчера", uz: "keça", en: "yesterday" };
+const TODAY: Record<string, string> = { ru: "сегодня", uz: "bugun", en: "today" };
+
+function word(table: Record<string, string>, language: string): string {
+  return table[language.slice(0, 2)] ?? table["ru"] ?? "";
+}
 
 /**
- * Время события в ленте и уведомлениях: сегодня — `10:12`, вчера — `вчера 09:24`, раньше — `24.10 11:50`, в прошлом
- * году — с годом.
+ * Время события в ленте и уведомлениях: сегодня — `10:12`, вчера — `вчера 09:24`, раньше — `24.10.2026 11:50` (всегда
+ * с годом: «24.10» без года читается по-разному в разные месяцы).
  */
 export function formatActivityTime(
   value: DateInput,
@@ -139,26 +144,43 @@ export function formatActivityTime(
   const yesterday = companyDayKey(new Date(now.getTime() - 24 * 60 * 60 * 1000));
   const time = formatDate(date, { style: "time" });
   if (day === today) return time;
-  if (day === yesterday)
-    return `${YESTERDAY[language.slice(0, 2)] ?? YESTERDAY["ru"] ?? ""} ${time}`;
-  const sameYear = day?.slice(0, 4) === today?.slice(0, 4);
-  return sameYear
-    ? `${formatDate(date, { style: "short" })} ${time}`
-    : formatDate(date, { style: "datetime" });
+  if (day === yesterday) return `${word(YESTERDAY, language)} ${time}`;
+  return formatDate(date, { style: "datetime" });
 }
 
 /**
- * Дата события в строке списка: сегодня — время `10:12`, иначе — дата `24.10.2026` (без «вчера» и времени): в таблице
- * время без даты не говорит, когда это было.
+ * Время в колонке таблицы: всегда день и час — `сегодня 10:12`, `вчера 09:24`, `24.10.2026 11:50`. Время без дня в
+ * столбце, где соседние строки — даты, не говорит, когда это было (СЦ-7).
+ */
+export function formatRowTime(
+  value: DateInput,
+  options: { language?: string; now?: Date } = {},
+): string {
+  const { language = "ru", now = new Date() } = options;
+  const date = toDate(value);
+  if (!date) return EM_DASH;
+  const day = companyDayKey(date);
+  const time = formatDate(date, { style: "time" });
+  if (day === companyDayKey(now)) return `${word(TODAY, language)} ${time}`;
+  if (day === companyDayKey(new Date(now.getTime() - 24 * 60 * 60 * 1000)))
+    return `${word(YESTERDAY, language)} ${time}`;
+  return formatDate(date, { style: "datetime" });
+}
+
+/**
+ * Дата события в строке списка без времени: `сегодня`, `вчера` или `24.10.2026` — «10:12» без даты в столбце дат
+ * не говорило, когда это было.
  */
 export function formatListDate(
   value: DateInput,
   options: { language?: string; now?: Date } = {},
 ): string {
-  const { now = new Date() } = options;
+  const { language = "ru", now = new Date() } = options;
   const date = toDate(value);
   if (!date) return EM_DASH;
-  return companyDayKey(date) === companyDayKey(now)
-    ? formatDate(date, { style: "time" })
-    : formatDate(date, { style: "date" });
+  const day = companyDayKey(date);
+  if (day === companyDayKey(now)) return word(TODAY, language);
+  if (day === companyDayKey(new Date(now.getTime() - 24 * 60 * 60 * 1000)))
+    return word(YESTERDAY, language);
+  return formatDate(date, { style: "date" });
 }
