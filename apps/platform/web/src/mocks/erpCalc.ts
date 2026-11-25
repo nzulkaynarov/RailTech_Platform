@@ -297,13 +297,15 @@ function present(calc: MockCalc, user: Me): CalcSheet {
   const missing = lines.filter((line) => line.visa === null).length;
   const blocker = !calc.started
     ? "not_started"
-    : !editable
-      ? "not_draft"
-      : lines.length === 0
-        ? "no_lines"
-        : missing
-          ? "visas_missing"
-          : null;
+    : calc.stage !== "CALCULATION" && calc.state !== "approved" && calc.state !== "rejected"
+      ? "not_in_calculation"
+      : !editable
+        ? "not_draft"
+        : lines.length === 0
+          ? "no_lines"
+          : missing
+            ? "visas_missing"
+            : null;
   const path = `/erp/calc/${encodeURIComponent(calc.number)}`;
   return {
     number: calc.number,

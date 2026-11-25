@@ -39,6 +39,14 @@ describe("Расчёт · после «Расчёт готов» есть пут
     );
   });
 
+  it("заявка вне расчёта: строка словами, без кнопки и без сырого ключа", async () => {
+    patchCalcMock(AT_DIRECTOR, { stage: "LOST", state: "in_progress" });
+    await openCalc("universal@demo.example", AT_DIRECTOR);
+    expect(await screen.findByText("Заявка вне расчёта.")).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Расчёт готов" })).toBeNull();
+    expect(screen.queryByText(/ready\.(hint|closed)\./)).toBeNull();
+  });
+
   it("у отклонённого директором КП — «КП отклонено» и ссылка на КП, без пустой причины", async () => {
     patchCalcMock(AT_DIRECTOR, { state: "rejected", rejectedBy: "director" });
     await openCalc("universal@demo.example", AT_DIRECTOR);

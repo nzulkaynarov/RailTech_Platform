@@ -81,8 +81,8 @@
     "rejectedComment": "Direktor TTni rad etdi: «{{comment}}». Hisob-kitob yopildi.",
     "requestFiles": "Ariza fayllari",
     "downloadFile": "{{name}} faylini yuklab oliş",
-    "openQuote": "TK {{number}}ni ochiş",
-    "openProject": "Loyihani ochiş"
+    "openQuote": "TK {{number}}ni oçiş",
+    "openProject": "Loyihani oçiş"
   },
   "lines": {
     "title": "Hisob-kitob qatorlari",
