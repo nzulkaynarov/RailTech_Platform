@@ -93,6 +93,14 @@ TAKEN: Final = {
 }
 
 
+JOIN_CHANNEL: Final = {
+    "ru": "Канал команды: подайте заявку, бот её одобрит.",
+    "uz": "Jamoa kanali: ariza yuboring, bot uni tasdiqlaydi.",
+    "en": "Team channel: send a join request, the bot approves it.",
+}
+JOIN_BUTTON: Final = {"ru": "Вступить в канал", "uz": "Kanalga qöşiliş", "en": "Join the channel"}
+
+
 def text(table: dict[str, str], language: str | None) -> str:
     return table.get(language or "ru", table["ru"])
 

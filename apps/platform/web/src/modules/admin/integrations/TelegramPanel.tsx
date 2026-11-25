@@ -116,6 +116,9 @@ function ChannelBlock({ bot, editable }: { bot: TelegramConnector; editable: boo
           ? t("telegram.channel.current", { title: bot.channel_title })
           : t("telegram.channel.none")}
       </p>
+      {bot.channel_id !== null && bot.channel_can_invite === false ? (
+        <Alert type="warning" showIcon message={t("telegram.channel.needsInvite")} />
+      ) : null}
       {editable && bot.channel_id !== null ? (
         <div className="pf-int-row">
           <Button

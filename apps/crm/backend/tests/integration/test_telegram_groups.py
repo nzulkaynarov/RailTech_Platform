@@ -20,7 +20,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.bot import channel, chat_member, client_handlers, handlers, staff_link
+from app.bot import channel, chat_member, client_handlers, handlers, staff_channel, staff_link
 from app.bot import groups as groups_router
 from app.bot.runtime import build_dispatcher
 from app.bus import runtime
@@ -153,7 +153,15 @@ def dispatcher(
     spy: Spy,
     storage: Storage,
 ) -> Any:
-    for module in (channel, chat_member, client_handlers, groups_router, handlers, staff_link):
+    for module in (
+        channel,
+        chat_member,
+        client_handlers,
+        groups_router,
+        handlers,
+        staff_link,
+        staff_channel,
+    ):
         module.router._parent_router = None  # роутеры модулей одни на процесс, диспетчер — на тест
     return build_dispatcher(
         sessions,
