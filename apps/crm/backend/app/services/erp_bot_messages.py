@@ -235,7 +235,8 @@ def staff_alert(
             "erp_staff_quote_accepted",
             "ru",
             client=client_name,
-            quote=_s(p.get("erp_quote_id")),
+            # Сотруднику — номер КП (КП-ГГГГ/NNN); id из базы — только у событий без номера.
+            quote=_s(p.get("number") or p.get("erp_quote_id")),
             deal=deal_title,
         )
     if event == "act.returned":

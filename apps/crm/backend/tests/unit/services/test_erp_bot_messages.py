@@ -460,3 +460,16 @@ def test_cabinet_button_opens_the_exact_object_page(
     )
     assert message is not None
     assert message.buttons[-1] == ("Кабинет", CABINET + expected)
+
+
+def test_staff_alert_names_the_quote_by_number_not_by_database_id() -> None:
+    text = staff_alert(
+        "quote.accepted",
+        {"erp_quote_id": 1203, "number": "QT-2026-115"},
+        client_name="ООО Тест",
+        deal_title="Оси",
+        texts=TEXTS,
+    )
+    assert text is not None
+    assert "QT-2026-115" in text
+    assert "1203" not in text

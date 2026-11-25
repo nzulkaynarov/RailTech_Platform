@@ -334,6 +334,13 @@ def role_crm_base(grant: RoleGrant) -> str:
     return "viewer"
 
 
+def handles_leads(grants: Iterable[RoleGrant]) -> bool:
+    """Право вести лиды по матрицам ролей (`crm.leads: full`), а не по базовой роли: у админа
+    с лидами старшая базовая роль — `admin`, но лиды ему поручены (СОТР-1)."""
+    access = merge_access(grants)
+    return any(_meets(access, c) for c in CRM_BASE_ROLE_BY_ACCESS.get("manager", ()))
+
+
 def derive_access(grants: Iterable[RoleGrant]) -> DerivedAccess:
     """Доступ по непустому набору ролей Платформы: объединение матриц и полей."""
     roles = list(grants)

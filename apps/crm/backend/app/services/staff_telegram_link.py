@@ -28,6 +28,8 @@ logger = structlog.get_logger(__name__)
 Status = Literal["linked", "invalid", "taken"]
 # Что сделать после успешной привязки (письмо владельцу): (id сотрудника, ник или None).
 OnLinked = Callable[[int, str | None], Awaitable[None]]
+# Telegram account no longer belongs to the employee: (user id, old tg_user_id) — leave chats.
+OnReleased = Callable[[int, int], Awaitable[None]]
 
 
 @dataclass(frozen=True, slots=True)
@@ -53,11 +55,13 @@ class StaffTelegramLinkService:
         bot_state: BotStateService,
         clock: Callable[[], datetime] = _utcnow,
         on_linked: OnLinked | None = None,
+        on_released: OnReleased | None = None,
     ) -> None:
         self._sessions = sessions
         self._bot_state = bot_state
         self._clock = clock
         self._on_linked = on_linked
+        self._on_released = on_released
 
     async def begin(self, user_id: int) -> LinkTicket:
         """Новая ссылка привязки; прежние неиспользованные коды сотрудника гасятся."""
@@ -99,6 +103,7 @@ class StaffTelegramLinkService:
                 return LinkOutcome("invalid")
             link.used_at = now
             language, user_id = user.language, user.id
+            previous_tg = user.tg_user_id
             try:
                 async with session.begin_nested():
                     user.tg_user_id = tg_user_id
@@ -113,8 +118,14 @@ class StaffTelegramLinkService:
                 after={"tg_user_id": tg_user_id},
             )  # fmt: skip
             nick = user.tg_username
+        if previous_tg is not None and previous_tg != tg_user_id:
+            await self._release(user_id, previous_tg)
         await self._announce(user_id, nick)
         return LinkOutcome("linked", language)
+
+    async def _release(self, user_id: int, tg_user_id: int) -> None:
+        if self._on_released is not None:
+            await self._on_released(user_id, tg_user_id)
 
     async def _announce(self, user_id: int, nick: str | None) -> None:
         """Письмо владельцу «Telegram привязан…»; сбой письма привязку не отменяет."""
@@ -133,6 +144,7 @@ class StaffTelegramLinkService:
             await session.execute(
                 delete(StaffTelegramLink).where(StaffTelegramLink.user_id == user_id)
             )
+            released = user.tg_user_id
             if user.tg_user_id is not None:
                 before = {"tg_user_id": user.tg_user_id}
                 user.tg_user_id = None
@@ -142,3 +154,5 @@ class StaffTelegramLinkService:
                 await audit.record(
                     session, actor, "user.telegram_unlinked", "user", user_id, before=before
                 )
+        if released is not None:
+            await self._release(user_id, released)

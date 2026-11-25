@@ -31,6 +31,7 @@ from app.models.clients import Client
 from app.models.deals import Deal
 from app.models.leads import Lead, LeadNote
 from app.repositories import events
+from app.schemas.settings_base import LANGUAGES
 from app.security.audit import Actor
 from app.services import deals as deals_service
 from app.services import staff_notifications
@@ -239,6 +240,27 @@ class ErpEventsService:
                 # Контакты, отключившие эту группу уведомлений в кабинете ERP (FX-9).
                 "muted_chats": list(getattr(env.data, "telegram_muted_user_ids", None) or []),
             }
+            # Тот же текст на каждом языке: адресат получает его на языке своего лида, а не лида,
+            # написавшего последним (`item["text"]` — запасной вариант для чата без лида).
+            variants: dict[str, dict[str, object]] = {}
+            for language in LANGUAGES:
+                other = client_message(
+                    env.event,
+                    body,
+                    deal_title=deal_title,
+                    texts=cfg.texts,
+                    language=language,
+                    cabinet_url=cfg.company.cabinet_url,
+                    deal_number=env_deal.number if env_deal else "",
+                    erp_deal_id=env_deal.erp_deal_id if env_deal else None,
+                )
+                if other is not None:
+                    variants[language] = {
+                        "text": other.text,
+                        "buttons": [list(button) for button in other.buttons],
+                    }
+            if variants:
+                item["variants"] = variants
             if env.event == "request.created":
                 # «Заявка принята»: бот, а клиенту без Telegram — письмо (SPEC-v3 §8).
                 language = pick_language(lead.language if lead else None)

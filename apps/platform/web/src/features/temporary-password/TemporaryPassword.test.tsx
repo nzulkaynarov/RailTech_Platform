@@ -84,6 +84,7 @@ describe("Приглашение без почты: временный паро�
               access: { crm: true, erp: true },
               status: "invited",
               telegram_linked: false,
+              telegram: "not_linked",
               erp_sync: "pending",
             },
             temporary_password: issued,

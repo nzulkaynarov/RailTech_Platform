@@ -113,7 +113,9 @@
       "skipped": "yuborilmagan",
       "channel": "kanal: {{channel}}"
     },
-    "none": "—"
+    "none": "—",
+    "partner": "Hamkor sifatida topşirilgan",
+    "partnerOpen": "Hamkor arizasi"
   },
   "newLead": {
     "title": "Yangi lid",

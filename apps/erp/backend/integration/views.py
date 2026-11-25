@@ -50,6 +50,8 @@ from .serializers import (
     PairingAcceptedSerializer,
     PairingRequestSerializer,
     PairingRotatedSerializer,
+    PartnerApplicationInSerializer,
+    PartnerApplicationOutSerializer,
     ProvisionUserRequestSerializer,
     ProvisionUserResponseSerializer,
 )
@@ -109,6 +111,22 @@ class ClientRequestView(BaseIntegrationView):
         response_data, created = create_client_request(crm_client_id, serializer.validated_data)
         status_code = status.HTTP_201_CREATED if created else status.HTTP_200_OK
         return Response(data=ClientRequestOutSerializer(response_data).data, status=status_code)
+
+
+class PartnerApplicationView(BaseIntegrationView):
+    """POST /api/integration/v1/partner-applications — «Партнёр» из карточки лида CRM (ЛП-1)."""
+
+    @handle_idempotency
+    def post(self, request, *args, **kwargs):
+        from portal.desk.service_partner_applications import create_from_lead
+
+        serializer = PartnerApplicationInSerializer(data=request.data)
+        if not serializer.is_valid():
+            raise IntegrationValidationError("VALIDATION_ERROR")
+        data = dict(serializer.validated_data)
+        app, created = create_from_lead({**data, "source_ref": data["lead_number"]})
+        out = PartnerApplicationOutSerializer({"erp_application_id": app.pk, "status": app.status, "created": created})
+        return Response(data=out.data, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
 
 
 class InviteClientContactView(BaseIntegrationView):

@@ -7,6 +7,8 @@ CRM — на respx (`crm_leads_support`), ответы BFF сверяются с
 уходит в браузер (заметки клиента, примечание контакта), 404 клиента.
 """
 
+from datetime import UTC, datetime
+
 import httpx
 import pytest
 
@@ -471,3 +473,37 @@ async def test_card_360_marks_a_contact_whose_letters_do_not_arrive(
         "reason": "mailbox_not_found",
         "at": "2026-11-24T10:15:00Z",
     }
+
+
+@pytest.mark.parametrize(
+    ("external_stage", "expected"),
+    [
+        (
+            "accepted",
+            "contract_preparing",
+        ),  # КП принято, договора у клиента нет: согласовывать нечего (СЦ-8)
+        ("contract", "contract_review"),
+        ("invoiced", "awaiting_payment"),
+    ],
+)
+def test_client_sees_follows_the_erp_stage_not_only_the_step(
+    external_stage: str, expected: str
+) -> None:
+    from types import SimpleNamespace
+
+    from app.crm_clients_view import request_row
+
+    deal = SimpleNamespace(
+        id=1,
+        erp_number="ЗВ-1",
+        title="Т",
+        request_summary="",
+        stage="open",
+        external_stage=external_stage,
+        request_urgency="normal",
+        erp_request_status="done",
+        erp_request_error=None,
+        created_at=datetime(2026, 11, 1, tzinfo=UTC),
+        request_letter_file_id=None,
+    )
+    assert request_row(deal).client_sees == expected  # type: ignore[arg-type]

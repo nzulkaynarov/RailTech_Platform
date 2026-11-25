@@ -66,6 +66,8 @@ class TelegramStatus:
     secrets_enabled: bool
     channel_id: int | None
     channel_title: str | None
+    # Bot holds the «invite users» right in the team channel (join-request links); None — unknown.
+    channel_can_invite: bool | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -97,6 +99,7 @@ class TelegramIntegrationService:
         *,
         mode: str,
         restart_wait_s: float = 10.0,
+        invite_check: Callable[[], Awaitable[bool | None]] | None = None,
         lockout: reauth.LockoutPolicy | None = None,
     ) -> None:
         self._lockout = lockout or reauth.LockoutPolicy()
@@ -108,6 +111,7 @@ class TelegramIntegrationService:
         self._restart_wait_s = restart_wait_s
         self._current_bot = current_bot
         self._mode = mode
+        self._invite_check = invite_check
 
     async def status(self) -> TelegramStatus:
         stored = await self._store.status(TELEGRAM_BOT_TOKEN) if self._store.enabled else None
@@ -133,6 +137,11 @@ class TelegramIntegrationService:
             secrets_enabled=self._store.enabled,
             channel_id=channel_id,
             channel_title=title,
+            channel_can_invite=(
+                await self._invite_check()
+                if self._invite_check is not None and channel_id is not None
+                else None
+            ),
         )
 
     async def save_token(self, who: Principal, token: str, password: str) -> BotIdentity:

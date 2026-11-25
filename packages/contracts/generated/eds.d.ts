@@ -1342,6 +1342,8 @@ export interface paths {
      *     статус переходит в `sent`, рендерится итоговый PDF/A без плашки «ПРОЕКТ», закрываются связанные поручения
      *     по входящему письму, публикуется событие `uz.railtech.eds.document.signed.v1`, и при `dispatch_method = email`
      *     и `send = true` запускается отправка адресату.
+     *     Раздел прав (`letters.register`, `memos.approve`) не нужен: подписывает тот, у кого есть действующее полномочие
+     *     в реестре; иначе 403 `no_permission` или `no_authority`.
      */
     post: operations["signDocument"];
     delete?: never;
@@ -2687,6 +2689,16 @@ export interface components {
     ResolutionKind: "execute" | "reply" | "info";
     LetterIntakeIn: {
       file_id: components["schemas"]["Uuid"];
+      /**
+       * Format: date
+       * @description Дата поступления письма: от неё считается срок «в течение N дней»; нет — от дня регистрации. Позже сегодняшнего дня (дня компании) или старше года — 422 `received_at` (`in_future`, `too_old`)
+       */
+      received_at?: string;
+      /**
+       * @description Только правила кода, без модели (пересчёт срока от новой даты поступления): платного вызова нет; срока в тексте нет — 409 `nothing_recognized`
+       * @default false
+       */
+      rules_only: boolean;
     };
     /** @description Предложенные поля карточки; `null` — не найдено. ИНН — найден кодом в тексте файла, не моделью */
     LetterIntakeFields: {
@@ -2733,9 +2745,14 @@ export interface components {
        */
       source: "text" | "image";
       fields: components["schemas"]["LetterIntakeFields"];
-      /** @example intake-model */
+      /**
+       * @description `rules` — модель не использовалась: срок по тексту письма («в течение N дней») посчитал код (СЦ-11)
+       * @example intake-model
+       */
       alias: string;
       prompt_version: string;
+      /** @description Поля, которые посчитал код, а не модель (срок по обороту «в течение N дней», ИНН); экран метит их «Из текста письма». Для `alias: rules` — все предложенные поля */
+      by_code?: ("sender_inn" | "document_due")[];
     };
     AiDecisionIn: {
       /** @enum {string} */
@@ -3551,6 +3568,11 @@ export interface components {
        * @description «Нужно до»
        */
       due_date?: string | null;
+      /**
+       * @description Служебка с суммой отправлена без счёта партнёра — автор отметил, что счёт придёт позже (Б-9)
+       * @default false
+       */
+      invoice_later: boolean;
       file_ids?: components["schemas"]["Uuid"][];
       /** @description Сообщение чата, из которого создан документ (непрозрачная ссылка) */
       source_message_id?: string | null;
@@ -3574,6 +3596,8 @@ export interface components {
       amount?: components["schemas"]["Money"] | null;
       /** Format: date */
       due_date?: string | null;
+      /** @description Служебка с суммой отправлена без счёта партнёра — автор отметил, что счёт придёт позже (Б-9) */
+      invoice_later?: boolean | null;
       file_ids?: components["schemas"]["Uuid"][];
       /** @description `crm_user_id` согласующих перед шагами шаблона, по порядку (пункт 1.6 плана); не передано — прежние. Не активный сотрудник — 422 `not_active_employee`, автор в списке — 422 `author_not_allowed`. Письму не нужно */
       approvers?: number[];
@@ -3643,6 +3667,8 @@ export interface components {
       amount?: components["schemas"]["Money"] | null;
       /** Format: date */
       due_date?: string | null;
+      /** @description Служебка с суммой отправлена без счёта партнёра — автор отметил, что счёт придёт позже (Б-9) */
+      invoice_later?: boolean | null;
       file_ids?: components["schemas"]["Uuid"][];
       /** @description Связь с проектом (заявкой) ERP; `null` снимает связь */
       erp_deal_id?: number | null;
@@ -3714,6 +3740,11 @@ export interface components {
       amount: components["schemas"]["Money"] | null;
       /** Format: date */
       due_date: string | null;
+      /**
+       * @description Служебка с суммой отправлена без счёта партнёра — автор отметил, что счёт придёт позже (Б-9)
+       * @default false
+       */
+      invoice_later: boolean;
       files: components["schemas"]["FileRef"][];
       source_message_id: string | null;
       erp_deal_id: number | null;

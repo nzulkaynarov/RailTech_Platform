@@ -363,7 +363,8 @@
         "title": "Hozir sizning qadamingiz emas",
         "text": ""
       },
-      "journal": "Xat jurnali"
+      "journal": "Xat jurnali",
+      "invoiceLater": "Hisob keyinroq keladi — muallifga eslatiş"
     },
     "form": {
       "name": "Xizmat xati tölovi",

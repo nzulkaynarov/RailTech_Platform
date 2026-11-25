@@ -182,6 +182,7 @@ class ErpPairing(_Out):
 
 
 class TelegramConnector(_Out):
+    channel_can_invite: bool | None = None
     channel_id: int | None
     channel_title: str | None
     configured: bool

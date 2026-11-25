@@ -11,6 +11,7 @@ export type ClientSees = (typeof ClientSees)[keyof typeof ClientSees];
 export const ClientSees = {
   in_work: "in_work",
   awaiting_decision: "awaiting_decision",
+  contract_preparing: "contract_preparing",
   contract_review: "contract_review",
   contract_signing: "contract_signing",
   awaiting_payment: "awaiting_payment",

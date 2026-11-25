@@ -475,6 +475,23 @@ async def test_author_edits_draft_without_sending(
     assert sent.status_code == 200 and sent.json()["subject"] == "Новая тема"
 
 
+async def test_invoice_later_is_kept_with_the_memo(client: httpx.AsyncClient, staff: dict[str, Person]) -> None:
+    """Б-9: «счёт партнёра придёт позже» — факт документа: сохраняется при создании, правится и читается обратно."""
+    doc = await create(client, staff["manager"], **WITH_AMOUNT)
+    assert doc["invoice_later"] is False
+    later = await create(client, staff["manager"], **WITH_AMOUNT, invoice_later=True)
+    assert later["invoice_later"] is True
+    fetched = await client.get(f"/api/v1/documents/{later['id']}", headers=staff["manager"].headers)
+    assert fetched.json()["invoice_later"] is True
+
+    changed = await patch(client, staff["manager"], doc["id"], {"invoice_later": True})
+    assert changed.status_code == 200 and changed.json()["invoice_later"] is True
+    untouched = await patch(client, staff["manager"], doc["id"], {"subject": "Другая тема"})
+    assert untouched.json()["invoice_later"] is True, "поле не передано — отметка остаётся"
+    cleared = await patch(client, staff["manager"], doc["id"], {"invoice_later": False})
+    assert cleared.json()["invoice_later"] is False
+
+
 async def test_update_rules(client: httpx.AsyncClient, staff: dict[str, Person]) -> None:
     doc = await create(client, staff["manager"])
     # не автор: чужой черновик не виден никому (D1-10) → 404, в том числе держателю registry.read

@@ -58,4 +58,6 @@ export interface LeadCard {
   discarded?: LeadCardDiscarded;
   /** Номер оставшегося лида, если `discarded = duplicate` */
   duplicate_of?: string | null;
+  /** Лид передан как партнёр (ЛП-1): номер заявки кандидата в ERP («Заявки партнёров»); иначе `null`. Лид закрыт, в списках его нет, карточка открывается по номеру. */
+  partner_application?: number | null;
 }
