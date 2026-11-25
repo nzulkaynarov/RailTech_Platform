@@ -4262,7 +4262,12 @@ export const getGetEdsProjectResponseProjectContractTermMock = (
     newer_edition: faker.helpers.arrayElement([faker.number.int(), null]),
     confidentiality_years: faker.helpers.arrayElement([faker.number.int(), null]),
     trade_secret_indefinite: faker.datatype.boolean(),
-    actions: faker.helpers.arrayElements(["decline_renewal", "renew", "send_new_edition"] as const),
+    actions: faker.helpers.arrayElements([
+      "decline_renewal",
+      "restore_renewal",
+      "renew",
+      "send_new_edition",
+    ] as const),
   },
   ...overrideResponse,
 });
@@ -4790,7 +4795,12 @@ export const getCreateEdsProjectContractResponseProjectContractTermMock = (
     newer_edition: faker.helpers.arrayElement([faker.number.int(), null]),
     confidentiality_years: faker.helpers.arrayElement([faker.number.int(), null]),
     trade_secret_indefinite: faker.datatype.boolean(),
-    actions: faker.helpers.arrayElements(["decline_renewal", "renew", "send_new_edition"] as const),
+    actions: faker.helpers.arrayElements([
+      "decline_renewal",
+      "restore_renewal",
+      "renew",
+      "send_new_edition",
+    ] as const),
   },
   ...overrideResponse,
 });
@@ -5351,7 +5361,12 @@ export const getActEdsProjectContractResponseProjectContractTermMock = (
     newer_edition: faker.helpers.arrayElement([faker.number.int(), null]),
     confidentiality_years: faker.helpers.arrayElement([faker.number.int(), null]),
     trade_secret_indefinite: faker.datatype.boolean(),
-    actions: faker.helpers.arrayElements(["decline_renewal", "renew", "send_new_edition"] as const),
+    actions: faker.helpers.arrayElements([
+      "decline_renewal",
+      "restore_renewal",
+      "renew",
+      "send_new_edition",
+    ] as const),
   },
   ...overrideResponse,
 });
@@ -5909,7 +5924,12 @@ export const getScanEdsProjectContractResponseProjectContractTermMock = (
     newer_edition: faker.helpers.arrayElement([faker.number.int(), null]),
     confidentiality_years: faker.helpers.arrayElement([faker.number.int(), null]),
     trade_secret_indefinite: faker.datatype.boolean(),
-    actions: faker.helpers.arrayElements(["decline_renewal", "renew", "send_new_edition"] as const),
+    actions: faker.helpers.arrayElements([
+      "decline_renewal",
+      "restore_renewal",
+      "renew",
+      "send_new_edition",
+    ] as const),
   },
   ...overrideResponse,
 });
@@ -6467,7 +6487,12 @@ export const getRequestEdsProjectSigningResponseProjectContractTermMock = (
     newer_edition: faker.helpers.arrayElement([faker.number.int(), null]),
     confidentiality_years: faker.helpers.arrayElement([faker.number.int(), null]),
     trade_secret_indefinite: faker.datatype.boolean(),
-    actions: faker.helpers.arrayElements(["decline_renewal", "renew", "send_new_edition"] as const),
+    actions: faker.helpers.arrayElements([
+      "decline_renewal",
+      "restore_renewal",
+      "renew",
+      "send_new_edition",
+    ] as const),
   },
   ...overrideResponse,
 });
@@ -7051,7 +7076,12 @@ export const getActEdsProjectActResponseProjectContractTermMock = (
     newer_edition: faker.helpers.arrayElement([faker.number.int(), null]),
     confidentiality_years: faker.helpers.arrayElement([faker.number.int(), null]),
     trade_secret_indefinite: faker.datatype.boolean(),
-    actions: faker.helpers.arrayElements(["decline_renewal", "renew", "send_new_edition"] as const),
+    actions: faker.helpers.arrayElements([
+      "decline_renewal",
+      "restore_renewal",
+      "renew",
+      "send_new_edition",
+    ] as const),
   },
   ...overrideResponse,
 });
@@ -7594,7 +7624,12 @@ export const getScanEdsProjectActResponseProjectContractTermMock = (
     newer_edition: faker.helpers.arrayElement([faker.number.int(), null]),
     confidentiality_years: faker.helpers.arrayElement([faker.number.int(), null]),
     trade_secret_indefinite: faker.datatype.boolean(),
-    actions: faker.helpers.arrayElements(["decline_renewal", "renew", "send_new_edition"] as const),
+    actions: faker.helpers.arrayElements([
+      "decline_renewal",
+      "restore_renewal",
+      "renew",
+      "send_new_edition",
+    ] as const),
   },
   ...overrideResponse,
 });
@@ -8143,7 +8178,12 @@ export const getMarkEdsProjectDeliveryResponseProjectContractTermMock = (
     newer_edition: faker.helpers.arrayElement([faker.number.int(), null]),
     confidentiality_years: faker.helpers.arrayElement([faker.number.int(), null]),
     trade_secret_indefinite: faker.datatype.boolean(),
-    actions: faker.helpers.arrayElements(["decline_renewal", "renew", "send_new_edition"] as const),
+    actions: faker.helpers.arrayElements([
+      "decline_renewal",
+      "restore_renewal",
+      "renew",
+      "send_new_edition",
+    ] as const),
   },
   ...overrideResponse,
 });

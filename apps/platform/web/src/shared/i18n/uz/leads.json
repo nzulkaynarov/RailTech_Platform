@@ -103,7 +103,7 @@
     "client": "Mijoz",
     "confirmation": "Mijozga ariza tasdiği",
     "firstResponse": "Saytdagi sörovga birinçi javob",
-    "firstResponseDue": "{{date}}gaça",
+    "firstResponseDue": "{{date}} gaça",
     "firstResponseOverdue": "muddat ötdi: {{date}}",
     "invitation": "Kabinetga taklif",
     "notice": {

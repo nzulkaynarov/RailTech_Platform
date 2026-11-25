@@ -628,8 +628,7 @@
         "status": "Holat",
         "client": "Sizning kelişuvingiz",
         "company": "Bizning imzo",
-        "deal": "Loyiha",
-        "term": "Muddat"
+        "deal": "Loyiha"
       },
       "notSigned": "Hali yöq",
       "sign": "Kelişiş",
@@ -652,7 +651,9 @@
         "decline": "Uzaytirişdan boş tortiş",
         "declineTitle": "{{number}} şartnomasini uzaytirişdan boş tortiş",
         "declineText": "Şartnoma {{until}}gaça amal qiladi va undan keyin tugaydi. Boşlangan yetkazib beriş, tölov va daʼvolar tegilmaydi. Boş tortiş {{notice}}gaça mümkin. Kabinetda uzaytirişni qaytarib bölmaydi.",
-        "declined": "Siz {{number}} şartnomasini uzaytirişdan boş tortdingiz."
+        "declined": "Siz {{number}} şartnomasini uzaytirişdan boş tortdingiz.",
+        "restore": "Uzaytirişni qaytariş",
+        "restored": "{{number}} şartnomasi uzaytirişi qaytarildi."
       }
     },
     "invoices": {
@@ -886,7 +887,7 @@
       "documentsTitle": "Hujjatlar",
       "documentNumber": "№ {{number}}",
       "issuedBy": "Bergan: {{name}}",
-      "validUntil": "{{date}}gaça amal qiladi",
+      "validUntil": "{{date}} gaça amal qiladi",
       "noExpiry": "Muddatsiz"
     },
     "company": {
@@ -1376,6 +1377,7 @@
     "TERM_NOTICE_PASSED": "Uzaytirişdan boş tortiş muddati ötdi.",
     "TERM_ALREADY_DECLINED": "Uzaytirişdan allaqaçon boş tortilgan.",
     "TERM_NOT_AVAILABLE": "Bu şartnoma özi uzaymaydi.",
+    "TERM_NOT_DECLINED": "Uzaytirişdan boş tortiş yöq yoki uni boşqa tomon qilgan.",
     "QUOTE_CODE_INVALID": "Kod notöğri yoki söralmagan. Xabardagi kodni tekşiring yoki yangisini sörang.",
     "QUOTE_EXPIRED": "Taklifning amal qiliş muddati tugagan — uni endi qabul qilib bölmaydi. Menejerdan taklifni yangilaşni sörang.",
     "REASON_REQUIRED": "Sababini körsating.",
@@ -1534,7 +1536,7 @@
     "noPrice": "Narx yöq",
     "priceNotConfirmed": "Tasdiqlanmagan",
     "priceConfirmed": "{{date}} tasdiqlangan",
-    "validUntil": "{{date}}gaça amal qiladi",
+    "validUntil": "{{date}} gaça amal qiladi",
     "moq": "{{count}} dona dan",
     "completenessValue": "{{percent}} %",
     "pendingChange": "Özgariş tekşiruvda",
@@ -1628,7 +1630,7 @@
         "rejected": "Rad etildi"
       },
       "docNumber": "№",
-      "validUntil": "Amal qiliş muddati: {{date}}gaça",
+      "validUntil": "Amal qiliş muddati: {{date}} gaça",
       "unlimited": "Muddatsiz",
       "downloadDoc": "{{name}} yuklab oliş",
       "deleteDoc": "{{name}} öçiriş",
@@ -1942,7 +1944,7 @@
     },
     "codeNote": "Har qanday amal {{email}} manziliga keladigan koddan keyin bajariladi. Bu havola orqali boşqa hujjat va bölimlar oçilmaydi.",
     "memberNote": "Siz {{name}} sifatida kirgansiz — kod kerak emas.",
-    "linkUntil": "Havola {{date}}gaça amal qiladi — yuboruvçi uni bekor qilişi mumkin.",
+    "linkUntil": "Havola {{date}} gaça amal qiladi — yuboruvçi uni bekor qilişi mumkin.",
     "state": {
       "accepted": "Taklif qabul qilindi. Şartnoma kabinetingizda paydo böladi.",
       "rejected": "Taklif izoh bilan qaytarildi.",

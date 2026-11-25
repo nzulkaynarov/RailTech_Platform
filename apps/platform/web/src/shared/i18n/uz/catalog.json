@@ -170,7 +170,7 @@
     "vatNone": "Belgilanmagan",
     "noOffers": "Takliflar yöq",
     "offersCount": "Takliflar: {{count}}",
-    "priceUntil": "narx {{date}}gaça",
+    "priceUntil": "narx {{date}} gaça",
     "docsLink": "{{name}} pozitsiyasi fayllari: {{count}}",
     "empty": {
       "title": "Pozitsiyalar yöq",
@@ -428,7 +428,7 @@
       "editNamed": "{{code}} kodini özgartiriş",
       "active": "Amalda",
       "closed": "Yopilgan",
-      "until": "{{date}}gaça",
+      "until": "{{date}} gaça",
       "columns": {
         "code": "Kod",
         "name": "Nomi",
@@ -942,7 +942,7 @@
     "editNamed": "«{{title}}» hujjatini özgartiriş",
     "open": "Oçiş",
     "expired": "Muddati ötgan",
-    "validUntil": "{{date}}gaça",
+    "validUntil": "{{date}} gaça",
     "forever": "muddatsiz",
     "visible": "Mijozga körinadi",
     "hidden": "Mijozga körinmaydi",

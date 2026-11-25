@@ -925,6 +925,30 @@ class ContractSignView(BasePortalView):
         return Response(ContractSerializer(_client_contracts(request.portal_company).get(pk=pk)).data)
 
 
+class ContractRestoreRenewalView(BasePortalView):
+    """POST /contracts/{id}/restore-renewal — клиент снимает свой отказ от продления до последнего дня отказа (ДС-1)."""
+
+    required_module = "contracts"
+
+    def post(self, request, pk):
+        from crm.services import contract_term
+
+        contract = _client_contracts(request.portal_company).filter(pk=pk).first()
+        if not contract:
+            raise Http404
+        _, error = contract_term.restore_renewal(contract.pk, "client", contact=request.portal_contact)
+        if error == "TERM_NOTICE_PASSED":
+            raise PortalConflict(error)
+        if error:  # отказа нет или его сделала другая сторона
+            raise PortalConflict("TERM_NOT_DECLINED")
+        return Response(
+            ContractSerializer(
+                _client_contracts(request.portal_company).get(pk=pk),
+                context={"can_act": request.portal_contact.can_act},
+            ).data
+        )
+
+
 class ContractDeclineRenewalView(BasePortalView):
     """POST /contracts/{id}/decline-renewal — отказ клиента от продления (ДС-1, `contract_term.decline_renewal`)."""
 

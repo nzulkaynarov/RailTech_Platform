@@ -105,6 +105,17 @@ export function ContractTermBlock({
           </Button>
         </form>
       ) : null}
+      {may("restore_renewal") ? (
+        <Button
+          loading={pending === "restore_renewal"}
+          disabled={busy}
+          onClick={() => {
+            send("restore_renewal");
+          }}
+        >
+          {t("contract.term.action.restore_renewal")}
+        </Button>
+      ) : null}
       {may("send_new_edition") ? (
         <Button
           loading={pending === "send_new_edition"}

@@ -628,8 +628,7 @@
         "status": "Status",
         "client": "Your agreement",
         "company": "Our signature",
-        "deal": "Project",
-        "term": "Term"
+        "deal": "Project"
       },
       "notSigned": "Not yet",
       "sign": "Agree",
@@ -652,7 +651,9 @@
         "decline": "Decline renewal",
         "declineTitle": "Decline renewal of contract {{number}}",
         "declineText": "The contract is valid until {{until}} and ends after that. Started deliveries, payments and claims are not affected. You can decline until {{notice}}. The renewal cannot be restored in the cabinet.",
-        "declined": "You declined the renewal of contract {{number}}."
+        "declined": "You declined the renewal of contract {{number}}.",
+        "restore": "Restore renewal",
+        "restored": "Renewal of contract {{number}} restored."
       }
     },
     "invoices": {
@@ -1376,6 +1377,7 @@
     "TERM_NOTICE_PASSED": "The deadline to decline the renewal has passed.",
     "TERM_ALREADY_DECLINED": "The renewal was already declined.",
     "TERM_NOT_AVAILABLE": "This contract does not renew automatically.",
+    "TERM_NOT_DECLINED": "There is no renewal refusal to restore, or the other side made it.",
     "QUOTE_CODE_INVALID": "The code is wrong or was not requested. Check the code in the message or request a new one.",
     "QUOTE_EXPIRED": "The quote has expired and can no longer be accepted. Ask your manager to update the offer.",
     "REASON_REQUIRED": "Give a reason.",

@@ -212,6 +212,41 @@ def decline_renewal(
 
 
 @transaction.atomic
+def restore_renewal(
+    contract_id: int, side: str, *, actor=None, contact=None, today: Optional[dt.date] = None
+) -> Tuple[Optional[Contract], Optional[str]]:
+    """Вернуть продление: свой отказ можно снять в любой день до последнего дня отказа (не только в окне «Продлить»)."""
+    from .contract_flow import is_staff, may
+
+    today = today or timezone.localdate()
+    if side == DeclinedBy.COMPANY and not (is_staff(actor) and may(actor, "contract.manage")):
+        return None, "MEMBER_REQUIRED_FOR_ACTION"
+    contract = _locked(contract_id)
+    if contract is None:
+        return None, "CONTRACT_NOT_FOUND"
+    if contract.status_code != ContractStatusCode.SIGNED or contract.valid_until is None:
+        return None, "TERM_NOT_SET"
+    if contract.renewal_declined_at is None or contract.renewal_declined_by != side:
+        return None, "TERM_NOT_DECLINED"
+    if contract.last_notice_date is None or today > contract.last_notice_date:
+        return None, "TERM_NOTICE_PASSED"
+    contract.renewal_declined_at = None
+    contract.renewal_declined_by = ""
+    contract.term_reminders = []
+    contract.save(update_fields=["renewal_declined_at", "renewal_declined_by", "term_reminders", "updated_at"])
+    _journal(
+        contract,
+        "contract.renewal_restored",
+        "Отказ от продления снят",
+        actor=actor,
+        contact=contact,
+        by=side,
+        valid_until=str(contract.valid_until),
+    )
+    return contract, None
+
+
+@transaction.atomic
 def renew_by_agreement(
     contract_id: int, actor, *, agreement_number: str = "", today: Optional[dt.date] = None
 ) -> Tuple[Optional[Contract], Optional[str]]:
@@ -725,6 +760,12 @@ def term_card(contract, user=None, today: Optional[dt.date] = None) -> Optional[
             and today <= contract.last_notice_date
         ):
             actions.append("decline_renewal")
+        if (
+            contract.renewal_declined_by == DeclinedBy.COMPANY
+            and contract.last_notice_date is not None
+            and today <= contract.last_notice_date
+        ):
+            actions.append("restore_renewal")
         if (state in ("ends", "expired") or contract.renewal_mode == ContractRenewalMode.BY_AGREEMENT) and can_renew(
             contract, _rules_of(contract), today
         ):

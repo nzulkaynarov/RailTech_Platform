@@ -82,7 +82,7 @@
     "open": "«{{name}}» tovarini oçiş",
     "free": "Böş · {{count}}",
     "noFree": "Böş yöq",
-    "until": "{{date}}gaça",
+    "until": "{{date}} gaça",
     "cellLine": "{{cell}}: {{qty}}",
     "card": "Omborda {{onHand}} · zaxirada {{reserved}}",
     "empty": {
@@ -210,7 +210,7 @@
       "cancel": "Buyurtmani bekor qiliş",
       "price": "Narx söraş"
     },
-    "overdueBanner": "{{date}}gaça kutilgan, tovar olinmagan — {{count}} kun keçikiş. Hamkor bilan boğlaning va kutilayotgan sanani yangilang.",
+    "overdueBanner": "{{date}} gaça kutilgan, tovar olinmagan — {{count}} kun keçikiş. Hamkor bilan boğlaning va kutilayotgan sanani yangilang.",
     "cancelledBanner": "Buyurtma bekor qilingan. Sabab: {{reason}}",
     "supplier": "Hamkor",
     "email": "Hamkor poçtasi",
@@ -306,7 +306,7 @@
     "offer": {
       "label": "Hamkor narxi: {{text}}",
       "incoterms": "bazis {{code}}",
-      "validUntil": "{{date}}gaça amal qiladi",
+      "validUntil": "{{date}} gaça amal qiladi",
       "expired": "{{date}} da tugagan"
     },
     "mail": {
@@ -445,7 +445,7 @@
     "order": "Hamkorga buyurtma",
     "received": "Qabul qilingan",
     "document": "Muvofiqlik hujjati",
-    "until": "{{date}}gaça",
+    "until": "{{date}} gaça",
     "expiryLabel": "Yaroqlilik muddati",
     "orderedFor": "Kimga buyurtma qilingan",
     "notShipped": "Hali omborda — jönatilmagan.",
@@ -461,7 +461,7 @@
     "pickSerials": "«{{name}}» seriya raqamlari: {{total}} dan {{count}} tanlandi",
     "pickLots": "«{{name}}» partiyalari: {{total}} dan {{count}} tanlandi",
     "lotAvailable": "omborda {{count}}",
-    "expiryShort": "{{date}}gaça yaroqli",
+    "expiryShort": "{{date}} gaça yaroqli",
     "lotQuantity": "{{number}} partiyadan qança",
     "problem": {
       "serials": "«{{name}}»: seriya raqamlari qabul qilinayotgan miqdorga teng bölsin.",

@@ -52,7 +52,7 @@
   },
   "term": {
     "from": "{{date}} dan",
-    "until": "{{date}}gaça",
+    "until": "{{date}} gaça",
     "open": "tugaş muddatisiz",
     "expires_one": "{{count}} kundan keyin tugaydi",
     "expires_few": "{{count}} kundan keyin tugaydi",

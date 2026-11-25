@@ -116,3 +116,23 @@ def test_declined_notice_links_to_contracts(contract_world, client_contact):
     notice_sources.contract_renewal_declined(contract)
     row = PortalNotice.objects.get(kind="contract_renewal_declined", contact=client_contact)
     assert row.link == "/contracts" and row.params["until"] == str(contract.valid_until)
+
+
+def test_client_restores_its_own_decline_until_the_last_notice_day(contract_world, portal_client):
+    contract = term_of(contract_world["contracts"]["signed"], dt.date.today())
+    path = f"{API}/contracts/{contract.pk}/restore-renewal"
+    assert portal_client.post(path, {}, format="json").json() == {"detail": "TERM_NOT_DECLINED"}  # снимать нечего
+    assert post(portal_client, contract).json()["term"]["can_restore"] is True
+    body = portal_client.post(path, {}, format="json")
+    assert body.status_code == 200 and body.json()["term"]["declined_by"] is None
+    contract.refresh_from_db()
+    assert contract.renewal_declined_at is None
+    assert ActivityLog.objects.filter(event_code="contract.renewal_restored", entity_id=contract.pk).exists()
+
+
+def test_restore_after_the_last_notice_day_is_409(contract_world, portal_client):
+    contract = term_of(contract_world["contracts"]["signed"], dt.date.today())
+    post(portal_client, contract)
+    type(contract).objects.filter(pk=contract.pk).update(last_notice_date=dt.date.today() - dt.timedelta(days=1))
+    response = portal_client.post(f"{API}/contracts/{contract.pk}/restore-renewal", {}, format="json")
+    assert response.status_code == 409 and response.json() == {"detail": "TERM_NOTICE_PASSED"}

@@ -295,7 +295,6 @@ def test_project_card_carries_the_term_and_its_actions(pw):  # noqa: F811
     term = card["term"]
     assert term["state"] == "renews" and term["valid_until"] == str(contract.valid_until), card
     assert term["last_notice_date"] == str(contract.last_notice_date) and "decline_renewal" in term["actions"]
-    assert term["last_notice_date"] == "2026-12-01"
 
 
 def test_company_settings_take_and_reject_term_values(pw):  # noqa: F811
@@ -471,3 +470,40 @@ def test_foreign_by_agreement_setting_itself(pw):  # noqa: F811
     assert contract.renewal_mode == "auto"  # …но настройка выключена — автопродление, как у резидента
     rules(pw, contract_foreign_by_agreement=True)
     assert signed(pw, D(2026, 3, 11)).renewal_mode == "by_agreement"
+
+
+def test_early_decline_can_be_restored_any_day_before_the_last_notice_day(pw):  # noqa: F811
+    contract = signed(pw)  # срок до 31.12.2026, последний день отказа 1.12 — окно «Продлить» ещё далеко
+    svc.decline_renewal(contract.pk, "company", actor=pw.accountant, today=D(2026, 4, 1))
+    assert svc.restore_renewal(contract.pk, "client", today=D(2026, 4, 2)) == (None, "TERM_NOT_DECLINED")  # чужой отказ
+    card = svc.term_card(Contract.objects.get(pk=contract.pk), pw.accountant, D(2026, 4, 2))
+    assert "restore_renewal" in card["actions"] and "renew" not in card["actions"]
+    restored, error = svc.restore_renewal(contract.pk, "company", actor=pw.accountant, today=D(2026, 4, 2))
+    assert error is None and restored.renewal_declined_at is None and restored.renewal_declined_by == ""
+    assert svc.run_daily(D(2027, 1, 2))["renewed"] == 1  # снятый отказ — договор снова продлевается
+    svc.decline_renewal(contract.pk, "company", actor=pw.accountant, today=D(2027, 6, 1))
+    assert svc.restore_renewal(contract.pk, "company", actor=pw.accountant, today=D(2027, 12, 2)) == (
+        None,
+        "TERM_NOTICE_PASSED",
+    )
+
+
+def test_project_card_term_follows_a_moved_today(pw, monkeypatch):  # noqa: F811
+    """Срок считается от дня подписания: «сегодня» за последним днём отказа — карточка не зовёт отказаться."""
+    contract = signed(pw, D(2026, 3, 10))
+    monkeypatch.setattr("django.utils.timezone.localdate", lambda *a, **k: D(2026, 12, 2))
+    card = svc.term_card(contract, pw.accountant)
+    assert "decline_renewal" not in card["actions"] and card["last_notice_date"] == D(2026, 12, 1)
+
+
+@pytest.mark.parametrize("today", [D(2026, 6, 1), D(2026, 12, 1), D(2026, 12, 2), D(2028, 2, 29)])
+def test_project_card_term_is_stable_on_any_calendar_day(pw, monkeypatch, today):  # noqa: F811
+    """Карточка сверяется с договором, а не с датой: тест не ломается 1 декабря и в високосный день."""
+    monkeypatch.setattr("django.utils.timezone.localdate", lambda *a, **k: today)
+    contract = signed(pw, today)
+    card = api(pw.accountant).get(f"/api/v1/crm/projects/{pw.deal.pk}/").json()["contract"]
+    term = card["term"]
+    assert term["valid_until"] == str(contract.valid_until) and term["last_notice_date"] == str(
+        contract.last_notice_date
+    )
+    assert "decline_renewal" in term["actions"]

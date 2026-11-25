@@ -532,6 +532,7 @@ export const contracts: Schemas["Contract"][] = [
       last_notice_date: "2026-12-01",
       declined_by: null,
       can_decline: true,
+      can_restore: false,
     },
   },
 ];

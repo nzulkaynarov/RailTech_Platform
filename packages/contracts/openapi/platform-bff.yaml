@@ -21889,7 +21889,7 @@ components:
         actions:
           type: array
           items:
-            enum: [decline_renewal, renew, send_new_edition]
+            enum: [decline_renewal, restore_renewal, renew, send_new_edition]
             type: string
     ProjectContractTemplate:
       type: object
@@ -22183,7 +22183,7 @@ components:
       description: 'Действие по договору. `reason` обязательна для `reject`, `channel` и `counterparty_person` — для `client_agreed`: пустые BFF отклоняет (422).'
       properties:
         action:
-          enum: [send_to_client, client_agreed, reject, revise, mark_issued, sign_ours, request_deviation, decide_deviation, decline_renewal, renew, send_new_edition]
+          enum: [send_to_client, client_agreed, reject, revise, mark_issued, sign_ours, request_deviation, decide_deviation, decline_renewal, restore_renewal, renew, send_new_edition]
           type: string
           description: '`sign_ours`, `request_deviation`, `decide_deviation` — договор по утверждённому шаблону (ДОК-10): наша подпись до отправки, заявка на отступление, решение держателя «Право»; `decline_renewal`, `renew`, `send_new_edition` — срок договора (ДС-1): отказ от продления, продление соглашением, новая редакция шаблона на подпись'
         reason:

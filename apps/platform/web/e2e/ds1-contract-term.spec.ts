@@ -34,6 +34,10 @@ for (const width of WIDTHS) {
       await expect(term.getByRole("button", { name: "Отказаться от продления" })).toHaveCount(0);
       await settledScreenshot(page, "ds1-contract-declined");
       await expectNoViolations(page, "отказ от продления записан");
+
+      // отказ можно вернуть до последнего дня отказа
+      await term.getByRole("button", { name: "Вернуть продление" }).click();
+      await expect(term.getByText("Продлится сам")).toBeVisible();
     });
 
     test("настройки «Продажи»: срок договора — правило, а не код", async ({ page }) => {

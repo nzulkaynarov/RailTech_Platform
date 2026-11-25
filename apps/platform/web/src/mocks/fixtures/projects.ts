@@ -831,7 +831,7 @@ export function termOf(c: MutableContract, writer: boolean): ProjectContractTerm
     newer_edition: null,
     confidentiality_years: null,
     trade_secret_indefinite: false,
-    actions: writer ? (declined ? ["renew"] : ["decline_renewal"]) : [],
+    actions: writer ? (declined ? ["restore_renewal", "renew"] : ["decline_renewal"]) : [],
   };
 }
 

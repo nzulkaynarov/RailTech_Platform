@@ -1,10 +1,10 @@
 import { useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { AlertTriangle, CalendarX2, CheckCircle2, ClipboardCheck, Download, FileSignature, PenLine, Receipt, Undo2, Upload, Wallet } from 'lucide-react';
+import { AlertTriangle, CalendarCheck, CalendarX2, CheckCircle2, ClipboardCheck, Download, FileSignature, PenLine, Receipt, Undo2, Upload, Wallet } from 'lucide-react';
 import { toast } from '@/lib/toast';
 
 import type { Act, Contract, Invoice, PaymentProof } from '@/api/portal';
-import { useAcceptAct, useActs, useContracts, useDeclineContractRenewal, useInvoices, useReturnAct, useSignContract, useSubmitPaymentProof } from '@/api/queries';
+import { useAcceptAct, useActs, useContracts, useDeclineContractRenewal, useInvoices, useRestoreContractRenewal, useReturnAct, useSignContract, useSubmitPaymentProof } from '@/api/queries';
 import { ActionDialog } from '@/components/ActionDialog';
 import { BillingNavTabs } from '@/components/BillingNavTabs';
 import { ConsequenceCallout } from '@/components/ConsequenceCallout';
@@ -56,12 +56,12 @@ function RowDocumentItem({ documentId, number }: { documentId: number | null | u
 
 // --- договоры ------------------------------------------------------------------------------------
 
-/** Срок договора (ДС-1): «до 31.12.2026 · продлится сам»; без срока — прочерк. Считает ERP, Cabinet только показывает. */
-function ContractTermCell({ term }: { term: Contract['term'] }) {
+/** Срок договора (ДС-1) второй строкой под номером: «до 31.12.2026 · продлится сам»; без срока — ничего. Считает ERP. */
+function ContractTermLine({ term }: { term: Contract['term'] }) {
   const { t } = useTranslation();
-  if (!term) return <span className="text-muted-foreground">{t('pages.contracts.term.none')}</span>;
+  if (!term) return null;
   return (
-    <span>
+    <span className="text-xs font-normal text-muted-foreground">
       {term.valid_until ? t('pages.contracts.term.until', { date: formatDate(term.valid_until) }) : t('pages.contracts.term.open')}
       {' · '}
       {t(`pages.contracts.term.state.${term.state}`)}
@@ -74,6 +74,7 @@ export function ContractsPage() {
   const contracts = useContracts();
   const sign = useSignContract();
   const decline = useDeclineContractRenewal();
+  const restore = useRestoreContractRenewal();
   const [target, setTarget] = useState<Contract | null>(null);
   const [declining, setDeclining] = useState<Contract | null>(null);
   const awaiting = (contracts.data ?? []).filter((item) => contractAwaitsClient(item.status)).length;
@@ -100,7 +101,15 @@ export function ContractsPage() {
             label={t('pages.contracts.title')}
             rows={contracts.data}
             getRowId={(row) => row.id}
-            title={{ header: t('pages.contracts.columns.contract'), cell: (row) => <span className="font-medium whitespace-nowrap">{row.number}</span> }}
+            title={{
+              header: t('pages.contracts.columns.contract'),
+              cell: (row) => (
+                <span className="flex flex-col">
+                  <span className="font-medium whitespace-nowrap">{row.number}</span>
+                  <ContractTermLine term={row.term} />
+                </span>
+              ),
+            }}
             columns={[
               { id: 'status', header: t('pages.contracts.columns.status'), cell: (row) => <StatusBadge entity="contract" code={row.status} /> },
               {
@@ -112,11 +121,6 @@ export function ContractsPage() {
                 id: 'company',
                 header: t('pages.contracts.columns.company'),
                 cell: (row) => (row.signed_by_company_at ? formatDateTime(row.signed_by_company_at) : t('pages.contracts.notSigned')),
-              },
-              {
-                id: 'term',
-                header: t('pages.contracts.columns.term'),
-                cell: (row) => <ContractTermCell term={row.term} />,
               },
               { id: 'deal', header: t('pages.contracts.columns.deal'), cell: (row) => <DealLink deal={row.deal} /> },
             ]}
@@ -138,6 +142,20 @@ export function ContractsPage() {
                       <CanAct>
                         <RowMenuAction icon={CalendarX2} onSelect={() => setDeclining(row)}>
                           {t('pages.contracts.term.decline')}
+                        </RowMenuAction>
+                      </CanAct>
+                    ) : null}
+                    {row.term?.can_restore ? (
+                      <CanAct>
+                        <RowMenuAction
+                          icon={CalendarCheck}
+                          onSelect={() =>
+                            restore.mutate(row.id, {
+                              onSuccess: (next) => toast.success(t('pages.contracts.term.restored', { number: next.number })),
+                            })
+                          }
+                        >
+                          {t('pages.contracts.term.restore')}
                         </RowMenuAction>
                       </CanAct>
                     ) : null}

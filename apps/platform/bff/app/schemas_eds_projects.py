@@ -41,10 +41,11 @@ ContractAction = Literal[
     "decide_deviation",
     # ДС-1: срок договора
     "decline_renewal",
+    "restore_renewal",
     "renew",
     "send_new_edition",
 ]
-TermActionCode = Literal["decline_renewal", "renew", "send_new_edition"]
+TermActionCode = Literal["decline_renewal", "restore_renewal", "renew", "send_new_edition"]
 TermState = Literal["open", "renews", "ends", "expired"]
 TemplateActionCode = Literal["sign_ours", "request_deviation", "decide_deviation"]
 DeviationState = Literal["none", "requested", "approved", "rejected"]

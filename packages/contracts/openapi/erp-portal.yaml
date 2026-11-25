@@ -1662,6 +1662,41 @@ paths:
         '429':
           $ref: '#/components/responses/TooManyRequests'
 
+  /contracts/{id}/restore-renewal:
+    post:
+      tags: [contracts]
+      operationId: restoreContractRenewal
+      summary: Вернуть продление договора
+      description: >-
+        Снимает отказ клиента от продления в любой день до `term.last_notice_date`; позже — 409 `TERM_NOTICE_PASSED`,
+        отказа нет или его сделала компания — 409 `TERM_NOT_DECLINED`.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: Отказ снят
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Contract'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Срок отказа вышел или снимать нечего
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '400':
+          $ref: '#/components/responses/IdempotencyKeyRequired'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
   /invoices:
     get:
       tags: [invoices]
@@ -3942,6 +3977,7 @@ components:
         - TERM_NOTICE_PASSED
         - TERM_ALREADY_DECLINED
         - TERM_NOT_AVAILABLE
+        - TERM_NOT_DECLINED
         - ACT_FINALIZED
         - DELIVERY_LINE_NOT_ACCEPTABLE
         - DOCUMENT_PENDING
@@ -6452,7 +6488,7 @@ components:
         Срок договора считается при подписании из правила компании и шаблона. `state`: `open` — без срока, `renews` —
         продлится сам, `ends` — закончится (отказ одной из сторон или продление только соглашением), `expired` — срок
         вышел. Отказаться от продления можно до `last_notice_date` (`can_decline`).
-      required: [state, valid_from, valid_until, last_notice_date, declined_by, can_decline]
+      required: [state, valid_from, valid_until, last_notice_date, declined_by, can_decline, can_restore]
       properties:
         state:
           type: string
@@ -6473,6 +6509,9 @@ components:
         can_decline:
           type: boolean
           description: Контакт может отказаться от продления сейчас (есть `can_act`, срок отказа не вышел)
+        can_restore:
+          type: boolean
+          description: Отказ клиента можно снять (до `last_notice_date`, есть `can_act`)
 
     InvoiceStatus:
       type: string

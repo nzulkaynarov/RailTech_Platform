@@ -196,7 +196,7 @@ class ContractTermCardSerializer(serializers.Serializer):
     )
     trade_secret_indefinite = serializers.BooleanField(help_text="NDA: коммерческая тайна — без срока (справка)")
     actions = serializers.ListField(
-        child=serializers.ChoiceField(choices=["decline_renewal", "renew", "send_new_edition"]),
+        child=serializers.ChoiceField(choices=["decline_renewal", "restore_renewal", "renew", "send_new_edition"]),
         help_text="Что можно сделать СЕЙЧАС этому сотруднику со сроком договора",
     )
 

@@ -197,6 +197,7 @@ class ContractViewSet(
         "decide_deviation": "contract.approve_template",
         # ДС-1: срок договора — отказ от продления, продление соглашением, новая редакция шаблона
         "decline_renewal": "contract.manage",
+        "restore_renewal": "contract.manage",
         "renew": "contract.manage",
         "send_new_edition": "contract.manage",
         "request_signing": "contract.manage",
@@ -358,6 +359,18 @@ class ContractViewSet(
         from crm.services import contract_term
 
         return self._term_flow(contract_term.decline_renewal(self.get_object().pk, "company", actor=request.user))
+
+    @extend_schema(
+        summary="Restore the renewal declined earlier by the company, until the last notice day (ДС-1)",
+        tags=["CRM"],
+        request=None,
+        responses={200: ContractFlowSerializer},
+    )
+    @action(detail=True, methods=["post"], url_path="restore-renewal")
+    def restore_renewal(self, request, pk=None):
+        from crm.services import contract_term
+
+        return self._term_flow(contract_term.restore_renewal(self.get_object().pk, "company", actor=request.user))
 
     @extend_schema(
         summary="Renew the contract by agreement of the parties (foreign counterparty, expired term; ДС-1)",

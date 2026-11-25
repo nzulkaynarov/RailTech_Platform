@@ -23,6 +23,7 @@ from portal.views import (
     CompanyView,
     ContractDeclineRenewalView,
     ContractListView,
+    ContractRestoreRenewalView,
     ContractSignView,
     CountriesView,
     DeliveryAcceptView,
@@ -190,6 +191,16 @@ urlpatterns = [
     path("contracts/", ContractListView.as_view(), name="portal-contracts-slash"),
     path("contracts/<int:pk>/sign", ContractSignView.as_view(), name="portal-contract-sign"),
     path("contracts/<int:pk>/sign/", ContractSignView.as_view(), name="portal-contract-sign-slash"),
+    path(
+        "contracts/<int:pk>/restore-renewal",
+        ContractRestoreRenewalView.as_view(),
+        name="portal-contract-restore-renewal",
+    ),
+    path(
+        "contracts/<int:pk>/restore-renewal/",
+        ContractRestoreRenewalView.as_view(),
+        name="portal-contract-restore-renewal-slash",
+    ),
     path(
         "contracts/<int:pk>/decline-renewal",
         ContractDeclineRenewalView.as_view(),

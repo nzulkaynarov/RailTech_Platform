@@ -1077,7 +1077,20 @@ export const handlers = [
         if (!contract) return error(404, 'NOT_FOUND');
         if (!contract.term) return error(409, 'TERM_NOT_AVAILABLE');
         if (contract.term.declined_by) return error(409, 'TERM_ALREADY_DECLINED');
-        contract.term = { ...contract.term, state: 'ends', declined_by: 'client', can_decline: false };
+        contract.term = { ...contract.term, state: 'ends', declined_by: 'client', can_decline: false, can_restore: true };
+        return json(contract);
+      },
+      { action: true },
+    ),
+  ),
+  http.post<IdParams>(
+    `${API}/contracts/:id/restore-renewal`,
+    withSession<IdParams>(
+      ({ db, params }) => {
+        const contract = byId(db.contracts, params.id);
+        if (!contract) return error(404, 'NOT_FOUND');
+        if (contract.term?.declined_by !== 'client') return error(409, 'TERM_NOT_DECLINED');
+        contract.term = { ...contract.term, state: 'renews', declined_by: null, can_decline: true, can_restore: false };
         return json(contract);
       },
       { action: true },

@@ -838,6 +838,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/contracts/{id}/restore-renewal": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Вернуть продление договора
+     * @description Снимает отказ клиента от продления в любой день до `term.last_notice_date`; позже — 409 `TERM_NOTICE_PASSED`, отказа нет или его сделала компания — 409 `TERM_NOT_DECLINED`.
+     */
+    post: operations["restoreContractRenewal"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/invoices": {
     parameters: {
       query?: never;
@@ -3239,6 +3259,8 @@ export interface components {
       declined_by: "company" | "client" | null;
       /** @description Контакт может отказаться от продления сейчас (есть `can_act`, срок отказа не вышел) */
       can_decline: boolean;
+      /** @description Отказ клиента можно снять (до `last_notice_date`, есть `can_act`) */
+      can_restore: boolean;
     };
     /** @enum {string} */
     InvoiceStatus: "issued" | "partially_paid" | "paid" | "overdue" | "cancelled";
@@ -5554,6 +5576,49 @@ export interface operations {
       403: components["responses"]["Forbidden"];
       404: components["responses"]["NotFound"];
       /** @description Срок отказа вышел, отказ уже записан или продления нет */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      429: components["responses"]["TooManyRequests"];
+    };
+  };
+  restoreContractRenewal: {
+    parameters: {
+      query?: never;
+      header: {
+        /**
+         * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
+         *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
+         *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
+         */
+        "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+      };
+      path: {
+        id: components["parameters"]["Id"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Отказ снят */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Contract"];
+        };
+      };
+      400: components["responses"]["IdempotencyKeyRequired"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      /** @description Срок отказа вышел или снимать нечего */
       409: {
         headers: {
           [name: string]: unknown;

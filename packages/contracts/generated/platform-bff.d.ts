@@ -12081,7 +12081,7 @@ export interface components {
       confidentiality_years: number | null;
       /** @description NDA: коммерческая тайна без срока (справка) */
       trade_secret_indefinite: boolean;
-      actions: ("decline_renewal" | "renew" | "send_new_edition")[];
+      actions: ("decline_renewal" | "restore_renewal" | "renew" | "send_new_edition")[];
     };
     ProjectContractTemplate: {
       id: number | null;
@@ -12252,6 +12252,7 @@ export interface components {
         | "request_deviation"
         | "decide_deviation"
         | "decline_renewal"
+        | "restore_renewal"
         | "renew"
         | "send_new_edition";
       reason?: string | null;

@@ -8,6 +8,7 @@ export type ProjectContractTermActionsItem =
 
 export const ProjectContractTermActionsItem = {
   decline_renewal: "decline_renewal",
+  restore_renewal: "restore_renewal",
   renew: "renew",
   send_new_edition: "send_new_edition",
 } as const;

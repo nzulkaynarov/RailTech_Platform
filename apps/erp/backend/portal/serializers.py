@@ -681,6 +681,12 @@ class ContractSerializer(DealLinkedSerializer):
             "last_notice_date": card["last_notice_date"].isoformat() if card["last_notice_date"] else None,
             "declined_by": card["declined_by"],
             "can_decline": bool(can_decline),
+            "can_restore": bool(
+                card["declined_by"] == "client"
+                and card["last_notice_date"] is not None
+                and today <= card["last_notice_date"]
+                and self.context.get("can_act", True)
+            ),
         }
 
     def get_status(self, contract) -> str:

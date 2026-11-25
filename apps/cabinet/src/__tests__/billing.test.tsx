@@ -422,5 +422,9 @@ describe('Срок договора (ДС-1)', () => {
     expect(within(card('Договоры', 'D-2026-0035')).getByText('до 31 дек. 2026 г. · закончится в срок')).toBeInTheDocument();
     await openRowMenu(user, card('Договоры', 'D-2026-0035'), 'D-2026-0035');
     expect(screen.queryByRole('menuitem', { name: 'Отказаться от продления' })).not.toBeInTheDocument();
+    // свой отказ можно вернуть до последнего дня отказа
+    await user.click(await screen.findByRole('menuitem', { name: 'Вернуть продление' }));
+    expect(await screen.findByText('Продление договора D-2026-0035 возвращено.')).toBeInTheDocument();
+    expect(within(card('Договоры', 'D-2026-0035')).getByText('до 31 дек. 2026 г. · продлится сам')).toBeInTheDocument();
   });
 });

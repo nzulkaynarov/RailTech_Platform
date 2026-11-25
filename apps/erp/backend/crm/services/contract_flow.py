@@ -391,7 +391,10 @@ def apply_transition(
     if action == "attach_scan":
         from .contract_term import apply_at_signing
 
-        apply_at_signing(contract)  # ДС-1: срок и последний день отказа из правила, до события «подписан»
+        # ДС-1: срок и последний день отказа из правила, до события «подписан». Срок считается в момент отметки
+        # «подписан»: сейчас единственный путь — скан (`attach_scan`). Когда появится отметка «подписан» с заметкой без
+        # скана (ДП-1), она обязана вызвать `apply_at_signing(contract)` тут же — крючок один, другого места нет.
+        apply_at_signing(contract)
         events.publish_contract_signed(contract, by="both", actor=events.build_actor(actor) if actor else None)
         _after_signed(contract)
     return contract, None

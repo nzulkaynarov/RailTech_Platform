@@ -865,6 +865,7 @@ async def test_signing_request_created_by_erp_with_201_is_success(
         ({"action": "decide_deviation", "approve": False}, "decide-deviation", {"approve": False}),
         # ДС-1: срок договора
         ({"action": "decline_renewal"}, "decline-renewal", {}),
+        ({"action": "restore_renewal"}, "restore-renewal", {}),
         ({"action": "renew", "agreement_number": " DS-1 "}, "renew", {"agreement_number": "DS-1"}),
         ({"action": "send_new_edition"}, "send-new-edition", {}),
     ],

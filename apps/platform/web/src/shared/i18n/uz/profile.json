@@ -93,7 +93,7 @@
   "deputy": {
     "title": "Örinbosarlik",
     "lead": "Yöqligingiz vaqtida hamkasbni tanlang: u vazifalaringizni «Vazifalar»da köradi va kelişuvlar, topşiriqlar hamda muddatlarni siz uçun hal qiladi. Imzoni faqat öz vakolati bilan qöyadi, tölovni ötkazmaydi.",
-    "sentence": "Yöqligim vaqtida vazifalarimni {{name}} {{from}}dan {{to}} gaça köradi.",
+    "sentence": "Yöqligim vaqtida vazifalarimni {{name}} {{from}} dan {{to}} gaça köradi.",
     "none": "Örinbosar tayinlanmagan.",
     "who": "Kim örnimda",
     "whoPlaceholder": "Hamkasbni tanlang",
@@ -104,7 +104,7 @@
     "clear": "Örinbosarlikni olib taşlaş",
     "saved": "Örinbosar tayinlandi",
     "cleared": "Örinbosarlik olib taşlandi",
-    "covering": "Siz örinbosarsiz: {{name}}, {{from}}dan {{to}} gaça. Ularning vazifalari «Vazifalar»da «{{name}} uçun» belgisi bilan turadi.",
+    "covering": "Siz örinbosarsiz: {{name}}, {{from}} dan {{to}} gaça. Ularning vazifalari «Vazifalar»da «{{name}} uçun» belgisi bilan turadi.",
     "noCandidates": "Tayinlaş mumkin bölgan hamkasblar yöq.",
     "required": "Hamkasbni va ikkala sanani tanlang",
     "errors": {

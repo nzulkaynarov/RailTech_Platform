@@ -1303,6 +1303,54 @@
                 }
             }
         },
+        "/api/portal/v1/contracts/{id}/restore-renewal": {
+            "post": {
+                "operationId": "api_portal_v1_contracts_restore_renewal_create",
+                "description": "POST /contracts/{id}/restore-renewal — клиент снимает свой отказ от продления до последнего дня отказа (ДС-1).",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/contracts/{id}/restore-renewal/": {
+            "post": {
+                "operationId": "api_portal_v1_contracts_restore_renewal_create_2",
+                "description": "POST /contracts/{id}/restore-renewal — клиент снимает свой отказ от продления до последнего дня отказа (ДС-1).",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
         "/api/portal/v1/contracts/{id}/sign": {
             "post": {
                 "operationId": "api_portal_v1_contracts_sign_create",
@@ -20179,6 +20227,53 @@
                     },
                     "400": {
                         "$ref": "#/components/responses/BadRequestResponse"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/ForbiddenResponse"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFoundResponse"
+                    }
+                }
+            }
+        },
+        "/api/v1/crm/contracts/{id}/restore-renewal/": {
+            "post": {
+                "operationId": "crm_contracts_restore_renewal_create",
+                "description": "Contracts -- generated from approved quotes, double-signed.",
+                "summary": "Restore the renewal declined earlier by the company, until the last notice day (ДС-1)",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "A unique integer value identifying this Контракт.",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "CRM"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ContractFlow"
+                                }
+                            }
+                        },
+                        "description": ""
                     },
                     "401": {
                         "$ref": "#/components/responses/UnauthorizedResponse"
@@ -44485,11 +44580,12 @@
             "ContractTermCardActionsEnum": {
                 "enum": [
                     "decline_renewal",
+                    "restore_renewal",
                     "renew",
                     "send_new_edition"
                 ],
                 "type": "string",
-                "description": "* `decline_renewal` - decline_renewal\n* `renew` - renew\n* `send_new_edition` - send_new_edition"
+                "description": "* `decline_renewal` - decline_renewal\n* `restore_renewal` - restore_renewal\n* `renew` - renew\n* `send_new_edition` - send_new_edition"
             },
             "ContractTermRuleEnum": {
                 "enum": [

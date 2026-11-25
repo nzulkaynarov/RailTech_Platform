@@ -364,6 +364,10 @@ export const signContract = (id: number) => portalRequest<Contract>(`/contracts/
 export const declineContractRenewal = (id: number) =>
   portalRequest<Contract>(`/contracts/${id}/decline-renewal`, { method: 'POST' });
 
+/** ДС-1: снять свой отказ от продления до последнего дня отказа. */
+export const restoreContractRenewal = (id: number) =>
+  portalRequest<Contract>(`/contracts/${id}/restore-renewal`, { method: 'POST' });
+
 export const listInvoices = () => portalRequest<Invoice[]>('/invoices');
 /** «Я оплатил»: платёжное поручение (`upload_id` из `POST /uploads`) к счёту; ответ — платёжка `pending`. */
 export function submitPaymentProof(id: number, body: PaymentProofCreate): Promise<PaymentProof> {
