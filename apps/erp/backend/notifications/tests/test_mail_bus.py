@@ -259,7 +259,8 @@ def test_sent_and_failed_update_the_erp_mail_log_idempotently(settings):
 
     mail_bus.apply_mail_result(mail_bus.MAIL_FAILED, result(mail_bus.MAIL_FAILED, ok))
     ok.refresh_from_db()
-    assert ok.status == EmailLog.STATUS_SENT, "«ошибка» после «отправлено» не применяется"
+    # отчёт о недоставке пришёл уже после «отправлено» (CRM шлёт `mail.failed`): письмо — «не доставлено»
+    assert (ok.status, ok.error) == (EmailLog.STATUS_FAILED, "rejected: SMTP 550")
 
 
 def test_results_of_other_requesters_are_ignored(settings):

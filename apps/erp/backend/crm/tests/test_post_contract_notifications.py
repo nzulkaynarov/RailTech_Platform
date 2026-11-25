@@ -213,6 +213,30 @@ def test_overdue_delivery_notifies_both_sides_and_reports_honestly(chain):
         assert "Просрочка по доставке" in titles, f"{user.email} не узнал о просрочке"
 
 
+def test_overdue_delivery_is_reported_once_per_delivery_and_deadline(chain):
+    """Задача идёт ежедневно, а просрочка — одно событие: повтор не засыпает штат; новый срок — новая просрочка."""
+    from crm.tasks import check_overdue_deliveries
+
+    fulfillment = Fulfillment.objects.create(
+        deal=chain["deal"],
+        contract=chain["contract"],
+        status=FulfillmentStatus.objects.get(code="SHIPPED"),
+        expected_delivery_date=timezone.localdate() - timedelta(days=3),
+    )
+
+    first = check_overdue_deliveries()
+    second = check_overdue_deliveries()
+
+    assert (first["overdue_flagged"], first["notified"]) == (1, 2)
+    assert (second["overdue_flagged"], second["notified"]) == (1, 0), "та же просрочка повторно разослана"
+    titles = [n.title for n in _notifications_for(chain["seller_user"])]
+    assert titles.count("Просрочка по доставке") == 1
+
+    fulfillment.expected_delivery_date = timezone.localdate() - timedelta(days=1)
+    fulfillment.save(update_fields=["expected_delivery_date"])
+    assert check_overdue_deliveries()["notified"] == 2, "перенесённый и снова просроченный срок — новое событие"
+
+
 def test_payment_notification_is_not_created_when_the_transaction_rolls_back(chain):
     """Уведомления висят на on_commit — откат не должен оставлять «призрачное» событие."""
     from crm.services.billing import record_payment

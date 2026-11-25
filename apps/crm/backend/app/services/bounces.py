@@ -20,6 +20,7 @@ import structlog
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.bus import events as bus_events
 from app.domain.bounce import Bounce
 from app.models.email import EmailLog, EmailUndeliverable
 from app.schemas.notices import EmailUndeliverableOut
@@ -150,6 +151,10 @@ async def apply(
             [a for a in bounce.recipients if a in allowed] if bounce.recipients else [row.to_email]
         )
         marked = [await _mark(session, a, bounce, row.id, report_id, moment) for a in addresses]
+    if await _is_final(session, bounce, marked):
+        # Письмо другой системы (ERP, EDS) с просьбой об итоге: адресат не получит его — отправитель
+        # узнаёт событием `crm.mail.failed` с причиной отчёта (УВ-2). Отсрочка (4.x.x) — не итог.
+        await bus_events.mail_result(session, row, bounce_reason=bounce.reason)
     await audit.record(
         session,
         audit.Actor.system(),
@@ -160,6 +165,20 @@ async def apply(
     )
     logger.info("bounce_applied", email_log_id=row.id, kind=bounce.severity, reason=bounce.reason)
     return Applied(True, tuple(marked))
+
+
+async def _is_final(session: AsyncSession, bounce: Bounce, marked: list[str]) -> bool:
+    """Окончательный отказ: постоянный (5.x.x) или мягкий, набравший `SOFT_LIMIT` отчётов."""
+    if bounce.severity == "permanent":
+        return True
+    if not marked:
+        return False
+    reached = await session.scalar(
+        select(EmailUndeliverable.id)
+        .where(EmailUndeliverable.email.in_(marked), EmailUndeliverable.reports == SOFT_LIMIT)
+        .limit(1)
+    )
+    return reached is not None
 
 
 async def _mark(

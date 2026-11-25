@@ -53,6 +53,26 @@ CATALOG: dict[str, dict[str, str]] = {
         "en": "Partner “{company}”: client handover from CRM is held until checked",
         "uz": "Hamkor «{company}»: CRMdan mijozni topşiriş tekşiruvgaça töxtatilgan",
     },
+    "contract.email_failed": {
+        "en": "Email with contract {number} was not delivered",
+        "uz": "{number} şartnomasi bilan xat yetkazilmadi",
+    },
+    "invoice.email_failed": {
+        "en": "Email with invoice {number} was not delivered",
+        "uz": "{number} hisobi bilan xat yetkazilmadi",
+    },
+    "act.email_failed": {
+        "en": "Email with act {number} was not delivered",
+        "uz": "{number} dalolatnomasi bilan xat yetkazilmadi",
+    },
+    "invitation.email_failed": {
+        "en": "Cabinet invitation was not delivered: {number}",
+        "uz": "Kabinetga taklif yetkazilmadi: {number}",
+    },
+    "supplier_order.email_failed": {
+        "en": "Email with order {number} was not delivered",
+        "uz": "{number} buyurtmasi bilan xat yetkazilmadi",
+    },
     "contract.signed_client": {
         "ru": "Клиент согласовал договор {number}",
         "en": "The client agreed to contract {number}",

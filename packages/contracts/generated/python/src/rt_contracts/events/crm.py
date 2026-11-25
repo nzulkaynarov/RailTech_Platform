@@ -556,7 +556,7 @@ class MailFailedV1(BaseModel):
     failed_at: AwareDatetime
     reason: Annotated[str, Field(pattern="^[a-z][a-z0-9_]{0,63}$")]
     """
-    Код причины: smtp_not_configured, rejected, auth_failed, unavailable, tls_failed, invalid_host, attachment_unavailable, content_unreadable… (список открытый — новый код не ломает подписчика)
+    Код причины: smtp_not_configured, rejected, auth_failed, unavailable, tls_failed, invalid_host, attachment_unavailable, content_unreadable; после «отправлено» — причина отчёта о недоставке: domain_not_found, mailbox_not_found, mailbox_full, rejected, other… (список открытый — новый код не ломает подписчика)
     """
     detail: Annotated[str | None, Field(max_length=500)] = None
     """
