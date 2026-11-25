@@ -126,7 +126,8 @@
       "viewed": "Viewed",
       "accepted": "Accepted",
       "rejected": "Rejected",
-      "expired": "Expired"
+      "expired": "Expired",
+      "closed": "Request closed"
     },
     "contract": {
       "sent": "Awaiting your agreement",
@@ -991,7 +992,7 @@
         "returnSubmit": "Return contract",
         "returnSuccess": "Remark sent. We will prepare a new version of the contract.",
         "scanNeeded": "Sign the contract and upload the signed scan.",
-        "scanReceived": "Scan received. We will confirm the contract and open the partner cabinet.",
+        "scanReceived": "Scan received. We will confirm the contract and open the partner account.",
         "scanUpload": "Upload scan",
         "scanReplace": "Replace scan",
         "scanInput": "Scan of the signed contract",
@@ -1977,7 +1978,8 @@
       "paid": "The invoice is paid.",
       "answered": "Answer sent. Thank you!",
       "confirmed": "You confirmed the order.",
-      "cancelled": "The order was cancelled by us."
+      "cancelled": "The order was cancelled by us.",
+      "closed": "The request is closed. If the matter is still relevant, write to us."
     },
     "reason": {
       "no_right": "You can't make this decision — ask your company administrator.",

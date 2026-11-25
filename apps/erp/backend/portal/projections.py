@@ -33,7 +33,13 @@ _CENT = Decimal("0.01")
 #: `crm.expire_stale_quotes` — КП не должно пропадать у клиента на следующий день после срока). Всё, что до отправки (черновик, проверка ВЭД,
 #: согласование, «готово к отправке»), в портале — 404: у такого КП нет публичной ссылки (`Quote.public_url` в
 #: контракте обязателен), а содержимое ещё не обещано клиенту.
-CLIENT_QUOTE_STATUSES = (QuoteStatusCode.SENT, QuoteStatusCode.APPROVED, QuoteStatusCode.REJECTED, _EXPIRED_STATUS_CODE)
+CLIENT_QUOTE_STATUSES = (
+    QuoteStatusCode.SENT,
+    QuoteStatusCode.APPROVED,
+    QuoteStatusCode.REJECTED,
+    QuoteStatusCode.CLOSED,
+    _EXPIRED_STATUS_CODE,
+)
 #: Договоры, которые видит клиент: ждёт подписи кого-то из сторон или подписан. Черновик и отменённый — нет.
 CLIENT_CONTRACT_STATUSES = (
     ContractStatusCode.PENDING_CLIENT,
@@ -165,6 +171,8 @@ def quote_status(quote) -> str:
         return "accepted"
     if code == QuoteStatusCode.REJECTED:
         return "rejected"
+    if code == QuoteStatusCode.CLOSED:
+        return "closed"  # закрыто вместе с заявкой (ЛХ-2): клиенту не «отклонено»
     if code == _EXPIRED_STATUS_CODE:
         return "expired"
     if quote.valid_until and quote.valid_until < timezone.localdate():

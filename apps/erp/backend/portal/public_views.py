@@ -196,6 +196,7 @@ class PublicQuoteView(_PublicQuoteBase):
                 "is_open": status_code == QuoteStatusCode.SENT,
                 "is_approved": status_code == QuoteStatusCode.APPROVED,
                 "is_rejected": status_code == QuoteStatusCode.REJECTED,
+                "is_closed": status_code == QuoteStatusCode.CLOSED,
                 "superseded_by_version": _newer_sent_version(quote),
             }
         )

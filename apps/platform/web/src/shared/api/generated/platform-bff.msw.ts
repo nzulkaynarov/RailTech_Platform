@@ -125,12 +125,14 @@ import type {
   BusRetryResult,
   CalcCatalogHint,
   CalcCatalogPage,
+  CalcCloseReasonList,
   CalcCopyResult,
   CalcLineVisa,
   CalcParseJob,
   CalcParseResult,
   CalcPreviousPage,
   CalcQuote,
+  CalcRequestCard,
   CalcRequestList,
   CalcSheet,
   CalcSupplier,
@@ -28838,6 +28840,21 @@ export const getGetCalcSheetResponseMock = (
     ]),
     missing: faker.number.int({ min: 0 }),
   },
+  close: faker.helpers.arrayElement([
+    {
+      allowed: faker.datatype.boolean(),
+      quote_sent: faker.datatype.boolean(),
+      reason: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      comment: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+    },
+    undefined,
+  ]),
   rights: {
     goods: faker.datatype.boolean(),
     services: faker.datatype.boolean(),
@@ -29114,6 +29131,21 @@ export const getStartCalcResponseMock = (
     ]),
     missing: faker.number.int({ min: 0 }),
   },
+  close: faker.helpers.arrayElement([
+    {
+      allowed: faker.datatype.boolean(),
+      quote_sent: faker.datatype.boolean(),
+      reason: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      comment: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+    },
+    undefined,
+  ]),
   rights: {
     goods: faker.datatype.boolean(),
     services: faker.datatype.boolean(),
@@ -29387,6 +29419,21 @@ export const getAddCalcLinesResponseMock = (
     ]),
     missing: faker.number.int({ min: 0 }),
   },
+  close: faker.helpers.arrayElement([
+    {
+      allowed: faker.datatype.boolean(),
+      quote_sent: faker.datatype.boolean(),
+      reason: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      comment: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+    },
+    undefined,
+  ]),
   rights: {
     goods: faker.datatype.boolean(),
     services: faker.datatype.boolean(),
@@ -29663,6 +29710,21 @@ export const getUpdateCalcLineResponseMock = (
     ]),
     missing: faker.number.int({ min: 0 }),
   },
+  close: faker.helpers.arrayElement([
+    {
+      allowed: faker.datatype.boolean(),
+      quote_sent: faker.datatype.boolean(),
+      reason: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      comment: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+    },
+    undefined,
+  ]),
   rights: {
     goods: faker.datatype.boolean(),
     services: faker.datatype.boolean(),
@@ -29939,6 +30001,21 @@ export const getDeleteCalcLineResponseMock = (
     ]),
     missing: faker.number.int({ min: 0 }),
   },
+  close: faker.helpers.arrayElement([
+    {
+      allowed: faker.datatype.boolean(),
+      quote_sent: faker.datatype.boolean(),
+      reason: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      comment: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+    },
+    undefined,
+  ]),
   rights: {
     goods: faker.datatype.boolean(),
     services: faker.datatype.boolean(),
@@ -30212,6 +30289,21 @@ export const getSignCalcLineResponseMock = (
     ]),
     missing: faker.number.int({ min: 0 }),
   },
+  close: faker.helpers.arrayElement([
+    {
+      allowed: faker.datatype.boolean(),
+      quote_sent: faker.datatype.boolean(),
+      reason: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      comment: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+    },
+    undefined,
+  ]),
   rights: {
     goods: faker.datatype.boolean(),
     services: faker.datatype.boolean(),
@@ -30488,6 +30580,21 @@ export const getUpdateCalcTermsResponseMock = (
     ]),
     missing: faker.number.int({ min: 0 }),
   },
+  close: faker.helpers.arrayElement([
+    {
+      allowed: faker.datatype.boolean(),
+      quote_sent: faker.datatype.boolean(),
+      reason: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      comment: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+    },
+    undefined,
+  ]),
   rights: {
     goods: faker.datatype.boolean(),
     services: faker.datatype.boolean(),
@@ -30761,6 +30868,21 @@ export const getMarkCalcReadyResponseMock = (
     ]),
     missing: faker.number.int({ min: 0 }),
   },
+  close: faker.helpers.arrayElement([
+    {
+      allowed: faker.datatype.boolean(),
+      quote_sent: faker.datatype.boolean(),
+      reason: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      comment: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+    },
+    undefined,
+  ]),
   rights: {
     goods: faker.datatype.boolean(),
     services: faker.datatype.boolean(),
@@ -31040,6 +31162,21 @@ export const getNewCalcQuoteVersionResponseMock = (
     ]),
     missing: faker.number.int({ min: 0 }),
   },
+  close: faker.helpers.arrayElement([
+    {
+      allowed: faker.datatype.boolean(),
+      quote_sent: faker.datatype.boolean(),
+      reason: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      comment: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+    },
+    undefined,
+  ]),
   rights: {
     goods: faker.datatype.boolean(),
     services: faker.datatype.boolean(),
@@ -31316,12 +31453,116 @@ export const getLoseCalcRequestResponseMock = (
     ]),
     missing: faker.number.int({ min: 0 }),
   },
+  close: faker.helpers.arrayElement([
+    {
+      allowed: faker.datatype.boolean(),
+      quote_sent: faker.datatype.boolean(),
+      reason: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      comment: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+    },
+    undefined,
+  ]),
   rights: {
     goods: faker.datatype.boolean(),
     services: faker.datatype.boolean(),
     build: faker.datatype.boolean(),
     cost: faker.datatype.boolean(),
     stock: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
+  },
+  ...overrideResponse,
+});
+
+export const getListCalcCloseReasonsResponseMock = (
+  overrideResponse: Partial<Extract<CalcCloseReasonList, object>> = {},
+): CalcCloseReasonList => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    code: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    name: {
+      ru: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    },
+    requires_comment: faker.datatype.boolean(),
+    allowed_after_quote_sent: faker.datatype.boolean(),
+    preselect_after_client_rejection: faker.datatype.boolean(),
+  })),
+  ...overrideResponse,
+});
+
+export const getGetCalcRequestCardResponseMock = (
+  overrideResponse: Partial<Extract<CalcRequestCard, object>> = {},
+): CalcRequestCard => ({
+  number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  client: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  step: faker.helpers.arrayElement(Object.values(StepCode)),
+  path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  has_task: faker.datatype.boolean(),
+  request: {
+    text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    lines: faker.number.int({ min: 0 }),
+    files: faker.helpers.arrayElement([
+      Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+        id: faker.number.int({ min: 1 }),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        uploaded_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      })),
+      undefined,
+    ]),
+  },
+  close: {
+    allowed: faker.datatype.boolean(),
+    quote_sent: faker.datatype.boolean(),
+    reason: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    comment: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
+export const getCloseCalcRequestResponseMock = (
+  overrideResponse: Partial<Extract<CalcRequestCard, object>> = {},
+): CalcRequestCard => ({
+  number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  client: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  step: faker.helpers.arrayElement(Object.values(StepCode)),
+  path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  has_task: faker.datatype.boolean(),
+  request: {
+    text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    lines: faker.number.int({ min: 0 }),
+    files: faker.helpers.arrayElement([
+      Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+        id: faker.number.int({ min: 1 }),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        uploaded_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      })),
+      undefined,
+    ]),
+  },
+  close: {
+    allowed: faker.datatype.boolean(),
+    quote_sent: faker.datatype.boolean(),
+    reason: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    comment: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
   },
   ...overrideResponse,
 });
@@ -31630,6 +31871,21 @@ export const getCopyCalcLinesResponseMock = (
       ]),
       missing: faker.number.int({ min: 0 }),
     },
+    close: faker.helpers.arrayElement([
+      {
+        allowed: faker.datatype.boolean(),
+        quote_sent: faker.datatype.boolean(),
+        reason: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+        comment: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+      },
+      undefined,
+    ]),
     rights: {
       goods: faker.datatype.boolean(),
       services: faker.datatype.boolean(),
@@ -32321,6 +32577,21 @@ export const getReserveCalcLineResponseMock = (
     ]),
     missing: faker.number.int({ min: 0 }),
   },
+  close: faker.helpers.arrayElement([
+    {
+      allowed: faker.datatype.boolean(),
+      quote_sent: faker.datatype.boolean(),
+      reason: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      comment: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+    },
+    undefined,
+  ]),
   rights: {
     goods: faker.datatype.boolean(),
     services: faker.datatype.boolean(),
@@ -32606,6 +32877,21 @@ export const getReleaseCalcLineReservationResponseMock = (
     ]),
     missing: faker.number.int({ min: 0 }),
   },
+  close: faker.helpers.arrayElement([
+    {
+      allowed: faker.datatype.boolean(),
+      quote_sent: faker.datatype.boolean(),
+      reason: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      comment: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+    },
+    undefined,
+  ]),
   rights: {
     goods: faker.datatype.boolean(),
     services: faker.datatype.boolean(),
@@ -51926,6 +52212,78 @@ export const getLoseCalcRequestMockHandler = (
   );
 };
 
+export const getListCalcCloseReasonsMockHandler = (
+  overrideResponse?:
+    | CalcCloseReasonList
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<CalcCloseReasonList> | CalcCloseReasonList),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/erp/calc-close-reasons",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListCalcCloseReasonsResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getGetCalcRequestCardMockHandler = (
+  overrideResponse?:
+    | CalcRequestCard
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<CalcRequestCard> | CalcRequestCard),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/erp/calc-request/:number",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetCalcRequestCardResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getCloseCalcRequestMockHandler = (
+  overrideResponse?:
+    | CalcRequestCard
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<CalcRequestCard> | CalcRequestCard),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/erp/calc/:number/close",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getCloseCalcRequestResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
 export const getParseCalcTextMockHandler = (
   overrideResponse?:
     | CalcParseJob
@@ -55736,6 +56094,9 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getMarkCalcReadyMockHandler(),
   getNewCalcQuoteVersionMockHandler(),
   getLoseCalcRequestMockHandler(),
+  getListCalcCloseReasonsMockHandler(),
+  getGetCalcRequestCardMockHandler(),
+  getCloseCalcRequestMockHandler(),
   getParseCalcTextMockHandler(),
   getParseCalcFileMockHandler(),
   getListCalcPreviousMockHandler(),

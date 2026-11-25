@@ -22,7 +22,7 @@ from rt_bus import Event, HandlerRegistry
 from rt_bus.sqlalchemy import AsyncBus
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.bus.erp_snapshots import ProjectDocumentEvent, QuoteReady, RequestCreated, SigningRequestedEvent
+from app.bus.erp_snapshots import DealLost, ProjectDocumentEvent, QuoteReady, RequestCreated, SigningRequestedEvent
 from app.bus.snapshots import AiPolicyChanged, UserDeactivated, UserEnvelope, parse_time
 from app.services import (
     commercial_signing,
@@ -42,6 +42,7 @@ USER_UPDATED = "uz.railtech.identity.user.updated.v1"
 USER_DEACTIVATED = "uz.railtech.identity.user.deactivated.v1"
 REQUEST_CREATED = "uz.railtech.erp.request.created.v1"
 QUOTE_READY = "uz.railtech.erp.quote.ready_for_approval.v1"
+DEAL_LOST = "uz.railtech.erp.deal.lost.v1"
 LETTERHEAD_UPDATED = "uz.railtech.erp.letterhead.updated.v1"
 MAIL_SENT = "uz.railtech.crm.mail.sent.v1"
 MAIL_FAILED = "uz.railtech.crm.mail.failed.v1"
@@ -88,6 +89,13 @@ async def on_project_document(event: Event, session: AsyncSession) -> None:
     )
 
 
+async def on_deal_lost(event: Event, session: AsyncSession) -> None:
+    """Заявка закрыта в ERP (ЛХ-2): открытый круг одобрения КП по ней снимается."""
+    data = DealLost.model_validate(event.data)
+    withdrawn = await quotes.close_for_lost_deal(session, data.deal.erp_deal_id, lost_at=parse_time(event.time))
+    log.info("quote_routes_withdrawn", deal=data.deal.number, routes=withdrawn, event_id=event.id)
+
+
 async def on_letterhead(event: Event, session: AsyncSession) -> None:
     """Бланк своей компании из ERP (P4): проекция; более старый снимок не применяется."""
     data = letterhead.LetterheadUpdated.model_validate(event.data)
@@ -131,6 +139,7 @@ def build_registry(get_bus: Callable[[], AsyncBus] | None = None) -> HandlerRegi
     for event_type in project_documents.EVENT_STATUS:
         registry.add(event_type, on_project_document)
     registry.add(LETTERHEAD_UPDATED, on_letterhead)
+    registry.add(DEAL_LOST, on_deal_lost)
     on_mail_result = mail_result_handler(get_bus)
     registry.add(MAIL_SENT, on_mail_result)
     registry.add(MAIL_FAILED, on_mail_result)

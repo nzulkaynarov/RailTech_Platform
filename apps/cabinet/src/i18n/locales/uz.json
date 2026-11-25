@@ -126,7 +126,8 @@
       "viewed": "Körilgan",
       "accepted": "Qabul qilingan",
       "rejected": "Rad etilgan",
-      "expired": "Muddati tugagan"
+      "expired": "Muddati tugagan",
+      "closed": "Sörov yopildi"
     },
     "contract": {
       "sent": "Kelişişingiz kutilmoqda",
@@ -1977,7 +1978,8 @@
       "paid": "Hisob tölandi.",
       "answered": "Javob yuborildi. Rahmat!",
       "confirmed": "Siz buyurtmani tasdiqladingiz.",
-      "cancelled": "Buyurtma tomonimizdan bekor qilindi."
+      "cancelled": "Buyurtma tomonimizdan bekor qilindi.",
+      "closed": "Sörov yopildi. Masala hali dolzarb bölsa, bizga yozing."
     },
     "reason": {
       "no_right": "Sizda qaror qabul qiliş huquqi yöq — kompaniyangiz administratoriga murojaat qiling.",

@@ -21,6 +21,7 @@ QUOTE_STATUSES = [
     ("APPROVED", "Одобрено клиентом", 30),
     ("REJECTED", "Отклонено", 40),
     ("EXPIRED", "Срок истёк", 50),
+    ("CLOSED", "Закрыто вместе с заявкой", 60),
 ]
 
 CONTRACT_STATUSES = [

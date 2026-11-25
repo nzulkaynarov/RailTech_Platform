@@ -15,7 +15,6 @@ import {
 } from "../../../shared/api/generated/platform-bff";
 import { useDocumentTitle } from "../../../shared/lib/useDocumentTitle";
 import { useFormat } from "../../../shared/lib/useFormat";
-import { EmptyState } from "../../../shared/ui/EmptyState";
 import { QueryState } from "../../../shared/ui/FormParts";
 import { LinkButton } from "../../../shared/ui/LinkButton";
 import { PageHeader } from "../../../shared/ui/PageHeader";
@@ -29,8 +28,10 @@ import { ParseModal } from "./ParseModal";
 import { PreviousModal } from "./PreviousModal";
 import { PriceRequestForm } from "./PriceRequestForm";
 import { PriceRequests } from "./PriceRequests";
+import { RequestCard } from "./RequestCard";
 import { RequestFiles } from "./RequestFiles";
 import { ClientRejection } from "./Rejection";
+import { CloseRequestButton, ClosedNote } from "./CloseRequest";
 import { TaskSlot } from "./TaskPanel";
 import { TermsCard, TermsForm } from "./Terms";
 
@@ -66,6 +67,8 @@ function Banner({ sheet }: { sheet: CalcSheet }) {
   const { t } = useTranslation("calc");
   const quote = sheet.quote;
   if (!quote) return null;
+  // Закрытая заявка: КП «у директора» и прочие состояния расчёта не показываем, итог — «Заявка закрыта: причина»
+  if (sheet.step === "LOST") return null;
   if (quote.state === "at_director") {
     return (
       <Alert
@@ -222,6 +225,8 @@ function Ready({ sheet }: { sheet: CalcSheet }) {
       },
     },
   });
+  // закрытая заявка с причиной: итог — плашка «Заявка закрыта», «Расчёт готов» и «у директора» не показываем
+  if (sheet.step === "LOST" && sheet.close?.reason) return null;
   if (stateOf(sheet) === "at_director") {
     return (
       <div className="pf-calc-ready">
@@ -314,9 +319,11 @@ function Content({ sheet }: { sheet: CalcSheet }) {
         subtitle={subtitle}
         extra={
           <div className="pf-calc-row">
-            <StatusTag kind="quote" status={state}>
-              {t(`state.${stateLabel(sheet)}`)}
-            </StatusTag>
+            {sheet.step === "LOST" ? null : (
+              <StatusTag kind="quote" status={state}>
+                {t(`state.${stateLabel(sheet)}`)}
+              </StatusTag>
+            )}
             {editable && sheet.rights.stock === true ? (
               <Button
                 onClick={() => {
@@ -326,6 +333,7 @@ function Content({ sheet }: { sheet: CalcSheet }) {
                 {t("sheet.requestPrice")}
               </Button>
             ) : null}
+            {sheet.quote?.can_revise ? null : <CloseRequestButton target={sheet} />}
             {mobile ? (
               <Button
                 onClick={() => {
@@ -349,6 +357,7 @@ function Content({ sheet }: { sheet: CalcSheet }) {
       <section className="pf-card pf-calc-steps" aria-label={t("sheet.steps")}>
         <RequestSteps stage={sheet.step} number={sheet.number} />
       </section>
+      <ClosedNote close={sheet.close} />
       <Banner sheet={sheet} />
       {sheet.quote === null ? (
         <NotStarted sheet={sheet} />
@@ -468,12 +477,12 @@ export function CalcScreen({ number }: { number: string }) {
 
   const error = query.error;
   if (error instanceof ApiError && error.status === 404) {
+    // Задания расчёта нет: карточка заявки (с «Закрыть заявку») или «заявки нет среди заданий»
     return (
-      <EmptyState
-        title={t("load.notFound.title")}
-        text={t("load.notFound.text")}
-        action={<LinkButton to="/erp/requests">{t("load.notFound.action")}</LinkButton>}
-      />
+      <div className="pf-calc">
+        <PageHeader title={t("close.draftTitle", { number })} />
+        <RequestCard number={number} />
+      </div>
     );
   }
   if (query.isPending) {

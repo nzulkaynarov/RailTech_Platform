@@ -500,6 +500,27 @@ async def test_a_late_deal_lost_closes_the_deal_with_its_reason(harness: Harness
     assert (deal.stage, deal.lost_reason, deal.external_stage) == ("lost", "Дорого", "quote_sent")
 
 
+async def test_deal_lost_by_a_closed_request_keeps_the_lead_stage(harness: Harness) -> None:
+    """Заявка закрыта в ERP (ЛХ-2): сделка CRM — lost с причиной, стадия лида прежняя (ADR-0022)."""
+    client_id, lead_id = await harness.seed_client()
+    async with harness.sessions() as session:
+        before = (await session.get(Lead, lead_id)).stage  # type: ignore[union-attr]
+    lost = await harness.store(
+        "deal.lost",
+        client_id,
+        occurred_at=T0,
+        stage="lost",
+        payload={"amount": "0.00", "currency": "UZS", "lost_reason": "Дубль"},
+    )
+
+    await harness.process(lost)
+
+    (deal,) = await harness.deals()
+    assert (deal.stage, deal.lost_reason) == ("lost", "Дубль")
+    async with harness.sessions() as session:
+        assert (await session.get(Lead, lead_id)).stage == before  # type: ignore[union-attr]
+
+
 async def test_an_older_outcome_does_not_overturn_a_newer_one(harness: Harness) -> None:
     """Итоги упорядочены между собой: `won` в T0 после `lost` в T0+1ч сделку не переоткрывает."""
     client_id, _ = await harness.seed_client()
