@@ -17,6 +17,7 @@ import {
 import { useFormat } from "../../../shared/lib/useFormat";
 import { ErrorNote, FormField } from "../../../shared/ui/FormParts";
 import { LinkButton } from "../../../shared/ui/LinkButton";
+import { DocNumber } from "../../../shared/ui/DocNumber";
 import { CompanyPicker, PersonPicker } from "../../../shared/ui/pickers";
 import {
   type RemainingItem,
@@ -123,6 +124,52 @@ export interface RequestFormProps {
   /** Заявка создана — вызывающий связывает её со своим объектом (поручение по ВХ) */
   onCreated?: (result: RequestCreatedView) => void;
   onCancel: () => void;
+}
+
+/**
+ * После «Создать заявку»: номер (когда учёт его выдал), что дальше — «Ждёт резолюции», и «Открыть заявку» (карточка
+ * клиента, где заявка стоит на своём шаге). Номер и шаг берутся из карточки клиента по номеру сделки (Б-7).
+ */
+function Created({
+  done,
+  mobile,
+  onClose,
+}: {
+  done: RequestCreatedView;
+  mobile: boolean;
+  onClose: () => void;
+}) {
+  const { t } = useTranslation(["request", "clients"]);
+  const card = useGetCrmClient(done.client_id);
+  const row = card.data?.requests.find((request) => request.deal === done.deal);
+  const waits =
+    done.transfer !== "failed" && (row?.step === "REQUEST" || row?.step === "RESOLUTION");
+  return (
+    <div className="pf-fp-stack" role="status">
+      <h3 className="pf-fp-title">{t("request:done.title")}</h3>
+      {row?.number ? (
+        <p className="pf-fp-sub">
+          <DocNumber number={row.number} />
+        </p>
+      ) : null}
+      {done.transfer === "failed" || !done.created || !row?.number ? (
+        <p className="pf-fp-sub">
+          {done.transfer === "failed"
+            ? t("request:done.failed")
+            : !done.created
+              ? t("request:done.repeated")
+              : t("request:done.text")}
+        </p>
+      ) : null}
+      {waits ? <p className="pf-fp-sub">{t("request:done.waits")}</p> : null}
+      <div className="pf-crm-actions" data-sheet={mobile}>
+        <LinkButton type="primary" to={clientPath(done.client_id)}>
+          {t("request:done.open")}
+        </LinkButton>
+        <Button onClick={onClose}>{t("clients:card.close")}</Button>
+      </div>
+    </div>
+  );
 }
 
 /**
@@ -356,20 +403,7 @@ export function RequestForm({
       .join(" ") || undefined;
 
   if (done) {
-    return (
-      <div className="pf-fp-stack" role="status">
-        <h3 className="pf-fp-title">{t("request:done.title")}</h3>
-        <p className="pf-fp-sub">
-          {done.created ? t("request:done.text") : t("request:done.repeated")}
-        </p>
-        <div className="pf-crm-actions" data-sheet={mobile}>
-          <LinkButton type="primary" to={clientPath(done.client_id)}>
-            {t("request:done.openClient")}
-          </LinkButton>
-          <Button onClick={onCancel}>{t("clients:card.close")}</Button>
-        </div>
-      </div>
-    );
+    return <Created done={done} mobile={mobile} onClose={onCancel} />;
   }
 
   const cancel = () => {

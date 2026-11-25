@@ -3,6 +3,7 @@ import { HttpResponse, http } from "msw";
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { readLeads, resetLeads, writeLeads } from "../../../mocks/fixtures/leads";
+import { MOCK_ERP_DOWN_KEY } from "../../../mocks/feedHandlers";
 import { resetMessages } from "../../../mocks/fixtures/messages";
 import { panelEl, renderAt, setupBotTests, signIn } from "../../../test/botKit";
 import {
@@ -222,10 +223,26 @@ describe("«Создать заявку» из лида и из клиента (
     const created = readLeads().clients.find((c) => c.name === "ООО Демо-Логистик");
     expect(created?.requests[0]?.letter_file_id).toBeTruthy();
     expect(created?.requests[0]?.urgency).toBe("urgent");
-    expect(within(panel).getByRole("link", { name: "Открыть карточку клиента" })).toHaveAttribute(
+    // Б-7: номер заявки, что дальше и «Открыть заявку»
+    expect(await within(panel).findByText("Ждёт резолюции.")).toBeVisible();
+    expect(created?.requests[0]?.number).toBeTruthy();
+    expect(within(panel).getByText(String(created?.requests[0]?.number))).toBeVisible();
+    expect(within(panel).getByRole("link", { name: "Открыть заявку" })).toHaveAttribute(
       "href",
       `/crm/clients/${String(created?.id)}?panel=open&tab=card`,
     );
+  });
+
+  it("учёт недоступен: номера нет, вместо «Ждёт резолюции» — «Не передана в учёт» (Б-7)", async () => {
+    window.localStorage.setItem(MOCK_ERP_DOWN_KEY, "1");
+    const panel = await openForm("/crm/leads?lead=L-2041&create=1&panel=open&tab=card");
+    open(panel, "Запрос");
+    await attach(panel);
+    fireEvent.click(submitButton(panel));
+    expect(await within(panel).findByText("Заявка создана")).toBeVisible();
+    expect(within(panel).getByText(/Не передана в учёт/)).toBeVisible();
+    expect(within(panel).queryByText("Ждёт резолюции.")).toBeNull();
+    window.localStorage.removeItem(MOCK_ERP_DOWN_KEY);
   });
 
   it("сбой сервера оставляет введённое; повтор с тем же ключом создаёт одну заявку", async () => {

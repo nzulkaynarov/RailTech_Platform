@@ -91,7 +91,9 @@
     "title": "Request created",
     "text": "The request is going to records; the request number will appear on the client card.",
     "repeated": "This request has already been created — showing it.",
-    "openClient": "Open client card"
+    "waits": "Waiting for a resolution.",
+    "failed": "Not passed to accounting: retry sending in the client card.",
+    "open": "Open request"
   },
   "errors": {
     "company": "Pick the company",

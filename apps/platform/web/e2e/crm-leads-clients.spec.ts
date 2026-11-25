@@ -75,7 +75,14 @@ test.describe("Лиды → «Создать заявку» → карточка
     await form.getByRole("button", { name: /^Проверка и отправка/, expanded: false }).click();
     await form.getByRole("button", { name: /Создать заявку/ }).dblclick();
     await expect(panel.getByText("Заявка создана")).toBeVisible();
-    await panel.getByRole("link", { name: "Открыть карточку клиента" }).click();
+    // Б-7: номер, что дальше и «Открыть заявку»
+    await expect(panel.getByText("RQ-2026-040")).toBeVisible();
+    await expect(panel.getByText("Ждёт резолюции.")).toBeVisible();
+    await settledScreenshot(page, "request-done");
+    await page.setViewportSize({ width: 1512, height: 900 });
+    await settledScreenshot(page, "request-done");
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await panel.getByRole("link", { name: "Открыть заявку" }).click();
 
     // Карточка клиента: заявка ЗВ с шкалой и тем, что видит клиент — ровно одна
     await expect(page.getByRole("heading", { level: 1, name: "Контрагенты" })).toBeVisible();
@@ -158,7 +165,9 @@ test(
 
     await submit.click();
     await expect(sheet.getByText("Заявка создана")).toBeVisible();
-    await sheet.getByRole("link", { name: "Открыть карточку клиента" }).click();
+    await expect(sheet.getByText("Ждёт резолюции.")).toBeVisible();
+    await settledScreenshot(page, "request-done");
+    await sheet.getByRole("link", { name: "Открыть заявку" }).click();
     const card = page.getByRole("dialog", { name: "Карточка контрагента" });
     await expect(card.getByRole("heading", { name: "ООО Демо-Логистик" })).toBeVisible();
     await expect(card.getByText("RQ-2026-040")).toBeVisible();
