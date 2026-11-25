@@ -13,6 +13,7 @@ import pytest
 from app.container import Container
 from tests.domain import Person
 from tests.test_document_notices import authorise, hand_over, notices
+from tests.test_files import upload
 from tests.test_letterhead_letters import PAIR, deliver_letterhead, letter_json
 from tests.test_reply_path import tasks_of
 from tests.test_sc9_signing import card
@@ -101,3 +102,23 @@ async def test_revoked_holder_loses_the_handed_draft(client: httpx.AsyncClient, 
     assert revoked.status_code == 200, revoked.text
     doc = await hand_over(client, staff["manager"])
     assert (await get(client, staff["accountant"], doc["id"])).status_code == 404
+
+
+async def test_attachments_of_the_handed_draft_open_for_the_signer_only(
+    client: httpx.AsyncClient, staff: dict[str, Person]
+) -> None:
+    await authorise(client, staff, crm_user_id=ACCOUNTANT)
+    ref = (await upload(client, staff["manager"])).json()
+    body = letter_json()
+    body["file_ids"] = [ref["id"]]
+    created = await client.post("/api/v1/documents", json=body, headers=staff["manager"].headers)
+    assert created.status_code == 201, created.text
+    doc = created.json()
+    url = f"/api/v1/files/{ref['id']}"
+    # Not handed over yet: the holder cannot open the file.
+    assert (await client.get(url, headers=staff["accountant"].headers)).status_code == 404
+    handed = await client.post(f"/api/v1/documents/{doc['id']}/registration-request", headers=staff["manager"].headers)
+    assert handed.status_code == 200, handed.text
+    assert (await client.get(url, headers=staff["accountant"].headers)).status_code == 200
+    for name in ("supplier", "engineer", "lawyer"):
+        assert (await client.get(url, headers=staff[name].headers)).status_code == 404, name
