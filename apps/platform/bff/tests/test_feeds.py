@@ -1415,5 +1415,6 @@ async def test_activity_today_follows_accept_language(web: Web, fb: FeedBackends
     ru = await web.client.get("/api/v1/activity/today")
 
     assert uz.json()["items"][0]["text"] == "TT mijozga yuborildi"
+    assert "Tizim" in [i["actor"]["name"] for i in uz.json()["items"]]
     assert "Tizimdagi harakat" in [i["text"] for i in uz.json()["items"]]
     assert ru.json()["items"][0]["text"] == "КП отправлено клиенту"

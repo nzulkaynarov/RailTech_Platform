@@ -65,6 +65,12 @@ export function CloseMenu({
           aria-label={`${t("close.menu")}: ${name}`}
           aria-expanded={expanded}
           aria-controls={expanded ? menuId : undefined}
+          onKeyDown={(event) => {
+            if (event.key === "Escape" && expanded) {
+              event.stopPropagation();
+              setExpanded(false);
+            }
+          }}
           onClick={() => {
             setExpanded((value) => !value);
           }}

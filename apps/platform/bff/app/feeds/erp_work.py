@@ -315,9 +315,9 @@ def _contract_step(row: RawRow) -> tuple[QueueItemKind, str, str] | None:
         return (
             "issue_contract",
             tr(
-                f"Отправить на подпись договор {contract.number} по",
-                f"{contract.number} şartnomani imzoga yuboriş:",
-                f"Send contract {contract.number} for signature —",
+                f"Выставить в ЭДО договор {contract.number} по",
+                f"{contract.number} şartnomani EHTda rasmiylaştiriş:",
+                f"Issue contract {contract.number} in EDI —",
             ),
             tr(
                 "клиент согласовал редакцию",
@@ -334,9 +334,9 @@ def _contract_step(row: RawRow) -> tuple[QueueItemKind, str, str] | None:
                 f"Attach the scan of signed contract {contract.number} —",
             ),
             tr(
-                "договор на подписи",
-                "şartnoma imzoda",
-                "the contract is out for signature",
+                "договор выставлен в ЭДО",
+                "şartnoma EHTda rasmiylaştirilgan",
+                "the contract is issued in EDI",
             ),
         )
     if contract.status == "rejected":
@@ -390,7 +390,7 @@ def _rows(raw: list[dict[str, Any]]) -> list[RawRow]:
 
 
 def project_rows(snap: Snapshot, now: datetime, view: View, role_of: RoleOf) -> list[Work]:
-    """Договор (сформировать, отправить, на подпись, скан, доработать) и акт к выпуску:
+    """Договор (сформировать, отправить, выставить в ЭДО, скан, доработать) и акт к выпуску:
     строка открывает проект на вкладке «Договор» или «Акт»."""
     del now
     out: list[Work] = []

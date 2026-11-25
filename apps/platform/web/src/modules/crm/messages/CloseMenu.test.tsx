@@ -27,6 +27,18 @@ describe("CloseMenu inline: клавиатура и фокус", () => {
     expect(button).toHaveAttribute("aria-expanded", "false");
   });
 
+  it("Escape на самой кнопке тоже сворачивает открытое меню", async () => {
+    const button = setup();
+    fireEvent.click(button);
+    await screen.findByRole("menu");
+    button.focus();
+    fireEvent.keyDown(button, { key: "Escape" });
+    await waitFor(() => {
+      expect(screen.queryByRole("menu")).toBeNull();
+    });
+    expect(button).toHaveFocus();
+  });
+
   it("после выбора пункта и закрытия окна фокус возвращается на «Закрыть»", async () => {
     const button = setup();
     fireEvent.click(button);
