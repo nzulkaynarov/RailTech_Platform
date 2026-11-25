@@ -16,4 +16,13 @@ class Migration(migrations.Migration):
                 verbose_name="Письмо EDS",
             ),
         ),
+        migrations.AddField(
+            model_name="calctask",
+            name="request_file_pending",
+            field=models.BooleanField(
+                default=False,
+                help_text="РЕЗ-1: расчёт без резолюции ждёт файл письма клиента из EDS; сбросится, когда файл пришёл или не придёт",
+                verbose_name="Файл заявки загружается",
+            ),
+        ),
     ]

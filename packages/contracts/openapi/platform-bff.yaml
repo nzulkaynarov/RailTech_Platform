@@ -14647,17 +14647,19 @@ paths:
       operationId: getCrmRequestResolution
       summary: 'Резолюция перед расчётом: что будет с заявкой дальше (РЕЗ-1)'
       description: >-
-        Настройка компании «Правила работы · Продажи → Резолюция перед расчётом» (ERP): `always` — письмо на резолюцию у каждой
-        заявки, `client_own` — только у заявок, которые клиент подал сам (Кабинет, бот, письмо клиента), `never` — не нужна,
-        заявка сразу в расчёт ответственному. Форма «Создать заявку» говорит по ней, что случится после отправки. Раздел
-        `crm.clients` полный.
+        Режим настройки компании «Правила работы · Продажи → Резолюция перед расчётом»: `always` — письмо на резолюцию у
+        каждой заявки, `client_own` — только у заявок, которые клиент подал сам (решает канал `initiated_by`), `never` — не
+        нужна. Плюс `ready`: расчёт может встать на самого сотрудника (иначе заявка идёт на резолюцию, причина — `reason`).
+        Читает любой сотрудник с разделом `crm.clients` полный, настройки компании ему не нужны (ERP `GET /calc/request-intake/`).
+        Форма «Создать заявку» говорит по этому, что случится после отправки.
       responses:
         '200':
-          description: Режим
+          description: Режим и готовность
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/RequestResolutionView'
+
   /crm/requests/{deal}/retry:
     post:
       tags: [requests]
@@ -24258,7 +24260,7 @@ components:
         request_resolution:
           type: string
           enum: [always, client_own, never]
-          description: 'РЕЗ-1: резолюция директора перед расчётом — у каждой заявки (always, по умолчанию), только у заявок из Кабинета и писем (client_own) или не нужна, заявка сразу в расчёт ответственному (never)'
+          description: 'РЕЗ-1: резолюция перед расчётом — у каждой заявки (always, по умолчанию), только у заявок, которые клиент подал сам: письмо, Кабинет, бот, сайт, входящее письмо (client_own), или не нужна (never); заявка сотрудника в режиме client_own и любая в режиме never идёт сразу в расчёт ответственному'
         default_client_contract_template:
           type: [integer, 'null']
           description: 'ДОК-10: шаблон договора по умолчанию для клиента — только утверждённый'
@@ -24372,7 +24374,7 @@ components:
         request_resolution:
           type: string
           enum: [always, client_own, never]
-          description: 'РЕЗ-1: резолюция директора перед расчётом — у каждой заявки (always, по умолчанию), только у заявок из Кабинета и писем (client_own) или не нужна, заявка сразу в расчёт ответственному (never)'
+          description: 'РЕЗ-1: резолюция перед расчётом — у каждой заявки (always, по умолчанию), только у заявок, которые клиент подал сам: письмо, Кабинет, бот, сайт, входящее письмо (client_own), или не нужна (never); заявка сотрудника в режиме client_own и любая в режиме never идёт сразу в расчёт ответственному'
         default_client_contract_template:
           type: [integer, 'null']
           description: 'ДОК-10: шаблон договора по умолчанию для клиента — только утверждённый'
@@ -28471,6 +28473,10 @@ components:
           type: array
           description: Файлы заявки клиента (СЦ-10); скачивание — `downloadCalcRequestFile`
           items: {$ref: '#/components/schemas/RequestFile'}
+        files_pending:
+          type: boolean
+          default: false
+          description: 'РЕЗ-1: расчёт без резолюции ждёт файл письма клиента — на экране «файл заявки загружается»'
 
     CalcQuote:
       type: object
@@ -30323,6 +30329,8 @@ components:
         summary: {type: string, minLength: 1, maxLength: 5000}
         urgency: {type: string, enum: [normal, urgent]}
         letter_file_id: {type: string, format: uuid, description: 'Основание заявки — письмо или файл запроса, загруженный в EDS (`POST /files`); без него заявка не создаётся (план 0.4)'}
+        initiated_by: {type: string, enum: [client, staff], default: client, description: 'РЕЗ-1: кто начал заявку — клиент сам (письмо, Кабинет, бот, сайт, входящее письмо) или сотрудник (запись звонка, ввод); вместе с настройкой компании решает, нужна ли резолюция'}
+        letter_number: {type: [string, 'null'], maxLength: 32, description: 'РЕЗ-1: номер зарегистрированного входящего письма, из которого создана заявка'}
         consent:
           oneOf:
             - type: object
@@ -30347,9 +30355,13 @@ components:
     RequestResolutionView:
       type: object
       additionalProperties: false
-      required: [mode]
+      required: [mode, ready]
       properties:
         mode: {type: string, enum: [always, client_own, never]}
+        ready:
+          type: boolean
+          description: Расчёт может встать на самого сотрудника; нет — заявка пойдёт на резолюцию, причина в `reason`
+        reason: {type: [string, 'null'], enum: [no_crm_mapping, inactive, null]}
 
     RequestRetriedView:
       type: object

@@ -81,7 +81,8 @@
     "rejectedComment": "The director rejected the quote: “{{comment}}”. The costing is closed.",
     "requestFiles": "Request files",
     "downloadFile": "Download file {{name}}",
-    "subtitleNoLetter": "{{client}} · costing due {{due}}"
+    "subtitleNoLetter": "{{client}} · costing due {{due}}",
+    "requestFilesPending": "The request file is loading…"
   },
   "lines": {
     "title": "Costing lines",

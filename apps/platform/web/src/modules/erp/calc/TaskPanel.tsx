@@ -108,7 +108,7 @@ export function TaskBody({ sheet, brief = false }: { sheet: CalcSheet; brief?: b
           <DefinitionList items={[{ label: t("task.due"), value: date(task.due) }]} />
         </section>
       )}
-      {sheet.request.files?.length ? (
+      {sheet.request.files?.length || sheet.request.files_pending ? (
         <section aria-labelledby="pf-calc-task-files">
           <h3 id="pf-calc-task-files" className="pf-calc-task-title">
             {t("task.requestFiles")}

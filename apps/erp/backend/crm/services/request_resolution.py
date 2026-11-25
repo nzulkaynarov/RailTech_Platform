@@ -3,13 +3,16 @@
 `CompanySettings.request_resolution` своей компании («Правила работы · Продажи»):
 
 * `always` (по умолчанию) — письмо директору у каждой заявки, как раньше;
-* `client_own` — «только заявки, которые клиент подал сам»: Кабинет, бот и заявка по письму клиента; заявка, заведённая
-  сотрудником, идёт сразу в расчёт;
+* `client_own` — «только заявки, которые клиент подал сам»: решает `initiated_by`, кто начал заявку (канал, а не экран):
+  `client` — Кабинет, бот, форма сайта, письмо клиента (в том числе зарегистрированное входящее); `staff` — запись
+  звонка, ввод сотрудником. Заявка сотрудника идёт сразу в расчёт;
 * `never` — резолюция не нужна нигде.
 
-Нужна ли резолюция, решает `required(source)`. Когда не нужна, `start_direct_calculation` ставит задание расчёта
+Нужна ли резолюция, решает `required(initiated_by)`. Когда не нужна, `start_direct_calculation` ставит задание расчёта
 ответственному (его же в обеих зонах виз), переводит сделку в «Расчёт», а в `request.created` уходит
 `resolution_required=false` — EDS письма не заводит. Нет ответственного — заявка идёт прежним путём, не повисает.
+Файл письма клиента (основание заявки) забирается из EDS после коммита задачей `integration.fetch_request_letter_file`;
+пока его нет, расчёт показывает «файл заявки загружается» (`CalcTask.request_file_pending`).
 Кто даёт резолюцию, здесь не задаётся: это держатели права EDS `letters.resolve` («Роли и права»).
 """
 
@@ -38,31 +41,41 @@ def mode() -> str:
     return value if value in MODES else DEFAULT_MODE
 
 
-def required(source: str, *, client_initiated: bool = False) -> bool:
-    """Нужна ли резолюция по заявке из источника `source` (`crm` | `cabinet` | `erp`).
+INITIATED_BY = ("client", "staff")
 
-    `client_initiated` — заявку подал сам клиент (бот, передача из лида, заявка по его письму); Кабинет — всегда."""
+
+def required(initiated_by: str = "client") -> bool:
+    """Нужна ли резолюция по заявке, которую начал `initiated_by` (`client` | `staff`)."""
     current = mode()
     if current == "never":
         return False
     if current == "client_own":
-        return source == "cabinet" or client_initiated
+        return initiated_by != "staff"
     return True
 
 
-def start_direct_calculation(deal, crm_user_id: int):
+def start_direct_calculation(deal, crm_user_id: int, *, file_pending: bool = False):
     """Расчёт ответственному без резолюции: задание, обе зоны виз, стадия «Расчёт». Повтор — то же задание."""
     from . import calc_tasks
 
     return calc_tasks.apply_without_resolution(
-        deal, crm_user_id=crm_user_id, due=timezone.localdate() + timedelta(days=DIRECT_DUE_DAYS)
+        deal,
+        crm_user_id=crm_user_id,
+        due=timezone.localdate() + timedelta(days=DIRECT_DUE_DAYS),
+        file_pending=file_pending,
     )
+
+
+def active_crm_user(crm_user_id: Optional[int]) -> bool:
+    """Сотрудник CRM подключён к ERP действующим пользователем — ему можно поставить расчёт."""
+    from integration.models import CrmUserMapping
+
+    return bool(crm_user_id) and CrmUserMapping.objects.filter(crm_user_id=crm_user_id, user__is_active=True).exists()
 
 
 def responsible_crm_user_id(deal, manager_crm_user_id: Optional[int]) -> Optional[int]:
     """Ответственный за заявку — сотрудник CRM с действующим пользователем ERP: менеджер вызывающего, иначе
     ответственный сделки ERP. Без пользователя ERP считать некому — `None` (заявка идёт прежним путём, с письмом)."""
-    from integration.models import CrmUserMapping
     from integration.services.event_builders import _crm_user_id
 
     found = (
@@ -70,44 +83,19 @@ def responsible_crm_user_id(deal, manager_crm_user_id: Optional[int]) -> Optiona
         or _crm_user_id(getattr(deal, "assigned_to", None))
         or _crm_user_id(getattr(deal, "manager", None))
     )
-    if not found:
-        return None
-    active = CrmUserMapping.objects.filter(crm_user_id=found, user__is_active=True).exists()
-    return int(found) if active else None
+    return int(found) if active_crm_user(found) else None
 
 
-def fetch_letter_file(file_id: str, created_by: Optional[int]):
-    """Файл письма клиента из EDS (сервисный путь, только непривязанный файл автора заявки): `(имя, байты)` или `None`."""
-    import httpx
-    from django.conf import settings
+def intake_info(user) -> dict:
+    """Что будет с заявкой этого сотрудника: режим и может ли расчёт встать на него (иначе — письмо, с причиной)."""
+    from integration.models import CrmUserMapping
 
-    token = settings.SERVICE_TOKEN_ERP_TO_EDS
-    if not token or not created_by:
-        return None
-    try:
-        response = httpx.get(
-            f"{settings.EDS_INTERNAL_URL}/api/v1/service/files/{file_id}",
-            params={"created_by": int(created_by)},
-            headers={"Authorization": f"Bearer {token}"},
-            timeout=10,
-        )
-    except httpx.HTTPError:
-        return None
-    if response.status_code != 200:
-        return None
-    from urllib.parse import unquote
-
-    disposition = response.headers.get("content-disposition", "")
-    name = unquote(disposition.split("filename*=UTF-8''", 1)[1]) if "filename*=UTF-8''" in disposition else "letter"
-    return name[:255], response.content
-
-
-def attach_request_file(deal, name: str, data: bytes) -> None:
-    """Файл письма клиента — исходник заявки: виден в «Расчёте» (`deal_request_files`)."""
-    from django.core.files.base import ContentFile
-
-    from sourcing.models import Attachment, AttachmentKind
-
-    Attachment.objects.create(
-        deal=deal, kind=AttachmentKind.SOURCE, original_filename=name, file=ContentFile(data, name=name)
-    )
+    mapped = CrmUserMapping.objects.filter(user=user).exists()
+    ready = active_crm_user(
+        CrmUserMapping.objects.filter(user=user).values_list("crm_user_id", flat=True).first()
+    ) and bool(getattr(user, "is_active", False))
+    return {
+        "mode": mode(),
+        "ready": ready,
+        "reason": None if ready else ("no_crm_mapping" if not mapped else "inactive"),
+    }

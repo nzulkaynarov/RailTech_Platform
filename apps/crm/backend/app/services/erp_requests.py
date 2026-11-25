@@ -258,6 +258,8 @@ async def _payload(
         contact=await _contact_payload(session, contact, language) if contact else None,
         product_interest=tuple(lead.product_interest or []) if lead else (),
         letter_file_id=deal.request_letter_file_id,
+        initiated_by=deal.request_initiated_by or "client",
+        letter_number=deal.request_letter_number,
     )
 
 

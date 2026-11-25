@@ -719,6 +719,7 @@ def _sheet(deal: Deal, task: CalcTask, user) -> dict:
             "text": deal_request_text(deal),
             "lines": deal_request_lines_count(deal),
             "files": deal_request_files(deal),
+            "files_pending": bool(task.request_file_pending),
         },
         "quote": (
             None

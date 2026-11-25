@@ -81,7 +81,8 @@
     "rejectedComment": "Direktor TTni rad etdi: «{{comment}}». Hisob-kitob yopildi.",
     "requestFiles": "Ariza fayllari",
     "downloadFile": "{{name}} faylini yuklab oliş",
-    "subtitleNoLetter": "{{client}} · hisob-kitob muddati {{due}}"
+    "subtitleNoLetter": "{{client}} · hisob-kitob muddati {{due}}",
+    "requestFilesPending": "Ariza fayli yuklanmoqda…"
   },
   "lines": {
     "title": "Hisob-kitob qatorlari",

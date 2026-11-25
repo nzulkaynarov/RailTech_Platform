@@ -14,6 +14,7 @@ export * from "./catalogItemKind";
 export * from "./catalogItemManufacturer";
 export * from "./catalogMode";
 export * from "./clientRequestIn";
+export * from "./clientRequestInInitiatedBy";
 export * from "./clientRequestInNeed";
 export * from "./clientRequestInOwner";
 export * from "./clientRequestInProcess";

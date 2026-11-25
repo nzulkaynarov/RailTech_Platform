@@ -342,7 +342,12 @@ def release_deferred_requests(company: Company, crm_client_id: int) -> int:
             deal = row.deal
             summary = getattr(getattr(deal, "portal_summary", None), "text", None) or deal.title
             events.publish_request_created(
-                deal, source="cabinet", erp_request_id=deal.pk, summary=summary, crm_client_id=crm_client_id
+                deal,
+                source="cabinet",
+                erp_request_id=deal.pk,
+                summary=summary,
+                crm_client_id=crm_client_id,
+                initiated_by="client",
             )
             row.published_at = timezone.now()
             row.save(update_fields=["published_at"])

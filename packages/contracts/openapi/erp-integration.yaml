@@ -1159,6 +1159,15 @@ components:
           type: string
           enum: [v3]
           description: Процесс заявки (ERP-07); из CRM — только `v3`
+        initiated_by:
+          type: string
+          enum: [client, staff]
+          default: client
+          description: 'РЕЗ-1: кто начал заявку. `client` — клиент сам (письмо, Кабинет, бот, сайт, зарегистрированное входящее письмо); `staff` — запись звонка, ввод сотрудником. Вместе с настройкой компании «Резолюция перед расчётом» решает, нужно ли письмо на резолюцию; нет поля — `client`'
+        letter_number:
+          type: [string, 'null']
+          maxLength: 32
+          description: 'РЕЗ-1: номер зарегистрированного входящего письма, из которого создана заявка; при заявке без резолюции ERP берёт файл этого письма (`letter_file_id`) из EDS'
       additionalProperties: false
 
     ClientRequestOut:

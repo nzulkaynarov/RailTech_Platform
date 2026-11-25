@@ -373,7 +373,12 @@ export const crmLeadsHandlers = [
   http.get("*/api/v1/crm/requests/resolution", () => {
     const denied = guard("crm.clients", "full");
     if (denied) return denied;
-    return HttpResponse.json({ mode: readCompanyMock().quote.request_resolution });
+    const notReady = mockFlag("rt-pf-mock-intake-not-ready");
+    return HttpResponse.json({
+      mode: readCompanyMock().quote.request_resolution,
+      ready: !notReady,
+      reason: notReady ? "no_crm_mapping" : null,
+    });
   }),
 
   http.post("*/api/v1/crm/requests", async ({ request }) => {

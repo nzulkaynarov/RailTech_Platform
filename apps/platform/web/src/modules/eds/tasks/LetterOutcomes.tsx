@@ -440,6 +440,7 @@ function HandOverDialog({
           lead={null}
           clientId={null}
           letterFile={file ? { id: file.id, name: file.name } : null}
+          letterNumber={letter.number}
           onCreated={(result) => void linkRequest(result.deal)}
           onCancel={onClose}
         />

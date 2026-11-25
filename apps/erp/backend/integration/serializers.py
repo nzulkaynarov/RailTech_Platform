@@ -100,6 +100,23 @@ class ClientRequestInSerializer(serializers.Serializer):
     urgency = serializers.ChoiceField(choices=["normal", "urgent"])
     letter_file_id = serializers.UUIDField(required=False, allow_null=True, default=None)
     process = serializers.ChoiceField(choices=["v3"])
+    initiated_by = serializers.ChoiceField(
+        choices=["client", "staff"],
+        required=False,
+        default="client",
+        help_text=(
+            "РЕЗ-1: кто начал заявку. client — клиент сам (Кабинет, бот, сайт, письмо клиента, в том числе "
+            "зарегистрированное входящее); staff — запись звонка, ввод сотрудником. Нет поля — client."
+        ),
+    )
+    letter_number = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        allow_null=True,
+        default=None,
+        max_length=32,
+        help_text="РЕЗ-1: номер зарегистрированного входящего письма, из которого создана заявка (его файл берётся в расчёт)",
+    )
 
 
 class ClientRequestOutSerializer(serializers.Serializer):

@@ -457,6 +457,29 @@ async def test_task_hands_off_a_new_client_first_and_then_creates_the_request(
         assert lead.erp_request_id == 9001
 
 
+async def test_channel_and_incoming_letter_are_kept_and_sent_to_erp_on_every_attempt(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    """РЕЗ-1: канал и номер входящего письма живут в заявке; повтор отправки несёт их же."""
+    who = await _manager(sessions)
+    lead_id = await _lead(sessions)
+    created = await _service(sessions).create_from_lead(
+        who, lead_id, _body(initiated_by="staff", letter_number="ВХ-12/26")
+    )
+    requests = FakeRequests()
+
+    await ErpRequestService(sessions, requests, ErpHandoffService(sessions, FakeHandoff())).run(
+        created.deal_id, who.user_id
+    )
+
+    (call,) = requests.calls
+    assert (call.initiated_by, call.letter_number) == ("staff", "ВХ-12/26")
+    async with sessions() as session:
+        deal = await session.get(Deal, created.deal_id)
+        assert deal is not None
+        assert (deal.request_initiated_by, deal.request_letter_number) == ("staff", "ВХ-12/26")
+
+
 async def test_permanent_erp_error_fails_the_request_without_retry(
     sessions: async_sessionmaker[AsyncSession],
 ) -> None:

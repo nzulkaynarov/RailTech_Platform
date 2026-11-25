@@ -62,6 +62,11 @@ class RequestCreate(BaseModel):
     # (`POST /files` EDS через BFF): id файла EDS. Без основания заявка не создаётся (план 0.4,
     # FR-9): ВХ-письмо в EDS и расчёт ERP иначе начинались с пустого места.
     letter_file_id: uuid.UUID
+    # РЕЗ-1: канал решает, нужна ли резолюция перед расчётом. client — клиент сам (письмо, Кабинет,
+    # бот, сайт, входящее письмо); staff — запись звонка, ввод сотрудником. `letter_number` — номер
+    # входящего письма, из которого заявка.
+    initiated_by: Literal["client", "staff"] = "client"
+    letter_number: str | None = Field(default=None, max_length=32)
     consent: RequestConsentIn | None = None
 
 

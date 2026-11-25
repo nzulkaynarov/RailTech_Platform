@@ -81,7 +81,8 @@
     "rejectedComment": "Директор отклонил КП: «{{comment}}». Расчёт закрыт.",
     "requestFiles": "Файлы заявки",
     "downloadFile": "Скачать файл {{name}}",
-    "subtitleNoLetter": "{{client}} · срок расчёта {{due}}"
+    "subtitleNoLetter": "{{client}} · срок расчёта {{due}}",
+    "requestFilesPending": "Файл заявки загружается…"
   },
   "lines": {
     "title": "Строки расчёта",

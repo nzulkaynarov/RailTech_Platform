@@ -65,6 +65,13 @@ class CalcTask(models.Model):
         verbose_name=_("Последнее событие EDS"),
         help_text=_("id события letter.resolved, применённого последним: повтор того же события — без изменений"),
     )
+    request_file_pending = models.BooleanField(
+        default=False,
+        verbose_name=_("Файл заявки загружается"),
+        help_text=_(
+            "РЕЗ-1: расчёт без резолюции ждёт файл письма клиента из EDS; сбросится, когда файл пришёл или не придёт"
+        ),
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

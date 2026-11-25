@@ -128,6 +128,10 @@
   "routing": {
     "letter": "The request goes to a resolution{{urgent}}, then to calculation.",
     "calc": "The request goes straight to the responsible person for calculation.",
-    "urgent": " (urgent)"
+    "urgent": " (urgent)",
+    "fallback": {
+      "no_crm_mapping": "It cannot go straight to calculation: you are not connected to it. The request goes to a resolution{{urgent}}.",
+      "inactive": "It cannot go straight to calculation: your account is disabled. The request goes to a resolution{{urgent}}."
+    }
   }
 }

@@ -1,7 +1,7 @@
 """РЕЗ-1: «Резолюция перед расчётом» — настройка компании «Правила работы · Продажи», а не код.
 
 Три значения: `always` (по умолчанию — как раньше: письмо директору у каждой заявки), `client_own` («только заявки,
-которые клиент подал сам»: Кабинет, бот, передача из лида, заявка по письму клиента; заведённая сотрудником идёт сразу в
+которые клиент подал сам»: решает `initiated_by` — кто начал заявку, канал, а не экран; заявка сотрудника идёт сразу в
 расчёт) и `never`. Когда резолюция не нужна, ERP сам ставит задание расчёта ответственному (обе зоны виз, срок, уведомление),
 переводит сделку в «Расчёт», кладёт файл письма клиента в исходники заявки и сообщает EDS флагом `resolution_required=false`
 в `request.created` — письмо директору не заводится. Нет ответственного с пользователем ERP — прежний путь с письмом.
@@ -49,15 +49,19 @@ def own(settings):
 
 
 @pytest.fixture
-def letter_file(monkeypatch):
-    """EDS отдаёт файл письма клиента; тест подменяет сервисный вызов."""
+def letter_file(monkeypatch, django_capture_on_commit_callbacks):
+    """EDS отдаёт файл письма клиента; тест подменяет сервисный вызов, а задачу после коммита гоняет сразу."""
+    from integration.services import eds_files
+    from integration.tasks import fetch_request_letter_file
+
     calls = []
 
-    def fake(file_id, created_by):
-        calls.append((file_id, created_by))
+    def fake(file_id, created_by, letter_number=""):
+        calls.append((file_id, created_by, letter_number))
         return ("письмо клиента.pdf", b"%PDF-1.4 client letter")
 
-    monkeypatch.setattr(request_resolution, "fetch_letter_file", fake)
+    monkeypatch.setattr(eds_files, "fetch_request_file", fake)
+    monkeypatch.setattr(fetch_request_letter_file, "delay", lambda *a: fetch_request_letter_file.apply(args=a))
     return calls
 
 
@@ -126,11 +130,12 @@ def test_client_own_staff_request_in_erp_goes_straight_to_calculation(api, own):
     assert deal.stage.code == "CALCULATING"
 
 
-def test_client_own_crm_request_without_the_client_letter_skips_the_resolution(api, own):  # noqa: F811
+def test_client_own_staff_initiated_crm_request_skips_the_resolution(api, own):  # noqa: F811
+    """Запись звонка в CRM: `initiated_by = staff` приходит с формы — файл основания тут ничего не решает."""
     mode(own, "client_own")
     _handoff(api)
     _manager()
-    deal = new_deal(api)  # CRM «Создать заявку» без письма клиента
+    deal = new_deal(api, initiated_by="staff")
 
     event = bus_support.only("request.created")
     bus_support.assert_matches_contract(event)
@@ -138,20 +143,27 @@ def test_client_own_crm_request_without_the_client_letter_skips_the_resolution(a
     assert CalcTask.objects.filter(deal=deal).exists()
 
 
-def test_client_own_keeps_the_letter_for_cabinet_bot_handoff_and_a_request_with_the_client_letter(
-    api, own, letter_file  # noqa: F811
-):
+def test_client_own_keeps_the_letter_for_every_client_channel(api, own):  # noqa: F811
     mode(own, "client_own")
     _handoff(api)
     _manager()
-    deal = new_deal(api)
+    deal = new_deal(api, initiated_by="client")  # письмо клиента, в том числе без указания канала
+    assert letter_is_created() and not CalcTask.objects.exists()
     republish(deal, "cabinet")
     assert letter_is_created() and not CalcTask.objects.exists()
-    republish(deal, "crm", client_initiated=True)  # передача из лида, бот
+    republish(deal, "crm", initiated_by="client")  # передача из лида, бот
     assert letter_is_created() and not CalcTask.objects.exists()
-    republish(deal, "crm", letter_file_id="3f2c1a7e-5b9d-4c8e-9a1f-0d2e3c4b5a69")  # заявка по письму клиента
+    republish(deal, "crm", initiated_by="client", source_letter_number="ВХ-12/26")  # зарегистрированное входящее
     assert letter_is_created() and not CalcTask.objects.exists()
-    assert letter_file == []  # файл тянется только когда письма не будет
+
+
+def test_client_own_defaults_to_the_source_when_the_channel_is_not_named(api, own):  # noqa: F811
+    mode(own, "client_own")
+    _handoff(api)
+    _manager()
+    deal = new_deal(api, initiated_by="client")
+    republish(deal, "erp")  # без `initiated_by` заявка из ERP — сотрудника
+    assert request_payload()["resolution_required"] is False
 
 
 def test_client_own_lead_handoff_with_a_request_keeps_the_letter(api, own):  # noqa: F811
@@ -266,30 +278,126 @@ def test_deal_without_any_manager_keeps_the_letter(api, own):  # noqa: F811
 # ── файл письма клиента виден расчёту ─────────────────────────────────────────────────────────────────────────────
 
 
-def test_client_letter_file_is_a_request_file_of_the_calculation_when_the_letter_is_skipped(
-    api, own, letter_file  # noqa: F811
+FILE = "3f2c1a7e-5b9d-4c8e-9a1f-0d2e3c4b5a69"
+
+
+def test_client_letter_file_is_fetched_after_commit_and_shown_in_the_calculation(
+    api, own, monkeypatch, django_capture_on_commit_callbacks  # noqa: F811
 ):
+    """Сеть не держит транзакцию заявки: до коммита файла нет и расчёт говорит «загружается»; после — файл в исходниках."""
+    from integration.services import eds_files
+    from integration.tasks import fetch_request_letter_file
+
+    calls = []
+
+    def fake(file_id, created_by, letter_number=""):
+        calls.append((file_id, created_by, letter_number))
+        return ("письмо клиента.pdf", b"%PDF-1.4 client letter")
+
+    monkeypatch.setattr(eds_files, "fetch_request_file", fake)
+    monkeypatch.setattr(fetch_request_letter_file, "delay", lambda *a: fetch_request_letter_file.apply(args=a))
     mode(own, "never")
     _handoff(api)
     manager = _manager()
-    deal = new_deal(api, letter_file_id="3f2c1a7e-5b9d-4c8e-9a1f-0d2e3c4b5a69")
 
+    with django_capture_on_commit_callbacks(execute=False) as callbacks:
+        deal = new_deal(api, letter_file_id=FILE, letter_number="ВХ-12/26")
+
+    task = CalcTask.objects.get(deal=deal)
     assert request_payload()["resolution_required"] is False
-    assert letter_file == [("3f2c1a7e-5b9d-4c8e-9a1f-0d2e3c4b5a69", 101)]
-    files = deal_request_files(deal)
-    assert [f["name"] for f in files] == ["письмо клиента.pdf"]
-    assert CalcTask.objects.get(deal=deal).assignees.filter(user=manager).exists()
+    assert calls == [] and task.request_file_pending and deal_request_files(deal) == []
+    assert len(callbacks) == 1
+    callbacks[0]()
+
+    assert calls == [(FILE, 101, "ВХ-12/26")]
+    task.refresh_from_db()
+    assert not task.request_file_pending
+    assert [f["name"] for f in deal_request_files(deal)] == ["письмо клиента.pdf"]
+    assert task.assignees.filter(user=manager).exists()
+    callbacks[0]()  # повтор задачи не кладёт файл второй раз
+    assert len(deal_request_files(deal)) == 1
 
 
-def test_unreachable_letter_file_keeps_the_letter_instead_of_losing_it(api, own, monkeypatch):  # noqa: F811
+def test_missing_letter_file_stops_waiting_and_leaves_a_journal_note(api, own, monkeypatch):  # noqa: F811
+    from integration.services import eds_files
+    from integration.tasks import fetch_request_letter_file
+
+    from crm.models import ActivityLog
+
+    monkeypatch.setattr(eds_files, "fetch_request_file", lambda *a: None)
     mode(own, "never")
-    monkeypatch.setattr(request_resolution, "fetch_letter_file", lambda file_id, created_by: None)
     _handoff(api)
     _manager()
-    deal = new_deal(api, letter_file_id="3f2c1a7e-5b9d-4c8e-9a1f-0d2e3c4b5a69")
+    deal = new_deal(api, letter_file_id=FILE)
+    task = CalcTask.objects.get(deal=deal)
+    assert task.request_file_pending
 
-    assert letter_is_created() and not CalcTask.objects.filter(deal=deal).exists()
-    assert deal_request_files(deal) == []
+    assert fetch_request_letter_file.apply(args=(deal.pk, FILE, 101, "")).result is False
+
+    task.refresh_from_db()
+    assert not task.request_file_pending and deal_request_files(deal) == []
+    assert ActivityLog.objects.filter(deal=deal, event_code="deal.request_file_missing").exists()
+
+
+def test_eds_down_retries_then_gives_up_without_waiting_forever(api, own, monkeypatch):  # noqa: F811
+    from integration.services import eds_files
+    from integration.tasks import MAX_RETRIES, fetch_request_letter_file
+
+    def down(*args):
+        raise eds_files.EdsFileUnavailable("down")
+
+    monkeypatch.setattr(eds_files, "fetch_request_file", down)
+    mode(own, "never")
+    _handoff(api)
+    _manager()
+    deal = new_deal(api, letter_file_id=FILE)
+
+    result = fetch_request_letter_file.apply(args=(deal.pk, FILE, 101, ""), retries=MAX_RETRIES)
+
+    assert result.result is False
+    assert not CalcTask.objects.get(deal=deal).request_file_pending
+
+
+def test_request_without_a_file_does_not_wait(api, own):  # noqa: F811
+    mode(own, "never")
+    _handoff(api)
+    _manager()
+    deal = new_deal(api)
+    assert not CalcTask.objects.get(deal=deal).request_file_pending
+
+
+# ── что сказать в форме заявки ────────────────────────────────────────────────────────────────────────────────────
+
+
+def test_intake_info_tells_the_form_the_mode_and_whether_the_calculation_can_start_on_the_user(own):  # noqa: F811
+    manager = _manager()
+    mode(own, "never")
+    assert request_resolution.intake_info(manager) == {"mode": "never", "ready": True, "reason": None}
+    loner = CustomUser.objects.create_user(email="loner@x.test", username="loner", password="pw")
+    assert request_resolution.intake_info(loner) == {"mode": "never", "ready": False, "reason": "no_crm_mapping"}
+    CustomUser.objects.filter(pk=manager.pk).update(is_active=False)
+    manager.refresh_from_db()
+    assert request_resolution.intake_info(manager)["reason"] == "inactive"
+
+
+def test_intake_endpoint_is_readable_by_a_seller_without_settings_rights(own, monkeypatch):  # noqa: F811
+    """Менеджеру настройки компании недоступны (нужно `settings.edit`), а форме заявки режим нужен: свой маленький путь."""
+    from rest_framework.test import APIClient
+
+    from crm.services import calculation
+
+    manager = _manager()
+    mode(own, "client_own")
+    monkeypatch.setattr(calculation, "is_seller", lambda user: True)
+    client = APIClient()
+    client.force_authenticate(manager)
+
+    response = client.get("/api/v1/calc/request-intake/")
+
+    assert response.status_code == 200, response.content
+    assert response.json() == {"mode": "client_own", "ready": True, "reason": None}
+    monkeypatch.setattr(calculation, "is_seller", lambda user: False)
+    assert client.get("/api/v1/calc/request-intake/").status_code == 403
 
 
 # ── значение настройки ────────────────────────────────────────────────────────────────────────────────────────────

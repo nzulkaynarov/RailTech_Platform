@@ -3516,6 +3516,33 @@ paths:
           description: Нет права (зона строки, роль) или не сотрудник
         '401':
           $ref: '#/components/responses/UnauthorizedResponse'
+  /api/v1/calc/request-intake/:
+    get:
+      operationId: calc_request_intake
+      description: |-
+        GET /api/v1/calc/request-intake/ — режим «Резолюция перед расчётом» для формы «Создать заявку» (РЕЗ-1).
+
+        Читает любой сотрудник-продавец: настройки компании ему недоступны, а форма должна честно сказать, что будет дальше.
+      summary: 'Что будет с заявкой сотрудника: резолюция или сразу расчёт'
+      tags:
+      - Calc
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RequestIntake'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalcError'
+          description: Нет права (зона строки, роль) или не сотрудник
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
   /api/v1/calc/tasks/:
     get:
       operationId: calc_tasks_list
@@ -23948,8 +23975,12 @@ components:
           items:
             $ref: '#/components/schemas/RequestFile'
           description: Файлы заявки клиента (СЦ-10)
+        files_pending:
+          type: boolean
+          description: 'РЕЗ-1: файл письма клиента ещё загружается (расчёт без резолюции)'
       required:
       - files
+      - files_pending
       - lines
       - text
     CalcRights:
@@ -38948,14 +38979,6 @@ components:
       required:
       - code
       - name
-    ReasonEnum:
-      enum:
-      - template_does_not_exist
-      - template_syntax_error
-      type: string
-      description: |-
-        * `template_does_not_exist` - template_does_not_exist
-        * `template_syntax_error` - template_syntax_error
     ReassignProductRequest:
       type: object
       properties:
@@ -39591,6 +39614,44 @@ components:
       - id
       - name
       - uploaded_at
+    RequestIntake:
+      type: object
+      description: 'РЕЗ-1: что будет с заявкой сотрудника — его форма «Создать заявку» говорит по этому.'
+      properties:
+        mode:
+          allOf:
+          - $ref: '#/components/schemas/RequestResolutionEnum'
+          description: |-
+            Резолюция перед расчётом
+
+            * `always` - always
+            * `client_own` - client_own
+            * `never` - never
+        ready:
+          type: boolean
+          description: Расчёт может встать на самого сотрудника (иначе заявка идёт на резолюцию)
+        reason:
+          nullable: true
+          description: |-
+            Почему расчёт на сотрудника не встанет
+
+            * `no_crm_mapping` - no_crm_mapping
+            * `inactive` - inactive
+          oneOf:
+          - $ref: '#/components/schemas/RequestIntakeReasonEnum'
+          - $ref: '#/components/schemas/NullEnum'
+      required:
+      - mode
+      - ready
+      - reason
+    RequestIntakeReasonEnum:
+      enum:
+      - no_crm_mapping
+      - inactive
+      type: string
+      description: |-
+        * `no_crm_mapping` - no_crm_mapping
+        * `inactive` - inactive
     RequestResolutionEnum:
       enum:
       - always
@@ -41633,13 +41694,21 @@ components:
       type: object
       properties:
         reason:
-          $ref: '#/components/schemas/ReasonEnum'
+          $ref: '#/components/schemas/_RenderFailureDetailsReasonEnum'
         message:
           type: string
           description: Текст ошибки Django (до 300 символов)
       required:
       - message
       - reason
+    _RenderFailureDetailsReasonEnum:
+      enum:
+      - template_does_not_exist
+      - template_syntax_error
+      type: string
+      description: |-
+        * `template_does_not_exist` - template_does_not_exist
+        * `template_syntax_error` - template_syntax_error
     _TrackedCurrency:
       type: object
       properties:

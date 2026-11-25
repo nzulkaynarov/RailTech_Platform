@@ -87,6 +87,7 @@ describe("Расчёт · без резолюции (РЕЗ-1)", () => {
     expect(within(panel).queryByText(/Посчитать переводы со склада и под заказ/)).toBeNull();
     expect(within(panel).queryByText(/Письмо /)).toBeNull();
     expect(within(panel).getByText("Срок расчёта")).toBeVisible();
+    expect(within(panel).getByText("Файл заявки загружается…")).toBeVisible();
     expect(within(panel).queryByText("Резолюция директора")).toBeNull();
     expect(within(panel).queryByText(/назначен\(а\) резолюцией/)).toBeNull();
     fireEvent.click(within(panel).getByRole("link", { name: "Открыть расчёт" }));

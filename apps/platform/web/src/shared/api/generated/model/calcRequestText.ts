@@ -14,4 +14,6 @@ export interface CalcRequestText {
   lines: number;
   /** Файлы заявки клиента (СЦ-10); скачивание — `downloadCalcRequestFile` */
   files?: RequestFile[];
+  /** РЕЗ-1: расчёт без резолюции ждёт файл письма клиента — на экране «файл заявки загружается» */
+  files_pending?: boolean;
 }

@@ -116,6 +116,7 @@ def register_new_deal(deal: Deal, actor: CustomUser) -> Deal:
         erp_request_id=deal.id,
         summary=deal.title or f"Заявка #{deal.id}",
         actor=events.build_actor(user=actor),
+        initiated_by="staff",  # заявку завёл сотрудник
     )
     return deal
 

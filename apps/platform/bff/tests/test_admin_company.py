@@ -1190,24 +1190,36 @@ async def test_quote_defaults_request_resolution_default_and_patch(
     assert bad.status_code == 422
 
 
-async def test_request_form_reads_the_resolution_mode_with_clients_access(
+async def test_request_form_reads_the_resolution_mode_without_settings_rights(
     web: Web, erp: respx.MockRouter, check: ContractChecker
 ) -> None:
-    """РЕЗ-1: форме заявки режим нужен без права на настройки компании: хватает `crm.clients`."""
+    """РЕЗ-1: настройки компании менеджеру недоступны (403 ERP), а форме режим нужен."""
     from tests.roles import custom
 
     await web.login([custom(40, "Только клиенты", {"crm.clients": "full"})])
     erp.get(f"{COMPANY}/settings/").mock(
-        return_value=httpx.Response(200, json=settings_json(request_resolution="client_own"))
+        return_value=httpx.Response(403, json={"detail": "FORBIDDEN"})
+    )
+    intake = erp.get(f"{API}/calc/request-intake/").mock(
+        return_value=httpx.Response(200, json={"mode": "client_own", "ready": True, "reason": None})
     )
 
     response = await web.client.get("/api/v1/crm/requests/resolution")
 
     assert response.status_code == 200
-    assert response.json() == {"mode": "client_own"}
+    assert response.json() == {"mode": "client_own", "ready": True, "reason": None}
     check(response, "/crm/requests/resolution", "get")
-    erp.get(f"{COMPANY}/settings/").mock(return_value=httpx.Response(200, json=settings_json()))
-    assert (await web.client.get("/api/v1/crm/requests/resolution")).json() == {"mode": "always"}
+    assert intake.called
+    intake.mock(
+        return_value=httpx.Response(
+            200, json={"mode": "never", "ready": False, "reason": "no_crm_mapping"}
+        )
+    )
+    assert (await web.client.get("/api/v1/crm/requests/resolution")).json() == {
+        "mode": "never",
+        "ready": False,
+        "reason": "no_crm_mapping",
+    }
 
 
 async def test_quote_defaults_overdue_reminders_switch(

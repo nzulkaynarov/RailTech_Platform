@@ -243,7 +243,7 @@ def create_request_tool(context: AgentContext, arguments: Dict[str, Any]) -> Dic
         summary=summary,
         actor=events.build_actor(actor_type="client", name="CRM Agent"),
         crm_client_id=context.crm_client_id,
-        client_initiated=True,  # бот ведёт диалог клиента
+        initiated_by="client",  # бот ведёт диалог клиента
     )
     return {
         "erp_request_id": deal.id,

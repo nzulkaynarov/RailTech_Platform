@@ -291,7 +291,7 @@ def apply_resolution(
 
 
 @transaction.atomic
-def apply_without_resolution(deal: Deal, *, crm_user_id: int, due: date) -> CalcTask:
+def apply_without_resolution(deal: Deal, *, crm_user_id: int, due: date, file_pending: bool = False) -> CalcTask:
     """РЕЗ-1: настройка компании «резолюция не нужна» — задание расчёта ответственному без письма директору.
 
     Одно такое задание на сделку (повтор возвращает его); ответственный — исполнитель обеих зон виз; сотрудник CRM без
@@ -309,6 +309,7 @@ def apply_without_resolution(deal: Deal, *, crm_user_id: int, due: date) -> Calc
         resolution_text="",
         due=due,
         decided_at=timezone.now(),
+        request_file_pending=file_pending,
     )
     user_id = _users_by_crm_id({crm_user_id}).get(crm_user_id)
     for zone in (Zone.GOODS, Zone.SERVICES):

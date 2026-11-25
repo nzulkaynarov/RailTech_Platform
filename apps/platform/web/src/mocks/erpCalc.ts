@@ -317,7 +317,13 @@ function present(calc: MockCalc, user: Me): CalcSheet {
       ...(cost ? { min_margin_pct: calc.minMargin } : {}),
       assignees: calc.assignees,
     },
-    request: { text: calc.requestText, lines: calc.requestLines, files: calc.requestFiles ?? [] },
+    request: {
+      text: calc.requestText,
+      lines: calc.requestLines,
+      // РЕЗ-1: без резолюции файл письма клиента ещё загружается (флаг `rt-pf-mock-no-resolution`)
+      files: mockFlag(NO_RESOLUTION) ? [] : (calc.requestFiles ?? []),
+      files_pending: mockFlag(NO_RESOLUTION),
+    },
     quote: calc.started
       ? {
           number: calc.quoteNumber,

@@ -128,6 +128,10 @@
   "routing": {
     "letter": "Ariza rezolyusiyaga ketadi{{urgent}}, keyin hisob-kitobga.",
     "calc": "Ariza darhol masʼul xodimga hisob-kitobga ketadi.",
-    "urgent": " (shoşilinç)"
+    "urgent": " (shoşilinç)",
+    "fallback": {
+      "no_crm_mapping": "Darhol hisob-kitobga boʼlmaydi: siz hisob-kitobga ulanmagansiz. Ariza rezolyusiyaga ketadi{{urgent}}.",
+      "inactive": "Darhol hisob-kitobga boʼlmaydi: hisobingiz oʼchirilgan. Ariza rezolyusiyaga ketadi{{urgent}}."
+    }
   }
 }

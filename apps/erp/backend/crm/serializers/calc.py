@@ -90,10 +90,25 @@ class CalcTaskBriefSerializer(serializers.Serializer):
     assignees = CalcAssigneeSerializer(many=True)
 
 
+class RequestIntakeSerializer(serializers.Serializer):
+    """РЕЗ-1: что будет с заявкой сотрудника — его форма «Создать заявку» говорит по этому."""
+
+    mode = serializers.ChoiceField(choices=["always", "client_own", "never"], help_text="Резолюция перед расчётом")
+    ready = serializers.BooleanField(
+        help_text="Расчёт может встать на самого сотрудника (иначе заявка идёт на резолюцию)"
+    )
+    reason = serializers.ChoiceField(
+        choices=["no_crm_mapping", "inactive"], allow_null=True, help_text="Почему расчёт на сотрудника не встанет"
+    )
+
+
 class CalcRequestSerializer(serializers.Serializer):
     text = serializers.CharField(allow_blank=True)
     lines = serializers.IntegerField()
     files = RequestFileSerializer(many=True, help_text="Файлы заявки клиента (СЦ-10)")
+    files_pending = serializers.BooleanField(
+        help_text="РЕЗ-1: файл письма клиента ещё загружается (расчёт без резолюции)"
+    )
 
 
 class CalcTermsSerializer(serializers.Serializer):

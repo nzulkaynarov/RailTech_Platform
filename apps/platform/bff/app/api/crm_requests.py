@@ -30,7 +30,6 @@ from app.api.crm_messages import _lead_id
 from app.api.eds_documents import MAX_UPLOAD_BYTES, FileStream, _read_limited, _too_large
 from app.clients import crm_models as crm
 from app.clients.crm_proxy import CrmProxy, crm_error
-from app.clients.erp_company import ErpCompany
 from app.crm_clients_view import CrmRequestCreated, CrmRequestRetried
 from app.deps import Authed, require, require_all
 from app.eds_documents import EdsProxy, eds_error
@@ -106,11 +105,14 @@ async def create_request(
     operation_id="getCrmRequestResolution",
 )
 async def request_resolution(authed: Writer) -> RequestResolutionView:
-    """Режим резолюции перед расчётом (настройка компании): форма говорит, что будет дальше."""
-    erp = ErpCompany(authed.call)
-    raw = await erp.data("GET", await erp.company_path("settings/"))
-    value = raw.get("request_resolution")
-    return RequestResolutionView(mode=value if value in ("client_own", "never") else "always")
+    """Режим резолюции и готовность расчёта встать на сотрудника; прав на настройки не нужно."""
+    upstream = await authed.call("erp", "GET", "/api/v1/calc/request-intake/")
+    if upstream.status_code != 200:
+        raise backend_unavailable("erp", f"http_{upstream.status_code}")
+    try:
+        return RequestResolutionView.model_validate(upstream.json())
+    except ValueError as exc:
+        raise backend_unavailable("erp", "bad_response") from exc
 
 
 @router.post(

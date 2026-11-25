@@ -3,7 +3,12 @@
  * RailTech Platform — BFF API (Платформа → CRM и ERP)
  */
 import type { RequestResolutionViewMode } from "./requestResolutionViewMode";
+import type { RequestResolutionViewReason } from "./requestResolutionViewReason";
 
 export interface RequestResolutionView {
   mode: RequestResolutionViewMode;
+  /** Расчёт может встать на самого сотрудника; нет — заявка пойдёт на резолюцию, причина в `reason` */
+  ready: boolean;
+  /** @nullable */
+  reason?: RequestResolutionViewReason;
 }

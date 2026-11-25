@@ -179,7 +179,12 @@ def test_start_without_request_lines_makes_an_empty_draft_once(world):
     assert first.status_code == 200
     body = first.json()
     assert body["quote"]["state"] == "in_progress" and body["lines"] == []
-    assert body["request"] == {"text": "Нужны 2 стрелочных перевода Р65 и монтаж бригадой", "lines": 0, "files": []}
+    assert body["request"] == {
+        "text": "Нужны 2 стрелочных перевода Р65 и монтаж бригадой",
+        "lines": 0,
+        "files": [],
+        "files_pending": False,
+    }
     assert body["ready"] == {"allowed": False, "blocker": "no_lines", "missing": 0}
     again = _api(world["engineer"]).post(_url(world, "start/"))
     assert again.status_code == 200

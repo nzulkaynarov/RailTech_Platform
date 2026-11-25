@@ -8,6 +8,7 @@ platform-bff.yaml. Проверяется то, что делает BFF: раз�
 именем из CRM; записка о звонке (СЦ-6) — лид из CRM (канал, согласие), поля в EDS и ответ EDS.
 """
 
+import uuid
 from pathlib import Path
 from typing import Any
 
@@ -102,6 +103,22 @@ async def test_request_from_a_lead_goes_to_the_lead_action_of_crm(
         .headers["authorization"]
         .startswith("Bearer crm-access-")
     )
+
+
+async def test_the_channel_and_the_registered_letter_reach_crm(web: Web, crm: CrmLeadsFake) -> None:
+    """РЕЗ-1: форма называет канал заявки; BFF отдаёт его CRM как есть."""
+    await web.login(["MANAGER"])
+    await web.send("POST", BASE, json=request_form())
+    assert crm.body("POST", "leads/2041/actions/create_request")["initiated_by"] == "client"
+
+    form = request_form(
+        initiated_by="staff", letter_number="ВХ-12/26", request_key=str(uuid.uuid4())
+    )
+    assert (await web.send("POST", BASE, json=form)).status_code == 201
+    sent = crm.body("POST", "leads/2041/actions/create_request")
+    assert (sent["initiated_by"], sent["letter_number"]) == ("staff", "ВХ-12/26")
+    bad = request_form(initiated_by="robot", request_key=str(uuid.uuid4()))
+    assert (await web.send("POST", BASE, json=bad)).status_code == 422
 
 
 async def test_request_for_a_client_goes_to_the_client_action_of_crm(

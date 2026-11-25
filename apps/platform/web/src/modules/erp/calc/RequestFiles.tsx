@@ -11,7 +11,14 @@ export function RequestFiles({ sheet }: { sheet: CalcSheet }) {
   const { t } = useTranslation("calc");
   const { date } = useFormat();
   const files = sheet.request.files ?? [];
-  if (files.length === 0) return null;
+  if (files.length === 0) {
+    // РЕЗ-1: расчёт без резолюции ждёт файл письма клиента — честно говорим, что он ещё идёт
+    return sheet.request.files_pending ? (
+      <p className="pf-hint" role="status">
+        {t("sheet.requestFilesPending")}
+      </p>
+    ) : null;
+  }
   return (
     <FileLinks
       label={t("sheet.requestFiles")}

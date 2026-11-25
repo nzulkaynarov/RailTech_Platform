@@ -84,3 +84,28 @@ async def test_erp_reads_an_unattached_request_file_only_for_its_author(
     assert_error(await client.get(path, params=other, headers=bearer(ERP_SERVICE_TOKEN)), 404, "NOT_FOUND")
     unknown = "/api/v1/service/files/00000000-0000-0000-0000-000000000000"
     assert_error(await client.get(unknown, params=author, headers=bearer(ERP_SERVICE_TOKEN)), 404, "NOT_FOUND")
+
+
+async def test_erp_reads_a_file_of_the_registered_letter_only_by_that_letters_number(
+    client: httpx.AsyncClient, container: Container, staff: dict[str, Person]
+) -> None:
+    """РЕЗ-1: заявка из зарегистрированного входящего — файл этого письма отдаётся по его номеру; файл другого письма,
+    привязанный файл без номера и чужой автор — 404 (держит защиту: привязанный файл не уходит «по автору»)."""
+    from tests.domain import deliver_erp
+    from tests.test_erp_events import request_created
+    from tests.test_files import upload
+
+    manager = staff["manager"]
+    ref = (await upload(client, manager, name="входящее.pdf")).json()
+    assert await deliver_erp(client, container, request_created(letter_file_id=ref["id"])) == "processed"
+    letter = (await client.get("/api/v1/letters", headers=manager.headers)).json()["items"][0]
+    path = f"/api/v1/service/files/{ref['id']}"
+    auth = bearer(ERP_SERVICE_TOKEN)
+
+    # привязан к письму: автор файла — не повод, нужен номер именно этого письма
+    assert_error(await client.get(path, params={"created_by": manager.id}, headers=auth), 404, "NOT_FOUND")
+    wrong = {"created_by": manager.id, "letter_number": "IN-999/26"}
+    assert_error(await client.get(path, params=wrong, headers=auth), 404, "NOT_FOUND")
+    right = {"created_by": manager.id + 100, "letter_number": letter["number"]}
+    got = await client.get(path, params=right, headers=auth)
+    assert got.status_code == 200

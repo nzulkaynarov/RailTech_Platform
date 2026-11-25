@@ -80,6 +80,8 @@ class CalcRequestText(BaseModel):
     text: str
     lines: int
     files: list[RequestFile] = []
+    # РЕЗ-1: расчёт без резолюции ждёт файл письма клиента — «файл заявки загружается»
+    files_pending: bool = False
 
 
 class CalcTerms(BaseModel):
@@ -455,6 +457,7 @@ def to_sheet(raw: dict[str, Any], fields: Collection[str], access: Mapping[str, 
             text=raw["request"]["text"],
             lines=raw["request"]["lines"],
             files=parse_request_files(raw["request"].get("files")) or [],
+            files_pending=raw["request"].get("files_pending") is True,
         ),
         quote=None
         if not isinstance(quote, dict)

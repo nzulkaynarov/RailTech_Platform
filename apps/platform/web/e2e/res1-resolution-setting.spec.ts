@@ -68,6 +68,7 @@ for (const { width, height } of SIZES) {
         page.getByText("Резолюция не требовалась — расчёт поставлен ответственному сразу."),
       ).toBeVisible();
       await expect(page.getByText(/Посчитать переводы со склада/)).toHaveCount(0);
+      await expect(page.getByText("Файл заявки загружается…")).toBeVisible();
       await settledScreenshot(page, "res1-calc-task-direct");
       await expectNoViolations(page, "задание расчёта без резолюции");
     });

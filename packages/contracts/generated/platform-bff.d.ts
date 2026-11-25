@@ -8112,7 +8112,7 @@ export interface paths {
     };
     /**
      * Резолюция перед расчётом: что будет с заявкой дальше (РЕЗ-1)
-     * @description Настройка компании «Правила работы · Продажи → Резолюция перед расчётом» (ERP): `always` — письмо на резолюцию у каждой заявки, `client_own` — только у заявок, которые клиент подал сам (Кабинет, бот, письмо клиента), `never` — не нужна, заявка сразу в расчёт ответственному. Форма «Создать заявку» говорит по ней, что случится после отправки. Раздел `crm.clients` полный.
+     * @description Режим настройки компании «Правила работы · Продажи → Резолюция перед расчётом»: `always` — письмо на резолюцию у каждой заявки, `client_own` — только у заявок, которые клиент подал сам (решает канал `initiated_by`), `never` — не нужна. Плюс `ready`: расчёт может встать на самого сотрудника (иначе заявка идёт на резолюцию, причина — `reason`). Читает любой сотрудник с разделом `crm.clients` полный, настройки компании ему не нужны (ERP `GET /calc/request-intake/`). Форма «Создать заявку» говорит по этому, что случится после отправки.
      */
     get: operations["getCrmRequestResolution"];
     put?: never;
@@ -13840,7 +13840,7 @@ export interface components {
       /** @description ДОК-10: «Запросить отступление» от шаблона доступно (по умолчанию да) */
       contract_deviations_allowed?: boolean;
       /**
-       * @description РЕЗ-1: резолюция директора перед расчётом — у каждой заявки (always, по умолчанию), только у заявок из Кабинета и писем (client_own) или не нужна, заявка сразу в расчёт ответственному (never)
+       * @description РЕЗ-1: резолюция перед расчётом — у каждой заявки (always, по умолчанию), только у заявок, которые клиент подал сам: письмо, Кабинет, бот, сайт, входящее письмо (client_own), или не нужна (never); заявка сотрудника в режиме client_own и любая в режиме never идёт сразу в расчёт ответственному
        * @enum {string}
        */
       request_resolution?: "always" | "client_own" | "never";
@@ -13899,7 +13899,7 @@ export interface components {
       /** @description ДОК-10: «Запросить отступление» от шаблона доступно (по умолчанию да) */
       contract_deviations_allowed?: boolean;
       /**
-       * @description РЕЗ-1: резолюция директора перед расчётом — у каждой заявки (always, по умолчанию), только у заявок из Кабинета и писем (client_own) или не нужна, заявка сразу в расчёт ответственному (never)
+       * @description РЕЗ-1: резолюция перед расчётом — у каждой заявки (always, по умолчанию), только у заявок, которые клиент подал сам: письмо, Кабинет, бот, сайт, входящее письмо (client_own), или не нужна (never); заявка сотрудника в режиме client_own и любая в режиме never идёт сразу в расчёт ответственному
        * @enum {string}
        */
       request_resolution?: "always" | "client_own" | "never";
@@ -16623,6 +16623,11 @@ export interface components {
       lines: number;
       /** @description Файлы заявки клиента (СЦ-10); скачивание — `downloadCalcRequestFile` */
       files?: components["schemas"]["RequestFile"][];
+      /**
+       * @description РЕЗ-1: расчёт без резолюции ждёт файл письма клиента — на экране «файл заявки загружается»
+       * @default false
+       */
+      files_pending: boolean;
     };
     CalcQuote: {
       /** @description Номер КП появляется при «Расчёт готов» */
@@ -18022,6 +18027,14 @@ export interface components {
        * @description Основание заявки — письмо или файл запроса, загруженный в EDS (`POST /files`); без него заявка не создаётся (план 0.4)
        */
       letter_file_id: string;
+      /**
+       * @description РЕЗ-1: кто начал заявку — клиент сам (письмо, Кабинет, бот, сайт, входящее письмо) или сотрудник (запись звонка, ввод); вместе с настройкой компании решает, нужна ли резолюция
+       * @default client
+       * @enum {string}
+       */
+      initiated_by: "client" | "staff";
+      /** @description РЕЗ-1: номер зарегистрированного входящего письма, из которого создана заявка */
+      letter_number?: string | null;
       consent?: {
         /** @enum {string} */
         method: "phone" | "email" | "paper";
@@ -18040,6 +18053,10 @@ export interface components {
     RequestResolutionView: {
       /** @enum {string} */
       mode: "always" | "client_own" | "never";
+      /** @description Расчёт может встать на самого сотрудника; нет — заявка пойдёт на резолюцию, причина в `reason` */
+      ready: boolean;
+      /** @enum {string|null} */
+      reason?: "no_crm_mapping" | "inactive" | null;
     };
     RequestRetriedView: {
       deal: number;
@@ -34213,7 +34230,7 @@ export interface operations {
     };
     requestBody?: never;
     responses: {
-      /** @description Режим */
+      /** @description Режим и готовность */
       200: {
         headers: {
           [name: string]: unknown;

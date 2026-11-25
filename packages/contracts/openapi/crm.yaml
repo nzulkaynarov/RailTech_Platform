@@ -8716,10 +8716,23 @@ components:
           - type: 'null'
         contact:
           $ref: '#/components/schemas/RequestContactIn'
+        initiated_by:
+          default: client
+          enum:
+          - client
+          - staff
+          title: Initiated By
+          type: string
         letter_file_id:
           format: uuid
           title: Letter File Id
           type: string
+        letter_number:
+          anyOf:
+          - maxLength: 32
+            type: string
+          - type: 'null'
+          title: Letter Number
         request_key:
           format: uuid
           title: Request Key

@@ -328,6 +328,10 @@ class RequestFormIn(BaseModel):
     urgency: Urgency
     # Basis of the request (plan 0.4, FR-9): the letter or request file uploaded to EDS first.
     letter_file_id: str = Field(pattern=UUID_PATTERN)
+    # РЕЗ-1: канал заявки решает, нужна ли резолюция; номер входящего письма,
+    # из которого заявка создана
+    initiated_by: Literal["client", "staff"] = "client"
+    letter_number: str | None = Field(default=None, max_length=32)
     consent: RequestConsentIn | None = None
 
 
@@ -340,9 +344,11 @@ class RequestCreatedView(BaseModel):
 
 
 class RequestResolutionView(BaseModel):
-    """РЕЗ-1: настройка компании «Резолюция перед расчётом»: форма обещает то, что случится."""
+    """РЕЗ-1: что будет с заявкой этого сотрудника: форма обещает то, что случится."""
 
     mode: Literal["always", "client_own", "never"]
+    ready: bool
+    reason: Literal["no_crm_mapping", "inactive"] | None = None
 
 
 class RequestRetriedView(BaseModel):
