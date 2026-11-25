@@ -1,12 +1,16 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — BFF API (Платформа → CRM и ERP)
-  version: 0.124.0
+  version: 0.125.0
   summary: Пространство `/api/v1/` BFF Платформы — вызывает SPA `apps/platform/web` от имени сотрудника.
   description: |
     Контракт по ADR-0011 и `docs/architecture/platform-bff.md`. Версия 0.1.0 (INF-P0-1) покрывает фазу P1:
     сессия, профиль, счётчики меню, «Моя очередь», лента «Сегодня», уведомления, поиск. Экраны фаз P2–P4 добавляются
     в этот файл до кода (`docs/architecture/integration-map.md` §1).
+
+    **0.125.0 (СОТР-1, карточка сотрудника) — добавляющее.** `Employee.telegram` (`linked` / `not_linked` / `blocked`: привязан,
+    не привязан, привязан, но сообщения не доходят — по отметке CRM `tg_dm_failed_at`), `Employee.deputy` и `EmployeeUpdate.deputy`
+    (администратор ставит замещение за сотрудника; явный `null` снимает; правила и журнал — как у `PUT /me/deputy`).
 
     **0.122.0 (СЦ-9, подпись — задача подписанта; замещение) — ломающее по oasdiff (до 1.0 допустимо): новое значение
     `QueueItemKind.sign_document`.** Строка «Подписать» в «Моих задачах»: исходящее письмо, переданное на подпись (подписанта
@@ -20535,7 +20539,7 @@ components:
     Employee:
       type: object
       additionalProperties: false
-      required: [id, name, initials, email, roles, access, status, telegram_linked, erp_sync]
+      required: [id, name, initials, email, roles, access, status, telegram_linked, telegram, erp_sync]
       properties:
         id:
           type: string
@@ -20568,7 +20572,16 @@ components:
           $ref: '#/components/schemas/EmployeeStatus'
         telegram_linked:
           type: boolean
-          description: Привязан Telegram для уведомлений сотруднику
+          description: Привязан Telegram для уведомлений сотруднику (есть привязка; дойдут ли сообщения — `telegram`)
+        telegram:
+          type: string
+          enum: [linked, not_linked, blocked]
+          description: >-
+            0.125.0. `linked` — привязан и бот может писать; `not_linked` — не привязан; `blocked` — привязан, но сообщения не
+            доходят (CRM отметила отказ Telegram: «Старт» не нажат или бот заблокирован) — сотруднику нужно привязать заново
+        deputy:
+          $ref: '#/components/schemas/DeputyPeriod'
+          description: 'Замещение на период (0.125.0): поставил сам сотрудник в профиле или администратор в карточке; нет — поля нет'
         erp_sync:
           $ref: '#/components/schemas/ErpSyncState'
         erp_sync_error:
@@ -20826,6 +20839,14 @@ components:
           description: >-
             Кому передать лиды в работе (`crm_user_id` коллеги), если отключение или новые роли отнимают у сотрудника работу
             с лидами; без поля при таких лидах — 409 `CONFLICT` (`details.reason = user_has_active_leads`)
+        deputy:
+          description: >-
+            0.125.0. Замещение за сотрудника (администратор, раздел `admin` на запись): тот же период и правила, что у
+            `setDeputy` (себя нельзя — 422 `deputy_is_self`, период не в прошлом и не длиннее года); явный `null` снимает
+            замещение. Попадает в журнал как `user.deputy_set` / `user.deputy_cleared` от имени администратора.
+          oneOf:
+            - $ref: '#/components/schemas/DeputyUpdate'
+            - type: 'null'
 
     MeUpdate:
       type: object

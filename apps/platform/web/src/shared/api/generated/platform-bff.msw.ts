@@ -16555,6 +16555,16 @@ export const getListEmployeesResponseMock = (
     access: { crm: faker.datatype.boolean(), erp: faker.datatype.boolean() },
     status: faker.helpers.arrayElement(Object.values(EmployeeStatus)),
     telegram_linked: faker.datatype.boolean(),
+    telegram: faker.helpers.arrayElement(["linked", "not_linked", "blocked"] as const),
+    deputy: faker.helpers.arrayElement([
+      {
+        user_id: faker.helpers.fromRegExp("^[1-9][0-9]*$"),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        date_from: faker.date.past().toISOString().slice(0, 10),
+        date_to: faker.date.past().toISOString().slice(0, 10),
+      },
+      undefined,
+    ]),
     erp_sync: faker.helpers.arrayElement(Object.values(ErpSyncState)),
     erp_sync_error: faker.helpers.arrayElement([
       faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -16594,6 +16604,16 @@ export const getCreateEmployeeResponseMock = (
     access: { crm: faker.datatype.boolean(), erp: faker.datatype.boolean() },
     status: faker.helpers.arrayElement(Object.values(EmployeeStatus)),
     telegram_linked: faker.datatype.boolean(),
+    telegram: faker.helpers.arrayElement(["linked", "not_linked", "blocked"] as const),
+    deputy: faker.helpers.arrayElement([
+      {
+        user_id: faker.helpers.fromRegExp("^[1-9][0-9]*$"),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        date_from: faker.date.past().toISOString().slice(0, 10),
+        date_to: faker.date.past().toISOString().slice(0, 10),
+      },
+      undefined,
+    ]),
     erp_sync: faker.helpers.arrayElement(Object.values(ErpSyncState)),
     erp_sync_error: faker.helpers.arrayElement([
       faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -16631,6 +16651,16 @@ export const getInviteEmployeeResponseMock = (
   access: { crm: faker.datatype.boolean(), erp: faker.datatype.boolean() },
   status: faker.helpers.arrayElement(Object.values(EmployeeStatus)),
   telegram_linked: faker.datatype.boolean(),
+  telegram: faker.helpers.arrayElement(["linked", "not_linked", "blocked"] as const),
+  deputy: faker.helpers.arrayElement([
+    {
+      user_id: faker.helpers.fromRegExp("^[1-9][0-9]*$"),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      date_from: faker.date.past().toISOString().slice(0, 10),
+      date_to: faker.date.past().toISOString().slice(0, 10),
+    },
+    undefined,
+  ]),
   erp_sync: faker.helpers.arrayElement(Object.values(ErpSyncState)),
   erp_sync_error: faker.helpers.arrayElement([
     faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -16666,6 +16696,16 @@ export const getResendInviteResponseMock = (
   access: { crm: faker.datatype.boolean(), erp: faker.datatype.boolean() },
   status: faker.helpers.arrayElement(Object.values(EmployeeStatus)),
   telegram_linked: faker.datatype.boolean(),
+  telegram: faker.helpers.arrayElement(["linked", "not_linked", "blocked"] as const),
+  deputy: faker.helpers.arrayElement([
+    {
+      user_id: faker.helpers.fromRegExp("^[1-9][0-9]*$"),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      date_from: faker.date.past().toISOString().slice(0, 10),
+      date_to: faker.date.past().toISOString().slice(0, 10),
+    },
+    undefined,
+  ]),
   erp_sync: faker.helpers.arrayElement(Object.values(ErpSyncState)),
   erp_sync_error: faker.helpers.arrayElement([
     faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -16701,6 +16741,16 @@ export const getRetryEmployeeErpSyncResponseMock = (
   access: { crm: faker.datatype.boolean(), erp: faker.datatype.boolean() },
   status: faker.helpers.arrayElement(Object.values(EmployeeStatus)),
   telegram_linked: faker.datatype.boolean(),
+  telegram: faker.helpers.arrayElement(["linked", "not_linked", "blocked"] as const),
+  deputy: faker.helpers.arrayElement([
+    {
+      user_id: faker.helpers.fromRegExp("^[1-9][0-9]*$"),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      date_from: faker.date.past().toISOString().slice(0, 10),
+      date_to: faker.date.past().toISOString().slice(0, 10),
+    },
+    undefined,
+  ]),
   erp_sync: faker.helpers.arrayElement(Object.values(ErpSyncState)),
   erp_sync_error: faker.helpers.arrayElement([
     faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -16739,6 +16789,16 @@ export const getIssueTemporaryPasswordResponseMock = (
     access: { crm: faker.datatype.boolean(), erp: faker.datatype.boolean() },
     status: faker.helpers.arrayElement(Object.values(EmployeeStatus)),
     telegram_linked: faker.datatype.boolean(),
+    telegram: faker.helpers.arrayElement(["linked", "not_linked", "blocked"] as const),
+    deputy: faker.helpers.arrayElement([
+      {
+        user_id: faker.helpers.fromRegExp("^[1-9][0-9]*$"),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        date_from: faker.date.past().toISOString().slice(0, 10),
+        date_to: faker.date.past().toISOString().slice(0, 10),
+      },
+      undefined,
+    ]),
     erp_sync: faker.helpers.arrayElement(Object.values(ErpSyncState)),
     erp_sync_error: faker.helpers.arrayElement([
       faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -16776,6 +16836,16 @@ export const getGetEmployeeResponseMock = (
   access: { crm: faker.datatype.boolean(), erp: faker.datatype.boolean() },
   status: faker.helpers.arrayElement(Object.values(EmployeeStatus)),
   telegram_linked: faker.datatype.boolean(),
+  telegram: faker.helpers.arrayElement(["linked", "not_linked", "blocked"] as const),
+  deputy: faker.helpers.arrayElement([
+    {
+      user_id: faker.helpers.fromRegExp("^[1-9][0-9]*$"),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      date_from: faker.date.past().toISOString().slice(0, 10),
+      date_to: faker.date.past().toISOString().slice(0, 10),
+    },
+    undefined,
+  ]),
   erp_sync: faker.helpers.arrayElement(Object.values(ErpSyncState)),
   erp_sync_error: faker.helpers.arrayElement([
     faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -16811,6 +16881,16 @@ export const getUpdateEmployeeResponseMock = (
   access: { crm: faker.datatype.boolean(), erp: faker.datatype.boolean() },
   status: faker.helpers.arrayElement(Object.values(EmployeeStatus)),
   telegram_linked: faker.datatype.boolean(),
+  telegram: faker.helpers.arrayElement(["linked", "not_linked", "blocked"] as const),
+  deputy: faker.helpers.arrayElement([
+    {
+      user_id: faker.helpers.fromRegExp("^[1-9][0-9]*$"),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      date_from: faker.date.past().toISOString().slice(0, 10),
+      date_to: faker.date.past().toISOString().slice(0, 10),
+    },
+    undefined,
+  ]),
   erp_sync: faker.helpers.arrayElement(Object.values(ErpSyncState)),
   erp_sync_error: faker.helpers.arrayElement([
     faker.string.alpha({ length: { min: 10, max: 20 } }),
