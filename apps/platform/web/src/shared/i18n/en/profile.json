@@ -41,7 +41,7 @@
     "rolesHint": "Roles decide which sections you can open.",
     "phone": "Phone",
     "phoneHint": "For example, +998 90 123-45-67",
-    "phoneInvalid": "Check the number: 7 to 15 digits, may start with “+”.",
+    "phoneInvalid": "Check the number, for example +998 90 123-45-67.",
     "language": "Language",
     "timezone": "Time zone",
     "timezoneHint": "Cover dates and times in letters are counted in it.",
@@ -52,7 +52,7 @@
     "cancel": "Cancel",
     "saved": "Profile saved",
     "errors": {
-      "phone_invalid": "Check the number: 7 to 15 digits, may start with “+”.",
+      "phone_invalid": "Check the number, for example +998 90 123-45-67.",
       "timezone_unknown": "There is no such time zone. Choose one from the list.",
       "signature_invalid": "The signature must be at most 1000 characters.",
       "BACKEND_UNAVAILABLE": "The server is not responding. Try again later.",

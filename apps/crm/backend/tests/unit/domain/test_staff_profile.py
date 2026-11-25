@@ -15,6 +15,7 @@ from app.domain.staff_profile import (
     checked_timezone,
     local_today,
     normalize_phone,
+    normalize_staff_phone,
     sniff_image,
 )
 
@@ -41,6 +42,31 @@ def test_normalize_phone(raw: str, expected: str | None) -> None:
 def test_phone_invalid(raw: str) -> None:
     with pytest.raises(ProfileValueError) as exc:
         normalize_phone(raw)
+    assert exc.value.reason == "phone_invalid"
+
+
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [
+        ("+998 90 123-45-67", "+998901234567"),
+        ("90 123 45 67", "+998901234567"),  # local Uzbek format gets the country code
+        ("998901234567", "+998901234567"),
+        ("00998901234567", "+998901234567"),
+        ("+7 495 123-45-67", "+74951234567"),  # foreign numbers keep their own code
+        ("  ", None),
+        ("", None),
+    ],
+)
+def test_normalize_staff_phone(raw: str, expected: str | None) -> None:
+    assert normalize_staff_phone(raw) == expected
+
+
+@pytest.mark.parametrize(
+    "raw", ["abc", "12", "+998 90 123", "8 90 123 45 67", "+" + "1" * 16, "1234567"]
+)
+def test_staff_phone_rejects_what_the_single_normaliser_rejects(raw: str) -> None:
+    with pytest.raises(ProfileValueError) as exc:
+        normalize_staff_phone(raw)
     assert exc.value.reason == "phone_invalid"
 
 
@@ -162,3 +188,18 @@ def test_timezone_list_is_read_once() -> None:
 
     assert checked_timezone("Asia/Tashkent") == "Asia/Tashkent"
     assert module._known_zones() is module._known_zones()
+
+
+def test_profile_save_path_stores_e164() -> None:
+    """The service `validate` (used by /me save) goes through the E.164 normaliser."""
+    from app.services.staff_profile import StaffProfileService
+
+    phone, _, _ = StaffProfileService.validate(phone="90 123 45 67")
+    assert phone == "+998901234567"
+
+
+def test_staff_phones_check_classifies() -> None:
+    from app.cli.staff_phones_check import classify
+
+    rows = [(1, "+998901234567"), (2, "90 123 45 67"), (3, "abc"), (4, None), (5, "1234567")]
+    assert classify(rows) == (1, 1, [3, 5])
