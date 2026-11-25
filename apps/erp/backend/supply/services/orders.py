@@ -114,6 +114,23 @@ def unconfirmed_lines(lines) -> list:
     ]
 
 
+def refresh_partner_names(lines) -> None:
+    """Перед тем как строки уйдут партнёру: строка без названия от сотрудника берёт ТЕКУЩИЕ название и артикул своей
+    подтверждённой карточки, а не сохранённую копию — копия могла быть словами клиента, пока карточка была черновиком
+    (она потом переименована и опубликована). Обновлённое значение записывается в строку. Неподтверждённые карточки сюда
+    не доходят: `unconfirmed_lines` отказывает раньше."""
+    for line in lines:
+        product = line.product if line.product_id else None
+        if product is None or line.name_by_staff or is_unconfirmed_card(product):
+            continue
+        name = product.name[:500]
+        # артикул в строке мог задать сотрудник (отдельного признака нет): подставляем наш, только если он пуст
+        article = line.article or (product.manufacturer_part_number or product.sku or "")[:120]
+        if (line.name, line.article) != (name, article):
+            line.name, line.article = name, article
+            type(line).objects.filter(pk=line.pk).update(name=name, article=article)
+
+
 def get_supplier(supplier_id: int):
     """Внешний поставщик (тип SUPPLIER, не своя компания, не в архиве) или 404/409."""
     from parties.models import Company
@@ -565,6 +582,7 @@ def send_order(user, order_id: int, *, to_email: str = "") -> SupplierOrder:
         raise StockError("LINES_REQUIRED", 409)
     if unconfirmed_lines(lines):
         raise StockError("PARTNER_NAME_REQUIRED", 409)
+    refresh_partner_names(lines)
     # СЦ-10: без цены и даты это запрос цены, а не заказ — партнёру не уходит.
     missing_prices, missing_date = send_gaps(order, lines)
     if missing_prices or missing_date:

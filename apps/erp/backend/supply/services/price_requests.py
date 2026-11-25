@@ -206,10 +206,11 @@ def create_from_order(
         raise StockError("NOTHING_TO_PRICE", 409)
     if len(chosen) > MAX_LINES:
         raise StockError("TOO_MANY_LINES", 400)
-    from supply.services.orders import unconfirmed_lines
+    from supply.services.orders import refresh_partner_names, unconfirmed_lines
 
     if unconfirmed_lines(chosen):
         raise StockError("PARTNER_NAME_REQUIRED", 409)  # название строки — слова клиента, карточку не подтвердили
+    refresh_partner_names(chosen)  # карточку могли переименовать и опубликовать после создания строки
     recipient = (to_email or "").strip() or supplier_email(order.supplier)
     if not recipient:
         raise StockError("SUPPLIER_EMAIL_REQUIRED", 409)

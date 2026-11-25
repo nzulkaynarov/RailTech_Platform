@@ -415,3 +415,45 @@ def test_a_name_written_by_staff_confirms_the_order_line(world):
     assert sent.status_code == 200, sent.json()
     body = "\n".join(m.body for m in mail.outbox)
     assert "Перевод стрелочный Р65" in body and "Чиланзар" not in body and "МетроСтрой" not in body
+
+
+def _rename_and_publish(product, name="Перевод стрелочный Р65"):
+    from catalog.models import ProductStatus
+
+    published, _ = ProductStatus.objects.get_or_create(code="PUBLISHED", defaults={"name": "Опубликован"})
+    type(product).objects.filter(pk=product.pk).update(status=published, name=name, manufacturer_part_number="")
+
+
+def test_order_line_made_from_client_words_takes_the_published_card_name_at_send(world):
+    """D: строка создана, пока карточка была черновиком из слов клиента; потом карточку переименовали и опубликовали."""
+    from inventory.tests.support import complete_order
+    from supply.models import SupplierOrderLine
+
+    deal, _q, _items = make_deal(world, [(world["rail"], 2)])
+    _auto_card(world["rail"], deal)
+    draft = _draft(world, [{"product_id": world["rail"].pk, "quantity": 2}])
+    assert SupplierOrderLine.objects.get(order_id=draft["id"]).name == CLIENT_WORDS  # копия — слова клиента
+    _rename_and_publish(world["rail"])
+    complete_order(draft["id"])
+    sent = api(world["supply"]).post(f"{STOCK}orders/{draft['id']}/send/", {}, format="json")
+    assert sent.status_code == 200, sent.json()
+    text = "\n".join([m.subject + m.body + "".join(h for h, _ in m.alternatives) for m in mail.outbox])
+    assert "Перевод стрелочный Р65" in text
+    for secret in ("Чиланзар", "МетроСтрой", "МС-КОД-77"):
+        assert secret not in text
+    line = SupplierOrderLine.objects.get(order_id=draft["id"])
+    assert line.name == "Перевод стрелочный Р65"  # обновлённое название записано в строку
+
+
+def test_price_request_from_an_order_takes_the_published_card_name(world):
+    """E: то же для «Запросить цену» из черновика заказа."""
+    deal, _q, _items = make_deal(world, [(world["rail"], 2)])
+    _auto_card(world["rail"], deal)
+    draft = _draft(world, [{"product_id": world["rail"].pk, "quantity": 2}])
+    _rename_and_publish(world["rail"])
+    response = api(world["supply"]).post(f"{STOCK}orders/{draft['id']}/price-request/", {}, format="json")
+    assert response.status_code == 201, response.json()
+    assert [line["name"] for line in response.json()["lines"]] == ["Перевод стрелочный Р65"]
+    seen = _everything_partner_sees(response.json()["id"])
+    for secret in ("Чиланзар", "МетроСтрой", "МС-КОД-77"):
+        assert secret not in seen
