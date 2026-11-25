@@ -7,8 +7,9 @@
 import uuid
 from dataclasses import dataclass
 from datetime import date
+from typing import Any
 
-from sqlalchemy import ColumnElement, SQLColumnExpression, and_, any_, exists, func, literal, not_, or_, select, true
+from sqlalchemy import ColumnElement, SQLColumnExpression, and_, any_, exists, literal, not_, or_, select, true
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 
@@ -166,27 +167,45 @@ def participates_in(employee: Employee) -> ColumnElement[bool]:
     return or_(step_is_mine(employee), ApprovalStep.decided_by == employee.crm_user_id)
 
 
-def holds_letter_authority(crm_user_id: SQLColumnExpression[int] | int) -> ColumnElement[bool]:
-    """У сотрудника есть не отозванное и не истёкшее полномочие подписи «исходящее письмо» (реестр «Права подписи»)."""
-    return exists(
-        select(1).where(
-            SigningAuthority.crm_user_id == crm_user_id,
-            SigningAuthority.revoked_at.is_(None),
-            or_(SigningAuthority.valid_to.is_(None), SigningAuthority.valid_to >= func.current_date()),
-            literal("letter_out") == any_(SigningAuthority.kinds),
+def holds_letter_authority(
+    crm_user_id: SQLColumnExpression[int] | int,
+    on_date: date | None = None,
+    *,
+    amount: SQLColumnExpression[Any] | None = None,
+    currency: SQLColumnExpression[Any] | None = None,
+) -> ColumnElement[bool]:
+    """Действующее на `on_date` (день компании, не БД) полномочие подписи «исходящее письмо» — то же условие, что у
+    `signing_resolve._problem`: не отозвано, началось, не кончилось, сумма документа не выше лимита в той же валюте
+    (документ без суммы лимит не проверяет). `amount`/`currency` — колонки документа; без них лимит не учитывается."""
+    day = on_date or deputy_today()
+    conditions: list[ColumnElement[bool]] = [
+        SigningAuthority.crm_user_id == crm_user_id,
+        SigningAuthority.revoked_at.is_(None),
+        SigningAuthority.valid_from <= day,
+        or_(SigningAuthority.valid_to.is_(None), SigningAuthority.valid_to >= day),
+        literal("letter_out") == any_(SigningAuthority.kinds),
+    ]
+    if amount is not None and currency is not None:
+        conditions.append(
+            or_(
+                SigningAuthority.limit_amount.is_(None),
+                amount.is_(None),
+                and_(SigningAuthority.limit_currency == currency, amount <= SigningAuthority.limit_amount),
+            )
         )
-    )
+    return exists(select(1).where(*conditions))
 
 
-def signer_handed_draft(employee: Employee) -> ColumnElement[bool]:
-    """Письмо, переданное на подпись, видит и тот, кому его поручают: выбранный подписант и держатель полномочия на
-    «исходящее письмо» — даже без `letters.register` и `letters.read` (иначе реестр подписи не работает: письмо к
-    нему не приходит, а «Подписать некому»). Чужие черновики, не переданные на подпись, по-прежнему закрыты."""
+def signer_handed_draft(employee: Employee, on_date: date | None = None) -> ColumnElement[bool]:
+    """Письмо, переданное на подпись, видит тот, кому его поручают: действующий для ЭТОГО документа держатель
+    полномочия на «исходящее письмо» (включая выбранного подписанта, пока он им остаётся) — даже без `letters.register`
+    и `letters.read`. Круг тот же, что у подбора подписанта (`signing_resolve`): отозванное, не начавшееся, истёкшее
+    полномочие и сумма выше лимита доступа не дают. Чужие черновики и не переданные на подпись закрыты."""
     return and_(
         Document.kind == "letter_out",
         Document.registration_requested_at.is_not(None),
         Document.status.in_(("draft", "returned")),
-        or_(Document.chosen_signer_crm_user_id == employee.crm_user_id, holds_letter_authority(employee.crm_user_id)),
+        holds_letter_authority(employee.crm_user_id, on_date, amount=Document.amount, currency=Document.currency),
     )
 
 

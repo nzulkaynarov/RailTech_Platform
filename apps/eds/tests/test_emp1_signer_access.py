@@ -5,16 +5,18 @@
 не открывают.
 """
 
+from datetime import UTC, datetime
 from typing import Any
 
 import httpx
 import pytest
 
 from app.container import Container
+from tests.conftest import FakeClock
 from tests.domain import Person
 from tests.test_document_notices import authorise, hand_over, notices
 from tests.test_files import upload
-from tests.test_letterhead_letters import PAIR, deliver_letterhead, letter_json
+from tests.test_letterhead_letters import PAIR, StubRenderer, deliver_letterhead, letter_json, run
 from tests.test_reply_path import tasks_of
 from tests.test_sc9_signing import card
 
@@ -122,3 +124,79 @@ async def test_attachments_of_the_handed_draft_open_for_the_signer_only(
     assert (await client.get(url, headers=staff["accountant"].headers)).status_code == 200
     for name in ("supplier", "engineer", "lawyer"):
         assert (await client.get(url, headers=staff[name].headers)).status_code == 404, name
+
+
+async def handed(client: httpx.AsyncClient, staff: dict[str, Person], **changes: Any) -> dict[str, Any]:
+    created = await client.post("/api/v1/documents", json=letter_json(**changes), headers=staff["manager"].headers)
+    assert created.status_code == 201, created.text
+    doc: dict[str, Any] = created.json()
+    done = await client.post(f"/api/v1/documents/{doc['id']}/registration-request", headers=staff["manager"].headers)
+    assert done.status_code == 200, done.text
+    return doc
+
+
+async def test_revoked_after_the_choice_the_signer_loses_the_draft(
+    client: httpx.AsyncClient, staff: dict[str, Person]
+) -> None:
+    await authorise(client, staff, crm_user_id=ACCOUNTANT)
+    body = letter_json()
+    body["letter"]["signer_crm_user_id"] = ACCOUNTANT
+    created = await client.post("/api/v1/documents", json=body, headers=staff["manager"].headers)
+    doc = created.json()
+    await client.post(f"/api/v1/documents/{doc['id']}/registration-request", headers=staff["manager"].headers)
+    assert (await get(client, staff["accountant"], doc["id"])).status_code == 200
+    authorities = (await client.get("/api/v1/signing/authorities", headers=staff["admin"].headers)).json()["items"]
+    mine = next(a for a in authorities if a["holder"]["crm_user_id"] == ACCOUNTANT)
+    revoked = await client.post(
+        f"/api/v1/signing/authorities/{mine['id']}/revoke", json={"reason": "уволен"}, headers=staff["admin"].headers
+    )
+    assert revoked.status_code == 200, revoked.text
+    assert (await get(client, staff["accountant"], doc["id"])).status_code == 404  # выбранный, но уже не держатель
+
+
+async def test_authority_not_started_yet_gives_no_access(client: httpx.AsyncClient, staff: dict[str, Person]) -> None:
+    await authorise(client, staff, crm_user_id=ACCOUNTANT, valid_from="2026-10-27")  # завтра по часам теста
+    doc = await handed(client, staff)
+    assert (await get(client, staff["accountant"], doc["id"])).status_code == 404
+
+
+async def test_amount_over_the_limit_gives_no_access_and_within_it_does(
+    client: httpx.AsyncClient, staff: dict[str, Person]
+) -> None:
+    await authorise(client, staff, crm_user_id=ACCOUNTANT, limit_amount="1000000.00", limit_currency="UZS")
+    over = await handed(client, staff, amount={"amount": "1500000.00", "currency": "UZS"})
+    within = await handed(client, staff, amount={"amount": "900000.00", "currency": "UZS"})
+    other_currency = await handed(client, staff, amount={"amount": "10.00", "currency": "USD"})
+    assert (await get(client, staff["accountant"], over["id"])).status_code == 404
+    assert (await get(client, staff["accountant"], within["id"])).status_code == 200
+    assert (await get(client, staff["accountant"], other_currency["id"])).status_code == 404
+
+
+async def test_valid_to_boundary_is_counted_in_company_time(
+    client: httpx.AsyncClient, staff: dict[str, Person], clock: FakeClock
+) -> None:
+    await authorise(client, staff, crm_user_id=ACCOUNTANT, valid_to="2026-10-26")
+    doc = await handed(client, staff)
+    clock.set(datetime(2026, 10, 26, 18, 0, tzinfo=UTC))  # 23:00 в Ташкенте: последний день ещё идёт
+    assert (await get(client, staff["accountant"], doc["id"])).status_code == 200
+    clock.set(datetime(2026, 10, 26, 19, 30, tzinfo=UTC))  # 00:30 следующего дня в Ташкенте
+    assert (await get(client, staff["accountant"], doc["id"])).status_code == 404
+
+
+async def test_valid_signer_opens_the_draft_pdf_and_others_do_not(
+    client: httpx.AsyncClient,
+    container: Container,
+    staff: dict[str, Person],
+    deferred: list[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("RT_BUS_SECRET_EDS_CRM", PAIR)
+    await deliver_letterhead(client, container)
+    await authorise(client, staff, crm_user_id=ACCOUNTANT)
+    doc = await handed(client, staff)
+    built = await client.post(f"/api/v1/documents/{doc['id']}/pdf", headers=staff["manager"].headers)
+    assert built.status_code == 202, built.text
+    assert await run(container, StubRenderer(), deferred[0]) == "ready"
+    url = f"/api/v1/documents/{doc['id']}/pdf/file"
+    assert (await client.get(url, headers=staff["accountant"].headers)).status_code == 200
+    assert (await client.get(url, headers=staff["supplier"].headers)).status_code in (403, 404)

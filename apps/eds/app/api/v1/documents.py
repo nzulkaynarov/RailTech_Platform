@@ -162,7 +162,7 @@ async def _render_of(session: AsyncSession, employee: Employee, document_id: uui
     # PDF без знака «ПРОЕКТ», построенный до SIGN-1, не выдаётся: для экрана «не запрашивался» — он запросит заново.
     if render is None or renders.is_unmarked_draft(render):
         raise not_found("PDF письма не запрашивался.")
-    if not render.final and not documents.may_open_pdf(employee, document):
+    if not render.final and not await documents.may_open_pdf(session, employee, document):
         raise not_found("Документ не найден.")  # проект — только автору и делопроизводителю переданного (SIGN-1)
     return render
 

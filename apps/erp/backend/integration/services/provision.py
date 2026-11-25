@@ -33,11 +33,11 @@ def sync_role_name(email: str) -> str:
 
 
 def is_seller(role: str | None, permissions) -> bool:
-    """Продаёт ли сотрудник: у него есть право вести сделки (`deal.manage` — его дают `crm.clients: full` и
-    `erp.calc: full`, platform-rbac.yaml). Суперпользователь (`role == "admin"`, системная «Администратор») не
-    продавец: уведомления продавца по сделкам ему не нужны (СОТР-1). Один источник и для провижининга, и для
-    миграции данных."""
-    return role != "admin" and "deal.manage" in (permissions or [])
+    """Продаёт ли сотрудник: право `quote.send` — отправить КП клиенту; его даёт только `crm.clients: full`
+    (platform-rbac.yaml), а `quote.build` есть и у снабженца, и у инженера (`erp.calc.goods/services`). Суперпользователь
+    (`role == "admin"`, системная «Администратор») не продавец: уведомления продавца по сделкам ему не нужны (СОТР-1).
+    Один источник и для провижининга, и для миграции данных."""
+    return role != "admin" and "quote.send" in (permissions or [])
 
 
 def split_full_name(name: str) -> Tuple[str, str]:

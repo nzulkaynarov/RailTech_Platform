@@ -490,7 +490,7 @@ async def sign_check(session: AsyncSession, employee: Employee, document: Docume
     result = await signing_resolve.resolve(
         session, kind=document.kind, amount=document.amount, currency=document.currency, on_date=today
     )
-    openers = await signing_resolve.draft_openers(session, {c.signer.crm_user_id for c in result.candidates})
+    openers = await signing_resolve.draft_openers(session, {c.signer.crm_user_id for c in result.candidates}, today)
     may_sign_own = await docflow_settings.author_may_sign_own_letter(session)
     signer = signing_resolve.pick_letter_signer(
         result, document.author_crm_user_id, openers, document.chosen_signer_crm_user_id, author_may_sign=may_sign_own
@@ -625,20 +625,35 @@ async def get_for_pdf(session: AsyncSession, *, employee: Employee, document_id:
         raise not_found("Документ не найден.")
     if document.kind != DocumentKind.LETTER_OUT.value:
         raise conflict("no_body", "PDF на бланке строится только для письма.")
-    if not may_open_pdf(employee, document):
+    if not await may_open_pdf(session, employee, document):
         raise forbidden_reason("not_author", "PDF письма строит его автор или делопроизводитель.")
     return document
 
 
-def may_open_pdf(employee: Employee, document: Document) -> bool:
+async def may_open_pdf(session: AsyncSession, employee: Employee, document: Document) -> bool:
     """Кто строит и скачивает PDF проекта (SIGN-1, ADR-0024 п. 4): автор письма; держатель `letters.register` —
-    переданный ему черновик и зарегистрированное письмо. Маршрута у письма нет; появится — его участники добавляются
-    сюда же. Итоговый PDF открывается по видимости документа."""
+    переданный ему черновик и зарегистрированное письмо; действующий подписант переданного черновика — он видит на
+    бланке то, что подписывает (СОТР-1). Итоговый PDF открывается по видимости документа."""
     mine = document.author_crm_user_id == employee.crm_user_id
     registrar = access.has(employee, P.LETTERS_REGISTER) and (
         document.status == DocumentStatus.SENT.value or document.registration_requested_at is not None
     )
-    return mine or registrar
+    if mine or registrar:
+        return True
+    if document.registration_requested_at is None or document.status not in (
+        DocumentStatus.DRAFT.value,
+        DocumentStatus.RETURNED.value,
+    ):
+        return False
+    check = await signing_resolve.check_signer(
+        session,
+        employee.crm_user_id,
+        kind=document.kind,
+        amount=document.amount,
+        currency=document.currency,
+        on_date=clock.company_date(clock.now()),
+    )
+    return check.allowed
 
 
 def _storage(storage: ObjectStorage | None) -> ObjectStorage:

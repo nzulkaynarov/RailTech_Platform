@@ -679,3 +679,24 @@ async def test_new_web_lead_does_not_reach_an_admin_by_the_legacy_base_role(
 
     assert delivered == 1
     assert [chat for chat, _ in bot.sent] == [8202]
+
+
+async def test_new_web_lead_for_legacy_users_without_platform_roles_goes_to_the_manager_only(
+    client: TestClient,
+    sessions: async_sessionmaker[AsyncSession],
+    live_settings: Settings,
+) -> None:
+    """Старые записи без ролей Платформы: признак `manager`; viewer и admin лидов не получают."""
+    lead_id = post_web(client, live_settings)
+    manager, _ = await make_user(sessions, "legacy-m@railtech.uz", ["manager"])
+    viewer, _ = await make_user(sessions, "legacy-v@railtech.uz", ["viewer"])
+    admin, _ = await make_user(sessions, "legacy-a@railtech.uz", ["admin"])
+    async with sessions() as session, session.begin():
+        for user, tg in ((manager, 8301), (viewer, 8302), (admin, 8303)):
+            await session.execute(update(User).where(User.id == user.id).values(tg_user_id=tg))
+
+    bot = FakeSender()
+    delivered = await StaffNotifier(sessions, bot).web_lead(lead_id, OLD_CRM, 15)
+
+    assert delivered == 1
+    assert [chat for chat, _ in bot.sent] == [8301]

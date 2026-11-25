@@ -17,7 +17,13 @@ from crm.services.deal_notifications import seller_team_user_ids
 pytestmark = pytest.mark.django_db
 
 SERVICE_TOKEN = "test-crm-to-erp-token"
-SELLER = ["deal.manage", "quote.build", "quote.edit_pricing", "quote.send"]
+# Права из каталога Платформы (platform-rbac.yaml) для шаблонов: «Менеджер» (`crm.clients` + `erp.calc`),
+# «Снабженец» (`erp.calc.goods`), «Инженер» (`erp.calc.services`), «Бухгалтер» (`eds.payments`-финансы).
+SELLER = ["deal.manage", "quote.send", "quote.build", "quote.edit_pricing"]
+CALC_ONLY = ["deal.manage", "quote.build", "quote.edit_pricing"]  # `erp.calc: full` без `crm.clients`
+SUPPLY = ["quote.build", "quote.visa_goods"]
+ENGINEER = ["quote.build", "quote.visa_services"]
+ACCOUNTANT = ["finance.view", "finance.invoice", "finance.payment"]
 migration = importlib.import_module("integration.migrations.0015_can_sell_from_permissions")
 
 
@@ -68,17 +74,21 @@ def member_of(user, company):
 
 def test_only_holders_of_deal_rights_are_sellers_at_provisioning(crm, company):
     manager = provision(crm, 11, "manager@own.test", permissions=SELLER)
-    accountant = provision(crm, 12, "accountant@own.test", permissions=["finance.view", "finance.invoice"])
-    supplier = provision(crm, 13, "supply@own.test", permissions=["quote.build", "quote.visa_goods"])
+    accountant = provision(crm, 12, "accountant@own.test", permissions=ACCOUNTANT)
+    supplier = provision(crm, 13, "supply@own.test", permissions=SUPPLY)
+    engineer = provision(crm, 15, "engineer@own.test", permissions=ENGINEER)
+    calc = provision(crm, 16, "calc@own.test", permissions=CALC_ONLY)
     boss = provision(crm, 14, "boss@own.test", role="admin", permissions=SELLER)
 
     assert member_of(manager, company).can_sell is True
     assert member_of(accountant, company).can_sell is False
     assert member_of(supplier, company).can_sell is False
+    assert member_of(engineer, company).can_sell is False
+    assert member_of(calc, company).can_sell is False, "расчёт без права отправлять КП клиенту — не продавец"
     assert member_of(boss, company).can_sell is False, "администратор (суперпользователь) — не продавец"
     recipients = set(seller_team_user_ids(deal=None))
     assert manager.pk in recipients
-    assert not {accountant.pk, supplier.pk, boss.pk} & recipients
+    assert not {accountant.pk, supplier.pk, engineer.pk, calc.pk, boss.pk} & recipients
 
 
 def test_reprovisioning_with_the_same_rights_keeps_the_owners_manual_choice(crm, company):
@@ -110,3 +120,10 @@ def test_data_migration_fixes_existing_members_and_reverses(crm, company):
 
     migration.backwards(django_apps, None)
     assert [member_of(u, company).can_sell for u in (manager, accountant, boss)] == [True, True, True]
+
+
+def test_permissions_used_here_exist_in_the_erp_catalog():
+    from accounts.constants import Permission
+
+    known = {p.value for p in Permission}
+    assert {*SELLER, *CALC_ONLY, *SUPPLY, *ENGINEER, *ACCOUNTANT} <= known
