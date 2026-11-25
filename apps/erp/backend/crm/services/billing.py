@@ -3,7 +3,7 @@ from typing import Optional, Tuple
 from django.db import IntegrityError, transaction
 
 from accounts.models import CustomUser
-from core.currency import BASE_CURRENCY, line_amount
+from core.currency import BASE_CURRENCY
 from crm.services.pdf_storage import save_rendered_pdf
 
 from ..constants import DEFAULT_INVOICE_DUE_DAYS, ActStatusCode, ContractStatusCode, InvoiceStatusCode
@@ -98,7 +98,10 @@ def generate_invoice_from_contract(
     from catalog.candidates import link_quote_lines
 
     link_quote_lines(quote)
-    billable_items = list(quote.items.billable().select_related("product"))
+    from .documents.projection import client_billable_lines
+
+    # Charges are spread into line prices (same as the КП): the buyer must not decompose the seller's charge structure.
+    billable_items = client_billable_lines(quote)
     # Wave C: an invoice is BORN as a DRAFT (ERP canon — Odoo draft→posted). It carries no
     # issue date and no PDF yet; the seller reviews it (due_date / notes editable while DRAFT)
     # and then explicitly `issue_invoice` → ISSUED (renders the PDF, notifies the buyer).
@@ -109,7 +112,7 @@ def generate_invoice_from_contract(
         status=_istatus(InvoiceStatusCode.DRAFT),
         issued_at=None,
         due_date=(timezone.now() + timedelta(days=due_days)).date(),
-        subtotal_excl_vat=quote.subtotal_excl_vat,
+        subtotal_excl_vat=quote.total_excl_vat,  # lines + charges: Σ lines = base
         vat_amount=quote.vat_amount,
         total_incl_vat=quote.total_incl_vat,
         # B1: the amounts above are copied verbatim from the quote header, which the calculation
@@ -131,8 +134,8 @@ def generate_invoice_from_contract(
             unit=qi.unit,
             unit_code=qi.unit_code,
             unit_price_excl_vat=qi.final_price_excl_vat,
-            line_total_excl_vat=line_amount(qi.final_price_excl_vat, qi.quantity),
-            source_quote_item=qi,
+            line_total_excl_vat=qi.line_total,
+            source_quote_item=qi._item,
         )
 
     # No PDF at DRAFT — the render happens on `issue_invoice` (a draft has no legal PDF yet).

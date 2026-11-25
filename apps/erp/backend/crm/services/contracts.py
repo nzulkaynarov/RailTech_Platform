@@ -293,7 +293,9 @@ def _render_contract_pdf(contract) -> None:
     )
     # A signed contract's specification (Приложение № 1) is the LEGALLY agreed goods: only
     # billable lines — see the comment on the code path below. Shared by both render paths.
-    items = contract.quote.items.billable().select_related("product", "frozen_currency")
+    from .documents.projection import client_billable_lines
+
+    items = client_billable_lines(contract.quote)
 
     # E1b: шаблон компании (или платформенный образец) — тем же механизмом, что акт. Компания
     # правит статьи договора, структурные блоки собирает сервер. Шаблона нет → путь из кода.

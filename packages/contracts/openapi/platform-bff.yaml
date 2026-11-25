@@ -1,12 +1,16 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — BFF API (Платформа → CRM и ERP)
-  version: 0.124.0
+  version: 0.125.0
   summary: Пространство `/api/v1/` BFF Платформы — вызывает SPA `apps/platform/web` от имени сотрудника.
   description: |
     Контракт по ADR-0011 и `docs/architecture/platform-bff.md`. Версия 0.1.0 (INF-P0-1) покрывает фазу P1:
     сессия, профиль, счётчики меню, «Моя очередь», лента «Сегодня», уведомления, поиск. Экраны фаз P2–P4 добавляются
     в этот файл до кода (`docs/architecture/integration-map.md` §1).
+
+    **0.125.0 (ЛП-1) — ломающее по oasdiff (до 1.0 допустимо): новое значение `PartnerApplicationSource.lead`** (заявка
+    партнёра заведена из карточки лида; очередь «Заявки партнёров» показывает источник «Лид»). Остальное в ЛП-1 аддитивно:
+    `POST /crm/leads/{lead}/partner`, `LeadCard.partner_application`.
 
     **0.122.0 (СЦ-9, подпись — задача подписанта; замещение) — ломающее по oasdiff (до 1.0 допустимо): новое значение
     `QueueItemKind.sign_document`.** Строка «Подписать» в «Моих задачах»: исходящее письмо, переданное на подпись (подписанта
@@ -14668,6 +14672,57 @@ paths:
         '503':
           $ref: '#/components/responses/BackendUnavailable'
 
+  /crm/leads/{lead}/partner:
+    post:
+      tags: [requests]
+      operationId: handOverCrmLeadAsPartner
+      summary: '«Кто это?» → «Партнёр»: заявка кандидата в партнёры из карточки лида (ЛП-1)'
+      description: >-
+        CRM `POST /leads/{id}/actions/hand_over_partner`. Раздел `crm.clients` полный. Вместо «Создать заявку» (лид — клиент):
+        CRM заводит заявку кандидата в ERP (очередь «Заявки партнёров», источник «лид», ссылка — номер лида) и закрывает лид
+        исходом «передан как партнёр» — в клиенты он не попадает, `LeadCard.partner_application` несёт номер заявки.
+        Идемпотентно по лиду: повтор (двойной клик, вторая вкладка, параллельно) — 200 `created: false` с первой заявкой,
+        второй не заводится; новая — 201. ERP недоступна — 503, лид не тронут, действие можно повторить. Отказы CRM —
+        `details.reason`: `request_not_allowed` (лид уже закрыт), `erp_not_configured`, `not_lead_owner`.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - name: lead
+          in: path
+          required: true
+          description: Номер лида
+          schema: {type: string, pattern: '^[Ll]-?\d{1,9}$'}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PartnerHandoffIn'
+      responses:
+        '200':
+          description: Лид уже передан как партнёр — та же заявка
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnerHandoffView'
+        '201':
+          description: Заявка кандидата заведена в ERP, лид закрыт исходом «передан как партнёр»
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnerHandoffView'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/RequestConflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
   /crm/requests/{deal}/retry:
     post:
       tags: [requests]
@@ -19218,6 +19273,7 @@ components:
     TelegramConnector:
       description: 'Telegram-бот и канал команды. Значение токена не попадает сюда никогда — только `configured` и `last4`.'
       properties:
+        channel_can_invite: {description: 'Бот может приглашать в канал команды (право «приглашать пользователей»); `false` — нужно право, `null` — неизвестно.', type: [boolean, 'null']}
         channel_id: {type: [integer, 'null']}
         channel_title: {type: [string, 'null']}
         configured: {type: boolean}
@@ -20563,7 +20619,7 @@ components:
     Employee:
       type: object
       additionalProperties: false
-      required: [id, name, initials, email, roles, access, status, telegram_linked, erp_sync]
+      required: [id, name, initials, email, roles, access, status, telegram_linked, telegram, erp_sync]
       properties:
         id:
           type: string
@@ -20596,7 +20652,16 @@ components:
           $ref: '#/components/schemas/EmployeeStatus'
         telegram_linked:
           type: boolean
-          description: Привязан Telegram для уведомлений сотруднику
+          description: Привязан Telegram для уведомлений сотруднику (есть привязка; дойдут ли сообщения — `telegram`)
+        telegram:
+          type: string
+          enum: [linked, not_linked, blocked]
+          description: >-
+            `linked` — привязан и бот может писать; `not_linked` — не привязан; `blocked` — привязан, но сообщения не
+            доходят (CRM отметила отказ Telegram: «Старт» не нажат или бот заблокирован) — сотруднику нужно привязать заново
+        deputy:
+          $ref: '#/components/schemas/DeputyPeriod'
+          description: 'Замещение на период (СОТР-1): поставил сам сотрудник в профиле или администратор в карточке; нет — поля нет'
         erp_sync:
           $ref: '#/components/schemas/ErpSyncState'
         erp_sync_error:
@@ -20854,6 +20919,15 @@ components:
           description: >-
             Кому передать лиды в работе (`crm_user_id` коллеги), если отключение или новые роли отнимают у сотрудника работу
             с лидами; без поля при таких лидах — 409 `CONFLICT` (`details.reason = user_has_active_leads`)
+        deputy:
+          description: >-
+            Замещение за сотрудника (СОТР-1) (администратор, раздел `admin` на запись): тот же период и правила, что у
+            `setDeputy` (себя нельзя — 422 `deputy_is_self`, период не в прошлом и не длиннее года); явный `null` снимает
+            замещение. Попадает в журнал как `user.deputy_set` / `user.deputy_cleared` от имени администратора.
+            Только отдельным запросом: вместе с другими полями — 422.
+          oneOf:
+            - $ref: '#/components/schemas/DeputyUpdate'
+            - type: 'null'
 
     MeUpdate:
       type: object
@@ -21698,7 +21772,7 @@ components:
           type: string
         client_status:
           description: 'Статус для клиента — ключ packages/contracts/client-statuses.yaml (SPEC-v3 §2.5); слово собирает SPA по ключу'
-          enum: [contract_review, contract_signing, awaiting_payment, fulfilling, awaiting_acceptance, done]
+          enum: [contract_preparing, contract_review, contract_signing, awaiting_payment, fulfilling, awaiting_acceptance, done]
           type: string
         total:
           description: 'Сумма с НДС последнего КП, видимого клиенту; null — КП клиенту не отправлялось'
@@ -22097,7 +22171,7 @@ components:
           enum: [CONTRACT, PAYMENT, DONE]
           type: string
         client_status:
-          enum: [contract_review, contract_signing, awaiting_payment, fulfilling, awaiting_acceptance, done]
+          enum: [contract_preparing, contract_review, contract_signing, awaiting_payment, fulfilling, awaiting_acceptance, done]
           type: string
         total:
           oneOf:
@@ -22378,6 +22452,7 @@ components:
           description: 'Получатели копии (пункт 1.6); не решают'
         amount: {oneOf: [{$ref: '#/components/schemas/EdsMoney'}, {type: 'null'}]}
         due_date: {type: [string, 'null'], format: date}
+        invoice_later: {type: boolean, default: false, description: 'Служебка с суммой без счёта партнёра: автор отметил, что счёт придёт позже (Б-9)'}
         files:
           type: array
           items: {$ref: '#/components/schemas/EdsFile'}
@@ -22677,6 +22752,7 @@ components:
         text: {type: string, minLength: 1, maxLength: 20000}
         amount: {oneOf: [{$ref: '#/components/schemas/EdsMoney'}, {type: 'null'}], description: 'Сумма: служебная записка с суммой после директора идёт бухгалтеру'}
         due_date: {type: [string, 'null'], format: date, description: '«Нужно до» — не в прошлом'}
+        invoice_later: {type: boolean, default: false, description: 'Служебка с суммой без счёта партнёра: автор отметил, что счёт придёт позже (Б-9)'}
         file_ids:
           type: array
           maxItems: 50
@@ -22718,6 +22794,7 @@ components:
         text: {type: string, minLength: 1, maxLength: 20000}
         amount: {oneOf: [{$ref: '#/components/schemas/EdsMoney'}, {type: 'null'}]}
         due_date: {type: [string, 'null'], format: date}
+        invoice_later: {type: boolean, default: false, description: 'Служебка с суммой без счёта партнёра: автор отметил, что счёт придёт позже (Б-9)'}
         file_ids:
           type: array
           maxItems: 50
@@ -23378,6 +23455,7 @@ components:
         author: {$ref: '#/components/schemas/EdsPerson'}
         amount: {oneOf: [{$ref: '#/components/schemas/PaymentMoney'}, {type: 'null'}]}
         due_date: {type: [string, 'null'], format: date}
+        invoice_later: {type: boolean, default: false, description: 'Служебка с суммой без счёта партнёра: автор отметил, что счёт придёт позже (Б-9)'}
         deal: {oneOf: [{$ref: '#/components/schemas/EdsDealRef'}, {type: 'null'}]}
         files:
           type: array
@@ -26103,6 +26181,12 @@ components:
       required: [file_id]
       properties:
         file_id: {type: string, format: uuid}
+        received_at:
+          anyOf:
+          - {type: string, format: date}
+          - {type: 'null'}
+          description: Дата поступления письма — от неё считается срок «в течение N дней»
+        rules_only: {type: boolean, default: false, description: 'Только правила кода, без модели (пересчёт срока)'}
 
     LetterIntakeFields:
       type: object
@@ -26152,7 +26236,10 @@ components:
         fields: {$ref: '#/components/schemas/LetterIntakeFields'}
         alias: {type: string}
         prompt_version: {type: string}
-
+        by_code:
+          type: array
+          items: {type: string, enum: [sender_inn, document_due]}
+          description: Поля, которые посчитал код, а не модель (срок «в течение N дней», ИНН); экран метит их «Из текста письма»
     AiDecisionIn:
       type: object
       additionalProperties: false
@@ -29159,6 +29246,7 @@ components:
         edit: {type: boolean}
         send: {type: boolean, description: 'Черновик полный: у всех строк цена и есть ожидаемая дата (СЦ-10)'}
         request_price: {type: boolean, description: 'В черновике есть строки без цены — «Запросить цену» у партнёра (СЦ-10)'}
+        resend: {type: boolean, description: 'Заказ отправлен, но письмо партнёру не ушло: «Отправить ещё раз» — тот же POST …/send (Б-5); только в карточке заказа'}
         confirm: {type: boolean}
         receive: {type: boolean}
         cancel: {type: boolean}
@@ -30081,6 +30169,13 @@ components:
             - type: string
               pattern: '^L-\d{4,}$'
             - type: 'null'
+        partner_application:
+          description: >-
+            Лид передан как партнёр (ЛП-1): номер заявки кандидата в ERP («Заявки партнёров»); иначе `null`. Лид закрыт, в
+            списках его нет, карточка открывается по номеру.
+          oneOf:
+            - type: integer
+            - type: 'null'
 
     LeadOrigin:
       type: object
@@ -30217,7 +30312,7 @@ components:
 
     ClientSees:
       type: string
-      enum: [in_work, awaiting_decision, contract_review, contract_signing, awaiting_payment, checking_payment, fulfilling, awaiting_acceptance, done, rejected, quote_expired]
+      enum: [in_work, awaiting_decision, contract_preparing, contract_review, contract_signing, awaiting_payment, checking_payment, fulfilling, awaiting_acceptance, done, rejected, quote_expired]
       description: Ключ статуса для клиента (`packages/contracts/client-statuses.yaml`, SPEC-v3 §2.5); текст — у экрана
 
     ClientRequestRow:
@@ -30363,6 +30458,7 @@ components:
               properties:
                 name: {type: string, minLength: 1, maxLength: 255}
                 inn: {type: [string, 'null'], maxLength: 32}
+                country: {type: [string, 'null'], pattern: '^[A-Za-z]{2}$', description: 'Страна — вместе с названием ищет уже заведённую компанию (ЛП-1)'}
             - type: 'null'
         contact: {$ref: '#/components/schemas/RequestContactFormIn'}
         summary: {type: string, minLength: 1, maxLength: 5000}
@@ -30377,6 +30473,29 @@ components:
                 method: {type: string, enum: [phone, email, paper]}
                 comment: {type: [string, 'null'], maxLength: 500}
             - type: 'null'
+
+    PartnerHandoffIn:
+      type: object
+      additionalProperties: false
+      required: [company_name, offer, contact_name, email]
+      description: Почта обязательна — по ней ERP приглашает кандидата согласовать договор; формат проверяет CRM (`details.reason = invalid_email`, поле `email`)
+      properties:
+        company_name: {type: string, minLength: 1, maxLength: 255}
+        country: {type: string, pattern: '^[A-Za-z]{2}$', default: UZ, description: ISO 3166-1 alpha-2}
+        inn: {type: string, maxLength: 32, default: ''}
+        offer: {type: string, minLength: 1, maxLength: 4000, description: Что предлагает кандидат (из запроса лида)}
+        contact_name: {type: string, minLength: 1, maxLength: 255}
+        email: {type: string, minLength: 3, maxLength: 254}
+        phone: {type: string, maxLength: 32, default: ''}
+
+    PartnerHandoffView:
+      type: object
+      additionalProperties: false
+      required: [lead, application, created]
+      properties:
+        lead: {type: string, pattern: '^L-\d{4,}$'}
+        application: {type: integer, description: Заявка кандидата в ERP}
+        created: {type: boolean, description: '`false` — лид уже был передан как партнёр: возвращена первая заявка'}
 
     RequestCreatedView:
       type: object
@@ -31352,8 +31471,8 @@ components:
         can_act: {type: boolean, description: 'Контакт может подтверждать заказы («Может подтверждать» в Платформе и в Кабинете); не указано — право контакта не меняется'}
     PartnerApplicationSource:
       type: string
-      enum: [public, client_cabinet, letter]
-      description: Откуда заявка — внешний вход, кабинет клиента или входящее письмо (сотрудник, план 1.9)
+      enum: [public, client_cabinet, letter, lead]
+      description: Откуда заявка — внешний вход, кабинет клиента, входящее письмо (сотрудник, план 1.9) или лид CRM (ЛП-1)
     PartnerApplicationStatus:
       type: string
       enum: [submitted, contract_sent, candidate_agreed, approved, rejected]

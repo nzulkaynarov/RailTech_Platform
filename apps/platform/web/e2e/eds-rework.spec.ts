@@ -94,6 +94,8 @@ test.describe("Доработать возвращённый документ", 
     await shoot(page, "rework-continue");
 
     await page.getByLabel("Тема").fill("Оплата аренды склада за ноябрь (два счёта)");
+    await openStep(page, "Текст и вложения");
+    await page.getByRole("checkbox", { name: "Счёт партнёра придёт позже" }).check();
     await openStep(page, "Проверка и отправка");
     await page.getByRole("button", { name: "Отправить на согласование" }).click();
     const panel = page.locator("#pf-context-panel");

@@ -19,6 +19,7 @@ EXACT: Final[dict[str, str]] = {
     "lead wrote again": "lead_wrote_again",
     "won": "closed_won",
     "lost": "closed_lost",
+    "handed over as a partner": "handed_over_partner",
 }
 #: Причины с переменной частью (идентификатор, число дней, действие модели): по префиксу.
 PREFIXES: Final[tuple[tuple[str, str], ...]] = (

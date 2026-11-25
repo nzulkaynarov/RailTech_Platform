@@ -37,6 +37,8 @@ from app.errors import PlatformError, backend_unavailable
 from app.feeds.numbers import lead_number
 from app.schemas_crm_leads import (
     CallNoteView,
+    PartnerHandoffIn,
+    PartnerHandoffView,
     RequestCallNoteIn,
     RequestCreatedView,
     RequestFileFromMessageIn,
@@ -95,6 +97,39 @@ async def create_request(
         lead=lead_number(out.lead_id) if out.lead_id is not None else None,
         created=out.created and upstream.status_code == 201,
         transfer=out.erp_request_status,
+    )
+
+
+@router.post(
+    "/crm/leads/{lead}/partner",
+    response_model=PartnerHandoffView,
+    status_code=status.HTTP_201_CREATED,
+    responses={200: {"model": PartnerHandoffView}},
+    operation_id="handOverCrmLeadAsPartner",
+)
+async def hand_over_as_partner(
+    lead: Annotated[str, Path(pattern=r"^[Ll]-?\d{1,9}$")],
+    body: PartnerHandoffIn,
+    authed: Writer,
+    response: Response,
+) -> PartnerHandoffView:
+    """ЛП-1, «Кто это?» → «Партнёр»: CRM заводит заявку кандидата в ERP и закрывает лид исходом
+    «передан как партнёр». Повтор — 200 с первой заявкой."""
+    lead_id = _lead_id(lead)
+    upstream = await CrmProxy(authed.call).raw(
+        "POST", f"{API}/leads/{lead_id}/actions/hand_over_partner", json=body.model_dump()
+    )
+    if upstream.status_code not in (200, 201):
+        raise crm_error(upstream)
+    try:
+        out = crm.PartnerHandoffOut.model_validate(upstream.json())
+    except ValueError as exc:
+        raise backend_unavailable("crm", "bad_response") from exc
+    response.status_code = upstream.status_code
+    return PartnerHandoffView(
+        lead=lead_number(out.lead_id),
+        application=out.application_id,
+        created=out.created and upstream.status_code == 201,
     )
 
 

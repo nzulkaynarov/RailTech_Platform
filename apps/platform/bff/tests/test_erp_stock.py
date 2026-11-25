@@ -781,6 +781,28 @@ async def test_order_card_tells_the_real_mail_result(
     assert card.json()["mail"] is None
 
 
+async def test_resend_action_of_an_order_comes_from_erp(
+    web: Web, erp: respx.MockRouter, check: ContractChecker
+) -> None:
+    """Б-5: «Отправить ещё раз» — действие карточки от ERP; без него (старый ERP) выключено."""
+    await web.login(["SUPPLY"])
+    actions = {"edit": False, "send": False, "confirm": True, "receive": False, "cancel": True}
+    failed = order_detail(
+        status="sent",
+        mail={"state": "failed", "reason": "smtp_not_configured"},
+        actions={**actions, "resend": True},
+    )
+    erp.get(f"{STOCK}/orders/31/").mock(return_value=httpx.Response(200, json=failed))
+    card = await web.client.get(f"/api/v1/erp/stock/orders/{ORDER_ENCODED}")
+    check(card, "/erp/stock/orders/{order_number}", "get")
+    assert card.json()["actions"]["resend"] is True
+
+    old = order_detail(status="sent", actions=actions)
+    erp.get(f"{STOCK}/orders/31/").mock(return_value=httpx.Response(200, json=old))
+    card = await web.client.get(f"/api/v1/erp/stock/orders/{ORDER_ENCODED}")
+    assert card.json()["actions"]["resend"] is False
+
+
 async def test_unknown_order_number_is_404(web: Web, be: Backends) -> None:
     await web.login(["SUPPLY"])
     be.router.get(f"{STOCK}/orders/").mock(return_value=httpx.Response(200, json={"results": []}))

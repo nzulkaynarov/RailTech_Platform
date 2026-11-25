@@ -499,6 +499,12 @@ def _mail_state(order: SupplierOrder) -> Optional[dict]:
     return {"state": state, "reason": reason or None}
 
 
+def mail_failed(order: SupplierOrder) -> bool:
+    """Письмо партнёру отправленного заказа не ушло (Б-5): только тогда доступно «Отправить ещё раз»."""
+    state = _mail_state(order)
+    return state is not None and state["state"] == "failed"
+
+
 _NOTICE_MAIL_STATES = (NoticeEmailState.SENT, NoticeEmailState.PENDING, NoticeEmailState.FAILED)
 
 
@@ -576,7 +582,10 @@ def send_order(user, order_id: int, *, to_email: str = "") -> SupplierOrder:
 
     require_supply(user)
     order = _order_or_404(order_id, lock=True)
-    _transition(order, OrderStatus.SENT)
+    # Б-5: повтор письма — только у отправленного заказа, письмо которого не ушло; статус остаётся «Отправлен».
+    resend = order.status == OrderStatus.SENT and mail_failed(order)
+    if not resend:
+        _transition(order, OrderStatus.SENT)
     lines = list(order.lines.select_related("product__status"))
     if not lines:
         raise StockError("LINES_REQUIRED", 409)
@@ -889,6 +898,7 @@ def present_order(order: SupplierOrder, user, *, detail: bool = False) -> dict:
             "edit": manage and status == OrderStatus.DRAFT,
             "send": manage and status == OrderStatus.DRAFT and complete,
             "request_price": manage and status == OrderStatus.DRAFT and missing_prices > 0,
+            "resend": bool(detail and manage and status == OrderStatus.SENT and mail_failed(order)),
             "confirm": manage and status == OrderStatus.SENT and not partner_confirms_in_cabinet(order.supplier),
             "receive": manage and status == OrderStatus.CONFIRMED,
             "cancel": manage

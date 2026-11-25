@@ -313,6 +313,7 @@ import type {
   OnBehalfRecord,
   PartnerApplicationItem,
   PartnerApplicationListResponse,
+  PartnerHandoffView,
   PartnerRequestDecision,
   PaymentBoard,
   PaymentCard,
@@ -3217,6 +3218,7 @@ export const getCreateEdsDocumentResponseMock = (
   ]),
   amount: faker.helpers.arrayElement([{ ...getCreateEdsDocumentResponseEdsMoneyMock() }, null]),
   due_date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  invoice_later: faker.datatype.boolean(),
   files: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
     id: faker.string.uuid(),
     name: faker.string.alpha({ length: { min: 10, max: 255 } }),
@@ -3536,6 +3538,7 @@ export const getGetEdsDocumentResponseMock = (
   ]),
   amount: faker.helpers.arrayElement([{ ...getGetEdsDocumentResponseEdsMoneyMock() }, null]),
   due_date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  invoice_later: faker.datatype.boolean(),
   files: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
     id: faker.string.uuid(),
     name: faker.string.alpha({ length: { min: 10, max: 255 } }),
@@ -3849,6 +3852,7 @@ export const getUpdateEdsDocumentResponseMock = (
   ]),
   amount: faker.helpers.arrayElement([{ ...getUpdateEdsDocumentResponseEdsMoneyMock() }, null]),
   due_date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  invoice_later: faker.datatype.boolean(),
   files: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
     id: faker.string.uuid(),
     name: faker.string.alpha({ length: { min: 10, max: 255 } }),
@@ -4050,6 +4054,7 @@ export const getListEdsProjectsResponseMock = (
     ]),
     step: faker.helpers.arrayElement(["CONTRACT", "PAYMENT", "DONE"] as const),
     client_status: faker.helpers.arrayElement([
+      "contract_preparing",
       "contract_review",
       "contract_signing",
       "awaiting_payment",
@@ -4472,6 +4477,7 @@ export const getGetEdsProjectResponseMock = (
   ]),
   step: faker.helpers.arrayElement(["CONTRACT", "PAYMENT", "DONE"] as const),
   client_status: faker.helpers.arrayElement([
+    "contract_preparing",
     "contract_review",
     "contract_signing",
     "awaiting_payment",
@@ -4969,6 +4975,7 @@ export const getCreateEdsProjectContractResponseMock = (
   ]),
   step: faker.helpers.arrayElement(["CONTRACT", "PAYMENT", "DONE"] as const),
   client_status: faker.helpers.arrayElement([
+    "contract_preparing",
     "contract_review",
     "contract_signing",
     "awaiting_payment",
@@ -5493,6 +5500,7 @@ export const getActEdsProjectContractResponseMock = (
   ]),
   step: faker.helpers.arrayElement(["CONTRACT", "PAYMENT", "DONE"] as const),
   client_status: faker.helpers.arrayElement([
+    "contract_preparing",
     "contract_review",
     "contract_signing",
     "awaiting_payment",
@@ -6014,6 +6022,7 @@ export const getScanEdsProjectContractResponseMock = (
   ]),
   step: faker.helpers.arrayElement(["CONTRACT", "PAYMENT", "DONE"] as const),
   client_status: faker.helpers.arrayElement([
+    "contract_preparing",
     "contract_review",
     "contract_signing",
     "awaiting_payment",
@@ -6535,6 +6544,7 @@ export const getRequestEdsProjectSigningResponseMock = (
   ]),
   step: faker.helpers.arrayElement(["CONTRACT", "PAYMENT", "DONE"] as const),
   client_status: faker.helpers.arrayElement([
+    "contract_preparing",
     "contract_review",
     "contract_signing",
     "awaiting_payment",
@@ -7076,6 +7086,7 @@ export const getActEdsProjectActResponseMock = (
   ]),
   step: faker.helpers.arrayElement(["CONTRACT", "PAYMENT", "DONE"] as const),
   client_status: faker.helpers.arrayElement([
+    "contract_preparing",
     "contract_review",
     "contract_signing",
     "awaiting_payment",
@@ -7588,6 +7599,7 @@ export const getScanEdsProjectActResponseMock = (
   ]),
   step: faker.helpers.arrayElement(["CONTRACT", "PAYMENT", "DONE"] as const),
   client_status: faker.helpers.arrayElement([
+    "contract_preparing",
     "contract_review",
     "contract_signing",
     "awaiting_payment",
@@ -8100,6 +8112,7 @@ export const getMarkEdsProjectDeliveryResponseMock = (
   ]),
   step: faker.helpers.arrayElement(["CONTRACT", "PAYMENT", "DONE"] as const),
   client_status: faker.helpers.arrayElement([
+    "contract_preparing",
     "contract_review",
     "contract_signing",
     "awaiting_payment",
@@ -8682,6 +8695,7 @@ export const getRequestEdsDocumentRegistrationResponseMock = (
     null,
   ]),
   due_date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  invoice_later: faker.datatype.boolean(),
   files: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
     id: faker.string.uuid(),
     name: faker.string.alpha({ length: { min: 10, max: 255 } }),
@@ -9025,6 +9039,7 @@ export const getRemindEdsDocumentSignerResponseMock = (
     null,
   ]),
   due_date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  invoice_later: faker.datatype.boolean(),
   files: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
     id: faker.string.uuid(),
     name: faker.string.alpha({ length: { min: 10, max: 255 } }),
@@ -9368,6 +9383,7 @@ export const getWithdrawEdsDocumentFromSigningResponseMock = (
     null,
   ]),
   due_date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  invoice_later: faker.datatype.boolean(),
   files: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
     id: faker.string.uuid(),
     name: faker.string.alpha({ length: { min: 10, max: 255 } }),
@@ -9711,6 +9727,7 @@ export const getChangeEdsDocumentSignerResponseMock = (
     null,
   ]),
   due_date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  invoice_later: faker.datatype.boolean(),
   files: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
     id: faker.string.uuid(),
     name: faker.string.alpha({ length: { min: 10, max: 255 } }),
@@ -10051,6 +10068,7 @@ export const getWaiveEdsDocumentMailResponseMock = (
   ]),
   amount: faker.helpers.arrayElement([{ ...getWaiveEdsDocumentMailResponseEdsMoneyMock() }, null]),
   due_date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  invoice_later: faker.datatype.boolean(),
   files: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
     id: faker.string.uuid(),
     name: faker.string.alpha({ length: { min: 10, max: 255 } }),
@@ -10376,6 +10394,7 @@ export const getSendEdsDocumentResponseMock = (
   ]),
   amount: faker.helpers.arrayElement([{ ...getSendEdsDocumentResponseEdsMoneyMock() }, null]),
   due_date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  invoice_later: faker.datatype.boolean(),
   files: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
     id: faker.string.uuid(),
     name: faker.string.alpha({ length: { min: 10, max: 255 } }),
@@ -10695,6 +10714,7 @@ export const getSignEdsDocumentResponseMock = (
   ]),
   amount: faker.helpers.arrayElement([{ ...getSignEdsDocumentResponseEdsMoneyMock() }, null]),
   due_date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  invoice_later: faker.datatype.boolean(),
   files: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
     id: faker.string.uuid(),
     name: faker.string.alpha({ length: { min: 10, max: 255 } }),
@@ -13248,6 +13268,7 @@ export const getGetPaymentMemoResponseMock = (
   },
   amount: faker.helpers.arrayElement([{ ...getGetPaymentMemoResponsePaymentMoneyMock() }, null]),
   due_date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  invoice_later: faker.datatype.boolean(),
   deal: faker.helpers.arrayElement([{ ...getGetPaymentMemoResponseEdsDealRefMock() }, null]),
   files: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
     id: faker.string.uuid(),
@@ -13345,6 +13366,7 @@ export const getPayPaymentMemoResponseMock = (
   },
   amount: faker.helpers.arrayElement([{ ...getPayPaymentMemoResponsePaymentMoneyMock() }, null]),
   due_date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  invoice_later: faker.datatype.boolean(),
   deal: faker.helpers.arrayElement([{ ...getPayPaymentMemoResponseEdsDealRefMock() }, null]),
   files: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
     id: faker.string.uuid(),
@@ -14279,6 +14301,7 @@ export const getRotateErpKeysResponseMock = (
 export const getGetTelegramConnectorResponseMock = (
   overrideResponse: Partial<Extract<TelegramConnector, object>> = {},
 ): TelegramConnector => ({
+  channel_can_invite: faker.helpers.arrayElement([faker.datatype.boolean(), null]),
   channel_id: faker.helpers.arrayElement([faker.number.int(), null]),
   channel_title: faker.helpers.arrayElement([
     faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -14307,6 +14330,7 @@ export const getGetTelegramConnectorResponseMock = (
 export const getSetTelegramTokenResponseMock = (
   overrideResponse: Partial<Extract<TelegramConnector, object>> = {},
 ): TelegramConnector => ({
+  channel_can_invite: faker.helpers.arrayElement([faker.datatype.boolean(), null]),
   channel_id: faker.helpers.arrayElement([faker.number.int(), null]),
   channel_title: faker.helpers.arrayElement([
     faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -16556,6 +16580,16 @@ export const getListEmployeesResponseMock = (
     access: { crm: faker.datatype.boolean(), erp: faker.datatype.boolean() },
     status: faker.helpers.arrayElement(Object.values(EmployeeStatus)),
     telegram_linked: faker.datatype.boolean(),
+    telegram: faker.helpers.arrayElement(["linked", "not_linked", "blocked"] as const),
+    deputy: faker.helpers.arrayElement([
+      {
+        user_id: faker.helpers.fromRegExp("^[1-9][0-9]*$"),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        date_from: faker.date.past().toISOString().slice(0, 10),
+        date_to: faker.date.past().toISOString().slice(0, 10),
+      },
+      undefined,
+    ]),
     erp_sync: faker.helpers.arrayElement(Object.values(ErpSyncState)),
     erp_sync_error: faker.helpers.arrayElement([
       faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -16595,6 +16629,16 @@ export const getCreateEmployeeResponseMock = (
     access: { crm: faker.datatype.boolean(), erp: faker.datatype.boolean() },
     status: faker.helpers.arrayElement(Object.values(EmployeeStatus)),
     telegram_linked: faker.datatype.boolean(),
+    telegram: faker.helpers.arrayElement(["linked", "not_linked", "blocked"] as const),
+    deputy: faker.helpers.arrayElement([
+      {
+        user_id: faker.helpers.fromRegExp("^[1-9][0-9]*$"),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        date_from: faker.date.past().toISOString().slice(0, 10),
+        date_to: faker.date.past().toISOString().slice(0, 10),
+      },
+      undefined,
+    ]),
     erp_sync: faker.helpers.arrayElement(Object.values(ErpSyncState)),
     erp_sync_error: faker.helpers.arrayElement([
       faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -16632,6 +16676,16 @@ export const getInviteEmployeeResponseMock = (
   access: { crm: faker.datatype.boolean(), erp: faker.datatype.boolean() },
   status: faker.helpers.arrayElement(Object.values(EmployeeStatus)),
   telegram_linked: faker.datatype.boolean(),
+  telegram: faker.helpers.arrayElement(["linked", "not_linked", "blocked"] as const),
+  deputy: faker.helpers.arrayElement([
+    {
+      user_id: faker.helpers.fromRegExp("^[1-9][0-9]*$"),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      date_from: faker.date.past().toISOString().slice(0, 10),
+      date_to: faker.date.past().toISOString().slice(0, 10),
+    },
+    undefined,
+  ]),
   erp_sync: faker.helpers.arrayElement(Object.values(ErpSyncState)),
   erp_sync_error: faker.helpers.arrayElement([
     faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -16667,6 +16721,16 @@ export const getResendInviteResponseMock = (
   access: { crm: faker.datatype.boolean(), erp: faker.datatype.boolean() },
   status: faker.helpers.arrayElement(Object.values(EmployeeStatus)),
   telegram_linked: faker.datatype.boolean(),
+  telegram: faker.helpers.arrayElement(["linked", "not_linked", "blocked"] as const),
+  deputy: faker.helpers.arrayElement([
+    {
+      user_id: faker.helpers.fromRegExp("^[1-9][0-9]*$"),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      date_from: faker.date.past().toISOString().slice(0, 10),
+      date_to: faker.date.past().toISOString().slice(0, 10),
+    },
+    undefined,
+  ]),
   erp_sync: faker.helpers.arrayElement(Object.values(ErpSyncState)),
   erp_sync_error: faker.helpers.arrayElement([
     faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -16702,6 +16766,16 @@ export const getRetryEmployeeErpSyncResponseMock = (
   access: { crm: faker.datatype.boolean(), erp: faker.datatype.boolean() },
   status: faker.helpers.arrayElement(Object.values(EmployeeStatus)),
   telegram_linked: faker.datatype.boolean(),
+  telegram: faker.helpers.arrayElement(["linked", "not_linked", "blocked"] as const),
+  deputy: faker.helpers.arrayElement([
+    {
+      user_id: faker.helpers.fromRegExp("^[1-9][0-9]*$"),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      date_from: faker.date.past().toISOString().slice(0, 10),
+      date_to: faker.date.past().toISOString().slice(0, 10),
+    },
+    undefined,
+  ]),
   erp_sync: faker.helpers.arrayElement(Object.values(ErpSyncState)),
   erp_sync_error: faker.helpers.arrayElement([
     faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -16740,6 +16814,16 @@ export const getIssueTemporaryPasswordResponseMock = (
     access: { crm: faker.datatype.boolean(), erp: faker.datatype.boolean() },
     status: faker.helpers.arrayElement(Object.values(EmployeeStatus)),
     telegram_linked: faker.datatype.boolean(),
+    telegram: faker.helpers.arrayElement(["linked", "not_linked", "blocked"] as const),
+    deputy: faker.helpers.arrayElement([
+      {
+        user_id: faker.helpers.fromRegExp("^[1-9][0-9]*$"),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        date_from: faker.date.past().toISOString().slice(0, 10),
+        date_to: faker.date.past().toISOString().slice(0, 10),
+      },
+      undefined,
+    ]),
     erp_sync: faker.helpers.arrayElement(Object.values(ErpSyncState)),
     erp_sync_error: faker.helpers.arrayElement([
       faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -16777,6 +16861,16 @@ export const getGetEmployeeResponseMock = (
   access: { crm: faker.datatype.boolean(), erp: faker.datatype.boolean() },
   status: faker.helpers.arrayElement(Object.values(EmployeeStatus)),
   telegram_linked: faker.datatype.boolean(),
+  telegram: faker.helpers.arrayElement(["linked", "not_linked", "blocked"] as const),
+  deputy: faker.helpers.arrayElement([
+    {
+      user_id: faker.helpers.fromRegExp("^[1-9][0-9]*$"),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      date_from: faker.date.past().toISOString().slice(0, 10),
+      date_to: faker.date.past().toISOString().slice(0, 10),
+    },
+    undefined,
+  ]),
   erp_sync: faker.helpers.arrayElement(Object.values(ErpSyncState)),
   erp_sync_error: faker.helpers.arrayElement([
     faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -16812,6 +16906,16 @@ export const getUpdateEmployeeResponseMock = (
   access: { crm: faker.datatype.boolean(), erp: faker.datatype.boolean() },
   status: faker.helpers.arrayElement(Object.values(EmployeeStatus)),
   telegram_linked: faker.datatype.boolean(),
+  telegram: faker.helpers.arrayElement(["linked", "not_linked", "blocked"] as const),
+  deputy: faker.helpers.arrayElement([
+    {
+      user_id: faker.helpers.fromRegExp("^[1-9][0-9]*$"),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      date_from: faker.date.past().toISOString().slice(0, 10),
+      date_to: faker.date.past().toISOString().slice(0, 10),
+    },
+    undefined,
+  ]),
   erp_sync: faker.helpers.arrayElement(Object.values(ErpSyncState)),
   erp_sync_error: faker.helpers.arrayElement([
     faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -26530,6 +26634,10 @@ export const getSuggestLetterFromFileResponseMock = (
   },
   alias: faker.string.alpha({ length: { min: 10, max: 20 } }),
   prompt_version: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  by_code: faker.helpers.arrayElement([
+    faker.helpers.arrayElements(["sender_inn", "document_due"] as const),
+    undefined,
+  ]),
   ...overrideResponse,
 });
 
@@ -32422,6 +32530,7 @@ export const getListSupplierOrdersResponseMock = (
       edit: faker.datatype.boolean(),
       send: faker.datatype.boolean(),
       request_price: faker.datatype.boolean(),
+      resend: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
       confirm: faker.datatype.boolean(),
       receive: faker.datatype.boolean(),
       cancel: faker.datatype.boolean(),
@@ -32565,6 +32674,7 @@ export const getCreateSupplierOrderResponseMock = (
     edit: faker.datatype.boolean(),
     send: faker.datatype.boolean(),
     request_price: faker.datatype.boolean(),
+    resend: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
     confirm: faker.datatype.boolean(),
     receive: faker.datatype.boolean(),
     cancel: faker.datatype.boolean(),
@@ -32835,6 +32945,7 @@ export const getCreateSupplierOrderFromRequestResponseMock = (
     edit: faker.datatype.boolean(),
     send: faker.datatype.boolean(),
     request_price: faker.datatype.boolean(),
+    resend: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
     confirm: faker.datatype.boolean(),
     receive: faker.datatype.boolean(),
     cancel: faker.datatype.boolean(),
@@ -33108,6 +33219,7 @@ export const getGetSupplierOrderResponseMock = (
     edit: faker.datatype.boolean(),
     send: faker.datatype.boolean(),
     request_price: faker.datatype.boolean(),
+    resend: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
     confirm: faker.datatype.boolean(),
     receive: faker.datatype.boolean(),
     cancel: faker.datatype.boolean(),
@@ -33375,6 +33487,7 @@ export const getUpdateSupplierOrderResponseMock = (
     edit: faker.datatype.boolean(),
     send: faker.datatype.boolean(),
     request_price: faker.datatype.boolean(),
+    resend: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
     confirm: faker.datatype.boolean(),
     receive: faker.datatype.boolean(),
     cancel: faker.datatype.boolean(),
@@ -33645,6 +33758,7 @@ export const getSendSupplierOrderResponseMock = (
     edit: faker.datatype.boolean(),
     send: faker.datatype.boolean(),
     request_price: faker.datatype.boolean(),
+    resend: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
     confirm: faker.datatype.boolean(),
     receive: faker.datatype.boolean(),
     cancel: faker.datatype.boolean(),
@@ -33973,6 +34087,7 @@ export const getConfirmSupplierOrderResponseMock = (
     edit: faker.datatype.boolean(),
     send: faker.datatype.boolean(),
     request_price: faker.datatype.boolean(),
+    resend: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
     confirm: faker.datatype.boolean(),
     receive: faker.datatype.boolean(),
     cancel: faker.datatype.boolean(),
@@ -34243,6 +34358,7 @@ export const getCancelSupplierOrderResponseMock = (
     edit: faker.datatype.boolean(),
     send: faker.datatype.boolean(),
     request_price: faker.datatype.boolean(),
+    resend: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
     confirm: faker.datatype.boolean(),
     receive: faker.datatype.boolean(),
     cancel: faker.datatype.boolean(),
@@ -34555,6 +34671,7 @@ export const getReceiveSupplierOrderResponseMock = (
     edit: faker.datatype.boolean(),
     send: faker.datatype.boolean(),
     request_price: faker.datatype.boolean(),
+    resend: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
     confirm: faker.datatype.boolean(),
     receive: faker.datatype.boolean(),
     cancel: faker.datatype.boolean(),
@@ -35103,6 +35220,7 @@ export const getListOverdueSupplierOrdersResponseMock = (
       edit: faker.datatype.boolean(),
       send: faker.datatype.boolean(),
       request_price: faker.datatype.boolean(),
+      resend: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
       confirm: faker.datatype.boolean(),
       receive: faker.datatype.boolean(),
       cancel: faker.datatype.boolean(),
@@ -35428,6 +35546,7 @@ export const getGetCrmLeadResponseMock = (
     null,
   ]),
   duplicate_of: faker.helpers.arrayElement([faker.helpers.fromRegExp("^L-\\d{4,}$"), null]),
+  partner_application: faker.helpers.arrayElement([faker.number.int(), null]),
   ...overrideResponse,
 });
 
@@ -35822,6 +35941,24 @@ export const getCreateCrmRequestResponseMock = (
       lead: faker.helpers.arrayElement([faker.helpers.fromRegExp("^L-\\d{4,}$"), null]),
       created: faker.datatype.boolean(),
       transfer: faker.helpers.arrayElement(["pending", "done", "failed"] as const),
+      ...overrideResponse,
+    },
+  ]);
+
+export const getHandOverCrmLeadAsPartnerResponseMock = (
+  overrideResponse: Partial<Extract<PartnerHandoffView, object>> = {},
+): PartnerHandoffView =>
+  faker.helpers.arrayElement([
+    {
+      lead: faker.helpers.fromRegExp("^L-\\d{4,}$"),
+      application: faker.number.int(),
+      created: faker.datatype.boolean(),
+      ...overrideResponse,
+    },
+    {
+      lead: faker.helpers.fromRegExp("^L-\\d{4,}$"),
+      application: faker.number.int(),
+      created: faker.datatype.boolean(),
       ...overrideResponse,
     },
   ]);
@@ -51831,6 +51968,30 @@ export const getCreateCrmRequestMockHandler = (
   );
 };
 
+export const getHandOverCrmLeadAsPartnerMockHandler = (
+  overrideResponse?:
+    | PartnerHandoffView
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<PartnerHandoffView> | PartnerHandoffView),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/crm/leads/:lead/partner",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getHandOverCrmLeadAsPartnerResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
 export const getRetryCrmRequestMockHandler = (
   overrideResponse?:
     | RequestRetriedView
@@ -54385,6 +54546,7 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getUnbindCrmTelegramGroupMockHandler(),
   getGetCrmClientTelegramGroupMockHandler(),
   getCreateCrmRequestMockHandler(),
+  getHandOverCrmLeadAsPartnerMockHandler(),
   getRetryCrmRequestMockHandler(),
   getUploadCrmRequestFileMockHandler(),
   getCopyCrmMessageAttachmentToRequestMockHandler(),

@@ -32,6 +32,10 @@ class OrderActionsSerializer(serializers.Serializer):
     request_price = serializers.BooleanField(
         help_text="Черновик с строками без цены: «Запросить цену» у партнёра (СЦ-10)"
     )
+    resend = serializers.BooleanField(
+        required=False,
+        help_text="Заказ отправлен, но письмо партнёру не ушло: «Отправить ещё раз» — тот же POST …/send/ (Б-5)",
+    )
     confirm = serializers.BooleanField()
     receive = serializers.BooleanField()
     cancel = serializers.BooleanField()

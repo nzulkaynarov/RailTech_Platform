@@ -114,7 +114,8 @@ test.describe("Помощь", () => {
       .getByRole("link", { name: "С чего начать" })
       .click();
     await expect(page).toHaveURL(/\/help$/);
-    await expect(page.getByText("Ваша роль: Бухгалтер")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Бухгалтер" })).toBeVisible();
+    await expect(page.getByText(/Ваша роль/)).toHaveCount(0);
     await expect(page.getByText(/Подтвердите оплату по выписке/)).toBeVisible();
     await shoot(page, "help-start");
 
@@ -268,7 +269,7 @@ test.describe("Первый вход", () => {
   }) => {
     await firstLogin("manager@demo.example", page);
     const welcome = page.getByRole("dialog", { name: /Добро пожаловать, Демо Менеджеров/ });
-    await expect(welcome.getByText("Ваша роль — Менеджер.")).toBeVisible();
+    await expect(welcome.getByText(/Ваша роль/)).toHaveCount(0);
     await expect(welcome.getByText("Вот что вы будете делать утром:")).toBeVisible();
     await shoot(page, "welcome", async () => {
       await expect(welcome).toBeVisible();

@@ -217,7 +217,9 @@ export function ApprovalForm({ quote, variant = "panel", onDone }: ApprovalFormP
           aria-describedby={blockedText ? id("blocked") : undefined}
         >
           {quote.acting_for
-            ? t("form.submitFor", { name: quote.acting_for.full_name })
+            ? t(chosen.length > 0 ? "form.submitFor" : "form.submitForNoChannels", {
+                name: quote.acting_for.full_name,
+              })
             : chosen.length > 0
               ? t("form.submit")
               : t("form.submitNoChannels")}

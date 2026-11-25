@@ -191,6 +191,8 @@ _STEP: dict[str, StepCode] = {
 _PROJECT: frozenset[StepCode] = frozenset({"CONTRACT", "PAYMENT", "DONE"})
 # Что видит клиент: сначала точная стадия ERP, затем — по шагу.
 _SEES_STAGE: dict[str, ClientSees] = {
+    # КП принято, договора у клиента ещё нет: согласовывать нечего (СЦ-8)
+    "accepted": "contract_preparing",
     "invoiced": "awaiting_payment",
     "paid": "fulfilling",
     "fulfilment": "fulfilling",
@@ -218,7 +220,7 @@ def step_of(deal: CrmDeal) -> StepCode:
 
 def request_row(deal: CrmDeal) -> ClientRequestRow:
     step = step_of(deal)
-    sees = _SEES_STAGE.get(deal.external_stage or "") if step == "PAYMENT" else None
+    sees = _SEES_STAGE.get(deal.external_stage or "") if step in ("CONTRACT", "PAYMENT") else None
     return ClientRequestRow(
         deal=deal.id,
         number=deal.erp_number,

@@ -222,6 +222,8 @@ class PaymentMemoCard(BaseModel):
     author: EdsPerson
     amount: PaymentMoney | None
     due_date: date | None
+    # Б-9: автор отметил «счёт придёт позже» — бухгалтер напоминает автору
+    invoice_later: bool = False
     deal: EdsDealRef | None
     files: list[EdsFile]
     document_status: str

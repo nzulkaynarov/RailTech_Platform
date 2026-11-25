@@ -7,6 +7,7 @@ export type ProjectCardClientStatus =
   (typeof ProjectCardClientStatus)[keyof typeof ProjectCardClientStatus];
 
 export const ProjectCardClientStatus = {
+  contract_preparing: "contract_preparing",
   contract_review: "contract_review",
   contract_signing: "contract_signing",
   awaiting_payment: "awaiting_payment",

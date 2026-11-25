@@ -155,6 +155,8 @@ class SupplierOrderActions(BaseModel):
     edit: bool
     send: bool
     request_price: bool = False
+    # Б-5: заказ отправлен, письмо партнёру не ушло — «Отправить ещё раз» (тот же POST send)
+    resend: bool = False
     confirm: bool
     receive: bool
     cancel: bool
@@ -818,7 +820,11 @@ def _row_data(raw: Mapping[str, Any], prices: bool) -> dict[str, Any]:
         "created_at": raw["created_at"],
         "created_by": person_of(raw.get("created_by"), raw.get("created_by_name")),
         "actions": SupplierOrderActions(
-            **{**raw["actions"], "request_price": bool(raw["actions"].get("request_price"))}
+            **{
+                **raw["actions"],
+                "request_price": bool(raw["actions"].get("request_price")),
+                "resend": bool(raw["actions"].get("resend")),
+            }
         ),
         "path": stock_path(raw["number"]),
     }
