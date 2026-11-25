@@ -211,13 +211,13 @@
   "doNotWork": {
     "title": "Kompaniya bilan işlamaymiz",
     "by": "{{name}} belgilagan, {{date}}",
-    "until": "{{date}} gaça",
+    "until": "{{date}}gaça",
     "unknown": "xodim körsatilmagan"
   },
   "clientLink": {
     "title": "Mijozning Kabinetdagi havolasi",
     "state": {
-      "active": "Havola {{date}} gaça amal qiladi.",
+      "active": "Havola {{date}}gaça amal qiladi.",
       "activeNoDate": "Havola amal qiladi.",
       "revoked": "Havola bekor qilindi: mijoz u orqali heç narsani oça olmaydi. Hujjatni qayta yuborsangiz, yangi havola beriladi.",
       "revoked_quote": "Havola bekor qilindi: mijoz u orqali heç narsani oça olmaydi. TTni qayta yuborsangiz, yangi havola beriladi.",

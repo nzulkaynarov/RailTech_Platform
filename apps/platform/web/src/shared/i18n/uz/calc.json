@@ -107,7 +107,7 @@
     "noStockData": "Katalogda yöq",
     "stockMore": "Yaçeyka va zaxira — «Ombor» ekranida",
     "days": "{{count}} kun",
-    "supplierHint": "kvota {{qty}} dan · narx {{date}} gaça",
+    "supplierHint": "kvota {{qty}} dan · narx {{date}}gaça",
     "supplierHintNoDate": "kvota {{qty}} dan · narx muddati körsatilmagan",
     "offerPrice": "Hamkor narxi: {{price}}",
     "noSupplier": "Hamkor tanlanmagan",

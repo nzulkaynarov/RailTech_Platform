@@ -160,6 +160,7 @@ export function ContractsPage() {
         title={t('pages.contracts.term.declineTitle', { number: declining?.number ?? '' })}
         description={t('pages.contracts.term.declineText', {
           until: declining?.term?.valid_until ? formatDate(declining.term.valid_until) : '',
+          notice: declining?.term?.last_notice_date ? formatDate(declining.term.last_notice_date) : '',
         })}
         confirmLabel={t('pages.contracts.term.decline')}
         pending={decline.isPending}

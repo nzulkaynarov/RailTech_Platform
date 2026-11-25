@@ -21,7 +21,7 @@
         "tomorrow": "ertaga",
         "memo": "xizmat xati",
         "none": "muddatsiz",
-        "until": "{{date}} gaça"
+        "until": "{{date}}gaça"
       },
       "loading": "Navbat yuklanmoqda…",
       "loadErrorTitle": "Navbatni yuklab bölmadi",
@@ -87,7 +87,7 @@
       },
       "onBehalf": "{{name}} uçun",
       "covering": {
-        "banner": "Siz {{name}}ni {{date}} gaça almaştirasiz",
+        "banner": "Siz {{name}}ni {{date}}gaça almaştirasiz",
         "filterAll": "Hammasi",
         "filterFor": "{{name}} uçun",
         "filterLabel": "Kimning vazifalari"

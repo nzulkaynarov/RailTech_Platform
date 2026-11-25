@@ -568,6 +568,8 @@ def email_context(notice: PortalNotice) -> dict:
         "reminder": bool(params.get("reminder")),
         "name": params.get("name", ""),
         "device": params.get("device", ""),
+        "until": _email_date(params.get("until")),
+        "count": params.get("count", ""),
         "open_url": f"{base}{notice.link}",
         "settings_url": f"{base}{NOTIFICATION_SETTINGS_PATH}",
         **email_brand(seller),

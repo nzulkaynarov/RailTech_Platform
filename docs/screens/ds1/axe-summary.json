@@ -1,0 +1,34 @@
+[
+  {
+    "screen": "cabinet-contract-term",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 42,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "cabinet-contract-decline",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 30,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "cabinet-contract-term",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 37,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "cabinet-contract-decline",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 30,
+    "overflowPx": 0,
+    "violations": []
+  }
+]

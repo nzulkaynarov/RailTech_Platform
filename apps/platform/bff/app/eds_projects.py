@@ -65,6 +65,7 @@ _ERP_REASONS: dict[str, str] = {
     "TERM_ALREADY_DECLINED": "От продления уже отказались.",
     "TERM_NOT_AUTO_RENEWING": "Договор не продлевается сам: отказываться не от чего.",
     "TERM_NOTICE_PASSED": "Срок отказа от продления вышел: договор продлится.",
+    "TERM_ALREADY_RENEWED": "Срок уже продлён: повторно продлить можно ближе к концу.",
     "TERM_NO_NEW_EDITION": "Новой утверждённой редакции шаблона нет.",
     "TERM_NEW_EDITION_ALREADY_SENT": "Новая редакция уже отправлена на подпись.",
     "COUNTERPARTY_CONTRACT_EXPIRED": "Срок договора вышел: продлите его, затем готовьте КП.",

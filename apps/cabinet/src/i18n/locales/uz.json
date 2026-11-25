@@ -641,7 +641,7 @@
       "signedBoth": "{{number}} şartnomasi ikki tomon tomonidan imzolandi.",
       "term": {
         "none": "—",
-        "until": "{{date}} gaça",
+        "until": "{{date}}gaça",
         "open": "muddatsiz",
         "state": {
           "open": "muddatsiz",
@@ -649,10 +649,10 @@
           "ends": "muddatida tugaydi",
           "expired": "muddat tugadi"
         },
-        "decline": "Uzaytirişdan bas tartiş",
-        "declineTitle": "{{number}} şartnomasini uzaytirişdan bas tartiş",
-        "declineText": "Şartnoma {{until}} gaça amal qiladi va undan keyin tugaydi. Boşlangan yetkazib beriş, tölov va daʼvolar tegilmaydi. Kabinetda uzaytirişni qaytarib bölmaydi.",
-        "declined": "Siz {{number}} şartnomasini uzaytirişdan bas tartdingiz."
+        "decline": "Uzaytirişdan boş tortiş",
+        "declineTitle": "{{number}} şartnomasini uzaytirişdan boş tortiş",
+        "declineText": "Şartnoma {{until}}gaça amal qiladi va undan keyin tugaydi. Boşlangan yetkazib beriş, tölov va daʼvolar tegilmaydi. Boş tortiş {{notice}}gaça mümkin. Kabinetda uzaytirişni qaytarib bölmaydi.",
+        "declined": "Siz {{number}} şartnomasini uzaytirişdan boş tortdingiz."
       }
     },
     "invoices": {
@@ -886,7 +886,7 @@
       "documentsTitle": "Hujjatlar",
       "documentNumber": "№ {{number}}",
       "issuedBy": "Bergan: {{name}}",
-      "validUntil": "{{date}} gaça amal qiladi",
+      "validUntil": "{{date}}gaça amal qiladi",
       "noExpiry": "Muddatsiz"
     },
     "company": {
@@ -1373,8 +1373,8 @@
     "QUOTE_FINALIZED": "Taklif allaqaçon qabul qilingan yoki rad etilgan — sahifani yangilang.",
     "ACT_FINALIZED": "Dalolatnoma allaqaçon qabul qilingan yoki qaytarilgan — sahifani yangilang.",
     "CONTRACT_FINALIZED": "Şartnoma allaqaçon kelişilgan, imzolangan yoki bekor qilingan — sahifani yangilang.",
-    "TERM_NOTICE_PASSED": "Uzaytirişdan bas tartiş muddati ötdi.",
-    "TERM_ALREADY_DECLINED": "Uzaytirişdan allaqaçon bas tartilgan.",
+    "TERM_NOTICE_PASSED": "Uzaytirişdan boş tortiş muddati ötdi.",
+    "TERM_ALREADY_DECLINED": "Uzaytirişdan allaqaçon boş tortilgan.",
     "TERM_NOT_AVAILABLE": "Bu şartnoma özi uzaymaydi.",
     "QUOTE_CODE_INVALID": "Kod notöğri yoki söralmagan. Xabardagi kodni tekşiring yoki yangisini sörang.",
     "QUOTE_EXPIRED": "Taklifning amal qiliş muddati tugagan — uni endi qabul qilib bölmaydi. Menejerdan taklifni yangilaşni sörang.",
@@ -1534,7 +1534,7 @@
     "noPrice": "Narx yöq",
     "priceNotConfirmed": "Tasdiqlanmagan",
     "priceConfirmed": "{{date}} tasdiqlangan",
-    "validUntil": "{{date}} gaça amal qiladi",
+    "validUntil": "{{date}}gaça amal qiladi",
     "moq": "{{count}} dona dan",
     "completenessValue": "{{percent}} %",
     "pendingChange": "Özgariş tekşiruvda",
@@ -1628,7 +1628,7 @@
         "rejected": "Rad etildi"
       },
       "docNumber": "№",
-      "validUntil": "Amal qiliş muddati: {{date}} gaça",
+      "validUntil": "Amal qiliş muddati: {{date}}gaça",
       "unlimited": "Muddatsiz",
       "downloadDoc": "{{name}} yuklab oliş",
       "deleteDoc": "{{name}} öçiriş",
@@ -1797,8 +1797,8 @@
       "bank_requisites_changed": "Kompaniya bank rekvizitlari özgartirildi",
       "bank_requisites_change_rejected": "Bank rekvizitlarini özgartiriş sörovi rad etildi: {{reason}}",
       "new_device_login": "{{name}} kabinetga yangi qurilmadan kirdi",
-      "contract_renewed": "{{number}} şartnomasi {{until}} gaça uzaytirildi",
-      "contract_renewal_declined": "Biz {{number}} şartnomasini uzaytirişdan bas tortdik: u {{until}} da tugaydi"
+      "contract_renewed": "{{number}} şartnomasi {{until}}gaça uzaytirildi",
+      "contract_renewal_declined": "Biz {{number}} şartnomasini uzaytirişdan boş tortdik: u {{until}}da tugaydi"
     }
   },
   "verify": {
@@ -1942,7 +1942,7 @@
     },
     "codeNote": "Har qanday amal {{email}} manziliga keladigan koddan keyin bajariladi. Bu havola orqali boşqa hujjat va bölimlar oçilmaydi.",
     "memberNote": "Siz {{name}} sifatida kirgansiz — kod kerak emas.",
-    "linkUntil": "Havola {{date}} gaça amal qiladi — yuboruvçi uni bekor qilişi mumkin.",
+    "linkUntil": "Havola {{date}}gaça amal qiladi — yuboruvçi uni bekor qilişi mumkin.",
     "state": {
       "accepted": "Taklif qabul qilindi. Şartnoma kabinetingizda paydo böladi.",
       "rejected": "Taklif izoh bilan qaytarildi.",

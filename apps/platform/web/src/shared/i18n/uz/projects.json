@@ -308,7 +308,7 @@
       "sign_ours": "Şartnoma kompaniya nomidan imzolandi.",
       "request_deviation": "Ariza «Huquq» egasiga yuborildi.",
       "decide_deviation": "Qaror yozildi.",
-      "decline_renewal": "Uzaytirişdan bas tartiş yozildi.",
+      "decline_renewal": "Uzaytirişdan boş tortiş yozildi.",
       "renew": "Şartnoma uzaytirildi.",
       "send_new_edition": "Yangi tahrir imzoga yuborildi."
     },
@@ -380,18 +380,18 @@
     },
     "term": {
       "title": "Şartnoma muddati",
-      "line": "{{from}} dan {{until}} gaça amal qiladi",
-      "lineOpen": "{{from}} dan amal qiladi, muddatsiz",
+      "line": "{{from}}dan {{until}}gaça amal qiladi",
+      "lineOpen": "{{from}}dan amal qiladi, muddatsiz",
       "state": {
         "open": "Muddatsiz",
         "renews": "Özi uzayadi",
         "ends": "Muddatida tugaydi",
         "expired": "Muddat tugadi"
       },
-      "renewsHint": "Uzaytirişdan {{notice}} gaça bas tartiş mümkin.",
+      "renewsHint": "Uzaytirişdan {{notice}}gaça boş tortiş mümkin.",
       "declined": {
-        "company": "Biz uzaytirişdan bas tortdik: şartnoma muddatida tugaydi.",
-        "client": "Kontragent uzaytirişdan bas tortdi: şartnoma muddatida tugaydi."
+        "company": "Biz uzaytirişdan boş tortdik: şartnoma muddatida tugaydi.",
+        "client": "Kontragent uzaytirişdan boş tortdi: şartnoma muddatida tugaydi."
       },
       "foreign": "Çet ellik kontragent: qöşimça kelişuv bilan uzaytiriladi.",
       "renewals": "Uzaytirişlar: {{count}}",
@@ -400,10 +400,10 @@
       "nda": "Şartnoma tugagaç sir saqlaş: {{years}} yil.",
       "ndaIndefinite": "Tijorat siri — muddatsiz.",
       "agreement": "Kelişuv raqami",
-      "declineConfirm": "Şartnoma {{until}} da tugaydi va uzaytirilmaydi. Kartada bekor qilib bölmaydi.",
+      "declineConfirm": "Şartnoma {{until}}da tugaydi va uzaytirilmaydi. Kartada bekor qilib bölmaydi.",
       "cancel": "Kerak emas",
       "action": {
-        "decline_renewal": "Uzaytirişdan bas tartiş",
+        "decline_renewal": "Uzaytirişdan boş tortiş",
         "renew": "Uzaytiriş",
         "send_new_edition": "Yangi tahrirni imzoga yuboriş"
       }

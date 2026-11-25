@@ -216,7 +216,7 @@
         "ends": "Muddatida tugaydi",
         "expired": "Muddat tugadi"
       },
-      "until": "{{number}} · {{until}} gaça",
+      "until": "{{number}} · {{until}}gaça",
       "open": "{{number}} · muddatsiz",
       "blocks": "Şartnoma uzaytirilmaguça yangi TT yaratilmaydi. Boşlangan bitimlar va tölovlar tegilmaydi."
     }

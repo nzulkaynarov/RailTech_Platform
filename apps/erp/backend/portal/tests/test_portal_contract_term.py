@@ -76,3 +76,43 @@ def test_read_only_contact_cannot_decline(contract_world, readonly_portal_client
     contract = term_of(contract_world["contracts"]["signed"])
     response = post(readonly_portal_client, contract)
     assert response.status_code == 403
+
+
+def test_renewal_notice_links_to_contracts_lists_every_number_and_has_email_text(contract_world, client_contact):
+    from django.template.loader import render_to_string
+    from django.utils import translation
+    from portal.models import PortalNotice
+    from portal.services import notice_sources
+    from portal.services.notices import email_context
+
+    first = contract_world["contracts"]["signed"]
+    second = contract_world["contracts"]["sent"]
+    notice_sources.contract_renewed([first, second], first.deal.company, until="2027-12-31")
+    notice_sources.contract_renewed(
+        [first, second], first.deal.company, until="2027-12-31"
+    )  # повтор — без новой строки
+    rows = PortalNotice.objects.filter(kind="contract_renewed", contact=client_contact)
+    assert rows.count() == 1
+    row = rows.get()
+    assert row.link == "/contracts" and f"{first.pk}-{second.pk}" in row.dedup_key
+    assert first.number in row.params["number"] and second.number in row.params["number"]
+    ctx = email_context(row)
+    for lang, title, body in (
+        ("ru", "Договор продлён", "Новый срок — до 31.12.2027"),
+        ("en", "Contract renewed", "until 31.12.2027"),
+        ("uz", "Şartnoma uzaytirildi", "31.12.2027gaça"),
+    ):
+        with translation.override(lang):
+            assert title in render_to_string("emails/_portal_notice_title.txt", ctx)
+            text = render_to_string("emails/_portal_notice_body.txt", ctx)
+        assert body in text and first.number in text and second.number in text
+
+
+def test_declined_notice_links_to_contracts(contract_world, client_contact):
+    from portal.models import PortalNotice
+    from portal.services import notice_sources
+
+    contract = term_of(contract_world["contracts"]["signed"], dt.date.today())
+    notice_sources.contract_renewal_declined(contract)
+    row = PortalNotice.objects.get(kind="contract_renewal_declined", contact=client_contact)
+    assert row.link == "/contracts" and row.params["until"] == str(contract.valid_until)

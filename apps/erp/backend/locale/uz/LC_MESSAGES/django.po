@@ -655,3 +655,15 @@ msgstr "Jami:"
 
 msgid "Просим сообщить цену, срок поставки и условия по каждой позиции."
 msgstr "Har bir pozitsiya böyiça narx, yetkazib beriş muddati va şartlarini maʼlum qiling."
+
+msgid "Договор продлён: %(number)s"
+msgstr "Şartnoma uzaytirildi: %(number)s"
+
+msgid "Отказ от продления договора %(number)s"
+msgstr "%(number)s şartnomasini uzaytirişdan boş tortiş"
+
+msgid "Срок договора продлён: %(number)s. Новый срок — до %(until)s."
+msgstr "Şartnoma muddati uzaytirildi: %(number)s. Yangi muddat — %(until)sgaça."
+
+msgid "Мы отказались от продления договора %(number)s: он закончится %(until)s."
+msgstr "Biz %(number)s şartnomasini uzaytirişdan boş tortdik: u %(until)sda tugaydi."

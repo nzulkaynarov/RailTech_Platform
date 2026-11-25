@@ -85,8 +85,8 @@ def _rules_of(contract) -> dict:
     return term_rules(_seller(contract), contract.template, contract.deal.company)
 
 
-def _journal(contract, event_code: str, action: str, *, actor=None, contact=None, level="INFO", **params) -> None:
-    ActivityLog.objects.create(
+def _journal(contract, event_code: str, action: str, *, actor=None, contact=None, level="INFO", **params):
+    return ActivityLog.objects.create(
         action=action,
         detail=f"Договор {contract.number} / сделка #{contract.deal_id}",
         event_code=event_code,
@@ -227,6 +227,8 @@ def renew_by_agreement(
     if contract.status_code != ContractStatusCode.SIGNED or contract.valid_until is None:
         return None, "TERM_NOT_SET"
     rules = _rules_of(contract)
+    if not can_renew(contract, rules, today):
+        return None, "TERM_ALREADY_RENEWED"
     rule = contract.term_rule or rules["rule"]
     notice = contract.notice_days
     if contract.valid_until >= today:
@@ -245,8 +247,22 @@ def renew_by_agreement(
         agreement_number=(agreement_number or "").strip()[:64],
         valid_until=str(term.valid_until or ""),
     )
-    transaction.on_commit(lambda: _notify_renewed(contract.deal.company_id, [contract.pk], str(term.valid_until or "")))
+    transaction.on_commit(
+        lambda: _notify_renewed_safely(contract.deal.company_id, [contract.pk], str(term.valid_until or ""))
+    )
     return contract, None
+
+
+def can_renew(contract, rules: dict, today: dt.date) -> bool:
+    """Продлить по соглашению можно, когда срок вышел или до конца осталось не больше окна напоминания.
+
+    Договор, уже продлённый дальше окна, повторно не продлевается: два нажатия в один день добавляют один срок."""
+    if contract.valid_until is None:
+        return False
+    if contract.valid_until < today:
+        return True
+    window = rules["foreign_remind"] if contract.renewal_mode != ContractRenewalMode.AUTO else contract.notice_days
+    return (contract.valid_until - today).days <= window
 
 
 def _apply_renewal(contract, term) -> None:
@@ -271,21 +287,72 @@ def _apply_renewal(contract, term) -> None:
 
 
 def run_daily(today: Optional[dt.date] = None) -> dict:
-    """Продлить, напомнить. Идемпотентна: повтор в тот же день ничего не меняет (срок уже сдвинут, метка напоминания стоит)."""
+    """Продлить, напомнить. Идемпотентна: повтор в тот же день ничего не меняет (срок уже сдвинут, метка напоминания стоит).
+
+    Сбой одного договора или одной компании журналируется и не останавливает остальных (`failed` в ответе). Уведомление о
+    продлении повторяемо: пока нет записи «уведомление отправлено» (`contract.term_notice_sent`), следующий запуск
+    отправит его снова — падение между продлением и уведомлением не теряет письмо."""
     today = today or timezone.localdate()
-    renewed: dict[int, list] = {}
-    reminded = 0
+    renewed = reminded = failed = 0
     base = Contract.objects.filter(status__code=ContractStatusCode.SIGNED, valid_until__isnull=False)
     for pk in list(base.filter(valid_until__lt=today).values_list("pk", flat=True)):
-        done = _renew_one(pk, today)
-        if done is not None:
-            renewed.setdefault(done[0], []).append((pk, done[1]))
-    for company_id, items in renewed.items():
-        until = str(max(item[1] for item in items))
-        _notify_renewed(company_id, [item[0] for item in items], until)
+        try:
+            if _renew_one(pk, today) is not None:
+                renewed += 1
+        except Exception:  # noqa: BLE001 — один договор не останавливает остальных
+            failed += 1
+            logger.exception("run_contract_terms: договор #%s не продлён", pk)
+    failed += _send_pending_notices(today)
     for pk in list(base.filter(valid_until__gte=today).values_list("pk", flat=True)):
-        reminded += _remind_one(pk, today)
-    return {"renewed": sum(len(v) for v in renewed.values()), "reminded": reminded}
+        try:
+            reminded += _remind_one(pk, today)
+        except Exception:  # noqa: BLE001
+            failed += 1
+            logger.exception("run_contract_terms: напоминание по договору #%s не отправлено", pk)
+    return {"renewed": renewed, "reminded": reminded, "failed": failed}
+
+
+NOTICE_RETRY_DAYS = 30
+
+
+def _send_pending_notices(today: dt.date) -> int:
+    """Отправить уведомления о продлении, которых ещё нет: одно на компанию и новую дату окончания. Возвращает число сбоев."""
+    since = timezone.now() - dt.timedelta(days=NOTICE_RETRY_DAYS)
+    logs = list(
+        ActivityLog.objects.filter(event_code="contract.term_renewed", entity_type="contract", timestamp__gte=since)
+        .order_by("pk")
+        .values("pk", "entity_id", "event_params")
+    )
+    if not logs:
+        return 0
+    sent = set(
+        ActivityLog.objects.filter(event_code="contract.term_notice_sent", timestamp__gte=since).values_list(
+            "event_params__renewal_log", flat=True
+        )
+    )
+    groups: dict = {}
+    for row in logs:
+        if row["pk"] in sent:
+            continue
+        contract = Contract.objects.select_related("deal").filter(pk=row["entity_id"]).first()
+        if contract is None:
+            continue
+        key = (contract.deal.company_id, str(row["event_params"].get("valid_until") or ""))
+        groups.setdefault(key, []).append((row["pk"], contract.pk))
+    failed = 0
+    for (company_id, until), items in groups.items():
+        try:
+            with transaction.atomic():
+                _notify_renewed(company_id, [cid for _, cid in items], until)
+                for log_id, cid in items:
+                    contract = Contract.objects.select_related("deal").get(pk=cid)
+                    _journal(
+                        contract, "contract.term_notice_sent", "Контрагенту сообщено о продлении", renewal_log=log_id
+                    )
+        except Exception:  # noqa: BLE001 — повторим при следующем запуске
+            failed += 1
+            logger.exception("run_contract_terms: уведомление компании #%s о продлении не отправлено", company_id)
+    return failed
 
 
 @transaction.atomic
@@ -302,7 +369,7 @@ def _renew_one(contract_id: int, today: dt.date):
     term = next_term(contract.valid_until, contract.term_rule, notice_days=contract.notice_days, today=today)
     previous = contract.valid_until
     _apply_renewal(contract, term)
-    _journal(
+    entry = _journal(
         contract,
         "contract.term_renewed",
         "Договор продлён автоматически",
@@ -310,7 +377,7 @@ def _renew_one(contract_id: int, today: dt.date):
         valid_until=str(term.valid_until),
         template_edition=contract.template_edition,
     )
-    return contract.deal.company_id, term.valid_until
+    return contract.deal.company_id, term.valid_until, entry.pk
 
 
 def _reminder_plan(contract, rules: dict, today: dt.date):
@@ -405,10 +472,17 @@ def _notify_renewed(company_id: int, contract_ids: list, until: str) -> None:
     from accounts.models import Company
 
     company = Company.objects.filter(pk=company_id).first()
-    contract = Contract.objects.select_related("template").filter(pk=contract_ids[0]).first()
-    if company is None or contract is None:
+    contracts = list(Contract.objects.select_related("template").filter(pk__in=contract_ids).order_by("pk"))
+    if company is None or not contracts:
         return
-    notice_sources.contract_renewed(contract, company, count=len(contract_ids), until=until)
+    notice_sources.contract_renewed(contracts, company, until=until)
+
+
+def _notify_renewed_safely(company_id: int, contract_ids: list, until: str) -> None:
+    try:
+        _notify_renewed(company_id, contract_ids, until)
+    except Exception:  # noqa: BLE001 — договор уже продлён, уведомление не должно ронять ответ
+        logger.exception("уведомление о продлении договора %s не отправлено", contract_ids)
 
 
 def _notify_declined(contract_id: int, side: str) -> None:
@@ -651,7 +725,9 @@ def term_card(contract, user=None, today: Optional[dt.date] = None) -> Optional[
             and today <= contract.last_notice_date
         ):
             actions.append("decline_renewal")
-        if state in ("ends", "expired") or contract.renewal_mode == ContractRenewalMode.BY_AGREEMENT:
+        if (state in ("ends", "expired") or contract.renewal_mode == ContractRenewalMode.BY_AGREEMENT) and can_renew(
+            contract, _rules_of(contract), today
+        ):
             actions.append("renew")
         if (
             newest_edition(template) is not None

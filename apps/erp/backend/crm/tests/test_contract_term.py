@@ -405,3 +405,69 @@ def test_non_resident_rule_is_a_setting_and_compares_countries(pw):  # noqa: F81
     svc.apply_at_signing(contract, signed_on=D(2026, 3, 10))
     contract.refresh_from_db()
     assert contract.renewal_mode == "auto" and not contract.term_foreign
+
+
+# ── сбои, повтор уведомления, повторное продление, настройка нерезидента ───────────────────────────────────────────
+
+
+def test_one_failing_contract_does_not_stop_the_others(pw, monkeypatch):  # noqa: F811
+    broken = signed(pw, D(2025, 3, 10))
+    renewable = signed(pw, D(2025, 3, 11))
+    reminder = signed(pw, D(2026, 3, 10))  # последний день отказа 1.12 — на 1.11 напоминание за 30 дней
+    real = svc._renew_one
+
+    def flaky(pk, today):
+        if pk == broken.pk:
+            raise RuntimeError("boom")
+        return real(pk, today)
+
+    monkeypatch.setattr(svc, "_renew_one", flaky)
+    result = svc.run_daily(D(2026, 11, 1))
+    assert (result["renewed"], result["reminded"], result["failed"]) == (1, 2, 1)  # продлённый тоже в окне напоминания
+    broken.refresh_from_db()
+    renewable.refresh_from_db()
+    reminder.refresh_from_db()
+    assert broken.renewals_count == 0 and renewable.renewals_count == 1
+    assert reminder.term_reminders  # напоминание отправлено, несмотря на сбой соседа
+
+
+def test_renewal_notice_is_retried_until_it_is_sent_and_then_not_repeated(pw, monkeypatch):  # noqa: F811
+    contract = signed(pw, D(2025, 3, 10))
+    calls = []
+    state = {"fail": True}
+
+    def fake(company_id, ids, until):
+        if state["fail"]:
+            raise RuntimeError("mail down")
+        calls.append((company_id, tuple(ids), until))
+
+    monkeypatch.setattr(svc, "_notify_renewed", fake)
+    first = svc.run_daily(D(2026, 1, 5))
+    assert (first["renewed"], first["failed"]) == (1, 1) and calls == []  # продлён, уведомление упало
+    state["fail"] = False
+    second = svc.run_daily(D(2026, 1, 6))
+    assert second["failed"] == 0 and calls == [(pw.client.pk, (contract.pk,), "2026-12-31")]
+    svc.run_daily(D(2026, 1, 7))
+    assert len(calls) == 1  # метка «уведомление отправлено» стоит — повторов нет
+
+
+def test_renewing_twice_in_a_day_adds_one_term(pw):  # noqa: F811
+    contract = signed(pw)
+    svc.decline_renewal(contract.pk, "client", today=D(2026, 11, 1))
+    first, error = svc.renew_by_agreement(contract.pk, pw.accountant, today=D(2027, 2, 10))
+    assert error is None and first.valid_until == D(2027, 12, 31)
+    assert svc.renew_by_agreement(contract.pk, pw.accountant, today=D(2027, 2, 10)) == (None, "TERM_ALREADY_RENEWED")
+    contract.refresh_from_db()
+    assert contract.valid_until == D(2027, 12, 31) and contract.renewals_count == 1
+    card = svc.term_card(contract, pw.accountant, D(2027, 2, 10))
+    assert "renew" not in card["actions"]
+
+
+def test_foreign_by_agreement_setting_itself(pw):  # noqa: F811
+    _foreign(pw)
+    rules(pw, contract_foreign_by_agreement=False)
+    contract = signed(pw)
+    assert contract.term_foreign is True  # страны различаются: это нерезидент…
+    assert contract.renewal_mode == "auto"  # …но настройка выключена — автопродление, как у резидента
+    rules(pw, contract_foreign_by_agreement=True)
+    assert signed(pw, D(2026, 3, 11)).renewal_mode == "by_agreement"
