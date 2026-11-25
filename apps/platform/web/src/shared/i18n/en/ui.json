@@ -1,4 +1,8 @@
 {
+  "longText": {
+    "more": "Show all",
+    "less": "Collapse"
+  },
   "open": "Open",
   "openItem": "Open: {{title}}",
   "steps": {

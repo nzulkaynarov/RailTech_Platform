@@ -318,7 +318,13 @@
       "attachment_foreign_host": "Ilova havolasi platforma omboriga olib bormaydi",
       "content_unreadable": "Xat matni şifrdan oçilmadi (tizimlar aloqa kaliti)",
       "body_expired": "Xat matni allaqaçon öçirilgan",
-      "queue": "Xatni navbatga qöyib bölmadi"
+      "queue": "Xatni navbatga qöyib bölmadi",
+      "smtp_unavailable": "Poçta serveri javob bermayapti",
+      "smtp_tls_failed": "Xavfsiz ulanish o‘rnatilmadi",
+      "smtp_auth_failed": "Poçta serveri login yoki parolni qabul qilmadi",
+      "smtp_rejected": "Poçta serveri xatni rad etdi",
+      "detail": "server javobi {{code}}",
+      "other": "Xat yetkazilmadi"
     },
     "purpose": {
       "quote_sent": "Mijozga TK",
@@ -342,7 +348,12 @@
       "telegram_linked": "Telegram boğlandi",
       "test": "Yuborişni tekşiriş",
       "outgoing_letter": "Çiquvçi xat",
-      "erp_mail": "ERP xati"
+      "erp_mail": "ERP xati",
+      "web_confirmation": "So‘rov tasdig‘i",
+      "supplier_order": "Yetkazib beruvchiga buyurtma",
+      "price_request": "Narx so‘rovi",
+      "document_link_code": "Hujjatni ochish kodi",
+      "other": "Xat"
     },
     "inbound": {
       "title": "Qabul: umumiy poçta qutisi (IMAP)",

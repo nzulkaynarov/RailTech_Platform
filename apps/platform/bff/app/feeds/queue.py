@@ -22,6 +22,7 @@ from urllib.parse import quote
 
 from app.feeds.erp_work import calc_rows, invoice_rows, project_rows
 from app.feeds.feed import Feed
+from app.feeds.lang import tr
 from app.feeds.models import (
     DueLabel,
     MenuCounter,
@@ -91,10 +92,10 @@ MAX_CARDS = 4
 _ACTIVE_STAGES = frozenset({"CONTRACT_SIGNED", "CLOSED_WON"})
 # Причина передачи «Передать менеджеру» первой линией (CRM `handed_over`, D17G-1).
 HANDED_OVER = "handed_over"
-_LEAD_ACTION: dict[QueueItemKind, str] = {
-    "take_lead": "Взять в работу лида",
-    "answer_lead": "Ответить лиду",
-    "triage_lead": "Разобрать лида",
+_LEAD_ACTION: dict[QueueItemKind, tuple[str, str, str]] = {
+    "take_lead": ("Взять в работу лида", "Lidni işga oliş", "Take on lead"),
+    "answer_lead": ("Ответить лиду", "Lidga javob beriş", "Reply to lead"),
+    "triage_lead": ("Разобрать лида", "Lidni saralaş", "Sort lead"),
 }
 
 
@@ -150,7 +151,14 @@ def _acting_item(item: QueueItem, owner: QueueOwner | None) -> QueueItem:
         "id": f"{item.id}:for:{owner.id}",
         "on_behalf_of": owner,
         # «за Нодиру Алиеву»: чья это работа — первое, что человек должен увидеть в причине
-        "reason": join(f"вы замещаете {owner.name}", item.reason),
+        "reason": join(
+            tr(
+                f"вы замещаете {owner.name}",
+                f"siz {owner.name} örnini bosasiz",
+                f"you cover for {owner.name}",
+            ),
+            item.reason,
+        ),
     }
     if item.kind in _TASK_SCREEN_KINDS:
         # Рабочий экран поручения не знает замещения (в карточке письма его признака нет): за кого
@@ -174,20 +182,34 @@ def _lead_row(
     number = lead_number(lead_id)
     name = str(lead.get("display_name") or number)
     waiting = parse_dt(lead.get("last_lead_msg_at")) or parse_dt(lead.get("created_at"))
-    action = _LEAD_ACTION.get(kind, "Ответить лиду")
+    action = tr(*_LEAD_ACTION.get(kind, _LEAD_ACTION["answer_lead"]))
     title = f"{action} {number}"
     if handed_by is not None:
         # D17G-1: передача первой линии — строка с запиской делопроизводителя и его именем.
-        title = f"Новый лид от делопроизводителя {number}"
+        title = tr(
+            f"Новый лид от делопроизводителя {number}",
+            f"Yangi lid, kotibdan {number}",
+            f"New lead from the clerk {number}",
+        )
         waiting = parse_dt((lead.get("escalation") or {}).get("created_at")) or waiting
     if handed_by is not None:
-        reason = f"вам {handed_by}"
+        reason = tr(f"вам {handed_by}", f"sizga {handed_by}", f"to you: {handed_by}")
     elif kind == "answer_lead":
-        reason = "ваш клиент" + (f" · {short(why, 60)}" if why else " ждёт ответа")
+        reason = tr("ваш клиент", "sizning mijozingiz", "your client") + (
+            f" · {short(why, 60)}"
+            if why
+            else tr(" ждёт ответа", " javob kutmoqda", " is waiting for a reply")
+        )
     elif kind == "triage_lead":
-        reason = "вы первая линия: разобрать и передать менеджеру"
+        reason = tr(
+            "вы первая линия: разобрать и передать менеджеру",
+            "siz birinçi liniyasiz: saralab menejerga uzating",
+            "you are the first line: sort and pass to a manager",
+        )
     else:
-        reason = "лид без менеджера" + (f" · {short(why, 60)}" if why else "")
+        reason = tr("лид без менеджера", "menejersiz lid", "lead without a manager") + (
+            f" · {short(why, 60)}" if why else ""
+        )
     item = QueueItem(
         id=f"lead:{lead_id}:{kind}",
         role_id=role_id,
@@ -212,7 +234,9 @@ def _handed_over(lead: dict[str, Any]) -> bool:
 def _handed_by(lead: dict[str, Any]) -> str:
     escalation = lead.get("escalation") or {}
     name = escalation.get("handed_by_user_name")
-    return f"передал(а) {name}" if isinstance(name, str) and name else "передал делопроизводитель"
+    if isinstance(name, str) and name:
+        return tr(f"передано: {name}", f"{name} uzatdi", f"handed over by {name}")
+    return tr("передал делопроизводитель", "kotib uzatdi", "handed over by the clerk")
 
 
 # TODO(CRM-08): `/inbox` «мои» на стороне CRM; пока BFF отбирает чужие передачи и отложенные сам.
@@ -298,7 +322,11 @@ def covered_rows(covered: Covered, now: datetime, view: View, skip: set[int]) ->
                 "id": f"{row.item.id}:for:{covered.user_id}",
                 "on_behalf_of": owner,
                 # The lead is the colleague's, not the reader's: never "ваш клиент"
-                "reason": f"вы замещаете {covered.name} · клиент ждёт ответа",
+                "reason": tr(
+                    f"вы замещаете {covered.name} · клиент ждёт ответа",
+                    f"siz {covered.name} örnini bosasiz · mijoz javob kutmoqda",
+                    f"you cover for {covered.name} · the client is waiting for a reply",
+                ),
             }
         )
         out.append(row)
@@ -355,19 +383,32 @@ def quote_rows(snap: Snapshot, now: datetime, view: View) -> list[Row]:
         created = parse_dt(route.get("created_at"))
         quote = {"number": obj.get("quote_number"), "version": obj.get("quote_version")}
         number = quote_number(quote)
+        step_label = _text(_dict(route.get("current_step")).get("label"))
         item = QueueItem(
             id=f"quote:{route_id}",
             role_id=role_id,
             kind="approve_quote",
             reason=join(
-                f"ваш шаг маршрута: {_text(_dict(route.get('current_step')).get('label'))}"
-                if _text(_dict(route.get("current_step")).get("label"))
-                else "ваш шаг одобрения КП",
-                f"расчёт: {_text(obj.get('calc_author'))}"
+                tr(
+                    f"ваш шаг маршрута: {step_label}",
+                    f"marşrutdagi sizning qadamingiz: {step_label}",
+                    f"your route step: {step_label}",
+                )
+                if step_label
+                else tr(
+                    "ваш шаг одобрения КП",
+                    "TTni maqullaş böyiça sizning qadamingiz",
+                    "your quote approval step",
+                ),
+                tr(
+                    f"расчёт: {_text(obj.get('calc_author'))}",
+                    f"hisob-kitob: {_text(obj.get('calc_author'))}",
+                    f"costing: {_text(obj.get('calc_author'))}",
+                )
                 if _text(obj.get("calc_author"))
                 else None,
             ),
-            title=f"Одобрить {number}",
+            title=tr(f"Одобрить {number}", f"{number} ni maqullaş", f"Approve {number}"),
             subtitle=join(
                 client,
                 money(snapshot.get("total"), snapshot.get("currency"))
@@ -416,8 +457,17 @@ def letter_rows(snap: Snapshot, now: datetime, view: View) -> list[Row]:
             id=f"letter:{letter_id}",
             role_id=role_id,
             kind="resolve_letter",
-            reason="входящее без резолюции" + (" · срочное" if letter.get("urgent") else ""),
-            title=f"Наложить резолюцию на письмо {number}",
+            reason=tr(
+                "входящее без резолюции",
+                "rezolyusiyasiz kiruvçi xat",
+                "incoming letter without a resolution",
+            )
+            + (tr(" · срочное", " · shoşilinç", " · urgent") if letter.get("urgent") else ""),
+            title=tr(
+                f"Наложить резолюцию на письмо {number}",
+                f"{number} xatga rezolyusiya qöyiş",
+                f"Add a resolution to letter {number}",
+            ),
             subtitle=join(
                 _text(sender.get("name")),
                 subject,
@@ -450,17 +500,28 @@ def _waiting(since: datetime, now: datetime) -> str:
     """Сколько дело ждёт: «40 мин», «2 ч», «3 д» (возраст передачи — факт, не выдуманный срок)."""
     seconds = max(0, int((now - since).total_seconds()))
     if seconds < 3600:
-        return f"{max(1, seconds // 60)} мин"
+        n = max(1, seconds // 60)
+        return tr(f"{n} мин", f"{n} daq.", f"{n} min")
     if seconds < 86400:
-        return f"{seconds // 3600} ч"
-    return f"{seconds // 86400} д"
+        n = seconds // 3600
+        return tr(f"{n} ч", f"{n} soat", f"{n} h")
+    n = seconds // 86400
+    return tr(f"{n} д", f"{n} kun", f"{n} d")
 
 
 def _instruction_reason(entry: dict[str, Any]) -> str:
     """Почему поручение у этого человека: роль в поручении и дата резолюции."""
     issued = _ddmm(entry.get("created_at"))
-    role = "вы соисполнитель" if entry.get("role") == "co_executor" else "вы ответственный"
-    return join(f"резолюция от {issued}" if issued else "поручено резолюцией", role)
+    if entry.get("role") == "co_executor":
+        role = tr("вы соисполнитель", "siz hamijrosiz", "you are a co-executor")
+    else:
+        role = tr("вы ответственный", "siz masʼulsiz", "you are responsible")
+    return join(
+        tr(f"резолюция от {issued}", f"{issued} dagi rezolyusiya", f"resolution of {issued}")
+        if issued
+        else tr("поручено резолюцией", "rezolyusiya bilan topşirilgan", "assigned by a resolution"),
+        role,
+    )
 
 
 def letter_task_rows(snap: Snapshot, now: datetime, view: View) -> list[Row]:
@@ -490,9 +551,13 @@ def letter_task_rows(snap: Snapshot, now: datetime, view: View) -> list[Row]:
         letter_id, number, sender, subject = letter
         due_at = parse_deadline(entry.get("due"))
         action = (
-            "Подготовить ответ на письмо"
+            tr("Подготовить ответ на письмо", "Xatga javob tayyorlaş", "Prepare a reply to letter")
             if entry.get("kind") == "reply"
-            else "Исполнить поручение по письму"
+            else tr(
+                "Исполнить поручение по письму",
+                "Xat böyiça topşiriqni bajariş",
+                "Carry out the instruction on letter",
+            )
         )
         label = "overdue" if entry.get("overdue") is True else due_label(due_at, now)
         item = QueueItem(
@@ -500,12 +565,16 @@ def letter_task_rows(snap: Snapshot, now: datetime, view: View) -> list[Row]:
             role_id=_role_id_for(view, "instruction", owner),
             kind="instruction",
             reason=_instruction_reason(entry),
-            action_label="Подготовить ответ" if entry.get("kind") == "reply" else None,
+            action_label=tr("Подготовить ответ", "Javob tayyorlaş", "Prepare a reply")
+            if entry.get("kind") == "reply"
+            else None,
             title=f"{action} {number}",
             subtitle=join(
                 sender,
                 subject,
-                "запрошен перенос" if entry.get("extension_pending") is True else None,
+                tr("запрошен перенос", "muddatni köçiriş söralgan", "an extension was requested")
+                if entry.get("extension_pending") is True
+                else None,
             ),
             due_label=label,
             due_at=due_at,
@@ -530,13 +599,23 @@ def letter_task_rows(snap: Snapshot, now: datetime, view: View) -> list[Row]:
             role_id=_role_id_for(view, "instruction_extension", owner),
             kind="instruction_extension",
             reason=join(
-                f"{_text(executor.get('full_name')) or 'исполнитель'} просит перенос",
-                "вы автор резолюции",
+                tr(
+                    f"{_text(executor.get('full_name')) or 'исполнитель'} просит перенос",
+                    f"{_text(executor.get('full_name')) or 'ijroçi'} muddatni köçiriş söramoqda",
+                    f"{_text(executor.get('full_name')) or 'the executor'} asks for an extension",
+                ),
+                tr("вы автор резолюции", "siz rezolyusiya muallifisiz", "you wrote the resolution"),
             ),
-            title=f"Решить перенос срока по {number}",
+            title=tr(
+                f"Решить перенос срока по {number}",
+                f"{number} böyiça muddatni köçirişni hal qiliş",
+                f"Decide on the deadline extension for {number}",
+            ),
             subtitle=join(
                 _text(executor.get("full_name")),
-                f"новый срок {new_due}" if new_due else None,
+                tr(f"новый срок {new_due}", f"yangi muddat {new_due}", f"new deadline {new_due}")
+                if new_due
+                else None,
                 short(entry.get("reason"), 80),
             ),
             # Срок — действующий срок поручения: решить надо, пока он не прошёл
@@ -558,8 +637,16 @@ def letter_task_rows(snap: Snapshot, now: datetime, view: View) -> list[Row]:
                         id=f"acquaint:{letter_id}",
                         role_id=role_id,
                         kind="acquaint",
-                        reason="вас просят ознакомиться с письмом · без срока",
-                        title=f"Ознакомиться с письмом {number}",
+                        reason=tr(
+                            "вас просят ознакомиться с письмом · без срока",
+                            "sizdan xat bilan tanişiş söralmoqda · muddatsiz",
+                            "you are asked to read the letter · no deadline",
+                        ),
+                        title=tr(
+                            f"Ознакомиться с письмом {number}",
+                            f"{number} xat bilan tanişiş",
+                            f"Read letter {number}",
+                        ),
                         subtitle=join(sender, subject),
                         due_label="later",
                         object=letter_task_ref(letter_id, number, subject or None),
@@ -591,23 +678,41 @@ def _signature_row(entry: dict[str, Any], view: View, now: datetime) -> Row | No
     item = QueueItem(
         id=f"sign_document:{document_id}",
         reason=join(
-            "вы подписант по реестру полномочий",
-            f"передал(а) {by}" if by else None,
-            f"ждёт {_waiting(handed, now)}" if handed else None,
+            tr(
+                "вы подписант по реестру полномочий",
+                "siz vakolatlar reyestri böyiça imzolovçisiz",
+                "you are a signatory per the authority register",
+            ),
+            tr(f"передано: {by}", f"{by} uzatdi", f"handed over by {by}") if by else None,
+            tr(
+                f"ждёт {_waiting(handed, now)}",
+                f"{_waiting(handed, now)} kutmoqda",
+                f"waiting {_waiting(handed, now)}",
+            )
+            if handed
+            else None,
         ),
         role_id=_role_id_for(view, "sign_document", owner),
         kind="sign_document",
-        title=f"Подписать исходящее: ответ на {letter_number}"
+        title=tr(
+            f"Подписать исходящее: ответ на {letter_number}",
+            f"Çiquvçi xatni imzolaş: {letter_number} xatga javob",
+            f"Sign the outgoing letter: reply to {letter_number}",
+        )
         if letter_number
-        else f"Подписать исходящее: {subject}"
+        else tr(
+            f"Подписать исходящее: {subject}",
+            f"Çiquvçi xatni imzolaş: {subject}",
+            f"Sign the outgoing letter: {subject}",
+        )
         if subject
-        else "Подписать исходящее",
+        else tr("Подписать исходящее", "Çiquvçi xatni imzolaş", "Sign the outgoing letter"),
         subtitle=join(None if letter_number is None else subject, by),
         # Срока у подписи письма нет: «сегодня» не выдумываем, возраст передачи — в «почему у вас»
         due_label="later",
         object=ObjectRef(
             kind="memo",
-            number=letter_number or subject or "Исходящее",
+            number=letter_number or subject or tr("Исходящее", "Çiquvçi xat", "Outgoing"),
             title=subject or None,
             path=outgoing_document_path(document_id),
         ),
@@ -617,7 +722,12 @@ def _signature_row(entry: dict[str, Any], view: View, now: datetime) -> Row | No
 
 # Права EDS шагов визы маршрута подписи (ADR-0025, как в `eds_approvals`): не подпись.
 VISA_PERMISSIONS = frozenset({"approvals.visa_finance", "approvals.visa_legal"})
-_SIGNING_NOUN = {"quote": "КП", "contract": "договор", "invoice": "счёт", "act": "акт"}
+_SIGNING_NOUN = {
+    "quote": ("КП", "TT", "quote"),
+    "contract": ("договор", "şartnoma", "contract"),
+    "invoice": ("счёт", "hisob", "invoice"),
+    "act": ("акт", "akt", "act"),
+}
 _SIGNING_OBJECT: dict[str, ObjectKind] = {
     "quote": "quote",
     "contract": "contract",
@@ -627,8 +737,16 @@ _SIGNING_OBJECT: dict[str, ObjectKind] = {
 
 
 _VISA_REASON = {
-    "approvals.visa_finance": "ваша виза: финансы, до подписи",
-    "approvals.visa_legal": "ваша виза: юрист, до подписи",
+    "approvals.visa_finance": (
+        "ваша виза: финансы, до подписи",
+        "sizning vizangiz: moliya, imzogaça",
+        "your visa: finance, before signing",
+    ),
+    "approvals.visa_legal": (
+        "ваша виза: юрист, до подписи",
+        "sizning vizangiz: yurist, imzogaça",
+        "your visa: legal, before signing",
+    ),
 }
 
 
@@ -665,7 +783,7 @@ def signing_rows(snap: Snapshot, now: datetime, view: View) -> list[Row]:
             if isinstance(tiyins, int)
             else None
         )
-        verb = "Завизировать" if visa else "Подписать"
+        verb = tr("Завизировать", "Vizalaş", "Visa") if visa else tr("Подписать", "Imzolaş", "Sign")
         item = QueueItem(
             id=f"sign_document:{route_id}",
             role_id=_role_id_for(view, "sign_document", owner),
@@ -674,12 +792,31 @@ def signing_rows(snap: Snapshot, now: datetime, view: View) -> list[Row]:
             category="approve" if visa else "sign",
             action_label=verb,
             reason=join(
-                _VISA_REASON.get(permission or "", "ваша виза перед подписью")
+                tr(
+                    *_VISA_REASON.get(
+                        permission or "",
+                        (
+                            "ваша виза перед подписью",
+                            "imzodan oldingi sizning vizangiz",
+                            "your visa before signing",
+                        ),
+                    )
+                )
                 if visa
-                else "вы подписант по реестру полномочий",
-                f"ждёт {_waiting(created, now)}" if created else None,
+                else tr(
+                    "вы подписант по реестру полномочий",
+                    "siz vakolatlar reyestri böyiça imzolovçisiz",
+                    "you are a signatory per the authority register",
+                ),
+                tr(
+                    f"ждёт {_waiting(created, now)}",
+                    f"{_waiting(created, now)} kutmoqda",
+                    f"waiting {_waiting(created, now)}",
+                )
+                if created
+                else None,
             ),
-            title=f"{verb} {_SIGNING_NOUN[kind]} {number}",
+            title=f"{verb} {tr(*_SIGNING_NOUN[kind])} {number}",
             subtitle=join(short(route.get("title"), 80), amount, ago(created, now)),
             # Срока у подписи и визы нет: «сегодня» не выдумываем, возраст — в «почему у вас»
             due_label="later",
@@ -694,7 +831,10 @@ def signing_rows(snap: Snapshot, now: datetime, view: View) -> list[Row]:
     return out
 
 
-_MEMO_TITLES = {"approve_memo": "Согласовать", "pay_memo": "Принять к оплате"}
+_MEMO_TITLES = {
+    "approve_memo": ("Согласовать", "Kelişiş", "Approve"),
+    "pay_memo": ("Принять к оплате", "Tölovga qabul qiliş", "Accept for payment"),
+}
 
 
 _MEMO_KIND_BY_PERMISSION: dict[str, QueueItemKind] = {
@@ -742,11 +882,19 @@ def memo_rows(snap: Snapshot, now: datetime, view: View) -> list[Row]:
             role_id=role_id,
             kind=kind,
             reason=(
-                f"ваш шаг маршрута: {_text(step.get('label'))}"
+                tr(
+                    f"ваш шаг маршрута: {_text(step.get('label'))}",
+                    f"marşrutdagi sizning qadamingiz: {_text(step.get('label'))}",
+                    f"your route step: {_text(step.get('label'))}",
+                )
                 if _text(step.get("label"))
-                else "вы согласующий по маршруту"
+                else tr(
+                    "вы согласующий по маршруту",
+                    "siz marşrut böyiça kelişuvçisiz",
+                    "you are an approver on the route",
+                )
             ),
-            title=f"{_MEMO_TITLES[kind]} {number}" + (f" · {subject}" if subject else ""),
+            title=f"{tr(*_MEMO_TITLES[kind])} {number}" + (f" · {subject}" if subject else ""),
             subtitle=join(
                 _text(step.get("label")),
                 ago(created, now),
@@ -759,11 +907,11 @@ def memo_rows(snap: Snapshot, now: datetime, view: View) -> list[Row]:
 
 
 _SUBJECT = {
-    "access": "доступ",
-    "notification": "уведомления",
-    "template": "шаблон документа",
-    "error": "ошибка",
-    "other": "другое",
+    "access": ("доступ", "kiriş", "access"),
+    "notification": ("уведомления", "bildirişnomalar", "notifications"),
+    "template": ("шаблон документа", "hujjat şablonı", "document template"),
+    "error": ("ошибка", "xato", "error"),
+    "other": ("другое", "boşqa", "other"),
 }
 
 
@@ -780,10 +928,16 @@ def ticket_rows(snap: Snapshot, now: datetime, view: View) -> list[Row]:
             id=f"ticket:{ticket.get('id', number)}",
             role_id=role_id,
             kind="ticket",
-            title=f"Ответить на обращение {number}",
+            title=tr(
+                f"Ответить на обращение {number}",
+                f"{number} murojaatga javob beriş",
+                f"Reply to request {number}",
+            ),
             subtitle=join(
                 str(ticket.get("author_name") or "") or None,
-                _SUBJECT.get(str(ticket.get("subject"))),
+                tr(*_SUBJECT[str(ticket.get("subject"))])
+                if str(ticket.get("subject")) in _SUBJECT
+                else None,
                 short(ticket.get("preview"), 80),
                 ago(created, now),
             ),
@@ -813,11 +967,15 @@ def mail_rows(snap: Snapshot, now: datetime, view: View) -> list[Row]:
         received = parse_dt(mail.get("activity_at") or mail.get("received_at"))
         raw_assist = mail.get("assist")
         assist: dict[str, Any] = raw_assist if isinstance(raw_assist, dict) else {}
-        subject = str(mail.get("subject") or "") or "(без темы)"
+        subject = str(mail.get("subject") or "") or tr("(без темы)", "(mavzusiz)", "(no subject)")
         sender = str(mail.get("from_name") or "") or str(mail.get("from_email") or "") or None
-        verb = "Разобрать письмо"
+        verb = tr("Разобрать письмо", "Xatni saralaş", "Sort the email")
         if mine:
-            verb = "Письмо вам лично" if mail.get("personal") else "Письмо в работе"
+            verb = (
+                tr("Письмо вам лично", "Xat sizga şaxsan", "Email addressed to you")
+                if mail.get("personal")
+                else tr("Письмо в работе", "Xat işda", "Email in progress")
+            )
         item = QueueItem(
             id=f"mail:{mail_id}",
             role_id=_role_id(view, kind),
@@ -825,14 +983,19 @@ def mail_rows(snap: Snapshot, now: datetime, view: View) -> list[Row]:
             title=f"{verb}: {short(subject, 80)}",
             subtitle=join(
                 sender,
-                "ответ в цепочке" if mail.get("thread_reply") else None,
+                tr("ответ в цепочке", "zanjirdagi javob", "reply in a thread")
+                if mail.get("thread_reply")
+                else None,
                 short(assist.get("summary") or mail.get("preview"), 80),
                 ago(received, now),
             ),
             due_label="later",
             due_at=None,
             object=mail_ref(
-                mail_id, str(mail.get("from_email") or "почта"), subject, own=not triage
+                mail_id,
+                str(mail.get("from_email") or tr("почта", "poçta", "mail")),
+                subject,
+                own=not triage,
             ),
         )
         out.append(Row(item, received))
@@ -856,11 +1019,23 @@ def supplier_rows(snap: Snapshot, now: datetime, view: View) -> list[Row]:
             id=f"supplier_order:{order.get('id', number)}",
             role_id=role_id,
             kind="supplier_overdue",
-            title=f"Просрочен заказ {number}",
+            title=tr(
+                f"Просрочен заказ {number}",
+                f"{number} buyurtmaning muddati ötgan",
+                f"Order {number} is overdue",
+            ),
             subtitle=join(
                 supplier,
-                f"ждали к {expected.astimezone(COMPANY_TZ):%d.%m}" if expected else None,
-                f"{days} дн. просрочки" if isinstance(days, int) else None,
+                tr(
+                    f"ждали к {expected.astimezone(COMPANY_TZ):%d.%m}",
+                    f"{expected.astimezone(COMPANY_TZ):%d.%m} gaça kutilgan",
+                    f"expected by {expected.astimezone(COMPANY_TZ):%d.%m}",
+                )
+                if expected
+                else None,
+                tr(f"{days} дн. просрочки", f"{days} kun kecikkan", f"{days} d overdue")
+                if isinstance(days, int)
+                else None,
             ),
             due_label="overdue",
             due_at=expected,
@@ -884,8 +1059,18 @@ def _supply_task_item(task: dict[str, Any], kind: QueueItemKind, role_id: str) -
             id=f"partner_application:{task.get('id')}",
             role_id=role_id,
             kind=kind,
-            title=f"Заявка на партнёрство: {supplier}",
-            subtitle="Кандидат согласовал договор — одобрите" if agreed else "Отправьте договор",
+            title=tr(
+                f"Заявка на партнёрство: {supplier}",
+                f"Hamkorlik arizasi: {supplier}",
+                f"Partnership application: {supplier}",
+            ),
+            subtitle=tr(
+                "Кандидат согласовал договор — одобрите",
+                "Nomzod şartnomani kelişdi — maqullang",
+                "The candidate agreed to the contract — approve it",
+            )
+            if agreed
+            else tr("Отправьте договор", "Şartnomani yuboring", "Send the contract"),
             due_label="later",
             object=partner_application_ref(supplier),
         )
@@ -896,13 +1081,21 @@ def _supply_task_item(task: dict[str, Any], kind: QueueItemKind, role_id: str) -
         subtitle = join(_text(task.get("client_name")), note)
         if kind == "order_shortage":
             title, due, path = (
-                f"Заказать недостающее по {number}",
+                tr(
+                    f"Заказать недостающее по {number}",
+                    f"{number} böyiça yetişmayotganni buyurtma beriş",
+                    f"Order what is missing for {number}",
+                ),
                 "later",
                 f"/erp/stock/new?mode=shortage&request={segment(number)}",
             )
         else:
             title, due, path = (
-                f"Отгрузить товар по {number}",
+                tr(
+                    f"Отгрузить товар по {number}",
+                    f"{number} böyiça tovarni jönatiş",
+                    f"Ship the goods for {number}",
+                ),
                 "later",
                 f"/erp/stock?view=shipments&request={segment(number)}",
             )
@@ -918,17 +1111,43 @@ def _supply_task_item(task: dict[str, Any], kind: QueueItemKind, role_id: str) -
             ),
         )
     if kind == "send_supplier_order":
-        title, subtitle = f"Отправить заказ {number} партнёру", supplier or ""
+        title, subtitle = (
+            tr(
+                f"Отправить заказ {number} партнёру",
+                f"{number} buyurtmani hamkorga yuboriş",
+                f"Send order {number} to the partner",
+            ),
+            supplier or "",
+        )
     elif kind == "partner_date_change":
         wanted = parse_deadline(task.get("date"))
-        title = f"Партнёр просит перенести {number}" + (
-            f" на {wanted.astimezone(COMPANY_TZ):%d.%m}" if wanted else ""
+        title = tr(
+            f"Партнёр просит перенести {number}",
+            f"Hamkor {number} ni köçiriş söramoqda",
+            f"The partner asks to move {number}",
+        ) + (
+            tr(
+                f" на {wanted.astimezone(COMPANY_TZ):%d.%m}",
+                f" {wanted.astimezone(COMPANY_TZ):%d.%m} ga",
+                f" to {wanted.astimezone(COMPANY_TZ):%d.%m}",
+            )
+            if wanted
+            else ""
         )
         subtitle = join(supplier, note)
     else:
         title, subtitle = (
-            f"Принять товар по {number}",
-            join(supplier, f"накладная {note}" if note else None),
+            tr(
+                f"Принять товар по {number}",
+                f"{number} böyiça tovarni qabul qiliş",
+                f"Receive the goods for {number}",
+            ),
+            join(
+                supplier,
+                tr(f"накладная {note}", f"yuk xati {note}", f"delivery note {note}")
+                if note
+                else None,
+            ),
         )
     return QueueItem(
         id=f"{kind}:{task.get('id')}",
@@ -1031,9 +1250,9 @@ def build_cards(view: View, snap: Snapshot, queue: list[QueueItem]) -> list[Queu
         triage = sum(1 for i in queue if i.kind == "triage_lead")
         cards["leads_to_triage"] = QueueCard(
             key="leads_to_triage",
-            label="Лиды разобрать",
+            label=tr("Лиды разобрать", "Saralaş kerak bölgan lidlar", "Leads to sort"),
             count=triage,
-            hint="Контакты · Лиды",
+            hint=tr("Контакты · Лиды", "Kontaktlar · Lidlar", "Contacts · Leads"),
             path="/crm/leads?scope=waiting",
         )
     elif wants_inbox(view):
@@ -1041,35 +1260,44 @@ def build_cards(view: View, snap: Snapshot, queue: list[QueueItem]) -> list[Queu
         take = sum(1 for i in queue if i.kind == "take_lead")
         cards["leads_without_answer"] = QueueCard(
             key="leads_without_answer",
-            label="Лиды без ответа",
+            label=tr("Лиды без ответа", "Javobsiz lidlar", "Leads without a reply"),
             count=answer,
-            hint="Контакты · Лиды",
+            hint=tr("Контакты · Лиды", "Kontaktlar · Lidlar", "Contacts · Leads"),
             path="/crm/leads?scope=waiting",
         )
         cards["leads_to_take"] = QueueCard(
             key="leads_to_take",
-            label="Лиды без менеджера",
+            label=tr("Лиды без менеджера", "Menejersiz lidlar", "Leads without a manager"),
             count=take,
-            hint="Контакты · Лиды",
+            hint=tr("Контакты · Лиды", "Kontaktlar · Lidlar", "Contacts · Leads"),
             path="/crm/leads?scope=waiting",
         )
     if wants_letters(view) and snap.letters is not None:
         cards["letters_without_resolution"] = QueueCard(
             key="letters_without_resolution",
-            label="Входящие без резолюции",
+            label=tr(
+                "Входящие без резолюции",
+                "Rezolyusiyasiz kiruvçilar",
+                "Incoming without a resolution",
+            ),
             count=len(snap.letters),
-            hint="Документы · Входящие" + (" · не меньше" if snap.letters_more else ""),
+            hint=tr("Документы · Входящие", "Hujjatlar · Kiruvçi", "Documents · Incoming")
+            + (tr(" · не меньше", " · kamida", " · at least") if snap.letters_more else ""),
             path="/eds/inbox",
         )
     if wants_mail(view) and snap.mail is not None:
         cards["inbound_mail"] = QueueCard(
             key="inbound_mail",
-            label="Входящая почта",
+            label=tr("Входящая почта", "Kiruvçi poçta", "Incoming mail"),
             count=snap.mail_total,
             hint=(
-                "Документы · Почта"
+                tr("Документы · Почта", "Hujjatlar · Poçta", "Documents · Mail")
                 if snap.mail_configured
-                else "Почта не подключена — Настройки · Подключения · Почта"
+                else tr(
+                    "Почта не подключена — Настройки · Подключения · Почта",
+                    "Poçta ulanmagan — Sozlamalar · Ulanişlar · Poçta",
+                    "Mail is not connected — Settings · Connections · Mail",
+                )
             ),
             path="/eds/mail",
         )
@@ -1077,42 +1305,44 @@ def build_cards(view: View, snap: Snapshot, queue: list[QueueItem]) -> list[Queu
         # D26G-4: число — те же строки «Одобрить КП», что в очереди (одна логика, без расхождений)
         cards["quotes_to_approve"] = QueueCard(
             key="quotes_to_approve",
-            label="КП на одобрение",
+            label=tr("КП на одобрение", "Maqullaş uçun TT", "Quotes to approve"),
             count=sum(1 for i in queue if i.kind == "approve_quote" and i.on_behalf_of is None),
-            hint="Документы · Исходящие" + (" · не меньше" if snap.quotes_more else ""),
+            hint=tr("Документы · Исходящие", "Hujjatlar · Çiquvçi", "Documents · Outgoing")
+            + (tr(" · не меньше", " · kamida", " · at least") if snap.quotes_more else ""),
             path="/eds/drafts",
         )
     if wants_memos(view) and snap.memos is not None:
         cards["memos_to_approve"] = QueueCard(
             key="memos_to_approve",
-            label="Служебные записки",
+            label=tr("Служебные записки", "Xizmat xatlari", "Internal memos"),
             count=_own_count(snap.memos),
-            hint="Документы · Внутренние" + (" · не меньше" if snap.memos_more else ""),
+            hint=tr("Документы · Внутренние", "Hujjatlar · Ichki", "Documents · Internal")
+            + (tr(" · не меньше", " · kamida", " · at least") if snap.memos_more else ""),
             path="/eds/approvals",
         )
     counts = snap.invoice_counts
     if counts is not None and wants_work(view, "confirm_payment"):
         cards["payments_to_confirm"] = QueueCard(
             key="payments_to_confirm",
-            label="Платёжки на подтверждение",
+            label=tr("Платёжки на подтверждение", "Tasdiqlaş uçun tölovlar", "Payments to confirm"),
             count=counts["proofs"],
-            hint="Операции · Финансы",
+            hint=tr("Операции · Финансы", "Amallar · Moliya", "Operations · Finance"),
             path="/eds/payments?show=proofs",
         )
     if counts is not None and wants_work(view, "issue_invoice"):
         cards["invoices_to_issue"] = QueueCard(
             key="invoices_to_issue",
-            label="Счета к выставлению",
+            label=tr("Счета к выставлению", "Çiqariladigan hisoblar", "Invoices to issue"),
             count=counts["to_issue"],
-            hint="Операции · Финансы",
+            hint=tr("Операции · Финансы", "Amallar · Moliya", "Operations · Finance"),
             path="/eds/payments?show=to_issue",
         )
     if wants_projects(view):
         cards["projects_in_work"] = QueueCard(
             key="projects_in_work",
-            label="Проекты в работе",
+            label=tr("Проекты в работе", "İşdagi loyihalar", "Projects in progress"),
             count=projects_in_work(snap),
-            hint="Главная · Проекты",
+            hint=tr("Главная · Проекты", "Asosiy · Loyihalar", "Home · Projects"),
             path="/eds/projects",
         )
     if snap.zones_without_responsible:
@@ -1121,9 +1351,13 @@ def build_cards(view: View, snap: Snapshot, queue: list[QueueItem]) -> list[Queu
         cards = {
             "zones_without_responsible": QueueCard(
                 key="zones_without_responsible",
-                label="Зоны без ответственного",
+                label=tr("Зоны без ответственного", "Masʼulsiz zonalar", "Zones without an owner"),
                 count=snap.zones_without_responsible,
-                hint="Настройки · Люди и доступ · Зоны ответственности",
+                hint=tr(
+                    "Настройки · Люди и доступ · Зоны ответственности",
+                    "Sozlamalar · Odamlar va kiriş · Masʼuliyat zonalari",
+                    "Settings · People and access · Responsibility zones",
+                ),
                 path="/admin/zones",
             ),
             **cards,

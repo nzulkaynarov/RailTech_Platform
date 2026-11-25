@@ -148,6 +148,9 @@ describe('Счета', () => {
     const pending = within(card('Счета', 'S-2026-0130')).getByRole('list', { name: 'Платёжные поручения по счёту S-2026-0130' });
     expect(within(pending).getByText('На проверке')).toBeInTheDocument();
     expect(within(pending).getByText('Вы указали: 12 500 USD, оплачено 13 окт. 2026 г.')).toBeInTheDocument();
+    // СЦ-7 (N9): подпись и имя файла — отдельные узлы, слова подписи не режутся именем файла
+    expect(within(pending).getByText(/^Платёжное поручение от /)).toBeInTheDocument();
+    expect(within(pending).getByTitle('platezhka-0130.pdf')).toHaveTextContent('platezhka-0130.pdf');
     const confirmed = within(card('Счета', 'S-2026-0118')).getByRole('list', { name: 'Платёжные поручения по счёту S-2026-0118' });
     expect(within(confirmed).getByText('Оплата подтверждена')).toBeInTheDocument();
     // оплаченному счёту платёжка не нужна — кнопки нет

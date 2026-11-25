@@ -15,6 +15,7 @@ import { DoNotWorkStrip } from "../../../shared/ui/DoNotWorkStrip";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { LinkButton } from "../../../shared/ui/LinkButton";
 import { StatusTag } from "../../../shared/ui/StatusTag";
+import { LongText } from "../../../shared/ui/LongText";
 import { CloseMenu } from "../messages/CloseMenu";
 import { HandOverButton } from "../messages/HandOver";
 import { useRefreshMessages } from "../messages/actions";
@@ -78,6 +79,13 @@ function consentText(t: TFunction, fmt: Format, card: LeadCard): string {
   });
 }
 
+/** Запрос лида — тот же текст, что уже есть в его сообщениях (письмо: запрос = тело письма). */
+function repeatsMessage(need: string, messages: readonly { text: string }[]): boolean {
+  const squash = (value: string) => value.replace(/\s+/g, " ").trim();
+  const wanted = squash(need);
+  return wanted.length > 0 && messages.some((message) => squash(message.text).includes(wanted));
+}
+
 function Body({ card, sheet, onClose }: { card: LeadCard; sheet: boolean; onClose: () => void }) {
   const { t } = useTranslation(["leads", "messages", "clients"]);
   const fmt = useFormat();
@@ -106,6 +114,8 @@ function Body({ card, sheet, onClose }: { card: LeadCard; sheet: boolean; onClos
   const noChannel = card.reply_via === null;
   const callOnly = noChannel ? card.contacts.phone : null;
   const facts = factRows(t, card.facts);
+  // Запрос из письма уже напечатан сообщением ниже: второй раз целиком не показываем (СЦ-7, N5)
+  const need = card.need && !repeatsMessage(card.need, card.last_messages) ? card.need : null;
   return (
     <div className="pf-fp-stack">
       <div className="pf-fp-stack" style={{ gap: 4 }}>
@@ -191,17 +201,21 @@ function Body({ card, sheet, onClose }: { card: LeadCard; sheet: boolean; onClos
         />
       </div>
 
-      <div className="pf-fp-block">
-        <h4>{t(card.channel === "telegram" ? "leads:card.facts" : "leads:card.factsOther")}</h4>
-        {card.need ? (
-          <DefinitionList items={[{ label: t("leads:card.need"), value: card.need }]} />
-        ) : null}
-        {facts.length ? (
-          <DefinitionList items={facts} />
-        ) : card.need ? null : (
-          <p className="pf-fp-sub">{t("leads:card.none")}</p>
-        )}
-      </div>
+      {need || facts.length > 0 || !card.need ? (
+        <div className="pf-fp-block">
+          <h4>{t(card.channel === "telegram" ? "leads:card.facts" : "leads:card.factsOther")}</h4>
+          {need ? (
+            <DefinitionList
+              items={[{ label: t("leads:card.need"), value: <LongText text={need} /> }]}
+            />
+          ) : null}
+          {facts.length ? (
+            <DefinitionList items={facts} />
+          ) : need ? null : (
+            <p className="pf-fp-sub">{t("leads:card.none")}</p>
+          )}
+        </div>
+      ) : null}
 
       <div className="pf-fp-block">
         <h4>{t("leads:card.messages")}</h4>
@@ -212,7 +226,7 @@ function Body({ card, sheet, onClose }: { card: LeadCard; sheet: boolean; onClos
                 <span className="pf-hint">
                   {t(`leads:card.authors.${message.author}`)} · {fmt.date(message.at, "datetime")}
                 </span>
-                <span className="pf-crm-message-text">{message.text}</span>
+                <LongText className="pf-crm-message-text" text={message.text} />
               </li>
             ))}
           </ol>

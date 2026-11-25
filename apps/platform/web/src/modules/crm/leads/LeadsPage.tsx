@@ -203,7 +203,7 @@ function NeedText({ need }: { need: string | null }) {
 function LastMessage({ row }: { row: LeadRow }) {
   const fmt = useFormat();
   return row.last_message_at ? (
-    <span>{fmt.activity(row.last_message_at)}</span>
+    <span>{fmt.rowTime(row.last_message_at)}</span>
   ) : (
     <span aria-hidden="true">—</span>
   );

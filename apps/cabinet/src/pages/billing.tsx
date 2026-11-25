@@ -218,13 +218,13 @@ export function InvoicesPage() {
                   <ProofList invoice={row} />
                 </span>
               ),
-              className: 'min-w-0',
+              className: 'min-w-0 max-w-44',
             }}
             columns={[
               {
                 id: 'status',
                 header: t('pages.invoices.columns.status'),
-                cell: (row) => <StatusBadge entity="invoice" code={views.get(row.id)?.displayStatus ?? row.status} />,
+                cell: (row) => <StatusBadge entity="invoice" code={views.get(row.id)?.displayStatus ?? row.status} className="whitespace-nowrap" />,
               },
               { id: 'total', header: t('pages.invoices.columns.total'), cell: (row) => formatMoney(row.total), className: 'text-right tabular-nums whitespace-nowrap' },
               { id: 'paid', header: t('pages.invoices.columns.paid'), cell: (row) => formatMoney(row.paid), className: 'text-right tabular-nums whitespace-nowrap' },
@@ -248,7 +248,7 @@ export function InvoicesPage() {
                   );
                 },
               },
-              { id: 'deal', header: t('pages.invoices.columns.deal'), cell: (row) => <DealLink deal={row.deal} /> },
+              { id: 'deal', header: t('pages.invoices.columns.deal'), cell: (row) => <DealLink deal={row.deal} />, className: 'whitespace-nowrap' },
             ]}
             actions={{
               header: t('common.actions'),
@@ -291,9 +291,11 @@ function ProofList({ invoice }: { invoice: Invoice }) {
           <li key={proof.id} className="flex min-w-0 flex-col gap-0.5">
             <span className="flex flex-wrap items-center gap-1.5">
               <StatusBadge entity="proof" code={proof.status} />
-              <span className="break-all text-muted-foreground">
-                {t('pages.invoices.proofLine', { name: proof.file_name, date: formatDateTime(proof.submitted_at) })}
-              </span>
+              <span className="text-muted-foreground">{t('pages.invoices.proofLine', { date: formatDateTime(proof.submitted_at) })}</span>
+            </span>
+            {/* имя файла отдельной строкой: слова подписи не рвутся посреди слова, длинное имя обрезается (СЦ-7, N9) */}
+            <span className="block max-w-full truncate text-muted-foreground" title={proof.file_name}>
+              {proof.file_name}
             </span>
             <ProofClaim proof={proof} />
             {proof.status === 'rejected' && proof.reject_reason ? (

@@ -27,9 +27,13 @@ export function ToneBadge({ tone, children, className }: { tone: StatusTone; chi
 }
 
 /** Бейдж статуса сущности контракта: подпись из `status.<entity>.<code>`, тон из `lib/status`. */
-export function StatusBadge<E extends StatusEntity>({ entity, code }: { entity: E; code: StatusCode<E> }) {
+export function StatusBadge<E extends StatusEntity>({ entity, code, className }: { entity: E; code: StatusCode<E>; className?: string }) {
   const { t } = useTranslation();
-  return <ToneBadge tone={statusTone(entity, code)}>{t(statusLabelKey(entity, code))}</ToneBadge>;
+  return (
+    <ToneBadge tone={statusTone(entity, code)} className={className}>
+      {t(statusLabelKey(entity, code))}
+    </ToneBadge>
+  );
 }
 
 /**
