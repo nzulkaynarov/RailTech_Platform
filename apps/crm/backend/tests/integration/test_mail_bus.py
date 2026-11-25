@@ -423,3 +423,46 @@ async def test_letter_with_attachment_is_resent_only_while_its_links_live(stand:
     assert old.links_expire_at is not None
     assert old.links_expire_at < datetime.now(UTC)
     assert can_resend(old) is False, "ссылка уже истекла"
+
+
+async def test_bounce_after_sent_tells_the_requesting_system_once(stand: Stand) -> None:
+    """Почта приняла письмо ERP (`sent`), позже вернула отчёт о недоставке: ERP получает
+    `mail.failed` с причиной отчёта (один раз), чтобы отправитель узнал."""
+    from sqlalchemy import update
+
+    from app.domain.bounce import Bounce
+    from app.services import bounces
+
+    await stand.request()
+    (row,) = await stand.rows()
+    assert await stand.mail.deliver(row.id) is True
+    async with stand.sessions() as session, session.begin():
+        await session.execute(
+            update(EmailLog).where(EmailLog.id == row.id).values(message_id="out-1@railtech.test")
+        )
+    report = Bounce(
+        recipients=("buyer@example.com",),
+        severity="permanent",
+        reason="mailbox_not_found",
+        status="5.1.1",
+        diagnostic="550 5.1.1 user unknown",
+        original_message_id="out-1@railtech.test",
+        reply_ids=(),
+    )
+
+    async with stand.sessions() as session, session.begin():
+        applied = await bounces.apply(session, report, "report-1@mail.test")
+    async with stand.sessions() as session, session.begin():
+        await bounces.apply(session, report, "report-1@mail.test")  # тот же отчёт прочитан снова
+
+    assert applied.linked
+    events = await stand.outbox()
+    assert [t for t, _ in events] == [
+        "uz.railtech.crm.mail.sent.v1",
+        "uz.railtech.crm.mail.failed.v1",
+    ]
+    failed = events[1][1]
+    assert (failed["requester"], failed["request_key"]) == ("erp", "erp:email_log:1")
+    assert failed["reason"] == "mailbox_not_found"
+    assert failed["ref"] == {"kind": "contact", "id": "310"}
+    assert "buyer@example.com" not in str(failed)

@@ -79,6 +79,7 @@ def test_failed_invitation_goes_to_the_one_who_invited(contract_world, author, c
     (note,) = Notification.objects.filter(event_code="invitation.email_failed")
     assert note.user_id == author.pk
     assert client_contact.name in note.title
+    assert note.link == ""  # экрана контакта по адресу в Платформе нет
 
 
 def test_failed_mail_without_a_known_sender_stays_in_the_mail_log_only(contract_world):
@@ -95,3 +96,33 @@ def test_failed_mail_without_a_known_sender_stays_in_the_mail_log_only(contract_
     log.refresh_from_db()
     assert log.status == EmailLog.STATUS_FAILED
     assert not Notification.objects.filter(event_code="contract.email_failed").exists()
+
+
+def test_bounce_after_sent_marks_the_mail_failed_and_tells_the_sender_once(contract_world, author):
+    """Почта приняла письмо (`sent`), потом пришёл отчёт о недоставке: письмо «не доставлено», отправитель узнаёт."""
+    contract = contract_world["contracts"]["sent"]
+    log = queued_log("document_link_sent", "client@example.org")
+    ok = failed(log, "contract", str(contract.pk))
+    ok.pop("reason"), ok.pop("detail")
+    mail_bus.apply_mail_result(mail_bus.MAIL_SENT, ok)
+    log.refresh_from_db()
+    assert log.status == EmailLog.STATUS_SENT
+    assert not Notification.objects.filter(event_code="contract.email_failed").exists()
+
+    bounce = {**failed(log, "contract", str(contract.pk)), "reason": "mailbox_not_found"}
+    bounce.pop("detail")
+    mail_bus.apply_mail_result(mail_bus.MAIL_FAILED, bounce)
+    mail_bus.apply_mail_result(mail_bus.MAIL_FAILED, bounce)  # отчёт прочитан повторно
+
+    log.refresh_from_db()
+    assert log.status == EmailLog.STATUS_FAILED
+    assert log.error == "mailbox_not_found"
+    (note,) = Notification.objects.filter(event_code="contract.email_failed")
+    assert note.user_id == author.pk
+    assert "такого ящика нет" in note.message
+
+
+def test_supplier_order_title_says_letter_with_order():
+    from notifications.mail_failure import TITLES
+
+    assert TITLES["supplier_order"] == "Письмо с заказом {name} не доставлено"

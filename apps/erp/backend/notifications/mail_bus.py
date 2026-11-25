@@ -232,14 +232,16 @@ def _apply_mail_result(event_type: str, data: dict[str, Any]) -> None:
         log = EmailLog.objects.select_for_update().filter(pk=int(match.group(1))).first()
         if log is None:
             logger.info("mail result for unknown EmailLog %s", match.group(1))
-        elif log.status != EmailLog.STATUS_SENT:
-            if sent:
+        elif sent:
+            if log.status != EmailLog.STATUS_SENT:
                 log.status, log.error = EmailLog.STATUS_SENT, ""
                 log.save(update_fields=["status", "error"])
-            elif log.status != EmailLog.STATUS_FAILED:
-                log.status, log.error = EmailLog.STATUS_FAILED, _failure_text(data)
-                log.save(update_fields=["status", "error"])
-                _tell_sender(data, log)  # только при первом отказе: повтор итога второй строки не даёт
+        elif log.status != EmailLog.STATUS_FAILED:
+            # «Ошибка» после «отправлено» — отчёт о недоставке: почта приняла письмо, адресат его не получил
+            # (CRM шлёт `mail.failed` с причиной отчёта). Письмо становится «не доставлено».
+            log.status, log.error = EmailLog.STATUS_FAILED, _failure_text(data)
+            log.save(update_fields=["status", "error"])
+            _tell_sender(data, log)  # только при первом отказе: повтор итога второй строки не даёт
     ref = data.get("ref") or {}
     if ref.get("kind") == "quote" and str(ref.get("id", "")).isdigit():
         _apply_quote_result(int(ref["id"]), sent, data)

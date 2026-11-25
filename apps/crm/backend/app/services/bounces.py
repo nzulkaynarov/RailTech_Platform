@@ -20,6 +20,7 @@ import structlog
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.bus import events as bus_events
 from app.domain.bounce import Bounce
 from app.models.email import EmailLog, EmailUndeliverable
 from app.schemas.notices import EmailUndeliverableOut
@@ -141,6 +142,9 @@ async def apply(
     row.bounced_at, row.bounce_message_id = moment, report_id[:255]
     row.bounce_status = bounce.status
     row.bounce_reason = bounce.reason
+    # Письмо другой системы (ERP, EDS) с просьбой об итоге: почта приняла, адресат не получил —
+    # отправитель узнаёт событием `crm.mail.failed` с причиной отчёта (УВ-2).
+    await bus_events.mail_result(session, row, bounce_reason=bounce.reason)
     marked: list[str] = []
     if proven:
         # A report that names recipients marks those of this letter (the Cc address itself, not

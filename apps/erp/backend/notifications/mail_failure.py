@@ -27,7 +27,17 @@ TITLES = {
     "invoice": "Письмо со счётом {name} не доставлено",
     "act": "Письмо с актом {name} не доставлено",
     "invitation": "Приглашение в кабинет не доставлено: {name}",
-    "supplier_order": "Заказ поставщику {name} не доставлен",
+    "supplier_order": "Письмо с заказом {name} не доставлено",
+}
+
+
+#: Коды причин почты и отчётов о недоставке — словами для строки колокольчика.
+REASON_TEXT = {
+    "domain_not_found": "такого домена нет",
+    "mailbox_not_found": "такого ящика нет",
+    "mailbox_full": "ящик получателя переполнен",
+    "rejected": "почта получателя отклонила письмо",
+    "smtp_not_configured": "почта не настроена",
 }
 
 
@@ -46,6 +56,8 @@ def notify_sender(kind: str, ref_id: str, to: list[str], reason: str) -> bool:
     from notifications.services import notify_user
 
     address = ", ".join(to)
+    code = reason.split(":", 1)[0].strip()
+    reason = REASON_TEXT.get(code, reason)
     notify_user(
         user=sender,
         title=TITLES[kind].format(name=name)[:200],
@@ -112,7 +124,8 @@ def _invitation(ref_id: str) -> Found:
             .first()
         )
         sender = (deal.manager or deal.assigned_to) if deal is not None else None
-    return sender, (contact.name or contact.email or f"#{contact.pk}"), "/company", None
+    # Экрана контакта по адресу в Платформе нет — без ссылки: причина и адрес в самой строке.
+    return sender, (contact.name or contact.email or f"#{contact.pk}"), "", None
 
 
 def _supplier_order(ref_id: str) -> Found:
