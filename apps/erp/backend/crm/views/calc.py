@@ -11,7 +11,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from core.permissions import RoleGatedViewMixin
+from core.permissions import SELF_SERVICE, RoleGatedViewMixin
 
 from ..serializers.calc import (
     CalcCatalogSerializer,
@@ -358,10 +358,12 @@ class CalcLostView(RoleGatedViewMixin, APIView):
             return _fail(exc)
 
 
-class CalcCloseView(APIView):
+class CalcCloseView(RoleGatedViewMixin, APIView):
     """POST /api/v1/calc/<deal_id>/close/ — «Закрыть заявку» на любом шаге до проекта, причина из справочника."""
 
     permission_classes = [IsAuthenticated]
+    # Закрывает ответственный за заявку или держатель `deal.manage` — решает сервис (`can_close_request`), не одно право.
+    required_permissions = {"POST": SELF_SERVICE}
 
     @extend_schema(
         operation_id="calc_close",
