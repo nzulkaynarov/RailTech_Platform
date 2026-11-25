@@ -45,6 +45,8 @@ from app.services.storage import ObjectStorage
 log = structlog.get_logger(__name__)
 
 FUNCTION: Final = "letter_intake"
+RULES_ALIAS: Final = "rules"  # предложение по правилам кода, без модели (СЦ-11)
+RULES_VERSION: Final = "rules-1"
 PDF: Final = "application/pdf"
 IMAGES: Final = frozenset({"image/jpeg", "image/png", "image/webp", "image/gif"})
 MIN_TEXT = 40  # меньше знаков в текстовом слое — считаем сканом
@@ -186,6 +188,43 @@ def clean(
     )
 
 
+def rules_fields(raw: str, today: date, own_inn: str | None = None) -> LetterIntakeFields | None:
+    """Поля, которые код берёт из текста письма без модели: срок «в течение N дней» и ИНН отправителя.
+    Нет срока в тексте — `None`: одного ИНН для предложения мало."""
+    due = due_from_text(raw, today)
+    if due is None or not today - DUE_PAST <= due <= today + DUE_AHEAD:
+        return None
+    return LetterIntakeFields(document_due=due, sender_inn=find_inn(raw, own_inn))
+
+
+async def _rules_suggestion(
+    session: AsyncSession, employee: Employee, fields: LetterIntakeFields
+) -> LetterIntakeSuggestion:
+    """Предложение по правилам кода: в журнале — алиас `rules`, без токенов и стоимости (платного вызова нет)."""
+    suggestion_id = uuid.uuid4()
+    async with session.begin():
+        session.add(
+            AiSuggestion(
+                id=suggestion_id,
+                function=FUNCTION,
+                alias=RULES_ALIAS,
+                prompt_version=RULES_VERSION,
+                source=IntakeSource.TEXT.value,
+                status="ok",
+                crm_user_id=employee.crm_user_id,
+                created_at=clock.now(),
+            )
+        )
+    log.info("ai.letter_intake", suggestion_id=str(suggestion_id), status="ok", source="rules")
+    return LetterIntakeSuggestion(
+        suggestion_id=suggestion_id,
+        source=IntakeSource.TEXT,
+        fields=fields,
+        alias=RULES_ALIAS,
+        prompt_version=RULES_VERSION,
+    )
+
+
 def _kinds_block(items: list[tuple[str, str]]) -> str:
     return "<kinds>\n" + "\n".join(f"{code}: {name}" for code, name in items) + "\n</kinds>"
 
@@ -227,11 +266,13 @@ async def suggest(
     limit = MAX_PDF_BYTES if version.content_type == PDF else MAX_IMAGE_BYTES
     if version.size > limit:
         raise conflict("file_too_large", _too_large(limit))
-    if not gateway.available(settings):
-        raise conflict("ai_unavailable", "Помощник не настроен — заполните вручную.")
+    # Модель недоступна или лимит исчерпан — не отказ: правила кода (срок по тексту) работают без модели (СЦ-11).
+    blocked: tuple[str, str] | None = None
     budget = Decimal(str(settings.ai_daily_budget_usd))
-    if budget > 0 and spent >= budget:  # 0 — без лимита (как у ERP)
-        raise conflict("ai_budget_exceeded", "Дневной лимит помощника исчерпан — заполните вручную.")
+    if not gateway.available(settings):
+        blocked = ("ai_unavailable", "Помощник не настроен — заполните вручную.")
+    elif budget > 0 and spent >= budget:  # 0 — без лимита (как у ERP)
+        blocked = ("ai_budget_exceeded", "Дневной лимит помощника исчерпан — заполните вручную.")
     data = await _read(storage, version.s3_key)
     try:
         raw = await asyncio.to_thread(pdf_text, data) if version.content_type == PDF else ""
@@ -240,6 +281,12 @@ async def suggest(
             "file_too_large", f"В файле больше {MAX_PDF_PAGES} страниц — это не письмо. Заполните вручную."
         ) from exc
     source = IntakeSource.TEXT if len(raw) >= MIN_TEXT else IntakeSource.IMAGE
+    today = clock.company_date(clock.now())
+    by_rules = rules_fields(raw, today, own_inn) if source is IntakeSource.TEXT else None
+    if blocked is not None:
+        if by_rules is None:
+            raise conflict(*blocked)
+        return await _rules_suggestion(session, employee, by_rules)
     if source is IntakeSource.IMAGE and not scans_on:
         why = (
             "при строгой политике защиты данных помощник сканы и фото не читает"
@@ -277,7 +324,7 @@ async def suggest(
             masked=masked,
             kinds={c for c, _ in kinds},
             raw=raw,
-            today=clock.company_date(clock.now()),
+            today=today,
             own_inn=own_inn,
         )
         if result.status == "ok" and result.data is not None
@@ -303,6 +350,8 @@ async def suggest(
             )
         )
     log.info("ai.letter_intake", suggestion_id=str(suggestion_id), status=status, source=source.value)
+    if (result.status == "budget" or fields is None or empty) and by_rules is not None:
+        return await _rules_suggestion(session, employee, by_rules)
     if result.status == "budget":
         raise conflict("ai_budget_exceeded", "Дневной лимит помощника исчерпан — заполните вручную.")
     if fields is None:

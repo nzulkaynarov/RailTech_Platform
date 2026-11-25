@@ -5018,7 +5018,10 @@ components:
           enum: [text, image]
           description: '`text` — текстовый слой PDF (маскированный), `image` — скан или фото (модель с изображением)'
         fields: { $ref: '#/components/schemas/LetterIntakeFields' }
-        alias: { type: string, examples: [intake-model] }
+        alias:
+          type: string
+          examples: [intake-model]
+          description: '`rules` — модель не использовалась: срок по тексту письма («в течение N дней») посчитал код (СЦ-11)'
         prompt_version: { type: string }
     AiDecisionIn:
       type: object

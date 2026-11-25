@@ -2733,7 +2733,10 @@ export interface components {
        */
       source: "text" | "image";
       fields: components["schemas"]["LetterIntakeFields"];
-      /** @example intake-model */
+      /**
+       * @description `rules` — модель не использовалась: срок по тексту письма («в течение N дней») посчитал код (СЦ-11)
+       * @example intake-model
+       */
       alias: string;
       prompt_version: string;
     };

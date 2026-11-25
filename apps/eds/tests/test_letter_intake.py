@@ -487,3 +487,32 @@ def test_relative_due_in_the_letter_text_is_suggested_by_code() -> None:
         {**ANSWER, "document_due": "2026-11-25"}, masked=None, kinds=set(), raw="в течение 5 рабочих дней", today=today
     )
     assert explicit.document_due == date(2026, 11, 25)
+
+
+async def test_due_from_the_text_is_suggested_without_the_model(
+    client: httpx.AsyncClient, staff: dict[str, Person], model: FakeModel, settings: Settings,
+    monkeypatch: pytest.MonkeyPatch, container: Container,
+) -> None:  # fmt: skip
+    """СЦ-11: срок «N ish kuni ichida» считает код — при выключенной модели и при её сбое он всё равно предложен."""
+    lines = [
+        "Tax Committee of Demo District",
+        "Explanations are due 5 ish kuni ichida from receipt of this notice.",
+        *LETTER_LINES[:1],
+    ]
+    monkeypatch.setattr(settings, "litellm_api_key", SecretStr(""))
+    off = await intake(client, staff["registrar"], make_pdf(lines))
+    assert off.status_code == 200, off.text
+    body = off.json()
+    validate("LetterIntakeSuggestion", body)
+    assert (body["alias"], body["source"]) == ("rules", "text")
+    assert body["fields"]["document_due"] is not None
+    assert model.bodies == []  # платного вызова не было
+
+    monkeypatch.setattr(settings, "litellm_api_key", SecretStr("sk-test-eds-key"))
+    model.status = 500
+    down = await intake(client, staff["registrar"], make_pdf(lines))
+    assert down.status_code == 200, down.text
+    assert down.json()["alias"] == "rules" and down.json()["fields"]["document_due"] == body["fields"]["document_due"]
+    # текст без срока по-прежнему отправляет заполнять вручную
+    plain = await intake(client, staff["registrar"], make_pdf(LETTER_LINES))
+    assert_error(plain, 409, "CONFLICT", reason="ai_budget_exceeded")
