@@ -135,7 +135,12 @@ def update_company_settings(
         changed.append("remind_overdue_invoices")
 
     # ДОК-10: правила договора по шаблону — три флага и шаблон по умолчанию на вид контрагента (только утверждённый).
-    for flag in ("contract_auto_send", "contract_sign_before_send", "contract_deviations_allowed", "contract_four_eyes"):
+    for flag in (
+        "contract_auto_send",
+        "contract_sign_before_send",
+        "contract_deviations_allowed",
+        "contract_four_eyes",
+    ):
         if flag in data:
             if not isinstance(data.get(flag), bool):
                 return None, "BAD_BOOLEAN"
