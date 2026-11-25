@@ -13,7 +13,7 @@ const LETTER = {
 
 for (const width of [1512, 1440] as const) {
   test(`заявка создана: номер и что дальше (${String(width)})`, async ({ page }) => {
-    await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
+    await page.setViewportSize({ width, height: 900 });
     await loginAndWait(page, "manager@demo.example");
     await spaGoto(page, "/crm/leads");
     const table = page.getByRole("table", { name: "Лиды" });
