@@ -457,3 +457,21 @@ test('B-CABFIX-1: наблюдатель — платёжки и коммент�
   await expect(page.getByLabel('Ваш комментарий')).toHaveCount(0);
   await snap(page, 'viewer-cabinet-quote-comments');
 });
+
+/** ТЕКСТ-1: договор после согласования клиентом — «Согласован» и «Договор будет выставлен на подписание», без прокрутки вбок. */
+test('ТЕКСТ-1: согласованный договор — статус и пояснение переносятся', async ({ page }) => {
+  await signIn(page, 'actor');
+  await page.goto('/contracts');
+  await heading(page, 'Договоры');
+  await page.getByRole('button', { name: /^Согласовать договор D-2026-0048/ }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Согласовать договор', exact: true }).click();
+  await expect(page.getByText('Договор будет выставлен на подписание').first()).toBeVisible();
+  await snap(page, 'text1-contract-agreed');
+  await page.getByRole('link', { name: /ПР-2026-048/ }).first().click(); // состояние мока живёт до перезагрузки — переходим по ссылке
+  await expect(page.getByRole('heading', { level: 1, name: /ПР-2026-048/ })).toBeVisible();
+  await expect(page.getByText('Договор будет выставлен на подписание').first()).toBeVisible();
+  await snap(page, 'text1-deal-agreed', { screenshot: true });
+  await page.goto('/requests');
+  await heading(page, 'Заявки');
+  await snap(page, 'text1-bottom-nav-requests', { widths: [{ width: 390, height: 844 }] });
+});

@@ -160,7 +160,12 @@ export function DealPage() {
         <DealSection title={t('pages.deal.contracts')} count={dealContracts.length}>
           {dealContracts.map((item) => (
             <DealRow key={item.id} to="/contracts" title={item.number}>
-              <StatusBadge entity="contract" code={item.status} />
+              <div className="flex flex-col items-start gap-1">
+                <StatusBadge entity="contract" code={item.status} />
+                {item.status === 'signed_by_client' ? (
+                  <span className="max-w-48 text-xs whitespace-normal text-muted-foreground">{t('pages.contracts.willBeSent')}</span>
+                ) : null}
+              </div>
             </DealRow>
           ))}
         </DealSection>

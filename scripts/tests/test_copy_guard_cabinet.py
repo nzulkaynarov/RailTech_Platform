@@ -16,6 +16,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 GUARD = ROOT / "scripts/copy_guard"
 BASELINE = GUARD / "baseline/cabinet.json"
+ALLOW = GUARD / "allow.tsv"
+# Ceilings only go down: each PR that fixes texts lowers the number (README, «Как работать»).
+BASELINE_CEILING = 50
+ALLOW_CEILING = 5
 
 
 def _load(name: str):
@@ -45,6 +49,18 @@ class CabinetCopyGuard(unittest.TestCase):
         for entry in json.loads(BASELINE.read_text(encoding="utf-8")):
             self.assertTrue(entry.startswith("L|"), f"fix the text, do not baseline it: {entry}")
 
+    def test_baseline_only_shrinks(self) -> None:
+        self.assertLessEqual(len(json.loads(BASELINE.read_text(encoding="utf-8"))), BASELINE_CEILING)
+
+    def test_allow_list_is_short_explained_and_exact(self) -> None:
+        lines = [x for x in ALLOW.read_text(encoding="utf-8").splitlines() if x.strip() and not x.startswith("#")]
+        self.assertLessEqual(len(lines), ALLOW_CEILING)
+        for line in lines:
+            key, cls, reason = (line.split("\t") + ["", ""])[:3]
+            self.assertTrue(key and cls and reason.strip(), f"key, class and reason are required: {line!r}")
+            self.assertNotIn(".*", key, f"no wildcard patterns: {line!r}")
+            self.assertNotIn(".+", key, f"no wildcard patterns: {line!r}")
+
     def test_rules_catch_what_the_cabinet_was_cleaned_of(self) -> None:
         guard = _load("copy_guard")
         rules = guard.load_rules()
@@ -57,6 +73,7 @@ class CabinetCopyGuard(unittest.TestCase):
         self.assertIn("audience", classes("Договор придёт вам в ЭДО"))
         self.assertIn("audience", classes("Contract comes via e-document exchange", "en"))
         self.assertIn("jargon", classes("Respond to RFQ", "en"))
+        self.assertIn("audience", classes("Contract comes via EDI", "en"))
         self.assertIn("gender", classes("Согласен(на) на обработку"))
         self.assertIn("promise", classes("Файлы в чат пока не прикладываются"))
         self.assertIn("jargon", classes("Рег. номер / Tax ID"))

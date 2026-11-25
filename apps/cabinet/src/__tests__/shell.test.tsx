@@ -16,7 +16,7 @@ describe('оболочка кабинета', () => {
     await waitFor(() => expect(document.title).toBe('Заявки · Кабинет RailTech'));
 
     const bottom = screen.getByRole('navigation', { name: 'Основные разделы' });
-    for (const name of ['Заявки', 'Предложения', 'Каталог', 'Все документы', 'Ещё']) {
+    for (const name of ['Заявки', 'Цены', 'Каталог', 'Все документы', 'Ещё']) {
       expect(within(bottom).getByText(name)).toBeInTheDocument();
     }
     const side = screen.getByRole('navigation', { name: 'Разделы кабинета' });

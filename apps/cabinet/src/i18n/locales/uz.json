@@ -21,6 +21,7 @@
   "nav": {
     "requests": "Arizalar",
     "quotes": "Takliflar",
+    "quotesShort": "Narxlar",
     "contracts": "Şartnomalar",
     "invoices": "Hisob-fakturalar",
     "acts": "Dalolatnomalar",
@@ -115,7 +116,7 @@
     "request": {
       "new": "Yangi",
       "in_progress": "Işda",
-      "quoted": "Taklif tayyor",
+      "quoted": "Taklif bor",
       "closed": "Yopilgan",
       "outcome_won": "Loyihaga aylandi",
       "outcome_cancelled": "Yopilgan"
@@ -933,7 +934,7 @@
         "applicationPendingDesc": "Hamkor maqomini oliş uçun ariza topşirilgan va {{operator}} tomonidan körib çiqilmoqda.",
         "contractValue": "№ {{number}}, {{date}}",
         "contractSentDesc": "Hamkorlik şartnomasi tayyorlandi va kompaniyangizga kelişiş uçun yuborildi.",
-        "contractAgreedDesc": "Şartnomani kelişdingiz. Bizning imzomizni kutmoqda.",
+        "contractAgreedDesc": "Şartnomani kelişdingiz. Şartnoma imzolaşga qöyiladi.",
         "status": {
           "submitted": "Körib çiqilmoqda",
           "contract_sent": "Şartnoma yuborildi",

@@ -444,7 +444,7 @@ test.describe('D. Договор → счёт', () => {
 
   step('D3. договор «подписан сторонами» и счёт с остатком', async () => {
     await open('/contracts');
-    await expect(client.getByText('Подписан').first()).toBeVisible();
+    await expect(client.getByText('Подписан', { exact: true }).first()).toBeVisible();
     await snap(client, 'contracts-signed-both');
     await open('/invoices');
     await expect(client.getByText('Оплачен частично')).toBeVisible();

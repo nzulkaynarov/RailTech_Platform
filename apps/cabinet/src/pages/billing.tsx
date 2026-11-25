@@ -94,7 +94,7 @@ export function ContractsPage() {
                   <div className="flex flex-col items-start gap-1">
                     <StatusBadge entity="contract" code={row.status} />
                     {row.status === 'signed_by_client' ? (
-                      <span className="text-xs text-muted-foreground">{t('pages.contracts.willBeSent')}</span>
+                      <span className="max-w-48 text-xs whitespace-normal text-muted-foreground">{t('pages.contracts.willBeSent')}</span>
                     ) : null}
                   </div>
                 ),

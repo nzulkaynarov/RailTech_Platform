@@ -300,7 +300,7 @@ describe('Онбординг партнёров (PART-ONBOARD-1)', () => {
 
       // После согласования статус меняется на «Согласован вами»
       expect(await screen.findByText('Согласован вами')).toBeInTheDocument();
-      expect(screen.getByText(/Ждёт нашей подписи/)).toBeInTheDocument();
+      expect(screen.getByText(/Договор будет выставлен на подписание/)).toBeInTheDocument();
     });
 
     it('компания уже имеет активный договор партнёра: карточка со ссылкой на «Мои товары»', async () => {

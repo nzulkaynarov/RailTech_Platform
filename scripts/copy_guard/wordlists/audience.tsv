@@ -15,5 +15,5 @@
 \b(персональн\w+ менеджер\w*)	M	ru	client,partner,any	менеджер	D-24.11 help.contactManager
 \b(генподрядчик\w*|принципал\w*|авторизованн\w+ партн\w*|оценк\w+ эффективности)	H	ru	partner	(убрать)	D8
 (?-i:\b(ЭДО|ЭЦП)\b)	H	ru	client,partner,any	«выставлен на подписание» / (убрать)	решение владельца 2026-11-25: клиенту не показываем «ЭДО», как подписываем — организационный вопрос
-(?-i:\bEHT\w*)|e-?document exchange	H	en,uz	client,partner,any	sent for signing / imzolaşga qöyiladi	решение владельца 2026-11-25
+(?-i:\bEHT\w*|\bEDI\b)|e-?document exchange	H	en,uz	client,partner,any	sent for signing / imzolaşga qöyiladi	решение владельца 2026-11-25
 (?-i:\bTK\b)	M	uz	client,partner,any	taklif	аббревиатура клиенту непонятна

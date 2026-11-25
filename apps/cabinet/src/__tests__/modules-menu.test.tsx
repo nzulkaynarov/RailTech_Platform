@@ -71,7 +71,7 @@ describe('меню по блокам «Покупаю · Продаю · Док�
       within(bottom)
         .getAllByRole('link')
         .map((link) => link.textContent?.replace(/\d+/g, '').trim()),
-    ).toEqual(['Заявки', 'Предложения', 'Каталог', 'Мои товары']);
+    ).toEqual(['Заявки', 'Цены', 'Каталог', 'Мои товары']);
     await user.click(within(bottom).getByRole('button', { name: 'Ещё' }));
     const sheet = await screen.findByRole('dialog');
     expect(within(sheet).getAllByRole('heading', { level: 3 }).map((h) => h.textContent)).toEqual(['Покупаю', 'Продаю', 'Документы', 'Компания']);
@@ -131,7 +131,7 @@ describe('меню из /me.modules', () => {
       within(bottom)
         .getAllByRole('link')
         .map((link) => link.textContent?.replace(/\d+/g, '').trim()),
-    ).toEqual(['Заявки', 'Предложения', 'Каталог', 'Все документы']);
+    ).toEqual(['Заявки', 'Цены', 'Каталог', 'Все документы']);
     expect(within(bottom).getByRole('button', { name: 'Ещё' })).toBeInTheDocument();
   });
 

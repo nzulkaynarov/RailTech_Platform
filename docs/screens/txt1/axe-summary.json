@@ -326,5 +326,45 @@
     "rulesPassed": 43,
     "overflowPx": 0,
     "violations": []
+  },
+  {
+    "screen": "text1-contract-agreed",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 41,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "text1-contract-agreed",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 37,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "text1-deal-agreed",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 37,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "text1-deal-agreed",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 37,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "text1-bottom-nav-requests",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 39,
+    "overflowPx": 0,
+    "violations": []
   }
 ]

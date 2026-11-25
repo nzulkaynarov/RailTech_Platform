@@ -21,6 +21,7 @@
   "nav": {
     "requests": "Requests",
     "quotes": "Quotes",
+    "quotesShort": "Quotes",
     "contracts": "Contracts",
     "invoices": "Invoices",
     "acts": "Acts",
@@ -118,7 +119,7 @@
       "quoted": "Quote ready",
       "closed": "Closed",
       "outcome_won": "Became a project",
-      "outcome_cancelled": "Cancelled"
+      "outcome_cancelled": "Closed"
     },
     "quote": {
       "sent": "Awaiting your decision",
@@ -153,7 +154,7 @@
       "shipped": "Shipped",
       "delivered": "Delivered",
       "accepted": "Accepted",
-      "disputed": "Disputed"
+      "disputed": "Has remarks"
     },
     "availability": {
       "in_stock": "In stock",
@@ -933,7 +934,7 @@
         "applicationPendingDesc": "The application for partner status has been submitted and is under review by {{operator}}.",
         "contractValue": "No. {{number}} dated {{date}}",
         "contractSentDesc": "The partner agreement has been prepared and sent to your company for review and signing.",
-        "contractAgreedDesc": "You agreed the contract. It now awaits our signature.",
+        "contractAgreedDesc": "You agreed the contract. The contract will be sent for signing.",
         "status": {
           "submitted": "Under review",
           "contract_sent": "Contract sent",

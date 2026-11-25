@@ -111,8 +111,17 @@ TS_STR = re.compile(r"""(?P<prop>\b(?:ru|en|uz)\s*:\s*)?(?P<q>['"`])(?P<body>(?:
 JSX_TEXT = re.compile(r">([^<>{}]*[А-Яа-яЁё][^<>{}]*)<")
 
 
-# Files whose strings are developer diagnostics (never shown to a user).
-DEV_ONLY_FILES = {"apps/cabinet/src/telegram/theme.ts"}
+# Functions whose strings are developer diagnostics (contrast-check pair names), never shown to a user.
+DEV_ONLY_SYMBOLS = {"apps/cabinet/src/telegram/theme.ts": ("palettePairs", "paletteProblems")}
+
+
+def _blank_functions(stripped: str, names: tuple[str, ...]) -> str:
+    """Blank out the body of top-level `function <name>` (up to the closing brace at column 0), keeping offsets."""
+    for name in names:
+        m = re.search(rf"^(?:export )?function {name}\b.*?^\}}", stripped, flags=re.S | re.M)
+        if m:
+            stripped = stripped[: m.start()] + re.sub(r"[^\n]", " ", m.group()) + stripped[m.end():]
+    return stripped
 
 
 def extract_ts(root: Path) -> Iterator[dict]:
@@ -122,12 +131,11 @@ def extract_ts(root: Path) -> Iterator[dict]:
             parts = set(f.relative_to(root / base).parts[:-1])
             if parts & SKIP_DIR_PARTS or "i18n" in parts or re.search(r"\.(test|spec|stories)\.tsx?$", f.name):
                 continue
-            if rel in DEV_ONLY_FILES:
-                continue
             src = f.read_text(encoding="utf-8")
             # strip comments (keep offsets)
             stripped = re.sub(r"/\*.*?\*/", lambda m: re.sub(r"[^\n]", " ", m.group()), src, flags=re.S)
             stripped = re.sub(r"(?<![:'\"`\\])//[^\n]*", lambda m: " " * len(m.group()), stripped)
+            stripped = _blank_functions(stripped, DEV_ONLY_SYMBOLS.get(rel, ()))
             # console output is for developers, not users
             stripped = re.sub(r"console\.\w+\((?:[^()]|\([^()]*\))*\)", lambda m: re.sub(r"[^\n]", " ", m.group()), stripped)
             audience = "staff" if app == "platform" else ("partner" if re.search(r"partner|supplier|seller", rel, re.I) else "client")
