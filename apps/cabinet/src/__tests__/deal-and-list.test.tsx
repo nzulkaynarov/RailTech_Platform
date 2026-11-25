@@ -57,7 +57,7 @@ describe('Сделка (deep-link бота)', () => {
     expect(within(screen.getByRole('region', { name: 'Счета' })).queryByText('S-2026-0118')).not.toBeInTheDocument();
   });
 
-  it('СЦ-8: договор «Ждёт вашего согласования» и просроченный счёт — с кнопкой действия; зрителю и закрытым — без', async () => {
+  it('СЦ-8: договор «Ждёт вашего согласования» и просроченный счёт — с кнопкой действия', async () => {
     signedIn();
     renderApp('/deals/29');
     await heading('Проект ПР-2026-029');
