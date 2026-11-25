@@ -23,6 +23,7 @@ class Staff:
     tg_user_id: int | None
     notify_system: bool
     notify_leads: bool
+    handles_leads: bool = False  # право вести лиды по матрицам ролей Платформы (`crm.leads: full`)
 
 
 def alert_recipients(staff: Iterable[Staff]) -> list[int]:
@@ -41,14 +42,15 @@ def alert_recipients(staff: Iterable[Staff]) -> list[int]:
 
 
 def new_lead_recipients(staff: Iterable[Staff]) -> list[int]:
-    """Telegram-id менеджеров и админов, подписанных на уведомления о лидах (D1-9): кому писать о
-    запросе без
-    ответственного. Без дублей, по порядку; неактивные и без привязанного Telegram пропускаются."""
+    """Telegram-id тех, кому поручены лиды (право `crm.leads: full` в ролях Платформы) и кто
+    подписан на уведомления о лидах (D1-9): кому писать о запросе без ответственного.
+    Администратор лидов не получает только потому, что он администратор по старой базовой роли
+    (СОТР-1). Без дублей, по порядку; неактивные и без Telegram пропускаются."""
     seen: list[int] = []
     for s in staff:
         if (
             s.is_active
-            and ("manager" in s.roles or "admin" in s.roles)
+            and s.handles_leads
             and s.notify_leads
             and s.tg_user_id is not None
             and s.tg_user_id not in seen

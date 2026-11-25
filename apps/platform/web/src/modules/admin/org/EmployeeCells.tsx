@@ -43,12 +43,22 @@ export function ErpTag({ employee }: { employee: Employee }) {
   return null;
 }
 
-/** Telegram для уведомлений сотруднику: привязан — зелёный тег, нет — серый «Telegram: нет». */
-export function TelegramTag({ linked }: { linked: boolean }) {
+/**
+ * Telegram для уведомлений сотруднику, три состояния (СОТР-1): привязан — зелёный тег; не привязан — серый «Telegram: нет»;
+ * привязан, но сообщения не доходят («Старт» не нажат или бот заблокирован) — жёлтый «Telegram: не доходит».
+ */
+export function TelegramTag({ state }: { state: Employee["telegram"] }) {
   const { t } = useTranslation("modules");
+  if (state === "blocked") {
+    return (
+      <StatusTag kind="access" status="pending">
+        {t("admin.org.access.telegramBlocked")}
+      </StatusTag>
+    );
+  }
   return (
-    <StatusTag kind="access" status={linked ? "yes" : "no"}>
-      {t(linked ? "admin.org.access.telegram" : "admin.org.access.telegramNo")}
+    <StatusTag kind="access" status={state === "linked" ? "yes" : "no"}>
+      {t(state === "linked" ? "admin.org.access.telegram" : "admin.org.access.telegramNo")}
     </StatusTag>
   );
 }
@@ -58,14 +68,15 @@ export function AccessTags({ employee }: { employee: Employee }) {
   return (
     <span className="pf-org-tags">
       <ErpTag employee={employee} />
-      <TelegramTag linked={employee.telegram_linked} />
+      <TelegramTag state={employee.telegram} />
     </span>
   );
 }
 
-export function TelegramText({ linked }: { linked: boolean }) {
+export function TelegramText({ state }: { state: Employee["telegram"] }) {
   const { t } = useTranslation("modules");
-  return <>{t(linked ? "admin.org.telegram.linked" : "admin.org.telegram.notLinked")}</>;
+  const key = { linked: "linked", not_linked: "notLinked", blocked: "blocked" }[state];
+  return <>{t(`admin.org.telegram.${key}`)}</>;
 }
 
 export function EmployeeStatusTag({ status }: { status: Employee["status"] }) {

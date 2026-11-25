@@ -202,6 +202,8 @@ function memoCard(
     author: m.author,
     amount: m.amount,
     due_date: m.due_date,
+    // Б-9: отметка автора «счёт придёт позже» (в фикстуре записки — необязательное поле)
+    invoice_later: (m as { invoice_later?: boolean }).invoice_later === true,
     deal: m.deal,
     files: m.files,
     document_status: m.document_status,

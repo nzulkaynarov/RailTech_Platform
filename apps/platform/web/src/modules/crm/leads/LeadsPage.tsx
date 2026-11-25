@@ -36,6 +36,7 @@ import {
   withParams,
 } from "../common/params";
 import { CreateRequest } from "../request/CreateRequest";
+import { useFreshGeneration } from "../../../app/shell/useFreshGeneration";
 import { NewLeadForm } from "./NewLeadForm";
 import { Conversations } from "../messages/MessagesPage";
 import { LeadPanel } from "./LeadPanel";
@@ -368,6 +369,8 @@ export function LeadsPage({ objectId }: { objectId?: string | undefined }) {
   const creating = lead !== null && params.get("create") === "1";
   // «Создать · Лид» из окна «Создать» (план 2026-11-12 п. 0.1)
   const newLead = lead === null && params.get("new") === "1";
+  // «Создать · Лид» второй раз, пока форма открыта, начинает форму заново (метка `fresh` меню «Создать»)
+  const freshForm = useFreshGeneration();
   // «В заявку» у файла клиента в «Ждут ответа»: `letter=<сообщение>-<вложение>`
   const letterHit = /^(\d{1,12})-(\d{1,3})$/.exec(params.get("letter") ?? "");
   const letterFrom = letterHit
@@ -572,6 +575,7 @@ export function LeadsPage({ objectId }: { objectId?: string | undefined }) {
           }}
         >
           <NewLeadForm
+            key={`new-${String(freshForm)}`}
             onCancel={() => {
               change({ new: null, panel: null, tab: null });
             }}

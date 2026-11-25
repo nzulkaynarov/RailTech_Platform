@@ -51,6 +51,8 @@ export interface RequestContext {
   consentGiven: boolean;
   /** Контакты выбранного клиента */
   contacts: readonly ClientContactView[];
+  /** У компании отметка «Не работать»: новую заявку создать нельзя (Х-8, Б-6) */
+  doNotWork?: boolean;
 }
 
 export type RequestField = "company" | "contact" | "channel" | "summary" | "letter" | "consent";
@@ -88,7 +90,8 @@ function consentNeeded(ctx: RequestContext): boolean {
  */
 export function validateRequest(state: RequestFormState, ctx: RequestContext): RequestErrors {
   const errors: RequestErrors = {};
-  if (state.clientId === null) {
+  if (ctx.doNotWork) errors.company = "do_not_work";
+  else if (state.clientId === null) {
     if (!state.company) errors.company = "company";
   }
   if (state.contactId === null) {

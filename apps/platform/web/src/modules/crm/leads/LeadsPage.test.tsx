@@ -32,6 +32,21 @@ function names(): string[] {
 }
 
 describe("Клиенты · Лиды (D1-2b)", () => {
+  it("«Создать · Лид» второй раз при открытой форме начинает её заново (Б-6)", async () => {
+    const { router } = await open("manager@demo.example", "/crm/leads?new=1&panel=open&tab=card");
+    const name = await screen.findByLabelText("Имя");
+    fireEvent.change(name, { target: { value: "Иван Звонивший" } });
+    expect(screen.getByLabelText("Имя")).toHaveValue("Иван Звонивший");
+    // боковое окно меняет адрес без метки «Создать» — введённое остаётся
+    await router.navigate("/crm/leads?new=1&panel=open&tab=card", { replace: true });
+    expect(screen.getByLabelText("Имя")).toHaveValue("Иван Звонивший");
+    // выбор пункта «Создать» — метка `fresh` — форма новая
+    await router.navigate("/crm/leads?new=1&panel=open&tab=card", { state: { fresh: 1 } });
+    await waitFor(() => {
+      expect(screen.getByLabelText("Имя")).toHaveValue("");
+    });
+  });
+
   it("вкладки по статусу, «Мои / Просроченные» и канал сужают список", async () => {
     await open("manager@demo.example");
     await screen.findByRole("table", { name: "Лиды" });

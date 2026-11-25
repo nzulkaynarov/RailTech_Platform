@@ -210,6 +210,7 @@ async def present(session: AsyncSession, document: Document, viewer: Employee | 
         watchers=[directory.person(uid) for uid in document.watchers or []],
         amount=money_of(document),
         due_date=document.due_date,
+        invoice_later=bool(document.invoice_later),
         files=await files.refs_for(session, document_id=document.id),
         source_message_id=document.source_message_id,
         erp_deal_id=document.erp_deal_id,

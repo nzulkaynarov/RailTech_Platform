@@ -15,9 +15,14 @@ export async function fillDate(field: Locator, iso: string): Promise<void> {
     return;
   }
   const text = iso.split("-").reverse().join(".");
-  await field.fill(text);
-  await field.press("Enter");
-  await expect(field).toHaveValue(text);
+  // Поле только что раскрытого шага под нагрузкой иногда не принимает первый набор (Enter не доходит до календаря):
+  // набираем заново, пока значение не встанет.
+  await expect(async () => {
+    await field.click();
+    await field.fill(text);
+    await field.press("Enter");
+    await expect(field).toHaveValue(text, { timeout: 2_000 });
+  }).toPass({ timeout: 15_000 });
 }
 
 type FilePayload = Parameters<Locator["setInputFiles"]>[0];

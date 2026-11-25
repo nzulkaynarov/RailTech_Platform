@@ -161,6 +161,32 @@ def client_projection_items(quote) -> list:
     return [row for row in rows if _keep_row(row)]
 
 
+class ClientBillableLine:
+    """A billable КП line as the buyer is allowed to see it in the contract spec / invoice / act:
+    the all-in price (document charges spread in), every other attribute delegated to the real
+    `QuoteItem`. Read-only view — never saved."""
+
+    def __init__(self, item, unit_price: Decimal, line_total: Decimal):
+        self._item = item
+        self.final_price_excl_vat = unit_price
+        self.line_total = line_total
+
+    def __getattr__(self, name):
+        return getattr(self._item, name)
+
+
+def client_billable_lines(quote) -> list:
+    """Billable lines (`quote.items.billable()` order) with charges spread into line prices — the SAME
+    distribution as `client_projection_items`, so quote, contract specification, invoice and act show
+    identical unit prices and Σ line totals = `quote.total_excl_vat`. Contract/invoice/act MUST use this,
+    never raw `final_price_excl_vat`: raw prices next to the quote reveal the seller's charges."""
+    items = list(quote.items.billable().select_related("product__uom", "frozen_currency"))
+    line_totals, unit_prices = _distribute_charges(
+        items, quote.subtotal_excl_vat or Decimal("0"), quote.charges_total or Decimal("0")
+    )
+    return [ClientBillableLine(it, unit_prices[it.id], line_totals[it.id]) for it in items]
+
+
 def client_optional_items(quote) -> list:
     """Optional КП lines (is_optional ITEM rows) in `position` order — shown to the buyer with a
     price in a SEPARATE «Опционально» block, but NEVER folded into subtotal/НДС/total. No document

@@ -32,6 +32,14 @@ def sync_role_name(email: str) -> str:
     return f"{SYNC_ROLE_PREFIX}{email}"
 
 
+def is_seller(role: str | None, permissions) -> bool:
+    """Продаёт ли сотрудник: право `quote.send` — отправить КП клиенту; его даёт только `crm.clients: full`
+    (platform-rbac.yaml), а `quote.build` есть и у снабженца, и у инженера (`erp.calc.goods/services`). Суперпользователь
+    (`role == "admin"`, системная «Администратор») не продавец: уведомления продавца по сделкам ему не нужны (СОТР-1).
+    Один источник и для провижининга, и для миграции данных."""
+    return role != "admin" and "quote.send" in (permissions or [])
+
+
 def split_full_name(name: str) -> Tuple[str, str]:
     """«Иван Петров» → («Иван», «Петров»): имя — первое слово, фамилия — остаток; одно слово — только имя."""
     first, _, last = name.strip().partition(" ")
@@ -73,18 +81,28 @@ def bind_member_to_company(
     permissions,
     role_codes,
     is_active: bool,
+    sync_can_sell: bool = False,
 ) -> CompanyMember:
-    """Участник своей компании с ролями из провижининга CRM (идемпотентно: get_or_create, роли — add/remove)."""
-    member, _ = CompanyMember.objects.get_or_create(
+    """Участник своей компании с ролями из провижининга CRM (идемпотентно: get_or_create, роли — add/remove).
+
+    `can_sell` (кому идут уведомления продавца по сделкам) выставляется из прав при создании участника, а у
+    существующего — только когда `sync_can_sell` (права по сделкам сменились): ручной выбор владельца в «Команде»
+    повторный провижининг без смены прав не затирает."""
+    sells = is_seller(role, permissions)
+    member, created = CompanyMember.objects.get_or_create(
         user=user,
         company=company,
         # `role` (должность) обязательна; доступ определяют роли бэк-офиса ниже, не должность.
         defaults={
             "is_primary": True,
             "is_active": is_active,
+            "can_sell": sells,
             "role": WorkspaceRole.objects.get(code="MEMBER"),
         },
     )
+    if not created and sync_can_sell and member.can_sell != sells:
+        member.can_sell = sells
+        member.save(update_fields=["can_sell"])
     if member.is_active != is_active:
         member.is_active = is_active
         member.save(update_fields=["is_active"])
@@ -229,6 +247,11 @@ def provision_crm_user(data: Dict[str, Any]) -> Tuple[Dict[str, Any], bool]:
     # update_fields: полная запись затёрла бы `token_version`, выросший при параллельном отзыве доступа.
     user.save(update_fields=update_fields)
 
+    # Права по сделкам сменились (или снимка не было) — `can_sell` участника пересчитывается из прав.
+    previous = mapping.provision_snapshot or {}
+    sells_changed = not previous or is_seller(previous.get("role"), previous.get("permissions")) != is_seller(
+        role, permissions
+    )
     # Что пришло в последний раз — для привязки к своей компании, созданной позже (FIX-P1-2).
     mapping.provision_snapshot = {"role": role, "permissions": list(permissions), "role_codes": role_codes}
     mapping.save(update_fields=["provision_snapshot", "updated_at"])
@@ -237,7 +260,13 @@ def provision_crm_user(data: Dict[str, Any]) -> Tuple[Dict[str, Any], bool]:
     company = own_company()
     if company:
         bind_member_to_company(
-            user, company, role=role, permissions=permissions, role_codes=role_codes, is_active=is_active
+            user,
+            company,
+            role=role,
+            permissions=permissions,
+            role_codes=role_codes,
+            is_active=is_active,
+            sync_can_sell=sells_changed,
         )
 
     return {

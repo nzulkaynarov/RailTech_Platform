@@ -212,6 +212,7 @@
       "empty": "Bot hozirça heç qanday çatni körmayapti. Uni jamoa çatiga qöşing va u yerga istalgan xabar yozing.",
       "candidates": "Bot bor çatlar",
       "isCurrent": "Ulangan",
+      "needsInvite": "Botga kanalga taklif qilış huquqi kerak.",
       "connect": "Ulaş",
       "connectAria": "Kanalni ulaş: {{title}}",
       "connected": "Kanal ulandi",

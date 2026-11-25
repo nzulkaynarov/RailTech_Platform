@@ -18,19 +18,19 @@ const TONE_CLASS: Record<StatusTone, string> = {
   neutral: 'border-border bg-muted text-muted-foreground',
 };
 
-export function ToneBadge({ tone, children, className }: { tone: StatusTone; children: React.ReactNode; className?: string }) {
+export function ToneBadge({ tone, children, className, nowrap }: { tone: StatusTone; children: React.ReactNode; className?: string; nowrap?: boolean }) {
   return (
-    <Badge variant="outline" className={cn('rounded-full px-2.5 py-0.5 text-xs font-medium whitespace-normal', TONE_CLASS[tone], className)}>
+    <Badge variant="outline" className={cn('rounded-full px-2.5 py-0.5 text-xs font-medium', nowrap ? 'whitespace-nowrap' : 'whitespace-normal', TONE_CLASS[tone], className)}>
       {children}
     </Badge>
   );
 }
 
 /** Бейдж статуса сущности контракта: подпись из `status.<entity>.<code>`, тон из `lib/status`. */
-export function StatusBadge<E extends StatusEntity>({ entity, code, className }: { entity: E; code: StatusCode<E>; className?: string }) {
+export function StatusBadge<E extends StatusEntity>({ entity, code, nowrap }: { entity: E; code: StatusCode<E>; nowrap?: boolean }) {
   const { t } = useTranslation();
   return (
-    <ToneBadge tone={statusTone(entity, code)} className={className}>
+    <ToneBadge tone={statusTone(entity, code)} nowrap={nowrap}>
       {t(statusLabelKey(entity, code))}
     </ToneBadge>
   );

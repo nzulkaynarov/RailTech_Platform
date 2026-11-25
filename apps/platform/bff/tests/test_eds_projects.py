@@ -150,6 +150,32 @@ async def test_list_rejects_bad_params(web: Web, erp: ProjectsFake) -> None:
 # --- карточка -----------------------------------------------------------------------------------
 
 
+@pytest.mark.parametrize(
+    ("contract", "expected"),
+    [
+        ({"status": "project", "sent_to_client": True}, "contract_review"),  # у клиента
+        ({"status": "project", "sent_to_client": False}, "contract_preparing"),  # черновик, визы
+        ({"status": "rejected", "sent_to_client": True}, "contract_preparing"),  # клиент отклонил
+        (None, "contract_preparing"),  # проекта договора нет вовсе
+    ],
+)
+async def test_client_status_asks_to_agree_only_while_the_contract_is_with_the_client(
+    web: Web, erp: ProjectsFake, contract: dict[str, Any] | None, expected: str
+) -> None:
+    """СЦ-8: «Согласуйте редакцию» — факт `sent_to_client`, а не шаг пути «Договор»."""
+    await _as(web, "DIRECTOR")
+    documents = row()["documents"]
+    documents["contract"] = None if contract is None else {**documents["contract"], **contract}
+    erp.rows = [row(documents=documents)]
+    erp.cards = {DEAL: card(documents=documents)}
+
+    listed = (await web.client.get(BASE)).json()["items"][0]
+    opened = (await web.client.get(f"{BASE}/{DEAL}")).json()
+
+    assert listed["client_status"] == expected
+    assert opened["client_status"] == expected
+
+
 async def test_card_by_number_and_by_id(
     web: Web, erp: ProjectsFake, check: ContractChecker
 ) -> None:

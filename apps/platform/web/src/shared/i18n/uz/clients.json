@@ -108,6 +108,7 @@
   "clientSees": {
     "in_work": "Işga qabul qilindi, hisoblayapmiz",
     "awaiting_decision": "Qaroringizni kutmoqda",
+    "contract_preparing": "Şartnomani tayyorlayapmiz",
     "contract_review": "Şartnoma matnini kelişib oling",
     "contract_signing": "Şartnoma imzolanmoqda",
     "awaiting_payment": "Tölov kutilmoqda",
