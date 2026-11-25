@@ -653,7 +653,7 @@
         },
         "decline": "Uzaytirişdan boş tortiş",
         "declineTitle": "{{number}} şartnomasini uzaytirişdan boş tortiş",
-        "declineText": "Şartnoma {{until}}gaça amal qiladi va undan keyin tugaydi. Boşlangan yetkazib beriş, tölov va daʼvolar tegilmaydi. Boş tortiş {{notice}}gaça mümkin. Kabinetda uzaytirişni qaytarib bölmaydi.",
+        "declineText": "Şartnoma {{until}}gaça amal qiladi va undan keyin tugaydi. Boşlangan yetkazib beriş, tölov va daʼvolar tegilmaydi. Boş tortiş {{notice}}gaça mümkin.",
         "declined": "Siz {{number}} şartnomasini uzaytirişdan boş tortdingiz.",
         "restore": "Uzaytirişni qaytariş",
         "restored": "{{number}} şartnomasi uzaytirişi qaytarildi."

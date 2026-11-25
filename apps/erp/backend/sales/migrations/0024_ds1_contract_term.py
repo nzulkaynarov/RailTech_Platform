@@ -9,7 +9,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("sales", "0022_dok10_contract_template_approval"),
+        ("sales", "0023_close_request"),
     ]
 
     operations = [

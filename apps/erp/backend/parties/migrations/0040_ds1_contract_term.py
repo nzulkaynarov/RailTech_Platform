@@ -24,7 +24,7 @@ def drop_terms_beat(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("parties", "0036_move_company_logos_to_private"),
+        ("parties", "0039_contract_four_eyes"),
         ("django_celery_beat", "0019_alter_periodictasks_options"),
     ]
 
