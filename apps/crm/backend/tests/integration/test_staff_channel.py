@@ -5,19 +5,22 @@ so he can be invited again); a join request is approved only for an active linke
 sends a join-request link after linking; a daily job removes deactivated staff who are still inside.
 """
 
+import asyncio
 from types import SimpleNamespace
 from typing import Any
 
 import pytest
 from aiogram import Bot
-from aiogram.exceptions import TelegramBadRequest, TelegramNetworkError
+from aiogram.exceptions import TelegramBadRequest, TelegramNetworkError, TelegramRetryAfter
 from aiogram.methods import TelegramMethod
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.bot import staff_channel as join_router
 from app.models.auth import AuditLog, User
+from app.models.clients import Client, ClientContact
 from app.models.integrations import TelegramGroup
+from app.models.leads import TelegramIdentity
 from app.security.audit import Actor
 from app.services.settings import SettingsService
 from app.services.staff_channel import StaffChannelService, StaffChannelUnavailableError
@@ -42,6 +45,9 @@ class FakeBot(Bot):
         self.members: dict[tuple[int, int], str] = {}
         self.bot_rights: dict[int, Any] = {}
         self.fail: dict[str, Exception] = {}
+        self.fail_for: dict[tuple[str, int], Exception] = {}  # (method, user id) -> error
+        self.hang = False
+        self.slept: list[float] = []
 
     async def __call__(
         self, method: TelegramMethod[Any], request_timeout: int | None = None
@@ -51,6 +57,10 @@ class FakeBot(Bot):
         self.calls.append((name, data))
         if name in self.fail:
             raise self.fail[name]
+        if (name, data.get("user_id", 0)) in self.fail_for:
+            raise self.fail_for[(name, data["user_id"])]
+        if self.hang and name in {"GetMe", "GetChatMember"}:
+            await asyncio.sleep(30)
         if name == "GetMe":
             return SimpleNamespace(id=BOT_ID, is_bot=True, first_name="bot", username="rt_bot")
         if name == "GetChatMember":
@@ -76,7 +86,12 @@ def service(sessions: async_sessionmaker[AsyncSession], bot: FakeBot) -> StaffCh
     async def provider() -> FakeBot:
         return bot
 
-    return StaffChannelService(sessions, SettingsService(sessions, ttl_s=0), provider)
+    async def no_sleep(_: float) -> None:
+        bot.slept.append(_)
+
+    return StaffChannelService(
+        sessions, SettingsService(sessions, ttl_s=0), provider, sleep=no_sleep, probe_timeout_s=0.1
+    )
 
 
 @pytest.fixture(autouse=True)
@@ -189,7 +204,7 @@ async def test_nothing_is_removed_if_he_is_staff_again(
     assert bot.calls == []
 
 
-async def test_outsider_is_skipped_and_not_journaled(
+async def test_outsider_is_skipped(
     sessions: async_sessionmaker[AsyncSession], service: StaffChannelService, bot: FakeBot
 ) -> None:
     bot.members[(GROUP, TG)] = "member"  # not in the team channel
@@ -305,3 +320,127 @@ async def test_invite_right_is_unknown_when_telegram_fails(
     method: Any = SimpleNamespace()
     bot.fail["GetChatMember"] = TelegramNetworkError(method=method, message="timeout")
     assert await service.can_invite() is None
+
+
+# --- review round ---------------------------------------------------------------------------
+
+
+async def test_failed_unban_is_finished_on_retry(
+    service: StaffChannelService, bot: FakeBot
+) -> None:
+    """Ban succeeded, unban failed: the retry sees `kicked` and unbans, without a second ban."""
+    bot.members[(TEAM, TG)] = "member"
+    method: Any = SimpleNamespace()
+    bot.fail["UnbanChatMember"] = TelegramNetworkError(method=method, message="timeout")
+    with pytest.raises(StaffChannelUnavailableError):
+        await service.remove_member(1, TG)
+    bot.fail.clear()
+    bot.members[(TEAM, TG)] = "kicked"  # what Telegram says after the ban
+    bot.calls.clear()
+    await service.remove_member(1, TG)
+    assert [n for n in bot.names() if n in {"BanChatMember", "UnbanChatMember"}] == [
+        "UnbanChatMember"
+    ]
+    assert [d["only_if_banned"] for n, d in bot.calls if n == "UnbanChatMember"] == [True]
+
+
+async def two_deactivated(sessions: async_sessionmaker[AsyncSession]) -> tuple[int, int]:
+    first = await linked_user(sessions)
+    second, _ = await make_user(sessions, "sanjar@railtech.uz", ["manager"])
+    async with sessions() as session, session.begin():
+        await session.execute(update(User).where(User.id == second.id).values(tg_user_id=TG + 1))
+    for uid in (first, second.id):
+        await UserService(sessions).update(Actor.system(), uid, UserPatch(is_active=False))
+    return first, second.id
+
+
+async def test_reconcile_survives_one_persons_error_and_honours_retry_after(
+    sessions: async_sessionmaker[AsyncSession], service: StaffChannelService, bot: FakeBot
+) -> None:
+    await two_deactivated(sessions)
+    method: Any = SimpleNamespace()
+    bot.fail_for[("GetChatMember", TG)] = TelegramRetryAfter(
+        method=method, message="flood", retry_after=7
+    )
+    bot.members[(TEAM, TG + 1)] = "member"
+    assert await service.reconcile() == 1  # the second person was still checked and removed
+    assert 7 in bot.slept  # Telegram's pause honoured
+    assert {d["user_id"] for n, d in bot.calls if n == "BanChatMember"} == {TG + 1}
+
+
+async def test_reconcile_skips_people_already_cleanly_removed(
+    sessions: async_sessionmaker[AsyncSession], service: StaffChannelService, bot: FakeBot
+) -> None:
+    await two_deactivated(sessions)
+    bot.members[(TEAM, TG)] = "member"
+    assert await service.reconcile() == 1
+    bot.calls.clear()
+    assert await service.reconcile() == 0
+    assert bot.calls == []  # both are recorded as clean: no Bot API calls
+
+
+async def test_failed_removal_is_retried_by_the_next_reconcile(
+    sessions: async_sessionmaker[AsyncSession], service: StaffChannelService, bot: FakeBot
+) -> None:
+    await two_deactivated(sessions)
+    bot.members[(TEAM, TG)] = "member"
+    method: Any = SimpleNamespace()
+    bot.fail["BanChatMember"] = TelegramBadRequest(method=method, message="not enough rights")
+    assert await service.reconcile() == 0
+    bot.fail.clear()
+    assert await service.reconcile() == 1  # not recorded as clean, so it is tried again
+
+
+async def test_client_contact_stays_in_the_clients_group(
+    sessions: async_sessionmaker[AsyncSession], service: StaffChannelService, bot: FakeBot
+) -> None:
+    """The same Telegram account is a contact of the client: only the team channel is cleaned."""
+    async with sessions() as session, session.begin():
+        client = Client(name="ООО Порядок")
+        session.add(client)
+        await session.flush()
+        identity = TelegramIdentity(tg_user_id=TG, client_id=None)
+        session.add(identity)
+        await session.flush()
+        session.add(
+            ClientContact(
+                client_id=client.id, full_name="Контакт", telegram_identity_id=identity.id
+            )
+        )
+        group = await session.get(TelegramGroup, GROUP)
+        assert group is not None
+        group.client_id, group.status = client.id, "bound"
+    inside(bot)
+    result = await service.remove_member(1, TG)
+    assert result.removed == 1
+    assert [d["chat_id"] for n, d in bot.calls if n == "BanChatMember"] == [TEAM]
+
+
+async def test_joined_is_journaled_only_after_telegram_accepted(
+    sessions: async_sessionmaker[AsyncSession], service: StaffChannelService, bot: FakeBot
+) -> None:
+    await linked_user(sessions)
+    method: Any = SimpleNamespace()
+    bot.fail["ApproveChatJoinRequest"] = TelegramBadRequest(method=method, message="expired")
+    request: Any = SimpleNamespace(chat=SimpleNamespace(id=TEAM), from_user=SimpleNamespace(id=TG))
+    await join_router.on_join_request(request, bot, service)
+    assert await journal(sessions, "user.team_channel_joined") == []
+
+
+async def test_status_probe_does_not_hang_and_is_cached(
+    sessions: async_sessionmaker[AsyncSession], service: StaffChannelService, bot: FakeBot
+) -> None:
+    bot.hang = True
+    assert await service.can_invite() is None  # Telegram hangs: answered within the timeout
+    bot.hang = False
+    bot.bot_rights[TEAM] = SimpleNamespace(status="creator")
+    assert await service.can_invite() is None  # the unknown answer is cached for minutes
+    # connecting another channel invalidates the cache
+    settings = SettingsService(sessions, ttl_s=0)
+    current = (await settings.raw())["notifications"]
+    await settings.update("notifications", {**current, "channel_id": GROUP}, None)
+    bot.bot_rights[GROUP] = SimpleNamespace(status="creator")
+    assert await service.can_invite() is True
+    n = len(bot.calls)
+    assert await service.can_invite() is True
+    assert len(bot.calls) == n  # cached: no new Bot API calls

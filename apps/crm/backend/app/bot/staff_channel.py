@@ -21,6 +21,7 @@ async def on_join_request(
     try:
         if decision == "approve":
             await bot.approve_chat_join_request(request.chat.id, request.from_user.id)
+            await staff_channel.record_joined(request.from_user.id)  # only after Telegram accepted
         elif decision == "decline":
             await bot.decline_chat_join_request(request.chat.id, request.from_user.id)
     except TelegramAPIError as exc:

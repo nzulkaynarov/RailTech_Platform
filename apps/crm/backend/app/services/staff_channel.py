@@ -7,6 +7,7 @@ be re-invited later. All Bot API access goes through `current_bot`; a missing bo
 Telegram failure raises, so the queue retries, and a daily reconciliation catches the rest.
 """
 
+import asyncio
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
@@ -24,8 +25,10 @@ from aiogram.exceptions import (
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.models.auth import User
+from app.models.auth import AuditLog, User
+from app.models.clients import ClientContact
 from app.models.integrations import TelegramGroup
+from app.models.leads import TelegramIdentity
 from app.repositories import users as users_repo
 from app.security import audit
 from app.security.audit import Actor
@@ -35,6 +38,12 @@ logger = structlog.get_logger(__name__)
 
 INVITE_TTL = timedelta(days=7)
 INVITE_NAME = "staff"
+CHECKED = "user.telegram_chats_checked"
+RECHECK_AFTER = timedelta(days=14)
+PACE_S = 0.2  # between people in the daily job
+MAX_PAUSE_S = 30.0  # longest honoured retry_after
+PROBE_TIMEOUT_S = 2.0
+INVITE_CACHE = timedelta(minutes=3)
 _OUTSIDE = frozenset({"left", "kicked"})
 _UNKNOWN_MEMBER = ("user not found", "participant_id_invalid")
 Decision = Literal["approve", "decline", "ignore"]
@@ -42,6 +51,10 @@ Decision = Literal["approve", "decline", "ignore"]
 
 class StaffChannelUnavailableError(Exception):
     """No bot or a transient Telegram failure: the task is retried."""
+
+    def __init__(self, message: str, retry_after: float = 0.0) -> None:
+        super().__init__(message)
+        self.retry_after = retry_after
 
 
 @dataclass(frozen=True, slots=True)
@@ -61,27 +74,52 @@ class StaffChannelService:
         settings: SettingsService,
         current_bot: Callable[[], Awaitable[Bot | None]],
         clock: Callable[[], datetime] = lambda: datetime.now(UTC),
+        sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
+        probe_timeout_s: float = PROBE_TIMEOUT_S,
     ) -> None:
         self._sessions = sessions
         self._settings = settings
         self._current_bot = current_bot
         self._clock = clock
+        self._sleep = sleep
+        self._probe_timeout_s = probe_timeout_s
+        self._invite_cache: tuple[int, datetime, bool | None] | None = None
 
     async def _channel_id(self) -> int | None:
         return (await self._settings.get()).notifications.channel_id
 
-    async def _chats(self) -> list[int]:
-        """The team channel and every client group the bot still sits in."""
-        chats: list[int] = []
+    async def _chats(self) -> list[tuple[int, int | None]]:
+        """The team channel and every client group the bot still sits in, with the bound client."""
+        chats: list[tuple[int, int | None]] = []
         channel = await self._channel_id()
         if channel is not None:
-            chats.append(channel)
+            chats.append((channel, None))
         async with self._sessions() as session:
-            groups = await session.scalars(
-                select(TelegramGroup.chat_id).where(TelegramGroup.status != "removed")
+            rows = await session.execute(
+                select(TelegramGroup.chat_id, TelegramGroup.client_id).where(
+                    TelegramGroup.status != "removed"
+                )
             )
-            chats.extend(c for c in groups if c not in chats)
+            chats.extend((c, client) for c, client in rows if c != channel)
         return chats
+
+    async def _is_client_contact(self, tg_user_id: int, client_id: int) -> bool:
+        """A contact of the client the group is bound to must never be removed from that group."""
+        async with self._sessions() as session:
+            identity = await session.scalar(
+                select(TelegramIdentity).where(TelegramIdentity.tg_user_id == tg_user_id)
+            )
+            if identity is None:
+                return False
+            if identity.client_id == client_id:
+                return True
+            contact = await session.scalar(
+                select(ClientContact.id).where(
+                    ClientContact.client_id == client_id,
+                    ClientContact.telegram_identity_id == identity.id,
+                )
+            )
+            return contact is not None
 
     async def remove_member(
         self, user_id: int, tg_user_id: int, *, journal_failed: bool = True
@@ -94,43 +132,79 @@ class StaffChannelService:
         bot = await self._current_bot()
         if bot is None:
             raise StaffChannelUnavailableError("no bot")
-        removed, failed, transient = 0, [], False
-        for chat_id in await self._chats():
+        removed, failed, transient, retry_after = 0, [], False, 0.0
+        for chat_id, client_id in await self._chats():
+            if client_id is not None and await self._is_client_contact(tg_user_id, client_id):
+                continue
             try:
                 if await self._kick(bot, chat_id, tg_user_id):
                     removed += 1
             except TelegramAPIError as exc:
                 transient = transient or _is_transient(exc)
+                if isinstance(exc, TelegramRetryAfter):
+                    retry_after = max(retry_after, float(exc.retry_after))
                 failed.append(chat_id)
                 logger.warning(
                     "staff_chat_removal_failed", chat_id=chat_id, error=type(exc).__name__
                 )
         if transient:
-            raise StaffChannelUnavailableError("telegram is unavailable")
-        if removed or (failed and journal_failed):
+            raise StaffChannelUnavailableError("telegram is unavailable", retry_after)
+        if (
+            not failed or journal_failed
+        ):  # a clean result is always recorded; failures once, not daily
+            action = "user.telegram_chats_removed" if removed or failed else CHECKED
             async with self._sessions() as session, session.begin():
                 await audit.record(
-                    session, Actor.system(), "user.telegram_chats_removed", "user", user_id,
+                    session, Actor.system(), action, "user", user_id,
                     after={"removed": removed, "failed": failed},
                 )  # fmt: skip
         return RemovalResult(removed, failed)
 
     async def _kick(self, bot: Bot, chat_id: int, tg_user_id: int) -> bool:
-        """True — he was inside and is removed; False — he was not a member."""
+        """True — he was inside and is removed; False — he was not a member.
+
+        Idempotent: a `kicked` status (a ban whose unban failed earlier) is unbanned again.
+        """
         try:
             member = await bot.get_chat_member(chat_id, tg_user_id)
         except TelegramBadRequest as exc:
             if any(marker in str(exc).lower() for marker in _UNKNOWN_MEMBER):
                 return False
             raise
+        if member.status == "kicked":
+            await bot.unban_chat_member(chat_id, tg_user_id, only_if_banned=True)
+            return False
         if member.status in _OUTSIDE:
             return False
         await bot.ban_chat_member(chat_id, tg_user_id)
         await bot.unban_chat_member(chat_id, tg_user_id, only_if_banned=True)
         return True
 
+    async def _recently_clean(self) -> set[int]:
+        """Users whose last check or removal in the past 14 days left no failed chat."""
+        since = self._clock() - RECHECK_AFTER
+        async with self._sessions() as session:
+            rows = await session.execute(
+                select(AuditLog.entity_id, AuditLog.after)
+                .where(
+                    AuditLog.action.in_(("user.telegram_chats_removed", CHECKED)),
+                    AuditLog.created_at >= since,
+                )
+                .order_by(AuditLog.id)
+            )
+        latest: dict[str, bool] = {}
+        for entity_id, after in rows:
+            if entity_id is not None:
+                latest[entity_id] = not (after or {}).get("failed")
+        return {int(k) for k, clean in latest.items() if clean}
+
     async def reconcile(self) -> int:
-        """Daily: deactivated staff with a known Telegram still inside; returns kicked count."""
+        """Daily: deactivated staff with a known Telegram still inside; returns kicked count.
+
+        One person's error never stops the loop; Telegram's `retry_after` is honoured and calls are
+        paced; people cleanly removed or checked in the last 14 days are skipped.
+        """
+        done = await self._recently_clean()
         async with self._sessions() as session:
             rows = (
                 await session.execute(
@@ -141,9 +215,16 @@ class StaffChannelService:
             ).all()
         kicked = 0
         for user_id, tg_user_id in rows:
-            if tg_user_id is None:
+            if tg_user_id is None or user_id in done:
                 continue
-            kicked += (await self.remove_member(user_id, tg_user_id, journal_failed=False)).removed
+            try:
+                kicked += (
+                    await self.remove_member(user_id, tg_user_id, journal_failed=False)
+                ).removed
+            except StaffChannelUnavailableError as exc:
+                logger.warning("staff_reconcile_person_failed", user_id=user_id)
+                await self._sleep(min(exc.retry_after, MAX_PAUSE_S))
+            await self._sleep(PACE_S)
         return kicked
 
     async def invite_url(self, tg_user_id: int) -> str | None:
@@ -182,20 +263,42 @@ class StaffChannelService:
                     chat_id, after={"tg_user_id": tg_user_id},
                 )  # fmt: skip
                 return "decline"
-            await audit.record(session, Actor.system(), "user.team_channel_joined", "user", user.id)
         return "approve"
 
+    async def record_joined(self, tg_user_id: int) -> None:
+        """Journal the join after Telegram accepted the approval."""
+        async with self._sessions() as session, session.begin():
+            user = await users_repo.by_tg_user_id(session, tg_user_id)
+            if user is not None:
+                await audit.record(
+                    session, Actor.system(), "user.team_channel_joined", "user", user.id
+                )
+
     async def can_invite(self) -> bool | None:
-        """Does the bot hold the «invite users» right in the team channel; None — unknown."""
+        """Does the bot hold the «invite users» right in the team channel; None — unknown.
+
+        Short timeout (a hanging Telegram must not hang the status), cached for minutes; the cache
+        is keyed by the channel, so connecting another channel invalidates it.
+        """
         channel = await self._channel_id()
         bot = await self._current_bot()
         if channel is None or bot is None:
             return None
+        now = self._clock()
+        cached = self._invite_cache
+        if cached is not None and cached[0] == channel and now - cached[1] < INVITE_CACHE:
+            return cached[2]
         try:
-            me = await bot.me()
-            member = await bot.get_chat_member(channel, me.id)
-        except TelegramAPIError:
-            return None
+            value = await asyncio.wait_for(self._probe_invite(bot, channel), self._probe_timeout_s)
+        except (TelegramAPIError, TimeoutError):
+            value = None
+        self._invite_cache = (channel, now, value)
+        return value
+
+    @staticmethod
+    async def _probe_invite(bot: Bot, channel: int) -> bool:
+        me = await bot.me()
+        member = await bot.get_chat_member(channel, me.id)
         if member.status == "creator":
             return True
         return member.status == "administrator" and bool(getattr(member, "can_invite_users", False))
