@@ -12401,6 +12401,11 @@ export interface components {
       amount: components["schemas"]["EdsMoney"] | null;
       /** Format: date */
       due_date: string | null;
+      /**
+       * @description Служебка с суммой без счёта партнёра: автор отметил, что счёт придёт позже (Б-9)
+       * @default false
+       */
+      invoice_later: boolean;
       files: components["schemas"]["EdsFile"][];
       /** @description Связь с проектом */
       deal: components["schemas"]["EdsDealRef"] | null;
@@ -12670,6 +12675,11 @@ export interface components {
        * @description «Нужно до» — не в прошлом
        */
       due_date?: string | null;
+      /**
+       * @description Служебка с суммой без счёта партнёра: автор отметил, что счёт придёт позже (Б-9)
+       * @default false
+       */
+      invoice_later: boolean;
       file_ids?: string[];
       /** @description Связь с проектом (`GET /eds/deal-options`) */
       erp_deal_id?: number | null;
@@ -12704,6 +12714,11 @@ export interface components {
       amount?: components["schemas"]["EdsMoney"] | null;
       /** Format: date */
       due_date?: string | null;
+      /**
+       * @description Служебка с суммой без счёта партнёра: автор отметил, что счёт придёт позже (Б-9)
+       * @default false
+       */
+      invoice_later: boolean;
       file_ids?: string[];
       erp_deal_id?: number | null;
       /** @description Только `letter_out`; не передан — прежний */
@@ -13339,6 +13354,11 @@ export interface components {
       amount: components["schemas"]["PaymentMoney"] | null;
       /** Format: date */
       due_date: string | null;
+      /**
+       * @description Служебка с суммой без счёта партнёра: автор отметил, что счёт придёт позже (Б-9)
+       * @default false
+       */
+      invoice_later: boolean;
       deal: components["schemas"]["EdsDealRef"] | null;
       files: components["schemas"]["EdsFile"][];
       document_status: string;

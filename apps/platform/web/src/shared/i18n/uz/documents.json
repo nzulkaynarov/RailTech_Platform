@@ -295,7 +295,8 @@
       "remove": "{{name}} faylini olib taşlaş",
       "tooLarge": "Fayl 25 MBdan katta.",
       "unsupported": "PDF, rasmlar va Office hujjatlari qabul qilinadi.",
-      "failed": "Yuklanmadi: {{reason}}"
+      "failed": "Yuklanmadi: {{reason}}",
+      "invoiceLater": "Hamkorning hisobi keyinroq keladi"
     },
     "deal": {
       "label": "Loyiha bilan boğlaş",
@@ -335,7 +336,8 @@
       "replyTo": "Bunday raqamli kiruvçi xat yöq. Kiruvçi xat raqamini tekşiring.",
       "recipientEmail": "Manzil e-poçtasini tekşiring, masalan office@example.uz.",
       "signer": "Imzolovçini röyxatdan tanlang: tanlanganda imzo huquqi yöq.",
-      "uploading": "Fayllar yuklanişini kuting."
+      "uploading": "Fayllar yuklanişini kuting.",
+      "invoice": "Hamkorning hisobini biriktiring yoki keyinroq kelişini belgilang."
     },
     "toast": {
       "draft": "Qoralama saqlandi",

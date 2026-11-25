@@ -3568,6 +3568,11 @@ export interface components {
        * @description «Нужно до»
        */
       due_date?: string | null;
+      /**
+       * @description Служебка с суммой отправлена без счёта партнёра — автор отметил, что счёт придёт позже (Б-9)
+       * @default false
+       */
+      invoice_later: boolean;
       file_ids?: components["schemas"]["Uuid"][];
       /** @description Сообщение чата, из которого создан документ (непрозрачная ссылка) */
       source_message_id?: string | null;
@@ -3591,6 +3596,8 @@ export interface components {
       amount?: components["schemas"]["Money"] | null;
       /** Format: date */
       due_date?: string | null;
+      /** @description Служебка с суммой отправлена без счёта партнёра — автор отметил, что счёт придёт позже (Б-9) */
+      invoice_later?: boolean | null;
       file_ids?: components["schemas"]["Uuid"][];
       /** @description `crm_user_id` согласующих перед шагами шаблона, по порядку (пункт 1.6 плана); не передано — прежние. Не активный сотрудник — 422 `not_active_employee`, автор в списке — 422 `author_not_allowed`. Письму не нужно */
       approvers?: number[];
@@ -3660,6 +3667,8 @@ export interface components {
       amount?: components["schemas"]["Money"] | null;
       /** Format: date */
       due_date?: string | null;
+      /** @description Служебка с суммой отправлена без счёта партнёра — автор отметил, что счёт придёт позже (Б-9) */
+      invoice_later?: boolean | null;
       file_ids?: components["schemas"]["Uuid"][];
       /** @description Связь с проектом (заявкой) ERP; `null` снимает связь */
       erp_deal_id?: number | null;
@@ -3731,6 +3740,11 @@ export interface components {
       amount: components["schemas"]["Money"] | null;
       /** Format: date */
       due_date: string | null;
+      /**
+       * @description Служебка с суммой отправлена без счёта партнёра — автор отметил, что счёт придёт позже (Б-9)
+       * @default false
+       */
+      invoice_later: boolean;
       files: components["schemas"]["FileRef"][];
       source_message_id: string | null;
       erp_deal_id: number | null;

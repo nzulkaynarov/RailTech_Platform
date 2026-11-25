@@ -165,6 +165,8 @@ test.describe("Создать документ: сотрудник", () => {
 
     await openStep(page, ABOUT);
     await page.getByLabel("Тема").fill("Ремонт кондиционера: замена компрессора");
+    await openStep(page, BODY);
+    await page.getByRole("checkbox", { name: "Счёт партнёра придёт позже" }).check();
     await send(page, "Отправить на согласование");
 
     const panel = side(page);
@@ -185,6 +187,8 @@ test.describe("Создать документ: сотрудник", () => {
     await fillMemo(page, "Командировка в Бухару", "Нужна командировка на два дня. [сбой]");
     await openStep(page, ABOUT);
     await page.getByLabel("Сумма, сум").fill("750 000");
+    await openStep(page, BODY);
+    await page.getByRole("checkbox", { name: "Счёт партнёра придёт позже" }).check();
 
     await send(page, "Отправить на согласование");
 

@@ -6396,6 +6396,10 @@ components:
           type: [string, 'null']
           format: date
           description: «Нужно до»
+        invoice_later:
+          type: boolean
+          default: false
+          description: 'Служебка с суммой отправлена без счёта партнёра — автор отметил, что счёт придёт позже (Б-9)'
         file_ids:
           type: array
           uniqueItems: true
@@ -6447,6 +6451,9 @@ components:
         due_date:
           type: [string, 'null']
           format: date
+        invoice_later:
+          type: [boolean, 'null']
+          description: 'Служебка с суммой отправлена без счёта партнёра — автор отметил, что счёт придёт позже (Б-9)'
         file_ids:
           type: array
           uniqueItems: true
@@ -6572,6 +6579,9 @@ components:
         due_date:
           type: [string, 'null']
           format: date
+        invoice_later:
+          type: [boolean, 'null']
+          description: 'Служебка с суммой отправлена без счёта партнёра — автор отметил, что счёт придёт позже (Б-9)'
         file_ids:
           type: array
           uniqueItems: true
@@ -6744,6 +6754,10 @@ components:
         due_date:
           type: [string, 'null']
           format: date
+        invoice_later:
+          type: boolean
+          default: false
+          description: 'Служебка с суммой отправлена без счёта партнёра — автор отметил, что счёт придёт позже (Б-9)'
         files:
           type: array
           items:

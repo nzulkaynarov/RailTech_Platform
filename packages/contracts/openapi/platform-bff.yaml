@@ -22369,6 +22369,7 @@ components:
           description: 'Получатели копии (пункт 1.6); не решают'
         amount: {oneOf: [{$ref: '#/components/schemas/EdsMoney'}, {type: 'null'}]}
         due_date: {type: [string, 'null'], format: date}
+        invoice_later: {type: boolean, default: false, description: 'Служебка с суммой без счёта партнёра: автор отметил, что счёт придёт позже (Б-9)'}
         files:
           type: array
           items: {$ref: '#/components/schemas/EdsFile'}
@@ -22668,6 +22669,7 @@ components:
         text: {type: string, minLength: 1, maxLength: 20000}
         amount: {oneOf: [{$ref: '#/components/schemas/EdsMoney'}, {type: 'null'}], description: 'Сумма: служебная записка с суммой после директора идёт бухгалтеру'}
         due_date: {type: [string, 'null'], format: date, description: '«Нужно до» — не в прошлом'}
+        invoice_later: {type: boolean, default: false, description: 'Служебка с суммой без счёта партнёра: автор отметил, что счёт придёт позже (Б-9)'}
         file_ids:
           type: array
           maxItems: 50
@@ -22709,6 +22711,7 @@ components:
         text: {type: string, minLength: 1, maxLength: 20000}
         amount: {oneOf: [{$ref: '#/components/schemas/EdsMoney'}, {type: 'null'}]}
         due_date: {type: [string, 'null'], format: date}
+        invoice_later: {type: boolean, default: false, description: 'Служебка с суммой без счёта партнёра: автор отметил, что счёт придёт позже (Б-9)'}
         file_ids:
           type: array
           maxItems: 50
@@ -23369,6 +23372,7 @@ components:
         author: {$ref: '#/components/schemas/EdsPerson'}
         amount: {oneOf: [{$ref: '#/components/schemas/PaymentMoney'}, {type: 'null'}]}
         due_date: {type: [string, 'null'], format: date}
+        invoice_later: {type: boolean, default: false, description: 'Служебка с суммой без счёта партнёра: автор отметил, что счёт придёт позже (Б-9)'}
         deal: {oneOf: [{$ref: '#/components/schemas/EdsDealRef'}, {type: 'null'}]}
         files:
           type: array
