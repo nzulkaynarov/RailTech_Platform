@@ -21688,6 +21688,62 @@ paths:
             мало товара, нет цены или ожидаемой даты — `ORDER_INCOMPLETE`)
         '401':
           $ref: '#/components/responses/UnauthorizedResponse'
+  /api/v1/stock/price-requests/preview/:
+    post:
+      operationId: stock_price_request_preview
+      description: 'POST /api/v1/stock/price-requests/preview/ — что увидит партнёр: тема, строки нашими словами, заметка,
+        адрес.'
+      summary: Предпросмотр запроса цены партнёру (ничего не отправляет)
+      tags:
+      - Stock
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PriceRequestInRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PriceRequestInRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PriceRequestInRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PriceRequestPreview'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StockError'
+          description: Тело не прошло проверку
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StockError'
+          description: Нет права, не сотрудник или нет права на цены поставщиков
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StockError'
+          description: Заказа, строки, поставщика или заявки нет
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StockError'
+          description: Состояние не позволяет (недопустимый переход статуса, нет адреса, письмо не ушло — `EMAIL_FAILED`,
+            мало товара, нет цены или ожидаемой даты — `ORDER_INCOMPLETE`)
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
   /api/v1/stock/price-requests/{request_id}/answer/:
     post:
       operationId: stock_price_request_answer
@@ -34166,6 +34222,26 @@ components:
         * `candidate_agreed` - candidate_agreed
         * `approved` - approved
         * `rejected` - rejected
+    PartnerNameInRequest:
+      type: object
+      description: «Как назвать партнёру» — название (и артикул), подтверждённые сотрудником вместо слов клиента (В-2).
+      properties:
+        line_id:
+          type: integer
+          minimum: 1
+          description: Строка расчёта
+        name:
+          type: string
+          minLength: 1
+          description: Название для партнёра; слова клиента — только после правки
+          maxLength: 500
+        article:
+          type: string
+          default: ''
+          maxLength: 120
+      required:
+      - line_id
+      - name
     PartnerPriceVisibilityEnum:
       enum:
       - cabinet
@@ -36442,6 +36518,11 @@ components:
             default: ''
           - type: string
             maxLength: 0
+        partner_names:
+          type: array
+          items:
+            $ref: '#/components/schemas/PartnerNameInRequest'
+          description: Подтверждённые названия для партнёра; строка без карточки каталога без названия не уходит (409 `PARTNER_NAME_REQUIRED`)
       required:
       - deal_id
       - line_ids
@@ -36476,6 +36557,79 @@ components:
             $ref: '#/components/schemas/PriceRequest'
       required:
       - results
+    PriceRequestPreview:
+      type: object
+      properties:
+        subject:
+          type: string
+        supplier:
+          $ref: '#/components/schemas/OrderSupplier'
+        to_email:
+          type: string
+        note:
+          type: string
+          nullable: true
+          description: Заметка партнёру ровно так, как уйдёт
+        ready:
+          type: boolean
+          description: У каждой строки есть название для партнёра
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/PriceRequestPreviewLine'
+      required:
+      - lines
+      - note
+      - ready
+      - subject
+      - supplier
+      - to_email
+    PriceRequestPreviewLine:
+      type: object
+      properties:
+        quote_item_id:
+          type: integer
+        name:
+          type: string
+          nullable: true
+          description: Как увидит партнёр; null — не названа, отправить нельзя
+        article:
+          type: string
+        source:
+          allOf:
+          - $ref: '#/components/schemas/PriceRequestPreviewLineSourceEnum'
+          description: |-
+            card — карточка каталога; staff — подтверждено сотрудником
+
+            * `card` - card
+            * `staff` - staff
+            * `missing` - missing
+        client_name:
+          type: string
+          description: Слова клиента из заявки — только сотруднику, партнёру не уходят
+        quantity:
+          type: number
+          description: Количество, до трёх знаков после запятой (ADR-0027 п. 9)
+        unit:
+          type: string
+      required:
+      - article
+      - client_name
+      - name
+      - quantity
+      - quote_item_id
+      - source
+      - unit
+    PriceRequestPreviewLineSourceEnum:
+      enum:
+      - card
+      - staff
+      - missing
+      type: string
+      description: |-
+        * `card` - card
+        * `staff` - staff
+        * `missing` - missing
     PriceRequestStatusEnum:
       enum:
       - sent
