@@ -317,7 +317,7 @@ function Content({ sheet }: { sheet: CalcSheet }) {
             <StatusTag kind="quote" status={state}>
               {t(`state.${stateLabel(sheet)}`)}
             </StatusTag>
-            {sheet.quote !== null && sheet.rights.stock === true ? (
+            {editable && sheet.rights.stock === true ? (
               <Button
                 onClick={() => {
                   openForm("price");

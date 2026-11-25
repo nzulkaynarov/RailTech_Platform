@@ -263,13 +263,15 @@
       "email": "Email address",
       "emailKnown": "Address from the partner card; you can enter another.",
       "emailMissing": "The partner has no email: enter an address for the letter.",
-      "submit": "Send letter"
+      "submit": "Send letter",
+      "reason": "Enter the partner's address — the email cannot go without it."
     },
     "confirm": {
       "title": "Partner confirmed order {{number}}",
       "date": "Confirmed delivery date",
       "dateHint": "The expected date is needed to track delays.",
-      "submit": "Confirm"
+      "submit": "Confirm",
+      "reason": "Enter the confirmed delivery date."
     },
     "cancel": {
       "title": "Cancel order {{number}}",
@@ -397,7 +399,8 @@
     "empty": {
       "title": "No shipments yet",
       "text": "A shipment is made from project reservations after the contract is signed."
-    }
+    },
+    "reason": "Set a quantity for at least one item."
   },
   "priceRequest": {
     "title": "Request a partner price · {{number}}",
@@ -429,7 +432,12 @@
     "entryMeta": "{{when}} · {{who}} → {{email}}",
     "answerNote": "Reply: {{note}}",
     "answer": "Reply received",
-    "answerLabel": "Reply received: partner “{{name}}”"
+    "answerLabel": "Reply received: partner “{{name}}”",
+    "reason": {
+      "supplier": "Choose a partner.",
+      "lines": "Tick at least one line.",
+      "email": "Enter the partner's email address."
+    }
   },
   "trace": {
     "title": "Traceability: where from and where to",

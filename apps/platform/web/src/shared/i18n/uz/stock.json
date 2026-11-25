@@ -263,13 +263,15 @@
       "email": "Xat manzili",
       "emailKnown": "Manzil hamkor kartoçkasidan; boşqasini kiritiş mumkin.",
       "emailMissing": "Hamkorda poçta yöq: xat uçun manzil kiriting.",
-      "submit": "Xatni yuboriş"
+      "submit": "Xatni yuboriş",
+      "reason": "Hamkorning manzilini kiriting — usiz xat ketmaydi."
     },
     "confirm": {
       "title": "Hamkor {{number}} buyurtmasini tasdiqladi",
       "date": "Tasdiqlangan yetkazib beriş sanasi",
       "dateHint": "Keçikişni kuzatiş uçun kutilayotgan sana kerak.",
-      "submit": "Tasdiqlaş"
+      "submit": "Tasdiqlaş",
+      "reason": "Tasdiqlangan yetkazib beriş sanasini kiriting."
     },
     "cancel": {
       "title": "{{number}} buyurtmasini bekor qiliş",
@@ -397,7 +399,8 @@
     "empty": {
       "title": "Jönatmalar hali bölmagan",
       "text": "Jönatma şartnoma imzolangandan keyin loyiha zaxiralari böyiça rasmiylaştiriladi."
-    }
+    },
+    "reason": "Kamida bitta pozitsiya uçun miqdorni kiriting."
   },
   "priceRequest": {
     "title": "Hamkordan narx söraş · {{number}}",
@@ -429,7 +432,12 @@
     "entryMeta": "{{when}} · {{who}} → {{email}}",
     "answerNote": "Javob: {{note}}",
     "answer": "Javob olindi",
-    "answerLabel": "Javob olindi: hamkor «{{name}}»"
+    "answerLabel": "Javob olindi: hamkor «{{name}}»",
+    "reason": {
+      "supplier": "Hamkorni tanlang.",
+      "lines": "Kamida bitta qatorni belgilang.",
+      "email": "Hamkorning xat manzilini kiriting."
+    }
   },
   "trace": {
     "title": "Kuzatuv: qayerdan va qayerga",

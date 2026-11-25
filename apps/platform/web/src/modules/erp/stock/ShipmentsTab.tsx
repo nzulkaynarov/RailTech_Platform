@@ -1,3 +1,4 @@
+import { DisabledReason } from "../../../shared/ui/DisabledReason";
 import { App, Button, Card, Input, InputNumber } from "antd";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -168,10 +169,14 @@ function NewShipment({ manage }: { manage: boolean }) {
                   <ErrorNote message={error} />
                   {manage ? (
                     <>
+                      <DisabledReason id="pf-ship-why">
+                        {picked.length === 0 ? t("shipments.reason") : null}
+                      </DisabledReason>
                       <div>
                         <Button
                           type="primary"
                           loading={ship.isPending}
+                          aria-describedby={picked.length === 0 ? "pf-ship-why" : undefined}
                           disabled={picked.length === 0}
                           onClick={() => {
                             if (unpicked) {
