@@ -6,9 +6,10 @@ import { useTranslation } from "react-i18next";
 import { canSee } from "../../app/access";
 import { useAuth } from "../../app/auth/useAuth";
 import { getGetMeQueryKey, useFinishOnboarding } from "../../shared/api/generated/platform-bff";
-import { rolesText, startKindsOf, useWelcomeSteps } from "../help/startKinds";
+import { startKindsOf, useWelcomeSteps } from "../help/startKinds";
 import { isNewer } from "../help/changelog";
 import { useWhatsNew } from "../help/whatsNew";
+import { useTelegramLink } from "./useTelegramLink";
 
 import "../help/help.css";
 
@@ -218,6 +219,7 @@ export function Onboarding() {
   const [phase, setPhase] = useState<"welcome" | "tour">("welcome");
   const finish = useFinishOnboarding();
   const whatsNew = useWhatsNew();
+  const telegram = useTelegramLink();
   const kinds = startKindsOf(me);
   const steps = useWelcomeSteps(kinds, 4);
   const tourSteps = useMemo(
@@ -270,12 +272,25 @@ export function Onboarding() {
         </Button>,
       ]}
     >
-      <p style={{ margin: 0 }}>{t("welcome.role", { role: rolesText(me) })}</p>
-      <p style={{ margin: "8px 0 0" }}>{t("welcome.lead")}</p>
+      <p style={{ margin: 0 }}>{t("welcome.lead")}</p>
       <ol className="pf-welcome-steps">
         {steps.map((step) => (
           <li key={step}>{step}</li>
         ))}
+        {telegram.show ? (
+          <li>
+            <Button
+              type="link"
+              size="small"
+              loading={telegram.pending}
+              onClick={telegram.start}
+              style={{ padding: 0, height: "auto" }}
+            >
+              {t("welcome.telegram")}
+            </Button>
+            {telegram.error ? <span role="alert"> {telegram.error}</span> : null}
+          </li>
+        ) : null}
       </ol>
     </Modal>
   );

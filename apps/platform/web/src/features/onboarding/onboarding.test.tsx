@@ -19,6 +19,11 @@ afterEach(() => {
   endSession();
 });
 
+/** Профиль уже запрошен и разобран: «строки нет» проверяем после ответа, а не пока он грузится. */
+async function profileAnswered(): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve, 150));
+}
+
 function firstLogin(email = "manager@demo.example") {
   window.localStorage.setItem("rt-pf-mock-onboarding", "pending");
   signInAs(email);
@@ -33,16 +38,34 @@ describe("Первый вход", () => {
     expect(screen.queryByText(/Добро пожаловать/)).toBeNull();
   });
 
-  it("карточка «Добро пожаловать»: имя, роль и что делать утром — по разделам, не по кодам ролей", async () => {
+  it("карточка «Добро пожаловать»: имя и что делать утром — по разделам, не по кодам ролей", async () => {
     firstLogin("accountant@demo.example");
     const dialog = await screen.findByRole("dialog", { name: /Добро пожаловать, Демо/ });
-    expect(within(dialog).getByText("Ваша роль — Бухгалтер.")).toBeInTheDocument();
+    expect(within(dialog).queryByText(/Ваша роль/)).toBeNull(); // названий ролей в приветствии нет
     expect(within(dialog).getByText("Вот что вы будете делать утром:")).toBeInTheDocument();
     expect(within(dialog).getByText(/Подтвердите оплату по выписке/)).toBeInTheDocument();
     expect(within(dialog).getByRole("button", { name: "Пропустить" })).toBeInTheDocument();
     expect(
       within(dialog).getByRole("button", { name: "Больше не показывать" }),
     ).toBeInTheDocument();
+  });
+
+  it("в списке «что делать утром» последняя строка — «Привязать Telegram», пока он не привязан", async () => {
+    firstLogin("supply@demo.example"); // Telegram не привязан
+    const dialog = await screen.findByRole("dialog", { name: /Добро пожаловать/ });
+    const button = await within(dialog).findByRole("button", { name: "Привязать Telegram" });
+    const items = within(dialog).getAllByRole("listitem");
+    expect(items[items.length - 1]).toContainElement(button);
+  });
+
+  it("с привязанным Telegram строки нет", async () => {
+    firstLogin("manager@demo.example"); // Telegram привязан
+    const dialog = await screen.findByRole("dialog", { name: /Добро пожаловать/ });
+    await waitFor(() => {
+      expect(within(dialog).getAllByRole("listitem").length).toBeGreaterThan(0);
+    });
+    await profileAnswered();
+    expect(within(dialog).queryByRole("button", { name: "Привязать Telegram" })).toBeNull();
   });
 
   it("тур из четырёх шагов: фокус на карточке, aria, Escape закрывает", async () => {

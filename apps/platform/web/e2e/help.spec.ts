@@ -268,7 +268,7 @@ test.describe("Первый вход", () => {
   }) => {
     await firstLogin("manager@demo.example", page);
     const welcome = page.getByRole("dialog", { name: /Добро пожаловать, Демо Менеджеров/ });
-    await expect(welcome.getByText("Ваша роль — Менеджер.")).toBeVisible();
+    await expect(welcome.getByText(/Ваша роль/)).toHaveCount(0);
     await expect(welcome.getByText("Вот что вы будете делать утром:")).toBeVisible();
     await shoot(page, "welcome", async () => {
       await expect(welcome).toBeVisible();

@@ -460,7 +460,7 @@
   },
   "welcome": {
     "title": "Xuş kelibsiz, {{name}}",
-    "role": "Sizning rolingiz — {{role}}.",
+    "telegram": "Telegramni ulaş",
     "lead": "Ertalab siz şularni qilasiz:",
     "tour": "Nima qayerda ekanini körsatiş",
     "skip": "Ötkazib yuboriş",
