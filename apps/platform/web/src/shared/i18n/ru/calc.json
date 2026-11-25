@@ -80,7 +80,9 @@
     "requestPrice": "Запросить цену у партнёра",
     "rejectedComment": "Директор отклонил КП: «{{comment}}». Расчёт закрыт.",
     "requestFiles": "Файлы заявки",
-    "downloadFile": "Скачать файл {{name}}"
+    "downloadFile": "Скачать файл {{name}}",
+    "openQuote": "Открыть КП {{number}}",
+    "openProject": "Открыть проект"
   },
   "lines": {
     "title": "Строки расчёта",
@@ -235,14 +237,15 @@
       "no_lines": "Добавьте хотя бы одну строку.",
       "not_started": "Сначала начните расчёт.",
       "not_draft": "Расчёт уже передан директору.",
-      "at_director": "",
-      "approved": "",
-      "rejected": "",
-      "not_in_calculation": "",
       "rejected_client": "Клиент отклонил КП — выберите выше: новая версия КП или отказ по заявке."
     },
     "missingGroups": "Ждут визы: {{groups}}.",
-    "done": "Черновик КП у директора"
+    "done": "Черновик КП у директора",
+    "closed": {
+      "approved": "КП одобрено",
+      "rejected": "КП отклонено",
+      "not_in_calculation": "Заявка вне расчёта."
+    }
   },
   "task": {
     "resolution": "Резолюция директора",
