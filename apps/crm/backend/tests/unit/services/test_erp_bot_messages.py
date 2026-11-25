@@ -429,3 +429,16 @@ def test_request_created_text_has_no_internal_terms() -> None:
     assert message is not None
     for word in ("лид", "сделк", "crm", "CRM"):
         assert word not in message.text
+
+
+def test_staff_alert_names_the_quote_by_number_not_by_database_id() -> None:
+    text = staff_alert(
+        "quote.accepted",
+        {"erp_quote_id": 1203, "number": "КП-2026/115"},
+        client_name="ООО Тест",
+        deal_title="Оси",
+        texts=TEXTS,
+    )
+    assert text is not None
+    assert "КП-2026/115" in text
+    assert "1203" not in text

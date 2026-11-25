@@ -256,6 +256,31 @@ async def test_channel_post_then_edit_after_take(
     assert edit["reply_markup"] is None
 
 
+async def test_direct_handover_is_not_a_channel_post(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    """Передача конкретному человеку идёт ему лично; в канале «Забрать» остальным не нужен."""
+    lead_id = await escalated_lead(sessions)
+    _, escalation = await load(sessions, lead_id)
+    async with sessions() as session, session.begin():
+        row = await session.get(Escalation, escalation.id)
+        assert row is not None
+        row.reason_codes = ["handed_over"]
+    settings = SettingsService(sessions, ttl_s=0)
+    await settings.update("notifications", {"channel_id": -100500, "duty_user_ids": []}, None)
+    bot = FakeChannelBot()
+    service = NotificationService(sessions, settings, bot)  # type: ignore[arg-type]
+    assert not await service.sync(escalation.id)
+    assert bot.posts == []
+    # передача, которая уже была рабочей карточкой (причина бота + handed_over), остаётся в канале
+    async with sessions() as session, session.begin():
+        row = await session.get(Escalation, escalation.id)
+        assert row is not None
+        row.reason_codes = ["price_or_contract_asked", "handed_over"]
+    assert await service.sync(escalation.id)
+    assert len(bot.posts) == 1
+
+
 async def test_events_are_delivered_after_commit_only(
     sessions: async_sessionmaker[AsyncSession], live_settings: Settings
 ) -> None:

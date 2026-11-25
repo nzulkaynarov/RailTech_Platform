@@ -145,6 +145,9 @@ async def test_registrar_hands_the_lead_over_and_the_manager_takes_it(
     assert [(b.kind, b.object_kind, b.object_number) for b in bell] == [
         ("lead_handed_over", "lead", f"L-{lead_id:04d}")
     ]
+    # колокольчик называет того, кто передал (не безликого «делопроизводителя»)
+    assert "clerk" in bell[0].title
+    assert f"L-{lead_id:04d}" in bell[0].title
 
     inbox = client.get("/api/v1/inbox", headers=seller).json()
     (row,) = [r for r in inbox["escalations"] if r["id"] == lead_id]

@@ -43,6 +43,19 @@ async def client_chats(session: AsyncSession, client_id: int, *, with_leads: boo
     return list(dict.fromkeys(rows.all()))
 
 
+async def chat_languages(session: AsyncSession, chat_ids: list[int]) -> dict[int, str]:
+    """Язык каждого Telegram-чата — по лиду самого человека (его беседа с ботом): сообщение идёт на
+    языке контакта, а не последнего лида компании. Чата без лида в словаре нет."""
+    if not chat_ids:
+        return {}
+    rows = await session.execute(
+        select(TelegramIdentity.tg_user_id, Lead.language)
+        .join(Lead, Lead.id == TelegramIdentity.lead_id)
+        .where(TelegramIdentity.tg_user_id.in_(chat_ids), Lead.erased_at.is_(None))
+    )
+    return dict(rows.all())
+
+
 async def client_email(session: AsyncSession, client_id: int) -> str | None:
     """Куда писать клиенту без Telegram: основной контакт, любой контакт с адресом, лид клиента."""
     contact = await session.scalar(

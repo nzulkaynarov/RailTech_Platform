@@ -5,7 +5,7 @@ from collections.abc import Iterator
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.models.leads import TelegramIdentity
+from app.models.leads import Lead, TelegramIdentity
 from tests.integration.bus_harness import T0, Harness, data_for, event_type_of
 
 pytestmark = pytest.mark.integration
@@ -53,3 +53,23 @@ async def test_without_the_field_everyone_gets_it(
     await deliver(harness, "invoice.paid", client_id, None)
 
     assert sorted(chat for chat, *_ in harness.bot.sent) == [777, 888]
+
+
+async def test_each_contact_gets_the_text_in_the_language_of_their_own_lead(
+    harness: Harness, sessions: async_sessionmaker[AsyncSession]
+) -> None:
+    """Бот пишет контакту на его языке, а не на языке лида компании, написавшего последним."""
+    client_id, _ = await harness.seed_client(tg_user_id=777)  # лид компании — русский
+    async with sessions() as session, session.begin():
+        own = Lead(display_name="B", stage="customer", owner_mode="bot", language="uz")
+        session.add(own)
+        await session.flush()
+        session.add(
+            TelegramIdentity(tg_user_id=888, client_id=client_id, lead_id=own.id, tg_first_name="B")
+        )
+
+    await deliver(harness, "invoice.paid", client_id, None)
+
+    texts = dict(harness.bot.sent)
+    assert set(texts) == {777, 888}
+    assert texts[777] != texts[888]  # узбекский контакт не получает русский текст

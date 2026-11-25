@@ -11,6 +11,7 @@ from html import escape
 from typing import Final
 from zoneinfo import ZoneInfo
 
+from app.domain.escalation import HANDED_OVER
 from app.services import channel_texts as tx
 
 # Новые карточки: `take:e<id эскалации>`. Старые `take:<id лида>` бот понимает как устаревшие.
@@ -21,10 +22,12 @@ LAST_MAX: Final = 200
 PRIORITY_RANK: Final[dict[str, int]] = {"hot": 0, "warm": 1, "info": 2}
 # Info-передачи — сигналы: бот продолжает отвечать, срока реакции и упоминаний нет.
 SLA_PRIORITIES: Final = frozenset({"hot", "warm"})
-# Причины, по которым карточка в канал не публикуется. Сейчас таких нет: передача клиента менеджеру
-# из-за сбоя ИИ (`agent_unavailable`) — рабочая карточка (менеджер должен забрать клиента), а
-# системный сигнал о сбое — строка «Ответы ИИ клиентам» центра внешних сервисов (W15-H3b).
-SILENT_REASONS: Final[frozenset[str]] = frozenset()
+# Причины, по которым карточка в канал не публикуется. Передача лида конкретному человеку
+# (`handed_over`) идёт ему лично — колокольчик и личное сообщение; остальные в канале «Забрать» не
+# смогут (забрать может только ответственный), пост был бы шумом. Передача клиента менеджеру из-за
+# сбоя ИИ (`agent_unavailable`) — рабочая карточка (менеджер должен забрать клиента), а системный
+# сигнал о сбое — строка «Ответы ИИ клиентам» центра внешних сервисов (W15-H3b).
+SILENT_REASONS: Final[frozenset[str]] = frozenset({HANDED_OVER})
 
 
 @dataclass(frozen=True, slots=True)
