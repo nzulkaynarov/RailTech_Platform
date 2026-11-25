@@ -32587,6 +32587,9 @@ components:
         request_price:
           type: boolean
           description: 'Черновик с строками без цены: «Запросить цену» у партнёра (СЦ-10)'
+        resend:
+          type: boolean
+          description: 'Заказ отправлен, но письмо партнёру не ушло: «Отправить ещё раз» — тот же POST …/send/ (Б-5)'
         confirm:
           type: boolean
         receive:

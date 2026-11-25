@@ -2,6 +2,7 @@ import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { HttpResponse, http } from "msw";
 import { describe, expect, it } from "vitest";
 
+import { patchOrderMock } from "../../../mocks/erpStock";
 import { renderAt, setupCalcTests, signIn } from "../../../test/calcKit";
 import { fillDate, pickCompany, searchCompany } from "../../../test/fields";
 import { panelEl } from "../../../test/panel";
@@ -273,6 +274,41 @@ describe("Склад · заказы партнёрам", () => {
     expect(await screen.findByText("Заказ подтверждён")).toBeVisible();
     await screen.findByRole("button", { name: "Принять товар" });
     expect(screen.queryByRole("button", { name: "Отправить партнёру" })).not.toBeInTheDocument();
+  });
+
+  it("письмо партнёру не ушло: главная кнопка «Отправить ещё раз», письмо уходит снова, статус не меняется (Б-5)", async () => {
+    patchOrderMock(ORDER, {
+      status: "sent",
+      sentAt: "2026-11-20T09:00:00+05:00",
+      sentTo: "sales@steel.example",
+      mail: { state: "failed", reason: "smtp_not_configured" },
+    });
+    signIn("supply@demo.example");
+    renderAt(ORDER_PATH);
+    expect(
+      await screen.findByRole("heading", { level: 1, name: `Заказ партнёру ${ORDER}` }),
+    ).toBeVisible();
+    // «Партнёр подтвердил» остаётся рядом, но главное — повтор письма
+    expect(screen.getByRole("button", { name: "Партнёр подтвердил" })).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Отправить ещё раз" }));
+    const send = await screen.findByRole("dialog");
+    fireEvent.click(within(send).getByRole("button", { name: "Отправить письмо" }));
+    expect(
+      await screen.findByText(/^Заказ оформлен\. Письмо партнёру — в очереди почты/),
+    ).toBeVisible();
+    await waitFor(() => {
+      expect(screen.queryByRole("button", { name: "Отправить ещё раз" })).not.toBeInTheDocument();
+    });
+    expect(screen.getByRole("button", { name: "Партнёр подтвердил" })).toBeVisible();
+  });
+
+  it("письмо ушло: «Отправить ещё раз» не предлагается", async () => {
+    patchOrderMock(ORDER, { status: "sent", sentAt: "2026-11-20T09:00:00+05:00" });
+    signIn("supply@demo.example");
+    renderAt(ORDER_PATH);
+    await screen.findByRole("heading", { level: 1, name: `Заказ партнёру ${ORDER}` });
+    expect(screen.getByRole("button", { name: "Партнёр подтвердил" })).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Отправить ещё раз" })).not.toBeInTheDocument();
   });
 
   it("внутреннее примечание и комментарий партнёру: разные поля; комментарий правится в черновике (СЦ-10)", async () => {

@@ -208,7 +208,8 @@
       "receive": "Tovarni qabul qiliş",
       "edit": "Özgartiriş",
       "cancel": "Buyurtmani bekor qiliş",
-      "price": "Narx söraş"
+      "price": "Narx söraş",
+      "resend": "Qayta yuboriş"
     },
     "overdueBanner": "{{date}} gaça kutilgan, tovar olinmagan — {{count}} kun keçikiş. Hamkor bilan boğlaning va kutilayotgan sanani yangilang.",
     "cancelledBanner": "Buyurtma bekor qilingan. Sabab: {{reason}}",
