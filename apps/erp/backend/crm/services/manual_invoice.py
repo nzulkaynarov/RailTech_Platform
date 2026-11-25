@@ -158,20 +158,22 @@ def create_manual_invoice(
     subtotal = Decimal("0")
     vat_amount = Decimal("0")
     total = Decimal("0")
-    item_specs = []  # (description, quantity, unit_price, product, unit, unit_code, source_quote_item)
+    item_specs = []  # (description, quantity, unit_price, product, unit, unit_code, source_quote_item, line_total)
 
     if source_quote is not None:
         # Mirror the contract→invoice projection EXACTLY: the header totals come verbatim from the
         # КП header (which the engine computes in the presentation currency, INCLUDING document
         # charges in total_incl_vat), and the InvoiceItems are ONLY the billable lines (SECTION/
         # NOTE and optional ITEMs are excluded — same .billable() filter, so Σ lines = subtotal).
-        subtotal += source_quote.subtotal_excl_vat or Decimal("0")
+        subtotal += source_quote.total_excl_vat
         vat_amount += source_quote.vat_amount or Decimal("0")
         total += source_quote.total_incl_vat or Decimal("0")
         from catalog.candidates import link_quote_lines
 
         link_quote_lines(source_quote)  # строки КП до перехода получают карточку (ADR-0027 п. 1), идемпотентно
-        for qi in source_quote.items.billable().select_related("product"):
+        from .documents.projection import client_billable_lines
+
+        for qi in client_billable_lines(source_quote):
             item_specs.append(
                 (
                     (qi.product.name if qi.product else qi.imported_raw_name) or "Позиция",
@@ -180,7 +182,8 @@ def create_manual_invoice(
                     qi.product,
                     qi.unit,
                     qi.unit_code,
-                    qi,
+                    qi._item,
+                    qi.line_total,  # projected: Σ lines = quote.total_excl_vat penny-exact
                 )
             )
 
@@ -190,7 +193,7 @@ def create_manual_invoice(
         subtotal += line_total
         vat_amount += line_vat
         total += line_total + line_vat
-        item_specs.append((description, quantity, unit_price, product, *_unit_of(product), None))
+        item_specs.append((description, quantity, unit_price, product, *_unit_of(product), None, line_total))
 
     invoice = Invoice.objects.create(
         deal=deal,
@@ -215,10 +218,10 @@ def create_manual_invoice(
                 unit=unit,
                 unit_code=unit_code,
                 unit_price_excl_vat=unit_price,
-                line_total_excl_vat=line_amount(unit_price, quantity),
+                line_total_excl_vat=spec_line_total,
                 source_quote_item=source_quote_item,
             )
-            for description, quantity, unit_price, product, unit, unit_code, source_quote_item in item_specs
+            for description, quantity, unit_price, product, unit, unit_code, source_quote_item, spec_line_total in item_specs
         ]
     )
 
