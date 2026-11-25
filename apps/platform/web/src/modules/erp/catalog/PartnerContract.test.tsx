@@ -146,4 +146,18 @@ describe("Договор кандидата в партнёры (ПД-1)", () =>
     expect(screen.queryByRole("button", { name: "Подготовить договор" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Отклонить" })).toBeNull();
   });
+
+  it("единственный держатель решает по своему договору только после подтверждения", async () => {
+    window.localStorage.setItem("rt-pf-mock-legal-holder", "1");
+    window.localStorage.setItem("rt-pf-mock-sole-holder", "1");
+    await openApplications("supply@demo.example");
+    fireEvent.click(
+      within(rowOf("Zhengzhou Rail Parts")).getByRole("button", { name: "Решить по договору" }),
+    );
+    const modal = await findModal(/Решение по договору: Zhengzhou Rail Parts/);
+    const ok = within(modal).getByRole("button", { name: "Согласовать договор" });
+    expect(ok).toBeDisabled();
+    fireEvent.click(within(modal).getByLabelText(/Других держателей нет/));
+    expect(ok).not.toBeDisabled();
+  });
 });

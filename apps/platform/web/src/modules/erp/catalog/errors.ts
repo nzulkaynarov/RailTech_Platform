@@ -106,6 +106,8 @@ const REASONS = new Set([
   "candidate_email_required",
   "signed_scan_required",
   "contract_date_invalid",
+  "self_approval_not_allowed",
+  "self_decision_confirmation_required",
   // ADR-0027: слияние карточек
   "merge_same_product",
 ]);

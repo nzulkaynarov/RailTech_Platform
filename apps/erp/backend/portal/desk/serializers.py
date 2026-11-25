@@ -175,7 +175,12 @@ class DeskPartnerContractFacts(serializers.Serializer):
     candidate_returned_at = serializers.DateTimeField(allow_null=True)
     has_signed_scan = serializers.BooleanField()
     signed_scan_at = serializers.DateTimeField(allow_null=True)
-    can_decide_contract = serializers.BooleanField(help_text="Зритель — держатель права утверждать договоры.")
+    can_decide_contract = serializers.BooleanField(
+        help_text="Зритель вправе решить: держатель права утверждать договоры; подготовивший — только если нет другого."
+    )
+    decision_needs_confirmation = serializers.BooleanField(
+        help_text="Зритель — единственный держатель права и сам подготовил договор: решение с подтверждением."
+    )
     contract_approvers = serializers.ListField(
         child=serializers.CharField(), help_text="Кто решает, пока согласование ждёт решения."
     )
@@ -332,6 +337,11 @@ class DeskPartnerContractPrepareIn(serializers.Serializer):
 
 class DeskPartnerContractDecisionIn(serializers.Serializer):
     decision = serializers.ChoiceField(choices=["approve", "return"])
+    confirm_self = serializers.BooleanField(
+        required=False,
+        default=False,
+        help_text="Подтверждение самостоятельного решения единственным держателем «Права».",
+    )
     note = serializers.CharField(required=False, allow_blank=True, max_length=1000)
 
 

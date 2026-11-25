@@ -21,6 +21,7 @@ const NO_CONTRACT = {
   contract_blocker: "CONTRACT_NOT_PREPARED",
   contract_approvers: [],
   can_decide_contract: false,
+  decision_needs_confirmation: false,
   candidate_notes: "",
   candidate_returned_at: null,
   has_signed_scan: false,
@@ -53,6 +54,15 @@ const TEMPLATES = [
 function noTemplateScenario(): boolean {
   try {
     return window.localStorage.getItem("rt-pf-mock-no-partner-template") === "1";
+  } catch {
+    return false;
+  }
+}
+
+/** Сценарий «единственный держатель, сам подготовил договор»: решение с подтверждением. */
+function soleHolder(): boolean {
+  try {
+    return window.localStorage.getItem("rt-pf-mock-sole-holder") === "1";
   } catch {
     return false;
   }
@@ -282,7 +292,12 @@ export const erpPartnerApplicationsHandlers = [
       (i) => i.status === "submitted" || i.status === "candidate_agreed",
     ).length;
     return HttpResponse.json({
-      items: filtered.map((i) => ({ ...i, can_decide_contract: legalHolder() })),
+      items: filtered.map((i) => ({
+        ...i,
+        can_decide_contract: legalHolder(),
+        decision_needs_confirmation:
+          legalHolder() && soleHolder() && i.contract_approval === "requested",
+      })),
       pending_count: pendingCount,
     });
   }),

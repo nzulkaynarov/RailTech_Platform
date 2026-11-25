@@ -26,7 +26,7 @@ from parties.models import (
 from parties.models.company_settings import CompanySettings
 from portal.tests.conftest import LOCMEM_BACKEND, PortalAPIClient, make_portal_session
 
-from catalog.tests.desk_world import build_world
+from catalog.tests.desk_world import build_world, client_for
 from crm.models import ActivityLog
 from notifications.models import Notification
 
@@ -502,15 +502,54 @@ class TestWholePath:
 
 
 class TestReviewFixes:
-    def test_the_one_who_prepared_cannot_decide_own_contract(self, world, director):
+    def _own_file(self, client):
         app = make_app()
-        director.post(f"{DESK}/{app.pk}/prepare-contract/", {"file": upload()}, format="multipart")
+        client.post(f"{DESK}/{app.pk}/prepare-contract/", {"file": upload()}, format="multipart")
+        return app
 
-        response = post(director, app, "contract-decision", {"decision": "approve"})
+    def test_requester_with_another_holder_has_no_button_and_is_refused(self, world, director):
+        from catalog.tests.desk_world import make_staff
+
+        other = make_staff(world["own"], "director", label="second-holder")
+        app = self._own_file(director)
+
+        card = director.get(f"{DESK}/{app.pk}/").json()
+        assert card["can_decide_contract"] is False and card["decision_needs_confirmation"] is False
+        assert card["contract_approvers"] == [other.get_full_name() or other.email]
+        response = post(director, app, "contract-decision", {"decision": "approve", "confirm_self": True})
 
         assert response.status_code == 403 and response.json()["detail"] == "SELF_APPROVAL_NOT_ALLOWED"
         app.refresh_from_db()
         assert app.contract_approval == "requested"
+        # другой держатель решает
+        assert post(client_for(other), app, "contract-decision", {"decision": "approve"}).status_code == 200
+
+    def test_sole_holder_decides_after_explicit_confirmation_with_warning(self, world, director):
+        app = self._own_file(director)
+
+        card = director.get(f"{DESK}/{app.pk}/").json()
+        assert card["can_decide_contract"] is True and card["decision_needs_confirmation"] is True
+        bare = post(director, app, "contract-decision", {"decision": "approve"})
+        assert bare.status_code == 400 and bare.json()["detail"] == "SELF_DECISION_CONFIRMATION_REQUIRED"
+        done = post(director, app, "contract-decision", {"decision": "approve", "confirm_self": True})
+
+        assert done.status_code == 200, done.content
+        entry = ActivityLog.objects.filter(event_code="admin.partner_application.contract_approved").latest("id")
+        assert entry.level == "WARNING" and "on_behalf" in entry.after_data
+
+    def test_rule_off_requester_decides_without_confirmation(self, world, director):
+        from catalog.tests.desk_world import make_staff
+
+        make_staff(world["own"], "director", label="second-holder")
+        tpl = template(world)
+        row, _ = CompanySettings.objects.get_or_create(company=tpl.company)
+        row.contract_four_eyes = False
+        row.save()
+        app = self._own_file(director)
+
+        card = director.get(f"{DESK}/{app.pk}/").json()
+        assert card["can_decide_contract"] is True and card["decision_needs_confirmation"] is False
+        assert post(director, app, "contract-decision", {"decision": "approve"}).status_code == 200
 
     def test_superuser_may_decide_own_request_but_it_is_journaled_on_behalf(self, world):
         from rest_framework.test import APIClient

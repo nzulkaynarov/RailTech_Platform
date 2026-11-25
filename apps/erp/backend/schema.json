@@ -43383,6 +43383,11 @@
                         "title": "Отступления от шаблона по заявке",
                         "description": "Выключено — «Запросить отступление» недоступно."
                     },
+                    "contract_four_eyes": {
+                        "type": "boolean",
+                        "title": "Решение по своему договору — другим держателем «Права»",
+                        "description": "Включено — подготовивший договор партнёра не решает по нему сам; единственный держатель права решает самостоятельно с подтверждением и записью в журнале."
+                    },
                     "default_client_contract_template": {
                         "type": "integer",
                         "nullable": true,
@@ -47876,7 +47881,11 @@
                     },
                     "can_decide_contract": {
                         "type": "boolean",
-                        "description": "Зритель — держатель права утверждать договоры."
+                        "description": "Зритель вправе решить: держатель права утверждать договоры; подготовивший — только если нет другого."
+                    },
+                    "decision_needs_confirmation": {
+                        "type": "boolean",
+                        "description": "Зритель — единственный держатель права и сам подготовил договор: решение с подтверждением."
                     },
                     "contract_approvers": {
                         "type": "array",
@@ -48053,6 +48062,7 @@
                     "contract_template_id",
                     "contract_template_name",
                     "created_at",
+                    "decision_needs_confirmation",
                     "email",
                     "has_signed_scan",
                     "id",
@@ -48153,7 +48163,11 @@
                     },
                     "can_decide_contract": {
                         "type": "boolean",
-                        "description": "Зритель — держатель права утверждать договоры."
+                        "description": "Зритель вправе решить: держатель права утверждать договоры; подготовивший — только если нет другого."
+                    },
+                    "decision_needs_confirmation": {
+                        "type": "boolean",
+                        "description": "Зритель — единственный держатель права и сам подготовил договор: решение с подтверждением."
                     },
                     "contract_approvers": {
                         "type": "array",
@@ -48312,6 +48326,7 @@
                     "contract_template_id",
                     "contract_template_name",
                     "created_at",
+                    "decision_needs_confirmation",
                     "email",
                     "has_signed_scan",
                     "id",
@@ -48402,6 +48417,11 @@
                 "properties": {
                     "decision": {
                         "$ref": "#/components/schemas/DeskPartnerContractDecisionInDecisionEnum"
+                    },
+                    "confirm_self": {
+                        "type": "boolean",
+                        "default": false,
+                        "description": "Подтверждение самостоятельного решения единственным держателем «Права»."
                     },
                     "note": {
                         "type": "string",
@@ -55464,6 +55484,11 @@
                         "type": "boolean",
                         "title": "Отступления от шаблона по заявке",
                         "description": "Выключено — «Запросить отступление» недоступно."
+                    },
+                    "contract_four_eyes": {
+                        "type": "boolean",
+                        "title": "Решение по своему договору — другим держателем «Права»",
+                        "description": "Включено — подготовивший договор партнёра не решает по нему сам; единственный держатель права решает самостоятельно с подтверждением и записью в журнале."
                     },
                     "default_client_contract_template": {
                         "type": "integer",

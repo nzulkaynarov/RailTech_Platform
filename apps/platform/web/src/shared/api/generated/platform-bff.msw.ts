@@ -17945,6 +17945,7 @@ export const getGetQuoteDefaultsResponseMock = (
   contract_auto_send: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
   contract_sign_before_send: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
   contract_deviations_allowed: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
+  contract_four_eyes: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
   default_client_contract_template: faker.helpers.arrayElement([faker.number.int(), null]),
   default_partner_contract_template: faker.helpers.arrayElement([faker.number.int(), null]),
   ...overrideResponse,
@@ -17993,6 +17994,7 @@ export const getUpdateQuoteDefaultsResponseMock = (
   contract_auto_send: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
   contract_sign_before_send: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
   contract_deviations_allowed: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
+  contract_four_eyes: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
   default_client_contract_template: faker.helpers.arrayElement([faker.number.int(), null]),
   default_partner_contract_template: faker.helpers.arrayElement([faker.number.int(), null]),
   ...overrideResponse,
@@ -40320,6 +40322,7 @@ export const getListPartnerApplicationsResponseMock = (
       (_, i) => i + 1,
     ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
     can_decide_contract: faker.datatype.boolean(),
+    decision_needs_confirmation: faker.datatype.boolean(),
     candidate_notes: faker.string.alpha({ length: { min: 10, max: 20 } }),
     candidate_returned_at: faker.helpers.arrayElement([
       faker.date.past().toISOString().slice(0, 19) + "Z",
@@ -40412,6 +40415,7 @@ export const getCreatePartnerApplicationResponseMock = (
     (_, i) => i + 1,
   ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
   can_decide_contract: faker.datatype.boolean(),
+  decision_needs_confirmation: faker.datatype.boolean(),
   candidate_notes: faker.string.alpha({ length: { min: 10, max: 20 } }),
   candidate_returned_at: faker.helpers.arrayElement([
     faker.date.past().toISOString().slice(0, 19) + "Z",
@@ -40502,6 +40506,7 @@ export const getSendContractPartnerApplicationResponseMock = (
     (_, i) => i + 1,
   ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
   can_decide_contract: faker.datatype.boolean(),
+  decision_needs_confirmation: faker.datatype.boolean(),
   candidate_notes: faker.string.alpha({ length: { min: 10, max: 20 } }),
   candidate_returned_at: faker.helpers.arrayElement([
     faker.date.past().toISOString().slice(0, 19) + "Z",
@@ -40592,6 +40597,7 @@ export const getApprovePartnerApplicationResponseMock = (
     (_, i) => i + 1,
   ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
   can_decide_contract: faker.datatype.boolean(),
+  decision_needs_confirmation: faker.datatype.boolean(),
   candidate_notes: faker.string.alpha({ length: { min: 10, max: 20 } }),
   candidate_returned_at: faker.helpers.arrayElement([
     faker.date.past().toISOString().slice(0, 19) + "Z",
@@ -40682,6 +40688,7 @@ export const getRejectPartnerApplicationResponseMock = (
     (_, i) => i + 1,
   ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
   can_decide_contract: faker.datatype.boolean(),
+  decision_needs_confirmation: faker.datatype.boolean(),
   candidate_notes: faker.string.alpha({ length: { min: 10, max: 20 } }),
   candidate_returned_at: faker.helpers.arrayElement([
     faker.date.past().toISOString().slice(0, 19) + "Z",
@@ -40796,6 +40803,7 @@ export const getPreparePartnerContractResponseMock = (
     (_, i) => i + 1,
   ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
   can_decide_contract: faker.datatype.boolean(),
+  decision_needs_confirmation: faker.datatype.boolean(),
   candidate_notes: faker.string.alpha({ length: { min: 10, max: 20 } }),
   candidate_returned_at: faker.helpers.arrayElement([
     faker.date.past().toISOString().slice(0, 19) + "Z",
@@ -40886,6 +40894,7 @@ export const getUploadPartnerContractFileResponseMock = (
     (_, i) => i + 1,
   ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
   can_decide_contract: faker.datatype.boolean(),
+  decision_needs_confirmation: faker.datatype.boolean(),
   candidate_notes: faker.string.alpha({ length: { min: 10, max: 20 } }),
   candidate_returned_at: faker.helpers.arrayElement([
     faker.date.past().toISOString().slice(0, 19) + "Z",
@@ -40976,6 +40985,7 @@ export const getDecidePartnerContractResponseMock = (
     (_, i) => i + 1,
   ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
   can_decide_contract: faker.datatype.boolean(),
+  decision_needs_confirmation: faker.datatype.boolean(),
   candidate_notes: faker.string.alpha({ length: { min: 10, max: 20 } }),
   candidate_returned_at: faker.helpers.arrayElement([
     faker.date.past().toISOString().slice(0, 19) + "Z",

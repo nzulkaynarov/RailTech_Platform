@@ -78,15 +78,54 @@ def read_file(field) -> tuple[bytes, str, str]:
 # ── Параметры для карточки ─────────────────────────────────────────────────────────────────────────────────────────
 
 
-def approver_names() -> list[str]:
-    """Кто решает: держатели права утверждать договоры (зона «Право») своей компании — именами."""
+def _holders() -> list:
     from core.tenant import own_company_id
     from crm.services.contract_templates import _holders_to_notify
 
-    names = []
-    for holder in _holders_to_notify(own_company_id()):
-        names.append((holder.get_full_name() or holder.email).strip())
-    return sorted(set(names))
+    return list(_holders_to_notify(own_company_id()))
+
+
+def four_eyes_on() -> bool:
+    """Правило компании «решение по своему договору — другим держателем «Права»» (по умолчанию включено)."""
+    from parties.models.company_settings import CompanySettings
+
+    company = contract_service._own_company_or_none()
+    row = CompanySettings.objects.filter(company=company).first() if company is not None else None
+    return True if row is None else row.contract_four_eyes
+
+
+def _others(user) -> list:
+    return [h for h in _holders() if h.pk != getattr(user, "pk", None)]
+
+
+def approver_names(exclude=None) -> list[str]:
+    """Кто решает: держатели права утверждать договоры (зона «Право») своей компании — именами.
+
+    Подготовивший договор из списка исключается, если есть другие держатели (правило «четыре глаза»)."""
+    holders = _holders()
+    if exclude is not None and any(h.pk != exclude.pk for h in holders):
+        holders = [h for h in holders if h.pk != exclude.pk]
+    return sorted({(h.get_full_name() or h.email).strip() for h in holders})
+
+
+def _is_requester(app, user) -> bool:
+    return app.contract_approval_requested_by_id is not None and app.contract_approval_requested_by_id == getattr(
+        user, "pk", None
+    )
+
+
+def decision_state(app, viewer) -> tuple[bool, bool]:
+    """(может решить, нужно подтверждение самостоятельного решения) — по правилу компании и составу держателей."""
+    from crm.services.contract_templates import is_approver
+
+    holder = viewer is not None and is_approver(viewer)
+    if not holder or app.contract_approval != PartnerContractApproval.REQUESTED:
+        return bool(holder), False
+    if not _is_requester(app, viewer) or getattr(viewer, "is_superuser", False) or not four_eyes_on():
+        return True, False
+    if _others(viewer):
+        return False, False
+    return True, True
 
 
 def contract_options(user) -> dict:
@@ -115,8 +154,6 @@ def contract_options(user) -> dict:
 
 def contract_facts(app: PartnerApplication, *, viewer=None) -> dict:
     """Договорная часть карточки заявки — по фактам заявки."""
-    from crm.services.contract_templates import is_approver
-
     template = app.contract_template
     requested_by = app.contract_approval_requested_by
     decided_by = app.contract_approval_decided_by
@@ -135,8 +172,11 @@ def contract_facts(app: PartnerApplication, *, viewer=None) -> dict:
         "candidate_returned_at": app.candidate_returned_at,
         "has_signed_scan": bool(app.signed_scan),
         "signed_scan_at": app.signed_scan_at,
-        "can_decide_contract": bool(viewer is not None and is_approver(viewer)),
-        "contract_approvers": approver_names() if app.contract_approval == PartnerContractApproval.REQUESTED else [],
+        "can_decide_contract": decision_state(app, viewer)[0],
+        "decision_needs_confirmation": decision_state(app, viewer)[1],
+        "contract_approvers": (
+            approver_names(exclude=requested_by) if app.contract_approval == PartnerContractApproval.REQUESTED else []
+        ),
     }
 
 
@@ -301,13 +341,14 @@ def decide_contract(pk: int, data: dict, user) -> PartnerApplication:
         raise AccessError("NOT_FOUND", 404)
     if app.contract_approval != PartnerContractApproval.REQUESTED:
         raise AccessError("CONTRACT_APPROVAL_NOT_REQUESTED")
-    # Решает не тот, кто подготовил (как в согласовании КП); суперпользователь — только «от имени», с записью в журнале
-    self_approval = (
-        app.contract_approval_requested_by_id is not None
-        and app.contract_approval_requested_by_id == getattr(user, "pk", None)
-    )
-    if self_approval and not getattr(user, "is_superuser", False):
-        raise AccessError("SELF_APPROVAL_NOT_ALLOWED", 403)
+    # Четыре глаза — правило компании: подготовивший сам не решает, пока есть другой держатель; единственный держатель
+    # решает с подтверждением, суперпользователь — «от имени»; оба случая в журнале на уровне WARNING
+    self_approval = _is_requester(app, user)
+    if self_approval and four_eyes_on() and not getattr(user, "is_superuser", False):
+        if _others(user):
+            raise AccessError("SELF_APPROVAL_NOT_ALLOWED", 403)
+        if not data.get("confirm_self"):
+            raise AccessError("SELF_DECISION_CONFIRMATION_REQUIRED")
     decision = data.get("decision")
     note = (data.get("note") or "").strip()
     if decision not in ("approve", "return"):

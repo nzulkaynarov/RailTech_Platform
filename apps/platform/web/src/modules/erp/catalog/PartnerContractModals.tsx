@@ -1,4 +1,4 @@
-import { Alert, Button, Input, Segmented, Select } from "antd";
+import { Alert, Button, Checkbox, Input, Segmented, Select } from "antd";
 import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
@@ -290,6 +290,7 @@ export function ContractDecisionModal({
   const noteId = useId();
   const [decision, setDecision] = useState<"approve" | "return">("approve");
   const [note, setNote] = useState("");
+  const [confirmed, setConfirmed] = useState(false);
   const mutation = useDecidePartnerContract({ mutation: { onSuccess: onDone } });
   return (
     <FormPanel
@@ -297,11 +298,18 @@ export function ContractDecisionModal({
       okLabel={t(`partnerApplications.decisionModal.ok.${decision}`)}
       loading={mutation.isPending}
       error={mutation.error}
-      disabled={decision === "return" && note.trim() === ""}
+      disabled={
+        (decision === "return" && note.trim() === "") ||
+        (item.decision_needs_confirmation && !confirmed)
+      }
       onOk={() => {
         mutation.mutate({
           id: item.id,
-          data: { decision, ...(note.trim() ? { note: note.trim() } : {}) },
+          data: {
+            decision,
+            ...(note.trim() ? { note: note.trim() } : {}),
+            ...(item.decision_needs_confirmation ? { confirm_self: true } : {}),
+          },
         });
       }}
       onCancel={onClose}
@@ -324,6 +332,16 @@ export function ContractDecisionModal({
       </Button>
       {item.contract_deviation_text ? (
         <blockquote className="pf-hint">{item.contract_deviation_text}</blockquote>
+      ) : null}
+      {item.decision_needs_confirmation ? (
+        <Checkbox
+          checked={confirmed}
+          onChange={(event) => {
+            setConfirmed(event.target.checked);
+          }}
+        >
+          {t("partnerApplications.decisionModal.selfConfirm")}
+        </Checkbox>
       ) : null}
       <Segmented
         block

@@ -161,7 +161,9 @@
       "contract_decision_invalid": "«Kelişiş» yoki «Qaytariş»ni tanlang.",
       "candidate_email_required": "Nomzodda e-mail yöq: kiriş xatini yuboriş imkoni yöq.",
       "signed_scan_required": "Imzolangan skan olinmagan. Usiz tasdiqlaş uçun sabab körsating.",
-      "contract_date_invalid": "Şartnoma sanasi notöğri."
+      "contract_date_invalid": "Şartnoma sanasi notöğri.",
+      "self_approval_not_allowed": "Qarorni «Huquq» zonasining boşqa egasi qiladi. Uning nomi ariza qatorida.",
+      "self_decision_confirmation_required": "Özboşimça qarorni tasdiqlang: boşqa egalar yöqligini belgilang."
     }
   },
   "items": {
@@ -1231,7 +1233,8 @@
       "ok": {
         "approve": "Şartnomani kelişiş",
         "return": "Qayta işlaşga qaytariş"
-      }
+      },
+      "selfConfirm": "Boşqa egalar yöq — qaror özboşimça deb yoziladi"
     }
   },
   "backToItems": "Pozitsiyalarga"

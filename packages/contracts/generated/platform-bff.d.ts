@@ -13939,6 +13939,8 @@ export interface components {
       contract_sign_before_send?: boolean;
       /** @description ДОК-10: «Запросить отступление» от шаблона доступно (по умолчанию да) */
       contract_deviations_allowed?: boolean;
+      /** @description ПД-1: по своему договору партнёра решает другой держатель «Права»; единственный держатель решает с подтверждением (по умолчанию да) */
+      contract_four_eyes?: boolean;
       /** @description ДОК-10: шаблон договора по умолчанию для клиента — только утверждённый */
       default_client_contract_template?: number | null;
       /** @description ДОК-10: шаблон договора по умолчанию для партнёра — только утверждённый */
@@ -13993,6 +13995,8 @@ export interface components {
       contract_sign_before_send?: boolean;
       /** @description ДОК-10: «Запросить отступление» от шаблона доступно (по умолчанию да) */
       contract_deviations_allowed?: boolean;
+      /** @description ПД-1: по своему договору партнёра решает другой держатель «Права»; единственный держатель решает с подтверждением (по умолчанию да) */
+      contract_four_eyes?: boolean;
       /** @description ДОК-10: шаблон договора по умолчанию для клиента — только утверждённый */
       default_client_contract_template?: number | null;
       /** @description ДОК-10: шаблон договора по умолчанию для партнёра — только утверждённый */
@@ -19157,8 +19161,10 @@ export interface components {
         | null;
       /** @description Кто решает, пока согласование ждёт решения */
       contract_approvers: string[];
-      /** @description Зритель — держатель права утверждать договоры */
+      /** @description Зритель вправе решить: держатель «Права»; подготовивший — только если нет другого держателя */
       can_decide_contract: boolean;
+      /** @description Зритель — единственный держатель и сам подготовил договор: решение с подтверждением */
+      decision_needs_confirmation: boolean;
       /** @description Замечание кандидата к договору */
       candidate_notes: string;
       /**
@@ -19201,6 +19207,8 @@ export interface components {
     PartnerContractDecisionRequest: {
       /** @enum {string} */
       decision: "approve" | "return";
+      /** @description Подтверждение самостоятельного решения единственным держателем */
+      confirm_self?: boolean | null;
       /** @description Замечание; при `return` обязательно */
       note?: string | null;
     };

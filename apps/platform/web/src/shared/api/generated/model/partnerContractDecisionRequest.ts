@@ -7,6 +7,11 @@ import type { PartnerContractDecisionRequestDecision } from "./partnerContractDe
 export interface PartnerContractDecisionRequest {
   decision: PartnerContractDecisionRequestDecision;
   /**
+   * Подтверждение самостоятельного решения единственным держателем
+   * @nullable
+   */
+  confirm_self?: boolean | null;
+  /**
    * Замечание; при `return` обязательно
    * @maxLength 1000
    * @nullable

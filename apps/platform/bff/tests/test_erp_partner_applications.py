@@ -46,6 +46,7 @@ APPLICATION_RAW = {
     "contract_blocker": "CONTRACT_NOT_PREPARED",
     "contract_approvers": [],
     "can_decide_contract": False,
+    "decision_needs_confirmation": False,
     "candidate_notes": "",
     "candidate_returned_at": None,
     "has_signed_scan": False,

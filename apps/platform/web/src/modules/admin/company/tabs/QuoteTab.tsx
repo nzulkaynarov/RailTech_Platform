@@ -43,6 +43,7 @@ const GROUPS: Record<QuoteGroup, readonly (keyof QuoteDefaults)[]> = {
     "contract_auto_send",
     "contract_sign_before_send",
     "contract_deviations_allowed",
+    "contract_four_eyes",
     "default_client_contract_template",
     "default_partner_contract_template",
   ],
@@ -236,6 +237,7 @@ function QuoteForm({ defaults, group }: { defaults: QuoteDefaults; group: QuoteG
             "contract_auto_send",
             "contract_sign_before_send",
             "contract_deviations_allowed",
+            "contract_four_eyes",
           ] as const
         ).map((name) =>
           shows(name) ? (

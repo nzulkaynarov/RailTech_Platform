@@ -63,6 +63,7 @@ class PartnerApplicationItem(Out):
     contract_blocker: ContractBlocker | None
     contract_approvers: list[str]
     can_decide_contract: bool
+    decision_needs_confirmation: bool
     candidate_notes: str
     candidate_returned_at: str | None
     has_signed_scan: bool
@@ -118,6 +119,7 @@ class PartnerContractPrepareRequest(Body):
 
 class PartnerContractDecisionRequest(Body):
     decision: Literal["approve", "return"]
+    confirm_self: bool | None = None
     note: str | None = Field(default=None, max_length=1000)
 
 
@@ -209,6 +211,7 @@ def to_partner_application(raw: Mapping[str, Any]) -> PartnerApplicationItem:
         ),
         contract_approvers=[str(name) for name in raw.get("contract_approvers") or []],
         can_decide_contract=bool(raw.get("can_decide_contract")),
+        decision_needs_confirmation=bool(raw.get("decision_needs_confirmation")),
         candidate_notes=text(raw.get("candidate_notes")),
         candidate_returned_at=(
             str(raw["candidate_returned_at"]) if raw.get("candidate_returned_at") else None

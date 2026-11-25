@@ -74,8 +74,10 @@ export interface PartnerApplicationItem {
   contract_blocker: PartnerApplicationItemContractBlocker;
   /** Кто решает, пока согласование ждёт решения */
   contract_approvers: string[];
-  /** Зритель — держатель права утверждать договоры */
+  /** Зритель вправе решить: держатель «Права»; подготовивший — только если нет другого держателя */
   can_decide_contract: boolean;
+  /** Зритель — единственный держатель и сам подготовил договор: решение с подтверждением */
+  decision_needs_confirmation: boolean;
   /** Замечание кандидата к договору */
   candidate_notes: string;
   /**
