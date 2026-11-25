@@ -32348,16 +32348,6 @@ components:
       required:
       - code
       - label
-    ModeEnum:
-      enum:
-      - always
-      - client_own
-      - never
-      type: string
-      description: |-
-        * `always` - always
-        * `client_own` - client_own
-        * `never` - never
     Money:
       type: object
       properties:
@@ -39628,12 +39618,11 @@ components:
       properties:
         mode:
           allOf:
-          - $ref: '#/components/schemas/ModeEnum'
+          - $ref: '#/components/schemas/RequestResolutionEnum'
           description: |-
             Резолюция перед расчётом
 
             * `always` - always
-            * `client_own` - client_own
             * `never` - never
         ready:
           type: boolean

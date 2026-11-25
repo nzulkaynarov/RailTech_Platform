@@ -51645,15 +51645,6 @@
                     "label"
                 ]
             },
-            "ModeEnum": {
-                "enum": [
-                    "always",
-                    "client_own",
-                    "never"
-                ],
-                "type": "string",
-                "description": "* `always` - always\n* `client_own` - client_own\n* `never` - never"
-            },
             "Money": {
                 "type": "object",
                 "properties": {
@@ -61078,10 +61069,10 @@
                     "mode": {
                         "allOf": [
                             {
-                                "$ref": "#/components/schemas/ModeEnum"
+                                "$ref": "#/components/schemas/RequestResolutionEnum"
                             }
                         ],
-                        "description": "Резолюция перед расчётом\n\n* `always` - always\n* `client_own` - client_own\n* `never` - never"
+                        "description": "Резолюция перед расчётом\n\n* `always` - always\n* `never` - never"
                     },
                     "ready": {
                         "type": "boolean",

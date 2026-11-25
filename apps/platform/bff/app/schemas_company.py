@@ -592,11 +592,7 @@ def to_quote_defaults(raw: Mapping[str, Any], visible_groups: Collection[str]) -
         "contract_auto_send": raw.get("contract_auto_send") is not False,
         "contract_sign_before_send": raw.get("contract_sign_before_send") is not False,
         "contract_deviations_allowed": raw.get("contract_deviations_allowed") is not False,
-        "request_resolution": (
-            raw.get("request_resolution")
-            if raw.get("request_resolution") in ("client_own", "never")
-            else "always"
-        ),
+        "request_resolution": "never" if raw.get("request_resolution") == "never" else "always",
         "default_client_contract_template": maybe_int(raw.get("default_client_contract_template")),
         "default_partner_contract_template": maybe_int(
             raw.get("default_partner_contract_template")

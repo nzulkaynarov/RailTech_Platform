@@ -1222,6 +1222,19 @@ async def test_request_form_reads_the_resolution_mode_without_settings_rights(
     }
 
 
+async def test_quote_defaults_old_resolution_value_reads_as_always(
+    web: Web, erp: respx.MockRouter
+) -> None:
+    """Значение снятого варианта в ERP не даёт 500: читается как «у каждой заявки»."""
+    await web.login(["ADMIN"])
+    erp.get(f"{COMPANY}/settings/").mock(
+        return_value=httpx.Response(200, json=settings_json(request_resolution="client_own"))
+    )
+    response = await web.client.get("/api/v1/admin/company/quote-defaults")
+    assert response.status_code == 200
+    assert response.json()["request_resolution"] == "always"
+
+
 async def test_quote_defaults_overdue_reminders_switch(
     web: Web, erp: respx.MockRouter, check: ContractChecker
 ) -> None:

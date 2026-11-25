@@ -93,7 +93,7 @@ class CalcTaskBriefSerializer(serializers.Serializer):
 class RequestIntakeSerializer(serializers.Serializer):
     """РЕЗ-1: что будет с заявкой сотрудника — его форма «Создать заявку» говорит по этому."""
 
-    mode = serializers.ChoiceField(choices=["always", "client_own", "never"], help_text="Резолюция перед расчётом")
+    mode = serializers.ChoiceField(choices=["always", "never"], help_text="Резолюция перед расчётом")
     ready = serializers.BooleanField(
         help_text="Расчёт может встать на самого сотрудника (иначе заявка идёт на резолюцию)"
     )
